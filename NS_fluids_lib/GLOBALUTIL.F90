@@ -3776,7 +3776,7 @@ end subroutine dynamic_contact_angle
       REAL_T substrate_height
       REAL_T ice_vertical
       INTEGER_T im_solid_temperature
-      REAL_T zprime
+      REAL_T z_shift
 
       if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
@@ -3798,7 +3798,7 @@ end subroutine dynamic_contact_angle
         stop
        endif
       endif
-      zprime=z
+      z_shift=z
  
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid62"
@@ -3853,20 +3853,21 @@ end subroutine dynamic_contact_angle
            stop
           endif
            
-          if (zprime.ge.yblob2) then ! above the substrate
+           ! block of ice melting on substrate
+          if (z_shift.ge.yblob2) then ! above the substrate
            temperature=get_user_temperature(time,bcflag,3) ! ice
-          else if ((zprime.ge.zero).and. &
-                   (zprime.le.yblob2)) then
+          else if ((z_shift.ge.zero).and. &
+                   (z_shift.le.yblob2)) then
            temperature= &
             get_user_temperature(time,bcflag,im_solid_temperature)+ &
             (get_user_temperature(time,bcflag,3)- &
              get_user_temperature(time,bcflag,im_solid_temperature))* &
-            zprime/yblob2 
-          else if (zprime.le.zero) then
+            z_shift/yblob2 
+          else if (z_shift.le.zero) then
            temperature= &
             get_user_temperature(time,bcflag,im_solid_temperature) !substrate
           else
-           print *,"zprime failure"
+           print *,"z_shift failure"
            stop
           endif
          else
@@ -3879,22 +3880,22 @@ end subroutine dynamic_contact_angle
           stop
          endif
           ! radblob3=thickness of underside of block already melted.
-         if (zprime.ge.yblob2+radblob3) then
-          temperature=get_user_temperature(time,bcflag,3) ! ice
-         else if (zprime.ge.yblob2) then
-          temperature=get_user_temperature(time,bcflag,3) ! water
-         else if ((zprime.ge.zero).and. &
-                  (zprime.le.yblob2)) then
+         if (z_shift.ge.yblob2+radblob3) then
+          temperature=get_user_temperature(time,bcflag,3) ! ice region
+         else if (z_shift.ge.yblob2) then
+          temperature=get_user_temperature(time,bcflag,3) ! water region
+         else if ((z_shift.ge.zero).and. &
+                  (z_shift.le.yblob2)) then
           temperature= &
            get_user_temperature(time,bcflag,im_solid_temperature)+ &
            (get_user_temperature(time,bcflag,3)- &
             get_user_temperature(time,bcflag,im_solid_temperature))* &
-            zprime/yblob2
-         else if (zprime.le.zero) then
+            z_shift/yblob2
+         else if (z_shift.le.zero) then
           ! substrate
           temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
          else
-          print *,"zprime failure"
+          print *,"z_shift failure"
           stop
          endif
         else
@@ -3934,10 +3935,10 @@ end subroutine dynamic_contact_angle
             print *,"num_materials invalid"
             stop
            endif
-           if (zprime.ge.yblob2) then
+           if (z_shift.ge.yblob2) then
             temperature=get_user_temperature(time,bcflag,3) ! ice
-           else if ((zprime.ge.zero).and. &
-                    (zprime.le.yblob2)) then
+           else if ((z_shift.ge.zero).and. &
+                    (z_shift.le.yblob2)) then
 
             if (zblob4.eq.zero) then
              temperature=get_user_temperature(time,bcflag,im_solid_temperature)
@@ -3946,35 +3947,38 @@ end subroutine dynamic_contact_angle
               get_user_temperature(time,bcflag,im_solid_temperature)+ &
               (get_user_temperature(time,bcflag,3)- &
                get_user_temperature(time,bcflag,im_solid_temperature))* &
-              zprime/yblob2 
+              z_shift/yblob2 
             else
              print *,"zblob4 invalid"
              stop
             endif
 
-           else if (zprime.le.zero) then
+           else if (z_shift.le.zero) then
             temperature= &
              get_user_temperature(time,bcflag,im_solid_temperature) !substrate
            else
-            print *,"zprime failure"
+            print *,"z_shift failure"
             stop
            endif
           else
            print *,"im invalid64"
            stop
           endif
+
          else if (bcflag.eq.1) then ! called from denBC
 
           if (im_solid_temperature.ne.4) then
            print *,"im_solid_temperature invalid"
            stop
           endif
-          if (zprime.ge.yblob2+radblob3) then
+           ! radblob3=thickness of underside of drop that is already
+           ! frozen.
+          if (z_shift.ge.yblob2+radblob3) then
            temperature=get_user_temperature(time,bcflag,1) ! water
-          else if (zprime.ge.yblob2) then
+          else if (z_shift.ge.yblob2) then
            temperature=get_user_temperature(time,bcflag,3) ! ice
-          else if ((zprime.ge.zero).and. &
-                   (zprime.le.yblob2)) then
+          else if ((z_shift.ge.zero).and. &
+                   (z_shift.le.yblob2)) then
 
            if (zblob4.eq.zero) then
             temperature=get_user_temperature(time,bcflag,im_solid_temperature)
@@ -3983,23 +3987,24 @@ end subroutine dynamic_contact_angle
              get_user_temperature(time,bcflag,im_solid_temperature)+ &
              (get_user_temperature(time,bcflag,3)- &
               get_user_temperature(time,bcflag,im_solid_temperature))* &
-             zprime/yblob2
+             z_shift/yblob2
            else
             print *,"zblob4 invalid"
             stop
            endif
 
-          else if (zprime.le.zero) then
+          else if (z_shift.le.zero) then
            ! substrate
            temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
           else
-           print *,"zprime failure"
+           print *,"z_shift failure"
            stop
           endif
          else
           print *,"bcflag invalid"
           stop
          endif
+         ! substrate: 0<y<yblob2
         else if (yblob2.eq.zero) then
          ! do nothing
         else
@@ -4007,7 +4012,7 @@ end subroutine dynamic_contact_angle
          print *,"probtype,axis_dir,bcflag ",probtype,axis_dir,bcflag
          print *,"im=",im
          print *,"time=",time
-         print *,"zprime=",zprime
+         print *,"z_shift=",z_shift
          print *,"yblob2=",yblob2
          stop
         endif ! yblob2>0
@@ -4052,16 +4057,16 @@ end subroutine dynamic_contact_angle
            print *,"parameters not supported"
            stop
           endif
-          zprime=yblob2+(z-yblob2)*cos(radblob2)-x*sin(radblob2)
+          z_shift=yblob2+(z-yblob2)*cos(radblob2)-x*sin(radblob2)
          else if (levelrz.eq.COORDSYS_CARTESIAN) then
           if (SDIM.eq.2) then
-           zprime=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
+           z_shift=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
           else if (SDIM.eq.3) then
            if (radblob3.ne.zero) then
             print *,"radblob3.ne.zero is not supported"
             stop
            endif
-           zprime=zblob2+(z-zblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
+           z_shift=zblob2+(z-zblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
           else
            print *,"dimension bust"
            stop
@@ -4076,19 +4081,19 @@ end subroutine dynamic_contact_angle
         endif
 
          ! (xblob2,yblob2,zblob2) is the "center" of the heated plate.
-        if (zprime.ge.substrate_height+yblob3) then
+        if (z_shift.ge.substrate_height+yblob3) then
          temperature=get_user_temperature(time,bcflag,1)
-        else if (zprime.le.substrate_height) then
+        else if (z_shift.le.substrate_height) then
          temperature=get_user_temperature(time,bcflag,im_solid_temperature)
-        else if ((substrate_height.le.zprime).and. &
-                 (zprime.le.substrate_height+yblob3)) then
+        else if ((substrate_height.le.z_shift).and. &
+                 (z_shift.le.substrate_height+yblob3)) then
          temp_slope=(get_user_temperature(time,bcflag,im_solid_temperature)- &
                      get_user_temperature(time,bcflag,1))/yblob3
          temperature= &
           get_user_temperature(time,bcflag,im_solid_temperature)- &
-          temp_slope*(zprime-substrate_height)
+          temp_slope*(z_shift-substrate_height)
         else
-         print *,"zprime or substrate_height invalid"
+         print *,"z_shift or substrate_height invalid"
          stop
         endif
        endif
@@ -4109,7 +4114,7 @@ end subroutine dynamic_contact_angle
         print *,"yblob3 invalid"
         stop
        endif
-       if (zprime.le.yblob3) then
+       if (z_shift.le.yblob3) then
         temperature=get_user_temperature(time,bcflag,im_solid_temperature)
        endif
 

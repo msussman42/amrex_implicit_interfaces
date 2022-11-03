@@ -27,7 +27,7 @@ ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=4000 # default: 40000
+ns.mof_decision_tree_learning=400 # default: 40000
 ns.MOFITERMAX_AFTER_PREDICT=15
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
@@ -100,7 +100,9 @@ ns.gravity        = 0.0 # thermal effects only
 #ns.tension=0.072 0.0 0.021 0.072 0.072 0.021
 #contact line: theta_L_initial=90 degrees
 #theta2=180 theta1=theta3="90"
-ns.tension=0.072 0.0 0.072 0.072 0.072 0.072
+#thermal effects only
+ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
+#ns.tension=0.072 0.0 0.072 0.072 0.072 0.072
 
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
@@ -115,8 +117,10 @@ ns.stiffCP = 4.21e+3 1.0e+3 2.03e+3 2.03e+2  # dimensional J/(kg K)
 #12 13 14 23 24 34 then reverse
 # dimensional J/kg:
 #thermal effects only
-#ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
-ns.latent_heat = 0.0 -3.34 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+#ns.latent_heat = 0.0 -3.34 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+#default: Stefan model
+ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0 
 # 1->2 liquid-> gas
 # 1->3 liquid->ice 
 # ....
@@ -153,9 +157,9 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
 #ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
-#ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
+ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
 #ns.denconst=1000.0 1.29 917.0 10000.0
-ns.denconst=1000.0 1.29 850.0 10000.0
+#ns.denconst=1000.0 1.29 850.0 10000.0
 ns.material_thickness=1.5 0.0 1.5 1.5
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
@@ -163,8 +167,8 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-ns.tempconst=273.0 273.0 273.0 271.0
-ns.initial_temperature=273.0 273.0 273.0 271.0
+ns.tempconst=293.0 274.0 271.0 271.0
+ns.initial_temperature=293.0 274.0 271.0 271.0
 ns.xblob=0.0  # center of water drop
 # dxcoarse=0.0005/64
 ns.yblob=0.00003125 #4*dxcoarse=3.125e-5
@@ -179,7 +183,7 @@ ns.radblob3=0.000015625 #dimensionless 2*dxcoarse=0.0005/32=0.000015625
 # 3.2724923E-11 m^3
 #ns.zblob4=0.0000625
 #transitional substrate temperature
-ns.zblob4=0.0 #substrate tempreture=wall temperature(atylo)
+ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 ns.radblob=250.0e-6 # meters
 ns.denfact=1.0
 ns.velfact=0.0
