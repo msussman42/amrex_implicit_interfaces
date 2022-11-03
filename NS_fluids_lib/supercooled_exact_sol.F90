@@ -140,23 +140,30 @@ contains
 
     REAL(kind=8), parameter:: dx = 1.0D-2     !! Marching step
     REAL(kind=8), parameter:: tol = 1.0D-14   !! tolerance of root finding 
-    INTEGER, parameter:: max_itr = 50           !! max ietration number
+    INTEGER, parameter:: max_itr = 50           !! max iteration number
+    INTEGER, parameter:: max_bracketing= 1000  !! max iteration number
     
     REAL(kind=8) :: a, b, fa, fb, p, fp
     
     INTEGER :: k
+    INTEGER :: nbracket
 
     !! initialize the search region
     a = 1.0D-10
     fa = f_lambda(a,St)
     b = a
     !! march forward to have a zero crossing in the search domain
+    nbracket=0
     do
        b = b + dx
        fb = f_lambda(b,St)
        if((fa*fb).lt.0.0D0) then
           exit
        end if
+       nbracket=nbracket+1
+       if (nbracket.gt.max_bracketing) then
+        exit
+       endif
     end do
 
 !!$    print *,"a= ", a
@@ -168,7 +175,9 @@ contains
 
     if ((fa*fb).gt.0.0D0) then
        print *,"Chosen range may not have a zero crossing!"
-       stop
+       print *,"find_lambda failed, setting lambda=0"
+       lambda=0.0d0
+       return
     end if
 
     
@@ -195,7 +204,8 @@ contains
     
     print *,"Reached max iterations &
          but not converged to the requested tolerence"
-    stop
+    print *,"find_lambda failed, setting lambda=0"
+    lambda=0.0d0
   
   end subroutine find_lambda
 !!$****************************************************
@@ -296,8 +306,8 @@ subroutine solidification_front_time_driver(t, R)
     stop
    endif
   else 
-   print *,"supercooled_lm invalid"
-   stop
+   print *,"supercooled_lm invalid setting t=0.0"
+   t=0.0d0
   endif
 
 end subroutine solidification_front_time_driver
