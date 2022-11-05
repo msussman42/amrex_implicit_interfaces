@@ -12730,11 +12730,11 @@ void NavierStokes::check_grid_places() {
   if (bfact_fine_min<4)
    amrex::Error("bfact_fine_min<4");
  } else if (level==finest_level) {
-  bfact_fine_min=((bfact_SEM<2) ? 2 : bfact_SEM);
-  if (bfact_grid<2)
-   amrex::Error("we must have blocking factor at least 2(1)");
-  if (bfact_fine_min<2)
-   amrex::Error("bfact_fine_min<2");
+  bfact_fine_min=((bfact_SEM<4) ? 4 : bfact_SEM);
+  if (bfact_grid<4)
+   amrex::Error("we must have blocking factor at least 4(1)");
+  if (bfact_fine_min<4)
+   amrex::Error("bfact_fine_min<4");
  } else
   amrex::Error("level invalid");
 
@@ -12755,8 +12755,8 @@ void NavierStokes::check_grid_places() {
   if (bfact_fine_min<4)
    amrex::Error("bfact_fine_min<4");
  } else if (level==finest_level) {
-  if (bfact_fine_min<2)
-   amrex::Error("bfact_fine_min<2");
+  if (bfact_fine_min<4)
+   amrex::Error("bfact_fine_min<4");
  } else
   amrex::Error("level invalid");
 
@@ -17480,8 +17480,8 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  int bfact=parent->Space_blockingFactor(level);
 
  if (level==max_level-1) {
-  if (n_error_buf<1)
-   amrex::Error("amr.n_error_buf<1 on level==max_level-1");
+  if (n_error_buf<2)
+   amrex::Error("amr.n_error_buf<2 on level==max_level-1");
  } else if ((level>=0)&&(level<max_level-1)) {
   if (n_error_buf<2)
    amrex::Error("amr.n_error_buf<2 on level<max_level-1");

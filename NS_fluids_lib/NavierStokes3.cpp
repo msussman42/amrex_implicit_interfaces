@@ -2345,8 +2345,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
    if (bfact_grid<4)
     amrex::Error("we must have blocking factor at least 4(1)");
   } else if (ilev==finest_level) {
-   if (bfact_grid<2)
-    amrex::Error("we must have blocking factor at least 2(1)");
+   if (bfact_grid<4)
+    amrex::Error("we must have blocking factor at least 4(1)");
   } else
    amrex::Error("ilev invalid");
   ns_level.check_grid_places();
