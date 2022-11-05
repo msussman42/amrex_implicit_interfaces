@@ -1133,6 +1133,13 @@ if ((istate.ge.1).and. &
     ! for density, temperature and species variables)
     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
     STATE_merge=STATE
+    if ((dir.eq.1).and.(side.eq.2)) then !xhi, 2D
+     if (axis_dir.eq.5) then
+      if (xblob3.gt.zero) then
+       STATE_merge=xblob3
+      endif
+     endif
+    endif
    else
     print *,"istate invalid"
     stop
