@@ -14607,14 +14607,21 @@ NavierStokes::phase_change_redistributeALL() {
      allocate_array(ngrow_distance,1,-1,donorflag_MF);
      setVal_array(ngrow_distance,1,0.0,donorflag_MF);
 
+     allocate_array(ngrow_distance,1,-1,accept_count_MF);
+     setVal_array(ngrow_distance,1,0.0,accept_count_MF);
+
      allocate_array(ngrow_distance,1,-1,donorflag_complement_MF);
      setVal_array(ngrow_distance,1,0.0,donorflag_complement_MF);
 
+     allocate_array(ngrow_distance,1,-1,accept_count_complement_MF);
+     setVal_array(ngrow_distance,1,0.0,accept_count_complement_MF);
+
       // isweep==0: fort_tagexpansion
-      // isweep==1: fort_distributeexpansion
-      // isweep==2: fort_clearexpansion
-      // isweep==3: fort_initjumpterm
-     for (int isweep_redistribute=0;isweep_redistribute<=2;
+      // isweep==1: fort_accept_neighbors
+      // isweep==2: fort_distributeexpansion
+      // isweep==3: fort_clearexpansion
+      // isweep==4: fort_initjumpterm
+     for (int isweep_redistribute=0;isweep_redistribute<=3;
 	  isweep_redistribute++) {
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -14631,9 +14638,9 @@ NavierStokes::phase_change_redistributeALL() {
          im_source << ' ' << im_dest << ' ' << mdot_sum[0] << '\n';
         std::cout << "before:imsrc,imdst,mdot_sum_complement " <<
          im_source << ' ' << im_dest << ' ' << mdot_sum_complement[0] << '\n';
-       } else if (isweep_redistribute==1) {
-        // do nothing
        } else if (isweep_redistribute==2) {
+        // do nothing
+       } else if (isweep_redistribute==3) {
         std::cout << "after:imsrc,imdst,mdot_sum2 " <<   
          im_source << ' ' << im_dest << ' ' << mdot_sum2[0] << '\n';
         std::cout << "after:imsrc,imdst,mdot_lost " <<   
@@ -14656,10 +14663,12 @@ NavierStokes::phase_change_redistributeALL() {
 
       } // if ParallelDescriptor::IOProcessor()
 
-     } // isweep_redistribute=0,1,2
+     } // isweep_redistribute=0,1,2,3
 
      delete_array(donorflag_MF);
+     delete_array(accept_count_MF);
      delete_array(donorflag_complement_MF);
+     delete_array(accept_count_complement_MF);
 
     } else if (LL==0.0) {
      // do nothing
@@ -14830,7 +14839,7 @@ NavierStokes::phase_change_redistributeALL() {
 
  // copy contributions from all materials changing phase to a single
  // source term.
- int isweep_combine=3;
+ int isweep_combine=4;
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   mdotplus[tid]=0.0;
@@ -14852,7 +14861,7 @@ NavierStokes::phase_change_redistributeALL() {
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,
    indexEXP_filler,
-   isweep_combine); // ==3 (fort_initjumpterm)
+   isweep_combine); // ==4 (fort_initjumpterm)
  } // ilev=finest_level ... level
 
  if (verbose>0) {
