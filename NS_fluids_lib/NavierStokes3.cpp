@@ -2853,8 +2853,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
-       if (ngrow_expansion!=2)
-        amrex::Error("ngrow_expansion!=2");
+       if (ngrow_expansion!=3)
+        amrex::Error("ngrow_expansion!=3");
        if (ngrow_make_distance!=3)
         amrex::Error("ngrow_make_distance!=3");
        if (ngrow_distance!=4)
@@ -2908,8 +2908,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.setVal_localMF(SATURATION_TEMP_MF,0.0,0,
           ntsat,ngrow_make_distance);
 
-        ns_level.new_localMF(JUMP_STRENGTH_MF,2*num_interfaces,ngrow_expansion,-1); 
-        ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,2*num_interfaces,ngrow_expansion);
+        ns_level.new_localMF(JUMP_STRENGTH_MF,2*num_interfaces,
+			     ngrow_expansion,-1); 
+        ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,
+			        2*num_interfaces,ngrow_expansion);
 
        } // ilev=level ... finest_level
 

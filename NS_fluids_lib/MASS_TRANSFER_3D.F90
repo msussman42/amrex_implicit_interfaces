@@ -3547,11 +3547,11 @@ stop
        debugrate=1
       endif
 
-      if (ngrow_expansion.ne.2) then
+      if (ngrow_expansion.ne.3) then
        print *,"ngrow_expansion invalid"
        stop
       endif
-      if (ngrow_expansion_in.ne.2) then
+      if (ngrow_expansion_in.ne.3) then
        print *,"ngrow_expansion_in invalid"
        stop
       endif

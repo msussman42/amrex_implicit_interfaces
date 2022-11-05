@@ -4448,12 +4448,12 @@ stop
        stop
       endif
 
-      if (ngrow_expansion.ne.2) then
-       print *,"ngrow_expansion invalid"
+      if (ngrow_expansion.ne.3) then
+       print *,"expecting ngrow_expansion=3"
        stop
       endif
-      if (ngrow_expansion_in.ne.2) then
-       print *,"ngrow_expansion_in invalid"
+      if (ngrow_expansion_in.ne.3) then
+       print *,"expecting ngrow_expansion_in=3"
        stop
       endif
       if (time.ge.zero) then
@@ -11662,12 +11662,12 @@ stop
        print *,"time invalid"
        stop
       endif
-      if (ngrow_expansion.ne.2) then
-       print *,"ngrow_expansion invalid"
+      if (ngrow_expansion.ne.3) then
+       print *,"expecting ngrow_expansion=3"
        stop
       endif
-      if (ngrow_expansion_in.ne.2) then
-       print *,"ngrow_expansion_in invalid"
+      if (ngrow_expansion_in.ne.3) then
+       print *,"expecting ngrow_expansion_in=3"
        stop
       endif
 
@@ -12118,12 +12118,12 @@ stop
 
        !! Sanity checks
 
-       if (ngrow_expansion.ne.2) then
-        print *,"ngrow_expansion invalid"
+       if (ngrow_expansion.ne.3) then
+        print *,"expecting ngrow_expansion=3"
         stop
        endif
-       if (ngrow_expansion_in.ne.2) then
-        print *,"ngrow_expansion_in invalid"
+       if (ngrow_expansion_in.ne.3) then
+        print *,"expecting ngrow_expansion_in=3"
         stop
        endif
        if ((im_source.ge.1).and.(im_source.le.num_materials)) then
@@ -12642,12 +12642,12 @@ stop
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
        !! Sanity checks
-       if (ngrow_expansion.ne.2) then
-        print *,"ngrow_expansion invalid"
+       if (ngrow_expansion.ne.3) then
+        print *,"expecting ngrow_expansion=3"
         stop
        endif
-       if (ngrow_expansion_in.ne.2) then
-        print *,"ngrow_expansion_in invalid"
+       if (ngrow_expansion_in.ne.3) then
+        print *,"expecting ngrow_expansion_in=3"
         stop
        endif
        if ((im_source.ge.1).and.(im_source.le.num_materials)) then

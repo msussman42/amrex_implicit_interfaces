@@ -563,7 +563,7 @@ Vector<int> NavierStokes::im_elastic_map; //0...num_materials_viscoelastic-1
 
 Vector<Real> NavierStokes::FSI_force_integral;
 
-int NavierStokes::ngrow_expansion=2;
+int NavierStokes::ngrow_expansion=3;
  
 Real NavierStokes::real_number_of_cells=0.0; 
 
@@ -14127,10 +14127,10 @@ NavierStokes::level_phase_change_convert(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_convert");
 
- if (ngrow_expansion==2) {
+ if (ngrow_expansion==3) {
   // do nothing
  } else
-  amrex::Error("expecting ngrow_expansion==2");
+  amrex::Error("expecting ngrow_expansion==3");
 
  if (ngrow_distance==4) {
   // do nothing
@@ -14515,10 +14515,10 @@ NavierStokes::phase_change_redistributeALL() {
  if (level!=0)
   amrex::Error("level invalid phase_change_redistributeALL");
 
- if (ngrow_expansion==2) {
+ if (ngrow_expansion==3) {
   // do nothing
  } else
-  amrex::Error("expecting ngrow_expansion==2");
+  amrex::Error("expecting ngrow_expansion==3");
 
  if (ngrow_distance==4) {
   // do nothing
@@ -14545,7 +14545,8 @@ NavierStokes::phase_change_redistributeALL() {
  mdot_sum_complement.resize(thread_class::nthreads);
  mdot_sum2_complement.resize(thread_class::nthreads);
 
- allocate_array(ngrow_expansion,2*num_interfaces,-1,JUMP_STRENGTH_COMPLEMENT_MF); 
+ allocate_array(ngrow_expansion,2*num_interfaces,-1,
+		JUMP_STRENGTH_COMPLEMENT_MF); 
  copyALL(ngrow_expansion,2*num_interfaces,0,0,
    JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
 
@@ -14884,10 +14885,10 @@ NavierStokes::level_phase_change_redistribute(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_redistribute");
 
- if (ngrow_expansion==2) {
+ if (ngrow_expansion==3) {
   // do nothing
  } else
-  amrex::Error("expecting ngrow_expansion==2");
+  amrex::Error("expecting ngrow_expansion==3");
 
  if (ngrow_distance==4) {
   // do nothing
