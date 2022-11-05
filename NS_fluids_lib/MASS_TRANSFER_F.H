@@ -16,7 +16,7 @@ extern "C"
     int* tid,
     int* im_outer,
     int* im_opp_outer,
-    int* ngrow_expansion,
+    int* ngrow_expansion, // =3
     int* level,int* finest_level,
     int* nden,
     int* nstate,

@@ -636,7 +636,7 @@ extern "C"
     Real* mdotplus,
     Real* mdotminus,
     Real* mdotcount,
-    int* ngrow_expansion,
+    int* ngrow_expansion, // =3
     Real* time,
     int* level,
     int* finest_level,
@@ -676,7 +676,7 @@ extern "C"
    void fort_tagexpansion(
     int* freezing_model,
     int* distribute_from_target,
-    int* ngrow_expansion,
+    int* ngrow_expansion, // =3
     Real* time,
     int* vofbc,
     Real* expect_mdot_sign,
@@ -705,7 +705,7 @@ extern "C"
 
 
    void fort_distributeexpansion(
-    int* ngrow_expansion,
+    int* ngrow_expansion, // =3
     int* im_source,
     int* im_dest,
     int* indexEXP,
@@ -726,7 +726,7 @@ extern "C"
     AMREX_ARLIM_P(jump_comp_hi) );
 
    void fort_clearexpansion(
-    int* ngrow_expansion,
+    int* ngrow_expansion, // =3
     Real* mdot_sum,
     Real* mdot_lost,
     Real* mdot_sum_comp,
