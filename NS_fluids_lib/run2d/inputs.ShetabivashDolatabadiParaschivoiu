@@ -173,8 +173,8 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-ns.tempconst=          293.0 293.0 271.0 271.0
-ns.initial_temperature=293.0 293.0 271.0 271.0
+ns.tempconst=          274.0 293.0 271.0 271.0
+ns.initial_temperature=274.0 293.0 271.0 271.0
 ns.xblob3=293.0 #force ambient temperature condition on all walls except the
                 #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop

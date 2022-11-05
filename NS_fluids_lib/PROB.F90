@@ -244,7 +244,8 @@ stop
        stop
       endif
 
-      if ((complement_flag.eq.0).or.(complement_flag.eq.1)) then
+      if ((complement_flag.eq.0).or. &
+          (complement_flag.eq.1)) then
        ! do nothing
       else
        print *,"complement_flag invalid"

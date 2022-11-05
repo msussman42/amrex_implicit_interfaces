@@ -12086,7 +12086,8 @@ stop
        REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
        REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(inout), target :: expan_comp(DIMV(expan_comp),2*num_interfaces)
+       REAL_T, INTENT(inout), target ::  &
+         expan_comp(DIMV(expan_comp),2*num_interfaces)
        REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
        INTEGER_T i,j,k,isweep
