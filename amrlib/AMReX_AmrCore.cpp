@@ -702,28 +702,28 @@ AmrCore::AMR_checkInput ()
     if (max_level < 0)
         amrex::Error("checkInput: max_level not set");
     //
-    // 1. Check that blocking_factor is a power of 2 and no smaller than 2.
+    // 1. Check that blocking_factor is a power of 2 and no smaller than 4.
     // 2. Check that blocking_factor[i+1]<=blocking_factor[i].
     // 3. Check that blocking_factor[i]>=8 if i<max_level.
     //    (this last check insures that there are at least 4 coarse 
     //     (level i) proper nesting cells next to a (level i+1) finer level)
     for (int i = 0; i <= max_level; i++) {
-        int k = Old_blockingFactor(i);
-	if (i<max_level) {
-         if (k<8) {
-  	  std::cout << "must have at least 4 proper nesting cells" << '\n';
-	  amrex::Error("must have blocking_factor>=8 if lev<max_level");
-	 }
-	 if (k<Old_blockingFactor(i+1))
-	  amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
-	}
-        if (k<2)
-         amrex::Error("blocking factor must be 2 or larger on max_level");
+     int k = Old_blockingFactor(i);
+     if (i<max_level) {
+      if (k<8) {
+       std::cout << "must have at least 4 proper nesting cells" << '\n';
+       amrex::Error("must have blocking_factor>=8 if lev<max_level");
+      }
+      if (k<Old_blockingFactor(i+1))
+       amrex::Error("blocking_factor[i]<blocking_factor[i+1]");
+     }
+     if (k<4)
+      amrex::Error("blocking factor must be 4 or larger on max_level");
 
-        while ( k > 0 && (k%2 == 0) )
-            k /= 2;
-        if (k != 1)
-            amrex::Error("AmrCore::checkInputs: blocking_factor not power of 2");
+     while ( k > 0 && (k%2 == 0) )
+         k /= 2;
+     if (k != 1)
+      amrex::Error("AmrCore::checkInputs: blocking_factor not power of 2");
     } // i=0 .. max_level
 
     for (int i = 0; i <= max_level; i++) {
@@ -761,13 +761,13 @@ AmrCore::AMR_checkInput ()
     } // i=0..max_level
 
     for (int i = 0; i < max_level; i++) {
-        int k = time_blocking_factor;
-        if (k>Old_blockingFactor(0))
-         amrex::Error("time_blocking_factor too big");
-        while ( k > 0 && (k%2 == 0) )
-            k /= 2;
-        if (k != 1)
-            amrex::Error("time_blocking_factor not power of 2");
+     int k = time_blocking_factor;
+     if (k>Old_blockingFactor(0))
+      amrex::Error("time_blocking_factor too big");
+     while ( k > 0 && (k%2 == 0) )
+         k /= 2;
+     if (k != 1)
+         amrex::Error("time_blocking_factor not power of 2");
     }
 
 

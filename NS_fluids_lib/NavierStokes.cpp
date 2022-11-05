@@ -2432,9 +2432,6 @@ NavierStokes::read_params ()
      // do nothing
     } else {
      std::cout << "max_level_two_materials no longer an option\n";
-     std::cout << "reduce amr.blocking_factor on the finest level \n";
-     std::cout << "reduce amr.n_error_buf on the finest level possible \n";
-     std::cout << "increase amr.grid_eff \n";
      amrex::Error("aborting ...");
     }
 
@@ -2448,9 +2445,6 @@ NavierStokes::read_params ()
       // do nothing
      } else {
       std::cout << "radius_cutoff no longer an option\n";
-      std::cout << "reduce amr.blocking_factor on the finest level \n";
-      std::cout << "reduce amr.n_error_buf on the finest level possible\n";
-      std::cout << "increase amr.grid_eff \n";
       amrex::Error("aborting ...");
      }
     } // i=0..num_materials-1
