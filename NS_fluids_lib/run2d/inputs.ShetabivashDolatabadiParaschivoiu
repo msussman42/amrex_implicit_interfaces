@@ -157,9 +157,9 @@ ns.material_type=0 0 0 999
 # water: k=0.58 W/(M K)
 # MKS: cp=4.1855 J/((kg/1000)K)=4.1855E+3 J/(kg K)
 # k_s/k_l=2.2/0.55=4.0
-ns.heatviscconst=0.546 0.026 2.2 386 # W/(m K)
+ns.heatviscconst=0.546 0.026 2.2 2.2 # W/(m K)
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
+ns.heatviscconst_interface=0.0 0.0 0.0 1.0e-10 1.0e-10 2.2
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
 #ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
@@ -173,8 +173,10 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-ns.tempconst=293.0 293.0 271.0 271.0
+ns.tempconst=          293.0 293.0 271.0 271.0
 ns.initial_temperature=293.0 293.0 271.0 271.0
+ns.xblob3=293.0 #force ambient temperature condition on all walls except the
+                #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop
 # dxcoarse=0.0005/64
 ns.yblob=0.00003125 #4*dxcoarse=3.125e-5

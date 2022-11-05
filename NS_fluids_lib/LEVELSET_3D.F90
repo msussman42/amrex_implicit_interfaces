@@ -7780,12 +7780,15 @@ stop
       INTEGER_T im_main,im_main_opp,im_opp
       INTEGER_T ireverse
       INTEGER_T iten
+      INTEGER_T local_iten
       INTEGER_T zeroradius_flag
-      INTEGER_T iten_tension,iten_micro
+      INTEGER_T iten_tension
+      INTEGER_T iten_micro
       INTEGER_T im_tension,im_opp_tension
       INTEGER_T im_fluid_micro,im_solid_micro
 
-      REAL_T gradh,gradh_tension,sign_test
+      REAL_T gradh,gradh_tension
+      REAL_T sign_test
       REAL_T one_over_mu
       REAL_T localvisc(num_materials)
       INTEGER_T null_viscosity
@@ -8125,10 +8128,11 @@ stop
          do im_opp=im+1,num_materials
           if (is_rigid(im_opp).eq.0) then
            call get_iten(im,im_opp,iten)
+
            do ireverse=0,1
-            if (get_user_latent_heat(iten+ireverse*num_interfaces, &
-                  293.0d0,1).ne.zero) then
-             if (freezing_model(iten+ireverse*num_interfaces).eq.0) then
+            local_iten=iten+ireverse*num_interfaces
+            if (get_user_latent_heat(local_iten,293.0d0,1).ne.zero) then
+             if (freezing_model(local_iten).eq.0) then
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
                   (im_solid_micro.le.num_materials)) then
@@ -8158,8 +8162,14 @@ stop
                stop
               endif 
              endif
+            else if (get_user_latent_heat(local_iten,293.0d0,1).eq.zero) then
+             ! do nothing
+            else
+             print *,"get_user_latent_heat invalid"
+             stop
             endif
            enddo ! ireverse=0..1
+
           else if (is_rigid(im_opp).eq.1) then
            ! do nothing
           else
@@ -8241,7 +8251,9 @@ stop
          wtL=(xstenMAC(0,veldir+1)-xstenMAC(-1,veldir+1))
          wtR=(xstenMAC(1,veldir+1)-xstenMAC(0,veldir+1))
          wtsum=wtL+wtR
-         if ((wtL.gt.zero).and.(wtR.gt.zero).and.(wtsum.gt.zero)) then
+         if ((wtL.gt.zero).and. &
+             (wtR.gt.zero).and. &
+             (wtsum.gt.zero)) then
           ! do nothing
          else
           print *,"wtL, wtR, or wtsum invalid" 
@@ -8953,7 +8965,8 @@ stop
             ! temperature diffusion in the solid
             if (iten_micro.eq.0) then
              ! do nothing
-            else if ((iten_micro.ge.1).and.(iten_micro.le.num_interfaces)) then
+            else if ((iten_micro.ge.1).and. &
+                     (iten_micro.le.num_interfaces)) then
              faceheat_local=zero ! internal TSAT dirichlet bc 
              do imspec=1,num_species_var
               facespecies_local(imspec)=zero
@@ -8990,22 +9003,24 @@ stop
              ! do nothing
             else if (heatvisc_interface(iten).gt.zero) then
 
-             if (get_user_latent_heat(iten,293.0d0,1).ne.zero) then
-              if ((freezing_model(iten).eq.0).or. &
-                  (freezing_model(iten).eq.5)) then
-               print *,"heatvisc_interface invalid"
+             do ireverse=0,1
+              local_iten=iten+ireverse*num_interfaces
+              if (get_user_latent_heat(local_iten,293.0d0,1).ne.zero) then
+               if ((freezing_model(local_iten).eq.0).or. &
+                   (freezing_model(local_iten).eq.5)) then
+                print *,"heatvisc_interface invalid"
+                stop
+               endif 
+              else if (get_user_latent_heat(local_iten,293.0d0,1).eq.zero) then
+               !do nothing
+              else
+               print *,"get_user_latent_heat invalid"
                stop
               endif 
-             endif 
-             if (get_user_latent_heat(iten+num_interfaces,293.0d0,1).ne.zero) then
-              if ((freezing_model(iten+num_interfaces).eq.0).or. &
-                  (freezing_model(iten+num_interfaces).eq.5)) then
-               print *,"heatvisc_interface invalid"
-               stop
-              endif 
-             endif 
+             enddo !do ireverse=0,1
 
              faceheat_local=heatvisc_interface(iten)
+
             else
              print *,"heatvisc_interface invalid"
              stop
@@ -9022,6 +9037,7 @@ stop
            stop
           endif
 
+           ! neither adjoining cell is a solid cell.
          else if (solid_present_flag.eq.0) then
 
           if (gradh.eq.zero) then
@@ -9150,7 +9166,8 @@ stop
               stop
              endif 
             endif 
-            if (get_user_latent_heat(iten+num_interfaces,293.0d0,1).ne.zero) then
+            if (get_user_latent_heat( &
+                 iten+num_interfaces,293.0d0,1).ne.zero) then
              if ((freezing_model(iten+num_interfaces).eq.0).or. &
                  (freezing_model(iten+num_interfaces).eq.5)) then
               print *,"heatvisc_interface invalid"

@@ -4827,7 +4827,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (facecut_solid.ge.VOFTOL_AREAFRAC) then
        if (im_solid.eq.0) then
         ! do nothing
-       else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
+       else if ((im_solid.ge.1).and. &
+                (im_solid.le.num_materials)) then
         im_solid_valid=1
         if (LScrit_solid.ge.zero) then
          is_solid_face=1
@@ -4851,7 +4852,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        is_prescribed_face=1
        if (im_prescribed.eq.0) then
         ! do nothing
-       else if ((im_prescribed.ge.1).and.(im_prescribed.le.num_materials)) then
+       else if ((im_prescribed.ge.1).and. &
+                (im_prescribed.le.num_materials)) then
         im_prescribed_valid=1 
         if ((partid_prescribed.lt.0).or. &
             (partid_prescribed.ge.nparts)) then
@@ -4865,7 +4867,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (facecut_prescribed.ge.VOFTOL_AREAFRAC) then
        if (im_prescribed.eq.0) then
         ! do nothing
-       else if ((im_prescribed.ge.1).and.(im_prescribed.le.num_materials)) then
+       else if ((im_prescribed.ge.1).and. &
+                (im_prescribed.le.num_materials)) then
         im_prescribed_valid=1
         if (LScrit_prescribed.ge.zero) then
          is_prescribed_face=1
