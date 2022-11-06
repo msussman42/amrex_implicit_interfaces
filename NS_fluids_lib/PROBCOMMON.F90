@@ -381,7 +381,6 @@ implicit none
 
       INTEGER_T, PARAMETER :: ngrow_make_distance=3
       INTEGER_T, PARAMETER :: ngrow_distance=4
-      INTEGER_T, PARAMETER :: ngrow_expansion=3
 
       REAL_T, PARAMETER :: GAMMA_SIMPLE_PARMS=1.4
 

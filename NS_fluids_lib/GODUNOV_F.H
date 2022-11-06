@@ -636,7 +636,6 @@ extern "C"
     Real* mdotplus,
     Real* mdotminus,
     Real* mdotcount,
-    int* ngrow_expansion, // =3
     Real* time,
     int* level,
     int* finest_level,
@@ -676,7 +675,6 @@ extern "C"
    void fort_tagexpansion(
     int* freezing_model,
     int* distribute_from_target,
-    int* ngrow_expansion, // =3
     Real* time,
     int* vofbc,
     Real* expect_mdot_sign,
@@ -704,8 +702,7 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
 
-   void fort_distributeexpansion(
-    int* ngrow_expansion, // =3
+   void fort_accept_weight(
     int* im_source,
     int* im_dest,
     int* indexEXP,
@@ -720,13 +717,41 @@ extern "C"
     Real* tag_comp,
     AMREX_ARLIM_P(tag_comp_lo),
     AMREX_ARLIM_P(tag_comp_hi),
+    Real* weightfab,AMREX_ARLIM_P(weightfablo),AMREX_ARLIM_P(weightfabhi),
+    Real* weight_comp,
+    AMREX_ARLIM_P(weight_comp_lo),
+    AMREX_ARLIM_P(weight_comp_hi),
+    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
+    Real* jump_comp,
+    AMREX_ARLIM_P(jump_comp_lo),
+    AMREX_ARLIM_P(jump_comp_hi) );
+
+
+   void fort_distributeexpansion(
+    int* im_source,
+    int* im_dest,
+    int* indexEXP,
+    int* level,int* finest_level,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,Real* dt,
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+    Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+    Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
+    Real* tag_comp,
+    AMREX_ARLIM_P(tag_comp_lo),
+    AMREX_ARLIM_P(tag_comp_hi),
+    Real* weightfab,AMREX_ARLIM_P(weightfablo),AMREX_ARLIM_P(weightfabhi),
+    Real* weight_comp,
+    AMREX_ARLIM_P(weight_comp_lo),
+    AMREX_ARLIM_P(weight_comp_hi),
     Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
     Real* jump_comp,
     AMREX_ARLIM_P(jump_comp_lo),
     AMREX_ARLIM_P(jump_comp_hi) );
 
    void fort_clearexpansion(
-    int* ngrow_expansion, // =3
     Real* mdot_sum,
     Real* mdot_lost,
     Real* mdot_sum_comp,

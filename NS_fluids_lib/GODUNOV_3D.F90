@@ -4367,7 +4367,6 @@ stop
        mdotplus, &
        mdotminus, &
        mdotcount, &
-       ngrow_expansion_in, &
        time, &
        level, &
        finest_level, &
@@ -4396,7 +4395,6 @@ stop
       REAL_T, INTENT(inout) :: mdotplus
       REAL_T, INTENT(inout) :: mdotminus
       REAL_T, INTENT(inout) :: mdotcount
-      INTEGER_T, INTENT(in) :: ngrow_expansion_in
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: level,finest_level
       REAL_T, INTENT(in) :: saturation_temp(2*num_interfaces)
@@ -4448,14 +4446,6 @@ stop
        stop
       endif
 
-      if (ngrow_expansion.ne.3) then
-       print *,"expecting ngrow_expansion=3"
-       stop
-      endif
-      if (ngrow_expansion_in.ne.3) then
-       print *,"expecting ngrow_expansion_in=3"
-       stop
-      endif
       if (time.ge.zero) then
        ! do nothing
       else
@@ -4514,7 +4504,7 @@ stop
       maskcov_ptr=>maskcov
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       JUMPFAB_ptr=>JUMPFAB
-      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_expansion,-1)
+      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_distance,-1)
       call checkbound_array1(fablo,fabhi,mdot_ptr,0,-1)
       LSnew_ptr=>LSnew
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
@@ -11556,7 +11546,6 @@ stop
       subroutine fort_tagexpansion(&
       freezing_model, &
       distribute_from_target, &
-      ngrow_expansion_in, &
       time, &
       vofbc, &
       expect_mdot_sign, &
@@ -11586,7 +11575,6 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: ngrow_expansion_in
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(inout) :: mdot_sum
       REAL_T, INTENT(inout) :: mdot_sum_comp
@@ -11662,14 +11650,6 @@ stop
        print *,"time invalid"
        stop
       endif
-      if (ngrow_expansion.ne.3) then
-       print *,"expecting ngrow_expansion=3"
-       stop
-      endif
-      if (ngrow_expansion_in.ne.3) then
-       print *,"expecting ngrow_expansion_in=3"
-       stop
-      endif
 
       if ((im_source.ge.1).and.(im_source.le.num_materials)) then
        ! do nothing
@@ -11716,8 +11696,8 @@ stop
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1)
-      call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1)
+      call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
       call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
 
@@ -12030,7 +12010,6 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_distributeexpansion(&
-       ngrow_expansion_in, &
        im_source, &
        im_dest, &
        indexEXP, &
@@ -12045,6 +12024,10 @@ stop
        DIMS(tag),&
        tag_comp, &
        DIMS(tag_comp),&
+       weightfab, &
+       DIMS(weightfab),&
+       weight_comp, &
+       DIMS(weight_comp),&
        expan, &
        DIMS(expan), &
        expan_comp, &
@@ -12055,11 +12038,9 @@ stop
        use global_utility_module
        use geometry_intersect_module
 
-
        IMPLICIT NONE
 
        INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
-       INTEGER_T, INTENT(in) :: ngrow_expansion_in
        INTEGER_T, INTENT(in) :: level,finest_level
        INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
@@ -12074,6 +12055,8 @@ stop
        INTEGER_T, INTENT(in) :: DIMDEC(LS)
        INTEGER_T, INTENT(in) :: DIMDEC(tag)
        INTEGER_T, INTENT(in) :: DIMDEC(tag_comp)
+       INTEGER_T, INTENT(in) :: DIMDEC(weightfab)
+       INTEGER_T, INTENT(in) :: DIMDEC(weight_comp)
        INTEGER_T, INTENT(in) :: DIMDEC(expan)
        INTEGER_T, INTENT(in) :: DIMDEC(expan_comp)
        REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
@@ -12084,6 +12067,10 @@ stop
        REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(in), target :: tag_comp(DIMV(tag_comp))
        REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(in), target :: weightfab(DIMV(weightfab))
+       REAL_T, pointer :: weightfab_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(in), target :: weight_comp(DIMV(weight_comp))
+       REAL_T, pointer :: weight_comp_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
        REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
        REAL_T, INTENT(inout), target ::  &
@@ -12119,14 +12106,6 @@ stop
 
        !! Sanity checks
 
-       if (ngrow_expansion.ne.3) then
-        print *,"expecting ngrow_expansion=3"
-        stop
-       endif
-       if (ngrow_expansion_in.ne.3) then
-        print *,"expecting ngrow_expansion_in=3"
-        stop
-       endif
        if ((im_source.ge.1).and.(im_source.le.num_materials)) then
         ! do nothing
        else
@@ -12167,12 +12146,17 @@ stop
        LS_ptr=>LS
        tag_ptr=>tag
        tag_comp_ptr=>tag_comp
+       weightfab_ptr=>weightfab
+       weight_comp_ptr=>weight_comp
+
        call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1)
-       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1)
+       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)
@@ -12186,7 +12170,7 @@ stop
          ! if a receiving cell
          TAGLOC=tag(D_DECL(i,j,k))
          if(TAGLOC.eq.two) then
-          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_expansion)
+          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
@@ -12205,7 +12189,7 @@ stop
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
             call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
-              ngrow_expansion)
+              ngrow_distance)
 
               ! first: find the maximum of |d phi/d n_grid|
               ! second: use the maximum to find the weights.
@@ -12371,7 +12355,7 @@ stop
          ! if a receiving cell
          TAGLOC=tag_comp(D_DECL(i,j,k))
          if(TAGLOC.eq.two) then
-          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_expansion)
+          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
@@ -12390,7 +12374,7 @@ stop
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
             call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
-              ngrow_expansion)
+              ngrow_distance)
 
               ! first: find the maximum of |d phi/d n_grid|
               ! second: use the maximum to find the weights.
@@ -12565,11 +12549,553 @@ stop
       end subroutine fort_distributeexpansion
 
 
+
+      subroutine fort_accept_weight(&
+       im_source, &
+       im_dest, &
+       indexEXP, &
+       level,finest_level, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx,dt, &
+       maskcov,DIMS(maskcov),&
+       LS,DIMS(LS),&
+       tag, &
+       DIMS(tag),&
+       tag_comp, &
+       DIMS(tag_comp),&
+       weightfab, &
+       DIMS(weightfab),&
+       weight_comp, &
+       DIMS(weight_comp),&
+       expan, &
+       DIMS(expan), &
+       expan_comp, &
+       DIMS(expan_comp) ) &
+       bind(c,name='fort_accept_weight')
+
+       use probf90_module
+       use global_utility_module
+       use geometry_intersect_module
+
+       IMPLICIT NONE
+
+       INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
+       INTEGER_T, INTENT(in) :: level,finest_level
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T :: stenlo(3),stenhi(3)
+       INTEGER_T :: stenlo2(3),stenhi2(3)
+       INTEGER_T, INTENT(in) :: bfact
+       REAL_T, INTENT(in) :: xlo(SDIM)
+       REAL_T, INTENT(in) :: dx(SDIM)
+       REAL_T, INTENT(in) :: dt
+       INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+       INTEGER_T, INTENT(in) :: DIMDEC(LS)
+       INTEGER_T, INTENT(in) :: DIMDEC(tag)
+       INTEGER_T, INTENT(in) :: DIMDEC(tag_comp)
+       INTEGER_T, INTENT(in) :: DIMDEC(weightfab)
+       INTEGER_T, INTENT(in) :: DIMDEC(weight_comp)
+       INTEGER_T, INTENT(in) :: DIMDEC(expan)
+       INTEGER_T, INTENT(in) :: DIMDEC(expan_comp)
+       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
+       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials)
+       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+       REAL_T, INTENT(in), target :: tag(DIMV(tag))
+       REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(in), target :: tag_comp(DIMV(tag_comp))
+       REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(in), target :: weightfab(DIMV(weightfab))
+       REAL_T, pointer :: weightfab_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(in), target :: weight_comp(DIMV(weight_comp))
+       REAL_T, pointer :: weight_comp_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
+       REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
+       REAL_T, INTENT(inout), target ::  &
+         expan_comp(DIMV(expan_comp),2*num_interfaces)
+       REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
+
+       INTEGER_T i,j,k,isweep
+       REAL_T DLS
+       REAL_T maxgrad,maxgrad2,curgrad
+       INTEGER_T dir
+       INTEGER_T i_n,j_n,k_n
+       INTEGER_T i_nn,j_nn,k_nn
+       REAL_T weight,total_weight,crit_weight
+       REAL_T total_weight2,crit_weight2
+       REAL_T TAGLOC,TAGSIDE
+       REAL_T xsten_n(-1:1,SDIM)
+       REAL_T xsten_nn(-1:1,SDIM)
+       REAL_T crit_ratio,factor
+       INTEGER_T is_inner,is_inner_main,nhalf
+       REAL_T LS_receiver,LS_donor
+       INTEGER_T local_mask
+
+       nhalf=1
+
+       expan_ptr=>expan
+       expan_comp_ptr=>expan_comp
+
+         ! if normal is close to inbetween two receiving cells, then include
+         ! both receiving cells in stencil for the donor.
+       crit_ratio=sqrt(4.0/5.0)
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       !! Sanity checks
+
+       if ((im_source.ge.1).and.(im_source.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_source invalid"
+        stop
+       endif
+       if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_dest invalid"
+        stop
+       endif
+       if (im_dest.eq.im_source) then
+        print *,"im_dest or im_source invalid"
+        stop
+       endif
+
+       if ((level.lt.0).or.(level.gt.finest_level)) then
+        print *,"level invalid in distribute_expansion"
+        stop
+       end if
+       if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
+        print *,"indexEXP invalid"
+        stop
+       endif
+       if (bfact.lt.1) then
+        print *,"bfact too small"
+        stop
+       endif
+       if (ngrow_distance.eq.4) then
+        ! do nothing
+       else
+        print *,"ngrow_distance invalid"
+        stop
+       endif
+
+       maskcov_ptr=>maskcov
+       LS_ptr=>LS
+       tag_ptr=>tag
+       tag_comp_ptr=>tag_comp
+       weightfab_ptr=>weightfab
+       weight_comp_ptr=>weight_comp
+
+       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+       call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
+       call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
+
+       ! Iterate over the box
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+
+        local_mask=NINT(maskcov(D_DECL(i,j,k)))
+
+        if (local_mask.eq.1) then
+
+         ! if a receiving cell
+         TAGLOC=tag(D_DECL(i,j,k))
+         if(TAGLOC.eq.two) then
+          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
+
+          do i_n=stenlo(1),stenhi(1)
+          do j_n=stenlo(2),stenhi(2)
+          do k_n=stenlo(3),stenhi(3)
+
+           is_inner_main=1
+           if ((abs(i_n-i).gt.1).or. &
+               (abs(j_n-j).gt.1).or. &
+               (abs(k_n-k).gt.1)) then
+            is_inner_main=0
+           endif
+
+           ! if there is donor neighbor cell
+           TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
+           if(TAGSIDE.eq.one) then
+
+            call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
+            call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
+              ngrow_distance)
+
+              ! first: find the maximum of |d phi/d n_grid|
+              ! second: use the maximum to find the weights.
+            crit_weight=zero
+            total_weight=zero
+            maxgrad=-one
+
+            crit_weight2=zero
+            total_weight2=zero
+            maxgrad2=-one
+
+            do isweep=0,1
+
+             do i_nn=stenlo2(1),stenhi2(1)
+             do j_nn=stenlo2(2),stenhi2(2)
+             do k_nn=stenlo2(3),stenhi2(3)
+
+              is_inner=1
+              if ((abs(i_nn-i_n).gt.1).or. &
+                  (abs(j_nn-j_n).gt.1).or. &
+                  (abs(k_nn-k_n).gt.1)) then
+               is_inner=0
+              endif
+
+              if (tag(D_DECL(i_nn,j_nn,k_nn)).eq.two) then ! receiver
+               call gridsten_level(xsten_nn,i_nn,j_nn,k_nn,level,nhalf)
+               weight=zero
+               do dir=1,SDIM
+                weight=weight+(xsten_n(0,dir)-xsten_nn(0,dir))**2
+               enddo
+               if (weight.le.zero) then
+                print *,"weight invalid"
+                stop
+               endif
+               LS_receiver=LS(D_DECL(i_nn,j_nn,k_nn),im_dest)
+               LS_donor=LS(D_DECL(i_n,j_n,k_n),im_dest)
+               DLS=(LS_receiver-LS_donor)**2
+               curgrad=sqrt(DLS/weight)
+               if (isweep.eq.0) then
+
+                if (is_inner.eq.1) then
+                 if ((curgrad.gt.maxgrad).or.(maxgrad.eq.-one)) then
+                  maxgrad=curgrad
+                 endif
+                endif 
+
+                if ((curgrad.gt.maxgrad2).or.(maxgrad2.eq.-one)) then
+                 maxgrad2=curgrad
+                endif
+               
+               else if (isweep.eq.1) then
+
+                if (is_inner.eq.1) then
+
+                 if (maxgrad.lt.zero) then
+                  weight=zero
+                  if (is_inner_main.eq.1) then
+                   print *,"maxgrad invalid"
+                   stop
+                  endif
+                 else if (maxgrad.eq.zero) then
+                  weight=one
+                 else if (curgrad/maxgrad.lt.crit_ratio) then
+                  weight=zero
+                 else
+                  weight=(curgrad/maxgrad)**2
+                 endif
+                 total_weight=total_weight+weight
+                 if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
+                  crit_weight=weight
+                  if (is_inner_main.eq.0) then
+                   print *,"is_inner_main invalid"
+                   stop
+                  endif
+                 endif
+
+                endif  ! is_inner=1
+
+                if ((maxgrad2.lt.maxgrad).or.(maxgrad2.lt.zero)) then
+                 print *,"maxgrad2 invalid"
+                 stop
+                else if (maxgrad2.eq.zero) then
+                 weight=one
+                else if (curgrad/maxgrad2.lt.crit_ratio) then
+                 weight=zero
+                else
+                 weight=(curgrad/maxgrad2)**2
+                endif
+                total_weight2=total_weight2+weight
+                if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
+                 crit_weight2=weight
+                endif
+
+               else
+                print *,"isweep invalid"
+                stop
+               endif
+              end if  ! receiver
+             end do ! k_nn
+             end do ! j_nn
+             end do ! i_nn
+
+             if (isweep.eq.0) then
+              if (maxgrad.lt.zero) then
+               if (is_inner_main.eq.1) then
+                print *,"maxgrad: a donor cell has no receiving cell"
+                stop
+               endif
+              end if
+              if (maxgrad2.lt.zero) then
+               print *,"maxgrad2: a donor cell has no receiving cell"
+               stop
+              end if
+             else if (isweep.eq.1) then
+              if (crit_weight.lt.zero) then
+               print *,"crit_weight invalid"
+               stop
+              endif
+              if (crit_weight2.lt.zero) then
+               print *,"crit_weight2 invalid"
+               stop
+              endif
+              if (total_weight.gt.zero) then
+               factor=crit_weight/total_weight
+              else if ((is_inner_main.eq.0).and. &
+                       (total_weight2.gt.zero)) then
+               factor=crit_weight2/total_weight2
+              else
+               print *,"a donor cell has no receiving cell"
+               stop
+              end if
+
+               ! transfer from donor to receiving cell
+               ! with weight crit_weight/total_weight
+              expan(D_DECL(i,j,k),indexEXP+1) = &
+               expan(D_DECL(i,j,k),indexEXP+1) + &
+               expan(D_DECL(i_n,j_n,k_n),indexEXP+1)*factor
+             else
+              print *,"isweep invalid"
+              stop
+             endif
+            enddo ! isweep=0..1
+
+           else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
+             ! do nothing
+           else
+            print *,"TAGSIDE invalid"
+            stop
+           end if ! donor cell
+          end do ! k_n
+          end do ! j_n
+          end do ! i_n
+
+         else if ((TAGLOC.eq.one).or.(TAGLOC.eq.zero)) then
+          ! do nothing
+         else
+          print *,"TAGLOC invalid"
+          stop
+         end if ! receiving cell
+
+          ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
+
+         ! if a receiving cell
+         TAGLOC=tag_comp(D_DECL(i,j,k))
+         if(TAGLOC.eq.two) then
+          call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
+
+          do i_n=stenlo(1),stenhi(1)
+          do j_n=stenlo(2),stenhi(2)
+          do k_n=stenlo(3),stenhi(3)
+
+           is_inner_main=1
+           if ((abs(i_n-i).gt.1).or. &
+               (abs(j_n-j).gt.1).or. &
+               (abs(k_n-k).gt.1)) then
+            is_inner_main=0
+           endif
+
+           ! if there is donor neighbor cell
+           TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
+           if(TAGSIDE.eq.one) then
+
+            call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
+            call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
+              ngrow_distance)
+
+              ! first: find the maximum of |d phi/d n_grid|
+              ! second: use the maximum to find the weights.
+            crit_weight=zero
+            total_weight=zero
+            maxgrad=-one
+
+            crit_weight2=zero
+            total_weight2=zero
+            maxgrad2=-one
+
+            do isweep=0,1
+
+             do i_nn=stenlo2(1),stenhi2(1)
+             do j_nn=stenlo2(2),stenhi2(2)
+             do k_nn=stenlo2(3),stenhi2(3)
+
+              is_inner=1
+              if ((abs(i_nn-i_n).gt.1).or. &
+                  (abs(j_nn-j_n).gt.1).or. &
+                  (abs(k_nn-k_n).gt.1)) then
+               is_inner=0
+              endif
+
+              if (tag_comp(D_DECL(i_nn,j_nn,k_nn)).eq.two) then ! receiver
+               call gridsten_level(xsten_nn,i_nn,j_nn,k_nn,level,nhalf)
+               weight=zero
+               do dir=1,SDIM
+                weight=weight+(xsten_n(0,dir)-xsten_nn(0,dir))**2
+               enddo
+               if (weight.le.zero) then
+                print *,"weight invalid"
+                stop
+               endif
+               LS_receiver=LS(D_DECL(i_nn,j_nn,k_nn),im_dest)
+               LS_donor=LS(D_DECL(i_n,j_n,k_n),im_dest)
+               DLS=(LS_receiver-LS_donor)**2
+               curgrad=sqrt(DLS/weight)
+               if (isweep.eq.0) then
+
+                if (is_inner.eq.1) then
+                 if ((curgrad.gt.maxgrad).or.(maxgrad.eq.-one)) then
+                  maxgrad=curgrad
+                 endif
+                endif 
+
+                if ((curgrad.gt.maxgrad2).or.(maxgrad2.eq.-one)) then
+                 maxgrad2=curgrad
+                endif
+               
+               else if (isweep.eq.1) then
+
+                if (is_inner.eq.1) then
+
+                 if (maxgrad.lt.zero) then
+                  weight=zero
+                  if (is_inner_main.eq.1) then
+                   print *,"maxgrad invalid"
+                   stop
+                  endif
+                 else if (maxgrad.eq.zero) then
+                  weight=one
+                 else if (curgrad/maxgrad.lt.crit_ratio) then
+                  weight=zero
+                 else
+                  weight=(curgrad/maxgrad)**2
+                 endif
+                 total_weight=total_weight+weight
+                 if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
+                  crit_weight=weight
+                  if (is_inner_main.eq.0) then
+                   print *,"is_inner_main invalid"
+                   stop
+                  endif
+                 endif
+
+                endif  ! is_inner=1
+
+                if ((maxgrad2.lt.maxgrad).or.(maxgrad2.lt.zero)) then
+                 print *,"maxgrad2 invalid"
+                 stop
+                else if (maxgrad2.eq.zero) then
+                 weight=one
+                else if (curgrad/maxgrad2.lt.crit_ratio) then
+                 weight=zero
+                else
+                 weight=(curgrad/maxgrad2)**2
+                endif
+                total_weight2=total_weight2+weight
+                if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
+                 crit_weight2=weight
+                endif
+
+               else
+                print *,"isweep invalid"
+                stop
+               endif
+              end if  ! receiver
+             end do ! k_nn
+             end do ! j_nn
+             end do ! i_nn
+
+             if (isweep.eq.0) then
+              if (maxgrad.lt.zero) then
+               if (is_inner_main.eq.1) then
+                print *,"maxgrad: a donor cell has no receiving cell"
+                stop
+               endif
+              end if
+              if (maxgrad2.lt.zero) then
+               print *,"maxgrad2: a donor cell has no receiving cell"
+               stop
+              end if
+             else if (isweep.eq.1) then
+              if (crit_weight.lt.zero) then
+               print *,"crit_weight invalid"
+               stop
+              endif
+              if (crit_weight2.lt.zero) then
+               print *,"crit_weight2 invalid"
+               stop
+              endif
+              if (total_weight.gt.zero) then
+               factor=crit_weight/total_weight
+              else if ((is_inner_main.eq.0).and. &
+                       (total_weight2.gt.zero)) then
+               factor=crit_weight2/total_weight2
+              else
+               print *,"a donor cell has no receiving cell"
+               stop
+              end if
+
+               ! transfer from donor to receiving cell
+               ! with weight crit_weight/total_weight
+              expan_comp(D_DECL(i,j,k),indexEXP+1) = &
+               expan_comp(D_DECL(i,j,k),indexEXP+1) + &
+               expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)*factor
+             else
+              print *,"isweep invalid"
+              stop
+             endif
+            enddo ! isweep=0..1
+
+           else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
+             ! do nothing
+           else
+            print *,"TAGSIDE invalid"
+            stop
+           end if ! donor cell
+          end do ! k_n
+          end do ! j_n
+          end do ! i_n
+
+         else if ((TAGLOC.eq.one).or.(TAGLOC.eq.zero)) then
+          ! do nothing
+         else
+          print *,"TAGLOC invalid"
+          stop
+         end if ! receiving cell
+
+
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else
+         print *,"local_mask invalid"
+         stop
+        endif
+
+       end do ! k
+       end do ! j
+       end do ! i
+      end subroutine fort_accept_weight
+
+
+
+
       ! tag = 1 -> donor cell
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_clearexpansion(&
-       ngrow_expansion_in, &
        mdot_sum, &
        mdot_lost, &
        mdot_sum_comp, &
@@ -12599,7 +13125,6 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, INTENT(in) :: ngrow_expansion_in
        REAL_T, INTENT(inout) :: mdot_sum,mdot_lost
        REAL_T, INTENT(inout) :: mdot_sum_comp,mdot_lost_comp
        INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
@@ -12643,14 +13168,6 @@ stop
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
        !! Sanity checks
-       if (ngrow_expansion.ne.3) then
-        print *,"expecting ngrow_expansion=3"
-        stop
-       endif
-       if (ngrow_expansion_in.ne.3) then
-        print *,"expecting ngrow_expansion_in=3"
-        stop
-       endif
        if ((im_source.ge.1).and.(im_source.le.num_materials)) then
         ! do nothing
        else
@@ -12691,8 +13208,8 @@ stop
        tag_ptr=>tag
        tag_comp_ptr=>tag_comp
        call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
-       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_expansion,-1)
-       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_expansion,-1)
+       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
 
@@ -12709,7 +13226,7 @@ stop
          TAGLOC=NINT(tag(D_DECL(i,j,k)))
          if(TAGLOC.eq.1) then
           if (1.eq.1) then  ! SANITY CHECK
-           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_expansion)
+           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
            receive_flag=0
            do i_n=stenlo(1),stenhi(1)
            do j_n=stenlo(2),stenhi(2)
@@ -12747,7 +13264,7 @@ stop
          TAGLOC=NINT(tag_comp(D_DECL(i,j,k)))
          if(TAGLOC.eq.1) then
           if (1.eq.1) then  ! SANITY CHECK
-           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_expansion)
+           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
            receive_flag=0
            do i_n=stenlo(1),stenhi(1)
            do j_n=stenlo(2),stenhi(2)

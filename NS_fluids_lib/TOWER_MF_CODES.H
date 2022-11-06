@@ -204,7 +204,7 @@
 #define nodevel_MF 209
 #define LSNEW_MF 210
 #define donorflag_MF 211
-#define accept_count_MF 212
+#define accept_weight_MF 212
 
 #define L1_LEVELPC_MF 213
 
@@ -243,9 +243,9 @@
 #define JUMP_STRENGTH_COMPLEMENT_MF 256
 
 #define donorflag_complement_MF (JUMP_STRENGTH_COMPLEMENT_MF+1)
-#define accept_count_complement_MF (donorflag_complement_MF+1)
+#define accept_weight_complement_MF (donorflag_complement_MF+1)
 
-#define CURRENT_CELL_VEL_MF (accept_count_complement_MF+1)
+#define CURRENT_CELL_VEL_MF (accept_weight_complement_MF+1)
 
 #define T_advect_MF (CURRENT_CELL_VEL_MF+1)
 

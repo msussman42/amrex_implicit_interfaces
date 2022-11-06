@@ -3189,7 +3189,6 @@ stop
        tid, &
        im_outer, &     ! im_outer and im_opp_outer define an interface
        im_opp_outer, & ! between im_outer and im_opp_outer.
-       ngrow_expansion_in, &
        level,finest_level, &
        nden, &
        nstate, &
@@ -3238,7 +3237,6 @@ stop
       INTEGER_T, INTENT(in) :: im_opp_outer
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: ngrow_expansion_in
       INTEGER_T, INTENT(in) :: nden
       INTEGER_T, INTENT(in) :: nstate
       INTEGER_T, INTENT(in) :: ntsat
@@ -3547,14 +3545,6 @@ stop
        debugrate=1
       endif
 
-      if (ngrow_expansion.ne.3) then
-       print *,"ngrow_expansion invalid"
-       stop
-      endif
-      if (ngrow_expansion_in.ne.3) then
-       print *,"ngrow_expansion_in invalid"
-       stop
-      endif
       if (ngrow_distance.ne.4) then
        print *,"ngrow_distance invalid"
        stop
@@ -3682,8 +3672,8 @@ stop
 
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
 
-      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_expansion,-1)
-      call checkbound_array(fablo,fabhi,TgammaFAB_ptr,ngrow_expansion,-1)
+      call checkbound_array(fablo,fabhi,JUMPFAB_ptr,ngrow_distance,-1)
+      call checkbound_array(fablo,fabhi,TgammaFAB_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,LSold_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
