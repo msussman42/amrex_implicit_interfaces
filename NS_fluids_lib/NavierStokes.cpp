@@ -14452,10 +14452,12 @@ NavierStokes::level_phase_change_convert(
 
 // if spectral_override==0, then always low order average down.
  int spectral_override=0;
- localMF[JUMP_STRENGTH_MF]->FillBoundary(iten-1,1,geom.periodicity());
+ localMF[JUMP_STRENGTH_MF]->FillBoundary(
+    iten-1,1,geom.periodicity());
  avgDown_localMF(JUMP_STRENGTH_MF,iten-1,1,spectral_override);
 
- localMF[JUMP_STRENGTH_MF]->FillBoundary(num_interfaces+iten-1,1,geom.periodicity());
+ localMF[JUMP_STRENGTH_MF]->FillBoundary(
+    num_interfaces+iten-1,1,geom.periodicity());
  avgDown_localMF(JUMP_STRENGTH_MF,num_interfaces+iten-1,1,spectral_override);
 
  if (i_phase_change+1<n_phase_change) {
@@ -14601,7 +14603,6 @@ NavierStokes::phase_change_redistributeALL() {
      allocate_array(ngrow_distance,1,-1,accept_weight_complement_MF);
      setVal_array(ngrow_distance,1,0.0,accept_weight_complement_MF);
 
-FIX ME
       // isweep==0: fort_tagexpansion
       // isweep==1: fort_accept_weight
       // isweep==2: fort_distributeexpansion
@@ -14616,6 +14617,19 @@ FIX ME
         expect_mdot_sign,im_source,im_dest,indexEXP,
         isweep_redistribute);
       } // ilev=finest_level ... level
+
+      // idx,ngrow,scomp,ncomp,index,scompBC_map
+      Vector<int> scompBC_map;
+      scompBC_map.resize(1);
+      scompBC_map[0]=0; //set_extrap_bc, fort_extrapfill
+
+      if (isweep_redistribute==0) {
+       PCINTERP_fill_bordersALL(donorflag_MF,1,0,
+         1,State_Type,scompBC_map);
+       PCINTERP_fill_bordersALL(donorflag_complement_MF,1,0,
+         1,State_Type,scompBC_map);
+      } else if (isweep_redistribute==1) {
+FIX ME
 
       if (ParallelDescriptor::IOProcessor()) {
 
@@ -14764,9 +14778,9 @@ FIX ME
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "color_count=" << color_count << '\n';
-   std::cout << "i=0..mdot_data.size()-1 (color_count) \n";
-   std::cout << "j=0..mdot_data_redistribute[i].size()-1 (2 * num_interfaces) \n";
+   std::cout<<"color_count=" << color_count << '\n';
+   std::cout<<"i=0..mdot_data.size()-1 (color_count)\n";
+   std::cout<<"j=0..mdot_data_redistribute[i].size()-1 (2 * num_interfaces)\n";
 
    for (int i=0;i<mdot_data.size();i++) {
 
@@ -14890,11 +14904,11 @@ NavierStokes::level_phase_change_redistribute(
 
  debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,355);
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces)
-  amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces level_phase ...");
+  amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces");
 
  debug_ngrow(JUMP_STRENGTH_COMPLEMENT_MF,ngrow_distance,355);
  if (localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces)
-  amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces");
+  amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_int");
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,6001);
@@ -15067,7 +15081,6 @@ NavierStokes::level_phase_change_redistribute(
   ParallelDescriptor::ReduceRealSum(mdot_sum_local[0]);
   mdot_sum[0]+=mdot_sum_local[0];
 
-  localMF[donorflag_MF]->FillBoundary(geom.periodicity());
   avgDown_tag_localMF(donorflag_MF);
 
  } else if (isweep==1) { //fort_accept_weight
@@ -19958,7 +19971,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   // idx,ngrow,scomp,ncomp,index,scompBC_map
  Vector<int> scompBC_map;
  scompBC_map.resize(1);
- scompBC_map[0]=0;
+ scompBC_map[0]=0; //set_extrap_bc, fort_extrapfill
  PCINTERP_fill_bordersALL(MACDIV_MF,1,0,
    1,State_Type,scompBC_map);
 
