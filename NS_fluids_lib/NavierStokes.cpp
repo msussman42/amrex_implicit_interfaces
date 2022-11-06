@@ -14451,6 +14451,7 @@ NavierStokes::level_phase_change_convert(
  }
 
 // if spectral_override==0, then always low order average down.
+// JUMP_STRENGTH_MF=0.0 outside the computational domain.
  int spectral_override=0;
  localMF[JUMP_STRENGTH_MF]->FillBoundary(
     iten-1,1,geom.periodicity());
@@ -14629,7 +14630,16 @@ NavierStokes::phase_change_redistributeALL() {
        PCINTERP_fill_bordersALL(donorflag_complement_MF,1,0,
          1,State_Type,scompBC_map);
       } else if (isweep_redistribute==1) {
-FIX ME
+       PCINTERP_fill_bordersALL(accept_weight_MF,1,0,
+         1,State_Type,scompBC_map);
+       PCINTERP_fill_bordersALL(accept_weight_complement_MF,1,0,
+         1,State_Type,scompBC_map);
+      } else if (isweep_redistribute==2) { //fort_distributeexpansion
+       // do nothing
+      } else if (isweep_redistribute==3) { //fort_clearexpansion
+       // do nothing
+      } else
+       amrex::Error("isweep_redistribute invalid");
 
       if (ParallelDescriptor::IOProcessor()) {
 
@@ -14879,7 +14889,7 @@ FIX ME
  delete_array(HOLD_LS_DATA_MF);
  delete_array(JUMP_STRENGTH_COMPLEMENT_MF);
 
-} // subroutine phase_change_redistributeALL
+} // end subroutine phase_change_redistributeALL
 
 // isweep==0: fort_tagexpansion
 // isweep==1: fort_accept_weight
@@ -14918,6 +14928,9 @@ NavierStokes::level_phase_change_redistribute(
  debug_ngrow(LSNEW_MF,ngrow_distance,6001);
 
  const Real* dx = geom.CellSize();
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect(); 
+ const int* domhi = domain.hiVect();
 
   // tags for redistribution of source term
   // 1=> donor  2=> receiver  0=> neither
@@ -15082,6 +15095,7 @@ NavierStokes::level_phase_change_redistribute(
   mdot_sum[0]+=mdot_sum_local[0];
 
   avgDown_tag_localMF(donorflag_MF);
+  avgDown_tag_localMF(donorflag_complement_MF);
 
  } else if (isweep==1) { //fort_accept_weight
 
@@ -15150,6 +15164,7 @@ NavierStokes::level_phase_change_redistribute(
      &im_dest,
      &indexEXP,
      &level,&finest_level,
+     domlo,domhi, 
      tilelo,tilehi,
      fablo,fabhi,
      &bfact, 
@@ -15177,6 +15192,10 @@ NavierStokes::level_phase_change_redistribute(
   } // mfi
 } //omp
   ns_reconcile_d_num(75);
+
+   // spectral_override==0 => always low order.
+  avgDown_localMF(accept_weight_MF,0,1,0);
+  avgDown_localMF(accept_weight_complement_MF,0,1,0);
 
  } else if (isweep==2) { //fort_distributeexpansion
 
@@ -15245,6 +15264,7 @@ NavierStokes::level_phase_change_redistribute(
      &im_dest,
      &indexEXP,
      &level,&finest_level,
+     domlo,domhi, 
      tilelo,tilehi,
      fablo,fabhi,
      &bfact, 

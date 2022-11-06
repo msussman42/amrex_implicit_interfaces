@@ -11995,6 +11995,31 @@ stop
       return
       end subroutine fort_tagexpansion
 
+      subroutine redistribute_weight(xmain,xside,crit_weight)
+      IMPLICIT NONE
+
+      REAL_T, INTENT(in) :: xmain(SDIM)
+      REAL_T, INTENT(in) :: xside(SDIM)
+      REAL_T, INTENT(out) :: crit_weight
+
+      INTEGER_T dir
+
+      crit_weight=zero
+      do dir=1,SDIM
+       crit_weight=crit_weight+(xmain(dir)-xside(dir))**2
+      enddo
+      crit_weight=sqrt(crit_weight)
+
+      if (crit_weight.gt.zero) then
+       ! do nothing
+      else
+       print *,"crit_weight invalid"
+       stop
+      endif
+
+      return
+      end subroutine redistribute_weight
+
 
       ! recon( num_materials * ngeom_recon )
       ! ngeom_recon=2 * SDIM + 3
@@ -12016,6 +12041,7 @@ stop
        im_dest, &
        indexEXP, &
        level,finest_level, &
+       domlo,domhi, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -12044,11 +12070,11 @@ stop
 
        INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
        INTEGER_T, INTENT(in) :: level,finest_level
+       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T :: stenlo(3),stenhi(3)
-       INTEGER_T :: stenlo2(3),stenhi2(3)
        INTEGER_T, INTENT(in) :: bfact
        REAL_T, INTENT(in) :: xlo(SDIM)
        REAL_T, INTENT(in) :: dx(SDIM)
@@ -12079,30 +12105,20 @@ stop
          expan_comp(DIMV(expan_comp),2*num_interfaces)
        REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
-       INTEGER_T i,j,k,isweep
-       REAL_T DLS
-       REAL_T maxgrad,maxgrad2,curgrad
+       INTEGER_T i,j,k
        INTEGER_T dir
        INTEGER_T i_n,j_n,k_n
-       INTEGER_T i_nn,j_nn,k_nn
-       REAL_T weight,total_weight,crit_weight
-       REAL_T total_weight2,crit_weight2
+       REAL_T total_weight,crit_weight
        REAL_T TAGLOC,TAGSIDE
-       REAL_T xsten_n(-1:1,SDIM)
-       REAL_T xsten_nn(-1:1,SDIM)
-       REAL_T crit_ratio,factor
-       INTEGER_T is_inner,is_inner_main,nhalf
-       REAL_T LS_receiver,LS_donor
+       INTEGER_T, PARAMETER :: nhalf=1
+       REAL_T xsten(-nhalf:nhalf,SDIM)
+       REAL_T xsten_n(-nhalf:nhalf,SDIM)
+       REAL_T xmain(SDIM)
+       REAL_T xside(SDIM)
        INTEGER_T local_mask
-
-       nhalf=1
 
        expan_ptr=>expan
        expan_comp_ptr=>expan_comp
-
-         ! if normal is close to inbetween two receiving cells, then include
-         ! both receiving cells in stencil for the donor.
-       crit_ratio=sqrt(4.0/5.0)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -12174,173 +12190,56 @@ stop
          if(TAGLOC.eq.two) then
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
+          do dir=1,SDIM
+           if (stenlo(dir).lt.domlo(dir)) then
+            stenlo(dir)=domlo(dir)
+           endif
+           if (stenhi(dir).gt.domhi(dir)) then
+            stenhi(dir)=domhi(dir)
+           endif
+          enddo
+
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           xmain(dir)=xsten(0,dir)
+          enddo
+            
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
-
-           is_inner_main=1
-           if ((abs(i_n-i).gt.1).or. &
-               (abs(j_n-j).gt.1).or. &
-               (abs(k_n-k).gt.1)) then
-            is_inner_main=0
-           endif
 
            ! if there is donor neighbor cell
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
            if(TAGSIDE.eq.one) then
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
-            call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
-              ngrow_distance)
-
-              ! first: find the maximum of |d phi/d n_grid|
-              ! second: use the maximum to find the weights.
-            crit_weight=zero
-            total_weight=zero
-            maxgrad=-one
-
-            crit_weight2=zero
-            total_weight2=zero
-            maxgrad2=-one
-
-            do isweep=0,1
-
-             do i_nn=stenlo2(1),stenhi2(1)
-             do j_nn=stenlo2(2),stenhi2(2)
-             do k_nn=stenlo2(3),stenhi2(3)
-
-              is_inner=1
-              if ((abs(i_nn-i_n).gt.1).or. &
-                  (abs(j_nn-j_n).gt.1).or. &
-                  (abs(k_nn-k_n).gt.1)) then
-               is_inner=0
-              endif
-
-              if (tag(D_DECL(i_nn,j_nn,k_nn)).eq.two) then ! receiver
-               call gridsten_level(xsten_nn,i_nn,j_nn,k_nn,level,nhalf)
-               weight=zero
-               do dir=1,SDIM
-                weight=weight+(xsten_n(0,dir)-xsten_nn(0,dir))**2
-               enddo
-               if (weight.le.zero) then
-                print *,"weight invalid"
-                stop
-               endif
-               LS_receiver=LS(D_DECL(i_nn,j_nn,k_nn),im_dest)
-               LS_donor=LS(D_DECL(i_n,j_n,k_n),im_dest)
-               DLS=(LS_receiver-LS_donor)**2
-               curgrad=sqrt(DLS/weight)
-               if (isweep.eq.0) then
-
-                if (is_inner.eq.1) then
-                 if ((curgrad.gt.maxgrad).or.(maxgrad.eq.-one)) then
-                  maxgrad=curgrad
-                 endif
-                endif 
-
-                if ((curgrad.gt.maxgrad2).or.(maxgrad2.eq.-one)) then
-                 maxgrad2=curgrad
-                endif
-               
-               else if (isweep.eq.1) then
-
-                if (is_inner.eq.1) then
-
-                 if (maxgrad.lt.zero) then
-                  weight=zero
-                  if (is_inner_main.eq.1) then
-                   print *,"maxgrad invalid"
-                   stop
-                  endif
-                 else if (maxgrad.eq.zero) then
-                  weight=one
-                 else if (curgrad/maxgrad.lt.crit_ratio) then
-                  weight=zero
-                 else
-                  weight=(curgrad/maxgrad)**2
-                 endif
-                 total_weight=total_weight+weight
-                 if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                  crit_weight=weight
-                  if (is_inner_main.eq.0) then
-                   print *,"is_inner_main invalid"
-                   stop
-                  endif
-                 endif
-
-                endif  ! is_inner=1
-
-                if ((maxgrad2.lt.maxgrad).or.(maxgrad2.lt.zero)) then
-                 print *,"maxgrad2 invalid"
-                 stop
-                else if (maxgrad2.eq.zero) then
-                 weight=one
-                else if (curgrad/maxgrad2.lt.crit_ratio) then
-                 weight=zero
-                else
-                 weight=(curgrad/maxgrad2)**2
-                endif
-                total_weight2=total_weight2+weight
-                if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                 crit_weight2=weight
-                endif
-
-               else
-                print *,"isweep invalid"
-                stop
-               endif
-              end if  ! receiver
-             end do ! k_nn
-             end do ! j_nn
-             end do ! i_nn
-
-             if (isweep.eq.0) then
-              if (maxgrad.lt.zero) then
-               if (is_inner_main.eq.1) then
-                print *,"maxgrad: a donor cell has no receiving cell"
-                stop
-               endif
-              end if
-              if (maxgrad2.lt.zero) then
-               print *,"maxgrad2: a donor cell has no receiving cell"
-               stop
-              end if
-             else if (isweep.eq.1) then
-              if (crit_weight.lt.zero) then
-               print *,"crit_weight invalid"
-               stop
-              endif
-              if (crit_weight2.lt.zero) then
-               print *,"crit_weight2 invalid"
-               stop
-              endif
-              if (total_weight.gt.zero) then
-               factor=crit_weight/total_weight
-              else if ((is_inner_main.eq.0).and. &
-                       (total_weight2.gt.zero)) then
-               factor=crit_weight2/total_weight2
-              else
-               print *,"a donor cell has no receiving cell"
-               stop
-              end if
-
-               ! transfer from donor to receiving cell
-               ! with weight crit_weight/total_weight
+            do dir=1,SDIM
+             xside(dir)=xsten_n(0,dir)
+            enddo
+            call redistribute_weight(xmain,xside,crit_weight)
+            total_weight=weightfab(D_DECL(i_n,j_n,k_n))
+            if (total_weight.gt.zero) then
+             call redistribute_weight(xmain,xside,crit_weight)
+             if (crit_weight.le.total_weight) then
               expan(D_DECL(i,j,k),indexEXP+1) = &
                expan(D_DECL(i,j,k),indexEXP+1) + &
-               expan(D_DECL(i_n,j_n,k_n),indexEXP+1)*factor
+               expan(D_DECL(i_n,j_n,k_n),indexEXP+1)*crit_weight/total_weight
              else
-              print *,"isweep invalid"
+              print *,"crit_weight invalid"
               stop
              endif
-            enddo ! isweep=0..1
+            else
+             print *,"total_weight invalid"
+             stop
+            endif
 
            else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
-             ! do nothing
+            ! do nothing
            else
             print *,"TAGSIDE invalid"
             stop
            end if ! donor cell
+
           end do ! k_n
           end do ! j_n
           end do ! i_n
@@ -12359,173 +12258,57 @@ stop
          if(TAGLOC.eq.two) then
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
+          do dir=1,SDIM
+           if (stenlo(dir).lt.domlo(dir)) then
+            stenlo(dir)=domlo(dir)
+           endif
+           if (stenhi(dir).gt.domhi(dir)) then
+            stenhi(dir)=domhi(dir)
+           endif
+          enddo
+
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           xmain(dir)=xsten(0,dir)
+          enddo
+            
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
-
-           is_inner_main=1
-           if ((abs(i_n-i).gt.1).or. &
-               (abs(j_n-j).gt.1).or. &
-               (abs(k_n-k).gt.1)) then
-            is_inner_main=0
-           endif
 
            ! if there is donor neighbor cell
            TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
            if(TAGSIDE.eq.one) then
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
-            call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
-              ngrow_distance)
-
-              ! first: find the maximum of |d phi/d n_grid|
-              ! second: use the maximum to find the weights.
-            crit_weight=zero
-            total_weight=zero
-            maxgrad=-one
-
-            crit_weight2=zero
-            total_weight2=zero
-            maxgrad2=-one
-
-            do isweep=0,1
-
-             do i_nn=stenlo2(1),stenhi2(1)
-             do j_nn=stenlo2(2),stenhi2(2)
-             do k_nn=stenlo2(3),stenhi2(3)
-
-              is_inner=1
-              if ((abs(i_nn-i_n).gt.1).or. &
-                  (abs(j_nn-j_n).gt.1).or. &
-                  (abs(k_nn-k_n).gt.1)) then
-               is_inner=0
-              endif
-
-              if (tag_comp(D_DECL(i_nn,j_nn,k_nn)).eq.two) then ! receiver
-               call gridsten_level(xsten_nn,i_nn,j_nn,k_nn,level,nhalf)
-               weight=zero
-               do dir=1,SDIM
-                weight=weight+(xsten_n(0,dir)-xsten_nn(0,dir))**2
-               enddo
-               if (weight.le.zero) then
-                print *,"weight invalid"
-                stop
-               endif
-               LS_receiver=LS(D_DECL(i_nn,j_nn,k_nn),im_dest)
-               LS_donor=LS(D_DECL(i_n,j_n,k_n),im_dest)
-               DLS=(LS_receiver-LS_donor)**2
-               curgrad=sqrt(DLS/weight)
-               if (isweep.eq.0) then
-
-                if (is_inner.eq.1) then
-                 if ((curgrad.gt.maxgrad).or.(maxgrad.eq.-one)) then
-                  maxgrad=curgrad
-                 endif
-                endif 
-
-                if ((curgrad.gt.maxgrad2).or.(maxgrad2.eq.-one)) then
-                 maxgrad2=curgrad
-                endif
-               
-               else if (isweep.eq.1) then
-
-                if (is_inner.eq.1) then
-
-                 if (maxgrad.lt.zero) then
-                  weight=zero
-                  if (is_inner_main.eq.1) then
-                   print *,"maxgrad invalid"
-                   stop
-                  endif
-                 else if (maxgrad.eq.zero) then
-                  weight=one
-                 else if (curgrad/maxgrad.lt.crit_ratio) then
-                  weight=zero
-                 else
-                  weight=(curgrad/maxgrad)**2
-                 endif
-                 total_weight=total_weight+weight
-                 if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                  crit_weight=weight
-                  if (is_inner_main.eq.0) then
-                   print *,"is_inner_main invalid"
-                   stop
-                  endif
-                 endif
-
-                endif  ! is_inner=1
-
-                if ((maxgrad2.lt.maxgrad).or.(maxgrad2.lt.zero)) then
-                 print *,"maxgrad2 invalid"
-                 stop
-                else if (maxgrad2.eq.zero) then
-                 weight=one
-                else if (curgrad/maxgrad2.lt.crit_ratio) then
-                 weight=zero
-                else
-                 weight=(curgrad/maxgrad2)**2
-                endif
-                total_weight2=total_weight2+weight
-                if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                 crit_weight2=weight
-                endif
-
-               else
-                print *,"isweep invalid"
-                stop
-               endif
-              end if  ! receiver
-             end do ! k_nn
-             end do ! j_nn
-             end do ! i_nn
-
-             if (isweep.eq.0) then
-              if (maxgrad.lt.zero) then
-               if (is_inner_main.eq.1) then
-                print *,"maxgrad: a donor cell has no receiving cell"
-                stop
-               endif
-              end if
-              if (maxgrad2.lt.zero) then
-               print *,"maxgrad2: a donor cell has no receiving cell"
-               stop
-              end if
-             else if (isweep.eq.1) then
-              if (crit_weight.lt.zero) then
-               print *,"crit_weight invalid"
-               stop
-              endif
-              if (crit_weight2.lt.zero) then
-               print *,"crit_weight2 invalid"
-               stop
-              endif
-              if (total_weight.gt.zero) then
-               factor=crit_weight/total_weight
-              else if ((is_inner_main.eq.0).and. &
-                       (total_weight2.gt.zero)) then
-               factor=crit_weight2/total_weight2
-              else
-               print *,"a donor cell has no receiving cell"
-               stop
-              end if
-
-               ! transfer from donor to receiving cell
-               ! with weight crit_weight/total_weight
+            do dir=1,SDIM
+             xside(dir)=xsten_n(0,dir)
+            enddo
+            call redistribute_weight(xmain,xside,crit_weight)
+            total_weight=weight_comp(D_DECL(i_n,j_n,k_n))
+            if (total_weight.gt.zero) then
+             call redistribute_weight(xmain,xside,crit_weight)
+             if (crit_weight.le.total_weight) then
               expan_comp(D_DECL(i,j,k),indexEXP+1) = &
                expan_comp(D_DECL(i,j,k),indexEXP+1) + &
-               expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)*factor
+               expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)* &
+               crit_weight/total_weight
              else
-              print *,"isweep invalid"
+              print *,"crit_weight invalid"
               stop
              endif
-            enddo ! isweep=0..1
+            else
+             print *,"total_weight invalid"
+             stop
+            endif
 
            else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
-             ! do nothing
+            ! do nothing
            else
             print *,"TAGSIDE invalid"
             stop
            end if ! donor cell
+
           end do ! k_n
           end do ! j_n
           end do ! i_n
@@ -12536,7 +12319,6 @@ stop
           print *,"TAGLOC invalid"
           stop
          end if ! receiving cell
-
 
         else if (local_mask.eq.0) then
          ! do nothing
@@ -12550,13 +12332,12 @@ stop
        end do ! i
       end subroutine fort_distributeexpansion
 
-
-
       subroutine fort_accept_weight(&
        im_source, &
        im_dest, &
        indexEXP, &
        level,finest_level, &
+       domlo,domhi, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -12585,11 +12366,11 @@ stop
 
        INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
        INTEGER_T, INTENT(in) :: level,finest_level
+       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
        INTEGER_T :: stenlo(3),stenhi(3)
-       INTEGER_T :: stenlo2(3),stenhi2(3)
        INTEGER_T, INTENT(in) :: bfact
        REAL_T, INTENT(in) :: xlo(SDIM)
        REAL_T, INTENT(in) :: dx(SDIM)
@@ -12610,9 +12391,9 @@ stop
        REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(in), target :: tag_comp(DIMV(tag_comp))
        REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in), target :: weightfab(DIMV(weightfab))
+       REAL_T, INTENT(out), target :: weightfab(DIMV(weightfab))
        REAL_T, pointer :: weightfab_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in), target :: weight_comp(DIMV(weight_comp))
+       REAL_T, INTENT(out), target :: weight_comp(DIMV(weight_comp))
        REAL_T, pointer :: weight_comp_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
        REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
@@ -12620,30 +12401,20 @@ stop
          expan_comp(DIMV(expan_comp),2*num_interfaces)
        REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
-       INTEGER_T i,j,k,isweep
-       REAL_T DLS
-       REAL_T maxgrad,maxgrad2,curgrad
+       INTEGER_T i,j,k
        INTEGER_T dir
        INTEGER_T i_n,j_n,k_n
-       INTEGER_T i_nn,j_nn,k_nn
-       REAL_T weight,total_weight,crit_weight
-       REAL_T total_weight2,crit_weight2
+       REAL_T total_weight,crit_weight
        REAL_T TAGLOC,TAGSIDE
-       REAL_T xsten_n(-1:1,SDIM)
-       REAL_T xsten_nn(-1:1,SDIM)
-       REAL_T crit_ratio,factor
-       INTEGER_T is_inner,is_inner_main,nhalf
-       REAL_T LS_receiver,LS_donor
+       INTEGER_T, PARAMETER :: nhalf=1
+       REAL_T xsten(-nhalf:nhalf,SDIM)
+       REAL_T xsten_n(-nhalf:nhalf,SDIM)
+       REAL_T xmain(SDIM)
+       REAL_T xside(SDIM)
        INTEGER_T local_mask
-
-       nhalf=1
 
        expan_ptr=>expan
        expan_comp_ptr=>expan_comp
-
-         ! if normal is close to inbetween two receiving cells, then include
-         ! both receiving cells in stencil for the donor.
-       crit_ratio=sqrt(4.0/5.0)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -12710,183 +12481,62 @@ stop
 
         if (local_mask.eq.1) then
 
-         ! if a receiving cell
+         ! if a doner cell
          TAGLOC=tag(D_DECL(i,j,k))
-         if(TAGLOC.eq.two) then
+         if(TAGLOC.eq.one) then
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
+          do dir=1,SDIM
+           if (stenlo(dir).lt.domlo(dir)) then
+            stenlo(dir)=domlo(dir)
+           endif
+           if (stenhi(dir).gt.domhi(dir)) then
+            stenhi(dir)=domhi(dir)
+           endif
+          enddo
+
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           xmain(dir)=xsten(0,dir)
+          enddo
+            
+          total_weight=zero
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
 
-           is_inner_main=1
-           if ((abs(i_n-i).gt.1).or. &
-               (abs(j_n-j).gt.1).or. &
-               (abs(k_n-k).gt.1)) then
-            is_inner_main=0
-           endif
-
-           ! if there is donor neighbor cell
+           ! if there is receiver neighbor cell
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
-           if(TAGSIDE.eq.one) then
+           if(TAGSIDE.eq.two) then
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
-            call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
-              ngrow_distance)
+            do dir=1,SDIM
+             xside(dir)=xsten_n(0,dir)
+            enddo
+            call redistribute_weight(xmain,xside,crit_weight)
+            total_weight=total_weight+crit_weight
 
-              ! first: find the maximum of |d phi/d n_grid|
-              ! second: use the maximum to find the weights.
-            crit_weight=zero
-            total_weight=zero
-            maxgrad=-one
-
-            crit_weight2=zero
-            total_weight2=zero
-            maxgrad2=-one
-
-            do isweep=0,1
-
-             do i_nn=stenlo2(1),stenhi2(1)
-             do j_nn=stenlo2(2),stenhi2(2)
-             do k_nn=stenlo2(3),stenhi2(3)
-
-              is_inner=1
-              if ((abs(i_nn-i_n).gt.1).or. &
-                  (abs(j_nn-j_n).gt.1).or. &
-                  (abs(k_nn-k_n).gt.1)) then
-               is_inner=0
-              endif
-
-              if (tag(D_DECL(i_nn,j_nn,k_nn)).eq.two) then ! receiver
-               call gridsten_level(xsten_nn,i_nn,j_nn,k_nn,level,nhalf)
-               weight=zero
-               do dir=1,SDIM
-                weight=weight+(xsten_n(0,dir)-xsten_nn(0,dir))**2
-               enddo
-               if (weight.le.zero) then
-                print *,"weight invalid"
-                stop
-               endif
-               LS_receiver=LS(D_DECL(i_nn,j_nn,k_nn),im_dest)
-               LS_donor=LS(D_DECL(i_n,j_n,k_n),im_dest)
-               DLS=(LS_receiver-LS_donor)**2
-               curgrad=sqrt(DLS/weight)
-               if (isweep.eq.0) then
-
-                if (is_inner.eq.1) then
-                 if ((curgrad.gt.maxgrad).or.(maxgrad.eq.-one)) then
-                  maxgrad=curgrad
-                 endif
-                endif 
-
-                if ((curgrad.gt.maxgrad2).or.(maxgrad2.eq.-one)) then
-                 maxgrad2=curgrad
-                endif
-               
-               else if (isweep.eq.1) then
-
-                if (is_inner.eq.1) then
-
-                 if (maxgrad.lt.zero) then
-                  weight=zero
-                  if (is_inner_main.eq.1) then
-                   print *,"maxgrad invalid"
-                   stop
-                  endif
-                 else if (maxgrad.eq.zero) then
-                  weight=one
-                 else if (curgrad/maxgrad.lt.crit_ratio) then
-                  weight=zero
-                 else
-                  weight=(curgrad/maxgrad)**2
-                 endif
-                 total_weight=total_weight+weight
-                 if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                  crit_weight=weight
-                  if (is_inner_main.eq.0) then
-                   print *,"is_inner_main invalid"
-                   stop
-                  endif
-                 endif
-
-                endif  ! is_inner=1
-
-                if ((maxgrad2.lt.maxgrad).or.(maxgrad2.lt.zero)) then
-                 print *,"maxgrad2 invalid"
-                 stop
-                else if (maxgrad2.eq.zero) then
-                 weight=one
-                else if (curgrad/maxgrad2.lt.crit_ratio) then
-                 weight=zero
-                else
-                 weight=(curgrad/maxgrad2)**2
-                endif
-                total_weight2=total_weight2+weight
-                if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                 crit_weight2=weight
-                endif
-
-               else
-                print *,"isweep invalid"
-                stop
-               endif
-              end if  ! receiver
-             end do ! k_nn
-             end do ! j_nn
-             end do ! i_nn
-
-             if (isweep.eq.0) then
-              if (maxgrad.lt.zero) then
-               if (is_inner_main.eq.1) then
-                print *,"maxgrad: a donor cell has no receiving cell"
-                stop
-               endif
-              end if
-              if (maxgrad2.lt.zero) then
-               print *,"maxgrad2: a donor cell has no receiving cell"
-               stop
-              end if
-             else if (isweep.eq.1) then
-              if (crit_weight.lt.zero) then
-               print *,"crit_weight invalid"
-               stop
-              endif
-              if (crit_weight2.lt.zero) then
-               print *,"crit_weight2 invalid"
-               stop
-              endif
-              if (total_weight.gt.zero) then
-               factor=crit_weight/total_weight
-              else if ((is_inner_main.eq.0).and. &
-                       (total_weight2.gt.zero)) then
-               factor=crit_weight2/total_weight2
-              else
-               print *,"a donor cell has no receiving cell"
-               stop
-              end if
-
-               ! transfer from donor to receiving cell
-               ! with weight crit_weight/total_weight
-              expan(D_DECL(i,j,k),indexEXP+1) = &
-               expan(D_DECL(i,j,k),indexEXP+1) + &
-               expan(D_DECL(i_n,j_n,k_n),indexEXP+1)*factor
-             else
-              print *,"isweep invalid"
-              stop
-             endif
-            enddo ! isweep=0..1
-
-           else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
-             ! do nothing
+           else if ((TAGSIDE.eq.one).or.(TAGSIDE.eq.zero)) then
+            ! do nothing
            else
             print *,"TAGSIDE invalid"
             stop
-           end if ! donor cell
-          end do ! k_n
-          end do ! j_n
-          end do ! i_n
+           endif
 
-         else if ((TAGLOC.eq.one).or.(TAGLOC.eq.zero)) then
+          enddo
+          enddo
+          enddo ! i_n,j_n,k_n
+
+          if (total_weight.ge.zero) then
+           ! do nothing
+          else
+           print *,"total_weight invalid"
+           stop
+          endif
+
+          weightfab(D_DECL(i,j,k))=total_weight
+
+         else if ((TAGLOC.eq.two).or.(TAGLOC.eq.zero)) then
           ! do nothing
          else
           print *,"TAGLOC invalid"
@@ -12895,189 +12545,67 @@ stop
 
           ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
 
-         ! if a receiving cell
+         ! if a doner cell
          TAGLOC=tag_comp(D_DECL(i,j,k))
-         if(TAGLOC.eq.two) then
+         if(TAGLOC.eq.one) then
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
+          do dir=1,SDIM
+           if (stenlo(dir).lt.domlo(dir)) then
+            stenlo(dir)=domlo(dir)
+           endif
+           if (stenhi(dir).gt.domhi(dir)) then
+            stenhi(dir)=domhi(dir)
+           endif
+          enddo
+
+          call gridsten_level(xsten,i,j,k,level,nhalf)
+          do dir=1,SDIM
+           xmain(dir)=xsten(0,dir)
+          enddo
+            
+          total_weight=zero
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
 
-           is_inner_main=1
-           if ((abs(i_n-i).gt.1).or. &
-               (abs(j_n-j).gt.1).or. &
-               (abs(k_n-k).gt.1)) then
-            is_inner_main=0
-           endif
-
-           ! if there is donor neighbor cell
+           ! if there is receiver neighbor cell
            TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
-           if(TAGSIDE.eq.one) then
+           if(TAGSIDE.eq.two) then
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
-            call stencilbox(i_n,j_n,k_n,fablo,fabhi,stenlo2,stenhi2, &
-              ngrow_distance)
+            do dir=1,SDIM
+             xside(dir)=xsten_n(0,dir)
+            enddo
+            call redistribute_weight(xmain,xside,crit_weight)
+            total_weight=total_weight+crit_weight
 
-              ! first: find the maximum of |d phi/d n_grid|
-              ! second: use the maximum to find the weights.
-            crit_weight=zero
-            total_weight=zero
-            maxgrad=-one
-
-            crit_weight2=zero
-            total_weight2=zero
-            maxgrad2=-one
-
-            do isweep=0,1
-
-             do i_nn=stenlo2(1),stenhi2(1)
-             do j_nn=stenlo2(2),stenhi2(2)
-             do k_nn=stenlo2(3),stenhi2(3)
-
-              is_inner=1
-              if ((abs(i_nn-i_n).gt.1).or. &
-                  (abs(j_nn-j_n).gt.1).or. &
-                  (abs(k_nn-k_n).gt.1)) then
-               is_inner=0
-              endif
-
-              if (tag_comp(D_DECL(i_nn,j_nn,k_nn)).eq.two) then ! receiver
-               call gridsten_level(xsten_nn,i_nn,j_nn,k_nn,level,nhalf)
-               weight=zero
-               do dir=1,SDIM
-                weight=weight+(xsten_n(0,dir)-xsten_nn(0,dir))**2
-               enddo
-               if (weight.le.zero) then
-                print *,"weight invalid"
-                stop
-               endif
-               LS_receiver=LS(D_DECL(i_nn,j_nn,k_nn),im_dest)
-               LS_donor=LS(D_DECL(i_n,j_n,k_n),im_dest)
-               DLS=(LS_receiver-LS_donor)**2
-               curgrad=sqrt(DLS/weight)
-               if (isweep.eq.0) then
-
-                if (is_inner.eq.1) then
-                 if ((curgrad.gt.maxgrad).or.(maxgrad.eq.-one)) then
-                  maxgrad=curgrad
-                 endif
-                endif 
-
-                if ((curgrad.gt.maxgrad2).or.(maxgrad2.eq.-one)) then
-                 maxgrad2=curgrad
-                endif
-               
-               else if (isweep.eq.1) then
-
-                if (is_inner.eq.1) then
-
-                 if (maxgrad.lt.zero) then
-                  weight=zero
-                  if (is_inner_main.eq.1) then
-                   print *,"maxgrad invalid"
-                   stop
-                  endif
-                 else if (maxgrad.eq.zero) then
-                  weight=one
-                 else if (curgrad/maxgrad.lt.crit_ratio) then
-                  weight=zero
-                 else
-                  weight=(curgrad/maxgrad)**2
-                 endif
-                 total_weight=total_weight+weight
-                 if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                  crit_weight=weight
-                  if (is_inner_main.eq.0) then
-                   print *,"is_inner_main invalid"
-                   stop
-                  endif
-                 endif
-
-                endif  ! is_inner=1
-
-                if ((maxgrad2.lt.maxgrad).or.(maxgrad2.lt.zero)) then
-                 print *,"maxgrad2 invalid"
-                 stop
-                else if (maxgrad2.eq.zero) then
-                 weight=one
-                else if (curgrad/maxgrad2.lt.crit_ratio) then
-                 weight=zero
-                else
-                 weight=(curgrad/maxgrad2)**2
-                endif
-                total_weight2=total_weight2+weight
-                if ((i.eq.i_nn).and.(j.eq.j_nn).and.(k.eq.k_nn)) then
-                 crit_weight2=weight
-                endif
-
-               else
-                print *,"isweep invalid"
-                stop
-               endif
-              end if  ! receiver
-             end do ! k_nn
-             end do ! j_nn
-             end do ! i_nn
-
-             if (isweep.eq.0) then
-              if (maxgrad.lt.zero) then
-               if (is_inner_main.eq.1) then
-                print *,"maxgrad: a donor cell has no receiving cell"
-                stop
-               endif
-              end if
-              if (maxgrad2.lt.zero) then
-               print *,"maxgrad2: a donor cell has no receiving cell"
-               stop
-              end if
-             else if (isweep.eq.1) then
-              if (crit_weight.lt.zero) then
-               print *,"crit_weight invalid"
-               stop
-              endif
-              if (crit_weight2.lt.zero) then
-               print *,"crit_weight2 invalid"
-               stop
-              endif
-              if (total_weight.gt.zero) then
-               factor=crit_weight/total_weight
-              else if ((is_inner_main.eq.0).and. &
-                       (total_weight2.gt.zero)) then
-               factor=crit_weight2/total_weight2
-              else
-               print *,"a donor cell has no receiving cell"
-               stop
-              end if
-
-               ! transfer from donor to receiving cell
-               ! with weight crit_weight/total_weight
-              expan_comp(D_DECL(i,j,k),indexEXP+1) = &
-               expan_comp(D_DECL(i,j,k),indexEXP+1) + &
-               expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)*factor
-             else
-              print *,"isweep invalid"
-              stop
-             endif
-            enddo ! isweep=0..1
-
-           else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
-             ! do nothing
+           else if ((TAGSIDE.eq.one).or.(TAGSIDE.eq.zero)) then
+            ! do nothing
            else
             print *,"TAGSIDE invalid"
             stop
-           end if ! donor cell
-          end do ! k_n
-          end do ! j_n
-          end do ! i_n
+           endif
 
-         else if ((TAGLOC.eq.one).or.(TAGLOC.eq.zero)) then
+          enddo
+          enddo
+          enddo ! i_n,j_n,k_n
+
+          if (total_weight.ge.zero) then
+           ! do nothing
+          else
+           print *,"total_weight invalid"
+           stop
+          endif
+
+          weight_comp(D_DECL(i,j,k))=total_weight
+
+         else if ((TAGLOC.eq.two).or.(TAGLOC.eq.zero)) then
           ! do nothing
          else
           print *,"TAGLOC invalid"
           stop
          end if ! receiving cell
-
 
         else if (local_mask.eq.0) then
          ! do nothing
@@ -13090,8 +12618,6 @@ stop
        end do ! j
        end do ! i
       end subroutine fort_accept_weight
-
-
 
 
       ! tag = 1 -> donor cell
@@ -13152,7 +12678,8 @@ stop
        REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
        REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(inout), target :: expan_comp(DIMV(expan_comp),2*num_interfaces)
+       REAL_T, INTENT(inout), target :: &
+           expan_comp(DIMV(expan_comp),2*num_interfaces)
        REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
        INTEGER_T i,j,k

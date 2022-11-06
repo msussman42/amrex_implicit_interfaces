@@ -650,7 +650,7 @@ void NavierStokes::avgDown_localMF(int idxMF,int scomp,int ncomp,
   avgDown(S_crse,S_fine,scomp,ncomp,spectral_override);
  }
 
-} // avgDown_localMF
+} // end subroutine avgDown_localMF
 
 
 void NavierStokes::avgDown_tag_localMF(int idxMF) {
@@ -665,7 +665,7 @@ void NavierStokes::avgDown_tag_localMF(int idxMF) {
   level_avgDown_tag(S_crse,S_fine);
  }
 
-} // subroutine avgDown_tag_localMF
+} // end subroutine avgDown_tag_localMF
 
 
 void NavierStokes::avgDownBURNING_localMF(
