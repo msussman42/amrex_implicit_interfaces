@@ -11607,11 +11607,13 @@ stop
       REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target :: expan(DIMV(expan),2*num_interfaces)
       REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: expan_comp(DIMV(expan_comp),2*num_interfaces)
+      REAL_T, INTENT(in), target :: &
+           expan_comp(DIMV(expan_comp),2*num_interfaces)
       REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon)
+      REAL_T, INTENT(in), target :: &
+           recon(DIMV(recon),num_materials*ngeom_recon)
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T local_freezing_model
