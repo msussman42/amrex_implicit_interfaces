@@ -2853,8 +2853,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
-       if (ngrow_expansion!=3)
-        amrex::Error("ngrow_expansion!=3");
        if (ngrow_make_distance!=3)
         amrex::Error("ngrow_make_distance!=3");
        if (ngrow_distance!=4)
@@ -2909,13 +2907,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           ntsat,ngrow_make_distance);
 
         ns_level.new_localMF(JUMP_STRENGTH_MF,2*num_interfaces,
-			     ngrow_expansion,-1); 
+			     ngrow_distance,-1); 
         ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,
-			        2*num_interfaces,ngrow_expansion);
+			        2*num_interfaces,ngrow_distance);
 
        } // ilev=level ... finest_level
 
-       debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,30);
+       debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,30);
        debug_ngrow(SWEPT_CROSSING_MF,0,31);
        debug_ngrow(BURNING_VELOCITY_MF,ngrow_make_distance,31);
        debug_ixType(BURNING_VELOCITY_MF,-1,BURNING_VELOCITY_MF);
@@ -2932,7 +2930,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        debug_ngrow(MDOT_MF,0,355);
 
        zeroALL(ngrow_make_distance,nburning,BURNING_VELOCITY_MF);
-       zeroALL(ngrow_expansion,2*num_interfaces,JUMP_STRENGTH_MF);
+       zeroALL(ngrow_distance,2*num_interfaces,JUMP_STRENGTH_MF);
         //ngrow,ncomp,val,dest_mf
        setVal_array(0,num_materials,1.0,SWEPT_CROSSING_MF);
         // piecewise constant interpolation at coarse/fine borders.

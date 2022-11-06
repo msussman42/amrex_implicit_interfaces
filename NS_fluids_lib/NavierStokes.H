@@ -1781,8 +1781,6 @@ protected:
 
     static Vector<Real> FSI_force_integral;
 
-    static int ngrow_expansion;  // should always be 3
-
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 
 

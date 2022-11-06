@@ -563,8 +563,6 @@ Vector<int> NavierStokes::im_elastic_map; //0...num_materials_viscoelastic-1
 
 Vector<Real> NavierStokes::FSI_force_integral;
 
-int NavierStokes::ngrow_expansion=3;
- 
 Real NavierStokes::real_number_of_cells=0.0; 
 
 // 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
@@ -5009,8 +5007,6 @@ NavierStokes::read_params ()
       ngrow_make_distance << '\n';
      std::cout << "ngrow_distance= " << 
       ngrow_distance << '\n';
-     std::cout << "ngrow_expansion= " << 
-      ngrow_expansion << '\n';
      std::cout << "prescribe_temperature_outflow= " << 
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
@@ -14127,11 +14123,6 @@ NavierStokes::level_phase_change_convert(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_convert");
 
- if (ngrow_expansion==3) {
-  // do nothing
- } else
-  amrex::Error("expecting ngrow_expansion==3");
-
  if (ngrow_distance==4) {
   // do nothing
  } else
@@ -14170,7 +14161,7 @@ NavierStokes::level_phase_change_convert(
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,28); 
 
- if (localMF[JUMP_STRENGTH_MF]->nGrow()!=ngrow_expansion)
+ if (localMF[JUMP_STRENGTH_MF]->nGrow()!=ngrow_distance)
   amrex::Error("jump strength invalid ngrow level_phase_change_conv");
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces)
   amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp() invalid");
@@ -14402,7 +14393,6 @@ NavierStokes::level_phase_change_convert(
     &tid_current,
     &im_outer,
     &im_opp_outer,
-    &ngrow_expansion,
     &level,&finest_level,
     &nden,
     &nstate,
@@ -14515,11 +14505,6 @@ NavierStokes::phase_change_redistributeALL() {
  if (level!=0)
   amrex::Error("level invalid phase_change_redistributeALL");
 
- if (ngrow_expansion==3) {
-  // do nothing
- } else
-  amrex::Error("expecting ngrow_expansion==3");
-
  if (ngrow_distance==4) {
   // do nothing
  } else
@@ -14545,9 +14530,9 @@ NavierStokes::phase_change_redistributeALL() {
  mdot_sum_complement.resize(thread_class::nthreads);
  mdot_sum2_complement.resize(thread_class::nthreads);
 
- allocate_array(ngrow_expansion,2*num_interfaces,-1,
+ allocate_array(ngrow_distance,2*num_interfaces,-1,
 		JUMP_STRENGTH_COMPLEMENT_MF); 
- copyALL(ngrow_expansion,2*num_interfaces,0,0,
+ copyALL(ngrow_distance,2*num_interfaces,0,0,
    JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
 
  for (int im=1;im<=num_materials;im++) {
@@ -14607,17 +14592,18 @@ NavierStokes::phase_change_redistributeALL() {
      allocate_array(ngrow_distance,1,-1,donorflag_MF);
      setVal_array(ngrow_distance,1,0.0,donorflag_MF);
 
-     allocate_array(ngrow_distance,1,-1,accept_count_MF);
-     setVal_array(ngrow_distance,1,0.0,accept_count_MF);
+     allocate_array(ngrow_distance,1,-1,accept_weight_MF);
+     setVal_array(ngrow_distance,1,0.0,accept_weight_MF);
 
      allocate_array(ngrow_distance,1,-1,donorflag_complement_MF);
      setVal_array(ngrow_distance,1,0.0,donorflag_complement_MF);
 
-     allocate_array(ngrow_distance,1,-1,accept_count_complement_MF);
-     setVal_array(ngrow_distance,1,0.0,accept_count_complement_MF);
+     allocate_array(ngrow_distance,1,-1,accept_weight_complement_MF);
+     setVal_array(ngrow_distance,1,0.0,accept_weight_complement_MF);
 
+FIX ME
       // isweep==0: fort_tagexpansion
-      // isweep==1: fort_accept_neighbors
+      // isweep==1: fort_accept_weight
       // isweep==2: fort_distributeexpansion
       // isweep==3: fort_clearexpansion
       // isweep==4: fort_initjumpterm
@@ -14633,14 +14619,16 @@ NavierStokes::phase_change_redistributeALL() {
 
       if (ParallelDescriptor::IOProcessor()) {
 
-       if (isweep_redistribute==0) {
+       if (isweep_redistribute==0) { //fort_tagexpansion
         std::cout << "before:imsrc,imdst,mdot_sum " <<
          im_source << ' ' << im_dest << ' ' << mdot_sum[0] << '\n';
         std::cout << "before:imsrc,imdst,mdot_sum_complement " <<
          im_source << ' ' << im_dest << ' ' << mdot_sum_complement[0] << '\n';
-       } else if (isweep_redistribute==2) {
+       } else if (isweep_redistribute==1) { //fort_accept_weight
         // do nothing
-       } else if (isweep_redistribute==3) {
+       } else if (isweep_redistribute==2) { //fort_distributeexpansion
+        // do nothing
+       } else if (isweep_redistribute==3) { //fort_clearexpansion
         std::cout << "after:imsrc,imdst,mdot_sum2 " <<   
          im_source << ' ' << im_dest << ' ' << mdot_sum2[0] << '\n';
         std::cout << "after:imsrc,imdst,mdot_lost " <<   
@@ -14666,9 +14654,9 @@ NavierStokes::phase_change_redistributeALL() {
      } // isweep_redistribute=0,1,2,3
 
      delete_array(donorflag_MF);
-     delete_array(accept_count_MF);
+     delete_array(accept_weight_MF);
      delete_array(donorflag_complement_MF);
-     delete_array(accept_count_complement_MF);
+     delete_array(accept_weight_complement_MF);
 
     } else if (LL==0.0) {
      // do nothing
@@ -14880,9 +14868,10 @@ NavierStokes::phase_change_redistributeALL() {
 } // subroutine phase_change_redistributeALL
 
 // isweep==0: fort_tagexpansion
-// isweep==1: fort_distributeexpansion
-// isweep==2: fort_clearexpansion
-// isweep==3: fort_initjumpterm
+// isweep==1: fort_accept_weight
+// isweep==2: fort_distributeexpansion
+// isweep==3: fort_clearexpansion
+// isweep==4: fort_initjumpterm
 void
 NavierStokes::level_phase_change_redistribute(
  Real expect_mdot_sign,
@@ -14894,21 +14883,16 @@ NavierStokes::level_phase_change_redistribute(
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid level_phase_change_redistribute");
 
- if (ngrow_expansion==3) {
-  // do nothing
- } else
-  amrex::Error("expecting ngrow_expansion==3");
-
  if (ngrow_distance==4) {
   // do nothing
  } else
   amrex::Error("expecting ngrow_distance==4");
 
- debug_ngrow(JUMP_STRENGTH_MF,ngrow_expansion,355);
+ debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,355);
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces)
   amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces level_phase ...");
 
- debug_ngrow(JUMP_STRENGTH_COMPLEMENT_MF,ngrow_expansion,355);
+ debug_ngrow(JUMP_STRENGTH_COMPLEMENT_MF,ngrow_distance,355);
  if (localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces)
   amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces");
 
@@ -14926,7 +14910,10 @@ NavierStokes::level_phase_change_redistribute(
 
  Real LL=0.0;
 
- if ((isweep==0)||(isweep==1)||(isweep==2)) {
+ if ((isweep==0)|| //fort_tagexpansion
+     (isweep==1)|| //fort_accept_weight
+     (isweep==2)|| //fort_distributeexpansion
+     (isweep==3)) {//fort_clearexpansion
 
   if (localMF[donorflag_MF]->nGrow()!=ngrow_distance)
    amrex::Error("localMF[donorflag_MF]->ngrow() invalid");
@@ -14938,14 +14925,24 @@ NavierStokes::level_phase_change_redistribute(
   if (localMF[donorflag_complement_MF]->nComp()!=1)
    amrex::Error("localMF[donorflag_complement_MF]->nComp() invalid");
 
+  if (localMF[accept_weight_MF]->nGrow()!=ngrow_distance)
+   amrex::Error("localMF[accept_weight_MF]->ngrow() invalid");
+  if (localMF[accept_weight_MF]->nComp()!=1)
+   amrex::Error("localMF[accept_weight_MF]->nComp() invalid");
+
+  if (localMF[accept_weight_complement_MF]->nGrow()!=ngrow_distance)
+   amrex::Error("localMF[accept_weight_complement_MF]->ngrow() invalid");
+  if (localMF[accept_weight_complement_MF]->nComp()!=1)
+   amrex::Error("localMF[accept_weight_complement_MF]->nComp() invalid");
+
   if ((indexEXP>=0)&&(indexEXP<2*num_interfaces)) {
    LL=get_user_latent_heat(indexEXP+1,293.0,1);
   } else
    amrex::Error("indexEXP invalid");
 
- } else if (isweep==3) {
+ } else if (isweep==4) { //fort_initjumpterm
 
-   // indexEXP is a filler when isweep==3.
+   // indexEXP is a filler when isweep==4.
   if (indexEXP==-1) {
    LL=0.0;
   } else
@@ -14956,7 +14953,7 @@ NavierStokes::level_phase_change_redistribute(
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
   
- if (isweep==0) {
+ if (isweep==0) { //fort_tagexpansion
 
   if (LL!=0.0) {
    // do nothing
@@ -15031,7 +15028,6 @@ NavierStokes::level_phase_change_redistribute(
    fort_tagexpansion( 
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
-    &ngrow_expansion,
     &cur_time_slab,
     vofbc.dataPtr(),
     &expect_mdot_sign,
@@ -15074,7 +15070,102 @@ NavierStokes::level_phase_change_redistribute(
   localMF[donorflag_MF]->FillBoundary(geom.periodicity());
   avgDown_tag_localMF(donorflag_MF);
 
- } else if (isweep==1) {
+ } else if (isweep==1) { //fort_accept_weight
+
+   //accept_weights
+
+  if (LL!=0.0) {
+   // do nothing
+  } else if (LL==0.0) {
+   amrex::Error("LL invalid");
+  } else
+   amrex::Error("LL is NaN");
+
+  if (std::abs(expect_mdot_sign)!=1.0)
+   amrex::Error("expect_mdot_sign invalid");
+  if ((im_source<1)||(im_source>num_materials))
+   amrex::Error("im_source invalid");
+  if ((im_dest<1)||(im_dest>num_materials))
+   amrex::Error("im_dest invalid");
+  if ((indexEXP<0)||(indexEXP>=2*num_interfaces))
+   amrex::Error("indexEXP invalid");
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*localMF[donorflag_MF],false); mfi.isValid(); ++mfi) {
+    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+    const int gridno = mfi.index();
+    const Box& tilegrid = mfi.tilebox();
+    const Box& fabgrid = grids[gridno];
+    const int* tilelo=tilegrid.loVect();
+    const int* tilehi=tilegrid.hiVect();
+    const int* fablo=fabgrid.loVect();
+    const int* fabhi=fabgrid.hiVect();
+    const Real* xlo = grid_loc[gridno].lo();
+    Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
+
+    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+
+    FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
+    FArrayBox& donor_comp_fab=(*localMF[donorflag_complement_MF])[mfi];
+
+    FArrayBox& weightfab=(*localMF[accept_weight_MF])[mfi];
+    FArrayBox& weight_comp_fab=(*localMF[accept_weight_complement_MF])[mfi];
+
+    FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
+    FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
+    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+
+    int bfact=parent->Space_blockingFactor(level);
+
+    int tid_current=ns_thread();
+    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+     amrex::Error("tid_current invalid");
+    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+     // isweep==1
+     // declared in: GODUNOV_3D.F90
+     // weightfab and weight_comp_fab are modified.
+    fort_accept_weight( 
+     &im_source,
+     &im_dest,
+     &indexEXP,
+     &level,&finest_level,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact, 
+     xlo,dx,&dt_slab,
+     maskcov.dataPtr(),
+     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+     newdistfab.dataPtr(),
+     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
+     donorfab.dataPtr(),
+     ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
+     donor_comp_fab.dataPtr(),
+     ARLIM(donor_comp_fab.loVect()),
+     ARLIM(donor_comp_fab.hiVect()),
+     weightfab.dataPtr(),
+     ARLIM(weightfab.loVect()),ARLIM(weightfab.hiVect()),
+     weight_comp_fab.dataPtr(),
+     ARLIM(weight_comp_fab.loVect()),
+     ARLIM(weight_comp_fab.hiVect()),
+     JUMPfab.dataPtr(),
+     ARLIM(JUMPfab.loVect()),
+     ARLIM(JUMPfab.hiVect()),
+     JUMP_comp_fab.dataPtr(),
+     ARLIM(JUMP_comp_fab.loVect()),
+     ARLIM(JUMP_comp_fab.hiVect()) );
+  } // mfi
+} //omp
+  ns_reconcile_d_num(75);
+
+ } else if (isweep==2) { //fort_distributeexpansion
 
    // redistribution.
 
@@ -15115,8 +15206,13 @@ NavierStokes::level_phase_change_redistribute(
     Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
 
     FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+
     FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
     FArrayBox& donor_comp_fab=(*localMF[donorflag_complement_MF])[mfi];
+
+    FArrayBox& weightfab=(*localMF[accept_weight_MF])[mfi];
+    FArrayBox& weight_comp_fab=(*localMF[accept_weight_complement_MF])[mfi];
+
     FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
     FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
     FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
@@ -15128,11 +15224,10 @@ NavierStokes::level_phase_change_redistribute(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // isweep==1
+     // isweep==2
      // declared in: GODUNOV_3D.F90
      // JUMPfab is modified.
     fort_distributeexpansion( 
-     &ngrow_expansion,
      &im_source,
      &im_dest,
      &indexEXP,
@@ -15150,6 +15245,11 @@ NavierStokes::level_phase_change_redistribute(
      donor_comp_fab.dataPtr(),
      ARLIM(donor_comp_fab.loVect()),
      ARLIM(donor_comp_fab.hiVect()),
+     weightfab.dataPtr(),
+     ARLIM(weightfab.loVect()),ARLIM(weightfab.hiVect()),
+     weight_comp_fab.dataPtr(),
+     ARLIM(weight_comp_fab.loVect()),
+     ARLIM(weight_comp_fab.hiVect()),
      JUMPfab.dataPtr(),
      ARLIM(JUMPfab.loVect()),
      ARLIM(JUMPfab.hiVect()),
@@ -15160,7 +15260,7 @@ NavierStokes::level_phase_change_redistribute(
 } //omp
   ns_reconcile_d_num(75);
 
- } else if (isweep==2) {
+ } else if (isweep==3) {
 
    // clear out mdot in the donor cells.
 
@@ -15231,11 +15331,10 @@ NavierStokes::level_phase_change_redistribute(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     // isweep==2
+     // isweep==3
      // declared in: GODUNOV_3D.F90
      // JUMPfab is modified.
     fort_clearexpansion( 
-     &ngrow_expansion,
      &mdot_sum2_local[tid_current],
      &mdot_lost_local[tid_current],
      &mdot_sum2_complement_local[tid_current],
@@ -15281,10 +15380,11 @@ NavierStokes::level_phase_change_redistribute(
   mdot_lost_complement[0]+=mdot_lost_complement_local[0];
 
   // isweep==0: fort_tagexpansion
-  // isweep==1: fort_distributeexpansion
-  // isweep==2: fort_clearexpansion
-  // isweep==3: fort_initjumpterm
- } else if (isweep==3) {
+  // isweep==1: fort_accept_weight
+  // isweep==2: fort_distributeexpansion
+  // isweep==3: fort_clearexpansion
+  // isweep==4: fort_initjumpterm
+ } else if (isweep==4) {
 
   Vector<Real> mdotplus_local;
   Vector<Real> mdotminus_local;
@@ -15357,7 +15457,6 @@ NavierStokes::level_phase_change_redistribute(
      &mdotplus_local[tid_current],
      &mdotminus_local[tid_current],
      &mdotcount_local[tid_current],
-     &ngrow_expansion,
      &cur_time_slab,
      &level,
      &finest_level,
