@@ -573,7 +573,7 @@ void NavierStokes::combine_state_variable(
   if (interface_cond_avail==1) {
    if (is_phasechange==1) {
     STATE_INTERFACE=localMF[SATURATION_TEMP_MF];
-    debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,830);
+    debug_ngrow(SATURATION_TEMP_MF,ngrow_distance,830);
     if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
      amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
    } else if (is_phasechange==0) {

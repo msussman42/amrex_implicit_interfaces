@@ -1132,14 +1132,14 @@ if ((istate.ge.1).and. &
     ! bcflag=1 (calling from denBC - boundary conditions
     ! for density, temperature and species variables)
     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-    STATE_merge=STATE
     if ((dir.eq.1).and.(side.eq.2)) then !xhi, 2D
      if (axis_dir.eq.5) then
       if (xblob3.gt.zero) then
-       STATE_merge=xblob3
+       STATE=xblob3
       endif
      endif
     endif
+    STATE_merge=STATE
    else
     print *,"istate invalid"
     stop
@@ -1188,7 +1188,7 @@ if ((istate.ge.1).and. &
 
    endif
 
-   ! yhi
+   ! yhi 2D
   else if ((dir.eq.2).and.(side.eq.2).and.(SDIM.eq.2)) then
 
    if (istate.eq.1) then ! density
@@ -1196,6 +1196,11 @@ if ((istate.ge.1).and. &
    else if (istate.eq.2) then ! temperature
     ! bcflag=1 (calling from denBC)
     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
+    if (axis_dir.eq.5) then
+     if (xblob3.gt.zero) then
+      STATE=xblob3
+     endif
+    endif
     STATE_merge=STATE
    else
     print *,"istate invalid"

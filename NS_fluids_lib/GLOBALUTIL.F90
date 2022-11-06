@@ -6363,7 +6363,7 @@ end subroutine print_visual_descriptor
         stop
        endif
        if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-        print *,"hi mismatch put breakpoint here"
+        print *,"hi mismatch put breakpoint here1"
         print *,"dir2=",dir2
         stop
        endif
@@ -6430,7 +6430,7 @@ end subroutine print_visual_descriptor
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch put breakpoint here"
+         print *,"checkbound_array:lo mismatch put breakpoint here1"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6440,7 +6440,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch put breakpoint here"
+         print *,"hi mismatch put breakpoint here2"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -6512,7 +6512,7 @@ end subroutine print_visual_descriptor
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch put breakpoint here"
+         print *,"checkbound_array:lo mismatch put breakpoint here2"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6522,7 +6522,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch put breakpoint here"
+         print *,"hi mismatch put breakpoint here3"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -6595,7 +6595,7 @@ end subroutine print_visual_descriptor
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch put breakpoint here"
+         print *,"checkbound_array:lo mismatch put breakpoint here3"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6605,7 +6605,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch put breakpoint here"
+         print *,"hi mismatch put breakpoint here4"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -6677,7 +6677,7 @@ end subroutine print_visual_descriptor
       do dir2=1,SDIM
 
         if (lodata(dir2).gt.lo(dir2)-ngrow) then
-         print *,"checkbound_array:lo mismatch put breakpoint here"
+         print *,"checkbound_array:lo mismatch put breakpoint here4"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
          print *,"dataxlo ",lodata(dir2)
@@ -6687,7 +6687,7 @@ end subroutine print_visual_descriptor
          stop
         endif
         if (hidata(dir2).lt.hi(dir2)+ngrow+box_type(dir2)) then
-         print *,"hi mismatch put breakpoint here"
+         print *,"hi mismatch put breakpoint here5"
          print *,"datalo,datahi ",lodata(dir2),hidata(dir2)
          print *,"box_type(dir2) ",box_type(dir2)
          print *,"lo,hi,ngrow ",lo(dir2),hi(dir2),ngrow
@@ -11829,10 +11829,10 @@ end subroutine print_visual_descriptor
        i,j,k,fablo,fabhi,stenlo,stenhi,nsten)
       IMPLICIT NONE
 
-      INTEGER_T i,j,k
-      INTEGER_T fablo(SDIM),fabhi(SDIM)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T nsten
+      INTEGER_T, INTENT(in) :: i,j,k
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T, INTENT(out) :: stenlo(3),stenhi(3)
+      INTEGER_T, INTENT(in) :: nsten
       INTEGER_T dir2
       INTEGER_T ii(3)
 
