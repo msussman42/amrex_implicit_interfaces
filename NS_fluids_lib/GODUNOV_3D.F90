@@ -12011,7 +12011,7 @@ stop
       crit_weight=sqrt(crit_weight)
 
       if (crit_weight.gt.zero) then
-       ! do nothing
+       crit_weight=one/crit_weight
       else
        print *,"crit_weight invalid"
        stop
