@@ -11629,15 +11629,13 @@ stop
       INTEGER_T iten
       INTEGER_T im_primary
       INTEGER_T vofcomp
-      INTEGER_T nhalf
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten_center(SDIM)
       INTEGER_T local_mask
       INTEGER_T dir
       INTEGER_T index_compare
       INTEGER_T complement_flag
-
-      nhalf=3
 
       tag_ptr=>tag
       tag_comp_ptr=>tag_comp
@@ -12008,7 +12006,8 @@ stop
       do dir=1,SDIM
        crit_weight=crit_weight+(xmain(dir)-xside(dir))**2
       enddo
-      crit_weight=sqrt(crit_weight)
+!      crit_weight=sqrt(crit_weight)
+      crit_weight=one
 
       if (crit_weight.gt.zero) then
        crit_weight=one/crit_weight
@@ -12632,6 +12631,7 @@ stop
        im_dest, &
        indexEXP, &
        level,finest_level, &
+       domlo,domhi, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -12657,6 +12657,7 @@ stop
        REAL_T, INTENT(inout) :: mdot_sum_comp,mdot_lost_comp
        INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
        INTEGER_T, INTENT(in) :: level,finest_level
+       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
@@ -12687,6 +12688,7 @@ stop
        INTEGER_T TAGLOC,TAGSIDE
        REAL_T xsten(-1:1,SDIM)
 
+       INTEGER_T dir
        INTEGER_T local_mask
 
        nhalf=1
@@ -12756,6 +12758,14 @@ stop
          if(TAGLOC.eq.1) then
           if (1.eq.1) then  ! SANITY CHECK
            call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
+           do dir=1,SDIM
+            if (stenlo(dir).lt.domlo(dir)) then
+             stenlo(dir)=domlo(dir)
+            endif
+            if (stenhi(dir).gt.domhi(dir)) then
+             stenhi(dir)=domhi(dir)
+            endif
+           enddo
            receive_flag=0
            do i_n=stenlo(1),stenhi(1)
            do j_n=stenlo(2),stenhi(2)
@@ -12794,6 +12804,14 @@ stop
          if(TAGLOC.eq.1) then
           if (1.eq.1) then  ! SANITY CHECK
            call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
+           do dir=1,SDIM
+            if (stenlo(dir).lt.domlo(dir)) then
+             stenlo(dir)=domlo(dir)
+            endif
+            if (stenhi(dir).gt.domhi(dir)) then
+             stenhi(dir)=domhi(dir)
+            endif
+           enddo
            receive_flag=0
            do i_n=stenlo(1),stenhi(1)
            do j_n=stenlo(2),stenhi(2)

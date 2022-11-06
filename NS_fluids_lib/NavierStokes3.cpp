@@ -2883,9 +2883,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         NavierStokes& ns_level=getLevel(ilev);
 
         ns_level.new_localMF(BURNING_VELOCITY_MF,nburning,
-          ngrow_make_distance,-1);
+          ngrow_distance,-1);
         ns_level.setVal_localMF(BURNING_VELOCITY_MF,0.0,0,
-          nburning,ngrow_make_distance);
+          nburning,ngrow_distance);
 
 	int n_normal=(num_materials+num_interfaces)*(AMREX_SPACEDIM+1);
 
@@ -2895,16 +2895,17 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           n_normal,ngrow_make_distance+1);
 
          // first num_materials+num_interfaces components are curvature
-         // second num_materials+num_interfaces components are status (0=bad 1=good)
+         // second num_materials+num_interfaces components are 
+         // status (0=bad 1=good)
         ns_level.new_localMF(FD_CURV_CELL_MF,2*(num_materials+num_interfaces),
           ngrow_make_distance,-1);
         ns_level.setVal_localMF(FD_CURV_CELL_MF,0.0,0,
           2*(num_materials+num_interfaces),ngrow_make_distance);
 
         ns_level.new_localMF(SATURATION_TEMP_MF,ntsat,
-          ngrow_make_distance,-1);
+          ngrow_distance,-1);
         ns_level.setVal_localMF(SATURATION_TEMP_MF,0.0,0,
-          ntsat,ngrow_make_distance);
+          ntsat,ngrow_distance);
 
         ns_level.new_localMF(JUMP_STRENGTH_MF,2*num_interfaces,
 			     ngrow_distance,-1); 
@@ -2915,9 +2916,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,30);
        debug_ngrow(SWEPT_CROSSING_MF,0,31);
-       debug_ngrow(BURNING_VELOCITY_MF,ngrow_make_distance,31);
+       debug_ngrow(BURNING_VELOCITY_MF,ngrow_distance,31);
        debug_ixType(BURNING_VELOCITY_MF,-1,BURNING_VELOCITY_MF);
-       debug_ngrow(SATURATION_TEMP_MF,ngrow_make_distance,31);
+       debug_ngrow(SATURATION_TEMP_MF,ngrow_distance,31);
        debug_ngrow(FD_NRM_ND_MF,ngrow_make_distance+1,31);
        debug_ixType(FD_NRM_ND_MF,-1,FD_NRM_ND_MF);
        debug_ngrow(FD_CURV_CELL_MF,ngrow_make_distance,31);
@@ -2929,7 +2930,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        }
        debug_ngrow(MDOT_MF,0,355);
 
-       zeroALL(ngrow_make_distance,nburning,BURNING_VELOCITY_MF);
+       zeroALL(ngrow_distance,nburning,BURNING_VELOCITY_MF);
        zeroALL(ngrow_distance,2*num_interfaces,JUMP_STRENGTH_MF);
         //ngrow,ncomp,val,dest_mf
        setVal_array(0,num_materials,1.0,SWEPT_CROSSING_MF);

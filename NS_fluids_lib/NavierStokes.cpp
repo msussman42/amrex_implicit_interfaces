@@ -13225,13 +13225,13 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
   if (localMF[BURNING_VELOCITY_MF]->nComp()!=nburning)
    amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
-  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
+  if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_distance)
    amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
   debug_ixType(BURNING_VELOCITY_MF,-1,BURNING_VELOCITY_MF);
 
   if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
    amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
-  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_distance)
    amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
   debug_ixType(SATURATION_TEMP_MF,-1,SATURATION_TEMP_MF);
 
@@ -13662,9 +13662,9 @@ NavierStokes::level_phase_change_rate_extend() {
  if (ngrow_distance!=4)
   amrex::Error("expecting ngrow_distance==4");
 
- if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_make_distance)
+ if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
- if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+ if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
@@ -13710,7 +13710,7 @@ NavierStokes::level_phase_change_rate_extend() {
    amrex::Error("velflag invalid");
 
    //scomp=0
-  PCINTERP_fill_borders(local_mf,ngrow_make_distance,
+  PCINTERP_fill_borders(local_mf,ngrow_distance,
    0,ncomp,State_Type,scompBC_map);
 
   if (1==0) {
@@ -13790,7 +13790,7 @@ NavierStokes::level_phase_change_rate_extend() {
    scompBC_map[imdest]=extend_start_pos+imdest;
 
     //scomp=0
-  PCINTERP_fill_borders(local_mf,ngrow_make_distance,
+  PCINTERP_fill_borders(local_mf,ngrow_distance,
    0,ncomp,State_Type,scompBC_map);
 
   if (1==0) {
@@ -14168,7 +14168,7 @@ NavierStokes::level_phase_change_convert(
 
  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
   amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
- if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+ if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
  if (localMF[nodevel_MF]->nGrow()!=1)
@@ -15376,6 +15376,7 @@ NavierStokes::level_phase_change_redistribute(
      &im_dest,
      &indexEXP,
      &level,&finest_level,
+     domlo,domhi, 
      tilelo,tilehi,
      fablo,fabhi,
      &bfact, 
@@ -15692,7 +15693,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
   amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
- if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_make_distance)
+ if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
  debug_ngrow(VOLUME_MF,1,34);

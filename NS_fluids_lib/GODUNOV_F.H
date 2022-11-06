@@ -762,6 +762,7 @@ extern "C"
     int* im_dest,
     int* indexEXP,
     int* level,int* finest_level,
+    const int* domlo,const int* domhi,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,

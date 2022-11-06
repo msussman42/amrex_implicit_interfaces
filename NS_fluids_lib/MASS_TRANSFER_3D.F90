@@ -6104,7 +6104,7 @@ stop
 
       extensionwidth=dxmaxLS*ngrow_make_distance 
 
-      call checkbound_array(fablo,fabhi,vel_ptr,ngrow_make_distance,-1)
+      call checkbound_array(fablo,fabhi,vel_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -7289,10 +7289,10 @@ stop
        ! num_materials x (sdim+1) components
        call checkbound_array(fablo,fabhi, &
         burnvel_ptr, &
-        ngrow_make_distance,-1)
+        ngrow_distance,-1)
        call checkbound_array(fablo,fabhi, &
         Tsatfab_ptr, &
-        ngrow_make_distance,-1)
+        ngrow_distance,-1)
 
        call checkbound_array(fablo,fabhi, &
         curvfab_ptr, &
