@@ -12002,7 +12002,7 @@ stop
 
       INTEGER_T dir
 
-      crit_weight=zero
+      crit_weight=dx(1)**2
       do dir=1,SDIM
        crit_weight=crit_weight+(xmain(dir)-xside(dir))**2
       enddo
@@ -12480,9 +12480,9 @@ stop
 
         if (local_mask.eq.1) then
 
-         ! if a doner cell
          TAGLOC=tag(D_DECL(i,j,k))
-         if(TAGLOC.eq.one) then
+         if ((TAGLOC.eq.one).or. & ! doner cell
+             (TAGLOC.eq.two)) then ! receiver cell
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
           do dir=1,SDIM
@@ -12506,7 +12506,7 @@ stop
 
            ! if there is receiver neighbor cell
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
-           if(TAGSIDE.eq.two) then
+           if (TAGSIDE.eq.two) then ! receiver cell
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
             do dir=1,SDIM
@@ -12515,7 +12515,9 @@ stop
             call redistribute_weight(xmain,xside,crit_weight)
             total_weight=total_weight+crit_weight
 
-           else if ((TAGSIDE.eq.one).or.(TAGSIDE.eq.zero)) then
+           else if (TAGSIDE.eq.one) then ! donate
+            ! do nothing
+           else if (TAGSIDE.eq.zero) then
             ! do nothing
            else
             print *,"TAGSIDE invalid"
@@ -12535,18 +12537,18 @@ stop
 
           weightfab(D_DECL(i,j,k))=total_weight
 
-         else if ((TAGLOC.eq.two).or.(TAGLOC.eq.zero)) then
+         else if (TAGLOC.eq.zero) then
           ! do nothing
          else
           print *,"TAGLOC invalid"
           stop
-         end if ! receiving cell
+         endif 
 
           ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
 
-         ! if a doner cell
          TAGLOC=tag_comp(D_DECL(i,j,k))
-         if(TAGLOC.eq.one) then
+         if ((TAGLOC.eq.one).or. & ! doner cell
+             (TAGLOC.eq.two)) then ! receiver cell
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
           do dir=1,SDIM
@@ -12570,7 +12572,7 @@ stop
 
            ! if there is receiver neighbor cell
            TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
-           if(TAGSIDE.eq.two) then
+           if(TAGSIDE.eq.two) then ! receiver cell
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
             do dir=1,SDIM
@@ -12578,8 +12580,9 @@ stop
             enddo
             call redistribute_weight(xmain,xside,crit_weight)
             total_weight=total_weight+crit_weight
-
-           else if ((TAGSIDE.eq.one).or.(TAGSIDE.eq.zero)) then
+           else if (TAGSIDE.eq.one) then ! donate
+            ! do nothing
+           else if (TAGSIDE.eq.zero) then
             ! do nothing
            else
             print *,"TAGSIDE invalid"
@@ -12599,7 +12602,7 @@ stop
 
           weight_comp(D_DECL(i,j,k))=total_weight
 
-         else if ((TAGLOC.eq.two).or.(TAGLOC.eq.zero)) then
+         else if (TAGLOC.eq.zero) then
           ! do nothing
          else
           print *,"TAGLOC invalid"
