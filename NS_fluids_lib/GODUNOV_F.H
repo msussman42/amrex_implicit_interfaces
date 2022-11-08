@@ -729,6 +729,10 @@ extern "C"
 
 
    void fort_distributeexpansion(
+    Real* mdot_sum,
+    Real* mdot_lost,
+    Real* mdot_sum_comp,
+    Real* mdot_lost_comp,
     int* im_source,
     int* im_dest,
     int* indexEXP,
@@ -752,31 +756,6 @@ extern "C"
     Real* jump_comp,
     AMREX_ARLIM_P(jump_comp_lo),
     AMREX_ARLIM_P(jump_comp_hi) );
-
-   void fort_clearexpansion(
-    Real* mdot_sum,
-    Real* mdot_lost,
-    Real* mdot_sum_comp,
-    Real* mdot_lost_comp,
-    int* im_source,
-    int* im_dest,
-    int* indexEXP,
-    int* level,int* finest_level,
-    const int* domlo,const int* domhi,
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    const Real* xlo,const Real* dx,Real* dt,
-    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
-    Real* tag,AMREX_ARLIM_P(taglo),AMREX_ARLIM_P(taghi),
-    Real* tag_comp,
-    AMREX_ARLIM_P(tag_comp_lo),
-    AMREX_ARLIM_P(tag_comp_hi),
-    Real* jump,AMREX_ARLIM_P(jumplo),AMREX_ARLIM_P(jumphi),
-    Real* jump_comp,
-    AMREX_ARLIM_P(jump_comp_lo),
-    AMREX_ARLIM_P(jump_comp_hi) );
-
 
    void fort_vfrac_split(
      int* nprocessed,
