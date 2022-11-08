@@ -11738,10 +11738,10 @@ stop
          !    (icemask=0.0)
          ! 
          ! check for being a receiving cell:
-         ! (F_ice > 0.5)&&(icemask>0.0)
+         ! (F_ice_tessellate > 0.5)&&(icemask>0.0)
          ! 
-         ! weight for redistribution: inversely proportional to distance
-         ! between donor and receiver.
+         ! weight for redistribution: equal weight for all cells in the
+         ! redistribution stencil.
               
         tag(D_DECL(i,j,k)) = zero
         tag_comp(D_DECL(i,j,k)) = zero
@@ -11936,7 +11936,7 @@ stop
             endif
            else if ((VFRAC(im_dest).lt.half).or. &
                     (ICEMASK.eq.zero)) then
-            ! do nothing - donor cell
+            ! do nothing - donor cell if VDOT<>0
            else
             print *,"VFRAC or ICEMASK bust"
             stop      
@@ -11958,7 +11958,7 @@ stop
             endif
            else if ((VFRAC(im_source).lt.half).or. &
                     (ICEMASK.eq.zero)) then
-            ! do nothing - donor cell
+            ! do nothing - donor cell if VDOT<>0
            else
             print *,"VFRAC or ICEMASK bust"     
             stop
@@ -12094,6 +12094,8 @@ stop
          expan_comp(DIMV(expan_comp),2*num_interfaces)
        REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
+       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: expan_new
+
        INTEGER_T i,j,k
        INTEGER_T dir
        INTEGER_T i_n,j_n,k_n
@@ -12149,6 +12151,8 @@ stop
         stop
        endif
 
+       allocate(expan_new(DIMV(expan),2))
+
        maskcov_ptr=>maskcov
        LS_ptr=>LS
        tag_ptr=>tag
@@ -12158,12 +12162,24 @@ stop
 
        call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,ngrow_distance,-1)
+
        call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,expan_new,ngrow_distance,-1)
+
        call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+        expan_new(D_DECL(i,j,k),1)=zero
+        expan_new(D_DECL(i,j,k),2)=zero
+       enddo
+       enddo
+       enddo
 
        ! Iterate over the box
        do i=growlo(1),growhi(1)
@@ -12176,7 +12192,7 @@ stop
 
          ! if a receiving cell
          TAGLOC=tag(D_DECL(i,j,k))
-         if(TAGLOC.eq.two) then
+         if(TAGLOC.eq.two) then ! receiver
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
           do dir=1,SDIM
@@ -12197,9 +12213,9 @@ stop
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
 
-           ! if there is donor neighbor cell
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
-           if(TAGSIDE.eq.one) then
+           if ((TAGSIDE.eq.one).or. & ! doner
+               (TAGSIDE.eq.two)) then ! receiver
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
             do dir=1,SDIM
@@ -12210,8 +12226,8 @@ stop
             if (total_weight.gt.zero) then
              call redistribute_weight(xmain,xside,crit_weight)
              if (crit_weight.le.total_weight) then
-              expan(D_DECL(i,j,k),indexEXP+1) = &
-               expan(D_DECL(i,j,k),indexEXP+1) + &
+              expan_new(D_DECL(i,j,k),1) = &
+               expan_new(D_DECL(i,j,k),1) + &
                expan(D_DECL(i_n,j_n,k_n),indexEXP+1)*crit_weight/total_weight
              else
               print *,"crit_weight invalid"
@@ -12222,29 +12238,30 @@ stop
              stop
             endif
 
-           else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
+           else if (TAGSIDE.eq.zero) then
             ! do nothing
            else
             print *,"TAGSIDE invalid"
             stop
-           end if ! donor cell
+           endif 
 
           end do ! k_n
           end do ! j_n
           end do ! i_n
 
-         else if ((TAGLOC.eq.one).or.(TAGLOC.eq.zero)) then
+         else if ((TAGLOC.eq.one).or. ! doner
+                  (TAGLOC.eq.zero)) then
           ! do nothing
          else
           print *,"TAGLOC invalid"
           stop
-         end if ! receiving cell
+         endif 
 
           ! ---------------- DISTRIBUTE FOR COMPLEMENT ----------------
 
          ! if a receiving cell
          TAGLOC=tag_comp(D_DECL(i,j,k))
-         if(TAGLOC.eq.two) then
+         if(TAGLOC.eq.two) then ! receiver
           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
 
           do dir=1,SDIM
@@ -12265,9 +12282,9 @@ stop
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
 
-           ! if there is donor neighbor cell
            TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
-           if(TAGSIDE.eq.one) then
+           if ((TAGSIDE.eq.one).or. & ! doner
+               (TAGSIDE.eq.two)) then ! receiver
 
             call gridsten_level(xsten_n,i_n,j_n,k_n,level,nhalf)
             do dir=1,SDIM
@@ -12278,8 +12295,8 @@ stop
             if (total_weight.gt.zero) then
              call redistribute_weight(xmain,xside,crit_weight)
              if (crit_weight.le.total_weight) then
-              expan_comp(D_DECL(i,j,k),indexEXP+1) = &
-               expan_comp(D_DECL(i,j,k),indexEXP+1) + &
+              expan_new(D_DECL(i,j,k),2) = &
+               expan_new(D_DECL(i,j,k),2) + &
                expan_comp(D_DECL(i_n,j_n,k_n),indexEXP+1)* &
                crit_weight/total_weight
              else
@@ -12291,23 +12308,24 @@ stop
              stop
             endif
 
-           else if ((TAGSIDE.eq.two).or.(TAGSIDE.eq.zero)) then
+           else if (TAGSIDE.eq.zero) then
             ! do nothing
            else
             print *,"TAGSIDE invalid"
             stop
-           end if ! donor cell
+           endif 
 
           end do ! k_n
           end do ! j_n
           end do ! i_n
 
-         else if ((TAGLOC.eq.one).or.(TAGLOC.eq.zero)) then
+         else if ((TAGLOC.eq.one).or. ! doner
+                  (TAGLOC.eq.zero)) then
           ! do nothing
          else
           print *,"TAGLOC invalid"
           stop
-         end if ! receiving cell
+         endif 
 
         else if (local_mask.eq.0) then
          ! do nothing
@@ -12319,6 +12337,10 @@ stop
        end do ! k
        end do ! j
        end do ! i
+FIX ME HERE COPY expan_new contents back into expan and expan_comp
+tally new mdots ...
+       deallocate(expan_new)
+
       end subroutine fort_distributeexpansion
 
       subroutine fort_accept_weight(&
@@ -12493,7 +12515,7 @@ stop
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
-FIX ME
+
            ! if there is receiver neighbor cell
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
            if (TAGSIDE.eq.two) then ! receiver cell
