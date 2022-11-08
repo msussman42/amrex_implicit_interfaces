@@ -12002,8 +12002,6 @@ stop
       REAL_T, INTENT(in) :: xside(SDIM)
       REAL_T, INTENT(out) :: crit_weight
 
-      INTEGER_T dir
-
       crit_weight=one
 
       return
@@ -12026,6 +12024,10 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> non of above
       subroutine fort_distributeexpansion(&
+       mdot_sum, &
+       mdot_lost, &
+       mdot_sum_comp, &
+       mdot_lost_comp, &
        im_source, &
        im_dest, &
        indexEXP, &
@@ -12057,6 +12059,8 @@ stop
 
        IMPLICIT NONE
 
+       REAL_T, INTENT(inout) :: mdot_sum,mdot_lost
+       REAL_T, INTENT(inout) :: mdot_sum_comp,mdot_lost_comp
        INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
        INTEGER_T, INTENT(in) :: level,finest_level
        INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
@@ -12094,7 +12098,10 @@ stop
          expan_comp(DIMV(expan_comp),2*num_interfaces)
        REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
 
-       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: expan_new
+       REAL_T, dimension(D_DECL(:,:,:),:), allocatable,target :: expan_new
+       REAL_T, pointer :: expan_new_ptr(D_DECL(:,:,:),:)
+       REAL_T local_expan_new
+       REAL_T local_expan_old
 
        INTEGER_T i,j,k
        INTEGER_T dir
@@ -12152,6 +12159,7 @@ stop
        endif
 
        allocate(expan_new(DIMV(expan),2))
+       expan_new_ptr=>expan_new
 
        maskcov_ptr=>maskcov
        LS_ptr=>LS
@@ -12165,7 +12173,7 @@ stop
 
        call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
        call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,expan_new,ngrow_distance,-1)
+       call checkbound_array(fablo,fabhi,expan_new_ptr,ngrow_distance,-1)
 
        call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
@@ -12249,7 +12257,7 @@ stop
           end do ! j_n
           end do ! i_n
 
-         else if ((TAGLOC.eq.one).or. ! doner
+         else if ((TAGLOC.eq.one).or. & ! doner
                   (TAGLOC.eq.zero)) then
           ! do nothing
          else
@@ -12319,7 +12327,7 @@ stop
           end do ! j_n
           end do ! i_n
 
-         else if ((TAGLOC.eq.one).or. ! doner
+         else if ((TAGLOC.eq.one).or. & ! doner
                   (TAGLOC.eq.zero)) then
           ! do nothing
          else
@@ -12337,8 +12345,34 @@ stop
        end do ! k
        end do ! j
        end do ! i
-FIX ME HERE COPY expan_new contents back into expan and expan_comp
-tally new mdots ...
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+        local_mask=NINT(maskcov(D_DECL(i,j,k)))
+        if (local_mask.eq.1) then
+         local_expan_new=expan_new(D_DECL(i,j,k),1)
+         local_expan_old=expan(D_DECL(i,j,k),indexEXP+1)
+         expan(D_DECL(i,j,k),indexEXP+1)=local_expan_new
+         mdot_sum=mdot_sum+local_expan_new
+         mdot_lost=mdot_lost+local_expan_old-local_expan_new
+
+         local_expan_new=expan_new(D_DECL(i,j,k),2)
+         local_expan_old=expan_comp(D_DECL(i,j,k),indexEXP+1)
+         expan_comp(D_DECL(i,j,k),indexEXP+1)=local_expan_new
+         mdot_sum_comp=mdot_sum_comp+local_expan_new
+         mdot_lost_comp=mdot_lost_comp+local_expan_old-local_expan_new
+
+        else if (local_mask.eq.0) then
+         ! do nothing
+        else
+         print *,"local_mask invalid"
+         stop
+        endif
+       end do ! k
+       end do ! j
+       end do ! i
+
        deallocate(expan_new)
 
       end subroutine fort_distributeexpansion
@@ -12632,247 +12666,6 @@ tally new mdots ...
        end do ! j
        end do ! i
       end subroutine fort_accept_weight
-
-
-      ! tag = 1 -> donor cell
-      ! tag = 2 -> receving cell
-      ! tag = 0 -> non of above
-      subroutine fort_clearexpansion(&
-       mdot_sum, &
-       mdot_lost, &
-       mdot_sum_comp, &
-       mdot_lost_comp, &
-       im_source, &
-       im_dest, &
-       indexEXP, &
-       level,finest_level, &
-       domlo,domhi, &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       xlo,dx,dt, &
-       maskcov,DIMS(maskcov),&
-       tag, &
-       DIMS(tag),&
-       tag_comp, &
-       DIMS(tag_comp),&
-       expan, &
-       DIMS(expan), &
-       expan_comp, &
-       DIMS(expan_comp) ) &
-       bind(c,name='fort_clearexpansion')
-
-       use probf90_module
-       use global_utility_module
-       use geometry_intersect_module
-
-       IMPLICIT NONE
-
-       REAL_T, INTENT(inout) :: mdot_sum,mdot_lost
-       REAL_T, INTENT(inout) :: mdot_sum_comp,mdot_lost_comp
-       INTEGER_T, INTENT(in) :: im_source,im_dest,indexEXP
-       INTEGER_T, INTENT(in) :: level,finest_level
-       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
-       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T :: stenlo(3),stenhi(3)
-       INTEGER_T, INTENT(in) :: bfact
-       REAL_T, INTENT(in) :: xlo(SDIM)
-       REAL_T, INTENT(in) :: dx(SDIM)
-       REAL_T, INTENT(in) :: dt
-       INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
-       INTEGER_T, INTENT(in) :: DIMDEC(tag)
-       INTEGER_T, INTENT(in) :: DIMDEC(tag_comp)
-       INTEGER_T, INTENT(in) :: DIMDEC(expan)
-       INTEGER_T, INTENT(in) :: DIMDEC(expan_comp)
-       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
-       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in), target :: tag(DIMV(tag))
-       REAL_T, pointer :: tag_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in), target :: tag_comp(DIMV(tag_comp))
-       REAL_T, pointer :: tag_comp_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(inout), target :: expan(DIMV(expan),2*num_interfaces)
-       REAL_T, pointer :: expan_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(inout), target :: &
-           expan_comp(DIMV(expan_comp),2*num_interfaces)
-       REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
-
-       INTEGER_T i,j,k
-       INTEGER_T i_n,j_n,k_n,receive_flag,nhalf
-       INTEGER_T TAGLOC,TAGSIDE
-       REAL_T xsten(-1:1,SDIM)
-
-       INTEGER_T dir
-       INTEGER_T local_mask
-
-       nhalf=1
-
-       expan_ptr=>expan
-       expan_comp_ptr=>expan_comp
-
-       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-
-       !! Sanity checks
-       if ((im_source.ge.1).and.(im_source.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_source invalid"
-        stop
-       endif
-       if ((im_dest.ge.1).and.(im_dest.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_dest invalid"
-        stop
-       endif
-       if (im_dest.eq.im_source) then
-        print *,"im_dest or im_source invalid"
-        stop
-       endif
-
-       if ((level.lt.0).or.(level.gt.finest_level)) then
-        print *,"level invalid in clear_expansion"
-        stop
-       end if
-       if ((indexEXP.lt.0).or.(indexEXP.ge.2*num_interfaces)) then
-        print *,"indexEXP invalid"
-        stop
-       endif
-       if (bfact.lt.1) then
-        print *,"bfact too small"
-        stop
-       endif
-       if (ngrow_distance.eq.4) then
-        ! do nothing
-       else
-        print *,"ngrow_distance invalid"
-        stop
-       endif
-
-       maskcov_ptr=>maskcov
-       tag_ptr=>tag
-       tag_comp_ptr=>tag_comp
-       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
-       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
-       call checkbound_array(fablo,fabhi,expan_comp_ptr,ngrow_distance,-1)
-       call checkbound_array1(fablo,fabhi,tag_ptr,ngrow_distance,-1)
-       call checkbound_array1(fablo,fabhi,tag_comp_ptr,ngrow_distance,-1)
-
-       ! Iterate over the box
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
-       do k=growlo(3),growhi(3)
-
-        local_mask=NINT(maskcov(D_DECL(i,j,k)))
-
-        if (local_mask.eq.1) then
-
-         ! if a donor cell
-         TAGLOC=NINT(tag(D_DECL(i,j,k)))
-         if(TAGLOC.eq.1) then
-          if (1.eq.1) then  ! SANITY CHECK
-           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
-           do dir=1,SDIM
-            if (stenlo(dir).lt.domlo(dir)) then
-             stenlo(dir)=domlo(dir)
-            endif
-            if (stenhi(dir).gt.domhi(dir)) then
-             stenhi(dir)=domhi(dir)
-            endif
-           enddo
-           receive_flag=0
-           do i_n=stenlo(1),stenhi(1)
-           do j_n=stenlo(2),stenhi(2)
-           do k_n=stenlo(3),stenhi(3)
-            TAGSIDE=NINT(tag(D_DECL(i_n,j_n,k_n)))
-            if (TAGSIDE.eq.2) then
-             receive_flag=1
-            endif
-           enddo
-           enddo
-           enddo
-           if (receive_flag.eq.0) then
-            mdot_lost=mdot_lost+expan(D_DECL(i,j,k),indexEXP+1)
-            call gridsten_level(xsten,i,j,k,level,nhalf)
-            if (1.eq.0) then
-             print *,"donor has no receiver"
-             print *,"i,j,k ",i,j,k
-             print *,"x,y,z ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-             print *,"LOST: ",expan(D_DECL(i,j,k),indexEXP+1)
-            endif
-           endif
-          endif
-          expan(D_DECL(i,j,k),indexEXP+1)=zero
-         else if ((TAGLOC.eq.2).or.(TAGLOC.eq.0)) then
-          ! do nothing
-         else
-          print *,"TAGLOC invalid"
-          stop
-         endif
-         mdot_sum=mdot_sum+expan(D_DECL(i,j,k),indexEXP+1)
-
-          ! --------------- COMPLEMENT -----------------
-
-          ! if a donor cell
-         TAGLOC=NINT(tag_comp(D_DECL(i,j,k)))
-         if(TAGLOC.eq.1) then
-          if (1.eq.1) then  ! SANITY CHECK
-           call stencilbox(i,j,k,fablo,fabhi,stenlo,stenhi,ngrow_distance)
-           do dir=1,SDIM
-            if (stenlo(dir).lt.domlo(dir)) then
-             stenlo(dir)=domlo(dir)
-            endif
-            if (stenhi(dir).gt.domhi(dir)) then
-             stenhi(dir)=domhi(dir)
-            endif
-           enddo
-           receive_flag=0
-           do i_n=stenlo(1),stenhi(1)
-           do j_n=stenlo(2),stenhi(2)
-           do k_n=stenlo(3),stenhi(3)
-            TAGSIDE=NINT(tag_comp(D_DECL(i_n,j_n,k_n)))
-            if (TAGSIDE.eq.2) then
-             receive_flag=1
-            endif
-           enddo
-           enddo
-           enddo
-           if (receive_flag.eq.0) then
-            mdot_lost_comp=mdot_lost_comp+ &
-                  expan_comp(D_DECL(i,j,k),indexEXP+1)
-            call gridsten_level(xsten,i,j,k,level,nhalf)
-            if (1.eq.0) then
-             print *,"donor has no receiver (complement) "
-             print *,"i,j,k ",i,j,k
-             print *,"x,y,z ",xsten(0,1),xsten(0,2),xsten(0,SDIM)
-             print *,"LOST: ",expan_comp(D_DECL(i,j,k),indexEXP+1)
-            endif
-           endif
-          endif
-          expan_comp(D_DECL(i,j,k),indexEXP+1)=zero
-         else if ((TAGLOC.eq.2).or.(TAGLOC.eq.0)) then
-          ! do nothing
-         else
-          print *,"TAGLOC invalid"
-          stop
-         endif
-         mdot_sum_comp=mdot_sum_comp+ &
-            expan_comp(D_DECL(i,j,k),indexEXP+1)
-
-        else if (local_mask.eq.0) then
-         ! do nothing
-        else
-         print *,"local_mask invalid"
-         stop
-        endif
-
-       enddo
-       enddo
-       enddo ! i,j,k
-
-      end subroutine fort_clearexpansion
-
 
       subroutine fort_sod_sanity( &
         id,nc,lo,hi, &

@@ -14607,9 +14607,8 @@ NavierStokes::phase_change_redistributeALL() {
       // isweep==0: fort_tagexpansion
       // isweep==1: fort_accept_weight
       // isweep==2: fort_distributeexpansion
-      // isweep==3: fort_clearexpansion
-      // isweep==4: fort_initjumpterm
-     for (int isweep_redistribute=0;isweep_redistribute<=3;
+      // isweep==3: fort_initjumpterm
+     for (int isweep_redistribute=0;isweep_redistribute<=2;
 	  isweep_redistribute++) {
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -14636,8 +14635,6 @@ NavierStokes::phase_change_redistributeALL() {
          1,State_Type,scompBC_map);
       } else if (isweep_redistribute==2) { //fort_distributeexpansion
        // do nothing
-      } else if (isweep_redistribute==3) { //fort_clearexpansion
-       // do nothing
       } else
        amrex::Error("isweep_redistribute invalid");
 
@@ -14651,8 +14648,6 @@ NavierStokes::phase_change_redistributeALL() {
        } else if (isweep_redistribute==1) { //fort_accept_weight
         // do nothing
        } else if (isweep_redistribute==2) { //fort_distributeexpansion
-        // do nothing
-       } else if (isweep_redistribute==3) { //fort_clearexpansion
         std::cout << "after:imsrc,imdst,mdot_sum2 " <<   
          im_source << ' ' << im_dest << ' ' << mdot_sum2[0] << '\n';
         std::cout << "after:imsrc,imdst,mdot_lost " <<   
@@ -14675,7 +14670,7 @@ NavierStokes::phase_change_redistributeALL() {
 
       } // if ParallelDescriptor::IOProcessor()
 
-     } // isweep_redistribute=0,1,2,3
+     } // isweep_redistribute=0,1,2
 
      delete_array(donorflag_MF);
      delete_array(accept_weight_MF);
@@ -14851,7 +14846,7 @@ NavierStokes::phase_change_redistributeALL() {
 
  // copy contributions from all materials changing phase to a single
  // source term.
- int isweep_combine=4;
+ int isweep_combine=3;
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   mdotplus[tid]=0.0;
@@ -14873,7 +14868,7 @@ NavierStokes::phase_change_redistributeALL() {
    expect_mdot_sign_filler,
    im_source_filler,im_dest_filler,
    indexEXP_filler,
-   isweep_combine); // ==4 (fort_initjumpterm)
+   isweep_combine); // ==3 (fort_initjumpterm)
  } // ilev=finest_level ... level
 
  if (verbose>0) {
@@ -14894,8 +14889,7 @@ NavierStokes::phase_change_redistributeALL() {
 // isweep==0: fort_tagexpansion
 // isweep==1: fort_accept_weight
 // isweep==2: fort_distributeexpansion
-// isweep==3: fort_clearexpansion
-// isweep==4: fort_initjumpterm
+// isweep==3: fort_initjumpterm
 void
 NavierStokes::level_phase_change_redistribute(
  Real expect_mdot_sign,
@@ -14939,8 +14933,7 @@ NavierStokes::level_phase_change_redistribute(
 
  if ((isweep==0)|| //fort_tagexpansion
      (isweep==1)|| //fort_accept_weight
-     (isweep==2)|| //fort_distributeexpansion
-     (isweep==3)) {//fort_clearexpansion
+     (isweep==2)) { //fort_distributeexpansion
 
   if (localMF[donorflag_MF]->nGrow()!=ngrow_distance)
    amrex::Error("localMF[donorflag_MF]->ngrow() invalid");
@@ -14967,9 +14960,9 @@ NavierStokes::level_phase_change_redistribute(
   } else
    amrex::Error("indexEXP invalid");
 
- } else if (isweep==4) { //fort_initjumpterm
+ } else if (isweep==3) { //fort_initjumpterm
 
-   // indexEXP is a filler when isweep==4.
+   // indexEXP is a filler when isweep==3.
   if (indexEXP==-1) {
    LL=0.0;
   } else
@@ -15217,6 +15210,24 @@ NavierStokes::level_phase_change_redistribute(
   if ((indexEXP<0)||(indexEXP>=2*num_interfaces))
    amrex::Error("indexEXP invalid");
 
+  Vector< Real > mdot_lost_local;
+  Vector< Real > mdot_sum2_local;
+  mdot_lost_local.resize(thread_class::nthreads);
+  mdot_sum2_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum2_local[tid]=0.0;
+   mdot_lost_local[tid]=0.0;
+  }
+
+  Vector< Real > mdot_lost_complement_local;
+  Vector< Real > mdot_sum2_complement_local;
+  mdot_lost_complement_local.resize(thread_class::nthreads);
+  mdot_sum2_complement_local.resize(thread_class::nthreads);
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   mdot_sum2_complement_local[tid]=0.0;
+   mdot_lost_complement_local[tid]=0.0;
+  }
+
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
@@ -15260,6 +15271,10 @@ NavierStokes::level_phase_change_redistribute(
      // declared in: GODUNOV_3D.F90
      // JUMPfab is modified.
     fort_distributeexpansion( 
+     &mdot_sum2_local[tid_current],
+     &mdot_lost_local[tid_current],
+     &mdot_sum2_complement_local[tid_current],
+     &mdot_lost_complement_local[tid_current],
      &im_source,
      &im_dest,
      &indexEXP,
@@ -15293,110 +15308,6 @@ NavierStokes::level_phase_change_redistribute(
 } //omp
   ns_reconcile_d_num(75);
 
- } else if (isweep==3) {
-
-   // clear out mdot in the donor cells.
-
-  if (LL!=0.0) {
-   // do nothing
-  } else if (LL==0.0) {
-   amrex::Error("LL invalid");
-  } else
-   amrex::Error("LL is NaN");
-
-  if (std::abs(expect_mdot_sign)!=1.0)
-   amrex::Error("expect_mdot_sign invalid");
-  if ((im_source<1)||(im_source>num_materials))
-   amrex::Error("im_source invalid");
-  if ((im_dest<1)||(im_dest>num_materials))
-   amrex::Error("im_dest invalid");
-  if ((indexEXP<0)||(indexEXP>=2*num_interfaces))
-   amrex::Error("indexEXP invalid");
-
-  Vector< Real > mdot_lost_local;
-  Vector< Real > mdot_sum2_local;
-  mdot_lost_local.resize(thread_class::nthreads);
-  mdot_sum2_local.resize(thread_class::nthreads);
-  for (int tid=0;tid<thread_class::nthreads;tid++) {
-   mdot_sum2_local[tid]=0.0;
-   mdot_lost_local[tid]=0.0;
-  }
-
-  Vector< Real > mdot_lost_complement_local;
-  Vector< Real > mdot_sum2_complement_local;
-  mdot_lost_complement_local.resize(thread_class::nthreads);
-  mdot_sum2_complement_local.resize(thread_class::nthreads);
-  for (int tid=0;tid<thread_class::nthreads;tid++) {
-   mdot_sum2_complement_local[tid]=0.0;
-   mdot_lost_complement_local[tid]=0.0;
-  }
-
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(localMF[donorflag_MF]->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*localMF[donorflag_MF],use_tiling);mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    const Real* xlo = grid_loc[gridno].lo();
-    Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
-
-    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
-    FArrayBox& donorfab=(*localMF[donorflag_MF])[mfi];
-    FArrayBox& donor_comp_fab=(*localMF[donorflag_complement_MF])[mfi];
-    FArrayBox& JUMPfab=(*localMF[JUMP_STRENGTH_MF])[mfi];
-    FArrayBox& JUMP_comp_fab=(*localMF[JUMP_STRENGTH_COMPLEMENT_MF])[mfi];
-
-    int bfact=parent->Space_blockingFactor(level);
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-     // isweep==3
-     // declared in: GODUNOV_3D.F90
-     // JUMPfab is modified.
-    fort_clearexpansion( 
-     &mdot_sum2_local[tid_current],
-     &mdot_lost_local[tid_current],
-     &mdot_sum2_complement_local[tid_current],
-     &mdot_lost_complement_local[tid_current],
-     &im_source,
-     &im_dest,
-     &indexEXP,
-     &level,&finest_level,
-     domlo,domhi, 
-     tilelo,tilehi,
-     fablo,fabhi,
-     &bfact, 
-     xlo,dx,&dt_slab,
-     maskcov.dataPtr(),
-     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     donorfab.dataPtr(),
-     ARLIM(donorfab.loVect()),ARLIM(donorfab.hiVect()),
-     donor_comp_fab.dataPtr(),
-     ARLIM(donor_comp_fab.loVect()),
-     ARLIM(donor_comp_fab.hiVect()),
-     JUMPfab.dataPtr(),
-     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
-     JUMP_comp_fab.dataPtr(),
-     ARLIM(JUMP_comp_fab.loVect()),
-     ARLIM(JUMP_comp_fab.hiVect()) );
-  } // mfi
-} // omp
-  ns_reconcile_d_num(76);
-
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    mdot_sum2_local[0]+=mdot_sum2_local[tid];
    mdot_lost_local[0]+=mdot_lost_local[tid];
@@ -15416,9 +15327,8 @@ NavierStokes::level_phase_change_redistribute(
   // isweep==0: fort_tagexpansion
   // isweep==1: fort_accept_weight
   // isweep==2: fort_distributeexpansion
-  // isweep==3: fort_clearexpansion
-  // isweep==4: fort_initjumpterm
- } else if (isweep==4) {
+  // isweep==3: fort_initjumpterm
+ } else if (isweep==3) {
 
   Vector<Real> mdotplus_local;
   Vector<Real> mdotminus_local;
