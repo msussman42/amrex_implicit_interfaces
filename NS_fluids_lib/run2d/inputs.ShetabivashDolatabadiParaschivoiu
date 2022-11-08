@@ -85,8 +85,8 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
-ns.gravity        = 0.0 # thermal effects only
-#ns.gravity        = -9.8 # m/s^2; Shetabivash et al include this?
+#ns.gravity        = 0.0 # thermal effects only
+ns.gravity        = -9.8 # m/s^2; Shetabivash et al include this?
 
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
@@ -98,11 +98,11 @@ ns.gravity        = 0.0 # thermal effects only
 #
 #contact line: theta_L_initial=60 degrees
 # LG,LI,LS,IG,GS,SI  (SI used)
-#ns.tension=0.072 0.0 0.036 0.072 0.072 0.036
+ns.tension=0.072 0.0 0.036 0.072 0.072 0.036
 #contact line: theta_L_initial=90 degrees
 #theta2=180 theta1=theta3="90"
 #thermal effects only
-ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
+#ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
 ns.tension_init=0.072 0.0 0.036 0.072 0.072 0.036 # 60 degrees
 #ns.tension=0.072 0.0 0.072 0.072 0.072 0.072
 
@@ -122,8 +122,8 @@ ns.stiffCP = 4.21e+3 1.0e+3 2.03e+3 2.03e+2  # dimensional J/(kg K)
 # dimensional J/kg:
 # St=Cp_l(T_m - T_c)/L=4.2e+3 * 2/3.34e+5 = 0.025
 #thermal effects only
-ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
-#ns.latent_heat = 0.0 -3.34 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+#ns.latent_heat = 0.0 -3.34e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+ns.latent_heat = 0.0 -3.34e+2 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 #default: Stefan model
 ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0 
 # 1->2 liquid-> gas
@@ -159,13 +159,13 @@ ns.material_type=0 0 0 999
 # k_s/k_l=2.2/0.55=4.0
 ns.heatviscconst=0.546 0.026 2.2 2.2 # W/(m K)
 # 12 13 14 23 24 34  
-ns.heatviscconst_interface=0.0 0.0 0.0 1.0e-10 1.0e-10 0.025
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 0.025
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
 #ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
-ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
+#ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
 #ns.denconst=1000.0 1.29 917.0 10000.0
-#ns.denconst=1000.0 1.29 850.0 10000.0
+ns.denconst=1000.0 1.29 850.0 10000.0
 ns.material_thickness=1.5 0.0 1.5 1.5
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
