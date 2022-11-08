@@ -11860,6 +11860,7 @@ stop
          if ((is_rigid(im_primary).eq.0).and. &
              (is_FSI_rigid(im_primary).eq.0)) then 
 
+           ! first tag donor cells (tag=one)
           if (VDOT.ne.zero) then ! nonzero source
 
            if ( &
@@ -11918,6 +11919,7 @@ stop
            stop
           endif 
 
+           ! now we tag receiver cells (tag=two)
           if ( &
             swap1_0(distribute_from_target(indexEXP+1),complement_flag) &
             .eq.0) then
@@ -12002,19 +12004,7 @@ stop
 
       INTEGER_T dir
 
-      crit_weight=dx(1)**2
-      do dir=1,SDIM
-       crit_weight=crit_weight+(xmain(dir)-xside(dir))**2
-      enddo
-!      crit_weight=sqrt(crit_weight)
       crit_weight=one
-
-      if (crit_weight.gt.zero) then
-       crit_weight=one/crit_weight
-      else
-       print *,"crit_weight invalid"
-       stop
-      endif
 
       return
       end subroutine redistribute_weight
@@ -12503,7 +12493,7 @@ stop
           do i_n=stenlo(1),stenhi(1)
           do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
-
+FIX ME
            ! if there is receiver neighbor cell
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
            if (TAGSIDE.eq.two) then ! receiver cell
