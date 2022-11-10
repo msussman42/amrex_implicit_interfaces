@@ -298,6 +298,7 @@ REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(out) :: LS(nmat)
 REAL_T :: dist_gas,dist_liquid,dist_ice,dist_liq2,distsolid
+REAL_T :: ht_ice_lo,ht_ice_hi,ht_water_hi
 INTEGER_T :: im
 INTEGER_T :: im_solid_materialdist
 REAL_T :: initial_time
@@ -348,8 +349,16 @@ INTEGER_T :: gravity_dir
      ! maxtall==two*radblob > radnew+vert => no ice in this call.
      ! (the purpose of this first call to drop_slope_dist is to get the
      ! LS function for gas)
-    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
+
+    if (fort_tension_init(1).gt.zero) then
+     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
       two*radblob,dist_ice,dist_liquid)
+    else if (fort_tension_init(1).eq.zero) then
+     dist_liquid=radblob-x(SDIM)
+    else 
+     print *,"fort_tension_init(1) invalid"
+     stop
+    endif
 
     dist_gas=-dist_liquid
     LS(1)=dist_liquid
@@ -580,8 +589,28 @@ INTEGER_T :: gravity_dir
     ! in: materialdist_batch (initial angle=static angle)
     ! radblob3 is the thickness of the underside of the droplet that
     ! is already frozen
-    call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
+    if (fort_tension_init(1).gt.zero) then
+     call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
       radblob3,dist_ice,dist_liquid)
+    else if (fort_tension_init(1).eq.zero) then
+     ht_ice_lo=yblob
+     ht_ice_hi=yblob+radblob3
+     ht_water_hi=radblob
+     if (x(SDIM).lt.half*(ht_ice_lo+ht_ice_hi)) then
+      dist_ice=x(SDIM)-ht_ice_lo
+     else
+      dist_ice=ht_ice_hi-x(SDIM)
+     endif
+     if (x(SDIM).lt.half*(ht_water_hi+ht_ice_hi)) then
+      dist_liquid=x(SDIM)-ht_ice_hi
+     else
+      dist_liquid=ht_water_hi-x(SDIM)
+     endif
+    else 
+     print *,"fort_tension_init(1) invalid"
+     stop
+    endif
+
     if (is_rigid(3).ne.0) then
      print *,"expecting material 3 to be ice"
      stop

@@ -66,7 +66,7 @@ amr.blocking_factor = 8 8 8 8  # block factor in grid generation
 amr.check_int       = 500
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 200 # 200
+amr.plot_int        = 50
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -85,8 +85,8 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
-#ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = -9.8 # m/s^2; Shetabivash et al include this?
+ns.gravity        = 0.0 # thermal effects only
+#ns.gravity        = -9.8 # m/s^2; Shetabivash et al include this?
 
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
@@ -99,10 +99,10 @@ ns.gravity        = -9.8 # m/s^2; Shetabivash et al include this?
 #contact line: theta_L_initial=60 degrees
 # LG,LI,LS,IG,GS,SI  (SI used)
 #thermal effects only
-#ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
-ns.tension=0.072e-4 0.0 0.036e-4 0.072e-4 0.072e-4 0.036e-4
+ns.tension=0.0 0.0 0.0 0.0 0.0 0.0 # 1D test
+#ns.tension=0.072e-4 0.0 0.036e-4 0.072e-4 0.072e-4 0.036e-4
 #ns.tension=0.072 0.0 0.036 0.072 0.072 0.036
-ns.tension_init=0.072 0.0 0.036 0.072 0.072 0.036 # 60 degrees
+#ns.tension_init=0.072 0.0 0.036 0.072 0.072 0.036 # 60 degrees
 
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
@@ -159,9 +159,9 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 ns.viscconst=1.7e-3 1.7e-5 1.0 100.0 # dimensional Pa s NO DAMPING
 #ns.viscconst=0.09 0.001 1.0 100.0 # dimensional Pa s DAMPING
-#ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
+ns.denconst=1000.0 1.29 1000.0 10000.0 #thermal effects only
 #ns.denconst=1000.0 1.29 917.0 10000.0
-ns.denconst=1000.0 1.29 850.0 10000.0
+#ns.denconst=1000.0 1.29 850.0 10000.0
 ns.material_thickness=1.5 0.0 1.5 1.5
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
@@ -190,7 +190,7 @@ ns.radblob3=0.000015625 #dimensionless 2*dxcoarse=0.0005/32=0.000015625
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
-ns.radblob=300.0e-6 # meters
+ns.radblob=0.00025 # 1D test height of air/water interface
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
@@ -211,7 +211,7 @@ ns.prescribe_temperature_outflow=0
 ns.lo_bc          = 3 2
 ns.hi_bc          = 3 2
 ns.temperature_lo_bc=3 1
-ns.temperature_hi_bc=1 1
+ns.temperature_hi_bc=3 1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
