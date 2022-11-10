@@ -124,7 +124,11 @@ c  NOTE: AA and bb are OVERWRITTEN after call to matrix_solve.
 
       return
       end
-       
+     
+c 1d stefan problem
+c Welch and Wilson, JCP 2000
+c lambda exp(lambda^2)erf(lambda)=
+c   cp (theta_wall - theta_sat)/(h_{lg}Pi^.5)
       real*8 function transf(x,cp)
       IMPLICIT NONE
 
@@ -156,6 +160,13 @@ c  NOTE: AA and bb are OVERWRITTEN after call to matrix_solve.
       real*8 xint_output,time_output
       integer RZFLAG,simple_parm
       real*8 rplus,rminus,rcen
+      real*8 xcfd_offset
+      real*8 xcalibrate
+      real*8 tcalibrate
+
+      xcfd_offset=0.0d0
+      xcalibrate=0.0d0
+      tcalibrate=0.0d0
 
 c theta_t=(1/r)(kr theta_r)_r
 c r'=r-int_0^t V(s) ds=r-X(t)
@@ -163,13 +174,15 @@ c theta(r'(r,t),t)_t=theta_r' r'_t + theta_t
 c theta_t=V(t)theta_r'+(1/(r'+X(t)))(k (r'+X(t))theta_r')_r'
       RZFLAG=1
       simple_parm=1 
-c testcase=0 stefan (analytical solution known, k=0 in source material)
+c testcase=0 1D stefan (analytical solution known, k=0 in source material)
+c Welch and Wilson, JCP 2000
 c testcase=1 sucking (1d numerical method, k=0 in destination material)
 c sucking problem has option of cylindrical coordinate systems.
-      testcase=1
+      testcase=0
 c is_freezing=1 => tstop=700
 c is_freezing=2 => tstop=0.002 
-      is_freezing=1
+c is_freezing=3 => tstop=1.0 
+      is_freezing=3
 
 c stefan problem
       if (testcase.eq.0) then
@@ -190,11 +203,25 @@ c 1W/(m K)=10^5 cgs
        else
         kvapor=2.4E+3
        endif
+       if (is_freezing.eq.3) then
+        kliquid=54.6E+3
+c ice
+        kvapor=220.0E+3
+       endif
 
        if (is_freezing.gt.0) then
         denvapor=0.934
         tsat=273.0
         deltat=-10.0
+        if (is_freezing.eq.3) then
+         denvapor=1.0
+         tsat=273.0
+         deltat=-2.0
+c ice
+         cp=2.03E+7
+         xcalibrate=1.5625e-3
+         xcfd_offset=3.125e-3
+        endif
        else
         psat=101.0
         if (psat.eq.101.0) then
@@ -245,11 +272,21 @@ c 1W/(m K)=10^5 cgs
        print *,"2 lambda= ",2.0*c
        print *,"alpha= ",alpha 
 
-       xlo=0.0
-       xhi=2.0
-       xstop=1.0
-       tstop=(xstop/(2.0*c))**2/alpha
-       print *,"xlo,xhi,xstop,tstop ",xlo,xhi,xstop,tstop
+       tcalibrate=(xcalibrate/(2.0*c))**2/alpha
+
+       if (is_freezing.eq.3) then
+        xlo=xcalibrate
+        tstop=1.22d0
+        xhi=2.0d0*c*sqrt(alpha*(tcalibrate+tstop))
+        xstop=xhi
+       else
+        xlo=0.0
+        xhi=2.0
+        xstop=1.0
+        tstop=(xstop/(2.0*c))**2/alpha
+       endif
+       print *,"xlo,xhi ",xlo+xcfd_offset,xhi+xcfd_offset
+       print *,"xstop,tstop ",xstop+xcfd_offset,tstop
        namestr='temp_profile'
        open(unit=11,file=namestr)
        N=200
@@ -263,7 +300,7 @@ c 1W/(m K)=10^5 cgs
      &    (deltat/erfmine(c))* 
      &    erfmine(xi/(2.0*sqrt(alpha*tstop)))
         endif
-        write(11,*) xi,theta
+        write(11,*) xi+xcfd_offset,theta
        enddo
        
        close(11)
@@ -277,8 +314,8 @@ c 1W/(m K)=10^5 cgs
        do while (time.lt.tstop)
         dt=tstop/256.0
         time=time+dt
-        xint=2.0*c*sqrt(alpha*time)
-        write(12,*) time,xint
+        xint=2.0*c*sqrt(alpha*(time+tcalibrate))
+        write(12,*) time,xint+xcfd_offset
        enddo
        close(12)  
        print *,"interface file is: interface"
