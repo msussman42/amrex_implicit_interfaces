@@ -46,8 +46,6 @@ amr.max_level =  0
 # liquid (material 1, lower stratified fluid), 
 # vapor  (material 2, bubble or drop), 
 # gas    (material 3, upper stratified fluid) => 3 materials
-# 0=never adapt   1=if radius< 1 * dx then adapt
-# -1=always adapt
 # An interface changing phase will always be adapted
 # to the finest possible level.
 # Triple junctions will always be adapted to the finest possible level.

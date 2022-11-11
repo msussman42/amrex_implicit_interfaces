@@ -119,7 +119,6 @@ ns.num_divu_outer_sweeps=2
 # on each level, and for each uncovered cell, code computes:
 # sum_star_stencil |pmg_i'j'k'-pmg_ijk|/(2 dim patmos)
 ns.pressure_error_flag=1 # look at pressure variation
-# Nov 15, 2018 almost always adapt the liq
 ns.pressure_error_cutoff=1.0e-6 0.1 1.0e+10 
 # May 17:
 # for water: material_type=7 EOS_tait_rho (base density is denconst(1))

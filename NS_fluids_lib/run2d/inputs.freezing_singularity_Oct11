@@ -16,7 +16,6 @@ ns.EILE_flag=-1
 #       material are both primary materials in this cell stencil.
 # -1 => do not tag a cell in which this material is the primary
 #       material in the cell stencil and a triple point is not nearby.
-# If laten_heat(im1,im2)<>0, then the im1,im2 interface is always adapted.
 # MS OCT 11 was 0 0 -1
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=30
