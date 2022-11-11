@@ -56,7 +56,6 @@ amr.plotfile_on_restart=1
 amr.n_cell=64 64
 amr.max_level = 0
 # water, gas, ice, substrate
-# 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
 amr.grid_eff        = 0.8     # what constitutes an efficient grid
@@ -158,11 +157,12 @@ ns.heatviscconst=0.546e+5 0.026e+5 2.2e+5 2.2e+5 # erg/(s cm K)
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 # 1 Pa = 10 CGS
-ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # dimensional CGS=Pa s x 10 
+ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 #ns.denconst=1.0 0.00129 0.917 10.0 
 ns.denconst=1.0 0.00129 0.850 10.0 
-ns.material_thickness=1.5 0.0 1.5 1.5
+#ns.material_thickness=1.5 0.0 1.5 1.5
+ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
