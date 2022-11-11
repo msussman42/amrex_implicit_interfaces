@@ -53,8 +53,6 @@ ns.visual_tessellate_vfrac=1
 
 amr.n_cell    = 16 64
 amr.max_level =  1
-# 0=never adapt   1=if radius< 1 * dx then adapt
-# -1=always adapt
 # An interface changing phase will always be adapted
 # to the finest possible level.
 # Triple junctions will always be adapted to the finest possible level.

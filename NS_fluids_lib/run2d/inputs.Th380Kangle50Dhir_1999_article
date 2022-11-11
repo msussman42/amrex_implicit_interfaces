@@ -95,8 +95,6 @@ amr.max_level =  3
 # NOV 2018 (3 or 4 materials)
 # liquid, vapor, gas, substrate 4 mat
 # liquid, vapor, substrate 3 mat
-# 0=never adapt   1=if radius< 1 * dx then adapt
-# -1=always adapt
 # An interface changing phase will always be adapted
 # to the finest possible level.
 # Triple junctions will always be adapted to the finest possible level.

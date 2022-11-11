@@ -58,7 +58,6 @@ ns.output_drop_distribution=1
 
 amr.n_cell    = 32 64
 amr.max_level =  0
-# gas/liquid and gas/solid interfaces are always adapted.
 # liquid/solid interface with no gas nearby is not adapted.
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16

@@ -111,7 +111,6 @@ ns.viscvapor=1.44444E-4
 #ns.viscburn=0.0
 #ns.viscvapor=0.0
 ns.tcenter=2.0     # MO adapt when radius of curv. < 2
-ns.solidradius=1.0e+10  # MO always adapt at contact line
 ns.denspread=1.0   # MO was 2.0
 ns.denwater=1.0
 ns.denair=0.000985
