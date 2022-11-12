@@ -37,7 +37,7 @@ DEBUG	  = FALSE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 2
+DIM       = 3
 
 BL_NO_FORT = TRUE
 
@@ -170,7 +170,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = FALSE
+USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE

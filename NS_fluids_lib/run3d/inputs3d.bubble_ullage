@@ -1,5 +1,6 @@
 # For more information check
-# NASA_CRYOGENICS_GITHUB => references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
+# NASA_CRYOGENICS_GITHUB => 
+#   references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
 # Kassemi, Kartuzova, Hylton, Cryogenics, 2018
 #  section 4.1 ZBOT
 #
@@ -14,7 +15,7 @@
 #max_step=200
 #max_step=10
 max_step=99999999
-stop_time=8000.0
+stop_time=20.0
 
 # unique problem identifier associated with each new plug-in:
 # CRYOGENIC_TANK_MK.F90
@@ -82,12 +83,10 @@ ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
 ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
-#TANK_MK_NOZZLE_RAD=0.01 can be resolved in 3D 64^3 grid.  
 #TANK_MK_NOZZLE_RAD=0.005 unfortunately cannot be resolved in 3D.
-#need 128^3 for TANK_MK_NOZZLE_RAD=0.005 (64x128 RZ)
-ns.radblob3 = 0.01  #TANK_MK_NOZZLE_RAD 
-ns.radblob4 = 0.02  #TANK_MK_HEATER_THICK=2*TANK_MK_NOZZLE_RAD
-ns.radblob5 = 0.01  #TANK_MK_NOZZLE_THICK_OUTLET=TANK_MK_NOZZLE_RAD
+ns.radblob3 = 0.02  #TANK_MK_NOZZLE_RAD 
+ns.radblob4 = 0.02  #TANK_MK_HEATER_THICK=TANK_MK_NOZZLE_RAD
+ns.radblob5 = 0.02  #TANK_MK_NOZZLE_THICK_OUTLET=TANK_MK_NOZZLE_RAD
 # volume of spherical ullage=0.17 * 0.01375=(4/3)pi r^3
 ns.radblob2         = 0.082   # radius of spherical ullage
 ns.xblob2           = 0.0
@@ -183,7 +182,7 @@ amr.plot_int        = 40   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.output_drop_distribution=1
-ns.sum_interval     = 10     # timesteps between computing mass 
+ns.sum_interval     = 5     # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
@@ -191,6 +190,7 @@ amr.file_name_digits= 7
 
 # make ns.v=1 to check the residual magnitude information for the solvers.
 ns.v=0
+amr.plotfile_on_restart=1
 #amr.restart        = chk0000010 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
@@ -368,35 +368,10 @@ ns.xblob3 = 18.3 # Watts=J/s
 #Weber number breakup criterion according to Breisacher and Moder 2015:
 #   We<=0.71 => no breakup
 #   We>=4.74 => breakup
-#nozzle outlet velocity (v_n) measured from simulations.
-#nozzle radius is 0.005m
-#To find Dj (diameter of jet at the interface): Tecplot -> insert -> Stream
-#Weber number=rho_liq * v_n^2 * r_nozzle^2 /(sigma * Dj)=
-#BREAKUP:
-#(3.35 Liters/min) 1400 * (0.95)^2 * (0.005)^2 /(0.012 * 0.012)=219.0 
-#BREAKUP:
-#(1.5 Liters/min) 1400 * (0.42)^2 * (0.005)^2 /(0.012 * 0.012)=43.0
-#BREAKUP:
-#(0.6 Liters/min) 1400 * (0.18)^2 * (0.005)^2 /(0.012 * 0.012)=7.9
-#BREAKUP:
-#(0.3 Liters/min) 1400 * (0.084)^2 * (0.005)^2 /(0.012 * 0.012)=1.7
-#NO BREAKUP:
-#64^3 grid:
-#(0.3 Liters/min) 1400 * (0.015)^2 * (0.01)^2 /(0.012 * 0.024)=0.11
-#NO BREAKUP:
-#(0.1 Liters/min) 1400 * (0.023)^2 * (0.005)^2 /(0.012 * 0.012)=0.13
-#ns.xblob5 = 5.6e-5 # m^3/s  (3.35 Liters/minute) (v_n=0.95 m/s, Dj=0.012)
-#ns.xblob5 = 2.5e-5 # m^3/s  (1.5 Liters/minute) (v_n=0.42 m/s, Dj=0.012)
-#ns.xblob5 = 1.0e-5 # m^3/s  (0.6 Liters/minute) (v_n=0.18 m/s, Dj=0.012)
-#128^3
-#ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=0.084 m/s, Dj=0.012)
-#64^3
-#ns.xblob5 = 0.166667e-5 # m^3/s  (0.1 Liters/minute) (v_n=0.023 m/s, Dj=0.012)
-
-
-ns.xblob5 = 3.0e-5 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
-
-
+#
+# 64x64x64 grid, assume Rj=R0, R0=radius of "rasterized jet,
+# pi R0^2 V0=xblob5  V0=0.026 rhoL=1400 sigma=0.012
+ns.xblob5 = 4.5e-5  # m^3/s
 
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
