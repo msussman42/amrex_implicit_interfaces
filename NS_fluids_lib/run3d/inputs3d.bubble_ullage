@@ -2,9 +2,15 @@
 # NASA_CRYOGENICS_GITHUB => references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
 # Kassemi, Kartuzova, Hylton, Cryogenics, 2018
 #  section 4.1 ZBOT
-# ----------------------------------------------------------
-# -------- Problem setup -----------------------------------
-# ----------------------------------------------------------
+#
+#  For TPCE test problem:
+# NASA_CRYOGENICS_MICROGRAVITY_GITHUB => 
+#   references/TPCE/Bentz\ 1993.pdf
+#   We_j=rho_l V_0^2 R_0^2/(\sigma D_j)
+#   We_j < 1.5 symmetric, no penetration
+#   We_j > 14 penetration
+#   1.5<=We_j<=14 transition asymmetric/penetration region
+#
 #max_step=200
 #max_step=10
 max_step=99999999
@@ -76,14 +82,12 @@ ns.xblob            = 0.127 # Tank cavity radius (TPCE) 0.254/2 meters
 ns.yblob            = 0.102 # Height of Cylindrical part 10.2 cm
 ns.zblob            = 0.0    # Interface location 
 ns.radblob          = 0.0    # Not used
-# 128^3 grid:
-#ns.radblob3 = 0.005  #TANK_MK_NOZZLE_RAD
-#ns.radblob4 = 0.01   #TANK_MK_HEATER_THICK
-#ns.radblob5 = 0.005  #TANK_MK_NOZZLE_THICK_OUTLET
-# 64^3 grid (compute1):
-ns.radblob3 = 0.01  #TANK_MK_NOZZLE_RAD
-ns.radblob4 = 0.02  #TANK_MK_HEATER_THICK
-ns.radblob5 = 0.01  #TANK_MK_NOZZLE_THICK_OUTLET
+#TANK_MK_NOZZLE_RAD=0.01 can be resolved in 3D 64^3 grid.  
+#TANK_MK_NOZZLE_RAD=0.005 unfortunately cannot be resolved in 3D.
+#need 128^3 for TANK_MK_NOZZLE_RAD=0.005 (64x128 RZ)
+ns.radblob3 = 0.01  #TANK_MK_NOZZLE_RAD 
+ns.radblob4 = 0.02  #TANK_MK_HEATER_THICK=2*TANK_MK_NOZZLE_RAD
+ns.radblob5 = 0.01  #TANK_MK_NOZZLE_THICK_OUTLET=TANK_MK_NOZZLE_RAD
 # volume of spherical ullage=0.17 * 0.01375=(4/3)pi r^3
 ns.radblob2         = 0.082   # radius of spherical ullage
 ns.xblob2           = 0.0
