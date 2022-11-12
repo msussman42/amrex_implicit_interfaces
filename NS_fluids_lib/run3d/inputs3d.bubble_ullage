@@ -134,9 +134,15 @@ amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 32   # 32 is optimal for MPI in 3D
 amr.regrid_on_restart=1
 
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+
 # Note: (max_level+1) values needed
 amr.n_error_buf     = 4 4 4 4 4 # number of buffer cells in error est 
 amr.blocking_factor = 8 8 8 8 8 # block factor in grid generation
+ns.enable_spectral=0
+amr.space_blocking_factor = 1 1
+amr.time_blocking_factor = 1 
 
 amr.grid_eff        = 0.7  # smaller => less boxes
 
@@ -156,12 +162,13 @@ ns.shock_timestep=2 2 2
 # ----------------------------------------------------------
 # -------- Input/output (IO) -------------------------------
 # ----------------------------------------------------------
+# output file -2=> tecplot -1=> plot files (visit or paraview)
 #ns.visual_buoyancy_plot_int=2000
 #ns.visual_phase_change_plot_int=1
 #ns.visual_nddata_format=1 #tecplot
-ns.visual_nddata_format=2 #visit, amrvis
+#ns.visual_nddata_format=2 #visit, amrvis
 #ns.visual_nddata_format=3 #piecewise constant tecplot
-#ns.visual_nddata_format=2
+ns.visual_nddata_format=1
 
 #amr.check_int       = 200  # number of timesteps between checkpoints 2D
 amr.check_int       = 40    # number of timesteps between checkpoints 3D
@@ -345,10 +352,6 @@ ns.hi_bc          = 3 3 3
 ns.temperature_lo_bc = 3 3 3
 ns.temperature_hi_bc = 3 3 3
 
-# -n=use LS with smeared thermal conductivity at material boundaries.
-# n=1,2,3,... (smearing thickness is 2n * Delta x)
-# 0=use LS (since GFM must be used at interfaces changing phase)
-# 1=use VOF
 ns.compressible_dt_factor=2.0 2.0 2.0
 #   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)
 #   rho_t + div (rho u) =0
@@ -388,16 +391,22 @@ ns.xblob3 = 18.3 # Watts=J/s
 #128^3
 #ns.xblob5 = 0.5e-5 # m^3/s  (0.3 Liters/minute) (v_n=0.084 m/s, Dj=0.012)
 #64^3
-ns.xblob5 = 3.0e-5 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
 #ns.xblob5 = 0.166667e-5 # m^3/s  (0.1 Liters/minute) (v_n=0.023 m/s, Dj=0.012)
+
+
+ns.xblob5 = 3.0e-5 # m^3/s  (0.3x6 Liters/minute) (v_n=0.084x6 m/s, Dj=0.024)
+
+
+
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
 ns.continuous_mof   = 2 # 0=MOF 2=CMOF
-ns.mof_decision_tree_learning=1000000
+ns.mof_decision_tree_learning=1000
 ns.mof_machine_learning=0
+ns.MOFITERMAX_AFTER_PREDICT = 15
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE
@@ -432,6 +441,7 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 200
+cg.restart_period=25
 mg.bot_atol = 1.0e-6
 mg.rtol_b = -0.01
 Lp.v = 1
