@@ -46,7 +46,7 @@ ns.initial_project_cycles=3
 ns.initial_cg_cycles=1
 ns.projection_pressure_scale=1.0e+6
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-amr.n_cell    = 64 32
+amr.n_cell    = 32 16 
 amr.max_level = 0
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
@@ -59,7 +59,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 1024
 #amr.restart         = chk00500
 amr.plotfile_on_restart=1
 #amr.trace   =1
@@ -91,7 +91,6 @@ ns.advbot=0.0
 ns.adv_vel=0.0
 ns.adv_dir=2
 
-
 ns.heatviscconst=0.0 0.0 0.0 0.0
 ns.viscconst=0.01 1.225e-5
 ns.pressure_error_cutoff=0.0 0.0 
@@ -102,6 +101,10 @@ ns.tempconst=282.88543 282.88543  # Tait EOS for water
 ns.shock_timestep=2 2  # 0 0 INCOMP; 2 2 if COMPRESSIBLE (shrink=0.1)
 ns.material_type=0 0 
 ns.stiffCP=4.19e+7  1.01e+7  # cgs units
+# if (probtype.eq.602)&&(xblob>=10^5)&&(radblob<=dx/1000) then 
+#  LS(time=0)=y-(yblob+dy/2)
+#  x^ref=dx/10
+#  y^ref=dy/4
 # number of periods in the domain (if 0.0 then default 1 period)
 ns.xblob=1.0e+10   
 # average height of the interface
