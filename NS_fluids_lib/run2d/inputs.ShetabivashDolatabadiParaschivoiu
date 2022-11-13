@@ -27,8 +27,8 @@ ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=400 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=15
+ns.mof_decision_tree_learning=10000 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=0
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 ns.mof_error_ordering=0
@@ -68,7 +68,7 @@ amr.plot_int        = 200 # 200
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 1024
+amr.max_grid_size   = 32
 amr.file_name_digits=7
 #amr.restart         = chk0137500
 #amr.trace   =1
@@ -98,7 +98,8 @@ ns.gravity        = -980.0 # cm/s^2
 # LG,LI,LS,IG,GS,SI  (SI used)
 #thermal effects only
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
-ns.tension=72.0e-2 0.0 36.0e-2 72.0e-2 72.0e-2 36.0e-2
+ns.tension= 20.0e-2 0.0 10.0e-2 20.0e-2 20.0e-2 10.0e-2
+#ns.tension=72.0e-2 0.0 36.0e-2 72.0e-2 72.0e-2 36.0e-2
 #ns.tension=72.0 0.0 36.0 72.0 72.0 36.0
 ns.tension_init=72.0 0.0 36.0 72.0 72.0 36.0 # 60 degrees
 
