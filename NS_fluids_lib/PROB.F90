@@ -24503,6 +24503,7 @@ end subroutine initialize2d
        REAL_T a1,a2,D2
        REAL_T pz,pz_sanity,fpz,gpz
        REAL_T T_HOT,T_COLD
+       REAL_T, parameter :: slope_checker=0.25d0
 
        if ((level.ge.0).and. &
            (level.le.max_level)) then
@@ -25601,21 +25602,29 @@ end subroutine initialize2d
 
          ! Rayleigh-Taylor, checkerboard test
         if (probtype.eq.602) then
+          ! in subroutine vapordist: dist=y-(yblob+dy/2)
+          ! material 1 is on top (dist>0)
+          ! material 2 is on bottom (dist<0)
          if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
           if (num_materials.ne.2) then
            print *,"num_materials invalid"
            stop
           endif
+           ! if 1x1 centroid is (alpha,-1/4+beta) then: 
+           !  3x3 volume=3(3/2)=9/2
+           !  3x3 bot centroidx: ((-1+alpha)+alpha+(1+alpha)+0)/(9/2)=2 alpha/3
+           !  3x3 bot centroidy: ((3/2)(-1/4+beta)-3)/(9/2)= 
+           !  (-3/8)/(9/2)-2/3+beta/3=-1/12-8/12+beta/3=-3/4+beta/3
           dir=2
-          im=1
-          cendark(im,dir)=0.25*dx(2)
-          im=2
-          cendark(im,dir)=-0.25*dx(2)
+          im=1 ! material 1 on top
+          cendark(im,dir)=(0.25d0-(slope_checker**2)/12.0d0)*dx(2)
+          im=2 ! material 2 on bottom
+          cendark(im,dir)=-cendark(1,dir)
           dir=1
-          im=1
-          cendark(im,dir)=0.1*dx(1)
-          im=2
-          cendark(im,dir)=-0.1*dx(2)
+          im=1 ! material 1 on top
+          cendark(im,dir)=-slope_checker*dx(1)/6.0d0 
+          im=2 ! material 2 on bottom
+          cendark(im,dir)=-cendark(1,dir)
          endif
         endif ! Rayleigh-Taylor checkerboard test
 
