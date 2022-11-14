@@ -25611,10 +25611,17 @@ end subroutine initialize2d
            stop
           endif
            ! if 1x1 centroid is (alpha,-1/4+beta) then: 
+           !  for saw tooth:
            !  3x3 volume=3(3/2)=9/2
-           !  3x3 bot centroidx: ((-1+alpha)+alpha+(1+alpha)+0)/(9/2)=2 alpha/3
+           !  3x3 bot centroidx:(1/2)((-1+alpha)+alpha+(1+alpha))/(9/2)=alpha/3
            !  3x3 bot centroidy: ((3/2)(-1/4+beta)-3)/(9/2)= 
            !  (-3/8)/(9/2)-2/3+beta/3=-1/12-8/12+beta/3=-3/4+beta/3
+           !  for continuation as line:
+           !  3x3 volume=9/2
+           !  3x3 bot centroidx: 3 alpha
+           !  3x3 bot centroidy: -3/4+3 beta
+           !  3 beta' = beta/3   beta'=beta/9=(m/3)^2/12
+           !  3 alpha' = alpha/3   alpha'=alpha/9=(m/9)/6
           dir=2
           im=1 ! material 1 on top
           cendark(im,dir)=(0.25d0-(slope_checker**2)/12.0d0)*dx(2)
