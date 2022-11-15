@@ -7350,8 +7350,11 @@ stop
        dxprobe_target_history(iten,2)=zero
       enddo
       create_in%EOS=>EOS
+      create_in%Snew=>Snew
+      create_in%LSnew=>LSnew
       create_in%pres=>pres
       create_in%pres_eos=>pres_eos
+
       create_inout%Snew=>Snew
       create_inout%LSnew=>LSnew
 
@@ -9406,6 +9409,7 @@ stop
                 create_in%local_TSAT=local_Tsat(ireverse)
                 create_in%im_source=im_source
                 create_in%im_dest=im_dest
+                 ! get_vel_phasechange_NUCLEATE is declared in: PROB.F90
                 call get_vel_phasechange_NUCLEATE( &
                  create_in,create_inout)
                else if ((im_primary.ge.1).and. &

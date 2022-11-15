@@ -802,7 +802,7 @@ REAL_T, INTENT(in)    :: problen(SDIM)
 return
 end subroutine STUB_velfreestream
 
-
+! this routine called from PROB.F90
 subroutine STUB_nucleation(nucleate_in,xsten,nhalf,make_seed)
 use probcommon_module_types
 IMPLICIT NONE
@@ -811,6 +811,12 @@ REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
 INTEGER_T, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 
+! i=nucleate_in%i
+! j=nucleate_in%j
+! k=nucleate_in%k
+! 1<=im<=num_materials
+! temperature_component=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+! temperature=nucleate_in%EOS(D_DECL(i,j,k),temperature_component)
 make_seed=0
 
 return

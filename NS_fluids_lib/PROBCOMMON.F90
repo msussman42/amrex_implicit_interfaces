@@ -102,6 +102,8 @@ module probcommon_module_types
        INTEGER_T, pointer :: fablo(:)
        INTEGER_T, pointer :: fabhi(:)
        REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: Snew
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LSnew
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
        REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres_eos
        INTEGER_T :: custom_nucleation_model
