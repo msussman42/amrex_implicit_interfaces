@@ -13242,7 +13242,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   debug_ixType(FD_NRM_ND_MF,-1,FD_NRM_ND_MF);
   
   if (localMF[FD_CURV_CELL_MF]->nComp()!=2*(num_materials+num_interfaces))
-   amrex::Error("localMF[FD_CURV_CELL_MF]->nComp()!=2*(num_materials+num_interfaces)");
+   amrex::Error(
+    "localMF[FD_CURV_CELL_MF]->nComp()!=2*(num_materials+num_interfaces)");
   if (localMF[FD_CURV_CELL_MF]->nGrow()!=ngrow_make_distance)
    amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
   debug_ixType(FD_CURV_CELL_MF,-1,FD_CURV_CELL_MF);

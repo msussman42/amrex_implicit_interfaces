@@ -19575,6 +19575,7 @@ end subroutine RatePhaseChange
 
       IMPLICIT NONE
 
+       ! nucleation_parm_type_input is declared in PROBCOMMON.F90
       type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
       type(nucleation_parm_type_inout), INTENT(inout) :: nucleate_out
       REAL_T VOFTOL_NUCLEATE
@@ -19638,6 +19639,10 @@ end subroutine RatePhaseChange
         nucleate_in%pres,1,-1)
       call checkbound_array1(nucleate_in%fablo,nucleate_in%fabhi, &
         nucleate_in%pres_eos,1,-1)
+      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
+        nucleate_in%Snew,1,-1)
+      call checkbound_array(nucleate_in%fablo,nucleate_in%fabhi, &
+        nucleate_in%LSnew,1,-1)
 
       if (nucleate_in%nstate.eq.STATE_NCOMP) then
        ! do nothing
@@ -19682,7 +19687,9 @@ end subroutine RatePhaseChange
 
        call gridsten_level(xsten,i,j,k,nucleate_in%level,nhalf)
 
-       if (local_freezing_model.eq.0) then
+       if ((local_freezing_model.eq.0).or. & !stefan model freezing/boiling
+           (local_freezing_model.eq.5).or. & !stefan model evap/condensation
+           (local_freezing_model.eq.6)) then !TSAT variable evap/condensation
 
         if (is_in_probtype_list().eq.1) then
          call SUB_nucleation(nucleate_in,xsten,nhalf,make_seed)
@@ -19691,6 +19698,7 @@ end subroutine RatePhaseChange
         endif
         
        else if (local_freezing_model.eq.7) then ! cavitation
+
         prev_time=nucleate_in%prev_time
         cur_time=nucleate_in%cur_time
         dt=nucleate_in%dt
@@ -19877,8 +19885,10 @@ end subroutine RatePhaseChange
          nucleate_out%LSnew(D_DECL(i,j,k),im_source)=-nucleate_in%dx(1)
          nucleate_out%LSnew(D_DECL(i,j,k),im_dest)=nucleate_in%dx(1)
          do dir=1,SDIM
-          nucleate_out%LSnew(D_DECL(i,j,k),num_materials+SDIM*(im_source-1)+dir)=zero
-          nucleate_out%LSnew(D_DECL(i,j,k),num_materials+SDIM*(im_dest-1)+dir)=zero
+          nucleate_out% &
+            LSnew(D_DECL(i,j,k),num_materials+SDIM*(im_source-1)+dir)=zero
+          nucleate_out% &
+            LSnew(D_DECL(i,j,k),num_materials+SDIM*(im_dest-1)+dir)=zero
          enddo
 
          vfluid_sum=zero
