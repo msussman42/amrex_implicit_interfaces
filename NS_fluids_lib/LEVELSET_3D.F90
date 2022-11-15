@@ -7599,7 +7599,7 @@ stop
        vol,DIMS(vol), &
        levelPC,DIMS(levelPC), &
        vofC,DIMS(vofC), &
-       vofF,DIMS(vofF), &
+       vofF,DIMS(vofF), & !vofF: see fort_build_semirefinevof, tessellate==3
        massF,DIMS(massF), &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
@@ -10639,7 +10639,8 @@ stop
             ! do nothing
            else
             print *,"voltotal or mass_total invalid"
-            print *,"voltotal, mass_total, num_materials ",voltotal,mass_total,num_materials
+            print *,"voltotal, mass_total, num_materials ", &
+                    voltotal,mass_total,num_materials
             print *,"voldonate,volrecon ",voldonate,volrecon
             print *,"veldir ",veldir
             print *,"fablo ",fablo(1),fablo(2),fablo(SDIM)

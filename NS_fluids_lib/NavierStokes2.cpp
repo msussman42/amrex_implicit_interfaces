@@ -4724,7 +4724,8 @@ void NavierStokes::allocate_physics_vars() {
   // ncomp,ngrow,dir
  if (localMF_grow[SWEPT_CROSSING_MF]==-1) {
   new_localMF(SWEPT_CROSSING_MF,num_materials,0,-1); 
-  setVal_localMF(SWEPT_CROSSING_MF,1.0,0,num_materials,0); //val,scomp,ncomp,ngrow
+    //val,scomp,ncomp,ngrow
+  setVal_localMF(SWEPT_CROSSING_MF,1.0,0,num_materials,0);
  } else if (localMF_grow[SWEPT_CROSSING_MF]>=0) {
   // do nothing
  } else
