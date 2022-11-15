@@ -7779,7 +7779,9 @@ stop
       REAL_T LSminus(num_materials)
       INTEGER_T im_main,im_main_opp,im_opp
       INTEGER_T ireverse
-      INTEGER_T iten
+      INTEGER_T iten_FFACE
+      INTEGER_T iten_main
+      INTEGER_T iten_majority
       INTEGER_T local_iten
       INTEGER_T zeroradius_flag
       INTEGER_T iten_tension
@@ -8127,10 +8129,10 @@ stop
         if (is_rigid(im).eq.0) then
          do im_opp=im+1,num_materials
           if (is_rigid(im_opp).eq.0) then
-           call get_iten(im,im_opp,iten)
+           call get_iten(im,im_opp,iten_main)
 
            do ireverse=0,1
-            local_iten=iten+ireverse*num_interfaces
+            local_iten=iten_main+ireverse*num_interfaces
             if (get_user_latent_heat(local_iten,293.0d0,1).ne.zero) then
              if (freezing_model(local_iten).eq.0) then
               im_solid_micro=microlayer_substrate(im)
@@ -8140,7 +8142,7 @@ stop
                 print *,"is_rigid(im_solid_micro) invalid"
                 stop
                endif 
-               micro_table(im_opp,im_solid_micro)=iten
+               micro_table(im_opp,im_solid_micro)=iten_main
               else if (im_solid_micro.eq.0) then
                ! do nothing
               else
@@ -8154,7 +8156,7 @@ stop
                 print *,"is_rigid(im_solid_micro) invalid"
                 stop
                endif 
-               micro_table(im,im_solid_micro)=iten
+               micro_table(im,im_solid_micro)=iten_main
               else if (im_solid_micro.eq.0) then
                ! do nothing
               else
@@ -8714,9 +8716,23 @@ stop
          if (is_solid_face.eq.1) then
           gradh=zero
           gradh_tension=zero
+          iten_main=0
          else if (is_solid_face.eq.0) then
 
           call fluid_interface(LSminus,LSplus,gradh,im_main_opp,im_main)
+
+          if (gradh.ne.zero) then
+           if (im_main.ge.im_main_opp) then
+            print *,"fluid_interface bust"
+            stop
+           endif
+           call get_iten(im_main,im_main_opp,iten_main)
+          else if (gradh.eq.zero) then
+           iten_main=0
+          else
+           print *,"gradh is NaN"
+           stop
+          endif
 
           call get_dxmaxLS(dx,bfact,DXMAXLS)
 
@@ -8756,17 +8772,22 @@ stop
            print *,"fluid_interface bust"
            stop
           endif
-          call get_iten(im_main,im_main_opp,iten)
+          if ((iten_main.ge.1).and.(iten_main.le.num_interfaces)) then
+           ! do nothing
+          else
+           print *,"iten_main invalid"
+           stop
+          endif
 
           do im=1,num_materials
            LSIDE_MAT(im)=levelPC(D_DECL(im1,jm1,km1),im)
           enddo
-          call get_LS_extend(LSIDE_MAT,iten,LSIDE(1))
+          call get_LS_extend(LSIDE_MAT,iten_main,LSIDE(1))
 
           do im=1,num_materials
            LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
           enddo
-          call get_LS_extend(LSIDE_MAT,iten,LSIDE(2))
+          call get_LS_extend(LSIDE_MAT,iten_main,LSIDE(2))
 
           if (LSIDE(1)*LSIDE(2).le.zero) then
            LS_consistent=1
@@ -8997,14 +9018,14 @@ stop
             ! prescribed interface coefficient.
            if (implus_majority.ne.imminus_majority) then
 
-            call get_iten(imminus_majority,implus_majority,iten)
+            call get_iten(imminus_majority,implus_majority,iten_majority)
 
-            if (heatvisc_interface(iten).eq.zero) then
+            if (heatvisc_interface(iten_majority).eq.zero) then
              ! do nothing
-            else if (heatvisc_interface(iten).gt.zero) then
+            else if (heatvisc_interface(iten_majority).gt.zero) then
 
              do ireverse=0,1
-              local_iten=iten+ireverse*num_interfaces
+              local_iten=iten_majority+ireverse*num_interfaces
               if (get_user_latent_heat(local_iten,293.0d0,1).ne.zero) then
                if ((freezing_model(local_iten).eq.0).or. &
                    (freezing_model(local_iten).eq.5)) then
@@ -9019,7 +9040,7 @@ stop
               endif 
              enddo !do ireverse=0,1
 
-             faceheat_local=heatvisc_interface(iten)
+             faceheat_local=heatvisc_interface(iten_majority)
 
             else
              print *,"heatvisc_interface invalid"
@@ -9070,7 +9091,12 @@ stop
             print *,"im_main or im_main_opp invalid"
             stop
            endif
-           call get_iten(im_main,im_main_opp,iten)
+           if ((iten_main.ge.1).and.(iten_main.le.num_interfaces)) then
+            ! do nothing
+           else
+            print *,"iten_main invalid"
+            stop
+           endif
 
            if (LSIDE(1).ge.LSIDE(2)) then
             visc1=localvisc_minus(im_main)
@@ -9123,10 +9149,10 @@ stop
             stop
            endif
 
-           if (visc_interface(iten).eq.zero) then
+           if (visc_interface(iten_main).eq.zero) then
             ! do nothing
-           else if (visc_interface(iten).gt.zero) then
-            facevisc_local=visc_interface(iten)
+           else if (visc_interface(iten_main).gt.zero) then
+            facevisc_local=visc_interface(iten_main)
            else
             print *,"visc_interface invalid"
             stop
@@ -9155,27 +9181,27 @@ stop
             stop
            endif
 
-           if (heatvisc_interface(iten).eq.zero) then
+           if (heatvisc_interface(iten_main).eq.zero) then
             ! do nothing
-           else if (heatvisc_interface(iten).gt.zero) then
+           else if (heatvisc_interface(iten_main).gt.zero) then
 
-            if (get_user_latent_heat(iten,293.0d0,1).ne.zero) then
-             if ((freezing_model(iten).eq.0).or. &
-                 (freezing_model(iten).eq.5)) then
+            if (get_user_latent_heat(iten_main,293.0d0,1).ne.zero) then
+             if ((freezing_model(iten_main).eq.0).or. &
+                 (freezing_model(iten_main).eq.5)) then
               print *,"heatvisc_interface invalid"
               stop
              endif 
             endif 
             if (get_user_latent_heat( &
-                 iten+num_interfaces,293.0d0,1).ne.zero) then
-             if ((freezing_model(iten+num_interfaces).eq.0).or. &
-                 (freezing_model(iten+num_interfaces).eq.5)) then
+                 iten_main+num_interfaces,293.0d0,1).ne.zero) then
+             if ((freezing_model(iten_main+num_interfaces).eq.0).or. &
+                 (freezing_model(iten_main+num_interfaces).eq.5)) then
               print *,"heatvisc_interface invalid"
               stop
              endif 
             endif 
 
-            faceheat_local=heatvisc_interface(iten)
+            faceheat_local=heatvisc_interface(iten_main)
            else
             print *,"heatvisc_interface invalid"
             stop
@@ -9206,7 +9232,8 @@ stop
              stop
             endif
 
-            spec_test=speciesvisc_interface((imspec-1)*num_interfaces+iten)
+            spec_test= &
+              speciesvisc_interface((imspec-1)*num_interfaces+iten_main)
             if (spec_test.eq.zero) then
              ! do nothing
             else if (spec_test.gt.zero) then
@@ -9286,12 +9313,12 @@ stop
  
             if ((FFACE(im).gt.VOFTOL).and. &
                 (FFACE(im_opp).gt.VOFTOL)) then
-             call get_iten(im,im_opp,iten)
+             call get_iten(im,im_opp,iten_FFACE)
 
-             if (visc_interface(iten).eq.zero) then
+             if (visc_interface(iten_FFACE).eq.zero) then
               ! do nothing
-             else if (visc_interface(iten).gt.zero) then
-              facevisc_local=visc_interface(iten)
+             else if (visc_interface(iten_FFACE).gt.zero) then
+              facevisc_local=visc_interface(iten_FFACE)
              else
               print *,"visc_interface invalid"
               stop
@@ -9597,17 +9624,22 @@ stop
 
          do im=1,num_materials
           do im_opp=im+1,num_materials
-           if ((FFACE(im).gt.VOFTOL).and. &
-               (FFACE(im_opp).gt.VOFTOL)) then
-            call get_iten(im,im_opp,iten)
-            if (den_interface(iten).eq.zero) then
+
+           call get_iten(im,im_opp,iten_FFACE)
+
+           if (((FFACE(im).gt.VOFTOL).and. &
+                (FFACE(im_opp).gt.VOFTOL)).or. &
+               (iten_main.eq.iten_FFACE)) then
+            if (den_interface(iten_FFACE).eq.zero) then
              ! do nothing
-            else if (den_interface(iten).gt.zero) then
-             local_face(FACECOMP_FACEDEN+1)=one/den_interface(iten)
+            else if (den_interface(iten_FFACE).gt.zero) then
+             local_face(FACECOMP_FACEDEN+1)=one/den_interface(iten_FFACE)
             else
              print *,"den_interface invalid"
              stop
             endif
+           else if (iten_main.ne.iten_FFACE) then
+            ! do nothing
            else if ((FFACE(im).gt.-VOFTOL).and. &
                     (FFACE(im_opp).gt.-VOFTOL)) then
             ! do nothing
