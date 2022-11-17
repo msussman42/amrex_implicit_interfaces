@@ -7735,8 +7735,13 @@ stop
       REAL_T, INTENT(in) :: &
           speciesvisc_interface(num_interfaces*num_species_var)
 
+      REAL_T den_interface_max
+
       INTEGER_T im1,jm1,km1
-      INTEGER_T i,j,k,ii,jj,kk
+      INTEGER_T i,j,k
+      INTEGER_T i1,j1,k1
+      INTEGER_T k1lo,k1hi
+      INTEGER_T ii,jj,kk
       INTEGER_T dir2,inorm,presbclo,presbchi
        ! mask_boundary=1 at left neumann boundary
        ! mask_boundary=2 at right neumann boundary
@@ -8021,6 +8026,18 @@ stop
       call checkbound_array(fablo,fabhi,vofC_ptr,1,-1)
       call checkbound_array(fablo,fabhi,vofF_ptr,1,-1)
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
+
+      k1lo=0
+      k1hi=0
+      if (SDIM.eq.2) then
+       ! do nothing
+      else if (SDIM.eq.3) then
+       k1lo=-1
+       k1hi=1
+      else
+       print *,"SDIM invalid"
+       stop
+      endif
 
       do im=1,2*num_interfaces
 
@@ -10122,6 +10139,11 @@ stop
         do im=1,num_materials
          LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
         enddo
+
+         ! checks rigid and non-rigid materials.
+        call get_primary_material(LSIDE_MAT,implus_majority)
+
+         ! LS_tessellate is declared in MOF.F90
         call LS_tessellate(LSIDE_MAT,LS_FIXED)
 
         do im=1,num_materials
@@ -10244,6 +10266,35 @@ stop
          DeDT_total=DeDT_total+DeDT*delta_mass
         enddo ! im=1..num_materials
 
+        den_interface_max=zero
+        do i1=-1,1
+        do j1=-1,1
+        do k1=k1lo,k1hi
+         do im=1,num_materials
+          LSIDE_MAT(im)=levelPC(D_DECL(i+i1,j+j1,k+k1),im)
+         enddo
+          ! checks rigid and non-rigid materials.
+         call get_primary_material(LSIDE_MAT,imminus_majority)
+         if (implus_majority.eq.imminus_majority) then
+          ! do nothing
+         else if (implus_majority.ne.imminus_majority) then
+          call get_iten(implus_majority,iminus_majority,iten_main)
+          if (den_interface(iten_main).eq.zero) then
+           ! do nothing
+          else if (den_interface(iten_main).gt.zero) then
+           den_interface_max=max(den_interface_max,den_interface(iten_main))
+          else
+           print *,"den_interface(iten_main) invalid"
+           stop
+          endif
+         else
+          print *,"implus or imminus majority corruption"
+          stop
+         endif
+        enddo !k1
+        enddo !j1
+        enddo !i1
+
         if (mass_total.gt.zero) then
          ! do nothing
         else
@@ -10283,6 +10334,14 @@ stop
              one/((visc_total_thick/voltotal_thick)+VISCINVTOL)  
         else
          print *,"thick_flag invalid"
+         stop
+        endif
+        if (den_interface_max.eq.zero) then
+         ! do nothing
+        else if (den_interface_max.gt.zero) then
+         local_cenden=one/den_interface_max
+        else
+         print *,"den_interface_max invalid"
          stop
         endif
 
