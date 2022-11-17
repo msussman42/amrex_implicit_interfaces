@@ -9598,6 +9598,12 @@ stop
            print *,"dir2,fablo,fabhi ",dir2,fablo(dir2),fabhi(dir2)
           enddo
           stop
+         else if ((mass_total.gt.zero).and. &
+                  (voltotal.gt.zero)) then
+          ! do nothing
+         else
+          print *,"mass_total or voltotal is NaN"
+          stop
          endif
 
          if (voltotal.gt.zero) then
