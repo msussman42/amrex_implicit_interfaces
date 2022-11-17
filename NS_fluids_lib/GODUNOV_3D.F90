@@ -2286,6 +2286,7 @@ stop
         mass_fraction_id, &
         molar_mass, &
         species_molar_mass, &
+        den_interface, &
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
@@ -2351,6 +2352,7 @@ stop
       INTEGER_T, INTENT(in) :: mass_fraction_id(2*num_interfaces)
       REAL_T, INTENT(in) :: molar_mass(num_materials)
       REAL_T, INTENT(in) :: species_molar_mass(num_species_var+1)
+      REAL_T, INTENT(in) :: den_interface(num_interfaces)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T uu_estdt
@@ -2391,7 +2393,8 @@ stop
       REAL_T, target, INTENT(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
       REAL_T, pointer :: solidfab_ptr(D_DECL(:,:,:),:)
        ! den,temp,species
-      REAL_T, target, INTENT(in) :: den(DIMV(den),num_state_material*num_materials)  
+      REAL_T, target, INTENT(in) :: &
+              den(DIMV(den),num_state_material*num_materials)  
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, target, INTENT(in) :: vof(DIMV(vof),num_materials*ngeom_raw)
       REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
@@ -2420,7 +2423,8 @@ stop
       REAL_T massfrac_parm_right(num_species_var+1)
       REAL_T gradh
       REAL_T weymouth_factor,weymouth_cfl
-      REAL_T dxmin,dxmax,dxmaxLS,den1,den2,visc1,visc2
+      REAL_T dxmin,dxmax,dxmaxLS
+      REAL_T den1,den2,visc1,visc2
       INTEGER_T recompute_wave_speed
       REAL_T uulocal
       REAL_T denjump
@@ -2625,6 +2629,17 @@ stop
           visc1=visc_coef*mu+1.0D-10
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
           visc2=visc_coef*mu+1.0D-10
+
+          if (den_interface(iten).eq.zero) then
+           ! do nothing
+          else if (den_interface(iten).gt.zero) then
+           den1=den_interface(iten)
+           den2=den1
+          else
+           print *,"den_interface invalid"
+           stop
+          endif
+
            ! declared in PROB.F90
           call capillary_wave_speed(dxmin,den1,den2,visc1,visc2, &
             user_tension(iten),cap_wave_speed(iten))
