@@ -21119,6 +21119,7 @@ void NavierStokes::MaxAdvectSpeed(
     mass_fraction_id.dataPtr(),
     molar_mass.dataPtr(),
     species_molar_mass.dataPtr(),
+    denconst_interface.dataPtr(),
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),

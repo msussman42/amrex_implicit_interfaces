@@ -10278,7 +10278,7 @@ stop
          if (implus_majority.eq.imminus_majority) then
           ! do nothing
          else if (implus_majority.ne.imminus_majority) then
-          call get_iten(implus_majority,iminus_majority,iten_main)
+          call get_iten(implus_majority,imminus_majority,iten_main)
           if (den_interface(iten_main).eq.zero) then
            ! do nothing
           else if (den_interface(iten_main).gt.zero) then
