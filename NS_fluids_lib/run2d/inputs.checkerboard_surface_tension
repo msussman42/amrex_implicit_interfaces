@@ -1,6 +1,6 @@
 max_step  =  99999    # maximum timestep
 #max_step  =  3    # maximum timestep
-stop_time =  1.0  # maximum problem time
+stop_time =  0.005  # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # use RT_growth.f90 to determine expected growth rate
@@ -101,17 +101,24 @@ ns.tempconst=282.88543 282.88543  # Tait EOS for water
 ns.shock_timestep=2 2  # 0 0 INCOMP; 2 2 if COMPRESSIBLE (shrink=0.1)
 ns.material_type=0 0 
 ns.stiffCP=4.19e+7  1.01e+7  # cgs units
-# if (probtype.eq.602)&&(xblob>=10^5)&&(radblob<=dx/1000) then 
+# if (probtype.eq.602)&&(xblob>=10^10)&&(radblob<=10^(-10)) then 
+#  material 1 is on top
+#  material 2 is on bottom
 #  LS(time=0)=y-(yblob+dy/2)
-#  x^ref=dx/10
-#  y^ref=dy/4
+#  m=1/4  suppose dx=dy=1
+#  V=1/2
+#  int_xlo^xhi int_ylo^mx x dy dx=int_xlo^xhi m x^2 + x/2 =
+#  |m x^3/3=m(2/3)(1/8)=m/12   x^ref=(m/12)/(1/2)=m/6
+#  int_xlo^xhi int_ylo^mx y dy dx=int_xlo^xhi m^2 x^2/2 - 1/8 =
+#  m^2 (1/24)-1/8   y^ref=m^2/12 - 1/4
+#
 # number of periods in the domain (if 0.0 then default 1 period)
-ns.xblob=1.0e+10   
+ns.xblob=1.0e+15   
 # average height of the interface
 # this value will automatically be shifted up by dy/2
 ns.yblob=0.5   
 ns.zblob=0.0
-ns.radblob=1.0e-10  # amplitude of perturbation 
+ns.radblob=1.0e-15  # amplitude of perturbation 
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=602
