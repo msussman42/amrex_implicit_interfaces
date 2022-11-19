@@ -2489,7 +2489,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if ((probtype.eq.36).or. &   ! bubble in liquid
             (probtype.eq.601).or. &  ! cooling disk
-            (probtype.eq.602)) then  ! Rayleigh-Taylor
+            (probtype.eq.602)) then  ! Rayleigh-Taylor (and checkerboard test)
          if ((probtype.eq.36).and. &
              (axis_dir.eq.10)) then
           print *,"cannot use hydrostatic pressure for heat pipe experiment"
@@ -8980,7 +8980,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          dist=y-(yblob-radblob*velperturbx)
         endif
 
-         ! Rayleigh Taylor (vapordist)
+         ! Rayleigh Taylor and checkerboard test (vapordist)
        else if (probtype.eq.602) then
          ! yblob is the average height of the interface 
          ! between water and air
@@ -8995,8 +8995,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else
          wave_number=xblob
         endif
-        if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
-         dist=y-(yblob+half*dx(2))
+        if ((xblob.ge.1.0D+10).and.(radblob.le.(1.0D-10))) then
+         dist=y-(yblob+half*(1.0d0/16.0d0))
         else 
          dist=y-(yblob+ &
           radblob*cos(two*Pi*wave_number*(x-problox)/(probhix-problox)))
@@ -25462,7 +25462,8 @@ end subroutine initialize2d
            im_dest=2
            ireverse=0
            call get_iten(im_source,im_dest,iten)
-           L_ice_melt=abs(get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1))
+           L_ice_melt= &
+            abs(get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1))
            TSAT=saturation_temp(iten+ireverse*num_interfaces)
            T_EXTREME=fort_initial_temperature(im_source)
            cp_melt=get_user_stiffCP(im_source) ! J/Kelvin
@@ -25604,6 +25605,7 @@ end subroutine initialize2d
         enddo ! im=1..num_materials
 
          ! in: fort_initdata
+         ! "stackvolume_batch" is declared in STACKVOLUME.F90
          ! "level" = 0
         call stackvolume_batch(xsten,nhalf,dx,bfact,fluiddata, &
          0,max_levelstack,materialdist_batch,time)
@@ -25612,14 +25614,36 @@ end subroutine initialize2d
 
          ! Rayleigh-Taylor, checkerboard test
         if (probtype.eq.602) then
-          ! in subroutine vapordist: dist=y-(yblob+dy/2)
+          ! in subroutine vapordist: dist=y-(yblob+(1/16)/2)
           ! material 1 is on top (dist>0)
           ! material 2 is on bottom (dist<0)
-         if ((xblob.ge.1.0D+5).and.(radblob.le.0.001*dx(1))) then
+         if ((xblob.ge.1.0D+10).and.(radblob.le.1.0D-10)) then
           if (num_materials.ne.2) then
            print *,"num_materials invalid"
            stop
           endif
+
+          if (1.eq.0) then
+           print *,"ic,jc,x,y ",ic,jc,x,y
+           do im=1,2
+            print *,"im,dist,vof,cen ",im,distbatch(im),vofdark(im), &
+              cendark(im,1),cendark(im,2)
+           enddo
+          endif
+
+          if (abs(1.0d0/16.0d0-dx(2)).le.1.0D-14) then
+           ! do nothing
+          else
+           print *,"checkerboard test distance function assumes dy=1/16"
+           stop
+          endif
+          if (abs(1.0d0/16.0d0-dx(1)).le.1.0D-14) then
+           ! do nothing
+          else
+           print *,"checkerboard test distance function assumes dx=1/16"
+           stop
+          endif
+
            ! if 1x1 centroid is (alpha,-1/4+beta) then: 
            !  for saw tooth:
            !  3x3 volume=3(3/2)=9/2
@@ -25693,7 +25717,8 @@ end subroutine initialize2d
           print *,"im,vofdark ",im,vofdark(im)
           print *,"im,distbatch ",im,distbatch(im)
          enddo
-         if ((im_solid_initdata.ge.1).and.(im_solid_initdata.le.num_materials)) then
+         if ((im_solid_initdata.ge.1).and. &
+             (im_solid_initdata.le.num_materials)) then
           call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
           if ((FSI_flag(im_solid_initdata).eq.2).or. &!prescribed solid (CAD)
               (FSI_flag(im_solid_initdata).eq.8).or. &!CTML FSI pres vel
@@ -26935,7 +26960,7 @@ end subroutine initialize2d
            endif
            y_vel=adv_vel*radblob2*cos(kterm)*cos(ktermx)
           endif
-         else if (probtype.eq.602) then  ! Rayleigh Taylor
+         else if (probtype.eq.602) then  ! Rayleigh Taylor and checkerboard
           x_vel=zero
           y_vel=zero
          else if ((probtype.eq.1).and.(axis_dir.lt.150)) then
