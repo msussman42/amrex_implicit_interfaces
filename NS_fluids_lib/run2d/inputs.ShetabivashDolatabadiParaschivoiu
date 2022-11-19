@@ -2,7 +2,7 @@
 # Figure 12, rho_ice/rho_liq=0.85
 max_step  =  9999999    # maximum timestep
 
-stop_time = 20.0
+stop_time = 5.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -18,7 +18,7 @@ ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=5
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-ns.projection_pressure_scale=1.0
+ns.projection_pressure_scale=1.0e-3
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=0
 ns.post_init_pressure_solve=1 
@@ -27,8 +27,8 @@ ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=2
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=10000 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=0
+ns.mof_decision_tree_learning=100 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=15
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 ns.mof_error_ordering=0
@@ -70,7 +70,7 @@ amr.plot_file       = plt
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 32
 amr.file_name_digits=7
-#amr.restart         = chk0137500
+#amr.restart         = chk0024000
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -162,7 +162,7 @@ ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 #ns.denconst=1.0 0.00129 0.917 10.0 
 ns.denconst=1.0 0.00129 0.850 10.0 
-ns.denconst_interface=500.0 0.0 500.0 500.0 500.0 500.0 #added mass test
+ns.denconst_interface=50000.0 0.0 50000.0 50000.0 50000.0 50000.0 #added mass 
 #ns.material_thickness=1.5 0.0 1.5 1.5
 ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 3 1
