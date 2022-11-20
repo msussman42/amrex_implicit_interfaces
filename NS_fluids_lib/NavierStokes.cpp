@@ -11197,12 +11197,14 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
+
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
+
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
@@ -11372,9 +11374,11 @@ void NavierStokes::make_marangoni_force() {
   debug_ngrow(FACE_VAR_MF+dir,0,2);
 
  debug_ngrow(DIST_CURV_MF,1,3);
+
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+
  debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
  if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
@@ -11525,13 +11529,17 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 
  debug_ngrow(delta_MF,0,3);
  debug_ngrow(MASKSEM_MF,1,28); 
+
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
+
  debug_ngrow(CELL_DEDT_MF,1,28); 
+
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
+
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
@@ -11705,9 +11713,11 @@ void NavierStokes::make_heat_source() {
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+
  debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
  if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
+
  debug_ngrow(CELL_DEDT_MF,1,5);
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
@@ -11743,7 +11753,6 @@ void NavierStokes::make_heat_source() {
 
   const Real* xlo = grid_loc[gridno].lo();
 
-  FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
   FArrayBox& DeDTinversefab=(*localMF[CELL_DEDT_MF])[mfi]; // 1/(rho cv)
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
@@ -11767,7 +11776,7 @@ void NavierStokes::make_heat_source() {
    // rho cv : J/(m^3 Kelvin)
    // 1/(rho cv) : (m^3 Kelvin)/J
    // heat_source: J/(m^3 s)
-   // in: GODUNOV_3D.F90
+   // declared in: GODUNOV_3D.F90
   fort_heatsource(
    &nstate,
    &nden,
@@ -11775,8 +11784,6 @@ void NavierStokes::make_heat_source() {
    &temperature_source,
    temperature_source_cen.dataPtr(),
    temperature_source_rad.dataPtr(),
-   rhoinversefab.dataPtr(),
-   ARLIM(rhoinversefab.loVect()),ARLIM(rhoinversefab.hiVect()),
    DeDTinversefab.dataPtr(),
    ARLIM(DeDTinversefab.loVect()),ARLIM(DeDTinversefab.hiVect()),
    snewfab.dataPtr(STATECOMP_STATES),
@@ -15629,12 +15636,14 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
 
  debug_ngrow(CELL_DEN_MF,1,28); 
  debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
+
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
  if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
+
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 

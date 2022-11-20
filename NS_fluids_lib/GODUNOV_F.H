@@ -618,8 +618,6 @@ extern "C"
     Real* temperature_source,
     Real* temperature_source_cen,
     Real* temperature_source_rad,
-    Real* rhoinverse,
-    AMREX_ARLIM_P(rhoinverselo),AMREX_ARLIM_P(rhoinversehi), 
     Real* DeDTinverse,
     AMREX_ARLIM_P(DeDTinverselo),AMREX_ARLIM_P(DeDTinversehi), 
     Real* Tnew,AMREX_ARLIM_P(Tnewlo),AMREX_ARLIM_P(Tnewhi), 

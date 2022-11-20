@@ -111,6 +111,7 @@ stop
          unew,DIMS(unew), &
          lsnew,DIMS(lsnew), &
          den,DIMS(den), &  ! 1/density
+         denadded,DIMS(denadded), &  ! density/density_added
          mu,DIMS(mu), &
          tilelo,tilehi, &
          fablo,fabhi, &
@@ -163,6 +164,7 @@ stop
        INTEGER_T, INTENT(in) :: DIMDEC(unew)
        INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
        INTEGER_T, INTENT(in) :: DIMDEC(den)
+       INTEGER_T, INTENT(in) :: DIMDEC(denadded)
        INTEGER_T, INTENT(in) :: DIMDEC(mu)
 
        REAL_T, INTENT(out),target :: force(DIMV(force),AMREX_SPACEDIM)
@@ -187,7 +189,9 @@ stop
        REAL_T, INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
        REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
        REAL_T, INTENT(in),target :: den(DIMV(den))
+       REAL_T, INTENT(in),target :: denadded(DIMV(denadded))
        REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
+       REAL_T, pointer :: denadded_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(in),target :: mu(DIMV(mu))
        REAL_T, pointer :: mu_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(in) ::  xlo(SDIM)
@@ -201,6 +205,7 @@ stop
        REAL_T unp1(AMREX_SPACEDIM)
        REAL_T RCEN
        REAL_T inverseden
+       REAL_T inversedenadded
        REAL_T mu_cell
        INTEGER_T vofcomp
        INTEGER_T dencomp
@@ -293,8 +298,12 @@ stop
        call checkbound_array(fablo,fabhi,unew_ptr,1,-1)
        lsnew_ptr=>lsnew
        call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+
        den_ptr=>den
        call checkbound_array1(fablo,fabhi,den_ptr,1,-1)
+       denadded_ptr=>denadded
+       call checkbound_array1(fablo,fabhi,denadded_ptr,1,-1)
+
        mu_ptr=>mu
        call checkbound_array1(fablo,fabhi,mu_ptr,1,-1)
 
@@ -325,7 +334,8 @@ stop
               im_solid=im
               partid_crit=partid
               LScrit=LStest
-             else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
+             else if ((im_solid.ge.1).and. &
+                      (im_solid.le.num_materials)) then
               if (LStest.ge.LScrit) then
                im_solid=im
                partid_crit=partid
@@ -373,13 +383,24 @@ stop
         endif
 
         inverseden=den(D_DECL(i,j,k))
+        inversedenadded=denadded(D_DECL(i,j,k))
         mu_cell=mu(D_DECL(i,j,k))
-        if (inverseden.ge.zero) then
+
+        if (inverseden.gt.zero) then
          ! do nothing
         else
          print *,"inverseden invalid"
          stop
         endif
+
+        if ((inversedenadded.gt.zero).and. &
+            (inversedenadded.le.one)) then
+         ! do nothing
+        else
+         print *,"inversedenadded invalid"
+         stop
+        endif
+
         if (mu_cell.ge.zero) then
          ! do nothing
         else
@@ -519,7 +540,7 @@ stop
           ! DTEMP has no units.
          if (abs(DTEMP).ge.zero) then
           do dir=1,SDIM
-           unp1(dir)=unp1(dir)+dt*gravity_vector(dir)*DTEMP
+           unp1(dir)=unp1(dir)+dt*gravity_vector(dir)*DTEMP*inversedenadded
           enddo
          else
           print *,"DTEMP is NaN"
