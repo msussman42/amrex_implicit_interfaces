@@ -6713,8 +6713,6 @@ stop
        temperature_source, &
        temperature_source_cen, &
        temperature_source_rad, &
-       rhoinverse, &
-       DIMS(rhoinverse), &
        DeDTinverse, &
        DIMS(DeDTinverse), &
        Tnew,DIMS(Tnew), &
@@ -6738,7 +6736,6 @@ stop
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
-      INTEGER_T, INTENT(in) :: DIMDEC(rhoinverse)
       INTEGER_T, INTENT(in) :: DIMDEC(DeDTinverse)
       INTEGER_T, INTENT(in) :: DIMDEC(Tnew)
       INTEGER_T, INTENT(in) :: DIMDEC(lsfab)
@@ -6751,8 +6748,6 @@ stop
       REAL_T, INTENT(in) :: temperature_source
       REAL_T, INTENT(in) :: temperature_source_cen(SDIM)
       REAL_T, INTENT(in) :: temperature_source_rad(SDIM)
-      REAL_T, INTENT(in),target :: rhoinverse(DIMV(rhoinverse))
-      REAL_T, pointer :: rhoinverse_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in),target :: DeDTinverse(DIMV(DeDTinverse)) ! 1/(rho cv)
       REAL_T, pointer :: DeDTinverse_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(inout),target :: Tnew(DIMV(Tnew),nden)
@@ -6820,8 +6815,6 @@ stop
        stop
       endif
 
-      rhoinverse_ptr=>rhoinverse
-      call checkbound_array1(fablo,fabhi,rhoinverse_ptr,1,-1)
       DeDTinverse_ptr=>DeDTinverse
       call checkbound_array1(fablo,fabhi,DeDTinverse_ptr,1,-1)
       Tnew_ptr=>Tnew

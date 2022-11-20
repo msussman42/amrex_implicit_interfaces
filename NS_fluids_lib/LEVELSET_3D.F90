@@ -7918,8 +7918,10 @@ stop
       solyfab_ptr=>solyfab
       solzfab_ptr=>solzfab
       cenDeDT_ptr=>cenDeDT
+
       cenden_ptr=>cenden
       cendenadded_ptr=>cendenadded
+
       cenvof_ptr=>cenvof
       cenvisc_ptr=>cenvisc
       vol_ptr=>vol
@@ -8013,8 +8015,10 @@ stop
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
 
       call checkbound_array1(fablo,fabhi,cenDeDT_ptr,1,-1)
+
       call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cendenadded_ptr,1,-1)
+
       call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1)
 
@@ -9668,6 +9672,7 @@ stop
              ! do nothing
             else if (denconst_interface_added(iten_FFACE).gt.zero) then
              if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
+               ! rho/rho_added
               local_face(FACECOMP_ADDED_MASS_FACTOR+1)=one/ &
                 (local_face(FACECOMP_FACEDEN+1)* &
                  denconst_interface_added(iten_FFACE))
@@ -10373,6 +10378,7 @@ stop
         else if (denconst_interface_added_max.gt.zero) then
          if (local_cenden.gt.zero) then
            !local_cenden=1/rho
+           !local_cendenadded=rho/rho_added
           local_cendenadded=one/ &
             (local_cenden*denconst_interface_added_max)
           if (local_cendenadded.le.one) then

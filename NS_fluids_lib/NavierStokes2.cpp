@@ -1612,9 +1612,11 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
  debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer level.
  debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
+
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+
  debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,5);
  if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
@@ -5067,6 +5069,7 @@ void NavierStokes::make_physics_vars(int project_option) {
 
    // stores 1/(rho cv)   (cv=DeDT)
    FArrayBox& cDeDTfab=(*localMF[CELL_DEDT_MF])[mfi];
+
    FArrayBox& cdenfab=(*localMF[CELL_DEN_MF])[mfi];  // 1/rho
      // rho/rho_added
    FArrayBox& cdenaddedfab=(*localMF[CELL_DEN_ADDED_MASS_FACTOR_MF])[mfi];  
@@ -5140,7 +5143,8 @@ void NavierStokes::make_physics_vars(int project_option) {
     ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
     cDeDTfab.dataPtr(),
     ARLIM(cDeDTfab.loVect()),ARLIM(cDeDTfab.hiVect()),
-    cdenfab.dataPtr(),ARLIM(cdenfab.loVect()),ARLIM(cdenfab.hiVect()),
+    cdenfab.dataPtr(),
+    ARLIM(cdenfab.loVect()),ARLIM(cdenfab.hiVect()),
     cdenaddedfab.dataPtr(),
     ARLIM(cdenaddedfab.loVect()),ARLIM(cdenaddedfab.hiVect()),
     cvoffab.dataPtr(),ARLIM(cvoffab.loVect()),ARLIM(cvoffab.hiVect()),
