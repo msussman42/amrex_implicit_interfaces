@@ -2286,7 +2286,7 @@ stop
         mass_fraction_id, &
         molar_mass, &
         species_molar_mass, &
-        den_interface, &
+        denconst_interface_added, &
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
@@ -2352,7 +2352,7 @@ stop
       INTEGER_T, INTENT(in) :: mass_fraction_id(2*num_interfaces)
       REAL_T, INTENT(in) :: molar_mass(num_materials)
       REAL_T, INTENT(in) :: species_molar_mass(num_species_var+1)
-      REAL_T, INTENT(in) :: den_interface(num_interfaces)
+      REAL_T, INTENT(in) :: denconst_interface_added(num_interfaces)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T uu_estdt
@@ -2630,13 +2630,13 @@ stop
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
           visc2=visc_coef*mu+1.0D-10
 
-          if (den_interface(iten).eq.zero) then
+          if (denconst_interface_added(iten).eq.zero) then
            ! do nothing
-          else if (den_interface(iten).gt.zero) then
-           den1=den_interface(iten)
+          else if (denconst_interface_added(iten).gt.zero) then
+           den1=denconst_interface_added(iten)
            den2=den1
           else
-           print *,"den_interface invalid"
+           print *,"denconst_interface_added invalid"
            stop
           endif
 

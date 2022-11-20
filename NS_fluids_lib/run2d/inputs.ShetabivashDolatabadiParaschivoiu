@@ -162,7 +162,8 @@ ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 #ns.denconst=1.0 0.00129 0.917 10.0 
 ns.denconst=1.0 0.00129 0.850 10.0 
-ns.denconst_interface=50000.0 0.0 50000.0 50000.0 50000.0 50000.0 #added mass 
+#added mass 
+ns.denconst_interface_added=50000.0 0.0 50000.0 50000.0 50000.0 50000.0 
 #ns.material_thickness=1.5 0.0 1.5 1.5
 ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 3 1

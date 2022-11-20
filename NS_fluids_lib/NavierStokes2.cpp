@@ -5084,7 +5084,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     &isweep,
     &nrefine_vof,
     material_thickness.dataPtr(),
-    denconst_interface.dataPtr(),
+    denconst_interface_added.dataPtr(),
     viscconst_interface.dataPtr(),
     heatviscconst_interface.dataPtr(),
     speciesviscconst_interface.dataPtr(),

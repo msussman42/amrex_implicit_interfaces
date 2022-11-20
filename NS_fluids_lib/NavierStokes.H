@@ -2058,7 +2058,7 @@ protected:
      // if cancel_advection==1, do not include u dot grad S terms for any
      // S corresponding to velocity, interface, or state variables.
     static int cancel_advection;  // def=0
-    static Vector<Real> denconst_interface;
+    static Vector<Real> denconst_interface_added;
 
     static Vector<Real> stiffPINF;
     static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7

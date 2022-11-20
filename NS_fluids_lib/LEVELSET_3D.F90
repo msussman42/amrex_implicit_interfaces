@@ -7552,7 +7552,7 @@ stop
        isweep, &
        nrefine_vof, &
        material_thickness, &
-       den_interface, &
+       denconst_interface_added, &
        visc_interface, &
        heatvisc_interface, &
        speciesvisc_interface, &
@@ -7729,13 +7729,13 @@ stop
 
       REAL_T, INTENT(in) :: material_thickness(num_materials)
 
-      REAL_T, INTENT(in) :: den_interface(num_interfaces)
+      REAL_T, INTENT(in) :: denconst_interface_added(num_interfaces)
       REAL_T, INTENT(in) :: visc_interface(num_interfaces)
       REAL_T, INTENT(in) :: heatvisc_interface(num_interfaces)
       REAL_T, INTENT(in) :: &
           speciesvisc_interface(num_interfaces*num_species_var)
 
-      REAL_T den_interface_max
+      REAL_T denconst_interface_added_max
 
       INTEGER_T im1,jm1,km1
       INTEGER_T i,j,k
@@ -8067,7 +8067,7 @@ stop
 
       do im=1,num_interfaces
 
-       if ((den_interface(im).ge.zero).and. &
+       if ((denconst_interface_added(im).ge.zero).and. &
            (visc_interface(im).ge.zero).and. &
            (heatvisc_interface(im).ge.zero)) then
         ! do nothing
@@ -9653,12 +9653,13 @@ stop
            if (((FFACE(im).gt.VOFTOL).and. &
                 (FFACE(im_opp).gt.VOFTOL)).or. &
                (iten_main.eq.iten_FFACE)) then
-            if (den_interface(iten_FFACE).eq.zero) then
+            if (denconst_interface_added(iten_FFACE).eq.zero) then
              ! do nothing
-            else if (den_interface(iten_FFACE).gt.zero) then
-             local_face(FACECOMP_FACEDEN+1)=one/den_interface(iten_FFACE)
+            else if (denconst_interface_added(iten_FFACE).gt.zero) then
+             local_face(FACECOMP_FACEDEN+1)=one/ &
+                     denconst_interface_added(iten_FFACE)
             else
-             print *,"den_interface invalid"
+             print *,"denconst_interface_added invalid"
              stop
             endif
            else if (iten_main.ne.iten_FFACE) then
@@ -10266,7 +10267,7 @@ stop
          DeDT_total=DeDT_total+DeDT*delta_mass
         enddo ! im=1..num_materials
 
-        den_interface_max=zero
+        denconst_interface_added_max=zero
         do i1=-1,1
         do j1=-1,1
         do k1=k1lo,k1hi
@@ -10279,12 +10280,13 @@ stop
           ! do nothing
          else if (implus_majority.ne.imminus_majority) then
           call get_iten(implus_majority,imminus_majority,iten_main)
-          if (den_interface(iten_main).eq.zero) then
+          if (denconst_interface_added(iten_main).eq.zero) then
            ! do nothing
-          else if (den_interface(iten_main).gt.zero) then
-           den_interface_max=max(den_interface_max,den_interface(iten_main))
+          else if (denconst_interface_added(iten_main).gt.zero) then
+           denconst_interface_added_max=max(denconst_interface_added_max, &
+                denconst_interface_added(iten_main))
           else
-           print *,"den_interface(iten_main) invalid"
+           print *,"denconst_interface_added(iten_main) invalid"
            stop
           endif
          else
@@ -10336,12 +10338,12 @@ stop
          print *,"thick_flag invalid"
          stop
         endif
-        if (den_interface_max.eq.zero) then
+        if (denconst_interface_added_max.eq.zero) then
          ! do nothing
-        else if (den_interface_max.gt.zero) then
-         local_cenden=one/den_interface_max
+        else if (denconst_interface_added_max.gt.zero) then
+         local_cenden=one/denconst_interface_added_max
         else
-         print *,"den_interface_max invalid"
+         print *,"denconst_interface_added_max invalid"
          stop
         endif
 
