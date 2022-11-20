@@ -46,7 +46,7 @@ ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
 cg.restart_period=25
 cg.maxiter = 200
-mg.bot_atol = 1.0e-12
+mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -61,14 +61,14 @@ amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
 amr.grid_eff        = 0.8     # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.blocking_factor = 8 8 8 8  # block factor in grid generation
-amr.check_int       = 500
+amr.check_int       = 200
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 200 # 200
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 32
+amr.max_grid_size   = 1024
 amr.file_name_digits=7
 #amr.restart         = chk0024000
 #amr.trace   =1
@@ -76,13 +76,13 @@ amr.file_name_digits=7
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-10
+mac.mac_abs_tol    = 1.0e-11
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
-mac.visc_abs_tol   = 1.0e-8
+mac.visc_abs_tol   = 1.0e-9
 ns.gravity        = 0.0 # thermal effects only
 #ns.gravity        = -980.0 # cm/s^2
 
