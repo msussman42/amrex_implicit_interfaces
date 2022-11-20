@@ -2296,24 +2296,56 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by ESTDT: determine maximum force due to buoyancy. 
-      subroutine get_max_denjump(denjump)
+      subroutine get_max_denjump_scale(denjump_scale,denconst_interface_added)
       use global_utility_module
 
       IMPLICIT NONE
 
       INTEGER_T im,im_opp
-      REAL_T, INTENT(out) :: denjump
-      REAL_T denjump_temp
+      INTEGER_T iten
+      REAL_T, INTENT(in) :: denconst_interface_added(num_interfaces)
+      REAL_T, INTENT(out) :: denjump_scale
+      REAL_T denjump_scale_temp
+      REAL_T max_den_interface
 
-      denjump=zero
+      denjump_scale=zero
 
       do im=1,num_materials 
        if (is_rigid(im).eq.0) then
         do im_opp=im+1,num_materials
          if (is_rigid(im_opp).eq.0) then
-          denjump_temp=abs(fort_denconst(im)-fort_denconst(im_opp))
-          if (denjump_temp.gt.denjump) then
-           denjump=denjump_temp
+          call get_iten(im,im_opp,iten)
+          if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+           ! do nothing
+          else
+           print *,"iten invalid"
+           stop
+          endif
+          max_den_interface=max(fort_denconst(im),fort_denconst(im_opp))
+          if (max_den_interface.gt.zero) then
+           if (denconst_interface_added(iten).eq.zero) then
+            ! do nothing
+           else if (denconst_interface_added(iten).gt.zero) then
+            if (denconst_interface_added(iten).gt.max_den_interface) then
+             max_den_interface=denconst_interface_added(iten)
+            else
+             print *,"denconst_interface_added invalid"
+             stop
+            endif             
+           else
+            print *,"denconst_interface_added invalid"
+            stop
+           endif             
+          
+           denjump_scale_temp=abs(fort_denconst(im)-fort_denconst(im_opp))/ &
+             max_den_interface
+           if (denjump_scale_temp.gt.denjump_scale) then
+            denjump_scale=denjump_scale_temp
+           endif
+
+          else
+           print *,"max_den_interface invalid"
+           stop
           endif
          else if (is_rigid(im_opp).eq.1) then
           ! do nothing
@@ -2321,30 +2353,36 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"is_rigid invalid PROB.F90"
           stop
          endif
-        enddo ! im_opp
+        enddo ! im_opp=im+1,num_materials
        else if (is_rigid(im).eq.1) then
         ! do nothing
        else
         print *,"is_rigid invalid PROB.F90"
         stop
        endif
-      enddo ! im
+      enddo ! im=1..num_materials
 
       if (probtype.eq.82) then ! rotating annulus
        if (twall.lt.fort_tempconst(1)) then
         print *,"twall invalid"
         stop
        endif
-       call SUB_UNITLESS_EXPANSION_FACTOR(1,twall, &
-          fort_tempconst(1),denjump_temp)
-       denjump_temp=abs(denjump_temp)
-       if (denjump_temp.gt.denjump) then
-        denjump=denjump_temp
+       max_den_interface=max(fort_denconst(1),fort_denconst(2))
+       if (max_den_interface.gt.zero) then
+        call SUB_UNITLESS_EXPANSION_FACTOR(1,twall, &
+          fort_tempconst(1),denjump_scale_temp)
+        denjump_scale_temp=abs(denjump_scale_temp)/max_den_interface
+        if (denjump_scale_temp.gt.denjump_scale) then
+         denjump_scale=denjump_scale_temp
+        endif
+       else
+        print *,"max_den_interface invalid"
+        stop
        endif
       endif
 
       return
-      end subroutine get_max_denjump
+      end subroutine get_max_denjump_scale
    
 
        ! Du/Dt=-grad p/rho - omega cross (omega cross r)- 2 omega cross u +
