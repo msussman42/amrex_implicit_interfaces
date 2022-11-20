@@ -21125,7 +21125,7 @@ void NavierStokes::MaxAdvectSpeed(
 
    Real local_dt_min_thread=local_dt_min[tid_current];
 
-    // in: GODUNOV_3D.F90
+    // declared in: GODUNOV_3D.F90
    fort_estdt(
     interface_mass_transfer_model.dataPtr(),
     &tid_current,

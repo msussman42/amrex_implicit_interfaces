@@ -10183,6 +10183,7 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_init_potential
 
+! called from:
 ! NavierStokes3.cpp: NavierStokes::increment_potential_force()
       subroutine fort_addgravity( &
        dt, &

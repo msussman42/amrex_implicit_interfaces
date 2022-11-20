@@ -2427,8 +2427,8 @@ stop
       REAL_T den1,den2,visc1,visc2
       INTEGER_T recompute_wave_speed
       REAL_T uulocal
-      REAL_T denjump
-      REAL_T denjump_temp
+      REAL_T denjump_scale
+      REAL_T denjump_scale_temp
       REAL_T denmax
       REAL_T USTEFAN,USTEFAN_hold
       REAL_T LS1,LS2,Tsrc,Tdst,Dsrc,Ddst,Csrc,Cdst,delta
@@ -2507,8 +2507,7 @@ stop
 
       vapor_den=one
 
-      denjump=zero
-      denmax=zero
+      denjump_scale=zero
 
        ! dxmin=min_d min_i dxsub_{gridtype,d,i} d=1..sdim  i=0..bfact-1
        ! gridtype=MAC or CELL
@@ -2575,20 +2574,22 @@ stop
         print *,"shock_timestep invalid"
         stop
        endif
-       if (denconst(im).le.zero) then
+       if (denconst(im).gt.zero) then
+        ! do nothing
+       else
         print *,"denconst invalid"
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.lt.zero) then
+       if (mu.ge.zero) then
+        ! do nothing
+       else
         print *,"viscconst invalid"
         stop
        endif
 
        if (is_rigid(im).eq.0) then
-        if (denconst(im).gt.denmax) then
-         denmax=denconst(im)
-        endif
+        ! do nothing
        else if (is_rigid(im).eq.1) then
         ! do nothing
        else
@@ -2597,8 +2598,6 @@ stop
        endif
 
       enddo  ! im=1..num_materials
-
-      call get_max_denjump(denjump)
 
       call get_max_user_tension(fort_tension,user_tension)
 
@@ -2712,6 +2711,16 @@ stop
        stop
       endif
 
+      local_gravity_mag=gravity_vector(1)**2+ &
+        gravity_vector(2)**2
+      if (SDIM.eq.3) then
+       local_gravity_mag=local_gravity_mag+gravity_vector(SDIM)**2
+      endif
+      local_gravity_mag=sqrt(local_gravity_mag)
+
+       ! get_max_denjump_scale is declared in: PROB.F90
+      call get_max_denjump_scale(denjump_scale,denconst_interface_added)
+
       ii=0
       jj=0
       kk=0
@@ -2818,6 +2827,11 @@ stop
         uright=velmac(D_DECL(ifaceR,jfaceR,kfaceR))
         if (uleft*uright.le.zero) then
          uu_estdt=max(uu_estdt,abs(uleft-uright))
+        else if (uleft*uright.gt.zero) then
+         !do nothing
+        else
+         print *,"uleft*uright invalid"
+         stop
         endif
        endif
       
@@ -3372,15 +3386,15 @@ stop
          endif
 
          if (im_primaryR.eq.im_primaryL) then
-          if (density_left.gt.denmax) then
-           denmax=density_left
-          endif
-          if (density_right.gt.denmax) then
-           denmax=density_right
-          endif
-          denjump_temp=abs(density_left-density_right)
-          if (denjump_temp.gt.denjump) then
-           denjump=denjump_temp
+          denmax=max(density_left,density_right)
+          if (denmax.gt.zero) then
+           denjump_scale_temp=abs(density_left-density_right)/denmax
+           if (denjump_scale_temp.gt.denjump_scale) then
+            denjump_scale=denjump_scale_temp
+           endif
+          else
+           print *,"denmax invalid"
+           stop
           endif
          endif
         else if (material_type(im_primaryR).eq.0) then
@@ -3428,10 +3442,39 @@ stop
         ! fluid region
        if ((is_rigid(im_primaryL).eq.0).and. &
            (is_rigid(im_primaryR).eq.0)) then 
+
         call fluid_interface(LSleft,LSright,gradh,im_opp,im)
+
+        if (gradh.ne.zero) then
+         if ((im.gt.num_materials).or. &
+             (im_opp.gt.num_materials).or. &
+             (im.lt.1).or. &
+             (im_opp.lt.1)) then
+          print *,"im or im_opp bust 8"
+          stop
+         endif
+         call get_iten(im,im_opp,iten)
+         if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+          ! do nothing
+         else
+          print *,"iten invalid"
+          stop
+         endif
+        else if (gradh.eq.zero) then
+         im=0
+         im_opp=0
+         iten=0
+        else
+         print *,"gradh invalid"
+         stop
+        endif
+
        else if ((is_rigid(im_primaryL).eq.1).or. &
                 (is_rigid(im_primaryR).eq.1)) then
         gradh=zero
+        im=0
+        im_opp=0
+        iten=0
        else
         print *,"im_primaryL, or im_primaryR invalid"
         stop 
@@ -3440,12 +3483,6 @@ stop
         ! gradh<>0 if the levelset function changes sign across a MAC
         ! face.
        if (gradh.ne.zero) then
-
-        if ((im.gt.num_materials).or.(im_opp.gt.num_materials)) then
-         print *,"im or im_opp bust 8"
-         stop
-        endif
-        call get_iten(im,im_opp,iten)
 
         if (level_cap_wave_speed(iten).lt.zero) then
          print *,"level_cap wave speed not initialized"
@@ -3502,56 +3539,35 @@ stop
       enddo
       enddo  ! i,j,k
 
-      local_gravity_mag=gravity_vector(1)**2+ &
-        gravity_vector(2)**2
-      if (SDIM.eq.3) then
-       local_gravity_mag=local_gravity_mag+gravity_vector(SDIM)**2
-      endif
-      local_gravity_mag=sqrt(local_gravity_mag)
-
       if (local_gravity_mag.gt.zero) then
 
-       if (denmax.gt.zero) then
+       if (denjump_scale.gt.zero) then
 
-         if (denjump.gt.zero) then
-
-          if (denmax.gt.zero) then
-           denjump=denjump/denmax
-          else
-           print *,"denmax became corrupt"
-           stop
-          endif
-          gravity_reference_wavelen=gravity_reference_wavelen_in
-          call SUB_reference_wavelen(gravity_reference_wavelen)
-          if (gravity_reference_wavelen.gt.zero) then
-            ! gravity_wave_speed is declared in PROB.F90
-           call gravity_wave_speed(gravity_reference_wavelen, &
-             local_gravity_mag,ugrav)
-          else
-           print *,"gravity_reference_wavelen invalid"
-           stop
-          endif
-          if (ugrav.gt.zero) then
-           dthold=dxmin/ugrav 
-           dt_min=min(dt_min,dthold)
-          else
-           print *,"ugrav invalid 1"
-           print *,"uu_estdt ",uu_estdt
-           print *,"denjump ",denjump
-           print *,"local_gravity_mag ",local_gravity_mag
-           print *,"dxmin ",dxmin
-           print *,"denmax ",denmax
-           stop
-          endif
-         else if (denjump.eq.zero) then
-          ! do nothing
-         else
-          print *,"denjump cannot be negative, denjump = ",denjump
-          stop
-         endif
-
+        gravity_reference_wavelen=gravity_reference_wavelen_in
+        call SUB_reference_wavelen(gravity_reference_wavelen)
+        if (gravity_reference_wavelen.gt.zero) then
+          ! gravity_wave_speed is declared in PROB.F90
+         call gravity_wave_speed(gravity_reference_wavelen, &
+            local_gravity_mag*denjump_scale,ugrav)
+        else
+         print *,"gravity_reference_wavelen invalid"
+         stop
+        endif
+        if (ugrav.gt.zero) then
+         dthold=dxmin/ugrav 
+         dt_min=min(dt_min,dthold)
+        else
+         print *,"ugrav invalid 1"
+         print *,"uu_estdt ",uu_estdt
+         print *,"denjump_scale ",denjump_scale
+         print *,"local_gravity_mag ",local_gravity_mag
+         print *,"dxmin ",dxmin
+         stop
+        endif
+       else if (denjump_scale.eq.zero) then
+        ! do nothing
        else
-        print *,"denmax invalid"
+        print *,"denjump_scale cannot be negative, denjump = ",denjump_scale
         stop
        endif
 

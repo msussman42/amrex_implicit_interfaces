@@ -15189,13 +15189,24 @@ stop
            ! p=dt( -|g| z + (1/2)Omega^2 r^2 )
            ! force=grad p=dt( -|g| z^hat + Omega^2 r r^hat )
           cutedge=half*(dplus+dminus)
-          if (cutedge.le.zero) then
+          if (cutedge.gt.zero) then
+           ! do nothing
+          else
            print *,"cutedge invalid"
            stop
           endif
 
            ! hydrostatic pressure gradient on the MAC grid
           pgrad_gravity=(pplus-pminus)/(hx*cutedge)
+
+          if ((local_face(FACECOMP_ADDED_MASS_FACTOR+1).gt.zero).and. &
+              (local_face(FACECOMP_ADDED_MASS_FACTOR+1).le.one)) then
+           pgrad_gravity=pgrad_gravity* &
+            local_face(FACECOMP_ADDED_MASS_FACTOR+1)
+          else
+           print *,"local_face(FACECOMP_ADDED_MASS_FACTOR+1) invalid"
+           stop
+          endif
 
           ! -dt k (grad p)_MAC (energyflag=SUB_OP_FOR_MAIN)
           ! (grad p)_MAC (energyflag=SUB_OP_FOR_SDC)
