@@ -7594,6 +7594,8 @@ stop
         ! voltotal/mass_total = (1/rho)
        cenden, &
        DIMS(cenden), &   
+       cendenadded, &
+       DIMS(cendenadded), &   
        cenvof,DIMS(cenvof), &   
        cenvisc,DIMS(cenvisc), &
        vol,DIMS(vol), &
@@ -7670,6 +7672,7 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
       INTEGER_T, INTENT(in) :: DIMDEC(cenDeDT)
       INTEGER_T, INTENT(in) :: DIMDEC(cenden)
+      INTEGER_T, INTENT(in) :: DIMDEC(cendenadded)
       INTEGER_T, INTENT(in) :: DIMDEC(cenvof)
       INTEGER_T, INTENT(in) :: DIMDEC(vol)
       INTEGER_T, INTENT(in) :: DIMDEC(levelPC)
@@ -7709,7 +7712,9 @@ stop
       REAL_T, INTENT(out), target :: cenDeDT(DIMV(cenDeDT))
       REAL_T, pointer :: cenDeDT_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(out), target :: cenden(DIMV(cenden))
+      REAL_T, INTENT(out), target :: cendenadded(DIMV(cendenadded))
       REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: cendenadded_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(out), target :: cenvof(DIMV(cenvof),num_materials)  
       REAL_T, pointer :: cenvof_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(out), target :: cenvisc(DIMV(cenvisc))
@@ -7892,6 +7897,7 @@ stop
       REAL_T cutoff
       REAL_T local_cenvisc
       REAL_T local_cenden
+      REAL_T local_cendenadded
 
       REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
 
@@ -7913,6 +7919,7 @@ stop
       solzfab_ptr=>solzfab
       cenDeDT_ptr=>cenDeDT
       cenden_ptr=>cenden
+      cendenadded_ptr=>cendenadded
       cenvof_ptr=>cenvof
       cenvisc_ptr=>cenvisc
       vol_ptr=>vol
@@ -8007,6 +8014,7 @@ stop
 
       call checkbound_array1(fablo,fabhi,cenDeDT_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,cendenadded_ptr,1,-1)
       call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1)
 
@@ -9634,6 +9642,8 @@ stop
 
          density_for_mass_fraction_diffusion=mass_total/voltotal
 
+         local_cendenadded=one
+
          if (thick_flag.eq.1) then
           local_cenden=voltotal_thick/mass_total_thick
          else if (thick_flag.eq.0) then
@@ -9644,6 +9654,7 @@ stop
          endif 
 
          local_face(FACECOMP_FACEDEN+1)=local_cenden
+         local_face(FACECOMP_ADDED_MASS_FACTOR+1)=local_cendenadded
 
          do im=1,num_materials
           do im_opp=im+1,num_materials
@@ -9656,8 +9667,23 @@ stop
             if (denconst_interface_added(iten_FFACE).eq.zero) then
              ! do nothing
             else if (denconst_interface_added(iten_FFACE).gt.zero) then
-             local_face(FACECOMP_FACEDEN+1)=one/ &
-                     denconst_interface_added(iten_FFACE)
+             if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
+              local_face(FACECOMP_ADDED_MASS_FACTOR+1)=one/ &
+                (local_face(FACECOMP_FACEDEN+1)* &
+                 denconst_interface_added(iten_FFACE))
+              if (local_face(FACECOMP_ADDED_MASS_FACTOR+1).le.one) then
+               ! do nothing
+              else
+               print *,"local_face(FACECOMP_ADDED_MASS_FACTOR+1) invalid"
+               stop
+              endif
+
+              local_face(FACECOMP_FACEDEN+1)=one/ &
+                 denconst_interface_added(iten_FFACE)
+             else
+              print *,"local_face(FACECOMP_FACEDEN+1) invalid"
+              stop
+             endif
             else
              print *,"denconst_interface_added invalid"
              stop
@@ -10081,7 +10107,8 @@ stop
 
       else if (isweep.eq.1) then
 
-        ! cenden, cenvof, cenDeDT, cenvisc, initialized in this loop.
+        ! cenden, cendenadded, cenvof, cenDeDT, 
+        ! cenvisc, initialized in this loop.
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi,1) 
 
@@ -10327,6 +10354,8 @@ stop
          cenvof(D_DECL(i,j,k),im)=volmat(im)/voltotal
         enddo
 
+        local_cendenadded=one
+
         if (thick_flag.eq.0) then
          local_cenden=voltotal/mass_total
          local_cenvisc=one/((visc_total/voltotal)+VISCINVTOL)  
@@ -10338,16 +10367,32 @@ stop
          print *,"thick_flag invalid"
          stop
         endif
+
         if (denconst_interface_added_max.eq.zero) then
          ! do nothing
         else if (denconst_interface_added_max.gt.zero) then
-         local_cenden=one/denconst_interface_added_max
+         if (local_cenden.gt.zero) then
+           !local_cenden=1/rho
+          local_cendenadded=one/ &
+            (local_cenden*denconst_interface_added_max)
+          if (local_cendenadded.le.one) then
+           ! do nothing
+          else
+           print *,"local_cendenadded invalid"
+           stop
+          endif
+          local_cenden=one/denconst_interface_added_max
+         else
+          print *,"local_cenden invalid"
+          stop
+         endif
         else
          print *,"denconst_interface_added_max invalid"
          stop
         endif
 
         cenden(D_DECL(i,j,k))=local_cenden
+        cendenadded(D_DECL(i,j,k))=local_cendenadded
         cenDeDT(D_DECL(i,j,k))=voltotal/DeDT_total
 
         if (null_viscosity.eq.1) then

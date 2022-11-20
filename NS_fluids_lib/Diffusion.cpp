@@ -181,10 +181,13 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  debug_ngrow(CELL_DEN_MF,1,811);
+ debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,811);
  debug_ngrow(CELL_VISC_MF,1,811);
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+ if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
  if (localMF[CELL_VISC_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
 

@@ -11196,10 +11196,13 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
 
  debug_ngrow(CELL_DEN_MF,1,28); 
+ debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+ if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
@@ -11372,6 +11375,9 @@ void NavierStokes::make_marangoni_force() {
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+ debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
+ if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
 
   // mask=1 if not covered or if outside the domain.
   // NavierStokes::maskfiner_localMF
@@ -11520,9 +11526,12 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  debug_ngrow(delta_MF,0,3);
  debug_ngrow(MASKSEM_MF,1,28); 
  debug_ngrow(CELL_DEN_MF,1,28); 
+ debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+ if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
@@ -11696,6 +11705,9 @@ void NavierStokes::make_heat_source() {
  debug_ngrow(CELL_DEN_MF,1,5);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+ debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
+ if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
  debug_ngrow(CELL_DEDT_MF,1,5);
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
@@ -12228,6 +12240,7 @@ void NavierStokes::tensor_advection_update() {
  debug_ngrow(CELLTENSOR_MF,1,9);
 
  debug_ngrow(CELL_DEN_MF,1,9);
+ debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
 
  debug_ngrow(HOLD_VELOCITY_DATA_MF,1,9);
  if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
@@ -15615,10 +15628,13 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
   debug_ngrow(FACE_VAR_MF+dir,0,2);
 
  debug_ngrow(CELL_DEN_MF,1,28); 
+ debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
  debug_ngrow(CELL_DEDT_MF,1,28); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+ if (localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_ADDED_MASS_FACTOR_MF]->nComp() invalid");
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
@@ -22858,6 +22874,7 @@ NavierStokes::particle_tensor_advection_update() {
    debug_ngrow(CELLTENSOR_MF,1,9);
 
    debug_ngrow(CELL_DEN_MF,1,9);
+   debug_ngrow(CELL_DEN_ADDED_MASS_FACTOR_MF,1,28); 
 
    debug_ngrow(HOLD_VELOCITY_DATA_MF,1,9);
    if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
