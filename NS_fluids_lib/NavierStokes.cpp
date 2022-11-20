@@ -799,7 +799,7 @@ Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Real NavierStokes::denconst_max=0.0;
 Real NavierStokes::denconst_min=0.0;
-Vector<Real> NavierStokes::denconst_interface;
+Vector<Real> NavierStokes::denconst_interface_added;
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
@@ -3556,10 +3556,11 @@ NavierStokes::read_params ()
 
     pp.queryAdd("molar_mass",molar_mass,num_materials);
 
-    denconst_interface.resize(num_interfaces);
+    denconst_interface_added.resize(num_interfaces);
     for (int i=0;i<num_interfaces;i++) 
-     denconst_interface[i]=0.0;
-    pp.queryAdd("denconst_interface",denconst_interface,num_interfaces);
+     denconst_interface_added[i]=0.0;
+    pp.queryAdd("denconst_interface_added",
+      denconst_interface_added,num_interfaces);
 
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
@@ -4974,8 +4975,8 @@ NavierStokes::read_params ()
      }
  
      for (int i=0;i<num_interfaces;i++) {
-      std::cout << "i= " << i << " denconst_interface "  << 
-        denconst_interface[i] << '\n';
+      std::cout << "i= " << i << " denconst_interface_added "  << 
+        denconst_interface_added[i] << '\n';
       std::cout << "i= " << i << " viscconst_interface "  << 
         viscconst_interface[i] << '\n';
       std::cout << "i= " << i << " heatviscconst_interface "  << 
@@ -21119,7 +21120,7 @@ void NavierStokes::MaxAdvectSpeed(
     mass_fraction_id.dataPtr(),
     molar_mass.dataPtr(),
     species_molar_mass.dataPtr(),
-    denconst_interface.dataPtr(),
+    denconst_interface_added.dataPtr(),
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),

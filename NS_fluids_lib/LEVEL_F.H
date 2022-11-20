@@ -383,7 +383,7 @@ namespace amrex{
        int* isweep,
        int* nrefine_vof,
        Real* material_thickness,
-       Real* den_interface,
+       Real* denconst_interface_added,
        Real* visc_interface,
        Real* heatvisc_interface,
        Real* speciesvisc_interface,
