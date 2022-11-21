@@ -3543,16 +3543,22 @@ stop
 
        if (denjump_scale.gt.zero) then
 
-        gravity_reference_wavelen=gravity_reference_wavelen_in
-        call SUB_reference_wavelen(gravity_reference_wavelen)
-        if (gravity_reference_wavelen.gt.zero) then
-          ! gravity_wave_speed is declared in PROB.F90
-         call gravity_wave_speed(gravity_reference_wavelen, &
+        if (denjump_scale.le.one) then
+         gravity_reference_wavelen=gravity_reference_wavelen_in
+         call SUB_reference_wavelen(gravity_reference_wavelen)
+         if (gravity_reference_wavelen.gt.zero) then
+           ! gravity_wave_speed is declared in PROB.F90
+          call gravity_wave_speed(gravity_reference_wavelen, &
             local_gravity_mag*denjump_scale,ugrav)
-        else
-         print *,"gravity_reference_wavelen invalid"
+         else
+          print *,"gravity_reference_wavelen invalid"
+          stop
+         endif
+        else 
+         print *,"require denjump_scale in [0,1]"
          stop
         endif
+
         if (ugrav.gt.zero) then
          dthold=dxmin/ugrav 
          dt_min=min(dt_min,dthold)
