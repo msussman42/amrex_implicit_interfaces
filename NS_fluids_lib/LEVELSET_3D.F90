@@ -7594,8 +7594,8 @@ stop
         ! voltotal/mass_total = (1/rho)
        cenden, &
        DIMS(cenden), &   
-       cendenadded, &
-       DIMS(cendenadded), &   
+       cenden_base, &
+       DIMS(cenden_base), &   
        cenvof,DIMS(cenvof), &   
        cenvisc,DIMS(cenvisc), &
        vol,DIMS(vol), &
@@ -7672,7 +7672,7 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
       INTEGER_T, INTENT(in) :: DIMDEC(cenDeDT)
       INTEGER_T, INTENT(in) :: DIMDEC(cenden)
-      INTEGER_T, INTENT(in) :: DIMDEC(cendenadded)
+      INTEGER_T, INTENT(in) :: DIMDEC(cenden_base)
       INTEGER_T, INTENT(in) :: DIMDEC(cenvof)
       INTEGER_T, INTENT(in) :: DIMDEC(vol)
       INTEGER_T, INTENT(in) :: DIMDEC(levelPC)
@@ -7712,9 +7712,9 @@ stop
       REAL_T, INTENT(out), target :: cenDeDT(DIMV(cenDeDT))
       REAL_T, pointer :: cenDeDT_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(out), target :: cenden(DIMV(cenden))
-      REAL_T, INTENT(out), target :: cendenadded(DIMV(cendenadded))
+      REAL_T, INTENT(out), target :: cenden_base(DIMV(cenden_base))
       REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
-      REAL_T, pointer :: cendenadded_ptr(D_DECL(:,:,:))
+      REAL_T, pointer :: cenden_base_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(out), target :: cenvof(DIMV(cenvof),num_materials)  
       REAL_T, pointer :: cenvof_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(out), target :: cenvisc(DIMV(cenvisc))
@@ -7897,7 +7897,7 @@ stop
       REAL_T cutoff
       REAL_T local_cenvisc
       REAL_T local_cenden
-      REAL_T local_cendenadded
+      REAL_T local_cenden_base
 
       REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
 
@@ -7920,7 +7920,7 @@ stop
       cenDeDT_ptr=>cenDeDT
 
       cenden_ptr=>cenden
-      cendenadded_ptr=>cendenadded
+      cenden_base_ptr=>cenden_base
 
       cenvof_ptr=>cenvof
       cenvisc_ptr=>cenvisc
@@ -8017,7 +8017,7 @@ stop
       call checkbound_array1(fablo,fabhi,cenDeDT_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,cendenadded_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,cenden_base_ptr,1,-1)
 
       call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1)
@@ -9646,8 +9646,6 @@ stop
 
          density_for_mass_fraction_diffusion=mass_total/voltotal
 
-         local_cendenadded=one
-
          if (thick_flag.eq.1) then
           local_cenden=voltotal_thick/mass_total_thick
          else if (thick_flag.eq.0) then
@@ -9657,8 +9655,10 @@ stop
           stop
          endif 
 
+         local_cenden_base=local_cenden
+
          local_face(FACECOMP_FACEDEN+1)=local_cenden
-         local_face(FACECOMP_ADDED_MASS_FACTOR+1)=local_cendenadded
+         local_face(FACECOMP_FACEDEN_BASE+1)=local_cenden_base
 
          do im=1,num_materials
           do im_opp=im+1,num_materials
@@ -9672,19 +9672,18 @@ stop
              ! do nothing
             else if (denconst_interface_added(iten_FFACE).gt.zero) then
              if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
-               ! rho/rho_added
-              local_face(FACECOMP_ADDED_MASS_FACTOR+1)=one/ &
-                (local_face(FACECOMP_FACEDEN+1)* &
-                 denconst_interface_added(iten_FFACE))
-              if (local_face(FACECOMP_ADDED_MASS_FACTOR+1).le.one) then
-               ! do nothing
-              else
-               print *,"local_face(FACECOMP_ADDED_MASS_FACTOR+1) invalid"
-               stop
-              endif
 
               local_face(FACECOMP_FACEDEN+1)=one/ &
                  denconst_interface_added(iten_FFACE)
+
+              if (local_face(FACECOMP_FACEDEN_BASE+1).gt. &
+                  local_face(FACECOMP_FACEDEN+1)) then
+               ! do nothing
+              else
+               print *,"local_face(FACECOMP_FACEDEN_BASE+1) invalid"
+               stop
+              endif
+
              else
               print *,"local_face(FACECOMP_FACEDEN+1) invalid"
               stop
@@ -10112,7 +10111,7 @@ stop
 
       else if (isweep.eq.1) then
 
-        ! cenden, cendenadded, cenvof, cenDeDT, 
+        ! cenden, cenden_base, cenvof, cenDeDT, 
         ! cenvisc, initialized in this loop.
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi,1) 
@@ -10361,8 +10360,6 @@ stop
          cenvof(D_DECL(i,j,k),im)=volmat(im)/voltotal
         enddo
 
-        local_cendenadded=one
-
         if (thick_flag.eq.0) then
          local_cenden=voltotal/mass_total
          local_cenvisc=one/((visc_total/voltotal)+VISCINVTOL)  
@@ -10375,21 +10372,22 @@ stop
          stop
         endif
 
+        local_cenden_base=local_cenden
+
         if (denconst_interface_added_max.eq.zero) then
          ! do nothing
         else if (denconst_interface_added_max.gt.zero) then
          if (local_cenden.gt.zero) then
-           !local_cenden=1/rho
-           !local_cendenadded=rho/rho_added
-          local_cendenadded=one/ &
-            (local_cenden*denconst_interface_added_max)
-          if (local_cendenadded.le.one) then
+           !local_cenden_base=1/rho
+           !local_cenden=1/rho_added
+          local_cenden=one/denconst_interface_added_max
+
+          if (local_cenden.lt.local_cenden_base) then
            ! do nothing
           else
-           print *,"local_cendenadded invalid"
+           print *,"local_cenden_base invalid"
            stop
           endif
-          local_cenden=one/denconst_interface_added_max
          else
           print *,"local_cenden invalid"
           stop
@@ -10400,7 +10398,7 @@ stop
         endif
 
         cenden(D_DECL(i,j,k))=local_cenden
-        cendenadded(D_DECL(i,j,k))=local_cendenadded
+        cenden_base(D_DECL(i,j,k))=local_cenden_base
         cenDeDT(D_DECL(i,j,k))=voltotal/DeDT_total
 
         if (null_viscosity.eq.1) then
@@ -15200,15 +15198,6 @@ stop
 
            ! hydrostatic pressure gradient on the MAC grid
           pgrad_gravity=(pplus-pminus)/(hx*cutedge)
-
-          if ((local_face(FACECOMP_ADDED_MASS_FACTOR+1).gt.zero).and. &
-              (local_face(FACECOMP_ADDED_MASS_FACTOR+1).le.one)) then
-           pgrad_gravity=pgrad_gravity* &
-            local_face(FACECOMP_ADDED_MASS_FACTOR+1)
-          else
-           print *,"local_face(FACECOMP_ADDED_MASS_FACTOR+1) invalid"
-           stop
-          endif
 
           ! -dt k (grad p)_MAC (energyflag=SUB_OP_FOR_MAIN)
           ! (grad p)_MAC (energyflag=SUB_OP_FOR_SDC)

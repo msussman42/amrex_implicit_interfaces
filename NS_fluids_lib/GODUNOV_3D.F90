@@ -2719,7 +2719,7 @@ stop
       local_gravity_mag=sqrt(local_gravity_mag)
 
        ! get_max_denjump_scale is declared in: PROB.F90
-      call get_max_denjump_scale(denjump_scale,denconst_interface_added)
+      call get_max_denjump_scale(denjump_scale)
 
       ii=0
       jj=0
