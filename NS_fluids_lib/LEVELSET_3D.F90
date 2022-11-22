@@ -10306,7 +10306,9 @@ stop
          do im=1,num_materials
           LSIDE_MAT(im)=levelPC(D_DECL(i+i1,j+j1,k+k1),im)
          enddo
-          ! checks rigid and non-rigid materials.
+          ! implus_majority is the main material in the i1,j1,k1=0
+          ! cell.
+          ! get_primary_material checks rigid and non-rigid materials.
          call get_primary_material(LSIDE_MAT,imminus_majority)
          if (implus_majority.eq.imminus_majority) then
           ! do nothing
