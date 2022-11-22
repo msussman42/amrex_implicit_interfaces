@@ -2296,14 +2296,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by fort_estdt: determine maximum force due to buoyancy. 
-      subroutine get_max_denjump_scale(denjump_scale,denconst_interface_added)
+      subroutine get_max_denjump_scale(denjump_scale)
       use global_utility_module
 
       IMPLICIT NONE
 
       INTEGER_T im,im_opp
       INTEGER_T iten
-      REAL_T, INTENT(in) :: denconst_interface_added(num_interfaces)
       REAL_T, INTENT(out) :: denjump_scale
       REAL_T denjump_scale_temp
       REAL_T max_den_interface
@@ -2323,27 +2322,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           endif
           max_den_interface=max(fort_denconst(im),fort_denconst(im_opp))
           if (max_den_interface.gt.zero) then
-           if (denconst_interface_added(iten).eq.zero) then
-            ! do nothing
-           else if (denconst_interface_added(iten).gt.zero) then
-            if (denconst_interface_added(iten).gt.max_den_interface) then
-             max_den_interface=denconst_interface_added(iten)
-            else
-             print *,"denconst_interface_added invalid"
-             stop
-            endif             
-           else
-            print *,"denconst_interface_added invalid"
-            stop
-           endif             
           
            denjump_scale_temp=abs(fort_denconst(im)-fort_denconst(im_opp))/ &
              max_den_interface
            if ((denjump_scale_temp.ge.zero).and. &
                (denjump_scale_temp.le.one)) then
+
             if (denjump_scale_temp.gt.denjump_scale) then
              denjump_scale=denjump_scale_temp
             endif
+
            else
             print *,"require denjump_scale_temp in [0,1]"
             stop
@@ -2375,9 +2363,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        max_den_interface=max(fort_denconst(1),fort_denconst(2))
        if (max_den_interface.gt.zero) then
+        ! density(T) = density_base * (1+expansion_factor(T))
         call SUB_UNITLESS_EXPANSION_FACTOR(1,twall, &
           fort_tempconst(1),denjump_scale_temp)
-        denjump_scale_temp=abs(denjump_scale_temp)/max_den_interface
+        denjump_scale_temp=abs(denjump_scale_temp)*fort_denconst(1)/ &
+           max_den_interface
         if (denjump_scale_temp.gt.denjump_scale) then
          denjump_scale=denjump_scale_temp
         endif
