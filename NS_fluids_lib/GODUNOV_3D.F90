@@ -553,8 +553,14 @@ stop
         stop
        endif
 
-      else
+      else if ((volint.ge.zero).and. &
+               (volint.le.VOFTOL*dx(normdir+1))) then
        volint=zero
+      else if (volint.lt.zero) then
+       volint=zero
+      else
+       print *,"volint invalid"
+       stop
       endif
 
       return
@@ -13044,8 +13050,6 @@ stop
       REAL_T usten_accept(-1:1)
       REAL_T usten_donate(-1:1)
 
-      INTEGER_T null_velocity_flag
-
       REAL_T xdepartsize,xtargetsize,xloint,xhiint
       REAL_T volint
       REAL_T coeff(2)
@@ -13994,7 +13998,8 @@ stop
 
               if (is_prescribed(im).eq.0) then
 
-               ! increment for each material:im=1..num_materials (since using veldata)
+               ! increment for each material:im=1..num_materials 
+               ! (since using veldata)
                if (veldir.eq.1) then
                 xmomside(D_DECL(ipart,jpart,kpart),ibucket)= &
                  xmomside(D_DECL(ipart,jpart,kpart),ibucket)+ &
@@ -14104,7 +14109,9 @@ stop
           bfact,level, &
           volcell_accept,cencell_accept,SDIM)
 
-         if (volcell_accept.le.zero) then
+         if (volcell_accept.gt.zero) then
+          ! do nothing
+         else
           print *,"volcell_accept invalid"
           stop
          endif
@@ -14161,11 +14168,9 @@ stop
          jdonate=jcrse
          kdonate=kcrse
 
-         null_velocity_flag=0
-
+          ! sanity check
          if ((usten_accept(1).eq.zero).and. &
              (usten_accept(-1).eq.zero)) then
-          null_velocity_flag=1
           if ((idonatelow.eq.0).and.(idonatehigh.eq.0)) then
            ! do nothing
           else
@@ -14301,29 +14306,6 @@ stop
               nmax, &
               nmax, &
               SDIM)
-
-            if (null_velocity_flag.eq.1) then
-             if (istencil.eq.0) then
-              do im=1,num_materials
-               vofcomp=(im-1)*ngeom_recon+1
-               multi_volume_grid(im)=mofdata_grid(vofcomp)*volcell_recon
-               multi_volume(im)=multi_volume_grid(im)
-               do dir2=1,SDIM
-                multi_cen_grid(dir2,im)=cencell_recon(dir2)+ &
-                    mofdata_grid(vofcomp+dir2)
-                multi_cen(dir2,im)=multi_cen_grid(dir2,im)
-               enddo ! dir2=1..sdim
-              enddo !im=1..num_materials
-             else
-              print *,"istencil invalid"
-              stop
-             endif
-            else if (null_velocity_flag.eq.0) then
-             ! do nothing
-            else
-             print *,"null_velocity_flag invalid"
-             stop
-            endif 
 
              ! normdir=0..sdim-1
             do im=1,num_materials

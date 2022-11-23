@@ -17893,19 +17893,27 @@ contains
        uncaptured_centroid_fluid(dir)=uncaptured_centroid_target(dir)
       enddo
 
-      if (volcell.le.zero) then
-       print *,"volcell invalid multigetvolume grid simple"
+      if (volcell.gt.zero) then
+       ! do nothing
+      else
+       print *,"volcell invalid multi_get_volume_grid_simple"
        stop
       endif
-      if (uncaptured_volume_target.lt.zero) then
+      if (uncaptured_volume_target.ge.zero) then
+       ! do nothing
+      else
        print *,"uncaptured_volume_target invalid"
        stop
       endif
-      if (uncaptured_volume_solid.lt.zero) then
+      if (uncaptured_volume_solid.ge.zero) then
+       ! do nothing
+      else
        print *,"uncaptured_volume_solid invalid"
        stop
       endif
-      if (uncaptured_volume_fluid.lt.zero) then
+      if (uncaptured_volume_fluid.ge.zero) then
+       ! do nothing
+      else
        print *,"uncaptured_volume_fluid invalid"
        stop
       endif
@@ -17952,12 +17960,16 @@ contains
        stop
       endif
 
-      if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
+      if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
+       ! do nothing
+      else
        print *,"vfrac_fluid_sum invalid"
        stop
       endif
-      if ((vfrac_solid_sum.gt.one+VOFTOL).or. &
-          (vfrac_solid_sum.lt.zero)) then
+      if ((vfrac_solid_sum.le.one+VOFTOL).and. &
+          (vfrac_solid_sum.ge.zero)) then
+       ! do nothing
+      else
        print *,"vfrac_solid_sum invalid"
        stop
       endif
@@ -18836,7 +18848,9 @@ contains
        print *,"normdir invalid"
        stop
       endif
-      if (coeff(1).le.zero) then
+      if (coeff(1).gt.zero) then
+       !do nothing
+      else
        print *,"coeff(1) invalid"
        stop
       endif
@@ -18889,15 +18903,21 @@ contains
        uncaptured_centroid_solid_map(dir)=uncaptured_centroid_fluid_map(dir)
       enddo
 
-      if (volcell.le.zero) then
+      if (volcell.gt.zero) then
+       ! do nothing
+      else
        print *,"volcell invalid multigetvolume grid"
        stop
       endif
-      if (uncaptured_volume_fluid.lt.zero) then
+      if (uncaptured_volume_fluid.ge.zero) then
+       ! do nothing
+      else
        print *,"uncaptured_volume_fluid invalid"
        stop
       endif
-      if (uncaptured_volume_solid.lt.zero) then
+      if (uncaptured_volume_solid.ge.zero) then
+       ! do nothing
+      else
        print *,"uncaptured_volume_solid invalid"
        stop
       endif
@@ -18924,12 +18944,16 @@ contains
        stop
       endif
 
-      if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
+      if (abs(one-vfrac_fluid_sum).le.VOFTOL) then
+       ! do nothing
+      else
        print *,"vfrac_fluid_sum invalid"
        stop
       endif
-      if ((vfrac_solid_sum.gt.one+VOFTOL).or. &
-          (vfrac_solid_sum.lt.zero)) then
+      if ((vfrac_solid_sum.le.one+VOFTOL).and. &
+          (vfrac_solid_sum.ge.zero)) then
+       ! do nothing
+      else
        print *,"vfrac_solid_sum invalid"
        stop
       endif
