@@ -161,7 +161,9 @@ stop
       REAL_T voflist_center(num_materials)
       REAL_T voflist_stencil(num_materials)
       REAL_T voflist_test
-      INTEGER_T mof_verbose,use_ls_data,nhalfbox_sten
+      INTEGER_T mof_verbose
+      INTEGER_T use_ls_data
+      INTEGER_T, parameter :: nhalfbox_sten=1
       REAL_T dxmaxLS
       INTEGER_T debugslope
       INTEGER_T tessellate
@@ -188,7 +190,6 @@ stop
       endif
 
       debugslope=0
-      nhalfbox_sten=1
 
       if (bfact.lt.1) then
        print *,"bfact invalid170"
@@ -345,7 +346,9 @@ stop
         ! sum of F_rigid<=1
        call make_vfrac_sum_ok_base( &
          cmofsten, &  ! INTENT(in)
-         xsten,nhalf,nhalf_box, &
+         xsten, &
+         nhalf, &
+         nhalf_box, &
          bfact,dx, &
          tessellate, & ! =0
          mofdata, &  ! INTENT(inout)
@@ -513,7 +516,8 @@ stop
          do j1=-1,1
          do k1=klosten,khisten
 
-          call CISBOX(xstenbox,nhalfbox_sten, &
+          call CISBOX(xstenbox, &
+            nhalfbox_sten, & ! =1
             xlo,dx,i+i1,j+j1,k+k1, &
             bfact,level, &
             volsten,censten,SDIM)
@@ -537,7 +541,9 @@ stop
            ! sum of F_rigid<=1
           call make_vfrac_sum_ok_base( &
             cmofsten, &
-            xstenbox,nhalfbox_sten,nhalf_box, &
+            xstenbox, &
+            nhalfbox_sten, & ! =1
+            nhalf_box, & ! =1
             bfact,dx, &
             tessellate, & ! =0
             mofsten,SDIM)
@@ -740,7 +746,9 @@ stop
         endif
 
         call multimaterial_MOF( &
-          bfact,dx,xsten,nhalf, &
+          bfact,dx, &
+          xsten, &
+          nhalf, &
           mof_verbose, &
           use_ls_data, &
           LS_stencil, &
