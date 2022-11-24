@@ -11998,7 +11998,8 @@ contains
        print *,"sdim invalid individual_MOF"
        stop
       endif
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid individual mof"
        stop
       endif
@@ -13677,7 +13678,8 @@ contains
 ! fluid is 1, and all other orders are 0.
 
       subroutine multimaterial_MOF( &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         mof_verbose, &
         use_ls_data, &
         LS_stencil, &
@@ -13890,7 +13892,8 @@ contains
        stop
       endif
 
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid multimaterial mof"
        print *,"num_materials= ",num_materials
        stop
@@ -14013,9 +14016,13 @@ contains
         ! sum of F_rigid<=1
       call make_vfrac_sum_ok_base( &
         cmofsten, &
-        xsten0,nhalf0,nhalf_box,bfact,dx, &
+        xsten0, &
+        nhalf0, &
+        nhalf_box, & !=3 if CMOF, =1 if MOF
+        bfact,dx, &
         tessellate, &  ! =0
-        mofdata,sdim)
+        mofdata, &
+        sdim)
 
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
@@ -15038,8 +15045,10 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_base( &
-        cmofsten, &
-        xsten,nhalf,nhalf_box, &
+        cmofsten, &  ! used if nhalf_box=3
+        xsten, &
+        nhalf, &
+        nhalf_box, & 
         bfact,dx, &
         tessellate, &
         mofdata, &
@@ -15097,7 +15106,8 @@ contains
        endif
       enddo ! im=1..num_materials
 
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials bust"
        stop
       endif
