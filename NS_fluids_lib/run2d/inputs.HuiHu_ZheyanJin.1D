@@ -2,13 +2,16 @@
 #radius: 400 microns, height: 250 microns
 max_step  =  9999999    # maximum timestep
 
-stop_time = 20.0
+stop_time = 3.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi=0.05 0.05  # centimeters
+#Vol_liquid=4.952E-5
+#average base area of liquid=pi * .0275^2
+#z_substrate+dz_frozen+dz_liquid=0.003125+0.0015625+0.0205=0.0252
+geometry.prob_hi=0.0275 0.0275  # centimeters
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
@@ -159,20 +162,20 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 # 1 Pa = 10 CGS
 ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # dimensional CGS=Pa s x 10
-ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
+ns.denconst=0.917 0.00129 0.917 10.0 #thermal effects only
 #ns.denconst=1.0 0.00129 0.917 10.0 
 #ns.denconst=1.0 0.00129 0.850 10.0 
 
-ns.material_thickness=1.5 0.0 1.5 1.5
+ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 3 1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
-ns.tempconst=          273.0 293.0 271.0 271.0
-ns.initial_temperature=273.0 293.0 271.0 271.0
-ns.xblob3=293.0 #force ambient temperature condition on all walls except the
+ns.tempconst=          273.0 273.0 271.0 271.0
+ns.initial_temperature=273.0 273.0 271.0 271.0
+ns.xblob3=273.0 #force TSAT temperature condition on all temp. dirichlet walls except the
                 #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop
 # dxcoarse=0.05/64
@@ -191,7 +194,9 @@ ns.radblob3=0.0015625 #dimensionless 2*dxcoarse=0.05/32=0.0015625
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
-ns.radblob=0.025 # 1D test height of air/water interface
+#if surface tension=0.0, then dist_liquid=radblob-y
+#z_substrate+dz_frozen+dz_liquid=0.003125+0.0015625+0.0205=0.0252
+ns.radblob=0.0252 # 1D test height of air/water interface
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
