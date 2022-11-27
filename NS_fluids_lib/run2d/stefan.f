@@ -214,7 +214,7 @@ c ice
         tsat=273.0
         deltat=-10.0
         if (is_freezing.eq.3) then
-         denvapor=1.0
+         denvapor=0.917d0
          tsat=273.0
          deltat=-2.0
 c ice
