@@ -158,8 +158,8 @@ ns.heatviscconst=0.546e+5 0.026e+5 2.2e+5 2.2e+5 # erg/(s cm K)
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 # 1 Pa = 10 CGS
-ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
-#ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
+ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS=Pa s x 10
+#ns.denconst=0.917 0.00129 0.917 10.0 #thermal effects only
 ns.denconst=1.0 0.00129 0.917 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 
 #added mass 
