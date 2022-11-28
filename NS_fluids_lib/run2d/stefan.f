@@ -181,7 +181,7 @@ c sucking problem has option of cylindrical coordinate systems.
       testcase=0
 c is_freezing=1 => tstop=700
 c is_freezing=2 => tstop=0.002 
-c is_freezing=3 => tstop=1.0 
+c is_freezing=3 => tstop=1.75 
       is_freezing=3
 
 c stefan problem
@@ -273,10 +273,12 @@ c ice
        print *,"alpha= ",alpha 
 
        tcalibrate=(xcalibrate/(2.0*c))**2/alpha
+       print *,"xcalibrate ",xcalibrate
+       print *,"tcalibrate ",tcalibrate
 
        if (is_freezing.eq.3) then
         xlo=xcalibrate
-        tstop=1.22d0
+        tstop=1.75d0
         xhi=2.0d0*c*sqrt(alpha*(tcalibrate+tstop))
         xstop=xhi
        else
@@ -285,8 +287,9 @@ c ice
         xstop=1.0
         tstop=(xstop/(2.0*c))**2/alpha
        endif
-       print *,"xlo,xhi ",xlo+xcfd_offset,xhi+xcfd_offset
-       print *,"xstop,tstop ",xstop+xcfd_offset,tstop
+       print *,"xlo+xcfd_offset,xhi+xcfd_offset ",  
+     &    xlo+xcfd_offset,xhi+xcfd_offset
+       print *,"xstop+xcfd_offset,tstop ",xstop+xcfd_offset,tstop
        namestr='temp_profile'
        open(unit=11,file=namestr)
        N=200
@@ -306,10 +309,14 @@ c ice
        close(11)
        print *,"temperature file is temp_profile"
 
+       print *,"xcfd_offset ",xcfd_offset
+       print *,"xcalibrate ",xcalibrate
+       print *,"tcalibrate ",tcalibrate
        time=0.0
        open(unit=12,file='interface')
        xint=0.0
-       write(12,*) time,xint
+       xint=2.0*c*sqrt(alpha*(time+tcalibrate))
+       write(12,*) time,xint+xcfd_offset
        itime=0
        do while (time.lt.tstop)
         dt=tstop/256.0
