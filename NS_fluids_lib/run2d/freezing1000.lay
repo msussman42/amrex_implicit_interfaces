@@ -1,12 +1,14 @@
 #!MC 1410
-$!VarSet |LFDSFN1| = '"nddata003600.plt"'
+$!VarSet |LFDSFN1| = '"nddata001000.plt"'
 $!VarSet |LFDSVL1| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "F04" "L0101" "L0202" "L0303" "L0404" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "x_normal0404" "y_normal0404" "D01" "T01" "D02" "T02" "D03" "T03" "D04" "T04" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MOMDEN04" "MU01" "MU02" "MU03" "MU04" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "K_THERMAL04" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "DT04" "TR04" "TRT04" "TRTF04" "VORT04" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
-$!VarSet |LFDSFN2| = '"mat02ls003600.plt"'
+$!VarSet |LFDSFN2| = '"mat01ls001000.plt"'
 $!VarSet |LFDSVL2| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "F04" "L0101" "L0202" "L0303" "L0404" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "x_normal0404" "y_normal0404" "D01" "T01" "D02" "T02" "D03" "T03" "D04" "T04" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MOMDEN04" "MU01" "MU02" "MU03" "MU04" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "K_THERMAL04" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "DT04" "TR04" "TRT04" "TRTF04" "VORT04" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
-$!VarSet |LFDSFN3| = '"mat03ls003600.plt"'
+$!VarSet |LFDSFN3| = '"mat02ls001000.plt"'
 $!VarSet |LFDSVL3| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "F04" "L0101" "L0202" "L0303" "L0404" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "x_normal0404" "y_normal0404" "D01" "T01" "D02" "T02" "D03" "T03" "D04" "T04" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MOMDEN04" "MU01" "MU02" "MU03" "MU04" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "K_THERMAL04" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "DT04" "TR04" "TRT04" "TRTF04" "VORT04" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
-$!VarSet |LFDSFN4| = '"mat04ls003600.plt"'
+$!VarSet |LFDSFN4| = '"mat03ls001000.plt"'
 $!VarSet |LFDSVL4| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "F04" "L0101" "L0202" "L0303" "L0404" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "x_normal0404" "y_normal0404" "D01" "T01" "D02" "T02" "D03" "T03" "D04" "T04" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MOMDEN04" "MU01" "MU02" "MU03" "MU04" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "K_THERMAL04" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "DT04" "TR04" "TRT04" "TRTF04" "VORT04" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
+$!VarSet |LFDSFN5| = '"mat04ls001000.plt"'
+$!VarSet |LFDSVL5| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "F04" "L0101" "L0202" "L0303" "L0404" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "x_normal0404" "y_normal0404" "D01" "T01" "D02" "T02" "D03" "T03" "D04" "T04" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MOMDEN04" "MU01" "MU02" "MU03" "MU04" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "K_THERMAL04" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "DT04" "TR04" "TRT04" "TRTF04" "VORT04" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
 $!SetStyleBase Factory
 $!CreateColorMap 
   Name = 'Sequential - Viridis'
@@ -267,6 +269,17 @@ $!ReadDataSet  '|LFDSFN4|'
   VarNameList = '|LFDSVL4|'
 $!RemoveVar |LFDSVL4|
 $!RemoveVar |LFDSFN4|
+$!ReadDataSet  '|LFDSFN5|'
+  InitialPlotType = Cartesian2D
+  IncludeText = No
+  IncludeGeom = No
+  ReadDataOption = Append
+  ResetStyle = No
+  AssignStrandIDs = Yes
+  VarLoadMode = ByName
+  VarNameList = '|LFDSVL5|'
+$!RemoveVar |LFDSVL5|
+$!RemoveVar |LFDSFN5|
 $!CreateMirrorZones 
   SourceZones =  [3]
   MirrorVars =  [1,3]
@@ -279,6 +292,9 @@ $!CreateMirrorZones
 $!CreateMirrorZones 
   SourceZones =  [6]
   MirrorVars =  [1,3]
+$!ExtendedCommand 
+  CommandProcessorID = 'Strand Editor'
+  Command = 'ZoneSet=1-10;AssignStrands=TRUE;StrandValue=0;AssignSolutionTime=TRUE;TimeValue=0;DeltaValue=1;TimeOption=Automatic;'
 $!FrameLayout 
   ShowHeader = No
   HeaderColor = Red
@@ -295,8 +311,8 @@ $!ThreeDAxis
 $!PlotType  = Cartesian2D
 $!FrameName  = 'Frame 001'
 $!GlobalTime 
-  SolutionTime = 0.610871000000000053
-$!ActiveFieldMaps  =  [1,3-4]
+  SolutionTime = 0.165982700000000011
+$!ActiveFieldMaps  =  [1-10]
 $!GlobalRGB 
   RedChannelVar = 3
   GreenChannelVar = 68
@@ -632,7 +648,7 @@ $!GlobalScatter
     Color = Red
     FillColor = Red
     }
-$!FieldMap  [1]
+$!FieldMap  [1-2]
   Mesh
     {
     Show = No
@@ -687,63 +703,7 @@ $!FieldMap  [1]
     {
     LightingEffect = Gouraud
     }
-$!FieldMap  [2]
-  Mesh
-    {
-    Show = No
-    Color = Black
-    LineThickness = 0.4
-    }
-  Contour
-    {
-    ContourType = Flood
-    Color = Black
-    UseLightingEffect = Yes
-    }
-  Vector
-    {
-    Color = Black
-    }
-  Scatter
-    {
-    Color = Black
-    }
-  Shade
-    {
-    Color = Custom2
-    }
-  EdgeLayer
-    {
-    Show = No
-    Color = Black
-    LineThickness = 0.1
-    }
-  Points
-    {
-    PointsToPlot = SurfaceNodes
-    }
-  Surfaces
-    {
-    SurfacesToPlot = KPlanes
-    IRange
-      {
-      Max = 1
-      }
-    }
-  VolumeMode
-    {
-    VolumeObjectsToPlot
-      {
-      ShowIsosurfaces = No
-      ShowSlices = No
-      ShowStreamtraces = No
-      }
-    }
-  Effects
-    {
-    LightingEffect = Gouraud
-    }
-$!FieldMap  [3-4]
+$!FieldMap  [3-10]
   Mesh
     {
     Color = Black
@@ -779,7 +739,7 @@ $!FieldMap  [3-4]
     }
   Surfaces
     {
-    SurfacesToPlot = KPlanes
+    SurfacesToPlot = None
     IRange
       {
       Max = 1
@@ -826,7 +786,7 @@ $!TwoDAxis
   YDetail
     {
     RangeMin = 0
-    RangeMax = 0.091259259259259248309
+    RangeMax = 0.091259259259259262187
     GRSpacing = 0.01
     Title
       {
