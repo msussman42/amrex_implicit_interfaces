@@ -1,6 +1,0 @@
-      local_gravity_mag=gravity_vector(1)**2+ &
-        gravity_vector(2)**2
-      if (SDIM.eq.3) then
-       local_gravity_mag=local_gravity_mag+gravity_vector(SDIM)**2
-      endif
-      local_gravity_mag=sqrt(local_gravity_mag)
