@@ -181,7 +181,7 @@ c sucking problem has option of cylindrical coordinate systems.
       testcase=0
 c is_freezing=1 => tstop=700
 c is_freezing=2 => tstop=0.002 
-c is_freezing=3 => tstop=1.75 
+c is_freezing=3 => tstop=1.75 ? (SEE H. Hu and Z. Jin)
       is_freezing=3
 
 c stefan problem
@@ -190,6 +190,9 @@ c When running this test, we set kliquid=0
        cp=4.1855E+7
        if (is_freezing.gt.0) then
         hlg=-3.34E+9
+        if (is_freezing.eq.3) then
+         hlg=-65.0E+9
+        endif
        else
         hlg=2.26E+10
        endif
@@ -216,7 +219,15 @@ c ice
         if (is_freezing.eq.3) then
          denvapor=0.917d0
          tsat=273.0
-         deltat=-2.0
+c See H. Hu and Z. Jin
+c Tfreeze=32.4
+c        deltat=-2.0
+c Tfreeze=21.5
+c        deltat=-3.0
+c Tfreeze=16.2
+c        deltat=-4.0
+c Tfreeze=13.0
+         deltat=-5.0
 c ice
          cp=2.03E+7
          xcalibrate=1.5625e-3
@@ -278,7 +289,8 @@ c ice
 
        if (is_freezing.eq.3) then
         xlo=xcalibrate
-        tstop=1.75d0
+c See H. Hu and Z. Jin
+        tstop=33.0d0  
         xhi=2.0d0*c*sqrt(alpha*(tcalibrate+tstop))
         xstop=xhi
        else
