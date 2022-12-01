@@ -27,17 +27,143 @@ module CAVITY_PHASE_CHANGE_module
 implicit none                   
 
 REAL_T :: DEF_VAPOR_GAMMA
+INTEGER_T :: sitesnum
+REAL_T,allocatable :: sites(:,:)  ! nucleate sites list
+INTEGER_T,allocatable  :: active_flag(:)
+
 
 contains
 
   ! do any initial preparation needed
 subroutine INIT_CAVITY_PHASE_CHANGE_MODULE()
 IMPLICIT NONE
+INTEGER_T :: i,j
 
-  DEF_VAPOR_GAMMA =  1.666666667D0
+DEF_VAPOR_GAMMA =  1.666666667D0
+
+if(SDIM.eq.3)then
+  open(10,file='list.dat')
+   
+  read(10,*) sitesnum
+  allocate(sites(3,sitesnum))
+  allocate(active_flag(sitesnum))
+  do i=1,sitesnum
+   read(10,*) sites(1:3,i)
+  enddo
+  do j=1,sitesnum
+  do i=1,2
+   sites(i,j)=((6.0d-3)-0.0d0)*sites(i,j)
+  enddo
+  enddo
+
+  active_flag=0
+  close(10)
+elseif(SDIM.eq.2)then
+
+  open(11,file='list2d.dat')
+  read(11,*) sitesnum
+  allocate(sites(2,sitesnum))               ! (2, sitenum)
+  allocate(active_flag(sitesnum))
+
+  do i=1,sitesnum
+   read(11,*) sites(1:2,i)
+  enddo
+  do j=1,sitesnum
+   sites(1,j)=((6.0d-3)-0.0d0)*sites(1,j)
+  enddo
+
+  active_flag=0
+  close(11)
+
+ 
+else
+ print *,"sdim invalid"
+ stop
+endif
+
 
 return
 end subroutine INIT_CAVITY_PHASE_CHANGE_MODULE
+
+! this routine called from PROB.F90
+subroutine Satomodel_nucleation(nucleate_in,xsten,nhalf,make_seed)
+use probcommon_module_types
+use probcommon_module
+IMPLICIT NONE
+INTEGER_T, INTENT(in) :: nhalf
+REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+INTEGER_T, INTENT(inout) :: make_seed
+type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
+INTEGER_T    :: i,j,k,im
+INTEGER_T    :: temperature_component 
+INTEGER_T    :: ii,jj,kk
+REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
+
+  print *,"in Satomodel_nucleation"
+  i=nucleate_in%i
+  j=nucleate_in%j
+  k=nucleate_in%k
+! 1<=im<=num_materials
+  if (num_materials.eq.3) then
+   ! do nothing
+  else
+   print *,"num_materials invalid"
+   stop
+  endif
+  im=3
+  temperature_component=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+  tempt=nucleate_in%EOS(D_DECL(i,j,k),temperature_component)
+  vf_sol=nucleate_in%Snew(D_DECL(i,j,k), &
+      STATECOMP_MOF+(im-1)*ngeom_raw+1)
+  ls_sol=nucleate_in%LSnew(D_DECL(i,j,k),im)
+  print *,"i=",i,"j=",j
+  print *,"ls_sol=",ls_sol,"temperature",tempt
+  print *,"xsten", xsten(-1,1),xsten(1,1)
+  ls_liq=nucleate_in%LSnew(D_DECL(i,j,k),1)
+  if(1.eq.1)then
+   if(SDIM.eq.3)then
+    do ii=1,sitesnum
+     print *,"sitesnum=", ii
+     if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
+      print *,"tempt satisfied"
+      if(abs(ls_sol).le.0.5d0*nucleate_in%dx(SDIM))then
+       print *,"ls_sol satisfied"
+       if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1).and.&
+          sites(2,ii).le.xsten(1,2).and.sites(2,ii).ge.xsten(-1,2))then
+        make_seed=1
+        active_flag(ii)=1
+       endif
+      endif    
+     endif
+    enddo
+   elseif(SDIM.eq.2)then
+    do ii=1,sitesnum
+     print *,"sitesnum=", ii
+     if(tempt.ge.sites(2,ii).and.active_flag(ii).eq.0)then
+      print *,"tempt satisfied"
+      if(abs(ls_sol).le.0.5d0*nucleate_in%dx(SDIM))then
+       print *,"ls_solid satisfied"
+       if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1))then
+        print *,"site position satisified"
+        make_seed=1
+        active_flag(ii)=1
+        print *,"make seed"
+       endif
+      endif    
+     endif
+    enddo
+   else
+    print *,"dim invalid"
+    stop
+   endif  
+  endif
+ 
+return
+end subroutine Satomodel_nucleation
+
+
+
+
 
 
 ! ----------
@@ -1334,7 +1460,7 @@ else if (cavity_type.eq.7) then
   stop
  endif
 else if (cavity_type.eq.8) then
- if(coord_type .eq. 2)then   !  R-Z  axis symmetric
+ if(coord_type .eq. 2)then   !  R-Z  axis symmetric (2D)
   if(SDIM.ne.2)then
    print *,"R-Z, SDIM should be 2"
    stop
@@ -1456,13 +1582,25 @@ else if (axis_dir.eq.7.or.axis_dir.eq.8) then
  
  if(coord_type .eq. 2)then 
 
+ if (SDIM.eq.2) then
+  ! do nothing
+ else
+  print *,"expecting 2D"
+  stop
+ endif
  center(1) = 0.0d0
  center(2) = 0.0d0
- center(SDIM) = 1.2d0
+ center(SDIM) = zblob
  call l2norm(center, x , dist_temp)
 ! vapor +   liquid -
  dist=radblob-dist_temp
  elseif(coord_type .eq. 1)then
+  if (SDIM.eq.3) then
+   ! do nothing
+  else
+   print *,"expecting 3D"
+   stop
+  endif
   center(1) = xblob
   center(2) = yblob
   center(SDIM) =zblob+xblob*tan(radblob2)
@@ -1557,9 +1695,15 @@ INTEGER_T :: im_solid_materialdist
     endif
    enddo
 
+   if(axis_dir.eq.8)then
+!    print *,"axis_dir=8"
+    LS(1)=1000.0d0
+    LS(2)=-1000.0d0
+   else
     ! vapor +   liquid -
-   call cavity_distf_12(levelrz+1,x,LS(2))
-   LS(1)=-LS(2)
+    call cavity_distf_12(levelrz+1,x,LS(2))
+    LS(1)=-LS(2)
+   endif
 
    if (nmat.eq.3) then
     if (im_solid_materialdist.ne.3) then
@@ -1718,6 +1862,30 @@ if (probtype.eq.710) then
   else
    print *,"t invalid"
    stop
+  endif
+
+  if (1.eq.0) then
+
+   if (t.eq.zero) then
+    if(x(SDIM).le.zblob2)then
+     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
+    elseif(x(SDIM).gt.zblob2.and.x(SDIM).le.zblob/100.0d0)then
+     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)-&
+       (fort_tempconst(im)-fort_initial_temperature(im))/ &
+       (zblob/100.0d0-zblob2)*(x(SDIM)-zblob2)
+    else
+     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
+    endif
+   else if (t.gt.zero) then
+    if(x(SDIM).le.zblob2)then
+     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
+    else
+     !do nothing
+    endif
+   else
+    print *,"t invalid"
+    stop
+   endif
   endif
 
    ! initial species in inputs?
