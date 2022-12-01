@@ -2,7 +2,7 @@
 #radius: 400 microns, height: 250 microns
 max_step  =  9999999    # maximum timestep
 
-stop_time = 5.0
+stop_time = 40.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -46,7 +46,7 @@ ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
 cg.restart_period=25
 cg.maxiter = 200
-mg.bot_atol = 1.0e-14
+mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -76,15 +76,15 @@ amr.file_name_digits=7
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-12
+mac.mac_abs_tol    = 1.0e-11
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
-mac.visc_abs_tol  = 1.0e-10
+mac.visc_abs_tol  = 1.0e-9
 #ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = 1.96e-3  #-980.0/500000  cm/s^2
+ns.gravity        = 0.5e-5  #-980.0/2.0e+8  cm/s^2
 
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
@@ -119,7 +119,8 @@ ns.stiffCP = 4.21e+7 1.0e+7 2.03e+7 2.03e+7  # dimensional erg/(g K)
 #12 13 14 23 24 34 then reverse
 # dimensional J/kg:
 # St=Cp_l(T_m - T_c)/L=4.2e+3 * 2/3.34e+5 = 0.025
-ns.latent_heat = 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+#ns.latent_heat = 0.0 -3.34e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
+ns.latent_heat = 0.0 -65.0e+9 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 
 #default: Stefan model
 ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0 
 # 1->2 liquid-> gas
@@ -158,12 +159,13 @@ ns.heatviscconst=0.546e+5 0.026e+5 2.2e+5 2.2e+5 # erg/(s cm K)
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
 ns.damping_coefficient=0.0 0.0 0.0 0.0
 # 1 Pa = 10 CGS
-ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS=Pa s x 10
-#ns.denconst=0.917 0.00129 0.917 10.0 #thermal effects only
+ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
+#ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 ns.denconst=1.0 0.00129 0.917 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 
 #added mass 
-ns.denconst_interface_added=500000.0 500000.0 500000.0 500000.0 500000.0 500000.0 
+#5e+5 x 400 = 20e+7=2e+8
+ns.denconst_interface_added=2.0e+8 2.0e+3 2.0e+3 2.0e+3 2.0e+3 2.0e+3
 #ns.material_thickness=1.5 0.0 1.5 1.5
 ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 3 1
