@@ -22893,6 +22893,13 @@ if (probtype.eq.55) then
 
  im_solid_substrate=im_solid_primary()
 
+ if (is_rigid(im_solid_substrate).eq.1) then
+  !do nothing
+ else
+  print *,"expecting is_rigid(im_solid_substrate).eq.1"
+  stop
+ endif
+
  xvec(1)=x
  xvec(2)=y
  if (SDIM.eq.3) then

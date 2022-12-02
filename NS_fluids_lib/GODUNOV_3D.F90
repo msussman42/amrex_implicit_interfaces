@@ -2625,6 +2625,9 @@ stop
          if ((is_rigid(im).eq.1).or. &
              (is_rigid(im_opp).eq.1)) then
           cap_wave_speed(iten)=zero
+         else if ((is_ice(im).eq.1).or. &
+                  (is_ice(im_opp).eq.1)) then
+          cap_wave_speed(iten)=zero
          else if (user_tension(iten).eq.zero) then
           cap_wave_speed(iten)=zero
          else if (user_tension(iten).gt.zero) then

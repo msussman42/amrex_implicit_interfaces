@@ -97,11 +97,11 @@ ns.gravity        = 0.5e-5  #-980.0/2.0e+8  cm/s^2
 #contact line: theta_L_initial=60 degrees
 # LG,LI,LS,IG,GS,SI  (SI used)
 #thermal effects only
-#ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
-#ns.tension= 20.0e-2 0.0 10.0e-2 20.0e-2 20.0e-2 10.0e-2
-#ns.tension=72.0e-2 0.0 36.0e-2 72.0e-2 72.0e-2 36.0e-2
-ns.tension=72.0 0.0 36.0 72.0 72.0 36.0 # added mass 
-ns.tension_init=72.0 0.0 36.0 72.0 72.0 36.0 # 60 degrees
+#ns.tension=   0.0     0.0 0.0     0.0 0.0      0.0
+#ns.tension= 20.0e-2   0.0 10.0e-2 0.0 20.0e-2  0.0
+#ns.tension= 72.0e-2   0.0 36.0e-2 0.0 72.0e-2  0.0
+ns.tension=     72.0   0.0 36.0    0.0 72.0     0.0 # added mass 
+ns.tension_init=72.0   0.0 36.0    0.0 72.0     0.0 # 60 degrees
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)

@@ -5038,7 +5038,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               stop
              endif
             else if (user_tension(iten).gt.zero) then
-             ! do nothing
+             print *,"expecting user_tension(iten)==0 if ice/fluid interface"
+             stop
             else
              print *,"user_tension invalid"
              stop
