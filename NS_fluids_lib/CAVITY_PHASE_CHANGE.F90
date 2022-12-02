@@ -27,60 +27,184 @@ module CAVITY_PHASE_CHANGE_module
 implicit none                   
 
 REAL_T :: DEF_VAPOR_GAMMA
+INTEGER_T, parameter :: max_sitesnum=1000
+REAL_T,parameter  :: tmax=116.0d0
+REAL_T,parameter  :: tinit=107.0d0
+
 INTEGER_T :: sitesnum
 REAL_T,allocatable :: sites(:,:)  ! nucleate sites list
 INTEGER_T,allocatable  :: active_flag(:)
+INTEGER_T,allocatable  :: flagrecord(:)
 
 
 contains
+
+subroutine findmax_dist(flagnum,flaglist,distin,iout)
+implicit none
+
+REAL_T,intent(in) :: distin(8)
+INTEGER_T,intent(in) :: flagnum
+INTEGER_T,intent(in) :: flaglist(1000)
+INTEGER_T            :: i,j
+INTEGER_T,intent(out):: iout
+REAL_T       :: tempdist
+
+tempdist=0.0d0
+
+do i=1,8
+ if(flagnum.ne.0)then
+  do j=1,flagnum
+  if(distin(i).gt.tempdist.and.i.ne.flaglist(flagnum))then
+   iout=i  
+  endif
+  enddo
+ else
+  if(distin(i).gt.tempdist)then
+   iout=i
+  endif
+ endif
+enddo
+
+end subroutine findmax_dist
+
+
+subroutine distcal(samp,pp,dist,vflag)
+implicit none
+
+REAL_T,intent(in) :: samp(2,8)
+REAL_T,intent(in) :: pp(2)
+REAL_T            :: dist(8)
+INTEGER_T                 :: i
+INTEGER_T,intent(out)     :: vflag
+REAL_T,parameter  :: eps=0.01d0
+
+vflag=0
+
+do i=1,8
+ dist(i)=sqrt((samp(1,i)-pp(1))**2.0+(samp(2,i)-pp(2))**2.0)
+  if(dist(i).lt.eps)then
+    vflag=i
+  endif
+enddo
+
+
+
+
+end subroutine distcal
 
   ! do any initial preparation needed
 subroutine INIT_CAVITY_PHASE_CHANGE_MODULE()
 IMPLICIT NONE
 INTEGER_T :: i,j
+REAL_T    :: t,tinit 
+REAL_T    :: r(2)
+INTEGER_T :: isite
+REAL_T    :: samp(2,8)
+INTEGER_T :: maxi,n
+REAL_T    :: a,b,fo
+REAL_T    :: totdist(8),tempdist(8)
+INTEGER_T :: vflag
+INTEGER_T :: flagnum
+
 
 DEF_VAPOR_GAMMA =  1.666666667D0
 
-if(SDIM.eq.3)then
-  open(10,file='list.dat')
-   
-  read(10,*) sitesnum
-  allocate(sites(3,sitesnum))
-  allocate(active_flag(sitesnum))
-  do i=1,sitesnum
-   read(10,*) sites(1:3,i)
-  enddo
-  do j=1,sitesnum
+allocate(sites(3,max_sitesnum)) !x,y,temperature
+allocate(active_flag(max_sitesnum))
+allocate(flagrecord(max_sitesnum))
+
+n=50
+call random_seed(size=n)
+
+fo=7.0d0
+a=201.0/(20.0**fo-(tinit-100.0d0)**fo)
+b=1.0-a*((tinit-100d0)**fo)
+print *,"a=",a,"b=",b
+
+isite=0
+sites=0.0d0
+t=0.0
+
+do while(t.le.tmax)
+ isite=isite+1
+ if(isite.eq.1)then
+  call random_number(r)
+  if (SDIM.eq.3) then
+   ! do nothing
+  else if (SDIM.eq.2) then
+   r(2)=zero
+  else
+   print *,"dimension invalid"
+   stop
+  endif
+  print *,r
   do i=1,2
-   sites(i,j)=((6.0d-3)-0.0d0)*sites(i,j)
+   sites(i,isite)=r(i)
   enddo
-  enddo
+ elseif(isite.gt.1)then
+  do i=1,8
 
-  active_flag=0
-  close(10)
-elseif(SDIM.eq.2)then
+   call random_number(r)
+   if (SDIM.eq.3) then
+    ! do nothing
+   else if (SDIM.eq.2) then
+    r(2)=zero
+   else
+    print *,"dimension invalid"
+    stop
+   endif
+   samp(1,i)=r(1)
+   samp(2,i)=r(2)
+   print *,samp(:,i)
+  enddo ! do i=1,8
+  print *,"-----------------"
+  totdist=0.0
+  flagrecord=0
+  flagnum=0
+  do i=1,isite-1
+   call distcal(samp,sites(1:2,i),tempdist,vflag)
+   do j=1,8
+    totdist(j)=totdist(j)+tempdist(j)
+   enddo
+   if(vflag.ne.0)then
+    flagnum=flagnum+1
+    flagrecord(flagnum)=vflag
+   endif
+  enddo ! do i=1,isite-1
+  print *,"flagnum=",flagnum
+  call findmax_dist(flagnum,flagrecord,totdist,maxi)
 
-  open(11,file='list2d.dat')
-  read(11,*) sitesnum
-  allocate(sites(2,sitesnum))               ! (2, sitenum)
-  allocate(active_flag(sitesnum))
+  do i=1,2
+   sites(i,isite)=samp(i,maxi)
+  enddo  
+ else
+  print *,"isite invalid"
+  stop
+ endif
 
-  do i=1,sitesnum
-   read(11,*) sites(1:2,i)
-  enddo
-  do j=1,sitesnum
-   sites(1,j)=((6.0d-3)-0.0d0)*sites(1,j)
-  enddo
-
-  active_flag=0
-  close(11)
-
+ if(isite.eq.1)then
+  sites(3,isite)=tinit
+  t=tinit
+ else
+  sites(3,isite)=((real(isite,8)-b)/a)**(1.0d0/fo)+100.0d0
+  t=sites(3,isite)
+ endif
+ print *,"ith=",isite, "t=",t
  
-else
- print *,"sdim invalid"
- stop
-endif
+enddo ! do while(t.le.tmax)
+do i=1,isite
+  sites(3,i)=sites(3,i)+273.0d0
+enddo
 
+sitesnum=isite
+
+do j=1,sitesnum
+do i=1,2
+ sites(i,j)=((6.0d-3)-0.0d0)*sites(i,j)
+enddo
+enddo
+
+active_flag=0
 
 return
 end subroutine INIT_CAVITY_PHASE_CHANGE_MODULE
@@ -96,7 +220,7 @@ INTEGER_T, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 INTEGER_T    :: i,j,k,im
 INTEGER_T    :: temperature_component 
-INTEGER_T    :: ii,jj,kk
+INTEGER_T    :: ii
 REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
 
   print *,"in Satomodel_nucleation"
@@ -121,49 +245,36 @@ REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
   print *,"xsten", xsten(-1,1),xsten(1,1)
   ls_liq=nucleate_in%LSnew(D_DECL(i,j,k),1)
   if(1.eq.1)then
-   if(SDIM.eq.3)then
+
     do ii=1,sitesnum
      print *,"sitesnum=", ii
      if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
       print *,"tempt satisfied"
       if(abs(ls_sol).le.0.5d0*nucleate_in%dx(SDIM))then
        print *,"ls_sol satisfied"
-       if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1).and.&
-          sites(2,ii).le.xsten(1,2).and.sites(2,ii).ge.xsten(-1,2))then
-        make_seed=1
-        active_flag(ii)=1
+       if (SDIM.eq.3) then
+        if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1).and.&
+           sites(2,ii).le.xsten(1,2).and.sites(2,ii).ge.xsten(-1,2))then
+         make_seed=1
+         active_flag(ii)=1
+        endif
+       else if (SDIM.eq.2) then
+        if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1)) then
+         make_seed=1
+         active_flag(ii)=1
+        endif
+       else
+        print *,"SDIM invalid"
+        stop
        endif
       endif    
      endif
-    enddo
-   elseif(SDIM.eq.2)then
-    do ii=1,sitesnum
-     print *,"sitesnum=", ii
-     if(tempt.ge.sites(2,ii).and.active_flag(ii).eq.0)then
-      print *,"tempt satisfied"
-      if(abs(ls_sol).le.0.5d0*nucleate_in%dx(SDIM))then
-       print *,"ls_solid satisfied"
-       if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1))then
-        print *,"site position satisified"
-        make_seed=1
-        active_flag(ii)=1
-        print *,"make seed"
-       endif
-      endif    
-     endif
-    enddo
-   else
-    print *,"dim invalid"
-    stop
-   endif  
+    enddo ! do ii=1,sitesnum
+
   endif
  
 return
 end subroutine Satomodel_nucleation
-
-
-
-
 
 
 ! ----------

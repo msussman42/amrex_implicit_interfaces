@@ -785,6 +785,7 @@ stop
        SUB_PRES_BC=>CAVITY_PHASE_CHANGE_PRES_BC
        SUB_STATE_BC=>CAVITY_PHASE_CHANGE_STATE_BC
        SUB_velfreestream=>CAVITY_PHASE_CHANGE_velfreestream
+       SUB_nucleation=>Satomodel_nucleation
       else if (probtype.eq.55) then
        SUB_INIT_MODULE=>INIT_GENERAL_PHASE_CHANGE_MODULE
        SUB_check_vel_rigid=>GENERAL_PHASE_CHANGE_check_vel_rigid
