@@ -21,11 +21,11 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.continuous_mof=0
-ns.mof_decision_tree_learning=40000
+ns.mof_decision_tree_learning=100
 ns.mof_machine_learning=0
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=15
-ns.MOFITERMAX_AFTER_PREDICT=0
+ns.MOFITERMAX_AFTER_PREDICT=15
 ns.num_materials=2
 ns.num_species_var=0
 # effective fine grid resolution: 96x96
@@ -42,10 +42,10 @@ ns.ns_tiling=false
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
-amr.n_error_buf     = 2 1 1    # number of buffer cells in error est
+amr.n_error_buf     = 4 4 4    # number of buffer cells in error est
 amr.grid_eff        = 0.85   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 2     # block factor in grid generation
+amr.blocking_factor = 8 8 4     # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1
 amr.check_int       = 160     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
