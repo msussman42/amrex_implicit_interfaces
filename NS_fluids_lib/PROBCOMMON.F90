@@ -304,6 +304,8 @@ implicit none
 !   gravity,gravity_dir,invert_gravity
 ! added November 3, 2022: 
 !   tension_init
+! added December 3, 2022: 
+!   gravity_boussinesq_vector
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1

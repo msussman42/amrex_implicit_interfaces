@@ -540,7 +540,8 @@ stop
           ! DTEMP has no units.
          if (abs(DTEMP).ge.zero) then
           do dir=1,SDIM
-           unp1(dir)=unp1(dir)+dt*gravity_vector(dir)*DTEMP
+           unp1(dir)=unp1(dir)+ &
+              dt*gravity_boussinesq_vector(dir)*DTEMP
           enddo
          else
           print *,"DTEMP is NaN"

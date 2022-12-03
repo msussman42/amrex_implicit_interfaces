@@ -170,7 +170,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-#USE_MPI = TRUE
+USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
