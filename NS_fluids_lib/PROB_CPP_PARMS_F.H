@@ -147,6 +147,7 @@ namespace amrex{
        Real* tension_min,
        Real* prefreeze_tension,
        Real* gravity_vector,
+       Real* gravity_boussinesq_vector,
        Real* fort_stop_time,
        Real* fort_Carreau_alpha,
        Real* fort_Carreau_beta,

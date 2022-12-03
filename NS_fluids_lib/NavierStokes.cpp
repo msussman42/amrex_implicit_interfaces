@@ -222,6 +222,7 @@ int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
+Vector<Real> NavierStokes::gravity_boussinesq_vector;
 
 int  NavierStokes::sum_interval = -1;
 int  NavierStokes::NUM_SCALARS  = 0;
@@ -1882,11 +1883,14 @@ void fortran_parameters() {
  int gravity_dir_temp=NavierStokes::gravity_dir;
  int invert_gravity_temp=NavierStokes::invert_gravity;
  Vector<Real> gravity_vector_temp(AMREX_SPACEDIM);
+ Vector<Real> gravity_boussinesq_vector_temp(AMREX_SPACEDIM);
 
  bool gravity_in_table=pp.contains("gravity");
  bool gravity_dir_in_table=pp.contains("gravity_dir");
  bool invert_gravity_in_table=pp.contains("invert_gravity");
  bool gravity_vector_in_table=pp.contains("gravity_vector");
+ bool gravity_boussinesq_vector_in_table=
+   pp.contains("gravity_boussinesq_vector");
 
  if (gravity_vector_in_table==true) {
 
@@ -1919,6 +1923,13 @@ void fortran_parameters() {
 
  } else
   amrex::Error("gravity_vector_in_table invalid");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  gravity_boussinesq_vector_temp[dir]=
+     gravity_vector_temp[dir];
+ }
+ pp.queryarr("gravity_boussinesq_vector",
+   gravity_boussinesq_vector_temp,0,AMREX_SPACEDIM);
 
  int n_sites=0;
  pp.queryAdd("n_sites",n_sites);
@@ -2053,6 +2064,7 @@ void fortran_parameters() {
   tension_mintemp.dataPtr(),
   prefreeze_tensiontemp.dataPtr(),
   gravity_vector_temp.dataPtr(),
+  gravity_boussinesq_vector_temp.dataPtr(),
   &fort_stop_time,
   Carreau_alpha_temp.dataPtr(),
   Carreau_beta_temp.dataPtr(),
@@ -2697,11 +2709,14 @@ NavierStokes::read_params ()
      amrex::Error("thread_class::nthreads invalid ns init");
 
     gravity_vector.resize(AMREX_SPACEDIM);
+    gravity_boussinesq_vector.resize(AMREX_SPACEDIM);
 
     bool gravity_in_table=pp.contains("gravity");
     bool gravity_dir_in_table=pp.contains("gravity_dir");
     bool invert_gravity_in_table=pp.contains("invert_gravity");
     bool gravity_vector_in_table=pp.contains("gravity_vector");
+    bool gravity_boussinesq_vector_in_table=
+      pp.contains("gravity_boussinesq_vector");
 
     if (gravity_vector_in_table==true) {
 
@@ -2734,6 +2749,12 @@ NavierStokes::read_params ()
 
     } else
      amrex::Error("gravity_vector_in_table invalid");
+
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     gravity_boussinesq_vector[dir]=gravity_vector[dir];
+    }
+    pp.queryarr("gravity_boussinesq_vector",
+      gravity_boussinesq_vector,0,AMREX_SPACEDIM);
 
     Real gravity_reference_wavelen_default=0.0;
 
@@ -2797,6 +2818,12 @@ NavierStokes::read_params ()
        gravity_vector[0] << ' ' <<
        gravity_vector[1] << ' ' <<
        gravity_vector[AMREX_SPACEDIM-1] << '\n';
+
+     std::cout << "gravity_boussinesq_vector 0..sdim-1: " << 
+       gravity_boussinesq_vector[0] << ' ' <<
+       gravity_boussinesq_vector[1] << ' ' <<
+       gravity_boussinesq_vector[AMREX_SPACEDIM-1] << '\n';
+
      std::cout << "gravity_reference_wavelen " << 
 	  gravity_reference_wavelen << '\n';
 

@@ -107,6 +107,7 @@
       REAL_T global_pressure_scale
       REAL_T global_velocity_scale
       REAL_T gravity_vector(AMREX_SPACEDIM)
+      REAL_T gravity_boussinesq_vector(AMREX_SPACEDIM)
 
       INTEGER_T num_species_var
       INTEGER_T num_materials_viscoelastic

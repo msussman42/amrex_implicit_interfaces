@@ -387,6 +387,7 @@ public:
     static int  invert_gravity;
     static int  gravity_dir;
     static Vector<Real> gravity_vector;
+    static Vector<Real> gravity_boussinesq_vector;
 
     static Real nucleation_init_time; //def 0.0
      // 0 - centroid furthest from uncaptured centroid

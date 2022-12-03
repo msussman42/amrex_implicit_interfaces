@@ -116,8 +116,8 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 #amr.n_cell          = 8 32
 #amr.n_cell          = 64 256  # this resolution agrees with experiments.
 #amr.max_level       = 0
-amr.n_cell          = 32 128  # 2nd order level 0, 1st order level 1.
-amr.max_level       = 1
+amr.n_cell          = 64 256  # 2nd order level 0, 1st order level 1.
+amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
 #speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
@@ -125,12 +125,12 @@ amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 64    # try 64
 
 # Note: (max_level+1) values needed
-amr.n_error_buf     = 1 1 1 1 1 # number of buffer cells in error est 
+amr.n_error_buf     = 2 2 2 2 2 # number of buffer cells in error est 
 amr.blocking_factor = 8 4 # block factor in grid generation
 # level0, level1, ...
-amr.space_blocking_factor=2 1 # make 2 1 for 2nd order in space
-amr.time_blocking_factor=2    # make 2 for 2nd order in time
-ns.enable_spectral=1          # make 1 for 2nd order
+amr.space_blocking_factor=1 1 # make 2 1 for 2nd order in space
+amr.time_blocking_factor=1    # make 2 for 2nd order in time
+ns.enable_spectral=0          # make 1 for 2nd order
 ns.nblocks=0
 #ns.nblocks=1
 ns.xblocks=0.0
@@ -189,13 +189,16 @@ ns.v=0
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
-ns.gravity          = 9.8
+ns.gravity          = 9.8e-5 #added mass
 #the longest wavelength is half the tank radius. (since axisymmetric)
 #(in 3D, without reflecting BC, the longest wavelength is half the tank
 #diameter)
+
 ns.gravity_reference_wavelen=0.0508
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
+ns.gravity_boussinesq_vector=0.0 -9.8
+
 #override_density=0 if compressible material
 #if incompressible material:
 # override_density=0 => rho independent of T 
@@ -243,6 +246,9 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
+# added mass
+ns.denconst_interface_added=1.0e+8 1.0e+8 1.0e+8 1.0e+8 1.0e+8 1.0e+8
+
 ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
 ns.multilevel_maxcycle=200
@@ -421,12 +427,15 @@ ns.xblob3 = 2.0 # Watts=J/s
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
 ns.continuous_mof   = 2 # 0=MOF 2=CMOF
+ns.mof_decision_tree_learning=100
+ns.mof_machine_learning=0
 
 #-1=Weymouth Yue,  
 # 1=EILE (default), 2=always EI, 3=always LE
 ns.EILE_flag        = -1
 
 ns.MOFITERMAX       = 15
+ns.MOFITERMAX_AFTER_PREDICT=15
 
 ns.truncate_thickness=2.0
 
