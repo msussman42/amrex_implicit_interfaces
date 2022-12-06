@@ -1,10 +1,6 @@
 #!MC 1410
-$!VarSet |LFDSFN1| = '"nddata000000.plt"'
-$!VarSet |LFDSVL1| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "L0101" "L0202" "L0303" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "D01" "T01" "D02" "T02" "D03" "T03" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MU01" "MU02" "MU03" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
-$!VarSet |LFDSFN2| = '"mat01ls000000.plt" "mat02ls000000.plt"'
-$!VarSet |LFDSVL2| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "L0101" "L0202" "L0303" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "D01" "T01" "D02" "T02" "D03" "T03" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MU01" "MU02" "MU03" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
-$!VarSet |LFDSFN3| = '"mat03ls000000.plt"'
-$!VarSet |LFDSVL3| = '"X" "Y" "x_velocity" "y_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "L0101" "L0202" "L0303" "x_normal0101" "y_normal0101" "x_normal0202" "y_normal0202" "x_normal0303" "y_normal0303" "D01" "T01" "D02" "T02" "D03" "T03" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MU01" "MU02" "MU03" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "x_ELSTCFORCE" "y_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04"'
+$!VarSet |LFDSFN1| = '"mat01ls000000.plt" "mat02ls000000.plt" "mat03ls000000.plt" "mat01ls000400.plt" "mat02ls000400.plt" "mat03ls000400.plt" "mat01ls000800.plt" "mat02ls000800.plt" "mat03ls000800.plt" "mat01ls001600.plt" "mat02ls001600.plt" "mat03ls001600.plt" "mat01ls008542.plt" "mat02ls008542.plt" "mat03ls008542.plt"'
+$!VarSet |LFDSVL1| = '"X" "Y"'
 $!SetStyleBase Factory
 $!CreateColorMap 
   Name = 'Sequential - Viridis'
@@ -229,28 +225,9 @@ $!ReadDataSet  '|LFDSFN1|'
   VarNameList = '|LFDSVL1|'
 $!RemoveVar |LFDSVL1|
 $!RemoveVar |LFDSFN1|
-$!ReadDataSet  '|LFDSFN2|'
-  InitialPlotType = Cartesian2D
-  IncludeText = No
-  IncludeGeom = No
-  ReadDataOption = Append
-  ResetStyle = No
-  AssignStrandIDs = Yes
-  VarLoadMode = ByName
-  VarNameList = '|LFDSVL2|'
-$!RemoveVar |LFDSVL2|
-$!RemoveVar |LFDSFN2|
-$!ReadDataSet  '|LFDSFN3|'
-  InitialPlotType = Cartesian2D
-  IncludeText = No
-  IncludeGeom = No
-  ReadDataOption = Append
-  ResetStyle = No
-  AssignStrandIDs = Yes
-  VarLoadMode = ByName
-  VarNameList = '|LFDSVL3|'
-$!RemoveVar |LFDSVL3|
-$!RemoveVar |LFDSFN3|
+$!ExtendedCommand 
+  CommandProcessorID = 'Strand Editor'
+  Command = 'ZoneSet=1-15;AssignStrands=TRUE;StrandValue=0;AssignSolutionTime=TRUE;TimeValue=0;DeltaValue=1;TimeOption=Automatic;'
 $!FrameLayout 
   ShowHeader = No
   HeaderColor = Red
@@ -267,8 +244,8 @@ $!ThreeDAxis
 $!PlotType  = Cartesian2D
 $!FrameName  = 'Frame 001'
 $!GlobalTime 
-  SolutionTime = 0.7493143000000001
-$!ActiveFieldMaps  =  [1-3]
+  SolutionTime = 4
+$!ActiveFieldMaps  =  [1-15]
 $!GlobalRGB 
   RangeMin = 0
   RangeMax = 1
@@ -416,10 +393,6 @@ $!GlobalContour  8
       CMax = 1
       }
     }
-$!GlobalTwoDVector 
-  UVar = 3
-  VVar = 4
-  RelativeLength = 0.15
 $!GlobalScatter 
   Legend
     {
@@ -433,65 +406,10 @@ $!GlobalScatter
     Color = Red
     FillColor = Red
     }
-$!FieldMap  [1]
+$!FieldMap  [1-3]
   Mesh
     {
-    Show = No
-    Color = Black
-    }
-  Contour
-    {
-    ContourType = Flood
-    Color = Black
-    UseLightingEffect = Yes
-    }
-  Vector
-    {
-    Color = Black
-    }
-  Scatter
-    {
-    Color = Black
-    }
-  Shade
-    {
-    Color = Custom2
-    }
-  EdgeLayer
-    {
-    Show = Yes
-    Color = Black
-    LineThickness = 0.1
-    }
-  Points
-    {
-    PointsToPlot = SurfaceNodes
-    }
-  Surfaces
-    {
-    SurfacesToPlot = KPlanes
-    IRange
-      {
-      Max = 1
-      }
-    }
-  VolumeMode
-    {
-    VolumeObjectsToPlot
-      {
-      ShowIsosurfaces = No
-      ShowSlices = No
-      ShowStreamtraces = No
-      }
-    }
-  Effects
-    {
-    LightingEffect = Gouraud
-    }
-$!FieldMap  [2]
-  Mesh
-    {
-    Color = Purple
+    Color = Custom49
     LineThickness = 0.8
     }
   Contour
@@ -514,7 +432,7 @@ $!FieldMap  [2]
     }
   EdgeLayer
     {
-    Show = Yes
+    Show = No
     Color = Black
     LineThickness = 0.1
     }
@@ -524,7 +442,7 @@ $!FieldMap  [2]
     }
   Surfaces
     {
-    SurfacesToPlot = KPlanes
+    SurfacesToPlot = None
     IRange
       {
       Max = 1
@@ -543,10 +461,175 @@ $!FieldMap  [2]
     {
     LightingEffect = Gouraud
     }
-$!FieldMap  [3]
+$!FieldMap  [4-6]
   Mesh
     {
-    Color = Purple
+    Color = Custom3
+    LineThickness = 0.8
+    }
+  Contour
+    {
+    ContourType = Flood
+    Color = Black
+    UseLightingEffect = Yes
+    }
+  Vector
+    {
+    Color = Black
+    }
+  Scatter
+    {
+    Color = Black
+    }
+  Shade
+    {
+    Color = Custom2
+    }
+  EdgeLayer
+    {
+    Show = No
+    Color = Black
+    LineThickness = 0.1
+    }
+  Points
+    {
+    PointsToPlot = SurfaceNodes
+    }
+  Surfaces
+    {
+    SurfacesToPlot = None
+    IRange
+      {
+      Max = 1
+      }
+    }
+  VolumeMode
+    {
+    VolumeObjectsToPlot
+      {
+      ShowIsosurfaces = No
+      ShowSlices = No
+      ShowStreamtraces = No
+      }
+    }
+  Effects
+    {
+    LightingEffect = Gouraud
+    }
+$!FieldMap  [7-9]
+  Mesh
+    {
+    Color = Custom38
+    LineThickness = 0.8
+    }
+  Contour
+    {
+    ContourType = Flood
+    Color = Black
+    UseLightingEffect = Yes
+    }
+  Vector
+    {
+    Color = Black
+    }
+  Scatter
+    {
+    Color = Black
+    }
+  Shade
+    {
+    Color = Custom2
+    }
+  EdgeLayer
+    {
+    Show = No
+    Color = Black
+    LineThickness = 0.1
+    }
+  Points
+    {
+    PointsToPlot = SurfaceNodes
+    }
+  Surfaces
+    {
+    SurfacesToPlot = None
+    IRange
+      {
+      Max = 1
+      }
+    }
+  VolumeMode
+    {
+    VolumeObjectsToPlot
+      {
+      ShowIsosurfaces = No
+      ShowSlices = No
+      ShowStreamtraces = No
+      }
+    }
+  Effects
+    {
+    LightingEffect = Gouraud
+    }
+$!FieldMap  [10-12]
+  Mesh
+    {
+    Color = Green
+    LineThickness = 0.8
+    }
+  Contour
+    {
+    ContourType = Flood
+    Color = Black
+    UseLightingEffect = Yes
+    }
+  Vector
+    {
+    Color = Black
+    }
+  Scatter
+    {
+    Color = Black
+    }
+  Shade
+    {
+    Color = Custom2
+    }
+  EdgeLayer
+    {
+    Show = No
+    Color = Black
+    LineThickness = 0.1
+    }
+  Points
+    {
+    PointsToPlot = SurfaceNodes
+    }
+  Surfaces
+    {
+    SurfacesToPlot = None
+    IRange
+      {
+      Max = 1
+      }
+    }
+  VolumeMode
+    {
+    VolumeObjectsToPlot
+      {
+      ShowIsosurfaces = No
+      ShowSlices = No
+      ShowStreamtraces = No
+      }
+    }
+  Effects
+    {
+    LightingEffect = Gouraud
+    }
+$!FieldMap  [13-15]
+  Mesh
+    {
+    Color = Red
     LineThickness = 0.8
     }
   Contour
@@ -613,16 +696,16 @@ $!TwoDAxis
 $!TwoDAxis 
   XDetail
     {
-    RangeMin = 0.22907535229864917081
-    RangeMax = 0.77701975164929859563
+    RangeMin = 0.24930695019340931573
+    RangeMax = 0.79010781444328248568
     GRSpacing = 0.2
     }
 $!TwoDAxis 
   YDetail
     {
-    RangeMin = 0.26818530406719043313
-    RangeMax = 0.76823530406719042762
-    GRSpacing = 0.2
+    RangeMin = 0.24847703170767951319
+    RangeMax = 0.74200789448978599072
+    GRSpacing = 0.1
     }
 $!IsoSurfaceAttributes  1
   IsoSurfaceSelection = OneSpecificValue
@@ -842,7 +925,7 @@ $!StreamAttributes
     }
   MaxSteps = 10000
 $!FieldLayers 
-  ShowVector = Yes
+  ShowShade = Yes
   ShowEdge = No
 $!StreamtraceLayers 
   Show = No
