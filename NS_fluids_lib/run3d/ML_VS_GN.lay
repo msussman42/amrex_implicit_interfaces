@@ -1189,7 +1189,7 @@ $!ThreeDAxis
     GRSpacing = 0.05
     AxisLine
       {
-      Edge = 3
+      Edge = 1
       }
     }
 $!ThreeDAxis 
@@ -1201,7 +1201,7 @@ $!ThreeDAxis
     GRSpacing = 0.05
     AxisLine
       {
-      Edge = 2
+      Edge = 1
       }
     }
 $!IsoSurfaceAttributes  1
@@ -1707,14 +1707,14 @@ $!GlobalThreeD
   VectorLiftFraction = 0.7
   NearPlaneFraction = 0.1
 $!ThreeDView 
-  PSIAngle = 86.1053
-  ThetaAngle = -91.3684
-  AlphaAngle = 1.22619E-259
+  PSIAngle = 90.8772
+  ThetaAngle = -89.4035
+  AlphaAngle = 1.22625E-259
   ViewerPosition
     {
-    X = 2.809674004493272
-    Y = 0.06711747900019494
-    Z = 0.1838565426774481
+    X = 2.816498524201797
+    Y = -0.02932288164655893
+    Z = -0.05060912436388002
     }
   ViewWidth = 0.438201
 $!FieldLayers 
