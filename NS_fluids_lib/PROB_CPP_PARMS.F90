@@ -125,6 +125,28 @@ stop
 
       end subroutine fort_blb_init
 
+       !called from NavierStokes.cpp: void fortran_deallocate_parameters
+      subroutine fort_deallocate_module( &
+        ) &
+      bind(c,name='fort_deallocate_module')
+
+      use probcommon_module
+      use global_utility_module
+      IMPLICIT NONE
+
+      if (is_in_probtype_list().eq.1) then
+       call SUB_DEALLOCATE_MODULE()
+      else if (is_in_probtype_list().eq.0) then
+       ! do nothing
+      else
+       print *,"is_in_probtype_list invalid"
+       stop
+      endif
+
+      return
+      end subroutine fort_deallocate_module
+
+       !called from NavierStokes.cpp: void fortran_parameters
       subroutine fort_override( &
         cc_int_size, &
         ccmax_level, &
@@ -472,6 +494,7 @@ stop
       used_probtypes(20)=710 ! CAVITY_PHASE_CHANGE
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
+      SUB_DEALLOCATE_MODULE=>DEALLOCATE_STUB_MODULE
       SUB_LS=>STUB_LS
       SUB_OVERRIDE_TAGFLAG=>STUB_OVERRIDE_TAGFLAG
       SUB_AUX_DATA=>STUB_AUX_DATA
@@ -1496,9 +1519,11 @@ stop
         print *,"iten,fort_saturation_temp ",iten,fort_saturation_temp(iten)
         print *,"iten,fort_reference_pressure ",iten, &
           fort_reference_pressure(iten)
-        print *,"iten+num_interfaces,fort_saturation_temp ",iten+num_interfaces, &
+        print *,"iten+num_interfaces,fort_saturation_temp ", &
+          iten+num_interfaces, &
           fort_saturation_temp(iten+num_interfaces)
-        print *,"iten+num_interfaces,fort_reference_pressure ",iten+num_interfaces, &
+        print *,"iten+num_interfaces,fort_reference_pressure ", &
+          iten+num_interfaces, &
           fort_reference_pressure(iten+num_interfaces)
        enddo ! iten=1..num_interfaces
       endif

@@ -19,20 +19,28 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 9000
+
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
+
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 1
 
 ns.num_materials=3
 ns.num_species_var=0
-# 3=no limiter with slope=0 at interface
-ns.continuous_mof=0
+ns.continuous_mof=2 #CMOF
+ns.vof_height_function=1
 ns.FD_curv_interp=1
 ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0e+4 # Kensuke 1.0e+4  Yongsheng 1.0
 #ns.show_mem=1
 ns.MOFITERMAX=15
+ns.MOFITERMAX_AFTER_PREDICT=15
+ns.mof_decision_tree_learning=100
+
 #amr.n_cell    = 24 24 # Yongsheng
 amr.n_cell=32 24 # Kensuke 
 #amr.max_level =  1   # Yongsheng 2= 43.2 points per diameter
@@ -55,13 +63,13 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 4       # block factor in grid generation
+amr.blocking_factor = 8       # block factor in grid generation
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 50      # CHANGE TO 50
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 32
 #amr.restart         = chk00400
 #amr.trace   =1
 
@@ -75,6 +83,7 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.1      # scale back initial timestep
 #ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
 ns.visc_coef=1.0 # Kensuke
+mac.visc_abs_tol=1.0e-8
 #ns.gravity=0.0  # Yongsheng
 ns.gravity        = -980.0  # Kensuke
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -93,6 +102,24 @@ ns.gravity        = -980.0  # Kensuke
 #  | 13 | 23 
 ns.tension=72.0 140.9 72.0  #Kensuke 163 degrees
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface
+
+#law_of_the_wall=0 0 0 if static angle condition or non-GNBC dynamic angle 
+#                  conditions.
+#if law_of_the_wall=2 2 2 (GNBC) then
+# calls to FORT_WALLFUNCTION and getGhostVel are made.
+ns.law_of_the_wall=0 0 0 #1=law of the wall   2=GNBC  0=neither
+
+# =-1 static angle
+# =1 GNBC
+# =2 Jiang 1970
+# =3 Shikmurzaev 2008 
+# =4 Kalliadasis1994
+# =5 Kistler1993
+# =6 Bracke1989
+# =7 Blake2006, Popescu2008
+# =8 Cox 1986
+ns.ZEYU_DCA_SELECT=-1  #DCA=dynamic contact angle
+
 #ns.fixed_dt	  = 5.0e-5   # hardwire dt
 ns.sum_interval   = 10       # timesteps between computing mass 
 ns.twall=0.0

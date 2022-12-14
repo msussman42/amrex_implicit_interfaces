@@ -30,6 +30,10 @@ namespace amrex{
       int* blb_pres_in,
       int* num_elements_blobclass_in);
 
+      // called from NavierStokes.cpp: void fortran_deallocate_parameters()
+     void fort_deallocate_module( );
+
+      // called from NavierStokes.cpp: void fortran_parameters()
      void fort_override(
        const int* cc_int_size,
        const int* max_level,

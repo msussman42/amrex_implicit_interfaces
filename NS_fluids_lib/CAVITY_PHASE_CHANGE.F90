@@ -96,7 +96,7 @@ end subroutine distcal
 subroutine INIT_CAVITY_PHASE_CHANGE_MODULE()
 IMPLICIT NONE
 INTEGER_T :: i,j
-REAL_T    :: t,tinit 
+REAL_T    :: t
 REAL_T    :: r(2)
 INTEGER_T :: isite
 REAL_T    :: samp(2,8)

@@ -882,6 +882,13 @@ int NavierStokes::global_postsmooth = 2;
 int NavierStokes::use_mg_precond_in_mglib=1;
 Real NavierStokes::bottom_bottom_tol_factor=0.001;
 
+// for static contact line algorithm: 
+//   Arienti and Sussman, IJMF
+// for dynamic contact line algorithm using "get_use_DCA" model,
+//   see work involving Yongsheng Lian and Sussman.
+//   (velocity is input => dynamic angle is output)
+// for dynamic contact line algorithm using GNBC, <unpublished>.
+//   (dynamic angle is input => velocity is output)
 // 0=> u=u_solid if phi_solid>=0
 // 1=> u=u_solid_ghost if phi_solid>=0
 // 2=> generalized Navier Boundary condition (GNBC),
@@ -1171,6 +1178,13 @@ void read_geometry_raw(int& geometry_coord,
  } // dir=0...sdim-1
 
 } // end subroutine read_geometry_raw
+
+// this routine is called from main.cpp after
+void fortran_deallocate_parameters() {
+
+ fort_deallocate_module();
+
+}
 
 // this routine is called from main.cpp prior to:
 //  1. AmrCore* amrptr = new AmrCore();
