@@ -30,7 +30,7 @@ REAL_T :: DEF_VAPOR_GAMMA
 
 contains
 
-  ! do any initial preparation needed
+! do any initial preparation needed
 subroutine INIT_STUB_MODULE()
 use probcommon_module
 IMPLICIT NONE
@@ -42,6 +42,17 @@ IMPLICIT NONE
 
 return
 end subroutine INIT_STUB_MODULE
+
+
+! do any final deallocation needed
+subroutine DEALLOCATE_STUB_MODULE()
+use probcommon_module
+IMPLICIT NONE
+
+ print *,"DEALLOCATE_STUB_MODULE being called"
+
+return
+end subroutine DEALLOCATE_STUB_MODULE
 
 
 subroutine STUB_CFL_HELPER(time,dir,uu,dx)

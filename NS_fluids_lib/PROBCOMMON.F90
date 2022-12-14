@@ -858,6 +858,9 @@ implicit none
       subroutine TEMPLATE_INIT_MODULE()
       end subroutine TEMPLATE_INIT_MODULE
 
+      subroutine TEMPLATE_DEALLOCATE_MODULE()
+      end subroutine TEMPLATE_DEALLOCATE_MODULE
+
       subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
         i,j,k,level, &
         angular_velocity, &
@@ -1224,6 +1227,7 @@ implicit none
       END INTERFACE
 
       PROCEDURE(TEMPLATE_INIT_MODULE), POINTER :: SUB_INIT_MODULE
+      PROCEDURE(TEMPLATE_DEALLOCATE_MODULE), POINTER :: SUB_DEALLOCATE_MODULE
       PROCEDURE(TEMPLATE_correct_pres_rho_hydrostatic), POINTER :: &
               SUB_correct_pres_rho_hydrostatic
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
