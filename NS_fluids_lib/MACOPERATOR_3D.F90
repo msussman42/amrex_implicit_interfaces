@@ -436,8 +436,8 @@ stop
        REAL_T rigid_mask
        REAL_T prescribed_mask
        REAL_T den_inverse,dedt_inverse
-       REAL_T xsten(-1:1,SDIM)
-       INTEGER_T nhalf
+       INTEGER_T, parameter :: nhalf=1
+       REAL_T xsten(-nhalf:nhalf,SDIM)
        REAL_T local_cterm(nsolve)
        INTEGER_T im
        INTEGER_T velcomp
@@ -449,8 +449,6 @@ stop
        REAL_T temperature_clamped
        INTEGER_T prescribed_flag
        INTEGER_T is_clamped_cell
-
-       nhalf=1
 
        mu_ptr=>mu
        call checkbound_array1(fablo,fabhi,mu_ptr,1,-1)
@@ -916,11 +914,9 @@ stop
        REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
        INTEGER_T i,j,k,n
-       REAL_T xsten(-1:1,SDIM)
-       INTEGER_T nhalf
+       INTEGER_T, parameter :: nhalf=1
+       REAL_T xsten(-nhalf:nhalf,SDIM)
        REAL_T hx,RR
-
-       nhalf=1
 
        if (bfact.lt.1) then
         print *,"bfact too small"
