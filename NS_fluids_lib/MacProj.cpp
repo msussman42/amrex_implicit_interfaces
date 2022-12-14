@@ -347,7 +347,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // defined in MACOPERATOR_3D.F90
+   // declared in MACOPERATOR_3D.F90
   fort_scalarcoeff(
     &nsolve,
     xlo,dx,
@@ -521,7 +521,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
     // FACE_WEIGHT_MF initialized in BUILDFACEWT (LEVELSET_3D.F90)
     // BXCOEFNOAREA *= (facewtL + facewtR)/2
-    // MULT_FACEWT is in MACOPERATOR_3D.F90
+    // mult_facewt is declared in MACOPERATOR_3D.F90
    fort_mult_facewt(
     &nsolve,
     bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
@@ -680,7 +680,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
     // BXCOEFNOAREA = min_interior_coeff if not on the
     // edge of the domain and BXCOEFNOAREA previously = 0.0
-    // REGULARIZE_BX is declared in MACOPERATOR_3D.F90
+    // fort_regularize_bx is declared in MACOPERATOR_3D.F90
     fort_regularize_bx(
      &nsolve,
      bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
@@ -777,6 +777,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   FArrayBox& alpha = (*localMF[ALPHACOEF_MF])[mfi];
   FArrayBox& diagfab = (*localMF[DIAG_REGULARIZE_MF])[mfi];
+
+   //BXCOEFF_MF=max(BXCOEF_NOAREA_MF,min_interior_coeff) * AREA_MF/dx
   FArrayBox& bxfab = (*localMF[BXCOEF_MF])[mfi];
   FArrayBox& byfab = (*localMF[BXCOEF_MF+1])[mfi];
   FArrayBox& bzfab = (*localMF[BXCOEF_MF+AMREX_SPACEDIM-1])[mfi];
@@ -785,7 +787,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
  
    // fort_nsgenerate is declared in MACOPERATOR_3D.F90
-   // initializes DIAG_REGULARIZE
+   // initializes DIAG_REGULARIZE_MF
   fort_nsgenerate(
     &level,
     &finest_level,
@@ -793,7 +795,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     &project_option,
     alpha.dataPtr(),
     ARLIM(alpha.loVect()),ARLIM(alpha.hiVect()),
-    diagfab.dataPtr(),
+    diagfab.dataPtr(), //DIAG_REGULARIZE_MF
     ARLIM(diagfab.loVect()),ARLIM(diagfab.hiVect()),
     bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
     byfab.dataPtr(),ARLIM(byfab.loVect()),ARLIM(byfab.hiVect()),
