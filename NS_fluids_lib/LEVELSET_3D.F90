@@ -15127,6 +15127,8 @@ stop
                 (is_clamped_face.eq.3)) then
              gradh_tension=zero
             else if (is_clamped_face.eq.0) then
+             ! fluid_interface_tension is declared in: PROB.F90
+             ! "merge_levelset" is called inside of "fluid_interface_tension"
              call fluid_interface_tension( &
                xstenMAC_center,time, &
                LSleft,LSright,gradh_tension,im_opp,im)

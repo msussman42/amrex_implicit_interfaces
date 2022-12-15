@@ -851,7 +851,7 @@ NavierStokes::restore_active_pressure(int save_mf) {
   int tid_current=ns_thread();
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // defined in MACOPERATOR_3D.F90
+   // fort_restore_pres: declared in MACOPERATOR_3D.F90
   fort_restore_pres(
    offdiagcheck.dataPtr(),
    ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),

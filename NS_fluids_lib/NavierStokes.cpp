@@ -2803,6 +2803,15 @@ NavierStokes::read_params ()
      amrex::Error("gravity_reference_wavelen_default invalid");
 
     pp.queryAdd("incremental_gravity_flag",incremental_gravity_flag);
+    if (incremental_gravity_flag==1) {
+     if (enable_spectral==0) {
+      // do nothing
+     } else
+      amrex::Error("expecting enable_spectral==0 if incremental_gravity");
+    } else if (incremental_gravity_flag==0) {
+     // do nothing
+    } else
+     amrex::Error("incremental_gravity_flag invalid");
 
     pp.get("visc_coef",visc_coef);
 
@@ -5786,6 +5795,7 @@ int NavierStokes::project_option_momeqn(int project_option) {
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)||  
      (project_option==SOLVETYPE_PRESCOR)|| 
+     (project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)|| 
      (project_option==SOLVETYPE_VISC)||
      ((project_option>=SOLVETYPE_VELEXTRAP)&&
@@ -5808,6 +5818,7 @@ int NavierStokes::project_option_singular_possible(int project_option) {
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
      (project_option==SOLVETYPE_PRESCOR)|| 
+     (project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)||
      ((project_option>=SOLVETYPE_VELEXTRAP)&&
       (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
@@ -5830,6 +5841,7 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
      (project_option==SOLVETYPE_PRESCOR)||  
+     (project_option==SOLVETYPE_PRESGRAVITY)||  
      (project_option==SOLVETYPE_PRESEXTRAP)||
      ((project_option>=SOLVETYPE_VELEXTRAP)&&
       (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
@@ -5850,6 +5862,7 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
 int NavierStokes::project_option_pressure(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_PRESGRAVITY)||
      (project_option==SOLVETYPE_INITPROJ)||
      (project_option==SOLVETYPE_PRESEXTRAP)||
      ((project_option>=SOLVETYPE_VELEXTRAP)&&
@@ -5875,6 +5888,7 @@ int NavierStokes::project_option_needs_scaling(int project_option) {
      (project_option==SOLVETYPE_PRESEXTRAP)) { 
   return 1;
  } else if ((project_option==SOLVETYPE_INITPROJ)|| 
+	    (project_option==SOLVETYPE_PRESGRAVITY)|| 
 	    (project_option==SOLVETYPE_HEAT)|| 
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
@@ -5893,6 +5907,7 @@ int NavierStokes::project_option_needs_scaling(int project_option) {
 int NavierStokes::project_option_projection(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
+     (project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_INITPROJ)) {  
   return 1;
@@ -5927,6 +5942,7 @@ NavierStokes::get_mm_scomp_solver(
  int nlist=1;
 
  if ((project_option==SOLVETYPE_PRES)||   
+     (project_option==SOLVETYPE_PRESGRAVITY)||   
      (project_option==SOLVETYPE_INITPROJ)) { 
   nsolve=1;
   nlist=1;
@@ -6876,6 +6892,9 @@ void NavierStokes::print_project_option(int project_option) {
 
  if (project_option==SOLVETYPE_PRES) {
   std::cout << "project_option= " << project_option << " (SOLVETYPE_PRES) \n";
+ } else if (project_option==SOLVETYPE_PRESGRAVITY) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_PRESGRAVITY) \n";
  } else if (project_option==SOLVETYPE_INITPROJ) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_INITPROJ) \n";

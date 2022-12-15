@@ -3497,7 +3497,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    b. surface tension
         //    c. pressure gradient
        if (disable_pressure_solve==0) {
- 
+
+        if (incremental_gravity_flag==1) {
+         multiphase_project(SOLVETYPE_PRESGRAVITY);
+	} else if (incremental_gravity_flag==0) {
+ 	 //do nothing
+	} else
+	 amrex::Error("incremental_gravity_flag invalid");
+
          // MDOT term included
         multiphase_project(SOLVETYPE_PRES);
 
@@ -8837,8 +8844,12 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  } // dir
 
  new_localMF(DIFFUSIONRHS_MF,nsolve,0,-1);
- if ((project_option==SOLVETYPE_PRESCOR)|| 
-     (project_option==SOLVETYPE_PRESEXTRAP)) {
+ if (project_option==SOLVETYPE_PRESGRAVITY) {
+  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
+  zero_independent_variable(project_option,nsolve);
+  zero_independent_vel(project_option,UMAC_MF,nsolve);
+ } else if ((project_option==SOLVETYPE_PRESCOR)|| 
+            (project_option==SOLVETYPE_PRESEXTRAP)) {
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
  } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
             (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
@@ -9184,6 +9195,7 @@ void NavierStokes::multiphase_project(int project_option) {
   // which means the presently stored contents 
   // of "DIV_TYPE" must be saved.
  if (project_option==SOLVETYPE_PRESCOR) { 
+
   allocate_array(1,1,-1,DIV_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -9197,24 +9209,40 @@ void NavierStokes::multiphase_project(int project_option) {
   //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol=
   // if incompressible: DIV_new=MDOT_MF dt/vol
   ADVECT_DIV_ALL();
- } else if ((project_option==SOLVETYPE_PRESEXTRAP)||
-            ((project_option>=SOLVETYPE_VELEXTRAP)&&
-	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
+
+ } else if (project_option==SOLVETYPE_PRESGRAVITY) {
+FIX ME SAVE THE MAC VELOCITY
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);
    MultiFab::Copy(
-      *ns_level.localMF[PRESSURE_SAVE_MF],
-      P_new,STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
-   if (project_option==SOLVETYPE_PRESEXTRAP) {
-    // do nothing
-   } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-	      (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-    P_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
-   } else
-    amrex::Error("project_option invalid");
+     *ns_level.localMF[PRESSURE_SAVE_MF],
+     P_new,STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+  } // ilev=level ... finest_level
 
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) {
+
+  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);
+   MultiFab::Copy(
+     *ns_level.localMF[PRESSURE_SAVE_MF],
+     P_new,STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+  } // ilev=level ... finest_level
+
+ } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
+	    (project_option<SOLVETYPE_VELEXTRAP+num_materials)) { 
+
+  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);
+   MultiFab::Copy(
+     *ns_level.localMF[PRESSURE_SAVE_MF],
+     P_new,STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+   P_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
   } // ilev=level ... finest_level
 
  } else if (project_option_is_valid(project_option)==1) {
@@ -9224,7 +9252,12 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int save_enable_spectral=enable_spectral;
 
- if (project_option_projection(project_option)==1) {
+ if (project_option==SOLVETYPE_PRESGRAVITY) {
+  if (enable_spectral==0) {
+   //do nothing
+  } else
+   amrex::Error("expecting enable_spectral==0 if incremental_gravity");
+ } else if (project_option_projection(project_option)==1) {
   // do nothing
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   override_enable_spectral(0); // always low order
@@ -9252,12 +9285,14 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int nsolve=1;
 
-  //SOLVETYPE_INITPROJ, SOLVETYPE_PRES, SOLVETYPE_PRESCOR
+  //SOLVETYPE_INITPROJ, SOLVETYPE_PRES, SOLVETYPE_PRESCOR,
+  //SOLVETYPE_PRESGRAVITY
  if (project_option_projection(project_option)==1) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
    // do nothing
   } else if ((project_option==SOLVETYPE_PRES)|| 
+             (project_option==SOLVETYPE_PRESGRAVITY)||
              (project_option==SOLVETYPE_PRESCOR)) { 
    // do nothing
   } else
@@ -9329,6 +9364,7 @@ void NavierStokes::multiphase_project(int project_option) {
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_HEAT 
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_VISC 
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_SPEC ...
+    // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_PRESGRAV
     // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESCOR 
     // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESEXTRAP 
     // (DIV_Type contents cannot be zapped because it is needed for
@@ -9338,7 +9374,7 @@ void NavierStokes::multiphase_project(int project_option) {
  }  // ilev=level ... finest_level
 
  if (project_option==SOLVETYPE_PRESCOR) {
-   check_value_max(1,DIFFUSIONRHS_MF,0,1,0,0.0);
+  check_value_max(1,DIFFUSIONRHS_MF,0,1,0,0.0);
  }
 
  Real max_nlevels=0;
@@ -9397,9 +9433,10 @@ void NavierStokes::multiphase_project(int project_option) {
  } // tid
 
   // in multiphase_project
- if (project_option==SOLVETYPE_PRES) {
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_PRESGRAVITY)) {
 
-   // gravity and surface tension
+   // gravity
   process_potential_forceALL();
 
 
@@ -9407,13 +9444,19 @@ void NavierStokes::multiphase_project(int project_option) {
 // 2. must be called before adding gravity and surface tension.
 // 3. cannot be called after the project because the velocity
 //    will then fail to satisfy the discrete divergence condition.
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.overwrite_outflow();  
-  }
+  if (project_option==SOLVETYPE_PRES) {
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.overwrite_outflow();  
+   }
+  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
+   // do nothing
+  } else
+   amrex::Error("project_option invalid");
 
-    // gravity and surface tension cell/face
+    // gravity and surface tension face
     // FUTURE: E+=dt u dot g + dt^2 g dot g/2
+ FIX ME SELECTIVELY INCLUDE surface tension or gravity force
   increment_potential_forceALL(); 
 
   if (1==0) {
@@ -9472,9 +9515,7 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("visual_buoyancy_plot_int invalid");
 
-
   deallocate_potential_forceALL(); 
-
 
    // grad p  face
    // u=u-(1/rho)(int gp - dt gp)
@@ -9493,8 +9534,11 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid multiphase prj");
 
- }  // project_option==SOLVETYPE_PRES 
-
+ } else if ((project_option!=SOLVETYPE_PRES)&&
+	    (project_option!=SOLVETYPE_PRESGRAVITY)) {
+  //do nothing
+ } else
+  amrex::Error("project_option bust");	 
 
  if (project_option==SOLVETYPE_PRESCOR) { 
    check_value_max(3,DIFFUSIONRHS_MF,0,1,0,0.0);
@@ -11488,7 +11532,23 @@ void NavierStokes::multiphase_project(int project_option) {
    ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,1); 
   }
   delete_array(PRESSURE_SAVE_MF);
- }
+ } else if (project_option==SOLVETYPE_PRESGRAVITY) {
+FIX ME RESTORE THE MAC VELOCITY
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);
+   MultiFab::Copy(
+     P_new,
+     *ns_level.localMF[PRESSURE_SAVE_MF],
+     0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+  } // ilev=level ... finest_level
+  delete_array(PRESSURE_SAVE_MF);
+ } else if (project_option==SOLVETYPE_PRESCOR) {
+  //do nothing
+ } else if (project_option_is_valid(project_option)==1) {
+  // do not restore anything
+ } else
+  amrex::Error("project_option invalid");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
