@@ -3570,6 +3570,7 @@ NavierStokes::read_params ()
     denconst_max=denconst[0];
 
     for (int i=0;i<num_materials;i++) {
+
      if (denconst[i]<denconst_min)
       denconst_min=denconst[i];
      if (denconst[i]>denconst_max)
@@ -3598,10 +3599,29 @@ NavierStokes::read_params ()
     pp.queryAdd("molar_mass",molar_mass,num_materials);
 
     denconst_interface_added.resize(num_interfaces);
-    for (int i=0;i<num_interfaces;i++) 
-     denconst_interface_added[i]=0.0;
+    for (int iten=0;iten<num_interfaces;iten++) {
+     denconst_interface_added[iten]=0.0;
     pp.queryAdd("denconst_interface_added",
       denconst_interface_added,num_interfaces);
+
+    for (int iten=0;iten<num_interfaces;iten++) {
+     Real test_density=denconst_interface_added[iten];
+     if (test_density==0.0) {
+      //do nothing
+     } else if (test_density>0.0) {
+      // get_inverse_iten_cpp declared in NavierStokes2.cpp
+      // 1<=im1,im2<=num_materials
+      int im1,im2;
+      get_inverse_iten_cpp(im1,im2,iten+1);
+      if ((test_density>denconst[im1-1])&&
+          (test_density>denconst[im2-1])) {
+       if (test_density>denconst_max)
+        denconst_max=test_density;
+      } else
+       amrex::Error("test_density or denconst invalid");
+     } else
+      amrex::Error("test_density invalid");
+    } //iten=0,..,num_interfaces-1
 
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
