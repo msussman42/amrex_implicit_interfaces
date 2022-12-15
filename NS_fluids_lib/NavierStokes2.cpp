@@ -5444,7 +5444,7 @@ void NavierStokes::deallocate_potential_forceALL() {
 } // deallocate_potential_forceALL
 
 // called from multiphase_project when 
-// project_option==SOLVETYPE_PRES 
+// project_option==SOLVETYPE_PRES or SOLVETYPE_PRESGRAVITY
 void NavierStokes::process_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -5514,7 +5514,6 @@ void NavierStokes::process_potential_forceALL() {
 
 void NavierStokes::init_gravity_potential() {
 
- 
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
