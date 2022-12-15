@@ -220,6 +220,7 @@ Real NavierStokes::gravity_reference_wavelen = 0.0;
 
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
+int NavierStokes::incremental_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
 Vector<Real> NavierStokes::gravity_boussinesq_vector;
@@ -2801,6 +2802,8 @@ NavierStokes::read_params ()
     } else
      amrex::Error("gravity_reference_wavelen_default invalid");
 
+    pp.queryAdd("incremental_gravity_flag",incremental_gravity_flag);
+
     pp.get("visc_coef",visc_coef);
 
     pp.queryAdd("include_viscous_heating",include_viscous_heating);
@@ -2840,6 +2843,9 @@ NavierStokes::read_params ()
 
      std::cout << "gravity_reference_wavelen " << 
 	  gravity_reference_wavelen << '\n';
+
+     std::cout << "incremental_gravity_flag " << 
+	  incremental_gravity_flag << '\n';
 
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
@@ -5034,7 +5040,10 @@ NavierStokes::read_params ()
       std::cout << "i,temperature_source_rad=" << i << ' ' <<
          temperature_source_rad[i] << '\n';
      }
- 
+
+     std::cout << "denconst_min= " << denconst_min << '\n';
+     std::cout << "denconst_max= " << denconst_max << '\n';
+
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i= " << i << " denconst_interface_added "  << 
         denconst_interface_added[i] << '\n';
