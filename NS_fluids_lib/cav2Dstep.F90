@@ -350,6 +350,7 @@ end subroutine CAV2Dstep_PRES_BC
 subroutine CAV2Dstep_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 REAL_T xwall
@@ -363,7 +364,7 @@ REAL_T STATE_in
 INTEGER_T dir,side
 REAL_T dx(SDIM)
 INTEGER_T istate,im
-INTEGER_T ibase,im_crit,im_loop
+INTEGER_T ibase,im_crit
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
@@ -372,12 +373,7 @@ if ((istate.ge.1).and. &
  call CAV2Dstep_STATE(xghost,t,LS,local_STATE)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
- im_crit=1
- do im_loop=2,num_materials
-  if (LS(im_loop).gt.LS(im_crit)) then
-   im_crit=im_loop
-  endif
- enddo
+ call get_primary_material(LS,im_crit)
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 else
