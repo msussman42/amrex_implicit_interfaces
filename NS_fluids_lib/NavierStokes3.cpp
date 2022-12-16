@@ -11533,7 +11533,7 @@ FIX ME SAVE THE MAC VELOCITY
   }
   delete_array(PRESSURE_SAVE_MF);
  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
-FIX ME RESTORE THE MAC VELOCITY
+FIX ME RESTORE THE MAC VELOCITY and increment with the current velocity P(g)
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);
