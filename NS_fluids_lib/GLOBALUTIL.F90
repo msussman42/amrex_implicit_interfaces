@@ -26165,12 +26165,11 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESCOR).or.& 
      (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
-     (project_option.eq.SOLVETYPE_VISC).or. &      ! viscosity
-     ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-      (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then 
+     (project_option.eq.SOLVETYPE_VISC)) then      ! viscosity
   project_option_momeqnF=1
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
@@ -26192,11 +26191,10 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESCOR).or. & 
-     (project_option.eq.SOLVETYPE_PRESEXTRAP).or. & ! pressure extension
-     ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-      (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_singular_possibleF=1
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
@@ -26218,11 +26216,10 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESCOR).or. & 
-     (project_option.eq.SOLVETYPE_PRESEXTRAP).or. & ! pressure extension
-     ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-      (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_olddata_neededF=0
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
@@ -26244,10 +26241,9 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. &
+     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. &
-     (project_option.eq.SOLVETYPE_PRESEXTRAP).or. & !pressure extrap
-     ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-      (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then  !pressure extrap
   project_option_pressureF=1
  else if ((project_option.eq.SOLVETYPE_PRESCOR).or. & 
           (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
@@ -26275,12 +26271,11 @@ INTEGER_T, INTENT(in) :: project_option
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extrapolation
   project_option_needs_scalingF=1
  else if ((project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
+          (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
           (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
           (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
-          ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then ! species
   project_option_needs_scalingF=0
  else
   print *,"project_option invalid"
@@ -26299,15 +26294,14 @@ INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
      (project_option.eq.SOLVETYPE_PRESCOR).or. & 
+     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial_project
   project_option_projectionF=1
  else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. & 
           (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
           (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var)).or. & ! species
-          ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials))) then
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then ! species
   project_option_projectionF=0
  else
   print *,"project_option invalid"

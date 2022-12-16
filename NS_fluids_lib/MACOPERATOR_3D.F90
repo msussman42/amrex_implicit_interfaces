@@ -688,30 +688,6 @@ stop
           endif
          endif
 
-        else if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-                 (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
-
-         if (dt.ge.zero) then
-          ! do nothing
-         else
-          print *,"dt invalid"
-          stop
-         endif
-         if (nsolve.ne.1) then
-          print *,"nsolveMM invalid 150"
-          stop
-         endif
-         local_diag=den(D_DECL(i,j,k))
-         if ((local_diag.gt.zero).and. &
-             (local_diag.le.two*SDIM)) then
-          local_cterm(1)=1.0D+6
-         else if (local_diag.eq.zero) then
-          local_cterm(1)=zero
-         else
-          print *,"local_diag invalid"
-          stop
-         endif
-
         else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
 
          if (nsolve.ne.SDIM) then

@@ -477,14 +477,13 @@ protected:
      // synchronizes level+1 and level.
     void avgDown_localMF(int idxMF,int scomp,int ncomp,
      int spectral_override);
-    void Plus_localMF(int idx_dest,Real val,
-     int dcomp,int ncomp,int ngrow);
+    void Plus_localMF(int idx_dest,Real val,int dcomp,int ncomp,int ngrow);
     void Mult_localMF(int idx_dest,int idx_source,
      int scomp,int dcomp,int ncomp,int ngrow);
     void Copy_localMF(int idx_dest,int idx_source,
      int scomp,int dcomp,int ncomp,int ngrow);
     void minus_localMF(int idx_dest,int idx_source,
-     int ncomp,int ngrow);
+     int scomp,int ncomp,int ngrow);
 
       // grid_type=-1 ... 5
     void new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type);
@@ -1294,15 +1293,21 @@ void apply_pressure_grad(
     void allocate_independent_var(int nsolve,int idx);
     void allocate_rhs_var(int nsolve,int idx);
 
-    void setVal_array(int ngrow,int ncomp,Real dataval,
+    int get_new_data_Type(int mfab_id);
+
+    void Copy_array(int mfab_dest,int mfab_source,
+		    int scomp,int dcomp,int ncomp,int ngrow);
+
+    void setVal_array(int ngrow,int scomp,int ncomp,Real dataval,
       int idx_localMF);
+
     void setVal_localMF(int idx,Real dataval,
       int scomp,int ncomp,int ngrow);
+
     void mult_array(int ngrow,int ncomp,Real dataval,
       int idx_localMF);
-    void copyALL(int ngrow,int ncomp,
-      int scomp,int dcomp,int idx_dest,int idx_source);
-    void minusALL(int ngrow,int ncomp,int idx_dest,int idx_source);
+    void minusALL(int ngrow,int scomp,int ncomp,int idx_dest,int idx_source);
+    void plusALL(int ngrow,int scomp,int ncomp,int idx_dest,int idx_source);
 
     void negateALL(int idx_localMF);
     void zeroALL(int ngrow,int ncomp,int idx_localMF);

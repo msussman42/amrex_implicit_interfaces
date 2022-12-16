@@ -77,11 +77,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   // do nothing
 
- } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-            (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {  
-
-  // do nothing
-
  } else if (project_option==SOLVETYPE_VISC) {  
 
   // do nothing
@@ -275,16 +270,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  int local_cell_visc_mf=CELL_VISC_MF;
  int local_cell_dedt_mf=CELL_DEDT_MF;
 
- if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-  local_cell_index=project_option-SOLVETYPE_VELEXTRAP;
-  local_cell_c2_ncomp=num_materials;
-  local_cell_ncomp=num_materials;
-  local_cell_den_mf=idx_scalar_mask_material_mf;
-  local_cell_visc_mf=idx_scalar_mask_material_mf;
-  local_cell_sound_mf=idx_scalar_mask_material_mf;
-  local_cell_dedt_mf=idx_scalar_mask_material_mf;
- } else if (project_option_is_valid(project_option)==1) {
+ if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else
   amrex::Error("project_option invalid");
@@ -651,7 +637,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    //    project_option==SOLVETYPE_INITPROJ,
    //    project_option==SOLVETYPE_PRESCOR,
    //    project_option==SOLVETYPE_PRESEXTRAP,  
-   //    project_option==SOLVETYPE_VELEXTRAP,  
   if (project_option_singular_possible(project_option)==1) {
 
    if (thread_class::nthreads<1)
@@ -1664,21 +1649,7 @@ void NavierStokes::apply_div(
  int local_face_var_mf=FACE_VAR_MF;
  int local_masksem_mf=MASKSEM_MF;
 
- if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-
-  if (enable_spectral==0) {
-   // do nothing
-  } else
-   amrex::Error("expecting enable_spectral==0");
-
-  local_fsi_ghost_mac_mf=AREA_MF;
-  local_fsi_ghost_ncomp=localMF[AREA_MF]->nComp();
-  local_fsi_ghost_ngrow=localMF[AREA_MF]->nGrow();
-  local_face_var_mf=AREA_MF;
-  local_masksem_mf=VOLUME_MF;
-
- } else if (project_option_is_valid(project_option)==1) {
+ if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else
   amrex::Error("project_option invalid");

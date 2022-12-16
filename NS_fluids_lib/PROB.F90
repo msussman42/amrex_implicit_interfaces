@@ -11815,49 +11815,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        cc_group=cc
        dd_group=dd
 
-       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
-
-        if (nsolve.ne.1) then
-         print *,"nsolve invalid for SOLVETYPE_VELEXTRAP"
-         stop
-        endif
-
-        if (at_RZ_boundary.eq.1) then
-         local_wt(veldir)=zero
-        else if (at_RZ_boundary.eq.0) then
-         if ((dd_group.ge.zero).and.(cc_group.ge.zero)) then
-          local_wt(veldir)=dd_group*cc_group
-          if (side.eq.0) then
-           ! do nothing
-          else if ((side.eq.1).or.(side.eq.2)) then
-           if ((local_presbc.eq.REFLECT_EVEN).or. &
-               (local_presbc.eq.FOEXTRAP)) then
-            local_wt(veldir)=zero
-           else if ((local_presbc.eq.INT_DIR).or. &
-                    (local_presbc.eq.EXT_DIR)) then
-            ! do nothing
-           else
-            print *,"local_presbc invalid"
-            stop
-           endif
-          else
-           print *,"side invalid"
-           stop
-          endif
-         else
-          print *,"dd_group or cc_group invalid1"
-          print *,"dd_group= ",dd_group
-          print *,"cc_group= ",cc_group
-          print *,"project_option= ",project_option
-          stop
-         endif
-        else
-         print *,"at_RZ_boundary invalid"
-         stop
-        endif
-
-       else if (project_option_projectionF(project_option).eq.1) then
+       if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then !regular pressure projection
          cc_group=cc
@@ -14537,10 +14495,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
         print *,"extension project should be low order"
-        stop
-       else if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-                (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
-        print *,"vel extension  should be low order"
         stop
        else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
         if (ncomp.ne.SDIM) then

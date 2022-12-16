@@ -81,7 +81,7 @@ void NavierStokes::Copy_localMF(int idx_dest,int idx_source,
 
 
 void NavierStokes::minus_localMF(int idx_dest,int idx_source,
-  int ncomp,int ngrow) {
+  int scomp,int ncomp,int ngrow) {
 
  debug_ngrow(idx_dest,ngrow,500); 
  debug_ngrow(idx_source,ngrow,501); 
@@ -89,10 +89,9 @@ void NavierStokes::minus_localMF(int idx_dest,int idx_source,
      localMF[idx_source]->boxArray())
   amrex::Error("minus_localMF: boxarrays do not match");
 
- localMF[idx_dest]->
-   minus(*localMF[idx_source],0,ncomp,ngrow);
+ localMF[idx_dest]->minus(*localMF[idx_source],scomp,ncomp,ngrow);
 
-}  // minus_LocalMF
+}  // end subroutine minus_LocalMF
 
 //grid_type=-1 ... 5
 void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
@@ -1770,11 +1769,8 @@ void NavierStokes::init_divup_cell_vel_cell(
      (project_option==SOLVETYPE_INITPROJ)||
      (project_option==SOLVETYPE_PRESCOR)) {  
   // do nothing
- } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-  	    (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-  // do nothing
  } else
-  amrex::Error("project_option invalid20");
+  amrex::Error("project_option invalid20 init_divup_cell_vel_cell");
 
  int num_colors=0;
  Vector<Real> blob_array;
@@ -1850,38 +1846,9 @@ void NavierStokes::init_divup_cell_vel_cell(
  if (nstate!=STATE_NCOMP)
   amrex::Error("invalid ncomp in vel update routine");
 
- if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-
-  if (enable_spectral==0) {
-   // do nothing
-  } else
-   amrex::Error("enable_spectral invalid");
-
-  if (energyflag==SUB_OP_THERMAL_DIVUP_NULL) {
-   // do nothing
-  } else
-   amrex::Error("energyflag invalid");
-
-  int im_extend=project_option-SOLVETYPE_VELEXTRAP;
-  if (ns_is_rigid(im_extend)==0) {
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    debug_ngrow(idx_umac+dir,0,111);
-    if (localMF[idx_umac+dir]->nComp()==1) {
-     if (idx_umac_material_mf>=0) {
-      MultiFab::Copy(*localMF[idx_umac_material_mf+dir],
- 		     *localMF[idx_umac+dir],0,im_extend,1,0);
-     } else
-      amrex::Error("idx_umac_material_mf invalid");
-    } else
-     amrex::Error("localMF[idx_umac+dir]->nComp() invalid");
-   }  // dir=0..sdim-1
-  } else
-   amrex::Error("ns_is_rigid(im_extend) invalid");
-
- } else if ((project_option==SOLVETYPE_PRES)||
-            (project_option==SOLVETYPE_INITPROJ)||
-            (project_option==SOLVETYPE_PRESCOR)) {  
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_INITPROJ)||
+     (project_option==SOLVETYPE_PRESCOR)) {  
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    debug_ngrow(FACE_VAR_MF+dir,0,101);
@@ -2433,7 +2400,7 @@ void NavierStokes::increment_face_velocityALL(
   //   (iii) (unew^{c})^{c->f} in compressible regions.
   //   (iv) usolid in solid regions
  if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
-  minusALL(1,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
+  minusALL(1,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
  }
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -3991,25 +3958,7 @@ void NavierStokes::apply_pressure_grad(
  int local_sem_fluxreg_ncomp=AMREX_SPACEDIM*nsolve;
  int local_masksem_mf=MASKSEM_MF;
 
- if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-     (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-
-  if (enable_spectral==0) {
-   // do nothing
-  } else
-   amrex::Error("expecting enable_spectral==0");
-
-  local_fsi_ghost_mac_mf=AREA_MF;
-  local_fsi_ghost_ncomp=localMF[AREA_MF]->nComp();
-  local_fsi_ghost_ngrow=localMF[AREA_MF]->nGrow();
-  local_face_var_mf=AREA_MF;
-  local_amrsync_pres_mf=AREA_MF;
-  local_amrsync_pres_ncomp=localMF[AREA_MF]->nComp();
-  local_sem_fluxreg_mf=VOLUME_MF;
-  local_sem_fluxreg_ncomp=localMF[VOLUME_MF]->nComp();
-  local_masksem_mf=VOLUME_MF;
-
- } else if (project_option_is_valid(project_option)==1) {
+ if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else
   amrex::Error("project_option invalid");
@@ -4305,12 +4254,7 @@ void NavierStokes::apply_pressure_grad(
 
   resize_levelset(2,LEVELPC_MF);
 
-  if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-      (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-
-   // do nothing
-   
-  } else if (project_option_is_valid(project_option)==1) {
+  if (project_option_is_valid(project_option)==1) {
 
    allocate_flux_register(operation_flag);
 
@@ -4494,10 +4438,7 @@ void NavierStokes::apply_pressure_grad(
   } // tileloop
   } // dir
 
-  if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-      (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-   // do nothing
-  } else if (project_option_is_valid(project_option)==1) {
+  if (project_option_is_valid(project_option)==1) {
    synchronize_flux_register(operation_flag,spectral_loop);
   } else
    amrex::Error("project_option invalid");
@@ -8262,9 +8203,59 @@ void NavierStokes::setVal_localMF(int idx,Real dataval,
 
  localMF[idx]->setVal(dataval,scomp,ncomp,ngrow);
 
-} // setVal_localMF
+} // end subroutine setVal_localMF
 
-void NavierStokes::setVal_array(int ngrow,int ncomp,Real dataval,
+int NavierStokes::get_new_data_Type(int mfab_id) {
+
+ if (mfab_id>=0) {
+  return -1;
+ } else if ((mfab_id>=GET_NEW_DATA_OFFSET)&&
+   	    (mfab_id<GET_NEW_DATA_OFFSET+NUM_STATE_TYPE)) {
+  return mfab_id-GET_NEW_DATA_OFFSET;
+ } else {
+  amrex::Error("mfab_id invalid");
+  return GET_NEW_DATA_INVALID;
+ }
+
+} // end subroutine get_new_data_Type
+
+void NavierStokes::Copy_array(int mfab_dest,int mfab_source,
+	int scomp,int dcomp,int ncomp,int ngrow) {
+
+ int finest_level = parent->finestLevel();
+
+ if ((level==0)&&(finest_level>=0)) {
+  // do nothing
+ } else
+  amrex::Error("expecting level==0 and finest_level>=0");
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  MultiFab* mfab_dest_ptr;
+  MultiFab* mfab_source_ptr;
+
+  if (get_new_data_Type(mfab_dest)>=0) {
+   mfab_dest_ptr=
+    &ns_level.get_new_data(get_new_data_Type(mfab_dest),slab_step+1);
+  } else if (get_new_data_Type(mfab_dest)==-1) {
+   mfab_dest_ptr=ns_level.localMF[mfab_dest];
+  } else
+   amrex::Error("mfab_dest invalid");
+
+  if (get_new_data_Type(mfab_source)>=0) {
+   mfab_source_ptr=
+    &ns_level.get_new_data(get_new_data_Type(mfab_source),slab_step+1);
+  } else if (get_new_data_Type(mfab_source)==-1) {
+   mfab_source_ptr=ns_level.localMF[mfab_source];
+  } else
+   amrex::Error("mfab_source invalid");
+
+  MultiFab::Copy(*mfab_dest_ptr,*mfab_source_ptr,scomp,dcomp,ncomp,ngrow);
+ } // for (int ilev=level;ilev<=finest_level;ilev++) 
+
+} // end subroutine Copy_array
+
+void NavierStokes::setVal_array(int ngrow,int scomp,int ncomp,Real dataval,
   int idx_localMF) {
 
  int finest_level = parent->finestLevel();
@@ -8275,7 +8266,17 @@ void NavierStokes::setVal_array(int ngrow,int ncomp,Real dataval,
 
    for (int i=finest_level;i>=level;i--) {
     NavierStokes& ns_level=getLevel(i);
-    ns_level.localMF[idx_localMF]->setVal(dataval,0,ncomp,ngrow);
+    MultiFab* mfab_dest_ptr;
+
+    if (get_new_data_Type(idx_localMF)>=0) {
+     mfab_dest_ptr=
+      &ns_level.get_new_data(get_new_data_Type(idx_localMF),slab_step+1);
+    } else if (get_new_data_Type(idx_localMF)==-1) {
+     mfab_dest_ptr=ns_level.localMF[idx_localMF];
+    } else
+     amrex::Error("mfab_dest invalid");
+
+    mfab_dest_ptr->setVal(dataval,scomp,ncomp,ngrow);
    }
 
   } else
@@ -8284,7 +8285,7 @@ void NavierStokes::setVal_array(int ngrow,int ncomp,Real dataval,
  } else
   amrex::Error("finest_level invalid");
 
-} // subroutine setVal_array 
+} // end subroutine setVal_array 
 
 
 void NavierStokes::mult_array(int ngrow,int ncomp,Real dataval,
@@ -8292,7 +8293,7 @@ void NavierStokes::mult_array(int ngrow,int ncomp,Real dataval,
 
  int finest_level = parent->finestLevel();
  if (level!=0)
-  amrex::Error("level!=0 in setVal_array");
+  amrex::Error("level!=0 in mult_array");
 
  for (int i=finest_level;i>=level;i--) {
   NavierStokes& ns_level=getLevel(i);
@@ -8300,21 +8301,9 @@ void NavierStokes::mult_array(int ngrow,int ncomp,Real dataval,
  }
 }  // end subroutine mult_array
 
-void NavierStokes::copyALL(int ngrow,int ncomp,
-	int scomp,int dcomp,int idx_dest,int idx_source) {
-
- int finest_level = parent->finestLevel();
- if (level!=0)
-  amrex::Error("level!=0 in copyALL");
-
- for (int i=finest_level;i>=level;i--) {
-  NavierStokes& ns_level=getLevel(i);
-  ns_level.Copy_localMF(idx_dest,idx_source,scomp,dcomp,ncomp,ngrow);
- }
-} // end subroutine copyALL
-
 //dest=dest-source
-void NavierStokes::minusALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
+void NavierStokes::minusALL(int ngrow,int scomp,int ncomp,
+		int idx_dest,int idx_source) {
 
  int finest_level = parent->finestLevel();
  if (level!=0)
@@ -8322,10 +8311,69 @@ void NavierStokes::minusALL(int ngrow,int ncomp,int idx_dest,int idx_source) {
 
  for (int i=finest_level;i>=level;i--) {
   NavierStokes& ns_level=getLevel(i);
-   //dest=dest-source
-  ns_level.minus_localMF(idx_dest,idx_source,ncomp,ngrow);
+
+  MultiFab* mfab_dest_ptr;
+  MultiFab* mfab_source_ptr;
+
+  if (get_new_data_Type(idx_dest)>=0) {
+   mfab_dest_ptr=
+    &ns_level.get_new_data(get_new_data_Type(idx_dest),slab_step+1);
+  } else if (get_new_data_Type(idx_dest)==-1) {
+   mfab_dest_ptr=ns_level.localMF[idx_dest];
+  } else
+   amrex::Error("idx_dest invalid");
+
+  if (get_new_data_Type(idx_source)>=0) {
+   mfab_source_ptr=
+    &ns_level.get_new_data(get_new_data_Type(idx_source),slab_step+1);
+  } else if (get_new_data_Type(idx_source)==-1) {
+   mfab_source_ptr=ns_level.localMF[idx_source];
+  } else
+   amrex::Error("idx_source invalid");
+
+   // dest=dest-source
+   // amrex-master/Src/Base/AMReX_MultiFab.H
+  mfab_dest_ptr->minus(*mfab_source_ptr,scomp,ncomp,ngrow);
  }
 } // end subroutine minusALL
+
+
+//dest=dest+source
+void NavierStokes::plusALL(int ngrow,int scomp,int ncomp,
+		int idx_dest,int idx_source) {
+
+ int finest_level = parent->finestLevel();
+ if (level!=0)
+  amrex::Error("level!=0 in minusALL");
+
+ for (int i=finest_level;i>=level;i--) {
+  NavierStokes& ns_level=getLevel(i);
+
+  MultiFab* mfab_dest_ptr;
+  MultiFab* mfab_source_ptr;
+
+  if (get_new_data_Type(idx_dest)>=0) {
+   mfab_dest_ptr=
+    &ns_level.get_new_data(get_new_data_Type(idx_dest),slab_step+1);
+  } else if (get_new_data_Type(idx_dest)==-1) {
+   mfab_dest_ptr=ns_level.localMF[idx_dest];
+  } else
+   amrex::Error("idx_dest invalid");
+
+  if (get_new_data_Type(idx_source)>=0) {
+   mfab_source_ptr=
+    &ns_level.get_new_data(get_new_data_Type(idx_source),slab_step+1);
+  } else if (get_new_data_Type(idx_source)==-1) {
+   mfab_source_ptr=ns_level.localMF[idx_source];
+  } else
+   amrex::Error("idx_source invalid");
+
+   // dest=dest+source
+   // amrex-master/Src/Base/AMReX_MultiFab.H
+  mfab_dest_ptr->plus(*mfab_source_ptr,scomp,ncomp,ngrow);
+ }
+} // end subroutine plusALL
+
 
 
 void NavierStokes::delete_array(int idx_localMF) {
