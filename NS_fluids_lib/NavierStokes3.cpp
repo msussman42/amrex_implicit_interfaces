@@ -9211,10 +9211,17 @@ void NavierStokes::multiphase_project(int project_option) {
   ADVECT_DIV_ALL();
 
  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
-FIX ME SAVE THE MAC VELOCITY
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    ns_level.new_localMF(UMAC_SAVE_MF+dir,1,0,dir);
+    MultiFab& Umac_new=ns_level.get_new_data(Umac_Type+dir,slab_step+1);
+    MultiFab::Copy(
+     *ns_level.localMF[UMAC_SAVE_MF+dir],
+     Umac_new,0,0,1,0); //scomp=dcomp=0  ncomp=1 ngrow=0
+    Umac_new.setVal(0.0);
+   }
    MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);
    MultiFab::Copy(
      *ns_level.localMF[PRESSURE_SAVE_MF],
@@ -11533,7 +11540,7 @@ FIX ME SAVE THE MAC VELOCITY
   }
   delete_array(PRESSURE_SAVE_MF);
  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
-FIX ME RESTORE THE MAC VELOCITY and increment with the current velocity P(g)
+	 FIX ME remove_MAC_velocityALL(UMAC_SAVE_MF),increment Umac_new
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
    MultiFab& P_new=ns_level.get_new_data(State_Type,slab_step+1);

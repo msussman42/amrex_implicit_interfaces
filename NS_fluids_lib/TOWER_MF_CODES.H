@@ -110,6 +110,8 @@
 #define GRADPEDGE_MF 100
 #define PEDGE_MF 103
 
+#define UMAC_SAVE_MF 106
+
 #define FACE_WEIGHT_MF 109
 
 #define dt_gradp_over_rho_face_MF 112
