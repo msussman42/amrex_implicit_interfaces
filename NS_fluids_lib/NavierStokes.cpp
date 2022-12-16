@@ -3614,8 +3614,10 @@ NavierStokes::read_params ()
     pp.queryAdd("molar_mass",molar_mass,num_materials);
 
     denconst_interface_added.resize(num_interfaces);
-    for (int iten=0;iten<num_interfaces;iten++) {
+
+    for (int iten=0;iten<num_interfaces;iten++) 
      denconst_interface_added[iten]=0.0;
+
     pp.queryAdd("denconst_interface_added",
       denconst_interface_added,num_interfaces);
 
@@ -3771,8 +3773,10 @@ NavierStokes::read_params ()
     pp.queryAdd("mglib_min_coeff_factor",mglib_min_coeff_factor);
 
     pp.getarr("tension",tension,0,num_interfaces);
+
     for (int iten=0;iten<num_interfaces;iten++)
      tension_init[iten]=tension[iten];
+
     pp.queryarr("tension_init",tension_init,0,num_interfaces);
 
     pp.queryAdd("unscaled_min_curvature_radius",unscaled_min_curvature_radius);
@@ -5797,9 +5801,7 @@ int NavierStokes::project_option_momeqn(int project_option) {
      (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)|| 
-     (project_option==SOLVETYPE_VISC)||
-     ((project_option>=SOLVETYPE_VELEXTRAP)&&
-      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
+     (project_option==SOLVETYPE_VISC)) {
   return 1;
  } else if ((project_option==SOLVETYPE_HEAT)||  
             ((project_option>=SOLVETYPE_SPEC)&& 
@@ -5819,9 +5821,7 @@ int NavierStokes::project_option_singular_possible(int project_option) {
      (project_option==SOLVETYPE_INITPROJ)|| 
      (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_PRESGRAVITY)|| 
-     (project_option==SOLVETYPE_PRESEXTRAP)||
-     ((project_option>=SOLVETYPE_VELEXTRAP)&&
-      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
+     (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 1;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
    	    (project_option==SOLVETYPE_VISC)|| 
@@ -5842,9 +5842,7 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
      (project_option==SOLVETYPE_INITPROJ)|| 
      (project_option==SOLVETYPE_PRESCOR)||  
      (project_option==SOLVETYPE_PRESGRAVITY)||  
-     (project_option==SOLVETYPE_PRESEXTRAP)||
-     ((project_option>=SOLVETYPE_VELEXTRAP)&&
-      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
+     (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 0;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
    	    (project_option==SOLVETYPE_VISC)|| 
@@ -5864,9 +5862,7 @@ int NavierStokes::project_option_pressure(int project_option) {
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_PRESGRAVITY)||
      (project_option==SOLVETYPE_INITPROJ)||
-     (project_option==SOLVETYPE_PRESEXTRAP)||
-     ((project_option>=SOLVETYPE_VELEXTRAP)&&
-      (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
+     (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 1;
  } else if ((project_option==SOLVETYPE_PRESCOR)|| 
 	    (project_option==SOLVETYPE_HEAT)|| 
@@ -5892,9 +5888,7 @@ int NavierStokes::project_option_needs_scaling(int project_option) {
 	    (project_option==SOLVETYPE_HEAT)|| 
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
-             (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-	    ((project_option>=SOLVETYPE_VELEXTRAP)&&
-	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) { 
+             (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 0;
  } else {
   amrex::Error("project_option invalid");
@@ -5915,9 +5909,7 @@ int NavierStokes::project_option_projection(int project_option) {
 	    (project_option==SOLVETYPE_HEAT)|| 
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
-             (project_option<SOLVETYPE_SPEC+num_species_var))|| 
-	    ((project_option>=SOLVETYPE_VELEXTRAP)&&
-	     (project_option<SOLVETYPE_VELEXTRAP+num_materials))) {
+             (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 0;
  } else {
   amrex::Error("project_option invalid");
@@ -5950,12 +5942,6 @@ NavierStokes::get_mm_scomp_solver(
    amrex::Error("num_materials_combine invalid");
  } else if ((project_option==SOLVETYPE_PRESCOR)||  
 	    (project_option==SOLVETYPE_PRESEXTRAP)) { 
-  nsolve=1;
-  nlist=1;
-  if (num_materials_combine!=1)
-   amrex::Error("num_materials_combine invalid");
- } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-   	    (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
   nsolve=1;
   nlist=1;
   if (num_materials_combine!=1)
@@ -6910,10 +6896,6 @@ void NavierStokes::print_project_option(int project_option) {
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_PRESEXTRAP) \n";
- } else if ((project_option>=SOLVETYPE_VELEXTRAP)&&
-            (project_option<SOLVETYPE_VELEXTRAP+num_materials)) {
-  std::cout << "project_option= " << project_option << 
-    " (SOLVETYPE_VELEXTRAP) \n";
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) {
   std::cout << "project_option= " << project_option << 
@@ -14646,8 +14628,8 @@ NavierStokes::phase_change_redistributeALL() {
 
  allocate_array(ngrow_distance,2*num_interfaces,-1,
 		JUMP_STRENGTH_COMPLEMENT_MF); 
- copyALL(ngrow_distance,2*num_interfaces,0,0,
-   JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF);
+ Copy_array(JUMP_STRENGTH_COMPLEMENT_MF,JUMP_STRENGTH_MF,
+	    0,0,2*num_interfaces,ngrow_distance);
 
  for (int im=1;im<=num_materials;im++) {
   for (int im_opp=im+1;im_opp<=num_materials;im_opp++) {
@@ -14704,16 +14686,16 @@ NavierStokes::phase_change_redistributeALL() {
      }
 
      allocate_array(ngrow_distance,1,-1,donorflag_MF);
-     setVal_array(ngrow_distance,1,0.0,donorflag_MF);
+     setVal_array(ngrow_distance,0,1,0.0,donorflag_MF);
 
      allocate_array(ngrow_distance,1,-1,accept_weight_MF);
-     setVal_array(ngrow_distance,1,0.0,accept_weight_MF);
+     setVal_array(ngrow_distance,0,1,0.0,accept_weight_MF);
 
      allocate_array(ngrow_distance,1,-1,donorflag_complement_MF);
-     setVal_array(ngrow_distance,1,0.0,donorflag_complement_MF);
+     setVal_array(ngrow_distance,0,1,0.0,donorflag_complement_MF);
 
      allocate_array(ngrow_distance,1,-1,accept_weight_complement_MF);
-     setVal_array(ngrow_distance,1,0.0,accept_weight_complement_MF);
+     setVal_array(ngrow_distance,0,1,0.0,accept_weight_complement_MF);
 
       // isweep==0: fort_tagexpansion
       // isweep==1: fort_accept_weight
@@ -19941,7 +19923,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  getStateALL(1,cur_time_slab,0,
    AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF);
 
- minusALL(1,AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF,HOLD_VELOCITY_DATA_MF);
+ minusALL(1,0,AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF,HOLD_VELOCITY_DATA_MF);
  if (dt_slab>0.0) {
   Real over_dt=1.0/dt_slab;
   mult_array(1,AMREX_SPACEDIM,over_dt,CELL_ELASTIC_FORCE_MF);
@@ -21959,9 +21941,8 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
       if (partid<im_elastic_map.size()) {
        // we are currently in "volWgtSumALL"
        make_viscoelastic_tensorALL(im); // (mu_p/lambda)(f(A)A-I) if FENE-P
-        //ngrow,ncomp,scomp,dcomp,dst,src
-       copyALL(1,ENUM_NUM_TENSOR_TYPE,0,partid*ENUM_NUM_TENSOR_TYPE,
-         VISCOTEN_ALL_MAT_MF,VISCOTEN_MF);
+       Copy_array(VISCOTEN_ALL_MAT_MF,VISCOTEN_MF,
+         0,partid*ENUM_NUM_TENSOR_TYPE,ENUM_NUM_TENSOR_TYPE,1);
        delete_array(VISCOTEN_MF);
       } else
        amrex::Error("partid could not be found: volWgtSumALL");

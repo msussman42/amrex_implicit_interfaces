@@ -11419,21 +11419,7 @@ stop
        endif
       enddo ! im=1..num_materials
 
-      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-       if (enable_spectral.eq.0) then
-        ! do nothing
-       else 
-        print *,"enable_spectral invalid"
-        stop
-       endif
-       if (operation_flag.eq.OP_RHS_CELL) then
-        ! do nothing
-       else 
-        print *,"operation_flag invalid"
-        stop
-       endif
-      else if (project_option_is_validF(project_option).eq.1) then
+      if (project_option_is_validF(project_option).eq.1) then
        ! do nothing
       else
        print *,"project_option invalid"
@@ -11525,15 +11511,7 @@ stop
         stop
        endif
 
-       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-        if (enable_spectral.eq.0) then
-         ! do nothing
-        else 
-         print *,"enable_spectral invalid"
-         stop
-        endif
-       else if (project_option_is_validF(project_option).eq.1) then
+       if (project_option_is_validF(project_option).eq.1) then
 
         if (ncphys.ne.FACECOMP_NCOMP) then
          print *,"ncphys invalid"
@@ -11761,12 +11739,7 @@ stop
       call checkbound_array1(fablo,fabhi,maskres_ptr,0,-1)
 
 
-      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-
-       ! do nothing
-
-      else if (project_option_is_validF(project_option).eq.1) then
+      if (project_option_is_validF(project_option).eq.1) then
 
          !local_face_var_mf
        call checkbound_array(fablo,fabhi,xface_ptr,0,0)
@@ -13512,21 +13485,7 @@ stop
        stop
       endif
 
-      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-       if (enable_spectral.eq.0) then
-        ! do nothing
-       else 
-        print *,"enable_spectral invalid"
-        stop
-       endif
-       if (operation_flag.eq.OP_PRESGRAD_MAC) then
-        ! do nothing
-       else 
-        print *,"operation_flag invalid"
-        stop
-       endif
-      else if (project_option_is_validF(project_option).eq.1) then
+      if (project_option_is_validF(project_option).eq.1) then
 
        if ((ncfluxreg/SDIM)*SDIM.ne.ncfluxreg) then
         print *,"ncfluxreg invalid11 ",ncfluxreg
@@ -13589,10 +13548,7 @@ stop
         stop
        endif
 
-       if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-           (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-        ! do nothing
-       else if (project_option_is_validF(project_option).eq.1) then
+       if (project_option_is_validF(project_option).eq.1) then
         if (ncphys.ne.FACECOMP_NCOMP) then
          print *,"ncphys invalid"
          stop
@@ -13768,10 +13724,7 @@ stop
       call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
 
-      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-       ! do nothing
-      else if (project_option_is_validF(project_option).eq.1) then
+      if (project_option_is_validF(project_option).eq.1) then
          !local_face_var_mf
        call checkbound_array(fablo,fabhi,xface_ptr,0,dir)
          !local_amrsync_pres_mf
@@ -15631,23 +15584,7 @@ stop
        print *,"local_face_ncomp=",local_face_ncomp
        stop
       endif
-      if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-          (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-       if (local_face_index.eq. &
-           project_option-SOLVETYPE_VELEXTRAP) then
-        ! do nothing
-       else
-        print *,"local_face_index invalid"
-        stop
-       endif
-       if (local_face_ncomp.eq.num_materials) then
-        ! do nothing
-       else
-        print *,"local_face_ncomp invalid"
-        stop
-       endif
-
-      else if (project_option_is_validF(project_option).eq.1) then
+      if (project_option_is_validF(project_option).eq.1) then
 
        if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
            (local_face_index.eq.FACECOMP_FACEHEAT).or. &
@@ -15795,9 +15732,6 @@ stop
            !do nothing
           else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
            !do nothing
-          else if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-                   (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then 
-           !do nothing
           else
            print *,"project_option invalid"
            stop
@@ -15816,24 +15750,7 @@ stop
              stop
             endif
 
-            if ((project_option.ge.SOLVETYPE_VELEXTRAP).and. &
-                (project_option.lt.SOLVETYPE_VELEXTRAP+num_materials)) then
-
-             cc_ice=one
-             if (dir.eq.0) then
-              cc=xface(D_DECL(i,j,k),local_face_index+1)
-             else if (dir.eq.1) then
-              cc=yface(D_DECL(i,j,k),local_face_index+1)
-             else if ((dir.eq.2).and.(SDIM.eq.3)) then
-              cc=zface(D_DECL(i,j,k),local_face_index+1)
-             else
-              print *,"dir invalid buildfacewt"
-              stop
-             endif
-             dd=cc
-             face_damping_factor=zero          
- 
-            else if (project_option_is_validF(project_option).eq.1) then
+            if (project_option_is_validF(project_option).eq.1) then
 
              if (dir.eq.0) then
               cc=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
