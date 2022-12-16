@@ -576,6 +576,7 @@ end subroutine flexible_plate_impact_PRES_BC
 subroutine flexible_plate_impact_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
 use probcommon_module
+use global_utility_module
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: nmat
@@ -590,7 +591,7 @@ REAL_T, INTENT(in) :: STATE_in
 INTEGER_T, INTENT(in) :: dir,side
 REAL_T, INTENT(in) :: dx(SDIM)
 INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit,im_loop
+INTEGER_T ibase,im_crit
 INTEGER_T local_bcflag
 
 if (nmat.eq.num_materials) then
@@ -610,12 +611,7 @@ if ((istate.ge.1).and. &
          local_bcflag,nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
- im_crit=1
- do im_loop=2,num_materials
-  if (LS(im_loop).gt.LS(im_crit)) then
-   im_crit=im_loop
-  endif
- enddo
+ call get_primary_material(LS,im_crit)
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 else
