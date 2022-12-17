@@ -14447,7 +14447,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif 
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_GRADU_MAC_TO_CELL"
         stop
        endif
        if (project_option.ne.SOLVETYPE_VISC) then
@@ -14548,7 +14548,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_RHS_CELL"
         stop
        endif
        if ((ncomp_xvel.ne.1).and. &
@@ -14597,7 +14597,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_DIV_CELL"
         stop
        endif
        if (ncomp_xvel.ne.1) then
@@ -14655,7 +14655,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. &
            (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_VEL_MAC_TO_CELL"
         stop
        endif
        if (ncomp_xvel.ne.1) then

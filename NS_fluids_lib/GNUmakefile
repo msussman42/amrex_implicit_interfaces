@@ -86,7 +86,7 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = TRUE
+MAC_LAPTOP = FALSE
 LINUX_DESKTOP = FALSE
 HPC_INTEL = FALSE
 HPC_GNU = FALSE
