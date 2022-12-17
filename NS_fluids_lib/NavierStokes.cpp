@@ -16317,7 +16317,7 @@ NavierStokes::allocate_flux_register(int operation_flag) {
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==OP_ISCHEME_MAC) {  // advection
   ncfluxreg=AMREX_SPACEDIM*NFLUXSEM;
- } else if (operation_flag==OP_POTGRAD_SURF_TEN_TO_MAC) { 
+ } else if (operation_flag==OP_POTGRAD_TO_MAC) { 
   ncfluxreg=AMREX_SPACEDIM; // (grad pressure_potential)_mac
  } else if (operation_flag==OP_UNEW_CELL_TO_MAC) { // ucell -> umac
   ncfluxreg=AMREX_SPACEDIM;

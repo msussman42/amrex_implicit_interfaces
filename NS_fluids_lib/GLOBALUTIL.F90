@@ -8082,7 +8082,7 @@ end subroutine print_visual_descriptor
 
       if ((operation_flag.eq.OP_PRESGRAD_MAC).or. &
           (operation_flag.eq.OP_PRES_CELL_TO_MAC).or. &
-          (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. &
+          (operation_flag.eq.OP_POTGRAD_TO_MAC).or. &
           (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
           (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
           (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
@@ -11223,7 +11223,7 @@ end subroutine print_visual_descriptor
 
        else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
         ! do nothing
-       else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
         ! do nothing
        else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
         ! do nothing
@@ -11661,7 +11661,7 @@ end subroutine print_visual_descriptor
 
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
         ! do nothing
-      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+      else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
         ! do nothing
       else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
         ! do nothing
@@ -11704,7 +11704,7 @@ end subroutine print_visual_descriptor
 
         else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p_MAC
          ! do nothing
-        else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+        else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
          ! do nothing
         else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! u^{Cell->Mac}
          ! do nothing

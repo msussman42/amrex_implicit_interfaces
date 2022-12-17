@@ -5387,7 +5387,8 @@ void NavierStokes::deallocate_potential_forceALL() {
 
 // called from multiphase_project when 
 // project_option==SOLVETYPE_PRES or SOLVETYPE_PRESGRAVITY
-void NavierStokes::process_potential_forceALL() {
+void NavierStokes::process_potential_forceALL(
+	      int potgrad_surface_tension_mask) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -5433,7 +5434,7 @@ void NavierStokes::process_potential_forceALL() {
   // to interpolate AMRSYNC_PRES info.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.process_potential_force_face();
+  ns_level.process_potential_force_face(potgrad_surface_tension_mask);
  }
 
   // must go from finest to coarsest in order
@@ -5589,11 +5590,12 @@ void NavierStokes::init_gravity_potential() {
 // reflecting boundary conditions on p so that
 // if facegrav = grad^face ppot, then this implies that
 //  div (grad^face ppot - grad^face p)=0 only if ppot=p.
-void NavierStokes::process_potential_force_face() {
+void NavierStokes::process_potential_force_face(
+		int potgrad_surface_tension_mask) {
 
  int finest_level=parent->finestLevel();
 
- int operation_flag=OP_POTGRAD_SURF_TEN_TO_MAC;
+ int operation_flag=OP_POTGRAD_TO_MAC;
  
  bool use_tiling=ns_tiling;
 
@@ -5732,7 +5734,7 @@ void NavierStokes::process_potential_force_face() {
    if (ncfluxreg!=AMREX_SPACEDIM) 
     amrex::Error("ncfluxreg invalid");
 
-   int local_energyflag=SUB_OP_DEFAULT;
+   int local_energyflag=SUB_OP_FORCE_MASK_BASE+potgrad_surface_tension_mask;
    int local_project_option=SOLVETYPE_PRES;
    int local_enable_spectral=enable_spectral;
 
@@ -5759,8 +5761,8 @@ void NavierStokes::process_potential_force_face() {
     &nsolve,
     &tileloop,
     &dir,
-    &operation_flag, //OP_POTGRAD_SURF_TEN_TO_MAC
-    &local_energyflag,
+    &operation_flag, //OP_POTGRAD_TO_MAC
+    &local_energyflag,//SUB_OP_FORCE_MASK_BASE+potgrad_surface_tension_mask
     &beta,
     &visc_coef,
     &local_enable_spectral,

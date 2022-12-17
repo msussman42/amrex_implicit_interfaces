@@ -13108,7 +13108,7 @@ stop
 ! operation_flag=0  pressure gradient on MAC grid
 ! OP_PRES_CELL_TO_MAC (1)
 ! operation_flag=1  interpolate pressure from cell to MAC grid.
-! OP_POTGRAD_SURF_TEN_TO_MAC (2)
+! OP_POTGRAD_TO_MAC (2)
 ! operation_flag=2  potential gradient on MAC grid, 
 !                   surface tension on MAC grid
 ! OP_UNEW_CELL_TO_MAC (3)
@@ -13581,8 +13581,8 @@ stop
         stop
        endif
 
-       !potential gradient, surface tension
-      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+       !potential gradient
+      else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
        if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
@@ -13637,12 +13637,15 @@ stop
 
       if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_PRES_CELL_TO_MAC"
         stop
        endif
-      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
-       if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+      else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
+       if ((energyflag.ge.SUB_OP_FORCE_MASK_BASE+1).and. &
+           (energyflag.le.SUB_OP_FORCE_MASK_BASE+3)) then
+        ! do nothing
+       else
+        print *,"energyflag invalid OP_POTGRAD_TO_MAC"
         stop
        endif
        if ((ncomp_xp.ne.1).or.(ncomp_xgp.ne.1)) then
@@ -13654,7 +13657,7 @@ stop
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_U etc CELL/MAC to MAC"
         stop
        endif
        if (project_option_momeqnF(project_option).eq.1) then
@@ -13666,13 +13669,13 @@ stop
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! (grad p)_MAC
        if ((energyflag.ne.SUB_OP_FOR_MAIN).and. &
            (energyflag.ne.SUB_OP_FOR_SDC)) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_PRESGRAD_MAC"
         stop
        endif
       else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
 
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_ISCHEME_MAC"
         stop
        endif
 
@@ -13845,7 +13848,7 @@ stop
            ! with the solid velocity.
           local_vel_MAC=xvel(D_DECL(i,j,k),1)
 
-         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+         else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
@@ -13890,7 +13893,7 @@ stop
          endif
 
           ! set LSleft, LSright, localLS
-         if ((operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
+         if ((operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
              (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
              (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
              (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
@@ -14924,7 +14927,7 @@ stop
            stop
           endif
 
-         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+         else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
            ! hydrostatic pressure
           pplus=pres(D_DECL(i,j,k),1)
@@ -15109,7 +15112,7 @@ stop
             call get_scaled_tension(user_tension(iten),tension_scaled)
             call get_scaled_pforce(pforce_scaled)
 
-             ! in: fort_cell_to_mac, OP_POTGRAD_SURF_TEN_TO_MAC,
+             ! in: fort_cell_to_mac, OP_POTGRAD_TO_MAC,
              !     surface tension on MAC grid ...
             local_tension_force=tension_scaled*local_face(FACECOMP_CURV+1)
 
@@ -15178,7 +15181,7 @@ stop
            pgrad=(pplus-pminus)/hx
 
           else
-           print *,"energyflag invalid"
+           print *,"energyflag invalid OP_PRESGRAD_MAC"
            stop
           endif
 
@@ -15209,9 +15212,18 @@ stop
 
           xgp(D_DECL(i,j,k),1)=pgrad
 
-         else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
-       
-          xgp(D_DECL(i,j,k),1)=pgrad_gravity+pgrad_tension
+         else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
+      
+          if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+3) then 
+           xgp(D_DECL(i,j,k),1)=pgrad_gravity+pgrad_tension
+          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+2) then 
+           xgp(D_DECL(i,j,k),1)=pgrad_tension
+          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+1) then 
+           xgp(D_DECL(i,j,k),1)=pgrad_gravity
+          else
+           print *,"energyflag invalid OP_POTGRAD_TO_MAC"
+           stop
+          endif
 
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then !p^CELL->MAC
 
@@ -15262,7 +15274,7 @@ stop
        else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then 
         ! do nothing
        else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
-                (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
+                (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                 (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
                 (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                 (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
@@ -15302,7 +15314,7 @@ stop
                 (maskcov.eq.1)) then
 
              if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
-                 (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
+                 (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                  (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
                  (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
@@ -15326,7 +15338,7 @@ stop
                scomp_bc=1
 
                !grad ppot/den 
-              else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+              else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
                scomp=1
                dcomp=1
                ncomp_dest=1
