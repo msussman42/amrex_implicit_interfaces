@@ -8132,7 +8132,7 @@ void NavierStokes::zeroALL(int ngrow,int ncomp,int idx_localMF) {
    amrex::Error("idx_localMF too small ngrow");
 
   ns_level.localMF[idx_localMF]->setVal(0.0,0,ncomp,ngrow);
- }
+ } // for (int ilev=0;ilev<=finest_level;ilev++) 
 } // end subroutine zeroALL
 
 // initializes localMF[idx_localMF] to 0.0
