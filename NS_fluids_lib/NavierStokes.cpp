@@ -10049,7 +10049,8 @@ void NavierStokes::init_boundary() {
 
   if (k==State_Type) {
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-   MultiFab* vofmf=getState(1,STATECOMP_MOF,num_materials*ngeom_raw,cur_time_slab);
+   MultiFab* vofmf=getState(1,STATECOMP_MOF,
+      num_materials*ngeom_raw,cur_time_slab);
    MultiFab::Copy(S_new,*vofmf,0,STATECOMP_MOF,num_materials*ngeom_raw,1);
    delete vofmf;
    MultiFab* velmf=getState(1,STATECOMP_VEL,
@@ -19920,8 +19921,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  int viscoelastic_force_only=1;
  vel_elastic_ALL(viscoelastic_force_only);
 
- getStateALL(1,cur_time_slab,0,
-   AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF);
+ getStateALL(1,cur_time_slab,STATECOMP_VEL,
+   STATE_NCOMP_VEL,CELL_ELASTIC_FORCE_MF);
 
  minusALL(1,0,AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF,HOLD_VELOCITY_DATA_MF);
  if (dt_slab>0.0) {
@@ -19930,13 +19931,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  } else
   amrex::Error("cannot have dt_slab<=0.0 in writeTECPLOT_File");
 
- for (int ilev=finest_level;ilev>=0;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
-  MultiFab::Copy(S_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MF],
-    0,0,AMREX_SPACEDIM,1);
-  ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
- }  // ilev=finest_level ... 0
+ Copy_array(GET_NEW_DATA_OFFSET+State_Type,HOLD_VELOCITY_DATA_MF,
+   0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+ delete_array(HOLD_VELOCITY_DATA_MF);
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
@@ -20012,8 +20009,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  
   // save a copy of the State_Type cell velocity since it will be
   // overwritten by the mass weighted MAC velocity interpolant.
- getStateALL(1,cur_time_slab,0,
-   AMREX_SPACEDIM,HOLD_VELOCITY_DATA_MF);
+ getStateALL(1,cur_time_slab,STATECOMP_VEL,
+   STATE_NCOMP_VEL,HOLD_VELOCITY_DATA_MF);
 
  int dest_idx=-1; // we put the interpolant in State_Type so that the
                   // command MultiFab* velmf=ns_level.getState( ... 
@@ -20657,13 +20654,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  ParallelDescriptor::Barrier();
 
- for (int ilev=finest_level;ilev>=0;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
-  MultiFab::Copy(S_new,*ns_level.localMF[HOLD_VELOCITY_DATA_MF],
-    0,0,AMREX_SPACEDIM,1);
-  ns_level.delete_localMF(HOLD_VELOCITY_DATA_MF,1);
- }  // ilev
+ Copy_array(GET_NEW_DATA_OFFSET+State_Type,HOLD_VELOCITY_DATA_MF,
+   0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+ delete_array(HOLD_VELOCITY_DATA_MF);
 
  delete_array(MULTIFAB_TOWER_PLT_MF);
 

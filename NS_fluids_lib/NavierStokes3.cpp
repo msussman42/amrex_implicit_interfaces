@@ -8956,6 +8956,7 @@ void NavierStokes::multiphase_preconditioner(
  } else
   amrex::Error("project_option_momeqn invalid42");
 
+  //declared in:NavierStokes2.cpp
  zeroALL(1,nsolve,idx_Z);
 
 #if (profile_solver==1)
@@ -9012,14 +9013,10 @@ void NavierStokes::multiphase_preconditioner(
   bprof.start();
 #endif
 
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   NavierStokes& ns_level=getLevel(ilev);
-   int ncomp=ns_level.localMF[idx_Z]->nComp();
-   int ngrow=ns_level.localMF[idx_Z]->nGrow();
-   ns_level.setVal_localMF(idx_Z,0.0,0,ncomp,ngrow);
-   MultiFab::Copy(*ns_level.localMF[idx_Z],
-		  *ns_level.localMF[idx_R],0,0,ncomp,0);
-  } // ilev=level ... finest_level
+  int ncomp=localMF[idx_Z]->nComp();
+  int ngrow=localMF[idx_Z]->nGrow();
+  setVal_array(ngrow,0,ncomp,0.0,idx_Z);
+  Copy_array(idx_Z,idx_R,0,0,ncomp,0);
 
 #if (profile_solver==1)
   bprof.stop();
@@ -11454,14 +11451,8 @@ void NavierStokes::multiphase_project(int project_option) {
  remove_MAC_velocityALL(UMAC_MF);
 
  if (project_option==SOLVETYPE_PRESCOR) { 
-  for (int ilev=level;ilev<=finest_level;ilev++) {
-   NavierStokes& ns_level=getLevel(ilev);
-   MultiFab& DIV_new=ns_level.get_new_data(DIV_Type,slab_step+1);
-   MultiFab::Copy(
-      DIV_new,
-      *ns_level.localMF[DIV_SAVE_MF],
-      0,0,1,1);
-  } // ilev=level ... finest_level
+
+  Copy_array(GET_NEW_DATA_OFFSET+DIV_Type,DIV_SAVE_MF,0,0,1,1);
   delete_array(DIV_SAVE_MF);
 
  } else if (project_option_is_valid(project_option)==1) {
