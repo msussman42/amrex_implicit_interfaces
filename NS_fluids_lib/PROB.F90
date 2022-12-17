@@ -12043,9 +12043,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 ! OP_PRESGRAD_MAC (0)
 ! operation_flag=0  pressure gradient on MAC grid
-! OP_POTGRAD_SURF_TEN_TO_MAC (2)
-! operation_flag=2  potential gradient on MAC grid, 
-!                   surface tension on MAC grid
+! OP_POTGRAD_TO_MAC (2)
+! operation_flag=2  potential gradient on MAC grid
 ! OP_UNEW_CELL_TO_MAC (3)
 ! operation_flag=3  unew^MAC=unew^CELL->MAC
 ! OP_UNEW_USOL_MAC_TO_MAC (4)
@@ -12331,7 +12330,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_UGRAD_MAC"
         stop
        endif
        if (project_option.ne.SOLVETYPE_VISC) then
@@ -12381,7 +12380,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_ISCHEME_MAC"
         stop
        endif
        if (ncfluxreg.ne.SDIM*NFLUXSEM) then
@@ -12412,7 +12411,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        if ((energyflag.ne.SUB_OP_FOR_MAIN).and. & ! regular solver
            (energyflag.ne.SUB_OP_FOR_SDC)) then  ! for SDC
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_PRESGRAD_MAC"
         stop
        endif
        if ((scomp.ne.1).or.(dcomp.ne.1)) then
@@ -12426,7 +12425,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-      else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then ! grad ppot
+      else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then ! grad ppot
 
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid5"
@@ -12441,8 +12440,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-       if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+       if (energyflag.ne.SUB_OP_FORCE_MASK_BASE+3) then
+        print *,"energyflag invalid OP_POTGRAD_TO_MAC"
         stop
        endif
        if ((ncomp_dest.ne.1).or. &
@@ -12463,7 +12462,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_U ETC CELL/MAC to MAC"
         stop
        endif
 
@@ -12825,7 +12824,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              print *,"nc invalid"
              stop
             endif
-           else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+           else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
             if (nc.eq.1) then
              if (scomp.eq.1) then
               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
@@ -13004,7 +13003,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif
 
            else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & 
-                    (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC)) then 
+                    (operation_flag.eq.OP_POTGRAD_TO_MAC)) then 
 
             if (presbc_in(dir,side,1).eq.REFLECT_EVEN) then
              local_bctype(side)=SEM_REFLECT_EVEN
@@ -13276,7 +13275,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
 
-           else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+           else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
             if (simple_AMR_BC_flag.eq.1) then
 
@@ -13409,7 +13408,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             stop
            endif
 
-          else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+          else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
            if (nc.eq.1) then
             local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
@@ -13484,7 +13483,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            x_sep, &
            operation_flag)
 
-          if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+          if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
            do side=1,2
             local_bcval_den(side)=one  ! will not be used since "extrap" bc.
@@ -13688,7 +13687,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! maskCF==0 at coarse/fine   maskCF==1 at fine/fine
 
           else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & !grad p_MAC
-                   (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC).or. & 
+                   (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                    (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u^{c->mac}
                    (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                    (operation_flag.eq.OP_UGRAD_MAC).or. & !rate of strain
@@ -13935,7 +13934,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              shared_face_value=local_grad(isten+1)
 
             else
-             print *,"energyflag invalid"
+             print *,"energyflag invalid OP_PRESGRAD_MAC"
              stop
             endif
 
@@ -13982,7 +13981,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             stop
            endif
 
-          else if (operation_flag.eq.OP_POTGRAD_SURF_TEN_TO_MAC) then 
+          else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
 
            ! potential pressure gradient/den 
            if (ncfluxreg.ne.SDIM) then
@@ -13992,7 +13991,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            if (spectral_loop.eq.0) then
 
-            if (local_interp_den(isten+1).le.zero) then
+            if (local_interp_den(isten+1).gt.zero) then
+             ! do nothing
+            else
              print *,"local_interp_den underflow"
              stop
             endif

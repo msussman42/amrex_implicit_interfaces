@@ -9400,10 +9400,27 @@ void NavierStokes::multiphase_project(int project_option) {
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_PRESGRAVITY)) {
 
-   // gravity
-   // output: HYDROSTATIC_PRESDEN_MF, POTENTIAL_FORCE_EDGE_MF
-  process_potential_forceALL();
+   // 1. init_gravity_potential
+   //      output: HYDROSTATIC_PRESDEN_MF
+   // 2. process_potential_force_face
+   //      output: POTENTIAL_FORCE_EDGE_MF (OP_POTGRAD_TO_MAC)
+  int potgrad_surface_tension_mask=3;
+  if (project_option==SOLVETYPE_PRESGRAVITY) {
+   if (incremental_gravity_flag==1) {
+    potgrad_surface_tension_mask=1;
+   } else
+    amrex::Error("expecting incremental_gravity_flag==1");
+  } else if (project_option==SOLVETYPE_PRES) {
+   if (incremental_gravity_flag==1) {
+    potgrad_surface_tension_mask=2;
+   } else if (incremental_gravity_flag==0) {
+    potgrad_surface_tension_mask=3;
+   } else
+    amrex::Error("incremental_gravity_flag invalid");
+  } else
+   amrex::Error("project_option invalid");
 
+  process_potential_forceALL(potgrad_surface_tension_mask);
 
 // 1. overwrites cell/face velocity perhaps
 // 2. must be called before adding gravity and surface tension.
@@ -9419,9 +9436,10 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("project_option invalid");
 
-    // gravity and surface tension face
-    // FUTURE: E+=dt u dot g + dt^2 g dot g/2
- //FIX ME SELECTIVELY INCLUDE surface tension or gravity force
+   // increment_potential_forceALL is declared in NavierStokes2.cpp
+   // increment_potential_force is declared in NavierStokes2.cpp
+   // fort_addgravity is declared in NAVIERSTOKES_3D.F90
+   // FUTURE: E+=dt u dot g + dt^2 g dot g/2
   increment_potential_forceALL(); 
 
   if (1==0) {

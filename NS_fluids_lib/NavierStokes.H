@@ -179,8 +179,8 @@ public:
       Real time,int n_error_buf=0,int ngrow=0);
 
     void deallocate_potential_forceALL();
-    void process_potential_forceALL();
-    void process_potential_force_face();
+    void process_potential_forceALL(int potgrad_surface_tension_mask);
+    void process_potential_force_face(int potgrad_surface_tension_mask);
     void init_gravity_potential();
 
     void GetDragALL();
