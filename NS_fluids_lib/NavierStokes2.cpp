@@ -2400,6 +2400,7 @@ void NavierStokes::increment_face_velocityALL(
   //   (iii) (unew^{c})^{c->f} in compressible regions.
   //   (iv) usolid in solid regions
  if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
+   //ngrow,scomp,ncomp
   minusALL(1,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
  }
 
@@ -8207,10 +8208,16 @@ void NavierStokes::setVal_localMF(int idx,Real dataval,
 
 int NavierStokes::get_new_data_Type(int mfab_id) {
 
+ if (GET_NEW_DATA_OFFSET<-100) {
+  //do nothing
+ } else
+  amrex::Error("expecting GET_NEW_DATA_OFFSET<-100");
+
  if (mfab_id>=0) {
   return -1;
  } else if ((mfab_id>=GET_NEW_DATA_OFFSET)&&
-   	    (mfab_id<GET_NEW_DATA_OFFSET+NUM_STATE_TYPE)) {
+   	    (mfab_id<GET_NEW_DATA_OFFSET+NUM_STATE_TYPE)&&
+	    (mfab_id<0)) {
   return mfab_id-GET_NEW_DATA_OFFSET;
  } else {
   amrex::Error("mfab_id invalid");
@@ -8344,7 +8351,7 @@ void NavierStokes::plusALL(int ngrow,int scomp,int ncomp,
 
  int finest_level = parent->finestLevel();
  if (level!=0)
-  amrex::Error("level!=0 in minusALL");
+  amrex::Error("level!=0 in plusALL");
 
  for (int i=finest_level;i>=level;i--) {
   NavierStokes& ns_level=getLevel(i);
