@@ -11602,7 +11602,7 @@ stop
        if (energyflag.eq.SUB_OP_DEFAULT) then
         ! do nothing
        else
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_RHS_CELL"
         stop
        endif
        if ((homflag.ge.0).and.(homflag.le.4)) then
@@ -11617,7 +11617,7 @@ stop
        if (energyflag.eq.SUB_OP_DEFAULT) then
         ! do nothing
        else
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_DIV_CELL"
         stop
        endif
        if (homflag.eq.0) then
@@ -11645,7 +11645,7 @@ stop
        endif
        if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. &
            (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_VEL/FORCE MAC_TO_CELL "
         stop
        endif
        if (nsolve.ne.1) then
@@ -11661,7 +11661,7 @@ stop
        endif
        if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. & 
            (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then 
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL"
         stop
        endif
        if (nsolve.ne.1) then
@@ -11680,7 +11680,7 @@ stop
         ! "advect_iter"
        if ((energyflag.ne.SUB_OP_ISCHEME_PREDICT).and. &
            (energyflag.ne.SUB_OP_ISCHEME_CORRECT)) then
-        print *,"energyflag invalid"
+        print *,"energyflag invalid OP_ISCHEME_CELL"
         stop
        endif
       else
@@ -12590,7 +12590,7 @@ stop
             (dencell*VOLTERM)
 
          else
-          print *,"energyflag invalid"
+          print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL"
           stop
          endif
 
@@ -12728,7 +12728,7 @@ stop
           else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
            ! do nothing
           else
-           print *,"energyflag invalid" 
+           print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL" 
            stop
           endif
 
