@@ -50,7 +50,7 @@ namespace amrex{
 #define mf_check_inf_bounds 1
 
 #define DEFAULT_MOFITERMAX 15
-#define DEFAULT_MOFITERMAX_AFTER_PREDICT 0
+#define DEFAULT_MOFITERMAX_AFTER_PREDICT 15
 
 #define PCOPY_DEBUG 0
 //
@@ -135,10 +135,13 @@ materials are immersed into the fluid(s).
 */
 
 int  NavierStokes::continuous_mof=2;
+
+//make MOFITERMAX_AFTER_PREDICT=0 if mof_decision_tree_learning>=100^d
+
 #if (AMREX_SPACEDIM==2)
-int  NavierStokes::mof_decision_tree_learning=10000;
+int  NavierStokes::mof_decision_tree_learning=10*10;//100x100 production runs
 #elif (AMREX_SPACEDIM==3)
-int  NavierStokes::mof_decision_tree_learning=1000000;
+int  NavierStokes::mof_decision_tree_learning=10*10*10;//100^3 production runs
 #else
 something wrong
 #endif
@@ -14687,15 +14690,19 @@ NavierStokes::phase_change_redistributeALL() {
      }
 
      allocate_array(ngrow_distance,1,-1,donorflag_MF);
+      //ngrow,scomp,ncomp
      setVal_array(ngrow_distance,0,1,0.0,donorflag_MF);
 
      allocate_array(ngrow_distance,1,-1,accept_weight_MF);
+      //ngrow,scomp,ncomp
      setVal_array(ngrow_distance,0,1,0.0,accept_weight_MF);
 
      allocate_array(ngrow_distance,1,-1,donorflag_complement_MF);
+      //ngrow,scomp,ncomp
      setVal_array(ngrow_distance,0,1,0.0,donorflag_complement_MF);
 
      allocate_array(ngrow_distance,1,-1,accept_weight_complement_MF);
+      //ngrow,scomp,ncomp
      setVal_array(ngrow_distance,0,1,0.0,accept_weight_complement_MF);
 
       // isweep==0: fort_tagexpansion
@@ -19924,6 +19931,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  getStateALL(1,cur_time_slab,STATECOMP_VEL,
    STATE_NCOMP_VEL,CELL_ELASTIC_FORCE_MF);
 
+  //ngrow,scomp,ncomp
  minusALL(1,0,AMREX_SPACEDIM,CELL_ELASTIC_FORCE_MF,HOLD_VELOCITY_DATA_MF);
  if (dt_slab>0.0) {
   Real over_dt=1.0/dt_slab;

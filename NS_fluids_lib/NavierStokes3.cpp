@@ -3034,11 +3034,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("visual_phase_change_plot_int invalid");
 
        allocate_array(1,2*num_interfaces*AMREX_SPACEDIM,-1,nodevel_MF);
+        //ngrow,scomp,ncomp
        setVal_array(1,0,2*num_interfaces*AMREX_SPACEDIM,0.0,nodevel_MF);
 
        delta_mass.resize(thread_class::nthreads);
        for (int tid=0;tid<thread_class::nthreads;tid++) {
-        delta_mass[tid].resize(2*num_materials); // source 1..num_materials  dest 1..num_materials
+	// source 1..num_materials  dest 1..num_materials
+        delta_mass[tid].resize(2*num_materials); 
         for (int im=0;im<2*num_materials;im++)
          delta_mass[tid][im]=0.0;
        } // tid
@@ -9015,6 +9017,14 @@ void NavierStokes::multiphase_preconditioner(
 
   int ncomp=localMF[idx_Z]->nComp();
   int ngrow=localMF[idx_Z]->nGrow();
+
+  if ((ncomp==1)||
+      (ncomp==AMREX_SPACEDIM)) {
+   // do nothing
+  } else
+   amrex::Error("expecting ncomp=1 or sdim");
+
+   //ngrow,scomp,ncomp
   setVal_array(ngrow,0,ncomp,0.0,idx_Z);
   Copy_array(idx_Z,idx_R,0,0,ncomp,0);
 
@@ -9195,6 +9205,7 @@ void NavierStokes::multiphase_project(int project_option) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    allocate_array(0,1,dir,UMAC_SAVE_MF+dir);
    Copy_array(UMAC_SAVE_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
+    //ngrow,scomp,ncomp
    setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
   }
 
@@ -9390,6 +9401,7 @@ void NavierStokes::multiphase_project(int project_option) {
      (project_option==SOLVETYPE_PRESGRAVITY)) {
 
    // gravity
+   // output: HYDROSTATIC_PRESDEN_MF, POTENTIAL_FORCE_EDGE_MF
   process_potential_forceALL();
 
 
@@ -11414,6 +11426,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
   delete_array(PRESSURE_SAVE_MF);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //ngrow,scomp,ncomp
    plusALL(0,0,1,GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_SAVE_MF+dir);
    delete_array(UMAC_SAVE_MF+dir);
   }
