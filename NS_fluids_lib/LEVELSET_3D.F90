@@ -13412,13 +13412,16 @@ stop
       REAL_T test_current_icemask
       REAL_T damping_factor
 
-      INTEGER_T DEBUG_PRESCRIBED
+      INTEGER_T :: homogeneous_rigid_velocity
+
+      INTEGER_T, parameter :: DEBUG_PRESCRIBED=0
       REAL_T DEBUG_PRESCRIBED_VEL_TOT
       REAL_T DEBUG_PRESCRIBED_VEL_DEN
 
-      DEBUG_PRESCRIBED=0
       DEBUG_PRESCRIBED_VEL_TOT=zero
       DEBUG_PRESCRIBED_VEL_DEN=zero
+
+      homogeneous_rigid_velocity=0
 
       semflux_ptr=>semflux
       xcut_ptr=>xcut
@@ -13665,6 +13668,10 @@ stop
        else
         print *,"project_option_momeqnF(project_option) invalid"
         stop
+       endif
+       if ((project_option.eq.SOLVETYPE_PRESGRAVITY).and. &
+           (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC)) then
+        homogeneous_rigid_velocity=1
        endif
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! (grad p)_MAC
        if ((energyflag.ne.SUB_OP_FOR_MAIN).and. &
@@ -13974,6 +13981,17 @@ stop
            stop
           endif
 
+          if (homogeneous_rigid_velocity.eq.0) then
+           ! do nothing
+          else if (homogeneous_rigid_velocity.eq.1) then
+           do dir2=1,SDIM
+            vel_clamped(dir2)=zero
+           enddo
+          else
+           print *,"homogeneous_rigid_velocity invalid"
+           stop
+          endif
+
          else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. &
                   (operation_flag.eq.OP_UGRAD_MAC).or. &
                   (operation_flag.eq.OP_ISCHEME_MAC).or. & ! advection
@@ -14248,7 +14266,16 @@ stop
                stop
               endif
               velcomp=partid_prescribed*SDIM+dir+1 
-              uedge=solfab(D_DECL(i,j,k),velcomp)
+
+              if (homogeneous_rigid_velocity.eq.0) then
+               uedge=solfab(D_DECL(i,j,k),velcomp)
+              else if (homogeneous_rigid_velocity.eq.1) then
+               uedge=zero
+              else
+               print *,"homogeneous_rigid_velocity invalid"
+               stop
+              endif
+
               DEBUG_PRESCRIBED_VEL_TOT=DEBUG_PRESCRIBED_VEL_TOT+uedge
               DEBUG_PRESCRIBED_VEL_DEN=DEBUG_PRESCRIBED_VEL_DEN+one
              else if (im_prescribed_valid.eq.0) then
@@ -14471,8 +14498,18 @@ stop
                      xstenMAC_center, &
                      blob_array, &
                      blob_array_size,num_colors) 
+
                     call SUB_check_vel_rigid(xstenMAC_center, &
                       time,uedge_rigid,dir+1)
+
+                    if (homogeneous_rigid_velocity.eq.0) then
+                     ! do nothing
+                    else if (homogeneous_rigid_velocity.eq.1) then
+                     uedge_rigid=zero
+                    else
+                     print *,"homogeneous_rigid_velocity invalid"
+                     stop
+                    endif
 
                     uedge=test_current_icemask*uedge+ &
                           (one-test_current_icemask)*uedge_rigid
@@ -14570,6 +14607,16 @@ stop
               call velbc_override(time,dir+1,side,dir+1, &
                uedge, &
                xstenMAC,nhalf,dx,bfact)
+
+              if (homogeneous_rigid_velocity.eq.0) then
+               ! do nothing
+              else if (homogeneous_rigid_velocity.eq.1) then
+               uedge=zero
+              else
+               print *,"homogeneous_rigid_velocity invalid"
+               stop
+              endif
+
              endif
             else
              print *,"side invalid"
