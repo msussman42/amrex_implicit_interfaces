@@ -2436,7 +2436,8 @@ void NavierStokes::increment_face_velocityALL(
 //   (iv) usolid in solid regions
 // called from: post_init_state, do_the_advance, multiphase_project
 // (when project_option==SOLVETYPE_PRES,SOLVETYPE_INITPROJ,
-//  SOLVETYPE_PRESCOR), APPLY_REGISTERS, INCREMENT_REGISTERS
+//  SOLVETYPE_PRESCOR,SOLVETYPE_PRESGRAVITY), 
+// APPLY_REGISTERS, INCREMENT_REGISTERS
 // called from NavierStokes::increment_face_velocityALL
 void NavierStokes::increment_face_velocity(
  int operation_flag,
@@ -2513,6 +2514,7 @@ void NavierStokes::increment_face_velocity(
     amrex::Error("blobdata or num_colors invalid");
 
   } else if ((project_option==SOLVETYPE_PRES)||
+  	     (project_option==SOLVETYPE_PRESGRAVITY)||
              (project_option==SOLVETYPE_INITPROJ)) {
    // do nothing
   } else
@@ -2798,6 +2800,7 @@ void NavierStokes::increment_face_velocity(
       int ncphys_proxy=FACECOMP_NCOMP;
 
       // in increment_face_velocity
+      // fort_cell_to_mac is declared in: LEVELSET_3D.F90
       fort_cell_to_mac(
        &ncomp_mgoni,
        &ncomp_xp,

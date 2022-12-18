@@ -9400,10 +9400,6 @@ void NavierStokes::multiphase_project(int project_option) {
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_PRESGRAVITY)) {
 
-   // 1. init_gravity_potential
-   //      output: HYDROSTATIC_PRESDEN_MF
-   // 2. process_potential_force_face
-   //      output: POTENTIAL_FORCE_EDGE_MF (OP_POTGRAD_TO_MAC)
   int potgrad_surface_tension_mask=3;
   if (project_option==SOLVETYPE_PRESGRAVITY) {
    if (incremental_gravity_flag==1) {
@@ -9420,6 +9416,10 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("project_option invalid");
 
+   // 1. init_gravity_potential
+   //      output: HYDROSTATIC_PRESDEN_MF
+   // 2. process_potential_force_face
+   //      output: POTENTIAL_FORCE_EDGE_MF (OP_POTGRAD_TO_MAC)
   process_potential_forceALL(potgrad_surface_tension_mask);
 
 // 1. overwrites cell/face velocity perhaps
@@ -9505,11 +9505,19 @@ void NavierStokes::multiphase_project(int project_option) {
   if ((SDC_outer_sweeps>0)&&
       (SDC_outer_sweeps<ns_time_order)&&
       (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
+
+   if ((project_option==SOLVETYPE_PRES)&&
+       (incremental_gravity_flag==0)) {
+
+    for (int ilev=finest_level;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
      //NavierStokes::make_SEM_delta_force declared in NavierStokes.cpp
-    ns_level.make_SEM_delta_force(SOLVETYPE_PRES); 
-   }
+     ns_level.make_SEM_delta_force(SOLVETYPE_PRES); 
+    }
+
+   } else
+    amrex::Error("cannot have spectral element and incremental_grav");
+
   } else if (SDC_outer_sweeps==0) {
    // do nothing
   } else if (divu_outer_sweeps+1<num_divu_outer_sweeps) {
@@ -9550,7 +9558,8 @@ void NavierStokes::multiphase_project(int project_option) {
    check_value_max(4,DIFFUSIONRHS_MF,0,1,0,0.0);
  }
 
-  //SOLVETYPE_PRES, SOLVETYPE_PRESCOR, SOLVETYPE_INITPROJ
+  //SOLVETYPE_PRES, SOLVETYPE_PRESCOR, 
+  //SOLVETYPE_INITPROJ, SOLVETYPE_PRESGRAVITY
  if (project_option_projection(project_option)==1) {
 
   Vector<blobclass> blobdata;
@@ -9634,6 +9643,7 @@ void NavierStokes::multiphase_project(int project_option) {
    amrex::Error("nsolve invalid");
 
   if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_PRESGRAVITY)||
       (project_option==SOLVETYPE_PRESCOR)) { 
    // unew^{f} = unew^{f} 
    operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
@@ -9643,8 +9653,13 @@ void NavierStokes::multiphase_project(int project_option) {
   } else 
    amrex::Error("project_option invalid47");
 
+   // if project_option==SOLVETYPE_PRESGRAVITY
+   // ---------------------------------------
+   //   velocity of rigid materials/ice is zero.
+   //
    // if project_option==SOLVETYPE_PRESCOR 
-   // then the velocity in the ice or 
+   // ---------------------------------------
+   // velocity in the ice or 
    // damping_coefficient(im)>0 materials
    // is overwritten with a projected rigid body velocity:
    //  a) call get_rigid_velocity
