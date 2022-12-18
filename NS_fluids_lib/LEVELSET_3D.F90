@@ -13663,7 +13663,7 @@ stop
        if (project_option_momeqnF(project_option).eq.1) then
         ! do nothing
        else
-        print *,"project_option invalid"
+        print *,"project_option_momeqnF(project_option) invalid"
         stop
        endif
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! (grad p)_MAC
