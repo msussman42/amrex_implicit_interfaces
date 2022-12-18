@@ -3507,39 +3507,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	} else
 	 amrex::Error("incremental_gravity_flag invalid");
 
+FIX ME FSI_material_exists still needed?
+FIX ME SOLVETYPE_PRESCOR still needed?
+
          // MDOT term included
         multiphase_project(SOLVETYPE_PRES);
-
-	int im_damping=-1;
-	for (int im=0;im<num_materials;im++) {
- 	 if (damping_coefficient[im]>0.0) {
-	  im_damping=im;
-	 } else if (damping_coefficient[im]==0.0) {
-	  // do nothing
-	 } else
-	  amrex::Error("damping_coefficient invalid");
-	}
-
-	 // FSI_flag=3,6 (ice) or FSI_flag=5 (FSI PROB.F90 rigid material)
-        if ((FSI_material_exists()==1)|| 
-            (im_damping>=0)) {
-
-          // MDOT term not included, instead 
-          // If compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+
-	  //                          MDOT_MF dt/vol
-          // If incompressible: DIV_new=MDOT_MF dt/vol
-          // If one of the adjoining cells of a face are in the 
-          // "flexible solid," then the face coefficient = 0. 
-          // See: fort_buildfacewt, FACE_VAR_MF
-         multiphase_project(SOLVETYPE_PRESCOR);
-
-        } else if ((FSI_material_exists()==0)&&
-		   (im_damping==-1)) {
-
-         // do nothing
-	 
-        } else
-         amrex::Error("FSI_material_exists invalid");
 
         int singular_parts_exist=0;
         for (int im=0;im<num_materials;im++) {
@@ -7584,7 +7556,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } // dir
  new_localMF(OFF_DIAG_CHECK_MF,nsolve,0,-1);
 
- if (project_option_projection(project_option)==1) {
+ if (project_option==SOLVETYPE_PRESGRAVITY) {
+  local_face_index=FACECOMP_FACEDEN_BASE;  // 1/rho
+ } else if (project_option_projection(project_option)==1) {
   local_face_index=FACECOMP_FACEDEN;  // 1/rho
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
    // 1/rho (only used in eval_face_coeff for sanity check purposes)
@@ -7889,24 +7863,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   // alpha(S - S^*) - div beta grad S = 0
  if (state_index==State_Type) {
   current_contents_mf=getState_list(1,scomp,ncomp,cur_time_slab);
- } else if (state_index==DIV_Type) {
-  if (scomp.size()!=1)
-   amrex::Error("scomp.size() invalid");
-  if (ncomp[0]!=1)
-   amrex::Error("ncomp[0] invalid");
-
-   //   if (project_option==SOLVETYPE_PRESCOR) then
-   //    a-1) ADVECT_DIV_ALL() puts latest div(u) in DIV_Type.
-   //    a-2) DIV_Type=-dt*(pnew-padv)/(rho c^2 dt^2) + mdot * dt/vol=
-   //                  -(pnew-padv)/(rho c^2 dt) + mdot * dt/vol
-   //    b) if (incomp): csnd(1)=0, (coefficient)
-   //                    csnd(2)=0, (padvect)
-   //                    DIFFSUIONRHS=(1/dt)( DIV_Type ) * vol
-   //    c) if (comp): csnd(2)=DIV_TYPE / (1/(rho c^2 dt)) =
-   //                          DIV_TYPE * (rho c^2 dt)
-   //    d) csnd(2) is copied to DIV_Type overwriting div(u)
-
-  current_contents_mf=getStateDIV_DATA(1,scomp[0],ncomp[0],cur_time_slab);
  } else {
   current_contents_mf=nullptr;
   amrex::Error("state_index invalid");
@@ -8836,8 +8792,7 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
   zero_independent_variable(project_option,nsolve);
   zero_independent_vel(project_option,UMAC_MF,nsolve);
- } else if ((project_option==SOLVETYPE_PRESCOR)|| 
-            (project_option==SOLVETYPE_PRESEXTRAP)) {
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
  } else if (project_option==SOLVETYPE_PRES)  { 
   int scomp=0;
@@ -9182,21 +9137,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  const Real* coarse_dx=geom.CellSize();
  
-  // The independent variable is "DIV_Type"
-  // which means the presently stored contents 
-  // of "DIV_TYPE" must be saved.
- if (project_option==SOLVETYPE_PRESCOR) { 
-
-  allocate_array(1,1,-1,DIV_SAVE_MF);
-  Copy_array(DIV_SAVE_MF,GET_NEW_DATA_OFFSET+DIV_Type,0,0,1,1);
-
-  // in: MacProj.cpp
-  // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
-  //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol=
-  // if incompressible: DIV_new=MDOT_MF dt/vol
-  ADVECT_DIV_ALL();
-
- } else if (project_option==SOLVETYPE_PRESGRAVITY) {
+ if (project_option==SOLVETYPE_PRESGRAVITY) {
    //ngrow,ncomp,grid_type
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
@@ -9252,15 +9193,14 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int nsolve=1;
 
-  //SOLVETYPE_INITPROJ, SOLVETYPE_PRES, SOLVETYPE_PRESCOR,
+  //SOLVETYPE_INITPROJ, SOLVETYPE_PRES, 
   //SOLVETYPE_PRESGRAVITY
  if (project_option_projection(project_option)==1) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
    // do nothing
   } else if ((project_option==SOLVETYPE_PRES)|| 
-             (project_option==SOLVETYPE_PRESGRAVITY)||
-             (project_option==SOLVETYPE_PRESCOR)) { 
+             (project_option==SOLVETYPE_PRESGRAVITY)) {
    // do nothing
   } else
    amrex::Error("project_option invalid 45"); 
@@ -9329,17 +9269,9 @@ void NavierStokes::multiphase_project(int project_option) {
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_VISC 
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_SPEC ...
     // diffusionRHS=0.0 UMAC=0 project_option==SOLVETYPE_PRESGRAV
-    // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESCOR 
     // diffusionRHS=0.0 if project_option==SOLVETYPE_PRESEXTRAP 
-    // (DIV_Type contents cannot be zapped because it is needed for
-    //  initializing CELL_SOUND_MF, DIFFUSIONRHS if 
-    //  project_option==SOLVETYPE_PRESCOR)
    ns_level.Prepare_UMAC_for_solver(project_option,nsolve);
  }  // ilev=level ... finest_level
-
- if (project_option==SOLVETYPE_PRESCOR) {
-  check_value_max(1,DIFFUSIONRHS_MF,0,1,0,0.0);
- }
 
  Real max_nlevels=0;
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -9381,10 +9313,6 @@ void NavierStokes::multiphase_project(int project_option) {
   // automatically initializes mac_rhs_crse_array=0.0
  allocate_rhs_var(nsolve,MAC_RHS_CRSE_MF);
  
- if (project_option==SOLVETYPE_PRESCOR) {
-   check_value_max(2,DIFFUSIONRHS_MF,0,1,0,0.0);
- }
-
  min_face_wt.resize(thread_class::nthreads);
  max_face_wt.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -9531,10 +9459,6 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("project_option bust");	 
 
- if (project_option==SOLVETYPE_PRESCOR) { 
-   check_value_max(3,DIFFUSIONRHS_MF,0,1,0,0.0);
- }
-
  if (project_option_needs_scaling(project_option)==1) {
 
    // fortran pressure and velocity scales
@@ -9554,12 +9478,9 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("project_option_needs_scaling invalid46");
 
- if (project_option==SOLVETYPE_PRESCOR) { 
-   check_value_max(4,DIFFUSIONRHS_MF,0,1,0,0.0);
- }
-
-  //SOLVETYPE_PRES, SOLVETYPE_PRESCOR, 
-  //SOLVETYPE_INITPROJ, SOLVETYPE_PRESGRAVITY
+  //SOLVETYPE_PRES, 
+  //SOLVETYPE_INITPROJ, 
+  //SOLVETYPE_PRESGRAVITY
  if (project_option_projection(project_option)==1) {
 
   Vector<blobclass> blobdata;
@@ -9569,37 +9490,23 @@ void NavierStokes::multiphase_project(int project_option) {
   Vector< Vector<Real> > mdot_comp_data_redistribute;
   Vector<int> type_flag;
 
-  int alloc_blobdata=0;
+  int alloc_blobdata=1;
  
-  if (project_option_projection(project_option)==1) { 
-   alloc_blobdata=1;
-  } else if (project_option_projection(project_option)==0) { 
-   amrex::Error("expecting project_option_projection(project_option)==1");
-  } else {
-   amrex::Error("project_option_projection(project_option)invalid");
+  if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "BEGIN: color_variable, multiphase_project " <<
+          "project_option=" << project_option << '\n';
+   }
   }
 
-  if (alloc_blobdata==1) {
+  int color_count=0;
+  int coarsest_level=0;
 
-   if (verbose>0) {
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "BEGIN: color_variable, multiphase_project " <<
-	          "project_option=" << project_option << '\n';
-    }
-   }
+  int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
 
-   int color_count=0;
-   int coarsest_level=0;
-
-   if (project_option==SOLVETYPE_PRESCOR) {
-    check_value_max(41,DIFFUSIONRHS_MF,0,1,0,0.0);
-   }
-
-   int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
-
-   int tessellate=1;
-   int operation_flag=OP_GATHER_MDOT;
-   ColorSumALL(
+  int tessellate=1;
+  int operation_flag=OP_GATHER_MDOT;
+  ColorSumALL(
      operation_flag, // =OP_GATHER_MDOT
      tessellate, //=1
      coarsest_level,
@@ -9615,24 +9522,15 @@ void NavierStokes::multiphase_project(int project_option) {
      mdot_comp_data_redistribute 
      );
 
-   if (color_count!=blobdata.size())
-    amrex::Error("color_count!=blobdata.size()");
+  if (color_count!=blobdata.size())
+   amrex::Error("color_count!=blobdata.size()");
 
-   if (project_option==SOLVETYPE_PRESCOR) {
-    check_value_max(42,DIFFUSIONRHS_MF,0,1,0,0.0);
+  if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "END: color_variable, multiphase_project\n";
+    print_project_option(project_option);
    }
-
-   if (verbose>0) {
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "END: color_variable, multiphase_project\n";
-     print_project_option(project_option);
-    }
-   }
-
-  } else if (alloc_blobdata==0) {
-   // do nothing
-  } else
-   amrex::Error("alloc_blobdata invalid");
+  }
 
   int idx_velcell=-1;
 
@@ -9657,30 +9555,13 @@ void NavierStokes::multiphase_project(int project_option) {
    // ---------------------------------------
    //   velocity of rigid materials/ice is zero.
    //
-   // if project_option==SOLVETYPE_PRESCOR 
+   // if project_option==SOLVETYPE_PRES
    // ---------------------------------------
-   // velocity in the ice or 
-   // damping_coefficient(im)>0 materials
+   // velocity in the ice or rigid materials
    // is overwritten with a projected rigid body velocity:
    //  a) call get_rigid_velocity
    //  b) uedge=test_current_icefacecut*uedge+ &
    //       (one-test_current_icefacecut)*uedge_rigid
-   //  c) uedge=c * uedge + (1-c) * uedge_rigid
-   //
-   // In LEVELSET_3D.F90, fort_cell_to_mac,
-   // operation_flag=OP_UNEW_CELL_TO_MAC, OP_UNEW_USOL_MAC_TO_MAC,
-   // OP_UMAC_PLUS_VISC_CELL_TO_MAC, or OP_U_COMP_CELL_MAC_TO_MAC,
-   //  num_colors.gt.0, if either
-   // left cell or right cell has ice (FSI_flag==3,6)
-   // or is FSI_rigid (FSI_flag==5) or 
-   // damping_coefficient(im)>0,  then velocity is
-   // overwritten.
-   // In GODUNOV_3D.F90, fort_init_icemask,
-   // "FACECOMP_ICEFACECUT" component (c++)
-   // is initialized by calling get_icemask
-   // and if "im_FSI_rigid==im_primary" for one of a faces'
-   // adjoining cells for example, then, 
-   // FACECOMP_ICEFACECUT component (c++) =0.0
    //
    // NavierStokes::increment_face_velocityALL is declared in 
    // NavierStokes2.cpp.
@@ -9755,6 +9636,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
    // do nothing
+  } else if (project_option==SOLVETYPE_PRESGRAVITY) { 
+   // do nothing
   } else if (project_option_projection(project_option)==1) {
 
    if ((project_option==SOLVETYPE_PRES)|| 
@@ -9765,17 +9648,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // updates CELL_SOUND_MF, DIFFUSIONRHS, and S_new. 
    //  State_Type is updated by solver if project_option==SOLVETYPE_PRES. 
-   //  DIV_Type is updated by solver if project_option==SOLVETYPE_PRESCOR
-   //   if (project_option==SOLVETYPE_PRESCOR) then
-   //    a-1) ADVECT_DIV_ALL() puts latest div(u) in DIV_Type.
-   //    a-2) DIV_Type=-dt*(pnew-padv)/(rho c^2 dt^2) + mdot * dt/vol=
-   //                  -(pnew-padv)/(rho c^2 dt) + mdot * dt/vol
-   //    b) if (incomp): csnd(1)=0, (coefficient)
-   //                    csnd(2)=0, (padvect)
-   //                    DIFFSUIONRHS=(1/dt)( DIV_Type ) * vol
-   //    c) if (comp): csnd(2)=DIV_TYPE / (1/(rho c^2 dt)) =
-   //                          DIV_TYPE * (rho c^2 dt)
-   //    d) csnd(2) is copied to DIV_Type overwriting div(u)
    // 
    //  NavierStokes::init_advective_pressure declared in NavierStokes2.cpp
    ns_level.init_advective_pressure(project_option); 
@@ -9855,7 +9727,7 @@ void NavierStokes::multiphase_project(int project_option) {
  energyflag=SUB_OP_FOR_MAIN;
  int homflag_residual_correction_form=0; 
 
- if ((project_option==SOLVETYPE_PRESCOR)|| 
+ if ((project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_INITPROJ)) {
   homflag_residual_correction_form=1; 
  } else if (project_option_is_valid(project_option)==1) {
@@ -11077,12 +10949,6 @@ void NavierStokes::multiphase_project(int project_option) {
      MultiFab* snew_mf=nullptr;
      if (state_index==State_Type) {
       snew_mf=ns_level.getState_list(1,scomp,ncomp,cur_time_slab);
-     } else if (state_index==DIV_Type) {
-      if (scomp.size()!=1)
-       amrex::Error("scomp.size() invalid");
-      if (ncomp[0]!=1)
-       amrex::Error("ncomp[0] invalid");
-      snew_mf=ns_level.getStateDIV_DATA(1,scomp[0],ncomp[0],cur_time_slab);
      } else {
       snew_mf=nullptr;
       amrex::Error("state_index invalid");
@@ -11496,12 +11362,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  remove_MAC_velocityALL(UMAC_MF);
 
- if (project_option==SOLVETYPE_PRESCOR) { 
-
-  Copy_array(GET_NEW_DATA_OFFSET+DIV_Type,DIV_SAVE_MF,0,0,1,1);
-  delete_array(DIV_SAVE_MF);
-
- } else if (project_option_is_valid(project_option)==1) {
+ if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else {
   amrex::Error("project_option invalid");

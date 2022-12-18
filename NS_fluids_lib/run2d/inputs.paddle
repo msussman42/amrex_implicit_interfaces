@@ -120,7 +120,6 @@ ns.zblob=1.75
 ns.radblob=0.80
 # denfact=mass of paddle
 ns.denfact=5.0
-# velfact=damping factor
 ns.velfact=0.01
 ns.probtype=50
 

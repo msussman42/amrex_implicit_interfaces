@@ -308,10 +308,6 @@ void NavierStokes::getState_localMF_list(
 
  if (state_index==State_Type) {
   localMF[idx_MF]=getState_list(ngrow,scomp,ncomp,cur_time_slab);
- } else if (state_index==DIV_Type) {
-  if (scomp.size()!=1)
-   amrex::Error("scomp.size() invalid");
-  localMF[idx_MF]=getStateDIV_DATA(ngrow,scomp[0],ncomp[0],cur_time_slab);
  } else
   amrex::Error("state_index invalid");
 
@@ -1766,8 +1762,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   amrex::Error("SDC_outer_sweeps invalid init_divup_cell_vel_cell");
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)||
-     (project_option==SOLVETYPE_PRESCOR)) {  
+     (project_option==SOLVETYPE_INITPROJ)) {  
   // do nothing
  } else
   amrex::Error("project_option invalid20 init_divup_cell_vel_cell");
@@ -1847,8 +1842,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   amrex::Error("invalid ncomp in vel update routine");
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)||
-     (project_option==SOLVETYPE_PRESCOR)) {  
+     (project_option==SOLVETYPE_INITPROJ)) {  
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    debug_ngrow(FACE_VAR_MF+dir,0,101);
@@ -2436,7 +2430,7 @@ void NavierStokes::increment_face_velocityALL(
 //   (iv) usolid in solid regions
 // called from: post_init_state, do_the_advance, multiphase_project
 // (when project_option==SOLVETYPE_PRES,SOLVETYPE_INITPROJ,
-//  SOLVETYPE_PRESCOR,SOLVETYPE_PRESGRAVITY), 
+//  SOLVETYPE_PRESGRAVITY), 
 // APPLY_REGISTERS, INCREMENT_REGISTERS
 // called from NavierStokes::increment_face_velocityALL
 void NavierStokes::increment_face_velocity(
@@ -2506,16 +2500,9 @@ void NavierStokes::increment_face_velocity(
   } else
    amrex::Error("idx_velcell invalid");
 
-  if (project_option==SOLVETYPE_PRESCOR) {  
-
-   if (num_colors>=1) {
-    // do nothing
-   } else
-    amrex::Error("blobdata or num_colors invalid");
-
-  } else if ((project_option==SOLVETYPE_PRES)||
-  	     (project_option==SOLVETYPE_PRESGRAVITY)||
-             (project_option==SOLVETYPE_INITPROJ)) {
+  if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_PRESGRAVITY)||
+      (project_option==SOLVETYPE_INITPROJ)) {
    // do nothing
   } else
    amrex::Error("project_option invalid22");
@@ -9355,10 +9342,6 @@ void NavierStokes::init_pressure_error_indicator() {
 // 3. in incompressible regions, p=0
 //
 // div_hold=(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-// if project_option==SOLVETYPE_PRESCOR
-// 1. div_hold*vol/dt is put in localMF[DIFFUSIONRHS_MF] in incomp parts
-// 2. div_hold/(csound_hold*dt) is put in the 2nd component of cell_sound where
-//    there are compressible materials.
 //
 // velocity scale: V
 // time scale is : 1/V
@@ -9427,34 +9410,12 @@ void NavierStokes::init_advective_pressure(int project_option) {
  if (project_option==SOLVETYPE_PRES) {
   if (state_index!=State_Type)
    amrex::Error("state_index invalid");
- } else if (project_option==SOLVETYPE_PRESCOR) { 
-  if (state_index!=DIV_Type)
-   amrex::Error("state_index invalid");
  } else
   amrex::Error("project_option invalid28");
 
  MultiFab& S_new=get_new_data(state_index,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
 
-  // CELL_SOUND_MF
-  // coeff_avg,padvect_avg 
- if (project_option==SOLVETYPE_PRES) {
-  // do nothing
- } else if (project_option==SOLVETYPE_PRESCOR) { 
-   // dst,src,scomp,dcomp,ncomp,ngrow
-  int sc=scomp[0];
-  if (sc==0) {
-   // do nothing
-  } else
-   amrex::Error("sc invalid");
-
-  int dc=1; // copy 1st component of DIV_TYPE into 2nd component of 
-            // localMF[CELL_SOUND_MF]
-            // DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-  MultiFab::Copy(*localMF[CELL_SOUND_MF],S_new,sc,dc,1,0);
- } else
-  amrex::Error("project_option invalid29");
-  
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(denmf->boxArray().d_numPts());

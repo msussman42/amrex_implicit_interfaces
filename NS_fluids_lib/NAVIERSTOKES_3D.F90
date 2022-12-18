@@ -1214,9 +1214,6 @@ END SUBROUTINE SIMP
 !    Equation of state to be used depends on cvof (tessellating vfracs)
 ! 3. pressure=0.0 in incompressible regions
 !
-! if project_option==SOLVETYPE_PRESCOR, mdot=0.0 (on input) (mdot corresponds
-! to localMF[DIFFUSIONRHS_MF])
-!
 ! velocity scale: V
 ! time scale is : 1/V
 ! pressure scale: V^2
@@ -1302,7 +1299,6 @@ END SUBROUTINE SIMP
       REAL_T vfrac_fluid_sum
       INTEGER_T infinite_weight
       INTEGER_T local_infinite_weight
-      REAL_T div_hold
       REAL_T csound_hold
       REAL_T DXMAXLS
       REAL_T cutoff
@@ -1348,8 +1344,7 @@ END SUBROUTINE SIMP
        print *,"pressure_select_criterion invalid"
        stop
       endif
-      if ((project_option.eq.SOLVETYPE_PRES).or. &
-          (project_option.eq.SOLVETYPE_PRESCOR)) then 
+      if (project_option.eq.SOLVETYPE_PRES) then
        ! do nothing
       else
        print *,"project_option invalid advective pressure"
@@ -1456,50 +1451,7 @@ END SUBROUTINE SIMP
         endif
 
 
-        if ((project_option.eq.SOLVETYPE_PRES).or. &
-            (project_option.eq.SOLVETYPE_PRESCOR)) then 
-
-         if (project_option.eq.SOLVETYPE_PRES) then
-          div_hold=zero
-         else if (project_option.eq.SOLVETYPE_PRESCOR) then 
-           ! coeff_avg,p_avg
-           ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-          div_hold=csnd(D_DECL(i,j,k),2)   ! pavg (copied from 1st component
-                                           ! of DIV_Type)
-           ! fort_advective_pressure called from 
-           !   NavierStokes::init_advective_pressure
-           ! init_advective_pressure called from
-           !   NavierStokes::multiphase_project
-           ! mdot passed from localMF[DIFFUSIONRHS_MF]
-           ! project_option==SOLVETYPE_PRESCOR => 
-           !  FSI_material_exists (2nd project)
-          if (mdot(D_DECL(i,j,k)).eq.zero) then
-           ! do nothing
-          else
-           print *,"mdot(D_DECL(i,j,k)).ne.zero in advective_pressure"
-           print *,"i,j,k,mdot ",i,j,k,mdot(D_DECL(i,j,k))
-           print *,"level,finest_level ",level,finest_level
-           print *,"div_hold ",div_hold
-           print *,"project_option ",project_option
-           print *,"dt=",dt
-           print *,"num_materials,nden,bfact ",num_materials,nden,bfact
-           print *,"pressure_select_criterion ",pressure_select_criterion
-           do im=1,num_materials
-            localLS(im)=lsnew(D_DECL(i,j,k),im)
-            print *,"im,localLS(im) ",im,localLS(im)
-            print *,"im,vfrac(im) ",im,vfrac(im)
-            print *,"im, compressible_dt_factor ", &
-                    im,compressible_dt_factor(im)
-           enddo
-           print *,"imcrit ",imcrit
-           print *,"vfrac_solid_sum ",vfrac_solid_sum
-           print *,"vfrac_fluid_sum ",vfrac_fluid_sum
-           stop
-          endif
-         else
-          print *,"project_option invalid"
-          stop
-         endif
+        if (project_option.eq.SOLVETYPE_PRES) then
 
          do im=1,num_materials
           localLS(im)=lsnew(D_DECL(i,j,k),im)
@@ -1694,16 +1646,6 @@ END SUBROUTINE SIMP
 
            csnd(D_DECL(i,j,k),1)=zero  ! coeff
            csnd(D_DECL(i,j,k),2)=zero  ! padvect
-           if (project_option.eq.SOLVETYPE_PRESCOR) then 
-            ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-            ! mdot corresponds to localMF[DIFFUSIONRHS_MF]
-            mdot(D_DECL(i,j,k))=local_volume*div_hold/dt
-           else if (project_option.eq.SOLVETYPE_PRES) then
-            ! do nothing
-           else
-            print *,"project_option invalid"
-            stop
-           endif
 
           else if (infinite_weight.eq.0) then
 
@@ -1743,47 +1685,11 @@ END SUBROUTINE SIMP
              stop
             endif
 
-            if (project_option.eq.SOLVETYPE_PRESCOR) then 
-
-             if (csound_hold.eq.zero) then ! incomp
-              csnd(D_DECL(i,j,k),2)=zero ! padvect
-               ! localMF[DIFFUSIONRHS_MF]
-               ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-              mdot(D_DECL(i,j,k))=local_volume*div_hold/dt 
-             else if (csound_hold.gt.zero) then
-              ! "div" = -(pnew-padv_old)/(rho c^2 dt) + mdot dt/vol
-              ! (1/(rho c^2 dt^2))p=div/dt
-              ! csound_hold p = div/dt
-              ! p=div/(dt csound_hold)
-              ! p = p * vol in MacProj.cpp
-              csnd(D_DECL(i,j,k),2)=div_hold/(csound_hold*dt)
-             else
-              print *,"csound_hold invalid"
-              stop
-             endif
-
-            else if (project_option.eq.SOLVETYPE_PRES) then
-             ! do nothing
-            else
-             print *,"project_option invalid"
-             stop
-            endif
-
             ! im_weight is an incompressible material
            else if (fort_material_type(im_weight).eq.0) then
 
             csnd(D_DECL(i,j,k),1)=zero ! coeff
             csnd(D_DECL(i,j,k),2)=zero ! padvect
-            if (project_option.eq.SOLVETYPE_PRESCOR) then 
-              ! DIV_Type=-(pnew-pold)/(rho c^2 dt) + dt mdot/vol
-              ! localMF[DIFFUSIONRHS_MF]
-             mdot(D_DECL(i,j,k))=div_hold*local_volume/dt 
-            else if (project_option.eq.SOLVETYPE_PRES) then
-             ! do nothing
-            else
-             print *,"project_option invalid"
-             stop
-            endif
 
            else
             print *,"material type invalid"
@@ -11387,8 +11293,6 @@ END SUBROUTINE SIMP
       REAL_T maskleft,maskright
       INTEGER_T maskface
       INTEGER_T face_vcomp
-      REAL_T face_vol(2*num_materials)
-      REAL_T face_damping_factor
 
       if ((level.ge.0).and.(level.le.finest_level)) then
        ! do nothing
@@ -11487,10 +11391,6 @@ END SUBROUTINE SIMP
           local_gp=xgp(D_DECL(i,j,k))
           AL=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-          do face_vcomp=1,2*num_materials
-           face_vol(face_vcomp)=xface(D_DECL(i,j,k), &
-                 face_vcomp+FACECOMP_VOFFACE)
-          enddo
           icrit=i
          else if (dir.eq.1) then
           local_dest=ydest(D_DECL(i,j,k))
@@ -11498,10 +11398,6 @@ END SUBROUTINE SIMP
           local_gp=ygp(D_DECL(i,j,k))
           AL=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-          do face_vcomp=1,2*num_materials
-           face_vol(face_vcomp)=yface(D_DECL(i,j,k), &
-                 face_vcomp+FACECOMP_VOFFACE)
-          enddo
           icrit=j
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           local_dest=zdest(D_DECL(i,j,k))
@@ -11509,18 +11405,11 @@ END SUBROUTINE SIMP
           local_gp=zgp(D_DECL(i,j,k))
           AL=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-          do face_vcomp=1,2*num_materials
-           face_vol(face_vcomp)=zface(D_DECL(i,j,k), &
-                 face_vcomp+FACECOMP_VOFFACE)
-          enddo
           icrit=k
          else
           print *,"dir invalid fluid solid cor"
           stop
          endif
-
-         face_damping_factor=get_face_damping_factor( &
-            face_vol,project_option,dt)
 
          if (project_option_singular_possibleF(project_option).eq.1) then
           if ((nsolve.eq.1).and.(velcomp.eq.0)) then
@@ -11588,7 +11477,6 @@ END SUBROUTINE SIMP
            level,finest_level, &
            AL,AL_ice,cc_group, &
            local_dd,local_dd_group, &
-           face_damping_factor, &
            local_visc_coef, &
            nsolve,dir,veldir,project_option, &
            local_uncoupled_viscosity,side,bccrit,local_wt)
