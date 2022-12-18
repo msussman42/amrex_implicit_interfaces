@@ -1988,33 +1988,16 @@ protected:
      // 5. viscosity force (viscosity coefficient >> 1 in the ice)
      // 6. (a) pressure gradient:
      //      t^{n+1}=(n+1)\Delta t  if uniform \Delta t.
-     //      u^{n+1,(1)}=
+     //      u^{n+1}=
      //         u^{viscosity}-dt F^{surface tension}-grad p^{n+1}/rho^{n+1}
-     //      div u^{1} = 0
-     //    (b) correct u^{n+1,(1)} since the ice is supposed to behave
-     //       like a rigid material (except right at the interface, where
-     //       some deformation, due to capillary force might occur - "mushy
-     //       zone dynamics" 
-     //      (i) project the current ice velocity u^{n+1,(1)} to a rigid body
-     //          velocity u^{rigid}.
-     //      (ii) in the ice: u^{n+1,(2)}=w u^{n+1,(1)} + (1-w) u^rigid
-     //           w=1/(1+alpha * \Delta t)
-     //           alpha=infinity LS_ice>2\Delta x
-     //           alpha="damping_coefficient"  0<LS_ice<=2\Delta x
-     //           alpha=0  LS_ice<0
-     //      (iii) div u^{n+1,(2)}<>0 at the LS_ice=0 and LS_ice=2\Delta x
-     //            levelset. 
-     //            (w=1 LS_ice<0  w=1/(1+alpha dt)  0<LS_ice<2\Delta x
-     //             w=0  LS_ice>2\Delta x
-     //      (iv) correction to the velocity so that the div u condition
-     //           is satisfied:
-     //           u^{n+1}=u^{n+1,(2)}-dt * w grad q/rho^{n+1}
-     //           div u^{n+1}=0
-     //           q=Lagrange Multiplier associated with the following
-     //             optimization problem:
-     //             u^{n+1}=argmin_{u, div u=0} ||u-u^{n+1,(2)}||_{wt,2}
-     //             the weight wt=rho^{n+1}/w
-    static Vector<Real> damping_coefficient; // dv/dt = -mu (v-vrigid)
+     //      div u^{n+1} = 0
+     //
+     //      NOTE:
+     //      (i) project the ice velocity u^{viscosity} to a rigid body
+     //          velocity u^{rigid}.  u=u^{rigid} in the ice.
+     //
+
+
     static Vector<Real> static_damping_coefficient; // dv/dt = -mu v
 
     // (1/L)   eps=0.01

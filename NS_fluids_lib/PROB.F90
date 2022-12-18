@@ -11736,7 +11736,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        level,finest_level, &
        cc,cc_ice,cc_group, &
        dd,dd_group, &
-       face_damping_factor, &
        visc_coef, &
        nsolve,dir,veldir,project_option, &
        uncoupled_viscosity, &
@@ -11750,7 +11749,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in) :: dd
       REAL_T :: ddfactor
       REAL_T, INTENT(out) :: dd_group
-      REAL_T, INTENT(in) :: face_damping_factor
       REAL_T, INTENT(in) :: visc_coef
       INTEGER_T, INTENT(in) :: nsolve,dir,veldir,project_option
       INTEGER_T, INTENT(in) :: uncoupled_viscosity
@@ -11764,7 +11762,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           (cc_ice.ge.zero).and. &
           (cc_ice.le.one).and. &
           (dd.ge.zero).and. &
-          (face_damping_factor.ge.zero).and. &
           (visc_coef.ge.zero).and. &
           (nsolve.ge.1).and. &
           (veldir.ge.1).and. &
@@ -11821,11 +11818,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          cc_group=cc
         else if (project_option.eq.SOLVETYPE_INITPROJ) then ! initial projection
          cc_group=cc*cc_ice
-        else if (project_option.eq.SOLVETYPE_PRESCOR) then 
-          ! cc_ice=0 in ice bulk region
-          ! cc_ice=1 in the mushy zone area and outside the ice.
-          ! face_damping_factor<1 in the mushy zone area.
-         cc_group=cc*cc_ice*face_damping_factor
         else
          print *,"project_option invalid"
          stop

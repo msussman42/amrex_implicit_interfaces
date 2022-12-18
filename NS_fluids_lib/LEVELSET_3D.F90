@@ -13410,7 +13410,6 @@ stop
 
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
-      REAL_T damping_factor
 
       INTEGER_T :: homogeneous_rigid_velocity
 
@@ -13669,8 +13668,13 @@ stop
         print *,"project_option_momeqnF(project_option) invalid"
         stop
        endif
-       if ((project_option.eq.SOLVETYPE_PRESGRAVITY).and. &
-           (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC)) then
+       if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
+        if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then
+         ! do nothing
+        else
+         print *,"OP_UNEW_USOL_MAC_TO_MAC expected"
+         stop
+        endif
         homogeneous_rigid_velocity=1
        endif
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! (grad p)_MAC
@@ -14487,8 +14491,7 @@ stop
                   endif
 
                    ! is_ice==1 or
-                   ! is_FSI_rigid==1 or
-                   ! fort_damping_coefficient>0
+                   ! is_FSI_rigid==1 
                   if (is_damped_material(typeface).eq.1) then
                    if ((colorface.ge.1).and.(colorface.le.num_colors)) then
                      ! declared in: GLOBALUTIL.F90
@@ -14514,24 +14517,6 @@ stop
                     uedge=test_current_icemask*uedge+ &
                           (one-test_current_icemask)*uedge_rigid
 
-                    if (fort_damping_coefficient(typeface).eq.zero) then
-                     ! do nothing
-                    else if (fort_damping_coefficient(typeface).gt.zero) then
-                     damping_factor=one/ &
-                         (one+dt*fort_damping_coefficient(typeface))
-                     if ((damping_factor.ge.zero).and. &
-                         (damping_factor.le.one)) then
-                      uedge=damping_factor*uedge+ &
-                            (one-damping_factor)*uedge_rigid
-                     else
-                      print *,"damping_factor invalid"
-                      stop
-                     endif
-                    else
-                     print *,"fort_damping_coefficient(typeface) invalid"
-                     stop
-                    endif
-       
                    else if (colorface.eq.0) then
                     ! do nothing
                    else
@@ -15627,8 +15612,6 @@ stop
       INTEGER_T local_presbc
       REAL_T local_mask
       INTEGER_T face_vcomp
-      REAL_T face_vol(2*num_materials)
-      REAL_T face_damping_factor
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level or finest_level invalid build face wt"
@@ -15646,6 +15629,7 @@ stop
       if (project_option_is_validF(project_option).eq.1) then
 
        if ((local_face_index.eq.FACECOMP_FACEDEN).or. &
+           (local_face_index.eq.FACECOMP_FACEDEN_BASE).or. &
            (local_face_index.eq.FACECOMP_FACEHEAT).or. &
            (local_face_index.eq.FACECOMP_FACEVISC).or. &
            (local_face_index.eq. &
@@ -15827,29 +15811,14 @@ stop
           
              if (dir.eq.0) then
               dd=xface(D_DECL(i,j,k),local_face_index+1)
-              do face_vcomp=1,2*num_materials
-               face_vol(face_vcomp)=xface(D_DECL(i,j,k), &
-                  face_vcomp+FACECOMP_VOFFACE)
-              enddo
              else if (dir.eq.1) then
               dd=yface(D_DECL(i,j,k),local_face_index+1)
-              do face_vcomp=1,2*num_materials
-               face_vol(face_vcomp)=yface(D_DECL(i,j,k), &
-                  face_vcomp+FACECOMP_VOFFACE)
-              enddo
              else if ((dir.eq.2).and.(SDIM.eq.3)) then
               dd=zface(D_DECL(i,j,k),local_face_index+1)
-              do face_vcomp=1,2*num_materials
-               face_vol(face_vcomp)=zface(D_DECL(i,j,k), &
-                  face_vcomp+FACECOMP_VOFFACE)
-              enddo
              else
               print *,"dir invalid buildfacewt"
               stop
              endif
- 
-             face_damping_factor=get_face_damping_factor( &
-               face_vol,project_option,dt)
 
             else
              print *,"project_option invalid"
@@ -15857,13 +15826,11 @@ stop
             endif
 
              ! eval_face_coeff is declared in: PROB.F90
-             ! e.g. 1/rho or if damping is active,
-             ! face_damping_factor/rho
+             ! e.g. 1/rho 
             call eval_face_coeff( &
              level,finest_level, &
              cc,cc_ice,cc_group, &
              dd,dd_group, &
-             face_damping_factor, &
              visc_coef, &
              nsolve,dir,veldir,project_option, &
              uncoupled_viscosity,side,local_presbc,local_wt)

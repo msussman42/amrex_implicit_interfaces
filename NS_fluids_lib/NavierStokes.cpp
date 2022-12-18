@@ -498,7 +498,6 @@ int NavierStokes::transposegradu=0;
 
 Vector<int> NavierStokes::store_elastic_data; // def=0, 0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
-Vector<Real> NavierStokes::damping_coefficient; // def=0
 Vector<Real> NavierStokes::static_damping_coefficient; // def=0
 
 Vector<Real> NavierStokes::Carreau_alpha; // def=1
@@ -1557,8 +1556,6 @@ void fortran_parameters() {
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
- Vector<Real> damping_coefficient_temp(NavierStokes::num_materials);
-
  Vector<Real> Carreau_alpha_temp(NavierStokes::num_materials);
  Vector<Real> Carreau_beta_temp(NavierStokes::num_materials);
  Vector<Real> Carreau_n_temp(NavierStokes::num_materials);
@@ -1588,7 +1585,6 @@ void fortran_parameters() {
   tempcutofftemp[im]=1.0e-8;
   tempcutoffmaxtemp[im]=1.0e+99;
   NavierStokes::FSI_flag[im]=0;
-  damping_coefficient_temp[im]=0.0;
 
   Carreau_alpha_temp[im]=1.0;
   Carreau_beta_temp[im]=0.0;
@@ -1612,7 +1608,6 @@ void fortran_parameters() {
  }
 
  pp.queryAdd("FSI_flag",NavierStokes::FSI_flag,NavierStokes::num_materials);
- pp.queryAdd("damping_coefficient",damping_coefficient_temp,NavierStokes::num_materials);
 
  int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;
  pp.queryAdd("num_local_aux_grids",num_local_aux_grids_temp);
@@ -1817,11 +1812,6 @@ void fortran_parameters() {
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
 
-  if (damping_coefficient_temp[im]>=0.0) {
-   // do nothing
-  } else
-   amrex::Error("damping_coefficient_temp[im] invalid");
-
   if (NavierStokes::material_type[im]==999) {
 
     // non-tessellating cases.
@@ -1994,7 +1984,6 @@ void fortran_parameters() {
   &solidheat_flag,
   &geometry_coord,
   NavierStokes::FSI_flag.dataPtr(),
-  damping_coefficient_temp.dataPtr(),
   &num_local_aux_grids_temp,
   &NavierStokes::ZEYU_DCA_SELECT,
   &denfact,
@@ -3126,13 +3115,11 @@ NavierStokes::read_params ()
      amrex::Error("FSI_material_exists_presvel() invalid");
 
     elastic_viscosity.resize(num_materials);
-    damping_coefficient.resize(num_materials);
     static_damping_coefficient.resize(num_materials);
     store_elastic_data.resize(num_materials);
 
     for (int im=0;im<num_materials;im++) {
      elastic_viscosity[im]=0.0;
-     damping_coefficient[im]=0.0;
      static_damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
     }
@@ -3154,7 +3141,6 @@ NavierStokes::read_params ()
       amrex::Error("fort_built_in_elastic_model invalid");
     } // i=0..num_materials-1
 
-    pp.queryAdd("damping_coefficient",damping_coefficient,num_materials);
     pp.queryAdd("static_damping_coefficient",
 		static_damping_coefficient,num_materials);
     pp.queryAdd("particles_flag",particles_flag);
@@ -4598,7 +4584,6 @@ NavierStokes::read_params ()
      if (ParallelDescriptor::IOProcessor()) {
       std::cout << "for material " << i << '\n';
 
-      std::cout << "damping_coefficient[i]=" << damping_coefficient[i] << '\n';
       std::cout << "static_damping_coefficient[i]=" << 
 	      static_damping_coefficient[i] << '\n';
 
@@ -5801,7 +5786,6 @@ int NavierStokes::project_option_momeqn(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)||  
-     (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)|| 
      (project_option==SOLVETYPE_VISC)) {
@@ -5822,7 +5806,6 @@ int NavierStokes::project_option_singular_possible(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
-     (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 1;
@@ -5843,7 +5826,6 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
-     (project_option==SOLVETYPE_PRESCOR)||  
      (project_option==SOLVETYPE_PRESGRAVITY)||  
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 0;
@@ -5867,8 +5849,7 @@ int NavierStokes::project_option_pressure(int project_option) {
      (project_option==SOLVETYPE_INITPROJ)||
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 1;
- } else if ((project_option==SOLVETYPE_PRESCOR)|| 
-	    (project_option==SOLVETYPE_HEAT)|| 
+ } else if ((project_option==SOLVETYPE_HEAT)|| 
 	    (project_option==SOLVETYPE_VISC)|| 
             ((project_option>=SOLVETYPE_SPEC)&&
              (project_option<SOLVETYPE_SPEC+num_species_var))) {
@@ -5883,7 +5864,6 @@ int NavierStokes::project_option_pressure(int project_option) {
 int NavierStokes::project_option_needs_scaling(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)||   
-     (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)) { 
   return 1;
  } else if ((project_option==SOLVETYPE_INITPROJ)|| 
@@ -5905,7 +5885,6 @@ int NavierStokes::project_option_projection(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_PRESGRAVITY)|| 
-     (project_option==SOLVETYPE_PRESCOR)|| 
      (project_option==SOLVETYPE_INITPROJ)) {  
   return 1;
  } else if ((project_option==SOLVETYPE_PRESEXTRAP)|| 
@@ -5943,8 +5922,7 @@ NavierStokes::get_mm_scomp_solver(
   nlist=1;
   if (num_materials_combine!=1)
    amrex::Error("num_materials_combine invalid");
- } else if ((project_option==SOLVETYPE_PRESCOR)||  
-	    (project_option==SOLVETYPE_PRESEXTRAP)) { 
+ } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   nsolve=1;
   nlist=1;
   if (num_materials_combine!=1)
@@ -5983,15 +5961,6 @@ NavierStokes::get_mm_scomp_solver(
    scomp[0]=STATECOMP_PRES;
    ncomp[0]=nsolveMM; 
    state_index=State_Type;
-  } else
-   amrex::Error("num_materials_combine invalid");
-
- } else if (project_option==SOLVETYPE_PRESCOR) { 
-   // divu pressure is independent var.
-  if (num_materials_combine==1) { 
-   scomp[0]=0;
-   ncomp[0]=nsolveMM; 
-   state_index=DIV_Type;
   } else
    amrex::Error("num_materials_combine invalid");
 
@@ -6893,9 +6862,6 @@ void NavierStokes::print_project_option(int project_option) {
  } else if (project_option==SOLVETYPE_VISC) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_VISC) \n";
- } else if (project_option==SOLVETYPE_PRESCOR) {
-  std::cout << "project_option= " << project_option << 
-    " (SOLVETYPE_PRESCOR) \n";
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_PRESEXTRAP) \n";
@@ -24496,7 +24462,7 @@ void NavierStokes::cpp_overridepbc(int homflag_in,int project_option_in) {
 MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 		int scomp,int ncomp,Real time) {
 
- int project_option=SOLVETYPE_PRESCOR; 
+ int project_option=SOLVETYPE_PRES; 
  int save_bc_status=override_bc_to_homogeneous;
  cpp_overridepbc(1,project_option);
 

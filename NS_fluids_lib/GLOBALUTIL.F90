@@ -14149,48 +14149,6 @@ end subroutine print_visual_descriptor
       end function swap1_0
 
 
-      function get_face_damping_factor( &
-         face_vol,project_option,dt)
-      use probcommon_module
-      IMPLICIT NONE
-
-      REAL_T :: get_face_damping_factor
-
-      INTEGER_T, INTENT(in) :: project_option
-      REAL_T, INTENT(in) :: face_vol(2*num_materials)
-      REAL_T, INTENT(in) :: dt
-      INTEGER_T :: im
-      INTEGER_T :: iside
-      INTEGER_T :: volcomp
-      REAL_T :: max_damping_coeff
-
-      max_damping_coeff=zero
-      do im=1,num_materials
-       do iside=1,2
-        volcomp=2*(im-1)+iside
-        if (face_vol(volcomp).eq.zero) then
-         ! do nothing
-        else if (face_vol(volcomp).gt.zero) then
-         max_damping_coeff= &
-          max(max_damping_coeff,fort_damping_coefficient(im))
-        else
-         print *,"face_vol invalid"
-         stop
-        endif
-       enddo !iside=1,2
-      enddo !im=1,num_materials
-
-      get_face_damping_factor=1.0
-      if (max_damping_coeff.ge.zero) then
-       get_face_damping_factor=one/(one+max_damping_coeff*dt)
-      else
-       print *,"max_damping_coeff invalid"
-       stop
-      endif
-
-      return
-      end function get_face_damping_factor
-
       function is_damped_material(im)
       use probcommon_module
 
@@ -14206,15 +14164,13 @@ end subroutine print_visual_descriptor
 
       is_damped_material=0
       if ((is_ice(im).eq.1).or. &
-          (is_FSI_rigid(im).eq.1).or. &
-          (fort_damping_coefficient(im).gt.zero)) then
+          (is_FSI_rigid(im).eq.1)) then
        is_damped_material=1
       else if ((is_ice(im).eq.0).and. &
-               (is_FSI_rigid(im).eq.0).and. &
-               (fort_damping_coefficient(im).eq.zero)) then
+               (is_FSI_rigid(im).eq.0)) then
        is_damped_material=0
       else
-       print *,"is_ice or is_FSI_rigid or fort_damping_coefficient bad"
+       print *,"is_ice or is_FSI_rigid bad"
        stop
       endif
 
@@ -26167,7 +26123,6 @@ INTEGER_T, INTENT(in) :: project_option
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-     (project_option.eq.SOLVETYPE_PRESCOR).or.& 
      (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
      (project_option.eq.SOLVETYPE_VISC)) then      ! viscosity
   project_option_momeqnF=1
@@ -26193,7 +26148,6 @@ INTEGER_T, INTENT(in) :: project_option
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_singular_possibleF=1
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
@@ -26218,7 +26172,6 @@ INTEGER_T, INTENT(in) :: project_option
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_olddata_neededF=0
  else if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
@@ -26245,8 +26198,7 @@ INTEGER_T, INTENT(in) :: project_option
      (project_option.eq.SOLVETYPE_INITPROJ).or. &
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then  !pressure extrap
   project_option_pressureF=1
- else if ((project_option.eq.SOLVETYPE_PRESCOR).or. & 
-          (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
+ else if ((project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
           (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
           ((project_option.ge.SOLVETYPE_SPEC).and. &
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then!species
@@ -26267,7 +26219,6 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extrapolation
   project_option_needs_scalingF=1
  else if ((project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
@@ -26293,7 +26244,6 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
-     (project_option.eq.SOLVETYPE_PRESCOR).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial_project
   project_option_projectionF=1
