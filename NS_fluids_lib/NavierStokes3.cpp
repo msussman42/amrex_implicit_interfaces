@@ -8801,6 +8801,8 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
  } else if (project_option==SOLVETYPE_INITPROJ) { 
   int scomp=0;
    // MDOT_MF already premultiplied by the cell volume
+   // MDOT_MF might not be zero at t=0 if sources/sinks of mass.
+   // (but for now, MDOT_MF should be zero)
   Copy_localMF(DIFFUSIONRHS_MF,MDOT_MF,0,scomp,nsolve,0);
   zero_independent_variable(project_option,nsolve);
  } else if (project_option==SOLVETYPE_HEAT) { 
@@ -9138,6 +9140,7 @@ void NavierStokes::multiphase_project(int project_option) {
  const Real* coarse_dx=geom.CellSize();
  
  if (project_option==SOLVETYPE_PRESGRAVITY) {
+
    //ngrow,ncomp,grid_type
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
   Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
@@ -9193,7 +9196,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int nsolve=1;
 
-  //SOLVETYPE_INITPROJ, SOLVETYPE_PRES, 
+  //SOLVETYPE_INITPROJ, 
+  //SOLVETYPE_PRES, 
   //SOLVETYPE_PRESGRAVITY
  if (project_option_projection(project_option)==1) {
 
@@ -9204,6 +9208,7 @@ void NavierStokes::multiphase_project(int project_option) {
    // do nothing
   } else
    amrex::Error("project_option invalid 45"); 
+
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   // do nothing
  } else if (project_option==SOLVETYPE_HEAT) { 
@@ -9541,8 +9546,7 @@ void NavierStokes::multiphase_project(int project_option) {
    amrex::Error("nsolve invalid");
 
   if ((project_option==SOLVETYPE_PRES)||
-      (project_option==SOLVETYPE_PRESGRAVITY)||
-      (project_option==SOLVETYPE_PRESCOR)) { 
+      (project_option==SOLVETYPE_PRESGRAVITY)) {
    // unew^{f} = unew^{f} 
    operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
   } else if (project_option==SOLVETYPE_INITPROJ) {
@@ -9569,10 +9573,6 @@ void NavierStokes::multiphase_project(int project_option) {
     operation_flag,
     project_option,
     idx_velcell,beta,blobdata); 
-
-  if (project_option==SOLVETYPE_PRESCOR) {
-   check_value_max(43,DIFFUSIONRHS_MF,0,1,0,0.0);
-  }
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);

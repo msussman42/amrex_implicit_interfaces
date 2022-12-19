@@ -6078,8 +6078,9 @@ NavierStokes::zero_independent_variable(int project_option,int nsolve) {
   amrex::Error("nsolve invalid 2732");
 
  MultiFab& S_new = get_new_data(state_index,slab_step+1);
- for (int icomp=0;icomp<scomp.size();icomp++) 
+ for (int icomp=0;icomp<scomp.size();icomp++) {
   S_new.setVal(0.0,scomp[icomp],ncomp[icomp],0);
+ }
 
 } // zero_independent_variable
 
@@ -22263,7 +22264,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  ns_level.allocate_mdot();
+  ns_level.allocate_mdot(); //MDOT_MF=0.0
 
     // mask=tag if not covered by level+1 or outside the domain.
   Real tag=1.0;
@@ -23195,7 +23196,7 @@ NavierStokes::post_init_state () {
    // inside of post_init_state
 
    // metrics_data
-   // allocate_mdot
+   // allocate_mdot (MDOT_MF=0.0)
    // MASKCOEF
    // init_FSI_GHOST_MAC_MF
    // VOF_Recon_ALL (update_flag==1)
@@ -24453,6 +24454,7 @@ void NavierStokes::cpp_overridepbc(int homflag_in,int project_option_in) {
 
  if ((homflag_in==0)||(homflag_in==1)) {
   override_bc_to_homogeneous=homflag_in;
+   //fort_overridepbc is declared in: PROB.F90
   fort_overridepbc(&homflag_in,&project_option_in);
  } else
   amrex::Error("homflag_in invalid");
@@ -24464,6 +24466,8 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 
  int project_option=SOLVETYPE_PRES; 
  int save_bc_status=override_bc_to_homogeneous;
+  //cpp_overridepbc is declared in: NavierStokes.cpp
+  //homflag_in=1
  cpp_overridepbc(1,project_option);
 
  MultiFab& S_new=get_new_data(DIV_Type,slab_step+1);
