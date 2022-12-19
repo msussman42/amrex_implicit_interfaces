@@ -13503,19 +13503,22 @@ stop
        stop
       endif
 
-      if ((blob_array_size.ne.1).and. &
-          (blob_array_size.ne.num_colors*num_elements_blobclass)) then
-       print *,"blob_array_size invalid"
+      if (blob_array_size.eq.1) then
+       ! do nothing
+      else if (blob_array_size.eq.num_colors*num_elements_blobclass) then
+       ! do nothing
+      else
+       print *,"blob_array_size invalid fort_cell_to_mac"
        stop
       endif
 
       if (num_colors.ge.0) then
        ! do nothing
       else
-       print *,"num_colors invalid"
+       print *,"num_colors invalid fort_cell_to_mac"
        stop
       endif
-
+FIX ME HERE
       call fort_check_operation_flag_MAC(operation_flag)
 
       if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
