@@ -14483,12 +14483,12 @@ stop
                if ((typeleft.ge.1).and.(typeleft.le.num_materials).and. &
                    (typeright.ge.1).and.(typeright.le.num_materials)) then
 
-                 !is_damped_material=1 if "is_ice" or "is_FSI_rigid"
-                if ((is_damped_material(typeleft).eq.1).or. &
-                    (is_damped_material(typeright).eq.1)) then
+                 !is_ice_or_FSI_rigid_material=1 if "is_ice" or "is_FSI_rigid"
+                if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).or. &
+                    (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
 
-                 if ((is_damped_material(typeleft).eq.1).and. &
-                     (is_damped_material(typeright).eq.1)) then
+                 if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).and. &
+                     (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
                   if (LSleft(typeleft).ge.LSright(typeright)) then  
                    typeface=typeleft
                    colorface=colorleft
@@ -14499,10 +14499,10 @@ stop
                    print *,"LSleft or LSright bust"
                    stop
                   endif
-                 else if (is_damped_material(typeleft).eq.1) then
+                 else if (is_ice_or_FSI_rigid_material(typeleft).eq.1) then
                   typeface=typeleft
                   colorface=colorleft
-                 else if (is_damped_material(typeright).eq.1) then
+                 else if (is_ice_or_FSI_rigid_material(typeright).eq.1) then
                   typeface=typeright
                   colorface=colorright
                  else
@@ -14512,7 +14512,7 @@ stop
 
                   ! is_ice==1 or
                   ! is_FSI_rigid==1 
-                 if (is_damped_material(typeface).eq.1) then
+                 if (is_ice_or_FSI_rigid_material(typeface).eq.1) then
                   if ((colorface.ge.1).and.(colorface.le.num_colors)) then
                     ! declared in: GLOBALUTIL.F90
                    call get_rigid_velocity( &
