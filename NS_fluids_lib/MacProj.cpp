@@ -635,7 +635,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // if project_option==SOLVETYPE_PRES,
    //    project_option==SOLVETYPE_INITPROJ,
-   //    project_option==SOLVETYPE_PRESCOR,
+   //    project_option==SOLVETYPE_PRESGRAVITY,
    //    project_option==SOLVETYPE_PRESEXTRAP,  
   if (project_option_singular_possible(project_option)==1) {
 
@@ -2186,11 +2186,9 @@ void NavierStokes::update_SEM_forces(int project_option,
 } // subroutine update_SEM_forces
 
 // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
-//                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol=
+//                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol
 // if incompressible: DIV_new=MDOT_MF dt/vol
-// called from NavierStokes::multiphase_project if 
-//   project_option==SOLVETYPE_PRESCOR
-// and called from NavierStokes::do_the_advance if advance_status==1.
+// called from NavierStokes::do_the_advance if advance_status==1.
 void NavierStokes::ADVECT_DIV_ALL() {
 
  if (level!=0)
@@ -2209,7 +2207,7 @@ void NavierStokes::ADVECT_DIV_ALL() {
 
 
 // if compressible: DIV_new=-dt(pnew-padv)/(rho c^2 dt^2)+MDOT_MF dt/vol=
-//                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol=
+//                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol
 //
 // if incompressible: DIV_new=MDOT_MF dt/vol
 void NavierStokes::ADVECT_DIV() {

@@ -1762,6 +1762,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   amrex::Error("SDC_outer_sweeps invalid init_divup_cell_vel_cell");
 
  if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_PRESGRAVITY)||
      (project_option==SOLVETYPE_INITPROJ)) {  
   // do nothing
  } else
@@ -1842,6 +1843,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   amrex::Error("invalid ncomp in vel update routine");
 
  if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_PRESGRAVITY)||
      (project_option==SOLVETYPE_INITPROJ)) {  
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
