@@ -7875,7 +7875,8 @@ stop
       REAL_T curvR(5+SDIM)
       REAL_T mu
       INTEGER_T local_maskL,local_maskR,local_masknbr
-      INTEGER_T covered_face,coarse_fine_face
+      INTEGER_T covered_face
+      INTEGER_T coarse_fine_face
       INTEGER_T FD_curv_interp
       REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T micro_table(num_materials,num_materials)
@@ -11278,7 +11279,6 @@ stop
        ! 1=div(up) ok
       INTEGER_T use_face_pres_cen
       INTEGER_T use_face_pres(2)  ! faces that are on either side of a cell.
-      REAL_T coarse_fine_face(2)
       REAL_T ASIDE(2,ncphys)
       REAL_T mass_side(2)
       REAL_T masscell
@@ -12503,7 +12503,6 @@ stop
            uface(side)=xvel(D_DECL(iface,jface,kface),1)
            pres_face(side)=xp(D_DECL(iface,jface,kface),3)
            use_face_pres(side)=NINT(xp(D_DECL(iface,jface,kface),1))
-           coarse_fine_face(side)=xp(D_DECL(iface,jface,kface),2)
           else if (dir.eq.1) then
            aface(side)=ay(D_DECL(iface,jface,kface))
            do im=1,ncphys
@@ -12512,7 +12511,6 @@ stop
            uface(side)=yvel(D_DECL(iface,jface,kface),1)
            pres_face(side)=yp(D_DECL(iface,jface,kface),3)
            use_face_pres(side)=NINT(yp(D_DECL(iface,jface,kface),1))
-           coarse_fine_face(side)=yp(D_DECL(iface,jface,kface),2)
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            aface(side)=az(D_DECL(iface,jface,kface))
            do im=1,ncphys
@@ -12521,7 +12519,6 @@ stop
            uface(side)=zvel(D_DECL(iface,jface,kface),1)
            pres_face(side)=zp(D_DECL(iface,jface,kface),3)
            use_face_pres(side)=NINT(zp(D_DECL(iface,jface,kface),1))
-           coarse_fine_face(side)=zp(D_DECL(iface,jface,kface),2)
           else
            print *,"dir invalid mac to cell 3"
            stop
@@ -14663,6 +14660,14 @@ stop
           ! contents.
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
 
+          if ((project_option.eq.SOLVETYPE_PRES).or. &
+              (project_option.eq.SOLVETYPE_INITPROJ)) then
+           ! do nothing
+          else
+           print *,"expecting project_option=SOLVETYPE_PRES or INITPROJ"
+           stop
+          endif
+
           pplus=pres(D_DECL(i,j,k),1)
           pminus=pres(D_DECL(im1,jm1,km1),1)
 
@@ -14816,34 +14821,15 @@ stop
            stop
           endif
 
-          if ((project_option.eq.SOLVETYPE_INITPROJ).or. &
-              (COARSE_FINE_VELAVG.eq.1)) then
-            ! at least 1 side is covered
-           if ((mask_covered(1).eq.0).or. &
-               (mask_covered(2).eq.0)) then
-            ! do nothing
-           else if ((mask_covered(1).eq.1).and. &
-                    (mask_covered(2).eq.1)) then
-            ! do nothing
-           else
-            print *,"mask_covered invalid"
-            stop
-           endif
-          else if ((project_option.eq.SOLVETYPE_PRES).and. &
-                   (COARSE_FINE_VELAVG.eq.0)) then
-           ! both sides are covered
-           if ((mask_covered(1).eq.0).and. &
-               (mask_covered(2).eq.0)) then
-            use_face_pres=0  ! do not use div(up)
-           else if ((mask_covered(1).eq.1).or. &
-                    (mask_covered(2).eq.1)) then
-            ! do nothing
-           else
-            print *,"mask_covered invalid"
-            stop
-           endif
+           ! at least 1 side is covered
+          if ((mask_covered(1).eq.0).or. &
+              (mask_covered(2).eq.0)) then
+           ! do nothing
+          else if ((mask_covered(1).eq.1).and. &
+                   (mask_covered(2).eq.1)) then
+           ! do nothing
           else
-           print *,"project_option invalid fort_cell_to_mac 4"
+           print *,"mask_covered invalid"
            stop
           endif
 
