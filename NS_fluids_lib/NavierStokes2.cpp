@@ -2528,6 +2528,7 @@ void NavierStokes::increment_face_velocity(
 
    primary_vel_data=idx_velcell;  // " ucell^{n+1}-ucell^{n} "
    secondary_vel_data=CURRENT_CELL_VEL_MF;  //ucell^{n+1}
+
   } else
    amrex::Error("idx_velcell invalid");
 

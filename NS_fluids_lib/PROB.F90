@@ -23139,6 +23139,7 @@ end subroutine initialize2d
 
        INTEGER_T, INTENT(in) :: homflag,project_option
 
+        ! project_option_singular_possibleF is declared in: GLOBALUTIL.F90
        if (project_option_singular_possibleF(project_option).eq.1) then
         if (homflag.eq.0) then
          pres_homflag=0
