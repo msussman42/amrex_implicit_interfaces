@@ -10044,9 +10044,6 @@ stop
                 stop
                endif
 
-              else if (project_option.eq.SOLVETYPE_PRESCOR) then 
-               print *,"fort_init_physics_vars should not be called here"
-               stop
               else
                print *,"project_option invalid"
                stop
@@ -12369,8 +12366,8 @@ stop
 
         enddo  ! dir=0..sdim-1
 
-        ! use_face_pres.eq.1   ! div(up) ok
-        ! in: fort_mac_to_cell
+        ! if use_face_pres.eq.1 then div(up) might be ok
+        ! this routine: fort_mac_to_cell
        else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then ! div(up)
 
          ! LS>0 if clamped
@@ -12568,7 +12565,7 @@ stop
           endif
          endif
 
-           ! use_face_pres.eq.1   ! div(up) ok
+           ! use_face_pres.eq.1 => div(up) ok
          if ((use_face_pres(1).eq.1).and. &
              (use_face_pres(2).eq.1)) then
           ! do nothing
@@ -12740,8 +12737,6 @@ stop
 
         else if (project_option.eq.SOLVETYPE_INITPROJ) then
          ! do nothing if initial project
-        else if (project_option.eq.SOLVETYPE_PRESCOR) then 
-         ! do nothing if rigid body project
         else
          print *,"project_option invalid edge pressure 5"
          stop
@@ -13311,8 +13306,11 @@ stop
       REAL_T pgrad_tension
       REAL_T gradh_tension
       REAL_T dplus,dminus
-       !OP_PRES_CELL_TO_MAC (1)use_face_pres,(2) grid flag, 2+1
-      REAL_T plocal(2+nsolve)
+       !OP_PRES_CELL_TO_MAC 
+       !(1)use_face_pres
+       !(2)coarse fine flag
+       !(3)face pressure
+      REAL_T plocal(3)
       INTEGER_T im1,jm1,km1
       INTEGER_T im,im_opp,im_heat,tcomp,iten
       INTEGER_T im_left,im_right
@@ -13504,9 +13502,19 @@ stop
       endif
 
       if (blob_array_size.eq.1) then
-       ! do nothing
+       if (num_colors.eq.0) then
+        ! do nothing
+       else
+        print *,"num_colors inconsistent; fort_cell_to_mac"
+        stop
+       endif
       else if (blob_array_size.eq.num_colors*num_elements_blobclass) then
-       ! do nothing
+       if (num_colors.ge.1) then
+        ! do nothing
+       else
+        print *,"num_colors inconsistent; fort_cell_to_mac"
+        stop
+       endif
       else
        print *,"blob_array_size invalid fort_cell_to_mac"
        stop
@@ -13518,7 +13526,7 @@ stop
        print *,"num_colors invalid fort_cell_to_mac"
        stop
       endif
-FIX ME HERE
+
       call fort_check_operation_flag_MAC(operation_flag)
 
       if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
@@ -14305,6 +14313,8 @@ FIX ME HERE
             if ((test_current_icefacecut.ge.zero).and. &
                 (test_current_icefacecut.le.one)) then
 
+              ! test_current_icemask=zero for both ice materials and
+              ! "is_FSI_rigid" materials.
              test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
 
              if ((test_current_icemask.eq.zero).or. &
@@ -14363,6 +14373,8 @@ FIX ME HERE
                   ! local_vel_MAC=xvel
                   ! local_vel_old_MAC=xgp (a copy of xvel)
                  velmaterialMAC=local_vel_old_MAC
+                  !secondary_velfab 
+                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
 
                  if (local_elastic.eq.0) then
@@ -14446,12 +14458,19 @@ FIX ME HERE
               endif
 
               if (num_colors.eq.0) then
-               if (project_option.eq.SOLVETYPE_PRESCOR) then 
-                print *,"project_option invalid"
+               if (blob_array_size.eq.1) then
+                ! do nothing
+               else
+                print *,"num_colors inconsistent; fort_cell_to_mac"
                 stop
                endif
               else if (num_colors.gt.0) then
-               ! do nothing
+               if (blob_array_size.eq.num_colors*num_elements_blobclass) then
+                ! do nothing 
+               else
+                print *,"num_colors inconsistent; fort_cell_to_mac"
+                stop
+               endif
               else
                print *,"num_colors invalid"
                stop
@@ -14459,92 +14478,93 @@ FIX ME HERE
 
               if (num_colors.gt.0) then 
 
-                ! type init in FORT_GETTYPEFAB
-                typeleft=NINT(typefab(D_DECL(im1,jm1,km1)))
-                typeright=NINT(typefab(D_DECL(i,j,k)))
-                colorleft=NINT(colorfab(D_DECL(im1,jm1,km1)))
-                colorright=NINT(colorfab(D_DECL(i,j,k)))
-                if ((typeleft.ge.1).and.(typeleft.le.num_materials).and. &
-                    (typeright.ge.1).and.(typeright.le.num_materials)) then
+               ! type init in FORT_GETTYPEFAB
+               typeleft=NINT(typefab(D_DECL(im1,jm1,km1)))
+               typeright=NINT(typefab(D_DECL(i,j,k)))
+               colorleft=NINT(colorfab(D_DECL(im1,jm1,km1)))
+               colorright=NINT(colorfab(D_DECL(i,j,k)))
+               if ((typeleft.ge.1).and.(typeleft.le.num_materials).and. &
+                   (typeright.ge.1).and.(typeright.le.num_materials)) then
 
-                 if ((is_damped_material(typeleft).eq.1).or. &
+                 !is_damped_material=1 if "is_ice" or "is_FSI_rigid"
+                if ((is_damped_material(typeleft).eq.1).or. &
+                    (is_damped_material(typeright).eq.1)) then
+
+                 if ((is_damped_material(typeleft).eq.1).and. &
                      (is_damped_material(typeright).eq.1)) then
-
-                  if ((is_damped_material(typeleft).eq.1).and. &
-                      (is_damped_material(typeright).eq.1)) then
-                   if (LSleft(typeleft).ge.LSright(typeright)) then  
-                    typeface=typeleft
-                    colorface=colorleft
-                   else if (LSleft(typeleft).lt.LSright(typeright)) then
-                    typeface=typeright
-                    colorface=colorright
-                   else
-                    print *,"LSleft or LSright bust"
-                    stop
-                   endif
-                  else if (is_damped_material(typeleft).eq.1) then
+                  if (LSleft(typeleft).ge.LSright(typeright)) then  
                    typeface=typeleft
                    colorface=colorleft
-                  else if (is_damped_material(typeright).eq.1) then
+                  else if (LSleft(typeleft).lt.LSright(typeright)) then
                    typeface=typeright
                    colorface=colorright
                   else
-                   print *,"typeleft or typeright bust"
+                   print *,"LSleft or LSright bust"
                    stop
                   endif
-
-                   ! is_ice==1 or
-                   ! is_FSI_rigid==1 
-                  if (is_damped_material(typeface).eq.1) then
-                   if ((colorface.ge.1).and.(colorface.le.num_colors)) then
-                     ! declared in: GLOBALUTIL.F90
-                    call get_rigid_velocity( &
-                     FSI_prescribed_flag, &
-                     colorface,dir+1,uedge_rigid, &
-                     xstenMAC_center, &
-                     blob_array, &
-                     blob_array_size,num_colors) 
-
-                    call SUB_check_vel_rigid(xstenMAC_center, &
-                      time,uedge_rigid,dir+1)
-
-                    if (homogeneous_rigid_velocity.eq.0) then
-                     ! do nothing
-                    else if (homogeneous_rigid_velocity.eq.1) then
-                     uedge_rigid=zero
-                    else
-                     print *,"homogeneous_rigid_velocity invalid"
-                     stop
-                    endif
-
-                    uedge=test_current_icemask*uedge+ &
-                          (one-test_current_icemask)*uedge_rigid
-
-                   else if (colorface.eq.0) then
-                    ! do nothing
-                   else
-                    print *,"colorface invalid"
-                    stop
-                   endif 
-                  else
-                   print *,"is_ice or is_FSI_rigid bust"
-                   stop
-                  endif
-
-                 else if ((is_ice(typeleft).eq.0).and. &
-                          (is_ice(typeright).eq.0).and. &
-                          (is_FSI_rigid(typeleft).eq.0).and. &
-                          (is_FSI_rigid(typeright).eq.0)) then
-                  ! do nothing
+                 else if (is_damped_material(typeleft).eq.1) then
+                  typeface=typeleft
+                  colorface=colorleft
+                 else if (is_damped_material(typeright).eq.1) then
+                  typeface=typeright
+                  colorface=colorright
                  else
-                  print *,"is_ice or is_FSI_rigid invalid"
+                  print *,"typeleft or typeright bust"
                   stop
                  endif
 
+                  ! is_ice==1 or
+                  ! is_FSI_rigid==1 
+                 if (is_damped_material(typeface).eq.1) then
+                  if ((colorface.ge.1).and.(colorface.le.num_colors)) then
+                    ! declared in: GLOBALUTIL.F90
+                   call get_rigid_velocity( &
+                    FSI_prescribed_flag, &
+                    colorface,dir+1,uedge_rigid, &
+                    xstenMAC_center, &
+                    blob_array, &
+                    blob_array_size,num_colors) 
+
+                   call SUB_check_vel_rigid(xstenMAC_center, &
+                     time,uedge_rigid,dir+1)
+
+                   if (homogeneous_rigid_velocity.eq.0) then
+                    ! do nothing
+                   else if (homogeneous_rigid_velocity.eq.1) then
+                    uedge_rigid=zero
+                   else
+                    print *,"homogeneous_rigid_velocity invalid"
+                    stop
+                   endif
+
+                   uedge=test_current_icemask*uedge+ &
+                         (one-test_current_icemask)*uedge_rigid
+
+                  else if (colorface.eq.0) then
+                   ! do nothing
+                  else
+                   print *,"colorface invalid"
+                   stop
+                  endif 
+                 else
+                  print *,"is_ice or is_FSI_rigid bust"
+                  stop
+                 endif
+
+                else if ((is_ice(typeleft).eq.0).and. &
+                         (is_ice(typeright).eq.0).and. &
+                         (is_FSI_rigid(typeleft).eq.0).and. &
+                         (is_FSI_rigid(typeright).eq.0)) then
+                 ! do nothing
                 else
-                 print *,"typeleft or typeright invalid"
+                 print *,"is_ice or is_FSI_rigid invalid"
                  stop
                 endif
+
+               else
+                print *,"typeleft or typeright invalid"
+                stop
+               endif
 
               else if (num_colors.eq.0) then
                ! do nothing
@@ -14765,6 +14785,8 @@ FIX ME HERE
            stop
           endif
 
+           ! local_face(FACECOMP_ICEMASK+1)=zero for both 
+           ! ice materials and "is_FSI_rigid" materials.
           if (local_face(FACECOMP_ICEMASK+1).eq.zero) then
            use_face_pres=0 ! do not use div(up)
           else if (local_face(FACECOMP_ICEMASK+1).eq.one) then
@@ -14807,8 +14829,7 @@ FIX ME HERE
             print *,"mask_covered invalid"
             stop
            endif
-          else if (((project_option.eq.SOLVETYPE_PRES).or. &
-                    (project_option.eq.SOLVETYPE_PRESCOR)).and. &
+          else if ((project_option.eq.SOLVETYPE_PRES).and. &
                    (COARSE_FINE_VELAVG.eq.0)) then
            ! both sides are covered
            if ((mask_covered(1).eq.0).and. &
@@ -14858,8 +14879,10 @@ FIX ME HERE
            denface=denface+den_local(side)
           enddo  ! side=1,2
 
-           ! 1=use_face_pres  2=coarse fine flag 2=face pressure
-          do im=1,2+nsolve
+           ! 1=use_face_pres  
+           ! 2=coarse fine flag 
+           ! 3=face pressure
+          do im=1,3
            plocal(im)=zero
           enddo
 
@@ -14924,22 +14947,24 @@ FIX ME HERE
           endif 
 
           if (at_reflect_wall.eq.0) then
-           if (denface.le.zero) then
+           if (denface.gt.zero) then
+            ! do nothing
+           else
             print *,"denface must be positive"
             stop
            endif
             ! face pressure
-           plocal(2+1)= &
+           plocal(3)= &
             (den_local(1)*pplus+den_local(2)*pminus)/denface
           else if (at_reflect_wall.eq.1) then ! left wall
 
             ! face pressure
-           plocal(2+1)=pplus
+           plocal(3)=pplus
 
           else if (at_reflect_wall.eq.2) then ! right wall
 
             ! face pressure
-           plocal(2+1)=pminus
+           plocal(3)=pminus
 
           else
            print *,"at reflect wall invalid"
@@ -15265,7 +15290,7 @@ FIX ME HERE
            ! plocal(1)=use_face_pres flag
            ! plocal(2)=at_coarse_fine_wallF+at_coarse_fine_wallC*10
            ! plocal(3)=face pressure
-          do im=1,2+nsolve
+          do im=1,3
            xp(D_DECL(i,j,k),im)=plocal(im)
           enddo
           xvel(D_DECL(i,j,k),1)=local_vel_MAC
