@@ -4786,7 +4786,9 @@ stop
        stop
       endif
 
-      if (time.lt.zero) then
+      if (time.ge.zero) then
+       ! do nothing
+      else
        print *,"time invalid"
        stop
       endif
@@ -4879,7 +4881,9 @@ stop
          complement_flag=0
 
           ! get_icemask defined in PROB.F90
-          ! in: fort_init_icemask
+          ! get_icemask is "triggered" for both ice materials and
+          !  "is_FSI_rigid" materials.
+          ! this routine: fort_init_icemask
          call get_icemask( &
           xmac, &
           time, &
@@ -4895,7 +4899,9 @@ stop
           complement_flag)
 
           ! get_icemask defined in PROB.F90
-          ! in: fort_init_icemask
+          ! get_icemask is "triggered" for both ice materials and
+          !  "is_FSI_rigid" materials.
+          ! this routine: fort_init_icemask
          call get_icemask( &
           xmac, &
           time, &
