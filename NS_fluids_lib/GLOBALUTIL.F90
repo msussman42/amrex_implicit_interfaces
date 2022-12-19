@@ -14149,12 +14149,12 @@ end subroutine print_visual_descriptor
       end function swap1_0
 
 
-      function is_damped_material(im)
+      function is_ice_or_FSI_rigid_material(im)
       use probcommon_module
 
       IMPLICIT NONE
 
-      INTEGER_T :: is_damped_material
+      INTEGER_T :: is_ice_or_FSI_rigid_material
       INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
@@ -14162,20 +14162,20 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      is_damped_material=0
+      is_ice_or_FSI_rigid_material=0
       if ((is_ice(im).eq.1).or. &
           (is_FSI_rigid(im).eq.1)) then
-       is_damped_material=1
+       is_ice_or_FSI_rigid_material=1
       else if ((is_ice(im).eq.0).and. &
                (is_FSI_rigid(im).eq.0)) then
-       is_damped_material=0
+       is_ice_or_FSI_rigid_material=0
       else
        print *,"is_ice or is_FSI_rigid bad"
        stop
       endif
 
       return
-      end function is_damped_material
+      end function is_ice_or_FSI_rigid_material
 
       function is_lag_part(im)
       use probcommon_module
