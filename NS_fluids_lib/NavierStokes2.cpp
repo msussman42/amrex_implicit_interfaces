@@ -1778,7 +1778,7 @@ void NavierStokes::init_divup_cell_vel_cell(
  int nsolve=1;
 
  if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
+  amrex::Error("num_state_base!=2;NavierStokes::init_divup_cell_vel_cell");
 
  int finest_level=parent->finestLevel();
 
@@ -1792,7 +1792,7 @@ void NavierStokes::init_divup_cell_vel_cell(
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>num_materials))
-  amrex::Error("nparts invalid");
+  amrex::Error("nparts invalid; NavierStokes::init_divup_cell_vel_cell");
  Vector<int> im_solid_map_null;
  im_solid_map_null.resize(1);
 
@@ -1804,13 +1804,14 @@ void NavierStokes::init_divup_cell_vel_cell(
  } else if ((nparts>=1)&&(nparts<=num_materials)) {
   im_solid_map_ptr=im_solid_map.dataPtr();
  } else
-  amrex::Error("nparts invalid");
+  amrex::Error("nparts invalid; NavierStokes::init_divup_cell_vel_cell");
 
  resize_levelset(2,LEVELPC_MF);
 
  debug_ngrow(LEVELPC_MF,2,103);
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
-  amrex::Error("(localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))");
+  amrex::Error(
+    "localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
@@ -1822,7 +1823,7 @@ void NavierStokes::init_divup_cell_vel_cell(
 
  MultiFab* presmf=localMF[idx_pres];
  if (presmf->nComp()!=nsolve)
-  amrex::Error("presmf->nComp() invalid");
+  amrex::Error("presmf->nComp()!=nsolve");
 
  Vector<int> scomp;
  Vector<int> ncomp;
@@ -1836,11 +1837,11 @@ void NavierStokes::init_divup_cell_vel_cell(
   scomp,ncomp,ncomp_check);
 
  if (ncomp_check!=nsolve)
-  amrex::Error("invalid ncomp");
+  amrex::Error("ncomp_check!=nsolve");
 
  int nstate=S_new.nComp();
  if (nstate!=STATE_NCOMP)
-  amrex::Error("invalid ncomp in vel update routine");
+  amrex::Error("nstate!=STATE_NCOMP");
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_PRESGRAVITY)||
@@ -1849,13 +1850,17 @@ void NavierStokes::init_divup_cell_vel_cell(
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    debug_ngrow(FACE_VAR_MF+dir,0,101);
    debug_ngrow(PEDGE_MF+dir,0,101);
-    // 0=use_face_pres  1=grid flag  2+1 (3rd component) pface
-   if (localMF[PEDGE_MF+dir]->nComp()!=2+nsolve)
-    amrex::Error("pedge_mf invalid ncomp");
+    // 0=use_face_pres  1= (2nd component) pface
+   if (localMF[PEDGE_MF+dir]->nComp()!=2)
+    amrex::Error("localMF[PEDGE_MF+dir]->nComp()!=2");
    if (localMF[AREA_MF+dir]->boxArray()!=
        localMF[PEDGE_MF+dir]->boxArray())
     amrex::Error("PEDGE boxarray does not match");
-   setVal_localMF(PEDGE_MF+dir,1.0e+40,2,1,0);
+    // 0=use_face_pres
+    // 1=face pressure
+    //scomp,ncomp,ngrow
+    //pface=1.0e+40 initially.
+   setVal_localMF(PEDGE_MF+dir,1.0e+40,1,1,0);
   } // dir=0..sdim-1
 
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
@@ -1871,7 +1876,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   MultiFab* divup;
   if ((energyflag==SUB_OP_THERMAL_DIVUP_NULL)||//do not update the temperature
       (energyflag==SUB_OP_THERMAL_DIVUP_OK)) {//update the temperature(comp)
-   ustar=getState(1,0,AMREX_SPACEDIM,cur_time_slab);
+   ustar=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
    divup=new MultiFab(grids,dmap,nsolve,0,
     MFInfo().SetTag("divup"),FArrayBoxFactory());
   } else
@@ -1945,7 +1950,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     int local_energyflag=SUB_OP_DEFAULT;
     int local_enable_spectral=0;
     int simple_AMR_BC_flag=0;
-    int ncomp_xp=2+nsolve;
+    int ncomp_xp=2;  //0=use_face_pres  1=(2nd component) pface
     int ncomp_xgp=1;
     int ncomp_mgoni=presfab.nComp();
 
@@ -1956,11 +1961,10 @@ void NavierStokes::init_divup_cell_vel_cell(
   
     int ncphys_proxy=FACECOMP_NCOMP;
 
-    // in init_divup_cell_vel_cell: p^CELL -> p^MAC 
-    // AMR transfer data is in the 3rd component of xp.
+    // present routine: init_divup_cell_vel_cell; p^CELL -> p^MAC 
     fort_cell_to_mac(
      &ncomp_mgoni, 
-     &ncomp_xp, 
+     &ncomp_xp, // =2
      &ncomp_xgp, 
      &simple_AMR_BC_flag,
      &nsolve,
@@ -2023,11 +2027,10 @@ void NavierStokes::init_divup_cell_vel_cell(
   } // dir=0..sdim-1
 
    // 0=use_face_pres
-   // 1=grid flag (coarse/fine boundary?)
-   // 2=face pressure
+   // 1=face pressure
   if (nsolve!=1)
-   amrex::Error("nsolve!=1");
-  int pface_comp=2;
+   amrex::Error("nsolve!=1 NavierStokes::init_divup_cell_vel_cell");
+  int pface_comp=1; // 0=use_face_pres 1=(2nd component)pface
   int ncomp_edge=nsolve;
   int caller_id=5;
   int spectral_override=0; // always low order.
