@@ -7619,7 +7619,6 @@ stop
       use godunov_module
       use geometry_intersect_module
       use MOF_routines_module
-      use CISL_SANITY_MODULE
 
       IMPLICIT NONE
 
@@ -10046,7 +10045,7 @@ stop
                endif
 
               else
-               print *,"project_option invalid"
+               print *,"project_option invalid fort_init_physics_vars"
                stop
               endif
 
@@ -10417,23 +10416,6 @@ stop
        stop
       endif
 
-      if (DO_SANITY_CHECK.eq.1) then
-       call mass_face_weight()
-       allocate(comparemassface(fablo(1)-1:fabhi(1)+1,5))
-       allocate(comparedenface(fablo(1)-1:fabhi(1)+1,5))
-       j=1
-       k=0
-       do i=fablo(1),fabhi(1)+1
-        comparemassface(i,1)=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+1)/dx(2)
-        comparemassface(i,2)=xface(D_DECL(i,j,k),FACECOMP_MASSFACE+2)/dx(2)
-        comparedenface(i,1)=one/xface(D_DECL(i,j,k),FACECOMP_FACEDEN+1)
-       enddo
-       call compare_sanity(comparemassface,1,2,3)
-       call compare_sanity(comparedenface,1,1,4)
-       deallocate(comparemassface)
-       deallocate(comparedenface)
-      endif
- 
       return
       end subroutine fort_init_physics_vars
 
@@ -11108,7 +11090,6 @@ stop
        use probf90_module
        use global_utility_module
        use MOF_routines_module
-       use CISL_SANITY_MODULE
        IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: ncomp_denold
@@ -11171,11 +11152,11 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(maskdivres)
       INTEGER_T, INTENT(in) :: DIMDEC(maskres)
 
-      REAL_T, INTENT(in), target ::  xp(DIMV(xp),2+nsolve)
+      REAL_T, INTENT(in), target :: xp(DIMV(xp),NCOMP_PEDGE)
       REAL_T, pointer :: xp_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target ::  yp(DIMV(yp),2+nsolve)
+      REAL_T, INTENT(in), target :: yp(DIMV(yp),NCOMP_PEDGE)
       REAL_T, pointer :: yp_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target ::  zp(DIMV(zp),2+nsolve)
+      REAL_T, INTENT(in), target :: zp(DIMV(zp),NCOMP_PEDGE)
       REAL_T, pointer :: zp_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(in), target ::  xvel(DIMV(xvel),nsolve)
@@ -11308,10 +11289,6 @@ stop
 
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T ispec
-
-      REAL_T, dimension(:,:), allocatable :: comparepface
-      REAL_T, dimension(:,:), allocatable :: comparevelface
-      REAL_T, dimension(:,:), allocatable :: comparestate
 
       vol_ptr=>vol
       rhs_ptr=>rhs
@@ -12501,24 +12478,30 @@ stop
             ASIDE(side,im)=xface(D_DECL(iface,jface,kface),im)
            enddo
            uface(side)=xvel(D_DECL(iface,jface,kface),1)
-           pres_face(side)=xp(D_DECL(iface,jface,kface),3)
-           use_face_pres(side)=NINT(xp(D_DECL(iface,jface,kface),1))
+           pres_face(side)= &
+                 xp(D_DECL(iface,jface,kface),PRESSURE_PEDGE+1)
+           use_face_pres(side)= &
+                 NINT(xp(D_DECL(iface,jface,kface),VALID_PEDGE+1))
           else if (dir.eq.1) then
            aface(side)=ay(D_DECL(iface,jface,kface))
            do im=1,ncphys
             ASIDE(side,im)=yface(D_DECL(iface,jface,kface),im)
            enddo
            uface(side)=yvel(D_DECL(iface,jface,kface),1)
-           pres_face(side)=yp(D_DECL(iface,jface,kface),3)
-           use_face_pres(side)=NINT(yp(D_DECL(iface,jface,kface),1))
+           pres_face(side)= &
+                 yp(D_DECL(iface,jface,kface),PRESSURE_PEDGE+1)
+           use_face_pres(side)= &
+                 NINT(yp(D_DECL(iface,jface,kface),VALID_PEDGE+1))
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            aface(side)=az(D_DECL(iface,jface,kface))
            do im=1,ncphys
             ASIDE(side,im)=zface(D_DECL(iface,jface,kface),im)
            enddo
            uface(side)=zvel(D_DECL(iface,jface,kface),1)
-           pres_face(side)=zp(D_DECL(iface,jface,kface),3)
-           use_face_pres(side)=NINT(zp(D_DECL(iface,jface,kface),1))
+           pres_face(side)= &
+                 zp(D_DECL(iface,jface,kface),PRESSURE_PEDGE+1)
+           use_face_pres(side)= &
+                 NINT(zp(D_DECL(iface,jface,kface),VALID_PEDGE+1))
           else
            print *,"dir invalid mac to cell 3"
            stop
@@ -12733,9 +12716,22 @@ stop
          endif
 
         else if (project_option.eq.SOLVETYPE_INITPROJ) then
-         ! do nothing if initial project
+         if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
+          ! do nothing if initial project
+         else
+          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)"
+          stop
+         endif
+        else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
+         if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
+          ! do nothing if solvetype_presgravity
+         else
+          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)"
+          stop
+         endif
         else
-         print *,"project_option invalid edge pressure 5"
+         print *,"project_option invalid fort_mac_to_cell 5"
+         print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL"
          stop
         endif
 
@@ -13060,38 +13056,6 @@ stop
        stop
       endif
 
-      if (DO_SANITY_CHECK.eq.1) then
-       if ((project_option.eq.SOLVETYPE_PRES).and. &
-           (operation_flag.eq.OP_UNEW_CELL_TO_MAC)) then
-        call CISL_projection(dt,divu_outer_sweeps+1)
-        allocate(comparepface(fablo(1)-1:fabhi(1)+1,5))
-        allocate(comparevelface(fablo(1)-1:fabhi(1)+1,5))
-        allocate(comparestate(fablo(1)-1:fabhi(1)+1,5))
-        j=1
-        k=0
-        do i=fablo(1),fabhi(1)
-         comparepface(i,1)=xp(D_DECL(i,j,k),2)
-        enddo
-        i=fabhi(1)+1
-        comparepface(i,1)=xp(D_DECL(i,j,k),1)
-        do i=fablo(1),fabhi(1)+1
-         comparevelface(i,1)=xvel(D_DECL(i,j,k),1)
-        enddo
-        do i=fablo(1),fabhi(1)
-         comparestate(i,1)=veldest(D_DECL(i,j,k),1)
-         ibase=0
-         comparestate(i,2)=dendest(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
-         comparestate(i,3)=dendest(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)
-        enddo
-        call compare_sanity(comparepface,1,1,5)
-        call compare_sanity(comparevelface,1,1,6)
-        call compare_sanity(comparestate,1,3,7)
-        deallocate(comparepface)
-        deallocate(comparevelface)
-        deallocate(comparestate)
-       endif ! project_option==SOLVETYPE_PRES dir=0
-      endif  ! do_sanity_check=true
- 
       return
       end subroutine fort_mac_to_cell
 
@@ -13272,10 +13236,9 @@ stop
       REAL_T, INTENT(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
       REAL_T, pointer :: xgp_ptr(D_DECL(:,:,:),:)
 
-        ! for regular edge pressure operation:
-        ! 1st component reserved for cell velocity override indicator.
-        ! 2nd component reserved for coarse/fine indicator.
-        ! for gravity/surface tension: not used.
+        ! when xp corresponds to PEDGE_MF:
+        !  xp(VALID_PEDGE+1)
+        !  xp(PRESSURE_PEDGE+1)
       REAL_T, INTENT(inout), target :: xp(DIMV(xp),ncomp_xp)
       REAL_T, pointer :: xp_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(inout), target :: xvel(DIMV(xvel),1)
@@ -13305,9 +13268,8 @@ stop
       REAL_T dplus,dminus
        !OP_PRES_CELL_TO_MAC 
        !(1)use_face_pres
-       !(2)coarse fine flag
-       !(3)face pressure
-      REAL_T plocal(3)
+       !(2)face pressure
+      REAL_T PEDGE_local(NCOMP_PEDGE)
       INTEGER_T im1,jm1,km1
       INTEGER_T im,im_opp,im_heat,tcomp,iten
       INTEGER_T im_left,im_right
@@ -13580,7 +13542,7 @@ stop
         print *,"ncomp_mgoni invalid"
         stop
        endif
-       if (ncomp_xp.ne.2+nsolve) then
+       if (ncomp_xp.ne.NCOMP_PEDGE) then
         print *,"ncomp_xp invalid(4) ",ncomp_xp
         stop
        endif
@@ -13658,7 +13620,8 @@ stop
         print *,"energyflag invalid OP_POTGRAD_TO_MAC"
         stop
        endif
-       if ((ncomp_xp.ne.1).or.(ncomp_xgp.ne.1)) then
+       if ((ncomp_xp.ne.1).or. &
+           (ncomp_xgp.ne.1)) then
         print *,"ncomp_xp or ncomp_xgp invalid"
         stop
        endif
@@ -14661,10 +14624,13 @@ stop
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
 
           if ((project_option.eq.SOLVETYPE_PRES).or. &
+              (project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
               (project_option.eq.SOLVETYPE_INITPROJ)) then
            ! do nothing
           else
-           print *,"expecting project_option=SOLVETYPE_PRES or INITPROJ"
+           print *,"expecting project_option=SOLVETYPE_PRES or "
+           print *,"expecting project_option=SOLVETYPE_PRESGRAVITY or "
+           print *,"expecting project_option=SOLVETYPE_INITPROJ  "
            stop
           endif
 
@@ -14866,10 +14832,9 @@ stop
           enddo  ! side=1,2
 
            ! 1=use_face_pres  
-           ! 2=coarse fine flag 
-           ! 3=face pressure
-          do im=1,3
-           plocal(im)=zero
+           ! 2=face pressure
+          do im=1,NCOMP_PEDGE
+           PEDGE_local(im)=zero
           enddo
 
           fluid_volface=one
@@ -14940,24 +14905,23 @@ stop
             stop
            endif
             ! face pressure
-           plocal(3)= &
+           PEDGE_local(PRESSURE_PEDGE+1)= &
             (den_local(1)*pplus+den_local(2)*pminus)/denface
           else if (at_reflect_wall.eq.1) then ! left wall
 
             ! face pressure
-           plocal(3)=pplus
+           PEDGE_local(PRESSURE_PEDGE+1)=pplus
 
           else if (at_reflect_wall.eq.2) then ! right wall
 
             ! face pressure
-           plocal(3)=pminus
+           PEDGE_local(PRESSURE_PEDGE+1)=pminus
 
           else
            print *,"at reflect wall invalid"
            stop
           endif
-          plocal(1)=use_face_pres
-          plocal(2)=at_coarse_fine_wallF+at_coarse_fine_wallC*10
+          PEDGE_local(VALID_PEDGE+1)=use_face_pres
 
           if (face_velocity_override.eq.1) then
            local_vel_MAC=solid_velocity
@@ -15273,11 +15237,10 @@ stop
 
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then !p^CELL->MAC
 
-           ! plocal(1)=use_face_pres flag
-           ! plocal(2)=at_coarse_fine_wallF+at_coarse_fine_wallC*10
-           ! plocal(3)=face pressure
-          do im=1,3
-           xp(D_DECL(i,j,k),im)=plocal(im)
+           ! PEDGE_local(1)=use_face_pres flag
+           ! PEDGE_local(2)=face pressure
+          do im=1,NCOMP_PEDGE
+           xp(D_DECL(i,j,k),im)=PEDGE_local(im)
           enddo
           xvel(D_DECL(i,j,k),1)=local_vel_MAC
 
@@ -15625,7 +15588,6 @@ stop
       REAL_T local_fwt
       INTEGER_T local_presbc
       REAL_T local_mask
-      INTEGER_T face_vcomp
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level or finest_level invalid build face wt"

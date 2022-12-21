@@ -14149,7 +14149,9 @@ end subroutine print_visual_descriptor
       end function swap1_0
 
 
-      function is_ice_or_FSI_rigid_material(im)
+      function is_ice_or_FSI_rigid_material(im) &
+      bind(c,name='is_ice_or_FSI_rigid_material')
+
       use probcommon_module
 
       IMPLICIT NONE

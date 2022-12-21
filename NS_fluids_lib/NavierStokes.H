@@ -733,8 +733,6 @@ protected:
 
     void check_grid_places();
 
-    void SOD_SANITY_CHECK(int id);
-
     void show_norm2(MultiFab* mf,int scomp,int ncomp,int id);
     void show_norm2_id(int mf_id,int id);
      // mf_check_inf_bounds must be 1.

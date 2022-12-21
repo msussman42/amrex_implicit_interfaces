@@ -12712,48 +12712,6 @@ stop
        end do ! i
       end subroutine fort_accept_weight
 
-      subroutine fort_sod_sanity( &
-        id,nc,lo,hi, &
-        snew,DIMS(snew)) &
-      bind(c,name='fort_sod_sanity')
-      use probf90_module
-      use CISL_SANITY_MODULE
-
-      IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: id,nc
-      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, INTENT(in) :: DIMDEC(snew)
-      REAL_T, INTENT(in) :: snew(DIMV(snew),nc)
-      INTEGER_T i,j,k
-      REAL_T, dimension(:,:), allocatable :: comparestate
-
-      if (nc.ne.STATECOMP_STATES+ &
-          num_materials*(num_state_material+ngeom_raw)+1) then
-       print *,"nc invalid in sod sanity"
-       stop
-      endif
-
-      if (DO_SANITY_CHECK.eq.1) then
-       print *,"SANITY CHECK FROM C++ id=",id
-       allocate(comparestate(lo(1)-1:hi(1)+1,5))
-       j=1
-       k=0
-       do i=lo(1),hi(1)
-        comparestate(i,1)=snew(D_DECL(i,j,k),1)
-        comparestate(i,2)=snew(D_DECL(i,j,k),SDIM+2)
-        comparestate(i,3)=snew(D_DECL(i,j,k),SDIM+3)
-       enddo 
-       call compare_sanity(comparestate,1,3,8)
-       deallocate(comparestate)
-       print *,"AFTER SANITY CHECK FROM C++ id=",id
-      else
-       print *,"sod sanity check should not be called"
-       stop
-      endif
-
-      return
-      end subroutine fort_sod_sanity
-
       subroutine fort_aggressive( &
        datatype, &
        warning_cutoff, &
@@ -13135,9 +13093,6 @@ stop
       REAL_T veldata_MAC(SDIM)
       REAL_T veldata_MAC_mass(SDIM)
 
-      REAL_T, dimension(:,:), allocatable :: compareconserve
-      REAL_T, dimension(:,:), allocatable :: comparestate
-
       INTEGER_T ihalf
       INTEGER_T nhalf
       INTEGER_T check_intersection
@@ -13464,38 +13419,6 @@ stop
 
       call checkbound_array(fablo,fabhi,conserve_ptr,ngrow_mass,-1)
      
-      if (DO_SANITY_CHECK.eq.1) then
-       print *,"SANITY CHECK AFTER CONSERVE dir_counter= ",dir_counter
-       print *,"SANITY CHECK AFTER CONSERVE normdir= ",normdir
-       call CISL_sanity(dt,normdir,dir_counter,1)
-       allocate(compareconserve(fablo(1)-1:fabhi(1)+1,5))
-       allocate(comparestate(fablo(1)-1:fabhi(1)+1,5))
-       jcrse=1
-       kcrse=0
-       do icrse=fablo(1),fabhi(1)
-        compareconserve(icrse,1)= &
-         conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_VEL+1)* &
-         conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+ENUM_DENVAR+1)
-        compareconserve(icrse,2)= &
-         conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+ENUM_DENVAR+1)
-        compareconserve(icrse,3)= &
-          conserve(D_DECL(icrse,jcrse,kcrse), &
-                   CISLCOMP_STATES+ENUM_TEMPERATUREVAR+1)
-        comparestate(icrse,1)= &
-           snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_VEL+1)
-        comparestate(icrse,2)= &
-         snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_DENVAR+1)
-        comparestate(icrse,3)= &
-         snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
-       enddo
-       call compare_sanity(compareconserve,1,3,2)
-       call compare_sanity(comparestate,1,3,1)
-       deallocate(compareconserve)
-       deallocate(comparestate)
-       print *,"AFTER SANITY CHECK AFTER CONSERVE dir_counter= ",dir_counter
-       print *,"AFTER SANITY CHECK AFTER CONSERVE normdir= ",normdir
-      endif ! if do_sanity_check
-    
       force_check=0
       datatype=0 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow_mass)
@@ -15152,39 +15075,6 @@ stop
       enddo
       enddo
       enddo ! icrse,jcrse,kcrse -> growntilebox(0 ghost cells)
-
-      if (DO_SANITY_CHECK.eq.1) then
-       print *,"SANITY CHECK AFTER ADVECTION dir_counter= ",dir_counter
-       print *,"SANITY CHECK AFTER ADVECTION normdir= ",normdir
-       call CISL_sanity(dt,normdir,dir_counter,2)
-       allocate(compareconserve(fablo(1)-1:fabhi(1)+1,5))
-       allocate(comparestate(fablo(1)-1:fabhi(1)+1,5))
-       jcrse=1
-       kcrse=0
-       do icrse=fablo(1),fabhi(1)
-        compareconserve(icrse,1)= &
-          conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_VEL+1)* &
-          conserve(D_DECL(icrse,jcrse,kcrse), &
-                   CISLCOMP_STATES+ENUM_DENVAR+1)
-        compareconserve(icrse,2)= &
-          conserve(D_DECL(icrse,jcrse,kcrse), &
-                   CISLCOMP_STATES+ENUM_DENVAR+1)
-        compareconserve(icrse,3)= &
-          conserve(D_DECL(icrse,jcrse,kcrse), &
-                   CISLCOMP_STATES+ENUM_TEMPERATUREVAR+1)
-        comparestate(icrse,1)=snew(D_DECL(icrse,jcrse,kcrse),STATECOMP_VEL+1)
-        comparestate(icrse,2)=snew(D_DECL(icrse,jcrse,kcrse), &
-                STATECOMP_STATES+ENUM_DENVAR+1)
-        comparestate(icrse,3)=snew(D_DECL(icrse,jcrse,kcrse), &
-                STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
-       enddo
-       call compare_sanity(compareconserve,1,3,2)
-       call compare_sanity(comparestate,1,3,1)
-       deallocate(compareconserve)
-       deallocate(comparestate)
-       print *,"AFTER SANITY CHECK AFTER ADVECTION dir_counter= ",dir_counter
-       print *,"AFTER SANITY CHECK AFTER ADVECTION normdir= ",normdir
-      endif
 
       return
       end subroutine fort_vfrac_split

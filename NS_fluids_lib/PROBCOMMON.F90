@@ -432,7 +432,6 @@ implicit none
       INTEGER_T, PARAMETER :: visual_RT_transform=1
 
       INTEGER_T, PARAMETER :: bubbleInPackedColumn=1001
-      INTEGER_T, PARAMETER :: DO_SANITY_CHECK=0
       REAL_T, PARAMETER :: MASK_FINEST_TOL=1.0D-3
 
       REAL_T, PARAMETER :: OVERFLOW_CUTOFF=1.0D+20

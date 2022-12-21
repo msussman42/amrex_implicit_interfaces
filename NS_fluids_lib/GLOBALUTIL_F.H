@@ -35,6 +35,8 @@ extern "C"
     int* drag_comp,//0..NDRAG_IQ-1
     int* drag_im); //0..num_materials-1
 
+   int is_ice_or_FSI_rigid_material(int* im); //im=1..num_materials
+
    int fort_read_from_CAD(
     int* fsi_flag_local);
 
