@@ -7828,8 +7828,6 @@ stop
       INTEGER_T igridlo(3),igridhi(3)
 
       INTEGER_T dir_refine
-      REAL_T, dimension(:,:), allocatable :: comparemassface
-      REAL_T, dimension(:,:), allocatable :: comparedenface
       INTEGER_T noslip_wall,velbclo,velbchi
       INTEGER_T imspec,is_zero_visc
       REAL_T solid_velocity
@@ -11016,9 +11014,6 @@ stop
        ! operation_flag=110 (divergence)
        ! OP_VEL_MAC_TO_CELL
        ! operation_flag=103 (mac -> cell velocity in solver or MAC_TO_CELL)
-       ! OP_FORCE_MAC_TO_CELL 
-       ! operation_flag=104 (mac force (vel increment) -> 
-       !                     cell force (vel increment))
        ! OP_VEL_DIVUP_TO_CELL
        ! operation_flag=101 (copy u^{mac->cell} to u^{cell}, div(up) )
        ! OP_GRADU_MAC_TO_CELL
@@ -11049,9 +11044,9 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xp,DIMS(xp), &  !xvel_save if operation_flag==OP_FORCE_MAC_TO_CELL
-       yp,DIMS(yp), &  !yvel_save  "          "
-       zp,DIMS(zp), &  !zvel_save  "          "
+       xp,DIMS(xp), & 
+       yp,DIMS(yp), & 
+       zp,DIMS(zp), &  
        xvel,DIMS(xvel), &
        yvel,DIMS(yvel), &
        zvel,DIMS(zvel), &
@@ -11249,9 +11244,7 @@ stop
       REAL_T local_POLD_DUAL
 
       REAL_T DIAG_REGULARIZE
-      REAL_T weight_prev
       REAL_T uface(2)
-      REAL_T save_uface(2) !needed for OP_FORCE_MAC_TO_CELL
       REAL_T ufacesolid(2)
       REAL_T aface(2)
       REAL_T pres_face(2)
@@ -11263,7 +11256,6 @@ stop
       REAL_T ASIDE(2,ncphys)
       REAL_T mass_side(2)
       REAL_T masscell
-      REAL_T fluid_velocity
       INTEGER_T local_maskSEM
       INTEGER_T stripstat
       INTEGER_T elemlo(3),elemhi(3)
@@ -11339,7 +11331,7 @@ stop
        stop
       endif
       if (num_divu_outer_sweeps.lt.1) then
-       print *,"num_divu_outer_sweeps invalid FORT_MAC_TO_CEL"
+       print *,"num_divu_outer_sweeps invalid fort_mac_to_cell"
        stop
       endif
       if ((divu_outer_sweeps.lt.0).or. &
@@ -11401,8 +11393,7 @@ stop
       endif
 
       ! mac -> cell in solver (init_divup_cell_vel_cell) or VELMAC_TO_CELL
-      if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-          (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then ! velocity increment
+      if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then ! velocity
        if (ncomp_veldest.ge.SDIM) then
         ! do nothing
        else
@@ -11608,8 +11599,7 @@ stop
        endif
 
        ! umac->ucell in solver or VELMAC_TO_CELL
-      else if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then ! increment
+      else if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then ! velocity
 
        if (homflag.eq.0) then
         ! do nothing
@@ -11619,7 +11609,7 @@ stop
        endif
        if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. &
            (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then
-        print *,"energyflag invalid OP_VEL/FORCE MAC_TO_CELL "
+        print *,"energyflag invalid OP_VEL_MAC_TO_CELL "
         stop
        endif
        if (nsolve.ne.1) then
@@ -12032,19 +12022,11 @@ stop
         endif
 
        ! mac -> cell in solver (init_divup_cell_vel_cell) or VELMAC_TO_CELL
-       else if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-                (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then !increment
+       else if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then ! velocity
 
          ! LS>0 if clamped
-        if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & !velocity
-            (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then !velocity increment
-         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-           vel_clamped,temperature_clamped,prescribed_flag,dx)
-        else
-         print *,"operation_flag invalid:",operation_flag
-         stop
-        endif
-     
+        call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+          vel_clamped,temperature_clamped,prescribed_flag,dx)
 
         do dir=0,SDIM-1 
          ii=0
@@ -12155,8 +12137,13 @@ stop
            print *,"im_solid invalid 6"
            stop
           endif
-          if (LStest(im_solid).lt.zero) then
+          if (LStest(im_solid).ge.zero) then
+           ! do nothing
+          else if (LStest(im_solid).lt.zero) then
            partid=-1
+          else
+           print *,"LStest(im_solid) is NaN"
+           stop
           endif
          else if (partid.eq.-1) then
           ! do nothing
@@ -12203,10 +12190,8 @@ stop
           endif
  
           if (dir.eq.0) then
-           uface(side)=xvel(D_DECL(iface,jface,kface),1)
-           save_uface(side)=xp(D_DECL(iface,jface,kface),1)!uface-save_uface
-           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then!uface-save_uface 
+           if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then
+            uface(side)=xvel(D_DECL(iface,jface,kface),1)
             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else
@@ -12218,10 +12203,19 @@ stop
              ! do nothing
             else if (levelrz.eq.COORDSYS_RZ) then
              if (iface.eq.0) then
-              if (xsten(-1,1).lt.zero) then
-               uface(side)=zero
-               save_uface(side)=zero
-               ufacesolid(side)=zero
+              if ((side.eq.1).and.(i.eq.0)) then
+               if (xsten(-2,1).lt.zero) then
+                uface(side)=zero
+                ufacesolid(side)=zero
+               else if (xsten(-2,1).gt.zero) then
+                ! do nothing
+               else
+                print *,"xsten is NaN"
+                stop
+               endif
+              else 
+               print *,"side or i invalid"
+               stop
               endif
              else if (iface.gt.0) then
               if (xsten(0,1).gt.zero) then
@@ -12252,10 +12246,8 @@ stop
             stop
            endif
           else if (dir.eq.1) then
-           uface(side)=yvel(D_DECL(iface,jface,kface),1)
-           save_uface(side)=yp(D_DECL(iface,jface,kface),1)!uface-save_uface
-           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then!uface-save_uface 
+           if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then  
+            uface(side)=yvel(D_DECL(iface,jface,kface),1)
             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else
@@ -12263,10 +12255,8 @@ stop
             stop
            endif
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           uface(side)=zvel(D_DECL(iface,jface,kface),1)
-           save_uface(side)=zp(D_DECL(iface,jface,kface),1)!uface-save_uface
-           if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then!uface-save_uface
+           if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then 
+            uface(side)=zvel(D_DECL(iface,jface,kface),1)
             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else
@@ -12295,9 +12285,11 @@ stop
 
          masscell=mass_side(1)+mass_side(2)
 
-         if ((mass_side(1).le.zero).or. &
-             (mass_side(2).le.zero).or. &
-             (masscell.le.zero)) then
+         if ((mass_side(1).gt.zero).and. &
+             (mass_side(2).gt.zero).and. &
+             (masscell.gt.zero)) then
+          ! do nothing
+         else
           print *,"mass invalid"
           stop
          endif
@@ -12311,20 +12303,9 @@ stop
             (mass_side(1)*ufacesolid(1)+ &
              mass_side(2)*ufacesolid(2))/masscell
           else if (cell_velocity_override.eq.0) then
-           if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then
-            weight_prev=zero
-           else if (operation_flag.eq.OP_FORCE_MAC_TO_CELL) then 
-            uface(1)=uface(1)-save_uface(1)
-            uface(2)=uface(2)-save_uface(2)
-            weight_prev=one
-           else
-            print *,"operation_flag invalid"
-            stop
-           endif
-           fluid_velocity=(mass_side(1)*uface(1)+ &
-                           mass_side(2)*uface(2))/masscell
            veldest(D_DECL(i,j,k),velcomp)= &
-              weight_prev*veldest(D_DECL(i,j,k),velcomp)+fluid_velocity
+             (mass_side(1)*uface(1)+ &
+              mass_side(2)*uface(2))/masscell
           else
            print *,"cell_velocity_override invalid"
            stop
@@ -12757,18 +12738,17 @@ stop
         stop
        endif
       else if ((ns_time_order.ge.2).and.(ns_time_order.le.32)) then
+
        if (enable_spectral.eq.1) then
 
-        if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. &
-            (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then
+        if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then
          print *,"expecting enable_spectral=0"
          stop
         endif
 
        else if (enable_spectral.eq.0) then
 
-        if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. &
-            (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then
+        if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then
          ! do nothing
         else if (operation_flag.eq.OP_RHS_CELL) then
          ! do nothing
@@ -12840,12 +12820,11 @@ stop
               ncomp=1
               ncomp_xvel=nsolve
               ncomp_cterm=1
-             else if (operation_flag.eq.OP_FORCE_MAC_TO_CELL) then  
-              print *,"expecting enable_spectral==0"
-              stop
+
              else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then ! div(up)
               print *,"expecting enable_spectral==0"
               stop
+
              else if (operation_flag.eq.OP_ISCHEME_CELL) then ! advection
               scomp=1
               scomp_bc=1
@@ -12858,8 +12837,7 @@ stop
               stop
              endif
              
-             if ((operation_flag.eq.OP_FORCE_MAC_TO_CELL).or. & 
-                 (operation_flag.eq.OP_VEL_DIVUP_TO_CELL)) then !div(up) 
+             if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then !div(up) 
               print *,"expecting enable_spectral==0"
               stop
              else if ((operation_flag.eq.OP_RHS_CELL).or. & ! RHS for solver
