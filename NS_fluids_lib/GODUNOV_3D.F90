@@ -12867,7 +12867,6 @@ stop
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
-      use CISL_SANITY_MODULE
 
       IMPLICIT NONE
 

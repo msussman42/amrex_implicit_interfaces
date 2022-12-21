@@ -2140,6 +2140,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     int ncomp_dendest=Snewfab.nComp()-STATECOMP_STATES;
 
     Real local_dt_slab=dt_slab;
+
     if (operation_flag_interp_macvel==OP_VEL_MAC_TO_CELL) {
      //do nothing
     } else if (operation_flag_interp_macvel==OP_VEL_DIVUP_TO_CELL) { 
@@ -3222,8 +3223,7 @@ void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
    &ns_time_order,
    &divu_outer_sweeps,
    &num_divu_outer_sweeps,
-   // operation_flag=OP_VEL_MAC_TO_CELL, or
-   // operation_flag=OP_FORCE_MAC_TO_CELL
+   // operation_flag=OP_VEL_MAC_TO_CELL
    &operation_flag, 
    &energyflag,
    constant_density_all_time.dataPtr(),
