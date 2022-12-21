@@ -11292,7 +11292,6 @@ END SUBROUTINE SIMP
       REAL_T local_wt(nsolve)
       REAL_T maskleft,maskright
       INTEGER_T maskface
-      INTEGER_T face_vcomp
 
       if ((level.ge.0).and.(level.le.finest_level)) then
        ! do nothing

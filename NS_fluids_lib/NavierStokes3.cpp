@@ -3507,9 +3507,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	} else
 	 amrex::Error("incremental_gravity_flag invalid");
 
-FIX ME FSI_material_exists still needed?
-FIX ME SOLVETYPE_PRESCOR still needed?
-
          // MDOT term included
         multiphase_project(SOLVETYPE_PRES);
 
@@ -7940,7 +7937,7 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
 
    // PEDGE_MF only used if pressure projection.
    // 0=use_face_pres  1=(2nd component) pface
-  new_localMF(PEDGE_MF+dir,2,0,dir);
+  new_localMF(PEDGE_MF+dir,NCOMP_PEDGE,0,dir);
 
   new_localMF(AMRSYNC_PRES_MF+dir,nsolve,0,dir);
   setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+40,0,nsolve,0);
@@ -8163,7 +8160,7 @@ void NavierStokes::correct_velocity(
 } // omp
  ns_reconcile_d_num(186);
 
-} // subroutine correct_velocity
+} // end subroutine correct_velocity
 
 
 void NavierStokes::residual_correction_form(
@@ -8182,8 +8179,20 @@ void NavierStokes::residual_correction_form(
   amrex::Error("project_option_momeqn invalid36");
 
  if (project_option==SOLVETYPE_INITPROJ) { 
-  //do nothing
+
+  if (homflag_residual_correction_form==1) {
+   // do nothing
+  } else
+   amrex::Error("expecting homflag_residual_correction_form==1");
+
  } else if (project_option_is_valid(project_option)==1) {
+
+  if (project_option==SOLVETYPE_PRESGRAVITY) { 
+   if (homflag_residual_correction_form==1) {
+    // do nothing
+   } else
+    amrex::Error("expecting homflag_residual_correction_form==1");
+  }
 
    // -dt grad p face_weight  
    // SEM BC if enable_spectral==1
@@ -9539,7 +9548,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   int idx_velcell=-1;
 
-  int operation_flag=OP_UNEW_CELL_TO_MAC;
+  operation_flag=OP_UNEW_CELL_TO_MAC;
   Real beta=0.0;
 
   if (nsolve!=1)
@@ -9557,7 +9566,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // if project_option==SOLVETYPE_PRESGRAVITY
    // ---------------------------------------
-   //   velocity of rigid materials/ice is zero.
+   //   velocity <TO BE PROJECTED> of rigid materials/ice is zero; gravity
+   //   will induce a velocity in the rigid materials/ice.
    //
    // if project_option==SOLVETYPE_PRES
    // ---------------------------------------

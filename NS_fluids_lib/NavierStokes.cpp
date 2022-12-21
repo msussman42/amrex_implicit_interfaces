@@ -5586,6 +5586,23 @@ NavierStokes::read_params ()
      std::cout << "save_atol_b= " << save_atol_b << '\n';
      std::cout << "save_min_rel_error= " << save_min_rel_error << '\n';
     }
+     for (int im=1;im<=num_materials;im++) {
+
+      if (is_ice_or_FSI_rigid_material(&im)==1) {
+
+       if (enable_spectral==0) {
+        // do nothing
+       } else
+        amrex::Error("need enable_spectral==0 if ice or FSI_rigid exists");
+
+       if (incremental_gravity_flag==1) {
+	//do nothing
+       } else
+        amrex::Error("need incremental_gravity_flag==1 if ice or FSI_rigid");
+
+      } // is_ice_or_FSI_rigid_material==1
+
+    } // im=1..num_materials
 
     if (enable_spectral==1) {
 
@@ -10627,37 +10644,6 @@ NavierStokes::Geometry_cleanup() {
  } // i=0 ... MAX_NUM_LOCAL_MF-1   
 
 } // subroutine Geometry_cleanup()
-
-void NavierStokes::SOD_SANITY_CHECK(int id) {
-
- MultiFab& snew=get_new_data(State_Type,slab_step+1);
- int nc=snew.nComp();
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(snew.boxArray().d_numPts());
-
- for (MFIter mfi(snew,false); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const Box& tilegrid = mfi.tilebox();
-  const int gridno = mfi.index();
-  const Box& fabgrid = grids[gridno];
-  const int* fablo=fabgrid.loVect();
-  const int* fabhi=fabgrid.hiVect();
-  FArrayBox& snewfab=snew[mfi];
-
-  int tid_current=ns_thread();
-  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-   amrex::Error("tid_current invalid");
-  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-  fort_sod_sanity(
-    &id,&nc,fablo,fabhi,
-    snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()));
- }
- ns_reconcile_d_num(53);
-
-} // subroutine SOD_SANITY_CHECK
 
 
 void NavierStokes::make_viscoelastic_tensorMACALL(int im,

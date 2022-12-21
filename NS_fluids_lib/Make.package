@@ -114,8 +114,7 @@ F90EXE_sources += \
   sinking_particle.F90 \
   wavy_channel.F90 \
   STACKVOLUME.F90 \
-  supercooled_exact_sol.F90 \
-  SANITYCHECK.F90 
+  supercooled_exact_sol.F90 
 
 ifeq ($(MEHDI_VAHAB_FSI),TRUE)
 FEXE_headers   += CTMLFSI_F.H

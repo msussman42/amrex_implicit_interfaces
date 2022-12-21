@@ -1851,16 +1851,16 @@ void NavierStokes::init_divup_cell_vel_cell(
    debug_ngrow(FACE_VAR_MF+dir,0,101);
    debug_ngrow(PEDGE_MF+dir,0,101);
     // 0=use_face_pres  1= (2nd component) pface
-   if (localMF[PEDGE_MF+dir]->nComp()!=2)
-    amrex::Error("localMF[PEDGE_MF+dir]->nComp()!=2");
+   if (localMF[PEDGE_MF+dir]->nComp()!=NCOMP_PEDGE)
+    amrex::Error("localMF[PEDGE_MF+dir]->nComp()!=NCOMP_PEDGE");
    if (localMF[AREA_MF+dir]->boxArray()!=
        localMF[PEDGE_MF+dir]->boxArray())
     amrex::Error("PEDGE boxarray does not match");
-    // 0=use_face_pres
-    // 1=face pressure
+    // 0=use_face_pres=VALID_PEDGE
+    // 1=face pressure=PRESSURE_PEDGE
     //scomp,ncomp,ngrow
     //pface=1.0e+40 initially.
-   setVal_localMF(PEDGE_MF+dir,1.0e+40,1,1,0);
+   setVal_localMF(PEDGE_MF+dir,1.0e+40,PRESSURE_PEDGE,1,0);
   } // dir=0..sdim-1
 
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
@@ -1950,7 +1950,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     int local_energyflag=SUB_OP_DEFAULT;
     int local_enable_spectral=0;
     int simple_AMR_BC_flag=0;
-    int ncomp_xp=2;  //0=use_face_pres  1=(2nd component) pface
+    int ncomp_xp=NCOMP_PEDGE;  //0=VALID_PEDGE  1=PRESSURE_PEDGE
     int ncomp_xgp=1;
     int ncomp_mgoni=presfab.nComp();
 
@@ -1964,7 +1964,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     // present routine: init_divup_cell_vel_cell; p^CELL -> p^MAC 
     fort_cell_to_mac(
      &ncomp_mgoni, 
-     &ncomp_xp, // =2
+     &ncomp_xp, // =2=NCOMP_PEDGE
      &ncomp_xgp, 
      &simple_AMR_BC_flag,
      &nsolve,
@@ -2030,11 +2030,11 @@ void NavierStokes::init_divup_cell_vel_cell(
    // 1=face pressure
   if (nsolve!=1)
    amrex::Error("nsolve!=1 NavierStokes::init_divup_cell_vel_cell");
-  int pface_comp=1; // 0=use_face_pres 1=(2nd component)pface
-  int ncomp_edge=nsolve;
+  int pface_comp=PRESSURE_PEDGE; // 0=use_face_pres 1=(2nd component)pface
+  int ncomp_edge_avgdown=1;
   int caller_id=5;
   int spectral_override=0; // always low order.
-  avgDownEdge_localMF(PEDGE_MF,pface_comp,ncomp_edge,0,AMREX_SPACEDIM,
+  avgDownEdge_localMF(PEDGE_MF,pface_comp,ncomp_edge_avgdown,0,AMREX_SPACEDIM,
      spectral_override,caller_id);
 
    // isweep=1 calculate cell velocity from mass weighted average of face
@@ -2645,8 +2645,9 @@ void NavierStokes::increment_face_velocity(
   amrex::Error("leveltyoe->nGrow()<1");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  new_localMF(AMRSYNC_VEL_MF+dir,1,0,dir);
-  setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+40,0,1,0);
+  new_localMF(AMRSYNC_VEL_MF+dir,NCOMP_AMRSYNC_VEL_MF,0,dir);
+   //val,scomp,ncomp,ngrow
+  setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+40,0,NCOMP_AMRSYNC_VEL_MF,0);
   if (localMF[AREA_MF+dir]->boxArray()!=
       localMF[AMRSYNC_VEL_MF+dir]->boxArray())
    amrex::Error("AMRSYNC_VEL boxarray does not match");
@@ -2781,7 +2782,7 @@ void NavierStokes::increment_face_velocity(
       int energyflag=SUB_OP_DEFAULT;
       int local_enable_spectral=enable_spectral;
       int simple_AMR_BC_flag=0;
-      int ncomp_xp=1;
+      int ncomp_xp=NCOMP_AMRSYNC_VEL_MF;
       int ncomp_xgp=1;
       int ncomp_mgoni=AMREX_SPACEDIM;
 
@@ -2796,7 +2797,7 @@ void NavierStokes::increment_face_velocity(
       // fort_cell_to_mac is declared in: LEVELSET_3D.F90
       fort_cell_to_mac(
        &ncomp_mgoni,
-       &ncomp_xp,
+       &ncomp_xp, //=NCOMP_AMRSYNC_VEL_MF
        &ncomp_xgp,
        &simple_AMR_BC_flag,
        &nsolve,

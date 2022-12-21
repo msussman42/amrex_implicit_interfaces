@@ -11814,10 +11814,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (project_option_projectionF(project_option).eq.1) then
 
-        if (project_option.eq.SOLVETYPE_PRES) then !regular pressure projection
-         cc_group=cc
-        else if (project_option.eq.SOLVETYPE_INITPROJ) then ! initial projection
+        if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
          cc_group=cc*cc_ice
+        else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
+         cc_group=cc*cc_ice
+        else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then!grav projection
+         cc_group=cc   ! we do not mask off the ice regions here
         else
          print *,"project_option invalid"
          stop
@@ -12406,14 +12408,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"energyflag invalid OP_PRESGRAD_MAC"
         stop
        endif
-       if ((scomp.ne.1).or.(dcomp.ne.1)) then
-        print *,"parameters invalid for op=0"
+       if ((scomp.ne.1).or. &
+           (dcomp.ne.1)) then
+        print *,"parameters invalid for op=0=OP_PRESGRAD_MAC"
         stop
        endif
        if ((ncomp_dest.ne.1).or. &
            (ncomp_source.ne.1).or. &
            (scomp_bc.ne.1)) then
-        print *,"parameters invalid for op=0"
+        print *,"parameters invalid for op=0=OP_PRESGRAD_MAC"
         stop
        endif
 
@@ -12539,6 +12542,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
 
        ! ncomp_dest=SDIM if OP_UGRAD_MAC  (du/dn, dv/dn, dw/dn)
+       ! ncomp_dest=1 if OP_PRESGRAD_MAC
       do nc=1,ncomp_dest
 
         ! do nothing if element is not a spectral element
@@ -13239,15 +13243,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
              if (nc.eq.1) then
-              if ((scomp.eq.1).or.(scomp.eq.cen_maskSEM)) then
+              if (scomp.eq.1) then
                local_data_side(side)= &
                 xp(D_DECL(iface_out,jface_out,kface_out),scomp)
               else
-               print *,"scomp invalid"
+               print *,"scomp invalid OP_PRESGRAD_MAC"
                stop
               endif
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_PRESGRAD_MAC"
               stop
              endif
             else if (simple_AMR_BC_flag.eq.1) then
@@ -24374,7 +24378,6 @@ end subroutine initialize2d
        use global_distance_module
        use shockdrop
        use marangoni
-       use CISL_SANITY_MODULE
        use USERDEF_module
        use HELIX_module
        use TSPRAY_module
@@ -24414,7 +24417,6 @@ end subroutine initialize2d
        INTEGER_T ibase
        INTEGER_T ic,jc,kc,n,im
        INTEGER_T dir
-       REAL_T, dimension(:,:), allocatable :: comparestate
        REAL_T vfracsum_test
 
        REAL_T fluiddata(num_materials,2*SDIM+2)
@@ -25921,21 +25923,6 @@ end subroutine initialize2d
        enddo
        enddo
        enddo ! ic,jc,kc
-
-       if (DO_SANITY_CHECK.eq.1) then
-        call init_sanity(fablo(1),fabhi(1))
-        allocate(comparestate(fablo(1)-1:fabhi(1)+1,5))
-        jc=1
-        kc=0
-        do ic=fablo(1),fabhi(1)
-         comparestate(ic,2)=scal(D_DECL(ic,jc,kc), &
-            STATECOMP_STATES+ENUM_DENVAR+1)
-         comparestate(ic,3)= &
-            scal(D_DECL(ic,jc,kc),STATECOMP_STATES+ENUM_TEMPERATUREVAR+1)
-        enddo
-        call compare_sanity(comparestate,2,2,1)
-        deallocate(comparestate)
-       endif
 
        return
        end subroutine fort_initdata

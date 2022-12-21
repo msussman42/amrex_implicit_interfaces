@@ -12,11 +12,6 @@ namespace amrex{
 
 extern "C"
 {
-   void fort_sod_sanity(
-    int* id,int* nc,
-    const int* lo,const int* hi,
-    Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi));
-
    void fort_aggressive(
     int* datatype,
     Real* warning_cutoff,
