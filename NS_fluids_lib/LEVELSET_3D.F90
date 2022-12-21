@@ -11251,7 +11251,7 @@ stop
       REAL_T DIAG_REGULARIZE
       REAL_T weight_prev
       REAL_T uface(2)
-      REAL_T save_uface(2)
+      REAL_T save_uface(2) !needed for OP_FORCE_MAC_TO_CELL
       REAL_T ufacesolid(2)
       REAL_T aface(2)
       REAL_T pres_face(2)
@@ -12204,9 +12204,9 @@ stop
  
           if (dir.eq.0) then
            uface(side)=xvel(D_DECL(iface,jface,kface),1)
-           save_uface(side)=xp(D_DECL(iface,jface,kface),1)
+           save_uface(side)=xp(D_DECL(iface,jface,kface),1)!uface-save_uface
            if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then!uface-save_uface 
             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else
@@ -12253,9 +12253,9 @@ stop
            endif
           else if (dir.eq.1) then
            uface(side)=yvel(D_DECL(iface,jface,kface),1)
-           save_uface(side)=yp(D_DECL(iface,jface,kface),1)
+           save_uface(side)=yp(D_DECL(iface,jface,kface),1)!uface-save_uface
            if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then!uface-save_uface 
             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else
@@ -12264,9 +12264,9 @@ stop
            endif
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            uface(side)=zvel(D_DECL(iface,jface,kface),1)
-           save_uface(side)=zp(D_DECL(iface,jface,kface),1)
+           save_uface(side)=zp(D_DECL(iface,jface,kface),1)!uface-save_uface
            if ((operation_flag.eq.OP_VEL_MAC_TO_CELL).or. & ! velocity
-               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then 
+               (operation_flag.eq.OP_FORCE_MAC_TO_CELL)) then!uface-save_uface
             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
            else
@@ -13267,8 +13267,8 @@ stop
       REAL_T gradh_tension
       REAL_T dplus,dminus
        !OP_PRES_CELL_TO_MAC 
-       !(1)use_face_pres
-       !(2)face pressure
+       !(1)use_face_pres=VALID_PEDGE+1
+       !(2)face pressure=PRESSURE_PEDGE+1
       REAL_T PEDGE_local(NCOMP_PEDGE)
       INTEGER_T im1,jm1,km1
       INTEGER_T im,im_opp,im_heat,tcomp,iten
@@ -13498,7 +13498,7 @@ stop
        endif
 
        if (ncomp_xp.ne.NFLUXSEM) then
-        print *,"ncomp_xp invalid(2) ",ncomp_xp
+        print *,"ncomp_xp.ne.NFLUXSEM (OP_ISCHEME_MAC) ",ncomp_xp
         stop
        endif
        if (ncomp_xgp.ne.NFLUXSEM) then
@@ -13530,6 +13530,18 @@ stop
         stop
        endif
 
+       if (ncomp_xp.ne.nsolve) then
+        print *,"ncomp_xp.ne.nsolve (OP_PRESGRAD_MAC) ",ncomp_xp
+        stop
+       endif
+
+       if (nsolve.eq.1) then
+        ! do nothing
+       else 
+        print *,"expecting nsolve==1 if OP_PRESGRAD_MAC"
+        stop
+       endif
+
       else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! P^{cell->mac}
        
        if (ncphys.ne.FACECOMP_NCOMP) then
@@ -13543,7 +13555,7 @@ stop
         stop
        endif
        if (ncomp_xp.ne.NCOMP_PEDGE) then
-        print *,"ncomp_xp invalid(4) ",ncomp_xp
+        print *,"ncomp_xp.ne.NCOMP_PEDGE(OP_PRES_CELL_TO_MAC) ",ncomp_xp
         stop
        endif
        if (enable_spectral.eq.0) then
@@ -13566,6 +13578,10 @@ stop
         print *,"ncomp_mgoni invalid"
         stop
        endif
+       if (ncomp_xp.ne.1) then
+        print *,"ncomp_xp.ne.1(OP_POTGRAD_TO_MAC) ",ncomp_xp
+        stop
+       endif
 
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
@@ -13577,6 +13593,11 @@ stop
         print *,"ncomp_mgoni invalid"
         stop
        endif
+       if (ncomp_xp.ne.NCOMP_AMRSYNC_VEL_MF) then
+        print *,"ncomp_xp.ne.NCOMP_AMRSYNC_VEL_MF(OP_UNEW or OP_UMAC) ", &
+           ncomp_xp
+        stop
+       endif
 
        if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
@@ -13585,10 +13606,9 @@ stop
 
       else if (operation_flag.eq.OP_UGRAD_MAC) then
 
-       if (ncphys.ne.FACECOMP_NCOMP) then
-        print *,"ncphys invalid"
-        stop
-       endif
+       print *,"fort_face_gradients calls sem_cell_to_mac with op=6"
+       print *,"(OP_UGRAD_MAC)"
+       stop
 
       else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
 
@@ -13664,6 +13684,7 @@ stop
       else if (operation_flag.eq.OP_UGRAD_MAC) then
 
        print *,"fort_face_gradients calls sem_cell_to_mac with op=6"
+       print *,"(OP_UGRAD_MAC)"
        stop
 
       else
@@ -13867,6 +13888,7 @@ stop
          else if (operation_flag.eq.OP_UGRAD_MAC) then
 
           print *,"fort_face_gradients calls sem_cell_to_mac with op=6"
+          print *,"(OP_UGRAD_MAC)"
           stop
  
          else
@@ -13968,10 +13990,22 @@ stop
           endif
 
          else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. &
-                  (operation_flag.eq.OP_UGRAD_MAC).or. &
-                  (operation_flag.eq.OP_ISCHEME_MAC).or. & ! advection
-                  (operation_flag.eq.OP_UGRAD_COUPLING_MAC)) then 
+                  (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
+
           ! do nothing
+
+         else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then
+
+          print *,"fort_crosterm calls lineGRAD"
+          print *,"(OP_UGRAD_COUPLING_MAC)"
+          stop
+
+         else if (operation_flag.eq.OP_UGRAD_MAC) then
+
+          print *,"fort_face_gradients calls sem_cell_to_mac with op=6"
+          print *,"(OP_UGRAD_MAC)"
+          stop
+
          else 
           print *,"operation_flag invalid15:",operation_flag
           stop
@@ -14831,8 +14865,8 @@ stop
            denface=denface+den_local(side)
           enddo  ! side=1,2
 
-           ! 1=use_face_pres  
-           ! 2=face pressure
+           ! 1=use_face_pres=VALID_PEDGE+1 
+           ! 2=face pressure=PRESSURE_PEDGE+1
           do im=1,NCOMP_PEDGE
            PEDGE_local(im)=zero
           enddo
@@ -15237,8 +15271,8 @@ stop
 
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then !p^CELL->MAC
 
-           ! PEDGE_local(1)=use_face_pres flag
-           ! PEDGE_local(2)=face pressure
+           ! PEDGE_local(VALID_PEDGE+1)=use_face_pres flag
+           ! PEDGE_local(PRESSURE_PEDGE+1)=face pressure
           do im=1,NCOMP_PEDGE
            xp(D_DECL(i,j,k),im)=PEDGE_local(im)
           enddo

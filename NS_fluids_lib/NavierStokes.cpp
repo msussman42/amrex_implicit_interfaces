@@ -16548,7 +16548,13 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
      const Real* xlo = grid_loc[gridno].lo();
 
      FArrayBox& xface=(*localMF[CONSERVE_FLUXES_MF+dir])[mfi];  
+
      FArrayBox& xp=(*localMF[AMRSYNC_PRES_MF+dir])[mfi];  
+     if (xp.nComp()==NFLUXSEM) {
+      // do nothing
+     } else
+      amrex::Error("xp.nComp invalid");
+
      FArrayBox& xgp=(*localMF[COARSE_FINE_FLUX_MF+dir])[mfi];  
 
      FArrayBox& xvel=(*localMF[UMAC_MF+dir])[mfi];  

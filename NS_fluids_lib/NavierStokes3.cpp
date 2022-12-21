@@ -7936,7 +7936,8 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
   new_localMF(GRADPEDGE_MF+dir,nsolve,0,dir);
 
    // PEDGE_MF only used if pressure projection.
-   // 0=use_face_pres  1=(2nd component) pface
+   // 0=use_face_pres=VALID_PEDGE  
+   // 1=(2nd component) pface=PRESSURE_PEDGE
   new_localMF(PEDGE_MF+dir,NCOMP_PEDGE,0,dir);
 
   new_localMF(AMRSYNC_PRES_MF+dir,nsolve,0,dir);
