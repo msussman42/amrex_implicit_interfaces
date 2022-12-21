@@ -1924,6 +1924,10 @@ void NavierStokes::init_divup_cell_vel_cell(
     FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
 
     FArrayBox& xp=(*localMF[PEDGE_MF+dir])[mfi];
+    if (xp.nComp()==NCOMP_PEDGE) {
+     //do nothing
+    } else
+     amrex::Error("xp.nComp() invalid");
 
     // mask=1.0 at interior fine bc ghost cells
     FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
@@ -2026,16 +2030,15 @@ void NavierStokes::init_divup_cell_vel_cell(
    ns_reconcile_d_num(132);
   } // dir=0..sdim-1
 
-   // 0=use_face_pres
-   // 1=face pressure
+   // 0=use_face_pres=VALID_PEDGE
+   // 1=face pressure=PRESSURE_PEDGE
   if (nsolve!=1)
    amrex::Error("nsolve!=1 NavierStokes::init_divup_cell_vel_cell");
-  int pface_comp=PRESSURE_PEDGE; // 0=use_face_pres 1=(2nd component)pface
   int ncomp_edge_avgdown=1;
   int caller_id=5;
   int spectral_override=0; // always low order.
-  avgDownEdge_localMF(PEDGE_MF,pface_comp,ncomp_edge_avgdown,0,AMREX_SPACEDIM,
-     spectral_override,caller_id);
+  avgDownEdge_localMF(PEDGE_MF,PRESSURE_PEDGE,ncomp_edge_avgdown,
+      0,AMREX_SPACEDIM,spectral_override,caller_id);
 
    // isweep=1 calculate cell velocity from mass weighted average of face
    //          velocity.
@@ -2092,9 +2095,18 @@ void NavierStokes::init_divup_cell_vel_cell(
     FArrayBox& maskcoef=(*localMF[MASKCOEF_MF])[mfi];// 1=not covered.
     FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
     FArrayBox& presfab=(*presmf)[mfi];
+
     FArrayBox& xp=(*localMF[PEDGE_MF])[mfi];
     FArrayBox& yp=(*localMF[PEDGE_MF+1])[mfi];
     FArrayBox& zp=(*localMF[PEDGE_MF+AMREX_SPACEDIM-1])[mfi];
+
+    if ((xp.nComp()==NCOMP_PEDGE)&&
+        (yp.nComp()==NCOMP_PEDGE)&&
+        (zp.nComp()==NCOMP_PEDGE)) {
+     //do nothing
+    } else
+     amrex::Error("xp,yp, or zp invalid nComp()");
+
     FArrayBox& Snewfab=S_new[mfi]; // veldest
     FArrayBox& ustarfab=(*ustar)[mfi];
     FArrayBox& divupfab=(*divup)[mfi];
@@ -2753,6 +2765,10 @@ void NavierStokes::increment_face_velocity(
       FArrayBox& xgp=(*Umac_old)[mfi];
 
       FArrayBox& xp=(*localMF[AMRSYNC_VEL_MF+dir])[mfi];
+      if (xp.nComp()==NCOMP_AMRSYNC_VEL_MF) {
+       //do nothing
+      } else
+       amrex::Error("xp.nComp() invalid");
 
       FArrayBox& pres=(*U_old)[mfi];
 
@@ -3159,9 +3175,23 @@ void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
   FArrayBox& yvel=(*face_velocity[1])[mfi];
   FArrayBox& zvel=(*face_velocity[AMREX_SPACEDIM-1])[mfi];
 
+  if ((xvel.nComp()==1)&&
+      (yvel.nComp()==1)&&
+      (zvel.nComp()==1)) {
+   //do nothing
+  } else
+   amrex::Error("xvel,yvel, or zvel invalid nComp()");
+
   FArrayBox& xvel_save=(*save_face_velocity[0])[mfi];
   FArrayBox& yvel_save=(*save_face_velocity[1])[mfi];
   FArrayBox& zvel_save=(*save_face_velocity[AMREX_SPACEDIM-1])[mfi];
+
+  if ((xvel_save.nComp()==1)&&
+      (yvel_save.nComp()==1)&&
+      (zvel_save.nComp()==1)) {
+   //do nothing
+  } else
+   amrex::Error("xvel_save,yvel_save, or zvel_save invalid nComp()");
 
   FArrayBox& volfab=(*localMF[VOLUME_MF])[mfi];
   FArrayBox& areax=(*localMF[AREA_MF])[mfi];
@@ -4320,6 +4350,14 @@ void NavierStokes::apply_pressure_grad(
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox& xp=(*localMF[local_amrsync_pres_mf+dir])[mfi];
+    if (xp.nComp()==nsolve) {
+     if (nsolve==1) {
+      //do nothing
+     } else
+      amrex::Error("expecting nsolve==1 OP_PRESGRAD_MAC");
+    } else
+     amrex::Error("expecting xp.nComp()==nsolve");
+
     FArrayBox& xgp=(*localMF[gp_mf+dir])[mfi];
     FArrayBox& xcut=(*localMF[FACE_WEIGHT_MF+dir])[mfi]; // A/rho
     FArrayBox& xface=(*localMF[local_face_var_mf+dir])[mfi];
@@ -5700,10 +5738,15 @@ void NavierStokes::process_potential_force_face(
    const Real* xlo = grid_loc[gridno].lo();
 
    FArrayBox& xgp=(*localMF[POTENTIAL_FORCE_EDGE_MF+dir])[mfi];
-   if (xgp.nComp()!=1)
+   if (xgp.nComp()==1) {
+    //do nothing
+   } else
     amrex::Error("xgp.nComp() invalid");
+
    FArrayBox& xp=(*localMF[POTENTIAL_FORCE_EDGE_MF+dir])[mfi];
-   if (xp.nComp()!=1)
+   if (xp.nComp()==1) {
+    //do nothing
+   } else
     amrex::Error("xp.nComp() invalid");
 
    FArrayBox& xface=(*localMF[FACE_VAR_MF+dir])[mfi];
