@@ -53,8 +53,6 @@
 
 #define FACE_VAR_MF 42
 
-#define dt_gradp_over_rho_cell_MF 45
-
 #define stableF_MF 46
 #define stableF_GP_MF 47
 
@@ -114,8 +112,6 @@
 #define UMAC_SAVE_MF 106
 
 #define FACE_WEIGHT_MF 109
-
-#define dt_gradp_over_rho_face_MF 112
 
 #define POTENTIAL_FORCE_EDGE_MF 115
 

@@ -355,8 +355,6 @@ public:
 
     void prepare_viscous_solver();
 
-    void alloc_gradp_over_rho(int alloc_flag);
-
     void alloc_DTDtALL(int alloc_flag);
     void alloc_DTDt(int alloc_flag);
 

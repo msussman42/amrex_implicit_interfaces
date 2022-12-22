@@ -12321,6 +12321,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
        if (ncomp_xp.ne.SDIM) then
         print *,"ncomp_xp invalid (it is supposed to be sdim)",ncomp_xp
+        print *,"operation_flag==OP_UGRAD_MAC"
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
@@ -12367,10 +12368,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (ncomp_xp.ne.NFLUXSEM) then
         print *,"ncomp_xp invalid(11) ",ncomp_xp
+        print *,"operation_flag==OP_ISCHEME_MAC"
         stop
        endif
        if (ncomp_xgp.ne.NFLUXSEM) then
-        print *,"ncomp_xgp invalid2"
+        print *,"expecting ncomp_xgp==NFLUXSEM invalid2"
+        print *,"operation_flag==OP_ISCHEME_MAC"
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
@@ -12388,6 +12391,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            (ncomp_source.ne.SDIM).or. &
            (scomp_bc.ne.1)) then
         print *,"parameters invalid for op=7"
+        print *,"operation_flag==OP_ISCHEME_MAC"
         stop
        endif
        if ((cen_maskSEM.ge.1).and.(cen_maskSEM.le.num_materials)) then
@@ -12408,6 +12412,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid3"
+        print *,"expecting ncomp_xgp=1 if OP_PRESGRAD_MAC"
         stop
        endif
        if ((energyflag.ne.SUB_OP_FOR_MAIN).and. & ! regular solver
@@ -12431,6 +12436,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (ncomp_xp.ne.1) then
         print *,"ncomp_xp invalid5 OP_POTGRAD_TO_MAC ",ncomp_xp
+        print *,"operation_flag.eq.OP_POTGRAD_TO_MAC"
         stop
        endif
 
@@ -12458,7 +12464,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
        if (ncomp_xgp.ne.1) then
-        print *,"ncomp_xgp invalid7 OP_UNEW,OP_U_COMP,OP_UMAC"
+        print *,"expecting ncomp_xgp=1 OP_UNEW,OP_U_COMP,OP_UMAC"
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
@@ -12854,11 +12860,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              if (scomp.eq.dir) then
               local_data_side(side)=vel(D_DECL(ic,jc,kc),scomp)
              else
-              print *,"scomp invalid"
+              print *,"scomp invalid(OP_UNEW, or OP_U_COMP, or OP_UMAC)"
               stop
              endif
             else
-             print *,"nc invalid"
+             print *,"nc invalid(OP_UNEW, or OP_U_COMP, or OP_UMAC)"
              stop
             endif
            else
@@ -13380,7 +13386,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if ((nc.ge.1).and.(nc.le.SDIM)) then
             local_data(isten+1)=vel(D_DECL(ic,jc,kc),nc)
            else
-            print *,"nc invalid"
+            print *,"nc invalid(OP_UGRAD_MAC)"
             stop
            endif
 
@@ -13392,11 +13398,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (scomp.eq.dir) then
              local_data(isten+1)=vel(D_DECL(ic,jc,kc),scomp)
             else
-             print *,"scomp invalid"
+             print *,"scomp invalid(OP_UNEW, or OP_U_COMP, or OP_UMAC)"
              stop
             endif
            else
-            print *,"nc invalid"
+            print *,"nc invalid(OP_UNEW, or OP_U_COMP, or OP_UMAC)"
             stop
            endif
          
@@ -14276,7 +14282,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ncomp_cterm, &
        vol, & 
        xface, & 
-       xp, & 
        xvel, & 
        maskcoef, & 
        cterm, & 
@@ -14328,7 +14333,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in), pointer :: vol(D_DECL(:,:,:),:)
        ! flux data for I-scheme
       REAL_T, INTENT(in), pointer :: xface(D_DECL(:,:,:),:)  
-      REAL_T, INTENT(in), pointer :: xp(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: xvel(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: maskcoef(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: cterm(D_DECL(:,:,:),:)
