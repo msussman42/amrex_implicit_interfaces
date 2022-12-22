@@ -12399,6 +12399,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! grad p
 
+       if (ncomp_xp.eq.1) then
+        ! do nothing
+       else
+        print *,"expecting ncomp_xp=1 if OP_PRESGRAD_MAC"
+        stop
+       endif
+
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid3"
         stop
@@ -12423,15 +12430,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then ! grad ppot
 
        if (ncomp_xgp.ne.1) then
-        print *,"ncomp_xgp invalid5"
+        print *,"ncomp_xgp invalid5 OP_POTGRAD_TO_MAC"
         stop
        endif
        if (ncomp_xp.ne.1) then
-        print *,"ncomp_xp invalid5 ",ncomp_xp
+        print *,"ncomp_xp invalid5 OP_POTGRAD_TO_MAC ",ncomp_xp
         stop
        endif
        if (ncomp_xgp.ne.1) then
-        print *,"ncomp_xgp invalid"
+        print *,"ncomp_xgp invalid OP_POTGRAD_TO_MAC ",ncomp_xgp
         stop
        endif
 
@@ -12439,12 +12446,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"energyflag invalid OP_POTGRAD_TO_MAC"
         stop
        endif
+
        if ((ncomp_dest.ne.1).or. &
            (ncomp_source.ne.1).or. &
            (scomp.ne.1).or. &
            (dcomp.ne.1).or. &
            (scomp_bc.ne.1)) then
-        print *,"parameters invalid for op=2"
+        print *,"parameters invalid for op=2 OP_POTGRAD_TO_MAC"
         stop
        endif
 
@@ -12813,11 +12821,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              if (scomp.eq.1) then
               local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
              else
-              print *,"scomp invalid"
+              print *,"scomp invalid OP_PRESGRAD_MAC"
               stop
              endif
             else
-             print *,"nc invalid"
+             print *,"nc invalid OP_PRESGRAD_MAC"
              stop
             endif
            else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
@@ -12834,11 +12842,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                stop
               endif
              else
-              print *,"scomp invalid"
+              print *,"scomp invalid OP_POTGRAD_TO_MAC"
               stop
              endif
             else
-             print *,"nc invalid"
+             print *,"nc invalid OP_POTGRAD_TO_MAC"
              stop
             endif
            else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
@@ -13011,7 +13019,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              local_bctype(side)=SEM_DIRICHLET
              local_bcval(side)=pres(D_DECL(i_out,j_out,k_out),1)
             else
-             print *,"presbc_in is corrupt"
+             print *,"presbc_in corrupt OP_PRESGRAD_MAC or OP_POTGRAD_TO_MAC"
              stop
             endif
            else
@@ -13223,14 +13231,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               local_data_side(side)= &
                xp(D_DECL(iface_out,jface_out,kface_out),nc)
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_UGRAD_MAC"
               stop
              endif
             else if (local_AMR_BC_flag.eq.1) then
              if ((nc.ge.1).and.(nc.le.SDIM)) then
               local_data_side(side)=vel(D_DECL(ic,jc,kc),nc)
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_UGRAD_MAC"
               stop
              endif
             else
@@ -13259,11 +13267,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               if (scomp.eq.1) then
                local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
               else
-               print *,"scomp invalid"
+               print *,"scomp invalid OP_PRESGRAD_MAC"
                stop
               endif
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_PRESGRAD_MAC"
               stop
              endif
             else
@@ -13280,16 +13288,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                local_data_side(side)=pres(D_DECL(ic,jc,kc),1)
                local_data_side_den(side)=den(D_DECL(ic,jc,kc),1)
               else
-               print *,"scomp invalid"
+               print *,"scomp invalid OP_POTGRAD_TO_MAC"
                stop
               endif
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_POTGRAD_TO_MAC"
               stop
              endif
 
             else
-             print *,"simple_AMR_BC_flag invalid"
+             print *,"simple_AMR_BC_flag invalid OP_POTGRAD_TO_MAC"
              stop
             endif
 
@@ -13313,11 +13321,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                local_data_side(side)= &
                 xp(D_DECL(iface_out,jface_out,kface_out),1)
               else
-               print *,"scomp invalid"
+               print *,"scomp invalid OP_UNEW or OP_U_COMP or OP_UMAC"
                stop
               endif
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_UNEW or OP_U_COMP or OP_UMAC"
               stop
              endif
             else if (simple_AMR_BC_flag.eq.1) then
@@ -13325,11 +13333,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               if (scomp.eq.dir) then
                local_data_side(side)=vel(D_DECL(ic,jc,kc),scomp)
               else
-               print *,"scomp invalid"
+               print *,"scomp invalid OP_UNEW or OP_U_COMP or OP_UMAC"
                stop
               endif
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_UNEW or OP_U_COMP or OP_UMAC"
               stop
              endif
             else
@@ -13400,7 +13408,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (nc.eq.1) then
             local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
            else
-            print *,"nc invalid"
+            print *,"nc invalid OP_PRESGRAD_MAC"
             stop
            endif
 
@@ -13410,7 +13418,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
             local_data_den(isten+1)=den(D_DECL(ic,jc,kc),1)
            else
-            print *,"nc invalid"
+            print *,"nc invalid OP_POTGRAD_TO_MAC"
             stop
            endif
 
@@ -14001,7 +14009,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               ! grad ppot/rho_pot at face.
               xgp(D_DECL(ic,jc,kc),nc)=shared_face_value
              else
-              print *,"nc invalid"
+              print *,"nc invalid OP_POTGRAD_TO_MAC"
               stop
              endif
             else if (shared_face.eq.1) then
