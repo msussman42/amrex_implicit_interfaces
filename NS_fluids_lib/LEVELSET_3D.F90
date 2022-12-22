@@ -12878,7 +12878,6 @@ stop
                 ncomp_cterm, &
                 vol_ptr, &
                 xface_ptr, &
-                xp_ptr, &
                 xvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
@@ -12924,7 +12923,6 @@ stop
                 ncomp_cterm, &
                 vol_ptr, &
                 yface_ptr, &
-                yp_ptr, &
                 yvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
@@ -12970,7 +12968,6 @@ stop
                 ncomp_cterm, &
                 vol_ptr, &
                 zface_ptr, &
-                zp_ptr, &
                 zvel_ptr, &
                 maskcoef_ptr, & ! 1=not covered, 0=covered
                 cterm_ptr, &
@@ -13568,7 +13565,7 @@ stop
        if (ncomp_mgoni.eq.SDIM) then
         ! do nothing
        else
-        print *,"ncomp_mgoni invalid"
+        print *,"ncomp_mgoni invalid(OP_UNEW or OP_UMAC)"
         stop
        endif
        if (ncomp_xp.ne.NCOMP_AMRSYNC_VEL_MF) then
@@ -13578,7 +13575,7 @@ stop
        endif
 
        if (ncphys.ne.FACECOMP_NCOMP) then
-        print *,"ncphys invalid"
+        print *,"ncphys invalid(OP_UNEW or OP_UMAC)"
         stop
        endif
 
@@ -15373,24 +15370,31 @@ stop
                ncomp_dest=1
                ncomp_source=1
                scomp_bc=dir+1
+
               else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
+
                scomp=dir+1
                dcomp=1
                ncomp_dest=1
                ncomp_source=1
                scomp_bc=dir+1
+
               else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
+
                scomp=dir+1
                dcomp=1
                ncomp_dest=1
                ncomp_source=1
                scomp_bc=dir+1
+
               else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
+
                scomp=1
                dcomp=1
                ncomp_dest=ncphys
                ncomp_source=SDIM
                scomp_bc=1
+
               else
                print *,"operation_flag invalid20: ",operation_flag
                stop

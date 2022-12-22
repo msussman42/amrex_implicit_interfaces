@@ -18410,7 +18410,6 @@ stop
                ncomp_cterm, &
                tdata_ptr, & ! vol
                tdata_ptr, & ! xface
-               tdata_ptr, & ! xp
                tdata_ptr, & ! xvel
                tdata_ptr, & ! maskcoef
                tdata_ptr, & ! cterm

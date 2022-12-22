@@ -2461,12 +2461,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     ParallelDescriptor::Barrier();
    }
 
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    int alloc_flag=OP_GRADP_ALLOC_INIT; // allocate and init to 0.0
-    ns_level.alloc_gradp_over_rho(alloc_flag);
-   }
-
     // ns.num_divu_outer_sweeps
    for (divu_outer_sweeps=0;
         ((divu_outer_sweeps<local_num_divu_outer_sweeps)&&
@@ -3585,13 +3579,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         }
        }
 
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-	 // subtract unew from dt_gradp_over_rho
-        int local_alloc_flag=OP_GRADP_CONSTRUCT_GP; 
-        ns_level.alloc_gradp_over_rho(local_alloc_flag);
-       }
-
       } else
        amrex::Error("is_zalesak invalid");
 
@@ -3849,12 +3836,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       amrex::Error("ns_time_order or advance_status invalid: do_the..");
 
    } // divu_outer_sweeps loop
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    int alloc_flag=OP_GRADP_DEALLOC; // deallocate
-    ns_level.alloc_gradp_over_rho(alloc_flag);
-   }
 
   } // slab_step loop
 
@@ -11827,18 +11808,10 @@ void NavierStokes::veldiffuseALL() {
  }
 
   // in: veldiffuseALL
-  // 1. subtract dt_gradp_over_rho:
-  //   viscosity: (1) (u^* - u^advect) = dt div 2\mu D/rho - dt grad p/rho
-  //              u^advect <-- u^advect - dt grad p/rho then 
-  //              solve 
-  //              (u^* - u^advect) = dt div 2\mu D/rho which is then equivalent
-  //              to (1)
-  // 2. allocate scratch variables (including CONSERVE_FLUXES_MF)
+  //  allocate scratch variables (including CONSERVE_FLUXES_MF)
   //
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  int alloc_flag=OP_GRADP_APPLY_GP;
-  ns_level.alloc_gradp_over_rho(alloc_flag);
   ns_level.prepare_viscous_solver();
  }
 
@@ -12269,32 +12242,9 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
-  // 1. add dt_gradp_over_rho:  u^* <-- u^* + dt grad p/rho
-  // 2. save resulting velocity, u^*, to dt_gradp_over_rho
-  //    dt_gradp_over_rho <-- u^*
-  // 3. delete scratch variables (including CONSERVE_FLUXES_MF)
+  // delete scratch variables (including CONSERVE_FLUXES_MF)
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  int alloc_flag=OP_GRADP_REMOVE_GP;
-  ns_level.alloc_gradp_over_rho(alloc_flag);
-    //    dt_gradp_over_rho <-- u^*
-    //    after the projection: dt_gradp_over_rho <--- u^*-u^{n+1}
-    //    note: in Jemison, Sussman, Arient:
-    //    for k=0...num_divu_outer_sweeps-1
-    //     S_t + u^{n+1,(k)} =0
-    //     u^* = u^advect + dt div (2 mu D)^*/rho
-    //     u^{n+1}=u^* - dt grad p^{n+1,(k)}/rho
-    //    end
-    //    NOW,
-    //    for k=0...num_divu_outer_sweeps-1
-    //     S_t + u^{n+1,(k)} =0
-    //     u^* = u^advect + dt div (2 mu D)^*/rho - dt (grad p/rho)^{n+1,(k)}
-    //     u^* = u^* + dt (grad p/rho)^{n+1,(k)}
-    //     u^{n+1}=u^* - dt grad p^{n+1,(k+1)}/rho
-    //    end
-  alloc_flag=OP_GRADP_SAVE_UVISC;
-  ns_level.alloc_gradp_over_rho(alloc_flag);
-
   ns_level.exit_viscous_solver();
  }  // ilev
 
@@ -12719,70 +12669,6 @@ void NavierStokes::prepare_advect_vars(Real time) {
  push_back_state_register(ADVECT_REGISTER_MF,time);
 
 } // end subroutine prepare_advect_vars(Real time)
-
-
-// FUTURE: do the same treatment for advection:
-//  variable: dt div (-pI + tau)/rho = unp1-u^advect = dt_non_advect_force
-void NavierStokes::alloc_gradp_over_rho(int alloc_flag) {
-
- int nsolve=AMREX_SPACEDIM;
-
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-
- if (alloc_flag==OP_GRADP_ALLOC_INIT) {
-  new_localMF(dt_gradp_over_rho_cell_MF,nsolve,1,-1);
-  setVal_localMF(dt_gradp_over_rho_cell_MF,0.0,0,nsolve,1);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   new_localMF(dt_gradp_over_rho_face_MF+dir,1,0,dir);
-   setVal_localMF(dt_gradp_over_rho_face_MF+dir,0.0,0,1,0);
-  }
- } else if (alloc_flag==OP_GRADP_DEALLOC) {
-  delete_localMF(dt_gradp_over_rho_cell_MF,1);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   delete_localMF(dt_gradp_over_rho_face_MF+dir,1);
-  }
-
-  // save velocity at end of veldiffuseALL
- } else if (alloc_flag==OP_GRADP_SAVE_UVISC) {  
-  init_boundary();
-  MultiFab::Copy(*localMF[dt_gradp_over_rho_cell_MF],S_new,0,0,nsolve,1);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Copy(*localMF[dt_gradp_over_rho_face_MF+dir],Umac_new,0,0,1,0);
-  }
-
-  //subtract dt grad p/rho at begin of veldiffuseALL
- } else if (alloc_flag==OP_GRADP_APPLY_GP) { 
-  MultiFab::Subtract(S_new,*localMF[dt_gradp_over_rho_cell_MF],0,0,nsolve,0);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Subtract(Umac_new,*localMF[dt_gradp_over_rho_face_MF+dir],0,0,1,0);
-  }
-  init_boundary();
-
-  //add dt grad p/rho at end of veldiffuseALL
-  //(but before saving the velocity)
- } else if (alloc_flag==OP_GRADP_REMOVE_GP) { 
-  MultiFab::Add(S_new,*localMF[dt_gradp_over_rho_cell_MF],0,0,nsolve,0);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Add(Umac_new,*localMF[dt_gradp_over_rho_face_MF+dir],0,0,1,0);
-  }
-  init_boundary();
-
-  //subtract unew from dt_gradp_over_rho at 
-  //end of pressure projection.
- } else if (alloc_flag==OP_GRADP_CONSTRUCT_GP) { 
-  init_boundary();
-  MultiFab::Subtract(*localMF[dt_gradp_over_rho_cell_MF],S_new,0,0,nsolve,1);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
-   MultiFab::Subtract(*localMF[dt_gradp_over_rho_face_MF+dir],Umac_new,0,0,1,0);
-  }
- } else
-  amrex::Error("alloc_flag invalid in alloc_gradp_over_rho");
-
-} // end subroutine alloc_gradp_over_rho
 
 void NavierStokes::alloc_DTDtALL(int alloc_flag) {
 
