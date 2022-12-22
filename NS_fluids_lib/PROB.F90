@@ -12429,14 +12429,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then ! grad ppot
 
-       if (ncomp_xgp.ne.1) then
-        print *,"ncomp_xgp invalid5 OP_POTGRAD_TO_MAC"
-        stop
-       endif
        if (ncomp_xp.ne.1) then
         print *,"ncomp_xp invalid5 OP_POTGRAD_TO_MAC ",ncomp_xp
         stop
        endif
+
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid OP_POTGRAD_TO_MAC ",ncomp_xgp
         stop
@@ -12461,7 +12458,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
        if (ncomp_xgp.ne.1) then
-        print *,"ncomp_xgp invalid7"
+        print *,"ncomp_xgp invalid7 OP_UNEW,OP_U_COMP,OP_UMAC"
         stop
        endif
        if (energyflag.ne.SUB_OP_DEFAULT) then
@@ -12471,13 +12468,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if ((scomp.ne.dir).or. &
            (dcomp.ne.1)) then
-        print *,"parameters invalid for op=3,10,11,5"
+        print *,"parameters invalid op=3,10,11,5, OP_UNEW,OP_U_COMP,OP_UMAC"
         stop
        endif
        if ((ncomp_dest.ne.1).or. &
            (ncomp_source.ne.1).or. &
            (scomp_bc.ne.dir)) then
-        print *,"parameters invalid for op=3"
+        print *,"parameters invalid for op=3 OP_UNEW,OP_U_COMP,OP_UMAC"
         stop
        endif
 
@@ -13989,7 +13986,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            ! potential pressure gradient/den 
            if (ncfluxreg.ne.SDIM) then
-            print *,"ncfluxreg invalid7 ",ncfluxreg
+            print *,"ncfluxreg invalid7 OP_POTGRAD_TO_MAC ",ncfluxreg
             stop
            endif
 
@@ -14015,7 +14012,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if (shared_face.eq.1) then
              ! do nothing
             else
-             print *,"shared_face invalid"
+             print *,"shared_face invalid OP_POTGRAD_TO_MAC"
              stop
             endif
 
