@@ -7537,7 +7537,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
  if (project_option==SOLVETYPE_PRESGRAVITY) {
   local_face_index=FACECOMP_FACEDEN_BASE;  // 1/rho
  } else if (project_option_projection(project_option)==1) {
-  local_face_index=FACECOMP_FACEDEN;  // 1/rho
+  local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
    // 1/rho (only used in eval_face_coeff for sanity check purposes)
   local_face_index=FACECOMP_FACEDEN;  
@@ -9158,10 +9158,23 @@ void NavierStokes::multiphase_project(int project_option) {
  int save_enable_spectral=enable_spectral;
 
  if (project_option==SOLVETYPE_PRESGRAVITY) {
+
+   //remark: incremental_gravity_flag==1 is an ok assumption to make
+   //so long as "delta p_{hydrostatic} << p_{ambient}" or the flow
+   //is incompressible.
+   
   if (enable_spectral==0) {
    //do nothing
+  } else if (enable_spectral==1) {
+   //having just SOLVETYPE_PRESGRAVITY low order will not
+   //adversely effect the numerical dissipation of an 
+   //otherwise spectrally accurate method (only the order
+   //will be adversely effected)
   } else
-   amrex::Error("expecting enable_spectral==0 if incremental_gravity");
+   amrex::Error("enable_spectral invalid");
+
+  override_enable_spectral(0); // always low order
+
  } else if (project_option_projection(project_option)==1) {
   // do nothing
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
@@ -9194,8 +9207,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
    // do nothing
-  } else if ((project_option==SOLVETYPE_PRES)|| 
-             (project_option==SOLVETYPE_PRESGRAVITY)) {
+  } else if (project_option==SOLVETYPE_PRES) {
+   //do nothing
+  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
    // do nothing
   } else
    amrex::Error("project_option invalid 45"); 
@@ -11298,18 +11312,30 @@ void NavierStokes::multiphase_project(int project_option) {
  cpp_overridepbc(0,project_option);
 
  if (project_option==SOLVETYPE_PRESEXTRAP) {
+
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
     // in: MacProj.cpp (calls fort_restore_pres)
    ns_level.restore_active_pressure(PRESSURE_SAVE_MF);
+    // spectral_override==1 => order derived from "enable_spectral"
     // average from ilev+1 to ilev
    ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,1); 
   }
   delete_array(PRESSURE_SAVE_MF);
+
  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
+
   Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
 	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
   delete_array(PRESSURE_SAVE_MF);
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+    // spectral_override==1 => order derived from "enable_spectral"
+    // average from ilev+1 to ilev
+   ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,1); 
+  }
+
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    //ngrow,scomp,ncomp
    plusALL(0,0,1,GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_SAVE_MF+dir);
