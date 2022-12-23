@@ -2798,8 +2798,13 @@ NavierStokes::read_params ()
     if (incremental_gravity_flag==1) {
      if (enable_spectral==0) {
       // do nothing
+     } else if (enable_spectral==1) {
+      //having just SOLVETYPE_PRESGRAVITY low order will not
+      //adversely effect the numerical dissipation of an 
+      //otherwise spectrally accurate method (only the order
+      //will be adversely effected)
      } else
-      amrex::Error("expecting enable_spectral==0 if incremental_gravity");
+      amrex::Error("enable_spectral invalid");
     } else if (incremental_gravity_flag==0) {
      // do nothing
     } else
@@ -5592,8 +5597,13 @@ NavierStokes::read_params ()
 
        if (enable_spectral==0) {
         // do nothing
+       } else if (enable_spectral==1) {
+        //having just SOLVETYPE_PRESGRAVITY low order will not
+        //adversely effect the numerical dissipation of an 
+        //otherwise spectrally accurate method (only the order
+        //will be adversely effected)
        } else
-        amrex::Error("need enable_spectral==0 if ice or FSI_rigid exists");
+        amrex::Error("enable_spectral invalid");
 
        if (incremental_gravity_flag==1) {
 	//do nothing
@@ -5617,6 +5627,7 @@ NavierStokes::read_params ()
     }
      
     if (some_materials_compressible()==1) {
+
      if (num_divu_outer_sweeps<2)
       amrex::Error("num_divu_outer_sweeps>=2 for comp materials");
 
