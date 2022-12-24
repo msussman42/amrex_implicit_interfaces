@@ -12,7 +12,9 @@
       Real*8 :: tdata_arr(lastline-firstline+1)
       Real*8 :: cendata_arr(lastline-firstline+1)
       REAL*8 :: LS_ERR,predict
-      REAL*8 :: LS_ERR_raw,predict_raw,sigma_1
+      REAL*8 :: LS_ERR_raw,predict_raw
+      REAL*8 :: sigma_1,sigma_2
+      REAL*8 :: sd_1,sd_2
       integer :: i,j,k
       integer :: fit_type
       integer :: ndata
@@ -108,12 +110,17 @@
        print *,"LS_ERR= ",LS_ERR
        print *,"LS_ERR_raw= ",LS_ERR_raw
        print *,"X(1),X(2) ",X(1),X(2)
-       sigma_1=(LS_ERR_raw/ndata)*A(2,2)/det
-       print *,"variance of X(1) ",sigma_1
-       print *,"variance of X(2) ",(LS_ERR_raw/ndata)*A(1,1)/det
+       sigma_1=(LS_ERR_raw/(ndata-2.0d0))*A(2,2)/det
+       sd_1=sqrt(sigma_1)
+       sigma_2=(LS_ERR_raw/(ndata-2.0d0))*A(1,1)/det
+       sd_2=sqrt(sigma_2)
+       print *,"variance,standard dev of X(1) ",sigma_1,sd_1
+       print *,"variance,standard dev of X(2) ",sigma_2,sd_2
        if ((fit_type.eq.1).or.(fit_type.eq.2)) then
         print *,"estimated variance of e^X(1): ", &
-          max(abs(exp(X(1)+sigma_1)-AA),abs(exp(X(1)-sigma_1)-AA))
+          max((exp(X(1)+sd_1)-AA)**2,(exp(X(1)-sd_1)-AA)**2)
+        print *,"estimated standard dev of e^X(1): ", &
+          max(abs(exp(X(1)+sd_1)-AA),abs(exp(X(1)-sd_1)-AA))
        endif
       enddo
 
