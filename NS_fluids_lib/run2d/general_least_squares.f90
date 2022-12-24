@@ -1,0 +1,101 @@
+      PROGRAM least_squares
+
+      IMPLICIT NONE
+
+      integer, PARAMETER :: firstline=1
+      integer, PARAMETER :: lastline=4
+      Real*8 :: AA
+      Real*8 :: A(2,2)
+      Real*8 :: B(2)
+      Real*8 :: X(2)
+      Real*8 :: tdata,cendata,det
+      Real*8 :: tdata_arr(lastline-firstline+1)
+      Real*8 :: cendata_arr(lastline-firstline+1)
+      REAL*8 :: LS_ERR,predict
+      integer :: i,j,k
+      integer :: fit_type
+
+      print *,"looking for file: cen"
+      print *,"firstline: ",firstline
+      print *,"lastline: ",lastline
+
+      open(unit=17, file= 'cen')
+
+      do i=1,firstline-1
+       read(17,*) tdata,cendata
+      enddo
+      do i=1,lastline-firstline+1
+       read(17,*) tdata,cendata
+       if (i.eq.1) then
+        print *,"first point: ",tdata,cendata
+       endif
+       tdata_arr(i)=tdata
+       cendata_arr(i)=cendata
+      enddo
+      print *,"last point: ",tdata,cendata
+      close(17)
+
+      do fit_type=0,2
+
+       do j=1,2
+       do k=1,2
+        A(j,k)=0.0
+       enddo
+       enddo
+       do j=1,2
+        B(j)=0.0
+        X(j)=0.0
+       enddo
+       do i=1,lastline-firstline+1
+        tdata=tdata_arr(i)
+        cendata=cendata_arr(i)
+        if (fit_type.eq.0) then
+         ! do nothing y=a+bx
+        else if (fit_type.eq.1) then 
+         ! log y = log a + b log x  (y=a x^b)
+         tdata=log(tdata)
+         cendata=log(cendata)
+        else if (fit_type.eq.2) then
+         ! log y= log a + b x    y=a e^(bx)
+         cendata=log(cendata)
+        else
+         print *,"fit_type invalid"
+         stop
+        endif
+
+        if (i.eq.1) then
+         print *,"first point: ",tdata,cendata
+        endif
+        A(1,1)=A(1,1)+1.0
+        A(1,2)=A(1,2)+tdata
+        A(2,1)=A(2,1)+tdata
+        A(2,2)=A(2,2)+tdata*tdata
+        B(1)=B(1)+cendata
+        B(2)=B(2)+cendata*tdata
+       enddo
+       print *,"last point: ",tdata,cendata
+       det=A(1,1)*A(2,2)-A(2,1)*A(1,2)
+       X(1)=(A(2,2)*B(1)-A(1,2)*B(2))/det
+       X(2)=(-A(2,1)*B(1)+A(1,1)*B(2))/det
+       print *,"X1,X2: ",X(1),X(2)
+       print *,"fit_type= ",fit_type
+       LS_ERR=0.0
+       do i=1,lastline-firstline+1
+        if (fit_type.eq.0) then
+         predict=X(1)+X(2)*tdata_arr(i)
+        else if (fit_type.eq.1) then
+         AA=exp(X(1))
+         predict=AA*(tdata_arr(i)**X(2))
+        else if (fit_type.eq.2) then
+         AA=exp(X(1))
+         predict=AA*exp(X(2)*tdata_arr(i))
+        endif
+        LS_ERR=LS_ERR+(predict-cendata_arr(i))**2
+       enddo
+       LS_ERR=sqrt(LS_ERR)
+
+       print *,"fit_type",fit_type
+       print *,"LS_ERR= ",LS_ERR
+      enddo
+
+      END PROGRAM
