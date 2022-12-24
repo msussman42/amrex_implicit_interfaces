@@ -12,19 +12,24 @@
       Real*8 :: tdata_arr(lastline-firstline+1)
       Real*8 :: cendata_arr(lastline-firstline+1)
       REAL*8 :: LS_ERR,predict
+      REAL*8 :: LS_ERR_raw,predict_raw,sigma_1
       integer :: i,j,k
       integer :: fit_type
+      integer :: ndata
+
+      ndata=lastline-firstline+1
 
       print *,"looking for file: cen"
       print *,"firstline: ",firstline
       print *,"lastline: ",lastline
+      print *,"ndata: ",ndata
 
       open(unit=17, file= 'cen')
 
       do i=1,firstline-1
        read(17,*) tdata,cendata
       enddo
-      do i=1,lastline-firstline+1
+      do i=1,ndata
        read(17,*) tdata,cendata
        if (i.eq.1) then
         print *,"first point: ",tdata,cendata
@@ -46,7 +51,7 @@
         B(j)=0.0
         X(j)=0.0
        enddo
-       do i=1,lastline-firstline+1
+       do i=1,ndata
         tdata=tdata_arr(i)
         cendata=cendata_arr(i)
         if (fit_type.eq.0) then
@@ -80,7 +85,9 @@
        print *,"X1,X2: ",X(1),X(2)
        print *,"fit_type= ",fit_type
        LS_ERR=0.0
-       do i=1,lastline-firstline+1
+       LS_ERR_raw=0.0
+       do i=1,ndata
+        predict_raw=X(1)+X(2)*tdata
         if (fit_type.eq.0) then
          AA=X(1)
          predict=AA+X(2)*tdata_arr(i)
@@ -92,12 +99,22 @@
          predict=AA*exp(X(2)*tdata_arr(i))
         endif
         LS_ERR=LS_ERR+(predict-cendata_arr(i))**2
+        LS_ERR_raw=LS_ERR_raw+(predict_raw-cendata)**2
        enddo
        LS_ERR=sqrt(LS_ERR)
 
        print *,"fit_type",fit_type
        print *,"AA,X2: ",AA,X(2)
        print *,"LS_ERR= ",LS_ERR
+       print *,"LS_ERR_raw= ",LS_ERR_raw
+       print *,"X(1),X(2) ",X(1),X(2)
+       sigma_1=(LS_ERR_raw/ndata)*A(2,2)/det
+       print *,"variance of X(1) ",sigma_1
+       print *,"variance of X(2) ",(LS_ERR_raw/ndata)*A(1,1)/det
+       if ((fit_type.eq.1).or.(fit_type.eq.2)) then
+        print *,"estimated variance of e^X(1): ", &
+          max(abs(exp(X(1)+sigma_1)-AA),abs(exp(X(1)-sigma_1)-AA))
+       endif
       enddo
 
       END PROGRAM
