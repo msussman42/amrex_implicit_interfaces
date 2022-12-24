@@ -82,7 +82,8 @@
        LS_ERR=0.0
        do i=1,lastline-firstline+1
         if (fit_type.eq.0) then
-         predict=X(1)+X(2)*tdata_arr(i)
+         AA=X(1)
+         predict=AA+X(2)*tdata_arr(i)
         else if (fit_type.eq.1) then
          AA=exp(X(1))
          predict=AA*(tdata_arr(i)**X(2))
@@ -95,6 +96,7 @@
        LS_ERR=sqrt(LS_ERR)
 
        print *,"fit_type",fit_type
+       print *,"AA,X2: ",AA,X(2)
        print *,"LS_ERR= ",LS_ERR
       enddo
 
