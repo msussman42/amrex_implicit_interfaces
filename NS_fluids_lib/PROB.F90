@@ -11732,18 +11732,26 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine grouplsBC
 
+       ! called from:
+       !   fort_buildfacewt (LEVELSET_3D.F90)
+       !   fort_fluidsolidcor (NAVIERSTOKES_3D.F90)
       subroutine eval_face_coeff( &
+       xsten,nhalf, &
        level,finest_level, &
        cc,cc_ice,cc_group, &
        dd,dd_group, &
        visc_coef, &
-       nsolve,dir,veldir,project_option, &
+       nsolve, &
+       dir,veldir, &
+       project_option, &
        uncoupled_viscosity, &
        side,local_presbc,local_wt)
       use global_utility_module
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: level,finest_level
+      INTEGER_T, INTENT(in) :: nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, INTENT(in) :: cc,cc_ice
       REAL_T, INTENT(out) :: cc_group
       REAL_T, INTENT(in) :: dd
@@ -11757,7 +11765,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(out) :: local_wt(nsolve)
       INTEGER_T :: at_RZ_boundary
 
-      if ((cc.ge.zero).and. &
+      if ((nhalf.ge.3).and. &
+          (cc.ge.zero).and. &
           (cc.le.one).and. &
           (cc_ice.ge.zero).and. &
           (cc_ice.le.one).and. &
@@ -11775,20 +11784,40 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           (level.le.finest_level)) then
 
        at_RZ_boundary=0
+
        if (SDIM.eq.2) then
         if (dir.eq.0) then
          if (side.eq.1) then
-          if (local_presbc.eq.REFLECT_EVEN) then
-           at_RZ_boundary=1
-          else if ((local_presbc.eq.INT_DIR).or. &
-                   (local_presbc.eq.EXT_DIR).or. &
-                   (local_presbc.eq.REFLECT_ODD).or. &
-                   (local_presbc.eq.FOEXTRAP)) then
+          if (levelrz.eq.COORDSYS_RZ) then
+           if (local_presbc.eq.REFLECT_EVEN) then
+            if ((xsten(-1,dir+1).lt.zero).and. &
+                (xsten(1,dir+1).ge.zero)) then
+             at_RZ_boundary=1
+            else if ((xsten(-1,dir+1).ge.zero).and. &
+                     (xsten(1,dir+1).ge.zero)) then
+             ! do nothing
+            else
+             print *,"xsten bust buildface_wt"
+             stop
+            endif
+           else if ((local_presbc.eq.INT_DIR).or. &
+                    (local_presbc.eq.EXT_DIR).or. &
+                    (local_presbc.eq.REFLECT_ODD).or. &
+                    (local_presbc.eq.FOEXTRAP)) then
+            ! do nothing
+           else
+            print *,"local_presbc invalid"
+            stop
+           endif
+          else if (levelrz.eq.COORDSYS_CARTESIAN) then
+           ! do nothing
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            ! do nothing
           else
-           print *,"local_presbc invalid"
+           print *,"levelrz invalid"
            stop
           endif
+
          else if ((side.eq.0).or.(side.eq.2)) then
           ! do nothing
          else

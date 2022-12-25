@@ -15604,6 +15604,8 @@ stop
       REAL_T local_fwt
       INTEGER_T local_presbc
       REAL_T local_mask
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level or finest_level invalid build face wt"
@@ -15725,6 +15727,8 @@ stop
           ! temperature: dedge is FACECOMP_FACEHEAT component c++ ( k )
           ! species: dedge is FACECOMP_FACESPEC component c++ ( rho D )
 
+          call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
+
           if (dir.eq.0) then
            inorm=i
           else if (dir.eq.1) then
@@ -15757,7 +15761,8 @@ stop
           endif
 
           if (project_option_projectionF(project_option).eq.1) then
-           !do nothing
+           !do nothing 
+           !SOLVETYPE_PRES,SOLVETYPE_PRESGRAVITY,SOLVETYPE_INITPROJ
           else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
            !do nothing
           else if (project_option.eq.SOLVETYPE_HEAT) then ! temperature
@@ -15820,6 +15825,7 @@ stop
              ! eval_face_coeff is declared in: PROB.F90
              ! e.g. 1/rho 
             call eval_face_coeff( &
+             xsten,nhalf, &
              level,finest_level, &
              cc,cc_ice,cc_group, &
              dd,dd_group, &
