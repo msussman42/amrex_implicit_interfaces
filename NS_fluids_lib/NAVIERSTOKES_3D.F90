@@ -11540,7 +11540,7 @@ END SUBROUTINE SIMP
        enddo
        enddo
        enddo
-      enddo ! dir
+      enddo ! dir=0..sdim-1
 
       return
       end subroutine fort_fluidsolidcor
