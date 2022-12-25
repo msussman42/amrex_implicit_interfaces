@@ -3194,7 +3194,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        ns_level.combine_state_variable(
         SOLVETYPE_HEAT,
         combine_idx,
-        combine_flag,
+        combine_flag, //combine_flag==2 (Fm=0 cells only)
         hflag,
         update_flux,
         interface_cond_avail); 
@@ -3202,21 +3202,22 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.combine_state_variable(
          SOLVETYPE_SPEC+ns,
          combine_idx,
-         combine_flag,
+         combine_flag, //combine_flag==2 (Fm=0 cells only)
          hflag,
          update_flux,
          interface_cond_avail); 
        }
        ns_level.combine_state_variable(
-        SOLVETYPE_VISC,
+        SOLVETYPE_VISC, //cell centered velocity
         combine_idx,
-        combine_flag,
+        combine_flag, //combine_flag==2 (Fm=0 cells only)
         hflag,
         update_flux,
         interface_cond_avail);
+
        update_flux=1;
        ns_level.combine_state_variable(
-        SOLVETYPE_PRES,
+        SOLVETYPE_PRES, //flux var=mac velocity
         combine_idx,
         combine_flag,
         hflag,
@@ -3351,10 +3352,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ns_level.combine_state_variable(
          SOLVETYPE_VISC,  //cell centered velocity
          combine_idx,
-         combine_flag,
+         combine_flag, //=2 (combine if vfrac<VOFTOL)
          hflag,
          update_flux, 
          interface_cond_avail);
+
         update_flux=1;
         ns_level.combine_state_variable(
          SOLVETYPE_PRES, //mac velocity
@@ -3551,15 +3553,16 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int update_flux=0;
         int interface_cond_avail=0;
         ns_level.combine_state_variable(
-         SOLVETYPE_VISC,
+         SOLVETYPE_VISC, // cell centered velocity
          combine_idx,
-         combine_flag,
+         combine_flag, // =2 (combine if vfrac<VOFTOL)
          hflag,
          update_flux,
          interface_cond_avail);
+
         update_flux=1;
         ns_level.combine_state_variable(
-         SOLVETYPE_PRES,
+         SOLVETYPE_PRES, //flux var = mac velocity
 	 combine_idx,
          combine_flag,
          hflag,
