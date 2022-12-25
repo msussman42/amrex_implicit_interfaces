@@ -69,6 +69,7 @@ void
 NavierStokes::allocate_maccoef(int project_option,int nsolve,
 		int create_hierarchy) {
 
+  //SOLVETYPE_PRES,SOLVETYPE_PRESGRAVITY,SOLVETYPE_INITPROJ
  if (project_option_projection(project_option)==1) {
 
   // do nothing
@@ -718,6 +719,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+     //fort_dividedx is declared in: MACOPERATOR_3D.F90
     fort_dividedx(
      &nsolve,
      bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),

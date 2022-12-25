@@ -7853,6 +7853,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  MultiFab::Copy(*localMF[OUTER_ITER_PRESSURE_MF],
 		*current_contents_mf,0,0,nsolve,0);
 
+  //project_option_olddata_needed is declared in: NavierStokes.cpp
  if (project_option_olddata_needed(project_option)==1) { 
   
    // if S^initial <> S^*, then put something else into
@@ -9659,7 +9660,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // in: multiphase_project
    // calls fort_buidfacewt
-   // BUILDFACEWT updates static variables min_face_wt and max_face_wt
+   // fort_buildfacewt updates static variables min_face_wt and max_face_wt
    // max_face_wt[0][1] has max of (1/rho) or (visc_coef*mu) or (k) or (D)
   int face_weight_op=SUB_OP_FOR_MAIN;
   ns_level.allocate_FACE_WEIGHT(nsolve,project_option,face_weight_op);
@@ -9754,6 +9755,8 @@ void NavierStokes::multiphase_project(int project_option) {
   ns_level.debug_ngrow(LEVELPC_MF,2,870);
  } // ilev=finest_level ... level
 
+ // allocate_maccoefALL is declared in: MacProj.cpp
+ //
  // initializes diagsing,mask_div_residual,mask_residual,
  // ONES_MF,ONES_GROW_MF
  //

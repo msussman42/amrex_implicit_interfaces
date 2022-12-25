@@ -11778,8 +11778,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           (dir.ge.0).and. &
           (dir.lt.SDIM).and. &
           (project_option_is_validF(project_option).eq.1).and. &
-          (uncoupled_viscosity.ge.0).and. &
-          (side.ge.0).and. &
+          ((uncoupled_viscosity.eq.0).or. &
+           (uncoupled_viscosity.eq.1)).and. &
+          ((side.eq.0).or.(side.eq.1).or.(side.eq.2)).and. &
           (level.ge.0).and. &
           (level.le.finest_level)) then
 
@@ -11788,16 +11789,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if (SDIM.eq.2) then
         if (dir.eq.0) then
          if (side.eq.1) then
+
           if (levelrz.eq.COORDSYS_RZ) then
            if (local_presbc.eq.REFLECT_EVEN) then
             if ((xsten(-1,dir+1).lt.zero).and. &
-                (xsten(1,dir+1).ge.zero)) then
+                (xsten(1,dir+1).gt.zero)) then
              at_RZ_boundary=1
-            else if ((xsten(-1,dir+1).ge.zero).and. &
-                     (xsten(1,dir+1).ge.zero)) then
+            else if ((xsten(-1,dir+1).gt.zero).and. &
+                     (xsten(1,dir+1).gt.zero)) then
              ! do nothing
             else
-             print *,"xsten bust buildface_wt"
+             print *,"xsten bust eval_face_coeff"
              stop
             endif
            else if ((local_presbc.eq.INT_DIR).or. &
@@ -11848,7 +11850,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
          cc_group=cc*cc_ice
         else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then!grav projection
-         cc_group=cc   ! we do not mask off the ice regions here
+         cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
         else
          print *,"project_option invalid"
          stop

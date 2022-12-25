@@ -584,6 +584,7 @@ stop
          stop
         endif
 
+         ! SOLVETYPE_PRES, SOLVETYPE_PRESGRAVITY, SOLVETYPE_INITPROJ
         if (project_option_projectionF(project_option).eq.1) then
 
          if (nsolve.ne.1) then
@@ -591,7 +592,16 @@ stop
           stop
          endif
 
-         local_cterm(1)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
+         if (project_option.eq.SOLVETYPE_PRES) then
+          local_cterm(1)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
+         else if (project_option.eq.SOLVETYPE_INITPROJ) then
+          local_cterm(1)=zero
+         else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
+          local_cterm(1)=zero
+         else
+          print *,"project_option invalid"
+          stop
+         endif
 
         else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
 
@@ -933,7 +943,9 @@ stop
          stop
         endif
         hx=(xsten(1,dir+1)-xsten(-1,dir+1))*RR
-        if (hx.le.zero) then
+        if (hx.gt.zero) then
+         ! do nothing
+        else
          print *,"hx invalid"
          stop
         endif

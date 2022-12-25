@@ -9398,6 +9398,7 @@ void NavierStokes::init_pressure_error_indicator() {
 // pressure scale: V^2
 // scale for "cell_sound" is 1
 //
+// init_advective_pressure is called from: NavierStokes::multiphase_project
 void NavierStokes::init_advective_pressure(int project_option) {
  
  int finest_level=parent->finestLevel();
