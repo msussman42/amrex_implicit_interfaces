@@ -11292,6 +11292,8 @@ END SUBROUTINE SIMP
       REAL_T local_wt(nsolve)
       REAL_T maskleft,maskright
       INTEGER_T maskface
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if ((level.ge.0).and.(level.le.finest_level)) then
        ! do nothing
@@ -11384,6 +11386,8 @@ END SUBROUTINE SIMP
           stop
          endif
 
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
+
          if (dir.eq.0) then
           local_dest=xdest(D_DECL(i,j,k))
           local_src=xsrc(D_DECL(i,j,k))
@@ -11473,6 +11477,7 @@ END SUBROUTINE SIMP
 
           ! declared in: PROB.F90
          call eval_face_coeff( &
+           xsten,nhalf, &
            level,finest_level, &
            AL,AL_ice,cc_group, &
            local_dd,local_dd_group, &
