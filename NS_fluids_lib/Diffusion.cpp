@@ -427,7 +427,7 @@ void NavierStokes::viscous_boundary_fluxes(
 // project_option = SOLVETYPE_PRES (flux var=mac velocity)
 // project_option = SOLVETYPE_HEAT (temp)
 // project_option = SOLVETYPE_VISC (cell centered velocity) 
-// project_option = SOLVETYPE_VISC,... (species)
+// project_option = SOLVETYPE_SPEC+ns ns=0..num_species_var-1 (species)
 // combine_flag==0 (FVM -> GFM) (T[im]=T_interp im=1..num_materials)
 // combine_flag==1 (GFM -> FVM)
 // combine_flag==2 (combine if vfrac<VOFTOL)
