@@ -1967,9 +1967,9 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   min_face_wt.resize(thread_class::nthreads);
   max_face_wt.resize(thread_class::nthreads);
   for (int tid=0;tid<thread_class::nthreads;tid++) {
-   min_face_wt[tid].resize(4);
-   max_face_wt[tid].resize(4);
-   for (int iwt=0;iwt<4;iwt++) {
+   min_face_wt[tid].resize(NCOMP_FACE_WT);
+   max_face_wt[tid].resize(NCOMP_FACE_WT);
+   for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
     min_face_wt[tid][iwt]=1.0e+20;
     max_face_wt[tid][iwt]=-1.0e+20;
    }
