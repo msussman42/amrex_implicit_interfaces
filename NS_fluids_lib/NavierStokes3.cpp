@@ -9327,6 +9327,7 @@ void NavierStokes::multiphase_project(int project_option) {
   // automatically initializes mac_rhs_crse_array=0.0
  allocate_rhs_var(nsolve,MAC_RHS_CRSE_MF);
  
+  // currently in: multiphase_project
  min_face_wt.resize(thread_class::nthreads);
  max_face_wt.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -9658,7 +9659,7 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("project_option_projection invalid 49");
 
-   // in: multiphase_project
+   // currently in: multiphase_project
    // calls fort_buidfacewt
    // fort_buildfacewt updates static variables min_face_wt and max_face_wt
    // max_face_wt[0][DD_COMP_FACE_WT] has max 
@@ -11422,6 +11423,7 @@ void NavierStokes::diffusion_heatingALL(
  } else
   amrex::Error("NS_geometry_coord bust 61");
 
+  // currently in: diffusion_heatingALL
  min_face_wt.resize(thread_class::nthreads);
  max_face_wt.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -11433,7 +11435,8 @@ void NavierStokes::diffusion_heatingALL(
   }
  } // tid
 
-
+  // currently in: NavierStokes::diffusion_heatingALL
+  
  int nsolve=AMREX_SPACEDIM;
  for (int ilev=finest_level;ilev>=level;ilev--) {
   int face_weight_op=SUB_OP_FOR_MAIN;
