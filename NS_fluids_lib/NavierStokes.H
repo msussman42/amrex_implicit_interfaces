@@ -1431,6 +1431,7 @@ protected:
 
     static Vector< Vector<Real> > min_face_wt;
     static Vector< Vector<Real> > max_face_wt;
+
     static Vector< Vector<Real> > delta_mass;
 
     static Real max_problen;

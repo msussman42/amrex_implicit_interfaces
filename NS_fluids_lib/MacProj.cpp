@@ -37,6 +37,10 @@
 //              NavierStokes::multiphase_project
 namespace amrex{
 
+//called from:
+// NavierStokes::multiphase_project (create_hierarchy=0)
+// NavierStokes::multiphase_project (create_hierarchy=1)
+// NavierStokes::update_SEM_forcesALL (create_hierarchy=-1)
 //create_hierarchy=-1,0,1
 void
 NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
@@ -615,6 +619,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   // dest,soucre,scomp,dcomp,ncomp,ngrow
  Copy_localMF(ONES_GROW_MF,ONES_MF,0,0,1,0);
+
+FIX ME use max_face_wt[0][DD_COMP_FACE_WT] as a basis
+sanity check: MERGE_COMP_FACE_WT at most twice as large DD_COMP_FACE_WT
 
  Real min_interior_coeff=0.0;
  if (denconst_max>0.0) {
@@ -1964,6 +1971,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    // allocate and initialize to 0.0
   allocate_MAC_velocityALL(nsolve,GP_DEST_FACE_MF);
 
+   // currently in: update_SEM_forcesALL
   min_face_wt.resize(thread_class::nthreads);
   max_face_wt.resize(thread_class::nthreads);
   for (int tid=0;tid<thread_class::nthreads;tid++) {
