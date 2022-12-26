@@ -7650,7 +7650,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
 
-  for (int iwt=0;iwt<4;iwt++) {
+  for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
    if (min_face_wt[tid][iwt]<min_face_wt[0][iwt])
     min_face_wt[0][iwt]=min_face_wt[tid][iwt];
    if (max_face_wt[tid][iwt]>max_face_wt[0][iwt])
@@ -7662,12 +7662,12 @@ void NavierStokes::allocate_FACE_WEIGHT(
  ParallelDescriptor::Barrier();
 
 
- for (int iwt=0;iwt<4;iwt++) {
+ for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
   ParallelDescriptor::ReduceRealMin(min_face_wt[0][iwt]);
   ParallelDescriptor::ReduceRealMax(max_face_wt[0][iwt]);
  }
  for (int tid=1;tid<thread_class::nthreads;tid++) {
-  for (int iwt=0;iwt<4;iwt++) {
+  for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
    min_face_wt[tid][iwt]=min_face_wt[0][iwt];
    max_face_wt[tid][iwt]=max_face_wt[0][iwt];
   }
@@ -9330,9 +9330,9 @@ void NavierStokes::multiphase_project(int project_option) {
  min_face_wt.resize(thread_class::nthreads);
  max_face_wt.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  min_face_wt[tid].resize(4);
-  max_face_wt[tid].resize(4);
-  for (int iwt=0;iwt<4;iwt++) {
+  min_face_wt[tid].resize(NCOMP_FACE_WT);
+  max_face_wt[tid].resize(NCOMP_FACE_WT);
+  for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
    min_face_wt[tid][iwt]=1.0e+20;
    max_face_wt[tid][iwt]=-1.0e+20;
   }
@@ -9661,7 +9661,8 @@ void NavierStokes::multiphase_project(int project_option) {
    // in: multiphase_project
    // calls fort_buidfacewt
    // fort_buildfacewt updates static variables min_face_wt and max_face_wt
-   // max_face_wt[0][1] has max of (1/rho) or (visc_coef*mu) or (k) or (D)
+   // max_face_wt[0][DD_COMP_FACE_WT] has max 
+   //    of (1/rho) or (visc_coef*mu) or (k) or (D)
   int face_weight_op=SUB_OP_FOR_MAIN;
   ns_level.allocate_FACE_WEIGHT(nsolve,project_option,face_weight_op);
 
@@ -9867,9 +9868,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "iwt:0=denface 1=cutface 2=desing. 3=sing\n";
+   std::cout << "0=DD_COMP_FACE_WT 1=CC_COMP_FACE_WT 2=MERGE_COMP_FACE_WT\n";
    print_project_option(project_option);
-   for (int iwt=0;iwt<4;iwt++) {
+   for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
     std::cout << "iwt= " << iwt << " min " << 
       min_face_wt[0][iwt] << " max " <<
       max_face_wt[0][iwt] << '\n';
@@ -11424,9 +11425,9 @@ void NavierStokes::diffusion_heatingALL(
  min_face_wt.resize(thread_class::nthreads);
  max_face_wt.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  min_face_wt[tid].resize(4);
-  max_face_wt[tid].resize(4);
-  for (int iwt=0;iwt<4;iwt++) {
+  min_face_wt[tid].resize(NCOMP_FACE_WT);
+  max_face_wt[tid].resize(NCOMP_FACE_WT);
+  for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
    min_face_wt[tid][iwt]=1.0e+20;
    max_face_wt[tid][iwt]=-1.0e+20;
   }

@@ -15549,8 +15549,8 @@ stop
       REAL_T, INTENT(in) :: visc_coef
       INTEGER_T, INTENT(in) :: uncoupled_viscosity
       INTEGER_T, INTENT(in) :: project_option
-      REAL_T, INTENT(inout) :: min_face_wt(4)
-      REAL_T, INTENT(inout) :: max_face_wt(4)
+      REAL_T, INTENT(inout) :: min_face_wt(NCOMP_FACE_WT)
+      REAL_T, INTENT(inout) :: max_face_wt(NCOMP_FACE_WT)
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -15839,17 +15839,17 @@ stop
              side,local_presbc, &
              local_wt) ! intent(out)
 
-            if (dd_group.lt.min_face_wt(1)) then
-             min_face_wt(1)=dd_group
+            if (dd_group.lt.min_face_wt(DD_COMP_FACE_WT+1)) then
+             min_face_wt(DD_COMP_FACE_WT+1)=dd_group
             endif
-            if (cc_group.lt.min_face_wt(2)) then
-             min_face_wt(2)=cc_group
+            if (cc_group.lt.min_face_wt(CC_COMP_FACE_WT+1)) then
+             min_face_wt(CC_COMP_FACE_WT+1)=cc_group
             endif
-            if (dd_group.gt.max_face_wt(1)) then
-             max_face_wt(1)=dd_group
+            if (dd_group.gt.max_face_wt(DD_COMP_FACE_WT+1)) then
+             max_face_wt(DD_COMP_FACE_WT+1)=dd_group
             endif
-            if (cc_group.gt.max_face_wt(2)) then
-             max_face_wt(2)=cc_group
+            if (cc_group.gt.max_face_wt(CC_COMP_FACE_WT+1)) then
+             max_face_wt(CC_COMP_FACE_WT+1)=cc_group
             endif
 
             if ((dd_group.ge.zero).and.(cc_group.ge.zero)) then
@@ -15859,11 +15859,11 @@ stop
              stop
             endif
 
-            if (local_wt(veldir).lt.min_face_wt(4)) then
-             min_face_wt(4)=local_wt(veldir)
+            if (local_wt(veldir).lt.min_face_wt(MERGE_COMP_FACE_WT+1)) then
+             min_face_wt(MERGE_COMP_FACE_WT+1)=local_wt(veldir)
             endif
-            if (local_wt(veldir).gt.max_face_wt(4)) then
-             max_face_wt(4)=local_wt(veldir)
+            if (local_wt(veldir).gt.max_face_wt(MERGE_COMP_FACE_WT+1)) then
+             max_face_wt(MERGE_COMP_FACE_WT+1)=local_wt(veldir)
             endif
 
             if (DEBUG_THERMAL_COEFF.eq.1) then
