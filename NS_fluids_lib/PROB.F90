@@ -11738,14 +11738,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine eval_face_coeff( &
        xsten,nhalf, &
        level,finest_level, &
-       cc,cc_ice,cc_group, &
-       dd,dd_group, &
+       cc,cc_ice, &
+       cc_group, &  ! intent(out)
+       dd, &
+       dd_group, & ! intent(out)
        visc_coef, &
        nsolve, &
        dir,veldir, &
        project_option, &
        uncoupled_viscosity, &
-       side,local_presbc,local_wt)
+       side,local_presbc, &
+       local_wt)  ! intent(out)
       use global_utility_module
       IMPLICIT NONE
 

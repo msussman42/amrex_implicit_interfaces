@@ -15827,11 +15827,17 @@ stop
             call eval_face_coeff( &
              xsten,nhalf, &
              level,finest_level, &
-             cc,cc_ice,cc_group, &
-             dd,dd_group, &
+             cc,cc_ice, &
+             cc_group, &  ! intent(out)
+             dd, &
+             dd_group, &  ! intent(out)
              visc_coef, &
-             nsolve,dir,veldir,project_option, &
-             uncoupled_viscosity,side,local_presbc,local_wt)
+             nsolve, &
+             dir,veldir, &
+             project_option, &
+             uncoupled_viscosity, &
+             side,local_presbc, &
+             local_wt) ! intent(out)
 
             if (dd_group.lt.min_face_wt(1)) then
              min_face_wt(1)=dd_group
