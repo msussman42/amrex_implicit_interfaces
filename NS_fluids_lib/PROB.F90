@@ -11867,7 +11867,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (at_RZ_boundary.eq.1) then
          local_wt(veldir)=zero
         else if (at_RZ_boundary.eq.0) then
-         if ((dd_group.gt.zero).and.(cc_group.ge.zero)) then
+         if ((dd_group.gt.zero).and. &
+             (cc_group.ge.zero).and. &
+             (cc_group.le.one)) then
           local_wt(veldir)=dd_group*cc_group
           if (side.eq.0) then
            ! do nothing
@@ -11917,13 +11919,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          local_wt(veldir)=zero
         else if (at_RZ_boundary.eq.0) then
          if ((dd_group.gt.zero).and. &
-             (cc_group.ge.zero)) then
-          if (cc_group.gt.zero) then
+             (cc_group.ge.zero).and. &
+             (cc_group.le.one)) then
+          if ((cc_group.gt.zero).and. &
+              (cc_group.le.one)) then
            local_wt(veldir)=zero
           else if (cc_group.eq.zero) then
            local_wt(veldir)=one
           else
-           print *,"cc_group invalid"
+           print *,"cc_group invalid SOLVETYPE_PRESEXTRAP: ",cc_group
            stop
           endif
           if (side.eq.0) then
@@ -11945,7 +11949,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            stop
           endif
          else
-          print *,"dd_group or cc_group invalid2"
+          print *,"dd_group or cc_group invalid2 SOLVETYPE_PRESEXTRAP"
           print *,"dd_group= ",dd_group
           print *,"cc_group= ",cc_group
           print *,"project_option=",project_option
@@ -11974,7 +11978,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (local_presbc.eq.INT_DIR) then
            ! do nothing
           else if (local_presbc.eq.EXT_DIR) then
-           ! do nothing
+           ! do nothing (first order Dirichlet for low order BC)
+           ! 2nd order or higher for spectral element method.
           else if (local_presbc.eq.REFLECT_EVEN) then
            local_wt(veldir)=zero
           else if (local_presbc.eq.FOEXTRAP) then
@@ -12024,7 +12029,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (local_presbc.eq.INT_DIR) then
            ! do nothing
           else if (local_presbc.eq.EXT_DIR) then
-           ! do nothing
+           ! do nothing 
+           ! a) 2nd order BC if standard FVM 
+           !    discretization (fort_face_gadients)
+           ! b) 2nd order or higher BC if SEM discretization.
           else if (local_presbc.eq.REFLECT_ODD) then
            ! do nothing
           else if (local_presbc.eq.REFLECT_EVEN) then
