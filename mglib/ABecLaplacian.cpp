@@ -930,7 +930,6 @@ ABecLaplacian::ABecLaplacian (
  int bfact,
  int cfd_level_in,
  int cfd_project_option_in,
- Real cfd_mglib_min_coeff_factor_in,
  int nsolve_in,
  bool ns_tiling_in,
  int _use_mg_precond_at_top) {
@@ -1038,7 +1037,6 @@ ABecLaplacian::ABecLaplacian (
 
  cfd_level=cfd_level_in;
  cfd_project_option=cfd_project_option_in;
- cfd_mglib_min_coeff_factor=cfd_mglib_min_coeff_factor_in;
  cfd_tiling=ns_tiling_in;
 
  cfd_max_grid_size.resize(ns_max_grid_size.size());
@@ -2113,8 +2111,6 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
      std::cout << "dot_result= " << dot_result << '\n';
      std::cout << "cfd_level= " << cfd_level << '\n';
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-     std::cout << "cfd_mglib_min_coeff_factor= " << 
-	     cfd_mglib_min_coeff_factor << '\n';
      std::cout << "cfd_tiling= " << cfd_tiling << '\n';
 
      std::cout << "pw_dotprod_var.size()=" << pw_dotprod_var.size() << '\n';
@@ -2157,8 +2153,6 @@ ABecLaplacian::project_null_space(MultiFab& rhsL,int level) {
    if (1==0) {
      std::cout << "cfd_level= " << cfd_level << '\n';
      std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-     std::cout << "cfd_mglib_min_coeff_factor= " << 
-	     cfd_mglib_min_coeff_factor << '\n';
      std::cout << "level= " << level << '\n';
      std::cout << "dot_result= " << dot_result << '\n';
      std::cout << "domainsum= " << domainsum << '\n';
@@ -2460,8 +2454,6 @@ ABecLaplacian::CG_dump_params(
   std::cout << "postsmooth= " << postsmooth << '\n';
   std::cout << "cfd_level= " << cfd_level << '\n';
   std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-  std::cout << "cfd_mglib_min_coeff_factor= " << 
-	  cfd_mglib_min_coeff_factor << '\n';
   std::cout << "laplacian_solvability= " << 
           laplacian_solvability << '\n';
   std::cout << "nsolve_ABec= " << nsolve_ABec << '\n';
@@ -2870,8 +2862,6 @@ ABecLaplacian::CG_solve(
          laplacian_solvability << '\n';
        std::cout << "cfd_level= " << cfd_level << '\n';
        std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-       std::cout << "cfd_mglib_min_coeff_factor= " << 
-       	cfd_mglib_min_coeff_factor << '\n';
        std::cout << "level (mglib)= " << level << '\n';
        std::cout << "mglib_blocking_factor= " << 
          mglib_blocking_factor << '\n';
@@ -2892,8 +2882,6 @@ ABecLaplacian::CG_solve(
         laplacian_solvability << '\n';
       std::cout << "cfd_level= " << cfd_level << '\n';
       std::cout << "cfd_project_option= " << cfd_project_option << '\n';
-      std::cout << "cfd_mglib_min_coeff_factor= " << 
-              cfd_mglib_min_coeff_factor << '\n';
       std::cout << "level (mglib)= " << level << '\n';
       std::cout << "mglib_blocking_factor= " << 
         mglib_blocking_factor << '\n';

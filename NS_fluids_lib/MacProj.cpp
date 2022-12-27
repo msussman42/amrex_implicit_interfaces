@@ -180,7 +180,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   bfact,
   level,
   project_option,
-  mglib_min_coeff_factor,
   nsolve,
   ns_tiling,
   local_use_mg_precond);
@@ -511,7 +510,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // FACE_WEIGHT_MF initialized in BUILDFACEWT (LEVELSET_3D.F90)
-    // BXCOEFNOAREA *= (facewtL + facewtR)/2
+    // BXCOEFNOAREA *= facewt
     // mult_facewt is declared in MACOPERATOR_3D.F90
    fort_mult_facewt(
     &nsolve,
@@ -620,15 +619,24 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // dest,soucre,scomp,dcomp,ncomp,ngrow
  Copy_localMF(ONES_GROW_MF,ONES_MF,0,0,1,0);
 
-//FIX ME use max_face_wt[0][DD_COMP_FACE_WT] as a basis
-//sanity check: MERGE_COMP_FACE_WT at most twice as large DD_COMP_FACE_WT
-
  Real min_interior_coeff=0.0;
+
  if (denconst_max>0.0) {
-  if (mglib_min_coeff_factor>=1.0) {
-   min_interior_coeff=1.0/(denconst_max*mglib_min_coeff_factor);
+  if ((max_face_wt[0][DD_COMP_FACE_WT]>0.0)&&
+      (max_face_wt[0][MERGE_COMP_FACE_WT]>0.0)&&
+      (max_face_wt[0][MERGE_COMP_FACE_WT]>=
+       max_face_wt[0][DD_COMP_FACE_WT])) {
+
+   if (mglib_max_ratio>1.0) {
+
+    min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
+
+   } else
+    amrex::Error("mglib_max_ratio invalid");
+
   } else
-   amrex::Error("mglib_min_coeff_factor invalid");
+   amrex::Error("max_face_wt invalid");
+
  } else
   amrex::Error("denconst_max invalid");
 
@@ -672,7 +680,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
     // BXCOEFNOAREA = min_interior_coeff if not on the
-    // edge of the domain and BXCOEFNOAREA previously = 0.0
+    // edge of the domain and BXCOEFNOAREA previously < min_interior_coeff
     // fort_regularize_bx is declared in MACOPERATOR_3D.F90
     fort_regularize_bx(
      &nsolve,

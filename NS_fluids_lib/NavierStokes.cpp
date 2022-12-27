@@ -569,8 +569,7 @@ Vector<Real> NavierStokes::FSI_force_integral;
 
 Real NavierStokes::real_number_of_cells=0.0; 
 
-// 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
-Real NavierStokes::mglib_min_coeff_factor=1000.0; 
+Real NavierStokes::mglib_max_ratio=1.0e+6; 
 
 int NavierStokes::idx_umac_material_mf=-1;
 int NavierStokes::idx_umac_mask_material_mf=-1;
@@ -3764,7 +3763,7 @@ NavierStokes::read_params ()
     pp.queryAdd("prerecalesce_stiffCP",prerecalesce_stiffCP,num_materials);
     pp.queryAdd("prerecalesce_stiffCV",prerecalesce_stiffCV,num_materials);
 
-    pp.queryAdd("mglib_min_coeff_factor",mglib_min_coeff_factor);
+    pp.queryAdd("mglib_max_ratio",mglib_max_ratio);
 
     pp.getarr("tension",tension,0,num_interfaces);
 
@@ -5038,8 +5037,8 @@ NavierStokes::read_params ()
 
      std::cout << "temperature_source=" << temperature_source << '\n';
 
-     std::cout << "mglib_min_coeff_factor=" << 
-        mglib_min_coeff_factor << '\n';
+     std::cout << "mglib_max_ratio=" << 
+        mglib_max_ratio << '\n';
      for (int i=0;i<AMREX_SPACEDIM;i++) {
       std::cout << "i,temperature_source_cen=" << i << ' ' <<
          temperature_source_cen[i] << '\n';
