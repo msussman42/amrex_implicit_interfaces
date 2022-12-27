@@ -1038,7 +1038,10 @@ stop
 
         do n=1,nsolve
          local_bx=bx(D_DECL(i,j,k),n)
-         if (local_bx.eq.zero) then
+         if (local_bx.gt.min_interior_coeff) then
+          !do nothing
+         else if ((local_bx.ge.zero).and. &
+                  (local_bx.le.min_interior_coeff)) then 
           if ((inorm.gt.domlo(dir+1)).and. &
               (inorm.lt.domhi(dir+1)+1)) then
            bx(D_DECL(i,j,k),n)=min_interior_coeff
@@ -1049,8 +1052,6 @@ stop
            print *,"inorm invalid"
            stop
           endif
-         else if (local_bx.gt.zero) then
-          ! do nothing
          else
           print *,"local_bx invalid"
           stop

@@ -7695,6 +7695,12 @@ void NavierStokes::sanity_check_face_wt() {
   } else
    amrex::Error("(max_face_wt[tid][CC_COMP_FACE_WT]<=1.0) violated");
 
+  if (max_face_wt[tid][MERGE_COMP_FACE_WT]>=
+      max_face_wt[tid][DD_COMP_FACE_WT]) {
+   //do nothing
+  } else
+   amrex::Error("expecting max: MERGE_COMP>=DD_COMP");
+
  } //tid=0..nthreads-1
 
 } // end subroutine sanity_check_face_wt
@@ -9898,8 +9904,8 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << "0=DD_COMP_FACE_WT 1=CC_COMP_FACE_WT 2=MERGE_COMP_FACE_WT\n";
    print_project_option(project_option);
    for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
-    std::cout << "iwt= " << iwt << " min " << 
-      min_face_wt[0][iwt] << " max " <<
+    std::cout << "iwt= " << iwt << " min_face_wt " << 
+      min_face_wt[0][iwt] << " max_face_wt " <<
       max_face_wt[0][iwt] << '\n';
    }
   }

@@ -249,7 +249,6 @@ ns.denconst= 1400.0 5.3421449445 1190.0
 # added mass
 ns.denconst_interface_added=1.0e+8 1.0e+8 1.0e+8 1.0e+8 1.0e+8 1.0e+8
 
-ns.mglib_min_coeff_factor=1000.0
 cg.mglib_blocking_factor=2
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25

@@ -16,7 +16,6 @@ class ABecLaplacian
 public:
     int cfd_level;
     int cfd_project_option;
-    Real cfd_mglib_min_coeff_factor;
     bool cfd_tiling;
 
       // we use cfd_max_grid_size[0] in order to determine dmap
@@ -33,7 +32,6 @@ public:
      int bfact,
      int cfd_level_in,
      int cfd_project_option_in,
-     Real cfd_mglib_min_coeff_factor_in,
      int nsolve,
      bool ns_tiling_in,
      int _use_mg_precond_at_top);

@@ -1629,8 +1629,8 @@ protected:
 
     static Real real_number_of_cells;
 
-     // 1.0/(den_max * mglib_min_coeff_factor) default=1000.0
-    static Real mglib_min_coeff_factor; 
+     // default=1.0e+6
+    static Real mglib_max_ratio; 
 
     static int custom_nucleation_model;
 

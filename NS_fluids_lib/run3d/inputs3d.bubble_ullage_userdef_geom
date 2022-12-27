@@ -253,7 +253,6 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
-ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
 #ns.speciesconst= 1.0 1.0 1.0  #Kassemi

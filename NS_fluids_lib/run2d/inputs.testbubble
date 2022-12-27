@@ -36,7 +36,6 @@ mg.visc_bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
 
-ns.mglib_min_coeff_factor=1000.0
 
 ns.projection_pressure_scale=1.0e+6
 ns.num_materials=2
