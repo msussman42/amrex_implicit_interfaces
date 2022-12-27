@@ -7675,6 +7675,30 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
 } // end subroutine allocate_FACE_WEIGHT 
 
+void NavierStokes::sanity_check_face_wt() {
+
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
+
+   if ((min_face_wt[tid][iwt]==min_face_wt[0][iwt])&&
+       (max_face_wt[tid][iwt]==max_face_wt[0][iwt])&&
+       (min_face_wt[tid][iwt]<=max_face_wt[tid][iwt])&&
+       (min_face_wt[tid][iwt]>=0.0)) {
+    // do nothing
+   } else
+    amrex::Error("min_face_wt or max_face_wt invalid");
+
+  } //iwt=0..NCOMP_FACE_WT-1
+    
+  if (max_face_wt[tid][CC_COMP_FACE_WT]<=1.0) {
+   //do nothing
+  } else
+   amrex::Error("(max_face_wt[tid][CC_COMP_FACE_WT]<=1.0) violated");
+
+ } //tid=0..nthreads-1
+
+} // end subroutine sanity_check_face_wt
+  
 // called from NavierStokes::multiphase_project
 void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  
@@ -9705,11 +9729,13 @@ void NavierStokes::multiphase_project(int project_option) {
   } // dir=0..sdim-1
 
   if (problen_max>0.0) {
-
+   //do nothing
   } else
    amrex::Error("problen_max invalid");
  } else
   amrex::Error("maxden invalid");
+
+ sanity_check_face_wt();
 
  int finest_total=0;
 
@@ -11443,6 +11469,8 @@ void NavierStokes::diffusion_heatingALL(
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.allocate_FACE_WEIGHT(nsolve,SOLVETYPE_VISC,face_weight_op);
  }
+
+ sanity_check_face_wt();
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);

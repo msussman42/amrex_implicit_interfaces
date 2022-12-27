@@ -620,8 +620,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // dest,soucre,scomp,dcomp,ncomp,ngrow
  Copy_localMF(ONES_GROW_MF,ONES_MF,0,0,1,0);
 
-FIX ME use max_face_wt[0][DD_COMP_FACE_WT] as a basis
-sanity check: MERGE_COMP_FACE_WT at most twice as large DD_COMP_FACE_WT
+//FIX ME use max_face_wt[0][DD_COMP_FACE_WT] as a basis
+//sanity check: MERGE_COMP_FACE_WT at most twice as large DD_COMP_FACE_WT
 
  Real min_interior_coeff=0.0;
  if (denconst_max>0.0) {
@@ -2001,6 +2001,8 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.allocate_FACE_WEIGHT(nsolve,project_option,face_weight_op);
    ns_level.allocate_pressure_work_vars(nsolve,project_option);
   } // ilev=finest_level ... level
+
+  sanity_check_face_wt();
 
    // create_hierarchy=-1,0,1
   int create_hierarchy=-1;
