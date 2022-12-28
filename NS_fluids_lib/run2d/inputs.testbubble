@@ -101,6 +101,9 @@ mac.visc_abs_tol    = 1.0e-8
 
 ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec 
 #ns.visual_ncell=64 128
+#0=tecplot nodes
+#1=plt file cells
+#2=tecplot cells (piecewise constant reconstruction).
 ns.visual_nddata_format=0
 
 ns.cfl            = 0.25    
