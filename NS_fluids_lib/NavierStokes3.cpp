@@ -2271,7 +2271,14 @@ void NavierStokes::prelim_alloc() {
 
 } // subroutine prelim_alloc
 
+// called from: NavierStokes::do_the_advance
 void NavierStokes::advance_MAC_velocity(int project_option) {
+
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_INITPROJ)) {
+  // do nothing
+ } else
+  amrex::Error("project_option invalid advance_MAC_velocity");
 
  int idx_velcell=-1;
  Real beta=0.0;
@@ -8188,7 +8195,7 @@ void NavierStokes::correct_velocity(
 
 } // end subroutine correct_velocity
 
-
+//called from: NavierStokes::multiphase_project
 void NavierStokes::residual_correction_form(
   int homflag_residual_correction_form,
   int energyflag,
@@ -8228,7 +8235,7 @@ void NavierStokes::residual_correction_form(
   apply_pressure_grad(
    simple_AMR_BC_flag,
    simple_AMR_BC_flag_viscosity,
-   homflag_residual_correction_form,
+   homflag_residual_correction_form,//unused except for:SOLVETYPE_VISC,HEAT
    energyflag,
    GRADPEDGE_MF,
    STATE_FOR_RESID_MF,
@@ -8241,7 +8248,7 @@ void NavierStokes::residual_correction_form(
  } else
   amrex::Error("project_option invalid residual_correction_form");
 
-}  // residual_correction_form
+}  // end subroutine residual_correction_form
 
 
 // local_MF[idx_phi]=0 on all levels on input
@@ -9489,8 +9496,7 @@ void NavierStokes::multiphase_project(int project_option) {
       (SDC_outer_sweeps<ns_time_order)&&
       (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
 
-   if ((project_option==SOLVETYPE_PRES)&&
-       (incremental_gravity_flag==0)) {
+   if (project_option==SOLVETYPE_PRES) {
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
@@ -9498,8 +9504,10 @@ void NavierStokes::multiphase_project(int project_option) {
      ns_level.make_SEM_delta_force(SOLVETYPE_PRES); 
     }
 
+   } else if (project_option==SOLVETYPE_PRESGRAVITY) {
+    //do nothing
    } else
-    amrex::Error("cannot have spectral element and incremental_grav");
+    amrex::Error("SOLVETYPE_PRES or PRESGRAVITY allowed only.");
 
   } else if (SDC_outer_sweeps==0) {
    // do nothing
