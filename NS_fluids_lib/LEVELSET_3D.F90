@@ -7988,17 +7988,17 @@ stop
           (project_option.eq.SOLVETYPE_INITPROJ)) then
        ! do nothing
       else
-       print *,"project_option invalid PHYSVARS"
+       print *,"project_option invalid fort_init_physics_vars"
        stop
       endif
 
       if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid init phys vars "
+       print *,"ngeom_recon invalid fort_init_physics_vars "
        print *,"ngeom_recon= ",ngeom_recon
        stop
       endif
       if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid init phys vars "
+       print *,"ngeom_raw invalid fort_init_physics_vars "
        print *,"ngeom_raw= ",ngeom_raw
        stop
       endif
@@ -11836,6 +11836,7 @@ stop
            stop
           endif
 
+           !SOLVETYPE_PRES, PRESGRAVITY, INITPROJ, PRESEXTRAP
           if (project_option_singular_possibleF(project_option).eq.1) then
 
            if (MDOT.eq.zero) then
@@ -11906,9 +11907,6 @@ stop
            divu=zero
           else if (MSKDV.gt.zero) then
 
-            ! if project_option==SOLVETYPE_PRES,
-            !  div (1/rho) grad p = div ustar/dt
-            ! 
             ! AXR,AXL,AYR,AYL,AZR,AZL are face areas.
            divu= &
             AXR*xvel(D_DECL(i+1,j,k),veldir)-  &
@@ -11925,18 +11923,13 @@ stop
            stop
           endif
 
-           ! divu=-dt VOLTERM * div(k grad T)  project_option==SOLVETYPE_HEAT
-           ! divu=-dt VOLTERM * visc_coef div(2 mu D) 
-           !   project_option==SOLVETYPE_VISC
-           ! use_dt=1 dir=-1
-           ! use_HO=0
-           ! uncoupled_viscosity=1
           local_div_val=divu/VOLTERM
 
-          if ((local_div_val.ge.zero).or.(local_div_val.le.zero)) then
+          if ((local_div_val.ge.zero).or. &
+              (local_div_val.le.zero)) then
            ! do nothing
           else
-           print *,"local_div_val invalid ",local_div_val
+           print *,"local_div_val=NaN  ",local_div_val
            print *,"divu invalid ",divu
            print *,"VOLTERM ",VOLTERM
            print *,"operation_flag ",operation_flag

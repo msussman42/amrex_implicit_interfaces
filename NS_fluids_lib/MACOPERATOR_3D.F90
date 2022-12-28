@@ -599,7 +599,7 @@ stop
          else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
           local_cterm(1)=zero
          else
-          print *,"project_option invalid"
+          print *,"project_option invalid fort_scalarcoeff"
           stop
          endif
 
