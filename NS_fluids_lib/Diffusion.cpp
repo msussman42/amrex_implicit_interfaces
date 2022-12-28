@@ -512,7 +512,7 @@ void NavierStokes::combine_state_variable(
   nsolve=1;
   num_materials_combine=num_materials;
  } else
-  amrex::Error("project_option invalid81");
+  amrex::Error("project_option invalid81 combine_state_variable");
 
  Vector<int> scomp;
  Vector<int> ncomp;
@@ -762,7 +762,7 @@ void NavierStokes::combine_state_variable(
    } // dir=0..sdim-1
 
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid combine_state_variable");
 
  } else if (update_flux==0) {
 

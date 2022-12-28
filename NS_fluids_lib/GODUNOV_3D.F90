@@ -7515,7 +7515,7 @@ stop
        print *,"viscosity force is only cell centered"
        stop
       else
-       print *,"project_option invalid"
+       print *,"project_option invalid fort_updatesemforce_face"
        stop
       endif
 
@@ -15442,7 +15442,7 @@ stop
          endif
         enddo ! im=1..num_materials
        else
-        print *,"project_option invalid"
+        print *,"project_option invalid fort_combinevel"
         stop
        endif
 

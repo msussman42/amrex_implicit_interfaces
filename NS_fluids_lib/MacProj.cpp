@@ -1956,7 +1956,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  } else if (project_option==SOLVETYPE_HEAT) {  
   //do nothing
  } else
-  amrex::Error("project_option invalid67");
+  amrex::Error("project_option invalid67 update_SEM_forcesALL");
 
  int nsolve=1;
  if (project_option==SOLVETYPE_PRES) { // grad p
@@ -1966,7 +1966,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
  } else if (project_option==SOLVETYPE_VISC) { //-div(2 mu D)-HOOP_FORCE_MARK_MF
   nsolve=AMREX_SPACEDIM;
  } else
-  amrex::Error("project_option invalid68"); 
+  amrex::Error("project_option invalid68 update_SEM_forcesALL"); 
 
  if ((project_option==SOLVETYPE_PRES)||   // grad p
      (project_option==SOLVETYPE_HEAT)||   // -div(k grad T)
@@ -2041,7 +2041,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
   remove_MAC_velocityALL(GP_DEST_FACE_MF);
 
  } else
-  amrex::Error("project_option invalid70");
+  amrex::Error("project_option invalid70 update_SEM_forcesALL");
 
  dt_slab=save_dt;
 
@@ -2090,7 +2090,7 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else if (project_option==SOLVETYPE_HEAT) { // -div(k grad T)
   //do nothing
  } else
-  amrex::Error("project_option invalid71");
+  amrex::Error("project_option invalid71 update_SEM_forces");
 
  int nsolve=1;
  if (project_option==SOLVETYPE_PRES) { // grad p
@@ -2100,7 +2100,7 @@ void NavierStokes::update_SEM_forces(int project_option,
  } else if (project_option==SOLVETYPE_VISC) { //-div(2 mu D)-HOOP_FORCE_MARK_MF
   nsolve=AMREX_SPACEDIM;
  } else
-  amrex::Error("project_option invalid72"); 
+  amrex::Error("project_option invalid72 update_SEM_forces"); 
 
  if ((project_option==SOLVETYPE_PRES)||   // grad p
      (project_option==SOLVETYPE_HEAT)||   // -div(k grad T)
@@ -2169,10 +2169,10 @@ void NavierStokes::update_SEM_forces(int project_option,
     project_option,nsolve);
 
   } else
-   amrex::Error("project_option invalid73");
+   amrex::Error("project_option invalid73 update_SEM_forces");
 
  } else
-  amrex::Error("project_option invalid74");
+  amrex::Error("project_option invalid74 update_SEM_forces");
 
   // f=-div 2 mu D - HOOP_FORCE_MARK_MF  (project_option==SOLVETYPE_VISC) or
   // f=-div k grad T                     (project_option==SOLVETYPE_HEAT) or
@@ -2201,7 +2201,7 @@ void NavierStokes::update_SEM_forces(int project_option,
   delete_localMF(MACDIV_MF,1);
 
  } else
-  amrex::Error("project_option invalid75");
+  amrex::Error("project_option invalid75 update_SEM_force");
 
 } // subroutine update_SEM_forces
 

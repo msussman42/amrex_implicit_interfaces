@@ -2497,13 +2497,12 @@ void NavierStokes::increment_face_velocity(
    primary_vel_data=CURRENT_CELL_VEL_MF; 
    secondary_vel_data=CURRENT_CELL_VEL_MF; 
   } else
-   amrex::Error("idx_velcell invalid");
+   amrex::Error("idx_velcell invalid increment_face_velocity");
 
-  if ((project_option==SOLVETYPE_PRES)||
-      (project_option==SOLVETYPE_INITPROJ)) {
+  if (project_option==SOLVETYPE_INITPROJ) {
    // do nothing
   } else
-   amrex::Error("project_option invalid21");
+   amrex::Error("project_option invalid21 increment_face_velocity");
 
   if (beta==0.0) {
    // do nothing
@@ -2519,11 +2518,10 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("idx_velcell invalid");
 
   if ((project_option==SOLVETYPE_PRES)||
-      (project_option==SOLVETYPE_PRESGRAVITY)||
-      (project_option==SOLVETYPE_INITPROJ)) {
+      (project_option==SOLVETYPE_PRESGRAVITY)) {
    // do nothing
   } else
-   amrex::Error("project_option invalid22");
+   amrex::Error("project_option invalid22 increment_face_velocity");
   
   if (beta==0.0) {
    //do nothing
@@ -2575,7 +2573,7 @@ void NavierStokes::increment_face_velocity(
       (project_option==SOLVETYPE_INITPROJ)) {
    // do nothing
   } else
-   amrex::Error("project_option invalid25");
+   amrex::Error("project_option invalid25 increment_face_velocity");
 
   if (idx_velcell==-1) {
    primary_vel_data=DELTA_CELL_VEL_MF; 
@@ -5409,7 +5407,7 @@ void NavierStokes::increment_potential_force() {
 } // increment_potential_force
 
 // called from multiphase_project when 
-// project_option==SOLVETYPE_PRES 
+// project_option==SOLVETYPE_PRES or SOLVETYPE_PRESGRAVITY
 void NavierStokes::deallocate_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -9462,7 +9460,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
   if (state_index!=State_Type)
    amrex::Error("state_index invalid");
  } else
-  amrex::Error("project_option invalid28");
+  amrex::Error("project_option invalid28 init_advective_pressure");
 
  MultiFab& S_new=get_new_data(state_index,slab_step+1);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
