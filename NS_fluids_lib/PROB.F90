@@ -11846,6 +11846,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        cc_group=cc
        dd_group=dd
 
+        ! SOLVETYPE_PRES, PRESGRAVITY, INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
@@ -11855,7 +11856,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then!grav projection
          cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
         else
-         print *,"project_option invalid"
+         print *,"project_option invalid eval_face_coeff"
          stop
         endif
 
@@ -11903,7 +11904,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else
-         print *,"at_RZ_boundary invalid"
+         print *,"at_RZ_boundary invalid;eval_face_coeff"
          stop
         endif
 
@@ -11953,6 +11954,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"dd_group= ",dd_group
           print *,"cc_group= ",cc_group
           print *,"project_option=",project_option
+          print *,"subroutine eval_face_coeff"
           stop
          endif
         else
@@ -14532,9 +14534,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_RHS_CELL) then ! RHS for solver
 
+        ! SOLVETYPE_PRES, PRESGRAVITY, INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
         if (ncomp.ne.1) then
-         print *,"ncomp invalid2"
+         print *,"ncomp invalid2 SEM_MAC_TO_CELL"
          stop
         endif
         if (ncomp_xvel.ne.1) then
@@ -14573,11 +14576,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
        else
-        print *,"project_option invalid"
+        print *,"project_option invalid SEM_MAC_TO_CELL"
         stop
        endif
-       if ((maskSEM.lt.1).or.(maskSEM.gt.num_materials)) then!operation_flag=OP_RHS_CELL
-        print *,"maskSEM invalid"
+       if ((maskSEM.lt.1).or. &
+           (maskSEM.gt.num_materials)) then!operation_flag=OP_RHS_CELL
+        print *,"maskSEM invalid SEM_MAC_TO_CELL"
         stop
        endif 
        if ((scomp.ne.1).or. &
