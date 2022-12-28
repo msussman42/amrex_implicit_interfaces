@@ -3695,8 +3695,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           scomp,
           ncomp);
 
-         // HOfab=grad p (MAC)
-         // calls: fort_updatesemforce declared in GODUNOV_3D.F90
+	 // currently in: NavierStokes::do_the_advance
+         // HOfab=grad p (MAC) if (update_spectralF==1)
+         // LOfab=grad p (MAC) if (update_stableF==1)
+	 // NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
+	 // NavierStokes::update_SEM_forces declared in MacProj.cpp
+         // fort_updatesemforce declared in GODUNOV_3D.F90
         update_SEM_forcesALL(
          SOLVETYPE_PRES,
          PRESPC2_MF,
@@ -3753,8 +3757,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
           scomp,
           ncomp);
 
+	// currently in: NavierStokes::do_the_advance
         // HOfab=-div(k grad T)
-        // calls: fort_updatesemforce declared in GODUNOV_3D.F90
+	// NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
+	// NavierStokes::update_SEM_forces declared in MacProj.cpp
+        // fort_updatesemforce declared in GODUNOV_3D.F90
         if (enable_spectral==1) {
          update_SEM_forcesALL(SOLVETYPE_HEAT,
           BOUSSINESQ_TEMP_MF,
@@ -3792,8 +3799,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         diffuse_hoopALL(REGISTER_MARK_MF,BOUSSINESQ_TEMP_MF,
          HOOP_FORCE_MARK_MF,update_state);
 
+	// currently in: NavierStokes::do_the_advance
         // HOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
-        // calls: fort_updatesemforce declared in GODUNOV_3D.F90
+	// NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
+	// NavierStokes::update_SEM_forces declared in MacProj.cpp
+        // fort_updatesemforce declared in GODUNOV_3D.F90
         if (enable_spectral==1) {
          update_SEM_forcesALL(SOLVETYPE_VISC,
           REGISTER_MARK_MF,
@@ -12134,8 +12144,11 @@ void NavierStokes::veldiffuseALL() {
   
   int update_spectralF=0;
   int update_stableF=1;
-   // LOfab=-div(k grad T)
-   // calls: fort_updatesemforce declared in GODUNOV_3D.F90:
+   //currently in: NavierStokes::veldiffuseALL
+   //LOfab=-div(k grad T)
+   //NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
+   //NavierStokes::update_SEM_forces declared in MacProj.cpp
+   //fort_updatesemforce declared in GODUNOV_3D.F90
   if (enable_spectral==1) {
    update_SEM_forcesALL(SOLVETYPE_HEAT,PRESPC2_MF,
     update_spectralF,update_stableF);
@@ -12147,8 +12160,11 @@ void NavierStokes::veldiffuseALL() {
   delete_array(PRESPC2_MF);
 
 
-   // LOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
-   // calls: fort_updatesemforce declared in GODUNOV_3D.F90:
+   //currently in: NavierStokes::veldiffuseALL
+   //LOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
+   //NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
+   //NavierStokes::update_SEM_forces declared in MacProj.cpp
+   //fort_updatesemforce declared in GODUNOV_3D.F90
   if (enable_spectral==1) {
    update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,
     update_spectralF,update_stableF);
