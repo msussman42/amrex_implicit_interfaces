@@ -564,7 +564,7 @@ stop
             else if (LSTEST.lt.zero) then
              ! do nothing
             else
-             print *,"LSTEST invalid"
+             print *,"LSTEST is NaN"
              stop
             endif
            else
@@ -732,15 +732,19 @@ stop
              stop
             endif
             if (veldir.eq.0) then
-             if (xsten(0,1).le.zero) then
-              print *,"r invalid"
+             if (xsten(0,1).gt.zero) then
+              ! do nothing
+             else
+              print *,"r (xsten(0,1)) invalid"
               stop
              endif
             endif
            else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
             if (veldir.eq.0) then
-             if (xsten(0,1).le.zero) then
-              print *,"r invalid"
+             if (xsten(0,1).gt.zero) then
+              ! do nothing
+             else
+              print *,"r (xsten(0,1)) invalid"
               stop
              endif
             endif
