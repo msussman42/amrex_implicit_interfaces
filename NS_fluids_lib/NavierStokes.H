@@ -1631,6 +1631,8 @@ protected:
 
      // default=1.0e+6
     static Real mglib_max_ratio; 
+     // default=0.0
+    static Real min_interior_coeff;
 
     static int custom_nucleation_model;
 
@@ -2040,8 +2042,6 @@ protected:
     static Vector<Real> density_ceiling;  // def=1.0e+20
     static Vector<Real> molar_mass;  // def=1
     static Vector<Real> denconst;
-    static Real denconst_max;
-    static Real denconst_min;
      // if stokes_flow==1, do not include u dot grad u term.
     static int stokes_flow;  // def=0
      // if cancel_advection==1, do not include u dot grad S terms for any
