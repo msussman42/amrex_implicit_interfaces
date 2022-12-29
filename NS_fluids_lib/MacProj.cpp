@@ -619,26 +619,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // dest,soucre,scomp,dcomp,ncomp,ngrow
  Copy_localMF(ONES_GROW_MF,ONES_MF,0,0,1,0);
 
- Real min_interior_coeff=0.0;
-
- if (denconst_max>0.0) {
-  if ((max_face_wt[0][DD_COMP_FACE_WT]>0.0)&&
-      (max_face_wt[0][MERGE_COMP_FACE_WT]>0.0)&&
-      (max_face_wt[0][MERGE_COMP_FACE_WT]>=
-       max_face_wt[0][DD_COMP_FACE_WT])) {
-
-   if (mglib_max_ratio>1.0) {
-
-    min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
-
-   } else
-    amrex::Error("mglib_max_ratio invalid");
-
-  } else
-   amrex::Error("max_face_wt invalid");
-
+ if ((min_interior_coeff>0.0)&&
+     (mglib_max_ratio>1.0)) {
+  //do nothing
  } else
-  amrex::Error("denconst_max invalid");
+  amrex::Error("min_interior_coeff or mglib_max_ratio invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 

@@ -7712,13 +7712,28 @@ void NavierStokes::sanity_check_face_wt() {
   } else
    amrex::Error("(max_face_wt[tid][CC_COMP_FACE_WT]<=1.0) violated");
 
-  if (max_face_wt[tid][MERGE_COMP_FACE_WT]>=
-      max_face_wt[tid][DD_COMP_FACE_WT]) {
+  if (max_face_wt[tid][MERGE_COMP_FACE_WT]<=
+      2.0*max_face_wt[tid][DD_COMP_FACE_WT]) {
    //do nothing
   } else
-   amrex::Error("expecting max: MERGE_COMP>=DD_COMP");
+   amrex::Error("expecting max: MERGE_COMP<=2.0*DD_COMP");
 
  } //tid=0..nthreads-1
+
+ if ((max_face_wt[0][DD_COMP_FACE_WT]>0.0)&&
+     (max_face_wt[0][MERGE_COMP_FACE_WT]>0.0)&&
+     (max_face_wt[0][MERGE_COMP_FACE_WT]<=
+      2.0*max_face_wt[0][DD_COMP_FACE_WT])) {
+
+  if (mglib_max_ratio>1.0) {
+
+   min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
+
+  } else
+   amrex::Error("mglib_max_ratio invalid");
+
+ } else
+  amrex::Error("max_face_wt invalid");
 
 } // end subroutine sanity_check_face_wt
   
@@ -9926,7 +9941,9 @@ void NavierStokes::multiphase_project(int project_option) {
       min_face_wt[0][iwt] << " max_face_wt " <<
       max_face_wt[0][iwt] << '\n';
    }
-  }
+   std::cout << "mglib_max_ratio=" << mglib_max_ratio << 
+	   " min_interior_coeff=" << min_interior_coeff << '\n';
+  } //  (ParallelDescriptor::IOProcessor()) 
  } // verbose>0
 
  deallocate_maccoefALL(project_option);

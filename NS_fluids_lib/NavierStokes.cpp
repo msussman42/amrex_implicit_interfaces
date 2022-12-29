@@ -570,6 +570,7 @@ Vector<Real> NavierStokes::FSI_force_integral;
 Real NavierStokes::real_number_of_cells=0.0; 
 
 Real NavierStokes::mglib_max_ratio=1.0e+6; 
+Real NavierStokes::min_interior_coeff=0.0; 
 
 int NavierStokes::idx_umac_material_mf=-1;
 int NavierStokes::idx_umac_mask_material_mf=-1;
@@ -800,8 +801,6 @@ Vector<Real> NavierStokes::density_floor;  // def=0.0
 Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
 Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
-Real NavierStokes::denconst_max=0.0;
-Real NavierStokes::denconst_min=0.0;
 Vector<Real> NavierStokes::denconst_interface_added;
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
@@ -3574,15 +3573,7 @@ NavierStokes::read_params ()
     denconst.resize(num_materials);
     pp.getarr("denconst",denconst,0,num_materials);
 
-    denconst_min=denconst[0];
-    denconst_max=denconst[0];
-
     for (int i=0;i<num_materials;i++) {
-
-     if (denconst[i]<denconst_min)
-      denconst_min=denconst[i];
-     if (denconst[i]>denconst_max)
-      denconst_max=denconst[i];
 
      if (density_ceiling[i]<=0.0) {
       amrex::Error("density_ceiling[i]<=0.0");
@@ -3613,25 +3604,6 @@ NavierStokes::read_params ()
 
     pp.queryAdd("denconst_interface_added",
       denconst_interface_added,num_interfaces);
-
-    for (int iten=0;iten<num_interfaces;iten++) {
-     Real test_density=denconst_interface_added[iten];
-     if (test_density==0.0) {
-      //do nothing
-     } else if (test_density>0.0) {
-      // get_inverse_iten_cpp declared in NavierStokes2.cpp
-      // 1<=im1,im2<=num_materials
-      int im1,im2;
-      get_inverse_iten_cpp(im1,im2,iten+1);
-      if ((test_density>denconst[im1-1])&&
-          (test_density>denconst[im2-1])) {
-       if (test_density>denconst_max)
-        denconst_max=test_density;
-      } else
-       amrex::Error("test_density or denconst invalid");
-     } else
-      amrex::Error("test_density invalid");
-    } //iten=0,..,num_interfaces-1
 
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
@@ -5045,9 +5017,6 @@ NavierStokes::read_params ()
       std::cout << "i,temperature_source_rad=" << i << ' ' <<
          temperature_source_rad[i] << '\n';
      }
-
-     std::cout << "denconst_min= " << denconst_min << '\n';
-     std::cout << "denconst_max= " << denconst_max << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i= " << i << " denconst_interface_added "  << 
