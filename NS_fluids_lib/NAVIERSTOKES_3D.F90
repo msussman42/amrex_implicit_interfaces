@@ -9919,7 +9919,8 @@ END SUBROUTINE SIMP
        !HYDROSTATIC_PRESSURE,HYDROSTATIC_DENSITY
       REAL_T, INTENT(inout),target :: presden(DIMV(presden),2) 
       REAL_T, pointer :: presden_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in),target :: state(DIMV(state),num_materials*num_state_material) 
+      REAL_T, INTENT(in),target :: &
+          state(DIMV(state),num_materials*num_state_material) 
       REAL_T, pointer :: state_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 

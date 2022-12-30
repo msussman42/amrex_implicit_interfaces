@@ -5559,7 +5559,7 @@ void NavierStokes::init_gravity_potential() {
      //   outflow.
      // if angular_velocity==0.0:
      // \vec{g} = \frac{ \nabla rho_{0} (\vec{g} dot \vec{x})}{rho_{0}}
-     // in: NAVIERSTOKES_3D.F90
+     // fort_init_potential is declared in: NAVIERSTOKES_3D.F90
     fort_init_potential(
      presdenfab.dataPtr(),
      ARLIM(presdenfab.loVect()),ARLIM(presdenfab.hiVect()),

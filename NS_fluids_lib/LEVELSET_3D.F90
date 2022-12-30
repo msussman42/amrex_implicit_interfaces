@@ -14940,12 +14940,22 @@ stop
           endif
 
          else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
-
-           ! hydrostatic pressure
+           ! HYDROSTATIC_PRESDEN_MF is initialized in 
+           ! NavierStokes::init_gravity_potentional()
+           ! init_gravity_potential() calls fort_init_potential
+           ! fort_init_potential is declared in: NAVIERSTOKES_3D.F90
+           ! fort_init_potential calls general_hydrostatic_pressure_density
+           ! which is declared in PROB.F90.
+           ! a default expression:
+           !  rhohydro=fort_denconst(1)
+           !  phydro=
+           !   dt*rhohydro(\vec{g}\cdot\vec{x}+||\vec{xaxis}||^2 Omega^2/2)
+           !
+           ! hydrostatic pressure (HYDROSTATIC_PRESDEN_MF, 1st component)
           pplus=pres(D_DECL(i,j,k),1)
           pminus=pres(D_DECL(im1,jm1,km1),1)
 
-           ! hydrostatic density
+           ! hydrostatic density (HYDROSTATIC_PRESDEN_MF, 2nd component)
           dplus=den(D_DECL(i,j,k),1)
           dminus=den(D_DECL(im1,jm1,km1),1)
           if ((dplus.gt.zero).and. &
@@ -15041,18 +15051,30 @@ stop
             vol_local(side)=vol_local(side)+ &
              local_face(FACECOMP_VOFFACE+2*(im-1)+side)
            enddo 
-           if (mass(side).lt.zero) then
+
+           if (mass(side).ge.zero) then
+            ! do nothing
+           else
             print *,"mass(side) invalid"
             stop
            endif
-           if (vol_local(side).lt.zero) then
+
+           if (vol_local(side).ge.zero) then
+            ! do nothing
+           else
             print *,"vol_local(side) invalid"
             stop
+           endif
+
+           if (vol_local(side).gt.zero) then
+            den_local(side)=mass(side)/vol_local(side)
            else if (vol_local(side).eq.zero) then
             den_local(side)=zero
            else
-            den_local(side)=mass(side)/vol_local(side)
+            print *,"cannot define den_local(side)"
+            stop
            endif
+
            massface=massface+mass(side)
            volface=volface+vol_local(side)
            denface=denface+den_local(side)
