@@ -2419,6 +2419,7 @@ stop
       REAL_T LSleft(num_materials)
       REAL_T LSright(num_materials)
       REAL_T LSsub(num_materials)
+      INTEGER_T im_left_interface,im_right_interface
       INTEGER_T im_opp
       INTEGER_T iten
       INTEGER_T im_source,im_dest
@@ -3452,7 +3453,9 @@ stop
        if ((is_rigid(im_primaryL).eq.0).and. &
            (is_rigid(im_primaryR).eq.0)) then 
 
-        call fluid_interface(LSleft,LSright,gradh,im_opp,im)
+        call fluid_interface(LSleft,LSright,gradh, &
+         im_opp,im, &
+         im_left_interface,im_right_interface)
 
         if (gradh.ne.zero) then
          if ((im.gt.num_materials).or. &
