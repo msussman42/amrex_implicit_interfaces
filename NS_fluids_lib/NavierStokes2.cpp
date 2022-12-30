@@ -5757,6 +5757,10 @@ void NavierStokes::process_potential_force_face(
    FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
    FArrayBox& presdenfab=(*localMF[HYDROSTATIC_PRESDEN_MF])[mfi];
    FArrayBox& mgonifab=(*dendata)[mfi];
+   if (mgonifab.nComp()==num_materials*num_state_material) {
+    // do nothing
+   } else
+    amrex::Error("mgonifab.nComp()!=num_materials*num_state_material");
 
    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
    FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];

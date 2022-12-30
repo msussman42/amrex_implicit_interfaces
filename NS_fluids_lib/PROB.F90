@@ -4647,7 +4647,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! If there are more than one "im_3", pick the one with the
         ! largest value.
         !
-      subroutine fluid_interface(LSleft,LSright,gradh,im_opp,im)
+      subroutine fluid_interface( &
+        LSleft,LSright,gradh, &
+        im_opp,im, &
+        imL,imR)
+
       use global_utility_module
 
       IMPLICIT NONE
@@ -4656,7 +4660,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in) :: LSleft(num_materials)
       REAL_T, INTENT(in) :: LSright(num_materials)
       REAL_T, INTENT(out) :: gradh
-      INTEGER_T imL,imR
+      INTEGER_T, INTENT(out) :: imL,imR
 
       im=0
       im_opp=0
@@ -4665,30 +4669,32 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call get_primary_material(LSleft,imL)
       call get_primary_material(LSright,imR)
 
-      if ((is_rigid(imL).eq.1).or. &
-          (is_rigid(imR).eq.1)) then
+      if ((imL.lt.1).or.(imL.gt.num_materials).or. &
+          (imR.lt.1).or.(imR.gt.num_materials)) then
+       print *,"imL or imR invalid"
+       stop
+      endif
+
+      if (is_rigid(imL).eq.1) then
+       ! do nothing
+      else if (is_rigid(imR).eq.1) then
+       ! do nothing
+      else if (imL.eq.imR) then
        ! do nothing
       else if ((is_rigid(imL).eq.0).and. &
-               (is_rigid(imR).eq.0)) then
+               (is_rigid(imR).eq.0).and. &
+               (imL.ne.imR)) then
 
-       if (imL.eq.imR) then
-        ! do nothing
-       else if (imL.ne.imR) then
-
-        if (imL.lt.imR) then 
-         gradh=-one
-         im=imL
-         im_opp=imR
-        else if (imL.gt.imR) then 
-         gradh=one
-         im=imR
-         im_opp=imL
-        else
-         print *,"imL or imR bust"
-         stop
-        endif
+       if (imL.lt.imR) then 
+        gradh=-one
+        im=imL
+        im_opp=imR
+       else if (imL.gt.imR) then 
+        gradh=one
+        im=imR
+        im_opp=imL
        else
-        print *,"imL or imR invalid"
+        print *,"imL or imR bust"
         stop
        endif
 
@@ -4705,8 +4711,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T psi,alpha,H
-      INTEGER_T im,im_opp
+      REAL_T, INTENT(in) :: psi
+      REAL_T alpha
+      REAL_T, INTENT(out) :: H
+      INTEGER_T, INTENT(in) :: im,im_opp
 
       alpha=zero
       H=hs(psi,alpha)
@@ -5305,7 +5313,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
       subroutine fluid_interface_tension( &
-         xpos,time,LSleft,LSright,gradh,im_opp,im)
+         xpos,time,LSleft,LSright,gradh, &
+         im_opp,im, &
+         imL,imR)
 
       use global_utility_module
 
@@ -5320,7 +5330,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T :: LSleft_merge(num_materials)
       REAL_T :: LSright_merge(num_materials)
       REAL_T psiL,psiR,HLEFT,HRIGHT
-      INTEGER_T imL,imR
+      INTEGER_T, INTENT(out) :: imL,imR
       INTEGER_T iten
 
       im=0

@@ -7787,6 +7787,7 @@ stop
       REAL_T LSplus(num_materials)
       REAL_T LSminus(num_materials)
       INTEGER_T im_main,im_main_opp,im_opp
+      INTEGER_T im_left_main,im_right_main
       INTEGER_T ireverse
       INTEGER_T iten_FFACE
       INTEGER_T iten_main
@@ -7796,6 +7797,7 @@ stop
       INTEGER_T iten_tension
       INTEGER_T iten_micro
       INTEGER_T im_tension,im_opp_tension
+      INTEGER_T im_left_tension,im_right_tension
       INTEGER_T im_fluid_micro,im_solid_micro
 
       REAL_T gradh,gradh_tension
@@ -8746,7 +8748,9 @@ stop
           iten_main=0
          else if (is_solid_face.eq.0) then
 
-          call fluid_interface(LSminus,LSplus,gradh,im_main_opp,im_main)
+          call fluid_interface(LSminus,LSplus,gradh, &
+            im_main_opp,im_main, &
+            im_left_main,im_right_main)
 
           if (gradh.ne.zero) then
            if (im_main.ge.im_main_opp) then
@@ -8772,7 +8776,8 @@ stop
            call fluid_interface_tension( &
             xstenMAC_center,time, &
             LSminus,LSplus,gradh_tension, &
-            im_opp_tension,im_tension)
+            im_opp_tension,im_tension, &
+            im_left_tension,im_right_tension)
           else
            print *,"covered_face invalid"
            stop
@@ -13092,8 +13097,9 @@ stop
        xp,DIMS(xp), & ! holds AMRSYNC_PRES if OP_PRESGRAD_MAC
        xvel,DIMS(xvel), &
        vel,DIMS(vel), & !primary_velfab coming from increment_face_vel
+        ! hydrostatic pressure if OP_POTGRAD_TO_MAC
        pres,DIMS(pres), & ! U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
-       den,DIMS(den), &
+       den,DIMS(den), & !hydrostatic density if OP_POTGRAD_TO_MAC
         ! secondary_velfab if 
         !  OP_UNEW_CELL_TO_MAC, OP_UNEW_USOL_MAC_TO_MAC,
         !  OP_UMAC_PLUS_VISC_CELL_TO_MAC, or OP_U_COMP_CELL_MAC_TO_MAC
@@ -13233,6 +13239,7 @@ stop
       REAL_T pgrad_gravity ! grad ppot/den_pot  ppot=dt * rho g z
       REAL_T pgrad_tension
       REAL_T gradh_tension
+      REAL_T gradh_gravity
       REAL_T dplus,dminus
        !OP_PRES_CELL_TO_MAC 
        !(1)use_face_pres=VALID_PEDGE+1
@@ -13241,6 +13248,7 @@ stop
       INTEGER_T im1,jm1,km1
       INTEGER_T im,im_opp,im_heat,tcomp,iten
       INTEGER_T im_left,im_right
+      INTEGER_T im_left_tension,im_right_tension
       INTEGER_T dir,dir2,side
       INTEGER_T velcomp,iboundary
       REAL_T cutedge,RR
@@ -14966,6 +14974,8 @@ stop
            stop
           endif
 
+          im_gravity=0
+
           at_reflect_wall=0
           at_wall=0
 
@@ -15080,8 +15090,12 @@ stop
            denface=denface+den_local(side)
           enddo  ! side=1,2
 
+          incremental_gravity=zero
           pgrad_gravity=zero
+
+          gradh_gravity=zero
           gradh_tension=zero
+
           pgrad_tension=zero
 
           call fixed_face( &
@@ -15101,27 +15115,38 @@ stop
            ! gradh_tension represents (H_{i}-H_{i-1})
           if (at_wall.eq.1) then
            ! do nothing, gradh_tension=0 on a wall
+           ! do nothing, gradh_gravity=0 on a wall
           else if (at_reflect_wall.eq.1) then
            ! do nothing, gradh_tension=0 at a reflecting wall 
+           ! do nothing, gradh_gravity=0 at a reflecting wall 
           else if (at_reflect_wall.eq.2) then
            ! do nothing, gradh_tension=0 at a reflecting wall 
+           ! do nothing, gradh_gravity=0 at a reflecting wall 
           else if ((at_reflect_wall.eq.0).and. &
                    (at_wall.eq.0)) then
 
            ! gradh_tension=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4,8
            if (is_solid_face.eq.1) then
             gradh_tension=zero
+            gradh_gravity=zero
            else if (is_solid_face.eq.0) then
             if ((is_clamped_face.eq.1).or. &
                 (is_clamped_face.eq.2).or. &
                 (is_clamped_face.eq.3)) then
              gradh_tension=zero
+             gradh_gravity=zero
             else if (is_clamped_face.eq.0) then
              ! fluid_interface_tension is declared in: PROB.F90
              ! "merge_levelset" is called inside of "fluid_interface_tension"
              call fluid_interface_tension( &
                xstenMAC_center,time, &
-               LSleft,LSright,gradh_tension,im_opp,im)
+               LSleft,LSright,gradh_tension, &
+               im_opp,im, &
+               im_left_tension,im_right_tension)
+             call fluid_interface( &
+               LSleft,LSright,gradh_gravity, &
+               im_opp,im, &
+               im_left_gravity,im_right_gravity)
             else
              print *,"is_clamped_face invalid"
              stop
@@ -15173,6 +15198,31 @@ stop
             print *,"gradh_tension bust"
             stop
            endif 
+
+           if (gradh_gravity.ne.zero) then
+
+            ! FIX ME init incremental_gravity here
+
+            if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+                (local_face(FACECOMP_FACECUT+1).le.half)) then
+             incremental_gravity=zero
+            else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                     (local_face(FACECOMP_FACECUT+1).le.one)) then
+             incremental_gravity=incremental_graivty* &
+              local_face(FACECOMP_FACECUT+1)* &
+              local_face(FACECOMP_FACEDEN+1)
+            else
+             print *,"local_face(FACECOMP_FACECUT+1) invalid"
+             stop
+            endif
+
+           else if (gradh_gravity.eq.zero) then
+            ! do nothing
+           else
+            print *,"gradh_gravity bust"
+            stop
+           endif 
+
           else
            print *,"at_reflect_wall or at_wall invalid"
            stop
@@ -15190,6 +15240,13 @@ stop
 
            ! hydrostatic pressure gradient on the MAC grid
           pgrad_gravity=(pplus-pminus)/(hx*cutedge)
+
+
+
+
+
+
+
 
           ! -dt k (grad p)_MAC (energyflag=SUB_OP_FOR_MAIN)
           ! (grad p)_MAC (energyflag=SUB_OP_FOR_SDC)
@@ -15305,13 +15362,33 @@ stop
        if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then
         ! do nothing
        else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then 
-        ! do nothing
+        ! do nothing ( grad(U P) term only low order )
+       else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
+                (energyflag.eq.SUB_OP_FORCE_MASK_BASE+2)) then 
+        ! do nothing (surface tension only)
+       else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
+                (energyflag.eq.SUB_OP_FORCE_MASK_BASE+1)) then 
+        if (enable_spectral.eq.0) then
+         ! do nothing (gravity only, incremental only)
+        else
+         print *,"incremental gravity low order only"
+         stop
+        endif
        else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
                 (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                 (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
                 (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                 (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
                 (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
+
+        if (operation_flag.eq.OP_POTGRAD_TO_MAC) then
+         if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+3) then
+          ! do nothing (gravity + surface tension is ok for SEM)
+         else
+          print *,"spectral method not for incremental formulation"
+          stop
+         endif
+        endif
 
         if (enable_spectral.eq.1) then
 
@@ -15377,6 +15454,13 @@ stop
                ncomp_dest=1
                ncomp_source=1
                scomp_bc=1
+
+               if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+3) then 
+                ! do nothing
+               else
+                print *,"energyflag incompatible OP_POTGRAD_TO_MAC"
+                stop
+               endif
 
               else if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then 
 
