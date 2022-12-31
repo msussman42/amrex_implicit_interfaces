@@ -206,6 +206,7 @@ stop
        REAL_T RCEN
        REAL_T inverseden
        REAL_T inverseden_base
+       REAL_T added_mass_factor
        REAL_T mu_cell
        INTEGER_T vofcomp
        INTEGER_T dencomp
@@ -393,11 +394,19 @@ stop
          stop
         endif
 
-        if ((inverseden_base.gt.zero).and. &
-            (inverseden_base/inverseden.ge.one-VOFTOL)) then
+        if (inverseden_base.gt.zero) then
          ! do nothing
         else
          print *,"inverseden_base invalid"
+         stop
+        endif
+
+        added_mass_factor=inverseden_base/inverseden
+
+        if (added_mass_factor.ge.one-VOFTOL) then
+         ! do nothing
+        else
+         print *,"added_mass_factor invalid"
          stop
         endif
 
@@ -499,9 +508,14 @@ stop
             ! DTEMP will have no units after dividing by total density.
             ! fort_tempconst is the temperature of the inner boundary
             ! for the differentially heated rotating annulus problem.
+            ! example (default): rho_factor=fort_DrhoDT(im)*(T-Tbase)
             call SUB_UNITLESS_EXPANSION_FACTOR( &
-              im,local_temp,fort_tempconst(im),rho_factor)
+              im, & !intent(in)
+              local_temp, & !intent(in)
+              fort_tempconst(im), & !intent(in)
+              rho_factor) !intent(out) (unitless)
 
+             !rho_base=density of material "im"
             DTEMP=DTEMP+localF*rho_base*rho_factor
 
            else
@@ -529,7 +543,7 @@ stop
          if (Fsolid.ge.half) then
           DTEMP=zero
          else if (Fsolid.le.half) then
-          DTEMP=DTEMP/cell_density_denom
+          DTEMP=DTEMP/cell_density_denom !DTEMP will be unitless after this.
          else
           print *,"Fsolid is NaN"
           stop
@@ -538,10 +552,11 @@ stop
           ! gravity force (temperature dependence)
           ! units of gravity: m/s^2
           ! DTEMP has no units.
+          ! added_mass_factor=inverseden_base/inverseden
          if (abs(DTEMP).ge.zero) then
           do dir=1,SDIM
            unp1(dir)=unp1(dir)+ &
-              dt*gravity_boussinesq_vector(dir)*DTEMP
+              dt*gravity_boussinesq_vector(dir)*DTEMP/added_mass_factor
           enddo
          else
           print *,"DTEMP is NaN"
