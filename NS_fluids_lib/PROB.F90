@@ -4760,16 +4760,25 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       is_solid_face=0
       is_prescribed_face=0
+
       im_solid=0
       im_prescribed=0
+
       im_solid_valid=0
       im_prescribed_valid=0
+
       nparts=0
       partid_solid=-1
       partid_prescribed=-1
 
       do im=1,num_materials
 
+        !FSI_flag=1 prescribed rigid solid (PROB.F90)
+        !FSI_flag=2 prescribed rigid solid (sci_clsvof.F90 - CAD)
+        !FSI_flag=4 FSI link w/Shoele
+        !FSI_flag=8 FSI link w/Shoele, pres-vel
+        !FSI_flag=6 Lag. ice (CAD)
+        !FSI_flag=7 Lag. fluid (CAD)
        if (is_lag_part(im).eq.1) then
 
         if (is_rigid(im).eq.0) then
@@ -4780,6 +4789,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else if (is_rigid(im).eq.1) then
+
          if (im_solid.eq.0) then
           im_solid=im
           partid_solid=nparts
@@ -4801,6 +4811,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"im_solid invalid 7"
           stop
          endif
+
          if (is_prescribed(im).eq.1) then
           if (im_prescribed.eq.0) then
            im_prescribed=im
