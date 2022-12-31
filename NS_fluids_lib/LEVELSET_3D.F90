@@ -14960,6 +14960,7 @@ stop
           endif
 
          else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
+
            ! HYDROSTATIC_PRESDEN_MF is initialized in 
            ! NavierStokes::init_gravity_potentional()
            ! init_gravity_potential() calls fort_init_potential
@@ -15313,6 +15314,7 @@ stop
               endif
 
              else if (gradh_gravity.eq.zero) then
+
               incremental_gravity=zero
 
               if (im_left_gravity.eq.im_right_gravity) then
@@ -15328,10 +15330,18 @@ stop
                 den_H=(one-interp_factor)*dminus+interp_factor*dplus
 
                 if (den_H.gt.zero) then
-                 incremental_gravity=-(pres_H/den_H)* &
+
+                 if (is_compressible_mat(im_left_gravity).eq.1) then
+                  incremental_gravity=-(pres_H/den_H)* &
                    (one/den_H)* &
-                   (den_H*(den_im_opp-den_im)+ &
+                   (den_H*(den_im_opp-den_im)- &
                     half*(den_im_opp+den_im)*(dplus-dminus))/hx
+                 else if (is_compressible_mat(im_left_gravity).eq.0) then
+                  incremental_gravity=zero
+                 else
+                  print *,"is_compressible_mat(im_left_gravity) invalid"
+                  stop
+                 endif
 
                  if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                      (local_face(FACECOMP_FACECUT+1).le.half)) then
