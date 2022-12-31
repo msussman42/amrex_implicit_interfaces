@@ -13237,18 +13237,28 @@ stop
       REAL_T pminus
       REAL_T pgrad
       REAL_T pgrad_gravity ! grad ppot/den_pot  ppot=dt * rho g z
+      REAL_T incremental_gravity
       REAL_T pgrad_tension
       REAL_T gradh_tension
       REAL_T gradh_gravity
       REAL_T dplus,dminus
+      REAL_T den_H,pres_H
+      REAL_T den_im,den_im_opp
+      REAL_T interp_factor
+      INTEGER_T dencomp_im,dencomp_im_opp
+
        !OP_PRES_CELL_TO_MAC 
        !(1)use_face_pres=VALID_PEDGE+1
        !(2)face pressure=PRESSURE_PEDGE+1
       REAL_T PEDGE_local(NCOMP_PEDGE)
       INTEGER_T im1,jm1,km1
-      INTEGER_T im,im_opp,im_heat,tcomp,iten
+      INTEGER_T im,im_opp
+      INTEGER_T im_gravity,im_opp_gravity
+      INTEGER_T im_heat,tcomp
+      INTEGER_T iten
       INTEGER_T im_left,im_right
       INTEGER_T im_left_tension,im_right_tension
+      INTEGER_T im_left_gravity,im_right_gravity
       INTEGER_T dir,dir2,side
       INTEGER_T velcomp,iboundary
       REAL_T cutedge,RR
@@ -13293,6 +13303,8 @@ stop
       REAL_T pforce_scaled
       REAL_T LSleft(num_materials)
       REAL_T LSright(num_materials)
+      REAL_T LSleft_grav
+      REAL_T LSright_grav
       REAL_T LSupwind(num_materials)
       REAL_T localLS(num_materials)
       REAL_T mgoni_temp(num_materials)
@@ -15096,11 +15108,12 @@ stop
           incremental_gravity=zero 
           pgrad_gravity=zero  ! grad P_H/rho_H
 
+          pgrad_tension=zero ! -sigma kappa grad H/rho_added
+
           gradh_gravity=zero
           gradh_tension=zero
 
-          pgrad_tension=zero ! -sigma kappa grad H/rho_added
-
+           ! fixed_face is declared in: PROB.F90
           call fixed_face( &
            AFACE, &
            AFACE, &
@@ -15115,7 +15128,9 @@ stop
            partid_prescribed) 
 
            ! at_wall==1 if FOEXTRAP or REFLECT_EVEN BC for pressure.
-           ! gradh_tension represents (H_{i}-H_{i-1})
+           ! gradh_tension represents (H_{m12,i}-H_{m12,i-1})
+           ! m1 = "im material"
+           ! m2 = "im_opp material"
           if (at_wall.eq.1) then
            ! do nothing, gradh_tension=0 on a wall
            ! do nothing, gradh_gravity=0 on a wall
@@ -15132,11 +15147,16 @@ stop
                    (at_wall.eq.0)) then
 
            ! gradh_tension=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4,8
+           ! 1=prescribed rigid (PROB.F90)
+           ! 2=prescribed rigid (sci_clsvof.F90)
+           ! 8=FSI pres-vel, Kourosh Shoele
+           ! 4=FSI Goldstein, Sirovich, Handler, Kourosh Shoele
            if (is_solid_face.eq.1) then
             gradh_tension=zero
             gradh_gravity=zero
             incremental_gravity=zero
            else if (is_solid_face.eq.0) then
+
             if ((is_clamped_face.eq.1).or. &
                 (is_clamped_face.eq.2).or. &
                 (is_clamped_face.eq.3)) then
@@ -15144,163 +15164,217 @@ stop
              gradh_gravity=zero
              incremental_gravity=zero
             else if (is_clamped_face.eq.0) then
+
+             gradh_tension=zero
+             gradh_gravity=zero
+             incremental_gravity=zero
+
              ! fluid_interface_tension is declared in: PROB.F90
              ! "merge_levelset" is called inside of "fluid_interface_tension"
              call fluid_interface_tension( &
                xstenMAC_center,time, &
-               LSleft,LSright,gradh_tension, &
+               LSleft,LSright, &
+               gradh_tension, &
                im_opp,im, &
                im_left_tension,im_right_tension)
+
              call fluid_interface( &
-               LSleft,LSright,gradh_gravity, &
+               LSleft,LSright, &
+               gradh_gravity, &
                im_opp_gravity,im_gravity, &
                im_left_gravity,im_right_gravity)
+
+             if (gradh_tension.ne.zero) then
+
+              if (im.lt.im_opp) then
+               ! do nothing
+              else
+               print *,"im or im_opp invalid"
+               stop
+              endif
+
+              do im_heat=1,num_materials
+               tcomp=(im_heat-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+               mgoni_temp(im_heat)=half*(mgoni(D_DECL(i,j,k),tcomp)+ &
+                mgoni(D_DECL(im1,jm1,km1),tcomp))
+              enddo ! im_heat
+
+              call get_user_tension(xstenMAC_center,time, &
+               fort_tension,user_tension,mgoni_temp)
+
+              call get_iten(im,im_opp,iten)
+              call get_scaled_tension(user_tension(iten),tension_scaled)
+              call get_scaled_pforce(pforce_scaled)
+
+               ! in: fort_cell_to_mac, OP_POTGRAD_TO_MAC,
+               !     surface tension on MAC grid ...
+              local_tension_force=tension_scaled*local_face(FACECOMP_CURV+1)
+
+               ! pgrad_tension is combined with pgrad_gravity at the very end.
+              pgrad_tension=-(local_tension_force+ &
+               pforce_scaled*local_face(FACECOMP_PFORCE+1))*gradh_tension
+              pgrad_tension=dt*pgrad_tension/hx
+              if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+                  (local_face(FACECOMP_FACECUT+1).le.half)) then
+               pgrad_tension=zero
+              else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                       (local_face(FACECOMP_FACECUT+1).le.one)) then
+               pgrad_tension=pgrad_tension* &
+                local_face(FACECOMP_FACECUT+1)* &
+                local_face(FACECOMP_FACEDEN+1)
+              else
+               print *,"local_face(FACECOMP_FACECUT+1) invalid"
+               stop
+              endif
+
+             else if (gradh_tension.eq.zero) then
+               ! do nothing
+             else
+              print *,"gradh_tension bust"
+              stop
+             endif 
+
+             if (gradh_gravity.ne.zero) then
+
+              if (im_gravity.lt.im_opp_gravity) then
+               ! do nothing
+              else
+               print *,"im_gravity or im_opp_gravity invalid"
+               stop
+              endif
+
+              LSleft_grav=LSleft(im_gravity)-LSleft(im_opp_gravity)
+              LSright_grav=LSright(im_gravity)-LSright(im_opp_gravity)
+             
+              dencomp_im=(im_gravity-1)*num_state_material+1+ENUM_DENVAR 
+              dencomp_im_opp=(im_opp_gravity-1)*num_state_material+1+ENUM_DENVAR 
+              if ((LSleft_grav.eq.zero).and. &
+                  (LSright_grav.eq.zero)) then
+               interp_factor=half
+               den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+               den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+              else if (LSleft_grav.eq.zero) then
+               interp_factor=zero
+               den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+               den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+              else if (LSright_grav.eq.zero) then
+               interp_factor=one
+               den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
+               den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
+              else if (LSleft_grav*LSright_grav.lt.zero) then
+               interp_factor=LSleft_grav/(LSleft_grav-LSright_grav)
+               if (LSleft_grav.gt.zero) then
+                if (gradh_gravity.lt.zero) then
+                 den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+                 den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+                else
+                 print *,"gradh_gravity invalid"
+                 stop
+                endif 
+               else if (LSright_grav.gt.zero) then
+                if (gradh_gravity.gt.zero) then
+                 den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
+                 den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
+                else
+                 print *,"gradh_gravity invalid"
+                 stop
+                endif 
+               else
+                print *,"LSleft_grav or LSright_grav invalid"
+                stop
+               endif
+
+              else
+               print *,"LSleft_grav,LSright_grav invalid"
+               stop
+              endif
+              
+              pres_H=(one-interp_factor)*pminus+interp_factor*pplus
+              den_H=(one-interp_factor)*dminus+interp_factor*dplus
+              if (den_H.gt.zero) then
+               incremental_gravity=-(pres_H/den_H)* &
+                 (den_im-den_im_opp)*gradh_gravity/hx
+              else
+               print *,"den_H invalid"
+               stop
+              endif
+      
+              if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+                  (local_face(FACECOMP_FACECUT+1).le.half)) then
+               incremental_gravity=zero
+              else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                       (local_face(FACECOMP_FACECUT+1).le.one)) then
+               incremental_gravity=incremental_gravity* &
+                local_face(FACECOMP_FACECUT+1)* &
+                local_face(FACECOMP_FACEDEN+1)
+              else
+               print *,"local_face(FACECOMP_FACECUT+1) invalid"
+               stop
+              endif
+
+             else if (gradh_gravity.eq.zero) then
+              incremental_gravity=zero
+
+              if (im_left_gravity.eq.im_right_gravity) then
+
+               if ((im_left_gravity.ge.1).and. &
+                   (im_left_gravity.le.num_materials)) then
+
+                dencomp_im=(im_left_gravity-1)*num_state_material+1+ENUM_DENVAR 
+                interp_factor=half
+                den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+                den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+                pres_H=(one-interp_factor)*pminus+interp_factor*pplus
+                den_H=(one-interp_factor)*dminus+interp_factor*dplus
+
+                if (den_H.gt.zero) then
+                 incremental_gravity=-(pres_H/den_H)* &
+                   (one/den_H)* &
+                   (den_H*(den_im_opp-den_im)+ &
+                    half*(den_im_opp+den_im)*(dplus-dminus))/hx
+
+                 if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+                     (local_face(FACECOMP_FACECUT+1).le.half)) then
+                  incremental_gravity=zero
+                 else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
+                          (local_face(FACECOMP_FACECUT+1).le.one)) then
+                  incremental_gravity=incremental_gravity* &
+                    local_face(FACECOMP_FACECUT+1)* &
+                    local_face(FACECOMP_FACEDEN+1)
+                 else
+                  print *,"local_face(FACECOMP_FACECUT+1) invalid"
+                  stop
+                 endif
+                else
+                 print *,"den_H invalid"
+                 stop
+                endif
+
+               else
+                print *,"im_left_gravity invalid"
+                stop
+               endif
+
+              else if (im_left_gravity.ne.im_right_gravity) then
+               ! do nothing
+              else
+               print *,"im_left_gravity,im_right_gravity bust"
+               stop
+              endif
+             else
+              print *,"gradh_gravity bust"
+              stop
+             endif 
+
             else
              print *,"is_clamped_face invalid"
              stop
             endif
+
            else
             print *,"is_solid_face invalid 9 ",is_solid_face
             stop
            endif
-
-           if (gradh_tension.ne.zero) then
-
-            if (im.lt.im_opp) then
-             ! do nothing
-            else
-             print *,"im or im_opp invalid"
-             stop
-            endif
-
-            do im_heat=1,num_materials
-             tcomp=(im_heat-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-             mgoni_temp(im_heat)=half*(mgoni(D_DECL(i,j,k),tcomp)+ &
-              mgoni(D_DECL(im1,jm1,km1),tcomp))
-            enddo ! im_heat
-
-            call get_user_tension(xstenMAC_center,time, &
-             fort_tension,user_tension,mgoni_temp)
-
-            call get_iten(im,im_opp,iten)
-            call get_scaled_tension(user_tension(iten),tension_scaled)
-            call get_scaled_pforce(pforce_scaled)
-
-             ! in: fort_cell_to_mac, OP_POTGRAD_TO_MAC,
-             !     surface tension on MAC grid ...
-            local_tension_force=tension_scaled*local_face(FACECOMP_CURV+1)
-
-             ! pgrad_tension is combined with pgrad_gravity at the very end.
-            pgrad_tension=-(local_tension_force+ &
-             pforce_scaled*local_face(FACECOMP_PFORCE+1))*gradh_tension
-            pgrad_tension=dt*pgrad_tension/hx
-            if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
-                (local_face(FACECOMP_FACECUT+1).le.half)) then
-             pgrad_tension=zero
-            else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
-                     (local_face(FACECOMP_FACECUT+1).le.one)) then
-             pgrad_tension=pgrad_tension* &
-              local_face(FACECOMP_FACECUT+1)* &
-              local_face(FACECOMP_FACEDEN+1)
-            else
-             print *,"local_face(FACECOMP_FACECUT+1) invalid"
-             stop
-            endif
-
-           else if (gradh_tension.eq.zero) then
-             ! do nothing
-           else
-            print *,"gradh_tension bust"
-            stop
-           endif 
-
-           if (gradh_gravity.ne.zero) then
-
-            if (im_gravity.lt.im_opp_gravity) then
-             ! do nothing
-            else
-             print *,"im_gravity or im_opp_gravity invalid"
-             stop
-            endif
-
-            LSleft_grav=LSleft(im_gravity)-LSleft(im_opp_gravity)
-            LSright_grav=LSright(im_gravity)-LSright(im_opp_gravity)
-           
-            dencomp_im=(im_gravity-1)*num_state_material+1+ENUM_DENVAR 
-            dencomp_im_opp=(im_opp_gravity-1)*num_state_material+1+ENUM_DENVAR 
-
-            if ((LSleft_grav.eq.zero).and. &
-                (LSright_grav.eq.zero)) then
-             interp_factor=half
-             den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
-             den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
-            else if (LSleft_grav.eq.zero) then
-             interp_factor=zero
-             den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
-             den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
-            else if (LSright_grav.eq.zero) then
-             interp_factor=one
-             den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
-             den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
-            else if (LSleft_grav*LSright_grav.lt.zero) then
-             interp_factor=LSleft_grav/(LS_left_grav-LS_right_grav)
-             if (LSleft_grav.gt.zero) then
-              if (gradh_gravity.lt.zero) then
-               den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
-               den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
-              else
-               print *,"gradh_gravity invalid"
-               stop
-              endif 
-             else if (LSright_grav.gt.zero) then
-              if (gradh_gravity.gt.zero) then
-               den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
-               den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
-              else
-               print *,"gradh_gravity invalid"
-               stop
-              endif 
-             else
-              print *,"LSleft_grav or LSright_grav invalid"
-              stop
-             endif
-
-            else
-             print *,"LSleft_grav,LSright_grav invalid"
-             stop
-            endif
-            
-            pres_H=(one-interp_factor)*pminus+interp_factor*pplus
-            den_H=(one-interp_factor)*dminus+interp_factor*dplus
-            if (den_H.gt.zero) then
-             incremental_gravity=-(pres_H/den_H)* &
-               (den_im-den_im_opp)*gradh_gravity/hx
-            else
-             print *,"den_H invalid"
-             stop
-            endif
-    
-            if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
-                (local_face(FACECOMP_FACECUT+1).le.half)) then
-             incremental_gravity=zero
-            else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
-                     (local_face(FACECOMP_FACECUT+1).le.one)) then
-             incremental_gravity=incremental_gravity* &
-              local_face(FACECOMP_FACECUT+1)* &
-              local_face(FACECOMP_FACEDEN+1)
-            else
-             print *,"local_face(FACECOMP_FACECUT+1) invalid"
-             stop
-            endif
-
-           else if (gradh_gravity.eq.zero) then
-            FIX ME, DO THIS NEXT
-
-
-           else
-            print *,"gradh_gravity bust"
-            stop
-           endif 
 
           else
            print *,"at_reflect_wall or at_wall invalid"
@@ -15319,13 +15393,6 @@ stop
 
            ! hydrostatic pressure gradient on the MAC grid
           pgrad_gravity=(pplus-pminus)/(hx*cutedge)
-
-
-
-
-
-
-
 
           ! -dt k (grad p)_MAC (energyflag=SUB_OP_FOR_MAIN)
           ! (grad p)_MAC (energyflag=SUB_OP_FOR_SDC)
@@ -15389,7 +15456,7 @@ stop
           else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+2) then 
            xgp(D_DECL(i,j,k),1)=pgrad_tension
           else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+1) then 
-           xgp(D_DECL(i,j,k),1)=pgrad_gravity
+           xgp(D_DECL(i,j,k),1)=incremental_gravity
           else
            print *,"energyflag invalid OP_POTGRAD_TO_MAC"
            stop
