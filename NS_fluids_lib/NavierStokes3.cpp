@@ -7555,7 +7555,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
  new_localMF(OFF_DIAG_CHECK_MF,nsolve,0,-1);
 
  if (project_option==SOLVETYPE_PRESGRAVITY) {
-  local_face_index=FACECOMP_FACEDEN_BASE;  // 1/rho
+  local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
  } else if (project_option_projection(project_option)==1) {
   local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
@@ -9232,6 +9232,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (enable_spectral==0) {
    //do nothing
   } else if (enable_spectral==1) {
+   //do nothing
    //having just SOLVETYPE_PRESGRAVITY low order will not
    //adversely effect the numerical dissipation of an 
    //otherwise spectrally accurate method (only the order

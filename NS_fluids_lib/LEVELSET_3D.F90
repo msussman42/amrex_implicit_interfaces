@@ -15090,13 +15090,16 @@ stop
            denface=denface+den_local(side)
           enddo  ! side=1,2
 
-          incremental_gravity=zero
-          pgrad_gravity=zero
+          ! -(P_H/rho_H)(1/(rho_added rho_H))(rho_H grad rho-rho grad rho_H)
+          !    (if gradh_gravity=0, im_left=im_right)
+          ! -(P_H/rho_H)grad rho/rho_added (gradh_gravity<>0) 
+          incremental_gravity=zero 
+          pgrad_gravity=zero  ! grad P_H/rho_H
 
           gradh_gravity=zero
           gradh_tension=zero
 
-          pgrad_tension=zero
+          pgrad_tension=zero ! -sigma kappa grad H/rho_added
 
           call fixed_face( &
            AFACE, &
@@ -15116,12 +15119,15 @@ stop
           if (at_wall.eq.1) then
            ! do nothing, gradh_tension=0 on a wall
            ! do nothing, gradh_gravity=0 on a wall
+           ! do nothing, incremental_gravity=0 on a wall
           else if (at_reflect_wall.eq.1) then
            ! do nothing, gradh_tension=0 at a reflecting wall 
            ! do nothing, gradh_gravity=0 at a reflecting wall 
+           ! do nothing, incremental_gravity=0 at a reflecting wall 
           else if (at_reflect_wall.eq.2) then
            ! do nothing, gradh_tension=0 at a reflecting wall 
            ! do nothing, gradh_gravity=0 at a reflecting wall 
+           ! do nothing, incremental_gravity=0 at a reflecting wall 
           else if ((at_reflect_wall.eq.0).and. &
                    (at_wall.eq.0)) then
 
@@ -15129,12 +15135,14 @@ stop
            if (is_solid_face.eq.1) then
             gradh_tension=zero
             gradh_gravity=zero
+            incremental_gravity=zero
            else if (is_solid_face.eq.0) then
             if ((is_clamped_face.eq.1).or. &
                 (is_clamped_face.eq.2).or. &
                 (is_clamped_face.eq.3)) then
              gradh_tension=zero
              gradh_gravity=zero
+             incremental_gravity=zero
             else if (is_clamped_face.eq.0) then
              ! fluid_interface_tension is declared in: PROB.F90
              ! "merge_levelset" is called inside of "fluid_interface_tension"
@@ -15145,7 +15153,7 @@ stop
                im_left_tension,im_right_tension)
              call fluid_interface( &
                LSleft,LSright,gradh_gravity, &
-               im_opp,im, &
+               im_opp_gravity,im_gravity, &
                im_left_gravity,im_right_gravity)
             else
              print *,"is_clamped_face invalid"
@@ -15157,6 +15165,13 @@ stop
            endif
 
            if (gradh_tension.ne.zero) then
+
+            if (im.lt.im_opp) then
+             ! do nothing
+            else
+             print *,"im or im_opp invalid"
+             stop
+            endif
 
             do im_heat=1,num_materials
              tcomp=(im_heat-1)*num_state_material+ENUM_TEMPERATUREVAR+1
@@ -15201,14 +15216,76 @@ stop
 
            if (gradh_gravity.ne.zero) then
 
-            ! FIX ME init incremental_gravity here
+            if (im_gravity.lt.im_opp_gravity) then
+             ! do nothing
+            else
+             print *,"im_gravity or im_opp_gravity invalid"
+             stop
+            endif
 
+            LSleft_grav=LSleft(im_gravity)-LSleft(im_opp_gravity)
+            LSright_grav=LSright(im_gravity)-LSright(im_opp_gravity)
+           
+            dencomp_im=(im_gravity-1)*num_state_material+1+ENUM_DENVAR 
+            dencomp_im_opp=(im_opp_gravity-1)*num_state_material+1+ENUM_DENVAR 
+
+            if ((LSleft_grav.eq.zero).and. &
+                (LSright_grav.eq.zero)) then
+             interp_factor=half
+             den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+             den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+            else if (LSleft_grav.eq.zero) then
+             interp_factor=zero
+             den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+             den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+            else if (LSright_grav.eq.zero) then
+             interp_factor=one
+             den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
+             den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
+            else if (LSleft_grav*LSright_grav.lt.zero) then
+             interp_factor=LSleft_grav/(LS_left_grav-LS_right_grav)
+             if (LSleft_grav.gt.zero) then
+              if (gradh_gravity.lt.zero) then
+               den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
+               den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
+              else
+               print *,"gradh_gravity invalid"
+               stop
+              endif 
+             else if (LSright_grav.gt.zero) then
+              if (gradh_gravity.gt.zero) then
+               den_im_opp=mgoni(D_DECL(im1,jm1,km1),dencomp_im_opp)
+               den_im=mgoni(D_DECL(i,j,k),dencomp_im)   
+              else
+               print *,"gradh_gravity invalid"
+               stop
+              endif 
+             else
+              print *,"LSleft_grav or LSright_grav invalid"
+              stop
+             endif
+
+            else
+             print *,"LSleft_grav,LSright_grav invalid"
+             stop
+            endif
+            
+            pres_H=(one-interp_factor)*pminus+interp_factor*pplus
+            den_H=(one-interp_factor)*dminus+interp_factor*dplus
+            if (den_H.gt.zero) then
+             incremental_gravity=-(pres_H/den_H)* &
+               (den_im-den_im_opp)*gradh_gravity/hx
+            else
+             print *,"den_H invalid"
+             stop
+            endif
+    
             if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                 (local_face(FACECOMP_FACECUT+1).le.half)) then
              incremental_gravity=zero
             else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
                      (local_face(FACECOMP_FACECUT+1).le.one)) then
-             incremental_gravity=incremental_graivty* &
+             incremental_gravity=incremental_gravity* &
               local_face(FACECOMP_FACECUT+1)* &
               local_face(FACECOMP_FACEDEN+1)
             else
@@ -15217,7 +15294,9 @@ stop
             endif
 
            else if (gradh_gravity.eq.zero) then
-            ! do nothing
+            FIX ME, DO THIS NEXT
+
+
            else
             print *,"gradh_gravity bust"
             stop
