@@ -4767,6 +4767,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       nparts=0
       partid_solid=-1
       partid_prescribed=-1
+
       do im=1,num_materials
 
        if (is_lag_part(im).eq.1) then
@@ -4790,6 +4791,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            LScrit_solid=LStest
            im_solid=im
            partid_solid=nparts
+          else if (LStest.le.LScrit_solid) then
+           ! do nothing
+          else
+           print *,"LStest or LScrit_solid bust"
+           stop
           endif
          else
           print *,"im_solid invalid 7"
@@ -4807,6 +4813,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             LScrit_prescribed=LStest
             im_prescribed=im
             partid_prescribed=nparts
+           else if (LStest.le.LScrit_prescribed) then
+            ! do nothing
+           else
+            print *,"LStest or LScrit_prescribed bust"
+            stop
            endif
           else
            print *,"im_prescribed invalid 7"
@@ -4875,6 +4886,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         im_solid_valid=1
         if (LScrit_solid.ge.zero) then
          is_solid_face=1
+        else if (LScrit_solid.lt.zero) then
+         ! do nothing
+        else
+         print *,"LScrit_solid invalid"
+         stop
         endif
         if ((partid_solid.lt.0).or. &
             (partid_solid.ge.nparts)) then
@@ -4915,6 +4931,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         im_prescribed_valid=1
         if (LScrit_prescribed.ge.zero) then
          is_prescribed_face=1
+        else if (LScrit_prescribed.lt.zero) then
+         ! do nothing
+        else
+         print *,"LScrit_prescribed invalid"
+         stop
         endif
         if ((partid_prescribed.lt.0).or. &
             (partid_prescribed.ge.nparts)) then
