@@ -2797,6 +2797,7 @@ NavierStokes::read_params ()
      if (enable_spectral==0) {
       // do nothing
      } else if (enable_spectral==1) {
+      //do nothing
       //having just SOLVETYPE_PRESGRAVITY low order will not
       //adversely effect the numerical dissipation of an 
       //otherwise spectrally accurate method (only the order
