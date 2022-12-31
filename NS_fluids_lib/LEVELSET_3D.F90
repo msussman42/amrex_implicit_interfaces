@@ -15322,7 +15322,9 @@ stop
                if ((im_left_gravity.ge.1).and. &
                    (im_left_gravity.le.num_materials)) then
 
-                dencomp_im=(im_left_gravity-1)*num_state_material+1+ENUM_DENVAR 
+                dencomp_im= &
+                   (im_left_gravity-1)*num_state_material+1+ENUM_DENVAR 
+                dencomp_im_opp=dencomp_im
                 interp_factor=half
                 den_im=mgoni(D_DECL(im1,jm1,km1),dencomp_im)   
                 den_im_opp=mgoni(D_DECL(i,j,k),dencomp_im_opp)   
