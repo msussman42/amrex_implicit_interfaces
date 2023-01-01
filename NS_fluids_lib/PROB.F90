@@ -2296,16 +2296,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by fort_estdt: determine maximum force due to buoyancy. 
-      subroutine get_max_denjump_scale(denjump_scale)
+      subroutine get_max_denjump_scale( &
+              denjump_scale, &
+              denconst_interface_added)
       use global_utility_module
 
       IMPLICIT NONE
 
       INTEGER_T im,im_opp
       INTEGER_T iten
+      REAL_T, INTENT(in) :: denconst_interface_added(num_interfaces)
       REAL_T, INTENT(out) :: denjump_scale
       REAL_T denjump_scale_temp
       REAL_T max_den_interface
+      REAL_T den_added
 
       denjump_scale=zero
 
@@ -2322,9 +2326,25 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           endif
           max_den_interface=max(fort_denconst(im),fort_denconst(im_opp))
           if (max_den_interface.gt.zero) then
-          
+      
+           den_added=denconst_interface_added(iten)
+           if (den_added.eq.zero) then
+            ! do nothing
+           else if (den_added.gt.zero) then 
+            if (den_added.gt.max_den_interface) then
+             max_den_interface=den_added
+            else
+             print *,"need den_added.gt.max_den_interface"
+             stop
+            endif
+           else
+            print *,"den_added invalid"
+            stop
+           endif
+
            denjump_scale_temp=abs(fort_denconst(im)-fort_denconst(im_opp))/ &
              max_den_interface
+
            if ((denjump_scale_temp.ge.zero).and. &
                (denjump_scale_temp.le.one)) then
 
