@@ -2730,9 +2730,9 @@ stop
 
        ! get_max_denjump_scale is declared in: PROB.F90
        ! denjump_scale=max_{im,im_opp (fluids)} 
-       !   |den(im)-den(im_opp)|/max(den(im),den(im_opp))
+       !   |den(im)-den(im_opp)|/max(den(im),den(im_opp),den_added)
        ! denjump_scale in [0,1]
-      call get_max_denjump_scale(denjump_scale)
+      call get_max_denjump_scale(denjump_scale,denconst_interface_added)
 
       ii=0
       jj=0
@@ -3007,13 +3007,15 @@ stop
          Tsrc=den(D_DECL(i-ii,j-jj,k-kk),tcompsrc)
          Tdst=den(D_DECL(i,j,k),tcompdst)
 
-         LL=get_user_latent_heat(iten+ireverse*num_interfaces,half*(Tsrc+Tdst),0)
+         LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                 half*(Tsrc+Tdst),0)
 
          K_f=reaction_rate(iten+ireverse*num_interfaces)
          local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
          local_Tanasawa_or_Schrage_or_Kassemi= &
            Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces)
-         distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+         distribute_from_targ= &
+             distribute_from_target(iten+ireverse*num_interfaces)
          TSAT=saturation_temp(iten+ireverse*num_interfaces)
 
          if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then
@@ -3171,7 +3173,8 @@ stop
              enddo
               ! either: 1-den_dst/den_src
               !     or: 1-den_src/den_dst
-             if (fort_expansion_factor(iten+ireverse*num_interfaces).ge.one) then
+             if (fort_expansion_factor(iten+ireverse*num_interfaces).ge. &
+                 one) then
               print *,"fort_expansion_factor(iten+ireverse*num_interfaces) bad"
               stop
              endif
