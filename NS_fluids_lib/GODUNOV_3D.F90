@@ -2729,6 +2729,9 @@ stop
       local_gravity_mag=sqrt(local_gravity_mag)
 
        ! get_max_denjump_scale is declared in: PROB.F90
+       ! denjump_scale=max_{im,im_opp (fluids)} 
+       !   |den(im)-den(im_opp)|/max(den(im),den(im_opp))
+       ! denjump_scale in [0,1]
       call get_max_denjump_scale(denjump_scale)
 
       ii=0
