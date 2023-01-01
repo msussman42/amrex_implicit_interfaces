@@ -15322,6 +15322,13 @@ stop
                if ((im_left_gravity.ge.1).and. &
                    (im_left_gravity.le.num_materials)) then
 
+                if (is_rigid(im_left_gravity).eq.0) then
+                 ! do nothing
+                else 
+                 print *,"is_rigid(im_left_gravity) invalid"
+                 stop
+                endif
+
                 dencomp_im= &
                    (im_left_gravity-1)*num_state_material+1+ENUM_DENVAR 
                 dencomp_im_opp=dencomp_im

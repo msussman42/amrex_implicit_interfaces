@@ -2734,6 +2734,13 @@ stop
        ! denjump_scale in [0,1]
       call get_max_denjump_scale(denjump_scale,denconst_interface_added)
 
+      if ((denjump_scale.ge.zero).and.(denjump_scale.le.one)) then
+       ! do nothing
+      else
+       print *,"denjump_scale invalid"
+       stop
+      endif
+
       ii=0
       jj=0
       kk=0
@@ -3338,6 +3345,13 @@ stop
         density_left= &
            den(D_DECL(i-ii,j-jj,k-kk),ibase+ENUM_DENVAR+1)
 
+        if (density_left.gt.zero) then
+         ! do nothing
+        else
+         print *,"density_left invalid"
+         stop
+        endif
+
         if (material_type(im_primaryL).gt.0) then
 
          call init_massfrac_parm(density_left,massfrac_parm_left,im_primaryL)
@@ -3378,6 +3392,13 @@ stop
         ibase=(im_primaryR-1)*num_state_material
         density_right=den(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)
 
+        if (density_right.gt.zero) then
+         ! do nothing
+        else
+         print *,"density_right invalid"
+         stop
+        endif
+
         if (material_type(im_primaryR).gt.0) then
 
          call init_massfrac_parm(density_right,massfrac_parm_right,im_primaryR)
@@ -3405,13 +3426,24 @@ stop
           denmax=max(density_left,density_right)
           if (denmax.gt.zero) then
            denjump_scale_temp=abs(density_left-density_right)/denmax
+
+           if ((denjump_scale_temp.ge.zero).and. &
+               (denjump_scale_temp.le.one)) then
+            ! do nothing
+           else
+            print *,"denjump_scale_temp invalid"
+            stop
+           endif
+
            if (denjump_scale_temp.gt.denjump_scale) then
             denjump_scale=denjump_scale_temp
            endif
+
           else
            print *,"denmax invalid"
            stop
           endif
+
          endif
         else if (material_type(im_primaryR).eq.0) then
          ! do nothing
