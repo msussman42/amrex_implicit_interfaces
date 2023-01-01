@@ -4719,28 +4719,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
       else
-       print *,"is_rigid invalid PROB.F90"
+       print *,"is_rigid, imL, or imR invalid PROB.F90"
        stop
       endif
 
       return
       end subroutine fluid_interface
-
-        ! hs and hs_scale are defined in global_utility_module
-      subroutine HSCALE(psi,im,im_opp,H)
-      use global_utility_module
-      IMPLICIT NONE
-
-      REAL_T, INTENT(in) :: psi
-      REAL_T alpha
-      REAL_T, INTENT(out) :: H
-      INTEGER_T, INTENT(in) :: im,im_opp
-
-      alpha=zero
-      H=hs(psi,alpha)
-
-      return
-      end subroutine HSCALE
 
        ! partid=0..nparts-1
        ! im_solid=0..num_materials
@@ -5365,7 +5349,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
       subroutine fluid_interface_tension( &
-         xpos,time,LSleft,LSright,gradh, &
+         xpos,time, &
+         LSleft,LSright,gradh, &
          im_opp,im, &
          imL,imR)
 
@@ -5381,9 +5366,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(out) :: gradh
       REAL_T :: LSleft_merge(num_materials)
       REAL_T :: LSright_merge(num_materials)
-      REAL_T psiL,psiR,HLEFT,HRIGHT
       INTEGER_T, INTENT(out) :: imL,imR
-      INTEGER_T iten
 
       im=0
       im_opp=0
@@ -5412,25 +5395,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                (imL.ne.imR)) then
 
        if (imL.lt.imR) then
+        gradh=-one
         im=imL
         im_opp=imR
        else if (imL.gt.imR) then
+        gradh=one
         im=imR
         im_opp=imL
        else
-        print *,"imL,imR bust"
+        print *,"imL or imR bust"
         stop
        endif
 
-       call get_iten(imL,imR,iten)
-       call get_LS_extend(LSleft_merge,iten,psiL) ! psiL>0 if fluid im
-       call get_LS_extend(LSright_merge,iten,psiR) ! psiR>0 if fluid im
-
-       call HSCALE(psiL,im,im_opp,HLEFT)
-       call HSCALE(psiR,im,im_opp,HRIGHT)
-       gradh=HRIGHT-HLEFT
       else
-       print *,"imL or imR bust"
+       print *,"is_rigid, imL, or imR invalid PROB.F90"
        stop
       endif 
 
