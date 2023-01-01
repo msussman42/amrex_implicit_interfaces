@@ -189,7 +189,7 @@ ns.v=0
 # ----------------------------------------------------------
 # -------- Inputs to physics class -------------------------
 # ----------------------------------------------------------
-ns.gravity          = 9.8e-5 #added mass
+ns.gravity          = 9.8
 #the longest wavelength is half the tank radius. (since axisymmetric)
 #(in 3D, without reflecting BC, the longest wavelength is half the tank
 #diameter)
@@ -197,7 +197,6 @@ ns.gravity          = 9.8e-5 #added mass
 ns.gravity_reference_wavelen=0.0508
 ns.gravity_dir      = 2 # 1..SDIM
 ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
-ns.gravity_boussinesq_vector=0.0 -9.8
 
 #override_density=0 if compressible material
 #if incompressible material:
