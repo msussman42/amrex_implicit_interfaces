@@ -398,19 +398,16 @@ public:
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
 
-     // 0=fluid, tessellating 
-     // 1=prescribed motion, non-tessellating, PROB.F90 solid 
-     // 2=prescribed motion, non-tessellating, sci_clsvof.F90 solid 
-     // 3=rigid FSI interior, tessellating, ice 
-     //    (expansion/triple point dynamics allowed)
-     // 4=link w/Kourosh, FSI, sci_clsvof.F90, fluids tessellate the
-     //   computational domain, and the CTML elastic solid is embedded
-     //   within the domain (non-tessellating) as if it was a rigid solid.
-     // 5=FSI, tessellating, rigid (PROB.F90)
-     // 6=FSI ice, represented as a tessellating fluid
-     //   (initial geometry: sci_clsvof.F90)
-     // 7=fluid, tessellating (initial geometry: sci_clsvof.F90)
-     // 8=FSI, non-tessellating link w/Kourosh, pres-vel coupling.
+     // FSI_FLUID=0
+     // FSI_PRESCRIBED_PROBF90=1
+     // FSI_PRESCRIBED_NODES=2
+     // FSI_ICE_PROBF90=3
+     // FSI_SHOELE_VELVEL=4
+     // FSI_RIGID_NOTPRESCRIBED=5
+     // FSI_ICE_NODES=6
+     // FSI_FLUID_NODES_INIT=7
+     // FSI_SHOELE_PRESVEL=8
+     // FSI_RIGIDSHELL_NOTPRESCRIBED=9
      
     static Vector<int>  FSI_flag; 
 
