@@ -9725,14 +9725,14 @@ END SUBROUTINE SIMP
            else if (singular_patch_flag(local_color).eq.2) then
             ! do nothing
            else
-            print *,"singular_patch_flag invalid";
+            print *,"singular_patch_flag invalid"
             stop
            endif
 
           else if (project_option_singular_possibleF(project_option).eq.0) then
            ! do nothing
           else
-           print *,"project_option_singular_possible invalid";
+           print *,"project_option_singular_possible invalid"
            stop
           endif
 
@@ -10426,7 +10426,7 @@ END SUBROUTINE SIMP
       INTEGER_T, INTENT(in) :: fdomhi(SDIM)
       INTEGER_T, INTENT(inout) :: Z_dir !0..sdim-1
       INTEGER_T, INTENT(inout) :: R_dir !0..sdim-1
-      INTEGER_T, INTENT(inout) :: num_cells;
+      INTEGER_T, INTENT(inout) :: num_cells
       REAL_T, INTENT(inout) :: coflow_Z(0:num_cells)
       REAL_T, INTENT(inout) :: coflow_R_of_Z(0:num_cells)
       REAL_T R_of_Z_MASK(0:num_cells)

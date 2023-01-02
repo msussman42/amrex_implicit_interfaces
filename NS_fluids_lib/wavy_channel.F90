@@ -1023,7 +1023,7 @@ END INTERFACE
 		
    itest=0
    itestp=0
-   ntestpmax=20;
+   ntestpmax=20
    print*, i_min
    Do While (itest .eq. 0)
    s1start=(max(0.0,dble(i_min-1-itestp))/40.0)*Ltotal

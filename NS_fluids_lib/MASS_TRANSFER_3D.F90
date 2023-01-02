@@ -8424,7 +8424,7 @@ stop
                       gradphi_substrate(dir)=LSINT(dir2)
                      enddo
                      call get_physical_dist(xI,LSINT(im_substrate_source), &
-                      gradphi_substrate,newphi_substrate);
+                      gradphi_substrate,newphi_substrate)
                      if (newphi_substrate.ge.-macrolayer_size(im_source)) then
                       microlayer_substrate_source=im_substrate_source
                      endif
@@ -8454,7 +8454,7 @@ stop
                       gradphi_substrate(dir)=LSINT(dir2)
                      enddo
                      call get_physical_dist(xI,LSINT(im_substrate_dest), &
-                      gradphi_substrate,newphi_substrate);
+                      gradphi_substrate,newphi_substrate)
                      if (newphi_substrate.ge.-macrolayer_size(im_dest)) then
                       microlayer_substrate_dest=im_substrate_dest
                      endif
