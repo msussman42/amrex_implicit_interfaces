@@ -33,6 +33,13 @@ namespace amrex{
       // called from NavierStokes.cpp: void fortran_deallocate_parameters()
      void fort_deallocate_module( );
 
+      // called from NavierStokes.cpp: void fortran_parameters() and
+      // NavierStokes.cpp: NavierStokes::read_params()
+     void fort_mof_ordering_override(
+       int* mof_ordering_local,
+       int* mof_error_ordering_local,
+       int* FSI_flag_temp);
+
       // called from NavierStokes.cpp: void fortran_parameters()
      void fort_override(
        const int* cc_int_size,

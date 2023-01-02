@@ -901,19 +901,16 @@ Vector<int> NavierStokes::interface_mass_transfer_model; //1..2*num_interfaces
 Real NavierStokes::wall_slip_weight=0.0;
 int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 
-//FSI_FLUID: 0 fluid, tessellating (default)
-//FSI_PRESCRIBED_PROBF90: 1 prescribed rigid solid, non-tessellating (PROB.F90)
-//FSI_PRESCRIBED_NODES: 2 prescribed rigid solid, 
-//        non-tessellating,sci_clsvof.F90
-//FSI_ICE_PROBF90: 3 FSI ice,tessellating
-//FSI_SHOELE_VELVEL: 4 FSI, non-tessellating link w/Kourosh Shoele
-//FSI_RIGID_NOTPRESCRIBED: 5 FSI rigid solid, tessellating (PROB.F90)
-//FSI_ICE_NODES: 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
-//FSI_FLUID_NODES: 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
-//FSI_SHOELE_PRESVEL: 8 FSI, non-tessellating, force comes from Eulerian code,
-//   velocity comes from Lagrangian code.  link w/Kourosh Shoele
-//FSI_RIGIDSHELL_NOTPRESCRIBED: 9 FSI rigid solid for shell part, tessellating
-//    (PROB.F90)
+// FSI_FLUID=0
+// FSI_PRESCRIBED_PROBF90=1
+// FSI_PRESCRIBED_NODES=2
+// FSI_ICE_PROBF90=3
+// FSI_SHOELE_VELVEL=4
+// FSI_RIGID_NOTPRESCRIBED=5
+// FSI_ICE_NODES=6
+// FSI_FLUID_NODES_INIT=7
+// FSI_SHOELE_PRESVEL=8
+// FSI_RIGIDSHELL_NOTPRESCRIBED=9
 Vector<int> NavierStokes::FSI_flag; 
 int NavierStokes::FSI_interval=1;
 int NavierStokes::num_local_aux_grids=0;
@@ -1038,7 +1035,7 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
   mof_ordering_local[im]=0;
 
   if ((FSI_flag_temp[im]==FSI_FLUID)||
-      (FSI_flag_temp[im]==FSI_FLUID_NODES)) { 
+      (FSI_flag_temp[im]==FSI_FLUID_NODES_INIT)) { 
    // do nothing, tessellating
   } else if (FSI_flag_temp[im]==FSI_PRESCRIBED_PROBF90) { 
    mof_ordering_local[im]=1;  // non-tessellating
@@ -1069,7 +1066,7 @@ void mof_ordering_override(Vector<int>& mof_ordering_local,
   for (int im=0;im<local_num_materials;im++) {
 
    if ((FSI_flag_temp[im]==FSI_FLUID)||
-       (FSI_flag_temp[im]==FSI_FLUID_NODES)) { 
+       (FSI_flag_temp[im]==FSI_FLUID_NODES_INIT)) { 
     mof_ordering_local[im]=local_num_materials;
    } else if (FSI_flag_temp[im]==FSI_PRESCRIBED_PROBF90) { 
     mof_ordering_local[im]=1; // non-tessellating
@@ -1189,7 +1186,7 @@ void fortran_deallocate_parameters() {
 
  fort_deallocate_module();
 
-}
+} // end subroutine fortran_deallocate_parameters
 
 // this routine is called from main.cpp prior to:
 //  1. AmrCore* amrptr = new AmrCore();

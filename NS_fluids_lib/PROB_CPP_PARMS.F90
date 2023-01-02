@@ -146,6 +146,18 @@ stop
       return
       end subroutine fort_deallocate_module
 
+      subroutine fort_mof_ordering_override( &
+        mof_ordering_local, &
+        mof_error_ordering_local, &
+        FSI_flag_temp) &
+      bind(c,name='fort_mof_ordering_override')
+
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, INTENT(out) :: mof_ordering_local(num_materials)
+
+
        !called from NavierStokes.cpp: void fortran_parameters
       subroutine fort_override( &
         cc_int_size, &
