@@ -1017,140 +1017,6 @@ void extra_circle_parameters(
 
 } // subroutine extra_circle_parameters
 
-// ns.mof_ordering overrides this.
-void mof_ordering_override(Vector<int>& mof_ordering_local,
- int probtype,int axis_dir,Real radblob3,
- Real radblob4,Real radblob7,
- int mof_error_ordering_local,
- Vector<int> FSI_flag_temp) {
-
- int local_num_materials=mof_ordering_local.size();
-
- if (local_num_materials!=FSI_flag_temp.size())
-  amrex::Error("FSI_flag_temp invalid size");
- if (local_num_materials<1)
-  amrex::Error("local_num_materials out of range");
-
- for (int im=0;im<local_num_materials;im++) {
-  mof_ordering_local[im]=0;
-
-  if ((FSI_flag_temp[im]==FSI_FLUID)||
-      (FSI_flag_temp[im]==FSI_FLUID_NODES_INIT)) { 
-   // do nothing, tessellating
-  } else if (FSI_flag_temp[im]==FSI_PRESCRIBED_PROBF90) { 
-   mof_ordering_local[im]=1;  // non-tessellating
-  } else if (FSI_flag_temp[im]==FSI_PRESCRIBED_NODES) { 
-   mof_ordering_local[im]=1;  // non-tessellating
-  } else if ((FSI_flag_temp[im]==FSI_ICE_PROBF90)||
-             (FSI_flag_temp[im]==FSI_ICE_NODES)) { 
-   // do nothing, tessellating
-   
-   // FSI elastic link w/Kourosh, pressure/vel coupling (sci_clsvof.F90)
-  } else if (FSI_flag_temp[im]==FSI_SHOELE_PRESVEL) {  
-   mof_ordering_local[im]=1; // non-tessellating
-   // FSI elastic link w/Kourosh (sci_clsvof.F90)
-  } else if (FSI_flag_temp[im]==FSI_SHOELE_VELVEL) {  
-   mof_ordering_local[im]=1; // non-tessellating
-  } else if (FSI_flag_temp[im]==FSI_RIGID_NOTPRESCRIBED) { 
-   mof_ordering_local[im]=1; // tessellating
-  } else if (FSI_flag_temp[im]==FSI_RIGIDSHELL_NOTPRESCRIBED) { 
-   mof_ordering_local[im]=1; // tessellating
-  } else
-   amrex::Error("FSI_flag_temp invalid");
-
- }
-
-  // default: centroid farthest from uncaptured centroid.
- if (mof_error_ordering_local==0) { 
-
-  for (int im=0;im<local_num_materials;im++) {
-
-   if ((FSI_flag_temp[im]==FSI_FLUID)||
-       (FSI_flag_temp[im]==FSI_FLUID_NODES_INIT)) { 
-    mof_ordering_local[im]=local_num_materials;
-   } else if (FSI_flag_temp[im]==FSI_PRESCRIBED_PROBF90) { 
-    mof_ordering_local[im]=1; // non-tessellating
-   } else if (FSI_flag_temp[im]==FSI_PRESCRIBED_NODES) { 
-    mof_ordering_local[im]=1; // non-tessellating
-   } else if ((FSI_flag_temp[im]==FSI_ICE_PROBF90)||
-              (FSI_flag_temp[im]==FSI_ICE_NODES)) { 
-    mof_ordering_local[im]=local_num_materials; // tessellating
-
-    // FSI elastic link w/Kourosh, pressure/vel coupling (sci_clsvof.F90)
-   } else if (FSI_flag_temp[im]==FSI_SHOELE_PRESVEL) {  
-    mof_ordering_local[im]=1; // non-tessellating
-   } else if (FSI_flag_temp[im]==FSI_SHOELE_VELVEL) {  
-    mof_ordering_local[im]=1;  // non-tessellating
-   } else if (FSI_flag_temp[im]==FSI_RIGID_NOTPRESCRIBED) { 
-    mof_ordering_local[im]=1;  // tessellating
-   } else if (FSI_flag_temp[im]==FSI_RIGIDSHELL_NOTPRESCRIBED) { 
-    mof_ordering_local[im]=1; // tessellating
-   } else
-    amrex::Error("FSI_flag_temp invalid");
-
-  } // im=0..local_num_materials-1
-
-   // impinge jets unlike material
-  if ((probtype==530)&&(AMREX_SPACEDIM==3)) {
-   if (axis_dir==1)
-    mof_ordering_local[1]=local_num_materials+1;// make gas have low priority
-   else if (axis_dir!=0)
-    amrex::Error("axis_dir invalid probtype=530");
-  }
-
-   // ns.mof_ordering overrides this.
-
-   // 2d colliding droplets, boiling, freezing problems
-  if ((probtype==55)&&(AMREX_SPACEDIM==2)) {
-   if (radblob7>0.0)
-    mof_ordering_local[1]=local_num_materials+1;// make gas have low priority
-   if (axis_dir==0) {
-    // do nothing
-   } else if (axis_dir==1) {
-    // 0=water 1=gas 2=ice 3=cold plate
-    mof_ordering_local[2]=1;
-   } else if (axis_dir==5) {
-    // 0=water 1=gas 2=ice 3=cold plate
-    mof_ordering_local[2]=1;
-    // 0=water 1=vapor 2=hot plate or
-    // 0=water 1=vapor 2=gas 3=hot plate 
-   } else if (axis_dir==6) {  // nucleate boiling incompressible
-    mof_ordering_local[local_num_materials-1]=1;
-    // 0=water 1=vapor 2=hot plate or
-    // 0=water 1=vapor 2=gas 3=hot plate 
-   } else if (axis_dir==7) {  // nucleate boiling compressible
-    mof_ordering_local[local_num_materials-1]=1;
-   } else
-    amrex::Error("axis_dir invalid probtype==55");
-  }
-
-  if (probtype==540) {
-   if ((radblob4>0.0)&&(radblob3>0.0)) {
-    amrex::Error("conflict of parametrs for 540");
-   } else if (radblob3>0.0) {  
-    mof_ordering_local[1]=local_num_materials+1;//make gas have low priority
-   } else if (radblob4>0.0) {
-    mof_ordering_local[2]=local_num_materials+1;//make filament gas low priority
-   }
-  }
-
-  if (probtype==202) {  // liquidlens
-   mof_ordering_local[1]=1; // make (circle) material 2 have high priority
-  }
-
-  if ((probtype==17)&&(local_num_materials==3)&&(1==0)) {// droplet impact 3mat
-   mof_ordering_local[1]=1; // make gas material 2 have high priority
-  }
-
- } else if (mof_error_ordering_local==1) {
-
-  // mof_ordering_local already init above.
-  
- } else
-  amrex::Error("mof_error_ordering invalid");
-
-} // end subroutine mof_ordering_override
-
 void read_geometry_raw(int& geometry_coord,
 	Vector<Real>& geometry_prob_lo,
         Vector<Real>& geometry_prob_hi,
@@ -1823,7 +1689,7 @@ void fortran_parameters() {
   } else if (NavierStokes::material_type[im]==0) {
 
    if ((NavierStokes::FSI_flag[im]!=FSI_FLUID)&&
-       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES)&& 
+       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT)&& 
        (NavierStokes::FSI_flag[im]!=FSI_ICE_PROBF90)&& 
        (NavierStokes::FSI_flag[im]!=FSI_ICE_NODES)&& 
        (NavierStokes::FSI_flag[im]!=FSI_RIGIDSHELL_NOTPRESCRIBED)&&
@@ -1834,7 +1700,7 @@ void fortran_parameters() {
              (NavierStokes::material_type[im]<999)) {
 
    if ((NavierStokes::FSI_flag[im]!=FSI_FLUID)&&   
-       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES)&&
+       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT)&&
        (NavierStokes::FSI_flag[im]!=FSI_RIGIDSHELL_NOTPRESCRIBED)) 
     amrex::Error("NavierStokes::FSI_flag invalid");
 
@@ -2096,7 +1962,7 @@ void fortran_parameters() {
  }
 
  int mof_error_ordering_local=NavierStokes::mof_error_ordering;
-;
+
  pp.queryAdd("mof_error_ordering",mof_error_ordering_local);
  if ((mof_error_ordering_local!=0)&&
      (mof_error_ordering_local!=1))
@@ -2104,12 +1970,10 @@ void fortran_parameters() {
  Vector<int> mof_ordering_local;
  mof_ordering_local.resize(NavierStokes::num_materials);
 
- mof_ordering_override(mof_ordering_local,
-  probtype,
-  axis_dir,radblob3,
-  radblob4,radblob7,
-  mof_error_ordering_local,
-  NavierStokes::FSI_flag);
+ fort_mof_ordering_override(
+  mof_ordering_local.dataPtr(),
+  &mof_error_ordering_local,
+  NavierStokes::FSI_flag.dataPtr());
 
  pp.queryAdd("mof_ordering",mof_ordering_local,NavierStokes::num_materials);
  for (int i=0;i<NavierStokes::num_materials;i++) {
@@ -4959,12 +4823,10 @@ NavierStokes::read_params ()
      amrex::Error("mof_error_ordering invalid");
     mof_ordering.resize(num_materials);
 
-    mof_ordering_override(mof_ordering,
-      probtype,
-      axis_dir,radblob3,
-      radblob4,radblob7,
-      mof_error_ordering,
-      FSI_flag);
+    fort_mof_ordering_override(
+      mof_ordering.dataPtr(),
+      &mof_error_ordering,
+      FSI_flag.dataPtr());
 
     pp.queryAdd("mof_ordering",mof_ordering,num_materials);
     for (int i=0;i<num_materials;i++) {

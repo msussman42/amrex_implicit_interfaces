@@ -50,12 +50,12 @@ contains
       REAL_T xrand(maxDrop_alloc)
       REAL_T nowTime,rainDuTime
       INTEGER_T iLoc,nLoc,iFound
-      INTEGER_T maxDrop_for_mod;
+      INTEGER_T maxDrop_for_mod
 
 
       if (maxDrop.gt.0) then
 
-       maxDrop_for_mod=maxDrop;
+       maxDrop_for_mod=maxDrop
 
        if (dir.eq.1) then
          rainDuTime=rDrop*2/abs(adv_vel)
@@ -187,11 +187,11 @@ contains
       REAL_T bigdist,LS0
       REAL_T nowTime,rainDuTime
       INTEGER_T im
-      INTEGER_T maxDrop_for_mod;
+      INTEGER_T maxDrop_for_mod
 
       if (maxDrop.gt.0) then
 
-       maxDrop_for_mod=maxDrop;
+       maxDrop_for_mod=maxDrop
 
        rainDuTime=2.0*rDrop/abs(adv_vel)
        nLoc=ceiling(rainDuTime/period)
@@ -263,11 +263,11 @@ contains
       REAL_T bigdist,LS0
       REAL_T nowTime,rainDuTime
       INTEGER_T im
-      INTEGER_T maxDrop_for_mod;
+      INTEGER_T maxDrop_for_mod
 
       if (maxDrop.gt.0) then
 
-       maxDrop_for_mod=maxDrop;
+       maxDrop_for_mod=maxDrop
 
        rainDuTime=2.0*rDrop/abs(uDrop)
        nLoc=ceiling(rainDuTime/period)

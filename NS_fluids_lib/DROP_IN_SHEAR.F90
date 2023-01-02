@@ -186,7 +186,7 @@ if (f_a*f_b.le.zero) then
    b=c
    f_b=f_c
   else if (f_b*f_c.le.zero) then
-   a=c;
+   a=c
    f_a=f_c
   else
    print *,"f_c became corrupt"

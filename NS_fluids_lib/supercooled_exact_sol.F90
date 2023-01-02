@@ -79,8 +79,8 @@ contains
     !! x^k
     xtok = x
     !! sum incremental term
-    inc = xtok/(k*kf);
-    y = y + inc;
+    inc = xtok/(k*kf)
+    y = y + inc
 
     if (x.lt.-25.0D0) then
      y=0.0
@@ -123,7 +123,7 @@ contains
     REAL(kind=8),INTENT(in):: lm
     REAL(kind=8),INTENT(in):: St
     
-    f_lambda = lm**2 * exp(lm**2) * Ei(-lm**2) + St;
+    f_lambda = lm**2 * exp(lm**2) * Ei(-lm**2) + St
 
   end function f_lambda
 !!$****************************************************

@@ -874,7 +874,7 @@ stop
       INTEGER_T :: idx_norm
 
 
-      call local_grid_type_to_box_type(grid_type,box_type);
+      call local_grid_type_to_box_type(grid_type,box_type)
 
       if (bfact.lt.1) then
        print *,"bfact invalid in EFILCC"

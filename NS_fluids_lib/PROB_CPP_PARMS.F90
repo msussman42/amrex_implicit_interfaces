@@ -21,6 +21,8 @@ print *,"dimension bust"
 stop
 #endif
 
+#include "EXTRAP_COMP.H"
+
       subroutine fort_blb_init( &
        blb_matrix_in, &
        blb_rhs_in, &
@@ -146,6 +148,7 @@ stop
       return
       end subroutine fort_deallocate_module
 
+       ! ns.mof_ordering overrides this
       subroutine fort_mof_ordering_override( &
         mof_ordering_local, &
         mof_error_ordering_local, &
@@ -155,8 +158,156 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: mof_error_ordering_local
+      INTEGER_T, INTENT(in) :: FSI_flag_temp(num_materials)
       INTEGER_T, INTENT(out) :: mof_ordering_local(num_materials)
+      INTEGER_T :: im
+      INTEGER_T :: local_FSI_flag
 
+      if ((num_materials.lt.1).or.(num_materials.gt.9999)) then
+       print *,"num_materials invalid"
+       stop
+      endif
+
+      do im=1,num_materials
+       mof_ordering_local(im)=0
+
+       local_FSI_flag=FSI_flag_temp(im)
+
+       if ((local_FSI_flag.eq.FSI_FLUID).or. &
+           (local_FSI_flag.eq.FSI_FLUID_NODES_INIT)) then
+        ! do nothing, tessellating
+       else if (local_FSI_flag.eq.FSI_PRESCRIBED_PROBF90) then
+        mof_ordering_local(im)=1  ! non-tessellating
+       else if (local_FSI_flag.eq.FSI_PRESCRIBED_NODES) then
+        mof_ordering_local(im)=1  ! non-tessellating
+       else if ((local_FSI_flag.eq.FSI_ICE_PROBF90).or. &
+                (local_FSI_flag.eq.FSI_ICE_NODES)) then
+        ! do nothing, tessellating
+   
+        ! FSI elastic link w/Kourosh, pressure/vel coupling (sci_clsvof.F90)
+       else if (local_FSI_flag.eq.FSI_SHOELE_PRESVEL) then
+        mof_ordering_local(im)=1 ! non-tessellating
+        ! FSI elastic link w/Kourosh (sci_clsvof.F90)
+       else if (local_FSI_flag.eq.FSI_SHOELE_VELVEL) then
+        mof_ordering_local(im)=1 ! non-tessellating
+       else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then
+        mof_ordering_local(im)=1 ! tessellating
+       else if (local_FSI_flag.eq.FSI_RIGIDSHELL_NOTPRESCRIBED) then
+        mof_ordering_local(im)=1 ! tessellating
+       else
+        print *,"local_FSI_flag invalid"
+        stop
+       endif
+      enddo !im=1,num_materials
+
+      ! default: centroid farthest from uncaptured centroid.
+      if (mof_error_ordering_local.eq.0) then
+
+       do im=1,num_materials
+
+        local_FSI_flag=FSI_flag_temp(im)
+
+        if ((local_FSI_flag.eq.FSI_FLUID).or. &
+            (local_FSI_flag.eq.FSI_FLUID_NODES_INIT)) then
+         mof_ordering_local(im)=num_materials
+        else if (local_FSI_flag.eq.FSI_PRESCRIBED_PROBF90) then 
+         mof_ordering_local(im)=1 ! non-tessellating
+        else if (local_FSI_flag.eq.FSI_PRESCRIBED_NODES) then 
+         mof_ordering_local(im)=1 ! non-tessellating
+        else if ((local_FSI_flag.eq.FSI_ICE_PROBF90).or. &
+                 (local_FSI_flag.eq.FSI_ICE_NODES)) then 
+         mof_ordering_local(im)=num_materials ! tessellating
+
+         ! FSI elastic link w/Kourosh, pressure/vel coupling (sci_clsvof.F90)
+        else if (local_FSI_flag.eq.FSI_SHOELE_PRESVEL) then  
+         mof_ordering_local(im)=1 ! non-tessellating
+        else if (local_FSI_flag.eq.FSI_SHOELE_VELVEL) then  
+         mof_ordering_local(im)=1  ! non-tessellating
+        else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then 
+         mof_ordering_local(im)=1  ! tessellating
+        else if (local_FSI_flag.eq.FSI_RIGIDSHELL_NOTPRESCRIBED) then 
+         mof_ordering_local(im)=1 ! tessellating
+        else
+         print *,"local_FSI_flag invalid"
+         stop
+        endif
+
+       enddo !im=1,num_materials
+
+       ! impinge jets unlike material
+       if ((probtype.eq.530).and.(AMREX_SPACEDIM.eq.3)) then
+        if (axis_dir.eq.1) then
+         mof_ordering_local(2)=num_materials+1! make gas have low priority
+        else if (axis_dir.ne.0) then
+         print *,"axis_dir invalid probtype=530"
+         stop
+        endif
+       endif 
+
+       ! 2d colliding droplets, boiling, freezing problems
+       if ((probtype.eq.55).and.(AMREX_SPACEDIM.eq.2)) then
+        if (radblob7.gt.zero) then
+         mof_ordering_local(2)=num_materials+1! make gas have low priority
+        else if (radblob7.le.zero) then
+         ! do nothing
+        else
+         print *,"radblob7 is NaN"
+         stop
+        endif
+        if (axis_dir.eq.0) then
+         ! do nothing
+        else if (axis_dir.eq.1) then
+         ! 0=water 1=gas 2=ice 3=cold plate
+         mof_ordering_local(3)=1
+        else if (axis_dir.eq.5) then
+         ! 0=water 1=gas 2=ice 3=cold plate
+         mof_ordering_local(3)=1
+         ! 0=water 1=vapor 2=hot plate or
+         ! 0=water 1=vapor 2=gas 3=hot plate 
+        else if (axis_dir.eq.6) then  ! nucleate boiling incompressible
+         mof_ordering_local(num_materials)=1
+         ! 0=water 1=vapor 2=hot plate or
+         ! 0=water 1=vapor 2=gas 3=hot plate 
+        else if (axis_dir.eq.7) then  ! nucleate boiling compressible
+         mof_ordering_local(num_materials)=1
+        else
+         print *,"axis_dir invalid probtype.eq.55"
+         stop
+        endif
+       endif
+
+       if (probtype.eq.540) then
+        if ((radblob4.gt.zero).and.(radblob3.gt.zero)) then
+         print *,"conflict of parametrs for 540"
+         stop
+        else if (radblob3.gt.zero) then  
+         mof_ordering_local(2)=num_materials+1!make gas have low priority
+        else if (radblob4.gt.zero) then
+         mof_ordering_local(3)=num_materials+1!make filament gas low priority
+        endif
+       endif
+
+       if (probtype.eq.202) then  ! liquidlens
+        mof_ordering_local(2)=1 ! make (circle) material 2 have high priority
+       endif 
+
+       if ((probtype.eq.17).and. &
+           (num_materials.eq.3).and. &
+           (1.eq.0)) then! droplet impact 3mat
+        mof_ordering_local(2)=1 ! make gas material 2 have high priority
+       endif
+
+      else if (mof_error_ordering_local.eq.1) then
+
+       ! mof_ordering_local already init above.
+  
+      else
+       print *,"mof_error_ordering_local invalid"
+       stop
+      endif
+
+      end subroutine fort_mof_ordering_override
 
        !called from NavierStokes.cpp: void fortran_parameters
       subroutine fort_override( &
@@ -1135,7 +1286,7 @@ stop
       outflow_pressure=ccoutflow_pressure
       period_time=ccperiod_time
      
-      fort_num_local_aux_grids=ccnum_local_aux_grids;
+      fort_num_local_aux_grids=ccnum_local_aux_grids
 
       if (fort_num_local_aux_grids.gt.0) then
        if (aux_data_allocated.eq.0) then
@@ -1595,7 +1746,7 @@ stop
       
        call shallow_water_solve()
       
-       ! above: probtype==110
+       ! above: probtype.eq.110
       else if ((probtype.eq.1).and. &
                ((axis_dir.eq.150).or. &
                 (axis_dir.eq.151))) then

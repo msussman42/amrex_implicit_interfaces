@@ -28,7 +28,7 @@ module local_amrex_fort_module
 #ifdef _WIN32
   integer, parameter :: amrex_long = c_long_long
 #else
-  integer, parameter :: amrex_long = c_long;
+  integer, parameter :: amrex_long = c_long
 #endif
 
 contains

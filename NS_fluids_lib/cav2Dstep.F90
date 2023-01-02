@@ -52,7 +52,7 @@ REAL_T, INTENT(in) :: x, y !spatial coordinates
 REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the solid
  
 INTEGER :: insideflag
-REAL_T :: topwall, botwall, stepheight, stepoffset;
+REAL_T :: topwall, botwall, stepheight, stepoffset
 REAL_T :: temp
  
 !geometry params, requires: botwall<stepheight<topwall, -L<stepoffset<L

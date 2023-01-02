@@ -8807,7 +8807,7 @@ INTEGER_T :: dir,inode,num_nodes
 
   if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8
 #ifdef MVAHABFSI
-   call CTML_RESET_ARRAYS(); ! vel_fib=zero  force_fib=zero
+   call CTML_RESET_ARRAYS() ! vel_fib=zero  force_fib=zero
 #else
    print *,"define MEHDI_VAHAB_FSI in GNUmakefile"
    stop
@@ -13947,17 +13947,17 @@ end subroutine CLSVOF_InitBox
 
           r(1,1) = v(1)*v(1)*(1.-ct)+ct
           r(1,2) = v(1)*v(2)*(1.-ct)-st*v(3)
-          r(1,3) = v(1)*v(3)*(1.-ct)+st*v(2);
-          r(2,1) = v(1)*v(2)*(1.-ct)+st*v(3);  
+          r(1,3) = v(1)*v(3)*(1.-ct)+st*v(2)
+          r(2,1) = v(1)*v(2)*(1.-ct)+st*v(3)  
           r(2,2) = v(2)*v(2)*(1.-ct)+ct
-          r(2,3) = v(2)*v(3)*(1.-ct)-st*v(1);
-          r(3,1) = v(1)*v(3)*(1.-ct)-st*v(2);  
-          r(3,2) = v(3)*v(2)*(1.-ct)+st*v(1);  
-          r(3,3) = v(3)*v(3)*(1.-ct)+ct     ;
+          r(2,3) = v(2)*v(3)*(1.-ct)-st*v(1)
+          r(3,1) = v(1)*v(3)*(1.-ct)-st*v(2)  
+          r(3,2) = v(3)*v(2)*(1.-ct)+st*v(1)  
+          r(3,3) = v(3)*v(3)*(1.-ct)+ct     
 
-          r(1,4) = (1.-r(1,1))*x0(1)    -r(1,2) *x0(2)    -r(1,3) *x0(3);
-          r(2,4) =    -r(2,1) *x0(1)+(1.-r(2,2))*x0(2)    -r(2,3) *x0(3);
-          r(3,4) =    -r(3,1) *x0(1)    -r(3,2) *x0(2)+(1.-r(3,3))*x0(3);
+          r(1,4) = (1.-r(1,1))*x0(1)    -r(1,2) *x0(2)    -r(1,3) *x0(3)
+          r(2,4) =    -r(2,1) *x0(1)+(1.-r(2,2))*x0(2)    -r(2,3) *x0(3)
+          r(3,4) =    -r(3,1) *x0(1)    -r(3,2) *x0(2)+(1.-r(3,3))*x0(3)
 
         elseif (motionType.eq.translateAlongALine) then
 
@@ -13984,9 +13984,9 @@ end subroutine CLSVOF_InitBox
           r(3,2) = 0.  
           r(3,3) = 1.
 
-          r(1,4) = x0(1) + v(1)*theta;
-          r(2,4) = x0(2) + v(2)*theta;
-          r(3,4) = x0(3) + v(3)*theta;
+          r(1,4) = x0(1) + v(1)*theta
+          r(2,4) = x0(2) + v(2)*theta
+          r(3,4) = x0(3) + v(3)*theta
 
          !print*,theta,v(1),v(2),v(3)
 
@@ -14097,7 +14097,7 @@ end subroutine CLSVOF_InitBox
        !    r(sintheta cos(alpha t)+costheta sin(alpha t))
 
        if (probtype.eq.563) then
-        RPM=abs(vinletgas);
+        RPM=abs(vinletgas)
         alpha=two*Pi*RPM/60.0  ! radians/s
 
         ! at a distance "r" from the origin, a particle on the gear will
@@ -14441,7 +14441,7 @@ end subroutine CLSVOF_InitBox
        !    r(sintheta cos(alpha t)+costheta sin(alpha t))
 
        if (probtype.eq.563) then
-        RPM=abs(vinletgas);
+        RPM=abs(vinletgas)
         alpha=two*Pi*RPM/60.0  ! radians/s
 
         ! at a distance "r" from the origin, a particle on the gear will

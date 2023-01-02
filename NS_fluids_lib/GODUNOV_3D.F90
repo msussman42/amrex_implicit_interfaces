@@ -5664,7 +5664,7 @@ stop
 
       i=mac_cell_index(1)+i1
       j=mac_cell_index(2)+j1
-      k=0;
+      k=0
       if (SDIM.eq.3) then
        k=mac_cell_index(SDIM)+k1
       endif

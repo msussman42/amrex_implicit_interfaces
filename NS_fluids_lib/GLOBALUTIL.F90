@@ -287,8 +287,8 @@ CONTAINS
 ! Algorithm 22
       SUBROUTINE LegendrePolyAndDeri(k,x,P,dl)
      !k=the degree of Legendre polynomial
-     !P=Legendre polynomial; 
-     !dl=its derivative;
+     !P=Legendre polynomial 
+     !dl=its derivative
       IMPLICIT NONE 
       INTEGER,INTENT(IN)          :: k
       REAL_T, INTENT(IN)   :: x
@@ -18982,10 +18982,10 @@ end subroutine print_visual_descriptor
       pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
       pressure=max(pressure,0.01*P0)
 
-      cd=2.273845+7.701613e-20*pressure*(pressure-1e6);
-      cc=-2.279889e-3-3.654273e-13*(pressure-1e6);
-      cb=6.106366e-06;
-      ca=-3.266302e-09;
+      cd=2.273845+7.701613e-20*pressure*(pressure-1e6)
+      cc=-2.279889e-3-3.654273e-13*(pressure-1e6)
+      cb=6.106366e-06
+      ca=-3.266302e-09
 
       DeDT=(4.*ca*T3+3.*cb*T2+2.*cc*T+cd)*1e7 ! in erg/cm3
 
@@ -19038,11 +19038,11 @@ end subroutine print_visual_descriptor
       pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
       pressure=max(pressure,0.0001*P0)
 
-      ce=19.94245;
-      cd=2.273845+7.701613e-20*pressure*(pressure-1e6);
-      cc=-2.279889e-3-3.654273e-13*(pressure-1e6);
-      cb=6.106366e-06;
-      ca=-3.266302e-09;
+      ce=19.94245
+      cd=2.273845+7.701613e-20*pressure*(pressure-1e6)
+      cc=-2.279889e-3-3.654273e-13*(pressure-1e6)
+      cb=6.106366e-06
+      ca=-3.266302e-09
 
       internal_energy=(ca*T4+cb*T3+cc*T2+cd*T+ce)*1e7 ! in erg/cm3
 
@@ -19248,10 +19248,10 @@ end subroutine print_visual_descriptor
 !      stop
       endif
       ! sound speed at pressure 
-     !D = 0.005208-5.1495e-4*T-5.55e-14*T*pressure; ! pressure needed in MPa
-      D = 0.1652083+2.5e-3*T-5.85e-13*T*pressure; ! modified correlation
+     !D = 0.005208-5.1495e-4*T-5.55e-14*T*pressure ! pressure needed in MPa
+      D = 0.1652083+2.5e-3*T-5.85e-13*T*pressure ! modified correlation
       E = (-56.91+7.3674e-5*T*T+0.02260*T+463.5*exp(-0.001687*T))*1e7 !  convert from dyne/cm^2 to MPa
-      c=c0/(1-D*log((E+pressure)/(E+1D6))); ! already in cm/s
+      c=c0/(1-D*log((E+pressure)/(E+1D6))) ! already in cm/s
       soundsqr=c*c
 
       if (OLD_DODECANE.eq.1) then

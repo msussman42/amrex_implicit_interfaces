@@ -275,7 +275,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       read(9997,*) 
       MASSIVE_IBM=.true.
       temp4=0.01
-      alpha=alphaglobal; gama= gammaglobal !gamma here length of body 
+      alpha=alphaglobal
+      gama= gammaglobal !gamma here length of body 
       deltatmp=deltaglobal
       beta=betaglobal 
       dr_ibm0=0.0
@@ -284,7 +285,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       if (nr_ibm .gt. 1) dr_ibm0=0.0
       ds_ibm0=1.d0/denom
-      r0= dr_ibm0/2. ; s0=0.0*ds_ibm0/2.
+      r0= dr_ibm0/2. 
+      s0=0.0*ds_ibm0/2.
 	  read(9997,*) nr_ibm_f,nr_ibm_fb
 	  read(9997,*) maxnstruct,maxiter,maxiterinner,
      &              density_coefp
@@ -524,11 +526,19 @@ c variable stiffness
                cb_ibm_rs(i+1,j)=cb_ibm_r(i+1)
         enddo
         k_massive_ibm_r(i+1)=k_massive_ibm*a_r
-        Gt0(i+1,1)=gx_bp(i+1,1);Gt0(i+1,2)=gy_bp(i+1,1)
-        Tramp(i+1)=0.0;frequency_fin(i+1)=0.0
-        ampx(i+1)=0.0;freqx(i+1)=0.0;phix(i+1)=0.0
-        ampy(i+1)=0.0;freqy(i+1)=0.0;phiy(i+1)=0.0
-        ampt(i+1)=0.0;freqt(i+1)=0.0;phit(i+1)=0.0          
+        Gt0(i+1,1)=gx_bp(i+1,1)
+        Gt0(i+1,2)=gy_bp(i+1,1)
+        Tramp(i+1)=0.0
+        frequency_fin(i+1)=0.0
+        ampx(i+1)=0.0
+        freqx(i+1)=0.0
+        phix(i+1)=0.0
+        ampy(i+1)=0.0
+        freqy(i+1)=0.0
+        phiy(i+1)=0.0
+        ampt(i+1)=0.0
+        freqt(i+1)=0.0
+        phit(i+1)=0.0          
           read(9997,*) i2
           read(9997,*) gt0(i2,1), gt0(i2,2)
           read(9997,*) tramp(i2)
@@ -740,8 +750,10 @@ c saving computed term for using later time
         end do
 c initializing velocities for feedback algorithm
 	print*, 'initialization of vibm1'
-        vibm1=0.0d0;vibm1_pre=0.0d0
-        vibm2=0.0d0;vibm2_pre=0.0d0
+        vibm1=0.0d0
+        vibm1_pre=0.0d0
+        vibm2=0.0d0
+        vibm2_pre=0.0d0
 
 c determine the width of delta function
       call delta_width(del_x,del_y,del_z
@@ -842,7 +854,8 @@ c initialize the bending force in ibm
 c 
 c compute bending force in ibm
 c here we assume ( small deformation + neglecting 2nd order )
-        f_link1=0.0;f_link2=0.0
+        f_link1=0.0
+        f_link2=0.0
 
       do i=1,nr_ibm_f
         temp_ibm1=(target_points(i,2,1)-target_points(i,1,1))
