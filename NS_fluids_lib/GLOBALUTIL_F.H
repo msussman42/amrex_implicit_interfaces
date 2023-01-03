@@ -23,11 +23,27 @@ extern "C"
 
    int fort_is_passive_advect_test();
 
+   int fort_CTML_FSI_mat_base(
+        int* FSI_flag_local,
+	int* im);  // 1<=im<=num_materials
+
+   int fort_is_FSI_rigid_base(
+        int* FSI_flag_local,
+	int* im);  // 1<=im<=num_materials
+
    int fort_is_rigid_base(
         int* FSI_flag_local,
 	int* im);  // 1<=im<=num_materials
 
    int fort_is_lag_part_base(
+        int* FSI_flag_local,
+	int* im);  // 1<=im<=num_materials
+
+   int fort_is_ice_base(
+        int* FSI_flag_local,
+	int* im);  // 1<=im<=num_materials
+
+   int fort_FSI_flag_valid_base(
         int* FSI_flag_local,
 	int* im);  // 1<=im<=num_materials
 
