@@ -13956,6 +13956,47 @@ end subroutine print_visual_descriptor
       return
       end subroutine containing_node
 
+      function fort_CTML_FSI_mat_base(FSI_flag_local,im) &
+      bind(c,name='fort_CTML_FSI_mat_base')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T fort_CTML_FSI_mat_base
+      INTEGER_T, INTENT(in) :: FSI_flag_local
+      INTEGER_T, INTENT(in) :: im ! 1<=im<=num_materials
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid16 fort_CTML_FSI_mat_base im:",im
+       stop
+      endif
+      fort_CTML_FSI_mat_base=0
+
+      if ((FSI_flag_local.eq.FSI_SHOELE_VELVEL).or. &
+          (FSI_flag_local.eq.FSI_SHOELE_PRESVEL)) then
+#ifdef MVAHABFSI
+       fort_CTML_FSI_mat_base=1
+#else
+       print *,"CTML(F): define MEHDI_VAHAB_FSI in GNUmakefile"
+       stop
+#endif
+      else if ((FSI_flag_local.eq.FSI_FLUID).or. &
+               (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
+               (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
+               (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then
+       fort_CTML_FSI_mat_base=0
+      else
+       print *,"FSI_flag_local invalid in fort_CTML_FSI_mat_base"
+       stop
+      endif
+
+      return
+      end function fort_CTML_FSI_mat_base
+
       function CTML_FSI_flagF()
       use probcommon_module
 
@@ -13966,22 +14007,14 @@ end subroutine print_visual_descriptor
 
       CTML_FSI_flagF=0
       do im=1,num_materials
-       if ((FSI_flag(im).eq.FSI_SHOELE_VELVEL).or. &
-           (FSI_flag(im).eq.FSI_SHOELE_PRESVEL)) then
+       if (fort_CTML_FSI_mat_base(FSI_flag(im),im).eq.1) then
 #ifdef MVAHABFSI
         CTML_FSI_flagF=1
 #else
         print *,"CTML(F): define MEHDI_VAHAB_FSI in GNUmakefile"
         stop
 #endif
-       else if ((FSI_flag(im).eq.FSI_FLUID).or. &
-                (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. &
-                (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
-                (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-                (FSI_flag(im).eq.FSI_ICE_PROBF90).or. &
-                (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. &
-                (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
-                (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then
+       else if (fort_CTML_FSI_mat_base(FSI_flag(im),im).eq.0) then
         ! do nothing
        else
         print *,"FSI_flag invalid in CTML_FSI_flagF"
@@ -14002,34 +14035,51 @@ end subroutine print_visual_descriptor
       INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid16"
+       print *,"im invalid16 CTML_FSI_mat"
        stop
       endif
-      CTML_FSI_mat=0
-      if ((FSI_flag(im).eq.FSI_SHOELE_VELVEL).or. &
-          (FSI_flag(im).eq.FSI_SHOELE_PRESVEL)) then
-#ifdef MVAHABFSI
-       CTML_FSI_mat=1
-#else
-       print *,"CTML(F): define MEHDI_VAHAB_FSI in GNUmakefile"
-       stop
-#endif
-       else if ((FSI_flag(im).eq.FSI_FLUID).or. &
-                (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. &
-                (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
-                (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-                (FSI_flag(im).eq.FSI_ICE_PROBF90).or. &
-                (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. &
-                (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
-                (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then
-       CTML_FSI_mat=0
-      else
-       print *,"FSI_flag invalid in CTML_FSI_mat"
-       stop
-      endif
+      CTML_FSI_mat=fort_CTML_FSI_mat_base(FSI_flag(im),im)
 
       return
       end function CTML_FSI_mat
+
+      function fort_FSI_flag_valid_base(FSI_flag_local,im) &
+      bind(c,name='fort_FSI_flag_valid_base')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T fort_FSI_flag_valid_base
+      INTEGER_T, INTENT(in) :: FSI_flag_local
+      INTEGER_T, INTENT(in) :: im ! 1<=im<=num_materials
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid16 fort_FSI_flag_valid_base: ",im
+       stop
+      endif
+
+      fort_FSI_flag_valid_base=0
+
+      if ((FSI_flag_local.eq.FSI_FLUID).or. &
+          (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
+          (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
+          (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
+          (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+          (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
+          (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
+          (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
+          (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
+          (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
+       fort_FSI_flag_valid_base=1
+      else
+       print *,"FSI_flag_local invalid"
+       stop
+       fort_FSI_flag_valid_base=0
+      endif
+
+      return
+      end function fort_FSI_flag_valid_base
+
 
       function fort_FSI_flag_valid(im)
       use probcommon_module
@@ -14042,25 +14092,60 @@ end subroutine print_visual_descriptor
        stop
       endif
 
-      if ((FSI_flag(im).eq.FSI_FLUID).or. &
-          (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. &
-          (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
-          (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-          (FSI_flag(im).eq.FSI_ICE_PROBF90).or. &
-          (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. &
-          (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
-          (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED).or. &
-          (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
-          (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
-       fort_FSI_flag_valid=1
-      else
-       print *,"FSI_flag invalid"
-       stop
-       fort_FSI_flag_valid=0
-      endif
+      fort_FSI_flag_valid=fort_FSI_flag_valid_base(FSI_flag(im),im)
 
       return
       end function fort_FSI_flag_valid
+
+
+      function fort_is_ice_base(FSI_flag_local,im) &
+      bind(c,name='fort_is_ice_base')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T fort_is_ice_base
+      INTEGER_T, INTENT(in) :: FSI_flag_local
+      INTEGER_T, INTENT(in) :: im ! 1<=im<=num_materials
+      INTEGER_T dummy_input
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+
+       print *,"im invalid16_a in fort_is_ice_base: im=",im
+       print *,"num_materials=",num_materials
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:14083"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
+
+      endif
+
+      fort_is_ice_base=0
+      if ((FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+          (FSI_flag_local.eq.FSI_ICE_NODES_INIT)) then
+       fort_is_ice_base=1
+      else if ((FSI_flag_local.eq.FSI_FLUID).or. &
+               (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
+               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
+               (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
+               (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
+               (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
+       fort_is_ice_base=0
+      else
+       print *,"FSI_flag_local invalid in fort_is_ice_base"
+       stop
+      endif
+
+      return
+      end function fort_is_ice_base
 
       function is_ice(im)
       use probcommon_module
@@ -14069,31 +14154,65 @@ end subroutine print_visual_descriptor
 
       INTEGER_T is_ice
       INTEGER_T, INTENT(in) :: im
+      INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid16"
+       print *,"im invalid16 is_ice: im=",im
+
+       print *,"num_materials=",num_materials
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:14132"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
        stop
       endif
-      is_ice=0
-      if ((FSI_flag(im).eq.FSI_ICE_PROBF90).or. &
-          (FSI_flag(im).eq.FSI_ICE_NODES_INIT)) then
-       is_ice=1
-      else if ((FSI_flag(im).eq.FSI_FLUID).or. &
-               (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. &
-               (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
-               (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-               (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
-               (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED).or. &
-               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
-               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
-       is_ice=0
+
+      is_ice=fort_is_ice_base(FSI_flag(im),im)
+
+      return
+      end function is_ice
+
+
+
+      function fort_is_FSI_rigid_base(FSI_flag_local,im) &
+      bind(c,name='fort_is_FSI_rigid_base')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T fort_is_FSI_rigid_base
+      INTEGER_T, INTENT(in) :: FSI_flag_local
+      INTEGER_T, INTENT(in) :: im ! 1<=im<=num_materials
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid16 fort_is_FSI_rigid_base: im:",im
+       stop
+      endif
+      fort_is_FSI_rigid_base=0
+      if ((FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
+          (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED)) then
+       fort_is_FSI_rigid_base=1
+      else if ((FSI_flag_local.eq.FSI_FLUID).or. &
+               (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
+               (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
+               (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
+       fort_is_FSI_rigid_base=0
       else
-       print *,"FSI_flag invalid in is_ice"
+       print *,"FSI_flag_local invalid in fort_is_FSI_rigid_base"
        stop
       endif
 
       return
-      end function is_ice
+      end function fort_is_FSI_rigid_base
 
       function is_FSI_rigid(im)
       use probcommon_module
@@ -14104,26 +14223,10 @@ end subroutine print_visual_descriptor
       INTEGER_T, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid16"
+       print *,"im invalid16 is_FSI_rigid: im=",im
        stop
       endif
-      is_FSI_rigid=0
-      if ((FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED).or. &
-          (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED)) then
-       is_FSI_rigid=1
-      else if ((FSI_flag(im).eq.FSI_FLUID).or. &
-               (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. &
-               (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
-               (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-               (FSI_flag(im).eq.FSI_ICE_PROBF90).or. &
-               (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. &
-               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
-               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
-       is_FSI_rigid=0
-      else
-       print *,"FSI_flag invalid in is_FSI_rigid"
-       stop
-      endif
+      is_FSI_rigid=fort_is_FSI_rigid_base(FSI_flag(im),im)
 
       return
       end function is_FSI_rigid
