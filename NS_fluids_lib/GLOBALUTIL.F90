@@ -14183,6 +14183,53 @@ end subroutine print_visual_descriptor
       return
       end function is_ice_or_FSI_rigid_material
 
+      function fort_is_lag_part_base(FSI_flag_local,im) &
+      bind(c,name='fort_is_lag_part_base')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      INTEGER_T fort_is_lag_part_base
+      INTEGER_T, INTENT(in) :: FSI_flag_local
+      INTEGER_T, INTENT(in) :: im ! 1<=im<=num_materials
+      INTEGER_T dummy_input
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid17 in fort_is_lag_part_base: im=",im
+       print *,"num_materials=",num_materials
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:14202"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
+      endif
+
+      if ((FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
+          (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. & 
+          (FSI_flag_local.eq.FSI_SHOELE_VELVEL).or. & 
+          (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. & 
+          (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
+          (FSI_flag_local.eq.FSI_FLUID_NODES_INIT)) then 
+       fort_is_lag_part_base=1
+      else if ((FSI_flag_local.eq.FSI_FLUID).or. &
+               (FSI_flag_local.eq.FSI_ICE_PROBF90).or. & 
+               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
+               (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
+       fort_is_lag_part_base=0
+      else
+       print *,"FSI_flag_local invalid in fort_is_lag_part_base"
+       stop
+      endif
+
+      return
+      end function fort_is_lag_part_base
+
+
       function is_lag_part(im)
       use probcommon_module
 
@@ -14190,29 +14237,24 @@ end subroutine print_visual_descriptor
 
       INTEGER_T is_lag_part
       INTEGER_T, INTENT(in) :: im
+      INTEGER_T dummy_input
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid17 in is_lag_part: im=",im
        print *,"num_materials=",num_materials
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:14247"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
        stop
       endif
 
-      if ((FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. & 
-          (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-          (FSI_flag(im).eq.FSI_SHOELE_VELVEL).or. & 
-          (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
-          (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. & 
-          (FSI_flag(im).eq.FSI_FLUID_NODES_INIT)) then 
-       is_lag_part=1
-      else if ((FSI_flag(im).eq.FSI_FLUID).or. &
-               (FSI_flag(im).eq.FSI_ICE_PROBF90).or. & 
-               (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
-               (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then 
-       is_lag_part=0
-      else
-       print *,"FSI_flag invalid in is_lag_part"
-       stop
-      endif
+      is_lag_part=fort_is_lag_part_base(FSI_flag(im),im)
 
       return
       end function is_lag_part
