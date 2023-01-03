@@ -5540,24 +5540,10 @@ int NavierStokes::ns_is_rigid(int im) {
 int NavierStokes::ns_is_lag_part(int im) {
 
  if ((im<0)|(im>=num_materials))
-  amrex::Error("im invalid50");
+  amrex::Error("im invalid50 (ns_is_lag_part)");
 
- int local_flag=-1;
-
- if ((FSI_flag[im]==FSI_FLUID)||  
-     (FSI_flag[im]==FSI_ICE_PROBF90)|| 
-     (FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED)||
-     (FSI_flag[im]==FSI_RIGIDSHELL_NOTPRESCRIBED)) { 
-  local_flag=0;
- } else if ((FSI_flag[im]==1)|| // prescribed PROB.F90 rigid solid
-            (FSI_flag[im]==2)|| // prescribed sci_clsvof.F90 rigid solid
-            (FSI_flag[im]==6)|| // lag ice
-            (FSI_flag[im]==7)|| // lag fluid
-            (FSI_flag[im]==4)|| // FSI CTML solid
-	    (FSI_flag[im]==8)) {// FSI pres-vel coupling
-  local_flag=1;
- } else
-  amrex::Error("FSI_flag invalid");
+ int imp1=im+1;
+ int local_flag=fort_is_lag_part_base(&FSI_flag[im],&imp1);
 
  return local_flag;
 
@@ -7460,7 +7446,7 @@ void NavierStokes::regenerate_from_eulerian(Real cur_time) {
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& solidfab=Solid_new[mfi];
 
-    // updates Solid_new for FSI_flag(im)==1 type materials.
+    // updates Solid_new for FSI_flag(im)==FSI_PRESCRIBED_PROBF90 materials.
     // (prescribed solid from PROB.F90, not from CAD)
     // fort_initdatasolid is declared in PROB.F90
    fort_initdatasolid(
@@ -7576,17 +7562,17 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
     amrex::Error("im_part invalid");
 
    int ok_to_modify_EUL=1;
-   if ((FSI_flag[im_part]==6)||  //initial ice from CAD file
-       (FSI_flag[im_part]==7)) { //initial fluid from CAD file.
+   if ((FSI_flag[im_part]==FSI_ICE_NODES_INIT)||  
+       (FSI_flag[im_part]==FSI_FLUID_NODES_INIT)) { 
     if (cur_time==0.0) {
      ok_to_modify_EUL=1;
     } else if (cur_time>0.0) {
      ok_to_modify_EUL=0;
     } else
      amrex::Error("cur_time invalid");
-   } else if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid sol.
-              (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 Goldstein..
-              (FSI_flag[im_part]==8)) {//FSI CTML sci_clsvof.F90 pres-vel
+   } else if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
+              (FSI_flag[im_part]==FSI_SHOELE_VELVEL)|| 
+              (FSI_flag[im_part]==FSI_SHOELE_PRESVEL)) {
     ok_to_modify_EUL=1;
     // do nothing
    } else
@@ -7599,7 +7585,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
      MultiFab::Copy(Solid_new,*localMF[FSI_MF],ibase+FSI_VELOCITY,
       partid*AMREX_SPACEDIM,
       AMREX_SPACEDIM,0);
-    } else if (FSI_flag[im_part]==1) { // prescribed solid EUL
+    } else if (FSI_flag[im_part]==FSI_PRESCRIBED_PROBF90) { 
      // do nothing
     } else
      amrex::Error("FSI_flag invalid");
@@ -7634,10 +7620,10 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
 
  if (fort_read_from_CAD(&FSI_flag[im_part])==1) { 
 
-  if ((FSI_flag[im_part]==2)|| // prescribed solid CAD
-      (FSI_flag[im_part]==6)|| // ice CAD
-      (FSI_flag[im_part]==8)|| // CTML FSI pres-vel coupling
-      (FSI_flag[im_part]==7)) {// fluid CAD
+  if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
+      (FSI_flag[im_part]==FSI_ICE_NODES_INIT)|| 
+      (FSI_flag[im_part]==FSI_SHOELE_PRESVEL)|| 
+      (FSI_flag[im_part]==FSI_FLUID_NODES_INIT)) {
 
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
    int nstate=STATE_NCOMP;
@@ -7707,7 +7693,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
     amrex::Error("ns_is_rigid invalid");
    }
 
-  } else if (FSI_flag[im_part]==4) { // FSI CTML material Goldstein et al
+  } else if (FSI_flag[im_part]==FSI_SHOELE_VELVEL) { 
    // do nothing (CTML)
   } else
    amrex::Error("FSI_flag[im_part] invalid");
@@ -7860,10 +7846,10 @@ void NavierStokes::copy_old_FSI_to_new_level() {
  for (int partid=0;partid<nparts;partid++) {
   int im_part=im_solid_map[partid];
   if ((im_part>=0)&&(im_part<num_materials)) {
-   if ((FSI_flag[im_part]==4)|| //link w/Kourosh Shoele, Goldstein et al
-       (FSI_flag[im_part]==8)) {//link w/Kourosh Shoele, standard coupling
+   if ((FSI_flag[im_part]==FSI_SHOELE_VELVEL)|| 
+       (FSI_flag[im_part]==FSI_SHOELE_PRESVEL)) {
     amrex::Error("must regenerate Eulerian data each step");
-   } else if (FSI_flag[im_part]==2){//prescribed rigid solid (sci_clsvof.F90)
+   } else if (FSI_flag[im_part]==FSI_PRESCRIBED_NODES){
     MultiFab::Copy(S_old,*vofmf,
       im_part*ngeom_raw,
       STATECOMP_MOF+im_part*ngeom_raw,
@@ -7931,11 +7917,6 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
  if ((nparts<0)||(nparts>num_materials))
   amrex::Error("nparts invalid");
 
- //(FSI_flag[im]==2) prescribed sci_clsvof.F90 rigid material 
- //(FSI_flag[im]==4) FSI CTML sci_clsvof.F90 material
- //(FSI_flag[im]==8) FSI CTML pressure-vel sci_clsvof.F90 material
- //(FSI_flag[im]==6) sci_clsvof.F90 ice
- //(FSI_flag[im]==7) sci_clsvof.F90 fluid
  if (read_from_CAD()==1) {
   // do nothing
  } else
@@ -7972,17 +7953,17 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
    int ibase=partid*NCOMP_FSI;
 
    int ok_to_modify_EUL=1;
-   if ((FSI_flag[im_part]==6)||  //initial ice from CAD file
-       (FSI_flag[im_part]==7)) { //initial fluid from CAD file.
+   if ((FSI_flag[im_part]==FSI_ICE_NODES_INIT)||  
+       (FSI_flag[im_part]==FSI_FLUID_NODES_INIT)) { 
     if (cur_time==0.0) {
      ok_to_modify_EUL=1;
     } else if (cur_time>0.0) {
      ok_to_modify_EUL=0;
     } else
      amrex::Error("cur_time invalid");
-   } else if ((FSI_flag[im_part]==2)|| //prescribed sci_clsvof.F90 rigid sol.
-              (FSI_flag[im_part]==4)|| //FSI CTML sci_clsvof.F90 Goldstein..
-              (FSI_flag[im_part]==8)) {//FSI CTML sci_clsvof.F90 pres-vel
+   } else if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
+              (FSI_flag[im_part]==FSI_SHOELE_VELVEL)|| 
+              (FSI_flag[im_part]==FSI_SHOELE_PRESVEL)) {
     ok_to_modify_EUL=1;
     // do nothing
    } else
@@ -7990,7 +7971,6 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
    if (ok_to_modify_EUL==1) {
 
-     //modifies S_new velocity if FSI_flag=2,6,7,8 (but not 4)
     copy_velocity_on_sign(partid);
     // Solid velocity
     //ngrow=0
@@ -8016,7 +7996,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
    } else
     amrex::Error("ok_to_modify_EUL invalid");
 
-  } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid
+  } else if (FSI_flag[im_part]==FSI_PRESCRIBED_PROBF90) { 
    // do nothing
   } else
    amrex::Error("FSI_flag invalid");
@@ -8056,11 +8036,11 @@ void NavierStokes::init_aux_data() {
 //FSI_operation=4  copy Eulerian velocity and stress to lag.
 //FSI_operation=5  find integral_{membrane} F_membrane dA.
 //
-// note for CTML algorithm (FSI_flag==4):
+// note for CTML algorithm (FSI_flag==FSI_SHOELE_VELVEL):
 // 1. copy Eulerian velocity to Lagrangian velocity.
 // 2. update node locations
 // 3. copy Lagrangian Force to Eulerian Force and update Eulerian velocity.
-// note for CTML algorithm (FSI_flag==8):
+// note for CTML algorithm (FSI_flag==FSI_SHOELE_PRESVEL):
 // 1. copy Eulerian stress to Lagrangian stress.
 // 2. update node locations
 // 3. copy Lagrangian velocity to Eulerian velocity.
@@ -8238,11 +8218,6 @@ void NavierStokes::ns_header_msg_level(
  int current_step = nStep();
  int plot_interval=parent->plotInt();
 
-  //(FSI_flag[im]==2) prescribed sci_clsvof.F90 rigid material 
-  //(FSI_flag[im]==4) FSI CTML sci_clsvof.F90 material
-  //(FSI_flag[im]==8) FSI CTML pressure-vel sci_clsvof.F90 material
-  //(FSI_flag[im]==6) sci_clsvof.F90 ice
-  //(FSI_flag[im]==7) sci_clsvof.F90 fluid
  if (read_from_CAD()==1) {
 
   int nparts=im_solid_map.size();
@@ -8709,17 +8684,17 @@ void NavierStokes::ns_header_msg_level(
       if (fort_read_from_CAD(&FSI_flag[im_part])==1) { 
 
        int ok_to_modify_EUL=1;
-       if ((FSI_flag[im_part]==6)|| //FSI ice, tessellating 
-           (FSI_flag[im_part]==7)) {//fluid, tessellating
+       if ((FSI_flag[im_part]==FSI_ICE_NODES_INIT)||  
+           (FSI_flag[im_part]==FSI_FLUID_NODES_INIT)) {
 	if (cur_time==0.0) {
          ok_to_modify_EUL=1;
 	} else if (cur_time>0.0) {
 	 ok_to_modify_EUL=0;
 	} else
 	 amrex::Error("cur_time invalid");
-       } else if ((FSI_flag[im_part]==2)|| //prescribed rigid solid, non-tess.
-                  (FSI_flag[im_part]==8)|| //FSI CTML pres-vel sci_clsvof.F90
-  	          (FSI_flag[im_part]==4)) {//FSI CTML Goldstein et al 
+       } else if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
+                  (FSI_flag[im_part]==FSI_SHOELE_PRESVEL)|| 
+  	          (FSI_flag[im_part]==FSI_SHOELE_VELVEL)) { 
         ok_to_modify_EUL=1;
        } else
         amrex::Error("FSI_flag invalid");
@@ -8768,7 +8743,7 @@ void NavierStokes::ns_header_msg_level(
        } else
         amrex::Error("ok_to_modify_EUL invalid");
 
-      } else if (FSI_flag[im_part]==1) { // prescribed PROB.F90 rigid solid 
+      } else if (FSI_flag[im_part]==FSI_PRESCRIBED_PROBF90) {  
        // do nothing
       } else
        amrex::Error("FSI_flag invalid");
@@ -8990,7 +8965,6 @@ void NavierStokes::ns_header_msg_level(
    } // partid=0..nparts-1
 
     // 1. copy_velocity_on_sign
-    //    (modifies S_new velocity if FSI_flag=2,6,7,8 (but not 4))
     // 2. update Solid_new
     // 3. update LS_new
     // 4. update S_new(temperature) (if solidheat_flag==1 or 2)
@@ -9567,7 +9541,7 @@ NavierStokes::initData () {
    recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
    if (parent->AMR_recalesce_flag(im)>0) {
     if (at_least_one_ice!=1)
-     amrex::Error("expecting FSI_flag==3 or 6");
+     amrex::Error("at_least_one_ice==1");
     at_least_one=1;
    }
   }
@@ -9693,9 +9667,6 @@ NavierStokes::initData () {
   }
  }
  
- // initialize one ghost cell of LS_new so that LS_stencil needed
- // by the AMR error indicator can be initialized for those
- // level set components with FSI_flag==2,4,6,7,8.
  MultiFab* lsmf=getStateDist(1,upper_slab_time,101);
  MultiFab::Copy(LS_new,*lsmf,0,0,num_materials*(1+AMREX_SPACEDIM),1);
  delete lsmf;
@@ -9725,9 +9696,6 @@ NavierStokes::initData () {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   // if FSI_flag==2,4,6,7,8 then LS_new is used.
-   // if FSI_flag==2,4,6,7,8 then S_new (volume fractions and centroids)
-   //  is used.
   fort_initdata(
    &tid_current,
    &adapt_quad_depth,
@@ -9814,7 +9782,6 @@ NavierStokes::initData () {
  ns_reconcile_d_num(52);
 
  if (read_from_CAD()==1) {
-  // for FSI_flag==2, 4, 8: (prescribed sci_clsvof.F90 rigid material)
   // 1. copy_velocity_on_sign
   // 2. update Solid_new
   // 3. update LS_new
@@ -12302,7 +12269,7 @@ void NavierStokes::tensor_advection_update() {
      // do nothing
     } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
     		                        &viscoelastic_model[im])==0) {
-     amrex::Error("FSI_flag==8 (pres vel coupling) has is_rigid==1");
+     amrex::Error("FSI_flag==FSI_SHOELE_PRESVEL has is_rigid==1");
     } else  
      amrex::Error("viscoelastic_model[im] invalid");
 
@@ -12453,7 +12420,7 @@ void NavierStokes::tensor_extrapolation() {
      // do nothing
     } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
     		                        &viscoelastic_model[im])==0) {
-     amrex::Error("FSI_flag==8 (pres vel coupling) has is_rigid==1");
+     amrex::Error("FSI_flag==FSI_SHOELE_PRESVEL has is_rigid==1");
     } else  
      amrex::Error("viscoelastic_model[im] invalid");
 
@@ -22983,7 +22950,7 @@ NavierStokes::particle_tensor_advection_update() {
         // do nothing
        } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
     			                &viscoelastic_model[im])==0) {
-        amrex::Error("FSI_flag==8 (pres vel coupling) has is_rigid==1");
+        amrex::Error("FSI_flag==FSI_SHOELE_PRESVEL has is_rigid==1");
        } else  
         amrex::Error("viscoelastic_model[im] invalid");
 
@@ -25588,7 +25555,6 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
 
 }  // subroutine getStateMAC
 
-//FSI_flag==4 (transfer Lagrangian force to Eulerian)
 void
 NavierStokes::ctml_fsi_transfer_force() {
 	
@@ -25623,7 +25589,7 @@ NavierStokes::ctml_fsi_transfer_force() {
      } else
       amrex::Error("must regenerate Eulerian data each step");
 
-     if (FSI_flag[im_part]==4) {
+     if (FSI_flag[im_part]==FSI_SHOELE_VELVEL) {
 
       debug_ngrow(FSI_MF,0,1);
       if (localMF[FSI_MF]->nComp()!=nFSI)
@@ -25679,7 +25645,7 @@ NavierStokes::ctml_fsi_transfer_force() {
       } else
        amrex::Error("CTML_force_model[im_part] invalid");
 
-     } else if (FSI_flag[im_part]==8) {
+     } else if (FSI_flag[im_part]==FSI_SHOELE_PRESVEL) {
       //do nothing (pres-vel coupling)
      } else
       amrex::Error("FSI_flag[im_part] invalid");

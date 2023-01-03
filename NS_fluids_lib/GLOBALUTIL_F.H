@@ -27,6 +27,10 @@ extern "C"
         int* FSI_flag_local,
 	int* im);  // 1<=im<=num_materials
 
+   int fort_is_lag_part_base(
+        int* FSI_flag_local,
+	int* im);  // 1<=im<=num_materials
+
    int fort_drag_type(
     int* drag_comp,//0..NDRAG-1
     int* drag_im); //0..num_materials-1
