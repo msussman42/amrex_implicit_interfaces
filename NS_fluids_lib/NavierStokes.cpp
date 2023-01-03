@@ -907,7 +907,7 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_ICE_PROBF90=3
 // FSI_SHOELE_VELVEL=4
 // FSI_RIGID_NOTPRESCRIBED=5
-// FSI_ICE_NODES=6
+// FSI_ICE_NODES_INIT=6
 // FSI_FLUID_NODES_INIT=7
 // FSI_SHOELE_PRESVEL=8
 // FSI_RIGIDSHELL_NOTPRESCRIBED=9
@@ -1437,7 +1437,8 @@ void fortran_parameters() {
 
  pp.get("visc_coef",visc_coef_temp);
 
- pp.getarr("material_type",NavierStokes::material_type,0,NavierStokes::num_materials);
+ pp.getarr("material_type",NavierStokes::material_type,0,
+    NavierStokes::num_materials);
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
 
@@ -1686,15 +1687,31 @@ void fortran_parameters() {
        (NavierStokes::FSI_flag[im]!=FSI_SHOELE_VELVEL))
     amrex::Error("NavierStokes::FSI_flag invalid");
 
+   int imp1=im+1;
+   if (fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1)==1) {
+    //do nothing
+   } else (fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1)==0) {
+    amrex::Error("NavierStokes::FSI_flag and material_type inconsistent");
+   } else
+    amrex::Error("fort_is_rigid_base corrupt");
+
   } else if (NavierStokes::material_type[im]==0) {
 
    if ((NavierStokes::FSI_flag[im]!=FSI_FLUID)&&
        (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT)&& 
        (NavierStokes::FSI_flag[im]!=FSI_ICE_PROBF90)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_ICE_NODES)&& 
+       (NavierStokes::FSI_flag[im]!=FSI_ICE_NODES_INIT)&& 
        (NavierStokes::FSI_flag[im]!=FSI_RIGIDSHELL_NOTPRESCRIBED)&&
        (NavierStokes::FSI_flag[im]!=FSI_RIGID_NOTPRESCRIBED)) 
     amrex::Error("NavierStokes::FSI_flag invalid");
+
+   int imp1=im+1;
+   if (fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1)==0) {
+    //do nothing
+   } else (fort_is_rigid_base(&NavierStokes::FSI_flag[im],&imp1)==1) {
+    amrex::Error("NavierStokes::FSI_flag and material_type inconsistent");
+   } else
+    amrex::Error("fort_is_rigid_base corrupt");
 
   } else if ((NavierStokes::material_type[im]>0)&& 
              (NavierStokes::material_type[im]<999)) {
@@ -2900,7 +2917,7 @@ NavierStokes::read_params ()
     pp.queryAdd("CTML_FSI_numsolids",CTML_FSI_numsolids);
     pp.queryAdd("CTML_force_model",CTML_force_model,num_materials);
     for (int i=0;i<num_materials;i++) {
-     if (FSI_flag[i]==4) {
+     if (FSI_flag[i]==FSI_SHOELE_VELVEL) {
       if (FSI_interval==1) {
        // do nothing
       } else
@@ -2909,7 +2926,7 @@ NavierStokes::read_params ()
        // do nothing
       } else
        amrex::Error("CTML_force_model invalid");
-     } else if (FSI_flag[i]==8) {
+     } else if (FSI_flag[i]==FSI_SHOELE_PRESVEL) {
       if (FSI_interval==1) {
        // do nothing
       } else
@@ -2932,9 +2949,9 @@ NavierStokes::read_params ()
     int CTML_FSI_numsolids_test=0;
     for (int im=0;im<num_materials;im++) {
 
-     if (FSI_flag[im]==4) { // non-tessellating Goldstein et al
+     if (FSI_flag[im]==FSI_SHOELE_VELVEL) { 
       CTML_FSI_numsolids_test++;
-     } else if (FSI_flag[im]==8) { // non-tessellating, pres-vel
+     } else if (FSI_flag[im]==FSI_SHOELE_PRESVEL) {
       CTML_FSI_numsolids_test++;
      } else if (FSI_flag_valid(im)==1) {
       //do nothing
@@ -4646,18 +4663,18 @@ NavierStokes::read_params ()
 
     for (int i=0;i<num_materials;i++) {
 
-     if ((FSI_flag[i]==0)|| // tessellating
-         (FSI_flag[i]==7))  // fluid, tessellating
+     if ((FSI_flag[i]==FSI_FLUID)|| // tessellating
+         (FSI_flag[i]==FSI_FLUID_NODES_INIT))  // fluid, tessellating
       truncate_volume_fractions[i]=1;
      else if (is_ice_matC(i)==1) // ice, tessellating
       truncate_volume_fractions[i]=1;
-     else if (FSI_flag[i]==1) // prescribed PROB.F90 solid, non-tessellating
+     else if (FSI_flag[i]==FSI_PRESCRIBED_PROBF90) 
       truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==2) // prescribed sci_clsvof.F90 solid, non-tess.
+     else if (FSI_flag[i]==FSI_PRESCRIBED_NODES) 
       truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==4) // FSI CTML solid, non-tesellating
+     else if (FSI_flag[i]==FSI_SHOELE_VELVEL) 
       truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==8) // FSI CTML solid, pres-vel coupling,non-tess.
+     else if (FSI_flag[i]==FSI_SHOELE_PRESVEL) 
       truncate_volume_fractions[i]=0;
      else if (is_FSI_rigid_matC(i)==1) // FSI rigid solid, tessellating
       truncate_volume_fractions[i]=0;
@@ -5527,9 +5544,10 @@ int NavierStokes::ns_is_lag_part(int im) {
 
  int local_flag=-1;
 
- if ((FSI_flag[im]==0)||  // fluid
-     (FSI_flag[im]==3)||  // ice
-     (FSI_flag[im]==5)) { //FSI rigid solid (PROB.F90)
+ if ((FSI_flag[im]==FSI_FLUID)||  
+     (FSI_flag[im]==FSI_ICE_PROBF90)|| 
+     (FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED)||
+     (FSI_flag[im]==FSI_RIGIDSHELL_NOTPRESCRIBED)) { 
   local_flag=0;
  } else if ((FSI_flag[im]==1)|| // prescribed PROB.F90 rigid solid
             (FSI_flag[im]==2)|| // prescribed sci_clsvof.F90 rigid solid
