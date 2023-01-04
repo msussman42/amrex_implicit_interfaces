@@ -20143,8 +20143,10 @@ stop
          print *,"im_max invalid"
          stop
         endif
-        if (vfracmax.le.VOFTOL) then
-         print *,"vfracmax invalid"
+        if (vfracmax.gt.VOFTOL) then
+         ! do nothing
+        else
+         print *,"vfracmax invalid:",vfracmax
          stop
         endif
 
@@ -20165,7 +20167,11 @@ stop
           else if (is_ice(imcrit).eq.1) then
            local_maskSEM=0
           else if (is_FSI_rigid(imcrit).eq.1) then
-           local_maskSEM=0
+           if (FSI_flag(imcrit).eq.FSI_RIGIDSHELL_NOTPRESCRIBED) then
+            local_maskSEM=imcrit
+           else
+            local_maskSEM=0
+           endif
           else if ((FSI_flag(imcrit).eq.FSI_FLUID).or. & 
                    (FSI_flag(imcrit).eq.FSI_FLUID_NODES_INIT)) then 
            local_maskSEM=imcrit
