@@ -1311,11 +1311,10 @@ stop
        if (fort_material_type(im).eq.0) then
         ! do nothing
        else if (fort_material_type(im).eq.999) then
-               FIX ME
-        if ((FSI_flag(im).ne.1).and. &
-            (FSI_flag(im).ne.2).and. &
-            (FSI_flag(im).ne.8).and. & !CTML pres vel
-            (FSI_flag(im).ne.4)) then  !CTML Goldstein et al.
+        if ((FSI_flag(im).ne.FSI_PRESCRIBED_PROBF90).and. &
+            (FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
+            (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. & 
+            (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then 
          print *,"FSI_flag invalid"
          stop
         endif

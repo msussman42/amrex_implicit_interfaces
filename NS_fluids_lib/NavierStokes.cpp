@@ -1450,7 +1450,7 @@ void fortran_parameters() {
   DrhoDTtemp[im]=0.0;
   tempcutofftemp[im]=1.0e-8;
   tempcutoffmaxtemp[im]=1.0e+99;
-  NavierStokes::FSI_flag[im]=0;
+  NavierStokes::FSI_flag[im]=FSI_FLUID;
 
   Carreau_alpha_temp[im]=1.0;
   Carreau_beta_temp[im]=0.0;
@@ -2902,7 +2902,7 @@ NavierStokes::read_params ()
     pp.queryAdd("material_type_visual",material_type_visual,num_materials);
  
     for (int i=0;i<num_materials;i++) {
-     FSI_flag[i]=0;
+     FSI_flag[i]=FSI_FLUID;
      FSI_refine_factor[i]=1;
      FSI_bounding_box_ngrow[i]=3;
     }

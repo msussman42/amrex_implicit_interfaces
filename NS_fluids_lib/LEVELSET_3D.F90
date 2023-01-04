@@ -96,16 +96,16 @@ stop
             CP%time, &
             CP%im_solid_max)
 
-          if ((FSI_flag(CP%im_solid_max).eq.2).or. & ! prescribed solid CAD
-              (FSI_flag(CP%im_solid_max).eq.8).or. & ! CTML FSI pres-vel
-              (FSI_flag(CP%im_solid_max).eq.4)) then ! CTML FSI
+          if ((FSI_flag(CP%im_solid_max).eq.FSI_PRESCRIBED_NODES).or. & 
+              (FSI_flag(CP%im_solid_max).eq.FSI_SHOELE_PRESVEL).or. & 
+              (FSI_flag(CP%im_solid_max).eq.FSI_SHOELE_VELVEL)) then 
            LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im_solid_max)
            do dir=1,SDIM
             nslope_cell(dir)= &
               CP%LS(D_DECL(CP%i,CP%j,CP%k), &
               num_materials+SDIM*(CP%im_solid_max-1)+dir)
            enddo
-          else if (FSI_flag(CP%im_solid_max).eq.1) then ! prescribed solid EUL
+          else if (FSI_flag(CP%im_solid_max).eq.FSI_PRESCRIBED_PROBF90) then 
            ! do nothing
           else
            print *,"FSI_flag invalid"
@@ -8738,7 +8738,6 @@ stop
           stop
          endif
 
-          ! does not consider materials with FSI_flag=1,2,4,8
           ! gradh>0 => im_main material dominates right and im_main_opp left.
           ! gradh<0 => im_main material dominates left and im_main_opp right.
           ! im_main<im_main_opp
@@ -15147,11 +15146,6 @@ stop
           else if ((at_reflect_wall.eq.0).and. &
                    (at_wall.eq.0)) then
 
-           ! gradh_tension=0 if FSI_flag(im) or FSI_flag(im_opp) = 1,2,4,8
-           ! 1=prescribed rigid (PROB.F90)
-           ! 2=prescribed rigid (sci_clsvof.F90)
-           ! 8=FSI pres-vel, Kourosh Shoele
-           ! 4=FSI Goldstein, Sirovich, Handler, Kourosh Shoele
            if (is_solid_face.eq.1) then
             gradh_tension=zero
             gradh_gravity=zero
@@ -16863,11 +16857,11 @@ stop
              xsten(0,1),xsten(0,2),xsten(0,SDIM), &
              LS_solid_new(im),time,im)
 
-            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                (FSI_flag(im).eq.8).or. & ! CTML FSI, pres vel
-                (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
+            if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+                (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
+                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
              LS_solid_new(im)=LS(D_DECL(i,j,k),im)
-            else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+            else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
             else
              print *,"FSI_flag invalid"
@@ -16897,15 +16891,15 @@ stop
              centroid, &
              im)
 
-            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                (FSI_flag(im).eq.8).or. & ! CTML FSI, pres/vel
-                (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
+            if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+                (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
+                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
              vofcompraw=(im-1)*ngeom_raw+1
              vfrac_solid_new(im)=vofnew(D_DECL(i,j,k),vofcompraw)
              do dir=1,SDIM
               centroid(dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)+cencell(dir)
              enddo
-            else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+            else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
             else
              print *,"FSI_flag invalid"
@@ -16926,13 +16920,13 @@ stop
              nslope_solid, &
              time,im)
 
-            if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                (FSI_flag(im).eq.8).or. & ! CTML FSI, pres/vel
-                (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
+            if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+                (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
+                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
              do dir=1,SDIM
               nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im-1)+dir)
              enddo
-            else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+            else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
             else
              print *,"FSI_flag invalid"
@@ -16984,11 +16978,11 @@ stop
              if (solidheat_flag.eq.0) then
               ! do nothing (heat conduction in solid)
              else if (solidheat_flag.eq.2) then ! neumann at solid/fluid
-              if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                  (FSI_flag(im).eq.8).or. & ! CTML FSI pres-vel
-                  (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
+              if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+                  (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
+                  (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
                ! den_hold(statecomp) already has the solid temperature
-              else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+              else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
                 den_hold(statecomp),time,im)
               else
@@ -16996,11 +16990,11 @@ stop
                stop
               endif
              else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
-              if ((FSI_flag(im).eq.2).or. & ! prescribed solid CAD
-                  (FSI_flag(im).eq.8).or. & ! CTML FSI, pres/vel
-                  (FSI_flag(im).eq.4)) then ! CTML FSI, Goldstein et al
+              if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+                  (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
+                  (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
                ! den_hold(statecomp) already has the solid temperature
-              else if (FSI_flag(im).eq.1) then ! prescribed solid EUL
+              else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
                 den_hold(statecomp),time,im)
               else
