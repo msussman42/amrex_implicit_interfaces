@@ -873,7 +873,7 @@ REAL_T, INTENT(out) :: probhi3D(3)
 
 
   !CTML_FSI_flagF() is declared in GLOBALUTIL.F90
- if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4 or 8
+ if (CTML_FSI_flagF().eq.1) then 
   xmap3D(1)=1
   xmap3D(2)=2
   xmap3D(3)=0
