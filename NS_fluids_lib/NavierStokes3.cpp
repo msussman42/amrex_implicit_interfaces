@@ -558,7 +558,8 @@ void NavierStokes::nonlinear_advection() {
 
    // fort_headermsg (SOLIDFLUID.F90)
    // CLSVOF_ReadNodes (sci_clsvof.F90)
-   // if FSI_flag==4 or FSI_flag==8, then
+   // if FSI_flag==FSI_SHOELE_VELVEL or 
+   //    FSI_flag==FSI_SHOELE_PRESVEL, then
    //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
    //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
    //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
@@ -2696,7 +2697,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
         if (parent->AMR_recalesce_flag(im)>0) {
          if (at_least_one_ice!=1)
-          amrex::Error("expecting at least one material FSI_flag==3 or 6");
+          amrex::Error("expecting at_least_one_ice==1");
          at_least_one=1;
         } 
        } //im=1..num_materials
@@ -11682,10 +11683,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
   //vel_elastic_ALL called from veldiffuseALL
  if (viscoelastic_force_only==0) {
 
-  if (CTML_FSI_flagC()==1) { //FSI_flag=4 or 8
+  if (CTML_FSI_flagC()==1) { 
 
-   // Add the Lagrangian solid force term on the right hand side of the
-   // Eulerian fluid velocity. (if FSI_flag=4)
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
     ns_level.ctml_fsi_transfer_force();
@@ -12226,10 +12225,6 @@ void NavierStokes::veldiffuseALL() {
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  // if (FSI_flag(im)==1,2,4,8)
-  //  T(im)=TSOLID
-  // else if (FSI_flag(im)=0,3,5,6,7)
-  //  T(im)=TSOLID if in the solid.
   int hflag=0;
   ns_level.solid_temperature();
 

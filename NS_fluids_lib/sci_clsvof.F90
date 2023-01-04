@@ -8805,7 +8805,7 @@ INTEGER_T :: dir,inode,num_nodes
 
  if (TOTAL_NPARTS.ge.1) then
 
-  if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8
+  if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
    call CTML_RESET_ARRAYS() ! vel_fib=zero  force_fib=zero
 #else
@@ -9015,7 +9015,7 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 
   enddo !part_id=1,TOTAL_NPARTS
 
-  if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8
+  if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
    call CTML_SET_VELOCITY(CTML_NPARTS, &
     ctml_max_n_fib_nodes,ctml_fib_vel) !vel_fib=ctml_fib_vel
@@ -9698,7 +9698,7 @@ INTEGER_T idir,ielem,inode
     im_solid_mapF(part_id)=im_solid_map_in(part_id)
     im_part=im_solid_mapF(part_id)+1
 
-    if (CTML_FSI_mat(im_part).eq.1) then ! FSI_flag==4,8
+    if (CTML_FSI_mat(im_part).eq.1) then 
      ctml_part_id=ctml_part_id+1
      CTML_partid_map(part_id)=ctml_part_id
     else if (CTML_FSI_mat(im_part).eq.0) then
@@ -9708,14 +9708,14 @@ INTEGER_T idir,ielem,inode
      stop
     endif
 
-    if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid (CAD)
-        (FSI_flag(im_part).eq.6).or. & ! prescribed ice (CAD)
-        (FSI_flag(im_part).eq.7)) then ! prescribed fluid (CAD)
+    if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
+        (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
+        (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
      fsi_part_id=fsi_part_id+1
      FSI_partid_map(part_id)=fsi_part_id
-    else if ((FSI_flag(im_part).eq.1).or. & ! prescribed solid (EUL)
-             (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres vel
-             (FSI_flag(im_part).eq.4)) then ! CTML FSI Goldstein et al
+    else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90).or. & 
+             (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
+             (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
      FSI_partid_map(part_id)=0
     else
      print *,"FSI_flag(im_part) invalid"
@@ -9772,7 +9772,7 @@ INTEGER_T idir,ielem,inode
 
    use_temp=0
 
-   if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8 for some materials
+   if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
     if (CTML_FSI_INIT.eq.0) then
      call CTML_INIT_SOLID(dx_max_level, &
@@ -9819,7 +9819,7 @@ INTEGER_T idir,ielem,inode
     do part_id=1,TOTAL_NPARTS
 
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
+     if (CTML_FSI_mat(im_part).eq.1) then 
       FSI(part_id)%deforming_part=1
       FSI(part_id)%CTML_flag=1
       num_nodes_list(im_part)=ctml_max_n_fib_nodes
@@ -9969,7 +9969,7 @@ INTEGER_T idir,ielem,inode
    ctml_part_id=0
    do part_id=1,TOTAL_NPARTS
     im_part=im_solid_mapF(part_id)+1
-    if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
+    if (CTML_FSI_mat(im_part).eq.1) then 
      ctml_part_id=ctml_part_id+1
      if (CTML_partid_map(part_id).eq.ctml_part_id) then
       if (im_part.eq.im_critical+1) then
@@ -15237,7 +15237,7 @@ INTEGER_T :: idir,ielem,im_part
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
+     if (CTML_FSI_mat(im_part).eq.1) then 
       ctml_part_id=ctml_part_id+1
       if (CTML_partid_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.-im_critical-1) then
@@ -15275,7 +15275,7 @@ INTEGER_T :: idir,ielem,im_part
 
    else if (im_critical.eq.-1) then
 
-    if (CTML_FSI_flagF().eq.1) then ! FSI_flag==4,8
+    if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
 
      do part_id=1,TOTAL_NPARTS
@@ -15513,7 +15513,7 @@ INTEGER_T :: idir,ielem,im_part
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
      im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(im_part).eq.1) then !FSI_flag==4,8
+     if (CTML_FSI_mat(im_part).eq.1) then 
       ctml_part_id=ctml_part_id+1
       if (CTML_partid_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.im_critical+1) then

@@ -29,7 +29,8 @@ implicit none
 contains
 
   ! fluids tessellate the domain, solids are immersed. 
-  ! The FSI rigid material (FSI_flag==5) is treated as a fluid.
+  ! The FSI rigid material (FSI_flag==FSI_RIGID_NOTPRESCRIBED)         
+  ! is treated as a fluid.
  subroutine sinking_FSI_LS(x,t,LS)
  use probcommon_module
  IMPLICIT NONE

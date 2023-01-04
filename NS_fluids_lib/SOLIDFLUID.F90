@@ -414,14 +414,14 @@
        stop
       endif
       do im_local=1,num_materials
-       if (FSI_flag(im_local).eq.4) then !CTML Goldstein et al
+       if (FSI_flag(im_local).eq.FSI_SHOELE_VELVEL) then 
         if (CTML_force_model(im_local).eq.0) then
          ! do nothing
         else
          print *,"CTML_force_model invalid"
          stop
         endif
-       else if (FSI_flag(im_local).eq.8) then !CTML pres-vel
+       else if (FSI_flag(im_local).eq.FSI_SHOELE_PRESVEL) then 
         if (CTML_force_model(im_local).eq.2) then
          ! do nothing
         else
@@ -614,7 +614,7 @@
          stop
         endif
          ! cur_time=t^{n+1}
-         ! if FSI_flag==4 or 8, then
+         ! if FSI_flag==FSI_SHOELE_VELVEL or FSI_SHOELE_PRESVEL, then
          !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
          !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
@@ -879,7 +879,7 @@
            CTML_force_model(im_part), &
            ioproc,isout)
 
-         else if (FSI_flag(im_part).eq.1) then ! prescribed solid (EUL)
+         else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 
 
           ! do nothing
 
@@ -1224,11 +1224,11 @@
          endif
          if (is_lag_part(im_part).eq.1) then
 
-          if ((FSI_flag(im_part).eq.2).or. & ! prescribed solid CAD
-              (FSI_flag(im_part).eq.4).or. & ! CTML FSI Goldstein et al
-              (FSI_flag(im_part).eq.8).or. & ! CTML FSI pres-vel
-              (FSI_flag(im_part).eq.6).or. & ! ice from CAD
-              (FSI_flag(im_part).eq.7)) then ! fluid from CAD
+          if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
+              (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL).or. & 
+              (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
+              (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
+              (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
 
            if (container_allocated.ne.1) then
             print *,"container_allocated.ne.1"
@@ -1301,7 +1301,7 @@
             maskfiner3D_ptr, &
             ioproc,isout)
 
-          else if (FSI_flag(im_part).eq.1) then !prescribed solid(EUL)
+          else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 
  
            ! do nothing
 
@@ -1948,7 +1948,6 @@
       INTEGER_T icomp
       INTEGER_T lo3D,hi3D
       REAL_T xlo3D
-      INTEGER_T local_flag
       INTEGER_T im_part
       INTEGER_T lev77
       INTEGER_T local_nelems
@@ -2214,18 +2213,18 @@
           print *,"im_part invalid"
           stop
          endif
-         local_flag=FSI_flag(im_part)
-         if ((local_flag.eq.2).or. & !prescribed solid from CAD
-             (local_flag.eq.4).or. & !CTML FSI Goldstein et al.
-             (local_flag.eq.8).or. & !CTML FSI pres-vel
-             (local_flag.eq.6).or. & !ice from CAD
-             (local_flag.eq.7)) then !fluid from CAD
+
+         if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
+             (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL).or. & 
+             (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
+             (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
+             (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &
            dx3D,partid,im_part,cur_time,dt)
-         else if (local_flag.eq.1) then ! prescribed solid (EUL)
+         else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 
           ! do nothing
          else
-          print *,"local_flag invalid"
+          print *,"FSI_flag(im_part) invalid"
           stop
          endif
         enddo ! partid=1..nparts
