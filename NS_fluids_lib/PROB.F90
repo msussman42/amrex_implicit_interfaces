@@ -203,7 +203,9 @@ stop
         dx,bfact, &
         icemask, &
         icefacecut, &
-        im,im_opp, &
+        im, &
+        im_opp, &
+        im_critical, &
         ireverse, &
         LS, &
         VOF, &
@@ -217,6 +219,7 @@ stop
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(out) :: im
       INTEGER_T, INTENT(out) :: im_opp
+      INTEGER_T, INTENT(out) :: im_critical
       INTEGER_T, INTENT(out) :: ireverse
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
@@ -334,6 +337,8 @@ stop
       endif
 
       if (im_FSI_rigid.eq.im_primary) then
+FIX ME
+       im_critical=im_FSI_rigid
 
        ireverse=-1
        icemask=zero
@@ -350,7 +355,10 @@ stop
        endif
 
         ! either the primary or secondary material is "ice"
-       if ((im_ice.ge.1).and.(im_ice.le.num_materials)) then 
+       if ((im_ice.ge.1).and. &
+           (im_ice.le.num_materials)) then 
+
+        im_critical=im_ice
 
          ! if the associated "melt" material
          ! is not the primary or secondary material,
@@ -393,9 +401,13 @@ stop
            stop
           endif
          else if (im_tertiary.eq.0) then
-          ! do nothing
+          print *,"expecting im_tertiary>=1 and <=num_materials"
+          print *,"im_tertiary: ",im_tertiary
+          print *,"im_ice: ",im_ice
+          print *,"im_FSI_rigid: ",im_FSI_rigid
+          stop
          else
-          print *,"im_tertiary invalid"
+          print *,"im_tertiary invalid: ",im_tertiary
           stop
          endif
         else if ((LL(0).ne.zero).or.(LL(1).ne.zero)) then
@@ -555,11 +567,14 @@ stop
         endif
  
        else if (im_ice.eq.0) then
+
+        im_critical=0
+
         ireverse=-1
         icemask=one
         icefacecut=one
        else
-        print *,"im_ice invalid"
+        print *,"im_ice invalid:",im_ice
         stop
        endif
 
@@ -591,7 +606,7 @@ stop
        ! called from: GODUNOV_3D.F90, subroutine fort_heatsource
        ! in fort_heatsource:
        ! T_local(im)=T_local(im)+ &
-       !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total  im=1..num_materials
+       !   dt*DeDTinverse(D_DECL(i,j,k),1)*heat_source_total im=1..num_materials
 
       subroutine get_local_heat_source( &
        time,dt, &
