@@ -1755,7 +1755,7 @@ if ((im.lt.1).or.(im.gt.num_materials)) then
  stop
 endif
 
-if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
  ! do nothing
 else
  print *,"FSI_flag(im) invalid"
@@ -1800,7 +1800,7 @@ INTEGER_T :: im_solid_materialdist
   if (probtype.eq.710) then
 
    do im=1,nmat
-    if (FSI_flag(im).eq.1) then
+    if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
      call CAVITY_soliddist(x,LS(im),nmat)  ! returns LS<0 in solid
      LS(im)=-LS(im)   ! now LS>0 in solid
     endif

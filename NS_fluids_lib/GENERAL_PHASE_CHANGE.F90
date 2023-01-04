@@ -173,7 +173,7 @@ if ((im.lt.1).or.(im.gt.nmat)) then
  stop
 endif
 
-if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
  ! do nothing
 else
  print *,"FSI_flag(im) invalid"
@@ -319,7 +319,7 @@ INTEGER_T :: gravity_dir
   if (probtype.eq.55) then
 
    do im=1,nmat
-    if (FSI_flag(im).eq.1) then
+    if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
      call GENERAL_soliddist(x,LS(im),nmat)  ! returns LS<0 in solid
      LS(im)=-LS(im)   ! now LS>0 in solid
      distsolid=LS(im)

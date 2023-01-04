@@ -818,10 +818,10 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    if ((axis_dir.eq.0).or. &
        (axis_dir.eq.1)) then
 
-    if (FSI_flag(3).eq.1) then
+    if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
     else
-     print *,"expecting FSI_flag(3).eq.1"
+     print *,"expecting FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90"
      stop
     endif
 
@@ -847,10 +847,10 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 
    else if (axis_dir.eq.2) then
 
-    if (FSI_flag(3).eq.1) then
+    if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
      ! do nothing
     else
-     print *,"expecting FSI_flag(3).eq.1"
+     print *,"expecting FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90"
      stop
     endif
     auxcomp=1

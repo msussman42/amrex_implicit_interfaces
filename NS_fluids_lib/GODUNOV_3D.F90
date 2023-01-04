@@ -8820,8 +8820,8 @@ stop
          endif
 
          ok_to_modify_EUL=1
-         if ((FSI_flag(im_part).eq.6).or. & ! FSI ice, tessellating
-             (FSI_flag(im_part).eq.7)) then ! fluid, tessellating
+         if ((FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
+             (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
           if (cur_time.eq.zero) then
            ok_to_modify_EUL=1
           else if (cur_time.gt.zero) then
@@ -8830,9 +8830,9 @@ stop
            print *,"cur_time invalid"
            stop
           endif
-         else if ((FSI_flag(im_part).eq.2).or. &!prescribed rigid solid,nontess
-                  (FSI_flag(im_part).eq.8).or. &!FSI CTML pres-vel sci_clsvof
-                  (FSI_flag(im_part).eq.4)) then!FSI CTML Goldstein et al
+         else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
+                  (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
+                  (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
           ok_to_modify_EUL=1
          else
           print *,"FSI_flag invalid"
@@ -8946,7 +8946,7 @@ stop
           stop
          endif
 
-        else if (FSI_flag(im_part).eq.1) then ! prescribed solid EUL
+        else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 
          ! do nothing
         else
          print *,"FSI_flag invalid"
@@ -11942,7 +11942,6 @@ stop
           stop
          endif
 
-         ! FSI_flag=0,7,3,6 ok
          if ((is_rigid(im_primary).eq.0).and. &
              (is_FSI_rigid(im_primary).eq.0)) then 
 
@@ -15708,7 +15707,6 @@ stop
 
         if ((im_solid_vel_plus.ge.1).and. &
             (im_solid_vel_plus.le.num_materials)) then
-          ! e.g. FSI_flag=2,8 (not 4!)
          if (is_prescribed(im_solid_vel_plus).eq.1) then
           is_solid_cell=im_solid_vel_plus
           if (im_solid_map(partid_vel_plus+1)+1.ne.im_solid_vel_plus) then
@@ -16937,7 +16935,6 @@ stop
         partidL=0
         partidR=0
 
-         ! is_rigid==1 and CTML_FSI_mat==0 or FSI_flag=2,8 (not 4)
         if (is_prescribed(imL).eq.1) then 
          do im=1,imL-1
           if (is_lag_part(im).eq.1) then
@@ -20169,8 +20166,8 @@ stop
            local_maskSEM=0
           else if (is_FSI_rigid(imcrit).eq.1) then
            local_maskSEM=0
-          else if ((FSI_flag(imcrit).eq.0).or. & ! fluid
-                   (FSI_flag(imcrit).eq.7)) then ! fluid - IC from CAD
+          else if ((FSI_flag(imcrit).eq.FSI_FLUID).or. & 
+                   (FSI_flag(imcrit).eq.FSI_FLUID_NODES_INIT)) then 
            local_maskSEM=imcrit
           else
            print *,"FSI_flag invalid"

@@ -373,7 +373,7 @@ end subroutine nozzle2d
        xvec(SDIM)=z
       endif
 
-      if (FSI_flag(im).eq.1) then  ! no external FSI (prescribed EUL)
+      if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
 
        if (is_in_probtype_list().eq.1) then
 
@@ -408,7 +408,7 @@ end subroutine nozzle2d
           ! nozzle2d is declared in GLOBALDIST.F90
         call nozzle2d(xprime,yprime,dist)  
 
-        ! materialdistsolid: flapping wing, FSI_flag=0
+        ! materialdistsolid: flapping wing
        else if (probtype.eq.701) then
   
          ! dist>0 in the airfoil
@@ -455,7 +455,6 @@ end subroutine nozzle2d
           print *,"axis_dir invalid probtype=531"
           stop
          endif
-         ! FSI_flag=0
         elseif (probtype.eq.bubbleInPackedColumn) then ! in materialdistsolid
          continue
         endif
@@ -466,9 +465,9 @@ end subroutine nozzle2d
         dist=-dist
        endif ! cases in which soliddist is called.
 
-      else if ((FSI_flag(im).eq.2).or. & ! prescribed CAD
-               (FSI_flag(im).eq.8).or. & ! CTML FSI pres-vel
-               (FSI_flag(im).eq.4)) then ! CTML FSI Goldstein et al
+      else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
+               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
+               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
 
 ! dist>0 in the solid
 ! eventually as the program is running FSI_MF multifab will be
@@ -1259,7 +1258,7 @@ end subroutine nozzle2d
        stop
       endif
 
-      if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+      if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
        ! do nothing
       else
        print *,"FSI_flag(im) invalid"
@@ -1713,7 +1712,7 @@ end subroutine nozzle2d
       else if (probtype.eq.5700) then  ! in soliddist
        if ((axis_dir.eq.0).or.(axis_dir.eq.1).or. &
            (axis_dir.eq.2).or.(axis_dir.eq.3)) then
-        print *,"must have FSI_flag=1"
+        print *,"must have FSI_flag=FSI_PRESCRIBED_PROBF90"
         stop
        else if (axis_dir.eq.4) then
         call square_Tchannel_dist(x,y,z,dist)  ! dist>0 in solid
