@@ -428,6 +428,8 @@ FIX ME
           icefacecut=one
          else
           print *,"is_ice(im_primary) invalid"
+          print *,"im_primary ",im_primary
+          print *,"is_ice(im_primary) ",is_ice(im_primary)
           stop
          endif
         else if ((LL(0).ne.zero).and.(LL(1).eq.zero)) then
@@ -448,11 +450,14 @@ FIX ME
           im_source=im_opp
           im_dest=im
          else
-          print *,"im_primary invalid"
+          print *,"LS(im) or LS(im_opp) invalid"
+          print *,"im, im_opp ",im,im_opp
+          print *,"LS(im),LS(im_opp) ",LS(im),LS(im_opp)
           stop
          endif
         else
          print *,"LL invalid"
+         print *,"LL(0),LL(1) ",LL(0),LL(1)
          stop
         endif
    
