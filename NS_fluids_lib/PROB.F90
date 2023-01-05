@@ -205,7 +205,7 @@ stop
         icefacecut, &
         im, &
         im_opp, &
-        im_critical, &
+        im_primary, &
         ireverse, &
         LS, &
         VOF, &
@@ -219,7 +219,7 @@ stop
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(out) :: im
       INTEGER_T, INTENT(out) :: im_opp
-      INTEGER_T, INTENT(out) :: im_critical
+      INTEGER_T, INTENT(out) :: im_primary
       INTEGER_T, INTENT(out) :: ireverse
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
@@ -231,12 +231,11 @@ stop
       INTEGER_T, INTENT(in) :: complement_flag
 
       REAL_T dist_mask_override
-      INTEGER_T im_primary
       INTEGER_T im_primary_vof
       INTEGER_T im_secondary
       INTEGER_T im_tertiary
       INTEGER_T im_ice
-      INTEGER_T im_FSI_rigid
+      INTEGER_T im_FSI_rigid_bulk
       INTEGER_T im_dest,im_source
       INTEGER_T iten
       REAL_T LL(0:1)
@@ -263,15 +262,24 @@ stop
       call get_primary_material_VFRAC(VOF,im_primary_vof)
       call get_secondary_material(LS,im_primary,im_secondary)
 
+      if ((im_primary.ge.1).and. &
+          (im_primary.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"im_primary invalid : ",im_primary
+       stop
+      endif
+
       if ((im_secondary.ge.1).and. &
           (im_secondary.le.num_materials)) then
         ! get_tertiary_material is declared in MOF.F90
         ! is_rigid(im_tertiary)=0
        call get_tertiary_material(LS,im_primary,im_secondary,im_tertiary)
       else
-       print *,"im_secondary invalid"
+       print *,"im_secondary invalid : ",im_secondary
        stop
       endif
+
       if ((im_tertiary.ge.0).and.(im_tertiary.le.num_materials)) then
        ! do nothing
       else
@@ -319,46 +327,42 @@ stop
        stop
       endif
      
-      if ((is_FSI_rigid(im).eq.0).and. &
-          (is_FSI_rigid(im_opp).eq.0)) then
-       im_FSI_rigid=0
-      else if ((is_FSI_rigid(im).eq.1).and. &
-               (is_FSI_rigid(im_opp).eq.0)) then
-       im_FSI_rigid=im
-      else if ((is_FSI_rigid(im).eq.0).and. &
-               (is_FSI_rigid(im_opp).eq.1)) then
-       im_FSI_rigid=im_opp
-      else if ((is_FSI_rigid(im).eq.1).and. &
-               (is_FSI_rigid(im_opp).eq.1)) then
-       im_FSI_rigid=im_primary
+      if ((is_FSI_rigid_bulk(im).eq.0).and. &
+          (is_FSI_rigid_bulk(im_opp).eq.0)) then
+       im_FSI_rigid_bulk=0
+      else if ((is_FSI_rigid_bulk(im).eq.1).and. &
+               (is_FSI_rigid_bulk(im_opp).eq.0)) then
+       im_FSI_rigid_bulk=im
+      else if ((is_FSI_rigid_bulk(im).eq.0).and. &
+               (is_FSI_rigid_bulk(im_opp).eq.1)) then
+       im_FSI_rigid_bulk=im_opp
+      else if ((is_FSI_rigid_bulk(im).eq.1).and. &
+               (is_FSI_rigid_bulk(im_opp).eq.1)) then
+       im_FSI_rigid_bulk=im_primary
       else
-       print *,"is_FSI_rigid invalid"
+       print *,"is_FSI_rigid_bulk invalid"
        stop
       endif
 
-      if (im_FSI_rigid.eq.im_primary) then
-FIX ME
-       im_critical=im_FSI_rigid
+      if (im_FSI_rigid_bulk.eq.im_primary) then
 
        ireverse=-1
        icemask=zero
        icefacecut=zero
 
-      else if ((im_FSI_rigid.ge.0).and. &
-               (im_FSI_rigid.le.num_materials)) then
+      else if ((im_FSI_rigid_bulk.ge.0).and. &
+               (im_FSI_rigid_bulk.le.num_materials)) then
 
-       if (im_FSI_rigid.ne.im_primary) then
+       if (im_FSI_rigid_bulk.ne.im_primary) then
         ! do nothing
        else
-        print *,"im_FSI_rigid cannot be equal to im_primary here"
+        print *,"im_FSI_rigid_bulk cannot be equal to im_primary here"
         stop
        endif
 
         ! either the primary or secondary material is "ice"
        if ((im_ice.ge.1).and. &
            (im_ice.le.num_materials)) then 
-
-        im_critical=im_ice
 
          ! if the associated "melt" material
          ! is not the primary or secondary material,
@@ -367,7 +371,7 @@ FIX ME
          if ((im_tertiary.ge.1).and. &
              (im_tertiary.le.num_materials)) then
           if (is_rigid(im_tertiary).eq.0) then
-           if (is_FSI_rigid(im_tertiary).eq.0) then
+           if (is_FSI_rigid_bulk(im_tertiary).eq.0) then
             if (is_ice(im_tertiary).eq.0) then
              if (im_ice.lt.im_tertiary) then
               im=im_ice
@@ -390,10 +394,10 @@ FIX ME
              print *,"is_ice(im_tertiary) invalid"
              stop
             endif
-           else if (is_FSI_rigid(im_tertiary).eq.1) then
+           else if (is_FSI_rigid_bulk(im_tertiary).eq.1) then
             ! do nothing
            else
-            print *,"is_FSI_rigid(im_tertiary) invalid"
+            print *,"is_FSI_rigid_bulk(im_tertiary) invalid"
             stop
            endif
           else
@@ -404,7 +408,7 @@ FIX ME
           print *,"expecting im_tertiary>=1 and <=num_materials"
           print *,"im_tertiary: ",im_tertiary
           print *,"im_ice: ",im_ice
-          print *,"im_FSI_rigid: ",im_FSI_rigid
+          print *,"im_FSI_rigid_bulk: ",im_FSI_rigid_bulk
           stop
          else
           print *,"im_tertiary invalid: ",im_tertiary
@@ -573,8 +577,6 @@ FIX ME
  
        else if (im_ice.eq.0) then
 
-        im_critical=0
-
         ireverse=-1
         icemask=one
         icefacecut=one
@@ -584,7 +586,7 @@ FIX ME
        endif
 
       else
-       print *,"im_FSI_rigid invalid: ",im_FSI_rigid
+       print *,"im_FSI_rigid_bulk invalid: ",im_FSI_rigid_bulk
        stop
       endif
 

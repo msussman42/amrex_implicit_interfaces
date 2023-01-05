@@ -6261,24 +6261,6 @@ int NavierStokes::is_ice_matC(int im) {
 
 }  // is_ice_matC()
 
-int NavierStokes::FSI_material_exists() {
-
- int local_flag=0;
-
- for (int im=0;im<num_materials;im++) {
-  if ((is_ice_matC(im)==0)&& 
-      (is_FSI_rigid_matC(im)==0)) { 
-   // do nothing
-  } else if ((is_ice_matC(im)==1)||        
-             (is_FSI_rigid_matC(im)==1)) { 
-   local_flag=1;
-  } else
-   amrex::Error("is_ice_matC or is_FSI_rigid_matC invalid");
- } // im=0..num_materials-1
- return local_flag;
-
-}  // FSI_material_exists()
-
 int NavierStokes::FSI_material_exists_presvel() {
 
  int local_flag=0;

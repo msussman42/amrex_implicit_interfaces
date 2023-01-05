@@ -1345,7 +1345,6 @@ void apply_pressure_grad(
     static int is_FSI_rigid_matC(int im);
     static int CTML_FSI_flagC();
     static int CTML_FSI_matC(int im);
-    static int FSI_material_exists();
     static int FSI_material_exists_presvel();
     static int FSI_flag_valid(int im); // 0<=im<num_materials
 

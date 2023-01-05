@@ -14213,6 +14213,7 @@ stop
            ! is_prescribed_face==1 if:
            !   0.0<=not_prescribed_prescribed<=VOFTOL_AREAFRAC  or
            !   max(LSleft(im_prescribed),LSright(im_prescribed))>=0.0
+           ! fixed_face is declared in: PROB.F90
            call fixed_face( &
             fluid_volface, &
             not_prescribed_volface, &
@@ -14296,6 +14297,8 @@ stop
 
               ! test_current_icemask=zero for both ice materials and
               ! "is_FSI_rigid" materials.
+              ! (if FSI_RIGIDSHELL_NOTPRESCRIBED, then icemask=0
+              !  only at the interfaces)
              test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
 
              if ((test_current_icemask.eq.zero).or. &
@@ -14779,6 +14782,8 @@ stop
 
            ! local_face(FACECOMP_ICEMASK+1)=zero for both 
            ! ice materials and "is_FSI_rigid" materials.
+           ! if FSI_RIGIDSHELL_NOTPRESCRIBED material, then
+           !  ICEMASK=0 only at interfaces
           if (local_face(FACECOMP_ICEMASK+1).eq.zero) then
            use_face_pres=0 ! do not use div(up)
           else if (local_face(FACECOMP_ICEMASK+1).eq.one) then
@@ -14860,6 +14865,7 @@ stop
 
           fluid_volface=one
           not_prescribed_volface=one
+           ! fixed_face is declared in: PROB.F90
           call fixed_face( &
            fluid_volface, &
            not_prescribed_volface, &
