@@ -6795,8 +6795,8 @@ NavierStokes::ColorSumALL(
 	   AA2D[irow][icol]=0.0;  // basis functions form an orthogonal set
 	 }
          imatrix++;
-        }
-       } 
+        } //icol=0..2*sdim-1
+       } //irow=0..2*sdim-1 
        if (imatrix!=matrix_ncomp*(veltype+1))
         amrex::Error("imatrix invalid");
 
@@ -6919,44 +6919,44 @@ NavierStokes::ColorSumALL(
          Real original_mom=blobdata[i].blob_integral_momentum[irow];
          int ibase=veltype*(2*AMREX_SPACEDIM)+irow;
 	 // momentum = velocity * mass
-	Real corrected_velocity=blobdata[i].blob_velocity[ibase];
-	Real proposed_velocity=corrected_velocity;
-	Real mass=blobdata[i].blob_integral_momentum[irow+2*AMREX_SPACEDIM];
+	 Real corrected_velocity=blobdata[i].blob_velocity[ibase];
+	 Real proposed_velocity=corrected_velocity;
+	 Real mass=blobdata[i].blob_integral_momentum[irow+2*AMREX_SPACEDIM];
 
          Real proposed_mom=proposed_velocity*mass;
 
-	if ((original_mom*proposed_mom<=0.0)|| 
-	    (std::abs(original_mom)<std::abs(proposed_mom))) {
-	 if (original_mom*proposed_mom<=0.0) {
-	  corrected_velocity=0.0;
-	 } else if (std::abs(original_mom)<std::abs(proposed_mom)) {
-	  corrected_velocity*=std::abs(original_mom/proposed_mom);
-	 } else
-	  amrex::Error("original_mom or proposed_mom became corrupt");
+	 if ((original_mom*proposed_mom<=0.0)|| 
+	     (std::abs(original_mom)<std::abs(proposed_mom))) {
+	  if (original_mom*proposed_mom<=0.0) {
+	   corrected_velocity=0.0;
+	  } else if (std::abs(original_mom)<std::abs(proposed_mom)) {
+	   corrected_velocity*=std::abs(original_mom/proposed_mom);
+	  } else
+	   amrex::Error("original_mom or proposed_mom became corrupt");
 
-	 blobdata[i].blob_velocity[ibase]=corrected_velocity;
+	  blobdata[i].blob_velocity[ibase]=corrected_velocity;
 	
-         if (verbose>=2) {
-          if (ParallelDescriptor::IOProcessor()) {
-	   std::cout << " ------------------------------------\n";
-           std::cout << " avoid momentum overshoot i= " << i << " im= " <<
-             blobdata[i].im << '\n';
-           std::cout << " irow= " << irow << " veltype= " << veltype << 
-            " orig_mom " << original_mom << " proposed_mom " << 
-	    proposed_mom << 
-	    " corrected_mom " << corrected_velocity*mass << '\n';
-	   std::cout << " irow= " << irow << " veltype= " << veltype <<
-	    " proposed_velocity= " << proposed_velocity << '\n';
-	   std::cout << " irow= " << irow << " veltype= " << veltype <<
-	    " blob_velocity= " << blobdata[i].blob_velocity[ibase] << '\n';
-	   std::cout << " ------------------------------------\n";
-	  } // ParallelDescriptor::IOProcessor()
- 	 }  // verbose>=2
-        } else if ((original_mom*proposed_mom>0.0)&& 
-		   (std::abs(original_mom)>=std::abs(proposed_mom))) {
-	 // do nothing
-	} else
-	 amrex::Error("original_mom or proposed_mom invalid");
+          if (verbose>=2) {
+           if (ParallelDescriptor::IOProcessor()) {
+	    std::cout << " ------------------------------------\n";
+            std::cout << " avoid momentum overshoot i= " << i << " im= " <<
+              blobdata[i].im << '\n';
+            std::cout << " irow= " << irow << " veltype= " << veltype << 
+             " orig_mom " << original_mom << " proposed_mom " << 
+	     proposed_mom << 
+	     " corrected_mom " << corrected_velocity*mass << '\n';
+	    std::cout << " irow= " << irow << " veltype= " << veltype <<
+	     " proposed_velocity= " << proposed_velocity << '\n';
+	    std::cout << " irow= " << irow << " veltype= " << veltype <<
+	     " blob_velocity= " << blobdata[i].blob_velocity[ibase] << '\n';
+	    std::cout << " ------------------------------------\n";
+	   } // ParallelDescriptor::IOProcessor()
+ 	  }  // verbose>=2
+         } else if ((original_mom*proposed_mom>0.0)&& 
+	            (std::abs(original_mom)>=std::abs(proposed_mom))) {
+ 	  // do nothing
+	 } else
+	  amrex::Error("original_mom or proposed_mom invalid");
 
         } // irow=0...2*sdim-1
         
@@ -6965,40 +6965,40 @@ NavierStokes::ColorSumALL(
          Real proposed_KE=0.0;
          for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
           int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
-	 Real mass=blobdata[i].blob_integral_momentum[dir+2*AMREX_SPACEDIM];
+	  Real mass=blobdata[i].blob_integral_momentum[dir+2*AMREX_SPACEDIM];
 	  // (1/2)*mass*(u^2)
           proposed_KE+=
-		 blobdata[i].blob_velocity[ibase]*
-  		 blobdata[i].blob_velocity[ibase]*mass;
+	     blobdata[i].blob_velocity[ibase]*
+  	     blobdata[i].blob_velocity[ibase]*mass;
          } // dir=0..sdim-1
          proposed_KE=0.5*proposed_KE;
          if (proposed_KE>original_KE) {
           for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
            int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
-  	  blobdata[i].blob_velocity[ibase]*=sqrt(original_KE/proposed_KE);
-	 }
+  	   blobdata[i].blob_velocity[ibase]*=sqrt(original_KE/proposed_KE);
+	  } //dir=0..sdim-1
           if (verbose>0) {
            if (ParallelDescriptor::IOProcessor()) {
-	   std::cout << " ------------------------------------\n";
+	    std::cout << " ------------------------------------\n";
             std::cout << " avoid energy overshoot i= " << i << " im= " <<
               blobdata[i].im << '\n';
             std::cout << " veltype= " << veltype << 
              " orig_KE " << original_KE << " proposed_KE " << proposed_KE << 
-	    " orig/proposed " << original_KE/proposed_KE;
+	     " orig/proposed " << original_KE/proposed_KE;
             for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
              int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
-	    std::cout << " dir= " << dir << " veltype= " << veltype <<
-  	     " blob_velocity= " << blobdata[i].blob_velocity[ibase] << '\n';
-	   }
-	   std::cout << " ------------------------------------\n";
-	  }
-	 }
+	     std::cout << " dir= " << dir << " veltype= " << veltype <<
+  	      " blob_velocity= " << blobdata[i].blob_velocity[ibase] << '\n';
+	    } //dir=0..sdim-1
+  	    std::cout << " ------------------------------------\n";
+	   } //IOProc
+	  } //verbose>0 
          } else if ((proposed_KE>=0.0)&&(proposed_KE<=original_KE)) {
-	 // do nothing
-	} else
-	 amrex::Error("proposed_KE invalid");
+	  // do nothing
+	 } else
+	  amrex::Error("proposed_KE invalid");
         } else
-	amrex::Error("original_KE invalid");
+	 amrex::Error("original_KE invalid");
 
        } else if (veltype==1) {
         // do nothing
@@ -9574,8 +9574,8 @@ void NavierStokes::multiphase_project(int project_option) {
  
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "BEGIN: color_variable, multiphase_project " <<
-          "project_option=" << project_option << '\n';
+    std::cout << "BEGIN: color_variable, multiphase_project\n";
+    print_project_option(project_option);
    }
   }
 

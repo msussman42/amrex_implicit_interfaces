@@ -6308,13 +6308,13 @@ int NavierStokes::is_singular_coeff(int im) {
  int local_is_singular_coeff=0;
  if ((im>=0)&&(im<num_materials)) {
   if (FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED) {  
-   local_is_singular_coeff=1;
+   local_is_singular_coeff=1; //extend pressure into this region
   } else if (FSI_flag[im]==FSI_RIGIDSHELL_NOTPRESCRIBED) { 
-   local_is_singular_coeff=1;
+   local_is_singular_coeff=0; //do not extend pressure here.
   } else if (FSI_flag[im]==FSI_PRESCRIBED_PROBF90) { 
-   local_is_singular_coeff=1;
+   local_is_singular_coeff=1; //extend pressure
   } else if (FSI_flag[im]==FSI_PRESCRIBED_NODES) { 
-   local_is_singular_coeff=1;
+   local_is_singular_coeff=1; //extend pressure
   } else if ((FSI_flag[im]==FSI_FLUID)||
              (FSI_flag[im]==FSI_FLUID_NODES_INIT)) { 
    local_is_singular_coeff=0;
