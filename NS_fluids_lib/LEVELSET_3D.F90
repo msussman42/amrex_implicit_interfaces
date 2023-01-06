@@ -13350,7 +13350,7 @@ stop
       REAL_T temperature_clamped
       INTEGER_T is_clamped_face
       INTEGER_T local_compressible
-      INTEGER_T :: local_elastic
+      INTEGER_T :: damping_viscoelastic_update
 
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
@@ -13784,7 +13784,7 @@ stop
          is_clamped_face=-1
 
          local_compressible=0
-         local_elastic=0
+         damping_viscoelastic_update=0
          im_left=0
          im_right=0
 
@@ -13900,14 +13900,14 @@ stop
           call get_primary_material(LSleft,im_left)
           call get_primary_material(LSright,im_right)
 
-          local_elastic=0
+          damping_viscoelastic_update=0
 
           if ((fort_elastic_viscosity(im_left).gt.zero).or. &
               (fort_elastic_viscosity(im_right).gt.zero)) then
-!          local_elastic=1
+!          damping_viscoelastic_update=1
           else if ((fort_elastic_viscosity(im_left).eq.zero).and. &
                    (fort_elastic_viscosity(im_right).eq.zero)) then
-           local_elastic=0
+           damping_viscoelastic_update=0
           else
            print *,"fort_elastic_viscosity invalid"
            stop
@@ -14289,8 +14289,12 @@ stop
            else if ((is_prescribed_face.eq.0).or. &
                     (face_velocity_override.eq.0)) then
 
-            test_current_icefacecut= &
+            if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
+             test_current_icefacecut=one
+            else
+             test_current_icefacecut= &
                  xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+            endif
           
             if ((test_current_icefacecut.ge.zero).and. &
                 (test_current_icefacecut.le.one)) then
@@ -14299,7 +14303,11 @@ stop
               ! "is_FSI_rigid" materials.
               ! (if FSI_RIGIDSHELL_NOTPRESCRIBED, then icemask=0
               !  only at the interfaces)
-             test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+             if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
+              test_current_icemask=one
+             else
+              test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+             endif
 
              if ((test_current_icemask.eq.zero).or. &
                  (test_current_icemask.eq.one)) then
@@ -14361,13 +14369,13 @@ stop
                   !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
 
-                 if (local_elastic.eq.0) then
+                 if (damping_viscoelastic_update.eq.0) then
                   primary_velmaterial= &
                     velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
-                 else if (local_elastic.eq.1) then
+                 else if (damping_viscoelastic_update.eq.1) then
                   primary_velmaterial=secondary_velmaterial
                  else
-                  print *,"local_elastic invalid"
+                  print *,"damping_viscoelastic_update invalid"
                   stop
                  endif
                 
