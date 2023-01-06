@@ -1,28 +1,3 @@
-# BEFORE:
-# Figure 2:
-# "Direct Numerical Simulations of Flows with Phase Change"
-# Tryggvason and Lu, Procedia IUTAM volume 15, 2015, 2-13
-#
-# NOW: Earth Gravity, Water boiling, from Dhir 2001.
-#
-# Options for microscale model:
-# 1. the null model:
-#   ns.microlayer_size=0.0 ... 0.0
-#   ns.yblob3>0.0  (initial thermal layer)
-#   ns.solidheat_flag=1 (dirichlet temperature BC at fluid/solid interface)
-# 2. triple point model:
-#   ns.macrolayer_size>ns.microlayer_size>0.0, ns.microlayer_substrate and
-#   ns.microlayer_angle set accordingly.
-# 3. the smoothed temperature model:
-#   ns.microlayer_size=0.0 ... 0.0
-#   ns.yblob3=1.0e-10 (initial thermal layer size very close to zero)
-#   ns.solidheat_flag=0 (diffuse in solid)
-#   ns.initial_temperature=saturation temperature in the solid
-#   ns.initial_temperature_diffuse_duration>0.0 (artificial time to
-#    solve just the heat equation at t=0.0)
-#   Mehdi's scaling:
-#   LENGTH=2.503E-3 meters
-#   TIME=1.598E-2 seconds
 max_step  =  99999999    # maximum timestep
 # stop_time=3.0 #dimensionless
 stop_time = 4.794e-2 #dimensional (seconds)
