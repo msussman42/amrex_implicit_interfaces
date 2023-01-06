@@ -26357,21 +26357,23 @@ INTEGER_T, INTENT(in) :: project_option
 end function project_option_pressureF
 
 
-INTEGER_T function project_option_needs_scalingF(project_option)
+function project_option_needs_scalingF(project_option) &
+bind(c,name='project_option_needs_scalingF')
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T :: project_option_needs_scalingF
 INTEGER_T, INTENT(in) :: project_option
 
- if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extrapolation
+ if ((project_option.eq.SOLVETYPE_PRES).or. & 
+     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
+     (project_option.eq.SOLVETYPE_PRESEXTRAP)) then 
   project_option_needs_scalingF=1
- else if ((project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-          (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
-          (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature
-          (project_option.eq.SOLVETYPE_VISC).or. &  ! viscosity
+ else if ((project_option.eq.SOLVETYPE_INITPROJ).or. & 
+          (project_option.eq.SOLVETYPE_HEAT).or. & 
+          (project_option.eq.SOLVETYPE_VISC).or. &  
           ((project_option.ge.SOLVETYPE_SPEC).and. &
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then ! species
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then 
   project_option_needs_scalingF=0
  else
   print *,"project_option invalid"

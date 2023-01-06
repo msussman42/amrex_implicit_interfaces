@@ -9702,7 +9702,7 @@ void NavierStokes::scale_variables(int scale_flag) {
  } else
   amrex::Error("nparts invalid");
 
-}  // subroutine scale_variables
+}  // end subroutine scale_variables
 
 
 // 1. viscosity coefficient - 1..num_materials

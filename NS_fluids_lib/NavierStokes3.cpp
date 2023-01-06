@@ -9354,6 +9354,8 @@ void NavierStokes::multiphase_project(int project_option) {
  Real max_nlevels=0;
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
+   //NavierStokes::NSnumLevels() is declared in: NavierStokes.cpp
+   //ns_level.NSnumLevels()=min_{grids \in level} numLevels(grid)
   int nlevels=ns_level.NSnumLevels();
   if (nlevels>max_nlevels)
    max_nlevels=nlevels;
@@ -11343,8 +11345,6 @@ void NavierStokes::multiphase_project(int project_option) {
    unscale_variablesALL();
 
   } else if (project_option==SOLVETYPE_INITPROJ) {
-   // do nothing
-  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
    // do nothing
   } else
    amrex::Error("project_option invalid");
