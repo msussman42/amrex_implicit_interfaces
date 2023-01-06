@@ -29,7 +29,7 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 400
+cg.maxiter = 200
 cg.restart_period=50
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=50
