@@ -30,6 +30,9 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 400
+cg.restart_period=50
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=50
 Lp.bottom_bottom_tol_factor=0.01
 mg.bot_atol = 1.0e-10
 mg.visc_bot_atol = 1.0e-10
@@ -116,6 +119,7 @@ ns.visc_coef      = 1.0    # 0.038=mu/(rho L U)
 # U^2=Lg/1.321=5.19 * 980/1.321   U=62.1
 ns.gravity        = -980.0   # 1.321=L g/U^2
 ns.incremental_gravity_flag=0
+#ns.FSI_flag=0 5
 # U^2=50/(1 L 0.0025)
 ns.tension        = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 #ns.fixed_dt	  = 0.0025     # hardwire dt
@@ -141,6 +145,7 @@ ns.heatviscconst=58000.0 2400.0 0.0 0.0
 ns.viscconst=12.25 2.0E-4 0.0 0.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.denconst=1.0 0.001221 1.0 1.0
+#ns.denconst_interface_added=1.0e+4
 ns.tempconst=293.0 292.0 293.0 293.0
 ns.include_viscous_heating=0
 # shock_timestep=2 2 option => never consider sound speed.

@@ -14301,8 +14301,6 @@ stop
 
               ! test_current_icemask=zero for both ice materials and
               ! "is_FSI_rigid" materials.
-              ! (if FSI_RIGIDSHELL_NOTPRESCRIBED, then icemask=0
-              !  only at the interfaces)
              if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
               test_current_icemask=one
              else
@@ -14790,8 +14788,6 @@ stop
 
            ! local_face(FACECOMP_ICEMASK+1)=zero for both 
            ! ice materials and "is_FSI_rigid" materials.
-           ! if FSI_RIGIDSHELL_NOTPRESCRIBED material, then
-           !  ICEMASK=0 only at interfaces
           if (local_face(FACECOMP_ICEMASK+1).eq.zero) then
            use_face_pres=0 ! do not use div(up)
           else if (local_face(FACECOMP_ICEMASK+1).eq.one) then

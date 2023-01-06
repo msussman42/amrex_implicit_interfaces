@@ -910,7 +910,6 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_ICE_NODES_INIT=6
 // FSI_FLUID_NODES_INIT=7
 // FSI_SHOELE_PRESVEL=8
-// FSI_RIGIDSHELL_NOTPRESCRIBED=9
 Vector<int> NavierStokes::FSI_flag; 
 int NavierStokes::FSI_interval=1;
 int NavierStokes::num_local_aux_grids=0;
@@ -1703,7 +1702,6 @@ void fortran_parameters() {
        (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT)&& 
        (NavierStokes::FSI_flag[im]!=FSI_ICE_PROBF90)&& 
        (NavierStokes::FSI_flag[im]!=FSI_ICE_NODES_INIT)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_RIGIDSHELL_NOTPRESCRIBED)&&
        (NavierStokes::FSI_flag[im]!=FSI_RIGID_NOTPRESCRIBED)) 
     amrex::Error("NavierStokes::FSI_flag invalid");
 
@@ -1719,8 +1717,7 @@ void fortran_parameters() {
              (NavierStokes::material_type[im]<999)) {
 
    if ((NavierStokes::FSI_flag[im]!=FSI_FLUID)&&   
-       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT)&&
-       (NavierStokes::FSI_flag[im]!=FSI_RIGIDSHELL_NOTPRESCRIBED)) 
+       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT))
     amrex::Error("NavierStokes::FSI_flag invalid");
 
   } else {
@@ -6309,8 +6306,6 @@ int NavierStokes::is_singular_coeff(int im) {
  if ((im>=0)&&(im<num_materials)) {
   if (FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED) {  
    local_is_singular_coeff=1; //extend pressure into this region
-  } else if (FSI_flag[im]==FSI_RIGIDSHELL_NOTPRESCRIBED) { 
-   local_is_singular_coeff=0; //do not extend pressure here.
   } else if (FSI_flag[im]==FSI_PRESCRIBED_PROBF90) { 
    local_is_singular_coeff=1; //extend pressure
   } else if (FSI_flag[im]==FSI_PRESCRIBED_NODES) { 

@@ -13986,7 +13986,6 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
-               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then
        fort_CTML_FSI_mat_base=0
       else
@@ -14066,7 +14065,6 @@ end subroutine print_visual_descriptor
           (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
           (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
-          (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
           (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
           (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
           (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
@@ -14134,7 +14132,6 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
                (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
                (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
-               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
                (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
                (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
@@ -14192,8 +14189,7 @@ end subroutine print_visual_descriptor
        stop
       endif
       fort_is_FSI_rigid_base=0
-      if ((FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
-          (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED)) then
+      if (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED) then
        fort_is_FSI_rigid_base=1
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
                (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
@@ -14228,58 +14224,6 @@ end subroutine print_visual_descriptor
 
       return
       end function is_FSI_rigid
-
-      function fort_is_FSI_rigid_bulk_base(FSI_flag_local,im) 
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T fort_is_FSI_rigid_bulk_base
-      INTEGER_T, INTENT(in) :: FSI_flag_local
-      INTEGER_T, INTENT(in) :: im ! 1<=im<=num_materials
-
-      if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid16 fort_is_FSI_rigid_bulk_base: im:",im
-       stop
-      endif
-      fort_is_FSI_rigid_bulk_base=0
-      if (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED) then
-       fort_is_FSI_rigid_bulk_base=1
-      else if ((FSI_flag_local.eq.FSI_FLUID).or. &
-               (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
-               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
-               (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
-               (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
-               (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
-               (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
-               (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
-               (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
-       fort_is_FSI_rigid_bulk_base=0
-      else
-       print *,"FSI_flag_local invalid in fort_is_FSI_rigid_bulk_base"
-       stop
-      endif
-
-      return
-      end function fort_is_FSI_rigid_bulk_base
-
-      function is_FSI_rigid_bulk(im)
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T :: is_FSI_rigid_bulk
-      INTEGER_T, INTENT(in) :: im
-
-      if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid16 is_FSI_rigid_bulk: im=",im
-       stop
-      endif
-      is_FSI_rigid_bulk=fort_is_FSI_rigid_bulk_base(FSI_flag(im),im)
-
-      return
-      end function is_FSI_rigid_bulk
-
 
       function swap1_0(in_flag,control_flag)
       IMPLICIT NONE
@@ -14371,7 +14315,6 @@ end subroutine print_visual_descriptor
        fort_is_lag_part_base=1
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. & 
-               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        fort_is_lag_part_base=0
       else
@@ -14428,7 +14371,6 @@ end subroutine print_visual_descriptor
       else if ((fsi_flag_local.eq.FSI_FLUID).or. & 
                (fsi_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
                (fsi_flag_local.eq.FSI_ICE_PROBF90).or. & 
-               (fsi_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
                (fsi_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        ! do nothing
       else
@@ -14954,7 +14896,6 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. & 
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. & 
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
-               (FSI_flag_local.eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        fort_is_rigid_base=0  ! tessellating material
       else
