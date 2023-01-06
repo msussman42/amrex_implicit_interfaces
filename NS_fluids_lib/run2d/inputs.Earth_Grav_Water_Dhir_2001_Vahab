@@ -1,0 +1,161 @@
+max_step  =  99999999    # maximum timestep
+stop_time = 6.0
+
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  2.0 3.0
+ns.EILE_flag=-1
+ns.continuous_mof=2
+ns.MOFITERMAX=15
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid
+ns.num_species_var=0
+ns.post_init_pressure_solve=1
+ns.output_drop_distribution=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 200
+cg.restart_period = 50
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=50
+Lp.bottom_bottom_tol_factor=0.01
+mg.bot_atol = 1.0e-10
+mg.visc_bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+Lp.v = 0
+
+amr.plotfile_on_restart=1
+ns.visual_nddata_format=0
+ns.visual_compare=0
+amr.file_name_digits=7
+amr.n_cell    = 48 72
+max_grid_size = 72
+amr.max_level =  0
+ns.ns_tiling=false
+fabarray.mfiter_tile_size=16 16
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8 8 8 8    # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.enable_spectral=0
+amr.regrid_int      = 1       # how often to regrid
+amr.check_int       = 10000    # number of timesteps between checkpoints
+amr.check_file      = chk    # root name of checkpoint file
+amr.plot_int        = 25    # 100
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+#amr.restart         = ch64k1000
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+ns.visc_coef      = 1.0  
+mac.visc_abs_tol   = 1.0e-10
+ns.gravity=-1.0
+ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
+ns.override_density=1 0 0
+ns.stiffCP=1.9218E+05 9.2466E+04 1.9218E+05
+ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0  
+ns.nucleation_period=0.0
+ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+#ns.fixed_dt	  = 0.1     # hardwire dt
+ns.sum_interval   = 25        # timesteps between computing mass 
+
+# 6 instead of 5 signals nucleate boiling
+ns.axis_dir=6
+ns.xblob3=0.0  # unused
+# see subroutine outside_temperature in PROB.F90
+ns.yblob3=1.0e-10  # initial thermal layer (meters)
+ns.zblob3=0.0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0  # not used
+ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=1 # adv_dir=1 x direction  adv_dir=2 y direction
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.material_type=0 0 999
+ns.heatviscconst=9.7526E+01 3.5568E+00 9.7526E+01
+ns.heatviscconst_interface=0.0 0.0 0.0
+ns.viscconst=8.7804E-04 3.7828E-05 8.7804E-04
+ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
+ns.tension=9.9938E-01 9.4440E-01 1.5868E+00
+ns.FSI_flag=0 0 1
+ns.CTML_FSI_flag=0
+ns.CTML_FSI_level=0
+#ns.CTML_FSI_numsolids=1
+ns.CTML_FSI_ngrow=2
+ns.CTML_FSI_box_number=1
+ns.CTML_FSI_box_location=0.0 0.0 1000.0 1000.0 
+ns.CTML_FSI_AMR=0  
+
+ns.microlayer_substrate=3 0 0
+
+ns.microlayer_angle=0.872664626 0.0 0.0
+ns.microlayer_size=4.4661E-09 0.0 0.0        
+ns.macrolayer_size=5.0000E-02 0.0 0.0           
+
+ns.tempconst=373.0 373.0 380.0
+ns.tempcutoffmax=500.0 500.0 500.0 
+ns.tempcutoff=373.0 373.0 373.0
+ns.xblob=0.0
+ns.yblob=0.1385681355
+ns.zblob=0.0
+ns.radblob=0.06  # dimensional meters
+
+ns.n_sites=1
+ns.pos_sites=0.0 0.1385681355 0.0 0.06
+
+# x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
+ns.xblob2=0.0 
+ns.yblob2=0.1 # 4 * dxcoarsest
+ns.zblob2=0.0
+ns.radblob2=0.0 # zero degrees incline (radians)
+ns.radblob3=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=55
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+
+ns.solidheat_flag=1
+
+#ns.lo_bc          = 3 3  # this option if heat source
+ns.lo_bc          = 3 5
+ns.hi_bc          = 3 2
+#ns.temperature_lo_bc          = 3 2
+#ns.temperature_hi_bc          = 3 2
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
