@@ -43,8 +43,8 @@ cg.verbose = 0
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 
-ns.multilevel_maxcycle=200
-ns.multilevel_restart_period=25
+ns.multilevel_maxcycle=50
+ns.multilevel_restart_period=10
 cg.restart_period=25
 cg.maxiter = 200
 mg.bot_atol = 1.0e-14
