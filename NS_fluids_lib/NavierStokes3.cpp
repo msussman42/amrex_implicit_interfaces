@@ -9889,12 +9889,12 @@ void NavierStokes::multiphase_project(int project_option) {
 
  int change_flag=0;
 
-    // at very beginning:
-    // POLDHOLD_MF=S^adv-S^init
-    // OUTER_ITER_PRESSURE_MF=S^init
-    // snew=S^init
-    // STATE_FOR_RESID=S^init
-    //
+ // at very beginning:
+ // POLDHOLD_MF=S^adv-S^init
+ // OUTER_ITER_PRESSURE_MF=S^init
+ // snew=S^init
+ // STATE_FOR_RESID=S^init
+ //
  project_right_hand_side(POLDHOLD_MF,project_option,change_flag);
  project_right_hand_side(OUTER_ITER_PRESSURE_MF,project_option,change_flag);
  project_right_hand_side(STATE_FOR_RESID_MF,project_option,change_flag);
@@ -11261,6 +11261,9 @@ void NavierStokes::multiphase_project(int project_option) {
  bprof.start();
 #endif
 
+  //SOLVETYPE_INITPROJ, 
+  //SOLVETYPE_PRES, 
+  //SOLVETYPE_PRESGRAVITY
  if (project_option_projection(project_option)==1) {
 
   getState_localMF_listALL(

@@ -26384,15 +26384,17 @@ INTEGER_T, INTENT(in) :: project_option
 end function project_option_needs_scalingF
 
 
-INTEGER_T function project_option_projectionF(project_option)
+function project_option_projectionF(project_option) &
+bind(c,name='project_option_projectionF')
 use probcommon_module
 IMPLICIT NONE
 
+INTEGER_T :: project_option_projectionF
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
-     (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial_project
+     (project_option.eq.SOLVETYPE_INITPROJ)) then 
   project_option_projectionF=1
  else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. & 
           (project_option.eq.SOLVETYPE_HEAT).or. &  ! temperature

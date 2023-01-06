@@ -5736,20 +5736,8 @@ int NavierStokes::project_option_needs_scaling(int project_option) {
 
 int NavierStokes::project_option_projection(int project_option) {
 
- if ((project_option==SOLVETYPE_PRES)|| 
-     (project_option==SOLVETYPE_PRESGRAVITY)|| 
-     (project_option==SOLVETYPE_INITPROJ)) {  
-  return 1;
- } else if ((project_option==SOLVETYPE_PRESEXTRAP)|| 
-	    (project_option==SOLVETYPE_HEAT)|| 
-	    (project_option==SOLVETYPE_VISC)|| 
-            ((project_option>=SOLVETYPE_SPEC)&&
-             (project_option<SOLVETYPE_SPEC+num_species_var))) {
-  return 0;
- } else {
-  amrex::Error("project_option invalid");
-  return 0;
- }
+ int local_flag=project_option_projectionF(&project_option);
+ return local_flag;
 
 }  // static function project_option_projection(project_option)
 
