@@ -4923,7 +4923,7 @@ stop
 
           ! get_icemask defined in PROB.F90
           ! get_icemask is "triggered" for both ice materials and
-          !  "is_FSI_rigid_bulk" materials.
+          !  "is_FSI_rigid" materials.
           ! this routine: fort_init_icemask
          call get_icemask( &
           xmac, &
@@ -4942,7 +4942,7 @@ stop
 
           ! get_icemask defined in PROB.F90
           ! get_icemask is "triggered" for both ice materials and
-          !  "is_FSI_rigid_bulk" materials.
+          !  "is_FSI_rigid" materials.
           ! this routine: fort_init_icemask
          call get_icemask( &
           xmac, &
@@ -4962,33 +4962,7 @@ stop
          icemask=min(icemask_left,icemask_right)
 
          if (icemask.eq.one) then
-          if ((FSI_flag(im_primary_left).eq. &
-               FSI_RIGIDSHELL_NOTPRESCRIBED).and.&
-              (FSI_flag(im_primary_right).eq. &
-               FSI_RIGIDSHELL_NOTPRESCRIBED)) then
-           ! do nothing
-          else if ((FSI_flag(im_primary_left).eq. &
-                    FSI_RIGIDSHELL_NOTPRESCRIBED).and.&
-                   (FSI_flag(im_primary_right).ne. &
-                    FSI_RIGIDSHELL_NOTPRESCRIBED)) then
-           icemask=zero
-           icefacecut_left=zero
-          else if ((FSI_flag(im_primary_left).ne. &
-                    FSI_RIGIDSHELL_NOTPRESCRIBED).and.&
-                   (FSI_flag(im_primary_right).eq. &
-                    FSI_RIGIDSHELL_NOTPRESCRIBED)) then
-           icemask=zero
-           icefacecut_right=zero
-          else if ((FSI_flag(im_primary_left).ne. &
-                    FSI_RIGIDSHELL_NOTPRESCRIBED).and.&
-                   (FSI_flag(im_primary_right).ne. &
-                    FSI_RIGIDSHELL_NOTPRESCRIBED)) then
-           ! do nothing
-          else
-           print *,"FSI_flag invalid"
-           stop
-          endif
-
+          ! do nothing
          else if (icemask.eq.zero) then
           ! do nothing
          else
@@ -11983,7 +11957,7 @@ stop
          endif
 
          if ((is_rigid(im_primary).eq.0).and. &
-             (is_FSI_rigid_bulk(im_primary).eq.0)) then
+             (is_FSI_rigid(im_primary).eq.0)) then
 
            ! first tag donor cells (tag=one)
           if (VDOT.ne.zero) then ! nonzero source
@@ -12096,11 +12070,11 @@ stop
 
          !in the prescribed solid.
          else if ((is_rigid(im_primary).eq.1).or. &
-                  (is_FSI_rigid_bulk(im_primary).eq.1)) then 
+                  (is_FSI_rigid(im_primary).eq.1)) then 
           ! do nothing (tag initialized to 0, neither donor nor receiver)
          else
           print *,"is_rigid(im_primary) invalid or"
-          print *,"is_FSI_rigid_bulk(im_primary) invalid"
+          print *,"is_FSI_rigid(im_primary) invalid"
           stop
          endif 
 
@@ -20206,11 +20180,10 @@ stop
            local_maskSEM=0
           else if (is_ice(imcrit).eq.1) then
            local_maskSEM=0
-          else if (is_FSI_rigid_bulk(imcrit).eq.1) then
+          else if (is_FSI_rigid(imcrit).eq.1) then
            local_maskSEM=0
           else if ((FSI_flag(imcrit).eq.FSI_FLUID).or. & 
-                   (FSI_flag(imcrit).eq.FSI_FLUID_NODES_INIT).or. &
-                   (FSI_flag(imcrit).eq.FSI_RIGIDSHELL_NOTPRESCRIBED)) then 
+                   (FSI_flag(imcrit).eq.FSI_FLUID_NODES_INIT)) then
            local_maskSEM=imcrit
           else
            print *,"FSI_flag invalid"

@@ -407,7 +407,6 @@ public:
      // FSI_ICE_NODES=6
      // FSI_FLUID_NODES_INIT=7
      // FSI_SHOELE_PRESVEL=8
-     // FSI_RIGIDSHELL_NOTPRESCRIBED=9
      
     static Vector<int>  FSI_flag; 
 

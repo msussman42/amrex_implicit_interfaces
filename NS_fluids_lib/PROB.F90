@@ -235,7 +235,7 @@ stop
       INTEGER_T im_secondary
       INTEGER_T im_tertiary
       INTEGER_T im_ice
-      INTEGER_T im_FSI_rigid_bulk
+      INTEGER_T im_FSI_rigid
       INTEGER_T im_dest,im_source
       INTEGER_T iten
       REAL_T LL(0:1)
@@ -327,36 +327,36 @@ stop
        stop
       endif
      
-      if ((is_FSI_rigid_bulk(im).eq.0).and. &
-          (is_FSI_rigid_bulk(im_opp).eq.0)) then
-       im_FSI_rigid_bulk=0
-      else if ((is_FSI_rigid_bulk(im).eq.1).and. &
-               (is_FSI_rigid_bulk(im_opp).eq.0)) then
-       im_FSI_rigid_bulk=im
-      else if ((is_FSI_rigid_bulk(im).eq.0).and. &
-               (is_FSI_rigid_bulk(im_opp).eq.1)) then
-       im_FSI_rigid_bulk=im_opp
-      else if ((is_FSI_rigid_bulk(im).eq.1).and. &
-               (is_FSI_rigid_bulk(im_opp).eq.1)) then
-       im_FSI_rigid_bulk=im_primary
+      if ((is_FSI_rigid(im).eq.0).and. &
+          (is_FSI_rigid(im_opp).eq.0)) then
+       im_FSI_rigid=0
+      else if ((is_FSI_rigid(im).eq.1).and. &
+               (is_FSI_rigid(im_opp).eq.0)) then
+       im_FSI_rigid=im
+      else if ((is_FSI_rigid(im).eq.0).and. &
+               (is_FSI_rigid(im_opp).eq.1)) then
+       im_FSI_rigid=im_opp
+      else if ((is_FSI_rigid(im).eq.1).and. &
+               (is_FSI_rigid(im_opp).eq.1)) then
+       im_FSI_rigid=im_primary
       else
-       print *,"is_FSI_rigid_bulk invalid"
+       print *,"is_FSI_rigid invalid"
        stop
       endif
 
-      if (im_FSI_rigid_bulk.eq.im_primary) then
+      if (im_FSI_rigid.eq.im_primary) then
 
        ireverse=-1
        icemask=zero
        icefacecut=zero
 
-      else if ((im_FSI_rigid_bulk.ge.0).and. &
-               (im_FSI_rigid_bulk.le.num_materials)) then
+      else if ((im_FSI_rigid.ge.0).and. &
+               (im_FSI_rigid.le.num_materials)) then
 
-       if (im_FSI_rigid_bulk.ne.im_primary) then
+       if (im_FSI_rigid.ne.im_primary) then
         ! do nothing
        else
-        print *,"im_FSI_rigid_bulk cannot be equal to im_primary here"
+        print *,"im_FSI_rigid cannot be equal to im_primary here"
         stop
        endif
 
@@ -371,7 +371,7 @@ stop
          if ((im_tertiary.ge.1).and. &
              (im_tertiary.le.num_materials)) then
           if (is_rigid(im_tertiary).eq.0) then
-           if (is_FSI_rigid_bulk(im_tertiary).eq.0) then
+           if (is_FSI_rigid(im_tertiary).eq.0) then
             if (is_ice(im_tertiary).eq.0) then
              if (im_ice.lt.im_tertiary) then
               im=im_ice
@@ -394,10 +394,10 @@ stop
              print *,"is_ice(im_tertiary) invalid"
              stop
             endif
-           else if (is_FSI_rigid_bulk(im_tertiary).eq.1) then
+           else if (is_FSI_rigid(im_tertiary).eq.1) then
             ! do nothing
            else
-            print *,"is_FSI_rigid_bulk(im_tertiary) invalid"
+            print *,"is_FSI_rigid(im_tertiary) invalid"
             stop
            endif
           else
@@ -408,7 +408,7 @@ stop
           print *,"expecting im_tertiary>=1 and <=num_materials"
           print *,"im_tertiary: ",im_tertiary
           print *,"im_ice: ",im_ice
-          print *,"im_FSI_rigid_bulk: ",im_FSI_rigid_bulk
+          print *,"im_FSI_rigid: ",im_FSI_rigid
           stop
          else
           print *,"im_tertiary invalid: ",im_tertiary
@@ -586,7 +586,7 @@ stop
        endif
 
       else
-       print *,"im_FSI_rigid_bulk invalid: ",im_FSI_rigid_bulk
+       print *,"im_FSI_rigid invalid: ",im_FSI_rigid
        stop
       endif
 
@@ -5577,7 +5577,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. &
             (FSI_flag(im).eq.FSI_SHOELE_VELVEL).or. &
             (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
-            (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. &
             (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then
          ! do nothing
         else if ((FSI_flag(im).eq.FSI_FLUID).or. &
@@ -10399,7 +10398,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if ((FSI_flag(im).eq.FSI_FLUID).or. & 
            (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. & 
            (FSI_flag(im).eq.FSI_ICE_PROBF90).or. & 
-           (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. & 
            (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then 
         VOF(vofcomp)=vofarray(im)
         do dir2=1,SDIM
@@ -10434,7 +10432,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if ((FSI_flag(im).eq.FSI_FLUID).or. & 
            (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. & 
            (FSI_flag(im).eq.FSI_ICE_PROBF90).or. & 
-           (FSI_flag(im).eq.FSI_RIGIDSHELL_NOTPRESCRIBED).or. & 
            (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then 
         ! do nothing
        else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
