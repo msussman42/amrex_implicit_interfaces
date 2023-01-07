@@ -268,38 +268,33 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  int local_cell_ncomp=1;
  int local_cell_c2_ncomp=2;
- int local_cell_index=0;
- int local_cell_den_mf=CELL_DEN_MF;
- int local_cell_sound_mf=CELL_SOUND_MF;
- int local_cell_visc_mf=CELL_VISC_MF;
- int local_cell_dedt_mf=CELL_DEDT_MF;
 
  if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else
   amrex::Error("project_option invalid");
 
- debug_ngrow(local_cell_sound_mf,0,135);
- debug_ngrow(local_cell_den_mf,1,136);
- debug_ngrow(local_cell_visc_mf,1,137);
- debug_ngrow(local_cell_dedt_mf,1,138);
+ debug_ngrow(CELL_SOUND_MF,0,135);
+ debug_ngrow(CELL_DEN_MF,1,136);
+ debug_ngrow(CELL_VISC_MF,1,137);
+ debug_ngrow(CELL_DEDT_MF,1,138);
 
  debug_ngrow(OFF_DIAG_CHECK_MF,0,139);
 
  if (localMF[OFF_DIAG_CHECK_MF]->nComp()!=nsolve)
   amrex::Error("localMF[OFF_DIAG_CHECK_MF]->nComp() invalid");
 
- if (localMF[local_cell_den_mf]->nComp()!=local_cell_ncomp)
-  amrex::Error("localMF[local_cell_den_mf]->nComp() invalid");
+ if (localMF[CELL_DEN_MF]->nComp()!=local_cell_ncomp)
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
- if (localMF[local_cell_visc_mf]->nComp()!=local_cell_ncomp)
-  amrex::Error("localMF[local_cell_visc_mf]->nComp() invalid");
+ if (localMF[CELL_VISC_MF]->nComp()!=local_cell_ncomp)
+  amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
 
- if (localMF[local_cell_dedt_mf]->nComp()!=local_cell_ncomp)
-  amrex::Error("localMF[local_cell_dedt_mf]->nComp() invalid");
+ if (localMF[CELL_DEDT_MF]->nComp()!=local_cell_ncomp)
+  amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
- if (localMF[local_cell_sound_mf]->nComp()!=local_cell_c2_ncomp)
-  amrex::Error("localMF[local_cell_sound_mf]->nComp() invalid");
+ if (localMF[CELL_SOUND_MF]->nComp()!=local_cell_c2_ncomp)
+  amrex::Error("localMF[CELL_SOUND_MF]->nComp() invalid");
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -325,11 +320,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // 1/(c^2 dt^2)  (first component)
    // p^advect      (2nd component)
-  FArrayBox& c2fab=(*localMF[local_cell_sound_mf])[mfi];
-  FArrayBox& denfab=(*localMF[local_cell_den_mf])[mfi]; // inverse of density
+  FArrayBox& c2fab=(*localMF[CELL_SOUND_MF])[mfi];
+  FArrayBox& denfab=(*localMF[CELL_DEN_MF])[mfi]; // inverse of density
    // 1/(rho cv)   (DeDT=cv)
-  FArrayBox& DeDTfab=(*localMF[local_cell_dedt_mf])[mfi];  
-  FArrayBox& mufab=(*localMF[local_cell_visc_mf])[mfi];
+  FArrayBox& DeDTfab=(*localMF[CELL_DEDT_MF])[mfi];  
+  FArrayBox& mufab=(*localMF[CELL_VISC_MF])[mfi];
 
   FArrayBox& cterm = (*localMF[ALPHANOVOLUME_MF])[mfi];
   FArrayBox& lsfab = LS_new[mfi];
@@ -345,15 +340,15 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
     cterm.dataPtr(),
     ARLIM(cterm.loVect()),ARLIM(cterm.hiVect()),
-    c2fab.dataPtr(local_cell_index),
+    c2fab.dataPtr(),
     ARLIM(c2fab.loVect()),ARLIM(c2fab.hiVect()),
-    DeDTfab.dataPtr(local_cell_index),
+    DeDTfab.dataPtr(),
     ARLIM(DeDTfab.loVect()),ARLIM(DeDTfab.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
-    denfab.dataPtr(local_cell_index),
+    denfab.dataPtr(),
     ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-    mufab.dataPtr(local_cell_index),
+    mufab.dataPtr(),
     ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,
@@ -473,7 +468,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   if (localMF[AREA_MF+dir]->boxArray()!=
       localMF[FACE_WEIGHT_MF+dir]->boxArray())
-   amrex::Error("face_weight_stable boxarrays do not match");
+   amrex::Error("AREA and FACE_WEIGHT boxarrays do not match");
 
   new_localMF(BXCOEFNOAREA_MF+dir,nsolve,0,dir);
   new_localMF(BXCOEF_MF+dir,nsolve,0,dir);
@@ -509,7 +504,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    int tid_current=ns_thread();
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // FACE_WEIGHT_MF initialized in BUILDFACEWT (LEVELSET_3D.F90)
+    // FACE_WEIGHT_MF initialized in fort_buildfacewt (LEVELSET_3D.F90)
     // BXCOEFNOAREA *= facewt
     // mult_facewt is declared in MACOPERATOR_3D.F90
    fort_mult_facewt(
@@ -629,7 +624,11 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   if (localMF[AREA_MF+dir]->boxArray()!=
       localMF[BXCOEFNOAREA_MF+dir]->boxArray())
-   amrex::Error("BXCOEFNOAREA boxarrays do not match");
+   amrex::Error("AREA and BXCOEFNOAREA boxarrays do not match");
+
+  if (localMF[AREA_MF+dir]->boxArray()!=
+      localMF[FACE_WEIGHT_MF+dir]->boxArray())
+   amrex::Error("AREA and FACE_WEIGHT boxarrays do not match");
 
   if (localMF[BXCOEFNOAREA_MF+dir]->nComp()!=nsolve) 
    amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
@@ -660,6 +659,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     const Real* xlo = grid_loc[gridno].lo();
 
     FArrayBox & bxfab=(*localMF[BXCOEFNOAREA_MF+dir])[mfi];
+    FArrayBox & facefab=(*localMF[FACE_WEIGHT_MF+dir])[mfi];
 
     int tid_current=ns_thread();
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
@@ -667,9 +667,12 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     // BXCOEFNOAREA = min_interior_coeff if not on the
     // edge of the domain and BXCOEFNOAREA previously < min_interior_coeff
     // fort_regularize_bx is declared in MACOPERATOR_3D.F90
+    // FACE_WEIGHT_MF = min_interior_coeff if not zero and
+    // FACE_WEIGHT_MF previously<min_interior_coeff
     fort_regularize_bx(
      &nsolve,
      bxfab.dataPtr(),ARLIM(bxfab.loVect()),ARLIM(bxfab.hiVect()),
+     facefab.dataPtr(),ARLIM(facefab.loVect()),ARLIM(facefab.hiVect()),
      &min_interior_coeff,
      domlo,domhi,
      tilelo,tilehi,

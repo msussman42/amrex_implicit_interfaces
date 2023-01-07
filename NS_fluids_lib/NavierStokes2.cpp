@@ -4428,7 +4428,9 @@ void NavierStokes::apply_pressure_grad(
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
      solfab.dataPtr(),
      ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
+      //xcut holds FACE_WEIGHT_MF
      xcut.dataPtr(),ARLIM(xcut.loVect()),ARLIM(xcut.hiVect()),
+      //xface holds FACE_VAR_MF
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
      xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()),
      xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //holds AMRSYNC_PRES

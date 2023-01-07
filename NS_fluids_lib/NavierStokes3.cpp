@@ -9830,6 +9830,7 @@ void NavierStokes::multiphase_project(int project_option) {
  //  
  // calls:fort_scalarcoeff,fort_mult_facewt, fort_dividedx, fort_nsgenerate
  // initializes arrays holding the diagonal, ONES_MF, ONES_GROW_MF.
+ // Regularizes FACE_WEIGHT_MF if necessary.
  // create_hierarchy=-1,0,1
  int create_hierarchy=0;
  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
