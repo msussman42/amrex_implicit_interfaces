@@ -968,6 +968,7 @@ stop
        subroutine fort_regularize_bx( &
          nsolve, &
          bx,DIMS(bx), &
+         facewt,DIMS(facewt), &
          min_interior_coeff, &
          domlo,domhi, &
          tilelo,tilehi, &
@@ -984,6 +985,7 @@ stop
        INTEGER_T, INTENT(in) :: dir
        INTEGER_T, INTENT(in) :: level
        INTEGER_T, INTENT(in) :: DIMDEC(bx)
+       INTEGER_T, INTENT(in) :: DIMDEC(facewt)
        INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
        INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
@@ -993,6 +995,8 @@ stop
 
        REAL_T, INTENT(inout),target :: bx(DIMV(bx),nsolve)
        REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
+       REAL_T, INTENT(inout),target :: facewt(DIMV(facewt),nsolve)
+       REAL_T, pointer :: facewt_ptr(D_DECL(:,:,:),:)
 
        REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
@@ -1003,7 +1007,8 @@ stop
        if (min_interior_coeff.gt.zero) then
         ! do nothing
        else
-        print *,"min_interior_coeff invalid"
+        print *,"min_interior_coeff invalid fort_regularize_bx: ", &
+          min_interior_coeff
         stop
        endif
 
@@ -1011,18 +1016,20 @@ stop
         print *,"bfact too small"
         stop
        endif
-       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
-        print *,"nsolve invalid23"
+       if (nsolve.ne.1) then
+        print *,"nsolve invalid in fort_regularize_bx: ",nsolve
         stop
        endif
 
        if ((dir.lt.0).or.(dir.ge.SDIM)) then
-        print *,"dir invalid mult_facewt"
+        print *,"dir invalid fort_regularize_bx"
         stop
        endif
 
        bx_ptr=>bx
+       facewt_ptr=>facewt
        call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
+       call checkbound_array(fablo,fabhi,facewt_ptr,0,dir)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
        do i=growlo(1),growhi(1)
@@ -1060,6 +1067,18 @@ stop
           print *,"local_bx invalid"
           stop
          endif
+
+         local_bx=facewt(D_DECL(i,j,k),n)
+         if (local_bx.gt.min_interior_coeff) then
+          !do nothing
+         else if ((local_bx.gt.zero).and. &
+                  (local_bx.le.min_interior_coeff)) then 
+          facewt(D_DECL(i,j,k),n)=min_interior_coeff
+         else
+          print *,"local_bx (facewt section) invalid"
+          stop
+         endif
+
         enddo ! n=1,nsolve
 
        enddo

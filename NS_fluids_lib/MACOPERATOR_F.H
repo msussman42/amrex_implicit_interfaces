@@ -16,6 +16,7 @@ extern "C"
     void fort_regularize_bx(
      int* nsolve,
      Real* bx,AMREX_ARLIM_P(bxlo),AMREX_ARLIM_P(bxhi),
+     Real* facewt,AMREX_ARLIM_P(facewtlo),AMREX_ARLIM_P(facewthi),
      Real* min_interior_coeff,
      const int* domlo, const int* domhi,
      const int* tilelo, const int* tilehi,
