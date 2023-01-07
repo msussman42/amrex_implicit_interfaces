@@ -1074,6 +1074,8 @@ stop
          else if ((local_bx.gt.zero).and. &
                   (local_bx.le.min_interior_coeff)) then 
           facewt(D_DECL(i,j,k),n)=min_interior_coeff
+         else if (local_bx.eq.zero) then
+          ! do nothing
          else
           print *,"local_bx (facewt section) invalid"
           stop
