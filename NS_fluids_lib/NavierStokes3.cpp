@@ -7422,11 +7422,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  int local_face_index=FACECOMP_FACEDEN;  // 1/rho
  int local_face_ncomp=FACECOMP_NCOMP;
- int local_cell_ncomp=1;
- int local_cell_index=0;
- int local_face_var_mf=FACE_VAR_MF;
- int local_cell_den_mf=CELL_DEN_MF;
- int local_cell_visc_mf=CELL_VISC_MF;
 
  if (project_option_is_valid(project_option)==1) {
   // do nothing
@@ -7434,15 +7429,15 @@ void NavierStokes::allocate_FACE_WEIGHT(
   amrex::Error("project_option invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(local_face_var_mf+dir,0,850);
+  debug_ngrow(FACE_VAR_MF+dir,0,850);
  }
 
- debug_ngrow(local_cell_visc_mf,1,47);
- debug_ngrow(local_cell_den_mf,1,47);
- if (localMF[local_cell_visc_mf]->nComp()!=local_cell_ncomp)
-  amrex::Error("localMF[local_cell_visc_mf]->nComp() invalid");
- if (localMF[local_cell_den_mf]->nComp()!=local_cell_ncomp)
-  amrex::Error("localMF[local_cell_den_mf]->nComp() invalid");
+ debug_ngrow(CELL_VISC_MF,1,47);
+ debug_ngrow(CELL_DEN_MF,1,47);
+ if (localMF[CELL_VISC_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
  int bcsize=AMREX_SPACEDIM*2*nsolve*grids.size();
  bcpres_array.resize(bcsize);
@@ -7579,13 +7574,13 @@ void NavierStokes::allocate_FACE_WEIGHT(
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
   thread_class::init_d_numPts(
-    localMF[local_cell_den_mf]->boxArray().d_numPts());
+    localMF[CELL_DEN_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-  for (MFIter mfi(*localMF[local_cell_den_mf],use_tiling); 
+  for (MFIter mfi(*localMF[CELL_DEN_MF],use_tiling); 
        mfi.isValid(); ++mfi) {
 
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
@@ -7599,8 +7594,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
    const int* fabhi=fabgrid.hiVect();
    int bfact=parent->Space_blockingFactor(level);
 
-   FArrayBox& cenden=(*localMF[local_cell_den_mf])[mfi];  // 1/rho
-   FArrayBox& cenvisc=(*localMF[local_cell_visc_mf])[mfi];
+   FArrayBox& cenden=(*localMF[CELL_DEN_MF])[mfi];  // 1/rho
+   FArrayBox& cenvisc=(*localMF[CELL_VISC_MF])[mfi];
 
    FArrayBox& xfwt=(*localMF[FACE_WEIGHT_MF])[mfi];
    FArrayBox& yfwt=(*localMF[FACE_WEIGHT_MF+1])[mfi];
@@ -7608,9 +7603,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
    FArrayBox& offdiagcheck=(*localMF[OFF_DIAG_CHECK_MF])[mfi];
  
-   FArrayBox& xface=(*localMF[local_face_var_mf])[mfi];  
-   FArrayBox& yface=(*localMF[local_face_var_mf+1])[mfi];  
-   FArrayBox& zface=(*localMF[local_face_var_mf+AMREX_SPACEDIM-1])[mfi];  
+   FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];  
+   FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];  
+   FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];  
 
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];  // mask=1 at fine-fine bc
    const Real* xlo = grid_loc[gridno].lo();
@@ -7640,9 +7635,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
     &dt_slab,
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
-    cenden.dataPtr(local_cell_index),
+    cenden.dataPtr(),
     ARLIM(cenden.loVect()),ARLIM(cenden.hiVect()),
-    cenvisc.dataPtr(local_cell_index),
+    cenvisc.dataPtr(),
     ARLIM(cenvisc.loVect()),ARLIM(cenvisc.hiVect()),
     xfwt.dataPtr(),ARLIM(xfwt.loVect()),ARLIM(xfwt.hiVect()),
     yfwt.dataPtr(),ARLIM(yfwt.loVect()),ARLIM(yfwt.hiVect()),
