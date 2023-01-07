@@ -2302,9 +2302,21 @@ NavierStokes::read_params ()
      Vector<int> mgs;
      ppamr.getarr("max_grid_size",mgs);
      int last_mgs = mgs.back();
+      // the newly added components to "mgs" are initialized with
+      // the last component of "mgs" prior to the resizing.
      mgs.resize(ns_max_level+1,last_mgs);
      for (int ilev=0;ilev<=ns_max_level;ilev++) {
       ns_max_grid_size[ilev]=mgs[ilev];
+
+      if (AMREX_SPACEDIM==2) {
+       if (ns_max_grid_size[ilev]<64)
+        amrex::Error("expecting max_grid_size>=64 in 2D or 3DRZ");
+      } else if (AMREX_SPACEDIM==3) {
+       if (ns_max_grid_size[ilev]<32)
+        amrex::Error("expecting max_grid_size>=32 in 3D");
+      } else
+       amrex::Error("AMREX_SPACEDIM invalid");
+
      }
     } else
      amrex::Error("cnt_max_grid_size invalid");

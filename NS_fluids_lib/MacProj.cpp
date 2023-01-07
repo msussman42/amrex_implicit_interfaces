@@ -1645,11 +1645,8 @@ void NavierStokes::apply_div(
  if (localMF[ALPHACOEF_MF]->nComp()!=nsolve)
   amrex::Error("localMF[ALPHACOEF_MF]->nComp()!=nsolve");
 
- int local_fsi_ghost_mac_mf=FSI_GHOST_MAC_MF;
  int local_fsi_ghost_ncomp=nparts_def*AMREX_SPACEDIM;
  int local_fsi_ghost_ngrow=0;
- int local_face_var_mf=FACE_VAR_MF;
- int local_masksem_mf=MASKSEM_MF;
 
  if (project_option_is_valid(project_option)==1) {
   // do nothing
@@ -1657,11 +1654,11 @@ void NavierStokes::apply_div(
   amrex::Error("project_option invalid");
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[local_fsi_ghost_mac_mf+data_dir]->nGrow()!=
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=
       local_fsi_ghost_ngrow)
-   amrex::Error("localMF[local_fsi_ghost_mac_mf+data_dir]->nGrow() bad");
-  if (localMF[local_fsi_ghost_mac_mf+data_dir]->nComp()!=local_fsi_ghost_ncomp)
-   amrex::Error("localMF[local_fsi_ghost_mac_mf+data_dir]->nComp() bad");
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow() bad");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=local_fsi_ghost_ncomp)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
 
  const Real* dx = geom.CellSize();
@@ -1683,11 +1680,11 @@ void NavierStokes::apply_div(
   amrex::Error("homflag invalid");
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  debug_ngrow(local_fsi_ghost_mac_mf+data_dir,
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,
               local_fsi_ghost_ngrow,112);
  }
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) 
-  debug_ngrow(local_face_var_mf+data_dir,0,122);
+  debug_ngrow(FACE_VAR_MF+data_dir,0,122);
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   if (localMF[idx_gphi+data_dir]->nComp()!=nsolve)
@@ -1730,9 +1727,9 @@ void NavierStokes::apply_div(
   FArrayBox& ay = (*localMF[AREA_MF+1])[mfi];
   FArrayBox& az = (*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& xface=(*localMF[local_face_var_mf])[mfi];
-  FArrayBox& yface=(*localMF[local_face_var_mf+1])[mfi];
-  FArrayBox& zface=(*localMF[local_face_var_mf+AMREX_SPACEDIM-1])[mfi];
+  FArrayBox& xface=(*localMF[FACE_VAR_MF])[mfi];
+  FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
+  FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& vol = (*localMF[VOLUME_MF])[mfi];
 
@@ -1754,15 +1751,15 @@ void NavierStokes::apply_div(
 
   FArrayBox& diffusionRHSfab = (*diffusionRHScell)[mfi];
 
-  FArrayBox& solxfab=(*localMF[local_fsi_ghost_mac_mf])[mfi];
-  FArrayBox& solyfab=(*localMF[local_fsi_ghost_mac_mf+1])[mfi];
-  FArrayBox& solzfab=(*localMF[local_fsi_ghost_mac_mf+AMREX_SPACEDIM-1])[mfi];
+  FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
+  FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+  FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& cterm = (*localMF[ALPHACOEF_MF])[mfi];
 
   FArrayBox& maskdivresfab = (*localMF[MASK_DIV_RESIDUAL_MF])[mfi];
   FArrayBox& maskresfab = (*localMF[MASK_RESIDUAL_MF])[mfi];
-  FArrayBox& maskSEMfab = (*localMF[local_masksem_mf])[mfi];
+  FArrayBox& maskSEMfab = (*localMF[MASKSEM_MF])[mfi];
 
   const Real* xlo = grid_loc[gridno].lo();
 
