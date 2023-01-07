@@ -569,7 +569,7 @@ Vector<Real> NavierStokes::FSI_force_integral;
 
 Real NavierStokes::real_number_of_cells=0.0; 
 
-Real NavierStokes::mglib_max_ratio=1.0e+6; 
+Real NavierStokes::mglib_max_ratio=1.0e+5; 
 Real NavierStokes::min_interior_coeff=0.0; 
 
 int NavierStokes::idx_umac_material_mf=-1;
@@ -3627,11 +3627,16 @@ NavierStokes::read_params ()
      prerecalesce_heatviscconst[i]=heatviscconst[i];
     }
     pp.queryAdd("prerecalesce_viscconst",prerecalesce_viscconst,num_materials);
-    pp.queryAdd("prerecalesce_heatviscconst",prerecalesce_heatviscconst,num_materials);
+    pp.queryAdd("prerecalesce_heatviscconst",
+       prerecalesce_heatviscconst,num_materials);
     pp.queryAdd("prerecalesce_stiffCP",prerecalesce_stiffCP,num_materials);
     pp.queryAdd("prerecalesce_stiffCV",prerecalesce_stiffCV,num_materials);
 
     pp.queryAdd("mglib_max_ratio",mglib_max_ratio);
+    if (mglib_max_ratio>1.0) {
+     //do nothing
+    } else
+     amrex::Error("mglib_max_ratio invalid");
 
     pp.getarr("tension",tension,0,num_interfaces);
 
