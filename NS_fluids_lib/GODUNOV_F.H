@@ -219,27 +219,6 @@ extern "C"
     int* ngrowmac,
     int* veldir);
 
-
-   void fort_build_newmac(
-    int* normdir, // 0..sdim-1
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    Real* xmomside,AMREX_ARLIM_P(xmomsidelo),AMREX_ARLIM_P(xmomsidehi),
-    Real* ymomside,AMREX_ARLIM_P(ymomsidelo),AMREX_ARLIM_P(ymomsidehi),
-    Real* zmomside,AMREX_ARLIM_P(zmomsidelo),AMREX_ARLIM_P(zmomsidehi),
-    Real* xmassside,AMREX_ARLIM_P(xmasssidelo),AMREX_ARLIM_P(xmasssidehi),
-    Real* ymassside,AMREX_ARLIM_P(ymasssidelo),AMREX_ARLIM_P(ymasssidehi),
-    Real* zmassside,AMREX_ARLIM_P(zmasssidelo),AMREX_ARLIM_P(zmasssidehi),
-    Real* xvmac,AMREX_ARLIM_P(xvmaclo),AMREX_ARLIM_P(xvmachi),
-    Real* yvmac,AMREX_ARLIM_P(yvmaclo),AMREX_ARLIM_P(yvmachi),
-    Real* zvmac,AMREX_ARLIM_P(zvmaclo),AMREX_ARLIM_P(zvmachi),
-    Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-    const Real* xlo,const Real* dx,
-    Real* cur_time,
-    int* level,
-    int* finest_level);
-
    void fort_extend_mac_vel(
     int* tid_current,
     int* level,
@@ -770,12 +749,14 @@ extern "C"
      int* bfact_f,
      Real* dt,
      Real* time,
+     Real* cur_time,
      Real* passive_veltime,
       // original data
      Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
      Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
      Real* mom_den,AMREX_ARLIM_P(mom_denlo),AMREX_ARLIM_P(mom_denhi),
      Real* tensor,AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),
+      // VELADVECT_MF
      Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),
       // slope data
      Real* vofslope,AMREX_ARLIM_P(vofslopelo),AMREX_ARLIM_P(vofslopehi), 
@@ -802,6 +783,14 @@ extern "C"
      Real* xmassside,AMREX_ARLIM_P(xmasssidelo),AMREX_ARLIM_P(xmasssidehi),
      Real* ymassside,AMREX_ARLIM_P(ymasssidelo),AMREX_ARLIM_P(ymasssidehi),
      Real* zmassside,AMREX_ARLIM_P(zmasssidelo),AMREX_ARLIM_P(zmasssidehi),
+     Real* xmac_new,AMREX_ARLIM_P(xmac_newlo),AMREX_ARLIM_P(xmac_newhi),
+     Real* ymac_new,AMREX_ARLIM_P(ymac_newlo),AMREX_ARLIM_P(ymac_newhi),
+     Real* zmac_new,AMREX_ARLIM_P(zmac_newlo),AMREX_ARLIM_P(zmac_newhi),
+     Real* xmac_old,AMREX_ARLIM_P(xmac_oldlo),AMREX_ARLIM_P(xmac_oldhi),
+     Real* ymac_old,AMREX_ARLIM_P(ymac_oldlo),AMREX_ARLIM_P(ymac_oldhi),
+     Real* zmac_old,AMREX_ARLIM_P(zmac_oldlo),AMREX_ARLIM_P(zmac_oldhi),
+     int* stokes_flow,
+     Real* denconst_interface_added,
      int* ngrow_mass,
      int* ngrow_mac_old,
      int* nc_conserve,

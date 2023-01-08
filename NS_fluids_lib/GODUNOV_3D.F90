@@ -783,10 +783,11 @@ stop
       REAL_T total_mass,DMface
       REAL_T massfrac(num_materials)
       REAL_T massF(2*num_materials)
-      REAL_T xsten(-1:1,SDIM)
-      REAL_T xstenMAC(-1:1,SDIM)
-      REAL_T xclamped_minus_sten(-1:1,SDIM)
-      REAL_T xclamped_plus_sten(-1:1,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xclamped_minus_sten(-nhalf:nhalf,SDIM)
+      REAL_T xclamped_plus_sten(-nhalf:nhalf,SDIM)
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
 
@@ -799,7 +800,6 @@ stop
       REAL_T temperature_clamped_plus
       INTEGER_T prescribed_flag
       INTEGER_T is_clamped_face
-      INTEGER_T nhalf
       INTEGER_T nbr_outside_domain_flag(2)
       INTEGER_T nbr_covered_flag ! 0=covered 1=not covered
       INTEGER_T isten
@@ -841,8 +841,6 @@ stop
       REAL_T local_flux_val_in
       REAL_T local_flux_val_out
       INTEGER_T project_option
-
-      nhalf=1
 
       semflux_ptr=>semflux
       xflux_ptr=>xflux
@@ -2413,9 +2411,9 @@ stop
       INTEGER_T ii,jj,kk
       INTEGER_T im,im_primaryL,im_primaryR
       INTEGER_T ibase
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T LSleft(num_materials)
       REAL_T LSright(num_materials)
       REAL_T LSsub(num_materials)
@@ -2484,8 +2482,6 @@ stop
        print *,"tid invalid in fort_estdt"
        stop
       endif
-
-      nhalf=3
 
       velmac_ptr=>velmac
       velcell_ptr=>velcell
@@ -3718,15 +3714,13 @@ stop
 
       INTEGER_T dencomp
       REAL_T xpos(SDIM)
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T temperature
-      INTEGER_T nhalf
       REAL_T density_of_TZ
       REAL_T rho_base
       INTEGER_T vofcomp
       REAL_T local_vfrac
-
-      nhalf=3
 
       mask_ptr=>mask
       masknbr_ptr=>masknbr
@@ -3976,11 +3970,9 @@ stop
       REAL_T delta
       REAL_T hx
       REAL_T RR
-      REAL_T xstenMAC(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
       INTEGER_T localbc
-
-      nhalf=3
 
       umactemp_ptr=>umactemp
       umac_displace_ptr=>umac_displace
@@ -4806,13 +4798,11 @@ stop
       REAL_T icefacecut_right
       REAL_T icemask
       REAL_T icefacecut
-      REAL_T xstenMAC(-3:3,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
       REAL_T xmac(SDIM)
-      INTEGER_T nhalf
       INTEGER_T local_mask_right
       INTEGER_T local_mask_left
-
-      nhalf=3
 
       maskcov_ptr=>maskcov
       xface_ptr=>xface
@@ -5075,331 +5065,6 @@ stop
       return
       end subroutine fort_init_icemask
 
-      subroutine fort_build_newmac( &
-       normdir, & ! 0..sdim-1
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       xmomside,DIMS(xmomside), &
-       ymomside,DIMS(ymomside), &
-       zmomside,DIMS(zmomside), &
-       xmassside,DIMS(xmassside), &
-       ymassside,DIMS(ymassside), &
-       zmassside,DIMS(zmassside), &
-       xvmac,DIMS(xvmac), &
-       yvmac,DIMS(yvmac), &
-       zvmac,DIMS(zvmac), &
-       mask,DIMS(mask), &
-       xlo,dx, &
-       cur_time, &
-       level, &
-       finest_level) &
-      bind(c,name='fort_build_newmac')
-
-      use probcommon_module
-      use probf90_module
-      use global_utility_module
-      use MOF_routines_module
-      IMPLICIT NONE
-
-      INTEGER_T, INTENT(in) :: normdir !normdir=0..sdim-1
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T :: veldir
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, INTENT(in) :: bfact
-
-      INTEGER_T, INTENT(in) :: DIMDEC(xmomside) 
-      INTEGER_T, INTENT(in) :: DIMDEC(ymomside) 
-      INTEGER_T, INTENT(in) :: DIMDEC(zmomside) 
-
-      INTEGER_T, INTENT(in) :: DIMDEC(xmassside) 
-      INTEGER_T, INTENT(in) :: DIMDEC(ymassside) 
-      INTEGER_T, INTENT(in) :: DIMDEC(zmassside) 
-
-      INTEGER_T, INTENT(in) :: DIMDEC(xvmac) 
-      INTEGER_T, INTENT(in) :: DIMDEC(yvmac) 
-      INTEGER_T, INTENT(in) :: DIMDEC(zvmac) 
-
-      INTEGER_T, INTENT(in) :: DIMDEC(mask) 
-
-      REAL_T, INTENT(in), target :: xmomside(DIMV(xmomside),2)
-      REAL_T, pointer :: xmomside_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: ymomside(DIMV(xmomside),2)
-      REAL_T, pointer :: ymomside_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: zmomside(DIMV(xmomside),2)
-      REAL_T, pointer :: zmomside_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, INTENT(in), target :: xmassside(DIMV(xmassside),2)
-      REAL_T, pointer :: xmassside_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: ymassside(DIMV(ymassside),2)
-      REAL_T, pointer :: ymassside_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: zmassside(DIMV(zmassside),2)
-      REAL_T, pointer :: zmassside_ptr(D_DECL(:,:,:),:)
-
-      REAL_T, INTENT(out), target :: xvmac(DIMV(xvmac))
-      REAL_T, pointer :: xvmac_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(out), target :: yvmac(DIMV(yvmac))
-      REAL_T, pointer :: yvmac_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(out), target :: zvmac(DIMV(zvmac))
-      REAL_T, pointer :: zvmac_ptr(D_DECL(:,:,:))
-
-      REAL_T, INTENT(in), target :: mask(DIMV(mask))
-      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: cur_time
-
-      INTEGER_T igridlo(3),igridhi(3)
-      INTEGER_T iii,jjj,kkk
-      INTEGER_T i,j,k
-      INTEGER_T iside
-      INTEGER_T icell,jcell,kcell
-      INTEGER_T ibucket
-      INTEGER_T ileft,jleft,kleft
-      INTEGER_T iright,jright,kright
-      INTEGER_T zapvel
-      REAL_T maskleft
-      REAL_T maskright
-      REAL_T momface_total
-      REAL_T massface_total
-      REAL_T massquarter,momquarter
-      REAL_T xsten(-1:1,SDIM)
-
-      REAL_T xclamped(SDIM)
-      REAL_T LS_clamped
-      REAL_T vel_clamped(SDIM)
-      REAL_T temperature_clamped
-      INTEGER_T prescribed_flag
-
-      INTEGER_T dir_local
-      INTEGER_T nhalf
-
-      nhalf=1
-
-      mask_ptr=>mask
-      xmomside_ptr=>xmomside
-      ymomside_ptr=>ymomside
-      zmomside_ptr=>zmomside
-      xmassside_ptr=>xmassside
-      ymassside_ptr=>ymassside
-      zmassside_ptr=>zmassside
-
-      xvmac_ptr=>xvmac
-      yvmac_ptr=>yvmac
-      zvmac_ptr=>zvmac
-
-      if (bfact.lt.1) then
-       print *,"bfact invalid45"
-       stop
-      endif
-      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-       ! do nothing
-      else
-       print *,"normdir invalid"
-       stop
-      endif
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid build newmac"
-       stop
-      endif
-
-      call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,zmomside_ptr,1,-1)
-
-      call checkbound_array(fablo,fabhi,xmassside_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,ymassside_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,zmassside_ptr,1,-1)
-
-      call checkbound_array1(fablo,fabhi,mask_ptr,1,-1)
-
-      call checkbound_array1(fablo,fabhi,xvmac_ptr,0,0)
-      call checkbound_array1(fablo,fabhi,yvmac_ptr,0,1)
-      call checkbound_array1(fablo,fabhi,zvmac_ptr,0,SDIM-1)
-
-      do veldir=1,SDIM
-
-        iii=0
-        jjj=0
-        kkk=0 
-
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          igridlo,igridhi,0,veldir-1)
-
-        if (veldir.eq.1) then
-         iii=1
-        else if (veldir.eq.2) then
-         jjj=1
-        else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-         kkk=1
-        else
-         print *,"veldir invalid"
-         stop
-        endif
-
-        do i=igridlo(1),igridhi(1)
-        do j=igridlo(2),igridhi(2)
-        do k=igridlo(3),igridhi(3)
-
-          ! veldir=1..sdim
-         call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1)
-         do dir_local=1,SDIM
-          xclamped(dir_local)=xsten(0,dir_local)
-         enddo
-
-         zapvel=0
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
-          ! do nothing
-         else if (levelrz.eq.COORDSYS_RZ) then
-          if (SDIM.ne.2) then
-           print *,"dimension bust"
-           stop
-          endif
-          if ((xsten(0,1).le.VOFTOL*dx(1)).and. &
-              (veldir.eq.1)) then
-           zapvel=1
-          endif
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          if ((xsten(0,1).le.VOFTOL*dx(1)).and. &
-              (veldir.eq.1)) then
-           zapvel=1
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-
-         if (zapvel.eq.1) then
-          if (veldir.eq.1) then
-           xvmac(D_DECL(i,j,k))=zero
-          else
-           print *,"veldir invalid"
-           stop
-          endif
-         else if (zapvel.eq.0) then
-          iright=i
-          jright=j
-          kright=k
-          ileft=iright-iii
-          jleft=jright-jjj
-          kleft=kright-kkk
-           ! mask=1 if cell is not covered by level+1 or cell is 
-           ! outside the domain.
-          maskleft=mask(D_DECL(ileft,jleft,kleft))
-          maskright=mask(D_DECL(iright,jright,kright))
-
-          if ((maskleft.eq.one).and.(maskright.eq.one)) then
-
-            momface_total=zero
-            massface_total=zero
-
-             ! iside=-1 (left of face)
-             ! iside=1  (right of face)
-            do iside=-1,1,2
-
-              ! iside=-1 (left of face)
-             if (iside.eq.-1) then
-              icell=ileft
-              jcell=jleft
-              kcell=kleft
-              ibucket=2  ! right side of cell ileft,jleft,kleft
-
-               ! iside=1  (right of face)
-             else if (iside.eq.1) then
-              icell=iright
-              jcell=jright
-              kcell=kright
-              ibucket=1  ! left side of cell iright,jright,kright
-             else 
-              print *,"iside invalid"
-              stop
-             endif
-
-             if (veldir.eq.1) then
-              massquarter=xmassside(D_DECL(icell,jcell,kcell),ibucket)
-              momquarter=xmomside(D_DECL(icell,jcell,kcell),ibucket)
-             else if (veldir.eq.2) then
-              massquarter=ymassside(D_DECL(icell,jcell,kcell),ibucket)
-              momquarter=ymomside(D_DECL(icell,jcell,kcell),ibucket)
-             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-              massquarter=zmassside(D_DECL(icell,jcell,kcell),ibucket)
-              momquarter=zmomside(D_DECL(icell,jcell,kcell),ibucket)
-             else
-              print *,"veldir invalid"
-              stop
-             endif
-             if (massquarter.ge.zero) then
-              ! do nothing
-             else
-              print *,"massquarter cannot be negative"
-              print *,"icell,jcell,kcell,ibucket ", &
-                icell,jcell,kcell,ibucket 
-              print *,"i,j,k ",i,j,k
-              print *,"massquarter ",massquarter
-              print *,"momquarter ",momquarter
-              stop
-             endif
-
-             massface_total=massface_total+massquarter
-             momface_total=momface_total+momquarter
-
-            enddo ! iside: do iside=-1,1,2
-
-            if (massface_total.gt.zero) then
-
-             momface_total=momface_total/massface_total
-             ! LS>0 if clamped
-             call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
-              vel_clamped,temperature_clamped,prescribed_flag,dx)
-             if (LS_clamped.ge.zero) then
-              momface_total=vel_clamped(veldir)
-             else if (LS_clamped.lt.zero) then
-              ! do nothing
-             else
-              print *,"LS_clamped is NaN"
-              stop
-             endif
-
-            else
-             print *,"massface_total invalid"
-             stop
-            endif
-          
-            if (veldir.eq.1) then
-             xvmac(D_DECL(i,j,k))=momface_total
-            else if (veldir.eq.2) then
-             yvmac(D_DECL(i,j,k))=momface_total
-            else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-             zvmac(D_DECL(i,j,k))=momface_total
-            else
-             print *,"veldir invalid"
-             stop
-            endif
-
-          else if ((maskleft.eq.zero).or.(maskright.eq.zero)) then
-            ! do nothing
-          else 
-           print *,"maskleft or maskright invalid"
-           stop
-          endif
-
-         else
-          print *,"zapvel invalid build newmac"
-          stop
-         endif
-
-        enddo
-        enddo
-        enddo  ! i,j,k
-
-      enddo ! veldir=1..sdim
-
-      return
-      end subroutine fort_build_newmac
-
       ! called from split_scalar_advection after 
       !  BUILD_SEMIREFINEVOF(tessellate==0)
       subroutine fort_build_macvof( &
@@ -5445,10 +5110,8 @@ stop
       INTEGER_T i,j,k
       INTEGER_T igridlo(3),igridhi(3)
       REAL_T velmac
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=1
+      INTEGER_T, PARAMETER :: nhalf=1
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       x_mac_old_ptr=>x_mac_old
 
@@ -5611,8 +5274,8 @@ stop
       REAL_T, INTENT(in), pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: umac_ptr(D_DECL(:,:,:))
 
-      REAL_T xstenMAC(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
       REAL_T local_umac
       REAL_T local_dist
       INTEGER_T local_dir
@@ -5622,8 +5285,6 @@ stop
       REAL_T LSRIGHT(num_materials)
       INTEGER_T imL,imR
       INTEGER_T imlocal
-
-      nhalf=3
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
        print *,"level invalid check_for_closest_UMAC"
@@ -5794,15 +5455,15 @@ stop
       REAL_T, pointer :: divu_mask_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials*(SDIM+1))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xclamped_minus_sten(-3:3,SDIM)
-      REAL_T xclamped_plus_sten(-3:3,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xclamped_minus_sten(-nhalf:nhalf,SDIM)
+      REAL_T xclamped_plus_sten(-nhalf:nhalf,SDIM)
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
       REAL_T xtarget(SDIM)
       REAL_T LSLEFT(num_materials)
       REAL_T LSRIGHT(num_materials)
-      INTEGER_T nhalf
 
       INTEGER_T bctest
       INTEGER_T vel_boundary_fixed
@@ -5831,8 +5492,6 @@ stop
       REAL_T :: mindist
       REAL_T :: dxmin
       REAL_T :: EXTEND_BAND_WIDTH
-
-      nhalf=3
 
       if ((tid_current.lt.0).or. &
           (tid_current.ge.geom_nthreads)) then
@@ -6214,8 +5873,8 @@ stop
       INTEGER_T local_mask
       REAL_T IEforce,Tforce
       REAL_T one_over_DeDT
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T local_gradu(3,3)
       INTEGER_T nbase
       INTEGER_T grdcomp
@@ -6223,8 +5882,6 @@ stop
       REAL_T LScen(num_materials)
       REAL_T Q(3,3)
       INTEGER_T ii,jj
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact invalid50"
@@ -6449,14 +6106,12 @@ stop
       INTEGER_T veldir,dir
       REAL_T IEforce,Tforce
       REAL_T one_over_DeDT
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T local_gradu(3,3)
       REAL_T tensor(SDIM,SDIM)
       INTEGER_T nbase
       INTEGER_T grdcomp
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact invalid51"
@@ -6643,8 +6298,8 @@ stop
       REAL_T, pointer :: velnew_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in) :: dt,cur_time
 
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T LScen(num_materials)
       INTEGER_T im
       INTEGER_T iten
@@ -6652,8 +6307,6 @@ stop
       INTEGER_T dirloc
       INTEGER_T i,j,k
       REAL_T surface_tension_force(SDIM)
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact invalid52"
@@ -6849,9 +6502,9 @@ stop
       REAL_T, pointer :: vol_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in) :: dt,time
                          
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xsten_cell(SDIM)
-      INTEGER_T nhalf
       REAL_T LS(num_materials)
       REAL_T VFRAC(num_materials)
       REAL_T heat_source_local(num_materials)
@@ -6866,8 +6519,6 @@ stop
       REAL_T DeDT_local(num_materials)
       INTEGER_T ispec
       REAL_T massfrac_parm(num_species_var+1)
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact invalid53"
@@ -8151,10 +7802,8 @@ stop
        ! Q=A-I
       REAL_T trace_A
       REAL_T determinant_factor
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=3
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       tensor_ptr=>tensor
       visc_ptr=>visc
@@ -8451,10 +8100,8 @@ stop
       REAL_T, target :: cell_data_deriv(1)
 
       INTEGER_T itensor
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=3
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       tensorMAC_ptr=>tensorMAC
 
@@ -8741,8 +8388,8 @@ stop
       INTEGER_T partid
       INTEGER_T k1lo,k1hi
       INTEGER_T dir,ibase
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T ldata(D_DECL(3,3,3))
       REAL_T volume_frac,facearea
       REAL_T centroid(SDIM)
@@ -8752,8 +8399,6 @@ stop
       REAL_T nrm(SDIM)
       INTEGER_T vofcomp
       INTEGER_T ok_to_modify_EUL
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -9234,20 +8879,18 @@ stop
       INTEGER_T :: k1low,k1high
 
       INTEGER_T :: dir_local
-      INTEGER_T :: nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
       INTEGER_T :: im
       INTEGER_T :: im_local
       INTEGER_T :: im_sten
 
-      REAL_T x_sten(-3:3,SDIM)
-      REAL_T x_extrap(-3:3,SDIM)
+      REAL_T x_sten(-nhalf:nhalf,SDIM)
+      REAL_T x_extrap(-nhalf:nhalf,SDIM)
       REAL_T LS_local(num_materials)
       REAL_T LS_sten(num_materials)
       REAL_T Q_extrap(ENUM_NUM_TENSOR_TYPE)
       REAL_T wtsum
       REAL_T wt_local
-
-      nhalf=3
 
       k1low=0
       k1high=0
@@ -9593,16 +9236,14 @@ stop
       INTEGER_T start_freezing
       REAL_T SWEPTFACTOR,hx
       INTEGER_T ncomp_per_tsat
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_side(-3:3,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_side(-nhalf:nhalf,SDIM)
       REAL_T x_interface(SDIM)
-      INTEGER_T nhalf
       INTEGER_T dir_inner
       REAL_T T_or_Y_min_sanity
       REAL_T thermal_k(num_materials)
       INTEGER_T maskcell
-
-      nhalf=3
 
       snew_ptr=>snew
       coeff_ptr=>coeff
@@ -10598,8 +10239,8 @@ stop
       REAL_T heat_flux
       REAL_T flux_sign
       REAL_T ls_cell_or_face(num_materials)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if (bfact.lt.1) then
        print *,"bfact invalid68"
@@ -10629,8 +10270,6 @@ stop
        print *,"time invalid"
        stop
       endif
-
-      nhalf=3
 
       LS_ptr=>LS
       call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
@@ -10899,11 +10538,11 @@ stop
 
       INTEGER_T i,j,k
       INTEGER_T ii,jj,kk
-      REAL_T xsten_solid(-3:3,SDIM)
-      REAL_T xsten_probe(-3:3,SDIM)
-      REAL_T xsten_fluid(-3:3,SDIM)
-      REAL_T xsten_MAC(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten_solid(-nhalf:nhalf,SDIM)
+      REAL_T xsten_probe(-nhalf:nhalf,SDIM)
+      REAL_T xsten_fluid(-nhalf:nhalf,SDIM)
+      REAL_T xsten_MAC(-nhalf:nhalf,SDIM)
       REAL_T LS_left(num_materials)
       REAL_T LS_left_probe(num_materials)
       REAL_T LS_right(num_materials)
@@ -10938,8 +10577,6 @@ stop
       type(law_of_wall_parm_type) :: law_of_wall_parm
 
       ncomp_sum_int_user12=ncomp_sum_int_user1+ncomp_sum_int_user2
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -12873,6 +12510,7 @@ stop
        bfact_f, &
        dt, &
        time, &
+       cur_time, &
        passive_veltime, &
        LS,DIMS(LS), &  ! original data
        den, &
@@ -12880,7 +12518,7 @@ stop
        mom_den, &
        DIMS(mom_den), &
        tensor,DIMS(tensor), &
-       velfab,DIMS(velfab), &
+       velfab,DIMS(velfab), & !VELADVECT_MF
        PLICSLP,DIMS(PLICSLP), &  ! slope data
        snew,DIMS(snew), &  ! this is the result
        tennew,DIMS(tennew), & 
@@ -12901,6 +12539,14 @@ stop
        xmassside,DIMS(xmassside), & ! 1..2
        ymassside,DIMS(ymassside), &
        zmassside,DIMS(zmassside), &
+       xmac_new,DIMS(xmac_new), &
+       ymac_new,DIMS(ymac_new), &
+       zmac_new,DIMS(zmac_new), &
+       xmac_old,DIMS(xmac_old), &
+       ymac_old,DIMS(ymac_old), &
+       zmac_old,DIMS(zmac_old), &
+       stokes_flow, &
+       denconst_interface_added, &
        ngrow_mass, &
        ngrow_mac_old, &
        nc_conserve, &
@@ -12924,11 +12570,14 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, PARAMETER :: nhalf=1
       INTEGER_T, INTENT(inout) :: nprocessed
       INTEGER_T, INTENT(in) :: tid
 
       INTEGER_T, INTENT(in) :: nc_conserve
       INTEGER_T, INTENT(in) :: ngrow_mass
+      INTEGER_T, INTENT(in) :: stokes_flow
+      REAL_T, INTENT(in) :: denconst_interface_added(num_interfaces)
       INTEGER_T, PARAMETER :: ngrow_scalar=1
       INTEGER_T, PARAMETER :: ngrow_mac_displace=2
       INTEGER_T, INTENT(in) :: ngrow_mac_old
@@ -12939,6 +12588,7 @@ stop
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: dombc(SDIM,2)
       INTEGER_T, INTENT(in) :: EILE_flag
+      REAL_T, INTENT(in) :: cur_time
       REAL_T, INTENT(in) :: passive_veltime
       INTEGER_T, INTENT(in) :: dir_counter
       INTEGER_T, INTENT(in) :: normdir
@@ -12987,6 +12637,12 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(xmassside) 
       INTEGER_T, INTENT(in) :: DIMDEC(ymassside) 
       INTEGER_T, INTENT(in) :: DIMDEC(zmassside) 
+      INTEGER_T, INTENT(in) :: DIMDEC(xmac_new) 
+      INTEGER_T, INTENT(in) :: DIMDEC(ymac_new) 
+      INTEGER_T, INTENT(in) :: DIMDEC(zmac_new) 
+      INTEGER_T, INTENT(in) :: DIMDEC(xmac_old) 
+      INTEGER_T, INTENT(in) :: DIMDEC(ymac_old) 
+      INTEGER_T, INTENT(in) :: DIMDEC(zmac_old) 
 
        ! FABS
        ! original data
@@ -12998,7 +12654,7 @@ stop
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: tensor(DIMV(tensor),NUM_CELL_ELASTIC)
       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: &
+      REAL_T, INTENT(in), target :: & !VELADVECT_MF
            velfab(DIMV(velfab),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
        ! slope data
@@ -13044,6 +12700,20 @@ stop
       REAL_T, pointer :: ymassside_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(inout), target :: zmassside(DIMV(zmassside),2)
       REAL_T, pointer :: zmassside_ptr(D_DECL(:,:,:),:)
+
+      REAL_T, INTENT(out), target :: xmac_new(DIMV(xmac_new))
+      REAL_T, pointer :: xmac_new_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(out), target :: ymac_new(DIMV(ymac_new))
+      REAL_T, pointer :: ymac_new_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(out), target :: zmac_new(DIMV(zmac_new))
+      REAL_T, pointer :: zmac_new_ptr(D_DECL(:,:,:))
+
+      REAL_T, INTENT(in), target :: xmac_old(DIMV(xmac_old))
+      REAL_T, pointer :: xmac_old_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(in), target :: ymac_old(DIMV(ymac_old))
+      REAL_T, pointer :: ymac_old_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(in), target :: zmac_old(DIMV(zmac_old))
+      REAL_T, pointer :: zmac_old_ptr(D_DECL(:,:,:))
     
       REAL_T, INTENT(in) :: density_floor(num_materials)
       REAL_T, INTENT(in) :: density_ceiling(num_materials)
@@ -13053,7 +12723,7 @@ stop
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       INTEGER_T ibucket
-      REAL_T xsten_crse(-1:1,SDIM)
+      REAL_T xsten_crse(-nhalf:nhalf,SDIM)
       INTEGER_T dir2
       INTEGER_T iside
       INTEGER_T iside_part
@@ -13062,13 +12732,13 @@ stop
       INTEGER_T vofcomp
       INTEGER_T im
       REAL_T mom2(SDIM)
-      REAL_T xsten_MAC(-1:1,SDIM)
-      REAL_T xsten_accept(-1:1,SDIM)
-      REAL_T xsten_donate(-1:1,SDIM)
-      REAL_T xsten_target(-1:1,SDIM)
-      REAL_T xsten_depart(-1:1,SDIM)
-      REAL_T usten_accept(-1:1)
-      REAL_T usten_donate(-1:1)
+      REAL_T xsten_MAC(-nhalf:nhalf,SDIM)
+      REAL_T xsten_accept(-nhalf:nhalf,SDIM)
+      REAL_T xsten_donate(-nhalf:nhalf,SDIM)
+      REAL_T xsten_target(-nhalf:nhalf,SDIM)
+      REAL_T xsten_depart(-nhalf:nhalf,SDIM)
+      REAL_T usten_accept(-nhalf:nhalf)
+      REAL_T usten_donate(-nhalf:nhalf)
 
       REAL_T xdepartsize,xtargetsize,xloint,xhiint
       REAL_T volint
@@ -13147,10 +12817,9 @@ stop
       REAL_T veldata_MAC_mass(SDIM)
 
       INTEGER_T ihalf
-      INTEGER_T nhalf
       INTEGER_T check_intersection
       INTEGER_T check_accept
-      REAL_T xsten_recon(-1:1,SDIM)
+      REAL_T xsten_recon(-nhalf:nhalf,SDIM)
 
       REAL_T warning_cutoff
       INTEGER_T momcomp
@@ -13164,7 +12833,23 @@ stop
 
       REAL_T :: critical_cutoff_low
       REAL_T :: critical_cutoff_high
-    
+
+      INTEGER_T :: dir_local
+      INTEGER_T :: zapvel
+      INTEGER_T :: iright,jright,kright
+      INTEGER_T :: ileft,jleft,kleft
+      INTEGER_T :: icell,jcell,kcell
+      REAL_T :: momface_total
+      REAL_T :: massface_total
+      REAL_T :: massquarter
+      REAL_T :: momquarter
+
+      REAL_T :: xclamped(SDIM)
+      REAL_T :: LS_clamped
+      REAL_T :: vel_clamped(SDIM)
+      REAL_T :: temperature_clamped
+      INTEGER_T :: prescribed_flag
+
 ! fort_vfrac_split code starts here
 
       LS_ptr=>LS
@@ -13190,6 +12875,14 @@ stop
       ymassside_ptr=>ymassside
       zmassside_ptr=>zmassside
 
+      xmac_new_ptr=>xmac_new
+      ymac_new_ptr=>ymac_new
+      zmac_new_ptr=>zmac_new
+
+      xmac_old_ptr=>xmac_old
+      ymac_old_ptr=>ymac_old
+      zmac_old_ptr=>zmac_old
+
       critical_cutoff_low=-1.0D+99
       critical_cutoff_high=1.0D+99
 
@@ -13210,7 +12903,6 @@ stop
        print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
        stop
       endif
-
 
       nmax=POLYGON_LIST_MAX ! in: fort_vfrac_split
 
@@ -13451,6 +13143,14 @@ stop
       call checkbound_array(fablo,fabhi,ymassside_ptr,1,-1)
       call checkbound_array(fablo,fabhi,zmassside_ptr,1,-1)
 
+      call checkbound_array1(fablo,fabhi,xmac_new_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,ymac_new_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,zmac_new_ptr,0,SDIM-1)
+
+      call checkbound_array1(fablo,fabhi,xmac_old_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,ymac_old_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,zmac_old_ptr,0,SDIM-1)
+
       if (NUM_CELL_ELASTIC.eq. &
           ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic) then
        ! do nothing
@@ -13565,7 +13265,6 @@ stop
 
          if ((maskleft.eq.1).or.(maskright.eq.1)) then
 
-          nhalf=1
           call gridstenMAC_level(xsten_MAC, &
             icrse,jcrse,kcrse, &
             level,nhalf,veldir-1)
@@ -13615,7 +13314,6 @@ stop
               stop
              endif
 
-             nhalf=1
              call CISBOXHALF(xsten_accept,nhalf, &
               xlo,dx, &
               ipart,jpart,kpart, &
@@ -13644,7 +13342,6 @@ stop
              !    *------------*----------*
              ! MAC velocity on left side of cell control volume
              usten_accept(-1)=umac_displace(D_DECL(ipart,jpart,kpart))
-             nhalf=1
               ! normdir=0..sdim-1
              call gridstenMAC_level(xsten_MAC,ipart,jpart,kpart, &
                level,nhalf,normdir)
@@ -13767,7 +13464,6 @@ stop
                 usten_donate(-1)= &
                   umac_displace(D_DECL(idonate,jdonate,kdonate))
 
-                nhalf=1
                 call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
                  level,nhalf,normdir)
 
@@ -14054,7 +13750,6 @@ stop
 
        if (maskcell.eq.1) then
 
-        nhalf=1
         call gridsten_level(xsten_crse,icrse,jcrse,kcrse,level,nhalf)
 
         check_accept=1
@@ -14088,7 +13783,6 @@ stop
           veldata(istate)=zero
          enddo
 
-         nhalf=1
          call CISBOX(xsten_accept,nhalf, &
           xlo,dx,icrse,jcrse,kcrse, &
           bfact,level, &
@@ -14110,7 +13804,6 @@ stop
 
          usten_accept(-1)=umac_displace(D_DECL(icrse,jcrse,kcrse))
 
-         nhalf=1
          call gridstenMAC_level(xsten_MAC,icrse,jcrse,kcrse, &
            level,nhalf,normdir)
 
@@ -14222,7 +13915,6 @@ stop
 
            usten_donate(-1)=umac_displace(D_DECL(idonate,jdonate,kdonate))
 
-           nhalf=1
            call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
              level,nhalf,normdir)
 
@@ -14589,7 +14281,6 @@ stop
            newvfrac_cor(im)=newvfrac(im)
           endif
      
-          nhalf=1 
           call CISBOX(xsten_accept,nhalf, &
            xlo,dx,icrse,jcrse,kcrse, &
            bfact,level, &
@@ -15129,6 +14820,186 @@ stop
       enddo
       enddo ! icrse,jcrse,kcrse -> growntilebox(0 ghost cells)
 
+      do veldir=1,SDIM
+
+        iii=0
+        jjj=0
+        kkk=0 
+
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+          growlo,growhi,0,veldir-1)
+
+        if (veldir.eq.1) then
+         iii=1
+        else if (veldir.eq.2) then
+         jjj=1
+        else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+         kkk=1
+        else
+         print *,"veldir invalid"
+         stop
+        endif
+
+        do icrse=growlo(1),growhi(1)
+        do jcrse=growlo(2),growhi(2)
+        do kcrse=growlo(3),growhi(3)
+
+          ! veldir=1..sdim
+         call gridstenMAC_level(xsten_MAC, &
+            icrse,jcrse,kcrse, &
+            level,nhalf,veldir-1)
+
+         do dir_local=1,SDIM
+          xclamped(dir_local)=xsten_MAC(0,dir_local)
+         enddo
+
+         zapvel=0
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
+          ! do nothing
+         else if (levelrz.eq.COORDSYS_RZ) then
+          if (SDIM.ne.2) then
+           print *,"dimension bust"
+           stop
+          endif
+          if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+              (veldir.eq.1)) then
+           zapvel=1
+          endif
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+          if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+              (veldir.eq.1)) then
+           zapvel=1
+          endif
+         else
+          print *,"levelrz invalid"
+          stop
+         endif
+
+         if (zapvel.eq.1) then
+          if (veldir.eq.1) then
+           xmac_new(D_DECL(icrse,jcrse,kcrse))=zero
+          else
+           print *,"veldir invalid"
+           stop
+          endif
+         else if (zapvel.eq.0) then
+          iright=icrse
+          jright=jcrse
+          kright=kcrse
+          ileft=iright-iii
+          jleft=jright-jjj
+          kleft=kright-kkk
+           ! mask=1 if cell is not covered by level+1 or cell is 
+           ! outside the domain.
+          maskleft=mask(D_DECL(ileft,jleft,kleft))
+          maskright=mask(D_DECL(iright,jright,kright))
+
+          if ((maskleft.eq.one).and.(maskright.eq.one)) then
+
+            momface_total=zero
+            massface_total=zero
+
+             ! iside=-1 (left of face)
+             ! iside=1  (right of face)
+            do iside=-1,1,2
+
+              ! iside=-1 (left of face)
+             if (iside.eq.-1) then
+              icell=ileft
+              jcell=jleft
+              kcell=kleft
+              ibucket=2  ! right side of cell ileft,jleft,kleft
+
+               ! iside=1  (right of face)
+             else if (iside.eq.1) then
+              icell=iright
+              jcell=jright
+              kcell=kright
+              ibucket=1  ! left side of cell iright,jright,kright
+             else 
+              print *,"iside invalid"
+              stop
+             endif
+
+             if (veldir.eq.1) then
+              massquarter=xmassside(D_DECL(icell,jcell,kcell),ibucket)
+              momquarter=xmomside(D_DECL(icell,jcell,kcell),ibucket)
+             else if (veldir.eq.2) then
+              massquarter=ymassside(D_DECL(icell,jcell,kcell),ibucket)
+              momquarter=ymomside(D_DECL(icell,jcell,kcell),ibucket)
+             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+              massquarter=zmassside(D_DECL(icell,jcell,kcell),ibucket)
+              momquarter=zmomside(D_DECL(icell,jcell,kcell),ibucket)
+             else
+              print *,"veldir invalid"
+              stop
+             endif
+             if (massquarter.ge.zero) then
+              ! do nothing
+             else
+              print *,"massquarter cannot be negative"
+              print *,"icell,jcell,kcell,ibucket ", &
+                icell,jcell,kcell,ibucket 
+              print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
+              print *,"massquarter ",massquarter
+              print *,"momquarter ",momquarter
+              stop
+             endif
+
+             massface_total=massface_total+massquarter
+             momface_total=momface_total+momquarter
+
+            enddo ! iside: do iside=-1,1,2
+
+            if (massface_total.gt.zero) then
+
+             momface_total=momface_total/massface_total
+             ! LS>0 if clamped
+             call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
+              vel_clamped,temperature_clamped,prescribed_flag,dx)
+             if (LS_clamped.ge.zero) then
+              momface_total=vel_clamped(veldir)
+             else if (LS_clamped.lt.zero) then
+              ! do nothing
+             else
+              print *,"LS_clamped is NaN"
+              stop
+             endif
+
+            else
+             print *,"massface_total invalid"
+             stop
+            endif
+          
+            if (veldir.eq.1) then
+             xmac_new(D_DECL(icrse,jcrse,kcrse))=momface_total
+            else if (veldir.eq.2) then
+             ymac_new(D_DECL(icrse,jcrse,kcrse))=momface_total
+            else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+             zmac_new(D_DECL(icrse,jcrse,kcrse))=momface_total
+            else
+             print *,"veldir invalid"
+             stop
+            endif
+
+          else if ((maskleft.eq.zero).or.(maskright.eq.zero)) then
+            ! do nothing
+          else 
+           print *,"maskleft or maskright invalid"
+           stop
+          endif
+
+         else
+          print *,"zapvel invalid fort_vfrac_split"
+          stop
+         endif
+
+        enddo
+        enddo
+        enddo  ! i,j,k
+
+      enddo ! veldir=1..sdim
+
       return
       end subroutine fort_vfrac_split
 
@@ -15287,10 +15158,10 @@ stop
 
       INTEGER_T vofcomp
       INTEGER_T start_freezing
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
 
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_ofs(-3:3,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_ofs(-nhalf:nhalf,SDIM)
 
       REAL_T total_vol_cell
       REAL_T mass_sum
@@ -15373,7 +15244,6 @@ stop
 
       DATA_FLOOR=zero
 
-      nhalf=3
       nmax=POLYGON_LIST_MAX ! in: fort_combinevel
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -15577,7 +15447,8 @@ stop
         call multi_get_volume_tessellate( &
          local_tessellate, &  ! =3
          bfact, &
-         dx,xsten,nhalf, &
+         dx,xsten, &
+         nhalf, & !nhalf=3
          mofdata, &
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
@@ -16599,11 +16470,11 @@ stop
       INTEGER_T side
       INTEGER_T im
       INTEGER_T idx
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
 
       REAL_T ucombine
-      REAL_T xstenMAC(-3:3,SDIM)
-      REAL_T xsten(-3:3,SDIM)
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T is_solid_face
       REAL_T vsol
       INTEGER_T iboundary
@@ -16643,7 +16514,6 @@ stop
       INTEGER_T is_clamped_face
       INTEGER_T local_tessellate
 
-      nhalf=3
       nmax=POLYGON_LIST_MAX ! in: COMBINEVELFACE
 
       if ((tid.lt.0).or. &
@@ -16824,7 +16694,8 @@ stop
          call multi_get_volume_tessellate( &
           local_tessellate, & !  =3
           bfact, &
-          dx,xsten,nhalf, &
+          dx,xsten, &
+          nhalf, & !=3
           mofdata, &
           geom_xtetlist(1,1,1,tid+1), &
           nmax, &
@@ -17356,9 +17227,12 @@ stop
 
       REAL_T hold_grad
       REAL_T RR
-      REAL_T xstenMAC(-1:1,SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf,nhalfcell
+      INTEGER_T, PARAMETER :: nhalf=1
+      INTEGER_T, PARAMETER :: nhalfcell=3
+      INTEGER_T, PARAMETER :: nhalfclamped=1
+
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xsten(-nhalfcell:nhalfcell,SDIM)
       INTEGER_T scomp,scomp_bc,dcomp
       INTEGER_T ncomp_source
       INTEGER_T ncomp_dest
@@ -17386,8 +17260,8 @@ stop
       INTEGER_T left_rigid,right_rigid
       INTEGER_T partidL,partidR
 
-      REAL_T xclamped_minus_sten(-1:1,SDIM)
-      REAL_T xclamped_plus_sten(-1:1,SDIM)
+      REAL_T xclamped_minus_sten(-nhalfclamped:nhalfclamped,SDIM)
+      REAL_T xclamped_plus_sten(-nhalfclamped:nhalfclamped,SDIM)
       REAL_T xclamped_minus(SDIM)
       REAL_T xclamped_plus(SDIM)
       REAL_T xclamped_cen(SDIM)
@@ -17403,9 +17277,6 @@ stop
       REAL_T temperature_clamped_plus
       INTEGER_T prescribed_flag
       INTEGER_T is_clamped_face
-
-      nhalf=1
-      nhalfcell=3
 
       semflux_ptr=>semflux
       amrsync_ptr=>amrsync
@@ -17759,8 +17630,10 @@ stop
           call get_primary_material(lsleft,imL)
           call get_primary_material(lsright,imR)
 
-          call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
-          call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+          call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level, &
+                  nhalfclamped)
+          call gridsten_level(xclamped_plus_sten,i,j,k,level, &
+                  nhalfclamped)
           do dir2=1,SDIM
            xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
            xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
@@ -18655,9 +18528,9 @@ stop
       INTEGER_T :: i,j,k
       INTEGER_T :: ii,jj,kk
       INTEGER_T :: dir_flux,side_flux
-      REAL_T :: xstenCELL(-3:3,SDIM)
-      REAL_T :: xsten_flux(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T :: xstenCELL(-nhalf:nhalf,SDIM)
+      REAL_T :: xsten_flux(-nhalf:nhalf,SDIM)
       INTEGER_T dircomp
       INTEGER_T dir_row,dir_column
       REAL_T, target :: x_CELL_control_volume(SDIM)
@@ -18735,8 +18608,6 @@ stop
 
       call checkbound_array1(fablo,fabhi,SNEW_ptr,1,-1)
 
-      nhalf=3
-  
       call get_dxmin(dx,bfact,dxmin)
       if (dxmin.gt.zero) then
        ! do nothing
@@ -19351,8 +19222,8 @@ stop
       REAL_T :: LS_stencil(num_materials)
       REAL_T :: LS_LEFT(num_materials)
       REAL_T :: LS_RIGHT(num_materials)
-      REAL_T, target :: xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T, target :: xsten(-nhalf:nhalf,SDIM)
       type(assimilate_parm_type) :: assimilate_parm
       type(assimilate_out_parm_type) :: assimilate_out_parm
       INTEGER_T cell_flag
@@ -19365,8 +19236,6 @@ stop
       REAL_T velsum(SDIM)
       REAL_T wtsum
       REAL_T velface
-
-      nhalf=3
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -19959,10 +19828,8 @@ stop
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       INTEGER_T prescribed_flag
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=3
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if (cur_time.ge.zero) then
        ! do nothing
@@ -20443,10 +20310,8 @@ stop
       REAL_T vel_clamped(SDIM)
       REAL_T temperature_clamped
       INTEGER_T prescribed_flag
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-
-      nhalf=3
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
 
       if ((level.lt.0).or.(level.gt.fort_finest_level)) then
        print *,"level invalid veladvance"
@@ -20592,7 +20457,7 @@ stop
       REAL_T, pointer, INTENT(in) :: tensor_fab(D_DECL(:,:,:),:)
       REAL_T, pointer, INTENT(in) :: matrixfab(D_DECL(:,:,:),:)
 
-      INTEGER_T :: nhalf
+      INTEGER_T, PARAMETER :: nhalf=3
       INTEGER_T :: interior_ID
       INTEGER_T :: dir
       REAL_T, target :: xpart(SDIM)
@@ -20600,7 +20465,7 @@ stop
       INTEGER_T cell_index(SDIM)
       INTEGER_T interior_ok
       INTEGER_T i,j,k
-      REAL_T xsten(-3:3,SDIM)
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xgrid(SDIM)
       REAL_T w_p
       INTEGER_T npart_local
@@ -20637,8 +20502,6 @@ stop
       data_in%fablo=accum_PARM%fablo
       data_in%fabhi=accum_PARM%fabhi
       data_in%scomp=1
-
-      nhalf=3
 
       if (accum_PARM%Npart.ge.0) then
        npart_local=accum_PARM%Npart
@@ -20864,9 +20727,9 @@ stop
       INTEGER_T dir_tensor
       INTEGER_T im
       INTEGER_T im_primary
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, PARAMETER :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xgrid(SDIM)
-      INTEGER_T nhalf
 
       REAL_T wp
       REAL_T A_matrix,B_matrix
@@ -20875,8 +20738,6 @@ stop
 
       INTEGER_T ipart,im_map,ii,jj
       REAL_T Q(3,3)
-
-      nhalf=3
 
       LSfab_ptr=>LSfab
       matrixfab_ptr=>matrixfab
