@@ -17106,6 +17106,10 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
   FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
+  FArrayBox& xvmac_new=(*umac_new[0])[mfi];
+  FArrayBox& yvmac_new=(*umac_new[1])[mfi];
+  FArrayBox& zvmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
+
   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
   Real local_dt_slab=dt_slab;
@@ -17178,6 +17182,11 @@ NavierStokes::split_scalar_advection() {
    xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
    ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
    zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
+   xvmac_new.dataPtr(),ARLIM(xvmac_new.loVect()),ARLIM(xvmac_new.hiVect()),
+   yvmac_new.dataPtr(),ARLIM(yvmac_new.loVect()),ARLIM(yvmac_new.hiVect()),
+   zvmac_new.dataPtr(),ARLIM(zvmac_new.loVect()),ARLIM(zvmac_new.hiVect()),
+   &stokes_flow,
+   denconst_interface_added.dataPtr(),
    &ngrow_mass,
    &ngrow_mac_old,
    &nc_conserve,
