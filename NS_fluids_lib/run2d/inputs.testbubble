@@ -91,7 +91,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 10  # default 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 256 16
+amr.max_grid_size   = 256 64
 #amr.restart         = chk01000
 amr.plotfile_on_restart=1
 #amr.trace   =1
@@ -119,7 +119,6 @@ ns.visc_coef      = 1.0    # 0.038=mu/(rho L U)
 # U^2=Lg/1.321=5.19 * 980/1.321   U=62.1
 ns.gravity        = -980.0   # 1.321=L g/U^2
 ns.incremental_gravity_flag=0
-#ns.FSI_flag=0 5
 # U^2=50/(1 L 0.0025)
 ns.tension        = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 #ns.fixed_dt	  = 0.0025     # hardwire dt
