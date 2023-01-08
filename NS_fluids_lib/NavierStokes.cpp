@@ -16194,7 +16194,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   debug_ngrow(VELADVECT_MF,1,37);
 
   if (localMF[DEN_RECON_MF]->nComp()!=num_materials*num_state_material)
-   amrex::Error("localMF[DEN_RECON_MF]->nComp()!=num_materials*num_state_material");
+   amrex::Error(
+    "localMF[DEN_RECON_MF]->nComp()!=num_materials*num_state_material");
   if (localMF[VELADVECT_MF]->nComp()!=AMREX_SPACEDIM)
    amrex::Error("localMF[VELADVECT_MF]->nComp()!=AMREX_SPACEDIM");
 
@@ -16938,7 +16939,7 @@ NavierStokes::split_scalar_advection() {
 
     const Real* xlo = grid_loc[gridno].lo();
 
-    FArrayBox& x_mac_old=(*localMF[UMACOLD_MF+veldir-1])[mfi];
+    FArrayBox& xmac_old=(*localMF[UMACOLD_MF+veldir-1])[mfi];
     FArrayBox& xvelfab=(*xvel[veldir-1])[mfi]; 
 
     int tid_current=ns_thread();
@@ -16951,7 +16952,7 @@ NavierStokes::split_scalar_advection() {
      &level,
      &finest_level,
      &normdir_here,
-     x_mac_old.dataPtr(),ARLIM(x_mac_old.loVect()),ARLIM(x_mac_old.hiVect()),
+     xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
      xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
      xlo,dx,
      tilelo,tilehi,
@@ -17106,9 +17107,13 @@ NavierStokes::split_scalar_advection() {
   FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
   FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
 
-  FArrayBox& xvmac_new=(*umac_new[0])[mfi];
-  FArrayBox& yvmac_new=(*umac_new[1])[mfi];
-  FArrayBox& zvmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
+  FArrayBox& xmac_new=(*umac_new[0])[mfi];
+  FArrayBox& ymac_new=(*umac_new[1])[mfi];
+  FArrayBox& zmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
+
+  FArrayBox& xmac_old=(*localMF[UMACOLD_MF])[mfi];
+  FArrayBox& ymac_old=(*localMF[UMACOLD_MF+1])[mfi];
+  FArrayBox& zmac_old=(*localMF[UMACOLD_MF+AMREX_SPACEDIM-1])[mfi];
 
   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
@@ -17140,6 +17145,7 @@ NavierStokes::split_scalar_advection() {
    &bfact_f,
    &local_dt_slab, // fort_vfrac_split
    &prev_time_slab,
+   &cur_time_slab,
    &prescribed_vel_time_slab,
      // this is the original data
    LSfab.dataPtr(),
@@ -17150,7 +17156,7 @@ NavierStokes::split_scalar_advection() {
    ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
    tenfab.dataPtr(),
    ARLIM(tenfab.loVect()),ARLIM(tenfab.hiVect()),
-   velfab.dataPtr(),
+   velfab.dataPtr(), //VELADVECT_MF
    ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
      // slope data
    vofslopefab.dataPtr(),
@@ -17182,9 +17188,14 @@ NavierStokes::split_scalar_advection() {
    xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
    ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
    zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
-   xvmac_new.dataPtr(),ARLIM(xvmac_new.loVect()),ARLIM(xvmac_new.hiVect()),
-   yvmac_new.dataPtr(),ARLIM(yvmac_new.loVect()),ARLIM(yvmac_new.hiVect()),
-   zvmac_new.dataPtr(),ARLIM(zvmac_new.loVect()),ARLIM(zvmac_new.hiVect()),
+     //umac_new[0..sdim-1]
+   xmac_new.dataPtr(),ARLIM(xmac_new.loVect()),ARLIM(xmac_new.hiVect()),
+   ymac_new.dataPtr(),ARLIM(ymac_new.loVect()),ARLIM(ymac_new.hiVect()),
+   zmac_new.dataPtr(),ARLIM(zmac_new.loVect()),ARLIM(zmac_new.hiVect()),
+    //UMACOLD_MF
+   xmac_old.dataPtr(),ARLIM(xmac_old.loVect()),ARLIM(xmac_old.hiVect()),
+   ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
+   zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
    &stokes_flow,
    denconst_interface_added.dataPtr(),
    &ngrow_mass,
@@ -17220,72 +17231,6 @@ NavierStokes::split_scalar_advection() {
      profile_time_end-profile_time_start << '\n';
   }
  }
-
- if (thread_class::nthreads<1)
-  amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(S_new.boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-    // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
-
-   FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];//1..2
-   FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
-   FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
-
-   FArrayBox& xmassside=(*side_bucket_mass[0])[mfi];//1..2
-   FArrayBox& ymassside=(*side_bucket_mass[1])[mfi];
-   FArrayBox& zmassside=(*side_bucket_mass[AMREX_SPACEDIM-1])[mfi];
-
-   FArrayBox& xvmac_new=(*umac_new[0])[mfi];
-   FArrayBox& yvmac_new=(*umac_new[1])[mfi];
-   FArrayBox& zvmac_new=(*umac_new[AMREX_SPACEDIM-1])[mfi];
-
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    // declared in GODUNOV_3D.F90
-   fort_build_newmac(
-    &normdir_here,
-    tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
-    ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
-    zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),
-    xmassside.dataPtr(),ARLIM(xmassside.loVect()),ARLIM(xmassside.hiVect()),
-    ymassside.dataPtr(),ARLIM(ymassside.loVect()),ARLIM(ymassside.hiVect()),
-    zmassside.dataPtr(),ARLIM(zmassside.loVect()),ARLIM(zmassside.hiVect()),
-    xvmac_new.dataPtr(),ARLIM(xvmac_new.loVect()),ARLIM(xvmac_new.hiVect()),
-    yvmac_new.dataPtr(),ARLIM(yvmac_new.loVect()),ARLIM(yvmac_new.hiVect()),
-    zvmac_new.dataPtr(),ARLIM(zvmac_new.loVect()),ARLIM(zvmac_new.hiVect()),
-    maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    xlo,dx,
-    &cur_time_slab,
-    &level,
-    &finest_level);
-
- }  // mfi
-} // omp
- ns_reconcile_d_num(92);
-
 
  delete conserve;
  
