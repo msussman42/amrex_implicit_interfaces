@@ -16787,7 +16787,9 @@ NavierStokes::split_scalar_advection() {
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type_local,slab_step+1);
 
- getStateDist_localMF(LS_RECON_MF,ngrow_scalar,advect_time_slab,10);
+   //ngrow_mass=2; need to update LS at faces in order to check
+   //for added mass.
+ getStateDist_localMF(LS_RECON_MF,ngrow_mass,advect_time_slab,10);
 
    // the pressure from before will be copied to the new pressure.
  getState_localMF(VELADVECT_MF,ngrow_mass,
@@ -16827,7 +16829,7 @@ NavierStokes::split_scalar_advection() {
  if (LS_recon_ncomp!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("LS_recon invalid");
 
- debug_ngrow(LS_RECON_MF,ngrow_scalar,40);
+ debug_ngrow(LS_RECON_MF,ngrow_mass,40);
 
  resize_mask_nbr(ngrow_mass);
  debug_ngrow(MASK_NBR_MF,ngrow_mass,28); 
@@ -17148,7 +17150,7 @@ NavierStokes::split_scalar_advection() {
    &cur_time_slab,
    &prescribed_vel_time_slab,
      // this is the original data
-   LSfab.dataPtr(),
+   LSfab.dataPtr(), //LS_RECON_MF, ngrow_mass 
    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
    denfab.dataPtr(),
    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -17198,7 +17200,7 @@ NavierStokes::split_scalar_advection() {
    zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
    &stokes_flow,
    denconst_interface_added.dataPtr(),
-   &ngrow_mass,
+   &ngrow_mass, //=2
    &ngrow_mac_old,
    &nc_conserve,
    &map_forward_direct_split[normdir_here],
@@ -17254,17 +17256,6 @@ NavierStokes::split_scalar_advection() {
  
  delete_localMF(LS_RECON_MF,1);
  
- if (stokes_flow==0) {
-  // do nothing
- } else if (stokes_flow==1) {
-  MultiFab& S_old=get_new_data(State_Type,slab_step);
-  MultiFab::Copy(S_new,S_old,0,0,AMREX_SPACEDIM,1);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   MultiFab::Copy(*umac_new[dir],*localMF[UMACOLD_MF+dir],0,0,1,0);
-  }
- } else
-  amrex::Error("stokes_flow invalid");
-
  delete_localMF(UMACOLD_MF,AMREX_SPACEDIM);
  
  if ((level>=0)&&(level<finest_level)) {
