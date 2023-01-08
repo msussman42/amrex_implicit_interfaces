@@ -12512,7 +12512,7 @@ stop
        time, &
        cur_time, &
        passive_veltime, &
-       LS,DIMS(LS), &  ! original data
+       LS,DIMS(LS), &  ! original data; ngrow_mass 
        den, &
        DIMS(den), &
        mom_den, &
@@ -12571,6 +12571,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, PARAMETER :: nhalf=1
+      INTEGER_T, PARAMETER :: nhalf_upwind=3
       INTEGER_T, INTENT(inout) :: nprocessed
       INTEGER_T, INTENT(in) :: tid
 
@@ -12724,6 +12725,7 @@ stop
 
       INTEGER_T ibucket
       REAL_T xsten_crse(-nhalf:nhalf,SDIM)
+      REAL_T xsten_upwind(-nhalf_upwind:nhalf_upwind,SDIM)
       INTEGER_T dir2
       INTEGER_T iside
       INTEGER_T iside_part
@@ -12835,7 +12837,15 @@ stop
       REAL_T :: critical_cutoff_high
 
       INTEGER_T :: dir_local
+      REAL_T :: vel_local
+      REAL_T :: dx_upwind
+      REAL_T :: wt_upwind
+      REAL_T :: wt_oldvel
+      INTEGER_T :: im_primary,im_secondary,iten
+      REAL_T :: LS_bucket(num_materials,2)
+      REAL_T :: LS_added(num_materials)
       INTEGER_T :: zapvel
+      INTEGER_T :: iupwind,jupwind,kupwind
       INTEGER_T :: iright,jright,kright
       INTEGER_T :: ileft,jleft,kleft
       INTEGER_T :: icell,jcell,kcell
@@ -13082,7 +13092,7 @@ stop
        ! ghost cells.
 
        ! original data
-      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_scalar,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,den_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,tensor_ptr,ngrow_scalar,-1)
@@ -14714,6 +14724,91 @@ stop
           snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
          enddo
 
+         call gridsten_level(xsten_upwind,icrse,jcrse,kcrse, &
+           level,nhalf_upwind)
+         vel_local=velfab(D_DECL(icrse,jcrse,kcrse),normdir+1)
+         iupwind=icrse
+         jupwind=jcrse
+         kupwind=kcrse
+         if (vel_local.ge.zero) then
+          dx_upwind=xsten_upwind(0,normdir+1)-xsten_upwind(-2,normdir+1)
+          iupwind=icrse-ii
+          jupwind=jcrse-jj
+          kupwind=kcrse-kk
+          wt_upwind=vel_local*dt/dx_upwind
+         else if (vel_local.le.zero) then
+          dx_upwind=xsten_upwind(2,normdir+1)-xsten_upwind(0,normdir+1)
+          iupwind=icrse+ii
+          jupwind=jcrse+jj
+          kupwind=kcrse+kk
+          wt_upwind=-vel_local*dt/dx_upwind
+         else
+          print *,"vel_local is NaN"
+          stop
+         endif
+         if (dx_upwind.gt.zero) then
+          if (wt_upwind.gt.one) then
+           wt_upwind=one
+          else if ((wt_upwind.ge.zero).and.(wt_upwind.le.one)) then
+           ! do nothing
+          else
+           print *,"wt_upwind invalid"
+           stop
+          endif
+         else
+          print *,"dx_upwind invalid"
+          stop
+         endif
+
+         do im=1,num_materials
+          LS_added(im)= &
+             wt_upwind*LS(D_DECL(iupwind,jupwind,kupwind),im)+ &
+             (one-wt_upwind)*LS(D_DECL(icrse,jcrse,kcrse),im)
+         enddo
+
+         if (stokes_flow.eq.1) then
+          wt_oldvel=one
+         else if (stokes_flow.eq.0) then
+          wt_oldvel=zero
+          call get_primary_material(LS_added,im_primary)
+          call get_secondary_material(LS_added,im_primary,im_secondary)
+          if ((abs(LS_added(im_primary)).le.DXMAXLS).and. &
+              (abs(LS_added(im_secondary)).le.DXMAXLS)) then
+           call get_iten(im_primary,im_secondary,iten)
+           if (denconst_interface_added(iten).eq.zero) then
+            ! do nothing
+           else if (denconst_interface_added(iten).gt.zero) then
+            wt_oldvel=one- &
+             max(fort_denconst(im_primary),fort_denconst(im_secondary))/ &
+             denconst_interface_added(iten)
+            if ((wt_oldvel.ge.zero).and.(wt_oldvel.le.one)) then
+             ! do nothing
+            else
+             print *,"wt_oldvel invalid"
+             stop
+            endif
+           else
+            print *,"denconst_interface_added invalid"
+            stop
+           endif
+          else if ((abs(LS_added(im_primary)).gt.DXMAXLS).or. &
+                   (abs(LS_added(im_secondary)).gt.DXMAXLS)) then
+           ! do nothing
+          else
+           print *,"LS_added is NaN"
+           stop
+          endif
+         else
+          print *,"stokes_flow invalid"
+          stop
+         endif
+
+         do istate=1,SDIM
+          snew(D_DECL(icrse,jcrse,kcrse),istate)= &
+             (one-wt_oldvel)*snew_hold(istate)+ &
+             wt_oldvel*velfab(D_DECL(icrse,jcrse,kcrse),istate)
+         enddo
+
           ! density, temperature, other scalars
           ! volume fractions, centroids
          do im=1,num_materials
@@ -14878,6 +14973,7 @@ stop
          if (zapvel.eq.1) then
           if (veldir.eq.1) then
            xmac_new(D_DECL(icrse,jcrse,kcrse))=zero
+           wt_oldvel=zero
           else
            print *,"veldir invalid"
            stop
@@ -14949,7 +15045,90 @@ stop
              massface_total=massface_total+massquarter
              momface_total=momface_total+momquarter
 
+             call gridsten_level(xsten_upwind,icell,jcell,kcell, &
+               level,nhalf_upwind)
+             vel_local=velfab(D_DECL(icell,jcell,kcell),normdir+1)
+             iupwind=icell
+             jupwind=jcell
+             kupwind=kcell
+             if (vel_local.ge.zero) then
+              dx_upwind=xsten_upwind(0,normdir+1)-xsten_upwind(-2,normdir+1)
+              iupwind=icell-ii
+              jupwind=jcell-jj
+              kupwind=kcell-kk
+              wt_upwind=vel_local*dt/dx_upwind
+             else if (vel_local.le.zero) then
+              dx_upwind=xsten_upwind(2,normdir+1)-xsten_upwind(0,normdir+1)
+              iupwind=icell+ii
+              jupwind=jcell+jj
+              kupwind=kcell+kk
+              wt_upwind=-vel_local*dt/dx_upwind
+             else
+              print *,"vel_local is NaN"
+              stop
+             endif
+             if (dx_upwind.gt.zero) then
+              if (wt_upwind.gt.one) then
+               wt_upwind=one
+              else if ((wt_upwind.ge.zero).and.(wt_upwind.le.one)) then
+               ! do nothing
+              else
+               print *,"wt_upwind invalid"
+               stop
+              endif
+             else
+              print *,"dx_upwind invalid"
+              stop
+             endif
+
+             do im=1,num_materials
+              LS_bucket(im,ibucket)= &
+                 wt_upwind*LS(D_DECL(iupwind,jupwind,kupwind),im)+ &
+                 (one-wt_upwind)*LS(D_DECL(icell,jcell,kcell),im)
+             enddo
+
             enddo ! iside: do iside=-1,1,2
+
+            do im=1,num_materials
+             LS_added(im)=half*(LS_bucket(im,1)+LS_bucket(im,2))
+            enddo
+
+            if (stokes_flow.eq.1) then
+             wt_oldvel=one
+            else if (stokes_flow.eq.0) then
+             wt_oldvel=zero
+             call get_primary_material(LS_added,im_primary)
+             call get_secondary_material(LS_added,im_primary,im_secondary)
+             if ((abs(LS_added(im_primary)).le.DXMAXLS).and. &
+                 (abs(LS_added(im_secondary)).le.DXMAXLS)) then
+              call get_iten(im_primary,im_secondary,iten)
+              if (denconst_interface_added(iten).eq.zero) then
+               ! do nothing
+              else if (denconst_interface_added(iten).gt.zero) then
+               wt_oldvel=one- &
+                max(fort_denconst(im_primary),fort_denconst(im_secondary))/ &
+                denconst_interface_added(iten)
+               if ((wt_oldvel.ge.zero).and.(wt_oldvel.le.one)) then
+                ! do nothing
+               else
+                print *,"wt_oldvel invalid"
+                stop
+               endif
+              else
+               print *,"denconst_interface_added invalid"
+               stop
+              endif
+             else if ((abs(LS_added(im_primary)).gt.DXMAXLS).or. &
+                      (abs(LS_added(im_secondary)).gt.DXMAXLS)) then
+              ! do nothing
+             else
+              print *,"LS_added is NaN"
+              stop
+             endif
+            else
+             print *,"stokes_flow invalid"
+             stop
+            endif
 
             if (massface_total.gt.zero) then
 
@@ -14959,6 +15138,7 @@ stop
               vel_clamped,temperature_clamped,prescribed_flag,dx)
              if (LS_clamped.ge.zero) then
               momface_total=vel_clamped(veldir)
+              wt_oldvel=zero
              else if (LS_clamped.lt.zero) then
               ! do nothing
              else
@@ -14972,11 +15152,17 @@ stop
             endif
           
             if (veldir.eq.1) then
-             xmac_new(D_DECL(icrse,jcrse,kcrse))=momface_total
+             xmac_new(D_DECL(icrse,jcrse,kcrse))= &
+              (one-wt_oldvel)*momface_total+ &
+              wt_oldvel*xmac_old(D_DECL(icrse,jcrse,kcrse))
             else if (veldir.eq.2) then
-             ymac_new(D_DECL(icrse,jcrse,kcrse))=momface_total
+             ymac_new(D_DECL(icrse,jcrse,kcrse))= &
+              (one-wt_oldvel)*momface_total+ &
+              wt_oldvel*ymac_old(D_DECL(icrse,jcrse,kcrse))
             else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-             zmac_new(D_DECL(icrse,jcrse,kcrse))=momface_total
+             zmac_new(D_DECL(icrse,jcrse,kcrse))= &
+              (one-wt_oldvel)*momface_total+ &
+              wt_oldvel*zmac_old(D_DECL(icrse,jcrse,kcrse))
             else
              print *,"veldir invalid"
              stop
