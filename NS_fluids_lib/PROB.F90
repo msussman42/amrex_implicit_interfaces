@@ -5574,6 +5574,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if ((FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
             (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
             (FSI_flag(im).eq.FSI_ICE_PROBF90).or. &
+            (FSI_flag(im).eq.FSI_ICE_STATIC).or. &
             (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. &
             (FSI_flag(im).eq.FSI_SHOELE_VELVEL).or. &
             (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
@@ -10398,6 +10399,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if ((FSI_flag(im).eq.FSI_FLUID).or. & 
            (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. & 
            (FSI_flag(im).eq.FSI_ICE_PROBF90).or. & 
+           (FSI_flag(im).eq.FSI_ICE_STATIC).or. & 
            (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then 
         VOF(vofcomp)=vofarray(im)
         do dir2=1,SDIM
@@ -10432,6 +10434,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if ((FSI_flag(im).eq.FSI_FLUID).or. & 
            (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. & 
            (FSI_flag(im).eq.FSI_ICE_PROBF90).or. & 
+           (FSI_flag(im).eq.FSI_ICE_STATIC).or. & 
            (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then 
         ! do nothing
        else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 

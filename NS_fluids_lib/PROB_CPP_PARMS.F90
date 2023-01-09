@@ -182,6 +182,7 @@ stop
        else if (local_FSI_flag.eq.FSI_PRESCRIBED_NODES) then
         mof_ordering_local(im)=1  ! non-tessellating
        else if ((local_FSI_flag.eq.FSI_ICE_PROBF90).or. &
+                (local_FSI_flag.eq.FSI_ICE_STATIC).or. &
                 (local_FSI_flag.eq.FSI_ICE_NODES_INIT)) then
         ! do nothing, tessellating
    
@@ -214,6 +215,7 @@ stop
         else if (local_FSI_flag.eq.FSI_PRESCRIBED_NODES) then 
          mof_ordering_local(im)=1 ! non-tessellating
         else if ((local_FSI_flag.eq.FSI_ICE_PROBF90).or. &
+                 (local_FSI_flag.eq.FSI_ICE_STATIC).or. &
                  (local_FSI_flag.eq.FSI_ICE_NODES_INIT)) then 
          mof_ordering_local(im)=num_materials ! tessellating
 
