@@ -910,6 +910,7 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_ICE_NODES_INIT=6
 // FSI_FLUID_NODES_INIT=7
 // FSI_SHOELE_PRESVEL=8
+// FSI_ICE_STATIC=9
 Vector<int> NavierStokes::FSI_flag; 
 int NavierStokes::FSI_interval=1;
 int NavierStokes::num_local_aux_grids=0;
@@ -1701,6 +1702,7 @@ void fortran_parameters() {
    if ((NavierStokes::FSI_flag[im]!=FSI_FLUID)&&
        (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT)&& 
        (NavierStokes::FSI_flag[im]!=FSI_ICE_PROBF90)&& 
+       (NavierStokes::FSI_flag[im]!=FSI_ICE_STATIC)&& 
        (NavierStokes::FSI_flag[im]!=FSI_ICE_NODES_INIT)&& 
        (NavierStokes::FSI_flag[im]!=FSI_RIGID_NOTPRESCRIBED)) 
     amrex::Error("NavierStokes::FSI_flag invalid");
@@ -5472,10 +5474,22 @@ NavierStokes::read_params ()
        } else
         amrex::Error("enable_spectral invalid");
 
-       if (incremental_gravity_flag==1) {
-	//do nothing
+       if (FSI_flag[im-1]!=FSI_ICE_STATIC) {
+
+        if (incremental_gravity_flag==1) {
+ 	 //do nothing
+        } else
+         amrex::Error("need incremental_gravity_flag==1 if ice or FSI_rigid");
+
+       } else if (FSI_flag[im-1]==FSI_ICE_STATIC) {
+
+        if (incremental_gravity_flag==0) {
+ 	 //do nothing
+        } else
+         amrex::Error("need incremental_gravity_flag==0 if FSI_ICE_STATIC");
+	
        } else
-        amrex::Error("need incremental_gravity_flag==1 if ice or FSI_rigid");
+	amrex::Error("FSI_flag[im-1] invalid");
 
       } // is_ice_or_FSI_rigid_material==1
 
@@ -6307,8 +6321,9 @@ int NavierStokes::is_singular_coeff(int im) {
              (FSI_flag[im]==FSI_FLUID_NODES_INIT)) { 
    local_is_singular_coeff=0;
   } else if ((FSI_flag[im]==FSI_ICE_PROBF90)||
+  	     (FSI_flag[im]==FSI_ICE_STATIC)||
 	     (FSI_flag[im]==FSI_ICE_NODES_INIT)) { 
-   local_is_singular_coeff=1;
+   local_is_singular_coeff=1; //extend pressure (after SOLVETYPE_PRES)
   } else if (FSI_flag[im]==FSI_SHOELE_VELVEL) { 
    local_is_singular_coeff=0;
   } else if (FSI_flag[im]==FSI_SHOELE_PRESVEL) { 

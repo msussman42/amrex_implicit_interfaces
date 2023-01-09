@@ -13985,6 +13985,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
                (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then
        fort_CTML_FSI_mat_base=0
@@ -14064,6 +14065,7 @@ end subroutine print_visual_descriptor
           (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
           (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
           (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+          (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
           (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
           (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
@@ -14126,6 +14128,7 @@ end subroutine print_visual_descriptor
 
       fort_is_ice_base=0
       if ((FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+          (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT)) then
        fort_is_ice_base=1
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
@@ -14196,6 +14199,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
                (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
                (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
                (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
@@ -14315,6 +14319,7 @@ end subroutine print_visual_descriptor
        fort_is_lag_part_base=1
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. & 
+               (FSI_flag_local.eq.FSI_ICE_STATIC).or. & 
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        fort_is_lag_part_base=0
       else
@@ -14371,6 +14376,7 @@ end subroutine print_visual_descriptor
       else if ((fsi_flag_local.eq.FSI_FLUID).or. & 
                (fsi_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
                (fsi_flag_local.eq.FSI_ICE_PROBF90).or. & 
+               (fsi_flag_local.eq.FSI_ICE_STATIC).or. & 
                (fsi_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        ! do nothing
       else
@@ -14895,6 +14901,7 @@ end subroutine print_visual_descriptor
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
                (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. & 
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. & 
+               (FSI_flag_local.eq.FSI_ICE_STATIC).or. & 
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        fort_is_rigid_base=0  ! tessellating material

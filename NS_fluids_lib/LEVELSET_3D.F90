@@ -14515,6 +14515,10 @@ stop
                     blob_array, &
                     blob_array_size,num_colors) 
 
+                   if (FSI_flag(typeface).eq.FSI_ICE_STATIC) then
+                    uedge_rigid=zero
+                   endif
+
                    call SUB_check_vel_rigid(xstenMAC_center, &
                      time,uedge_rigid,dir+1)
 
