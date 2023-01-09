@@ -12859,6 +12859,7 @@ stop
       REAL_T :: vel_clamped(SDIM)
       REAL_T :: temperature_clamped
       INTEGER_T :: prescribed_flag
+      INTEGER_T :: number_of_added_mass_interfaces
 
 ! fort_vfrac_split code starts here
 
@@ -12979,6 +12980,19 @@ stop
        print *,"ncomp_state invalid"
        stop
       endif
+
+      number_of_added_mass_interfaces=0
+      do im=1,num_interfaces
+       if (denconst_interface_added(im).gt.zero) then
+        number_of_added_mass_interfaces= &
+          number_of_added_mass_interfaces+1
+       else if (denconst_interface_added(im).eq.zero) then
+        ! do nothing
+       else
+        print *,"denconst_interface_added invalid"
+        stop
+       endif
+      enddo !im=1,num_interfaces
 
       all_incomp=1
 
@@ -14719,83 +14733,91 @@ stop
 
          enddo  ! im=1..num_materials
 
-
          do istate=1,STATECOMP_STATES
           snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
-         enddo
-
-         call gridsten_level(xsten_upwind,icrse,jcrse,kcrse, &
-           level,nhalf_upwind)
-         vel_local=velfab(D_DECL(icrse,jcrse,kcrse),normdir+1)
-         iupwind=icrse
-         jupwind=jcrse
-         kupwind=kcrse
-         if (vel_local.ge.zero) then
-          dx_upwind=xsten_upwind(0,normdir+1)-xsten_upwind(-2,normdir+1)
-          iupwind=icrse-ii
-          jupwind=jcrse-jj
-          kupwind=kcrse-kk
-          wt_upwind=vel_local*dt/dx_upwind
-         else if (vel_local.le.zero) then
-          dx_upwind=xsten_upwind(2,normdir+1)-xsten_upwind(0,normdir+1)
-          iupwind=icrse+ii
-          jupwind=jcrse+jj
-          kupwind=kcrse+kk
-          wt_upwind=-vel_local*dt/dx_upwind
-         else
-          print *,"vel_local is NaN"
-          stop
-         endif
-         if (dx_upwind.gt.zero) then
-          if (wt_upwind.gt.one) then
-           wt_upwind=one
-          else if ((wt_upwind.ge.zero).and.(wt_upwind.le.one)) then
-           ! do nothing
-          else
-           print *,"wt_upwind invalid"
-           stop
-          endif
-         else
-          print *,"dx_upwind invalid"
-          stop
-         endif
-
-         do im=1,num_materials
-          LS_added(im)= &
-             wt_upwind*LS(D_DECL(iupwind,jupwind,kupwind),im)+ &
-             (one-wt_upwind)*LS(D_DECL(icrse,jcrse,kcrse),im)
          enddo
 
          if (stokes_flow.eq.1) then
           wt_oldvel=one
          else if (stokes_flow.eq.0) then
           wt_oldvel=zero
-          call get_primary_material(LS_added,im_primary)
-          call get_secondary_material(LS_added,im_primary,im_secondary)
-          if ((abs(LS_added(im_primary)).le.DXMAXLS).and. &
-              (abs(LS_added(im_secondary)).le.DXMAXLS)) then
-           call get_iten(im_primary,im_secondary,iten)
-           if (denconst_interface_added(iten).eq.zero) then
-            ! do nothing
-           else if (denconst_interface_added(iten).gt.zero) then
-            wt_oldvel=one- &
-             max(fort_denconst(im_primary),fort_denconst(im_secondary))/ &
-             denconst_interface_added(iten)
-            if ((wt_oldvel.ge.zero).and.(wt_oldvel.le.one)) then
+
+          if (number_of_added_mass_interfaces.gt.0) then
+
+           call gridsten_level(xsten_upwind,icrse,jcrse,kcrse, &
+            level,nhalf_upwind)
+           vel_local=velfab(D_DECL(icrse,jcrse,kcrse),normdir+1)
+           iupwind=icrse
+           jupwind=jcrse
+           kupwind=kcrse
+           if (vel_local.ge.zero) then
+            dx_upwind=xsten_upwind(0,normdir+1)-xsten_upwind(-2,normdir+1)
+            iupwind=icrse-ii
+            jupwind=jcrse-jj
+            kupwind=kcrse-kk
+            wt_upwind=vel_local*dt/dx_upwind
+           else if (vel_local.le.zero) then
+            dx_upwind=xsten_upwind(2,normdir+1)-xsten_upwind(0,normdir+1)
+            iupwind=icrse+ii
+            jupwind=jcrse+jj
+            kupwind=kcrse+kk
+            wt_upwind=-vel_local*dt/dx_upwind
+           else
+            print *,"vel_local is NaN"
+            stop
+           endif
+           if (dx_upwind.gt.zero) then
+            if (wt_upwind.gt.one) then
+             wt_upwind=one
+            else if ((wt_upwind.ge.zero).and.(wt_upwind.le.one)) then
              ! do nothing
             else
-             print *,"wt_oldvel invalid"
+             print *,"wt_upwind invalid"
              stop
             endif
            else
-            print *,"denconst_interface_added invalid"
+            print *,"dx_upwind invalid"
             stop
            endif
-          else if ((abs(LS_added(im_primary)).gt.DXMAXLS).or. &
-                   (abs(LS_added(im_secondary)).gt.DXMAXLS)) then
+
+           do im=1,num_materials
+            LS_added(im)= &
+               wt_upwind*LS(D_DECL(iupwind,jupwind,kupwind),im)+ &
+               (one-wt_upwind)*LS(D_DECL(icrse,jcrse,kcrse),im)
+           enddo
+
+           call get_primary_material(LS_added,im_primary)
+           call get_secondary_material(LS_added,im_primary,im_secondary)
+           if ((abs(LS_added(im_primary)).le.DXMAXLS).and. &
+               (abs(LS_added(im_secondary)).le.DXMAXLS)) then
+            call get_iten(im_primary,im_secondary,iten)
+            if (denconst_interface_added(iten).eq.zero) then
+             ! do nothing
+            else if (denconst_interface_added(iten).gt.zero) then
+             wt_oldvel=one- &
+              max(fort_denconst(im_primary),fort_denconst(im_secondary))/ &
+              denconst_interface_added(iten)
+             if ((wt_oldvel.ge.zero).and.(wt_oldvel.le.one)) then
+              ! do nothing
+             else
+              print *,"wt_oldvel invalid"
+              stop
+             endif
+            else
+             print *,"denconst_interface_added invalid"
+             stop
+            endif
+           else if ((abs(LS_added(im_primary)).gt.DXMAXLS).or. &
+                    (abs(LS_added(im_secondary)).gt.DXMAXLS)) then
+            ! do nothing
+           else
+            print *,"LS_added is NaN"
+            stop
+           endif
+          else if (number_of_added_mass_interfaces.eq.0) then
            ! do nothing
           else
-           print *,"LS_added is NaN"
+           print *,"number_of_added_mass_interfaces invalid"
            stop
           endif
          else
