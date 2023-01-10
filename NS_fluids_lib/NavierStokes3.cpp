@@ -3504,12 +3504,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    c. pressure gradient
        if (disable_pressure_solve==0) {
 
-        if (incremental_gravity_flag==1) {
+        if (segregated_gravity_flag==1) {
          multiphase_project(SOLVETYPE_PRESGRAVITY);
-	} else if (incremental_gravity_flag==0) {
+	} else if (segregated_gravity_flag==0) {
  	 //do nothing
 	} else
-	 amrex::Error("incremental_gravity_flag invalid");
+	 amrex::Error("segregated_gravity_flag invalid");
 
          // MDOT term included
         multiphase_project(SOLVETYPE_PRES);
@@ -9406,6 +9406,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   int potgrad_surface_tension_mask=3;
   if (project_option==SOLVETYPE_PRESGRAVITY) {
+FIX ME
    if (incremental_gravity_flag==1) {
     potgrad_surface_tension_mask=1;
    } else

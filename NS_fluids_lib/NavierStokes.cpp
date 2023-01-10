@@ -224,6 +224,7 @@ Real NavierStokes::gravity_reference_wavelen = 0.0;
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
 int NavierStokes::incremental_gravity_flag = 0;
+int NavierStokes::segregated_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
 Vector<Real> NavierStokes::gravity_boussinesq_vector;
@@ -2695,16 +2696,29 @@ NavierStokes::read_params ()
       // do nothing
      } else if (enable_spectral==1) {
       //do nothing
-      //having just SOLVETYPE_PRESGRAVITY low order will not
-      //adversely effect the numerical dissipation of an 
-      //otherwise spectrally accurate method (only the order
-      //will be adversely effected)
      } else
       amrex::Error("enable_spectral invalid");
     } else if (incremental_gravity_flag==0) {
      // do nothing
     } else
      amrex::Error("incremental_gravity_flag invalid");
+
+    pp.queryAdd("segregated_gravity_flag",segregated_gravity_flag);
+    if (segregated_gravity_flag==1) {
+     if (enable_spectral==0) {
+      // do nothing
+     } else if (enable_spectral==1) {
+      //do nothing
+      //having just SOLVETYPE_PRESGRAVITY low order will not
+      //adversely effect the numerical dissipation of an 
+      //otherwise spectrally accurate method (only the order
+      //will be adversely effected)
+     } else
+      amrex::Error("enable_spectral invalid");
+    } else if (segregated_gravity_flag==0) {
+     // do nothing
+    } else
+     amrex::Error("segregated_gravity_flag invalid");
 
     pp.get("visc_coef",visc_coef);
 
@@ -2748,6 +2762,8 @@ NavierStokes::read_params ()
 
      std::cout << "incremental_gravity_flag " << 
 	  incremental_gravity_flag << '\n';
+     std::cout << "segregated_gravity_flag " << 
+	  segregated_gravity_flag << '\n';
 
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
@@ -5476,17 +5492,17 @@ NavierStokes::read_params ()
 
        if (FSI_flag[im-1]!=FSI_ICE_STATIC) {
 
-        if (incremental_gravity_flag==1) {
+        if (segregated_gravity_flag==1) {
  	 //do nothing
         } else
-         amrex::Error("need incremental_gravity_flag==1 if ice or FSI_rigid");
+         amrex::Error("need segregated_gravity_flag==1 if ice or FSI_rigid");
 
        } else if (FSI_flag[im-1]==FSI_ICE_STATIC) {
 
-        if (incremental_gravity_flag==0) {
+        if (segregated_gravity_flag==0) {
  	 //do nothing
         } else
-         amrex::Error("need incremental_gravity_flag==0 if FSI_ICE_STATIC");
+         amrex::Error("need segregated_gravity_flag==0 if FSI_ICE_STATIC");
 	
        } else
 	amrex::Error("FSI_flag[im-1] invalid");

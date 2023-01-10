@@ -387,6 +387,7 @@ public:
     static Vector<Real> gravity_vector;
     static Vector<Real> gravity_boussinesq_vector;
     static int incremental_gravity_flag;
+    static int segregated_gravity_flag;
 
     static Real nucleation_init_time; //def 0.0
      // 0 - centroid furthest from uncaptured centroid
