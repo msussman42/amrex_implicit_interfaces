@@ -13620,8 +13620,16 @@ stop
         stop
        endif
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
-       if ((energyflag.ge.SUB_OP_FORCE_MASK_BASE+1).and. &
-           (energyflag.le.SUB_OP_FORCE_MASK_BASE+3)) then
+       if ((energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+            POTGRAD_SURFTEN_INCREMENTAL_GRAV).or. &
+           (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+            POTGRAD_SURFTEN_BASE_GRAV).or. &
+           (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+            POTGRAD_INCREMENTAL_GRAV).or. &
+           (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+            POTGRAD_BASE_GRAV).or. &
+           (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+            POTGRAD_SURFTEN)) then
         ! do nothing
        else
         print *,"energyflag invalid OP_POTGRAD_TO_MAC"
