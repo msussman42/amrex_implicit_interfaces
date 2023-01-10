@@ -12860,6 +12860,7 @@ stop
       REAL_T :: temperature_clamped
       INTEGER_T :: prescribed_flag
       INTEGER_T :: number_of_added_mass_interfaces
+      REAL_T :: rad_added_mass
 
 ! fort_vfrac_split code starts here
 
@@ -12990,6 +12991,7 @@ stop
         ! do nothing
        else
         print *,"denconst_interface_added invalid"
+        print *,"index,value ",im,denconst_interface_added(im)
         stop
        endif
       enddo !im=1,num_interfaces
@@ -13248,6 +13250,7 @@ stop
        ! the band thickness in fort_advective_pressure is 2 * DXMAXLS
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
+      rad_added_mass=half*DXMAXLS
 
       nc_bucket_test=CISLCOMP_NCOMP
       if (nc_bucket_test.ne.nc_bucket) then
@@ -14742,7 +14745,8 @@ stop
          else if (stokes_flow.eq.0) then
           wt_oldvel=zero
 
-          if (number_of_added_mass_interfaces.gt.0) then
+          if ((number_of_added_mass_interfaces.gt.0).and. &
+              (number_of_added_mass_interfaces.le.num_interfaces)) then
 
            call gridsten_level(xsten_upwind,icrse,jcrse,kcrse, &
             level,nhalf_upwind)
@@ -14788,8 +14792,8 @@ stop
 
            call get_primary_material(LS_added,im_primary)
            call get_secondary_material(LS_added,im_primary,im_secondary)
-           if ((abs(LS_added(im_primary)).le.DXMAXLS).and. &
-               (abs(LS_added(im_secondary)).le.DXMAXLS)) then
+           if ((abs(LS_added(im_primary)).le.rad_added_mass).and. &
+               (abs(LS_added(im_secondary)).le.rad_added_mass)) then
             call get_iten(im_primary,im_secondary,iten)
             if (denconst_interface_added(iten).eq.zero) then
              ! do nothing
@@ -14807,8 +14811,8 @@ stop
              print *,"denconst_interface_added invalid"
              stop
             endif
-           else if ((abs(LS_added(im_primary)).gt.DXMAXLS).or. &
-                    (abs(LS_added(im_secondary)).gt.DXMAXLS)) then
+           else if ((abs(LS_added(im_primary)).gt.rad_added_mass).or. &
+                    (abs(LS_added(im_secondary)).gt.rad_added_mass)) then
             ! do nothing
            else
             print *,"LS_added is NaN"
@@ -14834,7 +14838,9 @@ stop
           ! density, temperature, other scalars
           ! volume fractions, centroids
          do im=1,num_materials
+
           if (is_rigid(im).eq.0) then
+
            do istate=1,num_state_material
             statecomp_data=STATECOMP_STATES+(im-1)*num_state_material+istate
             snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
@@ -14848,6 +14854,7 @@ stop
             snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
               snew_hold(statecomp_data)
            enddo
+
           else if (is_rigid(im).eq.1) then
 
            if (solidheat_flag.eq.0) then ! diffuse in solid
@@ -14993,6 +15000,7 @@ stop
          endif
 
          if (zapvel.eq.1) then
+
           if (veldir.eq.1) then
            xmac_new(D_DECL(icrse,jcrse,kcrse))=zero
            wt_oldvel=zero
@@ -15000,7 +15008,9 @@ stop
            print *,"veldir invalid"
            stop
           endif
+
          else if (zapvel.eq.0) then
+
           iright=icrse
           jright=jcrse
           kright=kcrse
@@ -15067,14 +15077,17 @@ stop
              massface_total=massface_total+massquarter
              momface_total=momface_total+momquarter
 
-             if (number_of_added_mass_interfaces.gt.0) then
+             if ((number_of_added_mass_interfaces.gt.0).and. &
+                 (number_of_added_mass_interfaces.le.num_interfaces)) then
 
               call gridsten_level(xsten_upwind,icell,jcell,kcell, &
                level,nhalf_upwind)
+
               vel_local=velfab(D_DECL(icell,jcell,kcell),normdir+1)
               iupwind=icell
               jupwind=jcell
               kupwind=kcell
+
               if (vel_local.ge.zero) then
                dx_upwind=xsten_upwind(0,normdir+1)-xsten_upwind(-2,normdir+1)
                iupwind=icell-ii
@@ -15120,16 +15133,13 @@ stop
 
             enddo ! iside: do iside=-1,1,2
 
-            do im=1,num_materials
-             LS_added(im)=half*(LS_bucket(im,1)+LS_bucket(im,2))
-            enddo
-
             if (stokes_flow.eq.1) then
              wt_oldvel=one
             else if (stokes_flow.eq.0) then
              wt_oldvel=zero
 
-             if (number_of_added_mass_interfaces.gt.0) then
+             if ((number_of_added_mass_interfaces.gt.0).and. &
+                 (number_of_added_mass_interfaces.le.num_interfaces)) then
 
               do im=1,num_materials
                LS_added(im)=half*(LS_bucket(im,1)+LS_bucket(im,2))
@@ -15137,8 +15147,8 @@ stop
 
               call get_primary_material(LS_added,im_primary)
               call get_secondary_material(LS_added,im_primary,im_secondary)
-              if ((abs(LS_added(im_primary)).le.DXMAXLS).and. &
-                  (abs(LS_added(im_secondary)).le.DXMAXLS)) then
+              if ((abs(LS_added(im_primary)).le.rad_added_mass).and. &
+                  (abs(LS_added(im_secondary)).le.rad_added_mass)) then
                call get_iten(im_primary,im_secondary,iten)
                if (denconst_interface_added(iten).eq.zero) then
                 ! do nothing
@@ -15156,8 +15166,8 @@ stop
                 print *,"denconst_interface_added invalid"
                 stop
                endif
-              else if ((abs(LS_added(im_primary)).gt.DXMAXLS).or. &
-                       (abs(LS_added(im_secondary)).gt.DXMAXLS)) then
+              else if ((abs(LS_added(im_primary)).gt.rad_added_mass).or. &
+                       (abs(LS_added(im_secondary)).gt.rad_added_mass)) then
                ! do nothing
               else
                print *,"LS_added is NaN"
