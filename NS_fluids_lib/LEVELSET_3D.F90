@@ -13350,7 +13350,6 @@ stop
       REAL_T temperature_clamped
       INTEGER_T is_clamped_face
       INTEGER_T local_compressible
-      INTEGER_T :: damping_viscoelastic_update
 
       REAL_T test_current_icefacecut
       REAL_T test_current_icemask
@@ -13792,7 +13791,6 @@ stop
          is_clamped_face=-1
 
          local_compressible=0
-         damping_viscoelastic_update=0
          im_left=0
          im_right=0
 
@@ -13907,19 +13905,6 @@ stop
           enddo
           call get_primary_material(LSleft,im_left)
           call get_primary_material(LSright,im_right)
-
-          damping_viscoelastic_update=0
-
-          if ((fort_elastic_viscosity(im_left).gt.zero).or. &
-              (fort_elastic_viscosity(im_right).gt.zero)) then
-!          damping_viscoelastic_update=1
-          else if ((fort_elastic_viscosity(im_left).eq.zero).and. &
-                   (fort_elastic_viscosity(im_right).eq.zero)) then
-           damping_viscoelastic_update=0
-          else
-           print *,"fort_elastic_viscosity invalid"
-           stop
-          endif
 
           if ((is_compressible_mat(im_left).eq.1).and. &
               (is_compressible_mat(im_right).eq.1)) then
@@ -14375,15 +14360,8 @@ stop
                   !secondary_vel_data=CURRENT_CELL_VEL_MF; 
                  secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
 
-                 if (damping_viscoelastic_update.eq.0) then
-                  primary_velmaterial= &
-                    velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
-                 else if (damping_viscoelastic_update.eq.1) then
-                  primary_velmaterial=secondary_velmaterial
-                 else
-                  print *,"damping_viscoelastic_update invalid"
-                  stop
-                 endif
+                 primary_velmaterial= &
+                   velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
                 
                  if ((beta.eq.-one).or.(beta.eq.one)) then
                    ! do nothing
@@ -15486,12 +15464,21 @@ stop
 
          else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
       
-          if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+3) then 
+          if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+              POTGRAD_SURFTEN_BASE_GRAV) then 
            xgp(D_DECL(i,j,k),1)=pgrad_gravity+pgrad_tension
-          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+2) then 
+          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                   POTGRAD_SURFTEN) then 
            xgp(D_DECL(i,j,k),1)=pgrad_tension
-          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+1) then 
+          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                   POTGRAD_INCREMENTAL_GRAV) then 
            xgp(D_DECL(i,j,k),1)=incremental_gravity
+          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                   POTGRAD_SURFTEN_INCREMENTAL_GRAV) then 
+           xgp(D_DECL(i,j,k),1)=incremental_gravity+pgrad_tension
+          else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                   POTGRAD_BASE_GRAV) then 
+           xgp(D_DECL(i,j,k),1)=pgrad_gravity
           else
            print *,"energyflag invalid OP_POTGRAD_TO_MAC"
            stop
@@ -15545,16 +15532,17 @@ stop
        else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then 
         ! do nothing ( grad(U P) term only low order )
        else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
-                (energyflag.eq.SUB_OP_FORCE_MASK_BASE+2)) then 
-        ! do nothing (surface tension only)
+                (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                 POTGRAD_SURFTEN)) then 
+        ! do nothing 
        else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
-                (energyflag.eq.SUB_OP_FORCE_MASK_BASE+1)) then 
-        if (enable_spectral.eq.0) then
-         ! do nothing (gravity only, incremental only)
-        else
-         print *,"incremental gravity low order only"
-         stop
-        endif
+                (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                 POTGRAD_INCREMENTAL_GRAV)) then 
+        ! do nothing 
+       else if ((operation_flag.eq.OP_POTGRAD_TO_MAC).and. &
+                (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                 POTGRAD_SURFTEN_INCREMENTAL_GRAV)) then 
+        ! do nothing 
        else if ((operation_flag.eq.OP_PRESGRAD_MAC).or. & ! pressure gradient
                 (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                 (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
@@ -15563,12 +15551,18 @@ stop
                 (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
 
         if (operation_flag.eq.OP_POTGRAD_TO_MAC) then
-         if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+3) then
-          ! do nothing (gravity + surface tension is ok for SEM)
+
+         if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+             POTGRAD_SURFTEN_BASE_GRAV) then
+          ! do nothing 
+         else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                  POTGRAD_BASE_GRAV) then
+          ! do nothing 
          else
           print *,"spectral method not for incremental formulation"
           stop
          endif
+
         endif
 
         if (enable_spectral.eq.1) then
@@ -15636,10 +15630,14 @@ stop
                ncomp_source=1
                scomp_bc=1
 
-               if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+3) then 
-                ! do nothing
+               if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                   POTGRAD_SURFTEN_BASE_GRAV) then
+                ! do nothing 
+               else if (energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
+                        POTGRAD_BASE_GRAV) then
+                ! do nothing 
                else
-                print *,"energyflag incompatible OP_POTGRAD_TO_MAC"
+                print *,"spectral method not for incremental formulation"
                 stop
                endif
 
