@@ -9221,18 +9221,10 @@ void NavierStokes::multiphase_project(int project_option) {
 
  if (project_option==SOLVETYPE_PRESGRAVITY) {
 
-   //remark: incremental_gravity_flag==1 is an ok assumption to make
-   //so long as "delta p_{hydrostatic} << p_{ambient}" or the flow
-   //is incompressible.
-   
   if (enable_spectral==0) {
    //do nothing
   } else if (enable_spectral==1) {
    //do nothing
-   //having just SOLVETYPE_PRESGRAVITY low order will not
-   //adversely effect the numerical dissipation of an 
-   //otherwise spectrally accurate method (only the order
-   //will be adversely effected)
   } else
    amrex::Error("enable_spectral invalid");
 
@@ -9404,20 +9396,40 @@ void NavierStokes::multiphase_project(int project_option) {
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_PRESGRAVITY)) {
 
-  int potgrad_surface_tension_mask=3;
+  int potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
+
   if (project_option==SOLVETYPE_PRESGRAVITY) {
-FIX ME
-   if (incremental_gravity_flag==1) {
-    potgrad_surface_tension_mask=1;
+
+   if (segregated_gravity_flag==1) {
+    //do nothing
    } else
-    amrex::Error("expecting incremental_gravity_flag==1");
-  } else if (project_option==SOLVETYPE_PRES) {
+    amrex::Error("expecting segregated_gravity_flag==1");
+
    if (incremental_gravity_flag==1) {
-    potgrad_surface_tension_mask=2;
+    potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
    } else if (incremental_gravity_flag==0) {
-    potgrad_surface_tension_mask=3;
+    potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
    } else
     amrex::Error("incremental_gravity_flag invalid");
+
+  } else if (project_option==SOLVETYPE_PRES) {
+
+   if (segregated_gravity_flag==1) {
+
+    potgrad_surface_tension_mask=POTGRAD_SURFTEN;
+
+   } else if (segregated_gravity_flag==0) {
+
+    if (incremental_gravity_flag==1) {
+     potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
+    } else if (incremental_gravity_flag==0) {
+     potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
+    } else
+     amrex::Error("incremental_gravity_flag invalid");
+
+   } else
+    amrex::Error("segregated_gravity_flag invalid");
+
   } else
    amrex::Error("project_option invalid");
 
