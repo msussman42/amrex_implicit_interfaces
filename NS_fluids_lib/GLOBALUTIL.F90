@@ -26390,6 +26390,33 @@ INTEGER_T, INTENT(in) :: project_option
 
 end function project_option_needs_scalingF
 
+INTEGER_T function project_option_FSI_rigid(project_option) &
+bind(c,name='project_option_FSI_rigid')
+
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: project_option
+
+ if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
+     (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
+     (project_option.eq.SOLVETYPE_VISC)) then      ! viscosity
+  project_option_FSI_rigid=1
+ else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. &
+          (project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
+          ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
+  project_option_FSI_rigid=0
+ else
+  print *,"project_option invalid"
+  stop
+  project_option_FSI_rigid=0
+ endif
+
+end function project_option_FSI_rigid
+
+
 
 function project_option_projectionF(project_option) &
 bind(c,name='project_option_projectionF')

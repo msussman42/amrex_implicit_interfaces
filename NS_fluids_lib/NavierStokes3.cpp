@@ -9571,7 +9571,8 @@ void NavierStokes::multiphase_project(int project_option) {
   //SOLVETYPE_PRES, 
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRESGRAVITY
- if (project_option_projection(project_option)==1) {
+  //SOLVETYPE_VISC
+ if (project_option_FSI_rigid(&project_option)==1) {
 
   Vector<blobclass> blobdata;
   Vector< Vector<Real> > mdot_data;
@@ -9637,6 +9638,15 @@ void NavierStokes::multiphase_project(int project_option) {
   } else if (project_option==SOLVETYPE_INITPROJ) {
    //unew^{f} = unew^{c->f}
    operation_flag=OP_UNEW_CELL_TO_MAC;
+  } else if (project_option==SOLVETYPE_VISC) {
+    // Overwrite the current MAC and CELL velocity in the ICE or FSI_RIGID
+    // materials to be rigid body projected velocities.  
+    // viscosity=0 on ICE (or FSI_RIGID) faces.  
+    // "density" very large in the
+    // ICE (or FSI_RIGID) materials.
+    // fort_scalarcoeff
+    // fort_buildfacewt
+   operation_flag=OP_PROJECT_TO_RIGID_VEL;
   } else 
    amrex::Error("project_option invalid47");
 
@@ -9703,10 +9713,10 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("alloc_blobdata invalid");
 
- } else if (project_option_projection(project_option)==0) {
+ } else if (project_option_FSI_rigid(&project_option)==0) {
   // do nothing
  } else {
-  amrex::Error("project_option_projection invalid48");
+  amrex::Error("project_option_FSI_rigid invalid48");
  } 
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
