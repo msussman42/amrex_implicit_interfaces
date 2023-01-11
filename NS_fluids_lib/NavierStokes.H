@@ -1518,7 +1518,6 @@ protected:
     static int particle_min_per_nsubdivide;  
 
     static Real truncate_thickness;  // default is 2.0
-    static Vector<Real> material_thickness; //default is 0.0
 
     static int  enable_spectral;
 
