@@ -9646,6 +9646,7 @@ void NavierStokes::multiphase_project(int project_option) {
     // ICE (or FSI_RIGID) materials.
     // fort_scalarcoeff
     // fort_buildfacewt
+    // ICE (or FSI_RIGID) materials are always low order.
    operation_flag=OP_PROJECT_TO_RIGID_VEL;
   } else 
    amrex::Error("project_option invalid47");
