@@ -382,7 +382,6 @@ namespace amrex{
        Real* curv_max,
        int* isweep,
        int* nrefine_vof,
-       Real* material_thickness,
        Real* denconst_interface_added,
        Real* visc_interface,
        Real* heatvisc_interface,

@@ -4819,7 +4819,7 @@ stop
        stop
       endif
 
-       ! in: fort_getcolorsum
+       ! presently in: fort_getcolorsum
       call get_dxmaxLS(dx,bfact,DXMAXLS)
       cutoff=DXMAXLS
 
@@ -7551,7 +7551,6 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
-       material_thickness, &
        denconst_interface_added, &
        visc_interface, &
        heatvisc_interface, &
@@ -7731,8 +7730,6 @@ stop
 
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-      REAL_T, INTENT(in) :: material_thickness(num_materials)
-
       REAL_T, INTENT(in) :: denconst_interface_added(num_interfaces)
       REAL_T, INTENT(in) :: visc_interface(num_interfaces)
       REAL_T, INTENT(in) :: heatvisc_interface(num_interfaces)
@@ -7743,8 +7740,6 @@ stop
 
       INTEGER_T im1,jm1,km1
       INTEGER_T i,j,k
-      INTEGER_T i1,j1,k1
-      INTEGER_T k1lo,k1hi
       INTEGER_T ii,jj,kk
       INTEGER_T dir2,inorm,presbclo,presbchi
        ! mask_boundary=1 at left neumann boundary
@@ -7763,19 +7758,13 @@ stop
       INTEGER_T nmax
       INTEGER_T vofcomp
 
-      INTEGER_T thick_flag
-
       REAL_T visc_total
-      REAL_T visc_total_thick
       REAL_T DeDT,DeDT_total
 
       REAL_T volmat(num_materials)
-      REAL_T volmat_thick
       REAL_T voltotal
-      REAL_T voltotal_thick
       REAL_T voldepart
       REAL_T mass_total
-      REAL_T mass_total_thick
       REAL_T delta_mass
       REAL_T den
       REAL_T density_for_mass_fraction_diffusion
@@ -7823,6 +7812,7 @@ stop
       REAL_T localheatvisc_plus(num_materials)
       REAL_T localheatvisc_minus(num_materials)
       INTEGER_T implus_majority,imminus_majority
+      INTEGER_T im_secondary
 
       REAL_T local_face(FACECOMP_NCOMP)
       REAL_T local_volumes(2,num_materials)
@@ -7838,8 +7828,6 @@ stop
       REAL_T LSIDE_tension(2)
       REAL_T LSIDE_MAT(num_materials)
       REAL_T LSIDE_tension_MAT(num_materials)
-
-      REAL_T LS_FIXED(num_materials)
 
       REAL_T DXMAXLS
       REAL_T FFACE(num_materials)
@@ -7894,10 +7882,11 @@ stop
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T local_tessellate
 
-      REAL_T cutoff
       REAL_T local_cenvisc
       REAL_T local_cenden
       REAL_T local_cenden_base
+
+      REAL_T :: rad_added_mass
 
       REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
 
@@ -8039,17 +8028,8 @@ stop
       call checkbound_array(fablo,fabhi,vofF_ptr,1,-1)
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
 
-      k1lo=0
-      k1hi=0
-      if (SDIM.eq.2) then
-       ! do nothing
-      else if (SDIM.eq.3) then
-       k1lo=-1
-       k1hi=1
-      else
-       print *,"SDIM invalid"
-       stop
-      endif
+      call get_dxmaxLS(dx,bfact,DXMAXLS)
+      rad_added_mass=half*DXMAXLS
 
       do im=1,2*num_interfaces
 
@@ -8067,15 +8047,6 @@ stop
        endif
 
       enddo !im=1,2*num_interfaces
-
-      do im=1,num_materials
-       if (material_thickness(im).ge.zero) then
-        !do nothing
-       else
-        print *,"material_thickness invalid"
-        stop
-       endif
-      enddo !im=1,num_materials
 
       do im=1,num_interfaces
 
@@ -8384,71 +8355,15 @@ stop
           LSminus(im)=levelPC(D_DECL(im1,jm1,km1),im)
           LSIDE_MAT(im)=half*(LSplus(im)+LSminus(im))
          enddo
-         call LS_tessellate(LSIDE_MAT,LS_FIXED)
 
           ! MAC grid 1/rho and mu
-         null_viscosity=0
-         voltotal_thick=zero
-         visc_total_thick=zero
-         mass_total_thick=zero
-         thick_flag=0
 
          do im=1,num_materials
 
-          if (material_thickness(im).gt.zero) then
-           cutoff=DXMAXLS*material_thickness(im)
-           volmat_thick=hs(LS_FIXED(im)+cutoff,cutoff)
-           if (volmat_thick.gt.zero) then
-            thick_flag=1
-           else if (volmat_thick.eq.zero) then
-            ! do nothing
-           else
-            print *,"volmat_thick invalid"
-            stop
-           endif
-          else if (material_thickness(im).eq.zero) then
-           cutoff=zero
-           volmat_thick=hs(LS_FIXED(im),cutoff)
-          else
-           print *,"material_thickness invalid"
-           stop
-          endif 
-
-          voltotal_thick=voltotal_thick+volmat_thick
-          mass_total_thick=mass_total_thick+volmat_thick*fort_denconst(im)
           mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
           one_over_mu=one/(mu+VISCINVTOL)
-          visc_total_thick=visc_total_thick+one_over_mu*volmat_thick
-
-          if (mu.lt.zero) then
-           print *,"mu gone negative"
-           stop
-          else if (mu.eq.zero) then
-            ! MAC grid 1/rho and mu
-           if (volmat_thick.gt.zero) then
-            null_viscosity=1
-           endif
-          else if (mu.gt.zero) then
-           ! do nothing
-          else
-           print *,"mu NaN"
-           stop
-          endif
 
          enddo ! im=1..num_materials
-
-         if (mass_total_thick.gt.zero) then
-          ! do nothing
-         else
-          print *,"mass_total_thick invalid"
-          stop
-         endif
-         if (voltotal_thick.gt.zero) then
-          ! do nothing
-         else
-          print *,"voltotal_thick invalid"
-          stop
-         endif
 
           ! checks rigid and non-rigid materials.
          call get_primary_material(LSplus,implus_majority)
@@ -8763,8 +8678,6 @@ stop
            print *,"gradh is NaN"
            stop
           endif
-
-          call get_dxmaxLS(dx,bfact,DXMAXLS)
 
           if (covered_face.eq.2) then !maskL=maskR=0
            gradh_tension=zero
@@ -9648,14 +9561,7 @@ stop
 
          density_for_mass_fraction_diffusion=mass_total/voltotal
 
-         if (thick_flag.eq.1) then
-          local_cenden=voltotal_thick/mass_total_thick
-         else if (thick_flag.eq.0) then
-          local_cenden=one/density_for_mass_fraction_diffusion
-         else
-          print *,"thick_flag invalid"
-          stop
-         endif 
+         local_cenden=one/density_for_mass_fraction_diffusion
 
          local_cenden_base=local_cenden
 
@@ -9706,23 +9612,7 @@ stop
           enddo ! im_opp=im+1..num_materials
          enddo ! im=1..num_materials
 
-         if (thick_flag.eq.1) then
-          local_cenvisc= &
-            one/((visc_total_thick/voltotal_thick)+VISCINVTOL)  
-          if (null_viscosity.eq.1) then
-           local_cenvisc=zero
-          else if (null_viscosity.eq.0) then
-           ! do nothing
-          else
-           print *,"null_viscosity invalid"
-           stop
-          endif
-         else if (thick_flag.eq.0) then
-          local_cenvisc=facevisc_local
-         else
-          print *,"thick_flag invalid"
-          stop
-         endif 
+         local_cenvisc=facevisc_local
 
          local_face(FACECOMP_FACEVISC+1)=local_cenvisc
 
@@ -10162,10 +10052,6 @@ stop
 
          ! Cell grid 1/rho and mu
         null_viscosity=0
-        voltotal_thick=zero
-        visc_total_thick=zero
-        mass_total_thick=zero
-        thick_flag=0
 
         do im=1,num_materials
          LSIDE_MAT(im)=levelPC(D_DECL(i,j,k),im)
@@ -10173,36 +10059,40 @@ stop
 
          ! checks rigid and non-rigid materials.
         call get_primary_material(LSIDE_MAT,implus_majority)
+        call get_secondary_material(LSIDE_MAT,implus_majority,im_secondary)
 
-         ! LS_tessellate is declared in MOF.F90
-        call LS_tessellate(LSIDE_MAT,LS_FIXED)
+        denconst_interface_added_max=zero
+
+        if ((abs(LSIDE_MAT(implus_majority)).le.rad_added_mass).and. &
+            (abs(LSIDE_MAT(im_secondary)).le.rad_added_mass)) then
+         call get_iten(implus_majority,im_secondary,iten_main)
+         if (denconst_interface_added(iten_main).eq.zero) then
+          ! do nothing
+         else if (denconst_interface_added(iten_main).gt.zero) then
+          if (max(fort_denconst(implus_majority),fort_denconst(im_secondary)) &
+              .le.denconst_interface_added(iten_main)) then
+           denconst_interface_added_max=  &
+              denconst_interface_added(iten_main)
+          else
+           print *,"denconst_interface_added(iten_main) invalid"
+           stop
+          endif
+         else 
+          print *,"denconst_interface_added(iten_main) invalid"
+          stop
+         endif 
+        else if ((abs(LSIDE_MAT(implus_majority)).ge.rad_added_mass).or. &
+                 (abs(LSIDE_MAT(im_secondary)).ge.rad_added_mass)) then
+         ! do nothing
+        else
+         print *,"LSIDE_MAT invalid"
+         stop
+        endif       
 
         do im=1,num_materials
 
-         if (material_thickness(im).gt.zero) then
-          cutoff=DXMAXLS*material_thickness(im)
-          volmat_thick=hs(LS_FIXED(im)+cutoff,cutoff)
-          if (volmat_thick.gt.zero) then
-           thick_flag=1
-          else if (volmat_thick.eq.zero) then
-           ! do nothing
-          else
-           print *,"volmat_thick invalid"
-           stop
-          endif
-         else if (material_thickness(im).eq.zero) then
-          cutoff=zero
-          volmat_thick=hs(LS_FIXED(im),cutoff)
-         else
-          print *,"material_thickness invalid"
-          stop
-         endif 
-
-         voltotal_thick=voltotal_thick+volmat_thick
-         mass_total_thick=mass_total_thick+volmat_thick*fort_denconst(im)
          mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
          one_over_mu=one/(mu+VISCINVTOL)
-         visc_total_thick=visc_total_thick+one_over_mu*volmat_thick
 
          dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
          tempcomp=dencomp+1
@@ -10239,6 +10129,12 @@ stop
          else if (localvisc(im).eq.zero) then
           if (volmat(im).gt.zero) then
            null_viscosity=1
+          else if (volmat(im).eq.zero) then
+           ! do nothing
+          else
+           print *,"volmat(im) went negative"
+           print *,"im,volmat ",im,volmat(im)
+           stop
           endif
          else if (localvisc(im).gt.zero) then
           ! do nothing
@@ -10297,54 +10193,10 @@ stop
          DeDT_total=DeDT_total+DeDT*delta_mass
         enddo ! im=1..num_materials
 
-        denconst_interface_added_max=zero
-        do i1=-1,1
-        do j1=-1,1
-        do k1=k1lo,k1hi
-         do im=1,num_materials
-          LSIDE_MAT(im)=levelPC(D_DECL(i+i1,j+j1,k+k1),im)
-         enddo
-          ! implus_majority is the main material in the i1,j1,k1=0
-          ! cell.
-          ! get_primary_material checks rigid and non-rigid materials.
-         call get_primary_material(LSIDE_MAT,imminus_majority)
-         if (implus_majority.eq.imminus_majority) then
-          ! do nothing
-         else if (implus_majority.ne.imminus_majority) then
-          call get_iten(implus_majority,imminus_majority,iten_main)
-          if (denconst_interface_added(iten_main).eq.zero) then
-           ! do nothing
-          else if (denconst_interface_added(iten_main).gt.zero) then
-           denconst_interface_added_max=max(denconst_interface_added_max, &
-                denconst_interface_added(iten_main))
-          else
-           print *,"denconst_interface_added(iten_main) invalid"
-           stop
-          endif
-         else
-          print *,"implus or imminus majority corruption"
-          stop
-         endif
-        enddo !k1
-        enddo !j1
-        enddo !i1
-
         if (mass_total.gt.zero) then
          ! do nothing
         else
          print *,"mass_total invalid"
-         stop
-        endif
-        if (mass_total_thick.gt.zero) then
-         ! do nothing
-        else
-         print *,"mass_total_thick invalid"
-         stop
-        endif
-        if (voltotal_thick.gt.zero) then
-         ! do nothing
-        else
-         print *,"voltotal_thick invalid"
          stop
         endif
 
@@ -10359,17 +10211,8 @@ stop
          cenvof(D_DECL(i,j,k),im)=volmat(im)/voltotal
         enddo
 
-        if (thick_flag.eq.0) then
-         local_cenden=voltotal/mass_total
-         local_cenvisc=one/((visc_total/voltotal)+VISCINVTOL)  
-        else if (thick_flag.eq.1) then
-         local_cenden=voltotal_thick/mass_total_thick
-         local_cenvisc= &
-             one/((visc_total_thick/voltotal_thick)+VISCINVTOL)  
-        else
-         print *,"thick_flag invalid"
-         stop
-        endif
+        local_cenden=voltotal/mass_total
+        local_cenvisc=one/((visc_total/voltotal)+VISCINVTOL)  
 
         local_cenden_base=local_cenden
 
@@ -11193,7 +11036,8 @@ stop
       REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: maskSEM(DIMV(maskSEM))
       REAL_T, pointer :: maskSEM_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: levelPC(DIMV(levelPC),num_materials*(SDIM+1))
+      REAL_T, INTENT(in), target :: &
+        levelPC(DIMV(levelPC),num_materials*(SDIM+1))
       REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
       REAL_T, INTENT(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
@@ -17799,7 +17643,8 @@ stop
       INTEGER_T, INTENT(in) :: truncate_volume_fractions(num_materials)
       REAL_T, INTENT(in),target :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(inout),target :: vofnew(DIMV(vofnew),num_materials*ngeom_raw)
+      REAL_T, INTENT(inout),target :: &
+        vofnew(DIMV(vofnew),num_materials*ngeom_raw)
       REAL_T, pointer :: vofnew_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in),target ::  LS(DIMV(LS),num_materials)
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
