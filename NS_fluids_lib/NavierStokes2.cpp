@@ -3866,6 +3866,7 @@ void NavierStokes::init_gradu_tensor(
   //   average of flux values shared at face.
  int spectral_loop=0;
  for (spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
+   // NavierStokes::doit_gradu_tensor is declared in NavierStokes2.cpp
   doit_gradu_tensor(
    homflag,
    idx_vel,
@@ -4061,6 +4062,7 @@ void NavierStokes::apply_pressure_grad(
   } else
    amrex::Error("simple_AMR_BC_flag_viscosity invalid");
 
+   // NavierStokes::init_gradu_tensor is declared in NavierStokes2.cpp
   init_gradu_tensor(
     homflag,
     pboth_mf,

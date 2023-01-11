@@ -15945,7 +15945,7 @@ stop
             endif
 
              ! eval_face_coeff is declared in: PROB.F90
-             ! e.g. 1/rho 
+             ! e.g. 1/rho for div( (1/rho) gradp ) = div( ustar )
             call eval_face_coeff( &
              xsten,nhalf, &
              level,finest_level, &
