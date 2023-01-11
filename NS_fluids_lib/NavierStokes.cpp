@@ -5478,22 +5478,10 @@ NavierStokes::read_params ()
        } else
         amrex::Error("enable_spectral invalid");
 
-       if (FSI_flag[im-1]!=FSI_ICE_STATIC) {
-
-        if (segregated_gravity_flag==1) {
- 	 //do nothing
-        } else
-         amrex::Error("need segregated_gravity_flag==1 if ice or FSI_rigid");
-
-       } else if (FSI_flag[im-1]==FSI_ICE_STATIC) {
-
-        if (segregated_gravity_flag==0) {
- 	 //do nothing
-        } else
-         amrex::Error("need segregated_gravity_flag==0 if FSI_ICE_STATIC");
-	
+       if (segregated_gravity_flag==1) {
+        //do nothing
        } else
-	amrex::Error("FSI_flag[im-1] invalid");
+        amrex::Error("need segregated_gravity_flag==1 if ice or FSI_rigid");
 
       } // is_ice_or_FSI_rigid_material==1
 
