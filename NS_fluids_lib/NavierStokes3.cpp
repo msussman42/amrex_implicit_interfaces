@@ -9685,16 +9685,16 @@ void NavierStokes::multiphase_project(int project_option) {
     }  // dir=0..sdim-1
    } // ilev=finest_level ... level
 
-   if (alloc_blobdata==1) {
-    delete_array(TYPE_MF);
-    delete_array(COLOR_MF);
-   } else if (alloc_blobdata==0) {
-    // do nothing
-   } else
-    amrex::Error("alloc_blobdata invalid");
-
   } else
    amrex::Error("project_option invalid");
+
+  if (alloc_blobdata==1) {
+   delete_array(TYPE_MF);
+   delete_array(COLOR_MF);
+  } else if (alloc_blobdata==0) {
+   // do nothing
+  } else
+   amrex::Error("alloc_blobdata invalid");
 
  } else if (project_option_FSI_rigid(&project_option)==0) {
   // do nothing
