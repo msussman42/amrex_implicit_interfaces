@@ -144,7 +144,6 @@ FSI_SIZE=area
 #define OP_ISCHEME_MAC (7)
 #define OP_UGRAD_COUPLING_MAC (8)
 #define OP_U_COMP_CELL_MAC_TO_MAC (11)
-#define OP_PROJECT_TO_RIGID_VEL (12)
 
 #define OP_GATHER_MDOT (0)
 #define OP_SCATTER_MDOT (1)

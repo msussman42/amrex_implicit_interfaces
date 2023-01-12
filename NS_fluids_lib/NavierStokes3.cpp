@@ -9628,91 +9628,73 @@ void NavierStokes::multiphase_project(int project_option) {
   operation_flag=OP_UNEW_CELL_TO_MAC;
   Real beta=0.0;
 
-  if (nsolve!=1)
-   amrex::Error("nsolve invalid");
+  if (project_option==SOLVETYPE_VISC) {
 
-  if ((project_option==SOLVETYPE_PRES)||
-      (project_option==SOLVETYPE_PRESGRAVITY)) {
-   // unew^{f} = unew^{f} 
-   operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
-  } else if (project_option==SOLVETYPE_INITPROJ) {
-   //unew^{f} = unew^{c->f}
-   operation_flag=OP_UNEW_CELL_TO_MAC;
-  } else if (project_option==SOLVETYPE_VISC) {
-    // Overwrite the current MAC and CELL velocity in the ICE or FSI_RIGID
-    // materials to be rigid body projected velocities.  
-    // viscosity=0 on ICE (or FSI_RIGID) faces.  
-    // "density" very large in the
-    // ICE (or FSI_RIGID) materials.
-    // fort_scalarcoeff
-    // fort_buildfacewt
-    // ICE (or FSI_RIGID) materials are always low order.
-   operation_flag=OP_PROJECT_TO_RIGID_VEL;
-  } else 
-   amrex::Error("project_option invalid47");
+   if (nsolve!=AMREX_SPACEDIM)
+    amrex::Error("nsolve invalid");
 
-   // if project_option==SOLVETYPE_PRESGRAVITY
-   // ---------------------------------------
-   //   velocity <TO BE PROJECTED> of rigid materials/ice is zero; gravity
-   //   will induce a velocity in the rigid materials/ice.
-   //
-   // if project_option==SOLVETYPE_PRES
-   // ---------------------------------------
-   // velocity in the ice or rigid materials
-   // is overwritten with a projected rigid body velocity:
-   //  a) call get_rigid_velocity
-   //  b) uedge=test_current_icefacecut*uedge+ &
-   //       (one-test_current_icefacecut)*uedge_rigid
-   //
-   // NavierStokes::increment_face_velocityALL is declared in 
-   // NavierStokes2.cpp.
-  increment_face_velocityALL(
+   project_to_rigid_velocityALL(blobdata); 
+
+  } else if ((project_option==SOLVETYPE_PRES)||
+ 	     (project_option==SOLVETYPE_PRESGRAVITY)||
+	     (project_option==SOLVETYPE_INITPROJ)) {
+
+   if (nsolve!=1)
+    amrex::Error("nsolve invalid");
+
+   if ((project_option==SOLVETYPE_PRES)||
+       (project_option==SOLVETYPE_PRESGRAVITY)) {
+    operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
+   } else if (project_option==SOLVETYPE_INITPROJ) {
+    operation_flag=OP_UNEW_CELL_TO_MAC;
+   } else 
+    amrex::Error("project_option invalid47");
+
+   increment_face_velocityALL(
     operation_flag,
     project_option,
     idx_velcell,beta,blobdata); 
 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
 
-     // 1. MAC_TEMP=Umac_new, UMAC=Umac_new
-     // 2. call to residual_correction_form (UMAC=UMAC-beta grad p_init)
-     // 3. MAC_TEMP=UMAC
-     // 4. .... (UMAC updated)
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     //Umac_TYpe
-    MultiFab* macvel=ns_level.getStateMAC(0,dir,cur_time_slab); 
-    MultiFab::Copy(
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     MultiFab* macvel=ns_level.getStateMAC(0,dir,cur_time_slab); 
+     MultiFab::Copy(
       *ns_level.localMF[MAC_TEMP_MF+dir],
       *macvel,0,0,nsolve,0);
-    MultiFab::Copy(
+     MultiFab::Copy(
       *ns_level.localMF[UMAC_MF+dir],
       *macvel,0,0,nsolve,0);
 
-    if (1==0) {
-     int gridno=0;
-     const Box& fabgrid = grids[gridno];
-     const int* fablo=fabgrid.loVect();
-     const int* fabhi=fabgrid.hiVect();
-     const Real* xlo = grid_loc[gridno].lo();
-     int interior_only=1;
-     FArrayBox& macfab=(*macvel)[0];
-     int scomp_debug=0;
-     int ncomp_debug=nsolve;
-     std::cout << "WARNING: this velocity is scaled\n";
-     tecplot_debug(macfab,xlo,fablo,fabhi,coarse_dx,dir,0,
+     if (1==0) {
+      int gridno=0;
+      const Box& fabgrid = grids[gridno];
+      const int* fablo=fabgrid.loVect();
+      const int* fabhi=fabgrid.hiVect();
+      const Real* xlo = grid_loc[gridno].lo();
+      int interior_only=1;
+      FArrayBox& macfab=(*macvel)[0];
+      int scomp_debug=0;
+      int ncomp_debug=nsolve;
+      std::cout << "WARNING: this velocity is scaled\n";
+      tecplot_debug(macfab,xlo,fablo,fabhi,coarse_dx,dir,0,
 	     scomp_debug,ncomp_debug,interior_only);
-    }
-    delete macvel;
-   }  // dir=0..sdim-1
-  } // ilev=finest_level ... level
+     }
+     delete macvel;
+    }  // dir=0..sdim-1
+   } // ilev=finest_level ... level
 
-  if (alloc_blobdata==1) {
-   delete_array(TYPE_MF);
-   delete_array(COLOR_MF);
-  } else if (alloc_blobdata==0) {
-   // do nothing
+   if (alloc_blobdata==1) {
+    delete_array(TYPE_MF);
+    delete_array(COLOR_MF);
+   } else if (alloc_blobdata==0) {
+    // do nothing
+   } else
+    amrex::Error("alloc_blobdata invalid");
+
   } else
-   amrex::Error("alloc_blobdata invalid");
+   amrex::Error("project_option invalid");
 
  } else if (project_option_FSI_rigid(&project_option)==0) {
   // do nothing
