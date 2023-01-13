@@ -2902,6 +2902,150 @@ void NavierStokes::increment_face_velocity(
 
 } // subroutine increment_face_velocity
 
+void NavierStokes::project_to_rigid_velocityALL(Vector<blobclass> blobdata) {
+
+ int finest_level=parent->finestLevel();
+
+ make_MAC_velocity_consistentALL();
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.project_to_rigid_velocity(blobdata); 
+   // avgDownMacState, getStateMAC to fill EXT_DIR BC.
+  ns_level.make_MAC_velocity_consistent();
+  ParallelDescriptor::Barrier();
+ }  // ilev=finest_level ... level
+
+} // end subroutine project_to_rigid_velocityALL
+
+void NavierStokes::project_to_rigid_velocity(Vector<blobclass> blobdata) {
+
+ int finest_level = parent->finestLevel();
+
+ int num_colors=blobdata.size();
+ if (num_colors>0) {
+  //do nothing
+ } else
+  amrex::Error("num_colors invalid");
+
+ int blob_array_size=num_colors*num_elements_blobclass;
+
+ Vector<Real> blob_array(blob_array_size);
+
+ int counter=0;
+
+ for (int i=0;i<num_colors;i++) {
+  copy_from_blobdata(i,counter,blob_array,blobdata);
+ }  // i=0..num_colors-1
+ if (counter!=blob_array_size)
+  amrex::Error("counter invalid");
+
+ bool use_tiling=ns_tiling;
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ resize_levelset(2,LEVELPC_MF);
+ debug_ngrow(LEVELPC_MF,2,110);
+
+ resize_maskfiner(1,MASKCOEF_MF);
+ resize_mask_nbr(1);
+
+ const Real* dx = geom.CellSize();
+
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
+ if (localMF[COLOR_MF]->nGrow()<1)
+  amrex::Error("localMF[COLOR_MF]->nGrow()<1");
+ if (localMF[TYPE_MF]->nGrow()<1)
+  amrex::Error("localMF[TYPE_MF]->nGrow()<1");
+
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+
+  MultiFab& Umac_new=get_new_data(Umac_Type+dir,slab_step+1);
+
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(S_new,use_tiling);mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   int gridno=mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+   int bfact=parent->Space_blockingFactor(level);
+   const Real* xlo = grid_loc[gridno].lo();
+    
+   FArrayBox& velMAC=Umac_new[mfi];
+   FArrayBox& velCELL=S_new[mfi];
+
+   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
+
+   FArrayBox& colorfab=(*localMF[COLOR_MF])[mfi];
+   FArrayBox& typefab=(*localMF[TYPE_MF])[mfi];
+
+   // mask=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskcoeffab=(*localMF[MASKCOEF_MF])[mfi];
+
+   Vector<int> velbc=getBCArray(State_Type,gridno,
+     STATECOMP_VEL,STATE_NCOMP_VEL);
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // fort_project_to_rigid_velocity is declared in: LEVELSET_3D.F90
+   fort_project_to_rigid_velocity(
+     &dir, //dir=0,1,2
+     velbc.dataPtr(),  
+     &slab_step,
+     &dt_slab,
+     &cur_time_slab, 
+     xlo,dx,
+      // mask=tag if not covered by level+1 or outside the domain.
+     maskcoeffab.dataPtr(),
+     ARLIM(maskcoeffab.loVect()),ARLIM(maskcoeffab.hiVect()),
+     lsfab.dataPtr(),
+     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+     velMAC.dataPtr(),
+     ARLIM(velMAC.loVect()),ARLIM(velMAC.hiVect()), 
+     velCELL.dataPtr(STATECOMP_VEL+dir),
+     ARLIM(velCELL.loVect()),ARLIM(velCELL.hiVect()),
+     colorfab.dataPtr(),
+     ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
+     typefab.dataPtr(),
+     ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &level,&finest_level,
+     &NS_geometry_coord,
+     domlo,domhi, 
+     blob_array.dataPtr(),
+     &blob_array_size,
+     &num_colors);
+  } // mfi
+} // omp
+  ns_reconcile_d_num(134);
+
+ } // dir=0..sdim-1
+
+} // subroutine project_to_rigid_velocity
+
+
 void NavierStokes::increment_KE_ALL(Real beta) {
 
  int finest_level=parent->finestLevel();
