@@ -12970,6 +12970,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: dir
       INTEGER_T, INTENT(in) :: ncomp_mgoni
       INTEGER_T, INTENT(in) :: ncomp_xp
       INTEGER_T, INTENT(in) :: ncomp_xgp
@@ -13102,7 +13103,7 @@ stop
       INTEGER_T im_left,im_right
       INTEGER_T im_left_tension,im_right_tension
       INTEGER_T im_left_gravity,im_right_gravity
-      INTEGER_T dir,dir2,side
+      INTEGER_T dir2,side
       INTEGER_T velcomp,iboundary
       REAL_T cutedge,RR
       INTEGER_T, parameter :: nhalf=3
@@ -15618,6 +15619,484 @@ stop
       return
       end subroutine fort_cell_to_mac
 
+      subroutine fort_project_to_rigid_velocity( &
+       dir, &
+       velbc_in, &
+       slab_step, &
+       dt, &
+       time, &
+       xlo,dx, &
+       maskcoef,DIMS(maskcoef), & ! 1=not cov. or outside domain  0=covered
+       levelPC,DIMS(levelPC), &
+       velMAC,DIMS(velMAC), &
+       velCELL,DIMS(velCELL), &
+       colorfab,DIMS(colorfab), &
+       typefab,DIMS(typefab), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       level,finest_level, &
+       rz_flag, &
+       domlo,domhi, &
+       blob_array, &
+       blob_array_size, &
+       num_colors) &
+      bind(c,name='fort_project_to_rigid_velocity')
+
+      use global_utility_module
+      use MOF_routines_module
+      use probf90_module
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: dir
+      INTEGER_T, INTENT(in) :: blob_array_size
+      INTEGER_T, INTENT(in) :: num_colors
+      REAL_T, INTENT(in) :: blob_array(blob_array_size)
+        
+      INTEGER_T, INTENT(in) :: slab_step
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: time
+      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcoef)
+      INTEGER_T, INTENT(in) :: DIMDEC(velMAC)
+      INTEGER_T, INTENT(in) :: DIMDEC(velCELL)
+      INTEGER_T, INTENT(in) :: DIMDEC(levelPC)
+      INTEGER_T, INTENT(in) :: DIMDEC(colorfab)
+      INTEGER_T, INTENT(in) :: DIMDEC(typefab)
+
+      INTEGER_T, INTENT(in) :: velbc_in(SDIM,2,SDIM)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T growlo(3),growhi(3)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: rz_flag
+      INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+
+      REAL_T, INTENT(in), target :: maskcoef(DIMV(maskcoef))
+      REAL_T, pointer :: maskcoef_ptr(D_DECL(:,:,:))
+
+      REAL_T, INTENT(in), target :: &
+              levelPC(DIMV(levelPC),num_materials*(1+SDIM))
+      REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(inout), target :: velMAC(DIMV(velMAC))
+      REAL_T, pointer :: velMAC_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(in), target :: velCELL(DIMV(velCELL))
+      REAL_T, pointer :: velCELL_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(in), target :: typefab(DIMV(typefab))
+      REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
+      REAL_T, INTENT(in), target :: colorfab(DIMV(colorfab))
+      REAL_T, pointer :: colorfab_ptr(D_DECL(:,:,:))
+  
+      INTEGER_T i,j,k,ii,jj,kk
+      INTEGER_T im1,jm1,km1
+      INTEGER_T iboundary
+      INTEGER_T im
+      INTEGER_T im_left,im_right
+      INTEGER_T dir2,side
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xstenMAC(-nhalf:nhalf,SDIM)
+      REAL_T xstenMAC_center(SDIM)
+      REAL_T uedge
+      REAL_T uedge_rigid
+      INTEGER_T idx
+      INTEGER_T at_RZ_face
+      REAL_T LSleft(num_materials)
+      REAL_T LSright(num_materials)
+      REAL_T localLS(num_materials)
+      REAL_T xclamped_minus(SDIM)
+      REAL_T xclamped_plus(SDIM)
+      REAL_T LS_clamped_plus
+      REAL_T LS_clamped_minus
+      REAL_T vel_clamped_plus(SDIM)
+      REAL_T vel_clamped_minus(SDIM)
+      REAL_T temperature_clamped_plus
+      REAL_T temperature_clamped_minus
+      INTEGER_T prescribed_flag
+      REAL_T vel_clamped(SDIM)
+      REAL_T temperature_clamped
+      INTEGER_T is_clamped_face
+      REAL_T xclamped_minus_sten(-nhalf:nhalf,SDIM)
+      REAL_T xclamped_plus_sten(-nhalf:nhalf,SDIM)
+
+      INTEGER_T colorface,colorleft,colorright
+      INTEGER_T typeface,typeleft,typeright
+      INTEGER_T face_velocity_override
+      INTEGER_T FSI_prescribed_flag
+
+      velMAC_ptr=>velMAC
+      velCELL_ptr=>velCELL
+      maskcoef_ptr=>maskcoef
+      typefab_ptr=>typefab
+      colorfab_ptr=>colorfab
+      levelPC_ptr=>levelPC
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid fort_project_to_rigid_velocity"
+       stop
+      endif
+ 
+      if (num_colors.ge.1) then
+       ! do nothing
+      else
+       print *,"num_colors invalid; fort_project_to_rigid_velocity"
+       stop
+      endif
+
+      if (blob_array_size.eq.num_colors*num_elements_blobclass) then
+       ! do nothing
+      else
+       print *,"blob_array_size invalid fort_project_to_rigid_velocity"
+       stop
+      endif
+
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+
+      do im=1,num_materials
+
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
+        print *,"denconst invalid"
+        stop
+       endif
+
+      enddo ! im=1..num_materials
+
+      if ((slab_step.lt.-1).or.(slab_step.gt.bfact_time_order)) then
+       print *,"slab_step invalid fort_project_to_rigid_velocity"
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,velMAC_ptr,0,dir)
+      call checkbound_array1(fablo,fabhi,velCELL_ptr,1,-1)
+
+      call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,colorfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
+
+      do im=1,num_materials
+
+       if (fort_material_type(im).eq.0) then
+        ! do nothing
+       else if (fort_material_type(im).eq.999) then
+        ! do nothing
+       else if ((fort_material_type(im).ge.1).and. &
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
+        ! do nothing
+       else
+        print *,"fort_material_type invalid"
+        stop
+       endif
+
+      enddo  ! im=1..num_materials
+
+      ii=0
+      jj=0
+      kk=0
+      if (dir.eq.0) then
+       ii=1
+      else if (dir.eq.1) then
+       jj=1
+      else if ((dir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"dir out of range in fort_project_to_rigid_velocity, dir=",dir
+       stop
+      endif 
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       ! dir=0..sdim-1
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+       do dir2=1,SDIM
+        xstenMAC_center(dir2)=xstenMAC(0,dir2)
+       enddo
+
+       is_clamped_face=-1
+
+       im_left=0
+       im_right=0
+
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_RZ) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        !do nothing 
+       else
+        print *,"levelrz invalid fort_project_to_rigid_velocity "
+        stop
+       endif 
+
+       im1=i-ii
+       jm1=j-jj
+       km1=k-kk
+
+       if (dir.eq.0) then
+        idx=i
+       else if (dir.eq.1) then
+        idx=j
+       else if ((dir.eq.2).and.(SDIM.eq.3)) then
+        idx=k
+       else
+        print *,"dir invalid fort_project_to_rigid_velocity, dir=",dir
+        stop
+       endif
+
+       do im=1,num_materials
+        LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
+        LSright(im)=levelPC(D_DECL(i,j,k),im)
+        localLS(im)=half*(LSright(im)+LSleft(im))
+       enddo
+       call get_primary_material(LSleft,im_left)
+       call get_primary_material(LSright,im_right)
+
+       call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
+       call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+       do dir2=1,SDIM
+        xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
+        xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
+       enddo
+       call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
+        vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
+       call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
+        vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
+       if ((LS_clamped_plus.ge.zero).and. &
+           (LS_clamped_minus.ge.zero)) then
+        is_clamped_face=1
+        do dir2=1,SDIM
+         vel_clamped(dir2)=half*(vel_clamped_minus(dir2)+ &
+          vel_clamped_plus(dir2))
+        enddo
+        temperature_clamped=half*(temperature_clamped_minus+ &
+          temperature_clamped_plus)
+       else if ((LS_clamped_plus.lt.zero).and. &
+                (LS_clamped_minus.lt.zero)) then
+        is_clamped_face=0
+       else if ((LS_clamped_plus.ge.zero).and. &
+                (LS_clamped_minus.lt.zero)) then
+        is_clamped_face=2
+        do dir2=1,SDIM
+         vel_clamped(dir2)=vel_clamped_plus(dir2)
+        enddo
+        temperature_clamped=temperature_clamped_plus
+       else if ((LS_clamped_plus.lt.zero).and. &
+                (LS_clamped_minus.ge.zero)) then
+        is_clamped_face=3
+        do dir2=1,SDIM
+         vel_clamped(dir2)=vel_clamped_minus(dir2)
+        enddo
+        temperature_clamped=temperature_clamped_minus
+       else
+        print *,"LS_clamped_plus or LS_clamped_minus NaN"
+        stop
+       endif
+
+       face_velocity_override=0
+
+       at_RZ_face=0
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_RZ) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+        if ((dir.eq.0).and. &
+            (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+         at_RZ_face=1
+        endif
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        if ((dir.eq.0).and. &
+            (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+         at_RZ_face=1
+        endif
+       else
+        print *,"levelrz invalid tfrmac"
+        stop
+       endif 
+
+       uedge=zero
+
+       if (at_RZ_face.eq.1) then
+        face_velocity_override=1
+        uedge=zero
+       else if (at_RZ_face.eq.0) then
+
+        if (num_colors.gt.0) then
+         if (blob_array_size.eq.num_colors*num_elements_blobclass) then
+          ! do nothing 
+         else
+          print *,"num_colors inconsistent; fort_project_to_rigid_velocity"
+          stop
+         endif
+        else
+         print *,"num_colors invalid"
+         stop
+        endif
+
+        ! type init in FORT_GETTYPEFAB
+        typeleft=NINT(typefab(D_DECL(im1,jm1,km1)))
+        typeright=NINT(typefab(D_DECL(i,j,k)))
+        colorleft=NINT(colorfab(D_DECL(im1,jm1,km1)))
+        colorright=NINT(colorfab(D_DECL(i,j,k)))
+        if ((typeleft.ge.1).and.(typeleft.le.num_materials).and. &
+            (typeright.ge.1).and.(typeright.le.num_materials)) then
+
+          !is_ice_or_FSI_rigid_material=1 if "is_ice" or "is_FSI_rigid"
+         if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).or. &
+             (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
+
+          if ((is_ice_or_FSI_rigid_material(typeleft).eq.1).and. &
+              (is_ice_or_FSI_rigid_material(typeright).eq.1)) then
+           if (LSleft(typeleft).ge.LSright(typeright)) then  
+            typeface=typeleft
+            colorface=colorleft
+           else if (LSleft(typeleft).lt.LSright(typeright)) then
+            typeface=typeright
+            colorface=colorright
+           else
+            print *,"LSleft or LSright bust"
+            stop
+           endif
+          else if (is_ice_or_FSI_rigid_material(typeleft).eq.1) then
+           typeface=typeleft
+           colorface=colorleft
+          else if (is_ice_or_FSI_rigid_material(typeright).eq.1) then
+           typeface=typeright
+           colorface=colorright
+          else
+           print *,"typeleft or typeright bust"
+           stop
+          endif
+
+           ! is_ice==1 or
+           ! is_FSI_rigid==1 
+          if (is_ice_or_FSI_rigid_material(typeface).eq.1) then
+           if ((colorface.ge.1).and.(colorface.le.num_colors)) then
+             ! declared in: GLOBALUTIL.F90
+            call get_rigid_velocity( &
+             FSI_prescribed_flag, &
+             colorface,dir+1,uedge_rigid, &
+             xstenMAC_center, &
+             blob_array, &
+             blob_array_size,num_colors) 
+
+            if (FSI_flag(typeface).eq.FSI_ICE_STATIC) then
+             uedge_rigid=zero
+            endif
+
+            call SUB_check_vel_rigid(xstenMAC_center, &
+              time,uedge_rigid,dir+1)
+
+            uedge=uedge_rigid
+           else if (colorface.eq.0) then
+            ! do nothing
+           else
+            print *,"colorface invalid"
+            stop
+           endif 
+          else
+           print *,"is_ice or is_FSI_rigid bust"
+           stop
+          endif
+
+         else if ((is_ice(typeleft).eq.0).and. &
+                  (is_ice(typeright).eq.0).and. &
+                  (is_FSI_rigid(typeleft).eq.0).and. &
+                  (is_FSI_rigid(typeright).eq.0)) then
+          ! do nothing
+         else
+          print *,"is_ice or is_FSI_rigid invalid"
+          stop
+         endif
+
+        else
+         print *,"typeleft or typeright invalid"
+         stop
+        endif
+
+        iboundary=0
+        side=0
+        if (idx.eq.fablo(dir+1)) then
+         iboundary=1
+         side=1
+        else if (idx.eq.fabhi(dir+1)+1) then
+         iboundary=1
+         side=2
+        else if ((idx.gt.fablo(dir+1)).and. &
+                 (idx.lt.fabhi(dir+1)+1)) then
+         ! do nothing
+        else
+         print *,"idx invalid"
+         stop 
+        endif
+        if (iboundary.eq.1) then
+
+         if ((side.eq.1).or.(side.eq.2)) then
+          if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
+           face_velocity_override=1
+           uedge=zero
+          else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
+           face_velocity_override=1
+           call velbc_override(time,dir+1,side,dir+1, &
+            uedge, &
+            xstenMAC,nhalf,dx,bfact)
+
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+
+        else if (iboundary.eq.0) then
+
+         if (side.eq.0) then
+          if ((is_clamped_face.eq.1).or. &
+              (is_clamped_face.eq.2).or. &
+              (is_clamped_face.eq.3)) then
+           uedge=vel_clamped(dir+1)
+           face_velocity_override=1
+          else if (is_clamped_face.eq.0) then
+           ! do nothing
+          else
+           print *,"is_clamped_face invalid"
+           stop
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+        else 
+         print *,"iboundary invalid"
+         stop
+        endif
+
+       else
+        print *,"at_RZ_face invalid"
+        stop
+       endif 
+
+      enddo
+      enddo
+      enddo ! i,j,k (MAC grid, zero ghost cells)
+
+      return
+      end subroutine fort_project_to_rigid_velocity
 
       ! called from: NavierStokes::allocate_FACE_WEIGHT (NavierStokes3.cpp)
       !  which is called from:

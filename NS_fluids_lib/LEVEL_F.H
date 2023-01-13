@@ -293,6 +293,28 @@ namespace amrex{
         int* num_colors,
         int* project_option);
 
+      void fort_project_to_rigid_velocity(
+        int* dir, //dir=0,1,2
+        int* velbc,
+        int* slab_step,
+        Real* dt,
+        Real* time,
+        const Real* xlo,const Real* dx,
+        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
+        Real* levelPC,AMREX_ARLIM_P(levelPClo),AMREX_ARLIM_P(levelPChi),
+        Real* velMAC,AMREX_ARLIM_P(velMAClo),AMREX_ARLIM_P(velMAChi), 
+        Real* velCELL,AMREX_ARLIM_P(velCELLlo),AMREX_ARLIM_P(velCELLhi), 
+	Real* colorfab,AMREX_ARLIM_P(colorfablo),AMREX_ARLIM_P(colorfabhi),
+	Real* typefab,AMREX_ARLIM_P(typefablo),AMREX_ARLIM_P(typefabhi),
+        const int* tilelo,const int* tilehi,
+        const int* fablo,const int* fabhi,
+        int* bfact,
+        int* level,int* finest_level,
+        const int* rz_flag,
+        const int* domlo,const int* domhi,
+        Real* blob_array,
+        int* blob_array_size,
+        int* num_colors);
 
       void fort_inc_temp(
         Real* beta,
