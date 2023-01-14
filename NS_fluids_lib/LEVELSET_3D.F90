@@ -15683,7 +15683,7 @@ stop
       REAL_T, pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(inout), target :: velMAC(DIMV(velMAC))
       REAL_T, pointer :: velMAC_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: velCELL(DIMV(velCELL))
+      REAL_T, INTENT(inout), target :: velCELL(DIMV(velCELL))
       REAL_T, pointer :: velCELL_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target :: typefab(DIMV(typefab))
       REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
@@ -15772,7 +15772,7 @@ stop
 
       enddo ! im=1..num_materials
 
-      if ((slab_step.lt.-1).or.(slab_step.gt.bfact_time_order)) then
+      if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
        print *,"slab_step invalid fort_project_to_rigid_velocity"
        stop
       endif
@@ -15825,6 +15825,8 @@ stop
        do dir2=1,SDIM
         xstenMAC_center(dir2)=xstenMAC(0,dir2)
        enddo
+
+       uedge=velMAC(D_DECL(i,j,k))
 
        is_clamped_face=-1
 
@@ -15929,8 +15931,6 @@ stop
         print *,"levelrz invalid tfrmac"
         stop
        endif 
-
-       uedge=zero
 
        if (at_RZ_face.eq.1) then
         face_velocity_override=1
