@@ -15700,7 +15700,6 @@ stop
       REAL_T xstenMAC(-nhalf:nhalf,SDIM)
       REAL_T xstenMAC_center(SDIM)
       REAL_T uedge
-      REAL_T uedge_rigid
       INTEGER_T idx
       INTEGER_T at_RZ_face
       REAL_T LSleft(num_materials)
@@ -15723,8 +15722,7 @@ stop
 
       INTEGER_T colorface,colorleft,colorright
       INTEGER_T typeface,typeleft,typeright
-      INTEGER_T face_velocity_override
-      INTEGER_T FSI_prescribed_flag
+      INTEGER_T FSI_prescribed_flag !=1 if FSI_RIGID material touches rigid.
 
       velMAC_ptr=>velMAC
       velCELL_ptr=>velCELL
@@ -15908,8 +15906,6 @@ stop
         stop
        endif
 
-       face_velocity_override=0
-
        at_RZ_face=0
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         ! do nothing
@@ -15933,7 +15929,6 @@ stop
        endif 
 
        if (at_RZ_face.eq.1) then
-        face_velocity_override=1
         uedge=zero
        else if (at_RZ_face.eq.0) then
 
@@ -15990,20 +15985,19 @@ stop
            if ((colorface.ge.1).and.(colorface.le.num_colors)) then
              ! declared in: GLOBALUTIL.F90
             call get_rigid_velocity( &
-             FSI_prescribed_flag, &
-             colorface,dir+1,uedge_rigid, &
+             FSI_prescribed_flag, & !=1 if FSI_rigid material touches rigid.
+             colorface,dir+1,uedge, &
              xstenMAC_center, &
              blob_array, &
              blob_array_size,num_colors) 
 
             if (FSI_flag(typeface).eq.FSI_ICE_STATIC) then
-             uedge_rigid=zero
+             uedge=zero
             endif
 
             call SUB_check_vel_rigid(xstenMAC_center, &
-              time,uedge_rigid,dir+1)
+              time,uedge,dir+1)
 
-            uedge=uedge_rigid
            else if (colorface.eq.0) then
             ! do nothing
            else
@@ -16045,18 +16039,16 @@ stop
          print *,"idx invalid"
          stop 
         endif
+
         if (iboundary.eq.1) then
 
          if ((side.eq.1).or.(side.eq.2)) then
           if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
-           face_velocity_override=1
            uedge=zero
           else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
-           face_velocity_override=1
            call velbc_override(time,dir+1,side,dir+1, &
             uedge, &
             xstenMAC,nhalf,dx,bfact)
-
           endif
          else
           print *,"side invalid"
@@ -16070,7 +16062,6 @@ stop
               (is_clamped_face.eq.2).or. &
               (is_clamped_face.eq.3)) then
            uedge=vel_clamped(dir+1)
-           face_velocity_override=1
           else if (is_clamped_face.eq.0) then
            ! do nothing
           else
@@ -16091,9 +16082,138 @@ stop
         stop
        endif 
 
+       velMAC(D_DECL(i,j,k))=uedge
+
       enddo
       enddo
       enddo ! i,j,k (MAC grid, zero ghost cells)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       ! dir=0..sdim-1
+       call gridsten_level(xstenMAC,i,j,k,level,nhalf)
+       do dir2=1,SDIM
+        xstenMAC_center(dir2)=xstenMAC(0,dir2)
+       enddo
+
+       uedge=velCELL(D_DECL(i,j,k))
+
+       is_clamped_face=-1
+
+       im_left=0
+
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_RZ) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        !do nothing 
+       else
+        print *,"levelrz invalid fort_project_to_rigid_velocity "
+        stop
+       endif 
+
+       do im=1,num_materials
+        localLS(im)=levelPC(D_DECL(i,j,k),im)
+       enddo
+       call get_primary_material(localLS,im_left)
+
+       call SUB_clamped_LS( &
+         xstenMAC_center, & !intent(in)
+         time, & !intent(in)
+         LS_clamped_minus, & !intent(out)
+         vel_clamped,& !intent(out)
+         temperature_clamped,& !intent(out)
+         prescribed_flag, & !intent(out) 
+         dx) !intent(in)
+
+       if (LS_clamped_minus.ge.zero) then
+        is_clamped_face=1
+       else if (LS_clamped_minus.lt.zero) then
+        is_clamped_face=0
+       else
+        print *," LS_clamped_minus NaN"
+        stop
+       endif
+
+       if (num_colors.gt.0) then
+        if (blob_array_size.eq.num_colors*num_elements_blobclass) then
+         ! do nothing 
+        else
+         print *,"num_colors inconsistent; fort_project_to_rigid_velocity"
+         stop
+        endif
+       else
+        print *,"num_colors invalid"
+        stop
+       endif
+
+        ! type init in FORT_GETTYPEFAB
+       typeface=NINT(typefab(D_DECL(i,j,k)))
+       colorface=NINT(colorfab(D_DECL(i,j,k)))
+
+       if ((typeface.ge.1).and.(typeface.le.num_materials)) then
+
+         !is_ice_or_FSI_rigid_material=1 if "is_ice" or "is_FSI_rigid"
+        if (is_ice_or_FSI_rigid_material(typeface).eq.1) then
+
+         if ((colorface.ge.1).and.(colorface.le.num_colors)) then
+          ! declared in: GLOBALUTIL.F90
+          call get_rigid_velocity( &
+           FSI_prescribed_flag, & !intent(out) (ice touches a substrate)
+           colorface, & !intent(in)
+           dir+1, & !intent(in)
+           uedge, & !intent(out)
+           xstenMAC_center, & ! intent(in)
+           blob_array, & !intent(in)
+           blob_array_size, & !intent(in)
+           num_colors) !intent(in)
+
+          if (FSI_flag(typeface).eq.FSI_ICE_STATIC) then
+           uedge=zero
+          endif
+
+          call SUB_check_vel_rigid(xstenMAC_center, &
+            time,uedge,dir+1)
+
+         else if (colorface.eq.0) then
+          ! do nothing
+         else
+          print *,"colorface invalid"
+          stop
+         endif 
+
+        else if ((is_ice(typeface).eq.0).and. &
+                 (is_FSI_rigid(typeface).eq.0)) then
+         ! do nothing
+        else
+         print *,"is_ice or is_FSI_rigid invalid"
+         stop
+        endif
+
+       else
+        print *,"typeface invalid"
+        stop
+       endif
+
+       if (is_clamped_face.eq.1) then
+        uedge=vel_clamped(dir+1)
+       else if (is_clamped_face.eq.0) then
+        ! do nothing
+       else
+        print *,"is_clamped_face invalid"
+        stop
+       endif
+
+       velCELL(D_DECL(i,j,k))=uedge
+
+      enddo
+      enddo
+      enddo ! i,j,k (CELL grid, zero ghost cells)
 
       return
       end subroutine fort_project_to_rigid_velocity
