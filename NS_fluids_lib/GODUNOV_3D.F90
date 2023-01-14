@@ -20186,10 +20186,22 @@ stop
            if (vfractest(im).gt.vfracmax) then
             im_max=im
             vfracmax=vfractest(im)
+           else if (vfractest(im).le.vfracmax) then
+            ! do nothing
+           else
+            print *,"vfractest(im) is NaN vfractest,vfracmax=", &
+              vfractest(im),vfracmax
+            stop
            endif
            if (vfractest(im).gt.VOFTOL) then
             imcrit=im
             tag(im)=1
+           else if (vfractest(im).le.VOFTOL) then
+            ! do nothing
+           else
+            print *,"vfractest(im) is NaN vfractest,VOFTOL=", &
+              vfractest(im),VOFTOL
+            stop
            endif
 
           else if (is_rigid(im).eq.0) then
@@ -20265,6 +20277,7 @@ stop
          print *,"im_max invalid"
          stop
         endif
+
         if (vfracmax.gt.VOFTOL) then
          ! do nothing
         else
@@ -20281,6 +20294,16 @@ stop
          print *,"sumtag invalid"
          stop
         else if (sumtag.eq.1) then
+
+         if (im_max.eq.imcrit) then
+          ! do nothing
+         else
+          print *,"if sumtag==1, need im_max=imcrit"
+          print *,"im_max=",im_max
+          print *,"imcrit=",imcrit
+          stop
+         endif
+
          if (clamped_cell_in_element.eq.1) then
           local_maskSEM=0
          else if (clamped_cell_in_element.eq.0) then
