@@ -15924,7 +15924,7 @@ stop
          at_RZ_face=1
         endif
        else
-        print *,"levelrz invalid tfrmac"
+        print *,"levelrz invalid fort_project_to_rigid_velocity"
         stop
        endif 
 
