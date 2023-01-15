@@ -16561,7 +16561,8 @@ stop
              dir,veldir, &
              project_option, &
              uncoupled_viscosity, &
-             side,local_presbc, &
+             side, &
+             local_presbc, &
              local_wt) ! intent(out)
 
             if (dd_group.lt.min_face_wt(DD_COMP_FACE_WT+1)) then

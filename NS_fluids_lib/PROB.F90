@@ -11760,7 +11760,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           ! do nothing
          else
           print *,"in: subroutine grouplsBC"
-          print *,"time,dir,side,bfact,num_materials ",time,dir,side,bfact,num_materials
+          print *,"time,dir,side,bfact,num_materials ", &
+            time,dir,side,bfact,num_materials
           print *,"probtype,axis_dir ",probtype,axis_dir
           print *,"ls_homflag=",ls_homflag
           print *,"dimension= ",SDIM
@@ -11803,7 +11804,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dir,veldir, &
        project_option, &
        uncoupled_viscosity, &
-       side,local_presbc, &
+       side, &
+       local_presbc, &
        local_wt)  ! intent(out)
       use global_utility_module
       IMPLICIT NONE
@@ -11847,7 +11849,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (SDIM.eq.2) then
         if (dir.eq.0) then
-         if (side.eq.1) then
+         if (side.eq.1) then !inorm=fablo(dir+1)
 
           if (levelrz.eq.COORDSYS_RZ) then
            if (local_presbc.eq.REFLECT_EVEN) then
@@ -11879,10 +11881,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            stop
           endif
 
-         else if ((side.eq.0).or.(side.eq.2)) then
+         else if ((side.eq.0).or. & !fablo<inorm<fabhi+1
+                  (side.eq.2)) then !inorm=fabhi(dir+1)+1
           ! do nothing
          else
-          print *,"side invalid"
+          print *,"side invalid; side=",side
           stop
          endif
         else if (dir.eq.1) then
@@ -12059,6 +12062,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
 
        else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
+
         if (nsolve.ne.SDIM) then
          print *,"nsolve invalid for viscosity"
          stop
