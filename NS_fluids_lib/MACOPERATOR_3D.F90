@@ -535,6 +535,7 @@ stop
         else if (is_clamped_cell.eq.0) then
 
          do im=1,num_materials
+
           if (is_rigid(im).eq.1) then
            LSTEST=lsnew(D_DECL(i,j,k),im)
            if (LSTEST.ge.zero) then
@@ -552,6 +553,8 @@ stop
            print *,"is_rigid(im) invalid"
            stop
           endif
+
+           ! FIX ME HERE
          enddo ! im=1..num_materials
 
          do im=1,num_materials
@@ -673,7 +676,7 @@ stop
            ! do nothing 
           else if (solidheat_flag.eq.2) then ! face coeff==0.0 at solid/fluid
            ! do nothing 
-          else if (solidheat_flag.eq.1) then
+          else if (solidheat_flag.eq.1) then !dirichlet bc at solid-fluid 
            ! T=Tsolid in solid so coeff>>1
            ! rigid_mask>>1 if solid material occupies cell. (rigid_mask==1
            ! otherwise)
