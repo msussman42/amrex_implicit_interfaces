@@ -8800,10 +8800,12 @@ stop
           stop
          endif
 
-          ! both adjoining cells are solid cells.
+          ! both adjoining cells are solid or clamped cells.
          if (solid_present_flag.eq.1) then
 
-          facevisc_local=zero  ! dirichlet cond for velocity at the solid.
+           ! dirichlet cond for velocity at the solid boundaries and 
+           ! clamped boundaries.
+          facevisc_local=zero  
 
           local_plus=localheatvisc_plus(implus_majority)
           local_minus=localheatvisc_minus(imminus_majority)
