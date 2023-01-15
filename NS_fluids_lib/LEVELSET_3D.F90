@@ -8989,10 +8989,33 @@ stop
          else if (solid_present_flag.eq.0) then
 
           if (gradh.eq.zero) then
+           visc1=localvisc_minus(imminus_majority)
+           visc2=localvisc_plus(implus_majority)
 
-           call geom_avg(localvisc_plus(implus_majority), &
-                  localvisc_minus(imminus_majority), &
-                  wtR,wtL,facevisc_local)
+           call geom_avg( &
+             visc2, &  !intent(in)
+             visc1, &  !intent(in)
+             wtR,wtL, & !intent(in)
+             facevisc_local) !intent(out)
+
+           if ((is_ice_or_FSI_rigid_material(implus_majority).eq.1).and. &
+               (is_ice_or_FSI_rigid_material(imminus_majority).eq.1)) then
+            facevisc_local=zero
+            localvisc_minus(imminus_majority)=zero
+            localvisc_plus(implus_majority)=zero
+           else if ((is_ice_or_FSI_rigid_material(implus_majority).eq.1).and. &
+                    (is_ice_or_FSI_rigid_material(imminus_majority).eq.0)) then
+            !do nothing
+           else if ((is_ice_or_FSI_rigid_material(implus_majority).eq.0).and. &
+                    (is_ice_or_FSI_rigid_material(imminus_majority).eq.1)) then
+            !do nothing
+           else if ((is_ice_or_FSI_rigid_material(implus_majority).eq.0).and. &
+                    (is_ice_or_FSI_rigid_material(imminus_majority).eq.0)) then
+            !do nothing
+           else
+            print *,"implus_majority or imminus_majority invalid"
+            stop
+           endif
 
            local_plus=localheatvisc_plus(implus_majority)
            local_minus=localheatvisc_minus(imminus_majority)
@@ -9024,7 +9047,7 @@ stop
             print *,"iten_main invalid"
             stop
            endif
-FIX ME
+
            if (LSIDE(1).ge.LSIDE(2)) then
             visc1=localvisc_minus(im_main)
             heat1=localheatvisc_minus(im_main)
@@ -9055,7 +9078,10 @@ FIX ME
            enddo
   
              ! 1/s = (wL/sL + wR/sR)/(wL+wR)=(wL sR + wR sL)/(sL sR)*1/(wL+wR)
-           if ((visc1.le.zero).or.(visc2.le.zero)) then
+           if ((visc1.lt.zero).or.(visc2.lt.zero)) then
+            print *,"visc1 or visc2 cannot be negative"
+            stop
+           else if ((visc1.eq.zero).or.(visc2.eq.zero)) then
             facevisc_local=zero
            else if ((LSIDE(1).eq.zero).and.(LSIDE(2).eq.zero)) then
             facevisc_local=two*visc1*visc2/(visc1+visc2)
@@ -9173,7 +9199,7 @@ FIX ME
            enddo !imspec=1..num_species_var
 
           else
-           print *,"gradh bust"
+           print *,"gradh bust; gradh=",gradh
            stop
           endif
 
@@ -9205,7 +9231,7 @@ FIX ME
             else if (visc1.gt.zero) then
              visc_total=visc_total+voldepart/visc1
             else
-             print *,"visc1 invalid"
+             print *,"visc1 invalid; visc1=",visc1
              stop
             endif
            else if (voldepart.eq.zero) then
@@ -9264,6 +9290,7 @@ FIX ME
 
          else
           print *,"solid_present_flag bust"
+          print *,"solid_present_flag=",solid_present_flag
           stop
          endif
 
@@ -9552,12 +9579,10 @@ FIX ME
 
          density_for_mass_fraction_diffusion=mass_total/voltotal
 
-         local_cenden=one/density_for_mass_fraction_diffusion
+         local_face(FACECOMP_FACEDEN+1)= &
+            one/density_for_mass_fraction_diffusion
 
-         local_cenden_base=local_cenden
-
-         local_face(FACECOMP_FACEDEN+1)=local_cenden
-         local_face(FACECOMP_FACEDEN_BASE+1)=local_cenden_base
+         local_face(FACECOMP_FACEDEN_BASE+1)=local_face(FACECOMP_FACEDEN+1)
 
          do im=1,num_materials
           do im_opp=im+1,num_materials
@@ -9603,9 +9628,7 @@ FIX ME
           enddo ! im_opp=im+1..num_materials
          enddo ! im=1..num_materials
 
-         local_cenvisc=facevisc_local
-
-         local_face(FACECOMP_FACEVISC+1)=local_cenvisc
+         local_face(FACECOMP_FACEVISC+1)=facevisc_local
 
          local_face(FACECOMP_FACEHEAT+1)=faceheat_local
          do imspec=1,num_species_var
