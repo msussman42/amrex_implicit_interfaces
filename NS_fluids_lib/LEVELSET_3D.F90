@@ -7748,9 +7748,6 @@ stop
        ! mask_boundary<>0 means the face coefficient (1/rho) should be
        ! equal to 0.0
       INTEGER_T mask_boundary
-       ! mask_boundary_insulating is derived on the assumption that
-       ! all grid boundaries are either periodic, INT_DIR, or insulating.
-      INTEGER_T mask_boundary_insulating
       INTEGER_T icell,jcell,kcell
       INTEGER_T iside
 
@@ -7860,7 +7857,6 @@ stop
       INTEGER_T dirR,sideR,im3R,orientR
       REAL_T curvL(5+SDIM)
       REAL_T curvR(5+SDIM)
-      REAL_T mu
       INTEGER_T local_maskL,local_maskR,local_masknbr
       INTEGER_T covered_face
       INTEGER_T coarse_fine_face
@@ -8107,8 +8103,8 @@ stop
        endif
         ! sanity check: the real viscosity coefficient(s) are derived from
         ! viscstate(D_DECL(:,:,:),3*num_materials)
-       mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-       if (mu.ge.zero) then
+       if (get_user_viscconst(im,fort_denconst(im),fort_tempconst(im)).ge. &
+           zero) then
         ! do nothing
        else
         print *,"viscosity cannot be negative"
@@ -8356,15 +8352,6 @@ stop
           LSIDE_MAT(im)=half*(LSplus(im)+LSminus(im))
          enddo
 
-          ! MAC grid 1/rho and mu
-
-         do im=1,num_materials
-
-          mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-          one_over_mu=one/(mu+VISCINVTOL)
-
-         enddo ! im=1..num_materials
-
           ! checks rigid and non-rigid materials.
          call get_primary_material(LSplus,implus_majority)
          call get_primary_material(LSminus,imminus_majority)
@@ -8542,9 +8529,6 @@ stop
           ! mask_boundary<>0 means the face coefficient (1/rho) should be
           ! equal to 0.0
          mask_boundary=0
-          ! mask_boundary_insulating is the same as mask_boundary except that
-          ! all grid boundaries are either periodic, insulating, or INT_DIR.
-         mask_boundary_insulating=0
 
          noslip_wall=0
          coarse_fine_face=0
@@ -8563,11 +8547,10 @@ stop
           if (presbclo.eq.INT_DIR) then
            ! do nothing
           else if (presbclo.eq.EXT_DIR) then
-           mask_boundary_insulating=1
+           ! do nothing
           else if ((presbclo.eq.REFLECT_EVEN).or. &
                    (presbclo.eq.FOEXTRAP)) then
            mask_boundary=1
-           mask_boundary_insulating=1
           else
            print *,"presbclo invalid"
            stop
@@ -8604,11 +8587,10 @@ stop
           if (presbchi.eq.INT_DIR) then
            ! do nothing
           else if (presbchi.eq.EXT_DIR) then
-           mask_boundary_insulating=2
+           ! do nothing
           else if ((presbchi.eq.REFLECT_EVEN).or. &
                    (presbchi.eq.FOEXTRAP)) then
            mask_boundary=2
-           mask_boundary_insulating=2
           else
            print *,"presbchi invalid"
            stop
@@ -8704,6 +8686,7 @@ stop
          do imspec=1,num_species_var
           facespecies_local(imspec)=zero
          enddo
+          !viscstate is initialized in fort_derviscosity
          do im=1,num_materials
           localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
           localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
@@ -9041,7 +9024,7 @@ stop
             print *,"iten_main invalid"
             stop
            endif
-
+FIX ME
            if (LSIDE(1).ge.LSIDE(2)) then
             visc1=localvisc_minus(im_main)
             heat1=localheatvisc_minus(im_main)
@@ -9419,9 +9402,13 @@ stop
           enddo
            ! voltotal=sum F_prescribed
            ! im_prescribed_primary=argmax_im F_prescribed
-          call combine_prescribed_VOF(volmat,voltotal,im_prescribed_primary)
+           ! combine_prescribed_VOF is declared in GLOBALUTIL.F90
+          call combine_prescribed_VOF( &
+            volmat, & !intent(in)
+            voltotal, & ! intent(out)
+            im_prescribed_primary) ! intent(out)
 
-          if (is_clamped_face.ge.1) then
+          if (is_clamped_face.ge.1) then !interior "wall"
 
            wall_flag_face=num_materials+1
 
@@ -9432,7 +9419,11 @@ stop
             if ((im_prescribed_primary.ge.1).and. &
                 (im_prescribed_primary.le.num_materials)) then
              if (wall_flag_face.eq.0) then
-              wall_flag_face=im_prescribed_primary !Neumann interior wall
+              wall_flag_face=im_prescribed_primary 
+               ! wallVOF_face should be 0 or 1 since the 
+               ! reconstruction on input to fort_init_physics_vars
+               ! "rasterizes" the "rigid" and
+               ! "prescribed" materials.
               wallVOF_face=volmat(im_prescribed_primary)
              else if ((wall_flag_face.ge.1).and. &
                       (wall_flag_face.le.num_materials)) then
@@ -9621,16 +9612,6 @@ stop
           local_face(FACECOMP_FACESPEC+imspec)= &
             density_for_mass_fraction_diffusion*facespecies_local(imspec)
          enddo
-
-         if (mask_boundary_insulating.eq.0) then
-          ! do nothing
-         else if ((mask_boundary_insulating.eq.1).or. &
-                  (mask_boundary_insulating.eq.2)) then
-          ! do nothing
-         else
-          print *,"mask_boundary_insulating invalid"
-          stop
-         endif
 
           ! mask_boundary=1 at left neumann boundary
           ! mask_boundary=2 at right neumann boundary
@@ -10091,9 +10072,6 @@ stop
 
         do im=1,num_materials
 
-         mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
-         one_over_mu=one/(mu+VISCINVTOL)
-
          dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
          tempcomp=dencomp+1
 
@@ -10123,6 +10101,7 @@ stop
          endif
 
          localvisc(im)=viscstate(D_DECL(i,j,k),im)
+
          if (localvisc(im).lt.zero) then
           print *,"viscstate gone negative"
           stop
