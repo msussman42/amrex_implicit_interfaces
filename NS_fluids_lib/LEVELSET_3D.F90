@@ -10016,6 +10016,10 @@ stop
        do k=igridlo(3),igridhi(3)
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
+        do dir2=1,SDIM
+         xclamped_minus(dir2)=xsten(0,dir2)
+        enddo
+
         do im=1,num_materials*ngeom_recon
          mofdata(im)=slope(D_DECL(i,j,k),im)
         enddo
@@ -10066,6 +10070,35 @@ stop
          ! checks rigid and non-rigid materials.
         call get_primary_material(LSIDE_MAT,implus_majority)
         call get_secondary_material(LSIDE_MAT,implus_majority,im_secondary)
+
+         ! LS>0 if clamped
+        call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
+          vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
+        if (LS_clamped_minus.ge.zero) then
+         null_viscosity=1
+        else if (LS_clamped_minus.lt.zero) then
+
+         if (is_rigid(implus_majority).eq.1) then
+          null_viscosity=1
+         else if (is_rigid(implus_majority).eq.0) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+         if (is_prescribed(implus_majority).eq.1) then
+          null_viscosity=1
+         else if (is_prescribed(implus_majority).eq.0) then
+          ! do nothing
+         else
+          print *,"is_prescibed invalid"
+          stop
+         endif
+
+        else
+         print *,"LS_clamped_minus invalid"
+         stop
+        endif
 
         denconst_interface_added_max=zero
 
