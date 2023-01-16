@@ -8025,7 +8025,7 @@ stop
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
-      rad_added_mass=half*DXMAXLS
+      rad_added_mass=0.5d0*DXMAXLS
 
       do im=1,2*num_interfaces
 
@@ -8988,6 +8988,8 @@ stop
           endif
 
            ! neither adjoining cell is a solid cell.
+           ! All adjoining cells are either "fluid" cells or
+           ! "ice" cells or "FSI_rigid" cells.
          else if (solid_present_flag.eq.0) then
 
           if (gradh.eq.zero) then
@@ -10018,6 +10020,7 @@ stop
         call gridsten_level(xsten,i,j,k,level,nhalf)
         do dir2=1,SDIM
          xclamped_minus(dir2)=xsten(0,dir2)
+         xclamped_plus(dir2)=xsten(0,dir2)
         enddo
 
         do im=1,num_materials*ngeom_recon
