@@ -554,7 +554,6 @@ stop
            stop
           endif
 
-           ! FIX ME HERE
          enddo ! im=1..num_materials
 
          do im=1,num_materials
@@ -581,6 +580,42 @@ stop
            stop
           endif
          enddo ! im=1..num_materials
+
+         if (project_option_projectionF(project_option).eq.1) then
+          ! do nothing
+         else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
+          ! do nothing
+         else if (project_option.eq.SOLVETYPE_HEAT) then ! temperature diff
+          ! do nothing
+         else if ((project_option.ge.SOLVETYPE_SPEC).and. &
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+          ! do nothing
+         else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
+
+          do im=1,num_materials
+           if (is_ice_or_FSI_rigid_material(im).eq.1) then
+            LSTEST=lsnew(D_DECL(i,j,k),im)
+            if (LSTEST.ge.zero) then
+             prescribed_mask=1.0D+6
+             in_prescribed=1
+            else if (LSTEST.lt.zero) then
+             ! do nothing
+            else
+             print *,"LSTEST is NaN"
+             stop
+            endif
+           else if (is_ice_or_FSI_rigid_material(im).eq.0) then
+            ! do nothing
+           else
+            print *,"is_ice_or_FSI_rigid_materal(im) invalid"
+            stop
+           endif
+          enddo ! im=1..num_materials
+
+         else
+          print *,"project_option invalid scalar coeff"
+          stop
+         endif 
 
         else
          print *,"is_clamped_cell invalid"
@@ -722,11 +757,16 @@ stop
           stop
          endif
          do veldir=0,nsolve-1
+
           velcomp=veldir+1
+          local_cterm(velcomp)=one/(den_inverse*dt) !den/dt
+
           if (in_prescribed.eq.1) then
-           local_cterm(velcomp)=one/(den_inverse*dt)
+
+           ! do nothing
+
           else if (in_prescribed.eq.0) then
-           local_cterm(velcomp)=one/(den_inverse*dt) ! den/dt
+
            if (levelrz.eq.COORDSYS_CARTESIAN) then
             ! do nothing
            else if (levelrz.eq.COORDSYS_RZ) then
@@ -760,9 +800,12 @@ stop
            print *,"in_prescribed invalid"
            stop
           endif
+
           ! vel=velsolid in solid, so cterm>>1 there.
           local_cterm(velcomp)=local_cterm(velcomp)*prescribed_mask
+
          enddo ! veldir=0..nsolve-1
+
         else if ((project_option.ge.SOLVETYPE_SPEC).and. &
                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
          if (dt.gt.zero) then

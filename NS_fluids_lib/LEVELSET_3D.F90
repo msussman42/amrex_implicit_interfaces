@@ -10074,6 +10074,7 @@ stop
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
           vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
+
         if (LS_clamped_minus.ge.zero) then
          null_viscosity=1
         else if (LS_clamped_minus.lt.zero) then
@@ -10086,6 +10087,7 @@ stop
           print *,"is_rigid invalid"
           stop
          endif
+
          if (is_prescribed(implus_majority).eq.1) then
           null_viscosity=1
          else if (is_prescribed(implus_majority).eq.0) then
@@ -10095,12 +10097,12 @@ stop
           stop
          endif
 
-         if (is_ice_or_FSI_rigid(implus_majority).eq.1) then
+         if (is_ice_or_FSI_rigid_material(implus_majority).eq.1) then
           null_viscosity=1
-         else if (is_ice_or_FSI_rigid(implus_majority).eq.0) then
+         else if (is_ice_or_FSI_rigid_material(implus_majority).eq.0) then
           ! do nothing
          else
-          print *,"is_ice_or_FSI_rigid invalid"
+          print *,"is_ice_or_FSI_rigid_material invalid"
           stop
          endif
 
