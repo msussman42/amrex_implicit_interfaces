@@ -1195,7 +1195,7 @@ void apply_pressure_grad(
 
     void project_to_rigid_velocity(Vector<blobclass> blobdata);
 
-    void project_to_rigid_velocityALL(Vector<blobclass> blobdata);
+    void project_to_rigid_velocityALL();
 
     void make_MAC_velocity_consistentALL();
     void make_MAC_velocity_consistent();

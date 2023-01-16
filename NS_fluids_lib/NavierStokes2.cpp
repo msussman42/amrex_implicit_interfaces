@@ -2902,9 +2902,54 @@ void NavierStokes::increment_face_velocity(
 
 } // subroutine increment_face_velocity
 
-void NavierStokes::project_to_rigid_velocityALL(Vector<blobclass> blobdata) {
+void NavierStokes::project_to_rigid_velocityALL() {
 
  int finest_level=parent->finestLevel();
+
+ Vector<blobclass> blobdata;
+ Vector< Vector<Real> > mdot_data;
+ Vector< Vector<Real> > mdot_comp_data;
+ Vector< Vector<Real> > mdot_data_redistribute;
+ Vector< Vector<Real> > mdot_comp_data_redistribute;
+ Vector<int> type_flag;
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "BEGIN: color_variable, project_to_rigid_velocityALL\n";
+  }
+ }
+
+ int color_count=0;
+ int coarsest_level=0;
+
+ int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
+
+ int tessellate=1;
+ int operation_flag=OP_GATHER_MDOT;
+ ColorSumALL(
+    operation_flag, // =OP_GATHER_MDOT
+    tessellate, //=1
+    coarsest_level,
+    color_count,
+    TYPE_MF,COLOR_MF,
+    idx_mdot,
+    idx_mdot,
+    type_flag,
+    blobdata,
+    mdot_data,
+    mdot_comp_data,
+    mdot_data_redistribute,
+    mdot_comp_data_redistribute 
+    );
+
+ if (color_count!=blobdata.size())
+  amrex::Error("color_count!=blobdata.size()");
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "END: color_variable, project_to_rigid_velocityALL\n";
+  }
+ }
 
  make_MAC_velocity_consistentALL();
 
@@ -2915,6 +2960,12 @@ void NavierStokes::project_to_rigid_velocityALL(Vector<blobclass> blobdata) {
   ns_level.make_MAC_velocity_consistent();
   ParallelDescriptor::Barrier();
  }  // ilev=finest_level ... level
+
+ delete_array(TYPE_MF);
+ delete_array(COLOR_MF);
+
+ // spectral_override==1 => order derived from "enable_spectral"
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
 
 } // end subroutine project_to_rigid_velocityALL
 

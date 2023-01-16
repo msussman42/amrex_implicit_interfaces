@@ -3322,6 +3322,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int alloc_flag=1;
        alloc_DTDtALL(alloc_flag);
 
+       project_to_rigid_velocityALL();
+
        // 4. Backwards Euler building block: VISCOSITY, thermal diffusion,
        //    species diffusion, conservative surface tension force.
        //   a. hoop stress
@@ -9571,7 +9573,6 @@ void NavierStokes::multiphase_project(int project_option) {
   //SOLVETYPE_PRES, 
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRESGRAVITY
-  //SOLVETYPE_VISC
  if (project_option_FSI_rigid(&project_option)==1) {
 
   Vector<blobclass> blobdata;
@@ -9581,8 +9582,6 @@ void NavierStokes::multiphase_project(int project_option) {
   Vector< Vector<Real> > mdot_comp_data_redistribute;
   Vector<int> type_flag;
 
-  int alloc_blobdata=1;
- 
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "BEGIN: color_variable, multiphase_project\n";
@@ -9628,16 +9627,9 @@ void NavierStokes::multiphase_project(int project_option) {
   operation_flag=OP_UNEW_CELL_TO_MAC;
   Real beta=0.0;
 
-  if (project_option==SOLVETYPE_VISC) {
-
-   if (nsolve!=AMREX_SPACEDIM)
-    amrex::Error("nsolve invalid");
-
-   project_to_rigid_velocityALL(blobdata); 
-
-  } else if ((project_option==SOLVETYPE_PRES)||
- 	     (project_option==SOLVETYPE_PRESGRAVITY)||
-	     (project_option==SOLVETYPE_INITPROJ)) {
+  if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_PRESGRAVITY)||
+      (project_option==SOLVETYPE_INITPROJ)) {
 
    if (nsolve!=1)
     amrex::Error("nsolve invalid");
@@ -9688,13 +9680,8 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("project_option invalid");
 
-  if (alloc_blobdata==1) {
-   delete_array(TYPE_MF);
-   delete_array(COLOR_MF);
-  } else if (alloc_blobdata==0) {
-   // do nothing
-  } else
-   amrex::Error("alloc_blobdata invalid");
+  delete_array(TYPE_MF);
+  delete_array(COLOR_MF);
 
  } else if (project_option_FSI_rigid(&project_option)==0) {
   // do nothing
