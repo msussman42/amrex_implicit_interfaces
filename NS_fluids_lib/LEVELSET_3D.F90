@@ -10095,6 +10095,15 @@ stop
           stop
          endif
 
+         if (is_ice_or_FSI_rigid(implus_majority).eq.1) then
+          null_viscosity=1
+         else if (is_ice_or_FSI_rigid(implus_majority).eq.0) then
+          ! do nothing
+         else
+          print *,"is_ice_or_FSI_rigid invalid"
+          stop
+         endif
+
         else
          print *,"LS_clamped_minus invalid"
          stop
