@@ -8025,7 +8025,7 @@ stop
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
-      rad_added_mass=0.5d0*DXMAXLS
+      rad_added_mass=1.5d0*DXMAXLS
 
       do im=1,2*num_interfaces
 
