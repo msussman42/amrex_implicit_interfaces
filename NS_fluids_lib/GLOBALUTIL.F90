@@ -26400,10 +26400,10 @@ INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
-     (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-     (project_option.eq.SOLVETYPE_VISC)) then      ! viscosity
+     (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial project
   project_option_FSI_rigid=1
  else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. &
+          (project_option.eq.SOLVETYPE_VISC).or. & ! viscosity
           (project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
           ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
            (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
