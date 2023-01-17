@@ -87,7 +87,7 @@ mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
 ns.gravity        = -980.0  
 ns.incremental_gravity_flag=1
-ns.segregated_gravity_flag=1
+ns.segregated_gravity_flag=0
 
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
@@ -100,6 +100,11 @@ ns.segregated_gravity_flag=1
 #contact line: theta_L_initial=60 degrees
 # LG,LI,LS,IG,GS,SI  (SI used)
 #thermal effects only
+#surface tension algorithm treats liquid and ice as just one liquid:
+#Lyu, S., Wang, K., Zhang, Z., Pedrono, A., Sun, C., & 
+#Legendre, D. (2021). A hybrid VOF-IBM method for the simulation of 
+#freezing liquid films and freezing drops. Journal of Computational 
+#Physics, 432, 110160.
 ns.tension= 72.0      0.0 36.0 0.0 72.0  0.0
 ns.tension_init= 72.0 0.0 36.0 0.0 72.0  0.0
 
