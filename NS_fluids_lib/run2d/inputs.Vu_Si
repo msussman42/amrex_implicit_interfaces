@@ -19,7 +19,8 @@ ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=5
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-ns.projection_pressure_scale=1.0e-7
+#SUSSMAN JAN20 2023: Important that "project_option= 0 error0=" be O(1)
+ns.projection_pressure_scale=1.0e-2
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=0
 ns.post_init_pressure_solve=1 
@@ -181,7 +182,8 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 21.2e+5
 
 ns.viscconst=5.57e-3 6.08e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
-ns.denconst=2.583 0.000209 2.290. 10.0 #physical values of denconst
+#SUSSMAN JAN20 2023: replaced 2.290. with 2.290
+ns.denconst=2.583 0.000209 2.290 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 
 #added mass 
 ns.denconst_interface_added=1.0e+6 1.0e+6 1.0e+6 1.0e+6 1.0e+6 1.0e+6 
