@@ -1613,6 +1613,8 @@ protected:
     static int TensorZ_Type;
     static int NUM_STATE_TYPE;
 
+    static int static_surface_tension;
+
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;
     static Vector<Real> tension_slope; //should be non-positive

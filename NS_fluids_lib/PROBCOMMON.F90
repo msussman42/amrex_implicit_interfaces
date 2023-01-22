@@ -308,6 +308,8 @@ implicit none
 !   gravity_boussinesq_vector
 ! deleted December 18, 2022:
 !   fort_damping_coefficient
+! added January 22, 2023:
+!   fort_static_surface_tension
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
