@@ -12834,9 +12834,7 @@ stop
       REAL_T :: critical_cutoff_high
 
       INTEGER_T :: dir_local
-      REAL_T :: vel_local
       REAL_T :: wt_oldvel
-      INTEGER_T :: im_primary,im_secondary,iten
       INTEGER_T :: zapvel
       INTEGER_T :: iright,jright,kright
       INTEGER_T :: ileft,jleft,kleft
