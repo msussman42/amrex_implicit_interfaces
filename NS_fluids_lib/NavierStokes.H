@@ -373,6 +373,9 @@ public:
     static Real period_time;
     static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
+
+    static int static_surface_tension;
+
     static Real visc_coef; 
      // 1..7 "1" corresponds to the GNBC option.
     static int ZEYU_DCA_SELECT;  // DCA=dynamic contact angle
@@ -1612,8 +1615,6 @@ protected:
     static int TensorY_Type;
     static int TensorZ_Type;
     static int NUM_STATE_TYPE;
-
-    static int static_surface_tension;
 
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;
