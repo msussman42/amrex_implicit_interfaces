@@ -579,6 +579,8 @@ int NavierStokes::idx_scalar_mask_material_mf=-1;
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::post_init_pressure_solve=1; 
 
+int NavierStokes::static_surface_tension=0;
+
 Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
@@ -1569,6 +1571,9 @@ void fortran_parameters() {
   pp.queryAdd("speciesviscconst",speciesviscconst_temp,NavierStokes::num_species_var*NavierStokes::num_materials);
  }
 
+ int local_static_surface_tension=NavierStokes::static_surface_tension;
+ pp.queryAdd("static_surface_tension",local_static_surface_tension);
+
  Vector<Real> tension_slopetemp(NavierStokes::num_interfaces);
  Vector<Real> tension_T0temp(NavierStokes::num_interfaces);
  Vector<Real> tension_mintemp(NavierStokes::num_interfaces);
@@ -1621,9 +1626,12 @@ void fortran_parameters() {
   latent_heat_mintemp[i+NavierStokes::num_interfaces]=0.0;
  }
  pp.queryAdd("latent_heat",latent_heat_temp,2*NavierStokes::num_interfaces);
- pp.queryAdd("latent_heat_slope",latent_heat_slopetemp,2*NavierStokes::num_interfaces);
- pp.queryAdd("latent_heat_T0",latent_heat_T0temp,2*NavierStokes::num_interfaces);
- pp.queryAdd("latent_heat_min",latent_heat_mintemp,2*NavierStokes::num_interfaces);
+ pp.queryAdd("latent_heat_slope",latent_heat_slopetemp,
+    2*NavierStokes::num_interfaces);
+ pp.queryAdd("latent_heat_T0",latent_heat_T0temp,
+    2*NavierStokes::num_interfaces);
+ pp.queryAdd("latent_heat_min",latent_heat_mintemp,
+    2*NavierStokes::num_interfaces);
 
  for (int i=0;i<2*NavierStokes::num_interfaces;i++) { 
 
@@ -1634,8 +1642,10 @@ void fortran_parameters() {
 
  } //i=0...2*NavierStokes::num_interfaces-1
 
- pp.queryAdd("saturation_temp",saturation_temp_temp,2*NavierStokes::num_interfaces);
- pp.queryAdd("reference_pressure",reference_pressure_temp,2*NavierStokes::num_interfaces);
+ pp.queryAdd("saturation_temp",saturation_temp_temp,
+	2*NavierStokes::num_interfaces);
+ pp.queryAdd("reference_pressure",reference_pressure_temp,
+	2*NavierStokes::num_interfaces);
 
   // ergs/(mol Kelvin)
  pp.queryAdd("R_Palmore_Desjardins",NavierStokes::R_Palmore_Desjardins);
@@ -1653,9 +1663,11 @@ void fortran_parameters() {
  pp.queryAdd("species_molar_mass",
    species_molar_mass_temp,NavierStokes::num_species_var);
 
- for (int im=0;im<NavierStokes::num_interfaces;im++)
+ for (int im=0;im<NavierStokes::num_interfaces;im++) {
   prefreeze_tensiontemp[im]=tensiontemp[im];
- pp.queryAdd("prefreeze_tension",prefreeze_tensiontemp,NavierStokes::num_interfaces);
+ }
+ pp.queryAdd("prefreeze_tension",prefreeze_tensiontemp,
+	NavierStokes::num_interfaces);
 
  int ioproc=0;
  if (ParallelDescriptor::IOProcessor())
@@ -1949,6 +1961,7 @@ void fortran_parameters() {
   reference_pressure_temp.dataPtr(),
   molar_mass_temp.dataPtr(),
   species_molar_mass_temp.dataPtr(),
+  &local_static_surface_tension,
   tensiontemp.dataPtr(),
   tension_inittemp.dataPtr(),
   tension_slopetemp.dataPtr(),
@@ -3336,7 +3349,8 @@ NavierStokes::read_params ()
      cavitation_tension[i]=0.0; 
     }
     pp.queryAdd("cavitation_pressure",cavitation_pressure,num_materials);
-    pp.queryAdd("cavitation_vapor_density",cavitation_vapor_density,num_materials);
+    pp.queryAdd("cavitation_vapor_density",cavitation_vapor_density,
+		num_materials);
     pp.queryAdd("cavitation_tension",cavitation_tension,num_materials);
  
      // in: read_params
@@ -3655,6 +3669,8 @@ NavierStokes::read_params ()
     } else
      amrex::Error("mglib_max_ratio invalid");
 
+    pp.get("static_surface_tension",static_surface_tension);
+
     pp.getarr("tension",tension,0,num_interfaces);
 
     for (int iten=0;iten<num_interfaces;iten++)
@@ -3726,9 +3742,11 @@ NavierStokes::read_params ()
     pp.queryAdd("microlayer_temperature_substrate",
      microlayer_temperature_substrate,num_materials);
 
-    pp.queryAdd("thermal_microlayer_size",thermal_microlayer_size,num_materials);
+    pp.queryAdd("thermal_microlayer_size",thermal_microlayer_size,
+		num_materials);
     pp.queryAdd("shear_microlayer_size",shear_microlayer_size,num_materials);
-    pp.queryAdd("buoyancy_microlayer_size",buoyancy_microlayer_size,num_materials);
+    pp.queryAdd("buoyancy_microlayer_size",buoyancy_microlayer_size,
+		num_materials);
     pp.queryAdd("phasechange_microlayer_size",
 	phasechange_microlayer_size,num_materials);
 
@@ -4910,6 +4928,10 @@ NavierStokes::read_params ()
     } // i=0..num_materials-1
 
     if (ParallelDescriptor::IOProcessor()) {
+
+     std::cout << "static_surface_tension=" << 
+	    static_surface_tension << '\n';
+
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i,tension=" << i << ' ' <<
          tension[i] << '\n';
