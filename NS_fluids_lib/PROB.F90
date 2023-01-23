@@ -19109,6 +19109,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! Denner and van Wachem, JCP 285 (2015) 24-40 (1)
        ! omega/k = k^{1/2} (sigma/(den_liquid+den_gas))^{1/2}
        ! wavelen = dxmin
+       ! wavespeed * dt < dx
+       ! dt < dx * k / omega =
+       ! dx / (sqrt(k * tension / (2 den ) ) ) =
+       ! dx ^ {3/2}/sqrt( pi * tension / den ) =
+       ! dx^{3/2} sqrt{den/(tension * pi)}
       k=two*Pi/wavelen
       omega=(k**(1.5))*sqrt(tension/(den1+den2))
       wavespeed=omega/k
