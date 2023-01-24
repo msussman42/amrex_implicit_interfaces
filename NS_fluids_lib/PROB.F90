@@ -19779,7 +19779,7 @@ end subroutine RatePhaseChange
       j=nucleate_in%j
       k=nucleate_in%k
       if (nucleate_out%Snew(D_DECL(i,j,k),vofcomp).ge.VOFTOL_NUCLEATE) then
-       ! do nothing
+       ! do nothing (already destination material in the cell)
       else if (nucleate_out%Snew(D_DECL(i,j,k),vofcomp).le.VOFTOL_NUCLEATE) then
 
        LL=nucleate_in%LL
@@ -19963,6 +19963,11 @@ end subroutine RatePhaseChange
          grid_level, &
          SDIM)
 
+         ! if local_tessellate==3: (rasterized reconstruction for solids)
+         !  if solid material(s) dominate the cell, then F_solid_raster=1
+         !  and F_fluid=0.
+         !  if fluid material(s) dominate the cell, then F_solid=0,
+         !  sum F_fluid=1
         local_tessellate=3
         call multi_get_volume_tessellate( &
          local_tessellate, & ! =3
@@ -19986,10 +19991,13 @@ end subroutine RatePhaseChange
  
         ibasesrc=(im_source-1)*ngeom_recon+1
 
+         ! is there enough "source material" in the cell to be 
+         ! converted to "destination material"?
         if (mofdata(ibasesrc).gt.VOFTOL_NUCLEATE) then
 
          nucleate_out%LSnew(D_DECL(i,j,k),im_source)=-nucleate_in%dx(1)
          nucleate_out%LSnew(D_DECL(i,j,k),im_dest)=nucleate_in%dx(1)
+          !levelset gradient=0 in the source and dest materials.
          do dir=1,SDIM
           nucleate_out% &
             LSnew(D_DECL(i,j,k),num_materials+SDIM*(im_source-1)+dir)=zero
@@ -20036,11 +20044,13 @@ end subroutine RatePhaseChange
            stop
           endif
          else
-          print *,"vfluid_sum invalid"
+          print *,"vfluid_sum invalid; fluid volume fractions should"
+          print *,"tessellate the domain.  vfluid_sum=",vfluid_sum
           stop
          endif
         else
-         print *,"mofdata(ibasesrc) invalid"
+         print *,"mofdata(ibasesrc) invalid: ",mofdata(ibasesrc)
+         print *,"(expecting mofdata(ibasesrc)>VOFTOL_NUCLEATE)"
          stop
         endif
            
