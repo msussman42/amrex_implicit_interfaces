@@ -9418,16 +9418,35 @@ void NavierStokes::multiphase_project(int project_option) {
 
    if (segregated_gravity_flag==1) {
 
-    potgrad_surface_tension_mask=POTGRAD_SURFTEN;
+    if (static_surface_tension==0) {
+     potgrad_surface_tension_mask=POTGRAD_SURFTEN;
+    } else if (static_surface_tension==1) {
+     potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
+    } else
+     amrex::Error("static_surface_tension invalid");
 
    } else if (segregated_gravity_flag==0) {
 
-    if (incremental_gravity_flag==1) {
-     potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
-    } else if (incremental_gravity_flag==0) {
-     potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
+    if (static_surface_tension==0) {
+
+     if (incremental_gravity_flag==1) {
+      potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
+     } else if (incremental_gravity_flag==0) {
+      potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
+     } else
+      amrex::Error("incremental_gravity_flag invalid");
+
+    } else if (static_surface_tension==1) {
+
+     if (incremental_gravity_flag==1) {
+      potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
+     } else if (incremental_gravity_flag==0) {
+      potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
+     } else
+      amrex::Error("incremental_gravity_flag invalid");
+
     } else
-     amrex::Error("incremental_gravity_flag invalid");
+     amrex::Error("static_surface_tension invalid");
 
    } else
     amrex::Error("segregated_gravity_flag invalid");
@@ -9439,7 +9458,13 @@ void NavierStokes::multiphase_project(int project_option) {
    //      output: HYDROSTATIC_PRESDEN_MF
    // 2. process_potential_force_face
    //      output: POTENTIAL_FORCE_EDGE_MF (OP_POTGRAD_TO_MAC)
-  process_potential_forceALL(potgrad_surface_tension_mask);
+   //
+  if (potgrad_surface_tension_mask==POTGRAD_NULLOPTION) {
+   // do nothing
+  } else if (potgrad_surface_tension_mask!=POTGRAD_NULLOPTION) {
+   process_potential_forceALL(potgrad_surface_tension_mask);
+  } else
+   amrex::Error("potgrad_surface_tension_mask invalid");
 
 // 1. overwrites cell/face velocity perhaps
 // 2. must be called before adding gravity and surface tension.
@@ -9459,7 +9484,12 @@ void NavierStokes::multiphase_project(int project_option) {
    // increment_potential_force is declared in NavierStokes2.cpp
    // fort_addgravity is declared in NAVIERSTOKES_3D.F90
    // FUTURE: E+=dt u dot g + dt^2 g dot g/2
-  increment_potential_forceALL(); 
+  if (potgrad_surface_tension_mask==POTGRAD_NULLOPTION) {
+   // do nothing
+  } else if (potgrad_surface_tension_mask!=POTGRAD_NULLOPTION) {
+   increment_potential_forceALL(); 
+  } else
+   amrex::Error("potgrad_surface_tension_mask invalid");
 
   if (1==0) {
    int basestep_debug=nStep()+1;
@@ -9495,15 +9525,21 @@ void NavierStokes::multiphase_project(int project_option) {
 
 
        // gravity * dt
-      writeSanityCheckData(
-       "POTENTIAL_FORCE_EDGE",
-       "project_option==SOLVETYPE_PRES:POTENTIAL_FORCE_EDGE",
-       caller_id,
-       localMF[POTENTIAL_FORCE_EDGE_MF+dir]->nComp(),
-       POTENTIAL_FORCE_EDGE_MF+dir,
-       -1, // State_Type==-1
-       dir,
-       parent->levelSteps(0)); 
+      if (potgrad_surface_tension_mask==POTGRAD_NULLOPTION) {
+       // do nothing
+      } else if (potgrad_surface_tension_mask!=POTGRAD_NULLOPTION) {
+       writeSanityCheckData(
+        "POTENTIAL_FORCE_EDGE",
+        "project_option==SOLVETYPE_PRES:POTENTIAL_FORCE_EDGE",
+        caller_id,
+        localMF[POTENTIAL_FORCE_EDGE_MF+dir]->nComp(),
+        POTENTIAL_FORCE_EDGE_MF+dir,
+        -1, // State_Type==-1
+        dir,
+        parent->levelSteps(0)); 
+      } else
+       amrex::Error("potgrad_surface_tension_mask invalid");
+
      } // dir=0..sdim-1
 
     } // ratio==nsteps+1
@@ -9517,7 +9553,12 @@ void NavierStokes::multiphase_project(int project_option) {
   } else
    amrex::Error("visual_buoyancy_plot_int invalid");
 
-  deallocate_potential_forceALL(); 
+  if (potgrad_surface_tension_mask==POTGRAD_NULLOPTION) {
+   // do nothing
+  } else if (potgrad_surface_tension_mask!=POTGRAD_NULLOPTION) {
+   deallocate_potential_forceALL(); 
+  } else
+   amrex::Error("potgrad_surface_tension_mask invalid");
 
    // grad p  face
    // u=u-(1/rho)(int gp - dt gp)
