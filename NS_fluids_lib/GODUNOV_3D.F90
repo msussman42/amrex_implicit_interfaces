@@ -2646,8 +2646,17 @@ stop
           endif
 
            ! declared in PROB.F90
-          call capillary_wave_speed(dxmin,den1,den2,visc1,visc2, &
-            user_tension(iten),cap_wave_speed(iten))
+          if (fort_static_surface_tension.eq.0) then
+           call capillary_wave_speed(dxmin,den1,den2,visc1,visc2, &
+            user_tension(iten), &
+            cap_wave_speed(iten)) !INTENT(out)
+          else if (fort_static_surface_tension.eq.1) then
+           cap_wave_speed(iten)=zero
+          else
+           print *,"fort_static_surface_tension invalid"
+           stop
+          endif
+
          else
           print *,"user_tension invalid"
           stop
