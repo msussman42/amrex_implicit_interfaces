@@ -2724,10 +2724,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        delta_mass.resize(thread_class::nthreads);
        for (int tid=0;tid<thread_class::nthreads;tid++) {
-        delta_mass[tid].resize(2*num_materials); // source 1..num_materials  dest 1..num_materials
-       for (int im=0;im<2*num_materials;im++)
-        delta_mass[tid][im]=0.0;
-       } // tid
+	// source 1..num_materials  dest 1..num_materials
+        delta_mass[tid].resize(2*num_materials); 
+        for (int im=0;im<2*num_materials;im++)
+         delta_mass[tid][im]=0.0;
+       } // tid=0 ... nthreads-1
 
        ParallelDescriptor::Barrier();
 
@@ -2758,7 +2759,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         NavierStokes& ns_level=getLevel(ilev);
         ns_level.avgDown(LS_Type,0,num_materials,0);
         ns_level.MOFavgDown();
-        ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+        ns_level.avgDown(State_Type,STATECOMP_STATES,
+	   num_state_material*num_materials,1);
        }  // ilev=finest_level ... level  
 
        if (verbose>0) {
