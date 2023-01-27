@@ -251,6 +251,15 @@ void NavierStokes::avgDownMacState(int spectral_override) {
 
 }  // end subroutine avgDownMacState
 
+void NavierStokes::static_surface_tension_advection() {
+
+ if (static_surface_tension==1) {
+  //do nothing
+ } else
+  amrex::Error("static_surface_tension invalid");
+
+} // end subroutine static_surface_tension_advection()
+
 void NavierStokes::nonlinear_advection() {
 
  int renormalize_only=1;
@@ -2523,6 +2532,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      if (disable_advection==0) {
 
       nonlinear_advection();
+
+      if (static_surface_tension==1) {
+       static_surface_tension_advection();
+      } else if (static_surface_tension==0) {
+       //do nothing
+      } else
+       amrex::Error("static_surface_tension invalid");
 
      } else if (disable_advection==1) {
       

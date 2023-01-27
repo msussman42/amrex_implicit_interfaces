@@ -826,6 +826,7 @@ protected:
     void solid_temperature();
 
     void nonlinear_advection();
+    void static_surface_tension_advection();
 
     void advance_MAC_velocity(int project_option);
 

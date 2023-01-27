@@ -4307,6 +4307,16 @@ NavierStokes::read_params ()
     } else
      amrex::Error("disable_advection invalid 1");
 
+    if (static_surface_tension==1) {
+     if (disable_advection==0) {
+      //do nothing
+     } else
+      amrex::Error("expecting disable_advection=0 if static_surf_ten=1");
+    } else if (static_surface_tension==0) {
+     //do nothing
+    } else
+     amrex::Error("static_surface_tension invalid");
+
     pp.queryAdd("disable_pressure_solve",disable_pressure_solve);
 
     if ((disable_pressure_solve==0)||(disable_pressure_solve==1)) {
