@@ -375,6 +375,7 @@ public:
     static int  MOF_DEBUG_RECON;
 
     static int static_surface_tension;
+    static Real static_viscosity;
 
     static Real visc_coef; 
      // 1..7 "1" corresponds to the GNBC option.

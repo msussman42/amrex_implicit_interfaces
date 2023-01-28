@@ -580,6 +580,7 @@ int NavierStokes::hydrate_flag=0;
 int NavierStokes::post_init_pressure_solve=1; 
 
 int NavierStokes::static_surface_tension=0;
+Real NavierStokes::static_viscosity=0.0;
 
 Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
@@ -1574,6 +1575,9 @@ void fortran_parameters() {
  int local_static_surface_tension=NavierStokes::static_surface_tension;
  pp.queryAdd("static_surface_tension",local_static_surface_tension);
 
+ Real local_static_viscosity=NavierStokes::static_viscosity;
+ pp.queryAdd("static_viscosity",local_static_viscosity);
+
  Vector<Real> tension_slopetemp(NavierStokes::num_interfaces);
  Vector<Real> tension_T0temp(NavierStokes::num_interfaces);
  Vector<Real> tension_mintemp(NavierStokes::num_interfaces);
@@ -1962,6 +1966,7 @@ void fortran_parameters() {
   molar_mass_temp.dataPtr(),
   species_molar_mass_temp.dataPtr(),
   &local_static_surface_tension,
+  &local_static_viscosity,
   tensiontemp.dataPtr(),
   tension_inittemp.dataPtr(),
   tension_slopetemp.dataPtr(),
@@ -3670,10 +3675,17 @@ NavierStokes::read_params ()
      amrex::Error("mglib_max_ratio invalid");
 
     pp.get("static_surface_tension",static_surface_tension);
+    pp.get("static_viscosity",static_viscosity);
 
     if (static_surface_tension==0) {
      //do nothing
     } else if (static_surface_tension==1) {
+
+     if (static_viscosity>0.0) {
+      //do nothing
+     } else 
+      amrex::Error("expecting static_viscosity>0.0"); 
+			                        
      for (int iten=0;iten<num_interfaces;iten++) {
       if (denconst_interface_added[iten]==0.0) {
        //do nothing
@@ -4953,6 +4965,9 @@ NavierStokes::read_params ()
 
      std::cout << "static_surface_tension=" << 
 	    static_surface_tension << '\n';
+
+     std::cout << "static_viscosity=" << 
+	    static_viscosity << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i,tension=" << i << ' ' <<
