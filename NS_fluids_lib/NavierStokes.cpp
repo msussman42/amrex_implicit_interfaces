@@ -3671,6 +3671,18 @@ NavierStokes::read_params ()
 
     pp.get("static_surface_tension",static_surface_tension);
 
+    if (static_surface_tension==0) {
+     //do nothing
+    } else if (static_surface_tension==1) {
+     for (int iten=0;iten<num_interfaces;iten++) {
+      if (denconst_interface_added[iten]==0.0) {
+       //do nothing
+      } else
+       amrex::Error("expecting denadd=0 if static_surf_ten==1");
+     }
+    } else
+     amrex::Error("static_surface_tension invalid");
+
     pp.getarr("tension",tension,0,num_interfaces);
 
     for (int iten=0;iten<num_interfaces;iten++)

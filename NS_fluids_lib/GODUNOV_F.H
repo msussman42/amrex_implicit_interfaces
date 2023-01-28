@@ -436,6 +436,30 @@ extern "C"
       int* level,
       int* finest_level);
 
+   void fort_estdt_static_equil(
+      int* tid,
+      const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
+      const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
+      Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
+      Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
+      Real* dist,AMREX_ARLIM_P(distlo),AMREX_ARLIM_P(disthi),
+      const Real* xlo,const Real* dx,
+      const int* tilelo, const int* tilehi,
+      const int* fablo, const int* fabhi,
+      int* bfact,
+      Real* cap_wave_speed,
+      Real* u_max_estdt,
+      Real* u_max_cap_wave,
+      Real* dt_min,
+      int* rzflag,
+      Real* denconst,
+      Real* visc_coef,
+      int* dir,
+      Real* time,
+      Real* cfl,
+      int* EILE_flag,
+      int* level,
+      int* finest_level);
 
    void fort_wallfunction(
     int* data_dir,
