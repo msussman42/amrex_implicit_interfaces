@@ -1921,9 +1921,8 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
  Real dt_min=1.0E+30;;
 
  Real vel_max_estdt[AMREX_SPACEDIM+1];
- Real vel_max_cap_wave=0.0;
  int caller_id=3;
- MaxAdvectSpeedALL(dt_min,vel_max_estdt,vel_max_cap_wave,caller_id);
+ MaxAdvectSpeedALL(dt_min,vel_max_estdt,caller_id);
 
  int local_counter=0;
 
@@ -2268,9 +2267,6 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
 	   " AMR_min_phase_change_rate=" <<
 	   parent->AMR_min_phase_change_rate[dir] << '\n';
   } // dir=0..sdim-1
-
-  std::cout << "TIME= "<<upper_slab_time<< 
-     " vel_max_cap_wave=" << vel_max_cap_wave << '\n';
 
   for (int iten=0;iten<num_interfaces;iten++) {
    std::cout << "TIME= "<<upper_slab_time<<" iten= " << iten <<
