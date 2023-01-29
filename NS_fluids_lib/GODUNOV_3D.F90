@@ -2269,8 +2269,8 @@ stop
       end subroutine fort_crossterm
 
 
-        ! u_max(1..sdim) is max vel in dir.
-        ! u_max(sdim+1) is max c^2
+        ! uu_estdt_max(1..sdim) is max vel in dir.
+        ! uu_estdt_max(sdim+1) is max c^2
       subroutine fort_estdt( &
         interface_mass_transfer_model, &
         tid, &
@@ -2303,8 +2303,7 @@ stop
         bfact, &
         min_stefan_velocity_for_dt, &
         cap_wave_speed, &
-        uu_estdt_max, &
-        u_max_cap_wave, &
+        uu_estdt_max, & ! fort_estdt
         dt_min, &
         rzflag, &
         denconst, &
@@ -2375,8 +2374,7 @@ stop
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(inout) :: uu_estdt_max(SDIM+1)
-      REAL_T, INTENT(inout) :: u_max_cap_wave
+      REAL_T, INTENT(inout) :: uu_estdt_max(SDIM+1) ! fort_estdt
       REAL_T, INTENT(inout) :: dt_min
       REAL_T user_tension(num_interfaces)
       REAL_T, INTENT(in) :: denconst(num_materials)
@@ -3647,6 +3645,7 @@ stop
        stop
       endif 
 
+       ! dirnormal=0..sdim-1
       if (uu_estdt_max(dirnormal+1).lt.uu_estdt_core) then
        uu_estdt_max(dirnormal+1)=uu_estdt_core
       endif
@@ -3657,23 +3656,20 @@ stop
       return
       end subroutine fort_estdt
 
-        ! u_max(1..sdim) is max vel in dir.
+        ! uu_estdt_max(1..sdim) is max vel in dir.
         ! for static loop, homogeneous BC used for advective velocity.
         ! inhomogeneous BC used for updating the main velocity.
       subroutine fort_estdt_static_equil( &
         tid, &
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
-        den,DIMS(den), &
-        vof,DIMS(vof), &
         dist,DIMS(dist), &
         xlo,dx, &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
         cap_wave_speed, &
-        uu_estdt_max, &
-        u_max_cap_wave, &
+        uu_estdt_max, & ! fort_estdt_static_equil
         dt_min, &
         rzflag, &
         denconst, &
@@ -3689,7 +3685,6 @@ stop
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
-      use hydrateReactor_module
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: tid
@@ -3709,8 +3704,7 @@ stop
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(inout) :: uu_estdt_max(SDIM+1)
-      REAL_T, INTENT(inout) :: u_max_cap_wave
+      REAL_T, INTENT(inout) :: uu_estdt_max(SDIM) !fort_estdt_static_equil
       REAL_T, INTENT(inout) :: dt_min
       REAL_T user_tension(num_interfaces)
       REAL_T, INTENT(in) :: denconst(num_materials)
@@ -3718,19 +3712,11 @@ stop
 
       INTEGER_T, INTENT(in) :: DIMDEC(velmac)
       INTEGER_T, INTENT(in) :: DIMDEC(velcell)
-      INTEGER_T, INTENT(in) :: DIMDEC(vof)
       INTEGER_T, INTENT(in) :: DIMDEC(dist)
-      INTEGER_T, INTENT(in) :: DIMDEC(den)
       REAL_T, target, INTENT(in) :: velmac(DIMV(velmac))
       REAL_T, pointer :: velmac_ptr(D_DECL(:,:,:))
       REAL_T, target, INTENT(in) :: velcell(DIMV(velcell),STATE_NCOMP_VEL)
       REAL_T, pointer :: velcell_ptr(D_DECL(:,:,:),:)
-       ! den,temp,species
-      REAL_T, target, INTENT(in) :: &
-              den(DIMV(den),num_state_material*num_materials)  
-      REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, INTENT(in) :: vof(DIMV(vof),num_materials*ngeom_raw)
-      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
       REAL_T, target, INTENT(in) :: dist(DIMV(dist),num_materials)
       REAL_T, pointer :: dist_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(inout) :: cap_wave_speed(num_interfaces)
@@ -3778,8 +3764,6 @@ stop
 
       velmac_ptr=>velmac
       velcell_ptr=>velcell
-      den_ptr=>den
-      vof_ptr=>vof
       dist_ptr=>dist
 
       if (bfact.lt.1) then
@@ -3974,8 +3958,6 @@ stop
 
       call checkbound_array1(fablo,fabhi,velmac_ptr,0,dirnormal)
       call checkbound_array(fablo,fabhi,velcell_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,den_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,vof_ptr,1,-1)
        ! need enough ghost cells for the calls to derive_dist.
       call checkbound_array(fablo,fabhi,dist_ptr,2,-1)
 
@@ -4240,6 +4222,7 @@ stop
       enddo
       enddo  ! i,j,k
 
+       ! dirnormal=0..sdim-1
       if (uu_estdt_max(dirnormal+1).lt.uu_estdt_core) then
        uu_estdt_max(dirnormal+1)=uu_estdt_core
       endif

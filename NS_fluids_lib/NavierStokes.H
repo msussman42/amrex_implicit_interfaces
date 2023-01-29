@@ -552,12 +552,11 @@ protected:
     void MaxAdvectSpeedALL(
       Real& dt_min,
       Real* vel_max_estdt,
-      Real& vel_max_cap_wave,
       int caller_id);
+
     void MaxAdvectSpeed(
       Real& dt_min,
       Real* vel_max_estdt,
-      Real& vel_max_cap_wave,
       int caller_id);
 
     void DumpProcNum();
