@@ -2802,15 +2802,20 @@ stop
         print *,"levelrz invalid"
         stop
        endif
-       if (RR.le.zero) then
-        print *,"RR invalid"
+       if (RR.gt.zero) then
+        ! do nothing
+       else
+        print *,"RR invalid fort_estdt"
         stop
        endif
  
        hx=hx*RR
        hxmac=hx
 
-       if (hx.le.(one-VOFTOL)*dxmin) then
+       if (hx.gt.(one-VOFTOL)*dxmin) then
+        ! do nothing
+       else
+        print *,"expecting hx>(1-VOFTOL)*dxmin"
         print *,"xstenMAC invalid estdt"
         print *,"hx= ",hx
         print *,"hx= ",dxmin
@@ -3466,7 +3471,10 @@ stop
        cc_diag=max(cleft_diag,cright_diag)  ! c^2
        cc=max(cleft,cright)  ! c^2
 
-       call check_user_defined_velbc(time,dirnormal,uu_estdt,dx)
+        ! check_user_defined_velbc is declared in: PROB.F90
+       call check_user_defined_velbc(time,dirnormal, &
+             uu_estdt, & ! INTENT(inout)
+             dx)
 
        uu_estdt_core = max(uu_estdt_core, &
            abs(uu_estdt)+abs(uu_estdt_phase_change))
@@ -3650,7 +3658,8 @@ stop
       end subroutine fort_estdt
 
         ! u_max(1..sdim) is max vel in dir.
-        ! u_max(sdim+1) is max c^2
+        ! for static loop, homogeneous BC used for advective velocity.
+        ! inhomogeneous BC used for updating the main velocity.
       subroutine fort_estdt_static_equil( &
         tid, &
         velmac,DIMS(velmac), &
@@ -3739,7 +3748,7 @@ stop
       INTEGER_T iten
       REAL_T gradh
       REAL_T weymouth_factor,weymouth_cfl
-      REAL_T dxmin,dxmax,dxmaxLS
+      REAL_T dxmin
       REAL_T den1_2
       REAL_T dt_galusinski
       REAL_T c1_galusinski
@@ -3774,7 +3783,7 @@ stop
       dist_ptr=>dist
 
       if (bfact.lt.1) then
-       print *,"bfact too small"
+       print *,"bfact too small fort_estdt_static_equil"
        stop
       endif
 
@@ -3787,17 +3796,14 @@ stop
       if (dxmin.gt.zero) then
        ! do nothing
       else
-       print *,"dxmin must be positive"
+       print *,"dxmin must be positive fort_estdt_static_equil"
        stop
       endif
-
-      call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
 
       if (visc_coef.ge.zero) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid fort_estdt_static_equil"
        stop
       endif
 
@@ -3814,14 +3820,14 @@ stop
           (EILE_flag.eq.3)) then  ! always LE
        ! do nothing
       else 
-       print *,"EILE flag invalid"
+       print *,"EILE flag invalid fort_estdt_static_equil"
        stop
       endif
 
       if (cfl.gt.zero) then
        ! do nothing
       else
-       print *,"cfl invalid: ",cfl
+       print *,"cfl invalid (fort_estdt_static_equil): ",cfl
        stop
       endif
 
@@ -3842,14 +3848,14 @@ stop
        if (denconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"denconst invalid"
+        print *,"denconst invalid fort_estdt_static_equil"
         stop
        endif
        mu=get_user_viscconst(im,fort_denconst(im),fort_tempconst(im))
        if (mu.ge.zero) then
         ! do nothing
        else
-        print *,"viscconst invalid"
+        print *,"viscconst invalid fort_estdt_static_equil"
         stop
        endif
 
@@ -3858,7 +3864,7 @@ stop
        else if (is_rigid(im).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid invalid GODUNOV_3D.F90"
+        print *,"is_rigid invalid GODUNOV_3D.F90 (fort_estdt_static_equil)"
         stop
        endif
 
@@ -3893,8 +3899,8 @@ stop
           den1_2=half*(denconst(im)+denconst(im_opp))
           if ((fort_static_viscosity.gt.zero).and. &
               (den1_2.gt.zero)) then
-           c1_galusinski=1.0d0/Pi
-           c2_galusinski=1.0d0  !=4,8
+           c1_galusinski=1.0d0/Pi !1 anecdotedly OK(Galusinski and Vigneaux)
+           c2_galusinski=1.0d0  !4,8 anecdotedly OK(Galusinski and Vigneaux)
            visc_constraint_term= &
             c2_galusinski*fort_static_viscosity*dxmin/user_tension(iten)
            dt_galusinski=0.5d0*( &
@@ -3928,7 +3934,7 @@ stop
         enddo
        enddo
       else
-       print *,"recompute wave speed invalid"
+       print *,"recompute wave speed invalid (fort_estdt_static_equil)"
        print *,"num_materials=",num_materials
        print *,"level=",level
        print *,"finest_level=",finest_level
@@ -3988,7 +3994,7 @@ stop
       else if ((dirnormal.eq.2).and.(SDIM.eq.3)) then
         kk=1
       else
-       print *,"dirnormal invalid estdt_static_equl 2"
+       print *,"dirnormal invalid estdt_static_equil 2"
        stop
       endif
 
@@ -4033,15 +4039,20 @@ stop
         print *,"levelrz invalid"
         stop
        endif
-       if (RR.le.zero) then
-        print *,"RR invalid"
+       if (RR.gt.zero) then
+        ! do nothing
+       else
+        print *,"RR invalid fort_estdt_static_equil"
         stop
        endif
  
        hx=hx*RR
        hxmac=hx
 
-       if (hx.le.(one-VOFTOL)*dxmin) then
+       if (hx.gt.(one-VOFTOL)*dxmin) then
+        ! do nothing
+       else
+        print *,"expecting hx>(1-VOFTOL)*dxmin"
         print *,"xstenMAC invalid estdt_static_equil"
         print *,"hx= ",hx
         print *,"hx= ",dxmin
@@ -4114,8 +4125,6 @@ stop
        enddo
        call get_primary_material(LSleft,im_primaryL)
        call get_primary_material(LSright,im_primaryR)
-
-       call check_user_defined_velbc(time,dirnormal,uu_estdt,dx)
 
        uu_estdt_core = max(uu_estdt_core,abs(uu_estdt))
 
