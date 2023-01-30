@@ -1525,7 +1525,16 @@ void fortran_parameters() {
  pp.queryAdd("density_ceiling",den_ceiling_temp,NavierStokes::num_materials);
 
  pp.getarr("viscconst",viscconst_temp,0,NavierStokes::num_materials);
+ NavierStokes::viscconst_min=viscconst_temp[0];
+ NavierStokes::viscconst_max=viscconst_temp[0];
+
  for (int im=0;im<NavierStokes::num_materials;im++) {
+
+  if (viscconst_temp[im]<NavierStokes::viscconst_min)
+   NavierStokes::viscconst_min=viscconst_temp[im];
+  if (viscconst_temp[im]>NavierStokes::viscconst_max)
+   NavierStokes::viscconst_max=viscconst_temp[im];
+
   viscconst_eddy_wall_temp[im]=0.0;
   viscconst_eddy_bulk_temp[im]=0.0;
   heatviscconst_eddy_wall_temp[im]=0.0;
@@ -1535,11 +1544,16 @@ void fortran_parameters() {
   shear_microlayer_size_temp[im]=microlayer_size_default;
   buoyancy_microlayer_size_temp[im]=microlayer_size_default;
   phasechange_microlayer_size_temp[im]=microlayer_size_default;
- }
- pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall_temp,NavierStokes::num_materials);
- pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,NavierStokes::num_materials);
- pp.queryAdd("heatviscconst_eddy_wall",heatviscconst_eddy_wall_temp,NavierStokes::num_materials);
- pp.queryAdd("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk_temp,NavierStokes::num_materials);
+ } //im=0...num_materials-1
+
+ pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall_temp,
+   NavierStokes::num_materials);
+ pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk_temp,
+   NavierStokes::num_materials);
+ pp.queryAdd("heatviscconst_eddy_wall",heatviscconst_eddy_wall_temp,
+   NavierStokes::num_materials);
+ pp.queryAdd("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk_temp,
+   NavierStokes::num_materials);
 
  pp.queryAdd("thermal_microlayer_size",thermal_microlayer_size_temp,NavierStokes::num_materials);
  pp.queryAdd("shear_microlayer_size",shear_microlayer_size_temp,NavierStokes::num_materials);
@@ -1568,14 +1582,17 @@ void fortran_parameters() {
  pp.queryAdd("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,NavierStokes::num_materials);
 
  if (NavierStokes::num_species_var>0) {
-  pp.queryAdd("speciesconst",speciesconst_temp,NavierStokes::num_species_var*NavierStokes::num_materials);
-  pp.queryAdd("speciesviscconst",speciesviscconst_temp,NavierStokes::num_species_var*NavierStokes::num_materials);
+  pp.queryAdd("speciesconst",speciesconst_temp,
+    NavierStokes::num_species_var*NavierStokes::num_materials);
+  pp.queryAdd("speciesviscconst",speciesviscconst_temp,
+    NavierStokes::num_species_var*NavierStokes::num_materials);
  }
 
  int local_static_surface_tension=NavierStokes::static_surface_tension;
  pp.queryAdd("static_surface_tension",local_static_surface_tension);
 
  Real local_static_viscosity=NavierStokes::static_viscosity;
+ local_static_viscosity=NavierStokes::viscconst_max;
  pp.queryAdd("static_viscosity",local_static_viscosity);
 
  Vector<Real> tension_slopetemp(NavierStokes::num_interfaces);
@@ -3675,7 +3692,9 @@ NavierStokes::read_params ()
      amrex::Error("mglib_max_ratio invalid");
 
     pp.get("static_surface_tension",static_surface_tension);
-    pp.get("static_viscosity",static_viscosity);
+
+    static_viscosity=viscconst_max;
+    pp.queryAdd("static_viscosity",static_viscosity);
 
     if (static_surface_tension==0) {
      //do nothing

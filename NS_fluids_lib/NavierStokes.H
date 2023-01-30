@@ -378,6 +378,10 @@ public:
     static Real static_viscosity;
 
     static Real visc_coef; 
+
+    static Real viscconst_max;
+    static Real viscconst_min;
+
      // 1..7 "1" corresponds to the GNBC option.
     static int ZEYU_DCA_SELECT;  // DCA=dynamic contact angle
     static int num_local_aux_grids; //default is 0
@@ -2072,8 +2076,6 @@ protected:
      //2=>Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
     static Vector<int> override_density; // default 0 
     static Vector<Real> viscconst;
-    static Real viscconst_max;
-    static Real viscconst_min;
     static Vector<Real> viscconst_eddy_wall;
     static Vector<Real> viscconst_eddy_bulk;
     static Vector<Real> heatviscconst_eddy_wall;
