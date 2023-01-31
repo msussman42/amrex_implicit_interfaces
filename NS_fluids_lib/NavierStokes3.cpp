@@ -258,6 +258,72 @@ void NavierStokes::static_surface_tension_advection() {
  } else
   amrex::Error("static_surface_tension invalid");
 
+ int finest_level=parent->finestLevel();
+ if (level!=0)
+  amrex::Error("level invalid static_surface_tension_advection");
+
+ if ((SDC_outer_sweeps>=0)&&
+     (SDC_outer_sweeps<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("SDC_outer_sweeps invalid multiphase_project");
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  // do nothing
+ } else
+  amrex::Error("slab_step invalid");
+
+ if (static_viscosity>0.0) {
+  //do nothing
+ } else
+  amrex::Error("static_viscosity invalid");
+
+ if ((STATE_NCOMP_PRES==1)&&
+     (STATE_NCOMP_VEL==AMREX_SPACEDIM)) {
+  // do nothing
+ } else
+  amrex::Error("STATE_NCOMP_PRES or STATE_NCOMP_VEL invalid");
+
+  //ngrow,ncomp,grid_type
+ allocate_array(1,1,-1,PRESSURE_SAVE_MF);
+ Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
+   STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+  //ngrow,scomp,ncomp
+ setVal_array(1,STATECOMP_PRES,STATE_NCOMP_PRES,0.0,
+   GET_NEW_DATA_OFFSET+State_Type);
+
+  //ngrow,ncomp,grid_type
+ allocate_array(1,AMREX_SPACEDIM,-1,UCELL_SAVE_MF);
+ Copy_array(UCELL_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
+   STATECOMP_VEL,0,AMREX_SPACEDIM,1);
+  //ngrow,scomp,ncomp
+ setVal_array(1,STATECOMP_VEL,AMREX_SPACEDIM,0.0,
+   GET_NEW_DATA_OFFSET+State_Type);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //ngrow,ncomp,grid_type
+  allocate_array(0,1,dir,UMAC_SAVE_MF+dir);
+  Copy_array(UMAC_SAVE_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
+    //ngrow,scomp,ncomp
+  setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
+ }
+
+
+
+
+ Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
+    0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+ delete_array(PRESSURE_SAVE_MF);
+
+ Copy_array(GET_NEW_DATA_OFFSET+State_Type,UCELL_SAVE_MF,
+    0,STATECOMP_VEL,AMREX_SPACEDIM,1);
+ delete_array(PRESSURE_SAVE_MF);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_SAVE_MF+dir,0,0,1,0);
+  delete_array(UMAC_SAVE_MF+dir);
+ }
+
 } // end subroutine static_surface_tension_advection()
 
 void NavierStokes::nonlinear_advection() {
@@ -2542,6 +2608,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
      } else if (disable_advection==1) {
       
+      if (static_surface_tension==0) {
+       //do nothing
+      } else
+       amrex::Error("expecting static_surface_tension==0 if adv disabled");
+
       // delete_advect_vars() called in NavierStokes::do_the_advance
       // right after increment_face_velocityALL. 
       for (int ilev=finest_level;ilev>=level;ilev--) {
