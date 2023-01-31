@@ -308,8 +308,19 @@ void NavierStokes::static_surface_tension_advection() {
   setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
  }
 
+ int save_enable_spectral=enable_spectral;
+
+ override_enable_spectral(0); // always low order
+
+ int quasi_static_reached=0;
+ while (quasi_static_reached==0) {
+	 FIX ME
+     make_physics_varsALL(SOLVETYPE_PRES,post_restart_flag,6); 
 
 
+ }
+
+ override_enable_spectral(save_enable_spectral);
 
  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
     0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
@@ -604,7 +615,7 @@ void NavierStokes::nonlinear_advection() {
   int caller_id=40;
   init_FSI_GHOST_MAC_MF_ALL(caller_id);
 
-  int post_init_flag=20;
+  int post_init_flag=CALLED_FROM_ADVECT;
   int fast_mode=0;
   setup_integrated_quantities();
   volWgtSumALL(post_init_flag,fast_mode);
