@@ -6917,7 +6917,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
  setup_integrated_quantities();
  int fast_mode=1;
- int local_post_init_flag=10;
+ int local_post_init_flag=CALLED_FROM_FSI_GHOST_MAC;
  volWgtSumALL(local_post_init_flag,fast_mode);
 
  getStateCONDUCTIVITY_ALL();
@@ -9431,7 +9431,7 @@ void NavierStokes::post_restart() {
 
   init_aux_data();
 
-  int post_init_flag=2; // post_restart
+  int post_init_flag=CALLED_FROM_POST_RESTART; // post_restart
 
   prepare_post_process(post_init_flag);
 
@@ -20681,7 +20681,7 @@ NavierStokes::writePlotFile (
   // VOF_Recon_ALL
   // make_physics_varsALL
  if (level==0) {
-  int post_init_flag=0; // in: writePlotFile
+  int post_init_flag=CALLED_FROM_WRITE_PLOTFILE; // in: writePlotFile
   prepare_post_process(post_init_flag);
  } // level==0
 
@@ -21381,7 +21381,7 @@ NavierStokes::post_timestep (Real stop_time) {
    if ( (sum_interval_trigger==1)||
         (visual_drag_plot_int_trigger==1)||
         (stop_time-upper_slab_time<1.0E-8) ) {
-    int post_init_flag=-1;
+    int post_init_flag=CALLED_FROM_POST_TIMESTEP;
     sum_integrated_quantities(post_init_flag,stop_time);
    }
   } else if (((sum_interval==0)||
@@ -21469,7 +21469,7 @@ NavierStokes::post_init (Real stop_time)
   int sum_interval_local=sum_interval;
 
   if (sum_interval_local > 0) {
-     int post_init_flag=1;
+     int post_init_flag=CALLED_FROM_POST_INIT;
      sum_integrated_quantities(post_init_flag,stop_time);
   }
 
@@ -21543,6 +21543,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 
 } // end subroutine matrix_solveCPP
 
+FIX ME
 //called from: NavierStokes::sum_integrated_quantities (NS_setup.cpp)
 // post_init_flag==-1 if sum_integrated_quantities called from post_timestep
 // post_init_flag==1  if sum_integrated_quantities called from post_init
@@ -21584,21 +21585,26 @@ NavierStokes::volWgtSumALL(int post_init_flag,int fast_mode) {
   // variables.
   // in: volWgtSumALL
  int post_restart_flag=0;
- if (post_init_flag==-1) { //sum_integrated_quant. call from post_timestep
+ if (post_init_flag==CALLED_FROM_POST_TIMESTEP) { 
+  //sum_integrated_quant. call from post_timestep
   // do nothing
- } else if (post_init_flag==1) { //sum_integrated_quant. call from post_init
+ } else if (post_init_flag==CALLED_FROM_POST_INIT) { 
+  //sum_integrated_quant. call from post_init
   // do nothing
- } else if (post_init_flag==2) { //sum_integrated_quand. call from post_restart
+ } else if (post_init_flag==CALLED_FROM_POST_RESTART) { 
+   //sum_integrated_quand. call from post_restart
   post_restart_flag=1;
- } else if (post_init_flag==10) { //this routine called directly from
-	                          //init_FSI_GHOST_MAC_MF_ALL
+ } else if (post_init_flag==CALLED_FROM_FSI_GHOST_MAC) { 
+  //this routine called directly from
+  //init_FSI_GHOST_MAC_MF_ALL
   if (fast_mode==1) {
    // do nothing
   } else
    amrex::Error("expecting fast_mode==1");
 
- } else if (post_init_flag==20) { //this routine called from
-	                          //NavierStokes::nonlinear_advection()
+ } else if (post_init_flag==CALLED_FROM_ADVECT) { 
+  //this routine called from
+  //NavierStokes::nonlinear_advection()
   // do nothing
  } else
   amrex::Error("post_init_flag invalid 20982");
@@ -21988,9 +21994,9 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
 } // end subroutine MaxPressureVelocity
 
 // called from 
-// 1. writePlotFile   (post_init_flag=0)
-// 2. post_init_state (post_init_flag=1)
-// 3. post_restart    (post_init_flag=2)
+// 1. writePlotFile   (post_init_flag=CALLED_FROM_WRITE_PLOT_FILE)
+// 2. post_init_state (post_init_flag=CALLED_FROM_POST_INIT)
+// 3. post_restart    (post_init_flag=CALLED_FROM_POST_RESTART)
 void
 NavierStokes::prepare_post_process(int post_init_flag) {
 
@@ -22007,11 +22013,14 @@ NavierStokes::prepare_post_process(int post_init_flag) {
 // (i) NavierStokes::initData ()
 // (ii) NavierStokes::post_restart()
 
- if (post_init_flag==1) { // called from post_init_state
+ if (post_init_flag==CALLED_FROM_POST_INIT) { 
+   // called from post_init_state
   ns_finest.MOF_training();
- } else if (post_init_flag==2) { // called from post_restart
+ } else if (post_init_flag==CALLED_FROM_POST_RESTART) { 
+  // called from post_restart
   ns_finest.MOF_training();
- } else if (post_init_flag==0) { // called from writePlotFile
+ } else if (post_init_flag==CALLED_FROM_WRITE_PLOTFILE) { 
+  // called from writePlotFile
   // do nothing
  } else
   amrex::Error("post_init_flag invalid");
@@ -22028,11 +22037,14 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   ns_level.maskfiner_localMF(MASKCOEF_MF,1,tag,clearbdry);
   ns_level.prepare_mask_nbr(1);
 
-  if (post_init_flag==1) { // called from post_init_state
+  if (post_init_flag==CALLED_FROM_POST_INIT) { 
+   // called from post_init_state
    // do nothing
-  } else if (post_init_flag==2) { // called from post_restart
+  } else if (post_init_flag==CALLED_FROM_POST_RESTART) { 
+   // called from post_restart
    // do nothing
-  } else if (post_init_flag==0) { // called from writePlotFile
+  } else if (post_init_flag==CALLED_FROM_WRITE_PLOTFILE) { 
+    // called from writePlotFile
     // in: NavierStokes::prepare_post_process
    ns_level.allocate_levelset(1,LEVELPC_MF);
   } else
@@ -22052,20 +22064,20 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  } // ilev=finest_level ... level
 
    // in prepare_post_process:
-   // post_init_flag==0 called from writePlotFile
-   // post_init_flag==1 called from post_init_state
-   // post_init_flag==2 called from post_restart
+   // post_init_flag==CALLED_FROM_WRITE_PLOTFILE called from writePlotFile
+   // post_init_flag==CALLED_FROM_POST_INIT called from post_init_state
+   // post_init_flag==CALLED_FROM_POST_RESTART called from post_restart
    //
  int init_vof_prev_time=0;
  int error_update_flag=0;
  int renormalize_only=0; // init:solid TEMP,VEL,LS,extend LSfluid into solid.
  int local_truncate=0; // do not force removal of flotsam.
 
- if (post_init_flag==0) { 
+ if (post_init_flag==CALLED_FROM_WRITE_PLOTFILE) { 
   error_update_flag=0;  // called from writePlotFile, do not update S_old
- } else if (post_init_flag==1) {
+ } else if (post_init_flag==CALLED_FROM_POST_INIT) {
   error_update_flag=1;  // called from post_init_state, update S_old
- } else if (post_init_flag==2) {
+ } else if (post_init_flag==CALLED_FROM_POST_RESTART) {
   error_update_flag=1;  // called from post_restart, update S_old
  } else
   amrex::Error("post_init_flag invalid 21394");
@@ -22077,7 +22089,7 @@ NavierStokes::prepare_post_process(int post_init_flag) {
  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
   init_vof_prev_time,SLOPE_RECON_MF);
 
- if (post_init_flag==1) { // called from post_init_state
+ if (post_init_flag==CALLED_FROM_POST_INIT) { // called from post_init_state
 
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
@@ -22088,13 +22100,15 @@ NavierStokes::prepare_post_process(int post_init_flag) {
   post_restart_flag=0;
   caller_id=1;
 
- } else if (post_init_flag==0) { // called from writePlotFile
+ } else if (post_init_flag==CALLED_FROM_WRITE_PLOTFILE) { 
+  // called from writePlotFile
 
   project_option=SOLVETYPE_INITPROJ;
   post_restart_flag=0;
   caller_id=2;
 
- } else if (post_init_flag==2) { // called from post_restart
+ } else if (post_init_flag==CALLED_FROM_POST_RESTART) { 
+  // called from post_restart
 
   if (1==0) {
    int keep_all_interfaces=0;
@@ -22958,7 +22972,7 @@ NavierStokes::post_init_state () {
    // makeStateDistALL
    // prescribe_solid_geometryALL
    // make_physics_varsALL
- int post_init_flag=1; // in: post_init_state
+ int post_init_flag=CALLED_FROM_POST_INIT; // in: post_init_state
  prepare_post_process(post_init_flag);
 
  if (particles_flag==1) {
@@ -24261,7 +24275,8 @@ void NavierStokes::putStateDIV_DATA(
 
 
 // called from:
-// NavierStokes::prepare_post_process  (post_init_flag==1)
+// NavierStokes::prepare_post_process  
+// (post_init_flag==CALLED_FROM_POST_INIT)
 // NavierStokes::do_the_advance
 void
 NavierStokes::makeStateDistALL(int keep_all_interfaces) {
