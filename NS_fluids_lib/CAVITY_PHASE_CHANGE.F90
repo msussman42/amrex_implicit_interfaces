@@ -28,8 +28,10 @@ implicit none
 
 REAL_T :: DEF_VAPOR_GAMMA
 INTEGER_T, parameter :: max_sitesnum=1000
-REAL_T,parameter  :: tmax=116.0d0
-REAL_T,parameter  :: tinit=107.0d0
+!REAL_T,parameter  :: tmax=116.0d0    ! end of the curve, currently should be 20 higher than tref 
+!REAL_T,parameter  :: tinit=109.0d0
+!REAL_T,parameter  :: tref=100.0d0  
+
 
 INTEGER_T :: sitesnum
 REAL_T,allocatable :: sites(:,:)  ! nucleate sites list
@@ -94,6 +96,7 @@ end subroutine distcal
 
   ! do any initial preparation needed
 subroutine INIT_CAVITY_PHASE_CHANGE_MODULE()
+ use probcommon_module
 IMPLICIT NONE
 INTEGER_T :: i,j
 REAL_T    :: t
@@ -105,9 +108,19 @@ REAL_T    :: a,b,fo
 REAL_T    :: totdist(8),tempdist(8)
 INTEGER_T :: vflag
 INTEGER_T :: flagnum
+REAL_T    :: tmax    ! end of the curve, currently should be 20 higher than tref 
+REAL_T    :: tinit
+REAL_T    :: tref  
 
 
 DEF_VAPOR_GAMMA =  1.666666667D0
+number_of_source_regions=1
+
+tref=xblob4
+tinit=yblob4
+tmax=tref+zblob4
+
+print *,"number_of_regions",number_of_source_regions
 
 allocate(sites(3,max_sitesnum)) !x,y,temperature
 allocate(active_flag(max_sitesnum))
@@ -116,14 +129,14 @@ allocate(flagrecord(max_sitesnum))
 n=50
 call random_seed(size=n)
 
-fo=7.0d0
-a=201.0/(20.0**fo-(tinit-100.0d0)**fo)
-b=1.0-a*((tinit-100d0)**fo)
-print *,"a=",a,"b=",b
+fo=7.0d0       ! function order
+a=201.0/(zblob4**fo-(tinit-tref)**fo)   ! 20 superheat condition with 202 sites
+b=1.0-a*((tinit-tref)**fo)            ! tinit-tref superheat condition for the first site
+!print *,"a=",a,"b=",b
 
 isite=0
 sites=0.0d0
-t=0.0
+t=0.0d0
 
 do while(t.le.tmax)
  isite=isite+1
@@ -137,7 +150,7 @@ do while(t.le.tmax)
    print *,"dimension invalid"
    stop
   endif
-  print *,r
+!  print *,r
   do i=1,2
    sites(i,isite)=r(i)
   enddo
@@ -155,9 +168,9 @@ do while(t.le.tmax)
    endif
    samp(1,i)=r(1)
    samp(2,i)=r(2)
-   print *,samp(:,i)
+!   print *,samp(:,i)
   enddo ! do i=1,8
-  print *,"-----------------"
+!  print *,"-----------------"
   totdist=0.0
   flagrecord=0
   flagnum=0
@@ -171,7 +184,7 @@ do while(t.le.tmax)
     flagrecord(flagnum)=vflag
    endif
   enddo ! do i=1,isite-1
-  print *,"flagnum=",flagnum
+!  print *,"flagnum=",flagnum
   call findmax_dist(flagnum,flagrecord,totdist,maxi)
 
   do i=1,2
@@ -186,22 +199,31 @@ do while(t.le.tmax)
   sites(3,isite)=tinit
   t=tinit
  else
-  sites(3,isite)=((real(isite,8)-b)/a)**(1.0d0/fo)+100.0d0
+  sites(3,isite)=((real(isite,8)-b)/a)**(1.0d0/fo)+tref
   t=sites(3,isite)
  endif
- print *,"ith=",isite, "t=",t
+! print *,"ith=",isite, "t=",t
  
 enddo ! do while(t.le.tmax)
-do i=1,isite
-  sites(3,i)=sites(3,i)+273.0d0
-enddo
+!do i=1,isite
+!  sites(3,i)=sites(3,i)+273.0d0
+!enddo
 
 sitesnum=isite
 
+!print *,"probx",problox,probhix
+
 do j=1,sitesnum
 do i=1,2
- sites(i,j)=((6.0d-3)-0.0d0)*sites(i,j)
+! sites(i,j)=(0.6d0-0.0d0)*sites(i,j)
+! sites(i,j)=(6.0d0-0.0d0)*sites(i,j)
+ sites(i,j)=(probhix-problox)*sites(i,j)
+ enddo
 enddo
+
+print *,"sitesnum",sitesnum,"sites list:"
+do i=1,sitesnum
+ print *, sites(:,i)
 enddo
 
 active_flag=0
@@ -222,8 +244,10 @@ INTEGER_T    :: i,j,k,im
 INTEGER_T    :: temperature_component 
 INTEGER_T    :: ii
 REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
+REAL_T       :: tempvec1(SDIM),tempvec2(SDIM)
+REAL_T       :: tempdist
 
-  print *,"in Satomodel_nucleation"
+!  print *,"in Satomodel_nucleation"
   i=nucleate_in%i
   j=nucleate_in%j
   k=nucleate_in%k
@@ -240,33 +264,52 @@ REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
   vf_sol=nucleate_in%Snew(D_DECL(i,j,k), &
       STATECOMP_MOF+(im-1)*ngeom_raw+1)
   ls_sol=nucleate_in%LSnew(D_DECL(i,j,k),im)
-  print *,"i=",i,"j=",j
-  print *,"ls_sol=",ls_sol,"temperature",tempt
-  print *,"xsten", xsten(-1,1),xsten(1,1)
+!  print *,"i=",i,"j=",j
+! print *,"ls_sol=",ls_sol,"temperature",tempt,"dx",nucleate_in%dx(SDIM)
+!  print *,"xsten", xsten(-1,1),xsten(1,1)
   ls_liq=nucleate_in%LSnew(D_DECL(i,j,k),1)
-  if(1.eq.1)then
+  tempvec1(1)=xsten(0,1)
+  tempvec1(2)=xsten(0,2)
+  tempvec1(SDIM)=xsten(0,SDIM)
 
+  if(1.eq.1)then
     do ii=1,sitesnum
-     print *,"sitesnum=", ii
+!     print *,"sitesnum=", ii
      if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
-      print *,"tempt satisfied"
-      if(abs(ls_sol).le.0.5d0*nucleate_in%dx(SDIM))then
-       print *,"ls_sol satisfied"
-       if (SDIM.eq.3) then
-        if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1).and.&
-           sites(2,ii).le.xsten(1,2).and.sites(2,ii).ge.xsten(-1,2))then
-         make_seed=1
+!      print *,"tempt satisfied"
+      if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
+!       print *,"ls_sol satisfied", ls_sol, nucleate_in%dx(SDIM)+radblob3
+!       if (SDIM.eq.3) then
+!        if(sites(1,ii).le.xsten(1,1)+nucleate_in%dx(1).and.&
+!           sites(1,ii).ge.xsten(-1,1)-nucleate_in%dx(1).and.&
+!           sites(2,ii).le.xsten(1,2)+nucleate_in%dx(2).and.&
+!           sites(2,ii).ge.xsten(-1,2)-nucleate_in%dx(2))then
+          tempvec2(1)=sites(1,ii)
+          tempvec2(2)=sites(2,ii)
+          tempvec2(SDIM)=zblob
+          call l2norm(tempvec1,tempvec2, tempdist)                               
+        if(tempdist.le.radblob3)then
+         print *,"make seed","temp","ls_sol","site"
+         print *,"make seed",tempt,ls_sol,sites(:,ii)
+           make_seed=1
          active_flag(ii)=1
+        elseif(tempdist.gt.radblob3)then
+                ! do nothing
+        else
+          print *,"invalid tempdist",tempdist
+          stop
         endif
-       else if (SDIM.eq.2) then
-        if(sites(1,ii).le.xsten(1,1).and.sites(1,ii).ge.xsten(-1,1)) then
-         make_seed=1
-         active_flag(ii)=1
-        endif
-       else
-        print *,"SDIM invalid"
-        stop
-       endif
+!       else if (SDIM.eq.2) then
+!        if(sites(1,ii).le.xsten(1,1)+nucleate_in%dx(SDIM).and.&
+!           sites(1,ii).ge.xsten(-1,1)-nucleate_in%dx(SDIM)) then
+!         make_seed=1
+!         active_flag(ii)=1
+!      print *,"make seed at ",sites(1,ii),"between ",xsten(-1,1),xsten(1,1), " tempt= ",tempt
+!        endif
+!       else
+!        print *,"SDIM invalid"
+!        stop
+!       endif  ! SDIM 
       endif    
      endif
     enddo ! do ii=1,sitesnum
@@ -275,6 +318,154 @@ REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
  
 return
 end subroutine Satomodel_nucleation
+
+subroutine CAVITY_BOILING_INIT_REGIONS_LIST(constant_density_all_time, &
+      num_materials_in,num_threads_in)
+use probcommon_module
+
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: num_materials_in
+INTEGER_T, INTENT(in) :: num_threads_in
+INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials_in)
+INTEGER_T :: im,iregion,dir
+
+ if (num_materials_in.eq.num_materials) then
+  ! do nothing
+ else
+  print *,"num_materials_in invalid"
+  stop
+ endif
+ if (num_threads_in.ge.1) then
+  ! do nothing
+ else
+  print *,"num_threads_in invalid: ",num_threads_in
+  stop
+ endif
+ do im=1,num_materials
+  if ((constant_density_all_time(im).eq.0).or. &
+      (constant_density_all_time(im).eq.1)) then
+   ! do nothing
+  else
+   print *,"constant_density_all_time(im) invalid"
+   stop
+  endif
+ enddo ! im=1..num_materials
+!number_of_source_regions is initialized in: INIT_CRYOGENIC_TANK_MK_MODULE()
+ if (number_of_source_regions.ge.0) then
+  ! do nothing
+ else
+  print *,"number_of_source_regions invalid"
+  stop
+ endif
+
+ number_of_threads_regions=num_threads_in
+ print *,"num_threads_in",num_threads_in
+
+ allocate(regions_list(1:number_of_source_regions, &
+                       0:number_of_threads_regions))
+
+ do iregion=1,number_of_source_regions
+  regions_list(iregion,0)%region_material_id=0
+  regions_list(iregion,0)%region_dt=0.0d0  ! timestep
+  regions_list(iregion,0)%region_mass_flux=0.0d0
+  regions_list(iregion,0)%region_volume_flux=0.0d0
+    ! default region_temperature_prescribe=0.0 => homogeneous
+    ! flux condition.
+  regions_list(iregion,0)%region_temperature_prescribe=0.0d0
+  do dir=1,SDIM
+   regions_list(iregion,0)%region_velocity_prescribe(dir)=0.0d0
+  enddo
+  regions_list(iregion,0)%region_energy_flux=0.0d0
+  regions_list(iregion,0)%region_volume_raster=0.0d0
+  regions_list(iregion,0)%region_volume=0.0d0
+  regions_list(iregion,0)%region_mass=0.0d0
+  regions_list(iregion,0)%region_energy=0.0d0
+  regions_list(iregion,0)%region_energy_per_kelvin=0.0d0
+  regions_list(iregion,0)%region_volume_after=0.0d0
+  regions_list(iregion,0)%region_mass_after=0.0d0
+  regions_list(iregion,0)%region_energy_after=0.0d0
+ enddo ! iregion=1,number_of_source_regions
+
+ if (axis_dir.eq.8) then
+  regions_list(1,0)%region_material_id=3 !heater
+  regions_list(1,0)%region_energy_flux=xblob3 ! Watts=J/s
+  print *,"m_id",regions_list(1,0)%region_material_id
+  print *,"flux",regions_list(1,0)%region_energy_flux
+ else
+  print *,"axis_dir must equal to 8"
+  stop
+ endif
+end subroutine CAVITY_BOILING_INIT_REGIONS_LIST
+
+subroutine CAVITY_BOILING_CHARFN_REGION(region_id,x,cur_time,charfn_out)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: region_id
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: cur_time
+REAL_T, INTENT(out) :: charfn_out
+
+!    if(x(SDIM).lt. zblob)then
+!    if(x(SDIM).lt. zblob2)then
+    if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2)then
+!     print *,"x(SDIM)",X(SDIM),"zblob2",zblob2
+     charfn_out=one
+    else
+     charfn_out=0.0d0
+    endif
+
+end subroutine CAVITY_BOILING_CHARFN_REGION
+
+subroutine CAVITY_BOILING_THERMAL_K(x,dx,cur_time, &
+  density, &
+  temperature, &
+  thermal_k, &
+  im, &
+  near_interface, &
+  im_solid, &
+  temperature_wall, &
+  temperature_wall_max, &
+  temperature_probe, &
+  nrm) ! nrm points from solid to fluid
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: im
+INTEGER_T, INTENT(in) :: im_solid
+INTEGER_T, INTENT(in) :: near_interface
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: cur_time
+REAL_T, INTENT(in) :: density
+REAL_T, INTENT(in) :: temperature
+REAL_T, INTENT(in) :: temperature_wall
+REAL_T, INTENT(in) :: temperature_wall_max
+REAL_T, INTENT(in) :: temperature_probe
+REAL_T, INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
+REAL_T, INTENT(inout) :: thermal_k
+
+
+if(axis_dir.eq.8)then
+! (zblob2,xblob2)heater
+!  if(x(SDIM).lt. zblob2+1.0d0.and.x(SDIM).gt.zblob2)then
+!   if(im.eq.3)then
+!    thermal_k=1e+8
+!   elseif(im.eq.1)then
+!     ! do nothing
+!   endif
+  if(x(SDIM).lt.zblob2)then
+      thermal_k=0.0d0
+  endif
+else
+  ! do nothing
+endif
+!print *,"thermal_k",thermal_k
+
+end subroutine CAVITY_BOILING_THERMAL_K
 
 
 ! ----------
@@ -874,7 +1065,7 @@ REAL_T            :: ztest
 INTEGER_T dir
 
 INTEGER_T,parameter :: debugflag = 0
-REAL_T,   parameter :: scale_factor=100.0d0
+REAL_T,   parameter :: scale_factor=1.0d0
 dist_sign = 1.0d0
 dist = 0.0d0
 dist1 = 0.0d0
@@ -905,19 +1096,16 @@ endif
 
 
 !  dimension sanity check
-if(coord_type .eq. 1) then   ! 3D cartisian
+if(coord_type .eq. 1.and.cavity_type.ne.8) then   ! 3D cartisian
  if(SDIM .ne. 3)then
   print *, "coord_type is not consistent with dimension"
   stop
  endif
-elseif(coord_type .eq. 2) then ! R-Z axis symmetric
+elseif(coord_type.eq.2.and.cavity_type.ne.8) then ! R-Z axis symmetric
  if(SDIM .ne. 2) then
   print *,"coord_type is not consistent with dimension"
   stop
  endif
-else
- print *,"invalid coord_type"
- stop
 endif
 
 
@@ -1560,10 +1748,6 @@ else if (cavity_type.eq.7) then
   endif
   dist=zblob-x(SDIM)  ! dist<0 in the solid (which is on top for this case)
  elseif(coord_type.eq.1)then   ! 3-D cartesian
-  if(SDIM.ne.3)then
-   print *,"3d cartesian, SDIM should be 3"
-   stop
-  endif
   dist1=tan(radblob2)*x(1)+zblob-x(SDIM)
   dist=dsign(dist1*cos(radblob2),dist1)
  else
@@ -1572,16 +1756,12 @@ else if (cavity_type.eq.7) then
  endif
 else if (cavity_type.eq.8) then
  if(coord_type .eq. 2)then   !  R-Z  axis symmetric (2D)
-  if(SDIM.ne.2)then
-   print *,"R-Z, SDIM should be 2"
-   stop
-  endif
+!  if(SDIM.ne.2)then
+!   print *,"R-Z, SDIM should be 2"
+!   stop
+!  endif
   dist=x(SDIM)-zblob  ! dist<0 in the solid (which is on bot for this case)
  elseif(coord_type.eq.1)then   ! 3-D cartesian
-  if(SDIM.ne.3)then
-   print *,"3d cartesian, SDIM should be 3"
-   stop
-  endif
   dist1=x(SDIM)-(tan(radblob2)*x(1)+zblob)
   dist=dsign(dist1*cos(radblob2),dist1)
  else
@@ -1693,7 +1873,7 @@ else if (axis_dir.eq.7.or.axis_dir.eq.8) then
  
  if(coord_type .eq. 2)then 
 
- if (SDIM.eq.2) then
+ if (SDIM.eq.2.and.axis_dir.eq.7) then
   ! do nothing
  else
   print *,"expecting 2D"
@@ -1705,7 +1885,7 @@ else if (axis_dir.eq.7.or.axis_dir.eq.8) then
  call l2norm(center, x , dist_temp)
 ! vapor +   liquid -
  dist=radblob-dist_temp
- elseif(coord_type .eq. 1)then
+ elseif(coord_type .eq. 1 .and.axis_dir.eq.7)then
   if (SDIM.eq.3) then
    ! do nothing
   else
@@ -1755,7 +1935,7 @@ if ((im.lt.1).or.(im.gt.num_materials)) then
  stop
 endif
 
-if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
+if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
  ! do nothing
 else
  print *,"FSI_flag(im) invalid"
@@ -1800,7 +1980,7 @@ INTEGER_T :: im_solid_materialdist
   if (probtype.eq.710) then
 
    do im=1,nmat
-    if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
+    if (FSI_flag(im).eq.1) then
      call CAVITY_soliddist(x,LS(im),nmat)  ! returns LS<0 in solid
      LS(im)=-LS(im)   ! now LS>0 in solid
     endif
@@ -1946,7 +2126,6 @@ REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
-REAL_T water_temp
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1961,43 +2140,45 @@ else
  stop
 endif
 if (probtype.eq.710) then
- do im=1,num_materials
-  ibase=(im-1)*num_state_material
-   ! density prescribed in the inputs file.
-  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
-  if (t.eq.zero) then
-    !initial temperature in inputs
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
-  else if (t.gt.zero) then
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
-  else
-   print *,"t invalid"
-   stop
-  endif
+  do im=1,num_materials
+   ibase=(im-1)*num_state_material
+     ! density prescribed in the inputs file.
+   STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
 
-  if (1.eq.0) then
-
-   if (t.eq.zero) then
-    if(x(SDIM).le.zblob2)then
-     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
-    elseif(x(SDIM).gt.zblob2.and.x(SDIM).le.zblob/100.0d0)then
-     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)-&
-       (fort_tempconst(im)-fort_initial_temperature(im))/ &
-       (zblob/100.0d0-zblob2)*(x(SDIM)-zblob2)
-    else
-     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
-    endif
-   else if (t.gt.zero) then
-    if(x(SDIM).le.zblob2)then
+   if(axis_dir.ne.8)then
+    if (t.eq.zero) then
+     !initial temperature in inputs
+     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
+    else if (t.gt.zero) then
      STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
     else
-     !do nothing
+     print *,"t invalid"
+     stop
     endif
-   else
-    print *,"t invalid"
-    stop
-   endif
-  endif
+   elseif (axis_dir.eq.8) then  ! axis_dir is cavity_type
+    if (t.eq.zero) then
+     if(x(SDIM).lt.zblob2)then   ! (zblob2,xblob2)heater
+       STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4
+     elseif(x(SDIM).le.xblob2)then
+       STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4+zblob4
+     elseif(x(SDIM).gt.xblob2.and.x(SDIM).le.zblob)then
+      STATE(ibase+ENUM_TEMPERATUREVAR+1)=(xblob4+zblob4)-&
+       (xblob4+zblob4-yblob4)/ &
+       (zblob-xblob2)*(x(SDIM)-xblob2)
+     elseif(x(SDIM).gt.zblob.and.x(SDIM).le.zblob+xblob5)then
+      STATE(ibase+ENUM_TEMPERATUREVAR+1)=yblob4-&
+       (yblob4-xblob4)/xblob5*(x(SDIM)-zblob)
+     else
+      STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4
+!      STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
+     endif
+    elseif(t.gt.zero)then
+      ! do nothing 
+    else
+     print *,"t invalid"
+     stop
+    endif
+   endif  ! cavity_type
 
    ! initial species in inputs?
   do n=1,num_species_var
@@ -2005,10 +2186,10 @@ if (probtype.eq.710) then
   enddo
 
   ! bcflag: 0=called from initialize  1=called from bc
-  if (im.eq.1) then
-   call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,bcflag)
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
-  endif
+!    if (im.eq.1) then
+!    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,bcflag)
+!   STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
+!  endif
 
  enddo ! im=1..num_materials
 else
@@ -2175,6 +2356,7 @@ if ((istate.ge.1).and. &
          nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
+ im_crit=1
  call get_primary_material(LS,im_crit)
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)

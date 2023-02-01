@@ -475,6 +475,7 @@ void NavierStokes::getStateCONDUCTIVITY_ALL() {
   amrex::Error("level invalid getStateCONDUCTIVITY_ALL");
 
  int finest_level=parent->finestLevel();
+
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.getStateCONDUCTIVITY();
@@ -10237,7 +10238,8 @@ void NavierStokes::getStateCONDUCTIVITY() {
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
- new_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,num_materials,ngrow,-1);//sets values to 0.0
+ //sets values to 0.0
+ new_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,num_materials,ngrow,-1);
 
  MultiFab* EOSdata=getStateDen(ngrow+2,cur_time_slab);
  const Real* dx = geom.CellSize();

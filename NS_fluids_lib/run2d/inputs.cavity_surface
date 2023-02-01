@@ -11,17 +11,23 @@
 #  length units are multiplied by 10 which means
 #  lenght units in GLOBALDIST are multiplied by 100 in order to convert to
 #  the appropriate units. 
-max_step  =  99999    # maximum timestep
-stop_time = 1.0
+max_step  =  10    # maximum timestep
+stop_time = 10000.0
 
-geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
-geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  6.0e-3 4.8e-2   # MKS
-ns.microlayer_substrate=3 0 0
-ns.microlayer_angle=0.785 0.0 0.0  # 45 degrees
-ns.microlayer_size=1.0e-9  0.0 0.0    # dimensional
-#ns.microlayer_size=0.0  0.0 0.0    
-ns.macrolayer_size=2.0e-4 0.0 0.0    #dimensional 2 x 6E-3/64=2.0E-4
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   = 0.0  8.0e-3
+geometry.prob_hi   = 6.0e-3 20.0e-3   # MKS
+geometry.is_periodic= 1 0
+
+#ns.microlayer_substrate=0 0 0
+#ns.microlayer_angle=0.785 0.0 0.0  # 45 degrees
+#ns.microlayer_size=0.0  0.0 0.0    # dimensional
+
+ns.microlayer_substrate=0 0 0
+ns.microlayer_angle=0.872664626 0.0 0.0
+#ns.microlayer_size=4.4661E-09 0.0 0.0
+ns.macrolayer_size=0.0 0.0 0.0
+
 ns.EILE_flag=-1 # weymouth and Yue
 # 0=MOF  2=CMOF
 ns.continuous_mof=2
@@ -43,18 +49,17 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 400
 mg.bot_atol = 1.0e-12
-mg.rtol_b = -0.01
-Lp.v = 0
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
+ns.visual_nddata_format=2  #2=tecplot cells (piecewise const)
 
-amr.n_cell    = 16 128
-amr.max_level =  2  # 3 levels for finest
+# amr.n_cell    = 16 16 48
+amr.n_cell    = 32 64
+amr.max_level =  0  # 3 levels for finest
 ns.ns_tiling=false
-fabarray.mfiter_tile_size=4 4
+fabarray.mfiter_tile_size=4 4 4
 #amr.max_level =  0
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.n_error_buf     = 4 4 4 4 4 4 4  # number of buffer cells in error est
@@ -65,13 +70,13 @@ amr.space_blocking_factor = 1 1 1 1 1 1
 amr.time_blocking_factor=1
 ns.enable_spectral=0
 amr.regrid_int      = 1       # how often to regrid
-amr.check_int       = 100    # number of timesteps between checkpoints
+amr.check_int       = 1000    # number of timesteps between checkpoints
 amr.check_file      = chk    # root name of checkpoint file
-amr.plot_int        = 100
+amr.plot_int        = 1
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 32
-#amr.restart         = ch64k1000
+amr.max_grid_size   = 64
+# amr.restart         = chk00036
 #amr.trace   =1
 
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
@@ -105,25 +110,33 @@ ns.override_density=1 0 0
 # theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
 # 12 13 23  (LV SL SV)
 # N/m
-ns.tension=58.8e-3 58.8e-3 72.9e-3  # 70 degrees contact angle
+#ns.tension=58.8e-3 58.8e-3 72.9e-3  # 70 degrees contact angle
+#ns.tension=58.8e-3 58.8e-3 58.8e-3  # 140 degrees contact angle
+# ns.tension=9.9938E-01 9.4440E-01 1.5868E+00
+ns.tension=8.94e-3 8.94e-3 11.9796e-3
 # Joule/(kg Kelvin)
-ns.stiffCP=4217.0 2029.0 4217.0
+#ns.stiffCP=4217.0 2029.0 4217.0
+#ns.stiffCP=1.9218E+05 9.2466E+04 1.9218E+05
+ns.stiffCP=2063.3 1120.0 385.0
 # 12 13 23 21 31 32  (12 liquid->vapor (boiling) 21 vapor->liquid condensate)
 # <0 if condensation or solidification
 # >0 if boiling or melting
 # latent_heat[2*max_num_tension]
 # Joule/kg
-ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0  
-ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+#ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0  
+#ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0
+#ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+ns.latent_heat=199e+3 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp=77.25 0.0 0.0 0.0 0.0 0.0
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
+ns.output_drop_distribution = 1  # output droplet
 
 # cavity type 1-7
 # make axis_dir=7 for bubble below substrate (substrate on top)
-ns.axis_dir=1
-ns.xblob3=0.0  # unused
-# see subroutine outside_temperature in PROB.F90
-ns.yblob3=1.0e-10  # initial thermal layer (meters)
+ns.axis_dir=8
+ns.xblob3=10000      # 7272.0  
+#ns.yblob3=1.0e-10  # initial thermal layer (meters)
 # see subroutine get_internal_heat_source in PROB.F90
 # see subroutine microcell_heat_model in PROB.F90
 # if zblob3>0, heatcoeff=heatcoeff*dx/zblob3 (where LS_SOLID changes sign)
@@ -137,7 +150,7 @@ ns.yblob3=1.0e-10  # initial thermal layer (meters)
 # heat flux in the solid cells that adjoin a fluid cell:
 # page 30, Sato Niceno (2015): "heater power maintained at 30kW/m^2"
 # rho cp DT/dt=-div q + Q
-# Q=(area) * |zblob3|/(volume)=(m^2)(W/m^2)/(m^3)=W/m^3
+
 # for Tryggvason problem: T=383 degrees at the wall.
 ns.zblob3=0.0
 ns.vorterr=0.0 0.0 0.0
@@ -150,42 +163,59 @@ ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
 ns.pressure_error_cutoff=0.0 0.0 0.0 
 ns.material_type=0 0 999
 # thermal conductivity: Watts/(meter Kelvin)
-ns.heatviscconst=0.680 0.0248 3.0
+#ns.heatviscconst=0.680 0.0248 3.0
+#ns.heatviscconst=0.680 0.248 3.0                 #thermal conductivity 
+#ns.heatviscconst=9.7526E+01 3.5568E+00 97.526E+01
+#ns.heatviscconst=9.7526E+01 3.5568E+0 1.0E+5
+ns.heatviscconst=0.1338 7.6e-3 398.0e+5
 # liquid-vapor, liquid-solid, vapor-solid
 # 0.0 means do not use.
-ns.heatviscconst_interface=0.0 0.0 0.0
+#ns.heatviscconst_interface=0.0 0.0 0.0
 # dynamic viscosity Pa * s = N s / m^2
-ns.viscconst=279E-6 12.02e-6 279E-6
+#ns.viscconst=279E-6 12.02e-6 279E-6
+#ns.viscconst=8.7804E-04 3.7828E-05 8.7804E-04
+ns.viscconst=156.2e-06 5.3e-06 156.2e-06
 # density: kg/m^3
-ns.denconst=958 0.5956 1916.0
-ns.FSI_flag=0 0 1
+#ns.denconst=958 0.5956 1916.0
+#ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
+ns.denconst=809.8 4.571 8960.0
+ns.FSI_flag=0 0 1 #FSI_flag=FSI_PRESCRIBED_PROBF90=1
 # 0=diffuse in solid, 1=dirichlet, 2=neumann
 # if solidheat_flag=2, then "tempfluxsolid" is called.
-ns.solidheat_flag=1
+ns.solidheat_flag=0
 # liquid, vapor, solid
 # was: ns.tempconst=557.0 373.0 647.0
-ns.tempconst=373.0 373.0 380.0   # SUPERHEAT=380-373
+#ns.tempconst=373.0 373.0 373.0   # SUPERHEAT=380-373
+ns.tempconst=77.25 77.25 77.25
+ns.initial_temperature=77.25 77.25 77.25
 #ns.initial_temperature=373.0 373.0 373.0
 #ns.initial_temperature_diffuse_duration=100.0
-ns.tempcutoff=373.0 373.0 373.0 
-
+#ns.tempcutoff=373.0 373.0 373.0 
+ns.tempcutoff=77.25 77.25 77.25
 # was: ns.tempcutoffmax=700.0 700.0 700.0
-ns.tempcutoffmax=400.0 400.0 400.0 
-#(xblob,yblob)=center of vapor bubble
-ns.xblob=0.0  
-# 45 degrees: center-substrate=R * sin(pi/2 - theta)=2.83e-4
-# center=2.34+2.83=5.17e-4
-ns.yblob=0.0
-ns.zblob=0.0
-ns.radblob=0.0  
+#ns.tempcutoffmax=500.0 500.0 500.0 
+ns.tempcutoffmax=90.0 90.0 90.0
 
-# x,y center of surface of HOT plate (xblob2,yblob2) (inclined)
-ns.xblob2=0.0 
-ns.yblob2=0.0 # 2 * dxcoarsest=2 * 3.75e-3/32=3.75e-3/16=2.34375e-4
-ns.zblob2=0.0
-ns.radblob2=0.0 # zero degrees incline (radians)
-ns.radblob3=0.0
-ns.radblob4=0.0 # film thickness  (0.01 value that Yang used)
+#(xblob,yblob)=center of vapor bubble
+ns.xblob=0.3  
+ns.yblob=0.3
+ns.zblob=12.0e-3    # 11.9375 solid-liquid interface
+ns.radblob=0.1  # radius
+ns.radblob2=0.0 # zero degrees incline (radians)  pi/12=0.2617
+                   # pi/6=0.5236  pi/3=1.047  80degree/180*pi=1.396
+
+# not use
+ns.xblob2=10.0e-3 
+ns.yblob2=0.0
+ns.zblob2=9.0e-3   # heater position (zlob2,xblob2)
+
+ns.xblob4=77.25  # tref   tmax=tref+zblob4
+ns.yblob4=80.0  # tinit   first site temperature 
+ns.zblob4=20.0   # superheat condition
+ns.radblob3=0.375e-3  # seed raw radius
+ns.xblob5=0.5e-3    # temp buff region , in the liquid next to solid
+
+ns.radblob4=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=710
@@ -197,21 +227,36 @@ ns.probtype=710
 # 1=dirichlet at inflow and outflow
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
-ns.prescribe_temperature_outflow=3
+#ns.prescribe_temperature_outflow=0
 
 #ns.lo_bc          = 3 3  # this option if heat source
-ns.lo_bc          = 3 5  # use "3 2" instead of "3 5" if axis_dir=7
-ns.hi_bc          = 3 2
-ns.temperature_lo_bc = 3 5
-ns.temperature_hi_bc = 3 2
+ns.lo_bc          = 0 3   # use "3 2" instead of "3 5" if axis_dir=7
+ns.hi_bc          = 0 2
+ns.temperature_lo_bc = 0 3
+ns.temperature_hi_bc = 0 3 
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
 # 1 = Inflow             4 = SlipWall
 # 2 = Outflow            5 = NoSlipWall
 
-# turn any of these on to generate run-time timing stats
+# ----------------------------------------------------------
+# -------- Other inputs ------------------------------------
+# ----------------------------------------------------------
+# multigrid class (set to 2 for maximum verbosity)
+mg.verbose = 0
+cg.verbose = 0
 
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+
+cg.maxiter = 200
+cg.restart_period=25
+
+mg.rtol_b = -0.01
+Lp.v = 1
+
+ns.pressure_error_cutoff=0.0 0.0 0.0
 
 # select single or double precision of FAB output data
 #        default is whatever precision code is compiled with.
