@@ -74,7 +74,7 @@ thread_class::Initialize() {
 } // end subroutine thread_class::Initialize
 
 void 
-thread_class::reconcile_d_numPts(int caller_id) {
+thread_class::reconcile_d_numPts(int caller_loop_id) {
 
  number_mfiter_loops=number_mfiter_loops+1.0;
 
@@ -92,7 +92,7 @@ thread_class::reconcile_d_numPts(int caller_id) {
     std::cout << "tile_d_numPts[0]= " << tile_d_numPts[0] << '\n';
     std::cout << "boxarray_d_numPts= " << boxarray_d_numPts << '\n';
     std::cout << "number_mfiter_loops= " << number_mfiter_loops << '\n';
-    std::cout << "caller_id= " << caller_id << '\n';
+    std::cout << "caller_loop_id= " << caller_loop_id << '\n';
     std::fflush(NULL);
    }
   }  // pid=0..NProcs-1
