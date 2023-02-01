@@ -1338,6 +1338,7 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+
        call gridsten_level(xsten,i,j,k,level,nhalf)
        do dir=1,SDIM
         xvec(dir)=xsten(0,dir)
@@ -1346,8 +1347,33 @@ stop
        flagcomp=(im_parm-1)*num_state_material+1+ENUM_DENVAR
        density=eosdata(D_DECL(i,j,k),flagcomp)
        temperature=eosdata(D_DECL(i,j,k),flagcomp+1)
+       temperature_wall=temperature
+       temperature_wall_max=temperature
+       temperature_probe=temperature
 
        thermal_k=get_user_heatviscconst(im_parm)
+
+       near_interface=0
+       do dir_local=1,SDIM
+        nrm(dir_local)=zero
+       enddo
+       im_solid_crit=0
+
+       if (is_in_probtype_list().eq.1) then
+        call SUB_THERMAL_K( &
+          xvec,dx,time, &
+          density, &
+          temperature, &
+          thermal_k, & ! INTENT(inout)
+          im_parm, &
+          near_interface, &
+          im_solid_crit, &
+          temperature_wall, &
+          temperature_wall_max, &
+          temperature_probe, &
+          nrm) ! nrm points from solid to fluid
+       endif
+
        thermal_k_max=thermal_k
 
        do im_local=1,num_materials
@@ -1388,6 +1414,7 @@ stop
          do dir_local=1,SDIM
           nrm(dir_local)=zero
          enddo
+
          if ((is_rigid(im_primary_side).eq.1).and. &
              (is_rigid(im_primary_center).eq.1)) then
           ! do nothing 
@@ -1473,7 +1500,8 @@ stop
          endif
 
          if (is_in_probtype_list().eq.1) then
-          call SUB_THERMAL_K(xvec,dx,time, &
+          call SUB_THERMAL_K( &
+            xvec,dx,time, &
             density, &
             temperature, &
             thermal_k, & ! INTENT(inout)
@@ -1502,6 +1530,11 @@ stop
          endif
         enddo ! side=-1,1,2
        enddo ! dir=1,SDIM
+
+       if (1.eq.0) then
+        print *,"i,j,k,thermal_k,thermal_k_max,im_parm ", &
+            i,j,k,thermal_k,thermal_k_max,im_parm
+       endif
 
        conduct(D_DECL(i,j,k),im_parm) = thermal_k_max+ &
           fort_heatviscconst_eddy_bulk(im_parm)

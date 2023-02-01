@@ -974,6 +974,9 @@ stop
        SUB_STATE_BC=>CAVITY_PHASE_CHANGE_STATE_BC
        SUB_velfreestream=>CAVITY_PHASE_CHANGE_velfreestream
        SUB_nucleation=>Satomodel_nucleation
+       SUB_INIT_REGIONS_LIST=>CAVITY_BOILING_INIT_REGIONS_LIST
+       SUB_CHARFN_REGION=>CAVITY_BOILING_CHARFN_REGION
+       SUB_THERMAL_K=>CAVITY_BOILING_THERMAL_K
       else if (probtype.eq.55) then
        SUB_INIT_MODULE=>INIT_GENERAL_PHASE_CHANGE_MODULE
        SUB_check_vel_rigid=>GENERAL_PHASE_CHANGE_check_vel_rigid
