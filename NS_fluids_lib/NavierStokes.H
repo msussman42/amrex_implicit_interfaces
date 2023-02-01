@@ -202,11 +202,12 @@ public:
 
     void Number_CellsALL(Real& rcells);
 
-// post_init_flag==-1 if called from post_timestep
-// post_init_flag==1  if called from post_init
-// post_init_flag==2  if called from post_restart
-// post_init_flag==10 if called from init_FSI_GHOST_MAC_MF_ALL
-    void volWgtSumALL(int post_init_flag,int fast_mode);
+// caller_startup_id==CALLED_FROM_POST_TIMESTEP if called from post_timestep
+// caller_startup_id==CALLED_FROM_POST_INIT if called from post_init
+// caller_startup_id==CALLED_FROM_POST_RESTART  if called from post_restart
+// caller_startup_id==CALLED_FROM_FSI_GHOST_MAC if called from 
+//     init_FSI_GHOST_MAC_MF_ALL
+    void volWgtSumALL(int caller_startup_id,int fast_mode);
 
     void zap_resid_where_singular(int index_MF);
 
@@ -315,7 +316,7 @@ public:
     // Insure state, and pressure are consistent.
     //
     virtual void post_init (Real stop_time);
-    void prepare_post_process(int post_init_flag);
+    void prepare_post_process(int caller_startup_id);
 
     void init_particle_container(int append_flag);
     void particle_tensor_advection_update();
@@ -584,7 +585,7 @@ protected:
     int NSnumLevels();
 
     int ns_thread();
-    void ns_reconcile_d_num(int caller_id);
+    void ns_reconcile_d_num(int caller_loop_id);
 
     static int some_materials_compressible();
 
@@ -614,10 +615,10 @@ protected:
     static void set_tensor_extrap_components_main(
       int coord,std::string postfix,int indx);
 
-// post_init_flag==-1 if called from post_timestep
-// post_init_flag==1  if called from post_init
-// post_init_flag==2  if called from post_restart
-    void sum_integrated_quantities (int post_init_flag,Real stop_time);
+// caller_startup_id==CALLED_FROM_POST_TIMESTEP if called from post_timestep
+// caller_startup_id==CALLED_FROM_POST_INIT  if called from post_init
+// caller_startup_id==CALLED_FROM_POST_RESTART  if called from post_restart
+    void sum_integrated_quantities (int caller_startup_id,Real stop_time);
 
     void CopyNewToOldALL();
     void CopyOldToNewALL();
@@ -821,7 +822,7 @@ protected:
       int init_vof_prev_time,int dest_mf);
     void VOF_Recon_resize(int ngrow,int dest_mf);
 
-    void make_physics_varsALL(int project_option,int post_restart_flag,
+    void make_physics_varsALL(int project_option,int caller_startup_id,
 		    int caller_id);
 
     void allocate_physics_vars();
@@ -1290,7 +1291,7 @@ void apply_pressure_grad(
     void makeStateDistALL(int keep_all_interfaces);
     void makeStateDist(int keep_all_interfaces);
     void correct_dist_uninit();
-    void makeStateCurv(int project_option,int post_restart_flag);
+    void makeStateCurv(int project_option,int caller_startup_id);
     void make_marangoni_force();
 
     void delete_array(int idx_localMF);

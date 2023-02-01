@@ -3232,7 +3232,7 @@ stop
 
 
       subroutine fort_curvstrip( &
-       post_restart_flag, &
+       caller_startup_id, &
        vof_height_function, &
        level, &
        finest_level, &
@@ -3273,7 +3273,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: nhistory
-      INTEGER_T, INTENT(in) :: post_restart_flag
+      INTEGER_T, INTENT(in) :: caller_startup_id
       INTEGER_T, INTENT(in) :: vof_height_function
       INTEGER_T :: vof_height_function_local
       INTEGER_T, INTENT(in) :: level
@@ -3497,7 +3497,7 @@ stop
        stop
       endif
   
-      if (post_restart_flag.eq.0) then 
+      if (caller_startup_id.ne.CALLED_FROM_POST_RESTART) then 
        do dirloc=1,SDIM
         if ((fablo(dirloc)/bfact_grid)*bfact_grid.ne.fablo(dirloc)) then
          print *,"fablo mod bfact_grid not 0 in fort_curvstrip"
@@ -3508,10 +3508,10 @@ stop
          stop
         endif
        enddo ! dirloc=1..sdim
-      else if (post_restart_flag.eq.1) then
+      else if (caller_startup_id.eq.CALLED_FROM_POST_RESTART) then 
        ! do nothing
       else
-       print *,"post_restart_flag invalid"
+       print *,"caller_startup_id invalid"
        stop
       endif
 
