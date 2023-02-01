@@ -253,6 +253,8 @@ void NavierStokes::avgDownMacState(int spectral_override) {
 
 void NavierStokes::static_surface_tension_advection() {
 
+int caller_startup_id=CALLED_FROM_STATIC_SURFACE_TENSION;
+
  if (static_surface_tension==1) {
   //do nothing
  } else
@@ -314,8 +316,8 @@ void NavierStokes::static_surface_tension_advection() {
 
  int quasi_static_reached=0;
  while (quasi_static_reached==0) {
-	 FIX ME
-     make_physics_varsALL(SOLVETYPE_PRES,post_restart_flag,6); 
+
+  make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,6); 
 
 
  }
@@ -615,10 +617,10 @@ void NavierStokes::nonlinear_advection() {
   int caller_id=40;
   init_FSI_GHOST_MAC_MF_ALL(caller_id);
 
-  int post_init_flag=CALLED_FROM_ADVECT;
+  int caller_startup_id=CALLED_FROM_ADVECT;
   int fast_mode=0;
   setup_integrated_quantities();
-  volWgtSumALL(post_init_flag,fast_mode);
+  volWgtSumALL(caller_startup_id,fast_mode);
 
   if (ok_copy_FSI_old_to_new()==1) {
 
@@ -2400,7 +2402,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
  advance_status=1; // 1=success 0=failure
 
- int post_restart_flag=0; 
+ int caller_startup_id=CALLED_FROM_DO_THE_ADVANCE; 
 
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
@@ -2879,7 +2881,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int keep_all_interfaces=1;
        makeStateDistALL(keep_all_interfaces);
 
-       make_physics_varsALL(SOLVETYPE_PRES,post_restart_flag,5); 
+       make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,5); 
        delete_array(CELLTENSOR_MF);
        delete_array(FACETENSOR_MF);
 
@@ -3222,9 +3224,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 // will have to be scaled later.
     debug_memory();
     if (is_zalesak()) {
-     make_physics_varsALL(SOLVETYPE_INITPROJ,post_restart_flag,6); 
+     make_physics_varsALL(SOLVETYPE_INITPROJ,caller_startup_id,6); 
     } else {
-     make_physics_varsALL(SOLVETYPE_PRES,post_restart_flag,6); 
+     make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,6); 
     }
     delete_array(CELLTENSOR_MF);
     delete_array(FACETENSOR_MF);

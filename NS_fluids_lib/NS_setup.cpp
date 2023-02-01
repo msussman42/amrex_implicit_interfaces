@@ -1824,11 +1824,11 @@ NavierStokes::variableSetUp ()
 
 }  // end subroutine variableSetUp
 
-// post_init_flag==-1 if called from post_timestep
-// post_init_flag==1  if called from post_init
-// post_init_flag==2  if called from post_restart
+// caller_startup_id==CALLED_FROM_POST_TIMESTEP if called from post_timestep
+// caller_startup_id==CALLED_FROM_POST_INIT  if called from post_init
+// caller_startup_id==CALLED_FROM_POST_RESTART  if called from post_restart
 void
-NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
+NavierStokes::sum_integrated_quantities (int caller_startup_id,Real stop_time) {
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -1856,7 +1856,7 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
    std::cout << "This routine takes a while.\n";
    std::cout << "ns.sum_int determines the frequency this\n";
    std::cout << "routine is called\n";
-   std::cout << "post_init_flag= " << post_init_flag << '\n';
+   std::cout << "caller_startup_id= " << caller_startup_id << '\n';
    std::cout << "upper_slab_time= " << upper_slab_time << '\n';
    std::cout << "adapt_quad_depth= " << adapt_quad_depth << '\n';
  }
@@ -1952,22 +1952,25 @@ NavierStokes::sum_integrated_quantities (int post_init_flag,Real stop_time) {
   // make_physics_varsALL
   // fort_summass -> stackerror -> get_symmetric_error -> uses mofdata_tess
  int fast_mode=0;
- volWgtSumALL(post_init_flag,fast_mode);
+ volWgtSumALL(caller_startup_id,fast_mode);
 
  if (visual_drag_plot_int>0) {
 
   int visual_drag_plot_int_trigger=0;
  
-  if (post_init_flag==-1) { //called from post_timestep
+  if (caller_startup_id==CALLED_FROM_POST_TIMESTEP) { 
+   //called from post_timestep
    if (parent->levelSteps(0)%visual_drag_plot_int == 0) {
     visual_drag_plot_int_trigger=1;
    }
-  } else if (post_init_flag==1) { //called from post_init
+  } else if (caller_startup_id==CALLED_FROM_POST_INIT) { 
+   //called from post_init
    visual_drag_plot_int_trigger=1;
-  } else if (post_init_flag==2) { //called from post_restart
+  } else if (caller_startup_id==CALLED_FROM_POST_RESTART) { 
+   //called from post_restart
    visual_drag_plot_int_trigger=1;
   } else
-   amrex::Error("post_init_flag invalid in sum_integrated_quantities");
+   amrex::Error("caller_startup_id invalid in sum_integrated_quantities");
 
   if ( (visual_drag_plot_int_trigger==1)||
        (stop_time-upper_slab_time<1.0E-8) ) {

@@ -4719,7 +4719,7 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
 //  NavierStokes::do_the_advance
 //
 void NavierStokes::make_physics_varsALL(int project_option,
-  int post_restart_flag,int caller_id) {
+  int caller_startup_id,int caller_id) {
 
  if (level!=0)
   amrex::Error("level invalid make_physics_varsALL");
@@ -4764,7 +4764,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateCurv(project_option,post_restart_flag);
+  ns_level.makeStateCurv(project_option,caller_startup_id);
  }
   // filenames: "ANGLE_UTAN<stuff>.plt"  (cell centered)
   // if GNBC is used, then the "ghost normal" in the substrate

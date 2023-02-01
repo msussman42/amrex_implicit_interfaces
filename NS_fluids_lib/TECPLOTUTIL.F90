@@ -825,7 +825,8 @@ stop
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
 
-      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (visual_revolve.ne.0) then
         print *,"visual_revolve= ",visual_revolve
         print *,"visual_revolve invalid combine zones"
