@@ -317,8 +317,8 @@ int caller_startup_id=CALLED_FROM_STATIC_SURFACE_TENSION;
  int quasi_static_reached=0;
  while (quasi_static_reached==0) {
 
-  make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,6); 
-
+  make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,
+     CALLED_FROM_STATIC_SURFACE_TENSION); 
 
  }
 
