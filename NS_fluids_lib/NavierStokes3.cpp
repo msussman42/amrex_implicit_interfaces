@@ -166,7 +166,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
    &ncomp);
  }  // mfi
 } //omp
- ns_reconcile_d_num(169);
+ ns_reconcile_d_num(LOOP_EDGEAVGDOWN);
 
  S_crse.ParallelCopy(crse_S_fine_MAC,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
@@ -1662,7 +1662,7 @@ NavierStokes::recalesce_temperature(int im_source) {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(171);
+ ns_reconcile_d_num(LOOP_RESET_TEMP);
 
 }  // end subroutine recalesce_temperature
 
@@ -1775,7 +1775,7 @@ NavierStokes::process_recalesce_data(
    &level,&finest_level);
 
  } // mfi
- ns_reconcile_d_num(172);
+ ns_reconcile_d_num(LOOP_INTEGRATE_RECALESCE);
 
  for (im=0;im<num_materials;im++) {
   int ibase=im*num_integrate;
@@ -2079,7 +2079,7 @@ void NavierStokes::init_splitting_force_SDC() {
     &delta_slab_time);
   }  // mfi  
 } // omp
-  ns_reconcile_d_num(173);
+  ns_reconcile_d_num(LOOP_SDC_TIME_QUAD);
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
@@ -2145,7 +2145,7 @@ void NavierStokes::init_splitting_force_SDC() {
      &delta_slab_time);
    }  // mfi  
 } // omp
-   ns_reconcile_d_num(174);
+   ns_reconcile_d_num(LOOP_SDC_TIME_QUAD_FACE);
 
   } // dir=0..sdim-1
 
@@ -4181,7 +4181,7 @@ void NavierStokes::correct_colors(
    &base_level,&arrsize);
  } // mfi
 } //omp
- ns_reconcile_d_num(175);
+ ns_reconcile_d_num(LOOP_LEVELRECOLOR);
 
 }  // subroutine correct_colors
 
@@ -4309,7 +4309,7 @@ void NavierStokes::assign_colors(
 	     color_per_grid_array[tid_current][gridno];
   } // mfi
 } // omp
-  ns_reconcile_d_num(176);
+  ns_reconcile_d_num(LOOP_COLORFILL);
 
   if (ipass==0) {
 
@@ -4449,7 +4449,7 @@ void NavierStokes::avgDownColor(int idx_color,int idx_type) {
     ovlo,ovhi);
  } // mfi
 } //omp
- ns_reconcile_d_num(177);
+ ns_reconcile_d_num(LOOP_AVGDOWNCOLOR);
 
  S_crse->ParallelCopy(crse_S_fine,0,0,1);
 }
@@ -4566,7 +4566,7 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(
     &zero_diag_flag);
  } // mfi
 } // omp
- ns_reconcile_d_num(178);
+ ns_reconcile_d_num(LOOP_COPYFINECOARSECOLOR);
 
  mf->ParallelCopy(crse_S_fine,0,0,6);
 
@@ -4736,7 +4736,7 @@ void NavierStokes::sync_colors(
    } // i,j,k
  } // mfi
 } //omp
- ns_reconcile_d_num(179);
+ ns_reconcile_d_num(LOOP_SYNC_COLORS);
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {
@@ -4907,7 +4907,7 @@ void NavierStokes::sync_colors(
     &number_grids,&arrsize);
  }  //mfi
 } //omp
- ns_reconcile_d_num(180);
+ ns_reconcile_d_num(LOOP_GRIDRECOLOR);
 
  colormax[level]=total_colors;
 
@@ -4993,7 +4993,7 @@ void NavierStokes::sync_colors(
      &arrsize,&check_corners);
    } //mfi
 } //omp
-   ns_reconcile_d_num(181);
+   ns_reconcile_d_num(LOOP_LEVELCOLORINIT);
 
    delete fine_coarse_color;
 
@@ -5545,7 +5545,7 @@ NavierStokes::ColorSum(
    &ncellfrac);
  } // mfi
 } // omp
- ns_reconcile_d_num(182);
+ ns_reconcile_d_num(LOOP_GETCOLORSUM);
 
  if (operation_flag==OP_GATHER_MDOT) {
 
@@ -5774,7 +5774,7 @@ NavierStokes::SumRegions(
    &finest_level);
  } // mfi
 } // omp
- ns_reconcile_d_num(182);
+ ns_reconcile_d_num(LOOP_REGIONSUM);
 
  ParallelDescriptor::Barrier();
 
@@ -6002,7 +6002,7 @@ NavierStokes::LowMachDIVU(
    material_type_lowmach.dataPtr());
  } // mfi
 } // omp
- ns_reconcile_d_num(182);
+ ns_reconcile_d_num(LOOP_LOWMACH_DIVU);
 
 if (sweep_num==0) {
  for (int tid=1;tid<thread_class::nthreads;tid++) {
@@ -7346,7 +7346,7 @@ NavierStokes::Type_level(
    &zero_diag_flag);
  } // mfi
 } // omp
- ns_reconcile_d_num(183);
+ ns_reconcile_d_num(LOOP_GETTYPEFAB);
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<ncomp_type;im++) { 
@@ -7761,7 +7761,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
   }  // mfi
 } // omp
-  ns_reconcile_d_num(184);
+  ns_reconcile_d_num(LOOP_BUILDFACEWT);
 
  } // facewt_iter=0..1
 
@@ -8152,7 +8152,7 @@ void NavierStokes::overwrite_outflow() {
       outflow_velocity_buffer_size.dataPtr());
    } // mfi
 }  // omp
-   ns_reconcile_d_num(185);
+   ns_reconcile_d_num(LOOP_FORCEVELOCITY);
 
  } // dir=0..sdim-1
 
@@ -8306,7 +8306,7 @@ void NavierStokes::correct_velocity(
   } // velcomp=0..nsolve-1
  } // mfi
 } // omp
- ns_reconcile_d_num(186);
+ ns_reconcile_d_num(LOOP_FLUIDSOLIDCOR);
 
 } // end subroutine correct_velocity
 
@@ -12768,7 +12768,7 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(187);
+ ns_reconcile_d_num(LOOP_HEATADVANCE);
 
 } // subroutine APPLY_VISCOUS_HEATING
 
@@ -13081,7 +13081,7 @@ void NavierStokes::zalesakVEL() {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(188);
+ ns_reconcile_d_num(LOOP_ZALESAK);
 }
 
 #undef profile_solver

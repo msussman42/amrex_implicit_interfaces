@@ -18,6 +18,8 @@
 
 #include <INTERP_F.H>
 
+#include <EXTRAP_COMP.H>
+
 namespace amrex {
 
 const Real INVALID_TIME = -1.0e200;
@@ -1294,7 +1296,7 @@ StateDataPhysBCFunct::FillBoundary (
 } // omp
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(23);
+  thread_class::reconcile_d_numPts(LOOP_FILLBOUNDARY);
 
 } // StateDataPhysBCFunct::FillBoundary
 
@@ -1460,7 +1462,7 @@ StateDataPhysBCFunctGHOST::FillBoundary (
 } // omp
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(24);
+  thread_class::reconcile_d_numPts(LOOP_FILLBOUNDARY_GHOST);
 
 } // StateDataPhysBCFunctGHOST::FillBoundary
 
