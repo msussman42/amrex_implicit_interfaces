@@ -9,6 +9,8 @@
 #include <omp.h>
 #endif
 
+#include <EXTRAP_COMP.H>
+
 namespace amrex
 {
 
@@ -361,7 +363,7 @@ void FillPatchTwoLevels (
 } // omp
    thread_class::sync_tile_d_numPts();
    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-   thread_class::reconcile_d_numPts(22);
+   thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP);
 
    ParallelDescriptor::Barrier();
     // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period

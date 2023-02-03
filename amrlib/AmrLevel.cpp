@@ -11,6 +11,8 @@
 #include <AmrLevel.H>
 #include <FillPatchUtil.H>
 
+#include <EXTRAP_COMP.H>
+
 namespace amrex {
 
 DescriptorList AmrLevel::desc_lst;
@@ -963,7 +965,7 @@ AmrLevel::FillCoarsePatchGHOST (
 } // omp
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(20);
+  thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP_GHOST);
 
   DComp += ncomp_range;
 
@@ -1397,7 +1399,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 } // omp
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(21);
+  thread_class::reconcile_d_numPts(LOOP_FILLCOARSEPATCH);
 
   StateDataPhysBCFunct physbc_fine(state[index],geom);
   physbc_fine.FillBoundary(level,mf,nudge_time,DComp,

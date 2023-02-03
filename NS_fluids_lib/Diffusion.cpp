@@ -293,7 +293,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    im_solid_map_ptr);
  } // mfi
 } // omp
- ns_reconcile_d_num(25);
+ ns_reconcile_d_num(LOOP_HOOPIMPLICIT);
 
 }  // end subroutine diffuse_hoop
 
@@ -418,7 +418,7 @@ void NavierStokes::viscous_boundary_fluxes(
    } // mfi
 } //omp
 
-   ns_reconcile_d_num(28);
+   ns_reconcile_d_num(LOOP_VISCFLUXFILL);
 
   } // dir=0..sdim-1
 
@@ -758,7 +758,7 @@ void NavierStokes::combine_state_variable(
 
     }  // mfi
 } // omp
-    ns_reconcile_d_num(29);
+    ns_reconcile_d_num(LOOP_COMBINEVELFACE);
    } // dir=0..sdim-1
 
   } else
@@ -949,7 +949,7 @@ void NavierStokes::combine_state_variable(
 
   }  // mfi
 } // omp
-  ns_reconcile_d_num(30);
+  ns_reconcile_d_num(LOOP_COMBINEVEL);
 
   if ((combine_flag==0)||  // FVM->GFM
       (combine_flag==1)) { // GFM->FVM
@@ -1122,7 +1122,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  }  // mfi  
 } // omp
 
- ns_reconcile_d_num(31);
+ ns_reconcile_d_num(LOOP_VISCTENSORHEAT);
 
 }   // subroutine diffusion_heating
 
