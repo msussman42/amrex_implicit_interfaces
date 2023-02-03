@@ -6937,7 +6937,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
   //
   //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
- if (caller_id==34) {
+ if (caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_REN0_VIA_OTHERS+
+	        CALLED_FROM_ADVECT) {
 
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
 
@@ -7002,7 +7003,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
    } else
     amrex::Error("visual_WALLVEL_plot_int invalid");
   } //data_dir=0..sdim-1
- }  // caller_id==34
+ }  // caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETY_REN0_VIA_OTHERS+
+    //            CALLED_FROM_ADVECT
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   delete_array(HISTORY_MAC_MF+data_dir);
@@ -21616,7 +21618,8 @@ NavierStokes::volWgtSumALL(int caller_startup_id,int fast_mode) {
 
  if (fast_mode==0) {
   //make_physics_varsALL calls "init_gradu_tensor_and_material_visc_ALL"
-  make_physics_varsALL(project_option,caller_startup_id,0);
+  make_physics_varsALL(project_option,caller_startup_id,
+	CALLED_FROM_VOLWGTSUMALL);
  } else if (fast_mode==1) {
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //responsibility of caller to issue commands,
@@ -21997,9 +22000,9 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
 } // end subroutine MaxPressureVelocity
 
 // called from 
-// 1. writePlotFile   (caller_startup_id=CALLED_FROM_WRITE_PLOT_FILE)
-// 2. post_init_state (caller_startup_id=CALLED_FROM_POST_INIT)
-// 3. post_restart    (caller_startup_id=CALLED_FROM_POST_RESTART)
+// writePlotFile   (caller_startup_id=CALLED_FROM_WRITE_PLOT_FILE)
+// post_init_state (caller_startup_id=CALLED_FROM_POST_INIT)
+// post_restart    (caller_startup_id=CALLED_FROM_POST_RESTART)
 void
 NavierStokes::prepare_post_process(int caller_startup_id) {
 
@@ -22086,39 +22089,38 @@ NavierStokes::prepare_post_process(int caller_startup_id) {
   amrex::Error("caller_startup_id invalid 22087");
 	
  int project_option=SOLVETYPE_INITPROJ; 
- int caller_id=1;
+ int caller_id=CALLED_FROM_PREPARE_POST_PROCESS;
 
  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
   init_vof_prev_time,SLOPE_RECON_MF);
 
  if (caller_startup_id==CALLED_FROM_POST_INIT) { // called from post_init_state
-
+FIX ME
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
-  caller_id=1;
+  caller_id=CALLED_FROM_PREPARE_POST_PROCESS_VIA_POST_INIT;
   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
 		  local_truncate,caller_id);
   project_option=SOLVETYPE_INITPROJ;
-  caller_id=1;
 
  } else if (caller_startup_id==CALLED_FROM_WRITE_PLOTFILE) { 
   // called from writePlotFile
 
   project_option=SOLVETYPE_INITPROJ;
-  caller_id=2;
+  caller_id=CALLED_FROM_PREPARE_POST_PROCESS_VIA_WRITE_PLOTFILE;
 
  } else if (caller_startup_id==CALLED_FROM_POST_RESTART) { 
   // called from post_restart
 
+  caller_id=CALLED_FROM_PREPARE_POST_PROCESS_VIA_POST_RESTART;
+
   if (1==0) {
    int keep_all_interfaces=0;
    makeStateDistALL(keep_all_interfaces);
-   caller_id=2;
    prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
 		   local_truncate,caller_id);
   }
   project_option=SOLVETYPE_INITPROJ;  // initial project
-  caller_id=3;
 
  } else
   amrex::Error("caller_startup_id invalid 22129");
