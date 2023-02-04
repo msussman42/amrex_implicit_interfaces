@@ -202,7 +202,7 @@ public:
 
     void Number_CellsALL(Real& rcells);
 
-    void volWgtSumALL(std::string& caller_string,int fast_mode);
+    void volWgtSumALL(const std::string& caller_string,int fast_mode);
 
     void zap_resid_where_singular(int index_MF);
 
