@@ -202,7 +202,7 @@ ABecLaplacian::applyBC (MultiFab& inout,int level,
  
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_APPLYBC);
+ thread_class::reconcile_d_numPts(LOOP_APPLYBC,"applyBC");
 } // end subroutine applyBC
 
 
@@ -331,7 +331,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
 } // omp
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_RESIDUAL);
+ thread_class::reconcile_d_numPts(LOOP_RESIDUAL,"residual");
 
 } // end subroutine residual
 
@@ -661,7 +661,7 @@ ABecLaplacian::makeCoefficients (
 
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_AVERAGEEC_OR_CC);
+ thread_class::reconcile_d_numPts(LOOP_AVERAGEEC_OR_CC,"makeCoefficients");
 
  if ((avg==0)||(avg==1)) {
   // do nothing
@@ -906,7 +906,7 @@ ABecLaplacian::buildMatrix() {
 
     thread_class::sync_tile_d_numPts();
     ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-    thread_class::reconcile_d_numPts(LOOP_BUILDMAT);
+    thread_class::reconcile_d_numPts(LOOP_BUILDMAT,"buildMatrix");
 
    } // veldir=0...nsolve_ABec-1
   } // isweep=0..3
@@ -1570,7 +1570,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
 
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(LOOP_GSRB);
+  thread_class::reconcile_d_numPts(LOOP_GSRB,"Fsmooth");
 
  } // isweep
 
@@ -1731,7 +1731,7 @@ ABecLaplacian::Fapply (MultiFab& y,
 
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_ADOTX);
+ thread_class::reconcile_d_numPts(LOOP_ADOTX,"Fapply");
 
 } // end subroutine Fapply
 
@@ -1851,7 +1851,7 @@ ABecLaplacian::LP_update (MultiFab& sol,
 
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_CGUPDATE);
+ thread_class::reconcile_d_numPts(LOOP_CGUPDATE,"LP_update");
 
 } // end subroutine LP_update
 
@@ -2044,7 +2044,7 @@ void ABecLaplacian::LP_dot(const MultiFab& w_in,
  ParallelDescriptor::ReduceRealSum(pw_dotprod_var[0]);
 
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_CGXDOTY);
+ thread_class::reconcile_d_numPts(LOOP_CGXDOTY,"LP_dot");
 
  dot_result=pw_dotprod_var[0];
 
@@ -2278,7 +2278,7 @@ ABecLaplacian::Fdiagsum(MultiFab&       y,
 
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_DIAGSUM);
+ thread_class::reconcile_d_numPts(LOOP_DIAGSUM,"Fdiagsum");
 
 } // end subroutine Fdiagsum
 
@@ -3187,7 +3187,7 @@ void ABecLaplacian::CG_advance (
 
     thread_class::sync_tile_d_numPts();
     ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-    thread_class::reconcile_d_numPts(LOOP_CGADVCP);
+    thread_class::reconcile_d_numPts(LOOP_CGADVCP,"CG_advance");
 
 } // end subroutine CG_advance
 
@@ -3653,7 +3653,7 @@ ABecLaplacian::MG_average (MultiFab& c,MultiFab& f,
 
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_MG_3D_AVERAGE);
+ thread_class::reconcile_d_numPts(LOOP_MG_3D_AVERAGE,"MG_average");
 
  c.ParallelCopy(crse_S_fine,0,0,nsolve_ABec);
  ParallelDescriptor::Barrier();
@@ -3776,7 +3776,7 @@ ABecLaplacian::MG_interpolate (MultiFab& f,MultiFab& c,
 
  thread_class::sync_tile_d_numPts();
  ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
- thread_class::reconcile_d_numPts(LOOP_MG3D_INTERP);
+ thread_class::reconcile_d_numPts(LOOP_MG3D_INTERP,"MG_interpolate");
 
 #if (profile_solver==1)
  bprof.stop();

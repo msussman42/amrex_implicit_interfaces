@@ -363,7 +363,7 @@ void FillPatchTwoLevels (
 } // omp
    thread_class::sync_tile_d_numPts();
    ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-   thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP);
+   thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP,"FillPatchTwoLevels");
 
    ParallelDescriptor::Barrier();
     // src,src_comp,dest_comp,num_comp,src_nghost,dst_nghost,period

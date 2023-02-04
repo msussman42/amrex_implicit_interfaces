@@ -365,7 +365,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_SCALARCOEFF);
+ ns_reconcile_d_num(LOOP_SCALARCOEFF,"allocate_maccoef");
 
  int GFM_flag=0;
  int adjust_temperature=0; 
@@ -518,7 +518,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     xlo,dx,&dir);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_MULT_FACEWT);
+  ns_reconcile_d_num(LOOP_MULT_FACEWT,"allocate_maccoef");
  }  // dir=0..sdim-1
 
  new_localMF(DIAG_REGULARIZE_MF,nsolve,0,-1);
@@ -609,7 +609,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     bc.dataPtr());
  }// mfi
 } // omp
- ns_reconcile_d_num(LOOP_INIT_MASK_SING);
+ ns_reconcile_d_num(LOOP_INIT_MASK_SING,"allocate_maccoef");
 
   // dest,soucre,scomp,dcomp,ncomp,ngrow
  Copy_localMF(ONES_GROW_MF,ONES_MF,0,0,1,0);
@@ -682,7 +682,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      xlo,dx,&dir);
    } // mfi
  } // omp
-   ns_reconcile_d_num(LOOP_REGULARIZE_BX);
+   ns_reconcile_d_num(LOOP_REGULARIZE_BX,"allocate_maccoef");
 
   } else if (project_option_singular_possible(project_option)==0) {
    // do nothing 
@@ -733,7 +733,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
      xlo,dx,&dir);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_DIVIDEDX);
+  ns_reconcile_d_num(LOOP_DIVIDEDX,"allocate_maccoef");
 
   mac_op->bCoefficients(*localMF[BXCOEF_MF+dir],dir);
  }  // dir=0...sdim-1
@@ -794,7 +794,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
     fablo,fabhi,&bfact);
  }// mfi
 } // omp
- ns_reconcile_d_num(LOOP_NSGENERATE);
+ ns_reconcile_d_num(LOOP_NSGENERATE,"allocate_maccoef");
 
 }  // end subroutine allocate_maccoef
 
@@ -857,7 +857,7 @@ NavierStokes::restore_active_pressure(int save_mf) {
 
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_RESTORE_PRES);
+ ns_reconcile_d_num(LOOP_RESTORE_PRES,"restore_active_pressure");
 
 } // end subroutine restore_active_pressure
 
@@ -989,7 +989,7 @@ NavierStokes::AllinterpScalarMAC(
   } // veldir=0..nsolve-1
  }   // mfi
 } //omp
- ns_reconcile_d_num(LOOP_INTERPMAC);
+ ns_reconcile_d_num(LOOP_INTERPMAC,"AllinterpScalarMAC");
 
 }  // subroutine AllinterpScalarMAC
 
@@ -1088,7 +1088,7 @@ NavierStokes::Allaverage(
     &bfact_fine,&bfact_fine);
  }   // mfi
 } //omp
- ns_reconcile_d_num(LOOP_AVERAGE);
+ ns_reconcile_d_num(LOOP_AVERAGE,"Allaverage");
 
 // src,scomp,dcomp,ncomp
  S_crse.ParallelCopy(crse_S_fine,0,dcomp,1);
@@ -1244,7 +1244,7 @@ void NavierStokes::DiagInverse(
   } // veldir
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_DIAGINV);
+ ns_reconcile_d_num(LOOP_DIAGINV,"DiagInverse");
 
 } // subroutine DiagInverse
 
@@ -1888,7 +1888,7 @@ void NavierStokes::apply_div(
    &ncomp_dendest);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_APPLY_DIV);
+ ns_reconcile_d_num(LOOP_APPLY_DIV,"apply_div");
 
 } // end subroutine apply_div
 
@@ -2288,7 +2288,7 @@ void NavierStokes::ADVECT_DIV() {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_UPDATE_DIV);
+ ns_reconcile_d_num(LOOP_UPDATE_DIV,"ADVECT_DIV");
 
 } // end subroutine ADVECT_DIV
 
@@ -2561,7 +2561,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
     &ncomp_dendest);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_OP_DIV_CELL);
+ ns_reconcile_d_num(LOOP_OP_DIV_CELL,"getStateDIV");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   if (idx_source==-1) {

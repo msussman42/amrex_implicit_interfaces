@@ -965,7 +965,8 @@ AmrLevel::FillCoarsePatchGHOST (
 } // omp
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP_GHOST);
+  thread_class::reconcile_d_numPts(LOOP_MAPPER_INTERP_GHOST,
+      "FillCoarsePatchGHOST");
 
   DComp += ncomp_range;
 
@@ -1399,7 +1400,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 } // omp
   thread_class::sync_tile_d_numPts();
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
-  thread_class::reconcile_d_numPts(LOOP_FILLCOARSEPATCH);
+  thread_class::reconcile_d_numPts(LOOP_FILLCOARSEPATCH,"FillCoarsePatch");
 
   StateDataPhysBCFunct physbc_fine(state[index],geom);
   physbc_fine.FillBoundary(level,mf,nudge_time,DComp,
