@@ -22095,7 +22095,7 @@ NavierStokes::prepare_post_process(int caller_startup_id) {
   init_vof_prev_time,SLOPE_RECON_MF);
 
  if (caller_startup_id==CALLED_FROM_POST_INIT) { // called from post_init_state
-FIX ME
+
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
   caller_id=CALLED_FROM_PREPARE_POST_PROCESS_VIA_POST_INIT;

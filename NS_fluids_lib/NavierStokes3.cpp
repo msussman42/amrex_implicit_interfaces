@@ -559,7 +559,7 @@ void NavierStokes::nonlinear_advection() {
      // projects volume fractions so that sum F_m_fluid=1.
     renormalize_only=1;
     int local_truncate=0;
-    int caller_id=3;
+    int caller_id=CALLED_FROM_ADVECT;
     prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
       local_truncate,caller_id);
 
