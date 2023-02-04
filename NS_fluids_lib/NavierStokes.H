@@ -202,12 +202,7 @@ public:
 
     void Number_CellsALL(Real& rcells);
 
-// caller_startup_id==CALLED_FROM_POST_TIMESTEP if called from post_timestep
-// caller_startup_id==CALLED_FROM_POST_INIT if called from post_init
-// caller_startup_id==CALLED_FROM_POST_RESTART  if called from post_restart
-// caller_startup_id==CALLED_FROM_FSI_GHOST_MAC if called from 
-//     init_FSI_GHOST_MAC_MF_ALL
-    void volWgtSumALL(int caller_startup_id,int fast_mode);
+    void volWgtSumALL(std::string& caller_string,int fast_mode);
 
     void zap_resid_where_singular(int index_MF);
 
@@ -286,7 +281,8 @@ public:
     //
     // Timestep estimation functions follow ...
     //
-   Real estTimeStep (Real local_fixed_dt,int caller_id);
+   Real estTimeStep (Real local_fixed_dt,
+     const std::string& caller_string);
 
    virtual void computeInitialDt (int    finest_level,
                                   Real&  dt,
@@ -316,7 +312,7 @@ public:
     // Insure state, and pressure are consistent.
     //
     virtual void post_init (Real stop_time);
-    void prepare_post_process(int caller_startup_id);
+    void prepare_post_process(const std::string& caller_string);
 
     void init_particle_container(int append_flag);
     void particle_tensor_advection_update();
@@ -500,7 +496,10 @@ protected:
     void getStateMAC_localMF(int idx_MF,int ngrow,int dir,Real time);
 
     void getStateDen_localMF(int idx_MF,int ngrow,Real time);
-    void getStateDist_localMF(int idx_MF,int ngrow,Real time,int caller_id);
+
+    void getStateDist_localMF(int idx_MF,int ngrow,Real time,
+       const std::string& caller_string);
+
     void resize_levelset(int ngrow,int idx);
     void allocate_levelset(int ngrow,int idx);
     void allocate_levelset_ALL(int ngrow,int idx);
@@ -557,12 +556,12 @@ protected:
     void MaxAdvectSpeedALL(
       Real& dt_min,
       Real* vel_max_estdt,
-      int caller_id);
+      const std::string& caller_string);
 
     void MaxAdvectSpeed(
       Real& dt_min,
       Real* vel_max_estdt,
-      int caller_id);
+      const std::string& caller_string);
 
     void DumpProcNum();
 
@@ -585,7 +584,8 @@ protected:
     int NSnumLevels();
 
     int ns_thread();
-    void ns_reconcile_d_num(int caller_loop_id);
+    void ns_reconcile_d_num(int caller_loop_id,
+       const std::string& caller_string);
 
     static int some_materials_compressible();
 
@@ -615,10 +615,9 @@ protected:
     static void set_tensor_extrap_components_main(
       int coord,std::string postfix,int indx);
 
-// caller_startup_id==CALLED_FROM_POST_TIMESTEP if called from post_timestep
-// caller_startup_id==CALLED_FROM_POST_INIT  if called from post_init
-// caller_startup_id==CALLED_FROM_POST_RESTART  if called from post_restart
-    void sum_integrated_quantities (int caller_startup_id,Real stop_time);
+    void sum_integrated_quantities (
+     const std::string& caller_string,
+     Real stop_time);
 
     void CopyNewToOldALL();
     void CopyOldToNewALL();
@@ -822,8 +821,8 @@ protected:
       int init_vof_prev_time,int dest_mf);
     void VOF_Recon_resize(int ngrow,int dest_mf);
 
-    void make_physics_varsALL(int project_option,int caller_startup_id,
-		    int caller_id);
+    void make_physics_varsALL(int project_option,
+	   const std::string& caller_string);
 
     void allocate_physics_vars();
     void make_physics_vars(int project_option);
@@ -946,14 +945,18 @@ protected:
     void MOFavgDown();
     void avgDownMac(); 
     void avgDownMacState(int spectral_override); 
+
     void avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
-     int scomp,int ncomp,int spectral_override,int caller_id);
+     int scomp,int ncomp,int spectral_override,
+     const std::string& caller_string);
+
      // spectral_override==1 => order derived from "enable_spectral"
      // spectral_override==0 => always low order.
     void avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
      int start_grid_type,int n_grid_type,
-     int spectral_override,int caller_id);
-
+     int spectral_override,
+     const std::string& caller_string);
+     
     void smearvariable(int scomp,
      MultiFab* mask_extrapolate,int ngrow,Real def_value);
 
@@ -973,8 +976,11 @@ protected:
     void avgDown_list(int stateidx,Vector<int> scomp,
       Vector<int> ncomp,int spectral_override); 
 
-    void prescribe_solid_geometryALL(Real time,int renormalize_only,
-      int local_truncate,int caller_id);
+    void prescribe_solid_geometryALL(Real time,
+      int renormalize_only,
+      int local_truncate,
+      const std::string& caller_string);
+
     void prescribe_solid_geometry(Real time,int renormalize_only);
 
     void move_particles(
@@ -1291,7 +1297,10 @@ void apply_pressure_grad(
     void makeStateDistALL(int keep_all_interfaces);
     void makeStateDist(int keep_all_interfaces);
     void correct_dist_uninit();
-    void makeStateCurv(int project_option,int caller_startup_id);
+
+    void makeStateCurv(int project_option,
+	  const std::string& caller_string);
+
     void make_marangoni_force();
 
     void delete_array(int idx_localMF);
@@ -1322,7 +1331,10 @@ void apply_pressure_grad(
     void zeroALL(int ngrow,int ncomp,int idx_localMF);
 
     MultiFab* getStateDen(int ngrow,Real time);
-    MultiFab* getStateDist(int ngrow,Real time,int caller_id);
+
+    MultiFab* getStateDist(int ngrow,Real time,
+       const std::string& caller_string);
+
     MultiFab* getStateDIV_DATA(int ngrow,int scomp,int ncomp,Real time);
 
     void putStateDIV_DATA(int scomp,int ncomp,int idx_MF);
@@ -1334,9 +1346,12 @@ void apply_pressure_grad(
 
     void resize_metrics(int ngrow);
     void metrics_data(int ngrow);
-    void metrics_data_min_max(int caller_id);
+
+    void metrics_data_min_max(const std::string& caller_string);
+
     void metrics_dataALL(int ngrow);
-    void metrics_data_min_max_ALL(int caller_id);
+
+    void metrics_data_min_max_ALL(const std::string& caller_string);
 
     MultiFab* maskfiner(int ngrow,Real tag,int clear_phys_boundary);
 
@@ -1365,7 +1380,8 @@ void apply_pressure_grad(
     void init_FSI_GHOST_MAC_MF_ALL_predict();
     void init_FSI_GHOST_MAC_MF_predict();
 
-    void init_FSI_GHOST_MAC_MF_ALL(int caller_id);
+    void init_FSI_GHOST_MAC_MF_ALL(const std::string& caller_string);
+
     void init_FSI_GHOST_MAC_MF(int dealloc_history);
 
     void assimilate_state_data();
