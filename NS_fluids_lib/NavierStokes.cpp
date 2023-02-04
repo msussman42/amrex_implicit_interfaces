@@ -11755,8 +11755,8 @@ void NavierStokes::add_perturbation() {
   }  // dir
  }  // mfi  
 } // omp
-FIX ME
- ns_reconcile_d_num(LOOP_ADDNOISE);
+
+ ns_reconcile_d_num(LOOP_ADDNOISE,"add_perturbation");
 
 }   // end subroutine add_perturbation
 
@@ -12001,7 +12001,7 @@ void NavierStokes::update_SEM_delta_force(
     &dt_slab);
   }  // mfi  
 } // omp
-  ns_reconcile_d_num(LOOP_UPDATE_SEMFORCE);
+  ns_reconcile_d_num(LOOP_UPDATE_SEMFORCE,"update_SEM_delta_force");
 
  } else if (project_option==SOLVETYPE_PRES) {
 
@@ -12088,7 +12088,7 @@ void NavierStokes::update_SEM_delta_force(
      &dt_slab);
    }  // mfi  
 } // omp
-   ns_reconcile_d_num(LOOP_UPDATESEMFORCE_FACE);
+   ns_reconcile_d_num(LOOP_UPDATESEMFORCE_FACE,"update_SEM_delta_force");
 
   } // dir=0..sdim-1
 
@@ -12266,7 +12266,7 @@ void NavierStokes::tensor_advection_update() {
        }
       }  // mfi
 } // omp
-      ns_reconcile_d_num(LOOP_UPDATETENSOR);
+      ns_reconcile_d_num(LOOP_UPDATETENSOR,"tensor_advection_update");
 
       delete tensor_source_mf;
      } else {
@@ -12417,7 +12417,7 @@ void NavierStokes::tensor_extrapolation() {
        }
       }  // mfi
 } // omp
-      ns_reconcile_d_num(LOOP_EXTRAPOLATE_TENSOR);
+      ns_reconcile_d_num(LOOP_EXTRAPOLATE_TENSOR,"tensor_extrapolation");
 
       delete tensor_source_mf;
      } else {
@@ -12592,7 +12592,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
      &level,&finest_level);
   }  // mfi
 }  // omp
-  ns_reconcile_d_num(LOOP_DERIVE_MOM_DEN);
+  ns_reconcile_d_num(LOOP_DERIVE_MOM_DEN,"getStateMOM_DEN");
   
  } // im=0..num_materials-1
 
@@ -12798,7 +12798,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
   }  // mfi
 } // omp
 
-  ns_reconcile_d_num(LOOP_VELMAC_OVERRIDE);
+  ns_reconcile_d_num(LOOP_VELMAC_OVERRIDE,"prepare_displacement");
 
 
   delete temp_mac_velocity;
@@ -13198,7 +13198,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &ngrow_make_distance);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_FD_NODE_NORMAL);
+  ns_reconcile_d_num(LOOP_FD_NODE_NORMAL,"level_phase_change_rate");
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -13258,7 +13258,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
     &ngrow_make_distance);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_NODE_TO_CELL);
+  ns_reconcile_d_num(LOOP_NODE_TO_CELL,"level_phase_change_rate");
 
   localMF[FD_CURV_CELL_MF]->FillBoundary(geom.periodicity());
 
@@ -13512,7 +13512,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_RATEMASSCHANGE);
+ ns_reconcile_d_num(LOOP_RATEMASSCHANGE,"level_phase_change_rate");
 
  delete_localMF(DEN_RECON_MF,1);
 
@@ -13675,7 +13675,7 @@ NavierStokes::level_phase_change_rate_extend() {
     lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_EXTEND_BURNING_VEL);
+  ns_reconcile_d_num(LOOP_EXTEND_BURNING_VEL,"level_phase_change_rate_extend");
 
   scompBC_map.resize(ncomp);
 
@@ -13818,7 +13818,7 @@ NavierStokes::level_DRAG_extend() {
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()));
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_EXTEND_DRAG);
+ ns_reconcile_d_num(LOOP_EXTEND_DRAG,"level_DRAG_extend");
 
  scompBC_map.resize(ncomp);
 
@@ -14192,7 +14192,7 @@ NavierStokes::level_phase_change_convert(
      &level,&finest_level);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_NODEDISPLACE);
+  ns_reconcile_d_num(LOOP_NODEDISPLACE,"level_phase_change_convert");
 
   if (1==0) {
     int gridno=0;
@@ -14328,7 +14328,7 @@ NavierStokes::level_phase_change_convert(
     ARLIM(sweptfab.loVect()),ARLIM(sweptfab.hiVect()));
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_CONVERTMATERIAL);
+ ns_reconcile_d_num(LOOP_CONVERTMATERIAL,"level_phase_change_convert");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<2*num_materials;im++) {
@@ -14976,7 +14976,7 @@ NavierStokes::level_phase_change_redistribute(
  
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_TAGEXPANSION);
+  ns_reconcile_d_num(LOOP_TAGEXPANSION,"level_phase_change_redistribute");
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    mdot_sum_local[0]+=mdot_sum_local[tid];
@@ -15081,7 +15081,7 @@ NavierStokes::level_phase_change_redistribute(
      ARLIM(JUMP_comp_fab.hiVect()) );
   } // mfi
 } //omp
-  ns_reconcile_d_num(LOOP_ACCEPT_WEIGHT);
+  ns_reconcile_d_num(LOOP_ACCEPT_WEIGHT,"level_phase_change_redistribute");
 
    // spectral_override==0 => always low order.
   avgDown_localMF(accept_weight_MF,0,1,0);
@@ -15203,7 +15203,8 @@ NavierStokes::level_phase_change_redistribute(
      ARLIM(JUMP_comp_fab.hiVect()) );
   } // mfi
 } //omp
-  ns_reconcile_d_num(LOOP_DISTRIBUTEEXPANSION);
+  ns_reconcile_d_num(LOOP_DISTRIBUTEEXPANSION,
+     "level_phase_change_redistribute");
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    mdot_sum2_local[0]+=mdot_sum2_local[tid];
@@ -15322,7 +15323,7 @@ NavierStokes::level_phase_change_redistribute(
 
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_INITJUMPTERM);
+  ns_reconcile_d_num(LOOP_INITJUMPTERM,"level_phase_change_redistribute");
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
    mdotplus_local[0]+=mdotplus_local[tid];
@@ -15424,7 +15425,7 @@ NavierStokes::level_init_icemask() {
 
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_INIT_ICEMASK);
+  ns_reconcile_d_num(LOOP_INIT_ICEMASK,"level_init_icemask");
 
   delete_localMF(LSNEW_MF,1);
 
@@ -15780,7 +15781,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()) );
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_STEFANSOLVER);
+ ns_reconcile_d_num(LOOP_STEFANSOLVER,"stefan_solver_init");
 
  delete state_var_mf;
  delete LSmf;
@@ -15898,7 +15899,7 @@ NavierStokes::heat_source_term_flux_source() {
     areaz.dataPtr(),ARLIM(areaz.loVect()),ARLIM(areaz.hiVect()) );
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_HEATSOURCE_FACE);
+ ns_reconcile_d_num(LOOP_HEATSOURCE_FACE,"heat_source_term_flux_source");
 
  delete LSmf;
  
@@ -16076,7 +16077,7 @@ void NavierStokes::aggressive_debug(
     mffab.dataPtr(),ARLIM(mffab.loVect()),ARLIM(mffab.hiVect()));
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_AGGRESSIVE);
+  ns_reconcile_d_num(LOOP_AGGRESSIVE,"aggressive_debug");
 
   std::fflush(NULL);
  } else
@@ -16509,7 +16510,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       &project_option_visc);
     }   // mfi
 } // omp
-    ns_reconcile_d_num(LOOP_CELL_TO_MAC_ISCHEME_MAC);
+    ns_reconcile_d_num(LOOP_CELL_TO_MAC_ISCHEME_MAC,"SEM_scalar_advection");
    } // dir=0..sdim-1
 
   } else if (init_fluxes==0) {
@@ -16702,7 +16703,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
     } // mfi
 }// omp
-    ns_reconcile_d_num(LOOP_MAC_TO_CELL_ISCHEME_CELL);
+    ns_reconcile_d_num(LOOP_MAC_TO_CELL_ISCHEME_CELL,"SEM_scalar_advection");
 
     // rhs=div(uF)  
     if (source_term==SUB_OP_SDC_ISCHEME) {
@@ -16982,7 +16983,7 @@ NavierStokes::split_scalar_advection() {
    &den_recon_ncomp);
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_BUILD_CONSERVE);
+ ns_reconcile_d_num(LOOP_BUILD_CONSERVE,"split_scalar_advection");
 
  MultiFab* xvel[AMREX_SPACEDIM]; 
  MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2 components
@@ -17054,7 +17055,7 @@ NavierStokes::split_scalar_advection() {
      &veldir);
   }  // mfi
 }// omp
-  ns_reconcile_d_num(LOOP_BUILD_MACVOF);
+  ns_reconcile_d_num(LOOP_BUILD_MACVOF,"split_scalar_advection");
 
  } // veldir=1..sdim
 
@@ -17306,7 +17307,7 @@ NavierStokes::split_scalar_advection() {
 
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_VFRAC_SPLIT);
+ ns_reconcile_d_num(LOOP_VFRAC_SPLIT,"split_scalar_advection");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   nprocessed[0]+=nprocessed[tid];
@@ -17527,7 +17528,7 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   tagfab.tags_and_untags(itags,tilegrid);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_VFRACERROR);
+ ns_reconcile_d_num(LOOP_VFRACERROR,"errorEst");
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   error_set_count[0]+=error_set_count[tid];
  }
@@ -17962,7 +17963,7 @@ NavierStokes::GetDrag(int isweep) {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_GETDRAG);
+ ns_reconcile_d_num(LOOP_GETDRAG,"GetDrag");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int iq=0;iq<N_DRAG_IQ;iq++) {
@@ -18431,7 +18432,7 @@ NavierStokes::dotSum(int project_option,
   sum[tid_current] += tsum;
  } // mfi1
 } // omp
- ns_reconcile_d_num(LOOP_SUMDOT);
+ ns_reconcile_d_num(LOOP_SUMDOT,"dotSum");
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   sum[0]+=sum[tid];
  }
@@ -18583,7 +18584,7 @@ NavierStokes::dotSumONES_size(int project_option,
   } // icolor=0;icolor<color_ONES_count
  } // mfi1
 } // omp
- ns_reconcile_d_num(LOOP_SUMDOT_ONES_SIZE);
+ ns_reconcile_d_num(LOOP_SUMDOT_ONES_SIZE,"dotSumONES_size");
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int icolor=0;icolor<color_ONES_count;icolor++) {
    local_sum[0][icolor]+=local_sum[tid][icolor];
@@ -18743,7 +18744,7 @@ NavierStokes::dotSumONES(int project_option,
   } // icolor=0;icolor<color_ONES_count
  } // mfi1
 } // omp
- ns_reconcile_d_num(LOOP_SUMDOT_ONES);
+ ns_reconcile_d_num(LOOP_SUMDOT_ONES,"dotSumONES");
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int icolor=0;icolor<color_ONES_count;icolor++) {
    local_sum[0][icolor]+=local_sum[tid][icolor];
@@ -18872,7 +18873,7 @@ NavierStokes::mf_combine_ones_level(int project_option,
 
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_FABCOM_ONES);
+ ns_reconcile_d_num(LOOP_FABCOM_ONES,"mf_combine_ones_level");
 
 } // end subroutine mf_combine_ones_level
 
@@ -18972,7 +18973,7 @@ void NavierStokes::levelCombine(
    &nsolve);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_FABCOM);
+ ns_reconcile_d_num(LOOP_FABCOM,"levelCombine");
 
 } // subroutine levelCombine
 
@@ -19243,7 +19244,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_SUMMASS);
+ ns_reconcile_d_num(LOOP_SUMMASS,"volWgtSum");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
 
@@ -19358,7 +19359,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
    tecplot_debug(errfab,xlo,fablo,fabhi,dx,-1,0,0,
      num_materials,interior_only);
   }// mfi
-  ns_reconcile_d_num(LOOP_TECPLOT_DEBUG);
+  ns_reconcile_d_num(LOOP_TECPLOT_DEBUG,"volWgtSum");
  } // fab_verbose=2 or 3
 
  delete error_heat_map_mf;
@@ -20732,7 +20733,7 @@ void NavierStokes::DumpProcNum() {
     ParallelDescriptor::MyProc() << " thread= " << ns_thread() << "\n";
  }// mfi
 }// omp
- ns_reconcile_d_num(LOOP_DUMPPROCNUM);
+ ns_reconcile_d_num(LOOP_DUMPPROCNUM,"DumpProcNum");
 }
 
 // called from: estTimeStep (caller_id=0,1,2)
@@ -20988,7 +20989,7 @@ void NavierStokes::MaxAdvectSpeed(
 
   }  //mfi
 } // omp
-  ns_reconcile_d_num(LOOP_ESTDT);
+  ns_reconcile_d_num(LOOP_ESTDT,"MaxAdvectSpeed");
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
 
@@ -21980,7 +21981,7 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
    fablo,fabhi,&bfact);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_MAXPRESVEL);
+ ns_reconcile_d_num(LOOP_MAXPRESVEL,"MaxPressureVelocity");
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   if (minpres>minpresA[tid])
@@ -22308,7 +22309,7 @@ void NavierStokes::assimilate_Q_from_particles(
     polymer_factor.dataPtr()); //0...num_materials-1
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_ASSIMILATE_Q_FROM_PART);
+  ns_reconcile_d_num(LOOP_ASSIMILATE_Q_FROM_PART,"assimilate_Q_from_particles");
 
   delete tensor_mf;
  } else
@@ -22644,7 +22645,7 @@ NavierStokes::init_particle_container(int append_flag) {
 
    } // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_INIT_PARTICLE_CONTAINER);
+   ns_reconcile_d_num(LOOP_INIT_PARTICLE_CONTAINER,"init_particle_container");
 
    delete lsmf;
 
@@ -22924,7 +22925,8 @@ NavierStokes::particle_tensor_advection_update() {
 
    } // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_UPDATE_PARTICLE_TENSOR);
+   ns_reconcile_d_num(LOOP_UPDATE_PARTICLE_TENSOR,
+     "particle_tensor_advection_update");
 
   } else
    amrex::Error("num_materials_viscoelastic invalid");
@@ -23276,7 +23278,7 @@ NavierStokes::level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine) {
 
  }// mfi
 } //omp
- ns_reconcile_d_num(LOOP_AVGDOWN_TAG);
+ ns_reconcile_d_num(LOOP_AVGDOWN_TAG,"level_avgDown_tag");
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 } // subroutine level_avgDown_tag
@@ -23387,7 +23389,7 @@ NavierStokes::level_avgDownBURNING(MultiFab& S_crse,MultiFab& S_fine,
 
  }// mfi
 } //omp
- ns_reconcile_d_num(LOOP_AVGDOWN_BURNING);
+ ns_reconcile_d_num(LOOP_AVGDOWN_BURNING,"level_avgDownBURNING");
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
@@ -23488,7 +23490,7 @@ NavierStokes::level_avgDownDRAG(MultiFab& S_crse,MultiFab& S_fine) {
 
  }// mfi
 } //omp
- ns_reconcile_d_num(LOOP_AVGDOWN_DRAG);
+ ns_reconcile_d_num(LOOP_AVGDOWN_DRAG,"level_avgDownDRAG");
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
@@ -23589,7 +23591,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
 
  }// mfi
 } //omp
- ns_reconcile_d_num(LOOP_AVGDOWN_CURV);
+ ns_reconcile_d_num(LOOP_AVGDOWN_CURV,"level_avgDownCURV");
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 
@@ -23715,7 +23717,7 @@ NavierStokes::avgDown(MultiFab& S_crse,MultiFab& S_fine,
 
  }// mfi
 } //omp
- ns_reconcile_d_num(LOOP_AVGDOWN_OR_AVGDOWN_LOW);
+ ns_reconcile_d_num(LOOP_AVGDOWN_OR_AVGDOWN_LOW,"avgDown");
  S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
  ParallelDescriptor::Barrier();
 }  // subroutine avgDown
@@ -23859,7 +23861,7 @@ void NavierStokes::MOFavgDown() {
    ovlo,ovhi);
  } // mfi
 } //omp
- ns_reconcile_d_num(LOOP_MOFAVGDOWN);
+ ns_reconcile_d_num(LOOP_MOFAVGDOWN,"MOFavgDown");
  S_crse.ParallelCopy(crse_S_fine,0,STATECOMP_MOF,num_materials*ngeom_raw);
  ParallelDescriptor::Barrier();
 }
@@ -23954,7 +23956,7 @@ void NavierStokes::avgDownError() {
    ovlo,ovhi);
  } // mfi
 } //omp
- ns_reconcile_d_num(LOOP_ERRORAVGDOWN);
+ ns_reconcile_d_num(LOOP_ERRORAVGDOWN,"avgDownError");
  S_crse.ParallelCopy(crse_S_fine,0,STATECOMP_ERR,1);
  ParallelDescriptor::Barrier();
 } // subroutine avgDownError
@@ -24427,7 +24429,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
       xlo,dx);
    } // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_FD_NORMAL);
+   ns_reconcile_d_num(LOOP_FD_NORMAL,"build_NRM_FD_MF");
 
    localMF[fd_mf]->FillBoundary(geom.periodicity()); 
   } else
@@ -24631,7 +24633,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     &nstar);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_STENINIT);
+ ns_reconcile_d_num(LOOP_STENINIT,"makeStateDist");
 
  localMF[STENCIL_MF]->FillBoundary(geom.periodicity());
 
@@ -24762,7 +24764,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  } // mfi
 } // omp
 
- ns_reconcile_d_num(LOOP_LEVELSTRIP);
+ ns_reconcile_d_num(LOOP_LEVELSTRIP,"makeStateDist");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<num_materials;im++) {
@@ -24866,7 +24868,7 @@ NavierStokes::correct_dist_uninit() {
     &cur_time_slab);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_CORRECT_UNINIT);
+ ns_reconcile_d_num(LOOP_CORRECT_UNINIT,"correct_dist_uninit");
 
 } // subroutine correct_dist_uninit
 
@@ -24974,7 +24976,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
     &nface_src,&nface_dst);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_FACEPROCESS);
+  ns_reconcile_d_num(LOOP_FACEPROCESS,"ProcessFaceFrac");
 
   localMF[idxdst+dir]->FillBoundary(geom.periodicity());
  } //dir=0..sdim-1
@@ -25059,7 +25061,7 @@ NavierStokes::makeFaceFrac(
     &nface);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_FACEINIT);
+ ns_reconcile_d_num(LOOP_FACEINIT,"makeFaceFrac");
 
  localMF[idx]->FillBoundary(geom.periodicity());
 
@@ -25153,7 +25155,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
     &nface);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_FACEINITTEST);
+ ns_reconcile_d_num(LOOP_FACEINITTEST,"makeFaceTest");
 
 } // subroutine makeFaceTest
 
@@ -25237,7 +25239,7 @@ NavierStokes::makeCellFrac(
     &ncellfrac);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_CELLFACEINIT);
+ ns_reconcile_d_num(LOOP_CELLFACEINIT,"makeCellFrac");
 
  localMF[idx]->FillBoundary(geom.periodicity());
 
@@ -25416,7 +25418,7 @@ NavierStokes::makeStateCurv(int project_option,int caller_startup_id) {
      &ngrow_distance);
   } // mfi
 } //omp
-  ns_reconcile_d_num(LOOP_CURVSTRIP);
+  ns_reconcile_d_num(LOOP_CURVSTRIP,"makeStateCurv");
 
   for (int tid=1;tid<thread_class::nthreads;tid++) {
     if (curv_min_local[tid]<curv_min_local[0])
@@ -25472,7 +25474,7 @@ NavierStokes::makeStateCurv(int project_option,int caller_startup_id) {
      tecplot_debug(lsfab,xlo,fablo,fabhi,dx,-1,0,0,num_materials,interior_only);
 
     } // mfi
-    ns_reconcile_d_num(LOOP_TECPLOT_DEBUG_CURV);
+    ns_reconcile_d_num(LOOP_TECPLOT_DEBUG_CURV,"makeStateCurv");
 
   } // ((fab_verbose==1)||(fab_verbose==3))
 
@@ -25595,7 +25597,7 @@ NavierStokes::ctml_fsi_transfer_force() {
 #endif
        }  // mfi  
 } // omp
-       ns_reconcile_d_num(LOOP_CTMLTRANSFERFORCE);
+       ns_reconcile_d_num(LOOP_CTMLTRANSFERFORCE,"ctml_fsi_transfer_force");
       } else
        amrex::Error("CTML_force_model[im_part] invalid");
 
