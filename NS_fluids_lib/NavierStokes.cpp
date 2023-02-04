@@ -6937,7 +6937,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
   //
   //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
- if (caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_REN0_VIA_OTHERS+
+ if (caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_RENONLY0_VIA_OTHERS+
 	        CALLED_FROM_ADVECT) {
 
   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
@@ -7003,7 +7003,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
    } else
     amrex::Error("visual_WALLVEL_plot_int invalid");
   } //data_dir=0..sdim-1
- }  // caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETY_REN0_VIA_OTHERS+
+ }  // caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETY_RENONLY0_VIA_OTHERS+
     //            CALLED_FROM_ADVECT
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {

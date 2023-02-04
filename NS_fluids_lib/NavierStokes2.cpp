@@ -6347,7 +6347,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
    amrex::Error("prescribe solid at the new time");
 
   int local_caller_id=
-   CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_REN0_VIA_OTHERS+
+   CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_RENONLY0_VIA_OTHERS+
    caller_id;
 
    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
