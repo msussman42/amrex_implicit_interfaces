@@ -582,7 +582,7 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
    amrex::Error("clear_phys_boundary invalid");
  } // mfi
 } //omp
- ns_reconcile_d_num(LOOP_MASKFINER);
+ ns_reconcile_d_num(LOOP_MASKFINER,"maskfiner");
 
  if ((clear_phys_boundary==0)|| //mask=tag outside domain and coarse/fine ghost
      (clear_phys_boundary==1)|| //mask=1-tag outside domain,mask=tag c/f ghost
@@ -618,7 +618,7 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
     } // j
    } // mfi
 } //omp
-   ns_reconcile_d_num(LOOP_MASKFINER_UNTAG);
+   ns_reconcile_d_num(LOOP_MASKFINER_UNTAG,"maskfiner");
   } // level<finest_level
  } else if (clear_phys_boundary==3) {
   // do nothing
@@ -956,7 +956,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
 
    }// mfi
 } //omp
-   ns_reconcile_d_num(LOOP_AVGDOWN_COPY);
+   ns_reconcile_d_num(LOOP_AVGDOWN_COPY,"avgDown_and_Copy_localMF");
 
    S_crse_MAC.ParallelCopy(crse_S_fine_MAC,0,scomp_flux,ncomp_flux);
    ParallelDescriptor::Barrier();
@@ -1219,7 +1219,7 @@ void NavierStokes::interp_and_Copy_localMF(
 
    }// mfi
 } //omp
-   ns_reconcile_d_num(LOOP_INTERP_COPY);
+   ns_reconcile_d_num(LOOP_INTERP_COPY,"interp_and_Copy_localMF");
   } // dir=0..sdim-1
 
   delete coarse_den_fine;
@@ -1310,7 +1310,7 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
 
      }// mfi
 } //omp
-     ns_reconcile_d_num(LOOP_FILLBDRY_FLUX);
+     ns_reconcile_d_num(LOOP_FILLBDRY_FLUX,"sync_flux_var");
 
      if (sync_iter==0) {
       flux_hold_mf->FillBoundary(geom.periodicity()); 
@@ -1495,7 +1495,7 @@ void NavierStokes::interp_flux_localMF(
 
    }// mfi
 } //omp
-   ns_reconcile_d_num(LOOP_INTERP_FLUX);
+   ns_reconcile_d_num(LOOP_INTERP_FLUX,"interp_flux_localMF");
   } // dir=0..sdim-1
 
   delete coarse_mask_sem_fine;
@@ -1744,7 +1744,7 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
 
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_ELASTIC_FORCE);
+  ns_reconcile_d_num(LOOP_ELASTIC_FORCE,"CELL_GRID_ELASTIC_FORCE");
  } // force_dir = 0..sdim-1
 
 } // end subroutine CELL_GRID_ELASTIC_FORCE
@@ -2028,7 +2028,7 @@ void NavierStokes::init_divup_cell_vel_cell(
      &project_option);
    } // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_PRES_CELL_TO_MAC);
+   ns_reconcile_d_num(LOOP_PRES_CELL_TO_MAC,"init_divup_cell_vel_cell");
   } // dir=0..sdim-1
 
    // 0=use_face_pres=VALID_PEDGE
@@ -2229,7 +2229,7 @@ void NavierStokes::init_divup_cell_vel_cell(
 
    }   // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_VEL_MAC_TO_CELL);
+   ns_reconcile_d_num(LOOP_VEL_MAC_TO_CELL,"init_divup_cell_vel_cell");
 
   }  // isweep=1,2
 
@@ -2884,7 +2884,7 @@ void NavierStokes::increment_face_velocity(
        &project_option);
     } // mfi
 } // omp
-    ns_reconcile_d_num(LOOP_VEL_CELL_TO_MAC);
+    ns_reconcile_d_num(LOOP_VEL_CELL_TO_MAC,"increment_face_velocity");
    } // tileloop
 
    if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) { 
@@ -3091,7 +3091,7 @@ void NavierStokes::project_to_rigid_velocity(Vector<blobclass> blobdata) {
      &num_colors);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_PROJECT_TO_RIGID_VEL);
+  ns_reconcile_d_num(LOOP_PROJECT_TO_RIGID_VEL,"project_to_rigid_velocity");
 
  } // dir=0..sdim-1
 
@@ -3174,7 +3174,7 @@ void NavierStokes::increment_KE(Real beta) {
    ARLIM(maskcoef.loVect()),ARLIM(maskcoef.hiVect()));
  }   // mfi
 } // omp
- ns_reconcile_d_num(LOOP_INC_TEMP);
+ ns_reconcile_d_num(LOOP_INC_TEMP,"increment_KE");
 
 } // subroutine increment_KE
 
@@ -3493,7 +3493,7 @@ void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
    &ncomp_dendest);
  }   // mfi
 } // omp
- ns_reconcile_d_num(LOOP_VELMAC_TO_CELL_GENERAL);
+ ns_reconcile_d_num(LOOP_VELMAC_TO_CELL_GENERAL,"VELMAC_TO_CELL");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete face_velocity[dir]; 
@@ -3839,7 +3839,7 @@ void NavierStokes::doit_gradu_tensor(
      &simple_AMR_BC_flag_viscosity);
    } // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_FACE_GRADIENTS);
+   ns_reconcile_d_num(LOOP_FACE_GRADIENTS,"doit_gradu_tensor");
   } // tileloop=0..1
  } // dir
 
@@ -3966,7 +3966,7 @@ void NavierStokes::FillBoundaryTENSOR(
   macfab.copy(localfab,localfab.box(),0,localfab.box(),0,1);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_FILL_BOUNDARY_TENSOR);
+ ns_reconcile_d_num(LOOP_FILL_BOUNDARY_TENSOR,"FillBoundaryTENSOR");
 
  macmf->FillBoundary(geom.periodicity()); 
 
@@ -4001,7 +4001,7 @@ void NavierStokes::FillBoundaryTENSOR(
   cellfab.copy(localfab,localfab.box(),0,localfab.box(),sc,1);
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_OVERRIDDE_FAB_TYPE);
+ ns_reconcile_d_num(LOOP_OVERRIDDE_FAB_TYPE,"FillBoundaryTENSOR");
 
  delete macmf;
 
@@ -4392,7 +4392,7 @@ void NavierStokes::apply_pressure_grad(
      &homflag);
    } // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_CROSSTERM);
+   ns_reconcile_d_num(LOOP_CROSSTERM,"apply_pressure_grad");
 
    int debug_id=30+spectral_loop*4+tileloop+10*dir;
    show_norm2(localMF[gp_mf+dir-1],0,
@@ -4662,7 +4662,7 @@ void NavierStokes::apply_pressure_grad(
    }  // mfi
 } // omp
 
-   ns_reconcile_d_num(LOOP_PRESGRAD_MAC);
+   ns_reconcile_d_num(LOOP_PRESGRAD_MAC,"apply_pressure_grad");
 
   } // tileloop
   } // dir
@@ -5155,7 +5155,7 @@ void NavierStokes::make_physics_vars(int project_option) {
    &level,&finest_level);
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_SEMIREFINEVOF);
+ ns_reconcile_d_num(LOOP_SEMIREFINEVOF,"make_physics_vars");
 
  resize_levelset(2,LEVELPC_MF);
 
@@ -5335,7 +5335,7 @@ void NavierStokes::make_physics_vars(int project_option) {
     &finest_level);
   }  // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_INIT_PHYSICS_VARS);
+  ns_reconcile_d_num(LOOP_INIT_PHYSICS_VARS,"make_physics_vars");
  } // isweep
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
@@ -5385,7 +5385,7 @@ void NavierStokes::make_physics_vars(int project_option) {
      tecplot_debug(curvfab,xlo,fablo,fabhi,dx,dir,0,FACECOMP_CURV,
       1,interior_only);
     } // mfi
-    ns_reconcile_d_num(LOOP_TECPLOT_DEBUG_CURV_POSTPROC);
+    ns_reconcile_d_num(LOOP_TECPLOT_DEBUG_CURV_POSTPROC,"make_physics_vars");
 
    } // dir=0..sdim-1
 
@@ -5481,7 +5481,7 @@ void NavierStokes::solid_temperature() {
  
    } // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_INITSOLIDTEMP);
+   ns_reconcile_d_num(LOOP_INITSOLIDTEMP,"solid_temperature");
   } else
    amrex::Error("solidheat_flag invalid");
 
@@ -5587,7 +5587,7 @@ void NavierStokes::increment_potential_force() {
      ARLIM(facegrav.loVect()),ARLIM(facegrav.hiVect()) );
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_ADDGRAVITY);
+  ns_reconcile_d_num(LOOP_ADDGRAVITY,"increment_potential_force");
  }  // dir=0..sdim-1
 
 } // increment_potential_force
@@ -5764,7 +5764,7 @@ void NavierStokes::init_gravity_potential() {
      &isweep);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_INIT_POTENTIAL);
+  ns_reconcile_d_num(LOOP_INIT_POTENTIAL,"init_gravity_potential");
 
   if (isweep==0) {
 
@@ -6048,7 +6048,7 @@ void NavierStokes::process_potential_force_face(
     &local_project_option);
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_POTGRAD_TO_MAC);
+  ns_reconcile_d_num(LOOP_POTGRAD_TO_MAC,"process_potential_force_face");
  } // tileloop
  } // dir
  synchronize_flux_register(operation_flag,spectral_loop);
@@ -6275,7 +6275,7 @@ void NavierStokes::metrics_data(int ngrow) {
    &NS_geometry_coord);
  }  // mfi
 }  // omp
- ns_reconcile_d_num(LOOP_METRICS);
+ ns_reconcile_d_num(LOOP_METRICS,"metrics_data");
 
 } // subroutine metrics_data
 
@@ -6573,7 +6573,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 
    }  // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_RENORMALIZE_PRESCRIBE);
+   ns_reconcile_d_num(LOOP_RENORMALIZE_PRESCRIBE,"prescribe_solid_geometry");
 
    for (int tid=1;tid<thread_class::nthreads;tid++) {
     num_LS_extrap[0]+=num_LS_extrap[tid];
@@ -6734,7 +6734,7 @@ void NavierStokes::move_particles(
 
    }  // mfi
 } // omp
-   ns_reconcile_d_num(LOOP_MOVE_PARTICLE_CONTAINER);
+   ns_reconcile_d_num(LOOP_MOVE_PARTICLE_CONTAINER,"move_particles");
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     delete mac_velocity[dir];
@@ -6836,7 +6836,7 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
 
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_PURGEFLOTSAM);
+ ns_reconcile_d_num(LOOP_PURGEFLOTSAM,"truncate_VOF");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<num_materials;im++) {
@@ -7011,7 +7011,7 @@ void NavierStokes::output_triangles() {
     amrex::Error("particles_flag invalid in output_triangles");
 
  }  // mfi
- ns_reconcile_d_num(LOOP_PARTICLE_GRID);
+ ns_reconcile_d_num(LOOP_PARTICLE_GRID,"output_triangles");
 
  delete maskplot;
 
@@ -7817,7 +7817,7 @@ void NavierStokes::output_zones(
       &do_slice,
       &visual_nddata_format);
     }  // mfi
-    ns_reconcile_d_num(LOOP_CELLGRID);
+    ns_reconcile_d_num(LOOP_CELLGRID,"output_zones");
 
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=num_materials)) {
@@ -8059,7 +8059,7 @@ void NavierStokes::output_zones(
     }  // mfi
 } //omp
      // declared in: NavierStokes.cpp
-    ns_reconcile_d_num(LOOP_CELLGRID_AS_IS);
+    ns_reconcile_d_num(LOOP_CELLGRID_AS_IS,"output_zones");
     ParallelDescriptor::Barrier();
 
    } else if (grids_per_level_local==0) {
@@ -8236,7 +8236,7 @@ void NavierStokes::Sanity_output_zones(
      &gridno,
      &NS_geometry_coord);
    }  // mfi
-   ns_reconcile_d_num(LOOP_CELLGRID_SANITY);
+   ns_reconcile_d_num(LOOP_CELLGRID_SANITY,"Sanity_output_zones");
 
    delete datamfminus;
 
@@ -8866,7 +8866,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     &partial_cmof_stencil_at_walls);
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_SLOPE_RECON);
+ ns_reconcile_d_num(LOOP_SLOPE_RECON,"VOF_Recon");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<num_materials;im++) {
@@ -9190,7 +9190,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
    &bfact_fine);
  }  // mfi
 } // omp
- ns_reconcile_d_num(LOOP_BUILD_MASKSEM);
+ ns_reconcile_d_num(LOOP_BUILD_MASKSEM,"build_masksem");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
   for (int im=0;im<num_materials;im++)
@@ -9336,7 +9336,7 @@ MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
  
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_EOS_PRESSURE);
+ ns_reconcile_d_num(LOOP_EOS_PRESSURE,"derive_EOS_pressure");
  
  delete denmf;
 
@@ -9444,7 +9444,7 @@ void NavierStokes::level_getshear(
 
  } //mfi
 } // omp
- ns_reconcile_d_num(LOOP_GETSHEAR);
+ ns_reconcile_d_num(LOOP_GETSHEAR,"level_getshear");
 
 } // end subroutine level_getshear
 
@@ -9566,7 +9566,7 @@ void NavierStokes::init_pressure_error_indicator() {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_PRESSURE_INDICATOR);
+ ns_reconcile_d_num(LOOP_PRESSURE_INDICATOR,"init_pressure_error_indicator");
 
  delete presmf;
  delete vortmf;
@@ -9733,7 +9733,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
 
  } // mfi
 } // omp
- ns_reconcile_d_num(LOOP_ADVECTIVE_PRESSURE);
+ ns_reconcile_d_num(LOOP_ADVECTIVE_PRESSURE,"init_advective_pressure");
 
   // CELL_SOUND_MF
   // coeff_avg,padvect_avg
@@ -10123,7 +10123,7 @@ void NavierStokes::getStateVISC() {
       &ncomp_visc);
   } //mfi
 } // omp
-  ns_reconcile_d_num(LOOP_DERVISCOSITY);
+  ns_reconcile_d_num(LOOP_DERVISCOSITY,"getStateVISC");
 
   if ((les_model[im]==1)||
       (viscconst_eddy_wall[im]>0.0)||
@@ -10199,7 +10199,7 @@ void NavierStokes::getStateVISC() {
       &ncomp_visc);
    } //mfi
 } // omp
-   ns_reconcile_d_num(LOOP_DERTURBVISC);
+   ns_reconcile_d_num(LOOP_DERTURBVISC,"getStateVISC");
 
   } else if ((les_model[im]==0)&&
              (viscconst_eddy_wall[im]==0.0)&&
@@ -10310,7 +10310,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
      &ngrow);
   } //mfi
 } // omp
-  ns_reconcile_d_num(LOOP_DERCONDUCTIVITY);
+  ns_reconcile_d_num(LOOP_DERCONDUCTIVITY,"getStateCONDUCTIVITY");
 
  } // im=0..num_materials-1
 
@@ -10505,7 +10505,7 @@ void NavierStokes::getState_tracemag(int idx) {
     elastic_viscosity.dataPtr());
   } //mfi
 } // omp
-  ns_reconcile_d_num(LOOP_DERMAGTRACE);
+  ns_reconcile_d_num(LOOP_DERMAGTRACE,"getState_tracemag");
 
   if (allocate_tensor==0) {
    // do nothing
