@@ -1380,7 +1380,9 @@ void apply_pressure_grad(
     void init_FSI_GHOST_MAC_MF_ALL_predict();
     void init_FSI_GHOST_MAC_MF_predict();
 
-    void init_FSI_GHOST_MAC_MF_ALL(const std::string& caller_string);
+    void init_FSI_GHOST_MAC_MF_ALL(
+      int renormalize_only,
+      const std::string& caller_string);
 
     void init_FSI_GHOST_MAC_MF(int dealloc_history);
 

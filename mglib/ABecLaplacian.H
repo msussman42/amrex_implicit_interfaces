@@ -69,7 +69,7 @@ public:
      int presmooth,int postsmooth,
      int use_PCG,
      int level, 
-     int caller_id);
+     const std::string& caller_string);
 
     void CG_solve(
       int& cg_cycles_out,

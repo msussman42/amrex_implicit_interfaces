@@ -6309,11 +6309,15 @@ void NavierStokes::metrics_data_min_max(int caller_id) {
 //                 after projection.
 //
 void NavierStokes::prescribe_solid_geometryALL(Real time,
-  int renormalize_only,int local_truncate,int caller_id) {
+  int renormalize_only,int local_truncate,
+  const std::string& caller_string) {
 
  if (level!=0)
   amrex::Error("level should be 0 in prescribe_solid_geometryALL");
  int finest_level=parent->finestLevel();
+
+ std::string local_caller_string="prescribe_solid_geometryALL";
+ local_caller_string=caller_string+local_caller_string;
 
  if (local_truncate==1) {
   Vector<Real> delta_mass_all;
@@ -6346,12 +6350,8 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   if (std::abs(time-cur_time_slab)>1.0e-8)
    amrex::Error("prescribe solid at the new time");
 
-  int local_caller_id=
-   CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_RENONLY0_VIA_OTHERS+
-   caller_id;
-
    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
-  init_FSI_GHOST_MAC_MF_ALL(local_caller_id);
+  init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
  
  } else if (renormalize_only==1) {
   // do nothing

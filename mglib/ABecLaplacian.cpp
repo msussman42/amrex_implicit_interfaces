@@ -2296,7 +2296,7 @@ ABecLaplacian::pcg_solve(
     int presmooth,int postsmooth,
     int use_PCG,
     int level,
-    int caller_id) {
+    const std::string& caller_string) {
 
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::pcg_solve";
@@ -2367,7 +2367,7 @@ ABecLaplacian::pcg_solve(
 
  if (CG_verbose>2) {
   std::cout << "end of pcg_solve level=" << level << '\n';
-  std::cout << "end of pcg_solve caller_id=" << caller_id << '\n';
+  std::cout << "end of pcg_solve caller_string=" << caller_string << '\n';
  }
 
 } // end subroutine pcg_solve
