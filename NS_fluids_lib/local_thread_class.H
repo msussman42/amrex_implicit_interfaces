@@ -21,7 +21,8 @@ class thread_class {
   static double number_mfiter_loops;
   static std::vector<double> tile_d_numPts;
   static double boxarray_d_numPts;
-  static void reconcile_d_numPts(int caller_loop_id);
+  static void reconcile_d_numPts(int caller_loop_id,
+    const std::string& caller_string);
 };
 
 #endif /*LOCAL_THREAD_CLASS_H*/

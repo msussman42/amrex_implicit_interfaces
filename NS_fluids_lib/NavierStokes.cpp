@@ -6876,9 +6876,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
   } // mfi
 } // omp
   ns_reconcile_d_num(LOOP_WALLFUNC_PRED,"init_FSI_GHOST_MAC_MF_predict"); 
-           //thread_class::sync_tile_d_numPts(),
-           //ParallelDescriptor::ReduceRealSum
-	   //thread_class::reconcile_d_numPts(caller_loop_id)
+   //thread_class::sync_tile_d_numPts(),
+   //ParallelDescriptor::ReduceRealSum
+   //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
 
  } // data_dir=0..sdim-1
 
@@ -6910,7 +6910,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
 //  NavierStokes::nonlinear_advection (caller_id=40)
 //    (if read_from_CAD()==1)
 //
-void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
+void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
+  int renormalize_only,
+  const std::string& caller_string) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -6918,8 +6920,11 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
 
  setup_integrated_quantities();
  int fast_mode=1;
- int local_caller_startup_id=CALLED_FROM_FSI_GHOST_MAC;
- volWgtSumALL(local_caller_startup_id,fast_mode);
+
+ std::string local_caller_string="init_FSI_GHOST_MAC_MF_ALL";
+ local_caller_string=caller_string+local_caller_string;
+
+ volWgtSumALL(local_caller_string,fast_mode);
 
  getStateCONDUCTIVITY_ALL();
 
@@ -6938,6 +6943,15 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(int caller_id) {
   //
   //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
+ std::string pattern="nonlinear_advection";
+ std::size_t found_advect=local_caller_string.find(pattern);
+ int called_from_advect=((found_advect!=std::string::npos) ? 1 : 0);
+
+ pattern="prescribe_solid_geometryALL";
+ std::size_t found_prescribe=local_caller_string.find(pattern);
+ int called_from_prescribe=((found_prescribe!=std::string::npos) ? 1 : 0);
+
+ FIX ME
  if (caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_RENONLY0_VIA_OTHERS+
 	        CALLED_FROM_ADVECT) {
 
