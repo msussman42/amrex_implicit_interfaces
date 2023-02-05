@@ -37,13 +37,17 @@ extern void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 // spectral_override==0 => always do low order average down.
 // grid_type=-1,..,5
 void
-NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
+NavierStokes::avgDownEdge(
+ int grid_type,MultiFab& S_crse,MultiFab& S_fine,
  int scomp,int ncomp_input,int spectral_override,
  const std::string& caller_string) {
 
  if (1==0) {
-  std::cout << "avgDownEdge caller_string= " << caller_string << '\n';
+  std::cout << "avgDownEdge caller_string= " << caller_string << 
+   " grid_type= " << grid_type << '\n';
  }
+ std::string local_caller_string="avgDownEdge";
+ local_caller_string=caller_string+local_caller_string;
 
  if ((grid_type>=-1)&&(grid_type<=5)) {
   // do nothing
@@ -60,14 +64,14 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
  debug_ngrow(VOLUME_MF,0,700);
  debug_ixType(VOLUME_MF,-1,VOLUME_MF);
  fine_lev.resize_metrics(1);
- fine_lev.debug_ngrow(VOLUME_MF,0,700);
- fine_lev.debug_ixType(VOLUME_MF,-1,VOLUME_MF);
+ fine_lev.debug_ngrow(VOLUME_MF,0,local_caller_string);
+ fine_lev.debug_ixType(VOLUME_MF,-1,local_caller_string);
 
- debug_ixType_raw(&S_fine,grid_type,caller_id);
- debug_ixType_raw(&S_crse,grid_type,caller_id);
+ debug_ixType_raw(&S_fine,grid_type,local_caller_string);
+ debug_ixType_raw(&S_crse,grid_type,local_caller_string);
 
- fine_lev.debug_boxArray(&S_fine,grid_type,caller_id);
- debug_boxArray(&S_crse,grid_type,caller_id);
+ fine_lev.debug_boxArray(&S_fine,grid_type,local_caller_string);
+ debug_boxArray(&S_crse,grid_type,local_caller_string);
 
  int ncomp=S_crse.nComp();
  if ((S_crse.nComp()!=ncomp)||(S_fine.nComp()!=ncomp)) {
@@ -107,7 +111,7 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
  DistributionMapping crse_dmap=fdmap;
  MultiFab crse_S_fine_MAC(crse_S_fine_BA_MAC,crse_dmap,ncomp,0,
    MFInfo().SetTag("crse_S_fine_MAC"),FArrayBoxFactory());
- debug_ixType_raw(&crse_S_fine_MAC,grid_type,caller_id);
+ debug_ixType_raw(&crse_S_fine_MAC,grid_type,local_caller_string);
 
  ParallelDescriptor::Barrier();
 
@@ -212,17 +216,21 @@ NavierStokes::avgDownEdge(int grid_type,MultiFab& S_crse,MultiFab& S_fine,
 void
 NavierStokes::avgDownMac() {
 
+ std::string local_caller_string="avgDownMac";
+
  int ncomp_edge=-1;
  int scomp=0;
   // spectral_override==0 => always do low order average down.
  int spectral_override=1;
  avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM, 
-   spectral_override,14);
+   spectral_override,local_caller_string);
 
 }  // end subroutine avgDownMac
 
 // spectral_override==0 => always do low order average down.
 void NavierStokes::avgDownMacState(int spectral_override) {
+
+ std::string local_caller_string="avgDownMacState";
 
  int finest_level = parent->finestLevel();
 
@@ -246,8 +254,8 @@ void NavierStokes::avgDownMacState(int spectral_override) {
       (S_fine.nComp()!=ncomp_edge))
    amrex::Error("S_crse.nComp() or S_fine.nComp() invalid");
 
-  int caller_id=1;
-  avgDownEdge(dir,S_crse,S_fine,scomp,ncomp_edge,spectral_override,caller_id);
+  avgDownEdge(dir,S_crse,S_fine,scomp,ncomp_edge,spectral_override,
+    local_caller_string);
  }  // dir=0..sdim-1
 
 }  // end subroutine avgDownMacState

@@ -178,6 +178,9 @@ public:
       int clearval, int tagval, 
       Real time,int n_error_buf=0,int ngrow=0);
 
+    int pattern_test(const std::string& source,
+      const std::string& pattern);
+
     void deallocate_potential_forceALL();
     void process_potential_forceALL(int potgrad_surface_tension_mask);
     void process_potential_force_face(int potgrad_surface_tension_mask);
@@ -433,10 +436,14 @@ protected:
     void SDC_setup_step();
     void SDC_setup();
 
-    void debug_ngrow(int idxMF,int ngrow,int counter);
-    void debug_ixType(int idxMF,int grid_type,int counter);
-    void debug_ixType_raw(MultiFab* mf,int grid_type,int counter);
-    void debug_boxArray(MultiFab* mf,int grid_type,int counter);
+    void debug_ngrow(int idxMF,int ngrow,
+      const std::string& caller_string);
+    void debug_ixType(int idxMF,int grid_type,
+      const std::string& caller_string);
+    void debug_ixType_raw(MultiFab* mf,int grid_type,
+      const std::string& caller_string);
+    void debug_boxArray(MultiFab* mf,int grid_type,
+      const std::string& caller_string);
 
     void avgDown_tag_localMF(int idxMF);
     void level_avgDown_tag(MultiFab& S_crse,MultiFab& S_fine);

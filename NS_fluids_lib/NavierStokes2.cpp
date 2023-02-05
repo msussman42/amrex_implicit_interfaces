@@ -1509,43 +1509,51 @@ void NavierStokes::interp_flux_localMF(
 
 // interpolate from level+1 to level.
 // spectral_override==0 => always do low order average down.
-void NavierStokes::avgDownEdge_localMF(int idxMF,int scomp,int ncomp,
+void NavierStokes::avgDownEdge_localMF(
+  int idxMF,int scomp,int ncomp,
   int start_grid_type,int n_grid_type,
-  int spectral_override,int caller_id) {
+  int spectral_override,
+  const std::string& caller_string) {
 
  if (1==0) {
-  std::cout << "avgDownEdge_localMF caller_id= " << caller_id << '\n';
+  std::cout << "avgDownEdge_localMF caller_string= " << 
+   caller_string << " start_grid_type= " << start_grid_type <<
+   " n_grid_type= " << n_grid_type << '\n';
  }
+
+ std::string local_caller_string="avgDownEdge_localMF";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
 
   int local_grid_type=start_grid_type;
-  int caller_id_alt=4;
 
   if (n_grid_type==-1) {
-   debug_ngrow(idxMF,0,1000+local_grid_type);
-   ns_fine.debug_ngrow(idxMF,0,1500+local_grid_type);
+   debug_ngrow(idxMF,0,local_caller_string);
+   ns_fine.debug_ngrow(idxMF,0,local_caller_string);
    MultiFab& S_crse=*localMF[idxMF];
    MultiFab& S_fine=*ns_fine.localMF[idxMF];
    avgDownEdge(local_grid_type,
 	S_crse,S_fine,
 	scomp,ncomp,
-	spectral_override,caller_id_alt);
+	spectral_override,
+        local_caller_string);
   } else if ((n_grid_type==1)||(n_grid_type==AMREX_SPACEDIM)) {
 
    for (local_grid_type=start_grid_type;
         local_grid_type<start_grid_type+n_grid_type;
         local_grid_type++) {
-    debug_ngrow(idxMF+local_grid_type,0,1000+local_grid_type);
-    ns_fine.debug_ngrow(idxMF+local_grid_type,0,1500+local_grid_type);
+    debug_ngrow(idxMF+local_grid_type,0,local_caller_string);
+    ns_fine.debug_ngrow(idxMF+local_grid_type,0,local_caller_string);
     MultiFab& S_crse=*localMF[idxMF+local_grid_type];
     MultiFab& S_fine=*ns_fine.localMF[idxMF+local_grid_type];
     avgDownEdge(local_grid_type,
 	S_crse,S_fine,
 	scomp,ncomp,
-	spectral_override,caller_id_alt);
+	spectral_override,
+        local_caller_string);
    } // local_grid_type=start_grid_type...start_grid_type+n_grid_type-1
   } else
    amrex::Error("n_grid_type invalid");

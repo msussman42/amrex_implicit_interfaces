@@ -6056,7 +6056,8 @@ NavierStokes::setTimeLevel (Real time,Real& dt)
 } //end subroutine setTimeLevel
 
 
-void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
+void NavierStokes::debug_ngrow(int idxMF,int ngrow,
+  const std::string& caller_string) {
 
  if ((idxMF<0)||(idxMF>=MAX_NUM_LOCAL_MF))
   amrex::Error("idxMF invalid");
@@ -6088,18 +6089,18 @@ void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
  int mfgrow=localMF_grow[idxMF];
 
  if (mfgrow<ngrow) {
-  std::cout << "counter= " << counter << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
   std::cout << "idxMF= " << idxMF << '\n';
   std::cout << "mfgrow= " << mfgrow << " expected grow= " <<
    ngrow << '\n';
  }
 
  if (! mf->ok()) {
-  std::cout << "counter= " << counter << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
   std::cout << "idxMF= " << idxMF << '\n';
   amrex::Error("mf not ok");
  } else if ((mf->nGrow()<ngrow)||(mfgrow<ngrow)) {
-  std::cout << "counter= " << counter << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
   std::cout << "idxMF= " << idxMF << '\n';
   std::cout << "mf->ngrow= " << mf->nGrow() << " expected grow= " <<
    ngrow << '\n';
@@ -6112,7 +6113,8 @@ void NavierStokes::debug_ngrow(int idxMF,int ngrow,int counter) {
 
 
 
-void NavierStokes::debug_ixType(int idxMF,int grid_type,int counter) {
+void NavierStokes::debug_ixType(int idxMF,int grid_type,
+  const std::string& caller_string) {
 
  if ((idxMF<0)||(idxMF>=MAX_NUM_LOCAL_MF))
   amrex::Error("idxMF invalid");
@@ -6143,21 +6145,22 @@ void NavierStokes::debug_ixType(int idxMF,int grid_type,int counter) {
  MultiFab* mf=localMF[idxMF];
 
  if (! mf->ok()) {
-  std::cout << "counter= " << counter << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
   std::cout << "idxMF= " << idxMF << '\n';
   amrex::Error("mf not ok");
  } else if (mf->ok()) {
-  debug_ixType_raw(mf,grid_type,counter);
+  debug_ixType_raw(mf,grid_type,caller_string);
  } else
   amrex::Error("mf->ok corrupt");
 
 } // end subroutine debug_ixType
 
 
-void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
+void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,
+ const std::string& caller_string) {
 
  if (! mf->ok()) {
-  std::cout << "counter= " << counter << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
   amrex::Error("mf not ok");
  } else if (mf->ok()) {
 
@@ -6209,10 +6212,11 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,int counter) {
 
 
 
-void NavierStokes::debug_boxArray(MultiFab* mf,int grid_type,int counter) {
+void NavierStokes::debug_boxArray(MultiFab* mf,int grid_type,
+ const std::string& caller_string) {
 
  if (! mf->ok()) {
-  std::cout << "counter= " << counter << '\n';
+  std::cout << "caller_string= " << caller_string << '\n';
   amrex::Error("mf not ok");
  } else if (mf->ok()) {
   IndexType compare_typ;
@@ -6888,6 +6892,13 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
 
 } // end subroutine init_FSI_GHOST_MAC_MF_predict
 
+int NavierStokes::pattern_test(const std::string& source,
+ const std::string& pattern) {
+
+ std::size_t local_found=source.find(pattern);
+ int return_val=((local_found<std::string::npos) ? 1 : 0);
+ return return_val;
+}
 
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
   int renormalize_only,
@@ -6922,17 +6933,10 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
   //
   //    angle = angle measured at the solid normal probe in the fluid
   //    region   grad LS_solid dot grad LS_fluid = cos(theta) ?
- std::string pattern="nonlinear_advection";
- std::size_t found_advect=local_caller_string.find(pattern);
- int called_from_advect=((found_advect!=std::string::npos) ? 1 : 0);
-
- pattern="prescribe_solid_geometryALL";
- std::size_t found_prescribe=local_caller_string.find(pattern);
- int called_from_prescribe=((found_prescribe!=std::string::npos) ? 1 : 0);
 
  if (renormalize_only==0) {
-  if (called_from_advect==1) {
-   if (called_from_prescribe==1) {
+  if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
+   if (pattern_test(local_caller_string,"prescribe_solid_geometryALL")==1) {
 
     for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
 
@@ -7001,14 +7005,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
      } else
       amrex::Error("visual_WALLVEL_plot_int invalid");
     } //data_dir=0..sdim-1
-   } else if (called_from_prescribe==0) {
-    //do nothing
-   } else
-    amrex::Error("called_from_prescribe invalid\n");
-  } else if (called_from_advect==0) {
-   //do nothing
-  } else
-   amrex::Error("called_from_advect invalid\n");
+   } // called from prescribe_solid_geometryALL?
+  } // called from nonlinear_advection?
  } else if (renormalize_only==1) {
   //do nothing
  } else
@@ -10587,7 +10585,6 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  } // scomp_extrap=0..ENUM_NUM_TENSOR_TYPE-1
 
  if (1==0) {
-  int caller_id=10+flux_grid_type;
   writeSanityCheckData(
    "FLUX_MF",
    "T11,T12,T22,T33,T13,T23",
@@ -20729,12 +20726,12 @@ void NavierStokes::DumpProcNum() {
  ns_reconcile_d_num(LOOP_DUMPPROCNUM,"DumpProcNum");
 }
 
-// called from: estTimeStep (caller_id=0,1,2)
-//              sum_integrated_quantities (caller_id=3) 
+// called from: estTimeStep 
+//              sum_integrated_quantities 
 void NavierStokes::MaxAdvectSpeedALL(
   Real& dt_min,
   Real* vel_max_estdt,
-  int caller_id) {
+  const std::string& caller_string) {
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -20774,7 +20771,7 @@ void NavierStokes::MaxAdvectSpeedALL(
   ns_level.MaxAdvectSpeed(
     local_dt_min,
     local_vel_max_estdt,
-    caller_id); 
+    caller_string); 
 
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
    vel_max_estdt[dir] = std::max(vel_max_estdt[dir],local_vel_max_estdt[dir]);
@@ -20786,15 +20783,18 @@ void NavierStokes::MaxAdvectSpeedALL(
 } // end subroutine MaxAdvectSpeedALL
 
 // MaxAdvectSpeedALL called from: 
-//     estTimeStep (caller_id=0,1,2)
-//     sum_integrated_quantities (caller_id=3) 
-// vel_max_estdt[0,1,2]= max vel in direction + extra cell centered velocity
+//     estTimeStep 
+//     sum_integrated_quantities
+// vel_max_estdt= max vel in direction + extra cell centered velocity
 //   considerations if spectral element method.
 //   vel_max_estdt[sdim]=max c^2
 void NavierStokes::MaxAdvectSpeed(
  Real& dt_min,
  Real* vel_max_estdt,
- int caller_id) {
+ const std::string& caller_string) {
+
+ std::string local_caller_string="MaxAdvectSpeed";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
 
@@ -20821,7 +20821,7 @@ void NavierStokes::MaxAdvectSpeed(
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
  }
 
- MultiFab* distmf=getStateDist(2,cur_time_slab,14);
+ MultiFab* distmf=getStateDist(2,cur_time_slab,local_caller_string);
   // num_materials*num_state_material
  MultiFab* denmf=getStateDen(1,cur_time_slab);  
  MultiFab* vofmf=
@@ -20866,11 +20866,13 @@ void NavierStokes::MaxAdvectSpeed(
   
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-  if ((caller_id==0)||   //computeInitialDt
-      (caller_id==3)) {  //sum_integrated_quantities
+  if (pattern_test(local_caller_string,"computeInitialDt")==1) {
    // do nothing
-  } else if ((caller_id==1)||  //computeNewDt
-             (caller_id==2)) { //do_the_advance
+  } else if (pattern_test(local_caller_string,"sum_integrated_quantities")==1) {
+   // do nothing
+  } else if 
+   ((pattern_test(local_caller_string,"computeNewDt")==1)|| 
+    (pattern_test(local_caller_string,"do_the_advance")==1)) {
 
    if ((cur_time_slab>prev_time_slab)&&
        (upper_slab_time>lower_slab_time)&&
@@ -20885,7 +20887,7 @@ void NavierStokes::MaxAdvectSpeed(
     amrex::Error("slab times are incorrect");
 
   } else
-   amrex::Error("caller_id invalid");
+   amrex::Error("local_caller_string invalid");
 
    //ngrow=0
    //Umac_Type
@@ -21031,13 +21033,17 @@ void NavierStokes::MaxAdvectSpeed(
 
 } // subroutine MaxAdvectSpeed
 
-// called from: do_the_advance (caller_id==2)
-//              computeNewDt (caller_id==1, nsteps>0) 
-//              computeInitialDt (caller_id==0)
+// called from: do_the_advance 
+//              computeNewDt (nsteps>0) 
+//              computeInitialDt 
 // fixed_dt==0.0 if dt not prescribed.
 // fixed_dt>0.0 if dt prescribed.
 //
-Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
+Real NavierStokes::estTimeStep (Real local_fixed_dt,
+  const std::string& caller_string) {
+
+ std::string local_caller_string="estTimeStep";
+ local_caller_string=caller_string+local_caller_string;
 
  Real return_dt=0.0;
 
@@ -21068,7 +21074,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,int caller_id) {
 
   } else if (fixed_dt_velocity==0.0) {
 
-   MaxAdvectSpeedALL(dt_min,u_max_estdt,caller_id);
+   MaxAdvectSpeedALL(dt_min,u_max_estdt,local_caller_string);
 
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
@@ -21192,6 +21198,8 @@ void NavierStokes::post_regrid (int lbase,
 void NavierStokes::computeNewDt (int finest_level,
   Real& dt,Real stop_time) {
 
+ std::string local_caller_string="computeNewDt";
+
  int nsteps=parent->levelSteps(0);
 
  if (nsteps>0) {
@@ -21225,8 +21233,7 @@ void NavierStokes::computeNewDt (int finest_level,
 
   if (level==0) {
 
-   int caller_id=1;
-   Real newdt=estTimeStep(local_fixed_dt,caller_id);
+   Real newdt=estTimeStep(local_fixed_dt,local_caller_string);
 
    if ((local_fixed_dt==0.0)&&(fixed_dt_velocity==0.0)) {
     if  (newdt>local_change_max*dt)
@@ -21283,6 +21290,8 @@ void NavierStokes::computeNewDt (int finest_level,
 void NavierStokes::computeInitialDt (int finest_level,
    Real& dt,Real stop_time) {
 
+ std::string local_caller_string="computeInitialDt";
+
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "start: computeInitialDt \n";
@@ -21312,8 +21321,8 @@ void NavierStokes::computeInitialDt (int finest_level,
   amrex::Error("ns_time_order invalid");
  }
 
- int caller_id=0;
- Real newdt=init_shrink*estTimeStep(fixed_dt_init,caller_id)/shrink_factor;
+ Real newdt=
+   init_shrink*estTimeStep(fixed_dt_init,local_caller_string)/shrink_factor;
 
  Real dt_0 = newdt;
 
@@ -21347,6 +21356,8 @@ NavierStokes::okToContinue ()
 
 void
 NavierStokes::post_timestep (Real stop_time) {
+
+ std::string local_caller_string="post_timestep";
 
  int max_level = parent->maxLevel();
 
@@ -21382,8 +21393,7 @@ NavierStokes::post_timestep (Real stop_time) {
    if ( (sum_interval_trigger==1)||
         (visual_drag_plot_int_trigger==1)||
         (stop_time-upper_slab_time<1.0E-8) ) {
-    int caller_startup_id=CALLED_FROM_POST_TIMESTEP;
-    sum_integrated_quantities(caller_startup_id,stop_time);
+    sum_integrated_quantities(local_caller_string,stop_time);
    }
   } else if (((sum_interval==0)||
 	      (sum_interval==-1))&&
@@ -21409,6 +21419,8 @@ NavierStokes::post_timestep (Real stop_time) {
 void
 NavierStokes::post_init (Real stop_time)
 {
+
+ std::string local_caller_string="post_init";
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
@@ -21470,8 +21482,7 @@ NavierStokes::post_init (Real stop_time)
   int sum_interval_local=sum_interval;
 
   if (sum_interval_local > 0) {
-     int caller_startup_id=CALLED_FROM_POST_INIT;
-     sum_integrated_quantities(caller_startup_id,stop_time);
+     sum_integrated_quantities(local_caller_string,stop_time);
   }
 
   ParallelDescriptor::Barrier();
@@ -21545,18 +21556,18 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
 } // end subroutine matrix_solveCPP
 
 //called from: NavierStokes::sum_integrated_quantities (NS_setup.cpp)
-// caller_startup_id==CALLED_FROM_POST_TIMESTEP 
-//   if sum_integrated_quantities called from post_timestep
-// caller_startup_id==CALLED_FROM_POST_INIT  
-//   if sum_integrated_quantities called from post_init
-// caller_startup_id==CALLED_FROM_POST_RESTART
-//   if sum_integrated_quantities called from post_restart
-// caller_startup_id==CALLED_FROM_FSI_GHOST_MAC 
-//   if called from init_FSI_GHOST_MAC_MF_ALL
-// caller_startup_id==CALLED_FROM_ADVECT 
+//   sum_integrated_quantities called from post_timestep or
+//   if sum_integrated_quantities called from post_init or
+//   if sum_integrated_quantities called from post_restart or
+//   if called from init_FSI_GHOST_MAC_MF_ALL or
 //   if called from nonlinear_advection
 void
-NavierStokes::volWgtSumALL(int caller_startup_id,int fast_mode) {
+NavierStokes::volWgtSumALL(
+  const std::string& caller_string,
+  int fast_mode) {
+
+ std::string local_caller_string="volWgtSumALL";
+ local_caller_string=caller_string+local_caller_string;
 
  int finest_level=parent->finestLevel();
  NavierStokes& ns_fine = getLevel(finest_level);
@@ -21590,35 +21601,29 @@ NavierStokes::volWgtSumALL(int caller_startup_id,int fast_mode) {
   // variables.
   // in: volWgtSumALL
   //
- if (caller_startup_id==CALLED_FROM_POST_TIMESTEP) { 
-  //sum_integrated_quant. call from post_timestep
+ if (pattern_test(local_caller_string,"post_timestep")==1) {
   // do nothing
- } else if (caller_startup_id==CALLED_FROM_POST_INIT) { 
-  //sum_integrated_quant. call from post_init
+ } else if (pattern_test(local_caller_string,"post_init")==1) {
   // do nothing
- } else if (caller_startup_id==CALLED_FROM_POST_RESTART) { 
-   //sum_integrated_quand. call from post_restart
- } else if (caller_startup_id==CALLED_FROM_FSI_GHOST_MAC) { 
-  //this routine called directly from
-  //init_FSI_GHOST_MAC_MF_ALL
+ } else if (pattern_test(local_caller_string,"post_restart")==1) {
+  // do nothing
+ } else if (pattern_test(local_caller_string,"init_FSI_GHOST_MAC_MF_ALL")==1) {
+
   if (fast_mode==1) {
    // do nothing
   } else
    amrex::Error("expecting fast_mode==1");
 
- } else if (caller_startup_id==CALLED_FROM_ADVECT) { 
-  //this routine called from
-  //NavierStokes::nonlinear_advection()
+ } else if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
   // do nothing
  } else
-  amrex::Error("caller_startup_id invalid 21614");
+  amrex::Error("local_caller_string invalid 21614");
 
  allocate_levelset_ALL(2,LEVELPC_MF);
 
  if (fast_mode==0) {
   //make_physics_varsALL calls "init_gradu_tensor_and_material_visc_ALL"
-  make_physics_varsALL(project_option,caller_startup_id,
-	CALLED_FROM_VOLWGTSUMALL);
+  make_physics_varsALL(project_option,local_caller_string);
  } else if (fast_mode==1) {
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //responsibility of caller to issue commands,
@@ -21999,12 +22004,12 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
 } // end subroutine MaxPressureVelocity
 
 // called from 
-// writePlotFile   (caller_startup_id=CALLED_FROM_WRITE_PLOT_FILE)
-// post_init_state (caller_startup_id=CALLED_FROM_POST_INIT)
-// post_restart    (caller_startup_id=CALLED_FROM_POST_RESTART)
+// writePlotFile   
+// post_init_state 
+// post_restart   
 void
-NavierStokes::prepare_post_process(int caller_startup_id) {
-
+NavierStokes::prepare_post_process(const std::string& caller_string) {
+FIX ME
  if (level!=0)
   amrex::Error("level invalid prepare_post_process");
 
