@@ -6889,27 +6889,6 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_predict() {
 } // end subroutine init_FSI_GHOST_MAC_MF_predict
 
 
-
-// called from:
-//  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
-//    (caller_id=31,32,33,34,35,36,37)
-//
-//  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
-//    (caller_id=4)
-//
-//  NavierStokes::do_the_advance (prior to viscous diffusion)
-//    (caller_id=4)
-//
-//  NavierStokes::MaxAdvectSpeedALL (caller_id=1)
-//
-//  NavierStokes::sum_integrated_quantities
-//    (caller_id==5)
-//
-//  NavierStokes::prepare_post_process (caller_id=2)
-//
-//  NavierStokes::nonlinear_advection (caller_id=40)
-//    (if read_from_CAD()==1)
-//
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
   int renormalize_only,
   const std::string& caller_string) {
@@ -6951,101 +6930,97 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
  std::size_t found_prescribe=local_caller_string.find(pattern);
  int called_from_prescribe=((found_prescribe!=std::string::npos) ? 1 : 0);
 
- FIX ME
- if (caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETRY_RENONLY0_VIA_OTHERS+
-	        CALLED_FROM_ADVECT) {
+ if (renormalize_only==0) {
+  if (called_from_advect==1) {
+   if (called_from_prescribe==1) {
 
-  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+    for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
 
-    //mat<stuff>.tec has reconstructed interface.
-    // (visit can open ascii surface mesh files)
-    //
-    //MAC grid law of the wall information.
-    //WALLFUNCTION<stuff>.plt (visit can open binary tecplot files)
-   if (1==0) {
-    writeSanityCheckData(
-     "WALLFUNCTION",
-     "GNBC DEBUGGING velINT,imgVR,solVR,angle",
-     caller_id,
-      //velINT,image vel,velsol,image vel raster,velsol raster,angle
-     localMF[HISTORY_MAC_MF+data_dir]->nComp(), 
-     HISTORY_MAC_MF+data_dir,
-     -1,  // State_Type==-1 
-     data_dir,
-     parent->levelSteps(0)); 
-   }
-
-   if (visual_WALLVEL_plot_int>0) {
-    if (very_last_sweep==1) {
-     int nsteps=parent->levelSteps(0)+1; // nsteps==0 very first step.
-     int ratio=nsteps/visual_WALLVEL_plot_int;
-     ratio=ratio*visual_WALLVEL_plot_int;
-     if (ratio==nsteps) {
-
-      int nparts=im_solid_map.size();
-      int nparts_def=nparts;
-      if (nparts==0) {
-       nparts_def=1;
-      } else if ((nparts>=1)&&(nparts<=num_materials)) {
-       //do nothing
-      } else
-       amrex::Error("nparts invalid");
-
-      if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!= 
-		      nparts_def*AMREX_SPACEDIM)
-       amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
-      if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-       amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-
-      //MAC grid rasterized solid boundary condition.
-      //WALLVEL<stuff>.plt (visit can open binary tecplot files)
+     //mat<stuff>.tec has reconstructed interface.
+     // (visit can open ascii surface mesh files)
+     //
+     //MAC grid law of the wall information.
+     //WALLFUNCTION<stuff>.plt (visit can open binary tecplot files)
+     if (1==0) {
       writeSanityCheckData(
-       "WALLVEL",
-       "init_FSI_GHOST_MAC_MF_ALL, FSI_GHOST_MAC_MF",//fictitious sol vel
-       caller_id,
-       localMF[FSI_GHOST_MAC_MF+data_dir]->nComp(),
-       FSI_GHOST_MAC_MF+data_dir,
+       "WALLFUNCTION",
+       "GNBC DEBUGGING velINT,imgVR,solVR,angle",
+       local_caller_string,
+       //velINT,image vel,velsol,image vel raster,velsol raster,angle
+       localMF[HISTORY_MAC_MF+data_dir]->nComp(), 
+       HISTORY_MAC_MF+data_dir,
        -1,  // State_Type==-1 
        data_dir,
-       nsteps); 
+       parent->levelSteps(0)); 
      }
-    } else if (very_last_sweep==0) {
-     // do nothing
-    } else
-     amrex::Error("very_last_sweep invalid");
-   } else if (visual_WALLVEL_plot_int==0) {
-    // do nothing
-   } else
-    amrex::Error("visual_WALLVEL_plot_int invalid");
-  } //data_dir=0..sdim-1
- }  // caller_id==CALLED_FROM_PRESCRIBE_SOLID_GEOMETY_RENONLY0_VIA_OTHERS+
-    //            CALLED_FROM_ADVECT
 
+     if (visual_WALLVEL_plot_int>0) {
+      if (very_last_sweep==1) {
+       int nsteps=parent->levelSteps(0)+1; // nsteps==0 very first step.
+       int ratio=nsteps/visual_WALLVEL_plot_int;
+       ratio=ratio*visual_WALLVEL_plot_int;
+       if (ratio==nsteps) {
+
+        int nparts=im_solid_map.size();
+        int nparts_def=nparts;
+        if (nparts==0) {
+         nparts_def=1;
+        } else if ((nparts>=1)&&(nparts<=num_materials)) {
+         //do nothing
+        } else
+         amrex::Error("nparts invalid");
+
+        if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!= 
+            nparts_def*AMREX_SPACEDIM)
+         amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+        if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+         amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+
+        //MAC grid rasterized solid boundary condition.
+        //WALLVEL<stuff>.plt (visit can open binary tecplot files)
+        writeSanityCheckData(
+         "WALLVEL",
+         "init_FSI_GHOST_MAC_MF_ALL, FSI_GHOST_MAC_MF",//fictitious sol vel
+         local_caller_string,
+         localMF[FSI_GHOST_MAC_MF+data_dir]->nComp(),
+         FSI_GHOST_MAC_MF+data_dir,
+         -1,  // State_Type==-1 
+         data_dir,
+         nsteps); 
+       } else if (ratio<nsteps) {
+        //do nothing
+       } else
+        amrex::Error("ratio or nsteps invalid");
+
+      } else if (very_last_sweep==0) {
+       // do nothing
+      } else
+       amrex::Error("very_last_sweep invalid");
+     } else if (visual_WALLVEL_plot_int==0) {
+      // do nothing
+     } else
+      amrex::Error("visual_WALLVEL_plot_int invalid");
+    } //data_dir=0..sdim-1
+   } else if (called_from_prescribe==0) {
+    //do nothing
+   } else
+    amrex::Error("called_from_prescribe invalid\n");
+  } else if (called_from_advect==0) {
+   //do nothing
+  } else
+   amrex::Error("called_from_advect invalid\n");
+ } else if (renormalize_only==1) {
+  //do nothing
+ } else
+  amrex::Eror("renormalize_only invalid");
+			 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   delete_array(HISTORY_MAC_MF+data_dir);
  }
 
 } // end subroutine init_FSI_GHOST_MAC_MF_ALL
 
-
-
-// called from:
-//  NavierStokes::prescribe_solid_geometryALL (if correcting solid state)
-//    (caller_id=31,32,33,34,35,36,37)
-//
-//  NavierStokes::do_the_advance (begin of divu_outer_sweeps loop)
-//    (caller_id=4)
-//
-//  NavierStokes::do_the_advance (prior to viscous diffusion)
-//    (caller_id=4)
-//
-//  NavierStokes::MaxAdvectSpeedALL (caller_id=1)
-//
-//  NavierStokes::sum_integrated_quantities
-//    (caller_id==5)
-//
-//  NavierStokes::prepare_post_process (caller_id=2)
-//
+FIX ME
 void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
  int finest_level=parent->finestLevel();
