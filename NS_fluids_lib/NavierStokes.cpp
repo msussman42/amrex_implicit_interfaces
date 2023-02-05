@@ -7020,12 +7020,13 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
 
 } // end subroutine init_FSI_GHOST_MAC_MF_ALL
 
-FIX ME
 void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
 
  int finest_level=parent->finestLevel();
  int nparts=im_solid_map.size();
  bool use_tiling=ns_tiling;
+
+ std::string local_caller_string="init_FSI_GHOST_MAC_MF";
 
  int nparts_ghost=nparts;
  if (nparts==0) {
@@ -7094,8 +7095,8 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
  } else
   amrex::Error("ngrow_distance invalid");
 
-  // caller_id==1
- getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,1);
+ getStateDist_localMF(LS_NRM_CP_MF,ngrow_distance,cur_time_slab,
+  		      local_caller_string);
  if (localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[LS_NRM_CP_MF]->nGrow()!=ngrow_distance");
  if (localMF[LS_NRM_CP_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
@@ -7225,7 +7226,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
   ns_reconcile_d_num(LOOP_WALLFUNCTION,"init_FSI_GHOST_MAC_MF"); 
    //thread_class::sync_tile_d_numPts(),
    //ParallelDescriptor::ReduceRealSum
-   //thread_class::reconcile_d_numPts(caller_loop_id)
+   //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
 
   if (dealloc_history==0) {
    // do nothing
@@ -7363,7 +7364,7 @@ void NavierStokes::assimilate_state_data() {
   ns_reconcile_d_num(LOOP_ASSIMILATE,"assimilate_state_data"); 
         //thread_class::sync_tile_d_numPts(),
         //ParallelDescriptor::ReduceRealSum
-        //thread_class::reconcile_d_numPts(caller_loop_id)
+        //thread_class::reconcile_d_numPts(caller_loop_id,caller_string)
  } // isweep=0..1
 
 } // end subroutine assimilate_state_data()
@@ -9258,6 +9259,8 @@ void NavierStokes::ns_header_msg_level(
 // called from AmrCore::restart 
 void NavierStokes::post_restart() {
 
+ std::string local_caller_string="post_restart";
+
  ParmParse ppmain;
  Real local_stop_time=-1.0;
  ppmain.queryAdd("stop_time",local_stop_time);
@@ -9425,12 +9428,10 @@ void NavierStokes::post_restart() {
 
   init_aux_data();
 
-  int caller_startup_id=CALLED_FROM_POST_RESTART; // post_restart
-
-  prepare_post_process(caller_startup_id);
+  prepare_post_process(local_caller_string);
 
   if (sum_interval>0) {
-   sum_integrated_quantities(caller_startup_id,local_stop_time);
+   sum_integrated_quantities(local_caller_sring,local_stop_time);
   }
 
  } else if (level>0) {
@@ -10482,6 +10483,8 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
  int finest_level=parent->finestLevel();
 
+ std::string local_caller_string="make_viscoelastic_tensorMACALL";
+
  if ((fill_state_idx==TensorX_Type)||
      (fill_state_idx==TensorY_Type)||
      ((fill_state_idx==TensorZ_Type)&&(AMREX_SPACEDIM==3))) {
@@ -10562,13 +10565,12 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
  for (int ilev=finest_level-1;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   int spectral_override=0; //always do low order average down
-  int caller_id=flux_grid_type+300;
    //declared in NavierStokes2.cpp
   ns_level.avgDownEdge_localMF(flux_mf,
     0,ENUM_NUM_TENSOR_TYPE,
     flux_grid_type,-1,
     spectral_override,
-    caller_id);
+    local_caller_string);
  } // ilev=finest_level-1 ... level
 
  for (int scomp_extrap=0;scomp_extrap<ENUM_NUM_TENSOR_TYPE;scomp_extrap++) {
@@ -10589,7 +10591,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   writeSanityCheckData(
    "FLUX_MF",
    "T11,T12,T22,T33,T13,T23",
-   caller_id,
+   local_caller_string,
    localMF[flux_mf]->nComp(), 
    flux_mf,
    -1, //State_Type==-1
@@ -19547,6 +19549,8 @@ void NavierStokes::debug_ParallelCopy() {
 // levels prior to this routine.
 void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
+ std::string local_caller_string="writeTECPLOT_File";
+
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
 
@@ -19577,12 +19581,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   writeInterfaceReconstruction();
 
   if (visual_output_raw_State_Type==1) {
-   int caller_id=0;
    MultiFab& S_new_temp=get_new_data(State_Type,slab_step+1);
    writeSanityCheckData(
     "RawStateType",
     "RawStateType: vel,pres,den_temp_spec,mofvars,error ind",
-    caller_id,
+    local_caller_string,
     S_new_temp.nComp(),
     -1,  //data_mf=-1
     State_Type, //state_type_mf
@@ -19596,12 +19599,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   if (visual_output_raw_mac_Type==1) {
 
    for (int dir_mac=0;dir_mac<AMREX_SPACEDIM;dir_mac++) {
-    int caller_id=dir_mac;
     MultiFab& mac_new_temp=get_new_data(Umac_Type+dir_mac,slab_step+1);
     writeSanityCheckData(
      "RawMacType",
      "RawMacType: vel",
-     caller_id,
+     local_caller_string,
      mac_new_temp.nComp(),
      -1,  //data_mf=-1
      Umac_Type+dir_mac, //state_type_mf
@@ -20435,7 +20437,7 @@ void NavierStokes::writeSanityCheckData(
   std::cout << "in: writeSanityCheckData, root_string= " <<
     root_string << '\n';
   std::cout << "in: writeSanityCheckData, caller_string= " <<
-    caller_string << '\n';
+    caller_string << " data_dir=" << data_dir << '\n';
   std::cout << "in: writeSanityCheckData, data_mf= " <<
     data_mf << " state_type_mf=" << state_type_mf << '\n';
  }
@@ -20650,10 +20652,13 @@ void NavierStokes::writeSanityCheckData(
 void
 NavierStokes::writePlotFile (
   int do_plot,int do_slice,
-  int SDC_outer_sweeps_in,int slab_step_in) {
+  int SDC_outer_sweeps_in,
+  int slab_step_in) {
 
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
+
+ std::string local_caller_string="writePlotFile";
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -20678,8 +20683,7 @@ NavierStokes::writePlotFile (
   // VOF_Recon_ALL
   // make_physics_varsALL
  if (level==0) {
-  int caller_startup_id=CALLED_FROM_WRITE_PLOTFILE; // in: writePlotFile
-  prepare_post_process(caller_startup_id);
+  prepare_post_process(local_caller_string);
  } // level==0
 
   // output tecplot zonal files  x,y,z,u,v,w,phi,psi
