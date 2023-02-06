@@ -1824,11 +1824,13 @@ NavierStokes::variableSetUp ()
 
 }  // end subroutine variableSetUp
 
-// caller_startup_id==CALLED_FROM_POST_TIMESTEP if called from post_timestep
-// caller_startup_id==CALLED_FROM_POST_INIT  if called from post_init
-// caller_startup_id==CALLED_FROM_POST_RESTART  if called from post_restart
 void
-NavierStokes::sum_integrated_quantities (int caller_startup_id,Real stop_time) {
+NavierStokes::sum_integrated_quantities (
+	const std::string& caller_string,
+	Real stop_time) {
+
+ std::string local_caller_string="sum_integrated_quantities";
+ local_caller_string=caller_string+local_caller_string;
 
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
@@ -1856,7 +1858,7 @@ NavierStokes::sum_integrated_quantities (int caller_startup_id,Real stop_time) {
    std::cout << "This routine takes a while.\n";
    std::cout << "ns.sum_int determines the frequency this\n";
    std::cout << "routine is called\n";
-   std::cout << "caller_startup_id= " << caller_startup_id << '\n';
+   std::cout << "local_caller_string= " << local_caller_string << '\n';
    std::cout << "upper_slab_time= " << upper_slab_time << '\n';
    std::cout << "adapt_quad_depth= " << adapt_quad_depth << '\n';
  }
@@ -1921,8 +1923,7 @@ NavierStokes::sum_integrated_quantities (int caller_startup_id,Real stop_time) {
  Real dt_min=1.0E+30;;
 
  Real vel_max_estdt[AMREX_SPACEDIM+1];
- int caller_id=3;
- MaxAdvectSpeedALL(dt_min,vel_max_estdt,caller_id);
+ MaxAdvectSpeedALL(dt_min,vel_max_estdt,local_caller_string);
 
  int local_counter=0;
 
@@ -1952,35 +1953,34 @@ NavierStokes::sum_integrated_quantities (int caller_startup_id,Real stop_time) {
   // make_physics_varsALL
   // fort_summass -> stackerror -> get_symmetric_error -> uses mofdata_tess
  int fast_mode=0;
- volWgtSumALL(caller_startup_id,fast_mode);
+ volWgtSumALL(local_caller_string,fast_mode);
 
  if (visual_drag_plot_int>0) {
 
   int visual_drag_plot_int_trigger=0;
  
-  if (caller_startup_id==CALLED_FROM_POST_TIMESTEP) { 
+  if (pattern_test(local_caller_string,"post_timestep")==1) {
    //called from post_timestep
    if (parent->levelSteps(0)%visual_drag_plot_int == 0) {
     visual_drag_plot_int_trigger=1;
    }
-  } else if (caller_startup_id==CALLED_FROM_POST_INIT) { 
+  } else if (pattern_test(local_caller_string,"post_init")==1) {
    //called from post_init
    visual_drag_plot_int_trigger=1;
-  } else if (caller_startup_id==CALLED_FROM_POST_RESTART) { 
+  } else if (pattern_test(local_caller_string,"post_restart")==1) {
    //called from post_restart
    visual_drag_plot_int_trigger=1;
   } else
-   amrex::Error("caller_startup_id invalid in sum_integrated_quantities");
+   amrex::Error("local_caller_string invalid in sum_integrated_quantities");
 
   if ( (visual_drag_plot_int_trigger==1)||
        (stop_time-upper_slab_time<1.0E-8) ) {
 
-   int drag_caller_id=2302;
     //DRAG<stuff>.plt (visit can open binary tecplot files)
    writeSanityCheckData(
      "DRAG",
      "DRAG_MF: see DRAG_COMP.H",
-     drag_caller_id,
+     local_caller_string,
      localMF[DRAG_MF]->nComp(), 
      DRAG_MF,
      -1,  // State_Type==-1 
