@@ -262,7 +262,7 @@ void NavierStokes::avgDownMacState(int spectral_override) {
 
 void NavierStokes::static_surface_tension_advection() {
 
-int caller_startup_id=CALLED_FROM_STATIC_SURFACE_TENSION;
+ std::string local_caller_string="static_surface_tension_advection";
 
  if (static_surface_tension==1) {
   //do nothing
@@ -326,8 +326,7 @@ int caller_startup_id=CALLED_FROM_STATIC_SURFACE_TENSION;
  int quasi_static_reached=0;
  while (quasi_static_reached==0) {
 
-  make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,
-     CALLED_FROM_STATIC_SURFACE_TENSION); 
+  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
 
  }
 
@@ -349,6 +348,8 @@ int caller_startup_id=CALLED_FROM_STATIC_SURFACE_TENSION;
 } // end subroutine static_surface_tension_advection()
 
 void NavierStokes::nonlinear_advection() {
+
+ std::string local_caller_string="nonlinear_advection";
 
  int renormalize_only=1;
 
@@ -568,9 +569,8 @@ void NavierStokes::nonlinear_advection() {
      // projects volume fractions so that sum F_m_fluid=1.
     renormalize_only=1;
     int local_truncate=0;
-    int caller_id=CALLED_FROM_ADVECT;
     prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
-      local_truncate,caller_id);
+      local_truncate,local_caller_string);
 
      // velocity and pressure
      // spectral_override==1 => order derived from "enable_spectral"
@@ -623,13 +623,11 @@ void NavierStokes::nonlinear_advection() {
 
  if (read_from_CAD()==1) {
 
-  int caller_id=40;
-  init_FSI_GHOST_MAC_MF_ALL(caller_id);
+  init_FSI_GHOST_MAC_MF_ALL(local_caller_string);
 
-  int caller_startup_id=CALLED_FROM_ADVECT;
   int fast_mode=0;
   setup_integrated_quantities();
-  volWgtSumALL(caller_startup_id,fast_mode);
+  volWgtSumALL(local_caller_string,fast_mode);
 
   if (ok_copy_FSI_old_to_new()==1) {
 
@@ -694,14 +692,13 @@ void NavierStokes::nonlinear_advection() {
  if (1==0) {
     // S_new is level 0 data
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-  int caller_id=1;
    // data file name "BEFOREPRESCRIBE<stuff>.plt"
    // xvel,yvel,zvel,pressure,(density, temperature) x num_materials,
    // (VFRAC,centroid) x num_materials, error indicator
   writeSanityCheckData(
    "BEFOREPRESCRIBE",
    "in: NavierStokes::nonlinear_advection, State_Type ", 
-   caller_id,
+   local_caller_string,
    S_new.nComp(),
    -1, // data_mf==-1
    State_Type,
@@ -715,23 +712,21 @@ void NavierStokes::nonlinear_advection() {
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
  renormalize_only=0;
  int local_truncate=1;
- int caller_id=4;
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-   local_truncate,caller_id);
+   local_truncate,local_caller_string);
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
  if (1==0) {
     // S_new is level 0 data
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-  int state_caller_id=1;
    // data file name "AFTERPRESCRIBE<stuff>.plt"
    // xvel,yvel,zvel,pressure,(density, temperature) x num_materials,
    // (VFRAC,centroid) x num_materials, error indicator
   writeSanityCheckData(
    "AFTERPRESCRIBE",
    "in: NavierStokes::nonlinear_advection, State_Type ", 
-   state_caller_id,
+   local_caller_string,
    S_new.nComp(),
    -1, // data_mf==-1
    State_Type,
@@ -1105,6 +1100,8 @@ void NavierStokes::init_delta_SDC() {
 
 Real NavierStokes::advance(Real time,Real dt) {
 
+ std::string local_caller_string="advance";
+
  if (ParallelDescriptor::IOProcessor()) 
   std::cout << "advance time= " << time << " dt= " << dt << '\n';
 
@@ -1226,9 +1223,8 @@ Real NavierStokes::advance(Real time,Real dt) {
     // projects volume fractions so that sum F_m_fluid=1.
    int renormalize_only=0;
    int local_truncate=0;
-   int caller_id=5;
    prescribe_solid_geometryALL(upper_slab_time,renormalize_only,
-      local_truncate,caller_id);
+      local_truncate,local_caller_string);
 
    if (verbose>0) {
     std::fflush(NULL);
@@ -2411,7 +2407,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
  advance_status=1; // 1=success 0=failure
 
- int caller_startup_id=CALLED_FROM_DO_THE_ADVANCE; 
+ std::string local_caller_string="do_the_advance";
 
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
@@ -2890,7 +2886,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int keep_all_interfaces=1;
        makeStateDistALL(keep_all_interfaces);
 
-       make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,5); 
+       make_physics_varsALL(SOLVETYPE_PRES,local_caller_string,5); 
        delete_array(CELLTENSOR_MF);
        delete_array(FACETENSOR_MF);
 
@@ -3097,38 +3093,35 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 	 ratio=ratio*visual_phase_change_plot_int;
 	 if (ratio==nsteps+1) {
 
-	  int caller_id=1;
 	   //writeSanityCheckData outputs raw data that exists on the
 	   //computational domain boundary or within.
            //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
           writeSanityCheckData(
            "TY_GAMMA",
            "SATURATION_TEMP_MF: flag12,flag13,flag23,T_GAMMA12,Y_GAMMA12, ...",
-           caller_id,
+           local_caller_string,
            localMF[SATURATION_TEMP_MF]->nComp(), 
            SATURATION_TEMP_MF,
            -1,  // State_Type==-1 
            -1, // data_dir==-1 (cell centered)
            parent->levelSteps(0)); 
 
-	  caller_id=2;
            //BURNVEL<stuff>.plt (visit can open binary tecplot files)
           writeSanityCheckData(
            "BURNVEL",
            "BURNING_VELOCITY_MF: flag12,flag13,flag23,[xyz]V12,[xyz]V13, ..",
-           caller_id,
+           local_caller_string,
            localMF[BURNING_VELOCITY_MF]->nComp(), 
            BURNING_VELOCITY_MF,
            -1,  // State_Type==-1 
            -1,  // data_dir==-1 (cell centered)
            parent->levelSteps(0)); 
 
-	  caller_id=3;
            //BURNVEL<stuff>.plt (visit can open binary tecplot files)
           writeSanityCheckData(
            "CURV_CELL",
            "FD_CURV_CELL_MF:curv:1..num_materials+num_interfaces stat:num_materials+num_interfaces+1..2(num_materials+nsten)",
-           caller_id,
+           local_caller_string,
            localMF[FD_CURV_CELL_MF]->nComp(), 
            FD_CURV_CELL_MF,
            -1,  // State_Type==-1 
@@ -3197,9 +3190,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 2. extend level set functions into the solid.
        int renormalize_only=0;
        int local_truncate=0;
-       int caller_id=6;
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-        local_truncate,caller_id);
+        local_truncate,local_caller_string);
 
        int keep_all_interfaces=0;
        makeStateDistALL(keep_all_interfaces);
@@ -3233,9 +3225,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 // will have to be scaled later.
     debug_memory();
     if (is_zalesak()) {
-     make_physics_varsALL(SOLVETYPE_INITPROJ,caller_startup_id,6); 
+     make_physics_varsALL(SOLVETYPE_INITPROJ,local_caller_string,6); 
     } else {
-     make_physics_varsALL(SOLVETYPE_PRES,caller_startup_id,6); 
+     make_physics_varsALL(SOLVETYPE_PRES,local_caller_string,6); 
     }
     delete_array(CELLTENSOR_MF);
     delete_array(FACETENSOR_MF);
@@ -3492,7 +3484,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if (1==0) {
           // S_new is level 0 data
         MultiFab& S_new=get_new_data(State_Type,slab_step+1);
-	int caller_id=1;
 	 // data file name "VISCSOLVE<stuff>.plt"
 	 // after the viscous solve, but before the pressure projection.
 	 // cell data in the fluid, next to the solid, should "make sense"
@@ -3501,7 +3492,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         writeSanityCheckData(
          "VISCSOLVE",
          "in: NavierStokes::do_the_advance, State_Type after veldiffuseALL", 
-         caller_id,
+         local_caller_string,
          S_new.nComp(),
          -1, // data_mf==-1
          State_Type,
@@ -3662,9 +3653,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 2. extend level set functions into the solid.
        int renormalize_only=0;
        int local_truncate=0;
-       int caller_id=7;
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-        local_truncate,caller_id);
+        local_truncate,local_caller_string);
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
         NavierStokes& ns_level=getLevel(ilev);
@@ -3729,7 +3719,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         amrex::Error("nsteps invalid");
        }
 
-       int caller_id=2;
        Real dt_predict=estTimeStep(local_fixed_dt,caller_id);
        Real dt_predict_max=dt_predict;
        Real dt_predict_min=dt_predict;
@@ -4017,25 +4006,23 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if (localMF[MACDIV_MF]->nGrow()!=1)
      amrex::Error("localMF[MACDIV_MF]->nGrow() invalid");
 
-    int caller_id=1;
      //MACDIV<stuff>.plt (visit can open binary tecplot files)
     writeSanityCheckData(
       "MACDIV",
       "MACDIV_MF: actual div u",
-      caller_id,
+      local_caller_string,
       localMF[MACDIV_MF]->nComp(), 
       MACDIV_MF,
       -1,  // State_Type==-1 
       -1,  // data_dir==-1 (cell centered)
       parent->levelSteps(0)); 
 
-    caller_id=2;
     MultiFab& DIV_new=get_new_data(DIV_Type,slab_step+1);
     //DIV_Type<stuff>.plt (visit can open binary tecplot files)
     writeSanityCheckData(
       "DIV_Type",
       "DIV_Type: -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol",
-      caller_id,
+      local_caller_string,
       DIV_new.nComp(), 
       -1,
       DIV_Type,  // State_Type==-1 

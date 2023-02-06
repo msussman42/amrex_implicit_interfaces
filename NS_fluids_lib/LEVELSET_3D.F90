@@ -3232,7 +3232,8 @@ stop
 
 
       subroutine fort_curvstrip( &
-       caller_startup_id, &
+       caller_string, &
+       caller_string_len, &
        vof_height_function, &
        level, &
        finest_level, &
@@ -3265,6 +3266,8 @@ stop
        ngrow_distance_in) &
       bind(c,name='fort_curvstrip')
 
+      use ISO_C_BINDING, ONLY: C_CHAR,C_INT
+
       use global_utility_module
       use global_distance_module
       use probcommon_module
@@ -3273,7 +3276,11 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: nhistory
-      INTEGER_T, INTENT(in) :: caller_startup_id
+
+      CHARACTER(KIND=C_CHAR), INTENT(in) :: caller_string(*)
+      INTEGER(C_INT), INTENT(in), VALUE :: caller_string_len
+      CHARACTER(:), ALLOCATABLE :: fort_caller_string
+
       INTEGER_T, INTENT(in) :: vof_height_function
       INTEGER_T :: vof_height_function_local
       INTEGER_T, INTENT(in) :: level
@@ -3434,7 +3441,12 @@ stop
       INTEGER_T local_mask
       INTEGER_T ihist
       REAL_T ZEYU_thet_d,ZEYU_u_cl
-    
+   
+      allocate(CHARACTER(caller_string_len) :: fort_caller_string)
+      do i=1,caller_string_len
+       fort_caller_string(i:i)=caller_string(i)
+      enddo
+
       if (ngrow_distance.ne.4) then
        print *,"ngrow_distance invalid in curvstrip"
        stop
@@ -3497,7 +3509,7 @@ stop
        stop
       endif
   
-      if (caller_startup_id.ne.CALLED_FROM_POST_RESTART) then 
+      if (fort_pattern_test(fort_caller_string,"post_restart").eq.0) then
        do dirloc=1,SDIM
         if ((fablo(dirloc)/bfact_grid)*bfact_grid.ne.fablo(dirloc)) then
          print *,"fablo mod bfact_grid not 0 in fort_curvstrip"
@@ -3508,10 +3520,10 @@ stop
          stop
         endif
        enddo ! dirloc=1..sdim
-      else if (caller_startup_id.eq.CALLED_FROM_POST_RESTART) then 
+      else if (fort_pattern_test(fort_caller_string,"post_restart").eq.1) then
        ! do nothing
       else
-       print *,"caller_startup_id invalid"
+       print *,"fort_caller_string invalid"
        stop
       endif
 
@@ -4331,6 +4343,7 @@ stop
 
       deallocate(xsten0)
       deallocate(xsten_curv)
+      deallocate(fort_caller_string)
 
       return
       end subroutine fort_curvstrip

@@ -22025,18 +22025,18 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 //note: fort_initgridmap is called from:
 // (i) NavierStokes::initData ()
 // (ii) NavierStokes::post_restart()
-FIX ME
+
  if (pattern_test(local_caller_string,"post_init_state")==1) {
    // called from post_init_state
   ns_finest.MOF_training();
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
   // called from post_restart
   ns_finest.MOF_training();
- } else if (caller_startup_id==CALLED_FROM_WRITE_PLOTFILE) { 
+ } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile
   // do nothing
  } else
-  amrex::Error("caller_startup_id invalid");
+  amrex::Error("local_caller_string invalid");
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -22050,18 +22050,18 @@ FIX ME
   ns_level.maskfiner_localMF(MASKCOEF_MF,1,tag,clearbdry);
   ns_level.prepare_mask_nbr(1);
 
-  if (caller_startup_id==CALLED_FROM_POST_INIT) { 
+  if (pattern_test(local_caller_string,"post_init_state")==1) {
    // called from post_init_state
    // do nothing
-  } else if (caller_startup_id==CALLED_FROM_POST_RESTART) { 
+  } else if (pattern_test(local_caller_string,"post_restart")==1) {
    // called from post_restart
    // do nothing
-  } else if (caller_startup_id==CALLED_FROM_WRITE_PLOTFILE) { 
+  } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
     // called from writePlotFile
     // in: NavierStokes::prepare_post_process
    ns_level.allocate_levelset(1,LEVELPC_MF);
   } else
-   amrex::Error("caller_startup_id invalid 22055");
+   amrex::Error("local_caller_string invalid 22064");
    
  } // ilev=level ... finest_level
 
@@ -22076,63 +22076,55 @@ FIX ME
   }
  } // ilev=finest_level ... level
 
-   // in prepare_post_process:
-   // caller_startup_id==CALLED_FROM_WRITE_PLOTFILE called from writePlotFile
-   // caller_startup_id==CALLED_FROM_POST_INIT called from post_init_state
-   // caller_startup_id==CALLED_FROM_POST_RESTART called from post_restart
-   //
  int init_vof_prev_time=0;
  int error_update_flag=0;
  int renormalize_only=0; // init:solid TEMP,VEL,LS,extend LSfluid into solid.
  int local_truncate=0; // do not force removal of flotsam.
 
- if (caller_startup_id==CALLED_FROM_WRITE_PLOTFILE) { 
+ if (pattern_test(local_caller_string,"writePlotFile")==1) {
   error_update_flag=0;  // called from writePlotFile, do not update S_old
- } else if (caller_startup_id==CALLED_FROM_POST_INIT) {
+ } else if (pattern_test(local_caller_string,"post_init_state")==1) {
   error_update_flag=1;  // called from post_init_state, update S_old
- } else if (caller_startup_id==CALLED_FROM_POST_RESTART) {
+ } else if (pattern_test(local_caller_string,"post_restart")==1) {
   error_update_flag=1;  // called from post_restart, update S_old
  } else
-  amrex::Error("caller_startup_id invalid 22087");
+  amrex::Error("local_caller_string invalid 22091");
 	
  int project_option=SOLVETYPE_INITPROJ; 
- int caller_id=CALLED_FROM_PREPARE_POST_PROCESS;
 
  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
   init_vof_prev_time,SLOPE_RECON_MF);
 
- if (caller_startup_id==CALLED_FROM_POST_INIT) { // called from post_init_state
+ if (pattern_test(local_caller_string,"post_init_state")==1) {
 
   int keep_all_interfaces=1;
   makeStateDistALL(keep_all_interfaces);
-  caller_id=CALLED_FROM_PREPARE_POST_PROCESS_VIA_POST_INIT;
   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-		  local_truncate,caller_id);
+		  local_truncate,
+		  local_caller_string);
   project_option=SOLVETYPE_INITPROJ;
 
- } else if (caller_startup_id==CALLED_FROM_WRITE_PLOTFILE) { 
+ } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile
 
   project_option=SOLVETYPE_INITPROJ;
-  caller_id=CALLED_FROM_PREPARE_POST_PROCESS_VIA_WRITE_PLOTFILE;
 
- } else if (caller_startup_id==CALLED_FROM_POST_RESTART) { 
+ } else if (pattern_test(local_caller_string,"post_restart")==1) {
   // called from post_restart
-
-  caller_id=CALLED_FROM_PREPARE_POST_PROCESS_VIA_POST_RESTART;
 
   if (1==0) {
    int keep_all_interfaces=0;
    makeStateDistALL(keep_all_interfaces);
    prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-		   local_truncate,caller_id);
+		   local_truncate,
+		   local_caller_string);
   }
   project_option=SOLVETYPE_INITPROJ;  // initial project
 
  } else
-  amrex::Error("caller_startup_id invalid 22129");
+  amrex::Error("local_caller_string invalid 22125");
 
- make_physics_varsALL(project_option,caller_startup_id,caller_id);
+ make_physics_varsALL(project_option,local_caller_string);
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
 
@@ -22945,6 +22937,8 @@ NavierStokes::particle_tensor_advection_update() {
 void
 NavierStokes::post_init_state () {
     
+ std::string local_caller_string="post_init_state";
+
  if (level==0) {
   // do nothing
  } else
@@ -22981,8 +22975,7 @@ NavierStokes::post_init_state () {
    // makeStateDistALL
    // prescribe_solid_geometryALL
    // make_physics_varsALL
- int caller_startup_id=CALLED_FROM_POST_INIT; // in: post_init_state
- prepare_post_process(caller_startup_id);
+ prepare_post_process(local_caller_string);
 
  if (particles_flag==1) {
 
@@ -23175,7 +23168,8 @@ NavierStokes::post_init_state () {
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.avgDown(State_Type,STATECOMP_PRES,1,1);
-  ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+  ns_level.avgDown(State_Type,STATECOMP_STATES,
+     num_state_material*num_materials,1);
  } // ilev
 
  delete_array(MASKCOEF_MF);
@@ -24200,12 +24194,13 @@ MultiFab* NavierStokes::getStateTensor (
 
 } // end subroutine getStateTensor
 
-MultiFab* NavierStokes::getStateDist (int ngrow,Real time,int caller_id) {
+MultiFab* NavierStokes::getStateDist (int ngrow,Real time,
+   const std::string& caller_string) {
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor())
-   std::cout << "getStateDist: time,caller_id " << time << ' ' << 
-     caller_id <<'\n';
+   std::cout << "getStateDist: time,caller_string " << time << ' ' << 
+     caller_string <<'\n';
 
  if ((ngrow<0)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
@@ -24284,8 +24279,7 @@ void NavierStokes::putStateDIV_DATA(
 
 
 // called from:
-// NavierStokes::prepare_post_process  
-//   (if caller_startup_id==CALLED_FROM_POST_INIT)
+// NavierStokes::prepare_post_process if via "post_init_state"
 // NavierStokes::do_the_advance
 void
 NavierStokes::makeStateDistALL(int keep_all_interfaces) {
@@ -25249,7 +25243,8 @@ NavierStokes::makeCellFrac(
 
 // called from make_physics_varsALL
 void
-NavierStokes::makeStateCurv(int project_option,int caller_startup_id) {
+NavierStokes::makeStateCurv(int project_option,
+   const std::string& caller_string) {
  
  bool use_tiling=ns_tiling;
 
@@ -25379,7 +25374,8 @@ NavierStokes::makeStateCurv(int project_option,int caller_startup_id) {
 
      // declared in: LEVELSET_3D.F90
     fort_curvstrip(
-     &caller_startup_id,
+     caller_string.c_str(),
+     caller_string.size(),
      &vof_height_function,
      &level,
      &finest_level,
