@@ -22009,9 +22009,12 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
 // post_restart   
 void
 NavierStokes::prepare_post_process(const std::string& caller_string) {
-FIX ME
+
  if (level!=0)
   amrex::Error("level invalid prepare_post_process");
+
+ std::string local_caller_string="prepare_post_process";
+ local_caller_string=caller_string+local_caller_string;
 
  const int finest_level = parent->finestLevel();
  NavierStokes& ns_finest=getLevel(finest_level);
@@ -22022,11 +22025,11 @@ FIX ME
 //note: fort_initgridmap is called from:
 // (i) NavierStokes::initData ()
 // (ii) NavierStokes::post_restart()
-
- if (caller_startup_id==CALLED_FROM_POST_INIT) { 
+FIX ME
+ if (pattern_test(local_caller_string,"post_init_state")==1) {
    // called from post_init_state
   ns_finest.MOF_training();
- } else if (caller_startup_id==CALLED_FROM_POST_RESTART) { 
+ } else if (pattern_test(local_caller_string,"post_restart")==1) {
   // called from post_restart
   ns_finest.MOF_training();
  } else if (caller_startup_id==CALLED_FROM_WRITE_PLOTFILE) { 
