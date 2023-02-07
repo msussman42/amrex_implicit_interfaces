@@ -274,7 +274,8 @@ void NavierStokes::getStateDen_localMF(int idx_MF,int ngrow,Real time) {
 
 
 void NavierStokes::getStateDist_localMF(int idx_MF,int ngrow,
-  Real time,int caller_id) {
+  Real time,
+  const std::string& caller_string) {
 
  if ((ngrow<0)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
@@ -286,7 +287,7 @@ void NavierStokes::getStateDist_localMF(int idx_MF,int ngrow,
   amrex::Error("localMF_grow invalid getStateDist_localMF ");
  }
 
- localMF[idx_MF]=getStateDist(ngrow,time,caller_id);
+ localMF[idx_MF]=getStateDist(ngrow,time,caller_string);
  localMF_grow[idx_MF]=localMF[idx_MF]->nGrow();
 } // end subroutine getStateDist_localMF
 
@@ -742,7 +743,7 @@ void NavierStokes::avgDownCURV_localMF(int idxMF) {
   level_avgDownCURV(S_crse,S_fine);
  }
 
-} // subroutine avgDownCURV_localMF
+} // end subroutine avgDownCURV_localMF
 
 
 // flux variables: average down in the tangential direction 
@@ -1764,6 +1765,8 @@ void NavierStokes::init_divup_cell_vel_cell(
  int idx_pres,    //nsolve=1
  int idx_umac) {  //nsolve=1
 
+ std::string local_caller_string="init_divup_cell_vel_cell";
+
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -1817,7 +1820,7 @@ void NavierStokes::init_divup_cell_vel_cell(
 
  resize_levelset(2,LEVELPC_MF);
 
- debug_ngrow(LEVELPC_MF,2,103);
+ debug_ngrow(LEVELPC_MF,2,local_caller_string);
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error(
     "localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
@@ -1857,8 +1860,8 @@ void NavierStokes::init_divup_cell_vel_cell(
      (project_option==SOLVETYPE_INITPROJ)) {  
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   debug_ngrow(FACE_VAR_MF+dir,0,101);
-   debug_ngrow(PEDGE_MF+dir,0,101);
+   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
+   debug_ngrow(PEDGE_MF+dir,0,local_caller_string);
     // 0=use_face_pres  1= (2nd component) pface
    if (localMF[PEDGE_MF+dir]->nComp()!=NCOMP_PEDGE)
     amrex::Error("localMF[PEDGE_MF+dir]->nComp()!=NCOMP_PEDGE");
@@ -2044,10 +2047,10 @@ void NavierStokes::init_divup_cell_vel_cell(
   if (nsolve!=1)
    amrex::Error("nsolve!=1 NavierStokes::init_divup_cell_vel_cell");
   int ncomp_edge_avgdown=1;
-  int caller_id=5;
   int spectral_override=0; // always low order.
   avgDownEdge_localMF(PEDGE_MF,PRESSURE_PEDGE,ncomp_edge_avgdown,
-      0,AMREX_SPACEDIM,spectral_override,caller_id);
+      0,AMREX_SPACEDIM,spectral_override,
+      local_caller_string);
 
    // isweep=1 calculate cell velocity from mass weighted average of face
    //          velocity.
@@ -2781,7 +2784,7 @@ void NavierStokes::increment_face_velocity(
       FArrayBox& pres=(*U_old)[mfi];
 
        // FSI_GHOST_MAC_MF is initialized in 
-       //  init_FSI_GHOST_MAC_MF_ALL(caller_id)
+       //  init_FSI_GHOST_MAC_MF_ALL(caller_string)
       FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
 
       FArrayBox& primary_velfab=(*localMF[primary_vel_data])[mfi];
@@ -4728,7 +4731,10 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
 //  NavierStokes::do_the_advance
 //
 void NavierStokes::make_physics_varsALL(int project_option,
-  int caller_startup_id,int caller_id) {
+        const std::string& caller_string) {
+
+ std::string local_caller_string="make_physics_varsALL";
+ local_caller_string=caller_string+local_caller_string;
 
  if (level!=0)
   amrex::Error("level invalid make_physics_varsALL");
@@ -4773,7 +4779,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateCurv(project_option,caller_startup_id);
+  ns_level.makeStateCurv(project_option,local_caller_string);
  }
   // filenames: "ANGLE_UTAN<stuff>.plt"  (cell centered)
   // if GNBC is used, then the "ghost normal" in the substrate
@@ -4786,7 +4792,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   writeSanityCheckData(
     "ANGLE_UTAN",
     "in: make_physics_varsALL, after makeStateCurv: HISTORY_MF, angle, utan", 
-    caller_id,
+    local_caller_string,
     localMF[HISTORY_MF]->nComp(),
     HISTORY_MF,
     -1, // State_Type==-1
@@ -4812,7 +4818,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  if (ncomp_visc!=3*num_materials)
   amrex::Error("visc_data invalid ncomp");
 
- debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,9);
+ debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,local_caller_string);
  int ncomp_conductivity=localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
  if (ncomp_conductivity!=num_materials)
   amrex::Error("conductivity_data invalid ncomp");
@@ -4834,35 +4840,23 @@ void NavierStokes::make_physics_varsALL(int project_option,
    // average down from ilev+1 to ilev.
   
     // idxMF,scomp,ncomp,start_dir,ndir
+    // spectral_override==1 => order derived from "enable_spectral"
+    // spectral_override==0 => always low order.
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACECUT,1,0,
-		  AMREX_SPACEDIM,0,6);
+    AMREX_SPACEDIM,0,local_caller_string);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEFACECUT,1,0,
-		  AMREX_SPACEDIM,0,7);
-
-  int spectral_override=0;
-  if (enable_spectral==1) {
-   if (bfact>=2) {
-    spectral_override=1;
-   } else if (bfact==1) {
-    spectral_override=0;
-   } else {
-    amrex::Error("bfact invalid");
-   }
-  } else if (enable_spectral==0) {
-   spectral_override=0;
-  } else
-   amrex::Error("enable_spectral invalid");
+    AMREX_SPACEDIM,0,local_caller_string);
 
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEDEN,1,0,
-	  AMREX_SPACEDIM,spectral_override,8);
+	  AMREX_SPACEDIM,0,local_caller_string);
 
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEVISC,1,0,
-          AMREX_SPACEDIM,0,9);
+          AMREX_SPACEDIM,0,local_caller_string);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEHEAT,1,0,
-	  AMREX_SPACEDIM,0,10);
+	  AMREX_SPACEDIM,0,local_caller_string);
   if (num_species_var>0) {
    ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACESPEC,
-      num_species_var,0,AMREX_SPACEDIM,0,11);
+      num_species_var,0,AMREX_SPACEDIM,0,local_caller_string);
   }
 
  }  // ilev=finest_level ... level
@@ -4873,7 +4867,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
    writeSanityCheckData(
     "FACE_VAR",
     "in: make_physics_varsALL, FACE_VAR_MF",
-    caller_id,
+    local_caller_string,
     localMF[FACE_VAR_MF+dir]->nComp(),
     FACE_VAR_MF+dir,
     -1, // State_Type==-1
@@ -4883,7 +4877,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  }
 
  delete_array(DEN_RECON_MF);
- delete_array(MOM_DEN_MF);
+ delete_array(F);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete_array(AMRSYNC_VEL_MF+dir);
 
@@ -6084,14 +6078,15 @@ void NavierStokes::metrics_dataALL(int ngrow) {
 }
 
 
-void NavierStokes::metrics_data_min_max_ALL(int caller_id) {
+void NavierStokes::metrics_data_min_max_ALL(
+  const std::string& caller_string) {
 
  std::fflush(NULL);
 
  int finest_level=parent->finestLevel();
  for (int ilev=0;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.metrics_data_min_max(caller_id);
+  ns_level.metrics_data_min_max(caller_string);
  }
  std::fflush(NULL);
 }
@@ -6288,10 +6283,10 @@ void NavierStokes::metrics_data(int ngrow) {
 } // subroutine metrics_data
 
 
-void NavierStokes::metrics_data_min_max(int caller_id) {
+void NavierStokes::metrics_data_min_max(const std::string& caller_string) {
 
  int ngrow=localMF_grow[VOLUME_MF];
- std::cout << "metrics_data_min_max caller_id " << caller_id <<'\n';
+ std::cout << "metrics_data_min_max caller_string " << caller_string <<'\n';
  std::cout << "metrics_data_min_max ngrow,level " << ngrow << ' ' << 
 	 level <<'\n';
 
@@ -6306,16 +6301,6 @@ void NavierStokes::metrics_data_min_max(int caller_id) {
 
 } // subroutine metrics_data_min_max
 
-// caller_id=1 NavierStokes::prepare_post_process, from post_init_state
-// caller_id=2 NavierStokes::prepare_post_process, from post_restart
-// caller_id=3 NavierStokes::nonlinear_advection, renormalize_only=1
-// caller_id=4 NavierStokes::nonlinear_advection, renormalize_only=0
-// caller_id=5 NavierStokes::advance, renormalize_only=0
-// caller_id=6 NavierStokes::do_the_advance, renormalize_only=0,
-//                 mass_transfer_active==1
-// caller_id=7 NavierStokes::do_the_advance, renormalize_only=0,
-//                 after projection.
-//
 void NavierStokes::prescribe_solid_geometryALL(Real time,
   int renormalize_only,int local_truncate,
   const std::string& caller_string) {

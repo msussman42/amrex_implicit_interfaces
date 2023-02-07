@@ -3280,6 +3280,7 @@ stop
       CHARACTER(KIND=C_CHAR), INTENT(in) :: caller_string(*)
       INTEGER(C_INT), INTENT(in), VALUE :: caller_string_len
       CHARACTER(:), ALLOCATABLE :: fort_caller_string
+      CHARACTER(len=255) :: pattern
 
       INTEGER_T, INTENT(in) :: vof_height_function
       INTEGER_T :: vof_height_function_local
@@ -3508,7 +3509,11 @@ stop
        print *,"level invalid in curvstrip"
        stop
       endif
-  
+
+FIX ME 
+      pattern='post_restart'
+      pattern_len=12
+      call fort_pattern_test(fort_caller_string, 
       if (fort_pattern_test(fort_caller_string,"post_restart").eq.0) then
        do dirloc=1,SDIM
         if ((fablo(dirloc)/bfact_grid)*bfact_grid.ne.fablo(dirloc)) then
