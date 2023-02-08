@@ -3566,9 +3566,9 @@ end subroutine dynamic_contact_angle
           pattern,pattern_len)
       IMPLICIT NONE
 
-      INTEGER_T source_len,pattern_len
-      CHARACTER(len=source_len) :: source
-      CHARACTER(len=pattern_len) :: pattern
+      INTEGER_T, INTENT(in) :: source_len,pattern_len
+      CHARACTER(len=source_len), INTENT(in) :: source
+      CHARACTER(len=pattern_len), INTENT(in) :: pattern
       INTEGER_T i,j,local_test,source_char,pattern_char
 
       fort_pattern_test=0
