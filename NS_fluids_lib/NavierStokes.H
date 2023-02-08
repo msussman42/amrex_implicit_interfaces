@@ -260,8 +260,9 @@ public:
      //   (data will be ascii with filenames uniform??????.tec)
     void writeSanityCheckData(
 		const std::string& root_string,
+		const std::string& information_string,
 		const std::string& caller_string,
-		int data_id,
+                int tower_mf_id,
 		int ncomp,
 		int data_mf,
 		int state_type_mf,
@@ -1032,7 +1033,8 @@ protected:
      // data_dir=4  X,Z node
      // data_dir=5  Y,Z node
     void Sanity_output_zones(
-      int data_id,
+      const std::string& information_string,
+      int tower_mf_id,
       int data_dir,
       MultiFab* datamf,
       int ncomp,

@@ -339,7 +339,7 @@ stop
 
       subroutine fort_cellgrid_sanity( &
        tid, &
-       data_id, &
+       tower_mf_id, &
        data_dir, & ! data_dir=-1,0..sdim,3,4,5
        bfact, &
        ncomp, &
@@ -360,7 +360,7 @@ stop
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: tower_mf_id
       INTEGER_T, INTENT(in) :: data_dir
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: ncomp
@@ -688,7 +688,7 @@ stop
 
              scomp=scomp+ncomp 
 
-             if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+             if (tower_mf_id.eq.MULTIFAB_TOWER_PLT_MF) then
               if (ncomp.eq.PLOTCOMP_NCOMP) then
                ! do nothing
               else
@@ -736,7 +736,7 @@ stop
        finest_level, &
        SDC_outer_sweeps, &
        slab_step, &
-       data_id, &
+       tower_mf_id, &
        nsteps, &
        num_levels, &
        time, &
@@ -764,7 +764,7 @@ stop
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: SDC_outer_sweeps
       INTEGER_T, INTENT(in) :: slab_step
-      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: tower_mf_id
       INTEGER_T, INTENT(in) :: nsteps
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: visual_revolve
@@ -852,7 +852,7 @@ stop
       endif
 
       nwrite=plot_sdim+ncomp
-      if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+      if (tower_mf_id.eq.MULTIFAB_TOWER_PLT_MF) then
        if (ncomp.eq.PLOTCOMP_NCOMP) then
         ! do nothing
        else
@@ -895,7 +895,7 @@ stop
         finest_level, &
         SDC_outer_sweeps, &
         slab_step, &
-        data_id, &
+        tower_mf_id, &
         nsteps, &
         num_levels, &
         time, &
@@ -926,7 +926,7 @@ stop
 
        write(outerstr,'(I3)') SDC_outer_sweeps
        write(slabstr,'(I3)') slab_step
-       write(idstr,'(I3)') data_id
+       write(idstr,'(I3)') tower_mf_id
        do i=1,3
         if (outerstr(i:i).eq.' ') then
          outerstr(i:i)='0'
@@ -1113,7 +1113,7 @@ stop
        write(11) nwrite
 
        ! Variable names: combinezones_sanity
-       if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+       if (tower_mf_id.eq.MULTIFAB_TOWER_PLT_MF) then
         add_sub_cells=plot_sdim
         call dumpstring_headers(plot_sdim,add_sub_cells)
        else
@@ -1385,7 +1385,7 @@ stop
        dx, &
        SDC_outer_sweeps, &
        slab_step, &
-       data_id, &
+       tower_mf_id, &
        nsteps, &
        time, &
        visual_revolve, &
@@ -1407,7 +1407,7 @@ stop
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: SDC_outer_sweeps
       INTEGER_T, INTENT(in) :: slab_step
-      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: tower_mf_id
       INTEGER_T, INTENT(in) :: nsteps
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: bfact
@@ -1435,7 +1435,7 @@ stop
 
       call fort_cellgrid_sanity( &
        tid_local, &
-       data_id, &
+       tower_mf_id, &
        data_dir, &
        bfact, &
        ncomp, &
@@ -1474,7 +1474,7 @@ stop
        finest_level, &
        SDC_outer_sweeps, &
        slab_step, &
-       data_id, &
+       tower_mf_id, &
        nsteps, &
        num_levels, &
        time, &

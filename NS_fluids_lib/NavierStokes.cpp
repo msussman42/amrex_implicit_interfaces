@@ -6950,6 +6950,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
        "WALLFUNCTION",
        "GNBC DEBUGGING velINT,imgVR,solVR,angle",
        local_caller_string,
+       HISTORY_MAC_MF+data_dir, // tower_mf_id
        //velINT,image vel,velsol,image vel raster,velsol raster,angle
        localMF[HISTORY_MAC_MF+data_dir]->nComp(), 
        HISTORY_MAC_MF+data_dir,
@@ -6986,6 +6987,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
          "WALLVEL",
          "init_FSI_GHOST_MAC_MF_ALL, FSI_GHOST_MAC_MF",//fictitious sol vel
          local_caller_string,
+         FSI_GHOST_MAC_MF+data_dir, //tower_mf_id
          localMF[FSI_GHOST_MAC_MF+data_dir]->nComp(),
          FSI_GHOST_MAC_MF+data_dir,
          -1,  // State_Type==-1 
@@ -7010,7 +7012,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
  } else if (renormalize_only==1) {
   //do nothing
  } else
-  amrex::Eror("renormalize_only invalid");
+  amrex::Error("renormalize_only invalid");
 			 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   delete_array(HISTORY_MAC_MF+data_dir);
@@ -7606,12 +7608,14 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
 // Transfer_FSI_To_STATE() called from: ns_header_msg_level,initData ()
 void NavierStokes::copy_velocity_on_sign(int partid) {
 
+ std::string local_caller_string="copy_velocity_on_sign";
+
  int nparts=im_solid_map.size();
  if ((nparts<1)||(nparts>num_materials))
   amrex::Error("nparts invalid");
  if ((partid<0)||(partid>=nparts))
   amrex::Error("partid invalid");
- debug_ngrow(FSI_MF,ngrow_make_distance,1);
+ debug_ngrow(FSI_MF,ngrow_make_distance,local_caller_string);
 
  int im_part=im_solid_map[partid];
  if ((im_part<0)||(im_part>=num_materials))
@@ -7705,6 +7709,8 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
 // called from: FSI_make_distance, initData ()
 void NavierStokes::build_moment_from_FSILS(Real cur_time) {
 
+ std::string local_caller_string="build_moment_from_FSILS";
+
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid 1");
@@ -7734,7 +7740,7 @@ void NavierStokes::build_moment_from_FSILS(Real cur_time) {
  int nFSI=nparts*NCOMP_FSI;
  if (localMF[FSI_MF]->nComp()!=nFSI)
   amrex::Error("localMF[FSI_MF]->nComp()!=nFSI");
- debug_ngrow(FSI_MF,ngrow_make_distance,1);
+ debug_ngrow(FSI_MF,ngrow_make_distance,local_caller_string);
   
  bool use_tiling=ns_tiling;
 
@@ -7909,6 +7915,8 @@ void NavierStokes::copy_old_FSI_to_new() {
 // called from: ns_header_msg_level,initData ()
 void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
+ std::string local_caller_string="Transfer_FSI_To_STATE";
+
  if (ngrow_make_distance!=3)
   amrex::Error("ngrow_make_distance invalid");
 
@@ -7923,7 +7931,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
 
  if ((nparts<1)||(nparts>num_materials))
   amrex::Error("nparts invalid");
- debug_ngrow(FSI_MF,ngrow_make_distance,1);
+ debug_ngrow(FSI_MF,ngrow_make_distance,local_caller_string);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
  int nstate=STATE_NCOMP;
@@ -8048,6 +8056,8 @@ void NavierStokes::ns_header_msg_level(
  Real cur_time,
  Real dt,
  int iter) {
+
+ std::string local_caller_string="ns_header_msg_level";
 
  if (cur_time==cur_time_slab) {
   //do nothing
@@ -8352,7 +8362,8 @@ void NavierStokes::ns_header_msg_level(
     } else
      amrex::Error("FSI_operation invalid");
 
-    for (im_critical=im_critical_start;im_critical<num_materials;im_critical++) {
+    for (im_critical=im_critical_start;
+	 im_critical<num_materials;im_critical++) {
 
      im_index=im_critical;
      if (im_critical==-1) {
@@ -8607,7 +8618,7 @@ void NavierStokes::ns_header_msg_level(
     // FSI_MF allocated in FSI_make_distance
    if (ngrow_make_distance!=3)
     amrex::Error("ngrow_make_distance invalid");
-   debug_ngrow(FSI_MF,ngrow_make_distance,1);
+   debug_ngrow(FSI_MF,ngrow_make_distance,local_caller_string);
    if (localMF[FSI_MF]->nComp()!=nFSI)
     amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
@@ -8820,7 +8831,7 @@ void NavierStokes::ns_header_msg_level(
    // (3) =1 interior+ngrow-1  =0 otherwise
    // (4) =1 interior+ngrow    =0 otherwise
    resize_mask_nbr(ngrow_make_distance);
-   debug_ngrow(MASK_NBR_MF,ngrow_make_distance,2);
+   debug_ngrow(MASK_NBR_MF,ngrow_make_distance,local_caller_string);
  
    if (thread_class::nthreads<1)
     amrex::Error("thread_class::nthreads invalid");
@@ -8990,12 +9001,12 @@ void NavierStokes::ns_header_msg_level(
    // (3) =1 interior+ngrow-1  =0 otherwise
    // (4) =1 interior+ngrow    =0 otherwise
    resize_mask_nbr(ngrow_make_distance);
-   debug_ngrow(MASK_NBR_MF,ngrow_make_distance,2);
+   debug_ngrow(MASK_NBR_MF,ngrow_make_distance,local_caller_string);
    // mask=1 if not covered or if outside the domain.
    // NavierStokes::maskfiner_localMF
    // NavierStokes::maskfiner
    resize_maskfiner(ngrow_make_distance,MASKCOEF_MF);
-   debug_ngrow(MASKCOEF_MF,ngrow_make_distance,28);
+   debug_ngrow(MASKCOEF_MF,ngrow_make_distance,local_caller_string);
 
    if (localMF[DRAG_MF]->nGrow()!=ngrow_make_distance)
     amrex::Error("localMF[DRAG_MF] incorrect ngrow");
@@ -10589,6 +10600,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
    "FLUX_MF",
    "T11,T12,T22,T33,T13,T23",
    local_caller_string,
+   flux_mf, //tower_mf_id
    localMF[flux_mf]->nComp(), 
    flux_mf,
    -1, //State_Type==-1
@@ -10602,6 +10614,8 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
 
 void NavierStokes::make_viscoelastic_tensorMAC(int im,
   int flux_mf,int flux_grid_type,int fill_state_idx) {
+
+ std::string local_caller_string="make_viscoelastic_tensorMAC";
 
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
@@ -10668,9 +10682,9 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
   amrex::Error("flux_mf invalid nComp");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
  }
- debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -10872,6 +10886,8 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
 
 void NavierStokes::make_viscoelastic_tensor(int im) {
 
+ std::string local_caller_string="make_viscoelastic_tensor";
+
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
 
@@ -10889,7 +10905,7 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
  } else 
   amrex::Error("VISCOTEN_MF should not be allocated");
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -11026,6 +11042,8 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
 
 void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
+ std::string local_caller_string="make_viscoelastic_heating";
+
  bool use_tiling=ns_tiling;
 
  int nden=num_materials*num_state_material;
@@ -11040,22 +11058,22 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
   amrex::Error("num_state_base invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- debug_ngrow(idx,0,4);
+ debug_ngrow(idx,0,local_caller_string);
  if (localMF[idx]->nComp()!=1)
   amrex::Error("localMF[idx]->nComp() invalid");
 
- debug_ngrow(CELLTENSOR_MF,1,6);
+ debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
  if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,1,3);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
 
- debug_ngrow(CELL_DEN_MF,1,28); 
- debug_ngrow(CELL_DEN_BASE_MF,1,28); 
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string); 
+ debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
- debug_ngrow(CELL_DEDT_MF,1,28); 
+ debug_ngrow(CELL_DEDT_MF,1,local_caller_string); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
@@ -11093,7 +11111,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
   if (store_elastic_data[im]==1) {
 
-   debug_ngrow(VISCOTEN_MF,1,5);
+   debug_ngrow(VISCOTEN_MF,1,local_caller_string);
    if (localMF[VISCOTEN_MF]->nComp()!=ENUM_NUM_TENSOR_TYPE)
     amrex::Error("localMF[VISCOTEN_MF] invalid");
 
@@ -11106,7 +11124,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
    }
 
    resize_levelset(2,LEVELPC_MF);
-   debug_ngrow(LEVELPC_MF,2,5);
+   debug_ngrow(LEVELPC_MF,2,local_caller_string);
    if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
     amrex::Error("localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
@@ -11212,6 +11230,8 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
 
 void NavierStokes::make_marangoni_force() {
 
+ std::string local_caller_string="make_marangoni_force";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -11223,20 +11243,20 @@ void NavierStokes::make_marangoni_force() {
   amrex::Error("num_state_base invalid");
 
  resize_levelset(2,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,2,5);
+ debug_ngrow(LEVELPC_MF,2,local_caller_string);
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- debug_ngrow(DIST_CURV_MF,1,3);
+ debug_ngrow(DIST_CURV_MF,1,local_caller_string);
 
- debug_ngrow(CELL_DEN_MF,1,5);
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
- debug_ngrow(CELL_DEN_BASE_MF,1,28); 
+ debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
  if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
 
@@ -11244,9 +11264,9 @@ void NavierStokes::make_marangoni_force() {
   // NavierStokes::maskfiner_localMF
   // NavierStokes::maskfiner
  resize_maskfiner(2,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,2,28);
+ debug_ngrow(MASKCOEF_MF,2,local_caller_string);
  resize_mask_nbr(2);
- debug_ngrow(MASK_NBR_MF,2,2);
+ debug_ngrow(MASK_NBR_MF,2,local_caller_string);
 
  resize_metrics(2);
 
@@ -11367,6 +11387,8 @@ int NavierStokes::ns_thread() {
 //  NavierStokes::veldiffuseALL
 void NavierStokes::make_SEM_delta_force(int project_option) {
 
+ std::string local_caller_string="make_SEM_delta_force";
+
  bool use_tiling=ns_tiling;
 
  if ((slab_step<0)||(slab_step>=ns_time_order))
@@ -11383,15 +11405,15 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
   amrex::Error("num_state_base invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- debug_ngrow(delta_MF,0,3);
- debug_ngrow(MASKSEM_MF,1,28); 
+ debug_ngrow(delta_MF,0,local_caller_string);
+ debug_ngrow(MASKSEM_MF,1,local_caller_string); 
 
- debug_ngrow(CELL_DEN_MF,1,28); 
- debug_ngrow(CELL_DEN_BASE_MF,1,28); 
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string); 
+ debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
- debug_ngrow(CELL_DEDT_MF,1,28); 
+ debug_ngrow(CELL_DEDT_MF,1,local_caller_string); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
@@ -11545,6 +11567,8 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
 // called from veldiffuseALL in NavierStokes3.cpp
 void NavierStokes::make_heat_source() {
 
+ std::string local_caller_string="make_heat_source";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -11556,27 +11580,27 @@ void NavierStokes::make_heat_source() {
   amrex::Error("num_state_base invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
  VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,3);
+ debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  resize_levelset(2,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,2,5);
+ debug_ngrow(LEVELPC_MF,2,local_caller_string);
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[LEVELPC_MF]->nComp() invalid");
 
  resize_metrics(1);  
- debug_ngrow(VOLUME_MF,1,28); 
+ debug_ngrow(VOLUME_MF,1,local_caller_string); 
 
- debug_ngrow(CELL_DEN_MF,1,5);
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
- debug_ngrow(CELL_DEN_BASE_MF,1,28); 
+ debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
  if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
 
- debug_ngrow(CELL_DEDT_MF,1,5);
+ debug_ngrow(CELL_DEDT_MF,1,local_caller_string);
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
@@ -11667,6 +11691,8 @@ void NavierStokes::make_heat_source() {
 
 
 void NavierStokes::add_perturbation() {
+
+ std::string local_caller_string="add_perturbation";
 
  bool use_tiling=ns_tiling;
 
@@ -11763,6 +11789,8 @@ void NavierStokes::update_SEM_delta_force(
  int update_stable,
  int nsolve) {
 
+ std::string local_caller_string="update_SEM_delta_force";
+
  bool use_tiling=ns_tiling;
 
  if ((ns_time_order>=2)&&(ns_time_order<=32)) {
@@ -11818,7 +11846,7 @@ void NavierStokes::update_SEM_delta_force(
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- debug_ngrow(MACDIV_MF,0,3);
+ debug_ngrow(MACDIV_MF,0,local_caller_string);
 
  int idx_hoop=MACDIV_MF;
 
@@ -11860,7 +11888,7 @@ void NavierStokes::update_SEM_delta_force(
   amrex::Error("project_option invalid6");
 
  if (project_option==SOLVETYPE_VISC) { 
-  debug_ngrow(idx_hoop,0,3);
+  debug_ngrow(idx_hoop,0,local_caller_string);
   if (localMF[idx_hoop]->nComp()!=localMF[MACDIV_MF]->nComp())
    amrex::Error("localMF[idx_hoop]->nComp() invalid");
  } else if (project_option==SOLVETYPE_HEAT) { 
@@ -11875,7 +11903,7 @@ void NavierStokes::update_SEM_delta_force(
      (project_option==SOLVETYPE_VISC)) { //viscosity
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   debug_ngrow(GP_DEST_FACE_MF+dir,0,3);
+   debug_ngrow(GP_DEST_FACE_MF+dir,0,local_caller_string);
 
    if (project_option==SOLVETYPE_PRES) {
     if (nsolve!=1)
@@ -11888,19 +11916,19 @@ void NavierStokes::update_SEM_delta_force(
    } else
     amrex::Error("project_option invalid7");
  
-   debug_ngrow(spectralF_GP_MF+dir,0,3);
-   debug_ngrow(stableF_GP_MF+dir,0,3);
-   debug_ngrow(delta_GP_MF+dir,0,3);
+   debug_ngrow(spectralF_GP_MF+dir,0,local_caller_string);
+   debug_ngrow(stableF_GP_MF+dir,0,local_caller_string);
+   debug_ngrow(delta_GP_MF+dir,0,local_caller_string);
   } // dir=0..sdim-1
 
  } else
   amrex::Error("project_option invalid8");
 
- debug_ngrow(spectralF_MF,0,3);
- debug_ngrow(stableF_MF,0,3);
- debug_ngrow(delta_MF,0,3);
+ debug_ngrow(spectralF_MF,0,local_caller_string);
+ debug_ngrow(stableF_MF,0,local_caller_string);
+ debug_ngrow(delta_MF,0,local_caller_string);
 
- debug_ngrow(MASKSEM_MF,1,28); 
+ debug_ngrow(MASKSEM_MF,1,local_caller_string); 
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -12090,6 +12118,8 @@ void NavierStokes::update_SEM_delta_force(
 //  NavierStokes::tensor_advection_updateALL()  (NavierStokes3.cpp)
 void NavierStokes::tensor_advection_update() {
 
+ std::string local_caller_string="tensor_advection_update";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -12103,12 +12133,12 @@ void NavierStokes::tensor_advection_update() {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- debug_ngrow(CELLTENSOR_MF,1,9);
+ debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
 
- debug_ngrow(CELL_DEN_MF,1,9);
- debug_ngrow(CELL_DEN_BASE_MF,1,28); 
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string);
+ debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
- debug_ngrow(HOLD_VELOCITY_DATA_MF,1,9);
+ debug_ngrow(HOLD_VELOCITY_DATA_MF,1,local_caller_string);
  if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
   amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
 
@@ -12165,7 +12195,7 @@ void NavierStokes::tensor_advection_update() {
       MultiFab* tensor_source_mf=
        getStateTensor(0,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);
 
-      debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,9);
+      debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,local_caller_string);
 
       MultiFab* tendata_mf=localMF[HOLD_GETSHEAR_DATA_MF];
       if (tendata_mf->nGrow()==0) {
@@ -12297,6 +12327,8 @@ void NavierStokes::tensor_advection_update() {
 // called from:
 //  NavierStokes::tensor_advection_updateALL()  (NavierStokes3.cpp)
 void NavierStokes::tensor_extrapolation() {
+
+ std::string local_caller_string="tensor_extrapolation";
 
  bool use_tiling=ns_tiling;
 
@@ -12454,6 +12486,8 @@ void NavierStokes::tensor_extrapolation() {
 void 
 NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
 
+ std::string local_caller_string="getStateMOM_DEN";
+
  delete_localMF_if_exist(idx,1);
 
  bool use_tiling=ns_tiling;
@@ -12482,13 +12516,13 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
   // NavierStokes::resize_mask_nbr declared in NavierStokes3.cpp
  resize_mask_nbr(ngrow);
 
- debug_ngrow(VOLUME_MF,ngrow,28); 
- debug_ngrow(MASKCOEF_MF,ngrow,28); 
- debug_ngrow(MASK_NBR_MF,ngrow,28); 
+ debug_ngrow(VOLUME_MF,ngrow,local_caller_string); 
+ debug_ngrow(MASKCOEF_MF,ngrow,local_caller_string); 
+ debug_ngrow(MASK_NBR_MF,ngrow,local_caller_string); 
 
   // vof,ref centroid,order,slope,intercept  x num_materials
  VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow,36);
+ debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("slope_recon_mf has incorrect ncomp");
 
@@ -12810,6 +12844,8 @@ void
 NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 	int color_count,int nucleation_flag) {
 
+ std::string local_caller_string="level_phase_change_rate";
+
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -12902,7 +12938,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
  debug_ixType_raw(pres_eos_mf,-1,0);
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,28); 
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
  debug_ixType(MASKCOEF_MF,-1,MASKCOEF_MF);
 
  if ((prev_time_slab<0.0)||
@@ -13128,12 +13164,12 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    amrex::Error("localMF[FD_CURV_CELL_MF] incorrect ngrow");
   debug_ixType(FD_CURV_CELL_MF,-1,FD_CURV_CELL_MF);
 
-  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+  debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
   if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
    amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
   debug_ixType(HOLD_LS_DATA_MF,-1,HOLD_LS_DATA_MF);
 
-  debug_ngrow(MDOT_MF,0,355);
+  debug_ngrow(MDOT_MF,0,local_caller_string);
   debug_ixType(MDOT_MF,-1,MDOT_MF);
 
   VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
@@ -13548,7 +13584,7 @@ NavierStokes::level_phase_change_rate_extend() {
  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
- debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
@@ -13718,7 +13754,7 @@ NavierStokes::level_DRAG_extend() {
  if (localMF[DRAG_MF]->nGrow()!=ngrow_make_distance)
   amrex::Error("localMF[DRAG_MF] incorrect ngrow");
 
- debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
@@ -13869,11 +13905,11 @@ NavierStokes::level_phase_change_convertALL() {
   } // im_opp=im+1..num_materials
  } // im=1..num_materials-1
 
- debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
- debug_ngrow(DEN_RECON_MF,1,30);
+ debug_ngrow(DEN_RECON_MF,1,local_caller_string);
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
 
@@ -13922,7 +13958,7 @@ NavierStokes::level_phase_change_convertALL() {
 
        Vector<int> scompBC_map;
        scompBC_map.resize(1);
-       debug_ngrow(DEN_RECON_MF,1,30);
+       debug_ngrow(DEN_RECON_MF,1,local_caller_string);
 
        int dstcomp=(im_current-1)*num_state_material;
        int srccomp=STATECOMP_STATES+(im_current-1)*num_state_material;
@@ -13960,7 +13996,7 @@ NavierStokes::level_phase_change_convertALL() {
       avgDown_localMF_ALL(HOLD_LS_DATA_MF,0,num_materials*(AMREX_SPACEDIM+1),0);
       for (int im_group=0;im_group<num_materials*(AMREX_SPACEDIM+1);im_group++)
        scompBC_map_LS[im_group]=im_group;
-      debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+      debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
        //scomp=0
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
          0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
@@ -14040,7 +14076,7 @@ NavierStokes::level_phase_change_convert(
  // NavierStokes::maskfiner_localMF
  // NavierStokes::maskfiner
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,28); 
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
 
  if (localMF[JUMP_STRENGTH_MF]->nGrow()!=ngrow_distance)
   amrex::Error("jump strength invalid ngrow level_phase_change_conv");
@@ -14065,11 +14101,11 @@ NavierStokes::level_phase_change_convert(
   // in: level_phase_change_convert
   // DEN_RECON_MF is initialized prior to the call
   // to this routine.
- debug_ngrow(DEN_RECON_MF,1,30);
+ debug_ngrow(DEN_RECON_MF,1,local_caller_string);
  if (localMF[DEN_RECON_MF]->nComp()!=nden)
   amrex::Error("DEN_RECON_MF invalid ncomp");
 
- debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)) 
   amrex::Error("localMF[HOLD_LS_DATA_MF]->nComp() invalid");
 
@@ -14791,20 +14827,20 @@ NavierStokes::level_phase_change_redistribute(
  } else
   amrex::Error("expecting ngrow_distance==4");
 
- debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,355);
+ debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,local_caller_string);
  if (localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces)
   amrex::Error("localMF[JUMP_STRENGTH_MF]->nComp()!=2*num_interfaces");
 
- debug_ngrow(JUMP_STRENGTH_COMPLEMENT_MF,ngrow_distance,355);
+ debug_ngrow(JUMP_STRENGTH_COMPLEMENT_MF,ngrow_distance,local_caller_string);
  if (localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_interfaces)
   amrex::Error("localMF[JUMP_STRENGTH_COMPLEMENT_MF]->nComp()!=2*num_int");
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,6001);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
  
  if (localMF[LSNEW_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
- debug_ngrow(LSNEW_MF,ngrow_distance,6001);
+ debug_ngrow(LSNEW_MF,ngrow_distance,local_caller_string);
 
  const Real* dx = geom.CellSize();
  const Box& domain = geom.Domain();
@@ -15343,16 +15379,16 @@ NavierStokes::level_init_icemask() {
  resize_maskfiner(1,MASKCOEF_MF);
  VOF_Recon_resize(1,SLOPE_RECON_MF);
 
- debug_ngrow(SLOPE_RECON_MF,1,3);
+ debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- debug_ngrow(MASKCOEF_MF,1,6001);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  getStateDist_localMF(LSNEW_MF,1,cur_time_slab,5);
 
- debug_ngrow(LSNEW_MF,1,6001);
+ debug_ngrow(LSNEW_MF,1,local_caller_string);
  if (localMF[LSNEW_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
 
@@ -15492,16 +15528,16 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  if (localMF[SATURATION_TEMP_MF]->nGrow()!=ngrow_distance)
   amrex::Error("localMF[SATURATION_TEMP_MF] incorrect ngrow");
 
- debug_ngrow(VOLUME_MF,1,34);
- debug_ngrow(SWEPT_CROSSING_MF,0,34);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
+ debug_ngrow(SWEPT_CROSSING_MF,0,local_caller_string);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- debug_ngrow(CELL_DEN_MF,1,28); 
- debug_ngrow(CELL_DEN_BASE_MF,1,28); 
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string); 
+ debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
- debug_ngrow(CELL_DEDT_MF,1,28); 
+ debug_ngrow(CELL_DEDT_MF,1,local_caller_string); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
@@ -15627,7 +15663,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  MultiFab* TorY_list_mf=getState_list(1,scomp,ncomp,cur_time_slab);
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,28); 
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
  debug_ixType(MASKCOEF_MF,-1,MASKCOEF_MF);
 
  if (thread_class::nthreads<1)
@@ -15791,10 +15827,10 @@ NavierStokes::heat_source_term_flux_source() {
 
  resize_metrics(1);
 
- debug_ngrow(VOLUME_MF,1,34);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
  if (dt_slab<=0.0)
   amrex::Error("dt_slab must be positive");
@@ -16265,11 +16301,11 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
   if (localMF[LEVELPC_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("localMF[LEVELPC_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM)");
 
-  debug_ngrow(LEVELPC_MF,1,37);
-  debug_ngrow(delta_MF,0,37);
-  debug_ngrow(MASKCOEF_MF,1,36);
-  debug_ngrow(DEN_RECON_MF,1,37);
-  debug_ngrow(VELADVECT_MF,1,37);
+  debug_ngrow(LEVELPC_MF,1,local_caller_string);
+  debug_ngrow(delta_MF,0,local_caller_string);
+  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
+  debug_ngrow(DEN_RECON_MF,1,local_caller_string);
+  debug_ngrow(VELADVECT_MF,1,local_caller_string);
 
   if (localMF[DEN_RECON_MF]->nComp()!=num_materials*num_state_material)
    amrex::Error(
@@ -16357,7 +16393,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    debug_ngrow(UMAC_MF+dir,0,115);
+    debug_ngrow(UMAC_MF+dir,0,local_caller_string);
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid");
@@ -16505,9 +16541,9 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
    if (bfact>=1) {
 
-    debug_ngrow(UMAC_MF,0,116);
-    debug_ngrow(UMAC_MF+1,0,117);
-    debug_ngrow(UMAC_MF+AMREX_SPACEDIM-1,0,118);
+    debug_ngrow(UMAC_MF,0,local_caller_string);
+    debug_ngrow(UMAC_MF+1,0,local_caller_string);
+    debug_ngrow(UMAC_MF+AMREX_SPACEDIM-1,0,local_caller_string);
 
     MultiFab& S_new=get_new_data(State_Type,slab_step+1);
     MultiFab& S_old=get_new_data(State_Type,slab_step);
@@ -16800,10 +16836,10 @@ NavierStokes::split_scalar_advection() {
 
   // vof,ref centroid,order,slope,intercept  x num_materials
  VOF_Recon_resize(ngrow_mass,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow_mass,36);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_mass,local_caller_string);
  resize_maskfiner(ngrow_mass,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,ngrow_mass,36);
- debug_ngrow(VOF_PREV_TIME_MF,ngrow_scalar,38);
+ debug_ngrow(MASKCOEF_MF,ngrow_mass,local_caller_string);
+ debug_ngrow(VOF_PREV_TIME_MF,ngrow_scalar,local_caller_string);
  if (localMF[VOF_PREV_TIME_MF]->nComp()!=num_materials)
   amrex::Error("vof prev time invalid ncomp");
 
@@ -16907,10 +16943,10 @@ NavierStokes::split_scalar_advection() {
  if (LS_recon_ncomp!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("LS_recon invalid");
 
- debug_ngrow(LS_RECON_MF,ngrow_mass,40);
+ debug_ngrow(LS_RECON_MF,ngrow_mass,local_caller_string);
 
  resize_mask_nbr(ngrow_mass);
- debug_ngrow(MASK_NBR_MF,ngrow_mass,28); 
+ debug_ngrow(MASK_NBR_MF,ngrow_mass,local_caller_string); 
 
  MultiFab* umac_new[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -17557,7 +17593,7 @@ void NavierStokes::GetDragALL() {
  if (level!=0)
   amrex::Error("it is required that level=0 in GetDragALL");
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*num_materials) {
   // do nothing
  } else 
@@ -17565,7 +17601,7 @@ void NavierStokes::GetDragALL() {
  
   //ngrow_make_distance=3
   //ngrow_distance=4
- debug_ngrow(DRAG_MF,ngrow_make_distance,9);
+ debug_ngrow(DRAG_MF,ngrow_make_distance,local_caller_string);
  debug_ixType(DRAG_MF,-1,DRAG_MF);
  if (localMF[DRAG_MF]->nComp()==N_DRAG) {
   // do nothing
@@ -17575,7 +17611,7 @@ void NavierStokes::GetDragALL() {
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
-  debug_ngrow(VISCOTEN_ALL_MAT_MF,1,9);
+  debug_ngrow(VISCOTEN_ALL_MAT_MF,1,local_caller_string);
   if (localMF[VISCOTEN_ALL_MAT_MF]->nComp()==
       num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
    // do nothing
@@ -17602,7 +17638,7 @@ void NavierStokes::GetDragALL() {
  allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
  if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("hold_LS_DATA_MF (nComp()) !=num_materials*(AMREX_SPACEDIM+1)");
- debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,30);
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -17690,17 +17726,17 @@ NavierStokes::GetDrag(int isweep) {
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
- debug_ngrow(CELLTENSOR_MF,1,45);
- debug_ngrow(FACETENSOR_MF,1,45);
+ debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
+ debug_ngrow(FACETENSOR_MF,1,local_caller_string);
  resize_levelset(2,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,2,45);
+ debug_ngrow(LEVELPC_MF,2,local_caller_string);
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("levelpc mf has incorrect ncomp");
  VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,46);
+ debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,1,47);
- debug_ngrow(CELL_VISC_MF,1,47);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
+ debug_ngrow(CELL_VISC_MF,1,local_caller_string);
 
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*num_materials) {
   // do nothing
@@ -17715,12 +17751,12 @@ NavierStokes::GetDrag(int isweep) {
  }
 
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,1,48);
- debug_ngrow(DRAG_MF,ngrow_make_distance,50);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
+ debug_ngrow(DRAG_MF,ngrow_make_distance,local_caller_string);
  debug_ixType(DRAG_MF,-1,DRAG_MF);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>num_materials))
@@ -17827,7 +17863,7 @@ NavierStokes::GetDrag(int isweep) {
      (num_materials_viscoelastic<=num_materials)) {
   VISCOTEN_ALL_MAT_MF_local=VISCOTEN_ALL_MAT_MF;
 
-  debug_ngrow(VISCOTEN_ALL_MAT_MF_local,1,50);
+  debug_ngrow(VISCOTEN_ALL_MAT_MF_local,1,local_caller_string);
   if (localMF[VISCOTEN_ALL_MAT_MF_local]->nComp()==NUM_CELL_ELASTIC) {
    //do nothing
   } else {
@@ -18355,10 +18391,10 @@ NavierStokes::dotSum(int project_option,
   amrex::Error("project_option_momeqn(project_option) invalid2");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,0,51);
+ debug_ngrow(MASKCOEF_MF,0,local_caller_string);
 
  if (mf1->nComp()!=nsolve) {
   std::cout << "mf1_ncomp nsolve " << mf1->nComp() << ' ' << nsolve << '\n';
@@ -18444,22 +18480,22 @@ NavierStokes::dotSumONES_size(int project_option,
   amrex::Error("result_sum or result_flag have invalid size");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2); 
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string); 
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,0,51);
+ debug_ngrow(MASKCOEF_MF,0,local_caller_string);
 
- debug_ngrow(ONES_MF,0,51);
- debug_ngrow(ONES_GROW_MF,0,51);
- debug_ngrow(TYPE_ONES_MF,0,51); //=1 if diagonal=0.0; =2 if diagonal>0.0
- debug_ngrow(COLOR_ONES_MF,0,51);
+ debug_ngrow(ONES_MF,0,local_caller_string);
+ debug_ngrow(ONES_GROW_MF,0,local_caller_string);
+ debug_ngrow(TYPE_ONES_MF,0,local_caller_string); //=1 if diagonal=0.0; =2 if diagonal>0.0
+ debug_ngrow(COLOR_ONES_MF,0,local_caller_string);
 
  if (type_ONES_flag.size()==2) {
   // do nothing
  } else
   amrex::Error("type_ONES_flag.size() invalid");
 
- debug_ngrow(ALPHACOEF_MF,0,51);
+ debug_ngrow(ALPHACOEF_MF,0,local_caller_string);
  int nsolve_test=localMF[ALPHACOEF_MF]->nComp();
  int nsolve_expect=1;
  if (project_option==SOLVETYPE_VISC) { 
@@ -18607,23 +18643,23 @@ NavierStokes::dotSumONES(int project_option,
   amrex::Error("result_sum has invalid size");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2); 
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string); 
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(index_MF,0,51);
- debug_ngrow(MASKCOEF_MF,0,51);
+ debug_ngrow(index_MF,0,local_caller_string);
+ debug_ngrow(MASKCOEF_MF,0,local_caller_string);
 
- debug_ngrow(ONES_MF,0,51);
- debug_ngrow(ONES_GROW_MF,0,51);
- debug_ngrow(TYPE_ONES_MF,0,51); //=1 if diagonal=0.0; =2 if diagonal>0.0
- debug_ngrow(COLOR_ONES_MF,0,51);
+ debug_ngrow(ONES_MF,0,local_caller_string);
+ debug_ngrow(ONES_GROW_MF,0,local_caller_string);
+ debug_ngrow(TYPE_ONES_MF,0,local_caller_string); //=1 if diagonal=0.0; =2 if diagonal>0.0
+ debug_ngrow(COLOR_ONES_MF,0,local_caller_string);
 
  if (type_ONES_flag.size()==2) {
   // do nothing
  } else
   amrex::Error("type_ONES_flag.size() invalid");
 
- debug_ngrow(ALPHACOEF_MF,0,51);
+ debug_ngrow(ALPHACOEF_MF,0,local_caller_string);
  int nsolve_test=localMF[ALPHACOEF_MF]->nComp();
  int nsolve_expect=1;
  if (project_option==SOLVETYPE_VISC) { 
@@ -18757,23 +18793,23 @@ NavierStokes::mf_combine_ones_level(int project_option,
  bool use_tiling=ns_tiling;
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2); 
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string); 
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(index_MF,0,51);
- debug_ngrow(MASKCOEF_MF,0,51);
+ debug_ngrow(index_MF,0,local_caller_string);
+ debug_ngrow(MASKCOEF_MF,0,local_caller_string);
 
- debug_ngrow(ONES_MF,0,51);
- debug_ngrow(ONES_GROW_MF,0,51);
- debug_ngrow(TYPE_ONES_MF,0,51); //=1 if diagonal=0.0; =2 if diagonal>0.0
- debug_ngrow(COLOR_ONES_MF,0,51);
+ debug_ngrow(ONES_MF,0,local_caller_string);
+ debug_ngrow(ONES_GROW_MF,0,local_caller_string);
+ debug_ngrow(TYPE_ONES_MF,0,local_caller_string); //=1 if diagonal=0.0; =2 if diagonal>0.0
+ debug_ngrow(COLOR_ONES_MF,0,local_caller_string);
 
  if (type_ONES_flag.size()==2) {
   // do nothing
  } else
   amrex::Error("type_ONES_flag.size() invalid");
 
- debug_ngrow(ALPHACOEF_MF,0,51);
+ debug_ngrow(ALPHACOEF_MF,0,local_caller_string);
  int nsolve_test=localMF[ALPHACOEF_MF]->nComp();
  int nsolve_expect=1;
  if (project_option==SOLVETYPE_VISC) { 
@@ -18909,10 +18945,10 @@ void NavierStokes::levelCombine(
   amrex::Error("level too big");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
-  debug_ngrow(FACE_VAR_MF+dir,0,2);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,0,51);
+ debug_ngrow(MASKCOEF_MF,0,local_caller_string);
 
  if (mfx->nComp()!= nsolve)
   amrex::Error("mfx invalid ncomp");
@@ -19031,13 +19067,13 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
   amrex::Error("fast_mode invalid");
 
  resize_maskfiner(2,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,2,53);
+ debug_ngrow(MASKCOEF_MF,2,local_caller_string);
 
  VOF_Recon_resize(2,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,2,54);
- debug_ngrow(CELLTENSOR_MF,1,54);
+ debug_ngrow(SLOPE_RECON_MF,2,local_caller_string);
+ debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
 
- debug_ngrow(DRAG_MF,ngrow_make_distance,50);
+ debug_ngrow(DRAG_MF,ngrow_make_distance,local_caller_string);
  debug_ixType(DRAG_MF,-1,DRAG_MF);
  if (localMF[DRAG_MF]->nComp()!=N_DRAG)
   amrex::Error("drag ncomp invalid");
@@ -19392,7 +19428,7 @@ void NavierStokes::writeInterfaceReconstruction() {
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
 
- debug_ngrow(SLOPE_RECON_MF,1,55);
+ debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  if (level!=0)
   amrex::Error("level should be zero");
 
@@ -19567,7 +19603,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  ParallelDescriptor::Barrier();
 
- debug_ngrow(SLOPE_RECON_MF,1,65);
+ debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
@@ -19583,6 +19619,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     "RawStateType",
     "RawStateType: vel,pres,den_temp_spec,mofvars,error ind",
     local_caller_string,
+    State_Type, //tower_mf_id
     S_new_temp.nComp(),
     -1,  //data_mf=-1
     State_Type, //state_type_mf
@@ -19601,6 +19638,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      "RawMacType",
      "RawMacType: vel",
      local_caller_string,
+     Umac_Type+dir_mac, //tower_mf_id
      mac_new_temp.nComp(),
      -1,  //data_mf=-1
      Umac_Type+dir_mac, //state_type_mf
@@ -19698,11 +19736,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
  getStateVISC_ALL(); //we are in writeTECPLOT_file
- debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*num_materials)
   amrex::Error("viscmf invalid ncomp");
 
- debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,9);
+ debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,local_caller_string);
  if (localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp()!=num_materials)
   amrex::Error("conductivity_data invalid ncomp");
 
@@ -19862,7 +19900,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  for (int ilev=tecplot_finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  ns_level.debug_ngrow(MACDIV_MF,1,250);
+  ns_level.debug_ngrow(MACDIV_MF,1,local_caller_string);
 
   MultiFab* velmf=ns_level.getState(1,STATECOMP_VEL,
 	STATE_NCOMP_VEL+STATE_NCOMP_PRES,cur_time_slab);
@@ -20332,7 +20370,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    writeSanityCheckData(
     "nddata_piecewise_const",
     "nddata_piecewise_const",
-    MULTIFAB_TOWER_PLT_MF, //data_id
+    "nddata_piecewise_const",
+    MULTIFAB_TOWER_PLT_MF, //tower_mf_id
     ncomp_plot,
     MULTIFAB_TOWER_PLT_MF,
     -1, //State_Type==-1
@@ -20419,8 +20458,9 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
 void NavierStokes::writeSanityCheckData(
 		const std::string& root_string,
+		const std::string& information_string,
 		const std::string& caller_string,
-		int data_id,
+		int tower_mf_id,
                 int ncomp,
                 int data_mf, 
 		int state_type_mf,
@@ -20433,10 +20473,14 @@ void NavierStokes::writeSanityCheckData(
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "in: writeSanityCheckData, root_string= " <<
     root_string << '\n';
+  std::cout << "in: writeSanityCheckData, information_string= " <<
+    information_string << '\n';
   std::cout << "in: writeSanityCheckData, caller_string= " <<
-    caller_string << " data_dir=" << data_dir << '\n';
+    caller_string << '\n';
   std::cout << "in: writeSanityCheckData, data_mf= " <<
     data_mf << " state_type_mf=" << state_type_mf << '\n';
+  std::cout << "in: writeSanityCheckData, tower_mf_id= " <<
+    tower_mf_id << '\n';
  }
 
  if (nsteps_actual>=0) {
@@ -20521,7 +20565,7 @@ void NavierStokes::writeSanityCheckData(
     amrex::Error("ns_level.localMF_grow[data_mf] invalid");
 
    raw_data_mf=ns_level.localMF[data_mf];
-   ns_level.debug_ngrow(data_mf,0,250);
+   ns_level.debug_ngrow(data_mf,0,local_caller_string);
 
   } else if (data_mf==-1) {
 
@@ -20546,7 +20590,8 @@ void NavierStokes::writeSanityCheckData(
    // data_dir=4  X,Z node
    // data_dir=5  Y,Z node
   ns_level.Sanity_output_zones(
-   data_id,
+   information_string, 
+   tower_mf_id,
    data_dir,
    raw_data_mf,
    ncomp,
@@ -20618,7 +20663,7 @@ void NavierStokes::writeSanityCheckData(
    &tecplot_finest_level,
    &SDC_outer_sweeps,
    &slab_step,
-   &data_id,
+   &tower_mf_id,
    &nsteps_actual,
    &num_levels,
    &cur_time_slab,
@@ -21645,7 +21690,7 @@ NavierStokes::volWgtSumALL(
   // ngrow_distance=4
  allocate_array(ngrow_make_distance,N_DRAG,-1,DRAG_MF);
 
- debug_ngrow(CELL_VISC_MATERIAL_MF,1,9);
+ debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()==3*num_materials) {
   // do nothing
  } else {
@@ -22342,7 +22387,7 @@ NavierStokes::init_particle_container(int append_flag) {
  const Real* dx = geom.CellSize();
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,28);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  if (particles_flag==1) {
 
@@ -22687,12 +22732,12 @@ NavierStokes::particle_tensor_advection_update() {
   if ((num_materials_viscoelastic>=1)&&
       (num_materials_viscoelastic<=num_materials)) {
 
-   debug_ngrow(CELLTENSOR_MF,1,9);
+   debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
 
-   debug_ngrow(CELL_DEN_MF,1,9);
-   debug_ngrow(CELL_DEN_BASE_MF,1,28); 
+   debug_ngrow(CELL_DEN_MF,1,local_caller_string);
+   debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
-   debug_ngrow(HOLD_VELOCITY_DATA_MF,1,9);
+   debug_ngrow(HOLD_VELOCITY_DATA_MF,1,local_caller_string);
    if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
     amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
 
@@ -22705,7 +22750,7 @@ NavierStokes::particle_tensor_advection_update() {
        num_materials << '\n';
     amrex::Error("cell_visc_material ncomp invalid(6)");
    }
-   debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,9);
+   debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,local_caller_string);
 
    MultiFab* tendata_mf=localMF[HOLD_GETSHEAR_DATA_MF];
    if (tendata_mf->nGrow()==0) {
@@ -23779,9 +23824,9 @@ void NavierStokes::MOFavgDown() {
  const BoxArray& fgrids=fine_lev.grids;
  const DistributionMapping& fdmap=fine_lev.dmap;
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,0,80);
+ debug_ngrow(VOLUME_MF,0,local_caller_string);
  fine_lev.resize_metrics(1);
- fine_lev.debug_ngrow(VOLUME_MF,1,81);
+ fine_lev.debug_ngrow(VOLUME_MF,1,local_caller_string);
 
  MultiFab& S_fine=fine_lev.get_new_data(State_Type,slab_step+1);
  MultiFab& S_crse = get_new_data(State_Type,slab_step+1);
@@ -23874,9 +23919,9 @@ void NavierStokes::avgDownError() {
  const BoxArray& fgrids=fine_lev.grids;
  const DistributionMapping& fdmap=fine_lev.dmap;
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,0,80);
+ debug_ngrow(VOLUME_MF,0,local_caller_string);
  fine_lev.resize_metrics(1);
- fine_lev.debug_ngrow(VOLUME_MF,1,81);
+ fine_lev.debug_ngrow(VOLUME_MF,1,local_caller_string);
 
  MultiFab& S_fine=fine_lev.get_new_data(State_Type,slab_step+1);
  MultiFab& S_crse = get_new_data(State_Type,slab_step+1);
@@ -24467,12 +24512,12 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  getStateDist_localMF(ORIGDIST_MF,ngrow_distance,cur_time_slab,15);
 
  resize_mask_nbr(ngrow_distance);
- debug_ngrow(MASK_NBR_MF,ngrow_distance,90);
+ debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
  if (localMF[MASK_NBR_MF]->nComp()!=4)
   amrex::Error("invalid ncomp for mask nbr");
  VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow_distance,90);
- debug_ngrow(ORIGDIST_MF,ngrow_distance,90);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
+ debug_ngrow(ORIGDIST_MF,ngrow_distance,local_caller_string);
  if (localMF[ORIGDIST_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("invalid ncomp for origdist");
 
@@ -24640,21 +24685,21 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
   }
  }
 
- debug_ngrow(FACETEST_MF,ngrow_distance,90);
+ debug_ngrow(FACETEST_MF,ngrow_distance,local_caller_string);
  if (localMF[FACETEST_MF]->nComp()!=num_materials*AMREX_SPACEDIM)
   amrex::Error("localMF[FACETEST_MF]->nComp() invalid");
 
- debug_ngrow(FACEFRAC_MF,ngrow_distance,90);
+ debug_ngrow(FACEFRAC_MF,ngrow_distance,local_caller_string);
  if (localMF[FACEFRAC_MF]->nComp()!=nface)
   amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACEFRAC_SOLVE_MM_MF+dir,ngrow_distance,722);
+  debug_ngrow(FACEFRAC_SOLVE_MM_MF+dir,ngrow_distance,local_caller_string);
   if (localMF[FACEFRAC_SOLVE_MM_MF+dir]->nComp()!=nface_dst)
    amrex::Error("localMF[FACEFRAC_SOLVE_MM_MF+dir]->nComp()!=nface_dst");
  }
 
- debug_ngrow(STENCIL_MF,ngrow_distance,90);
+ debug_ngrow(STENCIL_MF,ngrow_distance,local_caller_string);
 
  Vector<int> nprocessed;
  nprocessed.resize(thread_class::nthreads);
@@ -24900,19 +24945,19 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
  if (ngrow_dest==0)
   ngrow_source=1;
 
- debug_ngrow(idxsrc,ngrow_source,90);
+ debug_ngrow(idxsrc,ngrow_source,local_caller_string);
  if (localMF[idxsrc]->nComp()!=nface_src)
   amrex::Error("idxsrc has invalid ncomp");
 
  VOF_Recon_resize(ngrow_source,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow_source,90);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_source,local_caller_string);
 
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
    // (2) =1 interior  =0 otherwise
    // (3) =1 interior+ngrow-1  =0 otherwise
    // (4) =1 interior+ngrow    =0 otherwise
  resize_mask_nbr(ngrow_source);
- debug_ngrow(MASK_NBR_MF,ngrow_source,90);
+ debug_ngrow(MASK_NBR_MF,ngrow_source,local_caller_string);
 
  const Real* dx = geom.CellSize();
 
@@ -24999,9 +25044,9 @@ NavierStokes::makeFaceFrac(
  new_localMF(idx,nface,ngrow,-1);
  localMF[idx]->setVal(0.0);
  VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow,90);
+ debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
  resize_mask_nbr(ngrow);
- debug_ngrow(MASK_NBR_MF,ngrow,90);
+ debug_ngrow(MASK_NBR_MF,ngrow,local_caller_string);
 
  const Real* dx = geom.CellSize();
 
@@ -25087,10 +25132,10 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  localMF[idx]->setVal(0.0);
 
  VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow,90);
- debug_ngrow(FACEFRAC_MF,ngrow,90);
+ debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
+ debug_ngrow(FACEFRAC_MF,ngrow,local_caller_string);
  resize_mask_nbr(ngrow);
- debug_ngrow(MASK_NBR_MF,ngrow,90);
+ debug_ngrow(MASK_NBR_MF,ngrow,local_caller_string);
 
  if (localMF[FACEFRAC_MF]->nComp()!=nface)
   amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
@@ -25177,9 +25222,9 @@ NavierStokes::makeCellFrac(
   ngrow_resize++;
 
  VOF_Recon_resize(ngrow_resize,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow_resize,90);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_resize,local_caller_string);
  resize_mask_nbr(ngrow_resize);
- debug_ngrow(MASK_NBR_MF,ngrow_resize,90);
+ debug_ngrow(MASK_NBR_MF,ngrow_resize,local_caller_string);
 
  const Real* dx = geom.CellSize();
 
@@ -25294,7 +25339,7 @@ NavierStokes::makeStateCurv(int project_option,
  localMF[DIST_CURV_MF]->setVal(0.0);
 
  VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,ngrow_distance,90);
+ debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()==num_materials*ngeom_recon) {
   // do nothing
  } else
@@ -25323,9 +25368,9 @@ NavierStokes::makeStateCurv(int project_option,
    // NavierStokes::maskfiner_localMF
    // NavierStokes::maskfiner
   resize_maskfiner(1,MASKCOEF_MF);
-  debug_ngrow(MASKCOEF_MF,1,28); 
+  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
   resize_mask_nbr(1);
-  debug_ngrow(MASK_NBR_MF,1,2);
+  debug_ngrow(MASK_NBR_MF,1,local_caller_string);
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -25511,6 +25556,8 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
 void
 NavierStokes::ctml_fsi_transfer_force() {
 	
+ std::string local_caller_string="ctml_fsi_transfer_force";
+
  if (ParallelDescriptor::IOProcessor() && verbose)
   std::cout << "in NavierStokes::ctml_fsi_transfer_force() \n";
 
@@ -25544,7 +25591,7 @@ NavierStokes::ctml_fsi_transfer_force() {
 
      if (FSI_flag[im_part]==FSI_SHOELE_VELVEL) {
 
-      debug_ngrow(FSI_MF,0,1);
+      debug_ngrow(FSI_MF,0,local_caller_string);
       if (localMF[FSI_MF]->nComp()!=nFSI)
        amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
