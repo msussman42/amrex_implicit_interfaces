@@ -16705,7 +16705,7 @@ end subroutine print_visual_descriptor
        finest_level, &
        SDC_outer_sweeps, &
        slab_step, &
-       data_id, &
+       tower_mf_id, &
        nsteps, &
        num_levels, &
        time, &
@@ -16733,7 +16733,7 @@ end subroutine print_visual_descriptor
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: SDC_outer_sweeps
       INTEGER_T, INTENT(in) :: slab_step
-      INTEGER_T, INTENT(in) :: data_id
+      INTEGER_T, INTENT(in) :: tower_mf_id
       INTEGER_T, INTENT(in) :: nsteps
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: visual_revolve
@@ -16823,7 +16823,7 @@ end subroutine print_visual_descriptor
       nwrite2d=SDIM+ncomp
       nwrite3d=plot_sdim+ncomp
 
-      if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+      if (tower_mf_id.eq.MULTIFAB_TOWER_PLT_MF) then
        if (ncomp.eq.PLOTCOMP_NCOMP) then
         ! do nothing
        else
@@ -16845,7 +16845,7 @@ end subroutine print_visual_descriptor
       enddo
       write(outerstr,'(I3)') SDC_outer_sweeps
       write(slabstr,'(I3)') slab_step
-      write(idstr,'(I3)') data_id
+      write(idstr,'(I3)') tower_mf_id
       do i=1,3
        if (outerstr(i:i).eq.' ') then
         outerstr(i:i)='0'
@@ -17034,7 +17034,7 @@ end subroutine print_visual_descriptor
        ! Number of variables 
       write(11) nwrite3d
 
-      if (data_id.eq.MULTIFAB_TOWER_PLT_MF) then
+      if (tower_mf_id.eq.MULTIFAB_TOWER_PLT_MF) then
        add_sub_cells=plot_sdim
        call dumpstring_headers(plot_sdim_macro,add_sub_cells)
       else

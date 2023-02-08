@@ -253,18 +253,18 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  localMF[ALPHANOVOLUME_MF]->setVal(0.0,0,nsolve,0);
 
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,1,200);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
 
   // ONES_MF=1 if diag>0  ONES_MF=0 if diag==0.
- debug_ngrow(ONES_MF,0,202);
+ debug_ngrow(ONES_MF,0,local_caller_string);
  if (localMF[ONES_MF]->nComp()!=1)
   amrex::Error("localMF[ONES_MF]->nComp() invalid");
- debug_ngrow(ONES_GROW_MF,1,202);
+ debug_ngrow(ONES_GROW_MF,1,local_caller_string);
  if (localMF[ONES_GROW_MF]->nComp()!=1)
   amrex::Error("localMF[ONES_GROW_MF]->nComp() invalid");
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,202);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  int local_cell_ncomp=1;
  int local_cell_c2_ncomp=2;
@@ -274,12 +274,12 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  } else
   amrex::Error("project_option invalid");
 
- debug_ngrow(CELL_SOUND_MF,0,135);
- debug_ngrow(CELL_DEN_MF,1,136);
- debug_ngrow(CELL_VISC_MF,1,137);
- debug_ngrow(CELL_DEDT_MF,1,138);
+ debug_ngrow(CELL_SOUND_MF,0,local_caller_string);
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string);
+ debug_ngrow(CELL_VISC_MF,1,local_caller_string);
+ debug_ngrow(CELL_DEDT_MF,1,local_caller_string);
 
- debug_ngrow(OFF_DIAG_CHECK_MF,0,139);
+ debug_ngrow(OFF_DIAG_CHECK_MF,0,local_caller_string);
 
  if (localMF[OFF_DIAG_CHECK_MF]->nComp()!=nsolve)
   amrex::Error("localMF[OFF_DIAG_CHECK_MF]->nComp() invalid");
@@ -528,7 +528,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  localMF[MASK_DIV_RESIDUAL_MF]->setVal(0.0,0,1,0);
  localMF[MASK_RESIDUAL_MF]->setVal(0.0,0,1,0);
 
- debug_ngrow(DIFFUSIONRHS_MF,0,141);
+ debug_ngrow(DIFFUSIONRHS_MF,0,local_caller_string);
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -807,10 +807,10 @@ NavierStokes::restore_active_pressure(int save_mf) {
  bool use_tiling=ns_tiling;
  int bfact=parent->Space_blockingFactor(level);
 
- debug_ngrow(save_mf,0,142);
+ debug_ngrow(save_mf,0,local_caller_string);
  if (localMF[save_mf]->nComp()!=1)
   amrex::Error("localMF[save_mf]->nComp() invalid");
- debug_ngrow(OFF_DIAG_CHECK_MF,0,143);
+ debug_ngrow(OFF_DIAG_CHECK_MF,0,local_caller_string);
  if (localMF[OFF_DIAG_CHECK_MF]->nComp()!=1)
   amrex::Error("localMF[OFF_DIAG_CHECK_MF]->nComp() invalid");
 
@@ -1176,9 +1176,9 @@ void NavierStokes::DiagInverse(
  bool use_tiling=ns_tiling;
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,845);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
- debug_ngrow(FACE_VAR_MF,0,205);
+ debug_ngrow(FACE_VAR_MF,0,local_caller_string);
 
  int finest_level=parent->finestLevel();
  if (level > finest_level)
@@ -1633,18 +1633,18 @@ void NavierStokes::apply_div(
   amrex::Error("nparts invalid");
 
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,1,250);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
 
  resize_maskfiner(1,MASKCOEF_MF);
  resize_mask_nbr(1);
- debug_ngrow(MASKCOEF_MF,1,253); // maskcoef=1 if not covered by finer lev.
- debug_ngrow(MASK_NBR_MF,1,253); // mask_nbr=1 at fine-fine bc.
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); // maskcoef=1 if not covered by finer lev.
+ debug_ngrow(MASK_NBR_MF,1,local_caller_string); // mask_nbr=1 at fine-fine bc.
 
- debug_ngrow(DIAG_REGULARIZE_MF,0,253); 
+ debug_ngrow(DIAG_REGULARIZE_MF,0,local_caller_string); 
  if (localMF[DIAG_REGULARIZE_MF]->nComp()!=nsolve)
   amrex::Error("localMF[DIAG_REGULARIZE_MF]->nComp()!=nsolve");
 
- debug_ngrow(ALPHACOEF_MF,0,253); 
+ debug_ngrow(ALPHACOEF_MF,0,local_caller_string); 
  if (localMF[ALPHACOEF_MF]->nComp()!=nsolve)
   amrex::Error("localMF[ALPHACOEF_MF]->nComp()!=nsolve");
 
@@ -1687,7 +1687,7 @@ void NavierStokes::apply_div(
               local_fsi_ghost_ngrow,112);
  }
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) 
-  debug_ngrow(FACE_VAR_MF+data_dir,0,122);
+  debug_ngrow(FACE_VAR_MF+data_dir,0,local_caller_string);
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   if (localMF[idx_gphi+data_dir]->nComp()!=nsolve)
@@ -2220,11 +2220,11 @@ void NavierStokes::ADVECT_DIV() {
  bool use_tiling=ns_tiling;
 
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,0,700);
+ debug_ngrow(VOLUME_MF,0,local_caller_string);
 
- debug_ngrow(FACE_VAR_MF,0,660);
+ debug_ngrow(FACE_VAR_MF,0,local_caller_string);
 
- debug_ngrow(CELL_SOUND_MF,0,144);
+ debug_ngrow(CELL_SOUND_MF,0,local_caller_string);
 
  if (localMF[CELL_SOUND_MF]->nComp()!=2)
   amrex::Error("localMF[CELL_SOUND_MF]->nComp() invalid");
@@ -2377,9 +2377,9 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
  int nsolve=1;
 
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,1,250);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,80);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {

@@ -1916,7 +1916,8 @@ NavierStokes::sum_integrated_quantities (
 
  } // ilev=level..finest_level
 
- init_FSI_GHOST_MAC_MF_ALL(5);
+ int renormalize_only=1;
+ init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
  build_masksemALL();
 
@@ -1981,6 +1982,7 @@ NavierStokes::sum_integrated_quantities (
      "DRAG",
      "DRAG_MF: see DRAG_COMP.H",
      local_caller_string,
+     DRAG_MF, //tower_mf_id
      localMF[DRAG_MF]->nComp(), 
      DRAG_MF,
      -1,  // State_Type==-1 

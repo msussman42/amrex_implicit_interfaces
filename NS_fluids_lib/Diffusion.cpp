@@ -159,31 +159,31 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,local_caller_string);
  }
 
- debug_ngrow(FACE_VAR_MF,0,810);
+ debug_ngrow(FACE_VAR_MF,0,local_caller_string);
 
- debug_ngrow(idx_vel,1,812);
+ debug_ngrow(idx_vel,1,local_caller_string);
  if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_vel]->nComp() invalid");
 
- debug_ngrow(idx_thermal,1,812);
+ debug_ngrow(idx_thermal,1,local_caller_string);
  if (localMF[idx_thermal]->nComp()!=1)
   amrex::Error("localMF[idx_thermal]->nComp() invalid");
 
- debug_ngrow(idx_force,1,812);
+ debug_ngrow(idx_force,1,local_caller_string);
  if (localMF[idx_force]->nComp()!=AMREX_SPACEDIM)
   amrex::Error("localMF[idx_force]->nComp() invalid");
 
- debug_ngrow(CELLTENSOR_MF,1,6);
+ debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
  if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
- debug_ngrow(CELL_DEN_MF,1,811);
- debug_ngrow(CELL_DEN_BASE_MF,1,811);
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string);
+ debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string);
 
- debug_ngrow(CELL_VISC_MF,1,811);
+ debug_ngrow(CELL_VISC_MF,1,local_caller_string);
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
@@ -322,7 +322,7 @@ void NavierStokes::viscous_boundary_fluxes(
   const int* domhi = domain.hiVect();
 
   resize_levelset(2,LEVELPC_MF);
-  debug_ngrow(LEVELPC_MF,2,120);
+  debug_ngrow(LEVELPC_MF,2,local_caller_string);
   if (localMF[LEVELPC_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("levelpc mf has incorrect ncomp");
 
@@ -564,7 +564,7 @@ void NavierStokes::combine_state_variable(
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,112);
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,local_caller_string);
  }
 
  int ntsat=EXTRAP_NCOMP_TSAT;
@@ -582,7 +582,7 @@ void NavierStokes::combine_state_variable(
   if (interface_cond_avail==1) {
    if (is_phasechange==1) {
     STATE_INTERFACE=localMF[SATURATION_TEMP_MF];
-    debug_ngrow(SATURATION_TEMP_MF,ngrow_distance,830);
+    debug_ngrow(SATURATION_TEMP_MF,ngrow_distance,local_caller_string);
     if (localMF[SATURATION_TEMP_MF]->nComp()!=ntsat)
      amrex::Error("localMF[SATURATION_TEMP_MF]->nComp()!=ntsat");
    } else if (is_phasechange==0) {
@@ -595,7 +595,7 @@ void NavierStokes::combine_state_variable(
    amrex::Error("interface_cond_avail invalid");
 
 
-  debug_ngrow(LEVELPC_MF,2,830);
+  debug_ngrow(LEVELPC_MF,2,local_caller_string);
 
  } else if (combine_flag==2) { // combine if vfrac<VOFTOL
 
@@ -605,7 +605,7 @@ void NavierStokes::combine_state_variable(
   } else if (update_flux==1) {
    resize_levelset(2,LEVELPC_MF);
    LEVEL_COMBINE=localMF[LEVELPC_MF];
-   debug_ngrow(LEVELPC_MF,2,830);
+   debug_ngrow(LEVELPC_MF,2,local_caller_string);
   } else
    amrex::Error("update_flux invalid");
 
@@ -622,11 +622,11 @@ void NavierStokes::combine_state_variable(
   amrex::Error("LEVEL_COMBINE->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
 
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,1,832);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
  VOF_Recon_resize(1,SLOPE_RECON_MF);
- debug_ngrow(SLOPE_RECON_MF,1,830);
+ debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,6001);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  MultiFab* signed_distance=nullptr;
  if ((combine_flag==0)||  // FVM -> GFM
@@ -675,7 +675,7 @@ void NavierStokes::combine_state_variable(
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-    debug_ngrow(FACE_VAR_MF+dir,0,832);
+    debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
     MultiFab* face_mf=nullptr;
 
@@ -1001,14 +1001,14 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
 
  int nsolve=AMREX_SPACEDIM;
 
- debug_ngrow(FACE_VAR_MF,0,2);
- debug_ngrow(idx_heat,0,4);
- debug_ngrow(source_idx,1,842);
- debug_ngrow(CELLTENSOR_MF,1,6);
+ debug_ngrow(FACE_VAR_MF,0,local_caller_string);
+ debug_ngrow(idx_heat,0,local_caller_string);
+ debug_ngrow(source_idx,1,local_caller_string);
+ debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
  resize_levelset(2,LEVELPC_MF);
- debug_ngrow(LEVELPC_MF,2,5);
+ debug_ngrow(LEVELPC_MF,2,local_caller_string);
  resize_metrics(1);
- debug_ngrow(VOLUME_MF,1,845);
+ debug_ngrow(VOLUME_MF,1,local_caller_string);
 
  if (localMF[source_idx]->nComp()!=nsolve)
   amrex::Error("localMF[source_idx]->nComp() invalid");
@@ -1017,7 +1017,7 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   amrex::Error("localMF[idx_heat]->nComp()!=1");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(CONSERVE_FLUXES_MF+dir,0,7);
+  debug_ngrow(CONSERVE_FLUXES_MF+dir,0,local_caller_string);
   if (localMF[CONSERVE_FLUXES_MF+dir]->nComp()!=nsolve)
    amrex::Error("localMF[CONSERVE_FLUXES_MF+dir]->nComp() invalid");
   setVal_localMF(CONSERVE_FLUXES_MF+dir,0.0,0,nsolve,0);
