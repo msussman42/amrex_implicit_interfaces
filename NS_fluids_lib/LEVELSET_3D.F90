@@ -3280,7 +3280,9 @@ stop
       CHARACTER(KIND=C_CHAR), INTENT(in) :: caller_string(*)
       INTEGER(C_INT), INTENT(in), VALUE :: caller_string_len
       CHARACTER(:), ALLOCATABLE :: fort_caller_string
-      CHARACTER(len=255) :: pattern
+      INTEGER_T :: fort_caller_string_len
+      CHARACTER(len=255) :: pattern_string
+      INTEGER_T :: pattern_string_len
 
       INTEGER_T, INTENT(in) :: vof_height_function
       INTEGER_T :: vof_height_function_local
@@ -3442,11 +3444,13 @@ stop
       INTEGER_T local_mask
       INTEGER_T ihist
       REAL_T ZEYU_thet_d,ZEYU_u_cl
+      INTEGER_T test_for_post_restart
    
       allocate(CHARACTER(caller_string_len) :: fort_caller_string)
       do i=1,caller_string_len
        fort_caller_string(i:i)=caller_string(i)
       enddo
+      fort_caller_string_len=caller_string_len
 
       if (ngrow_distance.ne.4) then
        print *,"ngrow_distance invalid in curvstrip"
@@ -3510,11 +3514,13 @@ stop
        stop
       endif
 
-FIX ME 
-      pattern='post_restart'
-      pattern_len=12
-      call fort_pattern_test(fort_caller_string, 
-      if (fort_pattern_test(fort_caller_string,"post_restart").eq.0) then
+      pattern_string='post_restart'
+      pattern_string_len=12
+      test_fort_post_restart=call fort_pattern_test( &
+        fort_caller_string,fort_caller_string_len, &
+        pattern_string,pattern_string_len)
+
+      if (test_fort_post_restart.eq.0) then
        do dirloc=1,SDIM
         if ((fablo(dirloc)/bfact_grid)*bfact_grid.ne.fablo(dirloc)) then
          print *,"fablo mod bfact_grid not 0 in fort_curvstrip"
@@ -3525,7 +3531,7 @@ FIX ME
          stop
         endif
        enddo ! dirloc=1..sdim
-      else if (fort_pattern_test(fort_caller_string,"post_restart").eq.1) then
+      else if (test_fort_post_restart.eq.1) then
        ! do nothing
       else
        print *,"fort_caller_string invalid"
