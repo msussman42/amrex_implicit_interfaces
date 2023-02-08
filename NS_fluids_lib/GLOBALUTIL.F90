@@ -3562,6 +3562,38 @@ end subroutine dynamic_contact_angle
       return
       end subroutine safe_data_index
 
+      INTEGER_T function fort_pattern_test(source,source_len, &
+          pattern,pattern_len)
+      IMPLICIT NONE
+
+      INTEGER_T source_len,pattern_len
+      CHARACTER(len=source_len) :: source
+      CHARACTER(len=pattern_len) :: pattern
+      INTEGER_T i,j,local_test,source_char,pattern_char
+
+      fort_pattern_test=0
+      do i=1,source_len-pattern_len+1
+
+       local_test=1
+       do j=1,pattern_len
+        source_char=ICHAR(source(i+j-1:i+j-1))
+        pattern_char=ICHAR(pattern(j:j))
+        if (source_char.eq.pattern_char) then
+         ! do nothing
+        else if (source_char.ne.pattern_char) then
+         local_test=0
+        else
+         print *,"source_char or pattern_char bust"
+         stop
+        endif
+       enddo !j=1,pattern_len
+       if (local_test.eq.1) then
+        fort_pattern_test=1
+       endif
+      enddo !enddo i=1,source_len-pattern_len+1
+
+      return
+      end function fort_pattern_test
 
       ! Added by Guibo 11-12-2012
       subroutine dumpstring(instring)
