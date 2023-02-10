@@ -259,15 +259,15 @@ public:
      //   For postprocessing, adjust visual_ncell, and call writeTECPLOT_file
      //   (data will be ascii with filenames uniform??????.tec)
     void writeSanityCheckData(
-		const std::string& root_string,
-		const std::string& information_string,
-		const std::string& caller_string,
-                int tower_mf_id,
-		int ncomp,
-		int data_mf,
-		int state_type_mf,
-		int data_dir,
-		int nsteps_actual); 
+	const std::string& root_string,
+	const std::string& information_string,
+	const std::string& caller_string,
+        int tower_mf_id,
+	int ncomp,
+	int data_mf,
+	int state_type_mf,
+	int data_dir,
+	int nsteps_actual); 
 
     virtual void writePlotFile (
      int do_plot,int do_slice,

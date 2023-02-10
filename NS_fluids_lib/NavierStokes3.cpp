@@ -699,10 +699,10 @@ void NavierStokes::nonlinear_advection() {
    "BEFOREPRESCRIBE",
    "in: NavierStokes::nonlinear_advection, State_Type ", 
    local_caller_string,
-   State_Type, //tower_mf_id
+   State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
    S_new.nComp(),
    -1, // data_mf==-1
-   State_Type,
+   State_Type, //state_type_mf==State_Type
    -1, // data_dir==-1
    parent->levelSteps(0)); 
  }
@@ -728,10 +728,10 @@ void NavierStokes::nonlinear_advection() {
    "AFTERPRESCRIBE",
    "in: NavierStokes::nonlinear_advection, State_Type ", 
    local_caller_string,
-   State_Type, //tower_mf_id
+   State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
    S_new.nComp(),
    -1, // data_mf==-1
-   State_Type,
+   State_Type, //state_type_mf==State_Type
    -1, // data_dir==-1
    parent->levelSteps(0)); 
  }
@@ -3498,10 +3498,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          "VISCSOLVE",
          "in: NavierStokes::do_the_advance, State_Type after veldiffuseALL", 
          local_caller_string,
-         State_Type, //tower_mf_id
+         State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
          S_new.nComp(),
          -1, // data_mf==-1
-         State_Type,
+         State_Type, //state_type_mf==State_Type
          -1,  // data_dir==-1
          parent->levelSteps(0)); 
        }
@@ -4030,10 +4030,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       "DIV_Type",
       "DIV_Type: -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol",
       local_caller_string,
-      DIV_Type,  // tower_mf_id
+      DIV_Type+GET_NEW_DATA_OFFSET,  // tower_mf_id
       DIV_new.nComp(), 
-      -1,
-      DIV_Type,  // State_Type==-1 
+      -1, //data_mf==-1
+      DIV_Type,  // state_type_mf==DIV_TYPE
       -1,  // data_dir==-1 (cell centered)
       parent->levelSteps(0)); 
 
@@ -11689,6 +11689,8 @@ void NavierStokes::avgDownALL_TENSOR() {
 //  SET_STOKES_MARK(REGISTER_MARK_MF);
 void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
+ std::string local_caller_string="vel_elastic_ALL";
+
  int finest_level=parent->finestLevel();
 
  if ((num_materials_viscoelastic>=1)&&
@@ -11715,7 +11717,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         writeSanityCheckData(
          "VISCOTEN",
          "VISCOTEN",
-         "VISCOTEN",
+         local_caller_string,
          VISCOTEN_MF, //tower_mf_id
          im,
          localMF[VISCOTEN_MF]->nComp(),

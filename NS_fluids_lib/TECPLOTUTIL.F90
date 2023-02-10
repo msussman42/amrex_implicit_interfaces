@@ -428,6 +428,15 @@ stop
        stop
       endif
 
+      if (tower_mf_id.ge.0) then
+       !do nothing
+      else if (tower_mf_id-GET_NEW_DATA_OFFSET.ge.0) then
+       !do nothing
+      else
+       print *,"tower_mf_id out of range"
+       stop
+      endif
+
       datafab_ptr=>datafab
 
       if (data_dir.eq.-1) then 
@@ -825,6 +834,16 @@ stop
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
 
+      if (tower_mf_id.ge.0) then
+       !do nothing
+      else if (tower_mf_id-GET_NEW_DATA_OFFSET.ge.0) then
+       !do nothing
+      else
+       print *,"tower_mf_id out of range"
+       stop
+      endif
+
+
       if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
           (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (visual_revolve.ne.0) then
@@ -926,7 +945,16 @@ stop
 
        write(outerstr,'(I3)') SDC_outer_sweeps
        write(slabstr,'(I3)') slab_step
-       write(idstr,'(I3)') tower_mf_id
+
+       if (tower_mf_id.ge.0) then
+        write(idstr,'(I3)') tower_mf_id
+       else if (tower_mf_id-GET_NEW_DATA_OFFSET.ge.0) then
+        write(idstr,'(I3)') tower_mf_id-GET_NEW_DATA_OFFSET
+       else
+        print *,"tower_mf_id invalid"
+        stop
+       endif
+
        do i=1,3
         if (outerstr(i:i).eq.' ') then
          outerstr(i:i)='0'

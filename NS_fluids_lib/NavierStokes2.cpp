@@ -8092,6 +8092,13 @@ void NavierStokes::Sanity_output_zones(
    int& grids_per_level,
    BoxArray& cgrids_minusBA) {
 
+ if (tower_mf_id>=0) {
+  //do nothing
+ } else if (tower_mf_id-GET_NEW_DATA_OFFSET>=0) {
+   //do nothing
+ } else
+  amrex::Error("tower_mf_id out of range");
+
  const Real* dx = geom.CellSize();
  const Real* prob_lo = geom.ProbLo();
  const Real* prob_hi = geom.ProbHi();
