@@ -4121,6 +4121,8 @@ void NavierStokes::apply_pressure_grad(
   int pboth_mf,
   int project_option,int nsolve) {
 
+ std::string local_caller_string="apply_pressure_grad";
+
  int finest_level = parent->finestLevel();
 
  if (project_option_momeqn(project_option)==1) {
@@ -4202,7 +4204,7 @@ void NavierStokes::apply_pressure_grad(
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,
-              local_fsi_ghost_ngrow,112);
+              local_fsi_ghost_ngrow,local_caller_string);
  }
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) 
   debug_ngrow(FACE_VAR_MF+data_dir,0,local_caller_string);
@@ -4879,7 +4881,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
  }
 
  delete_array(DEN_RECON_MF);
- delete_array(F);
+ delete_array(MOM_DEN_MF);
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete_array(AMRSYNC_VEL_MF+dir);
 
@@ -4949,11 +4952,13 @@ void NavierStokes::allocate_levelset_ALL(int ngrow,int idx) {
 
 void NavierStokes::allocate_levelset(int ngrow,int idx) {
 
+ std::string local_caller_string="allocate_levelset";
+
  if ((ngrow<0)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
 
  delete_localMF_if_exist(idx,1);
- getStateDist_localMF(idx,ngrow,cur_time_slab,17);
+ getStateDist_localMF(idx,ngrow,cur_time_slab,local_caller_string);
  if (localMF[idx]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
   amrex::Error("localMF[idx]->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
  debug_ngrow(idx,ngrow,local_caller_string);
@@ -4987,6 +4992,8 @@ void NavierStokes::resize_levelset(int ngrow,int idx) {
 // density vars get 1/rho
 void NavierStokes::make_physics_vars(int project_option) {
  
+ std::string local_caller_string="make_physics_vars";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -5511,6 +5518,8 @@ void NavierStokes::increment_potential_forceALL() {
 
 void NavierStokes::increment_potential_force() {
 
+ std::string local_caller_string="increment_potential_force";
+
  int finest_level=parent->finestLevel();
  
  bool use_tiling=ns_tiling;
@@ -5613,6 +5622,8 @@ void NavierStokes::deallocate_potential_forceALL() {
 void NavierStokes::process_potential_forceALL(
 	      int potgrad_surface_tension_mask) {
 
+ std::string local_caller_string="process_potential_forceALL";
+
  int finest_level=parent->finestLevel();
  if (level!=0)
   amrex::Error("level!=0");
@@ -5668,7 +5679,7 @@ void NavierStokes::process_potential_forceALL(
   int scomp=0;
   // if level<finest_level then avgdown from level+1 to level.
   ns_level.avgDownEdge_localMF(POTENTIAL_FORCE_EDGE_MF,scomp,ncomp_edge,
-   0,AMREX_SPACEDIM,1,12);
+   0,AMREX_SPACEDIM,1,local_caller_string);
  }
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -5815,6 +5826,8 @@ void NavierStokes::init_gravity_potential() {
 //  div (grad^face ppot - grad^face p)=0 only if ppot=p.
 void NavierStokes::process_potential_force_face(
 		int potgrad_surface_tension_mask) {
+
+ std::string local_caller_string="process_potential_force_face";
 
  int finest_level=parent->finestLevel();
 
@@ -6382,6 +6395,8 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 //
 void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  
+ std::string local_caller_string="prescribe_solid_geometry";
+
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "begin subroutine prescribe_solid_geometry() level= " <<
@@ -6458,7 +6473,7 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 		STATE_NCOMP_VEL+STATE_NCOMP_PRES,time); 
    MultiFab* mofdata=getState(1,STATECOMP_MOF,num_materials*ngeom_raw,time);
    MultiFab* dendata=getStateDen(1,time);
-   MultiFab* lsdata=getStateDist(ngrow_distance,time,18);
+   MultiFab* lsdata=getStateDist(ngrow_distance,time,local_caller_string);
 
    for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
     if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
@@ -6746,6 +6761,7 @@ void NavierStokes::move_particles(
 // called from NavierStokes::prescribe_solid_geometryALL
 void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
 
+ std::string local_caller_string="truncate_VOF";
  
  bool use_tiling=ns_tiling;
 
@@ -6849,10 +6865,9 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
 
 }  // truncate_VOF()
 
-
-
-
 void NavierStokes::output_triangles() {
+
+ std::string local_caller_string="output_triangles";
 
  int finest_level = parent->finestLevel();
  if ((level<0)||(level>finest_level))
@@ -7364,6 +7379,8 @@ void NavierStokes::output_zones(
    BoxArray& cgrids_minusBA,
    Real* slice_data,
    int do_plot,int do_slice) {
+
+ std::string local_caller_string="output_zones";
 
  int plot_sdim_macro=AMREX_SPACEDIM;
 
@@ -8717,6 +8734,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
   int update_flag,int init_vof_prev_time,
   int dest_mf) {
 
+ std::string local_caller_string="VOF_Recon";
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -8768,7 +8786,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
 
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
 
- MultiFab* lsdata=getStateDist(1,time,19);
+ MultiFab* lsdata=getStateDist(1,time,local_caller_string);
  if (lsdata->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("lsdata invalid ncomp");
 
@@ -9064,6 +9082,8 @@ void NavierStokes::build_masksemALL() {
 
 void NavierStokes::build_masksem(int mask_sweep) {
 
+ std::string local_caller_string="build_masksem";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -9264,6 +9284,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
 // If compressible material then P=P(rho,e).
 MultiFab* NavierStokes::derive_EOS_pressure(Vector<int> local_material_type) {
 
+ std::string local_caller_string="derive_EOS_pressure";
  int finest_level=parent->finestLevel();
  
  bool use_tiling=ns_tiling;
@@ -9353,6 +9374,8 @@ void NavierStokes::level_getshear(
 	int only_scalar,
 	int destcomp,
 	int ngrow) {
+
+ std::string local_caller_string="level_getshear";
 
  int finest_level = parent->finestLevel();
  if ((level>=0)&&(level<=finest_level)) {
@@ -9462,6 +9485,8 @@ void NavierStokes::level_getshear(
 // during regridding, the following routine checks the error:
 //  NavierStokes::errorEst  (calls fort_vfracerror)
 void NavierStokes::init_pressure_error_indicator() {
+
+ std::string local_caller_string="init_pressure_error_indicator";
 
  bool use_tiling=ns_tiling;
 
@@ -9596,6 +9621,8 @@ void NavierStokes::init_pressure_error_indicator() {
 // init_advective_pressure is called from: NavierStokes::multiphase_project
 void NavierStokes::init_advective_pressure(int project_option) {
  
+ std::string local_caller_string="init_advective_pressure";
+
  int finest_level=parent->finestLevel();
  if ((level>=0)&&(level<=finest_level)) {
   // do nothing
@@ -9817,6 +9844,7 @@ void NavierStokes::unscale_variablesALL() {
 //scale Unew,Umac_new,P,mdot,solid_vars,even components of CELL_SOUND (padvect)
 void NavierStokes::scale_variables(int scale_flag) {
 
+ std::string local_caller_string="scale_variables";
  int finest_level = parent->finestLevel();
  if ((level<0)||(level>finest_level))
   amrex::Error("level invalid scale_variables");
@@ -9912,6 +9940,8 @@ void NavierStokes::scale_variables(int scale_flag) {
 // the viscous and viscoelastic forces should both be multiplied by
 // visc_coef.  
 void NavierStokes::getStateVISC() {
+
+ std::string local_caller_string="getStateVISC";
 
  int ngrow=1;
 
@@ -10232,6 +10262,8 @@ void NavierStokes::getStateVISC() {
 //CELL_CONDUCTIVITY_MATERIAL_MF is deleted in ::Geometry_cleanup()
 void NavierStokes::getStateCONDUCTIVITY() {
 
+ std::string local_caller_string="getStateCONDUCTIVITY";
+
  int ngrow=1;
 
  delete_localMF_if_exist(CELL_CONDUCTIVITY_MATERIAL_MF,1);
@@ -10357,6 +10389,8 @@ void NavierStokes::getState_tracemag_ALL(int idx) {
 //ngrow=1
 void NavierStokes::getState_tracemag(int idx) { 
  
+ std::string local_caller_string="getState_tracemag";
+
  bool use_tiling=ns_tiling;
 
  if (num_state_base!=2)
