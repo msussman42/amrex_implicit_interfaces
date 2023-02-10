@@ -623,7 +623,8 @@ void NavierStokes::nonlinear_advection() {
 
  if (read_from_CAD()==1) {
 
-  init_FSI_GHOST_MAC_MF_ALL(local_caller_string);
+  int renormalize_only=1;
+  init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
   int fast_mode=0;
   setup_integrated_quantities();
@@ -2606,7 +2607,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       //  or
       // initialize "GNBC" velocity.
       // in: NavierStokes::do_the_advance (prior to nonlinear_advect)
-    init_FSI_GHOST_MAC_MF_ALL(4);
+    int renormalize_only=1;
+    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
     int mass_transfer_active=0;
 
@@ -3224,7 +3226,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      // initialize "GNBC" velocity.
      // in: NavierStokes::do_the_advance (prior to viscous force step, and
      //  after reinitialization)
-    init_FSI_GHOST_MAC_MF_ALL(4);
+    int renormalize_only=1;
+    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
 // At this stage, variables are not scaled, so FACECOMP_FACEVEL component (c++)
 // will have to be scaled later.
