@@ -19619,10 +19619,10 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     "RawStateType",
     "RawStateType: vel,pres,den_temp_spec,mofvars,error ind",
     local_caller_string,
-    State_Type, //tower_mf_id
+    State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
     S_new_temp.nComp(),
     -1,  //data_mf=-1
-    State_Type, //state_type_mf
+    State_Type, //state_type_mf==State_Type
     -1, //data_dir=-1
     nsteps); 
   } else if (visual_output_raw_State_Type==0) {
@@ -19638,7 +19638,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      "RawMacType",
      "RawMacType: vel",
      local_caller_string,
-     Umac_Type+dir_mac, //tower_mf_id
+     Umac_Type+dir_mac+GET_NEW_DATA_OFFSET, //tower_mf_id
      mac_new_temp.nComp(),
      -1,  //data_mf=-1
      Umac_Type+dir_mac, //state_type_mf
@@ -20370,7 +20370,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    writeSanityCheckData(
     "nddata_piecewise_const",
     "nddata_piecewise_const",
-    "nddata_piecewise_const",
+    local_caller_string,
     MULTIFAB_TOWER_PLT_MF, //tower_mf_id
     ncomp_plot,
     MULTIFAB_TOWER_PLT_MF,
@@ -20467,6 +20467,13 @@ void NavierStokes::writeSanityCheckData(
                 int data_dir,
 		int nsteps_actual) {
 
+ if (tower_mf_id>=0) {
+  //do nothing
+ } else if (tower_mf_id-GET_NEW_DATA_OFFSET>=0) {
+   //do nothing
+ } else
+  amrex::Error("tower_mf_id out of range");
+
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
 
@@ -20481,6 +20488,8 @@ void NavierStokes::writeSanityCheckData(
     data_mf << " state_type_mf=" << state_type_mf << '\n';
   std::cout << "in: writeSanityCheckData, tower_mf_id= " <<
     tower_mf_id << '\n';
+  std::cout << "in: writeSanityCheckData, tower_mf_id-ofs= " <<
+    tower_mf_id-GET_NEW_DATA_OFFSET << '\n';
  }
 
  if (nsteps_actual>=0) {
