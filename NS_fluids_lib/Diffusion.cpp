@@ -130,6 +130,8 @@ void NavierStokes::diffuse_hoopALL(int idx_vel,int idx_thermal,
 void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
  int idx_force,int update_state) {
  
+ std::string local_caller_string="diffuse_hoop";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -304,6 +306,8 @@ void NavierStokes::viscous_boundary_fluxes(
  MultiFab* xflux,MultiFab* yflux,MultiFab* zflux,
  int nsolve) {
   
+  std::string local_caller_string="viscous_boundary_fluxes";
+
   bool use_tiling=ns_tiling;
 
   if (project_option==SOLVETYPE_VISC) { 
@@ -440,6 +444,8 @@ void NavierStokes::combine_state_variable(
  int hflag,
  int update_flux,
  int interface_cond_avail) {
+
+ std::string local_caller_string="combine_state_variable";
 
  bool use_tiling=ns_tiling;
 
@@ -992,6 +998,8 @@ void NavierStokes::combine_state_variable(
 // viscous heating (viscoelastic heating not done here)
 void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
  
+ std::string local_caller_string="diffusion_heating";
+
  bool use_tiling=ns_tiling;
 
  if (num_state_base!=2)
@@ -1035,9 +1043,10 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   project_option,nsolve);
 
  int ncomp_edge=-1;
+  // spectral_override==1 => order derived from "enable_spectral"
  avgDownEdge_localMF(
   CONSERVE_FLUXES_MF,
-  0,ncomp_edge,0,AMREX_SPACEDIM,1,21);
+  0,ncomp_edge,0,AMREX_SPACEDIM,1,local_caller_string);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 

@@ -60,7 +60,9 @@ public:
                   int level,
                   int smooth_type);
 
-    void pcg_solve(MultiFab* z,MultiFab* r,
+    void pcg_solve(
+     MultiFab* z,
+     MultiFab* r,
      Real eps_abs,Real bot_atol,
      MultiFab* pbdryhom,
      Vector<int> bcpres_array,
