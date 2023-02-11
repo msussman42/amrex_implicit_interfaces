@@ -42,6 +42,8 @@ namespace amrex{
 void NavierStokes::Mult_localMF(int idx_dest,int idx_source,
   int scomp,int dcomp,int ncomp,int ngrow) {
 
+ std::string local_caller_string="Mult_localMF";
+
  debug_ngrow(idx_dest,ngrow,local_caller_string); 
  debug_ngrow(idx_source,ngrow,local_caller_string); 
  if (localMF[idx_dest]->boxArray()!=
@@ -56,6 +58,8 @@ void NavierStokes::Mult_localMF(int idx_dest,int idx_source,
 void NavierStokes::Plus_localMF(int idx_dest,Real val,
   int dcomp,int ncomp,int ngrow) {
 
+ std::string local_caller_string="Plus_localMF";
+
  debug_ngrow(idx_dest,ngrow,local_caller_string); 
  if (localMF[idx_dest]->boxArray()!=grids)
   amrex::Error("Plus_localMF: boxarrays do not match");
@@ -67,6 +71,8 @@ void NavierStokes::Plus_localMF(int idx_dest,Real val,
 
 void NavierStokes::Copy_localMF(int idx_dest,int idx_source,
   int scomp,int dcomp,int ncomp,int ngrow) {
+
+ std::string local_caller_string="Copy_localMF";
 
  debug_ngrow(idx_dest,ngrow,local_caller_string); 
  debug_ngrow(idx_source,ngrow,local_caller_string); 
@@ -83,6 +89,8 @@ void NavierStokes::Copy_localMF(int idx_dest,int idx_source,
 void NavierStokes::minus_localMF(int idx_dest,int idx_source,
   int scomp,int ncomp,int ngrow) {
 
+ std::string local_caller_string="minus_localMF";
+
  debug_ngrow(idx_dest,ngrow,local_caller_string); 
  debug_ngrow(idx_source,ngrow,local_caller_string); 
  if (localMF[idx_dest]->boxArray()!=
@@ -95,6 +103,8 @@ void NavierStokes::minus_localMF(int idx_dest,int idx_source,
 
 //grid_type=-1 ... 5
 void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
+
+ std::string local_caller_string="new_localMF";
 
  if (1==0) {
   std::fflush(NULL);
@@ -203,7 +213,7 @@ void NavierStokes::new_localMF(int idx_MF,int ncomp,int ngrow,int grid_type) {
 
  ParallelDescriptor::Barrier();
   //declared in: NavierStokes.cpp
- debug_ixType(idx_MF,grid_type,idx_MF);
+ debug_ixType(idx_MF,grid_type,local_caller_string);
 
  if (1==0) {
   std::fflush(NULL);
@@ -637,6 +647,8 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
 void NavierStokes::avgDown_localMF(int idxMF,int scomp,int ncomp,
   int spectral_override) {
 
+ std::string local_caller_string="avgDown_localMF";
+
  int finest_level=parent->finestLevel();
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
@@ -651,6 +663,8 @@ void NavierStokes::avgDown_localMF(int idxMF,int scomp,int ncomp,
 
 
 void NavierStokes::avgDown_tag_localMF(int idxMF) {
+
+ std::string local_caller_string="avgDown_tag_localMF";
 
  int finest_level=parent->finestLevel();
  if (level<finest_level) {
@@ -667,6 +681,8 @@ void NavierStokes::avgDown_tag_localMF(int idxMF) {
 
 void NavierStokes::avgDownBURNING_localMF(
   int burnvel_MF,int TSAT_MF) {
+
+ std::string local_caller_string="avgDownBURNING_localMF";
 
  int finest_level=parent->finestLevel();
  int nburning=EXTRAP_NCOMP_BURNING;
@@ -703,10 +719,12 @@ void NavierStokes::avgDownBURNING_localMF(
 
 void NavierStokes::avgDownDRAG_MF() {
 
+ std::string local_caller_string="avgDownDRAG_MF";
+
   //ngrow_make_distance=3
   //ngrow_distance=4
  debug_ngrow(DRAG_MF,ngrow_make_distance,local_caller_string);
- debug_ixType(DRAG_MF,-1,DRAG_MF);
+ debug_ixType(DRAG_MF,-1,local_caller_string);
  if (localMF[DRAG_MF]->nComp()==N_DRAG) {
   // do nothing
  } else 
@@ -733,6 +751,8 @@ void NavierStokes::avgDownDRAG_MF() {
 
 void NavierStokes::avgDownCURV_localMF(int idxMF) {
 
+ std::string local_caller_string="avgDownCURV_localMF";
+
  int finest_level=parent->finestLevel();
  if (level<finest_level) {
   NavierStokes& ns_fine=getLevel(level+1);
@@ -756,6 +776,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
   int idx_flux_MF,
   int operation_flag) {
 
+ std::string local_caller_string="avgDown_and_Copy_localMF";
  int finest_level=parent->finestLevel();
 
  int ncomp_den=0;
@@ -998,6 +1019,8 @@ void NavierStokes::interp_and_Copy_localMF(
   int idx_flux_MF,
   int operation_flag) {
 
+ std::string local_caller_string="interp_and_Copy_localMF";
+
  int finest_level=parent->finestLevel();
 
  int ncomp_den=0;
@@ -1238,6 +1261,8 @@ void NavierStokes::interp_and_Copy_localMF(
 
 void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
 
+ std::string local_caller_string="sync_flux_var";
+
  int finest_level=parent->finestLevel();
 
  if ((dir>=0)&&(dir<AMREX_SPACEDIM)) {
@@ -1336,6 +1361,8 @@ void NavierStokes::sync_flux_var(int dir,int flux_MF,int ncomp_flux) {
 void NavierStokes::interp_flux_localMF(
   int coarse_flux_MF,
   int fine_flux_MF) {
+
+ std::string local_caller_string="interp_flux_localMF";
 
  int finest_level=parent->finestLevel();
 
@@ -1567,6 +1594,8 @@ void NavierStokes::avgDownEdge_localMF(
 } // avgDownEdge_localMF
 
 void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
+
+ std::string local_caller_string="CELL_GRID_ELASTIC_FORCE";
 
  if ((im_elastic>=0)&&(im_elastic<num_materials)) {
    if (ns_is_rigid(im_elastic)==0) {
@@ -2259,6 +2288,8 @@ void NavierStokes::init_divup_cell_vel_cell(
 
 void NavierStokes::save_to_macvel_state(int idx_umac) {
 
+ std::string local_caller_string="save_to_macvel_state";
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(idx_umac+dir,0,local_caller_string);
   if (localMF[idx_umac+dir]->nComp()==1) {
@@ -2469,6 +2500,8 @@ void NavierStokes::increment_face_velocity(
  int idx_velcell,
  Real beta,
  Vector<blobclass> blobdata) {
+
+ std::string local_caller_string="increment_face_velocity";
 
  int finest_level = parent->finestLevel();
 
@@ -2983,6 +3016,8 @@ void NavierStokes::project_to_rigid_velocityALL() {
 
 void NavierStokes::project_to_rigid_velocity(Vector<blobclass> blobdata) {
 
+ std::string local_caller_string="project_to_rigid_velocity";
+
  int finest_level = parent->finestLevel();
 
  int num_colors=blobdata.size();
@@ -3126,6 +3161,8 @@ void NavierStokes::increment_KE_ALL(Real beta) {
 
 void NavierStokes::increment_KE(Real beta) {
  
+ std::string local_caller_string="increment_KE";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -3137,7 +3174,8 @@ void NavierStokes::increment_KE(Real beta) {
   amrex::Error("beta invalid");
 
  resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string); // maskcoef=1 if not covered by finer level.
+ // maskcoef=1 if not covered by finer level.
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
@@ -3228,6 +3266,8 @@ void NavierStokes::VELMAC_TO_CELLALL(int dest_idx) {
 // dest_idx>=0  => destination is localMF[dest_idx]
 void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
  
+ std::string local_caller_string="VELMAC_TO_CELL";
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -3523,6 +3563,8 @@ void NavierStokes::init_gradu_tensorALL(
  int idx_face,
  int simple_AMR_BC_flag_viscosity) {
 
+ std::string local_caller_string="init_gradu_tensorALL";
+
  int finest_level=parent->finestLevel();
 
  if ((SDC_outer_sweeps>=0)&&
@@ -3636,6 +3678,8 @@ void NavierStokes::doit_gradu_tensor(
  int itensor_iter,
  MultiFab* mask3,
  int simple_AMR_BC_flag_viscosity) {
+
+ std::string local_caller_string="doit_gradu_tensor";
 
  int finest_level = parent->finestLevel();
 
@@ -4025,6 +4069,8 @@ void NavierStokes::init_gradu_tensor(
  int idx_cell,
  int idx_face,
  int simple_AMR_BC_flag_viscosity) {
+
+ std::string local_caller_string="init_gradu_tensor";
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -4837,8 +4883,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
   ns_level.make_physics_vars(project_option);
   ns_level.level_init_icemask();
-
-  int bfact=parent->Space_blockingFactor(ilev);
 
    // average down from ilev+1 to ilev.
   
@@ -8109,6 +8153,8 @@ void NavierStokes::Sanity_output_zones(
    int& grids_per_level,
    BoxArray& cgrids_minusBA) {
 
+ std::string local_caller_string="Sanity_output_zones";
+
  if (tower_mf_id>=0) {
   //do nothing
  } else if (tower_mf_id-GET_NEW_DATA_OFFSET>=0) {
@@ -8179,7 +8225,7 @@ void NavierStokes::Sanity_output_zones(
 
    ParallelDescriptor::Barrier();
 
-   debug_ixType_raw(datamf,data_dir,information_string);
+   debug_ixType_raw(datamf,data_dir,local_caller_string);
 
      // FabArray.H     
      // scomp,dcomp,ncomp,s_nghost,d_nghost
