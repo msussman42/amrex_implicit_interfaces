@@ -5149,6 +5149,8 @@ NavierStokes::ColorSum(
  Vector< Vector<Real> >& level_mdot_comp_data_redistribute
  ) {
 
+ std::string local_caller_string="ColorSum"
+
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
 
@@ -5664,6 +5666,8 @@ void
 NavierStokes::SumRegions(
  int isweep) { // isweep=0 or 1
 
+ std::string local_caller_string="SumRegions";
+
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
 
@@ -5808,6 +5812,8 @@ NavierStokes::LowMachDIVU(
  Vector< Vector<Real> >& cum_mdot_data
  ) {
 
+ std::string local_caller_string="LowMachDIVU";
+
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
 
@@ -5901,7 +5907,7 @@ NavierStokes::LowMachDIVU(
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  if (sweep_num==0) {
-  getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,20);
+  getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,local_caller_string);
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
  } else if (sweep_num==1) {
   // do nothing
@@ -7263,6 +7269,8 @@ NavierStokes::Type_level(
   MultiFab* typemf,Vector<int>& type_flag,
   int zero_diag_flag) {
 
+ std::string local_caller_string="Type_level";
+
  int finest_level=parent->finestLevel();
 
  int ncomp_type=num_materials;
@@ -7292,7 +7300,7 @@ NavierStokes::Type_level(
  int ncomp_source=0;
 
  if (zero_diag_flag==0) {
-  Type_Source_MF=getStateDist(1,cur_time_slab,21);
+  Type_Source_MF=getStateDist(1,cur_time_slab,local_caller_string);
   ncomp_source=Type_Source_MF->nComp();
   if (Type_Source_MF->nComp()!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("Type_Source_MF->nComp() invalid");
@@ -7495,6 +7503,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
  int project_option,
  int face_weight_op) {
  
+ std::string local_caller_string="allocate_FACE_WEIGHT";
+
  int finest_level=parent->finestLevel();
 
  bool use_tiling=ns_tiling;
@@ -7849,6 +7859,8 @@ void NavierStokes::sanity_check_face_wt() {
 // called from NavierStokes::multiphase_project
 void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  
+ std::string local_caller_string="allocate_project_variables";
+
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -8178,6 +8190,8 @@ void NavierStokes::correct_velocity(
   int macsrc,
   int gp,int nsolve) {
 
+ std::string local_caller_string="correct_velocity";
+
  int finest_level=parent->finestLevel();
 
  if (project_option_momeqn(project_option)==1) {
@@ -8446,6 +8460,8 @@ void NavierStokes::relaxLEVEL(
   int presmooth,
   int project_option,int nsolve) {
 
+ std::string local_caller_string="relaxLEVEL";
+
 #if (profile_solver==1)
  std::string subname="NavierStokes::relaxLEVEL";
  std::stringstream popt_string_stream(std::stringstream::in |
@@ -8608,7 +8624,8 @@ void NavierStokes::relaxLEVEL(
   ns_coarse.avgDownEdge_localMF(
     UMACSTAR_MF,
     scomp_edge,ncomp_edge,
-    start_dir,AMREX_SPACEDIM,spectral_override,15);
+    start_dir,AMREX_SPACEDIM,spectral_override,
+    local_caller_string);
 
   int iavg=0;
   BoxArray& fgridscen=grids;
@@ -9277,6 +9294,8 @@ void NavierStokes::Krylov_checkpoint(
 //   Result of the Helmholtz solve is stored instead.
 //
 void NavierStokes::multiphase_project(int project_option) {
+
+ std::string local_caller_string="multiphase_project";
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -11149,8 +11168,9 @@ void NavierStokes::multiphase_project(int project_option) {
 
      if (ilev<finest_level) {
       int ncomp_edge=-1;
+       //spectral_override=1 => order derived from "enable_spectral"
       ns_level.avgDownEdge_localMF(GRADPEDGE_MF,
-       0,ncomp_edge,0,AMREX_SPACEDIM,1,16);
+       0,ncomp_edge,0,AMREX_SPACEDIM,1,local_caller_string);
      }
 
       // UMAC=MAC_TEMP+GRADPEDGE=MAC_TEMP-dt gradp/rho
@@ -11613,6 +11633,8 @@ void NavierStokes::multiphase_project(int project_option) {
 void NavierStokes::diffusion_heatingALL(
   int source_idx,int idx_heat) {
 
+ std::string local_caller_string="diffusion_heatingALL";
+
  int finest_level=parent->finestLevel();
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -11718,11 +11740,10 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
 
        if (1==0) {
         writeSanityCheckData(
-         "VISCOTEN",
-         "VISCOTEN",
+         "VISCOTEN", //root_string
+         "VISCOTEN", //information_string
          local_caller_string,
          VISCOTEN_MF, //tower_mf_id
-         im,
          localMF[VISCOTEN_MF]->nComp(),
          VISCOTEN_MF,
          -1, // State_Type==-1
@@ -11955,6 +11976,8 @@ void NavierStokes::Mass_Energy_Sources_SinksALL() {
 } // end subroutine Mass_Energy_Sources_SinksALL()
 
 void NavierStokes::veldiffuseALL() {
+
+ std::string local_caller_string="veldiffuseALL";
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -12994,6 +13017,8 @@ void NavierStokes::alloc_DTDt(int alloc_flag) {
 
 
 void NavierStokes::prepare_viscous_solver() {
+
+ std::string local_caller_string="prepare_viscous_solver";
 
  int nsolve=AMREX_SPACEDIM;
 
