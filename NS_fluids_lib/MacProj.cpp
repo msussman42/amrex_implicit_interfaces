@@ -73,6 +73,8 @@ void
 NavierStokes::allocate_maccoef(int project_option,int nsolve,
 		int create_hierarchy) {
 
+ std::string local_caller_string="allocate_maccoef";
+
   //SOLVETYPE_PRES,SOLVETYPE_PRESGRAVITY,SOLVETYPE_INITPROJ
  if (project_option_projection(project_option)==1) {
 
@@ -692,7 +694,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   int ncomp_edge=-1;
   int scomp_bx=0;
   int ncomp_mf=1;
-  avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp_bx,ncomp_edge,dir,ncomp_mf,0,17);
+   // spectral_override==0 => always low order.
+  avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp_bx,ncomp_edge,dir,ncomp_mf,0,
+		  local_caller_string);
   Copy_localMF(BXCOEF_MF+dir,BXCOEFNOAREA_MF+dir,0,0,nsolve,0);
    // dest,source,scomp,dcomp,ncomp,ngrow
   for (int veldir=0;veldir<nsolve;veldir++)
@@ -801,6 +805,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 // called at end of pressure or velocity extrapolation.
 void 
 NavierStokes::restore_active_pressure(int save_mf) {
+
+ std::string local_caller_string="restore_active_pressure";
 
  int finest_level=parent->finestLevel();
 
@@ -1173,6 +1179,8 @@ void NavierStokes::JacobiALL(
 void NavierStokes::DiagInverse(
   MultiFab* resid,MultiFab* xnew,int nsolve,int project_option) {
  
+ std::string local_caller_string="DiagInverse";
+
  bool use_tiling=ns_tiling;
 
  resize_maskfiner(1,MASKCOEF_MF);
@@ -1287,6 +1295,8 @@ void NavierStokes::applyALL(
   int project_option,
   int idx_phi,int idx_Aphi,int nsolve) {
 
+ std::string local_caller_string="applyALL";
+
  int finest_level=parent->finestLevel();
  if (level!=0)
   amrex::Error("level invalid applyALL");
@@ -1318,8 +1328,9 @@ void NavierStokes::applyALL(
   if (ilev<finest_level) {
    int ncomp_edge=-1;
    int scomp=0;
+   // spectral_override==1 => order derived from "enable_spectral"
    ns_level.avgDownEdge_localMF(GRADPEDGE_MF,scomp,ncomp_edge,0,
-		   AMREX_SPACEDIM,1,18);
+		   AMREX_SPACEDIM,1,local_caller_string);
   }
 
   MultiFab* mdot_local=ns_level.localMF[DIFFUSIONRHS_MF];
@@ -1516,6 +1527,8 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
 void NavierStokes::applyGradALL(
   int project_option,int idx_phi,int nsolve) {
 
+ std::string local_caller_string="applyGradALL";
+
  int homflag=1;
  int energyflag=SUB_OP_FOR_MAIN;
  int finest_level=parent->finestLevel();
@@ -1546,7 +1559,7 @@ void NavierStokes::applyGradALL(
    ns_level.avgDownEdge_localMF(
     GRADPEDGE_MF,
     scomp_edge,ncomp_edge,
-    start_dir,AMREX_SPACEDIM,spectral_override,19);
+    start_dir,AMREX_SPACEDIM,spectral_override,local_caller_string);
   }
  } // ilev
 } // subroutine applyGradALL
@@ -1587,6 +1600,8 @@ void NavierStokes::apply_div(
   MultiFab* diffusionRHScell,
   int idx_gphi,
   int nsolve) {
+
+ std::string local_caller_string="apply_div";
 
  if (project_option_momeqn(project_option)==1) {
   //do nothing
@@ -1684,7 +1699,7 @@ void NavierStokes::apply_div(
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,
-              local_fsi_ghost_ngrow,112);
+              local_fsi_ghost_ngrow,local_caller_string);
  }
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) 
   debug_ngrow(FACE_VAR_MF+data_dir,0,local_caller_string);
@@ -2036,6 +2051,8 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 void NavierStokes::update_SEM_forces(int project_option,
  int idx_source,int update_spectral,int update_stable) {
 
+ std::string local_caller_string="update_SEM_forces";
+
  if (enable_spectral==1) {
   // do nothing
  } else
@@ -2122,7 +2139,8 @@ void NavierStokes::update_SEM_forces(int project_option,
    int ncomp_edge=-1;
    int scomp=0;
      // spectral_override==1 => order derived from "enable_spectral"
-   avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM,1,20);
+   avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM,1,
+		   local_caller_string);
 
    MultiFab* sourcemf=localMF[idx_source];
    MultiFab* rhs=localMF[MACDIV_MF];
@@ -2217,6 +2235,8 @@ void NavierStokes::ADVECT_DIV_ALL() {
 // if incompressible: DIV_new=MDOT_MF dt/vol
 void NavierStokes::ADVECT_DIV() {
  
+ std::string local_caller_string="ADVECT_DIV";
+
  bool use_tiling=ns_tiling;
 
  resize_metrics(1);
@@ -2339,6 +2359,8 @@ void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
 
 void NavierStokes::getStateDIV(int idx_source,int scomp_src,
   int idx_dest,int idx_mask) {
+
+ std::string local_caller_string="getStateDIV";
 
  bool use_tiling=ns_tiling;
 

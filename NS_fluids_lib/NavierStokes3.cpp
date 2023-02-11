@@ -62,7 +62,7 @@ NavierStokes::avgDownEdge(
  NavierStokes& fine_lev = getLevel(f_level);
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,0,local_caller_string);
- debug_ixType(VOLUME_MF,-1,VOLUME_MF);
+ debug_ixType(VOLUME_MF,-1,local_caller_string);
  fine_lev.resize_metrics(1);
  fine_lev.debug_ngrow(VOLUME_MF,0,local_caller_string);
  fine_lev.debug_ixType(VOLUME_MF,-1,local_caller_string);
@@ -623,7 +623,7 @@ void NavierStokes::nonlinear_advection() {
 
  if (read_from_CAD()==1) {
 
-  int renormalize_only=1;
+  renormalize_only=1;
   init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
   int fast_mode=0;
@@ -1984,6 +1984,7 @@ void NavierStokes::process_recalesce_dataALL(
 // delta=integral_tn^tnp1  f^spectral dt - deltatn F^stable
 void NavierStokes::init_splitting_force_SDC() {
 
+ std::string local_caller_string="init_splitting_force_SDC";
  
  bool use_tiling=ns_tiling;
 
@@ -2175,6 +2176,8 @@ void NavierStokes::init_splitting_force_SDC() {
 //  (b) F(t^{n+k/order,(1)})  (SUB_OP_ISCHEME_CORRECT)
 void NavierStokes::SEM_advectALL(int source_term) {
 
+ std::string local_caller_string="SEM_advectALL";
+
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
@@ -2306,7 +2309,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
      int scomp=0;
      int spectral_override=1;
      ns_level.avgDownEdge_localMF(CONSERVE_FLUXES_MF,scomp,ncomp_edge,
-       0,AMREX_SPACEDIM,spectral_override,3);
+       0,AMREX_SPACEDIM,spectral_override,local_caller_string);
     } // ilev=finest_level-1 ... level
 
     init_fluxes=0;
@@ -2890,7 +2893,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int keep_all_interfaces=1;
        makeStateDistALL(keep_all_interfaces);
 
-       make_physics_varsALL(SOLVETYPE_PRES,local_caller_string,5); 
+       make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
        delete_array(CELLTENSOR_MF);
        delete_array(FACETENSOR_MF);
 
@@ -3030,12 +3033,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,local_caller_string);
        debug_ngrow(SWEPT_CROSSING_MF,0,local_caller_string);
        debug_ngrow(BURNING_VELOCITY_MF,ngrow_distance,local_caller_string);
-       debug_ixType(BURNING_VELOCITY_MF,-1,BURNING_VELOCITY_MF);
+       debug_ixType(BURNING_VELOCITY_MF,-1,local_caller_string);
        debug_ngrow(SATURATION_TEMP_MF,ngrow_distance,local_caller_string);
        debug_ngrow(FD_NRM_ND_MF,ngrow_make_distance+1,local_caller_string);
-       debug_ixType(FD_NRM_ND_MF,-1,FD_NRM_ND_MF);
+       debug_ixType(FD_NRM_ND_MF,-1,local_caller_string);
        debug_ngrow(FD_CURV_CELL_MF,ngrow_make_distance,local_caller_string);
-       debug_ixType(FD_CURV_CELL_MF,-1,FD_CURV_CELL_MF);
+       debug_ixType(FD_CURV_CELL_MF,-1,local_caller_string);
 
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
         debug_ngrow(AREA_MF+dir,1,local_caller_string);
@@ -3195,7 +3198,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 1. prescribe solid temperature, velocity, and geometry where
         //    appropriate.
         // 2. extend level set functions into the solid.
-       int renormalize_only=0;
+       renormalize_only=0;
        int local_truncate=0;
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
         local_truncate,local_caller_string);
@@ -3226,16 +3229,16 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      // initialize "GNBC" velocity.
      // in: NavierStokes::do_the_advance (prior to viscous force step, and
      //  after reinitialization)
-    int renormalize_only=1;
+    renormalize_only=1;
     init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
 // At this stage, variables are not scaled, so FACECOMP_FACEVEL component (c++)
 // will have to be scaled later.
     debug_memory();
     if (is_zalesak()) {
-     make_physics_varsALL(SOLVETYPE_INITPROJ,local_caller_string,6); 
+     make_physics_varsALL(SOLVETYPE_INITPROJ,local_caller_string); 
     } else {
-     make_physics_varsALL(SOLVETYPE_PRES,local_caller_string,6); 
+     make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
     }
     delete_array(CELLTENSOR_MF);
     delete_array(FACETENSOR_MF);
@@ -3660,7 +3663,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // 1. prescribe solid temperature, velocity, and geometry where
         //    appropriate.
         // 2. extend level set functions into the solid.
-       int renormalize_only=0;
+       renormalize_only=0;
        int local_truncate=0;
        prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
         local_truncate,local_caller_string);
@@ -5149,7 +5152,7 @@ NavierStokes::ColorSum(
  Vector< Vector<Real> >& level_mdot_comp_data_redistribute
  ) {
 
- std::string local_caller_string="ColorSum"
+ std::string local_caller_string="ColorSum";
 
  int finest_level=parent->finestLevel();
  bool use_tiling=ns_tiling;
@@ -5366,7 +5369,7 @@ NavierStokes::ColorSum(
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
  if (sweep_num==0) {
-  getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,20);
+  getStateDist_localMF(LS_COLORSUM_MF,1,cur_time_slab,local_caller_string);
   getStateDen_localMF(DEN_COLORSUM_MF,1,cur_time_slab);
    // velocity + pressure
   getState_localMF(VEL_COLORSUM_MF,1,STATECOMP_VEL,

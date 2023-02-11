@@ -6126,17 +6126,20 @@ void NavierStokes::debug_ixType(int idxMF,int grid_type,
    if (localMF_grow[i]>=0) {
     MultiFab* mf_temp=localMF[i];
     if (! mf_temp->ok()) {
+     std::cout << "caller_string " << caller_string <<'\n';
      amrex::Error("! mf_temp->ok()");
     }
    } else if (localMF_grow[i]==-1) {
     if (localMF[i]==0) {
      // do nothing
     } else {
+     std::cout << "caller_string " << caller_string <<'\n';
      std::cout << "level = " << level << '\n';
      std::cout << "i = " << i << '\n';
      amrex::Error("localMF[i] invalid");
     }
    } else {
+    std::cout << "caller_string " << caller_string <<'\n';
     amrex::Error("localMF_grow[i] invalid");
    }
   } // i=0 ... MAX_NUM_LOCAL_MF-1   
@@ -6150,8 +6153,10 @@ void NavierStokes::debug_ixType(int idxMF,int grid_type,
   amrex::Error("mf not ok");
  } else if (mf->ok()) {
   debug_ixType_raw(mf,grid_type,caller_string);
- } else
+ } else {
+  std::cout << "caller_string= " << caller_string << '\n';
   amrex::Error("mf->ok corrupt");
+ }
 
 } // end subroutine debug_ixType
 
@@ -6167,6 +6172,7 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,
   if (1==0) {
    std::fflush(NULL);
    int proc=ParallelDescriptor::MyProc();
+   std::cout << "caller_string= " << caller_string << '\n';
    std::cout << "in debug_ixType_raw grid_type= " << grid_type << '\n';
    std::cout << "in debug_ixType_raw proc= " << proc << '\n';
    std::fflush(NULL);
@@ -6198,12 +6204,15 @@ void NavierStokes::debug_ixType_raw(MultiFab* mf,int grid_type,
     int proc=ParallelDescriptor::MyProc();
     std::cout << "in debug_ixType_raw2 grid_type= " << grid_type << '\n';
     std::cout << "in debug_ixType_raw2 proc= " << proc << '\n';
+    std::cout << "caller_string= " << caller_string << '\n';
     std::fflush(NULL);
     ParallelDescriptor::Barrier();
    }
 
-  } else
+  } else {
+   std::cout << "caller_string= " << caller_string << '\n';
    amrex::Error("mf->boxArray().ixType()!=compare_typ");
+  }
 
  } else
   amrex::Error("mf->ok corrupt");

@@ -2544,6 +2544,8 @@ ABecLaplacian::CG_solve(
     int level)
 {
 
+ std::string local_caller_string="CG_solve";
+
 #if (profile_solver==1)
  std::string subname="ABecLaplacian::solve";
  std::stringstream popt_string_stream(std::stringstream::in |
@@ -2795,7 +2797,8 @@ ABecLaplacian::CG_solve(
      smooth_type,bottom_smooth_type,
      local_presmooth,local_postsmooth,
      use_PCG, // 0=no preconditioning  1=depends:"CG_use_mg_precond_at_top"
-     level,nit);
+     level,
+     local_caller_string);
 
      // rho=z dot r
    LP_dot(*CG_z[coarsefine],*CG_r[coarsefine],level,rho); 

@@ -3516,11 +3516,11 @@ stop
 
       pattern_string='post_restart'
       pattern_string_len=12
-      test_fort_post_restart=call fort_pattern_test( &
+      test_for_post_restart=fort_pattern_test( &
         fort_caller_string,fort_caller_string_len, &
         pattern_string,pattern_string_len)
 
-      if (test_fort_post_restart.eq.0) then
+      if (test_for_post_restart.eq.0) then
        do dirloc=1,SDIM
         if ((fablo(dirloc)/bfact_grid)*bfact_grid.ne.fablo(dirloc)) then
          print *,"fablo mod bfact_grid not 0 in fort_curvstrip"
@@ -3531,7 +3531,7 @@ stop
          stop
         endif
        enddo ! dirloc=1..sdim
-      else if (test_fort_post_restart.eq.1) then
+      else if (test_for_post_restart.eq.1) then
        ! do nothing
       else
        print *,"fort_caller_string invalid"
