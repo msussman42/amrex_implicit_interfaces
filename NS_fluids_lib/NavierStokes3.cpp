@@ -295,6 +295,13 @@ void NavierStokes::static_surface_tension_advection() {
  } else
   amrex::Error("STATE_NCOMP_PRES or STATE_NCOMP_VEL invalid");
 
+ int update_flag=0; // do not update the error in S_new
+ int init_vof_prev_time=0;
+ VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
+   SLOPE_RECON_MF);
+ int keep_all_interfaces=0;
+ makeStateDistALL(keep_all_interfaces);
+
   //ngrow,ncomp,grid_type
  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
  Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
@@ -326,7 +333,11 @@ void NavierStokes::static_surface_tension_advection() {
  int quasi_static_reached=0;
  while (quasi_static_reached==0) {
 
+  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
+
   make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
+  delete_array(CELLTENSOR_MF);
+  delete_array(FACETENSOR_MF);
 
  }
 
@@ -2913,6 +2924,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         SLOPE_RECON_MF);
        int keep_all_interfaces=0;
        makeStateDistALL(keep_all_interfaces);
+
       } else
        amrex::Error("mass_transfer_active invalid");
 
@@ -11555,6 +11567,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
  override_enable_spectral(save_enable_spectral);
 
+  //homflag==0
  cpp_overridepbc(0,project_option);
 
  if (project_option==SOLVETYPE_PRESEXTRAP) {

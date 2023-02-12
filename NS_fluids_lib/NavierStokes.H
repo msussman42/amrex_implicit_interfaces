@@ -714,7 +714,8 @@ protected:
      MultiFab* mask3,
      int simple_AMR_BC_flag_viscosity);
 
-    void init_gradu_tensor_and_material_visc_ALL();
+    void init_gradu_tensor_and_material_visc_ALL(
+      const std::string& caller_string);
 
     void init_gradu_tensorALL(
      int idx,
@@ -833,7 +834,8 @@ protected:
 	   const std::string& caller_string);
 
     void allocate_physics_vars();
-    void make_physics_vars(int project_option);
+    void make_physics_vars(int project_option,
+      const std::string& caller_string);
 
     void solid_temperature();
 
