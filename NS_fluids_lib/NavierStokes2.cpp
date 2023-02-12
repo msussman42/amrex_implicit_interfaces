@@ -4753,8 +4753,11 @@ void NavierStokes::apply_pressure_grad(
 
 } // end subroutine apply_pressure_grad
 
-void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
+void NavierStokes::init_gradu_tensor_and_material_visc_ALL(
+  const std::string& caller_string) {
 
+ std::string local_caller_string="init_gradu_tensor_and_material_visc_ALL";
+ local_caller_string=caller_string+local_caller_string;
 
  // allocate and delete HOLD_VELOCITY_DATA_MF in init_gradu_tensorALL:
  // (since do_alloc==1)
@@ -4777,6 +4780,7 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL() {
 //  NavierStokes::volWgtSumALL
 //  NavierStokes::prepare_post_process
 //  NavierStokes::do_the_advance
+//  NavierStokes::static_surface_tension_advection
 //
 void NavierStokes::make_physics_varsALL(int project_option,
         const std::string& caller_string) {
@@ -4860,7 +4864,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   // delete_array(CELLTENSOR_MF);
   // delete_array(FACETENSOR_MF);
   //
- init_gradu_tensor_and_material_visc_ALL();
+ init_gradu_tensor_and_material_visc_ALL(local_caller_string);
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
  int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
@@ -4881,7 +4885,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
-  ns_level.make_physics_vars(project_option);
+  ns_level.make_physics_vars(project_option,local_caller_string);
   ns_level.level_init_icemask();
 
    // average down from ilev+1 to ilev.
@@ -4935,7 +4939,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  //delete_array(CELLTENSOR_MF);
  //delete_array(FACETENSOR_MF);
  
-} // subroutine make_physics_varsALL
+} // end subroutine make_physics_varsALL
 
 // called from: prelim_alloc() and make_physics_vars
 void NavierStokes::allocate_physics_vars() {
@@ -5035,9 +5039,11 @@ void NavierStokes::resize_levelset(int ngrow,int idx) {
 
 // called from make_physics_varsALL
 // density vars get 1/rho
-void NavierStokes::make_physics_vars(int project_option) {
+void NavierStokes::make_physics_vars(int project_option,
+  const std::string& caller_string) {
  
  std::string local_caller_string="make_physics_vars";
+ local_caller_string=caller_string+local_caller_string;
 
  bool use_tiling=ns_tiling;
 
@@ -5316,6 +5322,8 @@ void NavierStokes::make_physics_vars(int project_option) {
  
     // in: LEVELSET_3D.F90
    fort_init_physics_vars(
+    local_caller_string.c_str(),
+    local_caller_string.size(),
     &tid_current,
     &FD_curv_interp, 
     &local_curv_min[tid_current],

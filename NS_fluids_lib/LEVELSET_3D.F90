@@ -7569,6 +7569,8 @@ stop
 ! mask has 3 ghost cells.
 
       subroutine fort_init_physics_vars( &
+       caller_string, &
+       caller_string_len, &
        tid, &
        FD_curv_interp, &
        curv_min, &
@@ -7637,6 +7639,9 @@ stop
        level, &
        finest_level) &
       bind(c,name='fort_init_physics_vars')
+
+      use ISO_C_BINDING, ONLY: C_CHAR,C_INT
+
       use global_utility_module
       use probf90_module
       use godunov_module
@@ -7644,6 +7649,13 @@ stop
       use MOF_routines_module
 
       IMPLICIT NONE
+
+      CHARACTER(KIND=C_CHAR), INTENT(in) :: caller_string(*)
+      INTEGER(C_INT), INTENT(in), VALUE :: caller_string_len
+      CHARACTER(:), ALLOCATABLE :: fort_caller_string
+      INTEGER_T :: fort_caller_string_len
+      CHARACTER(len=255) :: pattern_string
+      INTEGER_T :: pattern_string_len
 
       INTEGER_T, INTENT(in) :: tid
       INTEGER_T, INTENT(in) :: nparts
@@ -7909,8 +7921,21 @@ stop
       REAL_T :: rad_added_mass
 
       REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
+      INTEGER_T test_for_quasi_static
 
 ! fort_init_physics_vars code starts here:
+
+      allocate(CHARACTER(caller_string_len) :: fort_caller_string)
+      do i=1,caller_string_len
+       fort_caller_string(i:i)=caller_string(i)
+      enddo
+      fort_caller_string_len=caller_string_len
+
+      pattern_string='static_surface_tension_advection'
+      pattern_string_len=32
+      test_for_quasi_static=fort_pattern_test( &
+        fort_caller_string,fort_caller_string_len, &
+        pattern_string,pattern_string_len)
 
       maskcov_ptr=>maskcov
       masknbr_ptr=>masknbr
@@ -8712,8 +8737,16 @@ stop
          enddo
           !viscstate is initialized in fort_derviscosity
          do im=1,num_materials
-          localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
-          localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
+          if (test_for_quasi_static.eq.1) then
+           localvisc_plus(im)=fort_static_viscosity
+           localvisc_minus(im)=fort_static_viscosity
+          else if (test_for_quasi_static.eq.0) then
+           localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
+           localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
+          else
+           print *,"test_for_quasi_static invalid"
+           stop
+          endif
           localheatvisc_plus(im)=conductstate(D_DECL(i,j,k),im)
           localheatvisc_minus(im)=conductstate(D_DECL(im1,jm1,km1),im)
          enddo
@@ -9133,7 +9166,16 @@ stop
            if (visc_interface(iten_main).eq.zero) then
             ! do nothing
            else if (visc_interface(iten_main).gt.zero) then
-            facevisc_local=visc_interface(iten_main)
+
+            if (test_for_quasi_static.eq.1) then
+             ! do nothing
+            else if (test_for_quasi_static.eq.0) then
+             facevisc_local=visc_interface(iten_main)
+            else
+             print *,"test_for_quasi_static invalid"
+             stop
+            endif
+
            else
             print *,"visc_interface invalid"
             stop
@@ -9299,7 +9341,14 @@ stop
              if (visc_interface(iten_FFACE).eq.zero) then
               ! do nothing
              else if (visc_interface(iten_FFACE).gt.zero) then
-              facevisc_local=visc_interface(iten_FFACE)
+              if (test_for_quasi_static.eq.1) then
+               ! do nothing
+              else if (test_for_quasi_static.eq.0) then
+               facevisc_local=visc_interface(iten_FFACE)
+              else
+               print *,"test_for_quasi_static invalid"
+               stop
+              endif
              else
               print *,"visc_interface invalid"
               stop
@@ -10012,6 +10061,15 @@ stop
           stop
          endif 
 
+         if (test_for_quasi_static.eq.1) then
+          local_face(FACECOMP_FACEVEL+1)=zero
+         else if (test_for_quasi_static.eq.0) then
+          ! do nothing
+         else
+          print *,"test_for_quasi_static invalid"
+          stop
+         endif
+
          do im=1,FACECOMP_NCOMP
           if (veldir.eq.0) then
            xface(D_DECL(i,j,k),im)=local_face(im)
@@ -10196,7 +10254,14 @@ stop
           stop
          endif
 
-         localvisc(im)=viscstate(D_DECL(i,j,k),im)
+         if (test_for_quasi_static.eq.1) then
+          localvisc(im)=fort_static_viscosity
+         else if (test_for_quasi_static.eq.0) then
+          localvisc(im)=viscstate(D_DECL(i,j,k),im)
+         else
+          print *,"test_for_quasi_static invalid"
+          stop
+         endif
 
          if (localvisc(im).lt.zero) then
           print *,"viscstate gone negative"
@@ -10335,6 +10400,8 @@ stop
        print *,"isweep invalid"
        stop
       endif
+
+      deallocate(fort_caller_string)
 
       return
       end subroutine fort_init_physics_vars

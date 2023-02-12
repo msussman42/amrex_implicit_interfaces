@@ -21743,7 +21743,7 @@ NavierStokes::volWgtSumALL(
   // delete_array(CELLTENSOR_MF);
   // delete_array(FACETENSOR_MF);
   //
-  init_gradu_tensor_and_material_visc_ALL();
+  init_gradu_tensor_and_material_visc_ALL(local_caller_string);
  } else
   amrex::Error("fast_mode invalid");
 
@@ -25379,6 +25379,7 @@ NavierStokes::makeStateCurv(int project_option,
    const std::string& caller_string) {
  
  std::string local_caller_string="makeStateCurv";
+ local_caller_string=caller_string+local_caller_string;
 
  bool use_tiling=ns_tiling;
 
@@ -25508,8 +25509,8 @@ NavierStokes::makeStateCurv(int project_option,
 
      // declared in: LEVELSET_3D.F90
     fort_curvstrip(
-     caller_string.c_str(),
-     caller_string.size(),
+     local_caller_string.c_str(),
+     local_caller_string.size(),
      &vof_height_function,
      &level,
      &finest_level,
