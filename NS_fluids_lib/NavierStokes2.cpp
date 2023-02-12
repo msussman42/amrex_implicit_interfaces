@@ -4894,6 +4894,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEFACECUT,1,0,
     AMREX_SPACEDIM,0,local_caller_string);
 
+   // spectral_override==0 => always low order.
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEDEN,1,0,
 	  AMREX_SPACEDIM,0,local_caller_string);
 
