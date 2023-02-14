@@ -129,7 +129,7 @@ allocate(flagrecord(max_sitesnum))
 n=50
 call random_seed(size=n)
 
-fo=7.0d0       ! function order
+fo=5.0d0       ! function order
 a=201.0/(zblob4**fo-(tinit-tref)**fo)   ! 20 superheat condition with 202 sites
 b=1.0-a*((tinit-tref)**fo)            ! tinit-tref superheat condition for the first site
 !print *,"a=",a,"b=",b
@@ -217,8 +217,12 @@ do j=1,sitesnum
 do i=1,2
 ! sites(i,j)=(0.6d0-0.0d0)*sites(i,j)
 ! sites(i,j)=(6.0d0-0.0d0)*sites(i,j)
- sites(i,j)=(probhix-problox)*sites(i,j)
- enddo
+ if(axis_dir.ne.9)then
+  sites(i,j)=(probhix-problox)*sites(i,j)
+ elseif(axis_dir.eq.9)then
+  sites(i,j)=(4.8d0-1.2d0)*sites(i,j)+1.2d0 
+ endif
+enddo
 enddo
 
 print *,"sitesnum",sitesnum,"sites list:"
@@ -248,6 +252,7 @@ REAL_T       :: tempvec1(SDIM),tempvec2(SDIM)
 REAL_T       :: tempdist
 
 !  print *,"in Satomodel_nucleation"
+ if(axis_dir.eq.8.or.axis_dir.eq.9)then
   i=nucleate_in%i
   j=nucleate_in%j
   k=nucleate_in%k
@@ -272,18 +277,11 @@ REAL_T       :: tempdist
   tempvec1(2)=xsten(0,2)
   tempvec1(SDIM)=xsten(0,SDIM)
 
-  if(1.eq.1)then
     do ii=1,sitesnum
 !     print *,"sitesnum=", ii
      if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
 !      print *,"tempt satisfied"
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
-!       print *,"ls_sol satisfied", ls_sol, nucleate_in%dx(SDIM)+radblob3
-!       if (SDIM.eq.3) then
-!        if(sites(1,ii).le.xsten(1,1)+nucleate_in%dx(1).and.&
-!           sites(1,ii).ge.xsten(-1,1)-nucleate_in%dx(1).and.&
-!           sites(2,ii).le.xsten(1,2)+nucleate_in%dx(2).and.&
-!           sites(2,ii).ge.xsten(-1,2)-nucleate_in%dx(2))then
           tempvec2(1)=sites(1,ii)
           tempvec2(2)=sites(2,ii)
           tempvec2(SDIM)=zblob
@@ -299,23 +297,13 @@ REAL_T       :: tempdist
           print *,"invalid tempdist",tempdist
           stop
         endif
-!       else if (SDIM.eq.2) then
-!        if(sites(1,ii).le.xsten(1,1)+nucleate_in%dx(SDIM).and.&
-!           sites(1,ii).ge.xsten(-1,1)-nucleate_in%dx(SDIM)) then
-!         make_seed=1
-!         active_flag(ii)=1
-!      print *,"make seed at ",sites(1,ii),"between ",xsten(-1,1),xsten(1,1), " tempt= ",tempt
-!        endif
-!       else
-!        print *,"SDIM invalid"
-!        stop
-!       endif  ! SDIM 
       endif    
      endif
     enddo ! do ii=1,sitesnum
+ else
+   make_seed=0 
+ endif
 
-  endif
- 
 return
 end subroutine Satomodel_nucleation
 
@@ -387,13 +375,20 @@ INTEGER_T :: im,iregion,dir
   regions_list(iregion,0)%region_energy_after=0.0d0
  enddo ! iregion=1,number_of_source_regions
 
- if (axis_dir.eq.8) then
+ if (axis_dir.eq.8.or. &
+     axis_dir.eq.9.or. &
+     axis_dir.eq.10) then
   regions_list(1,0)%region_material_id=3 !heater
   regions_list(1,0)%region_energy_flux=xblob3 ! Watts=J/s
-  print *,"m_id",regions_list(1,0)%region_material_id
-  print *,"flux",regions_list(1,0)%region_energy_flux
+!  print *,"m_id",regions_list(1,0)%region_material_id
+!  print *,"flux",regions_list(1,0)%region_energy_flux
+ elseif(axis_dir.eq.11)then
+  regions_list(1,0)%region_material_id=2 !heater
+  regions_list(1,0)%region_volume_flux=xblob6
+  regions_list(1,0)%region_mass_flux=xblob6*fort_denconst(2)
+  regions_list(1,0)%region_temperature_prescribe=yblob6
  else
-  print *,"axis_dir must equal to 8"
+  print *,"axis_dir must equal to 8 or 9or10"
   stop
  endif
 end subroutine CAVITY_BOILING_INIT_REGIONS_LIST
@@ -408,14 +403,41 @@ REAL_T, INTENT(in) :: x(SDIM)
 REAL_T, INTENT(in) :: cur_time
 REAL_T, INTENT(out) :: charfn_out
 
-!    if(x(SDIM).lt. zblob)then
-!    if(x(SDIM).lt. zblob2)then
-    if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2)then
-!     print *,"x(SDIM)",X(SDIM),"zblob2",zblob2
-     charfn_out=one
-    else
-     charfn_out=0.0d0
-    endif
+  if(axis_dir.eq.8)then 
+   if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2)then
+    charfn_out=one
+   else
+    charfn_out=0.0d0
+   endif
+  elseif(axis_dir.eq.9)then
+   if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2 .and.&
+      x(1).le.5.0d0 .and. x(1).ge.1.0d0 .and. &     
+      x(2).le.5.0d0 .and. x(2).ge.1.0d0)then
+    charfn_out=one
+   else
+    charfn_out=0.0d0
+   endif
+  elseif(axis_dir.eq.10)then
+   if(x(SDIM).lt. xblob2+1.0e-3.and.x(SDIM).gt.xblob2 .and.&
+      x(1).le.5.0e-3 .and. x(1).ge.1.0e-3 .and. &     
+      x(2).le.5.0e-3 .and. x(2).ge.1.0e-3)then
+    charfn_out=one
+   else
+    charfn_out=0.0d0
+   endif
+  elseif(axis_dir.eq.11)then
+   if(x(SDIM).le.probloz+0.000375d0 .and.&
+      x(1).le.(probhix-problox)*0.5d0+problox+0.000375d0 .and. &
+      x(1).ge.(probhix-problox)*0.5d0+problox)then      
+    charfn_out=one
+   else
+    charfn_out=0.0d0
+   endif
+
+  else
+   print *,"axis_dir must equal to 8-11"
+   stop
+  endif
 
 end subroutine CAVITY_BOILING_CHARFN_REGION
 
@@ -447,23 +469,52 @@ REAL_T, INTENT(in) :: temperature_wall_max
 REAL_T, INTENT(in) :: temperature_probe
 REAL_T, INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
 REAL_T, INTENT(inout) :: thermal_k
+INTEGER_T :: local1
 
 
 if(axis_dir.eq.8)then
-! (zblob2,xblob2)heater
-!  if(x(SDIM).lt. zblob2+1.0d0.and.x(SDIM).gt.zblob2)then
-!   if(im.eq.3)then
-!    thermal_k=1e+8
-!   elseif(im.eq.1)then
-!     ! do nothing
-!   endif
   if(x(SDIM).lt.zblob2)then
-      thermal_k=0.0d0
+   thermal_k=0.0d0
   endif
+elseif(axis_dir.eq.9)then
+  local1=0   
+   if(x(SDIM).le.zblob.and.x(SDIM).ge.zblob2+0.2d0 .and. &
+     x(1).le.5.0d0-0.2d0 .and. x(1).ge.1.0d0+0.2d0 .and. &     
+     x(2).le.5.0d0-0.2d0 .and. x(2).ge.1.0d0+0.2d0)then
+     local1=1
+   else
+     ! do nothing
+   endif  
+
+   if(x(SDIM).le.zblob.and.x(SDIM).ge.zblob2 .and.&
+     x(1).le.5.0d0 .and. x(1).ge.1.0d0 .and. &     
+     x(2).le.5.0d0 .and. x(2).ge.1.0d0 .and. &
+     local1.eq.0) then
+     thermal_k=0.0d0
+   else
+     ! do nothing
+   endif  
+elseif(axis_dir.eq.10)then
+  local1=0   
+   if(x(SDIM).le.zblob-0.2e-3 .and. x(SDIM).ge.zblob-1.0e-3 .and. &
+     x(1).le.5.0e-3-0.2e-3 .and. x(1).ge.1.0e-3+0.2e-3 .and. &     
+     x(2).le.5.0e-3-0.2e-3 .and. x(2).ge.1.0e-3+0.2e-3)then
+     local1=1
+   else
+     ! do nothing
+   endif  
+
+   if(x(SDIM).le.zblob.and.x(SDIM).ge.zblob-1.0e-3 .and.&
+     x(1).le.5.0e-3 .and. x(1).ge.1.0e-3 .and. &     
+     x(2).le.5.0e-3 .and. x(2).ge.1.0e-3 .and. &
+     local1.eq.0) then
+     thermal_k=0.0d0
+   else
+     ! do nothing
+   endif  
 else
   ! do nothing
 endif
-!print *,"thermal_k",thermal_k
 
 end subroutine CAVITY_BOILING_THERMAL_K
 
@@ -1044,14 +1095,14 @@ REAL_T            :: x(SDIM)
 
 INTEGER_T         :: dist_sign
 REAL_T, INTENT(out) :: dist
-REAL_T            :: dist1,dist2,dist3
+REAL_T            :: dist1,dist2,dist3,dist4,dist5,dist6
 REAL_T            :: x1(SDIM),x2(SDIM),x3(SDIM)
 REAL_T            :: x4(SDIM),x5(SDIM)
 REAL_T            :: trap,vshape,radius,lcinter,radius3d,bb
 INTEGER_T i
 
 REAL_T            :: pl1(SDIM),pl2(SDIM)
-REAL_T            :: d1,d2
+REAL_T            :: d1,d2,d3
 REAL_T            :: val1,val2 
 REAL_T            :: tp(SDIM)
 REAL_T            :: v1(SDIM),v2(SDIM),v3(SDIM)
@@ -1768,20 +1819,176 @@ else if (cavity_type.eq.8) then
   print *,"coord_type error"        
   stop
  endif
+elseif(cavity_type.eq.9)then
+  if(coord_type.ne.1)then
+   print *,"cavity_type.eq.9 has to be on 3d"
+   stop
+  endif
+  dist1=x(1)-5.0d0
+  dist2=x(1)-1.0d0
+  dist3=x(2)-5.0d0
+  dist4=x(2)-1.0d0
+  dist5=x(SDIM)-zblob2
+  dist6=x(SDIM)-zblob
+  d1=dist1*dist2
+  d2=dist3*dist4
+  d3=dist5*dist6
+
+  if(d1.le.0.0d0)then
+    if(d2.le.0.0d0)then
+       dist=min(abs(dist5),abs(dist6))
+    else
+      if(d3.le.0.0d0)then
+        dist=min(abs(dist3),abs(dist4))
+      else
+        dist=sqrt((min(abs(dist3),abs(dist4)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+      endif
+    endif
+  else
+    if(d2.le.0.0d0)then
+     if(d3.le.0.0d0)then
+      dist=min(abs(dist1),abs(dist2)) 
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif
+    else
+     if(d3.le.0.0d0)then
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist3),abs(dist4)))**2.0d0)
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                (min(abs(dist3),abs(dist4)))**2.0d0+ &
+                (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif  
+    endif
+  endif
+
+  if(x(SDIM).le.zblob.and.x(SDIM).ge.zblob2 .and.&
+     x(1).le.5.0d0 .and. x(1).ge.1.0d0 .and. &     
+     x(2).le.5.0d0 .and. x(2).ge.1.0d0)then
+    dist=-1.0d0*dist
+  else
+    ! do nothing
+  endif
+elseif(cavity_type.eq.10)then
+  if(coord_type.ne.1)then
+   print *,"cavity_type.eq.10 has to be on 3d"
+   stop
+  endif
+  dist1=x(1)-5.0e-3
+  dist2=x(1)-1.0e-3
+  dist3=x(2)-5.0e-3
+  dist4=x(2)-1.0e-3
+  dist5=x(SDIM)-xblob2
+  dist6=x(SDIM)-zblob
+  d1=dist1*dist2
+  d2=dist3*dist4
+  d3=dist5*dist6
+
+  if(d1.le.0.0d0)then
+    if(d2.le.0.0d0)then
+       dist=min(abs(dist5),abs(dist6))
+    else
+      if(d3.le.0.0d0)then
+        dist=min(abs(dist3),abs(dist4))
+      else
+        dist=sqrt((min(abs(dist3),abs(dist4)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+      endif
+    endif
+  else
+    if(d2.le.0.0d0)then
+     if(d3.le.0.0d0)then
+      dist=min(abs(dist1),abs(dist2)) 
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif
+    else
+     if(d3.le.0.0d0)then
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist3),abs(dist4)))**2.0d0)
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                (min(abs(dist3),abs(dist4)))**2.0d0+ &
+                (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif  
+    endif
+  endif
+
+  if(x(SDIM).le.zblob.and.x(SDIM).ge.xblob2 .and.&
+     x(1).le.5.0e-3 .and. x(1).ge.1.0e-3 .and. &     
+     x(2).le.5.0e-3 .and. x(2).ge.1.0e-3)then
+    dist=-1.0d0*dist
+  else
+    ! do nothing
+  endif
+elseif(cavity_type.eq.11)then
+  if(coord_type.ne.1)then
+   print *,"cavity_type.eq.11 has to be on 3d"
+   stop
+  endif
+  dist1=x(1)-problox
+  dist2=x(1)-((probhix-problox)*0.5d0+problox)
+  dist3=x(2)-probloy
+  dist4=x(2)-probhiy
+  dist5=x(SDIM)-probloz
+  dist6=x(SDIM)-(probloz+(probhix-problox)*0.5d0)
+  d1=dist1*dist2
+  d2=dist3*dist4
+  d3=dist5*dist6
+
+  if(d1.le.0.0d0)then
+    if(d2.le.0.0d0)then
+       dist=min(abs(dist5),abs(dist6))
+    else
+      if(d3.le.0.0d0)then
+        dist=min(abs(dist3),abs(dist4))
+      else
+        dist=sqrt((min(abs(dist3),abs(dist4)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+      endif
+    endif
+  else
+    if(d2.le.0.0d0)then
+     if(d3.le.0.0d0)then
+      dist=min(abs(dist1),abs(dist2)) 
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif
+    else
+     if(d3.le.0.0d0)then
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist3),abs(dist4)))**2.0d0)
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                (min(abs(dist3),abs(dist4)))**2.0d0+ &
+                (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif  
+    endif
+  endif
+
+  if(x(SDIM).le.probloz+(probhix-problox)*0.5d0 .and.&
+     x(1).le.(probhix-problox)*0.5d0+problox)then
+    dist=-1.0d0*dist
+  else
+    ! do nothing
+  endif
+
+
 
 else
  print *, "invalid cavity type flag"
  stop
 endif
 
-
-
 ! from cm to m
 dist = dist/scale_factor
 
 end subroutine cavity_distf_13
-
-
 
 
 ! --------------------------------------------------
@@ -1797,10 +2004,12 @@ REAL_T            :: x(SDIM)
 
 REAL_T, intent(out) :: dist
 REAL_T            :: dist_temp
-REAL_T            :: dist2
+REAL_T            :: dist1,dist2,dist3
+REAL_T            :: dist4,dist5,dist6,dist7
+REAL_T            :: d1,d2,d3
 REAL_T            :: center(SDIM)
 REAL_T            :: film_thickness     ! thickness of the film
-REAL_T, parameter :: scale_factor=100.0d0
+REAL_T, parameter :: scale_factor=1.0d0
 INTEGER_T i
 
 film_thickness=radblob4
@@ -1869,7 +2078,9 @@ if ((axis_dir.ge.1).and.(axis_dir.le.6)) then
    endif
  endif
 
-else if (axis_dir.eq.7.or.axis_dir.eq.8) then
+else if (axis_dir.eq.7.or. &
+         axis_dir.eq.8.or. &
+         axis_dir.eq.9) then
  
  if(coord_type .eq. 2)then 
 
@@ -1901,6 +2112,123 @@ else if (axis_dir.eq.7.or.axis_dir.eq.8) then
  print *,"coord_type invalid"
  stop
  endif
+elseif(axis_dir.eq.10)then
+
+  if(coord_type.ne.1)then
+   print *,"cavity_type.eq.10 has to be on 3d"
+   stop
+  endif
+  dist1=x(1)-(5.0e-3+zblob6)
+  dist2=x(1)-(1.0e-3-zblob6)
+  dist3=x(2)-(5.0e-3+zblob6)
+  dist4=x(2)-(1.0e-3-zblob6)
+  dist5=x(SDIM)-(xblob2-zblob6)
+  dist6=x(SDIM)-(xblob2+1.0e-3)
+  d1=dist1*dist2
+  d2=dist3*dist4
+  d3=dist5*dist6
+
+  if(d1.le.0.0d0)then
+    if(d2.le.0.0d0)then
+       dist=min(abs(dist5),abs(dist6))
+    else
+      if(d3.le.0.0d0)then
+        dist=min(abs(dist3),abs(dist4))
+      else
+        dist=sqrt((min(abs(dist3),abs(dist4)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+      endif
+    endif
+  else
+    if(d2.le.0.0d0)then
+     if(d3.le.0.0d0)then
+      dist=min(abs(dist1),abs(dist2)) 
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif
+    else
+     if(d3.le.0.0d0)then
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist3),abs(dist4)))**2.0d0)
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                (min(abs(dist3),abs(dist4)))**2.0d0+ &
+                (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif  
+    endif
+  endif
+
+  if(x(SDIM).le.xblob2+1.0e-3.and.x(SDIM).ge.xblob2-zblob6 .and.&
+     x(1).le.5.0e-3+zblob6 .and. x(1).ge.1.0e-3-zblob6 .and. &     
+     x(2).le.5.0e-3+zblob6 .and. x(2).ge.1.0e-3-zblob6)then
+    ! do nothing
+  else
+    dist=-1.0d0*dist
+    ! do nothing
+  endif
+elseif(axis_dir.eq.11)then
+
+  if(coord_type.ne.1)then
+   print *,"cavity_type.eq.10 has to be on 3d"
+   stop
+  endif
+  dist1=x(1)-((probhix-problox)*0.5d0+problox+0.000375d0)
+  dist2=x(1)-((probhix-problox)*0.5d0+problox)
+  dist3=x(2)-(probloy)
+  dist4=x(2)-(probhiy)
+  dist5=x(SDIM)-(probloz+(probhix-problox)*0.5d0+0.000375d0)
+  dist6=x(SDIM)-(probloz)
+  d1=dist1*dist2
+  d2=dist3*dist4
+  d3=dist5*dist6
+
+  if(d1.le.0.0d0)then
+    if(d2.le.0.0d0)then
+       dist=min(abs(dist5),abs(dist6))
+    else
+      if(d3.le.0.0d0)then
+        dist=min(abs(dist3),abs(dist4))
+      else
+        dist=sqrt((min(abs(dist3),abs(dist4)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+      endif
+    endif
+  else
+    if(d2.le.0.0d0)then
+     if(d3.le.0.0d0)then
+      dist=min(abs(dist1),abs(dist2)) 
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif
+    else
+     if(d3.le.0.0d0)then
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                  (min(abs(dist3),abs(dist4)))**2.0d0)
+     else
+      dist=sqrt((min(abs(dist1),abs(dist2)))**2.0d0+ &
+                (min(abs(dist3),abs(dist4)))**2.0d0+ &
+                (min(abs(dist5),abs(dist6)))**2.0d0)
+     endif  
+    endif
+  endif
+  
+  dist7=x(SDIM)-15e-3
+
+   if(x(SDIM).le.probloz+0.00075d0 .and.&
+      x(1).le.(probhix-problox)*0.5d0+problox+0.000375d0 .and. &
+      x(1).ge.(probhix-problox)*0.5d0+problox)then      
+     ! do nothing 
+  else
+    if(dist7.ge.0.0d0)then
+      dist=dist7
+    else
+     dist=-1.0d0*min(dist,abs(dist7))
+    ! do nothing
+    endif
+  endif
+
 else
  print *,"axis_dir invalid"
  stop
@@ -1986,7 +2314,7 @@ INTEGER_T :: im_solid_materialdist
     endif
    enddo
 
-   if(axis_dir.eq.8)then
+   if(axis_dir.eq.8.or.axis_dir.eq.9)then
 !    print *,"axis_dir=8"
     LS(1)=1000.0d0
     LS(2)=-1000.0d0
@@ -2145,7 +2473,8 @@ if (probtype.eq.710) then
      ! density prescribed in the inputs file.
    STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
 
-   if(axis_dir.ne.8)then
+   if(axis_dir.ne.8.and.axis_dir.ne.9.and.  &
+      axis_dir.ne.10)then
     if (t.eq.zero) then
      !initial temperature in inputs
      STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
@@ -2160,10 +2489,10 @@ if (probtype.eq.710) then
      if(x(SDIM).lt.zblob2)then   ! (zblob2,xblob2)heater
        STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4
      elseif(x(SDIM).le.xblob2)then
-       STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4+zblob4
+       STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4+zblob5
      elseif(x(SDIM).gt.xblob2.and.x(SDIM).le.zblob)then
-      STATE(ibase+ENUM_TEMPERATUREVAR+1)=(xblob4+zblob4)-&
-       (xblob4+zblob4-yblob4)/ &
+      STATE(ibase+ENUM_TEMPERATUREVAR+1)=(xblob4+zblob5)-&
+       (xblob4+zblob5-yblob4)/ &
        (zblob-xblob2)*(x(SDIM)-xblob2)
      elseif(x(SDIM).gt.zblob.and.x(SDIM).le.zblob+xblob5)then
       STATE(ibase+ENUM_TEMPERATUREVAR+1)=yblob4-&
@@ -2178,6 +2507,38 @@ if (probtype.eq.710) then
      print *,"t invalid"
      stop
     endif
+   elseif(axis_dir.eq.9)then
+    if(t.eq.zero)then
+     if(x(SDIM).le.zblob.and.x(SDIM).ge.zblob2 .and.&
+      x(1).le.5.0d0 .and. x(1).ge.1.0d0 .and. &     
+      x(2).le.5.0d0 .and. x(2).ge.1.0d0)then
+      
+      if(x(SDIM).le.xblob2)then
+       STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4+zblob5
+      elseif(x(SDIM).gt.xblob2.and.x(SDIM).le.zblob)then
+       STATE(ibase+ENUM_TEMPERATUREVAR+1)=(xblob4+zblob5)-&
+        zblob5/(zblob-xblob2)*(x(SDIM)-xblob2)
+      endif
+     else
+       STATE(ibase+ENUM_TEMPERATUREVAR+1)=xblob4
+     endif
+    elseif(t.gt.zero)then
+      ! do nothing 
+    else
+     print *,"t invalid"
+     stop
+    endif
+   elseif(axis_dir.eq.10.or.axis_dir.eq.11)then
+    if (t.eq.zero) then
+     !initial temperature in inputs
+     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
+    else if (t.gt.zero) then
+     STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
+    else
+     print *,"t invalid"
+     stop
+    endif
+
    endif  ! cavity_type
 
    ! initial species in inputs?
