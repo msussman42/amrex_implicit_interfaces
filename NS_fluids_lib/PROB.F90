@@ -22675,6 +22675,7 @@ end subroutine initialize2d
       INTEGER_T tagflag
       INTEGER_T, parameter :: nhalf=1
       REAL_T xsten(-nhalf:nhalf,SDIM)
+      INTEGER_T coarseblocks_available
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -22812,8 +22813,16 @@ end subroutine initialize2d
          enddo
         endif
 
-        if (ncoarseblocks.gt.0) then
-         if (((probtype.eq.541).and.(level.gt.3)).or.(probtype.ne.541)) then
+        coarseblocks_available=1
+        if ((probtype.eq.541).and.(level.le.3)) then
+         coarseblocks_available=0
+        else
+         ! do nothing
+        endif
+
+        if (coarseblocks_available.eq.1) then
+
+         if (ncoarseblocks.gt.0) then
           do np=1,ncoarseblocks
            if ((abs(x-xcoarseblocks(np)).ge.rxcoarseblocks(np)).or. &
 #if (AMREX_SPACEDIM==3)
@@ -22822,10 +22831,21 @@ end subroutine initialize2d
                (abs(y-ycoarseblocks(np)).ge.rycoarseblocks(np))) then
             tagflag=0
            endif
-          enddo
+          enddo ! do np=1,ncoarseblocks
+         else if (ncoarseblocks.eq.0) then
+          ! do nothing
+         else
+          print *,"ncoarseblocks invalid"
+          stop
          endif
-        endif ! ncoarseblocks>0
 
+        else if (coarseblocks_available.eq.0) then
+         ! do nothing
+        else
+         print *,"coarseblocks_available invalid"
+         stop
+        endif
+        
        else if (level.ge.max_level_for_use) then
         ! do nothing
        else
