@@ -747,7 +747,8 @@ stop
        stop
       endif
 
-       ! -1 if use static angle
+       ! use_DCA=-1 static angle
+       ! use_DCA=0  static angle
        ! if (probtype.eq.5501).and.(sdim.eq.3) then use_DCA=[-1,0,1,2]
        ! otherwise, if ZEYU_DCA_SELECT=-1 then use_DCA=-1 (static model)
        ! else if ZEYU_DCA_SELECT in [1,...,8], then
@@ -1624,8 +1625,8 @@ stop
          ! implement dynamic contact angle algorithm here.
          ! first project nfluid onto the solid (im3) material
 
-         if ((use_DCA.eq.-1).or. &
-             (use_DCA.ge.0)) then
+         if ((use_DCA.eq.-1).or. & !static option; probtype.ne.5501
+             (use_DCA.ge.0)) then  !static option; probtype.eq.5501
 
           dotprod=zero
           do dir2=1,SDIM
@@ -1654,9 +1655,13 @@ stop
   
             if (LSTEST_EXTEND.lt.zero) then
              wt=one
-            else 
+            else if (LSTEST_EXTEND.ge.zero) then
              wt=CURVWT
+            else
+             print *,"LSTEST_EXTEND is NaN"
+             stop
             endif
+
             totalwt=totalwt+wt
 
             udotn=zero
@@ -1668,7 +1673,9 @@ stop
            enddo
            enddo  ! i2,j2,k2=-1...1
 
-           if (totalwt.le.zero) then
+           if (totalwt.gt.zero) then
+            ! do nothing
+           else
             print *,"totalwt invalid"
             stop
            endif
@@ -1734,8 +1741,11 @@ stop
             ! use_DCA=0 static angle
             ! use_DCA=1 Jiang
             ! use_DCA=2 Kistler
-           else if ((use_DCA.eq.0).or.(use_DCA.eq.1).or.(use_DCA.eq.2)) then
+           else if ((use_DCA.eq.0).or. & !static
+                    (use_DCA.eq.1).or. & !Jiang
+                    (use_DCA.eq.2)) then !Kistler
 
+              ! DCA_select_model is declared in GLOBALUTIL.F90
             call DCA_select_model(nproject,totaludotn,cos_angle, &
              liquid_viscosity,user_tension(iten),cos_angle,use_DCA)
 
@@ -1753,7 +1763,8 @@ stop
              ! cases 2,...,8 for Zeyu's code.
              ! case 2 Jiang 1970 ...
              ! case 8 model=Cox 1986
-            else if ((use_DCA.ge.102).and.(use_DCA.le.108)) then
+            else if ((use_DCA.ge.102).and. &
+                     (use_DCA.le.108)) then
              ZEYU_imodel=use_DCA-100
 
              call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
@@ -1850,7 +1861,7 @@ stop
          if (use_DCA.eq.101) then ! GNBC
           gamma1=half*user_tension(iten)
           gamma2=half*user_tension(iten)
-         else if (use_DCA.ge.-1) then
+         else if (use_DCA.ge.-1) then  ! all other cases.
           gamma1=half*(one-cos_angle)
           gamma2=half*(one+cos_angle)
          else
