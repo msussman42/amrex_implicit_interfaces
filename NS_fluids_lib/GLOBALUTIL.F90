@@ -17439,7 +17439,9 @@ end subroutine print_visual_descriptor
 
 
        ! Dynamic Contact Angle
-      subroutine get_use_DCA(use_DCA)
+      subroutine get_use_DCA(use_DCA) &
+      bind(c,name='get_use_DCA')
+
       use probcommon_module
 
       IMPLICIT NONE

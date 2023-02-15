@@ -897,7 +897,7 @@ Real NavierStokes::bottom_bottom_tol_factor=0.001;
 // 1=> u=u_solid_ghost if phi_solid>=0
 // 2=> generalized Navier Boundary condition (GNBC),
 //   for conventional contact line dynamics, 
-//   modify "get_use_DCA" in PROB.F90.
+//   modify "get_use_DCA" in GLOBALUTIL.F90.
 Vector<int> NavierStokes::law_of_the_wall;
 Vector<Real> NavierStokes::wall_model_velocity; //1..num_materials
 Vector<int> NavierStokes::interface_mass_transfer_model; //1..2*num_interfaces
@@ -3697,7 +3697,9 @@ NavierStokes::read_params ()
     pp.queryAdd("static_viscosity",static_viscosity);
 
     if (static_surface_tension==0) {
+
      //do nothing
+     
     } else if (static_surface_tension==1) {
 
      if (static_viscosity>0.0) {
@@ -3711,6 +3713,27 @@ NavierStokes::read_params ()
       } else
        amrex::Error("expecting denadd=0 if static_surf_ten==1");
      }
+
+     for (int i=0;i<num_materials;i++) {
+      if ((law_of_the_wall[i]==0)||   //no wall model
+ 	  (law_of_the_wall[i]==1)) {  //high Reynolds number wall model
+       //do nothing
+      } else
+       amrex::Error("law_of_the_wall and static_surface_tension conflict");
+     } //for (int i=0;i<num_materials;i++) {
+
+     if (ZEYU_DCA_SELECT==-1) {
+      //do nothing
+     } else
+      amrex::Error("ZEYU_DCA_SELECT and static_surface_tension conflict");
+
+     int use_DCA_local=-1;
+     get_use_DCA(&use_DCA_local);
+     if (use_DCA_local==-1) {
+      //do nothing
+     } else
+      amrex::Error("use_DCA_local and static_surface_tension conflict");
+		    
     } else
      amrex::Error("static_surface_tension invalid");
 
@@ -25439,7 +25462,7 @@ NavierStokes::makeStateCurv(int project_option,
      (project_option==SOLVETYPE_INITPROJ)) {
 
   const Real* dx = geom.CellSize();
-
+FIX ME
   Real cl_time=prev_time_slab;
   if (project_option==SOLVETYPE_PRES)  
    cl_time=prev_time_slab;
