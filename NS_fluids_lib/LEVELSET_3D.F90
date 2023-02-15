@@ -1624,7 +1624,8 @@ stop
          ! implement dynamic contact angle algorithm here.
          ! first project nfluid onto the solid (im3) material
 
-         if ((use_DCA.eq.-1).or.(use_DCA.ge.0)) then
+         if ((use_DCA.eq.-1).or. &
+             (use_DCA.ge.0)) then
 
           dotprod=zero
           do dir2=1,SDIM
