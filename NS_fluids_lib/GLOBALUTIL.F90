@@ -17373,7 +17373,9 @@ end subroutine print_visual_descriptor
        ! material 0 and material 2 (the solid material)
        ! cos_thetad is the output cosine of the dynamic angle.
        ! vis is viscosity of material 0 (liquid)
-       ! imodel=0 static imodel=1 Jiang   imodel=2 Kistler
+       ! imodel=0 static 
+       ! imodel=1 Jiang   
+       ! imodel=2 Kistler
        ! DCA_select_model was written by Yongsheng Lian and
        ! students of his.
       subroutine DCA_select_model(normal,vel_n,cos_thetae,vis, &
@@ -17381,7 +17383,7 @@ end subroutine print_visual_descriptor
         cos_thetad,imodel)
       implicit none
 
-      INTEGER_T, intent(in) :: imodel
+      INTEGER_T, intent(in) :: imodel !0=static  1=Jiang  2=Kistler
       REAL_T, intent(in) :: normal(SDIM)
       REAL_T, intent(in) :: vel_n
       REAL_T, intent(in) :: cos_thetae  
@@ -17402,7 +17404,7 @@ end subroutine print_visual_descriptor
       f_Hoff_inver = 0.0276
       capillary = vel_n*vis/user_tension_scalar
 
-      if (imodel.eq.0) then
+      if (imodel.eq.0) then ! static
        cos_thetad=cos_thetae
       else if (imodel.eq.1) then ! Jiang's model
        temp2 = cmplx(capillary,0.0)
@@ -17456,6 +17458,9 @@ end subroutine print_visual_descriptor
         print *,"im_solid_DCA invalid"
         stop
        endif
+        ! xblob10=0 static
+        ! xblob10=1 Jiang
+        ! xblob10=2 Kistler
        use_DCA=NINT(xblob10)
       else
        use_DCA=-1

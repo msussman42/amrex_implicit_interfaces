@@ -1863,7 +1863,7 @@ void fortran_parameters() {
  pp.queryAdd("nucleation_init_time",nucleation_init_time);
 
  pp.queryAdd("ZEYU_DCA_SELECT",NavierStokes::ZEYU_DCA_SELECT);
- if ((NavierStokes::ZEYU_DCA_SELECT==-1)||
+ if ((NavierStokes::ZEYU_DCA_SELECT==-1)||  //static
      ((NavierStokes::ZEYU_DCA_SELECT>=1)&&
       (NavierStokes::ZEYU_DCA_SELECT<=8))) {
   // do nothing
@@ -2934,7 +2934,7 @@ NavierStokes::read_params ()
     }
 
     pp.queryAdd("ZEYU_DCA_SELECT",ZEYU_DCA_SELECT);
-    if ((ZEYU_DCA_SELECT==-1)||
+    if ((ZEYU_DCA_SELECT==-1)|| //static
         ((ZEYU_DCA_SELECT>=1)&&
 	 (ZEYU_DCA_SELECT<=8))) {
      // do nothing
@@ -3729,7 +3729,8 @@ NavierStokes::read_params ()
 
      int use_DCA_local=-1;
      get_use_DCA(&use_DCA_local);
-     if (use_DCA_local==-1) {
+     if ((use_DCA_local==-1)||  // Zeyu's static case.
+         (use_DCA_local==0)) {  // Yongsheng's static case.
       //do nothing
      } else
       amrex::Error("use_DCA_local and static_surface_tension conflict");
@@ -25462,14 +25463,20 @@ NavierStokes::makeStateCurv(int project_option,
      (project_option==SOLVETYPE_INITPROJ)) {
 
   const Real* dx = geom.CellSize();
-FIX ME
+
   Real cl_time=prev_time_slab;
-  if (project_option==SOLVETYPE_PRES)  
-   cl_time=prev_time_slab;
-  else if (project_option==SOLVETYPE_INITPROJ) 
-   cl_time=cur_time_slab;
-  else
-   amrex::Error("project_option invalid makeStateCurv");
+
+  if (static_surface_tension==1) {
+   cl_time=cur_time_slab; //irrelevant for static case.
+  } else if (static_surface_tension==0) {
+   if (project_option==SOLVETYPE_PRES)  
+    cl_time=prev_time_slab;
+   else if (project_option==SOLVETYPE_INITPROJ) 
+    cl_time=cur_time_slab;
+   else
+    amrex::Error("project_option invalid makeStateCurv");
+  } else
+   amrex::Error("static_surface_tension invalid");
 
   MultiFab* CL_velocity=getState(2,STATECOMP_VEL,
      STATE_NCOMP_VEL+STATE_NCOMP_PRES,cl_time);
