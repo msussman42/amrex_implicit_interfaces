@@ -4887,6 +4887,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   NavierStokes& ns_level=getLevel(ilev);
 
   ns_level.make_physics_vars(project_option,local_caller_string);
+   //NavierStokes::level_init_icemask is declared in NavierStokes.cpp
   ns_level.level_init_icemask();
 
    // average down from ilev+1 to ilev.

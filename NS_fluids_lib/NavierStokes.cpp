@@ -15492,7 +15492,8 @@ NavierStokes::level_init_icemask() {
     tilelo,tilehi,
     fablo,fabhi,
     &bfact, 
-    xlo,dx,&dt_slab,
+    xlo,dx,
+    &dt_slab,
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
@@ -20864,10 +20865,25 @@ void NavierStokes::DumpProcNum() {
 
 // called from: estTimeStep 
 //              sum_integrated_quantities 
+//              static_surface_tension_advection
 void NavierStokes::MaxAdvectSpeedALL(
   Real& dt_min,
   Real* vel_max_estdt,
   const std::string& caller_string) {
+
+ std::string local_caller_string="MaxAdvectSpeedALL";
+ local_caller_string=caller_string+local_caller_string;
+
+ int static_flag=0;
+
+ if (pattern_test(local_caller_string,"estTimeStep")==1) {
+  // do nothing
+ } else if (pattern_test(local_caller_string,"sum_integrated_quantities")==1) {
+  // do nothing
+ } else if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+  static_flag=1;
+ } else
+  amrex::Error("local_caller_string invalid");
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -20885,14 +20901,21 @@ void NavierStokes::MaxAdvectSpeedALL(
  if (dt_min<dt_max) 
   dt_min=dt_max;
 
- if (localMF_grow[FSI_GHOST_MAC_MF]==-1) {
-  int filler_renormalize_only=1;
-  init_FSI_GHOST_MAC_MF_ALL(filler_renormalize_only,caller_string);
- } else if (localMF_grow[FSI_GHOST_MAC_MF]>=0) {
-  // do nothing
- } else {
-  amrex::Error("localMF_grow[FSI_GHOST_MAC_MF] invalid");
- }
+ if (static_flag==0) {
+
+  if (localMF_grow[FSI_GHOST_MAC_MF]==-1) {
+   int filler_renormalize_only=1;
+   init_FSI_GHOST_MAC_MF_ALL(filler_renormalize_only,local_caller_string);
+  } else if (localMF_grow[FSI_GHOST_MAC_MF]>=0) {
+   // do nothing
+  } else {
+   amrex::Error("localMF_grow[FSI_GHOST_MAC_MF] invalid");
+  }
+
+ } else if (static_flag==1) {
+  //do nothing
+ } else
+  amrex::Error("static_flag invalid");
 
  for (int ilev=finest_level;ilev>=0;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -20908,7 +20931,7 @@ void NavierStokes::MaxAdvectSpeedALL(
   ns_level.MaxAdvectSpeed(
     local_dt_min,
     local_vel_max_estdt,
-    caller_string); 
+    local_caller_string); 
 
   for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
    vel_max_estdt[dir] = std::max(vel_max_estdt[dir],local_vel_max_estdt[dir]);
@@ -20933,6 +20956,17 @@ void NavierStokes::MaxAdvectSpeed(
  std::string local_caller_string="MaxAdvectSpeed";
  local_caller_string=caller_string+local_caller_string;
 
+ int static_flag=0;
+
+ if (pattern_test(local_caller_string,"estTimeStep")==1) {
+  // do nothing
+ } else if (pattern_test(local_caller_string,"sum_integrated_quantities")==1) {
+  // do nothing
+ } else if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+  static_flag=1;
+ } else
+  amrex::Error("local_caller_string invalid");
+
  int finest_level=parent->finestLevel();
 
  int nparts=im_solid_map.size();
@@ -20951,12 +20985,19 @@ void NavierStokes::MaxAdvectSpeed(
  } else
   amrex::Error("nparts invalid");
 
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
- }
+ if (static_flag==0) {
+
+  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() invalid");
+  }
+
+ } else if (static_flag==1) {
+  //do nothing
+ } else
+  amrex::Error("static_flag invalid");
 
  MultiFab* distmf=getStateDist(2,cur_time_slab,local_caller_string);
   // num_materials*num_state_material
@@ -21009,7 +21050,8 @@ void NavierStokes::MaxAdvectSpeed(
    // do nothing
   } else if 
    ((pattern_test(local_caller_string,"computeNewDt")==1)|| 
-    (pattern_test(local_caller_string,"do_the_advance")==1)) {
+    (pattern_test(local_caller_string,"do_the_advance")==1)||
+    (pattern_test(local_caller_string,"static_surface_tension")==1)) {
 
    if ((cur_time_slab>prev_time_slab)&&
        (upper_slab_time>lower_slab_time)&&
@@ -21055,7 +21097,6 @@ void NavierStokes::MaxAdvectSpeed(
    FArrayBox& distfab=(*distmf)[mfi];
    FArrayBox& voffab=(*vofmf)[mfi];
    FArrayBox& denfab=(*denmf)[mfi];
-   FArrayBox& solidfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
 
    int local_enable_spectral=enable_spectral;
 
@@ -21066,56 +21107,88 @@ void NavierStokes::MaxAdvectSpeed(
 
    Real local_dt_min_thread=local_dt_min[tid_current];
 
+   if (static_flag==0) {
+
+    FArrayBox& solidfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
+
     // declared in: GODUNOV_3D.F90
-   fort_estdt(
-    interface_mass_transfer_model.dataPtr(),
-    &tid_current,
-    &local_enable_spectral,
-    parent->AMR_min_phase_change_rate.dataPtr(),
-    parent->AMR_max_phase_change_rate.dataPtr(),
-    elastic_time.dataPtr(),
-    microlayer_substrate.dataPtr(),
-    microlayer_angle.dataPtr(),
-    microlayer_size.dataPtr(),
-    macrolayer_size.dataPtr(),
-    reaction_rate.dataPtr(),
-    freezing_model.dataPtr(),
-    Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
-    distribute_from_target.dataPtr(),
-    saturation_temp.dataPtr(),
-    mass_fraction_id.dataPtr(),
-    molar_mass.dataPtr(),
-    species_molar_mass.dataPtr(),
-    denconst_interface_added.dataPtr(),
-    Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
-    Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
-    solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
-    denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-    voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-    distfab.dataPtr(),ARLIM(distfab.loVect()),ARLIM(distfab.hiVect()),
-    xlo,dx,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    &min_stefan_velocity_for_dt,
-    local_cap_wave_speed[tid_current].dataPtr(),
-    local_vel_max_estdt[tid_current].dataPtr(),
-    &local_dt_min_thread,
-    &NS_geometry_coord,
-    denconst.dataPtr(),
-    &visc_coef,
-    &gravity_reference_wavelen,
-    &dir,
-    &nparts,
-    &nparts_def,
-    im_solid_map_ptr,
-    material_type.dataPtr(),
-    &cur_time_slab,
-    shock_timestep.dataPtr(),
-    &cfl,
-    &EILE_flag, 
-    &level,
-    &finest_level);
+    fort_estdt(
+     interface_mass_transfer_model.dataPtr(),
+     &tid_current,
+     &local_enable_spectral,
+     parent->AMR_min_phase_change_rate.dataPtr(),
+     parent->AMR_max_phase_change_rate.dataPtr(),
+     elastic_time.dataPtr(),
+     microlayer_substrate.dataPtr(),
+     microlayer_angle.dataPtr(),
+     microlayer_size.dataPtr(),
+     macrolayer_size.dataPtr(),
+     reaction_rate.dataPtr(),
+     freezing_model.dataPtr(),
+     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
+     distribute_from_target.dataPtr(),
+     saturation_temp.dataPtr(),
+     mass_fraction_id.dataPtr(),
+     molar_mass.dataPtr(),
+     species_molar_mass.dataPtr(),
+     denconst_interface_added.dataPtr(),
+     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
+     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
+     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),
+     denfab.dataPtr(),ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+     voffab.dataPtr(),ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
+     distfab.dataPtr(),ARLIM(distfab.loVect()),ARLIM(distfab.hiVect()),
+     xlo,dx,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     &min_stefan_velocity_for_dt,
+     local_cap_wave_speed[tid_current].dataPtr(),
+     local_vel_max_estdt[tid_current].dataPtr(),
+     &local_dt_min_thread,
+     &NS_geometry_coord,
+     denconst.dataPtr(),
+     &visc_coef,
+     &gravity_reference_wavelen,
+     &dir,
+     &nparts,
+     &nparts_def,
+     im_solid_map_ptr,
+     material_type.dataPtr(),
+     &cur_time_slab,
+     shock_timestep.dataPtr(),
+     &cfl,
+     &EILE_flag, 
+     &level,
+     &finest_level);
+
+   } else if (static_flag==1) {
+
+    // declared in: GODUNOV_3D.F90
+    fort_estdt_static_equil(
+     &tid_current,
+     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
+     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
+     distfab.dataPtr(),ARLIM(distfab.loVect()),ARLIM(distfab.hiVect()),
+     xlo,dx,
+     tilelo,tilehi,
+     fablo,fabhi,
+     &bfact,
+     local_cap_wave_speed[tid_current].dataPtr(),
+     local_vel_max_estdt[tid_current].dataPtr(),
+     &local_dt_min_thread,
+     &NS_geometry_coord,
+     denconst.dataPtr(),
+     &visc_coef,
+     &dir,
+     &cur_time_slab,
+     &cfl,
+     &EILE_flag, 
+     &level,
+     &finest_level);
+
+   } else
+    amrex::Error("static_flag invalid");
 
    local_dt_min[tid_current]=local_dt_min_thread;
 
@@ -21422,7 +21495,7 @@ void NavierStokes::computeNewDt (int finest_level,
  } else
   amrex::Error("nsteps invalid");
 
-}
+} //end subroutine computeNewDt
 
 void NavierStokes::computeInitialDt (int finest_level,
    Real& dt,Real stop_time) {

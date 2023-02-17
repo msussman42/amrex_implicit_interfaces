@@ -339,7 +339,9 @@ void NavierStokes::static_surface_tension_advection() {
   delete_array(CELLTENSOR_MF);
   delete_array(FACETENSOR_MF);
 
-
+  Real static_dt_min;
+  Real static_vel_max[AMREX_SPACEDIM+1];
+  MaxAdvectSpeedALL(static_dt_min,static_vel_max,local_caller_string);
 
 
 
