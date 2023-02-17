@@ -632,7 +632,7 @@ stop
         finest_level, &
         visc_coef, &
         im_parm, & !1<=im_parm<=num_materials
-        dt, &
+        dt, & ! used for the viscoelastic coefficient.
         viscosity_coefficient, & ! viscconst(im_parm)
         shear_thinning_fluid, &
         Carreau_alpha, &

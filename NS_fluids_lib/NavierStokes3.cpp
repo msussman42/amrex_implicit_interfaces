@@ -339,7 +339,12 @@ void NavierStokes::static_surface_tension_advection() {
   delete_array(CELLTENSOR_MF);
   delete_array(FACETENSOR_MF);
 
- }
+
+
+
+
+  cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
+ } // while (quasi_static_reached==0) 
 
  override_enable_spectral(save_enable_spectral);
 
