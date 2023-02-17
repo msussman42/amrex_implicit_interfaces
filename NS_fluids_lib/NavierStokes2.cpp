@@ -4854,6 +4854,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
  }
  delete_array(HISTORY_MF);
 
+  //DIST_CURV_MF is initialized and filled in makeStateCurv.
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.avgDownCURV_localMF(DIST_CURV_MF);
@@ -10019,6 +10020,9 @@ void NavierStokes::getStateVISC() {
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
 
+  // viscosity:                    1,...,nmat
+  // viscoelastic:                 nmat+1,...,2*nmat
+  // viscoelastic relaxation time: nmat+2,...,3*nmat
  int ncomp_visc=3*num_materials;
 
  for (int im=0;im<num_materials;im++) {
@@ -10063,6 +10067,9 @@ void NavierStokes::getStateVISC() {
 
  } // im=0..num_materials-1
 
+  // viscosity:                    1,...,nmat
+  // viscoelastic:                 nmat+1,...,2*nmat
+  // viscoelastic relaxation time: nmat+2,...,3*nmat
  new_localMF(CELL_VISC_MATERIAL_MF,ncomp_visc,ngrow,-1);//sets values to 0.0
 
  MultiFab* vel=getState(ngrow+1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
@@ -10180,7 +10187,7 @@ void NavierStokes::getStateVISC() {
       &finest_level,
       &visc_coef,
       &fortran_im,
-      &dt_slab,
+      &dt_slab, //used for viscoelastic coefficient
       &viscconst[im],
       &shear_thinning_fluid[im],
       &Carreau_alpha[im],
@@ -10241,6 +10248,9 @@ void NavierStokes::getStateVISC() {
 
     FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
+    // viscosity:                    1,...,nmat
+    // viscoelastic:                 nmat+1,...,2*nmat
+    // viscoelastic relaxation time: nmat+2,...,3*nmat
     FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
 
     FArrayBox& cellten=(*localMF[CELLTENSOR_MF])[mfi];
