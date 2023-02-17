@@ -5320,7 +5320,8 @@ stop
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
-       xlo,dx,dt, &
+       xlo,dx, &
+       dt, &
        maskcov,DIMS(maskcov), &
        xface,DIMS(xface), &
        yface,DIMS(yface), &
