@@ -343,6 +343,13 @@ void NavierStokes::static_surface_tension_advection() {
   Real static_vel_max[AMREX_SPACEDIM+1];
   MaxAdvectSpeedALL(static_dt_min,static_vel_max,local_caller_string);
 
+  if ((cfl>0.0)&&(cfl<1.0)&&(static_dt_min>0.0)) {
+   //do nothing
+  } else
+   amrex::Error("cfl or static_dt_min invalid");
+
+  quasi_static_dt_slab=static_dt_min*cfl;
+
 
 
   cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.

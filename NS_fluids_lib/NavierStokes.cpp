@@ -82,6 +82,7 @@ Real NavierStokes::lower_slab_time=0.0;
 Real NavierStokes::delta_slab_time=0.0;
 Real NavierStokes::prescribed_vel_time_slab=0.0;
 Real NavierStokes::dt_slab=1.0;
+Real NavierStokes::quasi_static_dt_slab=1.0;
 int NavierStokes::advect_iter=0;
 
 int  NavierStokes::show_mem = 0;
@@ -4234,14 +4235,18 @@ NavierStokes::read_params ()
     int all_advective=1;
 
     for (int i=0;i<num_materials;i++) {
-     if (!((shock_timestep[i]==1)||(shock_timestep[i]==0)||
-           (shock_timestep[i]==2)))
+     if (!((shock_timestep[i]==1)|| //always take into account acoustic waves
+	   (shock_timestep[i]==0)|| //taken into account acoustic waves t=0
+           (shock_timestep[i]==2))) //never consider acoustic waves.
       amrex::Error("shock_timestep invalid");
 
      if (shock_timestep[i]==1)
       all_advective=0;
     }
-    if ((cfl>1.0)&&(all_advective==1))
+     //the acoustic time step can be violated, but not
+     //the advective time step constraint.
+    if ((cfl>1.0)&&
+	(all_advective==1))
      amrex::Error("cfl should be less than or equal to 1");
 
     projection_pressure_scale=1.0;
@@ -15035,7 +15040,8 @@ NavierStokes::level_phase_change_redistribute(
     tilelo,tilehi,
     fablo,fabhi,
     &bfact, 
-    xlo,dx,&dt_slab,
+    xlo,dx,
+    &dt_slab,
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     donorfab.dataPtr(),
@@ -15135,7 +15141,8 @@ NavierStokes::level_phase_change_redistribute(
      tilelo,tilehi,
      fablo,fabhi,
      &bfact, 
-     xlo,dx,&dt_slab,
+     xlo,dx,
+     &dt_slab,
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      newdistfab.dataPtr(),
@@ -15257,7 +15264,8 @@ NavierStokes::level_phase_change_redistribute(
      tilelo,tilehi,
      fablo,fabhi,
      &bfact, 
-     xlo,dx,&dt_slab,
+     xlo,dx,
+     &dt_slab,
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      newdistfab.dataPtr(),
@@ -15387,7 +15395,8 @@ NavierStokes::level_phase_change_redistribute(
      tilelo,tilehi,
      fablo,fabhi,
      &bfact, 
-     xlo,dx,&dt_slab,
+     xlo,dx,
+     &dt_slab,
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      JUMPfab.dataPtr(),ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
@@ -15892,8 +15901,11 @@ NavierStokes::heat_source_term_flux_source() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- if (dt_slab<=0.0)
+ if (dt_slab>0.0) {
+  //do nothing
+ } else
   amrex::Error("dt_slab must be positive");
+
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -21290,6 +21302,7 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "after MaxAdvectSpeedALL " << '\n';
+     std::cout << "local_caller_string= " << local_caller_string << '\n';
      std::cout << "dt_min "<<dt_min<< '\n';
      for (int dir=0;dir<AMREX_SPACEDIM+1;dir++)
       std::cout << "dir u_max_estdt "<<dir<<' '<<u_max_estdt[dir]<< '\n';
