@@ -20945,6 +20945,7 @@ void NavierStokes::MaxAdvectSpeedALL(
 // MaxAdvectSpeedALL called from: 
 //     estTimeStep 
 //     sum_integrated_quantities
+//     static_surface_tension_advection
 // vel_max_estdt= max vel in direction + extra cell centered velocity
 //   considerations if spectral element method.
 //   vel_max_estdt[sdim]=max c^2
