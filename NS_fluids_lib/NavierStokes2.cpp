@@ -9869,6 +9869,7 @@ void NavierStokes::scale_variablesALL() {
    &projection_velocity_scale);
 
  dt_slab*=projection_velocity_scale;
+ quasi_static_dt_slab*=projection_velocity_scale;
 
  int scale_flag=0;
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -9889,6 +9890,7 @@ void NavierStokes::unscale_variablesALL() {
  fort_setfortscales(&dummy_scale,&dummy_scale);
 
  dt_slab/=projection_velocity_scale;
+ quasi_static_dt_slab/=projection_velocity_scale;
 
  int scale_flag=1;
  for (int ilev=finest_level;ilev>=level;ilev--) {
