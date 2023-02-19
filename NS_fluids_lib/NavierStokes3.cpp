@@ -350,7 +350,7 @@ void NavierStokes::static_surface_tension_advection() {
 
   quasi_static_dt_slab=static_dt_min*cfl;
 
-
+  multiphase_project(SOLVETYPE_PRESSTATIC);
 
   cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
  } // while (quasi_static_reached==0) 
