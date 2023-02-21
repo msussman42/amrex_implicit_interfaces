@@ -6826,6 +6826,9 @@ void NavierStokes::print_project_option(int project_option) {
 
  if (project_option==SOLVETYPE_PRES) {
   std::cout << "project_option= " << project_option << " (SOLVETYPE_PRES) \n";
+ } else if (project_option==SOLVETYPE_PRESSTATIC) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_PRESSTATIC) \n";
  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_PRESGRAVITY) \n";
@@ -6838,6 +6841,15 @@ void NavierStokes::print_project_option(int project_option) {
  } else if (project_option==SOLVETYPE_VISC) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_VISC) \n";
+ } else if (project_option==SOLVETYPE_VISCSTATIC_X) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_VISCSTATIC_X) \n";
+ } else if (project_option==SOLVETYPE_VISCSTATIC_Y) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_VISCSTATIC_Y) \n";
+ } else if (project_option==SOLVETYPE_VISCSTATIC_Y+AMREX_SPACEDIM-2) {
+  std::cout << "project_option= " << project_option << 
+    " (SOLVETYPE_VISCSTATIC_Z) \n";
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_PRESEXTRAP) \n";
