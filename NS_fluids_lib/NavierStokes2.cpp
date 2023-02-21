@@ -1804,6 +1804,7 @@ void NavierStokes::init_divup_cell_vel_cell(
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_PRESGRAVITY)||
+     (project_option==SOLVETYPE_PRESSTATIC)||
      (project_option==SOLVETYPE_INITPROJ)) {  
   // do nothing
  } else
@@ -1885,6 +1886,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   amrex::Error("nstate!=STATE_NCOMP");
 
  if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_PRESSTATIC)||
      (project_option==SOLVETYPE_PRESGRAVITY)||
      (project_option==SOLVETYPE_INITPROJ)) {  
 
@@ -2282,7 +2284,7 @@ void NavierStokes::init_divup_cell_vel_cell(
    amrex::Error("energyflag invalid");
 
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid: init_divup_cell_vel_cell");
 
 } // end subroutine init_divup_cell_vel_cell
 
@@ -2491,7 +2493,7 @@ void NavierStokes::increment_face_velocityALL(
 //   (iv) usolid in solid regions
 // called from: post_init_state, do_the_advance, multiphase_project
 // (when project_option==SOLVETYPE_PRES,SOLVETYPE_INITPROJ,
-//  SOLVETYPE_PRESGRAVITY), 
+//  SOLVETYPE_PRESGRAVITY, SOLVETYPE_PRESSTATIC), 
 // APPLY_REGISTERS, INCREMENT_REGISTERS
 // called from NavierStokes::increment_face_velocityALL
 void NavierStokes::increment_face_velocity(
@@ -2563,6 +2565,7 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("idx_velcell invalid");
 
   if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_PRESSTATIC)||
       (project_option==SOLVETYPE_PRESGRAVITY)) {
    // do nothing
   } else
@@ -4749,7 +4752,7 @@ void NavierStokes::apply_pressure_grad(
   }
 
  } else
-  amrex::Error("project_option invalid27");
+  amrex::Error("project_option invalid27: apply_pressure_grad");
 
 } // end subroutine apply_pressure_grad
 
@@ -5661,7 +5664,9 @@ void NavierStokes::increment_potential_force() {
 } // increment_potential_force
 
 // called from multiphase_project when 
-// project_option==SOLVETYPE_PRES or SOLVETYPE_PRESGRAVITY
+// project_option==SOLVETYPE_PRES, 
+//  SOLVETYPE_PRESSTATIC, or 
+//  SOLVETYPE_PRESGRAVITY
 void NavierStokes::deallocate_potential_forceALL() {
 
  int finest_level=parent->finestLevel();
@@ -5673,7 +5678,9 @@ void NavierStokes::deallocate_potential_forceALL() {
 } // deallocate_potential_forceALL
 
 // called from multiphase_project when 
-// project_option==SOLVETYPE_PRES or SOLVETYPE_PRESGRAVITY
+// project_option==SOLVETYPE_PRES, 
+//  SOLVETYPE_PRESSTATIC, or 
+//  SOLVETYPE_PRESGRAVITY
 void NavierStokes::process_potential_forceALL(
 	      int potgrad_surface_tension_mask) {
 
