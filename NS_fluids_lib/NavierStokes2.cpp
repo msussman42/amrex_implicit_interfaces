@@ -4244,18 +4244,26 @@ void NavierStokes::apply_pressure_grad(
  } else
   amrex::Error("project_option invalid");
 
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=
-      local_fsi_ghost_ngrow)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow() bad");
-  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=local_fsi_ghost_ncomp)
-   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
- }
+ if (project_option_is_static(&project_option)==1) {
+  //do nothing
+ } else if (project_option_is_static(&project_option)==0) {
 
- for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,
-              local_fsi_ghost_ngrow,local_caller_string);
- }
+  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=
+       local_fsi_ghost_ngrow)
+    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow() bad");
+   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=local_fsi_ghost_ncomp)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+  }
+
+  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+   debug_ngrow(FSI_GHOST_MAC_MF+data_dir,
+               local_fsi_ghost_ngrow,local_caller_string);
+  }
+
+ } else
+  amrex::Error("project_option_is_static invalid");
+
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) 
   debug_ngrow(FACE_VAR_MF+data_dir,0,local_caller_string);
 
@@ -4621,7 +4629,14 @@ void NavierStokes::apply_pressure_grad(
     FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
     FArrayBox& presfab=(*localMF[pboth_mf])[mfi]; // in: apply_pressure_grad
 
-    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
+    FArrayBox* solfab;
+    if (project_option_is_static(&project_option)==1) {
+     solfab=&(*localMF[LEVELPC_MF])[mfi]; //placeholder
+    } else if (project_option_is_static(&project_option)==0) {
+     solfab=&(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
+    } else
+     amrex::Error("project_option_is_static invalid");
+
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
     Vector<int> presbc;
@@ -4689,8 +4704,8 @@ void NavierStokes::apply_pressure_grad(
      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     solfab.dataPtr(),
-     ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
+     solfab->dataPtr(),
+     ARLIM(solfab->loVect()),ARLIM(solfab->hiVect()),
       //xcut holds FACE_WEIGHT_MF
      xcut.dataPtr(),ARLIM(xcut.loVect()),ARLIM(xcut.hiVect()),
       //xface holds FACE_VAR_MF

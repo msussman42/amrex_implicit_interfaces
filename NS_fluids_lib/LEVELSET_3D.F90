@@ -13730,8 +13730,16 @@ stop
        call checkbound_array(fablo,fabhi,xp_ptr,0,dir)
          !local_sem_fluxreg_mf
        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1)
-         !local_fsi_ghost_mac_mf+dir
-       call checkbound_array(fablo,fabhi,solfab_ptr,0,dir)
+
+       if (project_option_is_static(project_option).eq.1) then
+        ! do nothing
+       else if (project_option_is_static(project_option).eq.0) then
+        !local_fsi_ghost_mac_mf+dir
+        call checkbound_array(fablo,fabhi,solfab_ptr,0,dir)
+       else
+        print *,"project_option_is_static invalid"
+        stop
+       endif
        call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
       else
        print *,"project_option invalid"
