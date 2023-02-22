@@ -27909,6 +27909,7 @@ end subroutine initialize2d
        enddo
        velcomp=dir+1
        vel_in=vel(D_DECL(i,j,k),velcomp)*global_velocity_scale
+        ! vel_freestream is declared in: PROB.F90
        call vel_freestream( &
         xsten_cell, &
         dir,vel_in,time, &

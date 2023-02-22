@@ -26352,6 +26352,34 @@ INTEGER_T, INTENT(in) :: project_option
 
 end function project_option_momeqnF
 
+INTEGER_T function project_option_is_static(project_option) &
+bind(c,name='project_option_is_static')
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: project_option
+
+ if ((project_option.eq.SOLVETYPE_PRESSTATIC).or. &
+     (project_option.eq.SOLVETYPE_VISCSTATIC_X).or.& 
+     (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or.& 
+     (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then
+  project_option_is_static=1
+ else if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
+          (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
+          (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
+          (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
+          (project_option.eq.SOLVETYPE_VISC).or.&      ! viscosity
+          (project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
+          ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
+  project_option_is_static=0
+ else
+  print *,"project_option invalid in project_option_is_static"
+  stop
+  project_option_is_static=0
+ endif
+
+end function project_option_is_static
 
 INTEGER_T function project_option_singular_possibleF(project_option) 
 use probcommon_module
