@@ -7704,6 +7704,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  if (project_option==SOLVETYPE_PRESGRAVITY) {
   local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
+ } else if (project_option==SOLVETYPE_PRESSTATIC) { 
+  local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
  } else if (project_option_projection(project_option)==1) {
   local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
@@ -7712,6 +7714,12 @@ void NavierStokes::allocate_FACE_WEIGHT(
  } else if (project_option==SOLVETYPE_HEAT) {
   local_face_index=FACECOMP_FACEHEAT; 
  } else if (project_option==SOLVETYPE_VISC) {
+  local_face_index=FACECOMP_FACEVISC; 
+ } else if (project_option==SOLVETYPE_VISCSTATIC_X) {
+  local_face_index=FACECOMP_FACEVISC; 
+ } else if (project_option==SOLVETYPE_VISCSTATIC_Y) {
+  local_face_index=FACECOMP_FACEVISC; 
+ } else if (project_option==SOLVETYPE_VISCSTATIC_Y+AMREX_SPACEDIM-2) {
   local_face_index=FACECOMP_FACEVISC; 
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { // rho D
