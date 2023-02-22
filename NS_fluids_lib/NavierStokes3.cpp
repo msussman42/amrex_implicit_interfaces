@@ -2394,13 +2394,13 @@ void NavierStokes::prelim_alloc() {
    //val,scomp,ncomp,ngrow
  setVal_localMF(MDOT_MF,0.0,0,nsolve,0); 
 
-} // subroutine prelim_alloc
+} // end subroutine prelim_alloc
 
 // called from: NavierStokes::do_the_advance
 void NavierStokes::advance_MAC_velocity(int project_option) {
 
- if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_INITPROJ)) {
+ if ((project_option==SOLVETYPE_PRES)||  // is_zalesak()==FALSE
+     (project_option==SOLVETYPE_INITPROJ)) { //is_zalesak()==TRUE
   // do nothing
  } else
   amrex::Error("project_option invalid advance_MAC_velocity");
