@@ -2599,7 +2599,7 @@ void NavierStokes::increment_face_velocity(
   if (project_option==SOLVETYPE_VISC) {  
    //do nothing
   } else
-   amrex::Error("project_option invalid23");
+   amrex::Error("expecting project_option==SOLVETYPE_VISC incr_face_vel");
 
   if ((beta==1.0)||(beta==-1.0)) {
    //do nothing
@@ -2617,11 +2617,11 @@ void NavierStokes::increment_face_velocity(
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
    debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,local_caller_string);
 
-  if ((project_option==SOLVETYPE_PRES)||
-      (project_option==SOLVETYPE_INITPROJ)) {
+  if ((project_option==SOLVETYPE_PRES)|| //is_zalesak()==FALSE
+      (project_option==SOLVETYPE_INITPROJ)) {//is_zalesak()==TRUE
    // do nothing
   } else
-   amrex::Error("project_option invalid25 increment_face_velocity");
+   amrex::Error("expecting project_option==SOLVETYPE_(PRES|INITPROJ)");
 
   if (idx_velcell==-1) {
    primary_vel_data=DELTA_CELL_VEL_MF; 
@@ -4168,7 +4168,8 @@ void NavierStokes::apply_pressure_grad(
   int energyflag,
   int gp_mf,
   int pboth_mf,
-  int project_option,int nsolve) {
+  int project_option,
+  int nsolve) {
 
  std::string local_caller_string="apply_pressure_grad";
 
@@ -4285,7 +4286,7 @@ void NavierStokes::apply_pressure_grad(
  if (project_option==SOLVETYPE_VISC) {
 
   if (nsolve!=AMREX_SPACEDIM)
-   amrex::Error("nsolve invalid30");
+   amrex::Error("expecting nsolve==SDIM; project_option==SOLVETYPE_VISC");
 
   int operation_flag=OP_UGRAD_COUPLING_MAC;
 
@@ -4504,6 +4505,8 @@ void NavierStokes::apply_pressure_grad(
    amrex::Error("check_nan invalid");
   }
 
+  //above: SOLVETYPE_VISC
+  //below: everything else.
  } else if (project_option_is_valid(project_option)==1) {
 
   int num_colors=0;
@@ -5878,7 +5881,7 @@ void NavierStokes::init_gravity_potential() {
 
  delete dendata;
 
-}  // init_gravity_potential
+}  // end subroutine init_gravity_potential
 
 // called from: NavierStokes::process_potential_forceALL()
 // u^face = u^face + facegravforce - grad^face p
