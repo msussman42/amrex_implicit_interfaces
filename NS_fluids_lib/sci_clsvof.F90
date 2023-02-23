@@ -9196,6 +9196,7 @@ INTEGER_T :: raw_num_nodes
 INTEGER_T :: raw_num_elements
 REAL_T, allocatable :: raw_nodes(:,:)
 INTEGER_T, allocatable :: raw_elements(:,:)
+INTEGER_T, PARAMETER :: aux_unit_id=14
 
  initflag=1
 
@@ -9256,42 +9257,45 @@ INTEGER_T, allocatable :: raw_elements(:,:)
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
 
-   call SUB_OPEN_AUXFILE(auxcomp,14,file_format)
+   print *,"calling SUB_OPEN_AUXFILE; auxcomp,aux_unit_id = ", &
+     auxcomp,aux_unit_id
+
+   call SUB_OPEN_AUXFILE(auxcomp,aux_unit_id,file_format)
 
    if (file_format.eq.0) then ! cas file
 
-    READ(14,*) raw_num_nodes,raw_num_elements
+    READ(aux_unit_id,*) raw_num_nodes,raw_num_elements
     allocate(raw_nodes(raw_num_nodes,3))
     allocate(raw_elements(raw_num_elements,3))
     do inode=1,raw_num_nodes
-     READ(14,*) raw_nodes(inode,1), &
+     READ(aux_unit_id,*) raw_nodes(inode,1), &
           raw_nodes(inode,2),raw_nodes(inode,3)
     enddo
     do iface=1,raw_num_elements
-     READ(14,*) raw_elements(iface,1),raw_elements(iface,2), &
+     READ(aux_unit_id,*) raw_elements(iface,1),raw_elements(iface,2), &
          raw_elements(iface,3)
     enddo
 
    else if (file_format.eq.1) then ! vtk file
 
     do ivtk=1,4
-     read(14,*) discard
+     read(aux_unit_id,*) discard
     enddo
-    read(14,'(a6)',advance='no') points_line
-    read(14,*) raw_num_nodes
+    read(aux_unit_id,'(a6)',advance='no') points_line
+    read(aux_unit_id,*) raw_num_nodes
 
     allocate(raw_nodes(raw_num_nodes,3))
     do inode=1,raw_num_nodes
-     READ(14,*) raw_nodes(inode,1), &
+     READ(aux_unit_id,*) raw_nodes(inode,1), &
           raw_nodes(inode,2),raw_nodes(inode,3)
     enddo
 
-    read(14,*) discard,raw_num_elements
+    read(aux_unit_id,*) discard,raw_num_elements
 
     allocate(raw_elements(raw_num_elements,3))
 
     do iface=1,raw_num_elements
-     READ(14,*) dummy_num_nodes_per_elem, &
+     READ(aux_unit_id,*) dummy_num_nodes_per_elem, &
          raw_elements(iface,1), &
          raw_elements(iface,2), &
          raw_elements(iface,3)
@@ -9305,7 +9309,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
     stop
    endif
 
-   close(14)
+   close(aux_unit_id)
 
    aux_FSI(auxcomp)%NumNodes=raw_num_nodes
    aux_FSI(auxcomp)%NumIntElems=raw_num_elements
