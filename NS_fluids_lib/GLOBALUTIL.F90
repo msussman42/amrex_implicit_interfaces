@@ -26381,7 +26381,8 @@ INTEGER_T, INTENT(in) :: project_option
 
 end function project_option_is_static
 
-INTEGER_T function project_option_singular_possibleF(project_option) 
+INTEGER_T function project_option_singular_possibleF(project_option) &
+bind(c,name='project_option_singular_possibleF')
 use probcommon_module
 IMPLICIT NONE
 

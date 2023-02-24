@@ -5800,24 +5800,8 @@ int NavierStokes::project_option_momeqn(int project_option) {
 
 int NavierStokes::project_option_singular_possible(int project_option) {
 
- if ((project_option==SOLVETYPE_PRES)|| 
-     (project_option==SOLVETYPE_PRESSTATIC)|| 
-     (project_option==SOLVETYPE_INITPROJ)|| 
-     (project_option==SOLVETYPE_PRESGRAVITY)|| 
-     (project_option==SOLVETYPE_PRESEXTRAP)) {
-  return 1;
- } else if ((project_option==SOLVETYPE_HEAT)|| 
-   	    (project_option==SOLVETYPE_VISC)|| 
-   	    (project_option==SOLVETYPE_VISCSTATIC_X)|| 
-   	    (project_option==SOLVETYPE_VISCSTATIC_Y)|| 
-   	    (project_option==SOLVETYPE_VISCSTATIC_Y+AMREX_SPACEDIM-2)|| 
-            ((project_option>=SOLVETYPE_SPEC)&&
-	     (project_option<SOLVETYPE_SPEC+num_species_var))) {
-  return 0;
- } else {
-  amrex::Error("project_option invalid");
-  return 0;
- }
+ int local_flag=project_option_singular_possibleF(&project_option);
+ return local_flag;
 
 } // end function project_option_singular_possible(project_option)
 
