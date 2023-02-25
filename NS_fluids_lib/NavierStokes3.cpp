@@ -351,6 +351,8 @@ void NavierStokes::static_surface_tension_advection() {
   quasi_static_dt_slab=static_dt_min*cfl;
 
     //use static_dt
+    //for viscosity use static_dt and make sure solid velocity=0 in
+    //FSI regions and prescribed
   multiphase_project(SOLVETYPE_PRESSTATIC);
 
   cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
