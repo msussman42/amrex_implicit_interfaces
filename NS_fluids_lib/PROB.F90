@@ -11801,7 +11801,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dd_group, & ! intent(out)
        visc_coef, &
        nsolve, &
-       dir,veldir, &
+       dir, &
+       veldir, & ! veldir=1..nsolve
        project_option, &
        uncoupled_viscosity, &
        side, &
@@ -11905,10 +11906,15 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        cc_group=cc
        dd_group=dd
 
-        ! SOLVETYPE_PRES, PRESGRAVITY, INITPROJ
+        ! SOLVETYPE_PRES, 
+        ! SOLVETYPE_PRESSTATIC, 
+        ! SOLVETYPE_PRESGRAVITY, 
+        ! SOLVETYPE_INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
+         cc_group=cc*cc_ice
+        else if (project_option.eq.SOLVETYPE_PRESSTATIC) then!quasi-static
          cc_group=cc*cc_ice
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
          cc_group=cc*cc_ice
@@ -12080,6 +12086,62 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           ! do nothing
          else
           print *,"uncoupled_viscosity invalid"
+          stop
+         endif
+
+         local_wt(veldir)=dd_group*cc_group*ddfactor
+
+         if (side.eq.0) then
+          ! do nothing
+         else if ((side.eq.1).or.(side.eq.2)) then
+          if (local_presbc.eq.INT_DIR) then
+           ! do nothing
+          else if (local_presbc.eq.EXT_DIR) then
+           ! do nothing 
+           ! a) 2nd order BC if standard FVM 
+           !    discretization (fort_face_gadients)
+           ! b) 2nd order or higher BC if SEM discretization.
+          else if (local_presbc.eq.REFLECT_ODD) then
+           ! do nothing
+          else if (local_presbc.eq.REFLECT_EVEN) then
+           local_wt(veldir)=zero
+          else if (local_presbc.eq.FOEXTRAP) then
+           local_wt(veldir)=zero
+          else
+           print *,"local_presbc invalid"
+           stop
+          endif
+         else
+          print *,"side invalid"
+          stop
+         endif
+        else
+         print *,"dd_group or cc_group invalid4"
+         print *,"dd_group= ",dd_group
+         print *,"cc_group= ",cc_group
+         print *,"project_option=",project_option
+         stop
+        endif
+
+       else if ((project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
+                (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
+                (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
+
+        if (nsolve.ne.1) then
+         print *,"nsolve invalid for viscosity for quasi static iteration"
+         stop
+        endif
+        dd_group=dd  !no visc_coef quasi static iteration
+        cc_group=one
+        ddfactor=one
+
+        if ((dd_group.ge.zero).and. &
+            (cc_group.eq.one)) then
+
+         if (veldir.eq.1) then
+          ! do nothing
+         else
+          print *,"veldir invalid"
           stop
          endif
 
@@ -12433,7 +12495,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (project_option.ne.SOLVETYPE_VISC) then
-        print *,"project_option invalid"
+        print *,"project_option.ne.SOLVETYPE_VISC; SEM_CELL_TO_MAC"
         stop
        endif
         ! number of components for flux synchronization.
@@ -14560,7 +14622,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
        if (project_option.ne.SOLVETYPE_VISC) then
-        print *,"project_option invalid"
+        print *,"project_option.ne.SOLVETYPE_VISC; SEM_MAC_TO_CELL"
         stop
        endif
 
@@ -23312,6 +23374,17 @@ end subroutine initialize2d
          print *,"homflag invalid in override pbc 2"
          stop
         endif
+       else if ((project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
+                (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
+                (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
+        if (homflag.eq.0) then
+         vel_homflag=0
+        else if (homflag.eq.1) then
+         vel_homflag=1
+        else
+         print *,"homflag invalid in override pbc 2static"
+         stop
+        endif
        else if (project_option.eq.SOLVETYPE_HEAT) then  ! temperature
         if (homflag.eq.0) then
          temp_homflag=0
@@ -23804,7 +23877,7 @@ end subroutine initialize2d
         stop
        endif
       else
-       print *,"project_option not supported"
+       print *,"project_option not supported; fort_viscfluxfill"
        stop
       endif
       
@@ -24057,7 +24130,7 @@ end subroutine initialize2d
        endif  ! side==2 case (right side)
 
       else
-       print *,"project_option not supported"
+       print *,"project_option not supported; fort_viscfluxfill"
        stop
       endif  
 

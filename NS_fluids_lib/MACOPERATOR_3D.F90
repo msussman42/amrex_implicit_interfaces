@@ -590,8 +590,11 @@ stop
          else if ((project_option.ge.SOLVETYPE_SPEC).and. &
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
           ! do nothing
-         else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
-
+         else if ((project_option.eq.SOLVETYPE_VISC).or. &
+                  (project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
+                  (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
+                  (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
+         
           do im=1,num_materials
            if (is_ice_or_FSI_rigid_material(im).eq.1) then
             LSTEST=lsnew(D_DECL(i,j,k),im)
@@ -622,7 +625,10 @@ stop
          stop
         endif
 
-         ! SOLVETYPE_PRES, SOLVETYPE_PRESGRAVITY, SOLVETYPE_INITPROJ
+         ! SOLVETYPE_PRES, 
+         ! SOLVETYPE_PRESSTATIC, 
+         ! SOLVETYPE_PRESGRAVITY, 
+         ! SOLVETYPE_INITPROJ
         if (project_option_projectionF(project_option).eq.1) then
 
          if (nsolve.ne.1) then
@@ -635,6 +641,8 @@ stop
          else if (project_option.eq.SOLVETYPE_INITPROJ) then
           local_cterm(1)=zero
          else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
+          local_cterm(1)=zero
+         else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
           local_cterm(1)=zero
          else
           print *,"project_option invalid fort_scalarcoeff"
@@ -749,6 +757,7 @@ stop
           print *,"dt invalid"
           stop
          endif
+
          den_inverse=den(D_DECL(i,j,k)) ! 1/den
          if (den_inverse.gt.zero) then
           ! do nothing
@@ -805,6 +814,74 @@ stop
           local_cterm(velcomp)=local_cterm(velcomp)*prescribed_mask
 
          enddo ! veldir=0..nsolve-1
+
+        else if ((project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
+                 (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
+                 (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
+
+         if (nsolve.ne.1) then
+          print *,"nsolve invalid21static"
+          stop
+         endif
+
+          ! this dt is different from the "main" dt
+         if (dt.gt.zero) then
+          ! do nothing
+         else
+          print *,"dt invalid"
+          stop
+         endif
+
+         den_inverse=den(D_DECL(i,j,k)) ! 1/den
+         if (den_inverse.gt.zero) then
+          ! do nothing
+         else
+          print *,"den_inverse invalid"
+          stop
+         endif
+
+         veldir=0
+         velcomp=veldir+1
+         local_cterm(velcomp)=one/(den_inverse*dt) !den/dt
+
+         if (in_prescribed.eq.1) then
+
+          ! do nothing
+
+         else if (in_prescribed.eq.0) then
+
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
+           ! do nothing
+          else if (levelrz.eq.COORDSYS_RZ) then
+           if (SDIM.ne.2) then
+            print *,"dimension bust"
+            stop
+           endif
+           if (xsten(0,1).gt.zero) then
+            ! do nothing
+           else
+            print *,"r (xsten(0,1)) invalid"
+            stop
+           endif
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           if (xsten(0,1).gt.zero) then
+            ! do nothing
+           else
+            print *,"r (xsten(0,1)) invalid"
+            stop
+           endif
+          else 
+           print *,"levelrz invalid scalarcoeff"
+           stop
+          endif
+
+         else
+          print *,"in_prescribed invalid"
+          stop
+         endif
+
+         ! vel=velsolid in solid, so cterm>>1 there.
+         local_cterm(velcomp)=local_cterm(velcomp)*prescribed_mask
 
         else if ((project_option.ge.SOLVETYPE_SPEC).and. &
                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then

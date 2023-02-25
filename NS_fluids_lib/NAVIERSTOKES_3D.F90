@@ -9174,7 +9174,7 @@ END SUBROUTINE SIMP
          stop
         endif
        else
-        print *,"project_option invalid"
+        print *,"project_option invalid; fort_sumdot_ones_size"
         stop
        endif
        if (color_count.ge.1) then
@@ -9296,7 +9296,7 @@ END SUBROUTINE SIMP
                (project_option_singular_possibleF(project_option).eq.0) then
               ! do nothing
              else
-              print *,"project_option invalid"
+              print *,"project_option invalid; fort_sumdot_ones_size"
               stop
              endif
             else
@@ -9418,7 +9418,7 @@ END SUBROUTINE SIMP
          stop
         endif
        else
-        print *,"project_option invalid"
+        print *,"project_option invalid; fort_sumdot_ones"
         stop
        endif
        if (color_count.ge.1) then
@@ -9554,7 +9554,7 @@ END SUBROUTINE SIMP
                (project_option_singular_possibleF(project_option).eq.0) then
               ! do nothing
              else
-              print *,"project_option invalid"
+              print *,"project_option invalid; fort_sumdot_ones"
               stop
              endif
             else
@@ -9679,7 +9679,7 @@ END SUBROUTINE SIMP
          stop
         endif
        else
-        print *,"project_option invalid"
+        print *,"project_option invalid; fort_fabcom_ones"
         stop
        endif
        if (color_count.ge.1) then
@@ -9732,7 +9732,7 @@ END SUBROUTINE SIMP
           else if (project_option_singular_possibleF(project_option).eq.0) then
            ! do nothing
           else
-           print *,"project_option_singular_possible invalid"
+           print *,"project_option_singular_possible invalid; fort_fabcom_ones"
            stop
           endif
 
@@ -9838,7 +9838,7 @@ END SUBROUTINE SIMP
                (project_option_singular_possibleF(project_option).eq.0) then
               ! do nothing
              else
-              print *,"project_option invalid"
+              print *,"project_option invalid; fort_fabcom_ones"
               stop
              endif
             else
@@ -11444,8 +11444,21 @@ END SUBROUTINE SIMP
            print *,"nsolve,or velcomp invalid"
            stop
           endif
+         else if ((project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
+                  (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
+                  (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
+
+          if ((nsolve.eq.1).and. &
+              (velcomp.eq.0)) then
+           veldir=1
+           bc_comp=1
+          else
+           print *,"nsolve,or velcomp invalid"
+           stop
+          endif
+
          else
-          print *,"project_option invalid"
+          print *,"project_option invalid; fort_fluidsolidcor"
           stop
          endif
 
