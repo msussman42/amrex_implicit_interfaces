@@ -11838,7 +11838,11 @@ stop
            stop
           endif
 
-           !SOLVETYPE_PRES, PRESGRAVITY, INITPROJ, PRESEXTRAP
+           !SOLVETYPE_PRES, 
+           !SOLVETYPE_PRESSTATIC, 
+           !SOLVETYPE_PRESGRAVITY, 
+           !SOLVETYPE_INITPROJ, 
+           !SOLVETYPE_PRESEXTRAP
           if (project_option_singular_possibleF(project_option).eq.1) then
 
            if (MDOT.eq.zero) then
@@ -11850,17 +11854,17 @@ stop
             else if (MSKRES.ne.zero) then
              ! do nothing
             else
-             print *,"MSKRES bust"
+             print *,"MSKRES is NaN; fort_mac_to_cell"
              stop
             endif
            else
-            print *,"MDOT bust"
+            print *,"MDOT is NaN; fort_mac_to_cell"
             stop
            endif
            if ((CC.ge.zero).and.(CC_DUAL.ge.zero)) then
             ! do nothing
            else
-            print *,"CC or CC_DUAL invalid"
+            print *,"CC or CC_DUAL invalid; fort_mac_to_cell"
             stop
            endif
           else if (project_option_singular_possibleF(project_option).eq.0) then
@@ -12702,7 +12706,14 @@ stop
          if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
           ! do nothing if solvetype_presgravity
          else
-          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)"
+          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)mac_cell"
+          stop
+         endif
+        else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
+         if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
+          ! do nothing if solvetype_presstatic
+         else
+          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)mac_cell"
           stop
          endif
         else
@@ -13652,7 +13663,9 @@ stop
         print *,"project_option_momeqnF(project_option) invalid"
         stop
        endif
-       if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
+
+       if ((project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
+           (project_option.eq.SOLVETYPE_PRESSTATIC)) then
         if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then
          ! do nothing
         else
@@ -13661,6 +13674,7 @@ stop
         endif
         homogeneous_rigid_velocity=1
        endif
+
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! (grad p)_MAC
        if ((energyflag.ne.SUB_OP_FOR_MAIN).and. &
            (energyflag.ne.SUB_OP_FOR_SDC)) then
@@ -14651,11 +14665,13 @@ stop
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
 
           if ((project_option.eq.SOLVETYPE_PRES).or. &
+              (project_option.eq.SOLVETYPE_PRESSTATIC).or. &
               (project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
               (project_option.eq.SOLVETYPE_INITPROJ)) then
            ! do nothing
           else
            print *,"expecting project_option=SOLVETYPE_PRES or "
+           print *,"expecting project_option=SOLVETYPE_PRESSTATIC or "
            print *,"expecting project_option=SOLVETYPE_PRESGRAVITY or "
            print *,"expecting project_option=SOLVETYPE_INITPROJ  "
            stop
@@ -16645,7 +16661,10 @@ stop
 
           if (project_option_projectionF(project_option).eq.1) then
            !do nothing 
-           !SOLVETYPE_PRES,SOLVETYPE_PRESGRAVITY,SOLVETYPE_INITPROJ
+           !SOLVETYPE_PRES,
+           !SOLVETYPE_PRESSTATIC,
+           !SOLVETYPE_PRESGRAVITY,
+           !SOLVETYPE_INITPROJ
           else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
            !do nothing
           else if (project_option.eq.SOLVETYPE_HEAT) then ! temperature
@@ -16654,6 +16673,8 @@ stop
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then 
            !do nothing
           else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
+           !do nothing
+          else if (project_option_is_static(project_option).eq.1) then
            !do nothing
           else
            print *,"project_option invalid"
