@@ -604,7 +604,7 @@ stop
         heatcoeff=fort_speciesviscconst(ispec*num_materials+im_dest)*den
        endif
       else
-       print *,"project_option invalid"
+       print *,"project_option invalid: get_default_scalar_diffusion"
        stop
       endif
       if (heatcoeff.ge.zero) then
@@ -7346,7 +7346,7 @@ stop
           (project_option.eq.SOLVETYPE_VISC)) then
        ! do nothing
       else
-       print *,"project_option invalid"
+       print *,"project_option invalid; fort_semdeltaforce"
        stop
       endif
 
@@ -7392,7 +7392,7 @@ stop
          enddo ! im=1..num_materials
 
         else
-         print *,"project_option invalid"
+         print *,"project_option invalid; fort_semdeltaforce"
          stop
         endif
        else if (local_maskSEM.eq.0) then
@@ -7618,15 +7618,17 @@ stop
        print *,"nstate invalid"
        stop
       endif
-      if (dt.ne.one) then
-       print *,"dt invalid"
+      if (dt.eq.one) then
+       ! do nothing
+      else
+       print *,"dt invalid; fort_updatesemforce"
        stop
       endif
       if ((project_option.eq.SOLVETYPE_HEAT).or. & !thermal conductivity
           (project_option.eq.SOLVETYPE_VISC)) then !viscosity
        ! do nothing
       else
-       print *,"project_option invalid"
+       print *,"project_option invalid; fort_updatesemforce"
        stop
       endif
       if ((nsolve.ne.1).and. &
@@ -7732,7 +7734,7 @@ stop
          endif
 
         else
-         print *,"project_option invalid"
+         print *,"project_option invalid; fort_updatesemforce"
          stop
         endif
 
@@ -9913,7 +9915,7 @@ stop
                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
        T_or_Y_min_sanity=zero
       else
-       print *,"project_option invalid"
+       print *,"project_option invalid; fort_stefansolver"
        stop
       endif
 
@@ -10173,7 +10175,7 @@ stop
                    stop
                   endif
                  else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                          (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+                       (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                   Tgamma=saturation_temp(iten+ireverse*num_interfaces)
                   TorYgamma_BC=one
                   if (Tgamma.gt.zero) then
@@ -10198,7 +10200,7 @@ stop
                    stop
                   endif
                  else
-                  print *,"project_option invalid"
+                  print *,"project_option invalid; fort_stefansolver"
                   stop
                  endif
 
@@ -10421,7 +10423,7 @@ stop
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
            original_coeff=original_coeff/over_den
           else
-           print *,"project_option invalid"
+           print *,"project_option invalid; fort_stefansolver"
            stop
           endif
 
@@ -10440,7 +10442,8 @@ stop
 
           LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
           local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
-          distribute_from_targ=distribute_from_target(iten+ireverse*num_interfaces)
+          distribute_from_targ= &
+                distribute_from_target(iten+ireverse*num_interfaces)
 
           if (project_option.eq.SOLVETYPE_HEAT) then
            TorYgamma_BC=saturation_temp(iten+ireverse*num_interfaces)
@@ -10448,7 +10451,7 @@ stop
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
            TorYgamma_BC=one
           else
-           print *,"project_option invalid"
+           print *,"project_option invalid; subroutine fort_stefansolver"
            stop
           endif
 
@@ -10592,7 +10595,7 @@ stop
                         (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                 tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+2
                else
-                print *,"project_option invalid"
+                print *,"project_option invalid; fort_stefansolver"
                 stop
                endif
 
@@ -10683,7 +10686,7 @@ stop
                   ENUM_SPECIESVAR+1+ &
                   project_option-SOLVETYPE_SPEC
                else
-                print *,"project_option invalid"
+                print *,"project_option invalid; fort_stefansolver"
                 stop
                endif
                Snew(D_DECL(i,j,k),tcomp)=T_adjust
@@ -16274,7 +16277,7 @@ stop
         else if (solid_dist.lt.zero) then
          ! do nothing
         else
-         print *,"solid_dist invalid"
+         print *,"solid_dist invalid; fort_combinevel"
          stop
         endif
 
@@ -16287,7 +16290,7 @@ stop
         else if (is_prescribed(im_primary).eq.0) then
          ! do nothing
         else
-         print *,"is_prescribed invalid"
+         print *,"is_prescribed invalid; fort_combinevel"
          stop
         endif
 
@@ -16530,7 +16533,8 @@ stop
 
                  if (start_freezing.eq.1) then
 
-                  local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
+                  local_freezing_model= &
+                      freezing_model(iten+ireverse*num_interfaces)
                   distribute_from_targ= &
                         distribute_from_target(iten+ireverse*num_interfaces)
                   if ((distribute_from_targ.lt.0).or. &
@@ -16601,7 +16605,7 @@ stop
                         stop
                        endif
                       else
-                       print *,"project_option invalid"
+                       print *,"project_option invalid; fort_combinevel"
                        stop
                       endif
 
@@ -16626,7 +16630,7 @@ stop
                          stop
                         endif
                        else if ((project_option.ge.SOLVETYPE_SPEC).and. &
-                                (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+                        (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
                         Tgamma=saturation_temp(iten+ireverse*num_interfaces)
                         TorYgamma_BC=one
                         if (Tgamma.gt.zero) then
@@ -16652,7 +16656,7 @@ stop
                          stop
                         endif
                        else
-                        print *,"project_option invalid"
+                        print *,"project_option invalid; fort_combinevel"
                         stop
                        endif
 
@@ -16663,7 +16667,7 @@ stop
                         TDIFF=max(thermal_state(im)-Tgamma, &
                                   thermal_state(im_opp)-Tgamma)
                        else
-                        print *,"LL invalid"
+                        print *,"LL invalid; fort_combinevel"
                         stop
                        endif
                        if (tsat_flag.eq.0) then
@@ -16796,7 +16800,7 @@ stop
               endif
 
              else
-              print *,"project_option invalid"
+              print *,"project_option invalid; fort_combinevel"
               stop
              endif
         
