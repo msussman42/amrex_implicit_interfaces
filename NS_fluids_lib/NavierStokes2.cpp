@@ -1829,8 +1829,10 @@ void NavierStokes::init_divup_cell_vel_cell(
  resize_mask_nbr(1);
 
  debug_ngrow(VOLUME_MF,0,local_caller_string);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string); // maskcoef=1 if not covered by finer level.
- debug_ngrow(MASK_NBR_MF,1,local_caller_string); // mask_nbr=1 at fine-fine bc.
+ // maskcoef=1 if not covered by finer level.
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
+ // mask_nbr=1 at fine-fine bc.
+ debug_ngrow(MASK_NBR_MF,1,local_caller_string); 
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>num_materials))
@@ -1923,7 +1925,7 @@ void NavierStokes::init_divup_cell_vel_cell(
    divup=new MultiFab(grids,dmap,nsolve,0,
     MFInfo().SetTag("divup"),FArrayBoxFactory());
   } else
-   amrex::Error("energyflag invalid");
+   amrex::Error("energyflag invalid: init_divup_cell_vel_cell");
 
 
   //interpolate pressure from cell to MAC grid.
