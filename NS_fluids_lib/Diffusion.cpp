@@ -1041,7 +1041,8 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   simple_AMR_BC_flag_viscosity, 
   homflag,energyflag,CONSERVE_FLUXES_MF,
   source_idx,
-  project_option,nsolve);
+  project_option,nsolve,
+  dt_slab); //diffusion_heating
 
  int ncomp_edge=-1;
   // spectral_override==1 => order derived from "enable_spectral"

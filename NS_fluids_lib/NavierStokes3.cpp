@@ -8213,11 +8213,11 @@ void NavierStokes::overwrite_outflow() {
 } // end subroutine overwrite_outflow
 
 
-// called from: mac_update via updatevelALL via multiphase_project
-//    residual_correction_form via multiphase_project
-//    relaxLEVEL via mg_cycleALL via multiphase_preconditioner via
-//      multiphase_SHELL_preconditioner via multiphase_project
-//      or via multphase_project
+// called from: mac_update (from updatevelALL from multiphase_project)
+//    residual_correction_form (from multiphase_project)
+//    relaxLEVEL (from mg_cycleALL from multiphase_preconditioner from
+//      multiphase_SHELL_preconditioner from multiphase_project
+//      or from multphase_project)
 //
 // macdest=macsrc+gp
 // for pressure projection: 
@@ -8416,7 +8416,8 @@ void NavierStokes::residual_correction_form(
    energyflag,
    GRADPEDGE_MF,
    STATE_FOR_RESID_MF,
-   project_option,nsolve);
+   project_option,nsolve,
+   solver_dt_slab); //calling from residual_correction_form
 
    // UMAC_MF-=GRADPEDGE_MF
   correct_velocity(project_option,
@@ -8489,6 +8490,8 @@ void NavierStokes::mg_cycleALL(int presmooth,
  delete residmf;
 } // end subroutine mg_cycleALL
 
+// relaxLEVEL called from mg_cycleALL from multiphase_preconditioner from
+//   multiphase_SHELL_preconditioner from multiphase_project
 // this recursive routine first called from the finest_level.
 // localMF[idx_phi]=0.0 on all levels prior to the first call of this
 // routine.
@@ -8555,7 +8558,8 @@ void NavierStokes::relaxLEVEL(
   rhsmf,
   localMF[idx_rhs],
   UMACSTAR_MF,
-  nsolve);
+  nsolve,
+  solver_dt_slab); //calling from: relaxLEVEL
 
   // sets pbdry
   // going down the V-cycle: pdry=localMF[idx_phi]=0.0
@@ -8621,7 +8625,8 @@ void NavierStokes::relaxLEVEL(
    energyflag,
    GRADPEDGE_MF,
    idx_phi,
-   project_option,nsolve);
+   project_option,nsolve,
+   solver_dt_slab); //calling from relaxLEVEL
 
     // residmf=rhsmf-( (alpha+da) * phi - vol div grad phi )
   int apply_lev_resid=0;
@@ -8641,7 +8646,8 @@ void NavierStokes::relaxLEVEL(
    residmf,  // called "rhsmf" in apply_div
    rhsmf,    // called "diffusionRHScell" in apply_div
    GRADPEDGE_MF,
-   nsolve);
+   nsolve,
+   solver_dt_slab); //calling from relaxLEVEL
 
    // UMACSTAR=UMACSTAR+GRADPEDGE
   correct_velocity(project_option,
@@ -8940,7 +8946,7 @@ void NavierStokes::jacobi_cycles(
  
  delete_array(RESID_MF);
 
-}  // jacobi_cycles
+}  // end subroutine jacobi_cycles
 
 // called from:
 //  NavierStokes::multiphase_project
@@ -8957,8 +8963,9 @@ void NavierStokes::updatevelALL(
  } else
   amrex::Error("project_option_momeqn(project_option)  invalid40");
 
-   // gradpedge=-dt W grad p
-   // NavierStokes::applyGradALL is declared in MacProj.cpp
+ // calling from updatevelALL from multiphase_project
+ // gradpedge=-dt W grad p
+ // NavierStokes::applyGradALL is declared in MacProj.cpp
  applyGradALL(project_option,idx_mac_phi_crse,nsolve);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -8976,7 +8983,6 @@ void NavierStokes::updatevelALL(
  }
 
 } // end subroutine updatevelALL
-
 
 
 void NavierStokes::Prepare_UMAC_for_solver(int project_option,
@@ -9181,6 +9187,7 @@ void NavierStokes::multiphase_preconditioner(
 
   int call_adjust_tolerance=0;
 
+    //calling from: multiphase_preconditioner
   jacobi_cycles(
    call_adjust_tolerance, //=0
    smooth_cycles, //smooth_cycles=presmooth+postsmooth
@@ -10095,7 +10102,7 @@ void NavierStokes::multiphase_project(int project_option) {
  // Regularizes FACE_WEIGHT_MF if necessary.
  // create_hierarchy=-1,0,1
  int create_hierarchy=0;
- allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+ allocate_maccoefALL(project_option,nsolve,create_hierarchy,solver_dt_slab);
 
  if (create_hierarchy==0) {
 
@@ -10239,7 +10246,7 @@ void NavierStokes::multiphase_project(int project_option) {
   // ONES_MF,ONES_GROW_MF
   // create_hierarchy=-1,0,1
  create_hierarchy=1;
- allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+ allocate_maccoefALL(project_option,nsolve,create_hierarchy,solver_dt_slab);
 
    // this must be done after allocate_maccoef (stefan_solver_init relies on
    // inhomogeneous BCs)
@@ -10338,7 +10345,8 @@ void NavierStokes::multiphase_project(int project_option) {
     int update_vel=1;//update error0 IF krylov_subspace_num_outer_iterSOLVER==0
     int call_adjust_tolerance=1;
 
-      // NavierStokes::jacobi_cycles in NavierStokes3.cpp
+      // NavierStokes::jacobi_cycles declared in NavierStokes3.cpp
+      // calling from: multiphase project
     jacobi_cycles(
       call_adjust_tolerance,
       jacobi_cycles_count,
@@ -10378,6 +10386,7 @@ void NavierStokes::multiphase_project(int project_option) {
      // mac_phi_crse=0
      //
      // updatevelALL calls mac_update.
+     // calling from: multiphase_project.
     updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
 
     double after_startup=0.0;
@@ -11185,6 +11194,7 @@ void NavierStokes::multiphase_project(int project_option) {
      // mac_phi_crse=0
      //
      // updatevelALL calls mac_update.
+     // calling from: multiphase_project
      updatevelALL(project_option,MAC_PHI_CRSE_MF,nsolve);
 
 #if (profile_solver==1)
@@ -11263,7 +11273,8 @@ void NavierStokes::multiphase_project(int project_option) {
       energyflag,
       GRADPEDGE_MF,
       PRESPC_MF,
-      project_option,nsolve);
+      project_option,nsolve,
+      solver_dt_slab); //calling from multiphase_project
 
      if (ilev<finest_level) {
       int ncomp_edge=-1;

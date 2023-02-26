@@ -1744,7 +1744,7 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
      &ncomp_visc, 
      &visc_coef,
      velbc.dataPtr(),
-     &dt_slab,
+     &dt_slab, //fort_elastic_force
      &cur_time_slab,
      xlo,dx,
      &grid_type_CC,
@@ -2029,7 +2029,7 @@ void NavierStokes::init_divup_cell_vel_cell(
      presbc.dataPtr(),
      velbc.dataPtr(),
      &slab_step,
-     &dt_slab,
+     &solver_dt_slab,
      &cur_time_slab,
      xlo,dx,
      &spectral_loop,
@@ -2184,8 +2184,6 @@ void NavierStokes::init_divup_cell_vel_cell(
     int ncomp_veldest=Snewfab.nComp();
     int ncomp_dendest=Snewfab.nComp()-STATECOMP_STATES;
 
-    Real local_dt_slab=dt_slab;
-
     if (operation_flag_interp_macvel==OP_VEL_MAC_TO_CELL) {
      //do nothing
     } else if (operation_flag_interp_macvel==OP_VEL_DIVUP_TO_CELL) { 
@@ -2216,7 +2214,7 @@ void NavierStokes::init_divup_cell_vel_cell(
      presbc.dataPtr(), 
      &cur_time_slab, 
      &slab_step,
-     &local_dt_slab,
+     &solver_dt_slab,
      xlo,dx,
      tilelo,tilehi,
      fablo,fabhi,
@@ -2434,6 +2432,9 @@ void NavierStokes::make_MAC_velocity_consistent() {
 
 // ucell_new=ucell+old + force_cell
 //
+//called from: post_init_state, advance_MAC_velocity,
+//  do_the_advance, multiphase_project,
+//  INCREMENT_REGISTERS_ALL
 void NavierStokes::increment_face_velocityALL(
  int operation_flag,
  int project_option,
@@ -2632,7 +2633,7 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("idx_velcell invalid");
    
  } else
-  amrex::Error("operation_flag invalid");
+  amrex::Error("operation_flag invalid: increment_face_velocity");
 
  int nparts=im_solid_map.size();
  if ((nparts<0)||(nparts>num_materials))
@@ -2881,7 +2882,7 @@ void NavierStokes::increment_face_velocity(
        velbc.dataPtr(),  // presbc
        velbc.dataPtr(),  
        &slab_step,
-       &dt_slab,
+       &dt_slab, //unused for OP_UNEW_...,OP_UMAC..,OP_U_COMP 
        &cur_time_slab, 
        xlo,dx,
        &spectral_loop,
@@ -2950,7 +2951,7 @@ void NavierStokes::increment_face_velocity(
   synchronize_flux_register(operation_flag,spectral_loop);
  } // spectral_loop
 
-} // subroutine increment_face_velocity
+} // end subroutine increment_face_velocity
 
 void NavierStokes::project_to_rigid_velocityALL() {
 
@@ -3115,7 +3116,6 @@ void NavierStokes::project_to_rigid_velocity(Vector<blobclass> blobdata) {
      &dir, //dir=0,1,2
      velbc.dataPtr(),  
      &slab_step,
-     &dt_slab,
      &cur_time_slab, 
      xlo,dx,
       // mask=tag if not covered by level+1 or outside the domain.
@@ -3489,7 +3489,7 @@ void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
    velbc.dataPtr(), // presbc
    &cur_time_slab,
    &slab_step,
-   &dt_slab, 
+   &dt_slab, //unused OP_VEL_MAC_TO_CELL
    xlo,dx,
    tilelo,tilehi,
    fablo,fabhi,
@@ -4171,7 +4171,8 @@ void NavierStokes::apply_pressure_grad(
   int gp_mf,
   int pboth_mf,
   int project_option,
-  int nsolve) {
+  int nsolve,
+  Real dt_pressure_grad) {
 
  std::string local_caller_string="apply_pressure_grad";
 
@@ -4446,7 +4447,7 @@ void NavierStokes::apply_pressure_grad(
      maskSEMfab.dataPtr(),
      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
      xlo,dx,
-     &dt_slab,
+     &dt_pressure_grad,
      &cur_time_slab,
      velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
      levelpcfab.dataPtr(),
@@ -4691,7 +4692,7 @@ void NavierStokes::apply_pressure_grad(
      presbc.dataPtr(),
      velbc.dataPtr(),
      &slab_step,
-     &dt_slab,
+     &dt_pressure_grad,
      &cur_time_slab,
      xlo,dx,
      &spectral_loop,
@@ -5855,7 +5856,7 @@ void NavierStokes::init_gravity_potential() {
      dombcpres.dataPtr(),
      domlo,domhi,
      xlo,dx,
-     &solver_dt_slab,
+     &solver_dt_slab, //fort_init_potential
      &angular_velocity,
      &isweep);
   } // mfi
@@ -6097,7 +6098,7 @@ void NavierStokes::process_potential_force_face(
     presbc.dataPtr(),
     velbc.dataPtr(),
     &slab_step,
-    &solver_dt_slab,
+    &solver_dt_slab, // fort_cell_to_mac,process_potential_force_face
     &cur_time_slab,
     xlo,dx,
     &spectral_loop,
@@ -6797,8 +6798,6 @@ void NavierStokes::move_particles(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    Real local_dt_slab=dt_slab;
-
      // declared in: LEVELSET_3D.F90
     fort_move_particle_container( 
      &tid_current,
@@ -6810,7 +6809,7 @@ void NavierStokes::move_particles(
      xlo,dx,
      particles_AoS.data(),
      Np,  // pass by value
-     &local_dt_slab,
+     &dt_slab, //move_particle_container
      &vel_time_slab,
      xvelfab.dataPtr(),
      ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
@@ -9825,7 +9824,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
    &level,
    &finest_level,
    xlo,dx,
-   &dt_slab,
+   &solver_dt_slab, //fort_advective_pressure
    maskcov.dataPtr(),
    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
    volumefab.dataPtr(),
@@ -10308,7 +10307,7 @@ void NavierStokes::getStateVISC() {
       &les_model[im],
       &level,
       &fortran_im,
-      &dt_slab,
+      &dt_slab, //derturbvisc
       eosfab.dataPtr(),
       ARLIM(eosfab.loVect()),ARLIM(eosfab.hiVect()),
       voffab.dataPtr(),
@@ -10426,7 +10425,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
      &level,
      &finest_level,
      &fortran_im,
-     &dt_slab,
+     &dt_slab, //fort_derconductivity
      conductivity_fab.dataPtr(),
      ARLIM(conductivity_fab.loVect()),
      ARLIM(conductivity_fab.hiVect()),

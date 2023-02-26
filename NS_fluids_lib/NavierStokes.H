@@ -337,9 +337,9 @@ public:
     void restore_active_pressure(int save_mf);
 
     void allocate_maccoefALL(int project_option,int nsolve,
-		    int create_hierarchy); //-1,0,1
+	int create_hierarchy,Real dt_maccoef); //-1,0,1
     void allocate_maccoef(int project_option,int nsolve,
-		    int create_hierarchy); //-1,0,1
+        int create_hierarchy,Real dt_maccoef); //-1,0,1
      
     void deallocate_maccoefALL(int project_option);
     void deallocate_maccoef(int project_option);
@@ -1074,7 +1074,8 @@ void apply_div(
   MultiFab* rhsmf,
   MultiFab* mdotcell,
   int idx_gphi,
-  int nsolve);
+  int nsolve,
+  Real dt_apply_div);
 
 void mac_project_rhs(int project_option,
  int idx_mac_phi_crse,int idx_mac_rhs_crse,int nsolve);
@@ -1095,7 +1096,8 @@ void apply_pressure_grad(
  int energyflag,
  int gp_mf,
  int pboth_mf,
- int project_option,int nsolve);
+ int project_option,int nsolve,
+ Real dt_pressure_grad);
 
     void relaxLEVEL(
      MultiFab* rhsmf,

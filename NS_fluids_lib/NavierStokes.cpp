@@ -83,6 +83,7 @@ Real NavierStokes::delta_slab_time=0.0;
 Real NavierStokes::prescribed_vel_time_slab=0.0;
 Real NavierStokes::dt_slab=1.0;
 Real NavierStokes::quasi_static_dt_slab=1.0;
+Real NavierStokes::solver_dt_slab=1.0;
 int NavierStokes::advect_iter=0;
 
 int  NavierStokes::show_mem = 0;
@@ -7301,7 +7302,7 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      tilelo,tilehi,
      fablo,fabhi,&bfact,
      xlo,dx,
-     &dt_slab,
+     &dt_slab,//wall_function
      &cur_time_slab,
      lsCPfab.dataPtr(),ARLIM(lsCPfab.loVect()),ARLIM(lsCPfab.hiVect()),
      lsFDfab.dataPtr(),ARLIM(lsFDfab.loVect()),ARLIM(lsFDfab.hiVect()),
@@ -11277,8 +11278,6 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
     FArrayBox& yface=(*localMF[FACE_VAR_MF+1])[mfi];
     FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
 
-    Real local_dt_slab=dt_slab;
-
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -11304,7 +11303,7 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
       ARLIM(gradufab.loVect()),ARLIM(gradufab.hiVect()),
       tilelo,tilehi,
       fablo,fabhi,&bfact,&level,
-      &local_dt_slab,
+      &dt_slab, //tensorheat
       &NS_geometry_coord,
       &im,&nden);
     } else
@@ -11428,8 +11427,6 @@ void NavierStokes::make_marangoni_force() {
   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
-  Real local_dt_slab_surface_tension=dt_slab;
-
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
@@ -11453,7 +11450,7 @@ void NavierStokes::make_marangoni_force() {
    &bfact_grid,
    &level,
    &finest_level,
-   &local_dt_slab_surface_tension,
+   &dt_slab, //marangoniforce
    &cur_time_slab);
  }  // mfi  
 } // omp
@@ -11594,7 +11591,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
     ARLIM(S_new[mfi].loVect()),ARLIM(S_new[mfi].hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,&level,
-    &dt_slab);
+    &dt_slab); //semdeltaforce
   }  // mfi  
 } // omp
   ns_reconcile_d_num(LOOP_SEMDELTAFORCE,"make_SEM_delta_force");
@@ -11651,7 +11648,7 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
      ARLIM(macfab.loVect()),ARLIM(macfab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,&bfact,&level,
-     &dt_slab);
+     &dt_slab); //semdeltaforce_face
    }  // mfi  
 } // omp
    ns_reconcile_d_num(LOOP_SEMDELTAFORCE_FACE,"make_SEM_delta_force");
@@ -11781,7 +11778,7 @@ void NavierStokes::make_heat_source() {
    fablo,fabhi,&bfact,
    &level,
    &finest_level,
-   &dt_slab,  // time step within a slab if SDC, otherwise dt if not SDC.
+   &dt_slab,//heatsource:time step within a slab SDC, otherwise dt if not SDC.
    &prev_time_slab);
  }  // mfi  
 } // omp
@@ -12115,7 +12112,7 @@ void NavierStokes::update_SEM_delta_force(
     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
     tilelo,tilehi,
     fablo,fabhi,&bfact,&level,
-    &dt_slab);
+    &dt_slab); //updatesemforce
   }  // mfi  
 } // omp
   ns_reconcile_d_num(LOOP_UPDATE_SEMFORCE,"update_SEM_delta_force");
@@ -12202,7 +12199,7 @@ void NavierStokes::update_SEM_delta_force(
      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
      tilelo,tilehi,
      fablo,fabhi,&bfact,&level,
-     &dt_slab);
+     &dt_slab);//updatesemforce_face
    }  // mfi  
 } // omp
    ns_reconcile_d_num(LOOP_UPDATESEMFORCE_FACE,"update_SEM_delta_force");
@@ -12340,8 +12337,6 @@ void NavierStokes::tensor_advection_update() {
        Vector<int> velbc=getBCArray(State_Type,gridno,
         STATECOMP_VEL,STATE_NCOMP_VEL);
 
-       Real local_dt_slab=dt_slab;
-
        int tid_current=ns_thread();
        if ((tid_current<0)||(tid_current>=thread_class::nthreads))
         amrex::Error("tid_current invalid");
@@ -12371,7 +12366,7 @@ void NavierStokes::tensor_advection_update() {
          tilelo,tilehi,
          fablo,fabhi,
          &bfact, 
-         &local_dt_slab,
+         &dt_slab,//updatetensor
          &elastic_time[im],
          &viscoelastic_model[im],
          &polymer_factor[im],
@@ -12696,7 +12691,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
-     &dt_slab,
+     &dt_slab,//fort_derive_mom_den
      maskfab.dataPtr(),
      ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
      masknbrfab.dataPtr(),
@@ -12885,8 +12880,6 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
     prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
-    Real local_dt_slab=dt_slab;
-
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -12898,7 +12891,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
      fablo,fabhi,
      &bfact,
      velbc.dataPtr(),
-     &local_dt_slab,
+     &dt_slab,//fort_velmac_override
      &prev_time_slab,
      &prescribed_vel_time_slab,
      &vel_time_slab,
@@ -13521,7 +13514,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      fablo,fabhi,&bfact,
      xlo,dx,
      &prev_time_slab,
-     &dt_slab,
+     &dt_slab,//ratemasschange
      &blob_arraysize,
      blob_array.dataPtr(),
      &color_count,
@@ -13602,7 +13595,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      fablo,fabhi,&bfact,
      xlo,dx,
      &prev_time_slab,
-     &dt_slab,
+     &dt_slab,//ratemasschange
      &blob_arraysize,
      blob_array.dataPtr(),
      &color_count,
@@ -14315,7 +14308,7 @@ NavierStokes::level_phase_change_convert(
      fablo,fabhi,
      &bfact, 
      velbc.dataPtr(),
-     &dt_slab,
+     &dt_slab, //nodedisplace
      nodevelfab.dataPtr(),
      ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
      burnvelfab.dataPtr(),
@@ -14436,7 +14429,7 @@ NavierStokes::level_phase_change_convert(
     &min_stefan_velocity_for_dt,
     vofbc.dataPtr(),
     xlo,dx,
-    &dt_slab,
+    &dt_slab,//convertmaterial
     delta_mass_local[tid_current].dataPtr(),
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
@@ -15098,7 +15091,7 @@ NavierStokes::level_phase_change_redistribute(
     fablo,fabhi,
     &bfact, 
     xlo,dx,
-    &dt_slab,
+    &dt_slab,//tagexpansion
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     donorfab.dataPtr(),
@@ -15199,7 +15192,7 @@ NavierStokes::level_phase_change_redistribute(
      fablo,fabhi,
      &bfact, 
      xlo,dx,
-     &dt_slab,
+     &dt_slab,//fort_accept_weight
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      newdistfab.dataPtr(),
@@ -15322,7 +15315,7 @@ NavierStokes::level_phase_change_redistribute(
      fablo,fabhi,
      &bfact, 
      xlo,dx,
-     &dt_slab,
+     &dt_slab, //fort_distributeexpansion
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      newdistfab.dataPtr(),
@@ -15453,7 +15446,7 @@ NavierStokes::level_phase_change_redistribute(
      fablo,fabhi,
      &bfact, 
      xlo,dx,
-     &dt_slab,
+     &dt_slab, //initjumpterm
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      JUMPfab.dataPtr(),ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
@@ -15559,7 +15552,7 @@ NavierStokes::level_init_icemask() {
     fablo,fabhi,
     &bfact, 
     xlo,dx,
-    &dt_slab,
+    &dt_slab, //fort_init_icemask
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
@@ -15671,8 +15664,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
 
- if (dt_slab<=0.0)
+ if (dt_slab>0.0) {
+  // do nothing
+ } else
   amrex::Error("dt_slab must be positive");
+
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
@@ -15900,7 +15896,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &level,
     &finest_level,
     xlo,dx,
-    &dt_slab,
+    &dt_slab, //stefansolver
     maskfab.dataPtr(),
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     conductivity_fab.dataPtr(), //num_materials components
@@ -16031,7 +16027,7 @@ NavierStokes::heat_source_term_flux_source() {
     fablo,fabhi,
     &bfact,
     xlo,dx,
-    &dt_slab,
+    &dt_slab, //fort_heatsource_face
     &prev_time_slab,
     &level,
     &finest_level,
@@ -16616,7 +16612,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       denbc.dataPtr(),  // presbc
       velbc.dataPtr(),  
       &slab_step,
-      &dt_slab,  // CELL_TO_MAC
+      &dt_slab,  // CELL_TO_MAC (OP_ISCEME_MAC)
       &prev_time_slab, 
       xlo,dx,
       &spectral_loop,
@@ -16790,7 +16786,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       denbc.dataPtr(),  // presbc
       &prev_time_slab, 
       &slab_step,
-      &dt_slab,  // calling fort_mac_to_cell
+      &dt_slab,  // calling fort_mac_to_cell (OP_ISCHEME_CELL)
       xlo,dx,
       tilelo,tilehi,
       fablo,fabhi,
@@ -17367,8 +17363,6 @@ NavierStokes::split_scalar_advection() {
 
   prescribed_vel_time_slab=0.5*(prev_time_slab+cur_time_slab);
 
-  Real local_dt_slab=dt_slab;
-
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
@@ -17393,7 +17387,7 @@ NavierStokes::split_scalar_advection() {
    fablo,fabhi,
    &bfact,
    &bfact_f,
-   &local_dt_slab, // fort_vfrac_split
+   &dt_slab, // fort_vfrac_split
    &prev_time_slab,
    &cur_time_slab,
    &prescribed_vel_time_slab,
@@ -23038,8 +23032,6 @@ NavierStokes::particle_tensor_advection_update() {
     Vector<int> velbc=getBCArray(State_Type,gridno,
       STATECOMP_VEL,STATE_NCOMP_VEL);
 
-    Real local_dt_slab=dt_slab;
-
       // this is an object with a pointer to both AoS and
       // SoA data.
     auto& particles_grid_tile = localPC.GetParticles(level)
@@ -23144,7 +23136,7 @@ NavierStokes::particle_tensor_advection_update() {
           tilelo,tilehi,
           fablo,fabhi,
           &bfact, 
-          &local_dt_slab,
+          &dt_slab, //fort_update_particle_tensor
           &elastic_time[im],
           &viscoelastic_model[im],
           &polymer_factor[im],
