@@ -26497,6 +26497,7 @@ INTEGER_T, INTENT(in) :: project_option
 
 end function project_option_needs_scalingF
 
+! initialize blobdata if project_option_FSI_rigid==1
 INTEGER_T function project_option_FSI_rigid(project_option) &
 bind(c,name='project_option_FSI_rigid')
 

@@ -9890,7 +9890,7 @@ END SUBROUTINE SIMP
        dombcpres, &
        domlo,domhi, &
        xlo,dx, &
-       dt, &
+       dt, & ! solver_dt_slab
        angular_velocity, &
        isweep) &
       bind(c,name='fort_init_potential')
@@ -9902,7 +9902,7 @@ END SUBROUTINE SIMP
 
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: isweep
-      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: dt  ! solver_dt_slab
       REAL_T, INTENT(in) :: angular_velocity
       INTEGER_T, INTENT(in) :: DIMDEC(presden)
       INTEGER_T, INTENT(in) :: DIMDEC(state)
