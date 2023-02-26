@@ -7294,7 +7294,7 @@ NavierStokes::ColorSumALL(
  } else
   amrex::Error("verbose must be >=0");
 
-} // subroutine ColorSumALL
+} // end subroutine ColorSumALL
 
 
 void
@@ -8210,9 +8210,15 @@ void NavierStokes::overwrite_outflow() {
 
  } // dir=0..sdim-1
 
-} // subroutine overwrite_outflow
+} // end subroutine overwrite_outflow
 
 
+// called from: mac_update via updatevelALL via multiphase_project
+//    residual_correction_form via multiphase_project
+//    relaxLEVEL via mg_cycleALL via multiphase_preconditioner via
+//      multiphase_SHELL_preconditioner via multiphase_project
+//      or via multphase_project
+//
 // macdest=macsrc+gp
 // for pressure projection: 
 // macdest=UMAC,UMACSTAR,UMAC
@@ -8357,7 +8363,7 @@ void NavierStokes::correct_velocity(
     zdest.dataPtr(velcomp),ARLIM(zdest.loVect()),ARLIM(zdest.hiVect()),
     xlo,
     dx,
-    &dt_slab,
+    &solver_dt_slab,
     &cur_time_slab);
   } // velcomp=0..nsolve-1
  } // mfi
@@ -8481,7 +8487,7 @@ void NavierStokes::mg_cycleALL(int presmooth,
    project_option,nsolve);
 
  delete residmf;
-} // subroutine mg_cycleALL
+} // end subroutine mg_cycleALL
 
 // this recursive routine first called from the finest_level.
 // localMF[idx_phi]=0.0 on all levels prior to the first call of this
