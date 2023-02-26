@@ -5526,7 +5526,7 @@ NavierStokes::ColorSum(
    // declared in: LEVELSET_3D.F90
   fort_getcolorsum(
    &tid_current,
-   &operation_flag,
+   &operation_flag,//OP_GATHER_MDOT || OP_SCATTER_MDOT
    &sweep_num,
    &tessellate,
    distribute_mdot_evenly.dataPtr(),
@@ -5534,7 +5534,7 @@ NavierStokes::ColorSum(
    distribute_from_target.dataPtr(),
    constant_density_all_time.dataPtr(),
    &cur_time_slab,
-   &dt_slab,
+   &dt_slab, //used if "OP_SCATTER_MDOT"
    dx, 
    xlo, 
    &nstate,
@@ -7542,11 +7542,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  bool use_tiling=ns_tiling;
 
- if (dt_slab>0.0) {
-  // do nothing
- } else
-  amrex::Error("cannot have dt_slab<=0 in allocate_FACE_WEIGHT");
-
  if (project_option_momeqn(project_option)==1) {
   //do nothing
  } else if (project_option_momeqn(project_option)==0) {
@@ -7796,7 +7791,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
     &local_face_ncomp,
     xlo,
     dx,
-    &dt_slab,
     offdiagcheck.dataPtr(),
     ARLIM(offdiagcheck.loVect()),ARLIM(offdiagcheck.hiVect()),
     cenden.dataPtr(),
@@ -7911,11 +7905,6 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
   // do nothing
  } else
   amrex::Error("project_option_momeqn invalid32");
-
- if (dt_slab>0.0) {
-  // do nothing
- } else
-  amrex::Error("cannot have dt_slab<=0 in allocate_project_variables");
 
  debug_ngrow(FACE_VAR_MF,0,local_caller_string);
 
@@ -8124,7 +8113,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
 
  delete current_contents_mf;
 
-} // subroutine allocate_project_variables
+} // end subroutine allocate_project_variables
 
 
 void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
@@ -9823,6 +9812,8 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // fortran pressure and velocity scales
    // dt_slab
+   // solver_dt_slab
+   // quasi_static_dt_slab
    // s_new velocity
    // s_new pressure
    // div_new 
