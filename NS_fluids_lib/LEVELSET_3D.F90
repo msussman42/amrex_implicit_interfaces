@@ -4796,7 +4796,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: fort_getcolorsum"
        stop
       endif
       if (cur_time_slab.ge.zero) then
@@ -6289,7 +6289,10 @@ stop
             endif
 
            else
-            print *,"operation_flag invalid"
+            print *,"operation_flag invalid",operation_flag
+            print *,"operation_flag options:"
+            print *,"OP_GATHER_MDOT ",OP_GATHER_MDOT
+            print *,"OP_SCATTER_MDOT ",OP_SCATTER_MDOT
             stop
            endif
 
