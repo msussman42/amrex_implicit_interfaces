@@ -350,8 +350,9 @@ void NavierStokes::static_surface_tension_advection() {
 
   quasi_static_dt_slab=static_dt_min*cfl;
 
-    //use static_dt
-    //for viscosity use static_dt and make sure solid velocity=0 in
+    //use quasi_static_dt_slab
+    //for viscosity use quasi_static_dt_slab and 
+    //make sure solid velocity=0 in
     //FSI regions and prescribed
   multiphase_project(SOLVETYPE_PRESSTATIC);
 
@@ -8986,10 +8987,10 @@ void NavierStokes::updatevelALL(
 void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   int nsolve) {
 
- if (dt_slab>0.0) {
+ if (solver_dt_slab>0.0) {
   // do nothing
  } else
-  amrex::Error("dt_slab invalid4");
+  amrex::Error("solver_dt_slab invalid:Prepare_UMAC_for_solver");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
@@ -9359,6 +9360,7 @@ void NavierStokes::Krylov_checkpoint(
 //   ns_level.init_EOS_pressure() *DOES NOT* overwrite P01 with p(rho,T)
 //   Result of the Helmholtz solve is stored instead.
 //
+// if project_option==SOLVETYPE_PRESSTATIC then use quasi_static_dt_slab.
 void NavierStokes::multiphase_project(int project_option) {
 
  std::string local_caller_string="multiphase_project";
@@ -9430,24 +9432,32 @@ void NavierStokes::multiphase_project(int project_option) {
 
   override_enable_spectral(0); // always low order
 
- } else if (project_option_projection(project_option)==1) {
-  // do nothing
+  solver_dt_slab=dt_slab;
+
  } else if (project_option_is_static(&project_option)==1) {
 
   if (save_enable_spectral==0) {
    //do nothing
   } else
-   amrex::Error("expecting save_enable_spectral==0");
+   amrex::Error("expecting save_enable_spectral==0 if quasi-static-iter");
+
+  solver_dt_slab=quasi_static_dt_slab;
+
+ } else if (project_option_projection(project_option)==1) {
+
+  solver_dt_slab=dt_slab;
 
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   override_enable_spectral(0); // always low order
+  solver_dt_slab=dt_slab;
  } else if (project_option==SOLVETYPE_HEAT) { 
-  // do nothing
+  solver_dt_slab=dt_slab;
  } else if (project_option==SOLVETYPE_VISC) {
-  // do nothing
+  solver_dt_slab=dt_slab;
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) { 
   override_enable_spectral(0); // always low order
+  solver_dt_slab=dt_slab;
  } else
   amrex::Error("project_option invalid43");
 
@@ -9568,7 +9578,9 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << " SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
    std::cout << " ns_time_order= " << ns_time_order << '\n';
    std::cout << " slab_step= " << slab_step << '\n';
+   std::cout << " solver_dt_slab= " << solver_dt_slab << '\n';
    std::cout << " dt_slab= " << dt_slab << '\n';
+   std::cout << " quasi_static_dt_slab= " << quasi_static_dt_slab << '\n';
    std::cout << " lower_slab_time= " << lower_slab_time << '\n';
    std::cout << " upper_slab_time= " << upper_slab_time << '\n';
    std::cout << " prev_time_slab= " << prev_time_slab << '\n';
@@ -9828,6 +9840,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   //SOLVETYPE_PRES, 
   //SOLVETYPE_INITPROJ, 
+  //SOLVETYPE_PRESSTATIC,
   //SOLVETYPE_PRESGRAVITY
  if (project_option_FSI_rigid(&project_option)==1) {
 

@@ -5660,7 +5660,7 @@ void NavierStokes::increment_potential_force() {
     // (gravity and surface tension)
     // u+=facegrav 
    fort_addgravity(
-     &dt_slab,
+     &solver_dt_slab,
      &cur_time_slab,
      &angular_velocity,
      &level,
@@ -5698,7 +5698,8 @@ void NavierStokes::deallocate_potential_forceALL() {
 } // deallocate_potential_forceALL
 
 // called from multiphase_project when 
-// project_option==SOLVETYPE_PRES, 
+// project_option==
+//  SOLVETYPE_PRES, 
 //  SOLVETYPE_PRESSTATIC, or 
 //  SOLVETYPE_PRESGRAVITY
 void NavierStokes::process_potential_forceALL(
@@ -5829,8 +5830,6 @@ void NavierStokes::init_gravity_potential() {
 
     Vector<int> presbc=getBCArray(State_Type,gridno,STATECOMP_PRES,1);
 
-    Real local_dt_slab_gravity=dt_slab;
-
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -5856,7 +5855,7 @@ void NavierStokes::init_gravity_potential() {
      dombcpres.dataPtr(),
      domlo,domhi,
      xlo,dx,
-     &local_dt_slab_gravity,
+     &solver_dt_slab,
      &angular_velocity,
      &isweep);
   } // mfi
@@ -5960,8 +5959,10 @@ void NavierStokes::process_potential_force_face(
  resize_metrics(1);
  resize_levelset(2,LEVELPC_MF);
 
- debug_ngrow(MASKCOEF_MF,1,local_caller_string); // maskcoef=1 if not covered by finer level.
- debug_ngrow(MASK_NBR_MF,1,local_caller_string); // mask_nbr=1 at fine-fine bc.
+ // maskcoef=1 if not covered by finer level.
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
+ // mask_nbr=1 at fine-fine bc.
+ debug_ngrow(MASK_NBR_MF,1,local_caller_string); 
 
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
 
@@ -6071,8 +6072,6 @@ void NavierStokes::process_potential_force_face(
    int ncomp_xgp=1;
    int ncomp_mgoni=mgonifab.nComp();
 
-   Real local_dt_slab_surface_tension=dt_slab;
-
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -6098,7 +6097,7 @@ void NavierStokes::process_potential_force_face(
     presbc.dataPtr(),
     velbc.dataPtr(),
     &slab_step,
-    &local_dt_slab_surface_tension,
+    &solver_dt_slab,
     &cur_time_slab,
     xlo,dx,
     &spectral_loop,
@@ -9897,6 +9896,7 @@ void NavierStokes::scale_variablesALL() {
 
  dt_slab*=projection_velocity_scale;
  quasi_static_dt_slab*=projection_velocity_scale;
+ solver_dt_slab*=projection_velocity_scale;
 
  int scale_flag=0;
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -9918,6 +9918,7 @@ void NavierStokes::unscale_variablesALL() {
 
  dt_slab/=projection_velocity_scale;
  quasi_static_dt_slab/=projection_velocity_scale;
+ solver_dt_slab/=projection_velocity_scale;
 
  int scale_flag=1;
  for (int ilev=finest_level;ilev>=level;ilev--) {
