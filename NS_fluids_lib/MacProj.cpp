@@ -44,7 +44,7 @@ namespace amrex{
 //create_hierarchy=-1,0,1
 void
 NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
-		int create_hierarchy) {
+  int create_hierarchy,Real dt_maccoef) {
 
  int finest_level=parent->finestLevel();
 
@@ -55,7 +55,8 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.allocate_maccoef(project_option,nsolve,create_hierarchy);
+  ns_level.allocate_maccoef(project_option,nsolve,
+	create_hierarchy,dt_maccoef);
  }
 
   // fort_extrapfill, pc_interp
@@ -71,7 +72,7 @@ NavierStokes::allocate_maccoefALL(int project_option,int nsolve,
 //create_hierarchy=-1,0,1
 void
 NavierStokes::allocate_maccoef(int project_option,int nsolve,
-		int create_hierarchy) {
+    int create_hierarchy,Real dt_maccoef) {
 
  std::string local_caller_string="allocate_maccoef";
 
@@ -132,7 +133,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
  if (ncomp_check!=nsolve)
   amrex::Error("ncomp_check invalid");
 
- Real dt_diffuse=dt_slab;
+ Real dt_diffuse=dt_maccoef;
 
  if (project_option==SOLVETYPE_HEAT) { 
   if (lower_slab_time==0.0) {
@@ -1262,7 +1263,10 @@ void NavierStokes::DiagInverse(
 
 } // subroutine DiagInverse
 
-
+// residALL called from jacobi_cycles from multiphase_preconditioner from
+//  multiphase_SHELL_preconditioner from multiphase_project or 
+//  directly from multiphase_project.
+//
 // RHS=p^n*alpha-(a_{i+1/2}u_{i+1/2}-a_{i-1/2}u_{i-1/2}+... )/dt+diffusionRHS
 // solving p*alpha-(bx_{i+1/2}(p_{i+1}-p_{i})+...)=RHS
 // resid=rhs-Aphi
@@ -1297,6 +1301,7 @@ void NavierStokes::residALL(
  project_right_hand_side(idx_resid,project_option,change_flag);
 } // subroutine residALL
 
+//called from residALL 
 void NavierStokes::applyALL(
   int project_option,
   int idx_phi,int idx_Aphi,int nsolve) {
@@ -1329,7 +1334,8 @@ void NavierStokes::applyALL(
    energyflag,
    GRADPEDGE_MF,
    idx_phi,
-   project_option,nsolve);
+   project_option,nsolve,
+   solver_dt_slab); //applyALL
 
   if (ilev<finest_level) {
    int ncomp_edge=-1;
@@ -1355,7 +1361,8 @@ void NavierStokes::applyALL(
    ns_level.localMF[idx_Aphi],
    mdot_local,
    GRADPEDGE_MF,
-   nsolve);
+   nsolve,
+   solver_dt_slab); //calling from applyALL
  } // ilev=finest_level ... level
 
  project_right_hand_side(idx_Aphi,project_option,change_flag);
@@ -1528,8 +1535,8 @@ void NavierStokes::applyBC_MGLEVEL(int idx_phi,
 
 } // applyBC_MGLEVEL
 
-
-   // gradpedge=-dt W grad p
+// gradpedge=-dt W grad p
+// called from updatevelALL from multiphase_project
 void NavierStokes::applyGradALL(
   int project_option,int idx_phi,int nsolve) {
 
@@ -1556,7 +1563,9 @@ void NavierStokes::applyGradALL(
    energyflag,
    GRADPEDGE_MF,
    idx_phi,
-   project_option,nsolve);
+   project_option,nsolve,
+   solver_dt_slab); //applyGradALL
+
   if (ilev<finest_level) {
    int ncomp_edge=-1;
    int scomp_edge=0;
@@ -1605,7 +1614,8 @@ void NavierStokes::apply_div(
   MultiFab* rhsmf, 
   MultiFab* diffusionRHScell,
   int idx_gphi,
-  int nsolve) {
+  int nsolve,
+  Real dt_apply_div) {
 
  std::string local_caller_string="apply_div";
 
@@ -1853,7 +1863,7 @@ void NavierStokes::apply_div(
    presbc.dataPtr(), 
    &cur_time_slab, 
    &slab_step,
-   &dt_slab,
+   &dt_apply_div,
    xlo,dx,
    tilelo,tilehi,
    fablo,fabhi,
@@ -2020,7 +2030,9 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
 
    // create_hierarchy=-1,0,1
   int create_hierarchy=-1;
-  allocate_maccoefALL(project_option,nsolve,create_hierarchy);
+  allocate_maccoefALL(project_option,nsolve,
+   create_hierarchy,
+   dt_slab); //update_SEM_forcesALL
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -2137,7 +2149,8 @@ void NavierStokes::update_SEM_forces(int project_option,
     UMAC_MF,
     idx_source,
     project_option,
-    nsolve);
+    nsolve,
+    dt_slab); //update_SEM_forces
 
    if (localMF[UMAC_MF]->nComp()!=nsolve)
     amrex::Error("localMF[UMAC_MF]->nComp() invalid");
@@ -2159,7 +2172,8 @@ void NavierStokes::update_SEM_forces(int project_option,
     rhs,
     sourcemf,
     UMAC_MF,
-    nsolve);
+    nsolve,
+    dt_slab); //update_SEM_forces
 
   } else if (project_option==SOLVETYPE_PRES) {
 
@@ -2175,7 +2189,8 @@ void NavierStokes::update_SEM_forces(int project_option,
     homflag,energyflag,
     GP_DEST_FACE_MF,
     idx_source,
-    project_option,nsolve);
+    project_option,nsolve,
+    dt_slab); //update_SEM_forces
 
   } else
    amrex::Error("project_option invalid73 update_SEM_forces");
@@ -2239,6 +2254,7 @@ void NavierStokes::ADVECT_DIV_ALL() {
 //                          -(pnew-padv)/(rho c^2 dt)+MDOT_MF dt/vol
 //
 // if incompressible: DIV_new=MDOT_MF dt/vol
+// ADVECT_DIV is called from ADVECT_DIV_ALL (from do_the_advance)
 void NavierStokes::ADVECT_DIV() {
  
  std::string local_caller_string="ADVECT_DIV";
@@ -2299,7 +2315,7 @@ void NavierStokes::ADVECT_DIV() {
    // declared in: NAVIERSTOKES_3D.F90
   fort_update_div(
    xlo,dx,
-   &dt_slab,
+   &dt_slab, //ADVECT_DIV
    volumefab.dataPtr(),
    ARLIM(volumefab.loVect()),ARLIM(volumefab.hiVect()),
    csoundfab.dataPtr(),
@@ -2318,6 +2334,7 @@ void NavierStokes::ADVECT_DIV() {
 
 } // end subroutine ADVECT_DIV
 
+// called from: do_the_advance, writeTECPLOT_File
 void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
   int idx_dest,int idx_mask) {
 
@@ -2363,6 +2380,8 @@ void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
 
 } // end subroutine getStateDIV_ALL 
 
+//called from getStateDIV_ALL (from do_the_advance or
+//  writeTECPLOT_File)
 void NavierStokes::getStateDIV(int idx_source,int scomp_src,
   int idx_dest,int idx_mask) {
 
@@ -2535,7 +2554,7 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
     velbc.dataPtr(), // presbc
     &cur_time_slab, 
     &slab_step,
-    &dt_slab, 
+    &dt_slab, //getStateDIV
     xlo,dx,
     tilelo,tilehi,
     fablo,fabhi,
@@ -2608,9 +2627,8 @@ void NavierStokes::getStateDIV(int idx_source,int scomp_src,
 
 } // end subroutine getStateDIV
 
-
-
 // initializes righthand side and mac_phi for doing jacobi method.
+// called from: multiphase_project
 void NavierStokes::mac_project_rhs(int project_option,
  int idx_mac_phi_crse,int idx_mac_rhs_crse,int nsolve) {
 
@@ -2649,9 +2667,10 @@ void NavierStokes::mac_project_rhs(int project_option,
    localMF[idx_mac_rhs_crse], 
    localMF[DIFFUSIONRHS_MF],
    UMAC_MF,
-   nsolve);
+   nsolve,
+   solver_dt_slab); //mac_project_rhs
 
-}  // mac_project_rhs
+}  // end subroutine mac_project_rhs
 
 // called from: NavierStokes::updatevelALL
 // GRADPEDGE=-dt W grad p

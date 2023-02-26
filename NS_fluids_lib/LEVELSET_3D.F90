@@ -15804,7 +15804,6 @@ stop
        dir, &
        velbc_in, &
        slab_step, &
-       dt, &
        time, &
        xlo,dx, &
        maskcoef,DIMS(maskcoef), & ! 1=not cov. or outside domain  0=covered
@@ -15838,7 +15837,6 @@ stop
       INTEGER_T, INTENT(in) :: slab_step
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
       INTEGER_T, INTENT(in) :: DIMDEC(maskcoef)
@@ -16414,7 +16412,6 @@ stop
        local_face_ncomp, &
        xlo, &
        dx, &
-       dt, &
        offdiagcheck, &
        DIMS(offdiagcheck), &
        cenden,DIMS(cenden), &
@@ -16468,7 +16465,6 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(zface)
       INTEGER_T, INTENT(in) :: DIMDEC(mask)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(inout),target :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in),target :: cenden(DIMV(cenden)) 
@@ -16547,13 +16543,6 @@ stop
 
       else
        print *,"project_option invalid"
-       stop
-      endif
-
-      if (dt.gt.zero) then
-       ! do nothing
-      else
-       print *,"dt invalid"
        stop
       endif
 

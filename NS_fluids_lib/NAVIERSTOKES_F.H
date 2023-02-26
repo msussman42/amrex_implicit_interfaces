@@ -466,7 +466,7 @@ extern "C" {
       Real* zdest,AMREX_ARLIM_P(zdestlo),AMREX_ARLIM_P(zdesthi), 
       const Real* xlo,
       const Real* dx,
-      Real* dt,
+      Real* solver_dt_slab,
       Real* cur_time);
 
     void fort_summass(

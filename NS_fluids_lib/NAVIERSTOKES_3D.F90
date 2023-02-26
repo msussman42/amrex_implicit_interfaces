@@ -11211,7 +11211,7 @@ END SUBROUTINE SIMP
        zdest,DIMS(zdest), &
        xlo, &
        dx, &
-       dt, &
+       solver_dt_slab, &
        cur_time) &
       bind(c,name='fort_fluidsolidcor')
 
@@ -11278,7 +11278,7 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: zdest_ptr(D_DECL(:,:,:))
 
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: solver_dt_slab
       REAL_T, INTENT(in) :: cur_time
  
       INTEGER_T i,j,k
@@ -11314,10 +11314,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if (dt.gt.zero) then
+      if (solver_dt_slab.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"solve_dt_slab invalid"
        stop
       endif 
       maskcov_ptr=>maskcov

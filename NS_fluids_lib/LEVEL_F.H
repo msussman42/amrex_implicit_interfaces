@@ -297,7 +297,6 @@ namespace amrex{
         int* dir, //dir=0,1,2
         int* velbc,
         int* slab_step,
-        Real* dt,
         Real* time,
         const Real* xlo,const Real* dx,
         Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
@@ -502,7 +501,6 @@ namespace amrex{
         int* local_face_ncomp,
         const Real* xlo,
 	const Real* dx,
-	Real* dt,
         Real* offdiagcheck,
         AMREX_ARLIM_P(offdiagchecklo),AMREX_ARLIM_P(offdiagcheckhi), 
         Real* cenden,AMREX_ARLIM_P(cendenlo),AMREX_ARLIM_P(cendenhi), 
