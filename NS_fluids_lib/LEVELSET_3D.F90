@@ -13885,7 +13885,7 @@ stop
           local_vel_MAC=xvel(D_DECL(i,j,k),1)
           if ((operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
-           local_vel_old_MAC=xgp(D_DECL(i,j,k),1)
+           local_vel_old_MAC=xgp(D_DECL(i,j,k),1) !Umac_old
           else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                    (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC)) then
            local_vel_old_MAC=zero
@@ -14403,18 +14403,12 @@ stop
                   primary_velmaterial=local_vel_MAC ! UMAC^{ADVECT}
                   secondary_velmaterial=local_vel_MAC ! UMAC^{ADVECT}
                  else if (local_compressible.eq.1) then
-                  ! UMAC^{ADVECT}=UMAC^n + 
-                  !   I_{CELL}^{MAC} (U_CELL^{ADVECT}-U_CELL^{n})
-                  ! or
                   ! UMAC^{ADVECT}= 
                   !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
                   velcomp=dir+1
-                  if (1.eq.0) then
-                   primary_velmaterial= &
-                     local_vel_old_MAC+vel(D_DECL(ic,jc,kc),velcomp)
-                  else
-                   primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
-                  endif
+                   !secondary_velfab 
+                   !secondary_vel_data=CURRENT_CELL_VEL_MF; 
+                  primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
                  else
                   print *,"local_compressible invalid"
                   stop

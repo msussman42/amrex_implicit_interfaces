@@ -273,13 +273,12 @@ void NavierStokes::static_surface_tension_advection() {
  if (level!=0)
   amrex::Error("level invalid static_surface_tension_advection");
 
- if ((SDC_outer_sweeps>=0)&&
-     (SDC_outer_sweeps<ns_time_order)) {
+ if (SDC_outer_sweeps==0) {
   // do nothing
  } else
-  amrex::Error("SDC_outer_sweeps invalid multiphase_project");
+  amrex::Error("SDC_outer_sweeps invalid static_surface_tension_advection");
 
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+ if (slab_step==0) {
   // do nothing
  } else
   amrex::Error("slab_step invalid");
@@ -326,9 +325,10 @@ void NavierStokes::static_surface_tension_advection() {
   setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
  }
 
- int save_enable_spectral=enable_spectral;
-
- override_enable_spectral(0); // always low order
+ if (enable_spectral==0) {
+  //do nothing
+ } else
+  amrex::Error("enable_spectral invalid");
 
  int quasi_static_reached=0;
  while (quasi_static_reached==0) {
@@ -358,8 +358,6 @@ void NavierStokes::static_surface_tension_advection() {
 
   cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
  } // while (quasi_static_reached==0) 
-
- override_enable_spectral(save_enable_spectral);
 
  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
     0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
@@ -500,14 +498,21 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   amrex::Error("normdir_here invalid (prior to loop)");
  advect_time_slab=prev_time_slab;
 
+ if (enable_spectral==0) {
+  //do nothing
+ } else if (enable_spectral==1) {
+
   // delete_advect_vars() called in NavierStokes::do_the_advance
   // right after increment_face_velocityALL. 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
     // initialize ADVECT_REGISTER_FACE_MF and
     //            ADVECT_REGISTER_MF
-  ns_level.prepare_advect_vars(prev_time_slab);
- }
+   ns_level.prepare_advect_vars(prev_time_slab);
+  }
+
+ } else
+  amrex::Error("enable_spectral invalid");
 
  if (parent->global_AMR_particles_flag==particles_flag) {
   // do nothing
@@ -2679,14 +2684,23 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       } else
        amrex::Error("expecting static_surface_tension==0 if adv disabled");
 
-      // delete_advect_vars() called in NavierStokes::do_the_advance
-      // right after increment_face_velocityALL. 
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-       // initialize ADVECT_REGISTER_FACE_MF and
-       //            ADVECT_REGISTER_MF
-       ns_level.prepare_advect_vars(prev_time_slab);
-      }
+      if (enable_spectral==0) {
+       //do nothing
+      } else if (enable_spectral==1) {
+
+       amrex::Error("expecting enable_spectral==0 if disable_adv==1");
+
+       // delete_advect_vars() called in NavierStokes::do_the_advance
+       // right after increment_face_velocityALL. 
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        // initialize ADVECT_REGISTER_FACE_MF and
+        //            ADVECT_REGISTER_MF
+        ns_level.prepare_advect_vars(prev_time_slab);
+       }
+
+      } else
+       amrex::Error("enable_spectral invalid");
 
      } else
       amrex::Error("disable_advection invalid");
@@ -3315,7 +3329,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-FIX ME
+
        //  unew^{f}=
        // (i) unew^{f} in incompressible non-solid regions
        // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
@@ -3330,11 +3344,18 @@ FIX ME
        advance_MAC_velocity(SOLVETYPE_PRES);
       }
 
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-       // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
-       ns_level.delete_advect_vars();
-      } // ilev=finest_level ... level
+      if (enable_spectral==0) {
+       //do nothing
+      } else if (enable_spectral==1) {
+
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+        ns_level.delete_advect_vars();
+       } // ilev=finest_level ... level
+
+      } else
+       amrex::Error("enable_spectral invalid");
 
       Real beta=1.0;
       int dest_idx=-1;  // update State_Type
@@ -12802,8 +12823,15 @@ void NavierStokes::GetStateFromLocal(int idx_MF,int ngrow,
 
 void NavierStokes::delete_advect_vars() {
 
- delete_localMF(ADVECT_REGISTER_FACE_MF,AMREX_SPACEDIM);
- delete_localMF(ADVECT_REGISTER_MF,1);
+ if (enable_spectral==0) {
+  //do nothing
+ } else if (enable_spectral==1) {
+ 
+  delete_localMF(ADVECT_REGISTER_FACE_MF,AMREX_SPACEDIM);
+  delete_localMF(ADVECT_REGISTER_MF,1);
+
+ } else
+  amrex::Error("enable_spectral invalid");
 
 } // subroutine delete_advect_vars()
 
@@ -13069,14 +13097,21 @@ void NavierStokes::prepare_advect_vars(Real time) {
  if (time<0.0)
   amrex::Error("time invalid");
 
- new_localMF(ADVECT_REGISTER_MF,AMREX_SPACEDIM,1,-1);
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+ if (enable_spectral==0) {
+  //do nothing
+ } else if (enable_spectral==1) {
+
+  new_localMF(ADVECT_REGISTER_MF,AMREX_SPACEDIM,1,-1);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    //ngrow=0
    //Umac_Type
-  getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,0,dir,time);
- } // dir
+   getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,0,dir,time);
+  } // dir
   // advect_register has 1 ghost initialized.
- push_back_state_register(ADVECT_REGISTER_MF,time);
+  push_back_state_register(ADVECT_REGISTER_MF,time);
+
+ } else
+  amrex::Error("enable_spectral invalid");
 
 } // end subroutine prepare_advect_vars(Real time)
 
