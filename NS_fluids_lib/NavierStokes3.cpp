@@ -376,9 +376,21 @@ void NavierStokes::static_surface_tension_advection() {
 
 } // end subroutine static_surface_tension_advection()
 
-void NavierStokes::nonlinear_advection() {
+void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  std::string local_caller_string="nonlinear_advection";
+ local_caller_string=caller_string+local_caller_string;
+
+ int local_static_flag=0;
+
+ if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+  advection_dt_slab=quasi_static_dt_slab;
+  local_static_flag=1;
+ } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
+  advection_dt_slab=dt_slab;
+  local_static_flag=0;
+ } else
+  amrex::Error("caller is invalid in nonlinear_advection");
 
  int renormalize_only=1;
 
@@ -2651,7 +2663,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
      if (disable_advection==0) {
 
-      nonlinear_advection();
+      nonlinear_advection(local_caller_string);
 
       if (static_surface_tension==1) {
        static_surface_tension_advection();
@@ -3303,7 +3315,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
 
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
+FIX ME
        //  unew^{f}=
        // (i) unew^{f} in incompressible non-solid regions
        // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 

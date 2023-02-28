@@ -84,6 +84,7 @@ Real NavierStokes::prescribed_vel_time_slab=0.0;
 Real NavierStokes::dt_slab=1.0;
 Real NavierStokes::quasi_static_dt_slab=1.0;
 Real NavierStokes::solver_dt_slab=1.0;
+Real NavierStokes::advection_dt_slab=1.0;
 int NavierStokes::advect_iter=0;
 
 int  NavierStokes::show_mem = 0;
