@@ -839,7 +839,7 @@ protected:
 
     void solid_temperature();
 
-    void nonlinear_advection();
+    void nonlinear_advection(const std::string& caller_string);
     void static_surface_tension_advection();
 
     void advance_MAC_velocity(int project_option);
@@ -1451,6 +1451,7 @@ protected:
     static Real dt_slab;
     static Real quasi_static_dt_slab;
     static Real solver_dt_slab;
+    static Real advection_dt_slab;
     static int advect_iter;
     static int hydrate_flag;
 
