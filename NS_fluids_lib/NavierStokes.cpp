@@ -3737,6 +3737,11 @@ NavierStokes::read_params ()
       //do nothing
      } else
       amrex::Error("use_DCA_local and static_surface_tension conflict");
+
+     if (enable_spectral==0) {
+      //do nothing
+     } else
+      amrex::Error("enable_spectral and static_surface_tension conflict");
 		    
     } else
      amrex::Error("static_surface_tension invalid");

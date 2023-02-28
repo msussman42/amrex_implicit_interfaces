@@ -2460,8 +2460,17 @@ void NavierStokes::increment_face_velocityALL(
   //   (iii) (unew^{c})^{c->f} in compressible regions.
   //   (iv) usolid in solid regions
  if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
+
+  if (enable_spectral==0) {
+   //do nothing
+  } else if (enable_spectral==1) {
+  
    //ngrow,scomp,ncomp
-  minusALL(1,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
+   minusALL(1,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
+
+  } else
+   amrex::Error("enable_spectral invalid");
+
  }
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -2616,9 +2625,16 @@ void NavierStokes::increment_face_velocity(
   //   (iv) usolid in solid regions
  } else if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
 
-  debug_ngrow(ADVECT_REGISTER_MF,1,local_caller_string);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-   debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,local_caller_string);
+  if (enable_spectral==0) {
+   //do nothing
+  } else if (enable_spectral==1) {
+
+   debug_ngrow(ADVECT_REGISTER_MF,1,local_caller_string);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
+    debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,local_caller_string);
+
+  } else
+   amrex::Error("enable_spectral invalid");
 
   if ((project_option==SOLVETYPE_PRES)|| //is_zalesak()==FALSE
       (project_option==SOLVETYPE_INITPROJ)) {//is_zalesak()==TRUE
@@ -2757,8 +2773,20 @@ void NavierStokes::increment_face_velocity(
    MultiFab* U_old;
 
    if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) { 
-    Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
-    U_old=localMF[ADVECT_REGISTER_MF];
+
+    if (enable_spectral==0) {
+
+     Umac_old=&Umac_new;
+     U_old=localMF[CURRENT_CELL_VEL_MF];
+
+    } else if (enable_spectral==1) {
+
+     Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
+     U_old=localMF[ADVECT_REGISTER_MF];
+
+    } else
+     amrex::Error("enable_spectral invalid");
+
    } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)|| 
               (operation_flag==OP_UNEW_USOL_MAC_TO_MAC)|| 
               (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)) {
