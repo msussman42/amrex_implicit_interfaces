@@ -11051,7 +11051,7 @@ stop
        xp,DIMS(xp), & 
        yp,DIMS(yp), & 
        zp,DIMS(zp), &  
-       xvel,DIMS(xvel), &
+       xvel,DIMS(xvel), & 
        yvel,DIMS(yvel), &
        zvel,DIMS(zvel), &
        xface,DIMS(xface), & !local_face_var_mf
