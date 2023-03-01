@@ -11051,7 +11051,7 @@ stop
        xp,DIMS(xp), & 
        yp,DIMS(yp), & 
        zp,DIMS(zp), &  
-       xvel,DIMS(xvel), & 
+       xvel,DIMS(xvel), &
        yvel,DIMS(yvel), &
        zvel,DIMS(zvel), &
        xface,DIMS(xface), & !local_face_var_mf
@@ -13106,7 +13106,7 @@ stop
        !  OP_U_COMP_CELL_MAC_TO_MAC
        xgp,DIMS(xgp), & 
        xp,DIMS(xp), & ! holds AMRSYNC_PRES if OP_PRESGRAD_MAC
-       xvel,DIMS(xvel), &
+       xvel,DIMS(xvel), & !Umac_new
        vel,DIMS(vel), & !primary_velfab coming from increment_face_vel
         ! hydrostatic pressure if OP_POTGRAD_TO_MAC
        pres,DIMS(pres), & ! U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
@@ -13882,6 +13882,7 @@ stop
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
           enddo
+           !Umac_new
           local_vel_MAC=xvel(D_DECL(i,j,k),1)
           if ((operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
@@ -14400,15 +14401,17 @@ stop
                 else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
                  if (local_compressible.eq.0) then
                   velcomp=1
-                  primary_velmaterial=local_vel_MAC ! UMAC^{ADVECT}
-                  secondary_velmaterial=local_vel_MAC ! UMAC^{ADVECT}
+                   !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
+                  primary_velmaterial=local_vel_MAC
+                  secondary_velmaterial=local_vel_MAC
                  else if (local_compressible.eq.1) then
                   ! UMAC^{ADVECT}= 
                   !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
                   velcomp=dir+1
                    !secondary_velfab 
-                   !secondary_vel_data=CURRENT_CELL_VEL_MF; 
+                   !mgoni=secondary_vel_data=CURRENT_CELL_VEL_MF; 
                   primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
+                  secondary_velmaterial=primary_velmaterial
                  else
                   print *,"local_compressible invalid"
                   stop

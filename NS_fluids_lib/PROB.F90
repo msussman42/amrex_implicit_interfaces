@@ -13562,6 +13562,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
            if (nc.eq.1) then
             if (scomp.eq.dir) then
+              !if OP_U_COMP_CELL_MAC_TO_MAC:
+              !vel=primary_velfab=DELTA_CELL_VEL_MF
              local_data(isten+1)=vel(D_DECL(ic,jc,kc),scomp)
             else
              print *,"scomp invalid(OP_UNEW, or OP_U_COMP, or OP_UMAC)"
@@ -14281,6 +14283,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
            if (spectral_loop.eq.0) then
 
+             !xgp=Umac_old if OP_U_COMP_CELL_MAC_TO_MAC
             shared_face_value=xgp(D_DECL(ic,jc,kc),dcomp)+ &
               local_interp(isten+1)
 
