@@ -2735,6 +2735,9 @@ void NavierStokes::increment_face_velocity(
      (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)||
      (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
 
+   //primary_vel_data=DELTA_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
+   //secondary_vel_data=CURRENT_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
+
   if (level<finest_level) {
    avgDown_and_Copy_localMF(
      primary_vel_data,  // idx_den_MF
@@ -2854,6 +2857,9 @@ void NavierStokes::increment_face_velocity(
        //  init_FSI_GHOST_MAC_MF_ALL(caller_string)
       FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
 
+      //primary_vel_data=DELTA_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
+      //secondary_vel_data=CURRENT_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
+
       FArrayBox& primary_velfab=(*localMF[primary_vel_data])[mfi];
       FArrayBox& secondary_velfab=(*localMF[secondary_vel_data])[mfi];
 
@@ -2932,9 +2938,11 @@ void NavierStokes::increment_face_velocity(
        ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
        xface.dataPtr(),
        ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
-       xgp.dataPtr(),ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //holds Umac_old
+       xgp.dataPtr(),
+       ARLIM(xgp.loVect()),ARLIM(xgp.hiVect()), //holds Umac_old
        xp.dataPtr(),ARLIM(xp.loVect()),ARLIM(xp.hiVect()), //xp(holds AMRSYNC)
-       xvel.dataPtr(),ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
+       xvel.dataPtr(), //Umac_new
+       ARLIM(xvel.loVect()),ARLIM(xvel.hiVect()), 
        primary_velfab.dataPtr(), // vel
        ARLIM(primary_velfab.loVect()),ARLIM(primary_velfab.hiVect()),
        pres.dataPtr(dir), // pres holds U_old
