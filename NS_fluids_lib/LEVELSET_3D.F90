@@ -13297,11 +13297,9 @@ stop
       REAL_T vol_local(2)
       REAL_T den_local(2)
       REAL_T velsum_primary
-      REAL_T velsum_secondary
       REAL_T mass_sum
       REAL_T DMface
       REAL_T primary_velmaterial
-      REAL_T secondary_velmaterial
       REAL_T velmaterialMAC
       REAL_T solid_velocity
       INTEGER_T mask_covered(2)
@@ -14329,7 +14327,6 @@ stop
                  (test_current_icemask.eq.one)) then
 
               velsum_primary=zero
-              velsum_secondary=zero
               mass_sum=zero
 
               do side=1,2
@@ -14360,30 +14357,27 @@ stop
                  stop
                 endif
 
-                 !primary_vel_data=CURRENT_CELL_VEL_MF; 
-                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
+                 !primary_vel_data="vel"=CURRENT_CELL_VEL_MF; 
+                 !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 if (operation_flag.eq.OP_UNEW_CELL_TO_MAC) then ! cell -> MAC
                  velcomp=dir+1
                  primary_velmaterial=vel(D_DECL(ic,jc,kc),velcomp)
-                 secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
 
-                 !primary_vel_data=CURRENT_CELL_VEL_MF; 
-                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
+                 !primary_vel_data="vel"=CURRENT_CELL_VEL_MF; 
+                 !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then 
                  velcomp=1
                  primary_velmaterial=local_vel_MAC
-                 secondary_velmaterial=local_vel_MAC
 
-                 !primary_vel_data=idx_velcell;  // increment
-                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
+                 !primary_vel_data="vel"=idx_velcell;  // increment
+                 !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then
                  velcomp=dir+1
                   ! local_vel_MAC=xvel
                   ! local_vel_old_MAC=xgp (a copy of xvel)
                  velmaterialMAC=local_vel_old_MAC
-                  !secondary_velfab 
-                  !secondary_vel_data=CURRENT_CELL_VEL_MF; 
-                 secondary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp)
+
+                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
 
                  primary_velmaterial= &
                    velmaterialMAC+beta*vel(D_DECL(ic,jc,kc),velcomp)
@@ -14396,22 +14390,19 @@ stop
                  endif
 
                  !called after advection to update u^{advect,MAC}
-                 !primary_vel_data=DELTA_CELL_VEL_MF; 
-                 !secondary_vel_data=CURRENT_CELL_VEL_MF; 
+                 !primary_vel_data="vel"=DELTA_CELL_VEL_MF; 
+                 !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
                  if (local_compressible.eq.0) then
                   velcomp=1
                    !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
                   primary_velmaterial=local_vel_MAC
-                  secondary_velmaterial=local_vel_MAC
                  else if (local_compressible.eq.1) then
                   ! UMAC^{ADVECT}= 
                   !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
                   velcomp=dir+1
-                   !secondary_velfab 
-                   !mgoni=secondary_vel_data=CURRENT_CELL_VEL_MF; 
+                   !"mgoni"=secondary_vel_data=CURRENT_CELL_VEL_MF; 
                   primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
-                  secondary_velmaterial=primary_velmaterial
                  else
                   print *,"local_compressible invalid"
                   stop
@@ -14432,7 +14423,6 @@ stop
 
                 mass_sum=mass_sum+DMface
                 velsum_primary=velsum_primary+DMface*primary_velmaterial
-                velsum_secondary=velsum_secondary+DMface*secondary_velmaterial
 
                enddo ! im=1..num_materials
 

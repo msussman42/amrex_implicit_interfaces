@@ -13022,6 +13022,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                     (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
+             !if OP_UNEW_CELL_TO_MAC:
+             !primary_vel_data="vel"=CURRENT_CELL_VEL_MF; 
+             !if OP_UMAC_PLUS_VISC_CELL_TO_MAC:
+             !primary_vel_data="vel"=idx_velcell;  // increment
+             !if OP_U_COMP_CELL_MAC_TO_MAC:
+             !primary_vel_data="vel"=DELTA_CELL_VEL_MF; 
+
             if (nc.eq.1) then
              if (scomp.eq.dir) then
               local_data_side(side)=vel(D_DECL(ic,jc,kc),scomp)
