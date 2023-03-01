@@ -1167,7 +1167,7 @@ subroutine EOS_CRYOGENIC_TANK_MK(rho,massfrac_var, &
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then  ! material 2 is vapor
    if (imattype.eq.TANK_MK_MATERIAL_TYPE) then
-    ! p = rho (gamme-1) U
+    ! p = rho (gamma-1) U
     pressure=rho * (TANK_MK_GAS_GAMMA-one) * internal_energy
    else
     print *,"imattype= ",imattype
@@ -1567,6 +1567,8 @@ if ((num_materials.eq.3).and. &
      ! do nothing
     else
      print *,"mismatch between TANK_MK_R_UNIV and fort_R_Palmore_Desjardins"
+     print *,"TANK_MK_R_UNIV=",TANK_MK_R_UNIV
+     print *,"fort_R_Palmore_Desjardins=",fort_R_Palmore_Desjardins
      stop
     endif
     LL=get_user_latent_heat(1,293.0d0,1)
@@ -1585,6 +1587,21 @@ if ((num_materials.eq.3).and. &
      print *,"reference pressure=",fort_reference_pressure(1)
      print *,"modify reference pressure to be: ", &
         fort_reference_pressure(1)*pressure/Pgamma
+     print *,"im=",im
+     print *,"fort_R_Palmore_Desjardins=",fort_R_Palmore_Desjardins
+     print *,"den=",den
+     print *,"temperature=",temperature
+     print *,"fort_stiffCV(2)=",fort_stiffCV(2)
+     print *,"TANK_MK_GAS_CV=",TANK_MK_GAS_CV
+     print *,"internal_energy (e=cv T)=",internal_energy
+     print *,"TANK_MK_GAS_CP=",TANK_MK_GAS_CP
+     print *,"fort_stiffCP(2)=",fort_stiffCP(2)
+     print *,"TANK_MK_GAS_GAMMA=",TANK_MK_GAS_GAMMA
+     print *,"pressure=rho (gamma-1) e= ",pressure
+     print *,"latent heat= ",LL
+     print *,"fort_saturation_temp(1)=",fort_saturation_temp(1)
+     print *,"fort_molar_mass(2)=",fort_molar_mass(2)
+     print *,"P_Clausius=Pref*exp(-L*W/R)*(1/Tgamma-1/TSAT)=",Pgamma
      stop
     endif
              
