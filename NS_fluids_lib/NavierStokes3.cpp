@@ -354,7 +354,13 @@ void NavierStokes::static_surface_tension_advection() {
     //for viscosity use quasi_static_dt_slab and 
     //make sure solid velocity=0 in
     //FSI regions and prescribed
+  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
   multiphase_project(SOLVETYPE_PRESSTATIC);
+  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
+
+
+
+
 
   cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
  } // while (quasi_static_reached==0) 
@@ -365,7 +371,7 @@ void NavierStokes::static_surface_tension_advection() {
 
  Copy_array(GET_NEW_DATA_OFFSET+State_Type,UCELL_SAVE_MF,
     0,STATECOMP_VEL,AMREX_SPACEDIM,1);
- delete_array(PRESSURE_SAVE_MF);
+ delete_array(UCELL_SAVE_MF);
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_SAVE_MF+dir,0,0,1,0);
@@ -383,9 +389,27 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  if (pattern_test(local_caller_string,"static_surface_tension")==1) {
   advection_dt_slab=quasi_static_dt_slab;
+  advect_time_slab=cur_time_slab;
+  vel_time_slab=cur_time_slab;
+
   local_static_flag=1;
+
+  if (enable_spectral==0) {
+   //do nothing
+  } else 
+   amrex::Error("expecting enable_spectral==0");
+
  } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
   advection_dt_slab=dt_slab;
+  advect_time_slab=prev_time_slab;
+
+  if (divu_outer_sweeps==0) 
+   vel_time_slab=prev_time_slab;
+  else if (divu_outer_sweeps>0)
+   vel_time_slab=cur_time_slab;
+  else
+   amrex::Error("divu_outer_sweeps invalid nonlinear_advection");
+
   local_static_flag=0;
  } else
   amrex::Error("caller is invalid in nonlinear_advection");
@@ -496,7 +520,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  int normdir_here=normdir_direct_split[dir_absolute_direct_split];
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
- advect_time_slab=prev_time_slab;
 
  if (enable_spectral==0) {
   //do nothing
@@ -559,7 +582,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
     //move_particles() declared in NavierStokes2.cpp
-   ns_level.move_particles(localPC);
+   ns_level.move_particles(localPC,local_caller_string);
   }
 
   lev_min=0;
@@ -578,6 +601,42 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  VOF_Recon_ALL(1,advect_time_slab,update_flag,
   init_vof_prev_time,SLOPE_RECON_MF);
 
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.prepare_displacement();
+ } // ilev
+
+ if (local_static_flag==0) {
+  //do nothing
+ } else if (local_static_flag==1) {
+
+  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
+    0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+  delete_array(PRESSURE_SAVE_MF);
+
+  //ngrow,ncomp,grid_type
+  allocate_array(1,AMREX_SPACEDIM,-1,UCELL_STATIC_MF);
+  Copy_array(UCELL_STATIC_MF,GET_NEW_DATA_OFFSET+State_Type,
+   STATECOMP_VEL,0,AMREX_SPACEDIM,1);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //ngrow,ncomp,grid_type
+   allocate_array(0,1,dir,UMAC_STATIC_MF+dir);
+   Copy_array(UMAC_STATIC_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
+  }
+
+  Copy_array(GET_NEW_DATA_OFFSET+State_Type,UCELL_SAVE_MF,
+    0,STATECOMP_VEL,AMREX_SPACEDIM,1);
+  delete_array(UCELL_SAVE_MF);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_SAVE_MF+dir,0,0,1,0);
+   delete_array(UMAC_SAVE_MF+dir);
+  }
+
+ } else
+  amrex::Error("local_static_flag invalid"); 
+
  for (dir_absolute_direct_split=0;
       dir_absolute_direct_split<AMREX_SPACEDIM;
       dir_absolute_direct_split++) {
@@ -589,7 +648,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    init_vof_prev_time=0;
 
    if (dir_absolute_direct_split==0) {
-    advect_time_slab=prev_time_slab;
+
+    //do nothing
+
    } else if ((dir_absolute_direct_split>0)&&
               (dir_absolute_direct_split<AMREX_SPACEDIM)) {
 
@@ -782,6 +843,41 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    -1, // data_dir==-1
    parent->levelSteps(0)); 
  }
+
+ if (local_static_flag==0) {
+  //do nothing
+ } else if (local_static_flag==1) {
+
+  //ngrow,ncomp,grid_type
+  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
+  Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
+   STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+  //ngrow,scomp,ncomp
+  setVal_array(1,STATECOMP_PRES,STATE_NCOMP_PRES,0.0,
+   GET_NEW_DATA_OFFSET+State_Type);
+
+  //ngrow,ncomp,grid_type
+  allocate_array(1,AMREX_SPACEDIM,-1,UCELL_SAVE_MF);
+  Copy_array(UCELL_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
+   STATECOMP_VEL,0,AMREX_SPACEDIM,1);
+
+  Copy_array(GET_NEW_DATA_OFFSET+State_Type,UCELL_STATIC_MF,
+    0,STATECOMP_VEL,AMREX_SPACEDIM,1);
+  delete_array(UCELL_STATIC_MF);
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //ngrow,ncomp,grid_type
+   allocate_array(0,1,dir,UMAC_SAVE_MF+dir);
+   Copy_array(UMAC_SAVE_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
+  }
+
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_STATIC_MF+dir,0,0,1,0);
+   delete_array(UMAC_STATIC_MF+dir);
+  }
+
+ } else
+  amrex::Error("local_static_flag invalid"); 
 
 }  // end subroutine nonlinear_advection
 

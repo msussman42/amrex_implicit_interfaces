@@ -346,7 +346,7 @@ public:
 
     void prepare_mask_nbr(int ngrow);
     void resize_mask_nbr(int ngrow);
-    void prepare_displacement(int mac_grow);
+    void prepare_displacement();
 
     // VAHAB HEAT SOURCE
     void heat_source_term_flux_source();
@@ -994,7 +994,8 @@ protected:
     void prescribe_solid_geometry(Real time,int renormalize_only);
 
     void move_particles(
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC);
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
+      const std::string& caller_string);
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 

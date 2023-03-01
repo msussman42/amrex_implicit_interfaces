@@ -6729,7 +6729,23 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
 }  // end subroutine prescribe_solid_geometry()
 
 void NavierStokes::move_particles(
-  AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC) {
+  AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
+  const std::string& caller_string) {
+
+ std::string local_caller_string="move_particles";
+ local_caller_string=caller_string+local_caller_string;
+
+ if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+
+  if (enable_spectral==0) {
+   //do nothing
+  } else 
+   amrex::Error("expecting enable_spectral==0");
+
+ } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
+  //do nothing
+ } else
+  amrex::Error("caller is invalid in move_particles");
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
@@ -6752,14 +6768,7 @@ void NavierStokes::move_particles(
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
-
- if (divu_outer_sweeps==0)
-  vel_time_slab=prev_time_slab;
- else if (divu_outer_sweeps>0)
-  vel_time_slab=cur_time_slab;
- else
-  amrex::Error("divu_outer_sweeps invalid move_particles");
-
+ 
  if (particles_flag==1) {
 
   if ((num_materials_viscoelastic>=0)&&
@@ -6845,7 +6854,7 @@ void NavierStokes::move_particles(
      xlo,dx,
      particles_AoS.data(),
      Np,  // pass by value
-     &dt_slab, //move_particle_container
+     &advection_dt_slab, //move_particle_container
      &vel_time_slab,
      xvelfab.dataPtr(),
      ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
