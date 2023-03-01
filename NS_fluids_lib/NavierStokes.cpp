@@ -12821,21 +12821,14 @@ NavierStokes::prepare_mask_nbr(int ngrow) {
 } // end subroutine prepare_mask_nbr(int ngrow)
 
 void 
-NavierStokes::prepare_displacement(int mac_grow) {
+NavierStokes::prepare_displacement() {
  
  bool use_tiling=ns_tiling;
 
- if (divu_outer_sweeps==0)
-  vel_time_slab=prev_time_slab;
- else if (divu_outer_sweeps>0)
-  vel_time_slab=cur_time_slab;
- else
-  amrex::Error("divu_outer_sweeps invalid prepare_displacement");
-
- int mac_grow_expect=2;
-
- if (mac_grow!=mac_grow_expect)
-  amrex::Error("mac_grow invalid in prepare_displacement");
+  // 2 ghost cells needed in order to define the displacement MAC
+  // velocity for left/right strip of a MAC grid control volume
+  // being transported into a target MAC grid control volume.
+ int mac_grow=2;
 
  int finest_level=parent->finestLevel();
 
@@ -12846,13 +12839,13 @@ NavierStokes::prepare_displacement(int mac_grow) {
 
    // MAC_VELOCITY_MF deleted towards the end of 
    //   NavierStokes::nonlinear_advection
-   // velocity * dt
+   // velocity * advection_dt_slab
   new_localMF(MAC_VELOCITY_MF+normdir,1,mac_grow,normdir);
 
   const Real* dx = geom.CellSize();
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
-  // 1. multiply velocity by dt.  
+  // 1. multiply velocity by advection_dt_slab.  
   // 2. adjust velocity if RZ.  
   // 3. override velocity if it is a passive advection problem.
   // 4. copy into mac_velocity
@@ -12897,7 +12890,7 @@ NavierStokes::prepare_displacement(int mac_grow) {
      fablo,fabhi,
      &bfact,
      velbc.dataPtr(),
-     &dt_slab,//fort_velmac_override
+     &advection_dt_slab,//fort_velmac_override
      &prev_time_slab,
      &prescribed_vel_time_slab,
      &vel_time_slab,
@@ -12921,7 +12914,6 @@ NavierStokes::prepare_displacement(int mac_grow) {
 } // omp
 
   ns_reconcile_d_num(LOOP_VELMAC_OVERRIDE,"prepare_displacement");
-
 
   delete temp_mac_velocity;
 
@@ -16958,10 +16950,6 @@ NavierStokes::split_scalar_advection() {
  int ngrow_mass=2;
  int ngrow_scalar=1;
 
-  // 2 ghost cells needed in order to define the displacement MAC
-  // velocity for left/right strip of a MAC grid control volume
-  // being transported into a target MAC grid control volume.
- int mac_grow=2; 
  int ngrow_mac_old=2;
 
  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
@@ -16998,14 +16986,6 @@ NavierStokes::split_scalar_advection() {
  const int* b_rec=descbc.vect();
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombc[m]=b_rec[m];
-
- vel_time_slab=prev_time_slab;
- if (divu_outer_sweeps==0) 
-  vel_time_slab=prev_time_slab;
- else if (divu_outer_sweeps>0)
-  vel_time_slab=cur_time_slab;
- else
-  amrex::Error("divu_outer_sweeps invalid split_scalar_advection");
 
   // in: split_scalar_advection
  getStateDen_localMF(DEN_RECON_MF,ngrow_mass,advect_time_slab);
@@ -17057,7 +17037,7 @@ NavierStokes::split_scalar_advection() {
 
  if (dir_absolute_direct_split==0) {
 
-  prepare_displacement(mac_grow);
+  // do nothing
 
  } else if ((dir_absolute_direct_split>=1)&&
             (dir_absolute_direct_split<AMREX_SPACEDIM)) {
@@ -17393,7 +17373,7 @@ NavierStokes::split_scalar_advection() {
    fablo,fabhi,
    &bfact,
    &bfact_f,
-   &dt_slab, // fort_vfrac_split
+   &advection_dt_slab, // fort_vfrac_split
    &prev_time_slab,
    &cur_time_slab,
    &prescribed_vel_time_slab,

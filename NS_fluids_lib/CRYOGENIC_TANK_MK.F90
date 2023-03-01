@@ -1601,7 +1601,7 @@ if ((num_materials.eq.3).and. &
      print *,"latent heat= ",LL
      print *,"fort_saturation_temp(1)=",fort_saturation_temp(1)
      print *,"fort_molar_mass(2)=",fort_molar_mass(2)
-     print *,"P_Clausius=Pref*exp(-L*W/R)*(1/Tgamma-1/TSAT)=",Pgamma
+     print *,"P_Clausius=Pref*exp(-(L*W/R)*(1/Tgamma-1/TSAT))=",Pgamma
      stop
     endif
              

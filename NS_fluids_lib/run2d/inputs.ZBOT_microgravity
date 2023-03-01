@@ -29,7 +29,7 @@ ns.num_species_var  = 0
 
 
 # Clausius Clapyron:
-# P_gamma=P_ref * e^{(1/R)(1/T_ref-1/T_gamma)=P_{CC}(T_gamma)
+# P_gamma=P_ref * e^{(L*w/R)(1/T_ref-1/T_gamma)=P_{CC}(T_gamma)
 # P=density (cp-cv) T  equation of state in the gas
 # 1. density in the gas and liquid satisfies:
 #    density=density_{0}(time) * (1-beta*(T-T_{0}))
@@ -306,13 +306,15 @@ ns.freezing_model=      6 0 0 0 0 0
 # Tanasawa_or_Schrage_or_Kassemi=3 => Kassemi
 ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
 
+# CP-CV=R/w
+# PEOS=rho(gamma-1)cv T=rho(CP-CV)T=rho R T/w
 # if initial temperature is 295.41 Kelvin,
 # find P_ref so that
 # P_gamma=P_{CC}(T_gamma)  T_gamma=295.41 P_gamma=PEOS(T_gamma)
-# i.e. density_init_vapor * R * 295.41 = P_CC(295.41)
+# i.e. density_init_vapor * (R/w) * 295.41 = P_CC(295.41)
 # i.e.
-# density_init_vapor * R * 295.41=
-#    P_ref * e^{(1/R)(1/T_ref-1/T_gamma)
+# density_init_vapor * (R/w) * 295.41=
+#    P_ref * e^{(L*w/R)(1/T_ref-1/T_gamma)
 # The phase-change saturation temperature and pressure are calculated
 # from Clausius–Clapeyron relation. The "reference" temprature and
 # pressure are given below.
