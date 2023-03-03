@@ -309,9 +309,11 @@ implicit none
 ! deleted December 18, 2022:
 !   fort_damping_coefficient
 ! added January 22, 2023:
-!   fort_static_surface_tension
+!   fort_static_surface_tension_duration
 ! added January 28, 2023:
 !   fort_static_viscosity
+! added March 3, 2023:
+!   fort_static_tension
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1

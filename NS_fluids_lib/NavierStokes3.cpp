@@ -264,10 +264,10 @@ void NavierStokes::static_surface_tension_advection() {
 
  std::string local_caller_string="static_surface_tension_advection";
 
- if (static_surface_tension==1) {
+ if (static_surface_tension_duration>0.0) {
   //do nothing
  } else
-  amrex::Error("static_surface_tension invalid");
+  amrex::Error("static_surface_tension_duration invalid");
 
  int finest_level=parent->finestLevel();
  if (level!=0)
@@ -387,7 +387,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  int local_static_flag=0;
 
- if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+ if (pattern_test(local_caller_string,"static_surface_tension_ad")==1) {
   advection_dt_slab=quasi_static_dt_slab;
   advect_time_slab=cur_time_slab;
   vel_time_slab=cur_time_slab;
@@ -2766,19 +2766,19 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       nonlinear_advection(local_caller_string);
 
-      if (static_surface_tension==1) {
+      if (static_surface_tension_duration>0.0) {
        static_surface_tension_advection();
-      } else if (static_surface_tension==0) {
+      } else if (static_surface_tension_duration==0.0) {
        //do nothing
       } else
-       amrex::Error("static_surface_tension invalid");
+       amrex::Error("static_surface_tension_duration invalid");
 
      } else if (disable_advection==1) {
       
-      if (static_surface_tension==0) {
+      if (static_surface_tension_duration==0.0) {
        //do nothing
       } else
-       amrex::Error("expecting static_surface_tension==0 if adv disabled");
+       amrex::Error("expecting static_surface_tension_duration==0.0");
 
       if (enable_spectral==0) {
        //do nothing
@@ -9774,35 +9774,16 @@ void NavierStokes::multiphase_project(int project_option) {
 
    if (segregated_gravity_flag==1) {
 
-    if (static_surface_tension==0) {
-     potgrad_surface_tension_mask=POTGRAD_SURFTEN;
-    } else if (static_surface_tension==1) {
-     potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
-    } else
-     amrex::Error("static_surface_tension invalid");
+    potgrad_surface_tension_mask=POTGRAD_SURFTEN;
 
    } else if (segregated_gravity_flag==0) {
 
-    if (static_surface_tension==0) {
-
-     if (incremental_gravity_flag==1) {
-      potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
-     } else if (incremental_gravity_flag==0) {
-      potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
-     } else
-      amrex::Error("incremental_gravity_flag invalid");
-
-    } else if (static_surface_tension==1) {
-
-     if (incremental_gravity_flag==1) {
-      potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
-     } else if (incremental_gravity_flag==0) {
-      potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
-     } else
-      amrex::Error("incremental_gravity_flag invalid");
-
+    if (incremental_gravity_flag==1) {
+     potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
+    } else if (incremental_gravity_flag==0) {
+     potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
     } else
-     amrex::Error("static_surface_tension invalid");
+     amrex::Error("incremental_gravity_flag invalid");
 
    } else
     amrex::Error("segregated_gravity_flag invalid");
@@ -9818,7 +9799,7 @@ void NavierStokes::multiphase_project(int project_option) {
   if (potgrad_surface_tension_mask==POTGRAD_NULLOPTION) {
    // do nothing
   } else if (potgrad_surface_tension_mask!=POTGRAD_NULLOPTION) {
-   process_potential_forceALL(potgrad_surface_tension_mask);
+   process_potential_forceALL(potgrad_surface_tension_mask,project_option);
   } else
    amrex::Error("potgrad_surface_tension_mask invalid");
 

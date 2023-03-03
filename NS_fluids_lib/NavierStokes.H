@@ -182,8 +182,10 @@ public:
       const std::string& pattern);
 
     void deallocate_potential_forceALL();
-    void process_potential_forceALL(int potgrad_surface_tension_mask);
-    void process_potential_force_face(int potgrad_surface_tension_mask);
+    void process_potential_forceALL(int potgrad_surface_tension_mask,
+      int project_option);
+    void process_potential_force_face(int potgrad_surface_tension_mask,
+      int project_option);
     void init_gravity_potential();
 
     void GetDragALL();

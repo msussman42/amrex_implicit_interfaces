@@ -4983,11 +4983,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine fixed_face
 
-      subroutine merge_levelset(xpos,time,LS,LS_merge)
+      subroutine merge_levelset(xpos,time,LS,LS_merge,static_flag)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
+      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: LS(num_materials)
@@ -5019,12 +5020,22 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              print *,"iten invalid"
              stop
             endif
-            call get_user_tension( &
-             xpos,time,fort_tension,user_tension,def_thermal)
+
+            if (static_flag.eq.0) then
+             call get_user_tension( &
+              xpos,time,fort_tension,user_tension,def_thermal)
+            else if (static_flag.eq.1) then
+             user_tension(iten)=fort_static_tension(iten)
+            else
+             print *,"static_flag invalid"
+             stop
+            endif
+
             if (user_tension(iten).eq.zero) then
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
-             LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+             LH2= &
+               get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               call get_primary_material(LS,im_primary)
               call get_secondary_material(LS,im_primary,im_secondary)
@@ -5130,11 +5141,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine merge_levelset
 
 
-      subroutine merge_normal(xpos,time,LS,nrm,nrm_merge)
+      subroutine merge_normal(xpos,time,LS,nrm,nrm_merge,static_flag)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
+      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: LS(num_materials)
@@ -5164,8 +5176,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (im_opp.ne.im) then
            if (is_rigid(im_opp).eq.0) then
             call get_iten(im,im_opp,iten)
-            call get_user_tension( &
-             xpos,time,fort_tension,user_tension,def_thermal)
+
+            if (static_flag.eq.0) then
+             call get_user_tension( &
+              xpos,time,fort_tension,user_tension,def_thermal)
+            else if (static_flag.eq.1) then
+             user_tension(iten)=fort_static_tension(iten)
+            else
+             print *,"static_flag invalid"
+             stop
+            endif
+
             if (user_tension(iten).eq.zero) then
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
@@ -5286,11 +5307,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine merge_normal
 
 
-      subroutine merge_vof(xpos,time,vof,vof_merge)
+      subroutine merge_vof(xpos,time,vof,vof_merge,static_flag)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
+      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: vof(num_materials)
@@ -5313,8 +5335,17 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           if (im_opp.ne.im) then
            if (is_rigid(im_opp).eq.0) then
             call get_iten(im,im_opp,iten)
-            call get_user_tension( &
-             xpos,time,fort_tension,user_tension,def_thermal)
+
+            if (static_flag.eq.0) then
+             call get_user_tension( &
+              xpos,time,fort_tension,user_tension,def_thermal)
+            else if (static_flag.eq.1) then
+             user_tension(iten)=fort_static_tension(iten)
+            else
+             print *,"static_flag invalid"
+             stop
+            endif
+
             if (user_tension(iten).eq.zero) then
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
@@ -5366,12 +5397,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          xpos,time, &
          LSleft,LSright,gradh, &
          im_opp,im, &
-         imL,imR)
+         imL,imR, &
+         static_flag)
 
       use global_utility_module
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(out) :: im_opp,im
@@ -5386,8 +5419,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call merge_levelset(xpos,time,LSleft,LSleft_merge)
-      call merge_levelset(xpos,time,LSright,LSright_merge)
+      call merge_levelset(xpos,time,LSleft,LSleft_merge,static_flag)
+      call merge_levelset(xpos,time,LSright,LSright_merge,static_flag)
 
       call get_primary_material(LSleft_merge,imL)
       call get_primary_material(LSright_merge,imR)
