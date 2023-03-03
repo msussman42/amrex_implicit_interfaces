@@ -728,101 +728,113 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 //    b. init U,T in the solid regions.
 //    c. extrapolate F,X,LS from fluid regions into solid regions.
 
- if (read_from_CAD()==1) {
+ if (local_static_flag==0) {
 
-  renormalize_only=1;
-  init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
+  if (read_from_CAD()==1) {
 
-  int fast_mode=0;
-  setup_integrated_quantities();
-  volWgtSumALL(local_caller_string,fast_mode);
+   renormalize_only=1;
+   init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
-  if (ok_copy_FSI_old_to_new()==1) {
+   int fast_mode=0;
+   setup_integrated_quantities();
+   volWgtSumALL(local_caller_string,fast_mode);
 
-   copy_old_FSI_to_new();
+   if (ok_copy_FSI_old_to_new()==1) {
 
-  } else if (ok_copy_FSI_old_to_new()==0) {
+    copy_old_FSI_to_new();
 
-   int iter=0;
-   int FSI_operation=4; // eul vel t=cur_time_slab -> structure vel
-   int FSI_sub_operation=0;
-   for (FSI_sub_operation=0;FSI_sub_operation<3;FSI_sub_operation++) {
+   } else if (ok_copy_FSI_old_to_new()==0) {
+
+    int iter=0;
+    int FSI_operation=4; // eul vel t=cur_time_slab -> structure vel
+    int FSI_sub_operation=0;
+    for (FSI_sub_operation=0;FSI_sub_operation<3;FSI_sub_operation++) {
+     for (int ilev=level;ilev<=finest_level;ilev++) {
+      NavierStokes& ns_level=getLevel(ilev);
+      ns_level.resize_mask_nbr(ngrow_make_distance);
+      ns_level.ns_header_msg_level(
+       FSI_operation, //=4
+       FSI_sub_operation,
+       cur_time_slab,
+       dt_slab,
+       iter);
+     } // ilev=level..finest_level
+    } // FSI_sub_operation=0,1,2
+
+    // fort_headermsg (SOLIDFLUID.F90)
+    // CLSVOF_ReadNodes (sci_clsvof.F90)
+    // if FSI_flag==FSI_SHOELE_VELVEL or 
+    //    FSI_flag==FSI_SHOELE_PRESVEL, then
+    //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
+    //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
+    //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
+    FSI_operation=1; // update node locations
+    FSI_sub_operation=0;
+    ns_header_msg_level(
+     FSI_operation, //=1
+     FSI_sub_operation, //=0
+     cur_time_slab,
+     dt_slab,iter);
+
+    // convert Lagrangian position, velocity, temperature, and force to
+    // Eulerian.
+    // go from coarsest to finest.
     for (int ilev=level;ilev<=finest_level;ilev++) {
      NavierStokes& ns_level=getLevel(ilev);
-     ns_level.resize_mask_nbr(ngrow_make_distance);
-     ns_level.ns_header_msg_level(
-      FSI_operation, //=4
-      FSI_sub_operation,
-      cur_time_slab,
-      dt_slab,
-      iter);
-    } // ilev=level..finest_level
-   } // FSI_sub_operation=0,1,2
+     ns_level.FSI_make_distance(cur_time_slab,dt_slab);
+    } // ilev
 
-   // fort_headermsg (SOLIDFLUID.F90)
-   // CLSVOF_ReadNodes (sci_clsvof.F90)
-   // if FSI_flag==FSI_SHOELE_VELVEL or 
-   //    FSI_flag==FSI_SHOELE_PRESVEL, then
-   //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
-   //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
-   //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
-   FSI_operation=1; // update node locations
-   FSI_sub_operation=0;
-   ns_header_msg_level(
-    FSI_operation, //=1
-    FSI_sub_operation, //=0
-    cur_time_slab,
-    dt_slab,iter);
+    for (int ilev=level;ilev<=finest_level;ilev++) {
+     NavierStokes& ns_level=getLevel(ilev);
+     ns_level.resize_FSI_MF();
+    }
 
-   // convert Lagrangian position, velocity, temperature, and force to
-   // Eulerian.
-   // go from coarsest to finest.
-   for (int ilev=level;ilev<=finest_level;ilev++) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.FSI_make_distance(cur_time_slab,dt_slab);
-   } // ilev
+   } else
+    amrex::Error("ok_copy_FSI_old_to_new invalid");
 
-   for (int ilev=level;ilev<=finest_level;ilev++) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.resize_FSI_MF();
-   }
-
+  } else if (read_from_CAD()==0) {
+   // do nothing
   } else
-   amrex::Error("ok_copy_FSI_old_to_new invalid");
+   amrex::Error("read_from_CAD() invalid");
 
- } else if (read_from_CAD()==0) {
-  // do nothing
- } else
-  amrex::Error("read_from_CAD() invalid");
+  regenerate_from_eulerian(cur_time_slab);
 
- regenerate_from_eulerian(cur_time_slab);
-
- if (1==0) {
-    // S_new is level 0 data
-  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+  if (1==0) {
+   // S_new is level 0 data
+   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
    // data file name "BEFOREPRESCRIBE<stuff>.plt"
    // xvel,yvel,zvel,pressure,(density, temperature) x num_materials,
    // (VFRAC,centroid) x num_materials, error indicator
-  writeSanityCheckData(
-   "BEFOREPRESCRIBE",
-   "in: NavierStokes::nonlinear_advection, State_Type ", 
-   local_caller_string,
-   State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
-   S_new.nComp(),
-   -1, // data_mf==-1
-   State_Type, //state_type_mf==State_Type
-   -1, // data_dir==-1
-   parent->levelSteps(0)); 
- }
+   writeSanityCheckData(
+    "BEFOREPRESCRIBE",
+    "in: NavierStokes::nonlinear_advection, State_Type ", 
+    local_caller_string,
+    State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
+    S_new.nComp(),
+    -1, // data_mf==-1
+    State_Type, //state_type_mf==State_Type
+    -1, // data_dir==-1
+    parent->levelSteps(0)); 
+  }
 
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
   // made "consistent" amongst the levels.
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
- renormalize_only=0;
- int local_truncate=1;
- prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
+  renormalize_only=0;
+  int local_truncate=1;
+  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
    local_truncate,local_caller_string);
+
+ } else if (local_static_flag==1) {
+
+  renormalize_only=1;
+  int local_truncate=0;
+  prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
+    local_truncate,local_caller_string);
+
+ } else
+  amrex::Error("local_static_flag invalid");
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
