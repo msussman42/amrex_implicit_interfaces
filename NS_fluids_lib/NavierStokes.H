@@ -375,7 +375,7 @@ public:
     static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
 
-    static int static_surface_tension;
+    static Real static_surface_tension_duration;
     static Real static_viscosity;
 
     static Real visc_coef; 
@@ -1660,6 +1660,7 @@ protected:
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;
     static Vector<Real> tension_slope; //should be non-positive
+    static Vector<Real> static_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Vector<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Vector<Real> tension_init; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Real unscaled_min_curvature_radius; //default: 2.0
@@ -1670,6 +1671,7 @@ protected:
     static Vector<Real> outflow_velocity_buffer_size;
 
     static Vector<Real> cap_wave_speed; // num_interfaces components
+    static Vector<Real> static_cap_wave_speed; // num_interfaces components
 
     static Real real_number_of_cells;
 

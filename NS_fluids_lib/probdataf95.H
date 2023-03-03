@@ -71,9 +71,10 @@
       REAL_T fort_speciesconst(MAX_NUM_SPECIES*MAX_NUM_MATERIALS)
       REAL_T fort_speciesviscconst(MAX_NUM_SPECIES*MAX_NUM_MATERIALS)
 
-      INTEGER_T fort_static_surface_tension
+      REAL_T fort_static_surface_tension_duration
       REAL_T fort_static_viscosity
 
+      REAL_T fort_static_tension(MAX_NUM_INTERFACES)
       REAL_T fort_tension(MAX_NUM_INTERFACES)
       REAL_T fort_tension_init(MAX_NUM_INTERFACES)
       REAL_T fort_tension_slope(MAX_NUM_INTERFACES)

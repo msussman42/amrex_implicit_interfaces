@@ -582,12 +582,13 @@ int NavierStokes::idx_scalar_mask_material_mf=-1;
 int NavierStokes::hydrate_flag=0; 
 int NavierStokes::post_init_pressure_solve=1; 
 
-int NavierStokes::static_surface_tension=0;
+Real NavierStokes::static_surface_tension_duration=0.0;
 Real NavierStokes::static_viscosity=0.0;
 
 Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
 Vector<Real> NavierStokes::tension_T0;
+Vector<Real> NavierStokes::static_tension;
 Vector<Real> NavierStokes::tension;
 Vector<Real> NavierStokes::tension_init;
 
@@ -597,6 +598,7 @@ Vector<Real> NavierStokes::recalesce_model_parameters;
 
 Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 
+Vector<Real> NavierStokes::static_cap_wave_speed;
 Vector<Real> NavierStokes::cap_wave_speed;
 
 Vector<Real> NavierStokes::hardwire_Y_gamma;
@@ -1591,8 +1593,10 @@ void fortran_parameters() {
     NavierStokes::num_species_var*NavierStokes::num_materials);
  }
 
- int local_static_surface_tension=NavierStokes::static_surface_tension;
- pp.queryAdd("static_surface_tension",local_static_surface_tension);
+ Real local_static_surface_tension_duration=
+   NavierStokes::static_surface_tension_duration;
+ pp.queryAdd("static_surface_tension_duration",
+   local_static_surface_tension_duration);
 
  Real local_static_viscosity=NavierStokes::static_viscosity;
  local_static_viscosity=NavierStokes::viscconst_max;
@@ -1606,10 +1610,18 @@ void fortran_parameters() {
   tension_T0temp[im]=293.0;
   tension_mintemp[im]=0.0;
  }
+ Vector<Real> static_tensiontemp(NavierStokes::num_interfaces);
+ for (int im=0;im<NavierStokes::num_interfaces;im++) {
+  static_tensiontemp[im]=0.0;
+ }
+
  Vector<Real> tensiontemp(NavierStokes::num_interfaces);
  Vector<Real> tension_inittemp(NavierStokes::num_interfaces);
 
  Vector<Real> prefreeze_tensiontemp(NavierStokes::num_interfaces);
+
+ pp.queryarr("static_tension",static_tensiontemp,0,
+    NavierStokes::num_interfaces);
 
  pp.getarr("tension",tensiontemp,0,NavierStokes::num_interfaces);
  for (int im=0;im<NavierStokes::num_interfaces;im++) {
@@ -1985,8 +1997,9 @@ void fortran_parameters() {
   reference_pressure_temp.dataPtr(),
   molar_mass_temp.dataPtr(),
   species_molar_mass_temp.dataPtr(),
-  &local_static_surface_tension,
+  &local_static_surface_tension_duration,
   &local_static_viscosity,
+  static_tensiontemp.dataPtr(),
   tensiontemp.dataPtr(),
   tension_inittemp.dataPtr(),
   tension_slopetemp.dataPtr(),
@@ -3420,6 +3433,7 @@ NavierStokes::read_params ()
      // (dir,side)  (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
     outflow_velocity_buffer_size.resize(2*AMREX_SPACEDIM);
 
+    static_cap_wave_speed.resize(num_interfaces);
     cap_wave_speed.resize(num_interfaces);
 
     prerecalesce_stiffCP.resize(num_materials);
@@ -3694,16 +3708,16 @@ NavierStokes::read_params ()
     } else
      amrex::Error("mglib_max_ratio invalid");
 
-    pp.get("static_surface_tension",static_surface_tension);
+    pp.get("static_surface_tension_duration",static_surface_tension_duration);
 
     static_viscosity=viscconst_max;
     pp.queryAdd("static_viscosity",static_viscosity);
 
-    if (static_surface_tension==0) {
+    if (static_surface_tension_duration==0.0) {
 
      //do nothing
      
-    } else if (static_surface_tension==1) {
+    } else if (static_surface_tension_duration>0.0) {
 
      if (static_viscosity>0.0) {
       //do nothing
@@ -3722,13 +3736,13 @@ NavierStokes::read_params ()
  	  (law_of_the_wall[i]==1)) {  //high Reynolds number wall model
        //do nothing
       } else
-       amrex::Error("law_of_the_wall and static_surface_tension conflict");
+       amrex::Error("law_of_the_wall,static_surface_tension_duration conflict");
      } //for (int i=0;i<num_materials;i++) {
 
      if (ZEYU_DCA_SELECT==-1) {
       //do nothing
      } else
-      amrex::Error("ZEYU_DCA_SELECT and static_surface_tension conflict");
+      amrex::Error("ZEYU_DCA_SELECT,static_surface_tension_duration conflict");
 
      int use_DCA_local=-1;
      get_use_DCA(&use_DCA_local);
@@ -3736,15 +3750,19 @@ NavierStokes::read_params ()
          (use_DCA_local==0)) {  // Yongsheng's static case.
       //do nothing
      } else
-      amrex::Error("use_DCA_local and static_surface_tension conflict");
+      amrex::Error("use_DCA_local,static_surface_tension_duration conflict");
 
      if (enable_spectral==0) {
       //do nothing
      } else
-      amrex::Error("enable_spectral and static_surface_tension conflict");
+      amrex::Error("enable_spectral,static_surface_tension_duration conflict");
 		    
     } else
-     amrex::Error("static_surface_tension invalid");
+     amrex::Error("static_surface_tension_duration invalid");
+
+    for (int iten=0;iten<num_interfaces;iten++)
+     static_tension[iten]=0.0;
+    pp.queryarr("static_tension",static_tension,0,num_interfaces);
 
     pp.getarr("tension",tension,0,num_interfaces);
 
@@ -3769,6 +3787,7 @@ NavierStokes::read_params ()
      tension_slope[i]=0.0;
      tension_T0[i]=293.0;
      tension_min[i]=0.0;
+     static_cap_wave_speed[i]=0.0;
      cap_wave_speed[i]=0.0;
     }
 
@@ -4386,15 +4405,15 @@ NavierStokes::read_params ()
     } else
      amrex::Error("disable_advection invalid 1");
 
-    if (static_surface_tension==1) {
+    if (static_surface_tension_duration>0.0) {
      if (disable_advection==0) {
       //do nothing
      } else
-      amrex::Error("expecting disable_advection=0 if static_surf_ten=1");
-    } else if (static_surface_tension==0) {
+      amrex::Error("expecting disable_advection=0 if static_surf_ten_dur>0.0");
+    } else if (static_surface_tension_duration==0.0) {
      //do nothing
     } else
-     amrex::Error("static_surface_tension invalid");
+     amrex::Error("static_surface_tension_duration invalid");
 
     pp.queryAdd("disable_pressure_solve",disable_pressure_solve);
 
@@ -5018,13 +5037,15 @@ NavierStokes::read_params ()
 
     if (ParallelDescriptor::IOProcessor()) {
 
-     std::cout << "static_surface_tension=" << 
-	    static_surface_tension << '\n';
+     std::cout << "static_surface_tension_duration=" << 
+	    static_surface_tension_duration << '\n';
 
      std::cout << "static_viscosity=" << 
 	    static_viscosity << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
+      std::cout << "i,static_tension=" << i << ' ' <<
+         static_tension[i] << '\n';
       std::cout << "i,tension=" << i << ' ' <<
          tension[i] << '\n';
       std::cout << "i,tension_init=" << i << ' ' <<
@@ -5387,6 +5408,8 @@ NavierStokes::read_params ()
 
       std::cout << "tension_T0 i=" << i << "  " << tension_T0[i] << '\n';
       std::cout << "tension_min i=" << i << "  " << tension_min[i] << '\n';
+      std::cout << "initial static_cap_wave_speed i=" << i << "  " << 
+        static_cap_wave_speed[i] << '\n';
       std::cout << "initial cap_wave_speed i=" << i << "  " << 
         cap_wave_speed[i] << '\n';
       std::cout << "prefreeze_tension i=" << i << "  " << 
@@ -21077,7 +21100,12 @@ void NavierStokes::MaxAdvectSpeed(
 
   local_cap_wave_speed[tid].resize(num_interfaces); 
   for (int iten=0;iten<num_interfaces;iten++) {
-   local_cap_wave_speed[tid][iten]=cap_wave_speed[iten];
+   if (static_flag==0) {
+    local_cap_wave_speed[tid][iten]=cap_wave_speed[iten];
+   } else if (static_flag==1) {
+    local_cap_wave_speed[tid][iten]=static_cap_wave_speed[iten];
+   } else
+    amrex::Error("static_flag invalid");
   }
 
   local_vel_max_estdt[tid].resize(AMREX_SPACEDIM+1);//last component max|c|^2
@@ -21278,8 +21306,14 @@ void NavierStokes::MaxAdvectSpeed(
 
  delete velcell;
 
- for (int iten=0;iten<num_interfaces;iten++)
-  cap_wave_speed[iten]=local_cap_wave_speed[0][iten];
+ for (int iten=0;iten<num_interfaces;iten++) {
+  if (static_flag==0) {
+   cap_wave_speed[iten]=local_cap_wave_speed[0][iten];
+  } else if (static_flag==1) {
+   static_cap_wave_speed[iten]=local_cap_wave_speed[0][iten];
+  } else
+   amrex::Error("static_flag invalid");
+ }
 
  for (int dir=0;dir<=AMREX_SPACEDIM;dir++) {
   vel_max_estdt[dir]=local_vel_max_estdt[0][dir];
