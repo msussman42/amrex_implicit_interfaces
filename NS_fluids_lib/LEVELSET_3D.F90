@@ -15032,7 +15032,7 @@ stop
            ! hydrostatic pressure (HYDROSTATIC_PRESDEN_MF, 1st component)
 
           if ((project_option.eq.SOLVETYPE_PRES).or. &
-              (project_option.eq.SOLVETPE_PRESGRAVITY)) then
+              (project_option.eq.SOLVETYPE_PRESGRAVITY)) then
            static_flag=0
           else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
            static_flag=1
@@ -15265,7 +15265,7 @@ stop
               enddo ! im_heat
 
               if ((project_option.eq.SOLVETYPE_PRES).or. &
-                  (project_option.eq.SOLVETPE_PRESGRAVITY)) then
+                  (project_option.eq.SOLVETYPE_PRESGRAVITY)) then
                call get_user_tension(xstenMAC_center,time, &
                 fort_tension,user_tension,mgoni_temp)
               else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
@@ -16909,9 +16909,6 @@ stop
 
       return
       end subroutine fort_buildfacewt
-
-      FIX ME pass static_flag
-
 
        ! solid: velx,vely,velz,dist  (dist<0 in solid)
        ! called from: NavierStokes::prescribe_solid_geometry
