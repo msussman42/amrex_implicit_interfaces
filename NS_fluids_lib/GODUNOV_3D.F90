@@ -2269,8 +2269,9 @@ stop
       end subroutine fort_crossterm
 
 
-        ! uu_estdt_max(1..sdim) is max vel in dir.
-        ! uu_estdt_max(sdim+1) is max c^2
+      ! uu_estdt_max(1..sdim) is max vel in dir.
+      ! uu_estdt_max(sdim+1) is max c^2
+      ! called from: void NavierStokes::MaxAdvectSpeed when static_flag==0
       subroutine fort_estdt( &
         interface_mass_transfer_model, &
         tid, &
@@ -2644,16 +2645,9 @@ stop
           endif
 
            ! declared in PROB.F90
-          if (fort_static_surface_tension.eq.0) then
-           call capillary_wave_speed(dxmin,den1,den2,visc1,visc2, &
-            user_tension(iten), &
-            cap_wave_speed(iten)) !INTENT(out)
-          else if (fort_static_surface_tension.eq.1) then
-           cap_wave_speed(iten)=zero
-          else
-           print *,"fort_static_surface_tension invalid"
-           stop
-          endif
+          call capillary_wave_speed(dxmin,den1,den2,visc1,visc2, &
+           user_tension(iten), &
+           cap_wave_speed(iten)) !INTENT(out)
 
          else
           print *,"user_tension invalid"
@@ -3656,9 +3650,10 @@ stop
       return
       end subroutine fort_estdt
 
-        ! uu_estdt_max(1..sdim) is max vel in dir.
-        ! for static loop, homogeneous BC used for advective velocity.
-        ! inhomogeneous BC used for updating the main velocity.
+      ! uu_estdt_max(1..sdim) is max vel in dir.
+      ! for static loop, homogeneous BC used for advective velocity.
+      ! inhomogeneous BC used for updating the main velocity.
+      ! called from: void NavierStokes::MaxAdvectSpeed when static_flag==1
       subroutine fort_estdt_static_equil( &
         tid, &
         velmac,DIMS(velmac), &
@@ -3854,7 +3849,7 @@ stop
 
       enddo  ! im=1..num_materials
 
-      call get_max_user_tension(fort_tension,user_tension)
+      call get_max_user_tension(fort_static_tension,user_tension)
 
          ! finest_level is first level tried.
       recompute_wave_speed=0

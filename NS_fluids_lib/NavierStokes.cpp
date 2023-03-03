@@ -3728,7 +3728,7 @@ NavierStokes::read_params ()
       if (denconst_interface_added[iten]==0.0) {
        //do nothing
       } else
-       amrex::Error("expecting denadd=0 if static_surf_ten==1");
+       amrex::Error("expecting denadd=0 if static_surf_ten>0.0");
      }
 
      for (int i=0;i<num_materials;i++) {
@@ -21035,7 +21035,7 @@ void NavierStokes::MaxAdvectSpeed(
   // do nothing
  } else if (pattern_test(local_caller_string,"sum_integrated_quantities")==1) {
   // do nothing
- } else if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+ } else if (pattern_test(local_caller_string,"static_surface_tension_ad")==1) {
   static_flag=1;
  } else
   amrex::Error("local_caller_string invalid");
@@ -25561,6 +25561,19 @@ NavierStokes::makeStateCurv(int project_option,
  std::string local_caller_string="makeStateCurv";
  local_caller_string=caller_string+local_caller_string;
 
+ int static_flag=0;
+
+ if (pattern_test(local_caller_string,"static_surface_tension_ad")==1) {
+  static_flag=1;
+ } else if (pattern_test(local_caller_string,"volWgtSumALL")==1) {
+  //do nothing
+ } else if (pattern_test(local_caller_string,"prepare_post_process")==1) {
+  //do nothing
+ } else if (pattern_test(local_caller_string,"do_the_advence")==1) {
+  //do nothing
+ } else
+  amrex::Error("local_caller_string invalid");
+
  bool use_tiling=ns_tiling;
 
  int finest_level=parent->finestLevel();
@@ -25622,9 +25635,9 @@ NavierStokes::makeStateCurv(int project_option,
 
   Real cl_time=prev_time_slab;
 
-  if (static_surface_tension==1) {
+  if (static_flag==1) {
    cl_time=cur_time_slab; //irrelevant for static case.
-  } else if (static_surface_tension==0) {
+  } else if (static_flag==0) {
    if (project_option==SOLVETYPE_PRES)  
     cl_time=prev_time_slab;
    else if (project_option==SOLVETYPE_INITPROJ) 
@@ -25632,7 +25645,7 @@ NavierStokes::makeStateCurv(int project_option,
    else
     amrex::Error("project_option invalid makeStateCurv");
   } else
-   amrex::Error("static_surface_tension invalid");
+   amrex::Error("static_flag invalid");
 
   MultiFab* CL_velocity=getState(2,STATECOMP_VEL,
      STATE_NCOMP_VEL+STATE_NCOMP_PRES,cl_time);
@@ -25695,6 +25708,7 @@ NavierStokes::makeStateCurv(int project_option,
 
      // declared in: LEVELSET_3D.F90
     fort_curvstrip(
+     &static_flag,
      local_caller_string.c_str(),
      local_caller_string.size(),
      &vof_height_function,

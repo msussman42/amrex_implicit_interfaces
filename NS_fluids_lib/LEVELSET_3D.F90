@@ -490,6 +490,7 @@ stop
 
        ! called from fort_curvstrip
       subroutine initheightLS( &
+        static_flag, &
         vof_height_function, &
         icenter,jcenter,kcenter, &
         level, &
@@ -523,6 +524,7 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: static_flag
       INTEGER_T, INTENT(in) :: vof_height_function
       INTEGER_T, INTENT(in) :: icenter,jcenter,kcenter
       INTEGER_T, INTENT(in) :: level
@@ -902,8 +904,17 @@ stop
        temperature_cen(im_sort)=mgoni_temp(0,0,0,im_sort)
       enddo
 
-      call get_user_tension(xcenter,time, &
-       fort_tension,user_tension,temperature_cen)
+      if (static_flag.eq.0) then
+       call get_user_tension(xcenter,time, &
+         fort_tension,user_tension,temperature_cen)
+      else if (static_flag.eq.1) then
+       do dir2=1,num_interfaces
+        user_tension(dir2)=fort_static_tension(iten)
+       enddo
+      else
+       print *,"static_flag invalid"
+       stop
+      endif
 
       if (unscaled_min_curvature_radius.ge.two) then
        ! do nothing
@@ -913,18 +924,28 @@ stop
       endif
 
       do dir2=1,num_interfaces
+
        if (fort_tension(dir2).ge.zero) then
         ! do nothing
        else
         print *,"fort_tension(dir2) invalid"
         stop
        endif
+
        if (user_tension(dir2).ge.zero) then
         ! do nothing
        else
         print *,"user_tension(dir2) invalid"
         stop
        endif
+
+       if (fort_static_tension(dir2).ge.zero) then
+        ! do nothing
+       else
+        print *,"fort_static_tension(dir2) invalid"
+        stop
+       endif
+
       enddo ! dir2=1,num_interfaces
 
       do dir2=1,SDIM
@@ -972,90 +993,99 @@ stop
        ! (grad sigma - (grad sigma dot n)n ) delta
       if (fort_tension_slope(iten).lt.zero) then
 
-       do iofs=-1,1
-       do jofs=-1,1
-       do kofs=-1,1
-        local_index(1)=iofs
-        local_index(2)=jofs
-        local_index(3)=kofs
-        do dir2=1,SDIM
-         if (local_index(dir2).eq.-1) then
-          local_x(dir2)=xsten(-2,dir2)
-         else if (local_index(dir2).eq.1) then
-          local_x(dir2)=xsten(2,dir2)
-         else if (local_index(dir2).eq.0) then
-          local_x(dir2)=xsten(0,dir2)
-         else
-          print *,"local_index invalid"
-          stop
-         endif
-        enddo !dir2=1,SDIM
+       if (static_flag.eq.0) then
 
-        do im_sort=1,num_materials
-         local_temperature(im_sort)=mgoni_temp(iofs,jofs,kofs,im_sort)
-        enddo
-
-        call get_user_tension(local_x,time, &
-         fort_tension,local_tension,local_temperature)
-        mgoni_tension(iofs,jofs,kofs)=local_tension(iten)
-       enddo
-       enddo
-       enddo
-
-
-       dotprod=zero
-
-       do dir2=1,SDIM
-        iofs=0
-        jofs=0
-        kofs=0
-        RR=one
-        if (dir2.eq.1) then
-         iofs=1
-         RR=one
-        else if (dir2.eq.2) then 
-         jofs=1
-         if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-             (levelrz.eq.COORDSYS_RZ)) then
-          RR=one
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          RR=xcenter(1)
-          if (RR.gt.zero) then
-           ! do nothing
+        do iofs=-1,1
+        do jofs=-1,1
+        do kofs=-1,1
+         local_index(1)=iofs
+         local_index(2)=jofs
+         local_index(3)=kofs
+         do dir2=1,SDIM
+          if (local_index(dir2).eq.-1) then
+           local_x(dir2)=xsten(-2,dir2)
+          else if (local_index(dir2).eq.1) then
+           local_x(dir2)=xsten(2,dir2)
+          else if (local_index(dir2).eq.0) then
+           local_x(dir2)=xsten(0,dir2)
           else
-           print *,"RR invalid"
+           print *,"local_index invalid"
            stop
           endif
-         else
-          print *,"grad_tension: levelrz invalid"
-          stop
-         endif
-        else if ((dir2.eq.3).and.(SDIM.eq.3)) then
-         kofs=1
+         enddo !dir2=1,SDIM
+
+         do im_sort=1,num_materials
+          local_temperature(im_sort)=mgoni_temp(iofs,jofs,kofs,im_sort)
+         enddo
+
+         call get_user_tension(local_x,time, &
+          fort_tension,local_tension,local_temperature)
+         mgoni_tension(iofs,jofs,kofs)=local_tension(iten)
+        enddo
+        enddo
+        enddo
+
+        dotprod=zero
+
+        do dir2=1,SDIM
+         iofs=0
+         jofs=0
+         kofs=0
          RR=one
-        else
-         print *,"dir2 invalid"
-         stop
-        endif 
+         if (dir2.eq.1) then
+          iofs=1
+          RR=one
+         else if (dir2.eq.2) then 
+          jofs=1
+          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+              (levelrz.eq.COORDSYS_RZ)) then
+           RR=one
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           RR=xcenter(1)
+           if (RR.gt.zero) then
+            ! do nothing
+           else
+            print *,"RR invalid"
+            stop
+           endif
+          else
+           print *,"grad_tension: levelrz invalid"
+           stop
+          endif
+         else if ((dir2.eq.3).and.(SDIM.eq.3)) then
+          kofs=1
+          RR=one
+         else
+          print *,"dir2 invalid"
+          stop
+         endif 
 
-        grad_tension(dir2)=( &
-         mgoni_tension(iofs,jofs,kofs)- &
-         mgoni_tension(-iofs,-jofs,-kofs))/ &
-         (RR*(xsten(2,dir2)-xsten(-2,dir2)))
+         grad_tension(dir2)=( &
+          mgoni_tension(iofs,jofs,kofs)- &
+          mgoni_tension(-iofs,-jofs,-kofs))/ &
+          (RR*(xsten(2,dir2)-xsten(-2,dir2)))
 
-        dotprod=dotprod+grad_tension(dir2)*nfluid(dir2)
-       enddo ! dir2
+         dotprod=dotprod+grad_tension(dir2)*nfluid(dir2)
+        enddo ! dir2
         ! for the specific case,
         ! tension=sigma_0 + slope*(T-T0),
         ! then:
         ! grad sigma=slope * grad T
         !
         ! (I-nn^T)(grad sigma) delta
-       do dir2=1,SDIM
-        mgoni_force(dir2)= &
-         (grad_tension(dir2)- &
-          nfluid(dir2)*dotprod)*delta_mgoni
-       enddo
+        do dir2=1,SDIM
+         mgoni_force(dir2)= &
+          (grad_tension(dir2)- &
+           nfluid(dir2)*dotprod)*delta_mgoni
+        enddo
+
+       else if (static_flag.eq.1) then
+        ! do nothing
+       else
+        print *,"static_flag invalid"
+        stop
+       endif
+
       else if (fort_tension_slope(iten).eq.zero) then
        ! do nothing
       else
@@ -3244,6 +3274,7 @@ stop
 
 
       subroutine fort_curvstrip( &
+       static_flag, &
        caller_string, &
        caller_string_len, &
        vof_height_function, &
@@ -3286,6 +3317,8 @@ stop
       use MOF_routines_module
 
       IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: static_flag
 
       INTEGER_T, INTENT(in) :: nhistory
 
@@ -3340,7 +3373,8 @@ stop
       REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: LSPC(DIMV(LSPC),num_materials*(1+SDIM))
       REAL_T, pointer :: LSPC_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon)
+      REAL_T, INTENT(in), target ::  &
+           recon(DIMV(recon),num_materials*ngeom_recon)
       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(out),target :: curvfab(DIMV(curvfab),num_curv)
       REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
@@ -3512,6 +3546,12 @@ stop
         print *,"fort_tension(i) invalid"
         stop
        endif
+       if (fort_static_tension(i).ge.zero) then
+        ! do nothing
+       else
+        print *,"fort_static_tension(i) invalid"
+        stop
+       endif
       enddo ! i=1,num_interfaces
 
       if (nhistory.eq.num_interfaces*2) then
@@ -3653,7 +3693,7 @@ stop
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
-         call merge_levelset(xcenter,time,LS,LS_merge)
+         call merge_levelset(xcenter,time,LS,LS_merge,static_flag)
 
          call FIX_LS_tessellate(LS_merge,LS_fixed)
 
@@ -3702,7 +3742,7 @@ stop
             do im=1,num_materials
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
-            call merge_levelset(xcenter,time,LSSIDE,LS_merge)
+            call merge_levelset(xcenter,time,LSSIDE,LS_merge,static_flag)
             call FIX_LS_tessellate(LS_merge,LSSIDE_fixed)
             call get_primary_material(LSSIDE_fixed,im_opp)
             do im=1,num_materials
@@ -3979,7 +4019,7 @@ stop
              enddo
              call merge_normal(xcenter,time, &
                LS_PROBE, &
-               nrmPROBE,nrmPROBE_merge)
+               nrmPROBE,nrmPROBE_merge,static_flag)
 
               ! get normals at the cell center using finite differences. 
              do dirstar=1,SDIM
@@ -4180,10 +4220,12 @@ stop
 
               call merge_normal(xcenter,time, &
                  LSCEN_hold, &
-                 nrm_local,nrm_local_merge)
+                 nrm_local,nrm_local_merge,static_flag)
 
-              call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge)
-              call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
+              call merge_levelset(xcenter,time,LSCEN_hold, &
+                 LSCEN_hold_merge,static_flag)
+              call merge_vof(xcenter,time,vof_hold,vof_hold_merge, &
+                 static_flag)
 
               do im_curv=1,num_materials
                vofsten(i1,j1,k1,im_curv)=vof_hold_merge(im_curv)
@@ -4258,6 +4300,7 @@ stop
              ! tension used to find contact angle (scaling not 
              ! necessary)
              call initheightLS( &
+              static_flag, &
               vof_height_function_local, &
               i,j,k, &
               level, &
@@ -8735,7 +8778,8 @@ stop
             xstenMAC_center,time, &
             LSminus,LSplus,gradh_tension, &
             im_opp_tension,im_tension, &
-            im_left_tension,im_right_tension)
+            im_left_tension,im_right_tension, &
+            test_for_quasi_static)
           else
            print *,"covered_face invalid"
            stop
@@ -13308,6 +13352,7 @@ stop
       INTEGER_T use_face_pres
       INTEGER_T at_coarse_fine_wallF
       INTEGER_T at_coarse_fine_wallC
+      INTEGER_T static_flag
       REAL_T user_tension(num_interfaces)
       REAL_T tension_scaled
       REAL_T pforce_scaled
@@ -14985,6 +15030,17 @@ stop
            !   dt*rhohydro(\vec{g}\cdot\vec{x}+||\vec{xaxis}||^2 Omega^2/2)
            !
            ! hydrostatic pressure (HYDROSTATIC_PRESDEN_MF, 1st component)
+
+          if ((project_option.eq.SOLVETYPE_PRES).or. &
+              (project_option.eq.SOLVETPE_PRESGRAVITY)) then
+           static_flag=0
+          else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
+           static_flag=1
+          else
+           print *,"project_option invalid"
+           stop
+          endif
+
           pplus=pres(D_DECL(i,j,k),1)
           pminus=pres(D_DECL(im1,jm1,km1),1)
 
@@ -15184,7 +15240,8 @@ stop
                LSleft,LSright, &
                gradh_tension, &
                im_opp,im, &
-               im_left_tension,im_right_tension)
+               im_left_tension,im_right_tension, &
+               static_flag)
 
              call fluid_interface( &
                LSleft,LSright, &
@@ -15207,8 +15264,16 @@ stop
                 mgoni(D_DECL(im1,jm1,km1),tcomp))
               enddo ! im_heat
 
-              call get_user_tension(xstenMAC_center,time, &
-               fort_tension,user_tension,mgoni_temp)
+              if ((project_option.eq.SOLVETYPE_PRES).or. &
+                  (project_option.eq.SOLVETPE_PRESGRAVITY)) then
+               call get_user_tension(xstenMAC_center,time, &
+                fort_tension,user_tension,mgoni_temp)
+              else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
+               user_tension(iten)=fort_static_tension(iten)
+              else
+               print *,"project_option invalid"
+               stop
+              endif
 
               call get_iten(im,im_opp,iten)
               call get_scaled_tension(user_tension(iten),tension_scaled)
@@ -16844,6 +16909,8 @@ stop
 
       return
       end subroutine fort_buildfacewt
+
+      FIX ME pass static_flag
 
 
        ! solid: velx,vely,velz,dist  (dist<0 in solid)

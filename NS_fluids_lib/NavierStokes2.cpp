@@ -5740,7 +5740,7 @@ void NavierStokes::deallocate_potential_forceALL() {
 //  SOLVETYPE_PRESSTATIC, or 
 //  SOLVETYPE_PRESGRAVITY
 void NavierStokes::process_potential_forceALL(
-	      int potgrad_surface_tension_mask) {
+ int potgrad_surface_tension_mask,int project_option) {
 
  std::string local_caller_string="process_potential_forceALL";
 
@@ -5750,6 +5750,13 @@ void NavierStokes::process_potential_forceALL(
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
+
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_PRESSTATIC)||
+     (project_option==SOLVETYPE_PRESGRAVITY)) {
+  //do nothing
+ } else
+  amrex::Error("project_option invalid");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -5788,7 +5795,8 @@ void NavierStokes::process_potential_forceALL(
   // to interpolate AMRSYNC_PRES info.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.process_potential_force_face(potgrad_surface_tension_mask);
+  ns_level.process_potential_force_face(potgrad_surface_tension_mask,
+     project_option);
  }
 
   // must go from finest to coarsest in order
@@ -5943,7 +5951,8 @@ void NavierStokes::init_gravity_potential() {
 // if facegrav = grad^face ppot, then this implies that
 //  div (grad^face ppot - grad^face p)=0 only if ppot=p.
 void NavierStokes::process_potential_force_face(
-		int potgrad_surface_tension_mask) {
+  int potgrad_surface_tension_mask,
+  int project_option) {
 
  std::string local_caller_string="process_potential_force_face";
 
@@ -5957,6 +5966,13 @@ void NavierStokes::process_potential_force_face(
   // do nothing
  } else
   amrex::Error("SDC_outer_sweeps invalid process_potential_force_face");
+
+ if ((project_option==SOLVETYPE_PRES)||
+     (project_option==SOLVETYPE_PRESSTATIC)||
+     (project_option==SOLVETYPE_PRESGRAVITY)) {
+  //do nothing
+ } else
+  amrex::Error("project_option invalid");
 
  int num_colors=0;
  Vector<Real> blob_array;
@@ -6100,7 +6116,6 @@ void NavierStokes::process_potential_force_face(
     amrex::Error("ncfluxreg invalid");
 
    int local_energyflag=SUB_OP_FORCE_MASK_BASE+potgrad_surface_tension_mask;
-   int local_project_option=SOLVETYPE_PRES;
    int local_enable_spectral=enable_spectral;
 
    int simple_AMR_BC_flag=1;
@@ -6180,7 +6195,7 @@ void NavierStokes::process_potential_force_face(
     blob_array.dataPtr(),
     &blob_array_size,
     &num_colors,
-    &local_project_option);
+    &project_option);
   } // mfi
 } // omp
   ns_reconcile_d_num(LOOP_POTGRAD_TO_MAC,"process_potential_force_face");
@@ -6735,7 +6750,7 @@ void NavierStokes::move_particles(
  std::string local_caller_string="move_particles";
  local_caller_string=caller_string+local_caller_string;
 
- if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+ if (pattern_test(local_caller_string,"static_surface_tension_ad")==1) {
 
   if (enable_spectral==0) {
    //do nothing
