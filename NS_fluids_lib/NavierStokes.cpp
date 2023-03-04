@@ -21361,7 +21361,8 @@ Real NavierStokes::estTimeStep (Real local_fixed_dt,
  }
 
  Real dt_min=0.0;
- Real u_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
+  // last component is max|c|^2
+ Vector<Real> u_max_estdt(AMREX_SPACEDIM+1);  
 
  if (local_fixed_dt>0.0) {
 

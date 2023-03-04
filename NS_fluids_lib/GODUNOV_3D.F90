@@ -3866,7 +3866,7 @@ stop
       if (max_static_tension.gt.zero) then
        ! do nothing
       else
-       print *"max_static_tension invalid"
+       print *,"max_static_tension invalid"
        stop
       endif
 

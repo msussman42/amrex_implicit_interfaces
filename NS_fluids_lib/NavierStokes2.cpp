@@ -1908,11 +1908,21 @@ void NavierStokes::init_divup_cell_vel_cell(
    setVal_localMF(PEDGE_MF+dir,1.0e+40,PRESSURE_PEDGE,1,0);
   } // dir=0..sdim-1
 
-  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
-   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
-    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
-   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
-    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+  if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_PRESGRAVITY)||
+      (project_option==SOLVETYPE_INITPROJ)) {
+
+   for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+    if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+     amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+    if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+     amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+   }
+
+  } else if (project_option==SOLVETYPE_PRESSTATIC) {
+   // do nothing
+  } else {
+   amrex::Error("project_option invalid");
   }
 
    // old cell velocity before application of pressure gradient.
@@ -1981,8 +1991,18 @@ void NavierStokes::init_divup_cell_vel_cell(
 
     FArrayBox& maskSEMfab=(*localMF[MASKSEM_MF])[mfi];
     FArrayBox& presfab=(*presmf)[mfi];
-  
-    FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
+ 
+    FArrayBox* solfab;
+    if ((project_option==SOLVETYPE_PRES)||
+        (project_option==SOLVETYPE_PRESGRAVITY)||
+        (project_option==SOLVETYPE_INITPROJ)) {
+     solfab=&(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
+    } else if (project_option==SOLVETYPE_PRESSTATIC) {
+     solfab=&(*localMF[FACE_VAR_MF+dir])[mfi]; //placeholder
+    } else {
+     amrex::Error("project_option invalid");
+    }
+
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
     int ncfluxreg=AMREX_SPACEDIM; //placeholder
@@ -2044,8 +2064,8 @@ void NavierStokes::init_divup_cell_vel_cell(
      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     solfab.dataPtr(),
-     ARLIM(solfab.loVect()),ARLIM(solfab.hiVect()),
+     solfab->dataPtr(),
+     ARLIM(solfab->loVect()),ARLIM(solfab->hiVect()),
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), //xcut
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()), 
      xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),//xgp 
@@ -2130,9 +2150,24 @@ void NavierStokes::init_divup_cell_vel_cell(
     FArrayBox& ay = (*localMF[AREA_MF+1])[mfi];
     FArrayBox& az = (*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
     FArrayBox& vol=(*localMF[VOLUME_MF])[mfi];
-    FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
-    FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
-    FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+
+    FArrayBox* solxfab;
+    FArrayBox* solyfab;
+    FArrayBox* solzfab;
+
+    if ((project_option==SOLVETYPE_PRES)||
+        (project_option==SOLVETYPE_PRESGRAVITY)||
+        (project_option==SOLVETYPE_INITPROJ)) {
+     solxfab=&(*localMF[FSI_GHOST_MAC_MF])[mfi];
+     solyfab=&(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
+     solzfab=&(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
+    } else if (project_option==SOLVETYPE_PRESSTATIC) {
+     solxfab = &(*localMF[AREA_MF])[mfi]; //placeholder
+     solyfab = &(*localMF[AREA_MF+1])[mfi]; //placeholder
+     solzfab = &(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi]; //placeholder
+    } else {
+     amrex::Error("project_option invalid");
+    }
 
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
 
@@ -2246,9 +2281,9 @@ void NavierStokes::init_divup_cell_vel_cell(
      ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
      levelpcfab.dataPtr(), //levelPC
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     solxfab.dataPtr(),ARLIM(solxfab.loVect()),ARLIM(solxfab.hiVect()),
-     solyfab.dataPtr(),ARLIM(solyfab.loVect()),ARLIM(solyfab.hiVect()),
-     solzfab.dataPtr(),ARLIM(solzfab.loVect()),ARLIM(solzfab.hiVect()),
+     solxfab->dataPtr(),ARLIM(solxfab->loVect()),ARLIM(solxfab->hiVect()),
+     solyfab->dataPtr(),ARLIM(solyfab->loVect()),ARLIM(solyfab->hiVect()),
+     solzfab->dataPtr(),ARLIM(solzfab->loVect()),ARLIM(solzfab->hiVect()),
      levelpcfab.dataPtr(),
      ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),//cterm
      presfab.dataPtr(), 

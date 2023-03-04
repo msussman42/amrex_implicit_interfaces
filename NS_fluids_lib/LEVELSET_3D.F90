@@ -12073,6 +12073,11 @@ stop
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
           vel_clamped,temperature_clamped,prescribed_flag,dx)
+        if (project_option_is_static(project_option).eq.1) then
+         do dir=1,SDIM
+          vel_clamped(dir)=zero
+         enddo
+        endif
 
         do dir=0,SDIM-1 
          ii=0
@@ -12238,8 +12243,12 @@ stop
           if (dir.eq.0) then
            if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then
             uface(side)=xvel(D_DECL(iface,jface,kface),1)
-            ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
+            if (project_option_is_static(project_option).eq.1) then
+             ufacesolid(side)=zero
+            else
+             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
+            endif
            else
             print *,"operation_flag invalid"
             stop
@@ -12294,8 +12303,12 @@ stop
           else if (dir.eq.1) then
            if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then  
             uface(side)=yvel(D_DECL(iface,jface,kface),1)
-            ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
+            if (project_option_is_static(project_option).eq.1) then
+             ufacesolid(side)=zero
+            else
+             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
+            endif
            else
             print *,"operation_flag invalid"
             stop
@@ -12303,8 +12316,12 @@ stop
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then 
             uface(side)=zvel(D_DECL(iface,jface,kface),1)
-            ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
+            if (project_option_is_static(project_option).eq.1) then
+             ufacesolid(side)=zero
+            else
+             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
                    partid_ghost*SDIM+dir+1)
+            endif
            else
             print *,"operation_flag invalid"
             stop
@@ -13674,6 +13691,10 @@ stop
         print *,"energyflag invalid OP_PRES_CELL_TO_MAC"
         stop
        endif
+       if ((project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
+           (project_option.eq.SOLVETYPE_PRESSTATIC)) then
+        homogeneous_rigid_velocity=1
+       endif
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
        if ((energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
             POTGRAD_SURFTEN_INCREMENTAL_GRAV).or. &
@@ -14732,7 +14753,16 @@ stop
           at_coarse_fine_wallC=0
 
           use_face_pres=1 ! use div(up)
+
           solid_velocity=local_face(FACECOMP_FACEVEL+1)
+          if (project_option.eq.SOLVETYPE_PRESSTATIC) then
+           if (solid_velocity.eq.zero) then
+            ! do nothing
+           else
+            print *,"expecting solid_velocity==0.0 if SOLVETYPE_PRESSTATIC"
+            stop
+           endif
+          endif
 
           face_velocity_override=0
 
