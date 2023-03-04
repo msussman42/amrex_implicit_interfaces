@@ -565,12 +565,12 @@ protected:
 
     void MaxAdvectSpeedALL(
       Real& dt_min,
-      Real* vel_max_estdt,
+      Vector<Real>& vel_max_estdt,
       const std::string& caller_string);
 
     void MaxAdvectSpeed(
       Real& dt_min,
-      Real* vel_max_estdt,
+      Vector<Real>& vel_max_estdt,
       const std::string& caller_string);
 
     void DumpProcNum();

@@ -20940,8 +20940,11 @@ void NavierStokes::DumpProcNum() {
 //              static_surface_tension_advection
 void NavierStokes::MaxAdvectSpeedALL(
   Real& dt_min,
-  Real* vel_max_estdt,
+  Vector<Real>& vel_max_estdt,
   const std::string& caller_string) {
+
+ if (vel_max_estdt.size()!=AMREX_SPACEDIM+1)
+  amrex::Error("vel_max_estdt has invalid size");
 
  std::string local_caller_string="MaxAdvectSpeedALL";
  local_caller_string=caller_string+local_caller_string;
@@ -20961,7 +20964,8 @@ void NavierStokes::MaxAdvectSpeedALL(
  if (level!=0)
   amrex::Error("level invalid MaxAdvectSpeedALL");
 
- Real local_vel_max_estdt[AMREX_SPACEDIM+1];  // last component is max|c|^2
+  // last component is max|c|^2
+ Vector<Real> local_vel_max_estdt(AMREX_SPACEDIM+1);  
 
  Real local_dt_min;
 
@@ -21022,9 +21026,12 @@ void NavierStokes::MaxAdvectSpeedALL(
 //   considerations if spectral element method.
 //   vel_max_estdt[sdim]=max c^2
 void NavierStokes::MaxAdvectSpeed(
- Real& dt_min,
- Real* vel_max_estdt,
+ Real& dt_min, // minimum for the given level.
+ Vector<Real>& vel_max_estdt, // maximum for the given level.
  const std::string& caller_string) {
+
+ if (vel_max_estdt.size()!=AMREX_SPACEDIM+1)
+  amrex::Error("vel_max_estdt has invalid size");
 
  std::string local_caller_string="MaxAdvectSpeed";
  local_caller_string=caller_string+local_caller_string;

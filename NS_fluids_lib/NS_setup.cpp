@@ -1923,7 +1923,7 @@ NavierStokes::sum_integrated_quantities (
 
  Real dt_min=1.0E+30;;
 
- Real vel_max_estdt[AMREX_SPACEDIM+1];
+ Vector<Real> vel_max_estdt(AMREX_SPACEDIM+1);
  MaxAdvectSpeedALL(dt_min,vel_max_estdt,local_caller_string);
 
  int local_counter=0;

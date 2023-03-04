@@ -333,6 +333,7 @@ void NavierStokes::static_surface_tension_advection() {
  int quasi_static_reached=0;
  int quasi_static_iter=0;
  Real quasi_static_time=0.0;
+ Real vel_max_mag_init=0.0;
 
  while (quasi_static_reached==0) {
 
@@ -343,8 +344,29 @@ void NavierStokes::static_surface_tension_advection() {
   delete_array(FACETENSOR_MF);
 
   Real static_dt_min;
-  Real static_vel_max[AMREX_SPACEDIM+1];
+  Vector<Real> static_vel_max(AMREX_SPACEDIM+1);
   MaxAdvectSpeedALL(static_dt_min,static_vel_max,local_caller_string);
+  if (static_vel_max[AMREX_SPACEDIM]==0.0) {
+   // do nothing
+  } else
+   amrex::Error("expecting static_vel_max[AMREX_SPACEDIM]==0.0");
+
+  Real vel_max_mag_current=0.0;
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   if (static_vel_max[dir]>vel_max_mag_current)
+    vel_max_mag_current=static_vel_max[dir]; 
+  }
+  if (quasi_static_iter==0) {
+   if (vel_max_mag_current==0.0) {
+    //do nothing
+   } else
+    amrex::Error("expecting vel_max_mag_current==0.0");
+  } else if (quasi_static_iter==1) {
+   vel_max_mag_init=vel_max_mag_current;
+  } else if (quasi_static_iter>1) {
+   //do nothing
+  } else
+   amrex::Error("quasi_static_iter invalid");
 
   if ((cfl>0.0)&&(cfl<1.0)&&(static_dt_min>0.0)) {
    //do nothing
@@ -371,7 +393,20 @@ void NavierStokes::static_surface_tension_advection() {
    if (quasi_static_time>=static_surface_tension_duration) {
     quasi_static_reached=1;
    } 
-
+   if (quasi_static_iter==0) {
+    amrex::Error("quasi_static_iter invalid");
+   } else if (quasi_static_iter==1) {
+    if (vel_max_mag_current==0.0) {
+     //do nothing
+    } else
+     amrex::Error("expecting vel_max_mag_current==0.0");
+   } else if (quasi_static_iter==2) {
+     //do nothing
+   } else if (quasi_static_iter>=3) {
+    if (vel_max_mag_current<1.0e-3*vel_max_mag_init)
+     quasi_static_reached=1;
+   } else
+    amrex::Error("quasi_static_iter invalid");
   } else
    amrex::Error("static_surface_tension_duration<=0.0");
 
