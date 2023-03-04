@@ -3745,6 +3745,7 @@ stop
       REAL_T level_cap_wave_speed(num_interfaces)
       REAL_T mu
       REAL_T vapor_den
+      REAL_T max_static_tension
 
       INTEGER_T istenlo(3),istenhi(3)
       INTEGER_T ivec(3)
@@ -3850,6 +3851,24 @@ stop
       enddo  ! im=1..num_materials
 
       call get_max_user_tension(fort_static_tension,user_tension)
+      max_static_tension=zero
+      do im=1,num_interfaces
+       if (fort_static_tension(im).ge.zero) then
+        if (fort_static_tension(im).gt.max_static_tension) then
+         max_static_tension=fort_static_tension(im)
+        endif
+       else
+        print *,"fort_static_tension invalid"
+        stop
+       endif
+      enddo ! im=1..num_interfaces
+
+      if (max_static_tension.gt.zero) then
+       ! do nothing
+      else
+       print *"max_static_tension invalid"
+       stop
+      endif
 
          ! finest_level is first level tried.
       recompute_wave_speed=0

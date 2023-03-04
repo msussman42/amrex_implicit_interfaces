@@ -333,6 +333,7 @@ void NavierStokes::static_surface_tension_advection() {
  int quasi_static_reached=0;
  int quasi_static_iter=0;
  Real quasi_static_time=0.0;
+
  while (quasi_static_reached==0) {
 
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
