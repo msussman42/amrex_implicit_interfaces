@@ -331,6 +331,8 @@ void NavierStokes::static_surface_tension_advection() {
   amrex::Error("enable_spectral invalid");
 
  int quasi_static_reached=0;
+ int quasi_static_iter=0;
+ Real quasi_static_time=0.0;
  while (quasi_static_reached==0) {
 
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
@@ -361,6 +363,16 @@ void NavierStokes::static_surface_tension_advection() {
 
 
 
+  quasi_static_reached=0;
+  quasi_static_iter++;
+  quasi_static_time+=quasi_static_dt_slab;
+  if (static_surface_tension_duration>0.0) {
+   if (quasi_static_time>=static_surface_tension_duration) {
+    quasi_static_reached=1;
+   } 
+
+  } else
+   amrex::Error("static_surface_tension_duration<=0.0");
 
   cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
  } // while (quasi_static_reached==0) 

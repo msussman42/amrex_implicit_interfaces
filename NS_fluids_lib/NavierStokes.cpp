@@ -20952,7 +20952,7 @@ void NavierStokes::MaxAdvectSpeedALL(
   // do nothing
  } else if (pattern_test(local_caller_string,"sum_integrated_quantities")==1) {
   // do nothing
- } else if (pattern_test(local_caller_string,"static_surface_tension")==1) {
+ } else if (pattern_test(local_caller_string,"static_surface_tension_ad")==1) {
   static_flag=1;
  } else
   amrex::Error("local_caller_string invalid");
@@ -21129,7 +21129,7 @@ void NavierStokes::MaxAdvectSpeed(
   } else if 
    ((pattern_test(local_caller_string,"computeNewDt")==1)|| 
     (pattern_test(local_caller_string,"do_the_advance")==1)||
-    (pattern_test(local_caller_string,"static_surface_tension")==1)) {
+    (pattern_test(local_caller_string,"static_surface_tension_ad")==1)) {
 
    if ((cur_time_slab>prev_time_slab)&&
        (upper_slab_time>lower_slab_time)&&
