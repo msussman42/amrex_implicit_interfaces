@@ -353,8 +353,11 @@ void NavierStokes::static_surface_tension_advection() {
 
   Real vel_max_mag_current=0.0;
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   if (static_vel_max[dir]>vel_max_mag_current)
-    vel_max_mag_current=static_vel_max[dir]; 
+   if (static_vel_max[dir]>=0.0) {
+    if (static_vel_max[dir]>vel_max_mag_current)
+     vel_max_mag_current=static_vel_max[dir]; 
+   } else
+    amrex::Error("static_vel_max invalid");
   }
   if (quasi_static_iter==0) {
    if (vel_max_mag_current==0.0) {
@@ -383,7 +386,9 @@ void NavierStokes::static_surface_tension_advection() {
   multiphase_project(SOLVETYPE_PRESSTATIC);
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
 
-
+//For OP_UMAC_PLUS_VISC_CELL_TO_MAC,
+// if static project option (pressure projection or viscosity),
+//  then we do not use "solfab" instead "homogeneous_rigid_velocity=0"
 
 
   quasi_static_reached=0;
