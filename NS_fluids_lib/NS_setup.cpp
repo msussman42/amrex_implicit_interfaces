@@ -658,6 +658,8 @@ NavierStokes::variableSetUp ()
     BL_ASSERT(desc_lstGHOST.size() == 0);
 
      // static variable
+     // protected (NavierStokes.H):
+     // static BCRec phys_bc
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++)
     {
         phys_bc.setLo(dir,NoSlipWall);
