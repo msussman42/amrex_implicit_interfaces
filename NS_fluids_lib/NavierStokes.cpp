@@ -23430,7 +23430,7 @@ NavierStokes::post_init_state () {
    ns_level.make_MAC_velocity_consistent();
   }
 
-  multiphase_project(project_option); // initial project
+  multiphase_project(project_option,SUB_SOLVETYPE_NULL); // initial project
 
    // U^CELL and U^MAC
   for (int ilev=finest_level;ilev>=level;ilev--) {
