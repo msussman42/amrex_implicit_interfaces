@@ -386,12 +386,8 @@ void NavierStokes::static_surface_tension_advection() {
    setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
   }
 
-    //use quasi_static_dt_slab
-    //for viscosity use quasi_static_dt_slab and 
-    //make sure solid velocity=0 in
-    //FSI regions and prescribed
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
-  multiphase_project(SOLVETYPE_PRESSTATIC);
+  multiphase_project(SOLVETYPE_PRESSTATIC,SUB_SOLVETYPE_NULL);
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
 
 //For OP_UMAC_PLUS_VISC_CELL_TO_MAC,
@@ -400,7 +396,11 @@ void NavierStokes::static_surface_tension_advection() {
 
 
 
+  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
+  multiphase_project(SOLVETYPE_PRESSTATIC,SUB_SOLVETYPE_DISABLE_SURFTEN);
+  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
 
+  nonlinear_advection(local_caller_string);
 
   quasi_static_reached=0;
   quasi_static_iter++;
@@ -3856,14 +3856,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if (disable_pressure_solve==0) {
 
         if (segregated_gravity_flag==1) {
-         multiphase_project(SOLVETYPE_PRESGRAVITY);
+         multiphase_project(SOLVETYPE_PRESGRAVITY,SUB_SOLVETYPE_NULL);
 	} else if (segregated_gravity_flag==0) {
  	 //do nothing
 	} else
 	 amrex::Error("segregated_gravity_flag invalid");
 
          // MDOT term included
-        multiphase_project(SOLVETYPE_PRES);
+        multiphase_project(SOLVETYPE_PRES,SUB_SOLVETYPE_NULL);
 
         int singular_parts_exist=0;
         for (int im=0;im<num_materials;im++) {
@@ -3878,7 +3878,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (singular_parts_exist==1) {
  
          if (extend_pressure_into_solid==1) {
-          multiphase_project(SOLVETYPE_PRESEXTRAP);
+          multiphase_project(SOLVETYPE_PRESEXTRAP,SUB_SOLVETYPE_NULL);
          } else if (extend_pressure_into_solid==0) {
           // do nothing
          } else
@@ -9568,7 +9568,8 @@ void NavierStokes::Krylov_checkpoint(
 //   Result of the Helmholtz solve is stored instead.
 //
 // if project_option==SOLVETYPE_PRESSTATIC then use quasi_static_dt_slab.
-void NavierStokes::multiphase_project(int project_option) {
+void NavierStokes::multiphase_project(int project_option,
+  int sub_project_option) {
 
  std::string local_caller_string="multiphase_project";
 
@@ -9587,6 +9588,11 @@ void NavierStokes::multiphase_project(int project_option) {
  BLProfiler bprof(profname);
 #endif
 
+ if ((sub_project_option==SUB_SOLVETYPE_NULL)||
+     (sub_project_option==SUB_SOLVETYPE_DISABLE_SURFTEN)) {
+  //do nothing
+ } else
+  amrex::Error("sub_project_option invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -9844,7 +9850,12 @@ void NavierStokes::multiphase_project(int project_option) {
 
   } else if (project_option==SOLVETYPE_PRESSTATIC) {
    // (quasi-static) surface tension
-   potgrad_surface_tension_mask=POTGRAD_SURFTEN;
+   if (sub_project_option==SUB_SOLVETYPE_NULL) {
+    potgrad_surface_tension_mask=POTGRAD_SURFTEN;
+   } else if (sub_project_option==SUB_SOLVETYPE_DISABLE_SURFTEN) {
+    potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
+   } else
+    amrex::Error("sub_project_option invalid");
 
   } else if (project_option==SOLVETYPE_PRES) {
 
@@ -12534,7 +12545,7 @@ void NavierStokes::veldiffuseALL() {
  show_norm2_id(REGISTER_MARK_MF,4);
 
   //multigrid precond. BiCGStab viscosity
- multiphase_project(SOLVETYPE_VISC); 
+ multiphase_project(SOLVETYPE_VISC,SUB_SOLVETYPE_NULL); 
   
   //VISCHEAT_SOURCE_MF is a parameter for:
   //  update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,...)
@@ -12610,7 +12621,7 @@ void NavierStokes::veldiffuseALL() {
    // why average down the density here?
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
- multiphase_project(SOLVETYPE_HEAT); // MGP BiCGStab temperature.
+ multiphase_project(SOLVETYPE_HEAT,SUB_SOLVETYPE_NULL); 
 
 // --------------- end thermal diffusion -------------------
 
@@ -12693,7 +12704,7 @@ void NavierStokes::veldiffuseALL() {
    // why average down the density here?
   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
-  multiphase_project(SOLVETYPE_SPEC+species_comp); 
+  multiphase_project(SOLVETYPE_SPEC+species_comp,SUB_SOLVETYPE_NULL); 
 
  } // species_comp=0..num_species_var-1
 
