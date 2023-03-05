@@ -378,6 +378,14 @@ void NavierStokes::static_surface_tension_advection() {
 
   quasi_static_dt_slab=static_dt_min*cfl;
 
+  //ngrow,scomp,ncomp
+  setVal_array(1,STATECOMP_VEL,AMREX_SPACEDIM,0.0,
+    GET_NEW_DATA_OFFSET+State_Type);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    //ngrow,scomp,ncomp
+   setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
+  }
+
     //use quasi_static_dt_slab
     //for viscosity use quasi_static_dt_slab and 
     //make sure solid velocity=0 in
@@ -389,6 +397,9 @@ void NavierStokes::static_surface_tension_advection() {
 //For OP_UMAC_PLUS_VISC_CELL_TO_MAC,
 // if static project option (pressure projection or viscosity),
 //  then we do not use "solfab" instead "homogeneous_rigid_velocity=0"
+
+
+
 
 
   quasi_static_reached=0;
