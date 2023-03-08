@@ -8797,8 +8797,8 @@ stop
           !viscstate is initialized in fort_derviscosity
          do im=1,num_materials
           if (test_for_quasi_static.eq.1) then
-           localvisc_plus(im)=fort_static_viscosity
-           localvisc_minus(im)=fort_static_viscosity
+           localvisc_plus(im)=zero
+           localvisc_minus(im)=zero
           else if (test_for_quasi_static.eq.0) then
            localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
            localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
@@ -10314,7 +10314,7 @@ stop
          endif
 
          if (test_for_quasi_static.eq.1) then
-          localvisc(im)=fort_static_viscosity
+          localvisc(im)=zero
          else if (test_for_quasi_static.eq.0) then
           localvisc(im)=viscstate(D_DECL(i,j,k),im)
          else

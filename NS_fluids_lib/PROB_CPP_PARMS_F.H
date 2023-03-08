@@ -151,7 +151,6 @@ namespace amrex{
        Real* molar_mass,
        Real* species_molar_mass,
        Real* static_surface_tension_duration,
-       Real* static_viscosity,
        Real* static_tension,
        Real* tension,
        Real* tension_init,
