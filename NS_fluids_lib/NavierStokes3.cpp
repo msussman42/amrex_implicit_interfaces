@@ -260,6 +260,20 @@ void NavierStokes::avgDownMacState(int spectral_override) {
 
 }  // end subroutine avgDownMacState
 
+// PL=rhoL g(t) exp(ikx + ky)
+// PG=-rhoG g(t) exp(ikx - ky)
+// eta(t,x)=f(t)exp(ikx)
+// PL-PG=-sigma * curvature  (y=0)
+// (rhoL+rhoG) g(t) exp(ikx)=-sigma (-k^{2}) exp(ikx) f(t)
+// g(t)=sigma k^{2}f(t)/(rhoL+rhoG)
+// v=-\Delta t PG_y/rhoG=-\Delta t g(t) k exp(ikx)   (y=0)
+// v=-\Delta t sigma k^{3} f(t) exp(ikx)/(rhoL+rhoG)
+// eta_t = v  (y=0)
+// eta(t+\Delta t)=eta(t)-\Delta t^{2}sigma k^{3} f(t) exp(ikx)/(rhoL+rhoG)
+// f(t+\Delta t)=(1-\Delta t^{2}sigma k^{3}/(rhoL+rhoG))f(t)
+// k (2\Delta x)=2\pi  k=\pi/\Delta x
+// \Delta t < \sqrt{ (rhoL+rhoG)/(\pi^{3}\sigma) }\dxmin^{3/2}
+//
 void NavierStokes::static_surface_tension_advection() {
 
  std::string local_caller_string="static_surface_tension_advection";
@@ -269,7 +283,6 @@ void NavierStokes::static_surface_tension_advection() {
  } else
   amrex::Error("static_surface_tension_duration invalid");
 
- int finest_level=parent->finestLevel();
  if (level!=0)
   amrex::Error("level invalid static_surface_tension_advection");
 
@@ -283,18 +296,14 @@ void NavierStokes::static_surface_tension_advection() {
  } else
   amrex::Error("slab_step invalid");
 
- if (static_viscosity>0.0) {
-  //do nothing
- } else
-  amrex::Error("static_viscosity invalid");
-
  if ((STATE_NCOMP_PRES==1)&&
      (STATE_NCOMP_VEL==AMREX_SPACEDIM)) {
   // do nothing
  } else
   amrex::Error("STATE_NCOMP_PRES or STATE_NCOMP_VEL invalid");
 
- int update_flag=0; // do not update the error in S_new
+ // do not update the error in S_new
+ int update_flag=0; 
  int init_vof_prev_time=0;
  VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
    SLOPE_RECON_MF);
@@ -394,16 +403,6 @@ void NavierStokes::static_surface_tension_advection() {
 
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
   multiphase_project(SOLVETYPE_PRESSTATIC,SUB_SOLVETYPE_NULL);
-  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
-
-//For OP_UMAC_PLUS_VISC_CELL_TO_MAC,
-// if static project option (pressure projection or viscosity),
-//  then we do not use "solfab" instead "homogeneous_rigid_velocity=0"
-
-
-
-  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
-  multiphase_project(SOLVETYPE_PRESSTATIC,SUB_SOLVETYPE_DISABLE_SURFTEN);
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
 
   nonlinear_advection(local_caller_string);
@@ -2630,8 +2629,6 @@ void NavierStokes::phase_change_code_segment(
   int& color_count,
   Vector<blobclass>& blobdata) {
 
- int update_flag=0;
-
  int finest_level=parent->finestLevel();
  if (level==0) {
   //do nothing
@@ -2768,7 +2765,9 @@ void NavierStokes::phase_change_code_segment(
 
  if (visual_phase_change_plot_int>0) {
   if (very_last_sweep==1) {
-   int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+   // nsteps==0 very first step.
+   // in: phase_change_code_segment
+   int nsteps=parent->levelSteps(0); 
    int ratio=(nsteps+1)/visual_phase_change_plot_int;
    ratio=ratio*visual_phase_change_plot_int;
    if (ratio==nsteps+1) {
@@ -2862,7 +2861,7 @@ void NavierStokes::phase_change_code_segment(
  delete_array(DEN_RECON_MF);
  delete_array(nodevel_MF);
 
- update_flag=1;  // update the error in S_new
+ int update_flag=1;  // update the error in S_new
  int init_vof_prev_time=0;
  VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
   SLOPE_RECON_MF);
@@ -3049,8 +3048,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
  int finest_level = parent->finestLevel();
  const int max_level = parent->maxLevel();
 
- int tessellate=1;
-
  if (level>0) 
   amrex::Error("level should equal zero in do_the_advance");
  if (finest_level>max_level)
@@ -3101,7 +3098,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   ParallelDescriptor::Barrier();
  }
 
- int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+ // nsteps==0 very first step.
+ // in: do_the_advance
+ int nsteps=parent->levelSteps(0); 
 
  SDC_outer_sweeps=0;
  slab_step=0;
@@ -9987,7 +9986,9 @@ void NavierStokes::multiphase_project(int project_option,
 
   if (visual_buoyancy_plot_int>0) {
 
-   int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+   // nsteps==0 very first step.
+   // in: Multiphase_project
+   int nsteps=parent->levelSteps(0); 
 
    if (very_last_sweep==1) {
     int ratio=(nsteps+1)/visual_buoyancy_plot_int;

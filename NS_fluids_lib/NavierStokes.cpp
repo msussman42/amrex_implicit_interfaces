@@ -583,7 +583,6 @@ int NavierStokes::hydrate_flag=0;
 int NavierStokes::post_init_pressure_solve=1; 
 
 Real NavierStokes::static_surface_tension_duration=0.0;
-Real NavierStokes::static_viscosity=0.0;
 
 Vector<Real> NavierStokes::tension_slope;
 Vector<Real> NavierStokes::tension_min;
@@ -1598,10 +1597,6 @@ void fortran_parameters() {
  pp.queryAdd("static_surface_tension_duration",
    local_static_surface_tension_duration);
 
- Real local_static_viscosity=NavierStokes::static_viscosity;
- local_static_viscosity=NavierStokes::viscconst_max;
- pp.queryAdd("static_viscosity",local_static_viscosity);
-
  Vector<Real> tension_slopetemp(NavierStokes::num_interfaces);
  Vector<Real> tension_T0temp(NavierStokes::num_interfaces);
  Vector<Real> tension_mintemp(NavierStokes::num_interfaces);
@@ -1998,7 +1993,6 @@ void fortran_parameters() {
   molar_mass_temp.dataPtr(),
   species_molar_mass_temp.dataPtr(),
   &local_static_surface_tension_duration,
-  &local_static_viscosity,
   static_tensiontemp.dataPtr(),
   tensiontemp.dataPtr(),
   tension_inittemp.dataPtr(),
@@ -3710,20 +3704,12 @@ NavierStokes::read_params ()
 
     pp.get("static_surface_tension_duration",static_surface_tension_duration);
 
-    static_viscosity=viscconst_max;
-    pp.queryAdd("static_viscosity",static_viscosity);
-
     if (static_surface_tension_duration==0.0) {
 
      //do nothing
      
     } else if (static_surface_tension_duration>0.0) {
 
-     if (static_viscosity>0.0) {
-      //do nothing
-     } else 
-      amrex::Error("expecting static_viscosity>0.0"); 
-			                        
      for (int iten=0;iten<num_interfaces;iten++) {
       if (denconst_interface_added[iten]==0.0) {
        //do nothing
@@ -5039,9 +5025,6 @@ NavierStokes::read_params ()
 
      std::cout << "static_surface_tension_duration=" << 
 	    static_surface_tension_duration << '\n';
-
-     std::cout << "static_viscosity=" << 
-	    static_viscosity << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i,static_tension=" << i << ' ' <<

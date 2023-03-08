@@ -3731,11 +3731,8 @@ stop
       REAL_T weymouth_factor,weymouth_cfl
       REAL_T dxmin
       REAL_T den1_2
-      REAL_T dt_galusinski
-      REAL_T c1_galusinski
-      REAL_T c2_galusinski
+      REAL_T dt_stable
       REAL_T effective_velocity
-      REAL_T visc_constraint_term
       INTEGER_T recompute_wave_speed
       REAL_T uulocal
       INTEGER_T ifaceR,jfaceR,kfaceR
@@ -3895,25 +3892,16 @@ stop
           cap_wave_speed(iten)=zero
          else if (user_tension(iten).gt.zero) then
           den1_2=half*(denconst(im)+denconst(im_opp))
-          if ((fort_static_viscosity.gt.zero).and. &
-              (den1_2.gt.zero)) then
-           c1_galusinski=1.0d0/Pi !1 anecdotedly OK(Galusinski and Vigneaux)
-           c2_galusinski=1.0d0  !4,8 anecdotedly OK(Galusinski and Vigneaux)
-           visc_constraint_term= &
-            c2_galusinski*fort_static_viscosity*dxmin/user_tension(iten)
-           dt_galusinski=0.5d0*( &
-            visc_constraint_term+ &
-            sqrt( &
-             (visc_constraint_term)**2 + &
-             4.0d0*c1_galusinski*den1_2*(dxmin**3)/user_tension(iten)))
-           if (dt_galusinski.gt.0.0d0) then
-            cap_wave_speed(iten)=dxmin/dt_galusinski
+          if (den1_2.gt.zero) then
+           dt_stable=sqrt(den1_2/(user_tension(iten)*(Pi**3)))*dxmin**(1.5d0)
+           if (dt_stable.gt.0.0d0) then
+            cap_wave_speed(iten)=dxmin/dt_stable
            else
-            print *,"dt_galusinski invalid"
+            print *,"dt_stable invalid"
             stop
            endif
           else
-           print *,"fort_static_visc or den1_2 invalid"
+           print *,"den1_2 invalid"
            stop
           endif
 

@@ -310,8 +310,6 @@ implicit none
 !   fort_damping_coefficient
 ! added January 22, 2023:
 !   fort_static_surface_tension_duration
-! added January 28, 2023:
-!   fort_static_viscosity
 ! added March 3, 2023:
 !   fort_static_tension
 
