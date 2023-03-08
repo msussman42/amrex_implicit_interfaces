@@ -339,6 +339,12 @@ void NavierStokes::static_surface_tension_advection() {
 
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
 
+   // 1. allocate_levelset_ALL(1,LEVELPC_MF)
+   // 2. ns_level.makeStateCurv (all levels)
+   // 3. init_gradu_tensor_and_material_visc_ALL
+   //    on all levels:
+   // 4. ns_level.make_physics_vars
+   // 5. ns_level.level_init_icemask 
   make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
   delete_array(CELLTENSOR_MF);
   delete_array(FACETENSOR_MF);
@@ -2619,6 +2625,413 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
 
 } // end subroutine advance_MAC_velocity()
 
+void NavierStokes::phase_change_code_segment(
+  const std::string& caller_string,
+  int& color_count,
+  Vector<blobclass>& blobdata) {
+
+ int update_flag=0;
+
+ int finest_level=parent->finestLevel();
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid phase_change_code_segment");
+
+ std::string local_caller_string="phase_change_code_segment";
+ local_caller_string=caller_string+local_caller_string;
+
+ if (ngrow_make_distance!=3)
+  amrex::Error("ngrow_make_distance!=3");
+ if (ngrow_distance!=4)
+  amrex::Error("ngrow_distance!=4");
+
+  // first num_interfaces components correspond to the status.
+ int nburning=EXTRAP_NCOMP_BURNING;
+ int ntsat=EXTRAP_NCOMP_TSAT;
+
+  // SATURATION_TEMP_MF is passed to the following fortran
+  // routines:
+  //  RATEMASSCHANGE,
+  //  AVGDOWN_BURNING, 
+  //  EXT_BURNVEL_INTERP,
+  //  EXTEND_BURNING_VEL,
+  //  CONVERTMATERIAL
+  //  STEFANSOLVER
+  // BURNING_VELOCITY_MF is passed to the following fortran
+  // routines:
+  //  RATEMASSCHANGE,
+  //  AVGDOWN_BURNING, 
+  //  EXT_BURNVEL_INTERP,
+  //  EXTEND_BURNING_VEL,
+  //  NODEDISPLACE,
+  //  CONVERTMATERIAL
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+
+  NavierStokes& ns_level=getLevel(ilev);
+
+  ns_level.new_localMF(BURNING_VELOCITY_MF,nburning,
+    ngrow_distance,-1);
+  ns_level.setVal_localMF(BURNING_VELOCITY_MF,0.0,0,
+    nburning,ngrow_distance);
+
+  int n_normal=(num_materials+num_interfaces)*(AMREX_SPACEDIM+1);
+
+  ns_level.new_localMF(FD_NRM_ND_MF,n_normal,
+    ngrow_make_distance+1,-1);
+  ns_level.setVal_localMF(FD_NRM_ND_MF,0.0,0,
+    n_normal,ngrow_make_distance+1);
+
+   // first num_materials+num_interfaces components are curvature
+   // second num_materials+num_interfaces components are 
+   // status (0=bad 1=good)
+  ns_level.new_localMF(FD_CURV_CELL_MF,2*(num_materials+num_interfaces),
+    ngrow_make_distance,-1);
+  ns_level.setVal_localMF(FD_CURV_CELL_MF,0.0,0,
+    2*(num_materials+num_interfaces),ngrow_make_distance);
+
+  ns_level.new_localMF(SATURATION_TEMP_MF,ntsat,
+    ngrow_distance,-1);
+  ns_level.setVal_localMF(SATURATION_TEMP_MF,0.0,0,
+    ntsat,ngrow_distance);
+
+  ns_level.new_localMF(JUMP_STRENGTH_MF,2*num_interfaces,
+  		     ngrow_distance,-1); 
+  ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,
+  		        2*num_interfaces,ngrow_distance);
+
+ } // ilev=level ... finest_level
+
+ debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,local_caller_string);
+ debug_ngrow(SWEPT_CROSSING_MF,0,local_caller_string);
+ debug_ngrow(BURNING_VELOCITY_MF,ngrow_distance,local_caller_string);
+ debug_ixType(BURNING_VELOCITY_MF,-1,local_caller_string);
+ debug_ngrow(SATURATION_TEMP_MF,ngrow_distance,local_caller_string);
+ debug_ngrow(FD_NRM_ND_MF,ngrow_make_distance+1,local_caller_string);
+ debug_ixType(FD_NRM_ND_MF,-1,local_caller_string);
+ debug_ngrow(FD_CURV_CELL_MF,ngrow_make_distance,local_caller_string);
+ debug_ixType(FD_CURV_CELL_MF,-1,local_caller_string);
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  debug_ngrow(AREA_MF+dir,1,local_caller_string);
+  debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
+ }
+ debug_ngrow(MDOT_MF,0,local_caller_string);
+
+ zeroALL(ngrow_distance,nburning,BURNING_VELOCITY_MF);
+ zeroALL(ngrow_distance,2*num_interfaces,JUMP_STRENGTH_MF);
+  //ngrow,scomp,ncomp,val,dest_mf
+ setVal_array(0,0,num_materials,1.0,SWEPT_CROSSING_MF);
+  // piecewise constant interpolation at coarse/fine borders.
+  // fluid LS can be positive in the solid regions.
+  // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
+ allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
+ if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("hold_LS_DATA_MF (nComp())!=num_materials*(AMREX_SPACEDIM+1)");
+ debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
+
+  // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  int nucleation_flag=0;
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_phase_change_rate(blobdata,color_count,
+    nucleation_flag);
+ }
+
+ delete_array(TYPE_MF);
+ delete_array(COLOR_MF);
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+    // in: NavierStokes2.cpp
+  ns_level.avgDownBURNING_localMF(
+  		BURNING_VELOCITY_MF,
+  		SATURATION_TEMP_MF);
+  ns_level.avgDown(LS_Type,0,num_materials,0);
+ }
+
+   // FIND RATE OF PHASE CHANGE V=[k grad T]/L for fully saturated
+   // boiling for example.
+   // EVAPORATION (partially saturated), or
+   // EVAPORATION (fully saturated), or
+   // BOILING (fully saturated), or
+   // CONDENSATION (partially saturated), .....
+   // traverse from coarsest to finest so that coarse/fine
+   // BC are well defined.
+   // sets the burning velocity flag from 0 to 2 if
+   // foot of characteristic within range.
+   // calls fort_extend_burning_vel
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_phase_change_rate_extend();
+ }
+
+ if (visual_phase_change_plot_int>0) {
+  if (very_last_sweep==1) {
+   int nsteps=parent->levelSteps(0); // nsteps==0 very first step.
+   int ratio=(nsteps+1)/visual_phase_change_plot_int;
+   ratio=ratio*visual_phase_change_plot_int;
+   if (ratio==nsteps+1) {
+
+     //writeSanityCheckData outputs raw data that exists on the
+     //computational domain boundary or within.
+     //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
+    writeSanityCheckData(
+     "TY_GAMMA",
+     "SATURATION_TEMP_MF: flag12,flag13,flag23,T_GAMMA12,Y_GAMMA12, ...",
+     local_caller_string,
+     SATURATION_TEMP_MF, //tower_mf_id
+     localMF[SATURATION_TEMP_MF]->nComp(), 
+     SATURATION_TEMP_MF,
+     -1,  // State_Type==-1 
+     -1, // data_dir==-1 (cell centered)
+     parent->levelSteps(0)); 
+
+     //BURNVEL<stuff>.plt (visit can open binary tecplot files)
+    writeSanityCheckData(
+     "BURNVEL",
+     "BURNING_VELOCITY_MF: flag12,flag13,flag23,[xyz]V12,[xyz]V13, ..",
+     local_caller_string,
+     BURNING_VELOCITY_MF, //tower_mf_id
+     localMF[BURNING_VELOCITY_MF]->nComp(), 
+     BURNING_VELOCITY_MF,
+     -1,  // State_Type==-1 
+     -1,  // data_dir==-1 (cell centered)
+     parent->levelSteps(0)); 
+
+     //BURNVEL<stuff>.plt (visit can open binary tecplot files)
+    writeSanityCheckData(
+     "CURV_CELL",
+     "FD_CURV_CELL_MF:curv:1..num_materials+num_interfaces stat:num_materials+num_interfaces+1..2(num_materials+nsten)",
+     local_caller_string,
+     FD_CURV_CELL_MF, //tower_mf_id
+     localMF[FD_CURV_CELL_MF]->nComp(), 
+     FD_CURV_CELL_MF,
+     -1,  // State_Type==-1 
+     -1,  // data_dir==-1 (cell centered)
+     parent->levelSteps(0)); 
+
+   } // (ratio==nsteps+1) {
+  } else if (very_last_sweep==0) {
+   // do nothing
+  } else
+   amrex::Error("very_last_sweep invalid");
+
+ } else if (visual_phase_change_plot_int==0) {
+  // do nothing
+ } else
+  amrex::Error("visual_phase_change_plot_int invalid");
+
+ allocate_array(1,2*num_interfaces*AMREX_SPACEDIM,-1,nodevel_MF);
+  //ngrow,scomp,ncomp
+ setVal_array(1,0,2*num_interfaces*AMREX_SPACEDIM,0.0,nodevel_MF);
+
+ delta_mass.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  // source 1..num_materials  dest 1..num_materials
+  delta_mass[tid].resize(2*num_materials); 
+  for (int im=0;im<2*num_materials;im++)
+   delta_mass[tid][im]=0.0;
+ } // tid
+
+  // in: phase_change_code_segment
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.getStateDen_localMF(DEN_RECON_MF,1,cur_time_slab);
+ }
+
+ // 1.initialize node velocity from BURNING_VELOCITY_MF
+ // 2.unsplit advection of materials changing phase
+ // 3.update volume fractions, jump strength, temperature
+ level_phase_change_convertALL();
+
+ delete_array(BURNING_VELOCITY_MF);
+ delete_array(FD_NRM_ND_MF);
+ delete_array(FD_CURV_CELL_MF);
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   for (int im=0;im<num_materials;im++) {
+    std::cout << "convert statistics: im,source,dest " << im << ' ' <<
+     delta_mass[0][im] << ' ' << delta_mass[0][im+num_materials] << '\n';
+   }
+  }
+ }
+
+  // in: phase_change_code_segment
+ delete_array(DEN_RECON_MF);
+ delete_array(nodevel_MF);
+
+ update_flag=1;  // update the error in S_new
+ int init_vof_prev_time=0;
+ VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
+  SLOPE_RECON_MF);
+
+  // in: phase_change_code_segment
+  // 1. prescribe solid temperature, velocity, and geometry where
+  //    appropriate.
+  // 2. extend level set functions into the solid.
+ int renormalize_only=0;
+ int local_truncate=0;
+ prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
+  local_truncate,local_caller_string);
+
+ int keep_all_interfaces=0;
+ makeStateDistALL(keep_all_interfaces);
+
+} //end subroutine phase_change_code_segment
+
+void NavierStokes::nucleation_code_segment(
+  const std::string& caller_string,
+  int& color_count,
+  Vector<blobclass>& blobdata,
+  Vector< Vector<Real> >& mdot_data,
+  Vector< Vector<Real> >& mdot_comp_data,
+  Vector< Vector<Real> >& mdot_data_redistribute,
+  Vector< Vector<Real> >& mdot_comp_data_redistribute,
+  Vector<int>& type_flag) {
+
+ int finest_level=parent->finestLevel();
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid nucleation_code_segment");
+
+ std::string local_caller_string="nucleation_code_segment";
+ local_caller_string=caller_string+local_caller_string;
+
+ if (1==0) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+  std::cout << "press any number then enter: before nucleate_bubbles\n";
+  int n_input;
+  std::cin >> n_input;
+ }
+
+  // CREATE SEEDS, NUCLEATION.
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  int nucleation_flag=1;
+  color_count=1; // filler
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.level_phase_change_rate(blobdata,color_count,
+    nucleation_flag);
+ }
+
+ int at_least_one_ice=0;
+ for (int im=0;im<num_materials;im++) {
+  if (is_ice_matC(im)==1) {
+   at_least_one_ice=1;
+  } else if (is_ice_matC(im)==0) {
+   // do nothing
+  } else
+   amrex::Error("is_ice_matC invalid");
+ } // im=0..num_materials-1 
+
+ Vector<int> recalesce_material;
+ recalesce_material.resize(num_materials);
+ int at_least_one=0;
+ for (int im=1;im<=num_materials;im++) {
+  recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
+  if (parent->AMR_recalesce_flag(im)>0) {
+   if (at_least_one_ice!=1)
+    amrex::Error("expecting at_least_one_ice==1");
+   at_least_one=1;
+  } 
+ } //im=1..num_materials
+ if (at_least_one==1) {
+  Vector<Real> recalesce_state_old;
+  Vector<Real> recalesce_state_new;
+  int recalesce_num_state=6;
+  recalesce_state_old.resize(recalesce_num_state*num_materials);
+  recalesce_state_new.resize(recalesce_num_state*num_materials);
+  parent->recalesce_get_state(recalesce_state_old);
+
+  fort_initrecalesce(
+   recalesce_material.dataPtr(),
+   recalesce_state_old.dataPtr(),
+   &recalesce_num_state);
+
+  process_recalesce_dataALL(recalesce_material,
+   recalesce_state_old,recalesce_state_new);
+  parent->recalesce_put_state(recalesce_state_new);
+ } else if (at_least_one==0) {
+  // do nothing
+ } else
+  amrex::Error("at_least_one invalid");
+
+ delta_mass.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  // source 1..num_materials  dest 1..num_materials
+  delta_mass[tid].resize(2*num_materials); 
+  for (int im=0;im<2*num_materials;im++)
+   delta_mass[tid][im]=0.0;
+ } // tid=0 ... nthreads-1
+
+ ParallelDescriptor::Barrier();
+
+ int tessellate=1;
+ int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
+ int operation_flag=OP_GATHER_MDOT;
+ int coarsest_level=0;
+
+ ColorSumALL( 
+   operation_flag, //=OP_GATHER_MDOT
+   tessellate, //=1
+   coarsest_level,
+   color_count,
+   TYPE_MF,
+   COLOR_MF,
+   idx_mdot,
+   idx_mdot,
+   type_flag,
+   blobdata,
+   mdot_data,
+   mdot_comp_data,
+   mdot_data_redistribute,
+   mdot_comp_data_redistribute
+   );
+
+ ParallelDescriptor::Barrier();
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.avgDown(LS_Type,0,num_materials,0);
+  ns_level.MOFavgDown();
+  ns_level.avgDown(State_Type,STATECOMP_STATES,
+     num_state_material*num_materials,1);
+ }  // ilev=finest_level ... level  
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   for (int im=0;im<num_materials;im++) {
+    std::cout << "Nucleation stats: im,source,dest " << im << ' ' <<
+     delta_mass[0][im] << ' ' << delta_mass[0][im+num_materials] << '\n';
+   }
+  }
+ } 
+
+ // generates SLOPE_RECON_MF
+ int update_flag=0; // do not update the error indicator
+ int init_vof_prev_time=0;
+  // Fluids tessellate; solids overlay.
+ VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
+  SLOPE_RECON_MF);
+ int keep_all_interfaces=1;
+ makeStateDistALL(keep_all_interfaces);
+
+ make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
+ delete_array(CELLTENSOR_MF);
+ delete_array(FACETENSOR_MF);
+
+ if (1==0) {
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+  std::cout << "press any number then enter: after nucleate_bubbles\n";
+  int n_input;
+  std::cin >> n_input;
+ }
+} //end subroutine nucleation_code_segment()
+
 // called from: NavierStokes::advance
 void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
   int& advance_status) {
@@ -2987,7 +3400,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     blobdata.resize(1);
     int color_count=0;
-    int coarsest_level=0;
 
       // 2. If mass transfer
       //    (a) mass transfer rate (nucleation)
@@ -3002,135 +3414,15 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
-       if (1==0) {
-        int basestep_debug=nStep();
-        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
-        std::cout << "press any number then enter: before nucleate_bubbles\n";
-        int n_input;
-        std::cin >> n_input;
-       }
-
-	// CREATE SEEDS, NUCLEATION.
-       for (int ilev=level;ilev<=finest_level;ilev++) {
-        int nucleation_flag=1;
-	color_count=1; // filler
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.level_phase_change_rate(blobdata,color_count,
-          nucleation_flag);
-       }
-
-       int at_least_one_ice=0;
-       for (int im=0;im<num_materials;im++) {
-        if (is_ice_matC(im)==1) {
-         at_least_one_ice=1;
-        } else if (is_ice_matC(im)==0) {
-         // do nothing
-        } else
-         amrex::Error("is_ice_matC invalid");
-       } // im=0..num_materials-1 
-
-       Vector<int> recalesce_material;
-       recalesce_material.resize(num_materials);
-       int at_least_one=0;
-       for (int im=1;im<=num_materials;im++) {
-        recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
-        if (parent->AMR_recalesce_flag(im)>0) {
-         if (at_least_one_ice!=1)
-          amrex::Error("expecting at_least_one_ice==1");
-         at_least_one=1;
-        } 
-       } //im=1..num_materials
-       if (at_least_one==1) {
-        Vector<Real> recalesce_state_old;
-        Vector<Real> recalesce_state_new;
-        int recalesce_num_state=6;
-        recalesce_state_old.resize(recalesce_num_state*num_materials);
-        recalesce_state_new.resize(recalesce_num_state*num_materials);
-        parent->recalesce_get_state(recalesce_state_old);
-
-        fort_initrecalesce(
-         recalesce_material.dataPtr(),
-         recalesce_state_old.dataPtr(),
-         &recalesce_num_state);
-   
-        process_recalesce_dataALL(recalesce_material,
-         recalesce_state_old,recalesce_state_new);
-        parent->recalesce_put_state(recalesce_state_new);
-       } else if (at_least_one==0) {
-        // do nothing
-       } else
-        amrex::Error("at_least_one invalid");
-
-       delta_mass.resize(thread_class::nthreads);
-       for (int tid=0;tid<thread_class::nthreads;tid++) {
-	// source 1..num_materials  dest 1..num_materials
-        delta_mass[tid].resize(2*num_materials); 
-        for (int im=0;im<2*num_materials;im++)
-         delta_mass[tid][im]=0.0;
-       } // tid=0 ... nthreads-1
-
-       ParallelDescriptor::Barrier();
-
-       tessellate=1;
-       int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
-       int operation_flag=OP_GATHER_MDOT;
-
-       ColorSumALL( 
-         operation_flag, //=OP_GATHER_MDOT
-         tessellate, //=1
-         coarsest_level,
-         color_count,
-         TYPE_MF,
-	 COLOR_MF,
-	 idx_mdot,
-	 idx_mdot,
-         type_flag,
+       nucleation_code_segment(
+	 local_caller_string,
+	 color_count,
 	 blobdata,
 	 mdot_data,
 	 mdot_comp_data,
-         mdot_data_redistribute,
-         mdot_comp_data_redistribute
-	 );
-
-       ParallelDescriptor::Barrier();
-
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.avgDown(LS_Type,0,num_materials,0);
-        ns_level.MOFavgDown();
-        ns_level.avgDown(State_Type,STATECOMP_STATES,
-	   num_state_material*num_materials,1);
-       }  // ilev=finest_level ... level  
-
-       if (verbose>0) {
-        if (ParallelDescriptor::IOProcessor()) {
-         for (int im=0;im<num_materials;im++) {
-          std::cout << "Nucleation stats: im,source,dest " << im << ' ' <<
-           delta_mass[0][im] << ' ' << delta_mass[0][im+num_materials] << '\n';
-         }
-        }
-       } 
-
-       // generates SLOPE_RECON_MF
-       update_flag=0; // do not update the error indicator
-       int init_vof_prev_time=0;
-        // Fluids tessellate; solids overlay.
-       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-        SLOPE_RECON_MF);
-       int keep_all_interfaces=1;
-       makeStateDistALL(keep_all_interfaces);
-
-       make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
-       delete_array(CELLTENSOR_MF);
-       delete_array(FACETENSOR_MF);
-
-       if (1==0) {
-        int basestep_debug=nStep();
-        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
-        std::cout << "press any number then enter: after nucleate_bubbles\n";
-        int n_input;
-        std::cin >> n_input;
-       }
+	 mdot_data_redistribute,
+	 mdot_comp_data_redistribute,
+	 type_flag);
 
       } else if (mass_transfer_active==0) {
 
@@ -3197,242 +3489,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (mass_transfer_active==1) {
 
-       if (ngrow_make_distance!=3)
-        amrex::Error("ngrow_make_distance!=3");
-       if (ngrow_distance!=4)
-        amrex::Error("ngrow_distance!=4");
-
-        // first num_interfaces components correspond to the status.
-       int nburning=EXTRAP_NCOMP_BURNING;
-       int ntsat=EXTRAP_NCOMP_TSAT;
-
-	// SATURATION_TEMP_MF is passed to the following fortran
-        // routines:
-        //  RATEMASSCHANGE,
-        //  AVGDOWN_BURNING, 
-        //  EXT_BURNVEL_INTERP,
-        //  EXTEND_BURNING_VEL,
-        //  CONVERTMATERIAL
-        //  STEFANSOLVER
-        // BURNING_VELOCITY_MF is passed to the following fortran
-        // routines:
-        //  RATEMASSCHANGE,
-        //  AVGDOWN_BURNING, 
-        //  EXT_BURNVEL_INTERP,
-        //  EXTEND_BURNING_VEL,
-        //  NODEDISPLACE,
-        //  CONVERTMATERIAL
-       for (int ilev=level;ilev<=finest_level;ilev++) {
-
-        NavierStokes& ns_level=getLevel(ilev);
-
-        ns_level.new_localMF(BURNING_VELOCITY_MF,nburning,
-          ngrow_distance,-1);
-        ns_level.setVal_localMF(BURNING_VELOCITY_MF,0.0,0,
-          nburning,ngrow_distance);
-
-	int n_normal=(num_materials+num_interfaces)*(AMREX_SPACEDIM+1);
-
-        ns_level.new_localMF(FD_NRM_ND_MF,n_normal,
-          ngrow_make_distance+1,-1);
-        ns_level.setVal_localMF(FD_NRM_ND_MF,0.0,0,
-          n_normal,ngrow_make_distance+1);
-
-         // first num_materials+num_interfaces components are curvature
-         // second num_materials+num_interfaces components are 
-         // status (0=bad 1=good)
-        ns_level.new_localMF(FD_CURV_CELL_MF,2*(num_materials+num_interfaces),
-          ngrow_make_distance,-1);
-        ns_level.setVal_localMF(FD_CURV_CELL_MF,0.0,0,
-          2*(num_materials+num_interfaces),ngrow_make_distance);
-
-        ns_level.new_localMF(SATURATION_TEMP_MF,ntsat,
-          ngrow_distance,-1);
-        ns_level.setVal_localMF(SATURATION_TEMP_MF,0.0,0,
-          ntsat,ngrow_distance);
-
-        ns_level.new_localMF(JUMP_STRENGTH_MF,2*num_interfaces,
-			     ngrow_distance,-1); 
-        ns_level.setVal_localMF(JUMP_STRENGTH_MF,0.0,0,
-			        2*num_interfaces,ngrow_distance);
-
-       } // ilev=level ... finest_level
-
-       debug_ngrow(JUMP_STRENGTH_MF,ngrow_distance,local_caller_string);
-       debug_ngrow(SWEPT_CROSSING_MF,0,local_caller_string);
-       debug_ngrow(BURNING_VELOCITY_MF,ngrow_distance,local_caller_string);
-       debug_ixType(BURNING_VELOCITY_MF,-1,local_caller_string);
-       debug_ngrow(SATURATION_TEMP_MF,ngrow_distance,local_caller_string);
-       debug_ngrow(FD_NRM_ND_MF,ngrow_make_distance+1,local_caller_string);
-       debug_ixType(FD_NRM_ND_MF,-1,local_caller_string);
-       debug_ngrow(FD_CURV_CELL_MF,ngrow_make_distance,local_caller_string);
-       debug_ixType(FD_CURV_CELL_MF,-1,local_caller_string);
-
-       for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-        debug_ngrow(AREA_MF+dir,1,local_caller_string);
-        debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
-       }
-       debug_ngrow(MDOT_MF,0,local_caller_string);
-
-       zeroALL(ngrow_distance,nburning,BURNING_VELOCITY_MF);
-       zeroALL(ngrow_distance,2*num_interfaces,JUMP_STRENGTH_MF);
-        //ngrow,scomp,ncomp,val,dest_mf
-       setVal_array(0,0,num_materials,1.0,SWEPT_CROSSING_MF);
-        // piecewise constant interpolation at coarse/fine borders.
-        // fluid LS can be positive in the solid regions.
-        // HOLD_LS_DATA_MF is deleted in phase_change_redistributeALL()
-       allocate_levelset_ALL(ngrow_distance,HOLD_LS_DATA_MF);
-       if (localMF[HOLD_LS_DATA_MF]->nComp()!=num_materials*(AMREX_SPACEDIM+1))
-        amrex::Error("hold_LS_DATA_MF (nComp())!=num_materials*(AMREX_SPACEDIM+1)");
-       debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
-
-        // BURNING_VELOCITY_MF flag==+ or - 1 if valid rate of phase change.
-       for (int ilev=level;ilev<=finest_level;ilev++) {
-        int nucleation_flag=0;
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.level_phase_change_rate(blobdata,color_count,
-          nucleation_flag);
-       }
-
-       delete_array(TYPE_MF);
-       delete_array(COLOR_MF);
-
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-	  // in: NavierStokes2.cpp
-        ns_level.avgDownBURNING_localMF(
-			BURNING_VELOCITY_MF,
-			SATURATION_TEMP_MF);
-        ns_level.avgDown(LS_Type,0,num_materials,0);
-       }
-
-         // FIND RATE OF PHASE CHANGE V=[k grad T]/L for fully saturated
-	 // boiling for example.
-         // EVAPORATION (partially saturated), or
-	 // EVAPORATION (fully saturated), or
-	 // BOILING (fully saturated), or
-	 // CONDENSATION (partially saturated), .....
-         // traverse from coarsest to finest so that coarse/fine
-         // BC are well defined.
-         // sets the burning velocity flag from 0 to 2 if
-         // foot of characteristic within range.
-	 // calls fort_extend_burning_vel
-       for (int ilev=level;ilev<=finest_level;ilev++) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.level_phase_change_rate_extend();
-       }
-
-       if (visual_phase_change_plot_int>0) {
-        if (very_last_sweep==1) {
-         int ratio=(nsteps+1)/visual_phase_change_plot_int;
-	 ratio=ratio*visual_phase_change_plot_int;
-	 if (ratio==nsteps+1) {
-
-	   //writeSanityCheckData outputs raw data that exists on the
-	   //computational domain boundary or within.
-           //TY_GAMMA<stuff>.plt (visit can open binary tecplot files)
-          writeSanityCheckData(
-           "TY_GAMMA",
-           "SATURATION_TEMP_MF: flag12,flag13,flag23,T_GAMMA12,Y_GAMMA12, ...",
-           local_caller_string,
-           SATURATION_TEMP_MF, //tower_mf_id
-           localMF[SATURATION_TEMP_MF]->nComp(), 
-           SATURATION_TEMP_MF,
-           -1,  // State_Type==-1 
-           -1, // data_dir==-1 (cell centered)
-           parent->levelSteps(0)); 
-
-           //BURNVEL<stuff>.plt (visit can open binary tecplot files)
-          writeSanityCheckData(
-           "BURNVEL",
-           "BURNING_VELOCITY_MF: flag12,flag13,flag23,[xyz]V12,[xyz]V13, ..",
-           local_caller_string,
-           BURNING_VELOCITY_MF, //tower_mf_id
-           localMF[BURNING_VELOCITY_MF]->nComp(), 
-           BURNING_VELOCITY_MF,
-           -1,  // State_Type==-1 
-           -1,  // data_dir==-1 (cell centered)
-           parent->levelSteps(0)); 
-
-           //BURNVEL<stuff>.plt (visit can open binary tecplot files)
-          writeSanityCheckData(
-           "CURV_CELL",
-           "FD_CURV_CELL_MF:curv:1..num_materials+num_interfaces stat:num_materials+num_interfaces+1..2(num_materials+nsten)",
-           local_caller_string,
-           FD_CURV_CELL_MF, //tower_mf_id
-           localMF[FD_CURV_CELL_MF]->nComp(), 
-           FD_CURV_CELL_MF,
-           -1,  // State_Type==-1 
-           -1,  // data_dir==-1 (cell centered)
-           parent->levelSteps(0)); 
-
-	 } // (ratio==nsteps+1) {
-	} else if (very_last_sweep==0) {
-	 // do nothing
-	} else
-	 amrex::Error("very_last_sweep invalid");
-
-       } else if (visual_phase_change_plot_int==0) {
-        // do nothing
-       } else
-        amrex::Error("visual_phase_change_plot_int invalid");
-
-       allocate_array(1,2*num_interfaces*AMREX_SPACEDIM,-1,nodevel_MF);
-        //ngrow,scomp,ncomp
-       setVal_array(1,0,2*num_interfaces*AMREX_SPACEDIM,0.0,nodevel_MF);
-
-       delta_mass.resize(thread_class::nthreads);
-       for (int tid=0;tid<thread_class::nthreads;tid++) {
-	// source 1..num_materials  dest 1..num_materials
-        delta_mass[tid].resize(2*num_materials); 
-        for (int im=0;im<2*num_materials;im++)
-         delta_mass[tid][im]=0.0;
-       } // tid
-
-        // in: do_the_advance
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.getStateDen_localMF(DEN_RECON_MF,1,cur_time_slab);
-       }
-
-       // 1.initialize node velocity from BURNING_VELOCITY_MF
-       // 2.unsplit advection of materials changing phase
-       // 3.update volume fractions, jump strength, temperature
-       level_phase_change_convertALL();
-
-       delete_array(BURNING_VELOCITY_MF);
-       delete_array(FD_NRM_ND_MF);
-       delete_array(FD_CURV_CELL_MF);
-
-       if (verbose>0) {
-        if (ParallelDescriptor::IOProcessor()) {
-         for (int im=0;im<num_materials;im++) {
-          std::cout << "convert statistics: im,source,dest " << im << ' ' <<
-           delta_mass[0][im] << ' ' << delta_mass[0][im+num_materials] << '\n';
-         }
-        }
-       }
-
-        // in: do_the_advance
-       delete_array(DEN_RECON_MF);
-       delete_array(nodevel_MF);
-
-       update_flag=1;  // update the error in S_new
-       int init_vof_prev_time=0;
-       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-        SLOPE_RECON_MF);
-
-        // in: do_the_advance
-        // 1. prescribe solid temperature, velocity, and geometry where
-        //    appropriate.
-        // 2. extend level set functions into the solid.
-       renormalize_only=0;
-       int local_truncate=0;
-       prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-        local_truncate,local_caller_string);
-
-       int keep_all_interfaces=0;
-       makeStateDistALL(keep_all_interfaces);
+       phase_change_code_segment(
+	local_caller_string,
+	color_count,
+	blobdata);
 
       } else if (mass_transfer_active==0) {
        // do nothing
@@ -3799,7 +3859,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         Vector<int> local_type_flag;
 
         int local_color_count=0;
-        int local_coarsest_level=0;
+        int coarsest_level=0;
         int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
         int local_tessellate=3;
         int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
@@ -3809,7 +3869,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         ColorSumALL(
          operation_flag, // =OP_GATHER_MDOT
          local_tessellate, //=3
-         local_coarsest_level,
+         coarsest_level,
          local_color_count,
          TYPE_MF,COLOR_MF,
          idx_mdot,
@@ -3828,7 +3888,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
          // increment MDOF_MF
         LowMachDIVUALL(
-         local_coarsest_level,
+         coarsest_level,
          local_color_count,
          TYPE_MF,
          COLOR_MF,
