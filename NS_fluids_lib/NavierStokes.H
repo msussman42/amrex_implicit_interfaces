@@ -846,6 +846,21 @@ protected:
 
     void advance_MAC_velocity(int project_option);
 
+    void phase_change_code_segment(
+      const std::string& caller_string,
+      int& color_count,
+      Vector<blobclass>& blobdata);
+
+    void nucleation_code_segment(
+      const std::string& caller_string,
+      int& color_count,
+      Vector<blobclass>& blobdata,
+      Vector< Vector<Real> >& mdot_data,
+      Vector< Vector<Real> >& mdot_comp_data,
+      Vector< Vector<Real> >& mdot_data_redistribute,
+      Vector< Vector<Real> >& mdot_comp_data_redistribute,
+      Vector<int>& type_flag);
+
     void do_the_advance(Real timeSEM,Real dtSEM,int& advance_status);
 
     void correct_colors(
