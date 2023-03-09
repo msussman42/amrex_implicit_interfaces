@@ -11444,18 +11444,6 @@ END SUBROUTINE SIMP
            print *,"nsolve,or velcomp invalid"
            stop
           endif
-         else if ((project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
-                  (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
-                  (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
-
-          if ((nsolve.eq.1).and. &
-              (velcomp.eq.0)) then
-           veldir=1
-           bc_comp=1
-          else
-           print *,"nsolve,or velcomp invalid"
-           stop
-          endif
 
          else
           print *,"project_option invalid; fort_fluidsolidcor"
