@@ -12156,61 +12156,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
 
-       else if ((project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
-                (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
-                (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
-
-        if (nsolve.ne.1) then
-         print *,"nsolve invalid for viscosity for quasi static iteration"
-         stop
-        endif
-        dd_group=dd  !no visc_coef quasi static iteration
-        cc_group=one
-        ddfactor=one
-
-        if ((dd_group.ge.zero).and. &
-            (cc_group.eq.one)) then
-
-         if (veldir.eq.1) then
-          ! do nothing
-         else
-          print *,"veldir invalid"
-          stop
-         endif
-
-         local_wt(veldir)=dd_group*cc_group*ddfactor
-
-         if (side.eq.0) then
-          ! do nothing
-         else if ((side.eq.1).or.(side.eq.2)) then
-          if (local_presbc.eq.INT_DIR) then
-           ! do nothing
-          else if (local_presbc.eq.EXT_DIR) then
-           ! do nothing 
-           ! a) 2nd order BC if standard FVM 
-           !    discretization (fort_face_gadients)
-           ! b) 2nd order or higher BC if SEM discretization.
-          else if (local_presbc.eq.REFLECT_ODD) then
-           ! do nothing
-          else if (local_presbc.eq.REFLECT_EVEN) then
-           local_wt(veldir)=zero
-          else if (local_presbc.eq.FOEXTRAP) then
-           local_wt(veldir)=zero
-          else
-           print *,"local_presbc invalid"
-           stop
-          endif
-         else
-          print *,"side invalid"
-          stop
-         endif
-        else
-         print *,"dd_group or cc_group invalid4"
-         print *,"dd_group= ",dd_group
-         print *,"cc_group= ",cc_group
-         print *,"project_option=",project_option
-         stop
-        endif
        else
         print *,"project_option invalid eval_face_coeff"
         stop
@@ -23415,17 +23360,6 @@ end subroutine initialize2d
          vel_homflag=1
         else
          print *,"homflag invalid in override pbc 2"
-         stop
-        endif
-       else if ((project_option.eq.SOLVETYPE_VISCSTATIC_X).or. &
-                (project_option.eq.SOLVETYPE_VISCSTATIC_Y).or. &
-                (project_option.eq.SOLVETYPE_VISCSTATIC_Y+SDIM-2)) then 
-        if (homflag.eq.0) then
-         vel_homflag=0
-        else if (homflag.eq.1) then
-         vel_homflag=1
-        else
-         print *,"homflag invalid in override pbc 2static"
          stop
         endif
        else if (project_option.eq.SOLVETYPE_HEAT) then  ! temperature

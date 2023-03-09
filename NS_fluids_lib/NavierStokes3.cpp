@@ -7978,12 +7978,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
   local_face_index=FACECOMP_FACEHEAT; 
  } else if (project_option==SOLVETYPE_VISC) {
   local_face_index=FACECOMP_FACEVISC; 
- } else if (project_option==SOLVETYPE_VISCSTATIC_X) {
-  local_face_index=FACECOMP_FACEVISC; 
- } else if (project_option==SOLVETYPE_VISCSTATIC_Y) {
-  local_face_index=FACECOMP_FACEVISC; 
- } else if (project_option==SOLVETYPE_VISCSTATIC_Y+AMREX_SPACEDIM-2) {
-  local_face_index=FACECOMP_FACEVISC; 
  } else if ((project_option>=SOLVETYPE_SPEC)&&
             (project_option<SOLVETYPE_SPEC+num_species_var)) { // rho D
   local_face_index=FACECOMP_FACESPEC+project_option-SOLVETYPE_SPEC;
@@ -9312,21 +9306,6 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   zero_independent_vel(project_option,UMAC_MF,nsolve);
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
 
- } else if (project_option==SOLVETYPE_VISCSTATIC_X) {
-
-  zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
-
- } else if (project_option==SOLVETYPE_VISCSTATIC_Y) {
-
-  zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
-
- } else if (project_option==SOLVETYPE_VISCSTATIC_Y+AMREX_SPACEDIM-2) {
-
-  zero_independent_vel(project_option,UMAC_MF,nsolve);
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
-
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) {
 
@@ -9534,10 +9513,7 @@ void NavierStokes::set_local_tolerances(int project_option) {
   save_atol_b=0.01*save_mac_abs_tol; 
   pp.queryAdd("thermal_bot_atol",save_atol_b);
   save_min_rel_error=diffusion_minimum_relative_error;
- } else if ((project_option==SOLVETYPE_VISC)||
-  	    (project_option==SOLVETYPE_VISCSTATIC_X)||
-	    (project_option==SOLVETYPE_VISCSTATIC_Y)||
-	    (project_option==SOLVETYPE_VISCSTATIC_Y+AMREX_SPACEDIM-1)) {
+ } else if (project_option==SOLVETYPE_VISC) {
   save_mac_abs_tol=visc_abs_tol;
   save_atol_b=0.01*save_mac_abs_tol; 
   pp.queryAdd("visc_bot_atol",save_atol_b);
