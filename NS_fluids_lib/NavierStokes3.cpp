@@ -453,6 +453,17 @@ void NavierStokes::static_surface_tension_advection() {
   } else
    amrex::Error("verbose invalid");
 
+  if (visual_quasi_static_plot_int>0) {
+   int nsteps=parent->levelSteps(0); 
+   int ratio=(nsteps+1)/visual_quasi_static_plot_int;
+   ratio=ratio*visual_quasi_static_plot_int;
+   if (ratio==nsteps+1) {
+    parent->writeDEBUG_PlotFile(nsteps,SDC_outer_sweeps,slab_step);
+    std::cout << "press any number then enter: quasi_static loop\n";
+    int n_input;
+    std::cin >> n_input;
+   }
+  }
 
  } // while (quasi_static_reached==0) 
 
