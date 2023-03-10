@@ -308,6 +308,7 @@ int  NavierStokes::visual_tessellate_vfrac=0;
 int  NavierStokes::visual_revolve=0;   
 int  NavierStokes::visual_output_raw_State_Type=0; 
 int  NavierStokes::visual_output_raw_mac_Type=0; 
+int  NavierStokes::visual_quasi_static_plot_int=0; 
 int  NavierStokes::visual_phase_change_plot_int=0; 
 int  NavierStokes::visual_buoyancy_plot_int=0; 
 int  NavierStokes::visual_divergence_plot_int=0; 
@@ -2871,6 +2872,7 @@ NavierStokes::read_params ()
     pp.queryAdd("visual_revolve",visual_revolve);
     pp.queryAdd("visual_output_raw_State_Type",visual_output_raw_State_Type);
     pp.queryAdd("visual_output_raw_mac_Type",visual_output_raw_mac_Type);
+    pp.queryAdd("visual_quasi_static_plot_int",visual_quasi_static_plot_int);
     pp.queryAdd("visual_phase_change_plot_int",visual_phase_change_plot_int);
     pp.queryAdd("visual_buoyancy_plot_int",visual_buoyancy_plot_int);
     pp.queryAdd("visual_divergence_plot_int",visual_divergence_plot_int);
@@ -5517,6 +5519,8 @@ NavierStokes::read_params ()
 	     visual_output_raw_State_Type << '\n';
      std::cout << "visual_output_raw_mac_Type " << 
 	     visual_output_raw_mac_Type << '\n';
+     std::cout << "visual_quasi_static_plot_int " << 
+	     visual_quasi_static_plot_int << '\n';
      std::cout << "visual_phase_change_plot_int " << 
 	     visual_phase_change_plot_int << '\n';
      std::cout << "visual_buoyancy_plot_int " << 
