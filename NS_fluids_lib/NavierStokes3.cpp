@@ -414,6 +414,9 @@ void NavierStokes::static_surface_tension_advection() {
    if (quasi_static_time>=static_surface_tension_duration) {
     quasi_static_reached=1;
    } 
+   if (quasi_static_iter>=static_surface_tension_max_iter) {
+    quasi_static_reached=1;
+   } 
    if (quasi_static_iter==0) {
     amrex::Error("quasi_static_iter invalid");
    } else if (quasi_static_iter==1) {
@@ -432,6 +435,25 @@ void NavierStokes::static_surface_tension_advection() {
    amrex::Error("static_surface_tension_duration<=0.0");
 
   cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
+
+  if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "quasi_static_iter= " << quasi_static_iter << '\n';
+    std::cout << "quasi_static_dt_slab= " << quasi_static_dt_slab << '\n';
+    std::cout << "quasi_static_time= " << quasi_static_time << '\n';
+    std::cout << "vel_max_mag_init= " << vel_max_mag_init << '\n';
+    std::cout << "vel_max_mag_current= " << vel_max_mag_current << '\n';
+    for (int iten=0;iten<num_interfaces;iten++) {
+     std::cout << "iten= " << iten << " static_cap_wave_speed=" <<
+       static_cap_wave_speed[iten] << '\n';
+    }
+   } //IOProc?
+  } else if (verbose==0) {
+   //do nothing
+  } else
+   amrex::Error("verbose invalid");
+
+
  } // while (quasi_static_reached==0) 
 
  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,

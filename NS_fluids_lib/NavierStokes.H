@@ -378,6 +378,7 @@ public:
     static int  MOF_DEBUG_RECON;
 
     static Real static_surface_tension_duration;
+    static int static_surface_tension_max_iter;
 
     static Real visc_coef; 
 

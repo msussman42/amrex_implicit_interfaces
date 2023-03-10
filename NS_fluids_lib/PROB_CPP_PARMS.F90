@@ -405,7 +405,6 @@ stop
         ccreference_pressure, &
         ccmolar_mass, &
         ccspecies_molar_mass, &
-        ccstatic_surface_tension_duration, &
         ccstatic_tension, &
         cctension, &
         cctension_init, &
@@ -567,7 +566,6 @@ stop
       REAL_T, INTENT(in) :: ccreference_pressure(2*ccnten)
       REAL_T, INTENT(in) :: ccmolar_mass(ccnum_materials)
       REAL_T, INTENT(in) :: ccspecies_molar_mass(ccnum_species_var+1)
-      REAL_T, INTENT(in) :: ccstatic_surface_tension_duration
       REAL_T, INTENT(in) :: ccstatic_tension(ccnten)
       REAL_T, INTENT(in) :: cctension(ccnten)
       REAL_T, INTENT(in) :: cctension_init(ccnten)
@@ -1523,8 +1521,6 @@ stop
        stop
       endif
 
-      fort_static_surface_tension_duration=ccstatic_surface_tension_duration
-
       do iten=1,num_interfaces
        fort_latent_heat(iten)=cclatent_heat(iten)
        fort_latent_heat(num_interfaces+iten)=cclatent_heat(num_interfaces+iten)
@@ -1669,9 +1665,6 @@ stop
        enddo
      
        print *,"fort_visc_coef= ",fort_visc_coef
-
-       print *,"fort_static_surface_tension_duration= ", &
-               fort_static_surface_tension_duration
 
        do iten=1,num_interfaces
         print *,"iten,static_tension ",iten,fort_static_tension(iten)

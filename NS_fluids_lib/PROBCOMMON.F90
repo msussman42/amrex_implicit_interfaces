@@ -314,6 +314,8 @@ implicit none
 !   fort_static_tension
 ! deleted March 9, 2023:
 !   VISCSTATIC
+! deleted March 10, 2023:
+!   fort_static_surface_tension_duration
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
