@@ -101,7 +101,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // do nothing
   
  } else
-  amrex::Error("project_option invalid60");
+  amrex::Error("project_option invalid60 MacProj.cpp");
 
  int finest_level=parent->finestLevel();
 
@@ -279,8 +279,9 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  if (project_option_is_valid(project_option)==1) {
   // do nothing
- } else
-  amrex::Error("project_option invalid");
+ } else {
+  amrex::Error("project_option invalid line 283 MacProj.cpp");
+ }
 
  debug_ngrow(CELL_SOUND_MF,0,local_caller_string);
  debug_ngrow(CELL_DEN_MF,1,local_caller_string);
@@ -927,7 +928,7 @@ NavierStokes::AllinterpScalarMAC(
   // do nothing
 
  } else
-  amrex::Error("project_option invalid61");
+  amrex::Error("project_option invalid61 MacProj.cpp");
 
  int finest_level=parent->finestLevel();
  if ((level>finest_level)||(level<1))
@@ -1379,7 +1380,7 @@ void NavierStokes::applyBC_LEVEL(int project_option,int idx_phi,int nsolve) {
  } else if (project_option_momeqn(project_option)==0) {
   //do nothing
  } else
-  amrex::Error("project_option invalid64");
+  amrex::Error("project_option invalid64 MacProj.cpp");
 
  if (override_bc_to_homogeneous!=1) {
   std::cout << "override_bc_to_homogeneous= " <<
@@ -1684,8 +1685,9 @@ void NavierStokes::apply_div(
 
  if (project_option_is_valid(project_option)==1) {
   // do nothing
- } else
-  amrex::Error("project_option invalid");
+ } else {
+  amrex::Error("project_option invalid line 1689 MacProj.cpp");
+ }
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
   if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=

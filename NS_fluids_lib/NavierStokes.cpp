@@ -3421,6 +3421,8 @@ NavierStokes::read_params ()
 
     prefreeze_tension.resize(num_interfaces);
 
+    static_tension.resize(num_interfaces);
+
      // (dir,side)  (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
     outflow_velocity_buffer_size.resize(2*AMREX_SPACEDIM);
 
@@ -5805,7 +5807,7 @@ int NavierStokes::project_option_momeqn(int project_option) {
              (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 0;
  } else {
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid project_option_momeqn");
   return 0;
  }
 
@@ -5834,7 +5836,7 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
 	     (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 1;
  } else {
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid function project_option_olddata_needed");
   return 0;
  }
 
@@ -5855,7 +5857,7 @@ int NavierStokes::project_option_pressure(int project_option) {
              (project_option<SOLVETYPE_SPEC+num_species_var))) {
   return 0;
  } else {
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid project_option_pressure");
   return 0;
  }
 
@@ -6801,7 +6803,7 @@ void NavierStokes::print_project_option(int project_option) {
  } else {
   std::cout << "project_option= " << project_option << 
     " (INVALID) \n";
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid print_project_option");
  }
 
 } // end subroutine print_project_option
@@ -11950,7 +11952,7 @@ void NavierStokes::update_SEM_delta_force(
  } else if (project_option==SOLVETYPE_PRES) {
   // check nothing
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 11955");
 
  if ((project_option==SOLVETYPE_PRES)||  //pressure gradient (face)
      (project_option==SOLVETYPE_HEAT)||  //thermal conductivity
@@ -15674,7 +15676,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
      amrex::Error("latent_heat[im] (LL) invalid");
    } // im=0.. 2 num_interfaces -1
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 15679");
 
  } else if (is_phasechange==0) {
   amrex::Error("is_phasechange invalid in stefan_solver_init (1)");
@@ -18575,7 +18577,7 @@ NavierStokes::dotSumONES_size(int project_option,
  } else if (project_option_is_valid(project_option)==1) {
   nsolve_expect=1;
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 18580");
 
  if (nsolve_expect==nsolve_test) {
   // do nothing
@@ -18741,7 +18743,7 @@ NavierStokes::dotSumONES(int project_option,
  } else if (project_option_is_valid(project_option)==1) {
   nsolve_expect=1;
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid nsolve_expect nsolve_test");
 
  if (nsolve_expect==nsolve_test) {
   // do nothing
@@ -18893,7 +18895,7 @@ NavierStokes::mf_combine_ones_level(int project_option,
  } else if (project_option_is_valid(project_option)==1) {
   nsolve_expect=1;
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid nsolve_expect");
 
  if (nsolve_expect==nsolve_test) {
   // do nothing
@@ -23357,7 +23359,7 @@ NavierStokes::post_init_state () {
    ns_level.make_MAC_velocity_consistent();
   }
 
-  multiphase_project(project_option,SUB_SOLVETYPE_NULL); // initial project
+  multiphase_project(project_option); // initial project
 
    // U^CELL and U^MAC
   for (int ilev=finest_level;ilev>=level;ilev--) {
