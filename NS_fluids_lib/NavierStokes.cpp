@@ -25506,10 +25506,12 @@ NavierStokes::makeStateCurv(int project_option,
   //do nothing
  } else if (pattern_test(local_caller_string,"prepare_post_process")==1) {
   //do nothing
- } else if (pattern_test(local_caller_string,"do_the_advence")==1) {
+ } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
   //do nothing
- } else
+ } else {
+  std::cout << "local_caller_string=" << local_caller_string << '\n';
   amrex::Error("local_caller_string invalid");
+ }
 
  bool use_tiling=ns_tiling;
 
