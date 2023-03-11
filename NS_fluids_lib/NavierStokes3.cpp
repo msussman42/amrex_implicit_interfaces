@@ -344,6 +344,11 @@ void NavierStokes::static_surface_tension_advection() {
  Real quasi_static_time=0.0;
  Real vel_max_mag_init=0.0;
 
+ Vector<Real> vel_max_history(static_surface_tension_max_iter+2);
+ int vel_max_min_index=2;
+
+ vel_max_history[0]=0.0;
+ 
  while (quasi_static_reached==0) {
 
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
@@ -408,7 +413,11 @@ void NavierStokes::static_surface_tension_advection() {
   quasi_static_reached=0;
   quasi_static_iter++;
   quasi_static_time+=quasi_static_dt_slab;
+
   if (static_surface_tension_duration>0.0) {
+
+   vel_max_history[quasi_static_iter]=vel_max_mag_current;
+
    if (quasi_static_time>=static_surface_tension_duration) {
     quasi_static_reached=1;
    } 
@@ -425,6 +434,24 @@ void NavierStokes::static_surface_tension_advection() {
    } else if (quasi_static_iter==2) {
      //do nothing
    } else if (quasi_static_iter>=3) {
+
+    if (vel_max_mag_current<vel_max_history[vel_max_min_index]) {
+     vel_max_min_index=quasi_static_iter;
+    }
+    if (quasi_static_iter>=5) {
+     int at_valley=1;
+     for (int iback=0;iback<3;iback++) {
+      if (vel_max_history[quasi_static_iter-iback]<=
+          vel_max_history[vel_max_min_index]+1.0e-3) {
+       //do nothing
+      } else {
+        at_valley=0;
+      }
+     } //iback=0..2
+     if (at_valley==1)
+      quasi_static_reached=1
+    }
+
     if (vel_max_mag_current<1.0e-3*vel_max_mag_init)
      quasi_static_reached=1;
    } else
