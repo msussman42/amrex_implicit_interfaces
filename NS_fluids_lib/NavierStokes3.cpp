@@ -348,6 +348,8 @@ void NavierStokes::static_surface_tension_advection() {
  int vel_max_min_index=2;
 
  vel_max_history[0]=0.0;
+ vel_max_history[1]=0.0;
+ vel_max_history[2]=0.0;
  
  while (quasi_static_reached==0) {
 
@@ -442,14 +444,14 @@ void NavierStokes::static_surface_tension_advection() {
      int at_valley=1;
      for (int iback=0;iback<3;iback++) {
       if (vel_max_history[quasi_static_iter-iback]<=
-          vel_max_history[vel_max_min_index]+1.0e-3) {
+          vel_max_history[vel_max_min_index]*(1.0+1.0e-2)) {
        //do nothing
       } else {
         at_valley=0;
       }
      } //iback=0..2
      if (at_valley==1)
-      quasi_static_reached=1
+      quasi_static_reached=1;
     }
 
     if (vel_max_mag_current<1.0e-3*vel_max_mag_init)
@@ -466,6 +468,9 @@ void NavierStokes::static_surface_tension_advection() {
     std::cout << "quasi_static_iter= " << quasi_static_iter << '\n';
     std::cout << "quasi_static_dt_slab= " << quasi_static_dt_slab << '\n';
     std::cout << "quasi_static_time= " << quasi_static_time << '\n';
+    std::cout << "vel_max_min_index= " << vel_max_min_index << '\n';
+    std::cout << "vel_max_history[vel_max_min_index]= " << 
+       vel_max_history[vel_max_min_index] << '\n';
     std::cout << "vel_max_mag_init= " << vel_max_mag_init << '\n';
     std::cout << "vel_max_mag_current= " << vel_max_mag_current << '\n';
     for (int iten=0;iten<num_interfaces;iten++) {

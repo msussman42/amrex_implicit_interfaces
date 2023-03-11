@@ -110,8 +110,10 @@ ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec
 ns.visual_nddata_format=0
 ns.visual_quasi_static_plot_int=1
 ns.static_surface_tension_duration=1.0
-ns.static_surface_tension_max_iter=5
+ns.static_surface_tension_max_iter=10
 ns.static_tension = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
+# U^2=50/(1 L 0.0025)
+ns.tension        = 0.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 
 ns.cfl            = 0.25    
 ns.init_shrink    = 0.1  
@@ -124,8 +126,6 @@ ns.visc_coef      = 1.0    # 0.038=mu/(rho L U)
 ns.gravity        = -980.0   # 1.321=L g/U^2
 ns.segregated_gravity_flag=0
 ns.incremental_gravity_flag=0
-# U^2=50/(1 L 0.0025)
-ns.tension        = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 1     # default 1
 
