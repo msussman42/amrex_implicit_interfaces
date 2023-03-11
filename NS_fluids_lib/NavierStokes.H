@@ -1159,7 +1159,7 @@ void apply_pressure_grad(
       int idx_umac,
       int& restart_flag);
 
-    void multiphase_project(int project_option,int sub_project_option);
+    void multiphase_project(int project_option);
 
     static void set_local_tolerances(int project_option);
 

@@ -15299,7 +15299,9 @@ stop
                call get_user_tension(xstenMAC_center,time, &
                 fort_tension,user_tension,mgoni_temp)
               else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
-               user_tension(iten)=fort_static_tension(iten)
+               do iten=1,num_interfaces
+                user_tension(iten)=fort_static_tension(iten)
+               enddo
               else
                print *,"project_option invalid"
                stop

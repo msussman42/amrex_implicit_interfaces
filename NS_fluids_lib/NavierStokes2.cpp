@@ -1922,7 +1922,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   } else if (project_option==SOLVETYPE_PRESSTATIC) {
    // do nothing
   } else {
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 1925");
   }
 
    // old cell velocity before application of pressure gradient.
@@ -2000,7 +2000,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     } else if (project_option==SOLVETYPE_PRESSTATIC) {
      solfab=&(*localMF[FACE_VAR_MF+dir])[mfi]; //placeholder
     } else {
-     amrex::Error("project_option invalid");
+     amrex::Error("project_option invalid 2003");
     }
 
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
@@ -2166,7 +2166,7 @@ void NavierStokes::init_divup_cell_vel_cell(
      solyfab = &(*localMF[AREA_MF+1])[mfi]; //placeholder
      solzfab = &(*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi]; //placeholder
     } else {
-     amrex::Error("project_option invalid");
+     amrex::Error("project_option invalid 2169");
     }
 
     FArrayBox& levelpcfab=(*localMF[LEVELPC_MF])[mfi];
@@ -4316,7 +4316,7 @@ void NavierStokes::apply_pressure_grad(
  if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 4319");
 
  if (project_option_is_static(&project_option)==1) {
   //do nothing
@@ -4654,7 +4654,7 @@ void NavierStokes::apply_pressure_grad(
     amrex::Error("simple_AMR_BC_flag invalid");
 
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 4657");
 
   if (localMF[SEM_FLUXREG_MF]->nComp()!=local_sem_fluxreg_ncomp)
    amrex::Error("localMF[SEM_FLUXREG_MF]->nComp() invalid6");
@@ -4824,7 +4824,7 @@ void NavierStokes::apply_pressure_grad(
   if (project_option_is_valid(project_option)==1) {
    synchronize_flux_register(operation_flag,spectral_loop);
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 4827");
 
   } // spectral_loop
 
@@ -5791,7 +5791,7 @@ void NavierStokes::process_potential_forceALL(
      (project_option==SOLVETYPE_PRESGRAVITY)) {
   //do nothing
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid5794");
 
  if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -6007,7 +6007,7 @@ void NavierStokes::process_potential_force_face(
      (project_option==SOLVETYPE_PRESGRAVITY)) {
   //do nothing
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 6010 process_pot_force_face ");
 
  int num_colors=0;
  Vector<Real> blob_array;

@@ -402,9 +402,7 @@ void NavierStokes::static_surface_tension_advection() {
   }
 
   cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
-  multiphase_project(SOLVETYPE_PRESSTATIC,SUB_SOLVETYPE_NULL);
-  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
-
+  multiphase_project(SOLVETYPE_PRESSTATIC);
   nonlinear_advection(local_caller_string);
 
   quasi_static_reached=0;
@@ -3948,14 +3946,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if (disable_pressure_solve==0) {
 
         if (segregated_gravity_flag==1) {
-         multiphase_project(SOLVETYPE_PRESGRAVITY,SUB_SOLVETYPE_NULL);
+         multiphase_project(SOLVETYPE_PRESGRAVITY);
 	} else if (segregated_gravity_flag==0) {
  	 //do nothing
 	} else
 	 amrex::Error("segregated_gravity_flag invalid");
 
          // MDOT term included
-        multiphase_project(SOLVETYPE_PRES,SUB_SOLVETYPE_NULL);
+        multiphase_project(SOLVETYPE_PRES);
 
         int singular_parts_exist=0;
         for (int im=0;im<num_materials;im++) {
@@ -3970,7 +3968,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         if (singular_parts_exist==1) {
  
          if (extend_pressure_into_solid==1) {
-          multiphase_project(SOLVETYPE_PRESEXTRAP,SUB_SOLVETYPE_NULL);
+          multiphase_project(SOLVETYPE_PRESEXTRAP);
          } else if (extend_pressure_into_solid==0) {
           // do nothing
          } else
@@ -7874,7 +7872,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
  if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 7875");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
@@ -9636,8 +9634,7 @@ void NavierStokes::Krylov_checkpoint(
 //   Result of the Helmholtz solve is stored instead.
 //
 // if project_option==SOLVETYPE_PRESSTATIC then use quasi_static_dt_slab.
-void NavierStokes::multiphase_project(int project_option,
-  int sub_project_option) {
+void NavierStokes::multiphase_project(int project_option) {
 
  std::string local_caller_string="multiphase_project";
 
@@ -9655,12 +9652,6 @@ void NavierStokes::multiphase_project(int project_option,
  std::string profname=subname+popt_string_stream.str();
  BLProfiler bprof(profname);
 #endif
-
- if ((sub_project_option==SUB_SOLVETYPE_NULL)||
-     (sub_project_option==SUB_SOLVETYPE_DISABLE_SURFTEN)) {
-  //do nothing
- } else
-  amrex::Error("sub_project_option invalid");
 
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
@@ -9698,7 +9689,7 @@ void NavierStokes::multiphase_project(int project_option,
  } else if (project_option_is_valid(project_option)==1) {
   // do not save anything
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 9692");
 
  int save_enable_spectral=enable_spectral;
 
@@ -9917,13 +9908,9 @@ void NavierStokes::multiphase_project(int project_option,
     amrex::Error("incremental_gravity_flag invalid");
 
   } else if (project_option==SOLVETYPE_PRESSTATIC) {
+
    // (quasi-static) surface tension
-   if (sub_project_option==SUB_SOLVETYPE_NULL) {
-    potgrad_surface_tension_mask=POTGRAD_SURFTEN;
-   } else if (sub_project_option==SUB_SOLVETYPE_DISABLE_SURFTEN) {
-    potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
-   } else
-    amrex::Error("sub_project_option invalid");
+   potgrad_surface_tension_mask=POTGRAD_SURFTEN;
 
   } else if (project_option==SOLVETYPE_PRES) {
 
@@ -9944,7 +9931,7 @@ void NavierStokes::multiphase_project(int project_option,
     amrex::Error("segregated_gravity_flag invalid");
 
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 9934");
 
    // 1. init_gravity_potential
    //      output: HYDROSTATIC_PRESDEN_MF
@@ -9972,7 +9959,7 @@ void NavierStokes::multiphase_project(int project_option,
   } else if (project_option==SOLVETYPE_PRESSTATIC) {
    // do nothing
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 9962");
 
    // increment_potential_forceALL is declared in NavierStokes2.cpp
    // increment_potential_force is declared in NavierStokes2.cpp
@@ -10168,6 +10155,7 @@ void NavierStokes::multiphase_project(int project_option,
   Real beta=0.0;
 
   if ((project_option==SOLVETYPE_PRES)||
+      (project_option==SOLVETYPE_PRESSTATIC)||
       (project_option==SOLVETYPE_PRESGRAVITY)||
       (project_option==SOLVETYPE_INITPROJ)) {
 
@@ -10175,6 +10163,7 @@ void NavierStokes::multiphase_project(int project_option,
     amrex::Error("nsolve invalid");
 
    if ((project_option==SOLVETYPE_PRES)||
+       (project_option==SOLVETYPE_PRESSTATIC)||
        (project_option==SOLVETYPE_PRESGRAVITY)) {
     operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
    } else if (project_option==SOLVETYPE_INITPROJ) {
@@ -10218,7 +10207,7 @@ void NavierStokes::multiphase_project(int project_option,
    } // ilev=finest_level ... level
 
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 10208");
 
   delete_array(TYPE_MF);
   delete_array(COLOR_MF);
@@ -10243,7 +10232,7 @@ void NavierStokes::multiphase_project(int project_option,
    if (project_option==SOLVETYPE_PRES) {
     // do nothing
    } else
-    amrex::Error("project_option invalid");
+    amrex::Error("project_option invalid 10233");
 
    // updates CELL_SOUND_MF, DIFFUSIONRHS, and S_new. 
    //  State_Type is updated by solver if project_option==SOLVETYPE_PRES. 
@@ -10337,7 +10326,7 @@ void NavierStokes::multiphase_project(int project_option,
  } else if (project_option_is_valid(project_option)==1) {
   homflag_residual_correction_form=0; 
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 10327");
 
  cpp_overridepbc(homflag_residual_correction_form,project_option);
 
@@ -10842,7 +10831,7 @@ void NavierStokes::multiphase_project(int project_option,
        BICGSTAB_ACTIVE=0;
 
       } else
-       amrex::Error("project_option invalid");
+       amrex::Error("project_option invalid 10832");
 
      } else
       amrex::Error("enable_spectral invalid 3");
@@ -11834,7 +11823,7 @@ void NavierStokes::multiphase_project(int project_option,
 	      (project_option==SOLVETYPE_PRESSTATIC)) { 
     update_energy=SUB_OP_THERMAL_DIVUP_NULL;
    } else 
-    amrex::Error("project_option invalid");
+    amrex::Error("project_option invalid 11824");
 
     // NavierStokes::init_divup_cell_vel_cell declared
     // in NavierStokes2.cpp.
@@ -11896,7 +11885,7 @@ void NavierStokes::multiphase_project(int project_option,
   } else if (project_option==SOLVETYPE_INITPROJ) {
    // do nothing
   } else
-   amrex::Error("project_option invalid");
+   amrex::Error("project_option invalid 11886");
 
   if (project_option==SOLVETYPE_PRES) {
  
@@ -11973,7 +11962,7 @@ void NavierStokes::multiphase_project(int project_option,
  } else if (project_option_is_valid(project_option)==1) {
   // do not restore anything
  } else
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid 11963");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12003,7 +11992,7 @@ void NavierStokes::multiphase_project(int project_option,
  if (project_option_is_valid(project_option)==1) {
   // do nothing
  } else {
-  amrex::Error("project_option invalid");
+  amrex::Error("project_option invalid11993");
  }
 
 #if (profile_solver==1)
@@ -12615,7 +12604,7 @@ void NavierStokes::veldiffuseALL() {
  show_norm2_id(REGISTER_MARK_MF,4);
 
   //multigrid precond. BiCGStab viscosity
- multiphase_project(SOLVETYPE_VISC,SUB_SOLVETYPE_NULL); 
+ multiphase_project(SOLVETYPE_VISC); 
   
   //VISCHEAT_SOURCE_MF is a parameter for:
   //  update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,...)
@@ -12691,7 +12680,7 @@ void NavierStokes::veldiffuseALL() {
    // why average down the density here?
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
- multiphase_project(SOLVETYPE_HEAT,SUB_SOLVETYPE_NULL); 
+ multiphase_project(SOLVETYPE_HEAT); 
 
 // --------------- end thermal diffusion -------------------
 
@@ -12774,7 +12763,7 @@ void NavierStokes::veldiffuseALL() {
    // why average down the density here?
   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
-  multiphase_project(SOLVETYPE_SPEC+species_comp,SUB_SOLVETYPE_NULL); 
+  multiphase_project(SOLVETYPE_SPEC+species_comp); 
 
  } // species_comp=0..num_species_var-1
 
