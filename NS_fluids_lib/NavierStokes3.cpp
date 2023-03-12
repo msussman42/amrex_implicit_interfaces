@@ -440,19 +440,6 @@ void NavierStokes::static_surface_tension_advection() {
     if (vel_max_mag_current<vel_max_history[vel_max_min_index]) {
      vel_max_min_index=quasi_static_iter;
     }
-    if (quasi_static_iter>=5) {
-     int at_valley=1;
-     for (int iback=0;iback<3;iback++) {
-      if (vel_max_history[quasi_static_iter-iback]<=
-          vel_max_history[vel_max_min_index]*(1.0+1.0e-2)) {
-       //do nothing
-      } else {
-        at_valley=0;
-      }
-     } //iback=0..2
-     if (at_valley==1)
-      quasi_static_reached=1;
-    }
 
     if (vel_max_mag_current<1.0e-3*vel_max_mag_init)
      quasi_static_reached=1;
