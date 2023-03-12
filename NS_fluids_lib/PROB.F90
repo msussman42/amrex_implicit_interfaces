@@ -19165,8 +19165,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! dx ^ {3/2}/sqrt( pi * tension / den ) =
        ! dx^{3/2} sqrt{den/(tension * pi)}
       k=two*Pi/wavelen
-      omega=(k**(1.5))*sqrt(tension/(den1+den2))
-      wavespeed=omega/k
+      omega=(k**(1.5d0))*sqrt(tension/(den1+den2))
+       ! wavespeed=omega/k=
+       ! sqrt(k)*sqrt(tension/(den1+den2))=
+       ! sqrt(2\pi tension/((den1+den2)*dx)=
+      wavespeed=omega/k 
 
       return
       end subroutine capillary_wave_speed

@@ -2645,7 +2645,11 @@ stop
           endif
 
            ! declared in PROB.F90
-          call capillary_wave_speed(dxmin,den1,den2,visc1,visc2, &
+           ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)
+          call capillary_wave_speed( &
+           dxmin, & !wavelen
+           den1,den2, & 
+           visc1,visc2, &
            user_tension(iten), &
            cap_wave_speed(iten)) !INTENT(out)
 
@@ -3893,8 +3897,11 @@ stop
          else if (user_tension(iten).gt.zero) then
           den1_2=half*(denconst(im)+denconst(im_opp))
           if (den1_2.gt.zero) then
-           dt_stable=sqrt(den1_2/(user_tension(iten)*(Pi**3)))*dxmin**(1.5d0)
+           dt_stable=sqrt(den1_2/(user_tension(iten)*(Pi**3)))*(dxmin**(1.5d0))
            if (dt_stable.gt.0.0d0) then
+             !dxmin/dt_stable=
+             !(1/sqrt(dxmin))*sqrt(tension*(pi^3)*2/(den1+den2))=
+             !sqrt(2*(pi^3)*tension/((den1+den2)*dx)
             cap_wave_speed(iten)=dxmin/dt_stable
            else
             print *,"dt_stable invalid"
