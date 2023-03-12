@@ -423,6 +423,9 @@ void NavierStokes::static_surface_tension_advection() {
    if (quasi_static_time>=static_surface_tension_duration) {
     quasi_static_reached=1;
    } 
+   if (quasi_static_time>=dt_slab) {
+    quasi_static_reached=1;
+   } 
    if (quasi_static_iter>=static_surface_tension_max_iter) {
     quasi_static_reached=1;
    } 
@@ -453,6 +456,7 @@ void NavierStokes::static_surface_tension_advection() {
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "quasi_static_iter= " << quasi_static_iter << '\n';
+    std::cout << "dt_slab= " << dt_slab << '\n';
     std::cout << "quasi_static_dt_slab= " << quasi_static_dt_slab << '\n';
     std::cout << "quasi_static_time= " << quasi_static_time << '\n';
     std::cout << "vel_max_min_index= " << vel_max_min_index << '\n';

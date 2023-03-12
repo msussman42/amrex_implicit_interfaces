@@ -109,7 +109,7 @@ ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec
 #2=tecplot cells (piecewise constant reconstruction).
 ns.visual_nddata_format=0
 ns.visual_quasi_static_plot_int=0
-ns.static_surface_tension_duration=1.0
+ns.static_surface_tension_duration=0.8
 ns.static_surface_tension_max_iter=50
 ns.static_tension = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 # U^2=50/(1 L 0.0025)
