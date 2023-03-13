@@ -1564,10 +1564,11 @@ protected:
     BoxArray old_intersect_new;
 
     //
-    // Internal parameters for timestepping.
+    // Internal (protected) parameters for timestepping.
     //
-    static Real init_shrink;   // reduction factor of first esimated timestep
-    static Real cfl;           // desired maximum cfl
+    static Real init_shrink; // reduction factor of first esimated timestep
+    static Real cfl;         // desired maximum cfl
+    static Real cfl_static;  // desired maximum cfl for quasi static advance.
 
     static int  MOFITERMAX;
     static int  MOFITERMAX_AFTER_PREDICT;

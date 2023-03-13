@@ -271,8 +271,10 @@ void NavierStokes::avgDownMacState(int spectral_override) {
 // eta_t = v  (y=0)
 // eta(t+\Delta t)=eta(t)-\Delta t^{2}sigma k^{3} f(t) exp(ikx)/(rhoL+rhoG)
 // f(t+\Delta t)=(1-\Delta t^{2}sigma k^{3}/(rhoL+rhoG))f(t)
-// k (2\Delta x)=2\pi  k=\pi/\Delta x
-// \Delta t < \sqrt{ (rhoL+rhoG)/(\pi^{3}\sigma) }\dxmin^{3/2}
+// |1-\Delta t^{2}sigma k^{3}/(rhoL+rhoG)|<=1
+// k (2\Delta x)=2\pi  
+// k=\pi/\Delta x
+// \Delta t < \sqrt{ 2(rhoL+rhoG)/(\pi^{3}\sigma) }\dxmin^{3/2}
 //
 void NavierStokes::static_surface_tension_advection() {
 
@@ -393,12 +395,16 @@ void NavierStokes::static_surface_tension_advection() {
   } else
    amrex::Error("quasi_static_iter invalid");
 
-  if ((cfl>0.0)&&(cfl<1.0)&&(static_dt_min>0.0)) {
+  if ((cfl>0.0)&&
+      (cfl<1.0)&&
+      (cfl_static>0.0)&&
+      (cfl_static<1.0)&&
+      (static_dt_min>0.0)) {
    //do nothing
   } else
-   amrex::Error("cfl or static_dt_min invalid");
+   amrex::Error("cfl or cfl_static or static_dt_min invalid");
 
-  quasi_static_dt_slab=static_dt_min*cfl;
+  quasi_static_dt_slab=static_dt_min*cfl_static;
 
   //ngrow,scomp,ncomp
   setVal_array(1,STATECOMP_VEL,AMREX_SPACEDIM,0.0,
@@ -423,7 +429,7 @@ void NavierStokes::static_surface_tension_advection() {
    if (quasi_static_time>=static_surface_tension_duration) {
     quasi_static_reached=1;
    } 
-   if (quasi_static_time>=dt_slab) {
+   if (quasi_static_time>=2.0*dt_slab) {
     quasi_static_reached=1;
    } 
    if (quasi_static_iter>=static_surface_tension_max_iter) {
@@ -457,6 +463,8 @@ void NavierStokes::static_surface_tension_advection() {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "quasi_static_iter= " << quasi_static_iter << '\n';
     std::cout << "dt_slab= " << dt_slab << '\n';
+    std::cout << "cfl= " << cfl << '\n';
+    std::cout << "cfl_static= " << cfl_static << '\n';
     std::cout << "quasi_static_dt_slab= " << quasi_static_dt_slab << '\n';
     std::cout << "quasi_static_time= " << quasi_static_time << '\n';
     std::cout << "vel_max_min_index= " << vel_max_min_index << '\n';
