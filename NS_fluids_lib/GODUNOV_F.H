@@ -429,7 +429,8 @@ extern "C"
       int* nparts_def,
       int* im_solid_map,
       int* material_type,
-      Real* time,int* shock_timestep,
+      Real* time,
+      int* shock_timestep,
       Real* cfl,
       int* EILE_flag,
       int* level,
@@ -452,7 +453,7 @@ extern "C"
       Real* visc_coef,
       int* dir,
       Real* time,
-      Real* cfl,
+      Real* cfl_static,
       int* EILE_flag,
       int* level,
       int* finest_level);

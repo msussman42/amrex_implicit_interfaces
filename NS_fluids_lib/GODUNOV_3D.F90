@@ -2404,7 +2404,7 @@ stop
       REAL_T, target, INTENT(in) :: dist(DIMV(dist),num_materials)
       REAL_T, pointer :: dist_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in) :: min_stefan_velocity_for_dt
-      REAL_T, INTENT(inout) :: cap_wave_speed(num_interfaces)
+      REAL_T, INTENT(inout) :: cap_wave_speed(num_interfaces) !fort_estdt
       REAL_T hx,hxmac
       REAL_T dthold
       INTEGER_T ii,jj,kk
@@ -2453,7 +2453,7 @@ stop
       REAL_T uleftcell,urightcell,udiffcell,umaxcell
       REAL_T velsum
       REAL_T RR
-      REAL_T level_cap_wave_speed(num_interfaces)
+      REAL_T level_cap_wave_speed(num_interfaces) !fort_estdt
       REAL_T ksource_predict,kdest_predict
       REAL_T ksource_physical,kdest_physical
       REAL_T alpha,beta,dt_heat
@@ -2549,10 +2549,11 @@ stop
        stop
       endif
 
-      if (cfl.gt.zero) then
+      if ((cfl.gt.zero).and. &
+          (cfl.le.0.95d0)) then
        ! do nothing
       else
-       print *,"cfl invalid: ",cfl
+       print *,"cfl invalid (fort_estdt): ",cfl
        stop
       endif
 
@@ -2566,7 +2567,15 @@ stop
        print *,"EILE_flag invalid"
        stop
       endif
-      weymouth_factor=max(weymouth_cfl,weymouth_cfl/cfl)
+
+      if ((cfl.gt.zero).and. &
+          (cfl.le.0.95d0)) then
+       weymouth_factor=weymouth_cfl/cfl
+      else
+       print *,"cfl invalid (fort_estdt): ",cfl
+       print *,"weymouth_cfl ",weymouth_cfl
+       stop
+      endif
 
       do im=1,num_materials 
 
@@ -2640,11 +2649,11 @@ stop
            den1=denconst_interface_added(iten)
            den2=den1
           else
-           print *,"denconst_interface_added invalid"
+           print *,"denconst_interface_added invalid fort_estdt"
            stop
           endif
 
-           ! declared in PROB.F90
+           ! capillary_wave_speed declared in PROB.F90
            ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)
           call capillary_wave_speed( &
            dxmin, & !wavelen
@@ -2654,7 +2663,7 @@ stop
            cap_wave_speed(iten)) !INTENT(out)
 
          else
-          print *,"user_tension invalid"
+          print *,"user_tension invalid fort_estdt"
           stop
          endif
          level_cap_wave_speed(iten)=cap_wave_speed(iten)
@@ -2668,7 +2677,7 @@ stop
         enddo
        enddo
       else
-       print *,"recompute wave speed invalid"
+       print *,"recompute wave speed invalid fort_estdt"
        print *,"num_materials=",num_materials
        print *,"level=",level
        print *,"finest_level=",finest_level
@@ -2690,13 +2699,13 @@ stop
        ! do nothing
       else if (rzflag.eq.COORDSYS_RZ) then
        if (SDIM.ne.2) then
-        print *,"dimension bust"
+        print *,"dimension bust fort_estdt"
         stop
        endif
       else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
        ! do nothing
       else
-       print *,"rzflag invalid"
+       print *,"rzflag invalid fort_estdt"
        stop
       endif
 
@@ -2718,7 +2727,7 @@ stop
       call checkbound_array(fablo,fabhi,dist_ptr,2,-1)
 
       if (rzflag.ne.levelrz) then
-       print *,"rzflag invalid"
+       print *,"rzflag invalid fort_estdt"
        stop
       endif
 
@@ -3476,8 +3485,12 @@ stop
            abs(uu_estdt)+abs(uu_estdt_phase_change))
        c_core = max(c_core,abs(cc_diag))  ! c^2
 
+        !weymouth_factor=weymouth_cfl/cfl
        effective_velocity=abs(uu_estdt_phase_change/weymouth_factor)
        if (effective_velocity.gt.zero) then
+         !u_eff=u*cfl/weymouth_cfl
+         !dt=dx/u_eff=dx * weymouth_cfl / (u cfl)
+         !cfl * dt = dx * weymouth_cfl/u
         dt_min=min(dt_min,hx/effective_velocity)
        else if (effective_velocity.eq.zero) then
         ! do nothing
@@ -3544,7 +3557,7 @@ stop
        if (gradh.ne.zero) then
 
         if (level_cap_wave_speed(iten).lt.zero) then
-         print *,"level_cap wave speed not initialized"
+         print *,"level_cap wave speed not initialized fort_estdt"
          stop
         else if (level_cap_wave_speed(iten).eq.zero) then
          ! do nothing
@@ -3583,14 +3596,14 @@ stop
 
          dt_min=min(dt_min,dthold)
         else
-         print *,"level_cap_wave_speed is NaN"
+         print *,"level_cap_wave_speed is NaN in fort_estdt"
          stop
         endif
 
        else if (gradh.eq.zero) then
         ! do nothing
        else
-        print *,"gradh invalid"
+        print *,"gradh invalid fort_estdt"
         stop
        endif 
 
@@ -3622,7 +3635,7 @@ stop
          dthold=dxmin/ugrav 
          dt_min=min(dt_min,dthold)
         else
-         print *,"ugrav invalid 1"
+         print *,"ugrav invalid 1 fort_estdt"
          print *,"uu_estdt ",uu_estdt
          print *,"denjump_scale ",denjump_scale
          print *,"local_gravity_mag ",local_gravity_mag
@@ -3639,7 +3652,7 @@ stop
       else if (local_gravity_mag.eq.zero) then
        ! do nothing
       else
-       print *,"local_gravity_mag is NaN"
+       print *,"local_gravity_mag is NaN fort_estdt"
        stop
       endif 
 
@@ -3675,7 +3688,7 @@ stop
         visc_coef, &
         dirnormal, &
         time, &
-        cfl, &
+        cfl_static, &
         EILE_flag, &
         level,finest_level) &
       bind(c,name='fort_estdt_static_equil')
@@ -3688,7 +3701,7 @@ stop
 
       INTEGER_T, INTENT(in) :: tid
       INTEGER_T, INTENT(in) :: level,finest_level
-      REAL_T, INTENT(in) :: cfl
+      REAL_T, INTENT(in) :: cfl_static
       INTEGER_T, INTENT(in) :: EILE_flag
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
       REAL_T, INTENT(in) :: time
@@ -3805,10 +3818,11 @@ stop
        stop
       endif
 
-      if (cfl.gt.zero) then
+      if ((cfl_static.gt.zero).and. &
+          (cfl_static.le.0.95d0)) then
        ! do nothing
       else
-       print *,"cfl invalid (fort_estdt_static_equil): ",cfl
+       print *,"cfl_static invalid (fort_estdt_static_equil): ",cfl_static
        stop
       endif
 
@@ -3822,7 +3836,14 @@ stop
        print *,"EILE_flag invalid"
        stop
       endif
-      weymouth_factor=max(weymouth_cfl,weymouth_cfl/cfl)
+      if ((cfl_static.gt.zero).and. &
+          (cfl_static.le.0.95d0)) then
+       weymouth_factor=weymouth_cfl/cfl_static
+      else
+       print *,"cfl_static invalid (fort_estdt_static_equil): ",cfl_static
+       print *,"weymouth_cfl ",weymouth_cfl
+       stop
+      endif
 
       do im=1,num_materials 
 
@@ -3895,25 +3916,26 @@ stop
          else if (user_tension(iten).eq.zero) then
           cap_wave_speed(iten)=zero
          else if (user_tension(iten).gt.zero) then
-          den1_2=half*(denconst(im)+denconst(im_opp))
+          den1_2=denconst(im)+denconst(im_opp)
           if (den1_2.gt.zero) then
-           dt_stable=sqrt(den1_2/(user_tension(iten)*(Pi**3)))*(dxmin**(1.5d0))
+           dt_stable= &
+            sqrt(two*den1_2/(user_tension(iten)*(Pi**3)))*(dxmin**(1.5d0))
            if (dt_stable.gt.0.0d0) then
              !dxmin/dt_stable=
-             !(1/sqrt(dxmin))*sqrt(tension*(pi^3)*2/(den1+den2))=
-             !sqrt(2*(pi^3)*tension/((den1+den2)*dx)
+             !(1/sqrt(dxmin))*sqrt(tension*(pi^3)/(2*(den1+den2)))=
+             !sqrt((pi^3)*tension/(2*(den1+den2)*dx)
             cap_wave_speed(iten)=dxmin/dt_stable
            else
-            print *,"dt_stable invalid"
+            print *,"dt_stable invalid fort_estdt_static_equil"
             stop
            endif
           else
-           print *,"den1_2 invalid"
+           print *,"den1_2 invalid fort_estdt_static_equil"
            stop
           endif
 
          else
-          print *,"user_tension invalid"
+          print *,"user_tension invalid fort_est_static_equil"
           stop
          endif
          level_cap_wave_speed(iten)=cap_wave_speed(iten)
@@ -3932,7 +3954,7 @@ stop
        print *,"level=",level
        print *,"finest_level=",finest_level
        print *,"dxmin= ",dxmin
-       print *,"cfl= ",cfl
+       print *,"cfl_static= ",cfl_static
        print *,"denconst(1)= ",denconst(1)
        print *,"user_tension(1)= ",user_tension(1)
        print *,"EILE_flag= ",EILE_flag
@@ -4119,8 +4141,12 @@ stop
 
        uu_estdt_core = max(uu_estdt_core,abs(uu_estdt))
 
+        !weymouth_factor=weymouth_cfl/cfl_static
        effective_velocity=abs(uu_estdt/weymouth_factor)
        if (effective_velocity.gt.zero) then
+         !u_eff=u*cfl/weymouth_cfl
+         !dt=dx/u_eff=dx * weymouth_cfl / (u cfl)
+         !cfl * dt = dx * weymouth_cfl/u
         dt_min=min(dt_min,hx/effective_velocity)
        else if (effective_velocity.eq.zero) then
         ! do nothing

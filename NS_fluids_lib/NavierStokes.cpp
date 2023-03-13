@@ -97,7 +97,8 @@ int  NavierStokes::fab_verbose  = 0;
 // ns.output_drop_distribution
 int  NavierStokes::output_drop_distribution = 0;
 int  NavierStokes::extend_pressure_into_solid = 0;
-Real NavierStokes::cfl          = 0.5;
+Real NavierStokes::cfl = 0.5;
+Real NavierStokes::cfl_static = 0.9;
 int  NavierStokes::MOF_TURN_OFF_LS=0;
 int  NavierStokes::MOF_DEBUG_RECON=0;
 int  NavierStokes::MOFITERMAX=DEFAULT_MOFITERMAX;
@@ -2578,11 +2579,20 @@ NavierStokes::read_params ()
     // Get timestepping parameters.
     //
     pp.get("cfl",cfl);
-    if ((cfl>0.0)&&(cfl<=0.9)) {
+
+    if ((cfl>0.0)&&(cfl<=0.95)) {
      // do nothing
     } else {
-     std::cout << "cfl out of range (0<cfl<=0.9); cfl=" << cfl << '\n';
+     std::cout << "cfl out of range (0<cfl<=0.95); cfl=" << cfl << '\n';
      amrex::Error("default value for cfl is 1/2");
+    }
+
+    if ((cfl_static>0.0)&&(cfl_static<=0.95)) {
+     // do nothing
+    } else {
+     std::cout << "cfl_static out of range (0<cfl_static<=0.95); cfl_static=" 
+       << cfl_static << '\n';
+     amrex::Error("default value for cfl_static is 0.9");
     }
 
     pp.queryAdd("enable_spectral",enable_spectral);
@@ -2806,6 +2816,7 @@ NavierStokes::read_params ()
 	  segregated_gravity_flag << '\n';
 
      std::cout << "cfl " << cfl << '\n';
+     std::cout << "cfl_static " << cfl_static << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
      std::cout << "mof_machine_learning " << mof_machine_learning << '\n';
@@ -4246,22 +4257,12 @@ NavierStokes::read_params ()
      shock_timestep[i]=0;
     pp.queryAdd("shock_timestep",shock_timestep,num_materials);
 
-    int all_advective=1;
-
     for (int i=0;i<num_materials;i++) {
      if (!((shock_timestep[i]==1)|| //always take into account acoustic waves
 	   (shock_timestep[i]==0)|| //taken into account acoustic waves t=0
            (shock_timestep[i]==2))) //never consider acoustic waves.
       amrex::Error("shock_timestep invalid");
-
-     if (shock_timestep[i]==1)
-      all_advective=0;
     }
-     //the acoustic time step can be violated, but not
-     //the advective time step constraint.
-    if ((cfl>1.0)&&
-	(all_advective==1))
-     amrex::Error("cfl should be less than or equal to 1");
 
     projection_pressure_scale=1.0;
 
@@ -21196,7 +21197,7 @@ void NavierStokes::MaxAdvectSpeed(
      &visc_coef,
      &dir,
      &cur_time_slab,
-     &cfl,
+     &cfl_static,
      &EILE_flag, 
      &level,
      &finest_level);
