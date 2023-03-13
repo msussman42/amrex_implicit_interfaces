@@ -85,7 +85,7 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = -980.0  
+ns.gravity        = -980.0e-9
 ns.incremental_gravity_flag=1
 ns.segregated_gravity_flag=0
 
@@ -105,8 +105,12 @@ ns.segregated_gravity_flag=0
 #Legendre, D. (2021). A hybrid VOF-IBM method for the simulation of 
 #freezing liquid films and freezing drops. Journal of Computational 
 #Physics, 432, 110160.
-ns.tension= 72.0      0.0 36.0 0.0 72.0  0.0
+ns.tension= 72.0e-9  0.0 36.0e-9 0.0 72.0e-9  0.0
 ns.tension_init= 72.0 0.0 36.0 0.0 72.0  0.0
+ns.visual_quasi_static_plot_int=0
+#ns.static_surface_tension_duration=40.0
+ns.static_surface_tension_max_iter=50
+#ns.static_tension = 0.0 0.0 0.0 0.0 0.0 0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
@@ -168,7 +172,7 @@ ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 ns.denconst=1.0 0.00129 0.917 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 
 #added mass 
-ns.denconst_interface_added=1.0e+9 1.0e+9 1.0e+9 1.0e+9 1.0e+9 1.0e+9 
+ns.denconst_interface_added=0.0 0.0 0.0 0.0 0.0 0.0 
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
