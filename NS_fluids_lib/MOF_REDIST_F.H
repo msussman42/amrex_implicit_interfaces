@@ -83,6 +83,7 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        int* ngrowLS,
+       int* ngrow_make_distance_accept,
        int* nstar,
        int* nface_dst);
 

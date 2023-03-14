@@ -22332,7 +22332,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  if (pattern_test(local_caller_string,"post_init_state")==1) {
 
   int keep_all_interfaces=1;
-  makeStateDistALL(keep_all_interfaces);
+  int ngrow_make_distance_accept=ngrow_make_distance;
+  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
   prescribe_solid_geometryALL(cur_time_slab,
 		  renormalize_only,
 		  local_truncate,
@@ -22349,7 +22350,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
   if (1==0) {
    int keep_all_interfaces=0;
-   makeStateDistALL(keep_all_interfaces);
+   int ngrow_make_distance_accept=ngrow_make_distance;
+   makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
    prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
 		   local_truncate,
 		   local_caller_string);
@@ -24523,7 +24525,8 @@ void NavierStokes::putStateDIV_DATA(
 // NavierStokes::prepare_post_process if via "post_init_state"
 // NavierStokes::do_the_advance
 void
-NavierStokes::makeStateDistALL(int keep_all_interfaces) {
+NavierStokes::makeStateDistALL(int keep_all_interfaces,
+   int ngrow_make_distance_accept) {
 
  if (level!=0)
   amrex::Error("level invalid in makeStateDistALL");
@@ -24568,7 +24571,7 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces) {
   // function values.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateDist(keep_all_interfaces);
+  ns_level.makeStateDist(keep_all_interfaces,ngrow_make_distance_accept);
  }
   // fort_correct_uninit is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -24676,7 +24679,8 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
 } // end subroutine build_NRM_FD_MF
 
 void
-NavierStokes::makeStateDist(int keep_all_interfaces) {
+NavierStokes::makeStateDist(int keep_all_interfaces,
+		int ngrow_make_distance_accept) {
 
  std::string local_caller_string="makeStateDist";
 
@@ -24780,7 +24784,8 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
   nstar*=3;
  int nface=num_materials*AMREX_SPACEDIM*2; 
 
-  // (num_materials,num_materials,2)  left material, right material, frac_pair+dist_pair
+  // (num_materials,num_materials,2)  left material, right material, 
+  // frac_pair+dist_pair
  int nface_dst=num_materials*num_materials*2;
 
  new_localMF(STENCIL_MF,nstar,ngrow_distance,-1);
@@ -24998,6 +25003,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
+    &ngrow_make_distance_accept,
     &nstar,
     &nface_dst);
  } // mfi

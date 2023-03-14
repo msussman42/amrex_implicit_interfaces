@@ -296,13 +296,13 @@ void NavierStokes::static_surface_tension_advection() {
  if (slab_step==0) {
   // do nothing
  } else
-  amrex::Error("slab_step invalid");
+  amrex::Error("slab_step invalid static_surface_tension_advection");
 
  if ((STATE_NCOMP_PRES==1)&&
      (STATE_NCOMP_VEL==AMREX_SPACEDIM)) {
   // do nothing
  } else
-  amrex::Error("STATE_NCOMP_PRES or STATE_NCOMP_VEL invalid");
+  amrex::Error("STATE_NCOMP_PRES or STATE_NCOMP_VEL invalid static_surf..");
 
  // do not update the error in S_new
  int update_flag=0; 
@@ -310,7 +310,8 @@ void NavierStokes::static_surface_tension_advection() {
  VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
    SLOPE_RECON_MF);
  int keep_all_interfaces=0;
- makeStateDistALL(keep_all_interfaces);
+ int ngrow_make_distance_accept=ngrow_make_distance;
+ makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
 
   //ngrow,ncomp,grid_type
  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
@@ -339,7 +340,7 @@ void NavierStokes::static_surface_tension_advection() {
  if (enable_spectral==0) {
   //do nothing
  } else
-  amrex::Error("enable_spectral invalid");
+  amrex::Error("enable_spectral invalid static_surface_tension_advection");
 
  int quasi_static_reached=0;
  int quasi_static_iter=0;
@@ -2938,7 +2939,8 @@ void NavierStokes::phase_change_code_segment(
   local_truncate,local_caller_string);
 
  int keep_all_interfaces=0;
- makeStateDistALL(keep_all_interfaces);
+ int ngrow_make_distance_accept=ngrow_make_distance;
+ makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
 
 } //end subroutine phase_change_code_segment
 
@@ -2985,7 +2987,7 @@ void NavierStokes::nucleation_code_segment(
   } else if (is_ice_matC(im)==0) {
    // do nothing
   } else
-   amrex::Error("is_ice_matC invalid");
+   amrex::Error("is_ice_matC invalid nucleation_code_segment");
  } // im=0..num_materials-1 
 
  Vector<int> recalesce_material;
@@ -2995,7 +2997,7 @@ void NavierStokes::nucleation_code_segment(
   recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
   if (parent->AMR_recalesce_flag(im)>0) {
    if (at_least_one_ice!=1)
-    amrex::Error("expecting at_least_one_ice==1");
+    amrex::Error("expecting at_least_one_ice==1 nucleation_code_segment");
    at_least_one=1;
   } 
  } //im=1..num_materials
@@ -3018,7 +3020,7 @@ void NavierStokes::nucleation_code_segment(
  } else if (at_least_one==0) {
   // do nothing
  } else
-  amrex::Error("at_least_one invalid");
+  amrex::Error("at_least_one invalid: nucleation_code_segment");
 
  delta_mass.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -3078,7 +3080,8 @@ void NavierStokes::nucleation_code_segment(
  VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
   SLOPE_RECON_MF);
  int keep_all_interfaces=1;
- makeStateDistALL(keep_all_interfaces);
+ int ngrow_make_distance_accept=ngrow_make_distance;
+ makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);
@@ -3492,7 +3495,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
         SLOPE_RECON_MF);
        int keep_all_interfaces=0;
-       makeStateDistALL(keep_all_interfaces);
+       int ngrow_make_distance_accept=ngrow_make_distance;
+       makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
 
       } else
        amrex::Error("mass_transfer_active invalid");

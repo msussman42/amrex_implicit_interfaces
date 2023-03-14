@@ -323,7 +323,7 @@ stop
       if (ngrow_make_distance.eq.3) then
        ! do nothing
       else
-       print *,"ngrow_make_distance invalid"
+       print *,"ngrow_make_distance invalid fort_fd_normal"
        stop
       endif
 
@@ -548,15 +548,15 @@ stop
       endif
 
       if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance.ne.3"
+       print *,"ngrow_make_distance.ne.3 fort_fd_node_normal"
        stop
       endif
       if (ngrow_make_distance_in.ne.3) then
-       print *,"ngrow_make_distance_in.ne.3"
+       print *,"ngrow_make_distance_in.ne.3 fort_fd_node_normal"
        stop
       endif
       if (ngrow_distance.ne.4) then
-       print *,"ngrow_distance.ne.4"
+       print *,"ngrow_distance.ne.4 fort_fd_node_normal"
        stop
       endif
       n_normal_test=(SDIM+1)*(num_interfaces+num_materials)
@@ -963,11 +963,11 @@ stop
       endif
 
       if (ngrow_make_distance.ne.3) then
-       print *,"ngrow_make_distance.ne.3"
+       print *,"ngrow_make_distance.ne.3 fort_node_to_cell"
        stop
       endif
       if (ngrow_make_distance_in.ne.3) then
-       print *,"ngrow_make_distance_in.ne.3"
+       print *,"ngrow_make_distance_in.ne.3 fort_node_to_cell"
        stop
       endif
       if (ngrow_distance.ne.4) then
@@ -1743,6 +1743,7 @@ stop
          xlo,dx, &
          time, &
          ngrow_distance_in, &
+         ngrow_make_distance_accept, &
          nstar, &
          nface_dst) &
       bind(c,name='fort_levelstrip')
@@ -1761,6 +1762,7 @@ stop
       INTEGER_T, INTENT(in) :: nstar
       INTEGER_T, INTENT(in) :: nface_dst
       INTEGER_T, INTENT(in) :: ngrow_distance_in
+      INTEGER_T, INTENT(in) :: ngrow_make_distance_accept
       REAL_T, INTENT(inout) :: minLS(num_materials)
       REAL_T, INTENT(inout) :: maxLS(num_materials)
       REAL_T, INTENT(in) :: max_problen
@@ -1965,6 +1967,13 @@ stop
       endif
       if (ngrow_make_distance.ne.3) then
        print *,"ngrow_make_distance<>3 error in levelstrip"
+       stop
+      endif
+      if ((ngrow_make_distance_accept.eq.3).or. &
+          (ngrow_make_distance_accept.eq.2)) then
+       ! do nothing
+      else
+       print *,"ngrow_make_distance_accept<>2,3 error in levelstrip"
        stop
       endif
 
@@ -2173,6 +2182,7 @@ stop
       enddo
       enddo  ! initialize + or -
 
+       ! ngrow_make_distance=3
       call growntilebox_TILE(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_make_distance)
  
@@ -2270,7 +2280,8 @@ stop
        enddo
        call put_istar(istar,istar_array)
        im_test_center=NINT(stenfab(D_DECL(i,j,k),istar))
-       if ((im_test_center.ge.1).and.(im_test_center.le.num_materials)) then
+       if ((im_test_center.ge.1).and. &
+           (im_test_center.le.num_materials)) then
         ! do nothing
        else
         print *,"im_test_center out of range (0)"
@@ -2919,19 +2930,26 @@ stop
         icur(2)=j
         icur(3)=k
 
-         ! we do not have to check outside the tile since tiles
-         ! outside the present tile might traverse interface segments which
-         ! are in the present tile.
+         ! The main loop stencil,
+         ! traversing valid interface segments,
+         ! is derived from "growntilebox_TILE(ngrow_make_distance=3)
+         ! This inner loop cannot extend beyond the "owned"
+         ! tile otherwise there will be competition between
+         ! threads for modifying the same piece of data.
+         ! i.e. if tile A has the interface and tile B distance
+         ! needs to be modified, then the tile B distance should
+         ! only be touched by "thread B"
+         ! 
         do dir=1,SDIM
-         ilocut(dir)=-ngrow_make_distance
-         ihicut(dir)=ngrow_make_distance
+         ilocut(dir)=-ngrow_make_distance_accept
+         ihicut(dir)=ngrow_make_distance_accept
          if (icur(dir)+ilocut(dir).lt.tilelo(dir)) then
           ilocut(dir)=tilelo(dir)-icur(dir)
          endif
          if (icur(dir)+ihicut(dir).gt.tilehi(dir)) then
           ihicut(dir)=tilehi(dir)-icur(dir)
          endif
-        enddo ! dir
+        enddo ! dir=1..sdim
 
         do i1=ilocut(1),ihicut(1)
         do j1=ilocut(2),ihicut(2)
