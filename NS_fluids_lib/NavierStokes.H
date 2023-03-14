@@ -1325,8 +1325,10 @@ void apply_pressure_grad(
     void makeFaceTest(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
-    void makeStateDistALL(int keep_all_interfaces);
-    void makeStateDist(int keep_all_interfaces);
+    void makeStateDistALL(int keep_all_interfaces,
+       int ngrow_make_distance_accept);
+    void makeStateDist(int keep_all_interfaces,
+       int ngrow_make_distance_accept);
     void correct_dist_uninit();
 
     void makeStateCurv(int project_option,
