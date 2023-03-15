@@ -222,6 +222,8 @@ Real NavierStokes::min_stefan_velocity_for_dt = 1.0e-12;
 Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::gravity      = 0.0;
+// default=diagonal length of the domain tangent to the
+// gravity direction.
 Real NavierStokes::gravity_reference_wavelen = 0.0;
 
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
@@ -2720,13 +2722,18 @@ NavierStokes::read_params ()
      for (int local_dir=0;local_dir<AMREX_SPACEDIM;local_dir++) {
       if (local_dir+1!=gravity_max_index) {
        gravity_reference_wavelen_default=
-        std::max(gravity_reference_wavelen_default,
-         geometry_prob_hi[local_dir]-geometry_prob_lo[local_dir]);
+        gravity_reference_wavelen_default+
+         (geometry_prob_hi[local_dir]-
+	  geometry_prob_lo[local_dir])*
+         (geometry_prob_hi[local_dir]-
+	  geometry_prob_lo[local_dir]);
       }
      } //local_dir=0 ... sdim-1
+     gravity_reference_wavelen_default= 
+	  sqrt(gravity_reference_wavelen_default);
 
     } else
-     amrex::Error("gravity_max_index invalid");
+     amrex::Error("gravity_max_index invalid; NavierStokes::read_params() ");
 
     if (gravity_reference_wavelen_default>0.0) {
      gravity_reference_wavelen=gravity_reference_wavelen_default;
@@ -2736,9 +2743,9 @@ NavierStokes::read_params ()
 	  gravity_reference_wavelen_default*(1.0001))) {
       // do nothing
      } else
-      amrex::Error("gravity_reference_wavelen out of range");
+      amrex::Error("gravity_reference_wavelen out of range: read_params()");
     } else
-     amrex::Error("gravity_reference_wavelen_default invalid");
+     amrex::Error("gravity_reference_wavelen_default invalid: read_params");
 
     pp.queryAdd("incremental_gravity_flag",incremental_gravity_flag);
     if (incremental_gravity_flag==1) {

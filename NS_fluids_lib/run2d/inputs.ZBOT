@@ -116,7 +116,7 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 #amr.n_cell          = 8 32
 #amr.n_cell          = 64 256  # this resolution agrees with experiments.
 #amr.max_level       = 0
-amr.n_cell          = 64 256  # 2nd order level 0, 1st order level 1.
+amr.n_cell          = 64 256  
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
@@ -128,9 +128,9 @@ amr.max_grid_size   = 64    # try 64
 amr.n_error_buf     = 2 2 2 2 2 # number of buffer cells in error est 
 amr.blocking_factor = 8 4 # block factor in grid generation
 # level0, level1, ...
-amr.space_blocking_factor=1 1 # make 2 1 for 2nd order in space
-amr.time_blocking_factor=1    # make 2 for 2nd order in time
-ns.enable_spectral=0          # make 1 for 2nd order
+amr.space_blocking_factor=1 1 
+amr.time_blocking_factor=1    
+ns.enable_spectral=0          
 ns.nblocks=0
 #ns.nblocks=1
 ns.xblocks=0.0
@@ -245,8 +245,6 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
-# added mass
-ns.denconst_interface_added=1.0e+8 1.0e+8 1.0e+8 1.0e+8 1.0e+8 1.0e+8
 
 cg.mglib_blocking_factor=2
 ns.multilevel_maxcycle=200
@@ -334,8 +332,12 @@ ns.tempconst=295.41 295.41 295.41
 #      v=g (zvec dot n)n [rho]/rho 
 # Surface tension [N/m]
 #90 degree contact angle
-ns.tension=1.2E-02 1.2E-02 1.2E-02 
-#ns.tension=0.0 0.0 0.0
+#ns.tension=1.2E-02 1.2E-02 1.2E-02 
+ns.tension=1.2E-08 1.2E-08 1.2E-08 
+ns.visual_quasi_static_plot_int=0
+ns.static_surface_tension_max_iter=50
+ns.static_surface_tension_duration=8000.0
+ns.static_tension = 1.2e-2 1.2e-2 1.2e-2 
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------

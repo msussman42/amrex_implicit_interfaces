@@ -1386,13 +1386,20 @@ INTEGER_T :: dir_local
 INTEGER_T :: gravity_dir
 
  call fort_derive_gravity_dir(gravity_vector,gravity_dir)
+ if ((gravity_dir.ge.1).and.(gravity_dir.le.SDIM)) then
+  ! do nothing
+ else
+  print *,"gravity_dir invalid"
+  stop
+ endif
 
  default_wavelen=zero
  do dir_local=1,SDIM
   if (gravity_dir.ne.dir_local) then
-   default_wavelen=max(default_wavelen,problen_array(dir_local))
+   default_wavelen=default_wavelen+problen_array(dir_local)**2
   endif
- enddo
+ enddo !dir_local=1..sdim
+ default_wavelen=sqrt(default_wavelen)
 
  if ((wavelen.gt.zero).and. &
      (wavelen.le.default_wavelen*(one+VOFTOL))) then
@@ -1400,7 +1407,7 @@ INTEGER_T :: gravity_dir
  else
   print *,"input wavelen out of range"
   print *,"wavelen (input) = ",wavelen
-  print *,"default_wavelen (max wavelen) = ",default_wavelen
+  print *,"default_wavelen (diagonal distance) = ",default_wavelen
   stop
  endif
 

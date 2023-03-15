@@ -8067,7 +8067,8 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine cramers_rule
-
+  
+       ! 1<=gravity_dir<=sdim
       subroutine fort_derive_gravity_dir(gravity_vector_in,gravity_dir) &
       bind(c,name='fort_derive_gravity_dir')
       IMPLICIT NONE

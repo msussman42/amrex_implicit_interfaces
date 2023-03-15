@@ -1628,6 +1628,8 @@ protected:
     static int        fab_verbose; // 1=curv 2=error heat 3=both
     static int        output_drop_distribution;
     static int        extend_pressure_into_solid; // default=0
+     // default=diagonal length of the domain tangent to the
+     // gravity direction.
     static Real       gravity_reference_wavelen;
     static int        NUM_SCALARS;      // number of non-velocity components
 
