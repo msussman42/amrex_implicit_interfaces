@@ -497,6 +497,13 @@ void NavierStokes::static_surface_tension_advection() {
 
  } // while (quasi_static_reached==0) 
 
+ std::fflush(NULL);
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "End of static loop: quasi_static_iter= " << 
+    quasi_static_iter << '\n';
+ }
+ std::fflush(NULL);
+
  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
     0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
  delete_array(PRESSURE_SAVE_MF);

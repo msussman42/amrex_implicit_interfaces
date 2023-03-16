@@ -109,7 +109,7 @@ ns.tension= 72.0e-9  0.0 36.0e-9 0.0 72.0e-9  0.0
 ns.tension_init= 72.0 0.0 36.0 0.0 72.0  0.0
 ns.visual_quasi_static_plot_int=0
 #ns.static_surface_tension_duration=40.0
-ns.static_surface_tension_max_iter=50
+ns.static_surface_tension_max_iter=99999
 #ns.static_tension = 0.0 0.0 0.0 0.0 0.0 0.0
 
 # 1 J/kg = 10^4 erg/g
