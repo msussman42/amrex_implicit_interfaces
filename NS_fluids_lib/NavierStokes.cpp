@@ -17369,7 +17369,7 @@ NavierStokes::split_scalar_advection() {
    ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
    zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
    &stokes_flow,
-   denconst_interface_added.dataPtr(),
+   denconst_interface_added.dataPtr(), //unused in fort_vfrac_split
    &ngrow_mass, //=2
    &ngrow_mac_old,
    &nc_conserve,
