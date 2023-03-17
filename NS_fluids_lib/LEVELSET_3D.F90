@@ -7677,8 +7677,6 @@ stop
         ! voltotal/mass_total = (1/rho)
        cenden, &
        DIMS(cenden), &   
-       cenden_base, &
-       DIMS(cenden_base), &   
        cenvof,DIMS(cenvof), &   
        cenvisc,DIMS(cenvisc), &
        vol,DIMS(vol), &
@@ -7764,7 +7762,6 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
       INTEGER_T, INTENT(in) :: DIMDEC(cenDeDT)
       INTEGER_T, INTENT(in) :: DIMDEC(cenden)
-      INTEGER_T, INTENT(in) :: DIMDEC(cenden_base)
       INTEGER_T, INTENT(in) :: DIMDEC(cenvof)
       INTEGER_T, INTENT(in) :: DIMDEC(vol)
       INTEGER_T, INTENT(in) :: DIMDEC(levelPC)
@@ -7804,9 +7801,7 @@ stop
       REAL_T, INTENT(out), target :: cenDeDT(DIMV(cenDeDT))
       REAL_T, pointer :: cenDeDT_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(out), target :: cenden(DIMV(cenden))
-      REAL_T, INTENT(out), target :: cenden_base(DIMV(cenden_base))
       REAL_T, pointer :: cenden_ptr(D_DECL(:,:,:))
-      REAL_T, pointer :: cenden_base_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(out), target :: cenvof(DIMV(cenvof),num_materials)  
       REAL_T, pointer :: cenvof_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(out), target :: cenvisc(DIMV(cenvisc))
@@ -7829,8 +7824,6 @@ stop
       REAL_T, INTENT(in) :: heatvisc_interface(num_interfaces)
       REAL_T, INTENT(in) :: &
           speciesvisc_interface(num_interfaces*num_species_var)
-
-      REAL_T denconst_interface_added_max
 
       INTEGER_T im1,jm1,km1
       INTEGER_T i,j,k
@@ -7974,9 +7967,6 @@ stop
 
       REAL_T local_cenvisc
       REAL_T local_cenden
-      REAL_T local_cenden_base
-
-      REAL_T :: rad_added_mass
 
       REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
       INTEGER_T test_for_quasi_static
@@ -8012,7 +8002,6 @@ stop
       cenDeDT_ptr=>cenDeDT
 
       cenden_ptr=>cenden
-      cenden_base_ptr=>cenden_base
 
       cenvof_ptr=>cenvof
       cenvisc_ptr=>cenvisc
@@ -8109,7 +8098,6 @@ stop
       call checkbound_array1(fablo,fabhi,cenDeDT_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,cenden_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,cenden_base_ptr,1,-1)
 
       call checkbound_array(fablo,fabhi,cenvof_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,cenvisc_ptr,1,-1)
@@ -8132,7 +8120,6 @@ stop
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
-      rad_added_mass=1.5d0*DXMAXLS
 
       do im=1,2*num_interfaces
 
@@ -10149,7 +10136,7 @@ stop
 
       else if (isweep.eq.1) then
 
-        ! cenden, cenden_base, cenvof, cenDeDT, 
+        ! cenden, cenvof, cenDeDT, 
         ! cenvisc, initialized in this loop.
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi,1) 
@@ -10254,34 +10241,6 @@ stop
          print *,"LS_clamped_minus invalid"
          stop
         endif
-
-        denconst_interface_added_max=zero
-
-        if ((abs(LSIDE_MAT(implus_majority)).le.rad_added_mass).and. &
-            (abs(LSIDE_MAT(im_secondary)).le.rad_added_mass)) then
-         call get_iten(implus_majority,im_secondary,iten_main)
-         if (denconst_interface_added(iten_main).eq.zero) then
-          ! do nothing
-         else if (denconst_interface_added(iten_main).gt.zero) then
-          if (max(fort_denconst(implus_majority),fort_denconst(im_secondary)) &
-              .le.denconst_interface_added(iten_main)) then
-           denconst_interface_added_max=  &
-              denconst_interface_added(iten_main)
-          else
-           print *,"denconst_interface_added(iten_main) invalid"
-           stop
-          endif
-         else 
-          print *,"denconst_interface_added(iten_main) invalid"
-          stop
-         endif 
-        else if ((abs(LSIDE_MAT(implus_majority)).ge.rad_added_mass).or. &
-                 (abs(LSIDE_MAT(im_secondary)).ge.rad_added_mass)) then
-         ! do nothing
-        else
-         print *,"LSIDE_MAT invalid"
-         stop
-        endif       
 
         do im=1,num_materials
 
@@ -10413,33 +10372,14 @@ stop
         local_cenden=voltotal/mass_total
         local_cenvisc=one/((visc_total/voltotal)+VISCINVTOL)  
 
-        local_cenden_base=local_cenden
-
-        if (denconst_interface_added_max.eq.zero) then
-         ! do nothing
-        else if (denconst_interface_added_max.gt.zero) then
-         if (local_cenden.gt.zero) then
-           !local_cenden_base=1/rho
-           !local_cenden=1/rho_added
-          local_cenden=one/denconst_interface_added_max
-
-          if (local_cenden.lt.local_cenden_base) then
-           ! do nothing
-          else
-           print *,"local_cenden_base invalid"
-           stop
-          endif
-         else
-          print *,"local_cenden invalid"
-          stop
-         endif
+        if (local_cenden.gt.zero) then
+         !do nothing
         else
-         print *,"denconst_interface_added_max invalid"
+         print *,"local_cenden invalid fort_init_physics_vars"
          stop
         endif
 
         cenden(D_DECL(i,j,k))=local_cenden
-        cenden_base(D_DECL(i,j,k))=local_cenden_base
         cenDeDT(D_DECL(i,j,k))=voltotal/DeDT_total
 
         if (null_viscosity.eq.1) then

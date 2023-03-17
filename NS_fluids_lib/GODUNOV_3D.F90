@@ -13143,7 +13143,7 @@ stop
        time, &
        cur_time, &
        passive_veltime, &
-       LS,DIMS(LS), &  ! original data; ngrow_mass 
+       LS,DIMS(LS), &  ! original data; ngrow_scalar
        den, &
        DIMS(den), &
        mom_den, &
@@ -13480,7 +13480,6 @@ stop
       REAL_T :: vel_clamped(SDIM)
       REAL_T :: temperature_clamped
       INTEGER_T :: prescribed_flag
-      INTEGER_T :: number_of_added_mass_interfaces
 
 ! fort_vfrac_split code starts here
 
@@ -13602,15 +13601,13 @@ stop
        stop
       endif
 
-      number_of_added_mass_interfaces=0
       do im=1,num_interfaces
        if (denconst_interface_added(im).gt.zero) then
-        number_of_added_mass_interfaces= &
-          number_of_added_mass_interfaces+1
+        ! do nothing
        else if (denconst_interface_added(im).eq.zero) then
         ! do nothing
        else
-        print *,"denconst_interface_added invalid"
+        print *,"denconst_interface_added invalid fort_vfrac_split"
         print *,"index,value ",im,denconst_interface_added(im)
         stop
        endif
@@ -13728,7 +13725,9 @@ stop
        ! ghost cells.
 
        ! original data
-      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_mass,-1)
+       ! ngrow_scalar=1
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_scalar,-1)
+       ! ngrow_mass=2
       call checkbound_array(fablo,fabhi,den_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,tensor_ptr,ngrow_scalar,-1)
