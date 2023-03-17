@@ -33,8 +33,6 @@ extern "C"
       Real *lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
       Real *den,
       AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),  
-      Real *den_base,
-      AMREX_ARLIM_P(den_base_lo),AMREX_ARLIM_P(den_base_hi),  
       Real *mu,AMREX_ARLIM_P(mulo),AMREX_ARLIM_P(muhi),
       const int* tilelo, const int* tilehi,
       const int* fablo, const int* fabhi,

@@ -183,14 +183,11 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string);
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string);
 
  debug_ngrow(CELL_VISC_MF,1,local_caller_string);
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
 
  if (localMF[CELL_VISC_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_VISC_MF]->nComp() invalid");
@@ -232,7 +229,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   FArrayBox& unewfab=U_new[mfi];
   FArrayBox& lsfab=LS_new[mfi];
   FArrayBox& denfab=(*localMF[CELL_DEN_MF])[mfi]; 
-  FArrayBox& den_base_fab=(*localMF[CELL_DEN_BASE_MF])[mfi]; 
   FArrayBox& mufab=(*localMF[CELL_VISC_MF])[mfi];
   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
@@ -276,8 +272,6 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
    denfab.dataPtr(),
    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
-   den_base_fab.dataPtr(),
-   ARLIM(den_base_fab.loVect()),ARLIM(den_base_fab.hiVect()),
    mufab.dataPtr(),ARLIM(mufab.loVect()),ARLIM(mufab.hiVect()),
    tilelo,tilehi,
    fablo,fabhi,

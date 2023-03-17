@@ -11139,14 +11139,11 @@ void NavierStokes::make_viscoelastic_heating(int im,int idx) {
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string); 
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
  debug_ngrow(CELL_DEDT_MF,1,local_caller_string); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
 
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
@@ -11322,10 +11319,6 @@ void NavierStokes::make_marangoni_force() {
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
- if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
-
   // mask=1 if not covered or if outside the domain.
   // NavierStokes::maskfiner_localMF
   // NavierStokes::maskfiner
@@ -11475,14 +11468,11 @@ void NavierStokes::make_SEM_delta_force(int project_option) {
  debug_ngrow(MASKSEM_MF,1,local_caller_string); 
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string); 
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
  debug_ngrow(CELL_DEDT_MF,1,local_caller_string); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
 
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
@@ -11659,10 +11649,6 @@ void NavierStokes::make_heat_source() {
  debug_ngrow(CELL_DEN_MF,1,local_caller_string);
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
-
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
- if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
 
  debug_ngrow(CELL_DEDT_MF,1,local_caller_string);
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
@@ -12200,7 +12186,6 @@ void NavierStokes::tensor_advection_update() {
  debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string);
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
  debug_ngrow(HOLD_VELOCITY_DATA_MF,1,local_caller_string);
  if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
@@ -15610,14 +15595,11 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
  debug_ngrow(CELL_DEN_MF,1,local_caller_string); 
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
  debug_ngrow(CELL_DEDT_MF,1,local_caller_string); 
 
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
- if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
 
  if (localMF[CELL_DEDT_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEDT_MF]->nComp() invalid");
@@ -16964,6 +16946,7 @@ NavierStokes::split_scalar_advection() {
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
+   //ngrow_scalar=1
   getStateTensor_localMF(TENSOR_RECON_MF_local,
    ngrow_scalar,0,
    NUM_CELL_ELASTIC,
@@ -16976,9 +16959,8 @@ NavierStokes::split_scalar_advection() {
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type_local,slab_step+1);
 
-   //ngrow_mass=2; need to update LS at faces in order to check
-   //for added mass.
- getStateDist_localMF(LS_RECON_MF,ngrow_mass,advect_time_slab,
+   //ngrow_scalar=1
+ getStateDist_localMF(LS_RECON_MF,ngrow_scalar,advect_time_slab,
      local_caller_string);
 
    // the pressure from before will be copied to the new pressure.
@@ -17019,7 +17001,7 @@ NavierStokes::split_scalar_advection() {
  if (LS_recon_ncomp!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("LS_recon invalid");
 
- debug_ngrow(LS_RECON_MF,ngrow_mass,local_caller_string);
+ debug_ngrow(LS_RECON_MF,ngrow_scalar,local_caller_string);
 
  resize_mask_nbr(ngrow_mass);
  debug_ngrow(MASK_NBR_MF,ngrow_mass,local_caller_string); 
@@ -17338,7 +17320,7 @@ NavierStokes::split_scalar_advection() {
    &cur_time_slab,
    &prescribed_vel_time_slab,
      // this is the original data
-   LSfab.dataPtr(), //LS_RECON_MF, ngrow_mass 
+   LSfab.dataPtr(), //LS_RECON_MF, ngrow_scalar
    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
    denfab.dataPtr(),
    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -22938,7 +22920,6 @@ NavierStokes::particle_tensor_advection_update() {
    debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
 
    debug_ngrow(CELL_DEN_MF,1,local_caller_string);
-   debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string); 
 
    debug_ngrow(HOLD_VELOCITY_DATA_MF,1,local_caller_string);
    if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)

@@ -1651,10 +1651,6 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
  if (localMF[CELL_DEN_MF]->nComp()!=1)
   amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
 
- debug_ngrow(CELL_DEN_BASE_MF,1,local_caller_string);
- if (localMF[CELL_DEN_BASE_MF]->nComp()!=1)
-  amrex::Error("localMF[CELL_DEN_BASE_MF]->nComp() invalid");
-
  const Box& domain = geom.Domain();
  const int* domlo = domain.loVect();
  const int* domhi = domain.hiVect();
@@ -5067,10 +5063,6 @@ void NavierStokes::allocate_physics_vars() {
   //CELL_DEN_MF contains 1/rho
  new_localMF_if_not_exist(CELL_DEN_MF,1,1,-1); // ncomp,ngrow,dir
 
-  //CELL_DEN_BASE_MF contains (1/rho_base)   (no added mass)
-  // ncomp,ngrow,dir
- new_localMF_if_not_exist(CELL_DEN_BASE_MF,1,1,-1); 
-
   // coeff_avg,padvect_avg 
  new_localMF_if_not_exist(CELL_SOUND_MF,2,0,-1); // ncomp,ngrow,dir
 
@@ -5400,7 +5392,6 @@ void NavierStokes::make_physics_vars(int project_option,
    FArrayBox& cDeDTfab=(*localMF[CELL_DEDT_MF])[mfi];
 
    FArrayBox& cdenfab=(*localMF[CELL_DEN_MF])[mfi];  // 1/rho
-   FArrayBox& cden_base_fab=(*localMF[CELL_DEN_BASE_MF])[mfi]; // 1/rho_base 
 
     // CELL_VOF_MF has the tessellating volume fractions.
    FArrayBox& cvoffab=(*localMF[CELL_VOF_MF])[mfi];  
@@ -5474,8 +5465,6 @@ void NavierStokes::make_physics_vars(int project_option,
     ARLIM(cDeDTfab.loVect()),ARLIM(cDeDTfab.hiVect()),
     cdenfab.dataPtr(),
     ARLIM(cdenfab.loVect()),ARLIM(cdenfab.hiVect()),
-    cden_base_fab.dataPtr(),
-    ARLIM(cden_base_fab.loVect()),ARLIM(cden_base_fab.hiVect()),
     cvoffab.dataPtr(),ARLIM(cvoffab.loVect()),ARLIM(cvoffab.hiVect()),
     cviscfab.dataPtr(),ARLIM(cviscfab.loVect()),ARLIM(cviscfab.hiVect()),
     volfab.dataPtr(),ARLIM(volfab.loVect()),ARLIM(volfab.hiVect()),
