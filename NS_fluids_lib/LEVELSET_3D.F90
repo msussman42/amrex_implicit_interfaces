@@ -7971,6 +7971,9 @@ stop
       REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
       INTEGER_T test_for_quasi_static
 
+      REAL_T denconst_interface_added_max
+      REAL_T rad_added_mass
+
 ! fort_init_physics_vars code starts here:
 
       allocate(CHARACTER(caller_string_len) :: fort_caller_string)
@@ -8120,6 +8123,15 @@ stop
       call checkbound_array(fablo,fabhi,massF_ptr,1,-1)
 
       call get_dxmaxLS(dx,bfact,DXMAXLS)
+
+      if (DXMAXLS.gt.zero) then
+       ! do nothing
+      else
+       print *,"DXMAXLS invalid: fort_init_physics_vars"
+       stop
+      endif
+
+      rad_added_mass=1.5d0*DXMAXLS
 
       do im=1,2*num_interfaces
 
@@ -10233,14 +10245,42 @@ stop
          else if (is_ice_or_FSI_rigid_material(implus_majority).eq.0) then
           ! do nothing
          else
-          print *,"is_ice_or_FSI_rigid_material invalid"
+          print *,"is_ice_or_FSI_rigid_material invalid:fort_init_physics_vars"
           stop
          endif
 
         else
-         print *,"LS_clamped_minus invalid"
+         print *,"LS_clamped_minus invalid: fort_init_physics_vars"
          stop
         endif
+
+        denconst_interface_added_max=zero
+
+        if ((abs(LSIDE_MAT(implus_majority)).le.rad_added_mass).and. &
+            (abs(LSIDE_MAT(im_secondary)).le.rad_added_mass)) then
+         call get_iten(implus_majority,im_secondary,iten_main)
+         if (denconst_interface_added(iten_main).eq.zero) then
+          ! do nothing
+         else if (denconst_interface_added(iten_main).gt.zero) then
+          if (max(fort_denconst(implus_majority),fort_denconst(im_secondary)) &
+              .le.denconst_interface_added(iten_main)) then
+           denconst_interface_added_max= &
+             denconst_interface_added(iten_main)
+          else
+           print *,"denconst_interface_added(iten_main) invalid"
+           stop
+          endif
+         else 
+          print *,"denconst_interface_added(iten_main) invalid"
+          stop
+         endif 
+        else if ((abs(LSIDE_MAT(implus_majority)).ge.rad_added_mass).or.  &
+                 (abs(LSIDE_MAT(im_secondary)).ge.rad_added_mass)) then
+         ! do nothing
+        else
+         print *,"LSIDE_MAT invalid: fort_init_physics_vars"
+         stop
+        endif  
 
         do im=1,num_materials
 
@@ -10376,6 +10416,24 @@ stop
          !do nothing
         else
          print *,"local_cenden invalid fort_init_physics_vars"
+         stop
+        endif
+
+        if (denconst_interface_added_max.eq.zero) then
+         ! do nothing
+        else if (denconst_interface_added_max.gt.zero) then
+         if ((local_cenden.gt.zero).and. &
+             (denconst_interface_added_max.gt.one/local_cenden)) then
+          !local_cenden=voltotal/mass_total
+          local_cenden=one/denconst_interface_added_max
+         else
+          print *,"local_cenden or denconst_interface_added_max invalid"
+          print *,"local_cenden=",local_cenden
+          print *,"denconst_interface_added_max=",denconst_interface_added_max
+          stop
+         endif
+        else
+         print *,"denconst_interface_added_max invalid"
          stop
         endif
 
