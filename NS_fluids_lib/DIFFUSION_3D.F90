@@ -461,7 +461,8 @@ stop
                (override_density(im).eq.1)) then ! rho=rho(T,Y)
             ! do nothing
 
-  !Boussinesq approximation Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
+            !Boussinesq approximation:
+            !Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
            else if (override_density(im).eq.2) then 
 
             local_temp=thermal(D_DECL(i,j,k))
@@ -469,14 +470,14 @@ stop
             if (local_temp.gt.zero) then
              ! do nothing
             else
-             print *,"local_temp cannot be <= 0 (1)"
+             print *,"local_temp cannot be <= 0 fort_hoopimplicit(1)"
              stop
             endif
 
             if (fort_DrhoDT(im).le.zero) then
              ! do nothing
             else
-             print *,"fort_DrhoDT has invalid sign"
+             print *,"fort_DrhoDT has invalid sign: fort_hoopimplicit"
              stop
             endif
             ! units of DrhoDT are 1/(degrees Kelvin)
@@ -506,15 +507,17 @@ stop
          if (cell_density_denom.gt.zero) then
           ! do nothing
          else
-          print *,"cell_density_denom invalid"
+          print *,"cell_density_denom invalid: fort_hoopimplicit"
           stop
          endif
+
          if ((Fsolid.ge.zero).and.(Fsolid.le.one+VOFTOL)) then
           ! do nothing
          else
-          print *,"Fsolid invalid"
+          print *,"Fsolid invalid: fort_hoopimplicit"
           stop
          endif
+
          if (Fsolid.ge.half) then
           DTEMP=zero
          else if (Fsolid.le.half) then
