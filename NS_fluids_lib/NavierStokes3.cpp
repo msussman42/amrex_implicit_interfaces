@@ -3326,6 +3326,14 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       nonlinear_advection(local_caller_string);
 
+      if (step_through_data==1) {
+       int nsteps_local=0;
+       parent->writeDEBUG_PlotFile(nsteps_local,SDC_outer_sweeps,slab_step);
+       std::cout << "press any number then enter: after nonlinear_advection\n";
+       int n_input;
+       std::cin >> n_input;
+      }
+
       if (static_surface_tension_duration>0.0) {
        static_surface_tension_advection();
       } else if (static_surface_tension_duration==0.0) {

@@ -303,6 +303,8 @@ Real NavierStokes::ractivez=0.0;
 int  NavierStokes::probtype=0;
 int  NavierStokes::adapt_quad_depth=1;
 
+int  NavierStokes::step_through_data=0;   
+
 // =0 (solids embed, fluids tessellate), 
 // =1 (solids and fluids tessellate)
 // =3 (solids and fluids tessellate, if F_solid>1/2, replace with F_solid=1,
@@ -2885,6 +2887,8 @@ NavierStokes::read_params ()
      visual_ncell[dir]=8;
     pp.queryAdd("visual_ncell",visual_ncell,AMREX_SPACEDIM);
     pp.queryAdd("visual_compare",visual_compare);
+
+    pp.queryAdd("step_through_data",step_through_data);
 
     pp.queryAdd("visual_tessellate_vfrac",visual_tessellate_vfrac);
     pp.queryAdd("visual_revolve",visual_revolve);
@@ -5524,6 +5528,9 @@ NavierStokes::read_params ()
      std::cout << "initial_viscosity_cycles " <<initial_viscosity_cycles<< '\n';
      std::cout << "initial_thermal_cycles " <<initial_thermal_cycles<< '\n';
      std::cout << "visual_tessellate_vfrac " << visual_tessellate_vfrac << '\n';
+
+     std::cout << "step_through_data " << step_through_data << '\n';
+
      std::cout << "visual_revolve " << visual_revolve << '\n';
      std::cout << "visual_output_raw_State_Type " << 
 	     visual_output_raw_State_Type << '\n';
@@ -23403,6 +23410,14 @@ NavierStokes::post_init_state () {
  delete_array(MASK_NBR_MF);
 
  CopyNewToOldALL();
+
+ if (step_through_data==1) {
+  int nsteps_local=0;
+  parent->writeDEBUG_PlotFile(nsteps_local,SDC_outer_sweeps,slab_step);
+  std::cout << "press any number then enter: post_init_state\n";
+  int n_input;
+  std::cin >> n_input;
+ }
 
 }  // end subroutine post_init_state
 
