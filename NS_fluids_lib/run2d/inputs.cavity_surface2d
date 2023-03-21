@@ -1,0 +1,266 @@
+# Figure 2:
+# "Direct Numerical Simulations of Flows with Phase Change"
+# Tryggvason and Lu, Procedia IUTAM volume 15, 2015, 2-13
+#
+# Mu YT, Chen L, He YL, Kang QJ, Tao WQ. 
+# Nucleate boiling performance evaluation of cavities at mesoscale level. 
+# International Journal of Heat and Mass Transfer. 2017 Mar 31;106:708-19.
+#
+# April 10, 2018: in order to have behavior more consistent
+#  with inputs.Earth_grav_Water_Dhir_2001,
+#  length units are multiplied by 10 which means
+#  lenght units in GLOBALDIST are multiplied by 100 in order to convert to
+#  the appropriate units. 
+max_step  = 99999    # maximum timestep
+stop_time = 1000.0
+
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   = 0.0 0.0
+geometry.prob_hi   = 0.4 0.4   # MKS
+geometry.is_periodic= 0 0
+
+
+ns.EILE_flag=-1 # weymouth and Yue
+# 0=MOF  2=CMOF
+ns.continuous_mof=2
+ns.vof_height_function=1  #vof height function better than LS height function
+ns.MOFITERMAX=15
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=3
+ns.initial_cg_cycles=3
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0  # non-dimensional
+#ns.projection_pressure_scale=1.0  # dimensional ?
+ns.num_materials=3 # 1: liquid 2: vapor 3: solid
+ns.num_species_var=0
+ns.post_init_pressure_solve=1
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.bot_atol = 1.0e-12
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+#ns.visual_nddata_format=2  #2=tecplot cells (piecewise const)
+
+amr.n_cell    = 64 64
+amr.max_level =  0  # 3 levels for finest
+ns.ns_tiling=false
+fabarray.mfiter_tile_size=4 4 4
+#amr.max_level =  0
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.n_error_buf     = 4 4 4 4 4 4 4  # number of buffer cells in error est
+amr.grid_eff        = 0.7   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8 8 4 4 4 4 4    # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1 1 1
+amr.time_blocking_factor=1
+ns.enable_spectral=0
+amr.regrid_int      = 1       # how often to regrid
+amr.check_int       = 400    # number of timesteps between checkpoints
+amr.check_file      = chk    # root name of checkpoint file
+amr.plot_int        = 10
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 64
+#amr.restart         = chk01800
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max     = 1.1    # scale back initial timestep
+# viscous force term: rho u_t = visc_coef * div ( 2 mu D)
+# mu corresponds to "viscconst"
+ns.visc_coef      = 1.0  
+mac.visc_abs_tol   = 1.0e-10
+ns.gravity        = -9.8 #  dimensional  MKS
+# rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
+ns.override_density=2 2 0
+#ns.DrhoDT = -0.0007 0.0 0.0   # units: 1/degree K
+ns.DrhoDT = -0.0021 -0.0034 0.0
+# override_density=1 => rho=rho(T,z)
+# (override_density=2 is Boussinesq approx)
+# "default_hydrostatic_pressure_density" called if override_density=1.
+# gravity force is grad (-|g| denconst(1) y)/denconst(1) = -|g| 
+# rho_liq=denconst(1)+denconst(1)*DrhoDT(1)*(T-tempconst(1))
+
+# sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
+# sigma_{SL}=sigma_{LV}
+# sigma_{SV}=(1+cos(theta)) sigma_{LV}
+# theta=70 sigma_{SV}/sigma_{LV}=1.34
+# theta=80 sigma_{SV}/sigma_{LV}=1.17  
+# theta=120 sigma_{SV}/sigma{LV}=0.5
+# theta=140 sigma_{SV}/sigma{LV}=0.23
+# theta=45 sigma_{SV}/sigma_{LV}=1+1/sqrt{2}
+# 12 13 23  (LV SL SV)
+# N/m
+#ns.tension=58.8e-3 58.8e-3 72.9e-3  # 70 degrees contact angle
+#ns.tension=58.8e-3 58.8e-3 58.8e-3  # 140 degrees contact angle
+# ns.tension=9.9938E-01 9.4440E-01 1.5868E+00
+ns.tension=8.94e-4 8.94e-4 11.9796e-4
+# Joule/(kg Kelvin)
+#ns.stiffCP=4217.0 2029.0 4217.0
+#ns.stiffCP=1.9218E+05 9.2466E+04 1.9218E+05
+#ns.stiffCP=2063.3 1120.0 385.0
+ns.stiffCP=1040.0 1040.0 385.0
+# 12 13 23 21 31 32  (12 liquid->vapor (boiling) 21 vapor->liquid condensate)
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# latent_heat[2*max_num_tension]
+# Joule/kg
+#ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0  
+#ns.latent_heat=1.0286E+08 0.0 0.0 0.0 0.0 0.0
+#ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
+#ns.latent_heat=199e+3 0.0 0.0 0.0 0.0 0.0
+ns.latent_heat=199e+1 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp=77.25 0.0 0.0 0.0 0.0 0.0
+#ns.fixed_dt	  = 0.1     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+ns.output_drop_distribution = 1  # output droplet
+
+# cavity type 1-7
+# make axis_dir=7 for bubble below substrate (substrate on top)
+ns.axis_dir=12
+ns.xblob3=94340.0      # 2500 watts total  2500/1.06*0.2  
+#ns.yblob3=1.0e-10  # initial thermal layer (meters)
+# see subroutine get_internal_heat_source in PROB.F90
+# see subroutine microcell_heat_model in PROB.F90
+# if zblob3>0, heatcoeff=heatcoeff*dx/zblob3 (where LS_SOLID changes sign)
+# if zblob3<0, then heat source in solid cells that adjoin fluid.
+# if zblob3<0, then solidheat_flag should be 0. (diffuse in solid)
+# if zblob3=0, then Dirichlet BC at z=zlo (no internal heat flux or 
+#  other internal BC)
+#  solidheat_flag=1 (dirichlet in solid),zblob3>0:
+#  microlayer flux is (T-TSOLID)/zblob3 
+#
+# heat flux in the solid cells that adjoin a fluid cell:
+# page 30, Sato Niceno (2015): "heater power maintained at 30kW/m^2"
+# rho cp DT/dt=-div q + Q
+
+# for Tryggvason problem: T=383 degrees at the wall.
+ns.zblob3=0.0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57 # not used
+ns.vinletgas=0.0
+ns.twall=0.0  # not used
+ns.advbot=0.0 # initial falling (downward) speed of liquid drop (always 0)
+ns.adv_vel=0.0 # keep 0.0
+ns.adv_dir=2 # adv_dir=1 x direction  adv_dir=2 y direction
+ns.pressure_error_cutoff=0.0 0.0 0.0 
+ns.material_type=0 0 999
+# thermal conductivity: Watts/(meter Kelvin)
+#ns.heatviscconst=0.680 0.0248 3.0
+#ns.heatviscconst=0.680 0.248 3.0                 #thermal conductivity 
+#ns.heatviscconst=9.7526E+01 3.5568E+00 97.526E+01
+#ns.heatviscconst=9.7526E+01 3.5568E+0 1.0E+5
+ns.heatviscconst=0.1338 7.6e-3 55000.0
+# liquid-vapor, liquid-solid, vapor-solid
+# 0.0 means do not use.
+#ns.heatviscconst_interface=0.0 0.0 0.0
+# dynamic viscosity Pa * s = N s / m^2
+#ns.viscconst=279E-6 12.02e-6 279E-6
+#ns.viscconst=8.7804E-04 3.7828E-05 8.7804E-04
+ns.viscconst=156.2e-06 5.3e-06 156.2e-06
+# density: kg/m^3
+#ns.denconst=958 0.5956 1916.0
+#ns.denconst=1.0000E+00 6.2171E-04 1.0438E+00
+ns.denconst=809.8 4.571 8960.0
+ns.FSI_flag=0 0 1 #FSI_flag=FSI_PRESCRIBED_PROBF90=1
+# 0=diffuse in solid, 1=dirichlet, 2=neumann
+# if solidheat_flag=2, then "tempfluxsolid" is called.
+ns.solidheat_flag=0
+# liquid, vapor, solid
+# was: ns.tempconst=557.0 373.0 647.0
+#ns.tempconst=373.0 373.0 373.0   # SUPERHEAT=380-373
+#ns.tempconst=77.25 77.25 77.25
+ns.tempconst=100 100 100
+#ns.initial_temperature=77.25 77.25 77.25
+#ns.initial_temperature=373.0 373.0 373.0
+#ns.initial_temperature_diffuse_duration=100.0
+#ns.tempcutoff=373.0 373.0 373.0 
+ns.tempcutoff=77.25 77.25 77.25
+# was: ns.tempcutoffmax=700.0 700.0 700.0
+#ns.tempcutoffmax=500.0 500.0 500.0 
+ns.tempcutoffmax=100.0 100.0 100.0
+
+#(xblob,yblob)=center of vapor bubble
+ns.xblob=0.0 
+ns.yblob=0.0
+ns.zblob=0.203    # 11.9375 solid-liquid interface
+ns.radblob=0.1  # radius
+ns.radblob2=0.0 # zero degrees incline (radians)  pi/12=0.2617
+                   # pi/6=0.5236  pi/3=1.047  80degree/180*pi=1.396
+
+# not use
+ns.xblob2=0.1          # z rirection (xblob2,zblob) 
+ns.yblob2=0.0
+ns.zblob2=9.0e-3   # heater position (zlob2,xblob2)
+ns.zblob6=0.015    # vapor film sickness
+
+ns.xblob4=77.25  # tref   tmax=tref+zblob4
+ns.yblob4=77.55  # tinit   first site temperature 
+ns.zblob4=10.0   # max superheat condition
+ns.radblob3=0.00625  # seed raw diameter 0.00635=0.2/32
+ns.xblob5=0.5e-3  # not use   # temp buff region , in the liquid next to solid
+ns.zblob5=2.3   # superheated cndition
+
+# ns.xblob6= 8.4375e-3   # volume flux
+# ns.yblob6= 87.25    # temp
+
+ns.radblob4=0.0
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=710
+
+#ns.mem_debug = 1
+#ns.v = 1
+#ns.d = 1
+# 0=dirichlet at inflow (default)
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+#ns.prescribe_temperature_outflow=0
+
+#ns.lo_bc          = 3 3  # this option if heat source
+ns.lo_bc          = 3 3   # use "3 2" instead of "3 5" if axis_dir=7
+ns.hi_bc          = 3 2
+ns.temperature_lo_bc = 3 3
+ns.temperature_hi_bc = 3 3 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# ----------------------------------------------------------
+# -------- Other inputs ------------------------------------
+# ----------------------------------------------------------
+# multigrid class (set to 2 for maximum verbosity)
+mg.verbose = 0
+cg.verbose = 0
+
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+
+cg.maxiter = 200
+cg.restart_period=25
+
+mg.rtol_b = -0.01
+Lp.v = 1
+
+ns.pressure_error_cutoff=0.0 0.0 0.0
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+

@@ -1932,6 +1932,8 @@ protected:
     static Real perturbation_eps_temp;
     static Real perturbation_eps_vel;
 
+    static int step_through_data; //def=0
+
     static int visual_tessellate_vfrac; // def=0
     static int visual_revolve; //def=0
     static int visual_output_raw_State_Type; //def=0
