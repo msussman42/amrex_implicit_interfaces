@@ -199,8 +199,11 @@ state[DIV_Type]  scomp=0  ncomp=1
 #define PLOTCOMP_VFRAC (PLOTCOMP_MACH+1)
 #define PLOTCOMP_LS (PLOTCOMP_VFRAC+num_materials)
 #define PLOTCOMP_LS_SLOPE (PLOTCOMP_LS+num_materials)
+
 #define PLOTCOMP_SCALARS (PLOTCOMP_LS_SLOPE+num_materials*plot_sdim_macro)
-#define PLOTCOMP_MOMDEN (PLOTCOMP_SCALARS+num_materials*num_state_material)
+#define PLOTCOMP_SCALARS_MERGE (PLOTCOMP_SCALARS+num_materials*num_state_material)
+
+#define PLOTCOMP_MOMDEN (PLOTCOMP_SCALARS_MERGE+num_state_material)
 #define PLOTCOMP_CONFIG_TENSOR (PLOTCOMP_MOMDEN+num_materials)
 #if (0)
 11,12,22,33,13,23
