@@ -16389,7 +16389,63 @@ end subroutine print_visual_descriptor
    
        enddo  ! ispec=1..num_species_var
 
-      enddo  ! im (state variables)
+      enddo  ! im (state variables); do im=1,num_materials
+
+      if (test_nwrite.eq.PLOTCOMP_SCALARS_MERGE) then
+       ! do nothing
+      else
+       print *,"(test_nwrite.ne.PLOTCOMP_SCALARS_MERGE)"
+       stop
+      endif
+
+       ! density
+      ih=1
+      Varname='D'
+      ih=ih+1
+      Varname(ih:ih)='M'
+      ih=ih+1
+      Varname(ih:ih)='G'
+      ih=ih+1
+      call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
+
+       ! temperature
+      ih=1
+      Varname='T'
+      ih=ih+1
+      Varname(ih:ih)='M'
+      ih=ih+1
+      Varname(ih:ih)='G'
+      ih=ih+1
+      call dumpstring(Varname)
+      test_nwrite=test_nwrite+1
+
+      do ispec=1,num_species_var
+
+       write(specstr,'(I2)') ispec
+       do i=1,2
+        if (specstr(i:i).eq.' ') then
+         specstr(i:i)='0'
+        endif
+       enddo
+
+       ih=1
+       Varname='S'
+       ih=ih+1
+       Varname(ih:ih)='M'
+       ih=ih+1
+       Varname(ih:ih)='G'
+       ih=ih+1
+       Varname(ih:ih)='-'
+       ih=ih+1
+       do i=1,2
+        Varname(ih:ih)=specstr(i:i)
+        ih=ih+1
+       enddo
+       call dumpstring(Varname)
+       test_nwrite=test_nwrite+1
+   
+      enddo  ! ispec=1..num_species_var
 
       if (test_nwrite.eq.PLOTCOMP_MOMDEN) then
        ! do nothing

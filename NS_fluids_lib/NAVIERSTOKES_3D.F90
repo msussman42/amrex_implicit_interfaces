@@ -942,15 +942,18 @@ stop
           stop
          endif
 
-          ! den,mom_den,configuration tensor
+          ! den,den_merge,mom_den,configuration tensor
          do ivar_gb=1,num_materials*num_state_material+ &
+              num_state_material+ & !plotcomp_scalars_merge
               num_materials+ & !mom_den
               num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE
           index3d=index3d+1
           index2d=index2d+1
           zone3d_gb(iz_gb)%var(index3d,i,j,k)= &
             zone2d_gb(iz_gb)%var(index2d,i,j)
-         enddo ! do ivar_gb=1,num_materials*num_state_material+num_materials+viscoelastic stuff
+         enddo ! do ivar_gb=1,num_materials*num_state_material+
+               !            num_state_material+ &
+               !            num_materials+viscoelastic stuff
 
          if (index3d.eq.PLOTCOMP_VISC) then
           ! do nothing
@@ -3084,6 +3087,7 @@ END SUBROUTINE SIMP
         endif
 
         iw=0
+
         do im=1,num_materials
          do istate=1,num_state_material ! den,T
           iw=iw+1 
@@ -3091,14 +3095,27 @@ END SUBROUTINE SIMP
           if ((idissolution.eq.1).and.(istate.eq.2)) then
            writend(scomp+iw)=writend(scomp+iw)-one
           endif
-         enddo ! istate
-        enddo ! im
+         enddo ! istate=1..num_state_material
+        enddo ! im=1..num_materials
+
+        do istate=1,num_state_material ! den_merge,T_merge,scalar1..2.. MERGE
+         iw=iw+1 
+         writend(scomp+iw)=dennd_merge(iw)
+         if ((idissolution.eq.1).and.(istate.eq.2)) then
+          writend(scomp+iw)=writend(scomp+iw)-one
+         endif
+        enddo ! istate=1..num_state_material
+
+
         do im=1,num_materials
          iw=iw+1 
          writend(scomp+iw)=mom_dennd(im)
         enddo
 
-        scomp=scomp+num_state_material*num_materials+num_materials
+        scomp=scomp+ &
+              num_state_material*num_materials+ & !den
+              num_state_material+ & !dennd_merge
+              num_materials !MOMDEN
 
         if (scomp.eq.PLOTCOMP_CONFIG_TENSOR) then
          ! do nothing

@@ -20323,8 +20323,33 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      std::string ispec_string=ispec_string_stream.str();
      icomp++;
      varnames[icomp]="S"+ispec_string+"-"+im_string;
-    }
-   }
+    } //ispec=0;ispec<num_species_var;ispec++
+
+   } //im=0..num_materials-1
+
+   if (icomp+1==PLOTCOMP_SCALARS_MERGE) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_SCALARS_MERGE");
+
+   icomp++;
+   varnames[icomp]="DMERGE";
+   icomp++;
+   varnames[icomp]="TMERGE";
+
+   for (int ispec=0;ispec<num_species_var;ispec++) {
+    std::stringstream ispec_string_stream(std::stringstream::in |
+      std::stringstream::out);
+    ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
+    std::string ispec_string=ispec_string_stream.str();
+    icomp++;
+    varnames[icomp]="SMERGE"+ispec_string;
+   }  // for (int ispec=0;ispec<num_species_var;ispec++)
+
+   if (icomp+1==PLOTCOMP_MOMDEN) {
+    // do nothing
+   } else
+    amrex::Error("icomp+1!=PLOTCOMP_MOMDEN");
 
    for (int im=0;im<num_materials;im++) {
     std::stringstream im_string_stream(std::stringstream::in |
@@ -20333,7 +20358,8 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     std::string im_string=im_string_stream.str();
     icomp++;
     varnames[icomp]="MOMDEN"+im_string;
-   }
+   }  // for (int im=0;im<num_materials;im++)
+
    for (int partid=0;partid<num_materials_viscoelastic;partid++) {
     int im=im_elastic_map[partid];
     if ((im>=0)&&(im<num_materials)) {
