@@ -1992,9 +1992,11 @@ END SUBROUTINE SIMP
       REAL_T divnd
       REAL_T divdatnd
       REAL_T dennd(num_state_material*num_materials)
+      REAL_T dennd_merge(num_state_material)
       REAL_T mom_dennd(num_materials)
       REAL_T elasticnd(elastic_ncomp)
       REAL_T dencell(num_state_material*num_materials)
+      REAL_T dencell_merge(num_state_material)
       REAL_T mom_dencell(num_materials)
       REAL_T elasticcell(elastic_ncomp)
       REAL_T lsdistnd((SDIM+1)*num_materials)
@@ -2487,6 +2489,9 @@ END SUBROUTINE SIMP
         do dir=1,num_state_material*num_materials
          dennd(dir)=zero
         enddo
+        do dir=1,num_state_material
+         dennd_merge(dir)=zero
+        enddo
         do dir=1,num_materials
          mom_dennd(dir)=zero
         enddo
@@ -2640,6 +2645,9 @@ END SUBROUTINE SIMP
          do dir=1,num_state_material*num_materials
           dennd(dir)=dennd(dir)+localwt*dencell(dir)
          enddo
+         do dir=1,num_state_material
+          dennd_merge(dir)=dennd_merge(dir)+localwt*dencell_merge(dir)
+         enddo
          do dir=1,num_materials
           mom_dennd(dir)=mom_dennd(dir)+localwt*mom_dencell(dir)
          enddo
@@ -2734,6 +2742,9 @@ END SUBROUTINE SIMP
 
         do dir=1,num_state_material*num_materials
          dennd(dir)=dennd(dir)/sumweight
+        enddo
+        do dir=1,num_state_material
+         dennd_merge(dir)=dennd_merge(dir)/sumweight
         enddo
         do dir=1,num_materials
          mom_dennd(dir)=mom_dennd(dir)/sumweight
@@ -3101,9 +3112,6 @@ END SUBROUTINE SIMP
         do istate=1,num_state_material ! den_merge,T_merge,scalar1..2.. MERGE
          iw=iw+1 
          writend(scomp+iw)=dennd_merge(iw)
-         if ((idissolution.eq.1).and.(istate.eq.2)) then
-          writend(scomp+iw)=writend(scomp+iw)-one
-         endif
         enddo ! istate=1..num_state_material
 
 
