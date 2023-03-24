@@ -16082,13 +16082,14 @@ end subroutine print_visual_descriptor
 
       INTEGER_T, INTENT(in) :: plot_sdim
       INTEGER_T, INTENT(in) :: add_sub_cells
+      character*80 rootname
       character*80 Varname
       character*2 specstr
       character*2 matstr
       character*2 matstropp
       INTEGER_T igrad
       INTEGER_T im,imls,im_opp
-      INTEGER_T ih,ispec,dir,i
+      INTEGER_T ih,ih_root,ispec,dir,i
       INTEGER_T nparts,nparts_def,partid
       INTEGER_T plot_sdim_macro
       INTEGER_T test_nwrite
@@ -16398,14 +16399,16 @@ end subroutine print_visual_descriptor
        stop
       endif
 
+      rootname='MERGE'
+
        ! density
       ih=1
       Varname='D'
       ih=ih+1
-      Varname(ih:ih)='M'
-      ih=ih+1
-      Varname(ih:ih)='G'
-      ih=ih+1
+      do ih_root=1,5
+       Varname(ih:ih)=rootname(ih_root:ih_root)
+       ih=ih+1
+      enddo
       call dumpstring(Varname)
       test_nwrite=test_nwrite+1
 
@@ -16413,10 +16416,10 @@ end subroutine print_visual_descriptor
       ih=1
       Varname='T'
       ih=ih+1
-      Varname(ih:ih)='M'
-      ih=ih+1
-      Varname(ih:ih)='G'
-      ih=ih+1
+      do ih_root=1,5
+       Varname(ih:ih)=rootname(ih_root:ih_root)
+       ih=ih+1
+      enddo
       call dumpstring(Varname)
       test_nwrite=test_nwrite+1
 
@@ -16432,10 +16435,12 @@ end subroutine print_visual_descriptor
        ih=1
        Varname='S'
        ih=ih+1
-       Varname(ih:ih)='M'
-       ih=ih+1
-       Varname(ih:ih)='G'
-       ih=ih+1
+
+       do ih_root=1,5
+        Varname(ih:ih)=rootname(ih_root:ih_root)
+        ih=ih+1
+       enddo
+
        Varname(ih:ih)='-'
        ih=ih+1
        do i=1,2
