@@ -166,7 +166,7 @@ stop
       INTEGER_T, parameter :: nhalfbox_sten=1
       REAL_T dxmaxLS
       INTEGER_T debugslope
-      INTEGER_T tessellate
+      INTEGER_T, parameter :: tessellate=0
       INTEGER_T, parameter :: nhalf_box=1
 
       REAL_T vfrac_fluid_sum
@@ -181,8 +181,6 @@ stop
 
       slopes_ptr=>slopes
       snew_ptr=>snew
-
-      tessellate=0
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"

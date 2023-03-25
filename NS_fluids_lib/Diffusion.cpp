@@ -624,7 +624,7 @@ void NavierStokes::combine_state_variable(
 
  resize_metrics(1);
  debug_ngrow(VOLUME_MF,1,local_caller_string);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);

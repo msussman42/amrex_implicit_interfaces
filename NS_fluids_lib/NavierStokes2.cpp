@@ -5182,7 +5182,7 @@ void NavierStokes::make_physics_vars(int project_option,
  if (localMF[DIST_CURV_MF]->nComp()!=num_curv)
   amrex::Error("localMF[DIST_CURV_MF]->nComp() invalid");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
@@ -7046,7 +7046,7 @@ void NavierStokes::output_triangles() {
 
    // vof,refcentroid,order,slope,intercept x num_materials
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
  const Real* dx = geom.CellSize();
@@ -7587,7 +7587,8 @@ void NavierStokes::output_zones(
    amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
  }
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+  //VOF_Recon_resize is declared in: NavierStokes2.cpp
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
  debug_ngrow(MASKSEM_MF,1,local_caller_string);
@@ -8825,8 +8826,7 @@ void NavierStokes::delete_array(int idx_localMF) {
 }  // subroutine delete_array
 
 void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
-  int update_flag,int init_vof_prev_time,
-  int dest_mf) {
+  int update_flag,int init_vof_prev_time) {
 
  if (level!=0)
   amrex::Error("level must be 0 ");
@@ -8841,12 +8841,12 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
 
  int finest_level=parent->finestLevel();
 
-  // go from coarsest to finest so that dest_mf
+  // go from coarsest to finest so that SLOPE_RECON_MF
   // can have proper BC.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.VOF_Recon(ngrow,time,update_flag,
-   init_vof_prev_time,dest_mf);
+   init_vof_prev_time);
  }
 
  if (update_flag==0) {
@@ -8857,36 +8857,40 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
   amrex::Error("update_flag invalid");
 
 
-} // subroutine VOF_Recon_ALL
+} // end subroutine VOF_Recon_ALL
 
-void NavierStokes::VOF_Recon_resize(int ngrow,int dest_mf) {
+void NavierStokes::VOF_Recon_resize(int ngrow) {
 
  if ((ngrow<1)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
- if (localMF[dest_mf]->nComp()!=num_materials*ngeom_recon)
-  amrex::Error("localMF[dest_mf]->nComp()!=num_materials*ngeom_recon");
+ if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
+  amrex::Error("localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon");
 
- if (localMF[dest_mf]->nGrow()==ngrow) {
+ if (localMF[SLOPE_RECON_MF]->nGrow()==ngrow) {
   // do nothing
- } else if (localMF[dest_mf]->nGrow()>=0) {
+ } else if (localMF[SLOPE_RECON_MF]->nGrow()>=0) {
   MultiFab* slopes_mf=new MultiFab(grids,dmap,num_materials*ngeom_recon,0,
 	  MFInfo().SetTag("slope_m"),FArrayBoxFactory());
-  MultiFab::Copy(*slopes_mf,*localMF[dest_mf],0,0,num_materials*ngeom_recon,0);
-  delete_localMF(dest_mf,1);
-  new_localMF(dest_mf,num_materials*ngeom_recon,ngrow,-1); //sets values to 0.0
-  MultiFab::Copy(*localMF[dest_mf],*slopes_mf,0,0,num_materials*ngeom_recon,0);
+  MultiFab::Copy(*slopes_mf,*localMF[SLOPE_RECON_MF],0,0,
+		 num_materials*ngeom_recon,0);
+  delete_localMF(SLOPE_RECON_MF,1);
+  //sets values to 0.0
+  new_localMF(SLOPE_RECON_MF,num_materials*ngeom_recon,ngrow,-1); 
+  //sets values to 0.0
+  MultiFab::Copy(*localMF[SLOPE_RECON_MF],*slopes_mf,
+		 0,0,num_materials*ngeom_recon,0);
  
   Vector<int> scompBC_map;
   scompBC_map.resize(num_materials*ngeom_recon);
   for (int i=0;i<num_materials*ngeom_recon;i++)
    scompBC_map[i]=i+1+AMREX_SPACEDIM;
    //scomp=0
-  PCINTERP_fill_borders(dest_mf,ngrow,0,num_materials*ngeom_recon,
+  PCINTERP_fill_borders(SLOPE_RECON_MF,ngrow,0,num_materials*ngeom_recon,
     State_Type,scompBC_map);
  
   delete slopes_mf;
  } else
-  amrex::Error("localMF[dest_mf]->nGrow() invalid");
+  amrex::Error("localMF[SLOPE_RECON_MF]->nGrow() invalid");
 
 } // end subroutine VOF_Recon_resize
 
@@ -8897,8 +8901,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow,int dest_mf) {
 // 2. reconstruct interior cells only.
 // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
 void NavierStokes::VOF_Recon(int ngrow,Real time,
-  int update_flag,int init_vof_prev_time,
-  int dest_mf) {
+  int update_flag,int init_vof_prev_time) {
 
  std::string local_caller_string="VOF_Recon";
  bool use_tiling=ns_tiling;
@@ -8961,15 +8964,16 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if (localMF[MASK_NBR_MF]->nComp()!=4)
   amrex::Error("invalid ncomp for mask nbr");
 
- delete_localMF_if_exist(dest_mf,1);
- new_localMF(dest_mf,num_materials*ngeom_recon,ngrow,-1);  // sets values to 0.0
+ delete_localMF_if_exist(SLOPE_RECON_MF,1);
+ // sets values to 0.0
+ new_localMF(SLOPE_RECON_MF,num_materials*ngeom_recon,ngrow,-1);  
 
  delete_localMF_if_exist(VOF_RECON_MF,1);
  getState_localMF(VOF_RECON_MF,1,STATECOMP_MOF,num_materials*ngeom_raw,time);
  for (int im=0;im<num_materials;im++) {
   int ibase_raw=im*ngeom_raw;
   int ibase_recon=im*ngeom_recon;
-  Copy_localMF(dest_mf,VOF_RECON_MF,ibase_raw,ibase_recon,ngeom_raw,1);
+  Copy_localMF(SLOPE_RECON_MF,VOF_RECON_MF,ibase_raw,ibase_recon,ngeom_raw,1);
   if (init_vof_prev_time==1) {
    int ngrow_save=localMF[VOF_PREV_TIME_MF]->nGrow();
    if (ngrow_save!=1)
@@ -8988,13 +8992,13 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(localMF[dest_mf]->boxArray().d_numPts());
+ thread_class::init_d_numPts(localMF[SLOPE_RECON_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
- for (MFIter mfi(*localMF[dest_mf],use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
    const int gridno = mfi.index();
    const Box& tilegrid = mfi.tilebox();
@@ -9008,7 +9012,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
 
    FArrayBox& vfab=(*localMF[VOF_RECON_MF])[mfi];
    FArrayBox& lsfab=(*lsdata)[mfi];
-   FArrayBox& mffab=(*localMF[dest_mf])[mfi];
+   FArrayBox& mffab=(*localMF[SLOPE_RECON_MF])[mfi];
 
    FArrayBox& snewfab=S_new[mfi];
 
@@ -9079,13 +9083,13 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
    std::cout << "lev,im,calls,iter " << level << ' ' << 
     im << ' ' << total_calls[0][im] << ' ' <<
     total_iterations[0][im] << '\n';
-   Real vfracnrm=localMF[dest_mf]->norm1(vofcomp,0);
+   Real vfracnrm=localMF[SLOPE_RECON_MF]->norm1(vofcomp,0);
    std::cout << "im= " << im << " vfracnrm= " << vfracnrm << '\n';
   }
  }
 
   //scomp=0
- PCINTERP_fill_borders(dest_mf,ngrow,0,num_materials*ngeom_recon,
+ PCINTERP_fill_borders(SLOPE_RECON_MF,ngrow,0,num_materials*ngeom_recon,
    State_Type,scompBC_map);
 
  double end_recon = ParallelDescriptor::second();
@@ -10129,7 +10133,7 @@ void NavierStokes::getStateVISC() {
  if (localMF[CELLTENSOR_MF]->nComp()!=AMREX_SPACEDIM_SQR)
   amrex::Error("localMF[CELLTENSOR_MF]->nComp() invalid");
 
- VOF_Recon_resize(2,SLOPE_RECON_MF);
+ VOF_Recon_resize(2); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,2,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
@@ -10451,7 +10455,7 @@ void NavierStokes::getStateCONDUCTIVITY() {
 
  bool use_tiling=ns_tiling;
 
- VOF_Recon_resize(ngrow+2,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow+2); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow+2,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
