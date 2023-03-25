@@ -307,8 +307,8 @@ void NavierStokes::static_surface_tension_advection() {
  // do not update the error in S_new
  int update_flag=0; 
  int init_vof_prev_time=0;
- VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-   SLOPE_RECON_MF);
+  //output:SLOPE_RECON_MF
+ VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
  int keep_all_interfaces=0;
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
@@ -737,8 +737,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   amrex::Error("particles_flag invalid");
 
  int update_flag=0;  // do not update the error. 
+ //output:SLOPE_RECON_MF
  VOF_Recon_ALL(1,advect_time_slab,update_flag,
-  init_vof_prev_time,SLOPE_RECON_MF);
+  init_vof_prev_time);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -795,8 +796,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
     advect_time_slab=cur_time_slab;
     update_flag=0;  // do not update the error. 
+     //output::SLOPE_RECON_MF
     VOF_Recon_ALL(1,advect_time_slab,update_flag,
-     init_vof_prev_time,SLOPE_RECON_MF);
+     init_vof_prev_time);
 
    } else
     amrex::Error("dir_absolute_direct_split invalid");
@@ -2563,7 +2565,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
       ns_level.setVal_localMF(COARSE_FINE_FLUX_MF+dir,1.0e+40,0,NFLUXSEM,0);
      } // dir=0..sdim-1
      ns_level.resize_levelset(2,LEVELPC_MF);
-     ns_level.VOF_Recon_resize(1,SLOPE_RECON_MF);
+     ns_level.VOF_Recon_resize(1); //output:SLOPE_RECON_MF
      ns_level.resize_maskfiner(1,MASKCOEF_MF);
      ns_level.resize_mask_nbr(1);
      ns_level.resize_metrics(1);
@@ -2933,8 +2935,8 @@ void NavierStokes::phase_change_code_segment(
 
  int update_flag=1;  // update the error in S_new
  int init_vof_prev_time=0;
- VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-  SLOPE_RECON_MF);
+ //output:SLOPE_RECON_MF
+ VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
 
   // in: phase_change_code_segment
   // 1. prescribe solid temperature, velocity, and geometry where
@@ -3084,8 +3086,8 @@ void NavierStokes::nucleation_code_segment(
  int update_flag=0; // do not update the error indicator
  int init_vof_prev_time=0;
   // Fluids tessellate; solids overlay.
- VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-  SLOPE_RECON_MF);
+  // output:SLOPE_RECON_MF
+ VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
  int keep_all_interfaces=1;
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
@@ -3507,8 +3509,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        update_flag=1;  // update the error in S_new
        int init_vof_prev_time=0;
-       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-        SLOPE_RECON_MF);
+       //output:SLOPE_RECON_MF
+       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
        int keep_all_interfaces=0;
        int ngrow_make_distance_accept=ngrow_make_distance;
        makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
@@ -3549,8 +3551,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       update_flag=0;  // do not update the error in S_new
       int init_vof_prev_time=0;
-      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-        SLOPE_RECON_MF);
+       //output:SLOPE_RECON_MF
+      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
 
     } else
       amrex::Error("slab_step invalid");
@@ -5738,7 +5740,7 @@ NavierStokes::ColorSum(
  } // dir=0..sdim-1
  
  debug_ngrow(VOLUME_MF,0,local_caller_string);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
@@ -6068,7 +6070,7 @@ NavierStokes::SumRegions(
  resize_metrics(1);
 
  debug_ngrow(VOLUME_MF,0,local_caller_string);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
@@ -6279,7 +6281,7 @@ NavierStokes::LowMachDIVU(
  resize_metrics(1);
 
  debug_ngrow(VOLUME_MF,0,local_caller_string);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
@@ -12065,7 +12067,7 @@ void NavierStokes::diffusion_heatingALL(
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.resize_levelset(2,LEVELPC_MF);
   ns_level.debug_ngrow(LEVELPC_MF,2,local_caller_string);
-  ns_level.VOF_Recon_resize(1,SLOPE_RECON_MF);
+  ns_level.VOF_Recon_resize(1); //output:SLOPE_RECON_MF
   ns_level.debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
   ns_level.debug_ngrow(source_idx,1,local_caller_string);
   ns_level.debug_ngrow(idx_heat,0,local_caller_string);

@@ -11643,7 +11643,7 @@ void NavierStokes::make_heat_source() {
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   debug_ngrow(FACE_VAR_MF+dir,0,local_caller_string);
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
  resize_levelset(2,LEVELPC_MF);
  debug_ngrow(LEVELPC_MF,2,local_caller_string);
@@ -12575,7 +12575,7 @@ NavierStokes::getStateMOM_DEN(int idx,int ngrow,Real time) {
  debug_ngrow(MASK_NBR_MF,ngrow,local_caller_string); 
 
   // vof,ref centroid,order,slope,intercept  x num_materials
- VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
   amrex::Error("slope_recon_mf has incorrect ncomp");
@@ -13217,7 +13217,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
   debug_ngrow(MDOT_MF,0,local_caller_string);
   debug_ixType(MDOT_MF,-1,local_caller_string);
 
-  VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
+  VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
   debug_ixType(SLOPE_RECON_MF,-1,local_caller_string);
 
   if (thread_class::nthreads<1)
@@ -14054,9 +14054,8 @@ NavierStokes::level_phase_change_convertALL() {
 
       int update_flag=0; // do not update the error indicator
       int init_vof_prev_time=0;
-        // Fluids tessellate; solids overlay.
-      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time,
-        SLOPE_RECON_MF);
+        // Fluids tessellate; solids overlay; output:SLOPE_RECON_MF
+      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
      } else if (i_phase_change+1==n_phase_change) {
       // do nothing
      } else {
@@ -14295,7 +14294,7 @@ NavierStokes::level_phase_change_convert(
   amrex::Error("i_phase_change invalid");
   
 
- VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -14950,7 +14949,7 @@ NavierStokes::level_phase_change_redistribute(
  } else
   amrex::Error("isweep invalid");
 
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
   
  if (isweep==0) { //fort_tagexpansion
 
@@ -15441,7 +15440,7 @@ NavierStokes::level_init_icemask() {
   amrex::Error("level invalid level_init_icemask");
 
  resize_maskfiner(1,MASKCOEF_MF);
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
 
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
@@ -16907,7 +16906,7 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("NUM_CELL_ELASTIC invalid");
 
   // vof,ref centroid,order,slope,intercept  x num_materials
- VOF_Recon_resize(ngrow_mass,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow_mass); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_mass,local_caller_string);
  resize_maskfiner(ngrow_mass,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,ngrow_mass,local_caller_string);
@@ -17799,7 +17798,7 @@ NavierStokes::GetDrag(int isweep) {
  debug_ngrow(LEVELPC_MF,2,local_caller_string);
  if (localMF[LEVELPC_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("levelpc mf has incorrect ncomp");
- VOF_Recon_resize(1,SLOPE_RECON_MF);
+ VOF_Recon_resize(1); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
 
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
@@ -19148,7 +19147,7 @@ void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  resize_maskfiner(2,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,2,local_caller_string);
 
- VOF_Recon_resize(2,SLOPE_RECON_MF);
+ VOF_Recon_resize(2); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,2,local_caller_string);
  debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
 
@@ -21848,8 +21847,9 @@ NavierStokes::volWgtSumALL(
     // vof,ref cen, order,slope,int
  int update_flag=0;  // do not update the error
  int init_vof_prev_time=0;
+  //output: SLOPE_RECON_MF
  VOF_Recon_ALL(1,cur_time_slab,update_flag,
-   init_vof_prev_time,SLOPE_RECON_MF); 
+   init_vof_prev_time); 
 
  int project_option=SOLVETYPE_INITPROJ;
   // need to initialize viscosity and density temporary 
@@ -22348,8 +22348,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 	
  int project_option=SOLVETYPE_INITPROJ; 
 
+  //output:SLOPE_RECON_MF
  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
-  init_vof_prev_time,SLOPE_RECON_MF);
+  init_vof_prev_time);
 
  if (pattern_test(local_caller_string,"post_init_state")==1) {
 
@@ -24747,7 +24748,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
  debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
  if (localMF[MASK_NBR_MF]->nComp()!=4)
   amrex::Error("invalid ncomp for mask nbr");
- VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
  debug_ngrow(ORIGDIST_MF,ngrow_distance,local_caller_string);
  if (localMF[ORIGDIST_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
@@ -25185,7 +25186,7 @@ NavierStokes::ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
  if (localMF[idxsrc]->nComp()!=nface_src)
   amrex::Error("idxsrc has invalid ncomp");
 
- VOF_Recon_resize(ngrow_source,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow_source); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_source,local_caller_string);
 
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
@@ -25280,7 +25281,7 @@ NavierStokes::makeFaceFrac(
  delete_localMF_if_exist(idx,1);
  new_localMF(idx,nface,ngrow,-1);
  localMF[idx]->setVal(0.0);
- VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
  resize_mask_nbr(ngrow);
  debug_ngrow(MASK_NBR_MF,ngrow,local_caller_string);
@@ -25369,7 +25370,7 @@ NavierStokes::makeFaceTest(int tessellate,int ngrow,int idx) {
  new_localMF(idx,num_materials*AMREX_SPACEDIM,ngrow,-1);
  localMF[idx]->setVal(0.0);
 
- VOF_Recon_resize(ngrow,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
  debug_ngrow(FACEFRAC_MF,ngrow,local_caller_string);
  resize_mask_nbr(ngrow);
@@ -25461,7 +25462,7 @@ NavierStokes::makeCellFrac(
  if (ngrow_resize==0)
   ngrow_resize++;
 
- VOF_Recon_resize(ngrow_resize,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow_resize); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_resize,local_caller_string);
  resize_mask_nbr(ngrow_resize);
  debug_ngrow(MASK_NBR_MF,ngrow_resize,local_caller_string);
@@ -25596,7 +25597,7 @@ NavierStokes::makeStateCurv(int project_option,
  new_localMF(DIST_CURV_MF,num_curv,1,-1);
  localMF[DIST_CURV_MF]->setVal(0.0);
 
- VOF_Recon_resize(ngrow_distance,SLOPE_RECON_MF);
+ VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
  if (localMF[SLOPE_RECON_MF]->nComp()==num_materials*ngeom_recon) {
   // do nothing

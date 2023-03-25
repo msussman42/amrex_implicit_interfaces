@@ -827,10 +827,10 @@ protected:
      // update_flag=2 update S_new
     void VOF_Recon(int ngrow,
       Real time,int update_flag,
-      int init_vof_prev_time,int dest_mf);
+      int init_vof_prev_time); //output: SLOPE_RECON_MF
     void VOF_Recon_ALL(int ngrow,Real time,int update_flag,
-      int init_vof_prev_time,int dest_mf);
-    void VOF_Recon_resize(int ngrow,int dest_mf);
+      int init_vof_prev_time); //output: SLOPE_RECON_MF
+    void VOF_Recon_resize(int ngrow); //output: SLOPE_RECON_MF
 
     void make_physics_varsALL(int project_option,
 	   const std::string& caller_string);

@@ -1957,7 +1957,8 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: div_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target :: divdat(DIMV(divdat))
       REAL_T, pointer :: divdat_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: den(DIMV(den),num_state_material*num_materials)
+      REAL_T, INTENT(in), target :: &
+          den(DIMV(den),num_state_material*num_materials)
       REAL_T, pointer :: den_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: mom_den(DIMV(mom_den),num_materials)
       REAL_T, pointer :: mom_den_ptr(D_DECL(:,:,:),:)
@@ -2059,9 +2060,9 @@ END SUBROUTINE SIMP
       REAL_T, pointer :: plotfab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: reconfab
+      REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: reconfab_raster
       INTEGER_T debug_slice
       REAL_T denslice,tempslice,eslice,KEslice
-      INTEGER_T bfact_finest
       INTEGER_T, parameter :: nhalf=3
       REAL_T xstenND(-nhalf:nhalf,SDIM)
       REAL_T xsten_corner(-nhalf:nhalf,SDIM)
@@ -2073,7 +2074,11 @@ END SUBROUTINE SIMP
       REAL_T xsten_fabhi(-nhalf:nhalf,SDIM)
       REAL_T dxleft,dxright,dxmin
       REAL_T mofdata(num_materials*ngeom_recon)
-      INTEGER_T nmax
+      REAL_T mofdata_raster(num_materials*ngeom_recon)
+      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
+      INTEGER_T, PARAMETER :: bfact_finest=2
+      REAL_T, PARAMETER :: INTERP_TOL=1.0D-4
+      INTEGER_T, PARAMETER :: tessellate_raster=3
 
       INTEGER_T visual_ncell(SDIM)
       REAL_T visual_dx(SDIM)
@@ -2087,7 +2092,6 @@ END SUBROUTINE SIMP
       INTEGER_T grid_type
       INTEGER_T SEMhi(SDIM)
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: SEMloc
-      REAL_T INTERP_TOL
       INTEGER_T local_maskSEM
       REAL_T local_data
       INTEGER_T current_index
@@ -2096,11 +2100,6 @@ END SUBROUTINE SIMP
       INTEGER_T plot_sdim_macro
       INTEGER_T nwrite3d
       INTEGER_T nwrite2d
-
-
-      nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
-      bfact_finest=2
-      INTERP_TOL=1.0E-4
 
       plot_sdim_macro=2
       nwrite2d=PLOTCOMP_NCOMP
@@ -2204,6 +2203,7 @@ END SUBROUTINE SIMP
         igridlo,igridhi)
 
       allocate(reconfab(DIMV(plt),num_materials*ngeom_recon))
+      allocate(reconfab_raster(DIMV(plt),num_materials*ngeom_recon))
 
       if (plot_grid_type.eq.0) then ! interp to nodes.
 
@@ -2310,11 +2310,24 @@ END SUBROUTINE SIMP
 
        do dir=1,num_materials*ngeom_recon
         mofdata(dir)=vof(D_DECL(i,j,k),dir)
+        mofdata_raster(dir)=vof(D_DECL(i,j,k),dir)
        enddo
 
-       if ((visual_tessellate_vfrac.eq.1).or. &
-           (visual_tessellate_vfrac.eq.3)) then
-         ! before (mofdata): fluids tessellate
+       ! before (mofdata_raster): only fluids tessellate
+       ! after  (mofdata_raster): fluids and solids tessellate (rasterized)
+       call multi_get_volume_tessellate( &
+        tessellate_raster, & !=3
+        bfact, &
+        dx,xsten,nhalf, &
+        mofdata_raster, &
+        geom_xtetlist(1,1,1,tid+1), &
+        nmax, &
+        nmax, &
+        SDIM)
+
+       if ((visual_tessellate_vfrac.eq.1).or. & 
+           (visual_tessellate_vfrac.eq.3)) then ! rasterized solid.
+         ! before (mofdata): only fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
         call multi_get_volume_tessellate( &
          visual_tessellate_vfrac, &
@@ -2334,6 +2347,7 @@ END SUBROUTINE SIMP
 
        do dir=1,num_materials*ngeom_recon
         reconfab(D_DECL(i,j,k),dir)=mofdata(dir)
+        reconfab_raster(D_DECL(i,j,k),dir)=mofdata_raster(dir)
        enddo
       enddo  ! i
       enddo  ! j
@@ -2635,9 +2649,33 @@ END SUBROUTINE SIMP
          do dir=1,STATE_NCOMP_VEL+STATE_NCOMP_PRES
           velnd(dir)=velnd(dir)+localwt*velcell(dir)
          enddo
+
+         do dir=1,num_materials
+          vofcomp=(dir-1)*ngeom_recon+1
+          vofcell(dir)=reconfab_raster(D_DECL(i-i1,j-j1,k-k1),vofcomp)
+         enddo
+
          do dir=1,num_state_material*num_materials
           dencell(dir)=den(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
+
+         vofcell_denom=zero
+         do dir=1,num_materials
+          vofcell_denom=vofcell_denom+vofcell(dir)
+         enddo 
+         if ((vofcell_denom.gt.half).and. &
+             (vofcell_denom.lt.one+half)) then
+          ! do nothing
+         else
+          print *,"vofcell_denom invalid"
+          stop
+         endif
+
+         do dir=1,num_state_material
+          dencell_merge(dir)=zero
+          
+         enddo
+
          do dir=1,num_materials
           mom_dencell(dir)=mom_den(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
@@ -2668,6 +2706,7 @@ END SUBROUTINE SIMP
           vofcomp=(dir-1)*ngeom_recon+1
           vofcell(dir)=reconfab(D_DECL(i-i1,j-j1,k-k1),vofcomp)
          enddo
+
          do dir=1,num_materials
           vofnd(dir)=vofnd(dir)+localwt*vofcell(dir)
           viscnd(dir)=viscnd(dir)+ &
