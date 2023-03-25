@@ -1989,6 +1989,7 @@ END SUBROUTINE SIMP
       REAL_T velcell(STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       REAL_T vofnd(num_materials)
       REAL_T vofcell(num_materials)
+      REAL_T vofcell_denom
       REAL_T presnd
       REAL_T divnd
       REAL_T divdatnd
@@ -2673,8 +2674,13 @@ END SUBROUTINE SIMP
 
          do dir=1,num_state_material
           dencell_merge(dir)=zero
-          
-         enddo
+          do dir2=1,num_materials
+           current_index=(dir2-1)*num_state_material+dir
+           dencell_merge(dir)=dencell_merge(dir)+ &
+             vofcell(dir2)*dencell(current_index)
+          enddo !dir2=1..num_materials
+          dencell_merge(dir)=dencell_merge(dir)/vofcell_denom
+         enddo !dir=1..num_state_material
 
          do dir=1,num_materials
           mom_dencell(dir)=mom_den(D_DECL(i-i1,j-j1,k-k1),dir)
@@ -3150,7 +3156,10 @@ END SUBROUTINE SIMP
 
         do istate=1,num_state_material ! den_merge,T_merge,scalar1..2.. MERGE
          iw=iw+1 
-         writend(scomp+iw)=dennd_merge(iw)
+         writend(scomp+iw)=dennd_merge(istate)
+         if ((idissolution.eq.1).and.(istate.eq.2)) then
+          writend(scomp+iw)=writend(scomp+iw)-one
+         endif
         enddo ! istate=1..num_state_material
 
 
@@ -3860,6 +3869,7 @@ END SUBROUTINE SIMP
       endif
 
       deallocate(reconfab)
+      deallocate(reconfab_raster)
  
       return
       end subroutine fort_cellgrid
