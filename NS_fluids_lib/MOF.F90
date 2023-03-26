@@ -11382,7 +11382,7 @@ contains
        enddo
        errinit=sqrt(errinit)
        err=errinit
-       best_error=errinit
+       best_error=errinit*refvfrac
 
        do dir=1,sdim
         f_array(dir,iter)=finit(dir)
@@ -11423,7 +11423,7 @@ contains
   
       err_local_min=err_array(1)
       err=err_array(1)
-      best_error=err
+      best_error=err*refvfrac
 
       iter=0
 
@@ -11733,7 +11733,7 @@ contains
        print *,"AFTER------------------------------- "
       endif
 
-      best_error=err_array(iicrit+1)
+      best_error=err_array(iicrit+1)*refvfrac
 
       do dir=1,sdim-1 
        new_angle(dir)=angle_array(dir,iicrit+1)

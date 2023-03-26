@@ -9115,7 +9115,8 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
      iter_per_call=r_iters/r_calls;
      error_per_call=r_error/r_calls;
     }
-    std::cout << "lev,im,calls,iter,iter/call,error/call,cpu time " << 
+    std::cout << 
+     "lev,im,calls,iter,iter/call,error x refvfrac/call,cpu time " << 
      level << ' ' << 
      im << ' ' << total_calls[0][im] << ' ' <<
      total_iterations[0][im] << ' ' << iter_per_call << ' ' << 
