@@ -63,6 +63,7 @@ stop
         update_flag, &
         total_calls, &
         total_iterations, &
+        total_errors, &
         continuous_mof, &
         partial_cmof_stencil_at_walls) &
       bind(c,name='fort_sloperecon')
@@ -139,10 +140,11 @@ stop
       REAL_T orderflag
       INTEGER_T total_calls(num_materials)
       INTEGER_T total_iterations(num_materials)
+      REAL_T total_errors(num_materials)
       INTEGER_T i1,j1,k1
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      INTEGER_T nmax
+      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX !in: fort_sloperecon
 
       INTEGER_T continuous_mof_parm
      
@@ -219,8 +221,6 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-
-      nmax=POLYGON_LIST_MAX ! in: fort_sloperecon
 
       if (ngrow.lt.1) then
        print *,"ngrow invalid in fort_sloperecon"
@@ -781,7 +781,9 @@ stop
          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
          total_iterations(im)= &
           total_iterations(im)+mof_iterations(tid+1,im)
-        enddo  ! im
+         total_errors(im)= &
+          total_errors(im)+mof_errors(tid+1,im)
+        enddo  ! im=1..num_materials
 
        else
         print *,"level invalid fort_sloperecon"
@@ -896,7 +898,8 @@ stop
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
 
-      INTEGER_T nmax
+      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX
+
       REAL_T :: vof_training(num_samples)
       REAL_T :: phi_training(num_samples)
       REAL_T :: theta_training(num_samples)
@@ -993,8 +996,6 @@ stop
        print *,"num_state_base invalid"
        stop
       endif
-
-      nmax=POLYGON_LIST_MAX 
 
       if ((continuous_mof.eq.0).or. & ! MOF
           (continuous_mof.eq.2)) then ! CMOF
@@ -1601,7 +1602,7 @@ stop
 
       INTEGER_T :: i,j,k
       INTEGER_T :: local_continuous_mof
-      INTEGER_T nmax
+      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX
       REAL_T :: vof_training(num_samples)
       REAL_T :: phi_training(num_samples)
       REAL_T :: theta_training(num_samples)
@@ -1695,8 +1696,6 @@ stop
         print *,"num_state_base invalid"
         stop
        endif
-
-       nmax=POLYGON_LIST_MAX 
 
        if (ngeom_recon.ne.2*SDIM+3) then
         print *,"ngeom_recon invalid"
