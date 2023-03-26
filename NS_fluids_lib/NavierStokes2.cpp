@@ -9120,7 +9120,6 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
      level << ' ' << 
      im << ' ' << total_calls[0][im] << ' ' <<
      total_iterations[0][im] << ' ' << iter_per_call << ' ' << 
-     total_errors[0][im] << ' ' << 
      error_per_call << ' ' << cputime << '\n';
    } // im=0..num_materials-1
   }
