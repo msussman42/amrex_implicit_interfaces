@@ -8940,14 +8940,18 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
 
  Vector< Vector<int> > total_calls;
  Vector< Vector<int> > total_iterations;
+ Vector< Vector<Real> > total_errors;
  total_calls.resize(thread_class::nthreads);
  total_iterations.resize(thread_class::nthreads);
+ total_errors.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   total_calls[tid].resize(num_materials);
   total_iterations[tid].resize(num_materials);
+  total_errors[tid].resize(num_materials);
   for (int im=0;im<num_materials;im++) {
    total_calls[tid][im]=0;
    total_iterations[tid][im]=0;
+   total_errors[tid][im]=0.0;
   }
  } // tid
 
@@ -9054,6 +9058,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     &update_flag,
     total_calls[tid_current].dataPtr(),
     total_iterations[tid_current].dataPtr(),
+    total_errors[tid_current].dataPtr(),
     &continuous_mof, 
     &partial_cmof_stencil_at_walls);
  }  // mfi
@@ -9064,12 +9069,14 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
   for (int im=0;im<num_materials;im++) {
    total_calls[0][im]+=total_calls[tid][im];
    total_iterations[0][im]+=total_iterations[tid][im];
+   total_errors[0][im]+=total_errors[tid][im];
   }
  } // tid
 
  for (int im=0;im<num_materials;im++) {
    ParallelDescriptor::ReduceIntSum(total_calls[0][im]);
    ParallelDescriptor::ReduceIntSum(total_iterations[0][im]);
+   ParallelDescriptor::ReduceRealSum(total_errors[0][im]);
  }
 
  Vector<int> scompBC_map;
@@ -9080,9 +9087,10 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if (1==0) {
   for (int im=0;im<num_materials;im++) {
    int vofcomp=im*ngeom_recon;
-   std::cout << "lev,im,calls,iter " << level << ' ' << 
+   std::cout << "lev,im,calls,iter,err " << level << ' ' << 
     im << ' ' << total_calls[0][im] << ' ' <<
-    total_iterations[0][im] << '\n';
+    total_iterations[0][im] << ' ' <<
+    total_errors[0][im] << '\n';
    Real vfracnrm=localMF[SLOPE_RECON_MF]->norm1(vofcomp,0);
    std::cout << "im= " << im << " vfracnrm= " << vfracnrm << '\n';
   }
@@ -9098,14 +9106,21 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    for (int im=0;im<num_materials;im++) {
-    Real itercall=0.0;
+    Real iter_per_call=0.0;
+    Real error_per_call=0.0;
     Real r_calls=total_calls[0][im];
     Real r_iters=total_iterations[0][im];
-    if (total_calls[0][im]>0) 
-     itercall=r_iters/r_calls;
-    std::cout << "lev,im,calls,iter,iter/call,cpu time " << level << ' ' << 
+    Real r_error=total_errors[0][im];
+    if (total_calls[0][im]>0) {
+     iter_per_call=r_iters/r_calls;
+     error_per_call=r_error/r_calls;
+    }
+    std::cout << "lev,im,calls,iter,iter/call,error/call,cpu time " << 
+     level << ' ' << 
      im << ' ' << total_calls[0][im] << ' ' <<
-     total_iterations[0][im] << ' ' << itercall << ' ' << cputime << '\n';
+     total_iterations[0][im] << ' ' << iter_per_call << ' ' << 
+     total_errors[0][im] << ' ' << 
+     error_per_call << ' ' << cputime << '\n';
    } // im=0..num_materials-1
   }
  } else if (verbose<=0) {

@@ -53,6 +53,7 @@ REAL_T, ALLOCATABLE :: geom_xtetlist_old(:,:,:,:)
 REAL_T, ALLOCATABLE :: geom_xtetlist_uncapt(:,:,:,:)
 INTEGER_T, ALLOCATABLE :: mof_calls(:,:)
 INTEGER_T, ALLOCATABLE :: mof_iterations(:,:)
+REAL_T, ALLOCATABLE :: mof_errors(:,:)
 
 REAL_T, ALLOCATABLE :: intercept_error_history(:,:)
 
@@ -10832,6 +10833,7 @@ contains
       REAL_T err_array(MOFITERMAX+1)
 
       INTEGER_T dir,iter
+      REAL_T best_error
       REAL_T finit(sdim)
       REAL_T fp(sdim)
       REAL_T fm(sdim)
@@ -11380,6 +11382,7 @@ contains
        enddo
        errinit=sqrt(errinit)
        err=errinit
+       best_error=errinit
 
        do dir=1,sdim
         f_array(dir,iter)=finit(dir)
@@ -11420,6 +11423,7 @@ contains
   
       err_local_min=err_array(1)
       err=err_array(1)
+      best_error=err
 
       iter=0
 
@@ -11729,6 +11733,8 @@ contains
        print *,"AFTER------------------------------- "
       endif
 
+      best_error=err_array(iicrit+1)
+
       do dir=1,sdim-1 
        new_angle(dir)=angle_array(dir,iicrit+1)
       enddo
@@ -11772,6 +11778,8 @@ contains
 
       mof_iterations(tid+1,critical_material)= &
        mof_iterations(tid+1,critical_material)+iter
+      mof_errors(tid+1,critical_material)= &
+       mof_errors(tid+1,critical_material)+best_error
       mof_calls(tid+1,critical_material)= &
        mof_calls(tid+1,critical_material)+1
 
@@ -14031,6 +14039,7 @@ contains
       do imaterial=1,num_materials
 
        mof_iterations(tid+1,imaterial)=0
+       mof_errors(tid+1,imaterial)=0.0d0
        mof_calls(tid+1,imaterial)=0
        vofcomp=(imaterial-1)*ngeom_recon+1
 
@@ -14790,8 +14799,10 @@ contains
       REAL_T xref_matT(sdim)
       REAL_T xact_matT(sdim)
       REAL_T avgiter
+      REAL_T avgerror
       REAL_T total_calls(num_materials)
       REAL_T total_iterations(num_materials)
+      REAL_T total_errors(num_materials)
       INTEGER_T max_iterations(num_materials)
       REAL_T shrink_factor
       INTEGER_T mof_verbose
@@ -14874,6 +14885,7 @@ contains
       do im=1,num_materials
        total_calls(im)=zero
        total_iterations(im)=zero
+       total_errors(im)=zero
        max_iterations(im)=0
       enddo
 
@@ -15013,6 +15025,8 @@ contains
         total_calls(im)=total_calls(im)+mof_calls(1,im)
         total_iterations(im)= &
             total_iterations(im)+mof_iterations(1,im)
+        total_errors(im)= &
+            total_errors(im)+mof_errors(1,im)
         if (mof_iterations(1,im).gt.max_iterations(im)) then
          max_iterations(im)=mof_iterations(1,im)
         endif
@@ -15031,7 +15045,9 @@ contains
        print *,"total calls= ",total_calls(im)
        if (total_calls(im).gt.zero) then
         avgiter=total_iterations(im)/total_calls(im)
+        avgerror=total_errors(im)/total_calls(im)
         print *,"avgiter= ",avgiter
+        print *,"avgerror= ",avgerror
        endif
        print *,"max iterations= ",max_iterations(im)
       enddo
@@ -22592,6 +22608,7 @@ contains
       allocate(intercept_error_history(INTERCEPT_MAXITER,geom_nthreads))
 
       allocate(mof_calls(geom_nthreads,num_materials))
+      allocate(mof_errors(geom_nthreads,num_materials))
       allocate(mof_iterations(geom_nthreads,num_materials))
 
       call set_order_algorithm(order_algorithm_in)
@@ -22630,6 +22647,7 @@ contains
 
       deallocate(mof_calls)
       deallocate(mof_iterations)
+      deallocate(mof_errors)
 
       return
       end subroutine delete_mof

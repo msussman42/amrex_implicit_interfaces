@@ -56,6 +56,7 @@ extern "C"
         int* update_flag,
         int* total_calls,
         int* total_iterations,
+        Real* total_errors,
         int* continuous_mof,
         int* partial_cmof_stencil_at_walls);
 
