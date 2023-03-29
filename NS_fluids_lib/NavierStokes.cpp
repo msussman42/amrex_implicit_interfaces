@@ -13993,7 +13993,8 @@ NavierStokes::level_phase_change_convertALL() {
        // spectral_override==0 => always low order.
       ns_level.avgDown(LS_Type,0,num_materials,0);
       ns_level.MOFavgDown();
-      ns_level.avgDown(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+      ns_level.avgDown(State_Type,STATECOMP_STATES,
+	num_state_material*num_materials,1);
      } // ilev=finest_level ... level
 
      if (i_phase_change+1<n_phase_change) {
@@ -14052,7 +14053,7 @@ NavierStokes::level_phase_change_convertALL() {
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
          0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
 
-      int update_flag=0; // do not update the error indicator
+      int update_flag=RECON_UPDATE_NULL;
       int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay; output:SLOPE_RECON_MF
       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
@@ -21846,7 +21847,7 @@ NavierStokes::volWgtSumALL(
   amrex::Error("fast_mode invalid");
 
     // vof,ref cen, order,slope,int
- int update_flag=0;  // do not update the error
+ int update_flag=RECON_UPDATE_NULL;
  int init_vof_prev_time=0;
   //output: SLOPE_RECON_MF
  VOF_Recon_ALL(1,cur_time_slab,update_flag,
@@ -22339,11 +22340,14 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  int local_truncate=0; // do not force removal of flotsam.
 
  if (pattern_test(local_caller_string,"writePlotFile")==1) {
-  error_update_flag=0;  // called from writePlotFile, do not update S_old
+  // called from writePlotFile, do not update S_old
+  error_update_flag=RECON_UPDATE_NULL;  
  } else if (pattern_test(local_caller_string,"post_init_state")==1) {
-  error_update_flag=1;  // called from post_init_state, update S_old
+  // called from post_init_state, update S_old
+  error_update_flag=RECON_UPDATE_STATE_ERR;  
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
-  error_update_flag=1;  // called from post_restart, update S_old
+  // called from post_restart, update S_old
+  error_update_flag=RECON_UPDATE_STATE_ERR;  
  } else
   amrex::Error("local_caller_string invalid 22091");
 	

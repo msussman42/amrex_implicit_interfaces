@@ -304,8 +304,7 @@ void NavierStokes::static_surface_tension_advection() {
  } else
   amrex::Error("STATE_NCOMP_PRES or STATE_NCOMP_VEL invalid static_surf..");
 
- // do not update the error in S_new
- int update_flag=0; 
+ int update_flag=RECON_UPDATE_STATE_CENTROID; 
  int init_vof_prev_time=0;
   //output:SLOPE_RECON_MF
  VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
@@ -736,7 +735,14 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else
   amrex::Error("particles_flag invalid");
 
- int update_flag=0;  // do not update the error. 
+ int update_flag=RECON_UPDATE_NULL;
+ if (local_static_flag==0) {
+  //do nothing
+ } else if (local_static_flag==1) {
+  update_flag=RECON_UPDATE_STATE_CENTROID;
+ } else
+  amrex::Error("local_static_flag invalid"); 
+
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL(1,advect_time_slab,update_flag,
   init_vof_prev_time);
@@ -795,7 +801,14 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
               (dir_absolute_direct_split<AMREX_SPACEDIM)) {
 
     advect_time_slab=cur_time_slab;
-    update_flag=0;  // do not update the error. 
+
+    if (local_static_flag==0) {
+     //do nothing
+    } else if (local_static_flag==1) {
+      update_flag=RECON_UPDATE_STATE_CENTROID;
+    } else
+     amrex::Error("local_static_flag invalid"); 
+
      //output::SLOPE_RECON_MF
     VOF_Recon_ALL(1,advect_time_slab,update_flag,
      init_vof_prev_time);
@@ -2933,7 +2946,7 @@ void NavierStokes::phase_change_code_segment(
  delete_array(DEN_RECON_MF);
  delete_array(nodevel_MF);
 
- int update_flag=1;  // update the error in S_new
+ int update_flag=RECON_UPDATE_STATE_ERR; // update the error in S_new
  int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
@@ -3083,7 +3096,7 @@ void NavierStokes::nucleation_code_segment(
  } 
 
  // generates SLOPE_RECON_MF
- int update_flag=0; // do not update the error indicator
+ int update_flag=RECON_UPDATE_NULL; 
  int init_vof_prev_time=0;
   // Fluids tessellate; solids overlay.
   // output:SLOPE_RECON_MF
@@ -3507,7 +3520,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       } else if (mass_transfer_active==0) {
 
-       update_flag=1;  // update the error in S_new
+       update_flag=RECON_UPDATE_STATE_ERR;  // update the error in S_new
        int init_vof_prev_time=0;
        //output:SLOPE_RECON_MF
        VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
@@ -3549,7 +3562,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
 
-      update_flag=0;  // do not update the error in S_new
+      update_flag=RECON_UPDATE_NULL; 
       int init_vof_prev_time=0;
        //output:SLOPE_RECON_MF
       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);

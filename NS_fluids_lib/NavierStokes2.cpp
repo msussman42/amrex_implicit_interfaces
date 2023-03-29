@@ -8484,7 +8484,7 @@ void NavierStokes::avgDownError_ALL() {
   NavierStokes& ns_level=getLevel(i);
   ns_level.avgDownError();
  }
-}  // subroutine avgDownError_ALL
+}  // end subroutine avgDownError_ALL
 
 
 void NavierStokes::copybc(Vector<int> dest,Vector<int> source,
@@ -8823,8 +8823,10 @@ void NavierStokes::delete_array(int idx_localMF) {
  } else
   amrex::Error("finest_level invalid");
 
-}  // subroutine delete_array
+}  // end subroutine delete_array
 
+// update_flag=
+//  RECON_UPDATE_(NULL|STATE_ERR|STATE_CENTROID|STATE_ERR_AND_CENTROID)
 void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
   int update_flag,int init_vof_prev_time) {
 
@@ -8841,21 +8843,80 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
 
  int finest_level=parent->finestLevel();
 
+ int recon_iter=0;
+ int recon_error_met=0;
+ int number_centroid=0;
+ Real delta_centroid=0.0;
+
+ while (recon_error_met==0) {
+
   // go from coarsest to finest so that SLOPE_RECON_MF
   // can have proper BC.
- for (int ilev=level;ilev<=finest_level;ilev++) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.VOF_Recon(ngrow,time,update_flag,
-   init_vof_prev_time);
- }
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   int number_centroid_level=0;
+   Real delta_centroid_level=0.0;
+   ns_level.VOF_Recon(ngrow,time,update_flag,
+    init_vof_prev_time,
+    delta_centroid_level,
+    number_centroid_level);
+   delta_centroid+=delta_centroid_level;
+   number_centroid+=number_centroid_level;
+  } // for (int ilev=level;ilev<=finest_level;ilev++) 
 
- if (update_flag==0) {
-  // do nothing
- } else if (update_flag==1) {
-  avgDownError_ALL();
- } else
-  amrex::Error("update_flag invalid");
+  recon_iter++;
 
+  Real single_centroid_diff=0.0;
+  if (number_centroid==0) {
+   //do nothing
+  } else if (number_centroid>0) {
+   single_centroid_diff=delta_centroid/number_centroid;
+  } else
+   amrex::Error("number_centroid invalid");
+
+  if (update_flag==RECON_UPDATE_NULL) {
+
+   recon_error_met=1;
+
+  } else if (update_flag==RECON_UPDATE_STATE_ERR) {
+
+   recon_error_met=1;
+   avgDownError_ALL(); //updates the new data.
+
+  } else if (update_flag==RECON_UPDATE_STATE_CENTROID) {
+
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    if (ilev<finest_level) {
+     ns_level.MOFavgDown();
+    }
+   } // ilev=finest_level ... level
+
+   if ((single_centroid_diff<=1.0e-12)||
+       (recon_iter>12)) {
+    recon_error_met=1;
+   } 
+
+  } else if (update_flag==RECON_UPDATE_STATE_ERR_AND_CENTROID) {
+
+   avgDownError_ALL(); //updates the new data.
+		      
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    if (ilev<finest_level) {
+     ns_level.MOFavgDown();
+    }
+   } // ilev=finest_level ... level
+
+   if ((single_centroid_diff<=1.0e-12)||
+       (recon_iter>12)) {
+    recon_error_met=1;
+   } 
+
+  } else
+   amrex::Error("update_flag invalid");
+
+ } //while (recon_error_met==0) 
 
 } // end subroutine VOF_Recon_ALL
 

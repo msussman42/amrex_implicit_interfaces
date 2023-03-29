@@ -31,8 +31,6 @@ stop
 ! mask=0 at coarse/fine border cells and physical boundaries.
 ! mask=1 at fine/fine and periodic border cells.
 ! mask=1 at symmetric border cells
-! update_flag=0 do not update error
-! update_flag=1 update error
 ! vof,ref centroid,order,slope,intercept  x num_materials
 ! last comp. of solid <0 in solid
 ! vof is inputs, slopes is output.
@@ -60,7 +58,9 @@ stop
         slopes,DIMS(slopes), &
         nsteps, &
         time, &
-        update_flag, &
+        update_flag, & !RECON_UPDATE_ ...
+        number_centroid_per_core, &
+        delta_centroid_per_core, &
         total_calls, &
         total_iterations, &
         total_errors, &
@@ -87,6 +87,8 @@ stop
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: partial_cmof_stencil_at_walls
       INTEGER_T, INTENT(in) :: update_flag
+      INTEGER_T, INTENT(out) :: number_centroid_per_core
+      REAL_T, INTENT(out) :: delta_centroid_per_core
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: vofbc(SDIM,2)
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -257,12 +259,18 @@ stop
        stop
       endif
 
-      if ((update_flag.eq.0).or.(update_flag.eq.1)) then
+      if ((update_flag.eq.RECON_UPDATE_NULL).or. &
+          (update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
+          (update_flag.eq.RECON_UPDATE_STATE_CENTROID).or. &
+          (update_flag.eq.RECON_UPDATE_STATE_ERR_AND_CENTROID)) then
        ! do nothing
       else
        print *,"update_flag invalid1: ",update_flag
        stop
       endif
+
+      number_centroid_per_core=0
+      delta_centroid_per_core=zero
 
       call checkbound_array(fablo,fabhi,masknbr,1,-1)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
@@ -296,7 +304,10 @@ stop
         grid_index(SDIM)=k
        endif
 
-       if ((update_flag.eq.0).or.(update_flag.eq.1)) then
+       if ((update_flag.eq.RECON_UPDATE_NULL).or. &
+           (update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
+           (update_flag.eq.RECON_UPDATE_STATE_CENTROID).or. &
+           (update_flag.eq.RECON_UPDATE_STATE_ERR_AND_CENTROID)) then
         ! do nothing
        else
         print *,"update_flag invalid loop ",update_flag
@@ -305,6 +316,7 @@ stop
         print *,"igridhi ",igridhi(1),igridhi(2),igridhi(3)
         stop
        endif
+
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        use_ls_data=1
@@ -794,7 +806,8 @@ stop
         slopes(D_DECL(i,j,k),dir)=mofdata_super(dir)
        enddo
 
-       if (update_flag.eq.1) then
+       if ((update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
+           (update_flag.eq.RECON_UPDATE_STATE_ERR_AND_CENTROID)) then
 
 #if (STANDALONE==0)
         if (use_ls_data.ne.1) then
@@ -846,7 +859,9 @@ stop
         print *,"bust compiling PLIC_3D.F90"
         stop
 #endif
-       else if (update_flag.eq.0) then
+       else if (update_flag.eq.RECON_UPDATE_NULL) then
+        ! do nothing
+       else if (update_flag.eq.RECON_UPDATE_STATE_CENTROID) then
         ! do nothing
        else 
         print *,"update_flag invalid2: ",update_flag
