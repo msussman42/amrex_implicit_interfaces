@@ -3,8 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#define STANDALONE 0
-
 #include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
@@ -68,11 +66,7 @@ stop
         partial_cmof_stencil_at_walls) &
       bind(c,name='fort_sloperecon')
 
-#if (STANDALONE==0)
       use probf90_module
-#elif (STANDALONE==1)
-      use probcommon_module
-#endif
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -130,15 +124,9 @@ stop
       INTEGER_T vofcomprecon
       INTEGER_T vofcompraw
 
-#if (STANDALONE==0)
       REAL_T err,errsave
       INTEGER_T local_mask
-#elif (STANDALONE==1)
-      ! do nothing
-#else
-      print *,"stand alone bust"
-      stop
-#endif
+
       REAL_T orderflag
       INTEGER_T total_calls(num_materials)
       INTEGER_T total_iterations(num_materials)
@@ -171,6 +159,7 @@ stop
       REAL_T dxmaxLS
       INTEGER_T debugslope
       INTEGER_T, parameter :: tessellate=0
+      INTEGER_T, parameter :: shapeflag=0
       INTEGER_T, parameter :: nhalf_box=1
 
       REAL_T vfrac_fluid_sum
@@ -180,6 +169,13 @@ stop
       REAL_T vfrac_local(num_materials)
       INTEGER_T im_raster_solid
       INTEGER_T mod_cmofsten
+
+      REAL_T :: xtet(SDIM+1,SDIM)
+      REAL_T :: cmof_centroid
+      REAL_T :: delta_centroid
+      REAL_T :: multi_area(num_materials)
+      REAL_T :: multi_volume(num_materials)
+      REAL_T :: multi_cen(SDIM,num_materials)
 
 #include "mofdata.H"
 
@@ -767,7 +763,7 @@ stop
           nmax, &
           nmax, &
           mofdata_super, &
-          multi_centroidA, &
+          multi_centroidA, & ! (num_materials,sdim) relative to supercell
           continuous_mof_parm, &
           cmofsten, &
           grid_index, &
@@ -802,14 +798,67 @@ stop
         stop
        endif
 
+       if ((update_flag.eq.RECON_UPDATE_STATE_CENTROID).or. &
+           (update_flag.eq.RECON_UPDATE_STATE_ERR_AND_CENTROID)) then
+
+        call Box_volumeFAST(bfact,dx,xsten,nhalf, &
+          volume_super,cen_super,SDIM)
+
+        call multi_get_volume_grid( &
+         tessellate, & ! =0
+         bfact,dx, &
+         xsten,nhalf, & ! phi = n dot (x-x0) + intercept
+         mofdata_super, &
+         xsten,nhalf, & ! find volumes within xsten
+         xtet, &        ! not within xtet
+         multi_volume, &
+         multi_cen, & !(sdim,num_materials) absolute frame of ref.
+         multi_area, & !(num_materials)
+         geom_xtetlist_uncapt(1,1,1,tid+1), &
+         nmax, &
+         nmax, &
+         SDIM, &
+         shapeflag)
+
+        do im=1,num_materials
+         if (is_rigid(im).eq.0) then
+          number_centroid_per_core=number_centroid_per_core+1
+          vofcomprecon=(im-1)*ngeom_recon+1
+          vofcompraw=(im-1)*ngeom_raw+1
+          delta_centroid=zero
+          do dir=1,SDIM
+           cmof_centroid=multi_cen(dir,im)-cen_super(dir)
+           delta_centroid=delta_centroid+ &
+              (mofdata_super(vofcomprecon+dir)-cmof_centroid)**2
+           mofdata_super(vofcomprecon+dir)=cmof_centroid
+           snew(D_DECL(i,j,k),vofcompraw+dir)=cmof_centroid
+          enddo
+          delta_centroid=sqrt(delta_centroid)
+          delta_centroid_per_core=delta_centroid_per_core+delta_centroid
+         else if (is_rigid(im).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+        enddo ! im=1,num_materials
+
+       else if (update_flag.eq.RECON_UPDATE_NULL) then
+        ! do nothing
+       else if (update_flag.eq.RECON_UPDATE_STATE_ERR) then
+        ! do nothing
+       else 
+        print *,"update_flag invalid2: ",update_flag
+        stop
+       endif
+
        do dir=1,num_materials*ngeom_recon
         slopes(D_DECL(i,j,k),dir)=mofdata_super(dir)
        enddo
-
+       
        if ((update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
            (update_flag.eq.RECON_UPDATE_STATE_ERR_AND_CENTROID)) then
 
-#if (STANDALONE==0)
         if (use_ls_data.ne.1) then
          print *,"use_ls_data invalid"
          stop
@@ -852,13 +901,6 @@ stop
          print *,"level invalid fort_sloperecon 2"
          stop
         endif
-#elif (STANDALONE==1)
-        print *,"update_flag invalid for stand alone fort_sloperecon"
-        stop
-#else
-        print *,"bust compiling PLIC_3D.F90"
-        stop
-#endif
        else if (update_flag.eq.RECON_UPDATE_NULL) then
         ! do nothing
        else if (update_flag.eq.RECON_UPDATE_STATE_CENTROID) then
@@ -2108,6 +2150,4 @@ stop
 
 
       end module plic_cpp_module
-
-#undef STANDALONE
 

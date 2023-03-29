@@ -8955,6 +8955,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow) {
 
 } // end subroutine VOF_Recon_resize
 
+// VOF_Recon() is called from VOF_Recon_ALL()
 // vof,ref centroid,order,slope,intercept  x num_materials
 // update_flag=
 //  RECON_UPDATE_(NULL|STATE_ERR|STATE_CENTROID|STATE_ERR_AND_CENTROID)

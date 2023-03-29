@@ -22340,13 +22340,13 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  int local_truncate=0; // do not force removal of flotsam.
 
  if (pattern_test(local_caller_string,"writePlotFile")==1) {
-  // called from writePlotFile, do not update S_old
+  // called from writePlotFile, do not update S_new
   error_update_flag=RECON_UPDATE_NULL;  
  } else if (pattern_test(local_caller_string,"post_init_state")==1) {
-  // called from post_init_state, update S_old
+  // called from post_init_state, update S_new
   error_update_flag=RECON_UPDATE_STATE_ERR;  
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
-  // called from post_restart, update S_old
+  // called from post_restart, update S_new
   error_update_flag=RECON_UPDATE_STATE_ERR;  
  } else
   amrex::Error("local_caller_string invalid 22091");
