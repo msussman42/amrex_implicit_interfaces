@@ -14174,7 +14174,8 @@ NavierStokes::level_phase_change_convert(
  Vector< Vector<Real> > delta_mass_local;
  delta_mass_local.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  delta_mass_local[tid].resize(2*num_materials); // source 1..num_materials  dest 1..num_materials
+  // source 1..num_materials  dest 1..num_materials
+  delta_mass_local[tid].resize(2*num_materials); 
   for (int im=0;im<2*num_materials;im++)
    delta_mass_local[tid][im]=0.0;
  } // tid

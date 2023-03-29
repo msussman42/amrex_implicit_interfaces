@@ -8895,13 +8895,15 @@ void NavierStokes::VOF_Recon_resize(int ngrow) {
 } // end subroutine VOF_Recon_resize
 
 // vof,ref centroid,order,slope,intercept  x num_materials
-// update_flag=0 do not update the error
-// update_flag=1 update S_new  (update error)
+// update_flag=
+//  RECON_UPDATE_(NULL|STATE_ERR|STATE_CENTROID|STATE_ERR_AND_CENTROID)
 // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
 // 2. reconstruct interior cells only.
 // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
 void NavierStokes::VOF_Recon(int ngrow,Real time,
-  int update_flag,int init_vof_prev_time) {
+  int update_flag,int init_vof_prev_time,
+  Real& delta_centroid_level,
+  int& number_centroid_level) {
 
  std::string local_caller_string="VOF_Recon";
  bool use_tiling=ns_tiling;
@@ -8938,6 +8940,15 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if ((time<prev_time_slab-teps)||(time>cur_time_slab+teps))
   amrex::Error("cannot extrapolate slope data in time");
 
+ Vector< Real > delta_centroid_per_core;
+ Vector< int > number_centroid_per_core;
+ delta_centroid_per_core.resize(thread_class::nthreads);
+ number_centroid_per_core.resize(thread_class::nthreads);
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  delta_centroid_per_core[tid]=0.0;
+  number_centroid_per_core[tid]=0;
+ }
+
  Vector< Vector<int> > total_calls;
  Vector< Vector<int> > total_iterations;
  Vector< Vector<Real> > total_errors;
@@ -8953,7 +8964,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
    total_iterations[tid][im]=0;
    total_errors[tid][im]=0.0;
   }
- } // tid
+ } // tid=0..thread_class::nthreads-1
 
  double start_recon = ParallelDescriptor::second();
 
@@ -9056,6 +9067,8 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     &nsteps,
     &time,
     &update_flag,
+    &number_centroid_per_core[tid_current],
+    &delta_centroid_per_core[tid_current],
     total_calls[tid_current].dataPtr(),
     total_iterations[tid_current].dataPtr(),
     total_errors[tid_current].dataPtr(),
@@ -9066,12 +9079,20 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  ns_reconcile_d_num(LOOP_SLOPE_RECON,"VOF_Recon");
 
  for (int tid=1;tid<thread_class::nthreads;tid++) {
+  number_centroid_per_core[0]+=number_centroid_per_core[tid];
+  delta_centroid_per_core[0]+=delta_centroid_per_core[tid];
   for (int im=0;im<num_materials;im++) {
    total_calls[0][im]+=total_calls[tid][im];
    total_iterations[0][im]+=total_iterations[tid][im];
    total_errors[0][im]+=total_errors[tid][im];
   }
  } // tid
+
+ ParallelDescriptor::ReduceIntSum(number_centroid_per_core[0]);
+ ParallelDescriptor::ReduceRealSum(delta_centroid_per_core[0]);
+
+ number_centroid_level=number_centroid_per_core[0];
+ delta_centroid_level=delta_centroid_per_core[0];
 
  for (int im=0;im<num_materials;im++) {
    ParallelDescriptor::ReduceIntSum(total_calls[0][im]);
