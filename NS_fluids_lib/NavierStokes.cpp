@@ -117,7 +117,7 @@ int  NavierStokes::MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;
    F_ij^derived=derived volume fraction in cell ij for a given slope and
      intercept.   
 
-continuous_mof=2 (if same number of materials in center cell as in stencil)
+continuous_mof>0 
 
   CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
   subject to the constraint that F_ij^ref=F_ij^derived
@@ -138,7 +138,7 @@ materials are immersed into the fluid(s).
 
 */
 
-int  NavierStokes::continuous_mof=2;
+int  NavierStokes::continuous_mof=1;
 
 //make MOFITERMAX_AFTER_PREDICT=0 if mof_decision_tree_learning>=100^d
 
@@ -2616,6 +2616,13 @@ NavierStokes::read_params ()
      amrex::Error("enable_spectral invalid");
 
     pp.queryAdd("continuous_mof",continuous_mof);
+    if (continuous_mof==2) {
+     amrex::Error("continuous_mof==2 is an anachronism, set to 1");
+    } else if (continuous_mof>=0) {
+     //do nothing
+    } else
+     amrex::Error("continuous_mof invalid");
+
     pp.queryAdd("mof_machine_learning",mof_machine_learning);
     pp.queryAdd("mof_decision_tree_learning",mof_decision_tree_learning);
 

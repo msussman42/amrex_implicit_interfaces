@@ -261,7 +261,7 @@ ns.xblob3           = 19.894 # -q dot n=Watts/m^2
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 2
+ns.continuous_mof=1
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE

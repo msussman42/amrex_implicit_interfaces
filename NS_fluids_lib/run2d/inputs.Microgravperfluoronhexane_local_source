@@ -15,7 +15,7 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  0.064 0.064 # MKS
 ns.EILE_flag=-1
-ns.continuous_mof=2  
+ns.continuous_mof=1  
 ns.MOFITERMAX=15
                 # to be stable even if the CFL condition is met.
 ns.minimum_relative_error=1.0e-22

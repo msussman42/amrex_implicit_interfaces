@@ -40,7 +40,7 @@ ns.projection_pressure_scale=10000.0
 # for debugging
 ns.v=1
 
-ns.continuous_mof=2
+ns.continuous_mof=1
 ns.mof_ordering=0 0 1
 
 ns.MOFITERMAX=15

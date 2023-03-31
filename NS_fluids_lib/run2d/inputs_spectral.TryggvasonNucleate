@@ -9,7 +9,7 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  7.5e-3 3.0e-2   # MKS
 ns.EILE_flag=-1
-ns.continuous_mof=2
+ns.continuous_mof=1
 ns.MOFITERMAX=15
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3

@@ -172,9 +172,10 @@ stop
       REAL_T voltemp
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
-      INTEGER_T continuous_mof
+      INTEGER_T, PARAMETER :: continuous_mof=0
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T mof_verbose,use_ls_data
+      INTEGER_T, PARAMETER :: use_ls_data=0
+      INTEGER_T, PARAMETER ::  mof_verbose=0
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       INTEGER_T, parameter :: nhalf=3
       INTEGER_T, parameter :: nhalfgrid=1
@@ -250,9 +251,6 @@ stop
       do i=growlo(1),growhi(1)
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
-       use_ls_data=0
-       mof_verbose=0
-       continuous_mof=0
 
        do im=1,num_materials
         vofcomp_old=(im-1)*ngeom_raw+1
@@ -788,9 +786,9 @@ stop
       INTEGER_T n_overlap
       INTEGER_T tessellate
 
-      INTEGER_T use_ls_data
-      INTEGER_T mof_verbose
-      INTEGER_T continuous_mof
+      INTEGER_T, PARAMETER :: use_ls_data=0
+      INTEGER_T, PARAMETER ::  mof_verbose=0
+      INTEGER_T, PARAMETER :: continuous_mof=0
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T multi_centroidA(num_materials,SDIM)
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -1022,10 +1020,6 @@ stop
         enddo
 
        enddo ! im
-
-       use_ls_data=0
-       mof_verbose=0
-       continuous_mof=0
 
        do im=1,num_materials
         vofcomp_old=(im-1)*ngeom_recon+1

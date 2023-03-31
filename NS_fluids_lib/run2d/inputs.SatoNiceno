@@ -16,7 +16,7 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  2.0e-3 2.0e-3   # MKS 
 ns.EILE_flag=-1
-ns.continuous_mof=2
+ns.continuous_mof=1
 ns.MOFITERMAX=15
 # 1  => tag cell if this material is primary material in the cell stencil.
 # 0  => tag cell if this material and another *qualified* 

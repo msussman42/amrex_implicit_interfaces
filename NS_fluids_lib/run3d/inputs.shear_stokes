@@ -15,7 +15,7 @@ geometry.prob_hi   = 4.0 3.0 3.0
 geometry.is_periodic = 1 1 0
 
 ns.EILE_flag=-1
-ns.continuous_mof=2
+ns.continuous_mof=1
 ns.MOFITERMAX=15
 
 ns.tempconst=293.0 293.0 # default values for incomp flows

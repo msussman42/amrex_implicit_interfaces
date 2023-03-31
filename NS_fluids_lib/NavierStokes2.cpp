@@ -9274,8 +9274,8 @@ void NavierStokes::MOF_training() {
 #if (AMREX_SPACEDIM==3)
   for (cpp_k=cpp_training_lo[2];cpp_k<=cpp_training_hi[2];cpp_k++) {
 #endif
-  for (local_continuous_mof=0;local_continuous_mof<=2; 
- 		              local_continuous_mof+=2) {
+  for (local_continuous_mof=0;local_continuous_mof<=1; 
+ 		              local_continuous_mof++) {
    op_training=1;  // generate data and do python processing.
    ParallelDescriptor::Barrier();
    if (ParallelDescriptor::IOProcessor()) {

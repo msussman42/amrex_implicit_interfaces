@@ -38,7 +38,7 @@ geometry.prob_lo   =  -0.15 0.0
 geometry.prob_hi   =  0.15 3.0
 geometry.is_periodic=0 0
 ns.MOFITERMAX=15
-ns.continuous_mof=2
+ns.continuous_mof=1
 # units of latent_heat: 1 J/kg=10^7 erg/(1000 g)=10^4 erg/g
 # <0 if condensation or solidification
 # >0 if boiling or melting

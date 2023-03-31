@@ -27,7 +27,7 @@ mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
 
-ns.continuous_mof=2
+ns.continuous_mof=1
 ns.clsmof_weight=0.1 0.1  # CLSMOF II if clsmof_weight>0 and elvira_flag=0
 ns.num_materials=2
 # JAN18 .

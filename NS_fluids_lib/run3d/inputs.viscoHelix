@@ -32,7 +32,7 @@ ns.MOFITERMAX=15
 #ns.MOF_TURN_OFF_LS=0
 #ns.MOF_DEBUG_RECON=0
 
-#continuous_mof=2 => CMOF
+#continuous_mof=1 => CMOF
 ns.continuous_mof=0 #for the structure interfaces it is always MOF anyway.
 
 #ns.mof_error_ordering=0
