@@ -3476,14 +3476,14 @@ stop
       REAL_T temperature_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
-      INTEGER_T continuous_mof_parm
+      INTEGER_T, parameter :: continuous_mof_parm=0
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T :: grid_index(SDIM)
       INTEGER_T, parameter :: grid_level=-1
 
-      INTEGER_T use_ls_data
-      INTEGER_T mof_verbose
+      INTEGER_T, parameter :: use_ls_data=0
+      INTEGER_T, parameter :: mof_verbose=0
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       INTEGER_T order_probe(2)
       REAL_T nslope_probe(SDIM,2)
@@ -4917,15 +4917,11 @@ stop
              enddo ! udir
             enddo ! u_im=1..num_materials
 
-            mof_verbose=0
-            use_ls_data=0
-            continuous_mof_parm=0
-
              ! LS=n dot (x-x0)+intercept
             call multimaterial_MOF( &
              bfact,dx,u_xsten_updatecell,nhalf, &
-             mof_verbose, &
-             use_ls_data, &
+             mof_verbose, & //=0
+             use_ls_data, & //=0
              LS_stencil, &
              geom_xtetlist(1,1,1,tid+1), &
              geom_xtetlist_old(1,1,1,tid+1), &
@@ -4933,7 +4929,7 @@ stop
              nmax, &
              mofdata_new, &
              multi_centroidA, &
-             continuous_mof_parm, &
+             continuous_mof_parm, & //=0
              cmofsten, &
              grid_index, &
              grid_level, &

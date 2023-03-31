@@ -13277,9 +13277,9 @@ END SUBROUTINE SIMP
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
       INTEGER_T tessellate
-      INTEGER_T continuous_mof
-      INTEGER_T mof_verbose
-      INTEGER_T use_ls_data
+      INTEGER_T, parameter :: continuous_mof=0
+      INTEGER_T, parameter :: mof_verbose=0
+      INTEGER_T, parameter :: use_ls_data=0
       INTEGER_T fine_covered
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       INTEGER_T nmax
@@ -13453,9 +13453,6 @@ END SUBROUTINE SIMP
                enddo ! im
 
               else if (fine_covered.eq.0) then
-               use_ls_data=0
-               mof_verbose=0
-               continuous_mof=0
                tessellate=0
 
                 ! sum F_fluid=1  sum F_solid<=1
@@ -13467,8 +13464,8 @@ END SUBROUTINE SIMP
 
                call multimaterial_MOF( &
                 bfact_f,dxf,xstenfine,nhalf, &
-                mof_verbose, &
-                use_ls_data, &
+                mof_verbose, & // =0
+                use_ls_data, & // =0
                 LS_stencil, &
                 geom_xtetlist(1,1,1,tid+1), &
                 geom_xtetlist(1,1,1,tid+1), &
@@ -13476,7 +13473,7 @@ END SUBROUTINE SIMP
                 nmax, &
                 mofdatafine, &
                 multi_centroidA, &
-                continuous_mof, &
+                continuous_mof, & //=0
                 cmofsten, &
                 grid_index, &
                 grid_level, &

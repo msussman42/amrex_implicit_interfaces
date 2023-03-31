@@ -225,7 +225,7 @@ stop
        stop
       endif
       if ((continuous_mof.eq.0).or. & ! MOF
-          (continuous_mof.eq.2)) then ! CMOF
+          (continuous_mof.ge.1)) then ! CMOF
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -502,7 +502,7 @@ stop
 
          ! supercell for centroid cost function.
          ! center cell for volume constraint.
-        if (continuous_mof_parm.eq.2) then
+        if (continuous_mof_parm.ge.1) then
   
          volume_super=zero ! volume of the extended region
          volume_super_mofdata=zero !same as volume_super, except by im_fluid.
@@ -770,7 +770,7 @@ stop
           grid_level, &
           SDIM)
 
-        if (continuous_mof_parm.eq.2) then
+        if (continuous_mof_parm.ge.1) then
            ! center cell centroids.
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
@@ -1055,7 +1055,7 @@ stop
       endif
 
       if ((continuous_mof.eq.0).or. & ! MOF
-          (continuous_mof.eq.2)) then ! CMOF
+          (continuous_mof.eq.1)) then ! CMOF
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -1526,7 +1526,14 @@ stop
 
         ! sanity test for sk2f.py
        if (1.eq.0) then
-        cmof_idx=continuous_mof/2
+        if (continuous_mof.eq.0) then
+         cmof_idx=0
+        else if (continuous_mof.ge.1) then
+         cmof_idx=1
+        else
+         print *,"continuous_mof invalid"
+         stop
+        endif
         call training_array(D_DECL(i,j,k),cmof_idx)% &
          NN_ZHOUTENG_LOCAL%Initialization()
         call training_array(D_DECL(i,j,k),cmof_idx)% &
@@ -1619,7 +1626,14 @@ stop
         endif
        enddo ! do dir=1,sdim
 
-       cmof_idx=continuous_mof/2
+       if (continuous_mof.eq.0) then
+        cmof_idx=0
+       else if (continuous_mof.ge.1) then
+        cmof_idx=1
+       else
+        print *,"continuous_mof invalid"
+        stop
+       endif
        call training_array(D_DECL(i,j,k),cmof_idx)% &
          NN_ZHOUTENG_LOCAL%Initialization()
        call training_array(D_DECL(i,j,k),cmof_idx)% &
@@ -1822,7 +1836,7 @@ stop
        do k=decision_tree_lo(3),decision_tree_hi(3)
        do cmof_idx=0,1
 
-        local_continuous_mof=2*cmof_idx
+        local_continuous_mof=cmof_idx
 
         call gridsten_level(xsten,i,j,k,finest_level,nhalf)
 
@@ -2135,7 +2149,7 @@ stop
 
         endif
 
-       enddo !local_continuous_mof=0,2,2
+       enddo !local_continuous_mof=0,1
        enddo !k
        enddo !j
        enddo !i
