@@ -8893,7 +8893,7 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
    } // ilev=finest_level ... level
 
    if ((single_centroid_diff<=1.0e-12)||
-       (recon_iter>12)) {
+       (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 
 
@@ -8909,12 +8909,24 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
    } // ilev=finest_level ... level
 
    if ((single_centroid_diff<=1.0e-12)||
-       (recon_iter>12)) {
+       (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 
 
   } else
    amrex::Error("update_flag invalid");
+
+  if (verbose>0) {
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "recon_iter= " << recon_iter << '\n';
+    std::cout << "continuous_mof= " << continuous_mof << '\n';
+    std::cout << "number_centroid= " << number_centroid << '\n';
+    std::cout << "single_centroid_diff= " << single_centroid_diff << '\n';
+   } //IOProc?
+  } else if (verbose==0) {
+   //do nothing
+  } else
+   amrex::Error("verbose invalid");
 
  } //while (recon_error_met==0) 
 

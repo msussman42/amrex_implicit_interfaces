@@ -10281,8 +10281,11 @@ contains
          do dir=1,sdim
           if (volume_cut.gt.zero) then
            testcen(dir)=testcen(dir)/volume_cut
-          else
+          else if (volume_cut.eq.zero) then
            testcen(dir)=zero
+          else
+           print *,"volume_cut invalid: ",volume_cut
+           stop
           endif
          enddo ! dir=1..sdim
 
