@@ -19766,9 +19766,9 @@ end subroutine RatePhaseChange
       REAL_T vapor_mass_source
       REAL_T vapor_vfrac_source
       INTEGER_T nmax
-      INTEGER_T use_ls_data
-      INTEGER_T mof_verbose
-      INTEGER_T continuous_mof
+      INTEGER_T, parameter :: use_ls_data=0
+      INTEGER_T, parameter :: mof_verbose=0
+      INTEGER_T, parameter :: continuous_mof=0
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T :: grid_index(SDIM)
@@ -19970,9 +19970,6 @@ end subroutine RatePhaseChange
         ! create unidirectional seed
         ! initialize volume fraction, level set function, centroid,
         ! density, temperature, and vapor mass fraction.
-        use_ls_data=0
-        mof_verbose=0
-        continuous_mof=0
         tessellate=0
 
         do im_local=1,num_materials
@@ -20010,7 +20007,7 @@ end subroutine RatePhaseChange
          nmax, &
          mofdata, &
          multi_centroidA, &
-         continuous_mof, &
+         continuous_mof, & // =0
          cmofsten, &
          grid_index, &
          grid_level, &
@@ -29055,8 +29052,9 @@ end subroutine initialize2d
       INTEGER_T isub
       INTEGER_T ibasesrc
       INTEGER_T ibasedst
-      INTEGER_T use_ls_data,mof_verbose
-      INTEGER_T continuous_mof
+      INTEGER_T, parameter :: use_ls_data=0
+      INTEGER_T, parameter :: mof_verbose=0
+      INTEGER_T, parameter :: continuous_mof=0
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T :: grid_index(SDIM)
@@ -29255,10 +29253,6 @@ end subroutine initialize2d
           stop
          endif
 
-         use_ls_data=0
-         mof_verbose=0
-         continuous_mof=0
-
          do im=1,num_materials
 
           ibasesrc=(im-1)*ngeom_raw+1
@@ -29281,16 +29275,16 @@ end subroutine initialize2d
 
          call multimaterial_MOF( &
           bfact,dx,xsten,nhalf, &
-          mof_verbose, &
-          use_ls_data, &
-          LS_stencil, &
+          mof_verbose, & //=0
+          use_ls_data, & //=0
+          LS_stencil, & 
           geom_xtetlist(1,1,1,tid+1), &
           geom_xtetlist(1,1,1,tid+1), &
           nmax, &
           nmax, &
           mofdata, &
           multi_centroidA, &
-          continuous_mof, &
+          continuous_mof, & //=0
           cmofsten, &
           grid_index, &
           grid_level, &
