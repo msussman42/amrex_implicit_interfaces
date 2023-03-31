@@ -9976,7 +9976,7 @@ stop
                 stop
                endif
 
-                ! inputs.curvature_converge, continuous_mof=2
+                ! inputs.curvature_converge, continuous_mof=1
                 ! March 10, 2018: 1.99, 2.03 RZ 24x48 HT
                 ! March 10, 2018: 1.00, 1.01 XY 24x48 HT
                 ! March 10, 2018: 1.93, 2.07 XYZ 32x32x32 HT
@@ -17110,7 +17110,7 @@ stop
       INTEGER_T im2_substencil
       INTEGER_T im_fluid_critical
       INTEGER_T im_local
-      INTEGER_T continuous_mof_parm
+      INTEGER_T, PARAMETER :: continuous_mof_parm=0
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T :: grid_index(SDIM)
@@ -18259,7 +18259,6 @@ stop
               xsten,nhalf,nhalf_box, &
               bfact,dx, &
               tessellate,local_mof,SDIM)
-            continuous_mof_parm=0
             mof_verbose=0
 
             call multimaterial_MOF( &
