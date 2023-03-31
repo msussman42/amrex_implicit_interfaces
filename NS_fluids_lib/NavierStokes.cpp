@@ -14060,7 +14060,7 @@ NavierStokes::level_phase_change_convertALL() {
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
          0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
 
-      int update_flag=RECON_UPDATE_NULL;
+      int update_flag=RECON_UPDATE_STATE_CENTROID;
       int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay; output:SLOPE_RECON_MF
       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
@@ -22351,10 +22351,10 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   error_update_flag=RECON_UPDATE_NULL;  
  } else if (pattern_test(local_caller_string,"post_init_state")==1) {
   // called from post_init_state, update S_new
-  error_update_flag=RECON_UPDATE_STATE_ERR;  
+  error_update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID;  
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
   // called from post_restart, update S_new
-  error_update_flag=RECON_UPDATE_STATE_ERR;  
+  error_update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID;  
  } else
   amrex::Error("local_caller_string invalid 22091");
 	
@@ -23244,7 +23244,7 @@ NavierStokes::post_init_state () {
    // allocate_mdot (MDOT_MF=0.0)
    // MASKCOEF
    // init_FSI_GHOST_MAC_MF
-   // VOF_Recon_ALL (update_flag==1)
+   // VOF_Recon_ALL (RECON_UPDATE_STATE_ERR_AND_CENTROID)
    // makeStateDistALL
    // prescribe_solid_geometryALL
    // make_physics_varsALL
