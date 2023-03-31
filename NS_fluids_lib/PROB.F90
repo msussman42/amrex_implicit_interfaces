@@ -19998,8 +19998,8 @@ end subroutine RatePhaseChange
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
-         mof_verbose, &
-         use_ls_data, &
+         mof_verbose, & // =0
+         use_ls_data, & // =0
          LS_stencil, &
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
