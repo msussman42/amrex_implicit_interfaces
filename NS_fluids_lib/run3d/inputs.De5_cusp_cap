@@ -22,7 +22,7 @@ geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 10
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
-ns.continuous_mof=2
+ns.continuous_mof=1
 ns.vof_height_function=1
 ns.mof_decision_tree_learning=1000000 # default: 1000000
 ns.MOFITERMAX_AFTER_PREDICT=0

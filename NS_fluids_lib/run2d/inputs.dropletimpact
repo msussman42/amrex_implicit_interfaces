@@ -31,7 +31,7 @@ Lp.v = 1
 
 ns.num_materials=3
 ns.num_species_var=0
-ns.continuous_mof=2 #CMOF
+ns.continuous_mof=1 #CMOF
 ns.vof_height_function=1
 ns.FD_curv_interp=1
 ns.EILE_flag=-1

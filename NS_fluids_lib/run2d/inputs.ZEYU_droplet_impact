@@ -37,7 +37,7 @@ ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
 ns.num_species_var=0
 # 3=no limiter with slope=0 at interface
 # 0 = MOF (moment of fluid)
-# 2 = CMOF (continuous moment of fluid)
+# 1=CMOF (continuous moment of fluid)
 ns.continuous_mof=0
 ns.FD_curv_interp=1
 # 0=Sussman and Puckett algorithm 

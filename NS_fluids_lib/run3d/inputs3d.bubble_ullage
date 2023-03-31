@@ -377,7 +377,7 @@ ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 2 # 0=MOF 2=CMOF
+ns.continuous_mof=1 # 0=MOF 1=CMOF
 ns.mof_decision_tree_learning=1000
 ns.mof_machine_learning=0
 ns.MOFITERMAX_AFTER_PREDICT = 15

@@ -249,7 +249,7 @@ ns.xblob3 = 61.6726637934 # -q dot n
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 2
+ns.continuous_mof=1
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE

@@ -26,8 +26,8 @@ mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
 
-# May 14, 2018: continuous_mof=2 (works best at triple junctions)
-ns.continuous_mof=2  
+# May 14, 2018: continuous_mof=1 (works best at triple junctions)
+ns.continuous_mof=1  
 # material 2 is the bubble or drop
 # material 1 is the lower stratified fluid
 # material 3 is the upper stratified fluid

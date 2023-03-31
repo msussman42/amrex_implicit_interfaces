@@ -16,8 +16,8 @@ DistributionMapping.strategy=SFC
 
 ns.MOFITERMAX=15
 # continuous_mof=0 regular MOF
-# continuous_mof=2 CMOF
-ns.continuous_mof=2
+# continuous_mof=1 CMOF
+ns.continuous_mof=1
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

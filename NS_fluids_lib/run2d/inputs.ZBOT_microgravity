@@ -359,7 +359,7 @@ ns.xblob3 = 2.0 # Watts=J/s
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof   = 2 # 0=MOF 2=CMOF
+ns.continuous_mof=1 # 0=MOF 1=CMOF
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE

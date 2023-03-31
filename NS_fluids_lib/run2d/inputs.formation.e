@@ -18,7 +18,7 @@ geometry.prob_hi   =  16.0 48.0
 geometry.is_periodic = 0 0 0     
 
 ns.EILE_flag=-1
-ns.continuous_mof=2
+ns.continuous_mof=1
 ns.partial_cmof_stencil_at_walls=1
 ns.MOFITERMAX=15
 ns.vof_height_function=1

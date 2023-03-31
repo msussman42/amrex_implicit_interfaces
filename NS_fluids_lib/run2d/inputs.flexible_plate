@@ -36,8 +36,8 @@ ns.num_divu_outer_sweeps=1
 ns.num_species_var=0
 # 3=no limiter with slope=0 at interface
 # 0 = MOF (moment of fluid)
-# 2 = CMOF (continuous moment of fluid)
-ns.continuous_mof=2
+# 1=CMOF (continuous moment of fluid)
+ns.continuous_mof=1
 ns.FD_curv_interp=1
 # 0=Sussman and Puckett algorithm 
 # 1=EILE (default), -1=Weymouth Yue

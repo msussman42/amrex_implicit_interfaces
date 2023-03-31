@@ -52,7 +52,7 @@ mac.mac_abs_tol    = 1.0e-10
 #amr.plotfile_on_restart=1
 
 
-ns.continuous_mof=2
+ns.continuous_mof=1
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
