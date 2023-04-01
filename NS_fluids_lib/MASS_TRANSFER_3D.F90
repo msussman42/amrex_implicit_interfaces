@@ -4920,8 +4920,8 @@ stop
              ! LS=n dot (x-x0)+intercept
             call multimaterial_MOF( &
              bfact,dx,u_xsten_updatecell,nhalf, &
-             mof_verbose, & //=0
-             use_ls_data, & //=0
+             mof_verbose, & !=0
+             use_ls_data, & !=0
              LS_stencil, &
              geom_xtetlist(1,1,1,tid+1), &
              geom_xtetlist_old(1,1,1,tid+1), &
@@ -4929,7 +4929,7 @@ stop
              nmax, &
              mofdata_new, &
              multi_centroidA, &
-             continuous_mof_parm, & //=0
+             continuous_mof_parm, & !=0
              cmofsten, &
              grid_index, &
              grid_level, &

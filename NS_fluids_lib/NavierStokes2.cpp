@@ -9112,6 +9112,9 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
    // (4) =1 interior+ngrow    =0 otherwise
    FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];
 
+    // maskcov=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+
    Vector<int> vofbc=getBCArray(State_Type,gridno,STATECOMP_MOF,1);
 
    int tid_current=ns_thread();
@@ -9131,6 +9134,8 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     tilelo,tilehi,
     fablo,fabhi,&bfact,
     xlo,dx,
+    maskcov.dataPtr(),
+    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     masknbr.dataPtr(),
     ARLIM(masknbr.loVect()),ARLIM(masknbr.hiVect()),
     snewfab.dataPtr(STATECOMP_MOF),
@@ -9457,6 +9462,7 @@ void NavierStokes::build_masksem(int mask_sweep) {
 
    // mask=tag if not covered by level+1 or outside the domain.
   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+
    // (1) =1 interior  =1 fine-fine ghost in domain  =0 otherwise
    // (2) =1 interior  =0 otherwise
   FArrayBox& masknbr=(*localMF[MASK_NBR_MF])[mfi];

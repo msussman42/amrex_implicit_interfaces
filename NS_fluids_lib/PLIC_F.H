@@ -46,6 +46,7 @@ extern "C"
         int* bfact,
         const Real* xlo,
 	const Real* dx,
+        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
         Real* masknbr,AMREX_ARLIM_P(masknbrlo),AMREX_ARLIM_P(masknbrhi),
         Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
         Real* vof,AMREX_ARLIM_P(voflo),AMREX_ARLIM_P(vofhi),
