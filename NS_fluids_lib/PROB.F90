@@ -13003,7 +13003,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              !if OP_UNEW_CELL_TO_MAC:
              !primary_vel_data="vel"=CURRENT_CELL_VEL_MF; 
              !if OP_UMAC_PLUS_VISC_CELL_TO_MAC:
-             !primary_vel_data="vel"=idx_velcell;  // increment
+             !primary_vel_data="vel"=idx_velcell;  (increment)
              !if OP_U_COMP_CELL_MAC_TO_MAC:
              !primary_vel_data="vel"=DELTA_CELL_VEL_MF; 
 
@@ -19998,8 +19998,8 @@ end subroutine RatePhaseChange
          nucleate_in%bfact, &
          nucleate_in%dx, &
          xsten,nhalf, &
-         mof_verbose, & // =0
-         use_ls_data, & // =0
+         mof_verbose, & ! =0
+         use_ls_data, & ! =0
          LS_stencil, &
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
@@ -20007,7 +20007,7 @@ end subroutine RatePhaseChange
          nmax, &
          mofdata, &
          multi_centroidA, &
-         continuous_mof, & // =0
+         continuous_mof, & ! =0
          cmofsten, &
          grid_index, &
          grid_level, &
@@ -29275,8 +29275,8 @@ end subroutine initialize2d
 
          call multimaterial_MOF( &
           bfact,dx,xsten,nhalf, &
-          mof_verbose, & //=0
-          use_ls_data, & //=0
+          mof_verbose, & !=0
+          use_ls_data, & !=0
           LS_stencil, & 
           geom_xtetlist(1,1,1,tid+1), &
           geom_xtetlist(1,1,1,tid+1), &
@@ -29284,7 +29284,7 @@ end subroutine initialize2d
           nmax, &
           mofdata, &
           multi_centroidA, &
-          continuous_mof, & //=0
+          continuous_mof, & !=0
           cmofsten, &
           grid_index, &
           grid_level, &

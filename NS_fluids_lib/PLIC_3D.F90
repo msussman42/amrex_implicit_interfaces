@@ -49,6 +49,7 @@ stop
         tilelo,tilehi, &
         fablo,fabhi,bfact, &
         xlo,dx, &
+        maskcov,DIMS(maskcov), &
         masknbr,DIMS(masknbr), &
         snew,DIMS(snew), &
         vof,DIMS(vof), &
@@ -89,6 +90,7 @@ stop
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: ngrow
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
       INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
       INTEGER_T, INTENT(in) :: DIMDEC(snew)
       INTEGER_T, INTENT(in) :: DIMDEC(vof)
@@ -96,9 +98,14 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(slopes)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
      
+      REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4) 
+      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
+      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials) 
+      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(out), target :: &
               slopes(DIMV(slopes),num_materials*ngeom_recon) 
       REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
@@ -177,7 +184,14 @@ stop
       REAL_T :: multi_volume(num_materials)
       REAL_T :: multi_cen(SDIM,num_materials)
 
+      INTEGER_T :: local_maskcov
+
 #include "mofdata.H"
+
+      maskcov_ptr=>maskcov
+      masknbr_ptr=>masknbr
+      vof_ptr=>vof
+      LS_ptr=>LS
 
       slopes_ptr=>slopes
       snew_ptr=>snew
@@ -268,10 +282,11 @@ stop
       number_centroid_per_core=0
       delta_centroid_per_core=zero
 
-      call checkbound_array(fablo,fabhi,masknbr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,masknbr_ptr,1,-1)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,vof,1,-1)
-      call checkbound_array(fablo,fabhi,LS,1,-1)
+      call checkbound_array(fablo,fabhi,vof_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
       call checkbound_array(fablo,fabhi,slopes_ptr,ngrow,-1)
 
       if (SDIM.eq.3) then
@@ -293,6 +308,15 @@ stop
       do i = igridlo(1),igridhi(1)
       do j = igridlo(2),igridhi(2)
       do k = igridlo(3),igridhi(3)
+
+       local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
+       if ((local_maskcov.eq.1).or. &
+           (local_maskcov.eq.0)) then
+        ! do nothing
+       else
+        print *,"local_maskcov invalid"
+        stop
+       endif
 
        grid_index(1)=i
        grid_index(2)=j
@@ -822,19 +846,44 @@ stop
 
         do im=1,num_materials
          if (is_rigid(im).eq.0) then
-          number_centroid_per_core=number_centroid_per_core+1
-          vofcomprecon=(im-1)*ngeom_recon+1
-          vofcompraw=(im-1)*ngeom_raw+1
-          delta_centroid=zero
-          do dir=1,SDIM
-           cmof_centroid=multi_cen(dir,im)-cen_super(dir)
-           delta_centroid=delta_centroid+ &
-              (mofdata_super(vofcomprecon+dir)-cmof_centroid)**2
-           mofdata_super(vofcomprecon+dir)=cmof_centroid
-           snew(D_DECL(i,j,k),vofcompraw+dir)=cmof_centroid
-          enddo
-          delta_centroid=sqrt(delta_centroid)
-          delta_centroid_per_core=delta_centroid_per_core+delta_centroid
+
+          if (local_maskcov.eq.0) then
+           ! do nothing
+          else if (local_maskcov.eq.1) then
+           
+           vofcomprecon=(im-1)*ngeom_recon+1
+           vofcompraw=(im-1)*ngeom_raw+1
+
+           vfrac_local(im)=mofdata_super(vofcomprecon)
+
+           if ((vfrac_local(im).ge.0.01D0).and. &
+               (vfrac_local(im).le.0.99D0)) then
+
+            number_centroid_per_core=number_centroid_per_core+1
+            delta_centroid=zero
+            do dir=1,SDIM
+             cmof_centroid=multi_cen(dir,im)-cen_super(dir)
+             delta_centroid=delta_centroid+ &
+              ((mofdata_super(vofcomprecon+dir)-cmof_centroid)/dx(dir))**2
+             mofdata_super(vofcomprecon+dir)=cmof_centroid
+             snew(D_DECL(i,j,k),vofcompraw+dir)=cmof_centroid
+            enddo
+            delta_centroid=sqrt(delta_centroid)
+            delta_centroid_per_core=delta_centroid_per_core+delta_centroid
+           else if (abs(vfrac_local(im)).le.0.01D0) then
+            ! do nothing
+           else if (abs(one-vfrac_local(im)).le.0.01D0) then
+            ! do nothing
+           else
+            print *,"vfrac_local invalid"
+            stop
+           endif
+
+          else
+           print *,"local_maskcov invalid"
+           stop
+          endif
+
          else if (is_rigid(im).eq.1) then
           ! do nothing
          else
