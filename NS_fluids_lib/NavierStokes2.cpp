@@ -8850,6 +8850,9 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
 
  while (recon_error_met==0) {
 
+  number_centroid=0;
+  delta_centroid=0.0;
+
   // go from coarsest to finest so that SLOPE_RECON_MF
   // can have proper BC.
   for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -8892,7 +8895,7 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
     }
    } // ilev=finest_level ... level
 
-   if ((single_centroid_diff<=1.0e-12)||
+   if ((single_centroid_diff<=1.0e-8)||
        (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 
@@ -8908,7 +8911,7 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
     }
    } // ilev=finest_level ... level
 
-   if ((single_centroid_diff<=1.0e-12)||
+   if ((single_centroid_diff<=1.0e-8)||
        (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 
