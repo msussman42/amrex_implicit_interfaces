@@ -15,9 +15,9 @@ geometry.is_periodic=0 0
 DistributionMapping.strategy=SFC
 
 ns.MOFITERMAX=15
-# continuous_mof=0 regular MOF
-# continuous_mof=1 CMOF
-ns.continuous_mof=10
+# ns.continuous_mof=0 #regular MOF
+ns.continuous_mof=1 #CMOF(1)
+#ns.continuous_mof=10
 
 # 0=GSRB 1=ICRB 2=ILU
 Lp.smooth_type=2

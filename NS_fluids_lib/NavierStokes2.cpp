@@ -9264,7 +9264,8 @@ void NavierStokes::MOF_training() {
  int cpp_k=0;
  int local_continuous_mof=0;
 
-  // in: PLIC_3D.F90
+  // fort_MOF_DT_training is declared in: PLIC_3D.F90
+  // "local_continuous_mof" varied internally.
  fort_MOF_DT_training(
    &mof_decision_tree_learning,
    &finest_level,
@@ -9277,7 +9278,7 @@ void NavierStokes::MOF_training() {
   // in: PLIC_3D.F90
   fort_MOF_training(
    &mof_machine_learning,
-   &op_training,
+   &op_training, // =0 ("allocate")
    cpp_training_lo,
    cpp_training_hi,
    &cpp_i,&cpp_j,&cpp_k,
@@ -9285,7 +9286,7 @@ void NavierStokes::MOF_training() {
    &bfact,
    domlo,domhi,
    dx,
-   &local_continuous_mof);
+   &local_continuous_mof); // only used if op_training=1,2
 
   ParallelDescriptor::Barrier();
 
@@ -9312,7 +9313,7 @@ void NavierStokes::MOF_training() {
      &local_continuous_mof);
    }
    ParallelDescriptor::Barrier();
-   op_training=2;  // read network data
+   op_training=2;  // read either NN, DT, or RF network data
    fort_MOF_training(
     &mof_machine_learning,
     &op_training,
