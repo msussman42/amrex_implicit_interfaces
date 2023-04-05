@@ -332,12 +332,11 @@ ns.tempconst=295.41 295.41 295.41
 #      v=g (zvec dot n)n [rho]/rho 
 # Surface tension [N/m]
 #90 degree contact angle
-#ns.tension=1.2E-02 1.2E-02 1.2E-02 
-ns.tension=1.2E-08 1.2E-08 1.2E-08 
+ns.tension=1.2E-02 1.2E-02 1.2E-02 
 ns.visual_quasi_static_plot_int=0
-ns.static_surface_tension_max_iter=50
-ns.static_surface_tension_duration=8000.0
-ns.static_tension = 1.2e-2 1.2e-2 1.2e-2 
+#ns.static_surface_tension_max_iter=50
+#ns.static_surface_tension_duration=8000.0
+#ns.static_tension = 1.2e-2 1.2e-2 1.2e-2 
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -428,8 +427,8 @@ ns.xblob3 = 2.0 # Watts=J/s
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof=1 # 0=MOF 1=CMOF
-ns.mof_decision_tree_learning=100
+ns.continuous_mof = 1 # 0=MOF 1=CMOF
+ns.mof_decision_tree_learning=10000
 ns.mof_machine_learning=0
 
 #-1=Weymouth Yue,  
@@ -437,7 +436,7 @@ ns.mof_machine_learning=0
 ns.EILE_flag        = -1
 
 ns.MOFITERMAX       = 15
-ns.MOFITERMAX_AFTER_PREDICT=15
+ns.MOFITERMAX_AFTER_PREDICT=0
 
 ns.truncate_thickness=2.0
 
