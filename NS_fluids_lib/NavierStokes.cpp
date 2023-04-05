@@ -24363,6 +24363,7 @@ MultiFab* NavierStokes::getState (
  MultiFab* mf = new MultiFab(state[State_Type].boxArray(),dmap,ncomp,
    ngrow,MFInfo().SetTag("mf getState"),FArrayBoxFactory());
 
+  //FillPatch is declared in amrlib/AmrLevel.cpp
  FillPatch(*this,*mf,0,time,State_Type,scomp,ncomp,debug_fillpatch);
 
  ParallelDescriptor::Barrier();
