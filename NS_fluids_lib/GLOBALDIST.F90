@@ -1221,12 +1221,9 @@ end subroutine nozzle2d
       return
       end subroutine INIT_LS_GAS_AM
 
-
-
-
- 
-        ! dist<0 in the solid
-        ! dist>0 in the fluid 
+       ! soliddist is called by: subroutine materialdistsolid 
+       ! dist<0 in the solid
+       ! dist>0 in the fluid 
       subroutine soliddist(x,y,z,dist,im)
       use global_utility_module
       use bubbleControl_module
@@ -1578,9 +1575,6 @@ end subroutine nozzle2d
 ! natural convection in triangular enclosure (soliddist)
       else if (probtype.eq.81) then
        dist=y+yblob3-yblob*(one-x/xblob)
-! rotating annulus (cylindrical coordinates now) (soliddist)
-      else if (probtype.eq.82) then
-       dist=hugedist
 ! sphere impact on flat surface (dist >0 in fluid)
 ! soliddist - falling sphere
       else if ((probtype.eq.531).and.(SDIM.eq.2)) then  
