@@ -2316,6 +2316,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by fort_estdt: determine maximum force due to buoyancy. 
+       ! if denconst_interface_added==0.0 (default), then
+       !  denjump_scale=(rhoA - rhoB)/max(rhoA,rhoB)
       subroutine get_max_denjump_scale( &
               denjump_scale, &
               denconst_interface_added)
@@ -2330,6 +2332,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T denjump_scale_temp
       REAL_T max_den_interface
       REAL_T den_added
+      INTEGER_T internal_wave_exists
 
       denjump_scale=zero
 
@@ -2396,7 +2399,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
       enddo ! im=1..num_materials
 
-      if (probtype.eq.82) then ! rotating annulus
+      call SUB_INTERNAL_GRAVITY_WAVE_FLAG(internal_wave_exists)
+
+      if (internal_wave_exists.eq.1) then
        if (twall.lt.fort_tempconst(1)) then
         print *,"twall invalid"
         stop
@@ -2415,6 +2420,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"max_den_interface invalid"
         stop
        endif
+      else if (internal_wave_exists.eq.0) then
+       ! do nothing
+      else
+       print *,"internal_wave_exits invalid"
+       stop
       endif
 
       return

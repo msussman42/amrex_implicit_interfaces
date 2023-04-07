@@ -444,6 +444,7 @@ stop
       use ZEYU_droplet_impact_module
       use STUB_module
       use GENERAL_PHASE_CHANGE_module
+      use ROTATING_ANNULUS_module
       use CAVITY_PHASE_CHANGE_module
       use ICE_ON_SUBSTRATE_module
       use SIMPLE_PALMORE_DESJARDINS_module
@@ -632,7 +633,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=20
+      probtype_list_size=21
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -653,6 +654,7 @@ stop
       used_probtypes(18)=29  ! passive_advect_module
       used_probtypes(19)=31  ! passive_advect_module
       used_probtypes(20)=710 ! CAVITY_PHASE_CHANGE
+      used_probtypes(21)=82  ! Differentially Heated Rotating Annulus: ROTATING_ANNULUS
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_DEALLOCATE_MODULE=>DEALLOCATE_STUB_MODULE
@@ -994,6 +996,25 @@ stop
        SUB_ICE_SUBSTRATE_DISTANCE=>GENERAL_PHASE_CHANGE_ICE_SUBSTRATE_DISTANCE
        SUB_CFL_HELPER=>GENERAL_PHASE_CHANGE_CFL_HELPER
        SUB_SUMINT=>GENERAL_PHASE_CHANGE_SUMINT ! Nusseltt number
+      else if (probtype.eq.82) then
+       SUB_INIT_MODULE=>INIT_ROTATING_ANNULUS_MODULE
+       SUB_check_vel_rigid=>ROTATING_ANNULUS_check_vel_rigid
+       SUB_LS=>ROTATING_ANNULUS_LS
+       SUB_VEL=>ROTATING_ANNULUS_VEL
+       SUB_PRES=>ROTATING_ANNULUS_PRES
+       SUB_STATE=>ROTATING_ANNULUS_STATE
+       SUB_LS_BC=>ROTATING_ANNULUS_LS_BC
+       SUB_VEL_BC=>ROTATING_ANNULUS_VEL_BC
+       SUB_PRES_BC=>ROTATING_ANNULUS_PRES_BC
+       SUB_STATE_BC=>ROTATING_ANNULUS_STATE_BC
+       SUB_HEATSOURCE=>ROTATING_ANNULUS_HEATSOURCE
+       SUB_EB_heat_source=>ROTATING_ANNULUS_EB_heat_source
+       SUB_microcell_heat_coeff=>ROTATING_ANNULUS_microcell_heat_coeff
+       SUB_velfreestream=>ROTATING_ANNULUS_velfreestream
+       SUB_nucleation=>ROTATING_ANNULUS_nucleation
+       SUB_ICE_SUBSTRATE_DISTANCE=>ROTATING_ANNULUS_ICE_SUBSTRATE_DISTANCE
+       SUB_CFL_HELPER=>ROTATING_ANNULUS_CFL_HELPER
+       SUB_SUMINT=>ROTATING_ANNULUS_SUMINT ! Nusseltt number
       else
        ! assign null routines here that would cause the program to abort
        ! if called.  In otherwords, these are routines, that if called,
