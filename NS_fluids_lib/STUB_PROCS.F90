@@ -324,6 +324,17 @@ stop
 return 
 end subroutine STUB_VEL
 
+subroutine STUB_INTERNAL_GRAVITY_WAVE_FLAG(internal_wave_exists)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(out) :: internal_wave_exists
+
+internal_wave_exists=0
+
+end subroutine STUB_INTERNAL_GRAVITY_WAVE_FLAG
+
 ! density(T) = density_base * (1+expansion_factor(T))
 ! remark: expansion_factor(T)=density(T)/density_base - 1
 subroutine STUB_UNITLESS_EXPANSION_FACTOR( &

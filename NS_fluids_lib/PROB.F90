@@ -2402,13 +2402,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call SUB_INTERNAL_GRAVITY_WAVE_FLAG(internal_wave_exists)
 
       if (internal_wave_exists.eq.1) then
-       if (twall.lt.fort_tempconst(1)) then
-        print *,"twall invalid"
+       if (twall.ge.fort_tempconst(1)) then
+        ! do nothing
+       else
+        print *,"twall invalid get_max_denjump_scale"
         stop
        endif
        max_den_interface=max(fort_denconst(1),fort_denconst(2))
        if (max_den_interface.gt.zero) then
         ! density(T) = density_base * (1+expansion_factor(T))
+        ! im=1
+        ! temperature=twall (outer wall temperature)
+        ! temperature_base=fort_tempconst(1) (inner wall temperature)
+        ! default: expansion_factor=denjump_scale temp=
+        !   fort_DrhoDT(1)*(temperature-temperature_base)
         call SUB_UNITLESS_EXPANSION_FACTOR(1,twall, &
           fort_tempconst(1),denjump_scale_temp)
         denjump_scale_temp=abs(denjump_scale_temp)*fort_denconst(1)/ &
