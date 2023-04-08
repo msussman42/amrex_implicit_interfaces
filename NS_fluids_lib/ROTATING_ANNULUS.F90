@@ -212,7 +212,6 @@ subroutine ROTATING_ANNULUS_INTERNAL_GRAVITY_WAVE_FLAG(internal_wave_exists)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-
 INTEGER_T, INTENT(out) :: internal_wave_exists
 
 internal_wave_exists=1

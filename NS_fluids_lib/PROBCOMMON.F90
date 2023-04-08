@@ -1006,6 +1006,11 @@ implicit none
       REAL_T, INTENT(out) :: expansion_factor
       end subroutine TEMPLATE_UNITLESS_EXPANSION_FACTOR
 
+      subroutine TEMPLATE_INTERNAL_GRAVITY_WAVE_FLAG( &
+        internal_wave_exists)
+      INTEGER_T, INTENT(out) :: internal_wave_exists
+      end subroutine TEMPLATE_INTERNAL_GRAVITY_WAVE_FLAG
+
       subroutine TEMPLATE_dVdT(dVdT,massfrac_var, &
         pressure,temperature, &
         imattype,im,num_species_var_in)
@@ -1254,6 +1259,8 @@ implicit none
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS
       PROCEDURE(TEMPLATE_UNITLESS_EXPANSION_FACTOR), POINTER :: &
               SUB_UNITLESS_EXPANSION_FACTOR
+      PROCEDURE(TEMPLATE_INTERNAL_GRAVITY_WAVE_FLAG), POINTER :: &
+              SUB_INTERNAL_GRAVITY_WAVE_FLAG
       PROCEDURE(TEMPLATE_dVdT), POINTER :: SUB_dVdT
       PROCEDURE(TEMPLATE_SOUNDSQR), POINTER :: SUB_SOUNDSQR
       PROCEDURE(TEMPLATE_INTERNAL), POINTER :: SUB_INTERNAL
