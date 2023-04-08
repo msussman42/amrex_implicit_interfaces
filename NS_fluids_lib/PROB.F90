@@ -2411,6 +2411,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        max_den_interface=max(fort_denconst(1),fort_denconst(2))
        if (max_den_interface.gt.zero) then
         ! density(T) = density_base * (1+expansion_factor(T))
+        ! |density(T_outer)-density(T_inner)|=
+        ! |density_base*(expansion_factor(T_outer,T_base)-
+        !                expansion_factor(T_inner,T_base))| = 
+        ! |density_base*fort_DrhoDT(1)*(T_outer-T_inner)|=
+        ! fort_denconst(1)*|expansion_factor(T_inner,T_outer)|
         ! im=1
         ! temperature=twall (outer wall temperature)
         ! temperature_base=fort_tempconst(1) (inner wall temperature)
@@ -25769,7 +25774,7 @@ end subroutine initialize2d
 
            ! in: subroutine fort_initdata
           else if (probtype.eq.220) then
-           ! do nothing, density and tempearture are set from the input file
+           ! do nothing, density and temperature are set from the input file
            ! in the beginning of the loop on im. NO INIT_STATE_*** is called
 
            ! in: subroutine fort_initdata
