@@ -8992,6 +8992,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine blob_array_dist
 
+! called from:
+!  materialdist_batch
+!  velbc_override
+!  denBC
+!
 ! dist>0 in material 1
 ! dist<0 in material 2
       subroutine vapordist(xsten,nhalf,dx,bfact,dist)
@@ -9588,9 +9593,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 ! natural convection in triangular enclosure
        else if (probtype.eq.81) then
         dist=yblob2-y
-! rotating annulus (vapordist 2D)
-       else if (probtype.eq.82) then
-        dist=hugedist
        else if (probtype.eq.110) then
 !       dist=yblob-y
         call local_shallow_water_elevation(initial_time,x,dist)
@@ -9930,9 +9932,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"axis_dir 0,1,2,3,4,5,11 or 12 expected"
          stop
         endif
-! rotating annulus (vapordist 3D)
-       else if (probtype.eq.82) then
-        dist=hugedist
        endif
 
       else
@@ -15838,11 +15837,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          velcell(dir2)=zero
         enddo
 
-       else if (probtype.eq.82) then ! annulus
-        do dir2=1,SDIM
-         velcell(dir2)=zero
-        enddo
- 
         ! in: velbc_override
        else if (probtype.eq.199) then ! hydrates
 
@@ -17819,9 +17813,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if ((probtype.eq.299).or. &
                  (probtype.eq.301)) then !melting
 
-         if (istate.eq.ENUM_DENVAR+1) then ! density boundary condition
+         if (istate.eq.ENUM_DENVAR+1) then ! density bdry cond
           ADV=ADVwall
-         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! temperature boundary condition
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! temperature bdry cond
           ADV=fort_tempconst(2)  ! gas temperature
          else
           print *,"istate invalid"
@@ -26285,46 +26279,6 @@ end subroutine initialize2d
           (probhi_arr(dir2)-problo_arr(dir2)))
        enddo ! dir2
 
-       if (probtype.eq.82) then ! annulus
-
-        if (SDIM.ne.3) then
-         print *,"annulus is a 3d problem"
-         stop
-        endif
-
-        if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
-
-         do im=1,num_materials
-         
-          if (im.eq.1) then
-           velcomp=dir+1
-           Snew(D_DECL(i,j,k),velcomp)= &
-            Snew(D_DECL(i,j,k),velcomp)+ &
-            perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
-          endif
-
-          if (dir.eq.0) then
-           tcomp=STATECOMP_STATES+ &
-            (im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-           Snew(D_DECL(i,j,k),tcomp)= &
-            Snew(D_DECL(i,j,k),tcomp)+ &
-            perturbation_eps_temp*(twall-fort_tempconst(1))*sinprod
-          else if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
-           ! do nothing
-          else
-           print *,"dir invalid add noise"
-           stop
-          endif
-     
-         enddo ! im=1..num_materials 
-
-        else
-         print *,"levelrz invalid probtype==82"
-         stop
-        endif 
-
-       else
-        print *,"probtype invalid"
         stop
        endif
          
@@ -26350,28 +26304,6 @@ end subroutine initialize2d
           (xsten(0,dir2)-problo_arr(dir2))/ &
           (probhi_arr(dir2)-problo_arr(dir2)))
        enddo
-
-       if (probtype.eq.82) then ! annulus
-
-        if (SDIM.ne.3) then
-         print *,"annulus is a 3d problem"
-         stop
-        endif
-
-        if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
-
-         MAC(D_DECL(i,j,k))=MAC(D_DECL(i,j,k))+ &
-           perturbation_eps_vel*probhi_arr(1)*angular_velocity*sinprod
-
-        else
-         print *,"levelrz invalid probtype==82"
-         stop
-        endif 
-
-       else
-        print *,"probtype invalid"
-        stop
-       endif
 
       enddo
       enddo
@@ -26996,11 +26928,6 @@ end subroutine initialize2d
          x_vel=velcell(1)
          y_vel=velcell(2)
          z_vel=velcell(SDIM)
-
-        else if (probtype.eq.82) then ! annulus (2D or 3D) (in initvelocity)
-         x_vel=zero
-         y_vel=zero
-         z_vel=zero
 
          ! HYDRATE  (in initvelocity)
         else if (probtype.eq.199) then
