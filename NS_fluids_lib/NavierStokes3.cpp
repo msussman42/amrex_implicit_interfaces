@@ -495,7 +495,7 @@ void NavierStokes::static_surface_tension_advection() {
   }
 
   if (quasi_static_reached==0) {
-   int ngrow_make_distance_accept=2;
+   ngrow_make_distance_accept=2;
    makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
   } else if (quasi_static_reached==1) {
    //do nothing

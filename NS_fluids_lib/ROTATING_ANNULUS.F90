@@ -166,8 +166,8 @@ PRES=zero
 return 
 end subroutine ROTATING_ANNULUS_PRES
 
-
-
+! fort_tempconst(1) is the inner wall temperature
+! twall is the outer wall temperature
 subroutine ROTATING_ANNULUS_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 use global_utility_module
@@ -181,7 +181,7 @@ REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
-REAL_T water_temp
+REAL_T t_sloping
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -189,16 +189,51 @@ else
  print *,"nmat invalid"
  stop
 endif
+
 if (nstate_mat.eq.num_state_material) then
  ! do nothing
 else
  print *,"nstate_mat invalid"
  stop
 endif
-if (probtype.eq.55) then
+
+if (num_state_material.eq.2) then
+ ! do nothing
+else
+ print *,"expecting num_state_material.eq.2"
+ stop
+endif
+
+if (levelrz.eq.3) then
+ ! do nothing
+else
+ print *,"expecting levelrz=3"
+ stop
+endif
+
+if ((problenx.eq.problen_array(1)).and. &
+    (problenx.gt.zero).and. &
+    (problox.gt.zero).and. &
+    (x(1).gt.zero)) then
+ ! do nothing
+else
+ print *,"problenx or problox or x(1) invalid"
+ stop
+endif
+
+if (twall.ge.fort_tempconst(1)) then
+ ! do nothing
+else
+ print *,"TA or TB invalid"
+ stop
+endif
+
+if (probtype.eq.82) then
+
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
+
   if (t.eq.zero) then
    STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im) 
   else if (t.gt.zero) then
@@ -208,37 +243,36 @@ if (probtype.eq.55) then
    stop
   endif
 
+  if (x(1).lt.problox) then
+   t_sloping=fort_tempconst(1)
+  else if (x(1).gt.probhix) then
+   t_sloping=twall
+  else if ((x(1).ge.problox).and. &
+           (x(1).le.probhix)) then
+   t_sloping=fort_tempconst(1)+ &
+      (twall-fort_tempconst(1))*(x(1)-problox)/problenx
+  else
+   print *,"x(1) invalid"
+   stop
+  endif
+
+  if (t_sloping.gt.zero) then
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=t_sloping
+  else
+   print *,"need t_sloping>0"
+   stop
+  endif
+
    ! initial species in inputs?
   do n=1,num_species_var
    STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
 
-   ! initial temperature for boiling or freezing
-   ! nucleate boiling: Sato and Niceno or Tryggvason
-  if ((axis_dir.eq.6).or. &  ! incompressible
-      (axis_dir.eq.7)) then  ! compressible
-   ! water phase
-   if (im.eq.1) then
-    ! bcflag=0 (initial data)
-    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
-    STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
-   endif ! im=1
-  else if (axis_dir.eq.5) then ! freezing drop on substrate
-   if (nmat.lt.4) then
-    print *,"nmat too small for freezing drop on substrate"
-    stop
-   endif
-   ! ice or substrate (initial temperature)
-   if ((im.eq.3).or.(im.eq.4)) then
-    ! bcflag=0 (calling from ROTATING_ANNULUS_STATE))
-    call outside_temperature(t,x(1),x(2),x(SDIM),water_temp,im,0)
-    STATE(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  
-   endif
-  endif
-
  enddo ! im=1..num_materials
+
 else
  print *,"num_materials,num_state_material, or probtype invalid"
+ print *,"aborting ROTATING_ANNULUS_STATE"
  stop
 endif
  
@@ -404,6 +438,44 @@ else
  print *,"expecting num_materials.eq.2"
  stop
 endif
+
+if (levelrz.eq.3) then
+ ! do nothing
+else
+ print *,"expecting levelrz=3"
+ stop
+endif
+
+if ((problenx.eq.problen_array(1)).and. &
+    (problenx.gt.zero).and. &
+    (problox.gt.zero).and. &
+    (xghost(1).gt.zero)) then
+ ! do nothing
+else
+ print *,"problenx or problox or xghost(1) invalid"
+ stop
+endif
+if (dir.eq.1) then
+ if (xwall.gt.zero) then
+  ! do nothing
+ else
+  print *,"xwall invalid"
+  stop
+ endif
+else if ((dir.eq.2).or.(dir.eq.3)) then
+ ! do nothing
+else
+ print *,"dir invalid"
+ stop
+endif
+
+if (num_state_material.eq.2) then
+ ! do nothing
+else
+ print *,"expecting num_state_material.eq.2"
+ stop
+endif
+
 if (probtype.eq.82) then
  ! do nothing
 else
@@ -424,140 +496,14 @@ if ((istate.ge.1).and. &
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
  call get_primary_material(LS,im_crit)
- ibase=(im_crit-1)*num_state_material
- STATE_merge=local_STATE(ibase+istate)
-
- if (probtype.eq.55) then
-
-  STATE=STATE_in
-  STATE_merge=STATE
-
-   ! xlo or xhi
-  if ((dir.eq.1).and.(SDIM.eq.2)) then
-   if (istate.eq.1) then ! density
-    ! do nothing 
-   else if (istate.eq.2) then ! temperature
-    ! bcflag=1 (calling from denBC - boundary conditions
-    ! for density, temperature and species variables)
-    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-    if ((dir.eq.1).and.(side.eq.2)) then !xhi, 2D
-     if (axis_dir.eq.5) then
-      if (xblob3.gt.zero) then
-       STATE=xblob3
-      endif
-     endif
-    endif
-    STATE_merge=STATE
-   else
-    print *,"istate invalid"
-    stop
-   endif
-
-   ! ylo
-  else if ((dir.eq.2).and.(side.eq.1).and.(SDIM.eq.2)) then
-
-   ! prescribe_temperature_outflow=3 =>
-   !  Dirichlet for inflow, outflow, wall; ylo states
-   if ((prescribe_temperature_outflow.eq.3).and. &
-       (axis_dir.eq.1)) then
-
-    if (num_materials.lt.3) then
-     print *,"num_materials invalid probtype=55"
-     stop
-    endif
-   
-     ! ylo
-    if (istate.eq.1) then
-     ! do nothing (density)
-    else if (istate.eq.2) then
-     STATE=fort_tempconst(3)  ! ice temperature for bottom of substrate.
-     STATE_merge=STATE
-    else
-     print *,"istate invalid"
-     stop
-    endif
-
-      ! freezing singularity or nucleate boiling problem: ylo
-   else if ((prescribe_temperature_outflow.eq.3).and. &
-            ((axis_dir.eq.5).or. &  ! freezing drop on substrate
-             (axis_dir.eq.6).or. &  ! incompressible boiling
-             (axis_dir.eq.7))) then ! compressible boiling
-
-    if (istate.eq.1) then ! density
-     ! do nothing 
-    else if (istate.eq.2) then ! temperature
-     ! bcflag=1 (calling from denBC)
-     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-     STATE_merge=STATE
-    else
-     print *,"istate invalid"
-     stop
-    endif
-
-   endif
-
-   ! yhi 2D
-  else if ((dir.eq.2).and.(side.eq.2).and.(SDIM.eq.2)) then
-
-   if (istate.eq.1) then ! density
-    ! do nothing
-   else if (istate.eq.2) then ! temperature
-    ! bcflag=1 (calling from denBC)
-    call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-    if (axis_dir.eq.5) then
-     if (xblob3.gt.zero) then
-      STATE=xblob3
-     endif
-    endif
-    STATE_merge=STATE
-   else
-    print *,"istate invalid"
-    stop
-   endif
-
-   ! zlo
-  else if ((dir.eq.3).and.(side.eq.1).and.(SDIM.eq.3)) then
-
-   if ((prescribe_temperature_outflow.eq.3).and. &
-       (axis_dir.eq.1)) then
-     
-    if (num_materials.lt.3) then
-     print *,"num_materials invalid probtype=55"
-     stop
-    endif
-  
-    if (istate.eq.1) then ! density
-     ! do nothing 
-    else if (istate.eq.2) then ! temperature
-     STATE=fort_tempconst(3)  ! ice temperature at zlo
-     STATE_merge=STATE
-    else
-     print *,"istate invalid"
-     stop
-    endif
-
-    ! freezing singularity or nucleate boiling problem: zlo
-   else if ((prescribe_temperature_outflow.eq.3).and. &
-            ((axis_dir.eq.5).or. &  ! freezing drop on substrate
-             (axis_dir.eq.6).or. &
-             (axis_dir.eq.7))) then ! compressible boiling
-
-    if (istate.eq.1) then ! density
-     ! do nothing 
-    else if (istate.eq.2) then ! temperature
-      ! bcflag=1 (calling from denBC)
-     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-     STATE_merge=STATE
-    else
-     print *,"istate invalid"
-     stop
-    endif
-   endif
-  endif
+ if (im_crit.eq.1) then
+  ! do nothing
  else
-  print *,"expecting probtype ==55"
+  print *,"expecting im_crit=1"
   stop
  endif
+ ibase=(im_crit-1)*num_state_material
+ STATE_merge=local_STATE(ibase+istate)
 else
  print *,"istate invalid"
  stop
