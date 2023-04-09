@@ -397,6 +397,22 @@ else
  print *,"nmat invalid"
  stop
 endif
+
+if (num_materials.eq.2) then
+ ! do nothing
+else
+ print *,"expecting num_materials.eq.2"
+ stop
+endif
+if (probtype.eq.82) then
+ ! do nothing
+else
+ print *,"expecting probtype.eq.82"
+ stop
+endif
+
+! fort_tempconst(1) is the inner wall temperature
+! twall is the outer wall temperature
 local_bcflag=1
 
 if ((istate.ge.1).and. &
