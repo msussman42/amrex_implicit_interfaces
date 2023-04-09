@@ -17755,34 +17755,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        else if (species_flag.eq.0) then
 
-        if (probtype.eq.82) then ! annulus: denBC
-
-         if (istate.eq.ENUM_DENVAR+1) then ! den
-          ! do nothing
-         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! temperature
-          if (dir.eq.1) then ! r direction
-           if (side.eq.1) then
-            ADV=fort_tempconst(1)
-           else if (side.eq.2) then
-            ADV=fort_tempconst(1)  ! see: subroutine thermal_offset
-           else
-            print *,"side invalid"
-            stop
-           endif
-          else if ((dir.eq.2).or.(dir.eq.SDIM)) then
-           ! do nothing
-          else
-           print *,"dir invalid denbc 2"
-           stop
-          endif
-         else
-          print *,"istate invalid"
-          stop
-         endif
-
          ! in: subroutine denBC
          ! HYDRATES
-        else if (probtype.eq.199) then
+        if (probtype.eq.199) then
 
          if (istate.eq.ENUM_DENVAR+1) then
           call HYD_DENS_BC(time,dir,side,ADV,xwall,ADVwall, &
@@ -25028,13 +25003,6 @@ end subroutine initialize2d
             fort_speciesconst((n-1)*num_materials+im)
           enddo
 
-          if (probtype.eq.82) then ! annulus
-           ! fort_tempconst(1) is the inner wall temperature
-           ! twall is the outer wall temperature
-           ! see: subroutine thermal_offset
-           scalc(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(1)
-          endif
-
            ! in: INITDATA
           if (probtype.eq.26) then ! swirl if axis_dir=0 or 1.
 
@@ -26191,7 +26159,7 @@ end subroutine initialize2d
 
       INTEGER_T, parameter :: nhalf=3
       REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T i,j,k,ii,jj,kk,dir2,im,velcomp,tcomp
+      INTEGER_T i,j,k,ii,jj,kk,dir2
       REAL_T problo_arr(SDIM)
       REAL_T probhi_arr(SDIM)
       REAL_T sinprod
@@ -26279,9 +26247,6 @@ end subroutine initialize2d
           (probhi_arr(dir2)-problo_arr(dir2)))
        enddo ! dir2
 
-        stop
-       endif
-         
       enddo
       enddo
       enddo ! i,j,k
