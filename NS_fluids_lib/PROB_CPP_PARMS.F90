@@ -999,7 +999,6 @@ stop
        SUB_SUMINT=>GENERAL_PHASE_CHANGE_SUMINT ! Nusseltt number
       else if (probtype.eq.82) then
        SUB_INIT_MODULE=>INIT_ROTATING_ANNULUS_MODULE
-       SUB_check_vel_rigid=>ROTATING_ANNULUS_check_vel_rigid
        SUB_LS=>ROTATING_ANNULUS_LS
        SUB_VEL=>ROTATING_ANNULUS_VEL
        SUB_PRES=>ROTATING_ANNULUS_PRES
@@ -1008,16 +1007,8 @@ stop
        SUB_VEL_BC=>ROTATING_ANNULUS_VEL_BC
        SUB_PRES_BC=>ROTATING_ANNULUS_PRES_BC
        SUB_STATE_BC=>ROTATING_ANNULUS_STATE_BC
-       SUB_HEATSOURCE=>ROTATING_ANNULUS_HEATSOURCE
-       SUB_EB_heat_source=>ROTATING_ANNULUS_EB_heat_source
-       SUB_microcell_heat_coeff=>ROTATING_ANNULUS_microcell_heat_coeff
-       SUB_velfreestream=>ROTATING_ANNULUS_velfreestream
-       SUB_nucleation=>ROTATING_ANNULUS_nucleation
-       SUB_ICE_SUBSTRATE_DISTANCE=>ROTATING_ANNULUS_ICE_SUBSTRATE_DISTANCE
-       SUB_CFL_HELPER=>ROTATING_ANNULUS_CFL_HELPER
        SUB_INTERNAL_GRAVITY_WAVE_FLAG=> &
          ROTATING_ANNULUS_INTERNAL_GRAVITY_WAVE_FLAG
-       SUB_SUMINT=>ROTATING_ANNULUS_SUMINT ! Nusseltt number
       else
        ! assign null routines here that would cause the program to abort
        ! if called.  In otherwords, these are routines, that if called,

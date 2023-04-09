@@ -414,7 +414,8 @@ end subroutine nozzle2d
          ! dist>0 in the airfoil
         call naca_dist(x,y,z,time,dist)
 
-        ! materialdistsolid: cases that use soliddist.
+        ! materialdistsolid above: user defined
+        ! materialdistsolid below: cases that use soliddist.
        else  
 
         if (probtype.eq.32) then
