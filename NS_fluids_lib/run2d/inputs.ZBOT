@@ -428,7 +428,7 @@ ns.xblob3 = 2.0 # Watts=J/s
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
 ns.continuous_mof = 1 # 0=MOF 1=CMOF
-ns.mof_decision_tree_learning=10000
+ns.mof_decision_tree_learning=100
 ns.mof_machine_learning=0
 
 #-1=Weymouth Yue,  
@@ -436,7 +436,7 @@ ns.mof_machine_learning=0
 ns.EILE_flag        = -1
 
 ns.MOFITERMAX       = 15
-ns.MOFITERMAX_AFTER_PREDICT=0
+ns.MOFITERMAX_AFTER_PREDICT=15
 
 ns.truncate_thickness=2.0
 
