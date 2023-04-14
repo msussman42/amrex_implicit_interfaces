@@ -17,7 +17,7 @@ c Kelvin
 c J/kg
       real*8 Lh
       real*8 g
-      real*8 pr,st,B0
+      real*8 pr,st,B0,tau_c
 
       cpl=801.0
       cpg=1230.0
@@ -48,10 +48,12 @@ c J/kg
 
       g=9.8
       B0=rhol*g*R*R/sigma0
+      tau_c=rhol*cpl*R*R/kl
 
       print *,"pr= ",pr
       print *,"st= ",st
       print *,"B0= ",B0
+      print *,"tau_c= ",tau_c
 
       end
 
