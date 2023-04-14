@@ -553,18 +553,22 @@ stop
            print *,"RCEN invalid"
            stop
           endif
+           ! Lewis and Nagata 2004:
+           ! -2 Omega e_{z} \Times \vec{u}
           unp1(1)=unp1(1)+dt*((un(2)**2)/RCEN+two*angular_velocity*un(2))
           unp1(2)=unp1(2)-dt*((un(1)*un(2))/RCEN+two*angular_velocity*un(1))
 
            ! DTEMP has no units.
+           ! Lewis and Nagata 2004:
+           ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
           unp1(1)=unp1(1)+dt*DTEMP*(angular_velocity**2)*RCEN
          else if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! assume that RCEN > eps > 0 ?
           ! coriolis force:
           ! -2 omega cross v =
-          !  i  j   k
-          !  0  0   angular_velocity
-          !  u  v   w
+          !  rhat  theta_hat   zhat 
+          !  0        0      angular_velocity
+          !  u        v         w
           ! = -2(-angular_vel. v,angular_velocity u)
           unp1(1)=unp1(1)+dt*( two*angular_velocity*un(2) )
           unp1(2)=unp1(2)-dt*( two*angular_velocity*un(1) )
