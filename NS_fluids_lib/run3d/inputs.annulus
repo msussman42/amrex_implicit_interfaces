@@ -6,7 +6,7 @@
 # Multiple Zonal Jets in a Differentially Heated Rotating Annulus
 # number 6
 #
-# Taylor number=4 Omega^2 (rb-ra)^4/nu^2=
+# Taylor number=4 Omega^2 (rb-ra)^4/nu^2=  (Lewis and Nagata (1))
 #  4 (0.8169)^2 (6.02-3.48)^4/(0.01/0.998)^2=
 #  4 (0.8169)^2 (2.54)^4 / (0.01)^2 = 1.1E+6
 # units: (radians^2/s^2) (m^4) / (m^4/s^2)=radians^2 
@@ -15,7 +15,7 @@
 # Taylor number=4 Omega^2 L^5/(nu^2 d)=
 # 4 (3.161)^2 (49-20)^5/( (0.01)^2 12 ) = 6.8e+11
 #
-# Thermal Rossby number=alpha g D Delta T/(Omega^2 R^2)=
+# Thermal Rossby number=alpha g D Delta T/(Omega^2 R^2)= (Lewis and Nagata(2))
 #  (2.1E-4)(980)12 (20)/( (3.161)^2 29^2 )=5.9e-3
 #
 # Thermal Rossby number=alpha g D Delta T/(Omega^2 R^2)=
@@ -43,6 +43,7 @@ stop_time =  3000.0
 
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ, 3=>RTHETA
 geometry.coord_sys_override = 3    # 0 => cart, 1 => RZ, 3=>RTHETA
+# Table II Lewis and Nagata: ra=3.48 rb=6.02  R=6.02-3.48=2.54
 geometry.prob_lo   =  3.48 0.0 0.0
 geometry.prob_hi   =  6.02 6.28318530718 5.0 
 #geometry.prob_lo   =  20.0 0.0 0.0  #SMITH
@@ -146,8 +147,12 @@ ns.adv_dir=2
 ns.uncoupled_viscosity=1
 # Re=rho U L/mu  units of mu=(kg/m^3) (m/s) (m) = kg/(m s)
 # units of nu are kg/(m s)  (m^3/kg) = m^2/s
+# nu=mu/rho=0.01008/.998 ~ .0101 cm^2/s  Table II Lewis and Nagata
 ns.viscconst= 0.0100798 0.0100798 
-ns.denconst=0.998 0.998
+ns.denconst=0.998 0.998 # g/cm^3 Table II Lewis and Nagata
+# Boussinesq term:
+# \vec{g}*rho0*DrhoDT*(T-tempconst)+
+# (1 0 0)*r*rho0*DrhoDT*(T-tempconst)*angular_velocity^2
 ns.DrhoDT=-2.06e-4 0.0 # DrhoDT (alpha) has units of 1/degrees Kelvin
 ns.speciesconst=0.0 0.0 0.0
 ns.speciesviscconst=0.0 0.0 0.0
@@ -155,6 +160,8 @@ ns.speciesviscconst=0.0 0.0 0.0
 # water: 0.58 W/(m K)=0.58 10^7/(100)=58000 cgs
 # CP water=4.18 J/(g K)=4.18 10^7/(g K)
 # 58000/(4.18 10^7 0.998)=0.0014
+# Lewis and Nagata table II:
+# kappa=k/(rho Cv)=0.00140718/(.998 * 1.0)=0.00141 cm^2/s
 ns.heatviscconst= 0.00140718 0.00140718
 ns.stiffCP=1.0 1.0
 ns.pressure_error_cutoff=0.0 0.0

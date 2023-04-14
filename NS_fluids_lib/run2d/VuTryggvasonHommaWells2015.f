@@ -19,27 +19,41 @@ c J/kg
       real*8 g
       real*8 pr,st,B0,tau_c
 
-      cpl=801.0
-      cpg=1230.0
-      cps=801.0
+c     cpl=801.0
+      cpl=910.0
+c     cpg=1230.0
+      cpg=910.0
+c     cps=801.0
+      cps=910.0
 
-      kl=64.0
-      ks=32.0
-      kg=0.101
+c     kl=64.0
+      kl=152.3
+c     ks=32.0
+      ks=76.2
+c     kg=0.101
+      kg=1.52
 
       rhol=2583.0
-      rhog=0.210
+c     rhog=0.210
+      rhog=129.15
       rhos=2350.0
 
-      mul=5.75D-4
-      mug=6.1D-5
+c     mul=5.75D-4
+      mul=2.176D-3
+c     mug=6.1D-5
+      mug=1.08D-4
 
-      sigma0=0.831
+c     sigma0=0.831
+      sigma0=1.74
 
-      TC=1422.0
+c     TC=1422.0
+      TC=1453.0
       TM=1683.4
 
-      R=4.73D-3 
+c     R=4.73D-3 
+c     R=6.0D-3 
+c     R=5.1D-3 
+      R=9.5D-3 
 
       Lh=1.805D+6
 
