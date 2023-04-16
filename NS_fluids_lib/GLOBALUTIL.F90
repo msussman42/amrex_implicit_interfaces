@@ -15706,9 +15706,11 @@ end subroutine print_visual_descriptor
       subroutine tridiag_solve(l,u,d,n,f,soln)
       IMPLICIT NONE
 
-      INTEGER_T n,i
-      REAL_T l(n),u(n),d(n),f(n),soln(n)
-      REAL_T ll(n),uu(n),dd(n),z(n)
+      INTEGER_T, INTENT(in) :: n
+      INTEGER_T :: i
+      REAL_T, INTENT(in) :: l(n),u(n),d(n),f(n)
+      REAL_T, INTENT(out) :: soln(n)
+      REAL_T :: ll(n),uu(n),dd(n),z(n)
 
       dd(1)=d(1)
       uu(1)=u(1)/dd(1)
@@ -15729,6 +15731,93 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine tridiag_solve
+
+       ! dir=0,1,2
+      subroutine 1D_grid_mapping(xlo,xhi,dir,nelement,phys_coord)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, INTENT(in) :: xlo,xhi
+      INTEGER_T, INTENT(in) :: nelement
+      REAL_T, INTENT(out) :: phys_coord(0:nelement)
+      REAL_T, dimension(:), allocatable :: phys_coord_new
+      REAL_T, dimension(:), allocatable :: comp_coord
+      REAL_T, dimension(:), allocatable :: wt_coord
+      REAL_T, dimension(:), allocatable :: tri_l
+      REAL_T, dimension(:), allocatable :: tri_u
+      REAL_T, dimension(:), allocatable :: tri_d
+      REAL_T, dimension(:), allocatable :: tri_f
+      REAL_T, dimension(:), allocatable :: tri_soln
+
+      allocate(comp_coord(0:nelement))
+      allocate(phys_coord_new(0:nelement))
+      allocate(wt_coord(0:nelement-1))
+
+      nsolve=nelement-1
+
+      allocate(tri_l(1:nsolve))
+      allocate(tri_u(1:nsolve))
+      allocate(tri_d(1:nsolve))
+      allocate(tri_f(1:nsolve))
+      allocate(tri_soln(1:nsolve))
+
+      if ((dir.ge.0).and.(dir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir invalid"
+       stop
+      endif
+      if (nelement.ge.1) then
+       ! do nothing
+      else
+       print *,"nelement invalid"
+       stop
+      endif
+
+      comp_dx=(xhi-xlo)/nelement
+      do i=0,nelement
+       comp_coord(i)=xlo+i*comp_dx
+       phys_coord(i)=comp_coord(i)
+      enddo
+
+      nonlinear_conv=0
+      do while (nonlinear_conv.eq.0)
+
+       do i=0,nelement-1 
+        local_phys=half*(phys_coord(i)+phys_coord(i+1))
+        call SUB_MAPPING_WEIGHT(dir,local_wt,local_phys)
+        wt_coord(i)=local_wt/comp_dx
+       enddo
+
+       nsolve=nelement-1
+
+       do i=1,nsolve
+        tri_l(i)=-wt_coord(i-1)
+        tri_u(i)=-wt_coord(i)
+        tri_d(i)=-(tri_l(i)+tri_u(i))
+        tri_f(i)=zero
+       enddo 
+       tri_f(1)=-tri_l(1)*xlo
+       tri_f(nsolve)=-tri_u(nsolve)*xhi
+
+       call tridiag_solve(tri_l,tri_u,tri_d,nsolve,tri_f,tri_soln)
+
+       FIX ME
+      enddo ! while nonlinear_conv.eq.0
+
+      deallocate(tri_l(1:nsolve))
+      deallocate(tri_u(1:nsolve))
+      deallocate(tri_d(1:nsolve))
+      deallocate(tri_f(1:nsolve))
+      deallocate(tri_soln(1:nsolve))
+
+      deallocate(wt_coord)
+      deallocate(comp_coord)
+      deallocate(phys_coord_new)
+
+      return
+      end subroutine 1D_grid_mapping
 
       subroutine patterned_substrates(x,y,z,dist,time,im_substrate, &
                       ptb_dist_low,ptb_dist_high)
