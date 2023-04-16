@@ -24346,7 +24346,9 @@ end subroutine initialize2d
        return
        end subroutine init_initdata
 
-
+        ! fort_initgridmap is called from:
+        !   NavierStokes::post_restart() (called from AmrCore::restart)
+        !   NavierStokes::initData() 
        subroutine fort_initgridmap( &
         verbose, &
         ioproc, &

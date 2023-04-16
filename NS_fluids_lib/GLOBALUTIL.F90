@@ -8934,7 +8934,12 @@ end subroutine print_visual_descriptor
       subroutine get_element_index(i,ielem,isub,bfact)
       IMPLICIT NONE
 
-      INTEGER_T i,ielem,isub,bfact,ipos
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: i
+
+      INTEGER_T, INTENT(out) :: isub,ielem
+
+      INTEGER_T :: ipos
 
       if (bfact.eq.1) then
        ielem=i
@@ -15733,12 +15738,14 @@ end subroutine print_visual_descriptor
       end subroutine tridiag_solve
 
        ! dir=0,1,2
-      subroutine 1D_grid_mapping(xlo,xhi,dir,nelement,phys_coord)
+      subroutine single_dimension_grid_mapping(xlo,xhi,dir, &
+                      nelement,phys_coord,time)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: dir
       REAL_T, INTENT(in) :: xlo,xhi
+      REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: nelement
       REAL_T, INTENT(out) :: phys_coord(0:nelement)
       REAL_T, dimension(:), allocatable :: phys_coord_new
@@ -15749,6 +15756,16 @@ end subroutine print_visual_descriptor
       REAL_T, dimension(:), allocatable :: tri_d
       REAL_T, dimension(:), allocatable :: tri_f
       REAL_T, dimension(:), allocatable :: tri_soln
+
+      REAL_T, PARAMETER :: conv_TOL=1.0D-12
+      REAL_T :: conv_err
+      INTEGER_T :: conv_iter
+      INTEGER_T, PARAMETER :: conv_iter_max=100
+      REAL_T :: comp_dx
+      REAL_T :: local_phys
+      REAL_T :: local_wt
+      INTEGER_T :: nsolve
+      INTEGER_T :: i
 
       allocate(comp_coord(0:nelement))
       allocate(phys_coord_new(0:nelement))
@@ -15776,17 +15793,34 @@ end subroutine print_visual_descriptor
       endif
 
       comp_dx=(xhi-xlo)/nelement
+      if (comp_dx.gt.zero) then
+       ! do nothing
+      else
+       print *,"comp_dt invalid"
+       stop
+      endif
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid"
+       stop
+      endif
+
       do i=0,nelement
        comp_coord(i)=xlo+i*comp_dx
        phys_coord(i)=comp_coord(i)
       enddo
+      phys_coord(nelement)=xhi ! get rid of floating point round-off err
 
-      nonlinear_conv=0
-      do while (nonlinear_conv.eq.0)
+      conv_err=conv_TOL*1.0D+10
+      conv_iter=0
+
+      do while (conv_err.gt.conv_TOL)
 
        do i=0,nelement-1 
         local_phys=half*(phys_coord(i)+phys_coord(i+1))
-        call SUB_MAPPING_WEIGHT(dir,local_wt,local_phys)
+         ! returns (1/w) where w>>1 in "trouble" regions
+        call SUB_MAPPING_WEIGHT_COEFF(dir,local_wt,local_phys,time)
         wt_coord(i)=local_wt/comp_dx
        enddo
 
@@ -15803,21 +15837,39 @@ end subroutine print_visual_descriptor
 
        call tridiag_solve(tri_l,tri_u,tri_d,nsolve,tri_f,tri_soln)
 
-       FIX ME
-      enddo ! while nonlinear_conv.eq.0
+       phys_coord_new(0)=xlo
+       phys_coord_new(nelement)=xhi
 
-      deallocate(tri_l(1:nsolve))
-      deallocate(tri_u(1:nsolve))
-      deallocate(tri_d(1:nsolve))
-      deallocate(tri_f(1:nsolve))
-      deallocate(tri_soln(1:nsolve))
+       conv_err=zero
+       do i=1,nsolve
+        phys_coord_new(i)=tri_soln(i)
+        conv_err=conv_err+(phys_coord_new(i)-phys_coord(i))**2
+        phys_coord(i)=phys_coord_new(i)
+       enddo
+       conv_err=sqrt(conv_err/nelement)
+       conv_iter=conv_iter+1
+       if ((conv_iter.ge.1).and. &
+           (conv_iter.le.conv_iter_max)) then
+        ! do nothing
+       else
+        print *,"conv_iter out of range"
+        stop
+       endif
+       
+      enddo ! do while (conv_err.gt.conv_TOL)
+
+      deallocate(tri_l)
+      deallocate(tri_u)
+      deallocate(tri_d)
+      deallocate(tri_f)
+      deallocate(tri_soln)
 
       deallocate(wt_coord)
       deallocate(comp_coord)
       deallocate(phys_coord_new)
 
       return
-      end subroutine 1D_grid_mapping
+      end subroutine single_dimension_grid_mapping
 
       subroutine patterned_substrates(x,y,z,dist,time,im_substrate, &
                       ptb_dist_low,ptb_dist_high)

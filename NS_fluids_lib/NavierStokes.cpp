@@ -1500,7 +1500,8 @@ void fortran_parameters() {
  pp.getarr("tempconst",tempconst_temp,0,NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++)
   initial_temperature_temp[im]=tempconst_temp[im];
- pp.queryAdd("initial_temperature",initial_temperature_temp,NavierStokes::num_materials);
+ pp.queryAdd("initial_temperature",initial_temperature_temp,
+   NavierStokes::num_materials);
 
   //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
   //DrhoDT has units of 1/(Degrees Kelvin)
@@ -1531,7 +1532,8 @@ void fortran_parameters() {
   den_ceiling_temp[im]=1.0e+20;
   den_floor_temp[im]=0.0;
  }
- pp.queryAdd("cavitation_vapor_density",cavdenconst_temp,NavierStokes::num_materials);
+ pp.queryAdd("cavitation_vapor_density",cavdenconst_temp,
+     NavierStokes::num_materials);
  pp.queryAdd("density_floor",den_floor_temp,NavierStokes::num_materials);
  pp.queryAdd("density_ceiling",den_ceiling_temp,NavierStokes::num_materials);
 
@@ -1584,13 +1586,15 @@ void fortran_parameters() {
  pp.queryAdd("viscosity_state_model",
   viscosity_state_model_temp,NavierStokes::num_materials);
 
- pp.queryAdd("heatflux_factor",heatflux_factor_temp,NavierStokes::num_materials);
+ pp.queryAdd("heatflux_factor",heatflux_factor_temp,
+	NavierStokes::num_materials);
  pp.getarr("heatviscconst",heatviscconst_temp,0,NavierStokes::num_materials);
 
  Vector<Real> prerecalesce_heatviscconst_temp(NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_heatviscconst_temp[im]=heatviscconst_temp[im];
- pp.queryAdd("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,NavierStokes::num_materials);
+ pp.queryAdd("precalesce_heatviscconst",prerecalesce_heatviscconst_temp,
+  NavierStokes::num_materials);
 
  if (NavierStokes::num_species_var>0) {
   pp.queryAdd("speciesconst",speciesconst_temp,
