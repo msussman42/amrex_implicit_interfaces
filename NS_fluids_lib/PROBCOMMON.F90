@@ -555,6 +555,12 @@ implicit none
       INTEGER_T cache_index_low,cache_index_high,cache_max_level
       INTEGER_T :: grid_cache_allocated=0
 
+       ! index,dir
+      REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
+      REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
+      INTEGER_T :: mapping_n_cell(3)
+      INTEGER_T :: mapping_allocated=0
+
       INTEGER_T :: number_of_source_regions=0
       INTEGER_T :: number_of_threads_regions=0
 
@@ -684,6 +690,14 @@ implicit none
       REAL_T, INTENT(in) :: critical_length
       REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
       end subroutine TEMPLATE_wallfunc
+
+       ! returns (1/w) where w>>1 in "trouble" regions
+      subroutine TEMPLATE_MAPPING_WEIGHT_COEFF(dir,wt,phys_x,time)
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, INTENT(out) :: wt
+      REAL_T, INTENT(in) :: phys_x
+      REAL_T, INTENT(in) :: time
+      end subroutine TEMPLATE_MAPPING_WEIGHT_COEFF
 
       subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &
           num_materials_in,num_threads_in)
@@ -1287,6 +1301,9 @@ implicit none
       PROCEDURE(TEMPLATE_ORDER_NODES), POINTER :: SUB_ORDER_NODES
 
       PROCEDURE(TEMPLATE_wallfunc), POINTER :: SUB_wallfunc
+
+      PROCEDURE(TEMPLATE_MAPPING_WEIGHT_COEFF), POINTER :: &
+              SUB_MAPPING_WEIGHT_COEFF
 
       PROCEDURE(TEMPLATE_INIT_REGIONS_LIST), POINTER :: SUB_INIT_REGIONS_LIST
       PROCEDURE(TEMPLATE_CHARFN_REGION), POINTER :: SUB_CHARFN_REGION

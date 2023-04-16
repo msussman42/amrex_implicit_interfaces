@@ -654,7 +654,8 @@ stop
       used_probtypes(18)=29  ! passive_advect_module
       used_probtypes(19)=31  ! passive_advect_module
       used_probtypes(20)=710 ! CAVITY_PHASE_CHANGE
-      used_probtypes(21)=82  ! Differentially Heated Rotating Annulus: ROTATING_ANNULUS
+      used_probtypes(21)=82  ! Differentially Heated Rotating Annulus: 
+                             ! ROTATING_ANNULUS
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_DEALLOCATE_MODULE=>DEALLOCATE_STUB_MODULE
@@ -697,6 +698,8 @@ stop
       SUB_clamped_LS_no_scale=>STUB_clamped_LS
 
       SUB_wallfunc=>STUB_wallfunc
+
+      SUB_MAPPING_WEIGHT_COEFF=>STUB_MAPPING_WEIGHT_COEFF
 
       SUB_INIT_REGIONS_LIST=>STUB_INIT_REGIONS_LIST
       SUB_CHARFN_REGION=>STUB_CHARFN_REGION
@@ -1099,6 +1102,8 @@ stop
       endif
       bfactmax=16
       call sanity_check(bfactmax+2)
+       ! declared in: GLOBALUTIL.F90
+       ! define GG,GL weights for interpolation and derivatives
       call init_cache(bfactmax+2)
       
       if (ioproc.eq.1) then
@@ -1728,7 +1733,7 @@ stop
          ccgravity_boussinesq_vector(local_dir)
       enddo
       
-       ! in: GLOBALUTIL.F90
+       ! declared in: GLOBALUTIL.F90
       call init_density_at_depth()
       
       pres_homflag=0
@@ -1843,7 +1848,16 @@ stop
       else
        ! do nothing 
       endif
-      
+     
+       ! initialize grid mapping variables here.
+       ! mapping_n_cell=n_cell * 2^max_level
+       ! REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
+       ! REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
+       ! INTEGER_T :: mapping_n_cell(3)
+       ! INTEGER_T :: mapping_allocated=0
+
+
+
        ! this loop occurs after user defined initialization.
       do im=1,num_materials
        call init_massfrac_parm(fort_denconst(im),massfrac_parm,im)

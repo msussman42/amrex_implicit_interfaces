@@ -1117,6 +1117,40 @@ REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
 
 end subroutine STUB_wallfunc
 
+subroutine STUB_MAPPING_WEIGHT_COEFF(dir,wt,phys_x,time)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: dir
+REAL_T, INTENT(out) :: wt
+REAL_T, INTENT(in) :: phys_x
+REAL_T, INTENT(in) :: time
+
+if (time.ge.zero) then
+ ! do nothing
+else
+ print *,"time invalid"
+ stop
+endif
+if ((dir.ge.0).and.(dir.lt.SDIM)) then
+ ! do nothing
+else
+ print *,"dir invalid"
+ stop
+endif
+if ((phys_x.ge.zero).or.(phys_x.le.zero)) then
+ ! do nothing
+else
+ print *,"phys_x is NaN"
+ stop
+endif
+
+wt=one
+
+return
+end subroutine STUB_MAPPING_WEIGHT_COEFF
+
+
 subroutine STUB_INIT_REGIONS_LIST(constant_density_all_time, &
       num_materials_in,num_threads_in)
 use probcommon_module
