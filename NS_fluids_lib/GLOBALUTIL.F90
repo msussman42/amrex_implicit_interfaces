@@ -15737,17 +15737,180 @@ end subroutine print_visual_descriptor
       return
       end subroutine tridiag_solve
 
-       ! dir=0,1,2
-      subroutine single_dimension_grid_mapping(xlo,xhi,dir, &
-                      nelement,phys_coord,time)
+      REAL_T function xphys_of_xcomp(oldnew,dir,xcomp)
+      use probcommon_module
+      IMPLICIT NONE
+      INTEGER_T, INTENT(in) :: dir
+      INTEGER_T, INTENT(in) :: oldnew
+      REAL_T, INTENT(in) :: xcomp
+      INTEGER_T :: nelement
+      INTEGER_T :: icrit
+      REAL_T :: xlo,xhi,comp_dx
+      REAL_T :: xcell_lo,xcell_hi
+      REAL_T :: xphys_lo,xphys_hi
+ 
+      nelement=mapping_n_cell(dir)
+      if (nelement.ge.1) then
+       ! do nothing
+      else
+       print *,"nelement invalid"
+       stop
+      endif
+      if ((oldnew.eq.0).or.(oldnew.eq.1)) then
+       ! do nothing
+      else
+       print *,"oldnew invalid"
+       stop
+      endif
+      if ((dir.ge.0).and.(dir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir invalid"
+       stop
+      endif
+      xlo=problo_array(dir+1)
+      xhi=probhi_array(dir+1)
+      comp_dx=(xhi-xlo)/nelement
+      if (comp_dx.gt.zero) then
+       ! do nothing
+      else
+       print *,"comp_dx invalid"
+       stop
+      endif
+
+      if (xcomp.le.xlo) then
+       xphys_of_xcomp=xcomp
+      else if (xcomp.ge.xhi) then
+       xphys_of_xcomp=xcomp
+      else if ((xcomp.gt.xlo).and.(xcomp.lt.xhi)) then
+        ! xcomp=xlo+(i+1/2)*dx
+        ! i=NINT((xcomp-xlo)/dx-1/2)
+       icrit=NINT((xcomp-xlo)/comp_dx-half)
+       if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
+        xcell_lo=xlo+icrit*comp_dx
+        xcell_hi=xcell_lo+comp_dx
+        xphys_lo=mapping_comp_to_phys(oldnew,icrit,dir)
+        xphys_hi=mapping_comp_to_phys(oldnew,icrit+1,dir)
+        if (xcomp.le.xcell_lo) then
+         xphys_of_xcomp=xphys_lo
+        else if (xcomp.ge.xcell_hi) then
+         xphys_of_xcomp=xphys_hi
+        else if ((xcomp.gt.xcell_lo).and. &
+                 (xcomp.lt.xcell_hi)) then
+         xphys_of_xcomp=xphys_lo+ &
+            (xphys_hi-xphys_lo)* &
+            (xcomp-xcell_lo)/(xcell_hi-xcell_lo)
+        else
+         print *,"xcomp invalid"
+         stop
+        endif
+       else if (icrit.lt.0) then
+        xphys_of_xcomp=xcomp
+       else if (icrit.ge.nelement) then
+        xphys_of_xcomp=xcomp
+       else
+        print *,"icrit invalid"
+        stop
+       endif
+      else
+       print *,"xcomp is NaN"
+       stop
+      endif
+      end function xphys_of_xcomp
+
+
+      REAL_T function xcomp_of_xphys(oldnew,dir,xphys)
+      use probcommon_module
+      IMPLICIT NONE
+      INTEGER_T, INTENT(in) :: dir
+      INTEGER_T, INTENT(in) :: oldnew
+      REAL_T, INTENT(in) :: xphys
+      INTEGER_T :: nelement
+      INTEGER_T :: icrit
+      REAL_T :: xlo,xhi,comp_dx
+      REAL_T :: xcell_lo,xcell_hi
+      REAL_T :: xcomp_lo,xcomp_hi
+ 
+      nelement=mapping_n_cell(dir)
+      if (nelement.ge.1) then
+       ! do nothing
+      else
+       print *,"nelement invalid"
+       stop
+      endif
+      if ((oldnew.eq.0).or.(oldnew.eq.1)) then
+       ! do nothing
+      else
+       print *,"oldnew invalid"
+       stop
+      endif
+      if ((dir.ge.0).and.(dir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir invalid"
+       stop
+      endif
+      xlo=problo_array(dir+1)
+      xhi=probhi_array(dir+1)
+      comp_dx=(xhi-xlo)/nelement
+      if (comp_dx.gt.zero) then
+       ! do nothing
+      else
+       print *,"comp_dx invalid"
+       stop
+      endif
+
+      if (xphys.le.xlo) then
+       xcomp_of_xphys=xphys
+      else if (xphys.ge.xhi) then
+       xcomp_of_xphys=xphys
+      else if ((xphys.gt.xlo).and.(xphys.lt.xhi)) then
+        ! xphys=xlo+(i+1/2)*dx
+        ! i=NINT((xphys-xlo)/dx-1/2)
+       icrit=NINT((xphys-xlo)/comp_dx-half)
+       if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
+        xcell_lo=xlo+icrit*comp_dx
+        xcell_hi=xcell_lo+comp_dx
+        xcomp_lo=mapping_phys_to_comp(oldnew,icrit,dir)
+        xcomp_hi=mapping_phys_to_comp(oldnew,icrit+1,dir)
+        if (xphys.le.xcell_lo) then
+         xcomp_of_xphys=xcomp_lo
+        else if (xphys.ge.xcell_hi) then
+         xcomp_of_xphys=xcomp_hi
+        else if ((xphys.gt.xcell_lo).and. &
+                 (xphys.lt.xcell_hi)) then
+         xcomp_of_xphys=xcomp_lo+ &
+            (xcomp_hi-xcomp_lo)* &
+            (xphys-xcell_lo)/(xcell_hi-xcell_lo)
+        else
+         print *,"xphys invalid"
+         stop
+        endif
+       else if (icrit.lt.0) then
+        xcomp_of_xphys=xphys
+       else if (icrit.ge.nelement) then
+        xcomp_of_xphys=xphys
+       else
+        print *,"icrit invalid"
+        stop
+       endif
+      else
+       print *,"xphys is NaN"
+       stop
+      endif
+      end function xcomp_of_xphys
+
+
+       ! oldnew=0,1 dir=0,1,2
+      subroutine single_dimension_grid_mapping(oldnew,dir)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: dir
-      REAL_T, INTENT(in) :: xlo,xhi
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: nelement
-      REAL_T, INTENT(out) :: phys_coord(0:nelement)
+      INTEGER_T, INTENT(in) :: oldnew
+      REAL_T :: xlo,xhi
+      REAL_T :: time
+      INTEGER_T :: nelement
       REAL_T, dimension(:), allocatable :: phys_coord_new
       REAL_T, dimension(:), allocatable :: comp_coord
       REAL_T, dimension(:), allocatable :: wt_coord
@@ -15767,6 +15930,11 @@ end subroutine print_visual_descriptor
       INTEGER_T :: nsolve
       INTEGER_T :: i
 
+      nelement=mapping_n_cell(dir)
+      time=mapping_time(oldnew)
+      xlo=problo_array(dir+1)
+      xhi=probhi_array(dir+1)
+
       allocate(comp_coord(0:nelement))
       allocate(phys_coord_new(0:nelement))
       allocate(wt_coord(0:nelement-1))
@@ -15779,6 +15947,12 @@ end subroutine print_visual_descriptor
       allocate(tri_f(1:nsolve))
       allocate(tri_soln(1:nsolve))
 
+      if ((oldnew.eq.0).or.(oldnew.eq.1)) then
+       ! do nothing
+      else
+       print *,"oldnew invalid"
+       stop
+      endif
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
        ! do nothing
       else
@@ -15796,7 +15970,7 @@ end subroutine print_visual_descriptor
       if (comp_dx.gt.zero) then
        ! do nothing
       else
-       print *,"comp_dt invalid"
+       print *,"comp_dx invalid"
        stop
       endif
       if (time.ge.zero) then
@@ -15808,9 +15982,10 @@ end subroutine print_visual_descriptor
 
       do i=0,nelement
        comp_coord(i)=xlo+i*comp_dx
-       phys_coord(i)=comp_coord(i)
+       mapping_comp_to_phys(oldnew,i,dir)=comp_coord(i)
       enddo
-      phys_coord(nelement)=xhi ! get rid of floating point round-off err
+       ! get rid of floating point round-off err
+      mapping_comp_to_phys(oldnew,nelement,dir)=xhi 
 
       conv_err=conv_TOL*1.0D+10
       conv_iter=0
@@ -15818,7 +15993,8 @@ end subroutine print_visual_descriptor
       do while (conv_err.gt.conv_TOL)
 
        do i=0,nelement-1 
-        local_phys=half*(phys_coord(i)+phys_coord(i+1))
+        local_phys=half*(mapping_comp_to_phys(oldnew,i,dir)+ &
+                         mapping_comp_to_phys(oldnew,i+1,dir))
          ! returns (1/w) where w>>1 in "trouble" regions
         call SUB_MAPPING_WEIGHT_COEFF(dir,local_wt,local_phys,time)
         wt_coord(i)=local_wt/comp_dx
@@ -15843,8 +16019,10 @@ end subroutine print_visual_descriptor
        conv_err=zero
        do i=1,nsolve
         phys_coord_new(i)=tri_soln(i)
-        conv_err=conv_err+(phys_coord_new(i)-phys_coord(i))**2
-        phys_coord(i)=phys_coord_new(i)
+        conv_err=conv_err+ &
+          (mapping_comp_to_phys(oldnew,i,dir)-phys_coord_new(i))**2
+        mapping_comp_to_phys(oldnew,i,dir)= &
+           phys_coord_new(i)
        enddo
        conv_err=sqrt(conv_err/nelement)
        conv_iter=conv_iter+1
@@ -17781,8 +17959,10 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im,ibase,stage
-      REAL_T density,temperature,mu
+      INTEGER_T, INTENT(in) :: im
+      INTEGER_T :: ibase,stage
+      REAL_T, INTENT(in) :: density,temperature
+      REAL_T mu
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
