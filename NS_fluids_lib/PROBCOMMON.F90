@@ -555,10 +555,12 @@ implicit none
       INTEGER_T cache_index_low,cache_index_high,cache_max_level
       INTEGER_T :: grid_cache_allocated=0
 
-       ! index,dir
-      REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
-      REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
-      INTEGER_T :: mapping_n_cell(3)
+       ! old/new,index,dir
+       ! 0=old 1=new
+      REAL_T, allocatable, dimension(:,:,:) :: mapping_comp_to_phys
+      REAL_T, allocatable, dimension(:,:,:) :: mapping_phys_to_comp
+      REAL_T :: mapping_time(0:1)  ! 0=old  1=new
+      INTEGER_T :: mapping_n_cell(0:2)
       INTEGER_T :: mapping_allocated=0
 
       INTEGER_T :: number_of_source_regions=0
