@@ -1851,12 +1851,29 @@ stop
      
        ! initialize grid mapping variables here.
        ! mapping_n_cell=n_cell * 2^max_level
-       ! REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
-       ! REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
+       !  old/new,index,dir
+       ! REAL_T, allocatable, dimension(:,:,:) :: mapping_comp_to_phys
+       ! REAL_T, allocatable, dimension(:,:,:) :: mapping_phys_to_comp
        ! INTEGER_T :: mapping_n_cell(3)
        ! INTEGER_T :: mapping_allocated=0
 
-
+      mapping_allocated=1
+      mapping_time(0)=zero
+      mapping_time(1)=zero
+      mapping_n_cell_max=0
+      do local_dir=0,SDIM-1
+       mapping_n_cell(local_dir+1)=fort_n_cell(local_dir+1)
+       do level=1,fort_max_level
+        mapping_n_cell(local_dir+1)=2*mapping_n_cell(local_dir+1)
+       enddo
+       mapping_n_cell_max=max(mapping_n_cell_max,mapping_n_cell(local_dir+1))
+      enddo ! local_dir=0,SDIM-1
+      allocate(mapping_comp_to_phys(0:1,0:mapping_n_cell_max,0:2))
+      allocate(mapping_phys_to_comp(0:1,0:mapping_n_cell_max,0:2))
+      do local_dir=0,SDIM-1
+       call single_dimension_grid_mapping(0,local_dir)
+       call single_dimension_grid_mapping(1,local_dir)
+      enddo
 
        ! this loop occurs after user defined initialization.
       do im=1,num_materials

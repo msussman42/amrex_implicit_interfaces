@@ -9036,7 +9036,7 @@ end subroutine print_visual_descriptor
          print *,"bfact invalid27"
          stop
         endif
-        x(side*2*icell)=xabs
+        x(side*2*icell)=xphys_of_xcomp(1,dir-1,xabs)
 
        enddo ! icell
 
@@ -9078,7 +9078,7 @@ end subroutine print_visual_descriptor
          stop
         endif
     
-        x(side*(2*imac-1))=xabs
+        x(side*(2*imac-1))=xphys_of_xcomp(1,dir-1,xabs)
        enddo ! imac
       enddo ! side
 
@@ -9087,6 +9087,7 @@ end subroutine print_visual_descriptor
 
        ! x(0) is a gauss-Lobatto node
        ! x(-1) and x(1) are gauss nodes....
+       ! 1<=dir<=sdim
       subroutine gridsten1DMAC(x,xlo,i,fablo,bfact,dx,dir,nhalf)
       use LegendreNodes
 
@@ -9157,7 +9158,7 @@ end subroutine print_visual_descriptor
          print *,"bfact invalid30"
          stop
         endif
-        x(side*(2*icell-1))=xabs
+        x(side*(2*icell-1))=xphys_of_xcomp(1,dir-1,xabs)
 
        enddo ! icell
 
@@ -9193,14 +9194,12 @@ end subroutine print_visual_descriptor
          stop
         endif
     
-        x(side*2*imac)=xabs
+        x(side*2*imac)=xphys_of_xcomp(1,dir-1,xabs)
        enddo ! imac
       enddo ! side
 
       return
       end subroutine gridsten1DMAC
-
-
 
 
 
@@ -13786,12 +13785,16 @@ end subroutine print_visual_descriptor
 
       INTEGER_T lo_e,i1,e_index,dir
       REAL_T xnodes(bfact+1)
+      REAL_T xmap(SDIM)
 
        ! NINT=nearest int
       do dir=1,SDIM
+
+       xmap(dir)=xcomp_of_xphys(1,dir-1,x(dir))
+
        if (bfact.eq.1) then  ! evenly spaced points
         ! x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
-        cell_index(dir)=NINT( (x(dir)-xlo(dir))/dx(dir)-half )+lo(dir)
+        cell_index(dir)=NINT( (xmap(dir)-xlo(dir))/dx(dir)-half )+lo(dir)
        else if (bfact.gt.1) then
         lo_e=lo(dir)/bfact
         if (lo_e*bfact.ne.lo(dir)) then
@@ -13802,17 +13805,18 @@ end subroutine print_visual_descriptor
          ! element that contains x)
          ! dx_e=bfact*dx
          ! x=(e_index-lo_e+1/2)dx_e+xlo
-        e_index=NINT( (x(dir)-xlo(dir))/(bfact*dx(dir))-half )+lo_e
+        e_index=NINT( (xmap(dir)-xlo(dir))/(bfact*dx(dir))-half )+lo_e
          ! returns the Gauss Lobatto points in element e_index
         call element_GLnodes1D(xnodes,xlo(dir),e_index,lo_e, &
          dx(dir),bfact)
-        if (x(dir).le.xnodes(1)) then
+        if (xmap(dir).le.xnodes(1)) then
          cell_index(dir)=e_index*bfact
-        else if (x(dir).ge.xnodes(bfact+1)) then 
+        else if (xmap(dir).ge.xnodes(bfact+1)) then 
          cell_index(dir)=e_index*bfact+bfact-1
         else
          do i1=1,bfact
-          if ((x(dir).ge.xnodes(i1)).and.(x(dir).le.xnodes(i1+1))) then
+          if ((xmap(dir).ge.xnodes(i1)).and. &
+              (xmap(dir).le.xnodes(i1+1))) then
            cell_index(dir)=e_index*bfact+i1-1
           endif
          enddo
@@ -13850,6 +13854,7 @@ end subroutine print_visual_descriptor
       INTEGER_T i1crit
       INTEGER_T dir_local
       REAL_T xnodes(bfact+1)
+      REAL_T xmap(SDIM)
 
       if ((dir_mac.ge.0).and.(dir_mac.lt.SDIM)) then
        ! do nothing
@@ -13860,16 +13865,19 @@ end subroutine print_visual_descriptor
 
        ! NINT=nearest int
       do dir_local=1,SDIM
+
+       xmap(dir_local)=xcomp_of_xphys(1,dir_local-1,x(dir_local))
+
        if (bfact.eq.1) then  ! evenly spaced points
         ! dir_local!=dir_mac+1: x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
         ! dir_local==dir_mac+1: x=(i-lo)dx+xlo  i=(x-xlo)/dx+lo
         if (dir_local.ne.dir_mac+1) then
          mac_cell_index(dir_local)= &
-          NINT( (x(dir_local)-xlo(dir_local))/dx(dir_local)-half )+ &
+          NINT( (xmap(dir_local)-xlo(dir_local))/dx(dir_local)-half )+ &
           lo(dir_local)
         else if (dir_local.eq.dir_mac+1) then
          mac_cell_index(dir_local)= &
-          NINT( (x(dir_local)-xlo(dir_local))/dx(dir_local) )+ &
+          NINT( (xmap(dir_local)-xlo(dir_local))/dx(dir_local) )+ &
           lo(dir_local)
         else
          print *,"dir_local or dir_mac bust"
@@ -13886,20 +13894,21 @@ end subroutine print_visual_descriptor
          ! dx_e=bfact*dx
          ! x=(e_index-lo_e+1/2)dx_e+xlo
         e_index= &
-          NINT( (x(dir_local)-xlo(dir_local))/(bfact*dx(dir_local))-half )+lo_e
+          NINT( (xmap(dir_local)-xlo(dir_local))/ &
+          (bfact*dx(dir_local))-half )+lo_e
          ! returns the Gauss Lobatto points in element e_index
         call element_GLnodes1D(xnodes,xlo(dir_local),e_index,lo_e, &
          dx(dir_local),bfact)
        
         if (dir_local.ne.dir_mac+1) then
-         if (x(dir_local).le.xnodes(1)) then
+         if (xmap(dir_local).le.xnodes(1)) then
           mac_cell_index(dir_local)=e_index*bfact
-         else if (x(dir_local).ge.xnodes(bfact+1)) then 
+         else if (xmap(dir_local).ge.xnodes(bfact+1)) then 
           mac_cell_index(dir_local)=e_index*bfact+bfact-1
          else
           do i1=1,bfact
-           if ((x(dir_local).ge.xnodes(i1)).and. &
-               (x(dir_local).le.xnodes(i1+1))) then
+           if ((xmap(dir_local).ge.xnodes(i1)).and. &
+               (xmap(dir_local).le.xnodes(i1+1))) then
             mac_cell_index(dir_local)=e_index*bfact+i1-1
            endif
           enddo
@@ -13909,8 +13918,8 @@ end subroutine print_visual_descriptor
          i1crit=1
          do i1=2,bfact+1
           if (xnodes(i1).gt.xnodes(i1crit)) then
-           if (abs(x(dir_local)-xnodes(i1)).le. &
-               abs(x(dir_local)-xnodes(i1crit))) then
+           if (abs(xmap(dir_local)-xnodes(i1)).le. &
+               abs(xmap(dir_local)-xnodes(i1crit))) then
             i1crit=i1
            endif
           else
@@ -13938,23 +13947,27 @@ end subroutine print_visual_descriptor
        bfact,dx,xlo,lo,x,node_index)
       IMPLICIT NONE
 
-      INTEGER_T bfact
-      INTEGER_T lo(SDIM)
-      REAL_T x(SDIM)
-      REAL_T dx(SDIM)
-      REAL_T xlo(SDIM)
-      INTEGER_T node_index(SDIM)
+      INTEGER_T, INTENT(in) :: bfact
+      INTEGER_T, INTENT(in) :: lo(SDIM)
+      REAL_T, INTENT(in) ::  x(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: xlo(SDIM)
+      INTEGER_T, INTENT(out) :: node_index(SDIM)
       INTEGER_T lo_e
       INTEGER_T i1
       INTEGER_T i1crit
       INTEGER_T e_index,dir
       REAL_T xnodes(bfact+1)
+      REAL_T xmap(SDIM)
 
        ! NINT=nearest int
       do dir=1,SDIM
+
+       xmap(dir)=xcomp_of_xphys(1,dir-1,x(dir))
+
        if (bfact.eq.1) then ! evenly spaced points
         ! x=(i-lo)dx+xlo  i=(x-xlo)/dx+lo
-        node_index(dir)=NINT( (x(dir)-xlo(dir))/dx(dir) )+lo(dir)
+        node_index(dir)=NINT( (xmap(dir)-xlo(dir))/dx(dir) )+lo(dir)
        else if (bfact.gt.1) then
         lo_e=lo(dir)/bfact
         if (lo_e*bfact.ne.lo(dir)) then
@@ -13965,7 +13978,7 @@ end subroutine print_visual_descriptor
          ! element that contains x)
          ! dx_e=bfact*dx
          ! x=(e_index-lo_e+1/2)dx_e+xlo
-        e_index=NINT( (x(dir)-xlo(dir))/(bfact*dx(dir))-half )+lo_e
+        e_index=NINT( (xmap(dir)-xlo(dir))/(bfact*dx(dir))-half )+lo_e
          ! returns the Gauss Lobatto points in element e_index
          !  e.g. bfact=4
          !  element e_index=0
@@ -13976,7 +13989,8 @@ end subroutine print_visual_descriptor
         i1crit=1
         do i1=2,bfact+1
          if (xnodes(i1).gt.xnodes(i1crit)) then
-          if (abs(x(dir)-xnodes(i1)).le.abs(x(dir)-xnodes(i1crit))) then
+          if (abs(xmap(dir)-xnodes(i1)).le. &
+              abs(xmap(dir)-xnodes(i1crit))) then
            i1crit=i1
           endif
          else
@@ -15818,7 +15832,7 @@ end subroutine print_visual_descriptor
       endif
       end function xphys_of_xcomp
 
-
+       !dir=0..sdim-1
       REAL_T function xcomp_of_xphys(oldnew,dir,xphys)
       use probcommon_module
       IMPLICIT NONE

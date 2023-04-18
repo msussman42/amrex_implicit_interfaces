@@ -561,6 +561,7 @@ implicit none
       REAL_T, allocatable, dimension(:,:,:) :: mapping_phys_to_comp
       REAL_T :: mapping_time(0:1)  ! 0=old  1=new
       INTEGER_T :: mapping_n_cell(0:2)
+      INTEGER_T :: mapping_n_cell_max=0
       INTEGER_T :: mapping_allocated=0
 
       INTEGER_T :: number_of_source_regions=0
