@@ -15900,6 +15900,80 @@ end subroutine print_visual_descriptor
       endif
       end function xcomp_of_xphys
 
+       ! solve x(X)-xstar=0 for Xstar using Newton's method.
+      subroutine inverse_mapping(phys_coord,comp_coord,oldnew,dir)
+      use probcommon_module
+      IMPLICIT NONE
+
+      REAL_T :: xlo,xhi
+      REAL_T, INTENT(in) :: phys_coord 
+      REAL_T, INTENT(inout) :: comp_coord 
+      INTEGER_T, INTENT(in) :: oldnew
+      INTEGER_T :: nelement
+      INTEGER_T, INTENT(in) :: dir
+      REAL_T, PARAMETER :: conv_TOL=1.0D-12
+      REAL_T :: conv_err
+      INTEGER_T :: conv_iter
+      INTEGER_T, PARAMETER :: conv_iter_max=100
+      REAL_T :: comp_dx
+      REAL_T :: comp_lo,comp_hi
+      REAL_T :: fprime,ff
+      REAL_T :: comp_coord_new
+
+      nelement=mapping_n_cell(dir)
+      xlo=problo_array(dir+1)
+      xhi=probhi_array(dir+1)
+      if ((dir.ge.0).and.(dir.lt.SDIM)) then
+       ! do nothing
+      else
+       print *,"dir invalid"
+       stop
+      endif
+      comp_dx=(xhi-xlo)/nelement
+      if (comp_dx.gt.zero) then
+       ! do nothing
+      else
+       print *,"comp_dx invalid"
+       stop
+      endif
+      if (nelement.ge.1) then
+       ! do nothing
+      else
+       print *,"nelement invalid"
+       stop
+      endif
+      conv_err=conv_TOL*1.0D+10
+      conv_iter=0
+       ! solve x(X)-xstar=0 for Xstar using Newton's method.
+      do while (conv_err.gt.conv_TOL)
+       comp_hi=comp_coord+comp_dx*half
+       comp_lo=comp_coord-comp_dx*half
+       fprime=(xphys_of_xcomp(oldnew,dir,comp_hi)- &
+               xphys_of_xcomp(oldnew,dir,comp_lo))/comp_dx
+       if (fprime.gt.zero) then
+        ! do nothing
+       else
+        print *,"fprime must be positive"
+        stop
+       endif
+ 
+       ff=xphys_of_xcomp(oldnew,dir,comp_coord)-phys_coord
+       comp_coord_new=comp_coord-ff/fprime 
+ 
+       conv_err=abs(comp_coord-comp_coord_new)
+       comp_coord=comp_coord_new
+       conv_iter=conv_iter+1
+       if ((conv_iter.ge.1).and. &
+           (conv_iter.le.conv_iter_max)) then
+        ! do nothing
+       else
+        print *,"conv_iter out of range"
+        stop
+       endif
+
+      enddo ! while (conv_err.gt.conv_TOL)
+
+      end subroutine inverse_mapping
 
        ! oldnew=0,1 dir=0,1,2
       subroutine single_dimension_grid_mapping(oldnew,dir)
@@ -15911,8 +15985,11 @@ end subroutine print_visual_descriptor
       REAL_T :: xlo,xhi
       REAL_T :: time
       INTEGER_T :: nelement
+
+      REAL_T :: comp_coord
+      REAL_T :: phys_coord
+
       REAL_T, dimension(:), allocatable :: phys_coord_new
-      REAL_T, dimension(:), allocatable :: comp_coord
       REAL_T, dimension(:), allocatable :: wt_coord
       REAL_T, dimension(:), allocatable :: tri_l
       REAL_T, dimension(:), allocatable :: tri_u
@@ -15935,7 +16012,6 @@ end subroutine print_visual_descriptor
       xlo=problo_array(dir+1)
       xhi=probhi_array(dir+1)
 
-      allocate(comp_coord(0:nelement))
       allocate(phys_coord_new(0:nelement))
       allocate(wt_coord(0:nelement-1))
 
@@ -15981,8 +16057,8 @@ end subroutine print_visual_descriptor
       endif
 
       do i=0,nelement
-       comp_coord(i)=xlo+i*comp_dx
-       mapping_comp_to_phys(oldnew,i,dir)=comp_coord(i)
+       comp_coord=xlo+i*comp_dx
+       mapping_comp_to_phys(oldnew,i,dir)=comp_coord
       enddo
        ! get rid of floating point round-off err
       mapping_comp_to_phys(oldnew,nelement,dir)=xhi 
@@ -15990,6 +16066,9 @@ end subroutine print_visual_descriptor
       conv_err=conv_TOL*1.0D+10
       conv_iter=0
 
+       ! x(X) maps computational grid to physical grid.
+       ! solve: div_X (1/w(x)) grad_X x=0  x(Xlo)=Xlo   x(Xhi)=Xhi
+       !
       do while (conv_err.gt.conv_TOL)
 
        do i=0,nelement-1 
@@ -16043,9 +16122,23 @@ end subroutine print_visual_descriptor
       deallocate(tri_soln)
 
       deallocate(wt_coord)
-      deallocate(comp_coord)
       deallocate(phys_coord_new)
 
+      do i=0,nelement
+       phys_coord=xlo+i*comp_dx
+       mapping_phys_to_comp(oldnew,i,dir)=phys_coord
+      enddo
+       ! get rid of floating point round-off err
+      mapping_phys_to_comp(oldnew,nelement,dir)=xhi 
+
+      do i=1,nelement-1
+       phys_coord=xlo+i*comp_dx
+       comp_coord=mapping_phys_to_comp(oldnew,i-1,dir)
+        ! solve x(X)=xstar
+       call inverse_mapping(phys_coord,comp_coord,oldnew,dir)
+       mapping_phys_to_comp(oldnew,i,dir)=comp_coord
+      enddo
+ 
       return
       end subroutine single_dimension_grid_mapping
 
