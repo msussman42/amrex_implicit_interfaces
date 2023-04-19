@@ -15788,6 +15788,7 @@ end subroutine print_visual_descriptor
       REAL_T :: xlo,xhi,comp_dx
       REAL_T :: xcell_lo,xcell_hi
       REAL_T :: xphys_lo,xphys_hi
+      REAL_T, PARAMETER :: conv_TOL=1.0D-12
  
       nelement=mapping_n_cell(dir)
       if (nelement.ge.1) then
@@ -15822,7 +15823,8 @@ end subroutine print_visual_descriptor
        xphys_of_xcomp=xcomp
       else if (xcomp.ge.xhi) then
        xphys_of_xcomp=xcomp
-      else if ((xcomp.gt.xlo).and.(xcomp.lt.xhi)) then
+      else if ((xcomp.gt.xlo).and. &
+               (xcomp.lt.xhi)) then
         ! xcomp=xlo+(i+1/2)*dx
         ! i=NINT((xcomp-xlo)/dx-1/2)
        icrit=NINT((xcomp-xlo)/comp_dx-half)
@@ -15831,9 +15833,17 @@ end subroutine print_visual_descriptor
         xcell_hi=xcell_lo+comp_dx
         xphys_lo=mapping_comp_to_phys(oldnew,icrit,dir)
         xphys_hi=mapping_comp_to_phys(oldnew,icrit+1,dir)
-        if (xcomp.le.xcell_lo) then
+
+        if (xphys_hi.gt.xphys_lo) then
+         ! do nothing
+        else
+         print *,"xphys_hi-xphys_lo invalid"
+         stop
+        endif
+
+        if (abs(xcomp-xcell_lo).le.comp_dx*conv_TOL) then
          xphys_of_xcomp=xphys_lo
-        else if (xcomp.ge.xcell_hi) then
+        else if (abs(xcomp-xcell_hi).le.comp_dx*conv_TOL) then
          xphys_of_xcomp=xphys_hi
         else if ((xcomp.gt.xcell_lo).and. &
                  (xcomp.lt.xcell_hi)) then
@@ -15905,7 +15915,8 @@ end subroutine print_visual_descriptor
        xcomp_of_xphys=xphys
       else if (xphys.ge.xhi) then
        xcomp_of_xphys=xphys
-      else if ((xphys.gt.xlo).and.(xphys.lt.xhi)) then
+      else if ((xphys.gt.xlo).and. &
+               (xphys.lt.xhi)) then
         ! xphys=xlo+(i+1/2)*dx
         ! i=NINT((xphys-xlo)/dx-1/2)
        icrit=NINT((xphys-xlo)/comp_dx-half)
