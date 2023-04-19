@@ -434,6 +434,8 @@ public:
     static int ngeom_raw;
     static int ngeom_recon;
 
+    static Vector<Real> grid_stretching_parameter;
+
 protected:
 
     void SDC_setup_step();
@@ -1715,6 +1717,7 @@ protected:
      // index: 1..num_materials
     static Vector<Real> cavitation_vapor_density; 
     static Vector<Real> cavitation_tension; 
+
 
       // 1-2 means "material 1 is converted into material 2"
       // 1-2 1-3 1-4 2-3 2-4 3-4

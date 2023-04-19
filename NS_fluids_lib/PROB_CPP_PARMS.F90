@@ -426,6 +426,7 @@ stop
         ccetaS, &
         ccetaP, &
         ccvisc_coef, &
+        ccgrid_stretching_parameter, &
         ioproc) &
       bind(c,name='fort_override')
 
@@ -591,6 +592,7 @@ stop
       REAL_T, INTENT(in) :: ccetaL(ccnum_materials)
       REAL_T, INTENT(in) :: ccetaS(ccnum_materials)
       REAL_T, INTENT(in) :: ccetaP(ccnum_materials)
+      REAL_T, INTENT(in) :: ccgrid_stretching_parameter(SDIM)
 
       REAL_T, INTENT(in) :: ccvisc_coef
 
@@ -784,6 +786,8 @@ stop
        SUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP=> &
          CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
        SUB_GET_OUTSIDE_POINT=>CRYOGENIC_TANK_MK_GET_OUTSIDE_POINT
+
+       SUB_MAPPING_WEIGHT_COEFF=>CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF
 
       else if (probtype.eq.424) then
 
@@ -1012,6 +1016,7 @@ stop
        SUB_STATE_BC=>ROTATING_ANNULUS_STATE_BC
        SUB_INTERNAL_GRAVITY_WAVE_FLAG=> &
          ROTATING_ANNULUS_INTERNAL_GRAVITY_WAVE_FLAG
+       SUB_MAPPING_WEIGHT_COEFF=>ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF
       else
        ! assign null routines here that would cause the program to abort
        ! if called.  In otherwords, these are routines, that if called,
@@ -1508,6 +1513,11 @@ stop
 
       enddo ! im=1..num_materials
 
+      do local_dir=1,SDIM
+       fort_grid_stretching_parameter(local_dir)= &
+          ccgrid_stretching_parameter(local_dir)
+      enddo
+
       fort_visc_coef=ccvisc_coef
       
       nelastic=0
@@ -1675,6 +1685,11 @@ stop
         print *,"im,prerecalesce_cv ",im, &
          fort_prerecalesce_stiffCV(im)
        enddo ! im
+
+       do local_dir=1,SDIM
+        print *,"local_dir,fort_grid_stretching_parameter ",local_dir, &
+           fort_grid_stretching_parameter(local_dir)
+       enddo
 
        do im=1,num_species_var*num_materials
         print *,"im,species ",im,fort_speciesconst(im)
@@ -1851,15 +1866,13 @@ stop
      
        ! initialize grid mapping variables here.
        ! mapping_n_cell=n_cell * 2^max_level
-       !  old/new,index,dir
-       ! REAL_T, allocatable, dimension(:,:,:) :: mapping_comp_to_phys
-       ! REAL_T, allocatable, dimension(:,:,:) :: mapping_phys_to_comp
+       !  index,dir
+       ! REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
+       ! REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
        ! INTEGER_T :: mapping_n_cell(3)
        ! INTEGER_T :: mapping_allocated=0
 
       mapping_allocated=1
-      mapping_time(0)=zero
-      mapping_time(1)=zero
       mapping_n_cell_max=0
       do local_dir=0,SDIM-1
        mapping_n_cell(local_dir+1)=fort_n_cell(local_dir+1)
@@ -1868,11 +1881,10 @@ stop
        enddo
        mapping_n_cell_max=max(mapping_n_cell_max,mapping_n_cell(local_dir+1))
       enddo ! local_dir=0,SDIM-1
-      allocate(mapping_comp_to_phys(0:1,0:mapping_n_cell_max,0:2))
-      allocate(mapping_phys_to_comp(0:1,0:mapping_n_cell_max,0:2))
+      allocate(mapping_comp_to_phys(0:mapping_n_cell_max,0:2))
+      allocate(mapping_phys_to_comp(0:mapping_n_cell_max,0:2))
       do local_dir=0,SDIM-1
-       call single_dimension_grid_mapping(0,local_dir)
-       call single_dimension_grid_mapping(1,local_dir)
+       call single_dimension_grid_mapping(local_dir)
       enddo
 
        ! this loop occurs after user defined initialization.

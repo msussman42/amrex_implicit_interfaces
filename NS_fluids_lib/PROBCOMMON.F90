@@ -316,6 +316,8 @@ implicit none
 !   VISCSTATIC
 ! deleted March 10, 2023:
 !   fort_static_surface_tension_duration
+! added April 19, 2023:
+!   fort_grid_stretching_parameter
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
@@ -555,11 +557,10 @@ implicit none
       INTEGER_T cache_index_low,cache_index_high,cache_max_level
       INTEGER_T :: grid_cache_allocated=0
 
-       ! old/new,index,dir
-       ! 0=old 1=new
-      REAL_T, allocatable, dimension(:,:,:) :: mapping_comp_to_phys
-      REAL_T, allocatable, dimension(:,:,:) :: mapping_phys_to_comp
-      REAL_T :: mapping_time(0:1)  ! 0=old  1=new
+       ! solve: div_X (1/w(x)) grad_X x=0  x(Xlo)=Xlo   x(Xhi)=Xhi
+       ! index,dir
+      REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
+      REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
       INTEGER_T :: mapping_n_cell(0:2)
       INTEGER_T :: mapping_n_cell_max=0
       INTEGER_T :: mapping_allocated=0
@@ -695,11 +696,10 @@ implicit none
       end subroutine TEMPLATE_wallfunc
 
        ! returns (1/w) where w>>1 in "trouble" regions
-      subroutine TEMPLATE_MAPPING_WEIGHT_COEFF(dir,wt,phys_x,time)
+      subroutine TEMPLATE_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
       INTEGER_T, INTENT(in) :: dir
       REAL_T, INTENT(out) :: wt
       REAL_T, INTENT(in) :: phys_x
-      REAL_T, INTENT(in) :: time
       end subroutine TEMPLATE_MAPPING_WEIGHT_COEFF
 
       subroutine TEMPLATE_INIT_REGIONS_LIST(constant_density_all_time, &

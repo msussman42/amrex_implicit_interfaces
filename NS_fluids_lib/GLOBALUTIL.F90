@@ -9036,7 +9036,7 @@ end subroutine print_visual_descriptor
          print *,"bfact invalid27"
          stop
         endif
-        x(side*2*icell)=xphys_of_xcomp(1,dir-1,xabs)
+        x(side*2*icell)=xphys_of_xcomp(dir-1,xabs)
 
        enddo ! icell
 
@@ -9078,7 +9078,7 @@ end subroutine print_visual_descriptor
          stop
         endif
     
-        x(side*(2*imac-1))=xphys_of_xcomp(1,dir-1,xabs)
+        x(side*(2*imac-1))=xphys_of_xcomp(dir-1,xabs)
        enddo ! imac
       enddo ! side
 
@@ -9158,7 +9158,7 @@ end subroutine print_visual_descriptor
          print *,"bfact invalid30"
          stop
         endif
-        x(side*(2*icell-1))=xphys_of_xcomp(1,dir-1,xabs)
+        x(side*(2*icell-1))=xphys_of_xcomp(dir-1,xabs)
 
        enddo ! icell
 
@@ -9194,7 +9194,7 @@ end subroutine print_visual_descriptor
          stop
         endif
     
-        x(side*2*imac)=xphys_of_xcomp(1,dir-1,xabs)
+        x(side*2*imac)=xphys_of_xcomp(dir-1,xabs)
        enddo ! imac
       enddo ! side
 
@@ -13790,7 +13790,7 @@ end subroutine print_visual_descriptor
        ! NINT=nearest int
       do dir=1,SDIM
 
-       xmap(dir)=xcomp_of_xphys(1,dir-1,x(dir))
+       xmap(dir)=xcomp_of_xphys(dir-1,x(dir))
 
        if (bfact.eq.1) then  ! evenly spaced points
         ! x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
@@ -13866,7 +13866,7 @@ end subroutine print_visual_descriptor
        ! NINT=nearest int
       do dir_local=1,SDIM
 
-       xmap(dir_local)=xcomp_of_xphys(1,dir_local-1,x(dir_local))
+       xmap(dir_local)=xcomp_of_xphys(dir_local-1,x(dir_local))
 
        if (bfact.eq.1) then  ! evenly spaced points
         ! dir_local!=dir_mac+1: x=(i-lo+1/2)dx+xlo  i=(x-xlo)/dx+lo-1/2
@@ -13963,7 +13963,7 @@ end subroutine print_visual_descriptor
        ! NINT=nearest int
       do dir=1,SDIM
 
-       xmap(dir)=xcomp_of_xphys(1,dir-1,x(dir))
+       xmap(dir)=xcomp_of_xphys(dir-1,x(dir))
 
        if (bfact.eq.1) then ! evenly spaced points
         ! x=(i-lo)dx+xlo  i=(x-xlo)/dx+lo
@@ -15777,11 +15777,10 @@ end subroutine print_visual_descriptor
       return
       end subroutine tridiag_solve
 
-      REAL_T function xphys_of_xcomp(oldnew,dir,xcomp)
+      REAL_T function xphys_of_xcomp(dir,xcomp)
       use probcommon_module
       IMPLICIT NONE
       INTEGER_T, INTENT(in) :: dir
-      INTEGER_T, INTENT(in) :: oldnew
       REAL_T, INTENT(in) :: xcomp
       INTEGER_T :: nelement
       INTEGER_T :: icrit
@@ -15795,12 +15794,6 @@ end subroutine print_visual_descriptor
        ! do nothing
       else
        print *,"nelement invalid"
-       stop
-      endif
-      if ((oldnew.eq.0).or.(oldnew.eq.1)) then
-       ! do nothing
-      else
-       print *,"oldnew invalid"
        stop
       endif
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
@@ -15831,8 +15824,8 @@ end subroutine print_visual_descriptor
        if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
         xcell_lo=xlo+icrit*comp_dx
         xcell_hi=xcell_lo+comp_dx
-        xphys_lo=mapping_comp_to_phys(oldnew,icrit,dir)
-        xphys_hi=mapping_comp_to_phys(oldnew,icrit+1,dir)
+        xphys_lo=mapping_comp_to_phys(icrit,dir)
+        xphys_hi=mapping_comp_to_phys(icrit+1,dir)
 
         if (xphys_hi.gt.xphys_lo) then
          ! do nothing
@@ -15869,11 +15862,10 @@ end subroutine print_visual_descriptor
       end function xphys_of_xcomp
 
        !dir=0..sdim-1
-      REAL_T function xcomp_of_xphys(oldnew,dir,xphys)
+      REAL_T function xcomp_of_xphys(dir,xphys)
       use probcommon_module
       IMPLICIT NONE
       INTEGER_T, INTENT(in) :: dir
-      INTEGER_T, INTENT(in) :: oldnew
       REAL_T, INTENT(in) :: xphys
       INTEGER_T :: nelement
       INTEGER_T :: icrit
@@ -15887,12 +15879,6 @@ end subroutine print_visual_descriptor
        ! do nothing
       else
        print *,"nelement invalid"
-       stop
-      endif
-      if ((oldnew.eq.0).or.(oldnew.eq.1)) then
-       ! do nothing
-      else
-       print *,"oldnew invalid"
        stop
       endif
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
@@ -15923,8 +15909,8 @@ end subroutine print_visual_descriptor
        if ((icrit.ge.0).and.(icrit.le.nelement-1)) then
         xcell_lo=xlo+icrit*comp_dx
         xcell_hi=xcell_lo+comp_dx
-        xcomp_lo=mapping_phys_to_comp(oldnew,icrit,dir)
-        xcomp_hi=mapping_phys_to_comp(oldnew,icrit+1,dir)
+        xcomp_lo=mapping_phys_to_comp(icrit,dir)
+        xcomp_hi=mapping_phys_to_comp(icrit+1,dir)
 
         if (xcomp_hi.gt.xcomp_lo) then
          ! do nothing
@@ -15961,14 +15947,13 @@ end subroutine print_visual_descriptor
       end function xcomp_of_xphys
 
        ! solve x(X)-xstar=0 for Xstar using Newton's method.
-      subroutine inverse_mapping(phys_coord,comp_coord,oldnew,dir)
+      subroutine inverse_mapping(phys_coord,comp_coord,dir)
       use probcommon_module
       IMPLICIT NONE
 
       REAL_T :: xlo,xhi
       REAL_T, INTENT(in) :: phys_coord 
       REAL_T, INTENT(inout) :: comp_coord 
-      INTEGER_T, INTENT(in) :: oldnew
       INTEGER_T :: nelement
       INTEGER_T, INTENT(in) :: dir
       REAL_T, PARAMETER :: conv_TOL=1.0D-12
@@ -16008,8 +15993,8 @@ end subroutine print_visual_descriptor
       do while (conv_err.gt.conv_TOL)
        comp_hi=comp_coord+comp_dx*half
        comp_lo=comp_coord-comp_dx*half
-       fprime=(xphys_of_xcomp(oldnew,dir,comp_hi)- &
-               xphys_of_xcomp(oldnew,dir,comp_lo))/comp_dx
+       fprime=(xphys_of_xcomp(dir,comp_hi)- &
+               xphys_of_xcomp(dir,comp_lo))/comp_dx
        if (fprime.gt.zero) then
         ! do nothing
        else
@@ -16017,7 +16002,7 @@ end subroutine print_visual_descriptor
         stop
        endif
  
-       ff=xphys_of_xcomp(oldnew,dir,comp_coord)-phys_coord
+       ff=xphys_of_xcomp(dir,comp_coord)-phys_coord
        comp_coord_new=comp_coord-ff/fprime 
  
        conv_err=abs(comp_coord-comp_coord_new)
@@ -16035,15 +16020,13 @@ end subroutine print_visual_descriptor
 
       end subroutine inverse_mapping
 
-       ! oldnew=0,1 dir=0,1,2
-      subroutine single_dimension_grid_mapping(oldnew,dir)
+       ! dir=0,1,2
+      subroutine single_dimension_grid_mapping(dir)
       use probcommon_module
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: dir
-      INTEGER_T, INTENT(in) :: oldnew
       REAL_T :: xlo,xhi
-      REAL_T :: time
       INTEGER_T :: nelement
 
       REAL_T :: comp_coord
@@ -16068,7 +16051,6 @@ end subroutine print_visual_descriptor
       INTEGER_T :: i
 
       nelement=mapping_n_cell(dir)
-      time=mapping_time(oldnew)
       xlo=problo_array(dir+1)
       xhi=probhi_array(dir+1)
 
@@ -16083,12 +16065,6 @@ end subroutine print_visual_descriptor
       allocate(tri_f(1:nsolve))
       allocate(tri_soln(1:nsolve))
 
-      if ((oldnew.eq.0).or.(oldnew.eq.1)) then
-       ! do nothing
-      else
-       print *,"oldnew invalid"
-       stop
-      endif
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
        ! do nothing
       else
@@ -16109,19 +16085,13 @@ end subroutine print_visual_descriptor
        print *,"comp_dx invalid"
        stop
       endif
-      if (time.ge.zero) then
-       ! do nothing
-      else
-       print *,"time invalid"
-       stop
-      endif
 
       do i=0,nelement
        comp_coord=xlo+i*comp_dx
-       mapping_comp_to_phys(oldnew,i,dir)=comp_coord
+       mapping_comp_to_phys(i,dir)=comp_coord
       enddo
        ! get rid of floating point round-off err
-      mapping_comp_to_phys(oldnew,nelement,dir)=xhi 
+      mapping_comp_to_phys(nelement,dir)=xhi 
 
       conv_err=conv_TOL*1.0D+10
       conv_iter=0
@@ -16132,10 +16102,10 @@ end subroutine print_visual_descriptor
       do while (conv_err.gt.conv_TOL)
 
        do i=0,nelement-1 
-        local_phys=half*(mapping_comp_to_phys(oldnew,i,dir)+ &
-                         mapping_comp_to_phys(oldnew,i+1,dir))
+        local_phys=half*(mapping_comp_to_phys(i,dir)+ &
+                         mapping_comp_to_phys(i+1,dir))
          ! returns (1/w) where w>>1 in "trouble" regions
-        call SUB_MAPPING_WEIGHT_COEFF(dir,local_wt,local_phys,time)
+        call SUB_MAPPING_WEIGHT_COEFF(dir,local_wt,local_phys)
         if (local_wt.gt.zero) then
          wt_coord(i)=local_wt/comp_dx
         else 
@@ -16165,10 +16135,9 @@ end subroutine print_visual_descriptor
        do i=1,nsolve
         phys_coord_new(i)=tri_soln(i)
         conv_err=conv_err+ &
-          (mapping_comp_to_phys(oldnew,i,dir)- &
+          (mapping_comp_to_phys(i,dir)- &
            phys_coord_new(i))**2
-        mapping_comp_to_phys(oldnew,i,dir)= &
-           phys_coord_new(i)
+        mapping_comp_to_phys(i,dir)=phys_coord_new(i)
        enddo ! do i=1,nsolve
 
        do i=0,nelement-1
@@ -16203,23 +16172,23 @@ end subroutine print_visual_descriptor
 
       do i=0,nelement
        phys_coord=xlo+i*comp_dx
-       mapping_phys_to_comp(oldnew,i,dir)=phys_coord
+       mapping_phys_to_comp(i,dir)=phys_coord
       enddo
        ! get rid of floating point round-off err
-      mapping_phys_to_comp(oldnew,nelement,dir)=xhi 
+      mapping_phys_to_comp(nelement,dir)=xhi 
 
       do i=1,nelement-1
        phys_coord=xlo+i*comp_dx
         ! initial guess.
-       comp_coord=mapping_phys_to_comp(oldnew,i-1,dir)
+       comp_coord=mapping_phys_to_comp(i-1,dir)
         ! solve x(X)=xstar
-       call inverse_mapping(phys_coord,comp_coord,oldnew,dir)
-       mapping_phys_to_comp(oldnew,i,dir)=comp_coord
+       call inverse_mapping(phys_coord,comp_coord,dir)
+       mapping_phys_to_comp(i,dir)=comp_coord
       enddo ! do i=1,nelement-1
  
       do i=0,nelement-1
-       if (mapping_phys_to_comp(oldnew,i+1,dir)- &
-           mapping_phys_to_comp(oldnew,i,dir).gt.zero) then
+       if (mapping_phys_to_comp(i+1,dir)- &
+           mapping_phys_to_comp(i,dir).gt.zero) then
         ! do nothing
        else
         print *,"mapping_phys_to_comp not monotonic"

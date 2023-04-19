@@ -1,0 +1,484 @@
+# For more information check
+# NASA_CRYOGENICS_GITHUB => references/Verification_tests/MK_tank/CRYOGENIC_TANK_MK.xlsx
+# Kassemi, Kartuzova, Hylton, Cryogenics, 2018
+#  section 4.1 ZBOT
+# ----------------------------------------------------------
+# -------- Problem setup -----------------------------------
+# ----------------------------------------------------------
+#max_step=200
+max_step=99999999
+stop_time=8000.0
+
+# unique problem identifier associated with each new plug-in:
+# CRYOGENIC_TANK_MK.F90
+ns.probtype         = 423
+# variable accessible from plug-in:
+ns.axis_dir         = 0
+# variable for compiling diagnostic output
+# integral of region surrounding T1 in Figure 3 of Barsi and Kassemi, 2013
+# T1: r=0.0  Z=0.2921 relative to bottom of tank cylindrical section.
+# bottom of cylindrical section: -0.2032
+# so Z_code=-0.2032+0.2921=0.0889
+ns.ncomp_sum_int_user1=1 
+ns.ncomp_sum_int_user2=2  # pressure and temperature 
+
+# 1=liquid 2=gas(placeholder) 3=solid wall
+ns.num_materials    = 3
+# vapor
+ns.num_species_var  = 0
+
+
+# Clausius Clapyron:
+# P_gamma=P_ref * e^{(L*w/R)(1/T_ref-1/T_gamma)=P_{CC}(T_gamma)
+# P=density (cp-cv) T  equation of state in the gas
+# 1. density in the gas and liquid satisfies:
+#    density=density_{0}(time) * (1-beta*(T-T_{0}))
+# 2. P_gamma=P_{CC}(T_gamma)
+# 3. mdot=[k grad T]/L  where T_gamma is the interface temperature.
+# 4. Kassemi et al 2018:
+#    mdot=(2 sigma/(2-sigma))(M/(2 pi R))^(.5)(P_CC(T_gamma)/T_gamma-
+#     P_eos(T_gamma,rho_vapor)/T_gamma)
+# Material type:
+# 0  => incompressible
+# 24 => compressible 
+# 1=liquid HFE7000  2=gaseous HFE7000  3=solid acrylic
+ns.material_type = 0 0 999 
+ns.material_type_evap = 0 24 999 # needed for Kassemi model
+ns.material_type_lowmach = 0 0 999 # Tryggvason low mach number model
+ns.material_type_visual = 0 24 999 # visualize Peos(density,e(T))
+
+ns.num_divu_outer_sweeps=1
+
+# Solid defifnition for FSI
+# 1 => By levelset definition in PROB.F90 (and module file)
+ns.FSI_flag         = 0 0 1
+
+# these variables will be available to plug-ins:
+# Coordinate origin is at the center of the tank
+# See Barsi and Kassemi, "Investigation of Tank Pressurization and 
+# Pressure Control - part I: experimental study",
+# Journal of Thermal Science and Engineeing Applications,
+# December 2013, vol 5, 041005-1.
+# Probe positions of Figure 3 are relative to the bottom of the
+# cylindrical section.
+ns.xblob            = 0.1016 # Tank cavity radius 
+ns.yblob            = 0.4064 # Height of Cylindrical part 
+ns.zblob            = 0.0    # Interface location 
+ns.radblob          = 0.0    # Not used
+
+ns.xblob4 	    = 0.2159 # End cap radius 
+
+#TANK_MK_END_CENTER=yblob4
+#top of cylindrical section: z=0.2032
+#bottom of crylindrical section: z=-0.2032
+#radius of the spherical cap is 0.2159
+#z coordinate of tank bottom: -0.2286=-0.2032-0.0254
+#z coordinate of tank top: 0.2286
+#z tank top-radius of sphere cap = 0.2286-.2159=0.0127
+#Note: z_heater_top=-0.2286+0.0857=-0.1429
+#      z_heater_bot=-0.1429-0.0254=-0.1683
+ns.yblob4	    = 0.0127 # Z coord (vert) of the top spherical cap center 
+
+# ----------------------------------------------------------
+# -------- Domain and space/time discretization ------------
+# ----------------------------------------------------------
+# 0 => cart (XY or XYZ), 1 => RZ
+# if n_cell=32x128      
+# dx=.15/32=0.0046875
+# n_cell=16x64
+# dx=.15/16=0.009375
+# n_cell=8x32
+# dx=.15/8=0.01875
+geometry.coord_sys  = 1
+geometry.prob_lo    = 0.0  -0.3
+geometry.prob_hi    = 0.15  0.3
+geometry.is_periodic= 0 0
+
+#k=k*max(1,dx/1.0e-6) at the heater
+ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
+#for ZBOT, the wall thermal eddy model is given by:
+# Temperature Stratification in a Cryogenic Fuel Tank
+# JOURNAL OF THERMOPHYSICS AND HEAT TRANSFER
+# Vol. 27, No. 1, January–March 2013
+# Daigle, Smelyanskiy, Boschee, Foygel
+#
+ns.heatviscconst_eddy_wall=0.0 0.0 0.0
+ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
+
+# dx_coarse=(prob_hi_x-prob_lo_x)/n_cell_x
+# dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
+# best to have dx=dy for now.
+# prob_lo_x=0.0
+# prob_hi_x=0.15
+# 0.15/16=0.009375
+# 0.15/8=0.01875
+#amr.n_cell          = 16 64
+#amr.n_cell          = 8 32
+#amr.n_cell          = 64 256  # this resolution agrees with experiments.
+#amr.max_level       = 0
+#amr.n_cell          = 64 256  
+amr.n_cell          = 32 128 
+ns.grid_stretching_parameter=1.0 0.0
+amr.max_level       = 0
+
+amr.regrid_int      = 1     # How often to regrid
+#speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
+#amr.max_grid_size   = 128    # 128 is optimal for MPI in 2D
+amr.max_grid_size   = 64    # try 64
+
+# Note: (max_level+1) values needed
+amr.n_error_buf     = 2 2 2 2 2 # number of buffer cells in error est 
+amr.blocking_factor = 8 4 # block factor in grid generation
+# level0, level1, ...
+amr.space_blocking_factor=1 1 
+amr.time_blocking_factor=1    
+ns.enable_spectral=0          
+ns.nblocks=0
+#ns.nblocks=1
+ns.xblocks=0.0
+ns.yblocks=0.0
+ns.zblocks=0.0
+ns.rxblocks=0.01
+ns.ryblocks=0.3
+ns.rzblocks=0.3
+
+amr.grid_eff        = 0.99  # smaller => less boxes
+
+ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
+
+# Adaptive dt
+ns.cfl              = 0.5      # cfl number for hyperbolic system
+ns.init_shrink      = 1.0      # scale back initial timestep
+ns.change_max       = 1.1      
+ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
+
+#0=only at t=0 1=always account for sound speed 2=ignore
+ns.shock_timestep=2 2 2 
+#ns.fixed_dt	    = 5.0e-5   # Hardwire dt
+
+# ----------------------------------------------------------
+# -------- Input/output (IO) -------------------------------
+# ----------------------------------------------------------
+#ns.visual_buoyancy_plot_int=2000
+
+amr.check_int       = 400     # number of timesteps between checkpoints
+#amr.check_int       = 10     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+
+ns.slice_dir=1 # y (aka z) direction
+ns.xslice=0.0000001 0.0
+#amr.slice_int=2000
+amr.plot_int        = 100  # number of timesteps between plot files (100)
+#amr.plot_int        = 2   # number of timesteps between plot files
+amr.plot_file       = plt     # root name of HDF5 plot file
+#ns.visual_phase_change_plot_int=1
+#ns.visual_output_raw_State_Type=1
+
+ns.output_drop_distribution=1
+ns.sum_interval     = 100    # timesteps between computing mass 
+ns.sum_interval     = 10     # timesteps between computing mass 
+
+amr.grid_log        = grdlog  # name of grid logging file
+
+amr.file_name_digits= 7
+
+# make ns.v=1 to check the residual magnitude information for the solvers.
+ns.v=0
+#amr.restart        = chk0000010 # Name of the restart checkpoint file
+#amr.trace   	    = 1
+#ns.show_mem        = 1
+
+# ----------------------------------------------------------
+# -------- Inputs to physics class -------------------------
+# ----------------------------------------------------------
+ns.gravity          = 9.8
+#the longest wavelength is half the tank radius. (since axisymmetric)
+#(in 3D, without reflecting BC, the longest wavelength is half the tank
+#diameter)
+
+ns.gravity_reference_wavelen=0.0508
+ns.gravity_dir      = 2 # 1..SDIM
+ns.invert_gravity   = 0  # invert_gravity=0 means gravity points down.
+
+#override_density=0 if compressible material
+#if incompressible material:
+# override_density=0 => rho independent of T 
+# override_density=1 => rho=rho(T)  in the grad p/rho and div tau/rho
+#  force terms.
+# override_density=2 => Boussinesq approximation
+#   rho independent of T, but the gravity force is modified.
+#   Boussinesq approx: Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
+ns.override_density=2 2 0  # 1..num_materials
+# rhohydro+fort_denconst(im)*DrhoDT(im)*(T-fort_tempconst(im))
+# coefficient for heat expansion for HFE7000 at 298 K=0.00219 (1/K)
+# (PNP: 0.002252)
+# coefficient for heat expansion for an ideal gas: (1/T)=
+# 1/298=0.0034
+ns.DrhoDT = -0.00219 -0.0034 0.0   # units: 1/degree K
+
+ns.twall            = 0.0
+ns.rgasinlet        = 0.0
+ns.vinletgas        = 0.0
+ns.advbot           = 0.0
+ns.adv_vel          = 0.0
+ns.adv_dir          = 1
+ns.denfact          = 1.0
+ns.velfact          = 0.0
+ns.visc_coef        = 1.0
+
+# ----------------------------------------------------------
+# -------- Material properties -----------------------------
+# ----------------------------------------------------------
+# 3 materials
+# 1=liquid HFE7000  2=gaseous HFE7000  3=solid acrylic
+# 1 species variable => equal to 1 everywhere
+
+# Assuming saturation condition initially
+
+# Universal gas constant R = 8.31446261815324 [J/(Mol.K)]
+
+# Molar mass [kg/mol]
+# Acrylic ??? (Not used)
+# HFE7000, molar_mass=0.2?  Molar mass used in the Clausius Clapyron
+#                           equation.
+ns.molar_mass = 0.2 0.2 1  # 1..num_materials
+#ns.species_molar_mass=0.2  # molar mass for vapor should identical to liquid
+                           # molar mass.
+
+# Density [kg/m^3]  HFE7000
+ns.denconst= 1400.0 5.3421449445 1190.0
+
+cg.mglib_blocking_factor=2
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.maxiter = 400
+cg.restart_period=25
+
+#ns.speciesconst= 1.0 1.0 1.0  #Kassemi
+
+# Diffusion coefficient [m^2/s]
+# Not used ???
+# liquid, vapor, solid
+#ns.speciesviscconst = 0.0 9.5393525975504E-07 0.0
+
+# 1. input to the Schrage velocity model: Temperature, gas mixture density,
+#    mass fraction, liquid density
+# 2. input to the expansion model: Delta F * (liquid density/vapor density)
+#    It is assume that Y_{Interface}=1.
+# Not used ???
+
+# Specific heat capacity [J/(kg.K)]
+# in CRYOGENIC_TANK_MK: CP-CV=R/molar_mass => CP=CV+R/molar_mass
+ns.stiffCP=1300.0 2400.0 1500.0
+# Ground based experiments used HFE7000.
+# Space-Station experiments used Perfluoro-n-Pentane (PnP, or C5F12)
+# REFPROP (Refrigerant), (RE347MCC), Methyl-Heptafluoropropyl, 
+# https://pubchem.ncbi.nlm.nih.gov/compound/2774943#section=Synonyms
+# Methyl-Perfluoropropyl, HFE7000, CV=
+ns.stiffCV=1300.0 2358.4276869092 1500.0  #CV used CRYOGENIC_TANK_MK to get CP
+
+# Thermal conductivity [W/(m.K)]
+ns.heatviscconst=0.075 0.00375 0.189
+
+# Dynamic viscosity [Pa.s]
+# (PNP: 4.2E-4)
+ns.viscconst=4.48E-04 1.093e-6 1.0
+
+# eddy_bulk viscosity should at least place one
+# in the laminar regime:  rho L U/mu=1400 * 0.2 * U/ mu < 100
+# For fine resolution run: U_liquid=0.005 m/s
+# (1400)(0.2)(0.005)/100 < mu mu>0.014
+# For the gas,
+# (5.3)(0.2)(0.05)/100 < mu  mu>5.3e-4
+#ns.viscconst_eddy_wall=5.0e-3 0.0 0.0 #YANG
+#ns.viscconst_eddy_bulk=5.0e-3 5.3e-4 0.0 #YANG
+#ns.viscconst_eddy_wall=2.0e-2 0.0 0.0
+#ns.viscconst_eddy_bulk=2.0e-2 1.0e-3 0.0
+#ns.wall_model_velocity=0.005 0.0 0.0
+#ns.heatflux_factor=1.0 1.0 1.0 #YANG
+#ns.heatflux_factor=16.0 0.0 1.0
+ns.interface_mass_transfer_model=0 0 0 0 0 0
+#ns.interface_mass_transfer_model=1 0 0 0 0 0 #YANG
+#ns.law_of_the_wall=1 0 0
+#ns.les_model=1 0 0
+#ns.visual_WALLVEL_plot_int=100  # 100 for standard tests.
+
+# Initial temeparture [K]
+ns.tempconst=295.41 295.41 295.41
+
+#In the future: resurrect the Sussman and Ohta algorithm with accelerated
+#"coloring" update scheme:
+#(the savings is much more significant now since there is additional savings
+#in not having to calculate motion due to phase change during the motion
+#by mean curvature iteration!)
+#
+#for tau=0...dt
+# multimaterial volume preserving motion by mean curvature v=sigma kappa:
+#   a) marching tetrahedra redistancing
+#   b) height function level set
+#   c) extension of level set function into solid.
+#endfor
+#kappa=(LS(dt)-LS(0)
+#Also in the future: (for gravity)
+# for free surface problem:
+#   ppot=rho dot zvec g   zvec=(0 0 z)
+#   p=p' + ppot
+#   u_t = -grad(p'+ppot)/rho + g zhat   p'=-ppot on free surface
+#   u_t = -grad p'/rho - grad ppot/rho + g zhat = -grad p'/rho 
+#   or, as a two phase problem:
+#   u_t = -grad p'/rho - g zvec dot grad rho/rho =  
+#       = -grad p'/rho - g zvec dot n [rho] delta/rho
+#   Algorithm to overcome the gravity time step:
+#   for tau=0..dt
+#    multimaterial volume preserving motion by "normal": 
+#      v=g (zvec dot n)n [rho]/rho 
+# Surface tension [N/m]
+#90 degree contact angle
+ns.tension=1.2E-02 1.2E-02 1.2E-02 
+ns.visual_quasi_static_plot_int=0
+#ns.static_surface_tension_max_iter=50
+#ns.static_surface_tension_duration=8000.0
+#ns.static_tension = 1.2e-2 1.2e-2 1.2e-2 
+
+# ----------------------------------------------------------
+# -------- Phase change model ------------------------------
+# ----------------------------------------------------------
+# latent_heat [Joule/kg]
+# <0 if condensation or solidification
+# >0 if boiling or melting
+# 12 13 23 21 31 32
+# 12 liquid->vapor (boiling)
+# 21 vapor->liquid (condensation)
+ns.latent_heat=1.42E+05 0.0 0.0 0.0 0.0 0.0
+
+# distribution of the expansion term
+# For evaporation and Boiling, this should always be 0.
+ns.distribute_from_target= 0 0 0 0 0 0
+ns.distribute_mdot_evenly = 0 0 0 0 0 0 # 2 * num_interfaces components
+# density in the ambient gas will increase in a sealed tank.
+ns.constant_density_all_time=1 0 1 # sealed 1..nmat
+# constant_volume_mdot=0 in an open container
+# constant_volume_mdot=-1 => redistribute -sum mdot evenly into the destination
+#  material.
+# constant_volume_mdot=1 => redistribute -sum mdot evenly into the source
+#  material.
+#  12,13,23,21,31,32
+ns.constant_volume_mdot=-1 0 0 0 0 0 # sealed 1..2 nten
+
+# MK model (evaporation only) 
+#ns.mass_fraction_id =   1 0 0 0 0 0 # material 1 (liquid) is turned into spec 1
+# freezing_model==0 => Energy jump model, no species
+# freezing_model==6 => Either Villegas etal/Palmore Desjardins model with
+#  species for evaporation/condensation or 
+#  Kassemi hybrid energy jump+Schrage model.
+ns.freezing_model=      6 0 0 0 0 0
+# Tanasawa_or_Schrage_or_Kassemi=0 => Villegas etal/Palmore Desjardins
+# Tanasawa_or_Schrage_or_Kassemi=3 => Kassemi
+ns.Tanasawa_or_Schrage_or_Kassemi= 3 0 0 0 0 0
+
+# CP-CV=R/w
+# PEOS=rho(gamma-1)cv T=rho(CP-CV)T=rho R T/w
+# if initial temperature is 295.41 Kelvin,
+# find P_ref so that
+# P_gamma=P_{CC}(T_gamma)  T_gamma=295.41 P_gamma=PEOS(T_gamma)
+# i.e. density_init_vapor * (R/w) * 295.41 = P_CC(295.41)
+# i.e.
+# density_init_vapor * (R/w) * 295.41=
+#    P_ref * e^{(L*w/R)(1/T_ref-1/T_gamma)
+# The phase-change saturation temperature and pressure are calculated
+# from Clausius–Clapeyron relation. The "reference" temprature and
+# pressure are given below.
+ns.saturation_temp=307.0 0.0 0.0 0.0 0.0 0.0  # T_ref
+ns.saturation_temp_min=273 0.0 0.0 0.0 0.0 0.0
+ns.reference_pressure=101513.36461739511 0.0 0.0 0.0 0.0 0.0
+ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0
+# Universal gas constant: (note: this value is hardwired in CRYOGENIC_TANK_MK)
+ns.R_Palmore_Desjardins=8.3144626182 # J/(mol Kelvin)
+
+# ----------------------------------------------------------
+# -------- Initial and boundary conditions (IC/BC) ---------
+# ----------------------------------------------------------
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+# 0=dirichlet at inflow (default)
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=0
+
+ns.lo_bc          = 3 3
+ns.hi_bc          = 3 3
+ns.temperature_lo_bc = 3 3
+ns.temperature_hi_bc = 3 3
+
+ns.compressible_dt_factor=2.0 2.0 2.0
+#   (rho E)_{t} + div (rho u E) = -div( up )  (energy advection)
+#   rho_t + div (rho u) =0
+#   E=1/2  u dot u + e  e=e(T)
+#   (rho T)_{t} + div (rho u T) = -p div u  (energy advection)
+#   rho_t + u dot grad rho = -rho div u
+
+# Embedded boundary BC
+# 0=diffuse in solid 1=dirichlet 2=neumann
+ns.solidheat_flag   =0
+
+# Heat flux from band heater
+ns.xblob3 = 2.0 # Watts=J/s
+
+# ----------------------------------------------------------
+# -------- Reconstruction -----------------------------------
+# ----------------------------------------------------------
+ns.continuous_mof = 1 # 0=MOF 1=CMOF
+ns.mof_decision_tree_learning=100
+ns.mof_machine_learning=0
+
+#-1=Weymouth Yue,  
+# 1=EILE (default), 2=always EI, 3=always LE
+ns.EILE_flag        = -1
+
+ns.MOFITERMAX       = 15
+ns.MOFITERMAX_AFTER_PREDICT=15
+
+ns.truncate_thickness=2.0
+
+# ----------------------------------------------------------
+# -------- Projection --------------------------------------
+# ----------------------------------------------------------
+ns.projection_pressure_scale=1.0
+ns.minimum_relative_error=1.0e-18
+ns.initial_cg_cycles=10
+ns.initial_project_cycles=3
+ns.initial_viscosity_cycles=1
+ns.initial_thermal_cycles=1
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+
+# 0=GSRB 1=ICRB 2=ILU 3=Jackobi
+Lp.smooth_type       = 2
+Lp.bottom_smooth_type= 2
+
+# ----------------------------------------------------------
+# -------- Other inputs ------------------------------------
+# ----------------------------------------------------------
+# multigrid class (set to 2 for maximum verbosity)
+mg.verbose = 0
+cg.verbose = 0
+
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+Lp.v = 1
+
+mac.mac_abs_tol    = 1.0e-8
+
+
+ns.pressure_error_cutoff=0.0 0.0 0.0
+
+# turn any of these on to generate run-time timing stats
+RunStats.statvar = godunov_box level_project sync_project
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE

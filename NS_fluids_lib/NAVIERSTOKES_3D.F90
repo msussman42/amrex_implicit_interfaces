@@ -2846,7 +2846,7 @@ END SUBROUTINE SIMP
            stenhi(3)=0
            do dir2=1,SDIM
             dxelem=dx(dir2)*bfact
-            stenlo_index=NINT( (xcomp_of_xphys(1,dir2-1,xsten(0,dir2))- &
+            stenlo_index=NINT( (xcomp_of_xphys(dir2-1,xsten(0,dir2))- &
                                 problo(dir2))/dxelem-half )
             stenlo(dir2)=bfact*stenlo_index
             stenhi(dir2)=stenlo(dir2)+bfact-1
@@ -3573,7 +3573,7 @@ END SUBROUTINE SIMP
         icritlo(3)=0
         icrithi(3)=0
         do dir=1,SDIM
-         icrit(dir)=NINT((xcomp_of_xphys(1,dir-1,xsten(0,dir))- &
+         icrit(dir)=NINT((xcomp_of_xphys(dir-1,xsten(0,dir))- &
                           problo(dir))/visual_dx(dir))
          icritlo(dir)=icrit(dir)-1
          xcrit(dir)=icritlo(dir)*visual_dx(dir)+problo(dir)
@@ -3739,7 +3739,7 @@ END SUBROUTINE SIMP
            stenhi(3)=0
            do dir2=1,SDIM
             dxelem=dx(dir2)*bfact
-            stenlo_index=NINT( (xcomp_of_xphys(1,dir2-1,xsten(0,dir2))- &
+            stenlo_index=NINT( (xcomp_of_xphys(dir2-1,xsten(0,dir2))- &
                                 problo(dir2))/dxelem-half )
             stenlo(dir2)=bfact*stenlo_index
             stenhi(dir2)=stenlo(dir2)+bfact-1
@@ -4868,7 +4868,7 @@ END SUBROUTINE SIMP
           ! direction, xsten corresponds to a coarse level
           ! coordinate (avgdown). 
          xcoarse(dir2)=xsten(0,dir2)
-         finelo_index=NINT( (xcomp_of_xphys(1,dir2-1,xcoarse(dir2))- &
+         finelo_index=NINT( (xcomp_of_xphys(dir2-1,xcoarse(dir2))- &
                              problo(dir2))/dxelem_f-half )
          stenlo(dir2)=bfact_f*finelo_index
          stenhi(dir2)=stenlo(dir2)+bfact_f-1
@@ -5629,7 +5629,7 @@ END SUBROUTINE SIMP
           do dir2=1,SDIM
            dxelem_c=dxc(dir2)*bfact_c
            xfine(dir2)=xsten(0,dir2)
-           coarselo_index=NINT((xcomp_of_xphys(1,dir2-1,xfine(dir2))- &
+           coarselo_index=NINT((xcomp_of_xphys(dir2-1,xfine(dir2))- &
                                 problo(dir2))/dxelem_c-half )
            stenlo(dir2)=bfact_c*coarselo_index
            stenhi(dir2)=stenlo(dir2)+bfact_c-1
@@ -6336,7 +6336,7 @@ END SUBROUTINE SIMP
           do dir2=1,SDIM
            dxelem_c=dxc(dir2)*bfact_c
            xfine(dir2)=xsten(0,dir2)
-           coarselo_index=NINT( (xcomp_of_xphys(1,dir2-1,xfine(dir2))- &
+           coarselo_index=NINT( (xcomp_of_xphys(dir2-1,xfine(dir2))- &
                                  problo(dir2))/dxelem_c-half )
            stenlo(dir2)=bfact_c*coarselo_index
            stenhi(dir2)=stenlo(dir2)+bfact_c-1
@@ -12553,7 +12553,7 @@ END SUBROUTINE SIMP
        do dir2=1,SDIM
         dxelem_f=dxf(dir2)*bfact_f
         xcoarse(dir2)=xsten(0,dir2)
-        finelo_index=NINT( (xcomp_of_xphys(1,dir2-1,xcoarse(dir2))- &
+        finelo_index=NINT( (xcomp_of_xphys(dir2-1,xcoarse(dir2))- &
                             problo(dir2))/dxelem_f-half )
         stenlo(dir2)=bfact_f*finelo_index
         stenhi(dir2)=stenlo(dir2)+bfact_f-1
@@ -14086,7 +14086,7 @@ END SUBROUTINE SIMP
        do dir2=1,SDIM
         dxelem_f=dxf(dir2)*bfact_f
         xcoarse(dir2)=xsten(0,dir2)
-        finelo_index=NINT( (xcomp_of_xphys(1,dir2-1,xcoarse(dir2))- &
+        finelo_index=NINT( (xcomp_of_xphys(dir2-1,xcoarse(dir2))- &
                             problo(dir2))/dxelem_f-half )
         stenlo(dir2)=bfact_f*finelo_index
         stenhi(dir2)=stenlo(dir2)+bfact_f-1+box_type(dir2)

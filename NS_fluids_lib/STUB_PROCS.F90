@@ -1117,21 +1117,15 @@ REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
 
 end subroutine STUB_wallfunc
 
-subroutine STUB_MAPPING_WEIGHT_COEFF(dir,wt,phys_x,time)
+! returns (1/w) where w>>1 in "trouble" regions
+subroutine STUB_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
 use probcommon_module
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: dir
 REAL_T, INTENT(out) :: wt
 REAL_T, INTENT(in) :: phys_x
-REAL_T, INTENT(in) :: time
 
-if (time.ge.zero) then
- ! do nothing
-else
- print *,"time invalid"
- stop
-endif
 if ((dir.ge.0).and.(dir.lt.SDIM)) then
  ! do nothing
 else

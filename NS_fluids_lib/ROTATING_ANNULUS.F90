@@ -512,4 +512,33 @@ endif
 return
 end subroutine ROTATING_ANNULUS_STATE_BC
 
+! returns (1/w) where w>>1 in "trouble" regions
+subroutine ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: dir
+REAL_T, INTENT(out) :: wt
+REAL_T, INTENT(in) :: phys_x
+
+if ((dir.ge.0).and.(dir.lt.SDIM)) then
+ ! do nothing
+else
+ print *,"dir invalid"
+ stop
+endif
+if ((phys_x.ge.zero).or.(phys_x.le.zero)) then
+ ! do nothing
+else
+ print *,"phys_x is NaN"
+ stop
+endif
+
+wt=one
+
+return
+end subroutine ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF
+
+
+
 end module ROTATING_ANNULUS_module

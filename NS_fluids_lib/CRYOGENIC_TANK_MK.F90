@@ -3022,4 +3022,43 @@ endif
 end subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE
 
 
+! returns (1/w) where w>>1 in "trouble" regions
+subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
+use probcommon_module
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: dir
+REAL_T, INTENT(out) :: wt
+REAL_T, INTENT(in) :: phys_x
+
+if ((dir.ge.0).and.(dir.lt.SDIM)) then
+ ! do nothing
+else
+ print *,"dir invalid"
+ stop
+endif
+if ((phys_x.ge.zero).or.(phys_x.le.zero)) then
+ ! do nothing
+else
+ print *,"phys_x is NaN"
+ stop
+endif
+
+wt=one
+
+if (fort_grid_stretching_parameter(1).gt.zero) then
+ if (dir.eq.0) then
+  if (phys_x.le.problenx/10.0d0) then
+   wt=1.0d0/100.0d0
+  endif
+  if (abs(phys_x-xblob).le.problenx/10.0d0) then
+   wt=1.0d0/100.0d0
+  endif
+ endif
+endif
+
+return
+end subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF
+
+
 end module CRYOGENIC_TANK_MK_module
