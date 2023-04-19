@@ -132,6 +132,8 @@
 
       REAL_T fort_visc_coef
 
+      REAL_T fort_grid_stretching_parameter(SDIM)
+
       INTEGER_T num_state_material
       INTEGER_T num_state_base
       INTEGER_T ngeom_raw

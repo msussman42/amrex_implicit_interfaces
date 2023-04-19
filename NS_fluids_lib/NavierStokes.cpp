@@ -607,6 +607,8 @@ Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 Vector<Real> NavierStokes::static_cap_wave_speed;
 Vector<Real> NavierStokes::cap_wave_speed;
 
+Vector<Real> NavierStokes::grid_stretching_parameter;
+
 Vector<Real> NavierStokes::hardwire_Y_gamma;
 Vector<Real> NavierStokes::hardwire_T_gamma;
 // "p_boil" in Dodd and Ferrante
@@ -1347,6 +1349,14 @@ void fortran_parameters() {
  NavierStokes::num_state_material=ENUM_SPECIESVAR;  // den,Temperature
  NavierStokes::num_state_material+=NavierStokes::num_species_var;
 
+ NavierStokes::grid_stretching_parameter.resize(AMREX_SPACEDIM);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) { 
+  NavierStokes::grid_stretching_parameter[dir]=0.0;
+ }
+ pp.queryAdd("grid_stretching_parameter",
+    NavierStokes::grid_stretching_parameter,
+    AMREX_SPACEDIM);
+
  Vector<Real> elastic_viscosity_temp;
  Vector<Real> elastic_time_temp;
  Vector<int> viscoelastic_model_temp;
@@ -2019,6 +2029,7 @@ void fortran_parameters() {
   etaS_temp.dataPtr(),
   etaP_temp.dataPtr(),
   &visc_coef_temp,
+  NavierStokes::grid_stretching_parameter.dataPtr(),
   &ioproc);
 
  ParallelDescriptor::Barrier();
@@ -3417,6 +3428,8 @@ NavierStokes::read_params ()
  
      // in: read_params
 
+    grid_stretching_parameter.resize(AMREX_SPACEDIM);
+
     hardwire_Y_gamma.resize(2*num_interfaces);
     hardwire_T_gamma.resize(2*num_interfaces);
     accommodation_coefficient.resize(2*num_interfaces);
@@ -3486,6 +3499,10 @@ NavierStokes::read_params ()
      shear_microlayer_size[i]=microlayer_size_default;
      buoyancy_microlayer_size[i]=microlayer_size_default;
      phasechange_microlayer_size[i]=microlayer_size_default;
+    }
+
+    for (int i=0;i<AMREX_SPACEDIM;i++) { 
+     grid_stretching_parameter[i]=0.0;
     }
 
     for (int i=0;i<num_interfaces;i++) { 
@@ -3824,6 +3841,15 @@ NavierStokes::read_params ()
 
     pp.queryAdd("recalesce_model_parameters",recalesce_model_parameters,
        3*num_materials);
+
+    pp.queryAdd("grid_stretching_parameter",grid_stretching_parameter,
+	    AMREX_SPACEDIM);
+    if (ParallelDescriptor::IOProcessor()) {
+     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+      std::cout << "dir,grid_stretching_parameter " <<
+        dir << ' ' << grid_stretching_parameter[dir] << '\n';
+     }
+    }
 
     pp.queryAdd("hardwire_Y_gamma",hardwire_Y_gamma,2*num_interfaces);
     pp.queryAdd("hardwire_T_gamma",hardwire_T_gamma,2*num_interfaces);
@@ -5297,12 +5323,14 @@ NavierStokes::read_params ()
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "hardwire_T_gamma i=" << i << "  " << 
        hardwire_T_gamma[i] << '\n';
-      std::cout << "hardwire_T_gamma i+num_interfaces=" << i+num_interfaces << "  " << 
+      std::cout << "hardwire_T_gamma i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
        hardwire_T_gamma[i+num_interfaces] << '\n';
 
       std::cout << "hardwire_Y_gamma i=" << i << "  " << 
        hardwire_Y_gamma[i] << '\n';
-      std::cout << "hardwire_Y_gamma i+num_interfaces=" << i+num_interfaces << "  " << 
+      std::cout << "hardwire_Y_gamma i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
        hardwire_Y_gamma[i+num_interfaces] << '\n';
 
       std::cout << "accommodation_coefficient i=" << i << "  " << 
