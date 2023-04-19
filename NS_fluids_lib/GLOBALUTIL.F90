@@ -15732,16 +15732,42 @@ end subroutine print_visual_descriptor
       REAL_T :: ll(n),uu(n),dd(n),z(n)
 
       dd(1)=d(1)
+
+      if (dd(1).ne.zero) then
+       ! do nothing
+      else
+       print *,"dd(1) invalid ",dd(1)
+       stop
+      endif
+
       uu(1)=u(1)/dd(1)
       z(1)=f(1)/dd(1)
+
       do i=2,n-1
+
        ll(i)=l(i)
        dd(i)=d(i)-ll(i)*uu(i-1)
+
+       if (dd(i).ne.zero) then
+        ! do nothing
+       else
+        print *,"dd(i) invalid ",dd(i)
+        stop
+       endif
+
        uu(i)=u(i)/dd(i)
        z(i)=(f(i)-ll(i)*z(i-1))/dd(i)
       enddo
       ll(n)=l(n)
       dd(n)=d(n)-ll(n)*uu(n-1)
+
+      if (dd(n).ne.zero) then
+       ! do nothing
+      else
+       print *,"dd(n) invalid ",dd(n)
+       stop
+      endif
+
       z(n)=(f(n)-ll(n)*z(n-1))/dd(n)
       soln(n)=z(n)
       do i=n-1,1,-1
@@ -15844,6 +15870,7 @@ end subroutine print_visual_descriptor
       REAL_T :: xlo,xhi,comp_dx
       REAL_T :: xcell_lo,xcell_hi
       REAL_T :: xcomp_lo,xcomp_hi
+      REAL_T, PARAMETER :: conv_TOL=1.0D-12
  
       nelement=mapping_n_cell(dir)
       if (nelement.ge.1) then
@@ -15887,9 +15914,17 @@ end subroutine print_visual_descriptor
         xcell_hi=xcell_lo+comp_dx
         xcomp_lo=mapping_phys_to_comp(oldnew,icrit,dir)
         xcomp_hi=mapping_phys_to_comp(oldnew,icrit+1,dir)
-        if (xphys.le.xcell_lo) then
+
+        if (xcomp_hi.gt.xcomp_lo) then
+         ! do nothing
+        else
+         print *,"xcomp_hi-xcomp_lo invalid"
+         stop
+        endif
+
+        if (abs(xphys-xcell_lo).le.conv_TOL*comp_dx) then
          xcomp_of_xphys=xcomp_lo
-        else if (xphys.ge.xcell_hi) then
+        else if (abs(xphys-xcell_hi).le.conv_TOL*comp_dx) then
          xcomp_of_xphys=xcomp_hi
         else if ((xphys.gt.xcell_lo).and. &
                  (xphys.lt.xcell_hi)) then
@@ -16090,8 +16125,13 @@ end subroutine print_visual_descriptor
                          mapping_comp_to_phys(oldnew,i+1,dir))
          ! returns (1/w) where w>>1 in "trouble" regions
         call SUB_MAPPING_WEIGHT_COEFF(dir,local_wt,local_phys,time)
-        wt_coord(i)=local_wt/comp_dx
-       enddo
+        if (local_wt.gt.zero) then
+         wt_coord(i)=local_wt/comp_dx
+        else 
+         print *,"local_wt invalid"
+         stop
+        endif
+       enddo !do i=0,nelement-1 
 
        nsolve=nelement-1
 
@@ -16110,13 +16150,25 @@ end subroutine print_visual_descriptor
        phys_coord_new(nelement)=xhi
 
        conv_err=zero
+
        do i=1,nsolve
         phys_coord_new(i)=tri_soln(i)
         conv_err=conv_err+ &
-          (mapping_comp_to_phys(oldnew,i,dir)-phys_coord_new(i))**2
+          (mapping_comp_to_phys(oldnew,i,dir)- &
+           phys_coord_new(i))**2
         mapping_comp_to_phys(oldnew,i,dir)= &
            phys_coord_new(i)
-       enddo
+       enddo ! do i=1,nsolve
+
+       do i=0,nelement-1
+        if (phys_coord_new(i+1)-phys_coord_new(i).gt.zero) then
+         ! do nothing
+        else
+         print *,"phys_coord_new not monotonic"
+         stop
+        endif
+       enddo !i=0,nelement-1
+
        conv_err=sqrt(conv_err/nelement)
        conv_iter=conv_iter+1
        if ((conv_iter.ge.1).and. &
@@ -16147,12 +16199,23 @@ end subroutine print_visual_descriptor
 
       do i=1,nelement-1
        phys_coord=xlo+i*comp_dx
+        ! initial guess.
        comp_coord=mapping_phys_to_comp(oldnew,i-1,dir)
         ! solve x(X)=xstar
        call inverse_mapping(phys_coord,comp_coord,oldnew,dir)
        mapping_phys_to_comp(oldnew,i,dir)=comp_coord
-      enddo
+      enddo ! do i=1,nelement-1
  
+      do i=0,nelement-1
+       if (mapping_phys_to_comp(oldnew,i+1,dir)- &
+           mapping_phys_to_comp(oldnew,i,dir).gt.zero) then
+        ! do nothing
+       else
+        print *,"mapping_phys_to_comp not monotonic"
+        stop
+       endif
+      enddo !i=0,nelement-1
+
       return
       end subroutine single_dimension_grid_mapping
 
