@@ -91,7 +91,7 @@ amr.time_blocking_factor=1 # SEM time order
 ns.enable_spectral=0  # enable_spectral=0 or 1
 amr.check_int       = 1000
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1000 
+amr.plot_int        = 1000
 #amr.plot_int        = 1000 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -161,7 +161,8 @@ ns.axis_dir=0   # 0 for drop 1 for flat surface
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
 #ns.vinletgas=257.0  # cm/s equivalent to 5 knots
-ns.vinletgas=0.0
+#vinletgas=0.0 => stagnant case => "drop_analytical_solution" is called.
+ns.vinletgas=0.0 
 ns.twall=263  # not used
 ns.advbot=0.0 
 ns.adv_vel=0.0 # keep 0.0
@@ -245,7 +246,7 @@ ns.zblob=0.0
 ns.radblob=0.05
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=424
+ns.probtype=424 #DROP_IN_SHEAR.F90
 ns.ncomp_sum_int_user1=0 # level set,Tgas,Ygas,velocity errors
 
 #ns.mem_debug = 1
