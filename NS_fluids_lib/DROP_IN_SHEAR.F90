@@ -565,6 +565,7 @@ if (probtype.eq.424) then
  enddo ! im=1..num_materials
 
  if (axis_dir.eq.0) then
+   !stagnant
   if (vinletgas.eq.zero) then
    call drop_analytical_solution(t,x,D_gamma,T_analytical, &
       Y_analytical,VEL,LS_analytical,pres_analytical)

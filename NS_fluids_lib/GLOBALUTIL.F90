@@ -15776,7 +15776,8 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine tridiag_solve
-
+  
+       ! dir=0..sdim-1
       REAL_T function xphys_of_xcomp(dir,xcomp)
       use probcommon_module
       IMPLICIT NONE
@@ -15793,7 +15794,7 @@ end subroutine print_visual_descriptor
       if (nelement.ge.1) then
        ! do nothing
       else
-       print *,"nelement invalid"
+       print *,"nelement invalid xphys_of_xcomp nelement=",nelement
        stop
       endif
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
@@ -15878,7 +15879,7 @@ end subroutine print_visual_descriptor
       if (nelement.ge.1) then
        ! do nothing
       else
-       print *,"nelement invalid"
+       print *,"nelement invalid xcomp_of_xphys nelement=",nelement
        stop
       endif
       if ((dir.ge.0).and.(dir.lt.SDIM)) then
@@ -15946,6 +15947,7 @@ end subroutine print_visual_descriptor
       endif
       end function xcomp_of_xphys
 
+       ! dir=0..sdim-1
        ! solve x(X)-xstar=0 for Xstar using Newton's method.
       subroutine inverse_mapping(phys_coord,comp_coord,dir)
       use probcommon_module
@@ -15984,7 +15986,7 @@ end subroutine print_visual_descriptor
       if (nelement.ge.1) then
        ! do nothing
       else
-       print *,"nelement invalid"
+       print *,"nelement invalid inverse_mapping nelement=",nelement
        stop
       endif
       conv_err=conv_TOL*1.0D+10
@@ -16074,7 +16076,8 @@ end subroutine print_visual_descriptor
       if (nelement.ge.1) then
        ! do nothing
       else
-       print *,"nelement invalid"
+       print *,"nelement invalid single_dimension_grid_mapping nelement=", &
+               nelement
        stop
       endif
 

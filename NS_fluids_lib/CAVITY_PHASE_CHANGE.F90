@@ -130,7 +130,7 @@ allocate(active_flag2(max_sitesnum))
 allocate(sites3(3,max_sitesnum)) !x,y,temperature
 allocate(active_flag3(max_sitesnum))
 
-fo=2.0d0       ! function order
+fo=5.0d0       ! function order
 a=201.0/(zblob4**fo-(tinit-tref)**fo)   ! 20 superheat condition with 202 sites
 b=1.0-a*((tinit-tref)**fo)            ! tinit-tref superheat condition for the first site
 !print *,"a=",a,"b=",b
@@ -480,7 +480,7 @@ INTEGER_T, INTENT(in) :: nhalf
 REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
 INTEGER_T, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
-INTEGER_T    :: i,j,k,im
+INTEGER_T    :: i,j,k,im_l,im_s
 INTEGER_T    :: temperature_component 
 INTEGER_T    :: ii
 REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
@@ -499,16 +499,19 @@ REAL_T       :: tempdist
    print *,"num_materials invalid"
    stop
   endif
-  im=3
-  temperature_component=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+  im_l=1
+  im_s=3
+  temperature_component=(im_l-1)*num_state_material+ENUM_TEMPERATUREVAR+1
   tempt=nucleate_in%EOS(D_DECL(i,j,k),temperature_component)
   vf_sol=nucleate_in%Snew(D_DECL(i,j,k), &
-      STATECOMP_MOF+(im-1)*ngeom_raw+1)
-  ls_sol=nucleate_in%LSnew(D_DECL(i,j,k),im)
+      STATECOMP_MOF+(im_s-1)*ngeom_raw+1)
+  ls_sol=nucleate_in%LSnew(D_DECL(i,j,k),im_s)
 !  print *,"i=",i,"j=",j
+
 !  print *,"ls_sol=",ls_sol,"temperature",tempt,"dx",nucleate_in%dx(SDIM)
 !  print *,"xsten", xsten(-1,1),xsten(1,1)
-  ls_liq=nucleate_in%LSnew(D_DECL(i,j,k),1)
+
+!  ls_liq=nucleate_in%LSnew(D_DECL(i,j,k),1)
   tempvec1(1)=xsten(0,1)
   tempvec1(2)=xsten(0,2)
   tempvec1(SDIM)=xsten(0,SDIM)
@@ -516,7 +519,7 @@ REAL_T       :: tempdist
     do ii=1,sitesnum
 !     print *,"sitesnum=", ii
      if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
-      print *,"tempt satisfied"
+!      print *,"tempt satisfied"
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
           tempvec2(1)=sites(1,ii)
           tempvec2(2)=sites(2,ii)
@@ -548,16 +551,19 @@ REAL_T       :: tempdist
    print *,"num_materials invalid"
    stop
   endif
-  im=3
-  temperature_component=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+  im_l=1
+  im_s=3
+  temperature_component=(im_l-1)*num_state_material+ENUM_TEMPERATUREVAR+1
   tempt=nucleate_in%EOS(D_DECL(i,j,k),temperature_component)
   vf_sol=nucleate_in%Snew(D_DECL(i,j,k), &
-      STATECOMP_MOF+(im-1)*ngeom_raw+1)
-  ls_sol=nucleate_in%LSnew(D_DECL(i,j,k),im)
- if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
-  print *,"i=",i,"j=",j
-  print *,"ls_sol=",ls_sol,"temperature",tempt,"dx",nucleate_in%dx(SDIM)
-  print *,"xsten", xsten(0,1),xsten(0,2)
+      STATECOMP_MOF+(im_s-1)*ngeom_raw+1)
+  ls_sol=nucleate_in%LSnew(D_DECL(i,j,k),im_s)
+ if(1.eq.0)then
+  if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
+!   print *,"i=",i,"j=",j
+   print *,"ls_sol=",ls_sol,"temperature",tempt,"dx",nucleate_in%dx(SDIM)
+   print *,"xsten", xsten(0,1),xsten(0,2)
+  endif
  endif
   ls_liq=nucleate_in%LSnew(D_DECL(i,j,k),1)
   tempvec1(1)=xsten(0,1)
@@ -566,11 +572,11 @@ REAL_T       :: tempdist
     do ii=1,sitesnum
 !     print *,"sitesnum=", ii
      if(tempt.ge.sites(3,ii).and.active_flag(ii).eq.0)then
-       print *,"tempt satisfied"
-       print *,"tempt=",tempt,"ls_sol=",ls_sol,"threshold",nucleate_in%dx(SDIM)+radblob3
+!       print *,"tempt satisfied"
+!       print *,"tempt=",tempt,"ls_sol=",ls_sol,"threshold",nucleate_in%dx(SDIM)+radblob3
       if(abs(ls_sol).le.nucleate_in%dx(SDIM)+radblob3)then
-       print *,"ls_sol satisfied"
-       print *,"tempt< ",sites(3,ii),"ls_sol< ",nucleate_in%dx(SDIM)," + ",radblob3
+!       print *,"ls_sol satisfied"
+!       print *,"tempt< ",sites(3,ii),"ls_sol< ",nucleate_in%dx(SDIM)," + ",radblob3
           tempvec2(1)=sites(1,ii)
           tempvec2(2)=sites(2,ii)
           tempvec2(SDIM)=zblob
@@ -579,8 +585,8 @@ REAL_T       :: tempdist
           tempvec2(SDIM)=zblob 
           endif
           call l2norm(tempvec1,tempvec2, tempdist)
-          print *,"pointin",tempvec1
-          print *,"pointlist",tempvec2          
+!          print *,"pointin",tempvec1
+!          print *,"pointlist",tempvec2          
         if(tempdist.le.radblob3)then
          print *,"make seed ","temp ","ls_sol ","site "
          print *,"make seed",tempt,ls_sol,sites(:,ii)
@@ -595,7 +601,7 @@ REAL_T       :: tempdist
       endif    
      endif
     enddo ! do ii=1,sitesnum
-    if(1.eq.0)then
+    if(1.eq.1)then
     do ii=1,sitesnum2
 !     print *,"sitesnum=", ii
      if(tempt.ge.sites2(3,ii).and.active_flag2(ii).eq.0)then

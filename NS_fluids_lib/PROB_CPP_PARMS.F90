@@ -1869,17 +1869,17 @@ stop
        !  index,dir
        ! REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
        ! REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
-       ! INTEGER_T :: mapping_n_cell(3)
+       ! INTEGER_T :: mapping_n_cell(0:2)
        ! INTEGER_T :: mapping_allocated=0
 
       mapping_allocated=1
       mapping_n_cell_max=0
       do local_dir=0,SDIM-1
-       mapping_n_cell(local_dir+1)=fort_n_cell(local_dir+1)
+       mapping_n_cell(local_dir)=fort_n_cell(local_dir+1)
        do level=1,fort_max_level
-        mapping_n_cell(local_dir+1)=2*mapping_n_cell(local_dir+1)
+        mapping_n_cell(local_dir)=2*mapping_n_cell(local_dir)
        enddo
-       mapping_n_cell_max=max(mapping_n_cell_max,mapping_n_cell(local_dir+1))
+       mapping_n_cell_max=max(mapping_n_cell_max,mapping_n_cell(local_dir))
       enddo ! local_dir=0,SDIM-1
       allocate(mapping_comp_to_phys(0:mapping_n_cell_max,0:2))
       allocate(mapping_phys_to_comp(0:mapping_n_cell_max,0:2))
