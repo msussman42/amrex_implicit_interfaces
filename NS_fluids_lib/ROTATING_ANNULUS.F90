@@ -521,6 +521,13 @@ INTEGER_T, INTENT(in) :: dir
 REAL_T, INTENT(out) :: wt
 REAL_T, INTENT(in) :: phys_x
 
+if (SDIM.eq.3) then
+ ! do nothing
+else
+ print *,"expecting SDIM==3"
+ stop
+endif
+
 if ((dir.ge.0).and.(dir.lt.SDIM)) then
  ! do nothing
 else
@@ -534,7 +541,41 @@ else
  stop
 endif
 
-wt=one
+if (1.eq.0) then
+ wt=one
+else if (1.eq.1) then
+ if (dir.eq.0) then
+  scaling=(probhix-problox)
+  if (phys_x.le.half*(problox+probhix)) then
+   wt=one+(scaling/(problox-phys_x))**2
+  else if (phys_x.ge.half*(problox+probhix)) then
+   wt=one+(scaling/(probhix-phys_x))**2
+  else
+   print *,"phys_x bust"
+   stop
+  endif
+ else if (dir.eq.1) then
+  wt=one
+ else if (dir.eq.SDIM) then
+  scaling=(probhiz-probloz)
+  if (phys_x.le.half*(probloz+probhiz)) then
+   wt=one+(scaling/(probloz-phys_x))**2
+  else if (phys_x.ge.half*(probloz+probhiz)) then
+   wt=one+(scaling/(probhiz-phys_x))**2
+  else
+   print *,"phys_x bust"
+   stop
+  endif
+ else 
+  print *,"dir invalid"
+  stop
+ endif
+else
+ print *,"incorrect option"
+ stop
+endif
+
+wt=one/wt
 
 return
 end subroutine ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF

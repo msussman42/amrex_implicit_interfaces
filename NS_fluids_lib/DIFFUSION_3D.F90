@@ -82,6 +82,8 @@ stop
 ! |v_rr+v_r/r+v_tt/r^2+2u_t/r^2-v/r^2+v_zz |
 ! |w_rr+w_r/r+w_tt/r^2+w_zz                |
 !
+! the above (constant viscosity) matches mathematica website.
+!
 ! compromise: 
 !
 ! GU=| u_r       u_t/r  u_z  |
