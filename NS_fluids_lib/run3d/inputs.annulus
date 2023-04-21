@@ -34,7 +34,7 @@
 # rate x 2 pi / omega = 2 pi r
 # rate = r * omega
 #
-# twall-tempconst=Delta T
+# twall-tempconst=Delta T (tempconst=20)
 # angular_velocity=Omega
 #
 max_step  =  9999999    # maximum timestep
@@ -43,7 +43,8 @@ stop_time =  3000.0
 
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ, 3=>RTHETA
 geometry.coord_sys_override = 3    # 0 => cart, 1 => RZ, 3=>RTHETA
-# Table II Lewis and Nagata: ra=3.48 rb=6.02  R=6.02-3.48=2.54
+# Table II Lewis and Nagata: ra=3.48cm rb=6.02cm  R=6.02-3.48=2.54
+# D=5cm
 geometry.prob_lo   =  3.48 0.0 0.0
 geometry.prob_hi   =  6.02 6.28318530718 5.0 
 #geometry.prob_lo   =  20.0 0.0 0.0  #SMITH
@@ -128,7 +129,7 @@ ns.change_max     = 1.1      # scale back initial timestep
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-10
 
-ns.gravity        = -980.0
+ns.gravity        = -980.0 # g/cm^2
 ns.tension        = 0.0 0.0 
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 1        # timesteps between computing mass 
@@ -138,7 +139,8 @@ ns.axis_dir=0
 ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
-ns.twall=20.03820  # twall-tempconst=Delta T
+#outer wall temperature
+ns.twall=20.03820  # twall-tempconst=Delta T (tempconst=20) Delta T=0.0382
 #ns.twall=23.82  # twall-tempconst=Delta T
 #ns.twall=40.0 # twall-tempconst=Delta T SMITH
 ns.advbot=0.0
