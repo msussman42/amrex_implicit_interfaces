@@ -139,6 +139,7 @@ materials are immersed into the fluid(s).
 */
 
 int  NavierStokes::continuous_mof=1;
+int  NavierStokes::update_centroid_after_recon=0;
 
 //make MOFITERMAX_AFTER_PREDICT=0 if mof_decision_tree_learning>=100^d
 
@@ -2638,6 +2639,16 @@ NavierStokes::read_params ()
     } else
      amrex::Error("continuous_mof invalid");
 
+    pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
+    if (update_centroid_after_recon==0) {
+     if (continuous_mof>1)
+      amrex::Error("expecting update_centroid_after_recon=1");
+    } else if (update_centroid_after_recon==1) {
+     if (continuous_mof==0)
+      amrex::Error("expecting update_centroid_after_recon=0");
+    } else
+     amrex::Error("expecting update_centroid_after_recon=0 or 1");
+
     pp.queryAdd("mof_machine_learning",mof_machine_learning);
     pp.queryAdd("mof_decision_tree_learning",mof_decision_tree_learning);
 
@@ -2850,6 +2861,8 @@ NavierStokes::read_params ()
      std::cout << "cfl_static " << cfl_static << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
      std::cout << "continuous_mof " << continuous_mof << '\n';
+     std::cout << "update_centroid_after_recon " << 
+	    update_centroid_after_recon << '\n';
      std::cout << "mof_machine_learning " << mof_machine_learning << '\n';
      std::cout << "mof_decision_tree_learning " << 
 	     mof_decision_tree_learning << '\n';
