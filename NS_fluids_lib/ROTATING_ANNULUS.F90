@@ -520,6 +520,7 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: dir
 REAL_T, INTENT(out) :: wt
 REAL_T, INTENT(in) :: phys_x
+REAL_T :: scaling
 
 if (SDIM.eq.3) then
  ! do nothing
