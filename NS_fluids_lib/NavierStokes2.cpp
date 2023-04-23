@@ -8830,12 +8830,32 @@ void NavierStokes::delete_array(int idx_localMF) {
 void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
   int update_flag,int init_vof_prev_time) {
 
+ int local_update_flag=update_flag;
+
+ if (update_centroid_after_recon==1) {
+  // do nothing
+ } else if (update_centroid_after_recon==0) {
+
+  if (local_update_flag==RECON_UPDATE_NULL) {
+   // do nothing
+  } else if (local_update_flag==RECON_UPDATE_STATE_ERR) {
+   // do nothing
+  } else if (local_update_flag==RECON_UPDATE_STATE_CENTROID) {
+   local_update_flag=RECON_UPDATE_NULL;
+  } else if (local_update_flag==RECON_UPDATE_STATE_ERR_AND_CENTROID) {
+   local_update_flag=RECON_UPDATE_STATE_ERR;
+  } else
+   amrex::Error("local_update_flag invalid");
+
+ } else
+  amrex::Error("update_centroid_after_recon invalid");
+
  if (level!=0)
   amrex::Error("level must be 0 ");
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) 
    std::cout << "Start: VOF_Recon_ALL: time= " <<
-    time << " update_flag= " << update_flag << 
+    time << " local_update_flag= " << local_update_flag << 
     " init_vof_prev_time= " << init_vof_prev_time << '\n';
 
  if ((ngrow<1)||(ngrow>ngrow_distance))
@@ -8859,7 +8879,8 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
    NavierStokes& ns_level=getLevel(ilev);
    int number_centroid_level=0;
    Real delta_centroid_level=0.0;
-   ns_level.VOF_Recon(ngrow,time,update_flag,
+   ns_level.VOF_Recon(ngrow,time,
+    local_update_flag,
     init_vof_prev_time,
     delta_centroid_level,
     number_centroid_level);
@@ -8877,16 +8898,16 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
   } else
    amrex::Error("number_centroid invalid");
 
-  if (update_flag==RECON_UPDATE_NULL) {
+  if (local_update_flag==RECON_UPDATE_NULL) {
 
    recon_error_met=1;
 
-  } else if (update_flag==RECON_UPDATE_STATE_ERR) {
+  } else if (local_update_flag==RECON_UPDATE_STATE_ERR) {
 
    recon_error_met=1;
    avgDownError_ALL(); //updates the new data.
 
-  } else if (update_flag==RECON_UPDATE_STATE_CENTROID) {
+  } else if (local_update_flag==RECON_UPDATE_STATE_CENTROID) {
 
    for (int ilev=finest_level;ilev>=level;ilev--) {
     NavierStokes& ns_level=getLevel(ilev);
@@ -8900,7 +8921,7 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
     recon_error_met=1;
    } 
 
-  } else if (update_flag==RECON_UPDATE_STATE_ERR_AND_CENTROID) {
+  } else if (local_update_flag==RECON_UPDATE_STATE_ERR_AND_CENTROID) {
 
    avgDownError_ALL(); //updates the new data.
 		      
@@ -8917,7 +8938,7 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
    } 
 
   } else
-   amrex::Error("update_flag invalid");
+   amrex::Error("local_update_flag invalid");
 
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
