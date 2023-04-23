@@ -9154,7 +9154,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     total_calls[tid_current].dataPtr(),
     total_iterations[tid_current].dataPtr(),
     total_errors[tid_current].dataPtr(),
-    &continuous_mof, 
+    &continuous_mof,  //fort_sloperecon
     &partial_cmof_stencil_at_walls);
  }  // mfi
 } // omp
@@ -9275,7 +9275,10 @@ void NavierStokes::MOF_training() {
 
  if (mof_machine_learning>0) {
 
-  // in: PLIC_3D.F90
+  // fort_MOF_training is declared in: PLIC_3D.F90
+  // op_training=0 => alloc
+  // op_training=1 => generate data and do python processing
+  // op_training=2 => read either NN, DT, or RF network data
   fort_MOF_training(
    &mof_machine_learning,
    &op_training, // =0 ("allocate")
