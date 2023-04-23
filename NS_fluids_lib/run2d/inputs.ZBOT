@@ -428,6 +428,8 @@ ns.xblob3 = 2.0 # Watts=J/s
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
 ns.continuous_mof = 1 # 0=MOF 1=CMOF
+ns.vof_height_function = 0
+ns.update_centroid_after_recon = 0
 ns.mof_decision_tree_learning=100
 ns.mof_machine_learning=0
 
