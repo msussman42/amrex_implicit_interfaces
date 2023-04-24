@@ -26544,7 +26544,9 @@ end subroutine initialize2d
 
       allocate(distbatch(num_materials))
 
-      if (time.ne.zero) then
+      if (time.eq.zero) then
+       ! do nothing
+      else
        print *,"time should be zero in initvelocity"
        stop
       endif

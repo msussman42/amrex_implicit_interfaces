@@ -35,7 +35,9 @@ INTEGER_T, PARAMETER :: TANK_MK_GEOM_DESCRIPTOR=ZBOT_FLIGHT_ID
 
 INTEGER_T :: num_aux_expect
 
-INTEGER_T :: dir_x,dir_y,dir_z
+INTEGER_T, PARAMETER :: dir_x = 1
+INTEGER_T, PARAMETER :: dir_z = SDIM
+INTEGER_T :: dir_y
 
 !! MIDDLE OF THE TANK IS AT Z=0 
 ! Tank inner radius
@@ -555,8 +557,6 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 
   num_aux_expect=0
  
-  dir_x=1 
-  dir_z=SDIM
   if (SDIM.eq.2) then
    dir_y=-1
   else if (SDIM.eq.3) then
@@ -743,6 +743,24 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  !    self-pressurization: Crossing fluid types, scales, and gravity levels 
  !  Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
 
+ subroutine rigid_displacement(xfoot,t,xphys,velphys)
+ IMPLICIT NONE
+
+ REAL_T, INTENT(in) :: xfoot(3)
+ REAL_T, INTENT(in) :: t
+ REAL_T, INTENT(out) :: xphys(3)
+ REAL_T, INTENT(out) :: velphys(3)
+
+ REAL_T, PARAMETER :: xdisp_amplitude=0.01d0
+ REAL_T, PARAMETER :: xdisp_freq=10.0d0
+
+ xphys(dir_x)=xfoot(dir_x)+  &
+     xdisp_amplitude*sin(xdisp_freq*t)
+ velphys(dir_x)=  &
+     xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
+
+ end subroutine rigid_displacement
+
  subroutine CRYOGENIC_TANK_MK_LS(x,t,LS,nmat)
   use probcommon_module
   use global_utility_module
@@ -754,7 +772,11 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   REAL_T, INTENT(out) :: LS(nmat)
   REAL_T :: nozzle_dist,LS_A
   INTEGER_T :: called_from_heater_source
+
   REAL_T :: x3D(3)
+  REAL_T :: xphys(3)
+  REAL_T :: xvel(3)
+
   INTEGER_T auxcomp
   REAL_T :: LS_heater_a
   REAL_T :: LS_heater_b
@@ -786,6 +808,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    print *,"dimension bust"
    stop
   endif
+
+  call rigid_displacement(x3D,t,xphys,xvel)
 
    ! material 1= liquid  (e.g. Freon 113)
    ! material 2= vapor  
@@ -854,22 +878,22 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      stop
     endif
     auxcomp=1
-    call interp_from_aux_grid(auxcomp,x3D,LS_heater_a)
+    call interp_from_aux_grid(auxcomp,xphys,LS_heater_a)
     LS(3)=LS_heater_a
     auxcomp=2
-    call interp_from_aux_grid(auxcomp,x3D,LS_heater_b)
+    call interp_from_aux_grid(auxcomp,xphys,LS_heater_b)
     LS(3)=max(LS(3),LS_heater_b)
     auxcomp=5
-    call interp_from_aux_grid(auxcomp,x3D,LS_tank)
+    call interp_from_aux_grid(auxcomp,xphys,LS_tank)
     LS(3)=max(LS(3),LS_tank)
     auxcomp=6
-    call interp_from_aux_grid(auxcomp,x3D,LS_nozzle)
+    call interp_from_aux_grid(auxcomp,xphys,LS_nozzle)
     LS(3)=max(LS(3),LS_nozzle)
     if (TANK_MK_AUX_THICK_WALLS.eq.1) then
      ! do nothing
     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
      auxcomp=7
-     call interp_from_aux_grid(auxcomp,x3D,LS_LAD_housing)
+     call interp_from_aux_grid(auxcomp,xphys,LS_LAD_housing)
      LS(3)=max(LS(3),LS_LAD_housing)
     else 
      print *,"TANK_MK_AUX_THICK_WALLS invalid"
@@ -975,6 +999,10 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 
  ! if SOLID VELOCITY requested everywhere (including outside of the solid),
  ! then velsolid==1
+ ! This routine called from:
+ ! fort_initvelocity (velsolid_flag=0, time=0)
+ ! velsolid (velsolid_flag=1, VEL=0 by default)
+ ! CRYOGENIC_TANK_MK_VEL_BC (velsolid_flag=0)
  subroutine CRYOGENIC_TANK_MK_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
   use probcommon_module
   IMPLICIT NONE
@@ -988,6 +1016,10 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   INTEGER_T, INTENT(in) :: velsolid_flag
   INTEGER_T dir
 
+  REAL_T :: x3D(3)
+  REAL_T :: xphys(3)
+  REAL_T :: xvel(3)
+
   if (nmat.eq.num_materials) then
    ! do nothing
   else
@@ -995,20 +1027,80 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    stop
   endif
 
+  x3D(1)=x(dir_x)
+  x3D(2)=x(dir_z)
+
+  if (SDIM.eq.2) then
+   x3D(3)=0.0d0
+  else if (SDIM.eq.3) then
+   x3D(3)=x(dir_y)
+  else
+   print *,"dimension bust"
+   stop
+  endif
+
+  call rigid_displacement(x3D,t,xphys,xvel)
+
   if ((velsolid_flag.eq.0).or. &
-   (velsolid_flag.eq.1)) then
+      (velsolid_flag.eq.1)) then
    ! do nothing
   else 
    print *,"velsolid_flag invalid"
    stop
   endif
 
-  if((t.eq.0.0d0).or.(velsolid_flag.eq.0)) then
-   do dir=1,SDIM
-    VEL(dir)=0.0d0
-   enddo
+  if ((num_materials.eq.3).and.(probtype.eq.423)) then
+
+   if ((axis_dir.eq.0).or. &
+       (axis_dir.eq.1)) then
+
+    ! if SOLID VELOCITY requested everywhere (including outside of the solid),
+    ! then velsolid==1
+    if((t.eq.0.0d0).or. &         ! called from fort_initvelocity
+       (velsolid_flag.eq.0)) then ! called from boundary condition routine
+     do dir=1,SDIM
+      VEL(dir)=0.0d0
+     enddo
+    else if ((t.gt.0.0d0).and. &
+             (velsolid_flag.eq.1)) then
+     ! do nothing (vel=0.0 is the default)
+    else
+     print *,"t or velsolid_flag invalid"
+     stop
+    endif
+
+   else if (axis_dir.eq.2) then
+
+    do dir=1,SDIM
+     VEL(dir)=0.0d0
+    enddo
+
+    if ((LS(3).ge.zero).or. &
+        (velsolid_flag.eq.1)) then
+     do dir=1,SDIM
+      VEL(dir)=0.0d0
+     enddo
+     VEL(dir_x)=xvel(dir_x)
+    else if ((LS(3).le.zero).and. &
+             (velsolid_flag.eq.0)) then
+     do dir=1,SDIM
+      VEL(dir)=0.0d0
+     enddo
+    else
+     print *,"LS(3) or velsolid_flag bust"
+     stop
+    endif
+
+   else
+    print *,"axis_dir invalid"
+    stop
+   endif
+
   else
-   ! do nothing
+   print *,"num_materials ", num_materials
+   print *,"probtype ", probtype
+   print *,"num_materials or probtype invalid"
+   stop
   endif
 
   return 
