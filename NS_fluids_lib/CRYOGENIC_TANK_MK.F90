@@ -754,6 +754,13 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  REAL_T, PARAMETER :: xdisp_amplitude=0.01d0
  REAL_T, PARAMETER :: xdisp_freq=10.0d0
 
+ INTEGER_T :: dir
+
+ do dir=1,3
+  xfoot(dir)=xphys(dir)
+  velphys(dir)=zero
+ enddo
+
  xfoot(dir_x)=xphys(dir_x)-  &
      xdisp_amplitude*sin(xdisp_freq*t)
  velphys(dir_x)=  &

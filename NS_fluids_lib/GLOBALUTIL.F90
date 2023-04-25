@@ -13033,7 +13033,14 @@ end subroutine print_visual_descriptor
           cell_lo(dir)=cell_index(dir)
           wt_dist(dir)=(x(dir)-xgrid)/local_dx
          else
+          print *,"auxcomp=",auxcomp
+          print *,"fort_num_local_aux_grids=", &
+            fort_num_local_aux_grids
           print *,"x or xgrid is NaN"
+          print *,"dir=",dir
+          print *,"local_dx=",local_dx
+          print *,"x(1),x(2),x(3) ",x(1),x(2),x(3)
+          print *,"xgrid = ",xgrid
           stop
          endif
         enddo ! dir=1..3
