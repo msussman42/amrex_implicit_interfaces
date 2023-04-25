@@ -746,15 +746,15 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  subroutine rigid_displacement(xfoot,t,xphys,velphys)
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: xfoot(3)
+ REAL_T, INTENT(out) :: xfoot(3)
  REAL_T, INTENT(in) :: t
- REAL_T, INTENT(out) :: xphys(3)
+ REAL_T, INTENT(in) :: xphys(3)
  REAL_T, INTENT(out) :: velphys(3)
 
  REAL_T, PARAMETER :: xdisp_amplitude=0.01d0
  REAL_T, PARAMETER :: xdisp_freq=10.0d0
 
- xphys(dir_x)=xfoot(dir_x)+  &
+ xfoot(dir_x)=xphys(dir_x)-  &
      xdisp_amplitude*sin(xdisp_freq*t)
  velphys(dir_x)=  &
      xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
@@ -774,7 +774,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   INTEGER_T :: called_from_heater_source
 
   REAL_T :: x3D(3)
-  REAL_T :: xphys(3)
+  REAL_T :: xfoot(3)
   REAL_T :: xvel(3)
 
   INTEGER_T auxcomp
@@ -809,7 +809,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    stop
   endif
 
-  call rigid_displacement(x3D,t,xphys,xvel)
+  call rigid_displacement(xfoot,t,x3D,xvel)
 
    ! material 1= liquid  (e.g. Freon 113)
    ! material 2= vapor  
@@ -878,22 +878,22 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      stop
     endif
     auxcomp=1
-    call interp_from_aux_grid(auxcomp,xphys,LS_heater_a)
+    call interp_from_aux_grid(auxcomp,xfoot,LS_heater_a)
     LS(3)=LS_heater_a
     auxcomp=2
-    call interp_from_aux_grid(auxcomp,xphys,LS_heater_b)
+    call interp_from_aux_grid(auxcomp,xfoot,LS_heater_b)
     LS(3)=max(LS(3),LS_heater_b)
     auxcomp=5
-    call interp_from_aux_grid(auxcomp,xphys,LS_tank)
+    call interp_from_aux_grid(auxcomp,xfoot,LS_tank)
     LS(3)=max(LS(3),LS_tank)
     auxcomp=6
-    call interp_from_aux_grid(auxcomp,xphys,LS_nozzle)
+    call interp_from_aux_grid(auxcomp,xfoot,LS_nozzle)
     LS(3)=max(LS(3),LS_nozzle)
     if (TANK_MK_AUX_THICK_WALLS.eq.1) then
      ! do nothing
     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
      auxcomp=7
-     call interp_from_aux_grid(auxcomp,xphys,LS_LAD_housing)
+     call interp_from_aux_grid(auxcomp,xfoot,LS_LAD_housing)
      LS(3)=max(LS(3),LS_LAD_housing)
     else 
      print *,"TANK_MK_AUX_THICK_WALLS invalid"
@@ -1017,7 +1017,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   INTEGER_T dir
 
   REAL_T :: x3D(3)
-  REAL_T :: xphys(3)
+  REAL_T :: xfoot(3)
   REAL_T :: xvel(3)
 
   if (nmat.eq.num_materials) then
@@ -1039,7 +1039,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    stop
   endif
 
-  call rigid_displacement(x3D,t,xphys,xvel)
+  call rigid_displacement(xfoot,t,x3D,xvel)
 
   if ((velsolid_flag.eq.0).or. &
       (velsolid_flag.eq.1)) then
