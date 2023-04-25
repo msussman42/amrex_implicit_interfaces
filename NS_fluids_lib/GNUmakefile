@@ -33,11 +33,11 @@ MOF_HOME = ..
 
 USE_LIBAMREX = FALSE
 PRECISION = DOUBLE
-DEBUG	  = TRUE
+DEBUG	  = FALSE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 3
+DIM       = 2
 
 BL_NO_FORT = TRUE
 
@@ -86,8 +86,8 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = TRUE
-LINUX_DESKTOP = FALSE
+MAC_LAPTOP = FALSE
+LINUX_DESKTOP = TRUE
 HPC_INTEL = FALSE
 HPC_GNU = FALSE
 NASA_INTEL = FALSE
