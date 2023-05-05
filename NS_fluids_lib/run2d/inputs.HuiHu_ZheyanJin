@@ -138,7 +138,7 @@ ns.saturation_temp = 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # 
 ns.temperature_primitive_variable=1 1 1 1
 #ns.fixed_dt	  = 0.01     # hardwire dt
-ns.sum_interval   = 10        # timesteps between computing mass 
+ns.sum_interval   = 1        # timesteps between computing mass 
 
 # initial droplet with small layer of ice at its bottom, on a solid substrate.
 # probtype=55 (GENERAL_PHASE_CHANGE.F90)
