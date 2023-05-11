@@ -413,7 +413,6 @@ stop
         cctension_min, &
         ccprefreeze_tension, &
         ccgravity_vector, &
-        ccgravity_boussinesq_vector, &
         ccstop_time, &
         ccCarreau_alpha, &
         ccCarreau_beta, &
@@ -475,7 +474,6 @@ stop
       
       INTEGER_T, INTENT(in) :: ccnten
       REAL_T, INTENT(in) :: ccgravity_vector(SDIM)
-      REAL_T, INTENT(in) :: ccgravity_boussinesq_vector(SDIM)
       INTEGER_T, INTENT(in) :: ccFSI_flag(ccnum_materials)
       INTEGER_T, INTENT(in) :: ccnum_local_aux_grids
       INTEGER_T, INTENT(in) :: ccZEYU_DCA_SELECT
@@ -1744,8 +1742,6 @@ stop
 
       do local_dir=1,SDIM
        gravity_vector(local_dir)=ccgravity_vector(local_dir)
-       gravity_boussinesq_vector(local_dir)= &
-         ccgravity_boussinesq_vector(local_dir)
       enddo
       
        ! declared in: GLOBALUTIL.F90
@@ -1936,10 +1932,6 @@ stop
         gravity_vector(1), &
         gravity_vector(2), &
         gravity_vector(SDIM)
-       print *,"fort:gravity_boussinesq(1,..,sdim) ", &
-        gravity_boussinesq_vector(1), &
-        gravity_boussinesq_vector(2), &
-        gravity_boussinesq_vector(SDIM)
        print *,"fort:pres,vel,temp,spec,ls homflag ",pres_homflag, &
         vel_homflag,temp_homflag,species_homflag,ls_homflag
       

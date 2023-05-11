@@ -539,7 +539,7 @@ stop
          if (abs(DTEMP).ge.zero) then
           do dir=1,SDIM
            unp1(dir)=unp1(dir)+ &
-              dt*gravity_boussinesq_vector(dir)*DTEMP
+              dt*gravity_vector(dir)*DTEMP
           enddo
          else
           print *,"DTEMP is NaN"
@@ -559,6 +559,7 @@ stop
            print *,"RCEN invalid"
            stop
           endif
+           ! Coriolis "force"
            ! Lewis and Nagata 2004:
            ! -2 Omega e_{z} \Times \vec{u}
           unp1(1)=unp1(1)+dt*((un(2)**2)/RCEN+two*angular_velocity*un(2))
