@@ -396,7 +396,6 @@ public:
     static int invert_gravity;
     static int gravity_dir;
     static Vector<Real> gravity_vector;
-    static Vector<Real> gravity_boussinesq_vector;
     static int incremental_gravity_flag;
     static int segregated_gravity_flag;
 

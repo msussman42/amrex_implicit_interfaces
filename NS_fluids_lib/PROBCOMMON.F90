@@ -318,6 +318,8 @@ implicit none
 !   fort_static_surface_tension_duration
 ! added April 19, 2023:
 !   fort_grid_stretching_parameter
+! deleted May 11, 2023: 
+!   gravity_boussinesq_vector
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
