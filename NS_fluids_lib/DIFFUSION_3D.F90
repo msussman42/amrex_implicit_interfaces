@@ -462,6 +462,10 @@ stop
            if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
                (override_density(im).eq.1)) then ! rho=rho(T,Y)
             ! do nothing
+            ! if override_density(im)==1,
+            ! GODUNOV_3D.F90: fort_derive_mom_den
+            ! rho=rho0*(1+fort_DrhoDT(im)*(T-T0))
+            ! units of fort_DrhoDT: 1/temperature
 
             !Boussinesq approximation:
             !Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)

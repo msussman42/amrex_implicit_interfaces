@@ -4461,6 +4461,8 @@ stop
            stop
           endif
 
+            ! default: fort_DrhoDT(im)*(T-T0)
+            ! fort_DrhoDT units: 1/Temperature
           call SUB_UNITLESS_EXPANSION_FACTOR( &
             im_parm,temperature,fort_tempconst(im_parm),density_of_TZ)
           density_of_TZ=rho_base*(one+density_of_TZ)
