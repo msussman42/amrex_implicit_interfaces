@@ -40,7 +40,7 @@ extern "C"
       int* level,
       int* finest_level,
       Real* visc_coef,
-      Real* angular_velocity,
+      Real* angular_velocity, //parameter for fort_hoopimplicit
       int* uncoupled_viscosity,
       int* update_state,
       Real* dt,

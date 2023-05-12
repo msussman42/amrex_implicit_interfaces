@@ -199,7 +199,7 @@ extern "C" {
       int* presbc,int* dombc,
       const int* domlo,const int* domhi,
       const Real* xlo,const Real* dx,Real* dt,
-      Real* angular_velocity,
+      Real* angular_velocity, //parameter for fort_init_potential
       int* isweep);
 
     void fort_metrics(
@@ -429,7 +429,6 @@ extern "C" {
     void fort_addgravity(
       Real* dt,
       Real* cur_time,
-      Real* angular_velocity,
       int* level,
       int* finest_level,
       int* nstate,

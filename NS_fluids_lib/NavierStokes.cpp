@@ -11832,7 +11832,7 @@ void NavierStokes::add_perturbation() {
 
    fort_addnoise(
     &dir,
-    &angular_velocity,
+    &angular_velocity,  //parameter for fort_addnoise
     &perturbation_mode, //inputs parameter
     &perturbation_eps_temp, //inputs parameter
     &perturbation_eps_vel,  //inputs parameter

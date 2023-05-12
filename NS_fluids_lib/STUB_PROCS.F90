@@ -856,7 +856,7 @@ end subroutine STUB_ICE_SUBSTRATE_DISTANCE
 
 subroutine STUB_correct_pres_rho_hydrostatic( &
   i,j,k,level, &
-  angular_velocity, &
+  angular_velocity, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
   dt, &
   rho_hydrostatic, &
   pres_hydrostatic, &

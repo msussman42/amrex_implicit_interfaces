@@ -120,7 +120,7 @@ stop
          level, &
          finest_level, &
          visc_coef, &
-         angular_velocity, &
+         angular_velocity, & !intent(in): fort_hoopimplicit
          uncoupled_viscosity, &
          update_state, &
          dt, &
@@ -468,7 +468,16 @@ stop
             ! units of fort_DrhoDT: 1/temperature
 
             !Boussinesq approximation:
-            !Du/Dt=-grad(p-rho0 g dot z)/rho0-g DrhoDT (T-T0)
+            !rho Du/Dt=-grad p + rho g zhat +
+            !  rho Omega^2 r rhat
+            !rho0 Du/Dt=-grad p + rho g zhat +
+            !  rho Omega^2 r rhat
+            !rho/rho0=(1+beta(T-T0))
+            !Du/Dt=-grad p/rho0+g zhat + g zhat beta (T-T0)+
+            !  Omega^{2} r rhat +
+            !  Omega^{2} r rhat beta (T-T0)
+            !  (beta<0 here)
+
            else if (override_density(im).eq.2) then 
 
             local_temp=thermal(D_DECL(i,j,k))
@@ -498,6 +507,7 @@ stop
               rho_factor) !intent(out) (unitless)
 
              !rho_base=density of material "im"
+             !rho_factor=fort_DrhoDT(im)*(T-Tbase)
             DTEMP=DTEMP+localF*rho_base*rho_factor
 
            else
@@ -536,6 +546,7 @@ stop
           ! gravity force (temperature dependence)
           ! units of gravity: m/s^2
           ! DTEMP has no units.
+          ! DTEMP=beta(T-T0)  (beta<0)
          if (abs(DTEMP).ge.zero) then
           do dir=1,SDIM
            unp1(dir)=unp1(dir)+ &
@@ -552,7 +563,9 @@ stop
           ! angular_velocity<0 => clockwise
           ! in PROB.F90: 
           ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
+
          if (rzflag.eq.COORDSYS_CYLINDRICAL) then
+
           if (RCEN.gt.zero) then
            ! do nothing
           else
@@ -568,7 +581,9 @@ stop
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
+           ! DTEMP=beta*(T-T0)  beta<0
           unp1(1)=unp1(1)+dt*DTEMP*(angular_velocity**2)*RCEN
+
          else if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! assume that RCEN > eps > 0 ?
           ! coriolis force:
@@ -579,11 +594,22 @@ stop
           ! = -2(-angular_vel. v,angular_velocity u)
           unp1(1)=unp1(1)+dt*( two*angular_velocity*un(2) )
           unp1(2)=unp1(2)-dt*( two*angular_velocity*un(1) )
+
+          if ((DTEMP.eq.zero).or. &
+              (angular_velocity.eq.zero)) then
+           ! do nothing
+          else
+           print *,"Boussinesq approx+rotating invalid in XY for now"
+           stop
+          endif
+
          else if (rzflag.eq.COORDSYS_RZ) then
+
           if (SDIM.ne.2) then
            print *,"dimension bust"
            stop
           endif
+
           if (angular_velocity.eq.zero) then
            ! do nothing
           else
