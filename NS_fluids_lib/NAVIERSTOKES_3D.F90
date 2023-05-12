@@ -9971,7 +9971,7 @@ END SUBROUTINE SIMP
        domlo,domhi, &
        xlo,dx, &
        dt, & ! solver_dt_slab
-       angular_velocity, &
+       angular_velocity, & !intent(in) fort_init_potential
        isweep) &
       bind(c,name='fort_init_potential')
 
@@ -10035,7 +10035,7 @@ END SUBROUTINE SIMP
          ! e.g. for gravity force:
          ! grad p/rho = \vec{g}
          ! grad p = rho\vec{g}
-         ! p = rho \vec{g} \cdot \vec{x} 
+         ! p = dt rho \vec{g} \cdot \vec{x} 
          ! Du/Dt=-grad p/rho - omega cross (omega cross r)- 2 omega cross u +
          !       \vec{g} 
          ! omega z^hat cross r r^hat=omega r theta^hat
@@ -10051,8 +10051,8 @@ END SUBROUTINE SIMP
           i,j,k,level, &
           angular_velocity, &
           dt, &
-          den_cell, &
-          pres_cell, &
+          den_cell, &   !INTENT(out)
+          pres_cell, &  !INTENT(out)
           state_ptr)
         presden(D_DECL(i,j,k),1)=pres_cell
         presden(D_DECL(i,j,k),2)=den_cell
@@ -10106,9 +10106,10 @@ END SUBROUTINE SIMP
              ! p=dt( \vec{g}\cdot\vec{x} + (1/2)Omega^2 r^2 )
             call general_hydrostatic_pressure_density( &
              i,j,k,level, &
-             angular_velocity, &
-             dt, &
-             den_cell,pres_cell, &
+             angular_velocity, & !intent(in)
+             dt, &        ! intent(in)
+             den_cell, &  ! intent(out)
+             pres_cell, & ! intent(out)
              state_ptr)
 
             ! periodic BC
@@ -10181,7 +10182,6 @@ END SUBROUTINE SIMP
       subroutine fort_addgravity( &
        dt, &
        cur_time, &
-       angular_velocity, &
        level, &
        finest_level, &
        nstate, &
@@ -10202,7 +10202,6 @@ END SUBROUTINE SIMP
 
       REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(in) :: cur_time
-      REAL_T, INTENT(in) :: angular_velocity
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: nstate

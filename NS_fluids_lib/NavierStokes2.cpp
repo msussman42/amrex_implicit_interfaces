@@ -5723,7 +5723,6 @@ void NavierStokes::increment_potential_force() {
    fort_addgravity(
      &solver_dt_slab,
      &cur_time_slab,
-     &angular_velocity,
      &level,
      &finest_level,
      &nstate,
@@ -5925,7 +5924,7 @@ void NavierStokes::init_gravity_potential() {
      domlo,domhi,
      xlo,dx,
      &solver_dt_slab, //fort_init_potential
-     &angular_velocity,
+     &angular_velocity, //fort_init_potential
      &isweep);
   } // mfi
 } // omp

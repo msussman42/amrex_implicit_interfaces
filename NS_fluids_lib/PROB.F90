@@ -2455,7 +2455,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! called from fort_init_potential. (NAVIERSTOKES_3D.F90)
       subroutine general_hydrostatic_pressure_density( &
         i,j,k,level, &
-        angular_velocity, &
+        angular_velocity, &!intent(in) general_hydrostatic_pressure_density
         dt, &
         rho_hydrostatic, &
         pres_hydrostatic, &
@@ -2464,7 +2464,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: i,j,k,level
-      REAL_T, INTENT(in) :: angular_velocity
+       !general_hydrostatic_pressure_density
+      REAL_T, INTENT(in) :: angular_velocity 
       REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(out) :: rho_hydrostatic
       REAL_T, INTENT(out) :: pres_hydrostatic
@@ -26115,7 +26116,7 @@ end subroutine initialize2d
 
        subroutine fort_addnoise( &
         dir, &
-        angular_velocity, &
+        angular_velocity, & !INTENT(in): fort_addnoise
         perturbation_mode, &
         perturbation_eps_temp, &
         perturbation_eps_vel, &
@@ -26136,7 +26137,7 @@ end subroutine initialize2d
        IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: dir
-      REAL_T, INTENT(in) :: angular_velocity
+      REAL_T, INTENT(in) :: angular_velocity !fort_addnoise
       INTEGER_T, INTENT(in) :: perturbation_mode
       REAL_T, INTENT(in) :: perturbation_eps_temp
       REAL_T, INTENT(in) :: perturbation_eps_vel
