@@ -380,7 +380,6 @@ stop
          level, &
          finest_level, &
          visc_coef, &
-         angular_velocity, &
          dt, &
          cur_time, &
          project_option, &
@@ -408,7 +407,7 @@ stop
        INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
        INTEGER_T, INTENT(in) :: DIMDEC(den)
        INTEGER_T, INTENT(in) :: DIMDEC(mu)
-       REAL_T, INTENT(in) :: visc_coef,angular_velocity
+       REAL_T, INTENT(in) :: visc_coef
        REAL_T, INTENT(in) :: dt
        REAL_T, INTENT(in) :: cur_time
        INTEGER_T, INTENT(in) :: project_option,rzflag

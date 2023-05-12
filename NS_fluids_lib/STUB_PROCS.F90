@@ -870,6 +870,21 @@ REAL_T, INTENT(inout) :: rho_hydrostatic
 REAL_T, INTENT(inout) :: pres_hydrostatic
 REAL_T, INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
 
+
+ if (dt.gt.zero) then
+  ! do nothing
+ else
+  print *,"dt must be positive"
+  stop
+ endif
+ if (angular_velocity.ge.zero) then
+  ! do nothing
+ else
+  print *,"angular_velocity should be nonneg"
+  stop
+ endif
+
+
 end subroutine STUB_correct_pres_rho_hydrostatic
 
 subroutine STUB_FSI_SLICE(xmap3D,xslice3D,problo3D,probhi3D,dx_slice)
