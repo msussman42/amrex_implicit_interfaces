@@ -10036,8 +10036,14 @@ END SUBROUTINE SIMP
          ! grad p/rho = \vec{g}
          ! grad p = rho\vec{g}
          ! p = rho \vec{g} \cdot \vec{x} 
+         ! Du/Dt=-grad p/rho - omega cross (omega cross r)- 2 omega cross u +
+         !       \vec{g} 
+         ! omega z^hat cross r r^hat=omega r theta^hat
+         ! omega z^hat cross (omega z^hat cross r)=
+         ! omega z^hat cross omega r theta^hat = -omega^2 r r^hat
+         !
          ! includes centrifugal force but not "coriolis force"
-         ! if rho=1,
+         !  den_cell=fort_denconst(1)
          !  p=dt( \vec{g} \cdot \vec{x} + (1/2)Omega^2 r^2 )
          ! general_hydrostatic_pressure_density is declared in:
          !  PROB.F90

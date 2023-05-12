@@ -114,7 +114,6 @@ extern "C"
        int* level,
        int* finest_level,
        Real* visc_coef,
-       Real* angular_velocity,
        Real* dt,
        Real* cur_time,
        int* project_option,
