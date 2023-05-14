@@ -11372,16 +11372,9 @@ void NavierStokes::make_marangoni_force() {
 
   // div sigma delta (I-nn^T)/rho=
   //   -sigma kappa grad H/rho + (I-nn^T) (grad sigma) delta/rho 
-  // height function curvature
-  // finite difference curvature
-  // pforce
-  // marangoni force
-  // dir/side flag
-  // im3
-  // x num_interfaces
   // DIST_CURV_MF is calculated in:
   // NavierStokes::makeStateCurv
- int num_curv=num_interfaces*(5+AMREX_SPACEDIM);
+ int num_curv=num_interfaces*CURVCOMP_NCOMP;
  if (localMF[DIST_CURV_MF]->nComp()!=num_curv)
   amrex::Error("DIST_CURV invalid ncomp");
   
@@ -11407,15 +11400,14 @@ void NavierStokes::make_marangoni_force() {
 
   const Real* xlo = grid_loc[gridno].lo();
 
-   //DIST_CURV_MF contains for each pair of materials:
-   //1. height function curvature
-   //2. finite difference curvature
-   //3. pressure force for nudging (obsolete)
-   //4. marangoni force
-   //5. dir/side flag
    // DIST_CURV_MF is calculated in:
    // NavierStokes::makeStateCurv
   FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
+  if (curvfab.nComp()==num_interfaces*CURVCOMP_NCOMP) {
+   //do nothing
+  } else
+   amrex::Error("(curvfab.nComp()!=num_interfaces*CURVCOMP_NCOMP)");
+
   FArrayBox& rhoinversefab=(*localMF[CELL_DEN_MF])[mfi];
   FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
@@ -23796,7 +23788,7 @@ void
 NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
 
  int scomp=0;
- int ncomp=num_interfaces*(AMREX_SPACEDIM+5);
+ int ncomp_curv=num_interfaces*CURVCOMP_NCOMP;
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level)
@@ -23813,7 +23805,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
   amrex::Error("nComp mismatch");
- if (S_crse.nComp()!=scomp+ncomp)
+ if (S_crse.nComp()!=scomp+ncomp_curv)
   amrex::Error("S_crse.nComp() invalid level_avgDownCURV");
 
  BoxArray crse_S_fine_BA(fgrids.size());
@@ -23821,7 +23813,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp,0,
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp_curv,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
@@ -23878,7 +23870,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
    &level,&f_level,
    &bfact_c,&bfact_f,
    xlo_fine,dx,
-   &ncomp,
+   &ncomp_curv,
    c_dat,ARLIM(clo),ARLIM(chi),
    f_dat,ARLIM(flo),ARLIM(fhi),
    ovlo,ovhi,
@@ -23887,7 +23879,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  }// mfi
 } //omp
  ns_reconcile_d_num(LOOP_AVGDOWN_CURV,"level_avgDownCURV");
- S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp);
+ S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp_curv);
  ParallelDescriptor::Barrier();
 
 } // subroutine level_avgDownCURV
@@ -25601,14 +25593,7 @@ NavierStokes::makeStateCurv(int project_option,
   curv_max_local[tid]=-1.0e+99;
  } // tid
 
-  // height function curvature
-  // finite difference curvature
-  // pforce
-  // marangoni force
-  // dir/side flag
-  // im3
-  // x num_interfaces
- int num_curv=num_interfaces*(AMREX_SPACEDIM+5); 
+ int num_curv=num_interfaces*CURVCOMP_NCOMP;
 
  resize_metrics(1);
 

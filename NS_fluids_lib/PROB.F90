@@ -1520,17 +1520,6 @@ stop
        return 
        end subroutine get_scaled_tension
 
-       subroutine get_scaled_pforce(pforce_scaled)
-       IMPLICIT NONE
-
-       REAL_T, INTENT(out) :: pforce_scaled
-
-
-       pforce_scaled=one/global_pressure_scale
-
-       return
-       end subroutine get_scaled_pforce
-
 
 !assume x_proj locates in centeral cell ((ni+1)/2,(nj+1)/2,(nk+1)/2)
 !The stencil is better to be 7x7x7 (or larger), 
@@ -19166,121 +19155,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine capillary_wave_speed
 
-      subroutine pforce_probtype_flag_init(pforce_flag)
-      IMPLICIT NONE
 
-      INTEGER_T pforce_flag
-
-
-      if ((probtype.eq.90).and.(SDIM.eq.2)) then
-       pforce_flag=1
-      else
-       pforce_flag=0
-      endif
-
-      return
-      end subroutine
-
-      subroutine pressure_force(x,t,pforce)
-      use global_utility_module
-      IMPLICIT NONE
-
-      REAL_T, INTENT(in) :: x,t
-      REAL_T, INTENT(out) :: pforce
-      REAL_T t_stopforce
-      REAL_T h,mu,t_startup,wavelen
-      REAL_T factor,factor_test,k
-      REAL_T rampfn,mu_tilde,omega_bar
-      REAL_T omega,omega2,alpha,rho
-      REAL_T C1,D1,coeff1,coeff2,eta1,eta2
-      INTEGER_T :: gravity_dir
-
-      call fort_derive_gravity_dir(gravity_vector,gravity_dir)
-
-      if ((probtype.eq.90).and.(SDIM.eq.2)) then
-       h=yblob-probloy
-       mu=xblob2
-       t_startup=xblob3
-       t_stopforce=xblob4
-       wavelen=yblob3
-       if (wavelen.gt.probhix-problox+VOFTOL) then
-        print *,"wavelen too big"
-        stop
-       else if (wavelen.le.zero) then
-        print *,"wavelen too small"
-        stop
-       else if (probhix-problox.le.zero) then
-        print *,"probhix or problox invalid"
-        stop
-       else
-        factor=(probhix-problox)/wavelen
-        factor_test=ANINT(factor)  ! round to Nearest INTeger, return real
-        if (abs(factor-factor_test).gt.VOFTOL) then
-         print *,"wave length must be integer multiple of domain size"
-         stop
-        endif
-       endif
-       k=two*Pi/wavelen
- 
-       if (t.lt.zero) then
-        print *,"time invalid in pressure force"
-        stop
-       else if (t.eq.zero) then
-        rampfn=zero
-       else if (t.ge.t_startup) then
-        rampfn=one 
-        if (t_stopforce.gt.zero) then
-         if (t.ge.t_stopforce) then
-          rampfn=zero
-         endif
-        else if (t_stopforce.eq.zero) then
-         ! do nothing
-        else
-         print *,"t_stopforce invalid"
-         stop
-        endif
-       else
-        rampfn=half*(one+sin(Pi*(t-half*t_startup)/t_startup))
-       endif
-       mu_tilde=mu/(one+sqrt(one+mu*mu))
-       omega_bar=sqrt(abs(gravity_vector(gravity_dir))*k*tanh(k*h))
-       factor=sqrt(one+mu*mu)/(one+mu_tilde*mu_tilde)
-       omega=sqrt(factor)*omega_bar
-       omega2=mu_tilde*omega
-       alpha=omega_bar**2/(omega**2+omega2**2)
-       rho=fort_denconst(1)
- 
-        ! given mu, one derives omega2 which gives the
-        ! growth rate.
-        ! if pforce=rho g mu (-eta2 cos + eta1 sin) exp(omega2 t)
-        ! then the interface is 
-        ! eta=(eta1 cos + eta2 sin) exp(omega2 t)
-        ! note that there is no "mu" in the coefficient part of the
-        ! expression for eta.
-       if (1.eq.0) then
-        C1=yblob2
-        D1=zblob2
-        coeff1=-rho*mu*alpha*(-D1*omega2+C1*omega)
-        coeff2=-rho*mu*alpha*(D1*omega+C1*omega2)
-       else
-        eta1=yblob2
-        eta2=zblob2
-        coeff1=-eta2*rho*abs(gravity_vector(gravity_dir))*mu
-        coeff2=eta1*rho*abs(gravity_vector(gravity_dir))*mu
-       endif 
-       rampfn=rampfn*exp(omega2*t)
-       coeff1=coeff1*rampfn
-       coeff2=coeff2*rampfn
-       pforce=coeff1*cos(k*x-omega*t)+ &
-              coeff2*sin(k*x-omega*t) 
-      else
-       print *,"probtype invalid in pressure force"
-       stop
-      endif
-
-      return
-      end subroutine
- 
 ! distance to star with center at origin
 
       subroutine stardist(x,y,z,radstar,radthick,dist)

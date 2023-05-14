@@ -6880,7 +6880,8 @@ stop
       end subroutine fort_visctensorheat
 
       ! rhoinverse is 1/den
-      ! curv(num_interfaces*(SDIM+5)+3+dir)=mgoni_force(dir)=
+      ! curv((iten-1)*CURVCOMP_NCOMP+CURVCOMP_MARANGONI+dir)=
+      !  mgoni_force(dir)=
       !  (I-nn^T)(grad sigma)delta 
       subroutine fort_marangoniforce( &
        nstate, &
@@ -6968,14 +6969,7 @@ stop
        endif
       enddo ! dirloc=1..sdim
 
-      ! height function curvature
-      ! finite difference curvature
-      ! pforce
-      ! marangoni force
-      ! dir/side flag
-      ! im3
-      ! x num_interfaces
-      if (num_curv.ne.num_interfaces*(5+SDIM)) then
+      if (num_curv.ne.num_interfaces*CURVCOMP_NCOMP) then
        print *,"num_curv invalid"
        stop
       endif
@@ -7039,20 +7033,16 @@ stop
 
        if (is_rigid(im).eq.0) then ! fluid region
 
-        ! curv: num_interfaces * (5+SDIM)
-        !  curv_cellHT,curv_cellFD, pforce_cell,
-        !  marangoni force(sdim),
-        !  dir * side, im3
         do iten=1,num_interfaces
 
          do dirloc=1,SDIM
-          iforce=(iten-1)*(5+SDIM)+3+dirloc
+          iforce=(iten-1)*CURVCOMP_NCOMP+CURVCOMP_MARANGONI+dirloc
           surface_tension_force(dirloc)= &
            surface_tension_force(dirloc)+ &
            curv(D_DECL(i,j,k),iforce)*dt*rhoinverse(D_DECL(i,j,k))
          enddo  ! dirloc
 
-        enddo !iten
+        enddo !iten=1,num_interfaces
   
        else if (is_rigid(im).eq.1) then 
         ! do nothing

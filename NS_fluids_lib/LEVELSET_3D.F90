@@ -323,171 +323,6 @@ stop
         end function is_default
  
 
-      subroutine initpforce( &
-        bfact,dx,xsten0, &
-        time, &
-        lsdata, &
-        dir, &
-        im,im_opp, &
-        pforce)
-      use MOF_routines_module
-      IMPLICIT NONE
-
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xsten0( &
-        -(2*ngrow_distance+1):(2*ngrow_distance+1), &
-        SDIM)
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: im,im_opp
-      INTEGER_T, INTENT(in) :: dir
-      REAL_T, INTENT(in) :: lsdata( &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance, &
-        num_materials)
-
-      REAL_T, INTENT(out) :: pforce
-
-      INTEGER_T is_pforce_probtype
-      REAL_T columnLS(-ngrow_distance:ngrow_distance)
-      INTEGER_T icolumn
-      REAL_T n1d
-
-      REAL_T dx_col(SDIM)
-      REAL_T x_col(SDIM)
-      REAL_T x_col_avg(SDIM)
-
-      REAL_T col_ht_LS
-      REAL_T col_ht_VOF
-      REAL_T xforce
-      INTEGER_T crossing_status
-      INTEGER_T local_vof_height
-      INTEGER_T dir2
-
-      local_vof_height=0
-
-      if ((dir.lt.0).or.(dir.ge.SDIM)) then
-       print *,"dir invalid in initpforce, dir=",dir
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid84"
-       stop
-      endif
-
-       ! Sep 16, 2018: returns 1 if probtype.eq.90 and 2D
-       !               returns 0 otherwise
-      call pforce_probtype_flag_init(is_pforce_probtype)
-
-      if (is_pforce_probtype.eq.1) then
-
-       if (ngrow_distance.ne.4) then
-        print *,"ngrow_distance invalid in initpforce"
-        stop
-       endif
-       if (ngrow_make_distance.ne.3) then
-        print *,"ngrow_make_distance invalid in initpforce"
-        stop
-       endif
-
-       if (num_materials.ne.2) then
-        print *,"this routine not designed for num_materials<>2 yet"
-        print *,"if num_materials>2, then extrapolate_LS must be called"
-        stop
-       endif
-       if (im.ge.im_opp) then
-        print *,"im and im_opp invalid"
-        stop
-       endif
-       if ((im.lt.1).or.(im.gt.num_materials)) then
-        print *,"im invalid30"
-        stop
-       endif
-       if ((im_opp.lt.1).or.(im_opp.gt.num_materials)) then
-        print *,"im_opp invalid in init pforce im_opp=",im_opp
-        stop
-       endif
-
-       do icolumn=-ngrow_distance,ngrow_distance
-
-        if (dir.eq.0) then
-         columnLS(icolumn)=lsdata(icolumn,0,0,im)- &
-                           lsdata(icolumn,0,0,im_opp)
-        else if (dir.eq.1) then
-         columnLS(icolumn)=lsdata(0,icolumn,0,im)- &
-                           lsdata(0,icolumn,0,im_opp)
-        else if ((dir.eq.2).and.(SDIM.eq.3)) then
-         columnLS(icolumn)=lsdata(0,0,icolumn,im)- &
-                           lsdata(0,0,icolumn,im_opp)
-        else
-         print *,"dir invalid initpforce"
-         stop
-        endif
-
-       enddo !icolumn
-
-       if (columnLS(1).ge.columnLS(-1)) then
-        n1d=one ! "im" material on top
-       else
-        n1d=-one  ! "im" material on bottom
-       endif
-
-       do dir2=1,SDIM
-        x_col(dir2)=xsten0(0,dir2)
-        x_col_avg(dir2)=half*(xsten0(1,dir2)+xsten0(-1,dir2))
-        dx_col(dir2)=xsten0(1,dir2)-xsten0(-1,dir2)
-       enddo
-
-        ! calling from: initpforce
-       call get_col_ht_LS( &
-        local_vof_height, & !=0
-        crossing_status, &
-        bfact, &
-        dx, &
-        xsten0, &
-        dx_col, &
-        x_col, &
-        x_col_avg, &
-        columnLS, &
-        columnLS, &
-        col_ht_LS, &
-        col_ht_VOF, &
-        dir+1,n1d, &
-        SDIM)
-
-       if (crossing_status.eq.1) then
-        ! do nothing
-       else if (crossing_status.eq.0) then
-        ! do nothing
-       else
-        print *,"crossing_status invalid"
-        stop
-       endif
-
-       if (dir.eq.0) then
-        xforce=col_ht_LS
-       else if ((dir.gt.0).and.(dir.lt.SDIM)) then
-        xforce=xsten0(0,1)
-       else
-        print *,"dir invalid initpforce 2"
-        stop
-       endif
-
-       call pressure_force(xforce,time,pforce)
-
-      else if (is_pforce_probtype.eq.0) then
-
-       pforce=zero
-
-      else
-       print *,"is_pforce_problem invalid" 
-       stop
-      endif
-
-      return
-      end subroutine initpforce
-
        ! called from fort_curvstrip
       subroutine initheightLS( &
         static_flag, &
@@ -498,8 +333,8 @@ stop
         bfact,dx, &
         xcenter, &
         nrmcenter, & ! sdim x num_materials components
-        dircrit, &
-        side, &
+        dircrit, & ! 1..sdim
+        side, & ! -1 or 1
         signside, &
         time, &
         xsten, &
@@ -531,8 +366,8 @@ stop
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: xcenter(SDIM)
-      INTEGER_T, INTENT(in) :: dircrit
-      INTEGER_T, INTENT(in) :: side
+      INTEGER_T, INTENT(in) :: dircrit ! 1..SDIM
+      INTEGER_T, INTENT(in) :: side ! 1 or -1
       INTEGER_T, INTENT(in) :: signside
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: im,im_opp
@@ -3305,7 +3140,7 @@ stop
        time, &
        visc_coef, &
        unscaled_min_curvature_radius, &
-       num_curv, &
+       num_curv, & ! num_interfaces * CURVCOMP_NCOMP
        ngrow_distance_in) &
       bind(c,name='fort_curvstrip')
 
@@ -3334,7 +3169,7 @@ stop
       INTEGER_T, INTENT(in) :: level
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: ngrow_distance_in
-      INTEGER_T, INTENT(in) :: num_curv
+      INTEGER_T, INTENT(in) :: num_curv ! num_interfaces * CURVCOMP_NCOMP
       INTEGER_T icurv
       REAL_T, INTENT(in) :: visc_coef
       REAL_T, INTENT(in) :: unscaled_min_curvature_radius
@@ -3433,7 +3268,6 @@ stop
       REAL_T nrm_center(SDIM)
       REAL_T curv_cellHT
       REAL_T curv_cellFD
-      REAL_T pforce_cell
       REAL_T mag,RR
       INTEGER_T itemperature
       INTEGER_T donate_flag
@@ -4331,29 +4165,22 @@ stop
               print *,"curv_cellHT,curv_cellFD ",curv_cellHT,curv_cellFD
              endif
           
-             call initpforce( &
-              bfact,dx,xsten0, &
-              time, &
-              lssten, &
-              dircrossing-1, &
-              im_main,im_main_opp, &
-              pforce_cell)
-
              ihist=(iten-1)*2
              history_dat(D_DECL(i,j,k),ihist+1)=ZEYU_thet_d
              history_dat(D_DECL(i,j,k),ihist+2)=ZEYU_u_cl
 
-             icurv=(iten-1)*(5+SDIM)
-             curvfab(D_DECL(i,j,k),icurv+1)=curv_cellHT
-             curvfab(D_DECL(i,j,k),icurv+2)=curv_cellFD
-             curvfab(D_DECL(i,j,k),icurv+3)=pforce_cell
+             icurv=(iten-1)*CURVCOMP_NCOMP
+             curvfab(D_DECL(i,j,k),icurv+CURVCOMP_HTFUNC_CURV+1)=curv_cellHT
+             curvfab(D_DECL(i,j,k),icurv+CURVCOMP_FD_CURV+1)=curv_cellFD
              do dirloc=1,SDIM
-              curvfab(D_DECL(i,j,k),icurv+3+dirloc)=mgoni_force(dirloc)
+              curvfab(D_DECL(i,j,k),icurv+CURVCOMP_MARANGONI+dirloc)= &
+                 mgoni_force(dirloc)
              enddo
               ! dir=1..sdim
               ! side=-1 or 1
-             curvfab(D_DECL(i,j,k),icurv+4+SDIM)=dircrossing*sidestar
-             curvfab(D_DECL(i,j,k),icurv+5+SDIM)=im3
+             curvfab(D_DECL(i,j,k),icurv+CURVCOMP_DIRSIDE_FLAG+1)= &
+              dircrossing*sidestar
+             curvfab(D_DECL(i,j,k),icurv+CURVCOMP_MATERIAL3_ID+1)=im3
 
              if (curv_min.gt.curv_cellHT) then
               curv_min=curv_cellHT
@@ -7683,7 +7510,7 @@ stop
        nparts, &
        nparts_def, &
        im_solid_map, &
-       num_curv, &
+       num_curv, & !num_interfaces * CURVCOMP_NCOMP
        level, &
        finest_level) &
       bind(c,name='fort_init_physics_vars')
@@ -7934,8 +7761,8 @@ stop
       INTEGER_T curv_interp_flag
       INTEGER_T dirL,sideL,im3L,orientL
       INTEGER_T dirR,sideR,im3R,orientR
-      REAL_T curvL(5+SDIM)
-      REAL_T curvR(5+SDIM)
+      REAL_T curvL(CURVCOMP_NCOMP)
+      REAL_T curvR(CURVCOMP_NCOMP)
       INTEGER_T local_maskL,local_maskR,local_masknbr
       INTEGER_T covered_face
       INTEGER_T coarse_fine_face
@@ -8029,14 +7856,7 @@ stop
        stop
       endif
 
-      ! height function curvature
-      ! finite difference curvature
-      ! pforce
-      ! marangoni force
-      ! dir * side dir=1..sdim side=-1 or 1
-      ! im3
-      ! x num_interfaces
-      if (num_curv.ne.num_interfaces*(5+SDIM)) then
+      if (num_curv.ne.num_interfaces*CURVCOMP_NCOMP) then
        print *,"num_curv invalid"
        stop
       endif
@@ -9869,37 +9689,31 @@ stop
             if (is_solid_face.eq.1) then
              local_face(FACECOMP_CURV+1)=zero
             else if (is_solid_face.eq.0) then
-             icurv=(iten_tension-1)*(SDIM+5)
+             icurv=(iten_tension-1)*CURVCOMP_NCOMP
 
              if ((level.ge.0).and.(level.le.finest_level)) then
 
               if ((project_option.eq.SOLVETYPE_PRES).or. &
                   (project_option.eq.SOLVETYPE_INITPROJ)) then
 
-                ! curv_cellHT
-                ! curv_cellFD
-                ! pforce_cell
-                ! mgoni_force(1..sdim)
-                ! dir x side  dir=1..sdim  side=-1 or 1
-                ! im3
-               do icurv_ofs=1,SDIM+5
+               do icurv_ofs=1,CURVCOMP_NCOMP
                 curvL(icurv_ofs)=curv(D_DECL(im1,jm1,km1),icurv+icurv_ofs)
                 curvR(icurv_ofs)=curv(D_DECL(i,j,k),icurv+icurv_ofs)
                enddo
-               dirL=NINT(curvL(4+SDIM))
+               dirL=NINT(curvL(CURVCOMP_DIRSIDE_FLAG+1))
                sideL=1
                if (dirL.lt.0) then
                 dirL=-dirL
                 sideL=-sideL
                endif
-               dirR=NINT(curvR(4+SDIM))
+               dirR=NINT(curvR(CURVCOMP_DIRSIDE_FLAG+1))
                sideR=1
                if (dirR.lt.0) then
                 dirR=-dirR
                 sideR=-sideR
                endif
-               im3L=NINT(curvL(5+SDIM))
-               im3R=NINT(curvR(5+SDIM))
+               im3L=NINT(curvL(CURVCOMP_MATERIAL3_ID+1))
+               im3R=NINT(curvR(CURVCOMP_MATERIAL3_ID+1))
 
                 ! dirL or dirR = sdim+1 if curvature record averaged down.
                if ((dirL.eq.SDIM+1).or.(dirL.eq.0)) then
@@ -9936,7 +9750,7 @@ stop
                  im3R=0 
                  if ((dirL.eq.0).or. &
                      (dirR.eq.0)) then
-                  do icurv_ofs=1,SDIM+5
+                  do icurv_ofs=1,CURVCOMP_NCOMP
                    curvL(icurv_ofs)=zero
                    curvR(icurv_ofs)=zero
                   enddo
@@ -10012,31 +9826,39 @@ stop
                endif 
                 
                if (curv_interp_flag.eq.0) then
-                local_face(FACECOMP_CURV+1)=wtL*curvL(2)+wtR*curvR(2)
+                local_face(FACECOMP_CURV+1)= &
+                 wtL*curvL(CURVCOMP_FD_CURV+1)+ &
+                 wtR*curvR(CURVCOMP_FD_CURV+1)
                else if (curv_interp_flag.eq.1) then   
                 if (wtL.gt.wtR) then
-                 local_face(FACECOMP_CURV+1)=curvL(1)
+                 local_face(FACECOMP_CURV+1)=curvL(CURVCOMP_HTFUNC_CURV+1)
                 else if (wtR.gt.wtL) then
-                 local_face(FACECOMP_CURV+1)=curvR(1)
+                 local_face(FACECOMP_CURV+1)=curvR(CURVCOMP_HTFUNC_CURV+1)
                 else if (wtR.eq.wtL) then
-                 local_face(FACECOMP_CURV+1)=wtL*curvL(1)+wtR*curvR(1)
+                 local_face(FACECOMP_CURV+1)= &
+                    wtL*curvL(CURVCOMP_HTFUNC_CURV+1)+ &
+                    wtR*curvR(CURVCOMP_HTFUNC_CURV+1)
                 else
                  print *,"wtR or wtL is NaN"
                  stop
                 endif
                else if (curv_interp_flag.eq.2) then
-                local_face(FACECOMP_CURV+1)=curvL(1)
+                local_face(FACECOMP_CURV+1)=curvL(CURVCOMP_HTFUNC_CURV+1)
                else if (curv_interp_flag.eq.3) then
-                local_face(FACECOMP_CURV+1)=curvR(1)
+                local_face(FACECOMP_CURV+1)=curvR(CURVCOMP_HTFUNC_CURV+1)
                else if (curv_interp_flag.eq.4) then
-                local_face(FACECOMP_CURV+1)=wtL*curvL(1)+wtR*curvR(1)
+                local_face(FACECOMP_CURV+1)= &
+                   wtL*curvL(CURVCOMP_HTFUNC_CURV+1)+ &
+                   wtR*curvR(CURVCOMP_HTFUNC_CURV+1)
                else if (curv_interp_flag.eq.5) then
                 if (wtL.gt.wtR) then
-                 local_face(FACECOMP_CURV+1)=curvL(2)
+                 local_face(FACECOMP_CURV+1)=curvL(CURVCOMP_FD_CURV+1)
                 else if (wtR.gt.wtL) then
-                 local_face(FACECOMP_CURV+1)=curvR(2)
+                 local_face(FACECOMP_CURV+1)=curvR(CURVCOMP_FD_CURV+1)
                 else if (wtR.eq.wtL) then
-                 local_face(FACECOMP_CURV+1)=wtL*curvL(2)+wtR*curvR(2)
+                 local_face(FACECOMP_CURV+1)= &
+                  wtL*curvL(CURVCOMP_FD_CURV+1)+ &
+                  wtR*curvR(CURVCOMP_FD_CURV+1)
                 else
                  print *,"wtR or wtL is NaN"
                  stop
@@ -13348,7 +13170,6 @@ stop
       INTEGER_T static_flag
       REAL_T user_tension(num_interfaces)
       REAL_T tension_scaled
-      REAL_T pforce_scaled
       REAL_T LSleft(num_materials)
       REAL_T LSright(num_materials)
       REAL_T LSleft_grav
@@ -15284,7 +15105,6 @@ stop
 
               call get_iten(im,im_opp,iten)
               call get_scaled_tension(user_tension(iten),tension_scaled)
-              call get_scaled_pforce(pforce_scaled)
 
                ! in: fort_cell_to_mac, OP_POTGRAD_TO_MAC,
                !     surface tension on MAC grid 
