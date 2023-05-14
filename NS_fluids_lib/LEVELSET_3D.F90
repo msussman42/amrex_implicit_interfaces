@@ -8318,6 +8318,18 @@ stop
           stop
          endif
 
+          ! calls fort_is_rigid_base(FSI_flag(im),im) (GLOBALUTIL.F90)
+          ! FSI_PRESCRIBED_PROBF90,
+          ! FSI_PRESCRIBED_NODES,
+          ! FSI_SHOELE_PRESVEL,
+          ! FSI_SHOELE_VELVEL.
+          !
+          ! Remark: 
+          ! local_face(FACECOMP_ICEFACECUT+1) is initialized in
+          ! in GODUNOV_3D.F90: fort_init_icemask
+          !
+          ! local_face(FACECOMP_FACECUT+1) is initialized in this routine.
+          !
          if ((is_rigid(implus_majority).eq.1).or. &
              (is_rigid(imminus_majority).eq.1).or. &
              (is_clamped_face.ge.1)) then
@@ -8334,7 +8346,14 @@ stop
          if ((is_prescribed(implus_majority).eq.1).or. &
              (is_prescribed(imminus_majority).eq.1).or. &
              (is_clamped_face.ge.1)) then
-          predict_face_afrac_prescribed=zero
+
+          if (predict_face_afrac_solid.eq.zero) then
+           predict_face_afrac_prescribed=zero
+          else
+           print *,"is_prescribed==TRUE => is_rigid==TRUE"
+           stop
+          endif
+
          else if ((is_prescribed(implus_majority).eq.0).and. &
                   (is_prescribed(imminus_majority).eq.0).and. &
                   (is_clamped_face.eq.0)) then
@@ -8561,6 +8580,8 @@ stop
           iten_main=0
          else if (is_solid_face.eq.0) then
 
+          ! "merge_levelset" is NOT called inside of "fluid_interface"
+          ! fluid_interface is declared in: PROB.F90
           call fluid_interface(LSminus,LSplus,gradh, &
             im_main_opp,im_main, &
             im_left_main,im_right_main)

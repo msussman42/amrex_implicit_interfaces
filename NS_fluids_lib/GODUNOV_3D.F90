@@ -5657,7 +5657,8 @@ stop
           print *,"cut_test=",cut_test
           stop
          endif
-         if ((cut_test.ge.zero).and.(cut_test.le.one)) then
+         if ((cut_test.ge.zero).and. &
+             (cut_test.le.one)) then
           ! do nothing
          else
           print *,"cut_test invalid" 
