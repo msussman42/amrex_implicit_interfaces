@@ -13155,6 +13155,10 @@ END SUBROUTINE SIMP
               endif
               if (fine_test.eq.0) then
                ! do nothing
+
+               ! fine_test can equal SDIM+1 if the finer level (level l+1)
+               ! being averaged down is not the finest level. 
+               ! (i.e. level l+1 was obtained from averaging down level l+2)
               else if ((abs(fine_test).ge.1).and. &
                        (abs(fine_test).le.SDIM+1)) then
                velwt(iten)=velwt(iten)+volall
