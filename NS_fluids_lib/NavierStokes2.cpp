@@ -5138,14 +5138,7 @@ void NavierStokes::make_physics_vars(int project_option,
 
  int finest_level=parent->finestLevel();
 
-  // height function curvature
-  // finite difference curvature
-  // pforce
-  // marangoni force (sdim)
-  // dir * side (dir=1..sdim, side=-1 or 1)
-  // im3
-  // x num_interfaces
- int num_curv=num_interfaces*(AMREX_SPACEDIM+5); 
+ int num_curv=num_interfaces*CURVCOMP_NCOMP; 
 
  if ((project_option==SOLVETYPE_PRES)||
      (project_option==SOLVETYPE_INITPROJ)) {
@@ -5366,6 +5359,10 @@ void NavierStokes::make_physics_vars(int project_option,
 
    FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& curvfab=(*localMF[DIST_CURV_MF])[mfi];
+   if (curvfab.nComp()==num_interfaces*CURVCOMP_NCOMP) {
+    //do nothing
+   } else
+    amrex::Error("(curvfab.nComp()!=num_interfaces*CURVCOMP_NCOMP)");
 
    FArrayBox& denstatefab=(*localMF[DEN_RECON_MF])[mfi];
    FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
@@ -5480,7 +5477,7 @@ void NavierStokes::make_physics_vars(int project_option,
     &nparts,
     &nparts_def,
     im_solid_map_ptr,
-    &num_curv,
+    &num_curv, //num_interfaces * CURVCOMP_NCOMP
     &level,
     &finest_level);
   }  // mfi

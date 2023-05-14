@@ -13017,17 +13017,17 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_avgdown_tag
 
-        ! icurv=(iten-1)*(5+SDIM)
+        ! icurv=(iten-1)*CURVCOMP_NCOMP
         ! dir=1..sdim
         ! side=-1 or 1
-        ! curvfab(D_DECL(i,j,k),icurv+4+SDIM)=dir*side
+        ! curvfab(D_DECL(i,j,k),icurv+CURVCOMP_DIRSIDE_FLAG+1)=dir*side
       subroutine fort_avgdown_curv( &
        problo, &
        dxf, &
        level_c,level_f, &
        bfact_c,bfact_f, &
        xlo_fine,dx, &
-       ncomp, &
+       ncomp_curv, & !num_interfaces*CURVCOMP_NCOMP
        crse,DIMS(crse), &
        fine,DIMS(fine), &
        lo,hi, &
@@ -13048,16 +13048,16 @@ END SUBROUTINE SIMP
       REAL_T, INTENT(in) :: dxf(SDIM)
       REAL_T, INTENT(in) :: xlo_fine(SDIM)
       REAL_T, INTENT(in) :: dx(SDIM)
-      INTEGER_T, INTENT(in) :: ncomp
+      INTEGER_T, INTENT(in) :: ncomp_curv !num_interfaces*CURVCOMP_NCOMP
       INTEGER_T, INTENT(in) :: DIMDEC(crse)
       INTEGER_T, INTENT(in) :: DIMDEC(fine)
       INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
       INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp_curv)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp_curv)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -13067,14 +13067,15 @@ END SUBROUTINE SIMP
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
-      REAL_T crse_value(ncomp)
+      REAL_T crse_value(ncomp_curv)
       INTEGER_T fine_test
       INTEGER_T coarse_test
       REAL_T velwt(num_interfaces)
-      INTEGER_T icurv,istat
+      INTEGER_T icurv
+      INTEGER_T idx_dirside
 
-      if (ncomp.ne.num_interfaces*(SDIM+5)) then
-       print *,"ncomp invalid35"
+      if (ncomp_curv.ne.num_interfaces*CURVCOMP_NCOMP) then
+       print *,"ncomp_curv invalid35"
        stop
       endif
 
@@ -13108,7 +13109,7 @@ END SUBROUTINE SIMP
       do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
 
-       do n=1,ncomp
+       do n=1,ncomp_curv
         crse_value(n)=zero
        enddo
        do iten=1,num_interfaces
@@ -13134,16 +13135,19 @@ END SUBROUTINE SIMP
              do dir2=2,SDIM
               volall=volall*wt(dir2)
              enddo
-             if (volall.le.zero) then
+             if (volall.gt.zero) then
+              ! do nothing
+             else
               print *,"volall invalid"
               stop
              endif
 
              do iten=1,num_interfaces
-              icurv=(iten-1)*(5+SDIM)
-              istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
-              fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),istat))
-              coarse_test=NINT(crse_value(istat))
+              icurv=(iten-1)*CURVCOMP_NCOMP
+              ! dir x side  dir=1..sdim side=-1 or 1
+              idx_dirside=icurv+CURVCOMP_DIRSIDE_FLAG+1 
+              fine_test=NINT(fine(D_DECL(ifine,jfine,kfine),idx_dirside))
+              coarse_test=NINT(crse_value(idx_dirside))
               if ((coarse_test.ne.0).and. &
                   (coarse_test.ne.SDIM+1)) then
                print *,"coarse_test invalid"
@@ -13154,9 +13158,9 @@ END SUBROUTINE SIMP
               else if ((abs(fine_test).ge.1).and. &
                        (abs(fine_test).le.SDIM+1)) then
                velwt(iten)=velwt(iten)+volall
-               crse_value(istat)=SDIM+1
-               crse_value(istat+1)=zero ! im3
-               do dir2=1,SDIM+3
+               crse_value(idx_dirside)=SDIM+1
+               crse_value(icurv+CURVCOMP_MATERIAL3_ID+1)=zero 
+               do dir2=1,CURVCOMP_DIRSIDE_FLAG
                 crse_value(icurv+dir2)= &
                   crse_value(icurv+dir2)+volall* &
                   fine(D_DECL(ifine,jfine,kfine),icurv+dir2)
@@ -13165,7 +13169,7 @@ END SUBROUTINE SIMP
                print *,"fine_test bad (avgdown curv): ",fine_test
                stop
               endif
-             enddo ! iten
+             enddo ! iten=1...num_interfaces
 
              voltotal=voltotal+volall
             endif ! wt(sdim).gt.0
@@ -13175,28 +13179,33 @@ END SUBROUTINE SIMP
         endif
        enddo ! ifine
 
-       if (voltotal.le.zero) then
+       if (voltotal.gt.zero) then
+        ! do nothing
+       else
         print *,"voltotal invalid"
         stop
        endif
 
        do iten=1,num_interfaces
-        icurv=(iten-1)*(5+SDIM)
-        istat=icurv+4+SDIM ! dir x side  dir=1..sdim side=-1 or 1
-        coarse_test=NINT(crse_value(istat))
+        icurv=(iten-1)*NCOMP_CURV
+        ! dir x side  dir=1..sdim side=-1 or 1
+        idx_dirside=icurv+CURVCOMP_DIRSIDE_FLAG+1 
+        coarse_test=NINT(crse_value(idx_dirside))
         if (coarse_test.eq.0) then
-         if (velwt(iten).ne.zero) then
+         if (velwt(iten).eq.zero) then
+          ! do nothing
+         else
           print *,"velwt invalid"
           stop
          endif
-         do dir2=1,5+SDIM
+         do dir2=1,CURVCOMP_NCOMP
           crse(D_DECL(ic,jc,kc),icurv+dir2)=zero
          enddo
         else if (coarse_test.eq.SDIM+1) then
          if (velwt(iten).gt.zero) then
-          crse(D_DECL(ic,jc,kc),istat)=SDIM+1 ! dir x side
-          crse(D_DECL(ic,jc,kc),istat+1)=zero ! im3
-          do dir2=1,3+SDIM
+          crse(D_DECL(ic,jc,kc),idx_dirside)=SDIM+1 ! dir x side
+          crse(D_DECL(ic,jc,kc),icurv+CURVCOMP_MATERIAL3_ID+1)=zero 
+          do dir2=1,CURVCOMP_DIRSIDE_FLAG
            crse(D_DECL(ic,jc,kc),icurv+dir2)= &
             crse_value(icurv+dir2)/velwt(iten)
           enddo
