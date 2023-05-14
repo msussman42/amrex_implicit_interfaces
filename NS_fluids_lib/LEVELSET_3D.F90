@@ -3642,15 +3642,7 @@ stop
        stop
       endif
 
-      ! height function curvature
-      ! finite difference curvature
-      ! pforce
-      ! marangoni force
-      ! dir/side flag
-      ! im3
-      ! x num_interfaces
-
-      if (num_curv.ne.num_interfaces*(5+SDIM)) then
+      if (num_curv.ne.num_interfaces*CURVCOMP_NCOMP) then
        print *,"num_curv invalid"
        stop
       endif
@@ -8343,7 +8335,6 @@ stop
           ! in: fort_init_physics_vars
          local_face(FACECOMP_ICEMASK+1)=one
          local_face(FACECOMP_CURV+1)=zero
-         local_face(FACECOMP_PFORCE+1)=zero
          local_face(FACECOMP_FACEVEL+1)=zero
 
           ! veldir=0..sdim-1
@@ -9838,7 +9829,6 @@ stop
          endif
 
          local_face(FACECOMP_CURV+1)=zero
-         local_face(FACECOMP_PFORCE+1)=zero
 
          if (local_face(FACECOMP_FACECUT+1).ge.zero) then
           ! do nothing
@@ -9878,7 +9868,6 @@ stop
 
             if (is_solid_face.eq.1) then
              local_face(FACECOMP_CURV+1)=zero
-             local_face(FACECOMP_PFORCE+1)=zero
             else if (is_solid_face.eq.0) then
              icurv=(iten_tension-1)*(SDIM+5)
 
@@ -10062,17 +10051,6 @@ stop
                endif
                if (curv_max.lt.local_face(FACECOMP_CURV+1)) then
                 curv_max=local_face(FACECOMP_CURV+1)
-               endif
-
-               if (wtL.gt.wtR) then
-                local_face(FACECOMP_PFORCE+1)=curvL(3)
-               else if (wtR.gt.wtL) then
-                local_face(FACECOMP_PFORCE+1)=curvR(3)
-               else if (wtR.eq.wtL) then
-                local_face(FACECOMP_PFORCE+1)=wtL*curvL(3)+wtR*curvR(3)
-               else
-                print *,"wtR or wtL is NaN"
-                stop
                endif
 
               else
@@ -13400,7 +13378,6 @@ stop
       INTEGER_T partid_prescribed
       INTEGER_T partid_check
       REAL_T cutoff
-      REAL_T local_tension_force
       INTEGER_T typeleft,typeright,typeface
       INTEGER_T colorleft,colorright,colorface
       INTEGER_T face_velocity_override
@@ -15310,13 +15287,11 @@ stop
               call get_scaled_pforce(pforce_scaled)
 
                ! in: fort_cell_to_mac, OP_POTGRAD_TO_MAC,
-               !     surface tension on MAC grid ...
-              local_tension_force=tension_scaled*local_face(FACECOMP_CURV+1)
-
+               !     surface tension on MAC grid 
                ! pgrad_tension is combined with pgrad_gravity at the very end.
-              pgrad_tension=-(local_tension_force+ &
-               pforce_scaled*local_face(FACECOMP_PFORCE+1))*gradh_tension
-              pgrad_tension=dt*pgrad_tension/hx
+              pgrad_tension=-dt*tension_scaled*local_face(FACECOMP_CURV+1)* &
+                      gradh_tension/hx
+
               if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                   (local_face(FACECOMP_FACECUT+1).le.half)) then
                pgrad_tension=zero
