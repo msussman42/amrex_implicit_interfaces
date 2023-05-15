@@ -4995,6 +4995,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine fixed_face
 
+       ! static_flag=1 if called from "static surface tension advection"
       subroutine merge_levelset(xpos,time,LS,LS_merge,static_flag)
       use global_utility_module
       use MOF_routines_module
@@ -5139,7 +5140,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           endif
          enddo !im_opp=1,num_materials
         else
-         print *,"is_rigid invalid"
+         print *,"is_ice(im)==1 and is_rigid(im)!=0  is not allowed"
          stop
         endif
        else if (is_ice(im).eq.0) then
