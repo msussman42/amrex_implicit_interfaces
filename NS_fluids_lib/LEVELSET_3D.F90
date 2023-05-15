@@ -7668,6 +7668,7 @@ stop
 
       REAL_T volmat(num_materials)
       REAL_T voltotal
+      REAL_T voltotal_prescribed
       REAL_T voldepart
       REAL_T mass_total
       REAL_T delta_mass
@@ -8330,10 +8331,10 @@ stop
          endif
 
           ! calls fort_is_rigid_base(FSI_flag(im),im) (GLOBALUTIL.F90)
-          ! FSI_PRESCRIBED_PROBF90,
-          ! FSI_PRESCRIBED_NODES,
-          ! FSI_SHOELE_PRESVEL,
-          ! FSI_SHOELE_VELVEL.
+          !  FSI_PRESCRIBED_PROBF90,
+          !  FSI_PRESCRIBED_NODES,
+          !  FSI_SHOELE_PRESVEL,
+          !  FSI_SHOELE_VELVEL.
           !
           ! Remark: 
           ! local_face(FACECOMP_ICEFACECUT+1) is initialized in
@@ -8355,6 +8356,8 @@ stop
           stop
          endif
 
+          ! calls is_rigid(im) (GLOBALUTIL.F90)
+          !  is_rigid(im)==1 AND (! FSI_SHOELE_VELVEL)
          if ((is_prescribed(implus_majority).eq.1).or. &
              (is_prescribed(imminus_majority).eq.1).or. &
              (is_clamped_face.ge.1)) then
@@ -8620,8 +8623,8 @@ stop
            call fluid_interface_tension( &
             xstenMAC_center,time, &
             LSminus,LSplus,gradh_tension, &
-            im_opp_tension,im_tension, &
-            im_left_tension,im_right_tension, &
+            im_opp_tension,im_tension, & !INTENT(out)
+            im_left_tension,im_right_tension, & !INTENT(out)
             test_for_quasi_static)
           else
            print *,"covered_face invalid"
@@ -9406,12 +9409,12 @@ stop
           do im=1,num_materials
            volmat(im)=vofC(D_DECL(icell,jcell,kcell),im)
           enddo
-           ! voltotal=sum F_prescribed
+           ! voltotal_prescribed=sum F_prescribed
            ! im_prescribed_primary=argmax_im F_prescribed
            ! combine_prescribed_VOF is declared in GLOBALUTIL.F90
           call combine_prescribed_VOF( &
             volmat, & !intent(in)
-            voltotal, & ! intent(out)
+            voltotal_prescribed, & ! intent(out)
             im_prescribed_primary) ! intent(out)
 
           if (is_clamped_face.ge.1) then !interior "wall"
@@ -9420,8 +9423,8 @@ stop
 
           else if (is_clamped_face.eq.0) then
 
-           if ((voltotal.ge.one-0.01D0).and. &
-               (voltotal.le.one+VOFTOL)) then
+           if ((voltotal_prescribed.ge.one-0.01D0).and. &
+               (voltotal_prescribed.le.one+VOFTOL)) then
             if ((im_prescribed_primary.ge.1).and. &
                 (im_prescribed_primary.le.num_materials)) then
              if (wall_flag_face.eq.0) then
@@ -9447,11 +9450,11 @@ stop
              print *,"im_prescribed_primary invalid"
              stop
             endif
-           else if ((voltotal.le.one-0.01D0).and. &
-                    (voltotal.ge.-VOFTOL)) then
+           else if ((voltotal_prescribed.le.one-0.01D0).and. &
+                    (voltotal_prescribed.ge.-VOFTOL)) then
             ! do nothing
            else
-            print *,"voltotal invalid"
+            print *,"voltotal_prescribed invalid"
             stop
            endif
 
