@@ -1770,6 +1770,10 @@ protected:
      // default is 0.0
     static Vector<Real> max_contact_line_size;
 
+     // if growth_angle<>0, then auxiliary data, beyond what
+     // "merge_levelset" provides, must be supplied.
+    static Vector<Real> growth_angle; // radians
+
     static Vector<Real> microlayer_angle; // radians
     static Vector<int>  microlayer_substrate; // index of substrate
 
