@@ -621,6 +621,10 @@ Vector<Real> NavierStokes::saturation_temp_vel;
 Vector<Real> NavierStokes::saturation_temp_min; //aka T_I_min
 Vector<Real> NavierStokes::saturation_temp_max; //aka T_I_max
 
+// if growth_angle<>0, then auxiliary data, beyond what
+// "merge_levelset" provides, must be supplied.
+Vector<Real> NavierStokes::growth_angle;
+
 Vector<int> NavierStokes::microlayer_substrate;
 Vector<Real> NavierStokes::microlayer_angle;
 Vector<Real> NavierStokes::microlayer_size;
@@ -3391,6 +3395,11 @@ NavierStokes::read_params ()
     macrolayer_size.resize(num_materials);
     max_contact_line_size.resize(num_materials);
 
+    growth_angle.resize(num_materials);
+    for (int i=0;i<num_materials;i++) {
+     growth_angle[i]=0.0;
+    }
+
     thermal_microlayer_size.resize(num_materials);
     shear_microlayer_size.resize(num_materials);
     buoyancy_microlayer_size.resize(num_materials);
@@ -3903,6 +3912,8 @@ NavierStokes::read_params ()
      if (phasechange_microlayer_size[i]<microlayer_size_default)
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
+
+    pp.queryAdd("growth_angle",growth_angle,num_materials);
 
     pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
     pp.queryAdd("nucleation_pressure",nucleation_pressure,2*num_interfaces);
@@ -5267,6 +5278,11 @@ NavierStokes::read_params ()
      }
      std::cout << "pos_sites_random_flag= " << pos_sites_random_flag << '\n';
     
+     for (int i=0;i<num_materials;i++) {
+      std::cout << "growth_angle i=" << i << "  " << 
+       growth_angle[i] << '\n';
+     }
+
      for (int i=0;i<num_materials;i++) {
       std::cout << "microlayer_substrate i=" << i << "  " << 
        microlayer_substrate[i] << '\n';
@@ -25701,7 +25717,7 @@ NavierStokes::makeStateCurv(int project_option,
 
      // declared in: LEVELSET_3D.F90
     fort_curvstrip(
-     &static_flag,
+     &static_flag, //static_flag=1 => use static_tension
      local_caller_string.c_str(),
      local_caller_string.size(),
      &vof_height_function,
@@ -25738,6 +25754,7 @@ NavierStokes::makeStateCurv(int project_option,
      xlo,dx,
      &cur_time_slab,
      &visc_coef,
+     growth_angle.dataPtr(),
      &unscaled_min_curvature_radius,
      &num_curv,
      &ngrow_distance);
