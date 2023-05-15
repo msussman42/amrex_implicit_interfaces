@@ -351,6 +351,8 @@ INTEGER_T :: gravity_dir
      ! LS function for gas)
 
     if (fort_tension_init(1).gt.zero) then
+       ! uses fort_tension_init(1), fort_tension_init(2), and
+       ! fort_tension_init( im_solid_primary() )
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
       two*radblob,dist_ice,dist_liquid)
     else if (fort_tension_init(1).eq.zero) then
