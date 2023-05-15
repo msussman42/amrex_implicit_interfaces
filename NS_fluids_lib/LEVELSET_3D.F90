@@ -8054,11 +8054,16 @@ stop
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
                   (im_solid_micro.le.num_materials)) then
-               if (is_rigid(im_solid_micro).ne.1) then
-                print *,"is_rigid(im_solid_micro) invalid"
+
+               if (is_rigid(im_solid_micro).eq.1) then
+                ! do nothing
+               else
+                print *,"expecting is_rigid(im_solid_micro)==1"
                 stop
                endif 
+
                micro_table(im_opp,im_solid_micro)=iten_main
+
               else if (im_solid_micro.eq.0) then
                ! do nothing
               else
@@ -8068,10 +8073,14 @@ stop
               im_solid_micro=microlayer_substrate(im_opp)
               if ((im_solid_micro.ge.1).and. &
                   (im_solid_micro.le.num_materials)) then
-               if (is_rigid(im_solid_micro).ne.1) then
-                print *,"is_rigid(im_solid_micro) invalid"
+
+               if (is_rigid(im_solid_micro).eq.1) then
+                ! do nothing
+               else
+                print *,"expecting is_rigid(im_solid_micro)==1"
                 stop
                endif 
+
                micro_table(im,im_solid_micro)=iten_main
               else if (im_solid_micro.eq.0) then
                ! do nothing
@@ -8330,7 +8339,8 @@ stop
           ! local_face(FACECOMP_ICEFACECUT+1) is initialized in
           ! in GODUNOV_3D.F90: fort_init_icemask
           !
-          ! local_face(FACECOMP_FACECUT+1) is initialized in this routine.
+          ! local_face(FACECOMP_FACECUT+1) is initialized in 
+          ! LEVELSET_3D.F: fort_init_physics_vars (here)
           !
          if ((is_rigid(implus_majority).eq.1).or. &
              (is_rigid(imminus_majority).eq.1).or. &
