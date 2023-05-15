@@ -3139,6 +3139,7 @@ stop
        xlo,dx, &
        time, &
        visc_coef, &
+       growth_angle, &
        unscaled_min_curvature_radius, &
        num_curv, & ! num_interfaces * CURVCOMP_NCOMP
        ngrow_distance_in) &
@@ -3172,6 +3173,7 @@ stop
       INTEGER_T, INTENT(in) :: num_curv ! num_interfaces * CURVCOMP_NCOMP
       INTEGER_T icurv
       REAL_T, INTENT(in) :: visc_coef
+      REAL_T, INTENT(in) :: growth_angle(num_materials)
       REAL_T, INTENT(in) :: unscaled_min_curvature_radius
 
       INTEGER_T, INTENT(in) :: DIMDEC(history_dat)
