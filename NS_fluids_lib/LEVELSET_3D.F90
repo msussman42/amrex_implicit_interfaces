@@ -3239,8 +3239,9 @@ stop
       INTEGER_T ii,jj,kk
 
       REAL_T LS(num_materials)
-      REAL_T LS_merge(num_materials)
       REAL_T LS_fixed(num_materials)
+      REAL_T LS_merge(num_materials)
+      REAL_T LS_merge_fixed(num_materials)
       REAL_T LSSIDE(num_materials)
       REAL_T LSSIDE_fixed(num_materials)
 
@@ -3254,6 +3255,7 @@ stop
       INTEGER_T im_curv
       INTEGER_T vofcomp
       INTEGER_T im_majority
+      INTEGER_T im_merge_majority
       INTEGER_T im_main,im_main_opp
       INTEGER_T iten
       INTEGER_T inormal
@@ -3514,20 +3516,32 @@ stop
 
          vol_sten=vol(D_DECL(i,j,k))
 
+          ! num_curv=num_interfaces * CURVCOMP_NCOMP
          do icurv=1,num_curv
           curvfab(D_DECL(i,j,k),icurv)=zero
          enddo 
+
          do im=1,num_materials
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
          call merge_levelset(xcenter,time,LS,LS_merge,static_flag)
 
-         call FIX_LS_tessellate(LS_merge,LS_fixed)
+          ! FIX_LS_tessellate is declared in: MOF.F90
+          ! input : fluids tessellate, solids are embedded
+          ! output: fluids tessellate and one and only one fluid LS is positive
+         call FIX_LS_tessellate(LS_merge,LS_merge_fixed)
+         call FIX_LS_tessellate(LS,LS_fixed)
 
          call get_primary_material(LS_fixed,im_majority)
+         call get_primary_material(LS_merge_fixed,im_merge_majority)
 
-         if (is_rigid(im_majority).eq.1) then
+         if ((is_rigid(im_merge_majority).eq.1).or. &
+             (is_rigid(im_majority).eq.1).or. &
+             (is_ice(im_merge_majority).eq.1).or. &
+             (is_ice(im_majority).eq.1).or. &
+             (is_FSI_rigid(im_merge_majority).eq.1).or. &
+             (is_FSI_rigid(im_majority).eq.1)) then
 
           ! do nothing, all interface forces are 0
   
@@ -3536,7 +3550,12 @@ stop
          
           ! do nothing, all interface forces are 0
          
-         else if (is_rigid(im_majority).eq.0) then
+         else if ((is_rigid(im_merge_majority).eq.0).and. &
+                  (is_rigid(im_majority).eq.0).and. &
+                  (is_ice(im_merge_majority).eq.0).and. &
+                  (is_ice(im_majority).eq.0).and. &
+                  (is_FSI_rigid(im_merge_majority).eq.0).and. &
+                  (is_FSI_rigid(im_majority).eq.0)) then
 
           if (vol_sten.gt.zero) then
            ! do nothing
@@ -3582,26 +3601,26 @@ stop
 
           enddo ! dirstar=1..sdim
 
-           ! loop through all possible interfaces involving im_majority
+           ! loop through all possible interfaces involving im_merge_majority
            ! and initialize curvfab
           do im_opp=1,num_materials
 
            donate_flag=0
   
-           if (im_opp.eq.im_majority) then
+           if (im_opp.eq.im_merge_majority) then
             ! do nothing
            else if (is_rigid(im_opp).eq.1) then
             ! do nothing
            else if (is_rigid(im_opp).eq.0) then
 
-            if (im_majority.lt.im_opp) then
-             im_main=im_majority
+            if (im_merge_majority.lt.im_opp) then
+             im_main=im_merge_majority
              im_main_opp=im_opp
-            else if (im_majority.gt.im_opp) then
+            else if (im_merge_majority.gt.im_opp) then
              im_main=im_opp
-             im_main_opp=im_majority
+             im_main_opp=im_merge_majority
             else
-             print *,"im_majority bust"
+             print *,"im_merge_majority bust"
              stop
             endif
             call get_iten(im_main,im_main_opp,iten)
@@ -3705,15 +3724,15 @@ stop
                 at_RZ_axis=1
                endif
 
-               LCEN=LS_fixed(im_majority)
+               LCEN=LS_merge_fixed(im_merge_majority)
                LSIDE=LSSIDE_fixed(im_opp)
 
                if ((LCEN*LSIDE.ge.zero).and. &
                    (abs(LCEN)+abs(LSIDE).gt.zero).and. &
                    (at_RZ_axis.eq.0)) then
 
-                LCEN=-LS_fixed(im_opp)
-                LSIDE=-LSSIDE_fixed(im_majority)
+                LCEN=-LS_merge_fixed(im_opp)
+                LSIDE=-LSSIDE_fixed(im_merge_majority)
 
                 if ((LCEN*LSIDE.ge.zero).and. &
                     (abs(LCEN)+abs(LSIDE).gt.zero)) then
@@ -3722,7 +3741,7 @@ stop
 
                  dxside=abs(x1dcross-x1dcen)
 
-                  ! signcrossing points to im_majority material
+                  ! signcrossing points to im_merge_majority material
                  if (donate_flag.eq.0) then
                   donate_flag=1
                   dircrossing=dirstar
@@ -3767,35 +3786,35 @@ stop
 
             if (donate_flag.eq.1) then
 
-              ! sidestar points away from im_majority and towards the
+              ! sidestar points away from im_merge_majority and towards the
               ! opposite material.
-              ! signcrossing points towards im_majority.
+              ! signcrossing points towards im_merge_majority.
              sidestar=-signcrossing
 
-             if (im_majority.lt.im_opp) then
-               ! signside points to im_majority=im_main
+             if (im_merge_majority.lt.im_opp) then
+               ! signside points to im_merge_majority=im_main
               signside=signcrossing
-              if ((im_majority.eq.im_main).and. &
+              if ((im_merge_majority.eq.im_main).and. &
                   (im_opp.eq.im_main_opp)) then
                ! do nothing
               else
-               print *,"im_majority or im_opp invalid"
+               print *,"im_merge_majority or im_opp invalid"
                stop
               endif
-             else if (im_majority.gt.im_opp) then
-               ! signcrossing points towards im_majority.
-               ! signside points away from im_majority
+             else if (im_merge_majority.gt.im_opp) then
+               ! signcrossing points towards im_merge_majority.
+               ! signside points away from im_merge_majority
                ! signside points towards im_opp=im_main
               signside=-signcrossing
-              if ((im_majority.eq.im_main_opp).and. &
+              if ((im_merge_majority.eq.im_main_opp).and. &
                   (im_opp.eq.im_main)) then
                ! do nothing
               else
-               print *,"im_majority or im_opp invalid"
+               print *,"im_merge_majority or im_opp invalid"
                stop
               endif
              else
-              print *,"im_majority bust"
+              print *,"im_merge_majority bust"
               stop
              endif
 
@@ -3866,7 +3885,7 @@ stop
               do im_curv=1,num_materials
                LSRIGHT_EXTEND=LS_STAR_FIXED(1,dirstar,im_curv)
                LSLEFT_EXTEND=LS_STAR_FIXED(-1,dirstar,im_curv)
-               LCEN=LS_fixed(im_curv)
+               LCEN=LS_merge_fixed(im_curv)
 
                inormal=(im_curv-1)*SDIM+dirstar
 
@@ -3924,7 +3943,7 @@ stop
                 print *,"dxcrossing= ",dxcrossing
                 print *,"critsign=",critsign
                 print *,"im_curv=",im_curv
-                print *,"im_majority= ",im_majority
+                print *,"im_merge_majority= ",im_merge_majority
                 print *,"im_main=",im_main
                 print *,"im_main_opp=",im_main_opp
                 print *,"iten= ",iten
@@ -4024,8 +4043,8 @@ stop
              if (1.eq.0) then
               print *,"xcenter ",xcenter(1),xcenter(2),xcenter(SDIM)
               print *,"dircrossing ",dircrossing
-              print *,"im_majority,im_opp,im_main,im_main_opp ", &
-               im_majority,im_opp,im_main,im_main_opp
+              print *,"im_merge_majority,im_opp,im_main,im_main_opp ", &
+               im_merge_majority,im_opp,im_main,im_main_opp
              endif
 
              ! i1,j1,k1=-ngrow_distance ... ngrow_distance
@@ -4206,7 +4225,7 @@ stop
           enddo ! im_opp
 
          else
-          print *,"im_majority invalid"
+          print *,"im_majority or im_merge_majority invalid"
           stop
          endif
   
