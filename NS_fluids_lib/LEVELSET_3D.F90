@@ -3243,7 +3243,7 @@ stop
       REAL_T LS_merge(num_materials)
       REAL_T LS_merge_fixed(num_materials)
       REAL_T LSSIDE(num_materials)
-      REAL_T LSSIDE_fixed(num_materials)
+      REAL_T LSSIDE_merge_fixed(num_materials)
 
       REAL_T xcenter(SDIM)
       INTEGER_T dirloc,dircrossing,dirstar
@@ -3297,8 +3297,8 @@ stop
       REAL_T LSRIGHT_fixed(num_materials)
       REAL_T XLEFT,XRIGHT,XCEN
 
-      REAL_T LS_STAR_FIXED(-1:1,SDIM,num_materials)
-      INTEGER_T im_star_majority(-1:1,SDIM)
+      REAL_T LS_STAR_merge_FIXED(-1:1,SDIM,num_materials)
+      INTEGER_T im_star_merge_majority(-1:1,SDIM)
 
       REAL_T velsten(-1:1,-1:1,-1:1,SDIM)
       REAL_T nrmsten(-1:1,-1:1,-1:1,SDIM*num_materials)
@@ -3590,12 +3590,12 @@ stop
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
             call merge_levelset(xcenter,time,LSSIDE,LS_merge,static_flag)
-            call FIX_LS_tessellate(LS_merge,LSSIDE_fixed)
-            call get_primary_material(LSSIDE_fixed,im_opp)
+            call FIX_LS_tessellate(LS_merge,LSSIDE_merge_fixed)
+            call get_primary_material(LSSIDE_merge_fixed,im_opp)
             do im=1,num_materials
-             LS_STAR_FIXED(sidestar,dirstar,im)=LSSIDE_fixed(im)
+             LS_STAR_merge_FIXED(sidestar,dirstar,im)=LSSIDE_merge_fixed(im)
             enddo
-            im_star_majority(sidestar,dirstar)=im_opp
+            im_star_merge_majority(sidestar,dirstar)=im_opp
 
            enddo ! sidestar=-1,1,2
 
@@ -3611,7 +3611,13 @@ stop
             ! do nothing
            else if (is_rigid(im_opp).eq.1) then
             ! do nothing
-           else if (is_rigid(im_opp).eq.0) then
+           else if (is_ice(im_opp).eq.1) then
+            ! do nothing
+           else if (is_FSI_rigid(im_opp).eq.1) then
+            ! do nothing
+           else if ((is_rigid(im_opp).eq.0).and. &
+                    (is_ice(im_opp).eq.0).and. &
+                    (is_FSI_rigid(im_opp).eq.0)) then
 
             if (im_merge_majority.lt.im_opp) then
              im_main=im_merge_majority
@@ -3628,8 +3634,8 @@ stop
             do dirloc=1,SDIM
        
              do im=1,num_materials 
-              LSLEFT_fixed(im)=LS_STAR_FIXED(-1,dirloc,im)
-              LSRIGHT_fixed(im)=LS_STAR_FIXED(1,dirloc,im)
+              LSLEFT_fixed(im)=LS_STAR_merge_FIXED(-1,dirloc,im)
+              LSRIGHT_fixed(im)=LS_STAR_merge_FIXED(1,dirloc,im)
              enddo
 
              call get_LS_extend(LSLEFT_fixed,iten,LSLEFT_EXTEND)
@@ -3710,9 +3716,9 @@ stop
               x1dside=xsten0(2*sidestar,dirstar)
   
               do im=1,num_materials
-               LSSIDE_fixed(im)=LS_STAR_FIXED(sidestar,dirstar,im)
+               LSSIDE_merge_fixed(im)=LS_STAR_merge_FIXED(sidestar,dirstar,im)
               enddo
-              im_opp_test=im_star_majority(sidestar,dirstar)
+              im_opp_test=im_star_merge_majority(sidestar,dirstar)
 
               if (im_opp_test.eq.im_opp) then
 
@@ -3725,14 +3731,14 @@ stop
                endif
 
                LCEN=LS_merge_fixed(im_merge_majority)
-               LSIDE=LSSIDE_fixed(im_opp)
+               LSIDE=LSSIDE_merge_fixed(im_opp)
 
                if ((LCEN*LSIDE.ge.zero).and. &
                    (abs(LCEN)+abs(LSIDE).gt.zero).and. &
                    (at_RZ_axis.eq.0)) then
 
                 LCEN=-LS_merge_fixed(im_opp)
-                LSIDE=-LSSIDE_fixed(im_merge_majority)
+                LSIDE=-LSSIDE_merge_fixed(im_merge_majority)
 
                 if ((LCEN*LSIDE.ge.zero).and. &
                     (abs(LCEN)+abs(LSIDE).gt.zero)) then
@@ -3883,8 +3889,8 @@ stop
               endif
 
               do im_curv=1,num_materials
-               LSRIGHT_EXTEND=LS_STAR_FIXED(1,dirstar,im_curv)
-               LSLEFT_EXTEND=LS_STAR_FIXED(-1,dirstar,im_curv)
+               LSRIGHT_EXTEND=LS_STAR_merge_FIXED(1,dirstar,im_curv)
+               LSLEFT_EXTEND=LS_STAR_merge_FIXED(-1,dirstar,im_curv)
                LCEN=LS_merge_fixed(im_curv)
 
                inormal=(im_curv-1)*SDIM+dirstar
@@ -4222,7 +4228,7 @@ stop
             stop
            endif
 
-          enddo ! im_opp
+          enddo ! im_opp=1...num_materials
 
          else
           print *,"im_majority or im_merge_majority invalid"
