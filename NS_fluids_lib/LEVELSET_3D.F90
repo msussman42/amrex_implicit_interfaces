@@ -3243,6 +3243,7 @@ stop
       REAL_T LS_merge(num_materials)
       REAL_T LS_merge_fixed(num_materials)
       REAL_T LSSIDE(num_materials)
+      REAL_T LSSIDE_fixed(num_materials)
       REAL_T LSSIDE_merge_fixed(num_materials)
 
       REAL_T xcenter(SDIM)
@@ -3251,6 +3252,7 @@ stop
       INTEGER_T at_RZ_axis
 
       INTEGER_T im,im_opp
+      INTEGER_T im_opp_merge_test
       INTEGER_T im_opp_test
       INTEGER_T im_curv
       INTEGER_T vofcomp
@@ -3298,7 +3300,9 @@ stop
       REAL_T XLEFT,XRIGHT,XCEN
 
       REAL_T LS_STAR_merge_FIXED(-1:1,SDIM,num_materials)
+      REAL_T LS_STAR_FIXED(-1:1,SDIM,num_materials)
       INTEGER_T im_star_merge_majority(-1:1,SDIM)
+      INTEGER_T im_star_majority(-1:1,SDIM)
 
       REAL_T velsten(-1:1,-1:1,-1:1,SDIM)
       REAL_T nrmsten(-1:1,-1:1,-1:1,SDIM*num_materials)
@@ -3597,6 +3601,13 @@ stop
             enddo
             im_star_merge_majority(sidestar,dirstar)=im_opp
 
+            call FIX_LS_tessellate(LSSIDE,LSSIDE_fixed)
+            call get_primary_material(LSSIDE_fixed,im_opp)
+            do im=1,num_materials
+             LS_STAR_FIXED(sidestar,dirstar,im)=LSSIDE_fixed(im)
+            enddo
+            im_star_majority(sidestar,dirstar)=im_opp
+
            enddo ! sidestar=-1,1,2
 
           enddo ! dirstar=1..sdim
@@ -3717,10 +3728,13 @@ stop
   
               do im=1,num_materials
                LSSIDE_merge_fixed(im)=LS_STAR_merge_FIXED(sidestar,dirstar,im)
+               LSSIDE_fixed(im)=LS_STAR_FIXED(sidestar,dirstar,im)
               enddo
-              im_opp_test=im_star_merge_majority(sidestar,dirstar)
+              im_opp_merge_test=im_star_merge_majority(sidestar,dirstar)
+              im_opp_test=im_star_majority(sidestar,dirstar)
 
-              if (im_opp_test.eq.im_opp) then
+              if ((im_opp_merge_test.eq.im_opp).and. &
+                  (im_opp_test.eq.im_opp)) then
 
                at_RZ_axis=0
                if ((levelrz.eq.COORDSYS_RZ).and. &
@@ -3785,7 +3799,13 @@ stop
                 stop
                endif 
 
-              endif ! im_opp_test==im_opp?
+              else if ((im_opp_merge_test.ne.im_opp).or. &
+                       (im_opp_test.ne.im_opp)) then
+               ! do nothing
+              else
+               print *,"im_opp_merge_test of im_opp_test invalid"
+               stop
+              endif 
 
              enddo ! sidestar=-1,1,2
             enddo ! dirstar=1..sdim
