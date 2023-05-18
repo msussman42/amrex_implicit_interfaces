@@ -325,35 +325,38 @@ stop
 
        ! called from fort_curvstrip
       subroutine initheightLS( &
-        static_flag, &
-        vof_height_function, &
-        icenter,jcenter,kcenter, &
-        level, &
-        finest_level, &
-        bfact,dx, &
-        xcenter, &
-        nrmcenter, & ! sdim x num_materials components
-        dircrit, & ! 1..sdim
-        side, & ! -1 or 1
-        signside, &
-        time, &
-        xsten, &
-        velsten, &
-        mgoni_temp, &
-        lssten, &
-        vofsten, &
-        nrmsten, &
-        vol_sten, &
-        area_sten, &
-        curvHT_choice, &
-        curvFD, &
-        mgoni_force, &
-        ZEYU_thet_d, &
-        ZEYU_u_cl, &
-        im3, &
-        visc_coef, &
-        unscaled_min_curvature_radius, &
-        im,im_opp,iten)
+        static_flag, & !intent(in)
+        vof_height_function, & !intent(in)
+        icenter,jcenter,kcenter, & !intent(in)
+        level, & ! intent(in)
+        finest_level, & !intent(in)
+        bfact, & !intent(in)
+        dx, & !intent(in)
+        xcenter, & !intent(in)
+        nrmcenter, & !intent(in)  sdim x num_materials components
+        dircrit, & !intent(in)  1..sdim
+        side, & !intent(in)  -1 or 1
+        signside, & !intent(in)
+        time, & !intent(in)
+        xsten, & !intent(in)
+        velsten, & !intent(in)
+        mgoni_temp, & !intent(in)
+        lssten, & !intent(in)
+        vofsten, & !intent(in)
+        nrmsten, & !intent(in)
+        vol_sten, & !intent(in)
+        area_sten, & !intent(in)
+        curvHT_choice, & !intent(out)
+        curvFD, & !intent(out)
+        mgoni_force, & !intent(out)
+        ZEYU_thet_d, & !intent(out)
+        ZEYU_u_cl, & !intent(out)
+        im3, & !intent(out)
+        visc_coef, & !intent(in)
+        unscaled_min_curvature_radius, & !intent(in)
+        im, & !intent(in)
+        im_opp, & !intent(in)
+        iten) !intent(in)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -3173,7 +3176,7 @@ stop
       INTEGER_T, INTENT(in) :: num_curv ! num_interfaces * CURVCOMP_NCOMP
       INTEGER_T icurv
       REAL_T, INTENT(in) :: visc_coef
-      REAL_T, INTENT(in) :: growth_angle(num_materials)
+      REAL_T, INTENT(in) :: growth_angle(num_interfaces)
       REAL_T, INTENT(in) :: unscaled_min_curvature_radius
 
       INTEGER_T, INTENT(in) :: DIMDEC(history_dat)
@@ -3260,6 +3263,9 @@ stop
       INTEGER_T im_merge_majority
       INTEGER_T im_main,im_main_opp
       INTEGER_T iten
+      INTEGER_T iten_ice
+      INTEGER_T default_flag
+      REAL_T LH
       INTEGER_T inormal
 
       REAL_T nrmPROBE(SDIM*num_materials)
@@ -3317,6 +3323,9 @@ stop
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         num_materials)
+
+      REAL_T vofstenFD(-1:1,-1:1,-1:1,num_materials)
+      REAL_T lsstenFD(-1:1,-1:1,-1:1,num_materials)
 
       REAL_T, dimension(:,:), allocatable :: xsten0
       REAL_T, dimension(:,:), allocatable :: xsten_curv
@@ -3630,6 +3639,7 @@ stop
                     (is_ice(im_opp).eq.0).and. &
                     (is_FSI_rigid(im_opp).eq.0)) then
 
+             ! im_main < im_main_opp
             if (im_merge_majority.lt.im_opp) then
              im_main=im_merge_majority
              im_main_opp=im_opp
@@ -4147,7 +4157,7 @@ stop
 
              enddo
              enddo
-             enddo ! i1,j1,k1=LSstenlo,LSstenhi (init nrmsten,lssten,vofsten)
+             enddo ! i1,j1,k1=LSstenlo,LSstenhi(init nrmsten,lssten,vofsten)
  
              ! i1,j1,k1=-1..1
              do i1=istenlo(1),istenhi(1)
@@ -4195,15 +4205,185 @@ stop
               nrmsten, &
               vol_sten, &
               area_sten, &
-              curv_cellHT, &
-              curv_cellFD, &
-              mgoni_force, & !(I-nn^T)(grad sigma) delta
-              ZEYU_thet_d, &
-              ZEYU_u_cl, &
-              im3, &
+              curv_cellHT, & !intent(out)
+              curv_cellFD, & !intent(out)
+              mgoni_force, & !intent(out) (I-nn^T)(grad sigma) delta
+              ZEYU_thet_d, & !intent(out)
+              ZEYU_u_cl, & !intent(out)
+              im3, & !intent(out)
               visc_coef, &
               unscaled_min_curvature_radius, &
-              im_main,im_main_opp,iten)
+              im_main, & !intent(in)
+              im_main_opp, & !intent(in) 
+              iten) !intent(in)
+
+             if (im3.eq.0) then
+              ! do nothing
+             else if ((im3.ge.1).and.(im3.le.num_materials)) then
+              ! do nothing
+             else
+              print *,"im3 invalid"
+              stop
+             endif
+
+             if (im3.eq.0) then
+
+              if (growth_angle(iten).eq.zero) then
+               ! do nothing
+              else if (growth_angle(iten).ne.zero) then
+
+               ! i1,j1,k1=-1..1
+               do i1=istenlo(1),istenhi(1)
+               do j1=istenlo(2),istenhi(2)
+               do k1=istenlo(3),istenhi(3)
+
+                do inormal=1,SDIM*num_materials
+                 call safe_data(i+i1,j+j1,k+k1,num_materials+inormal, &
+                  LSPC_ptr,nrm_local(inormal))
+                enddo
+
+                do im_curv=1,num_materials
+                 call safe_data(i+i1,j+j1,k+k1,im_curv, &
+                  LSPC_ptr,LSCEN_hold(im_curv))
+                 vofcomp=(im_curv-1)*ngeom_recon+1
+                 call safe_data(i+i1,j+j1,k+k1,vofcomp, &
+                  recon_ptr,vof_hold(im_curv))
+                enddo !im_curv=1..num_materials
+       
+                if (im3.eq.0) then
+
+                 call get_primary_material(LSCEN_hold,im_curv)
+
+                 if (im_curv.eq.im_main) then
+                  ! do nothing
+                 else if (im_curv.eq.im_main_opp) then
+                  ! do nothing
+                 else if (is_ice(im_curv).eq.0) then
+                  ! do nothing
+                 else if ((im_curv.ge.1).and. &
+                          (im_curv.le.num_materials).and. &
+                          (is_ice(im_curv).eq.1)) then
+
+                  call get_iten(im_curv,im_main,iten_ice)
+                  default_flag=1
+                  LH=zero
+                  if (im_main.lt.im_curv) then
+                   LH=get_user_latent_heat(iten_ice,293.0d0,default_flag)
+                  else if (im_main.gt.im_curv) then
+                   LH=get_user_latent_heat(iten_ice+num_interfaces, &
+                       293.0d0,default_flag)
+                  else
+                   print *,"expecting im_main<>im_curv"
+                   stop
+                  endif
+
+                  if (LH.eq.zero) then
+                   ! do nothing
+                  else if (LH.gt.zero) then
+                   ! do nothing
+                  else if (LH.lt.zero) then
+                   im3=im_curv
+                  else
+                   print *,"LH invalid"
+                   stop
+                  endif
+
+                  if (im3.eq.0) then
+
+                   call get_iten(im_curv,im_main_opp,iten_ice)
+                   default_flag=1
+                   LH=zero
+                   if (im_main_opp.lt.im_curv) then
+                    LH=get_user_latent_heat(iten_ice,293.0d0,default_flag)
+                   else if (im_main_opp.gt.im_curv) then
+                    LH=get_user_latent_heat(iten_ice+num_interfaces, &
+                        293.0d0,default_flag)
+                   else
+                    print *,"expecting im_main_opp<>im_curv"
+                    stop
+                   endif
+
+                   if (LH.eq.zero) then
+                    ! do nothing
+                   else if (LH.gt.zero) then
+                    ! do nothing
+                   else if (LH.lt.zero) then
+                    im3=im_curv
+                   else
+                    print *,"LH invalid"
+                    stop
+                   endif
+
+                  else if (im3.eq.im_curv) then
+                   ! do nothing
+                  else
+                   print *,"im3 invalid"
+                   stop
+                  endif
+
+                 else
+                  print *,"im_curv invalid"
+                  stop
+                 endif
+
+                else if ((im3.ge.1).and.(im3.le.num_materials)) then
+                 ! do nothing
+                else
+                 print *,"im3 invalid"
+                 stop
+                endif
+
+                do im_curv=1,num_materials
+                 vofstenFD(i1,j1,k1,im_curv)=vof_hold(im_curv)
+                enddo
+
+                call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed)
+  
+                do im_curv=1,num_materials
+ 
+                 lsstenFD(i1,j1,k1,im_curv)=LSCEN_hold_fixed(im_curv)
+
+                 do dirloc=1,SDIM
+                  inormal=(im_curv-1)*SDIM+dirloc
+                  nrm_mat(dirloc)=nrm_local(inormal)
+                 enddo
+                 RR=one
+                 if (levelrz.eq.COORDSYS_CARTESIAN) then
+                  ! do nothing
+                 else if (levelrz.eq.COORDSYS_RZ) then
+                  if (SDIM.ne.2) then
+                   print *,"levelrz invalid"
+                   stop
+                  endif
+                 else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+                  RR=xsten_curv(2*i1,1)
+                 else
+                  print *,"transformed normal: levelrz invalid"
+                  stop
+                 endif
+                 call prepare_normal(nrm_mat,RR,mag)
+                 do dirloc=1,SDIM
+                  inormal=(im_curv-1)*SDIM+dirloc
+                  nrmsten(i1,j1,k1,inormal)=nrm_mat(dirloc)
+                 enddo
+
+                enddo ! im_curv=1..num_materials
+ 
+               enddo
+               enddo
+               enddo !i1,j1,k1=istenlo,istenhi(init nrmsten,lsstenFD,vofstenFD)
+
+              else
+               print *,"growth_angle(iten) is NaN"
+               stop
+              endif
+
+             else if ((im3.ge.1).and.(im3.le.num_materials)) then
+              ! do nothing
+             else
+              print *,"im3 invalid"
+              stop
+             endif
 
              if (DEBUG_CURVATURE.eq.1) then
               print *,"i,j,k,dircrossing,sidestar,nrm ", &

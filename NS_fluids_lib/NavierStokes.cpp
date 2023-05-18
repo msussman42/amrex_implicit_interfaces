@@ -621,8 +621,6 @@ Vector<Real> NavierStokes::saturation_temp_vel;
 Vector<Real> NavierStokes::saturation_temp_min; //aka T_I_min
 Vector<Real> NavierStokes::saturation_temp_max; //aka T_I_max
 
-// if growth_angle<>0, then auxiliary data, beyond what
-// "merge_levelset" provides, must be supplied.
 Vector<Real> NavierStokes::growth_angle;
 
 Vector<int> NavierStokes::microlayer_substrate;
@@ -3395,8 +3393,8 @@ NavierStokes::read_params ()
     macrolayer_size.resize(num_materials);
     max_contact_line_size.resize(num_materials);
 
-    growth_angle.resize(num_materials);
-    for (int i=0;i<num_materials;i++) {
+    growth_angle.resize(num_interfaces);
+    for (int i=0;i<num_interfaces;i++) {
      growth_angle[i]=0.0;
     }
 
@@ -3913,7 +3911,7 @@ NavierStokes::read_params ()
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
 
-    pp.queryAdd("growth_angle",growth_angle,num_materials);
+    pp.queryAdd("growth_angle",growth_angle,num_interfaces);
 
     pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
     pp.queryAdd("nucleation_pressure",nucleation_pressure,2*num_interfaces);
@@ -3946,7 +3944,7 @@ NavierStokes::read_params ()
         int im_source=0;
         int im_dest=0;
 	 // get_inverse_iten_cpp declared in NavierStokes2.cpp
-	 // 1<=im1,im2<=num_materials
+	 // 1<=im1<im2<=num_materials
         get_inverse_iten_cpp(im1,im2,iten+1);
         if (ireverse==0) {
          im_source=im1;  
@@ -5278,7 +5276,7 @@ NavierStokes::read_params ()
      }
      std::cout << "pos_sites_random_flag= " << pos_sites_random_flag << '\n';
     
-     for (int i=0;i<num_materials;i++) {
+     for (int i=0;i<num_interfaces;i++) {
       std::cout << "growth_angle i=" << i << "  " << 
        growth_angle[i] << '\n';
      }
