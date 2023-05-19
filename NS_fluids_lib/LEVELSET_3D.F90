@@ -2460,7 +2460,46 @@ stop
        enddo !j
        enddo !i
 
+       do iten_local=1,num_interfaces
+        if (nrm_interfaces_cnt(iten_local).eq.0) then
+         ! do nothing
+        else if (nrm_interfaces_cnt(iten_local).ge.1) then
+         mag_local=zero
+         do dir_local=1,SDIM
+          nrm_interfaces(iten_local,dir_local)= &
+           nrm_interfaces(iten_local,dir_local)/nrm_interfaces_cnt(iten_local)
+          mag_local=mag_local+nrm_interfaces(iten_local,dir_local)**2
+         enddo
+         if (mag_local.gt.zero) then
+          mag_local=sqrt(mag_local)
+          do dir_local=1,SDIM
+           nrm_interfaces(iten_local,dir_local)= &
+            nrm_interfaces(iten_local,dir_local)/mag_local
+          enddo
+         else
+          print *,"mag_local invalid"
+          stop
+         endif
+        else
+         print *,"nrm_interfaces_cnt invalid"
+         stop
+        endif
+       enddo !iten_local=1,num_interfaces
+       
+       call get_iten(im,im_opp,iten_local)
+       if (nrm_interfaces_cnt(iten_local).eq.0) then
+        im3=0
+       else if (nrm_interfaces_cnt(iten_local).gt.0) then
+        do dir_local=1,SDIM
+         nrm_water_air=nrm_interfaces(iten_local,dir_local)
+        enddo 
 
+        TODO: pass im_water, cancel this routine if not all 3 normals are
+        well defined. (return im3=0)
+       else
+        print *,"nrm_interface_cnt invalid"
+        stop
+       endif
 
       else
        print *,"prescribe_growth_angle: levelrz invalid (a)"
