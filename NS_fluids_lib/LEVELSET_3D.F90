@@ -2300,6 +2300,15 @@ stop
 
       REAL_T dxmax,dxmaxLS,dxmin
       INTEGER_T :: iten_test
+      INTEGER_T :: iten_local
+      INTEGER_T :: im_local
+      INTEGER_T :: i,j,k
+      INTEGER_T :: dir_local
+      REAL_T :: nrm_interfaces(num_interfaces,SDIM)
+      INTEGER_T :: nrm_interfaces_cnt(num_interfaces)
+      REAL_T :: LSTEST(num_materials)
+      INTEGER_T :: im_majority
+      INTEGER_T :: im_secondary
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -2387,6 +2396,71 @@ stop
         print *,"xcenter(1)>0 for RZ or RT prescribe_growth_angle"
         stop
        endif
+
+       if (SDIM.eq.3) then
+        klo_sten_short=-1
+        khi_sten_short=1
+       else if (SDIM.eq.2) then
+        klo_sten_short=0
+        khi_sten_short=0
+       else
+        print *,"dimension bust prescribe_growth_angle"
+        stop
+       endif
+
+       do iten_local=1,num_interfaces
+        do dir_local=1,SDIM
+         nrm_interfaces(iten_local,dir_local)=zero
+        enddo
+        nrm_interfaces_cnt(iten_local)=0
+       enddo
+
+       do i=-1,1
+       do j=-1,1
+       do k=klo_sten_short,khi_sten_short
+        do im_local=1,num_materials
+         LSTEST(im_local)=lssten(i,j,k,im_local)
+        enddo
+         ! checks rigid and non-rigid materials.
+         ! get_primary_material is declared in: GLOBALUTIL.F90
+         ! get_secondary_material is declared in: MOF.F90
+        call get_primary_material(LSTEST,im_majority)
+        call get_secondary_material(LSTEST,im_majority,im_secondary)
+        mag_local=zero
+        do dir_local=1,SDIM
+         nrm_local(dir_local)=nrmsten(i,j,k,SDIM*(im_secondary-1)+dir_local)
+         if (im_secondary.gt.im_majority) then
+          nrm_local(dir_local)=-nrm_local(dir_local)
+         else if (im_secondary.lt.im_majority) then
+          ! do nothing
+         else
+          print *,"expecting im_secondary<>im_majority"
+          stop
+         endif
+         mag_local=mag_local+nrm_local(dir_local)**2
+        enddo !dir_local=1,SDIM
+        if (mag_local.eq.zero) then
+         ! do nothing
+        else if (mag_local.gt.zero) then
+         mag_local=sqrt(mag_local)
+         do dir_local=1,SDIM
+          nrm_local(dir_local)=nrm_local(dir_local)/mag_local
+         enddo
+         call get_iten(im_majority,im_secondary,iten_local)
+         do dir_local=1,SDIM
+          nrm_interfaces(iten_local,dir_local)= &
+            nrm_interfaces(iten_local,dir_local)+nrm_local(dir_local)
+         enddo
+         nrm_interfaces_cnt(iten_local)=nrm_interfaces_cnt(iten_local)+1
+        else
+         print *,"mag_local invalid in prescribe_growth_angle"
+         stop
+        endif
+       enddo !k
+       enddo !j
+       enddo !i
+
+
 
       else
        print *,"prescribe_growth_angle: levelrz invalid (a)"
@@ -10461,6 +10535,8 @@ stop
         enddo
 
          ! checks rigid and non-rigid materials.
+         ! get_primary_material is declared in: GLOBALUTIL.F90
+         ! get_secondary_material is declared in: MOF.F90
         call get_primary_material(LSIDE_MAT,implus_majority)
         call get_secondary_material(LSIDE_MAT,implus_majority,im_secondary)
 
