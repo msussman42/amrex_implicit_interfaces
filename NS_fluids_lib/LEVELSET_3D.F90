@@ -2343,7 +2343,7 @@ stop
        stop
       endif
       if (im.ge.im_opp) then
-       print *,"im and im_opp invalid"
+       print *,"im and/or im_opp invalid prescribe_growth_angle"
        stop
       endif
       if ((im.lt.1).or.(im.gt.num_materials)) then
