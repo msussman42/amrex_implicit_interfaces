@@ -2299,7 +2299,14 @@ stop
       REAL_T, INTENT(in) :: nrmsten( &
        -1:1,-1:1,-1:1,SDIM*num_materials)
 
+      REAL_T :: ls_extend_sten(-1:1,-1:1,-1:1)
+      REAL_T :: nrm_extend_sten(-1:1,-1:1,-1:1,SDIM)
+
       REAL_T dxmax,dxmaxLS,dxmin
+
+      INTEGER_T :: klo_sten_short
+      INTEGER_T :: khi_sten_short
+
       INTEGER_T :: iten_test
       INTEGER_T :: iten_local
       INTEGER_T :: im_ambient
@@ -2311,6 +2318,23 @@ stop
       REAL_T :: LSTEST(num_materials)
       INTEGER_T :: im_majority
       INTEGER_T :: im_secondary
+      REAL_T :: nW(3) ! points from melt to ambient
+      REAL_T :: nI(3) ! points from ice to ambient
+      REAL_T :: nIW(3) ! points from melt to ice
+      REAL_T :: nCL(3)
+      REAL_T :: nI_perp(3)
+      REAL_T :: nrm_local(3)
+      REAL_T :: mag_local
+      REAL_T :: magCL
+      REAL_T :: magI_perp
+      REAL_T :: nI_perp_dot_nIW
+      REAL_T :: cos_angle
+      REAL_T :: nfree_fict(SDIM)
+      REAL_T :: nsolid_fict(SDIM)
+      REAL_T :: nghost(SDIM)
+      REAL_T :: nperp(SDIM)
+      REAL_T :: ls_local
+      REAL_T :: x_local(3)
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -2503,6 +2527,12 @@ stop
          stop
         endif
        enddo !iten_local=1,num_interfaces
+
+       do dir_local=1,3
+        nW(dir_local)=zero
+        nI(dir_local)=zero
+        nIW(dir_local)=zero
+       enddo
       
        if (im_melt.eq.im) then
         im_ambient=im_opp
@@ -2538,7 +2568,7 @@ stop
          im3=0
         else if (nrm_interfaces_cnt(iten_local).gt.0) then
 
-          ! nI points from melt into the ambient.
+          ! nI points from ice into the ambient.
          do dir_local=1,SDIM
           nI(dir_local)=nrm_interfaces(iten_local,dir_local)
           if (im3.lt.im_ambient) then
@@ -2549,7 +2579,115 @@ stop
            print *,"im3 or im_ambient invalid"
            stop
           endif
-         enddo 
+         enddo !dir_local=1,SDIM
+
+         call get_iten(im3,im_melt,iten_local)
+
+         if (nrm_interfaces_cnt(iten_local).eq.0) then
+          im3=0
+         else if (nrm_interfaces_cnt(iten_local).gt.0) then
+
+           ! nIW points from melt into the ice.
+          do dir_local=1,SDIM
+           nIW(dir_local)=nrm_interfaces(iten_local,dir_local)
+           if (im_melt.lt.im3) then
+            nIW(dir_local)=-nIW(dir_local)
+           else if (im_melt.gt.im3) then
+            ! do nothing
+           else
+            print *,"im3 or im_melt invalid"
+            stop
+           endif
+          enddo !dir_local=1,SDIM
+
+          call crossprod(nW,nI,nCL)
+          magCL=sqrt( nCL(1)**2+nCL(2)**2+nCL(3)**2 )
+          if (magCL.eq.zero) then
+           im3=0
+          else if (magCL.gt.zero) then
+           do dir_local=1,3
+            nCL(dir_local)=nCL(dir_local)/magCL
+           enddo
+           call crossprod(nCL,nI,nI_perp)
+           magI_perp=sqrt( nI_perp(1)**2+nI_perp(2)**2+nI_perp(3)**2 )
+
+           if (magI_perp.eq.zero) then
+            im3=0
+           else if (magI_perp.gt.zero) then
+
+            nI_perp_dot_nIW=zero
+
+            do dir_local=1,3
+             nI_perp(dir_local)=nI_perp(dir_local)/magI_perp
+             nI_perp_dot_nIW=nI_perp_dot_nIW+nI_perp(dir_local)*nIW(dir_local)
+            enddo
+            if (nI_perp_dot_nIW.eq.zero) then
+             im3=0
+            else if (nI_perp_dot_nIW.ne.zero) then
+             if (nI_perp_dot_nIW.gt.zero) then
+              ! do nothing
+             else if (nI_perp_dot_nIW.lt.zero) then
+              do dir_local=1,3
+               nI_perp(dir_local)=-nI_perp(dir_local)
+              enddo
+             else
+              print *,"nI_perp_dot_nIW invalid"
+              stop
+             endif
+             cos_angle=cos(half*Pi-growth_angle)
+             do dir_local=1,SDIM
+              nfree_fict(dir_local)=nW(dir_local)
+              nsolid_fict(dir_local)=-nI_perp(dir_local)
+             enddo
+             call ghostnormal(nfree_fict,nsolid_fict,cos_angle,nghost,nperp)
+             do i=-1,1
+             do j=-1,1
+             do k=klo_sten_short,khi_sten_short
+              ls_local=zero
+              dir_local=1
+              x_local(dir_local)=xsten(2*i,dir_local)
+              dir_local=2
+              x_local(dir_local)=xsten(2*j,dir_local)
+              dir_local=3
+              x_local(dir_local)=xsten(2*k,SDIM)
+
+              do dir_local=1,SDIM
+               ls_local=ls_local+nI_perp(dir_local)* &
+                 (x_local(dir_local)-xsten(0,dir_local))
+              enddo
+              ls_extend_sten(i,j,k)=ls_local
+              do dir_local=1,SDIM
+               if (ls_local.ge.zero) then
+                nrm_extend_sten(i,j,k,dir_local)=nW(dir_local)
+               else if (ls_local.lt.zero) then
+                nrm_extend_sten(i,j,k,dir_local)=nghost(dir_local)
+               else
+                print *,"ls_local invalid"
+                stop
+               endif
+              enddo !dir_local=1,SDIM
+
+             enddo !k
+             enddo !j
+             enddo !i
+            else
+             print *,"nI_perp_dot_nIW invalid"
+             stop
+            endif
+           else
+            print *,"magI_perp invalid"
+            stop
+           endif
+
+          else
+           print *,"magCL invalid"
+           stop
+          endif
+
+         else
+          print *,"nrm_interface_cnt invalid (im3,im_melt) "
+          stop
+         endif
 
         else
          print *,"nrm_interface_cnt invalid (im3,im_ambient) "

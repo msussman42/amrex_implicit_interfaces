@@ -3288,13 +3288,15 @@ end subroutine dynamic_contact_angle
       subroutine ghostnormal(nfree,nsolid,cos_angle,nghost,nperp)
       IMPLICIT NONE
 
-      REAL_T nfree(SDIM)
-      REAL_T nsolid(SDIM)
-      REAL_T nghost(SDIM)
-      REAL_T nperp(SDIM)
+      REAL_T, INTENT(in) :: nfree(SDIM)
+      REAL_T, INTENT(in) :: nsolid(SDIM)
+      REAL_T, INTENT(out) :: nghost(SDIM)
+      REAL_T, INTENT(out) :: nperp(SDIM)
+      REAL_T, INTENT(in)  :: cos_angle
+
       REAL_T e2(3),e3(3),ntemp(3)
       INTEGER_T i
-      REAL_T ss,cos_angle,sin_angle,dist
+      REAL_T ss,sin_angle,dist
       REAL_T nsolid_new(SDIM)
       INTEGER_T dir
       REAL_T mag
