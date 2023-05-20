@@ -2262,9 +2262,10 @@ stop
         vol_sten, & !intent(in)
         area_sten, & !intent(in)
         curvFD, & !intent(out)
-        im3, & !intent(in)
+        im3, & !intent(inout)
         im, & !intent(in)
         im_opp, & !intent(in)
+        im_melt, & !intent(in)
         iten, & !intent(in)
         growth_angle) !intent(in)
       use global_utility_module
@@ -2280,8 +2281,8 @@ stop
       INTEGER_T, INTENT(in) :: dircrit ! 1..SDIM
       INTEGER_T, INTENT(in) :: side ! 1 or -1
       INTEGER_T, INTENT(in) :: signside
-      INTEGER_T, INTENT(in) :: im,im_opp
-      INTEGER_T, INTENT(in) :: im3
+      INTEGER_T, INTENT(in) :: im,im_opp,im_melt
+      INTEGER_T, INTENT(inout) :: im3
       INTEGER_T, INTENT(in) :: iten
       REAL_T, INTENT(in) :: growth_angle
       REAL_T, INTENT(in) :: dx(SDIM)
@@ -2301,6 +2302,7 @@ stop
       REAL_T dxmax,dxmaxLS,dxmin
       INTEGER_T :: iten_test
       INTEGER_T :: iten_local
+      INTEGER_T :: im_ambient
       INTEGER_T :: im_local
       INTEGER_T :: i,j,k
       INTEGER_T :: dir_local
@@ -2363,6 +2365,20 @@ stop
        print *,"im_opp invalid prescribe_growth_angle im_opp=",im_opp
        stop
       endif
+      if ((im_melt.eq.im).or.(im_melt.eq.im_opp)) then
+       ! do nothing
+      else
+       print *,"im_melt invalid"
+       stop
+      endif
+
+      if (is_ice(im3).eq.1) then
+       ! do nothing
+      else
+       print *,"expecting is_ice(im3).eq.1 in prescribe_growth_angle"
+       stop
+      endif
+
       if ((iten.lt.1).or.(iten.gt.num_interfaces)) then
        print *,"iten invalid prescribe_growth_angle"
        stop
@@ -2409,11 +2425,13 @@ stop
        endif
 
        do iten_local=1,num_interfaces
+
         do dir_local=1,SDIM
          nrm_interfaces(iten_local,dir_local)=zero
         enddo
         nrm_interfaces_cnt(iten_local)=0
-       enddo
+
+       enddo !iten_local=1,num_interfaces
 
        do i=-1,1
        do j=-1,1
@@ -2485,19 +2503,61 @@ stop
          stop
         endif
        enddo !iten_local=1,num_interfaces
-       
-       call get_iten(im,im_opp,iten_local)
+      
+       if (im_melt.eq.im) then
+        im_ambient=im_opp
+       else if (im_melt.eq.im_opp) then
+        im_ambient=im
+       else
+        print *,"im_melt invalid"
+        stop
+       endif 
+
+       call get_iten(im_melt,im_ambient,iten_local)
+
        if (nrm_interfaces_cnt(iten_local).eq.0) then
         im3=0
        else if (nrm_interfaces_cnt(iten_local).gt.0) then
+
+         ! nW points from melt into the ambient.
         do dir_local=1,SDIM
-         nrm_water_air=nrm_interfaces(iten_local,dir_local)
+         nW(dir_local)=nrm_interfaces(iten_local,dir_local)
+         if (im_melt.lt.im_ambient) then
+          nW(dir_local)=-nW(dir_local)
+         else if (im_melt.gt.im_ambient) then
+          ! do nothing
+         else
+          print *,"im_melt or im_ambient invalid"
+          stop
+         endif
         enddo 
 
-        TODO: pass im_water, cancel this routine if not all 3 normals are
-        well defined. (return im3=0)
+        call get_iten(im3,im_ambient,iten_local)
+
+        if (nrm_interfaces_cnt(iten_local).eq.0) then
+         im3=0
+        else if (nrm_interfaces_cnt(iten_local).gt.0) then
+
+          ! nI points from melt into the ambient.
+         do dir_local=1,SDIM
+          nI(dir_local)=nrm_interfaces(iten_local,dir_local)
+          if (im3.lt.im_ambient) then
+           nI(dir_local)=-nI(dir_local)
+          else if (im3.gt.im_ambient) then
+           ! do nothing
+          else
+           print *,"im3 or im_ambient invalid"
+           stop
+          endif
+         enddo 
+
+        else
+         print *,"nrm_interface_cnt invalid (im3,im_ambient) "
+         stop
+        endif
+
        else
-        print *,"nrm_interface_cnt invalid"
+        print *,"nrm_interface_cnt invalid (im_melt,im_ambient) "
         stop
        endif
 
@@ -3560,6 +3620,7 @@ stop
       REAL_T mgoni_force(SDIM)
 
       INTEGER_T im3
+      INTEGER_T im_melt
 
       REAL_T LSCEN_hold(num_materials)
       REAL_T LSCEN_hold_merge(num_materials)
@@ -4499,7 +4560,9 @@ stop
 
               if (growth_angle(iten).eq.zero) then
                ! do nothing
-              else if (growth_angle(iten).ne.zero) then
+              else if (abs(growth_angle(iten)).le.half*Pi) then
+
+               im_melt=0
 
                ! i1,j1,k1=-1..1
                do i1=istenlo(1),istenhi(1)
@@ -4552,6 +4615,7 @@ stop
                    ! do nothing
                   else if (LH.lt.zero) then
                    im3=im_curv
+                   im_melt=im_main
                   else
                    print *,"LH invalid"
                    stop
@@ -4578,6 +4642,7 @@ stop
                     ! do nothing
                    else if (LH.lt.zero) then
                     im3=im_curv
+                    im_melt=im_main_opp
                    else
                     print *,"LH invalid"
                     stop
@@ -4643,32 +4708,53 @@ stop
                enddo !i1,j1,k1=istenlo,istenhi(init nrmsten,lsstenFD,vofstenFD)
 
                if (im3.eq.0) then
-                ! do nothing
+                if (im_melt.eq.0) then
+                 ! do nothing
+                else
+                 print *,"im_melt invalid"
+                 stop
+                endif
                else if ((im3.ge.1).and.(im3.le.num_materials)) then
-              
-                call prescribe_growth_angle( &
-                 i,j,k, &
-                 level, &
-                 finest_level, &
-                 bfact,dx, &
-                 xcenter, &
-                 dircrossing, &
-                 sidestar, &
-                 signside, &
-                 xsten_curv, &
-                 lsstenFD, &
-                 vofstenFD, &
-                 nrmsten, &
-                 vol_sten, &
-                 area_sten, &
-                 curv_cellFD, & !intent(out)
-                 im3, & !intent(in)
-                 im_main, & !intent(in)
-                 im_main_opp, & !intent(in) 
-                 iten, & !intent(in)
-                 growth_angle(iten))
+             
+                if ((im_melt.eq.im_main).or. &
+                    (im_melt.eq.im_main_opp)) then 
+                 call prescribe_growth_angle( &
+                  i,j,k, &
+                  level, &
+                  finest_level, &
+                  bfact,dx, &
+                  xcenter, &
+                  dircrossing, &
+                  sidestar, &
+                  signside, &
+                  xsten_curv, &
+                  lsstenFD, &
+                  vofstenFD, &
+                  nrmsten, &
+                  vol_sten, &
+                  area_sten, &
+                  curv_cellFD, & !intent(out)
+                  im3, & !intent(inout)
+                  im_main, & !intent(in)
+                  im_main_opp, & !intent(in) 
+                  im_melt, & !intent(in)
+                  iten, & !intent(in)
+                  growth_angle(iten))
 
-                curv_cellHT=curv_cellFD
+                 if (im3.eq.0) then
+                  ! do nothing
+                 else if ((im3.ge.1).and. &
+                          (im3.le.num_materials).and. &
+                          (is_ice(im3).eq.1)) then
+                  curv_cellHT=curv_cellFD
+                 else
+                  print *,"im3 became corrupt after prescribe_growth_angle"
+                  stop
+                 endif
+                else
+                 print *,"im_melt invalid"
+                 stop
+                endif
 
                else
                 print *,"im3 invalid"
@@ -4676,7 +4762,7 @@ stop
                endif
 
               else
-               print *,"growth_angle(iten) is NaN"
+               print *,"growth_angle(iten) invalid:",growth_angle(iten)
                stop
               endif
 
