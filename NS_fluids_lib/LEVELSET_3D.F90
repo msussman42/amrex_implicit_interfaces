@@ -2262,6 +2262,7 @@ stop
         vol_sten, & !intent(in)
         area_sten, & !intent(in)
         curvFD, & !intent(out)
+        unscaled_min_curvature_radius, & !intent(in)
         im3, & !intent(inout)
         im, & !intent(in)
         im_opp, & !intent(in)
@@ -2281,6 +2282,7 @@ stop
       INTEGER_T, INTENT(in) :: dircrit ! 1..SDIM
       INTEGER_T, INTENT(in) :: side ! 1 or -1
       INTEGER_T, INTENT(in) :: signside
+      REAL_T, INTENT(in) :: unscaled_min_curvature_radius
       INTEGER_T, INTENT(in) :: im,im_opp,im_melt
       INTEGER_T, INTENT(inout) :: im3
       INTEGER_T, INTENT(in) :: iten
@@ -2312,6 +2314,7 @@ stop
       INTEGER_T :: im_ambient
       INTEGER_T :: im_local
       INTEGER_T :: i,j,k
+      INTEGER_T :: inode,jnode,knode
       INTEGER_T :: dir_local
       REAL_T :: nrm_interfaces(num_interfaces,SDIM)
       INTEGER_T :: nrm_interfaces_cnt(num_interfaces)
@@ -2334,7 +2337,19 @@ stop
       REAL_T :: nghost(SDIM)
       REAL_T :: nperp(SDIM)
       REAL_T :: ls_local
+      REAL_T :: wtnode
+      REAL_T :: totalwt
+      REAL_T :: maxcurv
+      REAL_T :: RR
       REAL_T :: x_local(3)
+      REAL_T :: xsten_curv(-2:2,SDIM)
+      INTEGER_T :: node_index(3)
+      INTEGER_T :: cell_index(3)
+      INTEGER_T :: cell_lo(3)
+      INTEGER_T :: cell_hi(3)
+      REAL_T :: n_node(SDIM)
+      REAL_T :: dnrm(SDIM)
+      REAL_T :: dxsten(SDIM)
 
       call get_dxmax(dx,bfact,dxmax)
       call get_dxmaxLS(dx,bfact,dxmaxLS)
@@ -2350,6 +2365,13 @@ stop
        ! do nothing
       else
        print *,"dxmin invalid"
+       stop
+      endif
+
+      if (unscaled_min_curvature_radius.ge.two) then
+       ! do nothing
+      else
+       print *,"unscaled_min_curvature_radius invalid"
        stop
       endif
 
@@ -2683,6 +2705,9 @@ stop
              enddo ! dir_local=1,SDIM
 
              totalwt=zero
+             do dir_local=1,SDIM
+              dnrm(dir_local)=zero
+             enddo
 
              do inode=-1,1,2
              do jnode=-1,1,2
@@ -2758,15 +2783,15 @@ stop
                  print *,"levelrz invalid prescribe_growth_angle: RR"
                  stop
                 endif
-               else if ((dir2.eq.2).or.(dir2.eq.SDIM)) then
+               else if ((dir_local.eq.2).or.(dir_local.eq.SDIM)) then
                 RR=one
                else
-                print *,"dir2 invalid"
+                print *,"dir_local invalid"
                 stop
                endif
-               dnrm(dir2)=dnrm(dir2)+ &
-                     node_index(dir2)*RR*n_node(dir2)
-              enddo ! dir2
+               dnrm(dir_local)=dnrm(dir_local)+ &
+                   node_index(dir_local)*RR*n_node(dir_local)
+              enddo ! dir_local=1,SDIM
  
               totalwt=totalwt+one
 
@@ -2783,9 +2808,10 @@ stop
 
              ! dxsten=(xsten(2)+xsten(0))/2-(xsten(-2)+xsten(0))/2=
              !   (xsten(2)-xsten(-2))/2
-             do dir2=1,SDIM
-              dxsten(dir2)=xsten_curv(1,dir2)-xsten_curv(-1,dir2)
-              if (dxsten(dir2).gt.zero) then
+             do dir_local=1,SDIM
+              dxsten(dir_local)= &
+                xsten_curv(1,dir_local)-xsten_curv(-1,dir_local)
+              if (dxsten(dir_local).gt.zero) then
                ! do nothing
               else
                print *,"dxsten invalid"
@@ -2793,97 +2819,84 @@ stop
               endif 
              enddo ! dir_local=1,SDIM
 
-      do dir2=1,SDIM
+             do dir_local=1,SDIM
 
-        if (dir2.eq.1) then
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
-          RR=one
-         else if ((levelrz.eq.COORDSYS_RZ).or. &
-                  (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-          RR=abs(xsten_curv(0,1))
-         else
-          print *,"levelrz invalid initheightLS: RR 3"
-          stop
-         endif
-        else if (dir2.eq.2) then
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
-          RR=one
-         else if (levelrz.eq.COORDSYS_RZ) then
-          if (SDIM.ne.2) then
-           print *,"dimension bust"
-           stop
-          endif
-          RR=one
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          RR=abs(xsten_curv(0,1))
-         else
-          print *,"levelrz invalid initheightLS: RR 4"
-          stop
-         endif
-        else if ((dir2.eq.3).and.(SDIM.eq.3)) then
-         RR=one
-        else
-         print *,"dir2 invalid"
-         stop
-        endif
+              if (dir_local.eq.1) then
+               if (levelrz.eq.COORDSYS_CARTESIAN) then
+                RR=one
+               else if ((levelrz.eq.COORDSYS_RZ).or. &
+                        (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+                RR=abs(xsten_curv(0,1))
+               else
+                print *,"levelrz invalid prescribe_growth_angle RR 3"
+                stop
+               endif
+              else if (dir_local.eq.2) then
+               if (levelrz.eq.COORDSYS_CARTESIAN) then
+                RR=one
+               else if (levelrz.eq.COORDSYS_RZ) then
+                if (SDIM.ne.2) then
+                 print *,"dimension bust"
+                 stop
+                endif
+                RR=one
+               else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+                RR=abs(xsten_curv(0,1))
+               else
+                print *,"levelrz invalid initheightLS: RR 4"
+                stop
+               endif
+              else if ((dir_local.eq.3).and.(SDIM.eq.3)) then
+               RR=one
+              else
+               print *,"dir_local invalid"
+               stop
+              endif
 
-        dnrm(dir2)=two*dnrm(dir2)/(totalwt*RR*dxsten(dir2))
+              dnrm(dir_local)=two*dnrm(dir_local)/ &
+                     (totalwt*RR*dxsten(dir_local))
 
-         enddo ! dir_local=1,SDIM
+             enddo ! dir_local=1,SDIM
 
-        curvFD=zero
-            do dir_local=1,SDIM
-             curvFD=curvFD+dnrm(dir_local)
-         enddo ! dir_local=1,SDIM
+             curvFD=zero
+             do dir_local=1,SDIM
+              curvFD=curvFD+dnrm(dir_local)
+             enddo ! dir_local=1,SDIM
 
-      if (unscaled_min_curvature_radius.ge.two) then
-       maxcurv=one/(unscaled_min_curvature_radius*dxmax)
-       if (levelrz.eq.COORDSYS_CARTESIAN) then
-        if (SDIM.eq.2) then
-         ! do nothing
-        else if (SDIM.eq.3) then
-         maxcurv=two*maxcurv
-        else
-         print *,"sdim invalid"
-         stop
-        endif     
-       else if ((levelrz.eq.COORDSYS_RZ).or. &
-                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-        maxcurv=two*maxcurv
-       else
-        print *,"initheightLS: levelrz invalid (b)"
-        stop
-       endif
+             if (unscaled_min_curvature_radius.ge.two) then
+              maxcurv=one/(unscaled_min_curvature_radius*dxmax)
+              if (levelrz.eq.COORDSYS_CARTESIAN) then
+               if (SDIM.eq.2) then
+                ! do nothing
+               else if (SDIM.eq.3) then
+                maxcurv=two*maxcurv
+               else
+                print *,"sdim invalid"
+                stop
+               endif     
+              else if ((levelrz.eq.COORDSYS_RZ).or. &
+                       (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+               maxcurv=two*maxcurv
+              else
+               print *,"prescribe_growth_angle levelrz invalid (b)"
+               stop
+              endif
 
-       if (curvFD.gt.maxcurv) then
-        curvFD=maxcurv
-       else if (curvFD.lt.-maxcurv) then
-        curvFD=-maxcurv
-       else if (abs(curvFD).le.maxcurv) then
-        ! do nothing
-       else
-        print *,"curvFD is NaN"
-        stop
-       endif
+              if (curvFD.gt.maxcurv) then
+               curvFD=maxcurv
+              else if (curvFD.lt.-maxcurv) then
+               curvFD=-maxcurv
+              else if (abs(curvFD).le.maxcurv) then
+               ! do nothing
+              else
+               print *,"curvFD is NaN"
+               stop
+              endif
 
-       if (curvHT_choice.gt.maxcurv) then
-        curvHT_choice=maxcurv
-       else if (curvHT_choice.lt.-maxcurv) then
-        curvHT_choice=-maxcurv
-       else if (abs(curvHT_choice).le.maxcurv) then
-        ! do nothing
-       else
-        print *,"curvHT_choice is NaN"
-        stop
-       endif
-
-      else
-       print *,"unscaled_min_curvature_radius invalid"
-       stop
-      endif
-
-
-
+             else
+              print *,"unscaled_min_curvature_radius invalid"
+              stop
+             endif
 
             else
              print *,"nI_perp_dot_nIW invalid"
@@ -5087,6 +5100,7 @@ stop
                   vol_sten, &
                   area_sten, &
                   curv_cellFD, & !intent(out)
+                  unscaled_min_curvature_radius, &
                   im3, & !intent(inout)
                   im_main, & !intent(in)
                   im_main_opp, & !intent(in) 
