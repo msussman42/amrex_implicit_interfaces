@@ -4429,9 +4429,9 @@ end subroutine dynamic_contact_angle
 
       IMPLICIT NONE
 
-      REAL_T gradphi(SDIM)
-      REAL_T rval
-      REAL_T mag
+      REAL_T, intent(inout) :: gradphi(SDIM)
+      REAL_T, intent(in)    :: rval
+      REAL_T, intent(out)   :: mag
       INTEGER_T dir
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -4462,6 +4462,11 @@ end subroutine dynamic_contact_angle
        do dir=1,SDIM
         gradphi(dir)=gradphi(dir)/mag
        enddo
+      else if (mag.eq.zero) then
+       ! do nothing
+      else
+       print *,"mag is NaN ",mag
+       stop
       endif
 
       end subroutine prepare_normal
