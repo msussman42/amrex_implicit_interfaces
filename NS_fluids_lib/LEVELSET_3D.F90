@@ -733,7 +733,7 @@ stop
        if (xcenter(1).gt.zero) then
         ! do nothing
        else
-        print *,"xcenter(1)>0 for RZ or RT initheightLS"
+        print *,"expectimg xcenter(1)>0 for RZ or RT initheightLS"
         stop
        endif
 
@@ -2364,31 +2364,32 @@ stop
       if (dxmin.gt.zero) then
        ! do nothing
       else
-       print *,"dxmin invalid"
+       print *,"dxmin invalid in prescribe_growth_angle: ",dxmin
        stop
       endif
 
       if (unscaled_min_curvature_radius.ge.two) then
        ! do nothing
       else
-       print *,"unscaled_min_curvature_radius invalid"
+       print *,"unscaled_min_curvature_radius invalid: ", &
+          unscaled_min_curvature_radius
        stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid prescribe_grow_angle"
+       print *,"level invalid prescribe_growth_angle: ",level
        stop
       endif
       if ((side.ne.1).and.(side.ne.-1)) then
-       print *,"side invalid"
+       print *,"side invalid prescribe_growth_angle: ",side
        stop
       endif
       if ((signside.ne.1).and.(signside.ne.-1)) then
-       print *,"signside invalid"
+       print *,"signside invalid prescribe_growth_angle: ",signside
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid851 prescribe_growth_angle"
+       print *,"bfact invalid851 prescribe_growth_angle: ",bfact
        stop
       endif
       if (ngrow_distance.ne.4) then
@@ -2400,11 +2401,11 @@ stop
        stop
       endif
       if (im.ge.im_opp) then
-       print *,"im and/or im_opp invalid prescribe_growth_angle"
+       print *,"im and/or im_opp invalid prescribe_growth_angle:",im,im_opp
        stop
       endif
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid31 prescribe_growth_angle"
+       print *,"im invalid31 prescribe_growth_angle: ",im
        stop
       endif
       if ((im_opp.lt.1).or.(im_opp.gt.num_materials)) then
@@ -2414,7 +2415,7 @@ stop
       if ((im_melt.eq.im).or.(im_melt.eq.im_opp)) then
        ! do nothing
       else
-       print *,"im_melt invalid"
+       print *,"im_melt invalid :",im_melt
        stop
       endif
 
@@ -2437,7 +2438,7 @@ stop
       if (vol_sten.gt.zero) then
        ! do nothing
       else
-       print *,"vol_sten invalid prescribe_growth_angle"
+       print *,"vol_sten invalid prescribe_growth_angle: ",vol_sten
        stop
       endif
 
@@ -2455,480 +2456,480 @@ stop
        if (xcenter(1).gt.zero) then
         ! do nothing
        else
-        print *,"xcenter(1)>0 for RZ or RT prescribe_growth_angle"
+        print *,"expecting xcenter(1)>0 for RZ or RT prescribe_growth_angle"
         stop
        endif
 
-       if (SDIM.eq.3) then
-        klo_sten_short=-1
-        khi_sten_short=1
-       else if (SDIM.eq.2) then
-        klo_sten_short=0
-        khi_sten_short=0
-       else
-        print *,"dimension bust prescribe_growth_angle"
-        stop
-       endif
+      else
+       print *,"levelrz invalid prescribe_growth_angle: ",levelrz
+       stop
+      endif
 
-       do iten_local=1,num_interfaces
+      if (SDIM.eq.3) then
+       klo_sten_short=-1
+       khi_sten_short=1
+      else if (SDIM.eq.2) then
+       klo_sten_short=0
+       khi_sten_short=0
+      else
+       print *,"dimension bust prescribe_growth_angle"
+       stop
+      endif
 
+      do iten_local=1,num_interfaces
+
+       do dir_local=1,SDIM
+        nrm_interfaces(iten_local,dir_local)=zero
+       enddo
+       nrm_interfaces_cnt(iten_local)=0
+
+      enddo !iten_local=1,num_interfaces
+
+      do i=-1,1
+      do j=-1,1
+      do k=klo_sten_short,khi_sten_short
+       do im_local=1,num_materials
+        LSTEST(im_local)=lssten(i,j,k,im_local)
+       enddo
+        ! checks rigid and non-rigid materials.
+        ! get_primary_material is declared in: GLOBALUTIL.F90
+        ! get_secondary_material is declared in: MOF.F90
+       call get_primary_material(LSTEST,im_majority)
+       call get_secondary_material(LSTEST,im_majority,im_secondary)
+       mag_local=zero
+       do dir_local=1,SDIM
+        nrm_local(dir_local)=nrmsten(i,j,k,SDIM*(im_secondary-1)+dir_local)
+        if (im_secondary.gt.im_majority) then
+         nrm_local(dir_local)=-nrm_local(dir_local)
+        else if (im_secondary.lt.im_majority) then
+         ! do nothing
+        else
+         print *,"expecting im_secondary<>im_majority"
+         stop
+        endif
+        mag_local=mag_local+nrm_local(dir_local)**2
+       enddo !dir_local=1,SDIM
+       if (mag_local.eq.zero) then
+        ! do nothing
+       else if (mag_local.gt.zero) then
+        mag_local=sqrt(mag_local)
         do dir_local=1,SDIM
-         nrm_interfaces(iten_local,dir_local)=zero
+         nrm_local(dir_local)=nrm_local(dir_local)/mag_local
         enddo
-        nrm_interfaces_cnt(iten_local)=0
-
-       enddo !iten_local=1,num_interfaces
-
-       do i=-1,1
-       do j=-1,1
-       do k=klo_sten_short,khi_sten_short
-        do im_local=1,num_materials
-         LSTEST(im_local)=lssten(i,j,k,im_local)
+        call get_iten(im_majority,im_secondary,iten_local)
+        do dir_local=1,SDIM
+         nrm_interfaces(iten_local,dir_local)= &
+           nrm_interfaces(iten_local,dir_local)+nrm_local(dir_local)
         enddo
-         ! checks rigid and non-rigid materials.
-         ! get_primary_material is declared in: GLOBALUTIL.F90
-         ! get_secondary_material is declared in: MOF.F90
-        call get_primary_material(LSTEST,im_majority)
-        call get_secondary_material(LSTEST,im_majority,im_secondary)
+        nrm_interfaces_cnt(iten_local)=nrm_interfaces_cnt(iten_local)+1
+       else
+        print *,"mag_local invalid in prescribe_growth_angle"
+        stop
+       endif
+      enddo !k
+      enddo !j
+      enddo !i
+
+      do iten_local=1,num_interfaces
+       if (nrm_interfaces_cnt(iten_local).eq.0) then
+        ! do nothing
+       else if (nrm_interfaces_cnt(iten_local).ge.1) then
         mag_local=zero
         do dir_local=1,SDIM
-         nrm_local(dir_local)=nrmsten(i,j,k,SDIM*(im_secondary-1)+dir_local)
-         if (im_secondary.gt.im_majority) then
-          nrm_local(dir_local)=-nrm_local(dir_local)
-         else if (im_secondary.lt.im_majority) then
-          ! do nothing
-         else
-          print *,"expecting im_secondary<>im_majority"
-          stop
-         endif
-         mag_local=mag_local+nrm_local(dir_local)**2
-        enddo !dir_local=1,SDIM
-        if (mag_local.eq.zero) then
-         ! do nothing
-        else if (mag_local.gt.zero) then
+         nrm_interfaces(iten_local,dir_local)= &
+          nrm_interfaces(iten_local,dir_local)/nrm_interfaces_cnt(iten_local)
+         mag_local=mag_local+nrm_interfaces(iten_local,dir_local)**2
+        enddo
+        if (mag_local.gt.zero) then
          mag_local=sqrt(mag_local)
          do dir_local=1,SDIM
-          nrm_local(dir_local)=nrm_local(dir_local)/mag_local
-         enddo
-         call get_iten(im_majority,im_secondary,iten_local)
-         do dir_local=1,SDIM
           nrm_interfaces(iten_local,dir_local)= &
-            nrm_interfaces(iten_local,dir_local)+nrm_local(dir_local)
+           nrm_interfaces(iten_local,dir_local)/mag_local
          enddo
-         nrm_interfaces_cnt(iten_local)=nrm_interfaces_cnt(iten_local)+1
         else
-         print *,"mag_local invalid in prescribe_growth_angle"
+         print *,"mag_local invalid"
          stop
         endif
-       enddo !k
-       enddo !j
-       enddo !i
-
-       do iten_local=1,num_interfaces
-        if (nrm_interfaces_cnt(iten_local).eq.0) then
-         ! do nothing
-        else if (nrm_interfaces_cnt(iten_local).ge.1) then
-         mag_local=zero
-         do dir_local=1,SDIM
-          nrm_interfaces(iten_local,dir_local)= &
-           nrm_interfaces(iten_local,dir_local)/nrm_interfaces_cnt(iten_local)
-          mag_local=mag_local+nrm_interfaces(iten_local,dir_local)**2
-         enddo
-         if (mag_local.gt.zero) then
-          mag_local=sqrt(mag_local)
-          do dir_local=1,SDIM
-           nrm_interfaces(iten_local,dir_local)= &
-            nrm_interfaces(iten_local,dir_local)/mag_local
-          enddo
-         else
-          print *,"mag_local invalid"
-          stop
-         endif
-        else
-         print *,"nrm_interfaces_cnt invalid"
-         stop
-        endif
-       enddo !iten_local=1,num_interfaces
-
-       do dir_local=1,3
-        nW(dir_local)=zero
-        nI(dir_local)=zero
-        nIW(dir_local)=zero
-       enddo
-      
-       if (im_melt.eq.im) then
-        im_ambient=im_opp
-       else if (im_melt.eq.im_opp) then
-        im_ambient=im
        else
-        print *,"im_melt invalid"
+        print *,"nrm_interfaces_cnt invalid"
         stop
-       endif 
+       endif
+      enddo !iten_local=1,num_interfaces
 
-       call get_iten(im_melt,im_ambient,iten_local)
+      do dir_local=1,3
+       nW(dir_local)=zero
+       nI(dir_local)=zero
+       nIW(dir_local)=zero
+      enddo
+      
+      if (im_melt.eq.im) then
+       im_ambient=im_opp
+      else if (im_melt.eq.im_opp) then
+       im_ambient=im
+      else
+       print *,"im_melt invalid"
+       stop
+      endif 
+
+      call get_iten(im_melt,im_ambient,iten_local)
+
+      if (nrm_interfaces_cnt(iten_local).eq.0) then
+       im3=0
+      else if (nrm_interfaces_cnt(iten_local).gt.0) then
+
+        ! nW points from melt into the ambient.
+       do dir_local=1,SDIM
+        nW(dir_local)=nrm_interfaces(iten_local,dir_local)
+        if (im_melt.lt.im_ambient) then
+         nW(dir_local)=-nW(dir_local)
+        else if (im_melt.gt.im_ambient) then
+         ! do nothing
+        else
+         print *,"im_melt or im_ambient invalid"
+         stop
+        endif
+       enddo 
+
+       call get_iten(im3,im_ambient,iten_local)
 
        if (nrm_interfaces_cnt(iten_local).eq.0) then
         im3=0
        else if (nrm_interfaces_cnt(iten_local).gt.0) then
 
-         ! nW points from melt into the ambient.
+         ! nI points from ice into the ambient.
         do dir_local=1,SDIM
-         nW(dir_local)=nrm_interfaces(iten_local,dir_local)
-         if (im_melt.lt.im_ambient) then
-          nW(dir_local)=-nW(dir_local)
-         else if (im_melt.gt.im_ambient) then
+         nI(dir_local)=nrm_interfaces(iten_local,dir_local)
+         if (im3.lt.im_ambient) then
+          nI(dir_local)=-nI(dir_local)
+         else if (im3.gt.im_ambient) then
           ! do nothing
          else
-          print *,"im_melt or im_ambient invalid"
+          print *,"im3 or im_ambient invalid"
           stop
          endif
-        enddo 
+        enddo !dir_local=1,SDIM
 
-        call get_iten(im3,im_ambient,iten_local)
+        call get_iten(im3,im_melt,iten_local)
 
         if (nrm_interfaces_cnt(iten_local).eq.0) then
          im3=0
         else if (nrm_interfaces_cnt(iten_local).gt.0) then
 
-          ! nI points from ice into the ambient.
+          ! nIW points from melt into the ice.
          do dir_local=1,SDIM
-          nI(dir_local)=nrm_interfaces(iten_local,dir_local)
-          if (im3.lt.im_ambient) then
-           nI(dir_local)=-nI(dir_local)
-          else if (im3.gt.im_ambient) then
+          nIW(dir_local)=nrm_interfaces(iten_local,dir_local)
+          if (im_melt.lt.im3) then
+           nIW(dir_local)=-nIW(dir_local)
+          else if (im_melt.gt.im3) then
            ! do nothing
           else
-           print *,"im3 or im_ambient invalid"
+           print *,"im3 or im_melt invalid"
            stop
           endif
          enddo !dir_local=1,SDIM
 
-         call get_iten(im3,im_melt,iten_local)
-
-         if (nrm_interfaces_cnt(iten_local).eq.0) then
+         call crossprod(nW,nI,nCL)
+         magCL=sqrt( nCL(1)**2+nCL(2)**2+nCL(3)**2 )
+         if (magCL.eq.zero) then
           im3=0
-         else if (nrm_interfaces_cnt(iten_local).gt.0) then
+         else if (magCL.gt.zero) then
+          do dir_local=1,3
+           nCL(dir_local)=nCL(dir_local)/magCL
+          enddo
+          call crossprod(nCL,nI,nI_perp)
+          magI_perp=sqrt( nI_perp(1)**2+nI_perp(2)**2+nI_perp(3)**2 )
 
-           ! nIW points from melt into the ice.
-          do dir_local=1,SDIM
-           nIW(dir_local)=nrm_interfaces(iten_local,dir_local)
-           if (im_melt.lt.im3) then
-            nIW(dir_local)=-nIW(dir_local)
-           else if (im_melt.gt.im3) then
-            ! do nothing
-           else
-            print *,"im3 or im_melt invalid"
-            stop
-           endif
-          enddo !dir_local=1,SDIM
-
-          call crossprod(nW,nI,nCL)
-          magCL=sqrt( nCL(1)**2+nCL(2)**2+nCL(3)**2 )
-          if (magCL.eq.zero) then
+          if (magI_perp.eq.zero) then
            im3=0
-          else if (magCL.gt.zero) then
+          else if (magI_perp.gt.zero) then
+
+           nI_perp_dot_nIW=zero
+
            do dir_local=1,3
-            nCL(dir_local)=nCL(dir_local)/magCL
+            nI_perp(dir_local)=nI_perp(dir_local)/magI_perp
+            nI_perp_dot_nIW=nI_perp_dot_nIW+nI_perp(dir_local)*nIW(dir_local)
            enddo
-           call crossprod(nCL,nI,nI_perp)
-           magI_perp=sqrt( nI_perp(1)**2+nI_perp(2)**2+nI_perp(3)**2 )
-
-           if (magI_perp.eq.zero) then
+           if (nI_perp_dot_nIW.eq.zero) then
             im3=0
-           else if (magI_perp.gt.zero) then
-
-            nI_perp_dot_nIW=zero
-
-            do dir_local=1,3
-             nI_perp(dir_local)=nI_perp(dir_local)/magI_perp
-             nI_perp_dot_nIW=nI_perp_dot_nIW+nI_perp(dir_local)*nIW(dir_local)
+           else if (nI_perp_dot_nIW.ne.zero) then
+            if (nI_perp_dot_nIW.gt.zero) then
+             ! do nothing
+            else if (nI_perp_dot_nIW.lt.zero) then
+             do dir_local=1,3
+              nI_perp(dir_local)=-nI_perp(dir_local)
+             enddo
+            else
+             print *,"nI_perp_dot_nIW invalid"
+             stop
+            endif
+            cos_angle=cos(half*Pi-growth_angle)
+            do dir_local=1,SDIM
+             nfree_fict(dir_local)=nW(dir_local)
+             nsolid_fict(dir_local)=-nI_perp(dir_local)
             enddo
-            if (nI_perp_dot_nIW.eq.zero) then
-             im3=0
-            else if (nI_perp_dot_nIW.ne.zero) then
-             if (nI_perp_dot_nIW.gt.zero) then
-              ! do nothing
-             else if (nI_perp_dot_nIW.lt.zero) then
-              do dir_local=1,3
-               nI_perp(dir_local)=-nI_perp(dir_local)
-              enddo
-             else
-              print *,"nI_perp_dot_nIW invalid"
-              stop
-             endif
-             cos_angle=cos(half*Pi-growth_angle)
+            call ghostnormal(nfree_fict,nsolid_fict,cos_angle,nghost,nperp)
+            do i=-1,1
+            do j=-1,1
+            do k=klo_sten_short,khi_sten_short
+             ls_local=zero
+             dir_local=1
+             x_local(dir_local)=xsten(2*i,dir_local)
+             dir_local=2
+             x_local(dir_local)=xsten(2*j,dir_local)
+             dir_local=3
+             x_local(dir_local)=xsten(2*k,SDIM)
+
              do dir_local=1,SDIM
-              nfree_fict(dir_local)=nW(dir_local)
-              nsolid_fict(dir_local)=-nI_perp(dir_local)
+              ls_local=ls_local+nI_perp(dir_local)* &
+                (x_local(dir_local)-xsten(0,dir_local))
              enddo
-             call ghostnormal(nfree_fict,nsolid_fict,cos_angle,nghost,nperp)
-             do i=-1,1
-             do j=-1,1
-             do k=klo_sten_short,khi_sten_short
-              ls_local=zero
-              dir_local=1
-              x_local(dir_local)=xsten(2*i,dir_local)
-              dir_local=2
-              x_local(dir_local)=xsten(2*j,dir_local)
-              dir_local=3
-              x_local(dir_local)=xsten(2*k,SDIM)
-
-              do dir_local=1,SDIM
-               ls_local=ls_local+nI_perp(dir_local)* &
-                 (x_local(dir_local)-xsten(0,dir_local))
-              enddo
-              ls_extend_sten(i,j,k)=ls_local
-              do dir_local=1,SDIM
-               if (ls_local.ge.zero) then
-                nrm_extend_sten(i,j,k,dir_local)=nW(dir_local)
-               else if (ls_local.lt.zero) then
-                nrm_extend_sten(i,j,k,dir_local)=nghost(dir_local)
-               else
-                print *,"ls_local invalid"
-                stop
-               endif
-              enddo !dir_local=1,SDIM
-
-             enddo !k
-             enddo !j
-             enddo !i
-
+             ls_extend_sten(i,j,k)=ls_local
              do dir_local=1,SDIM
-              xsten_curv(-2,dir_local)=xsten(-2,dir_local)
-              xsten_curv(2,dir_local)=xsten(2,dir_local)
-              xsten_curv(-1,dir_local)= &
-                   (xsten(0,dir_local)+xsten(-2,dir_local))/two
-              xsten_curv(1,dir_local)= &
-                   (xsten(0,dir_local)+xsten(2,dir_local))/two
-              xsten_curv(0,dir_local)= &
-                   (xsten_curv(1,dir_local)+xsten_curv(-1,dir_local))/two
-             enddo ! dir_local=1,SDIM
-
-             totalwt=zero
-             do dir_local=1,SDIM
-              dnrm(dir_local)=zero
-             enddo
-
-             do inode=-1,1,2
-             do jnode=-1,1,2
-             do knode=klo_sten_short,khi_sten_short,2
-
-              node_index(1)=inode 
-              node_index(2)=jnode 
-              node_index(3)=knode 
-
-              do dir_local=1,SDIM
-               n_node(dir_local)=zero
-              enddo
-
-              cell_lo(3)=0
-              cell_hi(3)=0
-
-              do dir_local=1,SDIM
-               if (node_index(dir_local).eq.-1) then
-                cell_lo(dir_local)=-1
-                cell_hi(dir_local)=0
-               else if (node_index(dir_local).eq.1) then
-                cell_lo(dir_local)=0
-                cell_hi(dir_local)=1
-               else
-                print *,"node_index invalid"
-                stop
-               endif
-              enddo ! dir_local=1,SDIM
-
-              wtnode=zero
-
-              do i=cell_lo(1),cell_hi(1)
-              do j=cell_lo(2),cell_hi(2)
-              do k=cell_lo(3),cell_hi(3)
-
-               wtnode=wtnode+one
-
-               cell_index(1)=i 
-               cell_index(2)=j
-               cell_index(3)=k
-
-               do dir_local=1,SDIM
-                n_node(dir_local)=n_node(dir_local)+ &
-                   nrm_extend_sten(i,j,k,dir_local)
-               enddo ! dir_local=1,SDIM
-
-              enddo
-              enddo
-              enddo ! i,j,k=cell_lo ... cell_hi
-
-              if (wtnode.gt.zero) then
-               ! do nothing
+              if (ls_local.ge.zero) then
+               nrm_extend_sten(i,j,k,dir_local)=nW(dir_local)
+              else if (ls_local.lt.zero) then
+               nrm_extend_sten(i,j,k,dir_local)=nghost(dir_local)
               else
-               print *,"wtnode invalid"
+               print *,"ls_local invalid"
                stop
               endif
+             enddo !dir_local=1,SDIM
+
+            enddo !k
+            enddo !j
+            enddo !i
+
+            do dir_local=1,SDIM
+             xsten_curv(-2,dir_local)=xsten(-2,dir_local)
+             xsten_curv(2,dir_local)=xsten(2,dir_local)
+             xsten_curv(-1,dir_local)= &
+                  (xsten(0,dir_local)+xsten(-2,dir_local))/two
+             xsten_curv(1,dir_local)= &
+                  (xsten(0,dir_local)+xsten(2,dir_local))/two
+             xsten_curv(0,dir_local)= &
+                  (xsten_curv(1,dir_local)+xsten_curv(-1,dir_local))/two
+            enddo ! dir_local=1,SDIM
+
+            totalwt=zero
+            do dir_local=1,SDIM
+             dnrm(dir_local)=zero
+            enddo
+
+            do inode=-1,1,2
+            do jnode=-1,1,2
+            do knode=klo_sten_short,khi_sten_short,2
+
+             node_index(1)=inode 
+             node_index(2)=jnode 
+             node_index(3)=knode 
+
+             do dir_local=1,SDIM
+              n_node(dir_local)=zero
+             enddo
+
+             cell_lo(3)=0
+             cell_hi(3)=0
+
+             do dir_local=1,SDIM
+              if (node_index(dir_local).eq.-1) then
+               cell_lo(dir_local)=-1
+               cell_hi(dir_local)=0
+              else if (node_index(dir_local).eq.1) then
+               cell_lo(dir_local)=0
+               cell_hi(dir_local)=1
+              else
+               print *,"node_index invalid"
+               stop
+              endif
+             enddo ! dir_local=1,SDIM
+
+             wtnode=zero
+
+             do i=cell_lo(1),cell_hi(1)
+             do j=cell_lo(2),cell_hi(2)
+             do k=cell_lo(3),cell_hi(3)
+
+              wtnode=wtnode+one
+
+              cell_index(1)=i 
+              cell_index(2)=j
+              cell_index(3)=k
 
               do dir_local=1,SDIM
-               n_node(dir_local)=n_node(dir_local)/wtnode
+               n_node(dir_local)=n_node(dir_local)+ &
+                  nrm_extend_sten(i,j,k,dir_local)
               enddo ! dir_local=1,SDIM
-
-              RR=one
-              call prepare_normal(n_node,RR,mag_local)
-
-              do dir_local=1,SDIM
-               if (dir_local.eq.1) then
-                if (levelrz.eq.COORDSYS_CARTESIAN) then
-                 RR=one
-                else if ((levelrz.eq.COORDSYS_RZ).or. &
-                         (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-                 RR=abs(xsten_curv(node_index(1),1))
-                else
-                 print *,"levelrz invalid prescribe_growth_angle: RR"
-                 stop
-                endif
-               else if ((dir_local.eq.2).or.(dir_local.eq.SDIM)) then
-                RR=one
-               else
-                print *,"dir_local invalid"
-                stop
-               endif
-               dnrm(dir_local)=dnrm(dir_local)+ &
-                   node_index(dir_local)*RR*n_node(dir_local)
-              enddo ! dir_local=1,SDIM
- 
-              totalwt=totalwt+one
 
              enddo
              enddo
-             enddo  ! inode,jnode,knode=-1,1,2
+             enddo ! i,j,k=cell_lo ... cell_hi
 
-             if (totalwt.gt.zero) then
+             if (wtnode.gt.zero) then
               ! do nothing
              else
-              print *,"totalwt invalid in prescribe_growth_angle"
+              print *,"wtnode invalid"
               stop
              endif
 
-             ! dxsten=(xsten(2)+xsten(0))/2-(xsten(-2)+xsten(0))/2=
-             !   (xsten(2)-xsten(-2))/2
              do dir_local=1,SDIM
-              dxsten(dir_local)= &
-                xsten_curv(1,dir_local)-xsten_curv(-1,dir_local)
-              if (dxsten(dir_local).gt.zero) then
-               ! do nothing
-              else
-               print *,"dxsten invalid"
-               stop
-              endif 
+              n_node(dir_local)=n_node(dir_local)/wtnode
              enddo ! dir_local=1,SDIM
 
-             do dir_local=1,SDIM
+             RR=one
+             call prepare_normal(n_node,RR,mag_local)
 
+             do dir_local=1,SDIM
               if (dir_local.eq.1) then
                if (levelrz.eq.COORDSYS_CARTESIAN) then
                 RR=one
                else if ((levelrz.eq.COORDSYS_RZ).or. &
                         (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-                RR=abs(xsten_curv(0,1))
+                RR=abs(xsten_curv(node_index(1),1))
                else
-                print *,"levelrz invalid prescribe_growth_angle RR 3"
+                print *,"levelrz invalid prescribe_growth_angle: RR"
                 stop
                endif
-              else if (dir_local.eq.2) then
-               if (levelrz.eq.COORDSYS_CARTESIAN) then
-                RR=one
-               else if (levelrz.eq.COORDSYS_RZ) then
-                if (SDIM.ne.2) then
-                 print *,"dimension bust"
-                 stop
-                endif
-                RR=one
-               else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                RR=abs(xsten_curv(0,1))
-               else
-                print *,"levelrz invalid initheightLS: RR 4"
-                stop
-               endif
-              else if ((dir_local.eq.3).and.(SDIM.eq.3)) then
+              else if ((dir_local.eq.2).or.(dir_local.eq.SDIM)) then
                RR=one
               else
                print *,"dir_local invalid"
                stop
               endif
-
-              dnrm(dir_local)=two*dnrm(dir_local)/ &
-                     (totalwt*RR*dxsten(dir_local))
-
+              dnrm(dir_local)=dnrm(dir_local)+ &
+                  node_index(dir_local)*RR*n_node(dir_local)
              enddo ! dir_local=1,SDIM
+ 
+             totalwt=totalwt+one
 
-             curvFD=zero
-             do dir_local=1,SDIM
-              curvFD=curvFD+dnrm(dir_local)
-             enddo ! dir_local=1,SDIM
+            enddo
+            enddo
+            enddo  ! inode,jnode,knode=-1,1,2
 
-             if (unscaled_min_curvature_radius.ge.two) then
-              maxcurv=one/(unscaled_min_curvature_radius*dxmax)
+            if (totalwt.gt.zero) then
+             ! do nothing
+            else
+             print *,"totalwt invalid in prescribe_growth_angle"
+             stop
+            endif
+
+            ! dxsten=(xsten(2)+xsten(0))/2-(xsten(-2)+xsten(0))/2=
+            !   (xsten(2)-xsten(-2))/2
+            do dir_local=1,SDIM
+             dxsten(dir_local)= &
+               xsten_curv(1,dir_local)-xsten_curv(-1,dir_local)
+             if (dxsten(dir_local).gt.zero) then
+              ! do nothing
+             else
+              print *,"dxsten invalid"
+              stop
+             endif 
+            enddo ! dir_local=1,SDIM
+
+            do dir_local=1,SDIM
+
+             if (dir_local.eq.1) then
               if (levelrz.eq.COORDSYS_CARTESIAN) then
-               if (SDIM.eq.2) then
-                ! do nothing
-               else if (SDIM.eq.3) then
-                maxcurv=two*maxcurv
-               else
-                print *,"sdim invalid"
-                stop
-               endif     
+               RR=one
               else if ((levelrz.eq.COORDSYS_RZ).or. &
                        (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+               RR=abs(xsten_curv(0,1))
+              else
+               print *,"levelrz invalid prescribe_growth_angle RR 3"
+               stop
+              endif
+             else if (dir_local.eq.2) then
+              if (levelrz.eq.COORDSYS_CARTESIAN) then
+               RR=one
+              else if (levelrz.eq.COORDSYS_RZ) then
+               if (SDIM.ne.2) then
+                print *,"dimension bust"
+                stop
+               endif
+               RR=one
+              else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+               RR=abs(xsten_curv(0,1))
+              else
+               print *,"levelrz invalid initheightLS: RR 4"
+               stop
+              endif
+             else if ((dir_local.eq.3).and.(SDIM.eq.3)) then
+              RR=one
+             else
+              print *,"dir_local invalid"
+              stop
+             endif
+
+             dnrm(dir_local)=two*dnrm(dir_local)/ &
+                    (totalwt*RR*dxsten(dir_local))
+
+            enddo ! dir_local=1,SDIM
+
+            curvFD=zero
+            do dir_local=1,SDIM
+             curvFD=curvFD+dnrm(dir_local)
+            enddo ! dir_local=1,SDIM
+
+            if (unscaled_min_curvature_radius.ge.two) then
+             maxcurv=one/(unscaled_min_curvature_radius*dxmax)
+             if (levelrz.eq.COORDSYS_CARTESIAN) then
+              if (SDIM.eq.2) then
+               ! do nothing
+              else if (SDIM.eq.3) then
                maxcurv=two*maxcurv
               else
-               print *,"prescribe_growth_angle levelrz invalid (b)"
+               print *,"sdim invalid"
                stop
-              endif
-
-              if (curvFD.gt.maxcurv) then
-               curvFD=maxcurv
-              else if (curvFD.lt.-maxcurv) then
-               curvFD=-maxcurv
-              else if (abs(curvFD).le.maxcurv) then
-               ! do nothing
-              else
-               print *,"curvFD is NaN"
-               stop
-              endif
-
+              endif     
+             else if ((levelrz.eq.COORDSYS_RZ).or. &
+                      (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+              maxcurv=two*maxcurv
              else
-              print *,"unscaled_min_curvature_radius invalid"
+              print *,"prescribe_growth_angle levelrz invalid (b)"
+              stop
+             endif
+
+             if (curvFD.gt.maxcurv) then
+              curvFD=maxcurv
+             else if (curvFD.lt.-maxcurv) then
+              curvFD=-maxcurv
+             else if (abs(curvFD).le.maxcurv) then
+              ! do nothing
+             else
+              print *,"curvFD is NaN"
               stop
              endif
 
             else
-             print *,"nI_perp_dot_nIW invalid"
+             print *,"unscaled_min_curvature_radius invalid"
              stop
             endif
+
            else
-            print *,"magI_perp invalid"
+            print *,"nI_perp_dot_nIW invalid"
             stop
            endif
-
           else
-           print *,"magCL invalid"
+           print *,"magI_perp invalid"
            stop
           endif
 
          else
-          print *,"nrm_interface_cnt invalid (im3,im_melt) "
+          print *,"magCL invalid"
           stop
          endif
 
         else
-         print *,"nrm_interface_cnt invalid (im3,im_ambient) "
+         print *,"nrm_interface_cnt invalid (im3,im_melt) "
          stop
         endif
 
        else
-        print *,"nrm_interface_cnt invalid (im_melt,im_ambient) "
+        print *,"nrm_interface_cnt invalid (im3,im_ambient) "
         stop
        endif
 
       else
-       print *,"prescribe_growth_angle: levelrz invalid (a)"
+       print *,"nrm_interface_cnt invalid (im_melt,im_ambient) "
        stop
       endif
 
