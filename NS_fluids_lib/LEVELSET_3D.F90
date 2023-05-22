@@ -2546,8 +2546,10 @@ stop
           nrm_interfaces(iten_local,dir_local)= &
            nrm_interfaces(iten_local,dir_local)/mag_local
          enddo
+        else if (mag_local.eq.zero) then
+         nrm_interfaces_cnt(iten_local)=0
         else
-         print *,"mag_local invalid"
+         print *,"mag_local invalid prescribe_growth_angle"
          stop
         endif
        else
@@ -2557,8 +2559,8 @@ stop
       enddo !iten_local=1,num_interfaces
 
       do dir_local=1,3
-       nW(dir_local)=zero
-       nI(dir_local)=zero
+       nW(dir_local)=zero !melt to ambient
+       nI(dir_local)=zero !ice to ambient
        nIW(dir_local)=zero
       enddo
       
@@ -2588,7 +2590,7 @@ stop
          print *,"im_melt or im_ambient invalid"
          stop
         endif
-       enddo 
+       enddo  !dir_local=1..SDIM
 
        call get_iten(im3,im_ambient,iten_local)
 
