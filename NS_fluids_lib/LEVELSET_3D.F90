@@ -2803,8 +2803,14 @@ stop
                print *,"dir_local invalid"
                stop
               endif
-              dnrm(dir_local)=dnrm(dir_local)+ &
+              if ((node_index(dir_local).eq.1).or. &
+                  (node_index(dir_local).eq.-1)) then
+               dnrm(dir_local)=dnrm(dir_local)+ &
                   node_index(dir_local)*RR*n_node(dir_local)
+              else
+               print *,"node_index(dir_local) invalid", &
+                 dir_local,node_index(dir_local)
+              endif
              enddo ! dir_local=1,SDIM
  
              totalwt=totalwt+one
@@ -2828,7 +2834,7 @@ stop
              if (dxsten(dir_local).gt.zero) then
               ! do nothing
              else
-              print *,"dxsten invalid"
+              print *,"dxsten invalid: ",dir_local,dxsten(dir_local)
               stop
              endif 
             enddo ! dir_local=1,SDIM
@@ -2867,8 +2873,13 @@ stop
               stop
              endif
 
-             dnrm(dir_local)=two*dnrm(dir_local)/ &
+             if (RR.gt.zero) then
+              dnrm(dir_local)=two*dnrm(dir_local)/ &
                     (totalwt*RR*dxsten(dir_local))
+             else
+              print *,"expecting RR>0 ",RR
+              stop
+             endif
 
             enddo ! dir_local=1,SDIM
 
@@ -2878,6 +2889,7 @@ stop
             enddo ! dir_local=1,SDIM
 
             if (unscaled_min_curvature_radius.ge.two) then
+
              maxcurv=one/(unscaled_min_curvature_radius*dxmax)
              if (levelrz.eq.COORDSYS_CARTESIAN) then
               if (SDIM.eq.2) then
@@ -2908,7 +2920,8 @@ stop
              endif
 
             else
-             print *,"unscaled_min_curvature_radius invalid"
+             print *,"unscaled_min_curvature_radius invalid:", &
+              unscaled_min_curvature_radius 
              stop
             endif
 
@@ -2928,13 +2941,13 @@ stop
          endif
 
         else
-         print *,"nrm_interfaces_cnt invalid (im3,im_melt) ",
+         print *,"nrm_interfaces_cnt invalid (im3,im_melt) ", &
           im3,im_melt,iten_local,nrm_interfaces_cnt(iten_local)
          stop
         endif
 
        else
-        print *,"nrm_interfaces_cnt invalid (im3,im_ambient) ",
+        print *,"nrm_interfaces_cnt invalid (im3,im_ambient) ", & 
           im3,im_ambient,iten_local,nrm_interfaces_cnt(iten_local)
         stop
        endif
