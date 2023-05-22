@@ -2549,11 +2549,13 @@ stop
         else if (mag_local.eq.zero) then
          nrm_interfaces_cnt(iten_local)=0
         else
-         print *,"mag_local invalid prescribe_growth_angle"
+         print *,"mag_local invalid prescribe_growth_angle: ", &
+              iten_local,mag_local
          stop
         endif
        else
-        print *,"nrm_interfaces_cnt invalid"
+        print *,"nrm_interfaces_cnt invalid: ", &
+          iten_local,nrm_interfaces_cnt(iten_local)
         stop
        endif
       enddo !iten_local=1,num_interfaces
@@ -2561,7 +2563,7 @@ stop
       do dir_local=1,3
        nW(dir_local)=zero !melt to ambient
        nI(dir_local)=zero !ice to ambient
-       nIW(dir_local)=zero
+       nIW(dir_local)=zero !melt to ice
       enddo
       
       if (im_melt.eq.im) then
@@ -2569,7 +2571,7 @@ stop
       else if (im_melt.eq.im_opp) then
        im_ambient=im
       else
-       print *,"im_melt invalid"
+       print *,"im_melt invalid:",im_melt
        stop
       endif 
 
@@ -2630,7 +2632,7 @@ stop
           endif
          enddo !dir_local=1,SDIM
 
-         call crossprod(nW,nI,nCL)
+         call crossprod(nW,nIW,nCL)
          magCL=sqrt( nCL(1)**2+nCL(2)**2+nCL(3)**2 )
          if (magCL.eq.zero) then
           im3=0
@@ -2664,11 +2666,14 @@ stop
              print *,"nI_perp_dot_nIW invalid"
              stop
             endif
+             ! at this point, both nI_perp and nIW point towards the ice.
             cos_angle=cos(half*Pi-growth_angle)
             do dir_local=1,SDIM
-             nfree_fict(dir_local)=nW(dir_local)
-             nsolid_fict(dir_local)=-nI_perp(dir_local)
+             nfree_fict(dir_local)=nW(dir_local) !melt to ambient
+             nsolid_fict(dir_local)=-nI_perp(dir_local) !ice to melt
             enddo
+             ! nghost is orthogonal to nI_perp if cos_angle=0.0d0
+             ! i.e. nghost is parallel to nI.
             call ghostnormal(nfree_fict,nsolid_fict,cos_angle,nghost,nperp)
             do i=-1,1
             do j=-1,1
@@ -2681,15 +2686,16 @@ stop
              dir_local=3
              x_local(dir_local)=xsten(2*k,SDIM)
 
+              ! nI_perp: melt to ice
              do dir_local=1,SDIM
               ls_local=ls_local+nI_perp(dir_local)* &
                 (x_local(dir_local)-xsten(0,dir_local))
              enddo
              ls_extend_sten(i,j,k)=ls_local
              do dir_local=1,SDIM
-              if (ls_local.ge.zero) then
+              if (ls_local.le.zero) then
                nrm_extend_sten(i,j,k,dir_local)=nW(dir_local)
-              else if (ls_local.lt.zero) then
+              else if (ls_local.gt.zero) then
                nrm_extend_sten(i,j,k,dir_local)=nghost(dir_local)
               else
                print *,"ls_local invalid"
@@ -2740,7 +2746,7 @@ stop
                cell_lo(dir_local)=0
                cell_hi(dir_local)=1
               else
-               print *,"node_index invalid"
+               print *,"node_index invalid (prescribe_growth_angle)"
                stop
               endif
              enddo ! dir_local=1,SDIM
@@ -2907,31 +2913,35 @@ stop
             endif
 
            else
-            print *,"nI_perp_dot_nIW invalid"
+            print *,"nI_perp_dot_nIW is NaN: ",nI_perp_dot_nIW
             stop
            endif
+
           else
-           print *,"magI_perp invalid"
+           print *,"magI_perp invalid:",magI_perp
            stop
           endif
 
          else
-          print *,"magCL invalid"
+          print *,"magCL invalid:",magCL
           stop
          endif
 
         else
-         print *,"nrm_interface_cnt invalid (im3,im_melt) "
+         print *,"nrm_interfaces_cnt invalid (im3,im_melt) ",
+          im3,im_melt,iten_local,nrm_interfaces_cnt(iten_local)
          stop
         endif
 
        else
-        print *,"nrm_interface_cnt invalid (im3,im_ambient) "
+        print *,"nrm_interfaces_cnt invalid (im3,im_ambient) ",
+          im3,im_ambient,iten_local,nrm_interfaces_cnt(iten_local)
         stop
        endif
 
       else
-       print *,"nrm_interface_cnt invalid (im_melt,im_ambient) "
+       print *,"nrm_interfaces_cnt invalid (im_melt,im_ambient) ", &
+         im_melt,im_ambient,iten_local,nrm_interfaces_cnt(iten_local)
        stop
       endif
 
