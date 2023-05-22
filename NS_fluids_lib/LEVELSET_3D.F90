@@ -2331,6 +2331,8 @@ stop
       REAL_T :: magCL
       REAL_T :: magI_perp
       REAL_T :: nI_perp_dot_nIW
+      REAL_T :: nI_dot_nghost
+      REAL_T :: abs_growth_angle
       REAL_T :: cos_angle
       REAL_T :: nfree_fict(SDIM)
       REAL_T :: nsolid_fict(SDIM)
@@ -2672,9 +2674,26 @@ stop
              nfree_fict(dir_local)=nW(dir_local) !melt to ambient
              nsolid_fict(dir_local)=-nI_perp(dir_local) !ice to melt
             enddo
+             ! ghostnormal is declared in: GLOBALUTIL.F90
              ! nghost is orthogonal to nI_perp if cos_angle=0.0d0
              ! i.e. nghost is parallel to nI.
             call ghostnormal(nfree_fict,nsolid_fict,cos_angle,nghost,nperp)
+
+            nI_dot_nghost=zero
+            do dir_local=1,SDIM
+             nI_dot_nghost=nI_dot_nghost+nghost(dir_local)*nI(dir_local)
+            enddo
+            abs_growth_angle=acos(abs(nI_dot_nghost))
+            if (abs(abs(growth_angle)-abs(abs_growth_angle)).le.VOFTOL) then
+             ! do nothing
+            else
+             print *,"nghost derived incorrectly"
+             print *,"growth_angle,abs_growth_angle ",growth_angle, &
+               abs_growth_angle
+             print *,"nghost: ",nghost(1),nghost(2),nghost(SDIM)
+             stop
+            endif
+
             do i=-1,1
             do j=-1,1
             do k=klo_sten_short,khi_sten_short
@@ -2917,6 +2936,28 @@ stop
              else
               print *,"curvFD is NaN"
               stop
+             endif
+
+             if (1.eq.1) then
+              print *,"start debug growth_angle: ",growth_angle
+              print *,"abs_growth_angle ",abs_growth_angle
+              print *,"problo_array:",problo_array(1),problo_array(2), &
+                  problo_array(SDIM)
+              print *,"probhi_array:",probhi_array(1),probhi_array(2), &
+                  probhi_array(SDIM)
+              print *,"im3: ",im3
+              print *,"curvFD=",curvFD
+              print *,"dxmax=",dxmax
+              print *,"maxcurv=",maxcurv
+              print *,"unscaled_min_curvature_radius=", &
+                   unscaled_min_curvature_radius
+              print *,"xcenter=",xcenter(1),xcenter(2),xcenter(SDIM)
+              print *,"nghost=",nghost(1),nghost(2),nghost(SDIM)
+              print *,"nW=",nW(1),nW(2),nW(SDIM)
+              print *,"nI=",nI(1),nI(2),nI(SDIM)
+              print *,"nIW=",nIW(1),nIW(2),nIW(SDIM)
+              print *,"nI_perp=",nI_perp(1),nI_perp(2),nI_perp(SDIM)
+              print *,"end debug growth_angle: ",growth_angle
              endif
 
             else
