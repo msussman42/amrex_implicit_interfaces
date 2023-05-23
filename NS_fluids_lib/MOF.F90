@@ -85,6 +85,63 @@ type(intersect_type), dimension(4) :: template_tet_plane
 type(intersect_type), dimension(4) :: template_rec_plane
 type(intersect_type), dimension(3) :: template_tri_plane
 
+
+ !e.g. phi=z-eta(x,y)
+type levelset_parm_type
+REAL_T :: x_input(3) ! only first LSDIM are used.
+INTEGER_T :: LSDIM ! 1,2,3
+INTEGER_T :: height_dir !=0,1,2
+INTEGER_T :: frozen_parms_flag(3)
+REAL_T :: frozen_parms(3)
+INTEGER_T :: order
+REAL_T, pointer, dimension(:,:) :: LSCOEFF !sum a_ij x^i y^j i,j=0..order
+end type levelset_parm_type
+
+type function_parm_type3D
+REAL_T :: x_input(3)
+INTEGER_T :: order
+ !sum a_{i,j,k} x^i y^j z^k i,j,k=0..order
+REAL_T, pointer, dimension(:,:,:) :: FNCOEFF
+end type function_parm_type3D
+
+type function_parm_type2D
+REAL_T :: x_input(2)
+type(function_parm_type3D) :: f3D
+INTEGER_T :: nLS
+INTEGER_T, pointer, dimension(:) :: signLS
+type(levelset_parm_type), pointer, dimension(:) :: LS_array
+REAL_T :: xkL
+REAL_T :: xkU
+INTEGER_T :: k_reduce
+INTEGER_T :: quad_order
+INTEGER_T :: S_quad_type
+end type function_parm_type2D
+
+type function_parm_type1D
+REAL_T :: x_input
+type(function_parm_type2D) :: f2D
+INTEGER_T :: nLS
+INTEGER_T, pointer, dimension(:) :: signLS
+type(levelset_parm_type), pointer, dimension(:) :: LS_array
+REAL_T :: xkL
+REAL_T :: xkU
+INTEGER_T :: k_reduce
+INTEGER_T :: quad_order
+INTEGER_T :: S_quad_type
+end type function_parm_type1D
+
+type No_input_function_parm_type
+type(function_parm_type1D) :: f1D
+INTEGER_T :: nLS
+INTEGER_T, pointer, dimension(:) :: signLS
+type(levelset_parm_type), pointer, dimension(:) :: LS_array
+REAL_T :: xkL
+REAL_T :: xkU
+INTEGER_T :: k_reduce
+INTEGER_T :: quad_order
+INTEGER_T :: S_quad_type
+end type No_input_function_parm_type
+
 contains
 
 subroutine copy_intersect_type(source,dest)
@@ -2437,7 +2494,20 @@ INTEGER_T shapeflag
 return
 end subroutine intersection_volume_simple
 
+recursive function I3D(f3D,nLS,LS_array,signLS,U3D,S_quad_type,quad_order) &
+                result(IntegralResult)
+IMPLICIT NONE
 
+REAL_T :: IntegralResult
+type(function_parm_type3D), intent(in) :: f3D
+type(levelset_parm_type), pointer, dimension(:), intent(in) :: LS_array
+INTEGER_T, pointer, dimension(:), intent(in) :: signLS
+INTEGER_T, intent(in) :: nLS
+REAL_T, intent(in), dimension(3,2) :: U3D  !(dir,side)
+INTEGER_T, intent(in) :: S_quad_type !S=0 => volumetric  S=1 => perimeter
+INTEGER_T, intent(in) :: quad_order
+
+end function I3D
 
 ! nodedomain is 4*(sdim-1)
 subroutine intersection_volume_and_map( &
