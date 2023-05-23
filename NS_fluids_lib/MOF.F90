@@ -36,6 +36,11 @@ module geometry_intersect_module
 
 implicit none
 
+INTEGER_T, PARAMETER :: SAYE_quad_order=4
+INTEGER_T :: SAYE_quad_init=-1
+REAL_T, DIMENSION(0:SAYE_quad_order) :: xquad ! 0 < xquad < 1
+REAL_T, DIMENSION(0:SAYE_quad_order) :: wquad ! sum w = 1
+
 INTEGER_T, PARAMETER :: INTERCEPT_MAXITER=100
 INTEGER_T, PARAMETER :: INTERCEPT_MAXITER_NEWTON=25
 
@@ -88,7 +93,6 @@ type(intersect_type), dimension(3) :: template_tri_plane
 
  !e.g. phi=z-eta(x,y)
 type levelset_parm_type
-REAL_T :: x_input(3) ! only first LSDIM are used.
 INTEGER_T :: LSDIM ! 1,2,3
 INTEGER_T :: height_dir !=0,1,2
 INTEGER_T :: frozen_parms_flag(3)
@@ -113,7 +117,6 @@ type(levelset_parm_type), pointer, dimension(:) :: LS_array
 REAL_T :: xkL
 REAL_T :: xkU
 INTEGER_T :: k_reduce
-INTEGER_T :: quad_order
 INTEGER_T :: S_quad_type
 end type function_parm_type2D
 
@@ -126,7 +129,6 @@ type(levelset_parm_type), pointer, dimension(:) :: LS_array
 REAL_T :: xkL
 REAL_T :: xkU
 INTEGER_T :: k_reduce
-INTEGER_T :: quad_order
 INTEGER_T :: S_quad_type
 end type function_parm_type1D
 
@@ -138,7 +140,6 @@ type(levelset_parm_type), pointer, dimension(:) :: LS_array
 REAL_T :: xkL
 REAL_T :: xkU
 INTEGER_T :: k_reduce
-INTEGER_T :: quad_order
 INTEGER_T :: S_quad_type
 end type No_input_function_parm_type
 
@@ -2494,18 +2495,162 @@ INTEGER_T shapeflag
 return
 end subroutine intersection_volume_simple
 
-recursive function I3D(f3D,nLS,LS_array,signLS,U3D,S_quad_type,quad_order) &
+! signLS=+1,0,-1  (0 => levelset function has been deactivated)
+recursive function I3D(f3D,nLS,LS_array,signLS,U3D,S_quad_type) &
                 result(IntegralResult)
+use probcommon_module
+use LegendreNodes
+
 IMPLICIT NONE
 
 REAL_T :: IntegralResult
 type(function_parm_type3D), intent(in) :: f3D
 type(levelset_parm_type), pointer, dimension(:), intent(in) :: LS_array
-INTEGER_T, pointer, dimension(:), intent(in) :: signLS
+INTEGER_T, pointer, dimension(:), intent(inout) :: signLS
 INTEGER_T, intent(in) :: nLS
 REAL_T, intent(in), dimension(3,2) :: U3D  !(dir,side)
 INTEGER_T, intent(in) :: S_quad_type !S=0 => volumetric  S=1 => perimeter
-INTEGER_T, intent(in) :: quad_order
+REAL_T :: xc(3)
+INTEGER_T :: dir
+
+if (SAYE_quad_init.eq.-1) then
+ SAYE_quad_init=1
+
+ if (GQTYPE.eq.0) then
+  ! do nothing (Legendre Gauss)
+ else if (GQTYPE.eq.1) then
+  print *,"Clenshaw Curtis has problems"
+  stop
+ else
+  print *,"GQTYPE invalid"
+  stop
+ endif
+
+  ! 0<xquad<1
+  ! sum w = 1
+ do i=1,SAYE_quad_order+1
+  xquad(i-1)=(cache_gauss(SAYE_quad_order+1,i-1,GQTYPE)+one)/two
+  wquad(i-1)=cache_gauss_w(SAYE_quad_order+1,i-1,GQTYPE)*half
+ enddo
+else if (SAYE_quad_init.eq.1) then
+ ! do nothing
+else
+ print *,"SAYE_quad_init invalid"
+ stop
+endif
+
+if (S_quad_type.eq.0) then
+ if (nLS.ge.1) then
+  ! do nothing
+ else
+  print *,"nLS invalid"
+  stop
+ endif
+else if (S_quad_type.eq.1) then
+ if (nLS.eq.1) then
+  ! do nothing
+ else
+  print *,"nLS invalid"
+  stop
+ endif
+else
+ print *,"S_quad_type invalid"
+ stop
+endif
+
+do dir=1,3
+ xc(dir)=0.5d0*(U3D(dir,1)+U3D(dir,2))
+ dx3D(dir)=U3D(dir,2)-U3D(dir,1)
+ if (dx3D(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"dx3D(dir) invalid"
+  stop
+ endif
+enddo
+
+nLS_active=0
+
+do iLS=nLS,1,-1
+
+ if (signLS(iLS).eq.0) then
+         ! do nothing
+ else if ((signLS(iLS).eq.1).or. &
+          (signLS(iLS).eq.-1)) then
+
+  LSXC=EVAL_LS_POLY(xc,LS_array(iLS))
+  delta=zero
+  do i=1,3
+   dir=1
+   if (i.eq.1) then
+    xtest(dir)=U3D(dir,1)
+   else if (i.eq.2) then
+    xtest(dir)=xc(dir)
+   else if (i.eq.3) then
+    xtest(dir)=U3D(dir,2)
+   else
+    print *,"i invalid"
+    stop
+   endif
+
+   do j=1,3
+    dir=2
+ 
+    if (j.eq.1) then
+     xtest(dir)=U3D(dir,1)
+    else if (j.eq.2) then
+     xtest(dir)=xc(dir)
+    else if (j.eq.3) then
+     xtest(dir)=U3D(dir,2)
+    else
+     print *,"j invalid"
+     stop
+    endif
+
+    do k=1,3
+     dir=3
+
+     if (k.eq.1) then
+      xtest(dir)=U3D(dir,1)
+     else if (k.eq.2) then
+      xtest(dir)=xc(dir)
+     else if (k.eq.3) then
+      xtest(dir)=U3D(dir,2)
+     else
+      print *,"k invalid"
+      stop
+     endif
+
+     LSSIDE=EVAL_LS_POLY(xtest,LS_array(iLS))
+     delta=max(delta,abs(LSSIDE-LSXC))
+    enddo !k=1,3
+   enddo !j=1,3
+  enddo !i=1,3
+
+   ! fudge factor to guarantee that
+   ! sup_{x\in U} |psi(x)-psi(xc)|<=delta.
+  delta=delta*1.25d0 
+
+   ! the zero LS can potentialy intersect the box
+  if (abs(LSXC).lt.delta) then
+   nLS_active=nLS_active+1  
+   ! the zero LS can never intersect the box
+  else if (abs(LSXC).ge.delta) then
+   if (signLS(iLS)*LSXC.ge.zero) then
+    signLS(iLS)=0 ! deactivate
+   else if (signLS(iLS)*LSXC.lt.zero) then
+    IntegralResult=zero
+    return
+   else
+    print *,"signLS(iLS)*LSXC invalid"
+    stop
+   endif
+  else
+   print *,"abs(LSXC) is corrupt"
+   stop
+  endif
+
+
 
 end function I3D
 
@@ -3588,6 +3733,16 @@ end subroutine intersection_volume_and_map
         order_num=2
         allocate(xy(sdim-1,order_num))
         allocate(w(order_num))
+
+        if (GQTYPE.eq.0) then
+         ! do nothing (Legendre Gauss)
+        else if (GQTYPE.eq.1) then
+         print *,"Clenshaw Curtis has problems"
+         stop
+        else
+         print *,"GQTYPE invalid"
+         stop
+        endif
 
         do i=1,order_num
          xy(1,i)=(cache_gauss(order_num,i-1,GQTYPE)+one)/two

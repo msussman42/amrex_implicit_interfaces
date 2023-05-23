@@ -883,6 +883,12 @@ CONTAINS
        ! r is the largest "order" aka number of points that
        ! one can prescribe.
        ! 
+       ! called from PROB_CPP_PARMS.F90 (order_r=18): fort_override
+       ! fort_override is called from 
+       ! NavierStokes.cpp: void fortran_parameters
+       ! fortran_parameters is called from main.cpp prior to:
+       ! 1. AmrCore* amrptr=new AmrCore()
+       ! 2. amrptr->init(strt_time,stop_time)
       subroutine init_cache(order_r)
       IMPLICIT NONE
 
