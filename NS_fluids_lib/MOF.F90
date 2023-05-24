@@ -2510,7 +2510,6 @@ use LegendreNodes
 IMPLICIT NONE
 
 INTEGER_T, PARAMETER :: local_sdim=3
-INTEGER_T, PARAMETER :: max_sdim=3
 
 REAL_T :: IntegralResult
 type(function_parm_type3D), intent(in) :: f3D
@@ -2522,8 +2521,10 @@ REAL_T, intent(in), dimension(local_sdim,2) :: U3D  !(dir,side)
 INTEGER_T, intent(in) :: S_quad_type !S=0 => volumetric  S=1 => perimeter
 REAL_T :: xc(local_sdim)
 INTEGER_T :: dir
-INTEGER_T :: loop_lo(max_sdim)
-INTEGER_T :: loop_hi(max_sdim)
+INTEGER_T :: i_array(local_sdim)
+INTEGER_T :: i_flatten
+INTEGER_T :: i_flatten_lo
+INTEGER_T :: i_flatten_hi
 
 if (SAYE_quad_init.eq.-1) then
  SAYE_quad_init=1
@@ -2600,52 +2601,45 @@ do iLS=nLS,1,-1
   LSXC=EVAL_LS_POLY(xc,LS_array(iLS))
   delta=zero
 
-  do i=1,3
-   dir=1
-   if (i.eq.1) then
-    xtest(dir)=U3D(dir,1)
-   else if (i.eq.2) then
-    xtest(dir)=xc(dir)
-   else if (i.eq.3) then
-    xtest(dir)=U3D(dir,2)
-   else
-    print *,"i invalid"
-    stop
-   endif
-
-   do j=1,3
-    dir=2
- 
-    if (j.eq.1) then
+  i_flatten_lo=0
+  i_flatten_hi=3**local_sdim-1
+  do dir=1,local_sdim
+   i_array(dir)=-1
+  enddo
+  do i_flatten=i_flatten_lo,i_flatten_hi
+   do dir=1,local_sdim
+    if (i_array(dir).eq.-1) then 
      xtest(dir)=U3D(dir,1)
-    else if (j.eq.2) then
+    else if (i_array(dir).eq.0) then 
      xtest(dir)=xc(dir)
-    else if (j.eq.3) then
+    else if (i_array(dir).eq.1) then 
      xtest(dir)=U3D(dir,2)
     else
-     print *,"j invalid"
+     print *,"i_array(dir) invalid"
      stop
     endif
+   enddo ! dir=1,local_sdim
 
-    do k=1,3
-     dir=3
+   LSSIDE=EVAL_LS_POLY(xtest,LS_array(iLS))
+   delta=max(delta,abs(LSSIDE-LSXC))
 
-     if (k.eq.1) then
-      xtest(dir)=U3D(dir,1)
-     else if (k.eq.2) then
-      xtest(dir)=xc(dir)
-     else if (k.eq.3) then
-      xtest(dir)=U3D(dir,2)
+   inc_next=1
+   do dir=1,local_sdim
+    if (inc_next.eq.1) then
+     i_array(dir)=i_array(dir)+1
+     if (i_array(dir).gt.1) then
+      i_array(dir)=-1
      else
-      print *,"k invalid"
-      stop
+      inc_next=0
      endif
-
-     LSSIDE=EVAL_LS_POLY(xtest,LS_array(iLS))
-     delta=max(delta,abs(LSSIDE-LSXC))
-    enddo !k=1,3
-   enddo !j=1,3
-  enddo !i=1,3
+    else if (inc_next.eq.0) then
+     ! do nothing
+    else
+     print *,"inc_next invalid"
+     stop
+    endif
+   enddo ! dir=1,local_sdim
+  enddo !i_flatten=i_flatten_lo,i_flatten_hi
 
    ! fudge factor to guarantee that
    ! sup_{x\in U} |psi(x)-psi(xc)|<=delta.
@@ -2657,7 +2651,7 @@ do iLS=nLS,1,-1
    ! the zero LS can never intersect the box
   else if (abs(LSXC).ge.delta) then
    if (signLS(iLS)*LSXC.ge.zero) then
-    signLS(iLS)=0 ! deactivate
+    activeLS(iLS)=0 ! deactivate
    else if (signLS(iLS)*LSXC.lt.zero) then
     IntegralResult=zero
     return
