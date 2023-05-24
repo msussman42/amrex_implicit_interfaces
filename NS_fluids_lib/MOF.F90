@@ -2559,11 +2559,11 @@ endif
 
 do dir=1,LOCAL_SDIM
  xc(dir)=0.5d0*(U_hyper(dir,1)+U_hyper(dir,2))
- dx3D(dir)=U_hyper(dir,2)-U_hyper(dir,1)
- if (dx3D(dir).gt.zero) then
+ dx_hyper(dir)=U_hyper(dir,2)-U_hyper(dir,1)
+ if (dx_hyper(dir).gt.zero) then
   ! do nothing
  else
-  print *,"dx3D(dir) invalid"
+  print *,"dx_hyper(dir) invalid"
   stop
  endif
 enddo ! dir=1,LOCAL_SDIM
@@ -2659,25 +2659,36 @@ do iLS=nLS,1,-1
     i_array(dir)=1
    enddo
 
+   do i_flatten=i_flatten_lo,i_flatten_hi
+    wprod=one
+    do dir=1,LOCAL_SDIM
+     xmap(dir)=U_hyper(dir,1)+dx_hyper(dir)*xquad(i_array(dir)-1)
+     wprod=wprod*wquad(i_array(dir)-1)*dx_hyper(dir)
+    enddo
+    fmap=EVAL_FUNC_POLY(xmap,nF,LOCAL_SDIM,f_root,f_array)
+    IntegralResult=IntegralResult+wprod*fmap
 
+    inc_next=1
+    do dir=1,LOCAL_SDIM
+     if (inc_next.eq.1) then
+      i_array(dir)=i_array(dir)+1
+      if (i_array(dir).gt.SAYE_quad_order+1) then
+       i_array(dir)=1
+      else
+       inc_next=0
+      endif
+     else if (inc_next.eq.0) then
+      ! do nothing
+     else
+      print *,"inc_next invalid"
+      stop
+     endif
+    enddo ! dir=1,LOCAL_SDIM
 
-   do i=1,SAYE_quad_order+1
-    dir=1
-    wprod=wquad(i-1)*dx3D(dir)
-    xmap(dir)=U3D(dir,1)+dx3D(dir)*xquad(i-1)
-    do j=1,SAYE_quad_order+1
-     dir=2
-     wprod=wprod*wquad(j-1)*dx3D(dir)
-     xmap(dir)=U3D(dir,1)+dx3D(dir)*xquad(j-1)
-     do k=1,SAYE_quad_order+1
-      dir=3
-      wprod=wprod*wquad(k-1)*dx3D(dir)
-      xmap(dir)=U3D(dir,1)+dx3D(dir)*xquad(k-1)
-      fmap=EVAL_FUNC_POLY(xmap,f3D)
-      IntegralResult=IntegralResult+wprod*fmap
-     enddo ! k=1,SAYE_quad_order+1
-    enddo! j=1,SAYE_quad_order+1
-   enddo! i=1,SAYE_quad_order+1
+   enddo ! do i_flatten=i_flatten_lo,i_flatten_hi
+
+   return IntegralResult
+
   else if (nLS_active>0) then
 
    
