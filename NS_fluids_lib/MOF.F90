@@ -2580,6 +2580,7 @@ do iLS=nLS,1,-1
 
   LSXC=EVAL_LS_POLY(xc,LS_array(iLS))
   delta=zero
+
   do i=1,3
    dir=1
    if (i.eq.1) then
@@ -2650,7 +2651,31 @@ do iLS=nLS,1,-1
    stop
   endif
 
+  if (nLS_active.eq.0) then
+   IntegralResult=zero
+   do i=1,SAYE_quad_order+1
+    dir=1
+    wprod=wquad(i-1)*dx3D(dir)
+    xmap(dir)=U3D(dir,1)+dx3D(dir)*xquad(i-1)
+    do j=1,SAYE_quad_order+1
+     dir=2
+     wprod=wprod*wquad(j-1)*dx3D(dir)
+     xmap(dir)=U3D(dir,1)+dx3D(dir)*xquad(j-1)
+     do k=1,SAYE_quad_order+1
+      dir=3
+      wprod=wprod*wquad(k-1)*dx3D(dir)
+      xmap(dir)=U3D(dir,1)+dx3D(dir)*xquad(k-1)
+      fmap=EVAL_FUNC_POLY(xmap,f3D)
+      IntegralResult=IntegralResult+wprod*fmap
+     enddo ! k=1,SAYE_quad_order+1
+    enddo! j=1,SAYE_quad_order+1
+   enddo! i=1,SAYE_quad_order+1
+  else if (nLS_active>0) then
 
+   
+
+   return IntegralResult
+    
 
 end function I3D
 
