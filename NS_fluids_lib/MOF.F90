@@ -93,24 +93,24 @@ type(intersect_type), dimension(3) :: template_tri_plane
 
  !e.g. phi=z-eta(x,y)
 type levelset_parm_type
-INTEGER_T :: LSDIM ! 1,2,3
-INTEGER_T :: height_dir !=0,1,2
-INTEGER_T :: frozen_parms_flag(3)
-REAL_T :: frozen_parms(3)
+INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
+INTEGER_T :: height_dir !=0,1,2,3,....
+INTEGER_T, pointer :: frozen_parms_flag(:)
+REAL_T, pointer :: frozen_parms(:)
 INTEGER_T :: order
-REAL_T, pointer, dimension(:,:) :: LSCOEFF !sum a_ij x^i y^j i,j=0..order
+!e.g. sum a_ij x^i y^j i,j=0..order
+REAL_T, pointer, dimension(:) :: LSCOEFF_FLATTEN 
 end type levelset_parm_type
 
-type function_parm_type3D
-REAL_T :: x_input(3)
+type function_parm_type
+INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
 INTEGER_T :: order
- !sum a_{i,j,k} x^i y^j z^k i,j,k=0..order
-REAL_T, pointer, dimension(:,:,:) :: FNCOEFF
-end type function_parm_type3D
+!e.g. sum a_{i,j,k} x^i y^j z^k i,j,k=0..order
+REAL_T, pointer, dimension(:) :: FNCOEFF_FLATTEN
+end type function_parm_type
 
-type function_parm_type2D
-REAL_T :: x_input(2)
-type(function_parm_type3D) :: f3D
+type integral_function_parm_type
+INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
 INTEGER_T :: nLS
 INTEGER_T, pointer, dimension(:) :: signLS
 type(levelset_parm_type), pointer, dimension(:) :: LS_array
@@ -118,30 +118,7 @@ REAL_T :: xkL
 REAL_T :: xkU
 INTEGER_T :: k_reduce
 INTEGER_T :: S_quad_type
-end type function_parm_type2D
-
-type function_parm_type1D
-REAL_T :: x_input
-type(function_parm_type2D) :: f2D
-INTEGER_T :: nLS
-INTEGER_T, pointer, dimension(:) :: signLS
-type(levelset_parm_type), pointer, dimension(:) :: LS_array
-REAL_T :: xkL
-REAL_T :: xkU
-INTEGER_T :: k_reduce
-INTEGER_T :: S_quad_type
-end type function_parm_type1D
-
-type No_input_function_parm_type
-type(function_parm_type1D) :: f1D
-INTEGER_T :: nLS
-INTEGER_T, pointer, dimension(:) :: signLS
-type(levelset_parm_type), pointer, dimension(:) :: LS_array
-REAL_T :: xkL
-REAL_T :: xkU
-INTEGER_T :: k_reduce
-INTEGER_T :: S_quad_type
-end type No_input_function_parm_type
+end type integral_function_parm_type
 
 contains
 
@@ -2501,27 +2478,36 @@ end subroutine intersection_volume_simple
 ! V_{i}={x| phi_i > 0 }  s_i=+1
 ! V_{i}={x| phi_i < 0 }  s_i=-1
 ! V_{i}={x| phi_i <> 0 } s_i=0
-recursive function I3D(f3D,nLS,LS_array,signLS,activeLS, &
-                U3D,S_quad_type) &
-                result(IntegralResult)
+recursive function I_hyper( &
+    LOCAL_SDIM, &
+    nLS, &
+    nF, &
+    f_root, &
+    f_array, &
+    LS_array, &
+    signLS, &
+    activeLS, &
+    U_hyper, &
+    S_quad_type) result(IntegralResult)
 use probcommon_module
 use LegendreNodes
 
 IMPLICIT NONE
 
-INTEGER_T, PARAMETER :: local_sdim=3
-
 REAL_T :: IntegralResult
-type(function_parm_type3D), intent(in) :: f3D
-type(levelset_parm_type), pointer, dimension(:), intent(in) :: LS_array
-INTEGER_T, pointer, dimension(:), intent(in) :: signLS
-INTEGER_T, pointer, dimension(:), intent(inout) :: activeLS
+INTEGER_T, intent(in) :: LOCAL_SDIM
 INTEGER_T, intent(in) :: nLS
-REAL_T, intent(in), dimension(local_sdim,2) :: U3D  !(dir,side)
+INTEGER_T, intent(in) :: nF
+type(function_parm_type), intent(in) :: f_root
+type(integral_function_parm_type), dimension(nF), intent(in) :: f_array
+type(levelset_parm_type), dimension(nLS), intent(in) :: LS_array
+INTEGER_T, dimension(nLS), intent(in) :: signLS
+INTEGER_T, dimension(nLS), intent(inout) :: activeLS
+REAL_T, intent(in), dimension(LOCAL_SDIM,2) :: U_hyper  !(dir,side)
 INTEGER_T, intent(in) :: S_quad_type !S=0 => volumetric  S=1 => perimeter
-REAL_T :: xc(local_sdim)
+REAL_T :: xc(LOCAL_SDIM)
 INTEGER_T :: dir
-INTEGER_T :: i_array(local_sdim)
+INTEGER_T :: i_array(LOCAL_SDIM)
 INTEGER_T :: i_flatten
 INTEGER_T :: i_flatten_lo
 INTEGER_T :: i_flatten_hi
@@ -2571,16 +2557,16 @@ else
  stop
 endif
 
-do dir=1,local_sdim
- xc(dir)=0.5d0*(U3D(dir,1)+U3D(dir,2))
- dx3D(dir)=U3D(dir,2)-U3D(dir,1)
+do dir=1,LOCAL_SDIM
+ xc(dir)=0.5d0*(U_hyper(dir,1)+U_hyper(dir,2))
+ dx3D(dir)=U_hyper(dir,2)-U_hyper(dir,1)
  if (dx3D(dir).gt.zero) then
   ! do nothing
  else
   print *,"dx3D(dir) invalid"
   stop
  endif
-enddo
+enddo ! dir=1,LOCAL_SDIM
 
 
 nLS_active=0
@@ -2591,10 +2577,10 @@ do iLS=nLS,1,-1
   ! do nothing (this levelset function has been deactivated)
  else if (activeLS(iLS).eq.1) then
 
-  if (LS_array(iLS)%LSDIM.eq.local_sdim) then
+  if (LS_array(iLS)%LOCAL_SDIM.eq.LOCAL_SDIM) then
    ! do nothing
   else
-   print *,"LS_array(iLS)%LSDIM.ne.local_sdim"
+   print *,"LS_array(iLS)%LOCAL_SDIM.ne.LOCAL_SDIM"
    stop
   endif
 
@@ -2602,29 +2588,29 @@ do iLS=nLS,1,-1
   delta=zero
 
   i_flatten_lo=0
-  i_flatten_hi=3**local_sdim-1
-  do dir=1,local_sdim
+  i_flatten_hi=3**LOCAL_SDIM-1
+  do dir=1,LOCAL_SDIM
    i_array(dir)=-1
   enddo
   do i_flatten=i_flatten_lo,i_flatten_hi
-   do dir=1,local_sdim
+   do dir=1,LOCAL_SDIM
     if (i_array(dir).eq.-1) then 
-     xtest(dir)=U3D(dir,1)
+     xtest(dir)=U_hyper(dir,1)
     else if (i_array(dir).eq.0) then 
      xtest(dir)=xc(dir)
     else if (i_array(dir).eq.1) then 
-     xtest(dir)=U3D(dir,2)
+     xtest(dir)=U_hyper(dir,2)
     else
      print *,"i_array(dir) invalid"
      stop
     endif
-   enddo ! dir=1,local_sdim
+   enddo ! dir=1,LOCAL_SDIM
 
    LSSIDE=EVAL_LS_POLY(xtest,LS_array(iLS))
    delta=max(delta,abs(LSSIDE-LSXC))
 
    inc_next=1
-   do dir=1,local_sdim
+   do dir=1,LOCAL_SDIM
     if (inc_next.eq.1) then
      i_array(dir)=i_array(dir)+1
      if (i_array(dir).gt.1) then
@@ -2638,7 +2624,7 @@ do iLS=nLS,1,-1
      print *,"inc_next invalid"
      stop
     endif
-   enddo ! dir=1,local_sdim
+   enddo ! dir=1,LOCAL_SDIM
   enddo !i_flatten=i_flatten_lo,i_flatten_hi
 
    ! fudge factor to guarantee that
@@ -2666,6 +2652,15 @@ do iLS=nLS,1,-1
 
   if (nLS_active.eq.0) then
    IntegralResult=zero
+
+   i_flatten_lo=0
+   i_flatten_hi=(SAYE_quad_order+1)**LOCAL_SDIM-1
+   do dir=1,LOCAL_SDIM
+    i_array(dir)=1
+   enddo
+
+
+
    do i=1,SAYE_quad_order+1
     dir=1
     wprod=wquad(i-1)*dx3D(dir)
