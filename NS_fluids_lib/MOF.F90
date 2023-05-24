@@ -2495,23 +2495,35 @@ INTEGER_T shapeflag
 return
 end subroutine intersection_volume_simple
 
-! signLS=+1,0,-1  (0 => levelset function has been deactivated)
-recursive function I3D(f3D,nLS,LS_array,signLS,U3D,S_quad_type) &
+! signLS=+1,0,-1  
+! S_quad_type=1 => integral_{gamma\cap U} f
+! S_quad_type=0 => integral_{V} f  V=\cap_{i} V_{i}\cap U
+! V_{i}={x| phi_i > 0 }  s_i=+1
+! V_{i}={x| phi_i < 0 }  s_i=-1
+! V_{i}={x| phi_i <> 0 } s_i=0
+recursive function I3D(f3D,nLS,LS_array,signLS,activeLS, &
+                U3D,S_quad_type) &
                 result(IntegralResult)
 use probcommon_module
 use LegendreNodes
 
 IMPLICIT NONE
 
+INTEGER_T, PARAMETER :: local_sdim=3
+INTEGER_T, PARAMETER :: max_sdim=3
+
 REAL_T :: IntegralResult
 type(function_parm_type3D), intent(in) :: f3D
 type(levelset_parm_type), pointer, dimension(:), intent(in) :: LS_array
-INTEGER_T, pointer, dimension(:), intent(inout) :: signLS
+INTEGER_T, pointer, dimension(:), intent(in) :: signLS
+INTEGER_T, pointer, dimension(:), intent(inout) :: activeLS
 INTEGER_T, intent(in) :: nLS
-REAL_T, intent(in), dimension(3,2) :: U3D  !(dir,side)
+REAL_T, intent(in), dimension(local_sdim,2) :: U3D  !(dir,side)
 INTEGER_T, intent(in) :: S_quad_type !S=0 => volumetric  S=1 => perimeter
-REAL_T :: xc(3)
+REAL_T :: xc(local_sdim)
 INTEGER_T :: dir
+INTEGER_T :: loop_lo(max_sdim)
+INTEGER_T :: loop_hi(max_sdim)
 
 if (SAYE_quad_init.eq.-1) then
  SAYE_quad_init=1
@@ -2558,7 +2570,7 @@ else
  stop
 endif
 
-do dir=1,3
+do dir=1,local_sdim
  xc(dir)=0.5d0*(U3D(dir,1)+U3D(dir,2))
  dx3D(dir)=U3D(dir,2)-U3D(dir,1)
  if (dx3D(dir).gt.zero) then
@@ -2569,14 +2581,21 @@ do dir=1,3
  endif
 enddo
 
+
 nLS_active=0
 
 do iLS=nLS,1,-1
 
- if (signLS(iLS).eq.0) then
-         ! do nothing
- else if ((signLS(iLS).eq.1).or. &
-          (signLS(iLS).eq.-1)) then
+ if (activeLS(iLS).eq.0) then
+  ! do nothing (this levelset function has been deactivated)
+ else if (activeLS(iLS).eq.1) then
+
+  if (LS_array(iLS)%LSDIM.eq.local_sdim) then
+   ! do nothing
+  else
+   print *,"LS_array(iLS)%LSDIM.ne.local_sdim"
+   stop
+  endif
 
   LSXC=EVAL_LS_POLY(xc,LS_array(iLS))
   delta=zero
@@ -2676,6 +2695,12 @@ do iLS=nLS,1,-1
 
    return IntegralResult
     
+ else
+  print *,"activeLS(iLS) invalid"
+  stop
+ endif
+
+enddo ! iLS=nLS,1,-1
 
 end function I3D
 
