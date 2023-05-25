@@ -93,32 +93,36 @@ type(intersect_type), dimension(3) :: template_tri_plane
 
  !e.g. phi=z-eta(x,y)
 type levelset_parm_type
+INTEGER_T :: ROOT_SDIM ! 1,2,3,.... ROOT_SDIM>=LOCAL_SDIM
 INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
-INTEGER_T :: height_dir !=0,1,2,3,....
-INTEGER_T, pointer :: frozen_parms_flag(:)
-REAL_T, pointer :: frozen_parms(:)
+INTEGER_T :: height_dir !=0,1,2,3,....  height_dir<ROOT_SDIM
+INTEGER_T, pointer :: frozen_parms_flag(:) ! 1...ROOT_SDIM
+REAL_T, pointer :: frozen_parms(:) ! 1...ROOT_SDIM
+INTEGER_T :: signLS
+INTEGER_T :: activeLS
 INTEGER_T :: order
 !e.g. sum a_ij x^i y^j i,j=0..order
 REAL_T, pointer, dimension(:) :: LSCOEFF_FLATTEN 
 end type levelset_parm_type
 
+type levelset_array_parm_type
+INTEGER_T :: nLS
+INTEGER_T :: xkL
+INTEGER_T :: xkU
+INTEGER_T :: k_reduce
+INTEGER_T :: S_quad_type
+type(levelset_parm_type), pointer, dimension(:) :: LS_array !1..nLS
+end type levelset_array_parm_type
+
 type function_parm_type
+INTEGER_T :: ROOT_SDIM ! 1,2,3,.... ROOT_SDIM>=LOCAL_SDIM
 INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
 INTEGER_T :: order
 !e.g. sum a_{i,j,k} x^i y^j z^k i,j,k=0..order
 REAL_T, pointer, dimension(:) :: FNCOEFF_FLATTEN
+! 1..ROOT_SDIM
+type(levelset_array_parm_type), pointer, dimension(:) :: LS_FN_array 
 end type function_parm_type
-
-type integral_function_parm_type
-INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
-INTEGER_T :: nLS
-INTEGER_T, pointer, dimension(:) :: signLS
-type(levelset_parm_type), pointer, dimension(:) :: LS_array
-REAL_T :: xkL
-REAL_T :: xkU
-INTEGER_T :: k_reduce
-INTEGER_T :: S_quad_type
-end type integral_function_parm_type
 
 contains
 
@@ -2479,14 +2483,10 @@ end subroutine intersection_volume_simple
 ! V_{i}={x| phi_i < 0 }  s_i=-1
 ! V_{i}={x| phi_i <> 0 } s_i=0
 recursive function I_hyper( &
+    ROOT_SDIM, &
     LOCAL_SDIM, &
-    nLS, &
-    nF, &
-    f_root, &
     f_array, &
     LS_array, &
-    signLS, &
-    activeLS, &
     U_hyper, &
     S_quad_type) result(IntegralResult)
 use probcommon_module
@@ -2495,14 +2495,10 @@ use LegendreNodes
 IMPLICIT NONE
 
 REAL_T :: IntegralResult
+INTEGER_T, intent(in) :: ROOT_SDIM
 INTEGER_T, intent(in) :: LOCAL_SDIM
-INTEGER_T, intent(in) :: nLS
-INTEGER_T, intent(in) :: nF
-type(function_parm_type), intent(in) :: f_root
-type(integral_function_parm_type), dimension(nF), intent(in) :: f_array
-type(levelset_parm_type), dimension(nLS), intent(in) :: LS_array
-INTEGER_T, dimension(nLS), intent(in) :: signLS
-INTEGER_T, dimension(nLS), intent(inout) :: activeLS
+type(function_parm_type), intent(inout) :: f_history
+type(levelset_array_parm_type), intent(inout) :: LS_history
 REAL_T, intent(in), dimension(LOCAL_SDIM,2) :: U_hyper  !(dir,side)
 INTEGER_T, intent(in) :: S_quad_type !S=0 => volumetric  S=1 => perimeter
 REAL_T :: xc(LOCAL_SDIM)
@@ -2512,7 +2508,21 @@ INTEGER_T :: i_flatten
 INTEGER_T :: i_flatten_lo
 INTEGER_T :: i_flatten_hi
 
+if (ROOT_SDIM.ge.LOCAL_SDIM) then
+ ! do nothing
+else
+ print *,"ROOT_SDIM or LOCAL_SDIM invalid"
+ stop
+endif
+
 if (SAYE_quad_init.eq.-1) then
+
+ if (ROOT_SDIM.eq.LOCAL_SDIM) then
+  ! do nothing
+ else
+  print *,"expecting ROOT_SDIM.eq.LOCAL_SDIM"
+  stop
+ endif
  SAYE_quad_init=1
 
  if (GQTYPE.eq.0) then
@@ -2539,14 +2549,14 @@ else
 endif
 
 if (S_quad_type.eq.0) then
- if (nLS.ge.1) then
+ if (LS_history%nLS.ge.1) then
   ! do nothing
  else
   print *,"nLS invalid"
   stop
  endif
 else if (S_quad_type.eq.1) then
- if (nLS.eq.1) then
+ if (LS_history%nLS.eq.1) then
   ! do nothing
  else
   print *,"nLS invalid"
