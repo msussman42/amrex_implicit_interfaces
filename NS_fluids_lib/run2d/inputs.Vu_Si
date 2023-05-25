@@ -122,14 +122,14 @@ ns.segregated_gravity_flag=0
 #PROB.F90 "capillary_wave_speed": 
 #k=2 pi/dx
 #omega=k^(3/2)sqrt(tension/(2 * den_interface))
-#u_{capillary}=omega/k
-#dx=.5/64  tension=831
-#den_interface=1.0e+6
-#u_{capillary}=0.578
-#u_{phasechange}=k * (TDIFF/dx) /(L rho)=.395
-ns.tension= 1740.0      0.0 281.0 0.0 1740.0  0.0
-ns.tension_init= 1740.0 0.0 281.0 0.0 1740.0  0.0
-ns.growth_angle=0.314159265359 0.0 0.0 0.0 0.0 0.0 # 18 degrees
+#u_{phasechange}=k * (TDIFF/dx) /(L rho)
+# arccos((1740-281)/1740)=33 degrees
+# arccos((1740-870)/1740)=60 degrees
+ns.tension= 1740.0      0.0 870.0 0.0 1740.0  0.0
+ns.tension_init= 1740.0 0.0 870.0 0.0 1740.0  0.0
+# 0.314159=18 degrees
+# 0.1=5.7 degrees
+ns.growth_angle=0.1 0.0 0.0 0.0 0.0 0.0 
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
@@ -194,7 +194,7 @@ ns.viscconst=21.8e-3 1.08e-3 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 ns.denconst=2.583 0.129 2.350 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 
 #added mass 
-ns.denconst_interface_added=1.0e+4 1.0e+4 1.0e+4 1.0e+4 1.0e+4 1.0e+4
+ns.denconst_interface_added=1.0e+2 1.0e+2 1.0e+2 1.0e+2 1.0e+2 1.0e+2
 ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
