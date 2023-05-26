@@ -2245,7 +2245,7 @@ stop
 
 
        ! called from fort_curvstrip
-      subroutine prescribe_growth_angle( &
+      subroutine prescribe_pinning_angle( &
         icenter,jcenter,kcenter, & !intent(in)
         level, & ! intent(in)
         finest_level, & !intent(in)
@@ -2268,7 +2268,7 @@ stop
         im_opp, & !intent(in)
         im_melt, & !intent(in)
         iten, & !intent(in)
-        growth_angle) !intent(in)
+        pinning_angle) !intent(in)
       use global_utility_module
       use geometry_intersect_module
       use MOF_routines_module
@@ -2286,7 +2286,7 @@ stop
       INTEGER_T, INTENT(in) :: im,im_opp,im_melt
       INTEGER_T, INTENT(inout) :: im3
       INTEGER_T, INTENT(in) :: iten
-      REAL_T, INTENT(in) :: growth_angle
+      REAL_T, INTENT(in) :: pinning_angle
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(in) :: vol_sten
       REAL_T, INTENT(in) :: area_sten(SDIM,2)
@@ -2321,23 +2321,21 @@ stop
       REAL_T :: LSTEST(num_materials)
       INTEGER_T :: im_majority
       INTEGER_T :: im_secondary
-      REAL_T :: nW(3) ! points from melt to ambient
-      REAL_T :: nI(3) ! points from ice to ambient
+      REAL_T :: nGW(3) ! points from melt to ambient
+      REAL_T :: nGI(3) ! points from ice to ambient
       REAL_T :: nIW(3) ! points from melt to ice
       REAL_T :: nCL(3)
-      REAL_T :: nI_perp(3)
+      REAL_T :: nGI_perp(3)
       REAL_T :: nrm_local(3)
       REAL_T :: mag_local
       REAL_T :: magCL
-      REAL_T :: magI_perp
-      REAL_T :: nI_perp_dot_nIW
-      REAL_T :: nI_dot_nghost
-      REAL_T :: abs_growth_angle
+      REAL_T :: magGI_perp
+      REAL_T :: mag_ghost
+      REAL_T :: nGI_dot_neg_nIW
+      REAL_T :: nGI_perp_dot_nIW
       REAL_T :: cos_angle
-      REAL_T :: nfree_fict(SDIM)
-      REAL_T :: nsolid_fict(SDIM)
+      REAL_T :: sin_angle
       REAL_T :: nghost(SDIM)
-      REAL_T :: nperp(SDIM)
       REAL_T :: ls_local
       REAL_T :: wtnode
       REAL_T :: totalwt
@@ -2366,7 +2364,7 @@ stop
       if (dxmin.gt.zero) then
        ! do nothing
       else
-       print *,"dxmin invalid in prescribe_growth_angle: ",dxmin
+       print *,"dxmin invalid in prescribe_pinning_angle: ",dxmin
        stop
       endif
 
@@ -2379,39 +2377,39 @@ stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid prescribe_growth_angle: ",level
+       print *,"level invalid prescribe_pinning_angle: ",level
        stop
       endif
       if ((side.ne.1).and.(side.ne.-1)) then
-       print *,"side invalid prescribe_growth_angle: ",side
+       print *,"side invalid prescribe_pinning_angle: ",side
        stop
       endif
       if ((signside.ne.1).and.(signside.ne.-1)) then
-       print *,"signside invalid prescribe_growth_angle: ",signside
+       print *,"signside invalid prescribe_pinning_angle: ",signside
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid851 prescribe_growth_angle: ",bfact
+       print *,"bfact invalid851 prescribe_pinning_angle: ",bfact
        stop
       endif
       if (ngrow_distance.ne.4) then
-       print *,"expecting ngrow_distance=4 in prescribe_growth_angle"
+       print *,"expecting ngrow_distance=4 in prescribe_pinning_angle"
        stop
       endif
       if (ngrow_make_distance.ne.3) then
-       print *,"expecting ngrow_make_distance=3 in prescribe_growth_angle"
+       print *,"expecting ngrow_make_distance=3 in prescribe_pinning_angle"
        stop
       endif
       if (im.ge.im_opp) then
-       print *,"im and/or im_opp invalid prescribe_growth_angle:",im,im_opp
+       print *,"im and/or im_opp invalid prescribe_pinning_angle:",im,im_opp
        stop
       endif
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid31 prescribe_growth_angle: ",im
+       print *,"im invalid31 prescribe_pinning_angle: ",im
        stop
       endif
       if ((im_opp.lt.1).or.(im_opp.gt.num_materials)) then
-       print *,"im_opp invalid prescribe_growth_angle im_opp=",im_opp
+       print *,"im_opp invalid prescribe_pinning_angle im_opp=",im_opp
        stop
       endif
       if ((im_melt.eq.im).or.(im_melt.eq.im_opp)) then
@@ -2424,29 +2422,29 @@ stop
       if (is_ice(im3).eq.1) then
        ! do nothing
       else
-       print *,"expecting is_ice(im3).eq.1 in prescribe_growth_angle"
+       print *,"expecting is_ice(im3).eq.1 in prescribe_pinning_angle"
        stop
       endif
 
       if ((iten.lt.1).or.(iten.gt.num_interfaces)) then
-       print *,"iten invalid prescribe_growth_angle"
+       print *,"iten invalid prescribe_pinning_angle"
        stop
       endif
       call get_iten(im,im_opp,iten_test)
       if (iten.ne.iten_test) then
-       print *,"iten and iten_test differ prescribe_growth_angle"
+       print *,"iten and iten_test differ prescribe_pinning_angle"
        stop
       endif
       if (vol_sten.gt.zero) then
        ! do nothing
       else
-       print *,"vol_sten invalid prescribe_growth_angle: ",vol_sten
+       print *,"vol_sten invalid prescribe_pinning_angle: ",vol_sten
        stop
       endif
 
       if ((dircrit.lt.1).or. &
           (dircrit.gt.SDIM)) then
-       print *,"dircrit invalid prescribe_growth_angle  dircrit=",dircrit
+       print *,"dircrit invalid prescribe_pinning_angle  dircrit=",dircrit
        stop
       endif
 
@@ -2458,12 +2456,12 @@ stop
        if (xcenter(1).gt.zero) then
         ! do nothing
        else
-        print *,"expecting xcenter(1)>0 for RZ or RT prescribe_growth_angle"
+        print *,"expecting xcenter(1)>0 for RZ or RT prescribe_pinning_angle"
         stop
        endif
 
       else
-       print *,"levelrz invalid prescribe_growth_angle: ",levelrz
+       print *,"levelrz invalid prescribe_pinning_angle: ",levelrz
        stop
       endif
 
@@ -2474,7 +2472,7 @@ stop
        klo_sten_short=0
        khi_sten_short=0
       else
-       print *,"dimension bust prescribe_growth_angle"
+       print *,"dimension bust prescribe_pinning_angle"
        stop
       endif
 
@@ -2525,7 +2523,7 @@ stop
         enddo
         nrm_interfaces_cnt(iten_local)=nrm_interfaces_cnt(iten_local)+1
        else
-        print *,"mag_local invalid in prescribe_growth_angle"
+        print *,"mag_local invalid in prescribe_pinning_angle"
         stop
        endif
       enddo !k
@@ -2551,7 +2549,7 @@ stop
         else if (mag_local.eq.zero) then
          nrm_interfaces_cnt(iten_local)=0
         else
-         print *,"mag_local invalid prescribe_growth_angle: ", &
+         print *,"mag_local invalid prescribe_pinning_angle: ", &
               iten_local,mag_local
          stop
         endif
@@ -2563,8 +2561,8 @@ stop
       enddo !iten_local=1,num_interfaces
 
       do dir_local=1,3
-       nW(dir_local)=zero !melt to ambient
-       nI(dir_local)=zero !ice to ambient
+       nGW(dir_local)=zero !melt to ambient
+       nGI(dir_local)=zero !ice to ambient
        nIW(dir_local)=zero !melt to ice
       enddo
       
@@ -2583,11 +2581,11 @@ stop
        im3=0
       else if (nrm_interfaces_cnt(iten_local).gt.0) then
 
-        ! nW points from melt into the ambient.
+        ! nGW points from melt into the ambient.
        do dir_local=1,SDIM
-        nW(dir_local)=nrm_interfaces(iten_local,dir_local)
+        nGW(dir_local)=nrm_interfaces(iten_local,dir_local)
         if (im_melt.lt.im_ambient) then
-         nW(dir_local)=-nW(dir_local)
+         nGW(dir_local)=-nGW(dir_local)
         else if (im_melt.gt.im_ambient) then
          ! do nothing
         else
@@ -2602,11 +2600,11 @@ stop
         im3=0
        else if (nrm_interfaces_cnt(iten_local).gt.0) then
 
-         ! nI points from ice into the ambient.
+         ! nGI points from ice into the ambient.
         do dir_local=1,SDIM
-         nI(dir_local)=nrm_interfaces(iten_local,dir_local)
+         nGI(dir_local)=nrm_interfaces(iten_local,dir_local)
          if (im3.lt.im_ambient) then
-          nI(dir_local)=-nI(dir_local)
+          nGI(dir_local)=-nGI(dir_local)
          else if (im3.gt.im_ambient) then
           ! do nothing
          else
@@ -2634,7 +2632,7 @@ stop
           endif
          enddo !dir_local=1,SDIM
 
-         call crossprod(nW,nIW,nCL)
+         call crossprod(nGW,nIW,nCL)
          magCL=sqrt( nCL(1)**2+nCL(2)**2+nCL(3)**2 )
          if (magCL.eq.zero) then
           im3=0
@@ -2642,337 +2640,364 @@ stop
           do dir_local=1,3
            nCL(dir_local)=nCL(dir_local)/magCL
           enddo
-          call crossprod(nCL,nI,nI_perp)
-          magI_perp=sqrt( nI_perp(1)**2+nI_perp(2)**2+nI_perp(3)**2 )
+          call crossprod(nCL,nGI,nGI_perp)
+          magGI_perp=sqrt( nGI_perp(1)**2+nGI_perp(2)**2+nGI_perp(3)**2 )
 
-          if (magI_perp.eq.zero) then
+          if (magGI_perp.eq.zero) then
            im3=0
-          else if (magI_perp.gt.zero) then
+          else if (magGI_perp.gt.zero) then
 
-           nI_perp_dot_nIW=zero
+           nGI_perp_dot_nIW=zero
 
+            ! nIW points from melt into the ice.
            do dir_local=1,3
-            nI_perp(dir_local)=nI_perp(dir_local)/magI_perp
-            nI_perp_dot_nIW=nI_perp_dot_nIW+nI_perp(dir_local)*nIW(dir_local)
+            nGI_perp(dir_local)=nGI_perp(dir_local)/magGI_perp
+            nGI_perp_dot_nIW=nGI_perp_dot_nIW+ &
+               nGI_perp(dir_local)*nIW(dir_local)
            enddo
-           if (nI_perp_dot_nIW.eq.zero) then
+           if (nGI_perp_dot_nIW.eq.zero) then
             im3=0
-           else if (nI_perp_dot_nIW.ne.zero) then
-            if (nI_perp_dot_nIW.gt.zero) then
+           else if (nGI_perp_dot_nIW.ne.zero) then
+            if (nGI_perp_dot_nIW.gt.zero) then
              ! do nothing
-            else if (nI_perp_dot_nIW.lt.zero) then
+            else if (nGI_perp_dot_nIW.lt.zero) then
              do dir_local=1,3
-              nI_perp(dir_local)=-nI_perp(dir_local)
+              nGI_perp(dir_local)=-nGI_perp(dir_local)
              enddo
             else
-             print *,"nI_perp_dot_nIW invalid"
+             print *,"nGI_perp_dot_nIW invalid"
              stop
             endif
-             ! at this point, both nI_perp and nIW point towards the ice.
-            cos_angle=cos(half*Pi-growth_angle)
-            do dir_local=1,SDIM
-             nfree_fict(dir_local)=nW(dir_local) !melt to ambient
-             nsolid_fict(dir_local)=-nI_perp(dir_local) !ice to melt
-            enddo
-             ! ghostnormal is declared in: GLOBALUTIL.F90
-             ! nghost is orthogonal to nI_perp if cos_angle=0.0d0
-             ! i.e. nghost is parallel to nI.
-            call ghostnormal(nfree_fict,nsolid_fict,cos_angle,nghost,nperp)
+             ! at this point, both nGI_perp and nIW point towards the ice.
 
-            nI_dot_nghost=zero
-            do dir_local=1,SDIM
-             nI_dot_nghost=nI_dot_nghost+nghost(dir_local)*nI(dir_local)
-            enddo
-            abs_growth_angle=acos(abs(nI_dot_nghost))
-            if (abs(abs(growth_angle)-abs(abs_growth_angle)).le.VOFTOL) then
+            cos_angle=cos(pinning_angle)
+            sin_angle=-sin(pinning_angle)
+            if ((pinning_angle.ge.half*Pi).or. &
+                (pinning_angle.le.-half*Pi)) then
+             print *,"pinning_angle out of range"
+             stop
+            else if (abs(pinning_angle).lt.half*Pi) then
              ! do nothing
             else
-             print *,"nghost derived incorrectly"
-             print *,"growth_angle,abs_growth_angle ",growth_angle, &
-               abs_growth_angle
-             print *,"nghost: ",nghost(1),nghost(2),nghost(SDIM)
+             print *,"pinning_angle is NaN"
              stop
-            endif
+            endif 
 
-            do i=-1,1
-            do j=-1,1
-            do k=klo_sten_short,khi_sten_short
-             ls_local=zero
-             dir_local=1
-             x_local(dir_local)=xsten(2*i,dir_local)
-             dir_local=2
-             x_local(dir_local)=xsten(2*j,dir_local)
-             dir_local=3
-             x_local(dir_local)=xsten(2*k,SDIM)
-
-              ! nI_perp: melt to ice
-             do dir_local=1,SDIM
-              ls_local=ls_local+nI_perp(dir_local)* &
-                (x_local(dir_local)-xsten(0,dir_local))
-             enddo
-             ls_extend_sten(i,j,k)=ls_local
-             do dir_local=1,SDIM
-              if (ls_local.le.zero) then
-               nrm_extend_sten(i,j,k,dir_local)=nW(dir_local)
-              else if (ls_local.gt.zero) then
-               nrm_extend_sten(i,j,k,dir_local)=nghost(dir_local)
-              else
-               print *,"ls_local invalid"
-               stop
-              endif
-             enddo !dir_local=1,SDIM
-
-            enddo !k
-            enddo !j
-            enddo !i
-
+             ! nIW points from melt into the ice.
+             ! -nIW points from ice into the melt.
+             ! nGI points from ice into the ambient.
+            mag_ghost=zero
             do dir_local=1,SDIM
-             xsten_curv(-2,dir_local)=xsten(-2,dir_local)
-             xsten_curv(2,dir_local)=xsten(2,dir_local)
-             xsten_curv(-1,dir_local)= &
-                  (xsten(0,dir_local)+xsten(-2,dir_local))/two
-             xsten_curv(1,dir_local)= &
-                  (xsten(0,dir_local)+xsten(2,dir_local))/two
-             xsten_curv(0,dir_local)= &
-                  (xsten_curv(1,dir_local)+xsten_curv(-1,dir_local))/two
-            enddo ! dir_local=1,SDIM
-
-            totalwt=zero
-            do dir_local=1,SDIM
-             dnrm(dir_local)=zero
+             nghost(dir_local)=cos_angle*nGI(dir_local)+ &
+                               sin_angle*nIW(dir_local)
+             mag_ghost=mag_ghost+nghost(dir_local)**2
             enddo
 
-            do inode=-1,1,2
-            do jnode=-1,1,2
-            do knode=klo_sten_short,khi_sten_short,2
-
-             node_index(1)=inode 
-             node_index(2)=jnode 
-             node_index(3)=knode 
-
+            if (mag_ghost.eq.zero) then
+             im3=0
+            else if (mag_ghost.gt.zero) then
+             mag_ghost=sqrt(mag_ghost)
              do dir_local=1,SDIM
-              n_node(dir_local)=zero
+              nghost(dir_local)=nghost(dir_local)/mag_ghost
+             enddo
+             
+             nGI_dot_neg_nIW=zero
+             do dir_local=1,SDIM
+              nGI_dot_neg_nIW=nGI_dot_neg_nIW-nGI(dir_local)*nIW(dir_local)
              enddo
 
-             cell_lo(3)=0
-             cell_hi(3)=0
+             if (nGI_dot_neg_nIW.le.zero) then
+              im3=0
+             else if (nGI_dot_neg_nIW.gt.zero) then
+ 
+              do i=-1,1
+              do j=-1,1
+              do k=klo_sten_short,khi_sten_short
+               ls_local=zero
+               dir_local=1
+               x_local(dir_local)=xsten(2*i,dir_local)
+               dir_local=2
+               x_local(dir_local)=xsten(2*j,dir_local)
+               dir_local=3
+               x_local(dir_local)=xsten(2*k,SDIM)
 
-             do dir_local=1,SDIM
-              if (node_index(dir_local).eq.-1) then
-               cell_lo(dir_local)=-1
-               cell_hi(dir_local)=0
-              else if (node_index(dir_local).eq.1) then
-               cell_lo(dir_local)=0
-               cell_hi(dir_local)=1
-              else
-               print *,"node_index invalid (prescribe_growth_angle)"
-               stop
-              endif
-             enddo ! dir_local=1,SDIM
+               ! nGI_perp: melt to ice
+               do dir_local=1,SDIM
+                ls_local=ls_local+nGI_perp(dir_local)* &
+                 (x_local(dir_local)-xsten(0,dir_local))
+               enddo
+               ls_extend_sten(i,j,k)=ls_local
+               do dir_local=1,SDIM
+                if (ls_local.le.zero) then
+                 nrm_extend_sten(i,j,k,dir_local)= &
+                   nGW(dir_local)!melt to ambient
+                else if (ls_local.gt.zero) then
+                 nrm_extend_sten(i,j,k,dir_local)=nghost(dir_local)
+                else
+                 print *,"ls_local invalid"
+                 stop
+                endif
+               enddo !dir_local=1,SDIM
 
-             wtnode=zero
-
-             do i=cell_lo(1),cell_hi(1)
-             do j=cell_lo(2),cell_hi(2)
-             do k=cell_lo(3),cell_hi(3)
-
-              wtnode=wtnode+one
-
-              cell_index(1)=i 
-              cell_index(2)=j
-              cell_index(3)=k
+              enddo !k
+              enddo !j
+              enddo !i
 
               do dir_local=1,SDIM
-               n_node(dir_local)=n_node(dir_local)+ &
-                  nrm_extend_sten(i,j,k,dir_local)
+               xsten_curv(-2,dir_local)=xsten(-2,dir_local)
+               xsten_curv(2,dir_local)=xsten(2,dir_local)
+               xsten_curv(-1,dir_local)= &
+                  (xsten(0,dir_local)+xsten(-2,dir_local))/two
+               xsten_curv(1,dir_local)= &
+                  (xsten(0,dir_local)+xsten(2,dir_local))/two
+               xsten_curv(0,dir_local)= &
+                  (xsten_curv(1,dir_local)+xsten_curv(-1,dir_local))/two
               enddo ! dir_local=1,SDIM
 
-             enddo
-             enddo
-             enddo ! i,j,k=cell_lo ... cell_hi
+              totalwt=zero
+              do dir_local=1,SDIM
+               dnrm(dir_local)=zero
+              enddo
 
-             if (wtnode.gt.zero) then
-              ! do nothing
-             else
-              print *,"wtnode invalid"
-              stop
-             endif
+              do inode=-1,1,2
+              do jnode=-1,1,2
+              do knode=klo_sten_short,khi_sten_short,2
 
-             do dir_local=1,SDIM
-              n_node(dir_local)=n_node(dir_local)/wtnode
-             enddo ! dir_local=1,SDIM
+               node_index(1)=inode 
+               node_index(2)=jnode 
+               node_index(3)=knode 
 
-             RR=one
-             call prepare_normal(n_node,RR,mag_local)
+               do dir_local=1,SDIM
+                n_node(dir_local)=zero
+               enddo
 
-             do dir_local=1,SDIM
-              if (dir_local.eq.1) then
-               if (levelrz.eq.COORDSYS_CARTESIAN) then
+               cell_lo(3)=0
+               cell_hi(3)=0
+
+               do dir_local=1,SDIM
+                if (node_index(dir_local).eq.-1) then
+                 cell_lo(dir_local)=-1
+                 cell_hi(dir_local)=0
+                else if (node_index(dir_local).eq.1) then
+                 cell_lo(dir_local)=0
+                 cell_hi(dir_local)=1
+                else
+                 print *,"node_index invalid (prescribe_pinning_angle)"
+                 stop
+                endif
+               enddo ! dir_local=1,SDIM
+
+               wtnode=zero
+
+               do i=cell_lo(1),cell_hi(1)
+               do j=cell_lo(2),cell_hi(2)
+               do k=cell_lo(3),cell_hi(3)
+
+                wtnode=wtnode+one
+
+                cell_index(1)=i 
+                cell_index(2)=j
+                cell_index(3)=k
+
+                do dir_local=1,SDIM
+                 n_node(dir_local)=n_node(dir_local)+ &
+                    nrm_extend_sten(i,j,k,dir_local)
+                enddo ! dir_local=1,SDIM
+
+               enddo
+               enddo
+               enddo ! i,j,k=cell_lo ... cell_hi
+
+               if (wtnode.gt.zero) then
+                ! do nothing
+               else
+                print *,"wtnode invalid"
+                stop
+               endif
+
+               do dir_local=1,SDIM
+                n_node(dir_local)=n_node(dir_local)/wtnode
+               enddo ! dir_local=1,SDIM
+
+               RR=one
+               call prepare_normal(n_node,RR,mag_local)
+
+               do dir_local=1,SDIM
+                if (dir_local.eq.1) then
+                 if (levelrz.eq.COORDSYS_CARTESIAN) then
+                  RR=one
+                 else if ((levelrz.eq.COORDSYS_RZ).or. &
+                          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+                  RR=abs(xsten_curv(node_index(1),1))
+                 else
+                  print *,"levelrz invalid prescribe_pinning_angle: RR"
+                  stop
+                 endif
+                else if ((dir_local.eq.2).or.(dir_local.eq.SDIM)) then
+                 RR=one
+                else
+                 print *,"dir_local invalid"
+                 stop
+                endif
+                if ((node_index(dir_local).eq.1).or. &
+                    (node_index(dir_local).eq.-1)) then
+                 dnrm(dir_local)=dnrm(dir_local)+ &
+                    node_index(dir_local)*RR*n_node(dir_local)
+                else
+                 print *,"node_index(dir_local) invalid", &
+                   dir_local,node_index(dir_local)
+                endif
+               enddo ! dir_local=1,SDIM
+   
+               totalwt=totalwt+one
+
+              enddo
+              enddo
+              enddo  ! inode,jnode,knode=-1,1,2
+
+              if (totalwt.gt.zero) then
+               ! do nothing
+              else
+               print *,"totalwt invalid in prescribe_pinning_angle"
+               stop
+              endif
+
+              ! dxsten=(xsten(2)+xsten(0))/2-(xsten(-2)+xsten(0))/2=
+              !   (xsten(2)-xsten(-2))/2
+              do dir_local=1,SDIM
+               dxsten(dir_local)= &
+                 xsten_curv(1,dir_local)-xsten_curv(-1,dir_local)
+               if (dxsten(dir_local).gt.zero) then
+                ! do nothing
+               else
+                print *,"dxsten invalid: ",dir_local,dxsten(dir_local)
+                stop
+               endif 
+              enddo ! dir_local=1,SDIM
+
+              do dir_local=1,SDIM
+
+               if (dir_local.eq.1) then
+                if (levelrz.eq.COORDSYS_CARTESIAN) then
+                 RR=one
+                else if ((levelrz.eq.COORDSYS_RZ).or. &
+                         (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+                 RR=abs(xsten_curv(0,1))
+                else
+                 print *,"levelrz invalid prescribe_pinning_angle RR 3"
+                 stop
+                endif
+               else if (dir_local.eq.2) then
+                if (levelrz.eq.COORDSYS_CARTESIAN) then
+                 RR=one
+                else if (levelrz.eq.COORDSYS_RZ) then
+                 if (SDIM.ne.2) then
+                  print *,"dimension bust"
+                  stop
+                 endif
+                 RR=one
+                else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+                 RR=abs(xsten_curv(0,1))
+                else
+                 print *,"levelrz invalid initheightLS: RR 4"
+                 stop
+                endif
+               else if ((dir_local.eq.3).and.(SDIM.eq.3)) then
                 RR=one
+               else
+                print *,"dir_local invalid"
+                stop
+               endif
+
+               if (RR.gt.zero) then
+                dnrm(dir_local)=two*dnrm(dir_local)/ &
+                      (totalwt*RR*dxsten(dir_local))
+               else
+                print *,"expecting RR>0 ",RR
+                stop
+               endif
+
+              enddo ! dir_local=1,SDIM
+
+              curvFD=zero
+              do dir_local=1,SDIM
+               curvFD=curvFD+dnrm(dir_local)
+              enddo ! dir_local=1,SDIM
+
+              if (unscaled_min_curvature_radius.ge.two) then
+
+               maxcurv=one/(unscaled_min_curvature_radius*dxmax)
+               if (levelrz.eq.COORDSYS_CARTESIAN) then
+                if (SDIM.eq.2) then
+                 ! do nothing
+                else if (SDIM.eq.3) then
+                 maxcurv=two*maxcurv
+                else
+                 print *,"sdim invalid"
+                 stop
+                endif     
                else if ((levelrz.eq.COORDSYS_RZ).or. &
                         (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-                RR=abs(xsten_curv(node_index(1),1))
+                maxcurv=two*maxcurv
                else
-                print *,"levelrz invalid prescribe_growth_angle: RR"
+                print *,"prescribe_pinning_angle levelrz invalid (b)"
                 stop
                endif
-              else if ((dir_local.eq.2).or.(dir_local.eq.SDIM)) then
-               RR=one
-              else
-               print *,"dir_local invalid"
-               stop
-              endif
-              if ((node_index(dir_local).eq.1).or. &
-                  (node_index(dir_local).eq.-1)) then
-               dnrm(dir_local)=dnrm(dir_local)+ &
-                  node_index(dir_local)*RR*n_node(dir_local)
-              else
-               print *,"node_index(dir_local) invalid", &
-                 dir_local,node_index(dir_local)
-              endif
-             enddo ! dir_local=1,SDIM
- 
-             totalwt=totalwt+one
 
-            enddo
-            enddo
-            enddo  ! inode,jnode,knode=-1,1,2
-
-            if (totalwt.gt.zero) then
-             ! do nothing
-            else
-             print *,"totalwt invalid in prescribe_growth_angle"
-             stop
-            endif
-
-            ! dxsten=(xsten(2)+xsten(0))/2-(xsten(-2)+xsten(0))/2=
-            !   (xsten(2)-xsten(-2))/2
-            do dir_local=1,SDIM
-             dxsten(dir_local)= &
-               xsten_curv(1,dir_local)-xsten_curv(-1,dir_local)
-             if (dxsten(dir_local).gt.zero) then
-              ! do nothing
-             else
-              print *,"dxsten invalid: ",dir_local,dxsten(dir_local)
-              stop
-             endif 
-            enddo ! dir_local=1,SDIM
-
-            do dir_local=1,SDIM
-
-             if (dir_local.eq.1) then
-              if (levelrz.eq.COORDSYS_CARTESIAN) then
-               RR=one
-              else if ((levelrz.eq.COORDSYS_RZ).or. &
-                       (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-               RR=abs(xsten_curv(0,1))
-              else
-               print *,"levelrz invalid prescribe_growth_angle RR 3"
-               stop
-              endif
-             else if (dir_local.eq.2) then
-              if (levelrz.eq.COORDSYS_CARTESIAN) then
-               RR=one
-              else if (levelrz.eq.COORDSYS_RZ) then
-               if (SDIM.ne.2) then
-                print *,"dimension bust"
+               if (curvFD.gt.maxcurv) then
+                curvFD=maxcurv
+               else if (curvFD.lt.-maxcurv) then
+                curvFD=-maxcurv
+               else if (abs(curvFD).le.maxcurv) then
+                ! do nothing
+               else
+                print *,"curvFD is NaN"
                 stop
                endif
-               RR=one
-              else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-               RR=abs(xsten_curv(0,1))
+
+               if (1.eq.1) then
+                print *,"start debug pinning_angle: ",pinning_angle
+                print *,"problo_array:",problo_array(1),problo_array(2), &
+                    problo_array(SDIM)
+                print *,"probhi_array:",probhi_array(1),probhi_array(2), &
+                    probhi_array(SDIM)
+                print *,"im3: ",im3
+                print *,"curvFD=",curvFD
+                print *,"dxmax=",dxmax
+                print *,"maxcurv=",maxcurv
+                print *,"unscaled_min_curvature_radius=", &
+                     unscaled_min_curvature_radius
+                print *,"xcenter=",xcenter(1),xcenter(2),xcenter(SDIM)
+                print *,"nghost=",nghost(1),nghost(2),nghost(SDIM)
+                print *,"nGW=",nGW(1),nGW(2),nGW(SDIM)
+                print *,"nGI=",nGI(1),nGI(2),nGI(SDIM)
+                print *,"nIW=",nIW(1),nIW(2),nIW(SDIM)
+                print *,"nGI_perp=",nGI_perp(1),nGI_perp(2),nGI_perp(SDIM)
+                print *,"end debug pinning_angle: ",pinning_angle
+               endif
+
               else
-               print *,"levelrz invalid initheightLS: RR 4"
+               print *,"unscaled_min_curvature_radius invalid:", &
+                unscaled_min_curvature_radius 
                stop
               endif
-             else if ((dir_local.eq.3).and.(SDIM.eq.3)) then
-              RR=one
              else
-              print *,"dir_local invalid"
+              print *,"nGI_dot_neg_nIW is NaN: ",nGI_dot_neg_nIW
               stop
-             endif
-
-             if (RR.gt.zero) then
-              dnrm(dir_local)=two*dnrm(dir_local)/ &
-                    (totalwt*RR*dxsten(dir_local))
-             else
-              print *,"expecting RR>0 ",RR
-              stop
-             endif
-
-            enddo ! dir_local=1,SDIM
-
-            curvFD=zero
-            do dir_local=1,SDIM
-             curvFD=curvFD+dnrm(dir_local)
-            enddo ! dir_local=1,SDIM
-
-            if (unscaled_min_curvature_radius.ge.two) then
-
-             maxcurv=one/(unscaled_min_curvature_radius*dxmax)
-             if (levelrz.eq.COORDSYS_CARTESIAN) then
-              if (SDIM.eq.2) then
-               ! do nothing
-              else if (SDIM.eq.3) then
-               maxcurv=two*maxcurv
-              else
-               print *,"sdim invalid"
-               stop
-              endif     
-             else if ((levelrz.eq.COORDSYS_RZ).or. &
-                      (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-              maxcurv=two*maxcurv
-             else
-              print *,"prescribe_growth_angle levelrz invalid (b)"
-              stop
-             endif
-
-             if (curvFD.gt.maxcurv) then
-              curvFD=maxcurv
-             else if (curvFD.lt.-maxcurv) then
-              curvFD=-maxcurv
-             else if (abs(curvFD).le.maxcurv) then
-              ! do nothing
-             else
-              print *,"curvFD is NaN"
-              stop
-             endif
-
-             if (1.eq.1) then
-              print *,"start debug growth_angle: ",growth_angle
-              print *,"abs_growth_angle ",abs_growth_angle
-              print *,"problo_array:",problo_array(1),problo_array(2), &
-                  problo_array(SDIM)
-              print *,"probhi_array:",probhi_array(1),probhi_array(2), &
-                  probhi_array(SDIM)
-              print *,"im3: ",im3
-              print *,"curvFD=",curvFD
-              print *,"dxmax=",dxmax
-              print *,"maxcurv=",maxcurv
-              print *,"unscaled_min_curvature_radius=", &
-                   unscaled_min_curvature_radius
-              print *,"xcenter=",xcenter(1),xcenter(2),xcenter(SDIM)
-              print *,"nghost=",nghost(1),nghost(2),nghost(SDIM)
-              print *,"nW=",nW(1),nW(2),nW(SDIM)
-              print *,"nI=",nI(1),nI(2),nI(SDIM)
-              print *,"nIW=",nIW(1),nIW(2),nIW(SDIM)
-              print *,"nI_perp=",nI_perp(1),nI_perp(2),nI_perp(SDIM)
-              print *,"end debug growth_angle: ",growth_angle
              endif
 
             else
-             print *,"unscaled_min_curvature_radius invalid:", &
-              unscaled_min_curvature_radius 
+             print *,"mag_ghost is NaN: ",mag_ghost
              stop
             endif
 
            else
-            print *,"nI_perp_dot_nIW is NaN: ",nI_perp_dot_nIW
+            print *,"nGI_perp_dot_nIW is NaN: ",nGI_perp_dot_nIW
             stop
            endif
 
           else
-           print *,"magI_perp invalid:",magI_perp
+           print *,"magGI_perp invalid:",magGI_perp
            stop
           endif
 
@@ -3000,7 +3025,7 @@ stop
       endif
 
       return
-      end subroutine prescribe_growth_angle
+      end subroutine prescribe_pinning_angle
 
 
        ! for finding areas internal to a cell, perturb each internal 
@@ -3904,7 +3929,7 @@ stop
        xlo,dx, &
        time, &
        visc_coef, &
-       growth_angle, &
+       pinning_angle, &
        unscaled_min_curvature_radius, &
        num_curv, & ! num_interfaces * CURVCOMP_NCOMP
        ngrow_distance_in) &
@@ -3938,7 +3963,7 @@ stop
       INTEGER_T, INTENT(in) :: num_curv ! num_interfaces * CURVCOMP_NCOMP
       INTEGER_T icurv
       REAL_T, INTENT(in) :: visc_coef
-      REAL_T, INTENT(in) :: growth_angle(num_interfaces)
+      REAL_T, INTENT(in) :: pinning_angle(num_interfaces)
       REAL_T, INTENT(in) :: unscaled_min_curvature_radius
 
       INTEGER_T, INTENT(in) :: DIMDEC(history_dat)
@@ -4991,9 +5016,9 @@ stop
 
              if (im3.eq.0) then
 
-              if (growth_angle(iten).eq.zero) then
+              if (pinning_angle(iten).eq.zero) then
                ! do nothing
-              else if (abs(growth_angle(iten)).le.half*Pi) then
+              else if (abs(pinning_angle(iten)).le.half*Pi) then
 
                im_melt=0
 
@@ -5151,7 +5176,7 @@ stop
              
                 if ((im_melt.eq.im_main).or. &
                     (im_melt.eq.im_main_opp)) then 
-                 call prescribe_growth_angle( &
+                 call prescribe_pinning_angle( &
                   i,j,k, &
                   level, &
                   finest_level, &
@@ -5173,7 +5198,7 @@ stop
                   im_main_opp, & !intent(in) 
                   im_melt, & !intent(in)
                   iten, & !intent(in)
-                  growth_angle(iten))
+                  pinning_angle(iten))
 
                  if (im3.eq.0) then
                   ! do nothing
@@ -5182,7 +5207,7 @@ stop
                           (is_ice(im3).eq.1)) then
                   curv_cellHT=curv_cellFD
                  else
-                  print *,"im3 became corrupt after prescribe_growth_angle"
+                  print *,"im3 became corrupt after prescribe_pinning_angle"
                   stop
                  endif
                 else
@@ -5196,7 +5221,7 @@ stop
                endif
 
               else
-               print *,"growth_angle(iten) invalid:",growth_angle(iten)
+               print *,"pinning_angle(iten) invalid:",pinning_angle(iten)
                stop
               endif
 

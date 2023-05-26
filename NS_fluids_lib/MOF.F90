@@ -2476,6 +2476,21 @@ INTEGER_T shapeflag
 return
 end subroutine intersection_volume_simple
 
+function EVAL_LS_POLY(x,LOCAL_SDIM,LS) result(LS_result)
+use probcommon_module
+
+IMPLICIT NONE
+
+REAL_T :: LS_result
+INTEGER_T, INTENT(in) :: LOCAL_SDIM
+REAL_T, INTENT(in) :: x(LOCAL_SDIM)
+type(levelset_parm_type), INTENT(in) :: LS
+
+LS_result=zero
+
+return
+end function EVAL_LS_POLY
+
 ! signLS=+1,0,-1  
 ! S_quad_type=1 => integral_{gamma\cap U} f
 ! S_quad_type=0 => integral_{V} f  V=\cap_{i} V_{i}\cap U
@@ -2485,8 +2500,8 @@ end subroutine intersection_volume_simple
 recursive function I_hyper( &
     ROOT_SDIM, &
     LOCAL_SDIM, &
-    f_array, &
-    LS_array, &
+    f_history, &
+    LS_history, &
     U_hyper, &
     S_quad_type) result(IntegralResult)
 use probcommon_module
@@ -2502,11 +2517,22 @@ type(levelset_array_parm_type), intent(inout) :: LS_history
 REAL_T, intent(in), dimension(LOCAL_SDIM,2) :: U_hyper  !(dir,side)
 INTEGER_T, intent(in) :: S_quad_type !S=0 => volumetric  S=1 => perimeter
 REAL_T :: xc(LOCAL_SDIM)
+REAL_T :: xtest(LOCAL_SDIM)
+REAL_T :: xmap(LOCAL_SDIM)
+REAL_T :: dx_hyper(LOCAL_SDIM)
+REAL_T :: delta
+INTEGER_T :: nLS_active
+INTEGER_T :: iLS
 INTEGER_T :: dir
 INTEGER_T :: i_array(LOCAL_SDIM)
+INTEGER_T :: inc_next
+INTEGER_T :: i
 INTEGER_T :: i_flatten
 INTEGER_T :: i_flatten_lo
 INTEGER_T :: i_flatten_hi
+REAL_T :: LSSIDE,LSXC
+REAL_T :: wprod
+REAL_T :: fmap
 
 if (ROOT_SDIM.ge.LOCAL_SDIM) then
  ! do nothing
@@ -2581,20 +2607,20 @@ enddo ! dir=1,LOCAL_SDIM
 
 nLS_active=0
 
-do iLS=nLS,1,-1
+do iLS=LS_history%nLS,1,-1
 
- if (activeLS(iLS).eq.0) then
+ if (LS_history%LS_array(iLS)%activeLS.eq.0) then
   ! do nothing (this levelset function has been deactivated)
- else if (activeLS(iLS).eq.1) then
+ else if (LS_history%LS_array(iLS)%activeLS.eq.1) then
 
-  if (LS_array(iLS)%LOCAL_SDIM.eq.LOCAL_SDIM) then
+  if (LS_history%LS_array(iLS)%LOCAL_SDIM.eq.LOCAL_SDIM) then
    ! do nothing
   else
-   print *,"LS_array(iLS)%LOCAL_SDIM.ne.LOCAL_SDIM"
+   print *,"LS_history%LS_array(iLS)%LOCAL_SDIM.ne.LOCAL_SDIM"
    stop
   endif
 
-  LSXC=EVAL_LS_POLY(xc,LS_array(iLS))
+  LSXC=EVAL_LS_POLY(xc,LOCAL_SDIM,LS_history%LS_array(iLS))
   delta=zero
 
   i_flatten_lo=0
@@ -2616,7 +2642,7 @@ do iLS=nLS,1,-1
     endif
    enddo ! dir=1,LOCAL_SDIM
 
-   LSSIDE=EVAL_LS_POLY(xtest,LS_array(iLS))
+   LSSIDE=EVAL_LS_POLY(xtest,LOCAL_SDIM,LS_history%LS_array(iLS))
    delta=max(delta,abs(LSSIDE-LSXC))
 
    inc_next=1
@@ -2646,9 +2672,9 @@ do iLS=nLS,1,-1
    nLS_active=nLS_active+1  
    ! the zero LS can never intersect the box
   else if (abs(LSXC).ge.delta) then
-   if (signLS(iLS)*LSXC.ge.zero) then
-    activeLS(iLS)=0 ! deactivate
-   else if (signLS(iLS)*LSXC.lt.zero) then
+   if (LS_history%LS_array(iLS)%signLS*LSXC.ge.zero) then
+    LS_history%LS_array(iLS)%activeLS=0 ! deactivate
+   else if (LS_history%LS_array(iLS)%signLS*LSXC.lt.zero) then
     IntegralResult=zero
     return
    else
@@ -2675,7 +2701,8 @@ do iLS=nLS,1,-1
      xmap(dir)=U_hyper(dir,1)+dx_hyper(dir)*xquad(i_array(dir)-1)
      wprod=wprod*wquad(i_array(dir)-1)*dx_hyper(dir)
     enddo
-    fmap=EVAL_FUNC_POLY(xmap,nF,LOCAL_SDIM,f_root,f_array)
+    fmap=zero
+!    fmap=EVAL_FUNC_POLY(xmap,nF,LOCAL_SDIM,f_root,f_array)
     IntegralResult=IntegralResult+wprod*fmap
 
     inc_next=1
@@ -2697,13 +2724,15 @@ do iLS=nLS,1,-1
 
    enddo ! do i_flatten=i_flatten_lo,i_flatten_hi
 
-   return IntegralResult
+   return 
 
   else if (nLS_active>0) then
 
    
 
-   return IntegralResult
+   return !IntegralResult
+
+  endif
     
  else
   print *,"activeLS(iLS) invalid"
@@ -2712,7 +2741,7 @@ do iLS=nLS,1,-1
 
 enddo ! iLS=nLS,1,-1
 
-end function I3D
+end function I_hyper
 
 ! nodedomain is 4*(sdim-1)
 subroutine intersection_volume_and_map( &
