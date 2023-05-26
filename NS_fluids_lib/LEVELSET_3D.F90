@@ -2671,7 +2671,7 @@ stop
              ! at this point, both nGI_perp and nIW point towards the ice.
 
             cos_angle=cos(pinning_angle)
-            sin_angle=-sin(pinning_angle)
+            sin_angle=sin(pinning_angle)
             if ((pinning_angle.ge.half*Pi).or. &
                 (pinning_angle.le.-half*Pi)) then
              print *,"pinning_angle out of range"
