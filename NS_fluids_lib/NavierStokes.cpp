@@ -621,7 +621,7 @@ Vector<Real> NavierStokes::saturation_temp_vel;
 Vector<Real> NavierStokes::saturation_temp_min; //aka T_I_min
 Vector<Real> NavierStokes::saturation_temp_max; //aka T_I_max
 
-Vector<Real> NavierStokes::growth_angle;
+Vector<Real> NavierStokes::pinning_angle;
 
 Vector<int> NavierStokes::microlayer_substrate;
 Vector<Real> NavierStokes::microlayer_angle;
@@ -3393,9 +3393,9 @@ NavierStokes::read_params ()
     macrolayer_size.resize(num_materials);
     max_contact_line_size.resize(num_materials);
 
-    growth_angle.resize(num_interfaces);
+    pinning_angle.resize(num_interfaces);
     for (int i=0;i<num_interfaces;i++) {
-     growth_angle[i]=0.0;
+     pinning_angle[i]=0.0;
     }
 
     thermal_microlayer_size.resize(num_materials);
@@ -3911,7 +3911,7 @@ NavierStokes::read_params ()
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
 
-    pp.queryAdd("growth_angle",growth_angle,num_interfaces);
+    pp.queryAdd("pinning_angle",pinning_angle,num_interfaces);
 
     pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
     pp.queryAdd("nucleation_pressure",nucleation_pressure,2*num_interfaces);
@@ -5277,8 +5277,8 @@ NavierStokes::read_params ()
      std::cout << "pos_sites_random_flag= " << pos_sites_random_flag << '\n';
     
      for (int i=0;i<num_interfaces;i++) {
-      std::cout << "growth_angle i=" << i << "  " << 
-       growth_angle[i] << '\n';
+      std::cout << "pinning_angle i=" << i << "  " << 
+       pinning_angle[i] << '\n';
      }
 
      for (int i=0;i<num_materials;i++) {
@@ -25752,7 +25752,7 @@ NavierStokes::makeStateCurv(int project_option,
      xlo,dx,
      &cur_time_slab,
      &visc_coef,
-     growth_angle.dataPtr(),
+     pinning_angle.dataPtr(),
      &unscaled_min_curvature_radius,
      &num_curv,
      &ngrow_distance);
