@@ -2325,7 +2325,7 @@ stop
       REAL_T :: nGI(3) ! points from ice to ambient
       REAL_T :: nIW(3) ! points from melt to ice
       REAL_T :: nCL(3)
-      REAL_T :: nGI_perp(3)
+      REAL_T :: nIW_extend_nGI_perp(3) ! points from melt to ice
       REAL_T :: nrm_local(3)
       REAL_T :: mag_local
       REAL_T :: magCL
@@ -2640,8 +2640,10 @@ stop
           do dir_local=1,3
            nCL(dir_local)=nCL(dir_local)/magCL
           enddo
-          call crossprod(nCL,nGI,nGI_perp)
-          magGI_perp=sqrt( nGI_perp(1)**2+nGI_perp(2)**2+nGI_perp(3)**2 )
+          call crossprod(nCL,nGI,nIW_extend_nGI_perp)
+          magGI_perp=sqrt( nIW_extend_nGI_perp(1)**2+ &
+                           nIW_extend_nGI_perp(2)**2+ &
+                           nIW_extend_nGI_perp(3)**2 )
 
           if (magGI_perp.eq.zero) then
            im3=0
@@ -2651,9 +2653,10 @@ stop
 
             ! nIW points from melt into the ice.
            do dir_local=1,3
-            nGI_perp(dir_local)=nGI_perp(dir_local)/magGI_perp
+            nIW_extend_nGI_perp(dir_local)= &
+              nIW_extend_nGI_perp(dir_local)/magGI_perp
             nGI_perp_dot_nIW=nGI_perp_dot_nIW+ &
-               nGI_perp(dir_local)*nIW(dir_local)
+               nIW_extend_nGI_perp(dir_local)*nIW(dir_local)
            enddo
            if (nGI_perp_dot_nIW.eq.zero) then
             im3=0
@@ -2662,13 +2665,16 @@ stop
              ! do nothing
             else if (nGI_perp_dot_nIW.lt.zero) then
              do dir_local=1,3
-              nGI_perp(dir_local)=-nGI_perp(dir_local)
+              nIW_extend_nGI_perp(dir_local)= &
+                 -nIW_extend_nGI_perp(dir_local)
              enddo
             else
              print *,"nGI_perp_dot_nIW invalid"
              stop
             endif
-             ! at this point, both nGI_perp and nIW point towards the ice.
+             ! at this point, both 
+             ! nIW_extend_nGI_perp and 
+             ! nIW point towards the ice.
 
             cos_angle=cos(pinning_angle)
             sin_angle=sin(pinning_angle)
@@ -2721,9 +2727,9 @@ stop
                dir_local=3
                x_local(dir_local)=xsten(2*k,SDIM)
 
-               ! nGI_perp: melt to ice
+               ! nIW_extend_nGI_perp: melt to ice
                do dir_local=1,SDIM
-                ls_local=ls_local+nGI_perp(dir_local)* &
+                ls_local=ls_local+nIW_extend_nGI_perp(dir_local)* &
                  (x_local(dir_local)-xsten(0,dir_local))
                enddo
                ls_extend_sten(i,j,k)=ls_local
@@ -2972,7 +2978,10 @@ stop
                 print *,"nGW=",nGW(1),nGW(2),nGW(SDIM)
                 print *,"nGI=",nGI(1),nGI(2),nGI(SDIM)
                 print *,"nIW=",nIW(1),nIW(2),nIW(SDIM)
-                print *,"nGI_perp=",nGI_perp(1),nGI_perp(2),nGI_perp(SDIM)
+                print *,"nIW_extend_nGI_perp=", &
+                      nIW_extend_nGI_perp(1), &
+                      nIW_extend_nGI_perp(2), &
+                      nIW_extend_nGI_perp(SDIM)
                 print *,"end debug pinning_angle: ",pinning_angle
                endif
 
