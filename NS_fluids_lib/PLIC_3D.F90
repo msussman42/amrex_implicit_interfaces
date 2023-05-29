@@ -374,9 +374,17 @@ stop
         do dir=0,SDIM
          mofdata(vofcomprecon+dir)=vof(D_DECL(i,j,k),vofcompraw+dir)
         enddo
-        if ((mofdata(vofcomprecon).lt.-0.1).or. &
-            (mofdata(vofcomprecon).gt.1.1)) then
-         print *,"mofdata(vofcomprecon) invalid"
+
+        if ((mofdata(vofcomprecon).ge.-0.1d0).and. &
+            (mofdata(vofcomprecon).le.1.1d0)) then
+         ! do nothing
+        else if ((mofdata(vofcomprecon).lt.-0.1d0).or. &
+                 (mofdata(vofcomprecon).gt.1.1d0)) then
+         print *,"mofdata(vofcomprecon) out of range"
+         print *,"mofdata(vofcomprecon)=",mofdata(vofcomprecon)
+         stop
+        else
+         print *,"mofdata(vofcomprecon) is NaN"
          print *,"mofdata(vofcomprecon)=",mofdata(vofcomprecon)
          stop
         endif
@@ -405,6 +413,9 @@ stop
        vfrac_fluid_sum=zero
        vfrac_solid_sum=zero
        im_raster_solid=0
+
+        ! i,j,k
+        ! vfrac_raster_solid=max_{is_rigid(im)==1} vfrac(im)
        vfrac_raster_solid=zero
 
        do im=1,num_materials
@@ -434,7 +445,7 @@ stop
       
          vfrac_solid_sum=vfrac_solid_sum+voflist_center(im)
         else
-         print *,"is_rigid(im) invalid"
+         print *,"is_rigid(im) invalid: ",is_rigid(im)
          stop
         endif
 
@@ -445,7 +456,7 @@ stop
        if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
         ! do nothing
        else
-        print *,"vfrac_fluid_sum invalid"
+        print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
         stop
        endif
 
@@ -482,7 +493,7 @@ stop
          enddo ! im=1..num_materials
         enddo
         enddo
-        enddo  ! i1,j1,k1 
+        enddo  ! i1,j1,k1  = -1,1
 
         num_materials_in_cell=0
         num_materials_in_stencil=0
@@ -599,6 +610,8 @@ stop
           vfrac_fluid_sum=zero
           vfrac_solid_sum=zero
           im_raster_solid=0
+           ! i+i',j+j',k+k'
+           ! vfrac_raster_solid=max_{is_rigid(im)==1} vfrac(im)
           vfrac_raster_solid=zero
 
           do im=1,num_materials
@@ -813,6 +826,25 @@ stop
           SDIM)
 
         if (continuous_mof_parm.ge.1) then
+
+         if (num_materials_in_stencil.eq.3) then
+
+         else if ((num_materials_in_stencil.ge.1).and. &
+                  (mum_materials_in_stencil.le.num_materials)) then
+          ! do nothing
+         else
+          print *,"num_materials_in_stencil invalid:",num_materials_in_stencil
+          stop
+         endif
+
+        else if (continuous_mof_parm.eq.0) then
+         ! do nothing
+        else
+         print *,"continuous_mof_parm invalid(1) ",continuous_mof_parm
+         stop
+        endif
+         
+        if (continuous_mof_parm.ge.1) then
            ! center cell centroids.
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
@@ -823,7 +855,7 @@ stop
         else if (continuous_mof_parm.eq.0) then
          ! do nothing
         else
-         print *,"continuous_mof_parm invalid"
+         print *,"continuous_mof_parm invalid(2) ",continuous_mof_parm
          stop
         endif
 
@@ -836,7 +868,7 @@ stop
         enddo  ! im=1..num_materials
 
        else
-        print *,"level invalid fort_sloperecon"
+        print *,"level invalid fort_sloperecon: ",level
         stop
        endif
 
