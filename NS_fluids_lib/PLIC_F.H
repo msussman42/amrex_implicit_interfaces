@@ -61,7 +61,10 @@ extern "C"
         int* total_iterations,
         Real* total_errors,
         int* continuous_mof,
-        int* partial_cmof_stencil_at_walls);
+        int* partial_cmof_stencil_at_walls,
+        Real* growth_angle, 
+        int* growth_angle_ambient, 
+        int* growth_angle_ice);
 
 }
 }/* namespace amrex */

@@ -1770,7 +1770,9 @@ protected:
      // default is 0.0
     static Vector<Real> max_contact_line_size;
 
-    static Vector<Real> pinning_angle; 
+    static Vector<Real> growth_angle; 
+    static Vector<int> growth_angle_ambient; 
+    static Vector<int> growth_angle_ice; 
 
     static Vector<Real> microlayer_angle; // radians
     static Vector<int>  microlayer_substrate; // index of substrate

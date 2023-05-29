@@ -3938,7 +3938,6 @@ stop
        xlo,dx, &
        time, &
        visc_coef, &
-       pinning_angle, &
        unscaled_min_curvature_radius, &
        num_curv, & ! num_interfaces * CURVCOMP_NCOMP
        ngrow_distance_in) &
@@ -3972,7 +3971,6 @@ stop
       INTEGER_T, INTENT(in) :: num_curv ! num_interfaces * CURVCOMP_NCOMP
       INTEGER_T icurv
       REAL_T, INTENT(in) :: visc_coef
-      REAL_T, INTENT(in) :: pinning_angle(num_interfaces)
       REAL_T, INTENT(in) :: unscaled_min_curvature_radius
 
       INTEGER_T, INTENT(in) :: DIMDEC(history_dat)
@@ -4059,9 +4057,6 @@ stop
       INTEGER_T im_merge_majority
       INTEGER_T im_main,im_main_opp
       INTEGER_T iten
-      INTEGER_T iten_ice
-      INTEGER_T default_flag
-      REAL_T LH
       INTEGER_T inormal
 
       REAL_T nrmPROBE(SDIM*num_materials)
@@ -4087,7 +4082,6 @@ stop
       REAL_T mgoni_force(SDIM)
 
       INTEGER_T im3
-      INTEGER_T im_melt
 
       REAL_T LSCEN_hold(num_materials)
       REAL_T LSCEN_hold_merge(num_materials)
@@ -4120,9 +4114,6 @@ stop
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
         num_materials)
-
-      REAL_T vofstenFD(-1:1,-1:1,-1:1,num_materials)
-      REAL_T lsstenFD(-1:1,-1:1,-1:1,num_materials)
 
       REAL_T, dimension(:,:), allocatable :: xsten0
       REAL_T, dimension(:,:), allocatable :: xsten_curv
@@ -5024,216 +5015,7 @@ stop
              endif
 
              if (im3.eq.0) then
-
-              if (pinning_angle(iten).eq.zero) then
-               ! do nothing
-              else if (abs(pinning_angle(iten)).le.half*Pi) then
-
-               im_melt=0
-
-               ! i1,j1,k1=-1..1
-               do i1=istenlo(1),istenhi(1)
-               do j1=istenlo(2),istenhi(2)
-               do k1=istenlo(3),istenhi(3)
-
-                do inormal=1,SDIM*num_materials
-                 call safe_data(i+i1,j+j1,k+k1,num_materials+inormal, &
-                  LSPC_ptr,nrm_local(inormal))
-                enddo
-
-                do im_curv=1,num_materials
-                 call safe_data(i+i1,j+j1,k+k1,im_curv, &
-                  LSPC_ptr,LSCEN_hold(im_curv))
-                 vofcomp=(im_curv-1)*ngeom_recon+1
-                 call safe_data(i+i1,j+j1,k+k1,vofcomp, &
-                  recon_ptr,vof_hold(im_curv))
-                enddo !im_curv=1..num_materials
-       
-                if (im3.eq.0) then
-
-                 call get_primary_material(LSCEN_hold,im_curv)
-
-                 if (im_curv.eq.im_main) then
-                  ! do nothing
-                 else if (im_curv.eq.im_main_opp) then
-                  ! do nothing
-                 else if (is_ice(im_curv).eq.0) then
-                  ! do nothing
-                 else if ((im_curv.ge.1).and. &
-                          (im_curv.le.num_materials).and. &
-                          (is_ice(im_curv).eq.1)) then
-
-                  call get_iten(im_curv,im_main,iten_ice)
-                  default_flag=1
-                  LH=zero
-                  if (im_main.lt.im_curv) then
-                   LH=get_user_latent_heat(iten_ice,293.0d0,default_flag)
-                  else if (im_main.gt.im_curv) then
-                   LH=get_user_latent_heat(iten_ice+num_interfaces, &
-                       293.0d0,default_flag)
-                  else
-                   print *,"expecting im_main<>im_curv"
-                   stop
-                  endif
-
-                  if (LH.eq.zero) then
-                   ! do nothing
-                  else if (LH.gt.zero) then
-                   ! do nothing
-                  else if (LH.lt.zero) then
-                   im3=im_curv
-                   im_melt=im_main
-                  else
-                   print *,"LH invalid"
-                   stop
-                  endif
-
-                  if (im3.eq.0) then
-
-                   call get_iten(im_curv,im_main_opp,iten_ice)
-                   default_flag=1
-                   LH=zero
-                   if (im_main_opp.lt.im_curv) then
-                    LH=get_user_latent_heat(iten_ice,293.0d0,default_flag)
-                   else if (im_main_opp.gt.im_curv) then
-                    LH=get_user_latent_heat(iten_ice+num_interfaces, &
-                        293.0d0,default_flag)
-                   else
-                    print *,"expecting im_main_opp<>im_curv"
-                    stop
-                   endif
-
-                   if (LH.eq.zero) then
-                    ! do nothing
-                   else if (LH.gt.zero) then
-                    ! do nothing
-                   else if (LH.lt.zero) then
-                    im3=im_curv
-                    im_melt=im_main_opp
-                   else
-                    print *,"LH invalid"
-                    stop
-                   endif
-
-                  else if (im3.eq.im_curv) then
-                   ! do nothing
-                  else
-                   print *,"im3 invalid"
-                   stop
-                  endif
-
-                 else
-                  print *,"im_curv invalid"
-                  stop
-                 endif
-
-                else if ((im3.ge.1).and.(im3.le.num_materials)) then
-                 ! do nothing
-                else
-                 print *,"im3 invalid"
-                 stop
-                endif
-
-                do im_curv=1,num_materials
-                 vofstenFD(i1,j1,k1,im_curv)=vof_hold(im_curv)
-                enddo
-
-                call FIX_LS_tessellate(LSCEN_hold,LSCEN_hold_fixed)
-  
-                do im_curv=1,num_materials
- 
-                 lsstenFD(i1,j1,k1,im_curv)=LSCEN_hold_fixed(im_curv)
-
-                 do dirloc=1,SDIM
-                  inormal=(im_curv-1)*SDIM+dirloc
-                  nrm_mat(dirloc)=nrm_local(inormal)
-                 enddo
-                 RR=one
-                 if (levelrz.eq.COORDSYS_CARTESIAN) then
-                  ! do nothing
-                 else if (levelrz.eq.COORDSYS_RZ) then
-                  if (SDIM.ne.2) then
-                   print *,"levelrz invalid"
-                   stop
-                  endif
-                 else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                  RR=xsten_curv(2*i1,1)
-                 else
-                  print *,"transformed normal: levelrz invalid"
-                  stop
-                 endif
-                 call prepare_normal(nrm_mat,RR,mag)
-                 do dirloc=1,SDIM
-                  inormal=(im_curv-1)*SDIM+dirloc
-                  nrmsten(i1,j1,k1,inormal)=nrm_mat(dirloc)
-                 enddo
-
-                enddo ! im_curv=1..num_materials
- 
-               enddo
-               enddo
-               enddo !i1,j1,k1=istenlo,istenhi(init nrmsten,lsstenFD,vofstenFD)
-
-               if (im3.eq.0) then
-                if (im_melt.eq.0) then
-                 ! do nothing
-                else
-                 print *,"im_melt invalid"
-                 stop
-                endif
-               else if ((im3.ge.1).and.(im3.le.num_materials)) then
-             
-                if ((im_melt.eq.im_main).or. &
-                    (im_melt.eq.im_main_opp)) then 
-                 call prescribe_pinning_angle( &
-                  i,j,k, &
-                  level, &
-                  finest_level, &
-                  bfact,dx, &
-                  xcenter, &
-                  dircrossing, &
-                  sidestar, &
-                  signside, &
-                  xsten_curv, &
-                  lsstenFD, &
-                  vofstenFD, &
-                  nrmsten, &
-                  vol_sten, &
-                  area_sten, &
-                  curv_cellFD, & !intent(out)
-                  unscaled_min_curvature_radius, &
-                  im3, & !intent(inout)
-                  im_main, & !intent(in)
-                  im_main_opp, & !intent(in) 
-                  im_melt, & !intent(in)
-                  iten, & !intent(in)
-                  pinning_angle(iten))
-
-                 if (im3.eq.0) then
-                  ! do nothing
-                 else if ((im3.ge.1).and. &
-                          (im3.le.num_materials).and. &
-                          (is_ice(im3).eq.1)) then
-                  curv_cellHT=curv_cellFD
-                 else
-                  print *,"im3 became corrupt after prescribe_pinning_angle"
-                  stop
-                 endif
-                else
-                 print *,"im_melt invalid"
-                 stop
-                endif
-
-               else
-                print *,"im3 invalid"
-                stop
-               endif
-
-              else
-               print *,"pinning_angle(iten) invalid:",pinning_angle(iten)
-               stop
-              endif
-
+              ! do nothing
              else if ((im3.ge.1).and.(im3.le.num_materials)) then
               ! do nothing
              else

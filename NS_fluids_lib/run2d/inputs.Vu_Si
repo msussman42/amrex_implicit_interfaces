@@ -127,21 +127,10 @@ ns.segregated_gravity_flag=0
 # arccos((1740-870)/1740)=60 degrees
 ns.tension= 1740.0      0.0 870.0 0.0 1740.0  0.0
 ns.tension_init= 1740.0 0.0 870.0 0.0 1740.0  0.0
-# triple point condition from Vu et al (SI):
-#  water      | 
-#   90+18    |  air 180-18 degrees
-#  ---------|          n_air_ice=(1 0)
-#   ice 90  |          n_water_ice=(0 1)  
-#           |          n_air_water dot n_air_ice = cos(18deg)
-#                      n_air_water=(cos(18deg)  -sin(18deg)) =
-#                       cos(theta)*n_air_ice-sin(theta)*n_water_ice
-# notes: theta=180 deg  => n_air_water=-n_air_ice (not allowed)
-# notes: theta=-180 deg => n_air_water=-n_air_ice (not allowed)
-# notes: theta=90  deg  => n_air_water=-n_water_ice (not allowed)
-# notes: theta=-90  deg => n_air_water=+n_water_ice (not allowed)
-# ice corner angle=270 degrees
-# pinning_angle=18 deg
-ns.pinning_angle=0.314 0.0 0.0 0.0 0.0 0.0 
+# growth_angle=18 deg
+ns.growth_angle=0.314 0.0 0.0 0.0 0.0 0.0 
+ns.growth_angle_ambient=2 0 0 0 0 0 
+ns.growth_angle_ice=3 0 0 0 0 0 
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
