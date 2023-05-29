@@ -566,7 +566,6 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        Real* visc_coef,
-       Real* pinning_angle,
        Real* unscaled_min_curvature_radius,
        int* num_curv,
        int* ngrow_distance);

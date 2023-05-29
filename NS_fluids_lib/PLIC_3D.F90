@@ -64,7 +64,10 @@ stop
         total_iterations, &
         total_errors, &
         continuous_mof, &
-        partial_cmof_stencil_at_walls) &
+        partial_cmof_stencil_at_walls, &
+        growth_angle, &
+        growth_angle_ambient, &
+        growth_angle_ice) &
       bind(c,name='fort_sloperecon')
 
       use probf90_module
@@ -97,7 +100,11 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(LS)
       INTEGER_T, INTENT(in) :: DIMDEC(slopes)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
-     
+    
+      REAL_T, INTENT(in) :: growth_angle(num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_ambient(num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_ice(num_interfaces)
+ 
       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4) 
@@ -268,6 +275,17 @@ stop
        print *,"levelrz invalid fort_sloperecon"
        stop
       endif
+
+      do i=1,num_interfaces
+       if (growth_angle(i).eq.zero) then
+        ! do nothing
+       else if (abs(growth_angle(i)).le.half*Pi) then
+        ! do nothing
+       else
+        print *,"growth_angle is NaN"
+        stop
+       endif
+      enddo !i=1,num_interfaces
 
       if ((update_flag.eq.RECON_UPDATE_NULL).or. &
           (update_flag.eq.RECON_UPDATE_STATE_ERR).or. &

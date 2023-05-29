@@ -528,8 +528,9 @@ Vector<Real> NavierStokes::etaP; // def=0 (etaP0)
 Vector<Real> NavierStokes::polymer_factor; // def=0
 
  // 0 - centroid furthest from uncaptured centroid
- // 1 - use MOF error
+ // 1 - smallest MOF error
 int  NavierStokes::mof_error_ordering=0;
+
 Vector<int> NavierStokes::mof_ordering; // def=0
 
 // adv_dir=1,..,sdim+1
@@ -621,7 +622,9 @@ Vector<Real> NavierStokes::saturation_temp_vel;
 Vector<Real> NavierStokes::saturation_temp_min; //aka T_I_min
 Vector<Real> NavierStokes::saturation_temp_max; //aka T_I_max
 
-Vector<Real> NavierStokes::pinning_angle;
+Vector<Real> NavierStokes::growth_angle;
+Vector<int> NavierStokes::growth_angle_ambient;
+Vector<int> NavierStokes::growth_angle_ice;
 
 Vector<int> NavierStokes::microlayer_substrate;
 Vector<Real> NavierStokes::microlayer_angle;
@@ -2034,12 +2037,14 @@ void fortran_parameters() {
  int mof_error_ordering_local=NavierStokes::mof_error_ordering;
 
  pp.queryAdd("mof_error_ordering",mof_error_ordering_local);
- if ((mof_error_ordering_local!=0)&&
-     (mof_error_ordering_local!=1))
+ if ((mof_error_ordering_local!=0)&& //centroid furthest from uncapt centroid
+     (mof_error_ordering_local!=1))  //smallest MOF error
   amrex::Error("mof_error_ordering_local invalid");
+
  Vector<int> mof_ordering_local;
  mof_ordering_local.resize(NavierStokes::num_materials);
 
+  //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
  fort_mof_ordering_override(
   mof_ordering_local.dataPtr(),
   &mof_error_ordering_local,
@@ -2054,6 +2059,7 @@ void fortran_parameters() {
 
  int temp_POLYGON_LIST_MAX=1000;
  
+  //fort_initmof is declared in: MOF.F90
  fort_initmof(
    mof_ordering_local.dataPtr(),
    &MOFITERMAX,
@@ -3393,9 +3399,13 @@ NavierStokes::read_params ()
     macrolayer_size.resize(num_materials);
     max_contact_line_size.resize(num_materials);
 
-    pinning_angle.resize(num_interfaces);
+    growth_angle.resize(num_interfaces);
+    growth_angle_ambient.resize(num_interfaces);
+    growth_angle_ice.resize(num_interfaces);
     for (int i=0;i<num_interfaces;i++) {
-     pinning_angle[i]=0.0;
+     growth_angle[i]=0.0;
+     growth_angle_ambient[i]=0;
+     growth_angle_ice[i]=0;
     }
 
     thermal_microlayer_size.resize(num_materials);
@@ -3911,7 +3921,9 @@ NavierStokes::read_params ()
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
 
-    pp.queryAdd("pinning_angle",pinning_angle,num_interfaces);
+    pp.queryAdd("growth_angle",growth_angle,num_interfaces);
+    pp.queryAdd("growth_angle_ambient",growth_angle_ambient,num_interfaces);
+    pp.queryAdd("growth_angle_ice",growth_angle_ice,num_interfaces);
 
     pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
     pp.queryAdd("nucleation_pressure",nucleation_pressure,2*num_interfaces);
@@ -5021,11 +5033,13 @@ NavierStokes::read_params ()
 
     mof_error_ordering=0; 
     pp.queryAdd("mof_error_ordering",mof_error_ordering);
-    if ((mof_error_ordering!=0)&&
-        (mof_error_ordering!=1))
+    if ((mof_error_ordering!=0)&& //centroid furthest from uncaptured centroid
+        (mof_error_ordering!=1))  //smallest MOF error
      amrex::Error("mof_error_ordering invalid");
+
     mof_ordering.resize(num_materials);
 
+     //fort_mof_ordering_override is declared in: PROB_CPP_PARMS.F90
     fort_mof_ordering_override(
       mof_ordering.dataPtr(),
       &mof_error_ordering,
@@ -5038,33 +5052,65 @@ NavierStokes::read_params ()
       amrex::Error("mof_ordering invalid");
     }
 
+    for (int i=0;i<num_interfaces;i++) {
+
+     if (growth_angle[i]==0.0) {
+      //do nothing
+     } else if (growth_angle[i]!=0.0) {
+
+      if ((growth_angle_ambient[i]>=1)&&
+          (growth_angle_ambient[i]<=num_materials)) {
+       //do nothing
+      } else
+       amrex::Error("growth_angle_ambient invalid");
+
+      if ((growth_angle_ice[i]>=1)&&
+          (growth_angle_ice[i]<=num_materials)) {
+       //do nothing
+      } else
+       amrex::Error("growth_angle_ice invalid");
+     
+      if (mof_ordering[growth_angle_ambient[i]-1]==1) {
+       //do nothing
+      } else
+       amrex::Error("expecting mof_ordering[growth_angle_ambient[i]-1]==1");
+
+      if (mof_ordering[growth_angle_ice[i]-1]==2) {
+       //do nothing
+      } else
+       amrex::Error("expecting mof_ordering[growth_angle_ice[i]-1]==2");
+
+     } else
+      amrex::Error("growth_angle[i] is NaN");
+
+    } // for (int i=0;i<num_interfaces;i++) 
 
     for (int i=0;i<num_materials;i++) {
 
-       if (visc_coef*viscconst[i]<0.0) {
-        amrex::Error("viscosity coefficients invalid");
-       } else if (visc_coef*viscconst[i]==0.0) {
-        // do nothing
-       } else if (visc_coef*viscconst[i]>0.0) {
-        // do nothing
-       } else
-        amrex::Error("viscconst bust");
+     if (visc_coef*viscconst[i]<0.0) {
+      amrex::Error("viscosity coefficients invalid");
+     } else if (visc_coef*viscconst[i]==0.0) {
+      // do nothing
+     } else if (visc_coef*viscconst[i]>0.0) {
+      // do nothing
+     } else
+      amrex::Error("viscconst bust");
  
-       if (heatviscconst[i]==0.0) {
-        // do nothing
-       } else if (heatviscconst[i]>0.0) {
-        // do nothing
-       } else
-        amrex::Error("heatviscconst invalid");
+     if (heatviscconst[i]==0.0) {
+      // do nothing
+     } else if (heatviscconst[i]>0.0) {
+      // do nothing
+     } else
+      amrex::Error("heatviscconst invalid");
 
-       for (int imspec=0;imspec<num_species_var;imspec++) {
-        if (speciesviscconst[imspec*num_materials+i]==0.0) {
-         // do nothing
-        } else if (speciesviscconst[imspec*num_materials+i]>0.0) {
-         // do nothing
-        } else
-         amrex::Error("speciesviscconst invalid");
-       } // imspec
+     for (int imspec=0;imspec<num_species_var;imspec++) {
+      if (speciesviscconst[imspec*num_materials+i]==0.0) {
+       // do nothing
+      } else if (speciesviscconst[imspec*num_materials+i]>0.0) {
+       // do nothing
+      } else
+       amrex::Error("speciesviscconst invalid");
+     } // imspec
 
     } // i=0..num_materials-1
 
@@ -5277,8 +5323,12 @@ NavierStokes::read_params ()
      std::cout << "pos_sites_random_flag= " << pos_sites_random_flag << '\n';
     
      for (int i=0;i<num_interfaces;i++) {
-      std::cout << "pinning_angle i=" << i << "  " << 
-       pinning_angle[i] << '\n';
+      std::cout << "growth_angle i=" << i << "  " << 
+       growth_angle[i] << '\n';
+      std::cout << "growth_angle_ambient i=" << i << "  " << 
+       growth_angle_ambient[i] << '\n';
+      std::cout << "growth_angle_ice i=" << i << "  " << 
+       growth_angle_ice[i] << '\n';
      }
 
      for (int i=0;i<num_materials;i++) {
@@ -25752,7 +25802,6 @@ NavierStokes::makeStateCurv(int project_option,
      xlo,dx,
      &cur_time_slab,
      &visc_coef,
-     pinning_angle.dataPtr(),
      &unscaled_min_curvature_radius,
      &num_curv,
      &ngrow_distance);
