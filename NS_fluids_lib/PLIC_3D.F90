@@ -193,6 +193,11 @@ stop
 
       INTEGER_T :: local_maskcov
 
+      INTEGER_T :: im_primary
+      INTEGER_T :: im_secondary
+      INTEGER_T :: im_tertiary
+      INTEGER_T :: im_primary_rigid
+
 #include "mofdata.H"
 
       maskcov_ptr=>maskcov
@@ -829,8 +834,133 @@ stop
 
          if (num_materials_in_stencil.eq.3) then
 
+          im_primary=0
+          im_secondary=0
+          im_tertiary=0
+          im_primary_rigid=0
+
+          do im=1,num_materials
+
+           if (is_rigid(im).eq.0) then
+
+            if (voflist_stencil(im).gt.VOFTOL) then
+
+             if (im_primary.eq.0) then
+              im_primary=im
+             else if ((im_primary.ge.1).and. &
+                      (im_primary.le.num_materials)) then
+              if (voflist_stencil(im).gt. &
+                  voflist_stencil(im_primary)) then
+               if (im_secondary.eq.0) then
+                im_secondary=im_primary
+                im_primary=im
+               else if ((im_secondary.ge.1).and. &
+                        (im_secondary.le.num_materials)) then
+                if (voflist_stencil(im_primary).gt. &
+                    voflist_stencil(im_secondary)) then
+                 im_tertiary=im_secondary
+                 im_secondary=im_primary
+                 im_primary=im
+                else if (voflist_stencil(im_primary).le. &
+                         voflist_stencil(im_secondary)) then
+                 print *,"im_primary and im_secondary out of order"
+                 stop
+                else
+                 print *,"voflist is NaN(1) ",voflist_stencil(im_primary), &
+                         voflist_stencil(im_secondary)
+                 stop
+                endif
+               else
+                print *,"im_secondary invalid"
+                stop
+               endif
+              else if (voflist_stencil(im).le. &
+                       voflist_stencil(im_primary)) then
+               if (im_secondary.eq.0) then
+                im_secondary=im
+               else if ((im_secondary.ge.1).and. &
+                        (im_secondary.le.num_materials)) then
+                if (voflist_stencil(im).gt. &
+                    voflist_stencil(im_secondary)) then
+                 im_tertiary=im_secondary
+                 im_secondary=im
+                else if (voflist_stencil(im).le. &
+                         voflist_stencil(im_secondary)) then
+                 im_tertiary=im
+                else
+                 print *,"voflist is NaN(2) ",voflist_stencil(im), &
+                         voflist_stencil(im_secondary)
+                 stop
+                endif
+               else
+                print *,"im_secondary invalid"
+                stop
+               endif
+              else
+               print *,"voflist is NaN(3) ",voflist_stencil(im), &
+                         voflist_stencil(im_primary)
+               stop
+              endif
+             else
+              print *,"im_primary invalid"
+              stop
+             endif
+
+            else if (voflist_stencil(im).le.VOFTOL) then
+             ! do nothing
+            else
+             print *,"voflist is NaN(4) ",voflist_stencil(im)
+             stop
+            endif
+
+           else if (is_rigid(im).eq.1) then
+
+            if (im_primary_rigid.eq.0) then
+             im_primary_rigid=im
+            else if ((im_primary_rigid.ge.1).and. &
+                     (im_primary_rigid.le.num_materials)) then
+             if (voflist_stencil(im).gt. &
+                 voflist_stencil(im_primary_rigid)) then
+              im_primary_rigid=im
+             else if (voflist_stencil(im).le. &
+                      voflist_stencil(im_primary_rigid)) then
+              ! do nothing
+             else
+              print *,"voflist is NaN(5) ",voflist_stencil(im), &
+                  voflist_stencil(im_primary_rigid)
+              stop
+             endif
+            else
+             print *,"im_primary_rigid invalid"
+             stop
+            endif
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo !im=1,num_materials
+
+          if (im_primary_rigid.eq.0) then
+
+           if (voflist_stencil(im_tertiary).ge.0.01d0) then
+            ! correct triple point location here.
+           else if (voflist_stencil(im_tertiary).le.0.01d0) then
+            !do nothing
+           else
+            print *,"voflist is NaN(6) ",voflist_stencil(im_tertiary)
+            stop
+           endif
+
+          else if ((im_primary_rigid.ge.1).and. &
+                   (im_primary_rigid.le.num_materials)) then
+           ! do nothing
+          else
+           print *,"im_primary_rigid invalid"
+           stop
+          endif
+
          else if ((num_materials_in_stencil.ge.1).and. &
-                  (mum_materials_in_stencil.le.num_materials)) then
+                  (num_materials_in_stencil.le.num_materials)) then
           ! do nothing
          else
           print *,"num_materials_in_stencil invalid:",num_materials_in_stencil
