@@ -624,6 +624,7 @@ Vector<Real> NavierStokes::saturation_temp_max; //aka T_I_max
 
 Vector<Real> NavierStokes::growth_angle;
 Vector<int> NavierStokes::growth_angle_ambient;
+Vector<int> NavierStokes::growth_angle_melt;
 Vector<int> NavierStokes::growth_angle_ice;
 
 Vector<int> NavierStokes::microlayer_substrate;
@@ -3401,9 +3402,11 @@ NavierStokes::read_params ()
 
     growth_angle.resize(num_interfaces);
     growth_angle_ambient.resize(num_interfaces);
+    growth_angle_melt.resize(num_interfaces);
     growth_angle_ice.resize(num_interfaces);
     for (int i=0;i<num_interfaces;i++) {
      growth_angle[i]=0.0;
+     growth_angle_melt[i]=0;
      growth_angle_ambient[i]=0;
      growth_angle_ice[i]=0;
     }
@@ -3923,6 +3926,7 @@ NavierStokes::read_params ()
 
     pp.queryAdd("growth_angle",growth_angle,num_interfaces);
     pp.queryAdd("growth_angle_ambient",growth_angle_ambient,num_interfaces);
+    pp.queryAdd("growth_angle_melt",growth_angle_melt,num_interfaces);
     pp.queryAdd("growth_angle_ice",growth_angle_ice,num_interfaces);
 
     pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
@@ -5064,6 +5068,12 @@ NavierStokes::read_params ()
       } else
        amrex::Error("growth_angle_ambient invalid");
 
+      if ((growth_angle_melt[i]>=1)&&
+          (growth_angle_melt[i]<=num_materials)) {
+       //do nothing
+      } else
+       amrex::Error("growth_angle_melt invalid");
+
       if ((growth_angle_ice[i]>=1)&&
           (growth_angle_ice[i]<=num_materials)) {
        //do nothing
@@ -5325,6 +5335,8 @@ NavierStokes::read_params ()
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "growth_angle i=" << i << "  " << 
        growth_angle[i] << '\n';
+      std::cout << "growth_angle_melt i=" << i << "  " << 
+       growth_angle_melt[i] << '\n';
       std::cout << "growth_angle_ambient i=" << i << "  " << 
        growth_angle_ambient[i] << '\n';
       std::cout << "growth_angle_ice i=" << i << "  " << 

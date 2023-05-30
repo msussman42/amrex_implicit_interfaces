@@ -1772,6 +1772,7 @@ protected:
 
     static Vector<Real> growth_angle; 
     static Vector<int> growth_angle_ambient; 
+    static Vector<int> growth_angle_melt; 
     static Vector<int> growth_angle_ice; 
 
     static Vector<Real> microlayer_angle; // radians

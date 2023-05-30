@@ -129,6 +129,7 @@ ns.tension= 1740.0      0.0 870.0 0.0 1740.0  0.0
 ns.tension_init= 1740.0 0.0 870.0 0.0 1740.0  0.0
 # growth_angle=18 deg
 ns.growth_angle=0.314 0.0 0.0 0.0 0.0 0.0 
+ns.growth_angle_melt=1 0 0 0 0 0 
 ns.growth_angle_ambient=2 0 0 0 0 0 
 ns.growth_angle_ice=3 0 0 0 0 0 
 

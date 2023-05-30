@@ -67,6 +67,7 @@ stop
         partial_cmof_stencil_at_walls, &
         growth_angle, &
         growth_angle_ambient, &
+        growth_angle_melt, &
         growth_angle_ice) &
       bind(c,name='fort_sloperecon')
 
@@ -103,6 +104,7 @@ stop
     
       REAL_T, INTENT(in) :: growth_angle(num_interfaces)
       INTEGER_T, INTENT(in) :: growth_angle_ambient(num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_melt(num_interfaces)
       INTEGER_T, INTENT(in) :: growth_angle_ice(num_interfaces)
  
       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
@@ -197,6 +199,11 @@ stop
       INTEGER_T :: im_secondary
       INTEGER_T :: im_tertiary
       INTEGER_T :: im_primary_rigid
+      INTEGER_T :: iten_growth
+      INTEGER_T :: iten_growth_verify
+      INTEGER_T :: im_ambient
+      INTEGER_T :: im_melt
+      INTEGER_T :: im_ice
 
 #include "mofdata.H"
 
@@ -285,7 +292,12 @@ stop
        if (growth_angle(i).eq.zero) then
         ! do nothing
        else if (abs(growth_angle(i)).le.half*Pi) then
-        ! do nothing
+        if (continuous_mof.ge.1) then
+         ! do nothing
+        else
+         print *,"expecting continuous_mof>=1 if growth_angle!=0"
+         stop
+        endif
        else
         print *,"growth_angle is NaN"
         stop
@@ -916,7 +928,16 @@ stop
            else if (is_rigid(im).eq.1) then
 
             if (im_primary_rigid.eq.0) then
-             im_primary_rigid=im
+
+             if (voflist_stencil(im).ge.VOFTOL) then
+              im_primary_rigid=im
+             else if (voflist_stencil(im).lt.VOFTOL) then
+              ! do nothing
+             else
+              print *,"voflist is NaN(4p5) ",voflist_stencil(im)
+              stop
+             endif
+              
             else if ((im_primary_rigid.ge.1).and. &
                      (im_primary_rigid.le.num_materials)) then
              if (voflist_stencil(im).gt. &
@@ -931,7 +952,7 @@ stop
               stop
              endif
             else
-             print *,"im_primary_rigid invalid"
+             print *,"im_primary_rigid invalid: ",im_primary_rigid
              stop
             endif
            else
@@ -940,10 +961,51 @@ stop
            endif
           enddo !im=1,num_materials
 
+          iten_growth_verify=0
+          iten_growth=0
+
           if (im_primary_rigid.eq.0) then
 
            if (voflist_stencil(im_tertiary).ge.0.01d0) then
-            ! correct triple point location here.
+           
+            call get_iten(im_primary,im_secondary,iten_growth)
+            if ((growth_angle(iten_growth).ne.zero).and. &
+                (growth_angle_ice(iten_growth).eq.im_tertiary)) then
+             im_ambient=growth_angle_ambient(iten_growth)
+             im_ice=growth_angle_ice(iten_growth)
+             im_melt=growth_angle_melt(iten_growth)
+
+             call get_iten(im_melt,im_ambient,iten_growth_verify)
+            endif
+            call get_iten(im_primary,im_tertiary,iten_growth)
+            if ((growth_angle(iten_growth).ne.zero).and. &
+                (growth_angle_ice(iten_growth).eq.im_secondary)) then
+             im_ambient=growth_angle_ambient(iten_growth)
+             im_ice=growth_angle_ice(iten_growth)
+             im_melt=growth_angle_melt(iten_growth)
+
+             call get_iten(im_melt,im_ambient,iten_growth_verify)
+            endif
+            call get_iten(im_secondary,im_tertiary,iten_growth)
+            if ((growth_angle(iten_growth).ne.zero).and. &
+                (growth_angle_ice(iten_growth).eq.im_primary)) then
+             im_ambient=growth_angle_ambient(iten_growth)
+             im_ice=growth_angle_ice(iten_growth)
+             im_melt=growth_angle_melt(iten_growth)
+
+             call get_iten(im_melt,im_ambient,iten_growth_verify)
+            endif
+
+            if ((iten_growth_verify.eq.iten_growth).and. &
+                (iten_growth_verify.ne.0).and. &
+                (im_ambient.ne.0).and. &
+                (im_ice.ne.0).and. &
+                (im_melt.ne.0)) then
+             !project triple point
+            else
+             ! do nothing
+            endif 
+          
            else if (voflist_stencil(im_tertiary).le.0.01d0) then
             !do nothing
            else
@@ -955,7 +1017,7 @@ stop
                    (im_primary_rigid.le.num_materials)) then
            ! do nothing
           else
-           print *,"im_primary_rigid invalid"
+           print *,"im_primary_rigid invalid: ",im_primary_rigid
            stop
           endif
 
