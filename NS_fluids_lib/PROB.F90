@@ -19681,7 +19681,10 @@ end subroutine RatePhaseChange
       INTEGER_T tessellate
       INTEGER_T ibasesrc,ibasedst
       INTEGER_T ibase_raw,ibase_recon
+
       REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T vof_super(num_materials)
+
       REAL_T :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T :: multi_centroidA(num_materials,SDIM)
       REAL_T :: volcell
@@ -19896,7 +19899,13 @@ end subroutine RatePhaseChange
           nucleate_in%bfact, &
           nucleate_in%dx, &
           tessellate, &  ! =0
-          mofdata,SDIM)
+          mofdata, &
+          SDIM)
+
+        do im_local=1,num_materials
+         ibase_recon=(im_local-1)*ngeom_recon+1
+         vof_super(im_local)=mofdata(ibase_recon)
+        enddo
 
         call multimaterial_MOF( &
          nucleate_in%bfact, &
@@ -19910,6 +19919,7 @@ end subroutine RatePhaseChange
          nmax, &
          nmax, &
          mofdata, &
+         vof_super, &
          multi_centroidA, &
          continuous_mof, & ! =0
          cmofsten, &
@@ -28894,6 +28904,7 @@ end subroutine initialize2d
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),1)  ! not used
       REAL_T multi_centroidA(num_materials,SDIM)
       REAL_T mofdata(num_materials*ngeom_recon)
+      REAL_T vof_super(num_materials)
       INTEGER_T fablo(SDIM)
       INTEGER_T fabhi(SDIM)
       INTEGER_T borderlo(3)
@@ -29095,14 +29106,20 @@ end subroutine initialize2d
            ! order=0
           mofdata(ibasedst+SDIM+1)=zero
 
-         enddo  ! im
+         enddo  ! im=1,num_materials
 
          call make_vfrac_sum_ok_base( &
            cmofsten, &
            xsten,nhalf,nhalf_box, &
            bfact,dx, &
            tessellate, &  ! =0
-           mofdata,SDIM)
+           mofdata, &
+           SDIM)
+
+         do im=1,num_materials
+          ibasedst=(im-1)*ngeom_recon+1
+          vof_super(im)=mofdata(ibasedst)
+         enddo
 
          call multimaterial_MOF( &
           bfact,dx,xsten,nhalf, &
@@ -29114,6 +29131,7 @@ end subroutine initialize2d
           nmax, &
           nmax, &
           mofdata, &
+          vof_super, &
           multi_centroidA, &
           continuous_mof, & !=0
           cmofsten, &

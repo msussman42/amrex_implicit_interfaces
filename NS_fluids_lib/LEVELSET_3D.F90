@@ -17765,6 +17765,7 @@ stop
       REAL_T LS_solid_new(num_materials)
       INTEGER_T local_maskcov
       REAL_T vfrac_solid_new(num_materials)
+      REAL_T vof_super(num_materials)
       REAL_T F_stencil
       REAL_T F_stencil_sum
       INTEGER_T statecomp
@@ -18954,7 +18955,15 @@ stop
               cmofsten, &
               xsten,nhalf,nhalf_box, &
               bfact,dx, &
-              tessellate,local_mof,SDIM)
+              tessellate, &
+              local_mof, &
+              SDIM)
+
+            do im=1,num_materials
+             vofcomprecon=(im-1)*ngeom_recon+1
+             vof_super(im)=local_mof(vofcomprecon)
+            enddo
+
             mof_verbose=0
 
             call multimaterial_MOF( &
@@ -18967,8 +18976,9 @@ stop
              nmax, &
              nmax, &
              local_mof, &
+             vof_super, &
              multi_centroidA, &
-             continuous_mof_parm, &
+             continuous_mof_parm, & !continuous_mof_parm=0
              cmofsten, &
              grid_index, &
              grid_level, &

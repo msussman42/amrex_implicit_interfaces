@@ -438,6 +438,7 @@ stop
        do im=1,num_materials
         vofcomprecon=(im-1)*ngeom_recon+1
         voflist_center(im)=mofdata(vofcomprecon)
+        vof_super(im)=voflist_center(im)
 
          ! voflist_stencil(im)=max_{3x3x3 stencil} F(im,stencil)
         voflist_stencil(im)=zero
@@ -454,6 +455,11 @@ stop
           if (vfrac_raster_solid.lt.voflist_center(im)) then
            im_raster_solid=im
            vfrac_raster_solid=voflist_center(im)
+          else if (vfrac_raster_solid.ge.voflist_center(im)) then
+           ! do nothing
+          else
+           print *,"vfrac_raster_solid or voflist_center is NaN"
+           stop
           endif
          else
           print *,"im_raster_solid invalid"
@@ -616,7 +622,7 @@ stop
            ! sum of F_fluid=1
            ! sum of F_rigid<=1
           call make_vfrac_sum_ok_base( &
-            cmofsten, &
+            cmofsten, & !intent(in)
             xstenbox, &
             nhalfbox_sten, & ! =1
             nhalf_box, & ! =1
@@ -835,9 +841,10 @@ stop
           nmax, &
           nmax, &
           mofdata_super, &
+          vof_super, &
           multi_centroidA, & ! (num_materials,sdim) relative to supercell
           continuous_mof_parm, &
-          cmofsten, &
+          cmofsten, & !intent(in)
           grid_index, &
           grid_level, &
           SDIM)
@@ -1018,6 +1025,7 @@ stop
                print *,"iten_growth_verify invalid(1): ",iten_growth_verify
                stop
               endif
+
              else if ((iten_growth_verify.ge.1).and. &
                       (iten_growth_verify.le.num_interfaces)) then
               ! do nothing
@@ -1025,6 +1033,7 @@ stop
               print *,"iten_growth_verify invalid(2): ",iten_growth_verify
               stop
              endif
+
             else if ((iten_growth_verify.ge.1).and. &
                      (iten_growth_verify.le.num_interfaces)) then
              ! do nothing

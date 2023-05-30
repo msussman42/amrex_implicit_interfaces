@@ -13299,6 +13299,7 @@ END SUBROUTINE SIMP
       REAL_T volfine
       REAL_T cenfine(SDIM)
 
+      REAL_T vof_super(num_materials)
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
       INTEGER_T tessellate
@@ -13485,7 +13486,14 @@ END SUBROUTINE SIMP
                  cmofsten, &
                  xstenfine,nhalf,nhalf_box, &
                  bfact_f,dxf, &
-                 tessellate,mofdatafine,SDIM)
+                 tessellate, &
+                 mofdatafine, &
+                 SDIM)
+
+               do im=1,num_materials
+                vofcomp_recon=(im-1)*ngeom_recon+1
+                vof_super(im)=mofdatafine(vofcomp_recon)
+               enddo
 
                call multimaterial_MOF( &
                 bfact_f,dxf,xstenfine,nhalf, &
@@ -13497,6 +13505,7 @@ END SUBROUTINE SIMP
                 nmax, &
                 nmax, &
                 mofdatafine, &
+                vof_super, &
                 multi_centroidA, &
                 continuous_mof, & !=0
                 cmofsten, &

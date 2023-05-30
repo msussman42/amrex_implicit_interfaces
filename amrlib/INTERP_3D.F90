@@ -170,6 +170,7 @@ stop
       REAL_T volfine
       REAL_T cenfine(SDIM)
       REAL_T voltemp
+      REAL_T vof_super(num_materials)
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
       INTEGER_T, PARAMETER :: continuous_mof=0
@@ -276,6 +277,11 @@ stop
          tessellate, & !=0
          mofdata,SDIM)
 
+       do im=1,num_materials
+        vofcomp_new=(im-1)*ngeom_recon+1
+        vof_super(im)=mofdata(vofcomp_new)
+       enddo
+
        grid_index(1)=i
        grid_index(2)=j
        if (SDIM.eq.3) then
@@ -292,8 +298,9 @@ stop
          nmax, &
          nmax, &
          mofdata, &
+         vof_super, &
          multi_centroidA, &
-         continuous_mof, &
+         continuous_mof, & ! continuous_mof=0
          cmofsten, &
          grid_index, &
          grid_level, &
@@ -776,6 +783,7 @@ stop
       REAL_T volfine
       REAL_T cenfine(SDIM)
       REAL_T voltemp
+      REAL_T vof_super(num_materials)
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
       INTEGER_T, parameter :: nhalf=3
@@ -1034,7 +1042,7 @@ stop
           ! order=0
         mofdata(vofcomp_new+SDIM+1)=zero
 
-       enddo  ! im
+       enddo  ! im=1...num_materials
 
 !      call gridsten(xstenfine,problo,ifine,jfine,kfine, &
 !        domlo,bfact_fine,dxf,nhalf)
@@ -1054,6 +1062,11 @@ stop
          tessellate, & !=0
          mofdata,SDIM)
 
+       do im=1,num_materials
+        vofcomp_new=(im-1)*ngeom_recon+1
+        vof_super(im)=mofdata(vofcomp_new)
+       enddo
+
        call multimaterial_MOF( &
          bfact_fine,dxf,xstenfine,nhalf, &
          mof_verbose, &
@@ -1064,8 +1077,9 @@ stop
          nmax, &
          nmax, &
          mofdata, &
+         vof_super, &
          multi_centroidA, &
-         continuous_mof, &
+         continuous_mof, & ! continuous_mof=0
          cmofsten, &
          grid_index, &
          grid_level, &

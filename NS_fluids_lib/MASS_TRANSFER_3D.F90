@@ -3324,6 +3324,7 @@ stop
 
       REAL_T oldvfrac(num_materials)
       REAL_T newvfrac(num_materials)
+      REAL_T vof_super(num_materials)
       REAL_T dF,dFdst,dFsrc
       REAL_T den_dF(2)
       REAL_T jump_strength
@@ -4891,6 +4892,7 @@ stop
 
              mofdata(vofcomp_recon)=oldvfrac(u_im)
              mofdata_new(vofcomp_recon)=newvfrac(u_im)
+             vof_super(u_im)=newvfrac(u_im)
 
              do udir=1,SDIM 
               mofdata(vofcomp_recon+udir)= &
@@ -4928,6 +4930,7 @@ stop
              nmax, &
              nmax, &
              mofdata_new, &
+             vof_super, &
              multi_centroidA, &
              continuous_mof_parm, & !=0
              cmofsten, &
