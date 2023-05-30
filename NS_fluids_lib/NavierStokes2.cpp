@@ -9175,6 +9175,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     &partial_cmof_stencil_at_walls,
     growth_angle.dataPtr(), 
     growth_angle_ambient.dataPtr(),
+    growth_angle_melt.dataPtr(),
     growth_angle_ice.dataPtr());
  }  // mfi
 } // omp
