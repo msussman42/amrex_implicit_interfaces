@@ -299,7 +299,7 @@ stop
          stop
         endif
        else
-        print *,"growth_angle is NaN"
+        print *,"growth_angle is out of range: ",growth_angle(i)
         stop
        endif
       enddo !i=1,num_interfaces
@@ -875,10 +875,12 @@ stop
                  im_primary=im
                 else if (voflist_stencil(im_primary).le. &
                          voflist_stencil(im_secondary)) then
-                 print *,"im_primary and im_secondary out of order"
+                 print *,"im_primary and im_secondary out of order: ", &
+                    im_primary,im_secondary
                  stop
                 else
-                 print *,"voflist is NaN(1) ",voflist_stencil(im_primary), &
+                 print *,"voflist_stencil is NaN(1) ", &
+                         voflist_stencil(im_primary), &
                          voflist_stencil(im_secondary)
                  stop
                 endif
@@ -900,7 +902,8 @@ stop
                          voflist_stencil(im_secondary)) then
                  im_tertiary=im
                 else
-                 print *,"voflist is NaN(2) ",voflist_stencil(im), &
+                 print *,"voflist_stencil is NaN(2) ", &
+                         voflist_stencil(im), &
                          voflist_stencil(im_secondary)
                  stop
                 endif
@@ -909,8 +912,9 @@ stop
                 stop
                endif
               else
-               print *,"voflist is NaN(3) ",voflist_stencil(im), &
-                         voflist_stencil(im_primary)
+               print *,"voflist_stencil is NaN(3) ", &
+                       voflist_stencil(im), &
+                       voflist_stencil(im_primary)
                stop
               endif
              else
@@ -921,7 +925,7 @@ stop
             else if (voflist_stencil(im).le.VOFTOL) then
              ! do nothing
             else
-             print *,"voflist is NaN(4) ",voflist_stencil(im)
+             print *,"voflist_stencil is NaN(4) ",voflist_stencil(im)
              stop
             endif
 
@@ -934,7 +938,8 @@ stop
              else if (voflist_stencil(im).lt.VOFTOL) then
               ! do nothing
              else
-              print *,"voflist is NaN(4p5) ",voflist_stencil(im)
+              print *,"voflist_stencil is NaN im,voflist_stencil: ", &
+                      im,voflist_stencil(im)
               stop
              endif
               
@@ -947,7 +952,8 @@ stop
                       voflist_stencil(im_primary_rigid)) then
               ! do nothing
              else
-              print *,"voflist is NaN(5) ",voflist_stencil(im), &
+              print *,"voflist_stencil is NaN(5) ", &
+                  voflist_stencil(im), &
                   voflist_stencil(im_primary_rigid)
               stop
              endif
@@ -956,9 +962,10 @@ stop
              stop
             endif
            else
-            print *,"is_rigid invalid"
+            print *,"is_rigid invalid im,is_rigid: ",im,is_rigid(im)
             stop
            endif
+
           enddo !im=1,num_materials
 
           iten_growth_verify=0
@@ -977,39 +984,84 @@ stop
 
              call get_iten(im_melt,im_ambient,iten_growth_verify)
             endif
-            call get_iten(im_primary,im_tertiary,iten_growth)
-            if ((growth_angle(iten_growth).ne.zero).and. &
-                (growth_angle_ice(iten_growth).eq.im_secondary)) then
-             im_ambient=growth_angle_ambient(iten_growth)
-             im_ice=growth_angle_ice(iten_growth)
-             im_melt=growth_angle_melt(iten_growth)
+ 
+            if (iten_growth_verify.eq.0) then
 
-             call get_iten(im_melt,im_ambient,iten_growth_verify)
-            endif
-            call get_iten(im_secondary,im_tertiary,iten_growth)
-            if ((growth_angle(iten_growth).ne.zero).and. &
-                (growth_angle_ice(iten_growth).eq.im_primary)) then
-             im_ambient=growth_angle_ambient(iten_growth)
-             im_ice=growth_angle_ice(iten_growth)
-             im_melt=growth_angle_melt(iten_growth)
+             call get_iten(im_primary,im_tertiary,iten_growth)
+             if ((growth_angle(iten_growth).ne.zero).and. &
+                 (growth_angle_ice(iten_growth).eq.im_secondary)) then
+              im_ambient=growth_angle_ambient(iten_growth)
+              im_ice=growth_angle_ice(iten_growth)
+              im_melt=growth_angle_melt(iten_growth)
 
-             call get_iten(im_melt,im_ambient,iten_growth_verify)
-            endif
+              call get_iten(im_melt,im_ambient,iten_growth_verify)
+             endif
 
-            if ((iten_growth_verify.eq.iten_growth).and. &
-                (iten_growth_verify.ne.0).and. &
-                (im_ambient.ne.0).and. &
-                (im_ice.ne.0).and. &
-                (im_melt.ne.0)) then
-             !project triple point
-            else
+             if (iten_growth_verify.eq.0) then
+
+              call get_iten(im_secondary,im_tertiary,iten_growth)
+              if ((growth_angle(iten_growth).ne.zero).and. &
+                  (growth_angle_ice(iten_growth).eq.im_primary)) then
+               im_ambient=growth_angle_ambient(iten_growth)
+               im_ice=growth_angle_ice(iten_growth)
+               im_melt=growth_angle_melt(iten_growth)
+
+               call get_iten(im_melt,im_ambient,iten_growth_verify)
+              endif
+
+              if (iten_growth_verify.eq.0) then
+               ! do nothing
+              else if ((iten_growth_verify.ge.1).and. &
+                       (iten_growth_verify.le.num_interfaces)) then
+               ! do nothing
+              else
+               print *,"iten_growth_verify invalid(1): ",iten_growth_verify
+               stop
+              endif
+             else if ((iten_growth_verify.ge.1).and. &
+                      (iten_growth_verify.le.num_interfaces)) then
+              ! do nothing
+             else
+              print *,"iten_growth_verify invalid(2): ",iten_growth_verify
+              stop
+             endif
+            else if ((iten_growth_verify.ge.1).and. &
+                     (iten_growth_verify.le.num_interfaces)) then
              ! do nothing
-            endif 
-          
+            else
+             print *,"iten_growth_verify invalid(3): ",iten_growth_verify
+             stop
+            endif
+
+            if (iten_growth_verify.eq.0) then
+             ! do nothing
+            else if ((iten_growth_verify.ge.1).and. &
+                     (iten_growth_verify.le.num_interfaces)) then
+             if (iten_growth.eq.iten_growth_verify) then
+              
+              if ((im_ambient.ne.0).and. &
+                  (im_ice.ne.0).and. &
+                  (im_melt.ne.0)) then
+               ! triple point
+              else 
+               print *,"im_ambient,im_ice, or im_melt invalid"
+               stop
+              endif
+             else
+              print *,"iten_growth_verify!=iten_growth: ", &
+                iten_growth_verify,iten_growth
+              stop
+             endif
+
+            else
+             print *,"iten_growth_verify invalid(4): ",iten_growth_verify
+             stop
+            endif
+
            else if (voflist_stencil(im_tertiary).le.0.01d0) then
             !do nothing
            else
-            print *,"voflist is NaN(6) ",voflist_stencil(im_tertiary)
+            print *,"voflist_stencil is NaN(6) ",voflist_stencil(im_tertiary)
             stop
            endif
 
