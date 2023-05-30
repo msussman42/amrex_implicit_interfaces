@@ -14028,9 +14028,10 @@ contains
         nlist_alloc, &
         nmax, &
         mofdata, &
+        vof_super, &
         multi_centroidA, &
         continuous_mof, &
-        cmofsten, &
+        cmofsten, & !intent(in)
         grid_index, &
         grid_level, &
         sdim)
@@ -14062,6 +14063,7 @@ contains
       REAL_T, INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_cen
       REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       REAL_T, INTENT (INOUT), DIMENSION(num_materials*ngeom_recon) :: mofdata
+      REAL_T, INTENT (IN), DIMENSION(num_materials) :: vof_super
       REAL_T, DIMENSION(num_materials*ngeom_recon) :: mofdata_in
       REAL_T, INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
 
@@ -14261,9 +14263,40 @@ contains
       endif
 
       do imaterial=1,num_materials
+
        vofcomp=(imaterial-1)*ngeom_recon+1
        voftest(imaterial)=mofdata(vofcomp)
-      enddo
+
+       if ((vof_super(imaterial).ge.-0.1d0).and. &
+           (vof_super(imaterial).le.1.1d0)) then
+        ! do nothing
+       else
+        print *,"vof_super out of range"
+        stop
+       endif
+       if ((voftest(imaterial).ge.-0.1d0).and. &
+           (voftest(imaterial).le.1.1d0)) then
+        ! do nothing
+       else
+        print *,"voftest out of range"
+        stop
+       endif
+
+       if (continuous_mof.eq.0) then
+        if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
+         !do nothing
+        else
+         print *,"vof_super mismatch with voftest"
+         stop
+        endif
+       else if (continuous_mof.ge.1) then
+        ! do nothing
+       else
+        print *,"continuous_mof invalid"
+        stop
+       endif
+
+      enddo ! imaterial=1,num_materials
 
       allocate(ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials))
       allocate(lsnormal(num_materials,sdim))
@@ -15106,9 +15139,12 @@ contains
       REAL_T xtetlist(4,3,nmax)
       REAL_T xsten0(-3:3,sdim) 
       REAL_T dx(sdim) 
+
       REAL_T mofdata(num_materials*(2*sdim+3))
+      REAL_T vof_super(num_materials)
+
       REAL_T multi_centroidA(num_materials,sdim)
-      INTEGER_T continuous_mof
+      INTEGER_T, PARAMETER :: continuous_mof=0
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T angle(sdim-1)
       REAL_T xpoint(sdim)
@@ -15200,8 +15236,6 @@ contains
        stop
       endif
 
-      continuous_mof=0
-
       if (levelrz.ne.COORDSYS_CARTESIAN) then
        print *,"levelrz should be 0 for this sanity check"
        stop
@@ -15292,15 +15326,24 @@ contains
        do dir2=1,nrecon
         mofdata(dir2)=zero
        enddo
+       do im=1,num_materials
+        vof_super(im)=zero
+       enddo
+
        im=1
        vofcomp=(im-1)*(2*sdim+3)+1
        mofdata(vofcomp)=volcut/total_volume
+       vof_super(im)=mofdata(vofcomp)
+
        do dir=1,sdim
         mofdata(vofcomp+dir)=cencut(dir)-total_centroid(dir)
        enddo
+
        im=2
        vofcomp=(im-1)*(2*sdim+3)+1
        mofdata(vofcomp)=volcut2/total_volume
+       vof_super(im)=mofdata(vofcomp)
+
        do dir=1,sdim
         mofdata(vofcomp+dir)=cencut2(dir)-total_centroid(dir)
        enddo
@@ -15323,8 +15366,9 @@ contains
         nmax, &
         nmax, &
         mofdata, &
+        vof_super, &
         multi_centroidA, &
-        continuous_mof, &
+        continuous_mof, & ! continuous_mof=0
         cmofsten, &
         grid_index, &
         grid_level, &
@@ -15393,7 +15437,7 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_base( &
-        cmofsten, &  ! used if nhalf_box=3
+        cmofsten, &  !intent(in) used if nhalf_box=3
         xsten, &
         nhalf, &
         nhalf_box, & 
