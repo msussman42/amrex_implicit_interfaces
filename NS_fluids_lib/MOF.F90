@@ -7198,15 +7198,15 @@ end subroutine volume_sanity_check
       REAL_T rval,dr
     
       if ((sdim.ne.2).and.(sdim.ne.3)) then
-       print *,"sdim invalid Box_volumeFAST"
+       print *,"sdim invalid Box_volumeFAST: ",sdim
        stop
       endif 
       if (nhalf.lt.1) then
-       print *,"nhalf invalid boxvolumefast"
+       print *,"nhalf invalid Box_volumeFAST: ",nhalf
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid127"
+       print *,"bfact invalid127 Box_volumeFAST: ",bfact
        stop
       endif
 
@@ -7229,9 +7229,12 @@ end subroutine volume_sanity_check
         if (rval.ne.zero) then
          volume=volume*two*Pi*abs(rval)
          centroid(1)=rval+dr*dr/(12.0*rval)
-        else
+        else if (rval.eq.zero) then
          volume=zero
          centroid(1)=zero
+        else
+         print *,"rval is NaN (Box_volumeFAST): ",rval
+         stop
         endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then  ! in: Box_volumeFAST (2d)
         volume=one
@@ -7244,12 +7247,15 @@ end subroutine volume_sanity_check
         if (rval.ne.zero) then
          volume=volume*abs(rval)
          centroid(1)=rval+dr*dr/(12.0*rval)
-        else
+        else if (rval.eq.zero) then
          volume=zero
          centroid(1)=zero
+        else
+         print *,"rval is NaN (2)(Box_volumeFAST): ",rval
+         stop
         endif
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid Box_volumeFAST(1): ",levelrz
         stop
        endif
 
@@ -7271,12 +7277,15 @@ end subroutine volume_sanity_check
         if (rval.ne.zero) then
          volume=volume*abs(rval)
          centroid(1)=rval+dr*dr/(12.0*rval)
-        else
+        else if (rval.eq.zero) then
          volume=zero
          centroid(1)=zero
+        else
+         print *,"rval is NaN (3)(Box_volumeFAST): ",rval
+         stop
         endif
        else
-        print *,"levelrz invalid"
+        print *,"levelrz invalid Box_volumeFAST(2): ",levelrz
         stop
        endif
       else
@@ -7566,7 +7575,7 @@ end subroutine volume_sanity_check
       if (volume.gt.zero) then
        ! do nothing
       else
-       print *,"volume invalid"
+       print *,"volume invalid: ",volume
        stop
       endif
       do dir=1,sdim
@@ -14290,7 +14299,14 @@ contains
          stop
         endif
        else if (continuous_mof.ge.1) then
-        ! do nothing
+        if (voftest(imaterial).gt.zero) then
+         if (vof_super(imaterial).gt.zero) then
+          ! do nothing
+         else
+          print *,"vof_super_mismatch voftest(2)"
+          stop
+         endif
+        endif
        else
         print *,"continuous_mof invalid"
         stop
@@ -15473,13 +15489,13 @@ contains
            (nhalf_box.eq.3))) then
        ! do nothing
       else
-       print *,"nhalf or nhalf_box invalid"
+       print *,"nhalf or nhalf_box invalid: ",nhalf,nhalf_box
        stop
       endif
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid"
+       print *,"bfact invalid: ",bfact
        stop
       endif
       do im=1,num_materials
@@ -15494,22 +15510,22 @@ contains
         print *,"if non-raster cell, pass tessellate=0"
         stop
        else
-        print *,"tessellate invalid8"
+        print *,"tessellate invalid8: ",tessellate
         stop
        endif
       enddo ! im=1..num_materials
 
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials bust"
+       print *,"num_materials bust: ",num_materials
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
-       print *,"ngeom_recon invalid"
+       print *,"ngeom_recon invalid: ",ngeom_recon
        stop
       endif
       if ((sdim.ne.2).and.(sdim.ne.3)) then
-       print *,"sdim invalid"
+       print *,"sdim invalid: ",sdim
        stop
       endif
 
@@ -15521,6 +15537,8 @@ contains
       if (nhalf_box.eq.1) then
        call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
       else if (nhalf_box.eq.3) then
+        ! sum_i',j' V_i+i',j+j'
+        ! volume r<0 subbox is positive; centroid(1)<0 for r<0 subbox
        call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten,nhalf, &
@@ -15571,7 +15589,7 @@ contains
           vofsolid_max=mofdata(vofcomp)
          endif
         else
-         print *,"im_solid_max invalid"
+         print *,"im_solid_max invalid: ",im_solid_max
          stop
         endif
 
