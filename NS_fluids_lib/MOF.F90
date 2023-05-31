@@ -11242,7 +11242,7 @@ contains
       endif 
 
       if (nhalf0.lt.1) then
-       print *,"nhalf0 invalid"
+       print *,"expecting nhalf0>=1: ",nhalf0
        stop
       endif
       if (bfact.lt.1) then
@@ -11278,12 +11278,12 @@ contains
       endif
       if (continuous_mof.eq.0) then
        if (nhalf0.lt.1) then
-        print *,"nhalf0 invalid"
+        print *,"expecting nhalf0>=1: ",nhalf0
         stop
        endif
       else if (continuous_mof.ge.1) then
        if (nhalf0.lt.3) then
-        print *,"nhalf0 invalid"
+        print *,"expecting nhalf0>=3: ",nhalf0
         stop
        endif
       else
@@ -11310,7 +11310,8 @@ contains
       endif
 
       call scale_MOF_variables( &
-       bfact,dx,xsten0,nhalf0, &
+       bfact,dx, &
+       xsten0,nhalf0, &
        refcentroid, &
        dx_scale,xsten0_scale, &
        refcentroid_scale, &
@@ -12220,7 +12221,8 @@ contains
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         order_algorithm_in, &
         xtetlist_vof, &
         xtetlist_cen, &
@@ -12332,7 +12334,7 @@ contains
        stop
       endif
       if (nhalf0.lt.3) then
-       print *,"nhalf0 invalid"
+       print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
       if (uncaptured_volume_vof.le.zero) then
@@ -12390,7 +12392,8 @@ contains
          cencell_vof,sdim)
        call Box_volume_super( &
          cmofsten, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          volcell_cen, &
          cencell_cen, &
          sdim)
@@ -12421,7 +12424,8 @@ contains
         call tets_box_planes_super( &
          tessellate, & ! =0 (is_rigid==1 regions not subtracted)
          tid, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          mofdata, &
          xtetlist_vof, &
          nlist_alloc,nlist_vof,nmax, &
@@ -12432,7 +12436,8 @@ contains
         call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          mofdata, &
          xtetlist_cen, &
          nlist_alloc,nlist_cen,nmax, &
@@ -12444,7 +12449,8 @@ contains
         call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          mofdata, &
          xtetlist_vof, &
          nlist_alloc,nlist_vof,nmax, &
@@ -12455,7 +12461,8 @@ contains
         call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          mofdata, &
          xtetlist_cen, &
          nlist_alloc,nlist_cen,nmax, &
@@ -13546,7 +13553,8 @@ contains
         lsnormal, &
         lsnormal_valid, &
         ls_intercept, &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         im, &
         dxmaxLS, &
         sdim)
@@ -13595,7 +13603,7 @@ contains
       always_use_default=0
 
       if (nhalf0.lt.3) then
-       print *,"nhalf0 invalid"
+       print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
 
@@ -13997,6 +14005,11 @@ contains
 !   F_ij^ref=reference volume fraction in cell
 !   F_ij^derived=derived volume fraction in cell for a given
 !     slope and intercept.
+!continuous_mof=-1
+!  same as continuous_mof>=1 except that:
+!   F_ij^ref=reference volume fraction in "super" cell
+!   F_ij^derived=derived volume fraction in "super" cell for a given
+!     slope and intercept.
 
 ! normal points from light to dark   phi=n dot (x-x0) + intercept
 ! vof, ref centroid, order,slope,intercept  x num_materials
@@ -14203,7 +14216,7 @@ contains
       endif
 
       if (nhalf0.lt.3) then
-       print *,"nhalf0 invalid"
+       print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
       alloc_flag=0
@@ -14235,6 +14248,8 @@ contains
       endif
 
       if (continuous_mof.ge.1) then
+       nhalf_box=3
+      else if (continuous_mof.eq.-1) then
        nhalf_box=3
       else if (continuous_mof.eq.0) then
        nhalf_box=1
@@ -14291,24 +14306,41 @@ contains
         stop
        endif
 
-       if (continuous_mof.eq.0) then
+       if (is_rigid(imaterial).eq.1) then
+
         if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
          !do nothing
         else
          print *,"vof_super mismatch with voftest"
          stop
         endif
-       else if (continuous_mof.ge.1) then
-        if (voftest(imaterial).gt.zero) then
-         if (vof_super(imaterial).gt.zero) then
-          ! do nothing
+
+       else if (is_rigid(imaterial).eq.0) then
+
+        if ((continuous_mof.eq.0).or. &
+            (continuous_mof.eq.-1)) then
+         if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
+          !do nothing
          else
-          print *,"vof_super_mismatch voftest(2)"
+          print *,"vof_super mismatch with voftest"
           stop
          endif
+        else if (continuous_mof.ge.1) then
+         if (voftest(imaterial).gt.zero) then
+          if (vof_super(imaterial).gt.zero) then
+           ! do nothing
+          else
+           print *,"vof_super_mismatch voftest(2)"
+           stop
+          endif
+         endif
+        else
+         print *,"continuous_mof invalid"
+         stop
         endif
+
        else
-        print *,"continuous_mof invalid"
+        print *,"is_rigid(imaterial) invalid"
         stop
        endif
 
@@ -14336,6 +14368,7 @@ contains
          lsnormal_valid(imaterial)=0
 
         else if ((continuous_mof.eq.0).or. &
+                 (continuous_mof.eq.-1).or. &
                  (continuous_mof.ge.1)) then
  
           ! in multimaterial_MOF
@@ -14345,7 +14378,8 @@ contains
           lsnormal, &
           lsnormal_valid, &
           ls_intercept, &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten0,nhalf0, &
           imaterial, &
           dxmaxLS, &
           sdim)
@@ -14412,6 +14446,8 @@ contains
         tessellate, &  ! =0
         mofdata, &
         sdim)
+
+FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
 
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
