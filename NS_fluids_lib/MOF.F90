@@ -15469,7 +15469,8 @@ contains
 
       if ((nhalf.ge.1).and. &
           (nhalf_box.le.nhalf).and. &
-          ((nhalf_box.eq.1).or.(nhalf_box.eq.3))) then
+          ((nhalf_box.eq.1).or. &
+           (nhalf_box.eq.3))) then
        ! do nothing
       else
        print *,"nhalf or nhalf_box invalid"
@@ -15555,6 +15556,7 @@ contains
         print *,"put breakpoint here to see the caller"
         stop
        endif
+
        if (is_rigid_local(im).eq.0) then
         voffluid=voffluid+mofdata(vofcomp)
        else if (is_rigid_local(im).eq.1) then
@@ -15579,13 +15581,18 @@ contains
        endif
       enddo ! im=1..num_materials
 
-      if (voffluid.le.zero) then
+      if (voffluid.gt.zero) then
+       ! do nothing
+      else if (voffluid.le.zero) then
        print *,"vacuum bust in make_vfrac_sum_ok_base"
        print *,"put breakpoint here to see the caller"
        print *,"num_materials= ",num_materials
        print *,"sdim= ",sdim
        print *,"voffluid= ",voffluid
        print *,"vofsolid= ",vofsolid
+       stop
+      else
+       print *,"voffluid is NaN: ",voffluid
        stop
       endif
 
@@ -15594,7 +15601,8 @@ contains
        if (is_rigid_local(im).eq.1) then
         if (vofsolid.gt.one) then
          mofdata(vofcomp)=mofdata(vofcomp)/vofsolid
-        else if ((vofsolid.ge.zero).and.(vofsolid.le.one)) then
+        else if ((vofsolid.ge.zero).and. &
+                 (vofsolid.le.one)) then
          ! do nothing
         else
          print *,"vofsolid invalid"
