@@ -588,12 +588,22 @@ stop
          do dir=1,SDIM
           cen_super(dir)=zero
          enddo
+
          do im=1,num_materials
-          vofcomprecon=(im-1)*ngeom_recon+1
-          do dir=1,SDIM
-           mofdata_super(vofcomprecon+dir)=zero
-          enddo
-          vof_super(im)=zero
+
+          if (is_rigid(im).eq.1) then
+           ! do nothing
+          else if (is_rigid(im).eq.0) then
+           vofcomprecon=(im-1)*ngeom_recon+1
+           do dir=1,SDIM
+            mofdata_super(vofcomprecon+dir)=zero
+           enddo
+           vof_super(im)=zero
+          else
+           print *,"is_rigid(im) invalid"
+           stop
+          endif
+
          enddo ! im=1..num_materials
 
          do i1=-1,1
@@ -723,16 +733,18 @@ stop
 
            do im=1,num_materials
 
-            vofcomprecon=(im-1)*ngeom_recon+1
-            volmat=volsten*vfrac_local(im)
-            vof_super(im)=vof_super(im)+volmat
-            do dir=1,SDIM
-             mofdata_super(vofcomprecon+dir)= &
+            if (is_rigid(im).eq.0) then
+
+             vofcomprecon=(im-1)*ngeom_recon+1
+             volmat=volsten*vfrac_local(im)
+             vof_super(im)=vof_super(im)+volmat
+             do dir=1,SDIM
+              mofdata_super(vofcomprecon+dir)= &
                 mofdata_super(vofcomprecon+dir)+ &
                 volmat*(censten(dir)+mofsten(vofcomprecon+dir))
-            enddo ! dir
-            if (is_rigid(im).eq.0) then
+             enddo ! dir
              volume_super_mofdata=volume_super_mofdata+volmat
+
             else if (is_rigid(im).eq.1) then
              ! do nothing
             else
@@ -759,42 +771,47 @@ stop
           print *,"volume_super invalid"
           stop
          endif
+
          if (volume_super_mofdata.gt.zero) then
           ! do nothing
          else
           print *,"volume_super_mofdata invalid"
           stop
          endif
+
          do dir=1,SDIM
           cen_super(dir)=cen_super(dir)/volume_super
          enddo
 
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
-          if (vof_super(im).gt.zero) then
-           do dir=1,SDIM
-            mofdata_super(vofcomprecon+dir)= &
-             mofdata_super(vofcomprecon+dir)/ &
-             vof_super(im)- &
-             cen_super(dir)
-           enddo
-           vof_super(im)=vof_super(im)/volume_super_mofdata
-          else if (vof_super(im).eq.zero) then
-           do dir=1,SDIM
-            mofdata_super(vofcomprecon+dir)=zero
-           enddo
-          else
-           print *,"vof_super(im) invalid"
-           stop
-          endif
 
            ! always standard MOF centroid for the rigid materials.
           if (is_rigid(im).eq.1) then
+
            do dir=1,SDIM
             mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
            enddo
+
           else if (is_rigid(im).eq.0) then
-           ! do nothing
+
+           if (vof_super(im).gt.zero) then
+            do dir=1,SDIM
+             mofdata_super(vofcomprecon+dir)= &
+              mofdata_super(vofcomprecon+dir)/ &
+              vof_super(im)- &
+              cen_super(dir)
+            enddo
+            vof_super(im)=vof_super(im)/volume_super_mofdata
+           else if (vof_super(im).eq.zero) then
+            do dir=1,SDIM
+             mofdata_super(vofcomprecon+dir)=zero
+            enddo
+           else
+            print *,"vof_super(im) invalid"
+            stop
+           endif
+
           else
            print *,"is_rigid invalid PLIC_3D.F90"
            stop
