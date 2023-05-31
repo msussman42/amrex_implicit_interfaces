@@ -133,6 +133,7 @@ stop
       INTEGER_T im
       REAL_T mofdata(num_materials*ngeom_recon)
       REAL_T mofdata_super(num_materials*ngeom_recon)
+      REAL_T mofdata_super_vfrac(num_materials*ngeom_recon)
       REAL_T vof_super(num_materials)
       REAL_T mofsten(num_materials*ngeom_recon)
       REAL_T multi_centroidA(num_materials,SDIM)
@@ -153,6 +154,7 @@ stop
       INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX !in: fort_sloperecon
 
       INTEGER_T continuous_mof_parm
+      INTEGER_T continuous_mof_parm_super
      
       INTEGER_T klosten,khisten
       INTEGER_T, parameter :: nhalf=3
@@ -830,7 +832,11 @@ stop
          stop
         endif
 
-        call multimaterial_MOF( &
+        if ((continuous_mof_parm.eq.0).or. &
+            (num_materials_in_stencil.eq.1).or. &
+            (num_materials_in_stencil.eq.2)) then
+
+         call multimaterial_MOF( &
           bfact,dx, &
           xsten, &
           nhalf, &
@@ -850,8 +856,86 @@ stop
           grid_level, &
           SDIM)
 
-        if (continuous_mof_parm.ge.1) then
+         if (continuous_mof_parm.ge.1) then
+           ! center cell centroids.
+          do im=1,num_materials
+           vofcomprecon=(im-1)*ngeom_recon+1
+           do dir=1,SDIM
+            mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
+           enddo
+          enddo ! im
+         else if (continuous_mof_parm.eq.0) then
+          ! do nothing
+         else
+          print *,"continuous_mof_parm invalid(2) ",continuous_mof_parm
+          stop
+         endif
 
+         ! mof_calls, mof_iterations, mof_errors are init. in 
+         ! multimaterial_MOF
+         do im=1,num_materials
+          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
+          total_iterations(im)= &
+           total_iterations(im)+mof_iterations(tid+1,im)
+          total_errors(im)= &
+           total_errors(im)+mof_errors(tid+1,im)
+         enddo  ! im=1..num_materials
+
+         ! for growth angle algorithm:
+         ! 1. find CMOF reconstruction using both CMOF centroids and
+         !    CMOF volumes
+         ! 2. Correct the CMOF reconstruction (if just 3 materials in
+         !    CMOF stencil) according to the growth angle condition.
+         ! 3. Find the centroids of the resulting reconstruction in the
+         !    center cell.
+         ! 4. If both the original center cell volume fractions and
+         !    center cell reconstructed volume fraction satisfy 0<F<1,
+         !    then replace center cell centroids with those from step 3.
+         ! 5. Do a standard MOF reconstruction.
+        else if ((continuous_mof_parm.ge.1).and. &
+                 (num_materials_in_stencil.ge.3)) then
+
+         continuous_mof_parm_super=-1
+
+         do dir=1,num_materials*ngeom_recon
+          mofdata_super_vfrac(dir)=mofdata_super(dir)
+         enddo
+         do im=1,num_materials
+          vofcomprecon=(im-1)*ngeom_recon+1
+          mofdata_super_vfrac(vofcomprecon)=vof_super(im)
+         enddo
+
+         call multimaterial_MOF( &
+          bfact,dx, &
+          xsten, &
+          nhalf, &
+          mof_verbose, &
+          use_ls_data, &
+          LS_stencil, &
+          geom_xtetlist(1,1,1,tid+1), &
+          geom_xtetlist_old(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          mofdata_super_vfrac, &
+          vof_super, &
+          multi_centroidA, & ! (num_materials,sdim) relative to supercell
+          continuous_mof_parm_super, &
+          cmofsten, & !intent(in)
+          grid_index, &
+          grid_level, &
+          SDIM)
+
+         ! mof_calls, mof_iterations, mof_errors are init. in 
+         ! multimaterial_MOF
+         do im=1,num_materials
+          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
+          total_iterations(im)= &
+           total_iterations(im)+mof_iterations(tid+1,im)
+          total_errors(im)= &
+           total_errors(im)+mof_errors(tid+1,im)
+         enddo  ! im=1..num_materials
+
+          ! correct triple point angle
          if (num_materials_in_stencil.eq.3) then
 
           im_primary=0
@@ -1052,7 +1136,9 @@ stop
               if ((im_ambient.ne.0).and. &
                   (im_ice.ne.0).and. &
                   (im_melt.ne.0)) then
-               ! triple point
+
+               ! triple point correction goes here
+
               else 
                print *,"im_ambient,im_ice, or im_melt invalid"
                stop
@@ -1083,7 +1169,7 @@ stop
            stop
           endif
 
-         else if ((num_materials_in_stencil.ge.1).and. &
+         else if ((num_materials_in_stencil.gt.3).and. &
                   (num_materials_in_stencil.le.num_materials)) then
           ! do nothing
          else
@@ -1091,35 +1177,137 @@ stop
           stop
          endif
 
-        else if (continuous_mof_parm.eq.0) then
-         ! do nothing
-        else
-         print *,"continuous_mof_parm invalid(1) ",continuous_mof_parm
-         stop
-        endif
-         
-        if (continuous_mof_parm.ge.1) then
-           ! center cell centroids.
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
           do dir=1,SDIM
            mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
           enddo
-         enddo ! im
-        else if (continuous_mof_parm.eq.0) then
-         ! do nothing
+           ! order,slope,intercept (SDIM+2)
+          do dir=SDIM+1,ngeom_recon-1
+           mofdata_super(vofcomprecon+dir)= &
+               mofdata_super_vfrac(vofcomprecon+dir)
+          enddo
+         enddo ! im=1..num_materials
+
+         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
+          volume_super,cen_super,SDIM)
+
+         call multi_get_volume_grid( &
+          tessellate, & ! =0
+          bfact,dx, &
+          xsten,nhalf, & ! phi = n dot (x-x0) + intercept
+          mofdata_super, &
+          xsten,nhalf, & ! find volumes within xsten
+          xtet, &        ! not within xtet
+          multi_volume, &
+          multi_cen, & !(sdim,num_materials) absolute frame of ref.
+          multi_area, & !(num_materials)
+          geom_xtetlist_uncapt(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          SDIM, &
+          shapeflag) !shapeflag=0
+
+         vfrac_fluid_sum=zero
+         do im=1,num_materials
+          if (is_rigid(im).eq.0) then
+           vfrac_fluid_sum=vfrac_fluid_sum+multi_volume(im)
+          else if (is_rigid(im).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
+         enddo ! im=1,..,num_materials
+
+         if (vfrac_fluid_sum.gt.zero) then
+          do im=1,num_materials
+           if (is_rigid(im).eq.0) then
+            multi_volume(im)=multi_volume(im)/vfrac_fluid_sum
+           else if (is_rigid(im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+          enddo ! im=1,..,num_materials
+         else
+          print *,"vfrac_fluid_sum invalid"
+          stop
+         endif
+
+         do im=1,num_materials
+          if (is_rigid(im).eq.0) then
+
+           vofcomprecon=(im-1)*ngeom_recon+1
+           vfrac_local(im)=mofdata_super(vofcomprecon)
+
+           if ((vfrac_local(im).ge.0.01D0).and. &
+               (vfrac_local(im).le.0.99D0).and. &
+               (multi_volume(im).ge.0.01D0).and. &
+               (multi_volume(im).le.0.99D0)) then
+
+            do dir=1,SDIM
+             cmof_centroid=multi_cen(dir,im)-cen_super(dir)
+             mofdata_super(vofcomprecon+dir)=cmof_centroid
+            enddo
+           else if (abs(vfrac_local(im)).le.0.01D0) then
+            ! do nothing
+           else if (abs(one-vfrac_local(im)).le.0.01D0) then
+            ! do nothing
+           else if (abs(multi_volume(im)).le.0.01D0) then
+            ! do nothing
+           else if (abs(one-multi_volume(im)).le.0.01D0) then
+            ! do nothing
+           else
+            print *,"vfrac_local or multi_volumeinvalid"
+            stop
+           endif
+
+          else if (is_rigid(im).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
+         enddo ! im=1,num_materials
+
+         continuous_mof_parm=0
+
+         call multimaterial_MOF( &
+          bfact,dx, &
+          xsten, &
+          nhalf, &
+          mof_verbose, &
+          use_ls_data, &
+          LS_stencil, &
+          geom_xtetlist(1,1,1,tid+1), &
+          geom_xtetlist_old(1,1,1,tid+1), &
+          nmax, &
+          nmax, &
+          mofdata_super, &
+          vof_super, &
+          multi_centroidA, & ! (num_materials,sdim) relative to supercell
+          continuous_mof_parm, &
+          cmofsten, & !intent(in)
+          grid_index, &
+          grid_level, &
+          SDIM)
+
+         ! mof_calls, mof_iterations, mof_errors are init. in 
+         ! multimaterial_MOF
+         do im=1,num_materials
+          total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
+          total_iterations(im)= &
+           total_iterations(im)+mof_iterations(tid+1,im)
+          total_errors(im)= &
+           total_errors(im)+mof_errors(tid+1,im)
+         enddo  ! im=1..num_materials
+ 
         else
-         print *,"continuous_mof_parm invalid(2) ",continuous_mof_parm
+         print *,"continuous_mof_parm or num_materials_in_stencil bad"
          stop
         endif
-
-        do im=1,num_materials
-         total_calls(im)=total_calls(im)+mof_calls(tid+1,im)
-         total_iterations(im)= &
-          total_iterations(im)+mof_iterations(tid+1,im)
-         total_errors(im)= &
-          total_errors(im)+mof_errors(tid+1,im)
-        enddo  ! im=1..num_materials
 
        else
         print *,"level invalid fort_sloperecon: ",level
