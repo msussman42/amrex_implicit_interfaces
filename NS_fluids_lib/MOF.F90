@@ -16348,7 +16348,8 @@ contains
          new_tessellate_local=1
         else if (local_tessellate.eq.2) then
          new_tessellate_local=2
-         if ((num_materials_solid.eq.0).and.(num_materials_fluid.eq.num_materials)) then
+         if ((num_materials_solid.eq.0).and. &
+             (num_materials_fluid.eq.num_materials)) then
           ! do nothing
          else
           print *,"num_materials_solid or num_materials_fluid invalid"
