@@ -9198,6 +9198,7 @@ contains
        stop
       endif
       if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.-1).or. &
           (continuous_mof.ge.1)) then
        ! do nothing
       else
@@ -9211,7 +9212,18 @@ contains
 
       if ((continuous_mof.eq.0).or. &
           (continuous_mof.ge.1)) then
-       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell,cencell,sdim)
+       call Box_volumeFAST( &
+         bfact,dx,xsten0,nhalf0, &
+         volcell, &
+         cencell, &
+         sdim)
+      else if (continuous_mof.eq.-1) then
+       call Box_volume_super( &
+        cmofsten, &
+        bfact,dx,xsten0,nhalf0, &
+        volcell, &
+        cencell, &
+        sdim)
       else
        print *,"continuous_mof invalid"
        stop
@@ -9226,7 +9238,8 @@ contains
 
       if (fastflag.eq.0) then
          ! xsten0 used for LS dist.
-       call multi_cell_intersection(bfact,dx,xsten0,nhalf0, &
+       call multi_cell_intersection( &
+         bfact,dx,xsten0,nhalf0, &
          slope,intercept,voln, &
          centroid,arean,xtetlist, &
          nlist_alloc,nlist,nmax,sdim)
@@ -9446,8 +9459,7 @@ contains
       end subroutine scale_VOF_variables
 
 
-         ! centroid in absolute coordinate system
-
+       ! centroid in absolute coordinate system
       subroutine multi_find_intercept( &
        bfact,dx,xsten0,nhalf0, &
        slope,intercept, &
@@ -9556,6 +9568,7 @@ contains
       endif
 
       if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.-1).or. &
           (continuous_mof.ge.1)) then
        ! do nothing
       else
@@ -9641,8 +9654,18 @@ contains
 
       if ((continuous_mof.eq.0).or. &
           (continuous_mof.ge.1)) then
-       call Box_volumeFAST(bfact,dx_scale,xsten0_scale,nhalf0, &
-        volcell,cencell,sdim)
+       call Box_volumeFAST( &
+        bfact,dx_scale,xsten0_scale,nhalf0, &
+        volcell, &
+        cencell, &
+        sdim)
+      else if (continuous_mof.eq.-1) then
+       call Box_volume_super( &
+        cmofsten, &
+        bfact,dx_scale,xsten0_scale,nhalf0, &
+        volcell, &
+        cencell, &
+        sdim)
       else
        print *,"continuous_mof invalid"
        stop
@@ -9665,6 +9688,7 @@ contains
          minphi,maxphi,sdim)
 
       else if (fastflag.eq.1) then
+
        volcut=volcell
        do dir=1,sdim
         cencut(dir)=cencell(dir)
@@ -9740,6 +9764,11 @@ contains
       if ((volcut.le.zero).and.(vfrac.gt.MLSVOFTOL)) then
        print *,"ERROR: volcut<=0 and vfrac>mslvoftol"
        stop
+      else if ((volcut.gt.zero).or.(vfrac.le.MLSVOFTOL)) then
+       ! do nothing
+      else
+       print *,"volcut or vfrac is NaN"
+       stop
       endif
 
       if (vfrac.le.MLSVOFTOL) then
@@ -9759,13 +9788,20 @@ contains
        if ((vfrac_normalize.le.zero).or.(vfrac_normalize.ge.one)) then
         print *,"ERROR: vfrac_normalize out of range"
         stop
+       else if ((vfrac_normalize.gt.zero).and. &
+                (vfrac_normalize.lt.one)) then
+        !do nothing
+       else
+        print *,"vfrac_normalize invalid"
+        stop
        endif
 
        intercept_default=intercept_lower*(one-vfrac_normalize)+ &
            intercept_upper*vfrac_normalize
 
          ! fc_default=(voln-vtarget)/volcell
-       call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
+       call multi_ff( &
+        bfact,dx_scale,xsten0_scale,nhalf0, &
         fc_default,slope,intercept_default, &
         continuous_mof, &
         cmofsten, &
@@ -9795,7 +9831,8 @@ contains
         else
 
           ! fc=(voln-vtarget)/volcell
-         call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
+         call multi_ff( &
+          bfact,dx_scale,xsten0_scale,nhalf0, &
           fc,slope,intercept, &
           continuous_mof, &
           cmofsten, &
@@ -9850,14 +9887,16 @@ contains
            do while ((niter.lt.maxiter).and.(err.gt.moftol))
 
             if (niter.eq.0) then
-             call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
+             call multi_ff( &
+              bfact,dx_scale,xsten0_scale,nhalf0, &
               fa,slope,aa, &
               continuous_mof, &
               cmofsten, &
               arean,vtarget,local_xtetlist, &
               local_nlist,centroid,nlist,nmax, &
               fastflag,sdim)
-             call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
+             call multi_ff( &
+              bfact,dx_scale,xsten0_scale,nhalf0, &
               fb,slope,bb, &
               continuous_mof, &
               cmofsten, &
@@ -9879,7 +9918,8 @@ contains
              err=zero
             else if (fa*fb.lt.zero) then
              intercept=half*(aa+bb)
-             call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
+             call multi_ff( &
+              bfact,dx_scale,xsten0_scale,nhalf0, &
               fc,slope,intercept, &
               continuous_mof, &
               cmofsten, &
@@ -9926,7 +9966,8 @@ contains
                    (niter.lt.INTERCEPT_MAXITER_NEWTON)) then
             !intercept_test=intercept-fc*volcell/arean
            intercept=intercept_test
-           call multi_ff(bfact,dx_scale,xsten0_scale,nhalf0, &
+           call multi_ff( &
+            bfact,dx_scale,xsten0_scale,nhalf0, &
             fc,slope,intercept, &
             continuous_mof, &
             cmofsten, &
@@ -10432,6 +10473,7 @@ contains
       endif
 
       if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.-1).or. &
           (continuous_mof.ge.1)) then
        ! do nothing
       else
@@ -10455,7 +10497,8 @@ contains
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
-         cencell_vof,sdim)
+         cencell_vof, &
+         sdim)
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_cen, &
@@ -10465,7 +10508,21 @@ contains
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
-         cencell_vof,sdim)
+         cencell_vof, &
+         sdim)
+        call Box_volume_super( &
+         cmofsten, &
+         bfact,dx,xsten0,nhalf0, &
+         volcell_cen, &
+         cencell_cen, &
+         sdim)
+       else if (continuous_mof.eq.-1) then
+        call Box_volume_super( &
+         cmofsten, &
+         bfact,dx,xsten0,nhalf0, &
+         volcell_vof, &
+         cencell_vof, &
+         sdim)
         call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten0,nhalf0, &
@@ -10521,6 +10578,17 @@ contains
           nlist_vof, &
           nmax,sdim)
         else if (continuous_mof.ge.1) then
+          ! (testcen is the centroid of the intersection of
+          !  the material region with the super cell)
+         call multi_cell_intersection( &
+          bfact,dx,xsten0,nhalf0, &
+          nslope,intercept, &
+          volume_cut,testcen,facearea, &
+          xtetlist_cen, &
+          nlist_cen, &
+          nlist_cen, &
+          nmax,sdim)
+        else if (continuous_mof.eq.-1) then
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
          call multi_cell_intersection( &
@@ -10976,6 +11044,8 @@ contains
        endif
       else if (continuous_mof.ge.1) then
        use_MilcentLemoine=0
+      else if (continuous_mof.eq.-1) then
+       use_MilcentLemoine=0
       else
        print *,"continuous_mof invalid"
        stop
@@ -11299,6 +11369,7 @@ contains
 
       else if ((fastflag.eq.0).or. &
                (continuous_mof.ge.1).or. &
+               (continuous_mof.eq.-1).or. &
                (levelrz.eq.COORDSYS_RZ).or. &
                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
@@ -12337,7 +12408,9 @@ contains
        print *,"expecting nhalf0>=3: ",nhalf0
        stop
       endif
-      if (uncaptured_volume_vof.le.zero) then
+      if (uncaptured_volume_vof.gt.zero) then
+       ! do nothing
+      else
        print *,"uncaptured_volume_vof invalid"
        stop
       endif
@@ -12364,32 +12437,55 @@ contains
        stop
       endif
       if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.-1).or. &
           (continuous_mof.ge.1)) then
        ! do nothing
       else
        print *,"continuous_mof invalid"
        stop
       endif
+
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
       else
-       print *,"nlist_alloc invalid"
+       print *,"nlist_alloc invalid: ",nlist_alloc
        stop
       endif
 
        ! cencell_vof,cencell_cen is in absolute coordinate system
 
       if (continuous_mof.eq.0) then
-       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
-        cencell_vof,sdim)
+       call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        volcell_vof, &
+        cencell_vof, &
+        sdim)
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell_cen, &
         cencell_cen, &
         sdim)
       else if (continuous_mof.ge.1) then
-       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell_vof, &
-         cencell_vof,sdim)
+       call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        volcell_vof, &
+        cencell_vof, &
+        sdim)
+       call Box_volume_super( &
+         cmofsten, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         volcell_cen, &
+         cencell_cen, &
+         sdim)
+      else if (continuous_mof.eq.-1) then
+       call Box_volume_super( &
+         cmofsten, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         volcell_vof, &
+         cencell_vof, &
+         sdim)
        call Box_volume_super( &
          cmofsten, &
          bfact,dx, &
@@ -12398,18 +12494,30 @@ contains
          cencell_cen, &
          sdim)
       else
-        print *,"continuous_mof invalid"
-        stop
+       print *,"continuous_mof invalid"
+       stop
       endif
 
        ! imaterial_count-1=number of materials already reconstructed.
-      if ((imaterial_count.gt.1).and. &
-          (imaterial_count.le.num_materials)) then
+
+      if (continuous_mof.eq.-1) then
+
        fastflag=0
-      else if (imaterial_count.eq.1) then
-       fastflag=1
-      else 
-       print *,"imaterial_count invalid"
+
+      else if (continuous_mof.ge.0) then
+
+       if ((imaterial_count.gt.1).and. &
+           (imaterial_count.le.num_materials)) then
+        fastflag=0
+       else if (imaterial_count.eq.1) then
+        fastflag=1
+       else 
+        print *,"imaterial_count invalid"
+        stop
+       endif
+
+      else
+       print *,"continuous_mof invalid"
        stop
       endif
 
@@ -12446,6 +12554,31 @@ contains
          sdim)
        else if (continuous_mof.ge.1) then
         use_super_cell=0
+        call tets_box_planes_super( &
+         tessellate, & ! =0
+         tid, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         mofdata, &
+         xtetlist_vof, &
+         nlist_alloc,nlist_vof,nmax, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
+        use_super_cell=1
+        call tets_box_planes_super( &
+         tessellate, & ! =0
+         tid, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         mofdata, &
+         xtetlist_cen, &
+         nlist_alloc,nlist_cen,nmax, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
+       else if (continuous_mof.eq.-1) then
+        use_super_cell=1
         call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
@@ -14326,6 +14459,9 @@ contains
          !do nothing
         else
          print *,"vof_super mismatch with voftest"
+         print *,"imaterial=",imaterial
+         print *,"voftest=",voftest(imaterial)
+         print *,"vof_super=",vof_super(imaterial)
          stop
         endif
 
@@ -14336,7 +14472,10 @@ contains
          if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
           !do nothing
          else
-          print *,"vof_super mismatch with voftest"
+          print *,"vof_super mismatch with voftest(2)"
+          print *,"imaterial=",imaterial
+          print *,"voftest=",voftest(imaterial)
+          print *,"vof_super=",vof_super(imaterial)
           stop
          endif
         else if (continuous_mof.ge.1) then
@@ -14661,7 +14800,7 @@ contains
          endif
 
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof invalid: ",continuous_mof
          stop 
         endif
 
@@ -14860,21 +14999,29 @@ contains
 
         if (continuous_mof.eq.0) then
 
-         call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
-          uncaptured_centroid_vof,sdim)
-         call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_cen, &
-          uncaptured_centroid_cen,sdim)
+         call Box_volumeFAST( &
+          bfact,dx,xsten0,nhalf0, &
+          uncaptured_volume_vof, &
+          uncaptured_centroid_vof, &
+          sdim)
+         call Box_volumeFAST( &
+          bfact,dx,xsten0,nhalf0, &
+          uncaptured_volume_cen, &
+          uncaptured_centroid_cen, &
+          sdim)
 
         else if (continuous_mof.ge.1) then
 
          call Box_volumeFAST( &
           bfact,dx,xsten0,nhalf0, &
           uncaptured_volume_vof, &
-          uncaptured_centroid_vof,sdim)
+          uncaptured_centroid_vof, &
+          sdim)
          call Box_volume_super( &
           cmofsten, &
           bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen,uncaptured_centroid_cen, &
+          uncaptured_volume_cen, &
+          uncaptured_centroid_cen, &
           sdim)
 
         else if (continuous_mof.eq.-1) then
@@ -14888,7 +15035,8 @@ contains
          call Box_volume_super( &
           cmofsten, &
           bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen,uncaptured_centroid_cen, &
+          uncaptured_volume_cen, &
+          uncaptured_centroid_cen, &
           sdim)
 
         else
@@ -15031,7 +15179,8 @@ contains
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_vof, &
-           uncaptured_centroid_vof,sdim)
+           uncaptured_centroid_vof, &
+           sdim)
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_cen, &
@@ -15043,7 +15192,8 @@ contains
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_vof, &
-           uncaptured_centroid_vof,sdim)
+           uncaptured_centroid_vof, &
+           sdim)
           call Box_volume_super( &
            cmofsten, &
            bfact,dx,xsten0,nhalf0, &
@@ -15121,7 +15271,8 @@ contains
            print *,"is_rigid invalid MOF.F90"
            stop
           endif
-         enddo ! imaterial
+         enddo ! imaterial=1,num_materials
+
          do dir=1,num_materials*ngeom_recon
           mofdata_array(order_count,dir)=mofdata_in(dir)
          enddo
@@ -15207,6 +15358,7 @@ contains
 
       do imaterial=1,num_materials
        vofcomp=(imaterial-1)*ngeom_recon+1
+
        if (abs(voftest(imaterial)-mofdata(vofcomp)).ge.SANITY_TOL) then
         print *,"volume fraction changed"
         print *,"put breakpoint here to see the caller"
@@ -15218,7 +15370,14 @@ contains
           voftest(imaterial2),mofdata(vofcomp)
         enddo
         stop
+       else if (abs(voftest(imaterial)-mofdata(vofcomp)).lt.SANITY_TOL) then
+        ! do nothing
+       else
+        print *,"voftest or mofdata is NaN: ", &
+          imaterial,voftest(imaterial),mofdata(vofcomp)
+        stop
        endif
+
       enddo 
 
 
