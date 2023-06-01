@@ -13556,7 +13556,7 @@ contains
         bfact,dx, &
         xsten0,nhalf0, &
         im, &
-        dxmaxLS, &
+        dxmaxLS_volume_constraint, &
         sdim)
 
       use probcommon_module
@@ -13571,7 +13571,7 @@ contains
       INTEGER_T, INTENT(in) :: sdim
       REAL_T, INTENT(in)    :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in)    :: dx(sdim)
-      REAL_T, INTENT(in)    :: dxmaxLS
+      REAL_T, INTENT(in)    :: dxmaxLS_volume_constraint
       REAL_T xpoint(sdim)
       REAL_T cutoff,m1,m2
       REAL_T nsimple(sdim)
@@ -13607,8 +13607,10 @@ contains
        stop
       endif
 
-      if (dxmaxLS.le.zero) then
-       print *,"dxmaxLS invalid"
+      if (dxmaxLS_volume_constraint.gt.zero) then
+       ! do nothing
+      else
+       print *,"dxmaxLS_volume_constraint invalid"
        stop
       endif
 
@@ -13634,11 +13636,11 @@ contains
       if (sdim.eq.3) then
        klo=-1
        khi=1
-       cutoff=sqrt(three)*dxmaxLS
+       cutoff=sqrt(three)*dxmaxLS_volume_constraint
       else if (sdim.eq.2) then
        klo=0
        khi=0
-       cutoff=sqrt(two)*dxmaxLS
+       cutoff=sqrt(two)*dxmaxLS_volume_constraint
       else
        print *,"dimension bust"
        stop
@@ -13647,7 +13649,7 @@ contains
       lsnormal_valid(im)=1
       LS_cen=ls_mof(D_DECL(0,0,0),im)
 
-      if (abs(LS_cen).gt.three*dxmaxLS) then
+      if (abs(LS_cen).gt.three*dxmaxLS_volume_constraint) then
        lsnormal_valid(im)=0
       endif
 
@@ -13672,8 +13674,8 @@ contains
         LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
         LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
 
-        if ((abs(LS_plus).gt.three*dxmaxLS).or. &
-            (abs(LS_minus).gt.three*dxmaxLS)) then
+        if ((abs(LS_plus).gt.three*dxmaxLS_volume_constraint).or. &
+            (abs(LS_minus).gt.three*dxmaxLS_volume_constraint)) then
          lsnormal_valid(im)=0
         endif
  
@@ -13796,7 +13798,7 @@ contains
            endif
 
            LSWT=abs(ls_mof(D_DECL(i,j,k),im))
-           if (LSWT.gt.three*dxmaxLS) then
+           if (LSWT.gt.three*dxmaxLS_volume_constraint) then
             lsnormal_valid(im)=0
            endif
            w(D_DECL(i,j,k))=hsprime(LSWT,cutoff)*wx*wy*wz
@@ -14138,6 +14140,8 @@ contains
       REAL_T voftest(num_materials)
       INTEGER_T i1,j1,k1,k1lo,k1hi
       REAL_T dxmaxLS
+      REAL_T dxmaxLS_volume_constraint
+      REAL_T null_intercept
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: ls_mof
       REAL_T, dimension(:,:), allocatable :: lsnormal
       INTEGER_T, dimension(:), allocatable :: lsnormal_valid
@@ -14275,6 +14279,16 @@ contains
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
+      if (continuous_mof.ge.0) then
+       dxmaxLS_volume_constraint=dxmaxLS
+      else if (continuous_mof.eq.-1) then
+       dxmaxLS_volume_constraint=three*dxmaxLS
+      else
+       print *,"continuous_mof invalid"
+       stop
+      endif
+      null_intercept=two*bfact*dxmaxLS_volume_constraint
+
       if (sdim.eq.2) then
        k1lo=0
        k1hi=0
@@ -14381,7 +14395,7 @@ contains
           bfact,dx, &
           xsten0,nhalf0, &
           imaterial, &
-          dxmaxLS, &
+          dxmaxLS_volume_constraint, &
           sdim)
  
         else
@@ -14447,8 +14461,6 @@ contains
         mofdata, &
         sdim)
 
-FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
-
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
        ! reconstruct the rigid materials.
@@ -14461,12 +14473,21 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
        vofcomp=(imaterial-1)*ngeom_recon+1
 
        if ((continuous_mof.eq.0).or. &
+           (continuous_mof.eq.-1).or. &
            (continuous_mof.ge.1)) then
         mofdata(vofcomp+sdim+1)=zero  ! order=0
         do dir=1,sdim
          mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
         enddo
         mofdata(vofcomp+2*sdim+2)=zero  ! intercept=0
+
+        if (vofcomp+2*sdim+2.eq.imaterial*ngeom_recon) then
+         ! do nothing
+        else
+         print *,"ngeom_recon,vofcomp, or imaterial invalid"
+         stop
+        endif
+
        else
         print *,"continuous_mof invalid"
         stop 
@@ -14487,6 +14508,12 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
         fastflag=1
 
         refvfrac=mofdata(vofcomp)
+        if (abs(refvfrac-vof_super(imaterial)).le.1.0d-12) then
+         !do nothing
+        else
+         print *,"vof_super mismatch with refvfrac"
+         stop
+        endif
 
         if ((refvfrac.le.VOFTOL).and. &
             (refvfrac.ge.zero)) then
@@ -14528,7 +14555,8 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
-           bfact,dx,xsten0,nhalf0, &
+           bfact,dx, &
+           xsten0,nhalf0, &
            refcentroid,refvfrac, &
            npredict, &
            continuous_mof_rigid, &
@@ -14578,7 +14606,7 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
           enddo 
 
          else
-          print *,"mag invalid MOF.F90 13120"
+          print *,"mag invalid MOF.F90 14595: ",mag
           stop
          endif
 
@@ -14605,14 +14633,16 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
         endif
 
         if ((continuous_mof.eq.0).or. &
+            (continuous_mof.eq.-1).or. &
             (continuous_mof.ge.1)) then
          order_algorithm_in(imaterial)=order_algorithm(imaterial)
  
          if (order_algorithm(imaterial).eq.0) then
+
           if (mofdata(vofcomp).ge.one-VOFTOL) then
            order_algorithm_in(imaterial)=num_materials+1
           else if (mofdata(vofcomp).le.VOFTOL) then
-           order_algorithm_in(imaterial)=num_materials+1  ! was "1"
+           order_algorithm_in(imaterial)=num_materials+1  
           else if ((mofdata(vofcomp).gt.VOFTOL).and. &
                    (mofdata(vofcomp).lt.one-VOFTOL)) then
            ! do nothing
@@ -14620,6 +14650,14 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
            print *,"mofdata(vofcomp) invalid"
            stop
           endif
+
+         else if ((order_algorithm(imaterial).ge.1).and. &
+                  (order_algorithm(imaterial).le.num_materials+1)) then
+          ! do nothing
+         else
+          print *,"order_algorithm(imaterial) invalid: ",imaterial, &
+           order_algorithm(imaterial)
+          stop
          endif
 
         else
@@ -14629,6 +14667,11 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
 
         if (mofdata(vofcomp).ge.VOFTOL) then
          num_materials_cell=num_materials_cell+1
+        else if (mofdata(vofcomp).lt.VOFTOL) then
+         ! do nothing
+        else
+         print *,"mofdata(vofcomp) is NaN ",mofdata(vofcomp)
+         stop
         endif
 
        else
@@ -14639,13 +14682,14 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
       enddo  ! imaterial=1..num_materials
 
       if (num_materials_cell.le.2) then
+
        do imaterial=1,num_materials
 
         if (is_rigid_local(imaterial).eq.1) then
          ! do nothing
         else if (is_rigid_local(imaterial).eq.0) then
          if (order_algorithm(imaterial).eq.0) then
-          order_algorithm_in(imaterial)=num_materials+1  ! was "1"
+          order_algorithm_in(imaterial)=num_materials+1 
          endif
         else
          print *,"is_rigid_local invalid"
@@ -14653,13 +14697,20 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
         endif
 
        enddo ! imaterial=1..num_materials
+
+      else if ((num_materials_cell.ge.3).and. &
+               (num_materials_cell.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"num_materials_cell invalid"
+       stop
       endif
 
       ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
       n_ndef=0
       do imaterial=1,num_materials
-       placeholder(imaterial)=0 ! 0 if place open, 1 if place taken
-       placelist(imaterial)=0  ! list of available places (list size>=n_ndef)
+       placeholder(imaterial)=0 !0 if place open, 1 if place taken
+       placelist(imaterial)=0  !list of available places (list size>=n_ndef)
        flexlist(imaterial)=0 ! list of fluid materials that need an ordering
       enddo !imaterial=1..num_materials
 
@@ -14672,14 +14723,15 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
          n_ndef=n_ndef+1
          !flexlist: list of fluid materials that need an ordering
          flexlist(n_ndef)=imaterial
-        else if (order_algorithm_in(imaterial).gt.num_materials) then
+        else if (order_algorithm_in(imaterial).eq.num_materials+1) then
          ! do nothing
         else if ((order_algorithm_in(imaterial).ge.1).and. &
                  (order_algorithm_in(imaterial).le.num_materials)) then
           !0 if place open, 1 if place taken.
          placeholder(order_algorithm_in(imaterial))=1
         else
-         print *,"order_algorithm_in(imaterial) invalid"
+         print *,"order_algorithm_in(imaterial) invalid: ", &
+           imaterial,order_algorithm_in(imaterial),num_materials
          stop
         endif
        else
@@ -14794,10 +14846,10 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
         ! phi = n dot (x-x0) + int
         ! int=-min (n dot (x-x0)) where x is a point in the cell.  
         ! x0 is cell center (xcell)
-       mofdata(vofcomp+2*sdim+2)=two*bfact*dxmaxLS  ! null intercept
+       mofdata(vofcomp+2*sdim+2)=null_intercept
        do dir=1,sdim
-         mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
-         multi_centroidA(single_material,dir)=zero  ! cell is full
+        mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
+        multi_centroidA(single_material,dir)=zero  ! cell is full
        enddo 
 
       else if ((single_material.eq.0).or. &
@@ -14815,8 +14867,24 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
 
         else if (continuous_mof.ge.1) then
 
-         call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
+         call Box_volumeFAST( &
+          bfact,dx,xsten0,nhalf0, &
+          uncaptured_volume_vof, &
           uncaptured_centroid_vof,sdim)
+         call Box_volume_super( &
+          cmofsten, &
+          bfact,dx,xsten0,nhalf0, &
+          uncaptured_volume_cen,uncaptured_centroid_cen, &
+          sdim)
+
+        else if (continuous_mof.eq.-1) then
+
+         call Box_volume_super( &
+          cmofsten, &
+          bfact,dx,xsten0,nhalf0, &
+          uncaptured_volume_vof, &
+          uncaptured_centroid_vof, &
+          sdim)
          call Box_volume_super( &
           cmofsten, &
           bfact,dx,xsten0,nhalf0, &
@@ -14976,6 +15044,21 @@ FIX ME VERIFY *MOF* ALWAYS FOR is_rigid(im)==1 materials.
            bfact,dx,xsten0,nhalf0, &
            uncaptured_volume_vof, &
            uncaptured_centroid_vof,sdim)
+          call Box_volume_super( &
+           cmofsten, &
+           bfact,dx,xsten0,nhalf0, &
+           uncaptured_volume_cen, &
+           uncaptured_centroid_cen, &
+           sdim)
+
+         else if (continuous_mof.eq.-1) then
+
+          call Box_volume_super( &
+           cmofsten, &
+           bfact,dx,xsten0,nhalf0, &
+           uncaptured_volume_vof, &
+           uncaptured_centroid_vof, &
+           sdim)
           call Box_volume_super( &
            cmofsten, &
            bfact,dx,xsten0,nhalf0, &
