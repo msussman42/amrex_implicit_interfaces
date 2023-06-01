@@ -9254,7 +9254,7 @@ contains
          voln,centroid,arean, &
          xsten0,nhalf0,xtet,shapeflag,sdim) 
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
       else
@@ -9667,7 +9667,7 @@ contains
         cencell, &
         sdim)
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid(multi_find_intercept): ",continuous_mof
        stop
       endif
 
@@ -9744,7 +9744,7 @@ contains
         endif
 
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
 
@@ -10603,6 +10603,7 @@ contains
          print *,"continuous_mof invalid"
          stop
         endif
+
        else if (fastflag.eq.1) then
 
         shapeflag=0
@@ -10681,7 +10682,7 @@ contains
          enddo ! dir=1..sdim
 
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof invalid: ", continuous_mof
          stop
         endif
 
@@ -10698,6 +10699,13 @@ contains
        call RT_transform_offset(testcen,cencell_cen,testcenT)
 
       else if (use_MilcentLemoine.eq.1) then
+
+       if (continuous_mof.ge.0) then
+        ! do nothing
+       else
+        print *,"continuous_mof==-1 not allowed if use_MilcentLemoine==1"
+        stop
+       endif
 
        intercept=zero
 
@@ -11356,6 +11364,11 @@ contains
         print *,"expecting nhalf0>=3: ",nhalf0
         stop
        endif
+      else if (continuous_mof.eq.-1) then
+       if (nhalf0.lt.3) then
+        print *,"expecting nhalf0>=3: ",nhalf0
+        stop
+       endif
       else
        print *,"continuous_mof invalid"
        stop
@@ -11495,6 +11508,7 @@ contains
       training_nguess=0
 
       if ((continuous_mof.eq.0).or. &
+          (continuous_mof.eq.-1).or. &
           (continuous_mof.ge.1)) then
 
          ! -pi < angle < pi
@@ -11559,6 +11573,8 @@ contains
          mof_stencil_ok=1
          if (continuous_mof.eq.0) then
           ! do nothing
+         else if (continuous_mof.eq.-1) then
+          mof_stencil_ok=0
          else if (continuous_mof.ge.1) then
 
           if (sdim.eq.3) then
@@ -11664,6 +11680,8 @@ contains
          mof_stencil_ok=1
          if (continuous_mof.eq.0) then
           ! do nothing
+         else if (continuous_mof.eq.-1) then
+          mof_stencil_ok=0
          else if (continuous_mof.ge.1) then
 
           if (sdim.eq.3) then
