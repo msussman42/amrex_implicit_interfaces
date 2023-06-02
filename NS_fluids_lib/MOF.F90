@@ -15699,6 +15699,23 @@ contains
          stop
         endif
 
+        n_ambient(3)=zero
+
+        mag=zero
+        do dir=1,sdim
+         n_ambient(dir)=mofdata(vofcomp+sdim+1+dir)
+         mag=mag+n_ambient(dir)**2
+        enddo 
+        mag=sqrt(mag)
+        if (abs(mag-one).le.VOFTOL) then
+         do dir=1,sdim
+          n_ambient(dir)=n_ambient(dir)/mag
+         enddo
+         d_ambient=mofdata(vofcomp+2*sdim+2)
+        else
+         print *,"mag invalid im_ambient"
+         stop
+        endif         
        else if (imaterial.eq.im_ice) then
 
         if (NINT(mofdata(vofcomp+sdim+1)).eq.2) then
@@ -15714,6 +15731,24 @@ contains
          print *,"expecting 0.01<=F<=0.99 for im_ice"
          stop
         endif
+
+        n_ice(3)=zero
+
+        mag=zero
+        do dir=1,sdim
+         n_ice(dir)=mofdata(vofcomp+sdim+1+dir)
+         mag=mag+n_ice(dir)**2
+        enddo 
+        mag=sqrt(mag)
+        if (abs(mag-one).le.VOFTOL) then
+         do dir=1,sdim
+          n_ice(dir)=n_ice(dir)/mag
+         enddo
+         d_ice=mofdata(vofcomp+2*sdim+2)
+        else
+         print *,"mag invalid im_ice"
+         stop
+        endif         
 
        else if (imaterial.eq.im_melt) then
 
@@ -15732,16 +15767,27 @@ contains
          stop
         endif
 
+        n_melt(3)=zero
+
+        mag=zero
+        do dir=1,sdim
+         n_melt(dir)=mofdata(vofcomp+sdim+1+dir)
+         mag=mag+n_melt(dir)**2
+        enddo 
+        mag=sqrt(mag)
+        if (abs(mag-one).le.VOFTOL) then
+         do dir=1,sdim
+          n_melt(dir)=n_melt(dir)/mag
+         enddo
+         d_melt=mofdata(vofcomp+2*sdim+2)
+        else
+         print *,"mag invalid im_melt"
+         stop
+        endif         
+
        else if ((imaterial.ge.1).and. &
                 (imaterial.le.num_materials)) then
 
-        if (NINT(mofdata(vofcomp+sdim+1)).ge.4) then
-         ! do nothing
-        else
-         print *,"expecting order>=4 for rest of materials: ",
-           NINT(mofdata(vofcomp+sdim+1))
-         stop
-        endif
         if (mofdata(vofcomp).le.VOFTOL) then
          !do nothing
         else
@@ -15760,200 +15806,98 @@ contains
 
       enddo !imaterial=1..num_materials
 
+      junction_good=1
 
-      do imaterial=1,num_materials
-       if (is_rigid_local(imaterial).eq.1) then
-        ! do nothing
-       else if (is_rigid_local(imaterial).eq.0) then
-        if (order_algorithm_in(imaterial).eq.0) then
-         n_ndef=n_ndef+1
-         !flexlist: list of fluid materials that need an ordering
-         flexlist(n_ndef)=imaterial
-        else if (order_algorithm_in(imaterial).eq.num_materials+1) then
-         ! do nothing
-        else if ((order_algorithm_in(imaterial).ge.1).and. &
-                 (order_algorithm_in(imaterial).le.num_materials)) then
-          !0 if place open, 1 if place taken.
-         placeholder(order_algorithm_in(imaterial))=1
-        else
-         print *,"order_algorithm_in(imaterial) invalid: ", &
-           imaterial,order_algorithm_in(imaterial),num_materials
-         stop
-        endif
-       else
-        print *,"is_rigid_local invalid"
-        stop
-       endif
-      enddo ! imaterial=1..num_materials
-
-      !n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
-      !placelist: list of available places (size of list >= n_ndef)
-      number_of_open_places=0
-      do imaterial=1,num_materials
-       !0 if place open, 1 if place taken.
-       if (placeholder(imaterial).eq.0) then ! the "imaterial" place is open.
-        number_of_open_places=number_of_open_places+1
-        placelist(number_of_open_places)=imaterial
-       endif
-      enddo  ! imaterial
-      if (number_of_open_places.lt.n_ndef) then
-       print *,"number_of_open_places invalid"
-       stop
-      endif
-
-      if (n_ndef.eq.0) then
+      if (abs(d_melt+d_ice).lt.VOFTOL) then
        ! do nothing
-      else if ((n_ndef.ge.1).and. &
-               (n_ndef.le.num_materials).and. &
-               (n_ndef.le.number_of_open_places)) then
-       call nfact(n_ndef,n_orderings) 
-        ! order_algorithm_in(flexlist(1..n_ndef))=
-        !  placelist(order_array(*,1..n_ndef))
-       allocate(order_array(n_orderings,n_ndef))
-       allocate(order_stack(n_orderings,n_ndef))
-       alloc_flag=alloc_flag+2
-       order_count=0
-       order_stack_count=0
-       do irank=1,n_ndef
-        temp_order(1)=irank
-        do jflex=2,n_ndef
-         temp_order(jflex)=0 
-        enddo
-        call push_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef)
-       enddo  ! irank=1..n_ndef
-       do while (order_stack_count.gt.0)
-        call pop_order_stack(order_stack,order_stack_count, &
-         temp_order,n_orderings,n_ndef)
-        jflex=n_ndef
-        do while (temp_order(jflex).eq.0)
-         jflex=jflex-1
-         if (jflex.lt.1) then
-          print *,"jflex invalid"
-          stop
-         endif
-        enddo
-        if (jflex.eq.n_ndef) then
-         order_count=order_count+1
-         if (order_count.gt.n_orderings) then
-          print *,"order_count too big"
-          stop
-         endif
-         do iflex=1,n_ndef
-          order_array(order_count,iflex)=temp_order(iflex)
-         enddo
-        else if ((jflex.ge.1).and.(jflex.lt.n_ndef)) then
-         do irank=1,n_ndef
-          is_valid=1
-          do kflex=1,jflex
-           if (temp_order(kflex).eq.irank) then
-            is_valid=0
-           endif
-          enddo
-          if (is_valid.eq.1) then
-           temp_order(jflex+1)=irank
-           call push_order_stack(order_stack,order_stack_count, &
-            temp_order,n_orderings,n_ndef)
-          endif
-         enddo ! irank
-        else
-         print *,"j invalid"
-         stop
-        endif
-       enddo ! while order_stack_count>0
-    
-       deallocate(order_stack) 
-       alloc_flag=alloc_flag-1
-
-       if (order_count.ne.n_orderings) then
-        print *,"order_count invalid"
+      else
+       print *,"(abs(d_melt+d_ice).lt.VOFTOL) failed"
+       junction_good=0
+       stop
+      endif
+      do dir=1,sdim
+       if (abs(n_melt(dir)+n_ice(dir)).lt.VOFTOL) then
+        ! do nothing
+       else
+        print *,"(abs(n_melt+n_ice).lt.VOFTOL) failed"
+        junction_good=0
         stop
        endif
+      enddo !dir=1,sdim
+       !phi=n dot (x-x0)+d
+       !n_CL(3)
+#if (AMREX_SPACEDIM==3)
+      call crossprod(n_ambient,n_ice,n_CL)
+#elif (AMREX_SPACEDIM==2)
+      call crossprod2d(n_ambient,n_ice,n_CL)
+#else
+      print *,"dimension bust"
+      stop
+#endif
+      mag=zero
+      do dir=1,3
+       mag=mag+n_CL(dir)**2
+      enddo
+      mag=sqrt(mag)
+      if (mag.lt.zero) then
+       print *,"mag invalid"
+       stop
+      else if (mag.le.0.01d0) then
+       junction_good=0
+      else if (mag.le.one+VOFTOL) then
+       do dir=1,3
+        n_CL(dir)=n_CL(dir)/mag
+       enddo
 
+        ! contact line: x=n_CL t + x0+xcrit
+        ! plane 1: set of x such that n_ambient dot (x-x0)+d_ambient=0
+        ! plane 2: set of x such that n_ice dot (x-x0)+d_ice=0
+        ! plane 3: set of x such that n_CL dot (x-x0)=0
+        ! Assume x=x0 + xcrit =>
+        ! n_ambient dot xcrit + d_ambient = 0
+        ! n_ice     dot xcrit + d_ice = 0
+        ! n_CL      dot xcrit=0
+        ! once xcrit is found, then we determine if there are any "t"
+        ! such that x=n_CL t + x0 + xcrit is in the "supercell"
       else
-       print *,"n_ndef invalid"
+       print *,"mag invalid(n_CL)"
        stop
       endif
 
-      if ((single_material.gt.0).and. &
-          (remaining_vfrac.lt.VOFTOL)) then
 
-       if (is_rigid_local(single_material).ne.0) then
-        print *,"is_rigid_local(single_material) invalid"
-        stop
-       endif
 
-       vofcomp=(single_material-1)*ngeom_recon+1
-       mofdata(vofcomp+sdim+1)=one  ! order=1
-       do dir=1,sdim
-        nrecon(dir)=zero  
-       enddo
-       nrecon(1)=one ! null slope=(1 0 0) 
-        ! phi = n dot (x-x0) + int
-        ! int=-min (n dot (x-x0)) where x is a point in the cell.  
-        ! x0 is cell center (xcell)
-       mofdata(vofcomp+2*sdim+2)=null_intercept
-       do dir=1,sdim
-        mofdata(vofcomp+sdim+1+dir)=nrecon(dir)
-        multi_centroidA(single_material,dir)=zero  ! cell is full
-       enddo 
+      call Box_volume_super( &
+        cmofsten, &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_vof, &
+        uncaptured_centroid_vof, &
+        sdim)
+      call Box_volume_super( &
+        cmofsten, &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_cen, &
+        uncaptured_centroid_cen, &
+        sdim)
 
-      else if ((single_material.eq.0).or. &
-               (remaining_vfrac.ge.VOFTOL)) then
 
-          ! no need to pick an optimal ordering
-       if (n_ndef.eq.0) then
 
-        if (continuous_mof.eq.0) then
 
-         call Box_volumeFAST( &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_vof, &
-          uncaptured_centroid_vof, &
-          sdim)
-         call Box_volumeFAST( &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen, &
-          uncaptured_centroid_cen, &
-          sdim)
 
-        else if (continuous_mof.ge.1) then
 
-         call Box_volumeFAST( &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_vof, &
-          uncaptured_centroid_vof, &
-          sdim)
-         call Box_volume_super( &
-          cmofsten, &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen, &
-          uncaptured_centroid_cen, &
-          sdim)
 
-        else if (continuous_mof.eq.-1) then
 
-         call Box_volume_super( &
-          cmofsten, &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_vof, &
-          uncaptured_centroid_vof, &
-          sdim)
-         call Box_volume_super( &
-          cmofsten, &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen, &
-          uncaptured_centroid_cen, &
-          sdim)
 
-        else
-         print *,"continuous_mof invalid"
-         stop
-        endif
 
-        imaterial_count=1
-        do while ((imaterial_count.le.num_materials).and. &
-                  (uncaptured_volume_vof.gt.zero))
+
+
+
+
+
+
+
+
+
+
          call individual_MOF( &
           grid_index, &
           grid_level, &
