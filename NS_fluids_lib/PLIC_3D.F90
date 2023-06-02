@@ -1154,7 +1154,20 @@ stop
                   (im_ice.ne.0).and. &
                   (im_melt.ne.0)) then
 
-               ! triple point correction goes here
+               call multimaterial_MOF_growth_angle( &
+                im_ambient,im_ice,im_melt, &
+                growth_angle(iten_growth), &
+                bfact,dx, &
+                xsten, &
+                nhalf, &
+                geom_xtetlist(1,1,1,tid+1), &
+                geom_xtetlist_old(1,1,1,tid+1), &
+                nmax, &
+                nmax, &
+                mofdata_super_vfrac, &
+                multi_centroidA, & !(num_materials,sdim) relative to supercell
+                cmofsten, & !intent(in)
+                SDIM)
 
               else 
                print *,"im_ambient,im_ice, or im_melt invalid"
