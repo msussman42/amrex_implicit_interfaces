@@ -15472,6 +15472,11 @@ contains
       REAL_T, DIMENSION(num_materials*ngeom_recon) :: mofdata_in
       REAL_T, INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
 
+      REAL_T aa(3,3)
+      REAL_T bb(3)
+      REAL_T xcrit(3)
+      INTEGER_T matstatus
+
       INTEGER_T imaterial2
       INTEGER_T imaterial
       INTEGER_T vofcomp
@@ -15848,6 +15853,23 @@ contains
        do dir=1,3
         n_CL(dir)=n_CL(dir)/mag
        enddo
+       if (sdim.eq.3) then
+               ! do nothing
+       else if (sdim.eq.2) then
+        n_CL(1)=zero
+        n_CL(2)=zero
+        if (abs(n_CL(3)-one).le.1.0D-10) then
+         n_CL(3)=one
+        else if (abs(n_CL(3)+one).le.1.0D-10) then
+         n_CL(3)=-one
+        else
+         print *,"n_CL(3) invalid"
+         stop
+        endif
+       else
+        print *,"sdim invalid"
+        stop
+       endif
 
         ! contact line: x=n_CL t + x0+xcrit
         ! plane 1: set of x such that n_ambient dot (x-x0)+d_ambient=0
@@ -15857,13 +15879,129 @@ contains
         ! n_ambient dot xcrit + d_ambient = 0
         ! n_ice     dot xcrit + d_ice = 0
         ! n_CL      dot xcrit=0
-        ! once xcrit is found, then we determine if there are any "t"
-        ! such that x=n_CL t + x0 + xcrit is in the "supercell"
+        ! once xcrit is found, one has that x=n_CL t + x0 + xcrit is on
+        ! the following 3 planes:
+        ! plane 1: set of x such that n_ambient dot (x-x0)+d_ambient=0
+        ! plane 2: set of x such that n_ice dot (x-x0)+d_ice=0
+        ! plane 3: set of x such that n_CL dot (x-x0)=t
+       do dir=1,3
+        aa(1,dir)=n_ambient(dir)
+        aa(2,dir)=n_ice(dir)
+        aa(3,dir)=n_CL(dir)
+       enddo
+       bb(1)=-d_ambient
+       bb(2)=-d_ice
+       bb(3)=zero
+       call matrix_solve(aa,xcrit,bb,matstatus,3)
+       if (matstatus.eq.1) then
+        dircrit=1
+        do dir=2,3
+         if (abs(n_CL(dir)).gt.abs(n_CL(dircrit))) then
+          dircrit=dir
+         else if (abs(n_CL(dir)).le.abs(n_CL(dircrit))) then
+          ! do nothing
+         else
+          print *,"n_CL is NaN"
+          stop
+         endif
+        enddo !dir=2,3
+
+        if (sdim.eq.2) then
+         t1=zero
+         t2=zero
+        else if (sdim.eq.3) then
+         if (abs(n_CL(dircrit)).gt.one/three) then
+          t1=(xsten0(3,dircrit)-xsten0(0,dircrit)-xcrit(dircrit))/ &
+             n_CL(dircrit)
+          t2=(xsten0(-3,dircrit)-xsten0(0,dircrit)-xcrit(dircrit))/ &
+             n_CL(dircrit)
+          if (t1.le.t2) then
+           ! do nothing
+          else if (t1.gt.t2) then
+           tswap=t1
+           t1=t2
+           t2=tswap
+          else
+           print *,"t1 or t2 is NaN"
+           stop
+          endif
+          do dir=1,sdim
+           if (dir.ne.dircrit) then
+            if (abs(n_CL(dir)).gt.zero) then
+             t1_test=(xsten0(3,dir)-xsten0(0,dir)-xcrit(dir))/n_CL(dir)
+             t2_test=(xsten0(-3,dir)-xsten0(0,dir)-xcrit(dir))/n_CL(dir)
+             if (t1_test.le.t2_test) then
+              ! do nothing
+             else if (t1_test.gt.t2_test) then
+              tswap=t1_test
+              t1_test=t2_test
+              t2_test=tswap
+             else
+              print *,"t1_test or t2_test is NaN"
+              stop
+             endif
+             if (t1_test.gt.t1) then
+              t1=t1_test
+             endif
+             if (t2_test.lt.t2) then
+              t2=t2_test
+             endif
+            else if (abs(n_CL(dir)).eq.zero) then
+             ! do nothing
+            else
+             print *,"n_CL(dir) is NaN"
+             stop
+            endif
+           else if (dir.eq.dircrit) then
+            ! do nothing
+           else
+            print *,"dir invalid"
+            stop
+           endif
+          enddo !dir=1,sdim
+         else
+          print *,"n_CL(dircrit) invalid"
+          stop
+         endif
+        else
+         print *,"sdim invalid"
+         stop
+        endif
+        if (t1.le.t2) then
+         t_avg=half*(t1+t2)
+         do dir=1,sdim
+          xtest=n_CL(dir)*t_avg+xcrit(dir)+xsten0(0,dir)
+          if ((xtest.lt.xsten0(-3,dir)).or. &
+              (xtest.gt.xsten0(3,dir))) then
+           junction_good=0
+          else if ((xtest.ge.xsten0(-3,dir)).and. &
+                   (xtest.le.xsten0(3,dir))) then
+           ! do nothing
+          else
+           print *,"xtest is NaN"
+           stop
+          endif
+         enddo !dir=1,sdim
+        else if (t1.gt.t2) then
+         junction_good=0
+        else
+         print *,"t1 or t2 is NaN"
+         stop
+        endif
+
+       else
+        print *,"expecting a non-singular matrix"
+        stop
+       endif
+
       else
        print *,"mag invalid(n_CL)"
        stop
       endif
 
+      if (junction_good.eq.0) then
+              ! do nothing
+      else if (junction_good.eq.1) then
 
 
       call Box_volume_super( &
