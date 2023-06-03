@@ -11081,6 +11081,7 @@ contains
        stop
       endif
 
+       !calling from:angle_init_from_angle_recon_and_F
       call scale_MOF_variables( &
        bfact,dx,xsten0,nhalf0, &
        refcentroid, &
@@ -11393,6 +11394,7 @@ contains
        stop
       endif
 
+       !calling from:find_cut_geom_slope
       call scale_MOF_variables( &
        bfact,dx, &
        xsten0,nhalf0, &
@@ -15664,10 +15666,6 @@ contains
        stop
       endif
 
-      remaining_vfrac=zero
-      single_material=0
-      num_materials_cell=0
-
         ! if F<eps or F>1-eps, then moments and vfracs are truncated.
         ! sum of F_fluid=1
         ! sum of F_rigid<=1
@@ -15720,7 +15718,8 @@ contains
         else
          print *,"mag invalid im_ambient"
          stop
-        endif         
+        endif 
+
        else if (imaterial.eq.im_ice) then
 
         if (NINT(mofdata(vofcomp+sdim+1)).eq.2) then
@@ -15884,6 +15883,28 @@ contains
         ! plane 1: set of x such that n_ambient dot (x-x0)+d_ambient=0
         ! plane 2: set of x such that n_ice dot (x-x0)+d_ice=0
         ! plane 3: set of x such that n_CL dot (x-x0)=t
+        ! The corrected n_ambient comes from a 1-parameter family:
+        ! n1=n_ambient^{old} n2=n_ambient^{old} cross n_CL
+        ! define a mapping T such that 
+        !   T n_CL=(0 0 1)
+        !   T n1=(1 0 0)
+        !   T n2=(0 1 0)
+        !   T=(---- n1 ----     T^{-1}=T^{transpose}
+        !      ---- n2 ----  
+        !      ---- n_CL -- )
+        !   given a trial angle, we find the corresponding (2D) normal:
+        !   n_base=( n2d 
+        !             0  )
+        !   n_ambient_candidate=T^{-1}n_base
+        !   Let R=(cos(theta)   sin(theta) 
+        !          -sin(theta)  cos(theta) ) 
+        !   theta=\pm( pi/2-growth_angle/factor )
+        !   n_melt_candidate=T^{-1} ( \pm R n2d
+        !                                 0     )
+        !   The sign is chosen so that 
+        !   n_ambient_original dot n_melt_original have the same sign
+        !   as 
+        !   n_ambient_candiate dot n_melt_candidate. 
        do dir=1,3
         aa(1,dir)=n_ambient(dir)
         aa(2,dir)=n_ice(dir)
@@ -16000,409 +16021,54 @@ contains
       endif
 
       if (junction_good.eq.0) then
-              ! do nothing
+       ! do nothing
       else if (junction_good.eq.1) then
 
-
-      call Box_volume_super( &
+       call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
         uncaptured_volume_vof, &
         uncaptured_centroid_vof, &
         sdim)
-      call Box_volume_super( &
+       call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
         uncaptured_volume_cen, &
         uncaptured_centroid_cen, &
         sdim)
 
+       imaterial_count=1  ?????
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-         call individual_MOF( &
-          grid_index, &
-          grid_level, &
-          tid, &
-          ls_mof, &
-          lsnormal, &
-          lsnormal_valid, &
-          bfact,dx,xsten0,nhalf0, &
-          order_algorithm_in, &
-          xtetlist_vof, &
-          xtetlist_cen, &
-          nlist_alloc, &
-          nmax, &
-          mofdata, &
-          imaterial_count, & !imaterial_count-1=#mat already reconstructed.
-          uncaptured_volume_vof, &
-          uncaptured_volume_cen, &
-          multi_centroidA, &
-          continuous_mof, &
-          cmofsten, &
-          sdim)
-         imaterial_count=imaterial_count+1
-        enddo
-
-         ! multiple orderings must be tested.
-       else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
-
-        allocate(mofdata_array(n_orderings,num_materials*ngeom_recon))
-        allocate(centroidA_array(n_orderings,num_materials,sdim))
-        allocate(moferror_array(n_orderings))
-        alloc_flag=alloc_flag+3
-
-        argmin_order=0
-        min_error=0.0
-
-        do order_count=1,n_orderings
-
-         do dir=1,num_materials*ngeom_recon
-          mofdata_in(dir)=mofdata(dir)
-         enddo
-
-         !flexlist: list of fluid materials that need an ordering
-         do iflex=1,n_ndef
-
-          imaterial=flexlist(iflex)
-          if (order_algorithm_in(imaterial).eq.0) then
-           ! do nothing
-          else
-           print *,"order_algorithm_in(imaterial) invalid"
-           stop
-          endif
-          if (iflex.gt.1) then
-           if (flexlist(iflex).gt.flexlist(iflex-1)) then
-            ! do nothing
-           else
-            print *,"flexlist(iflex) or flexlist(iflex-1) bad"
-            stop
-           endif
-          else if (iflex.lt.n_ndef) then
-           if (flexlist(iflex).lt.flexlist(iflex+1)) then
-            ! do nothing
-           else
-            print *,"flexlist(iflex) or flexlist(iflex+1) bad"
-            stop
-           endif
-          else
-           print *,"iflex invalid"
-           stop
-          endif
-
-          if ((imaterial.lt.1).or.(imaterial.gt.num_materials)) then
-           print *,"imaterial invalid"
-           stop
-          endif
-
-          if ((is_rigid_local(imaterial).eq.0).and. &
-              (order_algorithm_in(imaterial).eq.0)) then
-
-           irank=order_array(order_count,iflex)
-
-           if ((irank.gt.1).and.(irank.le.n_ndef)) then
-            if (placelist(irank).ge.placelist(irank-1)) then
-             ! do nothing
-            else
-             print *,"placelist(irank) or placelist(irank-1) bad"
-             stop
-            endif
-           else if ((irank.ge.1).and.(irank.lt.n_ndef)) then
-            if (placelist(irank+1).ge.placelist(irank)) then
-             ! do nothing
-            else
-             print *,"placelist(irank+1) or placelist(irank) bad"
-             stop
-            endif
-           else
-            print *,"irank invalid"
-            stop
-           endif
-
-           order_algorithm_in(imaterial)=placelist(irank)
-          else
-           print *,"is_rigid_local or order_algorithm_in invalid"
-           print *,"n_ndef,num_materials ",n_ndef,num_materials
-           print *,"n_orderings ",n_orderings
-           print *,"argmin_order ",argmin_order
-           print *,"min_error ",min_error
-           print *,"order_count ",order_count
-           print *,"iflex=",iflex
-           print *,"imaterial=",imaterial
-           print *,"flexlist(iflex) ",flexlist(iflex)
-           do iflex2=1,n_ndef
-            print *,"iflex2,flexlist(iflex2) ",iflex2,flexlist(iflex2)
-           enddo
-           print *,"is_rigid_local(imaterial) ",is_rigid_local(imaterial)
-           print *,"order_algorithm_in(imaterial) ", &
-             order_algorithm_in(imaterial) 
-           do imaterial2=1,num_materials
-            print *,"imat2,order_algorithm_in,is_rigid_local ", &
-              imaterial2, &
-              order_algorithm_in(imaterial2), &
-              is_rigid_local(imaterial2)
-           enddo
-           stop
-          endif
-
-         enddo ! iflex=1...n_ndef
-        
-         if (continuous_mof.eq.0) then
-
-          call Box_volumeFAST( &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
-          call Box_volumeFAST( &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
-
-         else if (continuous_mof.ge.1) then
-
-          call Box_volumeFAST( &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
-          call Box_volume_super( &
-           cmofsten, &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
-
-         else if (continuous_mof.eq.-1) then
-
-          call Box_volume_super( &
-           cmofsten, &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
-          call Box_volume_super( &
-           cmofsten, &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
-
-         else
-          print *,"continuous_mof invalid"
-          stop
-         endif
-
-         imaterial_count=1
-         do while ((imaterial_count.le.num_materials).and. &
-                   (uncaptured_volume_vof.gt.zero))
-          call individual_MOF( &
-           grid_index, &
-           grid_level, &
-           tid, &
-           ls_mof, &
-           lsnormal, &
-           lsnormal_valid, &
-           bfact,dx,xsten0,nhalf0, &
-           order_algorithm_in, &
-           xtetlist_vof, &
-           xtetlist_cen, &
-           nlist_alloc, &
-           nmax, &
-           mofdata_in, &
-           imaterial_count, &
-           uncaptured_volume_vof, &
-           uncaptured_volume_cen, &
-           multi_centroidA, &
-           continuous_mof, &
-           cmofsten, &
-           sdim)
-          imaterial_count=imaterial_count+1
-         enddo ! while not all of uncaptured space filled
-
-         mof_err=zero
-         do imaterial = 1,num_materials
-          if (is_rigid_local(imaterial).eq.1) then
-           ! do nothing
-          else if (is_rigid_local(imaterial).eq.0) then
-           vofcomp=(imaterial-1)*ngeom_recon+1
-           do dir=1,sdim
-            xref_mat(dir)=mofdata_in(vofcomp+dir)
-            xact_mat(dir)=multi_centroidA(imaterial,dir)
-           enddo
-           call RT_transform_offset(xref_mat,uncaptured_centroid_cen,xref_matT)
-           call RT_transform_offset(xact_mat,uncaptured_centroid_cen,xact_matT)
-           
-           do dir=1,sdim
-            centroidA_array(order_count,imaterial,dir)= &
-             multi_centroidA(imaterial,dir)
-            mof_err = mof_err + &
-             mofdata_in(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
-           enddo ! dir
-          else
-           print *,"is_rigid invalid MOF.F90"
-           stop
-          endif
-         enddo ! imaterial=1,num_materials
-
-         do dir=1,num_materials*ngeom_recon
-          mofdata_array(order_count,dir)=mofdata_in(dir)
-         enddo
-         moferror_array(order_count)=mof_err
-         if (argmin_order.eq.0) then
-          argmin_order=order_count
-          min_error=mof_err
-         else if (mof_err.lt.min_error) then
-          min_error=mof_err
-          argmin_order=order_count
-         endif
-         
-         if (1.eq.0) then
-          print *,"n_ndef= ",n_ndef
-          print *,"order_count=",order_count
-          do imaterial=1,num_materials
-           print *,"imaterial,order_algorithm_in ",imaterial, &
-            order_algorithm_in(imaterial)
-          enddo
-          print *,"mof_err=",mof_err
-          print *,"argmin_order=",argmin_order
-          print *,"min_error=",min_error
-         endif 
-
-         do iflex=1,n_ndef
-          imaterial=flexlist(iflex)
-          order_algorithm_in(imaterial)=0
-         enddo
-
-        enddo ! do order_count=1,n_orderings
-
-        if ((argmin_order.lt.1).or.(argmin_order.gt.n_orderings)) then
-         print *,"argmin_order invalid"
-         stop
-        else
-         do dir=1,num_materials*ngeom_recon
-          mofdata(dir)=mofdata_array(argmin_order,dir)
-         enddo
-         do imaterial = 1,num_materials
-          if (is_rigid_local(imaterial).eq.1) then
-           ! do nothing
-          else if (is_rigid_local(imaterial).eq.0) then
-           do dir=1,sdim
-            multi_centroidA(imaterial,dir)= &
-             centroidA_array(argmin_order,imaterial,dir)
-           enddo
-          else
-           print *,"is_rigid invalid MOF.F90"
-           stop
-          endif
-         enddo ! do imaterial = 1,num_materials
-        endif
-
-        deallocate(mofdata_array)
-        deallocate(centroidA_array)
-        deallocate(moferror_array)
-        alloc_flag=alloc_flag-3
-
-       else
-        print *,"n_ndef invalid"
-        stop
-       endif
+       call individual_MOF( &
+        growth_angle, &
+        im_ambient,im_ice,im_CL, &
+        n_ambient,n_ice,n_CL, &
+        d_ambient,d_ice, &
+        grid_index, &
+        grid_level, &
+        tid, &
+        ls_mof, &
+        lsnormal, &
+        lsnormal_valid, &
+        bfact,dx,xsten0,nhalf0, &
+        order_algorithm_in, &
+        xtetlist_vof, &
+        xtetlist_cen, &
+        nlist_alloc, &
+        nmax, &
+        mofdata, &
+        imaterial_count, & !imaterial_count-1=#mat already reconstructed.
+        uncaptured_volume_vof, &
+        uncaptured_volume_cen, &
+        multi_centroidA, &
+        continuous_mof, &
+        cmofsten, &
+        sdim)
 
       else
-       print *,"single_material or remaining_vfrac invalid"
+       print *,"junction_good invalid"
        stop
       endif
-
-      if (n_ndef.eq.0) then
-       ! do nothing
-      else if ((n_ndef.ge.1).and.(n_ndef.le.num_materials)) then
-       deallocate(order_array)
-       alloc_flag=alloc_flag-1
-      else
-       print *,"n_ndef invalid"
-       stop
-      endif
-
-      if (alloc_flag.ne.0) then
-       print *,"alloc_flag invalid in MOF.F90"
-       stop
-      endif
-
-      do imaterial=1,num_materials
-       vofcomp=(imaterial-1)*ngeom_recon+1
-
-       if (abs(voftest(imaterial)-mofdata(vofcomp)).ge.SANITY_TOL) then
-        print *,"volume fraction changed"
-        print *,"put breakpoint here to see the caller"
-        print *,"imaterial,vofbefore,vofafter ",imaterial, &
-          voftest(imaterial),mofdata(vofcomp)
-        do imaterial2=1,num_materials
-         vofcomp=(imaterial2-1)*ngeom_recon+1
-         print *,"imaterial2,vofbefore,vofafter ",imaterial2, &
-          voftest(imaterial2),mofdata(vofcomp)
-        enddo
-        stop
-       else if (abs(voftest(imaterial)-mofdata(vofcomp)).lt.SANITY_TOL) then
-        ! do nothing
-       else
-        print *,"voftest or mofdata is NaN: ", &
-          imaterial,voftest(imaterial),mofdata(vofcomp)
-        stop
-       endif
-
-      enddo 
-
-
-      if (mof_verbose.eq.1) then
-       print *,"AFTER AFTER"
-       print *,"nmax = ",nmax
-       print *,"levelrz = ",levelrz
-       print *,"num_materials = ",num_materials
-       print *,"sdim = ",sdim
-       print *,"continuous_mof = ",continuous_mof
-       print *,"ngeom_recon = ",ngeom_recon
-       do imaterial=1,num_materials*ngeom_recon
-        print *,"i,mofdata ",imaterial,mofdata(imaterial)
-       enddo
-       do imaterial=1,num_materials
-        print *,"imaterial,order_algorithm ",imaterial, &
-         order_algorithm(imaterial)
-       enddo
-       do dir=1,sdim
-        print *,"dir,xsten0(0,dir) ",dir,xsten0(0,dir)
-       enddo
-       print *,"MOFITERMAX ",MOFITERMAX
-       print *,"MOFITERMAX_AFTER_PREDICT ",MOFITERMAX_AFTER_PREDICT
-      else if (mof_verbose.eq.0) then
-       ! do nothing
-      else
-       print *,"mof_verbose invalid in multimaterial_MOF 2"
-       print *,"mof_verbose= ",mof_verbose
-       print *,"continuous_mof=",continuous_mof
-       stop
-      endif
-
-      deallocate(ls_mof)
-      deallocate(lsnormal)
-      deallocate(lsnormal_valid)
-      deallocate(ls_intercept)
 
       return
       end subroutine multimaterial_MOF_growth_angle
