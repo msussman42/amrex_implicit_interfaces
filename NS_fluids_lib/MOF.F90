@@ -12338,16 +12338,15 @@ contains
 
       IMPLICIT NONE
 
-      REAL_T, INTENT(IN), OPTIONAL :: growth_angle
-      REAL_T :: actual_growth_angle = 1.0D+20
-      INTEGER_T, INTENT(IN), OPTIONAL :: im_ambient
-      INTEGER_T, INTENT(IN), OPTIONAL :: im_ice
-      INTEGER_T, INTENT(IN), OPTIONAL :: im_melt
-      REAL_T, INTENT(IN), OPTIONAL :: n_ambient(3)
-      REAL_T, INTENT(IN), OPTIONAL :: n_ice(3)
-      REAL_T, INTENT(IN), OPTIONAL :: n_CL(3)
-      REAL_T, INTENT(IN), OPTIONAL :: d_ambient
-      REAL_T, INTENT(IN), OPTIONAL :: d_ice
+      REAL_T, INTENT(in) :: growth_angle
+      INTEGER_T, INTENT(in) :: im_ambient
+      INTEGER_T, INTENT(in) :: im_ice
+      INTEGER_T, INTENT(in) :: im_melt
+      REAL_T, INTENT(in) :: n_ambient(3)
+      REAL_T, INTENT(in) :: n_ice(3)
+      REAL_T, INTENT(in) :: n_CL(3)
+      REAL_T, INTENT(in) :: d_ambient
+      REAL_T, INTENT(in) :: d_ice
 
       INTEGER_T, INTENT(IN) :: nlist_alloc 
       INTEGER_T, INTENT(IN) :: tid
@@ -12408,10 +12407,36 @@ contains
 
 #include "mofdata.H"
 
-      if (PRESENT(growth_angle)) then
-       actual_growth_angle=growth_angle
+      if (growth_angle.eq.zero) then
+
+       if ((im_ambient.eq.0).and. &
+           (im_ice.eq.0).and. &
+           (im_melt.eq.0).and. &
+           (d_ambient.eq.zero).and. &
+           (d_ice.eq.zero)) then
+        ! do nothing
+       else
+        print *,"invalid default arguments"
+        stop
+       endif
+
+      else if (abs(growth_angle).le.half*Pi) then
+
+       if ((im_ambient.ge.1).and. &
+           (im_ambient.le.num_materials).and. &
+           (im_ice.ge.1).and. &
+           (im_ice.le.num_materials).and. &
+           (im_melt.ge.1).and. &
+           (im_melt.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"invalid growth_angle arguments"
+        stop
+       endif
+
       else
-       actual_growth_angle=0
+       print *,"growth_angle invalid"
+       stop
       endif
 
       fastflag=1
@@ -14333,6 +14358,16 @@ contains
       INTEGER_T continuous_mof_rigid
       INTEGER_T nlist_vof,nlist_cen
 
+      REAL_T, PARAMETER :: growth_angle=zero
+      INTEGER_T, PARAMETER :: im_ambient=0
+      INTEGER_T, PARAMETER :: im_ice=0
+      INTEGER_T, PARAMETER :: im_melt=0
+      REAL_T :: n_ambient(3)
+      REAL_T :: n_ice(3)
+      REAL_T :: n_CL(3)
+      REAL_T, PARAMETER :: d_ambient=zero
+      REAL_T, PARAMETER :: d_ice=zero
+
       INTEGER_T, PARAMETER :: tessellate=0
       INTEGER_T is_rigid_local(num_materials)
 
@@ -15086,6 +15121,10 @@ contains
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
          call individual_MOF( &
+          growth_angle, &
+          im_ambient,im_ice,im_melt, &
+          n_ambient,n_ice,n_CL, &
+          d_ambient,d_ice, &
           grid_index, &
           grid_level, &
           tid, &
@@ -15263,6 +15302,10 @@ contains
          do while ((imaterial_count.le.num_materials).and. &
                    (uncaptured_volume_vof.gt.zero))
           call individual_MOF( &
+           growth_angle, &
+           im_ambient,im_ice,im_melt, &
+           n_ambient,n_ice,n_CL, &
+           d_ambient,d_ice, &
            grid_index, &
            grid_level, &
            tid, &
@@ -15492,7 +15535,6 @@ contains
       REAL_T, INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_cen
       REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
       REAL_T, INTENT (INOUT), DIMENSION(num_materials*ngeom_recon) :: mofdata
-      REAL_T, DIMENSION(num_materials*ngeom_recon) :: mofdata_in
       REAL_T, INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
 
       REAL_T aa(3,3)
@@ -15505,11 +15547,11 @@ contains
       INTEGER_T dir
       INTEGER_T dircrit
       INTEGER_T, PARAMETER :: imaterial_count=1
-      INTEGER_T, PARAMETER :: grid_index=0
+      INTEGER_T :: grid_index(sdim)
       INTEGER_T, PARAMETER :: grid_level=0
-      REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
-      INTEGER_T, INTENT(in) :: lsnormal_valid(num_materials)
+      REAL_T :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T :: lsnormal(num_materials,sdim)
+      INTEGER_T :: lsnormal_valid(num_materials)
       INTEGER_T order_algorithm_in(num_materials)
 
       REAL_T :: n_ambient(3)
@@ -15644,33 +15686,6 @@ contains
        endif
 
       enddo ! imaterial=1,num_materials
-
-      if (mof_verbose.eq.1) then
-       print *,"BEFORE BEFORE (multimaterial_MOF_growth_angle)"
-       print *,"nmax = ",nmax
-       print *,"levelrz = ",levelrz
-       print *,"num_materials = ",num_materials
-       print *,"sdim = ",sdim
-       print *,"continuous_mof = ",continuous_mof
-       print *,"ngeom_recon = ",ngeom_recon
-       do imaterial=1,num_materials*ngeom_recon
-        print *,"i,mofdata ",imaterial,mofdata(imaterial)
-       enddo
-       do dir=1,sdim
-        print *,"dir,xsten0(0) ",dir,xsten0(0,dir)
-        print *,"dir,xsten0(2) ",dir,xsten0(2,dir)
-        print *,"dir,dx ",dir,xsten0(1,dir)-xsten0(-1,dir)
-       enddo
-       print *,"MOFITERMAX ",MOFITERMAX
-       print *,"MOFITERMAX_AFTER_PREDICT ",MOFITERMAX_AFTER_PREDICT
-      else if (mof_verbose.eq.0) then
-       ! do nothing
-      else
-       print *,"mof_verbose invalid in multimaterial_MOF_growth_angle"
-       print *,"mof_verbose= ",mof_verbose
-       print *,"continuous_mof=",continuous_mof
-       stop
-      endif
 
         ! if F<eps or F>1-eps, then moments and vfracs are truncated.
         ! sum of F_fluid=1
@@ -16132,7 +16147,7 @@ contains
       INTEGER_T mof_verbose
       INTEGER_T use_ls_data
       INTEGER_T isten
-      INTEGER_T grid_index(3)
+      INTEGER_T grid_index(sdim)
       INTEGER_T, parameter :: grid_level=-1
       INTEGER_T bfact
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: LS_stencil
@@ -20154,7 +20169,7 @@ contains
       INTEGER_T num_processed_fluid
       INTEGER_T num_processed_total
       INTEGER_T loop_counter
-      INTEGER_T, PARAMETER :: tessellate_local=0
+      INTEGER_T :: tessellate_local=0
       INTEGER_T is_rigid_local(num_materials)
       INTEGER_T nhalf_box
 
