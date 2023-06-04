@@ -6204,7 +6204,8 @@ end subroutine volume_sanity_check
        print *,"sdim invalid tets_box_planes"
        stop
       endif
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid tets box planes"
        stop
       endif
@@ -6364,7 +6365,7 @@ end subroutine volume_sanity_check
         print *,"icrit invalid"
         stop
        endif 
-      enddo ! iplane
+      enddo ! iplane=1,num_materials
 
       return
       end subroutine tets_box_planes
@@ -11165,6 +11166,11 @@ contains
         ! output: intercept,centroidA,nslope
         ! called from: individual_MOF and multimaterial_MOF
       subroutine find_cut_geom_slope( &
+        mofdata, &
+        growth_angle, &
+        im_ambient,im_ice,im_melt, &
+        n_ambient,n_ice,n_CL, &
+        d_ambient,d_ice, &
         grid_index, &
         grid_level, &
         ls_mof, &
@@ -11182,7 +11188,7 @@ contains
         nlist_alloc, &
         centroidA, &
         nmax, &
-        critical_material, &
+        critical_material, & !INTENT(in)
         fastflag, &
         sdim)
 
@@ -11193,6 +11199,17 @@ contains
       IMPLICIT NONE
 
 #include "mofdata.H"
+
+      REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
+      REAL_T, INTENT(in) :: growth_angle
+      INTEGER_T, INTENT(in) :: im_ambient
+      INTEGER_T, INTENT(in) :: im_ice
+      INTEGER_T, INTENT(in) :: im_melt
+      REAL_T, INTENT(in) :: n_ambient(3)
+      REAL_T, INTENT(in) :: n_ice(3)
+      REAL_T, INTENT(in) :: n_CL(3)
+      REAL_T, INTENT(in) :: d_ambient
+      REAL_T, INTENT(in) :: d_ice
 
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: grid_index(sdim)
@@ -11372,6 +11389,60 @@ contains
        endif
       else
        print *,"continuous_mof invalid"
+       stop
+      endif
+
+      if (growth_angle.eq.zero) then
+
+       if ((im_ambient.eq.0).and. &
+           (im_ice.eq.0).and. &
+           (im_melt.eq.0).and. &
+           (d_ambient.eq.zero).and. &
+           (d_ice.eq.zero)) then
+        ! do nothing
+       else
+        print *,"invalid default arguments"
+        stop
+       endif
+
+      else if (abs(growth_angle).le.half*Pi) then
+
+        ! The corrected n_ambient comes from a 1-parameter family:
+        ! n1=n_ambient^{old} n2=n_ambient^{old} cross n_CL
+        ! define a mapping T such that 
+        !   T n_CL=(0 0 1)
+        !   T n1=(1 0 0)
+        !   T n2=(0 1 0)
+        !   T=(---- n1 ----     T^{-1}=T^{transpose}
+        !      ---- n2 ----  
+        !      ---- n_CL -- )
+        !   given a trial angle, we find the corresponding (2D) normal:
+        !   n_base=( n2d 
+        !             0  )
+        !   n_ambient_candidate=T^{-1}n_base
+        !   Let R=(cos(theta)   sin(theta) 
+        !          -sin(theta)  cos(theta) ) 
+        !   theta=\pm( pi/2-growth_angle/factor )
+        !   n_melt_candidate=T^{-1} ( \pm R n2d
+        !                                 0     )
+        !   The sign is chosen so that 
+        !   n_ambient_original dot n_melt_original have the same sign
+        !   as 
+        !   n_ambient_candiate dot n_melt_candidate. 
+       if ((im_ambient.ge.1).and. &
+           (im_ambient.le.num_materials).and. &
+           (im_ice.ge.1).and. &
+           (im_ice.le.num_materials).and. &
+           (im_melt.ge.1).and. &
+           (im_melt.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"invalid growth_angle arguments"
+        stop
+       endif
+
+      else
+       print *,"growth_angle invalid"
        stop
       endif
 
@@ -12644,6 +12715,28 @@ contains
          sdim)
        else if (continuous_mof.eq.-1) then
         use_super_cell=1
+
+        if (growth_angle.eq.zero) then
+         ! do nothing
+        else if (abs(growth_angle).le.half*Pi) then
+         do im=1,num_materials
+          vofcomp=(im-1)*(2*sdim+3)+1
+          test_order=NINT(mofdata(vofcomp+sdim+1))
+          if (((im.eq.im_ambient).and.(test_order.eq.1)).or. &
+              ((im.eq.im_ice).and.(test_order.eq.2)).or. &
+              ((im.eq.im_melt).and.(test_order.eq.3))) then
+           !do nothing
+          else
+           print *,"input orders incorrect"
+           stop
+          endif
+          mofdata(vofcomp+sdim+1)=zero
+         enddo !im=1,num_materials
+        else
+         print *,"growth_angle invalid"
+         stop
+        endif
+
         call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
@@ -12698,414 +12791,457 @@ contains
         stop
       endif
 
-        ! figure out the next material to fill the unoccupied region.
-      distmax=-one
-      order_min=9999
-      ordermax=0
+      if (growth_angle.eq.zero) then
 
-      do im=1,num_materials
-       vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid_local(im).eq.1) then
-        ! do nothing
-       else if (is_rigid_local(im).eq.0) then
-        if (NINT(mofdata(vofcomp+sdim+1)).gt.ordermax) then
-         ordermax=NINT(mofdata(vofcomp+sdim+1))
-        endif
-       else
-        print *,"is_rigid_local invalid"
-        stop
-       endif
-       vofmain(im)=mofdata(vofcomp)
-      enddo ! im=1..num_materials
-
-      if (ordermax.ge.num_materials) then
-       print *,"all the materials already initialized"
-       stop
-      endif
-      if (ordermax.lt.0) then
-       print *,"ordermax invalid"
-       stop
-      endif
-
-      critical_material=0
-      single_material_takes_all=0
-      single_material_im=0
-      do im=1,num_materials
-       vofcomp=(im-1)*ngeom_recon+1
-       if (is_rigid_local(im).eq.1) then
-        ! do nothing
-       else if (is_rigid_local(im).eq.0) then
-        if (mofdata(vofcomp+sdim+1).eq.zero) then
-         single_volume=mofdata(vofcomp)*volcell_vof
-         if (single_volume.ge.(one-VOFTOL)*uncaptured_volume_vof) then
-          if ((single_material_takes_all.ne.0).or. &
-              (single_material_im.ne.0)) then
-           print *,"cannot have two materials at once"
-           print *,"single_material_takes_all ",single_material_takes_all
-           print *,"im ",im
-           print *,"single vol ",single_volume
-           print *,"uncapt vol ",uncaptured_volume_vof
-           print *,"uncapt volfrac ",uncaptured_volume_vof/volcell_vof
-           stop
-          endif
-          single_material_takes_all=1
-          single_material_im=im
-          critical_material=im
-          distmax=-one  ! tells code below not to search for a slope
-         endif
-        endif  ! material not already processed.
-       else
-        print *,"is_rigid invalid MOF.F90"
-        stop
-       endif
-      enddo ! im
-
-      if (single_material_takes_all.eq.1) then
-       uncaptured_volume_vof=zero
-      else if (single_material_takes_all.eq.0) then
-       ! do nothing
-      else 
-       print *,"bust individual_MOF"
-       print *,"sdim,num_materials ",sdim,num_materials
-       stop
-      endif
-       
-         ! if uncaptured_volume_vof=0, then there is no need to find the
-         ! slope since "single_material_takes_all=1". 
-      if (uncaptured_volume_vof.gt.zero) then
-
-        ! find unprocessed material whose moment is furthest from cencut. 
-
-       override_selected=0
+         ! figure out the next material to fill the unoccupied region.
+       distmax=-one
+       order_min=9999
+       ordermax=0
 
        do im=1,num_materials
-
+        vofcomp=(im-1)*ngeom_recon+1
         if (is_rigid_local(im).eq.1) then
          ! do nothing
         else if (is_rigid_local(im).eq.0) then
+         if (NINT(mofdata(vofcomp+sdim+1)).gt.ordermax) then
+          ordermax=NINT(mofdata(vofcomp+sdim+1))
+         endif
+        else
+         print *,"is_rigid_local invalid"
+         stop
+        endif
+        vofmain(im)=mofdata(vofcomp)
+       enddo ! im=1..num_materials
 
-         vofcomp=(im-1)*ngeom_recon+1
+       if (ordermax.ge.num_materials) then
+        print *,"all the materials already initialized"
+        stop
+       endif
+       if (ordermax.lt.0) then
+        print *,"ordermax invalid"
+        stop
+       endif
 
-         single_volume=mofdata(vofcomp)*volcell_vof
+       critical_material=0
+       single_material_takes_all=0
+       single_material_im=0
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_recon+1
+        if (is_rigid_local(im).eq.1) then
+         ! do nothing
+        else if (is_rigid_local(im).eq.0) then
+         if (mofdata(vofcomp+sdim+1).eq.zero) then
+          single_volume=mofdata(vofcomp)*volcell_vof
+          if (single_volume.ge.(one-VOFTOL)*uncaptured_volume_vof) then
+           if ((single_material_takes_all.ne.0).or. &
+               (single_material_im.ne.0)) then
+            print *,"cannot have two materials at once"
+            print *,"single_material_takes_all ",single_material_takes_all
+            print *,"im ",im
+            print *,"single vol ",single_volume
+            print *,"uncapt vol ",uncaptured_volume_vof
+            print *,"uncapt volfrac ",uncaptured_volume_vof/volcell_vof
+            stop
+           endif
+           single_material_takes_all=1
+           single_material_im=im
+           critical_material=im
+           distmax=-one  ! tells code below not to search for a slope
+          endif
+         endif  ! material not already processed.
+        else
+         print *,"is_rigid invalid MOF.F90"
+         stop
+        endif
+       enddo ! im
 
-         ! only find the slope if refvfrac<>0 and refvfrac<available vol.
-         if ((NINT(mofdata(vofcomp+sdim+1)).eq.0).and. & ! order==0?
-             (single_volume.ge.VOFTOL*volcell_vof).and. & ! 0<V<Vavail?
-             (single_volume.le.(one-VOFTOL)*uncaptured_volume_vof)) then
+       if (single_material_takes_all.eq.1) then
+        uncaptured_volume_vof=zero
+       else if (single_material_takes_all.eq.0) then
+        ! do nothing
+       else 
+        print *,"bust individual_MOF"
+        print *,"sdim,num_materials ",sdim,num_materials
+        stop
+       endif
+        
+          ! if uncaptured_volume_vof=0, then there is no need to find the
+          ! slope since "single_material_takes_all=1". 
+       if (uncaptured_volume_vof.gt.zero) then
 
-          do dir=1,sdim
-           centroid_free(dir)=cencut_cen(dir)
-           centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_cen(dir)
-          enddo
+         ! find unprocessed material whose moment is furthest from cencut. 
+
+        override_selected=0
+
+        do im=1,num_materials
+
+         if (is_rigid_local(im).eq.1) then
+          ! do nothing
+         else if (is_rigid_local(im).eq.0) then
+
+          vofcomp=(im-1)*ngeom_recon+1
+
+          single_volume=mofdata(vofcomp)*volcell_vof
+
+          ! only find the slope if refvfrac<>0 and refvfrac<available vol.
+          if ((NINT(mofdata(vofcomp+sdim+1)).eq.0).and. & ! order==0?
+              (single_volume.ge.VOFTOL*volcell_vof).and. & ! 0<V<Vavail?
+              (single_volume.le.(one-VOFTOL)*uncaptured_volume_vof)) then
+
+           do dir=1,sdim
+            centroid_free(dir)=cencut_cen(dir)
+            centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_cen(dir)
+           enddo
+
+           ! centroid_ref-centroid_free
+           ! normal points from light to dark
+           call find_predict_slope( &
+             npredict, & !intent(out)
+             mag, & !intent(out)
+             centroid_free, & !centroid of uncaptured region
+             centroid_ref, &  !absolute coordinate system
+             bfact,dx,xsten0,nhalf0,sdim)
+          
+           if (mag.gt.VOFTOL*dx(1)) then
+
+             ! order_min initialized to be 9999.
+            if (order_algorithm_in(im).le.0) then
+             print *,"order_algorithm_in invalid"
+             stop
+            else if ((order_algorithm_in(im).lt.order_min).and. &
+                     (override_selected.eq.0)) then
+             distmax=mag
+             order_min=order_algorithm_in(im)
+             critical_material=im
+            else if ((order_algorithm_in(im).eq.order_min).and. &
+                     (override_selected.eq.0)) then
+             if (mag.gt.distmax) then
+              distmax=mag
+              critical_material=im
+             endif
+            endif
+
+           endif ! mag>vof_cutoff*dx(1)
+          else if ((NINT(mofdata(vofcomp+sdim+1)).ge.1).or. & ! order>=1?
+                   (abs(single_volume).le.VOFTOL*volcell_vof).or. &
+                   (single_volume.ge.(one-VOFTOL)*uncaptured_volume_vof)) then
+           ! do nothing
+          else
+           print *,"order or single_volume invalid"
+           stop
+          endif 
+         else
+          print *,"is_rigid invalid MOF.F90"
+          stop
+         endif
+
+        enddo ! im=1..num_materials
+
+       else if (uncaptured_volume_vof.eq.zero) then
+        if (distmax.ge.zero) then
+         print *,"distmax should be negative here"
+         stop
+        endif
+       else
+        print *,"uncaptured_volume_vof invalid"
+        stop
+       endif 
+
+        ! find MOF slope 
+       if (distmax.gt.VOFTOL*dx(1)) then
+
+         if ((critical_material.lt.1).or. &
+             (critical_material.gt.num_materials)) then
+          print *,"bust individual_MOF"
+          print *,"critical_material=",critical_material
+          print *,"num_materials=",num_materials
+          stop
+         endif
+         if (is_rigid_local(critical_material).ne.0) then
+          print *,"is_rigid invalid MOF.F90"
+          stop
+         endif
+
+         vofcomp=(critical_material-1)*ngeom_recon+1
+
+         do dir=1,sdim
+          centroid_free(dir)=cencut_cen(dir)
+          centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_cen(dir)
+         enddo
 
           ! centroid_ref-centroid_free
           ! normal points from light to dark
-          call find_predict_slope( &
-            npredict, & !intent(out)
-            mag, & !intent(out)
-            centroid_free, & !centroid of uncaptured region
-            centroid_ref, &  !absolute coordinate system
-            bfact,dx,xsten0,nhalf0,sdim)
-         
-          if (mag.gt.VOFTOL*dx(1)) then
-
-            ! order_min initialized to be 9999.
-           if (order_algorithm_in(im).le.0) then
-            print *,"order_algorithm_in invalid"
-            stop
-           else if ((order_algorithm_in(im).lt.order_min).and. &
-                    (override_selected.eq.0)) then
-            distmax=mag
-            order_min=order_algorithm_in(im)
-            critical_material=im
-           else if ((order_algorithm_in(im).eq.order_min).and. &
-                    (override_selected.eq.0)) then
-            if (mag.gt.distmax) then
-             distmax=mag
-             critical_material=im
-            endif
-           endif
-
-          endif ! mag>vof_cutoff*dx(1)
-         else if ((NINT(mofdata(vofcomp+sdim+1)).ge.1).or. & ! order>=1?
-                  (abs(single_volume).le.VOFTOL*volcell_vof).or. &
-                  (single_volume.ge.(one-VOFTOL)*uncaptured_volume_vof)) then
-          ! do nothing
-         else
-          print *,"order or single_volume invalid"
-          stop
-         endif 
-        else
-         print *,"is_rigid invalid MOF.F90"
-         stop
-        endif
-
-       enddo ! im=1..num_materials
-
-      else if (uncaptured_volume_vof.eq.zero) then
-       if (distmax.ge.zero) then
-        print *,"distmax should be negative here"
-        stop
-       endif
-      else
-       print *,"uncaptured_volume_vof invalid"
-       stop
-      endif 
-
-       ! find MOF slope 
-      if (distmax.gt.VOFTOL*dx(1)) then
-
-        if ((critical_material.lt.1).or. &
-            (critical_material.gt.num_materials)) then
-         print *,"bust individual_MOF"
-         print *,"critical_material=",critical_material
-         print *,"num_materials=",num_materials
-         stop
-        endif
-        if (is_rigid_local(critical_material).ne.0) then
-         print *,"is_rigid invalid MOF.F90"
-         stop
-        endif
-
-        vofcomp=(critical_material-1)*ngeom_recon+1
-
-        do dir=1,sdim
-         centroid_free(dir)=cencut_cen(dir)
-         centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_cen(dir)
-        enddo
-
-         ! centroid_ref-centroid_free
-         ! normal points from light to dark
-        call find_predict_slope( &
-          npredict, & !intent(out)
-          mag, & !intent(out)
-          centroid_free, & !centroid of uncaptured region
-          centroid_ref, &  !absolute coordinate system
-          bfact,dx,xsten0,nhalf0,sdim)
-
-        if (mag.lt.MLSVOFTOL*dx(1)) then
-         print *,"mag underflow"
-         stop
-        endif
-
-        do dir=1,sdim
-         refcentroid(dir)=mofdata(vofcomp+dir)
-        enddo
-        refvfrac=mofdata(vofcomp)
-
-          ! centroidA and refcentroid relative to cell centroid of the super
-          ! cell.
-          ! find_cut_geom_slope called from: individual_MOF
-        call find_cut_geom_slope( &
-          grid_index, &
-          grid_level, &
-          ls_mof, &
-          lsnormal, &
-          lsnormal_valid, &
-          bfact,dx,xsten0,nhalf0, &
-          refcentroid,refvfrac, &
-          npredict, &
-          continuous_mof, &
-          cmofsten, &
-          nslope,intercept, &
-          xtetlist_vof,nlist_vof, &
-          xtetlist_cen,nlist_cen, &
-          nlist_alloc, &
-          centroidA, &
-          nmax,critical_material, &
-          fastflag,sdim)
-
-        mofdata(vofcomp+sdim+1)=ordermax+1
-        mofdata(vofcomp+2*sdim+2)=intercept
-        do dir=1,sdim
-         mofdata(vofcomp+sdim+1+dir)=nslope(dir)
-         multi_centroidA(critical_material,dir)=centroidA(dir)
-        enddo 
-        uncaptured_volume_vof=uncaptured_volume_vof-refvfrac*volcell_vof
-        if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
-         uncaptured_volume_vof=zero
-        endif
-
-        ! above MOF reconstruct, below default slopes.
-      else if (distmax.le.VOFTOL*dx(1)) then
-
-         ! if single_material_takes_all=1, then
-         !  distmax<0
-         !  critical_material>0
-
-        if (single_material_takes_all.eq.1) then
-         critical_material=single_material_im
-        else if (single_material_takes_all.eq.0) then
-
-         max_vfrac=zero
-         do im=1,num_materials 
-          vofcomp=(im-1)*ngeom_recon+1
-          test_vfrac=mofdata(vofcomp)
-          test_order=NINT(mofdata(vofcomp+sdim+1))
-          if (is_rigid_local(im).eq.1) then
-           ! do nothing
-          else if (is_rigid_local(im).eq.0) then
-           if ((test_order.eq.0).and.(test_vfrac.ge.max_vfrac)) then
-            max_vfrac=test_vfrac
-            critical_material=im
-           endif
-          else
-           print *,"is_rigid_local invalid"
-           stop
-          endif
-         enddo ! im=1..num_materials
-       
-        else 
-         print *,"single_material_takes_all invalid"
-         stop
-        endif
-
-        if ((critical_material.lt.1).or. &
-            (critical_material.gt.num_materials)) then
-         print *,"bust individual_MOF"
-         print *,"sdim,num_materials,critical_material ", &
-                 sdim,num_materials,critical_material
-         print *,"ngeom_recon= ",ngeom_recon
-         do im=1,num_materials
-          vofcomp=(im-1)*ngeom_recon+1
-          print *,"im,vf ",im,mofdata(vofcomp)
-         enddo
-         stop
-        endif
-        if (is_rigid_local(critical_material).ne.0) then
-         print *,"is_rigid invalid MOF.F90"
-         stop
-        endif
-         
-        vofcomp=(critical_material-1)*ngeom_recon+1
-        test_order=NINT(mofdata(vofcomp+sdim+1))
-        if (test_order.ne.0) then
-         print *,"test_order invalid"
-         stop
-        endif
-
-        mat_before=0
-        if (ordermax.gt.0) then
-         do im=1,num_materials
-          vofcomp_before=(im-1)*ngeom_recon+1
-          if (is_rigid_local(im).eq.1) then
-           ! do nothing
-          else if (is_rigid_local(im).eq.0) then
-           if (NINT(mofdata(vofcomp_before+sdim+1)).eq.ordermax) then
-            mat_before=im
-           endif
-          else
-           print *,"is_rigid invalid MOF.F90"
-           stop
-          endif
-         enddo ! im=1..num_materials
-        else if (ordermax.eq.0) then
-         ! do nothing
-        else
-         print *,"ordermax invalid"
-         stop
-        endif
-
-        if ((mat_before.ge.1).and.(mat_before.le.num_materials)) then
-          if (is_rigid_local(mat_before).ne.0) then
-           print *,"is_rigid invalid MOF.F90"
-           stop
-          endif
-          vofcomp_before=(mat_before-1)*ngeom_recon+1
-          do dir=1,sdim
-           npredict(dir)=-mofdata(vofcomp_before+sdim+1+dir)
-          enddo
-          intercept=-mofdata(vofcomp_before+2*sdim+2)
-        else if (mat_before.eq.0) then
-          do dir=1,sdim
-           centroid_free(dir)=cencell_cen(dir)
-           centroid_ref(dir)=cencut_cen(dir)
-          enddo
-          ! centroid_ref-centroid_free
-          call find_predict_slope(npredict,mag,centroid_free,centroid_ref, &
+         call find_predict_slope( &
+           npredict, & !intent(out)
+           mag, & !intent(out)
+           centroid_free, & !centroid of uncaptured region
+           centroid_ref, &  !absolute coordinate system
            bfact,dx,xsten0,nhalf0,sdim)
-          if (mag.gt.VOFTOL*dx(1)) then
-           ! do nothing
-          else
-           do dir=1,sdim
-            npredict(dir)=zero
-           enddo
-           npredict(1)=one
-          endif
-          intercept=mofdata(vofcomp)-half
-        else
-          print *,"mat_before invalid"
+
+         if (mag.lt.MLSVOFTOL*dx(1)) then
+          print *,"mag underflow"
           stop
-        endif
- 
-        if ((single_material_takes_all.eq.1).and. &
-            (mat_before.ge.1).and.(mat_before.le.num_materials)) then
+         endif
+
+         do dir=1,sdim
+          refcentroid(dir)=mofdata(vofcomp+dir)
+         enddo
+         refvfrac=mofdata(vofcomp)
+
+           ! centroidA and refcentroid relative to cell centroid of the super
+           ! cell.
+           ! find_cut_geom_slope called from: individual_MOF
+         call find_cut_geom_slope( &
+           mofdata, &
+           growth_angle, &
+           im_ambient,im_ice,im_melt, &
+           n_ambient,n_ice,n_CL, &
+           d_ambient,d_ice, &
+           grid_index, &
+           grid_level, &
+           ls_mof, &
+           lsnormal, &
+           lsnormal_valid, &
+           bfact,dx,xsten0,nhalf0, &
+           refcentroid,refvfrac, &
+           npredict, &
+           continuous_mof, &
+           cmofsten, &
+           nslope,intercept, &
+           xtetlist_vof,nlist_vof, &
+           xtetlist_cen,nlist_cen, &
+           nlist_alloc, &
+           centroidA, &
+           nmax, &
+           critical_material, & !INTENT(in)
+           fastflag,sdim)
 
          mofdata(vofcomp+sdim+1)=ordermax+1
-
          mofdata(vofcomp+2*sdim+2)=intercept
          do dir=1,sdim
-          mofdata(vofcomp+sdim+1+dir)=npredict(dir)
-           ! cencut_cen is the uncaptured centroid in absolute frame 
-          centroidA(dir)=cencut_cen(dir)
-          multi_centroidA(critical_material,dir)= &
-           centroidA(dir)-cencell_cen(dir)
+          mofdata(vofcomp+sdim+1+dir)=nslope(dir)
+          multi_centroidA(critical_material,dir)=centroidA(dir)
          enddo 
-
-        else if ((single_material_takes_all.eq.0).or. &
-                 (mat_before.eq.0)) then
-
-         refvfrac=mofdata(vofcomp)
-         use_initial_guess=0
-
-          ! inside of individual MOF
-          ! centroidA in absolute coordinate system.
-
-         call multi_find_intercept( &
-          bfact,dx,xsten0,nhalf0, &
-          npredict,intercept, &
-          continuous_mof, &
-          cmofsten, &
-          xtetlist_vof, &
-          nlist_alloc, &
-          nlist_vof, &
-          nmax, &
-          refvfrac, &
-          use_initial_guess,centroidA,fastflag,sdim)
-
          uncaptured_volume_vof=uncaptured_volume_vof-refvfrac*volcell_vof
          if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
           uncaptured_volume_vof=zero
          endif
- 
+
+         ! above MOF reconstruct, below default slopes.
+       else if (distmax.le.VOFTOL*dx(1)) then
+
+          ! if single_material_takes_all=1, then
+          !  distmax<0
+          !  critical_material>0
+
          if (single_material_takes_all.eq.1) then
-           ! centroidA is the uncaptured centroid (absolute frame)
-          do dir=1,sdim
-           centroidA(dir)=cencut_cen(dir)
-          enddo
+          critical_material=single_material_im
          else if (single_material_takes_all.eq.0) then
-          ! do nothing
-         else
-          print *,"single material takes all invalid"
+
+          max_vfrac=zero
+          do im=1,num_materials 
+           vofcomp=(im-1)*ngeom_recon+1
+           test_vfrac=mofdata(vofcomp)
+           test_order=NINT(mofdata(vofcomp+sdim+1))
+           if (is_rigid_local(im).eq.1) then
+            ! do nothing
+           else if (is_rigid_local(im).eq.0) then
+            if ((test_order.eq.0).and.(test_vfrac.ge.max_vfrac)) then
+             max_vfrac=test_vfrac
+             critical_material=im
+            endif
+           else
+            print *,"is_rigid_local invalid"
+            stop
+           endif
+          enddo ! im=1..num_materials
+        
+         else 
+          print *,"single_material_takes_all invalid"
           stop
          endif
- 
-         mofdata(vofcomp+sdim+1)=ordermax+1
-         mofdata(vofcomp+2*sdim+2)=intercept
-          ! cencell is the supercell centroid
-         do dir=1,sdim
-          mofdata(vofcomp+sdim+1+dir)=npredict(dir)
-          multi_centroidA(critical_material,dir)= &
-           centroidA(dir)-cencell_cen(dir)
-         enddo 
-        else
-         print *,"single_material_takes_all or mat_before invalid"
-         stop
-        endif
+
+         if ((critical_material.lt.1).or. &
+             (critical_material.gt.num_materials)) then
+          print *,"bust individual_MOF"
+          print *,"sdim,num_materials,critical_material ", &
+                  sdim,num_materials,critical_material
+          print *,"ngeom_recon= ",ngeom_recon
+          do im=1,num_materials
+           vofcomp=(im-1)*ngeom_recon+1
+           print *,"im,vf ",im,mofdata(vofcomp)
+          enddo
+          stop
+         endif
+         if (is_rigid_local(critical_material).ne.0) then
+          print *,"is_rigid invalid MOF.F90"
+          stop
+         endif
+          
+         vofcomp=(critical_material-1)*ngeom_recon+1
+         test_order=NINT(mofdata(vofcomp+sdim+1))
+         if (test_order.ne.0) then
+          print *,"test_order invalid"
+          stop
+         endif
+
+         mat_before=0
+         if (ordermax.gt.0) then
+          do im=1,num_materials
+           vofcomp_before=(im-1)*ngeom_recon+1
+           if (is_rigid_local(im).eq.1) then
+            ! do nothing
+           else if (is_rigid_local(im).eq.0) then
+            if (NINT(mofdata(vofcomp_before+sdim+1)).eq.ordermax) then
+             mat_before=im
+            endif
+           else
+            print *,"is_rigid invalid MOF.F90"
+            stop
+           endif
+          enddo ! im=1..num_materials
+         else if (ordermax.eq.0) then
+          ! do nothing
+         else
+          print *,"ordermax invalid"
+          stop
+         endif
+
+         if ((mat_before.ge.1).and.(mat_before.le.num_materials)) then
+           if (is_rigid_local(mat_before).ne.0) then
+            print *,"is_rigid invalid MOF.F90"
+            stop
+           endif
+           vofcomp_before=(mat_before-1)*ngeom_recon+1
+           do dir=1,sdim
+            npredict(dir)=-mofdata(vofcomp_before+sdim+1+dir)
+           enddo
+           intercept=-mofdata(vofcomp_before+2*sdim+2)
+         else if (mat_before.eq.0) then
+           do dir=1,sdim
+            centroid_free(dir)=cencell_cen(dir)
+            centroid_ref(dir)=cencut_cen(dir)
+           enddo
+           ! centroid_ref-centroid_free
+           call find_predict_slope(npredict,mag,centroid_free,centroid_ref, &
+            bfact,dx,xsten0,nhalf0,sdim)
+           if (mag.gt.VOFTOL*dx(1)) then
+            ! do nothing
+           else
+            do dir=1,sdim
+             npredict(dir)=zero
+            enddo
+            npredict(1)=one
+           endif
+           intercept=mofdata(vofcomp)-half
+         else
+           print *,"mat_before invalid"
+           stop
+         endif
+  
+         if ((single_material_takes_all.eq.1).and. &
+             (mat_before.ge.1).and.(mat_before.le.num_materials)) then
+
+          mofdata(vofcomp+sdim+1)=ordermax+1
+
+          mofdata(vofcomp+2*sdim+2)=intercept
+          do dir=1,sdim
+           mofdata(vofcomp+sdim+1+dir)=npredict(dir)
+            ! cencut_cen is the uncaptured centroid in absolute frame 
+           centroidA(dir)=cencut_cen(dir)
+           multi_centroidA(critical_material,dir)= &
+            centroidA(dir)-cencell_cen(dir)
+          enddo 
+
+         else if ((single_material_takes_all.eq.0).or. &
+                  (mat_before.eq.0)) then
+
+          refvfrac=mofdata(vofcomp)
+          use_initial_guess=0
+
+           ! inside of individual MOF
+           ! centroidA in absolute coordinate system.
+
+          call multi_find_intercept( &
+           bfact,dx,xsten0,nhalf0, &
+           npredict,intercept, &
+           continuous_mof, &
+           cmofsten, &
+           xtetlist_vof, &
+           nlist_alloc, &
+           nlist_vof, &
+           nmax, &
+           refvfrac, &
+           use_initial_guess,centroidA,fastflag,sdim)
+
+          uncaptured_volume_vof=uncaptured_volume_vof-refvfrac*volcell_vof
+          if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
+           uncaptured_volume_vof=zero
+          endif
+  
+          if (single_material_takes_all.eq.1) then
+            ! centroidA is the uncaptured centroid (absolute frame)
+           do dir=1,sdim
+            centroidA(dir)=cencut_cen(dir)
+           enddo
+          else if (single_material_takes_all.eq.0) then
+           ! do nothing
+          else
+           print *,"single material takes all invalid"
+           stop
+          endif
+  
+          mofdata(vofcomp+sdim+1)=ordermax+1
+          mofdata(vofcomp+2*sdim+2)=intercept
+           ! cencell is the supercell centroid
+          do dir=1,sdim
+           mofdata(vofcomp+sdim+1+dir)=npredict(dir)
+           multi_centroidA(critical_material,dir)= &
+            centroidA(dir)-cencell_cen(dir)
+          enddo 
+         else
+          print *,"single_material_takes_all or mat_before invalid"
+          stop
+         endif
+       else
+        print *,"distmax invalid"
+        stop
+       endif  
+
+      else if (abs(growth_angle).le.half*Pi) then
+
+        ! centroidA and refcentroid relative to cell centroid of the super
+        ! cell.
+        ! find_cut_geom_slope called from: individual_MOF
+       call find_cut_geom_slope( &
+        mofdata, &
+        growth_angle, &
+        im_ambient,im_ice,im_melt, &
+        n_ambient,n_ice,n_CL, &
+        d_ambient,d_ice, &
+        grid_index, &
+        grid_level, &
+        ls_mof, &
+        lsnormal, &
+        lsnormal_valid, &
+        bfact,dx,xsten0,nhalf0, &
+        refcentroid,refvfrac, &
+        npredict, &
+        continuous_mof, &
+        cmofsten, &
+        nslope,intercept, &
+        xtetlist_vof,nlist_vof, &
+        xtetlist_cen,nlist_cen, &
+        nlist_alloc, &
+        centroidA, &
+        nmax, &
+        critical_material, & !INTENT(in)
+        fastflag,sdim)
+
       else
-       print *,"distmax invalid"
+       print *,"growth_angle invalid"
        stop
-      endif  
+      endif
 
       return
       end subroutine individual_MOF
@@ -14762,6 +14898,11 @@ contains
           ! This call is for the reconstruction of is_rigid=1 materials;
           ! continuous_mof_rigid=0
           call find_cut_geom_slope( &
+           mofdata, &
+           growth_angle, &
+           im_ambient,im_ice,im_melt, &
+           n_ambient,n_ice,n_CL, &
+           d_ambient,d_ice, &
            grid_index, &
            grid_level, &
            ls_mof, &
@@ -14778,7 +14919,8 @@ contains
            xtetlist_cen,nlist_cen, &
            nlist_alloc, &
            centroidA, &
-           nmax,imaterial, &
+           nmax, &
+           imaterial, & !INTENT(in)
            fastflag,sdim)
 
           mofdata(vofcomp+sdim+1)=one ! order=1
