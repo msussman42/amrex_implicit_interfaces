@@ -12306,6 +12306,10 @@ contains
 ! xcell is cell center (not cell centroid)
 
       subroutine individual_MOF( &
+        growth_angle, &
+        im_ambient,im_ice,im_melt, &
+        n_ambient,n_ice,n_CL, &
+        d_ambient,d_ice, &
         grid_index, &
         grid_level, &
         tid, &
@@ -12333,7 +12337,18 @@ contains
       use global_utility_module
 
       IMPLICIT NONE
-  
+
+      REAL_T, INTENT(IN), OPTIONAL :: growth_angle
+      REAL_T :: actual_growth_angle = 1.0D+20
+      INTEGER_T, INTENT(IN), OPTIONAL :: im_ambient
+      INTEGER_T, INTENT(IN), OPTIONAL :: im_ice
+      INTEGER_T, INTENT(IN), OPTIONAL :: im_melt
+      REAL_T, INTENT(IN), OPTIONAL :: n_ambient(3)
+      REAL_T, INTENT(IN), OPTIONAL :: n_ice(3)
+      REAL_T, INTENT(IN), OPTIONAL :: n_CL(3)
+      REAL_T, INTENT(IN), OPTIONAL :: d_ambient
+      REAL_T, INTENT(IN), OPTIONAL :: d_ice
+
       INTEGER_T, INTENT(IN) :: nlist_alloc 
       INTEGER_T, INTENT(IN) :: tid
       INTEGER_T, INTENT(in) :: sdim 
@@ -12392,6 +12407,12 @@ contains
       INTEGER_T is_rigid_local(num_materials)
 
 #include "mofdata.H"
+
+      if (PRESENT(growth_angle)) then
+       actual_growth_angle=growth_angle
+      else
+       actual_growth_angle=0
+      endif
 
       fastflag=1
       nlist_vof=0
@@ -15479,44 +15500,42 @@ contains
       REAL_T xcrit(3)
       INTEGER_T matstatus
 
-      INTEGER_T imaterial2
       INTEGER_T imaterial
       INTEGER_T vofcomp
       INTEGER_T dir
-      INTEGER_T imaterial_count
+      INTEGER_T dircrit
+      INTEGER_T, PARAMETER :: imaterial_count=1
+      INTEGER_T, PARAMETER :: grid_index=0
+      INTEGER_T, PARAMETER :: grid_level=0
+      REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
+      INTEGER_T, INTENT(in) :: lsnormal_valid(num_materials)
+      INTEGER_T order_algorithm_in(num_materials)
+
+      REAL_T :: n_ambient(3)
+      REAL_T :: n_ice(3)
+      REAL_T :: n_melt(3)
+      REAL_T :: n_CL(3)
+
+      REAL_T :: d_ambient
+      REAL_T :: d_ice
+      REAL_T :: d_melt
+
+      REAL_T :: t1,t2,tswap,t_avg
+      REAL_T :: t1_test,t2_test
+      REAL_T :: xtest
+
+      INTEGER_T :: junction_good
 
       REAL_T uncaptured_volume_vof
       REAL_T uncaptured_centroid_vof(sdim)
       REAL_T uncaptured_volume_cen
       REAL_T uncaptured_centroid_cen(sdim)
 
-      REAL_T xref_mat(sdim)
-      REAL_T xact_mat(sdim)
-      REAL_T xref_matT(sdim)
-      REAL_T xact_matT(sdim)
-      INTEGER_T single_material
-      REAL_T remaining_vfrac
-      REAL_T nrecon(sdim)
-      INTEGER_T order_algorithm_in(num_materials)
-      INTEGER_T num_materials_cell
-      INTEGER_T is_valid
       REAL_T voftest(num_materials)
-      INTEGER_T i1,j1,k1,k1lo,k1hi
-      REAL_T dxmaxLS
-      REAL_T dxmaxLS_volume_constraint
-      REAL_T null_intercept
 
       INTEGER_T, PARAMETER :: fastflag=0
-      REAL_T centroidA(sdim)
-      REAL_T centroid_free(sdim)
-      REAL_T centroid_ref(sdim)
-      REAL_T refcentroid(sdim)
-      REAL_T refvfrac
-      REAL_T nslope(sdim)
-      REAL_T intercept
-      REAL_T npredict(sdim)
       REAL_T mag
-      INTEGER_T nlist_vof,nlist_cen
 
       INTEGER_T, PARAMETER :: tessellate=0
       INTEGER_T is_rigid_local(num_materials)
@@ -15547,6 +15566,8 @@ contains
 
       do imaterial=1,num_materials
        is_rigid_local(imaterial)=is_rigid(imaterial)
+       lsnormal_valid(imaterial)=0
+       order_algorithm_in(imaterial)=0
       enddo ! imaterial=1..num_materials
 
       if (bfact.lt.1) then
@@ -15593,21 +15614,6 @@ contains
       endif
       if (nmax.lt.10) then
        print *,"nmax too small in multimaterial_MOF_growth_angle"
-       stop
-      endif
-
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      dxmaxLS_volume_constraint=three*dxmaxLS
-      null_intercept=two*bfact*dxmaxLS_volume_constraint
-
-      if (sdim.eq.2) then
-       k1lo=0
-       k1hi=0
-      else if (sdim.eq.3) then
-       k1lo=-1
-       k1hi=1
-      else
-       print *,"dimension bust"
        stop
       endif
 
@@ -16037,11 +16043,13 @@ contains
         uncaptured_centroid_cen, &
         sdim)
 
-       imaterial_count=1  ?????
+       order_algorithm_in(im_ambient)=1
+       order_algorithm_in(im_ice)=2
+       order_algorithm_in(im_melt)=3
 
        call individual_MOF( &
         growth_angle, &
-        im_ambient,im_ice,im_CL, &
+        im_ambient,im_ice,im_melt, &
         n_ambient,n_ice,n_CL, &
         d_ambient,d_ice, &
         grid_index, &
