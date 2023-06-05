@@ -1538,7 +1538,7 @@ stop
       REAL_T :: angle_exact_db(SDIM-1)
       REAL_T :: angle_init_db(SDIM-1)
       REAL_T :: angle_and_vfrac(SDIM)
-      REAL_T :: refvfrac
+      REAL_T :: refvfrac(1)
       REAL_T :: vof_single 
       REAL_T :: refcen(SDIM)
       REAL_T :: nr_db(SDIM)
@@ -1748,16 +1748,16 @@ stop
 
         do while (try_new_vfrac.eq.1)
 
-         refvfrac=vof_training(i_training)
+         refvfrac(1)=vof_training(i_training)
 
-         if ((refvfrac.ge.zero).and. &
-             (refvfrac.lt.VOFTOL)) then
+         if ((refvfrac(1).ge.zero).and. &
+             (refvfrac(1).lt.VOFTOL)) then
           ! do nothing
-         else if ((refvfrac.gt.one-VOFTOL).and. &
-                  (refvfrac.le.one)) then
+         else if ((refvfrac(1).gt.one-VOFTOL).and. &
+                  (refvfrac(1).le.one)) then
           ! do nothing
-         else if ((refvfrac.ge.VOFTOL).and. &
-                  (refvfrac.le.one-VOFTOL)) then
+         else if ((refvfrac(1).ge.VOFTOL).and. &
+                  (refvfrac(1).le.one-VOFTOL)) then
 
            ! given the slope, find the centroid.
           call angle_init_from_angle_recon_and_F( &
@@ -1843,7 +1843,7 @@ stop
           endif
 
          else 
-          print *,"refvfrac out of range"
+          print *,"refvfrac(1) out of range"
           stop
          endif
 
@@ -2000,8 +2000,8 @@ stop
           angle_exact_db_data(dir)=data_training(VOFTRAIN+dir,i_training)
           angle_and_vfrac(dir)=angle_init_db(dir)
          enddo
-         refvfrac=data_training(VOFTRAIN,i_training)
-         angle_and_vfrac(SDIM)=refvfrac
+         refvfrac(1)=data_training(VOFTRAIN,i_training)
+         angle_and_vfrac(SDIM)=refvfrac(1)
 
          angle_exact_db= &
            training_array(D_DECL(i,j,k),cmof_idx)%DT_ZHOUTENG_LOCAL% &
@@ -2132,7 +2132,7 @@ stop
       REAL_T :: angle_exact_db(SDIM-1)
       REAL_T :: angle_init_db(SDIM-1)
       REAL_T :: angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)
-      REAL_T :: refvfrac
+      REAL_T :: refvfrac(1)
       REAL_T :: vof_single 
       REAL_T :: refcen(SDIM)
       REAL_T :: nr_db(SDIM)
@@ -2315,16 +2315,16 @@ stop
 
          do while (try_new_vfrac.eq.1)
 
-          refvfrac=vof_training(i_training)
+          refvfrac(1)=vof_training(i_training)
 
-          if ((refvfrac.ge.zero).and. &
-              (refvfrac.lt.VOFTOL)) then
+          if ((refvfrac(1).ge.zero).and. &
+              (refvfrac(1).lt.VOFTOL)) then
            ! do nothing
-          else if ((refvfrac.gt.one-VOFTOL).and. &
-                   (refvfrac.le.one)) then
+          else if ((refvfrac(1).gt.one-VOFTOL).and. &
+                   (refvfrac(1).le.one)) then
            ! do nothing
-          else if ((refvfrac.ge.VOFTOL).and. &
-                   (refvfrac.le.one-VOFTOL)) then
+          else if ((refvfrac(1).ge.VOFTOL).and. &
+                   (refvfrac(1).le.one-VOFTOL)) then
 
             ! given the slope, find the centroid.
            call angle_init_from_angle_recon_and_F( &
@@ -2410,7 +2410,7 @@ stop
            endif
 
           else 
-           print *,"refvfrac out of range"
+           print *,"refvfrac(1) out of range"
            stop
           endif
 
@@ -2450,8 +2450,8 @@ stop
            angle_exact_db_data(dir)=data_classify(i_training,dir)
            angle_and_vfrac(dir)=angle_init_db(dir)
           enddo
-          refvfrac=data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS)
-          angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
+          refvfrac(1)=data_decisions(i_training,MOF_TRAINING_NDIM_DECISIONS)
+          angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
 
           call decision_tree_predict(angle_and_vfrac,angle_exact_db, &
             MOF_TRAINING_NDIM_DECISIONS, &
