@@ -9330,18 +9330,24 @@ contains
       end subroutine single_ff
 
       subroutine scale_MOF_variables( &
-        bfact,dx,xsten,nhalf, &
-        refcentroid, &
-        dx_scale,xsten_scale, &
-        refcentroid_scale, &
-        sdim,maxdx)
+       nMAT_OPT, & ! 1 or 3
+       nDOF, & ! sdim-1  or 1
+       nEQN, & ! sdim or 3 * sdim
+       bfact,dx,xsten,nhalf, &
+       refcentroid, &
+       dx_scale,xsten_scale, &
+       refcentroid_scale, &
+       sdim,maxdx)
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
       INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
       REAL_T, INTENT(out) :: maxdx
-      REAL_T, INTENT(in) :: refcentroid(sdim)
-      REAL_T, INTENT(out) :: refcentroid_scale(sdim)
+      REAL_T, INTENT(in) :: refcentroid(nEQN)
+      REAL_T, INTENT(out) :: refcentroid_scale(nEQN)
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, INTENT(out) :: xsten_scale(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
@@ -9350,6 +9356,11 @@ contains
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid scale mof variables"
+       stop
+      endif
+
+      if ((nEQN.ne.sdim).and.(nEQN.ne.3*sdim)) then
+       print *,"nEQN invalid"
        stop
       endif
 
@@ -9364,14 +9375,17 @@ contains
         print *,"sdim invalid"
         stop
        endif
+
+       do dir=1,NEQN
+        refcentroid_scale(dir)=refcentroid(dir)
+       enddo
+
        maxdx=one
        do dir=1,sdim
         do i=-nhalf,nhalf
          xsten_scale(i,dir)=xsten(i,dir)
         enddo
         dx_scale(dir)=dx(dir)
-
-        refcentroid_scale(dir)=refcentroid(dir)
        enddo ! dir
 
       else if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -9387,8 +9401,10 @@ contains
          xsten_scale(i,dir)=xsten(i,dir)/maxdx
         enddo
         dx_scale(dir)=dx(dir)/maxdx
-        refcentroid_scale(dir)=refcentroid(dir)/maxdx
        enddo ! dir
+       do dir=1,NEQN
+        refcentroid_scale(dir)=refcentroid(dir)/maxdx
+       enddo
 
       else
        print *,"levelrz invalid scale mof variables"
@@ -10385,12 +10401,16 @@ contains
         ! refcentroid_scale is passed into this routine.
         ! refcentroid_scale is relative to cell centroid of the super cell.
       subroutine multi_rotatefunc( &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN, & ! sdim or 3 * sdim
         use_MilcentLemoine, &
         bfact,dx,xsten0,nhalf0, &
         xtetlist_vof,nlist_vof, &
         xtetlist_cen,nlist_cen, &
         nmax, &
-        refcentroid,refvfrac, &
+        refcentroid, &
+        refvfrac, &
         continuous_mof, &
         cmofsten, &
         angle, &
@@ -10407,6 +10427,9 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -10418,14 +10441,14 @@ contains
       INTEGER_T, INTENT(in) :: nmax,fastflag
       REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_vof)
       REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_cen)
-      REAL_T, INTENT(in) :: refcentroid(sdim)
-      REAL_T refcentroidT(sdim)
-      REAL_T, INTENT(in) :: refvfrac
+      REAL_T, INTENT(in) :: refcentroid(nEQN)
+      REAL_T refcentroidT(nEQN)
+      REAL_T, INTENT(in) :: refvfrac(nMAT_OPT)
       INTEGER_T, INTENT(in) :: use_initial_guess 
 
-      REAL_T, INTENT(out) :: testcen(sdim)
-      REAL_T testcenT(sdim)
-      REAL_T, INTENT(in) :: angle(sdim-1)
+      REAL_T, INTENT(out) :: testcen(nEQN)
+      REAL_T testcenT(nEQN)
+      REAL_T, INTENT(in) :: angle(nDOF)
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten2(-1:1,sdim)
@@ -10434,7 +10457,7 @@ contains
       REAL_T volume_cut,facearea
       INTEGER_T dir
       REAL_T nslope(sdim)
-      REAL_T, INTENT(inout) :: intercept
+      REAL_T, INTENT(inout) :: intercept(nMAT_OPT)
 
       INTEGER_T i1,j1,k1
       REAL_T volcell_vof
@@ -10473,6 +10496,13 @@ contains
        stop
       endif
 
+      if ((nMAT_OPT.ne.1).or. &
+          (nDOF.ne.sdim-1).or. &
+          (nEQN.ne.sdim)) then
+       print *,"nMAT_OPT, nDOF, or nEQN invalid"
+       stop
+      endif
+
       if ((continuous_mof.eq.0).or. &
           (continuous_mof.eq.-1).or. &
           (continuous_mof.ge.1)) then
@@ -10481,12 +10511,13 @@ contains
        print *,"continuous_mof invalid"
        stop
       endif
-      if ((use_initial_guess.ne.0).and.(use_initial_guess.ne.1)) then
-       print *,"use_initial_guess  invalid multirotatefunc"
+      if ((use_initial_guess.ne.0).and. &
+          (use_initial_guess.ne.1)) then
+       print *,"use_initial_guess invalid multirotatefunc"
        stop
       endif
 
-      do dir=1,sdim
+      do dir=1,nEQN
        ff(dir)=zero
       enddo
 
@@ -10554,14 +10585,16 @@ contains
          !  the material region with the center cell)
        call multi_find_intercept( &
          bfact,dx,xsten0,nhalf0, &
-         nslope,intercept, &
+         nslope, &
+         intercept(1), &
          continuous_mof, &
          cmofsten, &
          xtetlist_vof, &
          nlist_vof, &
          nlist_vof, &
          nmax, &
-         refvfrac,use_initial_guess, &
+         refvfrac(1), &
+         use_initial_guess, &
          testcen,fastflag,sdim)
 
          ! testcen in absolute coordinate system
@@ -10572,7 +10605,8 @@ contains
           !  the material region with the center cell)
          call multi_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
-          nslope,intercept, &
+          nslope, &
+          intercept(1), &
           volume_cut,testcen,facearea, &
           xtetlist_vof, &
           nlist_vof, &
@@ -10583,7 +10617,8 @@ contains
           !  the material region with the super cell)
          call multi_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
-          nslope,intercept, &
+          nslope, &
+          intercept(1), &
           volume_cut,testcen,facearea, &
           xtetlist_cen, &
           nlist_cen, &
@@ -10594,7 +10629,8 @@ contains
           !  the material region with the super cell)
          call multi_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
-          nslope,intercept, &
+          nslope, &
+          intercept(1), &
           volume_cut,testcen,facearea, &
           xtetlist_cen, &
           nlist_cen, &
@@ -10613,7 +10649,8 @@ contains
           !  the material region with the center cell)
          call fast_cut_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
-          nslope,intercept, &
+          nslope, &
+          intercept(1), &
           volume_cut,testcen,facearea, &
           xsten0,nhalf0,xtet,shapeflag,sdim) 
         else if (continuous_mof.ge.1) then
@@ -10651,7 +10688,8 @@ contains
            enddo ! isten
            call fast_cut_cell_intersection( &
             bfact,dx,xsten0,nhalf0, &
-            nslope,intercept, &
+            nslope, &
+            intercept(1), &
             volsten,censten,areasten, &
             xsten2,nhalf2,xtet,shapeflag,sdim) 
            volume_cut=volume_cut+volsten
@@ -10718,25 +10756,25 @@ contains
        enddo
        call slope_to_angle(local_nslope,local_angles,sdim)
 
-       local_refvfrac=refvfrac
+       local_refvfrac=refvfrac(1)
        do dir=1,sdim
         local_ref_centroid(dir)=refcentroid(dir)
        enddo
 
-       if ((refvfrac.ge.half).and. &
-           (refvfrac.lt.one)) then
-        local_refvfrac=one-refvfrac
+       if ((refvfrac(1).ge.half).and. &
+           (refvfrac(1).lt.one)) then
+        local_refvfrac=one-refvfrac(1)
         do dir=1,sdim
          local_ref_centroid(dir)= &
-           -refvfrac*refcentroid(dir)/local_refvfrac
+           -refvfrac(1)*refcentroid(dir)/local_refvfrac
          local_nslope(dir)=-local_nslope(dir)
         enddo
         call slope_to_angle(local_nslope,local_angles,sdim)
-       else if ((refvfrac.gt.zero).and. &
-                (refvfrac.le.half)) then
+       else if ((refvfrac(1).gt.zero).and. &
+                (refvfrac(1).le.half)) then
         ! do nothing
        else
-        print *,"refvfrac invalid"
+        print *,"refvfrac(1) invalid"
         stop
        endif
 
@@ -10772,8 +10810,8 @@ contains
 
        if (1.eq.0) then
         print *,"BEFORE"
-        print *,"refvfrac ",refvfrac
-        print *,"refvfrac(opp) ",one-refvfrac
+        print *,"refvfrac ",refvfrac(1)
+        print *,"refvfrac(opp) ",one-refvfrac(1)
         print *,"nslope ",nslope(1), &
                 nslope(2),nslope(sdim)
         print *,"local_nslope ",local_nslope(1), &
@@ -10781,9 +10819,9 @@ contains
         print *,"refcentroid ",refcentroid(1), &
                 refcentroid(2),refcentroid(sdim)
         print *,"refcentroid(opp) ", &
-                -refvfrac*refcentroid(1)/(one-refvfrac), &
-                -refvfrac*refcentroid(2)/(one-refvfrac), &
-                -refvfrac*refcentroid(sdim)/(one-refvfrac)
+                -refvfrac(1)*refcentroid(1)/(one-refvfrac(1)), &
+                -refvfrac(1)*refcentroid(2)/(one-refvfrac(1)), &
+                -refvfrac(1)*refcentroid(sdim)/(one-refvfrac(1))
         print *,"local_refvfrac ",local_refvfrac
         print *,"local_volume ",local_volume
         print *,"angle ",angle(1),angle(sdim-1)
@@ -10816,16 +10854,16 @@ contains
         testcen(dir)=local_centroid(dir)
        enddo
 
-       if ((refvfrac.ge.half).and. &
-           (refvfrac.lt.one)) then
+       if ((refvfrac(1).ge.half).and. &
+           (refvfrac(1).lt.one)) then
         do dir=1,sdim
-         testcen(dir)=-local_refvfrac*testcen(dir)/refvfrac
+         testcen(dir)=-local_refvfrac*testcen(dir)/refvfrac(1)
         enddo
-       else if ((refvfrac.gt.zero).and. &
-                (refvfrac.le.half)) then
+       else if ((refvfrac(1).gt.zero).and. &
+                (refvfrac(1).le.half)) then
         ! do nothing
        else
-        print *,"refvfrac invalid"
+        print *,"refvfrac(1) invalid"
         stop
        endif
 
@@ -10992,6 +11030,10 @@ contains
 #include "mofdata.H"
 
       INTEGER_T, INTENT(in) :: sdim
+      INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
+      INTEGER_T :: nDOF_standard
+      INTEGER_T :: nEQN_standard
+
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: bfact,nhalf0
@@ -11003,14 +11045,14 @@ contains
       REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: refvfrac
+      REAL_T, INTENT(in) :: refvfrac(nMAT_OPT_standard)
       REAL_T, INTENT(in) :: angle_recon(sdim-1)
       REAL_T, INTENT(out) :: refcen(sdim)
       REAL_T, INTENT(out) :: angle_init(sdim-1)
 
       INTEGER_T fastflag
       INTEGER_T use_initial_guess
-      REAL_T intercept_init
+      REAL_T intercept_init(nMAT_OPT_standard)
       INTEGER_T use_MilcentLemoine
       INTEGER_T tid
       REAL_T maxdx
@@ -11026,11 +11068,14 @@ contains
       REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_vof
       REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_cen
       REAL_T :: f_placeholder(sdim)
-      REAL_T :: intercept_placeholder
+      REAL_T :: intercept_placeholder(nMAT_OPT_standard)
       REAL_T :: cen_derive_placeholder(sdim)
       REAL_T :: cen_free_placeholder(sdim)
       REAL_T :: npredict(sdim)
       REAL_T :: mag 
+
+      nDOF_standard=sdim-1
+      nEQN_standard=sdim
 
       tid=0
 
@@ -11084,6 +11129,9 @@ contains
 
        !calling from:angle_init_from_angle_recon_and_F
       call scale_MOF_variables( &
+       nMAT_OPT_standard, & ! 1
+       nDOF_standard, & ! sdim-1 
+       nEQN_standard, & ! sdim 
        bfact,dx,xsten0,nhalf0, &
        refcentroid, &
        dx_scale,xsten0_scale, &
@@ -11112,12 +11160,15 @@ contains
        enddo  !dir=1,sdim
       enddo  !itet=1,sdim+1
 
-      do dir=1,sdim-1
+      do dir=1,nDOF_standard
        angle_init_local(dir)=angle_recon(dir)
       enddo
 
         ! find the actual centroid given the angle.
       call multi_rotatefunc( &
+       nMAT_OPT_standard, & ! 1
+       nDOF_standard, & ! sdim-1 
+       nEQN_standard, & ! sdim
        use_MilcentLemoine, &
        bfact,dx_scale,xsten0_scale,nhalf0, &
        local_xtetlist_vof,local_nlist_vof, &
@@ -11135,7 +11186,7 @@ contains
        cen_derive_placeholder, & 
        use_initial_guess,fastflag,sdim)
 
-      do dir=1,sdim
+      do dir=1,nEQN_standard
        cen_free_placeholder(dir)=zero
       enddo
 
@@ -11150,7 +11201,7 @@ contains
 
       ! -pi < angle < pi
       call slope_to_angle(npredict,angle_init,sdim)
-      do dir=1,sdim
+      do dir=1,nEQN_standard
        refcen(dir)=cen_derive_placeholder(dir)*maxdx
       enddo
 
@@ -11237,11 +11288,11 @@ contains
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten0_scale(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: refcentroid(sdim)
-      REAL_T, INTENT(in) :: refvfrac
-      REAL_T, INTENT(in) :: npredict(sdim)
-      REAL_T, INTENT(out) :: intercept
-      REAL_T, INTENT(out) :: nslope(sdim) 
+      REAL_T, INTENT(in) :: refcentroid(nEQN)
+      REAL_T, INTENT(in) :: refvfrac(nMAT_OPT)
+      REAL_T, INTENT(in) :: npredict(nEQN)
+      REAL_T, INTENT(out) :: intercept(nMAT_OPT)
+      REAL_T, INTENT(out) :: nslope(nEQN) 
 
       REAL_T new_angle(nDOF)
 
@@ -11252,8 +11303,8 @@ contains
 
       REAL_T angle_init(nDOF)
 
-      REAL_T intercept_init
-      REAL_T cen_derive_init(sdim)
+      REAL_T intercept_init(nMAT_OPT)
+      REAL_T cen_derive_init(nEQN)
 
       REAL_T intercept_array(nMAT_OPT,MOFITERMAX+1)
       REAL_T cen_array(nEQN,MOFITERMAX+1)
@@ -11263,27 +11314,29 @@ contains
 
       INTEGER_T dir,iter
       REAL_T best_error
-      REAL_T finit(sdim)
-      REAL_T fp(sdim)
-      REAL_T fm(sdim)
-      REAL_T fopt(sdim)
-      REAL_T fbase(sdim)
-      REAL_T f_plus(sdim,nDOF)
-      REAL_T f_minus(sdim,nDOF)
+      REAL_T finit(nEQN)
+      REAL_T fp(nEQN)
+      REAL_T fm(nEQN)
+      REAL_T fopt(nEQN)
+      REAL_T fbase(nEQN)
+      REAL_T f_plus(nEQN,nDOF)
+      REAL_T f_minus(nEQN,nDOF)
 
-      REAL_T intp(nDOF)
-      REAL_T intm(nDOF)
-      REAL_T intopt
-      REAL_T cenp(sdim)
-      REAL_T cenm(sdim)
-      REAL_T cenopt(sdim)
-      REAL_T cen_plus(sdim,nDOF)
-      REAL_T cen_minus(sdim,nDOF)
+      REAL_T local_int(nMAT_OPT)
+
+      REAL_T intp(nMAT_OPT,nDOF)
+      REAL_T intm(nMAT_OPT,nDOF)
+      REAL_T intopt(nMAT_OPT)
+      REAL_T cenp(nEQN)
+      REAL_T cenm(nEQN)
+      REAL_T cenopt(nEQN)
+      REAL_T cen_plus(nEQN,nDOF)
+      REAL_T cen_minus(nEQN,nDOF)
 
       REAL_T delta_theta
       REAL_T delta_theta_max
       REAL_T err
-      REAL_T fgrad(sdim,nDOF)  
+      REAL_T fgrad(nEQN,nDOF)  
       INTEGER_T ii,iicrit
       INTEGER_T itet
       INTEGER_T i_angle,j_angle
@@ -11298,10 +11351,10 @@ contains
       REAL_T err_plus(nDOF)
       REAL_T err_minus(nDOF)
 
-      REAL_T, INTENT(out) :: centroidA(sdim)
+      REAL_T, INTENT(out) :: centroidA(nEQN)
       INTEGER_T use_initial_guess
       REAL_T dx_scale(sdim)
-      REAL_T refcentroid_scale(sdim)
+      REAL_T refcentroid_scale(nEQN)
       REAL_T maxdx
       INTEGER_T nn
       REAL_T dx_normalize
@@ -11316,8 +11369,8 @@ contains
       INTEGER_T grid_index_ML(sdim)
       INTEGER_T iML,jML,kML,cmofML
       REAL_T angle_init_ML(MOF_TRAINING_NDIM_DECISIONS) !angle,vfrac
-      REAL_T angle_init_range(sdim-1)
-      REAL_T angle_output(sdim-1)
+      REAL_T angle_init_range(nDOF)
+      REAL_T angle_output(nDOF)
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
@@ -11401,6 +11454,15 @@ contains
 
       if (growth_angle.eq.zero) then
 
+       if ((nMAT_OPT.eq.1).and. &
+           (nDOF.eq.sdim-1).and. &
+           (nEQN.eq.sdim)) then
+        ! do nothing
+       else
+        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        stop
+       endif
+
        if ((im_ambient.eq.0).and. &
            (im_ice.eq.0).and. &
            (im_melt.eq.0).and. &
@@ -11436,6 +11498,16 @@ contains
         !   n_ambient_original dot n_melt_original have the same sign
         !   as 
         !   n_ambient_candiate dot n_melt_candidate. 
+
+       if ((nMAT_OPT.eq.3).and. &
+           (nDOF.eq.1).and. &
+           (nEQN.eq.3*sdim)) then
+        ! do nothing
+       else
+        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        stop
+       endif
+
        if ((im_ambient.ge.1).and. &
            (im_ambient.le.num_materials).and. &
            (im_ice.ge.1).and. &
@@ -11474,6 +11546,9 @@ contains
 
        !calling from:find_cut_geom_slope
       call scale_MOF_variables( &
+       nMAT_OPT, & ! 1 or 3
+       nDOF, & ! sdim-1  or 1
+       nEQN, & ! sdim or 3 * sdim
        bfact,dx, &
        xsten0,nhalf0, &
        refcentroid, &
@@ -11594,7 +11669,7 @@ contains
          ! -pi < angle < pi
        call slope_to_angle(npredict,angle_init,sdim)
        nguess=nguess+1
-       do dir=1,sdim-1
+       do dir=1,nDOF
         angle_array(dir,nguess)=angle_init(dir)
        enddo
 
@@ -11695,10 +11770,10 @@ contains
 
            call put_angle_in_range(angle_init,angle_init_range,sdim)
 
-           do dir=1,sdim-1
+           do dir=1,nDOF
             angle_init_ML(dir)=angle_init_range(dir)
            enddo
-           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
+           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
 
            if (continuous_mof.eq.0) then
             cmofML=0
@@ -11716,14 +11791,14 @@ contains
 
            training_nguess=nguess
 
-           do dir=1,sdim-1
+           do dir=1,nDOF
             angle_array(dir,nguess)=angle_output(dir)
            enddo
 
            if (1.eq.0) then
             print *,"DT:grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
               grid_index,grid_index_ML,angle_init,angle_output,nguess
-            print *,"refvfrac ",refvfrac
+            print *,"refvfrac(1) ",refvfrac(1)
            endif
 
           else if (fastflag.eq.0) then
@@ -11802,10 +11877,10 @@ contains
 
            call put_angle_in_range(angle_init,angle_init_range,sdim)
 
-           do dir=1,sdim-1
+           do dir=1,nDOF
             angle_init_ML(dir)=angle_init_range(dir)
            enddo
-           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac
+           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
 
            if (continuous_mof.eq.0) then
             cmofML=0
@@ -11823,14 +11898,14 @@ contains
 
            training_nguess=nguess
 
-           do dir=1,sdim-1
+           do dir=1,nDOF
             angle_array(dir,nguess)=angle_output(dir)
            enddo
 
            if (1.eq.0) then
             print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
               grid_index,grid_index_ML,angle_init,angle_output,nguess
-            print *,"refvfrac ",refvfrac
+            print *,"refvfrac(1) ",refvfrac(1)
            endif
 
           else if (fastflag.eq.0) then
@@ -11867,14 +11942,17 @@ contains
       iicrit=0
       do iter=1,nguess 
 
-       do dir=1,sdim-1
+       do dir=1,nDOF
         angle_init(dir)=angle_array(dir,iter)
        enddo
 
        ! find finit=xref-xact for cut domain cut by a line.
        use_initial_guess=0
-       intercept_init=zero
+       intercept_init(1)=zero
        call multi_rotatefunc( &
+         nMAT_OPT, & ! 1 or 3
+         nDOF, & ! sdim-1  or 1
+         nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx_scale,xsten0_scale,nhalf0, &
          local_xtetlist_vof,local_nlist_vof, &
@@ -11884,23 +11962,25 @@ contains
          continuous_mof, &
          cmofsten, &
          angle_init, &
-         finit,intercept_init,cen_derive_init, &
+         finit, &
+         intercept_init, &
+         cen_derive_init, &
          use_initial_guess,fastflag,sdim)
 
        errinit=zero
-       do dir=1,sdim
+       do dir=1,nEQN
         errinit=errinit+finit(dir)**2
        enddo
        errinit=sqrt(errinit)
        err=errinit
-       best_error=errinit*refvfrac
+       best_error=errinit*refvfrac(1)
 
-       do dir=1,sdim
+       do dir=1,nEQN
         f_array(dir,iter)=finit(dir)
        enddo
        err_array(iter)=err
-       intercept_array(iter)=intercept_init
-       do dir=1,sdim
+       intercept_array(1,iter)=intercept_init(1)
+       do dir=1,nEQN
         cen_array(dir,iter)=cen_derive_init(dir)
        enddo 
        if (iicrit.eq.0) then
@@ -11920,21 +12000,21 @@ contains
        stop
       endif
 
-      do dir=1,sdim-1
+      do dir=1,nDOF
        angle_array(dir,1)=angle_array(dir,iicrit)
       enddo
-      do dir=1,sdim
+      do dir=1,nEQN
        f_array(dir,1)=f_array(dir,iicrit)
       enddo
       err_array(1)=err_array(iicrit)
-      intercept_array(1)=intercept_array(iicrit)
-      do dir=1,sdim
+      intercept_array(1,1)=intercept_array(1,iicrit)
+      do dir=1,nEQN
        cen_array(dir,1)=cen_array(dir,iicrit)
       enddo 
   
       err_local_min=err_array(1)
       err=err_array(1)
-      best_error=err*refvfrac
+      best_error=err*refvfrac(1)
 
       iter=0
 
@@ -11955,29 +12035,34 @@ contains
                 (err.gt.tol).and. &
                 (err_local_min.gt.local_tol))
 
-       do dir=1,sdim
+       do dir=1,nEQN
         fbase(dir)=f_array(dir,iter+1)
        enddo
 
-       do i_angle=1,sdim-1
+       do i_angle=1,nDOF
         angle_base(i_angle)=angle_array(i_angle,iter+1)
        enddo
 
-       do i_angle=1,sdim-1
+       do i_angle=1,nDOF
 
-        do j_angle=1,sdim-1
+        do j_angle=1,nDOF
          angle_plus(j_angle)=angle_base(j_angle)
          angle_minus(j_angle)=angle_base(j_angle)
         enddo
         angle_plus(i_angle)=angle_plus(i_angle)+delta_theta
         angle_minus(i_angle)=angle_minus(i_angle)-delta_theta
 
-        intp(i_angle)=intercept_array(iter+1)
-        intm(i_angle)=intercept_array(iter+1)
+        intp(1,i_angle)=intercept_array(1,iter+1)
+        intm(1,i_angle)=intercept_array(1,iter+1)
         use_initial_guess=1
+
+        local_int(1)=intp(1,i_angle)
 
          ! fp=xref-cenp
         call multi_rotatefunc( &
+         nMAT_OPT, & ! 1 or 3
+         nDOF, & ! sdim-1  or 1
+         nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx_scale,xsten0_scale,nhalf0, &
          local_xtetlist_vof,local_nlist_vof, &
@@ -11987,20 +12072,29 @@ contains
          continuous_mof, &
          cmofsten, &
          angle_plus, &
-         fp,intp(i_angle),cenp, &
+         fp, &
+         local_int, &
+         cenp, &
          use_initial_guess, &
          fastflag,sdim)
 
+        intp(1,i_angle)=local_int(1)
+
         err_plus(i_angle)=zero
-        do dir=1,sdim
+        do dir=1,nEQN
          err_plus(i_angle)=err_plus(i_angle)+fp(dir)**2
          f_plus(dir,i_angle)=fp(dir)
          cen_plus(dir,i_angle)=cenp(dir)
         enddo
         err_plus(i_angle)=sqrt(err_plus(i_angle))
 
+        local_int(1)=intm(1,i_angle)
+
          ! fm=xref-cenm
         call multi_rotatefunc( &
+         nMAT_OPT, & ! 1 or 3
+         nDOF, & ! sdim-1  or 1
+         nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx_scale,xsten0_scale,nhalf0, &
          local_xtetlist_vof,local_nlist_vof, &
@@ -12010,12 +12104,16 @@ contains
          continuous_mof, &
          cmofsten, &
          angle_minus, &
-         fm,intm(i_angle),cenm, &
+         fm, &
+         local_int, &
+         cenm, &
          use_initial_guess, &
          fastflag,sdim)
 
+        intm(1,i_angle)=local_int(1)
+
         err_minus(i_angle)=zero
-        do dir=1,sdim
+        do dir=1,nEQN
          err_minus(i_angle)=err_minus(i_angle)+fm(dir)**2
          f_minus(dir,i_angle)=fm(dir)
          cen_minus(dir,i_angle)=cenm(dir)
@@ -12028,16 +12126,16 @@ contains
 !   f3_1  f3_2  ....
 
          ! fgrad ~ df/dtheta  (has dimensions of length)
-        do dir=1,sdim
+        do dir=1,nEQN
          fgrad(dir,i_angle)=(fp(dir)-fm(dir))/(two*delta_theta)
         enddo
 
        enddo  ! i_angle=1..sdim-1
 
-       do i_angle=1,sdim-1
-        do j_angle=1,sdim-1
+       do i_angle=1,nDOF
+        do j_angle=1,nDOF
          JTJ(i_angle,j_angle)=zero
-         do dir=1,sdim
+         do dir=1,nEQN
           JTJ(i_angle,j_angle)=JTJ(i_angle,j_angle)+ &
            fgrad(dir,i_angle)*fgrad(dir,j_angle)
          enddo
@@ -12077,28 +12175,28 @@ contains
          stop
         endif
 
-        do i_angle=1,sdim-1
-         do j_angle=1,sdim-1
+        do i_angle=1,nDOF
+         do j_angle=1,nDOF
           JTJINV(i_angle,j_angle)=JTJINV(i_angle,j_angle)/DET
          enddo
         enddo
 
-        do i_angle=1,sdim-1  ! compute -JT * r
+        do i_angle=1,nDOF  ! compute -JT * r
          RHS(i_angle)=zero
-         do dir=1,sdim
+         do dir=1,nEQN
           RHS(i_angle)=RHS(i_angle)-fgrad(dir,i_angle)*fbase(dir)
          enddo
         enddo
 
         err_local_min=zero
-        do i_angle=1,sdim-1  
+        do i_angle=1,nDOF  
          err_local_min=err_local_min+RHS(i_angle)**2
         enddo
         err_local_min=sqrt(err_local_min)
   
-        do i_angle=1,sdim-1  ! compute JTJ^-1 (RHS)
+        do i_angle=1,nDOF  ! compute JTJ^-1 (RHS)
          delangle(i_angle)=zero
-         do j_angle=1,sdim-1
+         do j_angle=1,nDOF
           delangle(i_angle)=delangle(i_angle)+ &
            JTJINV(i_angle,j_angle)*RHS(j_angle)
          enddo
@@ -12109,24 +12207,30 @@ contains
          endif
         enddo
          ! -pi<angle<pi 
-        do i_angle=1,sdim-1
+        do i_angle=1,nDOF
          angle_previous(i_angle)=angle_base(i_angle)
          call advance_angle(angle_base(i_angle),delangle(i_angle))
         enddo
 
-        intopt=intercept_array(iter+1)
+        intopt(1)=intercept_array(1,iter+1)
         use_initial_guess=1
         call multi_rotatefunc( &
+         nMAT_OPT, & ! 1 or 3
+         nDOF, & ! sdim-1  or 1
+         nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx_scale,xsten0_scale,nhalf0, &
          local_xtetlist_vof,local_nlist_vof, &
          local_xtetlist_cen,local_nlist_cen, &
          nmax, &
-         refcentroid_scale,refvfrac, &
+         refcentroid_scale, &
+         refvfrac, &
          continuous_mof, &
          cmofsten, &
          angle_base, &
-         fopt,intopt,cenopt, &
+         fopt, &
+         intopt, &
+         cenopt, &
          use_initial_guess, &
          fastflag,sdim)
 
@@ -12134,14 +12238,14 @@ contains
 
         err_local_min=zero
 
-        do dir=1,sdim
+        do dir=1,nEQN
          fopt(dir)=fbase(dir)
          cenopt(dir)=cen_array(dir,iter+1)
         enddo
-        do i_angle=1,sdim-1
+        do i_angle=1,nDOF
          angle_base(i_angle)=angle_array(i_angle,iter+1)
         enddo
-        intopt=intercept_array(iter+1)
+        intopt(1)=intercept_array(1,iter+1)
 
        else
         print *,"singular_flag invalid"
@@ -12149,7 +12253,7 @@ contains
        endif 
      
        err=zero 
-       do dir=1,sdim
+       do dir=1,nEQN
         err=err+fopt(dir)**2
        enddo
        err=sqrt(err)
@@ -12158,9 +12262,9 @@ contains
         ! do nothing
        else if (singular_flag.eq.0) then
 
-        do i_angle=1,sdim-1
+        do i_angle=1,nDOF
 
-         do j_angle=1,sdim-1
+         do j_angle=1,nDOF
           angle_plus(j_angle)=angle_previous(j_angle)
           angle_minus(j_angle)=angle_previous(j_angle)
          enddo
@@ -12175,24 +12279,24 @@ contains
 
           if (err.ge.err_plus(i_angle)) then
            err=err_plus(i_angle)
-           do dir=1,sdim
+           do dir=1,nEQN
             fopt(dir)=f_plus(dir,i_angle)
             cenopt(dir)=cen_plus(dir,i_angle)
            enddo 
-           intopt=intp(i_angle)
-           do j_angle=1,sdim-1
+           intopt(1)=intp(1,i_angle)
+           do j_angle=1,nDOF
             angle_base(j_angle)=angle_plus(j_angle)
            enddo
           endif
 
           if (err.ge.err_minus(i_angle)) then
            err=err_minus(i_angle)
-           do dir=1,sdim
+           do dir=1,nEQN
             fopt(dir)=f_minus(dir,i_angle)
             cenopt(dir)=cen_minus(dir,i_angle)
            enddo
-           intopt=intm(i_angle)
-           do j_angle=1,sdim-1
+           intopt(1)=intm(1,i_angle)
+           do j_angle=1,nDOF
             angle_base(j_angle)=angle_minus(j_angle)
            enddo
           endif
@@ -12202,24 +12306,24 @@ contains
           stop
          endif 
 
-        enddo ! i_angle=1..sdim-1
+        enddo ! i_angle=1..nDOF
     
        else
         print *,"singular_flag invalid"
         stop
        endif
 
-       do dir=1,sdim
+       do dir=1,nEQN
         f_array(dir,iter+2)=fopt(dir)
         cen_array(dir,iter+2)=cenopt(dir)
        enddo
 
-       do i_angle=1,sdim-1
+       do i_angle=1,nDOF
         angle_array(i_angle,iter+2)=angle_base(i_angle) 
        enddo
        err_array(iter+2)=err
 
-       intercept_array(iter+2)=intopt
+       intercept_array(1,iter+2)=intopt(1)
 
        iter=iter+1
       enddo ! while error>tol and iter<local_MOFITERMAX
@@ -12244,13 +12348,13 @@ contains
        print *,"AFTER------------------------------- "
       endif
 
-      best_error=err_array(iicrit+1)*refvfrac
+      best_error=err_array(iicrit+1)*refvfrac(1)
 
-      do dir=1,sdim-1 
+      do dir=1,nDOF
        new_angle(dir)=angle_array(dir,iicrit+1)
       enddo
 
-      intercept=intercept_array(iicrit+1)
+      intercept(1)=intercept_array(1,iicrit+1)
 
       call angle_to_slope(new_angle,nslope,sdim)
 
@@ -12265,21 +12369,23 @@ contains
 
        call multi_find_intercept( &
         bfact,dx_scale,xsten0_scale,nhalf0, &
-        nslope,intercept, &
+        nslope, &
+        intercept(1), &
         continuous_mof, &
         cmofsten, &
         local_xtetlist_vof, &
         local_nlist_vof, &
         local_nlist_vof, &
         nmax, &
-        refvfrac,use_initial_guess, &
+        refvfrac(1), &
+        use_initial_guess, &
         cen_derive_init,fastflag,sdim)
       else
        print *,"use_MilcentLemoine invalid"
        stop
       endif
 
-      intercept=intercept*maxdx
+      intercept(1)=intercept(1)*maxdx
       do dir=1,sdim
        centroidA(dir)=centroidA(dir)*maxdx
       enddo
@@ -12470,9 +12576,10 @@ contains
       REAL_T refcentroid(sdim)
       REAL_T centroid_ref(sdim)
       REAL_T centroid_free(sdim)
-      REAL_T refvfrac
+      REAL_T refvfrac(1)
       REAL_T single_volume
-      REAL_T nslope(sdim),intercept
+      REAL_T nslope(sdim)
+      REAL_T intercept(1)
       INTEGER_T mat_before,vofcomp_before
       INTEGER_T fastflag,use_super_cell
       REAL_T vofmain(num_materials)
@@ -12484,12 +12591,16 @@ contains
       INTEGER_T, PARAMETER :: nMAT_OPT_growth_angle=3
       INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
       INTEGER_T, PARAMETER :: nDOF_growth_angle=1
-      INTEGER_T, PARAMETER :: nDOF_standard=sdim-1
-      INTEGER_T, PARAMETER :: nEQN_growth_angle=3*sdim
-      INTEGER_T, PARAMETER :: nEQN_standard=sdim
+      INTEGER_T :: nDOF_standard
+      INTEGER_T :: nEQN_growth_angle
+      INTEGER_T :: nEQN_standard
       INTEGER_T is_rigid_local(num_materials)
 
 #include "mofdata.H"
+
+      nDOF_standard=sdim-1
+      nEQN_growth_angle=3*sdim
+      nEQN_standard=sdim
 
       if (growth_angle.eq.zero) then
 
@@ -12999,7 +13110,7 @@ contains
          do dir=1,sdim
           refcentroid(dir)=mofdata(vofcomp+dir)
          enddo
-         refvfrac=mofdata(vofcomp)
+         refvfrac(1)=mofdata(vofcomp)
 
            ! centroidA and refcentroid relative to cell centroid of the super
            ! cell.
@@ -13016,11 +13127,13 @@ contains
            lsnormal, &
            lsnormal_valid, &
            bfact,dx,xsten0,nhalf0, &
-           refcentroid,refvfrac, &
+           refcentroid, &
+           refvfrac, &
            npredict, &
            continuous_mof, &
            cmofsten, &
-           nslope,intercept, &
+           nslope, &
+           intercept, &
            xtetlist_vof,nlist_vof, &
            xtetlist_cen,nlist_cen, &
            nlist_alloc, &
@@ -13034,12 +13147,12 @@ contains
            nEQN_standard)   !sdim
 
          mofdata(vofcomp+sdim+1)=ordermax+1
-         mofdata(vofcomp+2*sdim+2)=intercept
+         mofdata(vofcomp+2*sdim+2)=intercept(1)
          do dir=1,sdim
           mofdata(vofcomp+sdim+1+dir)=nslope(dir)
           multi_centroidA(critical_material,dir)=centroidA(dir)
          enddo 
-         uncaptured_volume_vof=uncaptured_volume_vof-refvfrac*volcell_vof
+         uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
          if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
           uncaptured_volume_vof=zero
          endif
@@ -13161,7 +13274,7 @@ contains
 
           mofdata(vofcomp+sdim+1)=ordermax+1
 
-          mofdata(vofcomp+2*sdim+2)=intercept
+          mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(dir)
             ! cencut_cen is the uncaptured centroid in absolute frame 
@@ -13181,17 +13294,18 @@ contains
 
           call multi_find_intercept( &
            bfact,dx,xsten0,nhalf0, &
-           npredict,intercept, &
+           npredict, &
+           intercept(1), &
            continuous_mof, &
            cmofsten, &
            xtetlist_vof, &
            nlist_alloc, &
            nlist_vof, &
            nmax, &
-           refvfrac, &
+           refvfrac(1), &
            use_initial_guess,centroidA,fastflag,sdim)
 
-          uncaptured_volume_vof=uncaptured_volume_vof-refvfrac*volcell_vof
+          uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
           if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
            uncaptured_volume_vof=zero
           endif
@@ -13209,7 +13323,7 @@ contains
           endif
   
           mofdata(vofcomp+sdim+1)=ordermax+1
-          mofdata(vofcomp+2*sdim+2)=intercept
+          mofdata(vofcomp+2*sdim+2)=intercept(1)
            ! cencell is the supercell centroid
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(dir)
@@ -14507,9 +14621,9 @@ contains
       REAL_T centroid_free(sdim)
       REAL_T centroid_ref(sdim)
       REAL_T refcentroid(sdim)
-      REAL_T refvfrac
+      REAL_T refvfrac(1)
       REAL_T nslope(sdim)
-      REAL_T intercept
+      REAL_T intercept(1)
       REAL_T npredict(sdim)
       REAL_T mag
       INTEGER_T continuous_mof_rigid
@@ -14527,8 +14641,8 @@ contains
 
       INTEGER_T, PARAMETER :: tessellate=0
       INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
-      INTEGER_T, PARAMETER :: nDOF_standard=sdim-1
-      INTEGER_T, PARAMETER :: nEQN_standard=sdim
+      INTEGER_T :: nDOF_standard
+      INTEGER_T :: nEQN_standard
       INTEGER_T is_rigid_local(num_materials)
 
       INTEGER_T nhalf_box
@@ -14548,6 +14662,9 @@ contains
        print *,"tid invalid"
        stop
       endif
+
+      nDOF_standard=sdim-1
+      nEQN_standard=sdim
 
       do imaterial=1,num_materials
        is_rigid_local(imaterial)=is_rigid(imaterial)
@@ -14879,22 +14996,22 @@ contains
 
         fastflag=1
 
-        refvfrac=mofdata(vofcomp)
-        if (abs(refvfrac-vof_super(imaterial)).le.1.0d-12) then
+        refvfrac(1)=mofdata(vofcomp)
+        if (abs(refvfrac(1)-vof_super(imaterial)).le.1.0d-12) then
          !do nothing
         else
-         print *,"vof_super mismatch with refvfrac"
+         print *,"vof_super mismatch with refvfrac(1)"
          stop
         endif
 
-        if ((refvfrac.le.VOFTOL).and. &
-            (refvfrac.ge.zero)) then
+        if ((refvfrac(1).le.VOFTOL).and. &
+            (refvfrac(1).ge.zero)) then
          ! do nothing
-        else if ((refvfrac.ge.one-VOFTOL).and. &
-                 (refvfrac.le.one)) then
+        else if ((refvfrac(1).ge.one-VOFTOL).and. &
+                 (refvfrac(1).le.one)) then
          ! do nothing
-        else if ((refvfrac.ge.VOFTOL).and. &
-                 (refvfrac.le.one-VOFTOL)) then
+        else if ((refvfrac(1).ge.VOFTOL).and. &
+                 (refvfrac(1).le.one-VOFTOL)) then
          do dir=1,sdim
           centroid_free(dir)=uncaptured_centroid_vof(dir)
           centroid_ref(dir)=mofdata(vofcomp+dir)+uncaptured_centroid_vof(dir)
@@ -14908,7 +15025,7 @@ contains
          continuous_mof_rigid=0
          nlist_vof=0
          nlist_cen=0
-         refvfrac=mofdata(vofcomp)
+         refvfrac(1)=mofdata(vofcomp)
 
          if (mag.gt.VOFTOL*dx(1)) then
 
@@ -14934,11 +15051,13 @@ contains
            lsnormal_valid, &
            bfact,dx, &
            xsten0,nhalf0, &
-           refcentroid,refvfrac, &
+           refcentroid, &
+           refvfrac, &
            npredict, &
            continuous_mof_rigid, &
            cmofsten, &
-           nslope,intercept, &
+           nslope, &
+           intercept, &
            xtetlist_vof,nlist_vof, &
            xtetlist_cen,nlist_cen, &
            nlist_alloc, &
@@ -14952,7 +15071,7 @@ contains
            nEQN_standard)   !nEQN_standard=sdim
 
           mofdata(vofcomp+sdim+1)=one ! order=1
-          mofdata(vofcomp+2*sdim+2)=intercept
+          mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=nslope(dir)
            multi_centroidA(imaterial,dir)=centroidA(dir)
@@ -14966,21 +15085,22 @@ contains
            centroidA(dir)=zero
           enddo
           npredict(1)=one
-          intercept=mofdata(vofcomp)-half
+          intercept(1)=mofdata(vofcomp)-half
 
           mofdata(vofcomp+sdim+1)=one ! order=1
-          mofdata(vofcomp+2*sdim+2)=intercept
+          mofdata(vofcomp+2*sdim+2)=intercept(1)
 
-          refvfrac=mofdata(vofcomp)
+          refvfrac(1)=mofdata(vofcomp)
 
           call single_find_intercept( &
            bfact,dx,xsten0,nhalf0, &
-           npredict,intercept, &
-           refvfrac, &
+           npredict, &
+           intercept(1), &
+           refvfrac(1), &
            centroidA, & ! centroid in absolute coordinate system
            sdim)
 
-          mofdata(vofcomp+2*sdim+2)=intercept
+          mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=npredict(dir)
            multi_centroidA(imaterial,dir)= &
@@ -16276,7 +16396,10 @@ contains
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: nmax
+
       INTEGER_T, INTENT(in) :: sdim
+      INTEGER_T :: nDOF_standard
+
       REAL_T xtetlist(4,3,nmax)
       REAL_T xsten0(-3:3,sdim) 
       REAL_T dx(sdim) 
@@ -16325,6 +16448,8 @@ contains
       INTEGER_T nhalf0
 
 #include "mofdata.H"
+
+      nDOF_standard=sdim-1
 
       print *,"in diagnostic_MOF"
       print *,"DO NOT RUN THIS TEST WITH MULTIPLE THREADS"
@@ -16409,7 +16534,7 @@ contains
       do ntry=1,nsamples
 
         ! 0<=rand()<=1
-       do iangle=1,sdim-1
+       do iangle=1,nDOF_standard
 #if (USERAND==1)
         angle(iangle)=rand()
 #else
