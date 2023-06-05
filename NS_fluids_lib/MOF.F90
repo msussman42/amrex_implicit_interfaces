@@ -11190,7 +11190,10 @@ contains
         nmax, &
         critical_material, & !INTENT(in)
         fastflag, &
-        sdim)
+        sdim, &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN)   ! sdim or 3 * sdim
 
       use probcommon_module
       use geometry_intersect_module
@@ -11199,6 +11202,10 @@ contains
       IMPLICIT NONE
 
 #include "mofdata.H"
+
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
 
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
       REAL_T, INTENT(in) :: growth_angle
@@ -11236,22 +11243,22 @@ contains
       REAL_T, INTENT(out) :: intercept
       REAL_T, INTENT(out) :: nslope(sdim) 
 
-      REAL_T new_angle(sdim-1)
+      REAL_T new_angle(nDOF)
 
-      REAL_T angle_previous(sdim-1)
-      REAL_T angle_base(sdim-1)
-      REAL_T angle_plus(sdim-1)
-      REAL_T angle_minus(sdim-1)
+      REAL_T angle_previous(nDOF)
+      REAL_T angle_base(nDOF)
+      REAL_T angle_plus(nDOF)
+      REAL_T angle_minus(nDOF)
 
-      REAL_T angle_init(sdim-1)
+      REAL_T angle_init(nDOF)
 
       REAL_T intercept_init
       REAL_T cen_derive_init(sdim)
 
-      REAL_T intercept_array(MOFITERMAX+1)
-      REAL_T cen_array(sdim,MOFITERMAX+1)
-      REAL_T angle_array(sdim-1,MOFITERMAX+1)
-      REAL_T f_array(sdim,MOFITERMAX+1)  
+      REAL_T intercept_array(nMAT_OPT,MOFITERMAX+1)
+      REAL_T cen_array(nEQN,MOFITERMAX+1)
+      REAL_T angle_array(nDOF,MOFITERMAX+1)
+      REAL_T f_array(nEQN,MOFITERMAX+1)  
       REAL_T err_array(MOFITERMAX+1)
 
       INTEGER_T dir,iter
@@ -11261,35 +11268,35 @@ contains
       REAL_T fm(sdim)
       REAL_T fopt(sdim)
       REAL_T fbase(sdim)
-      REAL_T f_plus(sdim,sdim-1)
-      REAL_T f_minus(sdim,sdim-1)
+      REAL_T f_plus(sdim,nDOF)
+      REAL_T f_minus(sdim,nDOF)
 
-      REAL_T intp(sdim-1)
-      REAL_T intm(sdim-1)
+      REAL_T intp(nDOF)
+      REAL_T intm(nDOF)
       REAL_T intopt
       REAL_T cenp(sdim)
       REAL_T cenm(sdim)
       REAL_T cenopt(sdim)
-      REAL_T cen_plus(sdim,sdim-1)
-      REAL_T cen_minus(sdim,sdim-1)
+      REAL_T cen_plus(sdim,nDOF)
+      REAL_T cen_minus(sdim,nDOF)
 
       REAL_T delta_theta
       REAL_T delta_theta_max
       REAL_T err
-      REAL_T fgrad(sdim,sdim-1)  
+      REAL_T fgrad(sdim,nDOF)  
       INTEGER_T ii,iicrit
       INTEGER_T itet
       INTEGER_T i_angle,j_angle
-      REAL_T delangle(sdim-1)
-      REAL_T RHS(sdim-1)
-      REAL_T JTJ(sdim-1,sdim-1)
-      REAL_T JTJINV(sdim-1,sdim-1)
+      REAL_T delangle(nDOF)
+      REAL_T RHS(nDOF)
+      REAL_T JTJ(nDOF,nDOF)
+      REAL_T JTJINV(nDOF,nDOF)
       REAL_T tol,local_tol,DET
       REAL_T err_local_min
       REAL_T errinit
 
-      REAL_T err_plus(sdim-1)
-      REAL_T err_minus(sdim-1)
+      REAL_T err_plus(nDOF)
+      REAL_T err_minus(nDOF)
 
       REAL_T, INTENT(out) :: centroidA(sdim)
       INTEGER_T use_initial_guess
@@ -12474,6 +12481,12 @@ contains
       REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
       INTEGER_T, INTENT(in) :: lsnormal_valid(num_materials)
       INTEGER_T, PARAMETER :: tessellate=0
+      INTEGER_T, PARAMETER :: nMAT_OPT_growth_angle=3
+      INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
+      INTEGER_T, PARAMETER :: nDOF_growth_angle=1
+      INTEGER_T, PARAMETER :: nDOF_standard=sdim-1
+      INTEGER_T, PARAMETER :: nEQN_growth_angle=3*sdim
+      INTEGER_T, PARAMETER :: nEQN_standard=sdim
       INTEGER_T is_rigid_local(num_materials)
 
 #include "mofdata.H"
@@ -12993,7 +13006,7 @@ contains
            ! find_cut_geom_slope called from: individual_MOF
          call find_cut_geom_slope( &
            mofdata, &
-           growth_angle, &
+           growth_angle, & !growth_angle=0.0
            im_ambient,im_ice,im_melt, &
            n_ambient,n_ice,n_CL, &
            d_ambient,d_ice, &
@@ -13014,7 +13027,11 @@ contains
            centroidA, &
            nmax, &
            critical_material, & !INTENT(in)
-           fastflag,sdim)
+           fastflag, &
+           sdim, &
+           nMAT_OPT_standard, & !1
+           nDOF_standard, & !sdim-1
+           nEQN_standard)   !sdim
 
          mofdata(vofcomp+sdim+1)=ordermax+1
          mofdata(vofcomp+2*sdim+2)=intercept
@@ -13215,7 +13232,7 @@ contains
         ! find_cut_geom_slope called from: individual_MOF
        call find_cut_geom_slope( &
         mofdata, &
-        growth_angle, &
+        growth_angle, & !growth_angle<>0
         im_ambient,im_ice,im_melt, &
         n_ambient,n_ice,n_CL, &
         d_ambient,d_ice, &
@@ -13236,7 +13253,11 @@ contains
         centroidA, &
         nmax, &
         critical_material, & !INTENT(in)
-        fastflag,sdim)
+        fastflag, &
+        sdim, &
+        nMAT_OPT_growth_angle, & !3
+        nDOF_growth_angle, & !nDOF_growth_angle=1
+        nEQN_growth_angle)   !nEQN_growth_angle=3*sdim
 
       else
        print *,"growth_angle invalid"
@@ -14505,6 +14526,9 @@ contains
       REAL_T, PARAMETER :: d_ice=zero
 
       INTEGER_T, PARAMETER :: tessellate=0
+      INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
+      INTEGER_T, PARAMETER :: nDOF_standard=sdim-1
+      INTEGER_T, PARAMETER :: nEQN_standard=sdim
       INTEGER_T is_rigid_local(num_materials)
 
       INTEGER_T nhalf_box
@@ -14899,7 +14923,7 @@ contains
           ! continuous_mof_rigid=0
           call find_cut_geom_slope( &
            mofdata, &
-           growth_angle, &
+           growth_angle, & !growth_angle=0.0
            im_ambient,im_ice,im_melt, &
            n_ambient,n_ice,n_CL, &
            d_ambient,d_ice, &
@@ -14921,7 +14945,11 @@ contains
            centroidA, &
            nmax, &
            imaterial, & !INTENT(in)
-           fastflag,sdim)
+           fastflag, &
+           sdim, &
+           nMAT_OPT_standard, & !nMAT_OPT_standard=1
+           nDOF_standard, & !nDOF_standard=sdim-1
+           nEQN_standard)   !nEQN_standard=sdim
 
           mofdata(vofcomp+sdim+1)=one ! order=1
           mofdata(vofcomp+2*sdim+2)=intercept
