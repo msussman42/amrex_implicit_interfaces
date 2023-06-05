@@ -12549,7 +12549,7 @@ contains
       REAL_T, INTENT(inout) :: uncaptured_volume_vof 
       REAL_T, INTENT(inout) :: uncaptured_volume_cen
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
-      REAL_T centroidA(sdim)
+      REAL_T centroidA(num_materials*sdim)
       REAL_T, INTENT(out) :: multi_centroidA(num_materials,sdim)
       INTEGER_T im,vofcomp
       INTEGER_T, INTENT(in) :: imaterial_count
@@ -12572,14 +12572,14 @@ contains
       INTEGER_T test_order
       REAL_T test_vfrac,max_vfrac
       INTEGER_T use_initial_guess
-      REAL_T npredict(sdim)
-      REAL_T refcentroid(sdim)
+      REAL_T npredict(num_materials*sdim)
+      REAL_T refcentroid(num_materials*sdim)
       REAL_T centroid_ref(sdim)
       REAL_T centroid_free(sdim)
-      REAL_T refvfrac(1)
+      REAL_T refvfrac(num_materials)
       REAL_T single_volume
-      REAL_T nslope(sdim)
-      REAL_T intercept(1)
+      REAL_T nslope(num_materials*sdim)
+      REAL_T intercept(num_materials)
       INTEGER_T mat_before,vofcomp_before
       INTEGER_T fastflag,use_super_cell
       REAL_T vofmain(num_materials)
@@ -12622,7 +12622,8 @@ contains
            (im_ice.ge.1).and. &
            (im_ice.le.num_materials).and. &
            (im_melt.ge.1).and. &
-           (im_melt.le.num_materials)) then
+           (im_melt.le.num_materials).and. &
+           (continuous_mof.eq.-1)) then
         ! do nothing
        else
         print *,"invalid growth_angle arguments"
@@ -13341,6 +13342,45 @@ contains
 
       else if (abs(growth_angle).le.half*Pi) then
 
+       if (is_rigid_local(im_ambient).ne.0) then
+        print *,"is_rigid(im_ambient) invalid MOF.F90"
+        stop
+       endif
+       if (is_rigid_local(im_ice).ne.0) then
+        print *,"is_rigid(im_ice) invalid MOF.F90"
+        stop
+       endif
+       if (is_rigid_local(im_melt).ne.0) then
+        print *,"is_rigid(im_melt) invalid MOF.F90"
+        stop
+       endif
+
+       vofcomp=(im_ambient-1)*ngeom_recon+1
+       do dir=1,sdim
+        refcentroid(dir)=mofdata(vofcomp+dir)
+        npredict(dir)=n_ambient(dir)
+       enddo
+       refvfrac(1)=mofdata(vofcomp)
+       intercept(1)=d_ambient
+
+       vofcomp=(im_ice-1)*ngeom_recon+1
+       do dir=1,sdim
+        refcentroid(sdim+dir)=mofdata(vofcomp+dir)
+        npredict(sdim+dir)=n_ice(dir)
+       enddo
+       refvfrac(2)=mofdata(vofcomp)
+       intercept(2)=d_ice
+
+       vofcomp=(im_melt-1)*ngeom_recon+1
+       do dir=1,sdim
+        refcentroid(2*sdim+dir)=mofdata(vofcomp+dir)
+        npredict(2*sdim+dir)=n_CL(dir)
+       enddo
+       refvfrac(3)=mofdata(vofcomp)
+       intercept(3)=zero
+
+       critical_material=im_ambient
+
         ! centroidA and refcentroid relative to cell centroid of the super
         ! cell.
         ! find_cut_geom_slope called from: individual_MOF
@@ -13372,6 +13412,42 @@ contains
         nMAT_OPT_growth_angle, & !3
         nDOF_growth_angle, & !nDOF_growth_angle=1
         nEQN_growth_angle)   !nEQN_growth_angle=3*sdim
+
+       vofcomp=(im_ambient-1)*ngeom_recon+1
+       mofdata(vofcomp+sdim+1)=1
+       mofdata(vofcomp+2*sdim+2)=intercept(1)
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=nslope(dir)
+        multi_centroidA(im_ambient,dir)=centroidA(dir)
+       enddo 
+       uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
+       if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
+        uncaptured_volume_vof=zero
+       endif
+
+       vofcomp=(im_ice-1)*ngeom_recon+1
+       mofdata(vofcomp+sdim+1)=2
+       mofdata(vofcomp+2*sdim+2)=intercept(2)
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=nslope(sdim+dir)
+        multi_centroidA(im_ice,dir)=centroidA(sdim+dir)
+       enddo 
+       uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(2)*volcell_vof
+       if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
+        uncaptured_volume_vof=zero
+       endif
+
+       vofcomp=(im_melt-1)*ngeom_recon+1
+       mofdata(vofcomp+sdim+1)=3
+       mofdata(vofcomp+2*sdim+2)=-intercept(2)
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=-nslope(sdim+dir)
+        multi_centroidA(im_melt,dir)=centroidA(2*sdim+dir)
+       enddo 
+       uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(3)*volcell_vof
+       if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
+        uncaptured_volume_vof=zero
+       endif
 
       else
        print *,"growth_angle invalid"
