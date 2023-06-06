@@ -9363,6 +9363,14 @@ contains
        print *,"nEQN invalid"
        stop
       endif
+      if ((nDOF.ne.sdim-1).and.(nDOF.ne.1)) then
+       print *,"nDOF invalid"
+       stop
+      endif
+      if ((nMAT_OPT.ne.1).and.(nMAT_OPT.ne.3)) then
+       print *,"nMAT_OPT invalid"
+       stop
+      endif
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid"
@@ -9396,15 +9404,23 @@ contains
          maxdx=xsten(1,dir)-xsten(-1,dir)
         endif
        enddo
-       do dir=1,sdim
-        do i=-nhalf,nhalf
-         xsten_scale(i,dir)=xsten(i,dir)/maxdx
+
+       if (maxdx.gt.zero) then
+
+        do dir=1,sdim
+         do i=-nhalf,nhalf
+          xsten_scale(i,dir)=xsten(i,dir)/maxdx
+         enddo
+         dx_scale(dir)=dx(dir)/maxdx
+        enddo ! dir
+        do dir=1,NEQN
+         refcentroid_scale(dir)=refcentroid(dir)/maxdx
         enddo
-        dx_scale(dir)=dx(dir)/maxdx
-       enddo ! dir
-       do dir=1,NEQN
-        refcentroid_scale(dir)=refcentroid(dir)/maxdx
-       enddo
+
+       else
+        print *,"maxdx invalid scale_MOF_variables: ",maxdx
+        stop
+       endif
 
       else
        print *,"levelrz invalid scale mof variables"
@@ -9460,13 +9476,22 @@ contains
          maxdx=xsten(1,dir)-xsten(-1,dir)
         endif
        enddo
-       do dir=1,sdim
-        do i=-nhalf,nhalf
-         xsten_scale(i,dir)=xsten(i,dir)/maxdx
+
+       if (maxdx.gt.zero) then
+
+        do dir=1,sdim
+         do i=-nhalf,nhalf
+          xsten_scale(i,dir)=xsten(i,dir)/maxdx
+         enddo
+         dx_scale(dir)=dx(dir)/maxdx
         enddo
-        dx_scale(dir)=dx(dir)/maxdx
-       enddo
-       intercept=intercept/maxdx
+        intercept=intercept/maxdx
+
+       else
+        print *,"maxdx invalid scale_VOF_variables: ",maxdx
+        stop
+       endif
+
       else
        print *,"levelrz invalid scale vof variables"
        stop
@@ -11508,7 +11533,9 @@ contains
         stop
        endif
 
-       if ((im_ambient.ge.1).and. &
+       if ((continuous_mof.eq.-1).and. &
+           (fastflag.eq.0).and. &
+           (im_ambient.ge.1).and. &
            (im_ambient.le.num_materials).and. &
            (im_ice.ge.1).and. &
            (im_ice.le.num_materials).and. &
@@ -11598,16 +11625,23 @@ contains
 
       if (fastflag.eq.0) then
 
-       do itet=1,sdim+1
-       do dir=1,sdim
-        do nn=1,local_nlist_vof
-         local_xtetlist_vof(itet,dir,nn)=local_xtetlist_vof(itet,dir,nn)/maxdx
+       if (maxdx.gt.zero) then
+
+        do itet=1,sdim+1
+        do dir=1,sdim
+         do nn=1,local_nlist_vof
+          local_xtetlist_vof(itet,dir,nn)=local_xtetlist_vof(itet,dir,nn)/maxdx
+         enddo 
+         do nn=1,local_nlist_cen
+          local_xtetlist_cen(itet,dir,nn)=local_xtetlist_cen(itet,dir,nn)/maxdx
+         enddo 
         enddo 
-        do nn=1,local_nlist_cen
-         local_xtetlist_cen(itet,dir,nn)=local_xtetlist_cen(itet,dir,nn)/maxdx
         enddo 
-       enddo 
-       enddo 
+
+       else
+        print *,"maxdx invalid find_cut_geom_slope maxdx: ",maxdx
+        stop
+       endif
 
       else if (fastflag.eq.1) then
        ! do nothing
@@ -11632,310 +11666,322 @@ contains
 
       nguess=0
 
-      if (MOF_TURN_OFF_LS.eq.0) then
+      if (growth_angle.eq.zero) then
 
-       if (lsnormal_valid(critical_material).eq.1) then
-        do dir=1,sdim
-         nLS(dir)=lsnormal(critical_material,dir)
-        enddo
-         ! -pi < angle < pi
-        call slope_to_angle(nLS,angle_init,sdim)
-        nguess=nguess+1 
-        do dir=1,sdim-1
+       if (MOF_TURN_OFF_LS.eq.0) then
+
+        if (lsnormal_valid(critical_material).eq.1) then
+         do dir=1,sdim
+          nLS(dir)=lsnormal(critical_material,dir)
+         enddo
+          ! -pi < angle < pi
+         call slope_to_angle(nLS,angle_init,sdim)
+         nguess=nguess+1 
+         do dir=1,sdim-1
+          angle_array(dir,nguess)=angle_init(dir)
+         enddo
+        else if (lsnormal_valid(critical_material).eq.0) then
+         ! do nothing
+        else
+         print *,"LSNORMAL_valid invalid1"
+         print *,"critical_material,flag ",critical_material, &
+          lsnormal_valid(critical_material) 
+         stop
+        endif
+
+       else if (MOF_TURN_OFF_LS.eq.1) then
+        ! do nothing
+       else
+        print *,"MOF_TURN_OFF_LS invalid"
+        stop
+       endif
+
+       training_nguess=0
+
+       if ((continuous_mof.eq.0).or. &
+           (continuous_mof.eq.-1).or. &
+           (continuous_mof.ge.1)) then
+
+          ! -pi < angle < pi
+        call slope_to_angle(npredict,angle_init,sdim)
+        nguess=nguess+1
+        do dir=1,nDOF
          angle_array(dir,nguess)=angle_init(dir)
         enddo
-       else if (lsnormal_valid(critical_material).eq.0) then
-        ! do nothing
-       else
-        print *,"LSNORMAL_valid invalid1"
-        print *,"critical_material,flag ",critical_material, &
-         lsnormal_valid(critical_material) 
-        stop
-       endif
 
-      else if (MOF_TURN_OFF_LS.eq.1) then
-       ! do nothing
-      else
-       print *,"MOF_TURN_OFF_LS invalid"
-       stop
-      endif
+        do dir=1,sdim
+         grid_index_ML(dir)=grid_index(dir)/bfact
+         grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
+        enddo
 
-      training_nguess=0
+        dir=1
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         ! do nothing
+        else if (levelrz.eq.COORDSYS_RZ) then
+         grid_index_ML(dir)=grid_index(dir)
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+         grid_index_ML(dir)=grid_index(dir)
+        else
+         print *,"levelrz invalid"
+         stop
+        endif
 
-      if ((continuous_mof.eq.0).or. &
-          (continuous_mof.eq.-1).or. &
-          (continuous_mof.ge.1)) then
+        dir=2
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         ! do nothing
+        else if (levelrz.eq.COORDSYS_RZ) then
+         ! do nothing
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+         grid_index_ML(dir)=grid_index(dir)
+        else
+         print *,"levelrz invalid"
+         stop
+        endif
 
-         ! -pi < angle < pi
-       call slope_to_angle(npredict,angle_init,sdim)
-       nguess=nguess+1
-       do dir=1,nDOF
-        angle_array(dir,nguess)=angle_init(dir)
-       enddo
+        iML=grid_index_ML(1)
+        jML=grid_index_ML(2)
+        if (sdim.eq.2) then
+         kML=0
+        else if (sdim.eq.3) then
+         kML=grid_index_ML(sdim)
+        else
+         print *,"sdim invalid"
+         stop
+        endif
 
-       do dir=1,sdim
-        grid_index_ML(dir)=grid_index(dir)/bfact
-        grid_index_ML(dir)=grid_index(dir)-bfact*grid_index_ML(dir)
-       enddo
+        if (1.eq.0) then
+         print *,"fort_finest_level ",fort_finest_level
+         print *,"grid_level ",grid_level
+         print *,"decision_tree_finest_level ",decision_tree_finest_level
+         print *,"grid_index_ML ",grid_index_ML
+        endif
 
-       dir=1
-       if (levelrz.eq.COORDSYS_CARTESIAN) then
-        ! do nothing
-       else if (levelrz.eq.COORDSYS_RZ) then
-        grid_index_ML(dir)=grid_index(dir)
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        grid_index_ML(dir)=grid_index(dir)
-       else
-        print *,"levelrz invalid"
-        stop
-       endif
+        if (decision_tree_finest_level.eq.-1) then
+         ! do nothing
+        else if (decision_tree_finest_level.ge.0) then
 
-       dir=2
-       if (levelrz.eq.COORDSYS_CARTESIAN) then
-        ! do nothing
-       else if (levelrz.eq.COORDSYS_RZ) then
-        ! do nothing
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        grid_index_ML(dir)=grid_index(dir)
-       else
-        print *,"levelrz invalid"
-        stop
-       endif
+         if (grid_level.eq.decision_tree_finest_level) then
+          mof_stencil_ok=1
+          if (continuous_mof.eq.0) then
+           ! do nothing
+          else if (continuous_mof.eq.-1) then
+           mof_stencil_ok=0
+          else if (continuous_mof.ge.1) then
 
-       iML=grid_index_ML(1)
-       jML=grid_index_ML(2)
-       if (sdim.eq.2) then
-        kML=0
-       else if (sdim.eq.3) then
-        kML=grid_index_ML(sdim)
-       else
-        print *,"sdim invalid"
-        stop
-       endif
+           if (sdim.eq.3) then
+            ksten_low=-1
+            ksten_high=1
+           else if (sdim.eq.2) then
+            ksten_low=0
+            ksten_high=0
+           else
+            print *,"sdim invalid"
+            stop
+           endif
 
-       if (1.eq.0) then
-        print *,"fort_finest_level ",fort_finest_level
-        print *,"grid_level ",grid_level
-        print *,"decision_tree_finest_level ",decision_tree_finest_level
-        print *,"grid_index_ML ",grid_index_ML
-       endif
+           do i1=-1,1
+           do j1=-1,1
+           do k1=ksten_low,ksten_high
+            if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+             ! do nothing
+            else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+             mof_stencil_ok=0
+            else
+             print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
+             stop
+            endif
+           enddo
+           enddo
+           enddo ! i1,j1,k1
 
-       if (decision_tree_finest_level.eq.-1) then
-        ! do nothing
-       else if (decision_tree_finest_level.ge.0) then
-
-        if (grid_level.eq.decision_tree_finest_level) then
-         mof_stencil_ok=1
-         if (continuous_mof.eq.0) then
-          ! do nothing
-         else if (continuous_mof.eq.-1) then
-          mof_stencil_ok=0
-         else if (continuous_mof.ge.1) then
-
-          if (sdim.eq.3) then
-           ksten_low=-1
-           ksten_high=1
-          else if (sdim.eq.2) then
-           ksten_low=0
-           ksten_high=0
           else
-           print *,"sdim invalid"
+           print *,"continuous_mof invalid"
            stop
           endif
 
-          do i1=-1,1
-          do j1=-1,1
-          do k1=ksten_low,ksten_high
-           if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+          if (mof_stencil_ok.eq.1) then
+
+           if (fastflag.eq.1) then
+            nguess=nguess+1
+
+            call put_angle_in_range(angle_init,angle_init_range,sdim)
+
+            do dir=1,nDOF
+             angle_init_ML(dir)=angle_init_range(dir)
+            enddo
+            angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
+
+            if (continuous_mof.eq.0) then
+             cmofML=0
+            else if (continuous_mof.ge.1) then
+             cmofML=1
+            else
+             print *,"continuous_mof invalid"
+             stop
+            endif
+
+            call decision_tree_predict(angle_init_ML,angle_output, &
+              MOF_TRAINING_NDIM_DECISIONS, &
+              MOF_TRAINING_NDIM_CLASSIFY, &
+              decision_tree_array(D_DECL(iML,jML,kML),cmofML))
+
+            training_nguess=nguess
+
+            do dir=1,nDOF
+             angle_array(dir,nguess)=angle_output(dir)
+            enddo
+
+            if (1.eq.0) then
+             print *,"DT:grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
+               grid_index,grid_index_ML,angle_init,angle_output,nguess
+             print *,"refvfrac(1) ",refvfrac(1)
+            endif
+
+           else if (fastflag.eq.0) then
             ! do nothing
-           else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-            mof_stencil_ok=0
            else
-            print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-            stop
-           endif
-          enddo
-          enddo
-          enddo ! i1,j1,k1
-
-         else
-          print *,"continuous_mof invalid"
-          stop
-         endif
-
-         if (mof_stencil_ok.eq.1) then
-
-          if (fastflag.eq.1) then
-           nguess=nguess+1
-
-           call put_angle_in_range(angle_init,angle_init_range,sdim)
-
-           do dir=1,nDOF
-            angle_init_ML(dir)=angle_init_range(dir)
-           enddo
-           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
-
-           if (continuous_mof.eq.0) then
-            cmofML=0
-           else if (continuous_mof.ge.1) then
-            cmofML=1
-           else
-            print *,"continuous_mof invalid"
+            print *,"fastflag invalid"
             stop
            endif
 
-           call decision_tree_predict(angle_init_ML,angle_output, &
-             MOF_TRAINING_NDIM_DECISIONS, &
-             MOF_TRAINING_NDIM_CLASSIFY, &
-             decision_tree_array(D_DECL(iML,jML,kML),cmofML))
-
-           training_nguess=nguess
-
-           do dir=1,nDOF
-            angle_array(dir,nguess)=angle_output(dir)
-           enddo
-
-           if (1.eq.0) then
-            print *,"DT:grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
-              grid_index,grid_index_ML,angle_init,angle_output,nguess
-            print *,"refvfrac(1) ",refvfrac(1)
-           endif
-
-          else if (fastflag.eq.0) then
+          else if (mof_stencil_ok.eq.0) then
            ! do nothing
           else
-           print *,"fastflag invalid"
+           print *,"mof_stencil_ok invalid"
            stop
           endif
 
-         else if (mof_stencil_ok.eq.0) then
+         else if (grid_level.eq.-1) then
           ! do nothing
          else
-          print *,"mof_stencil_ok invalid"
+          print *,"grid_level (decision tree check) invalid"
           stop
          endif
 
-        else if (grid_level.eq.-1) then
-         ! do nothing
         else
-         print *,"grid_level (decision tree check) invalid"
+         print *,"decision_tree_finest_level invalid"
+         stop
+        endif
+
+        if (training_finest_level.eq.-1) then
+         ! do nothing
+        else if (training_finest_level.ge.0) then
+
+         if (grid_level.eq.training_finest_level) then
+          mof_stencil_ok=1
+          if (continuous_mof.eq.0) then
+           ! do nothing
+          else if (continuous_mof.eq.-1) then
+           mof_stencil_ok=0
+          else if (continuous_mof.ge.1) then
+
+           if (sdim.eq.3) then
+            ksten_low=-1
+            ksten_high=1
+           else if (sdim.eq.2) then
+            ksten_low=0
+            ksten_high=0
+           else
+            print *,"sdim invalid"
+            stop
+           endif
+
+           do i1=-1,1
+           do j1=-1,1
+           do k1=ksten_low,ksten_high
+            if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
+             ! do nothing
+            else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
+             mof_stencil_ok=0
+            else
+             print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
+             stop
+            endif
+           enddo
+           enddo
+           enddo ! i1,j1,k1
+
+          else
+           print *,"continuous_mof invalid"
+           stop
+          endif
+
+          if (mof_stencil_ok.eq.1) then
+
+           if (fastflag.eq.1) then
+            nguess=nguess+1
+
+            call put_angle_in_range(angle_init,angle_init_range,sdim)
+
+            do dir=1,nDOF
+             angle_init_ML(dir)=angle_init_range(dir)
+            enddo
+            angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
+
+            if (continuous_mof.eq.0) then
+             cmofML=0
+            else if (continuous_mof.ge.1) then
+             cmofML=1
+            else
+             print *,"continuous_mof invalid"
+             stop
+            endif
+
+             ! choices: NN, DT, RF
+            angle_output= &
+              training_array(D_DECL(iML,jML,kML),cmofML)%DT_ZHOUTENG_LOCAL% &
+              predict(angle_init_ML)
+
+            training_nguess=nguess
+
+            do dir=1,nDOF
+             angle_array(dir,nguess)=angle_output(dir)
+            enddo
+
+            if (1.eq.0) then
+             print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
+               grid_index,grid_index_ML,angle_init,angle_output,nguess
+             print *,"refvfrac(1) ",refvfrac(1)
+            endif
+
+           else if (fastflag.eq.0) then
+            ! do nothing
+           else
+            print *,"fastflag invalid"
+            stop
+           endif
+
+          else if (mof_stencil_ok.eq.0) then
+           ! do nothing
+          else
+           print *,"mof_stencil_ok invalid"
+           stop
+          endif
+
+         else if (grid_level.eq.-1) then
+          ! do nothing
+         else
+          print *,"grid_level (training_finest_level) invalid"
+          stop
+         endif
+
+        else
+         print *,"training_finest_level invalid"
          stop
         endif
 
        else
-        print *,"decision_tree_finest_level invalid"
+        print *,"continuous_mof invalid"
         stop
        endif
 
-       if (training_finest_level.eq.-1) then
-        ! do nothing
-       else if (training_finest_level.ge.0) then
+      else if (abs(growth_angle).le.half*Pi) then
 
-        if (grid_level.eq.training_finest_level) then
-         mof_stencil_ok=1
-         if (continuous_mof.eq.0) then
-          ! do nothing
-         else if (continuous_mof.eq.-1) then
-          mof_stencil_ok=0
-         else if (continuous_mof.ge.1) then
-
-          if (sdim.eq.3) then
-           ksten_low=-1
-           ksten_high=1
-          else if (sdim.eq.2) then
-           ksten_low=0
-           ksten_high=0
-          else
-           print *,"sdim invalid"
-           stop
-          endif
-
-          do i1=-1,1
-          do j1=-1,1
-          do k1=ksten_low,ksten_high
-           if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
-            ! do nothing
-           else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
-            mof_stencil_ok=0
-           else
-            print *,"cmofsten(D_DECL(i1,j1,k1)) invalid"
-            stop
-           endif
-          enddo
-          enddo
-          enddo ! i1,j1,k1
-
-         else
-          print *,"continuous_mof invalid"
-          stop
-         endif
-
-         if (mof_stencil_ok.eq.1) then
-
-          if (fastflag.eq.1) then
-           nguess=nguess+1
-
-           call put_angle_in_range(angle_init,angle_init_range,sdim)
-
-           do dir=1,nDOF
-            angle_init_ML(dir)=angle_init_range(dir)
-           enddo
-           angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
-
-           if (continuous_mof.eq.0) then
-            cmofML=0
-           else if (continuous_mof.ge.1) then
-            cmofML=1
-           else
-            print *,"continuous_mof invalid"
-            stop
-           endif
-
-            ! choices: NN, DT, RF
-           angle_output= &
-             training_array(D_DECL(iML,jML,kML),cmofML)%DT_ZHOUTENG_LOCAL% &
-             predict(angle_init_ML)
-
-           training_nguess=nguess
-
-           do dir=1,nDOF
-            angle_array(dir,nguess)=angle_output(dir)
-           enddo
-
-           if (1.eq.0) then
-            print *,"grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
-              grid_index,grid_index_ML,angle_init,angle_output,nguess
-            print *,"refvfrac(1) ",refvfrac(1)
-           endif
-
-          else if (fastflag.eq.0) then
-           ! do nothing
-          else
-           print *,"fastflag invalid"
-           stop
-          endif
-
-         else if (mof_stencil_ok.eq.0) then
-          ! do nothing
-         else
-          print *,"mof_stencil_ok invalid"
-          stop
-         endif
-
-        else if (grid_level.eq.-1) then
-         ! do nothing
-        else
-         print *,"grid_level (training_finest_level) invalid"
-         stop
-        endif
-
-       else
-        print *,"training_finest_level invalid"
-        stop
-       endif
+       nguess=1
+       angle_array(1,1)=zero
 
       else
-       print *,"continuous_mof invalid"
+       print *,"growth_angle invalid"
        stop
       endif
 
@@ -11948,8 +11994,14 @@ contains
 
        ! find finit=xref-xact for cut domain cut by a line.
        use_initial_guess=0
-       intercept_init(1)=zero
+
+       do dir=1,nMAT_OPT
+        intercept_init(dir)=zero
+       enddo
+
        call multi_rotatefunc( &
+         growth_angle, &
+         npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
          nEQN, & ! sdim or 3 * sdim
@@ -11958,7 +12010,8 @@ contains
          local_xtetlist_vof,local_nlist_vof, &
          local_xtetlist_cen,local_nlist_cen, &
          nmax, &
-         refcentroid_scale,refvfrac, &
+         refcentroid_scale, &
+         refvfrac, &
          continuous_mof, &
          cmofsten, &
          angle_init, &
