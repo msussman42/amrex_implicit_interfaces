@@ -2953,6 +2953,250 @@ end subroutine intersection_volume_and_map
       return
       end subroutine angle_to_slope
 
+      subroutine angle_to_slope_general( &
+        growth_angle, &
+        npredict, &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & !sdim-1 or 1
+        nEQN, & !sdim or 3*sdim
+        angle,nslope,sdim)
+      IMPLICIT NONE
+
+      REAL_T, INTENT(in) :: growth_angle
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
+      REAL_T, INTENT(in) :: npredict(nEQN)
+      INTEGER_T, INTENT(in) :: sdim
+      INTEGER_T, PARAMETER :: sdim2d=2
+      REAL_T, INTENT(out) :: nslope(nEQN)
+      REAL_T, INTENT(in) :: angle(nDOF)
+
+      if (growth_angle.eq.zero) then
+
+       if ((nMAT_OPT.eq.1).and. &
+           (nDOF.eq.sdim-1).and. &
+           (nEQN.eq.sdim)) then
+        ! do nothing
+       else
+        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        stop
+       endif
+
+       call angle_to_slope(angle,nslope,sdim)
+
+      else if (abs(growth_angle).le.half*Pi) then
+
+        ! The corrected n_ambient comes from a 1-parameter family:
+        ! n1=n_ambient^{old} n2=n_ambient^{old} cross n_CL
+        ! define a mapping T such that 
+        !   T n_CL=(0 0 1)
+        !   T n1=(1 0 0)
+        !   T n2=(0 1 0)
+        !   T=(---- n1 ----     T^{-1}=T^{transpose}
+        !      ---- n2 ----  
+        !      ---- n_CL -- )
+        !   given a trial angle, we find the corresponding (2D) normal:
+        !   n_base=( n2d 
+        !             0  )
+        !   n_ambient_candidate=T^{-1}n_base
+        !   Let R=(cos(theta)   sin(theta)    (clockwise)
+        !          -sin(theta)  cos(theta) ) 
+        !   theta=\pm( pi/2-growth_angle/2 )
+        !   n_ice_candidate=T^{-1} (  R n2d
+        !                              0     )
+        !   The sign is chosen so that (3rd component)
+        !   T n_ambient_original x T n_ice_original has the same sign as
+        !   T n_ambient_candidate x T n_ice_candidate 
+
+       if ((nMAT_OPT.eq.3).and. &
+           (nDOF.eq.1).and. &
+           (nEQN.eq.3*sdim)) then
+        ! do nothing
+       else
+        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        stop
+       endif
+
+       n_ambient(3)=zero
+       mag=zero
+       do dir=1,sdim
+        n_ambient(dir)=npredict(dir)
+        mag=mag+n_ambient(dir)**2
+       enddo 
+       mag=sqrt(mag)
+       if (abs(mag-one).le.VOFTOL) then
+        do dir=1,sdim
+         n_ambient(dir)=n_ambient(dir)/mag
+        enddo
+       else
+        print *,"mag invalid n_ambient"
+        stop
+       endif 
+
+       n_ice(3)=zero
+       mag=zero
+       do dir=1,sdim
+        n_ice(dir)=npredict(sdim+dir)
+        mag=mag+n_ice(dir)**2
+       enddo 
+       mag=sqrt(mag)
+       if (abs(mag-one).le.VOFTOL) then
+        do dir=1,sdim
+         n_ice(dir)=n_ice(dir)/mag
+        enddo
+       else
+        print *,"mag invalid im_ice"
+        stop
+       endif         
+
+       n_melt(3)=zero
+
+       mag=zero
+       do dir=1,sdim
+        n_melt(dir)=-n_ice(dir)
+        mag=mag+n_melt(dir)**2
+       enddo 
+       mag=sqrt(mag)
+       if (abs(mag-one).le.VOFTOL) then
+        do dir=1,sdim
+         n_melt(dir)=n_melt(dir)/mag
+        enddo
+       else
+        print *,"mag invalid im_melt"
+        stop
+       endif         
+
+#if (AMREX_SPACEDIM==3)
+       call crossprod(n_ambient,n_ice,n_CL)
+#elif (AMREX_SPACEDIM==2)
+       call crossprod2d(n_ambient,n_ice,n_CL)
+#else
+       print *,"dimension bust"
+       stop
+#endif
+
+       mag=zero
+       do dir=1,3
+        mag=mag+n_CL(dir)**2
+       enddo
+       mag=sqrt(mag)
+       if ((mag.ge.0.005d0).and.(mag.le.one+VOFTOL)) then
+        do dir=1,3
+         n_CL(dir)=n_CL(dir)/mag
+        enddo
+        if (sdim.eq.3) then
+         ! do nothing
+        else if (sdim.eq.2) then
+         n_CL(1)=zero
+         n_CL(2)=zero
+         if (abs(n_CL(3)-one).le.1.0D-10) then
+          n_CL(3)=one
+         else if (abs(n_CL(3)+one).le.1.0D-10) then
+          n_CL(3)=-one
+         else
+          print *,"n_CL(3) invalid"
+          stop
+         endif
+        else
+         print *,"sdim invalid"
+         stop
+        endif
+       else
+        print *,"mag invalid"
+        stop
+       endif
+
+       call crossprod(n_ambient,n_CL,n_ambient_perp)
+       if (SDIM.eq.3) then
+        ! check nothing
+       else if (SDIM.eq.2) then
+        if (abs(n_ambient_perp(3)).le.VOFTOL) then
+         n_ambient_perp(3)=zero
+        else
+         print *,"expecting n_ambient_perp(3)=0"
+         stop
+        endif
+       else
+        print *,"sdim invalid"
+        stop
+       endif
+       mag=zero
+       do dir=1,3
+        mag=mag+n_ambient_perp(dir)**2
+       enddo
+       mag=sqrt(mag)
+       if (abs(mag-one).le.VOFTOL) then
+        do dir=1,3
+         n_ambient_perp(dir)=n_ambient_perp(dir)/mag
+        enddo
+       else
+        print *,"mag invalid n_ambient_perp"
+        stop
+       endif  
+
+       call angle_to_slope(angle,n2d,sdim2d)
+       do dir=1,2
+        n_base(dir)=n2d(dir)
+       enddo
+       n_base(3)=zero
+       do dir=1,3
+        T(1,dir)=n_ambient(dir)
+        T(2,dir)=n_ambient_perp(dir)
+        T(3,dir)=n_CL(dir)
+       enddo
+       do dir=1,3
+        n_trial(dir)=zero
+        Tn_ice(dir)=zero
+        Tn_ambient(dir)=zero
+        do dir2=1,3
+         n_trial(dir)=n_trial(dir)+T(dir2,dir)*n_base(dir2)
+         Tn_ice(dir)=Tn_ice(dir)+T(dir,dir2)*n_ice(dir2)
+        enddo
+       enddo
+       Tn_ambient(1)=one
+       call crossprod(Tn_ambient,Tn_ice,Tn_CL)
+
+       angle_rotate=half*Pi-half*growth_angle
+       costheta=cos(angle_rotate)
+       sintheta=sin(angle_rotate)
+       n_ice_base(1)=costheta*n_base(1)+sintheta*n_base(2)
+       n_ice_base(2)=-sintheta*n_base(1)+costheta*n_base(2)
+       n_ice_base(3)=zero
+       call crossprod(n_base,n_ice_base,n_CL_base)
+       checksign=n_CL_base(3)*Tn_CL(3)
+       if (checksign.eq.zero) then
+        print *,"expecting checksign<>0"
+        stop
+       else if (checksign.gt.zero) then
+        !do nothing
+       else if (checksign.lt.zero) then
+        n_ice_base(1)=costheta*n_base(1)-sintheta*n_base(2)
+        n_ice_base(2)=sintheta*n_base(1)+costheta*n_base(2)
+       else
+        print *,"checksign invalid"
+        stop
+       endif
+       do dir=1,3
+        n_ice_trial(dir)=zero
+        do dir2=1,3
+         n_ice_trial(dir)=n_ice_trial(dir)+T(dir2,dir)*n_ice_base(dir2)
+        enddo
+       enddo
+       do dir=1,sdim
+        nslope(dir)=n_trial(dir)
+        nslope(sdim+dir)=n_ice_trial(dir)
+        nslope(2*sdim+dir)=-n_ice_trial(dir)
+       enddo
+      else
+       print *,"growth_angle invalid"
+       stop
+      endif
+
+      return
+      end subroutine angle_to_slope_general
+
+
 
         ! returns centroid in absolute coordinate system
 
@@ -10426,6 +10670,8 @@ contains
         ! refcentroid_scale is passed into this routine.
         ! refcentroid_scale is relative to cell centroid of the super cell.
       subroutine multi_rotatefunc( &
+        growth_angle, &
+        npredict, &
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
         nEQN, & ! sdim or 3 * sdim
@@ -10452,9 +10698,11 @@ contains
 
       IMPLICIT NONE
 
+      REAL_T, INTENT(in) :: growth_angle
       INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
       INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
       INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
+      REAL_T, INTENT(in) :: npredict(nEQN)
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -10478,7 +10726,7 @@ contains
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten2(-1:1,sdim)
       INTEGER_T isten,nhalf2
-      REAL_T, INTENT(out) :: ff(sdim) 
+      REAL_T, INTENT(out) :: ff(nEQN) 
       REAL_T volume_cut,facearea
       INTEGER_T dir
       REAL_T nslope(sdim)
@@ -10521,10 +10769,61 @@ contains
        stop
       endif
 
-      if ((nMAT_OPT.ne.1).or. &
-          (nDOF.ne.sdim-1).or. &
-          (nEQN.ne.sdim)) then
-       print *,"nMAT_OPT, nDOF, or nEQN invalid"
+      if (growth_angle.eq.zero) then
+
+       if ((nMAT_OPT.eq.1).and. &
+           (nDOF.eq.sdim-1).and. &
+           (nEQN.eq.sdim)) then
+        ! do nothing
+       else
+        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        stop
+       endif
+
+      else if (abs(growth_angle).le.half*Pi) then
+
+        ! The corrected n_ambient comes from a 1-parameter family:
+        ! n1=n_ambient^{old} n2=n_ambient^{old} cross n_CL
+        ! define a mapping T such that 
+        !   T n_CL=(0 0 1)
+        !   T n1=(1 0 0)
+        !   T n2=(0 1 0)
+        !   T=(---- n1 ----     T^{-1}=T^{transpose}
+        !      ---- n2 ----  
+        !      ---- n_CL -- )
+        !   given a trial angle, we find the corresponding (2D) normal:
+        !   n_base=( n2d 
+        !             0  )
+        !   n_ambient_candidate=T^{-1}n_base
+        !   Let R=(cos(theta)   sin(theta)   (clockwise)
+        !          -sin(theta)  cos(theta) ) 
+        !   theta=\pm( pi/2-growth_angle/2 )
+        !   n_ice_candidate=T^{-1} (  R n2d
+        !                              0     )
+        !   The sign is chosen so that (3rd component)
+        !   T n_ambient_original x T n_ice_original has the same sign as
+        !   T n_ambient_candidate x T n_ice_candidate 
+
+       if ((nMAT_OPT.eq.3).and. &
+           (nDOF.eq.1).and. &
+           (nEQN.eq.3*sdim)) then
+        ! do nothing
+       else
+        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        stop
+       endif
+
+       if ((continuous_mof.eq.-1).and. &
+           (fastflag.eq.0).and. &
+           (use_MilcentLemoine.eq.0)) then
+        ! do nothing
+       else
+        print *,"invalid growth_angle arguments"
+        stop
+       endif
+
+      else
+       print *,"growth_angle invalid"
        stop
       endif
 
@@ -10591,7 +10890,13 @@ contains
         stop
        endif
 
-       call angle_to_slope(angle,nslope,sdim)
+       call angle_to_slope_general( &
+        growth_angle, &
+        npredict, &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN, & ! sdim or 3 * sdim
+        angle,nslope,sdim)
 
        if (sdim.eq.3) then
         ksten_low=-1
@@ -11514,15 +11819,14 @@ contains
         !   n_base=( n2d 
         !             0  )
         !   n_ambient_candidate=T^{-1}n_base
-        !   Let R=(cos(theta)   sin(theta) 
+        !   Let R=(cos(theta)   sin(theta)    (clockwise)
         !          -sin(theta)  cos(theta) ) 
-        !   theta=\pm( pi/2-growth_angle/factor )
-        !   n_melt_candidate=T^{-1} ( \pm R n2d
-        !                                 0     )
-        !   The sign is chosen so that 
-        !   n_ambient_original dot n_melt_original have the same sign
-        !   as 
-        !   n_ambient_candiate dot n_melt_candidate. 
+        !   theta=\pm( pi/2-growth_angle/2 )
+        !   n_ice_candidate=T^{-1} (  R n2d
+        !                               0     )
+        !   The sign is chosen so that (3rd component)
+        !   T n_ambient_original x T n_ice_original has the same sign as
+        !   T n_ambient_candidate x T n_ice_candidate 
 
        if ((nMAT_OPT.eq.3).and. &
            (nDOF.eq.1).and. &
@@ -11832,8 +12136,9 @@ contains
             enddo
 
             if (1.eq.0) then
-             print *,"DT:grid_idx,grid_idx_ML,angle_init,angle_output,nguess ", &
-               grid_index,grid_index_ML,angle_init,angle_output,nguess
+             print *,"DT:grid_idx,grid_idx_ML ",grid_index,grid_index_ML
+             print *,"DT:angle_init,angle_output,nguess ", &
+               angle_init,angle_output,nguess
              print *,"refvfrac(1) ",refvfrac(1)
             endif
 
@@ -12018,7 +12323,8 @@ contains
          finit, &
          intercept_init, &
          cen_derive_init, &
-         use_initial_guess,fastflag,sdim)
+         use_initial_guess, &
+         fastflag,sdim)
 
        errinit=zero
        do dir=1,nEQN
@@ -12105,14 +12411,21 @@ contains
         angle_plus(i_angle)=angle_plus(i_angle)+delta_theta
         angle_minus(i_angle)=angle_minus(i_angle)-delta_theta
 
-        intp(1,i_angle)=intercept_array(1,iter+1)
-        intm(1,i_angle)=intercept_array(1,iter+1)
+        do dir=1,nMAT_OPT
+         intp(dir,i_angle)=intercept_array(dir,iter+1)
+         intm(dir,i_angle)=intercept_array(dir,iter+1)
+        enddo
+
         use_initial_guess=1
 
-        local_int(1)=intp(1,i_angle)
+        do dir=1,nMAT_OPT
+         local_int(dir)=intp(dir,i_angle)
+        enddo
 
          ! fp=xref-cenp
         call multi_rotatefunc( &
+         growth_angle, &
+         npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
          nEQN, & ! sdim or 3 * sdim
@@ -12131,7 +12444,9 @@ contains
          use_initial_guess, &
          fastflag,sdim)
 
-        intp(1,i_angle)=local_int(1)
+        do dir=1,nMAT_OPT
+         intp(dir,i_angle)=local_int(dir)
+        enddo
 
         err_plus(i_angle)=zero
         do dir=1,nEQN
@@ -12141,10 +12456,14 @@ contains
         enddo
         err_plus(i_angle)=sqrt(err_plus(i_angle))
 
-        local_int(1)=intm(1,i_angle)
+        do dir=1,nMAT_OPT
+         local_int(dir)=intm(dir,i_angle)
+        enddo
 
          ! fm=xref-cenm
         call multi_rotatefunc( &
+         growth_angle, &
+         npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
          nEQN, & ! sdim or 3 * sdim
@@ -12163,7 +12482,9 @@ contains
          use_initial_guess, &
          fastflag,sdim)
 
-        intm(1,i_angle)=local_int(1)
+        do dir=1,nMAT_OPT
+         intm(dir,i_angle)=local_int(dir)
+        enddo
 
         err_minus(i_angle)=zero
         do dir=1,nEQN
@@ -12265,9 +12586,14 @@ contains
          call advance_angle(angle_base(i_angle),delangle(i_angle))
         enddo
 
-        intopt(1)=intercept_array(1,iter+1)
+        do dir=1,nMAT_OPT
+         intopt(dir)=intercept_array(dir,iter+1)
+        enddo
+
         use_initial_guess=1
         call multi_rotatefunc( &
+         growth_angle, &
+         npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
          nEQN, & ! sdim or 3 * sdim
@@ -12298,7 +12624,9 @@ contains
         do i_angle=1,nDOF
          angle_base(i_angle)=angle_array(i_angle,iter+1)
         enddo
-        intopt(1)=intercept_array(1,iter+1)
+        do dir=1,nMAT_OPT
+         intopt(dir)=intercept_array(dir,iter+1)
+        enddo
 
        else
         print *,"singular_flag invalid"
@@ -12348,7 +12676,9 @@ contains
             fopt(dir)=f_minus(dir,i_angle)
             cenopt(dir)=cen_minus(dir,i_angle)
            enddo
-           intopt(1)=intm(1,i_angle)
+           do dir=1,nMAT_OPT
+            intopt(dir)=intm(dir,i_angle)
+           enddo
            do j_angle=1,nDOF
             angle_base(j_angle)=angle_minus(j_angle)
            enddo
@@ -12376,7 +12706,9 @@ contains
        enddo
        err_array(iter+2)=err
 
-       intercept_array(1,iter+2)=intopt(1)
+       do dir=1,nMAT_OPT
+        intercept_array(dir,iter+2)=intopt(dir)
+       enddo
 
        iter=iter+1
       enddo ! while error>tol and iter<local_MOFITERMAX
@@ -12407,17 +12739,35 @@ contains
        new_angle(dir)=angle_array(dir,iicrit+1)
       enddo
 
-      intercept(1)=intercept_array(1,iicrit+1)
+      do dir=1,nMAT_OPT
+       intercept(dir)=intercept_array(dir,iicrit+1)
+      enddo
 
-      call angle_to_slope(new_angle,nslope,sdim)
+      call angle_to_slope_general( &
+        growth_angle, &
+        npredict, &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN, & ! sdim or 3 * sdim
+        new_angle,nslope,sdim)
 
-      do dir=1,sdim
+      do dir=1,nEQN
        centroidA(dir)=cen_array(dir,iicrit+1)
       enddo
 
       if (use_MilcentLemoine.eq.0) then
        ! do nothing
       else if (use_MilcentLemoine.eq.1) then
+
+       if ((nMAT_OPT.eq.1).and. &
+           (nDOF.eq.sdim-1).and. &
+           (nEQN.eq.sdim)) then
+        ! do nothing
+       else
+        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        stop
+       endif
+
        use_initial_guess=0
 
        call multi_find_intercept( &
@@ -12438,8 +12788,10 @@ contains
        stop
       endif
 
-      intercept(1)=intercept(1)*maxdx
-      do dir=1,sdim
+      do dir=1,nMAT_OPT
+       intercept(dir)=intercept(dir)*maxdx
+      enddo
+      do dir=1,nEQN
        centroidA(dir)=centroidA(dir)*maxdx
       enddo
 
@@ -13427,10 +13779,10 @@ contains
        vofcomp=(im_melt-1)*ngeom_recon+1
        do dir=1,sdim
         refcentroid(2*sdim+dir)=mofdata(vofcomp+dir)
-        npredict(2*sdim+dir)=n_CL(dir)
+        npredict(2*sdim+dir)=-n_ice(dir)
        enddo
        refvfrac(3)=mofdata(vofcomp)
-       intercept(3)=zero
+       intercept(3)=-d_ice
 
        critical_material=im_ambient
 
@@ -16336,15 +16688,14 @@ contains
         !   n_base=( n2d 
         !             0  )
         !   n_ambient_candidate=T^{-1}n_base
-        !   Let R=(cos(theta)   sin(theta) 
+        !   Let R=(cos(theta)   sin(theta)    (clockwise rotation)
         !          -sin(theta)  cos(theta) ) 
-        !   theta=\pm( pi/2-growth_angle/factor )
-        !   n_melt_candidate=T^{-1} ( \pm R n2d
-        !                                 0     )
-        !   The sign is chosen so that 
-        !   n_ambient_original dot n_melt_original have the same sign
-        !   as 
-        !   n_ambient_candiate dot n_melt_candidate. 
+        !   theta=\pm( pi/2-growth_angle/2 )
+        !   n_ice_candidate= T^{-1} (  R n2d
+        !                               0     )
+        !   The sign is chosen so that (3rd component)
+        !   T n_ambient_original x T n_ice_original has the same sign as
+        !   T n_ambient_candidate x T n_ice_candidate 
        do dir=1,3
         aa(1,dir)=n_ambient(dir)
         aa(2,dir)=n_ice(dir)
