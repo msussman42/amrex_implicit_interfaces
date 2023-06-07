@@ -2996,7 +2996,14 @@ end subroutine intersection_volume_and_map
       REAL_T :: checksign
       INTEGER_T :: dir,dir2
 
-      if (growth_angle.eq.zero) then
+      if (nMAT_OPT.eq.1) then
+
+       if (growth_angle.eq.zero) then
+        !do nothing
+       else
+        print *,"growth_angle invalid"
+        stop
+       endif
 
        if ((nMAT_OPT.eq.1).and. &
            (nDOF.eq.sdim-1).and. &
@@ -9684,7 +9691,8 @@ contains
        refcentroid, &
        dx_scale,xsten_scale, &
        refcentroid_scale, &
-       sdim,maxdx)
+       sdim, &
+       maxdx) !intent(out)
       use probcommon_module
       IMPLICIT NONE
 
@@ -9727,6 +9735,7 @@ contains
       if ((levelrz.eq.COORDSYS_RZ).or. &
           (levelrz.eq.COORDSYS_CYLINDRICAL).or. &
           (nMAT_OPT.eq.3)) then
+
        if ((levelrz.eq.COORDSYS_RZ).and.(sdim.ne.2)) then
         print *,"sdim invalid"
         stop
@@ -10948,8 +10957,13 @@ contains
        stop
       endif
 
-      if (growth_angle.eq.zero) then
-
+      if (nMAT_OPT.eq.1) then
+       if (growth_angle.eq.zero) then
+        ! do nothing
+       else
+        print *,"growth_angle invalid"
+        stop
+       endif
        if ((nMAT_OPT.eq.1).and. &
            (nDOF.eq.sdim-1).and. &
            (nEQN.eq.sdim)) then
@@ -11403,8 +11417,13 @@ contains
        stop
       endif
 
-      if (growth_angle.eq.zero) then
-       ! do nothing
+      if (nMAT_OPT.eq.1) then
+       if (growth_angle.eq.zero) then
+        ! do nothing
+       else
+        print *,"growth_angle invalid"
+        stop
+       endif
       else if (abs(growth_angle).le.half*Pi) then
        !now adjust the next interface (ice/water)
 
@@ -11984,8 +12003,13 @@ contains
        stop
       endif
 
-      if (growth_angle.eq.zero) then
-
+      if (nMAT_OPT.eq.1) then
+       if (growth_angle.eq.zero) then
+        ! do nothing
+       else
+        print *,"growth_angle invalid"
+        stop
+       endif
        if ((nMAT_OPT.eq.1).and. &
            (nDOF.eq.sdim-1).and. &
            (nEQN.eq.sdim)) then
@@ -12172,7 +12196,13 @@ contains
 
       nguess=0
 
-      if (growth_angle.eq.zero) then
+      if (nMAT_OPT.eq.1) then
+       if (growth_angle.eq.zero) then
+        ! do nothing
+       else
+        print *,"growth_angle invalid"
+        stop
+       endif
 
        if (MOF_TURN_OFF_LS.eq.0) then
 
@@ -13212,7 +13242,13 @@ contains
       nEQN_growth_angle=3*sdim
       nEQN_standard=sdim
 
-      if (growth_angle.eq.zero) then
+      if (im_ambient.eq.0) then
+       if (growth_angle.eq.zero) then
+        ! do nothing
+       else
+        print *,"growth_angle invalid"
+        stop
+       endif
 
        if ((im_ambient.eq.0).and. &
            (im_ice.eq.0).and. &
@@ -13451,8 +13487,13 @@ contains
        else if (continuous_mof.eq.-1) then
         use_super_cell=1
 
-        if (growth_angle.eq.zero) then
-         ! do nothing
+        if (im_ambient.eq.0) then
+         if (growth_angle.eq.zero) then
+          ! do nothing
+         else
+          print *,"growth_angle invalid"
+          stop
+         endif
         else if (abs(growth_angle).le.half*Pi) then
          do im=1,num_materials
           vofcomp=(im-1)*(2*sdim+3)+1
@@ -13526,7 +13567,13 @@ contains
         stop
       endif
 
-      if (growth_angle.eq.zero) then
+      if (im_ambient.eq.0) then
+       if (growth_angle.eq.zero) then
+        ! do nothing
+       else
+        print *,"growth_angle invalid"
+        stop
+       endif
 
          ! figure out the next material to fill the unoccupied region.
        distmax=-one
@@ -16484,7 +16531,9 @@ contains
 
 
       subroutine multimaterial_MOF_growth_angle( &
-        im_ambient,im_ice,im_melt, &
+        im_ambient, &  ! growth_angle_primary_mat
+        im_ice, &      ! growth_angle_seconary_mat
+        im_melt, &     ! growth_angle_tertiary_mat
         growth_angle, &
         bfact,dx, &
         xsten0,nhalf0, &
@@ -17046,7 +17095,9 @@ contains
 
        call individual_MOF( &
         growth_angle, &
-        im_ambient,im_ice,im_melt, &
+        im_ambient, & ! growth_angle_primary_mat
+        im_ice, &     ! growth_angle_secondary_mat
+        im_melt, &    ! growth_angle_tertiary_mat
         n_ambient,n_ice,n_CL, &
         d_ambient,d_ice, &
         grid_index, &
