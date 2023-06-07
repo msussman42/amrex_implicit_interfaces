@@ -14,6 +14,7 @@
 
 #define MAXTET (5)
 #define MAXAREA (5)
+! INTERCEPT_TOL is declared in PROBCOMMON.F90
 ! this should be larger than INTERCEPT_TOL
 #define GAUSSNEWTONTOL (1.0D-10)
 #define RADIUS_CUTOFF (6.0)
@@ -9084,13 +9085,21 @@ contains
        enddo  ! sweeping nodes of triangle
       enddo ! sweeping triangles
 
-      if (((minphi.eq.zero).and.(maxphi.eq.zero)).or. &
+      if (((minphi.eq.zero).and. &
+           (maxphi.eq.zero)).or. &
           (minphi.ge.maxphi)) then
        print *,"cannot have zero slope"
        print *,"minphi=",minphi
        print *,"maxphi=",maxphi
        print *,"slopexyz=",slope(1),slope(2),slope(sdim)
        print *,"xcell xyz=",xsten(0,1),xsten(0,2),xsten(0,sdim)
+       stop
+      else if (((minphi.ne.zero).or. &
+                (maxphi.ne.zero)).and. &
+               (minphi.lt.maxphi)) then
+       ! do nothing
+      else
+       print *,"minphi or maxphi is NaN: multi_phi_bounds: ",minphi,maxphi
        stop
       endif
 
@@ -9716,7 +9725,8 @@ contains
       endif
 
       if ((levelrz.eq.COORDSYS_RZ).or. &
-          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+          (levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+          (nMAT_OPT.eq.3)) then
        if ((levelrz.eq.COORDSYS_RZ).and.(sdim.ne.2)) then
         print *,"sdim invalid"
         stop
@@ -9734,7 +9744,8 @@ contains
         dx_scale(dir)=dx(dir)
        enddo ! dir
 
-      else if (levelrz.eq.COORDSYS_CARTESIAN) then
+      else if ((levelrz.eq.COORDSYS_CARTESIAN).and. &
+               (nMAT_OPT.eq.1)) then
 
        maxdx=xsten(1,1)-xsten(-1,1)
        do dir=2,sdim
@@ -9770,13 +9781,19 @@ contains
 
 
       subroutine scale_VOF_variables( &
-        bfact,dx,xsten,nhalf, &
-        intercept, &
-        dx_scale,xsten_scale, &
-        sdim,maxdx)
+       nMAT_OPT, & ! 1 or 3
+       nDOF, & ! sdim-1  or 1
+       nEQN, & ! sdim or 3 * sdim
+       bfact,dx,xsten,nhalf, &
+       intercept, &
+       dx_scale,xsten_scale, &
+       sdim,maxdx)
       use probcommon_module
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
       INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
       REAL_T, INTENT(inout) :: intercept
       REAL_T, INTENT(out) :: maxdx
@@ -9794,8 +9811,22 @@ contains
        print *,"sdim invalid"
        stop
       endif
+      if ((nEQN.ne.sdim).and.(nEQN.ne.3*sdim)) then
+       print *,"nEQN invalid"
+       stop
+      endif
+      if ((nDOF.ne.sdim-1).and.(nDOF.ne.1)) then
+       print *,"nDOF invalid"
+       stop
+      endif
+      if ((nMAT_OPT.ne.1).and.(nMAT_OPT.ne.3)) then
+       print *,"nMAT_OPT invalid"
+       stop
+      endif
 
-      if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if ((levelrz.eq.COORDSYS_RZ).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+          (nMAT_OPT.eq.3)) then
        if ((levelrz.eq.COORDSYS_RZ).and.(sdim.ne.2)) then
         print *,"sdim bust in scale_VOF_variables"
         stop
@@ -9807,7 +9838,8 @@ contains
         enddo
         dx_scale(dir)=dx(dir)
        enddo ! dir
-      else if (levelrz.eq.COORDSYS_CARTESIAN) then
+      else if ((levelrz.eq.COORDSYS_CARTESIAN).and. &
+               (nMAT_OPT.eq.1)) then
        maxdx=xsten(1,1)-xsten(-1,1)
        do dir=2,sdim
         if (xsten(1,dir)-xsten(-1,dir).gt.maxdx) then
@@ -9841,6 +9873,9 @@ contains
 
        ! centroid in absolute coordinate system
       subroutine multi_find_intercept( &
+       nMAT_OPT, & ! 1 or 3
+       nDOF, & ! sdim-1  or 1
+       nEQN, & ! sdim or 3 * sdim
        bfact,dx,xsten0,nhalf0, &
        slope,intercept, &
        continuous_mof, &
@@ -9859,6 +9894,9 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -9963,11 +10001,14 @@ contains
        ! intercept scaled directly
        ! no scaling if levelrz==COORDSYS_RZ or levelrz==COORDSYS_CYLINDRICAL
       call scale_VOF_variables( &
-        bfact,dx,xsten0,nhalf0, &
-        intercept, &
-        dx_scale,xsten0_scale,  &
-        sdim, &
-        maxdx_scale)
+       nMAT_OPT, & ! 1 or 3
+       nDOF, & ! sdim-1  or 1
+       nEQN, & ! sdim or 3 * sdim
+       bfact,dx,xsten0,nhalf0, &
+       intercept, &
+       dx_scale,xsten0_scale,  &
+       sdim, &
+       maxdx_scale)
 
       if (fastflag.eq.0) then
        local_nlist=nlist
@@ -10024,6 +10065,7 @@ contains
       endif
 
       maxiter=INTERCEPT_MAXITER
+       ! INTERCEPT_TOL is declared in PROBCOMMON.F90
       moftol=INTERCEPT_TOL
       min_err=-one
 
@@ -10056,6 +10098,20 @@ contains
        !  b_i=-n dot (x_i-x0)
        !  b_Lower_bound=min b_i = - maxphi
        !  b_Upper_bound=max b_i = - minphi
+       !  In otherwords:
+       !  if intercept>max b_i, then F=1
+       !  if intercept<min b_i, then F=0
+       !  min b_i <= intercept <= max b_i
+       !  i.e.
+       !  -maxphi <=intercept <= -minphi
+       !  i.e.
+       !  intercept_lower=-maxphi
+       !  intercept_upper=-minphi
+       !  Also define,
+       !  maxphi=max n dot (x_i -x0)=-min -(n dot (x_i-x0))=-min b_i
+       !    =>min b_i = -maxphi
+       !  minphi=min n dot (x_i -x0)=-max -(n dot (x_i-x0))=-max b_i
+       !    =>max b_i = -minphi
       if (fastflag.eq.0) then
 
        call get_cut_geom3D(local_xtetlist,local_nlist,nlist,nmax,volcut, &
@@ -10109,7 +10165,8 @@ contains
         enddo
         enddo  ! i,j,k
 
-        if (((minphi.eq.zero).and.(maxphi.eq.zero)).or. &
+        if (((minphi.eq.zero).and. &
+             (maxphi.eq.zero)).or. &
             (minphi.ge.maxphi)) then
          print *,"cannot have zero slope"
          print *,"fastflag=",fastflag
@@ -10120,6 +10177,13 @@ contains
          print *,"xsten(0) xyz=",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
          print *,"xsten_scale(0) xyz=", &
           xsten0_scale(0,1),xsten0_scale(0,2),xsten0_scale(0,sdim)
+         stop
+        else if (((minphi.ne.zero).or. &
+                  (maxphi.ne.zero)).and. &
+                 (minphi.lt.maxphi)) then
+         ! do nothing
+        else
+         print *,"minphi or maxphi is NaN"
          stop
         endif
 
@@ -10165,14 +10229,15 @@ contains
 ! minphi -> (minphi-maxphi)(1-vfrac)
 
        vfrac_normalize=vfrac*volcell/volcut
-       if ((vfrac_normalize.le.zero).or.(vfrac_normalize.ge.one)) then
+       if ((vfrac_normalize.le.zero).or. &
+           (vfrac_normalize.ge.one)) then
         print *,"ERROR: vfrac_normalize out of range"
         stop
        else if ((vfrac_normalize.gt.zero).and. &
                 (vfrac_normalize.lt.one)) then
         !do nothing
        else
-        print *,"vfrac_normalize invalid"
+        print *,"vfrac_normalize invalid: ",vfrac_normalize
         stop
        endif
 
@@ -10246,7 +10311,8 @@ contains
           min_err=err
          else if (min_err.gt.err) then
           min_err=err
-         else if ((min_err.le.err).and.(min_err.ge.zero)) then
+         else if ((min_err.le.err).and. &
+                  (min_err.ge.zero)) then
           ! do nothing
          else
           print *,"min_err invalid"
@@ -10310,9 +10376,18 @@ contains
              if (fa*fc.lt.zero) then
               bb=intercept
               fb=fc
-             else
+             else if (fb*fc.lt.zero) then
               aa=intercept
               fa=fc
+             else if (fc.eq.zero) then
+              aa=intercept
+              fa=fc
+             else
+              print *,"fa,fb, or fc bust"
+              print *,"fa=",fa
+              print *,"fb=",fb
+              print *,"fc=",fc
+              stop
              endif
             else
              print *,"signs of fa and fb are inconsistent"
@@ -10457,6 +10532,9 @@ contains
 
        ! centroid in absolute coordinate system
       subroutine single_find_intercept( &
+       nMAT_OPT, & ! 1 or 3
+       nDOF, & ! sdim-1  or 1
+       nEQN, & ! sdim or 3 * sdim
        bfact,dx,xsten0,nhalf0, &
        slope,intercept, &
        vfrac, &
@@ -10468,6 +10546,9 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: sdim
       REAL_T, INTENT(in) :: slope(sdim)
@@ -10526,15 +10607,19 @@ contains
 
        ! intercept scaled directly
       call scale_VOF_variables( &
-        bfact,dx,xsten0,nhalf0, &
-        intercept, &
-        dx_scale,xsten0_scale,  &
-        sdim, &
-        maxdx_scale)
+       nMAT_OPT, & ! 1 or 3
+       nDOF, & ! sdim-1  or 1
+       nEQN, & ! sdim or 3 * sdim
+       bfact,dx,xsten0,nhalf0, &
+       intercept, &
+       dx_scale,xsten0_scale,  &
+       sdim, &
+       maxdx_scale)
 
       debug_root=0
 
       maxiter=100
+       ! INTERCEPT_TOL is declared in PROBCOMMON.F90
       moftol=INTERCEPT_TOL
 
 ! phi=n dot (x-x0)+int
@@ -10912,12 +10997,14 @@ contains
            (use_MilcentLemoine.eq.0)) then
         ! do nothing
        else
-        print *,"invalid growth_angle arguments"
+        print *,"expecting continuous_mof==-1: ",continuous_mof
+        print *,"expecting fastflag==0: ",fastflag
+        print *,"expecting use_MilcentLemoine==0: ",use_MilcentLemoine
         stop
        endif
 
       else
-       print *,"growth_angle invalid"
+       print *,"growth_angle invalid: ",growth_angle
        stop
       endif
 
@@ -10926,7 +11013,7 @@ contains
           (continuous_mof.ge.1)) then
        ! do nothing
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
       if ((use_initial_guess.ne.0).and. &
@@ -10990,7 +11077,9 @@ contains
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
         nEQN, & ! sdim or 3 * sdim
-        angle,nslope,sdim)
+        angle, &
+        nslope, &
+        sdim)
 
        if (sdim.eq.3) then
         ksten_low=-1
@@ -11008,18 +11097,21 @@ contains
          ! (testcen is the centroid of the intersection of
          !  the material region with the center cell)
        call multi_find_intercept( &
-         bfact,dx,xsten0,nhalf0, &
-         nslope, &
-         intercept(1), &
-         continuous_mof, &
-         cmofsten, &
-         xtetlist_vof, &
-         nlist_vof, &
-         nlist_vof, &
-         nmax, &
-         refvfrac(1), &
-         use_initial_guess, &
-         testcen,fastflag,sdim)
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN, & ! sdim or 3 * sdim
+        bfact,dx,xsten0,nhalf0, &
+        nslope, &
+        intercept(1), &
+        continuous_mof, &
+        cmofsten, &
+        xtetlist_vof, &
+        nlist_vof, &
+        nlist_vof, &
+        nmax, &
+        refvfrac(1), &
+        use_initial_guess, &
+        testcen,fastflag,sdim)
 
          ! testcen in absolute coordinate system
        if (fastflag.eq.0) then
@@ -11055,8 +11147,10 @@ contains
           bfact,dx,xsten0,nhalf0, &
           nslope, &
           intercept(1), &
-          volume_cut,testcen,facearea, &
-          xtetlist_cen, &
+          volume_cut, & !intent(out)
+          testcen, &    !intent(out)
+          facearea, &   !intent(out)
+          xtetlist_cen, & !intent(in)
           nlist_cen, &
           nlist_cen, &
           nmax,sdim)
@@ -11150,7 +11244,7 @@ contains
         endif
 
        else
-        print *,"fastflag invalid multi rotatefunc "
+        print *,"fastflag invalid multi rotatefunc: ",fastflag
         stop
        endif
 
@@ -11309,7 +11403,18 @@ contains
        stop
       endif
 
-      do dir=1,sdim
+      if (growth_angle.eq.zero) then
+       ! do nothing
+      else if (abs(growth_angle).le.half*Pi) then
+       !now adjust the next interface (ice/water)
+
+      else
+       print *,"growth_angle invalid: ",growth_angle
+       stop
+      endif
+
+
+      do dir=1,nEQN
        ff(dir)=(refcentroidT(dir)-testcenT(dir))
        if (ff(dir)**2.ge.zero) then
         ! do nothing
@@ -12868,6 +12973,9 @@ contains
        use_initial_guess=0
 
        call multi_find_intercept( &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN, & ! sdim or 3 * sdim
         bfact,dx_scale,xsten0_scale,nhalf0, &
         nslope, &
         intercept(1), &
@@ -13756,7 +13864,8 @@ contains
             centroid_ref(dir)=cencut_cen(dir)
            enddo
            ! centroid_ref-centroid_free
-           call find_predict_slope(npredict,mag,centroid_free,centroid_ref, &
+           call find_predict_slope( &
+            npredict,mag,centroid_free,centroid_ref, &
             bfact,dx,xsten0,nhalf0,sdim)
            if (mag.gt.VOFTOL*dx(1)) then
             ! do nothing
@@ -13768,8 +13877,8 @@ contains
            endif
            intercept=mofdata(vofcomp)-half
          else
-           print *,"mat_before invalid"
-           stop
+          print *,"mat_before invalid"
+          stop
          endif
   
          if ((single_material_takes_all.eq.1).and. &
@@ -13796,6 +13905,9 @@ contains
            ! centroidA in absolute coordinate system.
 
           call multi_find_intercept( &
+           nMAT_OPT_standard, & !1
+           nDOF_standard, & !sdim-1
+           nEQN_standard, & !sdim
            bfact,dx,xsten0,nhalf0, &
            npredict, &
            intercept(1), &
@@ -15671,6 +15783,9 @@ contains
           refvfrac(1)=mofdata(vofcomp)
 
           call single_find_intercept( &
+           nMAT_OPT_standard, & !nMAT_OPT_standard=1
+           nDOF_standard, & !nDOF_standard=sdim-1
+           nEQN_standard, &  !nEQN_standard=sdim
            bfact,dx,xsten0,nhalf0, &
            npredict, &
            intercept(1), &
