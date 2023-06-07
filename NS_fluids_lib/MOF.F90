@@ -2960,6 +2960,8 @@ end subroutine intersection_volume_and_map
         nDOF, & !sdim-1 or 1
         nEQN, & !sdim or 3*sdim
         angle,nslope,sdim)
+      use probcommon_module
+      use global_utility_module
       IMPLICIT NONE
 
       REAL_T, INTENT(in) :: growth_angle
@@ -2971,6 +2973,27 @@ end subroutine intersection_volume_and_map
       INTEGER_T, PARAMETER :: sdim2d=2
       REAL_T, INTENT(out) :: nslope(nEQN)
       REAL_T, INTENT(in) :: angle(nDOF)
+      REAL_T :: n_trial(3)
+      REAL_T :: n_ice_trial(3)
+      REAL_T :: n_ambient(3)
+      REAL_T :: n_ambient_perp(3)
+      REAL_T :: n_ice(3)
+      REAL_T :: n_melt(3)
+      REAL_T :: n_CL(3)
+      REAL_T :: n_2d(2)
+      REAL_T :: n_base(3)
+      REAL_T :: n_ice_base(3)
+      REAL_T :: n_CL_base(3)
+      REAL_T :: T(3,3)
+      REAL_T :: Tn_ice(3)
+      REAL_T :: Tn_ambient(3)
+      REAL_T :: Tn_CL(3)
+      REAL_T :: Tn_ambient_test(3)
+      REAL_T :: mag
+      REAL_T :: angle_rotate
+      REAL_T :: sintheta,costheta
+      REAL_T :: checksign
+      INTEGER_T :: dir,dir2
 
       if (growth_angle.eq.zero) then
 
@@ -2982,7 +3005,8 @@ end subroutine intersection_volume_and_map
         print *,"invalid nMAT_OPT,nDOF, or nEQN"
         stop
        endif
-
+        ! in 3d: angle=0 => n=(0 0 1)
+        ! in 2d: angle=0 => n=(1 0)
        call angle_to_slope(angle,nslope,sdim)
 
       else if (abs(growth_angle).le.half*Pi) then
@@ -3095,7 +3119,7 @@ end subroutine intersection_volume_and_map
          else if (abs(n_CL(3)+one).le.1.0D-10) then
           n_CL(3)=-one
          else
-          print *,"n_CL(3) invalid"
+          print *,"n_CL(3) invalid: n_CL: ",n_CL(1),n_CL(2),n_CL(3)
           stop
          endif
         else
@@ -3135,11 +3159,16 @@ end subroutine intersection_volume_and_map
         stop
        endif  
 
-       call angle_to_slope(angle,n2d,sdim2d)
+        ! in 3d: angle=0 => n=(0 0 1)
+        ! in 2d: angle=0 => n=(1 0)
+       call angle_to_slope(angle,n_2d,sdim2d)
        do dir=1,2
-        n_base(dir)=n2d(dir)
+        n_base(dir)=n_2d(dir)
        enddo
        n_base(3)=zero
+        ! T n_ambient=(1 0 0)
+        ! T n_ambient_perp=(0 1 0)
+        ! T n_CL=(0 0 1)
        do dir=1,3
         T(1,dir)=n_ambient(dir)
         T(2,dir)=n_ambient_perp(dir)
@@ -3149,14 +3178,42 @@ end subroutine intersection_volume_and_map
         n_trial(dir)=zero
         Tn_ice(dir)=zero
         Tn_ambient(dir)=zero
+        Tn_ambient_test(dir)=zero
+         !n_base=(1 0 0) if angle=0
         do dir2=1,3
          n_trial(dir)=n_trial(dir)+T(dir2,dir)*n_base(dir2)
          Tn_ice(dir)=Tn_ice(dir)+T(dir,dir2)*n_ice(dir2)
+         Tn_ambient_test(dir)=Tn_ambient_test(dir)+T(dir,dir2)*n_ambient(dir2)
         enddo
        enddo
        Tn_ambient(1)=one
+
+       mag=zero
+       do dir=1,3
+        mag=mag+(Tn_ambient(dir)-Tn_ambient_test(dir))**2
+       enddo
+       mag=sqrt(mag)
+       if ((mag.ge.zero).and.(mag.le.VOFTOL)) then
+        ! do nothing
+       else
+        print *,"Tn_ambient_test failed sanity"
+        stop
+       endif
+
        call crossprod(Tn_ambient,Tn_ice,Tn_CL)
 
+       mag=zero
+       do dir=1,2
+        mag=mag+(Tn_CL(dir))**2
+       enddo
+       mag=sqrt(mag)
+       if ((mag.ge.zero).and.(mag.le.VOFTOL)) then
+        ! do nothing
+       else
+        print *,"Tn_CL failed sanity"
+        stop
+       endif
+        
        angle_rotate=half*Pi-half*growth_angle
        costheta=cos(angle_rotate)
        sintheta=sin(angle_rotate)
@@ -3164,7 +3221,21 @@ end subroutine intersection_volume_and_map
        n_ice_base(2)=-sintheta*n_base(1)+costheta*n_base(2)
        n_ice_base(3)=zero
        call crossprod(n_base,n_ice_base,n_CL_base)
+
+       mag=zero
+       do dir=1,2
+        mag=mag+(n_CL_base(dir))**2
+       enddo
+       mag=sqrt(mag)
+       if ((mag.ge.zero).and.(mag.le.VOFTOL)) then
+        ! do nothing
+       else
+        print *,"n_CL_base failed sanity"
+        stop
+       endif
+
        checksign=n_CL_base(3)*Tn_CL(3)
+
        if (checksign.eq.zero) then
         print *,"expecting checksign<>0"
         stop
@@ -3173,10 +3244,33 @@ end subroutine intersection_volume_and_map
        else if (checksign.lt.zero) then
         n_ice_base(1)=costheta*n_base(1)-sintheta*n_base(2)
         n_ice_base(2)=sintheta*n_base(1)+costheta*n_base(2)
+        call crossprod(n_base,n_ice_base,n_CL_base)
        else
         print *,"checksign invalid"
         stop
        endif
+
+       mag=zero
+       do dir=1,2
+        mag=mag+(n_CL_base(dir))**2
+       enddo
+       mag=sqrt(mag)
+       if ((mag.ge.zero).and.(mag.le.VOFTOL)) then
+        ! do nothing
+       else
+        print *,"n_CL_base failed sanity"
+        stop
+       endif
+
+       checksign=n_CL_base(3)*Tn_CL(3)
+
+       if (checksign.gt.zero) then
+        ! do nothing
+       else
+        print *,"checksign invalid"
+        stop
+       endif
+
        do dir=1,3
         n_ice_trial(dir)=zero
         do dir2=1,3
@@ -3189,7 +3283,7 @@ end subroutine intersection_volume_and_map
         nslope(2*sdim+dir)=-n_ice_trial(dir)
        enddo
       else
-       print *,"growth_angle invalid"
+       print *,"growth_angle invalid: ",growth_angle
        stop
       endif
 
@@ -11363,6 +11457,7 @@ contains
       INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
       INTEGER_T :: nDOF_standard
       INTEGER_T :: nEQN_standard
+      REAL_T, PARAMETER :: growth_angle_standard=zero
 
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -11496,6 +11591,8 @@ contains
 
         ! find the actual centroid given the angle.
       call multi_rotatefunc( &
+       growth_angle_standard, &
+       npredict, &
        nMAT_OPT_standard, & ! 1
        nDOF_standard, & ! sdim-1 
        nEQN_standard, & ! sdim
