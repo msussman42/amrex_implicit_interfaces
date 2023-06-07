@@ -66,9 +66,9 @@ stop
         continuous_mof, &
         partial_cmof_stencil_at_walls, &
         growth_angle, &
-        growth_angle_ambient, &
-        growth_angle_melt, &
-        growth_angle_ice) &
+        growth_angle_primary_mat, &
+        growth_angle_tertiary_mat, &
+        growth_angle_secondary_mat) &
       bind(c,name='fort_sloperecon')
 
       use probf90_module
@@ -103,9 +103,9 @@ stop
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
     
       REAL_T, INTENT(in) :: growth_angle(num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_ambient(num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_melt(num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_ice(num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_primary_mat(num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_tertiary_mat(num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_secondary_mat(num_interfaces)
  
       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
@@ -202,10 +202,7 @@ stop
       INTEGER_T :: im_tertiary
       INTEGER_T :: im_primary_rigid
       INTEGER_T :: iten_growth
-      INTEGER_T :: iten_growth_verify
-      INTEGER_T :: im_ambient
-      INTEGER_T :: im_melt
-      INTEGER_T :: im_ice
+      INTEGER_T :: match_flag
 
 #include "mofdata.H"
 
@@ -291,13 +288,29 @@ stop
       endif
 
       do i=1,num_interfaces
-       if (growth_angle(i).eq.zero) then
-        ! do nothing
+       if (growth_angle_primary_mat(i).eq.0) then
+
+        if (growth_angle(i).eq.zero) then
+         ! do nothing
+        else
+         print *,"growth_angle is out of range: ",growth_angle(i)
+         stop
+        endif
+
        else if (abs(growth_angle(i)).le.half*Pi) then
+
+        if ((growth_angle_primary_mat(i).ge.1).and. &
+            (growth_angle_primary_mat(i).le.num_materials)) then
+         ! do nothing
+        else
+         print *,"growth_angle_primary_mat invalid"
+         stop
+        endif
+
         if (continuous_mof.ge.1) then
          ! do nothing
         else
-         print *,"expecting continuous_mof>=1 if growth_angle!=0"
+         print *,"continuous_mof>=1 if growth_angle_primary_mat!=0"
          stop
         endif
        else
@@ -1077,85 +1090,55 @@ stop
 
           enddo !im=1,num_materials
 
-          iten_growth_verify=0
-          iten_growth=0
-
           if (im_primary_rigid.eq.0) then
 
            if (voflist_stencil(im_tertiary).ge.0.01d0) then
-           
-            call get_iten(im_primary,im_secondary,iten_growth)
-            if ((growth_angle(iten_growth).ne.zero).and. &
-                (growth_angle_ice(iten_growth).eq.im_tertiary)) then
-             im_ambient=growth_angle_ambient(iten_growth)
-             im_ice=growth_angle_ice(iten_growth)
-             im_melt=growth_angle_melt(iten_growth)
+         
+            do iten_growth=1,num_interfaces
 
-             call get_iten(im_melt,im_ambient,iten_growth_verify)
-            endif
- 
-            if (iten_growth_verify.eq.0) then
+             if (growth_angle_primary_mat(iten_growth).ge.1) then
 
-             call get_iten(im_primary,im_tertiary,iten_growth)
-             if ((growth_angle(iten_growth).ne.zero).and. &
-                 (growth_angle_ice(iten_growth).eq.im_secondary)) then
-              im_ambient=growth_angle_ambient(iten_growth)
-              im_ice=growth_angle_ice(iten_growth)
-              im_melt=growth_angle_melt(iten_growth)
-
-              call get_iten(im_melt,im_ambient,iten_growth_verify)
-             endif
-
-             if (iten_growth_verify.eq.0) then
-
-              call get_iten(im_secondary,im_tertiary,iten_growth)
-              if ((growth_angle(iten_growth).ne.zero).and. &
-                  (growth_angle_ice(iten_growth).eq.im_primary)) then
-               im_ambient=growth_angle_ambient(iten_growth)
-               im_ice=growth_angle_ice(iten_growth)
-               im_melt=growth_angle_melt(iten_growth)
-
-               call get_iten(im_melt,im_ambient,iten_growth_verify)
+              if (growth_angle_primary_mat(iten_growth).eq. &
+                  growth_angle_secondary_mat(iten_growth)) then
+               print *,"growth_angle parms incorrect"
+               stop
               endif
-
-              if (iten_growth_verify.eq.0) then
-               ! do nothing
-              else if ((iten_growth_verify.ge.1).and. &
-                       (iten_growth_verify.le.num_interfaces)) then
-               ! do nothing
-              else
-               print *,"iten_growth_verify invalid(1): ",iten_growth_verify
+              if (growth_angle_primary_mat(iten_growth).eq. &
+                  growth_angle_tertiary_mat(iten_growth)) then
+               print *,"growth_angle parms incorrect"
                stop
               endif
 
-             else if ((iten_growth_verify.ge.1).and. &
-                      (iten_growth_verify.le.num_interfaces)) then
-              ! do nothing
-             else
-              print *,"iten_growth_verify invalid(2): ",iten_growth_verify
-              stop
-             endif
+              match_flag=1
 
-            else if ((iten_growth_verify.ge.1).and. &
-                     (iten_growth_verify.le.num_interfaces)) then
-             ! do nothing
-            else
-             print *,"iten_growth_verify invalid(3): ",iten_growth_verify
-             stop
-            endif
+              if ((growth_angle_primary_mat(iten_growth).eq.im_primary).or. &
+                  (growth_angle_primary_mat(iten_growth).eq.im_secondary).or.&
+                  (growth_angle_primary_mat(iten_growth).eq.im_tertiary)) then
+               ! do nothing
+              else
+               match_flag=0
+              endif 
+              if ((growth_angle_secondary_mat(iten_growth).eq.im_primary).or.&
+                  (growth_angle_secondary_mat(iten_growth).eq.im_secondary).or.&
+                  (growth_angle_secondary_mat(iten_growth).eq.im_tertiary)) then
+               ! do nothing
+              else
+               match_flag=0
+              endif 
+              if ((growth_angle_tertiary_mat(iten_growth).eq.im_primary).or.&
+                  (growth_angle_tertiary_mat(iten_growth).eq.im_secondary).or.&
+                  (growth_angle_tertiary_mat(iten_growth).eq.im_tertiary)) then
+               ! do nothing
+              else
+               match_flag=0
+              endif 
 
-            if (iten_growth_verify.eq.0) then
-             ! do nothing
-            else if ((iten_growth_verify.ge.1).and. &
-                     (iten_growth_verify.le.num_interfaces)) then
-             if (iten_growth.eq.iten_growth_verify) then
-              
-              if ((im_ambient.ne.0).and. &
-                  (im_ice.ne.0).and. &
-                  (im_melt.ne.0)) then
+              if (match_flag.eq.1) then
 
                call multimaterial_MOF_growth_angle( &
-                im_ambient,im_ice,im_melt, &
+                growth_angle_primary_mat(iten_growth), &
+                growth_angle_secondary_mat(iten_growth), &
+                growth_angle_tertiary_mat(iten_growth), &
                 growth_angle(iten_growth), &
                 bfact,dx, &
                 xsten, &
@@ -1169,20 +1152,11 @@ stop
                 cmofsten, & !intent(in)
                 SDIM)
 
-              else 
-               print *,"im_ambient,im_ice, or im_melt invalid"
-               stop
               endif
-             else
-              print *,"iten_growth_verify!=iten_growth: ", &
-                iten_growth_verify,iten_growth
-              stop
+
              endif
 
-            else
-             print *,"iten_growth_verify invalid(4): ",iten_growth_verify
-             stop
-            endif
+            enddo !iten_growth=1,num_interfaces
 
            else if (voflist_stencil(im_tertiary).le.0.01d0) then
             !do nothing

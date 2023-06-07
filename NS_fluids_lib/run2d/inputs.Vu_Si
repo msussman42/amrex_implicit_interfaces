@@ -129,9 +129,9 @@ ns.tension= 1740.0      0.0 870.0 0.0 1740.0  0.0
 ns.tension_init= 1740.0 0.0 870.0 0.0 1740.0  0.0
 # growth_angle=18 deg
 ns.growth_angle=0.314 0.0 0.0 0.0 0.0 0.0 
-ns.growth_angle_melt=1 0 0 0 0 0 
-ns.growth_angle_ambient=2 0 0 0 0 0 
-ns.growth_angle_ice=3 0 0 0 0 0 
+ns.growth_angle_tertiary_mat=1 0 0 0 0 0 
+ns.growth_angle_primary_mat=2 0 0 0 0 0 
+ns.growth_angle_secondary_mat=3 0 0 0 0 0 
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)

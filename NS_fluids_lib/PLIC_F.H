@@ -63,9 +63,9 @@ extern "C"
         int* continuous_mof,
         int* partial_cmof_stencil_at_walls,
         Real* growth_angle, 
-        int* growth_angle_ambient, 
-        int* growth_angle_melt, 
-        int* growth_angle_ice);
+        int* growth_angle_primary_mat, 
+        int* growth_angle_tertiary_mat, 
+        int* growth_angle_secondary_mat);
 
 }
 }/* namespace amrex */
