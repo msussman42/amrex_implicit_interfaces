@@ -1108,7 +1108,7 @@ stop
 
            if (voflist_stencil(im_tertiary).ge.0.01d0) then
          
-            do iten_growth=1,num_interfaces
+            do iten_growth=1,2*num_interfaces
 
              if (growth_angle_primary_mat(iten_growth).ge.1) then
 
@@ -1118,6 +1118,11 @@ stop
                stop
               endif
               if (growth_angle_primary_mat(iten_growth).eq. &
+                  growth_angle_tertiary_mat(iten_growth)) then
+               print *,"growth_angle parms incorrect"
+               stop
+              endif
+              if (growth_angle_secondary_mat(iten_growth).eq. &
                   growth_angle_tertiary_mat(iten_growth)) then
                print *,"growth_angle parms incorrect"
                stop
@@ -1166,11 +1171,21 @@ stop
                 cmofsten, & !intent(in)
                 SDIM)
 
+              else if (match_flag.eq.0) then
+               ! do nothing
+              else
+               print *,"match_flag invalid"
+               stop
               endif
 
+             else if (growth_angle_primary_mat(iten_growth).eq.0) then
+              ! do nothing
+             else
+              print *,"growth_angle_primary_mat invalid"
+              stop
              endif
 
-            enddo !iten_growth=1,num_interfaces
+            enddo !iten_growth=1,2*num_interfaces
 
            else if (voflist_stencil(im_tertiary).le.0.01d0) then
             !do nothing
