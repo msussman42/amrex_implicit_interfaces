@@ -102,10 +102,10 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(slopes)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
     
-      REAL_T, INTENT(in) :: growth_angle(num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_primary_mat(num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_tertiary_mat(num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_secondary_mat(num_interfaces)
+      REAL_T, INTENT(in) :: growth_angle(2*num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_primary_mat(2*num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_tertiary_mat(2*num_interfaces)
+      INTEGER_T, INTENT(in) :: growth_angle_secondary_mat(2*num_interfaces)
  
       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
@@ -287,7 +287,7 @@ stop
        stop
       endif
 
-      do i=1,num_interfaces
+      do i=1,2*num_interfaces
        if (growth_angle_primary_mat(i).eq.0) then
 
         if (growth_angle(i).eq.zero) then
@@ -306,6 +306,20 @@ stop
          print *,"growth_angle_primary_mat invalid"
          stop
         endif
+        if ((growth_angle_secondary_mat(i).ge.1).and. &
+            (growth_angle_secondary_mat(i).le.num_materials)) then
+         ! do nothing
+        else
+         print *,"growth_angle_secondary_mat invalid"
+         stop
+        endif
+        if ((growth_angle_tertiary_mat(i).ge.1).and. &
+            (growth_angle_tertiary_mat(i).le.num_materials)) then
+         ! do nothing
+        else
+         print *,"growth_angle_tertiary_mat invalid"
+         stop
+        endif
 
         if (continuous_mof.ge.1) then
          ! do nothing
@@ -317,7 +331,7 @@ stop
         print *,"growth_angle is out of range: ",growth_angle(i)
         stop
        endif
-      enddo !i=1,num_interfaces
+      enddo !i=1,2*num_interfaces
 
       if ((update_flag.eq.RECON_UPDATE_NULL).or. &
           (update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
