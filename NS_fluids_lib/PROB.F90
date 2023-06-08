@@ -5053,8 +5053,22 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (user_tension(iten).eq.zero) then
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+
+              !The merge code is for the algorithm described by:
+              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
+              !The growth_angle code is for the algorithm described by
+              ! Vu, Tryggvason.
+             if (fort_growth_angle_primary_mat(iten).ne.0) then
+              LH1=zero
+             endif
+
              LH2= &
                get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+
+             if (fort_growth_angle_primary_mat(iten+num_interfaces).ne.0) then
+              LH2=zero
+             endif
+
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               call get_primary_material(LS,im_primary)
               call get_secondary_material(LS,im_primary,im_secondary)
@@ -5209,7 +5223,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (user_tension(iten).eq.zero) then
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+
+              !The merge code is for the algorithm described by:
+              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
+              !The growth_angle code is for the algorithm described by
+              ! Vu, Tryggvason.
+             if (fort_growth_angle_primary_mat(iten).ne.0) then
+              LH1=zero
+             endif
+
              LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+
+             if (fort_growth_angle_primary_mat(iten+num_interfaces).ne.0) then
+              LH2=zero
+             endif
+
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               call get_primary_material(LS,im_primary)
               call get_secondary_material(LS,im_primary,im_secondary)
@@ -5368,7 +5396,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (user_tension(iten).eq.zero) then
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+
+              !The merge code is for the algorithm described by:
+              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
+              !The growth_angle code is for the algorithm described by
+              ! Vu, Tryggvason.
+             if (fort_growth_angle_primary_mat(iten).ne.0) then
+              LH1=zero
+             endif
+
              LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+
+             if (fort_growth_angle_primary_mat(iten+num_interfaces).ne.0) then
+              LH2=zero
+             endif
+
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               vof_merge(im)=zero
               vof_merge(im_opp)=vof(im_opp)+vof(im)

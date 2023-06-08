@@ -5008,18 +5008,23 @@ stop
              if (im3.eq.0) then
               ! do nothing
              else if ((im3.ge.1).and.(im3.le.num_materials)) then
-              ! do nothing
-             else
-              print *,"im3 invalid"
-              stop
-             endif
 
-             if (im3.eq.0) then
-              ! do nothing
-             else if ((im3.ge.1).and.(im3.le.num_materials)) then
-              ! do nothing
+               ! triple point algorithm: 3 fluids
+               ! contact line algorithm: 2 fluids and "is_rigid" material.
+              if ((is_ice(im3).eq.1).or. &
+                  (is_FSI_rigid(im3).eq.1)) then
+               curv_cellHT=zero
+               curv_cellFD=zero
+              else if ((is_ice(im3).eq.0).and. &
+                       (is_FSI_rigid(im3).eq.0)) then
+               !do nothing
+              else
+               print *,"is_ice or is_FSI_rigid invalid"
+               stop
+              endif
+
              else
-              print *,"im3 invalid"
+              print *,"im3 invalid: ",im3
               stop
              endif
 

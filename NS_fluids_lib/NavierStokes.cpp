@@ -1650,6 +1650,8 @@ void fortran_parameters() {
  pp.queryAdd("tension_T0",tension_T0temp,NavierStokes::num_interfaces);
  pp.queryAdd("tension_min",tension_mintemp,NavierStokes::num_interfaces);
 
+ Vector<int> growth_angle_primary_mat_temp(2*NavierStokes::num_interfaces);
+
  Vector<Real> latent_heat_temp(2*NavierStokes::num_interfaces);
  Vector<Real> latent_heat_slopetemp(2*NavierStokes::num_interfaces);
  Vector<Real> latent_heat_T0temp(2*NavierStokes::num_interfaces);
@@ -1669,6 +1671,9 @@ void fortran_parameters() {
   reference_pressure_temp[i]=1.0e+6;
   reference_pressure_temp[i+NavierStokes::num_interfaces]=1.0e+6;
 
+  growth_angle_primary_mat_temp[i]=0;
+  growth_angle_primary_mat_temp[i+NavierStokes::num_interfaces]=0;
+
   latent_heat_temp[i]=0.0;
   latent_heat_temp[i+NavierStokes::num_interfaces]=0.0;
   latent_heat_slopetemp[i]=0.0;
@@ -1678,6 +1683,9 @@ void fortran_parameters() {
   latent_heat_mintemp[i]=0.0;
   latent_heat_mintemp[i+NavierStokes::num_interfaces]=0.0;
  }
+ pp.queryAdd("growth_angle_primary_mat",growth_angle_primary_mat_temp,
+             2*NavierStokes::num_interfaces);
+
  pp.queryAdd("latent_heat",latent_heat_temp,2*NavierStokes::num_interfaces);
  pp.queryAdd("latent_heat_slope",latent_heat_slopetemp,
     2*NavierStokes::num_interfaces);
@@ -1996,6 +2004,7 @@ void fortran_parameters() {
   prerecalesce_stiffCV_temp.dataPtr(),
   speciesconst_temp.dataPtr(),
   speciesviscconst_temp.dataPtr(),
+  growth_angle_primary_mat_temp.dataPtr(),
   latent_heat_temp.dataPtr(),
   latent_heat_slopetemp.dataPtr(),
   latent_heat_T0temp.dataPtr(),
