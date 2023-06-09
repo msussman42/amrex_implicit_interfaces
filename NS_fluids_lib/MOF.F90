@@ -6749,7 +6749,8 @@ end subroutine volume_sanity_check
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: use_super_cell
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T isten,nhalf2
+      INTEGER_T isten
+      INTEGER_T, PARAMETER :: nhalf2=1
       INTEGER_T, INTENT(out) :: nlist
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T nlist_local,i1,j1,k1,itri
@@ -6761,8 +6762,6 @@ end subroutine volume_sanity_check
       REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
       REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
       INTEGER_T ksten_low,ksten_high
-
-      nhalf2=1
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
@@ -7851,7 +7850,7 @@ end subroutine volume_sanity_check
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T nhalf2
+      INTEGER_T, PARAMETER :: nhalf2=1
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten2(-1:1,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
@@ -7860,8 +7859,6 @@ end subroutine volume_sanity_check
       INTEGER_T ksten_low,ksten_high,i1,j1,k1,dir,isten
       REAL_T volsten
       REAL_T censten(sdim)
-
-      nhalf2=1
 
       if (bfact.lt.1) then
        print *,"bfact invalid129"
@@ -9527,7 +9524,6 @@ contains
       REAL_T, INTENT(in) :: slope(sdim)
       REAL_T, INTENT(in) :: intercept
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      INTEGER_T nhalf2
       REAL_T, INTENT(in) :: dx(sdim)
 
       REAL_T, INTENT(out) :: ff
@@ -9539,8 +9535,6 @@ contains
       REAL_T, INTENT(out) :: centroid(sdim)
       INTEGER_T shapeflag
       REAL_T xtet(sdim+1,sdim)
-
-      nhalf2=1
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid multi_ff"
@@ -9638,7 +9632,6 @@ contains
       REAL_T, INTENT(in) :: slope(sdim)
       REAL_T, INTENT(in) :: intercept
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      INTEGER_T nhalf2
       REAL_T, INTENT(in) :: dx(sdim)
 
       REAL_T, INTENT(out) :: ff
@@ -9650,8 +9643,6 @@ contains
       REAL_T, INTENT(out) :: centroid(sdim)
       INTEGER_T shapeflag
       REAL_T xtet(sdim+1,sdim)
-
-      nhalf2=1
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid single_ff"
@@ -9950,12 +9941,12 @@ contains
       REAL_T intercept_upper,intercept_lower
       REAL_T intercept_test,aa,bb,fa,fb
       INTEGER_T local_nlist
-      INTEGER_T tid
+      INTEGER_T :: tid=0
+
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
 #endif
 
-      tid=0       
 #ifdef _OPENMP
       tid=omp_get_thread_num()
 #endif
@@ -10860,6 +10851,7 @@ contains
         ! refcentroid_scale is passed into this routine.
         ! refcentroid_scale is relative to cell centroid of the super cell.
       subroutine multi_rotatefunc( &
+        tid, &
         mofdata, &
         growth_angle, &
         im_ambient,im_ice,im_melt, &
@@ -10868,9 +10860,11 @@ contains
         nDOF, & ! sdim-1  or 1
         nEQN, & ! sdim or 3 * sdim
         use_MilcentLemoine, &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         xtetlist_vof,nlist_vof, &
         xtetlist_cen,nlist_cen, &
+        nlist_alloc, &
         nmax, &
         refcentroid, &
         refvfrac, &
@@ -10883,6 +10877,7 @@ contains
         use_initial_guess, &
         fastflag,sdim)
 
+      use probcommon_module
       use geometry_intersect_module
       use global_utility_module
       use mod_mof3d_analytic_centroid
@@ -10890,7 +10885,13 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: nlist_alloc
+
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
+
+      INTEGER_T, PARAMETER :: tessellate=0
+
       REAL_T, INTENT(in) :: growth_angle
       INTEGER_T, INTENT(in) :: im_ambient
       INTEGER_T, INTENT(in) :: im_ice
@@ -10905,11 +10906,11 @@ contains
       INTEGER_T, INTENT(in) :: use_MilcentLemoine
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: nhalf0
-      INTEGER_T,INTENT(in):: nlist_vof
-      INTEGER_T,INTENT(in):: nlist_cen
+      INTEGER_T,INTENT(inout):: nlist_vof
+      INTEGER_T,INTENT(inout):: nlist_cen
       INTEGER_T, INTENT(in) :: nmax,fastflag
-      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_vof)
-      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_cen)
+      REAL_T, INTENT(inout) :: xtetlist_vof(4,3,nlist_alloc)
+      REAL_T, INTENT(inout) :: xtetlist_cen(4,3,nlist_alloc)
       REAL_T, INTENT(in) :: refcentroid(nEQN)
       REAL_T refcentroidT(nEQN)
       REAL_T, INTENT(in) :: refvfrac(nMAT_OPT)
@@ -10921,7 +10922,8 @@ contains
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten2(-1:1,sdim)
-      INTEGER_T isten,nhalf2
+      INTEGER_T isten
+      INTEGER_T, PARAMETER :: nhalf2=1
       REAL_T, INTENT(out) :: ff(nEQN) 
       REAL_T volume_cut,facearea
       INTEGER_T dir
@@ -10947,9 +10949,14 @@ contains
       REAL_T local_centroid(3)
       REAL_T local_gradient(2)
       REAL_T local_refvfrac
+      INTEGER_T im
+      INTEGER_T vofcomp
+      INTEGER_T, PARAMETER :: use_super_cell=1
 
-      nhalf2=1
-
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid multi_rotatefunc"
        stop
@@ -11459,6 +11466,7 @@ contains
         stop
        endif
       else if (abs(growth_angle).le.half*Pi) then
+
        do im=1,num_materials*ngeom_recon
         mofdata(im)=zero
        enddo
@@ -11473,8 +11481,6 @@ contains
        enddo
        mofdata(vofcomp+2*sdim+2)=intercept(1)
 
-       use_super_cell=1
-
        call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
@@ -11486,7 +11492,7 @@ contains
          use_super_cell, &
          cmofsten, &
          sdim)
-       use_super_cell=1
+
        call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
@@ -11498,12 +11504,6 @@ contains
          use_super_cell, &
          cmofsten, &
          sdim)
-       call get_cut_geom3D(xtetlist_vof, &
-         nlist_alloc,nlist_vof,nmax, &
-         volcut_vof,cencut_vof,sdim)
-       call get_cut_geom3D(xtetlist_cen, &
-         nlist_alloc,nlist_cen,nmax, &
-         volcut_cen,cencut_cen,sdim)
 
        call multi_find_intercept( &
         nMAT_OPT, & ! 1 or 3
@@ -11554,8 +11554,6 @@ contains
        enddo
        mofdata(vofcomp+2*sdim+2)=intercept(2)
 
-       use_super_cell=1
-
        call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
@@ -11567,7 +11565,7 @@ contains
          use_super_cell, &
          cmofsten, &
          sdim)
-       use_super_cell=1
+
        call tets_box_planes_super( &
          tessellate, & ! =0
          tid, &
@@ -11579,12 +11577,6 @@ contains
          use_super_cell, &
          cmofsten, &
          sdim)
-       call get_cut_geom3D(xtetlist_vof, &
-         nlist_alloc,nlist_vof,nmax, &
-         volcut_vof,cencut_vof,sdim)
-       call get_cut_geom3D(xtetlist_cen, &
-         nlist_alloc,nlist_cen,nmax, &
-         volcut_cen,cencut_cen,sdim)
 
        intercept(3)=-intercept(2)
 
@@ -11795,7 +11787,7 @@ contains
       INTEGER_T use_initial_guess
       REAL_T intercept_init(nMAT_OPT_standard)
       INTEGER_T use_MilcentLemoine
-      INTEGER_T tid
+      INTEGER_T :: tid=0
       REAL_T maxdx
       REAL_T refcentroid(sdim)
       REAL_T refcentroid_scale(sdim)
@@ -11814,11 +11806,23 @@ contains
       REAL_T :: cen_free_placeholder(sdim)
       REAL_T :: npredict(sdim)
       REAL_T :: mag 
+      INTEGER_T, PARAMETER :: im_ambient=0
+      INTEGER_T, PARAMETER :: im_ice=0
+      INTEGER_T, PARAMETER :: im_melt=0
+      REAL_T :: mofdata(num_materials*ngeom_recon)
+#ifdef _OPENMP
+      INTEGER_T omp_get_thread_num
+#endif
+#ifdef _OPENMP
+      tid=omp_get_thread_num()
+#endif
+      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
+       print *,"tid invalid"
+       stop
+      endif 
 
       nDOF_standard=sdim-1
       nEQN_standard=sdim
-
-      tid=0
 
       fastflag=1
       use_initial_guess=0
@@ -11907,7 +11911,10 @@ contains
 
         ! find the actual centroid given the angle.
       call multi_rotatefunc( &
+       tid, &
+       mofdata, &
        growth_angle_standard, &
+       im_ambient,im_ice,im_melt, &
        npredict, &
        nMAT_OPT_standard, & ! 1
        nDOF_standard, & ! sdim-1 
@@ -11916,6 +11923,7 @@ contains
        bfact,dx_scale,xsten0_scale,nhalf0, &
        local_xtetlist_vof,local_nlist_vof, &
        local_xtetlist_cen,local_nlist_cen, &
+       nlist_alloc, &
        nmax, &
        refcentroid_scale, &
        refvfrac, &
@@ -11960,6 +11968,7 @@ contains
         ! output: intercept,centroidA,nslope
         ! called from: individual_MOF and multimaterial_MOF
       subroutine find_cut_geom_slope( &
+        tid, &
         mofdata, &
         growth_angle, &
         im_ambient,im_ice,im_melt, &
@@ -11996,6 +12005,8 @@ contains
       IMPLICIT NONE
 
 #include "mofdata.H"
+
+      INTEGER_T, INTENT(in) :: tid
 
       INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
       INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
@@ -12126,17 +12137,24 @@ contains
 
       INTEGER_T use_MilcentLemoine
 
-      INTEGER_T tid
+      INTEGER_T :: tid_check=0
+
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
 #endif
-
-      tid=0       
-#ifdef _OPENMP
-      tid=omp_get_thread_num()
-#endif
-      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
+      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
+       stop
+      endif
+
+#ifdef _OPENMP
+      tid_check=omp_get_thread_num()
+#endif
+
+      if ((tid_check.ge.geom_nthreads).or. &
+          (tid_check.lt.0).or. &
+          (tid_check.ne.tid)) then
+       print *,"tid_check invalid"
        stop
       endif 
 
@@ -12729,26 +12747,30 @@ contains
        enddo
 
        call multi_rotatefunc( &
-         growth_angle, &
-         npredict, &
-         nMAT_OPT, & ! 1 or 3
-         nDOF, & ! sdim-1  or 1
-         nEQN, & ! sdim or 3 * sdim
-         use_MilcentLemoine, &
-         bfact,dx_scale,xsten0_scale,nhalf0, &
-         local_xtetlist_vof,local_nlist_vof, &
-         local_xtetlist_cen,local_nlist_cen, &
-         nmax, &
-         refcentroid_scale, &
-         refvfrac, &
-         continuous_mof, &
-         cmofsten, &
-         angle_init, &
-         finit, &
-         intercept_init, &
-         cen_derive_init, &
-         use_initial_guess, &
-         fastflag,sdim)
+        tid, &
+        mofdata, &
+        growth_angle, &
+        im_ambient,im_ice,im_melt, &
+        npredict, &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN, & ! sdim or 3 * sdim
+        use_MilcentLemoine, &
+        bfact,dx_scale,xsten0_scale,nhalf0, &
+        local_xtetlist_vof,local_nlist_vof, &
+        local_xtetlist_cen,local_nlist_cen, &
+        nlist_alloc, &
+        nmax, &
+        refcentroid_scale, &
+        refvfrac, &
+        continuous_mof, &
+        cmofsten, &
+        angle_init, &
+        finit, &
+        intercept_init, &
+        cen_derive_init, &
+        use_initial_guess, &
+        fastflag,sdim)
 
        errinit=zero
        do dir=1,nEQN
@@ -12848,7 +12870,10 @@ contains
 
          ! fp=xref-cenp
         call multi_rotatefunc( &
+         tid, &
+         mofdata, &
          growth_angle, &
+         im_ambient,im_ice,im_melt, &
          npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
@@ -12857,8 +12882,10 @@ contains
          bfact,dx_scale,xsten0_scale,nhalf0, &
          local_xtetlist_vof,local_nlist_vof, &
          local_xtetlist_cen,local_nlist_cen, &
+         nlist_alloc, &
          nmax, &
-         refcentroid_scale,refvfrac, &
+         refcentroid_scale, &
+         refvfrac, &
          continuous_mof, &
          cmofsten, &
          angle_plus, &
@@ -12886,7 +12913,10 @@ contains
 
          ! fm=xref-cenm
         call multi_rotatefunc( &
+         tid, &
+         mofdata, &
          growth_angle, &
+         im_ambient,im_ice,im_melt, &
          npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
@@ -12895,6 +12925,7 @@ contains
          bfact,dx_scale,xsten0_scale,nhalf0, &
          local_xtetlist_vof,local_nlist_vof, &
          local_xtetlist_cen,local_nlist_cen, &
+         nlist_alloc, &
          nmax, &
          refcentroid_scale,refvfrac, &
          continuous_mof, &
@@ -13016,7 +13047,10 @@ contains
 
         use_initial_guess=1
         call multi_rotatefunc( &
+         tid, &
+         mofdata, &
          growth_angle, &
+         im_ambient,im_ice,im_melt, &
          npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
@@ -13025,6 +13059,7 @@ contains
          bfact,dx_scale,xsten0_scale,nhalf0, &
          local_xtetlist_vof,local_nlist_vof, &
          local_xtetlist_cen,local_nlist_cen, &
+         nlist_alloc, &
          nmax, &
          refcentroid_scale, &
          refvfrac, &
@@ -13966,6 +14001,7 @@ contains
            ! cell.
            ! find_cut_geom_slope called from: individual_MOF
          call find_cut_geom_slope( &
+           tid, &
            mofdata, &
            growth_angle, & !growth_angle=0.0
            im_ambient,im_ice,im_melt, &
@@ -14238,6 +14274,7 @@ contains
         ! cell.
         ! find_cut_geom_slope called from: individual_MOF
        call find_cut_geom_slope( &
+        tid, &
         mofdata, &
         growth_angle, & !growth_angle<>0
         im_ambient,im_ice,im_melt, &
@@ -15576,14 +15613,14 @@ contains
 
       INTEGER_T nhalf_box
 
-      INTEGER_T tid
+      INTEGER_T :: tid=0
+
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
 #endif
 
 #include "mofdata.H"
 
-      tid=0       
 #ifdef _OPENMP
       tid=omp_get_thread_num()
 #endif
@@ -15968,6 +16005,7 @@ contains
           ! This call is for the reconstruction of is_rigid=1 materials;
           ! continuous_mof_rigid=0
           call find_cut_geom_slope( &
+           tid, &
            mofdata, &
            growth_angle, & !growth_angle=0.0
            im_ambient,im_ice,im_melt, &
@@ -16808,14 +16846,13 @@ contains
 
       INTEGER_T, PARAMETER :: nhalf_box=3
 
-      INTEGER_T tid
+      INTEGER_T :: tid=0
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
 #endif
 
 #include "mofdata.H"
 
-      tid=0       
 #ifdef _OPENMP
       tid=omp_get_thread_num()
 #endif
