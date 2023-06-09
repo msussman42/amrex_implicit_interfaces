@@ -9972,6 +9972,7 @@ END SUBROUTINE SIMP
        xlo,dx, &
        dt, & ! solver_dt_slab
        angular_velocity, & !intent(in) fort_init_potential
+       centrifugal_force_factor, & !intent(in) fort_init_potential
        isweep) &
       bind(c,name='fort_init_potential')
 
@@ -9984,6 +9985,7 @@ END SUBROUTINE SIMP
       INTEGER_T, INTENT(in) :: isweep
       REAL_T, INTENT(in) :: dt  ! solver_dt_slab
       REAL_T, INTENT(in) :: angular_velocity
+      REAL_T, INTENT(in) :: centrifugal_force_factor
       INTEGER_T, INTENT(in) :: DIMDEC(presden)
       INTEGER_T, INTENT(in) :: DIMDEC(state)
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -10050,6 +10052,7 @@ END SUBROUTINE SIMP
         call general_hydrostatic_pressure_density( &
           i,j,k,level, &
           angular_velocity, &
+          centrifugal_force_factor, &
           dt, &
           den_cell, &   !INTENT(out)
           pres_cell, &  !INTENT(out)
@@ -10107,6 +10110,7 @@ END SUBROUTINE SIMP
             call general_hydrostatic_pressure_density( &
              i,j,k,level, &
              angular_velocity, & !intent(in)
+             centrifugal_force_factor, & !intent(in)
              dt, &        ! intent(in)
              den_cell, &  ! intent(out)
              pres_cell, & ! intent(out)

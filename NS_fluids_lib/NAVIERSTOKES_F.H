@@ -200,6 +200,7 @@ extern "C" {
       const int* domlo,const int* domhi,
       const Real* xlo,const Real* dx,Real* dt,
       Real* angular_velocity, //parameter for fort_init_potential
+      Real* centrifugal_force_factor, //parameter for fort_init_potential
       int* isweep);
 
     void fort_metrics(

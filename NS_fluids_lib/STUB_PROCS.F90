@@ -857,6 +857,7 @@ end subroutine STUB_ICE_SUBSTRATE_DISTANCE
 subroutine STUB_correct_pres_rho_hydrostatic( &
   i,j,k,level, &
   angular_velocity, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
+  centrifugal_force_factor, &!INTENT(in) STUB_correct_pres_rho_hydrostatic
   dt, &
   rho_hydrostatic, &
   pres_hydrostatic, &
@@ -865,6 +866,7 @@ IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: i,j,k,level
 REAL_T, INTENT(in) :: angular_velocity
+REAL_T, INTENT(in) :: centrifugal_force_factor
 REAL_T, INTENT(in) :: dt
 REAL_T, INTENT(inout) :: rho_hydrostatic
 REAL_T, INTENT(inout) :: pres_hydrostatic
@@ -881,6 +883,13 @@ REAL_T, INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
   ! do nothing
  else
   print *,"angular_velocity should be nonneg"
+  stop
+ endif
+ if ((centrifugal_force_factor.ge.zero).and. &
+     (centrifugal_force_factor.le.one)) then
+  ! do nothing
+ else
+  print *,"expecting 0<=centrifugal_force_factor<=1"
   stop
  endif
 

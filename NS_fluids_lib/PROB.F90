@@ -2445,6 +2445,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine general_hydrostatic_pressure_density( &
         i,j,k,level, &
         angular_velocity, &!intent(in) general_hydrostatic_pressure_density
+        centrifugal_force_factor, &!intent(in) 
+                                  &!general_hydrostatic_pressure_density
         dt, &
         rho_hydrostatic, &
         pres_hydrostatic, &
@@ -2455,6 +2457,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T, INTENT(in) :: i,j,k,level
        !general_hydrostatic_pressure_density
       REAL_T, INTENT(in) :: angular_velocity 
+      REAL_T, INTENT(in) :: centrifugal_force_factor
       REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(out) :: rho_hydrostatic
       REAL_T, INTENT(out) :: pres_hydrostatic
@@ -2509,10 +2512,18 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"angular_velocity should be nonneg"
         stop
        endif
+       if ((centrifugal_force_factor.ge.zero).and. &
+           (centrifugal_force_factor.le.one)) then
+        ! do nothing
+       else
+        print *,"expecting 0<=centrifugal_force_factor<=1"
+        stop
+       endif
 
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         pres_hydrostatic=pres_hydrostatic+ &
-            half*rho_hydrostatic*(angular_velocity**2)*(xcell(1)**2)
+            half*rho_hydrostatic*centrifugal_force_factor* &
+            (angular_velocity**2)*(xcell(1)**2)
        else if (levelrz.eq.COORDSYS_RZ) then
         if (SDIM.ne.2) then
          print *,"dimension bust"
@@ -2526,7 +2537,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         pres_hydrostatic=pres_hydrostatic+ &
-           half*rho_hydrostatic*(angular_velocity**2)*(xcell(1)**2)
+           half*rho_hydrostatic*centrifugal_force_factor* &
+           (angular_velocity**2)*(xcell(1)**2)
        else
         print *,"levelrz invalid general hydrostatic pressure density"
         stop
@@ -2540,6 +2552,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        call SUB_correct_pres_rho_hydrostatic( &
         i,j,k,level, &
         angular_velocity, &
+        centrifugal_force_factor, &
         dt, &
         rho_hydrostatic, &
         pres_hydrostatic, &
