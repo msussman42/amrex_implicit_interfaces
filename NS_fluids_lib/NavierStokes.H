@@ -2140,7 +2140,8 @@ protected:
 
     static int uncoupled_viscosity;
 
-    static Real angular_velocity;
+    static Real angular_velocity;  //Omega in Lewis and Nagata (Lappa's book)
+    static Real centrifugal_force_factor; //Eady disables centrifugal force.
      
      //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
      //DrhoDT has units of 1/(Degrees Kelvin)

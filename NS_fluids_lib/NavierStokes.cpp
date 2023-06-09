@@ -839,6 +839,7 @@ Vector<Real> NavierStokes::stiffGAMMA; // def=1.4
 int NavierStokes::uncoupled_viscosity=0;
 
 Real NavierStokes::angular_velocity=0.0;
+Real NavierStokes::centrifugal_force_factor=1.0;
 
 //Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
 //DrhoDT has units of 1/(Degrees Kelvin)
@@ -3664,6 +3665,7 @@ NavierStokes::read_params ()
     pp.queryAdd("stiffGAMMA",stiffGAMMA,num_materials);
 
     pp.queryAdd("angular_velocity",angular_velocity);
+    pp.queryAdd("centrifugal_force_factor",centrifugal_force_factor);
 
     pp.queryAdd("uncoupled_viscosity",uncoupled_viscosity);
 
@@ -5249,6 +5251,8 @@ NavierStokes::read_params ()
      std::cout << "NUM_STATE_TYPE= " << NUM_STATE_TYPE << '\n';
 
      std::cout << "angular_velocity= " << angular_velocity << '\n';
+     std::cout << "centrifugal_force_factor= " << 
+       centrifugal_force_factor << '\n';
 
      std::cout << "uncoupled_viscosity= " << uncoupled_viscosity << '\n';
 

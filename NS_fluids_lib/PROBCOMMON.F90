@@ -894,12 +894,14 @@ implicit none
       subroutine TEMPLATE_correct_pres_rho_hydrostatic( &
         i,j,k,level, &
         angular_velocity, &
+        centrifugal_force_factor, &
         dt, &
         rho_hydrostatic, &
         pres_hydrostatic, &
         state_ptr)
       INTEGER_T, INTENT(in) :: i,j,k,level
       REAL_T, INTENT(in) :: angular_velocity
+      REAL_T, INTENT(in) :: centrifugal_force_factor
       REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(inout) :: rho_hydrostatic
       REAL_T, INTENT(inout) :: pres_hydrostatic

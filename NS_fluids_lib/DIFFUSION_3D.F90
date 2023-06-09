@@ -98,6 +98,22 @@ stop
 ! hoop term 2nd component:   2 u_t/r^2 - v/r^2
 ! No coupling terms.
 ! Diagonal terms not multiplied by 2.
+! From Lewis and Nagata (ignoring viscosity) and Eady.
+! v=\Gamma z   u=0  w=0
+! T=A r + B z + T0
+! u_r + u/r + v_phi + w_z = 0
+! ez x u = | i    j    k   | = i(-v)-j(-u)
+!          | 0    0    1   |
+!          | u    v    w   | 
+! u_t=-p_r/rho0 + 2 Omega v-u* u_r - v *u_phi/r - w *u_z
+! v_t=-p_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z
+! w_t=-p_z/rho0+g*(A*r+B*z)-u*w_r-v*w_phi/r-w*w_z
+! T_t=-u*T_r-v T_phi - w T_z
+! p_r = rho0 * (2 Omega \Gamma z)  p=rho0 * (2 Omega \Gamma z * r) + f(z)
+! p_z = rho0 * g * (A*r+B*z)       p=rho0*A*r*z*g+rho0*g*B*z^2/2+h(r)
+! 2 Omega \Gamma = A g  \Gamma= A g/(2 Omega) = -A g / K
+
+
        subroutine fort_hoopimplicit( &
          override_density, &
          constant_density_all_time, & ! 1..num_materials
@@ -121,6 +137,7 @@ stop
          finest_level, &
          visc_coef, &
          angular_velocity, & !intent(in): fort_hoopimplicit
+         centrifugal_force_factor, & !intent(in): fort_hoopimplicit
          uncoupled_viscosity, &
          update_state, &
          dt, &
@@ -145,6 +162,7 @@ stop
        INTEGER_T, INTENT(in) :: finest_level
        INTEGER_T, INTENT(in) :: rzflag
        REAL_T, INTENT(in) :: angular_velocity
+       REAL_T, INTENT(in) :: centrifugal_force_factor
        REAL_T, INTENT(in) :: visc_coef
        INTEGER_T, INTENT(in) :: uncoupled_viscosity
        INTEGER_T, INTENT(in) :: update_state
@@ -272,6 +290,13 @@ stop
         ! do nothing
        else
         print *,"angular_velocity cannot be negative"
+        stop
+       endif
+       if ((centrifugal_force_factor.le.one).and. &
+           (centrifugal_force_factor.ge.zero)) then
+        ! do nothing
+       else
+        print *,"expecting 0<=centrifugal_force_factor<=1"
         stop
        endif
 
@@ -582,7 +607,8 @@ stop
            ! Lewis and Nagata 2004:
            ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
            ! DTEMP=beta*(T-T0)  beta<0
-          unp1(1)=unp1(1)+dt*DTEMP*(angular_velocity**2)*RCEN
+          unp1(1)=unp1(1)+ &
+           dt*DTEMP*centrifugal_force_factor*(angular_velocity**2)*RCEN
 
          else if (rzflag.eq.COORDSYS_CARTESIAN) then
           ! assume that RCEN > eps > 0 ?
