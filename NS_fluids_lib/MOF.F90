@@ -9886,7 +9886,8 @@ contains
        nDOF, & ! sdim-1  or 1
        nEQN, & ! sdim or 3 * sdim
        bfact,dx,xsten0,nhalf0, &
-       slope,intercept, &
+       slope, &
+       intercept, &
        continuous_mof, &
        cmofsten, &
        xtetlist, &
@@ -9895,7 +9896,8 @@ contains
        nmax, &
        vfrac, &
        use_initial_guess, &
-       centroid,fastflag,sdim)
+       centroid, &
+       fastflag,sdim)
 
       use probcommon_module
       use global_utility_module
@@ -10858,7 +10860,9 @@ contains
         ! refcentroid_scale is passed into this routine.
         ! refcentroid_scale is relative to cell centroid of the super cell.
       subroutine multi_rotatefunc( &
+        mofdata, &
         growth_angle, &
+        im_ambient,im_ice,im_melt, &
         npredict, &
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
@@ -10886,7 +10890,11 @@ contains
 
       IMPLICIT NONE
 
+      REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
       REAL_T, INTENT(in) :: growth_angle
+      INTEGER_T, INTENT(in) :: im_ambient
+      INTEGER_T, INTENT(in) :: im_ice
+      INTEGER_T, INTENT(in) :: im_melt
       INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
       INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
       INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
@@ -10973,6 +10981,15 @@ contains
         stop
        endif
 
+       if ((im_ambient.eq.0).and. &
+           (im_ice.eq.0).and. &
+           (im_melt.eq.0)) then
+        ! do nothing
+       else
+        print *,"invalid default arguments"
+        stop
+       endif
+
       else if (abs(growth_angle).le.half*Pi) then
 
         ! The corrected n_ambient comes from a 1-parameter family:
@@ -11014,6 +11031,18 @@ contains
         print *,"expecting continuous_mof==-1: ",continuous_mof
         print *,"expecting fastflag==0: ",fastflag
         print *,"expecting use_MilcentLemoine==0: ",use_MilcentLemoine
+        stop
+       endif
+
+       if ((im_ambient.ge.1).and. &
+           (im_ambient.le.num_materials).and. &
+           (im_ice.ge.1).and. &
+           (im_ice.le.num_materials).and. &
+           (im_melt.ge.1).and. &
+           (im_melt.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"invalid growth_angle arguments"
         stop
        endif
 
@@ -11109,14 +11138,15 @@ contains
          ! inside of multi_rotatefunc
          ! testcen in absolute coordinate system
          ! (testcen is the centroid of the intersection of
-         !  the material region with the center cell)
+         !  the material region with the center cell (super cell if 
+         !  continuous_mof==-1))
        call multi_find_intercept( &
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
         nEQN, & ! sdim or 3 * sdim
         bfact,dx,xsten0,nhalf0, &
-        nslope, &
-        intercept(1), &
+        nslope, &  ! intent(in)
+        intercept(1), & ! intent(inout)
         continuous_mof, &
         cmofsten, &
         xtetlist_vof, &
@@ -11125,7 +11155,8 @@ contains
         nmax, &
         refvfrac(1), &
         use_initial_guess, &
-        testcen,fastflag,sdim)
+        testcen, & !intent(out)
+        fastflag,sdim)
 
          ! testcen in absolute coordinate system
        if (fastflag.eq.0) then
@@ -11145,6 +11176,7 @@ contains
         else if (continuous_mof.ge.1) then
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
+          ! This step is needed since xtetlist_cen!=xtetlist_vof
          call multi_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
           nslope, &
@@ -11157,6 +11189,8 @@ contains
         else if (continuous_mof.eq.-1) then
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
+          ! This step is redundant since for continuous_mof==-1, 
+          ! xtetlist_cen=xtetlist_vof
          call multi_cell_intersection( &
           bfact,dx,xsten0,nhalf0, &
           nslope, &
@@ -11425,7 +11459,165 @@ contains
         stop
        endif
       else if (abs(growth_angle).le.half*Pi) then
-       !now adjust the next interface (ice/water)
+       do im=1,num_materials*ngeom_recon
+        mofdata(im)=zero
+       enddo
+       vofcomp=(im_ambient-1)*ngeom_recon+1
+       mofdata(vofcomp)=refvfrac(1)
+       do dir=1,sdim
+        mofdata(vofcomp+dir)=refcentroid(dir)
+       enddo
+       mofdata(vofcomp+sdim+1)=one ! order
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=nslope(dir)
+       enddo
+       mofdata(vofcomp+2*sdim+2)=intercept(1)
+
+       use_super_cell=1
+
+       call tets_box_planes_super( &
+         tessellate, & ! =0
+         tid, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         mofdata, &
+         xtetlist_vof, &
+         nlist_alloc,nlist_vof,nmax, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
+       use_super_cell=1
+       call tets_box_planes_super( &
+         tessellate, & ! =0
+         tid, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         mofdata, &
+         xtetlist_cen, &
+         nlist_alloc,nlist_cen,nmax, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
+       call get_cut_geom3D(xtetlist_vof, &
+         nlist_alloc,nlist_vof,nmax, &
+         volcut_vof,cencut_vof,sdim)
+       call get_cut_geom3D(xtetlist_cen, &
+         nlist_alloc,nlist_cen,nmax, &
+         volcut_cen,cencut_cen,sdim)
+
+       call multi_find_intercept( &
+        nMAT_OPT, & ! 1 or 3
+        nDOF, & ! sdim-1  or 1
+        nEQN, & ! sdim or 3 * sdim
+        bfact,dx,xsten0,nhalf0, &
+        nslope(sdim+1), &  ! intent(in)
+        intercept(2), & ! intent(inout)
+        continuous_mof, &
+        cmofsten, &
+        xtetlist_vof, &
+        nlist_vof, &
+        nlist_vof, &
+        nmax, &
+        refvfrac(2), &
+        use_initial_guess, &
+        testcen(sdim+1), & !intent(out)
+        fastflag,sdim)
+
+       call multi_cell_intersection( &
+        bfact,dx,xsten0,nhalf0, &
+        nslope(sdim+1), &
+        intercept(2), &
+        volume_cut, & !intent(out)
+        testcen(sdim+1), &    !intent(out)
+        facearea, &   !intent(out)
+        xtetlist_cen, & !intent(in)
+        nlist_cen, &
+        nlist_cen, &
+        nmax,sdim)
+
+       do dir=1,sdim
+        testcen(sdim+dir)=testcen(sdim+dir)-cencell_cen(dir)
+       enddo
+       call RT_transform_offset(refcentroid(sdim+1),cencell_cen, &
+               refcentroidT(sdim+1))
+       call RT_transform_offset(testcen(sdim+1),cencell_cen, &
+               testcenT(sdim+1))
+
+       vofcomp=(im_ice-1)*ngeom_recon+1
+       mofdata(vofcomp)=refvfrac(2)
+       do dir=1,sdim
+        mofdata(vofcomp+dir)=refcentroid(sdim+dir)
+       enddo
+       mofdata(vofcomp+sdim+1)=two ! order
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=nslope(sdim+dir)
+       enddo
+       mofdata(vofcomp+2*sdim+2)=intercept(2)
+
+       use_super_cell=1
+
+       call tets_box_planes_super( &
+         tessellate, & ! =0
+         tid, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         mofdata, &
+         xtetlist_vof, &
+         nlist_alloc,nlist_vof,nmax, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
+       use_super_cell=1
+       call tets_box_planes_super( &
+         tessellate, & ! =0
+         tid, &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         mofdata, &
+         xtetlist_cen, &
+         nlist_alloc,nlist_cen,nmax, &
+         use_super_cell, &
+         cmofsten, &
+         sdim)
+       call get_cut_geom3D(xtetlist_vof, &
+         nlist_alloc,nlist_vof,nmax, &
+         volcut_vof,cencut_vof,sdim)
+       call get_cut_geom3D(xtetlist_cen, &
+         nlist_alloc,nlist_cen,nmax, &
+         volcut_cen,cencut_cen,sdim)
+
+       intercept(3)=-intercept(2)
+
+       call multi_cell_intersection( &
+        bfact,dx,xsten0,nhalf0, &
+        nslope(2*sdim+1), &
+        intercept(3), &
+        volume_cut, & !intent(out)
+        testcen(2*sdim+1), &    !intent(out)
+        facearea, &   !intent(out)
+        xtetlist_cen, & !intent(in)
+        nlist_cen, &
+        nlist_cen, &
+        nmax,sdim)
+
+       do dir=1,sdim
+        testcen(2*sdim+dir)=testcen(2*sdim+dir)-cencell_cen(dir)
+       enddo
+       call RT_transform_offset(refcentroid(2*sdim+1),cencell_cen, &
+               refcentroidT(2*sdim+1))
+       call RT_transform_offset(testcen(2*sdim+1),cencell_cen, &
+               testcenT(2*sdim+1))
+
+       vofcomp=(im_melt-1)*ngeom_recon+1
+       mofdata(vofcomp)=refvfrac(3)
+       do dir=1,sdim
+        mofdata(vofcomp+dir)=refcentroid(2*sdim+dir)
+       enddo
+       mofdata(vofcomp+sdim+1)=three ! order
+       do dir=1,sdim
+        mofdata(vofcomp+sdim+1+dir)=-nslope(sdim+dir)
+       enddo
+       mofdata(vofcomp+2*sdim+2)=-intercept(2)
 
       else
        print *,"growth_angle invalid: ",growth_angle
