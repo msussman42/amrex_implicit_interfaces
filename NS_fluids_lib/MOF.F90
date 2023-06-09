@@ -10965,10 +10965,19 @@ contains
        print *,"nhalf0 invalid"
        stop
       endif
-      if ((nlist_vof.ge.1).and.(nlist_cen.ge.1)) then
+
+      if ((nlist_vof.ge.1).and.(nlist_vof.le.nlist_alloc).and. &
+          (nlist_cen.ge.1).and.(nlist_cen.le.nlist_alloc)) then
        ! do nothing
       else
        print *,"nlist_vof or nlist_cen invalid"
+       stop
+      endif
+
+      if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
+       ! do nothing
+      else
+       print *,"nlist_alloc invalid"
        stop
       endif
 
@@ -13068,7 +13077,7 @@ contains
          angle_base, &
          fopt, &
          intopt, &
-         cenopt, &
+         cenopt, & !REAL_T, INTENT(out) :: testcen(nEQN)
          use_initial_guess, &
          fastflag,sdim)
 
