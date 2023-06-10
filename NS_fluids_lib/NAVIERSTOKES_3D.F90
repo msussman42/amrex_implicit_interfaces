@@ -13031,7 +13031,7 @@ END SUBROUTINE SIMP
        level_c,level_f, &
        bfact_c,bfact_f, &
        xlo_fine,dx, &
-       ncomp_curv, & !num_interfaces*CURVCOMP_NCOMP
+       ncomp_curv_total, & !num_interfaces*CURVCOMP_NCOMP
        crse,DIMS(crse), &
        fine,DIMS(fine), &
        lo,hi, &
@@ -13052,16 +13052,16 @@ END SUBROUTINE SIMP
       REAL_T, INTENT(in) :: dxf(SDIM)
       REAL_T, INTENT(in) :: xlo_fine(SDIM)
       REAL_T, INTENT(in) :: dx(SDIM)
-      INTEGER_T, INTENT(in) :: ncomp_curv !num_interfaces*CURVCOMP_NCOMP
+      INTEGER_T, INTENT(in) :: ncomp_curv_total !num_interfaces*CURVCOMP_NCOMP
       INTEGER_T, INTENT(in) :: DIMDEC(crse)
       INTEGER_T, INTENT(in) :: DIMDEC(fine)
       INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM) ! coarse grid dimensions
       INTEGER_T, INTENT(in) :: lof(SDIM),hif(SDIM) ! fine grid dimensions
       INTEGER_T growlo(3),growhi(3)
       INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp_curv)
+      REAL_T, INTENT(out),target :: crse(DIMV(crse),ncomp_curv_total)
       REAL_T, pointer :: crse_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp_curv)
+      REAL_T, INTENT(in),target :: fine(DIMV(fine),ncomp_curv_total)
       REAL_T, pointer :: fine_ptr(D_DECL(:,:,:),:)
       INTEGER_T ic,jc,kc
       INTEGER_T ifine,jfine,kfine
@@ -13071,15 +13071,15 @@ END SUBROUTINE SIMP
       REAL_T voltotal
       REAL_T volall
       REAL_T wt(SDIM)
-      REAL_T crse_value(ncomp_curv)
+      REAL_T crse_value(ncomp_curv_total)
       INTEGER_T fine_test
       INTEGER_T coarse_test
       REAL_T velwt(num_interfaces)
       INTEGER_T icurv
       INTEGER_T idx_dirside
 
-      if (ncomp_curv.ne.num_interfaces*CURVCOMP_NCOMP) then
-       print *,"ncomp_curv invalid35"
+      if (ncomp_curv_total.ne.num_interfaces*CURVCOMP_NCOMP) then
+       print *,"ncomp_curv_total invalid35"
        stop
       endif
 
@@ -13113,7 +13113,7 @@ END SUBROUTINE SIMP
       do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
 
-       do n=1,ncomp_curv
+       do n=1,ncomp_curv_total
         crse_value(n)=zero
        enddo
        do iten=1,num_interfaces
@@ -13195,10 +13195,24 @@ END SUBROUTINE SIMP
        endif
 
        do iten=1,num_interfaces
-        icurv=(iten-1)*NCOMP_CURV
+        icurv=(iten-1)*CURVCOMP_NCOMP
         ! dir x side  dir=1..sdim side=-1 or 1
         idx_dirside=icurv+CURVCOMP_DIRSIDE_FLAG+1 
-        coarse_test=NINT(crse_value(idx_dirside))
+
+        if ((idx_dirside.ge.1).and. &
+            (idx_dirside.le.num_interfaces*CURVCOMP_NCOMP)) then
+         coarse_test=NINT(crse_value(idx_dirside))
+        else
+         print *,"idx_dirside invalid: ",idx_dirside
+         print *,"iten=",iten
+         print *,"icurv=",icurv
+         print *,"CURVCOMP_DIRSIDE_FLAG ",CURVCOMP_DIRSIDE_FLAG
+         print *,"CURVCOMP_NCOMP=",CURVCOMP_NCOMP
+         print *,"ncomp_curv_total: ",ncomp_curv_total
+         print *,"num_interfaces=",num_interfaces
+         stop
+        endif
+
         if (coarse_test.eq.0) then
          if (velwt(iten).eq.zero) then
           ! do nothing
