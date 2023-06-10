@@ -11551,8 +11551,10 @@ contains
         uncaptured_volume_vof_local=zero
        endif
 
-       if (abs(volcut_vof-uncaptured_volume_vof_local).gt. &
+       if (abs(volcut_vof-uncaptured_volume_vof_local).le. &
            VOFTOL*volcell_vof) then
+        !do nothing
+       else
         print *,"volcut_vof invalid multi_rotatefunc"
         print *,"volcut_vof ",volcut_vof
         print *,"uncaptured_volume_vof_local ", &
@@ -11644,8 +11646,10 @@ contains
         uncaptured_volume_vof_local=zero
        endif
 
-       if (abs(volcut_vof-uncaptured_volume_vof_local).gt. &
+       if (abs(volcut_vof-uncaptured_volume_vof_local).le. &
            VOFTOL*volcell_vof) then
+        !do nothing
+       else
         print *,"volcut_vof invalid multi_rotatefunc"
         print *,"volcut_vof ",volcut_vof
         print *,"uncaptured_volume_vof_local ", &
@@ -11685,6 +11689,22 @@ contains
         mofdata(vofcomp+sdim+1+dir)=-nslope(sdim+dir)
        enddo
        mofdata(vofcomp+2*sdim+2)=-intercept(2)
+
+       uncaptured_volume_vof_local=uncaptured_volume_vof_local- &
+            refvfrac(3)*volcell_vof
+
+       if (abs(uncaptured_volume_vof_local).le.volcell_vof*VOFTOL) then
+        uncaptured_volume_vof_local=zero
+       endif
+
+       if (uncaptured_volume_vof_local.eq.zero) then
+        ! do nothing
+       else
+        print *,"uncaptured_volume_vof_local invalid multi_rotatefunc"
+        print *,"uncaptured_volume_vof_local ", &
+           uncaptured_volume_vof_local
+        stop
+       endif
 
       else
        print *,"growth_angle invalid: ",growth_angle
@@ -13888,7 +13908,9 @@ contains
        stop
       endif      
 
-      if (abs(volcut_vof-uncaptured_volume_vof).gt.VOFTOL*volcell_vof) then
+      if (abs(volcut_vof-uncaptured_volume_vof).le.VOFTOL*volcell_vof) then
+        !do nothing
+      else
         print *,"volcut_vof invalid individual mof"
         print *,"volcut_vof ",volcut_vof
         print *,"uncaptured_volume_vof ",uncaptured_volume_vof
