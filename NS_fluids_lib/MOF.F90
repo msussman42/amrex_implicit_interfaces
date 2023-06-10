@@ -15925,6 +15925,7 @@ contains
           print *,"imaterial=",imaterial
           print *,"voftest=",voftest(imaterial)
           print *,"vof_super=",vof_super(imaterial)
+          print *,"continuous_mof=",continuous_mof
           stop
          endif
         else if (continuous_mof.ge.1) then

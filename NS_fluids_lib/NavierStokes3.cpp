@@ -8244,8 +8244,20 @@ void NavierStokes::sanity_check_face_wt() {
   } else
    amrex::Error("mglib_max_ratio invalid");
 
- } else
+ } else {
+  std::cout << "max_face_wt[0][DD_COMP_FACE_WT] " <<
+    max_face_wt[0][DD_COMP_FACE_WT] << '\n';
+  std::cout << "max_face_wt[0][MERGE_COMP_FACE_WT] " <<
+    max_face_wt[0][MERGE_COMP_FACE_WT] << '\n';
+  for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
+   std::cout << "iwt,min_face_wt " << iwt << ' ' << 
+     min_face_wt[0][iwt] << '\n';
+   std::cout << "iwt,max_face_wt " << iwt << ' ' << 
+     max_face_wt[0][iwt] << '\n';
+  }
+
   amrex::Error("max_face_wt invalid");
+ }
 
 } // end subroutine sanity_check_face_wt
   

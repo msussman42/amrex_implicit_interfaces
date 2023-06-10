@@ -949,6 +949,9 @@ stop
           mofdata_super_vfrac(vofcomprecon)=vof_super(im)
          enddo
 
+          !mofdata_super: centroid super cell, vfrac regular cell
+          !mofdata_super_vfrac: centroid super cell, vfrac super cell
+
          call multimaterial_MOF( &
           bfact,dx, &
           xsten, &
@@ -1222,6 +1225,9 @@ stop
           enddo
          enddo ! im=1..num_materials
 
+          !mofdata_super: centroid regular cell, vfrac regular cell,
+          !               reconstruction super cell.
+
          call Box_volumeFAST(bfact,dx,xsten,nhalf, &
           volume_super,cen_super,SDIM)
 
@@ -1230,7 +1236,7 @@ stop
           bfact,dx, &
           xsten,nhalf, & ! phi = n dot (x-x0) + intercept
           mofdata_super, &
-          xsten,nhalf, & ! find volumes within xsten
+          xsten,nhalf, & ! find volumes within xsten (cell i,j,k)
           xtet, &        ! not within xtet
           multi_volume, &
           multi_cen, & !(sdim,num_materials) absolute frame of ref.
@@ -1274,6 +1280,7 @@ stop
 
            vofcomprecon=(im-1)*ngeom_recon+1
            vfrac_local(im)=mofdata_super(vofcomprecon)
+           vof_super(im)=vfrac_local(im)
 
            if ((vfrac_local(im).ge.0.01D0).and. &
                (vfrac_local(im).le.0.99D0).and. &

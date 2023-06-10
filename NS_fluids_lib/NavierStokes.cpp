@@ -23909,7 +23909,7 @@ void
 NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
 
  int scomp=0;
- int ncomp_curv=num_interfaces*CURVCOMP_NCOMP;
+ int ncomp_curv_total=num_interfaces*CURVCOMP_NCOMP;
 
  int finest_level=parent->finestLevel();
  if (level>=finest_level)
@@ -23926,7 +23926,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
   amrex::Error("nComp mismatch");
- if (S_crse.nComp()!=scomp+ncomp_curv)
+ if (S_crse.nComp()!=scomp+ncomp_curv_total)
   amrex::Error("S_crse.nComp() invalid level_avgDownCURV");
 
  BoxArray crse_S_fine_BA(fgrids.size());
@@ -23934,7 +23934,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp_curv,0,
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ncomp_curv_total,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
@@ -23991,7 +23991,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
    &level,&f_level,
    &bfact_c,&bfact_f,
    xlo_fine,dx,
-   &ncomp_curv,
+   &ncomp_curv_total,
    c_dat,ARLIM(clo),ARLIM(chi),
    f_dat,ARLIM(flo),ARLIM(fhi),
    ovlo,ovhi,
@@ -24000,7 +24000,7 @@ NavierStokes::level_avgDownCURV(MultiFab& S_crse,MultiFab& S_fine) {
  }// mfi
 } //omp
  ns_reconcile_d_num(LOOP_AVGDOWN_CURV,"level_avgDownCURV");
- S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp_curv);
+ S_crse.ParallelCopy(crse_S_fine,0,scomp,ncomp_curv_total);
  ParallelDescriptor::Barrier();
 
 } // subroutine level_avgDownCURV
