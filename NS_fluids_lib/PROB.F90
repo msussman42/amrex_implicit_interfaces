@@ -2445,8 +2445,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine general_hydrostatic_pressure_density( &
         i,j,k,level, &
         angular_velocity, &!intent(in) general_hydrostatic_pressure_density
-        centrifugal_force_factor, &!intent(in) 
-                                  &!general_hydrostatic_pressure_density
+        centrifugal_force_factor, &!intent(in) "     "
         dt, &
         rho_hydrostatic, &
         pres_hydrostatic, &
