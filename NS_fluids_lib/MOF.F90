@@ -3038,7 +3038,8 @@ end subroutine intersection_volume_and_map
         !   n_GA_secondary_mat_candidate=T^{-1} (  R n2d
         !                              0     )
         !   The sign is chosen so that (3rd component)
-        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original has the same sign as
+        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original 
+        !   has the same sign as
         !   T n_GA_primary_mat_candidate x T n_GA_secondary_mat_candidate 
 
        if ((nMAT_OPT.eq.3).and. &
@@ -3190,8 +3191,10 @@ end subroutine intersection_volume_and_map
          !n_base=(1 0 0) if angle=0
         do dir2=1,3
          n_trial(dir)=n_trial(dir)+T(dir2,dir)*n_base(dir2)
-         Tn_GA_secondary_mat(dir)=Tn_GA_secondary_mat(dir)+T(dir,dir2)*n_GA_secondary_mat(dir2)
-         Tn_GA_primary_mat_test(dir)=Tn_GA_primary_mat_test(dir)+T(dir,dir2)*n_GA_primary_mat(dir2)
+         Tn_GA_secondary_mat(dir)=Tn_GA_secondary_mat(dir)+ &
+                   T(dir,dir2)*n_GA_secondary_mat(dir2)
+         Tn_GA_primary_mat_test(dir)=Tn_GA_primary_mat_test(dir)+ &
+                   T(dir,dir2)*n_GA_primary_mat(dir2)
         enddo
        enddo
        Tn_GA_primary_mat(1)=one
@@ -3218,7 +3221,7 @@ end subroutine intersection_volume_and_map
        if ((mag.ge.zero).and.(mag.le.VOFTOL)) then
         ! do nothing
        else
-        print *,"Tn_CL failed sanity"
+        print *,"Tn_CL failed sanity (expecting first two comps=0) "
         stop
        endif
         
@@ -3238,7 +3241,7 @@ end subroutine intersection_volume_and_map
        if ((mag.ge.zero).and.(mag.le.VOFTOL)) then
         ! do nothing
        else
-        print *,"n_CL_base failed sanity"
+        print *,"expecting first two comps of n_CL_base =0"
         stop
        endif
 
@@ -3282,7 +3285,8 @@ end subroutine intersection_volume_and_map
        do dir=1,3
         n_GA_secondary_mat_trial(dir)=zero
         do dir2=1,3
-         n_GA_secondary_mat_trial(dir)=n_GA_secondary_mat_trial(dir)+T(dir2,dir)*n_GA_secondary_mat_base(dir2)
+         n_GA_secondary_mat_trial(dir)=n_GA_secondary_mat_trial(dir)+ &
+            T(dir2,dir)*n_GA_secondary_mat_base(dir2)
         enddo
        enddo
        do dir=1,sdim
@@ -10890,6 +10894,7 @@ contains
       INTEGER_T, INTENT(in) :: nlist_alloc
 
       REAL_T, INTENT(in) :: uncaptured_volume_vof
+      REAL_T :: uncaptured_volume_vof_local
 
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
@@ -10955,6 +10960,8 @@ contains
       INTEGER_T im
       INTEGER_T vofcomp
       INTEGER_T, PARAMETER :: use_super_cell=1
+      REAL_T :: cencut_vof(sdim)
+      REAL_T :: volcut_vof
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -11030,7 +11037,8 @@ contains
         !   n_GA_secondary_mat_candidate=T^{-1} (  R n2d
         !                              0     )
         !   The sign is chosen so that (3rd component)
-        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original has the same sign as
+        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original 
+        !   has the same sign as
         !   T n_GA_primary_mat_candidate x T n_GA_secondary_mat_candidate 
 
        if ((nMAT_OPT.eq.3).and. &
@@ -11084,10 +11092,18 @@ contains
        stop
       endif
 
+      uncaptured_volume_vof_local=uncaptured_volume_vof
+
       if (uncaptured_volume_vof.gt.zero) then
        ! do nothing
       else
        print *,"uncaptured_volume_vof invalid"
+       stop
+      endif
+      if (uncaptured_volume_vof_local.gt.zero) then
+       ! do nothing
+      else
+       print *,"uncaptured_volume_vof_local invalid"
        stop
       endif
 
@@ -11508,7 +11524,7 @@ contains
          mofdata, &
          xtetlist_vof, &
          nlist_alloc,nlist_vof,nmax, &
-         use_super_cell, &
+         use_super_cell, & !use_super_cell=1
          cmofsten, &
          sdim)
 
@@ -11523,6 +11539,26 @@ contains
          use_super_cell, &
          cmofsten, &
          sdim)
+
+       call get_cut_geom3D(xtetlist_vof, &
+         nlist_alloc,nlist_vof,nmax, &
+         volcut_vof,cencut_vof,sdim)
+
+       uncaptured_volume_vof_local=uncaptured_volume_vof_local- &
+            refvfrac(1)*volcell_vof
+
+       if (abs(uncaptured_volume_vof_local).le.volcell_vof*VOFTOL) then
+        uncaptured_volume_vof_local=zero
+       endif
+
+       if (abs(volcut_vof-uncaptured_volume_vof_local).gt. &
+           VOFTOL*volcell_vof) then
+        print *,"volcut_vof invalid multi_rotatefunc"
+        print *,"volcut_vof ",volcut_vof
+        print *,"uncaptured_volume_vof_local ", &
+           uncaptured_volume_vof_local
+        stop
+       endif
 
        call multi_find_intercept( &
         nMAT_OPT, & ! 1 or 3
@@ -11597,6 +11633,26 @@ contains
          cmofsten, &
          sdim)
 
+       call get_cut_geom3D(xtetlist_vof, &
+         nlist_alloc,nlist_vof,nmax, &
+         volcut_vof,cencut_vof,sdim)
+
+       uncaptured_volume_vof_local=uncaptured_volume_vof_local- &
+            refvfrac(2)*volcell_vof
+
+       if (abs(uncaptured_volume_vof_local).le.volcell_vof*VOFTOL) then
+        uncaptured_volume_vof_local=zero
+       endif
+
+       if (abs(volcut_vof-uncaptured_volume_vof_local).gt. &
+           VOFTOL*volcell_vof) then
+        print *,"volcut_vof invalid multi_rotatefunc"
+        print *,"volcut_vof ",volcut_vof
+        print *,"uncaptured_volume_vof_local ", &
+           uncaptured_volume_vof_local
+        stop
+       endif
+
        intercept(3)=-intercept(2)
 
        call multi_cell_intersection( &
@@ -11634,7 +11690,6 @@ contains
        print *,"growth_angle invalid: ",growth_angle
        stop
       endif
-
 
       do dir=1,nEQN
        ff(dir)=(refcentroidT(dir)-testcenT(dir))
@@ -12036,7 +12091,7 @@ contains
       INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
       INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
 
-      REAL_T, INTENT(inout) :: uncaptured_volume_vof
+      REAL_T, INTENT(in) :: uncaptured_volume_vof
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
       REAL_T, INTENT(in) :: growth_angle
       INTEGER_T, INTENT(in) :: im_GA_primary_mat
@@ -14361,7 +14416,7 @@ contains
         multi_centroidA(im_GA_primary_mat,dir)=centroidA(dir)
        enddo 
        uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
-       if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
+       if (abs(uncaptured_volume_vof).le.volcell_vof*VOFTOL) then
         uncaptured_volume_vof=zero
        endif
 
@@ -14373,7 +14428,7 @@ contains
         multi_centroidA(im_GA_secondary_mat,dir)=centroidA(sdim+dir)
        enddo 
        uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(2)*volcell_vof
-       if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
+       if (abs(uncaptured_volume_vof).le.volcell_vof*VOFTOL) then
         uncaptured_volume_vof=zero
        endif
 
@@ -14385,8 +14440,14 @@ contains
         multi_centroidA(im_GA_tertiary_mat,dir)=centroidA(2*sdim+dir)
        enddo 
        uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(3)*volcell_vof
-       if (uncaptured_volume_vof.le.volcell_vof*VOFTOL) then
+       if (abs(uncaptured_volume_vof).le.volcell_vof*VOFTOL) then
         uncaptured_volume_vof=zero
+       endif
+       if (uncaptured_volume_vof.eq.zero) then
+        ! do nothing
+       else
+        print *,"uncaptured_volume_vof invalid"
+        stop
        endif
 
       else
