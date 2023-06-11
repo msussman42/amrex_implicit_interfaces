@@ -107,12 +107,15 @@ stop
 !          | u    v    w   | 
 ! u_t=-p_r/rho0 + 2 Omega v-u* u_r - v *u_phi/r - w *u_z
 ! v_t=-p_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z
-! w_t=-p_z/rho0+g*(A*r+B*z)-u*w_r-v*w_phi/r-w*w_z
+! w_t=-p_z/rho0+g*beta*(A*r+B*z)-u*w_r-v*w_phi/r-w*w_z
 ! T_t=-u*T_r-v T_phi - w T_z
 ! p_r = rho0 * (2 Omega \Gamma z)  p=rho0 * (2 Omega \Gamma z * r) + f(z)
-! p_z = rho0 * g * (A*r+B*z)       p=rho0*A*r*z*g+rho0*g*B*z^2/2+h(r)
-! 2 Omega \Gamma = A g  \Gamma= A g/(2 Omega) = -A g / K
-
+! p_z = rho0 * g * beta * (A*r+B*z)       
+!              p=rho0*beta*A*r*z*g+rho0*beta*g*B*z^2/2+h(r)
+! 2 Omega \Gamma = A g beta 
+! \Gamma= A g beta/(2 Omega) = -A beta g / K
+! h(r)=0
+! f(z)=rho0*g*beta*B*z^2/2
 
        subroutine fort_hoopimplicit( &
          override_density, &
@@ -501,7 +504,7 @@ stop
             !Du/Dt=-grad p/rho0+g zhat + g zhat beta (T-T0)+
             !  Omega^{2} r rhat +
             !  Omega^{2} r rhat beta (T-T0)
-            !  (beta<0 here)
+            !  (beta<0)
 
            else if (override_density(im).eq.2) then 
 
