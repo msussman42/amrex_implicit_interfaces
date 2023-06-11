@@ -99,6 +99,8 @@ stop
 ! No coupling terms.
 ! Diagonal terms not multiplied by 2.
 ! From Lewis and Nagata (ignoring viscosity) and Eady.
+! (Coriolis force is approximated as 2 \Omega rho0 ez x u NOT 
+!                                    2 \Omega rho rz x u)
 ! v=\Gamma z   u=0  w=0
 ! T=A r + B z + T0
 ! u_r + u/r + v_phi + w_z = 0
@@ -109,13 +111,22 @@ stop
 ! v_t=-p_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z
 ! w_t=-p_z/rho0+g*beta*(A*r+B*z)-u*w_r-v*w_phi/r-w*w_z
 ! T_t=-u*T_r-v T_phi - w T_z
-! p_r = rho0 * (2 Omega \Gamma z)  p=rho0 * (2 Omega \Gamma z * r) + f(z)
+! p_r = rho0 * (2 Omega \Gamma z)  
+!              p=rho0 * (2 Omega \Gamma z * r) + f(z)
 ! p_z = rho0 * g * beta * (A*r+B*z)       
 !              p=rho0*beta*A*r*z*g+rho0*beta*g*B*z^2/2+h(r)
 ! 2 Omega \Gamma = A g beta 
 ! \Gamma= A g beta/(2 Omega) = -A beta g / K
 ! h(r)=0
 ! f(z)=rho0*g*beta*B*z^2/2
+!
+! For the differentially heated rotating annulus problem, a user defined
+! function for T0 (appearing in the Boussinesq term (T-T0)) and U0
+! ( appearing in the Coriolis force ez x (U-U0) ) must be defined:
+! T0=fort_tempconst + Ar + Bz
+! U0=(0, \Gamma z, 0)    \Gamma=A g beta / (2 \Omega)
+! sanity check verifies \Gamma=A g beta/ (2 \Omega) and 
+! override_density(im_liquid)=2
 
        subroutine fort_hoopimplicit( &
          override_density, &

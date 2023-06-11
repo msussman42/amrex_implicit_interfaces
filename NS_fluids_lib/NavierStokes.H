@@ -1189,7 +1189,7 @@ void apply_pressure_grad(
 
     void remove_FACE_WEIGHT_vars();
 
-    void sanity_check_face_wt();
+    void sanity_check_face_wt(int project_option);
 
     void allocate_FACE_WEIGHT(
       int nsolve,
