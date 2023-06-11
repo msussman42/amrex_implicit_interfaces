@@ -3851,7 +3851,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        //   e. viscoelastic force
        //   f. FSI force
        //   g. momentum force
-       //   h. Marangoni force and conservative surface tension force
+       //   h. Marangoni force 
        //
        veldiffuseALL();  
 
@@ -8214,7 +8214,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
 } // end subroutine allocate_FACE_WEIGHT 
 
-void NavierStokes::sanity_check_face_wt() {
+void NavierStokes::sanity_check_face_wt(int project_option) {
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
@@ -8242,32 +8242,41 @@ void NavierStokes::sanity_check_face_wt() {
 
  } //tid=0..nthreads-1
 
- if ((max_face_wt[0][DD_COMP_FACE_WT]>0.0)&&
-     (max_face_wt[0][MERGE_COMP_FACE_WT]>0.0)&&
-     (max_face_wt[0][MERGE_COMP_FACE_WT]<=
-      2.0*max_face_wt[0][DD_COMP_FACE_WT])) {
+ if (project_option_singular_possible(project_option)==1) {
 
-  if (mglib_max_ratio>1.0) {
+  if ((max_face_wt[0][DD_COMP_FACE_WT]>0.0)&&
+      (max_face_wt[0][MERGE_COMP_FACE_WT]>0.0)&&
+      (max_face_wt[0][MERGE_COMP_FACE_WT]<=
+       2.0*max_face_wt[0][DD_COMP_FACE_WT])) {
 
-   min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
+   if (mglib_max_ratio>1.0) {
 
-  } else
-   amrex::Error("mglib_max_ratio invalid");
+    min_interior_coeff=max_face_wt[0][MERGE_COMP_FACE_WT]/mglib_max_ratio;
 
- } else {
-  std::cout << "max_face_wt[0][DD_COMP_FACE_WT] " <<
+   } else
+    amrex::Error("mglib_max_ratio invalid");
+
+  } else {
+   std::cout << "max_face_wt[0][DD_COMP_FACE_WT] " <<
     max_face_wt[0][DD_COMP_FACE_WT] << '\n';
-  std::cout << "max_face_wt[0][MERGE_COMP_FACE_WT] " <<
+   std::cout << "max_face_wt[0][MERGE_COMP_FACE_WT] " <<
     max_face_wt[0][MERGE_COMP_FACE_WT] << '\n';
-  for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
-   std::cout << "iwt,min_face_wt " << iwt << ' ' << 
+   for (int iwt=0;iwt<NCOMP_FACE_WT;iwt++) {
+    std::cout << "iwt,min_face_wt " << iwt << ' ' << 
      min_face_wt[0][iwt] << '\n';
-   std::cout << "iwt,max_face_wt " << iwt << ' ' << 
+    std::cout << "iwt,max_face_wt " << iwt << ' ' << 
      max_face_wt[0][iwt] << '\n';
+   }
+
+   amrex::Error("max_face_wt invalid");
   }
 
-  amrex::Error("max_face_wt invalid");
- }
+ } else if (project_option_singular_possible(project_option)==0) {
+
+  min_interior_coeff=0.0;
+
+ } else
+  amrex::Error("project_option_singular_possible invalid");
 
 } // end subroutine sanity_check_face_wt
   
@@ -10388,7 +10397,7 @@ void NavierStokes::multiphase_project(int project_option) {
  } else
   amrex::Error("maxden invalid");
 
- sanity_check_face_wt();
+ sanity_check_face_wt(project_option);
 
  int finest_total=0;
 
@@ -12146,7 +12155,7 @@ void NavierStokes::diffusion_heatingALL(
   ns_level.allocate_FACE_WEIGHT(nsolve,SOLVETYPE_VISC,face_weight_op);
  }
 
- sanity_check_face_wt();
+ sanity_check_face_wt(SOLVETYPE_VISC);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12459,14 +12468,14 @@ void NavierStokes::veldiffuseALL() {
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
- int convert_temperature=0;
- int convert_species=0;
+ int convert_temperature=1;
+ int convert_species=1;
 
  for (int im=0;im<num_materials;im++) {
    if (heatviscconst[im]>0.0) {
     convert_temperature=1;
    } else if (heatviscconst[im]==0.0) {
-    // do nothing
+    convert_temperature=1;
    } else
     amrex::Error("heatviscconst invalid");
  } // im 
@@ -12475,7 +12484,7 @@ void NavierStokes::veldiffuseALL() {
    if (speciesviscconst[im]>0.0) {
     convert_species=1;
    } else if (speciesviscconst[im]==0.0) {
-    // do nothing
+    convert_species=1;
    } else
     amrex::Error("speciesviscconst invalid");
  } // im=0..num_materials*num_species_var-1 

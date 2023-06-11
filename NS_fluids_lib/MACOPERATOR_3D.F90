@@ -1015,7 +1015,8 @@ stop
        return
        end subroutine fort_dividedx
 
-
+        ! fort_regularize_bx is called from MacProj.cpp when:
+        ! (project_option_singular_possible(project_option)==1) 
        subroutine fort_regularize_bx( &
          nsolve, &
          bx,DIMS(bx), &

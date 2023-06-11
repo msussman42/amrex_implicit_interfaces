@@ -622,7 +622,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   // dest,soucre,scomp,dcomp,ncomp,ngrow
  Copy_localMF(ONES_GROW_MF,ONES_MF,0,0,1,0);
 
- if ((min_interior_coeff>0.0)&&
+ if ((min_interior_coeff>=0.0)&&
      (mglib_max_ratio>1.0)) {
   //do nothing
  } else
@@ -2027,7 +2027,7 @@ void NavierStokes::update_SEM_forcesALL(int project_option,
    ns_level.allocate_pressure_work_vars(nsolve,project_option);
   } // ilev=finest_level ... level
 
-  sanity_check_face_wt();
+  sanity_check_face_wt(project_option);
 
    // create_hierarchy=-1,0,1
   int create_hierarchy=-1;
