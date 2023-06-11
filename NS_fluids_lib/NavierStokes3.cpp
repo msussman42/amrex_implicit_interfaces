@@ -3833,9 +3833,19 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        project_to_rigid_velocityALL();
 
        // 4. Backwards Euler building block: VISCOSITY, thermal diffusion,
-       //    species diffusion, conservative surface tension force.
+       //    species diffusion
        //   a. hoop stress
-       //   b. boussinesq approximation
+       //   b. boussinesq approximation:
+       //      rho Du/Dt=-grad p + rho g zhat +
+       //                 rho Omega^2 r rhat
+       //      rho0 Du/Dt=-grad p + rho g zhat +
+       //                 rho Omega^2 r rhat
+       //      rho/rho0=(1+beta(T-T0))
+       //      Du/Dt=-grad p/rho0+g zhat + g zhat beta (T-T0)+
+       //            Omega^{2} r rhat +
+       //            Omega^{2} r rhat beta (T-T0)
+       //      (beta<0 here)
+       //      
        //   c. coriolis effect
        //   d. viscous force
        //   e. viscoelastic force
