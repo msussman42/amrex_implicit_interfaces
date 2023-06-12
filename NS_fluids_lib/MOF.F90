@@ -9885,7 +9885,7 @@ contains
        intercept, &
        continuous_mof, &
        cmofsten, &
-       xtetlist, &
+       xtetlist, & !intent(in)
        nlist_alloc, &
        nlist, &
        nmax, &
@@ -10005,7 +10005,9 @@ contains
       endif
 
        ! intercept scaled directly
-       ! no scaling if levelrz==COORDSYS_RZ or levelrz==COORDSYS_CYLINDRICAL
+       ! no scaling if levelrz==COORDSYS_RZ or 
+       !               levelrz==COORDSYS_CYLINDRICAL or
+       !               nMAT_OPT=3
       call scale_VOF_variables( &
        nMAT_OPT, & ! 1 or 3
        nDOF, & ! sdim-1  or 1
@@ -10935,7 +10937,7 @@ contains
       REAL_T, INTENT(out) :: ff(nEQN) 
       REAL_T volume_cut,facearea
       INTEGER_T dir
-      REAL_T nslope(sdim)
+      REAL_T :: nslope(nEQN)
       REAL_T, INTENT(inout) :: intercept(nMAT_OPT)
 
       INTEGER_T i1,j1,k1
@@ -11191,7 +11193,7 @@ contains
         intercept(1), & ! intent(inout)
         continuous_mof, &
         cmofsten, &
-        xtetlist_vof, &
+        xtetlist_vof, & !intent(in)
         nlist_vof, &
         nlist_vof, &
         nmax, &
@@ -11210,8 +11212,10 @@ contains
           bfact,dx,xsten0,nhalf0, &
           nslope, &
           intercept(1), &
-          volume_cut,testcen,facearea, &
-          xtetlist_vof, &
+          volume_cut, & !intent(out)
+          testcen, & !intent(out)
+          facearea, & !intent(out)
+          xtetlist_vof, & !intent(in)
           nlist_vof, &
           nlist_vof, &
           nmax,sdim)
@@ -11223,8 +11227,10 @@ contains
           bfact,dx,xsten0,nhalf0, &
           nslope, &
           intercept(1), &
-          volume_cut,testcen,facearea, &
-          xtetlist_cen, &
+          volume_cut, & !intent(out)
+          testcen, & !intent(out)
+          facearea, & !intent(out)
+          xtetlist_cen, & !intent(in)
           nlist_cen, &
           nlist_cen, &
           nmax,sdim)
@@ -11536,7 +11542,7 @@ contains
          mofdata, &
          xtetlist_cen, &
          nlist_alloc,nlist_cen,nmax, &
-         use_super_cell, &
+         use_super_cell, & !use_super_cell=1
          cmofsten, &
          sdim)
 
@@ -11555,10 +11561,42 @@ contains
            VOFTOL*volcell_vof) then
         !do nothing
        else
-        print *,"volcut_vof invalid multi_rotatefunc"
+        print *,"volcut_vof invalid multi_rotatefunc(1)"
         print *,"volcut_vof ",volcut_vof
         print *,"uncaptured_volume_vof_local ", &
            uncaptured_volume_vof_local
+
+        do im=1,nMAT_OPT
+         print *,"i,refvfrac(i) ",im,refvfrac(im)
+        enddo
+        do dir=1,nEQN
+         print *,"i,refcentroid(i) ",dir,refcentroid(dir)
+        enddo
+        do dir=1,1
+         print *,"i,intercept(i) ",dir,intercept(dir)
+        enddo
+        do dir=1,nEQN
+         print *,"i,nslope(i) ",dir,nslope(dir)
+        enddo
+
+        do dir=1,nEQN
+         print *,"i,npredict(i) ",dir,npredict(dir)
+        enddo
+        print *,"angle=",angle(1)
+
+        print *,"volcell_vof ",volcell_vof
+        print *,"volcell_cen ",volcell_cen
+        print *,"volume_cut ",volume_cut
+        do dir=1,sdim
+         print *,"dir,dx(dir) ",dir,dx(dir)
+         print *,"dir,testcen(dir) ",dir,testcen(dir)
+         print *,"dir,cencell_vof(dir) ",dir,cencell_vof(dir)
+         print *,"dir,cencell_cen(dir) ",dir,cencell_cen(dir)
+        enddo
+        print *,"im_GA_primary_mat ",im_GA_primary_mat
+        print *,"im_GA_secondary_mat ",im_GA_secondary_mat
+        print *,"im_GA_tertiary_mat ",im_GA_tertiary_mat
+
         stop
        endif
 
@@ -11571,7 +11609,7 @@ contains
         intercept(2), & ! intent(inout)
         continuous_mof, &
         cmofsten, &
-        xtetlist_vof, &
+        xtetlist_vof, & !intent(in)
         nlist_vof, &
         nlist_vof, &
         nmax, &
@@ -11650,10 +11688,37 @@ contains
            VOFTOL*volcell_vof) then
         !do nothing
        else
-        print *,"volcut_vof invalid multi_rotatefunc"
+        print *,"volcut_vof invalid multi_rotatefunc(2)"
         print *,"volcut_vof ",volcut_vof
         print *,"uncaptured_volume_vof_local ", &
            uncaptured_volume_vof_local
+
+        do im=1,nMAT_OPT
+         print *,"i,refvfrac(i) ",im,refvfrac(im)
+        enddo
+        do dir=1,nEQN
+         print *,"i,refcentroid(i) ",dir,refcentroid(dir)
+        enddo
+        do dir=1,2
+         print *,"i,intercept(i) ",dir,intercept(dir)
+        enddo
+        do dir=1,nEQN
+         print *,"i,nslope(i) ",dir,nslope(dir)
+        enddo
+
+        do dir=1,nEQN
+         print *,"i,npredict(i) ",dir,npredict(dir)
+        enddo
+        print *,"angle=",angle(1)
+
+        print *,"volcell_vof ",volcell_vof
+        do dir=1,sdim
+         print *,"dir,dx(dir) ",dir,dx(dir)
+        enddo
+        print *,"im_GA_primary_mat ",im_GA_primary_mat
+        print *,"im_GA_secondary_mat ",im_GA_secondary_mat
+        print *,"im_GA_tertiary_mat ",im_GA_tertiary_mat
+
         stop
        endif
 
@@ -13351,7 +13416,7 @@ contains
         intercept(1), &
         continuous_mof, &
         cmofsten, &
-        local_xtetlist_vof, &
+        local_xtetlist_vof, & !intent(in)
         local_nlist_vof, &
         local_nlist_vof, &
         nmax, &
@@ -13846,12 +13911,31 @@ contains
          do im=1,num_materials
           vofcomp=(im-1)*(2*sdim+3)+1
           test_order=NINT(mofdata(vofcomp+sdim+1))
+          
           if (((im.eq.im_GA_primary_mat).and.(test_order.eq.1)).or. &
               ((im.eq.im_GA_secondary_mat).and.(test_order.eq.2)).or. &
               ((im.eq.im_GA_tertiary_mat).and.(test_order.eq.3))) then
            !do nothing
+          else if ((is_rigid_local(im).eq.1).and. &
+                   (test_order.ge.0).and. &
+                   (test_order.le.num_materials+1)) then
+           ! do nothing
+          else if ((is_rigid_local(im).eq.0).and. &
+                   (im.ne.im_GA_primary_mat).and. &
+                   (im.ne.im_GA_secondary_mat).and. &
+                   (im.ne.im_GA_tertiary_mat).and. &
+                   (im.ge.1).and. &
+                   (im.le.num_materials).and. &
+                   (test_order.eq.0)) then
+           ! do nothing
           else
            print *,"input orders incorrect"
+           print *,"im= ",im
+           print *,"is_rigid_local(im) ",is_rigid_local(im)
+           print *,"test_order= ",test_order
+           print *,"im_GA_primary_mat= ",im_GA_primary_mat
+           print *,"im_GA_secondary_mat= ",im_GA_secondary_mat
+           print *,"im_GA_tertiary_mat= ",im_GA_tertiary_mat
            stop
           endif
           mofdata(vofcomp+sdim+1)=zero
