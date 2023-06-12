@@ -6,6 +6,8 @@
       real*8 rad,theta1,theta2,sin1,sin2,d
       real*8 rtheta,e0
       real*8 gamma1,gamma2,gamma3
+      real*8 pos1(3),pos2(3),distpos1pos2
+      integer dir
       integer select
 
       select=1
@@ -62,6 +64,21 @@
       print *,"Rtheta=",rtheta
       print *,"d=     ",d
       print *,"e0=    ",e0
-  
+
+      pos1(1)=0.2745d0
+      pos1(2)=0.5012d0
+      pos1(3)=0.0d0
+      pos2(1)=0.7256d0
+      pos2(2)=0.508d0
+      pos2(3)=0.0d0
+      distpos1pos2=0.0d0
+      do dir=1,3
+       distpos1pos2=distpos1pos2+(pos1(dir)-pos2(dir))**2
+      enddo
+      distpos1pos2=sqrt(distpos1pos2)
+      print *,"pos1 ",pos1(1),pos1(2),pos1(3)
+      print *,"pos2 ",pos2(1),pos2(2),pos2(3)
+      print *,"distpos1pos2 ",distpos1pos2
+
       end
 
