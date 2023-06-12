@@ -160,8 +160,8 @@ stop
       INTEGER_T, parameter :: nhalf=3
       REAL_T xsten(-nhalf:nhalf,SDIM)
       REAL_T xstenbox(-1:1,SDIM)
-      INTEGER_T num_materials_in_cell
-      INTEGER_T num_materials_in_stencil
+      INTEGER_T num_fluid_materials_in_cell
+      INTEGER_T num_fluid_materials_in_stencil
       REAL_T volume_super
       REAL_T volume_super_mofdata
       REAL_T volsten
@@ -547,16 +547,16 @@ stop
         enddo
         enddo  ! i1,j1,k1  = -1,1
 
-        num_materials_in_cell=0
-        num_materials_in_stencil=0
+        num_fluid_materials_in_cell=0
+        num_fluid_materials_in_stencil=0
         do im=1,num_materials
          if (is_rigid(im).eq.0) then
            ! voflist_stencil(im)=max_{3x3x3 stencil} F(im,stencil)
           if (voflist_stencil(im).gt.VOFTOL) then
-           num_materials_in_stencil=num_materials_in_stencil+1
+           num_fluid_materials_in_stencil=num_fluid_materials_in_stencil+1
           endif
           if (voflist_center(im).gt.VOFTOL) then
-           num_materials_in_cell=num_materials_in_cell+1
+           num_fluid_materials_in_cell=num_fluid_materials_in_cell+1
           endif
          else if (is_rigid(im).eq.1) then
           ! do nothing
@@ -566,8 +566,11 @@ stop
          endif
         enddo ! im=1..num_materials
  
-        if (num_materials_in_cell.gt.num_materials_in_stencil) then
-         print *,"num_materials_in_cell invalid"
+        if (num_fluid_materials_in_cell.gt.num_fluid_materials_in_stencil) then
+         print *,"num_fluid_materials_in_cell invalid"
+         print *,"num_fluid_materials_in_cell: ",num_fluid_materials_in_cell
+         print *,"num_fluid_materials_in_stencil: ", &
+           num_fluid_materials_in_stencil
          stop
         endif
 
@@ -588,15 +591,15 @@ stop
         else if ((level.eq.finest_level).and. &
                  (level.eq.decision_tree_finest_level)) then
 
-         if (num_materials_in_cell.eq.1) then
+         if (num_fluid_materials_in_cell.eq.1) then
           continuous_mof_parm=0
-         else if ((num_materials_in_cell.ge.2).and. &
-                  (num_materials_in_cell.le.num_materials)) then
+         else if ((num_fluid_materials_in_cell.ge.2).and. &
+                  (num_fluid_materials_in_cell.le.num_materials)) then
 
           continuous_mof_parm=continuous_mof
 
          else
-          print *,"num_materials_in_cell invalid"
+          print *,"num_fluid_materials_in_cell invalid"
           stop
          endif
 
@@ -877,8 +880,8 @@ stop
         endif
 
         if ((continuous_mof_parm.eq.0).or. &
-            (num_materials_in_stencil.eq.1).or. &
-            (num_materials_in_stencil.eq.2)) then
+            (num_fluid_materials_in_stencil.eq.1).or. &
+            (num_fluid_materials_in_stencil.eq.2)) then
 
          call multimaterial_MOF( &
           bfact,dx, &
@@ -937,7 +940,7 @@ stop
          !    then replace center cell centroids with those from step 3.
          ! 5. Do a standard MOF reconstruction.
         else if ((continuous_mof_parm.ge.1).and. &
-                 (num_materials_in_stencil.ge.3)) then
+                 (num_fluid_materials_in_stencil.ge.3)) then
 
          continuous_mof_parm_super=-1
 
@@ -983,7 +986,7 @@ stop
          enddo  ! im=1..num_materials
 
           ! correct triple point angle
-         if (num_materials_in_stencil.eq.3) then
+         if (num_fluid_materials_in_stencil.eq.3) then
 
           im_primary=0
           im_secondary=0
@@ -1205,11 +1208,12 @@ stop
            stop
           endif
 
-         else if ((num_materials_in_stencil.gt.3).and. &
-                  (num_materials_in_stencil.le.num_materials)) then
+         else if ((num_fluid_materials_in_stencil.gt.3).and. &
+                  (num_fluid_materials_in_stencil.le.num_materials)) then
           ! do nothing
          else
-          print *,"num_materials_in_stencil invalid:",num_materials_in_stencil
+          print *,"num_fluid_materials_in_stencil invalid:", &
+            num_fluid_materials_in_stencil
           stop
          endif
 
@@ -1345,7 +1349,7 @@ stop
          enddo  ! im=1..num_materials
  
         else
-         print *,"continuous_mof_parm or num_materials_in_stencil bad"
+         print *,"continuous_mof_parm or num_fluid_materials_in_stencil bad"
          stop
         endif
 
