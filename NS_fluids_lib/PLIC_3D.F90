@@ -1535,7 +1535,7 @@ stop
       INTEGER_T, INTENT(inout) :: cpp_training_hi(SDIM)
       INTEGER_T, INTENT(in) :: i,j,k
       INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: continuous_mof
+      INTEGER_T, INTENT(in) :: continuous_mof ! =0 or 1
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
@@ -1571,7 +1571,6 @@ stop
       REAL_T :: centroid_null(SDIM)
       REAL_T :: mag_centroid
       INTEGER_T :: critical_material
-      INTEGER_T :: fastflag
 
       REAL_T :: DT_cost,NN_cost,RF_cost
       REAL_T :: angle_exact_db_data(SDIM-1)
@@ -1777,7 +1776,7 @@ stop
           call angle_init_from_angle_recon_and_F( &
            bfact,dx,xsten,nhalf, &
            refvfrac, & 
-           continuous_mof, & 
+           continuous_mof, &  !=0 or 1
            cmofsten, & 
            geom_xtetlist(1,1,1,tid+1), &
            nmax, &
@@ -1835,7 +1834,6 @@ stop
            centroid_null(dir)=zero
           enddo
           grid_level=-1
-          fastflag=1
           critical_material=1
           call find_predict_slope( &
            npredict, & ! INTENT(out)
@@ -2165,7 +2163,6 @@ stop
       REAL_T :: centroid_null(SDIM)
       REAL_T :: mag_centroid
       INTEGER_T :: critical_material
-      INTEGER_T :: fastflag
 
       REAL_T :: DT_cost
       REAL_T :: angle_exact_db_data(SDIM-1)
@@ -2402,7 +2399,6 @@ stop
             centroid_null(dir)=zero
            enddo
            grid_level=-1
-           fastflag=1
            critical_material=1
            call find_predict_slope( &
             npredict, & ! INTENT(out)

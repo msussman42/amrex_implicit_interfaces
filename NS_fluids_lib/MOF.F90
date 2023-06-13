@@ -6393,7 +6393,8 @@ end subroutine volume_sanity_check
 
 
 ! get volume/centroid of a triangulated region
-      subroutine get_cut_geom3D(xtetlist, &
+      subroutine get_cut_geom3D( &
+        xtetlist, & ! intent(in)
         nlist_alloc,nlist,nmax,volcut, &
         cencut,sdim)
       use probcommon_module
@@ -11546,7 +11547,8 @@ contains
          cmofsten, &
          sdim)
 
-       call get_cut_geom3D(xtetlist_vof, &
+       call get_cut_geom3D( &
+         xtetlist_vof, & !intent(in)
          nlist_alloc,nlist_vof,nmax, &
          volcut_vof,cencut_vof,sdim)
 
@@ -11673,7 +11675,8 @@ contains
          cmofsten, &
          sdim)
 
-       call get_cut_geom3D(xtetlist_vof, &
+       call get_cut_geom3D( &
+         xtetlist_vof, & ! intent(in)
          nlist_alloc,nlist_vof,nmax, &
          volcut_vof,cencut_vof,sdim)
 
@@ -11893,6 +11896,9 @@ contains
       end subroutine slope_to_angle
 
        ! Zhouteng Ye algorithm for machine learning.
+       ! angle_init_from_angle_recon_and_F is called from:
+       !  fort_MOF_training (PLIC_3D.F90)
+       !  fort_MOF_DT_training (PLIC_3D.F90)
        ! fastflag=1
        ! use_initial_guess=0
        ! intercept_init=0.0d0
@@ -11903,7 +11909,7 @@ contains
       subroutine angle_init_from_angle_recon_and_F( &
         bfact,dx,xsten0,nhalf0, &
         refvfrac, &
-        continuous_mof, &
+        continuous_mof, & ! =0 or 1
         cmofsten, &
         xtetlist_vof,nlist_vof, &
         xtetlist_cen,nlist_cen, &
@@ -11926,7 +11932,7 @@ contains
       INTEGER_T :: nEQN_standard
       REAL_T, PARAMETER :: growth_angle_standard=zero
 
-      INTEGER_T, INTENT(in) :: continuous_mof
+      INTEGER_T, INTENT(in) :: continuous_mof !=0 or 1
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: nlist_alloc
@@ -11942,8 +11948,9 @@ contains
       REAL_T, INTENT(out) :: refcen(sdim)
       REAL_T, INTENT(out) :: angle_init(sdim-1)
 
-      INTEGER_T fastflag
-      INTEGER_T use_initial_guess
+      INTEGER_T, PARAMETER :: fastflag=1
+      INTEGER_T, PARAMETER :: use_initial_guess=0
+
       REAL_T intercept_init(nMAT_OPT_standard)
       INTEGER_T use_MilcentLemoine
       INTEGER_T :: tid=0
@@ -11955,10 +11962,6 @@ contains
       REAL_T :: xsten0_scale(-nhalf0:nhalf0,sdim)
       REAL_T :: dx_scale(sdim)
       REAL_T :: angle_init_local(sdim-1)
-      INTEGER_T local_nlist_vof
-      INTEGER_T local_nlist_cen
-      REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_vof
-      REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_cen
       REAL_T :: f_placeholder(sdim)
       REAL_T :: intercept_placeholder(nMAT_OPT_standard)
       REAL_T :: cen_derive_placeholder(sdim)
@@ -11986,8 +11989,6 @@ contains
       nDOF_standard=sdim-1
       nEQN_standard=sdim
 
-      fastflag=1
-      use_initial_guess=0
       intercept_init=zero
       do dir=1,sdim
        refcentroid(dir)=zero
@@ -12003,12 +12004,11 @@ contains
         print *,"levelrz invalid"
         stop
        endif
-      else if (continuous_mof.ge.1) then
-       use_MilcentLemoine=0
-      else if (continuous_mof.eq.-1) then
+      else if (continuous_mof.eq.1) then
        use_MilcentLemoine=0
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid, angle_init_from_angle_recon_and_F"
+       print *,"continuous_mof=",continuous_mof
        stop
       endif
       if (nhalf0.lt.1) then
@@ -12046,32 +12046,13 @@ contains
        sdim, &
        maxdx)
       
-      if (fastflag.eq.1) then
-       local_nlist_vof=1
-       local_nlist_cen=1
-      else
-       print *,"fastflag invalid"
-       stop
-      endif
-
-      allocate(local_xtetlist_vof(4,3,local_nlist_vof)) 
-      allocate(local_xtetlist_cen(4,3,local_nlist_cen)) 
-      do itet=1,sdim+1
-       do dir=1,sdim
-        do nn=1,local_nlist_vof
-         local_xtetlist_vof(itet,dir,nn)=zero
-        enddo 
-        do nn=1,local_nlist_cen
-         local_xtetlist_cen(itet,dir,nn)=zero
-        enddo 
-       enddo  !dir=1,sdim
-      enddo  !itet=1,sdim+1
-
       do dir=1,nDOF_standard
        angle_init_local(dir)=angle_recon(dir)
       enddo
 
         ! find the actual centroid given the angle.
+        ! calling from:
+        !   angle_init_from_angle_recon_and_F
       call multi_rotatefunc( &
        tid, &
        uncaptured_volume_vof_placeholder, &
@@ -12084,13 +12065,13 @@ contains
        nEQN_standard, & ! sdim
        use_MilcentLemoine, &
        bfact,dx_scale,xsten0_scale,nhalf0, &
-       local_xtetlist_vof,local_nlist_vof, &
-       local_xtetlist_cen,local_nlist_cen, &
+       xtetlist_vof,nlist_vof, & !intent(in)
+       xtetlist_cen,nlist_cen, & !intent(in)
        nlist_alloc, &
        nmax, &
        refcentroid_scale, &
        refvfrac, &
-       continuous_mof, &
+       continuous_mof, & ! = 0 or 1
        cmofsten, &
        angle_init_local, & ! INTENT(in)
        f_placeholder, & ! INTENT(out); ||xref-xact||
@@ -12098,7 +12079,9 @@ contains
        intercept_placeholder, &
         !relative to supermesh centroid (CMOF case); INTENT(out)
        cen_derive_placeholder, & 
-       use_initial_guess,fastflag,sdim)
+       use_initial_guess, & ! = 0
+       fastflag, & ! = 1
+       sdim)
 
       do dir=1,nEQN_standard
        cen_free_placeholder(dir)=zero
@@ -12118,9 +12101,6 @@ contains
       do dir=1,nEQN_standard
        refcen(dir)=cen_derive_placeholder(dir)*maxdx
       enddo
-
-      deallocate(local_xtetlist_vof)
-      deallocate(local_xtetlist_cen)
 
       return
       end subroutine angle_init_from_angle_recon_and_F
@@ -12202,8 +12182,6 @@ contains
       INTEGER_T, INTENT(in) :: fastflag
       REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
       REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
-      REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_vof
-      REAL_T, dimension(:,:,:), allocatable :: local_xtetlist_cen
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T xsten0_scale(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
@@ -12294,8 +12272,6 @@ contains
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
       INTEGER_T, INTENT(in) :: lsnormal_valid(num_materials)
-      INTEGER_T local_nlist_vof
-      INTEGER_T local_nlist_cen
 
       INTEGER_T training_nguess
       INTEGER_T local_MOFITERMAX
@@ -12497,69 +12473,26 @@ contains
        sdim,maxdx)
 
       if (fastflag.eq.1) then
-       local_nlist_vof=1
-       local_nlist_cen=1
-      else if (fastflag.eq.0) then
-       local_nlist_vof=nlist_vof
-       local_nlist_cen=nlist_cen
-      else
-       print *,"fastflag invalid"
-       stop
-      endif
-
-      if ((local_nlist_vof.ge.1).and. &
-          (local_nlist_cen.ge.1)) then
-       allocate(local_xtetlist_vof(4,3,local_nlist_vof)) 
-       allocate(local_xtetlist_cen(4,3,local_nlist_cen)) 
-       do itet=1,sdim+1
-       do dir=1,sdim
-        do nn=1,local_nlist_vof
-         if (fastflag.eq.1) then
-          local_xtetlist_vof(itet,dir,nn)=zero
-         else 
-          local_xtetlist_vof(itet,dir,nn)=xtetlist_vof(itet,dir,nn)
-         endif
-        enddo 
-        do nn=1,local_nlist_cen
-         if (fastflag.eq.1) then
-          local_xtetlist_cen(itet,dir,nn)=zero
-         else
-          local_xtetlist_cen(itet,dir,nn)=xtetlist_cen(itet,dir,nn)
-         endif
-        enddo 
-       enddo 
-       enddo 
-      else
-       print *,"local_nlist_vof or local_nlist_cen invalid"
-       print *,"local_nlist_vof=",local_nlist_vof
-       print *,"local_nlist_cen=",local_nlist_cen
-       stop
-      endif
-
-      if (fastflag.eq.0) then
+       ! do nothing
+      else if (fastflag.eq.0) then 
 
        if (maxdx.gt.zero) then
-
         do itet=1,sdim+1
         do dir=1,sdim
-         do nn=1,local_nlist_vof
-          local_xtetlist_vof(itet,dir,nn)=local_xtetlist_vof(itet,dir,nn)/maxdx
+         do nn=1,nlist_vof
+          xtetlist_vof(itet,dir,nn)=xtetlist_vof(itet,dir,nn)/maxdx
          enddo 
-         do nn=1,local_nlist_cen
-          local_xtetlist_cen(itet,dir,nn)=local_xtetlist_cen(itet,dir,nn)/maxdx
+         do nn=1,nlist_cen
+          xtetlist_cen(itet,dir,nn)=xtetlist_cen(itet,dir,nn)/maxdx
          enddo 
         enddo 
         enddo 
-
        else
         print *,"maxdx invalid find_cut_geom_slope maxdx: ",maxdx
         stop
        endif
-
-      else if (fastflag.eq.1) then
-       ! do nothing
       else
-       print *,"fastflag invalid find cut geom slope"
+       print *,"fastflag invalid find_cut_geom_slope; fastflag=",fastflag
        stop
       endif
 
@@ -12919,6 +12852,8 @@ contains
         intercept_init(dir)=zero
        enddo
 
+        ! calling from:
+        !   find_cut_geom_slope
        call multi_rotatefunc( &
         tid, &
         uncaptured_volume_vof, &
@@ -12931,8 +12866,8 @@ contains
         nEQN, & ! sdim or 3 * sdim
         use_MilcentLemoine, &
         bfact,dx_scale,xsten0_scale,nhalf0, &
-        local_xtetlist_vof,local_nlist_vof, &
-        local_xtetlist_cen,local_nlist_cen, &
+        xtetlist_vof,nlist_vof, & !intent(inout)
+        xtetlist_cen,nlist_cen, & !intent(inout)
         nlist_alloc, &
         nmax, &
         refcentroid_scale, &
@@ -13043,6 +12978,8 @@ contains
         enddo
 
          ! fp=xref-cenp
+         ! calling from:
+         !   find_cut_geom_slope
         call multi_rotatefunc( &
          tid, &
          uncaptured_volume_vof, &
@@ -13055,8 +12992,8 @@ contains
          nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx_scale,xsten0_scale,nhalf0, &
-         local_xtetlist_vof,local_nlist_vof, &
-         local_xtetlist_cen,local_nlist_cen, &
+         xtetlist_vof,nlist_vof, & !intent(inout)
+         xtetlist_cen,nlist_cen, & !intent(inout)
          nlist_alloc, &
          nmax, &
          refcentroid_scale, &
@@ -13087,6 +13024,8 @@ contains
         enddo
 
          ! fm=xref-cenm
+         ! calling from:
+         !   find_cut_geom_slope
         call multi_rotatefunc( &
          tid, &
          uncaptured_volume_vof, &
@@ -13099,8 +13038,8 @@ contains
          nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx_scale,xsten0_scale,nhalf0, &
-         local_xtetlist_vof,local_nlist_vof, &
-         local_xtetlist_cen,local_nlist_cen, &
+         xtetlist_vof,nlist_vof, & ! intent(inout)
+         xtetlist_cen,nlist_cen, & ! intent(inout)
          nlist_alloc, &
          nmax, &
          refcentroid_scale,refvfrac, &
@@ -13223,6 +13162,8 @@ contains
 
         use_initial_guess=1
 
+         ! calling from:
+         !   find_cut_geom_slope
         call multi_rotatefunc( &
          tid, &
          uncaptured_volume_vof, &
@@ -13235,8 +13176,8 @@ contains
          nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx_scale,xsten0_scale,nhalf0, &
-         local_xtetlist_vof,local_nlist_vof, &
-         local_xtetlist_cen,local_nlist_cen, &
+         xtetlist_vof,nlist_vof, & !intent(inout)
+         xtetlist_cen,nlist_cen, & !intent(inout)
          nlist_alloc, &
          nmax, &
          refcentroid_scale, &
@@ -13416,7 +13357,7 @@ contains
         intercept(1), &
         continuous_mof, &
         cmofsten, &
-        local_xtetlist_vof, & !intent(in)
+        xtetlist_vof, & !intent(in)
         local_nlist_vof, &
         local_nlist_vof, &
         nmax, &
@@ -13435,8 +13376,29 @@ contains
        centroidA(dir)=centroidA(dir)*maxdx
       enddo
 
-      deallocate(local_xtetlist_vof)
-      deallocate(local_xtetlist_cen)
+      if (fastflag.eq.1) then
+       ! do nothing
+      else if (fastflag.eq.0) then 
+
+       if (maxdx.gt.zero) then
+        do itet=1,sdim+1
+        do dir=1,sdim
+         do nn=1,nlist_vof
+          xtetlist_vof(itet,dir,nn)=xtetlist_vof(itet,dir,nn)*maxdx
+         enddo 
+         do nn=1,nlist_cen
+          xtetlist_cen(itet,dir,nn)=xtetlist_cen(itet,dir,nn)*maxdx
+         enddo 
+        enddo 
+        enddo 
+       else
+        print *,"maxdx invalid find_cut_geom_slope maxdx: ",maxdx
+        stop
+       endif
+      else
+       print *,"fastflag invalid find_cut_geom_slope; fastflag=",fastflag
+       stop
+      endif
 
       mof_iterations(tid+1,critical_material)= &
        mof_iterations(tid+1,critical_material)+iter
