@@ -1540,7 +1540,7 @@ stop
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
 
-      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX
+      INTEGER_T :: nmax=POLYGON_LIST_MAX
 
       REAL_T :: vof_training(num_samples)
       REAL_T :: phi_training(num_samples)
@@ -2134,7 +2134,7 @@ stop
 
       INTEGER_T :: i,j,k
       INTEGER_T :: local_continuous_mof
-      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX
+      INTEGER_T :: nmax=POLYGON_LIST_MAX
       REAL_T :: vof_training(num_samples)
       REAL_T :: phi_training(num_samples)
       REAL_T :: theta_training(num_samples)
