@@ -3762,8 +3762,18 @@ end subroutine intersection_volume_and_map
        call shrink_list_tri(phi,x,3,1,2,0,xtrilist, &
                nlist_alloc,nlist,xarealist,narea)
       else
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break MOF.F90:3767"
        print *,"bust list_tris"
        print *,"phi : ",phi(1),phi(2),phi(3)
+       print *,"sdim= ",sdim
+       print *,"nlist_alloc= ",nlist_alloc
+       do i_tet_node=1,sdim+1
+       do j_dir=1,sdim
+        print *,"i_tet_node,j_dir,x ",i_tet_node,j_dir,x(i_tet_node,j_dir)
+       enddo 
+       enddo 
        stop
       endif
 
@@ -4604,9 +4614,13 @@ end subroutine intersection_volume_and_map
 
        if (centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir)) then
         print *,"WARN centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir) XYZ"
+        print *,"j_dir,centroid,CENTOL,dxmax,xmin ",j_dir, &
+         centroid(j_dir),CENTOL,dxmax,xmin(j_dir)
         centroid(j_dir)=xmin(j_dir)
        else if (centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir)) then
         print *,"WARN centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir) XYZ"
+        print *,"j_dir,centroid,CENTOL,dxmax,xmax ",j_dir, &
+         centroid(j_dir),CENTOL,dxmax,xmax(j_dir)
         centroid(j_dir)=xmax(j_dir)
        endif
 
@@ -4967,9 +4981,13 @@ end subroutine intersection_volume_and_map
 
        if (centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir)) then
         print *,"WARN centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir) XYZ"
+        print *,"j_dir,centroid,CENTOL,dxmax,xmin ",j_dir, &
+         centroid(j_dir),CENTOL,dxmax,xmin(j_dir)
         centroid(j_dir)=xmin(j_dir)
        else if (centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir)) then
         print *,"WARN centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir) XYZ"
+        print *,"j_dir,centroid,CENTOL,dxmax,xmax ",j_dir, &
+         centroid(j_dir),CENTOL,dxmax,xmax(j_dir)
         centroid(j_dir)=xmax(j_dir)
        endif
 
@@ -9773,9 +9791,9 @@ contains
        continuous_mof, &
        cmofsten, &
        xtetlist, & !intent(in)
-       nlist_alloc, &
-       nlist, &
-       nmax, &
+       nlist_alloc, & !intent(in)
+       nlist, & !intent(in)
+       nmax, & !intent(in)
        vfrac, &
        use_initial_guess, &
        centroid, &
@@ -10111,7 +10129,8 @@ contains
          err=err_default
          fc=fc_default
 
-        else
+        else if ((intercept.ge.intercept_lower).and. &
+                 (intercept.le.intercept_upper)) then
 
           ! fc=(voln-vtarget)/volcell
          call multi_ff( &
@@ -10135,7 +10154,13 @@ contains
           err=err_default
           fc=fc_default
          endif
- 
+
+        else
+         print *,"(breakpoint) break point and gdb: "
+         print *,"(1) compile with the -g option"
+         print *,"(2) break MOF.F90:10161"
+         print *,"intercept is NaN (multi_find_intercept): ",intercept
+         stop 
         endif
 
        else
@@ -10630,9 +10655,12 @@ contains
              if (fa*fc.lt.zero) then
               bb=intercept
               fb=fc
-             else
+             else if (fa*fc.ge.zero) then
               aa=intercept
               fa=fc
+             else
+              print *,"fa or fc corrupt"
+              stop
              endif
             else
              print *,"signs of fa and fb are inconsistent"
@@ -10644,13 +10672,18 @@ contains
              print *,"bisection(single): niter,intercept,fc ",niter,intercept,fc
             endif  
            enddo ! bisection while
-          else
+          else if ((intercept_test.gt.intercept_lower).and. &
+                   (intercept_test.lt.intercept_upper).and. &
+                   (niter.lt.maxiter-1)) then
            intercept=intercept_test
            call single_ff(bfact,dx,xsten0,nhalf0, &
             fc,slope,intercept, &
             arean,vtarget,centroid, &
             sdim)
            err=abs(fc)
+          else
+           print *,"intercept_test invalid"
+           stop
           endif
 
           niter=niter+1
@@ -10831,11 +10864,43 @@ contains
        stop
       endif
 
-      if ((nlist_vof.ge.1).and.(nlist_vof.le.nlist_alloc).and. &
-          (nlist_cen.ge.1).and.(nlist_cen.le.nlist_alloc)) then
+      if ((nlist_vof.ge.0).and.(nlist_vof.le.nlist_alloc).and. &
+          (nlist_cen.ge.0).and.(nlist_cen.le.nlist_alloc)) then
        ! do nothing
       else
        print *,"nlist_vof or nlist_cen invalid"
+       print *,"nlist_vof: ",nlist_vof
+       print *,"nlist_cen: ",nlist_cen
+       print *,"nlist_alloc: ",nlist_alloc
+       print *,"nmax: ",nmax
+       stop
+      endif
+      if (fastflag.eq.1) then
+       if ((nlist_vof.eq.0).and. &
+           (nlist_cen.eq.0)) then
+        !do nothing
+       else
+        print *,"(breakpoint) break point and gdb: "
+        print *,"(1) compile with the -g option"
+        print *,"(2) break MOF.F90:10852"
+        print *,"expecting nlist_vof=nlist_cen=0"
+        print *,"nlist_vof: ",nlist_vof
+        print *,"nlist_cen: ",nlist_cen
+        print *,"nlist_alloc: ",nlist_alloc
+        print *,"nmax: ",nmax
+        print *,"fastflag: ",fastflag
+        stop
+       endif
+      else if (fastflag.eq.0) then
+       if ((nlist_vof.ge.1).and.(nlist_vof.le.nlist_alloc).and. &
+           (nlist_cen.ge.1).and.(nlist_cen.le.nlist_alloc)) then
+        !do nothing
+       else
+        print *,"expecting nlist_vof, nlist_cen >= 1"
+        stop
+       endif
+      else
+       print *,"fastflag invalid"
        stop
       endif
 
@@ -11216,7 +11281,7 @@ contains
         stop
        endif
 
-       intercept=zero
+       intercept(1)=zero
 
         ! MilcentLemoine slope points away from the material,
         ! so we have to reverse the normal
@@ -11814,11 +11879,11 @@ contains
         refvfrac, &
         continuous_mof, & ! =0 or 1
         cmofsten, &
-        xtetlist_vof,nlist_vof, & !intent(inout)
-        xtetlist_cen,nlist_cen, & !intent(inout)
+        xtetlist_vof, & !intent(inout)
+        xtetlist_cen, & !intent(inout)
         nlist_alloc, & !intent(in)
         angle_init, & ! INTENT(out)
-        refcen, &
+        refcen, &  !INTENT(out)
         angle_recon, & ! INTENT(in)
         nmax, &
         sdim)
@@ -11839,8 +11904,6 @@ contains
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(inout) :: nlist_vof
-      INTEGER_T, INTENT(inout) :: nlist_cen
       INTEGER_T, INTENT(in) :: nmax
       REAL_T, INTENT(inout) :: xtetlist_vof(4,3,nlist_alloc)
       REAL_T, INTENT(inout) :: xtetlist_cen(4,3,nlist_alloc)
@@ -11851,13 +11914,14 @@ contains
       REAL_T, INTENT(out) :: refcen(sdim)
       REAL_T, INTENT(out) :: angle_init(sdim-1)
 
+      INTEGER_T :: nlist_vof=0
+      INTEGER_T :: nlist_cen=0
       INTEGER_T, PARAMETER :: fastflag=1
       INTEGER_T, PARAMETER :: use_initial_guess=0
 
       REAL_T intercept_init(nMAT_OPT_standard)
       INTEGER_T use_MilcentLemoine
       INTEGER_T :: tid=0
-      REAL_T maxdx
       REAL_T refcentroid(sdim)
       INTEGER_T dir
       REAL_T :: angle_init_local(sdim-1)
@@ -11986,7 +12050,7 @@ contains
       ! -pi < angle < pi
       call slope_to_angle(npredict,angle_init,sdim)
       do dir=1,nEQN_standard
-       refcen(dir)=cen_derive_placeholder(dir)*maxdx
+       refcen(dir)=cen_derive_placeholder(dir)
       enddo
 
       return
@@ -12123,7 +12187,6 @@ contains
       REAL_T err
       REAL_T fgrad(nEQN,nDOF)  
       INTEGER_T ii,iicrit
-      INTEGER_T itet
       INTEGER_T i_angle,j_angle
       REAL_T delangle(nDOF)
       REAL_T RHS(nDOF)
@@ -12138,8 +12201,6 @@ contains
 
       REAL_T, INTENT(out) :: centroidA(nEQN)
       INTEGER_T use_initial_guess
-      REAL_T maxdx
-      INTEGER_T nn
       REAL_T dx_normalize
       INTEGER_T nguess
       REAL_T nLS(sdim)
@@ -12745,7 +12806,11 @@ contains
         f_array(dir,iter)=finit(dir)
        enddo
        err_array(iter)=err
-       intercept_array(1,iter)=intercept_init(1)
+
+       do dir=1,nMAT_OPT
+        intercept_array(dir,iter)=intercept_init(dir)
+       enddo
+
        do dir=1,nEQN
         cen_array(dir,iter)=cen_derive_init(dir)
        enddo 
@@ -12773,7 +12838,9 @@ contains
        f_array(dir,1)=f_array(dir,iicrit)
       enddo
       err_array(1)=err_array(iicrit)
-      intercept_array(1,1)=intercept_array(1,iicrit)
+      do dir=1,nMAT_OPT
+       intercept_array(dir,1)=intercept_array(dir,iicrit)
+      enddo
       do dir=1,nEQN
        cen_array(dir,1)=cen_array(dir,iicrit)
       enddo 
@@ -13227,37 +13294,6 @@ contains
        stop
       endif
 
-      do dir=1,nMAT_OPT
-       intercept(dir)=intercept(dir)*maxdx
-      enddo
-      do dir=1,nEQN
-       centroidA(dir)=centroidA(dir)*maxdx
-      enddo
-
-      if (fastflag.eq.1) then
-       ! do nothing
-      else if (fastflag.eq.0) then 
-
-       if (maxdx.gt.zero) then
-        do itet=1,sdim+1
-        do dir=1,sdim
-         do nn=1,nlist_vof
-          xtetlist_vof(itet,dir,nn)=xtetlist_vof(itet,dir,nn)*maxdx
-         enddo 
-         do nn=1,nlist_cen
-          xtetlist_cen(itet,dir,nn)=xtetlist_cen(itet,dir,nn)*maxdx
-         enddo 
-        enddo 
-        enddo 
-       else
-        print *,"maxdx invalid find_cut_geom_slope maxdx: ",maxdx
-        stop
-       endif
-      else
-       print *,"fastflag invalid find_cut_geom_slope; fastflag=",fastflag
-       stop
-      endif
-
       mof_iterations(tid+1,critical_material)= &
        mof_iterations(tid+1,critical_material)+iter
       mof_errors(tid+1,critical_material)= &
@@ -13309,7 +13345,8 @@ contains
        stop
       endif
 
-      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+          (levelrz.eq.COORDSYS_RZ)) then
        RR=one
        do dir=1,sdim
         slope(dir)=cen_ref(dir)-cen_free(dir)
@@ -14230,10 +14267,10 @@ contains
            intercept(1), &
            continuous_mof, &
            cmofsten, &
-           xtetlist_vof, &
-           nlist_alloc, &
-           nlist_vof, &
-           nmax, &
+           xtetlist_vof, & !intent(in)
+           nlist_alloc, &  !intent(in)
+           nlist_vof, &    !intent(in)
+           nmax, &         !intent(in)
            refvfrac(1), &
            use_initial_guess,centroidA,fastflag,sdim)
 
@@ -16864,6 +16901,7 @@ contains
       INTEGER_T matstatus
 
       INTEGER_T imaterial
+      INTEGER_T imaterial_debug
       INTEGER_T vofcomp
       INTEGER_T dir
       INTEGER_T dircrit
@@ -17035,11 +17073,19 @@ contains
          print *,"expecting order==1 for im_GA_primary_mat"
          stop
         endif
-        if ((mofdata(vofcomp).ge.0.01d0).and. &
-            (mofdata(vofcomp).le.0.99d0)) then
+        if ((mofdata(vofcomp).ge.0.001d0).and. &
+            (mofdata(vofcomp).le.0.999d0)) then
          !do nothing
         else
-         print *,"expecting 0.01<=F<=0.99 for im_GA_primary_mat"
+         print *,"expecting 0.001<=F<=0.999 for im_GA_primary_mat"
+         print *,"vofcomp=",vofcomp
+         print *,"mofdata(vofcomp)=",mofdata(vofcomp)
+         do imaterial_debug=1,num_materials
+          vofcomp=(imaterial_debug-1)*ngeom_recon+1
+          print *,"listing: imaterial_debug=",imaterial_debug
+          print *,"listing: vofcomp=",vofcomp
+          print *,"listing: mofdata(vofcomp)=",mofdata(vofcomp)
+         enddo
          stop
         endif
 
@@ -17069,11 +17115,13 @@ contains
          print *,"expecting order==2 for im_GA_secondary_mat"
          stop
         endif
-        if ((mofdata(vofcomp).ge.0.01d0).and. &
-            (mofdata(vofcomp).le.0.99d0)) then
+        if ((mofdata(vofcomp).ge.0.001d0).and. &
+            (mofdata(vofcomp).le.0.999d0)) then
          !do nothing
         else
-         print *,"expecting 0.01<=F<=0.99 for im_GA_secondary_mat"
+         print *,"expecting 0.001<=F<=0.999 for im_GA_secondary_mat"
+         print *,"vofcomp=",vofcomp
+         print *,"mofdata(vofcomp)=",mofdata(vofcomp)
          stop
         endif
 
@@ -17104,11 +17152,13 @@ contains
          stop
         endif
 
-        if ((mofdata(vofcomp).ge.0.01d0).and. &
-            (mofdata(vofcomp).le.0.99d0)) then
+        if ((mofdata(vofcomp).ge.0.001d0).and. &
+            (mofdata(vofcomp).le.0.999d0)) then
          !do nothing
         else
-         print *,"expecting 0.01<=F<=0.99 for im_GA_tertiary_mat"
+         print *,"expecting 0.001<=F<=0.999 for im_GA_tertiary_mat"
+         print *,"vofcomp=",vofcomp
+         print *,"mofdata(vofcomp)=",mofdata(vofcomp)
          stop
         endif
 
@@ -17137,6 +17187,8 @@ contains
          !do nothing
         else
          print *,"expecting F<VOFTOL for rest of materials"
+         print *,"vofcomp=",vofcomp
+         print *,"mofdata(vofcomp)=",mofdata(vofcomp)
          stop
         endif
 
@@ -23236,6 +23288,13 @@ contains
         print *,"bfact invalid135"
         stop
        endif
+       if (maxdx.gt.zero) then
+        !do nothing
+       else
+        print *,"maxdx invalid (closestINT): ",maxdx
+        stop
+       endif
+
        if ((nlist.lt.2).or.(nlist.gt.num_materials-1).or. &
            (ilist.lt.1).or.(ilist.gt.nlist).or. &
            (jlist.lt.1).or.(jlist.gt.nlist).or. &
@@ -23413,6 +23472,13 @@ contains
 
        if (bfact.lt.1) then
         print *,"bfact invalid135"
+        stop
+       endif
+
+       if (maxdx.gt.zero) then
+        !do nothing
+       else
+        print *,"maxdx invalid (closestINT3): ",maxdx
         stop
        endif
 
@@ -23600,6 +23666,12 @@ contains
         stop
        endif
 
+       if (maxdx.gt.zero) then
+        !do nothing
+       else
+        print *,"maxdx invalid (closestPLANE): ",maxdx
+        stop
+       endif
        inboxflag=1
        dist=zero
        do dir=1,sdim
@@ -23886,6 +23958,13 @@ contains
       endif
       if (dx(sdim).gt.maxdx) then
        maxdx=dx(sdim)
+      endif
+
+      if (maxdx.gt.zero) then
+       !do nothing
+      else
+       print *,"maxdx invalid (multi_get_distance): ",maxdx
+       stop
       endif
 
       if (ngeom_recon.ne.2*sdim+3) then
