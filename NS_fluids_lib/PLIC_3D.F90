@@ -1779,9 +1779,7 @@ stop
            continuous_mof, &  !=0 or 1
            cmofsten, & 
            geom_xtetlist(1,1,1,tid+1), &
-           nmax, &
            geom_xtetlist_old(1,1,1,tid+1), &
-           nmax, &
            nmax, &
            angle_init_db, & ! INTENT(out)
            refcen, &  ! INTENT(out)
@@ -2344,9 +2342,7 @@ stop
             local_continuous_mof, & 
             cmofsten, & 
             geom_xtetlist(1,1,1,tid+1), &
-            nmax, &
             geom_xtetlist_old(1,1,1,tid+1), &
-            nmax, &
             nmax, &
             angle_init_db, & ! INTENT(out)
             refcen, &  ! INTENT(out)

@@ -3191,7 +3191,7 @@ end subroutine dynamic_contact_angle
           else if (mag.eq.zero) then
            ! do nothing
           else
-           print *,"mag is NaN"
+           print *,"mag is NaN (getGhostVel): ",mag
            stop
           endif
           do dir=1,SDIM
@@ -4471,7 +4471,10 @@ end subroutine dynamic_contact_angle
       else if (mag.eq.zero) then
        ! do nothing
       else
-       print *,"mag is NaN ",mag
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:4476"
+       print *,"mag is NaN (prepare_normal): ",mag
        stop
       endif
 
