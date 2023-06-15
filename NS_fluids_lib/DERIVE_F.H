@@ -97,37 +97,6 @@ extern "C" {
       int* im_solid_map);
 
 
-     void fort_integrate_recalesce(
-      int* isweep,
-      Real* globalsum,Real* localsum,
-      int* recalesce_material,
-      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
-      Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-      Real* vol,AMREX_ARLIM_P(vollo),AMREX_ARLIM_P(volhi),
-      const Real* xlo,const Real* dx,
-      const int* tilelo, const int* tilehi, 
-      const int* fablo, const int* fabhi,
-      int* bfact, 
-      int* velbc,
-      Real* time,
-      int* num_integrate,int* ncomp_state,
-      int* level,int* finest_level);
-
-
-     void fort_reset_temperature(
-      int* im_source,
-      Real* TSAT,
-      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi),
-      const Real* xlo,const Real* dx,
-      const int* tilelo, const int* tilehi, 
-      const int* fablo, const int* fabhi,
-      int* bfact, 
-      int* velbc,
-      Real* time,
-      int* ncomp_state,
-      int* level,int* finest_level);
-
-
      void fort_maxpresvel(
        Real* minpres,
        Real* maxpres,

@@ -7535,7 +7535,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         ! ice behaves like rigid solid where dist>0
         ! called from "get_icemask" (PROB.F90) and 
-        ! "integrate_recalesce" (DERIVE_3D.F90)
       subroutine icemask_override(xtarget,im_source,im_dest,dist)
       use global_utility_module
       use global_distance_module
@@ -7559,18 +7558,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
       dist=-9999.0d0
-
-      if (recalesce_material(im_source).eq.0) then
-       ! do nothing
-      else if ((recalesce_material(im_source).eq.1).or. &
-               (recalesce_material(im_source).eq.2)) then
-      
-       call SUB_ICE_SUBSTRATE_DISTANCE(xtarget,dist)
-
-      else 
-       print *,"recalesce_material invalid"
-       stop
-      endif
 
       end subroutine icemask_override
 
@@ -19345,36 +19332,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine jettingdist
 
 
-         ! stage=-1 (init)
-         ! stage=0 (cooling)
-         ! stage=1 (nucleation)
-         ! stage=2 (recalesce in progress)
-         ! stage=3 (recalesce finished)
-         ! stage=4 (frost)
-         ! stage=5 (regular freezing starts)
-      subroutine check_recalesce_status(im_source,start_freezing)
-      IMPLICIT NONE
-
-      INTEGER_T im_source,start_freezing,ibase,stage
-
-      start_freezing=1
-      if ((recalesce_material(im_source).eq.1).or. &
-          (recalesce_material(im_source).eq.2)) then
-       ibase=(im_source-1)*recalesce_num_state
-       stage=NINT(recalesce_state_old(ibase+1))
-       if (stage.lt.4) then ! start freezing when "frost" starts.
-        start_freezing=0
-       endif
-      else if (recalesce_material(im_source).eq.0) then
-       ! do nothing
-      else
-       print *,"recalesce_material invalid"
-       stop
-      endif
-
-      return
-      end subroutine check_recalesce_status
-
 ! -------------------
 ! CODY ESTEBE
 ! -----------------
@@ -20161,7 +20118,6 @@ end subroutine RatePhaseChange
       INTEGER_T, INTENT(in) :: distribute_from_target
        ! MEHDI EVAPORATION  im_source,im_dest = 1..num_materials
       INTEGER_T, INTENT(in) :: im_source,im_dest
-      INTEGER_T :: start_freezing
       REAL_T, INTENT(out) :: vel
       REAL_T, INTENT(in) :: densrc_I,dendst_I
       REAL_T, INTENT(in) :: densrc_probe,dendst_probe
@@ -20327,12 +20283,7 @@ end subroutine RatePhaseChange
        stop
       endif
 
-      call check_recalesce_status(im_source,start_freezing)
-
-      if (start_freezing.eq.0) then
-       vel=zero
-      else if (start_freezing.eq.1) then 
-       if ((probtype.eq.801).and.(vinletgas.gt.zero)) then
+      if ((probtype.eq.801).and.(vinletgas.gt.zero)) then
          ! in: get_vel_phasechange
          ! fixed rate of phase change (sanity check)
         vel=vinletgas  ! MDOT/rho_src
@@ -20344,7 +20295,7 @@ end subroutine RatePhaseChange
         ! local_freezing_model=5 (Stefan model evaporation/condensation)
         ! local_freezing_model=6 (Palmore and Desjardins)
         ! local_freezing_model=7 (Cavitation)
-       else if ((is_GFM_freezing_modelF(local_freezing_model).eq.1).or. &
+      else if ((is_GFM_freezing_modelF(local_freezing_model).eq.1).or. &
                 (local_freezing_model.eq.1)) then
          ! LL<0 if freezing
 
@@ -20554,7 +20505,7 @@ end subroutine RatePhaseChange
 
         vel=velsum
 
-       else if (local_freezing_model.eq.2) then
+      else if (local_freezing_model.eq.2) then
 
         if (distribute_from_target.ne.0) then
          print *,"distribute_from_target invalid"
@@ -20584,14 +20535,9 @@ end subroutine RatePhaseChange
          stop
         endif
 
-       else
+      else
         print *,"local_freezing_model invalid 13"
         stop
-       endif
-
-      else
-       print *,"start_freezing invalid"
-       stop
       endif
 
       mdot_override=0

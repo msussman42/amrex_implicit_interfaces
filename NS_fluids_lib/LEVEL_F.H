@@ -234,11 +234,6 @@ namespace amrex{
        Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
        const Real* xlo,const Real* dx);
 
-     void fort_initrecalesce(
-       int* recalesce_material,
-       Real* recalesce_state_old,
-       int* recalesce_num_state);
-
       void fort_cell_to_mac(
         int* ncomp_mgoni,
         int* ncomp_xp,

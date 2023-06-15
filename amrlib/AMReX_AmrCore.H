@@ -110,20 +110,6 @@ public:
 
     void writeDEBUG_PlotFile(int num,int SDC_outer_sweeps_in,int slab_step_in);
 
-      // get local variable "recalesce_flag", 0, 1 static, 2 dynamic
-    int AMR_recalesce_flag(int im) const;
-
-     // initialize class member "recalesce_state_new"
-    void recalesce_put_state(Vector<Real>& recalesce_state_in); 
-     // get class member "recalesce_state_old"
-    void recalesce_get_state(Vector<Real>& recalesce_state_out); 
-    void recalesce_init();
-
-     // copies new to old.
-    void recalesce_copy_new_to_old();
-     // copies old to new.
-    void recalesce_copy_old_to_new();
-
     void print_cells_advanced();
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
@@ -215,10 +201,6 @@ protected:
     // The data ...
     //
 
-      // num_materials x (stage,time,.....)
-    Vector<Real> recalesce_state_old;
-    Vector<Real> recalesce_state_new;
-    
     // OLD: PArray<AmrLevel> amr_level;    // Array of levels
     Vector<std::unique_ptr<AmrLevel> > amr_level;    //!< Vector of levels
 
