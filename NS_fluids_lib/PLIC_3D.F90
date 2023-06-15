@@ -64,7 +64,7 @@ stop
         total_iterations, &
         total_errors, &
         continuous_mof, &
-        partial_cmof_stencil_at_walls)
+        partial_cmof_stencil_at_walls) &
       bind(c,name='fort_sloperecon')
 
       use probf90_module

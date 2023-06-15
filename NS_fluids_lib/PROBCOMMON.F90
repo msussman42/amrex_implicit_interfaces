@@ -540,10 +540,6 @@ implicit none
       INTEGER_T inflow_count,outflow_count
       INTEGER_T last_inflow_index,last_outflow_index
 
-      INTEGER_T, PARAMETER :: recalesce_num_state=6
-      INTEGER_T recalesce_material(100)
-      REAL_T recalesce_state_old(recalesce_num_state*100)
-
        ! variables from "rfiledata"
       REAL_T zstatic(0:300),rstatic(0:300) 
 

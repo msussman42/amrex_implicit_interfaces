@@ -18136,7 +18136,6 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: im
-      INTEGER_T :: ibase,stage
       REAL_T, INTENT(in) :: density,temperature
       REAL_T mu
 
@@ -18168,32 +18167,6 @@ end subroutine print_visual_descriptor
 
       get_user_viscconst=fort_viscconst(im)
 
-      if (recalesce_material(im).eq.0) then
-       get_user_viscconst=fort_viscconst(im)
-      else if ((recalesce_material(im).eq.1).or. &
-               (recalesce_material(im).eq.2)) then
-       ibase=(im-1)*recalesce_num_state
-       stage=NINT(recalesce_state_old(ibase+1))
-         ! stage=-1 (init)
-         ! stage=0 (cooling)
-         ! stage=1 (nucleation)
-         ! stage=2 (recalesce in progress)
-         ! stage=3 (recalesce finished)
-         ! stage=4 (frost)
-         ! stage=5 (regular freezing starts)
-       if (stage.lt.3) then
-        get_user_viscconst=fort_prerecalesce_viscconst(im)
-       else if ((stage.ge.3).and.(stage.le.5)) then
-        get_user_viscconst=fort_viscconst(im)
-       else
-        print *,"stage invalid"
-        stop
-       endif
-      else
-       print *,"recalesce_material invalid"
-       stop
-      endif
-
       if (fort_viscosity_state_model(im).eq.0) then
        ! do nothing
       else if (fort_viscosity_state_model(im).eq.1) then
@@ -18215,43 +18188,25 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T im,ibase,stage
+      INTEGER_T im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
        stop
       endif
-      if ((fort_heatviscconst(im).lt.zero).or. &
-          (fort_prerecalesce_heatviscconst(im).lt.zero)) then
+
+      if ((fort_heatviscconst(im).ge.zero).and. &
+          (fort_prerecalesce_heatviscconst(im).ge.zero)) then
+       ! do nothing
+      else
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:18205"
        print *,"fortran heatviscconst invalid"
        stop
       endif
+
       get_user_heatviscconst=fort_heatviscconst(im)
-      if (recalesce_material(im).eq.0) then
-       get_user_heatviscconst=fort_heatviscconst(im)
-      else if ((recalesce_material(im).eq.1).or. &
-               (recalesce_material(im).eq.2)) then
-       ibase=(im-1)*recalesce_num_state
-       stage=NINT(recalesce_state_old(ibase+1))
-         ! stage=-1 (init)
-         ! stage=0 (cooling)
-         ! stage=1 (nucleation)
-         ! stage=2 (recalesce in progress)
-         ! stage=3 (recalesce finished)
-         ! stage=4 (frost)
-         ! stage=5 (regular freezing starts)
-       if (stage.lt.3) then
-        get_user_heatviscconst=fort_prerecalesce_heatviscconst(im)
-       else if ((stage.ge.3).and.(stage.le.5)) then
-        get_user_heatviscconst=fort_heatviscconst(im)
-       else
-        print *,"stage invalid"
-        stop
-       endif
-      else
-       print *,"recalesce_material invalid"
-       stop
-      endif
 
       return
       end function get_user_heatviscconst
@@ -18263,7 +18218,6 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: im
-      INTEGER_T :: ibase,stage
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im out of range"
@@ -18277,31 +18231,6 @@ end subroutine print_visual_descriptor
        stop
       endif
       get_user_stiffCP=fort_stiffCP(im)
-      if (recalesce_material(im).eq.0) then
-       get_user_stiffCP=fort_stiffCP(im)
-      else if ((recalesce_material(im).eq.1).or. &
-               (recalesce_material(im).eq.2)) then
-       ibase=(im-1)*recalesce_num_state
-       stage=NINT(recalesce_state_old(ibase+1))
-         ! stage=-1 (init)
-         ! stage=0 (cooling)
-         ! stage=1 (nucleation)
-         ! stage=2 (recalesce in progress)
-         ! stage=3 (recalesce finished)
-         ! stage=4 (frost)
-         ! stage=5 (regular freezing starts)
-       if (stage.lt.3) then
-        get_user_stiffCP=fort_prerecalesce_stiffCP(im)
-       else if ((stage.ge.3).and.(stage.le.5)) then
-        get_user_stiffCP=fort_stiffCP(im)
-       else
-        print *,"stage invalid"
-        stop
-       endif
-      else
-       print *,"recalesce_material invalid"
-       stop
-      endif
 
       return
       end function get_user_stiffCP
@@ -18400,7 +18329,7 @@ end subroutine print_visual_descriptor
       REAL_T, INTENT(in) :: tension(num_interfaces)
       REAL_T, INTENT(out) :: new_tension(num_interfaces)
       REAL_T avgtemp
-      INTEGER_T iten,im,im_opp,ibase,stage
+      INTEGER_T iten,im,im_opp
 
        ! fort_tension
        ! fort_prefreeze_tension
@@ -18458,35 +18387,6 @@ end subroutine print_visual_descriptor
         stop
        endif
       enddo ! iten
-      do im=1,num_materials
-       if (recalesce_material(im).eq.0) then
-        ! do nothing
-       else if ((recalesce_material(im).eq.1).or. &
-                (recalesce_material(im).eq.2)) then
-        ibase=(im-1)*recalesce_num_state
-        stage=NINT(recalesce_state_old(ibase+1))
-         ! stage=-1 (init)
-         ! stage=0 (cooling)
-         ! stage=1 (nucleation)
-         ! stage=2 (recalesce in progress)
-         ! stage=3 (recalesce finished)
-         ! stage=4 (frost)
-         ! stage=5 (regular freezing starts)
-        if (stage.lt.5) then
-         do iten=1,num_interfaces
-          new_tension(iten)=fort_prefreeze_tension(iten)
-         enddo
-        else if ((stage.eq.5).or.(stage.eq.6)) then
-         ! do nothing
-        else
-         print *,"stage invalid"
-         stop
-        endif
-       else
-        print *,"recalesce_material invalid"
-        stop
-       endif
-      enddo ! im=1..num_materials
 
       return
       end subroutine get_user_tension

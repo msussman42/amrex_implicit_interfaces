@@ -601,7 +601,6 @@ Vector<Real> NavierStokes::tension_init;
 
 Real NavierStokes::unscaled_min_curvature_radius=2.0;
 Vector<Real> NavierStokes::prefreeze_tension;
-Vector<Real> NavierStokes::recalesce_model_parameters;
 
 Vector<Real> NavierStokes::outflow_velocity_buffer_size;
 
@@ -1537,11 +1536,13 @@ void fortran_parameters() {
  Vector<Real> prerecalesce_stiffCP_temp(NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_stiffCP_temp[im]=stiffCPtemp[im];
- pp.queryAdd("precalesce_stiffCP",prerecalesce_stiffCP_temp,NavierStokes::num_materials);
+ pp.queryAdd("precalesce_stiffCP",prerecalesce_stiffCP_temp,
+    NavierStokes::num_materials);
  Vector<Real> prerecalesce_stiffCV_temp(NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_stiffCV_temp[im]=stiffCVtemp[im];
- pp.queryAdd("precalesce_stiffCV",prerecalesce_stiffCV_temp,NavierStokes::num_materials);
+ pp.queryAdd("precalesce_stiffCV",prerecalesce_stiffCV_temp,
+  NavierStokes::num_materials);
 
  pp.queryAdd("stiffGAMMA",stiffGAMMAtemp,NavierStokes::num_materials);
 
@@ -1597,7 +1598,8 @@ void fortran_parameters() {
  Vector<Real> prerecalesce_viscconst_temp(NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++)
   prerecalesce_viscconst_temp[im]=viscconst_temp[im];
- pp.queryAdd("precalesce_viscconst",prerecalesce_viscconst_temp,NavierStokes::num_materials);
+ pp.queryAdd("precalesce_viscconst",prerecalesce_viscconst_temp,
+	NavierStokes::num_materials);
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
   viscosity_state_model_temp[im]=0;
@@ -3405,8 +3407,6 @@ NavierStokes::read_params ()
     pressure_error_cutoff.resize(num_materials);
     temperature_error_cutoff.resize(num_materials);
 
-    recalesce_model_parameters.resize(3*num_materials);
-
     microlayer_substrate.resize(num_materials);
     microlayer_angle.resize(num_materials);
     microlayer_size.resize(num_materials);
@@ -3500,10 +3500,6 @@ NavierStokes::read_params ()
     prerecalesce_stiffCV.resize(num_materials);
     prerecalesce_viscconst.resize(num_materials);
     prerecalesce_heatviscconst.resize(num_materials);
-
-    for (int i=0;i<3*num_materials;i++) { 
-     recalesce_model_parameters[i]=0.0;
-    }
 
     nucleation_period=0.0;
     nucleation_init_time=0.0;
@@ -3861,9 +3857,6 @@ NavierStokes::read_params ()
     pp.queryAdd("tension_slope",tension_slope,num_interfaces);
     pp.queryAdd("tension_T0",tension_T0,num_interfaces);
     pp.queryAdd("tension_min",tension_min,num_interfaces);
-
-    pp.queryAdd("recalesce_model_parameters",recalesce_model_parameters,
-       3*num_materials);
 
     pp.queryAdd("grid_stretching_parameter",grid_stretching_parameter,
 	    AMREX_SPACEDIM);
@@ -5360,11 +5353,6 @@ NavierStokes::read_params ()
      std::cout << "cancel_advection= " << cancel_advection << '\n';
 
      std::cout << "is_phasechange= " << is_phasechange << '\n';
-
-     for (int i=0;i<3*num_materials;i++) {
-      std::cout << "recalesce_model_parameters i=" << i << "  " << 
-       recalesce_model_parameters[i] << '\n';
-     }
 
      std::cout << "perturbation_on_restart " << perturbation_on_restart << '\n';
      std::cout << "perturbation_mode " << perturbation_mode << '\n';
@@ -9771,45 +9759,6 @@ NavierStokes::initData () {
 
  if (level==0) {
 
-  int at_least_one_ice=0;
-  for (int im=1;im<=num_materials;im++) {
-   if (is_ice_matC(im-1)==1)
-    at_least_one_ice=1;
-  }
-
-  Vector<int> recalesce_material;
-  recalesce_material.resize(num_materials);
-
-  int at_least_one=0;
-  for (int im=1;im<=num_materials;im++) {
-   recalesce_material[im-1]=parent->AMR_recalesce_flag(im);
-   if (parent->AMR_recalesce_flag(im)>0) {
-    if (at_least_one_ice!=1)
-     amrex::Error("at_least_one_ice==1");
-    at_least_one=1;
-   }
-  }
-      
-  Vector<Real> recalesce_state_old;
-  int recalesce_num_state=6;
-  recalesce_state_old.resize(recalesce_num_state*num_materials);
-  if (at_least_one==1) {
-   parent->recalesce_init();
-   parent->recalesce_get_state(recalesce_state_old);
-  } else if (at_least_one==0) {
-   for (int im=0;im<recalesce_num_state*num_materials;im++) {
-    recalesce_state_old[im]=-1.0;
-   }
-  } else
-   amrex::Error("at_least_one invalid");
-
-    // this must be done before the volume fractions, centroids, and
-    // level set function are initialized.
-  fort_initrecalesce(
-   recalesce_material.dataPtr(),
-   recalesce_state_old.dataPtr(),
-   &recalesce_num_state); 
-
   init_aux_data();
 
  } else if ((level>0)&&(level<=max_level)) {
@@ -10496,18 +10445,6 @@ void NavierStokes::CopyNewToOldALL() {
  NavierStokes& ns_level0=getLevel(0);
  ns_level0.CopyNewToOldPC(finest_level);
 
- int at_least_one=0;
- for (int im=1;im<=num_materials;im++) {
-  if (parent->AMR_recalesce_flag(im)>0)
-   at_least_one=1;
- }
- if (at_least_one==1) {
-  parent->recalesce_copy_new_to_old();
- } else if (at_least_one==0) {
-  // do nothing
- } else
-  amrex::Error("at_least_one invalid");
-
 }  // subroutine CopyNewToOldALL
 
 
@@ -10529,18 +10466,6 @@ void NavierStokes::CopyOldToNewALL() {
  }// for (int ilev=level;ilev<=finest_level;ilev++)
  NavierStokes& ns_level0=getLevel(0);
  ns_level0.CopyOldToNewPC(finest_level);
-
- int at_least_one=0;
- for (int im=1;im<=num_materials;im++) {
-  if (parent->AMR_recalesce_flag(im)>0)
-   at_least_one=1;
- }
- if (at_least_one==1) {
-  parent->recalesce_copy_old_to_new();
- } else if (at_least_one==0) {
-  // do nothing
- } else
-  amrex::Error("at_least_one invalid");
 
 } // subroutine CopyOldToNewALL
 

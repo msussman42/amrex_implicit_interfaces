@@ -85,7 +85,6 @@ namespace
     bool prereadFAHeaders;
     VisMF::Header::Version plot_headerversion(VisMF::Header::Version_v1);
     VisMF::Header::Version checkpoint_headerversion(VisMF::Header::Version_v1);
-    Vector<int> recalesce_flag;  //if set, then "recalesce_state" checkpointed.
 
 //}
 
@@ -177,17 +176,6 @@ AmrCore::DataLog (int i)
 {
     return *datalog[i];
 }
-
-int 
-AmrCore::AMR_recalesce_flag(int im) const {
-
- if ((im<1)||(im>global_AMR_num_materials))
-  amrex::Error("im out of range");
-
- return recalesce_flag[im-1];
-
-}
-
 
 Vector<std::unique_ptr<AmrLevel> >&
 AmrCore::getAmrLevels () noexcept
@@ -497,18 +485,6 @@ AmrCore::InitAmr () {
  ppns.get("num_species_var",global_AMR_num_species_var);
  if ((global_AMR_num_species_var<0)||(global_AMR_num_species_var>999))
   amrex::Error("global_AMR_num_species_var invalid");
-
- recalesce_flag.resize(global_AMR_num_materials);
- for (int im=0;im<global_AMR_num_materials;im++) {
-  recalesce_flag[im]=0;
- }
- ppns.queryAdd("recalesce_flag",recalesce_flag,global_AMR_num_materials);
- for (int im=0;im<global_AMR_num_materials;im++) {
-  if ((recalesce_flag[im]!=0)&&
-      (recalesce_flag[im]!=1)&&
-      (recalesce_flag[im]!=2))
-   amrex::Error("recalesce_flag invalid");
- }
 
  global_AMR_particles_flag=0;
  ppns.queryAdd("particles_flag",global_AMR_particles_flag);
@@ -1021,30 +997,6 @@ AmrCore::restart (const std::string& filename)
     } else
      amrex::Error("local_num_materials!=global_AMR_num_materials");
 
-    int checkpoint_recalesce_data=0;
-    for (int im=0;im<global_AMR_num_materials;im++) {
-     if (recalesce_flag[im]!=0)
-      checkpoint_recalesce_data=1;
-    }
-
-    if (checkpoint_recalesce_data==0) {
-     // do nothing
-    } else if (checkpoint_recalesce_data==1) {
-     int array_size;
-
-     is >> array_size;
-     recalesce_state_old.resize(array_size);
-     for (int j=0;j<array_size;j++)
-      is >> recalesce_state_old[j];
-
-     is >> array_size;
-     recalesce_state_new.resize(array_size);
-     for (int j=0;j<array_size;j++)
-      is >> recalesce_state_new[j];
-
-    } else
-     amrex::Error("checkpoint_recalesce_data invalid");
-
 // END SUSSMAN KLUGE RESTART
 
     is >> dt_AMR;
@@ -1282,26 +1234,6 @@ AmrCore::checkPoint ()
     amrex::Error("AMR_volume_history cannot be negative");
   }
 
-  int checkpoint_recalesce_data=0;
-  for (int im=0;im<global_AMR_num_materials;im++) {
-   if (recalesce_flag[im]!=0)
-    checkpoint_recalesce_data=1;
-  }
-
-  if (checkpoint_recalesce_data==0) {
-   // do nothing
-  } else if (checkpoint_recalesce_data==1) {
-
-   HeaderFile << recalesce_state_old.size() << '\n';
-   for (int j=0;j<recalesce_state_old.size();j++)
-    HeaderFile << recalesce_state_old[j] << '\n';
-   HeaderFile << recalesce_state_new.size() << '\n';
-   for (int j=0;j<recalesce_state_new.size();j++)
-    HeaderFile << recalesce_state_new[j] << '\n';
-
-  } else
-   amrex::Error("checkpoint_recalesce_data invalid");
-
 // END SUSSMAN KLUGE CHECKPOINT
 
   HeaderFile << dt_AMR << ' ' << '\n';
@@ -1505,90 +1437,6 @@ AmrCore::timeStep (Real time,
  }
 
 }  // subroutine timeStep
-
-void AmrCore::recalesce_copy_new_to_old() {
-
- int recalesce_num_state=6;
-
- if ((recalesce_state_old.size()!=
-      global_AMR_num_materials*recalesce_num_state)||
-     (recalesce_state_new.size()!=
-      global_AMR_num_materials*recalesce_num_state)) {
-   amrex::Error("recalesce sizes incorrect");
- } else {
-
-  for (int im=0;im<global_AMR_num_materials*recalesce_num_state;im++) {
-
-   recalesce_state_old[im]=recalesce_state_new[im];
-
-  } // im
- } // everything correct size?
-} // recalesce_copy_new_to_old
-
-
-
-void AmrCore::recalesce_copy_old_to_new() {
-
- int recalesce_num_state=6;
-
- if ((recalesce_state_old.size()!=global_AMR_num_materials*recalesce_num_state)||
-     (recalesce_state_new.size()!=global_AMR_num_materials*recalesce_num_state)) {
-   amrex::Error("recalesce sizes incorrect");
- } else {
-  for (int im=0;im<global_AMR_num_materials*recalesce_num_state;im++) {
-
-   recalesce_state_new[im]=recalesce_state_old[im];
-
-  } // im
- } // everything correct size?
-} // recalesce_copy_old_to_new
-
-
-
-void AmrCore::recalesce_init() {
-
- int recalesce_num_state=6;
-
- recalesce_state_old.resize(recalesce_num_state*global_AMR_num_materials);
- recalesce_state_new.resize(recalesce_num_state*global_AMR_num_materials);
-
- for (int im=0;im<recalesce_num_state*global_AMR_num_materials;im++) {
-  recalesce_state_old[im]=-1.0;
-  recalesce_state_new[im]=-1.0;
- }
-
-} // recalesce_init
-
-
-void AmrCore::recalesce_get_state(Vector<Real>& recalesce_state_out) { 
-
- int recalesce_num_state=6;
-
- if (recalesce_state_out.size()!=recalesce_num_state*global_AMR_num_materials)
-  amrex::Error("recalesce_state_out has incorrect size");
- if (recalesce_state_old.size()!=recalesce_num_state*global_AMR_num_materials)
-  amrex::Error("recalesce_state_old has incorrect size");
-
- for (int im=0;im<recalesce_num_state*global_AMR_num_materials;im++)
-  recalesce_state_out[im]=recalesce_state_old[im];
-
-} // recalesce_get_state
-
-
-void AmrCore::recalesce_put_state(Vector<Real>& recalesce_state_in) {
-
- int recalesce_num_state=6;
-
- if (recalesce_state_new.size()!=recalesce_num_state*global_AMR_num_materials)
-  amrex::Error("recalesce_state_new has incorrect size");
- if (recalesce_state_in.size()!=recalesce_num_state*global_AMR_num_materials)
-  amrex::Error("recalesce_state_in has incorrect size");
-
- for (int im=0;im<recalesce_num_state*global_AMR_num_materials;im++)
-  recalesce_state_new[im]=recalesce_state_in[im];
-
-} // recalesce_put_state
-
 
 void
 AmrCore::coarseTimeStep (Real stop_time)

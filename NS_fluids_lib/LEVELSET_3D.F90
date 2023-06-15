@@ -18645,42 +18645,6 @@ stop
       return
       end subroutine fort_purgeflotsam
 
-      subroutine fort_initrecalesce( &
-       recalesce_material_in, &
-       recalesce_state_old_in, &
-       recalesce_num_state_in) &
-      bind(c,name='fort_initrecalesce')
-
-      use probcommon_module
-      use probf90_module
-
-      IMPLICIT NONE
-
-
-      INTEGER_T, INTENT(in) :: recalesce_num_state_in
-      INTEGER_T i
-      INTEGER_T, INTENT(in) :: recalesce_material_in(num_materials)
-      REAL_T, INTENT(in) :: &
-           recalesce_state_old_in(recalesce_num_state*num_materials)
-
-      if (num_materials.gt.100) then
-       print *,"too many materials"
-       stop
-      endif
-      if (recalesce_num_state.ne.recalesce_num_state_in) then
-       print *,"recalesce_num_state_in invalid"
-       stop
-      endif
-
-      do i=1,num_materials
-       recalesce_material(i)=recalesce_material_in(i)
-      enddo
-      do i=1,recalesce_num_state*num_materials
-       recalesce_state_old(i)=recalesce_state_old_in(i)
-      enddo
-
-      return
-      end subroutine fort_initrecalesce
 
       end module levelset_module
 
