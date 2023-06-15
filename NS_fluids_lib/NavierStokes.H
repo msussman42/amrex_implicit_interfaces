@@ -2154,6 +2154,8 @@ protected:
     static Vector<Real> prerecalesce_heatviscconst;
     static Vector<Real> heatviscconst_interface;
       // num_species * num_materials size.
+    static Vector<Real> speciesreactionrate;
+      // num_species * num_materials size.
     static Vector<Real> speciesconst;
       // num_species * num_materials size.
     static Vector<Real> speciesviscconst;
