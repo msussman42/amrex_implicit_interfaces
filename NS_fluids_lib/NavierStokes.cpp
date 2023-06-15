@@ -867,7 +867,8 @@ Real NavierStokes::heatviscconst_max=0.0;
 Real NavierStokes::heatviscconst_min=0.0;
 Vector<Real> NavierStokes::viscconst_interface;
 Vector<Real> NavierStokes::heatviscconst_interface;
-Vector<Real> NavierStokes::speciesconst;  // unused currently
+Vector<Real> NavierStokes::speciesconst;  
+Vector<Real> NavierStokes::speciesreactionrate;  
 Vector<Real> NavierStokes::speciesviscconst_interface;
 // 1..num_species_var
 Vector<Real> NavierStokes::species_molar_mass; // def=1
@@ -3366,6 +3367,7 @@ NavierStokes::read_params ()
     viscosity_state_model.resize(num_materials);
     les_model.resize(num_materials);
     viscconst_interface.resize(num_interfaces);
+    speciesreactionrate.resize((num_species_var+1)*num_materials);
     speciesconst.resize((num_species_var+1)*num_materials);
     speciesviscconst.resize((num_species_var+1)*num_materials);
     speciesviscconst_interface.resize((num_species_var+1)*num_interfaces);
@@ -3638,6 +3640,7 @@ NavierStokes::read_params ()
     for (int i=0;i<(num_species_var+1)*num_materials;i++) {
      speciesconst[i]=0.0;
      speciesviscconst[i]=0.0;
+     speciesreactionrate[i]=0.0;
     }
 
     for (int i=0;i<num_materials;i++) {
@@ -3746,10 +3749,14 @@ NavierStokes::read_params ()
      heatviscconst_interface[i]=0.0;
     }
 
-    pp.queryAdd("heatviscconst_interface",heatviscconst_interface,num_interfaces);
+    pp.queryAdd("heatviscconst_interface",heatviscconst_interface,
+		num_interfaces);
     if (num_species_var>0) {
+     pp.queryAdd("speciesreactionrate",speciesreactionrate,
+		 num_species_var*num_materials);
      pp.queryAdd("speciesconst",speciesconst,num_species_var*num_materials);
-     pp.queryAdd("speciesviscconst",speciesviscconst,num_species_var*num_materials);
+     pp.queryAdd("speciesviscconst",speciesviscconst,
+		 num_species_var*num_materials);
     }
 
     for (int i=0;i<num_materials;i++) {
@@ -4173,6 +4180,35 @@ NavierStokes::read_params ()
 
     for (int im=0;im<num_materials;im++) {
      if (is_ice_matC(im)==1) {
+
+      int ispec=recalesce_fraction_id[im];
+
+      if ((ispec>=1)&&(ispec<=num_species_var)) {
+       for (int im_opp=0;im_opp<num_materials;im_opp++) {
+        if (im_opp==im) {
+         if (speciesconst[(ispec-1)*num_materials+im]==1.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesconst invalid");
+         if (speciesreactionrate[(ispec-1)*num_materials+im]>0.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesreactionrate invalid");
+	} else if (im_opp!=im) {
+         if (speciesconst[(ispec-1)*num_materials+im_opp]==0.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesconst invalid");
+         if (speciesreactionrate[(ispec-1)*num_materials+im_opp]==0.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesreactionrate invalid");
+	} else 
+	 amrex::Error("im_opp or im invalid");
+       } //im_opp=0..num_materials-1
+      } else
+       amrex::Error("recalesce_fraction_id (ispec) invalid");
+
       for (int im_opp=0;im_opp<num_materials;im_opp++) {
        if (im!=im_opp) {
         if (ns_is_rigid(im_opp)==0) {
@@ -5347,6 +5383,8 @@ NavierStokes::read_params ()
           speciesviscconst[i] << '\n';
       std::cout << "speciesconst i=" << i << "  " << 
           speciesconst[i] << '\n';
+      std::cout << "speciesreactionrate i=" << i << "  " << 
+          speciesreactionrate[i] << '\n';
      }
 
      std::cout << "stokes_flow= " << stokes_flow << '\n';
