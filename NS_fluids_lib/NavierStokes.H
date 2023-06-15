@@ -191,18 +191,6 @@ public:
     void GetDragALL();
     void GetDrag(int isweep);
 
-    void process_recalesce_dataALL(
-     Vector<int> recalesce_material,
-     Vector<Real>& recalesce_state_old,
-     Vector<Real>& recalesce_state_new);
-    void process_recalesce_data(
-     Vector<int> recalesce_material,
-     Vector<Real>& recalesce_state_old,
-     Vector<Real>& recalesce_state_new,
-     Vector<Real>& integrated_quantities,
-     int isweep);
-    void recalesce_temperature(int im_source);
-
     void volWgtSum(int isweep,int fast_mode);
 
     void Number_CellsALL(Real& rcells);
@@ -1692,7 +1680,6 @@ protected:
     static Vector<Real> tension_init; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Real unscaled_min_curvature_radius; //default: 2.0
     static Vector<Real> prefreeze_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
-    static Vector<Real> recalesce_model_parameters; // 3*num_materials
 
      // (dir,side)  (1,1),(2,1),(3,1),(1,2),(2,2),(3,2)
     static Vector<Real> outflow_velocity_buffer_size;
@@ -1819,6 +1806,9 @@ protected:
      // 0=Palmore and Desjardins (same as Villegas et al)
      // 1=Tanasawa  2=Schrage  3=Kassemi
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
+     // index: 1..num_materials
+     // value: 1..num_species_var
+    static Vector<int> recalesce_fraction_id;
      // index: 1..2*num_interfaces
      // value: 1..num_species_var
     static Vector<int> mass_fraction_id; 

@@ -9173,11 +9173,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     total_iterations[tid_current].dataPtr(),
     total_errors[tid_current].dataPtr(),
     &continuous_mof,  //fort_sloperecon
-    &partial_cmof_stencil_at_walls,
-    growth_angle.dataPtr(), 
-    growth_angle_primary_mat.dataPtr(),
-    growth_angle_tertiary_mat.dataPtr(),
-    growth_angle_secondary_mat.dataPtr());
+    &partial_cmof_stencil_at_walls);
  }  // mfi
 } // omp
  ns_reconcile_d_num(LOOP_SLOPE_RECON,"VOF_Recon");

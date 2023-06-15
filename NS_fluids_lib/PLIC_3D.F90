@@ -64,11 +64,7 @@ stop
         total_iterations, &
         total_errors, &
         continuous_mof, &
-        partial_cmof_stencil_at_walls, &
-        growth_angle, &
-        growth_angle_primary_mat, &
-        growth_angle_tertiary_mat, &
-        growth_angle_secondary_mat) &
+        partial_cmof_stencil_at_walls)
       bind(c,name='fort_sloperecon')
 
       use probf90_module
@@ -102,11 +98,6 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(slopes)
       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
     
-      REAL_T, INTENT(in) :: growth_angle(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_primary_mat(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_tertiary_mat(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: growth_angle_secondary_mat(2*num_interfaces)
- 
       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
       REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4) 
@@ -197,13 +188,6 @@ stop
 
       INTEGER_T :: local_maskcov
 
-      INTEGER_T :: im_primary
-      INTEGER_T :: im_secondary
-      INTEGER_T :: im_tertiary
-      INTEGER_T :: im_primary_rigid
-      INTEGER_T :: iten_growth
-      INTEGER_T :: match_flag
-
 #include "mofdata.H"
 
       maskcov_ptr=>maskcov
@@ -286,52 +270,6 @@ stop
        print *,"levelrz invalid fort_sloperecon"
        stop
       endif
-
-      do i=1,2*num_interfaces
-       if (growth_angle_primary_mat(i).eq.0) then
-
-        if (growth_angle(i).eq.zero) then
-         ! do nothing
-        else
-         print *,"growth_angle is out of range: ",growth_angle(i)
-         stop
-        endif
-
-       else if (abs(growth_angle(i)).le.half*Pi) then
-
-        if ((growth_angle_primary_mat(i).ge.1).and. &
-            (growth_angle_primary_mat(i).le.num_materials)) then
-         ! do nothing
-        else
-         print *,"growth_angle_primary_mat invalid"
-         stop
-        endif
-        if ((growth_angle_secondary_mat(i).ge.1).and. &
-            (growth_angle_secondary_mat(i).le.num_materials)) then
-         ! do nothing
-        else
-         print *,"growth_angle_secondary_mat invalid"
-         stop
-        endif
-        if ((growth_angle_tertiary_mat(i).ge.1).and. &
-            (growth_angle_tertiary_mat(i).le.num_materials)) then
-         ! do nothing
-        else
-         print *,"growth_angle_tertiary_mat invalid"
-         stop
-        endif
-
-        if (continuous_mof.ge.1) then
-         ! do nothing
-        else
-         print *,"continuous_mof>=1 if growth_angle_primary_mat!=0"
-         stop
-        endif
-       else
-        print *,"growth_angle is out of range: ",growth_angle(i)
-        stop
-       endif
-      enddo !i=1,2*num_interfaces
 
       if ((update_flag.eq.RECON_UPDATE_NULL).or. &
           (update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
@@ -928,17 +866,19 @@ stop
            total_errors(im)+mof_errors(tid+1,im)
          enddo  ! im=1..num_materials
 
-         ! for growth angle algorithm:
+         ! for general CMOF reconstruction (>=3 materials):
          ! 1. find CMOF reconstruction using both CMOF centroids and
          !    CMOF volumes
-         ! 2. Correct the CMOF reconstruction (if just 3 materials in
-         !    CMOF stencil) according to the growth angle condition.
-         ! 3. Find the centroids of the resulting reconstruction in the
+         ! 2. Find the centroids of the resulting reconstruction in the
          !    center cell.
-         ! 4. If both the original center cell volume fractions and
+         ! 3. If both the original center cell volume fractions and
          !    center cell reconstructed volume fraction satisfy 0<F<1,
          !    then replace center cell centroids with those from step 3.
-         ! 5. Do a standard MOF reconstruction.
+         ! 4. Do a standard MOF reconstruction.
+         ! Future: if same number of materials 0<F<1 in center cell as in
+         !  the CMOF stencil, just do one step:
+         ! 1. find CMOF reconstruction using CMOF centroids and MOF 
+         !    (cell center) volumes.
         else if ((continuous_mof_parm.ge.1).and. &
                  (num_fluid_materials_in_stencil.ge.3)) then
 
@@ -984,238 +924,6 @@ stop
           total_errors(im)= &
            total_errors(im)+mof_errors(tid+1,im)
          enddo  ! im=1..num_materials
-
-          ! correct triple point angle
-         if (num_fluid_materials_in_stencil.eq.3) then
-
-          im_primary=0
-          im_secondary=0
-          im_tertiary=0
-          im_primary_rigid=0
-
-          do im=1,num_materials
-
-           if (is_rigid(im).eq.0) then
-
-            if (voflist_stencil(im).gt.VOFTOL) then
-
-             if (im_primary.eq.0) then
-              im_primary=im
-             else if ((im_primary.ge.1).and. &
-                      (im_primary.le.num_materials)) then
-              if (voflist_stencil(im).gt. &
-                  voflist_stencil(im_primary)) then
-               if (im_secondary.eq.0) then
-                im_secondary=im_primary
-                im_primary=im
-               else if ((im_secondary.ge.1).and. &
-                        (im_secondary.le.num_materials)) then
-                if (voflist_stencil(im_primary).gt. &
-                    voflist_stencil(im_secondary)) then
-                 im_tertiary=im_secondary
-                 im_secondary=im_primary
-                 im_primary=im
-                else if (voflist_stencil(im_primary).le. &
-                         voflist_stencil(im_secondary)) then
-                 print *,"im_primary and im_secondary out of order: ", &
-                    im_primary,im_secondary
-                 stop
-                else
-                 print *,"voflist_stencil is NaN(1) ", &
-                         voflist_stencil(im_primary), &
-                         voflist_stencil(im_secondary)
-                 stop
-                endif
-               else
-                print *,"im_secondary invalid"
-                stop
-               endif
-              else if (voflist_stencil(im).le. &
-                       voflist_stencil(im_primary)) then
-               if (im_secondary.eq.0) then
-                im_secondary=im
-               else if ((im_secondary.ge.1).and. &
-                        (im_secondary.le.num_materials)) then
-                if (voflist_stencil(im).gt. &
-                    voflist_stencil(im_secondary)) then
-                 im_tertiary=im_secondary
-                 im_secondary=im
-                else if (voflist_stencil(im).le. &
-                         voflist_stencil(im_secondary)) then
-                 im_tertiary=im
-                else
-                 print *,"voflist_stencil is NaN(2) ", &
-                         voflist_stencil(im), &
-                         voflist_stencil(im_secondary)
-                 stop
-                endif
-               else
-                print *,"im_secondary invalid"
-                stop
-               endif
-              else
-               print *,"voflist_stencil is NaN(3) ", &
-                       voflist_stencil(im), &
-                       voflist_stencil(im_primary)
-               stop
-              endif
-             else
-              print *,"im_primary invalid"
-              stop
-             endif
-
-            else if (voflist_stencil(im).le.VOFTOL) then
-             ! do nothing
-            else
-             print *,"voflist_stencil is NaN(4) ",voflist_stencil(im)
-             stop
-            endif
-
-           else if (is_rigid(im).eq.1) then
-
-            if (im_primary_rigid.eq.0) then
-
-             if (voflist_stencil(im).ge.VOFTOL) then
-              im_primary_rigid=im
-             else if (voflist_stencil(im).lt.VOFTOL) then
-              ! do nothing
-             else
-              print *,"voflist_stencil is NaN im,voflist_stencil: ", &
-                      im,voflist_stencil(im)
-              stop
-             endif
-              
-            else if ((im_primary_rigid.ge.1).and. &
-                     (im_primary_rigid.le.num_materials)) then
-             if (voflist_stencil(im).gt. &
-                 voflist_stencil(im_primary_rigid)) then
-              im_primary_rigid=im
-             else if (voflist_stencil(im).le. &
-                      voflist_stencil(im_primary_rigid)) then
-              ! do nothing
-             else
-              print *,"voflist_stencil is NaN(5) ", &
-                  voflist_stencil(im), &
-                  voflist_stencil(im_primary_rigid)
-              stop
-             endif
-            else
-             print *,"im_primary_rigid invalid: ",im_primary_rigid
-             stop
-            endif
-           else
-            print *,"is_rigid invalid im,is_rigid: ",im,is_rigid(im)
-            stop
-           endif
-
-          enddo !im=1,num_materials
-
-          if (im_primary_rigid.eq.0) then
-
-           if (voflist_stencil(im_tertiary).ge.0.01d0) then
-         
-            do iten_growth=1,2*num_interfaces
-
-             if (growth_angle_primary_mat(iten_growth).ge.1) then
-
-              if (growth_angle_primary_mat(iten_growth).eq. &
-                  growth_angle_secondary_mat(iten_growth)) then
-               print *,"growth_angle parms incorrect"
-               stop
-              endif
-              if (growth_angle_primary_mat(iten_growth).eq. &
-                  growth_angle_tertiary_mat(iten_growth)) then
-               print *,"growth_angle parms incorrect"
-               stop
-              endif
-              if (growth_angle_secondary_mat(iten_growth).eq. &
-                  growth_angle_tertiary_mat(iten_growth)) then
-               print *,"growth_angle parms incorrect"
-               stop
-              endif
-
-              match_flag=1
-
-              if ((growth_angle_primary_mat(iten_growth).eq.im_primary).or. &
-                  (growth_angle_primary_mat(iten_growth).eq.im_secondary).or.&
-                  (growth_angle_primary_mat(iten_growth).eq.im_tertiary)) then
-               ! do nothing
-              else
-               match_flag=0
-              endif 
-              if ((growth_angle_secondary_mat(iten_growth).eq.im_primary).or.&
-                  (growth_angle_secondary_mat(iten_growth).eq.im_secondary).or.&
-                  (growth_angle_secondary_mat(iten_growth).eq.im_tertiary)) then
-               ! do nothing
-              else
-               match_flag=0
-              endif 
-              if ((growth_angle_tertiary_mat(iten_growth).eq.im_primary).or.&
-                  (growth_angle_tertiary_mat(iten_growth).eq.im_secondary).or.&
-                  (growth_angle_tertiary_mat(iten_growth).eq.im_tertiary)) then
-               ! do nothing
-              else
-               match_flag=0
-              endif 
-
-              if (match_flag.eq.1) then
-
-               call multimaterial_MOF_growth_angle( &
-                growth_angle_primary_mat(iten_growth), &
-                growth_angle_secondary_mat(iten_growth), &
-                growth_angle_tertiary_mat(iten_growth), &
-                growth_angle(iten_growth), &
-                bfact,dx, &
-                xsten, &
-                nhalf, &
-                geom_xtetlist(1,1,1,tid+1), &
-                geom_xtetlist_old(1,1,1,tid+1), &
-                nmax, &
-                nmax, &
-                mofdata_super_vfrac, &
-                multi_centroidA, & !(num_materials,sdim) relative to supercell
-                cmofsten, & !intent(in)
-                SDIM)
-
-              else if (match_flag.eq.0) then
-               ! do nothing
-              else
-               print *,"match_flag invalid"
-               stop
-              endif
-
-             else if (growth_angle_primary_mat(iten_growth).eq.0) then
-              ! do nothing
-             else
-              print *,"growth_angle_primary_mat invalid"
-              stop
-             endif
-
-            enddo !iten_growth=1,2*num_interfaces
-
-           else if (voflist_stencil(im_tertiary).le.0.01d0) then
-            !do nothing
-           else
-            print *,"voflist_stencil is NaN(6) ",voflist_stencil(im_tertiary)
-            stop
-           endif
-
-          else if ((im_primary_rigid.ge.1).and. &
-                   (im_primary_rigid.le.num_materials)) then
-           ! do nothing
-          else
-           print *,"im_primary_rigid invalid: ",im_primary_rigid
-           stop
-          endif
-
-         else if ((num_fluid_materials_in_stencil.gt.3).and. &
-                  (num_fluid_materials_in_stencil.le.num_materials)) then
-          ! do nothing
-         else
-          print *,"num_fluid_materials_in_stencil invalid:", &
-            num_fluid_materials_in_stencil
-          stop
-         endif
 
          do im=1,num_materials
           vofcomprecon=(im-1)*ngeom_recon+1
