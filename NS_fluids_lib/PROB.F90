@@ -5013,6 +5013,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine fixed_face
 
+       !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
+       !if theta_air=Pi => sigma_ice_melt=0
        ! static_flag=1 if called from "static surface tension advection"
       subroutine merge_levelset(xpos,time,LS,LS_merge,static_flag)
       use global_utility_module
@@ -5062,24 +5064,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
 
+              !The merge_levelset is for the algorithm described by:
+              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
+              ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
             if (user_tension(iten).eq.zero) then
+
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
 
-              !The merge code is for the algorithm described by:
-              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
-              !The growth_angle code is for the algorithm described by
-              ! Vu, Tryggvason.
-             if (fort_growth_angle_primary_mat(iten).ne.0) then
-              LH1=zero
-             endif
-
              LH2= &
                get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
-
-             if (fort_growth_angle_primary_mat(iten+num_interfaces).ne.0) then
-              LH2=zero
-             endif
 
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               call get_primary_material(LS,im_primary)
@@ -5152,8 +5146,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               stop
              endif
             else if (user_tension(iten).gt.zero) then
-             print *,"expecting user_tension(iten)==0 if ice/fluid interface"
-             stop
+             !do nothing
             else
              print *,"user_tension invalid"
              stop
@@ -5186,6 +5179,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine merge_levelset
 
 
+       !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
+       !if theta_air=Pi => sigma_ice_melt=0
+       ! static_flag=1 if called from "static surface tension advection"
       subroutine merge_normal(xpos,time,LS,nrm,nrm_merge,static_flag)
       use global_utility_module
       use MOF_routines_module
@@ -5232,23 +5228,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
 
+              !The merge_normal is for the algorithm described by:
+              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
+              ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
             if (user_tension(iten).eq.zero) then
+
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
 
-              !The merge code is for the algorithm described by:
-              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
-              !The growth_angle code is for the algorithm described by
-              ! Vu, Tryggvason.
-             if (fort_growth_angle_primary_mat(iten).ne.0) then
-              LH1=zero
-             endif
-
-             LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
-
-             if (fort_growth_angle_primary_mat(iten+num_interfaces).ne.0) then
-              LH2=zero
-             endif
+             LH2= &
+               get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
 
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               call get_primary_material(LS,im_primary)
@@ -5366,6 +5355,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine merge_normal
 
 
+       !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
+       !if theta_air=Pi => sigma_ice_melt=0
+       ! static_flag=1 if called from "static surface tension advection"
       subroutine merge_vof(xpos,time,vof,vof_merge,static_flag)
       use global_utility_module
       use MOF_routines_module
@@ -5405,23 +5397,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
 
+              !The merge_vof code is for the algorithm described by:
+              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
+              ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
             if (user_tension(iten).eq.zero) then
+
              default_flag=1
              LH1=get_user_latent_heat(iten,293.0d0,default_flag)
 
-              !The merge code is for the algorithm described by:
-              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
-              !The growth_angle code is for the algorithm described by
-              ! Vu, Tryggvason.
-             if (fort_growth_angle_primary_mat(iten).ne.0) then
-              LH1=zero
-             endif
-
-             LH2=get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
-
-             if (fort_growth_angle_primary_mat(iten+num_interfaces).ne.0) then
-              LH2=zero
-             endif
+             LH2= &
+               get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
 
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               vof_merge(im)=zero

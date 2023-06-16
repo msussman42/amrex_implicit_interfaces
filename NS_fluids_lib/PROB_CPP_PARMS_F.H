@@ -142,7 +142,6 @@ namespace amrex{
        Real* prerecalesce_stiffCV,
        Real* speciesconst,
        Real* speciesviscconst,
-       int* growth_angle_primary_mat,
        Real* latent_heat,
        Real* latent_heat_slope,
        Real* latent_heat_T0,
