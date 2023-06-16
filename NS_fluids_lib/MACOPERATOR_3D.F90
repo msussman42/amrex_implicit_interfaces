@@ -622,7 +622,6 @@ stop
         endif
 
          ! SOLVETYPE_PRES, 
-         ! SOLVETYPE_PRESSTATIC, 
          ! SOLVETYPE_PRESGRAVITY, 
          ! SOLVETYPE_INITPROJ
         if (project_option_projectionF(project_option).eq.1) then
@@ -637,8 +636,6 @@ stop
          else if (project_option.eq.SOLVETYPE_INITPROJ) then
           local_cterm(1)=zero
          else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
-          local_cterm(1)=zero
-         else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
           local_cterm(1)=zero
          else
           print *,"project_option invalid fort_scalarcoeff"

@@ -5015,13 +5015,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
        !if theta_air=Pi => sigma_ice_melt=0
-       ! static_flag=1 if called from "static surface tension advection"
-      subroutine merge_levelset(xpos,time,LS,LS_merge,static_flag)
+      subroutine merge_levelset(xpos,time,LS,LS_merge)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: LS(num_materials)
@@ -5054,15 +5052,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
 
-            if (static_flag.eq.0) then
-             call get_user_tension( &
-              xpos,time,fort_tension,user_tension,def_thermal)
-            else if (static_flag.eq.1) then
-             user_tension(iten)=fort_static_tension(iten)
-            else
-             print *,"static_flag invalid"
-             stop
-            endif
+            call get_user_tension( &
+             xpos,time,fort_tension,user_tension,def_thermal)
 
               !The merge_levelset is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
@@ -5181,13 +5172,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
        !if theta_air=Pi => sigma_ice_melt=0
-       ! static_flag=1 if called from "static surface tension advection"
-      subroutine merge_normal(xpos,time,LS,nrm,nrm_merge,static_flag)
+      subroutine merge_normal(xpos,time,LS,nrm,nrm_merge)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: LS(num_materials)
@@ -5218,15 +5207,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (is_rigid(im_opp).eq.0) then
             call get_iten(im,im_opp,iten)
 
-            if (static_flag.eq.0) then
-             call get_user_tension( &
+            call get_user_tension( &
               xpos,time,fort_tension,user_tension,def_thermal)
-            else if (static_flag.eq.1) then
-             user_tension(iten)=fort_static_tension(iten)
-            else
-             print *,"static_flag invalid"
-             stop
-            endif
 
               !The merge_normal is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
@@ -5357,13 +5339,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
        !if theta_air=Pi => sigma_ice_melt=0
-       ! static_flag=1 if called from "static surface tension advection"
-      subroutine merge_vof(xpos,time,vof,vof_merge,static_flag)
+      subroutine merge_vof(xpos,time,vof,vof_merge)
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: vof(num_materials)
@@ -5387,15 +5367,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (is_rigid(im_opp).eq.0) then
             call get_iten(im,im_opp,iten)
 
-            if (static_flag.eq.0) then
-             call get_user_tension( &
+            call get_user_tension( &
               xpos,time,fort_tension,user_tension,def_thermal)
-            else if (static_flag.eq.1) then
-             user_tension(iten)=fort_static_tension(iten)
-            else
-             print *,"static_flag invalid"
-             stop
-            endif
 
               !The merge_vof code is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
@@ -5457,14 +5430,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          xpos,time, &
          LSleft,LSright,gradh, &
          im_opp,im, & !INTENT(out)
-         imL,imR, &   !INTENT(out)
-         static_flag)
+         imL,imR)     !INTENT(out)
 
       use global_utility_module
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: static_flag
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(out) :: im_opp,im
@@ -5480,8 +5451,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_opp=0
       gradh=zero
 
-      call merge_levelset(xpos,time,LSleft,LSleft_merge,static_flag)
-      call merge_levelset(xpos,time,LSright,LSright_merge,static_flag)
+      call merge_levelset(xpos,time,LSleft,LSleft_merge)
+      call merge_levelset(xpos,time,LSright,LSright_merge)
 
       call get_primary_material(LSleft,imL_local)
       call get_primary_material(LSright,imR_local)
@@ -12014,14 +11985,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dd_group=dd
 
         ! SOLVETYPE_PRES, 
-        ! SOLVETYPE_PRESSTATIC, 
         ! SOLVETYPE_PRESGRAVITY, 
         ! SOLVETYPE_INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
-         cc_group=cc*cc_ice
-        else if (project_option.eq.SOLVETYPE_PRESSTATIC) then!quasi-static
          cc_group=cc*cc_ice
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
          cc_group=cc*cc_ice

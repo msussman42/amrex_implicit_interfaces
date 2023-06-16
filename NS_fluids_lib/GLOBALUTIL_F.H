@@ -26,7 +26,6 @@ extern "C"
    int project_option_needs_scalingF(int* project_option);
    int project_option_projectionF(int* project_option);
    int project_option_FSI_rigid(int* project_option);
-   int project_option_is_static(int* project_option);
    int project_option_singular_possibleF(int* project_option);
 
    int fort_CTML_FSI_mat_base(
