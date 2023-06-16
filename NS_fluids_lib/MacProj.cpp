@@ -82,10 +82,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
   // do nothing
   
- } else if (project_option_is_static(&project_option)==1) {  
-
-  // do nothing
-  
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {  
 
   // do nothing
@@ -642,7 +638,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
    amrex::Error("localMF[BXCOEFNOAREA_MF+dir]->nComp() invalid");
 
    // if project_option==SOLVETYPE_PRES,
-   //    project_option==SOLVETYPE_PRESSTATIC,
    //    project_option==SOLVETYPE_INITPROJ,
    //    project_option==SOLVETYPE_PRESGRAVITY,
    //    project_option==SOLVETYPE_PRESEXTRAP,  

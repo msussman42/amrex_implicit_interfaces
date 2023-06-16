@@ -260,292 +260,12 @@ void NavierStokes::avgDownMacState(int spectral_override) {
 
 }  // end subroutine avgDownMacState
 
-// PL=rhoL g(t) exp(ikx + ky)
-// PG=-rhoG g(t) exp(ikx - ky)
-// eta(t,x)=f(t)exp(ikx)
-// PL-PG=-sigma * curvature  (y=0)
-// (rhoL+rhoG) g(t) exp(ikx)=-sigma (-k^{2}) exp(ikx) f(t)
-// g(t)=sigma k^{2}f(t)/(rhoL+rhoG)
-// v=-\Delta t PG_y/rhoG=-\Delta t g(t) k exp(ikx)   (y=0)
-// v=-\Delta t sigma k^{3} f(t) exp(ikx)/(rhoL+rhoG)
-// eta_t = v  (y=0)
-// eta(t+\Delta t)=eta(t)-\Delta t^{2}sigma k^{3} f(t) exp(ikx)/(rhoL+rhoG)
-// f(t+\Delta t)=(1-\Delta t^{2}sigma k^{3}/(rhoL+rhoG))f(t)
-// |1-\Delta t^{2}sigma k^{3}/(rhoL+rhoG)|<=1
-// k (2\Delta x)=2\pi  
-// k=\pi/\Delta x
-// \Delta t < \sqrt{ 2(rhoL+rhoG)/(\pi^{3}\sigma) }\dxmin^{3/2}
-//
-void NavierStokes::static_surface_tension_advection() {
-
- std::string local_caller_string="static_surface_tension_advection";
-
- if (static_surface_tension_duration>0.0) {
-  //do nothing
- } else
-  amrex::Error("static_surface_tension_duration invalid");
-
- if (level!=0)
-  amrex::Error("level invalid static_surface_tension_advection");
-
- if (SDC_outer_sweeps==0) {
-  // do nothing
- } else
-  amrex::Error("SDC_outer_sweeps invalid static_surface_tension_advection");
-
- if (slab_step==0) {
-  // do nothing
- } else
-  amrex::Error("slab_step invalid static_surface_tension_advection");
-
- if ((STATE_NCOMP_PRES==1)&&
-     (STATE_NCOMP_VEL==AMREX_SPACEDIM)) {
-  // do nothing
- } else
-  amrex::Error("STATE_NCOMP_PRES or STATE_NCOMP_VEL invalid static_surf..");
-
- int update_flag=RECON_UPDATE_STATE_CENTROID; 
- int init_vof_prev_time=0;
-  //output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
- int keep_all_interfaces=0;
- int ngrow_make_distance_accept=ngrow_make_distance;
- makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
-
-  //ngrow,ncomp,grid_type
- allocate_array(1,1,-1,PRESSURE_SAVE_MF);
- Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
-   STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
-  //ngrow,scomp,ncomp
- setVal_array(1,STATECOMP_PRES,STATE_NCOMP_PRES,0.0,
-   GET_NEW_DATA_OFFSET+State_Type);
-
-  //ngrow,ncomp,grid_type
- allocate_array(1,AMREX_SPACEDIM,-1,UCELL_SAVE_MF);
- Copy_array(UCELL_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
-   STATECOMP_VEL,0,AMREX_SPACEDIM,1);
-  //ngrow,scomp,ncomp
- setVal_array(1,STATECOMP_VEL,AMREX_SPACEDIM,0.0,
-   GET_NEW_DATA_OFFSET+State_Type);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   //ngrow,ncomp,grid_type
-  allocate_array(0,1,dir,UMAC_SAVE_MF+dir);
-  Copy_array(UMAC_SAVE_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
-    //ngrow,scomp,ncomp
-  setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
- }
-
- if (enable_spectral==0) {
-  //do nothing
- } else
-  amrex::Error("enable_spectral invalid static_surface_tension_advection");
-
- int quasi_static_reached=0;
- int quasi_static_iter=0;
- Real quasi_static_time=0.0;
- Real vel_max_mag_init=0.0;
-
- Vector<Real> vel_max_history(static_surface_tension_max_iter+2);
- int vel_max_min_index=2;
-
- vel_max_history[0]=0.0;
- vel_max_history[1]=0.0;
- vel_max_history[2]=0.0;
- 
- while (quasi_static_reached==0) {
-
-  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
-
-   // 1. allocate_levelset_ALL(1,LEVELPC_MF)
-   // 2. ns_level.makeStateCurv (all levels)
-   // 3. init_gradu_tensor_and_material_visc_ALL
-   //    on all levels:
-   // 4. ns_level.make_physics_vars
-   // 5. ns_level.level_init_icemask 
-  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
-  delete_array(CELLTENSOR_MF);
-  delete_array(FACETENSOR_MF);
-
-  Real static_dt_min;
-  Vector<Real> static_vel_max(AMREX_SPACEDIM+1);
-  MaxAdvectSpeedALL(static_dt_min,static_vel_max,local_caller_string);
-  if (static_vel_max[AMREX_SPACEDIM]==0.0) {
-   // do nothing
-  } else
-   amrex::Error("expecting static_vel_max[AMREX_SPACEDIM]==0.0");
-
-  Real vel_max_mag_current=0.0;
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   if (static_vel_max[dir]>=0.0) {
-    if (static_vel_max[dir]>vel_max_mag_current)
-     vel_max_mag_current=static_vel_max[dir]; 
-   } else
-    amrex::Error("static_vel_max invalid");
-  }
-  if (quasi_static_iter==0) {
-   if (vel_max_mag_current==0.0) {
-    //do nothing
-   } else
-    amrex::Error("expecting vel_max_mag_current==0.0");
-  } else if (quasi_static_iter==1) {
-   vel_max_mag_init=vel_max_mag_current;
-  } else if (quasi_static_iter>1) {
-   //do nothing
-  } else
-   amrex::Error("quasi_static_iter invalid");
-
-  if ((cfl>0.0)&&
-      (cfl<1.0)&&
-      (cfl_static>0.0)&&
-      (cfl_static<1.0)&&
-      (static_dt_min>0.0)) {
-   //do nothing
-  } else
-   amrex::Error("cfl or cfl_static or static_dt_min invalid");
-
-  quasi_static_dt_slab=static_dt_min*cfl_static;
-
-  //ngrow,scomp,ncomp
-  setVal_array(1,STATECOMP_VEL,AMREX_SPACEDIM,0.0,
-    GET_NEW_DATA_OFFSET+State_Type);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow,scomp,ncomp
-   setVal_array(0,0,1,0.0,GET_NEW_DATA_OFFSET+Umac_Type+dir);
-  }
-
-  cpp_overridepbc(1,SOLVETYPE_VISC); //homogeneous velocity bc.
-  multiphase_project(SOLVETYPE_PRESSTATIC);
-  nonlinear_advection(local_caller_string);
-
-  quasi_static_reached=0;
-  quasi_static_iter++;
-  quasi_static_time+=quasi_static_dt_slab;
-
-  if (static_surface_tension_duration>0.0) {
-
-   vel_max_history[quasi_static_iter]=vel_max_mag_current;
-
-   if (quasi_static_time>=static_surface_tension_duration) {
-    quasi_static_reached=1;
-   } 
-   if (quasi_static_time>=dt_slab) {
-    quasi_static_reached=1;
-   } 
-   if (quasi_static_iter>=static_surface_tension_max_iter) {
-    quasi_static_reached=1;
-   } 
-   if (quasi_static_iter==0) {
-    amrex::Error("quasi_static_iter invalid");
-   } else if (quasi_static_iter==1) {
-    if (vel_max_mag_current==0.0) {
-     //do nothing
-    } else
-     amrex::Error("expecting vel_max_mag_current==0.0");
-   } else if (quasi_static_iter==2) {
-     //do nothing
-   } else if (quasi_static_iter>=3) {
-
-    if (vel_max_mag_current<vel_max_history[vel_max_min_index]) {
-     vel_max_min_index=quasi_static_iter;
-    }
-
-    if (vel_max_mag_current<1.0e-3*vel_max_mag_init)
-     quasi_static_reached=1;
-   } else
-    amrex::Error("quasi_static_iter invalid");
-  } else
-   amrex::Error("static_surface_tension_duration<=0.0");
-
-  cpp_overridepbc(0,SOLVETYPE_VISC); //inhomogeneous velocity bc.
-
-  if (verbose>0) {
-   if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "quasi_static_iter= " << quasi_static_iter << '\n';
-    std::cout << "dt_slab= " << dt_slab << '\n';
-    std::cout << "cfl= " << cfl << '\n';
-    std::cout << "cfl_static= " << cfl_static << '\n';
-    std::cout << "quasi_static_dt_slab= " << quasi_static_dt_slab << '\n';
-    std::cout << "quasi_static_time= " << quasi_static_time << '\n';
-    std::cout << "vel_max_min_index= " << vel_max_min_index << '\n';
-    std::cout << "vel_max_history[vel_max_min_index]= " << 
-       vel_max_history[vel_max_min_index] << '\n';
-    std::cout << "vel_max_mag_init= " << vel_max_mag_init << '\n';
-    std::cout << "vel_max_mag_current= " << vel_max_mag_current << '\n';
-    for (int iten=0;iten<num_interfaces;iten++) {
-     std::cout << "iten= " << iten << " static_cap_wave_speed=" <<
-       static_cap_wave_speed[iten] << '\n';
-    }
-   } //IOProc?
-  } else if (verbose==0) {
-   //do nothing
-  } else
-   amrex::Error("verbose invalid");
-
-  if (visual_quasi_static_plot_int>0) {
-   int nsteps=parent->levelSteps(0); 
-   int ratio=(nsteps+1)/visual_quasi_static_plot_int;
-   ratio=ratio*visual_quasi_static_plot_int;
-   if (ratio==nsteps+1) {
-    parent->writeDEBUG_PlotFile(nsteps,SDC_outer_sweeps,slab_step);
-    std::cout << "press any number then enter: quasi_static loop\n";
-    int n_input;
-    std::cin >> n_input;
-   }
-  }
-
-  if (quasi_static_reached==0) {
-   ngrow_make_distance_accept=2;
-   makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
-  } else if (quasi_static_reached==1) {
-   //do nothing
-  } else
-   amrex::Error("quasi_static_reached invalid");
-
- } // while (quasi_static_reached==0) 
-
- std::fflush(NULL);
- if (ParallelDescriptor::IOProcessor()) {
-  std::cout << "End of static loop: quasi_static_iter= " << 
-    quasi_static_iter << '\n';
- }
- std::fflush(NULL);
-
- Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
-    0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
- delete_array(PRESSURE_SAVE_MF);
-
- Copy_array(GET_NEW_DATA_OFFSET+State_Type,UCELL_SAVE_MF,
-    0,STATECOMP_VEL,AMREX_SPACEDIM,1);
- delete_array(UCELL_SAVE_MF);
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_SAVE_MF+dir,0,0,1,0);
-  delete_array(UMAC_SAVE_MF+dir);
- }
-
-} // end subroutine static_surface_tension_advection()
-
 void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  std::string local_caller_string="nonlinear_advection";
  local_caller_string=caller_string+local_caller_string;
 
- int local_static_flag=0;
-
- if (pattern_test(local_caller_string,"static_surface_tension_ad")==1) {
-  advection_dt_slab=quasi_static_dt_slab;
-  advect_time_slab=cur_time_slab;
-  vel_time_slab=cur_time_slab;
-
-  local_static_flag=1;
-
-  if (enable_spectral==0) {
-   //do nothing
-  } else 
-   amrex::Error("expecting enable_spectral==0");
-
- } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
+ if (pattern_test(local_caller_string,"do_the_advance")==1) {
   advection_dt_slab=dt_slab;
   advect_time_slab=prev_time_slab;
 
@@ -556,7 +276,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   else
    amrex::Error("divu_outer_sweeps invalid nonlinear_advection");
 
-  local_static_flag=0;
  } else
   amrex::Error("caller is invalid in nonlinear_advection");
 
@@ -745,13 +464,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  int update_flag=RECON_UPDATE_NULL;
 
- if (local_static_flag==0) {
-  //do nothing
- } else if (local_static_flag==1) {
-  update_flag=RECON_UPDATE_STATE_CENTROID;
- } else
-  amrex::Error("local_static_flag invalid"); 
-
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL(1,advect_time_slab,update_flag,
   init_vof_prev_time);
@@ -760,37 +472,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.prepare_displacement();
  } // ilev
-
- if (local_static_flag==0) {
-  //do nothing
- } else if (local_static_flag==1) {
-
-  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
-    0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
-  delete_array(PRESSURE_SAVE_MF);
-
-  //ngrow,ncomp,grid_type
-  allocate_array(1,AMREX_SPACEDIM,-1,UCELL_STATIC_MF);
-  Copy_array(UCELL_STATIC_MF,GET_NEW_DATA_OFFSET+State_Type,
-   STATECOMP_VEL,0,AMREX_SPACEDIM,1);
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   //ngrow,ncomp,grid_type
-   allocate_array(0,1,dir,UMAC_STATIC_MF+dir);
-   Copy_array(UMAC_STATIC_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
-  }
-
-  Copy_array(GET_NEW_DATA_OFFSET+State_Type,UCELL_SAVE_MF,
-    0,STATECOMP_VEL,AMREX_SPACEDIM,1);
-  delete_array(UCELL_SAVE_MF);
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_SAVE_MF+dir,0,0,1,0);
-   delete_array(UMAC_SAVE_MF+dir);
-  }
-
- } else
-  amrex::Error("local_static_flag invalid"); 
 
  for (dir_absolute_direct_split=0;
       dir_absolute_direct_split<AMREX_SPACEDIM;
@@ -886,9 +567,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 //    b. init U,T in the solid regions.
 //    c. extrapolate F,X,LS from fluid regions into solid regions.
 
- if (local_static_flag==0) {
-
-  if (read_from_CAD()==1) {
+ if (read_from_CAD()==1) {
 
    renormalize_only=1;
    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
@@ -950,14 +629,14 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else
     amrex::Error("ok_copy_FSI_old_to_new invalid");
 
-  } else if (read_from_CAD()==0) {
-   // do nothing
-  } else
-   amrex::Error("read_from_CAD() invalid");
+ } else if (read_from_CAD()==0) {
+  // do nothing
+ } else
+  amrex::Error("read_from_CAD() invalid");
 
-  regenerate_from_eulerian(cur_time_slab);
+ regenerate_from_eulerian(cur_time_slab);
 
-  if (1==0) {
+ if (1==0) {
    // S_new is level 0 data
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
    // data file name "BEFOREPRESCRIBE<stuff>.plt"
@@ -973,26 +652,16 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     State_Type, //state_type_mf==State_Type
     -1, // data_dir==-1
     parent->levelSteps(0)); 
-  }
+ }
 
   // in: nonlinear_advection
   // level set function, volume fractions, and centroids are
   // made "consistent" amongst the levels.
   // prescribe_solid_geometryALL is declared in: NavierStokes2.cpp
-  renormalize_only=0;
-  int local_truncate=1;
-  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
+ renormalize_only=0;
+ int local_truncate=1;
+ prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
    local_truncate,local_caller_string);
-
- } else if (local_static_flag==1) {
-
-  renormalize_only=1;
-  int local_truncate=0;
-  prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
-    local_truncate,local_caller_string);
-
- } else
-  amrex::Error("local_static_flag invalid");
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
@@ -1013,41 +682,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    -1, // data_dir==-1
    parent->levelSteps(0)); 
  }
-
- if (local_static_flag==0) {
-  //do nothing
- } else if (local_static_flag==1) {
-
-  //ngrow,ncomp,grid_type
-  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
-  Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
-   STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
-  //ngrow,scomp,ncomp
-  setVal_array(1,STATECOMP_PRES,STATE_NCOMP_PRES,0.0,
-   GET_NEW_DATA_OFFSET+State_Type);
-
-  //ngrow,ncomp,grid_type
-  allocate_array(1,AMREX_SPACEDIM,-1,UCELL_SAVE_MF);
-  Copy_array(UCELL_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
-   STATECOMP_VEL,0,AMREX_SPACEDIM,1);
-
-  Copy_array(GET_NEW_DATA_OFFSET+State_Type,UCELL_STATIC_MF,
-    0,STATECOMP_VEL,AMREX_SPACEDIM,1);
-  delete_array(UCELL_STATIC_MF);
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   //ngrow,ncomp,grid_type
-   allocate_array(0,1,dir,UMAC_SAVE_MF+dir);
-   Copy_array(UMAC_SAVE_MF+dir,GET_NEW_DATA_OFFSET+Umac_Type+dir,0,0,1,0);
-  }
-
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   Copy_array(GET_NEW_DATA_OFFSET+Umac_Type+dir,UMAC_STATIC_MF+dir,0,0,1,0);
-   delete_array(UMAC_STATIC_MF+dir);
-  }
-
- } else
-  amrex::Error("local_static_flag invalid"); 
 
 }  // end subroutine nonlinear_advection
 
@@ -2344,16 +1978,6 @@ void NavierStokes::nucleation_code_segment(
     nucleation_flag);
  }
 
- int at_least_one_ice=0;
- for (int im=0;im<num_materials;im++) {
-  if (is_ice_matC(im)==1) {
-   at_least_one_ice=1;
-  } else if (is_ice_matC(im)==0) {
-   // do nothing
-  } else
-   amrex::Error("is_ice_matC invalid nucleation_code_segment");
- } // im=0..num_materials-1 
-
  delta_mass.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   // source 1..num_materials  dest 1..num_materials
@@ -2659,34 +2283,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        std::cin >> n_input;
       }
 
-      if (static_surface_tension_duration>0.0) {
-       static_surface_tension_advection();
-      } else if (static_surface_tension_duration==0.0) {
-       //do nothing
-      } else
-       amrex::Error("static_surface_tension_duration invalid");
-
      } else if (disable_advection==1) {
       
-      if (static_surface_tension_duration==0.0) {
-       //do nothing
-      } else
-       amrex::Error("expecting static_surface_tension_duration==0.0");
-
       if (enable_spectral==0) {
        //do nothing
       } else if (enable_spectral==1) {
 
        amrex::Error("expecting enable_spectral==0 if disable_adv==1");
-
-       // delete_advect_vars() called in NavierStokes::do_the_advance
-       // right after increment_face_velocityALL. 
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        // initialize ADVECT_REGISTER_FACE_MF and
-        //            ADVECT_REGISTER_MF
-        ns_level.prepare_advect_vars(prev_time_slab);
-       }
 
       } else
        amrex::Error("enable_spectral invalid");
@@ -7383,8 +6986,6 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
  if (project_option==SOLVETYPE_PRESGRAVITY) {
   local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
- } else if (project_option==SOLVETYPE_PRESSTATIC) { 
-  local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
  } else if (project_option_projection(project_option)==1) {
   local_face_index=FACECOMP_FACEDEN;  // 1/rho_added
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
@@ -7843,7 +7444,6 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
 // project_option==SOLVETYPE_PRES 
 // not called when:
 //    project_option==SOLVETYPE_PRESGRAVITY 
-//    project_option==SOLVETYPE_PRESSTATIC 
 void NavierStokes::overwrite_outflow() {
  
  bool use_tiling=ns_tiling;
@@ -8716,10 +8316,6 @@ void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   zero_independent_variable(project_option,nsolve);
   zero_independent_vel(project_option,UMAC_MF,nsolve);
 
- } else if (project_option==SOLVETYPE_PRESSTATIC) {
-  setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
-  zero_independent_variable(project_option,nsolve);
-
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   setVal_localMF(DIFFUSIONRHS_MF,0.0,0,nsolve,0);
  } else if (project_option==SOLVETYPE_PRES)  { 
@@ -9039,7 +8635,6 @@ void NavierStokes::Krylov_checkpoint(
 //   ns_level.init_EOS_pressure() *DOES NOT* overwrite P01 with p(rho,T)
 //   Result of the Helmholtz solve is stored instead.
 //
-// if project_option==SOLVETYPE_PRESSTATIC then use quasi_static_dt_slab.
 void NavierStokes::multiphase_project(int project_option) {
 
  std::string local_caller_string="multiphase_project";
@@ -9112,15 +8707,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
   solver_dt_slab=dt_slab;
 
- } else if (project_option_is_static(&project_option)==1) {
-
-  if (save_enable_spectral==0) {
-   //do nothing
-  } else
-   amrex::Error("expecting save_enable_spectral==0 if quasi-static-iter");
-
-  solver_dt_slab=quasi_static_dt_slab;
-
  } else if (project_option_projection(project_option)==1) {
 
   solver_dt_slab=dt_slab;
@@ -9153,7 +8739,6 @@ void NavierStokes::multiphase_project(int project_option) {
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRES, 
   //SOLVETYPE_PRESGRAVITY
-  //SOLVETYPE_PRESSTATIC
  if (project_option_projection(project_option)==1) {
 
   if (project_option==SOLVETYPE_INITPROJ) { 
@@ -9161,8 +8746,6 @@ void NavierStokes::multiphase_project(int project_option) {
   } else if (project_option==SOLVETYPE_PRES) {
    //do nothing
   } else if (project_option==SOLVETYPE_PRESGRAVITY) {
-   // do nothing
-  } else if (project_option==SOLVETYPE_PRESSTATIC) {
    // do nothing
   } else
    amrex::Error("project_option invalid 45"); 
@@ -9258,7 +8841,6 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << " slab_step= " << slab_step << '\n';
    std::cout << " solver_dt_slab= " << solver_dt_slab << '\n';
    std::cout << " dt_slab= " << dt_slab << '\n';
-   std::cout << " quasi_static_dt_slab= " << quasi_static_dt_slab << '\n';
    std::cout << " lower_slab_time= " << lower_slab_time << '\n';
    std::cout << " upper_slab_time= " << upper_slab_time << '\n';
    std::cout << " prev_time_slab= " << prev_time_slab << '\n';
@@ -9294,8 +8876,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   // in multiphase_project
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_PRESGRAVITY)||
-     (project_option==SOLVETYPE_PRESSTATIC)) {
+     (project_option==SOLVETYPE_PRESGRAVITY)) {
 
   int potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
 
@@ -9312,11 +8893,6 @@ void NavierStokes::multiphase_project(int project_option) {
     potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
    } else
     amrex::Error("incremental_gravity_flag invalid");
-
-  } else if (project_option==SOLVETYPE_PRESSTATIC) {
-
-   // (quasi-static) surface tension
-   potgrad_surface_tension_mask=POTGRAD_SURFTEN;
 
   } else if (project_option==SOLVETYPE_PRES) {
 
@@ -9361,8 +8937,6 @@ void NavierStokes::multiphase_project(int project_option) {
     ns_level.overwrite_outflow();  
    }
   } else if (project_option==SOLVETYPE_PRESGRAVITY) {
-   // do nothing
-  } else if (project_option==SOLVETYPE_PRESSTATIC) {
    // do nothing
   } else
    amrex::Error("project_option invalid 9962");
@@ -9486,7 +9060,6 @@ void NavierStokes::multiphase_project(int project_option) {
    // fortran pressure and velocity scales
    // dt_slab
    // solver_dt_slab
-   // quasi_static_dt_slab
    // s_new velocity
    // s_new pressure
    // div_new 
@@ -9504,7 +9077,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
   //SOLVETYPE_PRES, 
   //SOLVETYPE_INITPROJ, 
-  //SOLVETYPE_PRESSTATIC,
   //SOLVETYPE_PRESGRAVITY
  if (project_option_FSI_rigid(&project_option)==1) {
 
@@ -9561,7 +9133,6 @@ void NavierStokes::multiphase_project(int project_option) {
   Real beta=0.0;
 
   if ((project_option==SOLVETYPE_PRES)||
-      (project_option==SOLVETYPE_PRESSTATIC)||
       (project_option==SOLVETYPE_PRESGRAVITY)||
       (project_option==SOLVETYPE_INITPROJ)) {
 
@@ -9569,7 +9140,6 @@ void NavierStokes::multiphase_project(int project_option) {
     amrex::Error("nsolve invalid");
 
    if ((project_option==SOLVETYPE_PRES)||
-       (project_option==SOLVETYPE_PRESSTATIC)||
        (project_option==SOLVETYPE_PRESGRAVITY)) {
     operation_flag=OP_UNEW_USOL_MAC_TO_MAC;
    } else if (project_option==SOLVETYPE_INITPROJ) {
@@ -9630,8 +9200,6 @@ void NavierStokes::multiphase_project(int project_option) {
   if (project_option==SOLVETYPE_INITPROJ) { 
    // do nothing
   } else if (project_option==SOLVETYPE_PRESGRAVITY) { 
-   // do nothing
-  } else if (project_option==SOLVETYPE_PRESSTATIC) { 
    // do nothing
   } else if (project_option_projection(project_option)==1) {
 
@@ -9726,7 +9294,6 @@ void NavierStokes::multiphase_project(int project_option) {
  int homflag_residual_correction_form=0; 
 
  if ((project_option==SOLVETYPE_PRESGRAVITY)|| 
-     (project_option==SOLVETYPE_PRESSTATIC)||
      (project_option==SOLVETYPE_INITPROJ)) {
   homflag_residual_correction_form=1; 
  } else if (project_option_is_valid(project_option)==1) {
@@ -9998,8 +9565,6 @@ void NavierStokes::multiphase_project(int project_option) {
                (project_option<SOLVETYPE_SPEC+num_species_var)) { 
      jacobi_cycles_count=initial_thermal_cycles;
     } else if (project_option==SOLVETYPE_VISC) { 
-     jacobi_cycles_count=initial_viscosity_cycles;
-    } else if (project_option_is_static(&project_option)==1) {
      jacobi_cycles_count=initial_viscosity_cycles;
     } else
      amrex::Error("project_option invalid52");
@@ -11166,8 +10731,6 @@ void NavierStokes::multiphase_project(int project_option) {
  if ((project_option==SOLVETYPE_INITPROJ)||  
      (project_option==SOLVETYPE_PRESGRAVITY)) {
   homflag_dual_time=1;
- } else if (project_option_is_static(&project_option)==1) {
-  homflag_dual_time=1;
  } else if (project_option==SOLVETYPE_PRESEXTRAP) { 
   homflag_dual_time=0;
  } else if ((project_option==SOLVETYPE_PRES)|| 
@@ -11201,7 +10764,6 @@ void NavierStokes::multiphase_project(int project_option) {
   //SOLVETYPE_INITPROJ, 
   //SOLVETYPE_PRES, 
   //SOLVETYPE_PRESGRAVITY
-  //SOLVETYPE_PRESSTATIC
  if (project_option_projection(project_option)==1) {
 
   getState_localMF_listALL(
@@ -11225,8 +10787,7 @@ void NavierStokes::multiphase_project(int project_option) {
      // update temperature if compressible material
     update_energy=SUB_OP_THERMAL_DIVUP_OK; 
    } else if ((project_option==SOLVETYPE_INITPROJ)||  
-	      (project_option==SOLVETYPE_PRESGRAVITY)||
-	      (project_option==SOLVETYPE_PRESSTATIC)) { 
+	      (project_option==SOLVETYPE_PRESGRAVITY)) {
     update_energy=SUB_OP_THERMAL_DIVUP_NULL;
    } else 
     amrex::Error("project_option invalid 11824");
@@ -11275,8 +10836,6 @@ void NavierStokes::multiphase_project(int project_option) {
     ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
    } else if (project_option==SOLVETYPE_PRESGRAVITY) { 
     ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
-   } else if (project_option==SOLVETYPE_PRESSTATIC) { 
-    ns_level.avgDown(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
    } else
     amrex::Error("project_option invalid 54");
 
@@ -11314,8 +10873,7 @@ void NavierStokes::multiphase_project(int project_option) {
    delete_array(CELLTENSOR_MF);
 
   } else if ((project_option==SOLVETYPE_INITPROJ)||
-             (project_option==SOLVETYPE_PRESGRAVITY)||
-	     (project_option==SOLVETYPE_PRESSTATIC)) { 
+             (project_option==SOLVETYPE_PRESGRAVITY)) {
    // do nothing
   } else
    amrex::Error("project_option invalid 55");

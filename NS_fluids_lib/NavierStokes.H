@@ -365,9 +365,6 @@ public:
     static int  MOF_TURN_OFF_LS;
     static int  MOF_DEBUG_RECON;
 
-    static Real static_surface_tension_duration;
-    static int static_surface_tension_max_iter;
-
     static Real visc_coef; 
 
     static Real viscconst_max;
@@ -834,7 +831,6 @@ protected:
     void solid_temperature();
 
     void nonlinear_advection(const std::string& caller_string);
-    void static_surface_tension_advection();
 
     void advance_MAC_velocity(int project_option);
 
@@ -1461,7 +1457,6 @@ protected:
     static Real advect_time_slab;
     static Real prescribed_vel_time_slab;
     static Real dt_slab;
-    static Real quasi_static_dt_slab;
     static Real solver_dt_slab;
     static Real advection_dt_slab;
     static int advect_iter;
@@ -1562,7 +1557,6 @@ protected:
     //
     static Real init_shrink; // reduction factor of first esimated timestep
     static Real cfl;         // desired maximum cfl
-    static Real cfl_static;  // desired maximum cfl for quasi static advance.
 
     static int  MOFITERMAX;
     static int  MOFITERMAX_AFTER_PREDICT;
@@ -1675,7 +1669,6 @@ protected:
     static Vector<Real> tension_min;
     static Vector<Real> tension_T0;
     static Vector<Real> tension_slope; //should be non-positive
-    static Vector<Real> static_tension; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Vector<Real> tension; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Vector<Real> tension_init; // 1-2 1-3 1-4 2-3 2-4 3-4
     static Real unscaled_min_curvature_radius; //default: 2.0
@@ -1685,7 +1678,6 @@ protected:
     static Vector<Real> outflow_velocity_buffer_size;
 
     static Vector<Real> cap_wave_speed; // num_interfaces components
-    static Vector<Real> static_cap_wave_speed; // num_interfaces components
 
     static Real real_number_of_cells;
 
@@ -1934,7 +1926,6 @@ protected:
     static int visual_revolve; //def=0
     static int visual_output_raw_State_Type; //def=0
     static int visual_output_raw_mac_Type; //def=0
-    static int visual_quasi_static_plot_int; //def=0
     static int visual_phase_change_plot_int; //def=0
     static int visual_buoyancy_plot_int; //def=0
     static int visual_divergence_plot_int; //def=0

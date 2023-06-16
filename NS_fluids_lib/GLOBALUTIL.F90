@@ -26790,7 +26790,6 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESSTATIC).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
@@ -26808,32 +26807,6 @@ INTEGER_T, INTENT(in) :: project_option
 
 end function project_option_momeqnF
 
-INTEGER_T function project_option_is_static(project_option) &
-bind(c,name='project_option_is_static')
-use probcommon_module
-IMPLICIT NONE
-
-INTEGER_T, INTENT(in) :: project_option
-
- if (project_option.eq.SOLVETYPE_PRESSTATIC) then
-  project_option_is_static=1
- else if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-          (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
-          (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
-          (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
-          (project_option.eq.SOLVETYPE_VISC).or.&      ! viscosity
-          (project_option.eq.SOLVETYPE_HEAT).or. & ! thermal diffusion
-          ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
-           (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
-  project_option_is_static=0
- else
-  print *,"project_option invalid in project_option_is_static"
-  stop
-  project_option_is_static=0
- endif
-
-end function project_option_is_static
-
 INTEGER_T function project_option_singular_possibleF(project_option) &
 bind(c,name='project_option_singular_possibleF')
 use probcommon_module
@@ -26842,7 +26815,6 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESSTATIC).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
@@ -26867,7 +26839,6 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESSTATIC).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
@@ -26892,7 +26863,6 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. &
-     (project_option.eq.SOLVETYPE_PRESSTATIC).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. &
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then  !pressure extrap
@@ -26920,7 +26890,6 @@ INTEGER_T :: project_option_needs_scalingF
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
-     (project_option.eq.SOLVETYPE_PRESSTATIC).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then 
   project_option_needs_scalingF=1
@@ -26948,7 +26917,6 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESSTATIC).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial project
   project_option_FSI_rigid=1
@@ -26977,7 +26945,6 @@ INTEGER_T :: project_option_projectionF
 INTEGER_T, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
-     (project_option.eq.SOLVETYPE_PRESSTATIC).or. & 
      (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ)) then 
   project_option_projectionF=1

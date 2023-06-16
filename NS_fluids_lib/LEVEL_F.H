@@ -531,7 +531,6 @@ namespace amrex{
        int* ncellfrac);
 
      void fort_curvstrip(
-       int* static_flag,
        const char* caller_string,
        int caller_string_len,
        int* vof_height_function,

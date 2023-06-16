@@ -325,7 +325,6 @@ stop
 
        ! called from fort_curvstrip
       subroutine initheightLS( &
-        static_flag, & !intent(in)
         vof_height_function, & !intent(in)
         icenter,jcenter,kcenter, & !intent(in)
         level, & ! intent(in)
@@ -362,7 +361,6 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: static_flag
       INTEGER_T, INTENT(in) :: vof_height_function
       INTEGER_T, INTENT(in) :: icenter,jcenter,kcenter
       INTEGER_T, INTENT(in) :: level
@@ -746,17 +744,8 @@ stop
        temperature_cen(im_sort)=mgoni_temp(0,0,0,im_sort)
       enddo
 
-      if (static_flag.eq.0) then
-       call get_user_tension(xcenter,time, &
-         fort_tension,user_tension,temperature_cen)
-      else if (static_flag.eq.1) then
-       do dir2=1,num_interfaces
-        user_tension(dir2)=fort_static_tension(iten)
-       enddo
-      else
-       print *,"static_flag invalid"
-       stop
-      endif
+      call get_user_tension(xcenter,time, &
+        fort_tension,user_tension,temperature_cen)
 
       if (unscaled_min_curvature_radius.ge.two) then
        ! do nothing
@@ -778,13 +767,6 @@ stop
         ! do nothing
        else
         print *,"user_tension(dir2) invalid"
-        stop
-       endif
-
-       if (fort_static_tension(dir2).ge.zero) then
-        ! do nothing
-       else
-        print *,"fort_static_tension(dir2) invalid"
         stop
        endif
 
@@ -834,8 +816,6 @@ stop
        ! (I-nn^T)(grad sigma) delta=
        ! (grad sigma - (grad sigma dot n)n ) delta
       if (fort_tension_slope(iten).lt.zero) then
-
-       if (static_flag.eq.0) then
 
         do iofs=-1,1
         do jofs=-1,1
@@ -920,13 +900,6 @@ stop
           (grad_tension(dir2)- &
            nfluid(dir2)*dotprod)*delta_mgoni
         enddo
-
-       else if (static_flag.eq.1) then
-        ! do nothing
-       else
-        print *,"static_flag invalid"
-        stop
-       endif
 
       else if (fort_tension_slope(iten).eq.zero) then
        ! do nothing
@@ -3115,7 +3088,6 @@ stop
 
 
       subroutine fort_curvstrip( &
-       static_flag, &
        caller_string, &
        caller_string_len, &
        vof_height_function, &
@@ -3158,8 +3130,6 @@ stop
       use MOF_routines_module
 
       IMPLICIT NONE
-
-      INTEGER_T, INTENT(in) :: static_flag
 
       INTEGER_T, INTENT(in) :: nhistory
 
@@ -3392,12 +3362,6 @@ stop
         print *,"fort_tension(i) invalid"
         stop
        endif
-       if (fort_static_tension(i).ge.zero) then
-        ! do nothing
-       else
-        print *,"fort_static_tension(i) invalid"
-        stop
-       endif
       enddo ! i=1,num_interfaces
 
       if (nhistory.eq.num_interfaces*2) then
@@ -3533,7 +3497,7 @@ stop
           LS(im)=LSPC(D_DECL(i,j,k),im)
          enddo
 
-         call merge_levelset(xcenter,time,LS,LS_merge,static_flag)
+         call merge_levelset(xcenter,time,LS,LS_merge)
 
           ! FIX_LS_tessellate is declared in: MOF.F90
           ! input : fluids tessellate, solids are embedded
@@ -3597,7 +3561,7 @@ stop
             do im=1,num_materials
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
-            call merge_levelset(xcenter,time,LSSIDE,LS_merge,static_flag)
+            call merge_levelset(xcenter,time,LSSIDE,LS_merge)
             call FIX_LS_tessellate(LS_merge,LSSIDE_merge_fixed)
             call get_primary_material(LSSIDE_merge_fixed,im_opp)
             do im=1,num_materials
@@ -3897,7 +3861,7 @@ stop
              enddo
              call merge_normal(xcenter,time, &
                LS_PROBE, &
-               nrmPROBE,nrmPROBE_merge,static_flag)
+               nrmPROBE,nrmPROBE_merge)
 
               ! get normals at the cell center using finite differences. 
              do dirstar=1,SDIM
@@ -4098,12 +4062,10 @@ stop
 
               call merge_normal(xcenter,time, &
                  LSCEN_hold, &
-                 nrm_local,nrm_local_merge,static_flag)
+                 nrm_local,nrm_local_merge)
 
-              call merge_levelset(xcenter,time,LSCEN_hold, &
-                 LSCEN_hold_merge,static_flag)
-              call merge_vof(xcenter,time,vof_hold,vof_hold_merge, &
-                 static_flag)
+              call merge_levelset(xcenter,time,LSCEN_hold,LSCEN_hold_merge)
+              call merge_vof(xcenter,time,vof_hold,vof_hold_merge)
 
               do im_curv=1,num_materials
                vofsten(i1,j1,k1,im_curv)=vof_hold_merge(im_curv)
@@ -4178,7 +4140,6 @@ stop
              ! tension used to find contact angle (scaling not 
              ! necessary)
              call initheightLS( &
-              static_flag, &
               vof_height_function_local, &
               i,j,k, &
               level, &
@@ -7866,10 +7827,10 @@ stop
       REAL_T local_cenden
 
       REAL_T, PARAMETER :: VISCINVTOL=1.0D-8
-      INTEGER_T test_for_quasi_static
 
       REAL_T denconst_interface_added_max
       REAL_T rad_added_mass
+      INTEGER_T :: test_for_make_physics_vars
 
 ! fort_init_physics_vars code starts here:
 
@@ -7879,11 +7840,18 @@ stop
       enddo
       fort_caller_string_len=caller_string_len
 
-      pattern_string='static_surface_tension_advection'
-      pattern_string_len=32
-      test_for_quasi_static=fort_pattern_test( &
+      pattern_string='make_physics_vars'
+      pattern_string_len=17
+      test_for_make_physics_vars=fort_pattern_test( &
         fort_caller_string,fort_caller_string_len, &
         pattern_string,pattern_string_len)
+
+      if (test_for_make_physics_vars.eq.1) then
+       ! do nothing
+      else
+       print *,"test_for_make_physics_vars invalid"
+       stop
+      endif
 
       maskcov_ptr=>maskcov
       masknbr_ptr=>masknbr
@@ -8699,8 +8667,7 @@ stop
             xstenMAC_center,time, &
             LSminus,LSplus,gradh_tension, &
             im_opp_tension,im_tension, & !INTENT(out)
-            im_left_tension,im_right_tension, & !INTENT(out)
-            test_for_quasi_static)
+            im_left_tension,im_right_tension) !INTENT(out)
           else
            print *,"covered_face invalid"
            stop
@@ -8717,16 +8684,8 @@ stop
          enddo
           !viscstate is initialized in fort_derviscosity
          do im=1,num_materials
-          if (test_for_quasi_static.eq.1) then
-           localvisc_plus(im)=zero
-           localvisc_minus(im)=zero
-          else if (test_for_quasi_static.eq.0) then
-           localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
-           localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
-          else
-           print *,"test_for_quasi_static invalid"
-           stop
-          endif
+          localvisc_plus(im)=viscstate(D_DECL(i,j,k),im)
+          localvisc_minus(im)=viscstate(D_DECL(im1,jm1,km1),im)
           localheatvisc_plus(im)=conductstate(D_DECL(i,j,k),im)
           localheatvisc_minus(im)=conductstate(D_DECL(im1,jm1,km1),im)
          enddo
@@ -9147,14 +9106,7 @@ stop
             ! do nothing
            else if (visc_interface(iten_main).gt.zero) then
 
-            if (test_for_quasi_static.eq.1) then
-             ! do nothing
-            else if (test_for_quasi_static.eq.0) then
-             facevisc_local=visc_interface(iten_main)
-            else
-             print *,"test_for_quasi_static invalid"
-             stop
-            endif
+            facevisc_local=visc_interface(iten_main)
 
            else
             print *,"visc_interface invalid"
@@ -9321,14 +9273,7 @@ stop
              if (visc_interface(iten_FFACE).eq.zero) then
               ! do nothing
              else if (visc_interface(iten_FFACE).gt.zero) then
-              if (test_for_quasi_static.eq.1) then
-               ! do nothing
-              else if (test_for_quasi_static.eq.0) then
-               facevisc_local=visc_interface(iten_FFACE)
-              else
-               print *,"test_for_quasi_static invalid"
-               stop
-              endif
+              facevisc_local=visc_interface(iten_FFACE)
              else
               print *,"visc_interface invalid"
               stop
@@ -10030,15 +9975,6 @@ stop
           stop
          endif 
 
-         if (test_for_quasi_static.eq.1) then
-          local_face(FACECOMP_FACEVEL+1)=zero
-         else if (test_for_quasi_static.eq.0) then
-          ! do nothing
-         else
-          print *,"test_for_quasi_static invalid"
-          stop
-         endif
-
          do im=1,FACECOMP_NCOMP
           if (veldir.eq.0) then
            xface(D_DECL(i,j,k),im)=local_face(im)
@@ -10225,14 +10161,7 @@ stop
           stop
          endif
 
-         if (test_for_quasi_static.eq.1) then
-          localvisc(im)=zero
-         else if (test_for_quasi_static.eq.0) then
-          localvisc(im)=viscstate(D_DECL(i,j,k),im)
-         else
-          print *,"test_for_quasi_static invalid"
-          stop
-         endif
+         localvisc(im)=viscstate(D_DECL(i,j,k),im)
 
          if (localvisc(im).lt.zero) then
           print *,"viscstate gone negative"
@@ -11797,7 +11726,6 @@ stop
           endif
 
            !SOLVETYPE_PRES, 
-           !SOLVETYPE_PRESSTATIC, 
            !SOLVETYPE_PRESGRAVITY, 
            !SOLVETYPE_INITPROJ, 
            !SOLVETYPE_PRESEXTRAP
@@ -11984,11 +11912,6 @@ stop
          ! LS>0 if clamped
         call SUB_clamped_LS(xclamped,cur_time,LS_clamped, &
           vel_clamped,temperature_clamped,prescribed_flag,dx)
-        if (project_option_is_static(project_option).eq.1) then
-         do dir=1,SDIM
-          vel_clamped(dir)=zero
-         enddo
-        endif
 
         do dir=0,SDIM-1 
          ii=0
@@ -12154,12 +12077,8 @@ stop
           if (dir.eq.0) then
            if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then
             uface(side)=xvel(D_DECL(iface,jface,kface),1)
-            if (project_option_is_static(project_option).eq.1) then
-             ufacesolid(side)=zero
-            else
-             ufacesolid(side)=solxfab(D_DECL(iface,jface,kface), &
-                   partid_ghost*SDIM+dir+1)
-            endif
+            ufacesolid(side)= &
+              solxfab(D_DECL(iface,jface,kface),partid_ghost*SDIM+dir+1)
            else
             print *,"operation_flag invalid"
             stop
@@ -12214,12 +12133,8 @@ stop
           else if (dir.eq.1) then
            if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then  
             uface(side)=yvel(D_DECL(iface,jface,kface),1)
-            if (project_option_is_static(project_option).eq.1) then
-             ufacesolid(side)=zero
-            else
-             ufacesolid(side)=solyfab(D_DECL(iface,jface,kface), &
-                   partid_ghost*SDIM+dir+1)
-            endif
+            ufacesolid(side)= &
+              solyfab(D_DECL(iface,jface,kface),partid_ghost*SDIM+dir+1)
            else
             print *,"operation_flag invalid"
             stop
@@ -12227,12 +12142,8 @@ stop
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
            if (operation_flag.eq.OP_VEL_MAC_TO_CELL) then 
             uface(side)=zvel(D_DECL(iface,jface,kface),1)
-            if (project_option_is_static(project_option).eq.1) then
-             ufacesolid(side)=zero
-            else
-             ufacesolid(side)=solzfab(D_DECL(iface,jface,kface), &
-                   partid_ghost*SDIM+dir+1)
-            endif
+            ufacesolid(side)= &
+              solzfab(D_DECL(iface,jface,kface),partid_ghost*SDIM+dir+1)
            else
             print *,"operation_flag invalid"
             stop
@@ -12680,13 +12591,6 @@ stop
         else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
          if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
           ! do nothing if solvetype_presgravity
-         else
-          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)mac_cell"
-          stop
-         endif
-        else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
-         if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
-          ! do nothing if solvetype_presstatic
          else
           print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)mac_cell"
           stop
@@ -13280,7 +13184,6 @@ stop
       INTEGER_T use_face_pres
       INTEGER_T at_coarse_fine_wallF
       INTEGER_T at_coarse_fine_wallC
-      INTEGER_T static_flag
       REAL_T user_tension(num_interfaces)
       REAL_T tension_scaled
       REAL_T LSleft(num_materials)
@@ -13600,8 +13503,7 @@ stop
         print *,"energyflag invalid OP_PRES_CELL_TO_MAC"
         stop
        endif
-       if ((project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
-           (project_option.eq.SOLVETYPE_PRESSTATIC)) then
+       if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
         homogeneous_rigid_velocity=1
        endif
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
@@ -13640,8 +13542,7 @@ stop
         stop
        endif
 
-       if ((project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
-           (project_option.eq.SOLVETYPE_PRESSTATIC)) then
+       if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
         if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then
          ! do nothing
         else
@@ -13721,15 +13622,9 @@ stop
          !local_sem_fluxreg_mf
        call checkbound_array(fablo,fabhi,semflux_ptr,1,-1)
 
-       if (project_option_is_static(project_option).eq.1) then
-        ! do nothing
-       else if (project_option_is_static(project_option).eq.0) then
         !local_fsi_ghost_mac_mf+dir
-        call checkbound_array(fablo,fabhi,solfab_ptr,0,dir)
-       else
-        print *,"project_option_is_static invalid"
-        stop
-       endif
+       call checkbound_array(fablo,fabhi,solfab_ptr,0,dir)
+
        call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
       else
        print *,"project_option invalid"
@@ -14630,13 +14525,11 @@ stop
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
 
           if ((project_option.eq.SOLVETYPE_PRES).or. &
-              (project_option.eq.SOLVETYPE_PRESSTATIC).or. &
               (project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
               (project_option.eq.SOLVETYPE_INITPROJ)) then
            ! do nothing
           else
            print *,"expecting project_option=SOLVETYPE_PRES or "
-           print *,"expecting project_option=SOLVETYPE_PRESSTATIC or "
            print *,"expecting project_option=SOLVETYPE_PRESGRAVITY or "
            print *,"expecting project_option=SOLVETYPE_INITPROJ  "
            stop
@@ -14664,14 +14557,6 @@ stop
           use_face_pres=1 ! use div(up)
 
           solid_velocity=local_face(FACECOMP_FACEVEL+1)
-          if (project_option.eq.SOLVETYPE_PRESSTATIC) then
-           if (solid_velocity.eq.zero) then
-            ! do nothing
-           else
-            print *,"expecting solid_velocity==0.0 if SOLVETYPE_PRESSTATIC"
-            stop
-           endif
-          endif
 
           face_velocity_override=0
 
@@ -14972,11 +14857,9 @@ stop
 
           if ((project_option.eq.SOLVETYPE_PRES).or. &
               (project_option.eq.SOLVETYPE_PRESGRAVITY)) then
-           static_flag=0
-          else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
-           static_flag=1
+           ! do nothing
           else
-           print *,"project_option invalid"
+           print *,"project_option invalid(fort_cell_to_mac): ",project_option
            stop
           endif
 
@@ -15179,8 +15062,7 @@ stop
                LSleft,LSright, &
                gradh_tension, &
                im_opp,im, &
-               im_left_tension,im_right_tension, &
-               static_flag)
+               im_left_tension,im_right_tension)
 
              call fluid_interface( &
                LSleft,LSright, &
@@ -15207,12 +15089,9 @@ stop
                   (project_option.eq.SOLVETYPE_PRESGRAVITY)) then
                call get_user_tension(xstenMAC_center,time, &
                 fort_tension,user_tension,mgoni_temp)
-              else if (project_option.eq.SOLVETYPE_PRESSTATIC) then
-               do iten=1,num_interfaces
-                user_tension(iten)=fort_static_tension(iten)
-               enddo
               else
-               print *,"project_option invalid"
+               print *,"project_option invalid(fort_cell_to_mac) ", &
+                  project_option
                stop
               endif
 
@@ -16644,7 +16523,6 @@ stop
           if (project_option_projectionF(project_option).eq.1) then
            !do nothing 
            !SOLVETYPE_PRES,
-           !SOLVETYPE_PRESSTATIC,
            !SOLVETYPE_PRESGRAVITY,
            !SOLVETYPE_INITPROJ
           else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
@@ -16655,8 +16533,6 @@ stop
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then 
            !do nothing
           else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
-           !do nothing
-          else if (project_option_is_static(project_option).eq.1) then
            !do nothing
           else
            print *,"project_option invalid"

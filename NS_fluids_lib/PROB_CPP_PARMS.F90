@@ -405,7 +405,6 @@ stop
         ccreference_pressure, &
         ccmolar_mass, &
         ccspecies_molar_mass, &
-        ccstatic_tension, &
         cctension, &
         cctension_init, &
         cctension_slope, &
@@ -566,7 +565,6 @@ stop
       REAL_T, INTENT(in) :: ccreference_pressure(2*ccnten)
       REAL_T, INTENT(in) :: ccmolar_mass(ccnum_materials)
       REAL_T, INTENT(in) :: ccspecies_molar_mass(ccnum_species_var+1)
-      REAL_T, INTENT(in) :: ccstatic_tension(ccnten)
       REAL_T, INTENT(in) :: cctension(ccnten)
       REAL_T, INTENT(in) :: cctension_init(ccnten)
       REAL_T, INTENT(in) :: cctension_slope(ccnten)
@@ -1570,7 +1568,6 @@ stop
        fort_reference_pressure(num_interfaces+iten)= &
                ccreference_pressure(num_interfaces+iten)
 
-       fort_static_tension(iten)=ccstatic_tension(iten)
        fort_tension(iten)=cctension(iten)
        fort_tension_init(iten)=cctension_init(iten)
        fort_tension_slope(iten)=cctension_slope(iten)
@@ -1700,7 +1697,6 @@ stop
        print *,"fort_visc_coef= ",fort_visc_coef
 
        do iten=1,num_interfaces
-        print *,"iten,static_tension ",iten,fort_static_tension(iten)
         print *,"iten,tension ",iten,fort_tension(iten)
         print *,"iten,tension_init ",iten,fort_tension_init(iten)
         print *,"iten,tension_slope ",iten,fort_tension_slope(iten)
