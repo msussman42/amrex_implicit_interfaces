@@ -79,8 +79,6 @@
       REAL_T fort_tension_min(MAX_NUM_INTERFACES)
       REAL_T fort_prefreeze_tension(MAX_NUM_INTERFACES)
 
-      INTEGER_T fort_growth_angle_primary_mat(2*MAX_NUM_INTERFACES)
-
       REAL_T fort_latent_heat(2*MAX_NUM_INTERFACES)
       REAL_T fort_latent_heat_slope(2*MAX_NUM_INTERFACES)
       REAL_T fort_latent_heat_T0(2*MAX_NUM_INTERFACES)

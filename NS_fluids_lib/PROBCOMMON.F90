@@ -321,7 +321,7 @@ implicit none
 !   fort_grid_stretching_parameter
 ! deleted May 11, 2023: 
 !   gravity_boussinesq_vector
-! added June 8, 2023:
+! added June 8, deleted June 16 2023:
 !   fort_growth_angle_primary_mat
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM

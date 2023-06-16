@@ -2955,7 +2955,7 @@ end subroutine intersection_volume_and_map
       end subroutine angle_to_slope
 
       subroutine angle_to_slope_general( &
-        growth_angle, &
+        angle_primary_secondary, &
         npredict, &
         nMAT_OPT, & ! 1 or 3
         nDOF, & !sdim-1 or 1
@@ -2965,7 +2965,7 @@ end subroutine intersection_volume_and_map
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: growth_angle
+      REAL_T, INTENT(in) :: angle_primary_secondary
       INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
       INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
       INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
@@ -2975,33 +2975,32 @@ end subroutine intersection_volume_and_map
       REAL_T, INTENT(out) :: nslope(nEQN)
       REAL_T, INTENT(in) :: angle(nDOF)
       REAL_T :: n_trial(3)
-      REAL_T :: n_GA_secondary_mat_trial(3)
-      REAL_T :: n_GA_primary_mat(3)
-      REAL_T :: n_GA_primary_mat_perp(3)
-      REAL_T :: n_GA_secondary_mat(3)
-      REAL_T :: n_GA_tertiary_mat(3)
+      REAL_T :: n_secondary_mat_trial(3)
+      REAL_T :: n_primary_mat(3)
+      REAL_T :: n_primary_mat_perp(3)
+      REAL_T :: n_secondary_mat(3)
+      REAL_T :: n_tertiary_mat(3)
       REAL_T :: n_CL(3)
       REAL_T :: n_2d(2)
       REAL_T :: n_base(3)
-      REAL_T :: n_GA_secondary_mat_base(3)
+      REAL_T :: n_secondary_mat_base(3)
       REAL_T :: n_CL_base(3)
       REAL_T :: T(3,3)
-      REAL_T :: Tn_GA_secondary_mat(3)
-      REAL_T :: Tn_GA_primary_mat(3)
+      REAL_T :: Tn_secondary_mat(3)
+      REAL_T :: Tn_primary_mat(3)
       REAL_T :: Tn_CL(3)
-      REAL_T :: Tn_GA_primary_mat_test(3)
+      REAL_T :: Tn_primary_mat_test(3)
       REAL_T :: mag
-      REAL_T :: angle_rotate
       REAL_T :: sintheta,costheta
       REAL_T :: checksign
       INTEGER_T :: dir,dir2
 
       if (nMAT_OPT.eq.1) then
 
-       if (growth_angle.eq.zero) then
+       if (angle_primary_secondary.eq.zero) then
         !do nothing
        else
-        print *,"growth_angle invalid"
+        print *,"angle_primary_secondary invalid"
         stop
        endif
 
@@ -3017,10 +3016,11 @@ end subroutine intersection_volume_and_map
         ! in 2d: angle=0 => n=(1 0)
        call angle_to_slope(angle,nslope,sdim)
 
-      else if (abs(growth_angle).le.half*Pi) then
+      else if ((angle_primary_secondary.gt.zero).and. &
+               (angle_primary_secondary.lt.Pi)) then
 
-        ! The corrected n_GA_primary_mat comes from a 1-parameter family:
-        ! n1=n_GA_primary_mat^{old} n2=n_GA_primary_mat^{old} cross n_CL
+        ! The corrected n_primary_mat comes from a 1-parameter family:
+        ! n1=n_primary_mat^{old} n2=n_primary_mat^{old} cross n_CL
         ! define a mapping T such that 
         !   T n_CL=(0 0 1)
         !   T n1=(1 0 0)
@@ -3031,16 +3031,16 @@ end subroutine intersection_volume_and_map
         !   given a trial angle, we find the corresponding (2D) normal:
         !   n_base=( n2d 
         !             0  )
-        !   n_GA_primary_mat_candidate=T^{-1}n_base
+        !   n_primary_mat_candidate=T^{-1}n_base
         !   Let R=(cos(theta)   sin(theta)    (clockwise)
         !          -sin(theta)  cos(theta) ) 
-        !   theta=\pm( pi/2-growth_angle/2 )
-        !   n_GA_secondary_mat_candidate=T^{-1} (  R n2d
+        !   theta=angle_primary_secondary
+        !   n_secondary_mat_candidate=T^{-1} (  R n2d
         !                              0     )
         !   The sign is chosen so that (3rd component)
-        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original 
+        !   T n_primary_mat_original x T n_secondary_mat_original 
         !   has the same sign as
-        !   T n_GA_primary_mat_candidate x T n_GA_secondary_mat_candidate 
+        !   T n_primary_mat_candidate x T n_secondary_mat_candidate 
 
        if ((nMAT_OPT.eq.3).and. &
            (nDOF.eq.1).and. &
@@ -3051,59 +3051,59 @@ end subroutine intersection_volume_and_map
         stop
        endif
 
-       n_GA_primary_mat(3)=zero
+       n_primary_mat(3)=zero
        mag=zero
        do dir=1,sdim
-        n_GA_primary_mat(dir)=npredict(dir)
-        mag=mag+n_GA_primary_mat(dir)**2
+        n_primary_mat(dir)=npredict(dir)
+        mag=mag+n_primary_mat(dir)**2
        enddo 
        mag=sqrt(mag)
        if (abs(mag-one).le.VOFTOL) then
         do dir=1,sdim
-         n_GA_primary_mat(dir)=n_GA_primary_mat(dir)/mag
+         n_primary_mat(dir)=n_primary_mat(dir)/mag
         enddo
        else
-        print *,"mag invalid n_GA_primary_mat"
+        print *,"mag invalid n_primary_mat"
         stop
        endif 
 
-       n_GA_secondary_mat(3)=zero
+       n_secondary_mat(3)=zero
        mag=zero
        do dir=1,sdim
-        n_GA_secondary_mat(dir)=npredict(sdim+dir)
-        mag=mag+n_GA_secondary_mat(dir)**2
+        n_secondary_mat(dir)=npredict(sdim+dir)
+        mag=mag+n_secondary_mat(dir)**2
        enddo 
        mag=sqrt(mag)
        if (abs(mag-one).le.VOFTOL) then
         do dir=1,sdim
-         n_GA_secondary_mat(dir)=n_GA_secondary_mat(dir)/mag
+         n_secondary_mat(dir)=n_secondary_mat(dir)/mag
         enddo
        else
-        print *,"mag invalid im_GA_secondary_mat"
+        print *,"mag invalid im_secondary_mat"
         stop
        endif         
 
-       n_GA_tertiary_mat(3)=zero
+       n_tertiary_mat(3)=zero
 
        mag=zero
        do dir=1,sdim
-        n_GA_tertiary_mat(dir)=-n_GA_secondary_mat(dir)
-        mag=mag+n_GA_tertiary_mat(dir)**2
+        n_tertiary_mat(dir)=-n_secondary_mat(dir)
+        mag=mag+n_tertiary_mat(dir)**2
        enddo 
        mag=sqrt(mag)
        if (abs(mag-one).le.VOFTOL) then
         do dir=1,sdim
-         n_GA_tertiary_mat(dir)=n_GA_tertiary_mat(dir)/mag
+         n_tertiary_mat(dir)=n_tertiary_mat(dir)/mag
         enddo
        else
-        print *,"mag invalid im_GA_tertiary_mat"
+        print *,"mag invalid im_tertiary_mat"
         stop
        endif         
 
 #if (AMREX_SPACEDIM==3)
-       call crossprod(n_GA_primary_mat,n_GA_secondary_mat,n_CL)
+       call crossprod(n_primary_mat,n_secondary_mat,n_CL)
 #elif (AMREX_SPACEDIM==2)
-       call crossprod2d(n_GA_primary_mat,n_GA_secondary_mat,n_CL)
+       call crossprod2d(n_primary_mat,n_secondary_mat,n_CL)
 #else
        print *,"dimension bust"
        stop
@@ -3140,14 +3140,14 @@ end subroutine intersection_volume_and_map
         stop
        endif
 
-       call crossprod(n_GA_primary_mat,n_CL,n_GA_primary_mat_perp)
+       call crossprod(n_primary_mat,n_CL,n_primary_mat_perp)
        if (SDIM.eq.3) then
         ! check nothing
        else if (SDIM.eq.2) then
-        if (abs(n_GA_primary_mat_perp(3)).le.VOFTOL) then
-         n_GA_primary_mat_perp(3)=zero
+        if (abs(n_primary_mat_perp(3)).le.VOFTOL) then
+         n_primary_mat_perp(3)=zero
         else
-         print *,"expecting n_GA_primary_mat_perp(3)=0"
+         print *,"expecting n_primary_mat_perp(3)=0"
          stop
         endif
        else
@@ -3156,15 +3156,15 @@ end subroutine intersection_volume_and_map
        endif
        mag=zero
        do dir=1,3
-        mag=mag+n_GA_primary_mat_perp(dir)**2
+        mag=mag+n_primary_mat_perp(dir)**2
        enddo
        mag=sqrt(mag)
        if (abs(mag-one).le.VOFTOL) then
         do dir=1,3
-         n_GA_primary_mat_perp(dir)=n_GA_primary_mat_perp(dir)/mag
+         n_primary_mat_perp(dir)=n_primary_mat_perp(dir)/mag
         enddo
        else
-        print *,"mag invalid n_GA_primary_mat_perp"
+        print *,"mag invalid n_primary_mat_perp"
         stop
        endif  
 
@@ -3175,43 +3175,43 @@ end subroutine intersection_volume_and_map
         n_base(dir)=n_2d(dir)
        enddo
        n_base(3)=zero
-        ! T n_GA_primary_mat=(1 0 0)
-        ! T n_GA_primary_mat_perp=(0 1 0)
+        ! T n_primary_mat=(1 0 0)
+        ! T n_primary_mat_perp=(0 1 0)
         ! T n_CL=(0 0 1)
        do dir=1,3
-        T(1,dir)=n_GA_primary_mat(dir)
-        T(2,dir)=n_GA_primary_mat_perp(dir)
+        T(1,dir)=n_primary_mat(dir)
+        T(2,dir)=n_primary_mat_perp(dir)
         T(3,dir)=n_CL(dir)
        enddo
        do dir=1,3
         n_trial(dir)=zero
-        Tn_GA_secondary_mat(dir)=zero
-        Tn_GA_primary_mat(dir)=zero
-        Tn_GA_primary_mat_test(dir)=zero
+        Tn_secondary_mat(dir)=zero
+        Tn_primary_mat(dir)=zero
+        Tn_primary_mat_test(dir)=zero
          !n_base=(1 0 0) if angle=0
         do dir2=1,3
          n_trial(dir)=n_trial(dir)+T(dir2,dir)*n_base(dir2)
-         Tn_GA_secondary_mat(dir)=Tn_GA_secondary_mat(dir)+ &
-                   T(dir,dir2)*n_GA_secondary_mat(dir2)
-         Tn_GA_primary_mat_test(dir)=Tn_GA_primary_mat_test(dir)+ &
-                   T(dir,dir2)*n_GA_primary_mat(dir2)
+         Tn_secondary_mat(dir)=Tn_secondary_mat(dir)+ &
+                   T(dir,dir2)*n_secondary_mat(dir2)
+         Tn_primary_mat_test(dir)=Tn_primary_mat_test(dir)+ &
+                   T(dir,dir2)*n_primary_mat(dir2)
         enddo
        enddo
-       Tn_GA_primary_mat(1)=one
+       Tn_primary_mat(1)=one
 
        mag=zero
        do dir=1,3
-        mag=mag+(Tn_GA_primary_mat(dir)-Tn_GA_primary_mat_test(dir))**2
+        mag=mag+(Tn_primary_mat(dir)-Tn_primary_mat_test(dir))**2
        enddo
        mag=sqrt(mag)
        if ((mag.ge.zero).and.(mag.le.VOFTOL)) then
         ! do nothing
        else
-        print *,"Tn_GA_primary_mat_test failed sanity"
+        print *,"Tn_primary_mat_test failed sanity"
         stop
        endif
 
-       call crossprod(Tn_GA_primary_mat,Tn_GA_secondary_mat,Tn_CL)
+       call crossprod(Tn_primary_mat,Tn_secondary_mat,Tn_CL)
 
        mag=zero
        do dir=1,2
@@ -3225,13 +3225,12 @@ end subroutine intersection_volume_and_map
         stop
        endif
         
-       angle_rotate=half*Pi-half*growth_angle
-       costheta=cos(angle_rotate)
-       sintheta=sin(angle_rotate)
-       n_GA_secondary_mat_base(1)=costheta*n_base(1)+sintheta*n_base(2)
-       n_GA_secondary_mat_base(2)=-sintheta*n_base(1)+costheta*n_base(2)
-       n_GA_secondary_mat_base(3)=zero
-       call crossprod(n_base,n_GA_secondary_mat_base,n_CL_base)
+       costheta=cos(angle_primary_secondary)
+       sintheta=sin(angle_primary_secondary)
+       n_secondary_mat_base(1)=costheta*n_base(1)+sintheta*n_base(2)
+       n_secondary_mat_base(2)=-sintheta*n_base(1)+costheta*n_base(2)
+       n_secondary_mat_base(3)=zero
+       call crossprod(n_base,n_secondary_mat_base,n_CL_base)
 
        mag=zero
        do dir=1,2
@@ -3253,9 +3252,9 @@ end subroutine intersection_volume_and_map
        else if (checksign.gt.zero) then
         !do nothing
        else if (checksign.lt.zero) then
-        n_GA_secondary_mat_base(1)=costheta*n_base(1)-sintheta*n_base(2)
-        n_GA_secondary_mat_base(2)=sintheta*n_base(1)+costheta*n_base(2)
-        call crossprod(n_base,n_GA_secondary_mat_base,n_CL_base)
+        n_secondary_mat_base(1)=costheta*n_base(1)-sintheta*n_base(2)
+        n_secondary_mat_base(2)=sintheta*n_base(1)+costheta*n_base(2)
+        call crossprod(n_base,n_secondary_mat_base,n_CL_base)
        else
         print *,"checksign invalid"
         stop
@@ -3283,19 +3282,19 @@ end subroutine intersection_volume_and_map
        endif
 
        do dir=1,3
-        n_GA_secondary_mat_trial(dir)=zero
+        n_secondary_mat_trial(dir)=zero
         do dir2=1,3
-         n_GA_secondary_mat_trial(dir)=n_GA_secondary_mat_trial(dir)+ &
-            T(dir2,dir)*n_GA_secondary_mat_base(dir2)
+         n_secondary_mat_trial(dir)=n_secondary_mat_trial(dir)+ &
+            T(dir2,dir)*n_secondary_mat_base(dir2)
         enddo
        enddo
        do dir=1,sdim
         nslope(dir)=n_trial(dir)
-        nslope(sdim+dir)=n_GA_secondary_mat_trial(dir)
-        nslope(2*sdim+dir)=-n_GA_secondary_mat_trial(dir)
+        nslope(sdim+dir)=n_secondary_mat_trial(dir)
+        nslope(2*sdim+dir)=-n_secondary_mat_trial(dir)
        enddo
       else
-       print *,"growth_angle invalid: ",growth_angle
+       print *,"angle_primary_secondary invalid: ",angle_primary_secondary
        stop
       endif
 
@@ -10734,8 +10733,8 @@ contains
         tid, &
         uncaptured_volume_vof, &
         mofdata, &
-        growth_angle, &
-        im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
+        angle_primary_secondary, &
+        im_primary_mat,im_secondary_mat,im_tertiary_mat, &
         npredict, &
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
@@ -10778,10 +10777,10 @@ contains
 
       INTEGER_T, PARAMETER :: tessellate=0
 
-      REAL_T, INTENT(in) :: growth_angle
-      INTEGER_T, INTENT(in) :: im_GA_primary_mat
-      INTEGER_T, INTENT(in) :: im_GA_secondary_mat
-      INTEGER_T, INTENT(in) :: im_GA_tertiary_mat
+      REAL_T, INTENT(in) :: angle_primary_secondary
+      INTEGER_T, INTENT(in) :: im_primary_mat
+      INTEGER_T, INTENT(in) :: im_secondary_mat
+      INTEGER_T, INTENT(in) :: im_tertiary_mat
       INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
       INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
       INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
@@ -10912,10 +10911,10 @@ contains
       endif
 
       if (nMAT_OPT.eq.1) then
-       if (growth_angle.eq.zero) then
+       if (angle_primary_secondary.eq.zero) then
         ! do nothing
        else
-        print *,"growth_angle invalid"
+        print *,"angle_primary_secondary invalid"
         stop
        endif
        if ((nMAT_OPT.eq.1).and. &
@@ -10927,19 +10926,20 @@ contains
         stop
        endif
 
-       if ((im_GA_primary_mat.eq.0).and. &
-           (im_GA_secondary_mat.eq.0).and. &
-           (im_GA_tertiary_mat.eq.0)) then
+       if ((im_primary_mat.eq.0).and. &
+           (im_secondary_mat.eq.0).and. &
+           (im_tertiary_mat.eq.0)) then
         ! do nothing
        else
         print *,"invalid default arguments"
         stop
        endif
 
-      else if (abs(growth_angle).le.half*Pi) then
+      else if ((angle_primary_secondary.gt.zero).and. &
+               (angle_primary_secondary.lt.Pi)) then
 
-        ! The corrected n_GA_primary_mat comes from a 1-parameter family:
-        ! n1=n_GA_primary_mat^{old} n2=n_GA_primary_mat^{old} cross n_CL
+        ! The corrected n_primary_mat comes from a 1-parameter family:
+        ! n1=n_primary_mat^{old} n2=n_primary_mat^{old} cross n_CL
         ! define a mapping T such that 
         !   T n_CL=(0 0 1)
         !   T n1=(1 0 0)
@@ -10950,16 +10950,16 @@ contains
         !   given a trial angle, we find the corresponding (2D) normal:
         !   n_base=( n2d 
         !             0  )
-        !   n_GA_primary_mat_candidate=T^{-1}n_base
+        !   n_primary_mat_candidate=T^{-1}n_base
         !   Let R=(cos(theta)   sin(theta)   (clockwise)
         !          -sin(theta)  cos(theta) ) 
-        !   theta=\pm( pi/2-growth_angle/2 )
-        !   n_GA_secondary_mat_candidate=T^{-1} (  R n2d
+        !   theta=\pm( angle_primary_secondary )
+        !   n_secondary_mat_candidate=T^{-1} (  R n2d
         !                              0     )
         !   The sign is chosen so that (3rd component)
-        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original 
+        !   T n_primary_mat_original x T n_secondary_mat_original 
         !   has the same sign as
-        !   T n_GA_primary_mat_candidate x T n_GA_secondary_mat_candidate 
+        !   T n_primary_mat_candidate x T n_secondary_mat_candidate 
 
        if ((nMAT_OPT.eq.3).and. &
            (nDOF.eq.1).and. &
@@ -10981,20 +10981,20 @@ contains
         stop
        endif
 
-       if ((im_GA_primary_mat.ge.1).and. &
-           (im_GA_primary_mat.le.num_materials).and. &
-           (im_GA_secondary_mat.ge.1).and. &
-           (im_GA_secondary_mat.le.num_materials).and. &
-           (im_GA_tertiary_mat.ge.1).and. &
-           (im_GA_tertiary_mat.le.num_materials)) then
+       if ((im_primary_mat.ge.1).and. &
+           (im_primary_mat.le.num_materials).and. &
+           (im_secondary_mat.ge.1).and. &
+           (im_secondary_mat.le.num_materials).and. &
+           (im_tertiary_mat.ge.1).and. &
+           (im_tertiary_mat.le.num_materials)) then
         ! do nothing
        else
-        print *,"invalid growth_angle arguments"
+        print *,"invalid angle_primary_secondary arguments"
         stop
        endif
 
       else
-       print *,"growth_angle invalid: ",growth_angle
+       print *,"angle_primary_secondary invalid: ",angle_primary_secondary
        stop
       endif
 
@@ -11077,7 +11077,7 @@ contains
        endif
 
        call angle_to_slope_general( &
-        growth_angle, &
+        angle_primary_secondary, &
         npredict, &
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
@@ -11421,18 +11421,19 @@ contains
       endif
 
       if (nMAT_OPT.eq.1) then
-       if (growth_angle.eq.zero) then
+       if (angle_primary_secondary.eq.zero) then
         ! do nothing
        else
-        print *,"growth_angle invalid"
+        print *,"angle_primary_secondary invalid"
         stop
        endif
-      else if (abs(growth_angle).le.half*Pi) then
+      else if ((angle_primary_secondary.gt.zero).and. &
+               (angle_primary_secondary.lt.Pi)) then
 
        do im=1,num_materials*ngeom_recon
         mofdata(im)=zero
        enddo
-       vofcomp=(im_GA_primary_mat-1)*ngeom_recon+1
+       vofcomp=(im_primary_mat-1)*ngeom_recon+1
        mofdata(vofcomp)=refvfrac(1)
        do dir=1,sdim
         mofdata(vofcomp+dir)=refcentroid(dir)
@@ -11538,9 +11539,9 @@ contains
          print *,"dir,cencell_vof(dir) ",dir,cencell_vof(dir)
          print *,"dir,cencell_cen(dir) ",dir,cencell_cen(dir)
         enddo
-        print *,"im_GA_primary_mat ",im_GA_primary_mat
-        print *,"im_GA_secondary_mat ",im_GA_secondary_mat
-        print *,"im_GA_tertiary_mat ",im_GA_tertiary_mat
+        print *,"im_primary_mat ",im_primary_mat
+        print *,"im_secondary_mat ",im_secondary_mat
+        print *,"im_tertiary_mat ",im_tertiary_mat
 
         stop
        endif
@@ -11584,7 +11585,7 @@ contains
        call RT_transform_offset(testcen(sdim+1),cencell_cen, &
                testcenT(sdim+1))
 
-       vofcomp=(im_GA_secondary_mat-1)*ngeom_recon+1
+       vofcomp=(im_secondary_mat-1)*ngeom_recon+1
        mofdata(vofcomp)=refvfrac(2)
        do dir=1,sdim
         mofdata(vofcomp+dir)=refcentroid(sdim+dir)
@@ -11666,9 +11667,9 @@ contains
         do dir=1,sdim
          print *,"dir,dx(dir) ",dir,dx(dir)
         enddo
-        print *,"im_GA_primary_mat ",im_GA_primary_mat
-        print *,"im_GA_secondary_mat ",im_GA_secondary_mat
-        print *,"im_GA_tertiary_mat ",im_GA_tertiary_mat
+        print *,"im_primary_mat ",im_primary_mat
+        print *,"im_secondary_mat ",im_secondary_mat
+        print *,"im_tertiary_mat ",im_tertiary_mat
 
         stop
        endif
@@ -11696,7 +11697,7 @@ contains
        call RT_transform_offset(testcen(2*sdim+1),cencell_cen, &
                testcenT(2*sdim+1))
 
-       vofcomp=(im_GA_tertiary_mat-1)*ngeom_recon+1
+       vofcomp=(im_tertiary_mat-1)*ngeom_recon+1
        mofdata(vofcomp)=refvfrac(3)
        do dir=1,sdim
         mofdata(vofcomp+dir)=refcentroid(2*sdim+dir)
@@ -11743,7 +11744,7 @@ contains
        deallocate(save_xtetlist_cen)
 
       else
-       print *,"growth_angle invalid: ",growth_angle
+       print *,"angle_primary_secondary invalid: ",angle_primary_secondary
        stop
       endif
 
@@ -11898,7 +11899,7 @@ contains
       INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
       INTEGER_T :: nDOF_standard
       INTEGER_T :: nEQN_standard
-      REAL_T, PARAMETER :: growth_angle_standard=zero
+      REAL_T, PARAMETER :: angle_primary_secondary_standard=zero
 
       INTEGER_T, INTENT(in) :: continuous_mof !=0 or 1
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -11931,9 +11932,9 @@ contains
       REAL_T :: cen_free_placeholder(sdim)
       REAL_T :: npredict(sdim)
       REAL_T :: mag 
-      INTEGER_T, PARAMETER :: im_GA_primary_mat=0
-      INTEGER_T, PARAMETER :: im_GA_secondary_mat=0
-      INTEGER_T, PARAMETER :: im_GA_tertiary_mat=0
+      INTEGER_T, PARAMETER :: im_primary_mat=0
+      INTEGER_T, PARAMETER :: im_secondary_mat=0
+      INTEGER_T, PARAMETER :: im_tertiary_mat=0
 
       REAL_T, PARAMETER :: uncaptured_volume_vof_placeholder=one
 
@@ -12008,8 +12009,8 @@ contains
        tid, &
        uncaptured_volume_vof_placeholder, &
        mofdata, &
-       growth_angle_standard, &
-       im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
+       angle_primary_secondary_standard, &
+       im_primary_mat,im_secondary_mat,im_tertiary_mat, &
        npredict, &
        nMAT_OPT_standard, & ! 1
        nDOF_standard, & ! sdim-1 
@@ -12065,10 +12066,10 @@ contains
         tid, &
         uncaptured_volume_vof, &
         mofdata, &
-        growth_angle, &
-        im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
-        n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-        d_GA_primary_mat,d_GA_secondary_mat, &
+        angle_primary_secondary, &
+        im_primary_mat,im_secondary_mat,im_tertiary_mat, &
+        n_primary_mat,n_secondary_mat,n_CL, &
+        d_primary_mat,d_secondary_mat, &
         grid_index, &
         grid_level, &
         ls_mof, &
@@ -12111,15 +12112,15 @@ contains
 
       REAL_T, INTENT(in) :: uncaptured_volume_vof
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
-      REAL_T, INTENT(in) :: growth_angle
-      INTEGER_T, INTENT(in) :: im_GA_primary_mat
-      INTEGER_T, INTENT(in) :: im_GA_secondary_mat
-      INTEGER_T, INTENT(in) :: im_GA_tertiary_mat
-      REAL_T, INTENT(in) :: n_GA_primary_mat(3)
-      REAL_T, INTENT(in) :: n_GA_secondary_mat(3)
+      REAL_T, INTENT(in) :: angle_primary_secondary
+      INTEGER_T, INTENT(in) :: im_primary_mat
+      INTEGER_T, INTENT(in) :: im_secondary_mat
+      INTEGER_T, INTENT(in) :: im_tertiary_mat
+      REAL_T, INTENT(in) :: n_primary_mat(3)
+      REAL_T, INTENT(in) :: n_secondary_mat(3)
       REAL_T, INTENT(in) :: n_CL(3)
-      REAL_T, INTENT(in) :: d_GA_primary_mat
-      REAL_T, INTENT(in) :: d_GA_secondary_mat
+      REAL_T, INTENT(in) :: d_primary_mat
+      REAL_T, INTENT(in) :: d_secondary_mat
 
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: grid_index(sdim)
@@ -12309,10 +12310,10 @@ contains
       endif
 
       if (nMAT_OPT.eq.1) then
-       if (growth_angle.eq.zero) then
+       if (angle_primary_secondary.eq.zero) then
         ! do nothing
        else
-        print *,"growth_angle invalid"
+        print *,"angle_primary_secondary invalid"
         stop
        endif
        if ((nMAT_OPT.eq.1).and. &
@@ -12324,21 +12325,22 @@ contains
         stop
        endif
 
-       if ((im_GA_primary_mat.eq.0).and. &
-           (im_GA_secondary_mat.eq.0).and. &
-           (im_GA_tertiary_mat.eq.0).and. &
-           (d_GA_primary_mat.eq.zero).and. &
-           (d_GA_secondary_mat.eq.zero)) then
+       if ((im_primary_mat.eq.0).and. &
+           (im_secondary_mat.eq.0).and. &
+           (im_tertiary_mat.eq.0).and. &
+           (d_primary_mat.eq.zero).and. &
+           (d_secondary_mat.eq.zero)) then
         ! do nothing
        else
         print *,"invalid default arguments"
         stop
        endif
 
-      else if (abs(growth_angle).le.half*Pi) then
+      else if ((angle_primary_secondary.gt.zero).and. &
+               (angle_primary_secondary.lt.Pi)) then
 
-        ! The corrected n_GA_primary_mat comes from a 1-parameter family:
-        ! n1=n_GA_primary_mat^{old} n2=n_GA_primary_mat^{old} cross n_CL
+        ! The corrected n_primary_mat comes from a 1-parameter family:
+        ! n1=n_primary_mat^{old} n2=n_primary_mat^{old} cross n_CL
         ! define a mapping T such that 
         !   T n_CL=(0 0 1)
         !   T n1=(1 0 0)
@@ -12349,16 +12351,16 @@ contains
         !   given a trial angle, we find the corresponding (2D) normal:
         !   n_base=( n2d 
         !             0  )
-        !   n_GA_primary_mat_candidate=T^{-1}n_base
+        !   n_primary_mat_candidate=T^{-1}n_base
         !   Let R=(cos(theta)   sin(theta)    (clockwise)
         !          -sin(theta)  cos(theta) ) 
-        !   theta=\pm( pi/2-growth_angle/2 )
-        !   n_GA_secondary_mat_candidate=T^{-1} (  R n2d
+        !   theta=\pm( angle_primary_secondary )
+        !   n_secondary_mat_candidate=T^{-1} (  R n2d
         !                               0     )
         !   The sign is chosen so that (3rd component)
-        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original 
+        !   T n_primary_mat_original x T n_secondary_mat_original 
         !   has the same sign as
-        !   T n_GA_primary_mat_candidate x T n_GA_secondary_mat_candidate 
+        !   T n_primary_mat_candidate x T n_secondary_mat_candidate 
 
        if ((nMAT_OPT.eq.3).and. &
            (nDOF.eq.1).and. &
@@ -12371,20 +12373,20 @@ contains
 
        if ((continuous_mof.eq.-1).and. &
            (fastflag.eq.0).and. &
-           (im_GA_primary_mat.ge.1).and. &
-           (im_GA_primary_mat.le.num_materials).and. &
-           (im_GA_secondary_mat.ge.1).and. &
-           (im_GA_secondary_mat.le.num_materials).and. &
-           (im_GA_tertiary_mat.ge.1).and. &
-           (im_GA_tertiary_mat.le.num_materials)) then
+           (im_primary_mat.ge.1).and. &
+           (im_primary_mat.le.num_materials).and. &
+           (im_secondary_mat.ge.1).and. &
+           (im_secondary_mat.le.num_materials).and. &
+           (im_tertiary_mat.ge.1).and. &
+           (im_tertiary_mat.le.num_materials)) then
         ! do nothing
        else
-        print *,"invalid growth_angle arguments"
+        print *,"invalid angle_primary_secondary arguments"
         stop
        endif
 
       else
-       print *,"growth_angle invalid"
+       print *,"angle_primary_secondary invalid"
        stop
       endif
 
@@ -12424,10 +12426,10 @@ contains
       nguess=0
 
       if (nMAT_OPT.eq.1) then
-       if (growth_angle.eq.zero) then
+       if (angle_primary_secondary.eq.zero) then
         ! do nothing
        else
-        print *,"growth_angle invalid"
+        print *,"angle_primary_secondary invalid"
         stop
        endif
 
@@ -12739,13 +12741,14 @@ contains
         stop
        endif
 
-      else if (abs(growth_angle).le.half*Pi) then
+      else if ((angle_primary_secondary.gt.zero).and. &
+               (angle_primary_secondary.lt.Pi)) then
 
        nguess=1
        angle_array(1,1)=zero
 
       else
-       print *,"growth_angle invalid"
+       print *,"angle_primary_secondary invalid"
        stop
       endif
 
@@ -12769,8 +12772,8 @@ contains
         tid, &
         uncaptured_volume_vof, &
         mofdata, &
-        growth_angle, &
-        im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
+        angle_primary_secondary, &
+        im_primary_mat,im_secondary_mat,im_tertiary_mat, &
         npredict, &
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
@@ -12903,8 +12906,8 @@ contains
          tid, &
          uncaptured_volume_vof, &
          mofdata, &
-         growth_angle, &
-         im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
+         angle_primary_secondary, &
+         im_primary_mat,im_secondary_mat,im_tertiary_mat, &
          npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
@@ -12951,8 +12954,8 @@ contains
          tid, &
          uncaptured_volume_vof, &
          mofdata, &
-         growth_angle, &
-         im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
+         angle_primary_secondary, &
+         im_primary_mat,im_secondary_mat,im_tertiary_mat, &
          npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
@@ -13091,8 +13094,8 @@ contains
          tid, &
          uncaptured_volume_vof, &
          mofdata, &
-         growth_angle, &
-         im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
+         angle_primary_secondary, &
+         im_primary_mat,im_secondary_mat,im_tertiary_mat, &
          npredict, &
          nMAT_OPT, & ! 1 or 3
          nDOF, & ! sdim-1  or 1
@@ -13247,7 +13250,7 @@ contains
       enddo
 
       call angle_to_slope_general( &
-        growth_angle, &
+        angle_primary_secondary, &
         npredict, &
         nMAT_OPT, & ! 1 or 3
         nDOF, & ! sdim-1  or 1
@@ -13392,12 +13395,12 @@ contains
 ! xcell is cell center (not cell centroid)
 
       subroutine individual_MOF( &
-        growth_angle, &
-        im_GA_primary_mat, &
-        im_GA_secondary_mat, &
-        im_GA_tertiary_mat, &
-        n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-        d_GA_primary_mat,d_GA_secondary_mat, &
+        angle_primary_secondary, &
+        im_primary_mat, &
+        im_secondary_mat, &
+        im_tertiary_mat, &
+        n_primary_mat,n_secondary_mat,n_CL, &
+        d_primary_mat,d_secondary_mat, &
         grid_index, &
         grid_level, &
         tid, &
@@ -13426,15 +13429,15 @@ contains
 
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: growth_angle
-      INTEGER_T, INTENT(in) :: im_GA_primary_mat
-      INTEGER_T, INTENT(in) :: im_GA_secondary_mat
-      INTEGER_T, INTENT(in) :: im_GA_tertiary_mat
-      REAL_T, INTENT(in) :: n_GA_primary_mat(3)
-      REAL_T, INTENT(in) :: n_GA_secondary_mat(3)
+      REAL_T, INTENT(in) :: angle_primary_secondary
+      INTEGER_T, INTENT(in) :: im_primary_mat
+      INTEGER_T, INTENT(in) :: im_secondary_mat
+      INTEGER_T, INTENT(in) :: im_tertiary_mat
+      REAL_T, INTENT(in) :: n_primary_mat(3)
+      REAL_T, INTENT(in) :: n_secondary_mat(3)
       REAL_T, INTENT(in) :: n_CL(3)
-      REAL_T, INTENT(in) :: d_GA_primary_mat
-      REAL_T, INTENT(in) :: d_GA_secondary_mat
+      REAL_T, INTENT(in) :: d_primary_mat
+      REAL_T, INTENT(in) :: d_secondary_mat
 
       INTEGER_T, INTENT(IN) :: nlist_alloc 
       INTEGER_T, INTENT(IN) :: tid
@@ -13492,56 +13495,57 @@ contains
       REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
       INTEGER_T, INTENT(in) :: lsnormal_valid(num_materials)
       INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T, PARAMETER :: nMAT_OPT_growth_angle=3
+      INTEGER_T, PARAMETER :: nMAT_OPT_angle_primary_secondary=3
       INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
-      INTEGER_T, PARAMETER :: nDOF_growth_angle=1
+      INTEGER_T, PARAMETER :: nDOF_angle_primary_secondary=1
       INTEGER_T :: nDOF_standard
-      INTEGER_T :: nEQN_growth_angle
+      INTEGER_T :: nEQN_angle_primary_secondary
       INTEGER_T :: nEQN_standard
       INTEGER_T is_rigid_local(num_materials)
 
 #include "mofdata.H"
 
       nDOF_standard=sdim-1
-      nEQN_growth_angle=3*sdim
+      nEQN_angle_primary_secondary=3*sdim
       nEQN_standard=sdim
 
-      if (im_GA_primary_mat.eq.0) then
-       if (growth_angle.eq.zero) then
+      if (im_primary_mat.eq.0) then
+       if (angle_primary_secondary.eq.zero) then
         ! do nothing
        else
-        print *,"growth_angle invalid"
+        print *,"angle_primary_secondary invalid"
         stop
        endif
 
-       if ((im_GA_primary_mat.eq.0).and. &
-           (im_GA_secondary_mat.eq.0).and. &
-           (im_GA_tertiary_mat.eq.0).and. &
-           (d_GA_primary_mat.eq.zero).and. &
-           (d_GA_secondary_mat.eq.zero)) then
+       if ((im_primary_mat.eq.0).and. &
+           (im_secondary_mat.eq.0).and. &
+           (im_tertiary_mat.eq.0).and. &
+           (d_primary_mat.eq.zero).and. &
+           (d_secondary_mat.eq.zero)) then
         ! do nothing
        else
         print *,"invalid default arguments"
         stop
        endif
 
-      else if (abs(growth_angle).le.half*Pi) then
+      else if ((angle_primary_secondary.gt.zero).and. &
+               (angle_primary_secondary.lt.Pi)) then
 
-       if ((im_GA_primary_mat.ge.1).and. &
-           (im_GA_primary_mat.le.num_materials).and. &
-           (im_GA_secondary_mat.ge.1).and. &
-           (im_GA_secondary_mat.le.num_materials).and. &
-           (im_GA_tertiary_mat.ge.1).and. &
-           (im_GA_tertiary_mat.le.num_materials).and. &
+       if ((im_primary_mat.ge.1).and. &
+           (im_primary_mat.le.num_materials).and. &
+           (im_secondary_mat.ge.1).and. &
+           (im_secondary_mat.le.num_materials).and. &
+           (im_tertiary_mat.ge.1).and. &
+           (im_tertiary_mat.le.num_materials).and. &
            (continuous_mof.eq.-1)) then
         ! do nothing
        else
-        print *,"invalid growth_angle arguments"
+        print *,"invalid angle_primary_secondary arguments"
         stop
        endif
 
       else
-       print *,"growth_angle invalid"
+       print *,"angle_primary_secondary invalid"
        stop
       endif
 
@@ -13765,30 +13769,31 @@ contains
        else if (continuous_mof.eq.-1) then
         use_super_cell=1
 
-        if (im_GA_primary_mat.eq.0) then
-         if (growth_angle.eq.zero) then
+        if (im_primary_mat.eq.0) then
+         if (angle_primary_secondary.eq.zero) then
           ! do nothing
          else
-          print *,"growth_angle invalid"
+          print *,"angle_primary_secondary invalid"
           stop
          endif
-        else if (abs(growth_angle).le.half*Pi) then
+        else if ((angle_primary_secondary.gt.zero).and. &
+                 (angle_primary_secondary.lt.Pi)) then
          do im=1,num_materials
           vofcomp=(im-1)*(2*sdim+3)+1
           test_order=NINT(mofdata(vofcomp+sdim+1))
           
-          if (((im.eq.im_GA_primary_mat).and.(test_order.eq.1)).or. &
-              ((im.eq.im_GA_secondary_mat).and.(test_order.eq.2)).or. &
-              ((im.eq.im_GA_tertiary_mat).and.(test_order.eq.3))) then
+          if (((im.eq.im_primary_mat).and.(test_order.eq.1)).or. &
+              ((im.eq.im_secondary_mat).and.(test_order.eq.2)).or. &
+              ((im.eq.im_tertiary_mat).and.(test_order.eq.3))) then
            !do nothing
           else if ((is_rigid_local(im).eq.1).and. &
                    (test_order.ge.0).and. &
                    (test_order.le.num_materials+1)) then
            ! do nothing
           else if ((is_rigid_local(im).eq.0).and. &
-                   (im.ne.im_GA_primary_mat).and. &
-                   (im.ne.im_GA_secondary_mat).and. &
-                   (im.ne.im_GA_tertiary_mat).and. &
+                   (im.ne.im_primary_mat).and. &
+                   (im.ne.im_secondary_mat).and. &
+                   (im.ne.im_tertiary_mat).and. &
                    (im.ge.1).and. &
                    (im.le.num_materials).and. &
                    (test_order.eq.0)) then
@@ -13798,15 +13803,15 @@ contains
            print *,"im= ",im
            print *,"is_rigid_local(im) ",is_rigid_local(im)
            print *,"test_order= ",test_order
-           print *,"im_GA_primary_mat= ",im_GA_primary_mat
-           print *,"im_GA_secondary_mat= ",im_GA_secondary_mat
-           print *,"im_GA_tertiary_mat= ",im_GA_tertiary_mat
+           print *,"im_primary_mat= ",im_primary_mat
+           print *,"im_secondary_mat= ",im_secondary_mat
+           print *,"im_tertiary_mat= ",im_tertiary_mat
            stop
           endif
           mofdata(vofcomp+sdim+1)=zero
          enddo !im=1,num_materials
         else
-         print *,"growth_angle invalid"
+         print *,"angle_primary_secondary invalid"
          stop
         endif
 
@@ -13870,11 +13875,11 @@ contains
         stop
       endif
 
-      if (im_GA_primary_mat.eq.0) then
-       if (growth_angle.eq.zero) then
+      if (im_primary_mat.eq.0) then
+       if (angle_primary_secondary.eq.zero) then
         ! do nothing
        else
-        print *,"growth_angle invalid"
+        print *,"angle_primary_secondary invalid"
         stop
        endif
 
@@ -14080,10 +14085,10 @@ contains
            tid, &
            uncaptured_volume_vof, &
            mofdata, &
-           growth_angle, & !growth_angle=0.0
-           im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
-           n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-           d_GA_primary_mat,d_GA_secondary_mat, &
+           angle_primary_secondary, & !angle_primary_secondary=0.0
+           im_primary_mat,im_secondary_mat,im_tertiary_mat, &
+           n_primary_mat,n_secondary_mat,n_CL, &
+           d_primary_mat,d_secondary_mat, &
            grid_index, &
            grid_level, &
            ls_mof, &
@@ -14308,46 +14313,47 @@ contains
         stop
        endif  
 
-      else if (abs(growth_angle).le.half*Pi) then
+      else if ((angle_primary_secondary.gt.zero).and. &
+               (angle_primary_secondary.lt.Pi)) then
 
-       if (is_rigid_local(im_GA_primary_mat).ne.0) then
-        print *,"is_rigid(im_GA_primary_mat) invalid MOF.F90"
+       if (is_rigid_local(im_primary_mat).ne.0) then
+        print *,"is_rigid(im_primary_mat) invalid MOF.F90"
         stop
        endif
-       if (is_rigid_local(im_GA_secondary_mat).ne.0) then
-        print *,"is_rigid(im_GA_secondary_mat) invalid MOF.F90"
+       if (is_rigid_local(im_secondary_mat).ne.0) then
+        print *,"is_rigid(im_secondary_mat) invalid MOF.F90"
         stop
        endif
-       if (is_rigid_local(im_GA_tertiary_mat).ne.0) then
-        print *,"is_rigid(im_GA_tertiary_mat) invalid MOF.F90"
+       if (is_rigid_local(im_tertiary_mat).ne.0) then
+        print *,"is_rigid(im_tertiary_mat) invalid MOF.F90"
         stop
        endif
 
-       vofcomp=(im_GA_primary_mat-1)*ngeom_recon+1
+       vofcomp=(im_primary_mat-1)*ngeom_recon+1
        do dir=1,sdim
         refcentroid(dir)=mofdata(vofcomp+dir)
-        npredict(dir)=n_GA_primary_mat(dir)
+        npredict(dir)=n_primary_mat(dir)
        enddo
        refvfrac(1)=mofdata(vofcomp)
-       intercept(1)=d_GA_primary_mat
+       intercept(1)=d_primary_mat
 
-       vofcomp=(im_GA_secondary_mat-1)*ngeom_recon+1
+       vofcomp=(im_secondary_mat-1)*ngeom_recon+1
        do dir=1,sdim
         refcentroid(sdim+dir)=mofdata(vofcomp+dir)
-        npredict(sdim+dir)=n_GA_secondary_mat(dir)
+        npredict(sdim+dir)=n_secondary_mat(dir)
        enddo
        refvfrac(2)=mofdata(vofcomp)
-       intercept(2)=d_GA_secondary_mat
+       intercept(2)=d_secondary_mat
 
-       vofcomp=(im_GA_tertiary_mat-1)*ngeom_recon+1
+       vofcomp=(im_tertiary_mat-1)*ngeom_recon+1
        do dir=1,sdim
         refcentroid(2*sdim+dir)=mofdata(vofcomp+dir)
-        npredict(2*sdim+dir)=-n_GA_secondary_mat(dir)
+        npredict(2*sdim+dir)=-n_secondary_mat(dir)
        enddo
        refvfrac(3)=mofdata(vofcomp)
-       intercept(3)=-d_GA_secondary_mat
+       intercept(3)=-d_secondary_mat
 
-       critical_material=im_GA_primary_mat
+       critical_material=im_primary_mat
 
         ! centroidA and refcentroid relative to cell centroid of the super
         ! cell.
@@ -14356,12 +14362,12 @@ contains
         tid, &
         uncaptured_volume_vof, &
         mofdata, &
-        growth_angle, & !growth_angle<>0
-        im_GA_primary_mat, &
-        im_GA_secondary_mat, &
-        im_GA_tertiary_mat, &
-        n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-        d_GA_primary_mat,d_GA_secondary_mat, &
+        angle_primary_secondary, & !angle_primary_secondary<>0
+        im_primary_mat, &
+        im_secondary_mat, &
+        im_tertiary_mat, &
+        n_primary_mat,n_secondary_mat,n_CL, &
+        d_primary_mat,d_secondary_mat, &
         grid_index, &
         grid_level, &
         ls_mof, &
@@ -14383,40 +14389,40 @@ contains
         critical_material, & !INTENT(in)
         fastflag, &
         sdim, &
-        nMAT_OPT_growth_angle, & !3
-        nDOF_growth_angle, & !nDOF_growth_angle=1
-        nEQN_growth_angle)   !nEQN_growth_angle=3*sdim
+        nMAT_OPT_angle_primary_secondary, & !nMAT_OPT_angle_primary_secondary=3
+        nDOF_angle_primary_secondary, & !nDOF_angle_primary_secondary=1
+        nEQN_angle_primary_secondary)   !nEQN_angle_primary_secondary=3*sdim
 
-       vofcomp=(im_GA_primary_mat-1)*ngeom_recon+1
+       vofcomp=(im_primary_mat-1)*ngeom_recon+1
        mofdata(vofcomp+sdim+1)=1
        mofdata(vofcomp+2*sdim+2)=intercept(1)
        do dir=1,sdim
         mofdata(vofcomp+sdim+1+dir)=nslope(dir)
-        multi_centroidA(im_GA_primary_mat,dir)=centroidA(dir)
+        multi_centroidA(im_primary_mat,dir)=centroidA(dir)
        enddo 
        uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
        if (abs(uncaptured_volume_vof).le.volcell_vof*VOFTOL) then
         uncaptured_volume_vof=zero
        endif
 
-       vofcomp=(im_GA_secondary_mat-1)*ngeom_recon+1
+       vofcomp=(im_secondary_mat-1)*ngeom_recon+1
        mofdata(vofcomp+sdim+1)=2
        mofdata(vofcomp+2*sdim+2)=intercept(2)
        do dir=1,sdim
         mofdata(vofcomp+sdim+1+dir)=nslope(sdim+dir)
-        multi_centroidA(im_GA_secondary_mat,dir)=centroidA(sdim+dir)
+        multi_centroidA(im_secondary_mat,dir)=centroidA(sdim+dir)
        enddo 
        uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(2)*volcell_vof
        if (abs(uncaptured_volume_vof).le.volcell_vof*VOFTOL) then
         uncaptured_volume_vof=zero
        endif
 
-       vofcomp=(im_GA_tertiary_mat-1)*ngeom_recon+1
+       vofcomp=(im_tertiary_mat-1)*ngeom_recon+1
        mofdata(vofcomp+sdim+1)=3
        mofdata(vofcomp+2*sdim+2)=-intercept(2)
        do dir=1,sdim
         mofdata(vofcomp+sdim+1+dir)=-nslope(sdim+dir)
-        multi_centroidA(im_GA_tertiary_mat,dir)=centroidA(2*sdim+dir)
+        multi_centroidA(im_tertiary_mat,dir)=centroidA(2*sdim+dir)
        enddo 
        uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(3)*volcell_vof
        if (abs(uncaptured_volume_vof).le.volcell_vof*VOFTOL) then
@@ -14430,7 +14436,7 @@ contains
        endif
 
       else
-       print *,"growth_angle invalid"
+       print *,"angle_primary_secondary invalid"
        stop
       endif
 
@@ -15685,15 +15691,15 @@ contains
       INTEGER_T continuous_mof_rigid
       INTEGER_T nlist_vof,nlist_cen
 
-      REAL_T, PARAMETER :: growth_angle=zero
-      INTEGER_T, PARAMETER :: im_GA_primary_mat=0
-      INTEGER_T, PARAMETER :: im_GA_secondary_mat=0
-      INTEGER_T, PARAMETER :: im_GA_tertiary_mat=0
-      REAL_T :: n_GA_primary_mat(3)
-      REAL_T :: n_GA_secondary_mat(3)
+      REAL_T, PARAMETER :: angle_primary_secondary=zero
+      INTEGER_T, PARAMETER :: im_primary_mat=0
+      INTEGER_T, PARAMETER :: im_secondary_mat=0
+      INTEGER_T, PARAMETER :: im_tertiary_mat=0
+      REAL_T :: n_primary_mat(3)
+      REAL_T :: n_secondary_mat(3)
       REAL_T :: n_CL(3)
-      REAL_T, PARAMETER :: d_GA_primary_mat=zero
-      REAL_T, PARAMETER :: d_GA_secondary_mat=zero
+      REAL_T, PARAMETER :: d_primary_mat=zero
+      REAL_T, PARAMETER :: d_secondary_mat=zero
 
       INTEGER_T, PARAMETER :: tessellate=0
       INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
@@ -16099,10 +16105,10 @@ contains
            tid, &
            uncaptured_volume_vof, &
            mofdata, &
-           growth_angle, & !growth_angle=0.0
-           im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
-           n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-           d_GA_primary_mat,d_GA_secondary_mat, &
+           angle_primary_secondary, & !angle_primary_secondary=0.0
+           im_primary_mat,im_secondary_mat,im_tertiary_mat, &
+           n_primary_mat,n_secondary_mat,n_CL, &
+           d_primary_mat,d_secondary_mat, &
            grid_index, &
            grid_level, &
            ls_mof, &
@@ -16475,10 +16481,10 @@ contains
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
          call individual_MOF( &
-          growth_angle, &
-          im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
-          n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-          d_GA_primary_mat,d_GA_secondary_mat, &
+          angle_primary_secondary, &
+          im_primary_mat,im_secondary_mat,im_tertiary_mat, &
+          n_primary_mat,n_secondary_mat,n_CL, &
+          d_primary_mat,d_secondary_mat, &
           grid_index, &
           grid_level, &
           tid, &
@@ -16656,10 +16662,10 @@ contains
          do while ((imaterial_count.le.num_materials).and. &
                    (uncaptured_volume_vof.gt.zero))
           call individual_MOF( &
-           growth_angle, &
-           im_GA_primary_mat,im_GA_secondary_mat,im_GA_tertiary_mat, &
-           n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-           d_GA_primary_mat,d_GA_secondary_mat, &
+           angle_primary_secondary, &
+           im_primary_mat,im_secondary_mat,im_tertiary_mat, &
+           n_primary_mat,n_secondary_mat,n_CL, &
+           d_primary_mat,d_secondary_mat, &
            grid_index, &
            grid_level, &
            tid, &
@@ -16854,11 +16860,11 @@ contains
       end subroutine multimaterial_MOF
 
 
-      subroutine multimaterial_MOF_growth_angle( &
-        im_GA_primary_mat, &  
-        im_GA_secondary_mat, &
-        im_GA_tertiary_mat, & 
-        growth_angle, &
+      subroutine multimaterial_MOF_angle_primary_secondary( &
+        im_primary_mat, &  
+        im_secondary_mat, &
+        im_tertiary_mat, & 
+        angle_primary_secondary, &
         bfact,dx, &
         xsten0,nhalf0, &
         xtetlist_vof, &
@@ -16876,10 +16882,10 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(IN) :: im_GA_primary_mat
-      INTEGER_T, INTENT(IN) :: im_GA_secondary_mat
-      INTEGER_T, INTENT(IN) :: im_GA_tertiary_mat
-      REAL_T, INTENT(IN) :: growth_angle
+      INTEGER_T, INTENT(IN) :: im_primary_mat
+      INTEGER_T, INTENT(IN) :: im_secondary_mat
+      INTEGER_T, INTENT(IN) :: im_tertiary_mat
+      REAL_T, INTENT(IN) :: angle_primary_secondary
       INTEGER_T, INTENT (IN) :: bfact,nhalf0
       INTEGER_T, INTENT (IN) :: sdim
       INTEGER_T, INTENT (IN) :: nlist_alloc
@@ -16913,14 +16919,14 @@ contains
       INTEGER_T :: lsnormal_valid(num_materials)
       INTEGER_T order_algorithm_in(num_materials)
 
-      REAL_T :: n_GA_primary_mat(3)
-      REAL_T :: n_GA_secondary_mat(3)
-      REAL_T :: n_GA_tertiary_mat(3)
+      REAL_T :: n_primary_mat(3)
+      REAL_T :: n_secondary_mat(3)
+      REAL_T :: n_tertiary_mat(3)
       REAL_T :: n_CL(3)
 
-      REAL_T :: d_GA_primary_mat
-      REAL_T :: d_GA_secondary_mat
-      REAL_T :: d_GA_tertiary_mat
+      REAL_T :: d_primary_mat
+      REAL_T :: d_secondary_mat
+      REAL_T :: d_tertiary_mat
 
       REAL_T :: t1,t2,tswap,t_avg
       REAL_T :: t1_test,t2_test
@@ -16986,7 +16992,7 @@ contains
       endif
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid multimaterial_MOF_growth_angle"
+       print *,"sdim invalid multimaterial_MOF_angle_primary_secondary"
        stop
       endif
 
@@ -17000,7 +17006,7 @@ contains
       if (nmax.eq.geom_nmax) then
        ! do nothing
       else
-       print *,"multimaterial_MOF_growth_angle: nmax<>geom_nmax"
+       print *,"multimaterial_MOF_angle_primary_secondary: nmax<>geom_nmax"
        print *,"nmax= ",nmax
        print *,"geom_nmax= ",geom_nmax
        stop
@@ -17008,12 +17014,12 @@ contains
 
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid multimaterial MOF_growth_angle"
+       print *,"num_materials invalid multimaterial MOF_angle_primary_secondary"
        print *,"num_materials= ",num_materials
        stop
       endif
       if (nmax.lt.10) then
-       print *,"nmax too small in multimaterial_MOF_growth_angle"
+       print *,"nmax too small in multimaterial_MOF_angle_primary_secondary"
        stop
       endif
 
@@ -17065,19 +17071,19 @@ contains
        mof_calls(tid+1,imaterial)=0
        vofcomp=(imaterial-1)*ngeom_recon+1
 
-       if (imaterial.eq.im_GA_primary_mat) then
+       if (imaterial.eq.im_primary_mat) then
 
         if (NINT(mofdata(vofcomp+sdim+1)).eq.1) then
          ! do nothing
         else
-         print *,"expecting order==1 for im_GA_primary_mat"
+         print *,"expecting order==1 for im_primary_mat"
          stop
         endif
         if ((mofdata(vofcomp).ge.0.001d0).and. &
             (mofdata(vofcomp).le.0.999d0)) then
          !do nothing
         else
-         print *,"expecting 0.001<=F<=0.999 for im_GA_primary_mat"
+         print *,"expecting 0.001<=F<=0.999 for im_primary_mat"
          print *,"vofcomp=",vofcomp
          print *,"mofdata(vofcomp)=",mofdata(vofcomp)
          do imaterial_debug=1,num_materials
@@ -17089,66 +17095,66 @@ contains
          stop
         endif
 
-        n_GA_primary_mat(3)=zero
+        n_primary_mat(3)=zero
 
         mag=zero
         do dir=1,sdim
-         n_GA_primary_mat(dir)=mofdata(vofcomp+sdim+1+dir)
-         mag=mag+n_GA_primary_mat(dir)**2
+         n_primary_mat(dir)=mofdata(vofcomp+sdim+1+dir)
+         mag=mag+n_primary_mat(dir)**2
         enddo 
         mag=sqrt(mag)
         if (abs(mag-one).le.VOFTOL) then
          do dir=1,sdim
-          n_GA_primary_mat(dir)=n_GA_primary_mat(dir)/mag
+          n_primary_mat(dir)=n_primary_mat(dir)/mag
          enddo
-         d_GA_primary_mat=mofdata(vofcomp+2*sdim+2)
+         d_primary_mat=mofdata(vofcomp+2*sdim+2)
         else
-         print *,"mag invalid im_GA_primary_mat"
+         print *,"mag invalid im_primary_mat"
          stop
         endif 
 
-       else if (imaterial.eq.im_GA_secondary_mat) then
+       else if (imaterial.eq.im_secondary_mat) then
 
         if (NINT(mofdata(vofcomp+sdim+1)).eq.2) then
          ! do nothing
         else
-         print *,"expecting order==2 for im_GA_secondary_mat"
+         print *,"expecting order==2 for im_secondary_mat"
          stop
         endif
         if ((mofdata(vofcomp).ge.0.001d0).and. &
             (mofdata(vofcomp).le.0.999d0)) then
          !do nothing
         else
-         print *,"expecting 0.001<=F<=0.999 for im_GA_secondary_mat"
+         print *,"expecting 0.001<=F<=0.999 for im_secondary_mat"
          print *,"vofcomp=",vofcomp
          print *,"mofdata(vofcomp)=",mofdata(vofcomp)
          stop
         endif
 
-        n_GA_secondary_mat(3)=zero
+        n_secondary_mat(3)=zero
 
         mag=zero
         do dir=1,sdim
-         n_GA_secondary_mat(dir)=mofdata(vofcomp+sdim+1+dir)
-         mag=mag+n_GA_secondary_mat(dir)**2
+         n_secondary_mat(dir)=mofdata(vofcomp+sdim+1+dir)
+         mag=mag+n_secondary_mat(dir)**2
         enddo 
         mag=sqrt(mag)
         if (abs(mag-one).le.VOFTOL) then
          do dir=1,sdim
-          n_GA_secondary_mat(dir)=n_GA_secondary_mat(dir)/mag
+          n_secondary_mat(dir)=n_secondary_mat(dir)/mag
          enddo
-         d_GA_secondary_mat=mofdata(vofcomp+2*sdim+2)
+         d_secondary_mat=mofdata(vofcomp+2*sdim+2)
         else
-         print *,"mag invalid im_GA_secondary_mat"
+         print *,"mag invalid im_secondary_mat"
          stop
         endif         
 
-       else if (imaterial.eq.im_GA_tertiary_mat) then
+       else if (imaterial.eq.im_tertiary_mat) then
 
         if (NINT(mofdata(vofcomp+sdim+1)).eq.3) then
          ! do nothing
         else
-         print *,"expecting order==3 for im_GA_tertiary_mat"
+         print *,"expecting order==3 for im_tertiary_mat"
          stop
         endif
 
@@ -17156,27 +17162,27 @@ contains
             (mofdata(vofcomp).le.0.999d0)) then
          !do nothing
         else
-         print *,"expecting 0.001<=F<=0.999 for im_GA_tertiary_mat"
+         print *,"expecting 0.001<=F<=0.999 for im_tertiary_mat"
          print *,"vofcomp=",vofcomp
          print *,"mofdata(vofcomp)=",mofdata(vofcomp)
          stop
         endif
 
-        n_GA_tertiary_mat(3)=zero
+        n_tertiary_mat(3)=zero
 
         mag=zero
         do dir=1,sdim
-         n_GA_tertiary_mat(dir)=mofdata(vofcomp+sdim+1+dir)
-         mag=mag+n_GA_tertiary_mat(dir)**2
+         n_tertiary_mat(dir)=mofdata(vofcomp+sdim+1+dir)
+         mag=mag+n_tertiary_mat(dir)**2
         enddo 
         mag=sqrt(mag)
         if (abs(mag-one).le.VOFTOL) then
          do dir=1,sdim
-          n_GA_tertiary_mat(dir)=n_GA_tertiary_mat(dir)/mag
+          n_tertiary_mat(dir)=n_tertiary_mat(dir)/mag
          enddo
-         d_GA_tertiary_mat=mofdata(vofcomp+2*sdim+2)
+         d_tertiary_mat=mofdata(vofcomp+2*sdim+2)
         else
-         print *,"mag invalid im_GA_tertiary_mat"
+         print *,"mag invalid im_tertiary_mat"
          stop
         endif         
 
@@ -17205,18 +17211,18 @@ contains
 
       junction_good=1
 
-      if (abs(d_GA_tertiary_mat+d_GA_secondary_mat).lt.VOFTOL) then
+      if (abs(d_tertiary_mat+d_secondary_mat).lt.VOFTOL) then
        ! do nothing
       else
-       print *,"(abs(d_GA_tertiary_mat+d_GA_secondary_mat).lt.VOFTOL) failed"
+       print *,"(abs(d_tertiary_mat+d_secondary_mat).lt.VOFTOL) failed"
        junction_good=0
        stop
       endif
       do dir=1,sdim
-       if (abs(n_GA_tertiary_mat(dir)+n_GA_secondary_mat(dir)).lt.VOFTOL) then
+       if (abs(n_tertiary_mat(dir)+n_secondary_mat(dir)).lt.VOFTOL) then
         ! do nothing
        else
-        print *,"(abs(n_GA_tertiary_mat+n_GA_secondary_mat).lt.VOFTOL) failed"
+        print *,"(abs(n_tertiary_mat+n_secondary_mat).lt.VOFTOL) failed"
         junction_good=0
         stop
        endif
@@ -17224,9 +17230,9 @@ contains
        !phi=n dot (x-x0)+d
        !n_CL(3)
 #if (AMREX_SPACEDIM==3)
-      call crossprod(n_GA_primary_mat,n_GA_secondary_mat,n_CL)
+      call crossprod(n_primary_mat,n_secondary_mat,n_CL)
 #elif (AMREX_SPACEDIM==2)
-      call crossprod2d(n_GA_primary_mat,n_GA_secondary_mat,n_CL)
+      call crossprod2d(n_primary_mat,n_secondary_mat,n_CL)
 #else
       print *,"dimension bust"
       stop
@@ -17264,20 +17270,20 @@ contains
        endif
 
         ! contact line: x=n_CL t + x0+xcrit
-        ! plane 1:x such that n_GA_primary_mat dot (x-x0)+d_GA_primary_mat=0
-        ! plane 2:x such that n_GA_secondary_mat dot (x-x0)+d_GA_secondary_mat=0
+        ! plane 1:x such that n_primary_mat dot (x-x0)+d_primary_mat=0
+        ! plane 2:x such that n_secondary_mat dot (x-x0)+d_secondary_mat=0
         ! plane 3:x such that n_CL dot (x-x0)=0
         ! Assume x=x0 + xcrit =>
-        ! n_GA_primary_mat dot xcrit + d_GA_primary_mat = 0
-        ! n_GA_secondary_mat     dot xcrit + d_GA_secondary_mat = 0
+        ! n_primary_mat dot xcrit + d_primary_mat = 0
+        ! n_secondary_mat     dot xcrit + d_secondary_mat = 0
         ! n_CL      dot xcrit=0
         ! once xcrit is found, one has that x=n_CL t + x0 + xcrit is on
         ! the following 3 planes:
-        ! plane 1:such that n_GA_primary_mat dot (x-x0)+d_GA_primary_mat=0
-        ! plane 2:x such that n_GA_secondary_mat dot (x-x0)+d_GA_secondary_mat=0
+        ! plane 1:such that n_primary_mat dot (x-x0)+d_primary_mat=0
+        ! plane 2:x such that n_secondary_mat dot (x-x0)+d_secondary_mat=0
         ! plane 3:x such that n_CL dot (x-x0)=t
-        ! The corrected n_GA_primary_mat comes from a 1-parameter family:
-        ! n1=n_GA_primary_mat^{old} n2=n_GA_primary_mat^{old} cross n_CL
+        ! The corrected n_primary_mat comes from a 1-parameter family:
+        ! n1=n_primary_mat^{old} n2=n_primary_mat^{old} cross n_CL
         ! define a mapping T such that 
         !   T n_CL=(0 0 1)
         !   T n1=(1 0 0)
@@ -17288,23 +17294,23 @@ contains
         !   given a trial angle, we find the corresponding (2D) normal:
         !   n_base=( n2d 
         !             0  )
-        !   n_GA_primary_mat_candidate=T^{-1}n_base
+        !   n_primary_mat_candidate=T^{-1}n_base
         !   Let R=(cos(theta)   sin(theta)    (clockwise rotation)
         !          -sin(theta)  cos(theta) ) 
-        !   theta=\pm( pi/2-growth_angle/2 )
-        !   n_GA_secondary_mat_candidate= T^{-1} (  R n2d
+        !   theta=\pm( angle_primary_secondary )
+        !   n_secondary_mat_candidate= T^{-1} (  R n2d
         !                               0     )
         !   The sign is chosen so that (3rd component)
-        !   T n_GA_primary_mat_original x T n_GA_secondary_mat_original 
+        !   T n_primary_mat_original x T n_secondary_mat_original 
         !   has the same sign as
-        !   T n_GA_primary_mat_candidate x T n_GA_secondary_mat_candidate 
+        !   T n_primary_mat_candidate x T n_secondary_mat_candidate 
        do dir=1,3
-        aa(1,dir)=n_GA_primary_mat(dir)
-        aa(2,dir)=n_GA_secondary_mat(dir)
+        aa(1,dir)=n_primary_mat(dir)
+        aa(2,dir)=n_secondary_mat(dir)
         aa(3,dir)=n_CL(dir)
        enddo
-       bb(1)=-d_GA_primary_mat
-       bb(2)=-d_GA_secondary_mat
+       bb(1)=-d_primary_mat
+       bb(2)=-d_secondary_mat
        bb(3)=zero
        call matrix_solve(aa,xcrit,bb,matstatus,3)
        if (matstatus.eq.1) then
@@ -17430,17 +17436,17 @@ contains
         uncaptured_centroid_cen, &
         sdim)
 
-       order_algorithm_in(im_GA_primary_mat)=1
-       order_algorithm_in(im_GA_secondary_mat)=2
-       order_algorithm_in(im_GA_tertiary_mat)=3
+       order_algorithm_in(im_primary_mat)=1
+       order_algorithm_in(im_secondary_mat)=2
+       order_algorithm_in(im_tertiary_mat)=3
 
        call individual_MOF( &
-        growth_angle, &
-        im_GA_primary_mat, & 
-        im_GA_secondary_mat, & 
-        im_GA_tertiary_mat, & 
-        n_GA_primary_mat,n_GA_secondary_mat,n_CL, &
-        d_GA_primary_mat,d_GA_secondary_mat, &
+        angle_primary_secondary, &
+        im_primary_mat, & 
+        im_secondary_mat, & 
+        im_tertiary_mat, & 
+        n_primary_mat,n_secondary_mat,n_CL, &
+        d_primary_mat,d_secondary_mat, &
         grid_index, &
         grid_level, &
         tid, &
@@ -17468,7 +17474,7 @@ contains
       endif
 
       return
-      end subroutine multimaterial_MOF_growth_angle
+      end subroutine multimaterial_MOF_angle_primary_secondary
 
       subroutine diagnostic_MOF(sdim,nmax)
 

@@ -397,7 +397,6 @@ stop
         ccprerecalesce_stiffCV, &
         ccspeciesconst, &
         ccspeciesviscconst, &
-        ccgrowth_angle_primary_mat, &
         cclatent_heat, &
         cclatent_heat_slope, &
         cclatent_heat_T0, &
@@ -559,7 +558,6 @@ stop
         ccspeciesconst((ccnum_species_var+1)*ccnum_materials)
       REAL_T, INTENT(in) :: &
         ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
-      REAL_T, INTENT(in) :: ccgrowth_angle_primary_mat(2*ccnten)
       REAL_T, INTENT(in) :: cclatent_heat(2*ccnten)
       REAL_T, INTENT(in) :: cclatent_heat_slope(2*ccnten)
       REAL_T, INTENT(in) :: cclatent_heat_T0(2*ccnten)
@@ -1552,7 +1550,6 @@ stop
       endif
 
       do iten=1,num_interfaces
-       fort_growth_angle_primary_mat(iten)=ccgrowth_angle_primary_mat(iten)
        fort_latent_heat(iten)=cclatent_heat(iten)
        fort_latent_heat(num_interfaces+iten)=cclatent_heat(num_interfaces+iten)
        fort_latent_heat_slope(iten)=cclatent_heat_slope(iten)
@@ -1730,8 +1727,6 @@ stop
      
       if (ioproc.eq.1) then
        do iten=1,2*num_interfaces
-        print *,"iten,fort_growth_angle_primary_mat ", &
-           iten,fort_growth_angle_primary_mat(iten)
         print *,"iten,fort_latent_heat ",iten,fort_latent_heat(iten)
         print *,"iten,fort_latent_heat_slope ",iten,fort_latent_heat_slope(iten)
         print *,"iten,fort_latent_heat_T0 ",iten,fort_latent_heat_T0(iten)

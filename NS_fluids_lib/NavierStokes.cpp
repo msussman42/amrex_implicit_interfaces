@@ -621,11 +621,6 @@ Vector<Real> NavierStokes::saturation_temp_vel;
 Vector<Real> NavierStokes::saturation_temp_min; //aka T_I_min
 Vector<Real> NavierStokes::saturation_temp_max; //aka T_I_max
 
-Vector<Real> NavierStokes::growth_angle;
-Vector<int> NavierStokes::growth_angle_primary_mat;
-Vector<int> NavierStokes::growth_angle_tertiary_mat;
-Vector<int> NavierStokes::growth_angle_secondary_mat;
-
 Vector<int> NavierStokes::microlayer_substrate;
 Vector<Real> NavierStokes::microlayer_angle;
 Vector<Real> NavierStokes::microlayer_size;
@@ -1657,8 +1652,6 @@ void fortran_parameters() {
  pp.queryAdd("tension_T0",tension_T0temp,NavierStokes::num_interfaces);
  pp.queryAdd("tension_min",tension_mintemp,NavierStokes::num_interfaces);
 
- Vector<int> growth_angle_primary_mat_temp(2*NavierStokes::num_interfaces);
-
  Vector<Real> latent_heat_temp(2*NavierStokes::num_interfaces);
  Vector<Real> latent_heat_slopetemp(2*NavierStokes::num_interfaces);
  Vector<Real> latent_heat_T0temp(2*NavierStokes::num_interfaces);
@@ -1678,9 +1671,6 @@ void fortran_parameters() {
   reference_pressure_temp[i]=1.0e+6;
   reference_pressure_temp[i+NavierStokes::num_interfaces]=1.0e+6;
 
-  growth_angle_primary_mat_temp[i]=0;
-  growth_angle_primary_mat_temp[i+NavierStokes::num_interfaces]=0;
-
   latent_heat_temp[i]=0.0;
   latent_heat_temp[i+NavierStokes::num_interfaces]=0.0;
   latent_heat_slopetemp[i]=0.0;
@@ -1690,8 +1680,6 @@ void fortran_parameters() {
   latent_heat_mintemp[i]=0.0;
   latent_heat_mintemp[i+NavierStokes::num_interfaces]=0.0;
  }
- pp.queryAdd("growth_angle_primary_mat",growth_angle_primary_mat_temp,
-             2*NavierStokes::num_interfaces);
 
  pp.queryAdd("latent_heat",latent_heat_temp,2*NavierStokes::num_interfaces);
  pp.queryAdd("latent_heat_slope",latent_heat_slopetemp,
@@ -2011,7 +1999,6 @@ void fortran_parameters() {
   prerecalesce_stiffCV_temp.dataPtr(),
   speciesconst_temp.dataPtr(),
   speciesviscconst_temp.dataPtr(),
-  growth_angle_primary_mat_temp.dataPtr(),
   latent_heat_temp.dataPtr(),
   latent_heat_slopetemp.dataPtr(),
   latent_heat_T0temp.dataPtr(),
@@ -3415,17 +3402,6 @@ NavierStokes::read_params ()
     macrolayer_size.resize(num_materials);
     max_contact_line_size.resize(num_materials);
 
-    growth_angle.resize(2*num_interfaces);
-    growth_angle_primary_mat.resize(2*num_interfaces);
-    growth_angle_tertiary_mat.resize(2*num_interfaces);
-    growth_angle_secondary_mat.resize(2*num_interfaces);
-    for (int i=0;i<2*num_interfaces;i++) {
-     growth_angle[i]=0.0;
-     growth_angle_tertiary_mat[i]=0;
-     growth_angle_primary_mat[i]=0;
-     growth_angle_secondary_mat[i]=0;
-    }
-
     thermal_microlayer_size.resize(num_materials);
     shear_microlayer_size.resize(num_materials);
     buoyancy_microlayer_size.resize(num_materials);
@@ -3939,14 +3915,6 @@ NavierStokes::read_params ()
      if (phasechange_microlayer_size[i]<microlayer_size_default)
       amrex::Error("phasechange_microlayer_size too small");
     }  // i=0..num_materials-1
-
-    pp.queryAdd("growth_angle",growth_angle,2*num_interfaces);
-    pp.queryAdd("growth_angle_primary_mat",
-		growth_angle_primary_mat,2*num_interfaces);
-    pp.queryAdd("growth_angle_tertiary_mat",
-		growth_angle_tertiary_mat,2*num_interfaces);
-    pp.queryAdd("growth_angle_secondary_mat",
-		growth_angle_secondary_mat,2*num_interfaces);
 
     pp.queryAdd("nucleation_temp",nucleation_temp,2*num_interfaces);
     pp.queryAdd("nucleation_pressure",nucleation_pressure,2*num_interfaces);
@@ -5110,74 +5078,6 @@ NavierStokes::read_params ()
       amrex::Error("mof_ordering invalid");
     }
 
-    for (int i=0;i<2*num_interfaces;i++) {
-
-     if (growth_angle_primary_mat[i]==0) {
-
-      if (growth_angle[i]==0.0) {
-       //do nothing
-      } else
-       amrex::Error("expecting growth_angle=0.0");
-
-     } else if (growth_angle_primary_mat[i]!=0) {
-
-      if (std::abs(growth_angle[i])<=0.5*3.141593) {
-       //do nothing
-      } else
-       amrex::Error("growth_angle invalid");
-
-      if ((growth_angle_primary_mat[i]>=1)&&
-          (growth_angle_primary_mat[i]<=num_materials)) {
-       //do nothing
-      } else
-       amrex::Error("growth_angle_primary_mat invalid");
-
-      if ((growth_angle_tertiary_mat[i]>=1)&&
-          (growth_angle_tertiary_mat[i]<=num_materials)) {
-       //do nothing
-      } else
-       amrex::Error("growth_angle_tertiary_mat invalid");
-
-      if ((growth_angle_secondary_mat[i]>=1)&&
-          (growth_angle_secondary_mat[i]<=num_materials)) {
-       //do nothing
-      } else
-       amrex::Error("growth_angle_secondary_mat invalid");
-    
-      if ((growth_angle_primary_mat[i]==growth_angle_secondary_mat[i])||
-          (growth_angle_primary_mat[i]==growth_angle_tertiary_mat[i])||
-	  (growth_angle_secondary_mat[i]==growth_angle_tertiary_mat[i]))
-       amrex::Error("growth_angle duplication error");
-
-      int iten=i;
-      if (iten>=num_interfaces)
-       iten=iten-num_interfaces;
-      int im1,im2;
-      get_inverse_iten_cpp(im1,im2,iten+1);
-      if ((im1!=growth_angle_primary_mat[i])&&
-          (im1!=growth_angle_secondary_mat[i])&&
-          (im1!=growth_angle_tertiary_mat[i]))
-       amrex::Error("iten inconsistent with im1 value");
-      if ((im2!=growth_angle_primary_mat[i])&&
-          (im2!=growth_angle_secondary_mat[i])&&
-          (im2!=growth_angle_tertiary_mat[i]))
-       amrex::Error("iten inconsistent with im2 value");
-
-      if (mof_ordering[growth_angle_primary_mat[i]-1]==1) {
-       //do nothing
-      } else
-       amrex::Error("mof_ordering[growth_angle_primary_mat[i]-1]!=1");
-
-      if (mof_ordering[growth_angle_secondary_mat[i]-1]==2) {
-       //do nothing
-      } else
-       amrex::Error("mof_ordering[growth_angle_secondary_mat[i]-1]!=2");
-
-     } else
-      amrex::Error("growth_angle[i] is NaN");
-
-    } // for (int i=0;i<2*num_interfaces;i++) 
-
     for (int i=0;i<num_materials;i++) {
 
      if (visc_coef*viscconst[i]<0.0) {
@@ -5414,17 +5314,6 @@ NavierStokes::read_params ()
      }
      std::cout << "pos_sites_random_flag= " << pos_sites_random_flag << '\n';
     
-     for (int i=0;i<2*num_interfaces;i++) {
-      std::cout << "growth_angle i=" << i << "  " << 
-       growth_angle[i] << '\n';
-      std::cout << "growth_angle_tertiary_mat i=" << i << "  " << 
-       growth_angle_tertiary_mat[i] << '\n';
-      std::cout << "growth_angle_primary_mat i=" << i << "  " << 
-       growth_angle_primary_mat[i] << '\n';
-      std::cout << "growth_angle_secondary_mat i=" << i << "  " << 
-       growth_angle_secondary_mat[i] << '\n';
-     }
-
      for (int i=0;i<num_materials;i++) {
       std::cout << "microlayer_substrate i=" << i << "  " << 
        microlayer_substrate[i] << '\n';
