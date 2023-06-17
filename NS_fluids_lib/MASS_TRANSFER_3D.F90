@@ -3216,7 +3216,9 @@ stop
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       INTEGER_T i,j,k
       INTEGER_T im,ispec
+      INTEGER_T local_mask
       REAL_T local_VOF(num_materials)
+
       snew_ptr=>snew
       maskcov_ptr=>maskcov
 
