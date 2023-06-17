@@ -5316,17 +5316,19 @@ NavierStokes::read_params ()
 
       std::cout << "nucleation_mach i=" << i << "  " << 
        nucleation_mach[i] << '\n';
-      std::cout << "nucleation_mach i+num_interfaces=" << i+num_interfaces << "  " << 
+      std::cout << "nucleation_mach i+num_interfaces=" << 
+	     i+num_interfaces << "  " << 
        nucleation_mach[i+num_interfaces] << '\n';
 
       std::cout << "latent_heat i=" << i << "  " << 
        latent_heat[i] << '\n';
-      std::cout << "latent_heat i+num_interfaces=" << i+num_interfaces << "  " << 
-       latent_heat[i+num_interfaces] << '\n';
+      std::cout << "latent_heat i+num_interfaces=" << 
+       i+num_interfaces << "  " << latent_heat[i+num_interfaces] << '\n';
 
       std::cout << "latent_heat_slope i=" << i << "  " << 
        latent_heat_slope[i] << '\n';
-      std::cout << "latent_heat_slope i+num_interfaces=" << i+num_interfaces << "  " << 
+      std::cout << "latent_heat_slope i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
        latent_heat_slope[i+num_interfaces] << '\n';
 
       if (latent_heat_slope[i]<=0.0) {
@@ -5341,23 +5343,23 @@ NavierStokes::read_params ()
 
       std::cout << "latent_heat_T0 i=" << i << "  " << 
        latent_heat_T0[i] << '\n';
-      std::cout << "latent_heat_T0 i+num_interfaces=" << i+num_interfaces << "  " << 
-       latent_heat_T0[i+num_interfaces] << '\n';
+      std::cout << "latent_heat_T0 i+num_interfaces=" << 
+       i+num_interfaces << "  " << latent_heat_T0[i+num_interfaces] << '\n';
 
       std::cout << "latent_heat_min i=" << i << "  " << 
        latent_heat_min[i] << '\n';
-      std::cout << "latent_heat_min i+num_interfaces=" << i+num_interfaces << "  " << 
-       latent_heat_min[i+num_interfaces] << '\n';
+      std::cout << "latent_heat_min i+num_interfaces=" << 
+       i+num_interfaces << "  " << latent_heat_min[i+num_interfaces] << '\n';
 
       std::cout << "reaction_rate i=" << i << "  " << 
        reaction_rate[i] << '\n';
-      std::cout << "reaction_rate i+num_interfaces=" << i+num_interfaces << "  " << 
-       reaction_rate[i+num_interfaces] << '\n';
+      std::cout << "reaction_rate i+num_interfaces=" << 
+       i+num_interfaces << "  " << reaction_rate[i+num_interfaces] << '\n';
 
       std::cout << "freezing_model i=" << i << "  " << 
        freezing_model[i] << '\n';
-      std::cout << "freezing_model i+num_interfaces=" << i+num_interfaces << "  " << 
-       freezing_model[i+num_interfaces] << '\n';
+      std::cout << "freezing_model i+num_interfaces=" << 
+       i+num_interfaces << "  " << freezing_model[i+num_interfaces] << '\n';
       std::cout << "Tanasawa_or_Schrage_or_Kassemi i=" << i << "  " << 
        Tanasawa_or_Schrage_or_Kassemi[i] << '\n';
       std::cout << "Tanasawa_or_Schrage_or_Kassemi i+num_interfaces=" << 
@@ -5365,11 +5367,12 @@ NavierStokes::read_params ()
        Tanasawa_or_Schrage_or_Kassemi[i+num_interfaces] << '\n';
       std::cout << "mass_fraction_id i=" << i << "  " << 
        mass_fraction_id[i] << '\n';
-      std::cout << "mass_fraction_id i+num_interfaces=" << i+num_interfaces << "  " << 
-       mass_fraction_id[i+num_interfaces] << '\n';
+      std::cout << "mass_fraction_id i+num_interfaces=" << 
+       i+num_interfaces << "  " << mass_fraction_id[i+num_interfaces] << '\n';
       std::cout << "distribute_from_target i=" << i << "  " << 
        distribute_from_target[i] << '\n';
-      std::cout << "distribute_from_target i+num_interfaces=" << i+num_interfaces << "  " << 
+      std::cout << "distribute_from_target i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
        distribute_from_target[i+num_interfaces] << '\n';
 
       std::cout << "tension i=" << i << "  " << tension[i] << '\n';
@@ -13261,9 +13264,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
    FArrayBox& presfab=(*presmf)[mfi]; 
    FArrayBox& pres_eos_fab=(*pres_eos_mf)[mfi]; 
 
-   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
-   if (conductivity_fab.nComp()!=num_materials)
-    amrex::Error("conductivity_fab.nComp()!=num_materials");
+   FArrayBox& thermal_conductivity_fab=
+	  (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   if (thermal_conductivity_fab.nComp()!=num_materials)
+    amrex::Error("thermal_conductivity_fab.nComp()!=num_materials");
 
    Vector<int> use_exact_temperature(2*num_interfaces);
    for (int im=0;im<2*num_interfaces;im++)
@@ -13369,8 +13373,9 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(typefab.loVect()),ARLIM(typefab.hiVect()),
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     conductivity_fab.dataPtr(), //num_materials components
-     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
+     thermal_conductivity_fab.dataPtr(), //num_materials components
+     ARLIM(thermal_conductivity_fab.loVect()),
+     ARLIM(thermal_conductivity_fab.hiVect()),
      burnvelfab.dataPtr(),
      ARLIM(burnvelfab.loVect()),ARLIM(burnvelfab.hiVect()),
      Tsatfab.dataPtr(),
@@ -13450,8 +13455,9 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      maskcov.dataPtr(),
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-     conductivity_fab.dataPtr(), //num_materials components
-     ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
+     thermal_conductivity_fab.dataPtr(), //num_materials components
+     ARLIM(thermal_conductivity_fab.loVect()),
+     ARLIM(thermal_conductivity_fab.hiVect()),
      lsnewfab.dataPtr(), //burnvelfab
      ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
      lsnewfab.dataPtr(), //Tsatfab
@@ -13975,7 +13981,8 @@ NavierStokes::level_phase_change_convertALL() {
 
 // 1. initialize node velocity from BURNING_VELOCITY_MF
 // 2. unsplit advection of materials changing phase
-// 3. update volume fractions, jump strength, temperature
+// 3. update volume fractions, jump strength, temperature,
+//    species
 void
 NavierStokes::level_phase_change_convert(
   int im_outer,int im_opp_outer,
@@ -14046,7 +14053,7 @@ NavierStokes::level_phase_change_convert(
   amrex::Error("burning vel invalid ncomp");
  debug_ixType(BURNING_VELOCITY_MF,-1,local_caller_string);
 
-  // in: level_phase_change_convert
+  // this routine: level_phase_change_convert
   // DEN_RECON_MF is initialized prior to the call
   // to this routine.
  debug_ngrow(DEN_RECON_MF,1,local_caller_string);
@@ -14218,9 +14225,10 @@ NavierStokes::level_phase_change_convert(
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
-   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
-   if (conductivity_fab.nComp()!=num_materials)
-    amrex::Error("conductivity_fab.nComp()!=num_materials");
+   FArrayBox& thermal_conductivity_fab=
+	  (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   if (thermal_conductivity_fab.nComp()!=num_materials)
+    amrex::Error("thermal_conductivity_fab.nComp()!=num_materials");
 
    FArrayBox& nodevelfab=(*localMF[nodevel_MF])[mfi];
    if (nodevelfab.nComp()==2*num_interfaces*AMREX_SPACEDIM) {
@@ -14266,6 +14274,8 @@ NavierStokes::level_phase_change_convert(
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
+    speciesreactionrate.dataPtr(),
+    recalesce_fraction_id.dataPtr(),
     mass_fraction_id.dataPtr(),
     distribute_from_target.dataPtr(),
     constant_density_all_time.dataPtr(),
@@ -14279,8 +14289,9 @@ NavierStokes::level_phase_change_convert(
     delta_mass_local[tid_current].dataPtr(),
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
-    conductivity_fab.dataPtr(), //num_materials components
-    ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
+    thermal_conductivity_fab.dataPtr(), //num_materials components
+    ARLIM(thermal_conductivity_fab.loVect()),
+    ARLIM(thermal_conductivity_fab.hiVect()),
     nodevelfab.dataPtr(),
     ARLIM(nodevelfab.loVect()),ARLIM(nodevelfab.hiVect()),
     JUMPfab.dataPtr(),
@@ -15703,9 +15714,10 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     amrex::Error("Tsatfab.nComp()!=ntsat 4");
    }
 
-   FArrayBox& conductivity_fab=(*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
-   if (conductivity_fab.nComp()!=num_materials)
-    amrex::Error("conductivity_fab.nComp()!=num_materials");
+   FArrayBox& thermal_conductivity_fab=
+	 (*localMF[CELL_CONDUCTIVITY_MATERIAL_MF])[mfi];
+   if (thermal_conductivity_fab.nComp()!=num_materials)
+    amrex::Error("thermal_conductivity_fab.nComp()!=num_materials");
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -15742,8 +15754,9 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     &dt_slab, //stefansolver
     maskfab.dataPtr(),
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    conductivity_fab.dataPtr(), //num_materials components
-    ARLIM(conductivity_fab.loVect()),ARLIM(conductivity_fab.hiVect()),
+    thermal_conductivity_fab.dataPtr(), //num_materials components
+    ARLIM(thermal_conductivity_fab.loVect()),
+    ARLIM(thermal_conductivity_fab.hiVect()),
     statefab.dataPtr(),
     ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
     Tsatfab.dataPtr(),
@@ -19719,7 +19732,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  debug_ngrow(CELL_CONDUCTIVITY_MATERIAL_MF,1,local_caller_string);
  if (localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp()!=num_materials)
-  amrex::Error("conductivity_data invalid ncomp");
+  amrex::Error("thermal_conductivity_data invalid ncomp");
 
   // getStateDIV_ALL is declared in: MacProj.cpp
   // getStateDIV_ALL computes the derived divergence of the MAC
