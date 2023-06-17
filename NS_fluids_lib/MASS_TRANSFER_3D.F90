@@ -3173,6 +3173,125 @@ stop
       return
       end subroutine fort_nodedisplace
 
+      subroutine fort_apply_reaction( &
+       tid, &
+       level,finest_level, &
+       nstate, &
+       speciesreactionrate, &
+       recalesce_fraction_id, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx, &
+       dt, &
+       maskcov,DIMS(maskcov), &
+       snew,DIMS(snew)) &
+      bind(c,name='fort_apply_reaction')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: tid
+      INTEGER_T, INTENT(in) :: level
+      INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: nstate
+      REAL_T, INTENT(in) :: speciesreactionrate(num_species_var*num_materials)
+      INTEGER_T, INTENT(in) :: recalesce_fraction_id(num_materials)
+      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      INTEGER_T, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
+      INTEGER_T :: growlo(3),growhi(3)
+      INTEGER_T, INTENT(in) :: bfact
+      REAL_T, INTENT(in),target :: xlo(SDIM)
+      REAL_T, INTENT(in),target :: dx(SDIM)
+      REAL_T, INTENT(in) :: dt
+      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(snew)
+      REAL_T, target, INTENT(in) :: maskcov(DIMV(maskcov))
+      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, target, INTENT(out) :: snew(DIMV(snew),nstate)
+      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      INTEGER_T i,j,k
+      INTEGER_T im,ispec
+      REAL_T local_VOF(num_materials)
+      snew_ptr=>snew
+      maskcov_ptr=>maskcov
+
+      if ((tid.lt.0).or. &
+          (tid.ge.geom_nthreads)) then
+       print *,"tid invalid"
+       stop
+      endif
+
+      if ((level.lt.0).or.(level.gt.finest_level)) then
+       print *,"level invalid in reactionrate"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if (nstate.ne.STATE_NCOMP) then
+       print *,"nstate invalid"
+       stop
+      endif
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+       if (local_mask.eq.1) then
+
+        do im=1,num_materials
+         if (is_ice(im).eq.1) then
+          ispec=recalesce_fraction_id(im)
+          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+           
+          else
+           print *,"ispec invalid"
+           stop
+          endif
+
+         else if (is_ice(im).eq.0) then
+          !do nothing
+         else
+          print *,"is_ice(im) invalid"
+          stop
+         endif
+
+        enddo !im=1..num_materials
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+
+      enddo ! k
+      enddo ! j
+      enddo ! i
+
+      return
+      end subroutine fort_apply_reaction
 
         ! notes on phase change:
         ! 1. advection (density, temperature, species, etc)
@@ -3328,8 +3447,6 @@ stop
       REAL_T dF,dFdst,dFsrc
       REAL_T den_dF(2)
       REAL_T jump_strength
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_ofs(-3:3,SDIM)
 
       REAL_T volgrid
       REAL_T cengrid(SDIM)
@@ -3381,6 +3498,8 @@ stop
       REAL_T thermal_k_physical_base(2)  ! source,dest
 
       INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
+      REAL_T xsten_ofs(-nhalf:nhalf,SDIM)
 
       INTEGER_T nmax,nhalf0
       INTEGER_T klosten,khisten
@@ -5372,7 +5491,6 @@ stop
               stop
              endif
 
-
             !dF=mdot/rho_dest
             !dF_expand_source=(1-rho_dest/rho_source)*dF
             !dM=rho_dest * dF_dest + rho_source * dF_source=
@@ -5785,7 +5903,8 @@ stop
 
              delta_mass(im_source)=delta_mass(im_source)+ &
               volgrid*(newvfrac(im_source)-oldvfrac(im_source))
-             delta_mass(im_dest+num_materials)=delta_mass(im_dest+num_materials)+ &
+             delta_mass(im_dest+num_materials)= &
+              delta_mass(im_dest+num_materials)+ &
               volgrid*(newvfrac(im_dest)-oldvfrac(im_dest))
 
             else
