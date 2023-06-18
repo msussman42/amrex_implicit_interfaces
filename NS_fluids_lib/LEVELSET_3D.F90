@@ -8381,7 +8381,7 @@ stop
           !
           ! Remark: 
           ! local_face(FACECOMP_ICEFACECUT+1) is initialized in
-          ! in GODUNOV_3D.F90: fort_init_icemask
+          ! GODUNOV_3D.F90: fort_init_icemask
           !
           ! local_face(FACECOMP_FACECUT+1) is initialized in 
           ! LEVELSET_3D.F: fort_init_physics_vars (here)

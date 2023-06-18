@@ -4746,10 +4746,11 @@ stop
         ! if num_materials=2, num_interfaces=1
         ! if num_materials=3, num_interfaces=3    12 13 23
         ! if num_materials=4, num_interfaces=6    12 13 14 23 24 34
-        ! called from NavierStokes.cpp: NavierStokes::level_init_icemask()
+        ! called from NavierStokes.cpp: 
+        !  NavierStokes::level_init_icemask_and_icefacecut()
         !   which is called from
         !     NavierStokes::make_physics_varsALL
-      subroutine fort_init_icemask( &
+      subroutine fort_init_icemask_and_icefacecut( &
        time, &
        level,finest_level, &
        saturation_temp, &
@@ -4766,7 +4767,7 @@ stop
        zface,DIMS(zface), &
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon) ) &
-      bind(c,name='fort_init_icemask')
+      bind(c,name='fort_init_icemask_and_icefacecut')
       use probf90_module
       use global_utility_module
       use MOF_routines_module
@@ -4856,7 +4857,7 @@ stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in init_icemask"
+       print *,"level invalid in fort_init_icemask_and_icefacecut"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -4945,7 +4946,7 @@ stop
           ! get_icemask defined in PROB.F90
           ! get_icemask is "triggered" for both ice materials and
           !  "is_FSI_rigid" materials.
-          ! this routine: fort_init_icemask
+          ! this routine: fort_init_icemask_and_icefacecut
          call get_icemask( &
           xmac, &
           time, &
@@ -4964,7 +4965,7 @@ stop
           ! get_icemask defined in PROB.F90
           ! get_icemask is "triggered" for both ice materials and
           !  "is_FSI_rigid" materials.
-          ! this routine: fort_init_icemask
+          ! this routine: fort_init_icemask_and_icefacecut
          call get_icemask( &
           xmac, &
           time, &
@@ -5045,7 +5046,7 @@ stop
           ice_test=zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
           cut_test=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
          else
-          print *,"dir invalid init_icemask 2"
+          print *,"dir invalid fort_init_icemask_and_icefacecut 2"
           stop
          endif
 
@@ -5077,7 +5078,7 @@ stop
           zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)=icefacecut
           zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)=icemask
          else
-          print *,"dir invalid init_icemask 3"
+          print *,"dir invalid fort_init_icemask_and_icefacecut 3"
           stop
          endif
 
@@ -5095,7 +5096,7 @@ stop
       enddo ! dir=0..sdim-1
 
       return
-      end subroutine fort_init_icemask
+      end subroutine fort_init_icemask_and_icefacecut
 
       ! called from split_scalar_advection after 
       !  BUILD_SEMIREFINEVOF(tessellate==0)

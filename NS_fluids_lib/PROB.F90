@@ -193,7 +193,7 @@ stop
       end subroutine get_mach_number 
 
 
-       ! called from init_icemask (GODUNOV_3D.F90) and
+       ! called from fort_init_icemask_and_icefacecut (GODUNOV_3D.F90) and
        !             tagexpansion (GODUNOV_3D.F90)
        ! input: LS, latent_heat, distribute_from_target
        ! output: icemask,icefacecut,im,im_opp,ireverse

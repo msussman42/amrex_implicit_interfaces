@@ -641,7 +641,7 @@ protected:
     void tensor_advection_update();
     void tensor_advection_updateALL();
 
-    void level_init_icemask();
+    void level_init_icemask_and_icefacecut();
     void phase_change_redistributeALL();
     void level_phase_change_redistribute(
       Real expect_mdot_sign,
@@ -1797,7 +1797,7 @@ protected:
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
      // index: 1..num_materials
      // value: 1..num_species_var
-    static Vector<int> recalesce_fraction_id;
+    static Vector<int> rigid_fraction_id;
      // index: 1..2*num_interfaces
      // value: 1..num_species_var
     static Vector<int> mass_fraction_id; 

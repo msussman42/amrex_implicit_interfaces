@@ -3178,7 +3178,7 @@ stop
        level,finest_level, &
        nstate, &
        speciesreactionrate, &
-       recalesce_fraction_id, &
+       rigid_fraction_id, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -3200,7 +3200,7 @@ stop
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: nstate
       REAL_T, INTENT(in) :: speciesreactionrate(num_species_var*num_materials)
-      INTEGER_T, INTENT(in) :: recalesce_fraction_id(num_materials)
+      INTEGER_T, INTENT(in) :: rigid_fraction_id(num_materials)
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
       INTEGER_T :: growlo(3),growhi(3)
@@ -3300,7 +3300,7 @@ stop
          endif
 
          if (is_ice(im).eq.1) then
-          ispec=recalesce_fraction_id(im)
+          ispec=rigid_fraction_id(im)
           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
            !do nothing 
           else

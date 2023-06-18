@@ -18,7 +18,7 @@ extern "C"
     int* level,int* finest_level,
     int* nstate,
     Real* speciesreactionrate,
-    int* recalesce_fraction_id,
+    int* rigid_fraction_id,
     const int* tilelo,const int* tilehi,
     const int* fablo,const int* fabhi,
     int* bfact,

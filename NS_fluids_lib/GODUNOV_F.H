@@ -627,7 +627,7 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
 
-   void fort_init_icemask(
+   void fort_init_icemask_and_icefacecut(
     Real* time,
     int* level,int* finest_level,
     Real* saturation_temp,

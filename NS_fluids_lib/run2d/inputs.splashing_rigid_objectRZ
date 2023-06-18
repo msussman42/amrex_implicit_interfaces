@@ -30,7 +30,11 @@ ns.outflow_pressure=0.0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=100.0 
 ns.num_materials=3 # 1: liquid 2: vapor 3: solid 
-ns.num_species_var=0
+ns.num_species_var=1
+ns.speciesconst=0.0 0.0 1.0 
+ns.speciesviscconst=0.0 0.0 0.0 
+ns.speciesreactionrate=0.0 0.0 1.0e+10 
+ns.rigid_fraction_id=0 0 1
 ns.configuration_tensor_var=0
 ns.post_init_pressure_solve=1
 ns.output_drop_distribution=1
@@ -122,6 +126,7 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.viscconst=0.01 1.0e-4 100.0
 # density: g/cm^3
 ns.denconst=1.0 0.00125 0.1
+#FSI_RIGID_NOTPRESCRIBED=5
 ns.FSI_flag=0 0 5
 # 0=diffuse in solid, 1=dirichlet, 2=neumann
 # this flag only applicable if FSI_flag=1,2,3,4
