@@ -3262,24 +3262,98 @@ stop
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
 
+        species_vfrac_sum=zero
+
         do im=1,num_materials
+
+         vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
+         local_VOF(im)=snew(D_DECL(i,j,k),vofcomp)
+         if (abs(local_VOF(im)).le.VOFTOL) then
+          local_VOF(im)=zero
+         else if (abs(local_VOF(im)-one).le.VOFTOL) then
+          local_VOF(im)=one
+         else if ((local_VOF(im).ge.zero).and. &
+                  (local_VOF(im).le.one)) then
+          ! do nothing
+         else
+          print *,"local_VOF invalid"
+          stop
+         endif
+         if (is_rigid(im).eq.0) then
+          species_vfrac_sum=species_vfrac_sum+local_VOF(im)
+         else if (is_rigid(im).eq.1) then
+          ! do nothing
+         else
+          print *,"is_rigid invalid"
+          stop
+         endif
+
          if (is_ice(im).eq.1) then
           ispec=recalesce_fraction_id(im)
           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-           
+           !do nothing 
           else
            print *,"ispec invalid"
            stop
           endif
-
          else if (is_ice(im).eq.0) then
           !do nothing
          else
           print *,"is_ice(im) invalid"
           stop
          endif
-
         enddo !im=1..num_materials
+
+        if (abs(species_vfrac_sum-one).le.VOFTOL_REDIST) then
+         ! do nothing
+        else
+         print *,"species_vfrac_sum invalid"
+         stop
+        endif
+
+        do ispec=1,num_species_var
+
+         species_avg=zero
+         do im=1,num_materials
+          local_rate=speciesreactionrate((ispec-1)*num_materials+im)
+          if (local_rate.eq.zero) then
+           !do nothing
+          else if (local_rate.gt.zero) then
+           ! Y'=r(1-Y)
+           ! Ynew=Yold+dt * r * (1-Ynew)
+           ! Ynew=(Yold+r*dt)/(1+r*dt)
+           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
+                   ENUM_SPECIESVAR+ispec
+           spec_old=snew(D_DECL(i,j,k),spec_comp)
+           if (abs(spec_old).le.VOFTOL) then
+            spec_old=zero
+           else if (abs(spec_old-one).le.VOFTOL) then
+            spec_old=one
+           else if ((spec_old.ge.zero).and.(spec_old.le.one)) then
+            ! do nothing
+           else
+            print *,"spec_old invalid"
+            stop
+           endif
+           spec_new=(spec_old+local_rate*dt)/(one+local_rate*dx)
+
+           if (abs(spec_new).le.VOFTOL) then
+            spec_new=zero
+           else if (abs(spec_new-one).le.VOFTOL) then
+            spec_new=one
+           else if ((spec_new.ge.zero).and.(spec_new.le.one)) then
+            ! do nothing
+           else
+            print *,"spec_new invalid"
+            stop
+           endif
+           snew(D_DECL(i,j,k),spec_comp)=spec_new
+          else
+           print *,"local_rate invalid"
+           stop
+          endif
+         enddo ! im=1,num_materials
+        enddo ! ispec=1,num_species_var
 
        else if (local_mask.eq.0) then
         ! do nothing
