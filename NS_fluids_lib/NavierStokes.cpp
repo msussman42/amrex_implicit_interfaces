@@ -4086,7 +4086,7 @@ NavierStokes::read_params ()
   	  //do nothing
 	 } else
 	  amrex::Error("speciesconst invalid");
-         if (speciesreactionrate[(ispec-1)*num_materials+im_opp]==0.0) {
+         if (speciesreactionrate[(ispec-1)*num_materials+im_opp]>=0.0) {
   	  //do nothing
 	 } else
 	  amrex::Error("speciesreactionrate invalid");
@@ -14274,8 +14274,6 @@ NavierStokes::level_phase_change_convert(
     saturation_temp.dataPtr(),
     freezing_model.dataPtr(),
     Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
-    speciesreactionrate.dataPtr(),
-    recalesce_fraction_id.dataPtr(),
     mass_fraction_id.dataPtr(),
     distribute_from_target.dataPtr(),
     constant_density_all_time.dataPtr(),
@@ -14378,6 +14376,89 @@ NavierStokes::level_phase_change_convert(
  }
 
 } // subroutine level_phase_change_convert
+
+
+void
+NavierStokes::level_species_reaction() {
+
+ std::string local_caller_string="level_species_reaction";
+
+ bool use_tiling=ns_tiling;
+ int finest_level=parent->finestLevel();
+ if ((level<0)||(level>finest_level))
+  amrex::Error("level invalid level_species_reaction");
+
+ if (ngrow_distance==4) {
+  // do nothing
+ } else
+  amrex::Error("expecting ngrow_distance==4");
+
+ int nstate=STATE_NCOMP;
+
+ // mask=1 if not covered or if outside the domain.
+ // NavierStokes::maskfiner_localMF
+ // NavierStokes::maskfiner
+ resize_maskfiner(1,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
+
+ MultiFab& S_new = get_new_data(State_Type,slab_step+1);
+ if (nstate!=S_new.nComp())
+  amrex::Error("nstate invalid");
+
+ const Real* dx = geom.CellSize();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* tilelo=tilegrid.loVect();
+   const int* tilehi=tilegrid.hiVect();
+   const int* fablo=fabgrid.loVect();
+   const int* fabhi=fabgrid.hiVect();
+
+   const Real* xlo = grid_loc[gridno].lo();
+
+   int bfact=parent->Space_blockingFactor(level);
+
+    // mask=tag if not covered by level+1 or outside the domain.
+   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+   FArrayBox& snewfab=S_new[mfi];
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   fort_apply_reaction(
+    &tid_current,
+    &level,&finest_level,
+    &nstate,
+    speciesreactionrate.dataPtr(),
+    recalesce_fraction_id.dataPtr(),
+    tilelo,tilehi,
+    fablo,fabhi,
+    &bfact, 
+    xlo,dx,
+    &dt_slab,//apply_reaction
+    maskcov.dataPtr(),
+    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+    snewfab.dataPtr(),
+    ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()));
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_SPECIES_REACTION,"level_species_reaction");
+
+} // subroutine level_species_reaction
+
 
 void
 NavierStokes::phase_change_redistributeALL() {

@@ -11347,7 +11347,7 @@ void NavierStokes::veldiffuseALL() {
  for (int im=0;im<num_materials*num_species_var;im++) {
    if (speciesviscconst[im]>0.0) {
     convert_species=1;
-   } else if (speciesviscconst[im]==0.0) {
+   } else if (speciesviscconst[im]==0.0) { //speciesreactionrate
     convert_species=1;
    } else
     amrex::Error("speciesviscconst invalid");
@@ -11361,8 +11361,12 @@ void NavierStokes::veldiffuseALL() {
  
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
+
   int hflag=0;
+
   ns_level.solid_temperature();  // if solid temperature is prescribed
+
+  ns_level.level_species_reaction();
 
   // MEHDI VAHAB HEAT SOURCE
   // NavierStokes.cpp: void NavierStokes::make_heat_source()
@@ -11411,7 +11415,8 @@ void NavierStokes::veldiffuseALL() {
     hflag,
     update_flux,
     interface_cond_avail); 
-  }
+  }  // ns=0;ns<num_species_var;ns++
+
  }  // ilev=finest_level ... level
 
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
