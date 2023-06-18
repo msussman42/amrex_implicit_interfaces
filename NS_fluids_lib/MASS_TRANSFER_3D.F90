@@ -3222,6 +3222,7 @@ stop
       REAL_T local_rate
       INTEGER_T vofcomp,spec_comp
       REAL_T spec_old,spec_new
+      REAL_T, PARAMETER :: species_max=1.0d0
 
       snew_ptr=>snew
       maskcov_ptr=>maskcov
@@ -3252,6 +3253,12 @@ stop
        ! do nothing
       else
        print *,"dt invalid"
+       stop
+      endif
+      if (species_max.gt.zero) then
+       !do nothing
+      else
+       print *,"species_max invalid"
        stop
       endif
 
@@ -3320,50 +3327,50 @@ stop
          species_avg=zero
          do im=1,num_materials
           local_rate=speciesreactionrate((ispec-1)*num_materials+im)
-          if (local_rate.eq.zero) then
-           !do nothing
-          else if (local_rate.gt.zero) then
-           ! Y'=r(1-Y)
-           ! Ynew=Yold+dt * r * (1-Ynew)
-           ! Ynew=(Yold+r*dt)/(1+r*dt)
-           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
-                   ENUM_SPECIESVAR+ispec
+
+          spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
+               ENUM_SPECIESVAR+ispec
+
+          if (local_rate.ge.zero) then
+           ! Y'=r(species_max-Y)
+           ! Ynew=Yold+dt * r * (species_max-Ynew)
+           ! Ynew=(Yold+species_max*r*dt)/(1+r*dt)
            spec_old=snew(D_DECL(i,j,k),spec_comp)
            if (abs(spec_old).le.VOFTOL) then
             spec_old=zero
-           else if (abs(spec_old-one).le.VOFTOL) then
-            spec_old=one
-           else if ((spec_old.ge.zero).and.(spec_old.le.one)) then
+           else if (abs(spec_old-species_max).le.VOFTOL) then
+            spec_old=species_max
+           else if ((spec_old.ge.zero).and. &
+                    (spec_old.le.species_max)) then
             ! do nothing
            else
             print *,"spec_old invalid"
             stop
            endif
-           spec_new=(spec_old+local_rate*dt)/(one+local_rate*dt)
+           spec_new=(spec_old+species_max*local_rate*dt)/(one+local_rate*dt)
 
            if (abs(spec_new).le.VOFTOL) then
             spec_new=zero
-           else if (abs(spec_new-one).le.VOFTOL) then
-            spec_new=one
-           else if ((spec_new.ge.zero).and.(spec_new.le.one)) then
+           else if (abs(spec_new-species_max).le.VOFTOL) then
+            spec_new=species_max
+           else if ((spec_new.ge.zero).and.(spec_new.le.species_max)) then
             ! do nothing
            else
             print *,"spec_new invalid"
             stop
            endif
            snew(D_DECL(i,j,k),spec_comp)=spec_new
-
-           if (is_rigid(im).eq.0) then
-            species_avg=species_avg+spec_new*local_VOF(im)
-           else if (is_rigid(im).eq.1) then
-            ! do nothing
-           else
-            print *,"is_rigid invalid"
-            stop
-           endif
-           
           else
            print *,"local_rate invalid"
+           stop
+          endif
+
+          if (is_rigid(im).eq.0) then
+           species_avg=species_avg+spec_new*local_VOF(im)
+          else if (is_rigid(im).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid"
            stop
           endif
          enddo ! im=1,num_materials
@@ -3377,10 +3384,10 @@ stop
          if ((species_avg.ge.zero).and. &
              (species_avg.le.VOFTOL)) then
           species_avg=zero
-         else if (abs(species_avg-one).le.VOFTOL) then
-          species_avg=one
+         else if (abs(species_avg-species_max).le.VOFTOL) then
+          species_avg=species_max
          else if ((species_avg.gt.zero).and. &
-                  (species_avg.lt.one))  then
+                  (species_avg.lt.species_max))  then
           ! do nothing
          else
           print *,"species_avg invalid"
