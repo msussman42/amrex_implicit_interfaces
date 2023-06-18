@@ -12,6 +12,22 @@ namespace amrex{
 extern "C"
 {
 
+
+   void fort_apply_reaction(
+    int* tid,
+    int* level,int* finest_level,
+    int* nstate,
+    Real* speciesreactionrate,
+    int* recalesce_fraction_id,
+    const int* tilelo,const int* tilehi,
+    const int* fablo,const int* fabhi,
+    int* bfact,
+    const Real* xlo,const Real* dx,
+    Real* dt,
+    Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
+    Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi));
+
+
    void fort_convertmaterial(
     int* tid,
     int* im_outer,
