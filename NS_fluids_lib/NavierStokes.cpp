@@ -725,8 +725,8 @@ Vector<int> NavierStokes::freezing_model;
 //1=Tanasawa  2=Schrage 3=Kassemi
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 
-//ispec=recalesce_fraction_id[0..num_materials-1]=1..num_species_var
-Vector<int> NavierStokes::recalesce_fraction_id;
+//ispec=rigid_fraction_id[0..num_materials-1]=1..num_species_var
+Vector<int> NavierStokes::rigid_fraction_id;
 
 //ispec=mass_fraction_id[0..2 num_interfaces-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
@@ -3424,7 +3424,7 @@ NavierStokes::read_params ()
     reaction_rate.resize(2*num_interfaces);
     freezing_model.resize(2*num_interfaces);
     Tanasawa_or_Schrage_or_Kassemi.resize(2*num_interfaces);
-    recalesce_fraction_id.resize(num_materials);
+    rigid_fraction_id.resize(num_materials);
     mass_fraction_id.resize(2*num_interfaces);
     distribute_from_target.resize(2*num_interfaces);
     distribute_mdot_evenly.resize(2*num_interfaces);
@@ -3529,7 +3529,7 @@ NavierStokes::read_params ()
 
     for (int i=0;i<num_materials;i++) {
      constant_density_all_time[i]=1;
-     recalesce_fraction_id[i]=0;
+     rigid_fraction_id[i]=0;
     }
     molar_mass.resize(num_materials);
 
@@ -3851,7 +3851,7 @@ NavierStokes::read_params ()
     pp.queryAdd("Tanasawa_or_Schrage_or_Kassemi",
       Tanasawa_or_Schrage_or_Kassemi,2*num_interfaces);
 
-    pp.queryAdd("recalesce_fraction_id",recalesce_fraction_id,num_materials);
+    pp.queryAdd("rigid_fraction_id",rigid_fraction_id,num_materials);
 
     pp.queryAdd("mass_fraction_id",mass_fraction_id,2*num_interfaces);
 
@@ -4068,7 +4068,7 @@ NavierStokes::read_params ()
     for (int im=0;im<num_materials;im++) {
      if (is_ice_matC(im)==1) {
 
-      int ispec=recalesce_fraction_id[im];
+      int ispec=rigid_fraction_id[im];
 
       if ((ispec>=1)&&(ispec<=num_species_var)) {
        for (int im_opp=0;im_opp<num_materials;im_opp++) {
@@ -4095,7 +4095,7 @@ NavierStokes::read_params ()
 	 amrex::Error("im_opp or im invalid");
        } //im_opp=0..num_materials-1
       } else
-       amrex::Error("recalesce_fraction_id (ispec) invalid");
+       amrex::Error("rigid_fraction_id (ispec) invalid");
 
       for (int im_opp=0;im_opp<num_materials;im_opp++) {
        if (im!=im_opp) {
@@ -4253,8 +4253,8 @@ NavierStokes::read_params ()
 
     shock_timestep.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
-     if (recalesce_fraction_id[i]<0)
-      amrex::Error("recalesce_fraction_id invalid in read_params");
+     if (rigid_fraction_id[i]<0)
+      amrex::Error("rigid_fraction_id invalid in read_params");
      shock_timestep[i]=0;
     }
     pp.queryAdd("shock_timestep",shock_timestep,num_materials);
@@ -5403,8 +5403,8 @@ NavierStokes::read_params ()
      }  // i=0..num_interfaces-1
 
      for (int i=0;i<num_materials;i++) {
-      std::cout << "recalesce_fraction_id i=" << i << "  " << 
-       recalesce_fraction_id[i] << '\n';
+      std::cout << "rigid_fraction_id i=" << i << "  " << 
+       rigid_fraction_id[i] << '\n';
       std::cout << "constant_density_all_time i=" << i << "  " << 
        constant_density_all_time[i] << '\n';
       std::cout << "cavitation_pressure i=" << i << "  " << 
@@ -14444,7 +14444,7 @@ NavierStokes::level_species_reaction() {
     &level,&finest_level,
     &nstate,
     speciesreactionrate.dataPtr(),
-    recalesce_fraction_id.dataPtr(),
+    rigid_fraction_id.dataPtr(),
     tilelo,tilehi,
     fablo,fabhi,
     &bfact, 
@@ -15420,14 +15420,14 @@ NavierStokes::level_phase_change_redistribute(
 
 // called from: NavierStokes::make_physics_varsALL
 void
-NavierStokes::level_init_icemask() {
+NavierStokes::level_init_icemask_and_icefacecut() {
 
- std::string local_caller_string="level_init_icemask";
+ std::string local_caller_string="level_init_icemask_and_icefacecut";
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid level_init_icemask");
+  amrex::Error("level invalid level_init_icemask_and_icefacecut");
 
  resize_maskfiner(1,MASKCOEF_MF);
  VOF_Recon_resize(1); //output:SLOPE_RECON_MF
@@ -15481,7 +15481,7 @@ NavierStokes::level_init_icemask() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
    
     // declared in: GODUNOV_3D.F90
-   fort_init_icemask( 
+   fort_init_icemask_and_icefacecut( 
     &cur_time_slab,
     &level,&finest_level,
     saturation_temp.dataPtr(),
@@ -15491,7 +15491,7 @@ NavierStokes::level_init_icemask() {
     fablo,fabhi,
     &bfact, 
     xlo,dx,
-    &dt_slab, //fort_init_icemask
+    &dt_slab, //fort_init_icemask_and_icefacecut
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
@@ -15503,11 +15503,11 @@ NavierStokes::level_init_icemask() {
 
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_INIT_ICEMASK,"level_init_icemask");
+  ns_reconcile_d_num(LOOP_INIT_ICEMASK,"level_init_icemask_and_icefacecut");
 
   delete_localMF(LSNEW_MF,1);
 
-} // subroutine level_init_icemask
+} // subroutine level_init_icemask_and_icefacecut
 
 
 // 1. called if "is_GFM_freezing_model"
