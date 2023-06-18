@@ -3218,6 +3218,10 @@ stop
       INTEGER_T im,ispec
       INTEGER_T local_mask
       REAL_T local_VOF(num_materials)
+      REAL_T species_vfrac_sum,species_avg
+      REAL_T local_rate
+      INTEGER_T vofcomp,spec_comp
+      REAL_T spec_old,spec_new
 
       snew_ptr=>snew
       maskcov_ptr=>maskcov
@@ -3335,7 +3339,7 @@ stop
             print *,"spec_old invalid"
             stop
            endif
-           spec_new=(spec_old+local_rate*dt)/(one+local_rate*dx)
+           spec_new=(spec_old+local_rate*dt)/(one+local_rate*dt)
 
            if (abs(spec_new).le.VOFTOL) then
             spec_new=zero
@@ -3348,11 +3352,62 @@ stop
             stop
            endif
            snew(D_DECL(i,j,k),spec_comp)=spec_new
+
+           if (is_rigid(im).eq.0) then
+            species_avg=species_avg+spec_new*local_VOF(im)
+           else if (is_rigid(im).eq.1) then
+            ! do nothing
+           else
+            print *,"is_rigid invalid"
+            stop
+           endif
+           
           else
            print *,"local_rate invalid"
            stop
           endif
          enddo ! im=1,num_materials
+
+         if (species_vfrac_sum.gt.zero) then
+          species_avg=species_avg/species_vfrac_sum
+         else
+          print *,"species_vfrac_sum invalid"
+          stop
+         endif
+         if ((species_avg.ge.zero).and. &
+             (species_avg.le.VOFTOL)) then
+          species_avg=zero
+         else if (abs(species_avg-one).le.VOFTOL) then
+          species_avg=one
+         else if ((species_avg.gt.zero).and. &
+                  (species_avg.lt.one))  then
+          ! do nothing
+         else
+          print *,"species_avg invalid"
+          stop
+         endif
+
+         do im=1,num_materials
+          spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
+                ENUM_SPECIESVAR+ispec
+          if (is_rigid(im).eq.0) then
+           if (local_VOF(im).eq.zero) then
+            snew(D_DECL(i,j,k),spec_comp)=species_avg
+           else if ((local_VOF(im).gt.zero).and. &
+                    (local_VOF(im).le.one)) then
+            !do nothing
+           else
+            print *,"local_VOF invalid"
+            stop
+           endif
+          else if (is_rigid(im).eq.1) then
+           ! do nothing
+          else
+           print *,"is_rigid invalid"
+           stop
+          endif
+         enddo ! im=1,num_materials
+
         enddo ! ispec=1,num_species_var
 
        else if (local_mask.eq.0) then
