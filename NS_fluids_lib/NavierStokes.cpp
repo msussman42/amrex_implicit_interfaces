@@ -4082,7 +4082,8 @@ NavierStokes::read_params ()
 	 } else
 	  amrex::Error("speciesreactionrate invalid");
 	} else if (im_opp!=im) {
-         if (speciesconst[(ispec-1)*num_materials+im_opp]==0.0) {
+         if ((speciesconst[(ispec-1)*num_materials+im_opp]>=0.0)&&
+	     (speciesconst[(ispec-1)*num_materials+im_opp]<1.0)) {
   	  //do nothing
 	 } else
 	  amrex::Error("speciesconst invalid");
