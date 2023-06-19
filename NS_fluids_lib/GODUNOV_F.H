@@ -649,6 +649,8 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
+    int* rigid_fraction_id,
+    int* nden,
     int* freezing_model,
     int* distribute_from_target,
     Real* time,
@@ -674,6 +676,8 @@ extern "C"
     Real* jump_comp,
     AMREX_ARLIM_P(jump_complo),
     AMREX_ARLIM_P(jump_comp_hi),
+    Real* denstate,
+    AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
