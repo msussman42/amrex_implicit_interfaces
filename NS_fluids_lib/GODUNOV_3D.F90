@@ -4741,16 +4741,25 @@ stop
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
-        ! FACECOMP_ICEMASK component c++ initialized to one
-        !   in "init_physics_vars"
+        !
+        ! xface(FACECOMP_ICEMASK+1)=one and 
+        ! xface(FACECOMP_ICEFACECUT+1) = one in
+        ! fluid regions (not ice and not FSI_RIGID).
+        !
+        ! local_face(FACECOMP_ICEMASK+1) and 
+        ! local_face(FACECOMP_ICEFACECUT+1) 
+        ! are initialized to one in "fort_init_physics_vars."
+        !
         ! if num_materials=2, num_interfaces=1
         ! if num_materials=3, num_interfaces=3    12 13 23
         ! if num_materials=4, num_interfaces=6    12 13 14 23 24 34
-        ! called from NavierStokes.cpp: 
+        ! This routine is called from NavierStokes.cpp: 
         !  NavierStokes::level_init_icemask_and_icefacecut()
         !   which is called from
         !     NavierStokes::make_physics_varsALL
       subroutine fort_init_icemask_and_icefacecut( &
+       rigid_fraction_id, &
+       nden, &
        time, &
        level,finest_level, &
        saturation_temp, &
@@ -4765,6 +4774,7 @@ stop
        xface,DIMS(xface), &
        yface,DIMS(yface), &
        zface,DIMS(zface), &
+       denstate,DIMS(denstate), &
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon) ) &
       bind(c,name='fort_init_icemask_and_icefacecut')
@@ -4774,6 +4784,8 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: rigid_fraction_id(num_materials)
+      INTEGER_T, INTENT(in) :: nden
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: level,finest_level
       REAL_T, INTENT(in) :: saturation_temp(2*num_interfaces)
@@ -4790,6 +4802,7 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(xface)
       INTEGER_T, INTENT(in) :: DIMDEC(yface)
       INTEGER_T, INTENT(in) :: DIMDEC(zface)
+      INTEGER_T, INTENT(in) :: DIMDEC(denstate)
       INTEGER_T, INTENT(in) :: DIMDEC(LSnew)
       INTEGER_T, INTENT(in) :: DIMDEC(recon)
       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
@@ -4800,6 +4813,8 @@ stop
       REAL_T, pointer :: yface_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(inout), target :: zface(DIMV(zface),FACECOMP_NCOMP)
       REAL_T, pointer :: zface_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), target :: denstate(DIMV(denstate),nden)
+      REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: LSnew(DIMV(LSnew),num_materials)
       REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon)
@@ -4817,6 +4832,8 @@ stop
       INTEGER_T im_left,im_opp_left,im_primary_left
       INTEGER_T im_right,im_opp_right,im_primary_right
       INTEGER_T ireverse_left,ireverse_right
+      REAL_T denstateleft(nden)
+      REAL_T denstateright(nden)
       REAL_T LSleft(num_materials)
       REAL_T LSright(num_materials)
       REAL_T VOFleft(num_materials)
@@ -4840,6 +4857,7 @@ stop
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
+      denstate_ptr=>denstate
       LSnew_ptr=>LSnew
       recon_ptr=>recon
 
@@ -4862,6 +4880,12 @@ stop
       endif
       if (num_state_base.ne.2) then
        print *,"num_state_base invalid"
+       stop
+      endif
+      if (nden.eq.num_materials*num_state_material) then
+       ! do nothing
+      else
+       print *,"nden invalid"
        stop
       endif
 
@@ -4898,6 +4922,7 @@ stop
       call checkbound_array(fablo,fabhi,xface_ptr,0,0)
       call checkbound_array(fablo,fabhi,yface_ptr,0,1)
       call checkbound_array(fablo,fabhi,zface_ptr,0,SDIM-1)
+      call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
  
@@ -4940,14 +4965,20 @@ stop
           VOFleft(im)=recon(D_DECL(i-ii,j-jj,k-kk),vofcomp)
           VOFright(im)=recon(D_DECL(i,j,k),vofcomp)
          enddo
+         do im=1,nden
+          denstateleft(im)=denstate(D_DECL(i-ii,j-jj,k-kk),im)
+          denstateright(im)=denstate(D_DECL(i,j,k),im)
+         enddo
 
          complement_flag=0
 
-          ! get_icemask defined in PROB.F90
-          ! get_icemask is "triggered" for both ice materials and
-          !  "is_FSI_rigid" materials.
+          ! get_icemask_and_icefacecut defined in PROB.F90
+          ! get_icemask_and_icefacecut is "triggered" for both ice 
+          !  materials and "is_FSI_rigid" materials.
           ! this routine: fort_init_icemask_and_icefacecut
-         call get_icemask( &
+         call get_icemask_and_icefacecut( &
+          rigid_fraction_id, &
+          nden, &
           xmac, &
           time, &
           dx,bfact, &
@@ -4957,16 +4988,19 @@ stop
           im_opp_left, &
           im_primary_left, &
           ireverse_left, &
+          denstateleft, &
           LSleft, &
           VOFleft, &
           distribute_from_target, &
           complement_flag)
 
-          ! get_icemask defined in PROB.F90
-          ! get_icemask is "triggered" for both ice materials and
-          !  "is_FSI_rigid" materials.
+          ! get_icemask_and_icefacecut defined in PROB.F90
+          ! get_icemask_and_icefacecut is "triggered" for both ice 
+          !  materials and "is_FSI_rigid" materials.
           ! this routine: fort_init_icemask_and_icefacecut
-         call get_icemask( &
+         call get_icemask_and_icefacecut( &
+          rigid_fraction_id, &
+          nden, &
           xmac, &
           time, &
           dx,bfact, &
@@ -4976,6 +5010,7 @@ stop
           im_opp_right, &
           im_primary_right, &
           ireverse_right, &
+          denstateright, &
           LSright, &
           VOFright, &
           distribute_from_target, &
@@ -11558,8 +11593,8 @@ stop
           ! in: fort_tagexpansion
           ! ICEMASK=0 => mask off this cell.
           ! ICEMASK=1 => do nothing
-          ! get_icemask declared in PROB.F90
-          call get_icemask( &
+          ! get_icemask_and_icefacecut declared in PROB.F90
+          call get_icemask_and_icefacecut( &
            xsten_center, &
            time, &
            dx,bfact, &

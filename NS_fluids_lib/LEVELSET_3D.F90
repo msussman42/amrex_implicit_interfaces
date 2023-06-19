@@ -8209,6 +8209,7 @@ stop
 
           ! in: fort_init_physics_vars
          local_face(FACECOMP_ICEMASK+1)=one
+         local_face(FACECOMP_ICEFACECUT+1)=one
          local_face(FACECOMP_CURV+1)=zero
          local_face(FACECOMP_FACEVEL+1)=zero
 

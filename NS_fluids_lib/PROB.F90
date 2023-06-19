@@ -197,7 +197,7 @@ stop
        !             tagexpansion (GODUNOV_3D.F90)
        ! input: LS, latent_heat, distribute_from_target
        ! output: icemask,icefacecut,im,im_opp,ireverse
-      subroutine get_icemask( &
+      subroutine get_icemask_and_icefacecut( &
         xtarget, &
         time, &
         dx,bfact, &
@@ -256,7 +256,7 @@ stop
 
       call get_dxmax(dx,bfact,dxmax)
 
-        ! we are in "get_icemask"
+        ! we are in "get_icemask_and_icefacecut"
 
       call get_primary_material(LS,im_primary)
       call get_primary_material_VFRAC(VOF,im_primary_vof)
@@ -605,7 +605,7 @@ stop
       endif
  
       return
-      end subroutine get_icemask
+      end subroutine get_icemask_and_icefacecut
 
        ! MEHDI VAHAB HEAT SOURCE
        ! T^new=T^* + dt * (Q)/(rho cv)
@@ -7490,7 +7490,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
         ! ice behaves like rigid solid where dist>0
-        ! called from "get_icemask" (PROB.F90) and 
+        ! called from "get_icemask_and_icefacecut" (PROB.F90) and 
       subroutine icemask_override(xtarget,im_source,im_dest,dist)
       use global_utility_module
       use global_distance_module
