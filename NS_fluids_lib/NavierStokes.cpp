@@ -14958,6 +14958,11 @@ NavierStokes::level_phase_change_redistribute(
    amrex::Error("im_dest invalid");
   if ((indexEXP<0)||(indexEXP>=2*num_interfaces))
    amrex::Error("indexEXP invalid");
+
+  int nden=num_materials*num_state_material;
+  MultiFab* state_var_mf=getStateDen(1,cur_time_slab);
+  if (state_var_mf->nComp()!=nden)
+   amrex::Error("state_var_mf->nComp()!=nden");
   
   Vector< Real > mdot_sum_local;
   mdot_sum_local.resize(thread_class::nthreads);
@@ -15002,6 +15007,8 @@ NavierStokes::level_phase_change_redistribute(
 
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+   FArrayBox& denstatefab=(*state_var_mf)[mfi];
+
    int bfact=parent->Space_blockingFactor(level);
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -15014,6 +15021,8 @@ NavierStokes::level_phase_change_redistribute(
     // material is neither a donor or a receiver.
     // donorfab is modified.
    fort_tagexpansion( 
+    rigid_fraction_id.dataPtr(),
+    &nden,
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
     &cur_time_slab,
@@ -15041,6 +15050,8 @@ NavierStokes::level_phase_change_redistribute(
     ARLIM(JUMPfab.loVect()),ARLIM(JUMPfab.hiVect()),
     JUMP_comp_fab.dataPtr(),
     ARLIM(JUMP_comp_fab.loVect()),ARLIM(JUMP_comp_fab.hiVect()),
+    denstatefab.dataPtr(),
+    ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     newdistfab.dataPtr(),
     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
     reconfab.dataPtr(),
@@ -15058,6 +15069,8 @@ NavierStokes::level_phase_change_redistribute(
 
   avgDown_tag_localMF(donorflag_MF);
   avgDown_tag_localMF(donorflag_complement_MF);
+
+  delete state_var_mf;
 
  } else if (isweep==1) { //fort_accept_weight
 

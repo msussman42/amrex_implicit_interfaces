@@ -198,6 +198,8 @@ stop
        ! input: LS, latent_heat, distribute_from_target
        ! output: icemask,icefacecut,im,im_opp,ireverse
       subroutine get_icemask_and_icefacecut( &
+        rigid_fraction_id, &
+        nden, &
         xtarget, &
         time, &
         dx,bfact, &
@@ -207,6 +209,7 @@ stop
         im_opp, &
         im_primary, &
         ireverse, &
+        denstate, &
         LS, &
         VOF, &
         distribute_from_target, &
@@ -215,6 +218,8 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: rigid_fraction_id(num_materials)
+      INTEGER_T, INTENT(in) :: nden
       REAL_T, INTENT(in) :: xtarget(SDIM)
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(out) :: im
@@ -225,6 +230,7 @@ stop
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(out) :: icemask
       REAL_T, INTENT(out) :: icefacecut
+      REAL_T, INTENT(in) :: denstate(nden)
       REAL_T, INTENT(in) :: LS(num_materials)
       REAL_T, INTENT(in) :: VOF(num_materials)
       INTEGER_T, INTENT(in) :: distribute_from_target(2*num_interfaces)
@@ -240,6 +246,9 @@ stop
       INTEGER_T iten
       REAL_T LL(0:1)
       REAL_T dxmax
+      INTEGER_T ispec
+      INTEGER_T spec_comp
+      REAL_T test_icefacecut
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -251,6 +260,16 @@ stop
        ! do nothing
       else
        print *,"complement_flag invalid"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (nden.eq.num_materials*num_state_material) then
+       ! do nothing
+      else
+       print *,"nden invalid"
        stop
       endif
 
@@ -350,6 +369,21 @@ stop
        icemask=zero
        icefacecut=zero
 
+       ispec=rigid_fraction_id(im_FSI_rigid)
+       if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+        spec_comp=(im_FSI_rigid-1)*num_state_material+ENUM_SPECIESVAR+ispec
+        test_icefacecut=one-denstate(spec_comp);
+        if (test_icefacecut.eq.zero) then
+         ! do nothing
+        else
+         print *,"expecting test_icefacecut=0.0d0"
+         stop
+        endif
+       else
+        print *,"ispec invalid"
+        stop
+       endif
+
       else if ((im_FSI_rigid.ge.0).and. &
                (im_FSI_rigid.le.num_materials)) then
 
@@ -425,8 +459,26 @@ stop
         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
          ireverse=-1
          if (is_ice(im_primary).eq.1) then
+
           icemask=zero
           icefacecut=zero
+
+          ispec=rigid_fraction_id(im_primary)
+          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+           spec_comp=(im_primary-1)*num_state_material+ENUM_SPECIESVAR+ispec
+           icefacecut=one-denstate(spec_comp);
+           if ((icefacecut.ge.zero).and. &
+               (icefacecut.le.one)) then
+            ! do nothing
+           else
+            print *,"icefacecut invalid"
+            stop
+           endif
+          else
+           print *,"ispec invalid"
+           stop
+          endif
+
          else if (is_ice(im_primary).eq.0) then
           icemask=one
           icefacecut=one
@@ -548,6 +600,23 @@ stop
            icefacecut=zero
           else if (icemask.eq.zero) then
            icefacecut=zero
+
+           ispec=rigid_fraction_id(im_ice)
+           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+            spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
+            icefacecut=one-denstate(spec_comp);
+            if ((icefacecut.ge.zero).and. &
+                (icefacecut.le.one)) then
+             ! do nothing
+            else
+             print *,"icefacecut invalid"
+             stop
+            endif
+           else
+            print *,"ispec invalid"
+            stop
+           endif
+
           else if (icemask.eq.one) then
            icefacecut=one
           else
@@ -557,7 +626,24 @@ stop
          else if (im_ice.eq.im_source) then ! melting
 
           if (icemask.eq.zero) then
+
            icefacecut=zero
+
+           ispec=rigid_fraction_id(im_ice)
+           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+            spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
+            icefacecut=one-denstate(spec_comp);
+            if (icefacecut.eq.zero) then
+             ! do nothing
+            else
+             print *,"expecting icefacecut=0 for melting"
+             stop
+            endif
+           else
+            print *,"ispec invalid"
+            stop
+           endif
+
           else if (icemask.eq.one) then
            icefacecut=one
           else
@@ -580,6 +666,7 @@ stop
         ireverse=-1
         icemask=one
         icefacecut=one
+
        else
         print *,"im_ice invalid:",im_ice
         stop
@@ -597,7 +684,8 @@ stop
        stop
       endif
    
-      if ((icefacecut.eq.zero).or.(icefacecut.eq.one)) then
+      if ((icefacecut.ge.zero).and. &
+          (icefacecut.le.one)) then
        ! do nothing
       else
        print *,"icefacecut invalid"

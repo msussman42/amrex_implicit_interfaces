@@ -5041,6 +5041,11 @@ stop
           else if ((icefacecut_left.eq.one).and. &
                    (icefacecut_right.eq.one)) then
            icefacecut=one
+          else if ((icefacecut_left.gt.zero).and. &
+                   (icefacecut_left.le.one).and. &
+                   (icefacecut_right.gt.zero).and. &
+                   (icefacecut_right.le.one)) then
+           icefacecut=min(icefacecut_left,icefacecut_right)
           else
            print *,"icefacecut_left or icefacecut_right invalid"
            print *,"icefacecut_left ",icefacecut_left
@@ -11329,30 +11334,33 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine fort_tagexpansion(&
-      freezing_model, &
-      distribute_from_target, &
-      time, &
-      vofbc, &
-      expect_mdot_sign, &
-      mdot_sum, &
-      mdot_sum_comp, &
-      im_source, &
-      im_dest, &
-      indexEXP, &
-      level,finest_level, &
-      tilelo,tilehi, &
-      fablo,fabhi, &
-      bfact, &
-      xlo,dx,dt, &
-      maskcov,DIMS(maskcov), &
-      tag, &
-      DIMS(tag), &
-      tag_comp, &
-      DIMS(tag_comp), &
-      expan,DIMS(expan), &
-      expan_comp,DIMS(expan_comp), &
-      LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
-      recon,DIMS(recon)) &
+       rigid_fraction_id, &
+       nden, &
+       freezing_model, &
+       distribute_from_target, &
+       time, &
+       vofbc, &
+       expect_mdot_sign, &
+       mdot_sum, &
+       mdot_sum_comp, &
+       im_source, &
+       im_dest, &
+       indexEXP, &
+       level,finest_level, &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       xlo,dx,dt, &
+       maskcov,DIMS(maskcov), &
+       tag, &
+       DIMS(tag), &
+       tag_comp, &
+       DIMS(tag_comp), &
+       expan,DIMS(expan), &
+       expan_comp,DIMS(expan_comp), &
+       denstate,DIMS(denstate), &
+       LS,DIMS(LS), &  ! newdistfab=(*localMF[LSNEW_MF])[mfi]
+       recon,DIMS(recon)) &
       bind(c,name='fort_tagexpansion')
 
       use probf90_module
@@ -11360,6 +11368,8 @@ stop
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: rigid_fraction_id(num_materials)
+      INTEGER_T, INTENT(in) :: nden
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(inout) :: mdot_sum
       REAL_T, INTENT(inout) :: mdot_sum_comp
@@ -11382,6 +11392,7 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(tag_comp)
       INTEGER_T, INTENT(in) :: DIMDEC(expan)
       INTEGER_T, INTENT(in) :: DIMDEC(expan_comp)
+      INTEGER_T, INTENT(in) :: DIMDEC(denstate)
       INTEGER_T, INTENT(in) :: DIMDEC(LS)
       INTEGER_T, INTENT(in) :: DIMDEC(recon)
       REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
@@ -11395,6 +11406,8 @@ stop
       REAL_T, INTENT(in), target :: &
            expan_comp(DIMV(expan_comp),2*num_interfaces)
       REAL_T, pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), target :: denstate(DIMV(denstate),nden)
+      REAL_T, pointer :: denstate_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials*(1+SDIM))
       REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: &
@@ -11406,6 +11419,7 @@ stop
       INTEGER_T i,j,k
       REAL_T VFRAC(num_materials)
       REAL_T VDOT
+      REAL_T local_denstate(nden)
       REAL_T LSCELL(num_materials)
       REAL_T ICEMASK
       REAL_T icefacecut
@@ -11425,6 +11439,8 @@ stop
 
       tag_ptr=>tag
       tag_comp_ptr=>tag_comp
+
+      denstate_ptr=>denstate
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -11473,6 +11489,16 @@ stop
        print *,"ngrow_distance invalid"
        stop
       endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+      if (nden.eq.num_materials*num_state_material) then
+       ! do nothing
+      else
+       print *,"nden invalid"
+       stop
+      endif
 
       maskcov_ptr=>maskcov
       LS_ptr=>LS
@@ -11480,6 +11506,7 @@ stop
       expan_ptr=>expan
       expan_comp_ptr=>expan_comp
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,denstate_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
       call checkbound_array(fablo,fabhi,expan_ptr,ngrow_distance,-1)
@@ -11536,6 +11563,9 @@ stop
          vofcomp=(im-1)*ngeom_recon+1
          VFRAC(im)=recon(D_DECL(i,j,k),vofcomp)
          LSCELL(im)=LS(D_DECL(i,j,k),im)
+        enddo
+        do im=1,nden
+         local_denstate(im)=denstate(D_DECL(i,j,k),im)
         enddo
 
          ! first checks the rigid materials for a positive LS; if none
@@ -11595,6 +11625,8 @@ stop
           ! ICEMASK=1 => do nothing
           ! get_icemask_and_icefacecut declared in PROB.F90
           call get_icemask_and_icefacecut( &
+           rigid_fraction_id, &
+           nden, &
            xsten_center, &
            time, &
            dx,bfact, &
@@ -11604,6 +11636,7 @@ stop
            im_opp, &
            im_primary_icemask, &
            ireverse, &
+           local_denstate, &
            LSCELL, &
            VFRAC, &
            distribute_from_target, &
