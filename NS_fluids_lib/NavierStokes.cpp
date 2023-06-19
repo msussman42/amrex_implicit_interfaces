@@ -15445,6 +15445,11 @@ NavierStokes::level_init_icemask_and_icefacecut() {
  if (localMF[LSNEW_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("localMF[LSNEW_MF]->nComp() invalid");
 
+ int nden=num_materials*num_state_material;
+ MultiFab* state_var_mf=getStateDen(1,cur_time_slab);
+ if (state_var_mf->nComp()!=nden)
+  amrex::Error("state_var_mf->nComp()!=nden");
+
  const Real* dx = geom.CellSize();
 
  if (thread_class::nthreads<1)
@@ -15473,6 +15478,8 @@ NavierStokes::level_init_icemask_and_icefacecut() {
    FArrayBox& zface=(*localMF[FACE_VAR_MF+AMREX_SPACEDIM-1])[mfi];
    FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi]; 
    FArrayBox& newdistfab=(*localMF[LSNEW_MF])[mfi];
+   FArrayBox& denstatefab=(*state_var_mf)[mfi];
+
    int bfact=parent->Space_blockingFactor(level);
 
    int tid_current=ns_thread();
@@ -15482,6 +15489,8 @@ NavierStokes::level_init_icemask_and_icefacecut() {
    
     // declared in: GODUNOV_3D.F90
    fort_init_icemask_and_icefacecut( 
+    rigid_fraction_id.dataPtr(),
+    &nden,
     &cur_time_slab,
     &level,&finest_level,
     saturation_temp.dataPtr(),
@@ -15497,6 +15506,8 @@ NavierStokes::level_init_icemask_and_icefacecut() {
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
     yface.dataPtr(),ARLIM(yface.loVect()),ARLIM(yface.hiVect()),
     zface.dataPtr(),ARLIM(zface.loVect()),ARLIM(zface.hiVect()),
+    denstatefab.dataPtr(),
+    ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     newdistfab.dataPtr(),
     ARLIM(newdistfab.loVect()),ARLIM(newdistfab.hiVect()),
     reconfab.dataPtr(),ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()));
@@ -15506,6 +15517,7 @@ NavierStokes::level_init_icemask_and_icefacecut() {
   ns_reconcile_d_num(LOOP_INIT_ICEMASK,"level_init_icemask_and_icefacecut");
 
   delete_localMF(LSNEW_MF,1);
+  delete state_var_mf;
 
 } // subroutine level_init_icemask_and_icefacecut
 
@@ -15748,7 +15760,7 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
    // NavierStokes::maskfiner  (clear_phys_boundary==0)
    FArrayBox& maskfab=(*localMF[MASKCOEF_MF])[mfi];
 
-   FArrayBox& statefab=(*state_var_mf)[mfi];
+   FArrayBox& denstatefab=(*state_var_mf)[mfi];
 
    FArrayBox& lsfab=(*LSmf)[mfi];
    FArrayBox& T_fab=(*T_list_mf)[mfi];
@@ -15839,8 +15851,8 @@ NavierStokes::stefan_solver_init(MultiFab* coeffMF,
     thermal_conductivity_fab.dataPtr(), //num_materials components
     ARLIM(thermal_conductivity_fab.loVect()),
     ARLIM(thermal_conductivity_fab.hiVect()),
-    statefab.dataPtr(),
-    ARLIM(statefab.loVect()),ARLIM(statefab.hiVect()),
+    denstatefab.dataPtr(),
+    ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
     Tsatfab.dataPtr(),
     ARLIM(Tsatfab.loVect()),ARLIM(Tsatfab.hiVect()),
     sweptfab.dataPtr(),ARLIM(sweptfab.loVect()),ARLIM(sweptfab.hiVect()),

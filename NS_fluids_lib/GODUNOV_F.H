@@ -628,6 +628,8 @@ extern "C"
 
 
    void fort_init_icemask_and_icefacecut(
+    int* rigid_fraction_id,
+    int* nden,
     Real* time,
     int* level,int* finest_level,
     Real* saturation_temp,
@@ -641,6 +643,8 @@ extern "C"
     Real* xface,AMREX_ARLIM_P(xfacelo),AMREX_ARLIM_P(xfacehi),
     Real* yface,AMREX_ARLIM_P(yfacelo),AMREX_ARLIM_P(yfacehi),
     Real* zface,AMREX_ARLIM_P(zfacelo),AMREX_ARLIM_P(zfacehi),
+    Real* denstate,
+    AMREX_ARLIM_P(denstatelo),AMREX_ARLIM_P(denstatehi),
     Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
