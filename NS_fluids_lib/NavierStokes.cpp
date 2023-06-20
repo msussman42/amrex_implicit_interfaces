@@ -4066,6 +4066,7 @@ NavierStokes::read_params ()
     } // iten
 
     for (int im=0;im<num_materials;im++) {
+
      if (is_ice_matC(im)==1) {
 
       int ispec=rigid_fraction_id[im];
@@ -4083,7 +4084,7 @@ NavierStokes::read_params ()
 	  amrex::Error("speciesreactionrate invalid");
 	} else if (im_opp!=im) {
          if ((speciesconst[(ispec-1)*num_materials+im_opp]>=0.0)&&
-	     (speciesconst[(ispec-1)*num_materials+im_opp]<1.0)) {
+	     (speciesconst[(ispec-1)*num_materials+im_opp]<=1.0)) {
   	  //do nothing
 	 } else
 	  amrex::Error("speciesconst invalid");
@@ -4174,6 +4175,42 @@ NavierStokes::read_params ()
       //do nothing
      } else
       amrex::Error("is_ice_matC invalid");
+
+     if (is_FSI_rigid_matC(im)==1) {
+
+      int ispec=rigid_fraction_id[im];
+
+      if ((ispec>=1)&&(ispec<=num_species_var)) {
+       for (int im_opp=0;im_opp<num_materials;im_opp++) {
+        if (im_opp==im) {
+         if (speciesconst[(ispec-1)*num_materials+im]==1.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesconst invalid");
+         if (speciesreactionrate[(ispec-1)*num_materials+im]>0.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesreactionrate invalid");
+	} else if (im_opp!=im) {
+         if (speciesconst[(ispec-1)*num_materials+im_opp]==1.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesconst invalid");
+         if (speciesreactionrate[(ispec-1)*num_materials+im_opp]>=0.0) {
+  	  //do nothing
+	 } else
+	  amrex::Error("speciesreactionrate invalid");
+	} else 
+	 amrex::Error("im_opp or im invalid");
+       } //im_opp=0..num_materials-1
+      } else
+       amrex::Error("rigid_fraction_id (ispec) invalid");
+
+     } else if (is_FSI_rigid_matC(im)==0) {
+      //do nothing
+     } else
+      amrex::Error("is_FSI_rigid_matC invalid");
+
     } // im=0;im<num_materials;im++
 
     pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins);
