@@ -3509,11 +3509,7 @@ stop
          call get_primary_material(LS_merge_fixed,im_merge_majority)
 
          if ((is_rigid(im_merge_majority).eq.1).or. &
-             (is_rigid(im_majority).eq.1).or. &
-             (is_ice(im_merge_majority).eq.1).or. &
-             (is_ice(im_majority).eq.1).or. &
-             (is_FSI_rigid(im_merge_majority).eq.1).or. &
-             (is_FSI_rigid(im_majority).eq.1)) then
+             (is_rigid(im_majority).eq.1)) then
 
           ! do nothing, all interface forces are 0
   
@@ -3523,11 +3519,7 @@ stop
           ! do nothing, all interface forces are 0
          
          else if ((is_rigid(im_merge_majority).eq.0).and. &
-                  (is_rigid(im_majority).eq.0).and. &
-                  (is_ice(im_merge_majority).eq.0).and. &
-                  (is_ice(im_majority).eq.0).and. &
-                  (is_FSI_rigid(im_merge_majority).eq.0).and. &
-                  (is_FSI_rigid(im_majority).eq.0)) then
+                  (is_rigid(im_majority).eq.0)) then
 
           if (vol_sten.gt.zero) then
            ! do nothing
@@ -3590,13 +3582,7 @@ stop
             ! do nothing
            else if (is_rigid(im_opp).eq.1) then
             ! do nothing
-           else if (is_ice(im_opp).eq.1) then
-            ! do nothing
-           else if (is_FSI_rigid(im_opp).eq.1) then
-            ! do nothing
-           else if ((is_rigid(im_opp).eq.0).and. &
-                    (is_ice(im_opp).eq.0).and. &
-                    (is_FSI_rigid(im_opp).eq.0)) then
+           else if (is_rigid(im_opp).eq.0) then
 
              ! im_main < im_main_opp
             if (im_merge_majority.lt.im_opp) then
@@ -3702,8 +3688,7 @@ stop
               im_opp_merge_test=im_star_merge_majority(sidestar,dirstar)
               im_opp_test=im_star_majority(sidestar,dirstar)
 
-              if ((im_opp_merge_test.eq.im_opp).and. &
-                  (im_opp_test.eq.im_opp)) then
+              if (im_opp_merge_test.eq.im_opp) then
 
                at_RZ_axis=0
                if ((levelrz.eq.COORDSYS_RZ).and. &
@@ -3768,11 +3753,10 @@ stop
                 stop
                endif 
 
-              else if ((im_opp_merge_test.ne.im_opp).or. &
-                       (im_opp_test.ne.im_opp)) then
+              else if (im_opp_merge_test.ne.im_opp) then
                ! do nothing
               else
-               print *,"im_opp_merge_test of im_opp_test invalid"
+               print *,"im_opp_merge_test invalid"
                stop
               endif 
 
@@ -3905,6 +3889,7 @@ stop
              enddo ! dirstar=1..sdim
 
              do im_curv=1,num_materials
+
               do dirloc=1,SDIM
                inormal=(im_curv-1)*SDIM+dirloc
                nrm_mat(dirloc)=nrmPROBE_merge(inormal)
@@ -4179,17 +4164,8 @@ stop
 
                ! triple point algorithm: 3 fluids
                ! contact line algorithm: 2 fluids and "is_rigid" material.
-              if ((is_ice(im3).eq.1).or. &
-                  (is_FSI_rigid(im3).eq.1)) then
-               curv_cellHT=zero
-               curv_cellFD=zero
-              else if ((is_ice(im3).eq.0).and. &
-                       (is_FSI_rigid(im3).eq.0)) then
+
                !do nothing
-              else
-               print *,"is_ice or is_FSI_rigid invalid"
-               stop
-              endif
 
              else
               print *,"im3 invalid: ",im3

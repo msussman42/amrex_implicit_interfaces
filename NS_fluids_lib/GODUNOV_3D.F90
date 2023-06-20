@@ -2630,8 +2630,8 @@ stop
          if ((is_rigid(im).eq.1).or. &
              (is_rigid(im_opp).eq.1)) then
           cap_wave_speed(iten)=zero
-         else if ((is_ice(im).eq.1).or. &
-                  (is_ice(im_opp).eq.1)) then
+         else if ((is_ice_or_FSI_rigid_material(im).eq.1).or. &
+                  (is_ice_or_FSI_rigid_material(im_opp).eq.1)) then
           cap_wave_speed(iten)=zero
          else if (user_tension(iten).eq.zero) then
           cap_wave_speed(iten)=zero
@@ -5060,19 +5060,38 @@ stop
           stop
          endif
 
-         if (icemask.eq.zero) then
-          ! do nothing
-         else if (icemask.eq.one) then
-          ! do nothing
+         if (icemask.eq.one) then
+          if (icefacecut.eq.one) then
+           ! do nothing
+          else
+           print *,"icefacecut invalid"
+           stop
+          endif
+         else if (icemask.eq.zero) then
+          if ((icefacecut.ge.zero).and. &
+              (icefacecut.lt.one)) then
+           ! do nothing
+          else
+           print *,"icefacecut invalid"
+           stop
+          endif
          else
           print *,"icemask invalid icemask=",icemask
           print *,"icefacecut=",icefacecut
           stop
          endif
+
          if ((icefacecut.ge.zero).and.(icefacecut.le.one)) then
           ! do nothing
          else
           print *,"icefacecut invalid icefacecut=",icefacecut 
+          stop
+         endif
+
+         if (icefacecut.ge.icemask) then
+          ! do nothing
+         else
+          print *,"expecting icefacecut>=icemask"
           stop
          endif
 
