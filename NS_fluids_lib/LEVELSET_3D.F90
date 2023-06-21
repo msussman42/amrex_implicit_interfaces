@@ -16340,6 +16340,7 @@ stop
       REAL_T dd,dd_group
       REAL_T cc,cc_group
       REAL_T cc_ice
+      REAL_T cc_ice_mask
       INTEGER_T side
       INTEGER_T dir
       INTEGER_T veldir
@@ -16534,12 +16535,15 @@ stop
              if (dir.eq.0) then
               cc=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
               cc_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+              cc_ice_mask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
              else if (dir.eq.1) then
               cc=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
               cc_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+              cc_ice_mask=yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
              else if ((dir.eq.2).and.(SDIM.eq.3)) then
               cc=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
               cc_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+              cc_ice_mask=zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
              else
               print *,"dir invalid buildfacewt"
               stop
@@ -16566,7 +16570,9 @@ stop
             call eval_face_coeff( &
              xsten,nhalf, &
              level,finest_level, &
-             cc,cc_ice, &
+             cc, &
+             cc_ice, &
+             cc_ice_mask, &
              cc_group, &  ! intent(out)
              dd, &
              dd_group, &  ! intent(out)
