@@ -697,7 +697,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
   int scomp_bx=0;
   int ncomp_mf=1;
    // spectral_override==0 => always low order.
-  avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp_bx,ncomp_edge,dir,ncomp_mf,0,
+  avgDownEdge_localMF(BXCOEFNOAREA_MF,scomp_bx,ncomp_edge,dir,ncomp_mf,
+		  LOW_ORDER_AVGDOWN,
 		  local_caller_string);
   Copy_localMF(BXCOEF_MF+dir,BXCOEFNOAREA_MF+dir,0,0,nsolve,0);
    // dest,source,scomp,dcomp,ncomp,ngrow
@@ -1337,7 +1338,7 @@ void NavierStokes::applyALL(
    int scomp=0;
    // spectral_override==1 => order derived from "enable_spectral"
    ns_level.avgDownEdge_localMF(GRADPEDGE_MF,scomp,ncomp_edge,0,
-		   AMREX_SPACEDIM,1,local_caller_string);
+      AMREX_SPACEDIM,SPECTRAL_ORDER_AVGDOWN,local_caller_string);
   }
 
   MultiFab* mdot_local=ns_level.localMF[DIFFUSIONRHS_MF];
@@ -1565,7 +1566,9 @@ void NavierStokes::applyGradALL(
    int ncomp_edge=-1;
    int scomp_edge=0;
    int start_dir=0;
-   int spectral_override=1; // order determined from enable_spectral
+   //order determined from enable_spectral
+   int spectral_override=SPECTRAL_ORDER_AVGDOWN; 
+   //order determined from enable_spectral
    ns_level.avgDownEdge_localMF(
     GRADPEDGE_MF,
     scomp_edge,ncomp_edge,
@@ -2154,8 +2157,9 @@ void NavierStokes::update_SEM_forces(int project_option,
    int ncomp_edge=-1;
    int scomp=0;
      // spectral_override==1 => order derived from "enable_spectral"
-   avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM,1,
-		   local_caller_string);
+   avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM,
+      SPECTRAL_ORDER_AVGDOWN,
+      local_caller_string);
 
    MultiFab* sourcemf=localMF[idx_source];
    MultiFab* rhs=localMF[MACDIV_MF];
@@ -2239,7 +2243,7 @@ void NavierStokes::ADVECT_DIV_ALL() {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.ADVECT_DIV();
    // spectral_override==0 => always low order.
-  int spectral_override=1;
+  int spectral_override=SPECTRAL_ORDER_AVGDOWN;
   ns_level.avgDown(DIV_Type,0,1,spectral_override);
  }
 
@@ -2371,7 +2375,8 @@ void NavierStokes::getStateDIV_ALL(int idx_source,int scomp_src,
   int scomp_dst=0;
   int ncomp=ns_level.localMF[idx_dest]->nComp();
    // spectral_override==0 => always low order.
-  ns_level.avgDown_localMF(idx_dest,scomp_dst,ncomp,0);
+  ns_level.avgDown_localMF(idx_dest,scomp_dst,ncomp,
+	  LOW_ORDER_AVGDOWN);
  }
 
 } // end subroutine getStateDIV_ALL 

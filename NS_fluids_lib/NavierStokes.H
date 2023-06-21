@@ -958,7 +958,7 @@ protected:
 
 
     void avgDown(MultiFab& S_crse,MultiFab& S_fine,int scomp,int ncomp,
-     int spectral_override);
+       int spectral_override);
     void MOFavgDown();
     void avgDownMac(); 
     void avgDownMacState(int spectral_override); 
