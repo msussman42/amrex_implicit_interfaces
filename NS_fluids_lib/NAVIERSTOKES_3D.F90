@@ -11375,7 +11375,9 @@ END SUBROUTINE SIMP
       REAL_T local_dest,local_src,local_gp
       REAL_T AL
       REAL_T AL_ice
-      REAL_T local_dd,local_visc_coef,cc_group,local_dd_group
+      REAL_T AL_ice_mask
+      REAL_T local_dd,local_visc_coef
+      REAL_T cc_group,local_dd_group
       INTEGER_T local_uncoupled_viscosity
       INTEGER_T icrit,side,bccrit
       INTEGER_T bc_comp
@@ -11484,6 +11486,7 @@ END SUBROUTINE SIMP
           local_gp=xgp(D_DECL(i,j,k))
           AL=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          AL_ice_mask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
           icrit=i
          else if (dir.eq.1) then
           local_dest=ydest(D_DECL(i,j,k))
@@ -11491,6 +11494,7 @@ END SUBROUTINE SIMP
           local_gp=ygp(D_DECL(i,j,k))
           AL=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          AL_ice_mask=yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
           icrit=j
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           local_dest=zdest(D_DECL(i,j,k))
@@ -11498,6 +11502,7 @@ END SUBROUTINE SIMP
           local_gp=zgp(D_DECL(i,j,k))
           AL=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
           AL_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          AL_ice_mask=zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
           icrit=k
          else
           print *,"dir invalid fluid solid cor"
@@ -11570,8 +11575,12 @@ END SUBROUTINE SIMP
          call eval_face_coeff( &
            xsten,nhalf, &
            level,finest_level, &
-           AL,AL_ice,cc_group, &
-           local_dd,local_dd_group, &
+           AL, & !intent(in)
+           AL_ice, & !intent(in)
+           AL_ice_mask, & !intent(in)
+           cc_group, & !intent(out)
+           local_dd, & !intent(in)
+           local_dd_group, & !intent(out)
            local_visc_coef, &
            nsolve,dir,veldir,project_option, &
            local_uncoupled_viscosity,side,bccrit,local_wt)
@@ -11585,7 +11594,8 @@ END SUBROUTINE SIMP
             print *,"local_gp invalid"
             print *,"local_gp ",local_gp
             print *,"level,finest_level ",level,finest_level
-            print *,"AL,AL_ice,cc_group ",AL,AL_ice,cc_group
+            print *,"AL,AL_ice,AL_ice_mask,cc_group ", &
+                  AL,AL_ice,AL_ice_mask,cc_group
             print *,"veldir=",veldir
             print *,"local_wt(veldir) ",local_wt(veldir)
             print *,"local_dd,local_dd_group ",local_dd,local_dd_group

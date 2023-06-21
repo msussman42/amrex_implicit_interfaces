@@ -249,11 +249,18 @@ stop
       INTEGER_T ispec
       INTEGER_T spec_comp
       REAL_T test_icefacecut
+      REAL_T :: user_tension(num_interfaces)
+      REAL_T :: def_thermal(num_materials)
+      INTEGER_T :: im_local
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
        stop
       endif
+
+      do im_local=1,num_materials
+       def_thermal(im_local)=293.0d0
+      enddo
 
       if ((complement_flag.eq.0).or. &
           (complement_flag.eq.1)) then
@@ -324,6 +331,7 @@ stop
       endif
 
       call get_iten(im,im_opp,iten)
+
       do ireverse=0,1
        LL(ireverse)= &
         get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
@@ -385,14 +393,8 @@ stop
        endif
 
       else if ((im_FSI_rigid.ge.0).and. &
-               (im_FSI_rigid.le.num_materials)) then
-
-       if (im_FSI_rigid.ne.im_primary) then
-        ! do nothing
-       else
-        print *,"im_FSI_rigid cannot be equal to im_primary here"
-        stop
-       endif
+               (im_FSI_rigid.le.num_materials).and. &
+               (im_FSI_rigid.ne.im_primary)) then
 
         ! either the primary or secondary material is "ice"
        if ((im_ice.ge.1).and. &
@@ -457,7 +459,9 @@ stop
 
          ! an associated melt material was not found:
         if ((LL(0).eq.zero).and.(LL(1).eq.zero)) then
+
          ireverse=-1
+
          if (is_ice(im_primary).eq.1) then
 
           icemask=zero
@@ -488,6 +492,7 @@ stop
           print *,"is_ice(im_primary) ",is_ice(im_primary)
           stop
          endif
+
         else if ((LL(0).ne.zero).and.(LL(1).eq.zero)) then
          ireverse=0
          im_source=im
@@ -596,6 +601,7 @@ stop
          endif
 
          if (im_ice.eq.im_dest) then ! freezing
+
           if (dist_mask_override.ge.zero) then ! in a substrate
            icefacecut=zero
           else if (icemask.eq.zero) then
@@ -612,6 +618,24 @@ stop
              print *,"icefacecut invalid"
              stop
             endif
+
+            call get_user_tension( &
+             xtarget,time,fort_tension,user_tension,def_thermal)
+
+            if (user_tension(iten).eq.zero) then
+             if (icefacecut.eq.zero) then
+              ! do nothing
+             else
+              print *,"icefacecut invalid"
+              stop
+             endif
+            else if (user_tension(iten).gt.zero) then
+             ! do nothing
+            else
+             print *,"user_tension invalid"
+             stop
+            endif
+
            else
             print *,"ispec invalid"
             stop
@@ -623,6 +647,7 @@ stop
            print *,"icemask invalid"
            stop
           endif
+
          else if (im_ice.eq.im_source) then ! melting
 
           if (icemask.eq.zero) then
@@ -674,6 +699,8 @@ stop
 
       else
        print *,"im_FSI_rigid invalid: ",im_FSI_rigid
+       print *,"num_materials: ",num_materials
+       print *,"im_primary: ",im_primary
        stop
       endif
 
@@ -11961,7 +11988,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine eval_face_coeff( &
        xsten,nhalf, &
        level,finest_level, &
-       cc,cc_ice, &
+       cc, &
+       cc_ice, & !intent(in)
+       cc_ice_mask, & !intent(in)
        cc_group, &  ! intent(out)
        dd, &
        dd_group, & ! intent(out)
@@ -11980,7 +12009,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       INTEGER_T, INTENT(in) :: level,finest_level
       INTEGER_T, INTENT(in) :: nhalf
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, INTENT(in) :: cc,cc_ice
+      REAL_T, INTENT(in) :: cc,cc_ice,cc_ice_mask
       REAL_T, INTENT(out) :: cc_group
       REAL_T, INTENT(in) :: dd
       REAL_T :: ddfactor
@@ -11998,6 +12027,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           (cc.le.one).and. &
           (cc_ice.ge.zero).and. &
           (cc_ice.le.one).and. &
+          ((cc_ice_mask.eq.zero).or.(cc_ice_mask.eq.one)).and. &
           (dd.ge.zero).and. &
           (visc_coef.ge.zero).and. &
           (nsolve.ge.1).and. &
@@ -12080,7 +12110,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
          cc_group=cc*cc_ice
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
-         cc_group=cc*cc_ice
+         cc_group=cc*cc_ice_mask
         else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then!grav projection
          cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
         else
@@ -12122,8 +12152,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"dd_group or cc_group invalid1"
           print *,"dd_group= ",dd_group
           print *,"cc_group= ",cc_group
-          print *,"cc,cc_ice,dd,nsolve,dir,side ", &
-             cc,cc_ice,dd,nsolve,dir,side
+          print *,"cc,cc_ice,cc_ice_mask,dd,nsolve,dir,side ", &
+             cc,cc_ice,cc_ice_mask,dd,nsolve,dir,side
           print *,"level,finest_level ", &
             level,finest_level
           print *,"at_RZ_boundary ",at_RZ_boundary
@@ -12295,6 +12325,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"coefficients bust"
        print *,"cc=",cc
        print *,"cc_ice=",cc_ice
+       print *,"cc_ice_mask=",cc_ice_mask
        print *,"dd=",dd
        print *,"visc_coef=",visc_coef
        print *,"nsolve=",nsolve
