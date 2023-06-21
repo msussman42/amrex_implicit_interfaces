@@ -494,7 +494,8 @@ void NavierStokes::getStateCONDUCTIVITY_ALL() {
   int ncomp=ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF]->nComp();
    // spectral_override==1 => order derived from "enable_spectral"
    // spectral_override==0 => always low order.
-  ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,scomp,ncomp,0);
+  ns_level.avgDown_localMF(CELL_CONDUCTIVITY_MATERIAL_MF,
+    scomp,ncomp,LOW_ORDER_AVGDOWN);
  }
 
 } // end subroutine getStateCONDUCTIVITY_ALL 
@@ -2090,7 +2091,7 @@ void NavierStokes::init_divup_cell_vel_cell(
   if (nsolve!=1)
    amrex::Error("nsolve!=1 NavierStokes::init_divup_cell_vel_cell");
   int ncomp_edge_avgdown=1;
-  int spectral_override=0; // always low order.
+  int spectral_override=LOW_ORDER_AVGDOWN; // always low order.
   avgDownEdge_localMF(PEDGE_MF,PRESSURE_PEDGE,ncomp_edge_avgdown,
       0,AMREX_SPACEDIM,spectral_override,
       local_caller_string);
@@ -2432,7 +2433,7 @@ void NavierStokes::make_MAC_velocity_consistent() {
 
  // spectral_override==0 => always do low order average down.
  // spectral_override==1 => order derived from "enable_spectral"
- int spectral_override=1;
+ int spectral_override=SPECTRAL_ORDER_AVGDOWN;
 
   // avgDown all the MAC components.
   // Umac_Type
@@ -3072,7 +3073,7 @@ void NavierStokes::project_to_rigid_velocityALL() {
  delete_array(COLOR_MF);
 
  // spectral_override==1 => order derived from "enable_spectral"
- avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,SPECTRAL_ORDER_AVGDOWN);
 
 } // end subroutine project_to_rigid_velocityALL
 
@@ -4965,22 +4966,26 @@ void NavierStokes::make_physics_varsALL(int project_option,
     // idxMF,scomp,ncomp,start_dir,ndir
     // spectral_override==1 => order derived from "enable_spectral"
     // spectral_override==0 => always low order.
+    // Zero level set is completely contained on the finest level.
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACECUT,1,0,
-    AMREX_SPACEDIM,0,local_caller_string);
+    AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEMASK,1,0,
+    AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEFACECUT,1,0,
-    AMREX_SPACEDIM,0,local_caller_string);
+    AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
 
    // spectral_override==0 => always low order.
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEDEN,1,0,
-	  AMREX_SPACEDIM,0,local_caller_string);
+	  AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
 
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEVISC,1,0,
-          AMREX_SPACEDIM,0,local_caller_string);
+          AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACEHEAT,1,0,
-	  AMREX_SPACEDIM,0,local_caller_string);
+	  AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
   if (num_species_var>0) {
    ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACESPEC,
-      num_species_var,0,AMREX_SPACEDIM,0,local_caller_string);
+      num_species_var,0,AMREX_SPACEDIM,
+      LOW_ORDER_AVGDOWN,local_caller_string);
   }
 
  }  // ilev=finest_level ... level

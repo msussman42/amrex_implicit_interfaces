@@ -973,7 +973,7 @@ void NavierStokes::combine_state_variable(
       (hflag==0)) {
 
     // if level<finest_level, then average down from level+1.
-   int spectral_override=1;
+   int spectral_override=SPECTRAL_ORDER_AVGDOWN;
    avgDown_list(state_index,scomp,ncomp,spectral_override); 
 
   } else if ((combine_idx==0)||
@@ -1042,7 +1042,8 @@ void NavierStokes::diffusion_heating(int source_idx,int idx_heat) {
   // spectral_override==1 => order derived from "enable_spectral"
  avgDownEdge_localMF(
   CONSERVE_FLUXES_MF,
-  0,ncomp_edge,0,AMREX_SPACEDIM,1,local_caller_string);
+  0,ncomp_edge,0,AMREX_SPACEDIM,
+  SPECTRAL_ORDER_AVGDOWN,local_caller_string);
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 

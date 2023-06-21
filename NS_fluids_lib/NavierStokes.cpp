@@ -10592,7 +10592,7 @@ void NavierStokes::make_viscoelastic_tensorMACALL(int im,
   // spectral_override==0 => always low order.
  for (int ilev=finest_level-1;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  int spectral_override=0; //always do low order average down
+  int spectral_override=LOW_ORDER_AVGDOWN;//always do low order average down
    //declared in NavierStokes2.cpp
   ns_level.avgDownEdge_localMF(flux_mf,
     0,ENUM_NUM_TENSOR_TYPE,
@@ -10885,7 +10885,7 @@ void NavierStokes::make_viscoelastic_tensorALL(int im) {
   amrex::Error("VISCOTEN_MF has incorrect nComp");
 
   // spectral_override==0 => always low order.
- avgDown_localMF_ALL(VISCOTEN_MF,0,ENUM_NUM_TENSOR_TYPE,0);
+ avgDown_localMF_ALL(VISCOTEN_MF,0,ENUM_NUM_TENSOR_TYPE,LOW_ORDER_AVGDOWN);
  for (int scomp_extrap=0;scomp_extrap<ENUM_NUM_TENSOR_TYPE;scomp_extrap++) {
   Vector<int> scompBC_map;
    // desc_lstGHOST.setComponent(Tensor_Type, ...
@@ -13930,10 +13930,10 @@ NavierStokes::level_phase_change_convertALL() {
        i_phase_change,n_phase_change);
 
        // spectral_override==0 => always low order.
-      ns_level.avgDown(LS_Type,0,num_materials,0);
+      ns_level.avgDown(LS_Type,0,num_materials,LOW_ORDER_AVGDOWN);
       ns_level.MOFavgDown();
       ns_level.avgDown(State_Type,STATECOMP_STATES,
-	num_state_material*num_materials,1);
+	num_state_material*num_materials,SPECTRAL_ORDER_AVGDOWN);
      } // ilev=finest_level ... level
 
      if (i_phase_change+1<n_phase_change) {
@@ -13956,7 +13956,8 @@ NavierStokes::level_phase_change_convertALL() {
 
        // density
        // spectral_override==0 => always low order
-       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+ENUM_DENVAR,1,1);
+       avgDown_localMF_ALL(DEN_RECON_MF,dstcomp+ENUM_DENVAR,1,
+	  SPECTRAL_ORDER_AVGDOWN);
        scompBC_map[0]=srccomp+ENUM_DENVAR;
         //ngrow=1 scomp=dstcomp+ENUM_DENVAR ncomp=1
        GetStateFromLocalALL(DEN_RECON_MF,1,
@@ -13984,7 +13985,8 @@ NavierStokes::level_phase_change_convertALL() {
       Vector<int> scompBC_map_LS;
       scompBC_map_LS.resize(num_materials*(AMREX_SPACEDIM+1));
        // spectral_override==0 => always low order
-      avgDown_localMF_ALL(HOLD_LS_DATA_MF,0,num_materials*(AMREX_SPACEDIM+1),0);
+      avgDown_localMF_ALL(HOLD_LS_DATA_MF,0,num_materials*(AMREX_SPACEDIM+1),
+		  LOW_ORDER_AVGDOWN);
       for (int im_group=0;im_group<num_materials*(AMREX_SPACEDIM+1);im_group++)
        scompBC_map_LS[im_group]=im_group;
       debug_ngrow(HOLD_LS_DATA_MF,ngrow_distance,local_caller_string);
@@ -14365,7 +14367,7 @@ NavierStokes::level_phase_change_convert(
 
 // if spectral_override==0, then always low order average down.
 // JUMP_STRENGTH_MF=0.0 outside the computational domain.
- int spectral_override=0;
+ int spectral_override=LOW_ORDER_AVGDOWN;
  localMF[JUMP_STRENGTH_MF]->FillBoundary(
     iten-1,1,geom.periodicity());
  avgDown_localMF(JUMP_STRENGTH_MF,iten-1,1,spectral_override);
@@ -15207,8 +15209,8 @@ NavierStokes::level_phase_change_redistribute(
   ns_reconcile_d_num(LOOP_ACCEPT_WEIGHT,"level_phase_change_redistribute");
 
    // spectral_override==0 => always low order.
-  avgDown_localMF(accept_weight_MF,0,1,0);
-  avgDown_localMF(accept_weight_complement_MF,0,1,0);
+  avgDown_localMF(accept_weight_MF,0,1,LOW_ORDER_AVGDOWN);
+  avgDown_localMF(accept_weight_complement_MF,0,1,LOW_ORDER_AVGDOWN);
 
  } else if (isweep==2) { //fort_distributeexpansion
 

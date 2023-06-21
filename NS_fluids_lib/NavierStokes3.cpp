@@ -221,7 +221,7 @@ NavierStokes::avgDownMac() {
  int ncomp_edge=-1;
  int scomp=0;
   // spectral_override==0 => always do low order average down.
- int spectral_override=1;
+ int spectral_override=SPECTRAL_ORDER_AVGDOWN;
  avgDownEdge_localMF(UMAC_MF,scomp,ncomp_edge,0,AMREX_SPACEDIM, 
    spectral_override,local_caller_string);
 
@@ -521,9 +521,10 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
      // velocity and pressure
      // spectral_override==1 => order derived from "enable_spectral"
     avgDownALL(State_Type,STATECOMP_VEL,
-       STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+       STATE_NCOMP_VEL+STATE_NCOMP_PRES,SPECTRAL_ORDER_AVGDOWN);
      // "state" (all materials)
-    avgDownALL(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);
+    avgDownALL(State_Type,STATECOMP_STATES,num_state_material*num_materials,
+       SPECTRAL_ORDER_AVGDOWN);
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=num_materials)) {
      avgDownALL_TENSOR();
@@ -535,7 +536,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     for (int ilev=finest_level-1;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
      // spectral_override==0 => always low order.
-     ns_level.avgDownMacState(0);
+     ns_level.avgDownMacState(LOW_ORDER_AVGDOWN);
     }
 
    } else if (dir_absolute_direct_split==AMREX_SPACEDIM-1) {
@@ -1591,7 +1592,7 @@ void NavierStokes::SEM_advectALL(int source_term) {
      NavierStokes& ns_level=getLevel(ilev);
      int ncomp_edge=-1;
      int scomp=0;
-     int spectral_override=1;
+     int spectral_override=SPECTRAL_ORDER_AVGDOWN;
      ns_level.avgDownEdge_localMF(CONSERVE_FLUXES_MF,scomp,ncomp_edge,
        0,AMREX_SPACEDIM,spectral_override,local_caller_string);
     } // ilev=finest_level-1 ... level
@@ -7959,7 +7960,8 @@ void NavierStokes::relaxLEVEL(
   int ncomp_edge=-1;
   int scomp_edge=0;
   int start_dir=0;
-  int spectral_override=1; // order determined from enable_spectral
+   //order determined from enable_spectral
+  int spectral_override=SPECTRAL_ORDER_AVGDOWN;
    // average down from level to level-1.
   ns_coarse.avgDownEdge_localMF(
     UMACSTAR_MF,
@@ -10507,7 +10509,8 @@ void NavierStokes::multiphase_project(int project_option) {
       int ncomp_edge=-1;
        //spectral_override=1 => order derived from "enable_spectral"
       ns_level.avgDownEdge_localMF(GRADPEDGE_MF,
-       0,ncomp_edge,0,AMREX_SPACEDIM,1,local_caller_string);
+       0,ncomp_edge,0,AMREX_SPACEDIM,
+       SPECTRAL_ORDER_AVGDOWN,local_caller_string);
      }
 
       // UMAC=MAC_TEMP+GRADPEDGE=MAC_TEMP-dt gradp/rho
@@ -10900,7 +10903,8 @@ void NavierStokes::multiphase_project(int project_option) {
    ns_level.restore_active_pressure(PRESSURE_SAVE_MF);
     // spectral_override==1 => order derived from "enable_spectral"
     // average from ilev+1 to ilev
-   ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,1); 
+   ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,
+     SPECTRAL_ORDER_AVGDOWN); 
   }
   delete_array(PRESSURE_SAVE_MF);
 
@@ -10914,7 +10918,8 @@ void NavierStokes::multiphase_project(int project_option) {
    NavierStokes& ns_level=getLevel(ilev);
     // spectral_override==1 => order derived from "enable_spectral"
     // average from ilev+1 to ilev
-   ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,1); 
+   ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,
+     SPECTRAL_ORDER_AVGDOWN); 
   }
 
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -11040,7 +11045,7 @@ void NavierStokes::avgDownALL_TENSOR() {
      (num_materials_viscoelastic<=num_materials)) {
    // spectral_override==1 => order derived from "enable_spectral"
    // spectral_override==0 => always low order.
-  avgDownALL(Tensor_Type,0,NUM_CELL_ELASTIC,0);
+  avgDownALL(Tensor_Type,0,NUM_CELL_ELASTIC,LOW_ORDER_AVGDOWN);
  } else
   amrex::Error("num_materials_viscoelastic invalid avgDownALL_TENSOR");
 
@@ -11161,7 +11166,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
   } // im=0..num_materials-1
    
   // spectral_override==1 => order derived from "enable_spectral"
-  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+    SPECTRAL_ORDER_AVGDOWN);
 
    //vel_elastic_ALL called from veldiffuseALL
   if (viscoelastic_force_only==0) { 
@@ -11200,7 +11206,8 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
    }
 
    // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+	 SPECTRAL_ORDER_AVGDOWN);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
@@ -11514,7 +11521,8 @@ void NavierStokes::veldiffuseALL() {
  show_norm2_id(REGISTER_MARK_MF,2);
 
    // spectral_override==1 => order derived from "enable_spectral"
- avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+    SPECTRAL_ORDER_AVGDOWN);
 
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
@@ -11550,7 +11558,8 @@ void NavierStokes::veldiffuseALL() {
     amrex::Error("enable_spectral invalid");
 
    // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+      SPECTRAL_ORDER_AVGDOWN);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
@@ -11583,13 +11592,14 @@ void NavierStokes::veldiffuseALL() {
  SET_STOKES_MARK(VISCHEAT_SOURCE_MF);
 
   // spectral_override==1 => order derived from "enable_spectral"
- avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+    SPECTRAL_ORDER_AVGDOWN);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
   // spectral_override==1 => not always low order
- avgDownALL(State_Type,STATECOMP_STATES,nden,1);
+ avgDownALL(State_Type,STATECOMP_STATES,nden,SPECTRAL_ORDER_AVGDOWN);
 
  SET_STOKES_MARK(REGISTER_MARK_MF); //register_mark=unew
 
@@ -11604,7 +11614,8 @@ void NavierStokes::veldiffuseALL() {
  } // ilev=finest_level ... level
 
   // spectral_override==1 => order derived from "enable_spectral"
- avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+		 SPECTRAL_ORDER_AVGDOWN);
   // umacnew+=INTERP_TO_MAC(unew-register_mark)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
