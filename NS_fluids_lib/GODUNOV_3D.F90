@@ -4904,13 +4904,13 @@ stop
               freezing_model(iten+ireverse*num_interfaces)).eq.1) then
           ! do nothing 
          else
-          print *,"freezing_model invalid init ice mask"
+          print *,"freezing_model invalid fort_init_icemask_and_icefacecut"
           print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
          if ((distribute_from_target(iten+ireverse*num_interfaces).lt.0).or. &
              (distribute_from_target(iten+ireverse*num_interfaces).gt.1)) then
-          print *,"distribute_from_target invalid init ice mask"
+          print *,"distribute_from_target err fort_init_icemask_and_icefacecut"
           print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
@@ -4937,7 +4937,7 @@ stop
        else if ((dir.eq.2).and.(SDIM.eq.3)) then
         kk=1
        else
-        print *,"dir invalid init ice mask"
+        print *,"dir invalid fort_init_icemask_and_icefacecut"
         stop
        endif
 
@@ -5081,7 +5081,8 @@ stop
           stop
          endif
 
-         if ((icefacecut.ge.zero).and.(icefacecut.le.one)) then
+         if ((icefacecut.ge.zero).and. &
+             (icefacecut.le.one)) then
           ! do nothing
          else
           print *,"icefacecut invalid icefacecut=",icefacecut 

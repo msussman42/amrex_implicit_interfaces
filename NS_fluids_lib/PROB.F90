@@ -438,6 +438,8 @@ stop
            endif
           else
            print *,"is_rigid(im_tertiary) invalid"
+           print *,"contradiction with: get_tertiary_material"
+           print *,"is_rigid(im_tertiary): ",is_rigid(im_tertiary)
            stop
           endif
          else if (im_tertiary.eq.0) then
@@ -462,7 +464,7 @@ stop
 
          ireverse=-1
 
-         if (is_ice(im_primary).eq.1) then
+         if (is_ice(im_primary).eq.1) then ! in ice bulk region
 
           icemask=zero
           icefacecut=zero
@@ -472,10 +474,10 @@ stop
            spec_comp=(im_primary-1)*num_state_material+ENUM_SPECIESVAR+ispec
            icefacecut=one-denstate(spec_comp);
            if ((icefacecut.ge.zero).and. &
-               (icefacecut.le.one)) then
+               (icefacecut.lt.one)) then
             ! do nothing
            else
-            print *,"icefacecut invalid"
+            print *,"icefacecut invalid: ",icefacecut
             stop
            endif
           else
@@ -596,7 +598,7 @@ stop
          if ((icemask.eq.zero).or.(icemask.eq.one)) then
           ! do nothing
          else
-          print *,"icemask invalid"
+          print *,"icemask invalid: ",icemask
           stop
          endif
 
@@ -707,7 +709,7 @@ stop
       if ((icemask.eq.zero).or.(icemask.eq.one)) then
        ! do nothing
       else
-       print *,"icemask invalid"
+       print *,"icemask invalid: ",icemask
        stop
       endif
    
@@ -715,7 +717,13 @@ stop
           (icefacecut.le.one)) then
        ! do nothing
       else
-       print *,"icefacecut invalid"
+       print *,"icefacecut invalid: ",icefacecut
+       stop
+      endif
+      if (icemask.le.icefacecut) then
+       ! do nothing
+      else
+       print *,"expecting icemask<=icefacecut"
        stop
       endif
  

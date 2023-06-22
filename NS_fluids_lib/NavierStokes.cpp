@@ -15566,7 +15566,8 @@ NavierStokes::level_init_icemask_and_icefacecut() {
 
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_INIT_ICEMASK,"level_init_icemask_and_icefacecut");
+  ns_reconcile_d_num(LOOP_INIT_ICEMASK_AND_ICEFACECUT,
+	"level_init_icemask_and_icefacecut");
 
   delete_localMF(LSNEW_MF,1);
   delete state_var_mf;
