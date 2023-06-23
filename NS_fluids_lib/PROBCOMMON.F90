@@ -695,6 +695,20 @@ implicit none
       REAL_T, INTENT(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
+      subroutine TEMPLATE_T0_Boussinesq(x,dx,cur_time,T0)
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: cur_time
+      REAL_T, INTENT(out) :: T0
+      end subroutine TEMPLATE_T0_Boussinesq
+
+      subroutine TEMPLATE_V0_Coriolis(x,dx,cur_time,T0)
+      REAL_T, INTENT(in) :: x(SDIM)
+      REAL_T, INTENT(in) :: dx(SDIM)
+      REAL_T, INTENT(in) :: cur_time
+      REAL_T, INTENT(out) :: T0
+      end subroutine TEMPLATE_V0_Coriolis
+
       subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
         density, &
         temperature, &
@@ -1293,6 +1307,9 @@ implicit none
       PROCEDURE(TEMPLATE_CHARFN_REGION), POINTER :: SUB_CHARFN_REGION
       PROCEDURE(TEMPLATE_DELETE_REGIONS_LIST), POINTER ::  &
               SUB_DELETE_REGIONS_LIST
+
+      PROCEDURE(TEMPLATE_T0_Boussinesq), POINTER :: SUB_T0_Boussinesq
+      PROCEDURE(TEMPLATE_V0_Coriolis), POINTER :: SUB_V0_Coriolis
 
       PROCEDURE(TEMPLATE_THERMAL_K), POINTER :: SUB_THERMAL_K
       PROCEDURE(TEMPLATE_INTERFACE_TEMPERATURE), POINTER :: &
