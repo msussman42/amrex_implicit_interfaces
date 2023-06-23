@@ -8412,8 +8412,8 @@ stop
          else if (is_clamped_face.eq.0) then
           ! fixed_face is declared in: PROB.F90
           call fixed_face( &
-           predict_face_afrac_solid, &
-           predict_face_afrac_prescribed, &
+           predict_face_afrac_solid, & !intent(in) "facecut_solid"
+           predict_face_afrac_prescribed, & !intent(in) "facecut_prescribed"
            LSminus,LSplus, &
            is_solid_face, &
            is_prescribed_face, &
@@ -11116,7 +11116,7 @@ stop
       REAL_T DIAG_REGULARIZE
       REAL_T uface(2)
       REAL_T ufacesolid(2)
-      REAL_T aface(2)
+      REAL_T AFACE(2)
       REAL_T pres_face(2)
 
        ! 0=no div(up)
@@ -12320,7 +12320,7 @@ stop
           endif
 
           if (dir.eq.0) then
-           aface(side)=ax(D_DECL(iface,jface,kface))
+           AFACE(side)=ax(D_DECL(iface,jface,kface))
            do im=1,ncphys
             ASIDE(side,im)=xface(D_DECL(iface,jface,kface),im)
            enddo
@@ -12330,7 +12330,7 @@ stop
            use_face_pres(side)= &
                  NINT(xp(D_DECL(iface,jface,kface),VALID_PEDGE+1))
           else if (dir.eq.1) then
-           aface(side)=ay(D_DECL(iface,jface,kface))
+           AFACE(side)=ay(D_DECL(iface,jface,kface))
            do im=1,ncphys
             ASIDE(side,im)=yface(D_DECL(iface,jface,kface),im)
            enddo
@@ -12340,7 +12340,7 @@ stop
            use_face_pres(side)= &
                  NINT(yp(D_DECL(iface,jface,kface),VALID_PEDGE+1))
           else if ((dir.eq.2).and.(SDIM.eq.3)) then
-           aface(side)=az(D_DECL(iface,jface,kface))
+           AFACE(side)=az(D_DECL(iface,jface,kface))
            do im=1,ncphys
             ASIDE(side,im)=zface(D_DECL(iface,jface,kface),im)
            enddo
@@ -12409,8 +12409,8 @@ stop
          else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then
 
           Eforce_conservative=Eforce_conservative- &
-            dt*(aface(2)*uface(2)*pres_face(2)- &
-                aface(1)*uface(1)*pres_face(1))/ &
+            dt*(AFACE(2)*uface(2)*pres_face(2)- &
+                AFACE(1)*uface(1)*pres_face(1))/ &
             (dencell*VOLTERM)
 
          else
@@ -13184,8 +13184,7 @@ stop
       INTEGER_T stripstat
       INTEGER_T elemlo(3),elemhi(3)
       INTEGER_T ielem,jelem,kelem
-      REAL_T AFACE
-      REAL_T AFACE_ICE
+      REAL_T AFACE !fort_cell_to_mac
       REAL_T denlocal,templocal
       REAL_T test_velocity_FACE
       INTEGER_T im_solid
@@ -14082,8 +14081,8 @@ stop
            !   max(LSleft(im_prescribed),LSright(im_prescribed))>=0.0
            ! fixed_face is declared in: PROB.F90
            call fixed_face( &
-            fluid_volface, &
-            not_prescribed_volface, &
+            fluid_volface, & !intent(in) "facecut_solid"
+            not_prescribed_volface, & !intent(in) "facecut_prescribed"
             LSleft,LSright, &
             is_solid_face, &
             is_prescribed_face, &
@@ -14600,36 +14599,6 @@ stop
            stop
           endif
 
-          if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
-              (local_face(FACECOMP_FACECUT+1).le.half)) then
-           AFACE=zero
-          else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
-                   (local_face(FACECOMP_FACECUT+1).le.one)) then
-           AFACE=local_face(FACECOMP_FACECUT+1)* &
-                 local_face(FACECOMP_ICEFACECUT+1)
-          else
-           print *,"local_face(FACECOMP_FACECUT+1) invalid"
-           stop
-          endif
-
-          if ((AFACE.ge.zero).and. &
-              (AFACE.le.half)) then
-           if (at_reflect_wall.eq.0) then
-            ! do nothing
-           else if ((at_reflect_wall.eq.1).or. &
-                    (at_reflect_wall.eq.2)) then
-            ! do nothing
-           else
-            print *,"at_reflect_wall invalid"
-            stop
-           endif
-          else if ((AFACE.ge.half).and.(AFACE.le.one)) then
-           ! do nothing
-          else
-           print *,"AFACE invalid"
-           stop 
-          endif
-
           if (local_compressible.eq.0) then
            use_face_pres=0 ! do not use div(up)
           else if (local_compressible.eq.1) then
@@ -14724,8 +14693,8 @@ stop
           not_prescribed_volface=one
            ! fixed_face is declared in: PROB.F90
           call fixed_face( &
-           fluid_volface, &
-           not_prescribed_volface, &
+           fluid_volface, & !intent(in) "facecut_solid"
+           not_prescribed_volface, & !intent(in) "facecut_prescribed"
            LSleft,LSright, &
            is_solid_face, &
            is_prescribed_face, &
@@ -14922,14 +14891,6 @@ stop
            stop 
           endif
 
-          AFACE_ICE=local_face(FACECOMP_ICEFACECUT+1)
-          if ((AFACE_ICE.ge.zero).and.(AFACE_ICE.le.one)) then
-           ! do nothing
-          else
-           print *,"AFACE_ICE invalid"
-           stop
-          endif
-
           ! side=1 is right half of the cell that is to the left of the face.
           ! side=2 is left half of the cell that is to the right of the face.
           massface=zero
@@ -14987,17 +14948,17 @@ stop
 
            ! fixed_face is declared in: PROB.F90
           call fixed_face( &
-           AFACE, &
-           AFACE, &
-           LSleft,LSright, &
-           is_solid_face, &
-           is_prescribed_face, &
-           im_solid, &
-           im_prescribed, &
-           im_solid_valid, &
-           im_prescribed_valid, &
-           partid_solid, &
-           partid_prescribed) 
+           AFACE, &  !intent(in) "facecut_solid"
+           AFACE, &  !intent(in) "facecut_prescribed"
+           LSleft,LSright, & !intent(in)
+           is_solid_face, & !intent(out)
+           is_prescribed_face, & !intent(out)
+           im_solid, & !intent(out)
+           im_prescribed, & !intent(out)
+           im_solid_valid, & !intent(out)
+           im_prescribed_valid, & !intent(out)
+           partid_solid, &  !intent(out)
+           partid_prescribed)  !intent(out)
 
            ! at_wall==1 if FOEXTRAP or REFLECT_EVEN BC for pressure.
            ! gradh_tension represents (H_{m12,i}-H_{m12,i-1})

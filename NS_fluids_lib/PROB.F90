@@ -4902,8 +4902,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   0.0<=facecut_prescribed<=VOFTOL_AREAFRAC  or
        !   max(LSleft(im_prescribed),LSright(im_prescribed))>=0.0
       subroutine fixed_face( &
-       facecut_solid, &      
-       facecut_prescribed, & 
+       facecut_solid, &       !intent(in)
+       facecut_prescribed, &  !intent(in)
        LSleft,LSright, &
        is_solid_face, &
        is_prescribed_face, &
@@ -4917,8 +4917,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       IMPLICIT NONE
 
         !surface tension coefficient is zero
-      REAL_T, INTENT(inout) :: facecut_solid 
-      REAL_T, INTENT(inout) :: facecut_prescribed ! grad p coefficient is zero
+      REAL_T, INTENT(in) :: facecut_solid 
+      REAL_T, INTENT(in) :: facecut_prescribed ! grad p coefficient is zero
       REAL_T, INTENT(in) :: LSleft(num_materials)
       REAL_T, INTENT(in) :: LSright(num_materials)
       REAL_T LScrit_solid,LScrit_prescribed,LStest
@@ -4952,6 +4952,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! FSI_FLUID_NODES_INIT
        if (is_lag_part(im).eq.1) then
 
+        ! if is_rigid==1:
+        ! FSI_PRESCRIBED_PROBF90
+        ! FSI_PRESCRIBED_NODES
+        ! FSI_SHOELE_VELVEL
+        ! FSI_SHOELE_PRESVEL
         if (is_rigid(im).eq.0) then
          if (is_prescribed(im).eq.0) then
           ! do nothing
