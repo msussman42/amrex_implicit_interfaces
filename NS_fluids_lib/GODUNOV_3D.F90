@@ -11363,9 +11363,9 @@ stop
        expect_mdot_sign, &
        mdot_sum, &
        mdot_sum_comp, &
-       im_source, &
-       im_dest, &
-       indexEXP, &
+       im_source, & !intent(in)
+       im_dest, & !intent(in)
+       indexEXP, & !intent(in) 0<=indexEXP<2*num_interfaces
        level,finest_level, &
        tilelo,tilehi, &
        fablo,fabhi, &
@@ -11456,6 +11456,7 @@ stop
       INTEGER_T dir
       INTEGER_T index_compare
       INTEGER_T complement_flag
+      REAL_T LL
 
       tag_ptr=>tag
       tag_comp_ptr=>tag_comp
@@ -11546,6 +11547,50 @@ stop
        print *,"distribute_from_target invalid"
        stop
       endif
+      LL=get_user_latent_heat(indexEXP+1,293.0d0,1)
+      if (LL.eq.zero) then
+       ! check nothing
+      else if (LL.ne.zero) then
+       im_ice=0
+       if (is_ice(im_dest).eq.1) then
+        im_ice=im_dest
+       else if (is_ice(im_source).eq.1) then
+        im_ice=im_source
+       else if ((is_ice(im_dest).eq.0).and. &
+                (is_ice(im_source).eq.0)) then
+        im_ice=0
+       else
+        print *,"is_ice invalid"
+        stop
+       endif
+       if (im_ice.eq.0) then
+        ! do nothing
+       else if (im_ice.eq.im_dest) then ! freezing
+        if (distribute_from_target(indexEXP+1).eq.1) then
+         ! distribute_from_target=true
+         ! distribute_to_target=false
+         ! source=melt  dest (target)=ice
+        else 
+         print *,"distribute_from_target should be 1(freezing)"
+         stop
+        endif
+       else if (im_ice.eq.im_source) then ! melting
+        if (distribute_from_target(indexEXP+1).eq.0) then
+         ! distribute_from_target=false
+         ! distribute_to_target=true
+         ! source=ice  dest (target)=melt
+        else 
+         print *,"distribute_from_target should be 0(melting)"
+         stop
+        endif
+       else
+        print *,"im_ice invalid"
+        stop
+       endif
+      else
+       print *,"LL invalid: ",LL
+       stop
+      endif
 
       ! Iterate over the box
       do i=growlo(1),growhi(1)
@@ -11588,8 +11633,9 @@ stop
          local_denstate(im)=denstate(D_DECL(i,j,k),im)
         enddo
 
+         ! "get_primary_material"
          ! first checks the rigid materials for a positive LS; if none
-         ! exist, then the subroutine checks the fluid materials.
+         ! exist, then "get_primary_material" checks the fluid materials.
         call get_primary_material(LSCELL,im_primary)
 
         VDOT=expan(D_DECL(i,j,k),indexEXP+1)
@@ -11616,7 +11662,7 @@ stop
           stop
          endif
         else
-         print *,"expect_mdot_sign"
+         print *,"expect_mdot_sign invalid: ",expect_mdot_sign
          stop
         endif
 
@@ -11662,7 +11708,7 @@ stop
            distribute_from_target, &
            complement_flag)
 
-          if (ireverse.eq.-1) then
+          if (ireverse.eq.-1) then !assume fluid (melt)
            ICEMASK=one
           else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
            call get_iten(im,im_opp,iten)
@@ -11672,7 +11718,7 @@ stop
             if (index_compare.eq.indexEXP) then
              ! do nothing
             else
-             ICEMASK=one
+             ICEMASK=one !assume fluid (melt)
             endif
            else
             print *,"index_compare invalid"

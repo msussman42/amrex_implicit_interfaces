@@ -3943,7 +3943,7 @@ NavierStokes::read_params ()
 	} else
 	 amrex::Error("Tanasawa_or_Schrage_or_Kassemi[iten_local] invalid");
 
-       } else if (LL==0) {
+       } else if (LL==0.0) {
         distribute_from_target[iten_local]=0;
        } else
         amrex::Error("latent_heat (LL) invalid");
@@ -4019,7 +4019,7 @@ NavierStokes::read_params ()
         } else
          amrex::Error("im_constant invalid");
  
-       } else if (LL==0) {
+       } else if (LL==0.0) {
         // do nothing
        } else
         amrex::Error("latent_heat (LL) invalid");
@@ -4112,51 +4112,50 @@ NavierStokes::read_params ()
 
   	  int local_distribute=-1;
 
-          if (tension[iten-1]==0.0) {
+ 	  int im_source=-1;
+	  int im_dest=-1;
+	  int im_ice=im;
+	  if ((LL1!=0.0)&&(LL2==0.0)) {
+           local_distribute=distribute_from_target[iten-1];
+           if (im<im_opp) {
+  	    im_source=im;
+	    im_dest=im_opp;
+	   } else if (im>im_opp) {
+ 	    im_source=im_opp;
+	    im_dest=im;
+           } else
+  	    amrex::Error("im or im_opp bust");
+	  } else if ((LL1==0.0)&&(LL2!=0.0)) {
+           local_distribute=distribute_from_target[iten+num_interfaces-1];
+           if (im>im_opp) {
+  	    im_source=im;
+	    im_dest=im_opp;
+	   } else if (im<im_opp) {
+ 	    im_source=im_opp;
+	    im_dest=im;
+           } else
+  	    amrex::Error("im or im_opp bust");
+	  } else if ((LL1!=0.0)&&(LL2!=0.0)) {
+           amrex::Error("cannot do both melting and freezing yet...");
+	  } else
+  	   amrex::Error("LL1 or LL2 bust");
 
- 	   int im_source=-1;
-	   int im_dest=-1;
-	   int im_ice=im;
-	   if ((LL1!=0.0)&&(LL2==0.0)) {
-            local_distribute=distribute_from_target[iten-1];
-            if (im<im_opp) {
-  	     im_source=im;
-	     im_dest=im_opp;
-	    } else if (im>im_opp) {
- 	     im_source=im_opp;
-	     im_dest=im;
-            } else
-  	     amrex::Error("im or im_opp bust");
-	   } else if ((LL1==0.0)&&(LL2!=0.0)) {
-            local_distribute=distribute_from_target[iten+num_interfaces-1];
-            if (im>im_opp) {
-  	     im_source=im;
-	     im_dest=im_opp;
-	    } else if (im<im_opp) {
- 	     im_source=im_opp;
-	     im_dest=im;
-            } else
-  	     amrex::Error("im or im_opp bust");
-	   } else if ((LL1!=0.0)&&(LL2!=0.0)) {
-            amrex::Error("cannot do both melting and freezing yet...");
-	   } else
-  	    amrex::Error("LL1 or LL2 bust");
-
-	   if (im_source==im_ice) { //melting
-            if (local_distribute==0) {
-	     // do nothing
-	    } else 
-             amrex::Error("distribute_from_target should be 0(melting)");
-	   } else if (im_dest==im_ice) {
-            if (local_distribute==1) {
-	     // do nothing
-	    } else 
-             amrex::Error("distribute_from_target should be 1(freezing)");
-	   } else
-            amrex::Error("im_ice invalid");
-
-          } else
-           amrex::Error("liquid-ice surface tension should be 0"); 
+	  if (im_source==im_ice) { //melting
+           if (local_distribute==0) {
+	    // distribute_from_target=false
+	    // distribute_to_target=true 
+	    // source=ice  dest (target)=melt
+	   } else 
+            amrex::Error("distribute_from_target should be 0(melting)");
+	  } else if (im_dest==im_ice) {
+           if (local_distribute==1) {
+	    // distribute_from_target=true
+	    // distribute_to_target=false
+	    // source=melt  dest (target)=ice
+	   } else 
+            amrex::Error("distribute_from_target should be 1(freezing)");
+	  } else
+           amrex::Error("im_ice invalid");
 
          } else if ((LL1==0.0)&&(LL2==0.0)) {
           // do nothing
