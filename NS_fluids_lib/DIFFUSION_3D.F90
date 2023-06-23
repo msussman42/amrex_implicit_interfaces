@@ -21,6 +21,8 @@
 print *,"dimension bust"
 stop
 #endif
+! r coordinate corresponds to "y" in Eady's paper and Lappa's book.
+! theta coordinate corresponds to "x" in Eady's paper and Lappa's book.
 !
 ! 1. DA/Dt=0  or DQ/Dt=0
 ! 2. A^** = S A^* S^T   S=I+dt grad u
@@ -127,6 +129,7 @@ stop
 ! -q_phi/rho0=0
 ! -q_r/rho0=beta*A*z*g=2*Omega*\Gamma*z
 !
+! "-q" is the pressure of the base solution.
 ! new EQUIVALENT equations:
 ! u_t=-(p+q)_{r}/rho0+2 Omega (v-\Gamma z) -u*u_r-v*u_phi/r-w*u_z
 ! v_t=-(p+q)_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z
