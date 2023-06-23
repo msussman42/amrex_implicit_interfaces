@@ -7452,6 +7452,7 @@ stop
 ! faceden=1/rho
 ! facecut=A
 ! icefacecut=1
+! icemask=1
 ! mside=mass
 ! slope: vof,ref centroid,order,slope,intercept  x num_materials
 ! vof: piecewise constant interp at coarse/fine borders
@@ -8357,10 +8358,12 @@ stop
           !  FSI_SHOELE_VELVEL.
           !
           ! Remark: 
-          ! local_face(FACECOMP_ICEFACECUT+1) is initialized in
-          ! GODUNOV_3D.F90: fort_init_icemask
+          ! local_face(FACECOMP_ICEFACECUT+1) and
+          ! local_Face(FACECOMP_ICEMASK+1) are updated in
+          ! GODUNOV_3D.F90: fort_init_icemask_and_icefacecut
           !
-          ! local_face(FACECOMP_FACECUT+1) is initialized in 
+          ! local_face(FACECOMP_FACECUT+1) 
+          ! is initialized and updated in 
           ! LEVELSET_3D.F: fort_init_physics_vars (here)
           !
          if ((is_rigid(implus_majority).eq.1).or. &
@@ -9629,7 +9632,7 @@ stop
           stop
          endif  
 
-         local_face(FACECOMP_ICEFACECUT+1)=one
+         local_face(FACECOMP_FACECUT+1)=one
 
 ! local_face(FACECOMP_FACECUT+1)=0.0 if presbc=REFLECT_EVEN,LO_EXTRAP
 ! local_face(FACECOMP_FACECUT+1)=0.0 if face has adjoining
@@ -9683,7 +9686,8 @@ stop
 
          local_face(FACECOMP_CURV+1)=zero
 
-         if (local_face(FACECOMP_FACECUT+1).ge.zero) then
+         if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
+             (local_face(FACECOMP_FACECUT+1).le.one)) then
           ! do nothing
          else
           print *,"local_face(FACECOMP_FACECUT+1) invalid"
