@@ -4467,8 +4467,10 @@ stop
 
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
-        ! FACECOMP_ICEMASK component c++ initialized to one
-        !   in "init_physics_vars"
+        !
+        ! FACECOMP_ICEMASK and FACECOMP_ICEFACECUT components are 
+        !   initialized to one
+        !   in "fort_init_physics_vars"
         ! if num_materials=2, num_interfaces=1
         ! if num_materials=3, num_interfaces=3    12 13 23
         ! if num_materials=4, num_interfaces=6    12 13 14 23 24 34
@@ -11681,7 +11683,7 @@ stop
           stop
          endif
 
-         if (im_ice.eq.0) then ! neither source nor dest are ice materials.
+         if (im_ice.eq.0) then!both source and dest can be distributed to.
           ICEMASK=one
          else if ((im_ice.ge.1).and. &
                   (im_ice.le.num_materials)) then
@@ -11708,7 +11710,7 @@ stop
            distribute_from_target, &
            complement_flag)
 
-          if (ireverse.eq.-1) then !assume fluid (melt)
+          if (ireverse.eq.-1) then!both source and dest can be distributed to.
            ICEMASK=one
           else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
            call get_iten(im,im_opp,iten)
@@ -11718,7 +11720,7 @@ stop
             if (index_compare.eq.indexEXP) then
              ! do nothing
             else
-             ICEMASK=one !assume fluid (melt)
+             ICEMASK=one !assume both source and dest can be distributed to.
             endif
            else
             print *,"index_compare invalid"
