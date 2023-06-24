@@ -4958,12 +4958,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! FSI_SHOELE_VELVEL
         ! FSI_SHOELE_PRESVEL
         if (is_rigid(im).eq.0) then
+
+          ! if is_prescribed==1:
+          ! FSI_PRESCRIBED_PROBF90
+          ! FSI_PRESCRIBED_NODES
          if (is_prescribed(im).eq.0) then
           ! do nothing
          else
           print *,"is_prescribed(im) invalid"
           stop
          endif
+
+         ! FSI_PRESCRIBED_PROBF90
+         ! FSI_PRESCRIBED_NODES
+         ! FSI_SHOELE_VELVEL
+         ! FSI_SHOELE_PRESVEL
         else if (is_rigid(im).eq.1) then
 
          if (im_solid.eq.0) then
@@ -4988,6 +4997,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
 
+          ! FSI_PRESCRIBED_PROBF90
+          ! FSI_PRESCRIBED_NODES
          if (is_prescribed(im).eq.1) then
           if (im_prescribed.eq.0) then
            im_prescribed=im
@@ -5065,7 +5076,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"im_solid invalid 20"
         stop
        endif
-      else if (facecut_solid.ge.VOFTOL_AREAFRAC) then
+      else if ((facecut_solid.ge.VOFTOL_AREAFRAC).and. &
+               (facecut_solid.le.one)) then
        if (im_solid.eq.0) then
         ! do nothing
        else if ((im_solid.ge.1).and. &
@@ -5110,7 +5122,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         print *,"im_prescribed invalid 20"
         stop
        endif
-      else if (facecut_prescribed.ge.VOFTOL_AREAFRAC) then
+      else if ((facecut_prescribed.ge.VOFTOL_AREAFRAC).and. &
+               (facecut_prescribed.le.one)) then
        if (im_prescribed.eq.0) then
         ! do nothing
        else if ((im_prescribed.ge.1).and. &
@@ -5556,7 +5569,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   fort_cell_to_mac (surface tension force on MAC grid)
       subroutine fluid_interface_tension( &
          xpos,time, &
-         LSleft,LSright,gradh, &
+         LSleft,LSright, &
+         gradh, & !INTENT(out)
          im_opp,im, & !INTENT(out)
          imL,imR)     !INTENT(out)
 
@@ -5573,7 +5587,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T :: LSleft_merge(num_materials)
       REAL_T :: LSright_merge(num_materials)
       INTEGER_T, INTENT(out) :: imL,imR
-      INTEGER_T :: imL_local,imR_local
 
       im=0
       im_opp=0
@@ -5582,51 +5595,30 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call merge_levelset(xpos,time,LSleft,LSleft_merge)
       call merge_levelset(xpos,time,LSright,LSright_merge)
 
-      call get_primary_material(LSleft,imL_local)
-      call get_primary_material(LSright,imR_local)
-
       call get_primary_material(LSleft_merge,imL)
       call get_primary_material(LSright_merge,imR)
 
       if ((imL.lt.1).or.(imL.gt.num_materials).or. &
-          (imR.lt.1).or.(imR.gt.num_materials).or. &
-          (imL_local.lt.1).or.(imL_local.gt.num_materials).or. &
-          (imR_local.lt.1).or.(imR_local.gt.num_materials)) then
-       print *,"imL,imR,imL_local, or imR_local invalid"
+          (imR.lt.1).or.(imR.gt.num_materials)) then
+       print *,"imL or imR invalid (fluid_interface_tension): ",imL,imR
        stop
       endif
 
-      if ((is_rigid(imL).eq.1).or. &
-          (is_rigid(imL_local).eq.1)) then
+      if (is_rigid(imL).eq.1) then
        ! do nothing
-      else if ((is_rigid(imR).eq.1).or. &
-               (is_rigid(imR_local).eq.1)) then
+      else if (is_rigid(imR).eq.1) then
        ! do nothing
-      else if ((is_ice(imL).eq.1).or. &
-               (is_ice(imL_local).eq.1)) then
+      else if (is_FSI_rigid(imL).eq.1) then
        ! do nothing
-      else if ((is_ice(imR).eq.1).or. &
-               (is_ice(imR_local).eq.1)) then
+      else if (is_FSI_rigid(imR).eq.1) then
        ! do nothing
-      else if ((is_FSI_rigid(imL).eq.1).or. &
-               (is_FSI_rigid(imL_local).eq.1)) then
-       ! do nothing
-      else if ((is_FSI_rigid(imR).eq.1).or. &
-               (is_FSI_rigid(imR_local).eq.1)) then
-       ! do nothing
-      else if ((imL.eq.imR).or. &
-               (imL_local.eq.imR_local)) then
+      else if (imL.eq.imR) then
        ! do nothing
       else if ((is_rigid(imL).eq.0).and. &
                (is_rigid(imR).eq.0).and. &
-               (is_rigid(imL_local).eq.0).and. &
-               (is_rigid(imR_local).eq.0).and. &
-               (is_ice(imL_local).eq.0).and. &
-               (is_ice(imR_local).eq.0).and. &
-               (is_FSI_rigid(imL_local).eq.0).and. &
-               (is_FSI_rigid(imR_local).eq.0).and. &
-               (imL.ne.imR).and. &
-               (imL_local.ne.imR_local)) then
+               (is_FSI_rigid(imL).eq.0).and. &
+               (is_FSI_rigid(imR).eq.0).and. &
+               (imL.ne.imR)) then
 
        if (imL.lt.imR) then
         gradh=-one
@@ -5642,7 +5634,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
       else
-       print *,"is_rigid, is_ice, is_FSI_rigid, imL, or imR invalid PROB.F90"
+       print *,"is_rigid, is_FSI_rigid, imL, or imR invalid PROB.F90"
        stop
       endif 
 
