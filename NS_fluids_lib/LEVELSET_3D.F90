@@ -11116,7 +11116,7 @@ stop
       REAL_T DIAG_REGULARIZE
       REAL_T uface(2)
       REAL_T ufacesolid(2)
-      REAL_T AFACE(2)
+      REAL_T AFACE(2) !fort_mac_to_cell
       REAL_T pres_face(2)
 
        ! 0=no div(up)
@@ -14887,7 +14887,7 @@ stop
           else if ((AFACE.ge.half).and.(AFACE.le.one)) then
            ! do nothing
           else
-           print *,"AFACE invalid"
+           print *,"AFACE invalid (fort_cell_to_mac) : ",AFACE
            stop 
           endif
 
@@ -15004,7 +15004,8 @@ stop
                LSleft,LSright, &
                gradh_tension, &
                im_opp,im, &
-               im_left_tension,im_right_tension)
+               im_left_tension, &
+               im_right_tension)
 
              call fluid_interface( &
                LSleft,LSright, &
