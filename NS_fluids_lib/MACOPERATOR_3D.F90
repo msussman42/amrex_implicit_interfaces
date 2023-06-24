@@ -676,7 +676,7 @@ stop
           stop
          endif
 
-        else if (project_option.eq.SOLVETYPE_HEAT) then ! temperature diffusion
+        else if (project_option.eq.SOLVETYPE_HEAT) then !temperature diffusion
 
          if (dt.gt.zero) then
           ! do nothing
