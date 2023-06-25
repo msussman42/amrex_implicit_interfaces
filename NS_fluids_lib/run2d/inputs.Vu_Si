@@ -28,8 +28,8 @@ ns.projection_pressure_scale=1.0
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=1
 ns.speciesconst=0.0 0.0 1.0 0.0
-ns.speciesviscconst=0.0 0.0 0.0 0.0
-ns.speciesreactionrate=0.0 0.0 1.0e+10 0.0
+ns.speciesviscconst=0.01 0.01 0.01 0.01
+ns.speciesreactionrate=0.0 0.0 0.02 0.0
 ns.rigid_fraction_id=0 0 1 0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
@@ -74,7 +74,7 @@ amr.blocking_factor = 8 8 8 8  # block factor in grid generation
 amr.check_int       = 200
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 200 # 200
+amr.plot_int        = 50 # 200
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -129,13 +129,10 @@ ns.segregated_gravity_flag=0
 #u_{phasechange}=k * (TDIFF/dx) /(L rho)
 # arccos((1740-281)/1740)=33 degrees
 # arccos((1740-870)/1740)=60 degrees
-ns.tension= 1740.0      0.0 870.0 0.0 1740.0  0.0
-ns.tension_init= 1740.0 0.0 870.0 0.0 1740.0  0.0
-# growth_angle=18 deg
-ns.growth_angle=0.0 0.314 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0  
-ns.growth_angle_tertiary_mat=0 1 0 0 0 0 0 0 0 0 0 0 
-ns.growth_angle_primary_mat=0 2 0 0 0 0 0 0 0 0 0 0 
-ns.growth_angle_secondary_mat=0 3 0 0 0 0 0 0 0 0 0 0 
+# LG,LI,LS,IG,GS,SI  
+# see tensions_from_angles.f
+ns.tension= 1740.0      538.0 870.0 1655.0 1740.0  0.0
+ns.tension_init= 1740.0 538.0 870.0 1655.0 1740.0  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
