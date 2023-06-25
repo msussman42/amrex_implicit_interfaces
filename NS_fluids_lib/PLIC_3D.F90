@@ -241,10 +241,11 @@ stop
        stop
       endif
       if ((continuous_mof.eq.0).or. & ! MOF
-          (continuous_mof.ge.1)) then ! CMOF
+          ((continuous_mof.ge.1).and. &
+           (continuous_mof.le.4096))) then ! CMOF
        ! do nothing
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid (fort_sloperecon): ",continuous_mof
        stop
       endif
 
