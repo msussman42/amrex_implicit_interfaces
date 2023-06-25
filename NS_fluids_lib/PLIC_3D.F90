@@ -548,7 +548,8 @@ stop
 
          ! supercell for centroid cost function.
          ! center cell for volume constraint.
-        if (continuous_mof_parm.ge.1) then
+        if ((continuous_mof_parm.ge.1).and. &
+            (continuous_mof_parm.le.4096)) then
   
          volume_super=zero ! volume of the extended region
          volume_super_mofdata=zero !same as volume_super, except by im_fluid.
@@ -790,7 +791,7 @@ stop
         else if (continuous_mof_parm.eq.0) then
          ! do nothing
         else
-         print *,"continuous_mof_parm invalid"
+         print *,"continuous_mof_parm invalid: ",continuous_mof_parm
          stop
         endif
 
@@ -819,7 +820,10 @@ stop
 
         if ((continuous_mof_parm.eq.0).or. &
             (num_fluid_materials_in_stencil.eq.1).or. &
-            (num_fluid_materials_in_stencil.eq.2)) then
+            (num_fluid_materials_in_stencil.eq.2).or. &
+            ((num_fluid_materials_in_stencil.ge.3).and. &
+             (num_fluid_materials_in_cell.eq. &
+              num_fluid_materials_in_stencil))) then
 
          call multimaterial_MOF( &
           bfact,dx, &
@@ -841,7 +845,8 @@ stop
           grid_level, &
           SDIM)
 
-         if (continuous_mof_parm.ge.1) then
+         if ((continuous_mof_parm.ge.1).and. &
+             (continuous_mof_parm.le.4096)) then
            ! center cell centroids.
           do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
@@ -880,7 +885,10 @@ stop
          ! 1. find CMOF reconstruction using CMOF centroids and MOF 
          !    (cell center) volumes.
         else if ((continuous_mof_parm.ge.1).and. &
-                 (num_fluid_materials_in_stencil.ge.3)) then
+                 (continuous_mof_parm.le.4096).and. &
+                 (num_fluid_materials_in_stencil.ge.3).and. &
+                 (num_fluid_materials_in_stencil.gt. &
+                  num_fluid_materials_in_cell)) then
 
          continuous_mof_parm_super=-1
 
@@ -1057,7 +1065,11 @@ stop
          enddo  ! im=1..num_materials
  
         else
-         print *,"continuous_mof_parm or num_fluid_materials_in_stencil bad"
+         print *,"continuous_mof_parm or num_fluid_materials bad"
+         print *,"continuous_mof_parm=",continuous_mof_parm
+         print *,"num_fluid_materials_in_cell=",num_fluid_materials_in_cell
+         print *,"num_fluid_materials_in_stencil=", &
+             num_fluid_materials_in_stencil
          stop
         endif
 
