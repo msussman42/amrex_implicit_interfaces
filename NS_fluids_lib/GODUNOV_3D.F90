@@ -15381,6 +15381,7 @@ stop
       INTEGER_T is_solid_cell !=0 no solid 1<=is_solid_cell<=num_materials+1 ot
 
       INTEGER_T dencomp
+      INTEGER_T tempcomp
       INTEGER_T cellcomp
 
       REAL_T vsol(nsolve)
@@ -15642,6 +15643,10 @@ stop
         do im=1,num_materials*ngeom_recon
          mofdata(im)=vof(D_DECL(i,j,k),im)
         enddo
+        !  if solid material(s) dominate the cell, then F_solid_raster=1
+        !  and F_fluid=0.
+        !  if fluid material(s) dominate the cell, then F_solid=0,
+        !  sum F_fluid=1
         local_tessellate=3
         call multi_get_volume_tessellate( &
          local_tessellate, &  ! =3
@@ -15671,7 +15676,7 @@ stop
            local_volume=one
           endif
          else
-          print *,"local_volume invalid"
+          print *,"local_volume invalid: ",local_volume
           stop
          endif
          cell_vfrac(im)=local_volume
@@ -16039,7 +16044,9 @@ stop
 
             do im_crit=1,num_materials
              dencomp=STATECOMP_STATES+ &
-                 (im_crit-1)*num_state_material+ENUM_DENVAR+1
+               (im_crit-1)*num_state_material+ENUM_DENVAR+1
+             tempcomp=STATECOMP_STATES+ &
+               (im_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
              Tcenter(im_crit)=cellfab(D_DECL(i,j,k),scomp(im_crit)+1)
              if (Tcenter(im_crit).ge.zero) then
               ! do nothing
@@ -16051,8 +16058,15 @@ stop
               thermal_state(im_crit)=Tcenter(im_crit)
              else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
                       (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-              thermal_state(im_crit)= &
+              if (tempcomp.eq.dencomp+1) then
+               thermal_state(im_crit)= &
                  state(D_DECL(i,j,k),dencomp+1)
+              else
+               print *,"dencomp or tempcomp invalid"
+               print *,"dencomp: ",dencomp
+               print *,"tempcomp: ",tempcomp
+               stop
+              endif
              else
               print *,"project_option invalid"
               stop
@@ -16430,11 +16444,11 @@ stop
              TSAT_master, &
              T_out)
 
-            if (combine_flag.eq.0) then ! centroid -> center
+            if (combine_flag.eq.0) then !centroid -> center (FVM->GFM)
              do im_opp=1,num_materials
               newcell(D_DECL(i,j,k),im_opp)=T_out(1)
              enddo
-            else if (combine_flag.eq.1) then  ! center -> centroid
+            else if (combine_flag.eq.1) then  !center -> centroid (GFM->FVM)
              newcell(D_DECL(i,j,k),im)=T_out(1)
             else
              print *,"combine_flag invalid"
@@ -16442,7 +16456,7 @@ stop
             endif
 
            else if ((im_primary.ne.im).and. &
-                    (combine_flag.eq.0)) then  ! centroid -> center
+                    (combine_flag.eq.0)) then !centroid -> center (FVM->GFM)
             ! do nothing
            else if ((cell_vfrac(im).le.VOFTOL).and. &
                     ((combine_flag.eq.1).or. &   ! GFM->FVM
@@ -16498,7 +16512,7 @@ stop
             if (weight_sum.gt.zero) then
              velsum(1)=velsum(1)/weight_sum
             else
-             print *,"weight_sum invalid 1"
+             print *,"weight_sum invalid 1: ",weight_sum
              stop
             endif 
 
@@ -16525,9 +16539,9 @@ stop
              stop
             endif
 
-            if (combine_flag.eq.1) then
+            if (combine_flag.eq.1) then ! GFM -> FVM
              newcell(D_DECL(i,j,k),im)=velsum(1)
-            else if (combine_flag.eq.2) then
+            else if (combine_flag.eq.2) then !combine if F==0
              cellfab(D_DECL(i,j,k),cellcomp)=velsum(1)
             else
              print *,"combine_flag invalid"
@@ -16535,10 +16549,13 @@ stop
             endif
 
            else if ((cell_vfrac(im).ge.VOFTOL).and. &
-                    (combine_flag.eq.2)) then
+                    (combine_flag.eq.2)) then !combine if vfrac<VOFTOL
             ! do nothing
            else
             print *,"cell_vfrac or combine_flag bust"
+            print *,"im=",im
+            print *,"cell_vfrac=",cell_vfrac(im)
+            print *,"combine_flag=",combine_flag
             stop
            endif
    

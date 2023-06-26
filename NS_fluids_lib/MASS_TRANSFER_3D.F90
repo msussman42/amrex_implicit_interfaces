@@ -3218,9 +3218,16 @@ stop
       INTEGER_T im,ispec
       INTEGER_T local_mask
       REAL_T local_VOF(num_materials)
-      REAL_T species_vfrac_sum,species_avg
+      REAL_T local_DEN(num_materials)
+      REAL_T local_MASS(num_materials)
+      REAL_T species_vfrac_sum
+      REAL_T species_mass_sum
+      REAL_T species_avg
       REAL_T local_rate
-      INTEGER_T vofcomp,spec_comp
+      INTEGER_T vofcomp
+      INTEGER_T spec_comp
+      INTEGER_T dencomp
+      INTEGER_T ice_in_cell
       REAL_T spec_old,spec_new
       REAL_T, PARAMETER :: species_max=1.0d0
 
@@ -3274,11 +3281,25 @@ stop
        if (local_mask.eq.1) then
 
         species_vfrac_sum=zero
+        species_mass_sum=zero
+
+        ice_in_cell=0
 
         do im=1,num_materials
 
          vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
+         dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
          local_VOF(im)=snew(D_DECL(i,j,k),vofcomp)
+         local_DEN(im)=snew(D_DECL(i,j,k),dencomp)
+         local_MASS(im)=local_VOF(im)*local_DEN(im)
+
+         if (local_DEN(im).gt.zero) then
+          ! do nothing
+         else
+          print *,"local_DEN(im) invalid: ",local_DEN(im)
+          stop
+         endif
+
          if (abs(local_VOF(im)).le.VOFTOL) then
           local_VOF(im)=zero
          else if (abs(local_VOF(im)-one).le.VOFTOL) then
@@ -3292,6 +3313,7 @@ stop
          endif
          if (is_rigid(im).eq.0) then
           species_vfrac_sum=species_vfrac_sum+local_VOF(im)
+          species_mass_sum=species_mass_sum+local_MASS(im)
          else if (is_rigid(im).eq.1) then
           ! do nothing
          else
@@ -3300,6 +3322,20 @@ stop
          endif
 
          if (is_ice(im).eq.1) then
+
+          if ((local_VOF(im).ge.zero).and. &
+              (local_VOF(im).le.VOFTOL)) then
+           ! do nothing
+          else if ((local_VOF(im).ge.VOFTOL).and. &
+                   (local_VOF(im).le.one)) then
+           ice_in_cell=1
+          else
+           print *,"local_VOF(im) invalid"
+           print *,"im=",im
+           print *,"local_VOF(im)=",local_VOF(im)
+           stop
+          endif
+
           ispec=rigid_fraction_id(im)
           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
            !do nothing 
@@ -3307,6 +3343,7 @@ stop
            print *,"ispec invalid"
            stop
           endif
+
          else if (is_ice(im).eq.0) then
           !do nothing
          else
@@ -3319,6 +3356,13 @@ stop
          ! do nothing
         else
          print *,"species_vfrac_sum invalid"
+         stop
+        endif
+
+        if (species_mass_sum.gt.zero) then
+         ! do nothing
+        else
+         print *,"species_mass_sum invalid"
          stop
         endif
 
@@ -3353,20 +3397,21 @@ stop
             spec_new=zero
            else if (abs(spec_new-species_max).le.VOFTOL) then
             spec_new=species_max
-           else if ((spec_new.ge.zero).and.(spec_new.le.species_max)) then
+           else if ((spec_new.ge.zero).and. &
+                    (spec_new.le.species_max)) then
             ! do nothing
            else
-            print *,"spec_new invalid"
+            print *,"spec_new invalid: ",spec_new
             stop
            endif
            snew(D_DECL(i,j,k),spec_comp)=spec_new
           else
-           print *,"local_rate invalid"
+           print *,"local_rate invalid: ",local_rate
            stop
           endif
 
           if (is_rigid(im).eq.0) then
-           species_avg=species_avg+spec_new*local_VOF(im)
+           species_avg=species_avg+spec_new*local_MASS(im)
           else if (is_rigid(im).eq.1) then
            ! do nothing
           else
@@ -3375,10 +3420,13 @@ stop
           endif
          enddo ! im=1,num_materials
 
-         if (species_vfrac_sum.gt.zero) then
-          species_avg=species_avg/species_vfrac_sum
+         if ((species_vfrac_sum.gt.zero).and. &
+             (species_mass_sum.gt.zero)) then
+          species_avg=species_avg/species_mass_sum
          else
-          print *,"species_vfrac_sum invalid"
+          print *,"species_vfrac_sum or species_mass_sum invalid"
+          print *,"species_vfrac_sum: ",species_vfrac_sum
+          print *,"species_mass_sum: ",species_mass_sum
           stop
          endif
          if ((species_avg.ge.zero).and. &
@@ -3402,9 +3450,26 @@ stop
             snew(D_DECL(i,j,k),spec_comp)=species_avg
            else if ((local_VOF(im).gt.zero).and. &
                     (local_VOF(im).le.one)) then
-            !do nothing
+
+            if (is_ice(im).eq.1) then
+             !do nothing
+            else if (ice_in_cell.eq.0) then
+             !do nothing
+            else if ((is_ice(im).eq.0).and. &
+                     (ice_in_cell.eq.1)) then
+             snew(D_DECL(i,j,k),spec_comp)=species_avg
+            else
+             print *,"is_ice or ice_in_cell invalid"
+             print *,"im=",im
+             print *,"is_ice(im)=",is_ice(im)
+             print *,"ice_in_cell=",ice_in_cell
+             stop
+            endif
+
            else
             print *,"local_VOF invalid"
+            print *,"im=",im
+            print *,"local_VOF(im)=",local_VOF(im)
             stop
            endif
           else if (is_rigid(im).eq.1) then
