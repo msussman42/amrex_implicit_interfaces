@@ -184,9 +184,9 @@ implicit none
 REAL_T, INTENT(in) :: x_i,y_i
 REAL_T, INTENT(out) :: ls
 REAL_T :: x, y
-REAL_T :: d1,d2,e2
-REAL_T :: w1=0.3d0, w2=1.0d0, w=1.5d0 
-REAL_T :: l1=4.0d0, l2 =2.5d0, l3=4.5d0, l4=0.5d0, l=11.5d0
+REAL_T :: e2
+REAL_T :: w1=0.3d0
+REAL_T :: l1=4.0d0
 
 x=x_i*1000.0d0
 y=y_i*1000.0d0

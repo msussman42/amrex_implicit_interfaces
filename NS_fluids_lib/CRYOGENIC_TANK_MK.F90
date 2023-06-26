@@ -743,7 +743,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  !    self-pressurization: Crossing fluid types, scales, and gravity levels 
  !  Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
 
- subroutine rigid_displacement(xfoot,t,xphys,velphys)
+subroutine rigid_displacement(xfoot,t,xphys,velphys)
+ use probcommon_module
  IMPLICIT NONE
 
  REAL_T, INTENT(out) :: xfoot(3)
@@ -751,20 +752,89 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  REAL_T, INTENT(in) :: xphys(3)
  REAL_T, INTENT(out) :: velphys(3)
 
- REAL_T, PARAMETER :: xdisp_amplitude=0.01d0
- REAL_T, PARAMETER :: xdisp_freq=10.0d0
-
+ REAL_T :: xdisp_amplitude   ! xblob7
+ REAL_T :: xdisp_freq        ! yblob7
+ REAL_T :: xdisp_angV        ! zblob7
+                             ! radblob7 prob type
+                             ! radblob8 rot axis
+ INTEGER_T :: rotx,roty,rotz
+ INTEGER_T :: rot_dir
  INTEGER_T :: dir
 
- do dir=1,3
-  xfoot(dir)=xphys(dir)
+ 
+ do dir=1,3                  ! bug fixed        
+  xfoot(dir)=xphys(dir)      
   velphys(dir)=zero
  enddo
 
- xfoot(dir_x)=xphys(dir_x)-  &
+ if(NINT(radblob7).eq.1) then
+  xdisp_amplitude=xblob7   
+  xdisp_freq=yblob7
+
+  xfoot(dir_x)=xphys(dir_x)-  &
      xdisp_amplitude*sin(xdisp_freq*t)
- velphys(dir_x)=  &
+  velphys(dir_x)=  &
      xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
+ elseif(NINT(radblob7).eq.2)then         
+  !counter clockwise rotation with z axis. angular velocity zblob7 
+  xdisp_angV=zblob7 
+
+  rot_dir=NINT(radblob8)
+
+  if(SDIM.eq.3)then
+   if(rot_dir.eq.3)then
+    rotx=dir_x
+    roty=dir_z
+    rotz=dir_y
+   elseif(rot_dir.eq.1)then
+    rotx=dir_z
+    roty=dir_y
+    rotz=dir_x
+   elseif(rot_dir.eq.2)then
+    rotx=dir_x
+    roty=dir_y
+    rotz=dir_z
+   else
+    print *,"rot_dir invalid"
+    stop
+   endif
+   xfoot(rotx)= cos(xdisp_angV*t)*xphys(rotx)- &
+              ((-1)**(mod(rot_dir,2)))*sin(xdisp_angV*t)*xphys(roty)
+   xfoot(roty)=((-1)**(mod(rot_dir,2)))*sin(xdisp_angV*t)*xphys(rotx)+ &
+               cos(xdisp_angV*t)*xphys(roty) 
+   xfoot(rotz)=xphys(rotz)
+
+   velphys(rotx)=xdisp_angV*  &
+           (-sin(xdisp_angV*t)*xphys(rotx)+ &
+           ((-1)**(mod(rot_dir,2)))*cos(xdisp_angV*t)*xphys(roty))
+   velphys(roty)=xdisp_angV* &
+             (-((-1)**(mod(rot_dir,2)))*cos(xdisp_angV*t)*xphys(rotx)- &
+             sin(xdisp_angV*t)*xphys(roty))
+   velphys(rotz)=0.0d0
+  elseif(SDIM.eq.2)then
+   rotx=1
+   roty=2
+   xfoot(rotx)= cos(xdisp_angV*t)*xphys(rotx)+ &
+                sin(xdisp_angV*t)*xphys(roty)
+   xfoot(roty)= -sin(xdisp_angV*t)*xphys(rotx)+ &
+                cos(xdisp_angV*t)*xphys(roty) 
+   xfoot(rotz)=xphys(rotz)
+
+   velphys(rotx)=xdisp_angV*  &
+           (-sin(xdisp_angV*t)*xphys(rotx)- &
+             cos(xdisp_angV*t)*xphys(roty))
+   velphys(roty)=xdisp_angV* &
+             (cos(xdisp_angV*t)*xphys(rotx)- &
+             sin(xdisp_angV*t)*xphys(roty))
+   velphys(rotz)=0.0d0
+  else
+   print *,"SDIM invalid"
+   stop
+  endif
+ else
+  print *,"radblob7 invalid (rigid motion type invalid)"
+  stop
+ endif
 
  end subroutine rigid_displacement
 
@@ -783,7 +853,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   REAL_T :: x3D(3)
   REAL_T :: xfoot(3)
   REAL_T :: xvel(3)
-
+  REAL_T :: xtemp(3)
   INTEGER_T auxcomp
   REAL_T :: LS_heater_a
   REAL_T :: LS_heater_b
@@ -856,18 +926,21 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      stop
     endif
 
-    LS(3)=SOLID_TOP_HALF_DIST(x)
+!    LS(3)=SOLID_TOP_HALF_DIST(x)
+    LS(3)=SOLID_TOP_HALF_DIST(xfoot)
 
     if (axis_dir.eq.0) then
      ! do nothing
     else if (axis_dir.eq.1) then ! TPCE
-     call CRYOGENIC_TANK_MK_LS_NOZZLE(x,nozzle_dist)
+      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot,nozzle_dist)
+!     call CRYOGENIC_TANK_MK_LS_NOZZLE(x,nozzle_dist)
      if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
       LS(3)=nozzle_dist
      endif
      called_from_heater_source=0
      !LS_A>0 in heater
-     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source) 
+     call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot,LS_A,called_from_heater_source) 
+!     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source) 
      if (LS_A.gt.LS(3)) then
       LS(3)=LS_A
      endif
@@ -875,7 +948,6 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      print *,"axis_dir invalid"
      stop
     endif
-
    else if (axis_dir.eq.2) then
 
     if (FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90) then
@@ -1063,6 +1135,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
 
     ! if SOLID VELOCITY requested everywhere (including outside of the solid),
     ! then velsolid==1
+    if(1.eq.0)then
     if((t.eq.0.0d0).or. &         ! called from fort_initvelocity
        (velsolid_flag.eq.0)) then ! called from boundary condition routine
      do dir=1,SDIM
@@ -1073,6 +1146,30 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      ! do nothing (vel=0.0 is the default)
     else
      print *,"t or velsolid_flag invalid"
+     stop
+    endif
+    endif
+
+    do dir=1,SDIM
+     VEL(dir)=0.0d0
+    enddo
+
+    if ((LS(3).ge.zero).or. &
+        (velsolid_flag.eq.1)) then
+     do dir=1,SDIM
+      VEL(dir)=0.0d0
+     enddo
+ !    VEL(dir_x)=xvel(dir_x)
+     do dir=1,SDIM
+      VEL(dir)=xvel(dir)
+     enddo
+    else if ((LS(3).le.zero).and. &
+             (velsolid_flag.eq.0)) then
+     do dir=1,SDIM
+      VEL(dir)=0.0d0
+     enddo
+    else
+     print *,"LS(3) or velsolid_flag bust"
      stop
     endif
 
@@ -1087,7 +1184,10 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
      do dir=1,SDIM
       VEL(dir)=0.0d0
      enddo
-     VEL(dir_x)=xvel(dir_x)
+ !    VEL(dir_x)=xvel(dir_x)
+     do dir=1,SDIM
+      VEL(dir)=xvel(dir)
+     enddo
     else if ((LS(3).le.zero).and. &
              (velsolid_flag.eq.0)) then
      do dir=1,SDIM
@@ -1220,7 +1320,7 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
    end if ! D2
   
   else
-   print *,"Line equation invalid!"
+   print *,"Line equation invalid!",FRZ
    stop
   end if ! FRZ
  else 
