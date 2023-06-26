@@ -421,7 +421,7 @@ void NavierStokes::viscous_boundary_fluxes(
 
   } // dir=0..sdim-1
 
-} // subroutine viscous_boundary_fluxes
+} // end subroutine viscous_boundary_fluxes
 
 // project_option = SOLVETYPE_PRES (flux var=mac velocity)
 // project_option = SOLVETYPE_HEAT (temp)
@@ -987,7 +987,7 @@ void NavierStokes::combine_state_variable(
  } else
   amrex::Error("update_flux invalid"); 
 
-}  // combine_state_variable
+}  // end subroutine combine_state_variable
 
 
 // viscous heating (viscoelastic heating not done here)
