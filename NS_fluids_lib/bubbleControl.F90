@@ -72,17 +72,9 @@ contains
       REAL_T vfrac(num_materials)
       REAL_T cenbc(num_materials,SDIM)
 
-      INTEGER_T dir2,i1,j1,nDrop
-      REAL_T xgrid(SDIM)
-      REAL_T centroid(num_materials,SDIM)
-      REAL_T lsgrid(D_DECL(3,3,3),num_materials)
-      REAL_T facearea(num_materials)
-      REAL_T distbatch(num_materials)
-      REAL_T distleft,distright,dist
-      REAL_T xleft,xright,LS
+      REAL_T LS
       REAL_T xp(5)
-      REAL_T nowTime,rainDuTime
-      INTEGER_T iLoc,nLoc,iFound,ip
+      INTEGER_T iFound,ip
 
       if (dir.eq.2) then   ! y-direction
           !LS=0.05    ! liquid jet diameter   ysl is this correct?
@@ -127,8 +119,7 @@ contains
       INTEGER_T nDrop,iLoc,nLoc,insiderDrop
       REAL_T bigdist,LS0
       REAL_T nowTime,rainDuTime
-      REAL_T xp(5)
-      INTEGER_T i,im
+      INTEGER_T im
 
       rainDuTime=2.0*rDrop_pack/abs(adv_vel)
       nLoc=ceiling(rainDuTime/period_pack)
@@ -191,11 +182,9 @@ contains
       REAL_T VOF(num_materials)
       REAL_T LS
 
-      INTEGER_T nDrop,iLoc,nLoc,insiderDrop
-      REAL_T bigdist,LS0
-      REAL_T nowTime,rainDuTime
+      REAL_T bigdist
       REAL_T xp(5)
-      INTEGER_T i,im
+      INTEGER_T im
 
 
       !LS=0.3-sqrt(x*x)  ! 0.3 is the gas jet diameter
