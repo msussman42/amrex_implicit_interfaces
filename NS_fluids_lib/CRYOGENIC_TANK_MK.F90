@@ -22,6 +22,11 @@ stop
 #endif
 
 ! probtype==423 (see run2d/inputs.CRYOGENIC_TANK_MK)
+!
+! IT IS ASSUMED THAT THE VERTICAL DIRECTION (i.e. the direction at 
+! which gravity is applied) IS IN THE "Z" DIRECTION, BUT THE GEOMETRY
+! VERTICAL DIRECTION IS DEFINED IN THE "Y" DIRECTION.  SO "Z" and "Y" must
+! be swapped in 3D.
 module CRYOGENIC_TANK_MK_module
 
 implicit none
@@ -36,11 +41,11 @@ INTEGER_T, PARAMETER :: TANK_MK_GEOM_DESCRIPTOR=ZBOT_FLIGHT_ID
 INTEGER_T :: num_aux_expect
 
 ! x3D(1)=x(dir_x)=x(1)
-! x3D(2)=x(dir_z)=x(SDIM)
+! x3D(2)=x(dir_z)=x(SDIM)  vertical direction of geometry: "y"
 ! x3D(3)=0.0d0 if SDIM==2
 ! x3D(3)=x(dir_y)=x(2) if SDIM==3
 INTEGER_T, PARAMETER :: dir_x = 1
-INTEGER_T, PARAMETER :: dir_z = SDIM
+INTEGER_T, PARAMETER :: dir_z = SDIM ! vertical direction of gravity force
 ! dir_y is not used if SDIM==2
 ! dir_y=2 if SDIM==3
 INTEGER_T :: dir_y  
@@ -95,7 +100,7 @@ REAL_T :: TANK_MK_GAS_CV
 
 contains
 
-
+! vertical direction is "y"
 subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE(part_id,unit_id,file_format)
 use probcommon_module
 IMPLICIT NONE
@@ -131,6 +136,7 @@ return
 end subroutine CRYOGENIC_TANK_MK_OPEN_CASFILE
 
 
+! vertical direction is "y"
 subroutine CRYOGENIC_TANK_MK_GET_OUTSIDE_POINT( &
  exterior_BB, &
  xcell,time,x_outside,im_part,part_id)
@@ -171,6 +177,7 @@ REAL_T :: BB_len
  
 end subroutine CRYOGENIC_TANK_MK_GET_OUTSIDE_POINT
 
+! vertical direction is "y"
 subroutine CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
  exterior_BB, &
  interior_BB, &
@@ -308,6 +315,7 @@ INTEGER_T :: dir
 end subroutine CRYOGENIC_TANK_MK_OVERRIDE_FSI_SIGN_LS_VEL_TEMP
 
 
+! vertical direction is "y"
 subroutine CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX(auxcomp, &
     minnode,maxnode,LS_FROM_SUBROUTINE,aux_ncells_max_side)
 use probcommon_module
@@ -426,6 +434,7 @@ INTEGER_T, INTENT(out) :: aux_ncells_max_side
 end subroutine CRYOGENIC_TANK_MK_BOUNDING_BOX_AUX
 
 
+! vertical direction is "y"
 subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE(part_id,unit_id,file_format)
 use probcommon_module
 IMPLICIT NONE
@@ -566,7 +575,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   if (SDIM.eq.2) then
    dir_y=-1  ! dir_y is not used if SDIM==2
   else if (SDIM.eq.3) then
-    !x3D(1)=x(1)   x3D(2)=x(SDIM)   x3D(3)=x(dir_y)=x(2)
+    !x3D(1)=x(1)   
+    !x3D(2)=x(SDIM)   SDIM=gravity vert. dir.  2=vtk vertical dir.
+    !x3D(3)=x(dir_y)=x(2)
    dir_y=2
   else
    print *,"dimension bust"
@@ -702,6 +713,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  end subroutine INIT_CRYOGENIC_TANK_MK_MODULE
 
   ! LS>0 in the nozzle 
+  ! x(2) is the vertical direction
  subroutine CRYOGENIC_TANK_MK_LS_NOZZLE(x,LS)
   use probcommon_module
   use global_utility_module
@@ -749,6 +761,8 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
  ! MK = Validation of two-phase CFD models for propellant tank 
  !    self-pressurization: Crossing fluid types, scales, and gravity levels 
  !  Mohammad Kassemi , Olga Kartuzova, Sonya Hylton
+ !
+ ! xphys(2) is the vertical direction.
 
 subroutine rigid_displacement(xfoot,t,xphys,velphys)
  use probcommon_module
@@ -787,9 +801,10 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   velphys(1)=  &
      xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
  elseif(NINT(radblob7).eq.2)then         
-  !counter clockwise rotation with z axis. angular velocity zblob7 
+  !angular velocity zblob7 
   xdisp_angV=zblob7 
 
+   ! xphys(2) is the vertical direction.
   rot_dir=NINT(radblob8)
 
   if(SDIM.eq.3)then
@@ -801,7 +816,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     rotx=2
     roty=3
     rotz=rot_dir
-   elseif(rot_dir.eq.2)then
+   elseif(rot_dir.eq.2)then !axis is vertical (y) direction.
     rotx=1
     roty=3
     rotz=rot_dir
@@ -841,7 +856,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    velphys(rotz)=0.0d0
   elseif(SDIM.eq.2)then
    rotx=1
-   roty=2
+   roty=2 ! vertical direction
 
    Q(1,1)=cos(xdisp_angV*t)
    Q(1,2)=sin(xdisp_angV*t)
@@ -868,6 +883,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
   ! swap y and z in 3D.
   ! no change in 2D.
+  ! x(SDIM) is the vertical direction for gravity
+  ! x3D(2) is the vertical direction for the geometry files.
  subroutine convert_to_x3D(x,x3D)
  IMPLICIT NONE
 
@@ -900,6 +917,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
  end subroutine convert_to_x3D
 
+  !x(SDIM) is the vertical direction of gravity.
  subroutine CRYOGENIC_TANK_MK_LS(x,t,LS,nmat)
   use probcommon_module
   use global_utility_module
@@ -935,6 +953,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    stop
   endif
 
+   !x(SDIM) is the vertical direction of gravity.
+   !x3D(2) is the vertical direction of geometry.
   call convert_to_x3D(x,x3D)
 
   call rigid_displacement(xfoot3D,t,x3D,xvel)
@@ -977,21 +997,18 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
 
-!    LS(3)=SOLID_TOP_HALF_DIST(x)
     LS(3)=SOLID_TOP_HALF_DIST(xfoot3D)
 
     if (axis_dir.eq.0) then
      ! do nothing
     else if (axis_dir.eq.1) then ! TPCE
-      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,nozzle_dist)
-!     call CRYOGENIC_TANK_MK_LS_NOZZLE(x,nozzle_dist)
+     call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,nozzle_dist)
      if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
       LS(3)=nozzle_dist
      endif
      called_from_heater_source=0
      !LS_A>0 in heater
      call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source) 
-!     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source) 
      if (LS_A.gt.LS(3)) then
       LS(3)=LS_A
      endif
@@ -1045,12 +1062,13 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
  end subroutine CRYOGENIC_TANK_MK_LS
 
    !LS>0 in heater A region.
+   !x(2) is the vertical direction
  subroutine CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS,called_from_heater_source)
   use probcommon_module
   use global_utility_module
   IMPLICIT NONE
 
-  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: x(3)
   REAL_T, INTENT(out) :: LS
   INTEGER_T, INTENT(in) :: called_from_heater_source
   REAL_T zdiff
@@ -1066,7 +1084,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   if (SDIM.eq.2) then
    r_cyl=abs(x(1))
   else if (SDIM.eq.3) then
-   r_cyl=sqrt(x(1)**2+x(SDIM)**2)
+   r_cyl=sqrt(x(1)**2+x(3)**2)
   else
    print *,"sdim invalid"
    stop
@@ -1133,6 +1151,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
  ! fort_initvelocity (velsolid_flag=0, time=0)
  ! velsolid (velsolid_flag=1, VEL=0 by default)
  ! CRYOGENIC_TANK_MK_VEL_BC (velsolid_flag=0)
+ !
+ ! x(SDIM) is the vertical direction.
  subroutine CRYOGENIC_TANK_MK_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
   use probcommon_module
   IMPLICIT NONE
@@ -1177,18 +1197,18 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     ! if SOLID VELOCITY requested everywhere (including outside of the solid),
     ! then velsolid==1
     if(1.eq.0)then
-    if((t.eq.0.0d0).or. &         ! called from fort_initvelocity
-       (velsolid_flag.eq.0)) then ! called from boundary condition routine
-     do dir=1,SDIM
-      VEL(dir)=0.0d0
-     enddo
-    else if ((t.gt.0.0d0).and. &
-             (velsolid_flag.eq.1)) then
-     ! do nothing (vel=0.0 is the default)
-    else
-     print *,"t or velsolid_flag invalid"
-     stop
-    endif
+     if((t.eq.0.0d0).or. &         ! called from fort_initvelocity
+        (velsolid_flag.eq.0)) then ! called from boundary condition routine
+      do dir=1,SDIM
+       VEL(dir)=0.0d0
+      enddo
+     else if ((t.gt.0.0d0).and. &
+              (velsolid_flag.eq.1)) then
+      ! do nothing (vel=0.0 is the default)
+     else
+      print *,"t or velsolid_flag invalid"
+      stop
+     endif
     endif
 
     do dir=1,SDIM
@@ -1206,7 +1226,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
       VEL(2)=xvel(2)
      else if (SDIM.eq.3) then
       VEL(1)=xvel(1)
-      VEL(SDIM)=xvel(2)
+      VEL(SDIM)=xvel(2) !SDIM=vertical dir of grav.  2=vertical of geom files
       VEL(2)=xvel(3)
      else
       print *,"dimension bust"
@@ -1240,7 +1260,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
       VEL(2)=xvel(2)
      else if (SDIM.eq.3) then
       VEL(1)=xvel(1)
-      VEL(SDIM)=xvel(2)
+      VEL(SDIM)=xvel(2) !SDIM=vertical dir of grav.  2=vertical of geom files
       VEL(2)=xvel(3)
      else
       print *,"dimension bust"
@@ -1272,6 +1292,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   return 
  end subroutine CRYOGENIC_TANK_MK_VEL
 
+!P(2) is the vertical direction
 REAL_T function SOLID_TOP_HALF_DIST(P)
  ! Returns the signed distance function to the
  ! cylindrical tank with spherical ends.
@@ -1281,14 +1302,14 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
  ! Outside the tank > 0
  implicit none
 
- REAL_T, INTENT(in), dimension(SDIM) :: P
+ REAL_T, INTENT(in), dimension(3) :: P
  REAL_T R,Z,FRZ,D1,D2
  
  if (SDIM.eq.2) then
   R=abs(P(1))
   Z=abs(P(2))
  elseif (SDIM.eq.3) then
-  R=abs(sqrt(P(1)**2+P(SDIM)**2))
+  R=abs(sqrt(P(1)**2+P(3)**2))
   Z=abs(P(2))
  else
   print *,"Dimension bust at DIST_FINITE_CYLINDER"
@@ -1636,6 +1657,8 @@ end subroutine TEMPERATURE_CRYOGENIC_TANK_MK
 !***********************************************
 ! called by the boundary condition routine
 ! might be called at initialization, so put a placeholder pressure here.
+!
+!x(SDIM) is the vertical direction of gravity.
 subroutine CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES,rho_hyd)
 use probcommon_module
 use global_utility_module
@@ -1711,7 +1734,7 @@ endif
 return 
 end subroutine CRYOGENIC_TANK_MK_PRES_UTIL
 
-
+!x(SDIM) is the vertical direction for gravity.
 subroutine CRYOGENIC_TANK_MK_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -1735,6 +1758,7 @@ call CRYOGENIC_TANK_MK_PRES_UTIL(x,PRES,rho_hyd)
 return 
 end subroutine CRYOGENIC_TANK_MK_PRES
 
+!x(SDIM) is the vertical direction for gravity.
 subroutine CRYOGENIC_TANK_MK_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 use global_utility_module
@@ -1884,7 +1908,8 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_STATE
 
- ! dir=1..sdim  side=1..2
+! dir=1..sdim  side=1..2
+! xghost(SDIM)=vertical direction for gravity.
 subroutine CRYOGENIC_TANK_MK_LS_BC(xwall,xghost,t,LS, &
    LS_in,dir,side,dx,nmat)
 use probcommon_module
@@ -1918,7 +1943,8 @@ return
 end subroutine CRYOGENIC_TANK_MK_LS_BC
 
 
- ! dir=1..sdim  side=1..2 veldir=1..sdim
+! dir=1..sdim  side=1..2 veldir=1..sdim
+! xghost(SDIM)=vertical direction for gravity.
 subroutine CRYOGENIC_TANK_MK_VEL_BC(xwall,xghost,t,LS, &
    VEL,VEL_in,veldir,dir,side,dx,nmat)
 use probcommon_module
@@ -1959,7 +1985,8 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_VEL_BC
 
- ! dir=1..sdim  side=1..2
+! xghost(SDIM)=vertical direction for gravity.
+! dir=1..sdim  side=1..2
 subroutine CRYOGENIC_TANK_MK_PRES_BC(xwall,xghost,t,LS, &
    PRES,PRES_in,dir,side,dx,nmat)
 use probcommon_module
@@ -1995,7 +2022,8 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_PRES_BC
 
- ! dir=1..sdim  side=1..2
+! xghost(SDIM)=vertical direction for gravity.
+! dir=1..sdim  side=1..2
 subroutine CRYOGENIC_TANK_MK_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
 use probcommon_module
@@ -2045,6 +2073,7 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_STATE_BC
 
+! x(SDIM)=vertical direction for gravity.
 subroutine CRYOGENIC_TANK_MK_HEATSOURCE( &
      im,VFRAC, &
      time, &
@@ -2106,6 +2135,7 @@ endif
 return
 end subroutine CRYOGENIC_TANK_MK_HEATSOURCE
 
+! SDIM=vertical direction of gravity
 subroutine CRYOGENIC_TANK_MK_SUMINT(GRID_DATA_IN,increment_out1, &
                 increment_out2,nsum1,nsum2,isweep)
 use probcommon_module_types
@@ -2365,6 +2395,7 @@ INTEGER_T :: im,iregion,dir
  
 end subroutine CRYOGENIC_TANK_MK_INIT_REGIONS_LIST
 
+! x(SDIM)=vertical direction for gravity
 subroutine CRYOGENIC_TANK_MK_CHARFN_REGION(region_id,x,cur_time,charfn_out)
 use probcommon_module
 use global_utility_module
@@ -2559,6 +2590,7 @@ endif
 end subroutine CRYOGENIC_TANK_MK_CHARFN_REGION
 
 
+! x(SDIM)=vertical direction for gravity
 subroutine CRYOGENIC_TANK_MK_THERMAL_K(x,dx,cur_time, &
   density, &
   temperature, &
@@ -2820,6 +2852,7 @@ end subroutine CRYOGENIC_TANK_MK_THERMAL_K
 !
 ! This routine only called when "law_of_the_wall==1" associated with 
 ! im_fluid.
+! SDIM=vertical direction for gravity.
 subroutine wallfunc_thermocorrelation( &
   dir, & ! =1,2,3
   data_dir, & ! =0,1,2
@@ -3094,6 +3127,7 @@ endif
 end subroutine wallfunc_thermocorrelation
 
 
+! SDIM=vertical direction for gravity.
 subroutine CRYOGENIC_TANK_MK_wallfunc( &
   dir, & ! =1,2,3
   data_dir, & ! =0,1,2
@@ -3267,6 +3301,7 @@ end subroutine CRYOGENIC_TANK_MK_K_EFFECTIVE
 
 
 ! returns (1/w) where w>>1 in "trouble" regions
+! SDIM is vertical direction of gravity
 subroutine CRYOGENIC_TANK_MK_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
 use probcommon_module
 IMPLICIT NONE
