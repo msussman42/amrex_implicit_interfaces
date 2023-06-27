@@ -35,9 +35,15 @@ INTEGER_T, PARAMETER :: TANK_MK_GEOM_DESCRIPTOR=ZBOT_FLIGHT_ID
 
 INTEGER_T :: num_aux_expect
 
+! x3D(1)=x(dir_x)=x(1)
+! x3D(2)=x(dir_z)=x(SDIM)
+! x3D(3)=0.0d0 if SDIM==2
+! x3D(3)=x(dir_y)=x(2) if SDIM==3
 INTEGER_T, PARAMETER :: dir_x = 1
 INTEGER_T, PARAMETER :: dir_z = SDIM
-INTEGER_T :: dir_y
+! dir_y is not used if SDIM==2
+! dir_y=2 if SDIM==3
+INTEGER_T :: dir_y  
 
 !! MIDDLE OF THE TANK IS AT Z=0 
 ! Tank inner radius
@@ -558,8 +564,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   num_aux_expect=0
  
   if (SDIM.eq.2) then
-   dir_y=-1
+   dir_y=-1  ! dir_y is not used if SDIM==2
   else if (SDIM.eq.3) then
+    !x3D(1)=x(1)   x3D(2)=x(SDIM)   x3D(3)=x(dir_y)=x(2)
    dir_y=2
   else
    print *,"dimension bust"
@@ -700,7 +707,7 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
   use global_utility_module
   IMPLICIT NONE
 
-  REAL_T, INTENT(in) :: x(SDIM)
+  REAL_T, INTENT(in) :: x(3)
   REAL_T, INTENT(out) :: LS
   REAL_T :: xlo,xhi,ylo,yhi,xcen
 
@@ -716,9 +723,9 @@ end subroutine CRYOGENIC_TANK_MK_OPEN_AUXFILE
    ylo=TANK_MK_NOZZLE_BASE-TANK_MK_HEIGHT
    yhi=TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT
    if (SDIM.eq.2) then
-    call squaredist(x(dir_x),x(dir_z),xlo,xhi,ylo,yhi,LS)
+    call squaredist(x(1),x(2),xlo,xhi,ylo,yhi,LS)
    else if (SDIM.eq.3) then
-    call cylinderdist(x(dir_x),x(dir_y),x(dir_z),xcen,xcen,xhi,ylo,yhi,LS)
+    call cylinderdist(x(1),x(3),x(2),xcen,xcen,xhi,ylo,yhi,LS)
    else
     print *,"sdim invalid"
     stop
@@ -760,7 +767,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
  INTEGER_T :: rotx,roty,rotz
  INTEGER_T :: rot_dir
  INTEGER_T :: dir
-
+ REAL_T    :: sign_term
+ REAL_T    :: Q(2,2)
  
  do dir=1,3                  ! bug fixed        
   xfoot(dir)=xphys(dir)      
@@ -771,9 +779,12 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   xdisp_amplitude=xblob7   
   xdisp_freq=yblob7
 
-  xfoot(dir_x)=xphys(dir_x)-  &
+  xfoot(1)=xphys(1)-  &
      xdisp_amplitude*sin(xdisp_freq*t)
-  velphys(dir_x)=  &
+
+   !xphys=xfoot+A*sin(wt)
+   !velphys=Aw cos(wt)
+  velphys(1)=  &
      xdisp_amplitude*xdisp_freq*cos(xdisp_freq*t)
  elseif(NINT(radblob7).eq.2)then         
   !counter clockwise rotation with z axis. angular velocity zblob7 
@@ -783,49 +794,66 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 
   if(SDIM.eq.3)then
    if(rot_dir.eq.3)then
-    rotx=dir_x
-    roty=dir_z
-    rotz=dir_y
+    rotx=1
+    roty=2
+    rotz=rot_dir
    elseif(rot_dir.eq.1)then
-    rotx=dir_z
-    roty=dir_y
-    rotz=dir_x
+    rotx=2
+    roty=3
+    rotz=rot_dir
    elseif(rot_dir.eq.2)then
-    rotx=dir_x
-    roty=dir_y
-    rotz=dir_z
+    rotx=1
+    roty=3
+    rotz=rot_dir
    else
     print *,"rot_dir invalid"
     stop
    endif
-   xfoot(rotx)= cos(xdisp_angV*t)*xphys(rotx)- &
-              ((-1)**(mod(rot_dir,2)))*sin(xdisp_angV*t)*xphys(roty)
-   xfoot(roty)=((-1)**(mod(rot_dir,2)))*sin(xdisp_angV*t)*xphys(rotx)+ &
-               cos(xdisp_angV*t)*xphys(roty) 
+
+    !xfoot=Q(t) xphys
+    !xphys=Q(t)^{T} xfoot
+    !velphys=Q'(t)^{T} xfoot = Q'(t)^{T} Q(t) xphys
+    !
+    !Q= cos(wt)              -sign_term sin(wt)
+    !   sign_term*sin(wt)    cos(wt)
+    !
+    !Q'=w ( -sin(wt)          -sign_term cos(wt)
+    !       sign_term*cos(wt) -sin(wt)  )
+    !
+    !Q'^{T}=w ( -sin(wt)           sign_term cos(wt)
+    !           -sign_term*cos(wt) -sin(wt)  )
+    !
+    !Q'^{T}Q=w ( 0           sign_term 
+    !            -sign_term   0 )
+
+   sign_term=(-1.0d0)**(mod(rot_dir,2))
+   Q(1,1)=cos(xdisp_angV*t)
+   Q(1,2)=-sign_term*sin(xdisp_angV*t)
+   Q(2,1)=-Q(1,2)
+   Q(2,2)=Q(1,1)
+
+   xfoot(rotx)= Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
+   xfoot(roty)=Q(2,1)*xphys(rotx)+Q(2,2)*xphys(roty) 
    xfoot(rotz)=xphys(rotz)
 
-   velphys(rotx)=xdisp_angV*  &
-           (-sin(xdisp_angV*t)*xphys(rotx)+ &
-           ((-1)**(mod(rot_dir,2)))*cos(xdisp_angV*t)*xphys(roty))
-   velphys(roty)=xdisp_angV* &
-             (-((-1)**(mod(rot_dir,2)))*cos(xdisp_angV*t)*xphys(rotx)- &
-             sin(xdisp_angV*t)*xphys(roty))
+   velphys(rotx)=sign_term*xdisp_angV*xphys(roty)
+   velphys(roty)=-sign_term*xdisp_angV*xphys(rotx)
    velphys(rotz)=0.0d0
   elseif(SDIM.eq.2)then
    rotx=1
    roty=2
-   xfoot(rotx)= cos(xdisp_angV*t)*xphys(rotx)+ &
-                sin(xdisp_angV*t)*xphys(roty)
-   xfoot(roty)= -sin(xdisp_angV*t)*xphys(rotx)+ &
-                cos(xdisp_angV*t)*xphys(roty) 
+
+   Q(1,1)=cos(xdisp_angV*t)
+   Q(1,2)=sin(xdisp_angV*t)
+   Q(2,1)=-Q(1,2)
+   Q(2,2)=Q(1,1)
+
+   xfoot(rotx)= Q(1,1)*xphys(rotx)+Q(1,2)*xphys(roty)
+   xfoot(roty)=Q(2,1)*xphys(rotx)+Q(2,2)*xphys(roty) 
    xfoot(rotz)=xphys(rotz)
 
-   velphys(rotx)=xdisp_angV*  &
-           (-sin(xdisp_angV*t)*xphys(rotx)- &
-             cos(xdisp_angV*t)*xphys(roty))
-   velphys(roty)=xdisp_angV* &
-             (cos(xdisp_angV*t)*xphys(rotx)- &
-             sin(xdisp_angV*t)*xphys(roty))
+   velphys(rotx)=-xdisp_angV*xphys(roty)
+   velphys(roty)=xdisp_angV*xphys(rotx)
    velphys(rotz)=0.0d0
   else
    print *,"SDIM invalid"
@@ -837,6 +865,40 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
  endif
 
  end subroutine rigid_displacement
+
+  ! swap y and z in 3D.
+  ! no change in 2D.
+ subroutine convert_to_x3D(x,x3D)
+ IMPLICIT NONE
+
+ REAL_T, INTENT(in) :: x(SDIM)
+ REAL_T, INTENT(out) :: x3D(3)
+
+ if ((dir_x.eq.1).and.(dir_z.eq.SDIM)) then
+  x3D(1)=x(dir_x)
+  x3D(2)=x(dir_z)
+ else
+  print *,"expecting dir_x=1 and dir_z=sdim"
+  stop
+ endif
+
+ if (SDIM.eq.2) then
+  x3D(3)=0.0d0
+ else if (SDIM.eq.3) then
+
+  if (dir_y.eq.2) then
+   x3D(3)=x(dir_y)
+  else
+   print *,"expecting dir_y=2"
+   stop
+  endif
+
+ else
+  print *,"dimension bust"
+  stop
+ endif
+
+ end subroutine convert_to_x3D
 
  subroutine CRYOGENIC_TANK_MK_LS(x,t,LS,nmat)
   use probcommon_module
@@ -851,9 +913,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   INTEGER_T :: called_from_heater_source
 
   REAL_T :: x3D(3)
-  REAL_T :: xfoot(3)
+  REAL_T :: xfoot3D(3)
   REAL_T :: xvel(3)
-  REAL_T :: xtemp(3)
   INTEGER_T auxcomp
   REAL_T :: LS_heater_a
   REAL_T :: LS_heater_b
@@ -874,19 +935,9 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    stop
   endif
 
-  x3D(1)=x(dir_x)
-  x3D(2)=x(dir_z)
+  call convert_to_x3D(x,x3D)
 
-  if (SDIM.eq.2) then
-   x3D(3)=0.0d0
-  else if (SDIM.eq.3) then
-   x3D(3)=x(dir_y)
-  else
-   print *,"dimension bust"
-   stop
-  endif
-
-  call rigid_displacement(xfoot,t,x3D,xvel)
+  call rigid_displacement(xfoot3D,t,x3D,xvel)
 
    ! material 1= liquid  (e.g. Freon 113)
    ! material 2= vapor  
@@ -894,16 +945,16 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   if ((num_materials.eq.3).and.(probtype.eq.423)) then
    ! liquid
    if (TANK_MK_INTERFACE_RADIUS.eq.0.0d0) then
-    LS(1)=TANK_MK_INTERFACE_LOCATION-x(dir_z)
+    LS(1)=TANK_MK_INTERFACE_LOCATION-xfoot3D(2)
    else if (TANK_MK_INTERFACE_RADIUS.gt.0.0d0) then
     if (SDIM.eq.2) then
-     LS(1)=sqrt((x(dir_x)-TANK_MK_BUBBLE_X)**2+&
-                (x(dir_z)-TANK_MK_BUBBLE_Y)**2)&
+     LS(1)=sqrt((xfoot3D(1)-TANK_MK_BUBBLE_X)**2+&
+                (xfoot3D(2)-TANK_MK_BUBBLE_Y)**2)&
                -TANK_MK_INTERFACE_RADIUS
     else if (SDIM.eq.3) then 
-     LS(1)=sqrt((x(dir_x)-TANK_MK_BUBBLE_X)**2+&
-                (x(dir_y)-TANK_MK_BUBBLE_Y)**2+&
-                (x(dir_z)-TANK_MK_BUBBLE_Z)**2)&
+     LS(1)=sqrt((xfoot3D(1)-TANK_MK_BUBBLE_X)**2+&
+                (xfoot3D(3)-TANK_MK_BUBBLE_Y)**2+&
+                (xfoot3D(2)-TANK_MK_BUBBLE_Z)**2)&
                -TANK_MK_INTERFACE_RADIUS
     else
      print *,"dimension bust"
@@ -927,19 +978,19 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
     endif
 
 !    LS(3)=SOLID_TOP_HALF_DIST(x)
-    LS(3)=SOLID_TOP_HALF_DIST(xfoot)
+    LS(3)=SOLID_TOP_HALF_DIST(xfoot3D)
 
     if (axis_dir.eq.0) then
      ! do nothing
     else if (axis_dir.eq.1) then ! TPCE
-      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot,nozzle_dist)
+      call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,nozzle_dist)
 !     call CRYOGENIC_TANK_MK_LS_NOZZLE(x,nozzle_dist)
      if (nozzle_dist.gt.LS(3)) then ! nozzle_dist>0 in the nozzle
       LS(3)=nozzle_dist
      endif
      called_from_heater_source=0
      !LS_A>0 in heater
-     call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot,LS_A,called_from_heater_source) 
+     call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source) 
 !     call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source) 
      if (LS_A.gt.LS(3)) then
       LS(3)=LS_A
@@ -957,22 +1008,22 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      stop
     endif
     auxcomp=1
-    call interp_from_aux_grid(auxcomp,xfoot,LS_heater_a)
+    call interp_from_aux_grid(auxcomp,xfoot3D,LS_heater_a)
     LS(3)=LS_heater_a
     auxcomp=2
-    call interp_from_aux_grid(auxcomp,xfoot,LS_heater_b)
+    call interp_from_aux_grid(auxcomp,xfoot3D,LS_heater_b)
     LS(3)=max(LS(3),LS_heater_b)
     auxcomp=5
-    call interp_from_aux_grid(auxcomp,xfoot,LS_tank)
+    call interp_from_aux_grid(auxcomp,xfoot3D,LS_tank)
     LS(3)=max(LS(3),LS_tank)
     auxcomp=6
-    call interp_from_aux_grid(auxcomp,xfoot,LS_nozzle)
+    call interp_from_aux_grid(auxcomp,xfoot3D,LS_nozzle)
     LS(3)=max(LS(3),LS_nozzle)
     if (TANK_MK_AUX_THICK_WALLS.eq.1) then
      ! do nothing
     else if (TANK_MK_AUX_THICK_WALLS.eq.0) then
      auxcomp=7
-     call interp_from_aux_grid(auxcomp,xfoot,LS_LAD_housing)
+     call interp_from_aux_grid(auxcomp,xfoot3D,LS_LAD_housing)
      LS(3)=max(LS(3),LS_LAD_housing)
     else 
      print *,"TANK_MK_AUX_THICK_WALLS invalid"
@@ -1010,12 +1061,12 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   REAL_T z_crit
   REAL_T r_cyl
 
-  zdiff=x(dir_z)-TANK_MK_END_CENTER
+  zdiff=x(2)-TANK_MK_END_CENTER
 
   if (SDIM.eq.2) then
-   r_cyl=abs(x(dir_x))
+   r_cyl=abs(x(1))
   else if (SDIM.eq.3) then
-   r_cyl=sqrt(x(dir_x)**2+x(dir_y)**2)
+   r_cyl=sqrt(x(1)**2+x(SDIM)**2)
   else
    print *,"sdim invalid"
    stop
@@ -1096,7 +1147,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   INTEGER_T dir
 
   REAL_T :: x3D(3)
-  REAL_T :: xfoot(3)
+  REAL_T :: xfoot3D(3)
   REAL_T :: xvel(3)
 
   if (nmat.eq.num_materials) then
@@ -1106,19 +1157,9 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    stop
   endif
 
-  x3D(1)=x(dir_x)
-  x3D(2)=x(dir_z)
+  call convert_to_x3D(x,x3D)
 
-  if (SDIM.eq.2) then
-   x3D(3)=0.0d0
-  else if (SDIM.eq.3) then
-   x3D(3)=x(dir_y)
-  else
-   print *,"dimension bust"
-   stop
-  endif
-
-  call rigid_displacement(xfoot,t,x3D,xvel)
+  call rigid_displacement(xfoot3D,t,x3D,xvel)
 
   if ((velsolid_flag.eq.0).or. &
       (velsolid_flag.eq.1)) then
@@ -1160,9 +1201,17 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
       VEL(dir)=0.0d0
      enddo
  !    VEL(dir_x)=xvel(dir_x)
-     do dir=1,SDIM
-      VEL(dir)=xvel(dir)
-     enddo
+     if (SDIM.eq.2) then
+      VEL(1)=xvel(1)
+      VEL(2)=xvel(2)
+     else if (SDIM.eq.3) then
+      VEL(1)=xvel(1)
+      VEL(SDIM)=xvel(2)
+      VEL(2)=xvel(3)
+     else
+      print *,"dimension bust"
+      stop
+     endif
     else if ((LS(3).le.zero).and. &
              (velsolid_flag.eq.0)) then
      do dir=1,SDIM
@@ -1185,9 +1234,19 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
       VEL(dir)=0.0d0
      enddo
  !    VEL(dir_x)=xvel(dir_x)
-     do dir=1,SDIM
-      VEL(dir)=xvel(dir)
-     enddo
+
+     if (SDIM.eq.2) then
+      VEL(1)=xvel(1)
+      VEL(2)=xvel(2)
+     else if (SDIM.eq.3) then
+      VEL(1)=xvel(1)
+      VEL(SDIM)=xvel(2)
+      VEL(2)=xvel(3)
+     else
+      print *,"dimension bust"
+      stop
+     endif
+
     else if ((LS(3).le.zero).and. &
              (velsolid_flag.eq.0)) then
      do dir=1,SDIM
@@ -1216,7 +1275,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
 REAL_T function SOLID_TOP_HALF_DIST(P)
  ! Returns the signed distance function to the
  ! cylindrical tank with spherical ends.
- ! The tank is symmetrical to x(dir_z)=0;
+ ! The tank is symmetrical to x(SDIM)=0;
  ! The axis of cylinder is along dim=SDIM direction
  ! Inside the tank < 0
  ! Outside the tank > 0
@@ -1227,10 +1286,10 @@ REAL_T function SOLID_TOP_HALF_DIST(P)
  
  if (SDIM.eq.2) then
   R=abs(P(1))
-  Z=abs(P(SDIM))
+  Z=abs(P(2))
  elseif (SDIM.eq.3) then
-  R=abs(sqrt(P(1)**2+P(2)**2))
-  Z=abs(P(SDIM))
+  R=abs(sqrt(P(1)**2+P(SDIM)**2))
+  Z=abs(P(2))
  else
   print *,"Dimension bust at DIST_FINITE_CYLINDER"
   stop
@@ -1601,24 +1660,24 @@ if(fort_material_type(2).eq.0) then
   ! Flat open top x_2: TANK_MK_HEIGHT/two
   ! Known pressure(P_1) at top (outflow_pressure)
   ! P_2=P_1 + rho*g*(z_1-z_2)  [g>0]
-  if (x(dir_z).ge.TANK_MK_INTERFACE_LOCATION) then
+  if (x(SDIM).ge.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
-       fort_denconst(2)*(TANK_MK_HEIGHT/two-x(dir_z))* &
+       fort_denconst(2)*(TANK_MK_HEIGHT/two-x(SDIM))* &
        (abs(gravity_vector(gravity_dir))) 
-  elseif (x(dir_z).lt.TANK_MK_INTERFACE_LOCATION) then
+  elseif (x(SDIM).lt.TANK_MK_INTERFACE_LOCATION) then
    PRES=TANK_MK_INITIAL_PRESSURE+&
        fort_denconst(2)*(TANK_MK_HEIGHT/two-TANK_MK_INTERFACE_LOCATION)* &
        (abs(gravity_vector(gravity_dir)))+ &
-       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))* &
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(SDIM))* &
        (abs(gravity_vector(gravity_dir)))
   else
-   print *,"x(dir_z) is invalid in CRYOGENIC_TANK_MK_PRES!"
+   print *,"x(SDIM) is invalid in CRYOGENIC_TANK_MK_PRES!"
    stop
   endif
 
  else if (simple_hyd_p.eq.1) then
   rho_hyd=fort_denconst(1)
-  PRES=-abs(gravity_vector(gravity_dir))*rho_hyd*(x(dir_z)-probhiy-probhiy)
+  PRES=-abs(gravity_vector(gravity_dir))*rho_hyd*(x(SDIM)-probhiy-probhiy)
  else
   print *,"simple_hyd_p invalid"
   stop
@@ -1628,20 +1687,20 @@ elseif (fort_material_type(2).eq.TANK_MK_MATERIAL_TYPE) then
  ! Known pressure(P_1) at top (based on given density and temperature)
  ! P_2=P_1 * exp(g*(z_1-z_2)/(R_sp*T_0))  [g>0]
  rho_hyd=fort_denconst(2)
- if (x(dir_z).ge.TANK_MK_INTERFACE_LOCATION) then
+ if (x(SDIM).ge.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
-       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(dir_z))* &
+       exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-x(SDIM))* &
        abs(gravity_vector(gravity_dir))/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))
- elseif (x(dir_z).lt.TANK_MK_INTERFACE_LOCATION) then
+ elseif (x(SDIM).lt.TANK_MK_INTERFACE_LOCATION) then
   PRES=TANK_MK_INITIAL_PRESSURE*&
        exp((TANK_MK_END_CENTER+TANK_MK_END_RADIUS-TANK_MK_INTERFACE_LOCATION)*&
             abs(gravity_vector(gravity_dir))/&
            (TANK_MK_R_UNIV/fort_molar_mass(2)*fort_initial_temperature(2)))+&
-       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(dir_z))* &
+       fort_denconst(1)*(TANK_MK_INTERFACE_LOCATION-x(SDIM))* &
                         (abs(gravity_vector(gravity_dir)))
  else
-  print *,"x(dir_z) is invalid in CRYOGENIC_TANK_MK_PRES!"
+  print *,"x(SDIM) is invalid in CRYOGENIC_TANK_MK_PRES!"
   stop
  endif
 else
@@ -2152,7 +2211,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    endif
   enddo
   support_r=sqrt(support_r) 
-  dx_coarsest=GRID_DATA_IN%dx(dir_z)
+  dx_coarsest=GRID_DATA_IN%dx(SDIM)
   do ilev=0,level-1
    dx_coarsest=2.0d0*dx_coarsest
   enddo
@@ -2320,26 +2379,18 @@ REAL_T :: shell_R,shell_center,LS_SHELL,LS_A,LS_nozzle,zdiff
 INTEGER_T :: called_from_heater_source
 REAL_T :: r_cyl
 REAL_T :: x3D(3)
+REAL_T :: xvel(3)
+REAL_T :: xfoot3D(3)
 INTEGER_T auxcomp
 REAL_T :: LS_tank(num_materials)
 
-
- x3D(1)=x(dir_x)
- x3D(2)=x(dir_z)
-
- if (SDIM.eq.2) then
-  x3D(3)=0.0d0
- else if (SDIM.eq.3) then
-  x3D(3)=x(dir_y)
- else
-  print *,"dimension bust"
-  stop
- endif
+ call convert_to_x3D(x,x3D)
+ call rigid_displacement(xfoot3D,cur_time,x3D,xvel)
 
  if (SDIM.eq.2) then
-  r_cyl=abs(x(dir_x))
+  r_cyl=abs(xfoot3D(1))
  else if (SDIM.eq.3) then
-  r_cyl=sqrt(x(dir_x)**2+x(dir_y)**2)
+  r_cyl=sqrt(xfoot3D(1)**2+xfoot3D(3)**2)
  else
   print *,"sdim invalid"
   stop
@@ -2353,13 +2404,13 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    if (region_id.eq.1) then
     if ((r_cyl.le.TANK_MK_HEATER_R).and.&
         (r_cyl.ge.TANK_MK_HEATER_R_LOW).and.&
-        (x(dir_z).ge.TANK_MK_HEATER_LOW).and.&
-        (x(dir_z).le.TANK_MK_HEATER_HIGH)) then
+        (xfoot3D(2).ge.TANK_MK_HEATER_LOW).and.&
+        (xfoot3D(2).le.TANK_MK_HEATER_HIGH)) then
      charfn_out=one
     else if ((r_cyl.gt.TANK_MK_HEATER_R).or. &
              (r_cyl.lt.TANK_MK_HEATER_R_LOW).or. &
-             (x(dir_z).lt.TANK_MK_HEATER_LOW).or. &
-             (x(dir_z).gt.TANK_MK_HEATER_HIGH)) then
+             (xfoot3D(2).lt.TANK_MK_HEATER_LOW).or. &
+             (xfoot3D(2).gt.TANK_MK_HEATER_HIGH)) then
      charfn_out=0.0d0
     else
      print *,"position bust"
@@ -2379,7 +2430,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
   if (region_id.eq.1) then
    called_from_heater_source=1
    !LS_A>0 in heater
-   call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source) 
+   call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source) 
    if (LS_A.ge.0.0d0) then
     charfn_out=one
    else if (LS_A.le.0.0d0) then
@@ -2394,8 +2445,8 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
        (TANK_MK_NOZZLE_HT.gt.0.0d0).and. &
        (TANK_MK_NOZZLE_THICK_OUTLET.gt.0.0d0)) then
     if ((r_cyl.le.TANK_MK_NOZZLE_RAD).and. &
-        (x(dir_z).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
-        (x(dir_z).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
+        (xfoot3D(2).gt.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT).and. &
+        (xfoot3D(2).le.TANK_MK_NOZZLE_BASE+TANK_MK_NOZZLE_HT+ &
                  TANK_MK_NOZZLE_THICK_OUTLET)) then
      charfn_out=one
     else
@@ -2406,14 +2457,14 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
     stop
    endif
   else if (region_id.eq.3) then ! outflow
-   call CRYOGENIC_TANK_MK_LS_NOZZLE(x,LS_nozzle)
+   call CRYOGENIC_TANK_MK_LS_NOZZLE(xfoot3D,LS_nozzle)
    if (LS_nozzle.ge.0.0d0) then
     charfn_out=0.0d0
    else if (LS_nozzle.le.0.0d0) then
     if ((TANK_MK_END_CENTER.gt.0.0d0).and. &
         (TANK_MK_HEATER_THICK.gt.0.0d0).and. &
         (TANK_MK_END_RADIUS.gt.0.0d0)) then
-     zdiff=x(dir_z)+TANK_MK_END_CENTER
+     zdiff=xfoot3D(2)+TANK_MK_END_CENTER
      if (zdiff.ge.0.0d0) then
       charfn_out=0.0d0
      else if (zdiff.le.-TANK_MK_END_RADIUS) then
@@ -2453,7 +2504,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
 
   if (region_id.eq.1) then ! heater A (top)
    auxcomp=1
-   call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    if (LS_A.ge.0.0d0) then
     charfn_out=one
    else if (LS_A.le.0.0d0) then
@@ -2464,7 +2515,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    endif
   else if (region_id.eq.2) then ! inflow
    auxcomp=3
-   call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    call CRYOGENIC_TANK_MK_LS(x,cur_time,LS_tank,num_materials)
    LS_A=min(LS_A,-LS_tank(3))
    if (LS_A.ge.0.0d0) then
@@ -2477,7 +2528,7 @@ if ((num_materials.eq.3).and.(probtype.eq.423)) then
    endif
   else if (region_id.eq.3) then ! outflow
    auxcomp=4
-   call interp_from_aux_grid(auxcomp,x3D,LS_A)
+   call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    call CRYOGENIC_TANK_MK_LS(x,cur_time,LS_tank,num_materials)
    LS_A=min(LS_A,-LS_tank(3))
    if (LS_A.ge.0.0d0) then
@@ -2547,27 +2598,20 @@ REAL_T :: LS_A
 INTEGER_T :: called_from_heater_source
 REAL_T :: r_cyl
 REAL_T :: x3D(3)
+REAL_T :: xfoot3D(3)
+REAL_T :: xvel(3)
 INTEGER_T auxcomp
 
 
  call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
- x3D(1)=x(dir_x)
- x3D(2)=x(dir_z)
+ call convert_to_x3D(x,x3D)
+ call rigid_displacement(xfoot3D,cur_time,x3D,xvel)
 
  if (SDIM.eq.2) then
-  x3D(3)=0.0d0
+  r_cyl=abs(xfoot3D(1))
  else if (SDIM.eq.3) then
-  x3D(3)=x(dir_y)
- else
-  print *,"dimension bust"
-  stop
- endif
-
- if (SDIM.eq.2) then
-  r_cyl=abs(x(dir_x))
- else if (SDIM.eq.3) then
-  r_cyl=sqrt(x(dir_x)**2+x(dir_y)**2)
+  r_cyl=sqrt(xfoot3D(1)**2+xfoot3D(3)**2)
  else
   print *,"sdim invalid"
   stop
@@ -2602,12 +2646,13 @@ if ((im.ge.1).and.(im.le.num_materials)) then
    ! do nothing
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
    if ((r_cyl.le.TANK_MK_HEATER_R).and.&
-       (r_cyl.ge.TANK_MK_HEATER_R_LOW-dx(dir_x)).and.&
-       (x(dir_z).ge.TANK_MK_HEATER_LOW).and.&
-       (x(dir_z).le.TANK_MK_HEATER_HIGH)) then
+       (r_cyl.ge.TANK_MK_HEATER_R_LOW-dx(1)).and.&
+       (xfoot3D(2).ge.TANK_MK_HEATER_LOW).and.&
+       (xfoot3D(2).le.TANK_MK_HEATER_HIGH)) then
     thermal_k=fort_heatviscconst(im)* &
-      max(one,dx(dir_x)/fort_thermal_microlayer_size(im))
-   else if ((abs(x(dir_z)).ge.TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
+      max(one,dx(1)/fort_thermal_microlayer_size(im))
+   else if ((abs(xfoot3D(2)).ge. &
+             TANK_MK_INSULATE_THICK+TANK_MK_HEIGHT/2.0d0).or. &
             (r_cyl.ge.TANK_MK_INSULATE_R_HIGH)) then
     if (im.eq.3) then
      thermal_k=0.0d0
@@ -2617,7 +2662,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
      print *,"im invalid"
      stop
     endif
-   else if ((abs(x(dir_z)).le.TANK_MK_HEIGHT/2.0d0).and. &
+   else if ((abs(xfoot3D(2)).le.TANK_MK_HEIGHT/2.0d0).and. &
             (r_cyl.ge.TANK_MK_INSULATE_R)) then
     if (im.eq.3) then
      thermal_k=0.0d0
@@ -2654,7 +2699,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
      print *,"Cp invalid"
      stop
     endif
-    xi=x(dir_z)-TANK_MK_HEATER_LOW
+    xi=xfoot3D(2)-TANK_MK_HEATER_LOW
     R=r_cyl
     if ((xi.gt.0.0d0).and. &
         (xi.le.TANK_MK_HEATER_WALL_MODEL).and. &
@@ -2691,7 +2736,7 @@ if ((im.ge.1).and.(im.le.num_materials)) then
       print *,"turb_flag invalid"
       stop
      endif 
-     thermal_k=max(thermal_k,alpha*dx(dir_x))
+     thermal_k=max(thermal_k,alpha*dx(1))
     else if ((xi.le.0.0d0).or. &
              (xi.ge.TANK_MK_HEATER_WALL_MODEL).or. &
              (nrm(1).ne.-one).or. &
@@ -2719,19 +2764,19 @@ if ((im.ge.1).and.(im.le.num_materials)) then
   else if ((im.eq.1).or.(im.eq.3)) then ! liquid or solid
    called_from_heater_source=1
    if (axis_dir.eq.1) then
-    call CRYOGENIC_TANK_MK_LS_HEATER_A(x,LS_A,called_from_heater_source)
+    call CRYOGENIC_TANK_MK_LS_HEATER_A(xfoot3D,LS_A,called_from_heater_source)
    else if (axis_dir.eq.2) then
     auxcomp=1 ! heater A (top)
-    call interp_from_aux_grid(auxcomp,x3D,LS_A)
+    call interp_from_aux_grid(auxcomp,xfoot3D,LS_A)
    else
     print *,"axis_dir invalid"
     stop
    endif
 
-   if (LS_A.gt.-dx(dir_x)) then
+   if (LS_A.gt.-dx(1)) then
     thermal_k=fort_heatviscconst(im)* &
-      max(one,dx(dir_x)/fort_thermal_microlayer_size(im))
-   else if (LS_A.le.-dx(dir_x)) then
+      max(one,dx(1)/fort_thermal_microlayer_size(im))
+   else if (LS_A.le.-dx(1)) then
     if (im.eq.3) then
      thermal_k=0.0d0
     else if (im.eq.1) then
@@ -2847,10 +2892,10 @@ endif
 mu_w=fort_viscconst(im_fluid) 
 rho_w=fort_denconst(im_fluid)
 
-if (dx(dir_x).gt.0.0d0) then
+if (dx(1).gt.0.0d0) then
  ! do nothing
 else
- print *,"dx(dir_x) invalid"
+ print *,"dx(1) invalid"
  stop
 endif
 
@@ -2983,7 +3028,7 @@ if ((xi.gt.0.0d0).and. &
 
   ! it is known that converged solutions can be obtained on a 128x512 grid.
   ! on a 16x64 grid, choose a thickness associated to the finer grid.
-  macro_scale_thickness=dx(dir_x)/16.0d0
+  macro_scale_thickness=dx(1)/16.0d0
   if ((macro_scale_thickness.lt.dtemp).or.(1.eq.1)) then
    macro_scale_thickness=dtemp
   endif
@@ -3017,11 +3062,11 @@ if ((xi.gt.0.0d0).and. &
 
   ! do not prescribe a wall velocity if near (or in) another fluid.
   !
- if ((dist_probe.lt.dx(dir_z)).or. &
-     (dist_fluid.lt.dx(dir_z))) then
+ if ((dist_probe.lt.dx(SDIM)).or. &
+     (dist_fluid.lt.dx(SDIM))) then
   ughost_tngt=0.0d0
- else if ((dist_probe.ge.dx(dir_z)).and. &
-          (dist_fluid.ge.dx(dir_z))) then
+ else if ((dist_probe.ge.dx(SDIM)).and. &
+          (dist_fluid.ge.dx(SDIM))) then
   ! do nothing
  else
   print *,"dist_probe or dist_fluid is NaN"
@@ -3034,7 +3079,7 @@ if ((xi.gt.0.0d0).and. &
   print *,"Jtemp=",Jtemp
   print *,"R=",R
   print *,"rho_w=",rho_w
-  print *,"dx(dir_x)=",dx(dir_x)
+  print *,"dx(1)=",dx(1)
   print *,"ughost_tngt=",ughost_tngt
  endif
 
