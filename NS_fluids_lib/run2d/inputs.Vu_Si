@@ -197,7 +197,7 @@ ns.viscconst=21.8e-3 1.08e-3 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 ns.denconst=2.583 0.129 2.350 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 
 #added mass 
-ns.denconst_interface_added=1.0e+2 1.0e+2 1.0e+2 1.0e+2 1.0e+2 1.0e+2
+ns.denconst_interface_added=1.0e+3 1.0e+3 1.0e+3 1.0e+3 1.0e+3 1.0e+3
 ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
