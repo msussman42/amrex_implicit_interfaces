@@ -1514,6 +1514,7 @@ protected:
 
     static Real total_advance_time;
     static BCRec phys_bc;
+    static BCRec viscosity_phys_bc;
     static BCRec temperature_phys_bc;
     static BCRec species_phys_bc;
 
@@ -1521,7 +1522,6 @@ protected:
 
     ABecLaplacian* mac_op;
 
-      // localMF defined here MARC DAY JULIA REAM
       // localMF[mf_id] is a MultiFab defined on the BoxArray of the
       // present level.  The idea behind this data structure is as follows:
       // suppose one wants to interpolate data from level-1 to the present
