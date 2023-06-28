@@ -178,39 +178,37 @@ set_hoop_bc (BCRec& bc,const BCRec& phys_bc)
 
 } // end subroutine set_hoop_bc
 
+//static keyword not included since this is used in NavierStokes3.cpp
+void set_x_vel_bc_NS_setup (BCRec& bc,const BCRec& phys_bc) {
 
-static
-void
-set_x_vel_bc (BCRec&       bc,
-              const BCRec& phys_bc)
-{
-    const int* lo_bc = phys_bc.lo();
-    const int* hi_bc = phys_bc.hi();
-    bc.setLo(0,norm_vel_bc[lo_bc[0]]);
-    bc.setHi(0,norm_vel_bc[hi_bc[0]]);
-    bc.setLo(1,tang_vel_bc[lo_bc[1]]);
-    bc.setHi(1,tang_vel_bc[hi_bc[1]]);
+ const int* lo_bc = phys_bc.lo();
+ const int* hi_bc = phys_bc.hi();
+ bc.setLo(0,norm_vel_bc[lo_bc[0]]);
+ bc.setHi(0,norm_vel_bc[hi_bc[0]]);
+ bc.setLo(1,tang_vel_bc[lo_bc[1]]);
+ bc.setHi(1,tang_vel_bc[hi_bc[1]]);
 #if (AMREX_SPACEDIM == 3)
-    bc.setLo(2,tang_vel_bc[lo_bc[2]]);
-    bc.setHi(2,tang_vel_bc[hi_bc[2]]);
+ bc.setLo(2,tang_vel_bc[lo_bc[2]]);
+ bc.setHi(2,tang_vel_bc[hi_bc[2]]);
 #endif
-}
 
-static void
-set_y_vel_bc (BCRec&       bc,
-              const BCRec& phys_bc)
-{
-    const int* lo_bc = phys_bc.lo();
-    const int* hi_bc = phys_bc.hi();
-    bc.setLo(0,tang_vel_bc[lo_bc[0]]);
-    bc.setHi(0,tang_vel_bc[hi_bc[0]]);
-    bc.setLo(1,norm_vel_bc[lo_bc[1]]);
-    bc.setHi(1,norm_vel_bc[hi_bc[1]]);
+} //end subroutine set_x_vel_bc_NS_setup
+
+//static keyword not included since this is used in NavierStokes3.cpp
+void set_y_vel_bc_NS_setup (BCRec& bc,const BCRec& phys_bc) {
+
+ const int* lo_bc = phys_bc.lo();
+ const int* hi_bc = phys_bc.hi();
+ bc.setLo(0,tang_vel_bc[lo_bc[0]]);
+ bc.setHi(0,tang_vel_bc[hi_bc[0]]);
+ bc.setLo(1,norm_vel_bc[lo_bc[1]]);
+ bc.setHi(1,norm_vel_bc[hi_bc[1]]);
 #if (AMREX_SPACEDIM == 3)
-    bc.setLo(2,tang_vel_bc[lo_bc[2]]);
-    bc.setHi(2,tang_vel_bc[hi_bc[2]]);
+ bc.setLo(2,tang_vel_bc[lo_bc[2]]);
+ bc.setHi(2,tang_vel_bc[hi_bc[2]]);
 #endif
-}
+
+} //end subroutine set_y_vel_bc_NS_setup
 
 
 static
@@ -247,22 +245,21 @@ set_y_vel_extrap_bc (BCRec&       bc,
 }
 
 
-static
-void
-set_z_vel_bc (BCRec&       bc,
-              const BCRec& phys_bc)
-{
-    const int* lo_bc = phys_bc.lo();
-    const int* hi_bc = phys_bc.hi();
-    bc.setLo(0,tang_vel_bc[lo_bc[0]]);
-    bc.setHi(0,tang_vel_bc[hi_bc[0]]);
-    bc.setLo(1,tang_vel_bc[lo_bc[1]]);
-    bc.setHi(1,tang_vel_bc[hi_bc[1]]);
+//static keyword not included since this is used in NavierStokes3.cpp
+void set_z_vel_bc_NS_setup (BCRec& bc,const BCRec& phys_bc) {
+
+ const int* lo_bc = phys_bc.lo();
+ const int* hi_bc = phys_bc.hi();
+ bc.setLo(0,tang_vel_bc[lo_bc[0]]);
+ bc.setHi(0,tang_vel_bc[hi_bc[0]]);
+ bc.setLo(1,tang_vel_bc[lo_bc[1]]);
+ bc.setHi(1,tang_vel_bc[hi_bc[1]]);
 #if (AMREX_SPACEDIM == 3)
-    bc.setLo(2,norm_vel_bc[lo_bc[2]]);
-    bc.setHi(2,norm_vel_bc[hi_bc[2]]);
+ bc.setLo(2,norm_vel_bc[lo_bc[2]]);
+ bc.setHi(2,norm_vel_bc[hi_bc[2]]);
 #endif
-}
+
+} //end subroutine set_z_vel_bc_NS_setup
 
 
 static
@@ -732,7 +729,7 @@ NavierStokes::variableSetUp ()
        0,1,&umac_interp,state_holds_data);
     desc_lstGHOST.addDescriptor(Umac_Type,TheUMACType,
        0,1,&umac_interp,null_state_holds_data);
-    set_x_vel_bc(bc,phys_bc);
+    set_x_vel_bc_NS_setup(bc,phys_bc);
 
      // if new parameters added to the FILL routine, then
      // the following files must be modified:
@@ -753,7 +750,7 @@ NavierStokes::variableSetUp ()
       0,1,&umac_interp,state_holds_data);
     desc_lstGHOST.addDescriptor(Vmac_Type,TheVMACType,
       0,1,&umac_interp,null_state_holds_data);
-    set_y_vel_bc(bc,phys_bc);
+    set_y_vel_bc_NS_setup(bc,phys_bc);
 
     std::string v_mac_str="vmac"; 
     desc_lst.setComponent(Vmac_Type,0,v_mac_str,bc,fort_umacfill,
@@ -761,7 +758,7 @@ NavierStokes::variableSetUp ()
 
 // Wmac_Type  -------------------------------------------
 
-    set_z_vel_bc(bc,phys_bc); // prevent warnings.
+    set_z_vel_bc_NS_setup(bc,phys_bc); // prevent warnings.
 
 #if (AMREX_SPACEDIM == 3)
 
@@ -770,7 +767,7 @@ NavierStokes::variableSetUp ()
       0,1,&umac_interp,state_holds_data);
     desc_lstGHOST.addDescriptor(Wmac_Type,TheWMACType,
       0,1,&umac_interp,null_state_holds_data);
-    set_z_vel_bc(bc,phys_bc);
+    set_z_vel_bc_NS_setup(bc,phys_bc);
 
     std::string w_mac_str="wmac";
     desc_lst.setComponent(Wmac_Type,0,w_mac_str,bc,fort_umacfill,
@@ -867,14 +864,14 @@ NavierStokes::variableSetUp ()
       std::string xvel_str_solid="x_velocity_solid"; 
       xvel_str_solid+=im_string;
       MOFvelocity_names_solid[ibase_solid]=xvel_str_solid;
-      set_x_vel_bc(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
+      set_x_vel_bc_NS_setup(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
 
       ibase_solid++;
      
       std::string yvel_str_solid="y_velocity_solid"; 
       yvel_str_solid+=im_string;
       MOFvelocity_names_solid[ibase_solid]=yvel_str_solid;
-      set_y_vel_bc(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
+      set_y_vel_bc_NS_setup(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
      
 #if (AMREX_SPACEDIM == 3)
       ibase_solid++;
@@ -882,7 +879,7 @@ NavierStokes::variableSetUp ()
       std::string zvel_str_solid="z_velocity_solid"; 
       zvel_str_solid+=im_string;
       MOFvelocity_names_solid[ibase_solid]=zvel_str_solid;
-      set_z_vel_bc(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
+      set_z_vel_bc_NS_setup(MOFvelocity_bcs_solid[ibase_solid],phys_bc);
 #endif
 
       StateDescriptor::BndryFunc MOFvelocity_fill_class_solid(fort_solvfill,
@@ -1330,20 +1327,20 @@ NavierStokes::variableSetUp ()
      std::string cenx_str="cenxE"; 
      cenx_str+=im_string; 
      EXTMOF_names[ibase_extmof]=cenx_str;
-     set_x_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
+     set_x_vel_bc_NS_setup(EXTMOF_bcs[ibase_extmof],phys_bc);
 
      ibase_extmof++;
      std::string ceny_str="cenyE"; 
      ceny_str+=im_string; 
      EXTMOF_names[ibase_extmof]=ceny_str;
-     set_y_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
+     set_y_vel_bc_NS_setup(EXTMOF_bcs[ibase_extmof],phys_bc);
 
 #if (AMREX_SPACEDIM==3)
      ibase_extmof++;
      std::string cenz_str="cenzE"; 
      cenz_str+=im_string; 
      EXTMOF_names[ibase_extmof]=cenz_str;
-     set_z_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
+     set_z_vel_bc_NS_setup(EXTMOF_bcs[ibase_extmof],phys_bc);
 #endif    
 
      ibase_extmof++;
@@ -1356,20 +1353,20 @@ NavierStokes::variableSetUp ()
      std::string nrmx_str="nrmxE"; 
      nrmx_str+=im_string; 
      EXTMOF_names[ibase_extmof]=nrmx_str;
-     set_x_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
+     set_x_vel_bc_NS_setup(EXTMOF_bcs[ibase_extmof],phys_bc);
 
      ibase_extmof++;
      std::string nrmy_str="nrmyE"; 
      nrmy_str+=im_string; 
      EXTMOF_names[ibase_extmof]=nrmy_str;
-     set_y_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
+     set_y_vel_bc_NS_setup(EXTMOF_bcs[ibase_extmof],phys_bc);
 
 #if (AMREX_SPACEDIM==3)
      ibase_extmof++;
      std::string nrmz_str="nrmzE"; 
      nrmz_str+=im_string; 
      EXTMOF_names[ibase_extmof]=nrmz_str;
-     set_z_vel_bc(EXTMOF_bcs[ibase_extmof],phys_bc);
+     set_z_vel_bc_NS_setup(EXTMOF_bcs[ibase_extmof],phys_bc);
 #endif    
 
      ibase_extmof++;
@@ -1644,26 +1641,27 @@ NavierStokes::variableSetUp ()
 
     std::string xvel_str="x_velocity"; 
     MOFvelocity_names[ibase_state]=xvel_str;
-    set_x_vel_bc(MOFvelocity_bcs[ibase_state],phys_bc);
+    set_x_vel_bc_NS_setup(MOFvelocity_bcs[ibase_state],phys_bc);
 
     ibase_state++;
      
     std::string yvel_str="y_velocity"; 
     MOFvelocity_names[ibase_state]=yvel_str;
-    set_y_vel_bc(MOFvelocity_bcs[ibase_state],phys_bc);
+    set_y_vel_bc_NS_setup(MOFvelocity_bcs[ibase_state],phys_bc);
      
 #if (AMREX_SPACEDIM == 3)
     ibase_state++;
 
     std::string zvel_str="z_velocity"; 
     MOFvelocity_names[ibase_state]=zvel_str;
-    set_z_vel_bc(MOFvelocity_bcs[ibase_state],phys_bc);
+    set_z_vel_bc_NS_setup(MOFvelocity_bcs[ibase_state],phys_bc);
 #endif
 
     StateDescriptor::BndryFunc MOFvelocity_fill_class(fort_velfill,
        fort_group_velfill);
 
-    desc_lst.setComponent(State_Type,0,
+    desc_lst.setComponent(State_Type,
+      STATECOMP_VEL,
       MOFvelocity_names,
       MOFvelocity_bcs,MOFvelocity_fill_class,&sem_interp_DEFAULT);
 
@@ -1785,20 +1783,20 @@ NavierStokes::variableSetUp ()
      std::string cenx_str="cenx"; 
      cenx_str+=im_string; 
      MOF_names[ibase_mof]=cenx_str;
-     set_x_vel_bc(MOF_bcs[ibase_mof],phys_bc);
+     set_x_vel_bc_NS_setup(MOF_bcs[ibase_mof],phys_bc);
 
      ibase_mof++;
      std::string ceny_str="ceny"; 
      ceny_str+=im_string; 
      MOF_names[ibase_mof]=ceny_str;
-     set_y_vel_bc(MOF_bcs[ibase_mof],phys_bc);
+     set_y_vel_bc_NS_setup(MOF_bcs[ibase_mof],phys_bc);
 
 #if (AMREX_SPACEDIM==3)
      ibase_mof++;
      std::string cenz_str="cenz"; 
      cenz_str+=im_string; 
      MOF_names[ibase_mof]=cenz_str;
-     set_z_vel_bc(MOF_bcs[ibase_mof],phys_bc);
+     set_z_vel_bc_NS_setup(MOF_bcs[ibase_mof],phys_bc);
 #endif    
 
      if (ngeom_raw==ENUM_NUM_MOF_VAR) {

@@ -29,6 +29,11 @@ ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=1
 ns.speciesconst=0.0 0.0 1.0 0.0
 ns.speciesviscconst=0.0 0.0 0.0 0.0
+#reactionrate=( U/(alpha * dx) ) * log(1/eps)
+#U=characteristic rate of freezing
+#alpha * dx = thickness of the "mushy zone"; alpha=2 should be ok.
+#eps=value of the mushy zone fraction when at the mushy zone/rigid ice 
+#interface.  (e.g. eps=10^(-3) should be ok)
 ns.speciesreactionrate=0.0 0.0 0.2 0.0
 ns.rigid_fraction_id=0 0 1 0
 ns.post_init_pressure_solve=1 

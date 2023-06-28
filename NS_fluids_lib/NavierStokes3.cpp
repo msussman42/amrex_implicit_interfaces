@@ -33,6 +33,10 @@ namespace amrex{
 extern void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
  int& status,int numelem);
 
+extern void set_x_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
+extern void set_y_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
+extern void set_z_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
+
 // if ncomp_input==-1, then ncomp=S_crse.ncomp()
 // spectral_override==0 => always do low order average down.
 // grid_type=-1,..,5
@@ -11324,6 +11328,22 @@ void NavierStokes::veldiffuseALL() {
 
  std::string local_caller_string="veldiffuseALL";
 
+ // AmrLevel.H, protected:
+ // static DescriptorList desc_lst
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  BCRec simulation_bc;
+  if (dir==0) {
+   set_x_vel_bc_NS_setup(simulation_bc,viscosity_phys_bc);
+  } else if (dir==1) {
+   set_y_vel_bc_NS_setup(simulation_bc,viscosity_phys_bc);
+  } else if ((dir==AMREX_SPACEDIM-1)&&(AMREX_SPACEDIM==3)) {
+   set_z_vel_bc_NS_setup(simulation_bc,viscosity_phys_bc);
+  } else
+   amrex::Error("dir invalid: using viscosity_phys_bc");
+
+  desc_lst.reset_bcrecs(State_Type,STATECOMP_VEL+dir,simulation_bc);
+ } //dir=0 .. sdim-1
+
  if ((SDC_outer_sweeps>=0)&&
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
@@ -11883,6 +11903,23 @@ void NavierStokes::veldiffuseALL() {
  }  // ilev
 
  delete_array(BOUSSINESQ_TEMP_MF);
+
+ // AmrLevel.H, protected:
+ // static DescriptorList desc_lst
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  BCRec simulation_bc;
+  if (dir==0) {
+   set_x_vel_bc_NS_setup(simulation_bc,phys_bc);
+  } else if (dir==1) {
+   set_y_vel_bc_NS_setup(simulation_bc,phys_bc);
+  } else if ((dir==AMREX_SPACEDIM-1)&&(AMREX_SPACEDIM==3)) {
+   set_z_vel_bc_NS_setup(simulation_bc,phys_bc);
+  } else
+   amrex::Error("dir invalid: using phys_bc");
+
+  desc_lst.reset_bcrecs(State_Type,STATECOMP_VEL+dir,simulation_bc);
+ } //dir=0 .. sdim-1
+
 
 }   // end subroutine veldiffuseALL
 
