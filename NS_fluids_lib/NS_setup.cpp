@@ -1746,6 +1746,11 @@ NavierStokes::variableSetUp ()
     StateDescriptor::BndryFunc MOFstate_fill_class(fort_statefill,
        fort_group_statefill);
 
+     //amrlib/StateDescriptor.H
+     //void setComponent(indx,comp,nm,bc,func,interp=0)
+     //
+     //void reset_bcrecs(int indx,int comp,BCRec bcr);
+     //void save_bcrecs_statedesc(int indx,int comp,BCRec& bcr);
     desc_lst.setComponent(State_Type,
      STATECOMP_STATES,
      MOFstate_names,

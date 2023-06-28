@@ -57,6 +57,7 @@ namespace amrex{
 // Static objects.
 //
 BCRec NavierStokes::phys_bc;
+BCRec NavierStokes::viscosity_phys_bc;
 BCRec NavierStokes::temperature_phys_bc;
 BCRec NavierStokes::species_phys_bc;
 
@@ -2100,12 +2101,16 @@ NavierStokes::read_geometry ()
 
     if ((geometry_coord == COORDSYS_RZ) && 
         (phys_bc.lo(0) != Symmetry)) {
-        phys_bc.setLo(0,Symmetry);
-        temperature_phys_bc.setLo(0,Symmetry);
-        species_phys_bc.setLo(0,Symmetry);
 
-        if (ParallelDescriptor::IOProcessor())
-            std::cout << "\n WARNING: Setting phys_bc at xlo to Symmetry\n\n";
+     phys_bc.setLo(0,Symmetry);
+     viscosity_phys_bc.setLo(0,Symmetry);
+     temperature_phys_bc.setLo(0,Symmetry);
+     species_phys_bc.setLo(0,Symmetry);
+
+     if (ParallelDescriptor::IOProcessor()) {
+      std::cout << "\n WARNING: Setting phys_bc at xlo to Symmetry\n\n";
+     }
+
     }
 
     NS_geometry_coord=geometry_coord;
@@ -2466,6 +2471,8 @@ NavierStokes::read_params ()
      
     Vector<int> lo_bc(AMREX_SPACEDIM);
     Vector<int> hi_bc(AMREX_SPACEDIM);
+    Vector<int> viscosity_lo_bc(AMREX_SPACEDIM);
+    Vector<int> viscosity_hi_bc(AMREX_SPACEDIM);
     Vector<int> temperature_lo_bc(AMREX_SPACEDIM);
     Vector<int> temperature_hi_bc(AMREX_SPACEDIM);
     Vector<int> species_lo_bc(AMREX_SPACEDIM);
@@ -2475,6 +2482,10 @@ NavierStokes::read_params ()
     for (int i = 0; i < AMREX_SPACEDIM; i++) {
      phys_bc.setLo(i,lo_bc[i]);
      phys_bc.setHi(i,hi_bc[i]);
+     viscosity_phys_bc.setLo(i,lo_bc[i]);
+     viscosity_phys_bc.setHi(i,hi_bc[i]);
+     viscosity_lo_bc[i]=lo_bc[i];
+     viscosity_hi_bc[i]=hi_bc[i];
      temperature_phys_bc.setLo(i,lo_bc[i]);
      temperature_phys_bc.setHi(i,hi_bc[i]);
      temperature_lo_bc[i]=lo_bc[i];
@@ -2484,11 +2495,15 @@ NavierStokes::read_params ()
      species_lo_bc[i]=lo_bc[i];
      species_hi_bc[i]=hi_bc[i];
     }
+    pp.queryAdd("viscosity_lo_bc",viscosity_lo_bc,AMREX_SPACEDIM);
+    pp.queryAdd("viscosity_hi_bc",viscosity_hi_bc,AMREX_SPACEDIM);
     pp.queryAdd("temperature_lo_bc",temperature_lo_bc,AMREX_SPACEDIM);
     pp.queryAdd("temperature_hi_bc",temperature_hi_bc,AMREX_SPACEDIM);
     pp.queryAdd("species_lo_bc",species_lo_bc,AMREX_SPACEDIM);
     pp.queryAdd("species_hi_bc",species_hi_bc,AMREX_SPACEDIM);
     for (int i = 0; i < AMREX_SPACEDIM; i++) {
+     viscosity_phys_bc.setLo(i,viscosity_lo_bc[i]);
+     viscosity_phys_bc.setHi(i,viscosity_hi_bc[i]);
      temperature_phys_bc.setLo(i,temperature_lo_bc[i]);
      temperature_phys_bc.setHi(i,temperature_hi_bc[i]);
      species_phys_bc.setLo(i,species_lo_bc[i]);
@@ -2518,12 +2533,16 @@ NavierStokes::read_params ()
      for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
       if (geometry_is_periodic[dir]==1) {
        if ((lo_bc[dir] != Interior)||
+           (viscosity_lo_bc[dir] != Interior)||
+           (species_lo_bc[dir] != Interior)||
            (temperature_lo_bc[dir]!=Interior)) {
         std::cerr << "NavierStokes::variableSetUp:periodic in direction "
             << dir << " but low BC is not Interior\n";
         amrex::Abort("NavierStokes::read_params()");
        }
        if ((hi_bc[dir] != Interior)||
+           (viscosity_hi_bc[dir] != Interior)||
+           (species_hi_bc[dir] != Interior)||
            (temperature_hi_bc[dir]!=Interior)) {
         std::cerr << "NavierStokes::variableSetUp:periodic in direction "
             << dir << " but high BC is not Interior\n";
@@ -2544,12 +2563,16 @@ NavierStokes::read_params ()
     for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
      if (geometry_is_periodic[dir]==0) {
       if ((lo_bc[dir] == Interior)||
+          (viscosity_lo_bc[dir] == Interior)||
+          (species_lo_bc[dir] == Interior)||
           (temperature_lo_bc[dir]==Interior)) {
        std::cerr << "NavierStokes::variableSetUp:Interior bc in direction "
                  << dir << " but not defined as periodic\n";
        amrex::Abort("NavierStokes::read_params()");
       }
       if ((hi_bc[dir] == Interior)||
+          (viscosity_hi_bc[dir] == Interior)||
+          (species_hi_bc[dir] == Interior)||
           (temperature_hi_bc[dir]==Interior)) {
        std::cerr << "NavierStokes::variableSetUp:Interior bc in direction "
                  << dir << " but not defined as periodic\n";
@@ -2560,6 +2583,7 @@ NavierStokes::read_params ()
 
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "phys_bc= " << phys_bc << '\n';
+     std::cout << "viscosity_phys_bc= " << viscosity_phys_bc << '\n';
      std::cout << "temperature_phys_bc= " << temperature_phys_bc << '\n';
      std::cout << "species_phys_bc= " << species_phys_bc << '\n';
     }
