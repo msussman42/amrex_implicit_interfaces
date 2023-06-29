@@ -104,12 +104,20 @@ stop
 !   0       0        Omega
 !   u       v        w
 !
-! u_t = 2 Omega v - p_{x}/rho 
-! v_t = -2 Omega u - p_{y}/rho
-! w_t = -p_{z}/rho + g
-! K=2 Omega
-! Base state: u=\Gamma z  T=T0 + A y + B z
+! u_t = 2 Omega v - p_{x}/rho0 
+! v_t = -2 Omega u - p_{y}/rho0
+! w_t = -p_{z}/rho0 + g beta(T-T0)
+! T_t + u T_x + v T_y +w T_z=0
 !
+! K=2 Omega
+! Base state: ubase=\Gamma z Tbase=T0 + A y + B z  \Gamma=-A beta g/(2 Omega)
+! pbase=rho0 beta g B z^{2}/2 + rho0 beta A y z g 
+!
+! check: pbase_{x}=vbase=0
+!        pbase_{y}/rho0=beta A z g
+!        -2 Omega ubase=-2 Omega \Gamma z=A beta g z
+!        pbase_{z}/rho0=beta g B z + beta A y g
+! 
 ! Lewis and Nagata (ignoring viscosity and nonlinear terms):
 ! \vec{u}=u e_r + v e_{theta} + w e_{z}
 ! e_{z} x \vec{u}= e_r     e_theta     e_z
@@ -117,67 +125,31 @@ stop
 !                   u        v          w  = -v e_r + u e_theta
 ! u_t= 2 Omega v - p_r/rho0
 ! v_t=-2 Omega u - p_theta/rho0
-! w_t=           - p_z/rh0 - g beta_T(T-T0)
-! Base state: v=\Gamma z  T=T0 + A r + B z
+! w_t=           - p_z/rho0 + g beta (T-T0)
+! T_t + u T_r + v T_theta +w T_z=0
+!
+! Base state: vbase=\Gamma z Tbase=T0 + A r + B z  \Gamma=A beta g/(2 Omega)
+! pbase=rho0 beta g B z^{2}/2 + rho0 beta A r z g 
+!
+! check: pbase_{theta}=ubase=0
+!        pbase_{r}/rho0=beta A z g
+!        2 Omega vbase=2 Omega \Gamma z=A beta g z
+!        pbase_{z}/rho0=beta g B z + beta A r g
 !
 ! sanity check for cylindrical coordinates: suppose particle has
 ! velocity \vec{u} = (-1, 0, 0), then particle will deflect counter clockwise
 ! (same direction as Omega if Omega>0)
 ! i.e. new velocity will be (-1, 2 Omega dt,   0)
-! 
-! u_t=-p_r/rho0 + 2 Omega v-u* u_r - v *u_phi/r - w *u_z=
-!     -p_r/rho0 + 2 Omega (v-(\Gamma*z*r)_r+(\Gamma*z*r)_r)-
-!     u*u_r-v*u_phi/r-w*u_z=
-!     -(p+q)_{r}/rho0+2 Omega (v-\Gamma z) -u*u_r-v*u_phi/r-w*u_z
 !
-! v_t=-p_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z=
-!     -(p+q)_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z
-! w_t=-p_z/rho0+g*beta*(A*r+B*z)-u*w_r-v*w_phi/r-w*w_z=
-!     -p_z/rho0+g*beta*(T(r,theta,z)-T0+(A*r*z)_{z} + (B*z^{2}/2)_{z}-
-!                       (A*r*z)_{z}-(B*z^{2}/2)_{z}) - u*w_r - v*w_phi/r-
-!                       w*w_z
-! w_t=-(p+q)_z/rho0+g*beta*(T(r,theta,z)-T0-A*r-B*z)-u*w_r - v*w_phi/r-w*w_z
+! Let p'=p-pbase  
+! u_t= 2 Omega (v-vbase+vbase) - (p'+pbase)_r/rho0
+! v_t=-2 Omega u - (p'+pbase)_theta/rho0
+! w_t=           - (p'+pbase)_z/rho0 + g beta (T-Tbase+Tbase-T0)
 !
-! Assume that \Gamma=A*beta*g/(2*Omega)  
-! then the above equations are correct when
-! q=-rho0*beta*g*B*z^2/2-rho0*beta*A*r*z*g
-! -q_z/rho0=beta*g*B*z+beta*A*r*g = beta*g*B*z+2*Omega*\Gamma*r
-! -q_phi/rho0=0
-! -q_r/rho0=beta*A*z*g=2*Omega*\Gamma*z
-!
-! "-q" is the pressure of the base solution.
-! new EQUIVALENT equations:
-! u_t=-(p+q)_{r}/rho0+2 Omega (v-\Gamma z) -u*u_r-v*u_phi/r-w*u_z
-! v_t=-(p+q)_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z
-! w_t=-(p+q)_z/rho0+g*beta*(T(r,theta,z)-T0-A*r-B*z)-u*w_r - v*w_phi/r-w*w_z
-! Let p=p'-q
-! u_t=-(p')_{r}/rho0+2 Omega (v-\Gamma z) -u*u_r-v*u_phi/r-w*u_z
-! v_t=-(p')_phi/(r rho0)-2 Omega u-u*v_r - v *v_phi/r - w *v_z
-! w_t=-(p')_z/rho0+g*beta*(T(r,theta,z)-T0-A*r-B*z)-u*w_r - v*w_phi/r-w*w_z
-! p'=0 v=\Gamma z T=A*r+B*z+T0 is an exact solution.
-!
-! T_t=-u*T_r-v T_phi - w T_z
-! p_r = rho0 * (2 Omega \Gamma z)  
-!              p=rho0 * (2 Omega \Gamma z * r) + f(z)
-! p_z = rho0 * g * beta * (A*r+B*z)       
-!              p=rho0*beta*A*r*z*g+rho0*beta*g*B*z^2/2+h(r)
-! 2 Omega \Gamma = A g beta 
-! \Gamma= A g beta/(2 Omega) = -A beta g / K
-! h(r)=0
-! f(z)=rho0*g*beta*B*z^2/2
-!
-! For the differentially heated rotating annulus problem, a user defined
-! function for T0 (appearing in the Boussinesq term (T-T0)) and U0
-! ( appearing in the Coriolis force ez x (U-U0) ) must be defined:
-! T0=fort_tempconst + Ar + Bz
-! U0=(0, \Gamma z, 0)    \Gamma=A g beta / (2 \Omega)
-! sanity check verifies \Gamma=A g beta/ (2 \Omega) and 
-! override_density(im_liquid)=2
-!
-! Remark: Suppose T(r,phi,z,time=0)=A*r+T0  u=v=w=0 at time=0. 
-!  also, suppose Omega=0
-! claim: T=A*r+T0 is not a steady solution.
-! w_t=-p_z/rho0 + g*beta*(T-T0)
+! u_t= 2 Omega (v-vbase) - (p')_r/rho0
+! v_t=-2 Omega u - (p')_theta/rho0
+! w_t=           - (p')_z/rho0 + g beta (T-Tbase)
+! p'=0 T=Tbase v=vbase u=0  w=0 is a solution.
 
        subroutine fort_hoopimplicit( &
          override_density, &
@@ -659,14 +631,16 @@ stop
           if (RCEN.gt.zero) then
            ! do nothing
           else
-           print *,"RCEN invalid"
+           print *,"RCEN invalid: ",RCEN
            stop
           endif
            ! Coriolis "force"
            ! Lewis and Nagata 2004:
            ! -2 Omega e_{z} \Times \vec{u}
-          unp1(1)=unp1(1)+dt*((un(2)**2)/RCEN+two*angular_velocity*un(2))
-          unp1(2)=unp1(2)-dt*((un(1)*un(2))/RCEN+two*angular_velocity*un(1))
+          unp1(1)=unp1(1)+dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
+                              two*angular_velocity*un(2))
+          unp1(2)=unp1(2)-dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
+                              two*angular_velocity*un(1))
 
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
