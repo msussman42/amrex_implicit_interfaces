@@ -149,6 +149,8 @@ stop
       end subroutine fort_deallocate_module
 
        ! ns.mof_ordering overrides this
+       ! called from: fortran_parameters()  (before "pp.queryAdd")
+       ! called from: NavierStokes::read_params()  (before "pp.queryAdd")
       subroutine fort_mof_ordering_override( &
         mof_ordering_local, &
         mof_error_ordering_local, &
@@ -260,7 +262,15 @@ stop
          mof_ordering_local(3)=1
         else if (axis_dir.eq.5) then
          ! 0=water 1=gas 2=ice 3=cold plate
-         mof_ordering_local(3)=1
+         if (num_materials.eq.4) then
+          mof_ordering_local(1)=3
+          mof_ordering_local(2)=1
+          mof_ordering_local(3)=2
+          mof_ordering_local(4)=1
+         else
+          print *,"expecting num_materials==4 axis_dir==5 probtype==55"
+          stop
+         endif
          ! 0=water 1=vapor 2=hot plate or
          ! 0=water 1=vapor 2=gas 3=hot plate 
         else if (axis_dir.eq.6) then  ! nucleate boiling incompressible

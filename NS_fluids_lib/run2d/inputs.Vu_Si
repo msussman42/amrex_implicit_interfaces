@@ -237,7 +237,7 @@ ns.radblob=0.6 # centimeters(radblob is effective hemispherical radius)
                # r_base=0.95cm
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=55
+ns.probtype=55 #GENERAL_PHASE_CHANGE.F90
 
 #ns.mem_debug = 1
 #ns.v = 2
@@ -254,6 +254,8 @@ ns.output_drop_distribution=1
 ns.prescribe_temperature_outflow=0
 ns.lo_bc          = 3 2
 ns.hi_bc          = 3 2
+ns.viscosity_lo_bc = 3 5
+ns.viscosity_hi_bc = 5 5
 ns.temperature_lo_bc=3 1
 ns.temperature_hi_bc=1 1
 

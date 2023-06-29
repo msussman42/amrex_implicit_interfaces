@@ -711,7 +711,7 @@ if (probtype.eq.55) then
   VEL(dir)=zero
  enddo
 
-  ! in: GLOBALUTIL.F90
+  ! default_rampvel is declared in: GLOBALUTIL.F90
  call default_rampvel(t,VEL(1),VEL(2),VEL(SDIM))
 
  if (axis_dir.eq.5) then
