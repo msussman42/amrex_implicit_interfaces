@@ -21,8 +21,6 @@
 print *,"dimension bust"
 stop
 #endif
-! r coordinate corresponds to "y" in Eady's paper and Lappa's book.
-! theta coordinate corresponds to "x" in Eady's paper and Lappa's book.
 !
 ! 1. DA/Dt=0  or DQ/Dt=0
 ! 2. A^** = S A^* S^T   S=I+dt grad u
@@ -100,12 +98,19 @@ stop
 ! hoop term 2nd component:   2 u_t/r^2 - v/r^2
 ! No coupling terms.
 ! Diagonal terms not multiplied by 2.
-! Eady (page 35) and Lappa (page 20) (theta = x   r = y):
-!  K=2 Omega
-!  u_t = -2 Omega v - p_r/rho
-!  v_t =  2 Omega u - p_theta/rho
-!  w_t =            - p_z/rho - g
-! From Lewis and Nagata (ignoring viscosity and nonlinear terms):
+! Eady (page 35) and Lappa (page 20):
+!  \vec{u}_{t} = - 2 \vec{Omega} x \vec{u} - grad p/rho + g\vec{z}
+!   i       j        k
+!   0       0        Omega
+!   u       v        w
+!
+! u_t = 2 Omega v - p_{x}/rho 
+! v_t = -2 Omega u - p_{y}/rho
+! w_t = -p_{z}/rho + g
+! K=2 Omega
+! Base state: u=\Gamma z  T=T0 + A y + B z
+!
+! Lewis and Nagata (ignoring viscosity and nonlinear terms):
 ! \vec{u}=u e_r + v e_{theta} + w e_{z}
 ! e_{z} x \vec{u}= e_r     e_theta     e_z
 !                   0        0          1
@@ -113,21 +118,13 @@ stop
 ! u_t= 2 Omega v - p_r/rho0
 ! v_t=-2 Omega u - p_theta/rho0
 ! w_t=           - p_z/rh0 - g beta_T(T-T0)
-! Lewis and Nagata have Omega opposite sign!
+! Base state: v=\Gamma z  T=T0 + A r + B z
 !
 ! sanity check for cylindrical coordinates: suppose particle has
 ! velocity \vec{u} = (-1, 0, 0), then particle will deflect counter clockwise
 ! (same direction as Omega if Omega>0)
 ! i.e. new velocity will be (-1, 2 Omega dt,   0)
 ! 
-! (Coriolis force is approximated as 2 \Omega rho0 ez x u NOT 
-!                                    2 \Omega rho rz x u)
-! v=\Gamma z   u=0  w=0
-! T=A*r + B*z + T0
-! u_r + u/r + v_phi + w_z = 0
-! ez x u = | i    j    k   | = i(-v)-j(-u)
-!          | 0    0    1   |
-!          | u    v    w   | 
 ! u_t=-p_r/rho0 + 2 Omega v-u* u_r - v *u_phi/r - w *u_z=
 !     -p_r/rho0 + 2 Omega (v-(\Gamma*z*r)_r+(\Gamma*z*r)_r)-
 !     u*u_r-v*u_phi/r-w*u_z=
