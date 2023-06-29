@@ -100,7 +100,26 @@ stop
 ! hoop term 2nd component:   2 u_t/r^2 - v/r^2
 ! No coupling terms.
 ! Diagonal terms not multiplied by 2.
-! From Lewis and Nagata (ignoring viscosity) and Eady.
+! Eady (page 35) and Lappa (page 20) (theta = x   r = y):
+!  K=2 Omega
+!  u_t = -2 Omega v - p_r/rho
+!  v_t =  2 Omega u - p_theta/rho
+!  w_t =            - p_z/rho - g
+! From Lewis and Nagata (ignoring viscosity and nonlinear terms):
+! \vec{u}=u e_r + v e_{theta} + w e_{z}
+! e_{z} x \vec{u}= e_r     e_theta     e_z
+!                   0        0          1
+!                   u        v          w  = -v e_r + u e_theta
+! u_t= 2 Omega v - p_r/rho0
+! v_t=-2 Omega u - p_theta/rho0
+! w_t=           - p_z/rh0 - g beta_T(T-T0)
+! Lewis and Nagata have Omega opposite sign!
+!
+! sanity check for cylindrical coordinates: suppose particle has
+! velocity \vec{u} = (-1, 0, 0), then particle will deflect counter clockwise
+! (same direction as Omega if Omega>0)
+! i.e. new velocity will be (-1, 2 Omega dt,   0)
+! 
 ! (Coriolis force is approximated as 2 \Omega rho0 ez x u NOT 
 !                                    2 \Omega rho rz x u)
 ! v=\Gamma z   u=0  w=0
