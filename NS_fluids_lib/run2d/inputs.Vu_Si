@@ -125,8 +125,9 @@ ns.segregated_gravity_flag=0
 # theta_G=180 degrees  
 # theta_L=90 degrees 
 # and sigma_GI=sigma_LI=0.0 
-ns.tension=      1740.0e-2 538.0e-2 870.0e-2 1655.0e-2 1740.0e-2  0.0
-ns.tension_init= 1740.0e-2 538.0e-2 870.0e-2 1655.0e-2 1740.0e-2  0.0
+# LG,LI,LS,IG,GS,SI  
+ns.tension=      1740.0e-2 538.0e-2 281.0e-2 1655.0e-2 1740.0e-2  0.0
+ns.tension_init= 1740.0e-2 538.0e-2 281.0e-2 1655.0e-2 1740.0e-2  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
