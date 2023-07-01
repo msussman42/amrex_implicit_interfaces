@@ -99,14 +99,14 @@ stop
 ! No coupling terms.
 ! Diagonal terms not multiplied by 2.
 ! Eady (page 35) and Lappa (page 20):
-!  \vec{u}_{t} = - 2 \vec{Omega} x \vec{u} - grad p/rho + g\vec{z}
+!  \vec{u}_{t} = - 2 \vec{Omega} x \vec{u} - grad p/rho - |g|\vec{z}
 !   i       j        k
 !   0       0        Omega
 !   u       v        w
 !
 ! u_t = 2 Omega v - p_{x}/rho0 
 ! v_t = -2 Omega u - p_{y}/rho0
-! w_t = -p_{z}/rho0 + g beta(T-T0)
+! w_t = -p_{z}/rho0 - |g beta|(T-T0)
 ! T_t + u T_x + v T_y +w T_z=0
 !
 ! K=2 Omega
@@ -327,6 +327,8 @@ stop
         ! do nothing
        else
         print *,"angular_velocity cannot be negative"
+        print *,"expecting counterclockwise"
+        print *,"angular_velocity=",angular_velocity
         stop
        endif
        if ((centrifugal_force_factor.le.one).and. &
@@ -623,8 +625,11 @@ stop
           !                    centrifugal force (temperature dependence).
           ! angular_velocity>0 => counter clockwise
           ! angular_velocity<0 => clockwise
-          ! in PROB.F90: 
+          ! in PROB.F90:
+          ! R-Theta-Z 
           ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
+          ! X-Y-Z 
+          ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2+xpos(2)**2)
 
          if (rzflag.eq.COORDSYS_CYLINDRICAL) then
 
@@ -663,8 +668,16 @@ stop
           if ((DTEMP.eq.zero).or. &
               (angular_velocity.eq.zero)) then
            ! do nothing
+          else if ((DTEMP.ne.zero).and. &
+                   (angular_velocity.ne.zero)) then
+           unp1(1)=unp1(1)+ &
+            dt*DTEMP*centrifugal_force_factor*(angular_velocity**2)*xsten(0,1)
+           unp1(2)=unp1(2)+ &
+            dt*DTEMP*centrifugal_force_factor*(angular_velocity**2)*xsten(0,2)
           else
-           print *,"Boussinesq approx+rotating invalid in XY for now"
+           print *,"DTEMP or angular_velocity invalid"
+           print *,"DTEMP=",DTEMP
+           print *,"angular_velocity=",angular_velocity
            stop
           endif
 
@@ -678,9 +691,11 @@ stop
           if (angular_velocity.eq.zero) then
            ! do nothing
           else
-           print *,"angular_velocity<>0 not implemented here"
+           print *,"angular_velocity<>0 not implemented RZ:", &
+            angular_velocity
            stop
           endif
+
          else
           print *,"rzflag invalid"
           stop

@@ -52,6 +52,7 @@ geometry.prob_hi   =  6.02 6.28318530718 5.0
 
 ns.min_velocity_for_dt = 2.0  # rmax x omega
 
+ns.centrifugal_force_factor=0.0
 ns.angular_velocity=0.2583 # radians/s
 #ns.angular_velocity=2.583 # radians/s
 #ns.angular_velocity=3.161 # radians/s SMITH

@@ -85,6 +85,7 @@ ns.adv_dir=1  # 1,.., sdim
 # a=(2 omega sin(phi) v  -2 omega sin(phi) u  0)=(f v  -f u  0)
 # 2 omega sin(phi)=f
 # angular_velocity=f/2=1E-4/2=0.5E-4=5E-5
+ns.centrifugal_force_factor=0.0
 ns.angular_velocity=5.0e-5
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)

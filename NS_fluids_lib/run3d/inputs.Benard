@@ -97,10 +97,11 @@ ns.adv_dir=1  # 1,.., sdim
 # angular_velocity=f/2=1E-4/2=0.5E-4=5E-5
 # in terms of cross product, coriolis force is:
 # DU/Dt= - 2 * ns.angular_velocity * (zhat x U)
-# centripetal force:
+# centrifugal force:
 # grad ((1/2) rho_hydro angular_velocity^2 (x^2+y^2) )/rho_hydro
 # (  gravity is grad (-rho_hydro |g|z)  )/rho_hydro
 #ns.angular_velocity=5.0e-5
+ns.centrifugal_force_factor=0.0
 ns.angular_velocity=0.0
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
