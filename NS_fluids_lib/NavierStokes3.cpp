@@ -8095,7 +8095,10 @@ void NavierStokes::check_outer_solver_convergence(
 
 } // subroutine check_outer_solver_convergence
 
+// If called from NavierStokes::multiphase_project,
 // update_vel=1 if called at the beginning of each outer_iter sweep.
+//
+// If called from NavierStokes::multiphase_preconditioner,
 // update_vel=0 if this routine used as a preconditioner (instead of MG).
 void NavierStokes::jacobi_cycles(
  int call_adjust_tolerance,
@@ -8107,7 +8110,8 @@ void NavierStokes::jacobi_cycles(
  Real& error_after_all_jacobi_sweeps,
  Real& error0,
  Real& error0_max,
- int krylov_subspace_num_outer_iterSOLVER,int nsolve) {
+ int krylov_subspace_num_outer_iterSOLVER,
+ int nsolve) {
 
  int finest_level=parent->finestLevel();
 
@@ -8129,7 +8133,11 @@ void NavierStokes::jacobi_cycles(
  } else
   amrex::Error("project_option invalid39");
 
- if (krylov_subspace_num_outer_iterSOLVER<0)
+ if ((krylov_subspace_num_outer_iterSOLVER>=0)&&
+     (krylov_subspace_num_outer_iterSOLVER<=
+      krylov_subspace_max_num_outer_iter)) {
+  //do nothing
+ } else
   amrex::Error("krylov_subspace_num_outer_iterSOLVER invalid");
 
  allocate_array(0,nsolve,-1,RESID_MF);
@@ -8185,6 +8193,7 @@ void NavierStokes::jacobi_cycles(
    if (vcycle_jacobi==0)
     error_at_the_beginning=local_error;
 
+    //very first "outer iteration"
    if (krylov_subspace_num_outer_iterSOLVER==0) {
 
     error0=local_error;
@@ -8196,7 +8205,9 @@ void NavierStokes::jacobi_cycles(
     } else
      amrex::Error("call_adjust_tolerance invalid");
 
-   } else if (krylov_subspace_num_outer_iterSOLVER>0) {
+   } else if ((krylov_subspace_num_outer_iterSOLVER>0)&&
+              (krylov_subspace_num_outer_iterSOLVER<=
+               krylov_subspace_max_num_outer_iter)) {
     // do nothing
    } else
     amrex::Error("krylov_subspace_num_outer_iterSOLVER invalid");
