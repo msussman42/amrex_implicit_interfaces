@@ -20,7 +20,7 @@ ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 
 ns.minimum_relative_error=1.0e-22
-ns.initial_project_cycles=5
+ns.initial_project_cycles=100
 ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
