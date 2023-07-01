@@ -2631,9 +2631,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if (angular_velocity.ge.zero) then
         ! do nothing
        else
-        print *,"angular_velocity should be nonneg"
+        print *,"angular_velocity should be nonneg (counter-clockwise)"
         stop
        endif
+
        if ((centrifugal_force_factor.ge.zero).and. &
            (centrifugal_force_factor.le.one)) then
         ! do nothing
@@ -2643,10 +2644,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
        if (levelrz.eq.COORDSYS_CARTESIAN) then
-        pres_hydrostatic=pres_hydrostatic+ &
-            half*rho_hydrostatic*centrifugal_force_factor* &
-            (angular_velocity**2)*(xcell(1)**2)
+
+        if (centrifugal_force_factor.eq.zero) then
+         ! do nothing
+        else if ((centrifugal_force_factor.gt.zero).and. &
+                 (centrifugal_force_factor.le.one)) then
+         pres_hydrostatic=pres_hydrostatic+ &
+           half*rho_hydrostatic*centrifugal_force_factor* &
+           (angular_velocity**2)*(xcell(1)**2+xcell(2)**2)
+        else
+         print *,"expecting 0<=centrifugal_force_factor<=1"
+         stop
+        endif
+     
        else if (levelrz.eq.COORDSYS_RZ) then
+
         if (SDIM.ne.2) then
          print *,"dimension bust"
          stop
@@ -2654,19 +2666,24 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if (angular_velocity.eq.zero) then
          ! do nothing
         else
-         print *,"angular_velocity must be 0 for RZ for now"
+         print *,"angular_velocity must be 0 for RZ"
          stop
         endif
+
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+
         pres_hydrostatic=pres_hydrostatic+ &
            half*rho_hydrostatic*centrifugal_force_factor* &
            (angular_velocity**2)*(xcell(1)**2)
+
        else
         print *,"levelrz invalid general hydrostatic pressure density"
+        print *,"levelrz=",levelrz
         stop
        endif
+
       else
-       print *,"rho_hydrostatic invalid"
+       print *,"rho_hydrostatic invalid: ",rho_hydrostatic
        stop
       endif
 
