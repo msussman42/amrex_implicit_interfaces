@@ -98,15 +98,17 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol  = 1.0e-10
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
-#gravity and surface tension forces are both reduced by two orders of
-#magnitude.
-ns.gravity        = -980.0e-2 
+#gravity and surface tension forces are both reduced by the same orders of
+#magnitude.  A factor of 10 reduction is ok for the Silicone freezing
+#test problem.
+ns.gravity        = -980.0e-1
 ns.incremental_gravity_flag=1
 ns.segregated_gravity_flag=0
 
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
-#gravity and surface tension forces are both reduced by two orders of
-#magnitude.
+#gravity and surface tension forces are both reduced by the same orders of
+#magnitude. A factor of 10 reduction is ok for the Silicone freezing
+##test problem.
 # 12,13,14,23,24,34
 # LG,LI,LS,IG,GS,SI  
 # CONTACT LINE LIQUID-GAS-SUBSTRATE (CL_tensions_from_angles.f):
@@ -126,8 +128,8 @@ ns.segregated_gravity_flag=0
 # theta_L=90 degrees 
 # and sigma_GI=sigma_LI=0.0 
 # LG,LI,LS,IG,GS,SI  
-ns.tension=      1740.0e-2 538.0e-2 281.0e-2 1655.0e-2 1740.0e-2  0.0
-ns.tension_init= 1740.0e-2 538.0e-2 281.0e-2 1655.0e-2 1740.0e-2  0.0
+ns.tension=      1740.0e-1 538.0e-1 281.0e-1 1655.0e-1 1740.0e-1  0.0
+ns.tension_init= 1740.0e-1 538.0e-1 281.0e-1 1655.0e-1 1740.0e-1  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
@@ -189,7 +191,11 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 76.2e+5
 #The viscosity ratio between gas and liquid is assumed 
 #constant, the viscosity coefficient(s) are increased,
 #and the viscosity force is
-#div(mu grad u) instead of div ( 2 mu D )
+#div(mu grad u) instead of div ( 2 mu D ),
+#Claim: for many freezing and melting experiments, the numerical
+#approximation is insensitive to the amount that viscosity is increased and
+#the gas/liquid viscosity ratio.
+#
 ns.uncoupled_viscosity=1 # div(mu grad u)
 #ns.viscconst=21.8e-3 1.08e-3 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
 ns.viscconst=1.0 1.0 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
