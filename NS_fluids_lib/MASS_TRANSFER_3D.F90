@@ -3230,6 +3230,7 @@ stop
       INTEGER_T ice_in_cell
       REAL_T spec_old,spec_new
       REAL_T, PARAMETER :: species_max=1.0d0
+      REAL_T, PARAMETER :: SPECIES_TOL=1.0D-3
 
       snew_ptr=>snew
       maskcov_ptr=>maskcov
@@ -3355,14 +3356,14 @@ stop
         if (abs(species_vfrac_sum-one).le.VOFTOL_REDIST) then
          ! do nothing
         else
-         print *,"species_vfrac_sum invalid"
+         print *,"species_vfrac_sum invalid: ",species_vfrac_sum
          stop
         endif
 
         if (species_mass_sum.gt.zero) then
          ! do nothing
         else
-         print *,"species_mass_sum invalid"
+         print *,"species_mass_sum invalid: ",species_mass_sum
          stop
         endif
 
@@ -3380,22 +3381,22 @@ stop
            ! Ynew=Yold+dt * r * (species_max-Ynew)
            ! Ynew=(Yold+species_max*r*dt)/(1+r*dt)
            spec_old=snew(D_DECL(i,j,k),spec_comp)
-           if (abs(spec_old).le.VOFTOL) then
+           if (abs(spec_old).le.SPECIES_TOL) then
             spec_old=zero
-           else if (abs(spec_old-species_max).le.VOFTOL) then
+           else if (abs(spec_old-species_max).le.SPECIES_TOL) then
             spec_old=species_max
            else if ((spec_old.ge.zero).and. &
                     (spec_old.le.species_max)) then
             ! do nothing
            else
-            print *,"spec_old invalid"
+            print *,"spec_old invalid: ",spec_old
             stop
            endif
            spec_new=(spec_old+species_max*local_rate*dt)/(one+local_rate*dt)
 
-           if (abs(spec_new).le.VOFTOL) then
+           if (abs(spec_new).le.SPECIES_TOL) then
             spec_new=zero
-           else if (abs(spec_new-species_max).le.VOFTOL) then
+           else if (abs(spec_new-species_max).le.SPECIES_TOL) then
             spec_new=species_max
            else if ((spec_new.ge.zero).and. &
                     (spec_new.le.species_max)) then
@@ -3430,15 +3431,15 @@ stop
           stop
          endif
          if ((species_avg.ge.zero).and. &
-             (species_avg.le.VOFTOL)) then
+             (species_avg.le.SPECIES_TOL)) then
           species_avg=zero
-         else if (abs(species_avg-species_max).le.VOFTOL) then
+         else if (abs(species_avg-species_max).le.SPECIES_TOL) then
           species_avg=species_max
          else if ((species_avg.gt.zero).and. &
                   (species_avg.lt.species_max))  then
           ! do nothing
          else
-          print *,"species_avg invalid"
+          print *,"species_avg invalid: ",species_avg
           stop
          endif
 
