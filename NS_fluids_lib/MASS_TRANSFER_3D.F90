@@ -3183,7 +3183,9 @@ stop
        fablo,fabhi, &
        bfact, &
        xlo,dx, &
+       initialize_flag, &
        dt, &
+       time, &
        maskcov,DIMS(maskcov), &
        snew,DIMS(snew)) &
       bind(c,name='fort_apply_reaction')
@@ -3207,7 +3209,9 @@ stop
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in),target :: xlo(SDIM)
       REAL_T, INTENT(in),target :: dx(SDIM)
+      INTEGER_T, INTENT(in) :: initialize_flag
       REAL_T, INTENT(in) :: dt
+      REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
       INTEGER_T, INTENT(in) :: DIMDEC(snew)
       REAL_T, target, INTENT(in) :: maskcov(DIMV(maskcov))
@@ -3257,12 +3261,43 @@ stop
        print *,"nstate invalid"
        stop
       endif
-      if (dt.gt.zero) then
-       ! do nothing
+
+      if (initialize_flag.eq.0) then
+
+       if (dt.gt.zero) then
+        ! do nothing
+       else
+        print *,"dt invalid"
+        stop
+       endif
+       if (time.gt.zero) then
+        ! do nothing
+       else
+        print *,"time invalid"
+        stop
+       endif
+
+      else if (initialize_flag.eq.1) then
+
+       if (dt.eq.zero) then
+        ! do nothing
+       else
+        print *,"dt invalid"
+        stop
+       endif
+       if (time.eq.zero) then
+        ! do nothing
+       else
+        print *,"time invalid"
+        stop
+       endif
+
       else
-       print *,"dt invalid"
+       print *,"initialize_flag invalid"
        stop
       endif
+
+
       if (species_max.gt.zero) then
        !do nothing
       else
@@ -3278,7 +3313,15 @@ stop
       do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
 
-       local_mask=NINT(maskcov(D_DECL(i,j,k)))
+       if (initialize_flag.eq.1) then
+        local_mask=1
+       else if (initialize_flag.eq.0) then
+        local_mask=NINT(maskcov(D_DECL(i,j,k)))
+       else
+        print *,"initialize_flag invalid"
+        stop
+       endif
+
        if (local_mask.eq.1) then
 
         species_vfrac_sum=zero

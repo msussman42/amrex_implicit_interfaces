@@ -4097,27 +4097,16 @@ NavierStokes::read_params ()
 
       if ((ispec>=1)&&(ispec<=num_species_var)) {
        for (int im_opp=0;im_opp<num_materials;im_opp++) {
-        if (im_opp==im) {
-         if (speciesconst[(ispec-1)*num_materials+im]==1.0) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesconst invalid");
-         if (speciesreactionrate[(ispec-1)*num_materials+im]>0.0) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesreactionrate invalid");
-	} else if (im_opp!=im) {
-         if ((speciesconst[(ispec-1)*num_materials+im_opp]>=0.0)&&
-	     (speciesconst[(ispec-1)*num_materials+im_opp]<=1.0)) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesconst invalid");
-         if (speciesreactionrate[(ispec-1)*num_materials+im_opp]>=0.0) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesreactionrate invalid");
-	} else 
-	 amrex::Error("im_opp or im invalid");
+        if (speciesconst[(ispec-1)*num_materials+im]==1.0) {
+         //do nothing
+        } else if (speciesconst[(ispec-1)*num_materials+im]==0.0) {
+  	 //do nothing
+	} else
+	 amrex::Error("speciesconst invalid");
+        if (speciesreactionrate[(ispec-1)*num_materials+im]>=0.0) {
+  	 //do nothing
+	} else
+	 amrex::Error("speciesreactionrate invalid");
        } //im_opp=0..num_materials-1
       } else
        amrex::Error("rigid_fraction_id (ispec) invalid");
@@ -9867,10 +9856,14 @@ NavierStokes::initData () {
  } else
   amrex::Error("read_from_CAD invalid");
 
+
+ level_species_reaction(local_caller_string);
+
   // if nparts>0,
   //  Initialize FSI_GHOST_MAC_MF from Solid_State_Type
   // Otherwise initialize FSI_GHOST_MAC_MF with the fluid velocity.
   // No law of the wall modeling.
+  // FSI_GHOST_MAC_MF needed in NavierStokes::post_init_state
  init_FSI_GHOST_MAC_MF_predict();
 
  init_regrid_history();
@@ -14442,9 +14435,18 @@ NavierStokes::level_phase_change_convert(
 
 
 void
-NavierStokes::level_species_reaction() {
+NavierStokes::level_species_reaction(const std::string& caller_string) {
 
  std::string local_caller_string="level_species_reaction";
+ local_caller_string=caller_string+local_caller_string;
+
+ int initialize_flag=0;
+ if (pattern_test(local_caller_string,"initData")==1) {
+  initialize_flag=1;
+ } else if (pattern_test(local_caller_string,"veldiffuseALL")==1) {
+  initialize_flag=0;
+ } else
+  amrex::Error("local_caller_string invalid in level_species_reaction");
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
@@ -14458,15 +14460,29 @@ NavierStokes::level_species_reaction() {
 
  int nstate=STATE_NCOMP;
 
- // mask=1 if not covered or if outside the domain.
- // NavierStokes::maskfiner_localMF
- // NavierStokes::maskfiner
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
-
  MultiFab& S_new = get_new_data(State_Type,slab_step+1);
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
+
+ MultiFab* local_mask;
+ Real local_time;
+ Real local_dt;
+
+ if (initialize_flag==1) {
+  local_mask=&(S_new);
+  local_time=0.0;
+  local_dt=0.0;
+ } else if (initialize_flag==0) {
+  // mask=1 if not covered or if outside the domain.
+  // NavierStokes::maskfiner_localMF
+  // NavierStokes::maskfiner
+  resize_maskfiner(1,MASKCOEF_MF);
+  debug_ngrow(MASKCOEF_MF,1,local_caller_string); 
+  local_mask=localMF[MASKCOEF_MF];
+  local_time=cur_time_slab;
+  local_dt=dt_slab; //apply_reaction
+ } else
+  amrex::Error("initialize_flag invalid");
 
  const Real* dx = geom.CellSize();
 
@@ -14493,7 +14509,7 @@ NavierStokes::level_species_reaction() {
    int bfact=parent->Space_blockingFactor(level);
 
     // mask=tag if not covered by level+1 or outside the domain.
-   FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
+   FArrayBox& maskcov=(*local_mask)[mfi];
    FArrayBox& snewfab=S_new[mfi];
 
    int tid_current=ns_thread();
@@ -14511,7 +14527,9 @@ NavierStokes::level_species_reaction() {
     fablo,fabhi,
     &bfact, 
     xlo,dx,
-    &dt_slab,//apply_reaction
+    &initialize_flag,
+    &local_dt,
+    &local_time,
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     snewfab.dataPtr(),
