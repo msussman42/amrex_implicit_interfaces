@@ -3187,6 +3187,7 @@ stop
        dt, &
        time, &
        maskcov,DIMS(maskcov), &
+       LSnew,DIMS(LSnew), &
        snew,DIMS(snew)) &
       bind(c,name='fort_apply_reaction')
 
@@ -3213,14 +3214,21 @@ stop
       REAL_T, INTENT(in) :: dt
       REAL_T, INTENT(in) :: time
       INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
+      INTEGER_T, INTENT(in) :: DIMDEC(LSnew)
       INTEGER_T, INTENT(in) :: DIMDEC(snew)
       REAL_T, target, INTENT(in) :: maskcov(DIMV(maskcov))
       REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      REAL_T, target, INTENT(out) :: LSnew(DIMV(LSnew),num_materials)
+      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
       REAL_T, target, INTENT(out) :: snew(DIMV(snew),nstate)
       REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
       INTEGER_T i,j,k
-      INTEGER_T im,ispec
+      INTEGER_T im,im_inner,im_melt,im_opp,im_primary,ispec
+      INTEGER_T ireverse,iten
+      REAL_T LL
+      REAL_T LSMELT
       INTEGER_T local_mask
+      REAL_T local_LS(num_materials)
       REAL_T local_VOF(num_materials)
       REAL_T local_DEN(num_materials)
       REAL_T local_MASS(num_materials)
@@ -3231,11 +3239,12 @@ stop
       INTEGER_T vofcomp
       INTEGER_T spec_comp
       INTEGER_T dencomp
-      INTEGER_T ice_in_cell
       REAL_T spec_old,spec_new
       REAL_T, PARAMETER :: species_max=1.0d0
       REAL_T, PARAMETER :: SPECIES_TOL=1.0D-3
+      REAL_T, PARAMETER :: MUSHY_THICK=2.0d0
 
+      LSnew_ptr=>LSnew
       snew_ptr=>snew
       maskcov_ptr=>maskcov
 
@@ -3267,13 +3276,13 @@ stop
        if (dt.gt.zero) then
         ! do nothing
        else
-        print *,"dt invalid"
+        print *,"dt invalid (fort_apply_reaction, init_flag==0)"
         stop
        endif
        if (time.gt.zero) then
         ! do nothing
        else
-        print *,"time invalid"
+        print *,"time invalid (fort_apply_reaction, init_flag==0)"
         stop
        endif
 
@@ -3282,13 +3291,13 @@ stop
        if (dt.eq.zero) then
         ! do nothing
        else
-        print *,"dt invalid"
+        print *,"dt invalid (fort_apply_reaction, init_flag==1)"
         stop
        endif
        if (time.eq.zero) then
         ! do nothing
        else
-        print *,"time invalid"
+        print *,"time invalid (fort_apply_reaction, init_flag==1)"
         stop
        endif
 
@@ -3296,7 +3305,6 @@ stop
        print *,"initialize_flag invalid"
        stop
       endif
-
 
       if (species_max.gt.zero) then
        !do nothing
@@ -3306,6 +3314,7 @@ stop
       endif
 
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
@@ -3327,12 +3336,11 @@ stop
         species_vfrac_sum=zero
         species_mass_sum=zero
 
-        ice_in_cell=0
-
         do im=1,num_materials
 
          vofcomp=STATECOMP_MOF+(im-1)*ngeom_raw+1
          dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
+         local_LS(im)=LSnew(D_DECL(i,j,k),im)
          local_VOF(im)=snew(D_DECL(i,j,k),vofcomp)
          local_DEN(im)=snew(D_DECL(i,j,k),dencomp)
          local_MASS(im)=local_VOF(im)*local_DEN(im)
@@ -3365,36 +3373,9 @@ stop
           stop
          endif
 
-         if (is_ice(im).eq.1) then
-
-          if ((local_VOF(im).ge.zero).and. &
-              (local_VOF(im).le.VOFTOL)) then
-           ! do nothing
-          else if ((local_VOF(im).ge.VOFTOL).and. &
-                   (local_VOF(im).le.one)) then
-           ice_in_cell=1
-          else
-           print *,"local_VOF(im) invalid"
-           print *,"im=",im
-           print *,"local_VOF(im)=",local_VOF(im)
-           stop
-          endif
-
-          ispec=rigid_fraction_id(im)
-          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-           !do nothing 
-          else
-           print *,"ispec invalid"
-           stop
-          endif
-
-         else if (is_ice(im).eq.0) then
-          !do nothing
-         else
-          print *,"is_ice(im) invalid"
-          stop
-         endif
         enddo !im=1..num_materials
+
+        call get_primary_material(local_LS,im_primary)
 
         if (abs(species_vfrac_sum-one).le.VOFTOL_REDIST) then
          ! do nothing
@@ -3494,22 +3475,7 @@ stop
             snew(D_DECL(i,j,k),spec_comp)=species_avg
            else if ((local_VOF(im).gt.zero).and. &
                     (local_VOF(im).le.one)) then
-
-            if (is_ice(im).eq.1) then
-             !do nothing
-            else if (ice_in_cell.eq.0) then
-             !do nothing
-            else if ((is_ice(im).eq.0).and. &
-                     (ice_in_cell.eq.1)) then
-             snew(D_DECL(i,j,k),spec_comp)=species_avg
-            else
-             print *,"is_ice or ice_in_cell invalid"
-             print *,"im=",im
-             print *,"is_ice(im)=",is_ice(im)
-             print *,"ice_in_cell=",ice_in_cell
-             stop
-            endif
-
+            ! do nothing
            else
             print *,"local_VOF invalid"
             print *,"im=",im
@@ -3522,9 +3488,123 @@ stop
            print *,"is_rigid invalid"
            stop
           endif
+
          enddo ! im=1,num_materials
 
         enddo ! ispec=1,num_species_var
+
+        do im=1,num_materials
+         if (is_ice(im).eq.1) then
+          ispec=rigid_fraction_id(im)
+          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+           !do nothing 
+          else
+           print *,"ispec invalid"
+           stop
+          endif
+          spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
+               ENUM_SPECIESVAR+ispec
+          spec_old=snew(D_DECL(i,j,k),spec_comp)
+          spec_new=spec_old
+          if ((spec_old.ge.zero).and. &
+              (spec_old.le.species_max)) then
+
+           im_melt=0
+
+           do im_opp=1,num_materials
+            if (im_opp.ne.im) then
+             do ireverse=0,1
+              call get_iten(im,im_opp,iten)
+              LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+              if (LL.eq.zero) then
+               ! do nothing
+              else if (LL.ne.zero) then
+               im_melt=im_opp
+              else
+               print *,"LL invalid"
+               stop
+              endif
+             enddo !ireverse=0,1
+            else if (im_opp.eq.im) then
+             ! do nothing
+            else
+             print *,"im_opp invalid"
+             stop
+            endif
+           enddo !im_opp=1,num_materials
+
+           if ((im_melt.ge.1).and.(im_melt.le.num_materials)) then
+
+            if (is_rigid(im_primary).eq.1) then
+             spec_new=zero
+            else if (is_rigid(im_primary).eq.0) then
+
+             if (local_LS(im).lt.zero) then
+              spec_new=zero
+             else if (local_LS(im).ge.zero) then
+              if (local_LS(im).ge.MUSHY_THICK*dx(1)) then
+               spec_new=species_max
+              else if ((local_LS(im).le.MUSHY_THICK*dx(1)).and. &
+                       (local_LS(im).ge.zero)) then
+               if (local_LS(im_melt).le.-MUSHY_THICK*dx(1)) then
+                spec_new=species_max
+               else if (local_LS(im_melt).ge.zero) then
+                spec_new=zero
+               else if ((local_LS(im_melt).ge.-MUSHY_THICK*dx(1)).and. &
+                        (local_LS(im_melt).le.zero)) then
+                LSMELT=abs(local_LS(im_melt))-half*MUSHY_THICK*dx(1)
+                spec_new=hs(LSMELT,half*MUSHY_THICK*dx(1))
+               else
+                print *,"local_LS(im_melt) invalid"
+                stop
+               endif
+              else
+               print *,"local_LS(im) invalid"
+               stop
+              endif
+             else
+              print *,"local_LS invalid"
+              stop
+             endif
+
+            else
+             print *,"is_rigid(im_primary) invalid"
+             stop
+            endif
+
+            if ((spec_new.ge.zero).and. &
+                (spec_new.le.species_max)) then
+             ! do nothing
+            else
+             print *,"spec_new invalid"
+             stop
+            endif
+
+            spec_new=max(spec_new,spec_old)
+
+           else
+            print *,"im_melt invalid"
+            stop
+           endif
+
+           do im_inner=1,num_materials
+            spec_comp=STATECOMP_STATES+(im_inner-1)*num_state_material+ &
+               ENUM_SPECIESVAR+ispec
+            snew(D_DECL(i,j,k),spec_comp)=spec_new
+           enddo !do im_inner=1..num_materials
+
+          else
+           print *,"spec_old invalid: ",spec_old
+           stop
+          endif
+
+         else if (is_ice(im).eq.0) then
+          ! do nothing
+         else
+          print *,"is_ice invalid"
+          stop
+         endif
+        enddo ! im=1,num_materials
 
        else if (local_mask.eq.0) then
         ! do nothing

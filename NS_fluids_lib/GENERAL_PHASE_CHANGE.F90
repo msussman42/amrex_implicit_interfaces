@@ -216,6 +216,7 @@ if (probtype.eq.55) then
             (nmat.eq.4))) then
 
     ! dist>0 in the substrate
+    ! ice_substrate_distance is declared in: GLOBALUTIL.F90
    call ice_substrate_distance(x(1),x(2),x(SDIM),dist)
     ! now make dist<0 in the substrate.
    dist=-dist

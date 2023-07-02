@@ -27,6 +27,7 @@ extern "C"
     Real* dt,
     Real* time,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
+    Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi),
     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi));
 
 
