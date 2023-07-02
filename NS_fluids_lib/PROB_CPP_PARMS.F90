@@ -1345,11 +1345,15 @@ stop
        if (fort_material_type(im).eq.0) then
         ! do nothing
        else if (fort_material_type(im).eq.999) then
-        if ((FSI_flag(im).ne.FSI_PRESCRIBED_PROBF90).and. &
-            (FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
-            (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. & 
-            (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then 
+        if ((FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
+            (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
+            (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
+            (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+         !do nothing
+        else
          print *,"FSI_flag invalid"
+         print *,"im=",im
+         print *,"FSI_flag(im)=",FSI_flag(im)
          stop
         endif
        else if ((fort_material_type(im).gt.0).and. &

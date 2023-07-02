@@ -10792,7 +10792,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (probtype.eq.199) then !hydrates (groupmofBC)
        print *,"this code must be upgrated"
-       stop
+       stop 
+
+       FIX ME
        do im=1,num_materials
         if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
             (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
@@ -10912,6 +10914,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir)
           call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          else if (axis_dir.eq.2) then
+                 FIX ME
           do im=1,num_materials
            if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
                (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
@@ -23670,6 +23673,8 @@ end subroutine initialize2d
           ! in: fort_initsolidtemp
          call materialdistsolid(xsten(0,1),xsten(0,2), &
            xsten(0,SDIM),disttest,time,im)
+
+   FIX ME
          if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
              (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
              (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
@@ -23700,6 +23705,8 @@ end subroutine initialize2d
  
        call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
          temp_solid_mat,time,im_solid_crit)
+
+ FIX ME
        if ((FSI_flag(im_solid_crit).ne.FSI_PRESCRIBED_NODES).and. &
            (FSI_flag(im_solid_crit).ne.FSI_SHOELE_PRESVEL).and. &
            (FSI_flag(im_solid_crit).ne.FSI_SHOELE_VELVEL)) then
@@ -24822,6 +24829,7 @@ end subroutine initialize2d
         if (is_in_probtype_list().eq.1) then
 
          call SUB_LS(xpos,time,distbatch,num_materials)
+
              ! bcflag=0 (calling from fort_initdata)
          call SUB_STATE(xpos,time,distbatch,local_state, &
                  bcflag,num_materials,num_state_material)
@@ -25773,7 +25781,13 @@ end subroutine initialize2d
 
         call materialdist_batch(xsten,nhalf,dx,bfact,distbatch,time)
         do im=1,num_materials
+          !FSI_PRESCRIBED_PROBF90
+          !FSI_PRESCRIBED_NODES
+          !FSI_SHOELE_PRESVEL
+          !FSI_SHOELE_VELVEL
          if (is_rigid(im).eq.1) then
+
+                 FIX ME
           if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
               (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
               (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
@@ -25784,6 +25798,7 @@ end subroutine initialize2d
            print *,"FSI_flag(im) invalid"
            stop
           endif
+
          else if (is_rigid(im).eq.0) then
           ! do nothing
          else
@@ -25876,6 +25891,8 @@ end subroutine initialize2d
          if (is_rigid(im).eq.0) then
           debug_vfrac_sum=debug_vfrac_sum+vofdark(im)
          else if (is_rigid(im).eq.1) then
+
+                 FIX ME
           if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
               (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
               (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
@@ -25953,6 +25970,8 @@ end subroutine initialize2d
          call materialdist_batch(xsten2,nhalf2,dx,bfact,distbatch,time)
          do im=1,num_materials
           if (is_rigid(im).eq.1) then
+
+                  FIX ME
            if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
                (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
                (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then

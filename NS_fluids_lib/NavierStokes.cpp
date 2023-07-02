@@ -8014,6 +8014,11 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
  if ((nparts<0)||(nparts>num_materials))
   amrex::Error("nparts invalid");
 
+  //FSI_PRESCRIBED_NODES
+  //FSI_SHOELE_VELVEL
+  //FSI_SHOELE_PRESVEL
+  //FSI_ICE_NODES_INIT
+  //FSI_FLUID_NODES_INIT
  if (read_from_CAD()==1) {
   // do nothing
  } else
@@ -9699,6 +9704,11 @@ NavierStokes::initData () {
 
  prepare_mask_nbr(1);
 
+  //FSI_PRESCRIBED_NODES
+  //FSI_SHOELE_VELVEL
+  //FSI_SHOELE_PRESVEL
+  //FSI_ICE_NODES_INIT
+  //FSI_FLUID_NODES_INIT
  if (read_from_CAD()==1) {
   int iter=0; // iter==0 triggers allocation of touch + FSI_touch_flag[tid]=0
   // in initData: initialize node locations; generate_new_triangles
@@ -9711,11 +9721,18 @@ NavierStokes::initData () {
   // calls ns_header_msg_level with FSI_operation==2,3
   // ns_header_msg_level calls NavierStokes::Transfer_FSI_To_STATE
   FSI_make_distance(upper_slab_time,dt_amr);
+
+  //FSI_FLUID
+  //FSI_PRESCRIBED_PROBF90
+  //FSI_ICE_PROBF90
+  //FSI_ICE_STATIC
+  //FSI_RIGID_NOTPRESCRIBED
  } else if (read_from_CAD()==0) {
   // do nothing
  } else
   amrex::Error("read_from_CAD invalid");
 
+  //regenerate_from_eulerian calls fort_initdatasolid
  regenerate_from_eulerian(upper_slab_time);
 
  fort_initdata_alloc(&nc,
@@ -14464,6 +14481,10 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
  if (nstate!=S_new.nComp())
   amrex::Error("nstate invalid");
 
+ MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new ncomp invalid");
+
  MultiFab* local_mask;
  Real local_time;
  Real local_dt;
@@ -14511,6 +14532,7 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*local_mask)[mfi];
    FArrayBox& snewfab=S_new[mfi];
+   FArrayBox& LSnewfab=LS_new[mfi];
 
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -14532,6 +14554,8 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
     &local_time,
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
+    LSnewfab.dataPtr(),
+    ARLIM(LSnewfab.loVect()),ARLIM(LSnewfab.hiVect()),
     snewfab.dataPtr(),
     ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()));
  } // mfi

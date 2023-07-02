@@ -56,6 +56,7 @@ ns.num_divu_outer_sweeps=1
 # Solid definition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
 # 2 => prescribed rigid solid, non-tessellating (sci_clsvof.F90)
+# (1==FSI_PRESCRIBED_PROBF90)
 ns.FSI_flag         = 0 0 1 # tpce_geometry.vtk
 #FSI_interval=0 => only read in geometry at the beginning and copy data
 # from old time to new time.

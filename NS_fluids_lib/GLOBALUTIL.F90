@@ -8393,7 +8393,9 @@ end subroutine print_visual_descriptor
 
       REAL_T function hs(phi,cutoff)
       IMPLICIT NONE
-      REAL_T phi,cutoff,EPS
+      REAL_T, INTENT(in) :: phi
+      REAL_T, INTENT(in) :: cutoff
+      REAL_T EPS
 
       EPS=1.0D-6
       if (phi.ge.cutoff) then

@@ -54,6 +54,7 @@ ns.num_divu_outer_sweeps=1
 
 # Solid defifnition for FSI
 # 1 => By levelset definition in PROB.F90 (and module file)
+# (FSI_PRESCRIBED_PROBF90=1)
 ns.FSI_flag         = 0 0 1
 
 # these variables will be available to plug-ins:
