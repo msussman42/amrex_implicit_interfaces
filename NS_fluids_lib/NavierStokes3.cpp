@@ -11404,7 +11404,7 @@ void NavierStokes::veldiffuseALL() {
 
   ns_level.solid_temperature();  // if solid temperature is prescribed
 
-  ns_level.level_species_reaction();
+  ns_level.level_species_reaction(local_caller_string);
 
   // MEHDI VAHAB HEAT SOURCE
   // NavierStokes.cpp: void NavierStokes::make_heat_source()

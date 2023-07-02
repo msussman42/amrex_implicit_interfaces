@@ -23,7 +23,9 @@ extern "C"
     const int* fablo,const int* fabhi,
     int* bfact,
     const Real* xlo,const Real* dx,
+    int* initialize_flag,
     Real* dt,
+    Real* time,
     Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi), 
     Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi));
 

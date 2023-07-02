@@ -667,7 +667,7 @@ protected:
 
     void level_phase_change_convertALL();
 
-    void level_species_reaction();
+    void level_species_reaction(const std::string& caller_string);
 
     void level_phase_change_rate(Vector<blobclass> blobdata,
        int color_count,int nucleation_flag);
