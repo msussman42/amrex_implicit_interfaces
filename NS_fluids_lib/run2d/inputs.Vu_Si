@@ -29,7 +29,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=1
-ns.speciesconst=0.0 0.0 0.0 0.0
+ns.speciesconst=0.9 0.9 0.9 0.9
 ns.speciesviscconst=0.0 0.0 0.0 0.0
 #dY/dt=r(1-Y)
 ns.speciesreactionrate=0.0 0.0 0.0 0.0

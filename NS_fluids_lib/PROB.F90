@@ -248,6 +248,7 @@ stop
       REAL_T dxmax
       INTEGER_T ispec
       INTEGER_T spec_comp
+      REAL_T species_base
       REAL_T test_icefacecut
       REAL_T :: user_tension(num_interfaces)
       REAL_T :: def_thermal(num_materials)
@@ -471,15 +472,28 @@ stop
 
           ispec=rigid_fraction_id(im_primary)
           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+
+           species_base=fort_speciesconst((ispec-1)*num_materials+im_primary)
+
            spec_comp=(im_primary-1)*num_state_material+ENUM_SPECIESVAR+ispec
-           icefacecut=one-denstate(spec_comp);
-           if ((icefacecut.ge.zero).and. &
-               (icefacecut.lt.one)) then
-            ! do nothing
+
+           if ((denstate(spec_comp).ge.species_base).and. &
+               (denstate(spec_comp).le.one)) then
+
+            icefacecut=one-denstate(spec_comp);
+            if ((icefacecut.ge.zero).and. &
+                (icefacecut.lt.one)) then
+             ! do nothing
+            else
+             print *,"icefacecut invalid(3): ",icefacecut
+             stop
+            endif
+
            else
-            print *,"icefacecut invalid(3): ",icefacecut
+            print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
             stop
            endif
+
           else
            print *,"ispec invalid: ",ispec
            stop
@@ -611,14 +625,26 @@ stop
 
            ispec=rigid_fraction_id(im_ice)
            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+
+            species_base=fort_speciesconst((ispec-1)*num_materials+im_ice)
+
             spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
-            icefacecut=one-denstate(spec_comp);
-            if ((icefacecut.ge.zero).and. &
-                (icefacecut.le.one)) then
-             ! do nothing
+
+            if ((denstate(spec_comp).ge.species_base).and. &
+                (denstate(spec_comp).le.one)) then
+
+             icefacecut=one-denstate(spec_comp);
+             if ((icefacecut.ge.zero).and. &
+                 (icefacecut.le.one)) then
+              ! do nothing
+             else
+              print *,"icefacecut invalid(4)"
+              print *,"icefacecut= ",icefacecut
+              stop
+             endif
+
             else
-             print *,"icefacecut invalid(4)"
-             print *,"icefacecut= ",icefacecut
+             print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
              stop
             endif
 
@@ -641,7 +667,7 @@ stop
             endif
 
            else
-            print *,"ispec invalid"
+            print *,"ispec invalid: ",ispec
             stop
            endif
 
@@ -660,16 +686,29 @@ stop
 
            ispec=rigid_fraction_id(im_ice)
            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+
+            species_base=fort_speciesconst((ispec-1)*num_materials+im_ice)
+
             spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
-            icefacecut=one-denstate(spec_comp);
-            if (icefacecut.eq.zero) then
-             ! do nothing
+
+            if ((denstate(spec_comp).ge.species_base).and. &
+                (denstate(spec_comp).le.one)) then
+
+             icefacecut=one-denstate(spec_comp);
+             if (icefacecut.eq.zero) then
+              ! do nothing
+             else
+              print *,"expecting icefacecut=0 for melting"
+              stop
+             endif
+
             else
-             print *,"expecting icefacecut=0 for melting"
+             print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
              stop
             endif
+
            else
-            print *,"ispec invalid"
+            print *,"ispec invalid: ",ispec
             stop
            endif
 

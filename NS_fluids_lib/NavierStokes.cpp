@@ -4103,13 +4103,12 @@ NavierStokes::read_params ()
 
       if ((ispec>=1)&&(ispec<=num_species_var)) {
        for (int im_opp=0;im_opp<num_materials;im_opp++) {
-        if (speciesconst[(ispec-1)*num_materials+im]==1.0) {
+        if ((speciesconst[(ispec-1)*num_materials+im_opp]>0.0)&&
+            (speciesconst[(ispec-1)*num_materials+im_opp]<=1.0)) {
          //do nothing
-        } else if (speciesconst[(ispec-1)*num_materials+im]==0.0) {
-  	 //do nothing
 	} else
 	 amrex::Error("speciesconst invalid");
-        if (speciesreactionrate[(ispec-1)*num_materials+im]>=0.0) {
+        if (speciesreactionrate[(ispec-1)*num_materials+im_opp]>=0.0) {
   	 //do nothing
 	} else
 	 amrex::Error("speciesreactionrate invalid");
@@ -14545,6 +14544,7 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
     amrex::Error("tid_current invalid");
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
+    //fort_apply_reaction is declared in: MASS_TRANSFER_3D.F90
    fort_apply_reaction(
     &tid_current,
     &level,&finest_level,
