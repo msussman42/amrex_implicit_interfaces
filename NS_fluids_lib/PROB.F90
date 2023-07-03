@@ -477,7 +477,7 @@ stop
 
            spec_comp=(im_primary-1)*num_state_material+ENUM_SPECIESVAR+ispec
 
-           if ((denstate(spec_comp).ge.species_base).and. &
+           if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
                (denstate(spec_comp).le.one)) then
 
             icefacecut=one-denstate(spec_comp);
@@ -630,7 +630,7 @@ stop
 
             spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
 
-            if ((denstate(spec_comp).ge.species_base).and. &
+            if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
                 (denstate(spec_comp).le.one)) then
 
              icefacecut=one-denstate(spec_comp);
@@ -691,7 +691,7 @@ stop
 
             spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
 
-            if ((denstate(spec_comp).ge.species_base).and. &
+            if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
                 (denstate(spec_comp).le.one)) then
 
              icefacecut=one-denstate(spec_comp);

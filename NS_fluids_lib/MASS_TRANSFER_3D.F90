@@ -3513,7 +3513,7 @@ stop
 
            spec_old=snew(D_DECL(i,j,k),spec_comp)
            spec_new=spec_old
-           if ((spec_old.ge.species_base).and. &
+           if ((spec_old.ge.species_base-VOFTOL).and. &
                (spec_old.le.species_max)) then
 
             im_melt=0
@@ -3546,7 +3546,7 @@ stop
 
               spec_new=one
 
-              if (1.eq.1) then
+              if (1.eq.0) then
                print *,"i,j,k,im,im_melt,im_primary,species_base ", &
                   i,j,k,im,im_melt,im_primary,species_base
               endif
@@ -3587,7 +3587,7 @@ stop
               stop
              endif
 
-             if ((spec_new.ge.species_base).and. &
+             if ((spec_new.ge.species_base-VOFTOL).and. &
                  (spec_new.le.species_max)) then
               ! do nothing
              else
@@ -3609,7 +3609,7 @@ stop
             enddo !do im_inner=1..num_materials
 
            else
-            print *,"spec_old invalid: ",spec_old
+            print *,"spec_old invalid(1): ",spec_old
             stop
            endif
 
