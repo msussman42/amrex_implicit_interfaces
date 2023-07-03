@@ -197,7 +197,8 @@ stop
        else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then
         mof_ordering_local(im)=1 ! tessellating
        else
-        print *,"local_FSI_flag invalid"
+        print *,"local_FSI_flag invalid in fort_mof_ordering_override"
+        print *,"im,local_FSI_flag ",im,local_FSI_flag
         stop
        endif
       enddo !im=1,num_materials
@@ -229,7 +230,8 @@ stop
         else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then 
          mof_ordering_local(im)=1  ! tessellating
         else
-         print *,"local_FSI_flag invalid"
+         print *,"local_FSI_flag invalid in fort_mof_ordering_override"
+         print *,"im,local_FSI_flag ",im,local_FSI_flag
          stop
         endif
 
@@ -1351,7 +1353,7 @@ stop
             (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
          !do nothing
         else
-         print *,"FSI_flag invalid"
+         print *,"FSI_flag invalid in fort_override"
          print *,"im=",im
          print *,"FSI_flag(im)=",FSI_flag(im)
          stop

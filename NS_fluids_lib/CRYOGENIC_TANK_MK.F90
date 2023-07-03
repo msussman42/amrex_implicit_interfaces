@@ -994,6 +994,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      ! do nothing
     else
      print *,"expecting FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90"
+     print *,"(CRYOGENIC_TANK_MK)"
+     print *,"FSI_flag(3)=",FSI_flag(3)
      stop
     endif
 
@@ -1022,6 +1024,8 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
      ! do nothing
     else
      print *,"expecting FSI_flag(3).eq.FSI_PRESCRIBED_PROBF90"
+     print *,"(CRYOGENIC_TANK_MK)"
+     print *,"FSI_flag(3)=",FSI_flag(3)
      stop
     endif
     auxcomp=1

@@ -478,7 +478,8 @@ end subroutine nozzle2d
        dist=-99999.0
 
       else
-       print *,"FSI_flag invalid"
+       print *,"FSI_flag invalid in materialdistsolid"
+       print *,"im,FSI_flag(im) ",im,FSI_flag(im)
        stop
       endif
 
@@ -1259,7 +1260,8 @@ end subroutine nozzle2d
       if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
        ! do nothing
       else
-       print *,"FSI_flag(im) invalid"
+       print *,"expecting FSI_flag(im)=FSI_PRESCRIBED_PROBF90 in soliddist"
+       print *,"im,FSI_flag(im): ",im,FSI_flag(im)
        stop
       endif
 

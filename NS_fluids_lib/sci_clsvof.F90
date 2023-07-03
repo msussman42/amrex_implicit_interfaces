@@ -9722,7 +9722,7 @@ INTEGER_T idir,ielem,inode
              (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
      FSI_partid_map(part_id)=0
     else
-     print *,"FSI_flag(im_part) invalid"
+     print *,"FSI_flag(im_part) invalid in CLSVOF_ReadHeader"
      print *,"part_id,im_part,FSI_flag(im_part) ", &
              part_id,im_part,FSI_flag(im_part)
      stop
