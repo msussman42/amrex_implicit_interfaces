@@ -8578,7 +8578,7 @@ stop
           else if (cur_time.gt.zero) then
            ok_to_modify_EUL=0
           else
-           print *,"cur_time invalid"
+           print *,"cur_time invalid: ",cur_time
            stop
           endif
          else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
