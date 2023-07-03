@@ -3235,6 +3235,7 @@ stop
       REAL_T species_vfrac_sum
       REAL_T species_mass_sum
       REAL_T species_avg
+      REAL_T species_base
       REAL_T local_rate
       INTEGER_T vofcomp
       INTEGER_T spec_comp
@@ -3502,99 +3503,118 @@ stop
            print *,"ispec invalid"
            stop
           endif
-          spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
+
+          species_base=fort_speciesconst((ispec-1)*num_materials+im)
+
+          if ((species_base.gt.zero).and.(species_base.le.one)) then
+
+           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
                ENUM_SPECIESVAR+ispec
-          spec_old=snew(D_DECL(i,j,k),spec_comp)
-          spec_new=spec_old
-          if ((spec_old.ge.zero).and. &
-              (spec_old.le.species_max)) then
 
-           im_melt=0
+           spec_old=snew(D_DECL(i,j,k),spec_comp)
+           spec_new=spec_old
+           if ((spec_old.ge.species_base).and. &
+               (spec_old.le.species_max)) then
 
-           do im_opp=1,num_materials
-            if (im_opp.ne.im) then
-             do ireverse=0,1
-              call get_iten(im,im_opp,iten)
-              LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
-              if (LL.eq.zero) then
-               ! do nothing
-              else if (LL.ne.zero) then
-               im_melt=im_opp
-              else
-               print *,"LL invalid"
-               stop
-              endif
-             enddo !ireverse=0,1
-            else if (im_opp.eq.im) then
-             ! do nothing
-            else
-             print *,"im_opp invalid"
-             stop
-            endif
-           enddo !im_opp=1,num_materials
+            im_melt=0
 
-           if ((im_melt.ge.1).and.(im_melt.le.num_materials)) then
-
-            if (is_rigid(im_primary).eq.1) then
-             spec_new=zero
-            else if (is_rigid(im_primary).eq.0) then
-
-             if (local_LS(im).lt.zero) then
-              spec_new=zero
-             else if (local_LS(im).ge.zero) then
-              if (local_LS(im).ge.MUSHY_THICK*dx(1)) then
-               spec_new=species_max
-              else if ((local_LS(im).le.MUSHY_THICK*dx(1)).and. &
-                       (local_LS(im).ge.zero)) then
-               if (local_LS(im_melt).le.-MUSHY_THICK*dx(1)) then
-                spec_new=species_max
-               else if (local_LS(im_melt).ge.zero) then
-                spec_new=zero
-               else if ((local_LS(im_melt).ge.-MUSHY_THICK*dx(1)).and. &
-                        (local_LS(im_melt).le.zero)) then
-                LSMELT=abs(local_LS(im_melt))-half*MUSHY_THICK*dx(1)
-                spec_new=hs(LSMELT,half*MUSHY_THICK*dx(1))
+            do im_opp=1,num_materials
+             if (im_opp.ne.im) then
+              do ireverse=0,1
+               call get_iten(im,im_opp,iten)
+               LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+               if (LL.eq.zero) then
+                ! do nothing
+               else if (LL.ne.zero) then
+                im_melt=im_opp
                else
-                print *,"local_LS(im_melt) invalid"
+                print *,"LL invalid"
+                stop
+               endif
+              enddo !ireverse=0,1
+             else if (im_opp.eq.im) then
+              ! do nothing
+             else
+              print *,"im_opp invalid"
+              stop
+             endif
+            enddo !im_opp=1,num_materials
+
+            if ((im_melt.ge.1).and.(im_melt.le.num_materials)) then
+
+             if (is_rigid(im_primary).eq.1) then
+
+              spec_new=one
+
+              if (1.eq.1) then
+               print *,"i,j,k,im,im_melt,im_primary,species_base ", &
+                  i,j,k,im,im_melt,im_primary,species_base
+              endif
+
+             else if (is_rigid(im_primary).eq.0) then
+
+              if (local_LS(im).lt.zero) then
+               spec_new=species_base
+              else if (local_LS(im).ge.zero) then
+               if (local_LS(im).ge.MUSHY_THICK*dx(1)) then
+                spec_new=species_max
+               else if ((local_LS(im).le.MUSHY_THICK*dx(1)).and. &
+                        (local_LS(im).ge.zero)) then
+                if (local_LS(im_melt).le.-MUSHY_THICK*dx(1)) then
+                 spec_new=species_max
+                else if (local_LS(im_melt).ge.zero) then
+                 spec_new=species_base
+                else if ((local_LS(im_melt).ge.-MUSHY_THICK*dx(1)).and. &
+                         (local_LS(im_melt).le.zero)) then
+                 LSMELT=abs(local_LS(im_melt))-half*MUSHY_THICK*dx(1)
+                 spec_new=species_base+ &
+                    (one-species_base)*hs(LSMELT,half*MUSHY_THICK*dx(1))
+                else
+                 print *,"local_LS(im_melt) invalid: ",local_LS(im_melt)
+                 stop
+                endif
+               else
+                print *,"local_LS(im) invalid(1): ",local_LS(im)
                 stop
                endif
               else
-               print *,"local_LS(im) invalid"
+               print *,"local_LS(im) invalid(2): ",local_LS(im)
                stop
               endif
+
              else
-              print *,"local_LS invalid"
+              print *,"is_rigid(im_primary) invalid"
               stop
              endif
 
+             if ((spec_new.ge.species_base).and. &
+                 (spec_new.le.species_max)) then
+              ! do nothing
+             else
+              print *,"spec_new invalid: ",spec_new
+              stop
+             endif
+
+             spec_new=max(spec_new,spec_old)
+
             else
-             print *,"is_rigid(im_primary) invalid"
+             print *,"im_melt invalid: ",im_melt
              stop
             endif
 
-            if ((spec_new.ge.zero).and. &
-                (spec_new.le.species_max)) then
-             ! do nothing
-            else
-             print *,"spec_new invalid"
-             stop
-            endif
-
-            spec_new=max(spec_new,spec_old)
+            do im_inner=1,num_materials
+             spec_comp=STATECOMP_STATES+(im_inner-1)*num_state_material+ &
+               ENUM_SPECIESVAR+ispec
+             snew(D_DECL(i,j,k),spec_comp)=spec_new
+            enddo !do im_inner=1..num_materials
 
            else
-            print *,"im_melt invalid"
+            print *,"spec_old invalid: ",spec_old
             stop
            endif
 
-           do im_inner=1,num_materials
-            spec_comp=STATECOMP_STATES+(im_inner-1)*num_state_material+ &
-               ENUM_SPECIESVAR+ispec
-            snew(D_DECL(i,j,k),spec_comp)=spec_new
-           enddo !do im_inner=1..num_materials
-
           else
-           print *,"spec_old invalid: ",spec_old
+           print *,"species_base invalid: ",species_base
            stop
           endif
 
