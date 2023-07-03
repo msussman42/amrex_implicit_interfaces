@@ -17471,6 +17471,9 @@ stop
              ! do nothing
             else
              print *,"LS_solid_new or vfrac_solid_new invalid"
+             print *,"im=",im
+             print *,"LS_solid_new(im)=",LS_solid_new(im)
+             print *,"vfrac_solid_new(im)=",vfrac_solid_new(im)
              stop
             endif
 

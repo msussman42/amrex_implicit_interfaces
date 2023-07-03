@@ -12210,7 +12210,8 @@ IMPLICIT NONE
            endif
 
            if (mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID) then 
-            print *,"mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID invalid here"
+            print *, &
+              "mask_local.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID invalid here"
             stop
            endif
 

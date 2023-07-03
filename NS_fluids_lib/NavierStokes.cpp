@@ -7540,7 +7540,8 @@ void NavierStokes::regenerate_from_eulerian(Real cur_time) {
    FArrayBox& lsnewfab=LS_new[mfi];
    FArrayBox& solidfab=Solid_new[mfi];
 
-    // updates Solid_new for FSI_flag(im)==FSI_PRESCRIBED_PROBF90 materials.
+    // updates Solid_new for 
+    // FSI_flag(im)==FSI_PRESCRIBED_PROBF90 materials.
     // (prescribed solid from PROB.F90, not from CAD)
     // fort_initdatasolid is declared in PROB.F90
    fort_initdatasolid(
@@ -7932,10 +7933,10 @@ void NavierStokes::copy_old_FSI_to_new_level() {
 
  int nparts=im_solid_map.size();
 
-
  MultiFab& S_old=get_new_data(State_Type,slab_step);
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- MultiFab* vofmf=getState(1,STATECOMP_MOF,num_materials*ngeom_raw,prev_time_slab);
+ MultiFab* vofmf=
+   getState(1,STATECOMP_MOF,num_materials*ngeom_raw,prev_time_slab);
  MultiFab& LS_old=get_new_data(LS_Type,slab_step);
  MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
  MultiFab* lsmf=getStateDist(1,prev_time_slab,local_caller_string);  
