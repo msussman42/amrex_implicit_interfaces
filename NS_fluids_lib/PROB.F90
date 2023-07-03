@@ -477,11 +477,11 @@ stop
                (icefacecut.lt.one)) then
             ! do nothing
            else
-            print *,"icefacecut invalid: ",icefacecut
+            print *,"icefacecut invalid(3): ",icefacecut
             stop
            endif
           else
-           print *,"ispec invalid"
+           print *,"ispec invalid: ",ispec
            stop
           endif
 
@@ -617,7 +617,8 @@ stop
                 (icefacecut.le.one)) then
              ! do nothing
             else
-             print *,"icefacecut invalid"
+             print *,"icefacecut invalid(4)"
+             print *,"icefacecut= ",icefacecut
              stop
             endif
 
@@ -628,7 +629,8 @@ stop
              if (icefacecut.eq.zero) then
               ! do nothing
              else
-              print *,"icefacecut invalid"
+              print *,"icefacecut invalid(5)"
+              print *,"icefacecut= ",icefacecut
               stop
              endif
             else if (user_tension(iten).gt.zero) then
@@ -717,7 +719,8 @@ stop
           (icefacecut.le.one)) then
        ! do nothing
       else
-       print *,"icefacecut invalid: ",icefacecut
+       print *,"icefacecut invalid(6): ",icefacecut
+       print *,"icemask=",icemask
        stop
       endif
       if (icemask.le.icefacecut) then
@@ -5821,7 +5824,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else
-         print *,"FSI_flag(im) invalid"
+         print *,"FSI_flag(im) invalid in calc_error_indicator"
          print *,"im=",im
          print *,"FSI_flag(im)=",FSI_flag(im)
          stop
@@ -7196,6 +7199,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else
        print *,"FSI_flag invalid in velsolid"
+       print *,"im,FSI_flag(im) ",im,FSI_flag(im)
        stop
       endif
 
@@ -10630,7 +10634,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          VOF(vofcomp+dir2)=VOFwall(vofcomp+dir2)
         enddo
        else
-        print *,"FSI_flag invalid"
+        print *,"FSI_flag invalid in copy_mofbc_to_result"
+        print *,"im,FSI_flag(im): ",im,FSI_flag(im)
         stop
        endif
       enddo ! im=1..num_materials
@@ -10659,7 +10664,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                 (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
         LS(im)=LSwall(im)
        else
-        print *,"FSI_flag invalid"
+        print *,"FSI_flag invalid in check_lsbc_extrap"
+        print *,"im,FSI_flag(im): ",im,FSI_flag(im)
         stop
        endif
       enddo ! im=1..num_materials
@@ -10794,11 +10800,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"this code must be upgrated"
        stop 
 
-       FIX ME
        do im=1,num_materials
-        if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
-            (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
-            (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
+        if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
+            (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
+            (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
+         !do nothing
+        else
          vofcomp=(im-1)*ngeom_raw+1
          call HYD_VOLF_BC(time,dir,side,VOF(vofcomp), &
           xwall,VOFwall(vofcomp),x,y,z,dx,im)
@@ -10914,11 +10921,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           call get_rain_vfrac(x,y,z,dx,vofarray,cenbc,time,dir)
           call copy_mofbc_to_result(VOF,vofarray,cenbc,VOFwall)
          else if (axis_dir.eq.2) then
-                 FIX ME
+
           do im=1,num_materials
-           if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
-               (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
-               (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
+           if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
+               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
+               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
+            ! do nothing
+           else
             vofcomp=(im-1)*(ngeom_raw)+1
             if (im.eq.1) then
              VOF(vofcomp)=one
@@ -23555,7 +23564,8 @@ end subroutine initialize2d
                   (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
           ! do nothing
          else
-          print *,"FSI_flag invalid"
+          print *,"FSI_flag invalid in fort_initdatasolid"
+          print *,"im,FSI_flag(im): ",im,FSI_flag(im)
           stop
          endif
 
@@ -23674,15 +23684,15 @@ end subroutine initialize2d
          call materialdistsolid(xsten(0,1),xsten(0,2), &
            xsten(0,SDIM),disttest,time,im)
 
-   FIX ME
-         if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
-             (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
-             (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
+         if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
+             (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
+             (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
           disttest=lsnew(D_DECL(i,j,k),im)
          else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
           ! do nothing
          else
-          print *,"FSI_flag invalid"
+          print *,"FSI_flag invalid in fort_initsolidtemp"
+          print *,"im,FSI_flag(im): ",im,FSI_flag(im)
           stop
          endif
          if (disttest.gt.distsolid) then
@@ -23692,7 +23702,7 @@ end subroutine initialize2d
         else if (is_rigid(im).eq.0) then
          ! do nothing
         else
-         print *,"is_rigid invalid PROB.F90"
+         print *,"is_rigid invalid PROB.F90 (fort_initsolidtemp)"
          stop
         endif
        enddo ! im=1..num_materials
@@ -23706,16 +23716,17 @@ end subroutine initialize2d
        call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
          temp_solid_mat,time,im_solid_crit)
 
- FIX ME
-       if ((FSI_flag(im_solid_crit).ne.FSI_PRESCRIBED_NODES).and. &
-           (FSI_flag(im_solid_crit).ne.FSI_SHOELE_PRESVEL).and. &
-           (FSI_flag(im_solid_crit).ne.FSI_SHOELE_VELVEL)) then
+       if ((FSI_flag(im_solid_crit).eq.FSI_PRESCRIBED_NODES).or. &
+           (FSI_flag(im_solid_crit).eq.FSI_SHOELE_PRESVEL).or. &
+           (FSI_flag(im_solid_crit).eq.FSI_SHOELE_VELVEL)) then
         tcomp=(im_solid_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
         temp_solid_mat=snew(D_DECL(i,j,k),tcomp)
        else if (FSI_flag(im_solid_crit).eq.FSI_PRESCRIBED_PROBF90) then 
         ! do nothing
        else
-        print *,"FSI_flag(im_solid_crit) invalid"
+        print *,"FSI_flag(im_solid_crit) invalid in initsolidtemp"
+        print *,"im_solid_crit,FSI_flag(im_solid_crit) ", &
+         im_solid_crit,FSI_flag(im_solid_crit)
         stop
        endif
 
@@ -25787,15 +25798,15 @@ end subroutine initialize2d
           !FSI_SHOELE_VELVEL
          if (is_rigid(im).eq.1) then
 
-                 FIX ME
-          if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
-              (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
-              (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
+          if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
+              (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
+              (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
            distbatch(im)=LS(D_DECL(ic,jc,kc),im)
           else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
            ! do nothing
           else
-           print *,"FSI_flag(im) invalid"
+           print *,"FSI_flag(im) invalid in fort_initdata"
+           print *,"im,FSI_flag(im) ",im,FSI_flag(im)
            stop
           endif
 
@@ -25892,10 +25903,9 @@ end subroutine initialize2d
           debug_vfrac_sum=debug_vfrac_sum+vofdark(im)
          else if (is_rigid(im).eq.1) then
 
-                 FIX ME
-          if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
-              (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
-              (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
+          if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
+              (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
+              (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
            scalc(vofcomp_raw)=scal(D_DECL(ic,jc,kc),vofcomp_raw)
            do dir=1,SDIM 
             scalc(vofcomp_raw+dir)=scal(D_DECL(ic,jc,kc),vofcomp_raw+dir)
@@ -25903,7 +25913,8 @@ end subroutine initialize2d
           else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
            ! do nothing
           else
-           print *,"FSI_flag invalid"
+           print *,"FSI_flag invalid in fort_initdata"
+           print *,"im,FSI_flag(im): ",im,FSI_flag(im)
            stop
           endif
          else
@@ -25932,7 +25943,9 @@ end subroutine initialize2d
           else if (FSI_flag(im_solid_initdata).eq.FSI_PRESCRIBED_PROBF90) then
            ! do nothing
           else
-           print *,"FSI_flag invalid"
+           print *,"FSI_flag invalid in fort_initdata"
+           print *,"im_solid_initdata,FSI_flag(im_solid_initdata) ", &
+            im_solid_initdata,FSI_flag(im_solid_initdata)
            stop
           endif
          else
@@ -25971,15 +25984,15 @@ end subroutine initialize2d
          do im=1,num_materials
           if (is_rigid(im).eq.1) then
 
-                  FIX ME
-           if ((FSI_flag(im).ne.FSI_PRESCRIBED_NODES).and. &
-               (FSI_flag(im).ne.FSI_SHOELE_PRESVEL).and. &
-               (FSI_flag(im).ne.FSI_SHOELE_VELVEL)) then
+           if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
+               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
+               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
             distbatch(im)=LS(D_DECL(ic+i1,jc+j1,kc+k1),im)
            else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
             ! do nothing
            else
-            print *,"FSI_Flag(im) invalid"
+            print *,"FSI_flag(im) invalid in fort_initdata"
+            print *,"im,FSI_flag(im) ",im,FSI_flag(im)
             stop
            endif
           else if (is_rigid(im).eq.0) then

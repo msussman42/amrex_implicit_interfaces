@@ -5066,7 +5066,9 @@ stop
           if (icefacecut.eq.one) then
            ! do nothing
           else
-           print *,"icefacecut invalid"
+           print *,"icefacecut invalid(1)"
+           print *,"icefacecut ",icefacecut
+           print *,"icemask ",icemask
            stop
           endif
          else if (icemask.eq.zero) then
@@ -5074,7 +5076,13 @@ stop
               (icefacecut.lt.one)) then
            ! do nothing
           else
-           print *,"icefacecut invalid"
+           print *,"icefacecut invalid(2)"
+           print *,"icefacecut ",icefacecut
+           print *,"icefacecut_left ",icefacecut_left
+           print *,"icefacecut_right ",icefacecut_right
+           print *,"icemask ",icemask
+           print *,"icemask_left ",icemask_left
+           print *,"icemask_right ",icemask_right
            stop
           endif
          else
@@ -8578,7 +8586,8 @@ stop
                   (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
           ok_to_modify_EUL=1
          else
-          print *,"FSI_flag invalid"
+          print *,"FSI_flag invalid in fort_build_moment"
+          print *,"im_part,FSI_flag(im_part): ",im_part,FSI_flag(im_part)
           stop
          endif
 
@@ -8692,7 +8701,8 @@ stop
         else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 
          ! do nothing
         else
-         print *,"FSI_flag invalid"
+         print *,"FSI_flag invalid in fort_build_moment"
+         print *,"im_part,FSI_flag(im_part): ",im_part,FSI_flag(im_part)
          stop
         endif
        enddo ! partid=1..nparts

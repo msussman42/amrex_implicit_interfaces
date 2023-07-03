@@ -14068,6 +14068,7 @@ end subroutine print_visual_descriptor
        fort_CTML_FSI_mat_base=0
       else
        print *,"FSI_flag_local invalid in fort_CTML_FSI_mat_base"
+       print *,"im,FSI_flag_local ",im,FSI_flag_local
        stop
       endif
 
@@ -14149,7 +14150,8 @@ end subroutine print_visual_descriptor
           (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
        fort_FSI_flag_valid_base=1
       else
-       print *,"FSI_flag_local invalid"
+       print *,"FSI_flag_local invalid in fort_FSI_flag_valid_base"
+       print *,"im,FSI_flag_local=",im,FSI_flag_local
        stop
        fort_FSI_flag_valid_base=0
       endif
@@ -14218,6 +14220,7 @@ end subroutine print_visual_descriptor
        fort_is_ice_base=0
       else
        print *,"FSI_flag_local invalid in fort_is_ice_base"
+       print *,"im,FSI_flag_local ",im,FSI_flag_local
        stop
       endif
 
@@ -14283,6 +14286,7 @@ end subroutine print_visual_descriptor
        fort_is_FSI_rigid_base=0
       else
        print *,"FSI_flag_local invalid in fort_is_FSI_rigid_base"
+       print *,"im,FSI_flag_local ",im,FSI_flag_local
        stop
       endif
 
@@ -14401,6 +14405,7 @@ end subroutine print_visual_descriptor
        fort_is_lag_part_base=0
       else
        print *,"FSI_flag_local invalid in fort_is_lag_part_base"
+       print *,"im,FSI_flag_local ",im,FSI_flag_local
        stop
       endif
 
@@ -14457,7 +14462,8 @@ end subroutine print_visual_descriptor
                (fsi_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        ! do nothing
       else
-       print *,"fsi_flag_local invalid"
+       print *,"fsi_flag_local invalid in fort_read_from_CAD"
+       print *,"fsi_flag_local=",fsi_flag_local
        stop
       endif
 
@@ -14984,6 +14990,8 @@ end subroutine print_visual_descriptor
        fort_is_rigid_base=0  ! tessellating material
       else
        print *,"FSI_flag_local invalid in fort_is_rigid_base"
+       print *,"FSI_flag_local=",FSI_flag_local
+       print *,"im=",im
        stop
        fort_is_rigid_base=0  ! prevent compiler warnings
       endif

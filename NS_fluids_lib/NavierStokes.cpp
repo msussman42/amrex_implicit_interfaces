@@ -1737,10 +1737,12 @@ void fortran_parameters() {
   if (NavierStokes::material_type[im]==999) {
 
     // non-tessellating cases.
-   if ((NavierStokes::FSI_flag[im]!=FSI_PRESCRIBED_PROBF90)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_PRESCRIBED_NODES)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_SHOELE_PRESVEL)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_SHOELE_VELVEL))
+   if ((NavierStokes::FSI_flag[im]==FSI_PRESCRIBED_PROBF90)||
+       (NavierStokes::FSI_flag[im]==FSI_PRESCRIBED_NODES)||
+       (NavierStokes::FSI_flag[im]==FSI_SHOELE_PRESVEL)||
+       (NavierStokes::FSI_flag[im]==FSI_SHOELE_VELVEL)) {
+    //do nothing
+   } else
     amrex::Error("NavierStokes::FSI_flag invalid");
 
    int imp1=im+1;
@@ -1753,12 +1755,14 @@ void fortran_parameters() {
 
   } else if (NavierStokes::material_type[im]==0) {
 
-   if ((NavierStokes::FSI_flag[im]!=FSI_FLUID)&&
-       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_ICE_PROBF90)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_ICE_STATIC)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_ICE_NODES_INIT)&& 
-       (NavierStokes::FSI_flag[im]!=FSI_RIGID_NOTPRESCRIBED)) 
+   if ((NavierStokes::FSI_flag[im]==FSI_FLUID)||
+       (NavierStokes::FSI_flag[im]==FSI_FLUID_NODES_INIT)||
+       (NavierStokes::FSI_flag[im]==FSI_ICE_PROBF90)||
+       (NavierStokes::FSI_flag[im]==FSI_ICE_STATIC)||
+       (NavierStokes::FSI_flag[im]==FSI_ICE_NODES_INIT)||
+       (NavierStokes::FSI_flag[im]==FSI_RIGID_NOTPRESCRIBED)) {
+    //do nothing
+   } else
     amrex::Error("NavierStokes::FSI_flag invalid");
 
    int imp1=im+1;
@@ -1772,8 +1776,10 @@ void fortran_parameters() {
   } else if ((NavierStokes::material_type[im]>0)&& 
              (NavierStokes::material_type[im]<999)) {
 
-   if ((NavierStokes::FSI_flag[im]!=FSI_FLUID)&&   
-       (NavierStokes::FSI_flag[im]!=FSI_FLUID_NODES_INIT))
+   if ((NavierStokes::FSI_flag[im]==FSI_FLUID)||
+       (NavierStokes::FSI_flag[im]==FSI_FLUID_NODES_INIT)) {
+    //do nothing
+   } else
     amrex::Error("NavierStokes::FSI_flag invalid");
 
   } else {

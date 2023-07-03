@@ -108,7 +108,9 @@ stop
           else if (FSI_flag(CP%im_solid_max).eq.FSI_PRESCRIBED_PROBF90) then 
            ! do nothing
           else
-           print *,"FSI_flag invalid"
+           print *,"FSI_flag invalid in cell_xCP"
+           print *,"CP%im_solid_max=",CP%im_solid_max
+           print *,"FSI_flag(CP%im_solid_max)=",FSI_flag(CP%im_solid_max)
            stop
           endif
 
@@ -17318,7 +17320,8 @@ stop
             else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
             else
-             print *,"FSI_flag invalid"
+             print *,"FSI_flag invalid in fort_renormalize_prescribe"
+             print *,"im,FSI_flag(im): ",im,FSI_flag(im)
              stop
             endif
  
@@ -17356,7 +17359,8 @@ stop
             else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
             else
-             print *,"FSI_flag invalid"
+             print *,"FSI_flag invalid in fort_renormalize_prescribe"
+             print *,"im,FSI_flag(im): ",im,FSI_flag(im)
              stop
             endif
 
@@ -17383,7 +17387,8 @@ stop
             else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
             else
-             print *,"FSI_flag invalid"
+             print *,"FSI_flag invalid in fort_renormalize_prescribe"
+             print *,"im,FSI_flag(im): ",im,FSI_flag(im)
              stop
             endif
 
@@ -17440,7 +17445,8 @@ stop
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
                 den_hold(statecomp),time,im)
               else
-               print *,"FSI_flag invalid"
+               print *,"FSI_flag invalid in fort_renormalize_prescribe"
+               print *,"im,FSI_flag(im): ",im,FSI_flag(im)
                stop
               endif
              else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
@@ -17452,7 +17458,8 @@ stop
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
                 den_hold(statecomp),time,im)
               else
-               print *,"FSI_flag invalid"
+               print *,"FSI_flag invalid in fort_renormalize_prescribe"
+               print *,"im,FSI_flag(im): ",im,FSI_flag(im)
                stop
               endif
              else

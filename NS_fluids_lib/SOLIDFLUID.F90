@@ -884,7 +884,8 @@
           ! do nothing
 
          else
-          print *,"FSI_flag invalid"
+          print *,"FSI_flag invalid in fort_headermsg"
+          print *,"im_part,FSI_flag(im_part) ",im_part,FSI_flag(im_part)
           stop
          endif
 
@@ -1306,7 +1307,8 @@
            ! do nothing
 
           else
-           print *,"FSI_flag invalid"
+           print *,"FSI_flag invalid in fort_headermsg"
+           print *,"im_part,FSI_flag(im_part) ",im_part,FSI_flag(im_part)
            stop
           endif
 
@@ -2224,7 +2226,8 @@
          else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 
           ! do nothing
          else
-          print *,"FSI_flag(im_part) invalid"
+          print *,"FSI_flag(im_part) invalid in fort_fillcontainer"
+          print *,"im_part,FSI_flag(im_part) ",im_part,FSI_flag(im_part)
           stop
          endif
         enddo ! partid=1..nparts

@@ -176,7 +176,10 @@ endif
 if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then
  ! do nothing
 else
- print *,"FSI_flag(im) invalid"
+ print *,"expecting FSI_flag(im)=FSI_PRESCRIBED_PROBF90"
+ print *,"GENERAL_PHASECHANGE.F90"
+ print *,"im=",im
+ print *,"FSI_flag(im)=",FSI_flag(im)
  stop
 endif
 
