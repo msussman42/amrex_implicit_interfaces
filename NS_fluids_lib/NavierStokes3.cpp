@@ -11428,7 +11428,6 @@ void NavierStokes::veldiffuseALL() {
   } else
    amrex::Error("convert_temperature invalid");
 
-   // MEHDI VAHAB: COMBINE TEMPERATURES HERE IF NOT SUPERMESH APPROACH
   ns_level.combine_state_variable(
    SOLVETYPE_HEAT,
    combine_idx,

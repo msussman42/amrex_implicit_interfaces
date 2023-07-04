@@ -531,7 +531,7 @@ stop
          else if (tsat_flag.eq.0) then
           ! do nothing
          else
-          print *,"tsat_flag invalid"
+          print *,"tsat_flag invalid:",tsat_flag
           stop
          endif
          wt_local=VOFTOL

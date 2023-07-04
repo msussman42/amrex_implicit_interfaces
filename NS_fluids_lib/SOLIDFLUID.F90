@@ -1466,10 +1466,10 @@
       Zonename = "ZONE"
       call dumpstring(Zonename)
 
-      strandid=0
+      strandid=1
 
       write(11) -1   ! Parent Zone
-      write(11) 0    ! StrandID (this does not work)
+      write(11) strandid-1    ! StrandID (this does not work)
       write(11) 0.0d0 ! Solution time
       write(11) -1   ! Not used. Set to -1
       write(11) 0    ! Zone Type
@@ -1701,10 +1701,10 @@
       Zonename = "ZONE"
       call dumpstring(Zonename)
 
-      strandid=0
+      strandid=1
 
       write(11) -1   ! Parent Zone
-      write(11) 0    ! StrandID (this does not work)
+      write(11) strandid-1    ! StrandID (this does not work)
       write(11) 0.0d0 ! Solution time
       write(11) -1   ! Not used. Set to -1
       write(11) 0    ! Zone Type

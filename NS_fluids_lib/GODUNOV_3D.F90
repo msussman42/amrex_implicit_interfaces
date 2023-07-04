@@ -16045,7 +16045,7 @@ stop
             enddo
 
             ! check for TSAT BC.
-            tsat_flag=0
+            tsat_flag=0 !default: no TSAT available and only use cells w/F>0
             im_source_master=0
             im_dest_master=0
             TSAT_master=273.0d0
@@ -16109,9 +16109,9 @@ stop
                  endif
 
                  local_freezing_model= &
-                     freezing_model(iten+ireverse*num_interfaces)
+                   freezing_model(iten+ireverse*num_interfaces)
                  distribute_from_targ= &
-                       distribute_from_target(iten+ireverse*num_interfaces)
+                   distribute_from_target(iten+ireverse*num_interfaces)
                  if ((distribute_from_targ.lt.0).or. &
                      (distribute_from_targ.gt.1)) then
                   print *,"distribute_from_targ invalid"
@@ -16146,11 +16146,12 @@ stop
                      endif
 
                      if (project_option.eq.SOLVETYPE_HEAT) then
-                      ! do nothing
+                      ! do nothing (no need to reset Tgamma_STATUS to 0)
                      else if ((project_option.ge.SOLVETYPE_SPEC).and. &
                               (project_option.lt. &
                                SOLVETYPE_SPEC+num_species_var)) then
-                      if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
+                      if ((Tgamma_STATUS.eq.1).or. &
+                          (Tgamma_STATUS.eq.2)) then
                        if (is_multi_component_evapF(local_freezing_model, &
                         Tanasawa_or_Schrage_or_Kassemi(iten+ireverse*num_interfaces),&
                         LL).eq.0) then
@@ -16166,7 +16167,7 @@ stop
                                  (ispec.le.num_species_var)) then
                          Tgamma_STATUS=0
                         else
-                         print *,"ispec invalid"
+                         print *,"ispec invalid: ",ispec
                          stop
                         endif
                        else
@@ -16184,7 +16185,8 @@ stop
                       stop
                      endif
 
-                     if ((Tgamma_STATUS.eq.1).or.(Tgamma_STATUS.eq.2)) then
+                     if ((Tgamma_STATUS.eq.1).or. &
+                         (Tgamma_STATUS.eq.2)) then
 
                       if (project_option.eq.SOLVETYPE_HEAT) then
                        ! default Tgamma
@@ -16283,8 +16285,8 @@ stop
                  else if (is_GFM_freezing_modelF( &
                            local_freezing_model).eq.0) then 
                   ! do nothing
-                 else 
-                  print *,"local_freezing_model not supported"
+                 else
+                  print *,"local_freezing_model invalid:",local_freezing_model
                   stop
                  endif
 
@@ -16432,12 +16434,14 @@ stop
              stop
             endif
 
-             ! in: fort_combinevel
+             ! this subroutine: fort_combinevel
+             ! subroutine center_centroid_interchange is declared in:
+             ! MASS_TRANSFER_3D.F90
             call center_centroid_interchange( &
              DATA_FLOOR, &
              nsolve, &
              combine_flag,  & ! 0=>centroid -> center   1=>center->centroid
-             tsat_flag, &
+             tsat_flag, & !-1=>use all cells in stencil;=0=>no tsat;=1=>tsat
              bfact, &
              level, &
              finest_level, &
@@ -16455,11 +16459,40 @@ stop
              T_out)
 
             if (combine_flag.eq.0) then !centroid -> center (FVM->GFM)
+
+             if (im_primary.eq.im) then
+              !do nothing
+             else
+              print *,"expecting im=im_primary:",im,im_primary
+              stop
+             endif
+
+             if (VF_sten(D_DECL(0,0,0)).gt.VOFTOL) then
+              ! do nothing
+             else
+              print *,"expecting VF_sten(0,0,0)>VOFTOL"
+              stop
+             endif
+
+             if (tsat_flag.eq.0) then
+
+              T_out(1)=T_sten(D_DECL(0,0,0))
+
+             else if (tsat_flag.eq.1) then
+              ! do nothing
+             else
+              print *,"tsat_flag invalid"
+              stop
+             endif
+
              do im_opp=1,num_materials
               newcell(D_DECL(i,j,k),im_opp)=T_out(1)
              enddo
+
             else if (combine_flag.eq.1) then  !center -> centroid (GFM->FVM)
+
              newcell(D_DECL(i,j,k),im)=T_out(1)
+
             else
              print *,"combine_flag invalid"
              stop
