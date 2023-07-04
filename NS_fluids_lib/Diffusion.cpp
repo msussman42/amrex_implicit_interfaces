@@ -654,14 +654,23 @@ void NavierStokes::combine_state_variable(
    signed_distance->nGrow() << '\n';
   amrex::Error("signed_distance->nGrow() invalid");
  }
-  
- if ((update_flux==0)&&(combine_idx==-1)&&
-     ((combine_flag==0)||(combine_flag==1))) {
-  init_boundary_list(scomp,ncomp);
- } else if ((update_flux==1)||(combine_idx>=0)||(combine_flag==2)) {
-  // do nothing
+ 
+ if (update_flux==0) {
+  if (combine_idx==-1) {
+   if ((combine_flag==0)||(combine_flag==1)) {
+    init_boundary_list(scomp,ncomp);
+   } else if (combine_flag==2) {
+    //do nothing
+   } else
+    amrex::Error("combine_flag invalid");
+  } else if (combine_idx>=0) {
+   //do nothing
+  } else
+   amrex::Error("combine_idx invalid");
+ } else if (update_flux==1) {
+  //do nothing
  } else
-  amrex::Error("update_flux or combine_idx invalid");
+  amrex::Error("update_flux invalid");
 
  const Real* dx = geom.CellSize();
 
