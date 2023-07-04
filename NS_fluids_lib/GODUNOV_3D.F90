@@ -16314,7 +16314,8 @@ stop
              enddo ! im_opp
             enddo ! ireverse
 
-             ! combine_flag==0 or 1.
+             ! combine_flag==0 (FVM->GFM) or
+             ! combine_flag==1 (GFM->FVM) 
             do i1=-1,1
             do j1=-1,1
             do k1=k1lo,k1hi
@@ -16491,114 +16492,138 @@ stop
 
             else if (combine_flag.eq.1) then  !center -> centroid (GFM->FVM)
 
-             newcell(D_DECL(i,j,k),im)=T_out(1)
+             if (tsat_flag.eq.0) then
 
-            else
-             print *,"combine_flag invalid"
-             stop
-            endif
+              T_out(1)=cellfab(D_DECL(i,j,k),scomp(im_primary)+1)
 
-           else if ((im_primary.ne.im).and. &
-                    (combine_flag.eq.0)) then !centroid -> center (FVM->GFM)
-            ! do nothing
-           else if ((cell_vfrac(im).le.VOFTOL).and. &
-                    ((combine_flag.eq.1).or. &   ! GFM->FVM
-                     (combine_flag.eq.2))) then ! combine if F==0
-
-            if (nsolve.ne.1) then
-             print *,"nsolve invalid"
-             stop
-            endif
-            if (num_materials_combine.ne.num_materials) then
-             print *,"num_materials_combine invalid"
-             stop
-            endif
-
-            velsum(1)=zero
-            weight_sum=zero
-
-            do im_crit=1,num_materials
-
-             weight_sum=weight_sum+cell_mfrac(im_crit)
-
-             if (combine_idx.eq.-1) then
-              cellcomp=scomp(im_crit)+1
-             else if (combine_idx.ge.0) then
-              cellcomp=im_crit
+             else if (tsat_flag.eq.1) then
+              ! do nothing
              else
-              print *,"combine_idx invalid"
+              print *,"tsat_flag invalid"
               stop
              endif
 
-             test_temp=cellfab(D_DECL(i,j,k),cellcomp)
-             if (hflag.eq.0) then
-              if (test_temp.ge.zero) then
+             newcell(D_DECL(i,j,k),im)=T_out(1)
+
+            else
+             print *,"combine_flag invalid: ",combine_flag
+             stop
+            endif
+
+           else if (combine_flag.eq.0) then !centroid->center (FVM->GFM)
+
+            if (im_primary.ne.im) then
+             ! do nothing
+            else
+             print *,"combine_flag,im, or im_primary invalid: ", &
+                combine_flag,im,im_primary
+             stop
+            endif
+
+           else if ((combine_flag.eq.1).or. & ! GFM->FVM
+                    (combine_flag.eq.2)) then ! combine if F==0
+
+            if (cell_vfrac(im).le.VOFTOL) then
+
+             if (nsolve.ne.1) then
+              print *,"nsolve invalid"
+              stop
+             endif
+             if (num_materials_combine.ne.num_materials) then
+              print *,"num_materials_combine invalid"
+              stop
+             endif
+
+             velsum(1)=zero
+             weight_sum=zero
+
+             do im_crit=1,num_materials
+
+              weight_sum=weight_sum+cell_mfrac(im_crit)
+
+              if (combine_idx.eq.-1) then
+               cellcomp=scomp(im_crit)+1
+              else if (combine_idx.ge.0) then
+               cellcomp=im_crit
+              else
+               print *,"combine_idx invalid"
+               stop
+              endif
+
+              test_temp=cellfab(D_DECL(i,j,k),cellcomp)
+              if (hflag.eq.0) then
+               if (test_temp.ge.zero) then
+                ! do nothing
+               else
+                print *,"test_temp must be positive: combinevel"
+                print *,"test_temp=",test_temp
+                print *,"im_crit=",im_crit
+                print *,"cellcomp=",cellcomp
+                stop
+               endif
+              else if (hflag.eq.1) then
                ! do nothing
               else
-               print *,"test_temp must be positive: combinevel"
-               print *,"test_temp=",test_temp
-               print *,"im_crit=",im_crit
-               print *,"cellcomp=",cellcomp
+               print *,"hflag invalid3 hflag=",hflag
+               stop
+              endif
+ 
+              velsum(1)=velsum(1)+cell_mfrac(im_crit)*test_temp
+
+             enddo ! im_crit=1 .. num_materials
+
+             if (weight_sum.gt.zero) then
+              velsum(1)=velsum(1)/weight_sum
+             else
+              print *,"weight_sum invalid 1: ",weight_sum
+              stop
+             endif 
+
+             if (hflag.eq.0) then
+              if (velsum(1).ge.zero) then
+               ! do nothing
+              else
+               print *,"velsum must be nonneg: combinevel"
                stop
               endif
              else if (hflag.eq.1) then
               ! do nothing
              else
-              print *,"hflag invalid3 hflag=",hflag
+              print *,"hflag invalid4 hflag=",hflag
               stop
              endif
 
-             velsum(1)=velsum(1)+cell_mfrac(im_crit)*test_temp
-
-            enddo ! im_crit
-
-            if (weight_sum.gt.zero) then
-             velsum(1)=velsum(1)/weight_sum
-            else
-             print *,"weight_sum invalid 1: ",weight_sum
-             stop
-            endif 
-
-            if (hflag.eq.0) then
-             if (velsum(1).ge.zero) then
-              ! do nothing
+             if (combine_idx.eq.-1) then
+              cellcomp=scomp(im)+1
+             else if (combine_idx.ge.0) then
+              cellcomp=im
              else
-              print *,"velsum must be nonneg: combinevel"
+              print *,"combine_idx invalid"
               stop
              endif
-            else if (hflag.eq.1) then
+
+             if (combine_flag.eq.1) then ! GFM -> FVM (after diffusion)
+              newcell(D_DECL(i,j,k),im)=velsum(1)
+             else if (combine_flag.eq.2) then !combine if F==0
+              cellfab(D_DECL(i,j,k),cellcomp)=velsum(1)
+             else
+              print *,"combine_flag invalid:",combine_flag
+              stop
+             endif
+ 
+            else if ((cell_vfrac(im).ge.VOFTOL).and. &
+                     (combine_flag.eq.2)) then !combine if vfrac<VOFTOL
              ! do nothing
             else
-             print *,"hflag invalid4 hflag=",hflag
+             print *,"cell_vfrac or combine_flag bust"
+             print *,"im=",im
+             print *,"cell_vfrac=",cell_vfrac(im)
+             print *,"combine_flag=",combine_flag
              stop
             endif
 
-            if (combine_idx.eq.-1) then
-             cellcomp=scomp(im)+1
-            else if (combine_idx.ge.0) then
-             cellcomp=im
-            else
-             print *,"combine_idx invalid"
-             stop
-            endif
-
-            if (combine_flag.eq.1) then ! GFM -> FVM
-             newcell(D_DECL(i,j,k),im)=velsum(1)
-            else if (combine_flag.eq.2) then !combine if F==0
-             cellfab(D_DECL(i,j,k),cellcomp)=velsum(1)
-            else
-             print *,"combine_flag invalid"
-             stop
-            endif
-
-           else if ((cell_vfrac(im).ge.VOFTOL).and. &
-                    (combine_flag.eq.2)) then !combine if vfrac<VOFTOL
-            ! do nothing
            else
-            print *,"cell_vfrac or combine_flag bust"
-            print *,"im=",im
-            print *,"cell_vfrac=",cell_vfrac(im)
-            print *,"combine_flag=",combine_flag
+            print *,"combine_flag invalid: ",combine_flag
             stop
            endif
    
