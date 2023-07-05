@@ -15395,8 +15395,9 @@ stop
       INTEGER_T cellcomp
 
       REAL_T vsol(nsolve)
-      REAL_T velsum(nsolve)
       REAL_T ucombine(nsolve)
+
+      REAL_T state_mass_average
 
       REAL_T test_density
       REAL_T test_temp
@@ -15696,7 +15697,7 @@ stop
          if (test_density.gt.zero) then
           ! do nothing
          else
-          print *,"test_density invalid"
+          print *,"test_density invalid: ",test_density
           stop
          endif
          local_mass=test_density*local_volume ! local_volume is a volume frac.
@@ -15717,7 +15718,7 @@ stop
         if (mass_sum.gt.zero) then
          ! do nothing
         else
-         print *,"mass_sum invalid"
+         print *,"mass_sum invalid: ",mass_sum
          stop
         endif
 
@@ -15731,13 +15732,14 @@ stop
         partid_vel=0
         im_solid_vel_plus=0
         im_solid_vel=0
-        LSCRIT_solid_plus=-1.0D+99
-        LSCRIT_solid=-1.0D+99
+        LSCRIT_solid_plus=-1.0D+99 !only investigate LSNEW(solid)>=0
+        LSCRIT_solid=-1.0D+99      !investigate LSNEW>=0 and LSNEW<0
         
         do im=1,num_materials
          if (is_lag_part(im).eq.1) then
           if (is_rigid(im).eq.1) then
            LSTEST=LSNEW(D_DECL(i,j,k),im)
+
            if (LSTEST.ge.zero) then
             if (im_solid_vel_plus.eq.0) then
              partid_vel_plus=partid
@@ -15757,23 +15759,31 @@ stop
            else if (LSTEST.lt.zero) then
             ! do nothing
            else
-            print *,"LSTEST invalid"
+            print *,"LSTEST invalid: ",LSTEST
             stop
            endif
 
-           if (im_solid_vel.eq.0) then
-            partid_vel=partid
-            im_solid_vel=im
-            LSCRIT_solid=LSTEST
-           else if ((im_solid_vel.ge.1).and. &
-                    (im_solid_vel.le.num_materials)) then
-            if (LSTEST.ge.LSCRIT_solid) then
+           if ((LSTEST.ge.zero).or. &
+               (LSTEST.le.zero)) then
+
+            if (im_solid_vel.eq.0) then
              partid_vel=partid
              im_solid_vel=im
              LSCRIT_solid=LSTEST
+            else if ((im_solid_vel.ge.1).and. &
+                     (im_solid_vel.le.num_materials)) then
+             if (LSTEST.ge.LSCRIT_solid) then
+              partid_vel=partid
+              im_solid_vel=im
+              LSCRIT_solid=LSTEST
+             endif
+            else
+             print *,"im_solid_vel invalid: ",im_solid_vel
+             stop
             endif
+
            else
-            print *,"im_solid_vel invalid"
+            print *,"LSTEST invalid: ",LSTEST
             stop
            endif
 
@@ -15869,19 +15879,20 @@ stop
          if (combine_flag.eq.2) then !combine if vfrac<VOFTOL
 
           if (nsolve.ne.STATE_NCOMP_VEL) then
-           print *,"nsolve invalid"
+           print *,"nsolve invalid: ",nsolve
            stop
           endif
           if (scomp_size.ne.1) then
-           print *,"scomp_size invalid"
+           print *,"scomp_size invalid: ",scomp_size
            stop
           endif
           if (scomp(1).ne.STATECOMP_VEL) then
-           print *,"scomp invalid"
+           print *,"scomp invalid: ",scomp(1)
            stop
           endif
           if (ncomp(1).ne.nsolve) then
-           print *,"ncomp(1) invalid"
+           print *,"ncomp(1) invalid: ",ncomp(1)
+           print *,"nsolve=",nsolve
            stop
           endif
 
@@ -15972,7 +15983,7 @@ stop
           enddo ! cellcomp
 
          else
-          print *,"combine_flag invalid"
+          print *,"combine_flag invalid: ",combine_flag
           stop
          endif
   
@@ -15980,9 +15991,84 @@ stop
                  ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
 
+         state_mass_average=zero
+         weight_sum=zero
+
+         do im_crit=1,num_materials
+
+          weight_sum=weight_sum+cell_mfrac(im_crit)
+
+          if (combine_idx.eq.-1) then ! State_Type input(combine_flag=0,1)
+           cellcomp=scomp(im_crit)+1
+          else if (combine_idx.ge.0) then !localMF[combine_idx] input
+           cellcomp=im_crit
+          else
+           print *,"combine_idx invalid: ",combine_idx
+           stop
+          endif
+
+          test_temp=cellfab(D_DECL(i,j,k),cellcomp)
+          if (hflag.eq.0) then
+           if (test_temp.ge.zero) then
+            ! do nothing
+           else
+            print *,"test_temp must be positive: combinevel"
+            print *,"test_temp=",test_temp
+            print *,"im_crit=",im_crit
+            print *,"cellcomp=",cellcomp
+            stop
+           endif
+          else if (hflag.eq.1) then
+           if ((test_temp.ge.zero).or. &
+               (test_temp.le.zero)) then
+            ! do nothing
+           else
+            print *,"test_temp is NaN"
+            stop
+           endif
+          else
+           print *,"hflag invalid3 hflag=",hflag
+           stop
+          endif
+ 
+          state_mass_average=state_mass_average+ &
+             cell_mfrac(im_crit)*test_temp
+
+         enddo ! im_crit=1 .. num_materials
+
+         if (weight_sum.gt.zero) then
+          state_mass_average=state_mass_average/weight_sum
+         else
+          print *,"weight_sum invalid line 16029: ",weight_sum
+          stop
+         endif 
+
+         if (hflag.eq.0) then
+          if (state_mass_average.ge.zero) then
+           ! do nothing
+          else
+           print *,"state_mass_average must be nonneg: combinevel:", &
+             state_mass_average
+           stop
+          endif
+         else if (hflag.eq.1) then
+          if ((state_mass_average.ge.zero).or. &
+              (state_mass_average.le.zero)) then
+           ! do nothing
+          else 
+           print *,"state_mass_average is NaN: combinevel:", &
+             state_mass_average
+           stop
+          endif
+         else
+          print *,"hflag invalid4 hflag=",hflag
+          stop
+         endif
+
          do im=1,num_materials
 
-          if (cell_vfrac(im).le.one-VOFTOL) then
+          if ((cell_vfrac(im).le.one-VOFTOL).and. &
+              (cell_vfrac(im).ge.-VOFTOL)) then
 
            vofcomp=(im-1)*ngeom_recon+1
           
@@ -15991,10 +16077,13 @@ stop
               ((cell_vfrac(im).ge.VOFTOL).and. &
                (combine_flag.eq.1))) then  ! GFM -> FVM
 
-            if (combine_idx.ne.-1) then
-             print *,"combine_idx invalid"
+            if (combine_idx.eq.-1) then
+             ! do nothing
+            else
+             print *,"combine_idx invalid: ",combine_idx
              stop
             endif
+
             if (num_materials_combine.ne.num_materials) then
              print *,"num_materials_combine invalid"
              stop
@@ -16036,7 +16125,7 @@ stop
               xtarget(dir)=XC_sten(D_DECL(0,0,0),dir)
              enddo
             else
-             print *,"combine_flag invalid"
+             print *,"combine_flag invalid: ",combine_flag
              stop
             endif
 
@@ -16078,7 +16167,7 @@ stop
                stop
               endif
              else
-              print *,"project_option invalid"
+              print *,"project_option invalid: ",project_option
               stop
              endif
 
@@ -16364,14 +16453,22 @@ stop
                endif
 
               else if (hflag.eq.1) then
-               ! do nothing
+
+               if ((test_temp.ge.zero).or. &
+                   (test_temp.le.zero)) then
+                ! do nothing
+               else
+                print *,"test_temp is NaN: ",test_temp
+                stop
+               endif
               else
-               print *,"hflag invalid"
+               print *,"hflag invalid: ",hflag
                stop
               endif
 
              else
-              print *,"project_option invalid; fort_combinevel"
+              print *,"project_option invalid; fort_combinevel: ", &
+               project_option
               stop
              endif
         
@@ -16477,7 +16574,8 @@ stop
 
              if (tsat_flag.eq.0) then
 
-              T_out(1)=T_sten(D_DECL(0,0,0))
+              !  T_out(1)=T_sten(D_DECL(0,0,0))
+              T_out(1)=state_mass_average
 
              else if (tsat_flag.eq.1) then
               ! do nothing
@@ -16494,7 +16592,8 @@ stop
 
              if (tsat_flag.eq.0) then
 
-              T_out(1)=cellfab(D_DECL(i,j,k),scomp(im_primary)+1)
+              ! T_out(1)=cellfab(D_DECL(i,j,k),scomp(im_primary)+1)
+              T_out(1)=state_mass_average
 
              else if (tsat_flag.eq.1) then
               ! do nothing
@@ -16523,7 +16622,7 @@ stop
            else if ((combine_flag.eq.1).or. & ! GFM->FVM
                     (combine_flag.eq.2)) then ! combine if F==0
 
-            if (cell_vfrac(im).le.VOFTOL) then
+            if (abs(cell_vfrac(im)).le.VOFTOL) then
 
              if (nsolve.ne.1) then
               print *,"nsolve invalid"
@@ -16531,65 +16630,6 @@ stop
              endif
              if (num_materials_combine.ne.num_materials) then
               print *,"num_materials_combine invalid"
-              stop
-             endif
-
-             velsum(1)=zero
-             weight_sum=zero
-
-             do im_crit=1,num_materials
-
-              weight_sum=weight_sum+cell_mfrac(im_crit)
-
-              if (combine_idx.eq.-1) then
-               cellcomp=scomp(im_crit)+1
-              else if (combine_idx.ge.0) then
-               cellcomp=im_crit
-              else
-               print *,"combine_idx invalid"
-               stop
-              endif
-
-              test_temp=cellfab(D_DECL(i,j,k),cellcomp)
-              if (hflag.eq.0) then
-               if (test_temp.ge.zero) then
-                ! do nothing
-               else
-                print *,"test_temp must be positive: combinevel"
-                print *,"test_temp=",test_temp
-                print *,"im_crit=",im_crit
-                print *,"cellcomp=",cellcomp
-                stop
-               endif
-              else if (hflag.eq.1) then
-               ! do nothing
-              else
-               print *,"hflag invalid3 hflag=",hflag
-               stop
-              endif
- 
-              velsum(1)=velsum(1)+cell_mfrac(im_crit)*test_temp
-
-             enddo ! im_crit=1 .. num_materials
-
-             if (weight_sum.gt.zero) then
-              velsum(1)=velsum(1)/weight_sum
-             else
-              print *,"weight_sum invalid 1: ",weight_sum
-              stop
-             endif 
-
-             if (hflag.eq.0) then
-              if (velsum(1).ge.zero) then
-               ! do nothing
-              else
-               print *,"velsum must be nonneg: combinevel"
-               stop
-              endif
-             else if (hflag.eq.1) then
-              ! do nothing
-             else
-              print *,"hflag invalid4 hflag=",hflag
               stop
              endif
 
@@ -16603,15 +16643,16 @@ stop
              endif
 
              if (combine_flag.eq.1) then ! GFM -> FVM (after diffusion)
-              newcell(D_DECL(i,j,k),im)=velsum(1)
+              newcell(D_DECL(i,j,k),im)=state_mass_average
              else if (combine_flag.eq.2) then !combine if F==0
-              cellfab(D_DECL(i,j,k),cellcomp)=velsum(1)
+              cellfab(D_DECL(i,j,k),cellcomp)=state_mass_average
              else
               print *,"combine_flag invalid:",combine_flag
               stop
              endif
  
             else if ((cell_vfrac(im).ge.VOFTOL).and. &
+                     (cell_vfrac(im).le.one+VOFTOL).and. &
                      (combine_flag.eq.2)) then !combine if vfrac<VOFTOL
              ! do nothing
             else
@@ -16646,20 +16687,22 @@ stop
           
           else
            print *,"cell_vfrac or combine_flag bust"
+           print *,"im,cell_vfrac=",im,cell_vfrac(im)
+           print *,"combine_flag " ,combine_flag
            stop
           endif
 
          enddo ! im=1,num_materials
 
         else
-         print *,"project_option invalid"
+         print *,"project_option invalid: ",project_option
          stop
         endif
 
        else if (mask_test.eq.0) then
         ! do nothing
        else
-        print *,"mask_test invalid"
+        print *,"mask_test invalid: ",mask_test
         stop
        endif
  
