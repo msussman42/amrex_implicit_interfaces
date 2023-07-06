@@ -2673,7 +2673,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if (angular_velocity.ge.zero) then
         ! do nothing
        else
-        print *,"angular_velocity should be nonneg (counter-clockwise)"
+        print *,"angular_velocity should be nonneg (counter-clockwise): ", &
+           angular_velocity
         stop
        endif
 

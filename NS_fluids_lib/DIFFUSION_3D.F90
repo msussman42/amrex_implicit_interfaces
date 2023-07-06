@@ -98,6 +98,9 @@ stop
 ! hoop term 2nd component:   2 u_t/r^2 - v/r^2
 ! No coupling terms.
 ! Diagonal terms not multiplied by 2.
+!
+! Rotating frame of reference: (X-Y-Z coordinates)
+!
 ! Eady (page 35) and Lappa (page 20):
 !  \vec{u}_{t} = - 2 \vec{Omega} x \vec{u} - grad p/rho - |g|\vec{z}
 !   i       j        k
@@ -106,17 +109,19 @@ stop
 !
 ! u_t = 2 Omega v - p_{x}/rho0 
 ! v_t = -2 Omega u - p_{y}/rho0
-! w_t = -p_{z}/rho0 - |g beta|(T-T0)
+! w_t = -p_{z}/rho0 + |g beta|(T-T0)
 ! T_t + u T_x + v T_y +w T_z=0
 !
 ! K=2 Omega
-! Base state: ubase=\Gamma z Tbase=T0 + A y + B z  \Gamma=-A beta g/(2 Omega)
-! pbase=rho0 beta g B z^{2}/2 + rho0 beta A y z g 
+! Base state: ubase=\Gamma z 
+!             Tbase=T0 + A y + B z  
+!             \Gamma=-A |beta g|/(2 Omega)
+!             pbase=rho0 |beta g| B z^{2}/2 + rho0 |beta g| A y z 
 !
 ! check: pbase_{x}=vbase=0
-!        pbase_{y}/rho0=beta A z g
-!        -2 Omega ubase=-2 Omega \Gamma z=A beta g z
-!        pbase_{z}/rho0=beta g B z + beta A y g
+!        pbase_{y}/rho0=|beta g|A z 
+!        -2 Omega ubase=-2 Omega \Gamma z=A |beta g| z
+!        pbase_{z}/rho0=|beta g| B z + |beta g|A y 
 ! 
 ! Lewis and Nagata (ignoring viscosity and nonlinear terms):
 ! \vec{u}=u e_r + v e_{theta} + w e_{z}
@@ -125,16 +130,18 @@ stop
 !                   u        v          w  = -v e_r + u e_theta
 ! u_t= 2 Omega v - p_r/rho0
 ! v_t=-2 Omega u - p_theta/rho0
-! w_t=           - p_z/rho0 + g beta (T-T0)
+! w_t=           - p_z/rho0 + |g beta| (T-T0)
 ! T_t + u T_r + v T_theta +w T_z=0
 !
-! Base state: vbase=\Gamma z Tbase=T0 + A r + B z  \Gamma=A beta g/(2 Omega)
-! pbase=rho0 beta g B z^{2}/2 + rho0 beta A r z g 
+! Base state: vbase=\Gamma z 
+!             Tbase=T0 + A r + B z  
+!             \Gamma=A |beta g|/(2 Omega)
+!             pbase=rho0 |beta g| B z^{2}/2 + rho0 |beta g| A r z 
 !
 ! check: pbase_{theta}=ubase=0
-!        pbase_{r}/rho0=beta A z g
-!        2 Omega vbase=2 Omega \Gamma z=A beta g z
-!        pbase_{z}/rho0=beta g B z + beta A r g
+!        pbase_{r}/rho0=A |beta g| z 
+!        2 Omega vbase=2 Omega \Gamma z=A |beta g| z
+!        pbase_{z}/rho0=|beta g| B z + |beta g| A r 
 !
 ! sanity check for cylindrical coordinates: suppose particle has
 ! velocity \vec{u} = (-1, 0, 0), then particle will deflect counter clockwise
@@ -143,13 +150,13 @@ stop
 !
 ! Let p'=p-pbase  
 ! u_t= 2 Omega (v-vbase+vbase) - (p'+pbase)_r/rho0
-! v_t=-2 Omega u - (p'+pbase)_theta/rho0
-! w_t=           - (p'+pbase)_z/rho0 + g beta (T-Tbase+Tbase-T0)
+! v_t=-2 Omega (u-ubase+ubase) - (p'+pbase)_theta/rho0
+! w_t=           - (p'+pbase)_z/rho0 + |g beta| (T-Tbase+Tbase-T0)
 !
 ! u_t= 2 Omega (v-vbase) - (p')_r/rho0
-! v_t=-2 Omega u - (p')_theta/rho0
-! w_t=           - (p')_z/rho0 + g beta (T-Tbase)
-! p'=0 T=Tbase v=vbase u=0  w=0 is a solution.
+! v_t=-2 Omega (u-ubase) - (p')_theta/rho0
+! w_t=           - (p')_z/rho0 + |g beta| (T-Tbase)
+! p'=0 T=Tbase u=ubase v=vbase w=0 is a solution.
 
        subroutine fort_hoopimplicit( &
          override_density, &
@@ -492,15 +499,14 @@ stop
 
           vofcomp=(im-1)*ngeom_recon+1
           localF=recon(D_DECL(i,j,k),vofcomp)
-          if ((localF.ge.-VOFTOL).and.(localF.le.one+VOFTOL)) then
-           if (localF.lt.zero) then
-            localF=zero
-           endif
-           if (localF.gt.one) then
-            localF=one
-           endif
+          if (abs(localF).le.VOFTOL) then
+           localF=zero
+          else if (abs(localF-one).le.VOFTOL) then
+           localF=one
+          else if ((localF.gt.zero).and.(localF.lt.one)) then
+           ! do nothing
           else
-           print *,"localF out of range"
+           print *,"localF out of range: ",localF
            stop
           endif
           dencomp=STATECOMP_STATES+(im-1)*num_state_material+1+ENUM_DENVAR
@@ -515,7 +521,7 @@ stop
           if (rho_base.gt.zero) then
            ! do nothing
           else
-           print *,"rho_base invalid"
+           print *,"rho_base invalid: ",rho_base
            stop
           endif
           if (is_rigid(im).eq.1) then
@@ -526,20 +532,23 @@ stop
            if ((override_density(im).eq.0).or. & ! rho_t + div (rho u) = 0
                (override_density(im).eq.1)) then ! rho=rho(T,Y)
             ! do nothing
+            !
+            ! NOTE: DrhoDT<=0.0.
+            !
             ! if override_density(im)==1,
             ! GODUNOV_3D.F90: fort_derive_mom_den
             ! rho=rho0*(1+fort_DrhoDT(im)*(T-T0))
             ! units of fort_DrhoDT: 1/temperature
 
             !Boussinesq approximation:
-            !rho Du/Dt=-grad p + rho g zhat +
+            !rho Du/Dt=-grad p - rho |g| zhat +
             !  rho Omega^2 r rhat
-            !rho0 Du/Dt=-grad p + rho g zhat +
+            !rho0 Du/Dt=-grad p - rho |g| zhat +
             !  rho Omega^2 r rhat
-            !rho/rho0=(1+beta(T-T0))
-            !Du/Dt=-grad p/rho0+g zhat + g zhat beta (T-T0)+
-            !  Omega^{2} r rhat +
-            !  Omega^{2} r rhat beta (T-T0)
+            !rho/rho0=(1-|beta|(T-T0))
+            !Du/Dt=-grad p/rho0-|g| zhat + |g beta| zhat (T-T0)+
+            !  Omega^{2} r rhat -
+            !  Omega^{2} r rhat |beta| (T-T0)
             !  (beta<0)
 
            else if (override_density(im).eq.2) then 
@@ -557,6 +566,8 @@ stop
              ! do nothing
             else
              print *,"fort_DrhoDT has invalid sign: fort_hoopimplicit"
+             print *,"im=",im
+             print *,"fort_DrhoDT(im)=",fort_DrhoDT(im)
              stop
             endif
             ! units of DrhoDT are 1/(degrees Kelvin)
@@ -588,13 +599,14 @@ stop
           ! do nothing
          else
           print *,"cell_density_denom invalid: fort_hoopimplicit"
+          print *,"cell_density_denom=",cell_density_denom
           stop
          endif
 
          if ((Fsolid.ge.zero).and.(Fsolid.le.one+VOFTOL)) then
           ! do nothing
          else
-          print *,"Fsolid invalid: fort_hoopimplicit"
+          print *,"Fsolid invalid: fort_hoopimplicit: ",Fsolid
           stop
          endif
 
@@ -611,20 +623,21 @@ stop
           ! units of gravity: m/s^2
           ! DTEMP has no units.
           ! DTEMP=beta(T-T0)  (beta<0)
+          ! usually gravity_vector(SDIM)<0
          if (abs(DTEMP).ge.zero) then
           do dir=1,SDIM
            unp1(dir)=unp1(dir)+ &
               dt*gravity_vector(dir)*DTEMP
           enddo
          else
-          print *,"DTEMP is NaN"
+          print *,"DTEMP is NaN: ",DTEMP
           stop
          endif
 
           ! polar coordinates: coriolis force (temperature dependence)
           !                    centrifugal force (temperature dependence).
           ! angular_velocity>0 => counter clockwise
-          ! angular_velocity<0 => clockwise
+          ! angular_velocity<0 => clockwise (not allowed)
           ! in PROB.F90:
           ! R-Theta-Z 
           ! pres=pres+half*rho*(angular_velocity**2)*(xpos(1)**2)
@@ -669,7 +682,11 @@ stop
               (angular_velocity.eq.zero)) then
            ! do nothing
           else if ((DTEMP.ne.zero).and. &
-                   (angular_velocity.ne.zero)) then
+                   (angular_velocity.gt.zero)) then
+           ! DTEMP has no units.
+           ! Lewis and Nagata 2004:
+           ! -Omega^{2} r \rhat DrhoDT*(T-Tbase)
+           ! DTEMP=beta*(T-T0)  beta<0
            unp1(1)=unp1(1)+ &
             dt*DTEMP*centrifugal_force_factor*(angular_velocity**2)*xsten(0,1)
            unp1(2)=unp1(2)+ &
@@ -809,7 +826,7 @@ stop
         if (dt.gt.zero) then
          ! do nothing
         else
-         print *,"dt invalid"
+         print *,"dt invalid: ",dt
          stop
         endif
 
