@@ -11370,33 +11370,24 @@ void NavierStokes::veldiffuseALL() {
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
- int convert_temperature=1;
- int convert_species=1;
-
  for (int im=0;im<num_materials;im++) {
    if (heatviscconst[im]>0.0) {
-    convert_temperature=1;
+    //do nothing
    } else if (heatviscconst[im]==0.0) {
-    convert_temperature=1;
+    //do nothing
    } else
     amrex::Error("heatviscconst invalid");
  } // im 
 
  for (int im=0;im<num_materials*num_species_var;im++) {
    if (speciesviscconst[im]>0.0) {
-    convert_species=1;
+    //do nothing
    } else if (speciesviscconst[im]==0.0) { //speciesreactionrate
-    convert_species=1;
+    //do nothing
    } else
     amrex::Error("speciesviscconst invalid");
  } // im=0..num_materials*num_species_var-1 
 
- if (verbose>0)
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "convert_temperature= " << convert_temperature << '\n';
-   std::cout << "convert_species= " << convert_species << '\n';
-  }
- 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
 
@@ -11414,19 +11405,18 @@ void NavierStokes::veldiffuseALL() {
   // increment is added to all of the materials.
   ns_level.make_heat_source();  // updates S_new
 
-  int combine_flag=0;  // FVM -> GFM 
+   //FVM->GFM if phase change
+   //FVM->mass weighted average if no phase change. 
+  int combine_flag=0;  
    // combine_idx==-1 => update S_new  
    // combine_idx>=0  => update localMF[combine_idx]
   int combine_idx=-1; 
   int update_flux=0;
   int interface_cond_avail=1;
-  
-  if (convert_temperature==1) {
-   combine_flag=0; // FVM -> GFM
-  } else if (convert_temperature==0) { //thermal diffusivities all zero
-   combine_flag=2;
-  } else
-   amrex::Error("convert_temperature invalid");
+ 
+   //FVM->GFM if phase change
+   //FVM->mass weighted average if no phase change. 
+  combine_flag=0; 
 
   ns_level.combine_state_variable(
    SOLVETYPE_HEAT,
@@ -11438,12 +11428,9 @@ void NavierStokes::veldiffuseALL() {
 
   for (int ns=0;ns<num_species_var;ns++) {
 
-   if (convert_species==1) {
-    combine_flag=0; // FVM -> GFM
-   } else if (convert_species==0) {
-    combine_flag=2;
-   } else
-    amrex::Error("convert_species invalid");
+   //FVM->GFM if phase change
+   //FVM->mass weighted average if no phase change. 
+   combine_flag=0; 
 
    ns_level.combine_state_variable(
     SOLVETYPE_SPEC+ns,
@@ -11790,12 +11777,9 @@ void NavierStokes::veldiffuseALL() {
   int update_flux=0;
   int interface_cond_avail=1;
 
-  if (convert_temperature==1) {
-   combine_flag=1; // GFM -> FVM
-  } else if (convert_temperature==0) {
-   combine_flag=2;
-  } else
-   amrex::Error("convert_temperature invalid");
+   //GFM->FVM if phase change
+   //GFM copied to FVM if no phase change.
+  combine_flag=1; 
 
   ns_level.combine_state_variable(
    SOLVETYPE_HEAT,
@@ -11807,12 +11791,9 @@ void NavierStokes::veldiffuseALL() {
 
   for (int ns=0;ns<num_species_var;ns++) {
 
-   if (convert_species==1) {
-    combine_flag=1;  // GFM -> FVM
-   } else if (convert_species==0) {
-    combine_flag=2;
-   } else
-    amrex::Error("convert_species invalid");
+   //GFM->FVM if phase change
+   //GFM copied to FVM if no phase change.
+   combine_flag=1;
 
    ns_level.combine_state_variable(
     SOLVETYPE_SPEC+ns,
