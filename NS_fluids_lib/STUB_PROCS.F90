@@ -882,7 +882,8 @@ REAL_T, INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
  if (angular_velocity.ge.zero) then
   ! do nothing
  else
-  print *,"angular_velocity should be nonneg (counter clockwise)"
+  print *,"angular_velocity should be nonneg (counter clockwise): ", &
+     angular_velocity
   stop
  endif
  if ((centrifugal_force_factor.ge.zero).and. &
