@@ -185,6 +185,7 @@ stop
          uncoupled_viscosity, &
          update_state, &
          dt, &
+         cur_time_slab, &
          rzflag, &
          nparts, &
          nparts_def, &
@@ -211,6 +212,7 @@ stop
        INTEGER_T, INTENT(in) :: uncoupled_viscosity
        INTEGER_T, INTENT(in) :: update_state
        REAL_T, INTENT(in) :: dt
+       REAL_T, INTENT(in) :: cur_time_slab
        INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
        INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
        INTEGER_T :: growlo(3),growhi(3)
@@ -255,7 +257,9 @@ stop
        REAL_T, INTENT(in),target :: mu(DIMV(mu))
        REAL_T, pointer :: mu_ptr(D_DECL(:,:,:))
        REAL_T, INTENT(in) ::  xlo(SDIM)
-       REAL_T ::  xsten(-3:3,SDIM)
+       INTEGER_T, PARAMETER :: nhalf=3
+       REAL_T :: xsten(-nhalf:nhalf,SDIM)
+       REAL_T :: xpoint(SDIM)
        REAL_T, INTENT(in) ::  dx(SDIM)
 
        INTEGER_T i,j,k
@@ -268,12 +272,13 @@ stop
        REAL_T mu_cell
        INTEGER_T vofcomp
        INTEGER_T dencomp
-       INTEGER_T nhalf
        REAL_T localF
        REAL_T rho_base
        REAL_T rho_factor
        REAL_T local_temp
        REAL_T DTEMP
+       REAL_T T_BASE
+       REAL_T V_BASE(SDIM)
        REAL_T cell_density_denom
        REAL_T Fsolid
        REAL_T vt_over_r,ut_over_r
@@ -282,7 +287,18 @@ stop
        INTEGER_T partid,im_solid,partid_crit
        REAL_T LStest,LScrit
 
-       nhalf=3
+       if (dt.gt.zero) then
+        ! do nothing
+       else
+        print *,"expecting dt>0"
+        stop
+       endif
+       if (cur_time_slab.ge.zero) then
+        ! do nothing
+       else
+        print *,"expecting cur_time_slab>=0.0d0"
+        stop
+       endif
 
        if ((uncoupled_viscosity.ne.0).and. &
            (uncoupled_viscosity.ne.1)) then
@@ -380,6 +396,10 @@ stop
        do k=growlo(3),growhi(3)
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        do dir=1,SDIM
+         xpoint(dir)=xsten(0,dir)
+        enddo
 
         do dir=1,SDIM
          un(dir)=uold(D_DECL(i,j,k),dir)
@@ -570,6 +590,9 @@ stop
              print *,"fort_DrhoDT(im)=",fort_DrhoDT(im)
              stop
             endif
+
+            call SUB_T0_Boussinesq(xpoint,dx,cur_time_slab,im,T_BASE)
+
             ! units of DrhoDT are 1/(degrees Kelvin)
             ! DTEMP will have no units after dividing by total density.
             ! fort_tempconst is the temperature of the inner boundary
@@ -578,7 +601,7 @@ stop
             call SUB_UNITLESS_EXPANSION_FACTOR( &
               im, & !intent(in)
               local_temp, & !intent(in)
-              fort_tempconst(im), & !intent(in)
+              T_BASE, & !intent(in)
               rho_factor) !intent(out) (unitless)
 
              !rho_base=density of material "im"
@@ -634,6 +657,8 @@ stop
           stop
          endif
 
+         call SUB_V0_Coriolis(xpoint,dx,cur_time_slab,V_BASE)
+
           ! polar coordinates: coriolis force (temperature dependence)
           !                    centrifugal force (temperature dependence).
           ! angular_velocity>0 => counter clockwise
@@ -656,9 +681,9 @@ stop
            ! Lewis and Nagata 2004:
            ! -2 Omega e_{z} \Times \vec{u}
           unp1(1)=unp1(1)+dt*(centrifugal_force_factor*(un(2)**2)/RCEN+ &
-                              two*angular_velocity*un(2))
+             two*angular_velocity*(un(2)-V_BASE(2)))
           unp1(2)=unp1(2)-dt*(centrifugal_force_factor*(un(1)*un(2))/RCEN+ &
-                              two*angular_velocity*un(1))
+             two*angular_velocity*(un(1)-V_BASE(1)))
 
            ! DTEMP has no units.
            ! Lewis and Nagata 2004:
@@ -675,8 +700,10 @@ stop
           !  0        0      angular_velocity
           !  u        v         w
           ! = -2(-angular_vel. v,angular_velocity u)
-          unp1(1)=unp1(1)+dt*( two*angular_velocity*un(2) )
-          unp1(2)=unp1(2)-dt*( two*angular_velocity*un(1) )
+          unp1(1)=unp1(1)+ &
+               dt*( two*angular_velocity*(un(2)-V_BASE(2)) )
+          unp1(2)=unp1(2)- &
+               dt*( two*angular_velocity*(un(1)-V_BASE(1)) )
 
           if ((DTEMP.eq.zero).or. &
               (angular_velocity.eq.zero)) then
