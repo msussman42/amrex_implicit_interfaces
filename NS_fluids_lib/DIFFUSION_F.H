@@ -45,6 +45,7 @@ extern "C"
       int* uncoupled_viscosity,
       int* update_state,
       Real* dt,
+      Real* cur_time_slab,
       int* rzflag,
       int* nparts,
       int* nparts_def,
