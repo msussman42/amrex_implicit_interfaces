@@ -581,6 +581,59 @@ wt=one/wt
 return
 end subroutine ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF
 
+subroutine ROTATING_ANNULUS_T0_Boussinesq(x,dx,cur_time,im,T0)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: cur_time
+INTEGER_T, INTENT(in) :: im
+REAL_T, INTENT(out) :: T0
+
+ if (cur_time.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"cur_time invalid: ",cur_time
+  stop
+ endif
+ if ((im.ge.1).and.(im.le.num_materials)) then
+  ! do nothing
+ else
+  print *,"im invalid"
+  stop
+ endif
+
+ T0=fort_tempconst(im)
+
+end subroutine ROTATING_ANNULUS_T0_Boussinesq
+
+subroutine ROTATING_ANNULUS_V0_Coriolis(x,dx,cur_time,V0)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+REAL_T, INTENT(in) :: x(SDIM)
+REAL_T, INTENT(in) :: dx(SDIM)
+REAL_T, INTENT(in) :: cur_time
+REAL_T, INTENT(out) :: V0(SDIM)
+
+INTEGER_T dir
+
+ if (cur_time.ge.0.0d0) then
+  ! do nothing
+ else
+  print *,"cur_time invalid: ",cur_time
+  stop
+ endif
+
+ do dir=1,SDIM
+  V0(dir)=0.0d0
+ enddo
+
+end subroutine ROTATING_ANNULUS_V0_Coriolis
+
 
 
 end module ROTATING_ANNULUS_module
