@@ -129,6 +129,7 @@
       REAL_T fort_etaP(MAX_NUM_MATERIALS)
 
       REAL_T fort_visc_coef
+      REAL_T fort_angular_velocity
 
       REAL_T fort_grid_stretching_parameter(SDIM)
 

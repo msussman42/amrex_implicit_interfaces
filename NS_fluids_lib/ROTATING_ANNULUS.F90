@@ -25,7 +25,10 @@ stop
 ! probtype==82
 module ROTATING_ANNULUS_module
 
-implicit none                   
+implicit none 
+
+REAL_T, PARAMETER :: dT_dr=0.0d0
+REAL_T, PARAMETER :: dT_dz=0.0d0
 
 contains
 
@@ -204,10 +207,12 @@ else
  stop
 endif
 
-if (levelrz.eq.3) then
+if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+    (levelrz.eq.COORDSYS_CARTESIAN)) then
  ! do nothing
 else
- print *,"expecting levelrz=3"
+ print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
+ print *,"levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
@@ -438,11 +443,12 @@ else
  print *,"expecting num_materials.eq.2"
  stop
 endif
-
-if (levelrz.eq.3) then
+if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+    (levelrz.eq.COORDSYS_CARTESIAN)) then
  ! do nothing
 else
- print *,"expecting levelrz=3"
+ print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
+ print *,"levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
@@ -604,9 +610,25 @@ REAL_T, INTENT(out) :: T0
   print *,"im invalid"
   stop
  endif
+ if (SDIM.eq.3) then
+  ! do nothing
+ else
+  print *,"expecting sdim=3"
+  stop
+ endif
 
  T0=fort_tempconst(im)
-
+ if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+  T0=T0+dT_dr*x(1)
+ else if (levelrz.eq.COORDSYS_CARTESIAN) then
+  T0=T0+dT_dr*x(2)
+ else
+  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
+  print *,"levelrz=COORDSYS_CARTESIAN "
+  stop
+ endif
+ T0=T0+dT_dz*x(SDIM)
+        
 end subroutine ROTATING_ANNULUS_T0_Boussinesq
 
 subroutine ROTATING_ANNULUS_V0_Coriolis(x,dx,cur_time,V0)
@@ -619,7 +641,8 @@ REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T, INTENT(in) :: cur_time
 REAL_T, INTENT(out) :: V0(SDIM)
 
-INTEGER_T dir
+INTEGER_T :: dir
+REAL_T :: dV_dz
 
  if (cur_time.ge.0.0d0) then
   ! do nothing
@@ -627,10 +650,36 @@ INTEGER_T dir
   print *,"cur_time invalid: ",cur_time
   stop
  endif
+ if (SDIM.eq.3) then
+  ! do nothing
+ else
+  print *,"expecting sdim=3"
+  stop
+ endif
+ if (fort_angular_velocity.gt.0.0d0) then
+  ! do nothing
+ else
+  print *,"expecting fort_angular_velocity>0.0d0"
+  stop
+ endif
 
  do dir=1,SDIM
   V0(dir)=0.0d0
  enddo
+
+  ! rho=rho0*(1+fort_DrhoDT(im)*(T-T0))
+ dV_dz=dT_dr*abs(gravity_vector(SDIM)*fort_DrhoDT(1))/ &
+             (two*fort_angular_velocity)
+
+ if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+  V0(2)=dV_dz*x(SDIM)
+ else if (levelrz.eq.COORDSYS_CARTESIAN) then
+  V0(1)=-dV_dz*x(SDIM)
+ else
+  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
+  print *,"levelrz=COORDSYS_CARTESIAN "
+  stop
+ endif
 
 end subroutine ROTATING_ANNULUS_V0_Coriolis
 
