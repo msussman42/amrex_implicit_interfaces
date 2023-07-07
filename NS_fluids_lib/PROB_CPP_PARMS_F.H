@@ -169,6 +169,7 @@ namespace amrex{
        Real* fort_etaS,
        Real* fort_etaP,
        Real* fort_visc_coef,
+       Real* fort_angular_velocity,
        Real* grid_stretching_parameter,
        int* ioproc);
 

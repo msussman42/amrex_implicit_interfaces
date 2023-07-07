@@ -300,6 +300,15 @@ stop
         stop
        endif
 
+       if (abs(angular_velocity-fort_angular_velocity).le.VOFTOL) then
+        ! do nothing
+       else
+        print *,"angular_velocity or fort_angular_velocity invalid"
+        print *,"angular_velocity=",angular_velocity
+        print *,"fort_angular_velocity=",fort_angular_velocity
+        stop
+       endif
+
        if ((uncoupled_viscosity.ne.0).and. &
            (uncoupled_viscosity.ne.1)) then
         print *,"uncoupled_viscosity invalid"

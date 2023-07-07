@@ -1456,8 +1456,10 @@ void fortran_parameters() {
  Vector<Real> etaP_temp(NavierStokes::num_materials);
 
  Real visc_coef_temp=NavierStokes::visc_coef;
-
  pp.get("visc_coef",visc_coef_temp);
+
+ Real angular_velocity_temp=NavierStokes::angular_velocity;
+ pp.queryAdd("angular_velocity",angular_velocity_temp);
 
  pp.getarr("material_type",NavierStokes::material_type,0,
     NavierStokes::num_materials);
@@ -2018,6 +2020,7 @@ void fortran_parameters() {
   etaS_temp.dataPtr(),
   etaP_temp.dataPtr(),
   &visc_coef_temp,
+  &angular_velocity_temp,
   NavierStokes::grid_stretching_parameter.dataPtr(),
   &ioproc);
 

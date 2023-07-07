@@ -321,6 +321,8 @@ implicit none
 !   gravity_boussinesq_vector
 ! added June 8, deleted June 16 2023:
 !   fort_growth_angle_primary_mat
+! added July 7,
+!   fort_angular_velocity
 
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       INTEGER_T, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
