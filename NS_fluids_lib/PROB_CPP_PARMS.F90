@@ -727,6 +727,9 @@ stop
       SUB_ORDER_NODES=>STUB_ORDER_NODES
       SUB_FSI_SLICE=>STUB_FSI_SLICE
 
+      SUB_T0_Boussinesq=>STUB_T0_Boussinesq
+      SUB_V0_Coriolis=>STUB_V0_Coriolis
+
       if (probtype.eq.421) then
        SUB_INIT_MODULE=>INIT_CRYOGENIC_TANK1_MODULE
        SUB_LS=>CRYOGENIC_TANK1_LS
@@ -1025,10 +1028,14 @@ stop
        SUB_INTERNAL_GRAVITY_WAVE_FLAG=> &
          ROTATING_ANNULUS_INTERNAL_GRAVITY_WAVE_FLAG
        SUB_MAPPING_WEIGHT_COEFF=>ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF
+       SUB_T0_Boussinesq=>ROTATING_ANNULUS_T0_Boussinesq
+       SUB_V0_Coriolis=>ROTATING_ANNULUS_V0_Coriolis
       else
        ! assign null routines here that would cause the program to abort
        ! if called.  In otherwords, these are routines, that if called,
        ! MUST BE DEFINED and CANNOT depend on the STUB routines.
+       ! In otherwords, these routines must be uniquely defined for each
+       ! user defined problem.
        SUB_INIT_MODULE=>NULL() ! always called
        SUB_LS=>NULL() ! always called
 !       SUB_clamped_LS_no_scale=>NULL()

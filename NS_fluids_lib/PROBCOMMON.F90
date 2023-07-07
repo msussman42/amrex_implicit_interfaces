@@ -695,18 +695,19 @@ implicit none
       REAL_T, INTENT(out) :: charfn_out
       end subroutine TEMPLATE_CHARFN_REGION
 
-      subroutine TEMPLATE_T0_Boussinesq(x,dx,cur_time,T0)
+      subroutine TEMPLATE_T0_Boussinesq(x,dx,cur_time,im,T0)
       REAL_T, INTENT(in) :: x(SDIM)
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(in) :: cur_time
+      INTEGER_T, INTENT(in) :: im
       REAL_T, INTENT(out) :: T0
       end subroutine TEMPLATE_T0_Boussinesq
 
-      subroutine TEMPLATE_V0_Coriolis(x,dx,cur_time,T0)
+      subroutine TEMPLATE_V0_Coriolis(x,dx,cur_time,V0)
       REAL_T, INTENT(in) :: x(SDIM)
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(in) :: cur_time
-      REAL_T, INTENT(out) :: T0
+      REAL_T, INTENT(out) :: V0(SDIM)
       end subroutine TEMPLATE_V0_Coriolis
 
       subroutine TEMPLATE_THERMAL_K(x,dx,cur_time, &
