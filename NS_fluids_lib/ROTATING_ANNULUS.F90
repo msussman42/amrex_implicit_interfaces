@@ -180,11 +180,16 @@ INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
 INTEGER_T, INTENT(in) :: nmat
 INTEGER_T, INTENT(in) :: nstate_mat
 REAL_T, INTENT(in) :: x(SDIM)
+INTEGER_T :: radial_dir
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
 INTEGER_T im,ibase,n
-REAL_T t_sloping
+REAL_T dT_dr_local
+REAL_T T0
+REAL_T dx_local(SDIM)
+INTEGER_T local_dir
+INTEGER_T, PARAMETER :: im_liquid=1
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -207,9 +212,10 @@ else
  stop
 endif
 
-if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-    (levelrz.eq.COORDSYS_CARTESIAN)) then
- ! do nothing
+if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+ radial_dir=1
+else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ radial_dir=2
 else
  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
  print *,"levelrz=COORDSYS_CARTESIAN "
@@ -217,17 +223,26 @@ else
 endif
 
 if ((problenx.eq.problen_array(1)).and. &
+    (probleny.eq.problen_array(2)).and. &
     (problenx.gt.zero).and. &
-    (problox.gt.zero).and. &
-    (x(1).gt.zero)) then
+    (probleny.gt.zero).and. &
+    (problo_array(radial_dir).gt.zero).and. &
+    (x(radial_dir).gt.zero)) then
  ! do nothing
 else
- print *,"problenx or problox or x(1) invalid"
+ print *,"problenx or problo_array or x(radial_dir) invalid"
  stop
 endif
 
+dT_dr_local=(twall-fort_tempconst(1))/problen_array(radial_dir)
+
 if (twall.ge.fort_tempconst(1)) then
- ! do nothing
+ if (abs(dT_dr-dT_dr_local).le.VOFTOL) then
+  ! do nothig
+ else
+  print *,"(abs(dT_dr-dT_dr_local).le.VOFTOL) failed"
+  stop
+ endif
 else
  print *,"TA or TB invalid"
  stop
@@ -248,25 +263,13 @@ if (probtype.eq.82) then
    stop
   endif
 
-  if (x(1).lt.problox) then
-   t_sloping=fort_tempconst(1)
-  else if (x(1).gt.probhix) then
-   t_sloping=twall
-  else if ((x(1).ge.problox).and. &
-           (x(1).le.probhix)) then
-   t_sloping=fort_tempconst(1)+ &
-      (twall-fort_tempconst(1))*(x(1)-problox)/problenx
-  else
-   print *,"x(1) invalid"
-   stop
-  endif
+  do local_dir=1,SDIM
+   dx_local(local_dir)=one
+  enddo
 
-  if (t_sloping.gt.zero) then
-   STATE(ibase+ENUM_TEMPERATUREVAR+1)=t_sloping
-  else
-   print *,"need t_sloping>0"
-   stop
-  endif
+  call ROTATING_ANNULUS_T0_Boussinesq(x,dx_local,t,im_liquid,T0)
+
+  STATE(ibase+ENUM_TEMPERATUREVAR+1)=T0
 
    ! initial species in inputs?
   do n=1,num_species_var
@@ -418,6 +421,9 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: nmat
 REAL_T, INTENT(in) :: xwall
 REAL_T, INTENT(in) :: xghost(SDIM)
+REAL_T :: xwall_vec(SDIM)
+INTEGER_T :: radial_dir
+INTEGER_T :: local_dir
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T :: local_STATE(nmat*num_state_material)
@@ -428,7 +434,7 @@ INTEGER_T, INTENT(in) :: dir,side
 REAL_T, INTENT(in) :: dx(SDIM)
 INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+INTEGER_T, PARAMETER :: local_bcflag=1
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -443,9 +449,16 @@ else
  print *,"expecting num_materials.eq.2"
  stop
 endif
-if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
-    (levelrz.eq.COORDSYS_CARTESIAN)) then
- ! do nothing
+
+do local_dir=1,SDIM
+ xwall_vec(local_dir)=xghost(local_dir)
+enddo
+xwall_vec(dir)=xwall
+
+if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+ radial_dir=1
+else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ radial_dir=2
 else
  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
  print *,"levelrz=COORDSYS_CARTESIAN "
@@ -453,22 +466,27 @@ else
 endif
 
 if ((problenx.eq.problen_array(1)).and. &
+    (probleny.eq.problen_array(2)).and. &
     (problenx.gt.zero).and. &
-    (problox.gt.zero).and. &
-    (xghost(1).gt.zero)) then
+    (probleny.gt.zero).and. &
+    (problo_array(radial_dir).gt.zero).and. &
+    (xghost(radial_dir).gt.zero)) then
  ! do nothing
 else
- print *,"problenx or problox or xghost(1) invalid"
+ print *,"problenx or problo_array or xghost(radial_dir) invalid"
+ stop
+endif
+if (xwall_vec(radial_dir).gt.zero) then
+ ! do nothing
+else
+ print *,"xwall_vec(radial_dir) invalid"
  stop
 endif
 if (dir.eq.1) then
- if (xwall.gt.zero) then
-  ! do nothing
- else
-  print *,"xwall invalid"
-  stop
- endif
-else if ((dir.eq.2).or.(dir.eq.3)) then
+ ! do nothing
+else if (dir.eq.2) then
+ ! do nothing
+else if ((dir.eq.3).and.(SDIM.eq.3)) then
  ! do nothing
 else
  print *,"dir invalid"
@@ -489,27 +507,46 @@ else
  stop
 endif
 
+call get_primary_material(LS,im_crit)
+if (im_crit.eq.1) then
+ ! do nothing
+else
+ print *,"expecting im_crit=1"
+ stop
+endif
+
 ! fort_tempconst(1) is the inner wall temperature
 ! twall is the outer wall temperature
-local_bcflag=1
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
+
  call ROTATING_ANNULUS_STATE(xghost,t,LS,local_STATE,local_bcflag, &
          nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
- call get_primary_material(LS,im_crit)
- if (im_crit.eq.1) then
-  ! do nothing
- else
-  print *,"expecting im_crit=1"
-  stop
- endif
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
+
+ if (istate.eq.1+ENUM_TEMPERATUREVAR) then
+  call ROTATING_ANNULUS_STATE(xwall_vec,t,LS,local_STATE,local_bcflag, &
+         nmat,num_state_material)
+  ibase=(im-1)*num_state_material
+  STATE=local_STATE(ibase+istate)
+  ibase=(im_crit-1)*num_state_material
+  STATE_merge=local_STATE(ibase+istate)
+
+ else if (istate.eq.1+ENUM_DENVAR) then
+  ! do nothing
+ else if (istate.gt.1+ENUM_TEMPERATUREVAR) then
+  ! do nothing
+ else
+  print *,"istate invalid"
+  stop
+ endif
+
 else
  print *,"istate invalid"
  stop
