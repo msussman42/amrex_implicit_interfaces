@@ -11434,6 +11434,11 @@ end subroutine print_visual_descriptor
        ! SEM_IMAGE_BC_ALG is defined in PROBCOMMON.F90
       if (SEM_IMAGE_BC_ALG.eq.1) then
 
+        ! this approximation is exact for linear functions:
+        ! y=ax+b
+        ! PLINE(1)=a(xlo+h/2)+b
+        ! local_source_side(1)=2(a(xlo)+b)-[a(xlo+h/2)+b]=
+        ! a(xlo)+b-a(h/2)=a(xlo-h/2)+b
        if (bctype(1).eq.SEM_DIRICHLET) then ! dirichlet -> reflect odd
         local_bctype(1)=SEM_INTERIOR
         local_source_side(1)=two*bcvalue(1)-PLINE(1)
@@ -11454,7 +11459,7 @@ end subroutine print_visual_descriptor
       else if (SEM_IMAGE_BC_ALG.eq.0) then
        ! do nothing
       else
-       print *,"SEM_IMAGE_BC_ALG invalid"
+       print *,"SEM_IMAGE_BC_ALG invalid: ",SEM_IMAGE_BC_ALG
        stop
       endif
 

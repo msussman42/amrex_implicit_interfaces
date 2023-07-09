@@ -12785,29 +12785,34 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if (ncomp_xp.eq.1) then
         ! do nothing
        else
-        print *,"expecting ncomp_xp=1 if OP_PRESGRAD_MAC"
+        print *,"expecting ncomp_xp=1 if OP_PRESGRAD_MAC: ",ncomp_xp
         stop
        endif
 
        if (ncomp_xgp.ne.1) then
         print *,"ncomp_xgp invalid3"
-        print *,"expecting ncomp_xgp=1 if OP_PRESGRAD_MAC"
+        print *,"expecting ncomp_xgp=1 if OP_PRESGRAD_MAC: ",ncomp_xgp
         stop
        endif
        if ((energyflag.ne.SUB_OP_FOR_MAIN).and. & ! regular solver
            (energyflag.ne.SUB_OP_FOR_SDC)) then  ! for SDC
-        print *,"energyflag invalid OP_PRESGRAD_MAC"
+        print *,"energyflag invalid OP_PRESGRAD_MAC: ",energyflag
         stop
        endif
        if ((scomp.ne.1).or. &
            (dcomp.ne.1)) then
         print *,"parameters invalid for op=0=OP_PRESGRAD_MAC"
+        print *,"scomp=",scomp
+        print *,"dcomp=",dcomp
         stop
        endif
        if ((ncomp_dest.ne.1).or. &
            (ncomp_source.ne.1).or. &
            (scomp_bc.ne.1)) then
         print *,"parameters invalid for op=0=OP_PRESGRAD_MAC"
+        print *,"ncomp_dest=",ncomp_dest
+        print *,"ncomp_source=",ncomp_source
+        print *,"scomp_bc=",scomp_bc
         stop
        endif
 
@@ -13664,7 +13669,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               stop
              endif
             else
-             print *,"simple_AMR_BC_flag invalid"
+             print *,"simple_AMR_BC_flag invalid: ",simple_AMR_BC_flag
              stop
             endif
 
@@ -13799,7 +13804,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            if (nc.eq.1) then
             local_data(isten+1)=pres(D_DECL(ic,jc,kc),1)
            else
-            print *,"nc invalid OP_PRESGRAD_MAC"
+            print *,"nc invalid OP_PRESGRAD_MAC: ",nc
             stop
            endif
 
@@ -14014,6 +14019,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              if ((index_opp(dir2).lt.fablo(dir2)).or. &
                  (index_opp(dir2).gt.fabhi(dir2))) then
               print *,"index_opp invalid"
+              print *,"dir2=",dir2
+              print *,"index_opp(dir2)=",index_opp(dir2)
+              print *,"fablo(dir2)=",fablo(dir2)
+              print *,"fabhi(dir2)=",fabhi(dir2)
               stop
              endif
             else if (dir2.eq.dir) then
@@ -14292,8 +14301,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (nbr_outside_domain_flag(side).eq.1) then
              if ((local_bctype(side).eq.SEM_REFLECT_EVEN).or. & 
                  (local_bctype(side).eq.SEM_NEUMANN)) then ! neumann
-              if (shared_xcut.ne.zero) then
-               print *,"shared_xcut invalid"
+              if (shared_xcut.eq.zero) then
+               ! do nothing
+              else
+               print *,"shared_xcut invalid: ",shared_xcut
                stop
               endif
              else if ((local_bctype(side).eq.SEM_DIRICHLET).or. &

@@ -95,8 +95,6 @@ REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: VEL(SDIM)
 INTEGER_T dir
 INTEGER_T, INTENT(in) :: velsolid_flag
-REAL_T :: temp
-REAL_T :: xmid,zmid
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -352,8 +350,6 @@ INTEGER_T, INTENT(in) :: veldir,dir,side
 REAL_T, INTENT(in) :: dx(SDIM)
 REAL_T local_VEL(SDIM)
 INTEGER_T velsolid_flag
-REAL_T temp
-INTEGER_T for_dt
 
 if (nmat.eq.num_materials) then
  ! do nothing
