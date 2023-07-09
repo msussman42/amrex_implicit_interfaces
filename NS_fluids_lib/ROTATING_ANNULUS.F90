@@ -122,12 +122,22 @@ do dir=1,SDIM
  endif
 enddo
 
+if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+ !do nothing
+else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ !do nothing
+else
+ print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
+ print *,"levelrz=COORDSYS_CARTESIAN "
+ stop
+endif
+
 do dir=1,SDIM
  VEL(dir)=zero
 enddo
 
 if (probtype.eq.82) then
- ! do nothing
+ call ROTATING_ANNULUS_V0_Coriolis(x,dx,t,VEL)
 else
  print *,"expecting probtype==82"
  stop
@@ -240,11 +250,16 @@ if (twall.ge.fort_tempconst(1)) then
  if (abs(dT_dr-dT_dr_local).le.VOFTOL) then
   ! do nothig
  else
+  print *,"TA (fort_tempconst(1) or TB (twall) invalid"
   print *,"(abs(dT_dr-dT_dr_local).le.VOFTOL) failed"
+  print *,"twall=",twall
+  print *,"fort_tempconst(1)=",fort_tempconst(1)
   stop
  endif
 else
- print *,"TA or TB invalid"
+ print *,"TA (fort_tempconst(1) or TB (twall) invalid"
+ print *,"twall=",twall
+ print *,"fort_tempconst(1)=",fort_tempconst(1)
  stop
 endif
 
@@ -271,7 +286,6 @@ if (probtype.eq.82) then
 
   STATE(ibase+ENUM_TEMPERATUREVAR+1)=T0
 
-   ! initial species in inputs?
   do n=1,num_species_var
    STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
@@ -422,7 +436,7 @@ INTEGER_T, INTENT(in) :: nmat
 REAL_T, INTENT(in) :: xwall
 REAL_T, INTENT(in) :: xghost(SDIM)
 REAL_T :: xwall_vec(SDIM)
-INTEGER_T :: radial_dir
+INTEGER_T :: radial_dir ! 1 or 2
 INTEGER_T :: local_dir
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
@@ -560,10 +574,13 @@ subroutine ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: dir
+INTEGER_T, INTENT(in) :: dir !0,1,2
 REAL_T, INTENT(out) :: wt
 REAL_T, INTENT(in) :: phys_x
 REAL_T :: scaling
+REAL_T :: mid_x
+INTEGER_T :: radial_dir ! 1 or 2
+INTEGER_T :: azimuthal_dir ! 1 or 2
 
 if (SDIM.eq.3) then
  ! do nothing
@@ -572,35 +589,50 @@ else
  stop
 endif
 
-if ((dir.ge.0).and.(dir.lt.SDIM)) then
- ! do nothing
+if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+ radial_dir=1
+ azimuthal_dir=2
+else if (levelrz.eq.COORDSYS_CARTESIAN) then
+ radial_dir=2
+ azimuthal_dir=1
 else
- print *,"dir invalid"
- stop
-endif
-if ((phys_x.ge.zero).or.(phys_x.le.zero)) then
- ! do nothing
-else
- print *,"phys_x is NaN"
+ print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
+ print *,"levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
-if (1.eq.0) then
+if ((dir.ge.0).and.(dir.lt.SDIM)) then
+ ! do nothing
+else
+ print *,"dir invalid: ",dir
+ stop
+endif
+
+if ((phys_x.ge.zero).or.(phys_x.le.zero)) then
+ ! do nothing
+else
+ print *,"phys_x is NaN: ",phys_x
+ stop
+endif
+
+if (1.eq.1) then
  wt=one
-else if (1.eq.1) then
- if (dir.eq.0) then
-  scaling=(probhix-problox)
-  if (phys_x.le.half*(problox+probhix)) then
-   wt=one+(scaling/(problox-phys_x))**2
-  else if (phys_x.ge.half*(problox+probhix)) then
-   wt=one+(scaling/(probhix-phys_x))**2
+else if (1.eq.0) then
+ if (dir+1.eq.radial_dir) then
+  scaling=problen_array(radial_dir)
+  mid_x=half*(problo_array(radial_dir)+probhi_array(radial_dir))
+
+  if (phys_x.le.mid_x) then
+   wt=one+(scaling/(problo_array(radial_dir)-phys_x))**2
+  else if (phys_x.ge.mid_x) then
+   wt=one+(scaling/(probhi_array(radial_dir)-phys_x))**2
   else
    print *,"phys_x bust"
    stop
   endif
- else if (dir.eq.1) then
+ else if (dir+1.eq.azimuthal_dir) then
   wt=one
- else if (dir.eq.SDIM) then
+ else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
   scaling=(probhiz-probloz)
   if (phys_x.le.half*(probloz+probhiz)) then
    wt=one+(scaling/(probloz-phys_x))**2
@@ -611,7 +643,7 @@ else if (1.eq.1) then
    stop
   endif
  else 
-  print *,"dir invalid"
+  print *,"dir invalid: ",dir
   stop
  endif
 else
