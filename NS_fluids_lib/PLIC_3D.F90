@@ -1829,7 +1829,10 @@ stop
       return
       end subroutine fort_MOF_training
 
-
+      !NavierStokes::post_restart calls NavierStokes::prepare_post_process
+      !NavierStokes::post_init_state calls NavierStokes::prepare_post_process
+      !NavierStokes::prepare_post_process calls NavierStokes::MOF_training
+      !NavierStokes::MOF_training calls fort_MOF_DT_training
       subroutine fort_MOF_DT_training( &
         num_samples, &
         finest_level, &
