@@ -335,7 +335,7 @@ implicit none
 
       Type(training_model_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
         training_array
-      INTEGER_T :: training_finest_level=-1
+      INTEGER_T :: training_max_level=-1
       INTEGER_T :: training_lo(SDIM)
       INTEGER_T :: training_hi(SDIM)
 
@@ -372,7 +372,7 @@ implicit none
 
       Type(tree_type), allocatable, dimension(D_DECL(:,:,:),:) :: &
           decision_tree_array
-      INTEGER_T :: decision_tree_finest_level=-1
+      INTEGER_T :: decision_tree_max_level=-1
       INTEGER_T :: decision_tree_lo(3)
       INTEGER_T :: decision_tree_hi(3)
 

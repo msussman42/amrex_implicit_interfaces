@@ -12245,16 +12245,17 @@ contains
 
         if (1.eq.0) then
          print *,"fort_finest_level ",fort_finest_level
+         print *,"fort_max_level ",fort_max_level
          print *,"grid_level ",grid_level
-         print *,"decision_tree_finest_level ",decision_tree_finest_level
+         print *,"decision_tree_max_level ",decision_tree_max_level
          print *,"grid_index_ML ",grid_index_ML
         endif
 
-        if (decision_tree_finest_level.eq.-1) then
+        if (decision_tree_max_level.eq.-1) then
          ! do nothing
-        else if (decision_tree_finest_level.ge.0) then
+        else if (decision_tree_max_level.ge.0) then
 
-         if (grid_level.eq.decision_tree_finest_level) then
+         if (grid_level.eq.decision_tree_max_level) then
           mof_stencil_ok=1
           if (continuous_mof.eq.0) then
            ! do nothing
@@ -12354,15 +12355,15 @@ contains
          endif
 
         else
-         print *,"decision_tree_finest_level invalid"
+         print *,"decision_tree_max_level invalid"
          stop
         endif
 
-        if (training_finest_level.eq.-1) then
+        if (training_max_level.eq.-1) then
          ! do nothing
-        else if (training_finest_level.ge.0) then
+        else if (training_max_level.ge.0) then
 
-         if (grid_level.eq.training_finest_level) then
+         if (grid_level.eq.training_max_level) then
           mof_stencil_ok=1
           if (continuous_mof.eq.0) then
            ! do nothing
@@ -12456,12 +12457,12 @@ contains
          else if (grid_level.eq.-1) then
           ! do nothing
          else
-          print *,"grid_level (training_finest_level) invalid"
+          print *,"grid_level (training_max_level) invalid"
           stop
          endif
 
         else
-         print *,"training_finest_level invalid"
+         print *,"training_max_level invalid"
          stop
         endif
 
@@ -15485,8 +15486,8 @@ contains
 
       if (grid_level.eq.-1) then
        ! do nothing
-      else if ((grid_level.eq.training_finest_level).or. &
-               (grid_level.eq.decision_tree_finest_level)) then
+      else if ((grid_level.eq.training_max_level).or. &
+               (grid_level.eq.decision_tree_max_level)) then
        ! do nothing
       else
        print *,"grid_level invalid"

@@ -221,7 +221,7 @@ stop
        stop
       endif
       if (max_level.lt.finest_level) then
-       print *,"max_level invalid sloperecon"
+       print *,"max_level invalid sloperecon: ",max_level
        stop
       endif 
      
@@ -520,15 +520,15 @@ stop
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
           volume_super,cen_super,SDIM)
 
-        if ((level.lt.finest_level).or. &
-            (level.ne.decision_tree_finest_level)) then
+        if ((level.lt.max_level).or. &
+            (level.ne.decision_tree_max_level)) then
 
          ! always use MOF on the coarser levels or if decision tree data
          ! is not available.
          continuous_mof_parm=0
 
-        else if ((level.eq.finest_level).and. &
-                 (level.eq.decision_tree_finest_level)) then
+        else if ((level.eq.max_level).and. &
+                 (level.eq.decision_tree_max_level)) then
 
          if (num_fluid_materials_in_cell.eq.1) then
           continuous_mof_parm=0
@@ -543,7 +543,7 @@ stop
          endif
 
         else
-         print *,"level or decision_tree_finest_level invalid"
+         print *,"level or decision_tree_max_level invalid"
          stop
         endif
 
@@ -800,8 +800,8 @@ stop
 
         grid_level=-1
 
-        if ((level.eq.training_finest_level).or. &
-            (level.eq.decision_tree_finest_level))  then
+        if ((level.eq.training_max_level).or. &
+            (level.eq.decision_tree_max_level))  then
          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
              (levelrz.eq.COORDSYS_RZ)) then
           grid_level=level
@@ -815,7 +815,9 @@ stop
                  (level.le.finest_level)) then
          ! do nothing
         else
-         print *,"level invalid"
+         print *,"level invalid: ",level
+         print *,"finest_level: ",finest_level
+         print *,"max_level: ",max_level
          stop
         endif
 
@@ -1204,7 +1206,7 @@ stop
          endif
 
         else
-         print *,"level invalid fort_sloperecon 2"
+         print *,"level invalid fort_sloperecon 2: ",level
          stop
         endif
        else if (update_flag.eq.RECON_UPDATE_NULL) then
@@ -1237,6 +1239,7 @@ stop
         cpp_training_hi, &
         i,j,k, &
         finest_level, &
+        max_level, &
         bfact, &
         domlo,domhi, &
         dx, &
@@ -1256,6 +1259,7 @@ stop
       INTEGER_T, INTENT(inout) :: cpp_training_hi(SDIM)
       INTEGER_T, INTENT(in) :: i,j,k
       INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: max_level
       INTEGER_T, INTENT(in) :: continuous_mof ! =0 or 1
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: bfact
@@ -1311,10 +1315,10 @@ stop
        stop
       endif
 
-      if (finest_level.eq.fort_finest_level) then
-       training_finest_level=finest_level
+      if (max_level.eq.fort_max_level) then
+       training_max_level=max_level
       else
-       print *,"finest_level and fort_finest_level mismatch"
+       print *,"max_level and fort_max_level mismatch"
        stop
       endif
 
@@ -1426,7 +1430,7 @@ stop
 
       else if (op_training.eq.1) then
 
-       call gridsten_level(xsten,i,j,k,finest_level,nhalf)
+       call gridsten_level(xsten,i,j,k,max_level,nhalf)
 
        do dir=1,SDIM
         if (cpp_training_lo(dir).eq.training_lo(dir)) then
@@ -1836,6 +1840,7 @@ stop
       subroutine fort_MOF_DT_training( &
         num_samples, &
         finest_level, &
+        max_level, &
         bfact, &
         domlo,domhi, &
         dx) &
@@ -1850,6 +1855,7 @@ stop
 
       INTEGER_T, INTENT(in) :: num_samples
       INTEGER_T, INTENT(in) :: finest_level
+      INTEGER_T, INTENT(in) :: max_level
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
@@ -1879,6 +1885,9 @@ stop
       INTEGER_T i1,j1,k1
       INTEGER_T i_training
 
+      INTEGER_T :: loc_lo(SDIM)
+      INTEGER_T :: loc_hi(SDIM)
+
       INTEGER_T :: grid_index(SDIM)
       INTEGER_T :: grid_level
       REAL_T :: npredict(SDIM)
@@ -1898,14 +1907,14 @@ stop
 
       if (num_samples.eq.0) then
 
-       decision_tree_finest_level=-1
+       decision_tree_max_level=-1
 
       else if (num_samples.gt.0) then
 
-       if (finest_level.eq.fort_finest_level) then
-        decision_tree_finest_level=finest_level
+       if (max_level.eq.fort_max_level) then
+        decision_tree_max_level=max_level
        else
-        print *,"finest_level and fort_finest_level mismatch"
+        print *,"max_level and fort_max_level mismatch"
         stop
        endif
 
@@ -1996,9 +2005,14 @@ stop
         stop
        endif
 
+       do dir=1,SDIM
+        loc_lo(dir)=decision_tree_lo(dir)
+        loc_hi(dir)=decision_tree_hi(dir)
+       enddo
+
        allocate(decision_tree_array( &
-         D_DECL(decision_tree_lo(1):decision_tree_hi(1),decision_tree_lo(2):decision_tree_hi(2),decision_tree_lo(SDIM):decision_tree_hi(SDIM) ), &
-                 0:1))
+        D_DECL(loc_lo(1):loc_hi(1),loc_lo(2):loc_hi(2),loc_lo(SDIM):loc_hi(SDIM) ), &
+        0:1))
 
        do i=decision_tree_lo(1),decision_tree_hi(1)
        do j=decision_tree_lo(2),decision_tree_hi(2)
@@ -2007,7 +2021,7 @@ stop
 
         local_continuous_mof=cmof_idx
 
-        call gridsten_level(xsten,i,j,k,finest_level,nhalf)
+        call gridsten_level(xsten,i,j,k,max_level,nhalf)
 
         print *,"DT: training data num_samples,i,j,k,continuous_mof ", &
            num_samples,i,j,k,local_continuous_mof
