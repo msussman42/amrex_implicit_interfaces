@@ -22334,8 +22334,16 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  std::string local_caller_string="prepare_post_process";
  local_caller_string=caller_string+local_caller_string;
 
- const int finest_level = parent->finestLevel();
- NavierStokes& ns_finest=getLevel(finest_level);
+ int max_level = parent->maxLevel();
+ int finest_level = parent->finestLevel();
+ if ((max_level>=0)&&(finest_level<=max_level)) {
+  //do nothing
+ } else
+  amrex::Error("max_level invalid");
+ if ((finest_level>=0)&&(finest_level<=max_level)) {
+  //do nothing
+ } else
+  amrex::Error("finest_level invalid");
 
   // init VOLUME_MF and AREA_MF
  metrics_dataALL(1);
@@ -22344,14 +22352,12 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 // (i) NavierStokes::initData ()
 // (ii) NavierStokes::post_restart()
 
- FIX ME CALL MOF_training in post_regrid if MOF_training not prev called.
-
  if (pattern_test(local_caller_string,"post_init_state")==1) {
    // called from post_init_state
-  ns_finest.MOF_training();
+  MOF_training();
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
   // called from post_restart
-  ns_finest.MOF_training();
+  MOF_training();
  } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile
   // do nothing

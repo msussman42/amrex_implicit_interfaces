@@ -9231,21 +9231,40 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
 void NavierStokes::MOF_training() {
 
  int finest_level=parent->finestLevel();
+ int max_level = parent->maxLevel();
 
- if (level==finest_level) {
+ if (finest_level<=max_level) {
   //do nothing
  } else
-  amrex::Error("MOF_training only on finest level");
+  amrex::Error("expecting finest_level<=max_level");
 
- int bfact=parent->Space_blockingFactor(level);
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting MOF_training to be called from level=0");
+
+ int bfact=parent->Space_blockingFactor(max_level);
 
  if (num_state_base!=2)
   amrex::Error("num_state_base invalid");
 
  const Real* dx = geom.CellSize();
  const Box& domain = geom.Domain();
- const int* domlo = domain.loVect();
- const int* domhi = domain.hiVect();
+
+ Box domain_max_level = domain;
+ Real dx_max_level[AMREX_SPACEDIM];
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  dx_max_level[dir]=dx[dir];
+ }
+ for (int lev=1;lev<=max_level;lev++) {
+  domain_max_level.refine(2);
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   dx_max_level[dir]=dx_max_level[dir]/2;
+  }
+ }
+ const int* domlo = domain_max_level.loVect();
+ const int* domhi = domain_max_level.hiVect();
 
  int cpp_training_lo[AMREX_SPACEDIM];
  int cpp_training_hi[AMREX_SPACEDIM];
@@ -9260,9 +9279,10 @@ void NavierStokes::MOF_training() {
  fort_MOF_DT_training(
    &mof_decision_tree_learning,
    &finest_level,
+   &max_level,
    &bfact,
    domlo,domhi,
-   dx);
+   dx_max_level);
 
  if (mof_machine_learning>0) {
 
@@ -9277,9 +9297,10 @@ void NavierStokes::MOF_training() {
    cpp_training_hi,
    &cpp_i,&cpp_j,&cpp_k,
    &finest_level,
+   &max_level,
    &bfact,
    domlo,domhi,
-   dx,
+   dx_max_level,
    &local_continuous_mof); // only used if op_training=1,2
 
   ParallelDescriptor::Barrier();
@@ -9301,9 +9322,10 @@ void NavierStokes::MOF_training() {
      cpp_training_hi,
      &cpp_i,&cpp_j,&cpp_k,
      &finest_level,
+     &max_level,
      &bfact,
      domlo,domhi,
-     dx,
+     dx_max_level,
      &local_continuous_mof);
    }
    ParallelDescriptor::Barrier();
@@ -9315,9 +9337,10 @@ void NavierStokes::MOF_training() {
     cpp_training_hi,
     &cpp_i,&cpp_j,&cpp_k,
     &finest_level,
+    &max_level,
     &bfact,
     domlo,domhi,
-    dx,
+    dx_max_level,
     &local_continuous_mof);
    ParallelDescriptor::Barrier();
   } //local_continuous_mof
