@@ -73,7 +73,7 @@ namespace
     int  mffile_nstreams;
     int  probinit_natonce;
     int  checkpoint_nfiles;
-    int  regrid_on_restart;
+    int  level_0_already_regridded;
     int  use_efficient_regrid;
     bool refine_grid_layout;
     int  plotfile_on_restart;
@@ -145,7 +145,7 @@ AmrCore::Initialize ()
     mffile_nstreams          = 1;
     probinit_natonce         = 512;
     checkpoint_nfiles        = 64;
-    regrid_on_restart        = 0;
+    level_0_already_regridded = 0;
     use_efficient_regrid     = 0;
     plotfile_on_restart      = 0;
     checkpoint_on_restart    = 0;
@@ -257,11 +257,6 @@ AmrCore::InitAmr () {
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "Amr.verbose= " << verbose << '\n';
  }
-
-  //AmrCore::Initialize ()
- pp.queryAdd("regrid_on_restart",regrid_on_restart);
- if ((regrid_on_restart!=0)&&(regrid_on_restart!=1))
-  amrex::Error("regrid_on_restart invalid");
 
   //AmrCore::Initialize ()
  pp.queryAdd("plotfile_on_restart",plotfile_on_restart);
@@ -544,7 +539,7 @@ AmrCore::InitAmr () {
 
  m_gdb.reset(new AmrParGDB(this));
 
-} // subroutine InitAmr
+} // end subroutine InitAmr
 
 AmrCore::~AmrCore ()
 {
@@ -817,9 +812,8 @@ AmrCore::AMR_checkInput ()
 // geom[i].define(index_domain)  i=0...max_level and
 // m_gdb.reset(new AmrParGDB(this));
 void
-AmrCore::init (Real strt_time,
-           Real stop_time)
-{
+AmrCore::init (Real strt_time, Real stop_time) {
+
     if (!restart_file.empty() && restart_file != "init")
     {
         restart(restart_file);
@@ -1030,8 +1024,10 @@ AmrCore::restart (const std::string& filename)
         amrex::Error("max_level,mx_lev bust");
        }
 
-       if (regrid_on_restart and max_level > 0)
-           level_count[0] = regrid_int;
+        //AmrCore::restart
+        //force regridding prior to the first step taken. 
+       if (max_level > 0)
+        level_count[0] = regrid_int;
 
        AMR_checkInput();
        //
@@ -1088,7 +1084,9 @@ AmrCore::restart (const std::string& filename)
        for (i = 0          ; i <= max_level; i++) is >> level_count[i];
        for (i = max_level+1; i <= mx_lev   ; i++) is >> int_dummy;
 
-       if (regrid_on_restart and max_level > 0)
+        //force regridding prior to the first step taken. 
+        //AmrCore::restart
+       if (max_level > 0)
            level_count[0] = regrid_int;
 
        AMR_checkInput();
@@ -1287,57 +1285,65 @@ AmrCore::checkPoint ()
 
 
 void
-AmrCore::regrid_level_0_on_restart()
-{
+AmrCore::regrid_level_0_on_restart() {
 
+ if (max_level==0) {
 
- if ((max_level==0)&&(regrid_on_restart==1)) {
+  if (level_0_already_regridded==0) {
 
-  regrid_on_restart = 0;
-  //
-  // Coarsening before we split the grids ensures that each resulting
-  // grid will have an even number of cells in each direction.
-  //
-  BoxArray lev0(amrex::coarsen(Geom(0).Domain(),2));
-  //
-  // Now split up into list of grids within max_grid_size[0] limit.
-  //
-  lev0.maxSize(Old_maxGridSize(0)/2);
-  //
-  // Now refine these boxes back to level 0.
-  //
-  lev0.refine(2);
+   level_0_already_regridded=1;
+	  
+   //
+   // Coarsening before we split the grids ensures that each resulting
+   // grid will have an even number of cells in each direction.
+   //
+   BoxArray lev0(amrex::coarsen(Geom(0).Domain(),2));
+   //
+   // Now split up into list of grids within max_grid_size[0] limit.
+   //
+   lev0.maxSize(Old_maxGridSize(0)/2);
+   //
+   // Now refine these boxes back to level 0.
+   //
+   lev0.refine(2);
   
    //
    // Construct skeleton of new level.
    //
-  DistributionMapping dm(lev0);
-  AmrLevel* a = (*levelbld)(*this,0,Geom(0),lev0,dm,cumtime);
+   DistributionMapping dm(lev0);
+   AmrLevel* a = (*levelbld)(*this,0,Geom(0),lev0,dm,cumtime);
       
-  a->init(*amr_level[0],lev0,dm);
-  amr_level[0].reset(a);
+   a->init(*amr_level[0],lev0,dm);
+   amr_level[0].reset(a);
       
-  this->SetBoxArray(0, amr_level[0]->boxArray());
-  this->SetDistributionMap(0, amr_level[0]->DistributionMap());
+   this->SetBoxArray(0, amr_level[0]->boxArray());
+   this->SetDistributionMap(0, amr_level[0]->DistributionMap());
 
-  // calls CopyNewToOld 
-  // calls setTimeLevel(cumtime,dt_AMR) 
-  int initialInit_flag=0;
-  amr_level[0]->post_regrid(0,0,0,initialInit_flag,cumtime);
+   // calls CopyNewToOld 
+   // calls setTimeLevel(cumtime,dt_AMR) 
+   int initialInit_flag=0;
+   amr_level[0]->post_regrid(0,0,0,initialInit_flag,cumtime);
       
-  if (ParallelDescriptor::IOProcessor()) {
-   if (verbose > 1) {
-    printGridInfo(amrex::OutStream(),0,finest_level);
-   } else if (verbose > 0) {
-    printGridSummary(amrex::OutStream(),0,finest_level);
+   if (ParallelDescriptor::IOProcessor()) {
+    if (verbose > 1) {
+     printGridInfo(amrex::OutStream(),0,finest_level);
+    } else if (verbose > 0) {
+     printGridSummary(amrex::OutStream(),0,finest_level);
+    }
    }
-  }
       
-  if (record_grid_info && ParallelDescriptor::IOProcessor())
-   printGridInfo(gridlog,0,finest_level);
+   if (record_grid_info && ParallelDescriptor::IOProcessor())
+    printGridInfo(gridlog,0,finest_level);
+
+  } else if (level_0_already_regridded==1) {
+
+   //do nothing
+   
+  } else 
+   amrex::Error("level_0_already_regridded invalid");
 
  } else {
-  std::cout << "max_level not 0 or regrid_on_restart not 1\n";
+  std::cout << "expecting max_level=0 for regrid_level_0_on_restart 1\n";
   amrex::Error("regrid_level_0_on_restart(): invalid environment");
  }
 
@@ -1352,17 +1358,26 @@ AmrCore::timeStep (Real time,
  if (std::abs(time-cumtime)>1.0e-13)
   amrex::Error("time<>cumtime");
 
- if ((max_level==0)&&(regrid_on_restart==1)) {
+ if (max_level==0) {
 
-  regrid_level_0_on_restart();
+  if (level_0_already_regridded==0) {
 
-  if (record_grid_info && ParallelDescriptor::IOProcessor())
-   printGridInfo(gridlog,0,finest_level);
+   regrid_level_0_on_restart();
+
+   if (record_grid_info && ParallelDescriptor::IOProcessor())
+    printGridInfo(gridlog,0,finest_level);
+
+  } else if (level_0_already_regridded==1) {
+
+   //do nothing
+   
+  } else 
+   amrex::Error("level_0_already_regridded invalid");
  
- } else if ((max_level>0)||(regrid_on_restart==0)) {
+ } else if (max_level>0) {
   // do nothing
  } else
-  amrex::Error("finest_level or regrid_on_restart invalid");
+  amrex::Error("max_level invalid");
 
 
  int max_coarsest = std::min(finest_level, max_level-1);

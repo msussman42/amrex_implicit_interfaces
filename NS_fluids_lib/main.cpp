@@ -96,6 +96,10 @@ fork_job(int fork_id) {
  amrex::ParallelDescriptor::Barrier();
 
    // AmrCore::init 
+   //  a) if !restart_file.empty() and restart_file!="init" then:
+   //     "restart(restsrt_file)"
+   //  b) otherwise: "initialInit(strt_time,stop_time)"
+   //
  amrptr->init(strt_time,stop_time);
 
  amrex::ParallelDescriptor::Barrier();
@@ -179,7 +183,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 07/10/23, 12:20 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 07/10/23, 14:40 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

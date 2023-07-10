@@ -8,7 +8,6 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  5.12 2.56 
 geometry.is_periodic = 0 0 0
-amr.regrid_on_restart=1
 
 ns.projection_pressure_scale=1.0e+8
 ns.MOFITERMAX=15

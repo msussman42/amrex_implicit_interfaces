@@ -2390,8 +2390,6 @@ NavierStokes::read_params ()
     ppamr.queryAdd("plotfile_on_restart",local_plotfile_on_restart);
     int local_checkpoint_on_restart=0;
     ppamr.queryAdd("checkpoint_on_restart",local_checkpoint_on_restart);
-    int local_regrid_on_restart=0;
-    ppamr.queryAdd("regrid_on_restart",local_regrid_on_restart);
 
     tecplot_max_level=ns_max_level;
     max_level_for_use=ns_max_level;
@@ -2824,8 +2822,6 @@ NavierStokes::read_params ()
 	     local_plotfile_on_restart << '\n';
      std::cout << "local_checkpoint_on_restart (NS) = " << 
 	     local_checkpoint_on_restart << '\n';
-     std::cout << "local_regrid_on_restart (NS) = " << 
-	     local_regrid_on_restart << '\n';
      std::cout << "def_n_proper (NS) = " << def_n_proper << '\n';
      std::cout << "profile_debug= " << profile_debug << '\n';
      std::cout << "ns_tiling= " << ns_tiling << '\n';
@@ -22347,6 +22343,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 //note: fort_initgridmap is called from:
 // (i) NavierStokes::initData ()
 // (ii) NavierStokes::post_restart()
+
+ FIX ME CALL MOF_training in post_regrid if MOF_training not prev called.
 
  if (pattern_test(local_caller_string,"post_init_state")==1) {
    // called from post_init_state

@@ -20,7 +20,6 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 #geometry.prob_hi   = 16.0 8.0 
 geometry.prob_lo   = -1.0 -1.0 
 geometry.prob_hi   = 2.0 1.0 
-amr.regrid_on_restart=1
 
 # multigrid class
 mg.verbose = 0
