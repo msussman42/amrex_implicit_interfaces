@@ -18,7 +18,6 @@ ns.post_init_pressure_solve=1
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   = -1.0  0.0 
 geometry.prob_hi   =  1.0  1.0 
-amr.regrid_on_restart=1
 amr.plotfile_on_restart=1
 
 # multigrid class

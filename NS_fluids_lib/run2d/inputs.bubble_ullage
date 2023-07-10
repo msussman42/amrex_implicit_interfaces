@@ -127,7 +127,6 @@ amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 64   # 128 is optimal for MPI in 2D
-amr.regrid_on_restart=1
 
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
