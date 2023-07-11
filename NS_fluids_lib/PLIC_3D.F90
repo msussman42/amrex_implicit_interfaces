@@ -218,6 +218,10 @@ stop
           (level.lt.0).or. &
           (level.gt.finest_level)) then
        print *,"grid or level bust"
+       print *,"gridno=",gridno
+       print *,"level=",level
+       print *,"finest_level=",finest_level
+       print *,"max_level=",max_level
        stop
       endif
       if (max_level.lt.finest_level) then
@@ -538,12 +542,16 @@ stop
           continuous_mof_parm=continuous_mof
 
          else
-          print *,"num_fluid_materials_in_cell invalid"
+          print *,"num_fluid_materials_in_cell invalid: ", &
+           num_fluid_materials_in_cell
           stop
          endif
 
         else
          print *,"level or decision_tree_max_level invalid"
+         print *,"level=",level
+         print *,"max_level=",max_level
+         print *,"decision_tree_max_level=",decision_tree_max_level
          stop
         endif
 
@@ -808,7 +816,7 @@ stop
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           grid_level=level
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid: ",levelrz
           stop
          endif
         else if ((level.ge.0).and. &
@@ -818,6 +826,8 @@ stop
          print *,"level invalid: ",level
          print *,"finest_level: ",finest_level
          print *,"max_level: ",max_level
+         print *,"training_max_level: ",training_max_level
+         print *,"decision_tree_max_level: ",decision_tree_max_level
          stop
         endif
 
@@ -1915,6 +1925,9 @@ stop
         decision_tree_max_level=max_level
        else
         print *,"max_level and fort_max_level mismatch"
+        print *,"max_level: ",max_level
+        print *,"fort_max_level: ",fort_max_level
+        print *,"decision_tree_max_level: ",decision_tree_max_level
         stop
        endif
 

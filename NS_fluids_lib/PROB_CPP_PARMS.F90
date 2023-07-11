@@ -319,7 +319,11 @@ stop
 
       end subroutine fort_mof_ordering_override
 
-       !called from NavierStokes.cpp: void fortran_parameters
+       ! fortran_parameters is called from main.cpp prior to:
+       !  1. AmrCore* amrptr = new AmrCore();
+       !  2. amrptr->init(strt_time,stop_time);
+       ! fort_override is called from 
+       !  NavierStokes.cpp: void fortran_parameters
       subroutine fort_override( &
         cc_int_size, &
         ccmax_level, &
