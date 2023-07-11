@@ -12257,11 +12257,11 @@ contains
 
          if (grid_level.eq.decision_tree_max_level) then
           mof_stencil_ok=1
-          if (continuous_mof.eq.0) then
+          if (continuous_mof.eq.0) then !standard MOF
            ! do nothing
-          else if (continuous_mof.eq.-1) then
+          else if (continuous_mof.eq.-1) then!refcen and refvfrac on supercell
            mof_stencil_ok=0
-          else if (continuous_mof.ge.1) then
+          else if (continuous_mof.ge.1) then!refcen only on supercell
 
            if (sdim.eq.3) then
             ksten_low=-1
@@ -12350,12 +12350,12 @@ contains
          else if (grid_level.eq.-1) then
           ! do nothing
          else
-          print *,"grid_level (decision tree check) invalid"
+          print *,"grid_level (decision tree check) invalid: ",grid_level
           stop
          endif
 
         else
-         print *,"decision_tree_max_level invalid"
+         print *,"decision_tree_max_level invalid: ",decision_tree_max_level
          stop
         endif
 
@@ -12367,9 +12367,9 @@ contains
           mof_stencil_ok=1
           if (continuous_mof.eq.0) then
            ! do nothing
-          else if (continuous_mof.eq.-1) then
+          else if (continuous_mof.eq.-1) then!refcen and refvfrac on supermesh
            mof_stencil_ok=0
-          else if (continuous_mof.ge.1) then
+          else if (continuous_mof.ge.1) then!refcen on supermesh
 
            if (sdim.eq.3) then
             ksten_low=-1
@@ -12457,12 +12457,12 @@ contains
          else if (grid_level.eq.-1) then
           ! do nothing
          else
-          print *,"grid_level (training_max_level) invalid"
+          print *,"grid_level (training_max_level) invalid: ",grid_level
           stop
          endif
 
         else
-         print *,"training_max_level invalid"
+         print *,"training_max_level invalid: ",training_max_level
          stop
         endif
 
@@ -15491,6 +15491,9 @@ contains
        ! do nothing
       else
        print *,"grid_level invalid"
+       print *,"grid_level=",grid_level
+       print *,"training_max_level=",training_max_level
+       print *,"decision_tree_max_level=",decision_tree_max_level
        stop
       endif
 
