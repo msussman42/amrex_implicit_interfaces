@@ -9260,7 +9260,7 @@ void NavierStokes::MOF_training() {
  for (int lev=1;lev<=max_level;lev++) {
   domain_max_level.refine(2);
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   dx_max_level[dir]=dx_max_level[dir]/2;
+   dx_max_level[dir]=dx_max_level[dir]/2.0;
   }
  }
  const int* domlo = domain_max_level.loVect();
