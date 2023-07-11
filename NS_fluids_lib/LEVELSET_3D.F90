@@ -12936,7 +12936,7 @@ stop
        simple_AMR_BC_flag, &
        nsolve, &
        tileloop, &
-       dir, &
+       dir, &  !0,1,2
        operation_flag, & 
        energyflag, & 
        beta, &
@@ -12997,7 +12997,7 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: dir
+      INTEGER_T, INTENT(in) :: dir  !0,1,2
       INTEGER_T, INTENT(in) :: ncomp_mgoni
       INTEGER_T, INTENT(in) :: ncomp_xp
       INTEGER_T, INTENT(in) :: ncomp_xgp
@@ -14417,7 +14417,17 @@ stop
               endif 
 
              else
+              print *,"in fort_cell_to_mac: dir=",dir
               print *,"test_current_icemask bad: ",test_current_icemask
+              print *,"level,finest_level ",level,finest_level
+              print *,"domlo ",domlo
+              print *,"domhi ",domhi
+              print *,"project_option ",project_option
+              print *,"tilelo ",tilelo
+              print *,"tilehi ",tilehi
+              print *,"fablo ",fablo
+              print *,"fabhi ",fabhi
+              print *,"i,j,k:  ",i,j,k
               stop
              endif
 
