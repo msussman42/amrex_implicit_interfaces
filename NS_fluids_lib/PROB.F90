@@ -10806,7 +10806,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        vof_sum_check=vof_sum_check+vofarray(im)
       enddo ! im=1..num_materials
 
-      if (vof_sum_check.lt.half) then
+      if (vof_sum_check.ge.half) then
+       ! do nothing
+      else
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break PROB.F90:10814"
        print *,"vof_sum_check failed"
        print *,"vof_sum_check=",vof_sum_check
        print *,"time=",time
@@ -10816,6 +10821,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"dx= ",dx(1),dx(2),dx(SDIM)
        print *,"bfact=",bfact
        print *,"num_materials=",num_materials
+       print *,"VOFwall= ",VOFwall
+       print *,"vofarray= ",vofarray
        stop
       endif
 
@@ -29022,6 +29029,30 @@ end subroutine initialize2d
 
          do im=1,num_materials*ngeom_raw
           uwall(im)=u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)
+          if ((uwall(im).ge.zero).or. &
+              (uwall(im).le.zero)) then
+           ! do nothing
+          else
+           print *,"(breakpoint) break point and gdb: "
+           print *,"(1) compile with the -g option"
+           print *,"(2) break PROB.F90:29038"
+
+           print *,"u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)=", &
+             u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)
+
+           print *,"uwall(im) is NaN: ",im,uwall(im)
+           print *,"IWALL= ",IWALL
+           print *,"inside_index= ",inside_index
+           print *,"i,j,k ",i,j,k
+           print *,"borderlo=",borderlo
+           print *,"borderhi=",borderhi
+           print *,"fablo=",fablo
+           print *,"fabhi=",fabhi
+           print *,"domlo=",domlo
+           print *,"domhi=",domhi
+           print *,"dir2,side ",dir2,side
+           stop
+          endif
          enddo
          call groupmofBC(time,dir2,side, &
           uboundary, &
