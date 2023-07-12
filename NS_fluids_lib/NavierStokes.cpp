@@ -8769,8 +8769,9 @@ void NavierStokes::ns_header_msg_level(
      }
 
       //ngrow=0
-     MultiFab* LS_new_coarse=new MultiFab(grids,dmap,num_materials*(AMREX_SPACEDIM+1),0,
-      MFInfo().SetTag("LS_new_coarse"),FArrayBoxFactory());
+     MultiFab* LS_new_coarse=
+      new MultiFab(grids,dmap,num_materials*(AMREX_SPACEDIM+1),0,
+                   MFInfo().SetTag("LS_new_coarse"),FArrayBoxFactory());
      dcomp=0;
      scomp=0;
      FillCoarsePatch(*LS_new_coarse,dcomp,cur_time,LS_Type,scomp,
@@ -24839,6 +24840,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
  MultiFab* dist_touch_coarse_mf;
 
  if ((level>0)&&(level<=finest_level)) {
+   //ngrow=0
   dist_coarse_mf=new MultiFab(grids,dmap,num_materials*(AMREX_SPACEDIM+1),0,
 	MFInfo().SetTag("dist_coarse_mf"),FArrayBoxFactory());
   int dcomp=0;

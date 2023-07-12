@@ -11954,6 +11954,7 @@ void NavierStokes::PCINTERP_fill_borders(int idx_MF,int ngrow,
  }
 
   // uses desc_lstGHOST[index] instead of dest_lst[index]
+  // AmrLevel::InterpBordersGHOST is declared in AmrLevel.cpp.
  InterpBordersGHOST(
     *cmf,
     *localMF[idx_MF],
