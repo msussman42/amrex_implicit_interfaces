@@ -29015,13 +29015,17 @@ end subroutine initialize2d
       INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
-      INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
+      INTEGER_T dir2,dir3
+      INTEGER_T side
+      INTEGER_T side_debug
+      INTEGER_T ext_dir_flag,inside_index
       INTEGER_T fablo(SDIM)
       INTEGER_T fabhi(SDIM)
       INTEGER_T borderlo(3)
       INTEGER_T borderhi(3)
       INTEGER_T IWALL(3)
       INTEGER_T im
+      INTEGER_T im_debug
       REAL_T uwall(num_materials*ngeom_raw)
       REAL_T uboundary(num_materials*ngeom_raw)
       INTEGER_T, parameter :: nhalf=3
@@ -29151,6 +29155,11 @@ end subroutine initialize2d
            print *,"u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)=", &
              u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),im)
 
+           if (1.eq.0) then
+            print *,"u(D_DECL(IWALL(1)-1,IWALL(2),IWALL(3)),im)=", &
+             u(D_DECL(IWALL(1)-1,IWALL(2),IWALL(3)),im)
+           endif
+
            print *,"uwall(im) is NaN: ",im,uwall(im)
            print *,"IWALL= ",IWALL
            print *,"inside_index= ",inside_index
@@ -29162,6 +29171,20 @@ end subroutine initialize2d
            print *,"domlo=",domlo
            print *,"domhi=",domhi
            print *,"dir2,side ",dir2,side
+           print *,"EXT_DIR=",EXT_DIR
+           print *,"INT_DIR=",INT_DIR
+           print *,"FOEXTRAP=",FOEXTRAP
+           print *,"REFLECT_EVEN=",REFLECT_EVEN
+           print *,"REFLECT_ODD=",REFLECT_ODD
+           do dir3=1,SDIM
+           do side_debug=1,2
+           do im_debug=1,ncomp
+            print *,"dir,side,nc,bc(dir,side,nc) ",dir3,side_debug,im_debug, &
+              bc(dir3,side_debug,im_debug)
+           enddo 
+           enddo 
+           enddo 
+
            stop
           endif
          enddo
@@ -29175,7 +29198,7 @@ end subroutine initialize2d
         enddo
         enddo
         enddo
-       endif            
+       endif 
       enddo ! side
       enddo ! dir2
 
