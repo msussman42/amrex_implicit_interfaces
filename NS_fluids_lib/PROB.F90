@@ -23015,6 +23015,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -23128,9 +23129,13 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side,icomp).eq.EXT_DIR) then
 
-        print *,"exterior dirichlet BC not allowed"
+       test_bc=bc(dir2,side,icomp)
+
+       if (test_bc.eq.EXT_DIR) then
+
+        print *,"exterior dirichlet BC not allowed in fort_group_extrapfill"
+        print *,"test_bc=",test_bc
         stop
 
         if (side.eq.1) then
@@ -23149,7 +23154,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -23201,6 +23215,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -23279,9 +23294,13 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
 
-        print *,"exterior dirichlet BC not allowed"
+       test_bc=bc(dir2,side)
+
+       if (test_bc.eq.EXT_DIR) then
+
+        print *,"exterior dirichlet BC not allowed in fort_extrapfill"
+        print *,"test_bc=",test_bc
         stop
 
         if (box_type(dir2).eq.1) then
@@ -23327,7 +23346,16 @@ end subroutine initialize2d
          stop
         endif
 
-       endif  ! EXT_DIR ?
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
     
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -28043,6 +28071,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -28124,7 +28153,10 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side)
+
+       if (test_bc.eq.EXT_DIR) then
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -28141,7 +28173,17 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif  ! EXT_DIR ?
+
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         if (MARCO.eq.1) then
@@ -28197,6 +28239,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -28275,7 +28318,11 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side,velcomp).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side,velcomp)
+
+       if (test_bc.eq.EXT_DIR) then
+
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -28292,7 +28339,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         if (MARCO.eq.1) then
@@ -28347,6 +28403,7 @@ end subroutine initialize2d
       REAL_T, INTENT(inout), target :: u(DIMV(u))
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -28446,7 +28503,11 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side)
+
+       if (test_bc.eq.EXT_DIR) then
+
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -28463,7 +28524,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif  ! EXT_DIR ?
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         if (MARCO.eq.1) then
@@ -28518,6 +28588,7 @@ end subroutine initialize2d
       REAL_T, INTENT(inout), target :: u(DIMV(u),ncomp)
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -28614,7 +28685,11 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side,velcomp).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side,velcomp)
+
+       if (test_bc.eq.EXT_DIR) then
+
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -28631,7 +28706,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         if (MARCO.eq.1) then
@@ -28685,6 +28769,7 @@ end subroutine initialize2d
       REAL_T, INTENT(inout), target :: u(DIMV(u))
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -28769,7 +28854,10 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side)
+
+       if (test_bc.eq.EXT_DIR) then
 
         if (dir2.eq.velcomp) then
 
@@ -28814,7 +28902,16 @@ end subroutine initialize2d
          stop
         endif
 
-       endif  ! EXT_DIR ?
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
     
        if (ext_dir_flag.eq.1) then
         if (MARCO.eq.1) then
@@ -28915,6 +29012,7 @@ end subroutine initialize2d
       REAL_T, INTENT(inout), target :: u(DIMV(u),ncomp)
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -28964,7 +29062,7 @@ end subroutine initialize2d
        stop
       endif
       if (scomp.ne.STATECOMP_MOF) then
-       print *,"scomp invalid mof group fill"
+       print *,"scomp invalid mof group fill: ",scomp
        stop
       endif
 
@@ -28996,7 +29094,11 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side,1).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side,1)
+
+       if (test_bc.eq.EXT_DIR) then
+
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -29013,7 +29115,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -29095,6 +29206,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -29217,7 +29329,10 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side,1).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side,1)
+
+       if (test_bc.eq.EXT_DIR) then
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -29234,7 +29349,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -29408,6 +29532,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -29500,7 +29625,11 @@ end subroutine initialize2d
        enddo
 
        ext_dir_flag=0
-       if (bc(dir2,side,1).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side,1)
+
+       if (test_bc.eq.EXT_DIR) then
+
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -29517,7 +29646,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -29559,7 +29697,11 @@ end subroutine initialize2d
          borderhi(dir3)=fabhi(dir3)
         enddo
         ext_dir_flag=0
-        if (bc(dir2,side,icomp).eq.EXT_DIR) then
+
+        test_bc=bc(dir2,side,icomp)
+
+        if (test_bc.eq.EXT_DIR) then
+
          if (side.eq.1) then
           if (fablo(dir2).lt.domlo(dir2)) then
            ext_dir_flag=1
@@ -29576,7 +29718,16 @@ end subroutine initialize2d
           print *,"side invalid"
           stop
          endif
-        endif
+        else if ((test_bc.eq.FOEXTRAP).or. &
+                 (test_bc.eq.HOEXTRAP).or. &
+                 (test_bc.eq.REFLECT_EVEN).or. &
+                 (test_bc.eq.REFLECT_ODD).or. &
+                 (test_bc.eq.INT_DIR)) then
+         ! do nothing
+        else
+         print *,"test_bc invalid: ",test_bc
+         stop
+        endif  
 
         if (ext_dir_flag.eq.1) then
          do i=borderlo(1),borderhi(1)
@@ -29634,6 +29785,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -29708,8 +29860,12 @@ end subroutine initialize2d
         borderlo(dir3)=fablo(dir3)
         borderhi(dir3)=fabhi(dir3)
        enddo
+
        ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side)
+
+       if (test_bc.eq.EXT_DIR) then
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -29726,7 +29882,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -29775,6 +29940,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -29882,7 +30048,10 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side)
+
+       if (test_bc.eq.EXT_DIR) then
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -29899,7 +30068,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -29954,6 +30132,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -30047,7 +30226,10 @@ end subroutine initialize2d
          borderhi(dir3)=fabhi(dir3)
         enddo
         ext_dir_flag=0
-        if (bc(dir2,side).eq.EXT_DIR) then
+
+        test_bc=bc(dir2,side)
+
+        if (test_bc.eq.EXT_DIR) then
          if (side.eq.1) then
           if (fablo(dir2).lt.domlo(dir2)) then
            ext_dir_flag=1
@@ -30064,7 +30246,16 @@ end subroutine initialize2d
           print *,"side invalid"
           stop
          endif
-        endif
+        else if ((test_bc.eq.FOEXTRAP).or. &
+                 (test_bc.eq.HOEXTRAP).or. &
+                 (test_bc.eq.REFLECT_EVEN).or. &
+                 (test_bc.eq.REFLECT_ODD).or. &
+                 (test_bc.eq.INT_DIR)) then
+         ! do nothing
+        else
+         print *,"test_bc invalid: ",test_bc
+         stop
+        endif  
 
         if (ext_dir_flag.eq.1) then
 
@@ -30122,6 +30313,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:))
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -30192,7 +30384,11 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side)
+
+       if (test_bc.eq.EXT_DIR) then
+
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -30209,7 +30405,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -30258,6 +30463,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -30342,7 +30548,10 @@ end subroutine initialize2d
         borderhi(dir3)=fabhi(dir3)
        enddo
        ext_dir_flag=0
-       if (bc(dir2,side,icomp).eq.EXT_DIR) then
+
+       test_bc=bc(dir2,side,icomp)
+
+       if (test_bc.eq.EXT_DIR) then
         if (side.eq.1) then
          if (fablo(dir2).lt.domlo(dir2)) then
           ext_dir_flag=1
@@ -30359,7 +30568,16 @@ end subroutine initialize2d
          print *,"side invalid"
          stop
         endif
-       endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
 
        if (ext_dir_flag.eq.1) then
         do i=borderlo(1),borderhi(1)
@@ -30418,6 +30636,7 @@ end subroutine initialize2d
       REAL_T, pointer :: u_ptr(D_DECL(:,:,:),:)
 
       INTEGER_T, INTENT(in) :: bc(SDIM,2,ncomp)
+      INTEGER_T :: test_bc
 
       INTEGER_T i,j,k
       INTEGER_T dir2,dir3,side,ext_dir_flag,inside_index
@@ -30538,7 +30757,11 @@ end subroutine initialize2d
            borderhi(dir3)=fabhi(dir3)
           enddo
           ext_dir_flag=0
-          if (bc(dir2,side,icomp_total).eq.EXT_DIR) then
+
+          test_bc=bc(dir2,side,icomp_total)
+
+          if (test_bc.eq.EXT_DIR) then
+
            if (side.eq.1) then
             if (fablo(dir2).lt.domlo(dir2)) then
              ext_dir_flag=1
@@ -30555,11 +30778,22 @@ end subroutine initialize2d
             print *,"side invalid"
             stop
            endif
-          endif
+          else if ((test_bc.eq.FOEXTRAP).or. &
+                   (test_bc.eq.HOEXTRAP).or. &
+                   (test_bc.eq.REFLECT_EVEN).or. &
+                   (test_bc.eq.REFLECT_ODD).or. &
+                   (test_bc.eq.INT_DIR)) then
+           ! do nothing
+          else
+           print *,"test_bc invalid: ",test_bc
+           stop
+          endif  
 
           if (ext_dir_flag.eq.1) then
 
+           print *,"in: fort_group_tensorfill:"
            print *,"expecting all BCs to be reflect even or odd"
+
            stop
 
            do i=borderlo(1),borderhi(1)
