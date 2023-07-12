@@ -1537,7 +1537,7 @@ void NavierStokes::interp_flux_localMF(
 } // subroutine interp_flux_localMF
 
 // interpolate from level+1 to level.
-// spectral_override==0 => always do low order average down.
+// spectral_override==LOW_ORDER_AVGDOWN => always do low order average down.
 void NavierStokes::avgDownEdge_localMF(
   int idxMF,int scomp,int ncomp,
   int start_grid_type,int n_grid_type,
@@ -4970,7 +4970,7 @@ void NavierStokes::make_physics_varsALL(int project_option,
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACECUT,1,0,
     AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEMASK,1,0,
-    AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
+    AMREX_SPACEDIM,ICEMASK_AVGDOWN,local_caller_string);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEFACECUT,1,0,
     AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
 

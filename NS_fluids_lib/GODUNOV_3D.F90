@@ -5103,6 +5103,8 @@ stop
           ! do nothing
          else
           print *,"expecting icefacecut>=icemask"
+          print *,"icefacecut=",icefacecut
+          print *,"icemask=",icemask
           stop
          endif
 
