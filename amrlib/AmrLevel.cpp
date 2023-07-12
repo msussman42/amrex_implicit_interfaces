@@ -1060,6 +1060,7 @@ AmrLevel::InterpBordersGHOST (
    local_scompBC_map[isub]=scompBC_map[scomp_range+isub];
 
   if (level==0) {
+
    amrex::FillPatchSingleLevel(
     level,
     mf,
@@ -1073,6 +1074,7 @@ AmrLevel::InterpBordersGHOST (
     local_scompBC_map,
     bfact_fine,
     debug_fillpatch);
+
   } else if (level>0) {
 
    AmrLevel&               clev    = parent->getLevel(level-1);
@@ -1272,6 +1274,16 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
   amrex::Error("ncomp>(mf.nComp()-dcomp)");
  if ((index<0)||(index>=desc_lst.size()))
   amrex::Error("(index<0)||(index>=desc_lst.size())");
+
+ int ngrow=mf.nGrow();
+ if (ngrow==0) {
+  //do nothing
+ } else if (ngrow==1) {
+FIX ME: 1. verify ngrow==1 case is cell centered.
+	2. call mf.FillBoundary(scomp,ncomp,geom.periodicity())
+	3. call FillCoarsePatch for the thin strip borders?
+ } else
+  amrex::Error("expecting ngrow=0 or 1 in AmrLevel::FillCoarsePatch");
 
  Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
