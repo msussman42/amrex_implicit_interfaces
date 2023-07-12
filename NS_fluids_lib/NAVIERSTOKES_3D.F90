@@ -12373,7 +12373,7 @@ END SUBROUTINE SIMP
       return 
       end subroutine fort_zalesak_cell
 
-       ! spectral_override==0 => always do low order
+       ! spectral_override==LOW_ORDER_AVGDOWN => always do low order
       subroutine fort_avgdown( &
        enable_spectral, &
        finest_level, &
@@ -12450,8 +12450,9 @@ END SUBROUTINE SIMP
 
       local_enable_spectral=enable_spectral
 
-      if ((spectral_override.ne.0).and.(spectral_override.ne.1)) then
-       print *,"spectral_override invalid"
+      if ((spectral_override.ne.LOW_ORDER_AVGDOWN).and. &
+          (spectral_override.ne.SPECTRAL_ORDER_AVGDOWN)) then
+       print *,"spectral_override invalid: ",spectral_override
        stop
       endif
 
@@ -12647,7 +12648,7 @@ END SUBROUTINE SIMP
            (local_enable_spectral.eq.1).and. &
            (testmask.ge.1).and. &
            (testmask.le.num_materials).and. &
-           (spectral_override.eq.1)) then
+           (spectral_override.eq.SPECTRAL_ORDER_AVGDOWN)) then
 
         do ifine=stenlo(1),stenhi(1)
         do jfine=stenlo(2),stenhi(2)
@@ -12672,7 +12673,7 @@ END SUBROUTINE SIMP
        else if ((bfact_f.eq.1).or. &
                 (local_enable_spectral.eq.0).or. &
                 (testmask.eq.0).or. &
-                (spectral_override.eq.0)) then
+                (spectral_override.eq.LOW_ORDER_AVGDOWN)) then
 
         call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
          bfact_c,bfact_f)
@@ -13980,7 +13981,7 @@ END SUBROUTINE SIMP
 
 
 
-       ! spectral_override==0 => always low order
+       ! spectral_override==LOW_ORDER_AVGDOWN => always low order
       subroutine fort_edgeavgdown( &
        enable_spectral, &
        finest_level, &
@@ -14054,6 +14055,7 @@ END SUBROUTINE SIMP
       INTEGER_T finelo_index
       REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: ffine
       REAL_T INTERP_TOL
+      REAL_T icemask
       INTEGER_T khi
       INTEGER_T testmask,testmask2
       INTEGER_T local_enable_spectral
@@ -14068,9 +14070,10 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if ((spectral_override.ne.0).and. &
-          (spectral_override.ne.1)) then
-       print *,"spectral_override invalid"
+      if ((spectral_override.ne.LOW_ORDER_AVGDOWN).and. &
+          (spectral_override.ne.ICEMASK_AVGDOWN).and. &
+          (spectral_override.ne.SPECTRAL_ORDER_AVGDOWN)) then
+       print *,"spectral_override invalid: ",spectral_override
        stop
       endif
 
@@ -14246,7 +14249,7 @@ END SUBROUTINE SIMP
            (local_enable_spectral.eq.1).and. &
            (testmask.ge.1).and. &
            (testmask.le.num_materials).and. &
-           (spectral_override.eq.1)) then
+           (spectral_override.eq.SPECTRAL_ORDER_AVGDOWN)) then
 
         if ((grid_type.ge.0).and.(grid_type.lt.SDIM)) then
          ! do nothing
@@ -14278,7 +14281,8 @@ END SUBROUTINE SIMP
        else if ((bfact_f.eq.1).or. &
                 (local_enable_spectral.eq.0).or. &
                 (testmask.eq.0).or. &
-                (spectral_override.eq.0)) then
+                (spectral_override.eq.LOW_ORDER_AVGDOWN).or. &
+                (spectral_override.eq.ICEMASK_AVGDOWN)) then
 
         call fine_subelement_stencilMAC(ic,jc,kc,stenlo,stenhi, &
          bfact_c,bfact_f,grid_type)
@@ -14330,11 +14334,53 @@ END SUBROUTINE SIMP
                endif
               endif
               if (infab.eq.1) then
-               do n=1,ncomp
-                crse_value(n) = crse_value(n)+ &
-                 volall*fine(D_DECL(ifine,jfine,kfine),n)
-               enddo
-               voltotal=voltotal+volall
+
+               if (volall.gt.zero) then
+
+                if ((spectral_override.eq.LOW_ORDER_AVGDOWN).or. &
+                    (spectral_override.eq.SPECTRAL_ORDER_AVGDOWN)) then
+               
+                 do n=1,ncomp
+                  crse_value(n) = crse_value(n)+ &
+                    volall*fine(D_DECL(ifine,jfine,kfine),n)
+                 enddo
+                 voltotal=voltotal+volall
+
+                else if (spectral_override.eq.ICEMASK_AVGDOWN) then
+
+                 voltotal=one
+
+                 do n=1,ncomp
+                  icemask=fine(D_DECL(ifine,jfine,kfine),n)
+                  if (icemask.eq.zero) then
+                   crse_value(n)=zero
+                  else if (icemask.eq.one) then
+                   if (crse_value(n).eq.one) then
+                    ! do nothing
+                   else if (crse_value(n).eq.zero) then
+                    ! do nothing
+                   else
+                    print *,"crse_value(n) invalid: ",crse_value(n)
+                    stop
+                   endif
+                  else
+                   print *,"icemask invalid: ",icemask
+                   stop
+                  endif
+                 enddo  !n=1,ncomp
+              
+                else
+                 print *,"spectral_override invalid: ",spectral_override
+                 stop
+                endif
+
+               else if (volall.eq.zero) then
+                ! do nothing
+               else
+                print *,"volall invalid: ",volall
+                stop
+               endif
+
               else if (infab.eq.0) then
                ! do nothing
               else
@@ -14353,14 +14399,17 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid edgeavgdown"
+       if (voltotal.gt.zero) then
+        ! do nothing
+       else
+        print *,"voltotal invalid edgeavgdown: ",voltotal
         stop
        endif
 
        do n=1,ncomp
         crse(D_DECL(ic,jc,kc),n)=crse_value(n)/voltotal
-        if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+        if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+            (levelrz.eq.COORDSYS_CYLINDRICAL)) then
          ! do nothing
         else if (levelrz.eq.COORDSYS_RZ) then
          if (SDIM.ne.2) then
@@ -14372,10 +14421,10 @@ END SUBROUTINE SIMP
           crse(D_DECL(ic,jc,kc),n) = zero
          endif
         else
-         print *,"levelrz invalid edge avgdown"
+         print *,"levelrz invalid edge avgdown: ",levelrz
          stop
         endif
-       enddo ! n
+       enddo ! n=1,ncomp
 
       enddo 
       enddo

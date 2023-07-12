@@ -38,7 +38,7 @@ extern void set_y_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
 extern void set_z_vel_bc_NS_setup(BCRec& bc,const BCRec& phys_bc);
 
 // if ncomp_input==-1, then ncomp=S_crse.ncomp()
-// spectral_override==0 => always do low order average down.
+// spectral_override==LOW_ORDER_AVGDOWN => always do low order average down.
 // grid_type=-1,..,5
 void
 NavierStokes::avgDownEdge(
