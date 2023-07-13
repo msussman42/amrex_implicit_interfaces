@@ -1275,20 +1275,39 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  if ((index<0)||(index>=desc_lst.size()))
   amrex::Error("(index<0)||(index>=desc_lst.size())");
 
- int ngrow=mf.nGrow();
- if (ngrow==0) {
-  //do nothing
- } else if (ngrow==1) {
-FIX ME: 1. verify ngrow==1 case is cell centered.
-	2. call mf.FillBoundary(scomp,ncomp,geom.periodicity())
-	3. call FillCoarsePatch for the thin strip borders?
- } else
-  amrex::Error("expecting ngrow=0 or 1 in AmrLevel::FillCoarsePatch");
-
  Vector<int> scompBC_map;
  scompBC_map.resize(ncomp);
  for (int icomp=0;icomp<ncomp;icomp++)
   scompBC_map[icomp]=scomp+icomp;
+
+ int                     DComp   = dcomp;
+ const StateDescriptor&  desc    = desc_lst[index];
+ IndexType desc_typ(desc.getType());
+ int desc_grid_type=-1;
+ StateData::get_grid_type(desc_typ,desc_grid_type);
+
+ int ngrow=mf.nGrow();
+
+ if (ngrow==0) {
+  if ((desc_grid_type==-1)||
+      ((desc_grid_type>=0)&&
+       (desc_grid_type<AMREX_SPACEDIM))) {
+   //do nothing
+  } else {
+   amrex::Error("desc_grid_type invalid");
+  }
+ } else if (ngrow==1) {
+  if (desc_grid_type==-1) {
+   //do nothing
+  } else {
+   amrex::Error("desc_grid_type invalid");
+  }
+ } else
+  amrex::Error("expecting ngrow=0 or 1 in AmrLevel::FillCoarsePatch");
+
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
 
  AmrLevel&               clev    = parent->getLevel(level-1);
  const Geometry&         cgeom   = clev.geom;
@@ -1302,12 +1321,6 @@ FIX ME: 1. verify ngrow==1 case is cell centered.
  MultiFab& cmf=cstatedata.newData(best_index);
  StateDataPhysBCFunct physbc_coarse(cstatedata,cgeom);
 
- int                     DComp   = dcomp;
- const StateDescriptor&  desc    = desc_lst[index];
- IndexType desc_typ(desc.getType());
- int desc_grid_type=-1;
- StateData::get_grid_type(desc_typ,desc_grid_type);
-
  const Box&              pdomain = state[index].getDomain();
  const BoxArray&         mf_BA   = mf.boxArray();
  DistributionMapping dm=mf.DistributionMap();
@@ -1320,6 +1333,7 @@ FIX ME: 1. verify ngrow==1 case is cell centered.
    desc.sameInterps(scompBC_map,ncomp);
 
  for (unsigned int igroup = 0; igroup < ranges.size(); igroup++) {
+
   const int     scomp_range  = ranges[igroup].first;
   const int     ncomp_range  = ranges[igroup].second;
   Interpolater* mapper = desc.interp(scompBC_map[scomp_range]);
@@ -1329,7 +1343,26 @@ FIX ME: 1. verify ngrow==1 case is cell centered.
   for (int j = 0, N = crseBA.size(); j < N; ++j) {
    BL_ASSERT(mf_BA[j].ixType() == desc.getType());
    const Box& bx = mf_BA[j];
-   crseBA.set(j,mapper->CoarseBox(bx,bfact_coarse,bfact_fine,desc_grid_type));
+
+   Box grow_bx(bx);
+   const int* bx_lo=bx.loVect();
+   const int* bx_hi=bx.hiVect();
+
+   if (ngrow==1) {
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     if (bx_lo[dir]>domlo[dir]) 
+      grow_bx.growLo(dir,-1);
+     if (bx_hi[dir]<domhi[dir]) 
+      grow_bx.growHi(dir,1);
+    } //dir=0..sdim-1
+   } else if (ngrow==0) {
+    //do nothing
+   } else {
+    amrex::Error("ngrow invalid");
+   }
+ 
+   crseBA.set(j,mapper->CoarseBox(grow_bx,bfact_coarse,bfact_fine,
+     desc_grid_type));
   }
 
     // ngrow=0
@@ -1414,12 +1447,19 @@ FIX ME: 1. verify ngrow==1 case is cell centered.
   ParallelDescriptor::ReduceRealSum(thread_class::tile_d_numPts[0]);
   thread_class::reconcile_d_numPts(LOOP_FILLCOARSEPATCH,"FillCoarsePatch");
 
+  mf.FillBoundary(DComp,ncomp_range,geom.periodicity());
+
   StateDataPhysBCFunct physbc_fine(state[index],geom);
   physbc_fine.FillBoundary(level,mf,nudge_time,DComp,
     local_scompBC_map,ncomp_range,bfact_fine);
 
   DComp += ncomp_range;
  } // igroup=0..ranges.size()-1
+
+ if (DComp==dcomp+ncomp) {
+  //do nothing
+ } else
+  amrex::Error("expecting DComp==dcomp+ncomp");
 
 }   // FillCoarsePatch
 

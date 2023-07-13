@@ -10026,6 +10026,9 @@ void NavierStokes::init_boundary() {
 
 }  // subroutine init_boundary()
 
+
+//  AmrLevel* a = (*levelbld)(*this,lev,geom[lev],
+//    new_grid_places[lev],new_dmap[lev],cumtime);
 void
 NavierStokes::init(
   AmrLevel & old,
@@ -10069,26 +10072,26 @@ NavierStokes::init(
  if (nstate!=NUM_STATE_TYPE)
   amrex::Error("nstate invalid");
 
- for (int k=0;k<nstate;k++) {
+ for (int local_index=0;local_index<nstate;local_index++) {
 
-  int state_holds_data=get_desc_lst()[k].get_state_holds_data();
+  int state_holds_data=get_desc_lst()[local_index].get_state_holds_data();
+
   if (state_holds_data==1) {
 
     // data with respect to new grid structure.
-   MultiFab &S_new = get_new_data(k,ns_time_order);
+   MultiFab &S_new = get_new_data(local_index,ns_time_order);
 
    if (S_new.DistributionMap()==dmap_in) {
     // do nothing
    } else {
-    amrex::Error("dmap_in invalid");
+    amrex::Error("dmap_in invalid in init(old)");
    }
     //  Are the BoxArrays equal after conversion to cell-centered?
    if (S_new.boxArray().CellEqual(ba_in)) {
     // do nothing
    } else {
-    amrex::Error("S_new.boxArray().CellEqual(ba_in) failed");
+    amrex::Error("S_new.boxArray().CellEqual(ba_in) failed init(old)");
    }
-
 
    int ncomp=S_new.nComp();
 
@@ -10096,7 +10099,8 @@ NavierStokes::init(
    int ncomp_part[4];
    int scomp_part[4];
    
-   if (k==State_Type) {
+   if (local_index==State_Type) {
+
     int test_ncomp=0;
 
     numparts=4;
@@ -10116,15 +10120,22 @@ NavierStokes::init(
     if (test_ncomp!=ncomp)
      amrex::Error("test ncomp invalid");
 
-   } else {
+   } else if (local_index!=State_Type) {
+
     numparts=1;
     scomp_part[0]=0;
     ncomp_part[0]=ncomp;
+
+   } else {
+    amrex::Error("local_index bust");
    }
     
    for (int part_iter=0;part_iter<numparts;part_iter++) { 
-    FillPatch(old,S_new,scomp_part[part_iter],
-       upper_slab_time,k,
+     //FillPatch is declared in amrlib/AmrLevel.cpp
+    FillPatch(old,
+       S_new,scomp_part[part_iter],
+       upper_slab_time,
+       local_index,
        scomp_part[part_iter],
        ncomp_part[part_iter],
        debug_fillpatch);
@@ -10135,7 +10146,7 @@ NavierStokes::init(
   } else
    amrex::Error("state_holds_data invalid");
 
- }  // k=0..nstate-1
+ } // local_index=0..nstate-1
 
  NavierStokes& ns_level0=getLevel(0);
 
@@ -10187,18 +10198,17 @@ NavierStokes::init(
  is_first_step_after_regrid = 1;
 
  debug_fillpatch=0;
+
 }  // end subroutine init(old)
 
 // init a new level that did not exist on the previous step.
+// NavierStokes::init is called from: AmrCore::regrid
+//  AmrLevel* a = (*levelbld)(*this,lev,geom[lev],
+//    new_grid_places[lev],new_dmap[lev],cumtime);
 void
-NavierStokes::init (const BoxArray& ba_in,
-         const DistributionMapping& dmap_in) {
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- if (ngeom_raw!=AMREX_SPACEDIM+1)
-  amrex::Error("ngeom_raw bust");
+NavierStokes::init(
+  const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
+  const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
 
  if (level==0)
   amrex::Error("this init only called for level>0");
@@ -10234,23 +10244,45 @@ NavierStokes::init (const BoxArray& ba_in,
   // new time: upper_slab_time   old time: upper_slab_time-delta_slab_time
  setTimeLevel(upper_slab_time,delta_slab_time);
 
- int nstate=state.size();
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+
+ if (ngeom_raw!=AMREX_SPACEDIM+1)
+  amrex::Error("ngeom_raw bust");
+
+ int nstate=state.size(); // cell centered, vel MAC, LS, etc
  if (nstate!=NUM_STATE_TYPE)
   amrex::Error("nstate invalid");
 
- for (int k=0;k<nstate;k++) {
+ for (int local_index=0;local_index<nstate;local_index++) {
 
-  int state_holds_data=get_desc_lst()[k].get_state_holds_data();
+  int state_holds_data=get_desc_lst()[local_index].get_state_holds_data();
+
   if (state_holds_data==1) {
 
-   MultiFab &S_new = get_new_data(k,ns_time_order);
+   MultiFab &S_new = get_new_data(local_index,ns_time_order);
+
+   if (S_new.DistributionMap()==dmap_in) {
+    // do nothing
+   } else {
+    amrex::Error("dmap_in invalid in init()");
+   }
+
+    //  Are the BoxArrays equal after conversion to cell-centered?
+   if (S_new.boxArray().CellEqual(ba_in)) {
+    // do nothing
+   } else {
+    amrex::Error("S_new.boxArray().CellEqual(ba_in) failed init()");
+   }
+
    int ncomp=S_new.nComp();
 
    int numparts=1;
    int ncomp_part[4];
    int scomp_part[4];
    
-   if (k==State_Type) {
+   if (local_index==State_Type) {
+
     int test_ncomp=0;
 
     numparts=4;
@@ -10270,15 +10302,24 @@ NavierStokes::init (const BoxArray& ba_in,
     if (test_ncomp!=ncomp)
      amrex::Error("test ncomp invalid");
 
-   } else {
+   } else if (local_index!=State_Type) {
+
     numparts=1;
     scomp_part[0]=0;
     ncomp_part[0]=ncomp;
+
+   } else {
+    amrex::Error("local_index bust");
    }
 
    for (int part_iter=0;part_iter<numparts;part_iter++) { 
-    FillCoarsePatch(S_new,scomp_part[part_iter],upper_slab_time,k,
-      scomp_part[part_iter],ncomp_part[part_iter],debug_fillpatch);
+    FillCoarsePatch(
+      S_new,scomp_part[part_iter],
+      upper_slab_time,
+      local_index,
+      scomp_part[part_iter],
+      ncomp_part[part_iter],
+      debug_fillpatch);
    }
 
   } else if (state_holds_data==0) {
@@ -10286,7 +10327,7 @@ NavierStokes::init (const BoxArray& ba_in,
   } else
    amrex::Error("state_holds_data invalid");
 
- } // k=0..nstate-1
+ } // local_index=0..nstate-1
 
  if (particles_flag==0) {
   // do nothing
@@ -10319,7 +10360,7 @@ NavierStokes::init (const BoxArray& ba_in,
  init_regrid_history();
  is_first_step_after_regrid = 2;
 
-}  // subroutine init()
+}  // end subroutine init()
 
 void NavierStokes::CopyNewToOldALL() {
 
