@@ -62,11 +62,6 @@ amr.max_level = 2
 # 3D full domain.
 #amr.max_level = 3
 
-ns.particles_flag=0
-ns.particle_nsubdivide=1
-ns.particle_min_per_nsubdivide=1
-ns.particle_max_per_nsubdivide=100
-
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16 16
 
