@@ -1294,13 +1294,13 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
        (desc_grid_type<AMREX_SPACEDIM))) {
    //do nothing
   } else {
-   amrex::Error("desc_grid_type invalid");
+   amrex::Error("desc_grid_type invalid (ngrow=0)");
   }
  } else if (ngrow==1) {
   if (desc_grid_type==-1) {
    //do nothing
   } else {
-   amrex::Error("desc_grid_type invalid");
+   amrex::Error("desc_grid_type invalid (ngrow=1)");
   }
  } else
   amrex::Error("expecting ngrow=0 or 1 in AmrLevel::FillCoarsePatch");
@@ -1321,7 +1321,31 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
  MultiFab& cmf=cstatedata.newData(best_index);
  StateDataPhysBCFunct physbc_coarse(cstatedata,cgeom);
 
- const Box&              pdomain = state[index].getDomain();
+  //pdomain will be different depending on whether the state variable
+  //is cell centered or staggared.
+ const Box& pdomain = state[index].getDomain();
+ const int* pdomlo = pdomain.loVect();
+ const int* pdomhi = pdomain.hiVect();
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  if (pdomlo[dir]==domlo[dir]) {
+   // do nothing
+  } else
+   amrex::Error("pdomlo<>domlo");
+  if (dir==desc_grid_type) {
+   if (pdomhi[dir]==domhi[dir]+1) {
+    // do nothing
+   } else
+    amrex::Error("pdomhi<>domhi+1");
+  } else if (dir!=desc_grid_type) {
+   if (pdomhi[dir]==domhi[dir]) {
+    // do nothing
+   } else
+    amrex::Error("pdomhi<>domhi");
+  } else
+   amrex::Error("dir,desc_grid_type breakdown");
+ } //dir=0..sdim-1
+
  const BoxArray&         mf_BA   = mf.boxArray();
  DistributionMapping dm=mf.DistributionMap();
 
@@ -1355,12 +1379,17 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
      if (bx_hi[dir]<domhi[dir]) 
       grow_bx.growHi(dir,1);
     } //dir=0..sdim-1
+    Box grow_bx_test=grow_bx & domain;
+    if (grow_bx_test==grow_bx) {
+     //do nothing
+    } else
+     amrex::Error("grow_bx_test!=grow_bx");
    } else if (ngrow==0) {
     //do nothing
    } else {
     amrex::Error("ngrow invalid");
    }
- 
+
    crseBA.set(j,mapper->CoarseBox(grow_bx,bfact_coarse,bfact_fine,
      desc_grid_type));
   }
@@ -1427,7 +1456,21 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
      // source: local_bcs  dest: bcr
    amrex::setBC(dbx,pdomain,src_comp_bcs,dest_comp_bcr,ncomp_range,
      local_bcs,bcr);
-	   
+
+   const Box& mf_local_box=mf[mfi].box();
+
+   Box dbx_test=dbx;
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    dbx_test.grow(dir,ngrow);
+   }
+
+   if (dbx_test==mf_local_box) {
+    //do nothing
+   } else
+    amrex::Error("dbx_test==mf_local_box failed");
+
+   mf[mfi].setVal(1.0e+20,mf_local_box,DComp,ncomp_range);
+
    mapper->interp(nudge_time,
                   crseMF[mfi],
                   0,  // crse_comp
@@ -1441,6 +1484,14 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
                   level-1,level,
 		  bfact_coarse,bfact_fine,
                   desc_grid_type);
+
+    //p=0 (infinity norm)
+   Real test_norm=mf[mfi].norm(0,DComp,ncomp_range);
+   if (test_norm<1.0e+19) {
+    //do nothing
+   } else
+    amrex::Error("test_norm<1.0e+19 failed");
+
   }  // mfi
 } // omp
   thread_class::sync_tile_d_numPts();
