@@ -1375,9 +1375,9 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
    if (ngrow==1) {
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      if (bx_lo[dir]>domlo[dir]) 
-      grow_bx.growLo(dir,-1);
+      grow_bx.growLo(dir,ngrow);
      if (bx_hi[dir]<domhi[dir]) 
-      grow_bx.growHi(dir,1);
+      grow_bx.growHi(dir,ngrow);
     } //dir=0..sdim-1
     Box grow_bx_test=grow_bx & domain;
     if (grow_bx_test==grow_bx) {
@@ -1469,7 +1469,37 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
    } else
     amrex::Error("dbx_test==mf_local_box failed");
 
-   mf[mfi].setVal(1.0e+20,mf_local_box,DComp,ncomp_range);
+   Box grow_bx(dbx);
+   const int* bx_lo=dbx.loVect();
+   const int* bx_hi=dbx.hiVect();
+
+   if (ngrow==1) {
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     if (bx_lo[dir]>domlo[dir]) 
+      grow_bx.growLo(dir,ngrow);
+     if (bx_hi[dir]<domhi[dir]) 
+      grow_bx.growHi(dir,ngrow);
+    } //dir=0..sdim-1
+    Box grow_bx_test=grow_bx & domain;
+    if (grow_bx_test==grow_bx) {
+     //do nothing
+    } else
+     amrex::Error("grow_bx_test!=grow_bx");
+   } else if (ngrow==0) {
+    //do nothing
+   } else {
+    amrex::Error("ngrow invalid");
+   }
+
+   if (1==0) {
+    std::cout << "ngrow= " << ngrow << '\n';
+    std::cout << "dbx= " << dbx << '\n';
+    std::cout << "grow_bx= " << grow_bx << '\n';
+    std::cout << "DComp= " << DComp << '\n';
+    std::cout << "ncomp_range= " << ncomp_range << '\n';
+    std::cout << "mfi.index()= " << mfi.index() << '\n';
+   }
+   mf[mfi].setVal(1.0e+20,grow_bx,DComp,ncomp_range);
 
    mapper->interp(nudge_time,
                   crseMF[mfi],
@@ -1477,7 +1507,7 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 		  mf[mfi],
 		  DComp,
 		  ncomp_range,
-		  dbx,
+		  grow_bx,
 		  cgeom,
 		  geom,
 		  bcr,
@@ -1486,11 +1516,12 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
                   desc_grid_type);
 
     //p=0 (infinity norm)
-   Real test_norm=mf[mfi].norm(0,DComp,ncomp_range);
+   Real test_norm=mf[mfi].norm(grow_bx,0,DComp,ncomp_range);
    if (test_norm<1.0e+19) {
     //do nothing
-   } else
+   } else {
     amrex::Error("test_norm<1.0e+19 failed");
+   }
 
   }  // mfi
 } // omp
