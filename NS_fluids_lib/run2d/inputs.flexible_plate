@@ -51,10 +51,6 @@ ns.MOFITERMAX=15
 amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 #amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=0 # ZEYU
-ns.particles_flag=0
-ns.particle_nsubdivide=1
-ns.particle_min_per_nsubdivide=1
-ns.particle_max_per_nsubdivide=100
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
 ns.mof_ordering=1 4 2 #non-wetting drop has highest priority.  gas lowest.
