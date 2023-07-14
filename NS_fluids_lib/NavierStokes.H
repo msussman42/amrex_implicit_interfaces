@@ -396,7 +396,6 @@ public:
      // FSI_RIGID_NOTPRESCRIBED=5
      // FSI_ICE_NODES=6
      // FSI_FLUID_NODES_INIT=7
-     // FSI_SHOELE_PRESVEL=8
      // FSI_ICE_STATIC=9
      
     static Vector<int>  FSI_flag; 
@@ -1387,7 +1386,7 @@ void apply_pressure_grad(
     static int is_FSI_rigid_matC(int im);
     static int CTML_FSI_flagC();
     static int CTML_FSI_matC(int im);
-    static int FSI_material_exists_presvel();
+    static int FSI_material_exists_velvel();
     static int FSI_flag_valid(int im); // 0<=im<num_materials
 
     void init_FSI_GHOST_MAC_MF_ALL_predict();
@@ -1629,7 +1628,7 @@ protected:
     static int FSI_interval; //default=1
 
     static int         CTML_FSI_numsolids;
-    static Vector<int> CTML_force_model; // 0=Lag force 2=presvel
+    static Vector<int> CTML_force_model; // 0=Lag force 
     static int         CTML_FSI_init;
 
     static Vector<int>  shock_timestep;

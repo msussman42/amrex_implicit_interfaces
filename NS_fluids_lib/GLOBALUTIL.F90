@@ -15051,10 +15051,8 @@ end subroutine print_visual_descriptor
            (viscoelastic_model_in.eq.5).or. & ! FENE-P
            (viscoelastic_model_in.eq.6)) then ! linear PTT
         fort_built_in_elastic_model=1
-       else if (viscoelastic_model_in.eq.4) then ! pressure velocity coupling
-        fort_built_in_elastic_model=0
        else
-        print *,"viscoelastic_model_in invalid"
+        print *,"viscoelastic_model_in invalid: ",viscoelastic_model_in
         stop
         fort_built_in_elastic_model=0
        endif
