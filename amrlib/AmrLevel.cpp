@@ -127,13 +127,10 @@ AmrLevel::AmrLevel (AmrCore&        papa,
      amrex::Error("level_slab_dt_type invalid");
 
     int time_order=parent->Time_blockingFactor();
-    int local_particles_flag=parent->global_AMR_particles_flag;
     int local_nmat=parent->global_AMR_num_materials;
-    int num_SoA_var=parent->global_AMR_num_SoA_var;
 
     if (level==0) {
 
-     AmrLevel0_new_dataPC.resize(level_MAX_NUM_SLAB);
      new_data_FSI.resize(level_MAX_NUM_SLAB);
 
      for (int i=0;i<=time_order;i++) {
@@ -142,24 +139,6 @@ AmrLevel::AmrLevel (AmrCore&        papa,
       for (int j=0;j<local_nmat;j++) {
        new_data_FSI[i][j].initData_FSI(0,0);
       }
-
-      if (local_particles_flag==1) {
-
-       if (num_SoA_var>=0) {
-        AmrLevel0_new_dataPC[i]=
-          new AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>(parent);
-        //add Structure of Array component(s)
-        //amrex-master/Src/Particle/AMReX_Particles.H
-        //void AddRealComp (T communicate=true)
-        for (int ns=0;ns<num_SoA_var;ns++)
-         AmrLevel0_new_dataPC[i]->AddRealComp(true);
-       } else
-        amrex::Error("num_SoA_var invalid");
-
-      } else if (local_particles_flag==0) {
-       // do nothing
-      } else
-       amrex::Error("local_particles_flag invalid");
 
      }// for (int i=0;i<=time_order;i++) 
     } else if (level>0) {
@@ -239,13 +218,10 @@ AmrLevel::restart (AmrCore&      papa,
 
  if (level==0) {
 
-  // SUSSMAN restart the particle data
   std::string FullPathName=FullPath;
   int time_order=parent->Time_blockingFactor();
-  int local_particles_flag=parent->global_AMR_particles_flag;
   int local_nmat=parent->global_AMR_num_materials;
 
-  AmrLevel0_new_dataPC.resize(level_MAX_NUM_SLAB);
   new_data_FSI.resize(level_MAX_NUM_SLAB);
 
   for (int i=0;i<=time_order;i++) {
@@ -255,18 +231,6 @@ AmrLevel::restart (AmrCore&      papa,
    for (int j=0;j<local_nmat;j++) {
     new_data_FSI[i][j].initData_FSI(0,0);
    }
-
-   if (local_particles_flag==0) {
-    // do nothing
-   } else if (local_particles_flag==1) {
-
-    //The actual particle data will be read from the restart file
-    //later (in NavierStokes.cpp) when "post_restart" is called.
-    //Particle data needs the AMR hierarchy to already be built before
-    //being read from the restart file and redistributed appropriately.
-    
-   } else
-    amrex::Error("local_particles_flag invalid");
 
   }//for (int i=0;i<=time_order;i++) 
 
@@ -394,37 +358,6 @@ AmrLevel::checkPoint (const std::string& dir,
         os << ndesc << '\n';
     }
 
-    if (level==0) {
-
-     // SUSSMAN checkpoint the particle data
-     std::string FullPathName=FullPath;
-     int time_order=parent->Time_blockingFactor();
-     int local_particles_flag=parent->global_AMR_particles_flag;
-
-     for (int i=0;i<=time_order;i++) {
-
-      if (local_particles_flag==0) {
-       // do nothing
-      } else if (local_particles_flag==1) {
-
-       std::string Part_name="FusionPart";
-       std::stringstream i_string_stream(std::stringstream::in |
-           std::stringstream::out);
-       i_string_stream << i;
-       std::string i_string=i_string_stream.str();
-       Part_name+=i_string;
-       AmrLevel0_new_dataPC[i]->Checkpoint(FullPathName,Part_name);
-
-      } else
-       amrex::Error("local_particles_flag invalid");
-
-     }//for (int i=0;i<=time_order;i++) 
-
-    } else if (level>0) {
-     // do nothing
-    } else
-     amrex::Error("level invalid");
-
     //
     // Output state data.
     //
@@ -455,7 +388,6 @@ AmrLevel::~AmrLevel ()
 
     if (level==0) {
      int time_order=parent->Time_blockingFactor();
-     int local_particles_flag=parent->global_AMR_particles_flag;
      int local_nmat=parent->global_AMR_num_materials;
 
      for (int i=0;i<=time_order;i++) {
@@ -465,15 +397,7 @@ AmrLevel::~AmrLevel ()
       }
       new_data_FSI[i].resize(0);
 
-      if (local_particles_flag==1) {
-       delete AmrLevel0_new_dataPC[i];
-      } else if (local_particles_flag==0) {
-       // do nothing
-      } else
-       amrex::Error("local_particles_flag invalid");
-
      } // for (int i=0;i<=time_order;i++) 
-     AmrLevel0_new_dataPC.resize(0);
      new_data_FSI.resize(0);
     } else if (level>0) {
      // do nothing
@@ -482,162 +406,6 @@ AmrLevel::~AmrLevel ()
 
     parent = 0;
 }
-
-AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& 
-   AmrLevel::newDataPC (int slab_index)
-{
-
-if (level==0) {
- int time_order=parent->Time_blockingFactor();
- int local_particles_flag=parent->global_AMR_particles_flag;
- if (local_particles_flag==1) {
-
-  int project_slab_index=slab_index;
-  if (project_slab_index==-1)
-   project_slab_index=0;
-  if (project_slab_index==time_order+1)
-   project_slab_index=time_order;
-  if ((project_slab_index<0)||
-      (project_slab_index>time_order)) {
-   std::cout << "time_order= " << time_order << '\n';
-   std::cout << "project_slab_index= " << project_slab_index << '\n';
-   amrex::Error("project_slab_index invalid1");
-  }
-
-  return *AmrLevel0_new_dataPC[project_slab_index];
-
- } else {
-  amrex::Error("local_particles_flag invalid"); 
-  return *AmrLevel0_new_dataPC[0];
- }
-} else {
- amrex::Error("level invalid"); 
- return *AmrLevel0_new_dataPC[0];
-}
-
-}
-
-const AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>&
-AmrLevel::newDataPC (int slab_index) const
-{
-
-if (level==0) {
- int time_order=parent->Time_blockingFactor();
- int local_particles_flag=parent->global_AMR_particles_flag;
- if (local_particles_flag==1) {
-
-  int project_slab_index=slab_index;
-  if (project_slab_index==-1)
-   project_slab_index=0;
-  if (project_slab_index==time_order+1)
-   project_slab_index=time_order;
-  if ((project_slab_index<0)||
-      (project_slab_index>time_order)) {
-   std::cout << "time_order= " << time_order << '\n';
-   std::cout << "project_slab_index= " << project_slab_index << '\n';
-   amrex::Error("project_slab_index invalid2");
-  }
-
-  return *AmrLevel0_new_dataPC[project_slab_index];
- } else {
-  amrex::Error("local_particles_flag invalid"); 
-  return *AmrLevel0_new_dataPC[0];
- }
-} else {
- amrex::Error("level invalid"); 
- return *AmrLevel0_new_dataPC[0];
-}
-
-}
-
-void
-AmrLevel::CopyNewToOldPC(int lev_max) {
-
-if (level==0) {
-
- int time_order=parent->Time_blockingFactor();
- int local_particles_flag=parent->global_AMR_particles_flag;
- int local_nmat=parent->global_AMR_num_materials;
-
- for (int i=0;i<time_order;i++) {
-
-  for (int j=0;j<local_nmat;j++) {
-   new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[time_order][j]);
-  }
-
-  if (local_particles_flag==0) {
-   // do nothing
-  } else if (local_particles_flag==1) {
-
-   //amrex-master/Src/Particle/AMReX_Particles.H
-   //void copyParticles (const ParticleContainerType& other,bool local=false);
-   bool local=true;  
-   AmrLevel0_new_dataPC[i]->clearParticles();
-    //make sure hierarchy is initialized.
-   AmrLevel0_new_dataPC[i]->Redistribute();
-
-   AmrLevel0_new_dataPC[i]->copyParticles(
-        *AmrLevel0_new_dataPC[time_order],local);
-
-   int lev_min=0;
-   int nGrow_Redistribute=0;
-   int local_Redistribute=0;
-   //amrex-master/Src/Particle/AMReX_Particles.H
-   //void Redistribute (int lev_min = 0, int lev_max = -1, int nGrow = 0, int local=0);
-   AmrLevel0_new_dataPC[i]->
-      Redistribute(lev_min,lev_max,nGrow_Redistribute,local_Redistribute);
-  } else 
-   amrex::Error("local_particles_flag invalid");
- } //i=0;i<time_order;i++
-} else
- amrex::Error("level invalid in CopyNewToOldPC");
-
-} // end subroutine CopyNewToOldPC()
-
-
-void
-AmrLevel::CopyOldToNewPC(int lev_max) {
-
-if (level==0) {
-
- int time_order=parent->Time_blockingFactor();
- int local_particles_flag=parent->global_AMR_particles_flag;
- int local_nmat=parent->global_AMR_num_materials;
-
- for (int i=1;i<=time_order;i++) {
-
-  for (int j=0;j<local_nmat;j++) {
-   new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[0][j]);
-  }
-
-  if (local_particles_flag==0) {
-   // do nothing
-  } else if (local_particles_flag==1) {
-
-   //amrex-master/Src/Particle/AMReX_Particles.H
-   //void copyParticles (const ParticleContainerType& other,bool local=false);
-   bool local=true;
-   AmrLevel0_new_dataPC[i]->clearParticles();
-    //make sure hierarchy is initialized.
-   AmrLevel0_new_dataPC[i]->Redistribute();
-
-   AmrLevel0_new_dataPC[i]->copyParticles(
-      *AmrLevel0_new_dataPC[0],local);
-
-   int lev_min=0;
-   int nGrow_Redistribute=0;
-   int local_Redistribute=0;
-   AmrLevel0_new_dataPC[i]->
-     Redistribute(lev_min,lev_max,nGrow_Redistribute,local_Redistribute);
-  } else 
-   amrex::Error("local_particles_flag invalid");
- } // i=1..time_order
-} else
- amrex::Error("level invalid in CopyOldToNewPC");
-
-} // end subroutine CopyOldToNewPC()
-
-
 
 void
 AmrLevel::FillPatch (AmrLevel & old,

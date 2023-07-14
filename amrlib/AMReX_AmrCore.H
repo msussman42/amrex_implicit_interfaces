@@ -17,8 +17,6 @@
 
 namespace amrex {
 
-class AmrParGDB;
-
 class AmrLevel;
 class LevelBld;
 class BoxDomain;
@@ -44,8 +42,6 @@ public:
     // The destructor.
     //
     virtual ~AmrCore ();
-
-    AmrParGDB* GetParGDB () const noexcept { return m_gdb.get(); }
 
     //
     // Init data after construction. Must be called before timestepping.
@@ -114,11 +110,9 @@ public:
 
     AmrLevel& getLevel (int lev) noexcept { return *amr_level[lev]; }
 
-    int global_AMR_particles_flag; //init in InitAmr
     int global_AMR_num_materials; //init in InitAmr
     int global_AMR_num_materials_viscoelastic; //init in InitAmr
     int global_AMR_num_species_var; //init in InitAmr
-    int global_AMR_num_SoA_var; //init in InitAmr
 
 protected:
     //
@@ -203,8 +197,6 @@ protected:
 
     // OLD: PArray<AmrLevel> amr_level;    // Array of levels
     Vector<std::unique_ptr<AmrLevel> > amr_level;    //!< Vector of levels
-
-    std::unique_ptr<AmrParGDB> m_gdb;
 
     std::string      regrid_grids_file;   
     std::string      initial_grids_file; 

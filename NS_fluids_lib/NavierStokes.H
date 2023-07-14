@@ -308,14 +308,6 @@ public:
     virtual void post_init (Real stop_time);
     void prepare_post_process(const std::string& caller_string);
 
-    void init_particle_container(int append_flag);
-    void particle_tensor_advection_update();
-
-    void correct_Q_with_particles();
-
-    void assimilate_Q_from_particles(
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC);
-
     //
     // Advance grids at this level in time.
     //
@@ -1002,10 +994,6 @@ protected:
 
     void prescribe_solid_geometry(Real time,int renormalize_only);
 
-    void move_particles(
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
-      const std::string& caller_string);
-
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
     void getState_tracemag_ALL(int idx);
@@ -1568,12 +1556,6 @@ protected:
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
-     // =0 do not hybridize with particles (default)
-     // =1 hybridize with particles
-    static int particles_flag;  
-    static int particle_nsubdivide;  
-    static int particle_max_per_nsubdivide;  
-    static int particle_min_per_nsubdivide;  
 
     static Real truncate_thickness;  // default is 2.0
 
@@ -1964,8 +1946,6 @@ protected:
     static Vector<Real> rxcoarseblocks;
     static Vector<Real> rycoarseblocks;
     static Vector<Real> rzcoarseblocks;
-
-    static int num_SoA_var; //number of Structure of Array variables
 
     static int ncomp_sum_int_user1; //def=0
     static int ncomp_sum_int_user2; //def=0

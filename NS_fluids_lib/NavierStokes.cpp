@@ -193,12 +193,6 @@ int  NavierStokes::enable_spectral=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
-// default=1   
-int NavierStokes::particle_nsubdivide=1; 
-int NavierStokes::particle_max_per_nsubdivide=3; 
-int NavierStokes::particle_min_per_nsubdivide=1; 
-int NavierStokes::particles_flag=0; 
-
 Real NavierStokes::truncate_thickness=2.0;  
 
 Real NavierStokes::init_shrink  = 1.0;
@@ -400,7 +394,6 @@ Vector<Real> NavierStokes::rzcoarseblocks;
 int  NavierStokes::override_bc_to_homogeneous=0;
 
 int  NavierStokes::num_species_var=0;
-int  NavierStokes::num_SoA_var=0;
 
 // search num_materials,AMREX_SPACEDIM+1,SDIM+1,
 //  dcomp,pcomp,tcomp,scomp,
@@ -3147,7 +3140,6 @@ NavierStokes::read_params ()
 
     pp.queryAdd("static_damping_coefficient",
 		static_damping_coefficient,num_materials);
-    pp.queryAdd("particles_flag",particles_flag);
 
     for (int im=0;im<num_materials;im++) {
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
@@ -4875,28 +4867,6 @@ NavierStokes::read_params ()
       amrex::Error("FSI_flag invalid");
     }  // i=0..num_materials-1
 
-     //default=1
-    pp.queryAdd("particle_nsubdivide",particle_nsubdivide);
-     //default=3
-    pp.queryAdd("particle_max_per_nsubdivide",
-	    particle_max_per_nsubdivide);
-     //default=1
-    pp.queryAdd("particle_min_per_nsubdivide",
-	    particle_min_per_nsubdivide);
-
-    if ((particle_nsubdivide<1)||
-        (particle_nsubdivide>6))
-     amrex::Error("particle_nsubdivide invalid");
-    if ((particle_max_per_nsubdivide<2)||
-        (particle_max_per_nsubdivide>100))
-     amrex::Error("particle_max_per_nsubdivide invalid");
-    if ((particle_min_per_nsubdivide<0)||
-        (particle_min_per_nsubdivide>100))
-     amrex::Error("particle_min_per_nsubdivide invalid");
-    if ((particles_flag<0)||
-        (particles_flag>1))
-     amrex::Error("particles_flag invalid");
-
     pp.queryAdd("truncate_volume_fractions",truncate_volume_fractions,
 		num_materials);
 
@@ -5156,13 +5126,6 @@ NavierStokes::read_params ()
 
      std::cout << "initial_temperature_diffuse_duration=" << 
       initial_temperature_diffuse_duration << '\n';
-
-     std::cout << "particle_nsubdivide = " << particle_nsubdivide << '\n';
-     std::cout << "particle_max_per_nsubdivide= " <<
-        particle_max_per_nsubdivide << '\n';
-     std::cout << "particle_min_per_nsubdivide= " << 
-        particle_min_per_nsubdivide << '\n';
-     std::cout << "particles_flag = " << particles_flag << '\n';
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
@@ -5468,14 +5431,11 @@ NavierStokes::read_params ()
        cavitation_tension[i] << '\n';
      } // i=0..num_materials-1
 
-     num_SoA_var=SOA_NCOMP;
-
      std::cout << "pressure_select_criterion " << 
        pressure_select_criterion << '\n';
 
      std::cout << "num_materials_viscoelastic " << 
         num_materials_viscoelastic << '\n';
-     std::cout << "num_SoA_var " << num_SoA_var << '\n';
      std::cout << "num_species_var " << num_species_var << '\n';
      std::cout << "num_materials " << num_materials << '\n';
      std::cout << "num_interfaces " << num_interfaces << '\n';
@@ -9474,68 +9434,6 @@ void NavierStokes::post_restart() {
   FullPath += Level_string;
 
   std::string FullPathName=FullPath;
-  int time_order=parent->Time_blockingFactor();
-
-  if (parent->global_AMR_particles_flag==particles_flag) {
-   // do nothing
-  } else
-   amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
-
-  for (int i=0;i<=time_order;i++) {
-
-   if (particles_flag==0) {
-    // do nothing
-   } else if (particles_flag==1) {
-
-    if (num_SoA_var==SOA_NCOMP) {
-     // do nothing
-    } else
-     amrex::Error("num_SoA_var invalid");
-
-    if (num_SoA_var==parent->global_AMR_num_SoA_var) {
-     // do nothing
-    } else
-     amrex::Error("num_SoA_var invalid");
-
-    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-     //N_EXTRA_REAL_INSERT_TIME==0
-     //N_EXTRA_REAL_X0==1
-    if (N_EXTRA_REAL==1+AMREX_SPACEDIM) {
-     //do nothing
-    } else
-     amrex::Error("N_EXTRA_REAL invalid");
-
-     //N_EXTRA_INT_MATERIAL_ID==0
-    if (N_EXTRA_INT>0) {
-     //do nothing
-    } else
-     amrex::Error("N_EXTRA_INT invalid");
-
-    AmrLevel0_new_dataPC[i]=new My_ParticleContainer(parent);
-    for (int ns=0;ns<num_SoA_var;ns++)
-     AmrLevel0_new_dataPC[i]->AddRealComp(true);
-     
-    std::string Part_name="FusionPart";
-    std::stringstream i_string_stream(std::stringstream::in |
-        std::stringstream::out);
-    i_string_stream << i;
-    std::string i_string=i_string_stream.str();
-    Part_name+=i_string;
-
-    if (ParallelDescriptor::IOProcessor()) {
-     std::cout << "Restarting particle container, time_slab i= " <<
-       i << " FullPathName= " <<
-       FullPathName << " Part_name= " << Part_name << '\n';
-    }
-
-    AmrLevel0_new_dataPC[i]->Restart(FullPathName,Part_name);
-
-   } else
-    amrex::Error("particles_flag invalid");
-
-  }//for (int i=0;i<=time_order;i++) 
 
   init_aux_data();
 
@@ -9902,26 +9800,6 @@ NavierStokes::initData () {
    // time_array[bfact_time_order]=upper_slab_time (=0.0)
   state[k].setTimeLevel(upper_slab_time,dt_amr); 
  }
- NavierStokes& ns_level0=getLevel(0);
- int lev_min=0;
- int lev_max=level;
-
-  // even though there are no particles yet, the grid hierarchy should
-  // be initialized.
- if (particles_flag==0) {
-  // do nothing
- } else if (particles_flag==1) {
-  using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
-  int nGrow_Redistribute=0;
-  int local_Redistribute=0;
-  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_Redistribute);
- } else
-  amrex::Error("particles_flag invalid");
-
- ns_level0.CopyNewToOldPC(lev_max); //copy and redistribute up to lev_max
 
 }  // end subroutine initData
 
@@ -10157,43 +10035,6 @@ NavierStokes::init(
   }
  }
 
- if (particles_flag==0) {
-  // do nothing
- } else if (particles_flag==1) {
-
-   int lev_min=0;
-   int lev_max=level;
-   int nGrow_Redistribute=0;
-   bool local_copy=true; //do not redistribute inside of copyParticles
-   int local_redistribute=0;
-
-   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-    // if level==0, we must copy from the old Amr_level (level==0) to the
-    // new Amr_level prior to deleting the old level==0 structure.
-   if (level==0) {
-    My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
-    My_ParticleContainer& old_PC=oldns->newDataPC(ns_time_order);
-
-    new_PC.clearParticles();
-    //make sure hierarchy is initialized.
-    new_PC.Redistribute();
-
-    new_PC.copyParticles(old_PC,local_copy);
-   } else if (level>0) {
-    // do nothing
-   } else
-    amrex::Error("level invalid");
-     
-   My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
-
-   new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_redistribute);
-
- } else
-  amrex::Error("particles_flag invalid");
-
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
  is_first_step_after_regrid = 1;
 
@@ -10329,34 +10170,6 @@ NavierStokes::init(
 
  } // local_index=0..nstate-1
 
- if (particles_flag==0) {
-  // do nothing
- } else if (particles_flag==1) {
-
-   int lev_min=0;
-   int lev_max=level;
-   int nGrow_Redistribute=0;
-   int local_Redistribute=0;
-
-   if (level==0) {
-    amrex::Error("level==0 cannot be made from nothing");
-   } else if (level>0) {
-    // do nothing
-   } else
-    amrex::Error("level invalid");
-     
-   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-   NavierStokes& ns_level0=getLevel(0);
-   My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
-
-   new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
-
- } else
-  amrex::Error("particles_flag invalid");
-
  init_regrid_history();
  is_first_step_after_regrid = 2;
 
@@ -10381,9 +10194,6 @@ void NavierStokes::CopyNewToOldALL() {
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++) 
 
- NavierStokes& ns_level0=getLevel(0);
- ns_level0.CopyNewToOldPC(finest_level);
-
 }  // subroutine CopyNewToOldALL
 
 
@@ -10403,8 +10213,6 @@ void NavierStokes::CopyOldToNewALL() {
    ns_level.state[k].CopyOldToNew(level,max_level);
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++)
- NavierStokes& ns_level0=getLevel(0);
- ns_level0.CopyOldToNewPC(finest_level);
 
 } // subroutine CopyOldToNewALL
 
@@ -19708,28 +19516,6 @@ void NavierStokes::writeInterfaceReconstruction() {
     &plotint);
   } // im=1..num_materials
 
-  if (particles_flag==0) {
-   // do nothing
-  } else if (particles_flag==1) {
-
-   if ((num_materials_viscoelastic>=0)&&
-       (num_materials_viscoelastic<=num_materials)) {
-
-    // fort_combine_particles is declared in: NAVIERSTOKES_3D.F90
-    fort_combine_particles(
-     grids_per_level.dataPtr(),
-     &finest_level,
-     &nsteps,
-     &arrdim,
-     &cur_time_slab,
-     &plotint);
-
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
-
-  } else
-   amrex::Error("particles_flag invalid");
-
  }
  ParallelDescriptor::Barrier();
 
@@ -21527,30 +21313,11 @@ void NavierStokes::post_regrid (int lbase,
   } else
    amrex::Error("initialInit_flag invalid");
 
-  int lev_min=0;
-  int lev_max=new_finest;
-  int nGrow_Redistribute=0;
-  int local_Redistribute=0;
-
-  if (particles_flag==0) {
-   // do nothing
-  } else if (particles_flag==1) {
-   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-   NavierStokes& ns_level0=getLevel(0);
-   My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
-   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
-  } else
-   amrex::Error("particles_flag invalid");
-    
    // olddata=newdata  
   for (int k=0;k<nstate;k++) {
    state[k].CopyNewToOld(level,max_level); 
    state[k].setTimeLevel(time,dt_amr);
   }
-  NavierStokes& ns_level0=getLevel(0);
-  ns_level0.CopyNewToOldPC(lev_max);
 
 } // end subroutine post_regrid
 
@@ -21818,7 +21585,6 @@ NavierStokes::post_init (Real stop_time)
 
   // Ensure state is consistent, i.e. velocity field is non-divergent,
   // Coarse levels are fine level averages, 
-  // initialize particles.
   //
   post_init_state();
 
@@ -22506,808 +22272,6 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
 }  // end subroutine prepare_post_process
 
-//called from NavierStokes3.cpp: NavierStokes::correct_Q_with_particles()
-void NavierStokes::assimilate_Q_from_particles(
-   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC) {
-
- if (N_EXTRA_INT>0) {
-  // do nothing
- } else
-  amrex::Error("need N_EXTRA_INT>0");
-
- bool use_tiling=ns_tiling;
- int finest_level=parent->finestLevel();
- if ((level>=0)&&(level<=finest_level)) {
-  // do nothing
- } else
-  amrex::Error("level out of range");
-
- if ((num_materials_viscoelastic>=1)&& 
-     (num_materials_viscoelastic<=num_materials)) {
-
-  const Real* dx = geom.CellSize();
-
-  if (particles_flag==1) {
-   // do nothing
-  } else if (particles_flag==0) {
-   amrex::Error("particles_flag cannot be 0 in assimilate_Q_from_particles");
-  } else
-   amrex::Error("particles_flag invalid");
-
-  MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
-  if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
-   amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
-  if (NCOMP_SUM_WEIGHTS==NUM_CELL_ELASTIC+1) {
-   // do nothing
-  } else
-   amrex::Error("NCOMP_SUM_WEIGHTS==NUM_CELL_ELASTIC+1 failed");
-
-   // Qcor=Q - lambda
-   // E=sum_p w_p(Qcor(xp)-Qp)^2=sum_p w_p(Q(xp)-lambda-Qp)^2
-   // dE/dlambda=0 =>
-   // sum_p w_p (Q(xp)-Qp)=lambda sum_p w_p
-   // lambda=[sum_p w_p (Q(xp)-Qp)]/[sum_p w_p]
-  int ncomp_accumulate=NCOMP_SUM_WEIGHTS;
-
-  MultiFab* tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
-
-  //LEVELPC_MF is up to date since "allocate_levelset_ALL" was
-  //called from "make_physics_varsALL" which was called after
-  //the phase change update and before this routine was called.
-  resize_levelset(2,LEVELPC_MF);
-
-  if (thread_class::nthreads<1)
-   amrex::Error("thread_class::nthreads invalid");
-  thread_class::init_d_numPts(tensor_mf->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-  for (MFIter mfi(*tensor_mf,use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-    // std::cout << tilegrid << '\n';
-    // std::cout << gridno << '\n';
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-
-   const Real* xlo = grid_loc[gridno].lo();
-
-   // particles is of type "ParticleTileType::AoS"
-   // see AMReX_ArrayOfStructs.H
-   // particles is of type:
-   //  amrex::ParticleTile<SDIM,0,0,0>
-   // (Q variables are stored in "SoA = structure of arrays")
-   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-   auto& particles_grid_tile = localPC.GetParticles(level)
-     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-   auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-   unsigned int Np=particles_AoS.size();
-
-   auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-   int N_arrays=localPC.NumRealComps();
-   unsigned int Np_SoA=particles_SoA.size();
-
-   if (Np==Np_SoA) {
-    // do nothing
-   } else
-    amrex::Error("expecting Np==Np_SoA");
-
-   if (N_arrays==NUM_CELL_ELASTIC) {
-    //do nothing
-   } else
-    amrex::Error("N_arrays invalid");
-
-   unsigned int k=0;
-   unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
-
-   Vector<Real> real_compALL(N_real_comp);
-   for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-    My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
-
-    if (real_comp.size()==Np) {
-     //do nothing
-    } else
-     amrex::Error("real_comp.size()!=Np");
-
-    for (unsigned int j=0;j<Np;j++) {
-     real_compALL[k]=real_comp[j]; 
-     k++;
-
-     if (k==dir*Np+j+1) {
-      //do nothing
-     } else
-      amrex::Error("k invalid");
-
-    }
-   } // for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) 
-
-   if (k==N_real_comp) {
-    // do nothing
-   } else 
-    amrex::Error("k invalid");
-
-   FArrayBox matrixfab(tilegrid,ncomp_accumulate);
-   matrixfab.setVal(0.0);
-
-   FArrayBox& TNEWfab=Tensor_new[mfi];
-
-   FArrayBox& tensor_fab=(*tensor_mf)[mfi];
-
-   FArrayBox& LSfab=(*localMF[LEVELPC_MF])[mfi];
- 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-   // declared in: GODUNOV_3D.F90
-   fort_assimilate_Q_from_particles( 
-    &dt_slab,
-    &tid_current,
-    tilelo,tilehi,
-    fablo,fabhi,
-    &bfact,
-    &level,
-    &finest_level,
-    xlo,
-    dx,
-    particles_AoS.data(),
-    Np,  //pass by value
-    real_compALL.dataPtr(),
-    N_real_comp,  //pass by value
-    &ncomp_accumulate,
-    LSfab.dataPtr(),
-    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
-    TNEWfab.dataPtr(),
-    ARLIM(TNEWfab.loVect()),ARLIM(TNEWfab.hiVect()),
-    tensor_fab.dataPtr(),
-    ARLIM(tensor_fab.loVect()),ARLIM(tensor_fab.hiVect()),
-    matrixfab.dataPtr(),
-    ARLIM(matrixfab.loVect()),ARLIM(matrixfab.hiVect()),
-    viscoelastic_model.dataPtr(), //0..num_materials-1
-    im_elastic_map.dataPtr(), //0...num_materials_viscoelastic-1
-    polymer_factor.dataPtr()); //0...num_materials-1
-  } // mfi
-} // omp
-  ns_reconcile_d_num(LOOP_ASSIMILATE_Q_FROM_PART,"assimilate_Q_from_particles");
-
-  delete tensor_mf;
- } else
-  amrex::Error("num_materials_viscoelastic invalid");
-
-} // end subroutine assimilate_Q_from_particles
-
-// DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
-// This routine called from:
-// 1. post_init_state() and
-// 2. nonlinear_advection()
-void
-NavierStokes::init_particle_container(int append_flag) {
-
- std::string local_caller_string="init_particle_container";
-
- bool use_tiling=ns_tiling;
- int max_level = parent->maxLevel();
- int finest_level=parent->finestLevel();
-
- if (finest_level<=max_level) {
-  // do nothing
- } else
-  amrex::Error("max_level invalid");
-
- if (slab_step==ns_time_order-1) {
-  // do nothing
- } else
-  amrex::Error("expecting slab_step==ns_time_order-1");
-
- if ((level>=0)&&(level<=finest_level)) {
-  // do nothing
- } else 
-  amrex::Error("0<=level<=finest_level failed");
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- const Real* dx = geom.CellSize();
-
- resize_maskfiner(1,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,1,local_caller_string);
-
- if (particles_flag==1) {
-
-  if ((num_materials_viscoelastic>=0)&&
-      (num_materials_viscoelastic<=num_materials)) {
-
-   MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
-
-   MultiFab* tensor_mf=nullptr;
-
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-    tensor_mf=getStateTensor(1,0,NUM_CELL_ELASTIC,cur_time_slab);
-   } else if (num_materials_viscoelastic==0) {
-    tensor_mf=lsmf;
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
-
-   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-   NavierStokes& ns_level0=getLevel(0);
-   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
-
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(lsmf->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-   for (MFIter mfi(*lsmf,use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    int bfact=parent->Space_blockingFactor(level);
-
-    const Real* xlo = grid_loc[gridno].lo();
-
-    FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
-
-    FArrayBox& tensorfab=(*tensor_mf)[mfi];
-    FArrayBox& lsfab=(*lsmf)[mfi];
-
-     // component 1: number of particles linked to the cell.
-     // component 2: the link to the list of particles.
-    BaseFab<int> cell_particle_count(tilegrid,2);
-    cell_particle_count.setVal(0);
-
-    if (N_EXTRA_INT>0) {
-     // do nothing
-    } else 
-     amrex::Error("N_EXTRA_INT invalid");
-
-     // allocate for just one particle for now.
-    int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+
-      NUM_CELL_ELASTIC;
-    Vector< Real > new_particle_data;
-    new_particle_data.resize(single_particle_size);
-
-      // this is an object with a pointer to both AoS and
-      // SoA data.
-    auto& particles_grid_tile = localPC.GetParticles(level)
-      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
- 
-    auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-    unsigned int Np=particles_AoS.size();
-
-    auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-    int N_arrays=localPC.NumRealComps();
-    unsigned int Np_SoA=particles_SoA.size();
-
-    unsigned int Np_SoA_expect=Np;
-    if (num_materials_viscoelastic==0)
-     Np_SoA_expect=0;
-
-    if (Np_SoA_expect==Np_SoA) {
-     // do nothing
-    } else
-     amrex::Error("expecting Np_SoA_expect==Np_SoA");
-
-    if (N_arrays==NUM_CELL_ELASTIC) {
-     //do nothing
-    } else {
-     std::cout << "N_arrays= " << N_arrays << '\n';
-     amrex::Error("N_arrays invalid");
-    }
-
-    unsigned int k=0;
-    unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
-
-    Vector<Real> real_compALL(N_real_comp);
-    for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-     My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
-
-     if (real_comp.size()==Np) {
-      //do nothing
-     } else
-      amrex::Error("real_comp.size()!=Np");
-
-     for (unsigned int j=0;j<Np;j++) {
-      real_compALL[k]=real_comp[j]; 
-      k++;
-
-      if (k==dir*Np+j+1) {
-       //do nothing
-      } else
-       amrex::Error("k invalid");
-
-     }
-    } // for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) 
-
-    if (k==N_real_comp) {
-     // do nothing
-    } else 
-     amrex::Error("k invalid");
-
-     // The link index will start at 1.
-    Vector< int > particle_link_data;
-     // i_particle_link_1,i1,j1,k1,   (child link, parent link)
-     // i_particle_link_2,i2,j2,k2,  ...
-    particle_link_data.resize(Np*(1+AMREX_SPACEDIM));
-
-    for (unsigned int i_link=0;i_link<Np*(1+AMREX_SPACEDIM);i_link++)
-     particle_link_data[i_link]=0;
-
-      // 1 if particle should be deleted.
-    Vector< int > particle_delete_flag; 
-    particle_delete_flag.resize(Np);
-    for (unsigned int i_delete=0;i_delete<Np;i_delete++)
-     particle_delete_flag[i_delete]=0;
-
-    int Np_append=0;  // number of particles to append
-
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    for (int isweep=0;isweep<2;isweep++) {
-
-     int new_Pdata_size=new_particle_data.size();
-
-     // declared in: LEVELSET_3D.F90
-     // 1. subdivide each cell with "particle_nsubdivide" divisions.
-     //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
-     //                 "         "   =4 => 64 pieces in 2D.
-     // 2. for each small sub-box, add a particle at the sub-box center.
-     fort_init_particle_container( 
-       &tid_current,
-       &single_particle_size,
-       &isweep,
-       &append_flag,
-       &particle_nsubdivide,
-       &particle_max_per_nsubdivide,
-       &particle_min_per_nsubdivide,
-       tilelo,tilehi,
-       fablo,fabhi,
-       &bfact,
-       &level,
-       &finest_level,
-       &cur_time_slab,
-       xlo,dx,
-       particles_AoS.data(), // existing particles
-       Np,  // pass by value
-       real_compALL.dataPtr(),
-       N_real_comp,  //pass by value
-       new_particle_data.dataPtr(), // size is "new_Pdata_size"
-       &new_Pdata_size,
-       &Np_append,  // Np_append number of new particles to add.
-       particle_link_data.dataPtr(),
-       particle_delete_flag.dataPtr(),
-       cell_particle_count.dataPtr(),
-       ARLIM(cell_particle_count.loVect()),
-       ARLIM(cell_particle_count.hiVect()),
-       tensorfab.dataPtr(),
-       ARLIM(tensorfab.loVect()),
-       ARLIM(tensorfab.hiVect()),
-       lsfab.dataPtr(),
-       ARLIM(lsfab.loVect()),
-       ARLIM(lsfab.hiVect()),
-       mfinerfab.dataPtr(),
-       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
-       viscoelastic_model.dataPtr(), //0..num_materials-1
-       im_elastic_map.dataPtr(), //0...num_materials_viscoelastic-1
-       polymer_factor.dataPtr()); //0...num_materials-1
-      
-     if (isweep==0) {
-      new_particle_data.resize(Np_append*single_particle_size);
-     }
-    } // isweep=0...1
-
-    unsigned int Np_delete=0;
-    for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
-     if (particle_delete_flag[i_delete]==1) {
-      Np_delete++;
-     } else if (particle_delete_flag[i_delete]==0) {
-      // do nothing
-     } else
-      amrex::Error("particle_delete_flag[i_delete] invalid");
-    }
-
-    if (Np_delete<=Np) {
-     // do nothing
-    } else
-     amrex::Error("Np_delete invalid");
-
-    Vector< My_ParticleContainer::ParticleType > mirrorPC_AoS;
-    unsigned int Np_mirror_AoS=Np-Np_delete+Np_append;
-    mirrorPC_AoS.resize(Np_mirror_AoS);
-
-    int N_real_comp_mirror=NUM_CELL_ELASTIC*Np_mirror_AoS;
-    Vector<Real> mirror_real_compALL(N_real_comp_mirror);
-
-     //save the existing particle data to:
-     //1. mirrorPC_AoS
-     //2. mirror_real_compALL
-    unsigned int i_mirror=0;
-    for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
-     if (particle_delete_flag[i_delete]==1) {
-      // do nothing
-     } else if (particle_delete_flag[i_delete]==0) {
-      mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
-      for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-       int k_dest=dir*Np_mirror_AoS+i_mirror;
-       int k_source=dir*Np+i_delete;
-       mirror_real_compALL[k_dest]=real_compALL[k_source];
-      }
-      i_mirror++;
-     } else
-      amrex::Error("particle_delete_flag[i_delete] invalid");
-    }
-
-    if (i_mirror==Np-Np_delete) {
-     //do nothing
-    } else
-     amrex::Error("i_mirror invalid");
-
-    for (int i_append=0;i_append<Np_append;i_append++) {
-
-     My_ParticleContainer::ParticleType p;
-     p.id() = My_ParticleContainer::ParticleType::NextID();
-
-     p.cpu() = ParallelDescriptor::MyProc();
-
-     int ibase=i_append*single_particle_size;
-      //pos(AMREX_SPACEDIM)
-     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-      p.pos(dir) = new_particle_data[ibase+dir];
-     }
-     for (int dir=0;dir<N_EXTRA_REAL;dir++) {
-      p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
-     }
-     for (int dir=0;dir<N_EXTRA_INT;dir++) {
-      p.idata(dir) = 
-       (int) new_particle_data[ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir];
-     }
-     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-      int k_dest=dir*Np_mirror_AoS+i_mirror;
-      int k_source=ibase+AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+dir;
-      mirror_real_compALL[k_dest]=new_particle_data[k_source];
-     }
-     mirrorPC_AoS[i_mirror]=p;
-     i_mirror++;
-    } // i_append=0..Np_append-1
-
-    if (i_mirror==Np_mirror_AoS) {
-
-     particles_grid_tile.resize(0);
-
-     for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-      My_ParticleContainer::RealVector& 
-	      real_comp=particles_SoA.GetRealData(dir);
-      real_comp.resize(0);
-      for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
-       int k_source=dir*Np_mirror_AoS+i_mirror;
-       real_comp.push_back(mirror_real_compALL[k_source]);
-      } //i_mirror=0...Np_mirror_AoS-1
-     } //dir=0..NUM_CELL_ELASTIC-1
-
-     for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
-      particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);
-     }
-
-    } else
-     amrex::Error("i_mirror <> Np_mirror_AoS");
-
-   } // mfi
-} // omp
-   ns_reconcile_d_num(LOOP_INIT_PARTICLE_CONTAINER,"init_particle_container");
-
-   delete lsmf;
-
-   if ((num_materials_viscoelastic>=1)&&
-       (num_materials_viscoelastic<=num_materials)) {
-    delete tensor_mf;
-   } else if (num_materials_viscoelastic==0) {
-    //do nothing
-   } else
-    amrex::Error("num_materials_viscoelastic invalid");
-
-  } else
-   amrex::Error("num_materials_viscoelastic invalid");
-
- } else
-  amrex::Error("particles_flag invalid in init_particle_container");
-
-
-}  // end subroutine init_particle_container()
-
-//called from:
-//NavierStokes3.cpp,
-//void NavierStokes::tensor_advection_updateALL() if particles_flag==1.
-void
-NavierStokes::particle_tensor_advection_update() {
-
- std::string local_caller_string="particle_tensor_advection_update";
-
- bool use_tiling=ns_tiling;
- int max_level = parent->maxLevel();
- int finest_level=parent->finestLevel();
-
- if (finest_level<=max_level) {
-  // do nothing
- } else
-  amrex::Error("max_level invalid");
-
- if ((level>=0)&&(level<=finest_level)) {
-  // do nothing
- } else 
-  amrex::Error("0<=level<=finest_level failed");
-
- if (num_state_base!=2)
-  amrex::Error("num_state_base invalid");
-
- if (particles_flag==1) {
-
-  if ((num_materials_viscoelastic>=1)&&
-      (num_materials_viscoelastic<=num_materials)) {
-
-   debug_ngrow(CELLTENSOR_MF,1,local_caller_string);
-
-   debug_ngrow(CELL_DEN_MF,1,local_caller_string);
-
-   debug_ngrow(HOLD_VELOCITY_DATA_MF,1,local_caller_string);
-   if (localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL)
-    amrex::Error("localMF[HOLD_VELOCITY_DATA_MF]->nComp()!=STATE_NCOMP_VEL");
-
-   const Real* dx = geom.CellSize();
-
-   int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
-   if (ncomp_visc!=3*num_materials) {
-    std::cout << "ncomp= " <<
-     localMF[CELL_VISC_MATERIAL_MF]->nComp() << " num_materials= " << 
-       num_materials << '\n';
-    amrex::Error("cell_visc_material ncomp invalid(6)");
-   }
-   debug_ngrow(HOLD_GETSHEAR_DATA_MF,0,local_caller_string);
-
-   MultiFab* tendata_mf=localMF[HOLD_GETSHEAR_DATA_MF];
-   if (tendata_mf->nGrow()==0) {
-    // do nothing
-   } else
-    amrex::Error("tendata_mf invalid nGrow()");
-   if (tendata_mf->nComp()==DERIVE_TENSOR_NCOMP) {
-    // do nothing
-   } else
-    amrex::Error("tendata_mf invalid nComp()");
-
-   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-   NavierStokes& ns_level0=getLevel(0);
-   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
-
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(tendata_mf->boxArray().d_numPts());
-
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-   for (MFIter mfi(*tendata_mf,use_tiling); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
-    int bfact=parent->Space_blockingFactor(level);
-
-    const Real* xlo = grid_loc[gridno].lo();
-
-    FArrayBox& viscfab=(*localMF[CELL_VISC_MATERIAL_MF])[mfi];
-    FArrayBox& one_over_den_fab=(*localMF[CELL_DEN_MF])[mfi];
-    FArrayBox& velfab=(*localMF[HOLD_VELOCITY_DATA_MF])[mfi];
-    FArrayBox& tendata=(*tendata_mf)[mfi];
-    Vector<int> velbc=getBCArray(State_Type,gridno,
-      STATECOMP_VEL,STATE_NCOMP_VEL);
-
-      // this is an object with a pointer to both AoS and
-      // SoA data.
-    auto& particles_grid_tile = localPC.GetParticles(level)
-      [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
- 
-    auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
-    unsigned int Np=particles_AoS.size();
-
-    auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-    int N_arrays=localPC.NumRealComps();
-    unsigned int Np_SoA=particles_SoA.size();
-
-    if (Np==Np_SoA) {
-     // do nothing
-    } else
-     amrex::Error("expecting Np==Np_SoA");
-
-    if (N_arrays==NUM_CELL_ELASTIC) {
-     //do nothing
-    } else
-     amrex::Error("N_arrays invalid");
-
-    unsigned int k=0;
-    unsigned int N_real_comp=NUM_CELL_ELASTIC*Np;
-
-    Vector<Real> real_compALL(N_real_comp);
-    for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
-     My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
-
-     if (real_comp.size()==Np) {
-      //do nothing
-     } else
-      amrex::Error("real_comp.size()!=Np");
-
-     for (unsigned int j=0;j<Np;j++) {
-      real_compALL[k]=real_comp[j]; 
-      k++;
-
-      if (k==dir*Np+j+1) {
-       //do nothing
-      } else
-       amrex::Error("k invalid");
-
-     } //j=0 ... Np-1
-    } // for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) 
-
-    if (k==N_real_comp) {
-     // do nothing
-    } else 
-     amrex::Error("k invalid");
-
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
-
-    int partid_test=0;
-
-    for (int im=0;im<num_materials;im++) {
-     if (ns_is_rigid(im)==0) {
-      if (store_elastic_data[im]==1) {
-
-       int partid=0;
-       while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
-        partid++;
-       }
-
-       if (partid==partid_test) {
-        //do nothing
-       } else
-        amrex::Error("partid invalid");
-
-       if (partid<im_elastic_map.size()) {
-
-        if (fort_built_in_elastic_model(&elastic_viscosity[im],
-    			                &viscoelastic_model[im])==1) {
-
-         int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
-
-          // declared in: GODUNOV_3D.F90
-         fort_update_particle_tensor( 
-          &tid_current,
-          &cur_time_slab,
-          particles_AoS.data(), // particle positions
-          Np,  // pass by value
-          real_compALL.dataPtr(),
-          N_real_comp,  //pass by value
-          &level,
-          &finest_level,
-          &im,
-          &partid,
-          &scomp_tensor,
-          &ncomp_visc,
-          viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
-          one_over_den_fab.dataPtr(),
-	  ARLIM(one_over_den_fab.loVect()),
-	  ARLIM(one_over_den_fab.hiVect()),
-          tendata.dataPtr(),ARLIM(tendata.loVect()),ARLIM(tendata.hiVect()),
-          dx,xlo,
-          velfab.dataPtr(),
-          ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-          tilelo,tilehi,
-          fablo,fabhi,
-          &bfact, 
-          &dt_slab, //fort_update_particle_tensor
-          &elastic_time[im],
-          &viscoelastic_model[im],
-          &polymer_factor[im],
-          &elastic_viscosity[im],
-          &NS_geometry_coord,
-          velbc.dataPtr(),
-          &transposegradu);
- 
-         for (int dir=scomp_tensor;
-	      dir<scomp_tensor+ENUM_NUM_TENSOR_TYPE;dir++) {
- 	  My_ParticleContainer::RealVector& 
-		  real_comp=particles_SoA.GetRealData(dir);
-
-          if (real_comp.size()==Np) {
-           //do nothing
-          } else
-           amrex::Error("real_comp.size()!=Np");
-
-          for (unsigned int j=0;j<Np;j++) {
-	   k=dir*Np+j;
-	   real_comp[j]=real_compALL[k];
-	  }
-	 } //dir=scomp_tensor ... scomp_tensor+ENUM_TENSOR_TYPE-1
-
-        } else {
-	 std::cout << "illegal: store_elastic_data==1 and visc_model==4\n";
-         amrex::Error("fort_built_in_elastic_model invalid");
-	}
-       } else
-        amrex::Error("partid not found: particle tensor_advection_update");
-
-       partid_test++;
-
-      } else if (store_elastic_data[im]==0) {
-
-       if (viscoelastic_model[im]==0) {
-        // do nothing
-       } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
-    			                &viscoelastic_model[im])==0) {
-        amrex::Error("FSI_flag==FSI_SHOELE_PRESVEL has is_rigid==1");
-       } else  
-        amrex::Error("viscoelastic_model[im] invalid");
-
-      } else
-       amrex::Error("store_elastic_data[im] invalid");
-
-     } else if (ns_is_rigid(im)==1) {
-      // do nothing
-     } else
-      amrex::Error("ns_is_rigid invalid");
-
-    } // im=0..num_materials-1
-
-    if (partid_test==num_materials_viscoelastic) {
-     // do nothing
-    } else
-     amrex::Error("partid_test invalid");
-
-   } // mfi
-} // omp
-   ns_reconcile_d_num(LOOP_UPDATE_PARTICLE_TENSOR,
-     "particle_tensor_advection_update");
-
-  } else
-   amrex::Error("num_materials_viscoelastic invalid");
-
- } else
-  amrex::Error("particles_flag invalid in particle tensor adv upd");
-
-
-}  // end subroutine particle_tensor_advection_update()
-
-
 
 // should be cur_time=0 and prev_time=-1
 // called from post_init
@@ -23353,31 +22317,6 @@ NavierStokes::post_init_state () {
    // prescribe_solid_geometryALL
    // make_physics_varsALL
  prepare_post_process(local_caller_string);
-
- if (particles_flag==1) {
-
-  int append_flag=0;
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.init_particle_container(append_flag);
-  }
-  using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-  NavierStokes& ns_level0=getLevel(0);
-  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
-
-  int lev_min=0;
-  int lev_max=-1;
-  int nGrow_Redistribute=0;
-   //particles are being redistributed for the first time.
-  int local_Redistribute=0;
-  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute,local_Redistribute);
-
- } else if (particles_flag==0) {
-  // do nothing
- } else
-  amrex::Error("particles_flag invalid");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
