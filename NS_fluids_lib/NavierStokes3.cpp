@@ -406,66 +406,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else
   amrex::Error("enable_spectral invalid");
 
- if (parent->global_AMR_particles_flag==particles_flag) {
-  // do nothing
- } else
-  amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
-
- if (particles_flag==1) {
-
-  using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-  NavierStokes& ns_level0=getLevel(0);
-  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
-
-   // first add particles if needed
-  if (slab_step==ns_time_order-1) {
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    int append_flag=1;
-    ns_level.init_particle_container(append_flag);
-   }
-  } else if ((slab_step>=0)&&(slab_step<ns_time_order-1)) {
-   //do nothing
-  } else
-   amrex::Error("slab_step invalid");
-
-  int lev_min=0;
-  int lev_max=-1;
-  int nGrow_Redistribute=0;
-  int local_Redistribute=0; 
-  localPC.Redistribute(lev_min,lev_max,
-     nGrow_Redistribute,local_Redistribute);
-
-  if (num_SoA_var==SOA_NCOMP) {
-   // do nothing
-  } else
-   amrex::Error("num_SoA_var invalid");
-
-  if (num_SoA_var==parent->global_AMR_num_SoA_var) {
-   // do nothing
-  } else
-   amrex::Error("num_SoA_var invalid");
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-    //move_particles() declared in NavierStokes2.cpp
-   ns_level.move_particles(localPC,local_caller_string);
-  }
-
-  lev_min=0;
-  lev_max=-1;
-  nGrow_Redistribute=0;
-  local_Redistribute=0; 
-  localPC.Redistribute(lev_min,lev_max,
-     nGrow_Redistribute,local_Redistribute);
-
- } else if (particles_flag==0) {
-   // do nothing
- } else
-  amrex::Error("particles_flag invalid");
-
  int update_flag=RECON_UPDATE_NULL;
 
  //output:SLOPE_RECON_MF
@@ -773,59 +713,6 @@ void NavierStokes::deallocate_SDC() {
 }  // subroutine deallocate_SDC
 
 
-// called at the beginning of tensor_advection_updateALL()
-void NavierStokes::correct_Q_with_particles() {
-
- int finest_level=parent->finestLevel();
-
- if ((num_materials_viscoelastic>=1)&&
-     (num_materials_viscoelastic<=num_materials)) {
-
-  if ((level==0)&&(level<=finest_level)) {
-   // do nothing
-  } else
-   amrex::Error("level invalid");
-
-  if (parent->global_AMR_particles_flag==particles_flag) {
-   // do nothing
-  } else
-   amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
-
-  if (particles_flag==1) {
-
-   using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-   NavierStokes& ns_level0=getLevel(0);
-   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
-
-   if (num_SoA_var==SOA_NCOMP) {
-    // do nothing
-   } else
-    amrex::Error("num_SoA_var invalid");
-
-   if (num_SoA_var==parent->global_AMR_num_SoA_var) {
-    // do nothing
-   } else
-    amrex::Error("num_SoA_var invalid");
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.assimilate_Q_from_particles(localPC);
-   }
-
-   avgDownALL_TENSOR();
-  } else if (particles_flag==0) {
-   // do nothing
-  } else
-   amrex::Error("particles_flag invalid");
- } else
-  amrex::Error("num_materials_viscoelastic bad correct_Q_with_particles()");
-
-} // end subroutine correct_Q_with_particles()
-
-
-
 // called before veldiffuseALL() from NavierStokes::do_the_advance
 // Second half of D^{upside down triangle}/Dt
 void NavierStokes::tensor_advection_updateALL() {
@@ -834,8 +721,6 @@ void NavierStokes::tensor_advection_updateALL() {
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
-
-  correct_Q_with_particles();
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -883,16 +768,6 @@ void NavierStokes::tensor_advection_updateALL() {
    ns_level.tensor_advection_update();
   }
   avgDownALL_TENSOR();
-
-  if (particles_flag==1) {
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.particle_tensor_advection_update();
-   }
-  } else if (particles_flag==0) {
-   // do nothing
-  } else
-   amrex::Error("particles_flag invalid");
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -1187,30 +1062,6 @@ Real NavierStokes::advance(Real time,Real dt) {
     }
     std::fflush(NULL);
     ParallelDescriptor::Barrier();
-   }
-
-   if (parent->global_AMR_particles_flag==particles_flag) {
-    // do nothing
-   } else
-    amrex::Error("parent->global_AMR_particles_flag==particles_flag failed");
-
-   if (particles_flag==0) {
-    // do nothing
-   } else if (particles_flag==1) {
-    int lev_min=0;
-    int lev_max=-1;
-    int nGrow_Redistribute=0;
-    int local_Redistribute=0;
-
-    using My_ParticleContainer =
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-    NavierStokes& ns_level0=getLevel(0);
-    My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
-    old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-      local_Redistribute);
-   } else {
-    amrex::Error("particles_flag invalid");
    }
 
    //copy bfact_time_order component to the

@@ -29,8 +29,6 @@
 #include <AMReX_Print.H>
 #include <AMReX_TagBox.H>
 
-#include <AMReX_AmrParGDB.H>
-
 #include <AMReX_Cluster.H>
 #include <LevelBld.H>
 #include <AmrLevel.H>
@@ -481,24 +479,10 @@ AmrCore::InitAmr () {
  if ((global_AMR_num_species_var<0)||(global_AMR_num_species_var>999))
   amrex::Error("global_AMR_num_species_var invalid");
 
- global_AMR_particles_flag=0;
- ppns.queryAdd("particles_flag",global_AMR_particles_flag);
- if ((global_AMR_particles_flag==0)||
-     (global_AMR_particles_flag==1)) {
-  //do nothing
- } else
-  amrex::Error("global_AMR_particles_flag invalid");
-
-  //these variable definitions are needed by "SOA_NCOMP"
  int num_materials=global_AMR_num_materials;
  int num_species_var=global_AMR_num_species_var;
  int num_materials_viscoelastic=global_AMR_num_materials_viscoelastic;
 
- global_AMR_num_SoA_var=SOA_NCOMP;
-
- std::fflush(NULL);
- std::cout << "global_AMR_num_SoA_var= " << global_AMR_num_SoA_var <<
-      " on processor " << ParallelDescriptor::MyProc() << "\n";
  std::fflush(NULL);
  std::fflush(NULL);
  std::cout << "num_materials= " << num_materials <<
@@ -536,8 +520,6 @@ AmrCore::InitAmr () {
  }
  std::fflush(NULL);
  levelbld->variableSetUp();
-
- m_gdb.reset(new AmrParGDB(this));
 
 } // end subroutine InitAmr
 
@@ -809,8 +791,7 @@ AmrCore::AMR_checkInput ()
 // AmrMesh()
 // InitAmr() 
 //  they call,
-// geom[i].define(index_domain)  i=0...max_level and
-// m_gdb.reset(new AmrParGDB(this));
+// geom[i].define(index_domain)  i=0...max_level 
 void
 AmrCore::init (Real strt_time, Real stop_time) {
 

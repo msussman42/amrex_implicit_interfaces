@@ -11,7 +11,7 @@
 # example:
 # (1)
 # ./configure --dim 2 --with-fortran no --with-mpi no --with-omp no --comp gnu 
-#    --debug no --enable-particle yes --enable-fortran-api no 
+#    --debug no --enable-particle no --enable-fortran-api no 
 #    --enable-linear-solver no --sensei-amr-inst no --enable-probinit no
 # (2) make
 # (3) tmp_build_dir/o/2d.gnu.EXE/libamrex.a 
@@ -86,8 +86,8 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = FALSE
-LINUX_DESKTOP = TRUE
+MAC_LAPTOP = TRUE
+LINUX_DESKTOP = FALSE
 HPC_INTEL = FALSE
 HPC_GNU = FALSE
 NASA_INTEL = FALSE
@@ -177,8 +177,6 @@ USE_OMP = FALSE
 #EBASE = amr
 EBASE = amr
 
-USE_PARTICLES = TRUE
-
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
 $(info MODDEP=$(MODDEP))
@@ -218,13 +216,11 @@ endif
 
 ifeq ($(USE_LIBAMREX),FALSE)
 include $(AMREX_HOME)/Src/Base/Make.package
-include $(AMREX_HOME)/Src/Particle/Make.package
 endif
 LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.DEBUG.EXE/
 ifeq ($(USE_LIBAMREX),TRUE)
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base
 INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base/Parser
-INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Particle
 LDFLAGS += -L$(LIBAMREX_FILE_DIR)
 override XTRALIBS += -lamrex
 endif

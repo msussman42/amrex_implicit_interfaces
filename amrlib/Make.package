@@ -15,8 +15,6 @@ CEXE_headers += AMReX_ArrayLim_SUSSMAN.H \
                 N_EXTRA_REAL.H \
                 StateDescriptor.H AMReX_TagBox.H FillPatchUtil.H 
 
-CEXE_headers += AMReX_AmrParGDB.H AMReX_AmrParticles.H
-
 FEXE_headers += INTERP_F.H
 
 F90EXE_sources += INTERP_3D.F90 
