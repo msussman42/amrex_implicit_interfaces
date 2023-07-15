@@ -31,7 +31,7 @@ if ((num_nodes_init>=0)&&(num_elements_init>=0)) {
  displacement_list.resize(num_nodes*3);
  velocity_halftime_list.resize(num_nodes*3);
  velocity_list.resize(num_nodes*3);
- force_list.resize(num_nodes*3);
+ force_list.resize(num_nodes*NCOMP_FORCE_STRESS);
  mass_list.resize(num_nodes);
  temperature_list.resize(num_nodes);
 } else
@@ -57,8 +57,11 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
   displacement_list[inode]=source_FSI.displacement_list[inode];
   velocity_list[inode]=source_FSI.velocity_list[inode];
   velocity_halftime_list[inode]=source_FSI.velocity_halftime_list[inode];
-  force_list[inode]=source_FSI.force_list[inode];
  } //inode=0..3*num_nodes-1
+
+ for (int inode=0;inode<NCOMP_FORCE_STRESS*num_nodes;inode++) {
+  force_list[inode]=source_FSI.force_list[inode];
+ }
 
 } // end subroutine copyFrom_FSI
 

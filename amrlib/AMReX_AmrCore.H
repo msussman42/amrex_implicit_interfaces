@@ -150,7 +150,8 @@ protected:
      override;
 
     virtual BoxArray GetAreaNotToTag (int lev) override;
-    virtual void ManualTagsPlacement (int lev, TagBoxArray& tags, const Vector<IntVect>& bf_lev) override;
+    virtual void ManualTagsPlacement (int lev, TagBoxArray& tags, 
+		   const Vector<IntVect>& bf_lev) override;
 
 
     //
