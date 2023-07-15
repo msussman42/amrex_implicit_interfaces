@@ -196,7 +196,8 @@
         FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
       REAL_T, INTENT(inout) :: &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
-      REAL_T, INTENT(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
+      REAL_T, INTENT(inout) :: &
+              FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_num_nodes)
       REAL_T, INTENT(inout) :: &
         FSI_input_mass_list(FSI_input_num_nodes)
       REAL_T, INTENT(inout) :: &
@@ -215,7 +216,7 @@
       REAL_T, INTENT(inout) :: &
               FSI_output_velocity_list(3*FSI_output_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_force_list(3*FSI_output_num_nodes)
+              FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_num_nodes)
       REAL_T, INTENT(inout) :: &
               FSI_output_mass_list(FSI_output_num_nodes)
       REAL_T, INTENT(inout) :: &
@@ -762,7 +763,7 @@
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
          enddo ! dir=1..3
 
-         do dir=1,3
+         do dir=1,NCOMP_FORCE_STRESS
           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=zero
          enddo
          FSIdata3D(i,j,k,ibase+FSI_AREA_PER_VOL)=zero
@@ -975,10 +976,10 @@
            if (SDIM.eq.3) then
             FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)= &
              FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir) 
-            if (FSI_operation.eq.2) then
+            if (FSI_operation.eq.2) then !make dist in narrow band
              FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)= &
               FSIdata3D(i,j,k,ibase+FSI_FORCE+dir) 
-            else if (FSI_operation.eq.3) then
+            else if (FSI_operation.eq.3) then !update the sign
              ! do nothing
             else
              print *,"FSI_operation invalid"
@@ -1010,6 +1011,16 @@
             stop
            endif
           enddo ! dir=1..3
+
+          if (NCOMP_FORCE_STRESS.eq.9) then
+           do dir=4,NCOMP_FORCE_STRESS
+            FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)=zero
+           enddo
+          else
+           print *,"expecting NCOMP_FORCE_STRESS==9"
+           stop
+          endif
+
          enddo ! partid=1..nparts
  
         else if ((mask1.eq.1).and.(mask2.eq.0)) then

@@ -3421,7 +3421,7 @@ INTEGER_T :: dir
 
 REAL_T, dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
 REAL_T, dimension(3) :: vel_local
-REAL_T, dimension(3) :: force_local
+REAL_T, dimension(NCOMP_FORCE_STRESS) :: force_local
 REAL_T :: mass_local
 REAL_T :: density_local
 REAL_T :: volm1,volp1
@@ -3524,7 +3524,7 @@ INTEGER_T :: ctml_part_id
      volp1=half*sqrt(volp1)
     endif
 
-    do dir=1,3
+    do dir=1,NCOMP_FORCE_STRESS
      force_local(dir)=zero
     enddo
     do dir=1,AMREX_SPACEDIM
@@ -3587,7 +3587,7 @@ INTEGER_T :: ctml_part_id
      FSI(part_id)%NodeVel_old(dir,inode)=vel_local(dir)
      FSI(part_id)%NodeVel_new(dir,inode)=vel_local(dir)
     enddo ! dir=1,3
-    do dir=1,3
+    do dir=1,NCOMP_FORCE_STRESS
      FSI(part_id)%NodeForce(dir,inode)=force_local(dir)
      FSI(part_id)%NodeForce_old(dir,inode)=force_local(dir)
      FSI(part_id)%NodeForce_new(dir,inode)=force_local(dir)
@@ -9509,10 +9509,9 @@ INTEGER_T, PARAMETER :: aux_unit_id=14
 
    do dir=1,3
     aux_FSIdata3D(i,j,k,FSI_VELOCITY+dir)=0.0d0
-    aux_FSIdata3D(i,j,k,FSI_FORCE+dir)=0.0d0
    enddo
-   do dir=1,6
-    aux_FSIdata3D(i,j,k,FSI_STRESS+dir)=0.0d0
+   do dir=1,NCOMP_FORCE_STRESS
+    aux_FSIdata3D(i,j,k,FSI_FORCE+dir)=0.0d0
    enddo
    aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)=-99999.0
    ! bit 0=1 if +sign hits
@@ -9638,7 +9637,8 @@ REAL_T, INTENT(inout) ::  &
         FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
 REAL_T, INTENT(inout) ::  &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
-REAL_T, INTENT(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
+REAL_T, INTENT(inout) ::  &
+        FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_num_nodes)
 REAL_T, INTENT(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
 REAL_T, INTENT(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
 
@@ -9651,7 +9651,8 @@ REAL_T, INTENT(inout) :: &
         FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
 REAL_T, INTENT(inout) :: &
         FSI_output_velocity_list(3*FSI_output_num_nodes)
-REAL_T, INTENT(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: &
+        FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_num_nodes)
 REAL_T, INTENT(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
 REAL_T, INTENT(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
 
@@ -9977,6 +9978,11 @@ INTEGER_T idir,ielem,inode
      if (CTML_partid_map(part_id).eq.ctml_part_id) then
       if (im_part.eq.im_critical+1) then
        do inode=1,ctml_max_n_fib_nodes
+
+        do idir=1,NCOMP_FORCE_STRESS
+         FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)=zero
+        enddo
+
         do idir=1,AMREX_SPACEDIM
          FSI_output_node_list((inode-1)*3+idir)= &
            ctml_fib_pst(ctml_part_id,inode,idir)
@@ -9985,9 +9991,10 @@ INTEGER_T idir,ielem,inode
            ctml_fib_vel(ctml_part_id,inode,idir)
          FSI_output_velocity_list((inode-1)*3+idir)= &
            ctml_fib_vel(ctml_part_id,inode,idir)
-         FSI_output_force_list((inode-1)*3+idir)= &
+         FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)= &
            ctml_fib_frc(ctml_part_id,inode,idir)
         enddo !idir=1,sdim
+
         FSI_output_mass_list(inode)=ctml_fib_mass(ctml_part_id,inode)
         FSI_output_temperature_list(inode)=293.0d0
        enddo ! inode=1,ctml_max_n_fib_nodes 
@@ -11032,7 +11039,7 @@ subroutine CLSVOF_InitBox(  &
   im_part, &  ! =1...fort_num_local_aux_grids for aux (auxcomp)
   nparts, &   ! =fort_num_local_aux_grids for aux
   part_id, &  ! =(auxcomp)
-  ngrow_make_distance, & ! =3 for all cases
+  ngrow_make_distance_in, & ! =3 for all cases
   nFSI, & ! =NCOMP_FSI (aux)
   FSI_operation, &
   touch_flag, &
@@ -11066,7 +11073,7 @@ IMPLICIT NONE
   INTEGER_T, INTENT(in) :: im_part
   INTEGER_T, INTENT(in) :: nparts
   INTEGER_T, INTENT(in) :: part_id
-  INTEGER_T, INTENT(in) :: ngrow_make_distance
+  INTEGER_T, INTENT(in) :: ngrow_make_distance_in
   INTEGER_T, INTENT(in) :: nFSI
   INTEGER_T, INTENT(in) :: FSI_operation
   INTEGER_T, INTENT(inout) :: touch_flag
@@ -11156,7 +11163,7 @@ IMPLICIT NONE
   INTEGER_T mask_local,mask_node
   INTEGER_T new_mask_local
   REAL_T, dimension(3) :: vel_local
-  REAL_T, dimension(3) :: force_local
+  REAL_T, dimension(NCOMP_FORCE_STRESS) :: force_local
   REAL_T temp_local
   INTEGER_T nc
   INTEGER_T ii_current
@@ -11449,20 +11456,20 @@ IMPLICIT NONE
     print *,"FSI_operation invalid"
     stop
    endif
-   if (ngrow_make_distance.ne.3) then
-    print *,"ngrow_make_distance invalid"
+   if (ngrow_make_distance_in.ne.3) then
+    print *,"ngrow_make_distance_in invalid"
     stop
    endif
 
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     FSIdata3D, &
-    ngrow_make_distance,-1)
+    ngrow_make_distance_in,-1)
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     xdata3D, &
-    ngrow_make_distance,-1)
+    ngrow_make_distance_in,-1)
    call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
     masknbr3D, &
-    ngrow_make_distance,-1)
+    ngrow_make_distance_in,-1)
 
    if (lev77.eq.-1) then
     num_elements_container=FSI_mesh_type%NumIntElemsBIG
@@ -12305,7 +12312,7 @@ IMPLICIT NONE
           do dir=1,3
            vel_local(dir)=0.0d0
           enddo
-          do dir=1,3
+          do dir=1,NCOMP_FORCE_STRESS
            force_local(dir)=0.0d0
           enddo
           temp_local=0.0d0
@@ -12347,7 +12354,7 @@ IMPLICIT NONE
            do dir=1,3
             vel_local(dir)=vel_local(dir)+weight*velparm(dir)
            enddo
-           do dir=1,3
+           do dir=1,NCOMP_FORCE_STRESS
             force_local(dir)=force_local(dir)+ &
              weight*FSI_mesh_type%NodeForceBIG(dir,nodeptr)
            enddo
@@ -12359,7 +12366,7 @@ IMPLICIT NONE
           do dir=1,3
            vel_local(dir)=vel_local(dir)/weighttotal
           enddo
-          do dir=1,3
+          do dir=1,NCOMP_FORCE_STRESS
            force_local(dir)=force_local(dir)/weighttotal
           enddo
 
@@ -12394,15 +12401,18 @@ IMPLICIT NONE
          FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1)=mask_local
          do dir=1,3
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
-           ! the Eulerian force will be corrected later so that:
-           ! a) integral 1 dA = integral delta dV
-           !  delta_cor=
-           !   delta * (integral 1 dA)/
-           !           (integral 1 delta dV)
-           ! b) integral F_lag dA=integral delta_cor F_cor dV
-           !    F_cor=F+c
-          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force_local(dir)*dt
          enddo 
+          ! the Eulerian force will be corrected later so that:
+          ! a) integral 1 dA = integral delta dV
+          !  delta_cor=
+          !   delta * (integral 1 dA)/
+          !           (integral 1 delta dV)
+          ! b) integral F_lag dA=integral delta_cor F_cor dV
+          !    F_cor=F+c
+         do dir=1,NCOMP_FORCE_STRESS
+          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force_local(dir)*dt
+         enddo
+
           ! FIX ME: delta function must be corrected so that
           ! perimeter measured from Eulerian and Lagrangian perspectives
           ! match.  (total forces should match too?)
@@ -12609,7 +12619,7 @@ IMPLICIT NONE
 
     call checkbound3D_array(FSI_lo3D,FSI_hi3D, &
      old_FSIdata_ptr, &
-     ngrow_make_distance,-1)
+     ngrow_make_distance_in,-1)
 
     do i=FSI_growlo3D(1),FSI_growhi3D(1)
     do j=FSI_growlo3D(2),FSI_growhi3D(2)
@@ -13296,7 +13306,7 @@ end subroutine CLSVOF_InitBox
        im_part, & ! 1..num_materials
        nparts, &
        part_id, &
-       ngrow_make_distance, &
+       ngrow_make_distance_in, &
        nFSI, &
        FSI_operation, &
        time, &
@@ -13329,7 +13339,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, INTENT(in) :: im_part ! 1..num_materials
       INTEGER_T, INTENT(in) :: nparts
       INTEGER_T, INTENT(in) :: part_id
-      INTEGER_T, INTENT(in) :: ngrow_make_distance
+      INTEGER_T, INTENT(in) :: ngrow_make_distance_in
       INTEGER_T, INTENT(in) :: nFSI
       INTEGER_T, INTENT(in) :: FSI_operation
       REAL_T, INTENT(in) :: time
@@ -13534,29 +13544,29 @@ end subroutine CLSVOF_InitBox
         print *,"FSI_operation invalid"
         stop
        endif
-       if (ngrow_make_distance.ne.3) then
-        print *,"ngrow_make_distance invalid"
+       if (ngrow_make_distance_in.ne.3) then
+        print *,"ngrow_make_distance_in invalid"
         stop
        endif
 
        call checkbound3D_array(FSI_lo,FSI_hi, &
         xdata3D, &
-        ngrow_make_distance,-1)
+        ngrow_make_distance_in,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         veldata3D, &
-        ngrow_make_distance,-1)
+        ngrow_make_distance_in,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressdata3D, &
-        ngrow_make_distance,-1)
+        ngrow_make_distance_in,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressflag3D, &
-        ngrow_make_distance,-1)
+        ngrow_make_distance_in,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         masknbr3D, &
-        ngrow_make_distance,-1)
+        ngrow_make_distance_in,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         maskfiner3D, &
-        ngrow_make_distance,-1)
+        ngrow_make_distance_in,-1)
 
        num_nodes_container=contain_elem(lev77)% &
                            level_node_data(tid+1,part_id,tilenum+1)% &
@@ -13612,7 +13622,7 @@ end subroutine CLSVOF_InitBox
         endif
 
         call find_grid_bounding_box_node( &
-         ngrow_make_distance, &
+         ngrow_make_distance_in, &
          null_probe_size, &
          xnot, &
          FSI_lo,FSI_hi, &
@@ -13711,7 +13721,7 @@ end subroutine CLSVOF_InitBox
              sign_normal*probe_size*dx3D_min*local_node_normal(dir)
 
            call find_grid_bounding_box_node( &
-            ngrow_make_distance, &
+            ngrow_make_distance_in, &
             probe_size, &
             xprobe, &
             FSI_lo,FSI_hi, &
@@ -14933,7 +14943,7 @@ end subroutine find_grid_bounding_box
 
 
 subroutine find_grid_bounding_box_node( &
- ngrow_make_distance, &
+ ngrow_make_distance_in, &
  probe_size, &
  xnot, &
  FSI_lo,FSI_hi, &
@@ -14944,7 +14954,7 @@ subroutine find_grid_bounding_box_node( &
 use global_utility_module
 IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: ngrow_make_distance
+ INTEGER_T, INTENT(in) :: ngrow_make_distance_in
  REAL_T, INTENT(in) :: probe_size
  REAL_T, INTENT(in) :: xnot(3)
  INTEGER_T, INTENT(in) :: FSI_lo(3),FSI_hi(3)
@@ -14961,8 +14971,8 @@ IMPLICIT NONE
  INTEGER_T interp_support
  INTEGER_T i_probe_size
 
- if (ngrow_make_distance.ne.3) then
-  print *,"ngrow_make_distance invalid"
+ if (ngrow_make_distance_in.ne.3) then
+  print *,"ngrow_make_distance_in invalid"
   stop
  endif
 
@@ -14984,18 +14994,18 @@ IMPLICIT NONE
 
  call checkbound3D_array(FSI_lo,FSI_hi, &
    xdata3D, &
-   ngrow_make_distance,-1)
+   ngrow_make_distance_in,-1)
 
  interp_support=BoundingBoxRadNode
 
  do dir=1,3
   ngrowtest=FSI_lo(dir)-FSI_growlo(dir)
-  if (ngrowtest.ne.ngrow_make_distance) then
+  if (ngrowtest.ne.ngrow_make_distance_in) then
    print *,"ngrowtest invalid1 ",ngrowtest
    stop
   endif
   ngrowtest=FSI_growhi(dir)-FSI_hi(dir)
-  if (ngrowtest.ne.ngrow_make_distance) then
+  if (ngrowtest.ne.ngrow_make_distance_in) then
    print *,"ngrowtest invalid2 ",ngrowtest
    stop
   endif
@@ -15173,7 +15183,8 @@ REAL_T, INTENT(inout) :: &
         FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
 REAL_T, INTENT(inout) :: &
         FSI_input_velocity_list(3*FSI_input_num_nodes)
-REAL_T, INTENT(inout) :: FSI_input_force_list(3*FSI_input_num_nodes)
+REAL_T, INTENT(inout) :: &
+        FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_num_nodes)
 REAL_T, INTENT(inout) :: FSI_input_mass_list(FSI_input_num_nodes)
 REAL_T, INTENT(inout) :: FSI_input_temperature_list(FSI_input_num_nodes)
 
@@ -15186,7 +15197,8 @@ REAL_T, INTENT(inout) :: &
         FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
 REAL_T, INTENT(inout) :: &
         FSI_output_velocity_list(3*FSI_output_num_nodes)
-REAL_T, INTENT(inout) :: FSI_output_force_list(3*FSI_output_num_nodes)
+REAL_T, INTENT(inout) :: &
+        FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_num_nodes)
 REAL_T, INTENT(inout) :: FSI_output_mass_list(FSI_output_num_nodes)
 REAL_T, INTENT(inout) :: FSI_output_temperature_list(FSI_output_num_nodes)
 
@@ -15255,7 +15267,7 @@ INTEGER_T :: idir,ielem,im_part
           ctml_fib_vel_prev(ctml_part_id,inode,idir)= &
             FSI_input_velocity_list((inode-1)*3+idir)
           ctml_fib_frc_prev(ctml_part_id,inode,idir)= &
-            FSI_input_force_list((inode-1)*3+idir)
+            FSI_input_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)
          enddo !idir=1,sdim
          ctml_fib_mass_prev(ctml_part_id,inode)= &
             FSI_input_mass_list(inode)
@@ -15523,6 +15535,11 @@ INTEGER_T :: idir,ielem,im_part
       if (CTML_partid_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.im_critical+1) then
         do inode=1,ctml_max_n_fib_nodes
+
+         do idir=1,NCOMP_FORCE_STRESS
+          FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)=zero
+         enddo
+
          do idir=1,AMREX_SPACEDIM
           FSI_output_node_list((inode-1)*3+idir)= &
            ctml_fib_pst(ctml_part_id,inode,idir)
@@ -15539,9 +15556,11 @@ INTEGER_T :: idir,ielem,im_part
           FSI_output_velocity_list((inode-1)*3+idir)= &
            ctml_fib_vel(ctml_part_id,inode,idir)
 
-          FSI_output_force_list((inode-1)*3+idir)= &
+          FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)= &
            ctml_fib_frc(ctml_part_id,inode,idir)
+
          enddo !idir=1,sdim
+
          FSI_output_mass_list(inode)=ctml_fib_mass(ctml_part_id,inode)
          FSI_output_temperature_list(inode)=293.0d0
         enddo ! inode=1,ctml_max_n_fib_nodes 

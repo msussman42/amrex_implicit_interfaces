@@ -13,7 +13,7 @@ F90EXE_headers +=  \
 				UTIL_BOUNDARY_FORCE_FSI.F90 
 
 lowercase_comp := $(shell echo $(COMP) | tr A-Z a-z)
-ifeq ($(lowercase_comp),$(filter $(lowercase_comp),gcc gnu g++))
+ifeq ($(lowercase_comp),$(filter $(lowercase_comp),gcc gnu g++ g++-8))
 #  FFLAGS        += -zero -fdefault-double-8 -fdefault-real-8 -m64
 #  F90FLAGS      += -zero -fdefault-double-8 -fdefault-real-8 -m64
   FFLAGS        += -fdefault-double-8 -fdefault-real-8 -m64

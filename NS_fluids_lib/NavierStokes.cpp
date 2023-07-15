@@ -7532,10 +7532,10 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,FSI_NOTHING_VALID,
 		  ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance);
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrow_make_distance);
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,NCOMP_FORCE_STRESS,
+		  ngrow_make_distance);
     // perimeter in 2D
    setVal_localMF(FSI_MF,0.0,ibase+FSI_AREA_PER_VOL,1,ngrow_make_distance);
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_STRESS,6,ngrow_make_distance);
   } // partid=0..nparts-1
 
 
