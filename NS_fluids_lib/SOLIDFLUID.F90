@@ -414,7 +414,7 @@
        stop
       endif
       do im_local=1,num_materials
-       if (FSI_flag(im_local).eq.FSI_SHOELE_VELVEL) then 
+       if (FSI_flag(im_local).eq.FSI_SHOELE_CTML) then 
         if (CTML_force_model(im_local).eq.0) then
          ! do nothing
         else
@@ -607,7 +607,7 @@
          stop
         endif
          ! cur_time=t^{n+1}
-         ! if FSI_flag==FSI_SHOELE_VELVEL, then
+         ! if FSI_flag==FSI_SHOELE_CTML, then
          !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
          !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
@@ -757,7 +757,7 @@
            print *,"dimension bust"
            stop
           endif
-           !FSI_FORCE and FSI_SIZE should be initialized to zero.
+           !FSI_FORCE and FSI_AREA_PER_VOL should be initialized to zero.
            !FSI_VELOCITY, on the other hand, needs to be extrapolated.
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
          enddo ! dir=1..3
@@ -765,7 +765,7 @@
          do dir=1,3
           FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=zero
          enddo
-         FSIdata3D(i,j,k,ibase+FSI_SIZE)=zero
+         FSIdata3D(i,j,k,ibase+FSI_AREA_PER_VOL)=zero
 
         enddo ! partid=1,nparts
           
@@ -962,8 +962,8 @@
            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_EXTRAP_FLAG+1) ! flag
 
           if (FSI_operation.eq.2) then
-           FSIdata(D_DECL(i,j,k),ibase+FSI_SIZE+1)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_SIZE+1)!perim(2D)
+           FSIdata(D_DECL(i,j,k),ibase+FSI_AREA_PER_VOL+1)= &
+            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_AREA_PER_VOL+1)!perim(2D)
           else if (FSI_operation.eq.3) then
            ! do nothing
           else
@@ -1219,7 +1219,7 @@
          if (is_lag_part(im_part).eq.1) then
 
           if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
-              (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL).or. & 
+              (FSI_flag(im_part).eq.FSI_SHOELE_CTML).or. & 
               (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
               (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
 
@@ -2209,7 +2209,7 @@
          endif
 
          if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
-             (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL).or. & 
+             (FSI_flag(im_part).eq.FSI_SHOELE_CTML).or. & 
              (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
              (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &

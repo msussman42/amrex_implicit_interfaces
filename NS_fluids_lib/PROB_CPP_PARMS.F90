@@ -189,7 +189,7 @@ stop
         ! do nothing, tessellating
    
         ! FSI elastic link w/Kourosh (sci_clsvof.F90)
-       else if (local_FSI_flag.eq.FSI_SHOELE_VELVEL) then
+       else if (local_FSI_flag.eq.FSI_SHOELE_CTML) then
         mof_ordering_local(im)=1 ! non-tessellating
        else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then
         mof_ordering_local(im)=1 ! tessellating
@@ -219,7 +219,7 @@ stop
                  (local_FSI_flag.eq.FSI_ICE_NODES_INIT)) then 
          mof_ordering_local(im)=num_materials ! tessellating
 
-        else if (local_FSI_flag.eq.FSI_SHOELE_VELVEL) then  
+        else if (local_FSI_flag.eq.FSI_SHOELE_CTML) then  
          mof_ordering_local(im)=1  ! non-tessellating
         else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then 
          mof_ordering_local(im)=1  ! tessellating
@@ -1356,7 +1356,7 @@ stop
        else if (fort_material_type(im).eq.999) then
         if ((FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90).or. &
             (FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-            (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+            (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
          !do nothing
         else
          print *,"FSI_flag invalid in fort_override"

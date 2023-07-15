@@ -911,7 +911,7 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_PRESCRIBED_PROBF90=1
 // FSI_PRESCRIBED_NODES=2
 // FSI_ICE_PROBF90=3
-// FSI_SHOELE_VELVEL=4
+// FSI_SHOELE_CTML=4
 // FSI_RIGID_NOTPRESCRIBED=5
 // FSI_ICE_NODES_INIT=6
 // FSI_FLUID_NODES_INIT=7
@@ -1732,7 +1732,7 @@ void fortran_parameters() {
     // non-tessellating cases.
    if ((NavierStokes::FSI_flag[im]==FSI_PRESCRIBED_PROBF90)||
        (NavierStokes::FSI_flag[im]==FSI_PRESCRIBED_NODES)||
-       (NavierStokes::FSI_flag[im]==FSI_SHOELE_VELVEL)) {
+       (NavierStokes::FSI_flag[im]==FSI_SHOELE_CTML)) {
     //do nothing
    } else
     amrex::Error("NavierStokes::FSI_flag invalid");
@@ -3023,7 +3023,7 @@ NavierStokes::read_params ()
     pp.queryAdd("CTML_FSI_numsolids",CTML_FSI_numsolids);
     pp.queryAdd("CTML_force_model",CTML_force_model,num_materials);
     for (int i=0;i<num_materials;i++) {
-     if (FSI_flag[i]==FSI_SHOELE_VELVEL) {
+     if (FSI_flag[i]==FSI_SHOELE_CTML) {
       if (FSI_interval==1) {
        // do nothing
       } else
@@ -3046,7 +3046,7 @@ NavierStokes::read_params ()
     int CTML_FSI_numsolids_test=0;
     for (int im=0;im<num_materials;im++) {
 
-     if (FSI_flag[im]==FSI_SHOELE_VELVEL) { 
+     if (FSI_flag[im]==FSI_SHOELE_CTML) { 
       CTML_FSI_numsolids_test++;
      } else if (FSI_flag_valid(im)==1) {
       //do nothing
@@ -4827,7 +4827,7 @@ NavierStokes::read_params ()
       truncate_volume_fractions[i]=0;
      else if (FSI_flag[i]==FSI_PRESCRIBED_NODES) 
       truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==FSI_SHOELE_VELVEL) 
+     else if (FSI_flag[i]==FSI_SHOELE_CTML) 
       truncate_volume_fractions[i]=0;
      else if (is_FSI_rigid_matC(i)==1) // FSI rigid solid, tessellating
       truncate_volume_fractions[i]=0;
@@ -6361,7 +6361,7 @@ int NavierStokes::FSI_material_exists_velvel() {
  int local_flag=0;
 
  for (int im=0;im<num_materials;im++) {
-  if (FSI_flag[im]==FSI_SHOELE_VELVEL) { //Goldstein, Handler, Sirovich
+  if (FSI_flag[im]==FSI_SHOELE_CTML) { //Goldstein, Handler, Sirovich
    local_flag=1;
   } else if (FSI_flag_valid(im)==1) {
    // do nothing
@@ -6415,7 +6415,7 @@ int NavierStokes::is_singular_coeff(int im) {
   	     (FSI_flag[im]==FSI_ICE_STATIC)||
 	     (FSI_flag[im]==FSI_ICE_NODES_INIT)) { 
    local_is_singular_coeff=1; //extend pressure (after SOLVETYPE_PRES)
-  } else if (FSI_flag[im]==FSI_SHOELE_VELVEL) {  //Goldstein, Handler, Sirovich
+  } else if (FSI_flag[im]==FSI_SHOELE_CTML) {  //Goldstein, Handler, Sirovich
    local_is_singular_coeff=0;
   } else
    amrex::Error("FSI_flag invalid");
@@ -7534,7 +7534,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
 		  ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,3,ngrow_make_distance);
     // perimeter in 2D
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_SIZE,1,ngrow_make_distance);
+   setVal_localMF(FSI_MF,0.0,ibase+FSI_AREA_PER_VOL,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,0.0,ibase+FSI_STRESS,6,ngrow_make_distance);
   } // partid=0..nparts-1
 
@@ -7591,7 +7591,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
     } else
      amrex::Error("cur_time invalid");
    } else if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
-              (FSI_flag[im_part]==FSI_SHOELE_VELVEL)) {//Goldstein,Handler,Sirovich
+              (FSI_flag[im_part]==FSI_SHOELE_CTML)) {//Goldstein,Handler,Sirovich
     ok_to_modify_EUL=1;
     // do nothing
    } else
@@ -7713,7 +7713,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
     amrex::Error("ns_is_rigid invalid");
    }
 
-  } else if (FSI_flag[im_part]==FSI_SHOELE_VELVEL) { 
+  } else if (FSI_flag[im_part]==FSI_SHOELE_CTML) { 
    // do nothing (CTML)
   } else
    amrex::Error("FSI_flag[im_part] invalid");
@@ -7870,7 +7870,7 @@ void NavierStokes::copy_old_FSI_to_new_level() {
  for (int partid=0;partid<nparts;partid++) {
   int im_part=im_solid_map[partid];
   if ((im_part>=0)&&(im_part<num_materials)) {
-   if (FSI_flag[im_part]==FSI_SHOELE_VELVEL) { //Goldstein, Handler, Sirovich
+   if (FSI_flag[im_part]==FSI_SHOELE_CTML) { //Goldstein, Handler, Sirovich
     amrex::Error("must regenerate Eulerian data each step");
    } else if (FSI_flag[im_part]==FSI_PRESCRIBED_NODES){
     MultiFab::Copy(S_old,*vofmf,
@@ -7943,7 +7943,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
   amrex::Error("nparts invalid");
 
   //FSI_PRESCRIBED_NODES
-  //FSI_SHOELE_VELVEL
+  //FSI_SHOELE_CTML
   //FSI_ICE_NODES_INIT
   //FSI_FLUID_NODES_INIT
  if (read_from_CAD()==1) {
@@ -7991,7 +7991,7 @@ void NavierStokes::Transfer_FSI_To_STATE(Real cur_time) {
     } else
      amrex::Error("cur_time invalid");
    } else if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
-              (FSI_flag[im_part]==FSI_SHOELE_VELVEL)) {
+              (FSI_flag[im_part]==FSI_SHOELE_CTML)) {
     ok_to_modify_EUL=1;
     // do nothing
    } else
@@ -8064,7 +8064,7 @@ void NavierStokes::init_aux_data() {
 //FSI_operation=4  copy Eulerian velocity and stress to lag.
 //FSI_operation=5  find integral_{membrane} F_membrane dA.
 //
-// note for CTML algorithm (FSI_flag==FSI_SHOELE_VELVEL):
+// note for CTML algorithm (FSI_flag==FSI_SHOELE_CTML):
 // 0. Goldstein, Handler, Sirovich
 // 1. copy Eulerian velocity to Lagrangian velocity.
 // 2. update node locations
@@ -8722,7 +8722,7 @@ void NavierStokes::ns_header_msg_level(
 	} else
 	 amrex::Error("cur_time invalid");
        } else if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
-  	          (FSI_flag[im_part]==FSI_SHOELE_VELVEL)) { 
+  	          (FSI_flag[im_part]==FSI_SHOELE_CTML)) { 
         ok_to_modify_EUL=1;
        } else
         amrex::Error("FSI_flag invalid");
@@ -9566,7 +9566,7 @@ NavierStokes::initData () {
  prepare_mask_nbr(1);
 
   //FSI_PRESCRIBED_NODES
-  //FSI_SHOELE_VELVEL
+  //FSI_SHOELE_CTML
   //FSI_ICE_NODES_INIT
   //FSI_FLUID_NODES_INIT
  if (read_from_CAD()==1) {
@@ -24847,7 +24847,7 @@ NavierStokes::ctml_fsi_transfer_force() {
      } else
       amrex::Error("must regenerate Eulerian data each step");
 
-     if (FSI_flag[im_part]==FSI_SHOELE_VELVEL) {
+     if (FSI_flag[im_part]==FSI_SHOELE_CTML) {
 
       debug_ngrow(FSI_MF,0,local_caller_string);
       if (localMF[FSI_MF]->nComp()!=nFSI)

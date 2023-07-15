@@ -97,7 +97,7 @@ stop
             CP%im_solid_max)
 
           if ((FSI_flag(CP%im_solid_max).eq.FSI_PRESCRIBED_NODES).or. & 
-              (FSI_flag(CP%im_solid_max).eq.FSI_SHOELE_VELVEL)) then 
+              (FSI_flag(CP%im_solid_max).eq.FSI_SHOELE_CTML)) then 
            LS_cell=CP%LS(D_DECL(CP%i,CP%j,CP%k),CP%im_solid_max)
            do dir=1,SDIM
             nslope_cell(dir)= &
@@ -8355,7 +8355,7 @@ stop
           ! calls fort_is_rigid_base(FSI_flag(im),im) (GLOBALUTIL.F90)
           !  FSI_PRESCRIBED_PROBF90,
           !  FSI_PRESCRIBED_NODES,
-          !  FSI_SHOELE_VELVEL.
+          !  FSI_SHOELE_CTML.
           !
           ! Remark: 
           ! local_face(FACECOMP_ICEFACECUT+1) and
@@ -8380,7 +8380,7 @@ stop
          endif
 
           ! calls is_rigid(im) (GLOBALUTIL.F90)
-          !  is_rigid(im)==1 AND (! FSI_SHOELE_VELVEL)
+          !  is_rigid(im)==1 AND (! FSI_SHOELE_CTML)
          if ((is_prescribed(implus_majority).eq.1).or. &
              (is_prescribed(imminus_majority).eq.1).or. &
              (is_clamped_face.ge.1)) then
@@ -17431,7 +17431,7 @@ stop
              LS_solid_new(im),time,im)
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+                (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
              LS_solid_new(im)=LS(D_DECL(i,j,k),im)
             else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
              ! do nothing
@@ -17465,7 +17465,7 @@ stop
              im)
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+                (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
              vofcompraw=(im-1)*ngeom_raw+1
              vfrac_solid_new(im)=vofnew(D_DECL(i,j,k),vofcompraw)
              do dir=1,SDIM
@@ -17494,7 +17494,7 @@ stop
              time,im)
 
             if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+                (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
              do dir=1,SDIM
               nslope_solid(dir)=LS(D_DECL(i,j,k),num_materials+SDIM*(im-1)+dir)
              enddo
@@ -17552,7 +17552,7 @@ stop
               ! do nothing (heat conduction in solid)
              else if (solidheat_flag.eq.2) then ! neumann at solid/fluid
               if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                  (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+                  (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
                ! den_hold(statecomp) already has the solid temperature
               else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
@@ -17564,7 +17564,7 @@ stop
               endif
              else if (solidheat_flag.eq.1) then ! dirichlet at solid/fluid
               if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-                  (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+                  (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
                ! den_hold(statecomp) already has the solid temperature
               else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
                call tempsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM), &
