@@ -14054,7 +14054,7 @@ end subroutine print_visual_descriptor
       endif
       fort_CTML_FSI_mat_base=0
 
-      if (FSI_flag_local.eq.FSI_SHOELE_VELVEL) then
+      if (FSI_flag_local.eq.FSI_SHOELE_CTML) then
 #ifdef MVAHABFSI
        fort_CTML_FSI_mat_base=1
 #else
@@ -14150,7 +14150,7 @@ end subroutine print_visual_descriptor
           (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
           (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
-          (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
+          (FSI_flag_local.eq.FSI_SHOELE_CTML)) then
        fort_FSI_flag_valid_base=1
       else
        print *,"FSI_flag_local invalid in fort_FSI_flag_valid_base"
@@ -14218,7 +14218,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
                (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
-               (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
+               (FSI_flag_local.eq.FSI_SHOELE_CTML)) then
        fort_is_ice_base=0
       else
        print *,"FSI_flag_local invalid in fort_is_ice_base"
@@ -14283,7 +14283,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
                (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
-               (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
+               (FSI_flag_local.eq.FSI_SHOELE_CTML)) then
        fort_is_FSI_rigid_base=0
       else
        print *,"FSI_flag_local invalid in fort_is_FSI_rigid_base"
@@ -14394,7 +14394,7 @@ end subroutine print_visual_descriptor
 
       if ((FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
           (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. & 
-          (FSI_flag_local.eq.FSI_SHOELE_VELVEL).or. & 
+          (FSI_flag_local.eq.FSI_SHOELE_CTML).or. & 
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
           (FSI_flag_local.eq.FSI_FLUID_NODES_INIT)) then 
        fort_is_lag_part_base=1
@@ -14450,7 +14450,7 @@ end subroutine print_visual_descriptor
 
       fort_read_from_CAD=0
       if ((fsi_flag_local.eq.FSI_PRESCRIBED_NODES).or. & 
-          (fsi_flag_local.eq.FSI_SHOELE_VELVEL).or. & 
+          (fsi_flag_local.eq.FSI_SHOELE_CTML).or. & 
           (fsi_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
           (fsi_flag_local.eq.FSI_FLUID_NODES_INIT)) then 
        fort_read_from_CAD=1
@@ -14977,7 +14977,7 @@ end subroutine print_visual_descriptor
 
       if ((FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
           (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. & 
-          (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then 
+          (FSI_flag_local.eq.FSI_SHOELE_CTML)) then 
        fort_is_rigid_base=1  ! non-tessellating material
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
                (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. & 
@@ -15079,7 +15079,7 @@ end subroutine print_visual_descriptor
        if (CTML_FSI_mat(im).eq.0) then
         is_prescribed=1
        else if (CTML_FSI_mat(im).eq.1) then
-        if (FSI_flag(im).eq.FSI_SHOELE_VELVEL) then 
+        if (FSI_flag(im).eq.FSI_SHOELE_CTML) then 
          is_prescribed=0
         else
          print *,"FSI_flag invalid"

@@ -98,7 +98,7 @@ type mesh_type
  INTEGER_T, pointer :: ElemNodeCountEdgeBIG(:)
  REAL_T, pointer :: NodeBIG(:,:)  ! (3,node_id)
  REAL_T, pointer :: NodeVelBIG(:,:)
- REAL_T, pointer :: NodeForceBIG(:,:)  ! (3,node_id)
+ REAL_T, pointer :: NodeForceBIG(:,:)  ! (NCOMP_FORCE_STRESS,node_id)
  REAL_T, pointer :: NodeDensityBIG(:)
  REAL_T, pointer :: NodeMassBIG(:)
  REAL_T, pointer :: NodeTempBIG(:)  
@@ -123,9 +123,9 @@ type mesh_type
  REAL_T, pointer :: NodeNormalEdge(:,:) !sanity check purposes
  REAL_T, pointer :: NodeVel_old(:,:)
  REAL_T, pointer :: NodeVel_new(:,:)
- REAL_T, pointer :: NodeForce(:,:)
- REAL_T, pointer :: NodeForce_old(:,:)
- REAL_T, pointer :: NodeForce_new(:,:)
+ REAL_T, pointer :: NodeForce(:,:) ! NCOMP_FORCE_STRESS, NumNodes
+ REAL_T, pointer :: NodeForce_old(:,:) ! NCOMP_FORCE_STRESS, NumNodes
+ REAL_T, pointer :: NodeForce_new(:,:) ! NCOMP_FORCE_STRESS, NumNodes
  REAL_T, pointer :: NodeDensity(:)
  REAL_T, pointer :: NodeMass(:)
  REAL_T, pointer :: NodeTemp(:)
@@ -487,7 +487,7 @@ INTEGER_T :: dir
  if (ifirst.eq.1) then
   allocate(FSI_mesh_type%Node(3,FSI_mesh_type%NumNodes))
   allocate(FSI_mesh_type%NodeVel(3,FSI_mesh_type%NumNodes))
-  allocate(FSI_mesh_type%NodeForce(3,FSI_mesh_type%NumNodes))
+  allocate(FSI_mesh_type%NodeForce(NCOMP_FORCE_STRESS,FSI_mesh_type%NumNodes))
   allocate(FSI_mesh_type%NodeNormal(3,FSI_mesh_type%NumNodes))
   allocate(FSI_mesh_type%NodeNormalEdge(3,FSI_mesh_type%NumNodes))
   allocate(FSI_mesh_type%ElemNodeCount(FSI_mesh_type%NumNodes))
@@ -505,7 +505,7 @@ INTEGER_T :: dir
    FSI_mesh_type%Node(dir,inode)=FSI_mesh_type%Node_current(dir,inode)
    FSI_mesh_type%NodeVel(dir,inode)=FSI_mesh_type%NodeVel_new(dir,inode)
   enddo
-  do dir=1,3
+  do dir=1,NCOMP_FORCE_STRESS
    FSI_mesh_type%NodeForce(dir,inode)=FSI_mesh_type%NodeForce_new(dir,inode)
   enddo
   FSI_mesh_type%NodeTemp(inode)=FSI_mesh_type%NodeTemp_new(inode)
@@ -9520,7 +9520,7 @@ INTEGER_T, PARAMETER :: aux_unit_id=14
    aux_FSIdata3D(i,j,k,FSI_SIGN_CONFLICT+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_TEMPERATURE+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)=FSI_NOTHING_VALID
-   aux_FSIdata3D(i,j,k,FSI_SIZE+1)=0.0d0
+   aux_FSIdata3D(i,j,k,FSI_AREA_PER_VOL+1)=0.0d0
   enddo
   enddo
   enddo
@@ -9718,7 +9718,7 @@ INTEGER_T idir,ielem,inode
      fsi_part_id=fsi_part_id+1
      FSI_partid_map(part_id)=fsi_part_id
     else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90).or. & 
-             (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
+             (FSI_flag(im_part).eq.FSI_SHOELE_CTML)) then 
      FSI_partid_map(part_id)=0
     else
      print *,"FSI_flag(im_part) invalid in CLSVOF_ReadHeader"
@@ -12406,7 +12406,8 @@ IMPLICIT NONE
           ! FIX ME: delta function must be corrected so that
           ! perimeter measured from Eulerian and Lagrangian perspectives
           ! match.  (total forces should match too?)
-         FSIdata3D(i,j,k,ibase+FSI_SIZE+1)=hsprime(ls_local,FSI_delta_cutoff)
+         FSIdata3D(i,j,k,ibase+FSI_AREA_PER_VOL+1)= &
+                 hsprime(ls_local,FSI_delta_cutoff)
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
 
         else if ((i.ge.FSI_growlo3D(1)).and.(i.le.FSI_growhi3D(1)).and. &

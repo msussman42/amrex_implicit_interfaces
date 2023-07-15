@@ -8575,7 +8575,7 @@ stop
            stop
           endif
          else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
-                  (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
+                  (FSI_flag(im_part).eq.FSI_SHOELE_CTML)) then 
           ok_to_modify_EUL=1
          else
           print *,"FSI_flag invalid in fort_build_moment"

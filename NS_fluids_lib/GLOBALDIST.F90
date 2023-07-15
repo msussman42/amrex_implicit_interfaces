@@ -467,7 +467,7 @@ end subroutine nozzle2d
        endif ! cases in which soliddist is called.
 
       else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
+               (FSI_flag(im).eq.FSI_SHOELE_CTML)) then 
 
 ! dist>0 in the solid
 ! eventually as the program is running FSI_MF multifab will be
