@@ -5007,7 +5007,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! FSI_PRESCRIBED_PROBF90
         ! FSI_PRESCRIBED_NODES
         ! FSI_SHOELE_VELVEL
-        ! FSI_SHOELE_PRESVEL
         ! FSI_ICE_NODES_INIT
         ! FSI_FLUID_NODES_INIT
        if (is_lag_part(im).eq.1) then
@@ -5016,7 +5015,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! FSI_PRESCRIBED_PROBF90
         ! FSI_PRESCRIBED_NODES
         ! FSI_SHOELE_VELVEL
-        ! FSI_SHOELE_PRESVEL
         if (is_rigid(im).eq.0) then
 
           ! if is_prescribed==1:
@@ -5032,7 +5030,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          ! FSI_PRESCRIBED_PROBF90
          ! FSI_PRESCRIBED_NODES
          ! FSI_SHOELE_VELVEL
-         ! FSI_SHOELE_PRESVEL
         else if (is_rigid(im).eq.1) then
 
          if (im_solid.eq.0) then
@@ -5849,7 +5846,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             (FSI_flag(im).eq.FSI_ICE_STATIC).or. &
             (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. &
             (FSI_flag(im).eq.FSI_SHOELE_VELVEL).or. &
-            (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
             (FSI_flag(im).eq.FSI_RIGID_NOTPRESCRIBED)) then
          ! do nothing
         else if ((FSI_flag(im).eq.FSI_FLUID).or. &
@@ -7227,7 +7223,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         enddo
        endif
       else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
 
 ! as simulation progresses: FSI_MF multifab copied to fortran.
@@ -10667,7 +10662,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
                 (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. & 
                 (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. & 
-                (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
                 (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
         VOF(vofcomp)=VOFwall(vofcomp)
         do dir2=1,SDIM
@@ -10700,7 +10694,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
                 (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. & 
                 (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. & 
-                (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
                 (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
         LS(im)=LSwall(im)
        else
@@ -10849,7 +10842,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        do im=1,num_materials
         if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-            (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
             (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
          !do nothing
         else
@@ -10874,8 +10866,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        im=num_materials
        vofcomp=(im-1)*ngeom_raw+1
-       if ((FSI_flag(im).eq.FSI_SHOELE_VELVEL).or. & 
-           (FSI_flag(im).eq.FSI_SHOELE_PRESVEL)) then 
+       if (FSI_flag(im).eq.FSI_SHOELE_VELVEL) then
         VOF(vofcomp)=zero
         do dir2=1,SDIM
          VOF(vofcomp+dir2)=zero
@@ -10971,7 +10962,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
           do im=1,num_materials
            if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
             ! do nothing
            else
@@ -11564,11 +11554,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          xwall,LSwall(imls),x,y,z,dx,im)
        enddo
        imls=num_materials
-       if ((FSI_flag(imls).eq.FSI_SHOELE_VELVEL).or. & 
-           (FSI_flag(imls).eq.FSI_SHOELE_PRESVEL)) then 
+       if (FSI_flag(imls).eq.FSI_SHOELE_VELVEL) then
         LS(imls)=-ten
        else
-        print *,"expecting FSI_flag equal to FSI_SHOELE_VELVEL or PRESVEL"
+        print *,"expecting FSI_flag equal to FSI_SHOELE_VELVEL"
         stop
        endif
 
@@ -23646,7 +23635,6 @@ end subroutine initialize2d
          else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
                   (FSI_flag(im).eq.FSI_ICE_NODES_INIT).or. & 
                   (FSI_flag(im).eq.FSI_FLUID_NODES_INIT).or. & 
-                  (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
                   (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
           ! do nothing
          else
@@ -23771,7 +23759,6 @@ end subroutine initialize2d
            xsten(0,SDIM),disttest,time,im)
 
          if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-             (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
              (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
           disttest=lsnew(D_DECL(i,j,k),im)
          else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
@@ -23803,7 +23790,6 @@ end subroutine initialize2d
          temp_solid_mat,time,im_solid_crit)
 
        if ((FSI_flag(im_solid_crit).eq.FSI_PRESCRIBED_NODES).or. &
-           (FSI_flag(im_solid_crit).eq.FSI_SHOELE_PRESVEL).or. &
            (FSI_flag(im_solid_crit).eq.FSI_SHOELE_VELVEL)) then
         tcomp=(im_solid_crit-1)*num_state_material+ENUM_TEMPERATUREVAR+1
         temp_solid_mat=snew(D_DECL(i,j,k),tcomp)
@@ -25880,12 +25866,10 @@ end subroutine initialize2d
         do im=1,num_materials
           !FSI_PRESCRIBED_PROBF90
           !FSI_PRESCRIBED_NODES
-          !FSI_SHOELE_PRESVEL
           !FSI_SHOELE_VELVEL
          if (is_rigid(im).eq.1) then
 
           if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-              (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
            distbatch(im)=LS(D_DECL(ic,jc,kc),im)
           else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 
@@ -25990,7 +25974,6 @@ end subroutine initialize2d
          else if (is_rigid(im).eq.1) then
 
           if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-              (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
               (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
            scalc(vofcomp_raw)=scal(D_DECL(ic,jc,kc),vofcomp_raw)
            do dir=1,SDIM 
@@ -26023,7 +26006,6 @@ end subroutine initialize2d
              (im_solid_initdata.le.num_materials)) then
           call materialdistsolid(x,y,z,distsolid,time,im_solid_initdata)
           if ((FSI_flag(im_solid_initdata).eq.FSI_PRESCRIBED_NODES).or. &
-              (FSI_flag(im_solid_initdata).eq.FSI_SHOELE_PRESVEL).or. &
               (FSI_flag(im_solid_initdata).eq.FSI_SHOELE_VELVEL)) then
            distsolid=LS(D_DECL(ic,jc,kc),im_solid_initdata)
           else if (FSI_flag(im_solid_initdata).eq.FSI_PRESCRIBED_PROBF90) then
@@ -26071,7 +26053,6 @@ end subroutine initialize2d
           if (is_rigid(im).eq.1) then
 
            if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. &
-               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. &
                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then
             distbatch(im)=LS(D_DECL(ic+i1,jc+j1,kc+k1),im)
            else if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then 

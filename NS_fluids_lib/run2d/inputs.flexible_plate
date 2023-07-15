@@ -214,7 +214,6 @@ ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
 # viscoelastic_model=1 Oldroyd-B  f_R=(A-I) f_S=f_R
 # viscoelastic_model=2 Q ~ (grad X + grad X^T) 
 # viscoelastic_model=3 incremental elastic material, Jaumann derivative
-# viscoelastic_model=4 pressure/velocity FSI coupling
 # viscoelastic_model=5 FENE-P  f_R=A/(1-tr(A)/L^2)-I  f_S=f_R
 #    f_R=(1/(1-tr(A)/L^2))*(A-I(1-tr(A)/L^2))=
 #        (1/(1-tr(A)/L^2))*(A-I+I tr(A)/L^2)
@@ -226,8 +225,6 @@ ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
 #         Xia, Lu, Tryggvason 2018
 # for INCOMPRESSIBLE Neo-Hookean model, there is not "determinant factor"
 #
-# LAG-EUL FSI
-#ns.viscoelastic_model=0 0 4
 # EUL-EUL FSI
 #ns.viscoelastic_model=0 0 3
 #ns.viscoelastic_model=0 0 7

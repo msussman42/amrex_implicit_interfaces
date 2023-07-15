@@ -421,13 +421,6 @@
          print *,"CTML_force_model invalid"
          stop
         endif
-       else if (FSI_flag(im_local).eq.FSI_SHOELE_PRESVEL) then 
-        if (CTML_force_model(im_local).eq.2) then
-         ! do nothing
-        else
-         print *,"CTML_force_model invalid"
-         stop
-        endif
        else if (fort_FSI_flag_valid(im_local).eq.1) then
         ! do nothing
        else
@@ -614,7 +607,7 @@
          stop
         endif
          ! cur_time=t^{n+1}
-         ! if FSI_flag==FSI_SHOELE_VELVEL or FSI_SHOELE_PRESVEL, then
+         ! if FSI_flag==FSI_SHOELE_VELVEL, then
          !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
          !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
@@ -1227,7 +1220,6 @@
 
           if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
               (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL).or. & 
-              (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
               (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
               (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
 
@@ -2218,7 +2210,6 @@
 
          if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
              (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL).or. & 
-             (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
              (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
              (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &

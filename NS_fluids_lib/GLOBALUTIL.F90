@@ -14054,8 +14054,7 @@ end subroutine print_visual_descriptor
       endif
       fort_CTML_FSI_mat_base=0
 
-      if ((FSI_flag_local.eq.FSI_SHOELE_VELVEL).or. &
-          (FSI_flag_local.eq.FSI_SHOELE_PRESVEL)) then
+      if (FSI_flag_local.eq.FSI_SHOELE_VELVEL) then
 #ifdef MVAHABFSI
        fort_CTML_FSI_mat_base=1
 #else
@@ -14151,7 +14150,6 @@ end subroutine print_visual_descriptor
           (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
           (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
-          (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
           (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
        fort_FSI_flag_valid_base=1
       else
@@ -14220,7 +14218,6 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
                (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
-               (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
                (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
        fort_is_ice_base=0
       else
@@ -14286,7 +14283,6 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
                (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
-               (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. &
                (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then
        fort_is_FSI_rigid_base=0
       else
@@ -14399,7 +14395,6 @@ end subroutine print_visual_descriptor
       if ((FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
           (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. & 
           (FSI_flag_local.eq.FSI_SHOELE_VELVEL).or. & 
-          (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. & 
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
           (FSI_flag_local.eq.FSI_FLUID_NODES_INIT)) then 
        fort_is_lag_part_base=1
@@ -14456,7 +14451,6 @@ end subroutine print_visual_descriptor
       fort_read_from_CAD=0
       if ((fsi_flag_local.eq.FSI_PRESCRIBED_NODES).or. & 
           (fsi_flag_local.eq.FSI_SHOELE_VELVEL).or. & 
-          (fsi_flag_local.eq.FSI_SHOELE_PRESVEL).or. & 
           (fsi_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
           (fsi_flag_local.eq.FSI_FLUID_NODES_INIT)) then 
        fort_read_from_CAD=1
@@ -14983,7 +14977,6 @@ end subroutine print_visual_descriptor
 
       if ((FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
           (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. & 
-          (FSI_flag_local.eq.FSI_SHOELE_PRESVEL).or. & 
           (FSI_flag_local.eq.FSI_SHOELE_VELVEL)) then 
        fort_is_rigid_base=1  ! non-tessellating material
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
@@ -15059,7 +15052,7 @@ end subroutine print_visual_descriptor
       else if (elastic_visc_in.eq.zero) then
        fort_built_in_elastic_model=0
       else
-       print *,"elastic_visc_in invalid"
+       print *,"elastic_visc_in invalid: ",elastic_visc_in
        stop
        fort_built_in_elastic_model=0
       endif
@@ -15088,8 +15081,6 @@ end subroutine print_visual_descriptor
        else if (CTML_FSI_mat(im).eq.1) then
         if (FSI_flag(im).eq.FSI_SHOELE_VELVEL) then 
          is_prescribed=0
-        else if (FSI_flag(im).eq.FSI_SHOELE_PRESVEL) then 
-         is_prescribed=1
         else
          print *,"FSI_flag invalid"
          stop
@@ -25774,11 +25765,8 @@ else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
  ! Xia, Lu, Tryggvason 2018
  ! coeff=elastic_viscosity
  implicit_hoop=1
-else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
- print *,"this routine should not be called if visc_model==4"
- stop
 else
- print *,"viscoelastic_model invalid"
+ print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
 endif
 
@@ -25830,11 +25818,8 @@ else if (viscoelastic_model.eq.3) then ! incremental model
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
  ! Xia, Lu, Tryggvason 2018
  dumbbell_model=0
-else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
- print *,"this routine should not be called if viscoelastic_model==4"
- stop
 else
- print *,"viscoelastic_model invalid"
+ print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
 endif
 
@@ -25991,11 +25976,8 @@ do ii=1,3
     print *,"Q_hoop_old invalid"
     stop
    endif
-  else if (viscoelastic_model.eq.4) then!FSI pressure velocity coupling
-   print *,"this routine should not be called if viscoelastic_model==4"
-   stop
   else
-   print *,"viscoelastic_model invalid"
+   print *,"viscoelastic_model invalid: ",viscoelastic_model
    stop
   endif
 
@@ -26033,9 +26015,6 @@ else if (viscoelastic_model.eq.3) then ! incremental model
 else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
  ! Xia, Lu, Tryggvason 2018
  equilibrium_diagonal=zero
-else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
- print *,"this routine should not be called if visc_model==4"
- stop
 else if (viscoelastic_model.eq.6) then !linearPTT
  equilibrium_diagonal=zero
  if (trace_A.gt.zero) then
@@ -26056,7 +26035,7 @@ else if (viscoelastic_model.eq.6) then !linearPTT
   stop
  endif
 else
- print *,"viscoelastic_model invalid"
+ print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
 endif
 
@@ -26154,7 +26133,7 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     ! Xia, Lu, Tryggvason 2018
     Aadvect(ii,ii)=Aadvect(ii,ii)+one
    else
-    print *,"viscoelastic_model invalid"
+    print *,"viscoelastic_model invalid: ",viscoelastic_model
     stop
    endif
   else
@@ -26213,18 +26192,18 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
    enddo !jj=1,3
    enddo !ii=1,3
   else
-   print *,"dumbbell_model invalid"
+   print *,"dumbbell_model invalid: ",dumbbell_model
    stop
   endif
  else if (viscoelastic_model.eq.7) then ! incremental Neo-Hookean model
   if (dumbbell_model.eq.0) then
    ! do nothing
   else
-   print *,"dumbbell_model invalid"
+   print *,"dumbbell_model invalid: ",dumbbell_model
    stop
   endif
  else
-  print *,"viscoelastic_model invalid"
+  print *,"viscoelastic_model invalid: ",viscoelastic_model
   stop
  endif
 
@@ -26273,11 +26252,11 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     ! Xia, Lu, Tryggvason (2018)
     Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
    else
-    print *,"viscoelastic_model invalid"
+    print *,"viscoelastic_model invalid: ",viscoelastic_model
     stop
    endif
   else
-   print *,"dumbbell_model invalid"
+   print *,"dumbbell_model invalid: ",dumbbell_model
    stop
   endif
 
@@ -26326,11 +26305,11 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     ! Xia, Lu, Tryggvason 2018
     Aadvect(ii,ii)=Aadvect(ii,ii)+one
    else
-    print *,"viscoelastic_model invalid"
+    print *,"viscoelastic_model invalid: ",viscoelastic_model
     stop
    endif
   else
-   print *,"dumbbell_model invalid"
+   print *,"dumbbell_model invalid: ",dumbbell_model
    stop
   endif
  enddo ! do ii=1,3
@@ -26355,11 +26334,11 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
     ! Xia, Lu, Tryggvason (2018)
     Q(ii,ii)=Q(ii,ii)-one  ! Q <--  A-I
    else
-    print *,"viscoelastic_model invalid"
+    print *,"viscoelastic_model invalid: ",viscoelastic_model
     stop
    endif
   else
-   print *,"dumbbell_model invalid"
+   print *,"dumbbell_model invalid: ",dumbbell_model
    stop
   endif
  enddo
@@ -26425,11 +26404,8 @@ if ((viscoelastic_model.eq.0).or. & !FENE-CR
   stop
  endif
 
-else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
- print *,"this routine should not be called if viscoelastic_model==4"
- stop
 else 
- print *,"viscoelastic_model invalid"
+ print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
 endif
 

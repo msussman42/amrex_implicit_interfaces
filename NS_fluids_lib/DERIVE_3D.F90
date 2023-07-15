@@ -952,8 +952,6 @@ stop
             (viscoelastic_model.eq.5).or. & ! FENE-P
             (Viscoelastic_model.eq.6)) then ! linear PTT
          ! do nothing
-        else if (viscoelastic_model.eq.4) then ! pressure velocity coupling
-         ! do nothing
         else if (viscoelastic_model.eq.3) then !incremental
          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
          if (elastic_viscosity.ge.zero) then
@@ -971,7 +969,7 @@ stop
           stop
          endif
         else
-         print *,"viscoelastic_model invalid"
+         print *,"viscoelastic_model invalid: ",viscoelastic_model
          stop
         endif
 
@@ -1117,12 +1115,11 @@ stop
            endif
 
            ! modtime=elastic_time >> 1 for 2,3,7
-          else if ((viscoelastic_model.eq.4).or. & !pressure velocity coupling
-                   (viscoelastic_model.eq.3).or. & !incremental (plastic)
+          else if ((viscoelastic_model.eq.3).or. & !incremental (plastic)
                    (viscoelastic_model.eq.7)) then !incremental (Neo-Hookean)
            modtime=elastic_time
           else
-           print *,"viscoelastic_model invalid"
+           print *,"viscoelastic_model invalid: ",viscoelastic_model
            stop
           endif
 
@@ -1148,10 +1145,8 @@ stop
            else if (viscoelastic_model.eq.7) then !incremental
             ! Xia, Lu, Tryggvason
             viscoelastic_coeff=elastic_viscosity
-           else if (viscoelastic_model.eq.4) then !pressure velocity coupling
-            viscoelastic_coeff=elastic_viscosity
            else
-            print *,"viscoelastic_model invalid"
+            print *,"viscoelastic_model invalid: ",viscoelastic_model
             stop
            endif
           else

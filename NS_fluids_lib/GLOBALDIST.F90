@@ -467,7 +467,6 @@ end subroutine nozzle2d
        endif ! cases in which soliddist is called.
 
       else if ((FSI_flag(im).eq.FSI_PRESCRIBED_NODES).or. & 
-               (FSI_flag(im).eq.FSI_SHOELE_PRESVEL).or. & 
                (FSI_flag(im).eq.FSI_SHOELE_VELVEL)) then 
 
 ! dist>0 in the solid
