@@ -474,7 +474,6 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 //       (iii) X=I+dt W
 //       (iv) S^{n+1}=X A^advect X^T-I=
 //         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
-// 4=> elastic model handled in the coupler (Lagrangian).
 // 5=> FENE-P 
 //       (v) lambda'=lambda * (1-tr(A)/L^2)
 //       (vi) Q_t = -(1/lambda')(Q+I * tr(A)/L^{2})  
@@ -4437,7 +4436,7 @@ NavierStokes::read_params ()
     for (int i=0;i<num_materials;i++) {
      if (elastic_viscosity[i]>=0.0) {
       if (fort_built_in_elastic_model(&elastic_viscosity[i],
-			            &viscoelastic_model[i])==1) {
+                                      &viscoelastic_model[i])==1) {
        if (viscoelastic_model[i]==3) { // incremental elastic model
         if (elastic_time[i]>=1.0e+8) {
          // do nothing
@@ -4527,8 +4526,7 @@ NavierStokes::read_params ()
         amrex::Error("elastic_viscosity invalid");
 
       } else if ((viscoelastic_model[i]==7)|| //Neo-Hookean
-   	         (viscoelastic_model[i]==3)|| //incremental model
-   	         (viscoelastic_model[i]==4)) {//pres-vel coupling
+   	         (viscoelastic_model[i]==3)) { //incremental model
        // do nothing
       } else
        amrex::Error("viscoelastic_model invalid");
@@ -6358,7 +6356,6 @@ int NavierStokes::is_ice_matC(int im) {
 
 }  // end subroutine is_ice_matC()
 
-FIX ME
 int NavierStokes::FSI_material_exists_velvel() {
 
  int local_flag=0;
@@ -10635,7 +10632,6 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
        // viscoelastic_model==0 => FENE-CR
        // viscoelastic_model==1 => Oldroyd B
        // viscoelastic_model==3 => incremental elastic model
-       // viscoelastic_model==4 => FSI pressure velocity coupling (N/A here)
        // viscoelastic_model==5 => FENE-P
        // viscoelastic_model==6 => linear PTT
        // viscoelastic_model==7 => incremental Neo-Hookean model
@@ -12125,8 +12121,9 @@ void NavierStokes::tensor_advection_update() {
 
       delete tensor_source_mf;
      } else {
-      std::cout << "illegal: store_elastic_data==1 and visc_model==4\n";
-      amrex::Error("fort_built_in_elastic_model invalid");
+      std::cout << "illegal: store_elastic_data==1 and \n";
+      std::cout << "fort_built_in_elastic_model!=1";
+      amrex::Error("fort_built_in_elastic_model or store_elastic_data invalid");
      }
     } else
      amrex::Error("partid could not be found: tensor_advection_update");
@@ -12135,12 +12132,9 @@ void NavierStokes::tensor_advection_update() {
 
     if (viscoelastic_model[im]==0) {
      // do nothing
-    } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
-    		                        &viscoelastic_model[im])==0) {
-	    FIX ME
-     amrex::Error("FSI_flag==FSI_SHOELE_PRESVEL has is_rigid==1");
-    } else  
+    } else {
      amrex::Error("viscoelastic_model[im] invalid");
+    }
 
    } else
     amrex::Error("store_elastic_data[im] invalid");
@@ -12289,11 +12283,9 @@ void NavierStokes::tensor_extrapolation() {
 
     if (viscoelastic_model[im]==0) {
      // do nothing
-    } else if (fort_built_in_elastic_model(&elastic_viscosity[im],
-    		                        &viscoelastic_model[im])==0) {
-     amrex::Error("FSI_flag==FSI_SHOELE_PRESVEL has is_rigid==1");
-    } else  
+    } else { 
      amrex::Error("viscoelastic_model[im] invalid");
+    }
 
    } else
     amrex::Error("store_elastic_data[im] invalid");

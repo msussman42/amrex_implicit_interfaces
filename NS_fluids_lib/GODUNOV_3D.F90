@@ -7997,11 +7997,8 @@ stop
        else if (viscoelastic_model.eq.7) then ! incremental model
         ! Xia, Lu, Tryggvason 2018
         ! coeff=elastic_viscosity*|Q+I|^{-5/6}
-       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
-        print *,"this routine should not be called if visc_model==4"
-        stop
        else
-        print *,"viscoelastic_model invalid"
+        print *,"viscoelastic_model invalid: ",viscoelastic_model
         stop
        endif
 
@@ -8027,11 +8024,8 @@ stop
           print *,"A=Q+I should be positive definite"
           stop
          endif
-        else if (viscoelastic_model.eq.4) then !pressure velocity coupling
-         print *,"this routine should not be called if visc_model==4"
-         stop
         else
-         print *,"viscoelastic_model invalid"
+         print *,"viscoelastic_model invalid: ",viscoelastic_model
          stop
         endif
        enddo ! ii=1,3
@@ -8094,13 +8088,10 @@ stop
          stop
         endif
         
-       else if (viscoelastic_model.eq.4) then !FSI pressure velocity coupling
-        print *,"this routine should not be called if visc_model==4"
-        stop
        else if (viscoelastic_model.eq.6) then !linearPTT
         ! do nothing
        else
-        print *,"viscoelastic_model invalid"
+        print *,"viscoelastic_model invalid: ",viscoelastic_model
         stop
        endif
 
@@ -8584,7 +8575,6 @@ stop
            stop
           endif
          else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
-                  (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
                   (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
           ok_to_modify_EUL=1
          else
@@ -8844,11 +8834,8 @@ stop
       else if (viscoelastic_model.eq.7) then ! incremental model
        ! Xia, Lu, Tryggvason 2018
        ! coeff=elastic_viscosity
-      else if (viscoelastic_model.eq.4) then !pressure velocity FSI coupling
-       print *,"this routine should not be called if visc_model==4"
-       stop
       else
-       print *,"viscoelastic_model invalid"
+       print *,"viscoelastic_model invalid: ",viscoelastic_model
        stop
       endif
 

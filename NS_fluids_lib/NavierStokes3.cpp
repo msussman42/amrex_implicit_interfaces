@@ -545,8 +545,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
     // fort_headermsg (SOLIDFLUID.F90)
     // CLSVOF_ReadNodes (sci_clsvof.F90)
-    // if FSI_flag==FSI_SHOELE_VELVEL or 
-    //    FSI_flag==FSI_SHOELE_PRESVEL, then
+    // if FSI_flag==FSI_SHOELE_VELVEL then
     //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
     //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
     //  b) tick is called (in ../Vicar3D/distFSI/tick.F)

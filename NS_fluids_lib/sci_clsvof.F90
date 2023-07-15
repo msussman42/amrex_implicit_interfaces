@@ -9718,7 +9718,6 @@ INTEGER_T idir,ielem,inode
      fsi_part_id=fsi_part_id+1
      FSI_partid_map(part_id)=fsi_part_id
     else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90).or. & 
-             (FSI_flag(im_part).eq.FSI_SHOELE_PRESVEL).or. & 
              (FSI_flag(im_part).eq.FSI_SHOELE_VELVEL)) then 
      FSI_partid_map(part_id)=0
     else
