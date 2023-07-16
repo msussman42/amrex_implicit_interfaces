@@ -26,6 +26,10 @@ if ((num_nodes_init>=0)&&(num_elements_init>=0)) {
  num_nodes=num_nodes_init;
  num_elements=num_elements_init;
 
+ FSI_dt=0.0;
+ FSI_time=0.0;
+ nodes_per_element=0;
+
  node_list.resize(num_nodes*3);
  element_list.resize(num_elements*4);
  displacement_list.resize(num_nodes*3);
@@ -42,6 +46,10 @@ if ((num_nodes_init>=0)&&(num_elements_init>=0)) {
 void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
  initData_FSI(source_FSI.num_nodes,source_FSI.num_elements);
+
+ FSI_dt=source_FSI.FSI_dt;
+ FSI_time=source_FSI.FSI_time;
+ nodes_per_element=source_FSI.nodes_per_element;
 
  for (int ielem=0;ielem<4*num_elements;ielem++) {
   element_list[ielem]=source_FSI.element_list[ielem];
