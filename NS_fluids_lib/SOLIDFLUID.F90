@@ -105,6 +105,9 @@
         num_elements_list, &
         FSI_input_num_nodes, &
         FSI_input_num_elements, &
+        FSI_input_nodes_per_element, &
+        FSI_input_FSI_dt, &
+        FSI_input_FSI_time, &
         FSI_input_node_list, &
         FSI_input_element_list, &
         FSI_input_displacement_list, &
@@ -115,6 +118,9 @@
         FSI_input_temperature_list, &
         FSI_output_num_nodes, &
         FSI_output_num_elements, &
+        FSI_output_nodes_per_element, &
+        FSI_output_FSI_dt, &
+        FSI_output_FSI_time, &
         FSI_output_node_list, &
         FSI_output_element_list, &
         FSI_output_displacement_list, &
@@ -187,6 +193,9 @@
 
       INTEGER_T, INTENT(in) :: FSI_input_num_nodes
       INTEGER_T, INTENT(in) :: FSI_input_num_elements
+      INTEGER_T, INTENT(inout) :: FSI_input_nodes_per_element
+      REAL_T, INTENT(inout) :: FSI_input_FSI_dt
+      REAL_T, INTENT(inout) :: FSI_input_FSI_time
       REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
       INTEGER_T, INTENT(inout) :: &
         FSI_input_element_list(4*FSI_input_num_elements)
@@ -205,6 +214,9 @@
 
       INTEGER_T, INTENT(in) :: FSI_output_num_nodes
       INTEGER_T, INTENT(in) :: FSI_output_num_elements
+      INTEGER_T, INTENT(inout) :: FSI_output_nodes_per_element
+      REAL_T, INTENT(inout) :: FSI_output_FSI_dt
+      REAL_T, INTENT(inout) :: FSI_output_FSI_time
       REAL_T, INTENT(inout) :: &
        FSI_output_node_list(3*FSI_output_num_nodes)
       INTEGER_T, INTENT(inout) :: &
