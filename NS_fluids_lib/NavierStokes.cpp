@@ -8289,8 +8289,10 @@ void NavierStokes::ns_header_msg_level(
   for (int im=0;im<num_materials;im++) {
    num_nodes_list[im]=0;
    num_elements_list[im]=0;
-   FSI_input[im].initData_FSI(0,0);
-   FSI_output[im].initData_FSI(0,0);
+   int num_nodes_init=0;
+   int num_elements_init=0;
+   FSI_input[im].initData_FSI(num_nodes_init,num_elements_init);
+   FSI_output[im].initData_FSI(num_nodes_init,num_elements_init);
   }
   NavierStokes& ns_level0=getLevel(0);
 
@@ -8407,6 +8409,9 @@ void NavierStokes::ns_header_msg_level(
       num_elements_list.dataPtr(),
       &FSI_input[im_index].num_nodes,
       &FSI_input[im_index].num_elements,
+      &FSI_input[im_index].nodes_per_element,
+      &FSI_input[im_index].FSI_dt,
+      &FSI_input[im_index].FSI_time,
       FSI_input[im_index].node_list.dataPtr(),
       FSI_input[im_index].element_list.dataPtr(),
       FSI_input[im_index].displacement_list.dataPtr(),
@@ -8417,6 +8422,9 @@ void NavierStokes::ns_header_msg_level(
       FSI_input[im_index].temperature_list.dataPtr(),
       &FSI_output[im_index].num_nodes,
       &FSI_output[im_index].num_elements,
+      &FSI_output[im_index].nodes_per_element,
+      &FSI_output[im_index].FSI_dt,
+      &FSI_output[im_index].FSI_time,
       FSI_output[im_index].node_list.dataPtr(),
       FSI_output[im_index].element_list.dataPtr(),
       FSI_output[im_index].displacement_list.dataPtr(),
@@ -8569,6 +8577,9 @@ void NavierStokes::ns_header_msg_level(
      num_elements_list.dataPtr(),
      &FSI_input[im_index].num_nodes,
      &FSI_input[im_index].num_elements,
+     &FSI_input[im_index].nodes_per_element,
+     &FSI_input[im_index].FSI_dt,
+     &FSI_input[im_index].FSI_time,
      FSI_input[im_index].node_list.dataPtr(),
      FSI_input[im_index].element_list.dataPtr(),
      FSI_input[im_index].displacement_list.dataPtr(),
@@ -8579,6 +8590,9 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].temperature_list.dataPtr(),
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
+     &FSI_output[im_index].nodes_per_element,
+     &FSI_output[im_index].FSI_dt,
+     &FSI_output[im_index].FSI_time,
      FSI_output[im_index].node_list.dataPtr(),
      FSI_output[im_index].element_list.dataPtr(),
      FSI_output[im_index].displacement_list.dataPtr(),
@@ -8895,6 +8909,9 @@ void NavierStokes::ns_header_msg_level(
      num_elements_list.dataPtr(),
      &FSI_input[im_index].num_nodes,
      &FSI_input[im_index].num_elements,
+     &FSI_input[im_index].nodes_per_element,
+     &FSI_input[im_index].FSI_dt,
+     &FSI_input[im_index].FSI_time,
      FSI_input[im_index].node_list.dataPtr(),
      FSI_input[im_index].element_list.dataPtr(),
      FSI_input[im_index].displacement_list.dataPtr(),
@@ -8905,6 +8922,9 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].temperature_list.dataPtr(),
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
+     &FSI_output[im_index].nodes_per_element,
+     &FSI_output[im_index].FSI_dt,
+     &FSI_output[im_index].FSI_time,
      FSI_output[im_index].node_list.dataPtr(),
      FSI_output[im_index].element_list.dataPtr(),
      FSI_output[im_index].displacement_list.dataPtr(),
@@ -9094,6 +9114,9 @@ void NavierStokes::ns_header_msg_level(
      num_elements_list.dataPtr(),
      &FSI_input[im_index].num_nodes,
      &FSI_input[im_index].num_elements,
+     &FSI_input[im_index].nodes_per_element,
+     &FSI_input[im_index].FSI_dt,
+     &FSI_input[im_index].FSI_time,
      FSI_input[im_index].node_list.dataPtr(),
      FSI_input[im_index].element_list.dataPtr(),
      FSI_input[im_index].displacement_list.dataPtr(),
@@ -9104,6 +9127,9 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].temperature_list.dataPtr(),
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
+     &FSI_output[im_index].nodes_per_element,
+     &FSI_output[im_index].FSI_dt,
+     &FSI_output[im_index].FSI_time,
      FSI_output[im_index].node_list.dataPtr(),
      FSI_output[im_index].element_list.dataPtr(),
      FSI_output[im_index].displacement_list.dataPtr(),
@@ -9198,6 +9224,9 @@ void NavierStokes::ns_header_msg_level(
       num_elements_list.dataPtr(),
       &FSI_input[im_index].num_nodes,
       &FSI_input[im_index].num_elements,
+      &FSI_input[im_index].nodes_per_element,
+      &FSI_input[im_index].FSI_dt,
+      &FSI_input[im_index].FSI_time,
       FSI_input[im_index].node_list.dataPtr(),
       FSI_input[im_index].element_list.dataPtr(),
       FSI_input[im_index].displacement_list.dataPtr(),
@@ -9208,6 +9237,9 @@ void NavierStokes::ns_header_msg_level(
       FSI_input[im_index].temperature_list.dataPtr(),
       &FSI_output[im_index].num_nodes,
       &FSI_output[im_index].num_elements,
+      &FSI_output[im_index].nodes_per_element,
+      &FSI_output[im_index].FSI_dt,
+      &FSI_output[im_index].FSI_time,
       FSI_output[im_index].node_list.dataPtr(),
       FSI_output[im_index].element_list.dataPtr(),
       FSI_output[im_index].displacement_list.dataPtr(),

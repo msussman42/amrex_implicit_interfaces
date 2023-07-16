@@ -35,20 +35,31 @@ class TagBoxArray;
 // and also manages the advancement of data in time.
 //
 
+//new_data_FSI only lives at level=0
 class FSI_container_class
 {
 public:
 
 int num_nodes;
 int num_elements;
-Vector< Real > node_list;
-Vector< int > element_list;
-Vector< Real > displacement_list;
-Vector< Real > velocity_list;
-Vector< Real > velocity_halftime_list;
-Vector< Real > force_list;
-Vector< Real > mass_list;
-Vector< Real > temperature_list;
+int nodes_per_element;
+Real FSI_dt;
+Real FSI_time;
+Vector< Real > node_list; //3*num_nodes
+Vector< int > element_list;//4*num_elements
+//3*num_nodes
+Vector< Real > displacement_list; //displacement at time=FSI_time
+//3*num_nodes
+Vector< Real > velocity_list; //velocity at time=FSI_time
+//3*num_nodes
+//u^{n+1/2}=(x^{n+1}-x^{n})/FSI_dt
+Vector< Real > velocity_halftime_list; //velocity at time=FSI_time-FSI_dt/2.0
+//NCOMP_FORCE_STRESS*num_nodes
+Vector< Real > force_list; // force at time=FSI_time
+//num_nodes
+Vector< Real > mass_list; // mass at time=FSI_time
+//num_nodes
+Vector< Real > temperature_list; // temperature at time=FSI_time
 
 void initData_FSI(int num_nodes_init,int num_elements_init);
 void copyFrom_FSI(const FSI_container_class& source_FSI);
