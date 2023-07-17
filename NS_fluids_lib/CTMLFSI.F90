@@ -56,8 +56,10 @@ stop
       endif
 
       do dir=1,SDIM
-       if (dx_max_level(dir).le.zero) then
-        print *,"dx_max_level(dir).le.zero"
+       if (dx_max_level(dir).gt.zero) then
+        !do nothing
+       else
+        print *,"dx_max_level(dir) invalid: ",dir,dx_max_level(dir)
         stop
        endif
       enddo
@@ -131,7 +133,15 @@ stop
 
       n_Read_in = 0
       the_boss = .true.
-      
+
+       ! :set ignorecase  (ignore case for vi searches)
+       ! :set ic  (ignore case for vi searches)
+       ! grep -i  (ignore case)      
+       ! amrex_implicit_interfaces/Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
+       ! amrex_implicit_interfaces/Vicar3D/distFSI/grid_def
+       ! amrex_implicit_interfaces/Vicar3D/distFSI/initialize_ibm.F
+       ! amrex_implicit_interfaces/Vicar3D/distFSI/create_grid2.F 
+       ! open (9997,file='./inputdistibm.dat',status="unknown")
       call init_membrane_solver(SDIM,n_Read_in,the_boss)
 
       n_fib_bodies = nrIBM_fib
