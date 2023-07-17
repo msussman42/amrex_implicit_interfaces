@@ -101,8 +101,12 @@
         finest_level, &
         max_level, &
         im_critical, &
+        max_num_nodes_list, &
+        max_num_elements_list, &
         num_nodes_list, &
         num_elements_list, &
+        FSI_input_max_num_nodes, &
+        FSI_input_max_num_elements, &
         FSI_input_num_nodes, &
         FSI_input_num_elements, &
         FSI_input_nodes_per_element, &
@@ -116,6 +120,8 @@
         FSI_input_force_list, &
         FSI_input_mass_list, &
         FSI_input_temperature_list, &
+        FSI_output_max_num_nodes, &
+        FSI_output_max_num_elements, &
         FSI_output_num_nodes, &
         FSI_output_num_elements, &
         FSI_output_nodes_per_element, &
@@ -188,51 +194,57 @@
       INTEGER_T, INTENT(in) :: max_level
 
       INTEGER_T, INTENT(in) :: im_critical
+      INTEGER_T, INTENT(inout) :: max_num_nodes_list(num_materials)
+      INTEGER_T, INTENT(inout) :: max_num_elements_list(num_materials)
       INTEGER_T, INTENT(inout) :: num_nodes_list(num_materials)
       INTEGER_T, INTENT(inout) :: num_elements_list(num_materials)
 
+      INTEGER_T, INTENT(in) :: FSI_input_max_num_nodes
+      INTEGER_T, INTENT(in) :: FSI_input_max_num_elements
       INTEGER_T, INTENT(in) :: FSI_input_num_nodes
       INTEGER_T, INTENT(in) :: FSI_input_num_elements
       INTEGER_T, INTENT(inout) :: FSI_input_nodes_per_element
       REAL_T, INTENT(inout) :: FSI_input_FSI_dt
       REAL_T, INTENT(inout) :: FSI_input_FSI_time
-      REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_num_nodes)
+      REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_max_num_nodes)
       INTEGER_T, INTENT(inout) :: &
-        FSI_input_element_list(4*FSI_input_num_elements)
+        FSI_input_element_list(4*FSI_input_max_num_elements)
       REAL_T, INTENT(inout) :: &
-        FSI_input_displacement_list(3*FSI_input_num_nodes)
+        FSI_input_displacement_list(3*FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-        FSI_input_velocity_halftime_list(3*FSI_input_num_nodes)
+        FSI_input_velocity_halftime_list(3*FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-        FSI_input_velocity_list(3*FSI_input_num_nodes)
+        FSI_input_velocity_list(3*FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_num_nodes)
+              FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-        FSI_input_mass_list(FSI_input_num_nodes)
+        FSI_input_mass_list(FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-        FSI_input_temperature_list(FSI_input_num_nodes)
+        FSI_input_temperature_list(FSI_input_max_num_nodes)
 
+      INTEGER_T, INTENT(in) :: FSI_output_max_num_nodes
+      INTEGER_T, INTENT(in) :: FSI_output_max_num_elements
       INTEGER_T, INTENT(in) :: FSI_output_num_nodes
       INTEGER_T, INTENT(in) :: FSI_output_num_elements
       INTEGER_T, INTENT(inout) :: FSI_output_nodes_per_element
       REAL_T, INTENT(inout) :: FSI_output_FSI_dt
       REAL_T, INTENT(inout) :: FSI_output_FSI_time
       REAL_T, INTENT(inout) :: &
-       FSI_output_node_list(3*FSI_output_num_nodes)
+       FSI_output_node_list(3*FSI_output_max_num_nodes)
       INTEGER_T, INTENT(inout) :: &
-              FSI_output_element_list(4*FSI_output_num_elements)
+              FSI_output_element_list(4*FSI_output_max_num_elements)
       REAL_T, INTENT(inout) :: &
-              FSI_output_displacement_list(3*FSI_output_num_nodes)
+              FSI_output_displacement_list(3*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_velocity_halftime_list(3*FSI_output_num_nodes)
+              FSI_output_velocity_halftime_list(3*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_velocity_list(3*FSI_output_num_nodes)
+              FSI_output_velocity_list(3*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_num_nodes)
+              FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_mass_list(FSI_output_num_nodes)
+              FSI_output_mass_list(FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_temperature_list(FSI_output_num_nodes)
+              FSI_output_temperature_list(FSI_output_max_num_nodes)
 
       INTEGER_T, INTENT(in) :: FSI_operation
       INTEGER_T, INTENT(in) :: FSI_sub_operation
@@ -586,8 +598,12 @@
        if (FSI_operation.eq.0) then ! initialize node locations
         call CLSVOF_ReadHeader( &
           im_critical, &
+          max_num_nodes_list, &
+          max_num_elements_list, &
           num_nodes_list, &
           num_elements_list, &
+          FSI_input_max_num_nodes, &
+          FSI_input_max_num_elements, &
           FSI_input_num_nodes, &
           FSI_input_num_elements, &
           FSI_input_node_list, &
@@ -598,6 +614,8 @@
           FSI_input_force_list, &
           FSI_input_mass_list, &
           FSI_input_temperature_list, &
+          FSI_output_max_num_nodes, &
+          FSI_output_max_num_elements, &
           FSI_output_num_nodes, &
           FSI_output_num_elements, &
           FSI_output_node_list, &
@@ -625,8 +643,12 @@
          !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
           im_critical, &
+          max_num_nodes_list, &
+          max_num_elements_list, &
           num_nodes_list, &
           num_elements_list, &
+          FSI_input_max_num_nodes, &
+          FSI_input_max_num_elements, &
           FSI_input_num_nodes, &
           FSI_input_num_elements, &
           FSI_input_node_list, &
@@ -637,6 +659,8 @@
           FSI_input_force_list, &
           FSI_input_mass_list, &
           FSI_input_temperature_list, &
+          FSI_output_max_num_nodes, &
+          FSI_output_max_num_elements, &
           FSI_output_num_nodes, &
           FSI_output_num_elements, &
           FSI_output_node_list, &
