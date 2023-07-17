@@ -40,28 +40,34 @@ class FSI_container_class
 {
 public:
 
+int max_num_nodes;
+int max_num_elements;
 int num_nodes;
 int num_elements;
 int nodes_per_element;
 Real FSI_dt;
 Real FSI_time;
-Vector< Real > node_list; //3*num_nodes
-Vector< int > element_list;//4*num_elements
-//3*num_nodes
+Vector< Real > node_list; //3*max_num_nodes
+Vector< int > element_list;//4*max_num_elements
+//3*max_num_nodes
 Vector< Real > displacement_list; //displacement at time=FSI_time
-//3*num_nodes
+//3*max_num_nodes
 Vector< Real > velocity_list; //velocity at time=FSI_time
-//3*num_nodes
+//3*max_num_nodes
 //u^{n+1/2}=(x^{n+1}-x^{n})/FSI_dt
 Vector< Real > velocity_halftime_list; //velocity at time=FSI_time-FSI_dt/2.0
-//NCOMP_FORCE_STRESS*num_nodes
+//NCOMP_FORCE_STRESS*max_num_nodes
 Vector< Real > force_list; // force at time=FSI_time
-//num_nodes
+//max_num_nodes
 Vector< Real > mass_list; // mass at time=FSI_time
-//num_nodes
+//max_num_nodes
 Vector< Real > temperature_list; // temperature at time=FSI_time
 
-void initData_FSI(int num_nodes_init,int num_elements_init);
+void initData_FSI(
+  int max_num_nodes_init,
+  int max_num_elements_init,
+  int num_nodes_init,
+  int num_elements_init);
 void copyFrom_FSI(const FSI_container_class& source_FSI);
 void clear_FSI();
 

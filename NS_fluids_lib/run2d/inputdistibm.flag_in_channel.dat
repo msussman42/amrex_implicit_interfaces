@@ -1,0 +1,78 @@
+1.00    0       0.8 000.0 0.0   -1    0.05  0.05       /K_LINK,  SimulationType(0:fiber or shell/~0:shell+fiber), impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling)
+0.7 5.0 4.9  3.5  0.45 0.25 100 1.0d-9 1.5 0.20   /Contact Paramters 0:9
+-5.0 -5.0 -5.0                         /bucket start (x,y,z)
+35.0 35.0 35.0                         /bucket end (x,y,z)   
+150.5 150.5 150.5                      /bucket dx (dx,dy,dz)
+100.0                                  /bucketdeltat                                  
+2           2           2              /Delta_typeX, Delta_typeY, Delta_typeZ
+-1.0d4     -2.0d0        0.05          /alpha_IBM , beta_IBM, alphabetaRise
+1           1          1        0.5    /SAVE_FORCE_INT, Del_FORCE,  CHECK_INT, g
+90.0       0.0                         /phi_grav,the_grav
+2.45                                    /baseLengthofaBeam
+10 1.0d-12 1 1.0d-5  0                 /maxnstruct,maxErrorstruct,maxnfluid,maxErrorfluid,maxiter
+1.0d-13 1.0d-11 15  200 1  2           /Solverabstol,Solverreltol,SolverOutiter,SolverIniter,SolverPre{0:no Pre;1:diag Pre; 2:iLU}
+0.0  -00.0  0.00                       /del_s(~0: with thermal calculation),alphaTEMP_IBM,betaTEMP_IBM
+.false. .false.                        /channelcontacty,channelcontactz
+.false.  500  500                       /flag_restartfile, t0_restartfile, dt_restartfile {now only implemented for FE shell}
+c------------------Start of main inputs-------------------------------------
+1 1                                    /nr_ibm_f, nr_ibm_fb    Number of flexible bodies, num of interacting bodies for penalty to prevent intersection
+./tringulareFix.dat                   /name of externalcontact trinagular
+0 0                                    /nFixcontact,nFixcontactL:num of nodes and elements in the above file
+c======global inputs 1-------------------------
+0			               /0:fiber structure 1:shell structure 2:fibrous shell
+.true.                                 /flag record position    
+./posFib1.dat                         /name of the data file with the tags for recording
+0.0                                    /TSIBMin
+0.0  0.0000   1.5  0.0                 /Cs_IBM, CS_IBM_rays, Density_Coef, Density_coefP
+.true.  .false.   .false.  .flase.  .false.   .false.         /6 records:1FluidForceFlag,2ThermalForceFlag,3ContactForceFlag,4ExternalPressureFlag,Electromehcanical,ImplicitElecMech
+.false.                                /plane contact   if true need to add following lines
+2.0 4.0 0.0                            /shift coordinates
+0.0 0.0 0.0 1.0 1.0 1.0                /scaling paramter( xo,yo,zo , Scal_x,Scal_y,Scal_z)
+0.0 0.0 0.0                            /cenetr of rotation in local coordinates
+0.0 0.0 18 1230                        /rotational angle in Euler sequance (deg)  :Euler sequence{1:X;2:Y;3:Z;<0,1>:<current,fixed> coodinate}
+c----2D Fiber ------------------------
+1.0   0.001  1   1                     /ks_ibm,  kb_ibm, iflaginext{1:inex; 0:ext},  implicitflag{1:solve all implicitly 0:semi-implicit}
+1                                      /FlagForTypeOfInput  1=create fiber mesh 0= read fiber mesh
+101                                    /fiberbdry {look at the end of this file}
+0.0 0.0 0.0  1.0 0.0 0.0               / if{FlagForTypeOfInput eq 1 we should have this line   {x0,y0,z0:start point of a line,x1,y1,z1:end point of a line} 
+1.0 1.0 1.0                            /frequncy of motion (fx,fy,fz)  
+4                                      /i_fintype {number of attached spring types}
+1 2 -1 0                               /position of the rays
+0.0 00.00 00.0 00.0                    /rays stiffness {1:i_fintype}    
+1000.0 1000.0 1000.0 1000.0            /rays dettachement time (more than this time it will detached){1:i_fintype} 
+0.0 0.0 0.0 0.0                        /ampx x=ampx*sin(2*pi*fx t+phix) {1:i_fintype} 
+1.0 1.0 1.0 1.0                        /phix  {1:i_fintype} 
+0.0 0.0 0.0 0.0                        /ampy y=amp*sin(2*pi*fy t+phiy){1:i_fintype} 
+1.0 1.0 1.0 1.0                        /phiy {1:i_fintype} 
+0.0 0.0 0.0 0.0                        /ampz z=amp*sin(2*pi*fz t+phiz) {1:i_fintype} 
+1.0 1.0 1.0 1.0                        /phiz {1:i_fintype}  
+1   1  1  1                            /xfixed  1 if fixed {1:i_fintype} 
+0 0.0d0                                /flag_TDpt_Pnormal_Ext{1:read external pressure on the surface from the following file and multipy by the number in this line,0: just use this line },Pnormal_Ext(i+1){pressure magnitude}
+PressureTimeNew.dat                    /file for pressure data
+c------------------- Rigid Body motion of this body and ramping time --------------
+0.0 0.0 0.0        /Gt0 center of rotation of thebody in its defined local coordinate x,y,z
+0.0 3000.0         /Tramps [1: starting time for motion; 2: ramping period for local motion
+4.0 4.0 4.0        /TrampX ramping time of transitional motion in X,Y,and Z
+0.0 0.0 0.0        /aX: amplitude of trans. motion in X,Y,Z   X=f(TrampX)*aX*sin(2*pi*freqX t+phiX)
+1.0 1.0 1.0        /freqX: Frequency of trans. motion in X,Y,Z (1/period)
+0.0 0.0 0.0        /phiX: phase of trans. motion (deg)
+4.0 4.0 1.0        /TrampT ramping time of rotational motion in X,Y,and Z 
+0.0 0.0 0.0  1231 /aT: amplitude of rota. motion in X,Y,Z   TX=f(TrampT)*aT*sin(2*pi*freqT t+phiT)  for rotation in XYZ Euer sequance (deg)
+0.2 0.2 -0.25      /freqT: Frequency of rota. motion in X,Y,Z (1/period)
+-90.0 -0.0 0.5     /phiT: phase of rota. motion (deg)
+c---------------------- Extra inputs for inflation and section boundaries --------------
+-0.0 1 1.0 0.0     /p inflation in the case of inflation,  num. of sections , dsec in y, dsec in z  IN THE CASE OF ONE SECTION put  dsecy_IBM+dsecz_IBM=1
+
+!Ccont(0):0.7 : angle separation
+!Ccont(1) :initial distance check  (scale dx)
+!Ccont(2) :false contact calculation   (scale dx) show be smaller than Ccont(1)
+!Ccont(3) :h distance  (scale dx)
+!Ccont(4) :a distance  (scale dx)
+!Ccont(5) :b distance  (scale dx)
+!Ccont(6) :ntrial
+!Ccont(7) :tolx
+!Ccont(8) :tolf
+!Ccont(9) :initial ratio to ignore contact  for point < Ccont(1)*Ccont(9) apart should be more than 1
+!Ccont(10) :viscoelasticity damping 
+!Ccont(15) :Contact penalty (scale by 1/dx)
+!fiberbdry :  1{0:free, 1:pin, 2:fixed <last node>}{0:free, 1:pin, 2:fixed <1st node>}  example 100 101 110 ...

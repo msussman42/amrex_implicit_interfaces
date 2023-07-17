@@ -8278,8 +8278,12 @@ void NavierStokes::ns_header_msg_level(
 
   Vector<FSI_container_class> FSI_input;
   Vector<FSI_container_class> FSI_output;
+  Vector<int> max_num_nodes_list;
+  Vector<int> max_num_elements_list;
   Vector<int> num_nodes_list;
   Vector<int> num_elements_list;
+  max_num_nodes_list.resize(num_materials);
+  max_num_elements_list.resize(num_materials);
   num_nodes_list.resize(num_materials);
   num_elements_list.resize(num_materials);
 
@@ -8287,12 +8291,20 @@ void NavierStokes::ns_header_msg_level(
   int im_index=0;
 
   for (int im=0;im<num_materials;im++) {
+   max_num_nodes_list[im]=0;
+   max_num_elements_list[im]=0;
    num_nodes_list[im]=0;
    num_elements_list[im]=0;
+   int max_num_nodes_init=0;
+   int max_num_elements_init=0;
    int num_nodes_init=0;
    int num_elements_init=0;
-   FSI_input[im].initData_FSI(num_nodes_init,num_elements_init);
-   FSI_output[im].initData_FSI(num_nodes_init,num_elements_init);
+   FSI_input[im].initData_FSI(
+	max_num_nodes_init,max_num_elements_init,
+	num_nodes_init,num_elements_init);
+   FSI_output[im].initData_FSI(
+	max_num_nodes_init,max_num_elements_init,
+        num_nodes_init,num_elements_init);
   }
   NavierStokes& ns_level0=getLevel(0);
 
@@ -8336,6 +8348,8 @@ void NavierStokes::ns_header_msg_level(
    amrex::Error("FSI_operation invalid");
 
   for (int im=0;im<num_materials;im++) {
+   max_num_nodes_list[im]=FSI_input[im].max_num_nodes;
+   max_num_elements_list[im]=FSI_input[im].max_num_elements;
    num_nodes_list[im]=FSI_input[im].num_nodes;
    num_elements_list[im]=FSI_input[im].num_elements;
   }
@@ -8405,8 +8419,12 @@ void NavierStokes::ns_header_msg_level(
       &finest_level,
       &max_level,
       &im_critical,
+      max_num_nodes_list.dataPtr(),
+      max_num_elements_list.dataPtr(),
       num_nodes_list.dataPtr(),
       num_elements_list.dataPtr(),
+      &FSI_input[im_index].max_num_nodes,
+      &FSI_input[im_index].max_num_elements,
       &FSI_input[im_index].num_nodes,
       &FSI_input[im_index].num_elements,
       &FSI_input[im_index].nodes_per_element,
@@ -8420,6 +8438,8 @@ void NavierStokes::ns_header_msg_level(
       FSI_input[im_index].force_list.dataPtr(),
       FSI_input[im_index].mass_list.dataPtr(),
       FSI_input[im_index].temperature_list.dataPtr(),
+      &FSI_output[im_index].max_num_nodes,
+      &FSI_output[im_index].max_num_elements,
       &FSI_output[im_index].num_nodes,
       &FSI_output[im_index].num_elements,
       &FSI_output[im_index].nodes_per_element,
@@ -8476,26 +8496,32 @@ void NavierStokes::ns_header_msg_level(
 
       if (im_critical==-1) {
        for (int im=0;im<num_materials;im++) {
-        if (num_nodes_list[im]>0) {
-         FSI_input[im].initData_FSI(num_nodes_list[im],
-            num_elements_list[im]);
-         FSI_output[im].initData_FSI(num_nodes_list[im],
-            num_elements_list[im]);
-        } else if (num_nodes_list[im]==0) {
+        if (max_num_nodes_list[im]>0) {
+         FSI_input[im].initData_FSI(
+	   max_num_nodes_list[im],
+           max_num_elements_list[im],
+	   num_nodes_list[im],
+           num_elements_list[im]);
+         FSI_output[im].initData_FSI(
+	   max_num_nodes_list[im],
+           max_num_elements_list[im],
+	   num_nodes_list[im],
+           num_elements_list[im]);
+        } else if (max_num_nodes_list[im]==0) {
          //do nothing
         } else 
-         amrex::Error("num_nodes_list invalid");
+         amrex::Error("max_num_nodes_list invalid");
        } //im=0..num_materials-1
       } else if ((im_critical>=0)&&(im_critical<num_materials)) {
-       if (num_nodes_list[im_critical]>0) {
+       if (max_num_nodes_list[im_critical]>0) {
         for (int i=0;i<=ns_time_order;i++) {
          ns_level0.new_data_FSI[i][im_critical]. 
            copyFrom_FSI(FSI_output[im_critical]); 
         }
-       } else if (num_nodes_list[im_critical]==0) {
+       } else if (max_num_nodes_list[im_critical]==0) {
         //do nothing
        } else 
-        amrex::Error("num_nodes_list invalid");
+        amrex::Error("max_num_nodes_list invalid");
       } else
        amrex::Error("im_critical invalid");
 
@@ -8506,13 +8532,13 @@ void NavierStokes::ns_header_msg_level(
        // do nothing
       } else if ((im_critical>=0)&&(im_critical<num_materials)) {
 
-       if (num_nodes_list[im_critical]>0) {
+       if (max_num_nodes_list[im_critical]>0) {
         ns_level0.new_data_FSI[slab_step+1][im_critical]. 
            copyFrom_FSI(FSI_output[im_critical]); 
-       } else if (num_nodes_list[im_critical]==0) {
+       } else if (max_num_nodes_list[im_critical]==0) {
         //do nothing
        } else 
-        amrex::Error("num_nodes_list invalid");
+        amrex::Error("max_num_nodes_list invalid");
 
       } else
        amrex::Error("im_critical invalid");
@@ -8573,8 +8599,12 @@ void NavierStokes::ns_header_msg_level(
      &finest_level,
      &max_level,
      &im_critical, // =0 (default; 0<=im<=num_materials-1)
+     max_num_nodes_list.dataPtr(),
+     max_num_elements_list.dataPtr(),
      num_nodes_list.dataPtr(),
      num_elements_list.dataPtr(),
+     &FSI_input[im_index].max_num_nodes,
+     &FSI_input[im_index].max_num_elements,
      &FSI_input[im_index].num_nodes,
      &FSI_input[im_index].num_elements,
      &FSI_input[im_index].nodes_per_element,
@@ -8588,6 +8618,8 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].force_list.dataPtr(),
      FSI_input[im_index].mass_list.dataPtr(),
      FSI_input[im_index].temperature_list.dataPtr(),
+     &FSI_output[im_index].max_num_nodes,
+     &FSI_output[im_index].max_num_elements,
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
      &FSI_output[im_index].nodes_per_element,
@@ -8905,8 +8937,12 @@ void NavierStokes::ns_header_msg_level(
      &finest_level,
      &max_level,
      &im_critical, // =0 (default; 0<=im<=num_materials-1)
+     max_num_nodes_list.dataPtr(),
+     max_num_elements_list.dataPtr(),
      num_nodes_list.dataPtr(),
      num_elements_list.dataPtr(),
+     &FSI_input[im_index].max_num_nodes,
+     &FSI_input[im_index].max_num_elements,
      &FSI_input[im_index].num_nodes,
      &FSI_input[im_index].num_elements,
      &FSI_input[im_index].nodes_per_element,
@@ -8920,6 +8956,8 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].force_list.dataPtr(),
      FSI_input[im_index].mass_list.dataPtr(),
      FSI_input[im_index].temperature_list.dataPtr(),
+     &FSI_output[im_index].max_num_nodes,
+     &FSI_output[im_index].max_num_elements,
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
      &FSI_output[im_index].nodes_per_element,
@@ -9110,8 +9148,12 @@ void NavierStokes::ns_header_msg_level(
      &finest_level,
      &max_level,
      &im_critical, //==0
+     max_num_nodes_list.dataPtr(),
+     max_num_elements_list.dataPtr(),
      num_nodes_list.dataPtr(),
      num_elements_list.dataPtr(),
+     &FSI_input[im_index].max_num_nodes,
+     &FSI_input[im_index].max_num_elements,
      &FSI_input[im_index].num_nodes,
      &FSI_input[im_index].num_elements,
      &FSI_input[im_index].nodes_per_element,
@@ -9125,6 +9167,8 @@ void NavierStokes::ns_header_msg_level(
      FSI_input[im_index].force_list.dataPtr(),
      FSI_input[im_index].mass_list.dataPtr(),
      FSI_input[im_index].temperature_list.dataPtr(),
+     &FSI_output[im_index].max_num_nodes,
+     &FSI_output[im_index].max_num_elements,
      &FSI_output[im_index].num_nodes,
      &FSI_output[im_index].num_elements,
      &FSI_output[im_index].nodes_per_element,
@@ -9220,8 +9264,12 @@ void NavierStokes::ns_header_msg_level(
       &finest_level,
       &max_level,
       &im_critical, //=0
+      max_num_nodes_list.dataPtr(),
+      max_num_elements_list.dataPtr(),
       num_nodes_list.dataPtr(),
       num_elements_list.dataPtr(),
+      &FSI_input[im_index].max_num_nodes,
+      &FSI_input[im_index].max_num_elements,
       &FSI_input[im_index].num_nodes,
       &FSI_input[im_index].num_elements,
       &FSI_input[im_index].nodes_per_element,
@@ -9235,6 +9283,8 @@ void NavierStokes::ns_header_msg_level(
       FSI_input[im_index].force_list.dataPtr(),
       FSI_input[im_index].mass_list.dataPtr(),
       FSI_input[im_index].temperature_list.dataPtr(),
+      &FSI_output[im_index].max_num_nodes,
+      &FSI_output[im_index].max_num_elements,
       &FSI_output[im_index].num_nodes,
       &FSI_output[im_index].num_elements,
       &FSI_output[im_index].nodes_per_element,
