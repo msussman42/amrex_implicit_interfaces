@@ -43,7 +43,7 @@ def configure(argv):
                         default="no")
     parser.add_argument("--comp",
                         help="Compiler [default=gnu]",
-                        choices=["gnu","g++-8","intel","cray","pgi","llvm","nag","nec","ibm","armclang"],
+                        choices=["gnu","g++","g++-8","intel","cray","pgi","llvm","nag","nec","ibm","armclang"],
                         default="gnu") #SUSSMAN
     parser.add_argument("--debug",
                         help="Debug build [default=no]",

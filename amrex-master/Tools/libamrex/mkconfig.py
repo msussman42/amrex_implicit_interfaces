@@ -31,6 +31,9 @@ def doit(defines, undefines, comp, allow_diff_comp):
         if comp == "gnu" or comp == "nag":
             comp_macro = "__GNUC__"
             comp_id    = "GNU"
+        elif comp == "g++": #SUSSMAN
+            comp_macro = "__GNUC__"
+            comp_id    = "GNU"
         elif comp == "g++-8": #SUSSMAN
             comp_macro = "__GNUC__"
             comp_id    = "GNU"
@@ -97,7 +100,7 @@ if __name__ == "__main__":
                         default="")
     parser.add_argument("--comp",
                         help="compiler",
-                        choices=["gnu","g++-8","intel","nasaintel","cray","pgi","nvhpc","llvm","nag","nec","ibm",
+                        choices=["gnu","g++","g++-8","intel","nasaintel","cray","pgi","nvhpc","llvm","nag","nec","ibm",
                                  "armclang","hip","dpcpp"]) #SUSSMAN
     parser.add_argument("--allow-different-compiler",
                         help="allow an application to use a different compiler than the one used to build libamrex",
