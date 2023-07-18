@@ -15060,44 +15060,6 @@ end subroutine print_visual_descriptor
       return
       end function fort_built_in_elastic_model
 
-      function is_prescribed(im)
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T is_prescribed
-      INTEGER_T, INTENT(in) :: im
-
-      if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid18"
-       stop
-      endif
-
-      if (is_rigid(im).eq.0) then
-       is_prescribed=0
-      else if (is_rigid(im).eq.1) then
-       if (CTML_FSI_mat(im).eq.0) then
-        is_prescribed=1
-       else if (CTML_FSI_mat(im).eq.1) then
-        if (FSI_flag(im).eq.FSI_SHOELE_CTML) then 
-         is_prescribed=0
-        else
-         print *,"FSI_flag invalid"
-         stop
-        endif
-       else 
-        print *,"CTML_FSI_mat(im) invalid"
-        stop
-       endif
-      else
-       print *,"is_rigid invalid GLOBALUTIL.F90"
-       stop
-      endif
-
-      return
-      end function is_prescribed
-
-
       function rigid_exists()
       use probcommon_module
 
@@ -15122,35 +15084,6 @@ end subroutine print_visual_descriptor
       return
       end function rigid_exists
 
-      function prescribed_exists()
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      INTEGER_T prescribed_exists
-      INTEGER_T im
-
-      prescribed_exists=0
-
-      do im=1,num_materials
-       if (is_prescribed(im).eq.1) then
-        if (is_rigid(im).eq.1) then
-         prescribed_exists=1
-        else
-         print *,"is_rigid(im) invalid"
-         stop
-        endif
-       else if (is_prescribed(im).eq.0) then
-        ! do nothing
-       else
-        print *,"is_prescribed invalid in prescribed_exists"
-        stop
-       endif
-      enddo ! im=1..num_materials
-
-      return
-      end function prescribed_exists
- 
        ! solid_dist>0 in the solid
       subroutine combine_solid_LS(LS,solid_dist,im_solid_primary)
       use probcommon_module

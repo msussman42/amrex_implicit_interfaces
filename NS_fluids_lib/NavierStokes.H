@@ -1389,7 +1389,7 @@ void apply_pressure_grad(
     static int is_FSI_rigid_matC(int im);
     static int CTML_FSI_flagC();
     static int CTML_FSI_matC(int im);
-    static int FSI_material_exists_velvel();
+    static int FSI_material_exists_CTML();
     static int FSI_flag_valid(int im); // 0<=im<num_materials
 
     void init_FSI_GHOST_MAC_MF_ALL_predict();
@@ -1631,7 +1631,6 @@ protected:
     static int FSI_interval; //default=1
 
     static int         CTML_FSI_numsolids;
-    static Vector<int> CTML_force_model; // 0=Lag force 
     static int         CTML_FSI_init;
 
     static Vector<int>  shock_timestep;

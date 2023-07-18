@@ -9058,7 +9058,6 @@ REAL_T :: time_local
 REAL_T :: dt_local
 INTEGER_T :: xmap3D_local(3)
 REAL_T :: dx3D_local(3)
-INTEGER_T :: CTML_force_model_local
 INTEGER_T :: sdim_AMR_local
 INTEGER_T :: dir
 INTEGER_T :: LSLO(3),LSHI(3)
@@ -9084,7 +9083,6 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
  do dir=1,3
   xmap3D_local(dir)=dir
  enddo
- CTML_force_model_local=0
 
  do dir=1,3
   LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)- &
@@ -9124,7 +9122,6 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    aux_xdata3D_ptr, &
    aux_FSIdata3D_ptr, &
    aux_masknbr3D_ptr, &
-   CTML_force_model_local, &
    ioproc, &
    aux_isout)
 
@@ -11070,7 +11067,6 @@ subroutine CLSVOF_InitBox(  &
   xdata3D, &
   FSIdata3D, &
   masknbr3D, &
-  CTML_force_model, & ! =0 for aux
   ioproc,isout)
 use global_utility_module
 #ifdef MVAHABFSI
@@ -11108,7 +11104,6 @@ IMPLICIT NONE
   REAL_T, allocatable, target :: old_FSIdata(:,:,:,:)
   REAL_T, pointer :: old_FSIdata_ptr(:,:,:,:)
 
-  INTEGER_T, INTENT(in) :: CTML_force_model
   INTEGER_T, INTENT(in) :: ioproc,isout
 
   REAL_T override_LS
@@ -11425,12 +11420,6 @@ IMPLICIT NONE
 
    else
     print *,"lev77 invalid"
-    stop
-   endif
-
-   if ((CTML_force_model.ne.0).and. &  !Goldstein et al
-       (CTML_force_model.ne.2)) then   !pres vel
-    print *,"CTML_force_model invalid"
     stop
    endif
 
@@ -13194,17 +13183,6 @@ IMPLICIT NONE
             enddo
             FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)= &
                    weight_top(FSI_TEMPERATURE+1)/weight_bot
-
-            ! FORCE is not extended!
-            if (CTML_force_model.eq.2) then 
-             print *,"CTML_force_model.eq.2 not supported"
-             stop
-            else if (CTML_force_model.eq.0) then ! Goldstein et al
-             ! do nothing
-            else
-             print *,"CTML_force_model invalid"
-             stop
-            endif
 
            else if (weight_bot.eq.zero) then
             ! do nothing
