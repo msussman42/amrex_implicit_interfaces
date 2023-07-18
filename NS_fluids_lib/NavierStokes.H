@@ -398,7 +398,10 @@ public:
      // FSI_FLUID_NODES_INIT=7
      // FSI_ICE_STATIC=9
      
-    static Vector<int>  FSI_flag; 
+    static Vector<int> FSI_flag; 
+
+    static Vector<int> FSI_CTML_max_num_nodes_list; 
+    static Vector<int> FSI_CTML_max_num_elements_list; 
 
     static Vector<int> material_type; // 0 incomp   
 

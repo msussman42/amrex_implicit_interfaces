@@ -917,6 +917,10 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_FLUID_NODES_INIT=7
 // FSI_ICE_STATIC=9
 Vector<int> NavierStokes::FSI_flag; 
+
+Vector<int> NavierStokes::FSI_CTML_max_num_nodes_list; 
+Vector<int> NavierStokes::FSI_CTML_max_num_elements_list; 
+
 int NavierStokes::FSI_interval=1;
 int NavierStokes::num_local_aux_grids=0;
 
@@ -1433,6 +1437,15 @@ void fortran_parameters() {
  NavierStokes::material_type.resize(NavierStokes::num_materials);
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
+ NavierStokes::FSI_CTML_max_num_nodes_list.
+    resize(NavierStokes::num_materials);
+ NavierStokes::FSI_CTML_max_num_elements_list.
+    resize(NavierStokes::num_materials);
+
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  NavierStokes::FSI_CTML_max_num_nodes_list[im]=0;
+  NavierStokes::FSI_CTML_max_num_elements_list[im]=0;
+ }
 
  Vector<Real> Carreau_alpha_temp(NavierStokes::num_materials);
  Vector<Real> Carreau_beta_temp(NavierStokes::num_materials);
@@ -1491,6 +1504,14 @@ void fortran_parameters() {
  }
 
  pp.queryAdd("FSI_flag",NavierStokes::FSI_flag,NavierStokes::num_materials);
+
+#ifdef MVAHABFSI
+ fort_ctml_max_nodes(
+   &NavierStokes::num_materials,
+   NavierStokes::FSI_flag.dataPtr(),
+   NavierStokes::FSI_CTML_max_num_nodes_list.dataPtr(),
+   NavierStokes::FSI_CTML_max_num_elements_list.dataPtr());
+#endif
 
  int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;
  pp.queryAdd("num_local_aux_grids",num_local_aux_grids_temp);

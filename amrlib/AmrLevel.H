@@ -291,6 +291,7 @@ public:
              const Vector<IntVect>& bf_lev);
     const BoxArray& getAreaNotToTag() noexcept;
 
+     // new_data_FSI[0..level_MAX_NUM_SLAB-1][0..num_materials-1]
     Vector< Vector< FSI_container_class > > new_data_FSI;
 
     //
