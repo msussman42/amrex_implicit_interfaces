@@ -3899,6 +3899,7 @@ stop
       INTEGER_T local_mask
       INTEGER_T im_primary_new
       INTEGER_T im_primary_old
+      INTEGER_T im_primary_local
       INTEGER_T away_from_interface
       REAL_T solid_vof_new,solid_vof_old
       INTEGER_T mtype
@@ -4896,8 +4897,8 @@ stop
             ! materials.
            call get_primary_material(unsplit_lsnew,im_primary_new)
            call get_primary_material(oldLS_point,im_primary_old)
-           call combine_solid_VOF(newvfrac,solid_vof_new)
-           call combine_solid_VOF(oldvfrac,solid_vof_old)
+           call combine_solid_VOF(newvfrac,solid_vof_new,im_primary_local)
+           call combine_solid_VOF(oldvfrac,solid_vof_old,im_primary_local)
 
            away_from_interface=0
            

@@ -2860,7 +2860,7 @@ if ((im.lt.1).or.(im.gt.num_materials)) then
  stop
 endif
 
-if (FSI_flag(im).eq.1) then ! prescribed solid (EUL)
+if (FSI_flag(im).eq.FSI_PRESCRIBED_PROBF90) then ! prescribed solid (EUL)
  ! do nothing
 else
  print *,"FSI_flag(im) invalid"

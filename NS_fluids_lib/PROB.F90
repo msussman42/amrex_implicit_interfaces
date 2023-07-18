@@ -4958,49 +4958,34 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! is_solid_face==1 if:
        !   0.0<=facecut_solid<=VOFTOL_AREAFRAC  or
        !   max(LSleft(im_solid),LSright(im_solid))>=0.0
-       ! is_prescribed_face==1 if:
-       !   0.0<=facecut_prescribed<=VOFTOL_AREAFRAC  or
-       !   max(LSleft(im_prescribed),LSright(im_prescribed))>=0.0
       subroutine fixed_face( &
-       facecut_solid, &       !intent(in)
-       facecut_prescribed, &  !intent(in)
-       LSleft,LSright, &
+       facecut_solid, &   !intent(in)
+       LSleft,LSright, &  !intent(in)
        is_solid_face, &
-       is_prescribed_face, &
        im_solid, &
-       im_prescribed, &
        im_solid_valid, &
-       im_prescribed_valid, &
-       partid_solid, &
-       partid_prescribed)
+       partid_solid)
       use global_utility_module
       IMPLICIT NONE
 
         !surface tension coefficient is zero
       REAL_T, INTENT(in) :: facecut_solid 
-      REAL_T, INTENT(in) :: facecut_prescribed ! grad p coefficient is zero
       REAL_T, INTENT(in) :: LSleft(num_materials)
       REAL_T, INTENT(in) :: LSright(num_materials)
-      REAL_T LScrit_solid,LScrit_prescribed,LStest
-      INTEGER_T, INTENT(out) :: is_solid_face,is_prescribed_face
+      REAL_T LScrit_solid,LStest
+      INTEGER_T, INTENT(out) :: is_solid_face
       INTEGER_T im
-      INTEGER_T, INTENT(out) :: im_solid,im_prescribed
-      INTEGER_T, INTENT(out) :: im_solid_valid,im_prescribed_valid
-      INTEGER_T, INTENT(out) :: partid_solid,partid_prescribed
+      INTEGER_T, INTENT(out) :: im_solid
+      INTEGER_T, INTENT(out) :: im_solid_valid
+      INTEGER_T, INTENT(out) :: partid_solid
       INTEGER_T nparts
 
       is_solid_face=0
-      is_prescribed_face=0
-
       im_solid=0
-      im_prescribed=0
-
       im_solid_valid=0
-      im_prescribed_valid=0
 
       nparts=0
       partid_solid=-1
-      partid_prescribed=-1
 
       do im=1,num_materials
 
@@ -5016,16 +5001,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! FSI_PRESCRIBED_NODES
         ! FSI_SHOELE_CTML
         if (is_rigid(im).eq.0) then
-
-          ! if is_prescribed==1:
-          ! FSI_PRESCRIBED_PROBF90
-          ! FSI_PRESCRIBED_NODES
-         if (is_prescribed(im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_prescribed(im) invalid"
-          stop
-         endif
 
          ! FSI_PRESCRIBED_PROBF90
          ! FSI_PRESCRIBED_NODES
@@ -5054,36 +5029,6 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
 
-          ! FSI_PRESCRIBED_PROBF90
-          ! FSI_PRESCRIBED_NODES
-         if (is_prescribed(im).eq.1) then
-          if (im_prescribed.eq.0) then
-           im_prescribed=im
-           partid_prescribed=nparts
-           LScrit_prescribed=max(LSleft(im),LSright(im))
-          else if ((im_prescribed.ge.1).and. &
-                   (im_prescribed.le.num_materials)) then
-           LStest=max(LSleft(im),LSright(im))
-           if (LStest.gt.LScrit_prescribed) then
-            LScrit_prescribed=LStest
-            im_prescribed=im
-            partid_prescribed=nparts
-           else if (LStest.le.LScrit_prescribed) then
-            ! do nothing
-           else
-            print *,"LStest or LScrit_prescribed bust"
-            stop
-           endif
-          else
-           print *,"im_prescribed invalid 7"
-           stop
-          endif
-         else if (is_prescribed(im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_prescribed(im) invalid"
-          stop
-         endif
         else
          print *,"is_rigid invalid PROB.F90"
          stop
@@ -5094,12 +5039,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (is_lag_part(im).eq.0) then
 
         if (is_rigid(im).eq.0) then
-         if (is_prescribed(im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_prescribed(im) invalid"
-          stop
-         endif
+         ! do nothing
         else 
          print *,"is_rigid(im) invalid"
          stop
@@ -5145,12 +5085,12 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (LScrit_solid.lt.zero) then
          ! do nothing
         else
-         print *,"LScrit_solid invalid"
+         print *,"LScrit_solid invalid: ",LScrit_solid
          stop
         endif
         if ((partid_solid.lt.0).or. &
             (partid_solid.ge.nparts)) then
-         print *,"partid_solid invalid"
+         print *,"partid_solid invalid: ",partid_solid
          stop
         endif 
        else
@@ -5158,56 +5098,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
       else
-       print *,"facecut_solid invalid"
+       print *,"facecut_solid invalid: ",facecut_solid
        stop
       endif
   
-      if ((facecut_prescribed.le.VOFTOL_AREAFRAC).and. &
-          (facecut_prescribed.ge.zero)) then
-       is_prescribed_face=1
-       if (im_prescribed.eq.0) then
-        ! do nothing
-       else if ((im_prescribed.ge.1).and. &
-                (im_prescribed.le.num_materials)) then
-        im_prescribed_valid=1 
-        if ((partid_prescribed.lt.0).or. &
-            (partid_prescribed.ge.nparts)) then
-         print *,"partid_prescribed invalid"
-         stop
-        endif 
-       else
-        print *,"im_prescribed invalid 20"
-        stop
-       endif
-      else if ((facecut_prescribed.ge.VOFTOL_AREAFRAC).and. &
-               (facecut_prescribed.le.one)) then
-       if (im_prescribed.eq.0) then
-        ! do nothing
-       else if ((im_prescribed.ge.1).and. &
-                (im_prescribed.le.num_materials)) then
-        im_prescribed_valid=1
-        if (LScrit_prescribed.ge.zero) then
-         is_prescribed_face=1
-        else if (LScrit_prescribed.lt.zero) then
-         ! do nothing
-        else
-         print *,"LScrit_prescribed invalid"
-         stop
-        endif
-        if ((partid_prescribed.lt.0).or. &
-            (partid_prescribed.ge.nparts)) then
-         print *,"partid_prescribed invalid"
-         stop
-        endif 
-       else
-        print *,"im_prescribed invalid 9"
-        stop
-       endif
-      else
-       print *,"facecut_prescribed invalid"
-       stop
-      endif
- 
       return
       end subroutine fixed_face
 
@@ -10506,7 +10400,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       REAL_T, INTENT(in) :: time
       REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(out) :: velcell(SDIM)
+      REAL_T, INTENT(inout) :: velcell(SDIM)
 
       REAL_T VOF(num_materials)
       REAL_T cenbc(num_materials,SDIM)
@@ -10524,19 +10418,14 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       call get_initial_vfrac(xsten,nhalf,dx,bfact,VOF,cenbc)
 
       do im=1,num_materials
-       if (is_prescribed(im).eq.1) then
-        if (is_rigid(im).eq.1) then
-         if (VOF(im).gt.zero) then
-          call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),velcell,time,im,dx)
-         endif
-        else
-         print *,"is_rigid(im) invalid"
-         stop
+       if (is_rigid(im).eq.1) then
+        if (VOF(im).gt.zero) then
+         call velsolid(xsten(0,1),xsten(0,2),xsten(0,SDIM),velcell,time,im,dx)
         endif
-       else if (is_prescribed(im).eq.0) then
+       else if (is_rigid(im).eq.0) then
         ! do nothing
        else
-        print *,"is_prescribed invalid"
+        print *,"is_rigid(im) invalid"
         stop
        endif
       enddo ! im=1..num_materials
