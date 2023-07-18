@@ -83,7 +83,6 @@ namespace amrex{
      int* FSI_bounding_box_ngrow,
      int* touch_flag,
      int* CTML_FSI_INIT,
-     int* CTML_force_model,
      int* iter,
      int* current_step,
      int* plot_interval,

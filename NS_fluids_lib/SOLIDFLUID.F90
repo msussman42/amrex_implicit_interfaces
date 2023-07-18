@@ -167,7 +167,6 @@
         FSI_bounding_box_ngrow, & ! 1..num_materials
         touch_flag, &
         CTML_FSI_INIT, &
-        CTML_force_model, &
         iter, &
         current_step, &
         plot_interval, &
@@ -259,7 +258,6 @@
       INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
       INTEGER_T, INTENT(inout) :: touch_flag
       INTEGER_T, INTENT(in) :: CTML_FSI_init
-      INTEGER_T, INTENT(in) :: CTML_force_model(num_materials)
       INTEGER_T, INTENT(in) :: iter
       INTEGER_T, INTENT(in) :: current_step 
       INTEGER_T, INTENT(in) :: plot_interval 
@@ -440,12 +438,7 @@
       endif
       do im_local=1,num_materials
        if (FSI_flag(im_local).eq.FSI_SHOELE_CTML) then 
-        if (CTML_force_model(im_local).eq.0) then
-         ! do nothing
-        else
-         print *,"CTML_force_model invalid"
-         stop
-        endif
+        ! do nothing
        else if (fort_FSI_flag_valid(im_local).eq.1) then
         ! do nothing
        else
@@ -906,7 +899,6 @@
            xdata3D_ptr, &
            FSIdata3D_ptr, &
            masknbr3D_ptr, &
-           CTML_force_model(im_part), &
            ioproc,isout)
 
          else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 

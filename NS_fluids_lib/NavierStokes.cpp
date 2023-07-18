@@ -934,9 +934,6 @@ Vector<int> NavierStokes::ns_max_grid_size;
 
 int NavierStokes::CTML_FSI_numsolids = 0;
 
-// 0=Lag force (Goldstein, Handler, Sirovich)
-Vector<int> NavierStokes::CTML_force_model; 
-
 int NavierStokes::CTML_FSI_init = 0;
 
 int NavierStokes::elements_generated = 0; 
@@ -3037,27 +3034,15 @@ NavierStokes::read_params ()
     pp.queryAdd("FSI_refine_factor",FSI_refine_factor,num_materials);
     pp.queryAdd("FSI_bounding_box_ngrow",FSI_bounding_box_ngrow,num_materials);
 
-    CTML_force_model.resize(num_materials);
-    for (int i=0;i<num_materials;i++) {
-     CTML_force_model[i]=0;
-    }
     pp.queryAdd("CTML_FSI_numsolids",CTML_FSI_numsolids);
-    pp.queryAdd("CTML_force_model",CTML_force_model,num_materials);
     for (int i=0;i<num_materials;i++) {
      if (FSI_flag[i]==FSI_SHOELE_CTML) {
       if (FSI_interval==1) {
        // do nothing
       } else
        amrex::Error("Eulerian data must be regenerated every step");
-      if (CTML_force_model[i]==0) {
-       // do nothing
-      } else
-       amrex::Error("CTML_force_model invalid");
      } else if (FSI_flag_valid(i)==1) {
-      if (CTML_force_model[i]==0) {
-       // do nothing
-      } else
-       amrex::Error("CTML_force_model invalid");
+      // do nothing
      } else {
       amrex::Error("FSI_flag_valid(i)!=1");
      }
@@ -3101,7 +3086,22 @@ NavierStokes::read_params ()
     if (nparts!=im_solid_map.size())
      amrex::Error("nparts!=im_solid_map.size()");
 
+    if (FSI_material_exists_CTML()==1) {
+     extend_pressure_into_solid=1;
+    } else if (FSI_material_exists_CTML()==0) {
+     // do nothing
+    } else
+     amrex::Error("FSI_material_exists_CTML() invalid");
+
     pp.queryAdd("extend_pressure_into_solid",extend_pressure_into_solid);
+
+    if (FSI_material_exists_CTML()==1) {
+     if (extend_pressure_into_solid!=1)
+      amrex::Error("need extend_pressure_into_solid==1 if CTML coupling");
+    } else if (FSI_material_exists_CTML()==0) {
+     // do nothing
+    } else
+     amrex::Error("FSI_material_exists_CTML() invalid");
 
     elastic_viscosity.resize(num_materials);
     static_damping_coefficient.resize(num_materials);
@@ -4325,12 +4325,12 @@ NavierStokes::read_params ()
      amrex::Error("some_materials_compressible invalid");
     }
 
-    if (FSI_material_exists_velvel()==1) {
+    if (FSI_material_exists_CTML()==1) {
      num_divu_outer_sweeps=2;
-    } else if (FSI_material_exists_velvel()==0) {
+    } else if (FSI_material_exists_CTML()==0) {
      // do nothing
     } else
-     amrex::Error("FSI_material_exists_velvel() invalid");
+     amrex::Error("FSI_material_exists_CTML() invalid");
 
     pp.queryAdd("num_divu_outer_sweeps",num_divu_outer_sweeps);
 
@@ -4343,13 +4343,13 @@ NavierStokes::read_params ()
      amrex::Error("some_materials_compressible invalid");
     }
 
-    if (FSI_material_exists_velvel()==1) {
+    if (FSI_material_exists_CTML()==1) {
      if (num_divu_outer_sweeps<2) 
-      amrex::Error("num_divu_outer_sweeps must be >1 (velvel coupling)");
-    } else if (FSI_material_exists_velvel()==0) {
+      amrex::Error("num_divu_outer_sweeps must be >1 (CTML coupling)");
+    } else if (FSI_material_exists_CTML()==0) {
      // do nothing
     } else
-     amrex::Error("FSI_material_exists_velvel() invalid");
+     amrex::Error("FSI_material_exists_CTML() invalid");
      
     pp.queryAdd("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
@@ -5071,10 +5071,6 @@ NavierStokes::read_params ()
      }  
 
      std::cout << "CTML_FSI_numsolids " << CTML_FSI_numsolids << '\n';
-
-     for (int i=0;i<num_materials;i++)
-      std::cout << "i=" << i << "CTML_force_model[i] " << 
-        CTML_force_model[i] << '\n';
 
      std::cout << "mof_error_ordering " << 
       mof_error_ordering << '\n';
@@ -6377,12 +6373,12 @@ int NavierStokes::is_ice_matC(int im) {
 
 }  // end subroutine is_ice_matC()
 
-int NavierStokes::FSI_material_exists_velvel() {
+int NavierStokes::FSI_material_exists_CTML() {
 
  int local_flag=0;
 
  for (int im=0;im<num_materials;im++) {
-  if (FSI_flag[im]==FSI_SHOELE_CTML) { //Goldstein, Handler, Sirovich
+  if (FSI_flag[im]==FSI_SHOELE_CTML) { //Wardlaw
    local_flag=1;
   } else if (FSI_flag_valid(im)==1) {
    // do nothing
@@ -6393,7 +6389,7 @@ int NavierStokes::FSI_material_exists_velvel() {
 
  return local_flag;
 
-}  // end subroutine FSI_material_exists_velvel()
+}  // end subroutine FSI_material_exists_CTML()
 
 int NavierStokes::FSI_flag_valid(int im) {
 
@@ -6436,8 +6432,8 @@ int NavierStokes::is_singular_coeff(int im) {
   	     (FSI_flag[im]==FSI_ICE_STATIC)||
 	     (FSI_flag[im]==FSI_ICE_NODES_INIT)) { 
    local_is_singular_coeff=1; //extend pressure (after SOLVETYPE_PRES)
-  } else if (FSI_flag[im]==FSI_SHOELE_CTML) {  //Goldstein, Handler, Sirovich
-   local_is_singular_coeff=0;
+  } else if (FSI_flag[im]==FSI_SHOELE_CTML) {  //Wardlaw
+   local_is_singular_coeff=1;
   } else
    amrex::Error("FSI_flag invalid");
  } else
@@ -7664,6 +7660,7 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
 
   if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
       (FSI_flag[im_part]==FSI_ICE_NODES_INIT)|| 
+      (FSI_flag[im_part]==FSI_SHOELE_CTML)||
       (FSI_flag[im_part]==FSI_FLUID_NODES_INIT)) {
 
    MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -7734,8 +7731,6 @@ void NavierStokes::copy_velocity_on_sign(int partid) {
     amrex::Error("ns_is_rigid invalid");
    }
 
-  } else if (FSI_flag[im_part]==FSI_SHOELE_CTML) { 
-   // do nothing (CTML)
   } else
    amrex::Error("FSI_flag[im_part] invalid");
 
@@ -8086,10 +8081,10 @@ void NavierStokes::init_aux_data() {
 //FSI_operation=5  find integral_{membrane} F_membrane dA.
 //
 // note for CTML algorithm (FSI_flag==FSI_SHOELE_CTML):
-// 0. Goldstein, Handler, Sirovich
-// 1. copy Eulerian velocity to Lagrangian velocity.
+// 0. Wardlaw
+// 1. copy Eulerian stress to Lagrangian stress.
 // 2. update node locations
-// 3. copy Lagrangian Force to Eulerian Force and update Eulerian velocity.
+// 3. copy Lagrangian velocity to Eulerian velocity.
 void NavierStokes::ns_header_msg_level(
  int FSI_operation,int FSI_sub_operation,
  Real cur_time,
@@ -8506,7 +8501,6 @@ void NavierStokes::ns_header_msg_level(
       FSI_bounding_box_ngrow.dataPtr(),
       &FSI_touch_flag[tid],
       &CTML_FSI_init,
-      CTML_force_model.dataPtr(),
       &iter,
       &current_step,
       &plot_interval,
@@ -8686,7 +8680,6 @@ void NavierStokes::ns_header_msg_level(
      FSI_bounding_box_ngrow.dataPtr(), // 1,...,num_materials
      &FSI_touch_flag[tid],
      &CTML_FSI_init,
-     CTML_force_model.dataPtr(),
      &iter,
      &current_step,
      &plot_interval,
@@ -9024,7 +9017,6 @@ void NavierStokes::ns_header_msg_level(
      FSI_bounding_box_ngrow.dataPtr(),
      &FSI_touch_flag[tid_current],
      &CTML_FSI_init,
-     CTML_force_model.dataPtr(),
      &iter,
      &current_step,
      &plot_interval,
@@ -9235,7 +9227,6 @@ void NavierStokes::ns_header_msg_level(
      FSI_bounding_box_ngrow.dataPtr(),
      &FSI_touch_flag[tid],
      &CTML_FSI_init,
-     CTML_force_model.dataPtr(),
      &iter,
      &current_step,
      &plot_interval,
@@ -9351,7 +9342,6 @@ void NavierStokes::ns_header_msg_level(
       FSI_bounding_box_ngrow.dataPtr(),
       &FSI_touch_flag[tid_current],
       &CTML_FSI_init,
-      CTML_force_model.dataPtr(),
       &iter,
       &current_step,
       &plot_interval,
@@ -24914,6 +24904,7 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
 
 }  // subroutine getStateMAC
 
+FIX ME the force should go from fluid to structure
 void
 NavierStokes::ctml_fsi_transfer_force() {
 	
@@ -24955,8 +24946,6 @@ NavierStokes::ctml_fsi_transfer_force() {
       debug_ngrow(FSI_MF,0,local_caller_string);
       if (localMF[FSI_MF]->nComp()!=nFSI)
        amrex::Error("localMF[FSI_MF]->nComp() invalid");
-
-      if (CTML_force_model[im_part]==0) {
 
        if (thread_class::nthreads<1)
         amrex::Error("thread_class::nthreads invalid");
@@ -25005,8 +24994,6 @@ NavierStokes::ctml_fsi_transfer_force() {
        }  // mfi  
 } // omp
        ns_reconcile_d_num(LOOP_CTMLTRANSFERFORCE,"ctml_fsi_transfer_force");
-      } else
-       amrex::Error("CTML_force_model[im_part] invalid");
 
      } else
       amrex::Error("FSI_flag[im_part] invalid");
