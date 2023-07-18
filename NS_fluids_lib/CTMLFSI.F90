@@ -18,6 +18,7 @@ stop
 #include "AMReX_SPACE.H"
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
 
 #include "CTMLFSI_F.H"
 
@@ -624,7 +625,47 @@ stop
       end module CTML_module
 
 
-!!*****************************************************
+subroutine fort_ctml_max_nodes(&
+ nmat_in,&
+ FSI_flag_in,&
+ FSI_CTML_max_num_nodes_list,&
+ FSI_CTML_max_num_elements_list) &
+bind(c,name='fort_ctml_max_nodes')
+
+ use probcommon_module
+ use global_utility_module
+ use dummy_module
+
+ IMPLICIT NONE
+ INTEGER_T, INTENT(in) :: nmat_in
+ INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
+ INTEGER_T, INTENT(inout) :: FSI_CTML_max_num_nodes_list(nmat_in)
+ INTEGER_T, INTENT(inout) :: FSI_CTML_max_num_elements_list(nmat_in)
+ INTEGER_T :: im
+
+ do im=1,nmat_in
+  if (FSI_flag_in(im).eq.FSI_SHOELE_CTML) then
+#ifdef MVAHABFSI
+   if (nIBM_fib.ge.2) then
+    FSI_CTML_max_num_nodes_list(im)=nIBM_fib
+    FSI_CTML_max_num_elements_list(im)=nIBM_fib-1
+   else
+    print *,"nIBM_fib invalid"
+    stop
+   endif
+#else
+   print *,"CTML(F): define MEHDI_VAHAB_FSI in GNUmakefile"
+   stop
+#endif
+  else
+   FSI_CTML_max_num_nodes_list(im)=0 
+   FSI_CTML_max_num_elements_list(im)=0 
+  endif
+ enddo !im=1,nmat_in
+
+ return
+end subroutine fort_ctml_max_nodes
+
 
 subroutine fort_ctmltransferforce(&
  tilelo,&
@@ -669,4 +710,5 @@ bind(c,name='fort_ctmltransferforce')
 
  return
 end subroutine fort_ctmltransferforce
+
 
