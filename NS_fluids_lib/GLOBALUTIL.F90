@@ -15129,22 +15129,37 @@ end subroutine print_visual_descriptor
       end subroutine combine_solid_LS
 
 
-      subroutine combine_solid_VOF(VOF,solid_vof)
+      subroutine combine_solid_VOF(VOF,solid_vof,im_solid_primary)
       use probcommon_module
 
       IMPLICIT NONE
 
       REAL_T, INTENT(out) :: solid_vof
       REAL_T, INTENT(in) :: VOF(num_materials)
+      INTEGER_T, INTENT(out) :: im_solid_primary
       INTEGER_T im
 
       solid_vof=zero
+      im_solid_primary=0
 
       do im=1,num_materials
        if (is_rigid(im).eq.0) then
         ! do nothing
        else if (is_rigid(im).eq.1) then
         solid_vof=solid_vof+VOF(im)
+
+        if (im_solid_primary.eq.0) then
+         im_solid_primary=im
+        else if ((im_solid_primary.ge.1).and. &
+                 (im_solid_primary.le.num_materials)) then
+         if (VOF(im).gt.VOF(im_solid_primary)) then
+          im_solid_primary=im
+         endif
+        else
+         print *,"im_solid_primary invalid"
+         stop
+        endif
+
        else
         print *,"is_rigid invalid GLOBALUTIL.F90"
         stop
@@ -15152,49 +15167,6 @@ end subroutine print_visual_descriptor
       enddo ! im=1..num_materials
 
       end subroutine combine_solid_VOF
-
-      subroutine combine_prescribed_VOF(VOF,solid_vof, &
-                      im_prescribed_primary)
-      use probcommon_module
-
-      IMPLICIT NONE
-
-      REAL_T, INTENT(out) :: solid_vof
-      REAL_T, INTENT(in) :: VOF(num_materials)
-      INTEGER_T, INTENT(out) :: im_prescribed_primary
-      INTEGER_T im
-
-      solid_vof=zero
-      im_prescribed_primary=0
-
-      do im=1,num_materials
-       if (is_prescribed(im).eq.0) then
-        ! do nothing
-       else if (is_prescribed(im).eq.1) then
-        if (is_rigid(im).eq.1) then
-         solid_vof=solid_vof+VOF(im)
-         if (im_prescribed_primary.eq.0) then
-          im_prescribed_primary=im
-         else if ((im_prescribed_primary.ge.1).and. &
-                  (im_prescribed_primary.le.num_materials)) then
-          if (VOF(im).gt.VOF(im_prescribed_primary)) then
-           im_prescribed_primary=im
-          endif
-         else
-          print *,"im_prescribed_primary invalid"
-          stop
-         endif
-        else
-         print *,"is_rigid(im) invalid"
-         stop
-        endif
-       else
-        print *,"is_prescribed invalid"
-        stop
-       endif
-      enddo ! im=1..num_materials
-
-      end subroutine combine_prescribed_VOF
 
       function rigid_count()
       use probcommon_module

@@ -429,11 +429,9 @@ stop
 
        INTEGER_T i,j,k
        INTEGER_T in_rigid
-       INTEGER_T in_prescribed
        INTEGER_T veldir
        INTEGER_T dir_local
        REAL_T rigid_mask
-       REAL_T prescribed_mask
        REAL_T den_inverse,dedt_inverse
        INTEGER_T, parameter :: nhalf=1
        REAL_T xsten(-nhalf:nhalf,SDIM)
@@ -523,14 +521,9 @@ stop
         rigid_mask=one
         in_rigid=0
 
-        prescribed_mask=one
-        in_prescribed=0
-
         if (is_clamped_cell.eq.1) then
          rigid_mask=1.0D+6
          in_rigid=1
-         prescribed_mask=1.0D+6
-         in_prescribed=1
         else if (is_clamped_cell.eq.0) then
 
          do im=1,num_materials
@@ -543,7 +536,7 @@ stop
            else if (LSTEST.lt.zero) then
             ! do nothing
            else
-            print *,"LSTEST invalid"
+            print *,"LSTEST is NaN: ",LSTEST
             stop
            endif
           else if (is_rigid(im).eq.0) then
@@ -553,31 +546,6 @@ stop
            stop
           endif
 
-         enddo ! im=1..num_materials
-
-         do im=1,num_materials
-          if (is_prescribed(im).eq.1) then
-           if (is_rigid(im).eq.1) then
-            LSTEST=lsnew(D_DECL(i,j,k),im)
-            if (LSTEST.ge.zero) then
-             prescribed_mask=1.0D+6
-             in_prescribed=1
-            else if (LSTEST.lt.zero) then
-             ! do nothing
-            else
-             print *,"LSTEST is NaN"
-             stop
-            endif
-           else
-            print *,"is_rigid(im) invalid"
-            stop
-           endif
-          else if (is_prescribed(im).eq.0) then
-           ! do nothing
-          else
-           print *,"is_prescribed(im) invalid"
-           stop
-          endif
          enddo ! im=1..num_materials
 
          if (project_option_projectionF(project_option).eq.1) then
@@ -595,12 +563,13 @@ stop
            if (is_ice_or_FSI_rigid_material(im).eq.1) then
             LSTEST=lsnew(D_DECL(i,j,k),im)
             if (LSTEST.ge.zero) then
-             prescribed_mask=1.0D+6
-             in_prescribed=1
+              !SOLVETYPE_VISC
+             rigid_mask=1.0D+6
+             in_rigid=1
             else if (LSTEST.lt.zero) then
              ! do nothing
             else
-             print *,"LSTEST is NaN"
+             print *,"LSTEST is NaN: ",LSTEST
              stop
             endif
            else if (is_ice_or_FSI_rigid_material(im).eq.0) then
@@ -713,6 +682,7 @@ stop
           else if (solidheat_flag.eq.2) then ! face coeff==0.0 at solid/fluid
            ! do nothing 
           else if (solidheat_flag.eq.1) then !dirichlet bc at solid-fluid 
+           ! SOLVETYPE_HEAT:
            ! T=Tsolid in solid so coeff>>1
            ! rigid_mask>>1 if solid material occupies cell. (rigid_mask==1
            ! otherwise)
@@ -763,11 +733,11 @@ stop
           velcomp=veldir+1
           local_cterm(velcomp)=one/(den_inverse*dt) !den/dt
 
-          if (in_prescribed.eq.1) then
+          if (in_rigid.eq.1) then
 
            ! do nothing
 
-          else if (in_prescribed.eq.0) then
+          else if (in_rigid.eq.0) then
 
            if (levelrz.eq.COORDSYS_CARTESIAN) then
             ! do nothing
@@ -799,12 +769,13 @@ stop
            endif
 
           else
-           print *,"in_prescribed invalid"
+           print *,"in_rigid invalid"
            stop
           endif
 
+          ! SOLVETYPE_VISC:
           ! vel=velsolid in solid, so cterm>>1 there.
-          local_cterm(velcomp)=local_cterm(velcomp)*prescribed_mask
+          local_cterm(velcomp)=local_cterm(velcomp)*rigid_mask
 
          enddo ! veldir=0..nsolve-1
 

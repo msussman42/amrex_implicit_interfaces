@@ -7682,7 +7682,7 @@ stop
 
       REAL_T volmat(num_materials)
       REAL_T voltotal
-      REAL_T voltotal_prescribed
+      REAL_T voltotal_solid
       REAL_T voldepart
       REAL_T mass_total
       REAL_T delta_mass
@@ -7770,7 +7770,7 @@ stop
       REAL_T temperature_clamped_minus
       REAL_T temperature_clamped_plus
       INTEGER_T prescribed_flag
-      INTEGER_T prescribed_exists_flag
+      INTEGER_T rigid_exists_flag
       INTEGER_T is_clamped_face
       REAL_T vel_clamped_face(SDIM)
 
@@ -7787,16 +7787,11 @@ stop
       REAL_T mofdata(num_materials*ngeom_recon)
       INTEGER_T micro_table(num_materials,num_materials)
       REAL_T predict_face_afrac_solid !=0 if clamped or is_rigid
-      REAL_T predict_face_afrac_prescribed !=0 if clamped or prescribed
       INTEGER_T is_solid_face
-      INTEGER_T is_prescribed_face
       INTEGER_T im_solid
-      INTEGER_T im_prescribed
       INTEGER_T im_solid_valid
-      INTEGER_T im_prescribed_valid
       INTEGER_T partid_solid
-      INTEGER_T partid_prescribed
-      INTEGER_T im_prescribed_primary
+      INTEGER_T im_solid_primary
       INTEGER_T ispec
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T local_tessellate
@@ -8379,116 +8374,74 @@ stop
           stop
          endif
 
-          ! calls is_rigid(im) (GLOBALUTIL.F90)
-          !  is_rigid(im)==1 AND (! FSI_SHOELE_CTML)
-         if ((is_prescribed(implus_majority).eq.1).or. &
-             (is_prescribed(imminus_majority).eq.1).or. &
-             (is_clamped_face.ge.1)) then
-
-          if (predict_face_afrac_solid.eq.zero) then
-           predict_face_afrac_prescribed=zero
-          else
-           print *,"is_prescribed==TRUE => is_rigid==TRUE"
-           stop
-          endif
-
-         else if ((is_prescribed(implus_majority).eq.0).and. &
-                  (is_prescribed(imminus_majority).eq.0).and. &
-                  (is_clamped_face.eq.0)) then
-          predict_face_afrac_prescribed=one
-         else
-          print *,"implus_majority or imminus_majority invalid"
-          stop
-         endif
-
          if (is_clamped_face.ge.1) then
-          is_prescribed_face=1
           is_solid_face=1
           im_solid=0
-          im_prescribed=0
           im_solid_valid=1
-          im_prescribed_valid=1
           solid_velocity=vel_clamped_face(veldir+1)
          else if (is_clamped_face.eq.0) then
           ! fixed_face is declared in: PROB.F90
           call fixed_face( &
            predict_face_afrac_solid, & !intent(in) "facecut_solid"
-           predict_face_afrac_prescribed, & !intent(in) "facecut_prescribed"
-           LSminus,LSplus, &
-           is_solid_face, &
-           is_prescribed_face, &
-           im_solid, &
-           im_prescribed, &
-           im_solid_valid, &
-           im_prescribed_valid, &
-           partid_solid, &
-           partid_prescribed) 
+           LSminus,LSplus, & !intent(in)
+           is_solid_face, & !intent(out)
+           im_solid, & !intent(out)
+           im_solid_valid, & !intent(out)
+           partid_solid)  !intent(out)
 
-          if (is_prescribed_face.eq.1) then
-           if (is_solid_face.eq.1) then
-            if (im_prescribed_valid.eq.1) then
-             if (im_solid_map(partid_prescribed+1)+1.eq.im_prescribed) then
-              dir2=partid_prescribed*SDIM+veldir+1
-              if (veldir.eq.0) then
-               solid_velocity=solxfab(D_DECL(i,j,k),dir2)
-              else if (veldir.eq.1) then
-               solid_velocity=solyfab(D_DECL(i,j,k),dir2)
-              else if ((veldir.eq.SDIM-1).and.(SDIM.eq.3)) then
-               solid_velocity=solzfab(D_DECL(i,j,k),dir2)
-              else
-               print *,"veldir invalid"
-               stop
-              endif
+          if (is_solid_face.eq.1) then
+           if (im_solid_valid.eq.1) then
+            if (im_solid_map(partid_solid+1)+1.eq.im_solid) then
+             dir2=partid_solid*SDIM+veldir+1
+             if (veldir.eq.0) then
+              solid_velocity=solxfab(D_DECL(i,j,k),dir2)
+             else if (veldir.eq.1) then
+              solid_velocity=solyfab(D_DECL(i,j,k),dir2)
+             else if ((veldir.eq.SDIM-1).and.(SDIM.eq.3)) then
+              solid_velocity=solzfab(D_DECL(i,j,k),dir2)
              else
-              print *,"im_solid_map(partid_prescribed+1)+1.ne.im_prescribed"
+              print *,"veldir invalid: ",veldir
               stop
              endif
-            else 
-             print *,"im_prescribed_valid bust"
+            else
+             print *,"im_solid_map(partid_solid+1)+1.ne.im_solid"
              stop
-            endif 
-           else
-            print *,"in fort_init_physics_vars"
-            print *,"is_solid_face invalid(2) is_solid_face= ",is_solid_face
-            print *,"tid=",tid
-            print *,"isweep=",isweep
-            print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
-            print *,"solidheat_flag=",solidheat_flag
-            print *,"time=",time
-            print *,"dt=",dt
-            print *,"project_option=",project_option
-            print *,"num_interfaces=",num_interfaces
-            print *,"num_materials=",num_materials
-            print *,"nparts=",nparts
-            print *,"nparts_def=",nparts_def
-            print *,"num_curv=",num_curv
-            print *,"level=",level
-            print *,"finest_level=",finest_level
-            do im=1,num_materials
-             print *,"im,FSI_flag(im) ",im,FSI_flag(im)
-            enddo
-            print *,"is_solid_face ",is_solid_face
-            print *,"is_prescribed_face ",is_prescribed_face
-            print *,"partid_solid ",partid_solid
-            print *,"partid_prescribed ",partid_prescribed
-            print *,"im_solid_valid ",im_solid_valid
-            print *,"im_prescribed_valid ",im_prescribed_valid
-            print *,"im_solid ",im_solid
-            print *,"im_prescribed ",im_prescribed
-            print *,"predict_face_afrac_solid ",predict_face_afrac_solid
-            print *,"predict_face_afrac_prescribed ", &
-                   predict_face_afrac_prescribed
-
+            endif
+           else 
+            print *,"im_solid_valid bust: ",im_solid_valid
             stop
-           endif
-          else if (is_prescribed_face.eq.0) then
+           endif 
+          else if (is_solid_face.eq.0) then
            solid_velocity=zero
           else
-           print *,"is_prescribed_face invalid"
+           print *,"in fort_init_physics_vars"
+           print *,"is_solid_face invalid(2) is_solid_face= ",is_solid_face
+           print *,"tid=",tid
+           print *,"isweep=",isweep
+           print *,"FACECOMP_NCOMP=",FACECOMP_NCOMP
+           print *,"solidheat_flag=",solidheat_flag
+           print *,"time=",time
+           print *,"dt=",dt
+           print *,"project_option=",project_option
+           print *,"num_interfaces=",num_interfaces
+           print *,"num_materials=",num_materials
+           print *,"nparts=",nparts
+           print *,"nparts_def=",nparts_def
+           print *,"num_curv=",num_curv
+           print *,"level=",level
+           print *,"finest_level=",finest_level
+           do im=1,num_materials
+            print *,"im,FSI_flag(im) ",im,FSI_flag(im)
+           enddo
+           print *,"is_solid_face ",is_solid_face
+           print *,"partid_solid ",partid_solid
+           print *,"im_solid_valid ",im_solid_valid
+           print *,"im_solid ",im_solid
+           print *,"predict_face_afrac_solid ",predict_face_afrac_solid
            stop
           endif
          else
-          print *,"is_clamped_face invalid"
+          print *,"is_clamped_face invalid: ",is_clamped_face
           stop
          endif
 
@@ -8595,17 +8548,12 @@ stop
           stop
          endif
 
-         if (is_prescribed_face.eq.1) then
-          if (is_solid_face.eq.1) then
-           local_face(FACECOMP_FACEVEL+1)=solid_velocity
-          else
-           print *,"is_solid_face invalid 3 ",is_solid_face
-           stop
-          endif
-         else if (is_prescribed_face.eq.0) then
+         if (is_solid_face.eq.1) then
+          local_face(FACECOMP_FACEVEL+1)=solid_velocity
+         else if (is_solid_face.eq.0) then
           ! do nothing
          else
-          print *,"is_prescribed_face invalid"
+          print *,"is_solid_face invalid: ",is_solid_face
           stop
          endif
 
@@ -9409,13 +9357,13 @@ stop
           do im=1,num_materials
            volmat(im)=vofC(D_DECL(icell,jcell,kcell),im)
           enddo
-           ! voltotal_prescribed=sum F_prescribed
-           ! im_prescribed_primary=argmax_im F_prescribed
-           ! combine_prescribed_VOF is declared in GLOBALUTIL.F90
-          call combine_prescribed_VOF( &
+           ! voltotal_solid=sum F_solid
+           ! im_solid_primary=argmax_im F_solid
+           ! combine_solid_VOF is declared in GLOBALUTIL.F90
+          call combine_solid_VOF( &
             volmat, & !intent(in)
-            voltotal_prescribed, & ! intent(out)
-            im_prescribed_primary) ! intent(out)
+            voltotal_solid, & ! intent(out)
+            im_solid_primary) ! intent(out)
 
           if (is_clamped_face.ge.1) then !interior "wall"
 
@@ -9423,22 +9371,21 @@ stop
 
           else if (is_clamped_face.eq.0) then
 
-           if ((voltotal_prescribed.ge.one-0.01D0).and. &
-               (voltotal_prescribed.le.one+VOFTOL)) then
-            if ((im_prescribed_primary.ge.1).and. &
-                (im_prescribed_primary.le.num_materials)) then
+           if ((voltotal_solid.ge.one-0.01D0).and. &
+               (voltotal_solid.le.one+VOFTOL)) then
+            if ((im_solid_primary.ge.1).and. &
+                (im_solid_primary.le.num_materials)) then
              if (wall_flag_face.eq.0) then
-              wall_flag_face=im_prescribed_primary 
+              wall_flag_face=im_solid_primary 
                ! wallVOF_face should be 0 or 1 since the 
                ! reconstruction on input to fort_init_physics_vars
-               ! "rasterizes" the "rigid" and
-               ! "prescribed" materials.
-              wallVOF_face=volmat(im_prescribed_primary)
+               ! "rasterizes" the "rigid" materials.
+              wallVOF_face=volmat(im_solid_primary)
              else if ((wall_flag_face.ge.1).and. &
                       (wall_flag_face.le.num_materials)) then
-              if (volmat(im_prescribed_primary).gt.wallVOF_face) then
-               wall_flag_face=im_prescribed_primary
-               wallVOF_face=volmat(im_prescribed_primary)
+              if (volmat(im_solid_primary).gt.wallVOF_face) then
+               wall_flag_face=im_solid_primary
+               wallVOF_face=volmat(im_solid_primary)
               endif
              else if (wall_flag_face.eq.num_materials+1) then
               ! do nothing
@@ -9447,14 +9394,14 @@ stop
               stop
              endif
             else
-             print *,"im_prescribed_primary invalid"
+             print *,"im_solid_primary invalid"
              stop
             endif
-           else if ((voltotal_prescribed.le.one-0.01D0).and. &
-                    (voltotal_prescribed.ge.-VOFTOL)) then
+           else if ((voltotal_solid.le.one-0.01D0).and. &
+                    (voltotal_solid.ge.-VOFTOL)) then
             ! do nothing
            else
-            print *,"voltotal_prescribed invalid"
+            print *,"voltotal_solid invalid"
             stop
            endif
 
@@ -9466,43 +9413,43 @@ stop
           if ((wall_flag_face.ge.0).and. &
               (wall_flag_face.le.num_materials)) then
 
-           prescribed_exists_flag=prescribed_exists()
+           rigid_exists_flag=rigid_exists()
 
-           if (prescribed_exists_flag.eq.1) then 
+           if (rigid_exists_flag.eq.1) then 
 
              ! at least one of the face's adjoining cells is dominated
-             ! by a prescribed material.
-            if (is_prescribed_face.eq.1) then 
-             if ((im_prescribed.ge.1).and. &
-                 (im_prescribed.le.num_materials)) then
+             ! by a rigid material.
+            if (is_solid_face.eq.1) then 
+             if ((im_solid.ge.1).and. &
+                 (im_solid.le.num_materials)) then
               if (wall_flag_face.eq.0) then
-               wall_flag_face=im_prescribed
-               wallVOF_face=volmat(im_prescribed)
+               wall_flag_face=im_solid
+               wallVOF_face=volmat(im_solid)
               else if ((wall_flag_face.ge.1).and. &
                        (wall_flag_face.le.num_materials)) then
-               if (volmat(im_prescribed).gt.wallVOF_face) then
-                wall_flag_face=im_prescribed
-                wallVOF_face=volmat(im_prescribed)
+               if (volmat(im_solid).gt.wallVOF_face) then
+                wall_flag_face=im_solid
+                wallVOF_face=volmat(im_solid)
                endif
               else
                print *,"wall_flag_face invalid"
                stop
               endif
              else
-              print *,"im_prescribed invalid"
+              print *,"im_solid invalid"
               stop
              endif
-            else if (is_prescribed_face.eq.0) then
+            else if (is_solid_face.eq.0) then
              ! do nothing
             else
-             print *,"is_prescribed_face invalid"
+             print *,"is_solid_face invalid"
              stop
             endif
 
-           else if (prescribed_exists_flag.eq.0) then
+           else if (rigid_exists_flag.eq.0) then
             ! do nothing
            else
-            print *,"prescribed_exists_flag invalid 70"
+            print *,"rigid_exists_flag invalid 70"
             stop
            endif
 
@@ -10061,9 +10008,9 @@ stop
           stop
          endif
 
-         if (is_prescribed(implus_majority).eq.1) then
+         if (is_rigid(implus_majority).eq.1) then
           null_viscosity=1
-         else if (is_prescribed(implus_majority).eq.0) then
+         else if (is_rigid(implus_majority).eq.0) then
           ! do nothing
          else
           print *,"is_prescibed invalid"
@@ -11953,23 +11900,16 @@ stop
           if (is_lag_part(im).eq.1) then
 
            if (is_rigid(im).eq.1) then
-            if (is_prescribed(im).eq.1) then
-             if (im_solid.eq.0) then
+            if (im_solid.eq.0) then
+             im_solid=im
+             partid=nparts_temp
+            else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
+             if (LStest(im).gt.LStest(im_solid)) then
               im_solid=im
               partid=nparts_temp
-             else if ((im_solid.ge.1).and.(im_solid.le.num_materials)) then
-              if (LStest(im).gt.LStest(im_solid)) then
-               im_solid=im
-               partid=nparts_temp
-              endif
-             else
-              print *,"im_solid invalid 5"
-              stop
              endif
-            else if (is_prescribed(im).eq.0) then
-             ! do nothing
             else
-             print *,"is_prescribed(im) invalid"
+             print *,"im_solid invalid 5"
              stop
             endif
            else if (is_rigid(im).eq.0) then
@@ -13142,11 +13082,9 @@ stop
       REAL_T local_face(ncphys)
       INTEGER_T idx
       INTEGER_T is_solid_face
-      INTEGER_T is_prescribed_face
       INTEGER_T at_RZ_face
       INTEGER_T ic,jc,kc
       REAL_T fluid_volface
-      REAL_T not_prescribed_volface
       REAL_T volface
       REAL_T local_volume
       REAL_T massface,denface
@@ -13188,11 +13126,8 @@ stop
       REAL_T denlocal,templocal
       REAL_T test_velocity_FACE
       INTEGER_T im_solid
-      INTEGER_T im_prescribed
       INTEGER_T im_solid_valid
-      INTEGER_T im_prescribed_valid
       INTEGER_T partid_solid
-      INTEGER_T partid_prescribed
       INTEGER_T partid_check
       REAL_T cutoff
       INTEGER_T typeleft,typeright,typeface
@@ -14014,28 +13949,14 @@ stop
           else if (at_RZ_face.eq.0) then
 
            fluid_volface=zero
-           not_prescribed_volface=zero
            volface=zero
 
            do side=1,2
             do im=1,num_materials
              local_volume=local_face(FACECOMP_VOFFACE+2*(im-1)+side)
              volface=volface+local_volume
-             if (is_prescribed(im).eq.0) then
-              not_prescribed_volface=not_prescribed_volface+local_volume
-             else if (is_prescribed(im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_prescribed(im) invalid"
-              stop
-             endif
              if (is_rigid(im).eq.0) then
-              if (is_prescribed(im).eq.0) then
-               fluid_volface=fluid_volface+local_volume
-              else
-               print *,"is_prescribed(im) invalid"
-               stop
-              endif
+              fluid_volface=fluid_volface+local_volume
              else if (is_rigid(im).eq.1) then
               ! do nothing
              else
@@ -14048,7 +13969,6 @@ stop
            if (volface.gt.zero) then
             ! do nothing
            else
-            print *,"not_prescribed_volface ",not_prescribed_volface
             print *,"fluid_volface ",fluid_volface
             print *,"volface ",volface
             print *,"volface bust tfrmac"
@@ -14056,18 +13976,14 @@ stop
            endif
 
            fluid_volface=fluid_volface/volface
-           not_prescribed_volface=not_prescribed_volface/volface
 
            if ((local_face(FACECOMP_FACECUT+1).ge.zero).and. &
                (local_face(FACECOMP_FACECUT+1).le.half)) then
             fluid_volface=zero
-            not_prescribed_volface=zero
            else if ((local_face(FACECOMP_FACECUT+1).ge.half).and. &
                     (local_face(FACECOMP_FACECUT+1).le.one)) then
             fluid_volface= &
              min(fluid_volface,local_face(FACECOMP_FACECUT+1))
-            not_prescribed_volface= &
-             min(not_prescribed_volface,local_face(FACECOMP_FACECUT+1))
            else
             print *,"local_face(FACECOMP_FACECUT+1) invalid"
             stop
@@ -14076,83 +13992,64 @@ stop
            ! is_solid_face==1 if:
            !   0.0<=fluid_volface<=VOFTOL_AREAFRAC  or
            !   max(LSleft(im_solid),LSright(im_solid))>=0.0
-           ! is_prescribed_face==1 if:
-           !   0.0<=not_prescribed_prescribed<=VOFTOL_AREAFRAC  or
-           !   max(LSleft(im_prescribed),LSright(im_prescribed))>=0.0
            ! fixed_face is declared in: PROB.F90
            call fixed_face( &
             fluid_volface, & !intent(in) "facecut_solid"
-            not_prescribed_volface, & !intent(in) "facecut_prescribed"
             LSleft,LSright, &
             is_solid_face, &
-            is_prescribed_face, &
             im_solid, &
-            im_prescribed, &
             im_solid_valid, &
-            im_prescribed_valid, &
-            partid_solid, &
-            partid_prescribed)
+            partid_solid)
           
-           if (is_prescribed_face.eq.1) then
-            if (is_solid_face.eq.1) then 
-             if (im_prescribed_valid.eq.1) then
-              if (im_prescribed.ne.im_solid_map(partid_prescribed+1)+1) then
-               print *,"im_solid_map invalid"
-               stop
-              endif
-              face_velocity_override=1
-             else if (im_prescribed_valid.eq.0) then
-              face_velocity_override=1
-             else
-              print *,"im_prescribed_valid invalid"
+           if (is_solid_face.eq.1) then
+            if (im_solid_valid.eq.1) then
+             if (im_solid.ne.im_solid_map(partid_solid+1)+1) then
+              print *,"im_solid_map invalid"
               stop
              endif
+             face_velocity_override=1
+            else if (im_solid_valid.eq.0) then
+             face_velocity_override=1
             else
-             print *,"is_solid_face invalid 6 ",is_solid_face
+             print *,"im_solid_valid invalid"
              stop
             endif
-           else if (is_prescribed_face.eq.0) then
+           else if (is_solid_face.eq.0) then
             ! do nothing
            else
-            print *,"is_prescribed_face invalid"
+            print *,"is_solid_face invalid"
             stop
            endif
  
-           if ((is_prescribed_face.eq.1).and. &
+           if ((is_solid_face.eq.1).and. &
                (face_velocity_override.eq.1)) then
 
-            if (is_solid_face.eq.1) then 
-
-             if (im_prescribed_valid.eq.1) then
-              if (im_prescribed.ne.im_solid_map(partid_prescribed+1)+1) then
-               print *,"im_solid_map invalid"
-               stop
-              endif
-              velcomp=partid_prescribed*SDIM+dir+1 
-
-              if (homogeneous_rigid_velocity.eq.0) then
-               uedge=solfab(D_DECL(i,j,k),velcomp)
-              else if (homogeneous_rigid_velocity.eq.1) then
-               uedge=zero
-              else
-               print *,"homogeneous_rigid_velocity invalid"
-               stop
-              endif
-
-              DEBUG_PRESCRIBED_VEL_TOT=DEBUG_PRESCRIBED_VEL_TOT+uedge
-              DEBUG_PRESCRIBED_VEL_DEN=DEBUG_PRESCRIBED_VEL_DEN+one
-             else if (im_prescribed_valid.eq.0) then
-              uedge=zero
-             else
-              print *,"im_prescribed_valid invalid"
+            if (im_solid_valid.eq.1) then
+             if (im_solid.ne.im_solid_map(partid_solid+1)+1) then
+              print *,"im_solid_map invalid"
               stop
              endif
+             velcomp=partid_solid*SDIM+dir+1 
+
+             if (homogeneous_rigid_velocity.eq.0) then
+              uedge=solfab(D_DECL(i,j,k),velcomp)
+             else if (homogeneous_rigid_velocity.eq.1) then
+              uedge=zero
+             else
+              print *,"homogeneous_rigid_velocity invalid"
+              stop
+             endif
+
+             DEBUG_SOLID_VEL_TOT=DEBUG_SOLID_VEL_TOT+uedge
+             DEBUG_SOLID_VEL_DEN=DEBUG_SOLID_VEL_DEN+one
+            else if (im_solid_valid.eq.0) then
+              uedge=zero
             else
-             print *,"is_solid_face invalid 6 ",is_solid_face
+             print *,"im_solid_valid invalid"
              stop
             endif
 
-           else if ((is_prescribed_face.eq.0).or. &
+           else if ((is_solid_face.eq.0).or. &
                     (face_velocity_override.eq.0)) then
 
             if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
@@ -14356,7 +14253,7 @@ stop
                   if ((colorface.ge.1).and.(colorface.le.num_colors)) then
                     ! declared in: GLOBALUTIL.F90
                    call get_rigid_velocity( &
-                    FSI_prescribed_flag, &
+                    FSI_prescribed_flag, & !intent(out) (ice touches substrate)
                     colorface,dir+1,uedge_rigid, &
                     xstenMAC_center, &
                     blob_array, &
@@ -14435,8 +14332,8 @@ stop
             endif
 
            else
-            print *,"is_prescribed_face or (7) ",is_prescribed_face
-            print *,"face_velocity_override invalid ",face_velocity_override
+            print *,"is_solid_face invalid?  ",is_solid_face
+            print *,"or face_velocity_override invalid?",face_velocity_override
             stop
            endif  
 
@@ -14700,51 +14597,40 @@ stop
           enddo
 
           fluid_volface=one
-          not_prescribed_volface=one
            ! fixed_face is declared in: PROB.F90
           call fixed_face( &
            fluid_volface, & !intent(in) "facecut_solid"
-           not_prescribed_volface, & !intent(in) "facecut_prescribed"
            LSleft,LSright, &
            is_solid_face, &
-           is_prescribed_face, &
            im_solid, &
-           im_prescribed, &
            im_solid_valid, &
-           im_prescribed_valid, &
-           partid_solid, &
-           partid_prescribed) 
+           partid_solid)
 
-          if (is_prescribed_face.eq.1) then
+          if (is_solid_face.eq.1) then
 
-           if (is_solid_face.eq.1) then
-            if (im_prescribed_valid.eq.1) then
-             if ((im_prescribed.ge.1).and. &
-                 (im_prescribed.le.num_materials)) then
-              if (im_solid_map(partid_prescribed+1)+1.eq.im_prescribed) then
-               use_face_pres=0 ! do not use div(up)
-               face_velocity_override=1
-              else
-               print *,"im_solid_map(partid_prescribed+1)+1 invalid"
-               stop
-              endif
+           if (im_solid_valid.eq.1) then
+            if ((im_solid.ge.1).and. &
+                (im_solid.le.num_materials)) then
+             if (im_solid_map(partid_solid+1)+1.eq.im_solid) then
+              use_face_pres=0 ! do not use div(up)
+              face_velocity_override=1
              else
-              print *,"im_prescribed invalid"
+              print *,"im_solid_map(partid_solid+1)+1 invalid"
               stop
              endif
             else
-             print *,"im_prescribed_valid corrupt"
+             print *,"im_solid invalid"
              stop
             endif
            else
-            print *,"is_solid_face invalid 8 ",is_solid_face
+            print *,"im_solid_valid corrupt"
             stop
            endif
 
-          else if (is_prescribed_face.eq.0) then
+          else if (is_solid_face.eq.0) then
            ! do nothing
           else
-           print *,"is_prescribed_face invalid"
+           print *,"is_solid_face invalid"
            stop
           endif
 
@@ -14959,16 +14845,11 @@ stop
            ! fixed_face is declared in: PROB.F90
           call fixed_face( &
            AFACE, &  !intent(in) "facecut_solid"
-           AFACE, &  !intent(in) "facecut_prescribed"
            LSleft,LSright, & !intent(in)
            is_solid_face, & !intent(out)
-           is_prescribed_face, & !intent(out)
            im_solid, & !intent(out)
-           im_prescribed, & !intent(out)
            im_solid_valid, & !intent(out)
-           im_prescribed_valid, & !intent(out)
-           partid_solid, &  !intent(out)
-           partid_prescribed)  !intent(out)
+           partid_solid)  !intent(out)
 
            ! at_wall==1 if FOEXTRAP or REFLECT_EVEN BC for pressure.
            ! gradh_tension represents (H_{m12,i}-H_{m12,i-1})
@@ -17622,7 +17503,7 @@ stop
           ibase=(partid_max-1)*SDIM
 
            ! velocity
-          if (is_prescribed(im_solid_max).eq.1) then
+          if (is_rigid(im_solid_max).eq.1) then
 
            dir=1
            velnew(D_DECL(i,j,k),dir)= &
@@ -17639,10 +17520,10 @@ stop
                     solzfab(D_DECL(i,j,k+1),ibase+dir))
            endif
 
-          else if (is_prescribed(im_solid_max).eq.0) then
+          else if (is_rigid(im_solid_max).eq.0) then
            ! do nothing
           else
-           print *,"is_prescribed(im_solid_max) invalid"
+           print *,"is_rigid(im_solid_max) invalid"
            stop
           endif
 
