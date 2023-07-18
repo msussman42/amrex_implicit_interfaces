@@ -79,7 +79,7 @@ amr.blocking_factor = 8 8 8 8  # block factor in grid generation
 amr.check_int       = 200
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 50 # 200
+amr.plot_int        = 200 # 200
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -117,6 +117,8 @@ ns.segregated_gravity_flag=0
 # let sigma_{SG}=sigma_{LG} =>
 # 1-sigma_{SL}/sigma_{LG}=cos(theta_L_initial)
 # sigma_SL = sigma_LG * (1-cos(theta_L))
+# theta_L=33 degrees a little too large. (sigma_SL/sigma_LG=281/1740)
+# for theta_L=25 degrees, sigma_SL/sigma_LG=163/1740
 #
 # TRIPLE POINT LIQUID-GAS-ICE (tensions_from_angles.f)
 # sigma_LG/sin(theta_I)=sigma_LI/sin(theta_G)=sigma_GI/sin(theta_L)
@@ -129,8 +131,8 @@ ns.segregated_gravity_flag=0
 # theta_L=90 degrees 
 # and sigma_GI=sigma_LI=0.0 
 # LG,LI,LS,IG,GS,SI  
-ns.tension=      1740.0e-1 538.0e-1 281.0e-1 1655.0e-1 1740.0e-1  0.0
-ns.tension_init= 1740.0e-1 538.0e-1 281.0e-1 1655.0e-1 1740.0e-1  0.0
+ns.tension=      1740.0e-1 538.0e-1 163.0e-1 1655.0e-1 1740.0e-1  0.0
+ns.tension_init= 1740.0e-1 538.0e-1 163.0e-1 1655.0e-1 1740.0e-1  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
