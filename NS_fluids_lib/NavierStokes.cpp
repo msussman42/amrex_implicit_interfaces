@@ -7608,7 +7608,7 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
     } else
      amrex::Error("cur_time invalid");
    } else if ((FSI_flag[im_part]==FSI_PRESCRIBED_NODES)|| 
-              (FSI_flag[im_part]==FSI_SHOELE_CTML)) {//Goldstein,Handler,Sirovich
+              (FSI_flag[im_part]==FSI_SHOELE_CTML)) {//Wardlaw
     ok_to_modify_EUL=1;
     // do nothing
    } else
@@ -7886,7 +7886,7 @@ void NavierStokes::copy_old_FSI_to_new_level() {
  for (int partid=0;partid<nparts;partid++) {
   int im_part=im_solid_map[partid];
   if ((im_part>=0)&&(im_part<num_materials)) {
-   if (FSI_flag[im_part]==FSI_SHOELE_CTML) { //Goldstein, Handler, Sirovich
+   if (FSI_flag[im_part]==FSI_SHOELE_CTML) { //Wardlaw
     amrex::Error("must regenerate Eulerian data each step");
    } else if (FSI_flag[im_part]==FSI_PRESCRIBED_NODES){
     MultiFab::Copy(S_old,*vofmf,
@@ -24904,10 +24904,11 @@ MultiFab* NavierStokes::getStateMAC(int ngrow,int dir,Real time) {
 
 }  // subroutine getStateMAC
 
-FIX ME the force should go from fluid to structure
 void
 NavierStokes::ctml_fsi_transfer_force() {
-	
+
+ amrex::Error("FIX ME the force should go from fluid to structure");
+
  std::string local_caller_string="ctml_fsi_transfer_force";
 
  if (ParallelDescriptor::IOProcessor() && verbose)
@@ -24947,15 +24948,15 @@ NavierStokes::ctml_fsi_transfer_force() {
       if (localMF[FSI_MF]->nComp()!=nFSI)
        amrex::Error("localMF[FSI_MF]->nComp() invalid");
 
-       if (thread_class::nthreads<1)
-        amrex::Error("thread_class::nthreads invalid");
-       thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+      if (thread_class::nthreads<1)
+       amrex::Error("thread_class::nthreads invalid");
+      thread_class::init_d_numPts(S_new.boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-       for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+      for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
         BL_ASSERT(grids[mfi.index()] == mfi.validbox());
         const Box& tilegrid = mfi.tilebox();
 
@@ -24991,9 +24992,9 @@ NavierStokes::ctml_fsi_transfer_force() {
 #else
         amrex::Error("CTML(C): define MEHDI_VAHAB_FSI in GNUmakefile");
 #endif
-       }  // mfi  
+      }  // mfi  
 } // omp
-       ns_reconcile_d_num(LOOP_CTMLTRANSFERFORCE,"ctml_fsi_transfer_force");
+      ns_reconcile_d_num(LOOP_CTMLTRANSFERFORCE,"ctml_fsi_transfer_force");
 
      } else
       amrex::Error("FSI_flag[im_part] invalid");
