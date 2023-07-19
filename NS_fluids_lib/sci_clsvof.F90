@@ -9837,8 +9837,18 @@ INTEGER_T idir,ielem,inode
      if (CTML_FSI_mat(im_part).eq.1) then 
       FSI(part_id)%deforming_part=1
       FSI(part_id)%CTML_flag=1
-      num_nodes_list(im_part)=ctml_max_n_fib_nodes
-      num_elements_list(im_part)=ctml_max_n_fib_nodes
+      if (max_num_nodes_list(im_part).eq.ctml_max_n_fib_nodes) then
+       ! do nothing
+      else
+       print *,"max_num_nodes_list(im_part) invalid"
+       stop
+      endif
+      if (max_num_elements_list(im_part).eq.ctml_max_n_fib_nodes-1) then
+       ! do nothing
+      else
+       print *,"max_num_elements_list(im_part) invalid"
+       stop
+      endif
      else if (CTML_FSI_mat(im_part).eq.0) then
       FSI(part_id)%deforming_part=0
       FSI(part_id)%CTML_flag=0

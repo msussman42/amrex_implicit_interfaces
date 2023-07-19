@@ -8307,12 +8307,12 @@ void NavierStokes::ns_header_msg_level(
   int im_index=0;
 
   for (int im=0;im<num_materials;im++) {
-   max_num_nodes_list[im]=0;
-   max_num_elements_list[im]=0;
+   max_num_nodes_list[im]=FSI_CTML_max_num_nodes_list[im];
+   max_num_elements_list[im]=FSI_CTML_max_num_elements_list[im];
    num_nodes_list[im]=0;
    num_elements_list[im]=0;
-   int max_num_nodes_init=0;
-   int max_num_elements_init=0;
+   int max_num_nodes_init=max_num_nodes_list[im];
+   int max_num_elements_init=max_num_elements_list[im];
    int num_nodes_init=0;
    int num_elements_init=0;
    FSI_input[im].initData_FSI(

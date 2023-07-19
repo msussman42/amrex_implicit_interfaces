@@ -415,8 +415,10 @@
        print *,"FSI_operation invalid"
        stop
       endif
-      if (h_small.le.zero) then
-       print *,"h_small invalid"
+      if (h_small.gt.zero) then
+       ! do nothing
+      else
+       print *,"h_small invalid: ",h_small
        stop
       endif
       do dir=1,SDIM
@@ -671,7 +673,7 @@
           h_small,problo3D,probhi3D, &
           current_step,plot_interval,ioproc,isout)
        else
-        print *,"FSI_operation invalid"
+        print *,"FSI_operation invalid: ",FSI_operation
         stop
        endif
 
