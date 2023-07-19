@@ -91,6 +91,16 @@ c
             timebucket=0.0
       endif
 #ifdef INCLUDE_FIB
+      i1=0
+      ne1=0
+      jq=0
+      jq2=0
+      outcont=0.0d0
+      outcont2=0.0d0
+      x=0.0d0
+      xcont=0.0d0
+      xp1cont=0.0d0
+      xp2cont=0.0d0
 ! passing old fiber values to pre variables and initialize new variables 
       do i=1,nr_ibm_fib
        do j=1,ns_ibm_r_fib(i)
@@ -744,16 +754,30 @@ c
 
 c rtime = t^{n+1}
 c
-      subroutine tick_fib(rtime
-     &     ,dt,nt,monitorON,ntsave
+      subroutine tick_fib(
+! t^{n+1}              
+     &     rtime
+     &     ,dt
+! step              
+     &     ,nt
+     &     ,monitorON
+! plot_int
+     &     ,ntsave
+! velocity at t^{n-1/2}
      &     ,uhibm1in_fib,uhibm2in_fib,uhibm3in_fib
+! velocity at t^{n}
      &     ,uibm1in_fib,uibm2in_fib,uibm3in_fib
+! velocity at t^{n+1} ?
      &     ,uibm1out_fib,uibm2out_fib,uibm3out_fib
+! force at t^{n}
      &     ,fibm1in_fib,fibm2in_fib,fibm3in_fib
+! force at t^{n+1}?
      &     ,fibm1out_fib,fibm2out_fib,fibm3out_fib
+! position at t^{n}
      &     ,gx_ibm_massivein_fib
      &     ,gy_ibm_massivein_fib
      &     ,gz_ibm_massivein_fib
+! position at t^{n+1}?
      &     ,gx_ibm_massiveout_fib
      &     ,gy_ibm_massiveout_fib
      &     ,gz_ibm_massiveout_fib
@@ -814,13 +838,13 @@ c
 ! passing old fiber values to pre variables and initialize new variables 
       do i=1,nr_ibm_fib
        do j=1,ns_ibm_r_fib(i)
-            ! gx_ibm_fib data at t^{n-1}
+            ! gx_ibm_fib data (position) at t^{n-1}
           gx_ibmpre_fib(i,j)=gx_ibm_fib(i,j)
           gy_ibmpre_fib(i,j)=gy_ibm_fib(i,j)
-            ! gx_ibm_massive_fib data at t^{n}
+            ! gx_ibm_massive_fib data (position) at t^{n}
           gx_ibm_fib(i,j)=gx_ibm_massive_fib(i,j)
           gy_ibm_fib(i,j)=gy_ibm_massive_fib(i,j)
-            ! gx_ibm_massive_fib data at t^{n}
+            ! gx_ibm_massive_fib data (position) at t^{n}
           gx_ibmo1_fib(i,j)=gx_ibm_massive_fib(i,j)
           gy_ibmo1_fib(i,j)=gy_ibm_massive_fib(i,j)
        end do
@@ -834,8 +858,10 @@ c
        endif
        do isec=1,nsec_ibm
        do j=1,ns_ibm_r_fib(i)
+! velocity at t^{n}
           UIBM1_fib(i,isec,j)=UIBM1in_fib(i,isec,j)
           UIBM2_fib(i,isec,j)=UIBM2in_fib(i,isec,j)
+! force at t^{n}?
           fk_mass1o_fib(i,isec,j)=fk_mass1_fib(i,isec,j)
           fk_mass2o_fib(i,isec,j)=fk_mass2_fib(i,isec,j)
        end do
@@ -943,6 +969,7 @@ c
         end do
         end do
         do j=1,ns_ibm_r_fib(i)
+! position at t^{n+1}
           gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
           gy_ibm_massiveout_fib(i,j)=gy_ibm_massive_fib(i,j)
           if(ndim .gt.2) 

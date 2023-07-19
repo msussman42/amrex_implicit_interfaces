@@ -71,7 +71,7 @@ type lag_type
 end type lag_type
 
 type mesh_type
- INTEGER_T :: PartID
+ INTEGER_T :: part_id
  INTEGER_T :: flag_2D_to_3D
  INTEGER_T :: LS_FROM_SUBROUTINE
  INTEGER_T :: CTML_flag
@@ -187,8 +187,8 @@ INTEGER_T FSI_NPARTS
 INTEGER_T CTML_NPARTS
 INTEGER_T TOTAL_NPARTS
 INTEGER_T im_solid_mapF(MAX_PARTS) ! type: 0..num_materials-1
-INTEGER_T CTML_partid_map(MAX_PARTS)
-INTEGER_T FSI_partid_map(MAX_PARTS)
+INTEGER_T ctml_part_id_map(MAX_PARTS)
+INTEGER_T fsi_part_id_map(MAX_PARTS)
 
 INTEGER_T ctml_n_fib_bodies
 INTEGER_T ctml_max_n_fib_nodes
@@ -222,8 +222,8 @@ INTEGER_T, INTENT(in) :: part_id
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI(part_id)%part_id.ne.part_id) then
+  print *,"FSI(part_id)%part_id.ne.part_id"
   stop
  endif
 
@@ -251,8 +251,8 @@ REAL_T dilated_time
    print *,"part_id invalid"
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -280,7 +280,7 @@ REAL_T dilated_time
 !  
   else if ((probtype.eq.538).or.(probtype.eq.541)) then
 
-   if (FSI(part_id)%PartID.eq.2) then
+   if (FSI(part_id)%part_id.eq.2) then
 
     if (probtype.eq.538) then
      dilated_time=timeB
@@ -396,7 +396,7 @@ REAL_T dilated_time
      print*,"solid displacement: ",FSI(part_id)%solid_displ
      print*,"solid velocity: ",FSI(part_id)%solid_speed
     endif
-   else if (FSI(part_id)%PartID.eq.1) then
+   else if (FSI(part_id)%part_id.eq.1) then
 
     do dir=1,3
      FSI(part_id)%solid_displ(dir)=0.
@@ -627,8 +627,8 @@ INTEGER_T, INTENT(in) :: allocate_intelem
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI(part_id)%part_id.ne.part_id) then
+  print *,"FSI(part_id)%part_id.ne.part_id"
   stop
  endif
 
@@ -1376,8 +1376,8 @@ INTEGER_T :: num_nodes_local
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
 
@@ -1691,8 +1691,8 @@ REAL_T :: opp_edge_data(6)
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
  if (edit_refined_data.eq.0) then
@@ -2182,8 +2182,8 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
  if (h_small.gt.zero) then
@@ -3371,7 +3371,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  endif
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
-  print*,"in allocate: part ID ",FSI_mesh_type%PartID
+  print*,"in allocate: part ID ",FSI_mesh_type%part_id
  endif
 
  view_refined=1
@@ -3434,8 +3434,8 @@ INTEGER_T :: ctml_part_id
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -3444,7 +3444,7 @@ INTEGER_T :: ctml_part_id
    stop
   endif
 
-  ctml_part_id=CTML_partid_map(part_id)
+  ctml_part_id=ctml_part_id_map(part_id)
 
   if ((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)) then
@@ -3633,7 +3633,25 @@ end subroutine CTML_init_sci_node
 
 ! called from overall_solid_init
 ! overall_solid_init is called from CLSVOF_ReadHeader
-! CLSVOF_ReadHeader is called from fort_headermsg when FSI_operation==0.
+! CLSVOF_ReadHeader is called from fort_headermsg when FSI_operation.eq.0.
+! fort_headermsg, when FSI_operation.eq.0, is called from
+! NavierStokes::ns_header_msg_level
+! ns_header_msg_level is called from:
+!   NavierStokes::FSI_make_distance (FSI_operation.eq.2 or 3)
+!   NavierStokes::post_restart (FSI_operation.eq.0)
+!   NavierStokes::initData (FSI_operation.eq.0)
+!   NavierStokes::nonlinear_advection (FSI_operation.eq.4 or 1)
+! SUMMARY (typical time step):
+!   0. for k=0,1,2,3,...
+!   1. NavierStokes::nonlinear_advection
+!   2. CLSMOF advection
+!   3. copy Eulerian force to Lagrangian
+!   4. Lagrangian (structure) evolution
+!   5. copy Lagrangian velocity to Eulerian.
+!   6. viscous solve
+!   7. pressure solve
+!   8. velocity and pressure at t^{n+1}(k) differ too much from
+!      t^{n+1}(k-1)? if yes, go back to step 0.
 subroutine CTML_init_sci(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
 use global_utility_module
@@ -3664,8 +3682,8 @@ INTEGER_T :: local_elements
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -3674,7 +3692,7 @@ INTEGER_T :: local_elements
     stop
   endif
 
-  ctml_part_id=CTML_partid_map(part_id)
+  ctml_part_id=ctml_part_id_map(part_id)
 
   if ((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)) then
@@ -3686,10 +3704,10 @@ INTEGER_T :: local_elements
 #ifdef MVAHABFSI 
     ! declared in: CTMLFSI.F90
    call CTML_GET_POS_VEL_FORCE_WT( &
-    ctml_fib_pst, &
-    ctml_fib_vel, &
-    ctml_fib_frc, &
-    ctml_fib_mass, &
+    ctml_fib_pst, & ! =coord_fib
+    ctml_fib_vel, & ! =vel_fib
+    ctml_fib_frc, & ! =force_fib
+    ctml_fib_mass,& ! =ds_fib
     ctml_n_fib_bodies, &
     ctml_max_n_fib_nodes, &
     ctml_part_id)
@@ -3864,8 +3882,8 @@ REAL_T :: radradblob1,radradblob2
    print *,"part_id invalid"
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -3948,7 +3966,7 @@ REAL_T :: radradblob1,radradblob2
              (probtype.eq.541)) then
 
        ! MARK:
-       ! IF probtype=538 and partID=2, then add 0.01d0 in order to shift the
+       ! IF probtype=538 and part_id=2, then add 0.01d0 in order to shift the
        ! needle all the way in the domain (newxxblob1(3)=0.01d0)
        ! this shift will be taken into account in the line that has:
        ! "xfoot(3)=xfoot(3)+0.01d0" (get_foot_from_target, get_target_from_foot)
@@ -3960,13 +3978,13 @@ REAL_T :: radradblob1,radradblob2
      newxxblob1(3)=0.0
 
      if ((probtype.eq.538).or.(probtype.eq.541)) then
-      if (FSI(part_id)%partID.eq.2) then !want the whole needle in the domain.
+      if (FSI(part_id)%part_id.eq.2) then !want the whole needle in the domain.
        if ((AMREX_SPACEDIM.eq.3).or.(probtype.eq.538)) then
         newxxblob1(3)=0.01d0
        else if ((AMREX_SPACEDIM.eq.2).and.(probtype.eq.541)) then
         newxxblob1(3)=0.0
        endif
-      else if (FSI(part_id)%partID.eq.1) then
+      else if (FSI(part_id)%part_id.eq.1) then
        newxxblob1(3)=0.0
       else
        print *,"part id invalid"
@@ -3994,7 +4012,7 @@ REAL_T :: radradblob1,radradblob2
     dampingpaddle=0.0
 
      ! choice here regardless of axis_dir
-    if (FSI(part_id)%partID.eq.1) then
+    if (FSI(part_id)%part_id.eq.1) then
 
       if (probtype.eq.5501) then
        dwave="rough.cas"
@@ -4004,7 +4022,7 @@ REAL_T :: radradblob1,radradblob2
        dwave="injectorgeom.dat"
       endif
 
-    else if (FSI(part_id)%partID.eq.2) then
+    else if (FSI(part_id)%part_id.eq.2) then
       dwave="injectorgeom_needle.dat"
     else
       print *,"part id invalid"
@@ -4164,8 +4182,8 @@ INTEGER_T localElem(4)
    print *,"part_id invalid"
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -4219,13 +4237,13 @@ INTEGER_T localElem(4)
    denpaddle=one
    dampingpaddle=zero
 
-   if (FSI(part_id)%partID.eq.1 ) then
+   if (FSI(part_id)%part_id.eq.1 ) then
 
     dwave="foreWing.sci"
     newxxblob1(1)=0.0  ! 1st wing at a "default" location.
-    print *,"init_flapping partID=1"
+    print *,"init_flapping part_id=1"
 
-   else if (FSI(part_id)%partID.eq.2) then
+   else if (FSI(part_id)%part_id.eq.2) then
 
     if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
      print *,"part id invalid"
@@ -4236,7 +4254,7 @@ INTEGER_T localElem(4)
      ! position 2nd wing in "default" location too.
      ! kinematics will shift wing in the x direction.
      newxxblob1(1)=0.0  
-     print *,"init_flapping partID=2"
+     print *,"init_flapping part_id=2"
     else
      print *,"axis_dir invalid"
      stop
@@ -4412,8 +4430,8 @@ INTEGER_T, allocatable :: raw_elements(:,:)
    print *,"part_id invalid"
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -4793,8 +4811,8 @@ INTEGER_T :: stand_alone_flag
    print *,"part_id invalid"
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -5027,8 +5045,8 @@ INTEGER_T :: orig_elements,local_elements
    print *,"part_id invalid"
    stop
   endif
-  if (FSI(part_id)%partID.ne.part_id) then
-   print *,"FSI(part_id)%partID.ne.part_id"
+  if (FSI(part_id)%part_id.ne.part_id) then
+   print *,"FSI(part_id)%part_id.ne.part_id"
    stop
   endif
 
@@ -7647,8 +7665,8 @@ REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI(part_id)%part_id.ne.part_id) then
+  print *,"FSI(part_id)%part_id.ne.part_id"
   stop
  endif
 
@@ -7755,8 +7773,8 @@ INTEGER_T :: fsi_part_id
   print *,"ioproc invalid"
   stop
  endif
- ctml_part_id=CTML_partid_map(part_id)
- fsi_part_id=FSI_partid_map(part_id)
+ ctml_part_id=ctml_part_id_map(part_id)
+ fsi_part_id=fsi_part_id_map(part_id)
 
  if (((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)).or. &
@@ -8075,8 +8093,8 @@ REAL_T, dimension(3) :: velparm
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
  if (time.ge.zero) then
@@ -8207,8 +8225,8 @@ REAL_T, dimension(3) :: velparm
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
  if (time.ge.zero) then
@@ -8390,8 +8408,8 @@ REAL_T, dimension(3,3) :: xnode ! (ipoint,dir)
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
  if (time.ge.zero) then
@@ -8498,8 +8516,8 @@ INTEGER_T :: local_normal_invert
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
  if (time.ge.zero) then
@@ -8653,8 +8671,8 @@ INTEGER_T :: local_normal_invert
   print *,"part_id invalid"
   stop
  endif
- if (FSI_mesh_type%partID.ne.part_id) then
-  print *,"FSI_mesh_type%partID.ne.part_id"
+ if (FSI_mesh_type%part_id.ne.part_id) then
+  print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
  if (time.ge.zero) then
@@ -8750,8 +8768,8 @@ REAL_T :: aa,bb,cc
   print *,"part_id invalid"
   stop
  endif
- if (FSI(part_id)%partID.ne.part_id) then
-  print *,"FSI(part_id)%partID.ne.part_id"
+ if (FSI(part_id)%part_id.ne.part_id) then
+  print *,"FSI(part_id)%part_id.ne.part_id"
   stop
  endif
 
@@ -8787,7 +8805,7 @@ REAL_T :: aa,bb,cc
 return
 end subroutine sciarea
 
-! called from fort_headermsg when FSI_operation==4 and FSI_sub_operation==0
+! called from fort_headermsg when FSI_operation.eq.4 and FSI_sub_operation.eq.0
 ! isout==1 => verbose
 subroutine CLSVOF_clear_lag_data(ioproc,isout)
 use global_utility_module
@@ -8821,8 +8839,8 @@ INTEGER_T :: dir,inode,num_nodes
 
   do part_id=1,TOTAL_NPARTS
 
-   ctml_part_id=CTML_partid_map(part_id)
-   fsi_part_id=FSI_partid_map(part_id)
+   ctml_part_id=ctml_part_id_map(part_id)
+   fsi_part_id=fsi_part_id_map(part_id)
 
    if ((ctml_part_id.gt.0).or. &
        (fsi_part_id.gt.0)) then
@@ -8846,7 +8864,9 @@ INTEGER_T :: dir,inode,num_nodes
     endif
 
     num_nodes=FSI(part_id)%NumNodes
-    if (num_nodes.le.0) then
+    if (num_nodes.gt.0) then
+     !do nothing
+    else
      print *,"num_nodes invalid"
      stop
     endif
@@ -8883,10 +8903,10 @@ return
 end subroutine CLSVOF_clear_lag_data
 
 
-! called from fort_headermsg when FSI_operation==4 and 
-! FSI_sub_operation==2
+! called from fort_headermsg when FSI_operation.eq.4 and 
+! FSI_sub_operation.eq.2
 ! isout==1 => verbose
-! NOTE: headermsg when FSI_operation==4 and FSI_sub_operation==1
+! NOTE: headermsg when FSI_operation.eq.4 and FSI_sub_operation.eq.1
 ! (which calls CLSVOF_Copy_To_LAG)
 ! is called only for those blocks associated with a given node.
 ! It is the job of this routine to insure that all nodes have all
@@ -8919,8 +8939,8 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 
   do part_id=1,TOTAL_NPARTS
 
-   ctml_part_id=CTML_partid_map(part_id)
-   fsi_part_id=FSI_partid_map(part_id)
+   ctml_part_id=ctml_part_id_map(part_id)
+   fsi_part_id=fsi_part_id_map(part_id)
 
    if ((ctml_part_id.gt.0).or. &
        (fsi_part_id.gt.0)) then
@@ -9231,7 +9251,7 @@ INTEGER_T, PARAMETER :: aux_unit_id=14
   aux_ncells=contain_aux(auxcomp)%aux_ncells_max_side
 
   aux_FSI(auxcomp)%IntElemDim=3
-  aux_FSI(auxcomp)%partID=auxcomp
+  aux_FSI(auxcomp)%part_id=auxcomp
   aux_FSI(auxcomp)%flag_2D_to_3D=0
 
    ! The normals in Cody's vtk files point out of the object (as seen
@@ -9574,7 +9594,7 @@ INTEGER_T, PARAMETER :: aux_unit_id=14
 return
 end subroutine CLSVOF_Read_aux_Header
 
-! called from fort_headermsg when FSI_operation==0
+! called from fort_headermsg when FSI_operation.eq.0
 ! fort_headermsg is called from NavierStokes::ns_header_msg_level
 ! ns_header_msg_level is called from:
 !   NavierStokes::FSI_make_distance (op=2,3)
@@ -9615,7 +9635,7 @@ subroutine CLSVOF_ReadHeader( &
   FSI_refine_factor, &
   FSI_bounding_box_ngrow, &
   nparts_in, &
-  im_solid_map_in, &  ! im_part=im_solid_map_in(partid)+1
+  im_solid_map_in, &  ! im_part=im_solid_map_in(part_id)+1
   h_small, &
   dx_max_level, &
   CTML_FSI_INIT, &
@@ -9649,10 +9669,10 @@ REAL_T, INTENT(inout) ::  &
 REAL_T, INTENT(inout) :: FSI_input_mass_list(FSI_input_max_num_nodes)
 REAL_T, INTENT(inout) :: FSI_input_temperature_list(FSI_input_max_num_nodes)
 
-INTEGER_T, INTENT(in) :: FSI_output_max_num_nodes
-INTEGER_T, INTENT(in) :: FSI_output_max_num_elements
-INTEGER_T, INTENT(in) :: FSI_output_num_nodes
-INTEGER_T, INTENT(in) :: FSI_output_num_elements
+INTEGER_T, INTENT(inout) :: FSI_output_max_num_nodes
+INTEGER_T, INTENT(inout) :: FSI_output_max_num_elements
+INTEGER_T, INTENT(inout) :: FSI_output_num_nodes
+INTEGER_T, INTENT(inout) :: FSI_output_num_elements
 REAL_T, INTENT(inout) :: FSI_output_node_list(3*FSI_output_max_num_nodes)
 INTEGER_T, INTENT(inout) :: &
         FSI_output_element_list(4*FSI_output_max_num_elements)
@@ -9716,9 +9736,9 @@ INTEGER_T idir,ielem,inode
 
     if (CTML_FSI_mat(im_part).eq.1) then 
      ctml_part_id=ctml_part_id+1
-     CTML_partid_map(part_id)=ctml_part_id
+     ctml_part_id_map(part_id)=ctml_part_id
     else if (CTML_FSI_mat(im_part).eq.0) then
-     CTML_partid_map(part_id)=0
+     ctml_part_id_map(part_id)=0
     else
      print *,"CTML_FSI_mat(im_part) invalid"
      stop
@@ -9728,10 +9748,10 @@ INTEGER_T idir,ielem,inode
         (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
         (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
      fsi_part_id=fsi_part_id+1
-     FSI_partid_map(part_id)=fsi_part_id
+     fsi_part_id_map(part_id)=fsi_part_id
     else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90).or. & 
              (FSI_flag(im_part).eq.FSI_SHOELE_CTML)) then 
-     FSI_partid_map(part_id)=0
+     fsi_part_id_map(part_id)=0
     else
      print *,"FSI_flag(im_part) invalid in CLSVOF_ReadHeader"
      print *,"part_id,im_part,FSI_flag(im_part) ", &
@@ -9846,6 +9866,12 @@ INTEGER_T idir,ielem,inode
      if (CTML_FSI_mat(im_part).eq.1) then 
 
       ctml_part_id=ctml_part_id+1
+      if (ctml_part_id.eq.ctml_part_id_map(part_id)) then
+       !do nothing
+      else
+       print *,"ctml_part_id invalid"
+       stop
+      endif
 
       FSI(part_id)%deforming_part=1
       FSI(part_id)%CTML_flag=1
@@ -9958,10 +9984,10 @@ INTEGER_T idir,ielem,inode
 
      im_part=im_solid_mapF(part_id)+1
 
-     if ((FSI_partid_map(part_id).gt.0).or. &
-         (CTML_partid_map(part_id).gt.0)) then
+     if ((fsi_part_id_map(part_id).gt.0).or. &
+         (ctml_part_id_map(part_id).gt.0)) then
   
-      FSI(part_id)%PartID=part_id
+      FSI(part_id)%part_id=part_id
       FSI(part_id)%LS_FROM_SUBROUTINE=0
 
       if ((FSI_refine_factor(im_part).ge.0).and. &
@@ -9982,9 +10008,14 @@ INTEGER_T idir,ielem,inode
       ! ifirst=1 (=>read from data files in 
       !           initinjector, initflapping, init_gingerbread2D,
       !           init_helix, or init_from_cas)
-      ! if CTML materials exists, then overall_solid_init will call
-      ! CTML_init_sci and CTML_init_sci will call
-      ! CTML_GET_POS_VEL_FORCE_WT (declared in CTMLFSI.F90)
+      ! if CTML materials exists, then,
+      !   overall_solid_init calls CTML_init_sci 
+      !   CTML_init_sci calls CTML_GET_POS_VEL_FORCE_WT 
+      !   (declared in CTMLFSI.F90)
+      ! ctml_fib_pst =coord_fib
+      ! ctml_fib_vel =vel_fib
+      ! ctml_fib_frc =force_fib
+      ! ctml_fib_mass=ds_fib
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       ! ReadHeader
@@ -9995,11 +10026,11 @@ INTEGER_T idir,ielem,inode
        FSI(part_id),part_id,TOTAL_NPARTS, &
        ioproc,isout,h_small)
 
-     else if ((FSI_partid_map(part_id).eq.0).and. &
-              (CTML_partid_map(part_id).eq.0)) then
+     else if ((fsi_part_id_map(part_id).eq.0).and. &
+              (ctml_part_id_map(part_id).eq.0)) then
       ! do nothing
      else
-      print *,"FSI_partid_map or CTML_partid_map invalid"
+      print *,"fsi_part_id_map or ctml_part_id_map invalid"
       stop
      endif
 
@@ -10018,8 +10049,14 @@ INTEGER_T idir,ielem,inode
     im_part=im_solid_mapF(part_id)+1
     if (CTML_FSI_mat(im_part).eq.1) then 
      ctml_part_id=ctml_part_id+1
-     if (CTML_partid_map(part_id).eq.ctml_part_id) then
+     if (ctml_part_id_map(part_id).eq.ctml_part_id) then
       if (im_part.eq.im_critical+1) then
+
+       FSI_output_max_num_nodes=max_num_nodes_list(im_part)
+       FSI_output_max_num_elements=max_num_elements_list(im_part)
+       FSI_output_num_nodes=num_nodes_list(im_part)
+       FSI_output_num_elements=num_elements_list(im_part)
+
        do inode=1,ctml_max_n_fib_nodes
 
         do idir=1,NCOMP_FORCE_STRESS
@@ -10041,11 +10078,23 @@ INTEGER_T idir,ielem,inode
         FSI_output_mass_list(inode)=ctml_fib_mass(ctml_part_id,inode)
         FSI_output_temperature_list(inode)=293.0d0
        enddo ! inode=1,ctml_max_n_fib_nodes 
-       do ielem=1,ctml_max_n_fib_nodes
-        do inode=1,4
-         FSI_output_element_list(4*(ielem-1)+inode)=ielem
+
+       if (FSI_output_max_num_elements.eq. &
+           ctml_max_n_fib_nodes-1) then
+        do ielem=1,ctml_max_n_fib_nodes-1
+         do inode=1,AMREX_SPACEDIM
+          FSI_output_element_list(4*(ielem-1)+inode)=ielem+inode-1
+         enddo
         enddo
-       enddo
+       else
+        print *,"mismatch:"
+        print *,"im_part=",im_part
+        print *,"FSI_output_max_num_elements=",  &
+          FSI_output_max_num_elements
+        print *,"ctml_max_n_fib_nodes ", &
+          ctml_max_n_fib_nodes
+        stop
+       endif
       else if ((im_part.ge.1).and.(im_part.le.num_materials)) then
        ! do nothing
       else
@@ -10053,7 +10102,7 @@ INTEGER_T idir,ielem,inode
        stop
       endif
      else
-      print *,"CTML_partid_map(part_id) invalid"
+      print *,"ctml_part_id_map(part_id) invalid"
       stop
      endif
     else if (CTML_FSI_mat(im_part).eq.0) then
@@ -10549,8 +10598,8 @@ IMPLICIT NONE
   stop
  endif
 
- ctml_part_id=CTML_partid_map(part_id)
- fsi_part_id=FSI_partid_map(part_id)
+ ctml_part_id=ctml_part_id_map(part_id)
+ fsi_part_id=fsi_part_id_map(part_id)
 
  if (((ctml_part_id.ge.1).and. &
       (ctml_part_id.le.CTML_NPARTS)).or. &
@@ -11381,8 +11430,8 @@ IMPLICIT NONE
    ctml_part_id=0
    fsi_part_id=part_id
   else if (lev77.ge.1) then
-   ctml_part_id=CTML_partid_map(part_id)
-   fsi_part_id=FSI_partid_map(part_id)
+   ctml_part_id=ctml_part_id_map(part_id)
+   fsi_part_id=fsi_part_id_map(part_id)
   else
    print *,"lev77 invalid"
    stop
@@ -12226,6 +12275,10 @@ IMPLICIT NONE
             ! do nothing
            else
             print *,"expecting doubly wetted"
+            print *,"ctml_part_id=",ctml_part_id
+            print *,"ielem=",ielem
+            print *,"FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem)=", &
+              FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem)
             stop
            endif
           else if (ctml_part_id.eq.0) then
@@ -13316,8 +13369,8 @@ IMPLICIT NONE
 return
 end subroutine CLSVOF_InitBox
 
-        ! called from fort_headermsg when FSI_operation==4 and
-        ! FSI_sub_operation==1.
+        ! called from fort_headermsg when FSI_operation.eq.4 and
+        ! FSI_sub_operation.eq.1.
         ! This routine is called only for those blocks associated with a 
         ! given node.
         ! CLSVOF_sync_lag_data must be called later in order to synchronize
@@ -13494,8 +13547,8 @@ end subroutine CLSVOF_InitBox
        endif
       enddo ! dir=1..3
 
-      ctml_part_id=CTML_partid_map(part_id)
-      fsi_part_id=FSI_partid_map(part_id)
+      ctml_part_id=ctml_part_id_map(part_id)
+      fsi_part_id=fsi_part_id_map(part_id)
 
       if (((ctml_part_id.ge.1).and. &
            (ctml_part_id.le.CTML_NPARTS)).or. &
@@ -14106,8 +14159,8 @@ end subroutine CLSVOF_InitBox
        print *,"part_id invalid"
        stop
       endif
-      if (FSI(part_id)%partID.ne.part_id) then
-       print *,"FSI(part_id)%partID.ne.part_id"
+      if (FSI(part_id)%part_id.ne.part_id) then
+       print *,"FSI(part_id)%part_id.ne.part_id"
        stop
       endif
 
@@ -14454,8 +14507,8 @@ end subroutine CLSVOF_InitBox
        print *,"part_id invalid"
        stop
       endif
-      if (FSI_mesh_type%partID.ne.part_id) then
-       print *,"FSI_mesh_type%partID.ne.part_id"
+      if (FSI_mesh_type%part_id.ne.part_id) then
+       print *,"FSI_mesh_type%part_id.ne.part_id"
        stop
       endif
 
@@ -15154,7 +15207,7 @@ end subroutine find_grid_bounding_box_node
 ! ns_header_msg_level is called from NavierStokes::nonlinear_advection
 ! fort_headermsg is called from NavierStokes::ns_header_msg_level
 ! CLSVOF_ReadNodes is called from fort_headermsg 
-! (FSI_operation=1, FSI_sub_operation=0)
+! (FSI_operation.eq.1, FSI_sub_operation.eq.0)
 ! isout==1 => verbose
 subroutine CLSVOF_ReadNodes( &
   im_critical, &
@@ -15296,7 +15349,7 @@ INTEGER_T :: idir,ielem,im_part
      im_part=im_solid_mapF(part_id)+1
      if (CTML_FSI_mat(im_part).eq.1) then 
       ctml_part_id=ctml_part_id+1
-      if (CTML_partid_map(part_id).eq.ctml_part_id) then
+      if (ctml_part_id_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.-im_critical-1) then
         do inode=1,ctml_max_n_fib_nodes
          do idir=1,AMREX_SPACEDIM
@@ -15319,7 +15372,7 @@ INTEGER_T :: idir,ielem,im_part
         stop
        endif
       else
-       print *,"CTML_partid_map(part_id) invalid"
+       print *,"ctml_part_id_map(part_id) invalid"
        stop
       endif
      else if (CTML_FSI_mat(im_part).eq.0) then
@@ -15337,7 +15390,7 @@ INTEGER_T :: idir,ielem,im_part
 
      do part_id=1,TOTAL_NPARTS
 
-      ctml_part_id=CTML_partid_map(part_id)
+      ctml_part_id=ctml_part_id_map(part_id)
 
       if ((ctml_part_id.ge.1).and. &
           (ctml_part_id.le.CTML_NPARTS)) then
@@ -15366,6 +15419,9 @@ INTEGER_T :: idir,ielem,im_part
         stop
        endif
 
+       !coord_fib_prev=ctml_fib_pst_prev
+       !coord_fib=ctml_fib_pst_prev
+       !vel_fib_halftime_prev=ctml_fib_vel_halftime_prev
        inode_crit=0 ! node index of first inactive node.
        call CTML_PUT_PREV_POS_VEL_FORCE_WT( &
          ctml_fib_pst_prev, &
@@ -15431,10 +15487,10 @@ INTEGER_T :: idir,ielem,im_part
 
     do part_id=1,TOTAL_NPARTS
 
-     FSI(part_id)%PartID=part_id
+     FSI(part_id)%part_id=part_id
 
-     ctml_part_id=CTML_partid_map(part_id)
-     fsi_part_id=FSI_partid_map(part_id)
+     ctml_part_id=ctml_part_id_map(part_id)
+     fsi_part_id=fsi_part_id_map(part_id)
 
      if (((ctml_part_id.ge.1).and. &
           (ctml_part_id.le.CTML_NPARTS)).or. &
@@ -15572,7 +15628,7 @@ INTEGER_T :: idir,ielem,im_part
      im_part=im_solid_mapF(part_id)+1
      if (CTML_FSI_mat(im_part).eq.1) then 
       ctml_part_id=ctml_part_id+1
-      if (CTML_partid_map(part_id).eq.ctml_part_id) then
+      if (ctml_part_id_map(part_id).eq.ctml_part_id) then
        if (im_part.eq.im_critical+1) then
         do inode=1,ctml_max_n_fib_nodes
 
@@ -15616,7 +15672,7 @@ INTEGER_T :: idir,ielem,im_part
         stop
        endif
       else
-       print *,"CTML_partid_map(part_id) invalid"
+       print *,"ctml_part_id_map(part_id) invalid"
        stop
       endif
      else if (CTML_FSI_mat(im_part).eq.0) then
