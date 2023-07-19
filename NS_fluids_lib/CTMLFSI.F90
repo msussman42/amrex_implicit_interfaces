@@ -264,10 +264,14 @@ stop
 
        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
       subroutine CTML_PUT_PREV_POS_VEL_FORCE_WT(&
-       fib_pst,& !caller: ctml_fib_pst_prev
+       fib_pst,& !caller: ctml_fib_pst_prev; coord_fib(_prev)=fib_pst
+        !vel_fib_halftime_prev=fib_vel_halftime
        fib_vel_halftime,& !caller: ctml_fib_vel_halftime_prev
+        !vel_fib(_prev)=fib_vel
        fib_vel,& !caller: ctml_fib_vel_prev
+        !force_fib(_prev)=fib_frc
        fib_frc,& !caller: ctml_fib_frc_prev
+        !ds_fib(_prev)=fib_wt
        fib_wt,&  !caller: ctml_fib_mass_prev
        n_fib_bodies,&
        max_n_fib_nodes,&
@@ -435,7 +439,7 @@ stop
       return
       end subroutine CTML_SET_VELOCITY
 
-
+       ! CTML_SOLVE_SOLID is called from CLSVOF_ReadNodes
       subroutine CTML_SOLVE_SOLID(&
        cur_time,& ! t^{n+1}
        dt,&

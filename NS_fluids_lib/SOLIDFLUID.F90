@@ -221,10 +221,10 @@
       REAL_T, INTENT(inout) :: &
         FSI_input_temperature_list(FSI_input_max_num_nodes)
 
-      INTEGER_T, INTENT(in) :: FSI_output_max_num_nodes
-      INTEGER_T, INTENT(in) :: FSI_output_max_num_elements
-      INTEGER_T, INTENT(in) :: FSI_output_num_nodes
-      INTEGER_T, INTENT(in) :: FSI_output_num_elements
+      INTEGER_T, INTENT(inout) :: FSI_output_max_num_nodes
+      INTEGER_T, INTENT(inout) :: FSI_output_max_num_elements
+      INTEGER_T, INTENT(inout) :: FSI_output_num_nodes
+      INTEGER_T, INTENT(inout) :: FSI_output_num_elements
       INTEGER_T, INTENT(inout) :: FSI_output_nodes_per_element
       REAL_T, INTENT(inout) :: FSI_output_FSI_dt
       REAL_T, INTENT(inout) :: FSI_output_FSI_time
