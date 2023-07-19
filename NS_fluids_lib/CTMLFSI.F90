@@ -42,12 +42,12 @@ stop
       use grid_arrays
 
       IMPLICIT NONE
-      REAL_T dx_max_level(SDIM)
-      REAL_T prob_lo(SDIM)
-      REAL_T prob_hi(SDIM)
-      INTEGER_T io_proc
-      INTEGER_T n_fib_bodies
-      INTEGER_T max_n_fib_nodes
+      REAL_T, INTENT(in) :: dx_max_level(SDIM)
+      REAL_T, INTENT(in) :: prob_lo(SDIM)
+      REAL_T, INTENT(in) :: prob_hi(SDIM)
+      INTEGER_T, INTENT(in) :: io_proc
+      INTEGER_T, INTENT(out) :: n_fib_bodies
+      INTEGER_T, INTENT(out) :: max_n_fib_nodes
       
       INTEGER_T n_Read_in,i,dir
       logical the_boss
@@ -165,8 +165,8 @@ stop
       use dummy_module
   
       IMPLICIT NONE
-      INTEGER_T n_fib_bodies
-      INTEGER_T n_fib_nodes(n_fib_bodies)
+      INTEGER_T, INTENT(in) :: n_fib_bodies
+      INTEGER_T, INTENT(out) :: n_fib_nodes(n_fib_bodies)
 
       integer i
       do i=1,nrIBM_fib

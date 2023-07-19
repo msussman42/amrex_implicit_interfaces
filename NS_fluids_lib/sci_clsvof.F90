@@ -9790,15 +9790,21 @@ INTEGER_T idir,ielem,inode
    if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
     if (CTML_FSI_INIT.eq.0) then
-     call CTML_INIT_SOLID(dx_max_level, &
-      problo_ref,probhi_ref,ioproc, &
-      ctml_n_fib_bodies,ctml_max_n_fib_nodes)
+       ! CTML_INIT_SOLID is declared in CTMLFSI.F90
+       ! vel_fib and force_fib are initialized to 0.0d0
+     call CTML_INIT_SOLID( &
+      dx_max_level, &
+      problo_ref,probhi_ref, &
+      ioproc, &
+      ctml_n_fib_bodies, &
+      ctml_max_n_fib_nodes)
      if (ctml_n_fib_bodies.eq.CTML_NPARTS) then
       allocate(ctml_n_fib_nodes(ctml_n_fib_bodies))
       allocate(ctml_n_fib_active_nodes(ctml_n_fib_bodies))
+       ! CTML_GET_FIB_NODE_COUNT is declared in CTMLFSI.F90
       call CTML_GET_FIB_NODE_COUNT( &
-       ctml_n_fib_bodies, &
-       ctml_n_fib_nodes)
+       ctml_n_fib_bodies, & !intent(in)
+       ctml_n_fib_nodes) ! intent(out)
 
       allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
              AMREX_SPACEDIM))
@@ -9821,7 +9827,8 @@ INTEGER_T idir,ielem,inode
       allocate(ctml_fib_mass_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
 
      else
-      print *,"ctml_n_fib_bodies out of range"
+      print *,"ctml_n_fib_bodies.eq.CTML_NPARTS failed: ", &
+         ctml_n_fib_bodies,CTML_NPARTS
       stop
      endif
     else if (CTML_FSI_INIT.eq.1) then
@@ -9831,22 +9838,37 @@ INTEGER_T idir,ielem,inode
      stop
     endif
 
+    ctml_part_id=0
+
     do part_id=1,TOTAL_NPARTS
 
      im_part=im_solid_mapF(part_id)+1
      if (CTML_FSI_mat(im_part).eq.1) then 
+
+      ctml_part_id=ctml_part_id+1
+
       FSI(part_id)%deforming_part=1
       FSI(part_id)%CTML_flag=1
+
+      num_nodes_list(im_part)=ctml_n_fib_nodes(ctml_part_id)
+      num_elements_list(im_part)=ctml_n_fib_nodes(ctml_part_id)-1
+
       if (max_num_nodes_list(im_part).eq.ctml_max_n_fib_nodes) then
        ! do nothing
       else
-       print *,"max_num_nodes_list(im_part) invalid"
+       print *,"max_num_nodes_list(im_part).eq.ctml_max_n_fib_nodes failed: "
+       print *,"im_part=",im_part
+       print *,"max_num_nodes_list(im_part)=",max_num_nodes_list(im_part)
+       print *,"ctml_max_n_fib_nodes=",ctml_max_n_fib_nodes
        stop
       endif
       if (max_num_elements_list(im_part).eq.ctml_max_n_fib_nodes-1) then
        ! do nothing
       else
-       print *,"max_num_elements_list(im_part) invalid"
+       print *,"max_num_elements_list(im_part).eq.ctml_max_n_fib_nodes-1 fail"
+       print *,"im_part=",im_part
+       print *,"max_num_elements_list(im_part)=",max_num_elements_list(im_part)
+       print *,"ctml_max_n_fib_nodes=",ctml_max_n_fib_nodes
        stop
       endif
      else if (CTML_FSI_mat(im_part).eq.0) then
