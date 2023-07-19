@@ -23,7 +23,7 @@ extern "C" {
   int* max_num_nodes_list,
   int* max_num_elements_list);
 
-};
+}
 
 }/* namespace amrex */
 

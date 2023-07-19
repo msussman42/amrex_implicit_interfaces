@@ -7791,7 +7791,7 @@ stop
       INTEGER_T im_solid
       INTEGER_T im_solid_valid
       INTEGER_T partid_solid
-      INTEGER_T im_solid_primary
+      INTEGER_T local_im_solid_primary
       INTEGER_T ispec
       REAL_T massfrac_parm(num_species_var+1)
       INTEGER_T local_tessellate
@@ -8084,7 +8084,7 @@ stop
               else if (im_solid_micro.eq.0) then
                ! do nothing
               else
-               print *,"im_solid_micro invalid"
+               print *,"im_solid_micro invalid: ",im_solid_micro
                stop
               endif 
               im_solid_micro=microlayer_substrate(im_opp)
@@ -8102,7 +8102,7 @@ stop
               else if (im_solid_micro.eq.0) then
                ! do nothing
               else
-               print *,"im_solid_micro invalid"
+               print *,"im_solid_micro invalid: ",im_solid_micro
                stop
               endif 
              endif
@@ -9358,12 +9358,12 @@ stop
            volmat(im)=vofC(D_DECL(icell,jcell,kcell),im)
           enddo
            ! voltotal_solid=sum F_solid
-           ! im_solid_primary=argmax_im F_solid
+           ! local_im_solid_primary=argmax_im F_solid
            ! combine_solid_VOF is declared in GLOBALUTIL.F90
           call combine_solid_VOF( &
             volmat, & !intent(in)
             voltotal_solid, & ! intent(out)
-            im_solid_primary) ! intent(out)
+            local_im_solid_primary) ! intent(out)
 
           if (is_clamped_face.ge.1) then !interior "wall"
 
@@ -9373,19 +9373,19 @@ stop
 
            if ((voltotal_solid.ge.one-0.01D0).and. &
                (voltotal_solid.le.one+VOFTOL)) then
-            if ((im_solid_primary.ge.1).and. &
-                (im_solid_primary.le.num_materials)) then
+            if ((local_im_solid_primary.ge.1).and. &
+                (local_im_solid_primary.le.num_materials)) then
              if (wall_flag_face.eq.0) then
-              wall_flag_face=im_solid_primary 
+              wall_flag_face=local_im_solid_primary 
                ! wallVOF_face should be 0 or 1 since the 
                ! reconstruction on input to fort_init_physics_vars
                ! "rasterizes" the "rigid" materials.
-              wallVOF_face=volmat(im_solid_primary)
+              wallVOF_face=volmat(local_im_solid_primary)
              else if ((wall_flag_face.ge.1).and. &
                       (wall_flag_face.le.num_materials)) then
-              if (volmat(im_solid_primary).gt.wallVOF_face) then
-               wall_flag_face=im_solid_primary
-               wallVOF_face=volmat(im_solid_primary)
+              if (volmat(local_im_solid_primary).gt.wallVOF_face) then
+               wall_flag_face=local_im_solid_primary
+               wallVOF_face=volmat(local_im_solid_primary)
               endif
              else if (wall_flag_face.eq.num_materials+1) then
               ! do nothing
@@ -9394,14 +9394,14 @@ stop
               stop
              endif
             else
-             print *,"im_solid_primary invalid"
+             print *,"local_im_solid_primary invalid: ",local_im_solid_primary
              stop
             endif
            else if ((voltotal_solid.le.one-0.01D0).and. &
                     (voltotal_solid.ge.-VOFTOL)) then
             ! do nothing
            else
-            print *,"voltotal_solid invalid"
+            print *,"voltotal_solid invalid: ",voltotal_solid
             stop
            endif
 
@@ -11085,7 +11085,8 @@ stop
       INTEGER_T velcomp
       INTEGER_T partid
       INTEGER_T partid_ghost
-      INTEGER_T nparts_temp,im_solid
+      INTEGER_T nparts_temp
+      INTEGER_T im_solid
       INTEGER_T cell_velocity_override
       
       REAL_T xclamped(SDIM)
@@ -11928,7 +11929,7 @@ stop
             stop
            endif
           else
-           print *,"is_lag_part invalid"
+           print *,"is_lag_part invalid: ",is_lag_part(im)
            stop
           endif
 
@@ -11962,7 +11963,7 @@ stop
          else if ((partid.ge.0).and.(partid.lt.nparts)) then
           partid_ghost=partid
          else
-          print *,"partid invalid"
+          print *,"partid invalid: ",partid
           stop
          endif
  
@@ -13156,12 +13157,12 @@ stop
 
       INTEGER_T :: homogeneous_rigid_velocity
 
-      INTEGER_T, parameter :: DEBUG_PRESCRIBED=0
-      REAL_T DEBUG_PRESCRIBED_VEL_TOT
-      REAL_T DEBUG_PRESCRIBED_VEL_DEN
+      INTEGER_T, parameter :: DEBUG_SOLID=0
+      REAL_T DEBUG_SOLID_VEL_TOT
+      REAL_T DEBUG_SOLID_VEL_DEN
 
-      DEBUG_PRESCRIBED_VEL_TOT=zero
-      DEBUG_PRESCRIBED_VEL_DEN=zero
+      DEBUG_SOLID_VEL_TOT=zero
+      DEBUG_SOLID_VEL_DEN=zero
 
       homogeneous_rigid_velocity=0
 
@@ -13995,11 +13996,11 @@ stop
            ! fixed_face is declared in: PROB.F90
            call fixed_face( &
             fluid_volface, & !intent(in) "facecut_solid"
-            LSleft,LSright, &
-            is_solid_face, &
-            im_solid, &
-            im_solid_valid, &
-            partid_solid)
+            LSleft,LSright, & !intent(in)
+            is_solid_face, & !intent(out)
+            im_solid, & !intent(out)
+            im_solid_valid, & !intent(out)
+            partid_solid) ! intent(out)
           
            if (is_solid_face.eq.1) then
             if (im_solid_valid.eq.1) then
@@ -14017,7 +14018,7 @@ stop
            else if (is_solid_face.eq.0) then
             ! do nothing
            else
-            print *,"is_solid_face invalid"
+            print *,"is_solid_face invalid: ",is_solid_face
             stop
            endif
  
@@ -14600,11 +14601,11 @@ stop
            ! fixed_face is declared in: PROB.F90
           call fixed_face( &
            fluid_volface, & !intent(in) "facecut_solid"
-           LSleft,LSright, &
-           is_solid_face, &
-           im_solid, &
-           im_solid_valid, &
-           partid_solid)
+           LSleft,LSright, & !intent(in)
+           is_solid_face, & !intent(out)
+           im_solid, & !intent(out)
+           im_solid_valid, & !intent(out)
+           partid_solid) !intent(out)
 
           if (is_solid_face.eq.1) then
 
@@ -14619,18 +14620,19 @@ stop
               stop
              endif
             else
-             print *,"im_solid invalid"
+             print *,"im_solid invalid: ",im_solid
              stop
             endif
            else
-            print *,"im_solid_valid corrupt"
+            print *,"im_solid_valid corrupt (fluid_volface=1): ", &
+              im_solid_valid
             stop
            endif
 
           else if (is_solid_face.eq.0) then
            ! do nothing
           else
-           print *,"is_solid_face invalid"
+           print *,"is_solid_face invalid: ",is_solid_face
            stop
           endif
 
@@ -15231,12 +15233,12 @@ stop
         enddo
         enddo ! i,j,k (MAC grid, zero ghost cells)
 
-        if (DEBUG_PRESCRIBED.eq.1) then
-         if (DEBUG_PRESCRIBED_VEL_DEN.gt.zero) then
+        if (DEBUG_SOLID.eq.1) then
+         if (DEBUG_SOLID_VEL_DEN.gt.zero) then
           call FLUSH(6) ! 6=screen
-          print *,"DEBUG_PRESCRIBED ",DEBUG_PRESCRIBED
-          print *,"DEBUG_PRESCRIBED_VEL_DEN ",DEBUG_PRESCRIBED_VEL_DEN
-          print *,"DEBUG_PRESCRIBED_VEL_TOT ",DEBUG_PRESCRIBED_VEL_TOT
+          print *,"DEBUG_SOLID ",DEBUG_SOLID
+          print *,"DEBUG_SOLID_VEL_DEN ",DEBUG_SOLID_VEL_DEN
+          print *,"DEBUG_SOLID_VEL_TOT ",DEBUG_SOLID_VEL_TOT
           print *,"tileloop,spectral_loop ",tileloop,spectral_loop
           print *,"dir ",dir
           print *,"project_option=",project_option
@@ -17521,7 +17523,8 @@ stop
            endif
 
           else if (is_rigid(im_solid_max).eq.0) then
-           ! do nothing
+           print *,"expecting is_rigid(im_solid_max)=1"
+           stop
           else
            print *,"is_rigid(im_solid_max) invalid"
            stop
@@ -18146,7 +18149,7 @@ stop
          else if (im_solid_max.eq.0) then
           ! do nothing
          else
-          print *,"im_solid_max invalid"
+          print *,"im_solid_max invalid: ",im_solid_max
           stop
          endif
 

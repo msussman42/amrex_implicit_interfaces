@@ -423,33 +423,26 @@ stop
          if (is_lag_part(im).eq.1) then
           if (is_rigid(im).eq.1) then
            LStest=lsnew(D_DECL(i,j,k),im)
-           if (is_prescribed(im).eq.1) then
-            if (LStest.ge.zero) then
-             if (im_solid.eq.0) then
+           if (LStest.ge.zero) then
+            if (im_solid.eq.0) then
+             im_solid=im
+             partid_crit=partid
+             LScrit=LStest
+            else if ((im_solid.ge.1).and. &
+                     (im_solid.le.num_materials)) then
+             if (LStest.ge.LScrit) then
               im_solid=im
               partid_crit=partid
               LScrit=LStest
-             else if ((im_solid.ge.1).and. &
-                      (im_solid.le.num_materials)) then
-              if (LStest.ge.LScrit) then
-               im_solid=im
-               partid_crit=partid
-               LScrit=LStest
-              endif
-             else
-              print *,"im_solid invalid 1"
-              stop
              endif
-            else if (LStest.lt.zero) then
-             ! do nothing
             else
-             print *,"LStest invalid"
+             print *,"im_solid invalid 1"
              stop
             endif
-           else if (is_prescribed(im).eq.0) then
+           else if (LStest.lt.zero) then
             ! do nothing
            else
-            print *,"is_prescribed(im) invalid"
+            print *,"LStest invalid: ",LStest
             stop
            endif
           else if (is_rigid(im).eq.0) then

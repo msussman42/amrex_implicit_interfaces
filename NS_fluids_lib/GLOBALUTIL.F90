@@ -15085,7 +15085,7 @@ end subroutine print_visual_descriptor
       end function rigid_exists
 
        ! solid_dist>0 in the solid
-      subroutine combine_solid_LS(LS,solid_dist,im_solid_primary)
+      subroutine combine_solid_LS(LS,solid_dist,local_im_solid_primary)
       use probcommon_module
 
       IMPLICIT NONE
@@ -15093,23 +15093,23 @@ end subroutine print_visual_descriptor
       REAL_T, INTENT(out) :: solid_dist
       REAL_T, INTENT(in) :: LS(num_materials)
       INTEGER_T im
-      INTEGER_T, INTENT(out) :: im_solid_primary
+      INTEGER_T, INTENT(out) :: local_im_solid_primary
 
       solid_dist=-99999.0
-      im_solid_primary=0
+      local_im_solid_primary=0
 
       do im=1,num_materials
        if (is_rigid(im).eq.0) then
         ! do nothing
        else if (is_rigid(im).eq.1) then
-        if (im_solid_primary.eq.0) then
+        if (local_im_solid_primary.eq.0) then
          solid_dist=LS(im)
-         im_solid_primary=im
-        else if ((im_solid_primary.ge.1).and. &
-                 (im_solid_primary.le.num_materials)) then
+         local_im_solid_primary=im
+        else if ((local_im_solid_primary.ge.1).and. &
+                 (local_im_solid_primary.le.num_materials)) then
          if (LS(im).gt.solid_dist) then
           solid_dist=LS(im)
-          im_solid_primary=im
+          local_im_solid_primary=im
          else if (LS(im).le.solid_dist) then
           ! do nothing
          else
@@ -15117,7 +15117,7 @@ end subroutine print_visual_descriptor
           stop
          endif
         else
-         print *,"im_solid_primary invalid"
+         print *,"local_im_solid_primary invalid: ",local_im_solid_primary
          stop
         endif 
        else
@@ -15129,18 +15129,18 @@ end subroutine print_visual_descriptor
       end subroutine combine_solid_LS
 
 
-      subroutine combine_solid_VOF(VOF,solid_vof,im_solid_primary)
+      subroutine combine_solid_VOF(VOF,solid_vof,local_im_solid_primary)
       use probcommon_module
 
       IMPLICIT NONE
 
       REAL_T, INTENT(out) :: solid_vof
       REAL_T, INTENT(in) :: VOF(num_materials)
-      INTEGER_T, INTENT(out) :: im_solid_primary
+      INTEGER_T, INTENT(out) :: local_im_solid_primary
       INTEGER_T im
 
       solid_vof=zero
-      im_solid_primary=0
+      local_im_solid_primary=0
 
       do im=1,num_materials
        if (is_rigid(im).eq.0) then
@@ -15148,15 +15148,15 @@ end subroutine print_visual_descriptor
        else if (is_rigid(im).eq.1) then
         solid_vof=solid_vof+VOF(im)
 
-        if (im_solid_primary.eq.0) then
-         im_solid_primary=im
-        else if ((im_solid_primary.ge.1).and. &
-                 (im_solid_primary.le.num_materials)) then
-         if (VOF(im).gt.VOF(im_solid_primary)) then
-          im_solid_primary=im
+        if (local_im_solid_primary.eq.0) then
+         local_im_solid_primary=im
+        else if ((local_im_solid_primary.ge.1).and. &
+                 (local_im_solid_primary.le.num_materials)) then
+         if (VOF(im).gt.VOF(local_im_solid_primary)) then
+          local_im_solid_primary=im
          endif
         else
-         print *,"im_solid_primary invalid"
+         print *,"local_im_solid_primary invalid: ",local_im_solid_primary
          stop
         endif
 
