@@ -3633,14 +3633,17 @@ end subroutine CTML_init_sci_node
 
 ! called from overall_solid_init
 ! overall_solid_init is called from CLSVOF_ReadHeader
-! CLSVOF_ReadHeader is called from fort_headermsg when FSI_operation.eq.0.
-! fort_headermsg, when FSI_operation.eq.0, is called from
+! CLSVOF_ReadHeader is called from fort_headermsg when 
+!  FSI_operation.eq.OP_FSI_INITIALIZE_NODES.
+! fort_headermsg, when FSI_operation.eq.OP_FSI_INITIALIZE_NODES, is called from
 ! NavierStokes::ns_header_msg_level
 ! ns_header_msg_level is called from:
-!   NavierStokes::FSI_make_distance (FSI_operation.eq.2 or 3)
-!   NavierStokes::post_restart (FSI_operation.eq.0)
-!   NavierStokes::initData (FSI_operation.eq.0)
-!   NavierStokes::nonlinear_advection (FSI_operation.eq.4 or 1)
+!   NavierStokes::FSI_make_distance 
+!   (FSI_operation.eq.OP_FSI_MAKE_DISTANCE(SIGN))
+!   NavierStokes::post_restart (FSI_operation.eq.OP_FSI_INITIALIZE_NODES)
+!   NavierStokes::initData (FSI_operation.eq.OP_FSI_INITIALIZE_NODES)
+!   NavierStokes::nonlinear_advection 
+!    (FSI_operation.eq.OP_FSI_LAG_STRESS or OP_FSI_UPDATE_NODES)
 ! SUMMARY (typical time step):
 !   0. for k=0,1,2,3,...
 !   1. NavierStokes::nonlinear_advection
@@ -8805,7 +8808,9 @@ REAL_T :: aa,bb,cc
 return
 end subroutine sciarea
 
-! called from fort_headermsg when FSI_operation.eq.4 and FSI_sub_operation.eq.0
+! called from fort_headermsg when 
+!  FSI_operation.eq.OP_FSI_LAG_STRESS and 
+!  FSI_sub_operation.eq.SUB_OP_FSI_CLEAR_LAG_DATA
 ! isout==1 => verbose
 subroutine CLSVOF_clear_lag_data(ioproc,isout)
 use global_utility_module
@@ -8903,10 +8908,10 @@ return
 end subroutine CLSVOF_clear_lag_data
 
 
-! called from fort_headermsg when FSI_operation.eq.4 and 
+! called from fort_headermsg when FSI_operation.eq.OP_FSI_LAG_STRESS and 
 ! FSI_sub_operation.eq.2
 ! isout==1 => verbose
-! NOTE: headermsg when FSI_operation.eq.4 and FSI_sub_operation.eq.1
+! NOTE: headermsg when FSI_operation.eq.OP_FSI_LAG_STRESS and FSI_sub_operation.eq.1
 ! (which calls CLSVOF_Copy_To_LAG)
 ! is called only for those blocks associated with a given node.
 ! It is the job of this routine to insure that all nodes have all
@@ -9145,9 +9150,9 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
    ioproc, &
    aux_isout)
 
-  if (FSI_operation.eq.2) then
+  if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then
    FSI_touch_flag=1
-  else if (FSI_operation.eq.3) then
+  else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
    ! do nothing
   else
    print *,"FSI_operation invalid"
@@ -9594,13 +9599,18 @@ INTEGER_T, PARAMETER :: aux_unit_id=14
 return
 end subroutine CLSVOF_Read_aux_Header
 
-! called from fort_headermsg when FSI_operation.eq.0
+! called from fort_headermsg when FSI_operation.eq.OP_FSI_INITIALIZE_NODES
 ! fort_headermsg is called from NavierStokes::ns_header_msg_level
 ! ns_header_msg_level is called from:
-!   NavierStokes::FSI_make_distance (op=2,3)
-!   NavierStokes::post_restart (op=0)
-!   NavierStokes::initData (op=0)
-!   NavierStokes::nonlinear_advection (op=4,1)
+!   NavierStokes::FSI_make_distance 
+!     (  FSI_operation.eq.OP_FSI_MAKE_DISTANCE(SIGN)  )
+!   NavierStokes::post_restart 
+!     (  FSI_operation.eq.OP_FSI_INITIALIZE_NODES  )
+!   NavierStokes::initData 
+!     (  FSI_operation.eq.OP_FSI_INITIALIZE_NODES  )
+!   NavierStokes::nonlinear_advection 
+!     (  FSI_operation.eq.OP_FSI_LAG_STRESS  )
+!     (  FSI_operation.eq.OP_FSI_UPDATE_NODES )
 ! isout==1 => verbose
 subroutine CLSVOF_ReadHeader( &
   im_critical, &
@@ -9723,7 +9733,7 @@ INTEGER_T idir,ielem,inode
    stop
   endif
 
-  if (im_critical.eq.-1) then
+  if (im_critical.eq.0) then
 
    TOTAL_NPARTS=nparts_in
    ctml_part_id=0
@@ -10041,9 +10051,16 @@ INTEGER_T idir,ielem,inode
     stop
    endif
 
-  else if ((im_critical.ge.0).and. &
+  else if ((im_critical.ge.1).and. &
            (im_critical.lt.num_materials)) then
+   !do nothing
+  else
+   print *,"im_critical invalid"
+   stop
+  endif
 
+  if ((im_critical.ge.0).and. &
+      (im_critical.lt.num_materials)) then
    ctml_part_id=0
    do part_id=1,TOTAL_NPARTS
     im_part=im_solid_mapF(part_id)+1
@@ -11575,7 +11592,7 @@ IMPLICIT NONE
    local_corner_count=0
    local_smooth_count=0
 
-   if (FSI_operation.eq.2) then ! make distance in narrow band
+   if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then 
 
     if (isout.eq.0) then
      ! do nothing
@@ -12693,7 +12710,7 @@ IMPLICIT NONE
     enddo
     enddo
 
-   else if (FSI_operation.eq.3) then
+   else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
 
      !FSI_growlo3D(dir)=FSI_lo3D(dir)-ngrow_make_distance_in
      !FSI_growhi3D(dir)=FSI_hi3D(dir)+ngrow_make_distance_in
@@ -13369,7 +13386,7 @@ IMPLICIT NONE
 return
 end subroutine CLSVOF_InitBox
 
-        ! called from fort_headermsg when FSI_operation.eq.4 and
+        ! called from fort_headermsg when FSI_operation.eq.OP_FSI_LAG_STRESS and
         ! FSI_sub_operation.eq.1.
         ! This routine is called only for those blocks associated with a 
         ! given node.
@@ -15207,10 +15224,11 @@ end subroutine find_grid_bounding_box_node
 ! ns_header_msg_level is called from NavierStokes::nonlinear_advection
 ! fort_headermsg is called from NavierStokes::ns_header_msg_level
 ! CLSVOF_ReadNodes is called from fort_headermsg 
-! (FSI_operation.eq.1, FSI_sub_operation.eq.0)
+! (FSI_operation.eq.OP_FSI_UPDATE_NODES, 
+!  FSI_sub_operation.eq.SUB_OP_FSI_DEFAULT)
 ! isout==1 => verbose
 subroutine CLSVOF_ReadNodes( &
-  im_critical, &
+  im_critical, & !0..2*num_materials-1
   max_num_nodes_list, &
   max_num_elements_list, &
   num_nodes_list, &
@@ -15341,8 +15359,8 @@ INTEGER_T :: idir,ielem,im_part
 
   if ((TOTAL_NPARTS.ge.1).and.(TOTAL_NPARTS.le.MAX_PARTS)) then
 
-   if ((im_critical.lt.-1).and. &
-       (im_critical.ge.-num_materials-1)) then
+   if ((im_critical.ge.0).and. &
+       (im_critical.lt.num_materials)) then
 
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
@@ -15350,7 +15368,7 @@ INTEGER_T :: idir,ielem,im_part
      if (CTML_FSI_mat(im_part).eq.1) then 
       ctml_part_id=ctml_part_id+1
       if (ctml_part_id_map(part_id).eq.ctml_part_id) then
-       if (im_part.eq.-im_critical-1) then
+       if (im_part.eq.im_critical+1) then
         do inode=1,ctml_max_n_fib_nodes
          do idir=1,AMREX_SPACEDIM
           ctml_fib_pst_prev(ctml_part_id,inode,idir)= &
@@ -15383,7 +15401,15 @@ INTEGER_T :: idir,ielem,im_part
      endif
     enddo ! part_id=1,TOTAL_NPARTS
 
-   else if (im_critical.eq.-1) then
+   else if ((im_critical.ge.num_materials).and. &
+            (im_critical.lt.2*num_materials)) then
+    ! do nothing
+   else
+    print *,"im_critical invalid"
+    stop
+   endif
+
+   if (im_critical.eq.num_materials) then
 
     if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
@@ -15620,8 +15646,10 @@ INTEGER_T :: idir,ielem,im_part
 
     enddo ! part_id=1,TOTAL_NPARTS
 
-   else if ((im_critical.ge.0).and. &
-            (im_critical.lt.num_materials)) then
+   endif
+
+   if ((im_critical.ge.num_materials).and. &
+       (im_critical.lt.2*num_materials)) then
 
     ctml_part_id=0
     do part_id=1,TOTAL_NPARTS
@@ -15629,7 +15657,7 @@ INTEGER_T :: idir,ielem,im_part
      if (CTML_FSI_mat(im_part).eq.1) then 
       ctml_part_id=ctml_part_id+1
       if (ctml_part_id_map(part_id).eq.ctml_part_id) then
-       if (im_part.eq.im_critical+1) then
+       if (im_part.eq.im_critical-num_materials+1) then
         do inode=1,ctml_max_n_fib_nodes
 
          do idir=1,NCOMP_FORCE_STRESS
@@ -15683,9 +15711,6 @@ INTEGER_T :: idir,ielem,im_part
      endif
     enddo ! part_id=1,TOTAL_NPARTS
 
-   else
-    print *,"im_critical invalid"
-    stop
    endif
 
   else
