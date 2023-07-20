@@ -842,6 +842,8 @@ c
 ! velocity at t^{n+1/2}
           UIBM1_fib(i,isec,j)=0.0d0
           UIBM2_fib(i,isec,j)=0.0d0
+          vibm1_fib(i,j)=0.0d0
+          vibm2_fib(i,j)=0.0d0
 ! force
           fk_mass1o_fib(i,isec,j)=FIBM1in_fib(i,isec,j)
           fk_mass2o_fib(i,isec,j)=FIBM2in_fib(i,isec,j)
@@ -849,6 +851,7 @@ c
        if(ndim .gt.2) then
        do j=1,ns_ibm_r_fib(i)
           UIBM3_fib(i,isec,j)=0.0d0
+          vibm3_fib(i,j)=0.0d0
           fk_mass3o_fib(i,isec,j)=FIBM3in_fib(i,isec,j)
        end do
        endif

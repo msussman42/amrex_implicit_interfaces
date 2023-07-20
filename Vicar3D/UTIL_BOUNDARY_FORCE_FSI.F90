@@ -57,48 +57,20 @@ include './distFSI/grid_def'
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_esh 
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_fbc 
 
-! t^{n+1}
  real*8, SAVE, allocatable, dimension(:,:,:) :: coord_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: coord_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_fbc
 
-! t^{n}
- real*8, SAVE, allocatable, dimension(:,:,:) :: coord_fib_prev
- real*8, SAVE, allocatable, dimension(:,:,:,:) :: coord_fsh_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_esh_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_fbc_prev
-
-! t^{n+1}
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib, force_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh, force_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh, force_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc, force_fbc
 
-! t^{n}
- real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib_prev
- real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_prev
-
-! t^{n-1/2}
- real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib_halftime_prev
- real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh_halftime_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_halftime_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_halftime_prev
-
-! t^{n+1}
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib
  real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_esh
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fbc
-
-! t^{n}
- real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib_prev
- real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh_prev
- real*8, SAVE, allocatable, dimension(:,:)   :: ds_esh_prev
- real*8, SAVE, allocatable, dimension(:,:)   :: ds_fbc_prev
-
 
  parameter(nqIBM_fsh=nq_IBM_fsh)
 
@@ -184,9 +156,6 @@ SUBROUTINE cal_velIBM_fib(&
  integer, allocatable, dimension (:,:) :: iCellMarker, jCellMarker, kCellMarker
  integer isec
  REAL*8  zsecIBM,ysecIBM
-
- 
-
  
 ! print*, 'inside cal_velIBM'
 !print*, dsecIBMy,dsecIBMz,nrIBM,nsecIBMmax,nsecIBM
@@ -1782,36 +1751,6 @@ subroutine init_membrane_solver(&
       ENDIF ! iErrin
 
 
-      ALLOCATE(coord_fib_prev(nr_IBM_fib,ns_IBM_fib,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for coord_fib_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(vel_fib_prev(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for vel_fib_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(vel_fib_halftime_prev(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3), &
-               STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for vel_fib_halftime_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(ds_fib_prev(nr_IBM_fib,ns_IBM_fib),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for ds_fib_prev'
-        STOP
-      ENDIF ! iErrin
-
-
 !%===============================================================
       ALLOCATE(coord_fsh(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
       IF ( iErrin/= 0 ) THEN
@@ -1838,28 +1777,6 @@ subroutine init_membrane_solver(&
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
        'Allocate_memory: Memory Allocation Error for ds_fsh'
-        STOP
-      ENDIF ! iErrin
-
-
-      ALLOCATE(coord_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for coord_fsh_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(vel_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for vel_fsh_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(ds_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for ds_fsh_prev'
         STOP
       ENDIF ! iErrin
 
@@ -1895,27 +1812,6 @@ subroutine init_membrane_solver(&
       ENDIF ! iErrin
 
 
-      ALLOCATE(coord_esh_prev(nr_IBM_esh,ns_IBM_esh,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for coord_esh_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(vel_esh_prev(nr_IBM_esh,ns_IBM_esh,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for vel_esh_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(ds_esh_prev(nr_IBM_esh,ns_IBM_esh),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for ds_esh_prev'
-        STOP
-      ENDIF ! iErrin
-
 !%===============================================================
 
       ALLOCATE(coord_fbc(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
@@ -1947,32 +1843,7 @@ subroutine init_membrane_solver(&
       ENDIF ! iErrin
 
 
-      ALLOCATE(coord_fbc_prev(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for coord_fbc_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(vel_fbc_prev(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for vel_fbc_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(ds_fbc_prev(nr_IBM_fbc,ns_IBM_fbc),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for ds_fbc_prev'
-        STOP
-      ENDIF ! iErrin
-
-
 !%===============================================================
-
-
-
 
 !   Loop on cells in X direction
 !   ----------------------------

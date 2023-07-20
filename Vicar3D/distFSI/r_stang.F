@@ -1245,4 +1245,459 @@ c initialized master matrices for later use
       end
 
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+      subroutine r_stang_fib(ibm_solve,monitorON,isavesigma)
+c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+c solve for 2d and 3d structures
+c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+      USE HeaderFSI
+      implicit none
+
+      integer ibdy,np,npg,bodypoint(3),ne,jtype,itype,nos,ntem,noi,noj
+     &     ,ntemi, ntemj
+
+      real*8 wei_i,iner1,iner2,jner1,jner2
+      integer ntype,info,isavesigma
+      logical monitorON 
+      integer ibm_solve
+      real*8 mms(ns_ibm_esh,ns_ibm_esh)
+
+      real*8 x(maxordern,3), sx(2,maxordern), mass(maxordern,maxordern)
+     &    ,ks(maxordern,maxordern), kb(maxordern,maxordern)
+     &    ,xpos(3),dxpos(2,3),d2xpos(3,3)
+     &    ,ms(maxordern,maxordern)
+
+       real*8 s(1,maxordern), dsdv(2,maxordern),ddsdvdv(3,maxordern)
+     &    , dmat(2,2),kmat(2,2)
+     &    , kmatbar(2,2) , smat(2,2), bmat(3,3), jmat(2,2)
+     &    , gmat(3,2), hmat(3,3)
+     &    , amat1(2,maxordern), amat2(3,maxordern)
+     &    , amat1T(maxordern,2), amat2T(maxordern,3)
+
+      integer i,j,k,k2,para,t_temp,n,j2,kcontact,jq,jq2
+      integer ierrksh1,iksh1,iksh2,iksh3,i2,iksh1b,iksh1c
+
+      real*8 aamat_fib(ns_ibm_fib,ns_ibm_fib)   !tobe changes
+      real*8 aamat_total(nr_ibm_mas,ns_ibm_esh,ns_ibm_esh)    
+     &    ,bbmat_total(nr_ibm_mas,ns_ibm_esh,3)   !tobe changes
+
+      INTEGER,SAVE, ALLOCATABLE :: 
+     &             jacsr(:),iacsr(:)
+      REAL*8,SAVE, ALLOCATABLE :: 
+     &             aacsr(:)
+
+      INTEGER,SAVE, ALLOCATABLE :: 
+     &             jacsrm(:),iacsrm(:)
+      REAL*8,SAVE, ALLOCATABLE :: 
+     &             aacsrm(:)
+
+      INTEGER,SAVE, ALLOCATABLE :: 
+     &             jacsrfibershell(:),iacsrfibershell(:)
+      REAL*8,SAVE, ALLOCATABLE :: 
+     &             aacsrfibershell(:),vecRHSfibershell(:),
+     &             vecXfibershell(:)
+
+! contact parameters
+      REAL*8 gau_i(3,ngaumax)
+     &      ,xcont(maxordern,3),dxcont(3)
+     &      ,ddcont,dncont,Fcont
+     &      ,dXP1cont(2,3),Normalcont1(3),outcont(3),outcont2(3)
+     &      ,Normalcont2(3),ContactForce
+      REAL*8,SAVE, ALLOCATABLE :: 
+     &             l_loc(:,:),iv_loc(:,:,:)
+     &             ,phi_loc(:,:,:,:)
+      INTEGER ntypeMAx_loc
+     &        ,ItypecontELE1(3),ItypecontELE(3)
+     &        ,ne2,ntype2,itype2,nos2,jtype2,ntem2
+
+      INTEGER, SAVE :: ntermiMAX,ntermiMAXfibershell,ntermiMAXmaster 
+      INTEGER, SAVE :: ntermiMAXm(nr_ibm_mas) 
+!      real aamcsr(nr_ibm_mas,ns_ibm*20)
+!      integer jamcsr(nr_ibm_mas,ns_ibm*20),iamcsr(nr_ibm_mas,ns_ibm)
+
+      real temp1, temp2, temp3, temp4,ksh_tmp
+      real temp_ibm1,temp_ibm2,temp_ibm3
+     &      ,temp_ibm1b,temp_ibm2b,temp_ibm3b
+     &      ,fn1,fn2,fn3
+     &      ,temp_check1,temp_check2,temp_check3, temp2_ibm, temp3_ibm
+      real   temp4_1_ibm_fib(nr_ibm_fib,0:ns_ibm_fib)    
+     &      , temp4_2_ibm_fib(nr_ibm_fib,0:ns_ibm_fib)    
+     &      , temp4_3_ibm_fib(nr_ibm_fib,0:ns_ibm_fib)     
+     &      ,a_fib(ns_ibm_fib,-3:3) 
+     &      ,mat(4,4)
+     &      ,tdx0_1_fib(nr_ibm_fib)    
+     &      ,tdx0_2_fib(nr_ibm_fib)    
+     &      ,tdx0_3_fib(nr_ibm_fib)    
+     &      ,tdxnm1_1_fib(nr_ibm_fib)    
+     &      ,tdxnm1_2_fib(nr_ibm_fib)    
+     &      ,tdxnm1_3_fib(nr_ibm_fib)    
+
+      real*8  timetemp2,s_function
+      logical fix_bc,free_bc,fix_bcb,free_bcb 
+      integer itmax,precond,success,itconverge,isec
+      real*8 tol,h_channel,KB_ibmt
+    
+      real*8 dt,dt2,time_alphaf 
+
+      real*8 tmpv1(3),tmpv2(3),tmpv3(3),tmpv1x(3)
+      real*8 areapnt_esh(nr_ibm_esh,ns_ibm_esh)
+!     &       ,xpnt_esh(nr_ibm_esh,ns_ibm_esh)  !for inflation problem 
+
+      real*8 CoefsecIBM  !related to section problem qusi3D
+      integer jbndy,jqbndy
+
+      real*8  X_i_j(3),X_ip_j(3),X_i_jp(3)
+     &       ,X_imf_j(3),X_i_jpf(3),X_i_jmf(3)
+     &       ,X_imf_jp(3)
+     &       ,X_ip_jmf(3),X_imf_jpf(3)
+     &       ,X_imf_jmf(3)
+     &       ,DXX_i_j(3),DYY_i_j(3),DXY_i_j(3),DYX_i_j(3)
+     &       ,DX_im_jm(3),DX_im_j(3),DX_im_jp(3)
+     &       ,DX_i_jm(3),DX_i_j(3),DX_i_jp(3)
+     &       ,DX_ip_jm(3),DX_ip_j(3),DX_ip_jp(3)
+     &       ,DY_im_jm(3),DY_im_j(3),DY_im_jp(3)
+     &       ,DY_i_jm(3),DY_i_j(3),DY_i_jp(3)
+     &       ,DY_ip_jm(3),DY_ip_j(3),DY_ip_jp(3)
+     &       ,kmem_i_j(50,3),kbend_i_j
+
+      integer ibkt,ibkt2,ibkt_i,ibkt2_i
+     &       ,ibktmp1,ibktx,ibkty,ibktz,ibkts1,ibkts2,ibkts3
+     &       ,ibktmin(3),ibktmax(3)
+
+      real*8  dvcont(3),dnvcont,Vcont(maxordern,3)
+     &       ,VP1cont(3),VP2cont(3)
+      integer i2l,i2g, ibdyg,i3g
+
+      real*8 target_timefn
+      REAL*8,SAVE, ALLOCATABLE :: ForceOut(:)
+!temporal variables
+      real*8  real_distibm(50),rtmpusrfn(50)
+      integer int_distibm(50),itmpusrfn(50)
+      integer jq_pm(2),j_pm(2)
+      real*8  contactplane_n(4),contactplane_point(3)
+      real*8  matFib_Esh(3,3)
+      real*8  R_Fibmat(3,3),xposFib(3),x_FibVec(maxordern,3)
+     &       ,n_FibVec(3),n3_FibVec(3)
+     &       ,ImplicitFSI_coef
+
+!variable for genralized alpha
+      real*8  timeMarchcoef(20)
+     &       ,d_smat(3,3)
+     &       ,mattmp_eye(3,3)
+     &       ,coef_iter
+
+      integer iter
+
+      real*8, ALLOCATABLE ::
+!     (ns_ibm_fbc or (3*ns_ibm_fbc,
+     &     matdir1(:,:)
+!     (3,maxordern)
+     &     ,matdir2(:,:)
+!     (3,maxordern)
+     &     ,matdir3(:,:)
+!     (3,maxordern)
+     &     ,Dmat_Stiff1(:,:)
+!     (maxordern,3)
+     &     ,Dmat_Stiff2(:,:)
+!     (maxordern,3)
+     &     ,Dmat_Stiff3(:,:)
+!     (maxordern,3)
+     &     ,kb11(:,:)
+!     (maxordern,maxordern)
+     &     ,kb12(:,:)
+!     (maxordern,maxordern)
+     &     ,kb13(:,:)
+!     (maxordern,maxordern)
+     &     ,kb21(:,:)
+!     (maxordern,maxordern)
+     &     ,kb22(:,:)
+!     (maxordern,maxordern)
+     &     ,kb23(:,:)
+!     (maxordern,maxordern)
+     &     ,kb31(:,:)
+!     (maxordern,maxordern)
+     &     ,kb32(:,:)
+!     (maxordern,maxordern)
+     &     ,kb33(:,:)
+!     (maxordern,maxordern)
+     &     ,kks(:,:)
+!     (ns_ibm_esh or (3*ns_ibm_esh,
+     &     ,kkb(:,:)
+!     (ns_ibm_esh or (3*ns_ibm_esh,
+     &     ,kksf(:,:)
+!     (ns_ibm_esh or
+     &     ,kkbf(:,:)
+
+      logical ilucal_flag
+
+      integer iv0,iv1,iv2,iv3,ie1,ie2
+
+      real*8 tmpcoord(3),tmpcoord2(3),tmpcoord3(3)
+     &      ,cf_coef,cf_coef2,cf_coef1
+     &      ,x0,x1,x2,x3
+     &      ,Ktmp(4,3,4,3)
+     &      ,L_over_Lmax
+     &      ,sinsign
+     &      ,costet0,sintet0
+
+      INTEGER iDX0,iKS0,N_iPARA0,iPARA0(100),i_FABRICLINE0
+
+      REAL*8,  ALLOCATABLE :: 
+     &             vecRHS(:,:)
+     &            ,x0LHS(:,:)
+
+      real*8 maxtmpx
+      Logical KtmpFlag
+!=====newallocatables for FE shell Continuum model
+      integer  ih
+      real*8 
+     &    weih_i,theta3
+     &   ,ametric(3),bmetric(3),dnxpos(3)
+     &   ,gmetric_cov(2,2),gmetric_con0(2,2),gmetric_con(2,2)
+     &   ,CauchyGreen_C(3,3),CauchyGreen_Cbar(3,3),C33_old
+     &   ,detC_inplane,tracC_inplane
+     &   ,detC,tracC
+     &   ,DiffPhi_C(3),DiffPhi_C33,Diff2Phi_CC33(3),Diff2Phi_C(3,3)
+     &   ,Diff2Phi_C33,Sstress33 
+     &   ,Smetric(3),CMAT(3,3),CMAT33,dC33_old,CMATi3(3)
+     &   ,nmatMetric(3),mmatMetric(3),DmatMetric(3,3,3)
+     &   ,abar3inv
+     &   ,avectmp0(3),avectmp1(3),avectmp2(3),avectmp3(3)
+     &   ,avectmp1b(3),avectmp2b(3),avectmp3b(3)
+     &   ,q_contrav_bases0(2,3),MatposFib_con(3,3)
+
+      real*8, allocatable, dimension(:,:)::
+     &    Forcetemp1
+     &   ,temp_ibmtype2,temp_ibmtype3
+     &   ,a3bar_Drs,a3_Dr
+     &   ,Da_ab_Dr,a3tilde_Dr,Db_ab_Dr
+
+      real*8, allocatable, dimension(:,:,:) ::
+     &    Da_ab_Drs,a3tilde_Drs,a3_Drs,Depsilon_ab_r,Dkappa_ab_r
+
+      real*8, allocatable, dimension(:,:,:,:)::
+     &    Db_ab_Drs,Depsilon_ab_rs
+
+      real*8, allocatable, dimension(:,:,:,:,:)::
+     &    Dkappa_ab_rs
+
+      real*8   alpha_coefK(5),Elect_RHS 
+
+
+
+!==========================================================
+
+      parameter (tol = 1.0d-11, precond=1, itmax=200)
+       
+#ifdef INCLUDE_FIB
+      iksh1=simulationtype
+      if (iksh1.eq.0) then
+       ! do nothing
+      else
+       print *,"expecting iksh1.eq.0"
+       stop
+      endif
+!     iksh1=0; only fiber   iksh1 ~=0  fiber + shell 
+
+c time step
+      dt=delta_t
+      dt2=dt**2.0
+      if(alphabetaRise .lt. delta_t) then
+         timetemp2=1.d0
+      else
+         timetemp2=(1.d0-exp(-time2/alphabetaRise))           
+      endif
+      eps=1.0d-8
+
+      if(ibm_solve .ne. 2) then
+       ! do nothing
+      else
+       print *,"expecting ibm_solve.ne.2"
+       stop
+      endif
+
+      if(nr_ibm_fib.ge. 1) then
+       fibm1_fib=0.0
+       fibm2_fib=0.0
+       fibm3_fib=0.0
+       ffluidsum1_fib=0.0
+       ffluidsum2_fib=0.0
+       ffluidsum3_fib=0.0
+      endif
+c
+      do i=1,nr_ibm_fib
+       do isec=1,nsec_ibm
+        do j=1,ns_ibm_r_fib(i)
+           fk_mass1_fib(i,isec,j)=fk_mass1o_fib(i,isec,j)
+           fk_mass2_fib(i,isec,j)=fk_mass2o_fib(i,isec,j)
+           ffluidsum1_fib(i,isec,j)= fk_mass1_fib(i,isec,j)
+           ffluidsum2_fib(i,isec,j)= fk_mass2_fib(i,isec,j)
+           if(ndim .gt. 2) then
+            fk_mass3_fib(i,isec,j)=fk_mass3o_fib(i,isec,j)
+            ffluidsum3_fib(i,isec,j)= fk_mass3_fib(i,isec,j)
+           endif
+! j           
+        end do
+! isec           
+       end do
+       do isec=1,nsec_ibm
+        if(nsec_ibm .eq. 1) then
+           CoefsecIBM=1.0/dble(nsec_ibm)
+        elseif ((isec .eq. 1) .or. (isec .eq. nsec_ibm)) then
+           CoefsecIBM=0.5/dble(nsec_ibm-1)
+        else
+           CoefsecIBM=1.0/dble(nsec_ibm-1)
+        endif
+        do j=1,ns_ibm_r_fib(i)
+
+              fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,isec,j)
+     &                   *CoefsecIBM
+              fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,isec,j)
+     &                   *CoefsecIBM
+              if(ndim .gt. 2) 
+     &           fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,isec,j)
+     &                   *CoefsecIBM
+!j
+        end do
+! isec           
+       end do
+  
+       do j=1,ns_ibm_r_fib(i)
+           vibm1_pre_fib(i,j)=vibm1_fib(i,j)
+           vibm2_pre_fib(i,j)=vibm2_fib(i,j)
+           if(ndim .gt. 2) 
+     &         vibm3_pre_fib(i,j)=vibm3_fib(i,j)
+       end do
+      end do  !nr_ibm_fib
+
+      if(dabs(del_s).gt.1.d-6) then
+       do i=1,nr_ibm_fib
+        i2g=Ilocglb_fib(i)
+        if(ThermalForceFlag(i2g)) then
+         do j=1,ns_ibm_r_fib(i)
+             tsibm_fib(i,j)= tsibmin(i2g)*timetemp2
+             q_mass_fib(i,j)=q_masso_fib(i,j)
+     &          +alphatemp_ibm*delta_t*(tfibm_fib(i,j)-tsibm_fib(i,j))
+     &                   *timetemp2
+             qibm_fib(i,j)=q_mass_fib(i,j)+
+     &                    betatemp_ibm*(tfibm_fib(i,j)-tsibm_fib(i,j))
+     &                   *timetemp2
+! j
+         end do
+        endif
+! i
+       end do
+      endif
+
+401   format(3(i8,' '),20(f20.9,' '))
+
+      n=1
+
+c imposing bcs
+      call boundary_ibm
+
+      if(nr_ibm_fib.ge. 1) then
+         f_impuls1_fib=0.d0
+         f_impuls2_fib=0.d0
+         f_impuls3_fib=0.d0
+         force_points_fib=0.d0
+         f_link1_fib=0.0
+         f_link2_fib=0.0
+         f_link3_fib=0.0
+      endif
+
+
+!=============================  MAIN PART of the SOLVER ========================
+      do ibdyg=1,nr_ibm
+       if(bodytype(ibdyg) .eq. fiber) then
+          include "r_stang_Fib.Fi"
+       endif
+!===============================================================================
+
+!CAUTION:need to be rewrite for fibrous shell
+       if(iksh1 .ne. 0) then
+               print *,"expecting iksh1=0"
+               stop
+       end if
+
+      end do  !ibdy
+
+
+!CAUTION:need to be rewrite for fibrous shell
+
+      if(iksh1 .ne. 0) then
+               print *,"expecting iksh1=0"
+               stop
+      end if !iksh1
+
+      do ibdy=1,nr_ibm
+        i=ibdy
+        if(BodyType(i) .eq. fiber) then 
+         i2l=Iglbloc_fib(i)
+         do j=1,ns_ibm_r_fib(i2l)
+          vibm1_fib(i2l,j)= 
+     &        (gx_ibm_massive_fib(i2l,j)-gx_ibm_fib(i2l,j))/dt
+          vibm2_fib(i2l,j)= 
+     &        (gy_ibm_massive_fib(i2l,j)-gy_ibm_fib(i2l,j))/dt
+          if(ndim .gt. 2) 
+     &     vibm3_fib(i2l,j)= 
+     &        (gz_ibm_massive_fib(i2l,j)-gz_ibm_fib(i2l,j))/dt
+         end do
+
+        elseif((BodyType(i) .eq. shell).and. 
+     &         (Genalpha_timesolver(i) .le. 1)) then 
+                print *,"this code should not be called"
+                stop
+        elseif((BodyType(i) .eq. fabric).and. 
+     &         (Genalpha_timesolver(i) .le. 1)) then 
+                print *,"this code should not be called"
+                stop
+        elseif((BodyType(i) .eq. fibrousshell).and. 
+     &         (Genalpha_timesolver(i) .le. 1)) then   
+                print *,"this code should not be called"
+                stop
+        else
+                print *,"expecting BodyType(i)=fiber"
+                stop
+        endif 
+
+      end do ! ibdy
+
+      do i=1,nr_ibm_esh
+       print *,"this code should not be called"
+       stop
+      end do  !nr_ibm_esh
+      do i=1,nr_ibm_fbc
+       print *,"this code should not be called"
+       stop
+      end do  !nr_ibm_fbc
+
+      do i=1,nr_ibm_fsh
+       print *,"this code should not be called"
+       stop
+      end do  !nr_ibm_fsh
+
+3000    format(1x,24(f8.4,2x))
+3001    format(1x,1(i5,2x),24(f8.4,2x))
+3002    format(1x,2(i5,2x),24(f8.4,2x))
+3003    format(1x,3(i5,2x),24(f8.4,2x))
+3004    format(1x,4(i5,2x),24(f8.4,2x))
+3005    format(1x,5(i5,2x),24(f8.4,2x))
+3006    format(1x,6(i5,2x),24(f8.4,2x))
+3007    format(1x,7(i5,2x),24(f8.4,2x))
+3008    format(1x,8(i5,2x),24(f8.4,2x))
+3009    format(1x,9(i5,2x),24(f8.4,2x))
+3010    format(1x,10(i5,2x),24(f8.4,2x))
+3011    format(1x,11(i5,2x))
+
+#else 
+      print *,"include_fib not defined"
+      stop
+#endif
+
+      return 
+      end
+
+c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+
+
 
