@@ -30,15 +30,7 @@ stop
 #include "AMReX_ArrayLim.H"
 #include "AMReX_SPACE.H"
 
-#ifdef BL_USE_MPI
-#define mpi_activate 1
-#else
-#ifdef BL_USE_MPI3
-#define mpi_activate 1
-#else
 #define mpi_activate 0
-#endif
-#endif
 
 # define L2GI(i)       myIs+i-1
 # define L2GJ(j)       myJs+j-1
@@ -65,36 +57,43 @@ include './distFSI/grid_def'
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_esh 
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_fbc 
 
+! t^{n+1}
  real*8, SAVE, allocatable, dimension(:,:,:) :: coord_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: coord_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_fbc
 
+! t^{n}
  real*8, SAVE, allocatable, dimension(:,:,:) :: coord_fib_prev
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: coord_fsh_prev
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_esh_prev
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_fbc_prev
 
+! t^{n+1}
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib, force_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh, force_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh, force_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc, force_fbc
 
- real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib_prev, force_fib_prev
- real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh_prev, force_fsh_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_prev, force_esh_prev
- real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_prev, force_fbc_prev
+! t^{n}
+ real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib_prev
+ real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_prev
+ real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_prev
 
+! t^{n-1/2}
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib_halftime_prev
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh_halftime_prev
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh_halftime_prev
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc_halftime_prev
 
+! t^{n+1}
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib
  real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_esh
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fbc
 
+! t^{n}
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib_prev
  real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh_prev
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_esh_prev
@@ -1805,13 +1804,6 @@ subroutine init_membrane_solver(&
         STOP
       ENDIF ! iErrin
 
-      ALLOCATE(force_fib_prev(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for force_fib_prev'
-        STOP
-      ENDIF ! iErrin
-
       ALLOCATE(ds_fib_prev(nr_IBM_fib,ns_IBM_fib),STAT=iErrin)
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
@@ -1861,13 +1853,6 @@ subroutine init_membrane_solver(&
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
        'Allocate_memory: Memory Allocation Error for vel_fsh_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(force_fsh_prev(nr_IBM_fsh,nq_IBM_fsh,ns_IBM_fsh,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for force_fsh_prev'
         STOP
       ENDIF ! iErrin
 
@@ -1924,13 +1909,6 @@ subroutine init_membrane_solver(&
         STOP
       ENDIF ! iErrin
 
-      ALLOCATE(force_esh_prev(nr_IBM_esh,ns_IBM_esh,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for force_esh_prev'
-        STOP
-      ENDIF ! iErrin
-
       ALLOCATE(ds_esh_prev(nr_IBM_esh,ns_IBM_esh),STAT=iErrin)
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
@@ -1980,13 +1958,6 @@ subroutine init_membrane_solver(&
       IF ( iErrin/= 0 ) THEN
         WRITE(*,*) &
        'Allocate_memory: Memory Allocation Error for vel_fbc_prev'
-        STOP
-      ENDIF ! iErrin
-
-      ALLOCATE(force_fbc_prev(nr_IBM_fbc,ns_IBM_fbc,3),STAT=iErrin)
-      IF ( iErrin/= 0 ) THEN
-        WRITE(*,*) &
-       'Allocate_memory: Memory Allocation Error for force_fbc_prev'
         STOP
       ENDIF ! iErrin
 
@@ -2071,7 +2042,6 @@ subroutine init_membrane_solver(&
     do isec=1,nsecIBM
     do j=1,nIBM_fib
       force_fib(i,isec,j,1:3)=0.d0
-      force_fib_prev(i,isec,j,1:3)=0.d0
     enddo
     enddo      
  enddo
@@ -2079,20 +2049,17 @@ subroutine init_membrane_solver(&
     do jq=1,nqIBM_fsh
     do j=1,nIBM_fsh
       force_fsh(i,jq,j,1:3)=0.d0
-      force_fsh_prev(i,jq,j,1:3)=0.d0
     enddo
     enddo      
  enddo
  do i=1,nrIBM_esh
     do j=1,nIBM_esh
       force_esh(i,j,1:3)=0.d0
-      force_esh_prev(i,j,1:3)=0.d0
     enddo
  enddo
  do i=1,nrIBM_fbc
     do j=1,nIBM_fbc
       force_fbc(i,j,1:3)=0.d0
-      force_fbc_prev(i,j,1:3)=0.d0
     enddo
  enddo
 #if (mpi_activate==1)

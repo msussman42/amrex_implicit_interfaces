@@ -11061,37 +11061,6 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
-  //vel_elastic_ALL called from veldiffuseALL
- if (viscoelastic_force_only==0) {
-
-  if (CTML_FSI_flagC()==1) { 
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.ctml_fsi_transfer_force();
-   }
-
-   // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
-	 SPECTRAL_ORDER_AVGDOWN);
-
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
-
-    // register_mark=unew
-   SET_STOKES_MARK(REGISTER_MARK_MF);
-
-  } else if (CTML_FSI_flagC()==0) {
-   // do nothing
-  } else
-   amrex::Error("CTML_FSI_flagC() invalid");
-
-  //vel_elastic_ALL called from writeTECPLOT_File
- } else if (viscoelastic_force_only==1) {
-  // do nothing
- } else
-  amrex::Error("viscoelastic_force_only invalid");
-
 } // end subroutine vel_elastic_ALL
 
 
