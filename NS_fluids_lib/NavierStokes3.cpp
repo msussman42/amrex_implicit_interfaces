@@ -528,14 +528,15 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else if (ok_copy_FSI_old_to_new()==0) {
 
     int iter=0;
-    int FSI_operation=4; // eul vel t=cur_time_slab -> structure vel
-    int FSI_sub_operation=0;
-    for (FSI_sub_operation=0;FSI_sub_operation<3;FSI_sub_operation++) {
+    int FSI_operation=OP_FSI_LAG_STRESS; // eul stress -> structure stress
+    int FSI_sub_operation=SUB_OP_FSI_CLEAR_LAG_DATA;
+    for (FSI_sub_operation=SUB_OP_FSI_CLEAR_LAG_DATA;
+         FSI_sub_operation<=SUB_OP_FSI_SYNC_LAG_DATA;FSI_sub_operation++) {
      for (int ilev=level;ilev<=finest_level;ilev++) {
       NavierStokes& ns_level=getLevel(ilev);
       ns_level.resize_mask_nbr(ngrow_make_distance);
       ns_level.ns_header_msg_level(
-       FSI_operation, //=4
+       FSI_operation, //FSI_operation.eq.OP_FSI_LAG_STRESS
        FSI_sub_operation,
        cur_time_slab,
        dt_slab,
@@ -549,11 +550,11 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
     //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
     //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
-    FSI_operation=1; // update node locations
-    FSI_sub_operation=0;
+    FSI_operation=OP_FSI_UPDATE_NODES; // update node locations
+    FSI_sub_operation=SUB_OP_FSI_DEFAULT;
     ns_header_msg_level(
-     FSI_operation, //=1
-     FSI_sub_operation, //=0
+     FSI_operation, //=OP_FSI_UPDATE_NODES
+     FSI_sub_operation, //=SUB_OP_FSI_DEFAULT
      cur_time_slab,
      dt_slab,iter);
 

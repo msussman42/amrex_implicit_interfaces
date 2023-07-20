@@ -83,15 +83,15 @@
       module solidfluid_cpp_module
       contains
 
-       !FSI_operation=0  initialize node locations; post_process_nodes_elements
-       !FSI_operation=1  update node locations
-       !FSI_operation=2  make distance in narrow band
-       !FSI_operation=3  update the sign.
-       !FSI_operation=4  copy eul fluid vel to solid
-       !FSI_operation=5  find integral_{membrane} F_membrane dA.
-       !  FSI_sub_operation.eq.0 (clear lagrangian data)
-       !  FSI_sub_operation.eq.1 (actual copy)
-       !  FSI_sub_operation.eq.2 (sync lag data)
+       !FSI_operation.eq.OP_FSI_INITIALIZE_NODES  
+       !  initialize node locations; post_process_nodes_elements
+       !FSI_operation.eq.OP_FSI_UPDATE_NODES  update node locations
+       !FSI_operation.eq.OP_FSI_MAKE_DISTANCE  make distance in narrow band
+       !FSI_operation.eq.OP_FSI_MAKE_SIGN  update the sign.
+       !FSI_operation.eq.OP_FSI_LAG_STRESS  copy eul fluid stress to solid
+       !  FSI_sub_operation.eq.SUB_OP_FSI_CLEAR_LAG_DATA
+       !  FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA
+       !  FSI_sub_operation.eq.SUB_OP_FSI_SYNC_LAG_DATA
       subroutine fort_headermsg( &
         tid, &
         tilenum, &
@@ -140,12 +140,12 @@
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
-        xlo, & ! problo if FSI_operation==0
-        dx, &  ! problen if FSI_operation==1
+        xlo, & !problo if FSI_operation.eq.OP_FSI_INITIALIZE(UPDATE)_NODES
+        dx, & !problen if FSI_operation.eq.OP_FSI_INITIALIZE(UPDATE)_NODES
         dx_max_level, & 
         velbc, &
         vofbc, &
-        FSIdata, & ! velfab if FSI_operation==4
+        FSIdata, & ! velfab if FSI_operation.eq.OP_FSI_LAG_STRESS
         DIMS(FSIdata), &
         velfab, &
         DIMS(velfab), &
@@ -205,7 +205,8 @@
       INTEGER_T, INTENT(inout) :: FSI_input_nodes_per_element
       REAL_T, INTENT(inout) :: FSI_input_FSI_dt
       REAL_T, INTENT(inout) :: FSI_input_FSI_time
-      REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_max_num_nodes)
+      REAL_T, INTENT(inout) :: &
+        FSI_input_node_list(3*FSI_input_max_num_nodes)
       INTEGER_T, INTENT(inout) :: &
         FSI_input_element_list(4*FSI_input_max_num_elements)
       REAL_T, INTENT(inout) :: &
@@ -215,7 +216,7 @@
       REAL_T, INTENT(inout) :: &
         FSI_input_velocity_list(3*FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_max_num_nodes)
+        FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
         FSI_input_mass_list(FSI_input_max_num_nodes)
       REAL_T, INTENT(inout) :: &
@@ -235,11 +236,11 @@
       REAL_T, INTENT(inout) :: &
               FSI_output_displacement_list(3*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_velocity_halftime_list(3*FSI_output_max_num_nodes)
+          FSI_output_velocity_halftime_list(3*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
               FSI_output_velocity_list(3*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
-              FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_max_num_nodes)
+      FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
               FSI_output_mass_list(FSI_output_max_num_nodes)
       REAL_T, INTENT(inout) :: &
@@ -263,12 +264,13 @@
       INTEGER_T, INTENT(in) :: plot_interval 
       INTEGER_T, INTENT(in) :: ioproc
       INTEGER_T isout
-      INTEGER_T, INTENT(in) :: DIMDEC(FSIdata)  ! velfab if FSI_operation==4
+!velfab if FSI_operation.eq.OP_FSI_LAG_STRESS
+      INTEGER_T, INTENT(in) :: DIMDEC(FSIdata) 
       INTEGER_T, INTENT(in) :: DIMDEC(velfab) 
       INTEGER_T, INTENT(in) :: DIMDEC(drag) 
       INTEGER_T, INTENT(in) :: DIMDEC(masknbr) 
       INTEGER_T, INTENT(in) :: DIMDEC(maskfiner) 
-        ! velfab if FSI_operation==4
+!velfab if FSI_operation.eq.OP_FSI_LAG_STRESS
       REAL_T, INTENT(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
       REAL_T, pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: velfab(DIMV(velfab),SDIM)
@@ -389,24 +391,13 @@
        print *,"ngrow_make_distance invalid"
        stop
       endif
-      if ((FSI_operation.eq.0).or. &  ! initialize node locations
-          (FSI_operation.eq.1)) then  ! update node locations
+      if ((FSI_operation.eq.OP_FSI_INITIALIZE_NODES).or. &  
+          (FSI_operation.eq.OP_FSI_UPDATE_NODES)) then  
        if (ngrow_make_distance_in.ne.0) then
         print *,"ngrow_make_distance_in invalid"
         stop
        endif
-      else if (FSI_operation.eq.5) then ! find perimeter of solid object
-       if (ngrow_make_distance_in.ne.0) then
-        print *,"ngrow_make_distance_in invalid"
-        stop
-       endif
-      else if ((FSI_operation.eq.2).or. & ! make distance in narrow band
-               (FSI_operation.eq.3)) then ! update the sign
-       if (ngrow_make_distance_in.ne.3) then
-        print *,"ngrow_make_distance_in invalid"
-        stop
-       endif
-      else if (FSI_operation.eq.4) then ! copy Eul fluid vel/stress to solid
+      else if (FSI_operation.eq.OP_FSI_LAG_STRESS) then 
        if (ngrow_make_distance_in.ne.3) then
         print *,"ngrow_make_distance_in invalid"
         stop
@@ -574,8 +565,8 @@
       ARG3D_H2(FSIdata3D)=FSI_growhi3D(2)
       ARG3D_H3(FSIdata3D)=FSI_growhi3D(3)
 
-      if ((FSI_operation.eq.0).or. &  ! initialize node locations
-          (FSI_operation.eq.1)) then  ! update node locations
+      if ((FSI_operation.eq.OP_FSI_INITIALIZE_NODES).or. &  
+          (FSI_operation.eq.OP_FSI_UPDATE_NODES)) then  
 
        if ((tilenum.ne.0).or.(gridno.ne.0)) then
         print *,"tilenum or gridno invalid"
@@ -584,13 +575,14 @@
         stop
        endif
 
-       if (FSI_sub_operation.ne.0) then
-        print *,"FSI_sub_operation.ne.0"
+       if (FSI_sub_operation.ne.SUB_OP_FSI_DEFAULT) then
+        print *,"FSI_sub_operation.ne.SUB_OP_FSI_DEFAULT"
         stop
        endif
 
        isout=1 ! verbose on in sci_clsvof.F90
-       if (FSI_operation.eq.0) then ! initialize node locations
+       if (FSI_operation.eq.OP_FSI_INITIALIZE_NODES) then 
+
         call CLSVOF_ReadHeader( &
           im_critical, &
           max_num_nodes_list, &
@@ -627,7 +619,9 @@
           im_solid_map, &
           h_small,dx_max_level,CTML_FSI_INIT, &
           cur_time,problo3D,probhi3D,ioproc,isout)
-       else if (FSI_operation.eq.1) then 
+
+       else if (FSI_operation.eq.OP_FSI_UPDATE_NODES) then 
+
         if (CTML_FSI_INIT.ne.1) then
          print *,"CTML_FSI_INIT.ne.1"
          stop
@@ -677,13 +671,13 @@
         stop
        endif
 
-      else if ((FSI_operation.eq.2).or. & ! make distance in narrow band
-               (FSI_operation.eq.3)) then ! update the sign
+      else if ((FSI_operation.eq.OP_FSI_MAKE_DISTANCE).or. & 
+               (FSI_operation.eq.OP_FSI_MAKE_SIGN)) then 
 
        isout=1 ! verbose on in sci_clsvof.F90
 
-       if (FSI_sub_operation.ne.0) then
-        print *,"FSI_sub_operation.ne.0"
+       if (FSI_sub_operation.ne.SUB_OP_FSI_DEFAULT) then
+        print *,"FSI_sub_operation.ne.SUB_OP_FSI_DEFAULT"
         stop
        endif
        if (CTML_FSI_INIT.ne.1) then
@@ -992,10 +986,10 @@
           FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_EXTRAP_FLAG+1) ! flag
 
-          if (FSI_operation.eq.2) then
+          if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then
            FSIdata(D_DECL(i,j,k),ibase+FSI_AREA_PER_VOL+1)= &
             FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_AREA_PER_VOL+1)!perim(2D)
-          else if (FSI_operation.eq.3) then
+          else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
            ! do nothing
           else
            print *,"FSI_operation invalid"
@@ -1006,10 +1000,10 @@
            if (SDIM.eq.3) then
             FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)= &
              FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir) 
-            if (FSI_operation.eq.2) then !make dist in narrow band
+            if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then 
              FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)= &
               FSIdata3D(i,j,k,ibase+FSI_FORCE+dir) 
-            else if (FSI_operation.eq.3) then !update the sign
+            else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then 
              ! do nothing
             else
              print *,"FSI_operation invalid"
@@ -1023,10 +1017,10 @@
                      (xmap3D(dir).eq.2)) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+xmap3D(dir))= &
               FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_VELOCITY+dir) 
-             if (FSI_operation.eq.2) then
+             if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then
               FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+xmap3D(dir))= &
                FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) 
-             else if (FSI_operation.eq.3) then
+             else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
               ! do nothing
              else
               print *,"FSI_operation invalid"
@@ -1068,7 +1062,7 @@
        deallocate(FSIdata3D)
        deallocate(masknbr3D)
 
-      else if (FSI_operation.eq.4) then ! copy Eul fluid vel/stress to solid
+      else if (FSI_operation.eq.OP_FSI_LAG_STRESS) then 
 
        isout=1 ! verbose on in sci_clsvof.F90
 
@@ -1077,9 +1071,9 @@
         stop
        endif
 
-       if (FSI_sub_operation.eq.0) then
+       if (FSI_sub_operation.eq.SUB_OP_FSI_CLEAR_LAG_DATA) then
         call CLSVOF_clear_lag_data(ioproc,isout)
-       else if (FSI_sub_operation.eq.1) then 
+       else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then 
         allocate(veldata3D(DIMV3D(FSIdata3D),3)) 
         veldata3D_ptr=>veldata3D
 
@@ -1364,7 +1358,7 @@
         deallocate(masknbr3D)
         deallocate(maskfiner3D)
 
-       else if (FSI_sub_operation.eq.2) then 
+       else if (FSI_sub_operation.eq.SUB_OP_FSI_SYNC_LAG_DATA) then 
         call CLSVOF_sync_lag_data(ioproc,isout)
        else
         print *,"FSI_sub_operation invalid"
@@ -1860,7 +1854,7 @@
          !  allocated and initialized in this routine. 
         call CLSVOF_Read_aux_Header(auxcomp,ioproc,aux_isout)
 
-        FSI_operation=2 ! make distance in narrow band
+        FSI_operation=OP_FSI_MAKE_DISTANCE
         iter=0
         FSI_touch_flag=0
         call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
@@ -1871,7 +1865,7 @@
         endif
 
         do while (FSI_touch_flag.eq.1)
-         FSI_operation=3 ! sign update
+         FSI_operation=OP_FSI_MAKE_SIGN
          FSI_touch_flag=0
          call CLSVOF_Init_aux_Box(FSI_operation,iter,auxcomp, &
           FSI_touch_flag,ioproc,aux_isout)
