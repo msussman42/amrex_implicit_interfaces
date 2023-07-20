@@ -3706,10 +3706,9 @@ INTEGER_T :: local_elements
    inode=0
 #ifdef MVAHABFSI 
     ! declared in: CTMLFSI.F90
-   call CTML_GET_POS_VEL_FORCE_WT( &
+   call CTML_GET_POS_VEL_WT( &
     ctml_fib_pst, & ! =coord_fib
     ctml_fib_vel, & ! =vel_fib
-    ctml_fib_frc, & ! =force_fib
     ctml_fib_mass,& ! =ds_fib
     ctml_n_fib_bodies, &
     ctml_max_n_fib_nodes, &
@@ -9039,20 +9038,6 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
    endif
 
   enddo !part_id=1,TOTAL_NPARTS
-
-  if (CTML_FSI_flagF().eq.1) then 
-#ifdef MVAHABFSI
-   call CTML_SET_VELOCITY(CTML_NPARTS, &
-    ctml_max_n_fib_nodes,ctml_fib_vel) !vel_fib=ctml_fib_vel
-#else
-   print *,"define MEHDI_VAHAB_FSI in GNUmakefile"
-#endif
-  else if (CTML_FSI_flagF().eq.0) then
-   ! do nothing
-  else 
-   print *,"CTML_FSI_flagF() invalid"
-   stop
-  endif
 
  else
   print *,"TOTAL_NPARTS invalid"
@@ -15377,7 +15362,7 @@ INTEGER_T :: idir,ielem,im_part
             FSI_input_velocity_halftime_list((inode-1)*3+idir)
           ctml_fib_vel_prev(ctml_part_id,inode,idir)= &
             FSI_input_velocity_list((inode-1)*3+idir)
-          ctml_fib_frc_prev(ctml_part_id,inode,idir)= &
+          ctml_fib_frc(ctml_part_id,inode,idir)= &
             FSI_input_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)
          enddo !idir=1,sdim
          ctml_fib_mass_prev(ctml_part_id,inode)= &
@@ -15445,16 +15430,9 @@ INTEGER_T :: idir,ielem,im_part
         stop
        endif
 
-       !coord_fib_prev=ctml_fib_pst_prev
-       !coord_fib=ctml_fib_pst_prev
-       !vel_fib_halftime_prev=ctml_fib_vel_halftime_prev
        inode_crit=0 ! node index of first inactive node.
-       call CTML_PUT_PREV_POS_VEL_FORCE_WT( &
-         ctml_fib_pst_prev, &
-         ctml_fib_vel_halftime_prev, &
-         ctml_fib_vel_prev, &
-         ctml_fib_frc_prev, &
-         ctml_fib_mass_prev, &
+       call CTML_PUT_FORCE( &
+         ctml_fib_frc, &
          ctml_n_fib_bodies, &
          ctml_max_n_fib_nodes, &
          ctml_part_id)
@@ -15556,10 +15534,9 @@ INTEGER_T :: idir,ielem,im_part
         inode_crit=0 ! node index of first inactive node.
         inode=0
 #ifdef MVAHABFSI
-        call CTML_GET_POS_VEL_FORCE_WT( &
+        call CTML_GET_POS_VEL_WT( &
          ctml_fib_pst, &
          ctml_fib_vel, &
-         ctml_fib_frc, &
          ctml_fib_mass, &
          ctml_n_fib_bodies, &
          ctml_max_n_fib_nodes, &

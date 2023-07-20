@@ -177,10 +177,9 @@ stop
       end subroutine CTML_GET_FIB_NODE_COUNT
 
        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
-      subroutine CTML_GET_POS_VEL_FORCE_WT(&
+      subroutine CTML_GET_POS_VEL_WT(&
        fib_pst,&
        fib_vel,&
-       fib_frc,&
        fib_wt,&
        n_fib_bodies,&
        max_n_fib_nodes,&
@@ -195,12 +194,11 @@ stop
       INTEGER_T, INTENT(in) :: ifib
       REAL_T, INTENT(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
       REAL_T, INTENT(inout) :: fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, INTENT(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
       REAL_T, INTENT(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
       INTEGER_T inode,idir,inode_cutoff
 
       if (1.eq.1) then
-       print *,"calling CTML_GET_POS_VEL_FORCE_WT"
+       print *,"calling CTML_GET_POS_VEL_WT"
        print *,"ifib=",ifib
       endif
 
@@ -220,10 +218,6 @@ stop
            ! section=1
          fib_vel(ifib,inode,idir)=vel_fib(ifib,1,inode,idir)
         end do
-        do idir=1,SDIM
-           ! section=1
-         fib_frc(ifib,inode,idir)=force_fib(ifib,1,inode,idir)
-        enddo
         fib_wt(ifib,inode)=ds_fib(ifib,inode)
         if (fib_wt(ifib,inode).gt.zero) then
          ! do nothing
@@ -259,20 +253,13 @@ stop
       endif
 
       return
-      end subroutine CTML_GET_POS_VEL_FORCE_WT
+      end subroutine CTML_GET_POS_VEL_WT
 
 
        ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
-      subroutine CTML_PUT_PREV_POS_VEL_FORCE_WT(&
-       fib_pst,& !caller: ctml_fib_pst_prev; coord_fib(_prev)=fib_pst
-        !vel_fib_halftime_prev=fib_vel_halftime
-       fib_vel_halftime,& !caller: ctml_fib_vel_halftime_prev
-        !vel_fib(_prev)=fib_vel
-       fib_vel,& !caller: ctml_fib_vel_prev
+      subroutine CTML_PUT_FORCE(&
         !force_fib(_prev)=fib_frc
-       fib_frc,& !caller: ctml_fib_frc_prev
-        !ds_fib(_prev)=fib_wt
-       fib_wt,&  !caller: ctml_fib_mass_prev
+       fib_frc,& !caller: ctml_fib_frc
        n_fib_bodies,&
        max_n_fib_nodes,&
        ifib)
@@ -284,17 +271,11 @@ stop
       INTEGER_T, INTENT(in) :: n_fib_bodies
       INTEGER_T, INTENT(in) :: max_n_fib_nodes
       INTEGER_T, INTENT(in) :: ifib
-      REAL_T, INTENT(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, INTENT(inout) :: &
-              fib_vel_halftime(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, INTENT(inout) :: &
-              fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
       REAL_T, INTENT(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, INTENT(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
       INTEGER_T inode,idir,inode_cutoff
 
       if (1.eq.1) then
-       print *,"calling CTML_PUT_PREV_POS_VEL_FORCE_WT"
+       print *,"calling CTML_PUT_FORCE"
        print *,"ifib=",ifib
       endif
 
@@ -310,66 +291,23 @@ stop
        inode_cutoff=0
        do inode=1,nIBM_fib
         do idir=1,SDIM
-         coord_fib_prev(ifib,inode,idir)= &
-           fib_pst(ifib,inode,idir)
-         coord_fib(ifib,inode,idir)= &
-           fib_pst(ifib,inode,idir)
-          !section=1
-         vel_fib_halftime_prev(ifib,1,inode,idir)= &
-           fib_vel_halftime(ifib,inode,idir)
-         vel_fib_prev(ifib,1,inode,idir)= &
-           fib_vel(ifib,inode,idir)
-         vel_fib(ifib,1,inode,idir)= &
-           fib_vel(ifib,inode,idir)
-          ! need to overwrite X^{n-1}
-        end do
-        do idir=1,SDIM
           ! section=1
-         force_fib_prev(ifib,1,inode,idir)= &
-           fib_frc(ifib,inode,idir)
          force_fib(ifib,1,inode,idir)= &
            fib_frc(ifib,inode,idir)
         enddo
-        ds_fib_prev(ifib,inode)= &
-          fib_wt(ifib,inode)
-        ds_fib(ifib,inode)= &
-          fib_wt(ifib,inode)
-        if (fib_wt(ifib,inode).gt.zero) then
-         ! do nothing
-        else if ((fib_wt(ifib,inode).eq.zero).and.(inode.gt.1)) then
-         if (inode_cutoff.eq.0) then
-          inode_cutoff=inode
-         endif
-        else 
-         print *,"fib_wt(ifib,inode) invalid"
-         print *,"ifib= ",ifib
-         print *,"inode= ",inode
-         print *,"nIBM_fib= ",nIBM_fib
-         print *,"nrIBM_fib= ",nrIBM_fib
-         stop
-        endif
-       end do
-
-       if (inode_cutoff.ne.0) then
-        print *,"WARNING, ds_fib==0 for some nodes"
-        print *,"inode_cutoff=",inode_cutoff 
-        print *,"ifib= ",ifib
-        print *,"nIBM_fib= ",nIBM_fib
-        print *,"nrIBM_fib= ",nrIBM_fib
-       endif
-
+       enddo
       else
        print *,"ifib invalid"
        stop
       endif
 
       if (1.eq.1) then
-       print *,"done with CTML_PUT_PREV_POS_VEL_FORCE_WT"
+       print *,"done with CTML_PUT_FORCE"
        print *,"ifib=",ifib
       endif
 
       return
-      end subroutine CTML_PUT_PREV_POS_VEL_FORCE_WT
+      end subroutine CTML_PUT_FORCE
 
 
 
@@ -396,48 +334,6 @@ stop
 
       return
       end subroutine CTML_RESET_ARRAYS
-
-       ! (NodeVel was initialized when FSI_sub_operation==1)
-       ! called from: sci_clsvof.F90 (CLSVOF_sync_lag_data)
-       ! this routine copies FSI(partid)%NodeVel(dir,inode)
-       ! (fib_vel) to the Lagrangian code.
-      subroutine CTML_SET_VELOCITY(&
-       nparts,max_n_fib_nodes,fib_vel)
-      use dummy_module
-      use probcommon_module
-
-      IMPLICIT NONE
-      INTEGER_T nparts,max_n_fib_nodes
-      REAL_T fib_vel(nparts,max_n_fib_nodes,AMREX_SPACEDIM)
-      INTEGER_T ifib,inode,idir
-
-      if (1.eq.1) then
-       print *,"calling CTML_SET_VELOCITY"
-      endif
-
-      if (nrIBM_fib.ne.nparts) then
-       print *,"nrIBM_fig.ne.nparts"
-       stop
-      endif
-      if (nIBM_fib.ne.max_n_fib_nodes) then
-       print *,"nIBM_fib.ne.max_n_fib_nodes"
-       stop
-      endif
-
-      do ifib=1,nrIBM_fib
-       do inode=1,nIBM_fib
-        do idir=1,SDIM
-         vel_fib(ifib,1,inode,idir)=fib_vel(ifib,inode,idir)
-        end do
-       end do
-      end do
-
-      if (1.eq.1) then
-       print *,"done with CTML_SET_VELOCITY"
-      endif
-
-      return
-      end subroutine CTML_SET_VELOCITY
 
        ! CTML_SOLVE_SOLID is called from CLSVOF_ReadNodes
       subroutine CTML_SOLVE_SOLID(&
@@ -528,10 +424,6 @@ stop
         vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
         vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
         vel_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), &
-        !ctml_fib_frc_prev
-        force_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
-        force_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
-        force_fib_prev(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & 
         force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,1), & 
         force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,2), &
         force_fib(1:nrIBM_fib,1:nsecIBMmax,1:nIBM_fib,3), & 
@@ -669,50 +561,5 @@ bind(c,name='fort_ctml_max_nodes')
 
  return
 end subroutine fort_ctml_max_nodes
-
-
-subroutine fort_ctmltransferforce(&
- tilelo,&
- tilehi,&
- fablo,&
- fabhi,&
- velnew,DIMS(velnew),&
- force,DIMS(force)) &
-bind(c,name='fort_ctmltransferforce')
-
- use probcommon_module
- use global_utility_module
-
- IMPLICIT NONE
- INTEGER_T, INTENT(in) :: tilelo(SDIM)
- INTEGER_T, INTENT(in) :: tilehi(SDIM)
- INTEGER_T, INTENT(in) :: fablo(SDIM)
- INTEGER_T, INTENT(in) :: fabhi(SDIM)
- INTEGER_T, INTENT(in) :: DIMDEC(velnew)
- REAL_T, INTENT(inout) :: velnew(DIMV(velnew),SDIM)
- INTEGER_T, INTENT(in) :: DIMDEC(force)
- REAL_T, INTENT(in) :: force(DIMV(force),SDIM)
-
- INTEGER_T growlo(3),growhi(3)
- INTEGER_T i,j,k,idir
-
- call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
- 
- do i=growlo(1),growhi(1)
- do j=growlo(2),growhi(2)
- do k=growlo(3),growhi(3)
-   
-  do idir=1,SDIM
-   velnew(D_DECL(i,j,k),idir)=&
-    velnew(D_DECL(i,j,k),idir)+&
-    force(D_DECL(i,j,k),idir)
-  end do
-  
- end do
- end do
- end do
-
- return
-end subroutine fort_ctmltransferforce
 
 

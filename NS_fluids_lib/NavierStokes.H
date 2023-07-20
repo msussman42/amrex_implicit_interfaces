@@ -1425,8 +1425,6 @@ void apply_pressure_grad(
 
     void build_moment_from_FSILS(Real cur_time);
 
-    void ctml_fsi_transfer_force();
-
 protected:
 
     static int POLYGON_LIST_MAX;

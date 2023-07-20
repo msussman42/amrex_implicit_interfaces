@@ -769,10 +769,8 @@ c
      &     ,uibm1in_fib,uibm2in_fib,uibm3in_fib
 ! velocity at t^{n+1} ?
      &     ,uibm1out_fib,uibm2out_fib,uibm3out_fib
-! force at t^{n}
+! force at t^{n+1}
      &     ,fibm1in_fib,fibm2in_fib,fibm3in_fib
-! force at t^{n+1}?
-     &     ,fibm1out_fib,fibm2out_fib,fibm3out_fib
 ! position at t^{n}
      &     ,gx_ibm_massivein_fib
      &     ,gy_ibm_massivein_fib
@@ -808,9 +806,6 @@ c
       real*8 FIBM1in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
      &      ,FIBM2in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
      &      ,FIBM3in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,FIBM1out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,FIBM2out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,FIBM3out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
 
       real*8 GX_IBM_MASSIVEin_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,Ns_IBM_fib)
@@ -954,20 +949,7 @@ c
            endif
          endif
 
-! initialize and assign output variables
-      if(nr_ibm_fib>=1) FIBM1out_fib=0.0
-      if(nr_ibm_fib>=1) FIBM2out_fib=0.0
-      if(nr_ibm_fib>=1) FIBM3out_fib=0.0
-
       do i=1,nr_ibm_fib
-        do isec=1,nsec_ibm
-        do j=1,ns_ibm_r_fib(i)
-          FIBM1out_fib(i,isec,j)=ffluidsum1_fib(i,isec,j)
-          FIBM2out_fib(i,isec,j)=ffluidsum2_fib(i,isec,j)
-          if(ndim .gt.2) 
-     &       FIBM3out_fib(i,isec,j)=ffluidsum3_fib(i,isec,j)
-        end do
-        end do
         do j=1,ns_ibm_r_fib(i)
 ! position at t^{n+1}
           gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
