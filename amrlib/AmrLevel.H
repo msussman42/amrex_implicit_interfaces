@@ -43,9 +43,9 @@ public:
 int max_num_nodes;
 int max_num_elements;
 int max_num_sections;
-int num_nodes[2];
-int num_elements[2];
-int num_sections[2];
+int num_nodes;
+int num_elements;
+int num_sections;
 int nodes_per_element;
 //node[0 or 1][0..maxsec-1][0..max_num_nodes][0..2]
 Vector< Real > node_list; 
