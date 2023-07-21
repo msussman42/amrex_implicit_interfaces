@@ -1,4 +1,4 @@
-1.00    0       0.8 000.0 0.0   -1    0.05  0.05       /K_LINK,  SimulationType(0:fiber or shell/~0:shell+fiber), impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling)
+1.0 0 0.8 0.0 0.0 -1 0.05  0.05       /K_LINK,  SimulationType(0:fiber or shell/~0:shell+fiber), impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling)
 0.7 5.0 4.9  3.5  0.45 0.25 100 1.0d-9 1.5 0.20   /Contact Paramters 0:9
 -5.0 -5.0 -5.0                         /bucket start (x,y,z)
 35.0 35.0 35.0                         /bucket end (x,y,z)   
@@ -13,7 +13,7 @@
 1.0d-13 1.0d-11 15  200 1  2           /Solverabstol,Solverreltol,SolverOutiter,SolverIniter,SolverPre{0:no Pre;1:diag Pre; 2:iLU}
 0.0  -00.0  0.00                       /del_s(~0: with thermal calculation),alphaTEMP_IBM,betaTEMP_IBM
 .false. .false.                        /channelcontacty,channelcontactz
-.false.  500  500                       /flag_restartfile, t0_restartfile, dt_restartfile {now only implemented for FE shell}
+.false.  500  500                       /flag_restartfile, t0_restartfile, dt_restartfile flag_restartfile=false (only _esh restart implemented)
 c------------------Start of main inputs-------------------------------------
 1 1                                    /nr_ibm_f, nr_ibm_fb    Number of flexible bodies, num of interacting bodies for penalty to prevent intersection
 ./tringulareFix.dat                   /name of externalcontact trinagular

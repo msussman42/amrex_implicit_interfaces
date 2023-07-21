@@ -922,12 +922,13 @@ c
               call outputstr(nt,ntsave)
            endif
 
-! write geometrical restart file for Fe shell  structures
+! t0_restartfile and dt_restartfile are integers.
            if(     (flag_restartfile)  
      &        .and.(time_step .ge.t0_restartfile) 
      &        .and.(mod(time_step,dt_restartfile).eq. 0 ) 
      &       ) then
-            call restartInput_esh(nt,nt-t0_restartfile,dt_restartfile)
+            print *,"restart done through the c++"
+            stop
            endif
          endif
 
