@@ -42,26 +42,21 @@ public:
 
 int max_num_nodes;
 int max_num_elements;
-int num_nodes;
-int num_elements;
+int max_num_sections;
+int num_nodes[2];
+int num_elements[2];
+int num_sections[2];
 int nodes_per_element;
-Real FSI_dt;
-Real FSI_time;
-Vector< Real > node_list; //3*max_num_nodes
+//node[0 or 1][0..maxsec-1][0..max_num_nodes][0..2]
+Vector< Real > node_list; 
+//element[0..maxsec-1][0..max_num_elements][0..3]
 Vector< int > element_list;//4*max_num_elements
-//3*max_num_nodes
-Vector< Real > displacement_list; //displacement at time=FSI_time
-//3*max_num_nodes
-Vector< Real > velocity_list; //velocity at time=FSI_time
-//3*max_num_nodes
-//u^{n+1/2}=(x^{n+1}-x^{n})/FSI_dt
-Vector< Real > velocity_halftime_list; //velocity at time=FSI_time-FSI_dt/2.0
-//NCOMP_FORCE_STRESS*max_num_nodes
-Vector< Real > force_list; // force at time=FSI_time
-//max_num_nodes
-Vector< Real > mass_list; // mass at time=FSI_time
-//max_num_nodes
-Vector< Real > temperature_list; // temperature at time=FSI_time
+//displacement[0 or 1][0..maxsec-1][0..max_num_nodes][0..2]
+Vector< Real > displacement_list; 
+//mass[0..maxsec-1][0..max_num_nodes]
+Vector< Real > mass_list; 
+//temperature[0..maxsec-1][0..max_num_nodes]
+Vector< Real > temperature_list; 
 
 void initData_FSI(
   int max_num_nodes_init,
