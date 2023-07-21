@@ -57,16 +57,20 @@ include './distFSI/grid_def'
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_esh 
  integer, SAVE, allocatable, dimension(:) :: nIBM_r_fbc 
 
+! coord_fib(nr_IBM_fib,ns_IBM_fib,3)
  real*8, SAVE, allocatable, dimension(:,:,:) :: coord_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: coord_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: coord_fbc
 
+! vel_fib(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3)
+! force_fib(nr_IBM_fib,Nsec_IBMmax,ns_IBM_fib,3)
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fib, force_fib
  real*8, SAVE, allocatable, dimension(:,:,:,:) :: vel_fsh, force_fsh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_esh, force_esh
  real*8, SAVE, allocatable, dimension(:,:,:)   :: vel_fbc, force_fbc
 
+! ds_fib(nr_IBM_fib,ns_IBM_fib)
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_fib
  real*8, SAVE, allocatable, dimension(:,:,:) :: ds_fsh
  real*8, SAVE, allocatable, dimension(:,:)   :: ds_esh

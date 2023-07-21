@@ -918,6 +918,10 @@ c
          if(theboss) then
 
 ! write tecplot files for structural components
+! g[xyz]_ibm_massive_fib(i,j)
+! vibm[1-3]_fib(i,j)
+! filename='ibm-2dFib-B ... .dat'
+! filename='ibm-3dFib-B ... .dat'
            if(mod(time_step,ntsave).eq. 0 ) then
               call outputstr(nt,ntsave)
            endif

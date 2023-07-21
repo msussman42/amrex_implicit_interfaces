@@ -1,4 +1,4 @@
-1.0 0 0.8 0.0 0.0 -1 0.05  0.05       /K_LINK,  SimulationType(0:fiber or shell/~0:shell+fiber), impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling)
+1.0 0 0.8 0.0 0.0 -1 0.05  0.05       /K_LINK,  SimulationType(0:fiber or shell/~0:shell+fiber), impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling); this file read from create_grid2.F
 0.7 5.0 4.9  3.5  0.45 0.25 100 1.0d-9 1.5 0.20   /Contact Paramters 0:9
 -5.0 -5.0 -5.0                         /bucket start (x,y,z)
 35.0 35.0 35.0                         /bucket end (x,y,z)   
@@ -14,15 +14,15 @@
 0.0  -00.0  0.00                       /del_s(~0: with thermal calculation),alphaTEMP_IBM,betaTEMP_IBM
 .false. .false.                        /channelcontacty,channelcontactz
 .false.  500  500                       /flag_restartfile, t0_restartfile, dt_restartfile flag_restartfile=false (only _esh restart implemented)
-c------------------Start of main inputs-------------------------------------
+c Start of main inputs; this file read from create_grid2.F
 1 1                                    /nr_ibm_f, nr_ibm_fb    Number of flexible bodies, num of interacting bodies for penalty to prevent intersection
 ./tringulareFix.dat                   /name of externalcontact trinagular
 0 0                                    /nFixcontact,nFixcontactL:num of nodes and elements in the above file
 c======global inputs 1-------------------------
 0			               /0:fiber structure 1:shell structure 2:fibrous shell
 .true.                                 /flag record position    
-./posFib1.dat                         /name of the data file with the tags for recording
-0.0                                    /TSIBMin
+./posFib1.flag_in_channel.dat     /name of the data file with the tags for recording
+0.0                                    /TSIBMin (temperature)
 0.0  0.0000   1.5  0.0                 /Cs_IBM, CS_IBM_rays, Density_Coef, Density_coefP
 .true.  .false.   .false.  .flase.  .false.   .false.         /6 records:1FluidForceFlag,2ThermalForceFlag,3ContactForceFlag,4ExternalPressureFlag,Electromehcanical,ImplicitElecMech
 .false.                                /plane contact   if true need to add following lines
