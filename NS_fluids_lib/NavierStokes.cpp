@@ -196,8 +196,8 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 Real NavierStokes::truncate_thickness=2.0;  
 
 Real NavierStokes::init_shrink  = 1.0;
-Real NavierStokes::change_max   = 1.1;
-Real NavierStokes::change_max_init = 1.1;
+Real NavierStokes::change_max   = 1.01;
+Real NavierStokes::change_max_init = 1.01;
 
 Vector<Real> NavierStokes::NS_coflow_Z; 
 Vector<Real> NavierStokes::NS_coflow_R_of_Z; 
@@ -2677,11 +2677,37 @@ NavierStokes::read_params ()
 		partial_cmof_stencil_at_walls);
 
     pp.queryAdd("init_shrink",init_shrink);
+    if ((init_shrink>0.0)&&(init_shrink<=1.0)) {
+     //do nothing
+    } else
+     amrex::Error("need to have: 0.0<ns.init_shrink<=1.0");
+
     pp.queryAdd("dt_max",dt_max);
 
     pp.queryAdd("change_max",change_max);
+    if ((change_max>=1.0)&&(change_max<1.011)) {
+     //do nothing
+    } else {
+     std::cout << "ns.change_max now invalid: " << change_max << '\n';
+     amrex::Error("need to have 1.0<=ns.change_max<=1.01");
+    }
+
     change_max_init=change_max;
     pp.queryAdd("change_max_init",change_max_init);
+
+    if ((change_max_init>=1.0)&&(change_max_init<1.011)) {
+     //do nothing
+    } else if (change_max_init<1.0) {
+     amrex::Error("need to have 1.0<=ns.change_max_init<=1.01");
+    } else if (change_max_init>=1.011) {
+     if ((init_shrink>0.0)&&(init_shrink<1.0)) {
+      //do nothing
+     } else if (init_shrink>=1.0) {
+      amrex::Error("cannot have change_max_init>1.01 and init_shrink>=1.0");
+     } else
+      amrex::Error("init_shrink invalid");
+    } else
+     amrex::Error("ns.change_max_init invalid");
 
     pp.queryAdd("fixed_dt",fixed_dt);
     fixed_dt_init=fixed_dt;

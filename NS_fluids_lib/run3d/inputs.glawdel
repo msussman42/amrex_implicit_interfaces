@@ -64,7 +64,7 @@ mac.mac_abs_tol    = 1.0e-10
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 0.1      
-ns.change_max     = 1.1     
+ns.change_max=1.01     
 ns.visc_coef      = 1.0      # Re=rho L U/mu  L=1  U=1
 ns.gravity        = 0.0   # Fr=U^2/gL L=1  
 # water is material 1 and it is dispersed phase (comes from bottom - ylo)

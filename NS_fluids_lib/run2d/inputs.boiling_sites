@@ -80,7 +80,7 @@ mac.mac_abs_tol    = 1.0e-10
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 0.5      # scale back initial timestep
-ns.change_max     = 1.1    # scale back initial timestep
+ns.change_max=1.01    # scale back initial timestep
 ns.visc_coef      = 0.002  # Re=rho LU/mu=0.96*16.6*.28/0.0089=501
 mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = -1.0 #  U^2=gL

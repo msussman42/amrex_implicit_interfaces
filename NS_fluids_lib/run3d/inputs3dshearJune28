@@ -70,7 +70,7 @@ ns.is_twophase=1
 
 ns.cfl            = 1.0      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 ns.visc_coef      = 1.0     # coef of viscosity
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -980.0  # body force  (gravity in MKS units)

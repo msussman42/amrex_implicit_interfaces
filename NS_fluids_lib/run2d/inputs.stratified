@@ -64,7 +64,7 @@ mac.mac_abs_tol    = 1.0e-8
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1    
+ns.change_max=1.01    
 ns.visc_coef      = 0.038    # coef of viscosity 0.038
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -1.321   # -1.321

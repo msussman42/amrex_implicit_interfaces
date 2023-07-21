@@ -97,7 +97,7 @@ mac.mac_abs_tol    = 1.0e-10
 ns.shock_timestep=2 2 2
 ns.cfl            = 0.125    # cfl number for hyperbolic system
 ns.init_shrink    = 0.2      # scale back initial timestep
-ns.change_max     = 1.025    # scale back initial timestep
+ns.change_max=1.01    # scale back initial timestep
 # for underwater explosion, energy equation must be handled
 # conservatively, but not for this problem.
 ns.visc_coef      = 1.0    # coef of viscosity

@@ -68,7 +68,7 @@ ns.implicit_surface_tension=0
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 ns.visc_coef      = 0.000105263  #coef of viscosity
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -1.44893  # body force  (gravity in MKS units)

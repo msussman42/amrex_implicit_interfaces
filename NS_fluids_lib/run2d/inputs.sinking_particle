@@ -144,7 +144,7 @@ ns.visual_ncell=16 32
 
 ns.cfl            = 0.5 
 ns.init_shrink    = 0.1 
-ns.change_max     = 1.1      
+ns.change_max=1.01      
 ns.change_max_init = 1.0e+5
 ns.visc_coef      = 1.0   
 ns.gravity        = -9.8

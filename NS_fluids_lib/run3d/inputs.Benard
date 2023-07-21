@@ -75,7 +75,7 @@ mac.mac_abs_tol    = 1.0e-8
 
 ns.cfl            = 0.5
 ns.init_shrink    = 0.1   
-ns.change_max     = 1.1  
+ns.change_max=1.01  
 ns.visc_coef      = 1.0   
 ns.gravity        = -980.0  # MIKE  
 ns.tension        = 0.0

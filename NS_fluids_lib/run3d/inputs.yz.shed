@@ -67,7 +67,7 @@ mac.mac_abs_tol    = 1.0e-11
 
 ns.cfl            = 0.533    # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 #ns.visc_coef      = 0.032   # 0.05 translating 1/31 Seo coarse test
 #ns.visc_coef=0.0127          # 1/78.5 Seo convergence test
 ns.visc_coef=0.01          # 1/100 body fit compare

@@ -77,7 +77,7 @@ ns.overlap=1.0  # MS
 
 ns.cfl             = 0.2      # cfl number for hyperbolic system
 ns.init_shrink     = 1.0e-5   # scale back initial timestep
-ns.change_max      = 1.1      # scale back initial timestep
+ns.change_max      = 1.01      # scale back initial timestep
 
 #** [dyne s/cm^2] ** - CGS units!
 #ns.visc_coef       = 1.766e-6 # INDIUM coef of viscosity, real 1.7e-2@460K, divide by U

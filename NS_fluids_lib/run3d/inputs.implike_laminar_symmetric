@@ -60,7 +60,7 @@ mac.mac_abs_tol    = 1.0e-10
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 ns.visc_coef      = 1.0   
 ns.gravity        = 0.0   # body force  (gravity in MKS units)
 ns.gravityangle = 0.0

@@ -100,7 +100,7 @@ ns.visual_compare=0 # if 1, then compare to COARSEDATA.tec
 ns.visual_ncell=32 32
 
 ns.cfl            = 0.5   # cfl number for hyperbolic system 0.5
-ns.change_max     = 1.1     
+ns.change_max=1.01     
 ns.change_max_init= 1.0e+6
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-11

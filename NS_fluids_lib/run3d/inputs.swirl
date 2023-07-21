@@ -69,7 +69,7 @@ ns.projection_pressure_scale=1.0
 
 
 ns.cfl            = 0.5   # cfl number for hyperbolic system 0.5
-ns.change_max     = 1.1     
+ns.change_max=1.01     
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-10
 

@@ -78,7 +78,7 @@ mac.visc_abs_tol    = 1.0e-8
 
 ns.cfl            = 0.1667   # 0.5 INCOMP 0.1667 COMP
 ns.init_shrink    = 0.1      # 1.0 INCOMP 0.1 COMP
-ns.change_max     = 1.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 # 0.038=mu/(rho L U)
 # mu=0.038*1*5.19222*62.06=12.2447
 ns.visc_coef      = 1.0    # coef of viscosity 0.038

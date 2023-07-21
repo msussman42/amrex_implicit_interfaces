@@ -117,7 +117,7 @@ ns.tension        = 0.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 
 ns.cfl            = 0.5    
 ns.init_shrink    = 0.1  
-ns.change_max     = 1.1      
+ns.change_max=1.01      
 ns.change_max_init = 1.0e+5      
 ns.visc_coef      = 1.0    # 0.038=mu/(rho L U)
 # mu=0.038 * 1* 5.19 * 62.1=12.25
