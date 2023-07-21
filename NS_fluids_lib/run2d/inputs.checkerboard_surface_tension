@@ -74,7 +74,7 @@ mac.mac_abs_tol    = 1.0e-12
 
 ns.cfl            = 0.5 
 ns.init_shrink    = 0.1
-ns.change_max     = 1.1      
+ns.change_max=1.01      
 ns.visc_coef      = 1.0  # 1.0
 # invert_gravity=0 => force points from heavy fluid to light fluid
 # invert_gravity=1 => force points from light fluid to heavy fluid

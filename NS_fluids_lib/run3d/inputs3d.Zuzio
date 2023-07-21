@@ -65,7 +65,7 @@ mac.visc_abs_tol    = 1.0e-5
 
 ns.cfl            = 0.5    
 ns.init_shrink    = 0.1  
-ns.change_max     = 1.1      
+ns.change_max=1.01      
 ns.visc_coef      = 1.0    # 0.038=mu/(rho L U)
 # mu=0.038 * 1* 5.19 * 62.1=12.25
 # 1.321=L^2 980 0.0025/50   L^2=1.321 * 50/(980*0.0025)=26.959 L=5.19

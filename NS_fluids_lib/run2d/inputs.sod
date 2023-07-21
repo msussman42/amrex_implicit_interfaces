@@ -72,7 +72,7 @@ ns.shock_timestep=1 1
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
 ns.init_shrink    = 0.1      # scale back initial timestep
-ns.change_max     = 1.025      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 ns.visc_coef      = 0.0    # coef of viscosity
 ns.gravity        = 0.0  # must be nonzero, otherwise not used.
 ns.tension        = 0.0 

@@ -68,7 +68,7 @@ mac.mac_abs_tol    = 1.0e-10
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 0.5      # scale back initial timestep
-ns.change_max     = 1.1      # 
+ns.change_max=1.01      # 
 ns.visc_coef      = 5.7e-8   # water=0.01poise  mu/(rho L U)=5.7e-8 
 mac.visc_abs_tol   = 1.0e-7   # above: 1/17697680 (max_level=3, 0.0001)
 ns.gravity        = 5.95     # Fr^2=U^2/gL g=980 L=572 U=309.4cm/s (6.02knots)

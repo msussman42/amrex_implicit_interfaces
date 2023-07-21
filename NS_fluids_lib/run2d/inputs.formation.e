@@ -85,7 +85,7 @@ amr.plotfile_on_restart=1
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 ns.visc_coef      = 1.0      # was 0.2749, now included in viscconst
                              # must have visc_coef=1 if some shear-thinning
                              # materials

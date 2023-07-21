@@ -73,7 +73,7 @@ ns.is_twophase=1
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
 ns.visc_coef      = 0.01    # coef of viscosity
 mac.visc_abs_tol   = 1.0e-8
 #ns.init_iter      = 5       # number of init iters to def pressure

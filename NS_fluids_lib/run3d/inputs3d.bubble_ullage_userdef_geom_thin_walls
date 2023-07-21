@@ -159,7 +159,7 @@ ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
 # Adaptive dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0      # scale back initial timestep
-ns.change_max       = 1.1      
+ns.change_max=1.01      
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
 #0=only at t=0 1=always account for sound speed 2=ignore

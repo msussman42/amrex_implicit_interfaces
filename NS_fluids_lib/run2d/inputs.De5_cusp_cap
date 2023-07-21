@@ -101,7 +101,7 @@ ns.dt_cutoff      = 1.0e-11 # level 0 timestep below which we halt
 mac.mac_abs_tol    = 1.0e-8  # tolerence for mac projections
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0   # scale back initial timestep
-ns.change_max     = 1.1 
+ns.change_max=1.01 
 #KEEP THIS EQUAL TO ONE
 ns.visc_coef      = 1.0  # viscosity 1.0 or
                          # (eta_solvent/eta_total)*(1/Re(based on eta_total))

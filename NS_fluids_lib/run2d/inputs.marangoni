@@ -114,7 +114,7 @@ mac.visc_abs_tol    = 1.0e-6
 
 ns.cfl            = 0.8
 ns.init_shrink    = 0.1 
-ns.change_max     = 1.1      
+ns.change_max=1.01      
 ns.visc_coef      = 1.0  
 ns.gravity        = 0.0
 ns.tension        = 7.0

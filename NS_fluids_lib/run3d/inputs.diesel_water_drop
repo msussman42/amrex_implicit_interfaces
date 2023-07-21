@@ -71,7 +71,7 @@ mac.mac_abs_tol    = 1.0e-8
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1    
+ns.change_max=1.01    
 # We= 2.0,   9.6,   18.6,   28.7,   45.3,   58.9, 79.6
 # Re= 56.3, 123.3,  171.6,  213.2,  267.9,  305.5, 355.1
 # 1/Re=0.018 0.008, 0.0058, 0.0047, 0.0037, 0.0033, 0.0028 

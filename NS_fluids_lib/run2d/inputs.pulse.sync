@@ -73,7 +73,7 @@ ns.visual_header=1  # 3=Viorel binary 2=Amira binary  1=tecplot ascii
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max     = 1.1      # 
+ns.change_max=1.01      # 
 ns.visc_coef      = 0.001   # water=0.01poise=.001kg/(m s)  
 ns.gravity        = -9.8     
 ns.gravityangle = 0.0
