@@ -21,7 +21,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &                         ,min_gridz
      &                         ,nx1,ny1,nz1
      &                         ,gx1,gy1,gz1
-     &                         ,Nsec_IBMout,dsecy_IBMout,dsecz_IBMout
+     &                         ,dsecy_IBMout,dsecz_IBMout
      &                         ,idimin
      &                         ,nRead
      &                         ,theboss)
@@ -35,22 +35,23 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       implicit none
       integer nr_ibm_t,ns_ibm_t
 
-      integer nIBM_r(nr_IBM)
+      integer, INTENT(out) :: nIBM_r(nr_IBM)
      &        ,nIBM_r_fib(nr_IBM_fib)
      &        ,nIBM_r_fsh(nr_IBM_fsh)
      &        ,nIBM_r_esh(nr_IBM_esh)
      &        ,nIBM_r_fbc(nr_IBM_fbc)
-     &        ,dtypeDelta(3) 
+     
+      integer, INTENT(out) :: dtypeDelta(3) 
 
-      integer nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
+      integer, INTENT(out) :: nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
 
       integer i,j,k,ig,jq
 
-      real*8 min_gridx,min_gridy,min_gridz
+      real*8, intent(in) :: min_gridx,min_gridy,min_gridz
 
-      integer nx1,ny1,nz1
+      integer, intent(in) :: nx1,ny1,nz1
 
-      real*8  gx1(nx1),gy1(ny1),gz1(nz1)
+      real*8, intent(in) :: gx1(nx1),gy1(ny1),gz1(nz1)
 
       integer ibdy,np,bodypoint(3),npg,ne
      &    ,jtype,itype,nos,ntype,ntem,noi,noj,n 
@@ -63,29 +64,34 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &    , amat1(2,maxordern), amat2(3,maxordern),sx(2,maxordern)
      &    ,x_FibVec(maxordern,3),xFibvecLoc(3)
 
-      real*8 GX_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
+      real*8, intent(out) ::
+     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,ds_fib(Nr_IBM_fib,Ns_IBM_fib)
 
-      real*8 GX_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
+      real*8, intent(out) ::
+     &       GX_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
      &      ,Gy_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
      &      ,Gz_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
      &      ,ds_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
 
-      real*8 GX_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
+      real*8, intent(out) ::
+     &       GX_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
      &      ,Gy_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
      &      ,Gz_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
      &      ,ds_esh(Nr_IBM_esh,Ns_IBM_esh)
 
-      real*8 GX_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
+      real*8, intent(out) ::
+     &       GX_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
      &      ,Gy_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
      &      ,Gz_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
      &      ,ds_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
 
       real*8 das,xj1,xj2,xj3,yj1,yj2,yj3,zj1,zj2,zj3  
 
-      integer idimin,i2
+      integer, intent(in) :: idimin
+      integer i2
 
       real*8 tmpv1val,tmpv2val,tmpv1(3),tmpv2(3),tmpv3(3),tmpv1x(3)
      &      ,tmpvec(3),tmpvecval
@@ -94,12 +100,13 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &      ,kmem_i_j(50,3),kbend_i_j
 
       integer jq_pm(2),j_pm(2)
-      integer itmpnode(3),isec,Nsec_IBMout
+      integer itmpnode(3)
 
-      real*8  dsecy_IBMout,dsecz_IBMout
+      real*8, intent(out) :: dsecy_IBMout,dsecz_IBMout
 
-      integer nRead
-      logical temprestart,theboss
+      integer, intent(in) :: nRead
+      logical temprestart
+      logical, intent(in) :: theboss
 
       real*8 
      &     GXtmp(1:3,1-Nq_IBMB_fsh:Nq_IBM_fsh+Nq_IBMB_fsh 
@@ -229,12 +236,10 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       if (create_ibm_flag) then
        if (create_new_flow) then
         do i=1,nr_ibm_fib
-          do isec=1,Nsec_IBMmax
-           do j=1,ns_ibm_fib
-             fk_mass1_fib(i,isec,j)=0.0d0
-             fk_mass2_fib(i,isec,j)=0.0d0
-             fk_mass3_fib(i,isec,j)=0.0d0
-            enddo
+          do j=1,ns_ibm_fib
+             fk_mass1_fib(i,j)=0.0d0
+             fk_mass2_fib(i,j)=0.0d0
+             fk_mass3_fib(i,j)=0.0d0
           enddo
           do j=1,ns_ibm_fib
              if(  j .le. ns_ibm_r_fib(i)
@@ -3123,9 +3128,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
 
 ! passing to outputs
-       dsecy_IBMout=dsecy_IBM
-       dsecz_IBMout=dsecz_IBM
-       Nsec_IBMout=Nsec_IBM
+      dsecy_IBMout=dsecy_IBM
+      dsecz_IBMout=dsecz_IBM
 
       do i=1,nr_ibm
        nIBM_r(i) =ns_IBM_r(i)

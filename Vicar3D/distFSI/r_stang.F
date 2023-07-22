@@ -111,7 +111,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       real*8  timetemp2,s_function
       logical fix_bc,free_bc,fix_bcb,free_bcb 
-      integer itmax,precond,success,itconverge,isec
+      integer itmax,precond,success,itconverge
       real*8 tol,h_channel,KB_ibmt
     
       real*8 dt,dt2,time_alphaf 
@@ -120,7 +120,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8 areapnt_esh(nr_ibm_esh,ns_ibm_esh)
 !     &       ,xpnt_esh(nr_ibm_esh,ns_ibm_esh)  !for inflation problem 
 
-      real*8 CoefsecIBM  !related to section problem qusi3D
       integer jbndy,jqbndy
 
       real*8  X_i_j(3),X_ip_j(3),X_i_jp(3),X_ipf_j(3)
@@ -413,66 +412,52 @@ c time step
       if(ibm_solve .ne. 2) then
 
 #ifdef INCLUDE_FIB
-      if(nr_ibm_fib.ge. 1) then
-      fibm1_fib=0.0
-      fibm2_fib=0.0
-      fibm3_fib=0.0
-      ffluidsum1_fib=0.0
-      ffluidsum2_fib=0.0
-      ffluidsum3_fib=0.0
-      endif
+       if(nr_ibm_fib.ge. 1) then
+        fibm1_fib=0.0
+        fibm2_fib=0.0
+        fibm3_fib=0.0
+        ffluidsum1_fib=0.0
+        ffluidsum2_fib=0.0
+        ffluidsum3_fib=0.0
+       endif
 c
 c calculating feedback force for matching bcs
-      do i=1,nr_ibm_fib
-       i2g=Ilocglb_fib(i)
-       if(FluidForceFlag(i2g)) then
-       do isec=1,nsec_ibm
-        do j=1,ns_ibm_r_fib(i)
-           fk_mass1_fib(i,isec,j)=fk_mass1o_fib(i,isec,j)
-     &          +alpha_ibm*delta_t*(uibm1_fib(i,isec,j)-vibm1_fib(i,j))
+       do i=1,nr_ibm_fib
+        i2g=Ilocglb_fib(i)
+        if(FluidForceFlag(i2g)) then
+         do j=1,ns_ibm_r_fib(i)
+           fk_mass1_fib(i,j)=fk_mass1o_fib(i,j)
+     &          +alpha_ibm*delta_t*(uibm1_fib(i,j)-vibm1_fib(i,j))
      &                   *timetemp2
-            fk_mass2_fib(i,isec,j)=fk_mass2o_fib(i,isec,j)
-     &          +alpha_ibm*delta_t*(uibm2_fib(i,isec,j)-vibm2_fib(i,j))
-     &                   *timetemp2
-
-            ffluidsum1_fib(i,isec,j)= fk_mass1_fib(i,isec,j)
-     &                   +beta_ibm*(uibm1_fib(i,isec,j)-vibm1_fib(i,j))
+           fk_mass2_fib(i,j)=fk_mass2o_fib(i,j)
+     &          +alpha_ibm*delta_t*(uibm2_fib(i,j)-vibm2_fib(i,j))
      &                   *timetemp2
 
-            ffluidsum2_fib(i,isec,j)= fk_mass2_fib(i,isec,j)
-     &                   +beta_ibm*(uibm2_fib(i,isec,j)-vibm2_fib(i,j))
+           ffluidsum1_fib(i,j)= fk_mass1_fib(i,j)
+     &                   +beta_ibm*(uibm1_fib(i,j)-vibm1_fib(i,j))
      &                   *timetemp2
-            if(ndim .gt. 2) then
-            fk_mass3_fib(i,isec,j)=fk_mass3o_fib(i,isec,j)
-     &          +alpha_ibm*delta_t*(uibm3_fib(i,isec,j)-vibm3_fib(i,j))
+
+           ffluidsum2_fib(i,j)= fk_mass2_fib(i,j)
+     &                   +beta_ibm*(uibm2_fib(i,j)-vibm2_fib(i,j))
      &                   *timetemp2
-            ffluidsum3_fib(i,isec,j)= fk_mass3_fib(i,isec,j)
-     &                   +beta_ibm*(uibm3_fib(i,isec,j)-vibm3_fib(i,j))
+           if(ndim .gt. 2) then
+            fk_mass3_fib(i,j)=fk_mass3o_fib(i,j)
+     &          +alpha_ibm*delta_t*(uibm3_fib(i,j)-vibm3_fib(i,j))
      &                   *timetemp2
-            endif
+            ffluidsum3_fib(i,j)= fk_mass3_fib(i,j)
+     &                   +beta_ibm*(uibm3_fib(i,j)-vibm3_fib(i,j))
+     &                   *timetemp2
+           endif
 
          end do
-        end do
-        do isec=1,nsec_ibm
-        if(nsec_ibm .eq. 1) then
-           CoefsecIBM=1.0/dble(nsec_ibm)
-        elseif ((isec .eq. 1) .or. (isec .eq. nsec_ibm)) then
-           CoefsecIBM=0.5/dble(nsec_ibm-1)
-        else
-           CoefsecIBM=1.0/dble(nsec_ibm-1)
-        endif
          do j=1,ns_ibm_r_fib(i)
 
-              fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,isec,j)
-     &                   *CoefsecIBM
-              fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,isec,j)
-     &                   *CoefsecIBM
+              fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,j)
+              fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,j)
               if(ndim .gt. 2) 
-     &           fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,isec,j)
-     &                   *CoefsecIBM
+     &           fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,j)
 
-          end do
-        end do
+         end do
         endif  
   
         do j=1,ns_ibm_r_fib(i)
@@ -1333,7 +1318,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       real*8  timetemp2,s_function
       logical fix_bc,free_bc,fix_bcb,free_bcb 
-      integer itmax,precond,success,itconverge,isec
+      integer itmax,precond,success,itconverge
       real*8 tol,h_channel,KB_ibmt
     
       real*8 dt,dt2,time_alphaf 
@@ -1342,7 +1327,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8 areapnt_esh(nr_ibm_esh,ns_ibm_esh)
 !     &       ,xpnt_esh(nr_ibm_esh,ns_ibm_esh)  !for inflation problem 
 
-      real*8 CoefsecIBM  !related to section problem qusi3D
       integer jbndy,jqbndy
 
       real*8  X_i_j(3),X_ip_j(3),X_i_jp(3)
@@ -1525,40 +1509,24 @@ c time step
       endif
 c
       do i=1,nr_ibm_fib
-       do isec=1,nsec_ibm
-        do j=1,ns_ibm_r_fib(i)
-           fk_mass1_fib(i,isec,j)=fk_mass1o_fib(i,isec,j)
-           fk_mass2_fib(i,isec,j)=fk_mass2o_fib(i,isec,j)
-           ffluidsum1_fib(i,isec,j)= fk_mass1_fib(i,isec,j)
-           ffluidsum2_fib(i,isec,j)= fk_mass2_fib(i,isec,j)
+       do j=1,ns_ibm_r_fib(i)
+           fk_mass1_fib(i,j)=fk_mass1o_fib(i,j)
+           fk_mass2_fib(i,j)=fk_mass2o_fib(i,j)
+           ffluidsum1_fib(i,j)= fk_mass1_fib(i,j)
+           ffluidsum2_fib(i,j)= fk_mass2_fib(i,j)
            if(ndim .gt. 2) then
-            fk_mass3_fib(i,isec,j)=fk_mass3o_fib(i,isec,j)
-            ffluidsum3_fib(i,isec,j)= fk_mass3_fib(i,isec,j)
+            fk_mass3_fib(i,j)=fk_mass3o_fib(i,j)
+            ffluidsum3_fib(i,j)= fk_mass3_fib(i,j)
            endif
 ! j           
-        end do
-! isec           
        end do
-       do isec=1,nsec_ibm
-        if(nsec_ibm .eq. 1) then
-           CoefsecIBM=1.0/dble(nsec_ibm)
-        elseif ((isec .eq. 1) .or. (isec .eq. nsec_ibm)) then
-           CoefsecIBM=0.5/dble(nsec_ibm-1)
-        else
-           CoefsecIBM=1.0/dble(nsec_ibm-1)
-        endif
-        do j=1,ns_ibm_r_fib(i)
+       do j=1,ns_ibm_r_fib(i)
 
-              fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,isec,j)
-     &                   *CoefsecIBM
-              fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,isec,j)
-     &                   *CoefsecIBM
+              fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,j)
+              fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,j)
               if(ndim .gt. 2) 
-     &           fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,isec,j)
-     &                   *CoefsecIBM
+     &           fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,j)
 !j
-        end do
-! isec           
        end do
   
        do j=1,ns_ibm_r_fib(i)

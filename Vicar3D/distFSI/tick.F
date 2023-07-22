@@ -37,9 +37,9 @@ c
 !$ x^*= x^{n}\/\/\/\/\/\/  \textrm{if}\/\/   m_s\/\/  \ge\/\/  1.05$ \\
 !@q
       implicit none
-      real*8 UIBM1in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,UIBM2in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,UIBM3in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib) 
+      real*8 UIBM1in_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,UIBM2in_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,UIBM3in_fib(Nr_IBM_fib,Ns_IBM_fib) 
      &      ,UIBM1in_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
      &      ,UIBM2in_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
      &      ,UIBM3in_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh) 
@@ -49,9 +49,9 @@ c
      &      ,UIBM1in_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
      &      ,UIBM2in_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
      &      ,UIBM3in_fbc(Nr_IBM_fbc,Ns_IBM_fbc) 
-      real*8 FIBM1out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,FIBM2out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,FIBM3out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+      real*8 FIBM1out_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,FIBM2out_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,FIBM3out_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,FIBM1out_fsh(Nr_IBM,Nq_IBM_fsh,Ns_IBM_fsh)
      &      ,FIBM2out_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
      &      ,FIBM3out_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
@@ -78,7 +78,7 @@ c
     
       integer nt, ntsave,i,j,iiter2,jq,jq2
       integer ibm_solve,isavesigma
-      integer isec,i_glb, ne1,i1
+      integer i_glb, ne1,i1
       real*8 x(3,3) ,xcont(3,3), xp1cont(3)
      &          ,xp2cont(3), outcont(3),outcont2(3)
 
@@ -122,20 +122,18 @@ c
           gz_ibmo1_fib(i,j)=gz_ibm_massive_fib(i,j)
        end do
        endif
-       do isec=1,nsec_ibm
        do j=1,ns_ibm_r_fib(i)
-          UIBM1_fib(i,isec,j)=UIBM1in_fib(i,isec,j)
-          UIBM2_fib(i,isec,j)=UIBM2in_fib(i,isec,j)
-          fk_mass1o_fib(i,isec,j)=fk_mass1_fib(i,isec,j)
-          fk_mass2o_fib(i,isec,j)=fk_mass2_fib(i,isec,j)
+          UIBM1_fib(i,j)=UIBM1in_fib(i,j)
+          UIBM2_fib(i,j)=UIBM2in_fib(i,j)
+          fk_mass1o_fib(i,j)=fk_mass1_fib(i,j)
+          fk_mass2o_fib(i,j)=fk_mass2_fib(i,j)
        end do
        if(ndim .gt.2) then
-       do j=1,ns_ibm_r_fib(i)
-          UIBM3_fib(i,isec,j)=UIBM3in_fib(i,isec,j)
-          fk_mass3o_fib(i,isec,j)=fk_mass3_fib(i,isec,j)
-       end do
+        do j=1,ns_ibm_r_fib(i)
+          UIBM3_fib(i,j)=UIBM3in_fib(i,j)
+          fk_mass3o_fib(i,j)=fk_mass3_fib(i,j)
+        end do
        endif
-      end do
       end do
 #endif
 #ifdef INCLUDE_FSH
@@ -678,13 +676,11 @@ c
 
 #ifdef INCLUDE_FIB
       do i=1,nr_ibm_fib
-        do isec=1,nsec_ibm
         do j=1,ns_ibm_r_fib(i)
-          FIBM1out_fib(i,isec,j)=ffluidsum1_fib(i,isec,j)
-          FIBM2out_fib(i,isec,j)=ffluidsum2_fib(i,isec,j)
+          FIBM1out_fib(i,j)=ffluidsum1_fib(i,j)
+          FIBM2out_fib(i,j)=ffluidsum2_fib(i,j)
           if(ndim .gt.2) 
-     &       FIBM3out_fib(i,isec,j)=ffluidsum3_fib(i,isec,j)
-        end do
+     &       FIBM3out_fib(i,j)=ffluidsum3_fib(i,j)
         end do
         do j=1,ns_ibm_r_fib(i)
           gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
@@ -786,14 +782,14 @@ c
 !@q
       implicit none
       real*8, INTENT(out),
-     &       UIBM1out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,UIBM2out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,UIBM3out_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib) 
+     &       UIBM1out_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,UIBM2out_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,UIBM3out_fib(Nr_IBM_fib,Ns_IBM_fib) 
 
       real*8, INTENT(in), 
-     &       FIBM1in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,FIBM2in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
-     &      ,FIBM3in_fib(Nr_IBM_fib,nsec_IBMmax,Ns_IBM_fib)
+     &       FIBM1in_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,FIBM2in_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,FIBM3in_fib(Nr_IBM_fib,Ns_IBM_fib)
 
       real*8, INTENT(out), 
      &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
@@ -804,7 +800,7 @@ c
     
       integer nt, ntsave,i,j,iiter2
       integer ibm_solve,isavesigma
-      integer isec,i_glb
+      integer i_glb
 
 #ifdef INCLUDE_FIB
 
@@ -837,25 +833,23 @@ c
           gz_ibmo1_fib(i,j)=gz_ibm_massive_fib(i,j)
        end do
        endif
-       do isec=1,nsec_ibm
        do j=1,ns_ibm_r_fib(i)
 ! velocity at t^{n+1/2}
-          UIBM1_fib(i,isec,j)=0.0d0
-          UIBM2_fib(i,isec,j)=0.0d0
+          UIBM1_fib(i,j)=0.0d0
+          UIBM2_fib(i,j)=0.0d0
           vibm1_fib(i,j)=0.0d0
           vibm2_fib(i,j)=0.0d0
 ! force
-          fk_mass1o_fib(i,isec,j)=FIBM1in_fib(i,isec,j)
-          fk_mass2o_fib(i,isec,j)=FIBM2in_fib(i,isec,j)
+          fk_mass1o_fib(i,j)=FIBM1in_fib(i,j)
+          fk_mass2o_fib(i,j)=FIBM2in_fib(i,j)
        end do
        if(ndim .gt.2) then
        do j=1,ns_ibm_r_fib(i)
-          UIBM3_fib(i,isec,j)=0.0d0
+          UIBM3_fib(i,j)=0.0d0
           vibm3_fib(i,j)=0.0d0
-          fk_mass3o_fib(i,isec,j)=FIBM3in_fib(i,isec,j)
+          fk_mass3o_fib(i,j)=FIBM3in_fib(i,j)
        end do
        endif
-      end do
       end do
 
 ! computing predicted x^*=2 * x^{n} - x^{n-1}
@@ -938,13 +932,11 @@ c
 
       do i=1,nr_ibm_fib
 
-        do isec=1,nsec_ibm
         do j=1,ns_ibm_r_fib(i)
-          uIBM1out_fib(i,isec,j)=vibm1_fib(i,j)
-          uIBM2out_fib(i,isec,j)=vibm2_fib(i,j)
+          uIBM1out_fib(i,j)=vibm1_fib(i,j)
+          uIBM2out_fib(i,j)=vibm2_fib(i,j)
           if(ndim .gt.2) 
-     &       uIBM3out_fib(i,isec,j)=vibm3_fib(i,j)
-        end do
+     &       uIBM3out_fib(i,j)=vibm3_fib(i,j)
         end do
 
         do j=1,ns_ibm_r_fib(i)

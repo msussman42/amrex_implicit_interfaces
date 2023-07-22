@@ -111,7 +111,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &       ,ngauCont
      &       ,ngau0
      &       ,ngau_h
-     &       ,Nsec_IBM
      &       ,contacttype
      &       ,s_START
      &       ,s_END
@@ -355,7 +354,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &       ,ngauCont
      &       ,ngau0
      &       ,ngau_h
-     &       ,Nsec_IBM
      &       ,contacttype
      &       ,s_START
      &       ,s_END
@@ -576,18 +574,18 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &       ,GX_BP_fib0(1:Nr_IBM_fib,0:Ns_IBM_fib+1)
      &       ,GY_BP_fib0(1:Nr_IBM_fib,0:Ns_IBM_fib+1)
      &       ,GZ_BP_fib0(1:Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &       ,UIBM1_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,UIBM2_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,UIBM3_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS1_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS2_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS3_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS1o_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS2o_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS3o_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,ffluidsum1_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,ffluidsum2_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,ffluidsum3_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
+     &       ,UIBM1_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,UIBM2_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,UIBM3_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS1_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS2_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS3_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS1o_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS2o_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS3o_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,ffluidsum1_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,ffluidsum2_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,ffluidsum3_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
      &       ,npos_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
      &       ,QIBM_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
      &       ,TFIBM_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
@@ -1375,18 +1373,18 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &       ,GX_BP_fib0(1:Nr_IBM_fib,0:Ns_IBM_fib+1)
      &       ,GY_BP_fib0(1:Nr_IBM_fib,0:Ns_IBM_fib+1)
      &       ,GZ_BP_fib0(1:Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &       ,UIBM1_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,UIBM2_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,UIBM3_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS1_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS2_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS3_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS1o_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS2o_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,FK_MASS3o_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,ffluidsum1_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,ffluidsum2_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
-     &       ,ffluidsum3_fib(1:Nr_IBM_fib,1:Nsec_IBMmax,1:Ns_IBM_fib)
+     &       ,UIBM1_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,UIBM2_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,UIBM3_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS1_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS2_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS3_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS1o_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS2o_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,FK_MASS3o_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,ffluidsum1_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,ffluidsum2_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
+     &       ,ffluidsum3_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
      &       ,npos_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
      &       ,QIBM_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
      &       ,TFIBM_fib(1:Nr_IBM_fib,1:Ns_IBM_fib)
