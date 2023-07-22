@@ -2421,15 +2421,12 @@ c variable stiffness
       enddo !end body numbers i
 
                read(9997,*) 
-               read(9997,*) p_inflation,Nsec_IBM,dsecy_IBM,dsecz_IBM 
+               read(9997,*) p_inflation,dsecy_IBM,dsecz_IBM 
 
                if(theboss) print*,  'done with inputdist.dat '
 
-
-               if(Nsec_IBM .le. 1) then
-                    dsecy_IBM=1.0
-                    dsecz_IBM=0.0
-               endif
+               dsecy_IBM=1.0
+               dsecz_IBM=0.0
 
       close(9997)  
 

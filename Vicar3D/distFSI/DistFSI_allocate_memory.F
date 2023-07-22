@@ -1888,7 +1888,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 !==================
-      ALLOCATE(UIBM1_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(UIBM1_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1896,7 +1896,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 
-      ALLOCATE(UIBM2_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(UIBM2_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1904,7 +1904,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 
-      ALLOCATE(UIBM3_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(UIBM3_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1912,7 +1912,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 
-      ALLOCATE(FK_MASS1_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(FK_MASS1_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1920,7 +1920,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 
-      ALLOCATE(FK_MASS2_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(FK_MASS2_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1928,7 +1928,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 
-      ALLOCATE(FK_MASS3_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(FK_MASS3_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1936,7 +1936,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 
-      ALLOCATE(FK_MASS1o_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(FK_MASS1o_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1944,7 +1944,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr
 
-      ALLOCATE(FK_MASS2o_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(FK_MASS2o_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1952,7 +1952,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr
 
-      ALLOCATE(FK_MASS3o_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(FK_MASS3o_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1960,7 +1960,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr
 
-      ALLOCATE(ffluidsum1_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(ffluidsum1_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1968,7 +1968,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr
 
-      ALLOCATE(ffluidsum2_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(ffluidsum2_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
@@ -1976,7 +1976,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         STOP
       ENDIF ! iErr 
 
-      ALLOCATE(ffluidsum3_fib(Nr_IBM_fib,Nsec_IBMmax,Ns_IBM_fib)
+      ALLOCATE(ffluidsum3_fib(Nr_IBM_fib,Ns_IBM_fib)
      &         ,STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 

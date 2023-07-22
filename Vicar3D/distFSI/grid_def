@@ -10,7 +10,6 @@
       INTEGER   maxordern,jTypeMax
       INTEGER   Ns_IBMmax_esh,Ns_IBMmax_fbc
       INTEGER   NMaxnumbuck
-      INTEGER   Nsec_IBMmax
       INTEGER   fiber,shell,fibrousshell,fabric
       INTEGER   NPlanesIBM
       INTEGER   Ns_IBM_Fbr_esh,Ns_IBM_Fbr_fbc
@@ -31,7 +30,6 @@
       PARAMETER (NMaxnumbuck=2)  ! Number of buckets
 
 !==Fiber paramters
-      PARAMETER (Nsec_IBMmax=1)      ! Number of sections
       PARAMETER (Ns_IBM_fib=200)    ! maximum number of points in each bdy
       PARAMETER (Ns_IBMB_fib=2)    ! boundary points always more than 1
 

@@ -441,7 +441,6 @@
      &       ,ngau0
      &       ,ngauCont
      &       ,ngau_h
-     &       ,Nsec_IBM
      &       ,contacttype
      &       ,s_START
      &       ,s_END

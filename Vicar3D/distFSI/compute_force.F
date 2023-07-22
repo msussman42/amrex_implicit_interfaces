@@ -26,7 +26,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8 temp2b_localforce(nr_ibm)
       real*8 temp2c_localforce(nr_ibm)
 
-      integer i2,isec,i2l,i2g,k2
+      integer i2,i2l,i2g,k2
       real*8 das
 
       real*8 coor1(3),coor2(3),dist
@@ -63,25 +63,24 @@ c find the drag and lift forces by method f*dt = int(m*(u0j-u_j), omega)
        temp1Piezo=0.0d0
         if(bodytype(i) ==fiber) then
          i2l=Iglbloc_fib(i)
-          do j=1,ns_ibm_r_fib(i2l)
-             das=ds_ibm_fib(i2l,j)
-          do isec=1,nsec_IBM
+         do j=1,ns_ibm_r_fib(i2l)
+            das=ds_ibm_fib(i2l,j)
+
             temp1=temp1
-     &      - ffluidsum1_fib(i2l,isec,j)*das*(dsecy_IBM+dsecz_IBM)
+     &      - ffluidsum1_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
             tempb=tempb
-     &      - ffluidsum1_fib(i2l,isec,j)*das*(dsecy_IBM+dsecz_IBM)
+     &      - ffluidsum1_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
      &        *vibm1_fib(i2l,j)
             temp2=temp2
-     &      - ffluidsum2_fib(i2l,isec,j)*das*(dsecy_IBM+dsecz_IBM)
+     &      - ffluidsum2_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
             temp=temp
-     &      - ffluidsum2_fib(i2l,isec,j)*das*(dsecy_IBM+dsecz_IBM)
+     &      - ffluidsum2_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
      &        *vibm2_fib(i2l,j)
             temp3=temp3
-     &      - ffluidsum3_fib(i2l,isec,j)*das*(dsecy_IBM+dsecz_IBM)
+     &      - ffluidsum3_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
             tempc=tempc
-     &      - ffluidsum3_fib(i2l,isec,j)*das*(dsecy_IBM+dsecz_IBM)
+     &      - ffluidsum3_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
      &        *vibm3_fib(i2l,j)
-          enddo
          end do
         elseif(bodytype(i) ==shell) then
          i2l=Iglbloc_esh(i)
