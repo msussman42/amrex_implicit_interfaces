@@ -66,21 +66,12 @@ c find the drag and lift forces by method f*dt = int(m*(u0j-u_j), omega)
          do j=1,ns_ibm_r_fib(i2l)
             das=ds_ibm_fib(i2l,j)
 
-            temp1=temp1
-     &      - ffluidsum1_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
-            tempb=tempb
-     &      - ffluidsum1_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
-     &        *vibm1_fib(i2l,j)
-            temp2=temp2
-     &      - ffluidsum2_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
-            temp=temp
-     &      - ffluidsum2_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
-     &        *vibm2_fib(i2l,j)
-            temp3=temp3
-     &      - ffluidsum3_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
-            tempc=tempc
-     &      - ffluidsum3_fib(i2l,j)*das*(dsecy_IBM+dsecz_IBM)
-     &        *vibm3_fib(i2l,j)
+            temp1=temp1 - ffluidsum1_fib(i2l,j)*das
+            tempb=tempb - ffluidsum1_fib(i2l,j)*das*vibm1_fib(i2l,j)
+            temp2=temp2 - ffluidsum2_fib(i2l,j)*das
+            temp=temp   - ffluidsum2_fib(i2l,j)*das*vibm2_fib(i2l,j)
+            temp3=temp3 - ffluidsum3_fib(i2l,j)*das
+            tempc=tempc - ffluidsum3_fib(i2l,j)*das*vibm3_fib(i2l,j)
          end do
         elseif(bodytype(i) ==shell) then
          i2l=Iglbloc_esh(i)

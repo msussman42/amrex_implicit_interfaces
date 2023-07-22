@@ -82,8 +82,6 @@
      &       ,deltaGlobal
      &       ,alphaGlobal 
      &       ,ImpactPen(3) 
-     &       ,dsecy_IBM
-     &       ,dsecz_IBM
 
 
       real*8, allocatable, dimension(:) ::

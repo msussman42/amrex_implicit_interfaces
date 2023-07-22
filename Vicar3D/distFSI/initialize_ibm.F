@@ -3,25 +3,11 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       subroutine initialize_ibm(nIBM_rq,nIBM_rq_fsh
      &                         ,nIBM_r,nIBM_r_fib,nIBM_r_fsh
      7                         ,nIBM_r_esh,nIBM_r_fbc,dtypeDelta 
-     &                         ,ds_fib,ds_fsh,ds_esh,ds_fbc
-     &                         ,gx_ibm_massiveout_fib
-     &                         ,gy_ibm_massiveout_fib
-     &                         ,gz_ibm_massiveout_fib
-     &                         ,gx_ibm_massiveout_fsh
-     &                         ,gy_ibm_massiveout_fsh
-     &                         ,gz_ibm_massiveout_fsh
-     &                         ,gx_ibm_massiveout_esh
-     &                         ,gy_ibm_massiveout_esh
-     &                         ,gz_ibm_massiveout_esh
-     &                         ,gx_ibm_massiveout_fbc
-     &                         ,gy_ibm_massiveout_fbc
-     &                         ,gz_ibm_massiveout_fbc
      &                         ,min_gridx
      &                         ,min_gridy
      &                         ,min_gridz
      &                         ,nx1,ny1,nz1
      &                         ,gx1,gy1,gz1
-     &                         ,dsecy_IBMout,dsecz_IBMout
      &                         ,idimin
      &                         ,nRead
      &                         ,theboss)
@@ -33,7 +19,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       USE HeaderFSI
       implicit none
-      integer nr_ibm_t,ns_ibm_t
 
       integer, INTENT(out) :: nIBM_r(nr_IBM)
      &        ,nIBM_r_fib(nr_IBM_fib)
@@ -46,7 +31,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       integer, INTENT(out) :: nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
 
       integer i,j,k,ig,jq
-
+! Eulerian grid spacing
       real*8, intent(in) :: min_gridx,min_gridy,min_gridz
 
       integer, intent(in) :: nx1,ny1,nz1
@@ -64,29 +49,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &    , amat1(2,maxordern), amat2(3,maxordern),sx(2,maxordern)
      &    ,x_FibVec(maxordern,3),xFibvecLoc(3)
 
-      real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,ds_fib(Nr_IBM_fib,Ns_IBM_fib)
-
-      real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
-     &      ,Gy_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
-     &      ,Gz_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
-     &      ,ds_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
-
-      real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
-     &      ,Gy_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
-     &      ,Gz_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
-     &      ,ds_esh(Nr_IBM_esh,Ns_IBM_esh)
-
-      real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
-     &      ,Gy_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
-     &      ,Gz_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
-     &      ,ds_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
+      real*8 :: ds_ibm_esh_hold
 
       real*8 das,xj1,xj2,xj3,yj1,yj2,yj3,zj1,zj2,zj3  
 
@@ -101,8 +64,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       integer jq_pm(2),j_pm(2)
       integer itmpnode(3)
-
-      real*8, intent(out) :: dsecy_IBMout,dsecz_IBMout
 
       integer, intent(in) :: nRead
       logical temprestart
@@ -201,7 +162,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       nxgrid_ibm=nx1
       nygrid_ibm=ny1
       nzgrid_ibm=nz1
-
 
       gx(1:nx1)=gx1(1:nx1)
       gy(1:ny1)=gy1(1:ny1) 
@@ -3125,18 +3085,67 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       
       endif  !nRead
 
-
-
 ! passing to outputs
-      dsecy_IBMout=dsecy_IBM
-      dsecz_IBMout=dsecz_IBM
 
       do i=1,nr_ibm
        nIBM_r(i) =ns_IBM_r(i)
        nIBM_rq(i)=nq_IBM_r(i)
       enddo
+
       do i=1,nr_ibm_fib
        nIBM_r_fib(i) =ns_IBM_r_fib(i)
+      enddo
+
+      do i=1,nr_ibm_fsh
+       nIBM_r_fsh(i) =ns_IBM_r_fsh(i)
+       nIBM_rq_fsh(i)=nq_IBM_r_fsh(i)
+      enddo
+
+      do i=1,nr_ibm_esh
+       nIBM_r_esh(i) =ns_IBM_r_esh(i)
+       do j=1,ns_ibm_r_esh(i)
+          das=0.d0
+          do i2=1,nposele_esh(i,j,1)
+            das=das+area(i,nposele_esh(i,j,1+i2))
+          end do
+          ds_ibm_esh_hold=das/dble(nposele_esh(i,j,1))
+          ds_ibm_esh(i,j)=ds_ibm_esh_hold
+       end do
+      enddo
+
+      do i=1,nr_ibm_fbc
+       nIBM_r_fbc(i) =ns_IBM_r_fbc(i)
+       do j=1,ns_ibm_r_fbc(i)
+          ds_ibm_fbc(i,j)=areapnt_fbc(i,j)
+       end do
+      enddo
+
+      dtypeDelta(1)=Delta_typeX
+      dtypeDelta(2)=Delta_typeY
+      dtypeDelta(3)=Delta_typeZ
+
+      call  BucketSorting
+      timebucket=0.0
+      return
+      end 
+
+      subroutine copy_ibm_fib(
+     &   ds_fib
+     &  ,gx_ibm_massiveout_fib
+     &  ,gy_ibm_massiveout_fib
+     &  ,gz_ibm_massiveout_fib)
+      USE HeaderFSI
+      implicit none
+
+      real*8, intent(out) ::
+     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &      ,ds_fib(Nr_IBM_fib,Ns_IBM_fib)
+
+      integer i,j
+
+      do i=1,nr_ibm_fib
        do j=1,ns_ibm_r_fib(i)
           gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
           gy_ibm_massiveout_fib(i,j)=gy_ibm_massive_fib(i,j)
@@ -3145,61 +3154,99 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        end do
       enddo
 
+      return
+      end 
+     
+      subroutine copy_ibm_fsh(
+     &   ds_fsh
+     &  ,gx_ibm_massiveout_fsh
+     &  ,gy_ibm_massiveout_fsh
+     &  ,gz_ibm_massiveout_fsh)
+      USE HeaderFSI
+      implicit none
+
+      real*8, intent(out) ::
+     &    GX_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
+     &   ,Gy_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
+     &   ,Gz_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
+     &   ,ds_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
+
+      integer i,j,jq
+      real*8 tmpv1val
+      real*8 tmpv2val
+
       do i=1,nr_ibm_fsh
-       nIBM_r_fsh(i) =ns_IBM_r_fsh(i)
-       nIBM_rq_fsh(i)=nq_IBM_r_fsh(i)
        do jq=1,nq_ibm_r_fsh(i)
        do j=1,ns_ibm_r_fsh(i)
           gx_ibm_massiveout_fsh(i,jq,j)=gx_ibm_massive_fsh(i,jq,j)
           gy_ibm_massiveout_fsh(i,jq,j)=gy_ibm_massive_fsh(i,jq,j)
           gz_ibm_massiveout_fsh(i,jq,j)=gz_ibm_massive_fsh(i,jq,j)
-              tmpv1val=1.0d0;tmpv2val=1.0d0
-              if(j .eq.1 .or. j .eq. ns_ibm_r_fsh(i)) tmpv1val=0.5d0
-              if(jq.eq.1 .or. jq.eq. nq_ibm_r_fsh(i)) tmpv2val=0.5d0
-              ds_fsh(i,jq,j)=ds_ibm_fsh(i,jq,j)*ds2_ibm_fsh(i,jq,j)
-     &                  *tmpv1val*tmpv2val
-       end do
-       end do
+          tmpv1val=1.0d0;tmpv2val=1.0d0
+          if(j .eq.1 .or. j .eq. ns_ibm_r_fsh(i)) tmpv1val=0.5d0
+          if(jq.eq.1 .or. jq.eq. nq_ibm_r_fsh(i)) tmpv2val=0.5d0
+          ds_fsh(i,jq,j)=ds_ibm_fsh(i,jq,j)*ds2_ibm_fsh(i,jq,j)
+     &           *tmpv1val*tmpv2val
+       enddo
+       enddo
       enddo
 
+      return
+      end 
+
+
+      subroutine copy_ibm_esh(
+     &   ds_esh
+     &  ,gx_ibm_massiveout_esh
+     &  ,gy_ibm_massiveout_esh
+     &  ,gz_ibm_massiveout_esh)
+      USE HeaderFSI
+      implicit none
+
+      real*8, intent(out) ::
+     &       GX_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
+     &      ,Gy_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
+     &      ,Gz_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
+     &      ,ds_esh(Nr_IBM_esh,Ns_IBM_esh)
+
+      integer i,j
+
       do i=1,nr_ibm_esh
-       nIBM_r_esh(i) =ns_IBM_r_esh(i)
        do j=1,ns_ibm_r_esh(i)
           gx_ibm_massiveout_esh(i,j)=gx_ibm_massive_esh(i,j)
           gy_ibm_massiveout_esh(i,j)=gy_ibm_massive_esh(i,j)
           gz_ibm_massiveout_esh(i,j)=gz_ibm_massive_esh(i,j)
-          das=0.d0
-             do i2=1,nposele_esh(i,j,1)
-                 das=das+area(i,nposele_esh(i,j,1+i2))
-             end do
-             ds_esh(i,j)=das/dble(nposele_esh(i,j,1))
-             ds_ibm_esh(i,j)=ds_esh(i,j)
+          ds_esh(i,j)=ds_ibm_esh(i,j)
        end do
       enddo
 
+      return
+      end 
 
+      subroutine copy_ibm_fbc(
+     &   ds_fbc
+     &  ,gx_ibm_massiveout_fbc
+     &  ,gy_ibm_massiveout_fbc
+     &  ,gz_ibm_massiveout_fbc)
+      USE HeaderFSI
+      implicit none
+
+      real*8, intent(out) ::
+     &       GX_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
+     &      ,Gy_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
+     &      ,Gz_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
+     &      ,ds_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
+
+      integer i,j
 
       do i=1,nr_ibm_fbc
-       nIBM_r_fbc(i) =ns_IBM_r_fbc(i)
        do j=1,ns_ibm_r_fbc(i)
           gx_ibm_massiveout_fbc(i,j)=gx_ibm_massive_fbc(i,j)
           gy_ibm_massiveout_fbc(i,j)=gy_ibm_massive_fbc(i,j)
           gz_ibm_massiveout_fbc(i,j)=gz_ibm_massive_fbc(i,j)
-          ds_ibm_fbc(i,j)=areapnt_fbc(i,j)
+          ds_fbc(i,j)=ds_ibm_fbc(i,j)
        end do
       enddo
 
-
-
-
-
-      dtypeDelta(1)=Delta_typeX
-      dtypeDelta(2)=Delta_typeY
-      dtypeDelta(3)=Delta_typeZ
-
-
-      call  BucketSorting
-      timebucket=0.0
       return
       end 
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|

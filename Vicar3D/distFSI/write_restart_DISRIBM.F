@@ -34,9 +34,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &       ,flag_restartfile
      &       ,MIN_GRID_X,MIN_GRID_Y,MIN_GRID_Z,KS_IBM,KB_IBM
      &       ,K_MASSIVE_IBM,k_link,Kx_SPRING,Ky_SPRING,Ut0,Vt0
-     &       ,alpha_IBM,beta_IBM,alphabetaRise,Fr,the_grav,phi_grav                                               
+     &       ,alpha_IBM,beta_IBM,alphabetaRise,Fr,the_grav,phi_grav 
      &       ,temporary_sum,betaGlobal,gammaGlobal,deltaGlobal
-     &       ,alphaGlobal ,ImpactPen(1:3),dsecy_IBM,dsecz_IBM
+     &       ,alphaGlobal ,ImpactPen(1:3)
      &             
      &       ,Density_Coef(1:Nr_IBM)
      &       ,Density_coefP(1:Nr_IBM)
@@ -277,9 +277,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &       ,flag_restartfile
      &       ,MIN_GRID_X,MIN_GRID_Y,MIN_GRID_Z,KS_IBM,KB_IBM
      &       ,K_MASSIVE_IBM,k_link,Kx_SPRING,Ky_SPRING,Ut0,Vt0
-     &       ,alpha_IBM,beta_IBM,alphabetaRise,Fr,the_grav,phi_grav                                               
+     &       ,alpha_IBM,beta_IBM,alphabetaRise,Fr,the_grav,phi_grav 
      &       ,temporary_sum,betaGlobal,gammaGlobal,deltaGlobal
-     &       ,alphaGlobal ,ImpactPen(1:3),dsecy_IBM,dsecz_IBM
+     &       ,alphaGlobal ,ImpactPen(1:3)
      &       
      &       ,Density_Coef(1:Nr_IBM)
      &       ,Density_coefP(1:Nr_IBM)
