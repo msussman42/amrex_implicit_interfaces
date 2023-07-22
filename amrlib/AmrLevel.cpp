@@ -34,16 +34,12 @@ if ((num_nodes_init>=0)&&
  max_num_nodes=max_num_nodes_init;
  max_num_elements=max_num_elements_init;
 
- FSI_dt=0.0;
- FSI_time=0.0;
  nodes_per_element=0;
 
- node_list.resize(max_num_nodes*3);
+ node_list.resize(max_num_nodes*3*2);
  element_list.resize(max_num_elements*4);
- displacement_list.resize(max_num_nodes*3);
- velocity_halftime_list.resize(max_num_nodes*3);
- velocity_list.resize(max_num_nodes*3);
- force_list.resize(max_num_nodes*NCOMP_FORCE_STRESS);
+ initial_node_list.resize(max_num_nodes*3);
+ velocity_list.resize(max_num_nodes*3*2);
  mass_list.resize(max_num_nodes);
  temperature_list.resize(max_num_nodes);
 } else {
@@ -62,8 +58,6 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
    source_FSI.num_nodes,
    source_FSI.num_elements);
 
- FSI_dt=source_FSI.FSI_dt;
- FSI_time=source_FSI.FSI_time;
  nodes_per_element=source_FSI.nodes_per_element;
 
  for (int ielem=0;ielem<4*max_num_elements;ielem++) {
@@ -76,15 +70,13 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
  }
 
  for (int inode=0;inode<3*max_num_nodes;inode++) {
-  node_list[inode]=source_FSI.node_list[inode];
-  displacement_list[inode]=source_FSI.displacement_list[inode];
-  velocity_list[inode]=source_FSI.velocity_list[inode];
-  velocity_halftime_list[inode]=source_FSI.velocity_halftime_list[inode];
- } //inode=0..3*max_num_nodes-1
-
- for (int inode=0;inode<NCOMP_FORCE_STRESS*max_num_nodes;inode++) {
-  force_list[inode]=source_FSI.force_list[inode];
+  initial_node_list[inode]=source_FSI.initial_node_list[inode];
  }
+
+ for (int inode=0;inode<2*3*max_num_nodes;inode++) {
+  node_list[inode]=source_FSI.node_list[inode];
+  velocity_list[inode]=source_FSI.velocity_list[inode];
+ } //inode=0..3*max_num_nodes-1
 
 } // end subroutine copyFrom_FSI
 

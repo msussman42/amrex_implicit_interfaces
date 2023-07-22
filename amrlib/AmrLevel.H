@@ -42,20 +42,20 @@ public:
 
 int max_num_nodes;
 int max_num_elements;
-int max_num_sections;
 int num_nodes;
 int num_elements;
-int num_sections;
 int nodes_per_element;
-//node[0 or 1][0..maxsec-1][0..max_num_nodes][0..2]
+//node[0 or 1][0..max_num_nodes-1][0..2]
 Vector< Real > node_list; 
-//element[0..maxsec-1][0..max_num_elements][0..3]
+//velocity[0 or 1][0..max_num_nodes-1][0..2]
+Vector< Real > velocity_list; 
+//element[0..max_num_elements-1][0..3]
 Vector< int > element_list;//4*max_num_elements
-//displacement[0 or 1][0..maxsec-1][0..max_num_nodes][0..2]
-Vector< Real > displacement_list; 
-//mass[0..maxsec-1][0..max_num_nodes]
+//initial_node_list[0..max_num_nodes-1][0..2]
+Vector< Real > initial_node_list; 
+//mass[0..max_num_nodes-1]
 Vector< Real > mass_list; 
-//temperature[0..maxsec-1][0..max_num_nodes]
+//temperature[0..max_num_nodes-1]
 Vector< Real > temperature_list; 
 
 void initData_FSI(

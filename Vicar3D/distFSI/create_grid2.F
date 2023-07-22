@@ -2420,13 +2420,10 @@ c variable stiffness
 
       enddo !end body numbers i
 
-               read(9997,*) 
-               read(9997,*) p_inflation,dsecy_IBM,dsecz_IBM 
+      read(9997,*) 
+      read(9997,*) p_inflation
 
-               if(theboss) print*,  'done with inputdist.dat '
-
-               dsecy_IBM=1.0
-               dsecz_IBM=0.0
+      if(theboss) print*,  'done with inputdist.dat '
 
       close(9997)  
 

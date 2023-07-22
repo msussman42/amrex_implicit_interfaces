@@ -60,8 +60,8 @@ c------------------- Rigid Body motion of this body and ramping time -----------
 0.0 0.0 0.0  1231 /aT: amplitude of rota. motion in X,Y,Z   TX=f(TrampT)*aT*sin(2*pi*freqT t+phiT)  for rotation in XYZ Euer sequance (deg)
 0.2 0.2 -0.25      /freqT: Frequency of rota. motion in X,Y,Z (1/period)
 -90.0 -0.0 0.5     /phiT: phase of rota. motion (deg)
-c---------------------- Extra inputs for inflation and section boundaries --------------
--0.0 1 1.0 0.0     /p inflation in the case of inflation,  num. of sections , dsec in y, dsec in z  IN THE CASE OF ONE SECTION put  dsecy_IBM+dsecz_IBM=1
+c--------- Extra inputs for inflation and section boundaries --------------
+-0.0     /p inflation in the case of inflation
 
 !Ccont(0):0.7 : angle separation
 !Ccont(1) :initial distance check  (scale dx)
