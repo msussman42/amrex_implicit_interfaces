@@ -530,7 +530,6 @@ bind(c,name='fort_ctml_max_nodes')
 
  use probcommon_module
  use global_utility_module
- use dummy_module
 
  IMPLICIT NONE
  INTEGER_T, INTENT(in) :: nmat_in
@@ -538,15 +537,70 @@ bind(c,name='fort_ctml_max_nodes')
  INTEGER_T, INTENT(inout) :: FSI_CTML_max_num_nodes_list(nmat_in)
  INTEGER_T, INTENT(inout) :: FSI_CTML_max_num_elements_list(nmat_in)
  INTEGER_T :: im
+ INTEGER_T Ns_IBM_fib_out
+ INTEGER_T Ns_IBM_fsh_out
+ INTEGER_T Nq_IBM_fsh_out
+ INTEGER_T Ns_IBM_esh_out
+ INTEGER_T Ns_IBM_fbc_out
+
+ INTEGER_T Nr_IBM_out
+ INTEGER_T Nr_IBM_fib_out
+ INTEGER_T Nr_IBM_fsh_out
+ INTEGER_T Nr_IBM_esh_out
+ INTEGER_T Nr_IBM_fbc_out
 
  do im=1,nmat_in
   if (FSI_flag_in(im).eq.FSI_SHOELE_CTML) then
 #ifdef MVAHABFSI
-   if (nIBM_fib.ge.2) then
-    FSI_CTML_max_num_nodes_list(im)=nIBM_fib
-    FSI_CTML_max_num_elements_list(im)=nIBM_fib-1
+   call copy_nmaxIBM( &
+     nr_IBM_out, &
+     nr_IBM_fib_out, &
+     nr_IBM_fsh_out, &
+     nr_IBM_esh_out, &
+     nr_IBM_fbc_out, &
+     ns_IBM_fib_out, &
+     ns_IBM_fsh_out, &
+     nq_IBM_fsh_out, &
+     ns_IBM_esh_out, &
+     ns_IBM_fbc_out)
+
+   if ((Nr_IBM_out.ge.1).and. &
+       (Nr_IBM_out.le.nmat_in-1)) then
+    ! do nothing
    else
-    print *,"nIBM_fib invalid"
+    print *,"Nr_IBM_out invalid"
+    stop
+   endif
+   if (Nr_IBM_fib_out.eq.Nr_IBM_out) then
+    ! do nothing
+   else
+    print *,"Nr_IBM_fib_out invalid"
+    stop
+   endif
+   if (Nr_IBM_fsh_out.eq.0) then
+    ! do nothing
+   else
+    print *,"Nr_IBM_fsh_out invalid"
+    stop
+   endif
+   if (Nr_IBM_esh_out.eq.0) then
+    ! do nothing
+   else
+    print *,"Nr_IBM_esh_out invalid"
+    stop
+   endif
+   if (Nr_IBM_fbc_out.eq.0) then
+    ! do nothing
+   else
+    print *,"Nr_IBM_fbc_out invalid"
+    stop
+   endif
+
+   if (Ns_IBM_fib_out.ge.2) then
+    FSI_CTML_max_num_nodes_list(im)=Ns_IBM_fib_out
+    FSI_CTML_max_num_elements_list(im)=Ns_IBM_fib_out-1
+   else
+    print *,"Ns_IBM_fib_out invalid"
     stop
    endif
 #else

@@ -2,7 +2,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !@c
       subroutine initialize_ibm(nIBM_rq,nIBM_rq_fsh
      &                         ,nIBM_r,nIBM_r_fib,nIBM_r_fsh
-     7                         ,nIBM_r_esh,nIBM_r_fbc,dtypeDelta 
+     &                         ,nIBM_r_esh,nIBM_r_fbc,dtypeDelta 
      &                         ,min_gridx
      &                         ,min_gridy
      &                         ,min_gridz
@@ -3128,6 +3128,100 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       timebucket=0.0
       return
       end 
+
+      subroutine copy_nIBM( 
+     &  nIBM_rq,nIBM_rq_fsh
+     & ,nIBM_r,nIBM_r_fib,nIBM_r_fsh
+     & ,nIBM_r_esh,nIBM_r_fbc
+     & ,Ns_IBM_fib_out
+     & ,Ns_IBM_fsh_out
+     & ,Nq_IBM_fsh_out
+     & ,Ns_IBM_esh_out
+     & ,Ns_IBM_fbc_out)
+      USE HeaderFSI
+      implicit none
+
+      integer, INTENT(out) :: nIBM_r(nr_IBM)
+     &        ,nIBM_r_fib(nr_IBM_fib)
+     &        ,nIBM_r_fsh(nr_IBM_fsh)
+     &        ,nIBM_r_esh(nr_IBM_esh)
+     &        ,nIBM_r_fbc(nr_IBM_fbc)
+      integer, INTENT(out) :: nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
+      integer, INTENT(out) :: Ns_IBM_fib_out
+      integer, INTENT(out) :: Ns_IBM_fsh_out
+      integer, INTENT(out) :: Nq_IBM_fsh_out
+      integer, INTENT(out) :: Ns_IBM_esh_out
+      integer, INTENT(out) :: Ns_IBM_fbc_out
+
+      integer i
+
+      Ns_IBM_fib_out = Ns_IBM_fib
+      Ns_IBM_fsh_out = Ns_IBM_fsh
+      Nq_IBM_fsh_out = Nq_IBM_fsh
+      Ns_IBM_esh_out = Ns_IBM_esh
+      Ns_IBM_fbc_out = Ns_IBM_fbc
+
+      do i=1,nr_ibm
+       nIBM_r(i) =ns_IBM_r(i)
+       nIBM_rq(i)=nq_IBM_r(i)
+      enddo
+      do i=1,nr_ibm_fib
+       nIBM_r_fib(i) =ns_IBM_r_fib(i)
+      enddo
+      do i=1,nr_ibm_fsh
+       nIBM_r_fsh(i) =ns_IBM_r_fsh(i)
+       nIBM_rq_fsh(i)=nq_IBM_r_fsh(i)
+      enddo
+      do i=1,nr_ibm_esh
+       nIBM_r_esh(i) =ns_IBM_r_esh(i)
+      enddo
+      do i=1,nr_ibm_fbc
+       nIBM_r_fbc(i) =ns_IBM_r_fbc(i)
+      enddo
+
+      return
+      end 
+
+      subroutine copy_nmaxIBM( 
+     &  nr_IBM_out
+     & ,nr_IBM_fib_out
+     & ,nr_IBM_fsh_out
+     & ,nr_IBM_esh_out
+     & ,nr_IBM_fbc_out
+     & ,Ns_IBM_fib_out
+     & ,Ns_IBM_fsh_out
+     & ,Nq_IBM_fsh_out
+     & ,Ns_IBM_esh_out
+     & ,Ns_IBM_fbc_out)
+      USE HeaderFSI
+      implicit none
+
+      integer, INTENT(out) :: Nr_IBM_out
+      integer, INTENT(out) :: Nr_IBM_fib_out
+      integer, INTENT(out) :: Nr_IBM_fsh_out
+      integer, INTENT(out) :: Nr_IBM_esh_out
+      integer, INTENT(out) :: Nr_IBM_fbc_out
+      integer, INTENT(out) :: Ns_IBM_fib_out
+      integer, INTENT(out) :: Ns_IBM_fsh_out
+      integer, INTENT(out) :: Nq_IBM_fsh_out
+      integer, INTENT(out) :: Ns_IBM_esh_out
+      integer, INTENT(out) :: Ns_IBM_fbc_out
+
+      Nr_IBM_out = Nr_IBM
+      Nr_IBM_fib_out = Nr_IBM_fib
+      Nr_IBM_fsh_out = Nr_IBM_fsh
+      Nr_IBM_esh_out = Nr_IBM_esh
+      Nr_IBM_fbc_out = Nr_IBM_fbc
+
+      Ns_IBM_fib_out = Ns_IBM_fib
+      Ns_IBM_fsh_out = Ns_IBM_fsh
+      Nq_IBM_fsh_out = Nq_IBM_fsh
+      Ns_IBM_esh_out = Ns_IBM_esh
+      Ns_IBM_fbc_out = Ns_IBM_fbc
+
+      return
+      end 
+
 
       subroutine copy_ibm_fib(
      &   ds_fib

@@ -1502,6 +1502,7 @@ void fortran_parameters() {
 
  pp.queryAdd("FSI_flag",NavierStokes::FSI_flag,NavierStokes::num_materials);
 
+  ! fort_ctml_max_nodes is declared in: CTMLFSI.F90
 #ifdef MVAHABFSI
  fort_ctml_max_nodes(
    &NavierStokes::num_materials,
