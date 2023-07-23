@@ -565,8 +565,6 @@ Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..num_mat
 // 0<=im_elastic_map<num_materials
 Vector<int> NavierStokes::im_elastic_map; //0...num_materials_viscoelastic-1
 
-Vector<Real> NavierStokes::FSI_force_integral;
-
 Real NavierStokes::real_number_of_cells=0.0; 
 
 Real NavierStokes::mglib_max_ratio=1.0e+5; 
@@ -918,8 +916,8 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_ICE_STATIC=9
 Vector<int> NavierStokes::FSI_flag; 
 
-Vector<int> NavierStokes::FSI_CTML_max_num_nodes_list; 
-Vector<int> NavierStokes::FSI_CTML_max_num_elements_list; 
+int NavierStokes::CTML_max_num_nodes_list=0;
+int NavierStokes::CTML_max_num_elements_list=0;
 
 int NavierStokes::FSI_interval=1;
 int NavierStokes::num_local_aux_grids=0;
@@ -1434,15 +1432,9 @@ void fortran_parameters() {
  NavierStokes::material_type.resize(NavierStokes::num_materials);
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
- NavierStokes::FSI_CTML_max_num_nodes_list.
-    resize(NavierStokes::num_materials);
- NavierStokes::FSI_CTML_max_num_elements_list.
-    resize(NavierStokes::num_materials);
 
- for (int im=0;im<NavierStokes::num_materials;im++) {
-  NavierStokes::FSI_CTML_max_num_nodes_list[im]=0;
-  NavierStokes::FSI_CTML_max_num_elements_list[im]=0;
- }
+ NavierStokes::CTML_max_num_nodes_list=0;
+ NavierStokes::CTML_max_num_elements_list=0;
 
  Vector<Real> Carreau_alpha_temp(NavierStokes::num_materials);
  Vector<Real> Carreau_beta_temp(NavierStokes::num_materials);
@@ -1502,13 +1494,13 @@ void fortran_parameters() {
 
  pp.queryAdd("FSI_flag",NavierStokes::FSI_flag,NavierStokes::num_materials);
 
-  ! fort_ctml_max_nodes is declared in: CTMLFSI.F90
+  // fort_ctml_max_nodes is declared in: CTMLFSI.F90
 #ifdef MVAHABFSI
  fort_ctml_max_nodes(
    &NavierStokes::num_materials,
    NavierStokes::FSI_flag.dataPtr(),
-   NavierStokes::FSI_CTML_max_num_nodes_list.dataPtr(),
-   NavierStokes::FSI_CTML_max_num_elements_list.dataPtr());
+   &NavierStokes::CTML_max_num_nodes_list,
+   &NavierStokes::CTML_max_num_elements_list);
 #endif
 
  int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;
@@ -3094,8 +3086,6 @@ NavierStokes::read_params ()
       amrex::Error("ns_is_lag_part invalid");
     }  // im=0..num_materials-1
     im_solid_map.resize(nparts);
-
-    FSI_force_integral.resize(NCOMP_FSI*num_materials);
 
     if (CTML_FSI_numsolids!=CTML_FSI_numsolids_test)
      amrex::Error("CTML_FSI_numsolids!=CTML_FSI_numsolids_test");
@@ -8306,33 +8296,13 @@ void NavierStokes::ns_header_msg_level(
     amrex::Error("problen[dir] invalid");
   }
 
-  Vector<FSI_container_class> FSI_input;
-  Vector<FSI_container_class> FSI_output;
-  Vector<int> max_num_nodes_list;
-  Vector<int> max_num_elements_list;
-  Vector<int> num_nodes_list;
-  Vector<int> num_elements_list;
-  max_num_nodes_list.resize(num_materials);
-  max_num_elements_list.resize(num_materials);
-  num_nodes_list.resize(num_materials);
-  num_elements_list.resize(num_materials);
+  FSI_container_class FSI_input;
+  FSI_container_class FSI_output;
+  FSI_input.initData_FSI(CTML_FSI_numsolids,CTML_max_num_nodes_list,
+    CTML_max_num_elements_list);
+  FSI_output.initData_FSI(CTML_FSI_numsolids,CTML_max_num_nodes_list,
+    CTML_max_num_elements_list);
 
-  for (int im=0;im<num_materials;im++) {
-   max_num_nodes_list[im]=FSI_CTML_max_num_nodes_list[im];
-   max_num_elements_list[im]=FSI_CTML_max_num_elements_list[im];
-   num_nodes_list[im]=0;
-   num_elements_list[im]=0;
-   int max_num_nodes_init=max_num_nodes_list[im];
-   int max_num_elements_init=max_num_elements_list[im];
-   int num_nodes_init=0;
-   int num_elements_init=0;
-   FSI_input[im].initData_FSI(
-	max_num_nodes_init,max_num_elements_init,
-	num_nodes_init,num_elements_init);
-   FSI_output[im].initData_FSI(
-	max_num_nodes_init,max_num_elements_init,
-        num_nodes_init,num_elements_init);
-  }
   NavierStokes& ns_level0=getLevel(0);
 
    //initialize node locations; generate_new_triangles
@@ -8343,10 +8313,8 @@ void NavierStokes::ns_header_msg_level(
   } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
     
    if (level==0) {
-    for (int im=0;im<num_materials;im++) {
-     FSI_input[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step][im]);
-     FSI_output[im].copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1][im]);
-    }
+    FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step]);
+    FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
    } else if ((level>=1)&&(level<=finest_level)) {
     // do nothing
    } else
@@ -8369,13 +8337,6 @@ void NavierStokes::ns_header_msg_level(
 
   } else
    amrex::Error("FSI_operation invalid");
-
-  for (int im=0;im<num_materials;im++) {
-   max_num_nodes_list[im]=FSI_input[im].max_num_nodes;
-   max_num_elements_list[im]=FSI_input[im].max_num_elements;
-   num_nodes_list[im]=FSI_input[im].num_nodes;
-   num_elements_list[im]=FSI_input[im].num_elements;
-  }
 
   int nFSI=nparts*NCOMP_FSI;
 
@@ -8435,10 +8396,16 @@ void NavierStokes::ns_header_msg_level(
        &finest_level,
        &max_level,
        &im_critical,
+
+       FIX ME 
+
        max_num_nodes_list.dataPtr(),
        max_num_elements_list.dataPtr(),
        num_nodes_list.dataPtr(),
        num_elements_list.dataPtr(),
+
+       FIX ME
+
        &FSI_input[im_index].max_num_nodes,
        &FSI_input[im_index].max_num_elements,
        &FSI_input[im_index].num_nodes,
@@ -8489,7 +8456,6 @@ void NavierStokes::ns_header_msg_level(
        ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
        FSIfab.dataPtr(), // mfiner spot
        ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-       FSI_force_integral.dataPtr(),
        &nFSI,
        &ngrow_make_distance_unitfab,
        &nparts,
@@ -8818,10 +8784,15 @@ void NavierStokes::ns_header_msg_level(
      &finest_level,
      &max_level,
      &im_critical, // =0 (default; 0<=im<=num_materials-1)
+
+     FIX ME 
+
      max_num_nodes_list.dataPtr(),
      max_num_elements_list.dataPtr(),
      num_nodes_list.dataPtr(),
      num_elements_list.dataPtr(),
+
+     FIX ME
      &FSI_input[im_index].max_num_nodes,
      &FSI_input[im_index].max_num_elements,
      &FSI_input[im_index].num_nodes,
@@ -8872,7 +8843,6 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
      mnbrfab.dataPtr(), // mfiner spot
      ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
-     FSI_force_integral.dataPtr(),
      &nFSI,
      &ngrow_make_distance,
      &nparts,
@@ -9030,6 +9000,9 @@ void NavierStokes::ns_header_msg_level(
      &finest_level,
      &max_level,
      &im_critical, //==0
+
+     FIX ME
+
      max_num_nodes_list.dataPtr(),
      max_num_elements_list.dataPtr(),
      num_nodes_list.dataPtr(),
@@ -9084,7 +9057,6 @@ void NavierStokes::ns_header_msg_level(
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // mfiner spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSI_force_integral.dataPtr(),
      &nFSI,
      &ngrow_make_distance_unitfab,
      &nparts,
@@ -9148,6 +9120,9 @@ void NavierStokes::ns_header_msg_level(
       &finest_level,
       &max_level,
       &im_critical, //=0
+
+      FIX ME
+
       max_num_nodes_list.dataPtr(),
       max_num_elements_list.dataPtr(),
       num_nodes_list.dataPtr(),
@@ -9202,7 +9177,6 @@ void NavierStokes::ns_header_msg_level(
       ARLIM(mnbrfab.loVect()),ARLIM(mnbrfab.hiVect()),
       mfinerfab.dataPtr(),
       ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()),
-      FSI_force_integral.dataPtr(),
       &nFSI,
       &ngrow_make_distance,
       &nparts,

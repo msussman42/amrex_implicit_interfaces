@@ -40,29 +40,29 @@ class FSI_container_class
 {
 public:
 
+int CTML_num_solids;
 int max_num_nodes;
 int max_num_elements;
-int num_nodes;
-int num_elements;
-int nodes_per_element;
-//node[0 or 1][0..max_num_nodes-1][0..2]
+//node[0 or 1][0..num_solids-1][0..max_num_nodes-1][0..2]
 Vector< Real > node_list; 
-//velocity[0 or 1][0..max_num_nodes-1][0..2]
+//velocity[0 or 1][0..num_solids-1][0..max_num_nodes-1][0..2]
 Vector< Real > velocity_list; 
-//element[0..max_num_elements-1][0..3]
-Vector< int > element_list;//4*max_num_elements
-//initial_node_list[0..max_num_nodes-1][0..2]
-Vector< Real > initial_node_list; 
-//mass[0..max_num_nodes-1]
+//element[0..num_solids-1][0..max_num_elements-1][0..3]
+Vector< int > element_list;
+//initial_node_list[0..num_solids-1][0..max_num_nodes-1][0..2]
+Vector< Real > init_node_list; 
+//mass[0..num_solids-1][0..max_num_nodes-1]
 Vector< Real > mass_list; 
-//temperature[0..max_num_nodes-1]
-Vector< Real > temperature_list; 
+//temp[0..num_solids-1][0..max_num_nodes-1] (temperature)
+Vector< Real > temp_list; 
+
+void FSI_flatten(Vector< Real >& flattened_data);
+void FSI_unflatten(Vector< Real > flattened_data);
 
 void initData_FSI(
+  int CTML_num_solids_init,
   int max_num_nodes_init,
-  int max_num_elements_init,
-  int num_nodes_init,
-  int num_elements_init);
+  int max_num_elements_init);
 void copyFrom_FSI(const FSI_container_class& source_FSI);
 void clear_FSI();
 
@@ -286,8 +286,8 @@ public:
              const Vector<IntVect>& bf_lev);
     const BoxArray& getAreaNotToTag() noexcept;
 
-     // new_data_FSI[0..level_MAX_NUM_SLAB-1][0..num_materials-1]
-    Vector< Vector< FSI_container_class > > new_data_FSI;
+     // new_data_FSI[0..level_MAX_NUM_SLAB-1]
+    Vector< FSI_container_class > new_data_FSI;
 
     //
 protected:

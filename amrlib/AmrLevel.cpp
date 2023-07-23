@@ -19,33 +19,27 @@ DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
 void FSI_container_class::initData_FSI(
+  int CTML_num_solids_init,
   int max_num_nodes_init,
-  int max_num_elements_init,
-  int num_nodes_init,
-  int num_elements_init) {
+  int max_num_elements_init) {
 
-if ((num_nodes_init>=0)&&
+if ((CTML_num_solids_init>=0)&&
     (num_elements_init>=0)&&
     (max_num_nodes_init>=0)&&
     (max_num_elements_init>=0)) {
 
- num_nodes=num_nodes_init;
- num_elements=num_elements_init;
+ CTML_num_solids=CTML_num_solids_init;
  max_num_nodes=max_num_nodes_init;
  max_num_elements=max_num_elements_init;
 
- nodes_per_element=0;
-
- node_list.resize(max_num_nodes*3*2);
- element_list.resize(max_num_elements*4);
- initial_node_list.resize(max_num_nodes*3);
- velocity_list.resize(max_num_nodes*3*2);
- mass_list.resize(max_num_nodes);
- temperature_list.resize(max_num_nodes);
+ node_list.resize(CTML_num_solids*max_num_nodes*3*2);
+ velocity_list.resize(CTML_num_solids*max_num_nodes*3*2);
+ element_list.resize(CTML_num_solids*max_num_elements*4);
+ init_node_list.resize(CTML_num_solids*max_num_nodes*3);
+ mass_list.resize(CTML_num_solids*max_num_nodes);
+ temp_list.resize(CTML_num_solids*max_num_nodes);
 } else {
- std::cout <<  "num_nodes_init or num_elements_init or " << '\n';
- std::cout <<  "max_num_nodes_init or max_num_elements_init invalid" << '\n';
- amrex::Error("input parameteers (nodes, elements, etc invalid aborting");
+ amrex::Error("num_solids/nodes/ or elements invalid");
 }
 
 } // end subroutine initData_FSI()
@@ -53,39 +47,35 @@ if ((num_nodes_init>=0)&&
 void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
  initData_FSI(
+   source_FSI.CTML_num_solids,
    source_FSI.max_num_nodes,
-   source_FSI.max_num_elements,
-   source_FSI.num_nodes,
-   source_FSI.num_elements);
+   source_FSI.max_num_elements);
 
- nodes_per_element=source_FSI.nodes_per_element;
-
- for (int ielem=0;ielem<4*max_num_elements;ielem++) {
+ for (int ielem=0;ielem<source_FSI.element_list.size();ielem++) {
   element_list[ielem]=source_FSI.element_list[ielem];
- } //ielem=0..4*max_num_elements-1
+ } 
 
- for (int inode=0;inode<max_num_nodes;inode++) {
-  mass_list[inode]=source_FSI.mass_list[inode];
-  temperature_list[inode]=source_FSI.temperature_list[inode];
- }
-
- for (int inode=0;inode<3*max_num_nodes;inode++) {
-  initial_node_list[inode]=source_FSI.initial_node_list[inode];
- }
-
- for (int inode=0;inode<2*3*max_num_nodes;inode++) {
+ for (int inode=0;inode<source_FSI.node_list.size();inode++) {
   node_list[inode]=source_FSI.node_list[inode];
   velocity_list[inode]=source_FSI.velocity_list[inode];
- } //inode=0..3*max_num_nodes-1
+ } 
+
+ for (int inode=0;inode<source_FSI.mass_list.size();inode++) {
+  mass_list[inode]=source_FSI.mass_list[inode];
+  temp_list[inode]=source_FSI.temp_list[inode];
+ }
+
+ for (int inode=0;inode<source_FSI.init_node_list.size();inode++) {
+  init_node_list[inode]=source_FSI.init_node_list[inode];
+ }
 
 } // end subroutine copyFrom_FSI
 
 void FSI_container_class::clear_FSI() {
 
- initData_FSI(0,0,0,0);
+ initData_FSI(0,0,0);
 
 } // end subroutine FSI_container_class::clear_FSI() 
-
 
 
 void
@@ -153,10 +143,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
 
      for (int i=0;i<=time_order;i++) {
 
-      new_data_FSI[i].resize(local_nmat);
-      for (int j=0;j<local_nmat;j++) {
-       new_data_FSI[i][j].initData_FSI(0,0,0,0);
-      }
+      new_data_FSI[i].initData_FSI(0,0,0);
 
      }// for (int i=0;i<=time_order;i++) 
     } else if (level>0) {
@@ -245,10 +232,7 @@ AmrLevel::restart (AmrCore&      papa,
   for (int i=0;i<=time_order;i++) {
 
     //TODO: restart the FSI data.
-   new_data_FSI[i].resize(local_nmat);
-   for (int j=0;j<local_nmat;j++) {
-    new_data_FSI[i][j].initData_FSI(0,0,0,0);
-   }
+   new_data_FSI[i].initData_FSI(0,0,0);
 
   }//for (int i=0;i<=time_order;i++) 
 
@@ -410,10 +394,7 @@ AmrLevel::~AmrLevel ()
 
      for (int i=0;i<=time_order;i++) {
 
-      for (int j=0;j<local_nmat;j++) {
-       new_data_FSI[i][j].clear_FSI();
-      }
-      new_data_FSI[i].resize(0);
+      new_data_FSI[i].clear_FSI();
 
      } // for (int i=0;i<=time_order;i++) 
      new_data_FSI.resize(0);

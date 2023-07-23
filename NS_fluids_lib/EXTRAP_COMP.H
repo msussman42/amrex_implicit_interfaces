@@ -342,6 +342,17 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 #define OP_FSI_MAKE_SIGN 3
 #define OP_FSI_LAG_STRESS 4
 
+#define FSIcontain_num_solids 0
+#define FSIcontain_max_num_nodes 1
+#define FSIcontain_max_num_elements 2
+#define FSIcontain_node_list 3
+#define FSIcontain_velocity_list (FSIcontain_node_list+node_list_size)
+#define FSIcontain_element_list (FSIcontain_velocity_list+velocity_list_size)
+#define FSIcontain_init_node_list (FSIcontain_element_list+element_list_size)
+#define FSIcontain_mass_list (FSIcontain_init_node_list+init_node_list_size)
+#define FSIcontain_temp_list (FSIcontain_mass_list+mass_list_size)
+#define FSIcontain_size (FSIcontain_temp_list+temp_list_size)
+
 #define POTGRAD_NULLOPTION 0
 #define POTGRAD_SURFTEN_INCREMENTAL_GRAV 1
 #define POTGRAD_SURFTEN_BASE_GRAV 2
