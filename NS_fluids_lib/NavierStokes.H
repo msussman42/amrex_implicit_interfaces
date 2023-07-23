@@ -400,8 +400,8 @@ public:
      
     static Vector<int> FSI_flag; 
 
-    static Vector<int> FSI_CTML_max_num_nodes_list; 
-    static Vector<int> FSI_CTML_max_num_elements_list; 
+    static Vector<int> CTML_max_num_nodes; 
+    static Vector<int> CTML_max_num_elements; 
 
     static Vector<int> material_type; // 0 incomp   
 
@@ -1628,8 +1628,8 @@ protected:
 
     static int FSI_interval; //default=1
 
-    static int         CTML_FSI_numsolids;
-    static int         CTML_FSI_init;
+    static int CTML_FSI_numsolids;
+    static int CTML_FSI_init;
 
     static Vector<int>  shock_timestep;
 
@@ -1827,8 +1827,6 @@ protected:
 
     static Vector<int> im_solid_map; //nparts components, in range 0..num_materials-1
     static Vector<int> im_elastic_map;
-
-    static Vector<Real> FSI_force_integral;
 
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 

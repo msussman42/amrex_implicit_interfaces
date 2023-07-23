@@ -524,8 +524,8 @@ stop
 subroutine fort_ctml_max_nodes(&
  nmat_in,&
  FSI_flag_in,&
- FSI_CTML_max_num_nodes_list,&
- FSI_CTML_max_num_elements_list) &
+ CTML_max_num_nodes_list,&
+ CTML_max_num_elements_list) &
 bind(c,name='fort_ctml_max_nodes')
 
  use probcommon_module
@@ -534,23 +534,38 @@ bind(c,name='fort_ctml_max_nodes')
  IMPLICIT NONE
  INTEGER_T, INTENT(in) :: nmat_in
  INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
- INTEGER_T, INTENT(inout) :: FSI_CTML_max_num_nodes_list(nmat_in)
- INTEGER_T, INTENT(inout) :: FSI_CTML_max_num_elements_list(nmat_in)
+ INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list
+ INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
  INTEGER_T :: im
- INTEGER_T Ns_IBM_fib_out
- INTEGER_T Ns_IBM_fsh_out
- INTEGER_T Nq_IBM_fsh_out
- INTEGER_T Ns_IBM_esh_out
- INTEGER_T Ns_IBM_fbc_out
+ INTEGER_T :: Ns_IBM_fib_out
+ INTEGER_T :: Ns_IBM_fsh_out
+ INTEGER_T :: Nq_IBM_fsh_out
+ INTEGER_T :: Ns_IBM_esh_out
+ INTEGER_T :: Ns_IBM_fbc_out
 
- INTEGER_T Nr_IBM_out
- INTEGER_T Nr_IBM_fib_out
- INTEGER_T Nr_IBM_fsh_out
- INTEGER_T Nr_IBM_esh_out
- INTEGER_T Nr_IBM_fbc_out
+ INTEGER_T :: Nr_IBM_out
+ INTEGER_T :: Nr_IBM_fib_out
+ INTEGER_T :: Nr_IBM_fsh_out
+ INTEGER_T :: Nr_IBM_esh_out
+ INTEGER_T :: Nr_IBM_fbc_out
 
+ INTEGER_T :: CTML_num_solids_local
+
+ CTML_max_num_nodes_list=0
+ CTML_max_num_elements_list=0
+
+ CTML_num_solids_local=0
  do im=1,nmat_in
   if (FSI_flag_in(im).eq.FSI_SHOELE_CTML) then
+   CTML_num_solids_local=CTML_num_solids_local+1
+  endif
+ endif
+
+ if (CTML_num_solids_local.eq.0) then
+  !do nothing
+ else if ((CTML_num_solids_local.ge.1).and. &
+          (CTML_num_solids_local.le.nmat_in-1)) then
+
 #ifdef MVAHABFSI
    call copy_nmaxIBM( &
      nr_IBM_out, &
@@ -564,8 +579,7 @@ bind(c,name='fort_ctml_max_nodes')
      ns_IBM_esh_out, &
      ns_IBM_fbc_out)
 
-   if ((Nr_IBM_out.ge.1).and. &
-       (Nr_IBM_out.le.nmat_in-1)) then
+   if (Nr_IBM_out.eq.CTML_num_solids_local) then
     ! do nothing
    else
     print *,"Nr_IBM_out invalid"
@@ -574,7 +588,7 @@ bind(c,name='fort_ctml_max_nodes')
    if (Nr_IBM_fib_out.eq.Nr_IBM_out) then
     ! do nothing
    else
-    print *,"Nr_IBM_fib_out invalid"
+    print *,"expecting Nr_IBM_fib_out.eq.Nr_IBM_out"
     stop
    endif
    if (Nr_IBM_fsh_out.eq.0) then
@@ -597,8 +611,8 @@ bind(c,name='fort_ctml_max_nodes')
    endif
 
    if (Ns_IBM_fib_out.ge.2) then
-    FSI_CTML_max_num_nodes_list(im)=Ns_IBM_fib_out
-    FSI_CTML_max_num_elements_list(im)=Ns_IBM_fib_out-1
+    CTML_max_num_nodes_list=Ns_IBM_fib_out
+    CTML_max_num_elements_list=Ns_IBM_fib_out-1
    else
     print *,"Ns_IBM_fib_out invalid"
     stop
@@ -607,11 +621,10 @@ bind(c,name='fort_ctml_max_nodes')
    print *,"CTML(F): define MEHDI_VAHAB_FSI in GNUmakefile"
    stop
 #endif
-  else
-   FSI_CTML_max_num_nodes_list(im)=0 
-   FSI_CTML_max_num_elements_list(im)=0 
-  endif
- enddo !im=1,nmat_in
+ else
+  print *,"CTML_num_solids_local invalid"
+  stop
+ endif
 
  return
 end subroutine fort_ctml_max_nodes

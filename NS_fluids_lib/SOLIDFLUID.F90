@@ -155,7 +155,6 @@
         DIMS(masknbr), &
         maskfiner, &
         DIMS(maskfiner), &
-        FSI_force_integral, &
         nFSI, &
         ngrow_make_distance_in, &
         nparts, &
@@ -291,9 +290,6 @@
       REAL_T, INTENT(in) :: xlo(SDIM)
       REAL_T, INTENT(in) :: dx(SDIM)
       REAL_T, INTENT(in) :: dx_max_level(SDIM)
-
-      REAL_T, INTENT(inout) :: &
-        FSI_force_integral(NCOMP_FSI*num_materials)
 
       REAL_T problo3D(3),probhi3D(3)
       REAL_T dx3D(3)
