@@ -107,7 +107,7 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
   temp_list[i]=flattened_data[FSIcontain_temp_list+i];
  } 
 
-} //end subroutine FSI_flatten
+} //end subroutine FSI_unflatten
 
 
 
