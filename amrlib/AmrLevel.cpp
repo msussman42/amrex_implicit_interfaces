@@ -44,6 +44,73 @@ if ((CTML_num_solids_init>=0)&&
 
 } // end subroutine initData_FSI()
 
+void FSI_container_class::FSI_flatten(Vector< Real >& flattened_data) {
+
+ int node_list_size=node_list.size();
+ int velocity_list_size=velocity_list.size();
+ int element_list_size=element_list.size();
+ int init_node_list_size=init_node_list.size();
+ int mass_list_size=mass_list.size();
+ int temp_list_size=temp_list.size();
+ flattened_data.resize(FSIcontain_size);
+ flattened_data[FSIcontain_num_solids]=CTML_num_solids; 
+ flattened_data[FSIcontain_max_num_nodes]=max_num_nodes; 
+ flattened_data[FSIcontain_max_num_elements]=max_num_elements; 
+ for (int i=0;i<node_list_size;i++) {
+  flattened_data[FSIcontain_node_list+i]=node_list[i];
+ } 
+ for (int i=0;i<velocity_list_size;i++) {
+  flattened_data[FSIcontain_velocity_list+i]=velocity_list[i];
+ } 
+ for (int i=0;i<element_list_size;i++) {
+  flattened_data[FSIcontain_element_list+i]=element_list[i];
+ } 
+ for (int i=0;i<init_node_list_size;i++) {
+  flattened_data[FSIcontain_init_node_list+i]=init_node_list[i];
+ } 
+ for (int i=0;i<mass_list_size;i++) {
+  flattened_data[FSIcontain_mass_list+i]=mass_list[i];
+ } 
+ for (int i=0;i<temp_list_size;i++) {
+  flattened_data[FSIcontain_temp_list+i]=temp_list[i];
+ } 
+
+} //end subroutine FSI_flatten
+
+void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
+
+ int node_list_size=node_list.size();
+ int velocity_list_size=velocity_list.size();
+ int element_list_size=element_list.size();
+ int init_node_list_size=init_node_list.size();
+ int mass_list_size=mass_list.size();
+ int temp_list_size=temp_list.size();
+ CTML_num_solids=flattened_data[FSIcontain_num_solids]; 
+ max_num_nodes=flattened_data[FSIcontain_max_num_nodes];
+ max_num_elements=flattened_data[FSIcontain_max_num_elements];
+ for (int i=0;i<node_list_size;i++) {
+  node_list[i]=flattened_data[FSIcontain_node_list+i];
+ } 
+ for (int i=0;i<velocity_list_size;i++) {
+  velocity_list[i]=flattened_data[FSIcontain_velocity_list+i];
+ } 
+ for (int i=0;i<element_list_size;i++) {
+  element_list[i]=flattened_data[FSIcontain_element_list+i];
+ } 
+ for (int i=0;i<init_node_list_size;i++) {
+  init_node_list[i]=flattened_data[FSIcontain_init_node_list+i];
+ } 
+ for (int i=0;i<mass_list_size;i++) {
+  mass_list[i]=flattened_data[FSIcontain_mass_list+i];
+ } 
+ for (int i=0;i<temp_list_size;i++) {
+  temp_list[i]=flattened_data[FSIcontain_temp_list+i];
+ } 
+
+} //end subroutine FSI_flatten
+
+
+
 void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
  initData_FSI(
