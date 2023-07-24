@@ -1617,7 +1617,6 @@ protected:
     static Real bottom_bottom_tol_factor;
 
     static Vector<int>  FSI_touch_flag;
-    static int         elements_generated;
      // 0=> u=u_solid if phi_solid>=0
      // 1=> u=u_solid_ghost if phi_solid>=0
      // 2=> GNBC (u=u_solid_ghost if phi_solid>=0)

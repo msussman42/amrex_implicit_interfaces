@@ -528,7 +528,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else if (ok_copy_FSI_old_to_new()==0) {
 
     int iter=0;
-    int FSI_operation=OP_FSI_LAG_STRESS; // eul stress -> structure stress
     int FSI_sub_operation=SUB_OP_FSI_CLEAR_LAG_DATA;
     for (FSI_sub_operation=SUB_OP_FSI_CLEAR_LAG_DATA;
          FSI_sub_operation<=SUB_OP_FSI_SYNC_LAG_DATA;FSI_sub_operation++) {
@@ -536,7 +535,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
       NavierStokes& ns_level=getLevel(ilev);
       ns_level.resize_mask_nbr(ngrow_make_distance);
       ns_level.ns_header_msg_level(
-       FSI_operation, //FSI_operation.eq.OP_FSI_LAG_STRESS
+       OP_FSI_LAG_STRESS,
        FSI_sub_operation,
        cur_time_slab,
        dt_slab,
@@ -544,19 +543,20 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
      } // ilev=level..finest_level
     } // FSI_sub_operation=0,1,2
 
-    // fort_headermsg (SOLIDFLUID.F90)
-    // CLSVOF_ReadNodes (sci_clsvof.F90)
-    // if FSI_flag==FSI_SHOELE_CTML then
-    //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
-    //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
-    //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
-    FSI_operation=OP_FSI_UPDATE_NODES; // update node locations
-    FSI_sub_operation=SUB_OP_FSI_DEFAULT;
-    ns_header_msg_level(
-     FSI_operation, //=OP_FSI_UPDATE_NODES
-     FSI_sub_operation, //=SUB_OP_FSI_DEFAULT
-     cur_time_slab,
-     dt_slab,iter);
+    if (level==0) {
+     // fort_headermsg (SOLIDFLUID.F90)
+     // CLSVOF_ReadNodes (sci_clsvof.F90)
+     // if FSI_flag==FSI_SHOELE_CTML then
+     //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
+     //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
+     //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
+     ns_header_msg_level(
+      OP_FSI_UPDATE_NODES,
+      SUB_OP_FSI_DEFAULT,
+      cur_time_slab,
+      dt_slab,iter);
+    } else
+     amrex::Error("expecting level==0");
 
     // convert Lagrangian position, velocity, temperature, and force to
     // Eulerian.
