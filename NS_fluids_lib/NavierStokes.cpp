@@ -934,8 +934,6 @@ int NavierStokes::CTML_FSI_numsolids = 0;
 
 int NavierStokes::CTML_FSI_init = 0;
 
-int NavierStokes::elements_generated = 0; 
-
 // 0=take into account sound speed only at t=0 if compressible.
 // 1=always take into account sound speed
 // 2=never take into account sound speed
@@ -2731,6 +2729,11 @@ NavierStokes::read_params ()
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid ns init");
+
+    FSI_touch_flag.resize(thread_class::nthreads);
+    for (int tid=0;tid<thread_class::nthreads;tid++) {
+     FSI_touch_flag[tid]=0;
+    }
 
     gravity_vector.resize(AMREX_SPACEDIM);
 
@@ -7582,21 +7585,17 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    //    that are located in or very near the tile.
   create_fortran_grid_struct(cur_time,dt);
 
-  int iter=0; // iter==0 triggers allocation and FSI_touch_flag=0
-  int FSI_operation=OP_FSI_MAKE_DISTANCE;  // make distance in narrow band
-  int FSI_sub_operation=SUB_OP_FSI_DEFAULT;
+  int iter=0;
   resize_mask_nbr(ngrow_make_distance);
    // in: FSI_make_distance
    // 1.FillCoarsePatch
    // 2.traverse lagrangian elements belonging to each tile and update
    //   cells within "bounding box" of the element.
-  ns_header_msg_level(FSI_operation,FSI_sub_operation,cur_time,dt,iter);
+  ns_header_msg_level(OP_FSI_MAKE_DISTANCE,SUB_OP_FSI_DEFAULT,cur_time,dt,iter);
   
   do {
  
-   FSI_operation=OP_FSI_MAKE_SIGN; // sign update   
-   FSI_sub_operation=SUB_OP_FSI_DEFAULT;
-   ns_header_msg_level(FSI_operation,FSI_sub_operation,cur_time,dt,iter);
+   ns_header_msg_level(OP_FSI_MAKE_SIGN,SUB_OP_FSI_DEFAULT,cur_time,dt,iter);
    iter++;
   
   } while (FSI_touch_flag[0]==1);
@@ -8101,6 +8100,11 @@ void NavierStokes::init_aux_data() {
 // 1. Lagrangian advection
 // 2. copy Lagrangian velocity and position to Eulerian.
 // 3. copy Eulerian force to Lagrangian
+//
+// ns_header_msg_level is called from:
+//  NavierStokes::FSI_make_distance
+//  NavierStokes::post_restart
+FIX ME
 void NavierStokes::ns_header_msg_level(
  int FSI_operation,int FSI_sub_operation,
  Real cur_time,
@@ -8122,6 +8126,9 @@ void NavierStokes::ns_header_msg_level(
 
   //initialize node locations; generate_new_triangles
  if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
+
+  if (level!=0)
+   amrex::Error("level invalid");
   if (iter!=0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=SUB_OP_FSI_DEFAULT)
@@ -8129,6 +8136,9 @@ void NavierStokes::ns_header_msg_level(
 
   //update node locations
  } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
+
+  if (level!=0)
+   amrex::Error("level invalid");
   if (iter!=0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=SUB_OP_FSI_DEFAULT)
@@ -8166,17 +8176,8 @@ void NavierStokes::ns_header_msg_level(
  } else
   amrex::Error("FSI_operation out of range");
 
- if (iter==0) {
-  FSI_touch_flag.resize(thread_class::nthreads);
-  for (int tid=0;tid<thread_class::nthreads;tid++) {
-   FSI_touch_flag[tid]=0;
-  }
- } else if (iter>0) {
-  for (int tid=0;tid<thread_class::nthreads;tid++) {
-   FSI_touch_flag[tid]=0;
-  }
- } else {
-  amrex::Error("iter invalid");
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  FSI_touch_flag[tid]=0;
  }
 
  const int max_level = parent->maxLevel();
@@ -8221,46 +8222,6 @@ void NavierStokes::ns_header_msg_level(
   ioproc=1;
  else
   ioproc=0;
-
-  //initialize node locations; generate_new_triangles
- if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
-
-  if (level==0) {
-   elements_generated=0;
-  } else if ((level>=1)&&(level<=finest_level)) {
-   elements_generated=1;
-  } else {
-   amrex::Error("level invalid");
-  }
-
-  //update node locations
- } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
-
-  if (level==0) {
-   elements_generated=0;
-  } else if ((level>=1)&&(level<=finest_level)) {
-   elements_generated=1;
-  } else {
-   amrex::Error("level invalid");
-  }
-
-  //make distance in narrow band
- } else if (FSI_operation==OP_FSI_MAKE_DISTANCE) {
-
-  elements_generated=1;
-
-  //update the sign.
- } else if (FSI_operation==OP_FSI_MAKE_SIGN) {
-
-  elements_generated=1;
-
-  //copy Eulerian pressure to Lagrangian pressure
- } else if (FSI_operation==OP_FSI_LAG_STRESS) { 
-
-  elements_generated=1;
-
- } else
-  amrex::Error("FSI_operation invalid");
 
  int current_step = nStep();
  int plot_interval=parent->plotInt();
@@ -8307,18 +8268,18 @@ void NavierStokes::ns_header_msg_level(
 
    //initialize node locations; generate_new_triangles
   if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
-   // do nothing
-    
+
+	  FIX ME
+   if  (calledfrompost_restart)  {
+    FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
+    FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
+   }
+
    //update node locations
   } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
     
-   if (level==0) {
-    FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step]);
-    FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
-   } else if ((level>=1)&&(level<=finest_level)) {
-    // do nothing
-   } else
-    amrex::Error("level invalid");
+   FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step]);
+   FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
 
    //make distance in narrow band
   } else if (FSI_operation==OP_FSI_MAKE_DISTANCE) {
@@ -8346,172 +8307,165 @@ void NavierStokes::ns_header_msg_level(
    if (FSI_sub_operation!=SUB_OP_FSI_DEFAULT)
     amrex::Error("FSI_sub_operation!=SUB_OP_FSI_DEFAULT");
 
-   if (elements_generated==0) {
-    int ngrow_make_distance_unitfab=0;
-    IntVect unitlo(D_DECL(0,0,0));
-    IntVect unithi(D_DECL(0,0,0));
-     // construct cell-centered type box
-    Box unitbox(unitlo,unithi);
+   int ngrow_make_distance_unitfab=0;
+   IntVect unitlo(D_DECL(0,0,0));
+   IntVect unithi(D_DECL(0,0,0));
+    // construct cell-centered type box
+   Box unitbox(unitlo,unithi);
 
-    const int* tilelo=unitbox.loVect();
-    const int* tilehi=unitbox.hiVect();
-    const int* fablo=unitbox.loVect();
-    const int* fabhi=unitbox.hiVect();
+   const int* tilelo=unitbox.loVect();
+   const int* tilehi=unitbox.hiVect();
+   const int* fablo=unitbox.loVect();
+   const int* fabhi=unitbox.hiVect();
 
-    FArrayBox FSIfab(unitbox,nFSI);
+   FArrayBox FSIfab(unitbox,nFSI);
 
-    Vector<int> velbc;
-    velbc.resize(AMREX_SPACEDIM*2*AMREX_SPACEDIM);
-    for (int i=0;i<velbc.size();i++)
-     velbc[i]=0;
-    Vector<int> vofbc;
-    vofbc.resize(2*AMREX_SPACEDIM);
-    for (int i=0;i<vofbc.size();i++)
-     vofbc[i]=0;
+   Vector<int> velbc;
+   velbc.resize(AMREX_SPACEDIM*2*AMREX_SPACEDIM);
+   for (int i=0;i<velbc.size();i++)
+    velbc[i]=0;
+   Vector<int> vofbc;
+   vofbc.resize(2*AMREX_SPACEDIM);
+   for (int i=0;i<vofbc.size();i++)
+    vofbc[i]=0;
 
-    int tid=0;
-    int gridno=0;
+   int tid=0;
+   int gridno=0;
 
-    int number_passes=1;
-    if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
-     number_passes=1;
-    } else if (FSI_operation==OP_FSI_UPDATE_NODES) {
-     number_passes=2;
-    } else
-     amrex::Error("FSI_operation invalid");
+   int number_passes=1;
+   if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
+    number_passes=1;
+   } else if (FSI_operation==OP_FSI_UPDATE_NODES) {
+    number_passes=2;
+   } else
+    amrex::Error("FSI_operation invalid");
 
-    for (int ipass=0;ipass<number_passes;ipass++) {
+   for (int ipass=0;ipass<number_passes;ipass++) {
 
-     for (int im_index=0;im_index<num_materials;im_index++) {
+    for (int im_index=0;im_index<num_materials;im_index++) {
  
-      int im_critical=ipass*num_materials+im_index;
+     int im_critical=ipass*num_materials+im_index;
 
-      // declared in SOLIDFLUID.F90
-      fort_headermsg(
-       &tid,
-       &num_tiles_on_thread_proc[tid],
-       &gridno,
-       &thread_class::nthreads,
-       &level,
-       &finest_level,
-       &max_level,
-       &im_critical,
+FIX ME if called from post_restart!
 
-       FIX ME 
+     // declared in SOLIDFLUID.F90
+     fort_headermsg(
+      &tid,
+      &num_tiles_on_thread_proc[tid],
+      &gridno,
+      &thread_class::nthreads,
+      &level,
+      &finest_level,
+      &max_level,
+      &im_critical,
 
-       max_num_nodes_list.dataPtr(),
-       max_num_elements_list.dataPtr(),
-       num_nodes_list.dataPtr(),
-       num_elements_list.dataPtr(),
+      FIX ME 
 
-       FIX ME
+      max_num_nodes_list.dataPtr(),
+      max_num_elements_list.dataPtr(),
+      num_nodes_list.dataPtr(),
+      num_elements_list.dataPtr(),
 
-       &FSI_input[im_index].max_num_nodes,
-       &FSI_input[im_index].max_num_elements,
-       &FSI_input[im_index].num_nodes,
-       &FSI_input[im_index].num_elements,
-       &FSI_input[im_index].nodes_per_element,
-       &FSI_input[im_index].FSI_dt,
-       &FSI_input[im_index].FSI_time,
-       FSI_input[im_index].node_list.dataPtr(),
-       FSI_input[im_index].element_list.dataPtr(),
-       FSI_input[im_index].displacement_list.dataPtr(),
-       FSI_input[im_index].velocity_halftime_list.dataPtr(),
-       FSI_input[im_index].velocity_list.dataPtr(),
-       FSI_input[im_index].force_list.dataPtr(),
-       FSI_input[im_index].mass_list.dataPtr(),
-       FSI_input[im_index].temperature_list.dataPtr(),
-       &FSI_output[im_index].max_num_nodes,
-       &FSI_output[im_index].max_num_elements,
-       &FSI_output[im_index].num_nodes,
-       &FSI_output[im_index].num_elements,
-       &FSI_output[im_index].nodes_per_element,
-       &FSI_output[im_index].FSI_dt,
-       &FSI_output[im_index].FSI_time,
-       FSI_output[im_index].node_list.dataPtr(),
-       FSI_output[im_index].element_list.dataPtr(),
-       FSI_output[im_index].displacement_list.dataPtr(),
-       FSI_output[im_index].velocity_halftime_list.dataPtr(),
-       FSI_output[im_index].velocity_list.dataPtr(),
-       FSI_output[im_index].force_list.dataPtr(),
-       FSI_output[im_index].mass_list.dataPtr(),
-       FSI_output[im_index].temperature_list.dataPtr(),
-       &FSI_operation, // OP_FSI_INITIALIZE(UPDATE)_NODES
-       &FSI_sub_operation, // SUB_OP_FSI_DEFAULT
-       tilelo,tilehi,
-       fablo,fabhi,
-       &bfact,
-       problo,
-       problen, 
-       dx_max_level, 
-       velbc.dataPtr(),  
-       vofbc.dataPtr(), 
-       FSIfab.dataPtr(), // placeholder
-       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-       FSIfab.dataPtr(), // velfab spot
-       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-       FSIfab.dataPtr(), // drag spot
-       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-       FSIfab.dataPtr(), // mnbrfab spot
-       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-       FSIfab.dataPtr(), // mfiner spot
-       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-       &nFSI,
-       &ngrow_make_distance_unitfab,
-       &nparts,
-       im_solid_map.dataPtr(),
-       &h_small,
-       &cur_time, 
-       &dt, 
-       FSI_refine_factor.dataPtr(),
-       FSI_bounding_box_ngrow.dataPtr(),
-       &FSI_touch_flag[tid],
-       &CTML_FSI_init,
-       &iter,
-       &current_step,
-       &plot_interval,
-       &ioproc);
+      FIX ME
 
-      if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
+      &FSI_input[im_index].max_num_nodes,
+      &FSI_input[im_index].max_num_elements,
+      &FSI_input[im_index].num_nodes,
+      &FSI_input[im_index].num_elements,
+      &FSI_input[im_index].nodes_per_element,
+      &FSI_input[im_index].FSI_dt,
+      &FSI_input[im_index].FSI_time,
+      FSI_input[im_index].node_list.dataPtr(),
+      FSI_input[im_index].element_list.dataPtr(),
+      FSI_input[im_index].displacement_list.dataPtr(),
+      FSI_input[im_index].velocity_halftime_list.dataPtr(),
+      FSI_input[im_index].velocity_list.dataPtr(),
+      FSI_input[im_index].force_list.dataPtr(),
+      FSI_input[im_index].mass_list.dataPtr(),
+      FSI_input[im_index].temperature_list.dataPtr(),
+      &FSI_output[im_index].max_num_nodes,
+      &FSI_output[im_index].max_num_elements,
+      &FSI_output[im_index].num_nodes,
+      &FSI_output[im_index].num_elements,
+      &FSI_output[im_index].nodes_per_element,
+      &FSI_output[im_index].FSI_dt,
+      &FSI_output[im_index].FSI_time,
+      FSI_output[im_index].node_list.dataPtr(),
+      FSI_output[im_index].element_list.dataPtr(),
+      FSI_output[im_index].displacement_list.dataPtr(),
+      FSI_output[im_index].velocity_halftime_list.dataPtr(),
+      FSI_output[im_index].velocity_list.dataPtr(),
+      FSI_output[im_index].force_list.dataPtr(),
+      FSI_output[im_index].mass_list.dataPtr(),
+      FSI_output[im_index].temperature_list.dataPtr(),
+      &FSI_operation, // OP_FSI_INITIALIZE(UPDATE)_NODES
+      &FSI_sub_operation, // SUB_OP_FSI_DEFAULT
+      tilelo,tilehi,
+      fablo,fabhi,
+      &bfact,
+      problo,
+      problen, 
+      dx_max_level, 
+      velbc.dataPtr(),  
+      vofbc.dataPtr(), 
+      FSIfab.dataPtr(), // placeholder
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // velfab spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // drag spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // mnbrfab spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      FSIfab.dataPtr(), // mfiner spot
+      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
+      &nFSI,
+      &ngrow_make_distance_unitfab,
+      &nparts,
+      im_solid_map.dataPtr(),
+      &h_small,
+      &cur_time, 
+      &dt, 
+      FSI_refine_factor.dataPtr(),
+      FSI_bounding_box_ngrow.dataPtr(),
+      &FSI_touch_flag[tid],
+      &CTML_FSI_init,
+      &iter,
+      &current_step,
+      &plot_interval,
+      &ioproc);
+
+     if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
+
+      if (max_num_nodes_list[im_index]>0) {
+       for (int i=0;i<=ns_time_order;i++) {
+        ns_level0.new_data_FSI[i][im_index]. 
+          copyFrom_FSI(FSI_output[im_index]); 
+       }
+      } else if (max_num_nodes_list[im_index]==0) {
+       //do nothing
+      } else 
+       amrex::Error("max_num_nodes_list invalid");
+
+     } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
+
+      if (ipass==1) {
 
        if (max_num_nodes_list[im_index]>0) {
-        for (int i=0;i<=ns_time_order;i++) {
-         ns_level0.new_data_FSI[i][im_index]. 
-           copyFrom_FSI(FSI_output[im_index]); 
-        }
+        ns_level0.new_data_FSI[slab_step+1][im_index]. 
+          copyFrom_FSI(FSI_output[im_index]); 
        } else if (max_num_nodes_list[im_index]==0) {
         //do nothing
        } else 
         amrex::Error("max_num_nodes_list invalid");
-
-      } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
-
-       if (ipass==1) {
-
-        if (max_num_nodes_list[im_index]>0) {
-         ns_level0.new_data_FSI[slab_step+1][im_index]. 
-           copyFrom_FSI(FSI_output[im_index]); 
-        } else if (max_num_nodes_list[im_index]==0) {
-         //do nothing
-        } else 
-         amrex::Error("max_num_nodes_list invalid");
   
-       }
+      }
 
-      } else
-       amrex::Error("FSI_operation invalid");
+     } else
+      amrex::Error("FSI_operation invalid");
 
-     } //im_index=0 ... num_materials-1
+    } //im_index=0 ... num_materials-1
 
-    } // for (int ipass=0;ipass<number_passes;ipass++) {
-
-    elements_generated=1;
-   } else if (elements_generated==1) {
-    // do nothing
-   } else 
-    amrex::Error("elements_generated invalid");
-
-   elements_generated=1;
+   } // for (int ipass=0;ipass<number_passes;ipass++) {
 
    CTML_FSI_init=1;
 
@@ -8520,8 +8474,6 @@ void NavierStokes::ns_header_msg_level(
 
    if (FSI_sub_operation!=SUB_OP_FSI_DEFAULT)
     amrex::Error("FSI_sub_operation!=SUB_OP_FSI_DEFAULT");
-
-   elements_generated=1;
 
     // FSI_MF allocated in FSI_make_distance
    if (ngrow_make_distance!=3)
@@ -8915,7 +8867,6 @@ void NavierStokes::ns_header_msg_level(
    //copy Eulerian velocity and stress to Lagrangian velocity and stress
   } else if (FSI_operation==OP_FSI_LAG_STRESS) { 
 
-   elements_generated=1;
    if (ngrow_make_distance!=3)
     amrex::Error("ngrow_make_distance invalid");
    if ((FSI_sub_operation!=SUB_OP_FSI_CLEAR_LAG_DATA)&&
@@ -9305,20 +9256,18 @@ void NavierStokes::post_restart() {
 
  Real dt_amr=parent->getDt(); // returns dt_AMR
 
- if (read_from_CAD()==1) {
-  int iter=0;
-  // in post_restart: initialize node locations; generate_new_triangles
-  int FSI_operation=OP_FSI_INITIALIZE_NODES; 
-  int FSI_sub_operation=SUB_OP_FSI_DEFAULT; 
-  ns_header_msg_level(FSI_operation,FSI_sub_operation,
-   upper_slab_time,dt_amr,iter); 
- } else if (read_from_CAD()==0) {
-  // do nothing
- } else
-  amrex::Error("read_from_CAD invalid");
-
    // inside of post_restart
  if (level==0) {
+
+  if (read_from_CAD()==1) {
+   int iter=0;
+   // in post_restart: initialize node locations; generate_new_triangles
+   ns_header_msg_level(OP_FSI_INITIALIZE_NODES,SUB_OP_FSI_DEFAULT,
+    upper_slab_time,dt_amr,iter); 
+  } else if (read_from_CAD()==0) {
+   // do nothing
+  } else
+   amrex::Error("read_from_CAD invalid");
 
   // e.g. chkfile=./chk<nsteps>
   std::string chkfile=parent->theRestartFile();
@@ -9509,12 +9458,12 @@ NavierStokes::initData () {
   //FSI_ICE_NODES_INIT
   //FSI_FLUID_NODES_INIT
  if (read_from_CAD()==1) {
-  int iter=0; // iter==0 triggers allocation of touch + FSI_touch_flag[tid]=0
+  int iter=0; 
   // in initData: initialize node locations; generate_new_triangles
-  int FSI_operation=OP_FSI_INITIALIZE_NODES; 
-  int FSI_sub_operation=SUB_OP_FSI_DEFAULT; 
-  ns_header_msg_level(FSI_operation,FSI_sub_operation,
-   upper_slab_time,dt_amr,iter); 
+  if (level==0) {
+   ns_header_msg_level(OP_FSI_INITIALIZE_NODES,SUB_OP_FSI_DEFAULT,
+    upper_slab_time,dt_amr,iter); 
+  }
 
   // create a distance function (velocity and temperature) on this level.
   // calls ns_header_msg_level with 
