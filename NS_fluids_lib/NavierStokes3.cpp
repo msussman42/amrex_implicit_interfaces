@@ -521,11 +521,11 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    setup_integrated_quantities();
    volWgtSumALL(local_caller_string,fast_mode);
 
-   if (ok_copy_FSI_old_to_new()==1) {
+   if (ok_copy_FSI_old_to_new()==1) { //stationary solid
 
     copy_old_FSI_to_new();
 
-   } else if (ok_copy_FSI_old_to_new()==0) {
+   } else if (ok_copy_FSI_old_to_new()==0) { //deforming solid
 
     int iter=0;
     int FSI_sub_operation=SUB_OP_FSI_CLEAR_LAG_DATA;
@@ -549,7 +549,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
      // if FSI_flag==FSI_SHOELE_CTML then
      //  a) CTML_SOLVE_SOLID is called from sci_clsvof.F90 
      //     (CTML_SOLVE_SOLID declared in CTMLFSI.F90)
-     //  b) tick is called (in ../Vicar3D/distFSI/tick.F)
+     //  b) tick_fib is called (in ../Vicar3D/distFSI/tick.F)
      ns_header_msg_level(
       OP_FSI_UPDATE_NODES,
       SUB_OP_FSI_DEFAULT,
