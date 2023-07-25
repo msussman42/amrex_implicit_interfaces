@@ -8908,9 +8908,10 @@ end subroutine CLSVOF_clear_lag_data
 
 
 ! called from fort_headermsg when FSI_operation.eq.OP_FSI_LAG_STRESS and 
-! FSI_sub_operation.eq.2
+! FSI_sub_operation.eq.SUB_OP_FSI_SYNC_LAG_DATA
 ! isout==1 => verbose
-! NOTE: headermsg when FSI_operation.eq.OP_FSI_LAG_STRESS and FSI_sub_operation.eq.1
+! NOTE: headermsg when FSI_operation.eq.OP_FSI_LAG_STRESS and 
+!                      FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA
 ! (which calls CLSVOF_Copy_To_LAG)
 ! is called only for those blocks associated with a given node.
 ! It is the job of this routine to insure that all nodes have all
@@ -8928,8 +8929,6 @@ IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: ioproc,isout
 INTEGER_T :: ierr1
-double precision, dimension(:), allocatable :: sync_velocity
-double precision, dimension(:), allocatable :: temp_velocity
 double precision, dimension(:), allocatable :: sync_force
 double precision, dimension(:), allocatable :: temp_force
 
@@ -8955,17 +8954,12 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
      stop
     endif
     sync_dim=num_nodes*3
-    allocate(sync_velocity(sync_dim))
-    allocate(temp_velocity(sync_dim))
 
     allocate(sync_force(sync_dim))
     allocate(temp_force(sync_dim))
 
     do inode=1,num_nodes
     do dir=1,3
-     sync_velocity(3*(inode-1)+dir)=FSI(part_id)%NodeVel(dir,inode)
-     temp_velocity(3*(inode-1)+dir)=zero
-
      sync_force(3*(inode-1)+dir)=FSI(part_id)%NodeForce(dir,inode)
      temp_force(3*(inode-1)+dir)=zero
     enddo
@@ -8973,10 +8967,6 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
     ierr1=0
 #if (mpi_activate==1)
     call MPI_BARRIER(MPI_COMM_WORLD,ierr1)
-     ! sync_velocity is input
-     ! temp_velocity is output
-    call MPI_ALLREDUCE(sync_velocity,temp_velocity,sync_dim, &
-     MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr1)
      ! sync_force is input
      ! temp_force is output
     call MPI_ALLREDUCE(sync_force,temp_force,sync_dim, &
@@ -8984,7 +8974,6 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
     call MPI_BARRIER(MPI_COMM_WORLD,ierr1)
     do inode=1,num_nodes
     do dir=1,3
-     sync_velocity(3*(inode-1)+dir)=temp_velocity(3*(inode-1)+dir)
      sync_force(3*(inode-1)+dir)=temp_force(3*(inode-1)+dir)
     enddo
     enddo
@@ -8996,18 +8985,11 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
 #endif
     do inode=1,num_nodes
     do dir=1,3
-     FSI(part_id)%NodeVel(dir,inode)=sync_velocity(3*(inode-1)+dir)
-     FSI(part_id)%NodeVel_old(dir,inode)=sync_velocity(3*(inode-1)+dir)
-     FSI(part_id)%NodeVel_new(dir,inode)=sync_velocity(3*(inode-1)+dir)
-
      FSI(part_id)%NodeForce(dir,inode)=sync_force(3*(inode-1)+dir)
      FSI(part_id)%NodeForce_old(dir,inode)=sync_force(3*(inode-1)+dir)
      FSI(part_id)%NodeForce_new(dir,inode)=sync_force(3*(inode-1)+dir)
     enddo
     enddo
-
-    deallocate(sync_velocity)
-    deallocate(temp_velocity)
 
     deallocate(sync_force)
     deallocate(temp_force)
@@ -9017,8 +8999,6 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
      do inode_fiber=1,ctml_n_fib_active_nodes(ctml_part_id)
       inode=inode_fiber
       do dir=1,AMREX_SPACEDIM
-       ctml_fib_vel(ctml_part_id,inode_fiber,dir)= &
-        FSI(part_id)%NodeVel(dir,inode)
        ctml_fib_frc(ctml_part_id,inode_fiber,dir)= &
         FSI(part_id)%NodeForce(dir,inode)
       enddo
@@ -9517,16 +9497,12 @@ INTEGER_T, PARAMETER :: aux_unit_id=14
    do dir=1,3
     aux_FSIdata3D(i,j,k,FSI_VELOCITY+dir)=0.0d0
    enddo
-   do dir=1,NCOMP_FORCE_STRESS
-    aux_FSIdata3D(i,j,k,FSI_FORCE+dir)=0.0d0
-   enddo
    aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)=-99999.0
    ! bit 0=1 if +sign hits
    ! bit 1=1 if -sign hits
    aux_FSIdata3D(i,j,k,FSI_SIGN_CONFLICT+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_TEMPERATURE+1)=0.0d0
    aux_FSIdata3D(i,j,k,FSI_EXTRAP_FLAG+1)=FSI_NOTHING_VALID
-   aux_FSIdata3D(i,j,k,FSI_AREA_PER_VOL+1)=0.0d0
   enddo
   enddo
   enddo
@@ -11538,8 +11514,9 @@ IMPLICIT NONE
     print *,"touch_flag invalid in CLSVOF_InitBox"
     stop
    endif
-   if ((FSI_operation.ne.2).and.(FSI_operation.ne.3)) then
-    print *,"FSI_operation invalid"
+   if ((FSI_operation.ne.OP_FSI_MAKE_DISTANCE).and. &
+       (FSI_operation.ne.OP_FSI_MAKE_SIGN)) then
+    print *,"FSI_operation invalid in CLSVOF_InitBox"
     stop
    endif
    if (ngrow_make_distance_in.ne.3) then
@@ -12492,22 +12469,7 @@ IMPLICIT NONE
          do dir=1,3
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel_local(dir)
          enddo 
-          ! the Eulerian force will be corrected later so that:
-          ! a) integral 1 dA = integral delta dV
-          !  delta_cor=
-          !   delta * (integral 1 dA)/
-          !           (integral 1 delta dV)
-          ! b) integral F_lag dA=integral delta_cor F_cor dV
-          !    F_cor=F+c
-         do dir=1,NCOMP_FORCE_STRESS
-          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=force_local(dir)*dt
-         enddo
 
-          ! FIX ME: delta function must be corrected so that
-          ! perimeter measured from Eulerian and Lagrangian perspectives
-          ! match.  (total forces should match too?)
-         FSIdata3D(i,j,k,ibase+FSI_AREA_PER_VOL+1)= &
-                 hsprime(ls_local,FSI_delta_cutoff)
          FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)=temp_local
 
         else if ((i.ge.FSI_growlo3D(1)).and.(i.le.FSI_growhi3D(1)).and. &
@@ -13337,7 +13299,7 @@ IMPLICIT NONE
 
     deallocate(old_FSIdata)
    else
-    print *,"FSI_operation invalid"
+    print *,"FSI_operation invalid in CLSVOF_InitBox"
     stop
    endif
 
@@ -13371,8 +13333,9 @@ IMPLICIT NONE
 return
 end subroutine CLSVOF_InitBox
 
-        ! called from fort_headermsg when FSI_operation.eq.OP_FSI_LAG_STRESS and
-        ! FSI_sub_operation.eq.1.
+        ! called from fort_headermsg when 
+        ! FSI_operation.eq.OP_FSI_LAG_STRESS and
+        ! FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA.
         ! This routine is called only for those blocks associated with a 
         ! given node.
         ! CLSVOF_sync_lag_data must be called later in order to synchronize
@@ -13398,7 +13361,6 @@ end subroutine CLSVOF_InitBox
        FSI_growlo,FSI_growhi, &
        growlo3D,growhi3D, &
        xdata3D, &
-       veldata3D, &
        stressdata3D, &
        stressflag3D, &
        masknbr3D, &
@@ -13432,7 +13394,6 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
       INTEGER_T, INTENT(in) :: growlo3D(3),growhi3D(3)
       REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
-      REAL_T, INTENT(in), pointer :: veldata3D(:,:,:,:)
       REAL_T, INTENT(in), pointer :: stressdata3D(:,:,:,:)
       REAL_T, INTENT(in), pointer :: stressflag3D(:,:,:,:)
       REAL_T, INTENT(in), pointer :: masknbr3D(:,:,:,:)
@@ -13619,7 +13580,7 @@ end subroutine CLSVOF_InitBox
         stop
        endif
 
-       if (FSI_operation.ne.4) then
+       if (FSI_operation.ne.OP_FSI_LAG_STRESS) then
         print *,"FSI_operation invalid"
         stop
        endif
@@ -13630,9 +13591,6 @@ end subroutine CLSVOF_InitBox
 
        call checkbound3D_array(FSI_lo,FSI_hi, &
         xdata3D, &
-        ngrow_make_distance_in,-1)
-       call checkbound3D_array(FSI_lo,FSI_hi, &
-        veldata3D, &
         ngrow_make_distance_in,-1)
        call checkbound3D_array(FSI_lo,FSI_hi, &
         stressdata3D, &
@@ -13888,61 +13846,11 @@ end subroutine CLSVOF_InitBox
             enddo
 
            else
-            print *,"total_weight invalid"
+            print *,"total_weight invalid in CLSVOF_Copy_To_LAG:",total_weight
             stop
            endif
 
           enddo ! idoubly=1,2
-
-          total_weight=zero
-          do dir=1,3
-           total_vel(dir)=zero
-          enddo
-          do i=gridloBB(1),gridhiBB(1)
-          do j=gridloBB(2),gridhiBB(2)
-          do k=gridloBB(3),gridhiBB(3)
-           wt=one
-           do dir=1,3
-            call safe_data3D(i,j,k,dir,xdata3D,data_out)
-            dist_scale=abs(data_out-xnot(dir))/dxBB(dir)
-            support_size=two
-            df=hsprime(dist_scale,support_size)
-            if (sdim_AMR.eq.3) then
-             wt=wt*df
-            else if (sdim_AMR.eq.2) then
-             if (xmap3D(dir).eq.0) then
-              ! do nothing
-             else if ((xmap3D(dir).eq.1).or. &
-                      (xmap3D(dir).eq.2)) then
-              wt=wt*df
-             else
-              print *,"xmap3D invalid"
-              stop
-             endif
-            else
-             print *,"sdim_AMR invalid"
-             stop
-            endif
-
-           enddo ! dir=1..3
-
-           total_weight=total_weight+wt
-           do dir=1,3
-            call safe_data3D(i,j,k,dir,veldata3D,data_out)
-            total_vel(dir)=total_vel(dir)+wt*data_out
-           enddo
-          enddo
-          enddo
-          enddo
-          if (total_weight.gt.zero) then
-           !NodeVel used in CLSVOF_sync_lag_data 
-           do dir=1,3
-            FSI(part_id)%NodeVel(dir,inode)=total_vel(dir)/total_weight
-           enddo
-          else
-           print *,"total_weight invalid"
-           stop
-          endif
 
          else if (inside_interior_box.eq.0) then
           ! do nothing

@@ -145,10 +145,8 @@
         dx_max_level, & 
         velbc, &
         vofbc, &
-        FSIdata, & ! velfab if FSI_operation.eq.OP_FSI_LAG_STRESS
+        FSIdata, & ! drag if FSI_operation.eq.OP_FSI_LAG_STRESS
         DIMS(FSIdata), &
-        velfab, &
-        DIMS(velfab), &
         drag, &
         DIMS(drag), &
         masknbr, &
@@ -263,17 +261,14 @@
       INTEGER_T, INTENT(in) :: plot_interval 
       INTEGER_T, INTENT(in) :: ioproc
       INTEGER_T isout
-!velfab if FSI_operation.eq.OP_FSI_LAG_STRESS
+!drag if FSI_operation.eq.OP_FSI_LAG_STRESS
       INTEGER_T, INTENT(in) :: DIMDEC(FSIdata) 
-      INTEGER_T, INTENT(in) :: DIMDEC(velfab) 
       INTEGER_T, INTENT(in) :: DIMDEC(drag) 
       INTEGER_T, INTENT(in) :: DIMDEC(masknbr) 
       INTEGER_T, INTENT(in) :: DIMDEC(maskfiner) 
-!velfab if FSI_operation.eq.OP_FSI_LAG_STRESS
+!drag if FSI_operation.eq.OP_FSI_LAG_STRESS
       REAL_T, INTENT(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
       REAL_T, pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: velfab(DIMV(velfab),SDIM)
-      REAL_T, pointer :: velfab_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: drag(DIMV(drag),N_DRAG)
       REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),2)
@@ -310,8 +305,6 @@
       INTEGER_T DIMDEC3D(FSIdata3D)
       REAL_T, allocatable,target :: FSIdata3D(:,:,:,:)
       REAL_T, pointer :: FSIdata3D_ptr(:,:,:,:)
-      REAL_T, allocatable,target :: veldata3D(:,:,:,:)
-      REAL_T, pointer :: veldata3D_ptr(:,:,:,:)
 
       REAL_T, allocatable,target :: stressdata3D(:,:,:,:)
       REAL_T, pointer :: stressdata3D_ptr(:,:,:,:)
@@ -460,9 +453,6 @@
       endif
   
       call checkbound_array(fablo,fabhi,FSIdata_ptr, &
-        ngrow_make_distance_in,-1)
-      velfab_ptr=>velfab
-      call checkbound_array(fablo,fabhi,velfab_ptr, &
         ngrow_make_distance_in,-1)
       drag_ptr=>drag
       call checkbound_array(fablo,fabhi,drag_ptr, &
@@ -779,15 +769,9 @@
            print *,"dimension bust"
            stop
           endif
-           !FSI_FORCE and FSI_AREA_PER_VOL should be initialized to zero.
-           !FSI_VELOCITY, on the other hand, needs to be extrapolated.
+           !FSI_VELOCITY is extrapolated.
           FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)=vel3D(dir)
          enddo ! dir=1..3
-
-         do dir=1,NCOMP_FORCE_STRESS
-          FSIdata3D(i,j,k,ibase+FSI_FORCE+dir)=zero
-         enddo
-         FSIdata3D(i,j,k,ibase+FSI_AREA_PER_VOL)=zero
 
         enddo ! partid=1,nparts
           
@@ -982,46 +966,17 @@
           FSIdata(D_DECL(i,j,k),ibase+FSI_EXTRAP_FLAG+1)= &
            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_EXTRAP_FLAG+1) ! flag
 
-          if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then
-           FSIdata(D_DECL(i,j,k),ibase+FSI_AREA_PER_VOL+1)= &
-            FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_AREA_PER_VOL+1)!perim(2D)
-          else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
-           ! do nothing
-          else
-           print *,"FSI_operation invalid"
-           stop
-          endif
-
           do dir=1,3
            if (SDIM.eq.3) then
             FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+dir)= &
              FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir) 
-            if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then 
-             FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)= &
-              FSIdata3D(i,j,k,ibase+FSI_FORCE+dir) 
-            else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then 
-             ! do nothing
-            else
-             print *,"FSI_operation invalid"
-             stop
-            endif
            else if (SDIM.eq.2) then
             if (xmap3D(dir).eq.0) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+3)=zero
-             FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+3)=zero
             else if ((xmap3D(dir).eq.1).or. &
                      (xmap3D(dir).eq.2)) then
              FSIdata(D_DECL(i,j,k),ibase+FSI_VELOCITY+xmap3D(dir))= &
               FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_VELOCITY+dir) 
-             if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then
-              FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+xmap3D(dir))= &
-               FSIdata3D(idx(1),idx(2),idx(3),ibase+FSI_FORCE+dir) 
-             else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
-              ! do nothing
-             else
-              print *,"FSI_operation invalid"
-              stop
-             endif
             else
              print *,"xmap3D(dir) invalid"
              stop
@@ -1031,15 +986,6 @@
             stop
            endif
           enddo ! dir=1..3
-
-          if (NCOMP_FORCE_STRESS.eq.9) then
-           do dir=4,NCOMP_FORCE_STRESS
-            FSIdata(D_DECL(i,j,k),ibase+FSI_FORCE+dir)=zero
-           enddo
-          else
-           print *,"expecting NCOMP_FORCE_STRESS==9"
-           stop
-          endif
 
          enddo ! partid=1..nparts
  
@@ -1070,8 +1016,6 @@
        if (FSI_sub_operation.eq.SUB_OP_FSI_CLEAR_LAG_DATA) then
         call CLSVOF_clear_lag_data(ioproc,isout)
        else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then 
-        allocate(veldata3D(DIMV3D(FSIdata3D),3)) 
-        veldata3D_ptr=>veldata3D
 
         allocate(stressdata3D(DIMV3D(FSIdata3D),6*num_materials)) 
         stressdata3D_ptr=>stressdata3D
@@ -1101,9 +1045,6 @@
          if (SDIM.eq.3) then
 
           call gridsten_level(xsten,i,j,k,level,nhalf)
-          do dir=1,SDIM
-           veldata3D(i,j,k,dir)=velfab(D_DECL(i,j,k),dir)
-          enddo
           do dir=1,6*num_materials
            stressdata3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
              DRAGCOMP_PSTRESS+dir)
@@ -1150,19 +1091,6 @@
            stop
           endif
           call gridsten_level(xsten,i2d,j2d,k2d,level,nhalf)
-
-          do dir=1,3
-           if (xmap3D(dir).eq.0) then
-            vel3D(dir)=zero
-           else if ((xmap3D(dir).eq.1).or. &
-                    (xmap3D(dir).eq.2)) then
-            vel3D(dir)=velfab(D_DECL(i2d,j2d,k2d),xmap3D(dir))
-           else
-            print *,"xmap3D(dir) invalid"
-            stop
-           endif
-           veldata3D(i,j,k,dir)=vel3D(dir)
-          enddo ! dir=1..3
 
           do im_local=1,num_materials
            ibase=6*(im_local-1)
@@ -1306,6 +1234,7 @@
             nparts, &
             partid, &
             ngrow_make_distance, &
+            num_materials, &
             nFSI, &
             FSI_operation, &
             cur_time, &
@@ -1318,7 +1247,6 @@
             FSI_growlo3D,FSI_growhi3D, &
             growlo3D,growhi3D, &
             xdata3D_ptr, &
-            veldata3D_ptr, &
             stressdata3D_ptr, &
             stressflag3D_ptr, &
             masknbr3D_ptr, &
@@ -1348,7 +1276,6 @@
         endif
 
         deallocate(xdata3D)
-        deallocate(veldata3D)
         deallocate(stressdata3D)
         deallocate(stressflag3D)
         deallocate(masknbr3D)
@@ -1362,7 +1289,7 @@
        endif
 
       else
-       print *,"FSI_operation invalid"
+       print *,"FSI_operation invalid in fort_headermsg"
        stop
       endif
  

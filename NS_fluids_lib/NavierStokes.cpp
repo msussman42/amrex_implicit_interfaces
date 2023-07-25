@@ -7568,10 +7568,6 @@ void NavierStokes::FSI_make_distance(Real cur_time,Real dt) {
    setVal_localMF(FSI_MF,0.0,ibase+FSI_TEMPERATURE,1,ngrow_make_distance);
    setVal_localMF(FSI_MF,FSI_NOTHING_VALID,
 		  ibase+FSI_EXTRAP_FLAG,1,ngrow_make_distance);
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_FORCE,NCOMP_FORCE_STRESS,
-		  ngrow_make_distance);
-    // perimeter in 2D
-   setVal_localMF(FSI_MF,0.0,ibase+FSI_AREA_PER_VOL,1,ngrow_make_distance);
   } // partid=0..nparts-1
 
 
@@ -8153,6 +8149,7 @@ void NavierStokes::ns_header_msg_level(
 
   //make distance in narrow band
  } else if (FSI_operation==OP_FSI_MAKE_DISTANCE) { 
+
   if (iter!=0)
    amrex::Error("iter invalid");
   if (FSI_sub_operation!=SUB_OP_FSI_DEFAULT)
@@ -8168,13 +8165,15 @@ void NavierStokes::ns_header_msg_level(
 
   //copy Eulerian pressure to Lagrangian pressure
  } else if (FSI_operation==OP_FSI_LAG_STRESS) { 
+
   if (iter!=0)
    amrex::Error("iter invalid");
   if ((FSI_sub_operation<SUB_OP_FSI_CLEAR_LAG_DATA)||
       (FSI_sub_operation>SUB_OP_FSI_SYNC_LAG_DATA)) 
    amrex::Error("FSI_sub_operation invalid");
+
  } else
-  amrex::Error("FSI_operation out of range");
+  amrex::Error("FSI_operation invalid NavierStokes::ns_header_msg_level");
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   FSI_touch_flag[tid]=0;
@@ -8348,7 +8347,7 @@ void NavierStokes::ns_header_msg_level(
 
 FIX ME if called from post_restart!
 
-     // declared in SOLIDFLUID.F90
+     // fort_headermsg is declared in SOLIDFLUID.F90
      fort_headermsg(
       &tid,
       &num_tiles_on_thread_proc[tid],
@@ -8409,8 +8408,6 @@ FIX ME if called from post_restart!
       velbc.dataPtr(),  
       vofbc.dataPtr(), 
       FSIfab.dataPtr(), // placeholder
-      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-      FSIfab.dataPtr(), // velfab spot
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
       FSIfab.dataPtr(), // drag spot
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
@@ -8787,8 +8784,6 @@ FIX ME if called from post_restart!
      vofbc.dataPtr(), 
      FSIfab.dataPtr(),
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // velfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // drag spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      mnbrfab.dataPtr(),
@@ -8900,18 +8895,14 @@ FIX ME if called from post_restart!
        (FSI_sub_operation==SUB_OP_FSI_SYNC_LAG_DATA)) {
 
     if (FSI_sub_operation==SUB_OP_FSI_CLEAR_LAG_DATA) {
-     // Two layers of ghost cells are needed if
-     // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
-     if (ngrow_make_distance!=3)
-      amrex::Error("ngrow_make_distance invalid");
-     getState_localMF(VELADVECT_MF,ngrow_make_distance,
-		STATECOMP_VEL,STATE_NCOMP_VEL,
-		cur_time); 
 
       // in: NavierStokes::ns_header_msg_level
      create_fortran_grid_struct(cur_time,dt);
+
     } else if (FSI_sub_operation==SUB_OP_FSI_SYNC_LAG_DATA) {
-     delete_localMF(VELADVECT_MF,1);
+
+     // do nothing
+	    
     } else
      amrex::Error("FSI_sub_operation bad: NavierStokes::ns_header_msg_level");
 
@@ -9000,8 +8991,6 @@ FIX ME if called from post_restart!
      vofbc.dataPtr(), 
      FSIfab.dataPtr(), // placeholder
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-     FSIfab.dataPtr(), // velfab spot
-     ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // drag spot
      ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
      FSIfab.dataPtr(), // mnbrfab spot
@@ -9028,13 +9017,13 @@ FIX ME if called from post_restart!
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid");
-    thread_class::init_d_numPts(localMF[VELADVECT_MF]->boxArray().d_numPts());
+    thread_class::init_d_numPts(localMF[MASKCOEF_MF]->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-    for (MFIter mfi(*localMF[VELADVECT_MF],use_tiling); mfi.isValid(); ++mfi) {
+    for (MFIter mfi(*localMF[MASKCOEF_MF],use_tiling); mfi.isValid(); ++mfi) {
      BL_ASSERT(grids[mfi.index()] == mfi.validbox());
      const int gridno = mfi.index();
      const Box& tilegrid = mfi.tilebox();
@@ -9044,9 +9033,8 @@ FIX ME if called from post_restart!
      const int* fablo=fabgrid.loVect();
      const int* fabhi=fabgrid.hiVect();
      const Real* xlo = grid_loc[gridno].lo();
-     FArrayBox& FSIfab=(*localMF[VELADVECT_MF])[mfi]; // placeholder
-     FArrayBox& velfab=(*localMF[VELADVECT_MF])[mfi]; // ngrow_make_distance ghost cells
-     FArrayBox& dragfab=(*localMF[DRAG_MF])[mfi]; // ngrow_make_dist ghost cells
+     FArrayBox& FSIfab=(*localMF[DRAG_MF])[mfi]; //placeholder
+     FArrayBox& dragfab=(*localMF[DRAG_MF])[mfi];//ngrow_make_dist ghost cells
      FArrayBox& mnbrfab=(*localMF[MASK_NBR_MF])[mfi];
      FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -9120,8 +9108,6 @@ FIX ME if called from post_restart!
       vofbc.dataPtr(), 
       FSIfab.dataPtr(), // placeholder
       ARLIM(FSIfab.loVect()),ARLIM(FSIfab.hiVect()),
-      velfab.dataPtr(), // ngrow_make_distance ghost cells VELADVECT_MF
-      ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
       dragfab.dataPtr(), // ngrow_make_distance ghost cells DRAG_MF
       ARLIM(dragfab.loVect()),ARLIM(dragfab.hiVect()),
       mnbrfab.dataPtr(),
