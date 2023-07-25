@@ -541,7 +541,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
        dt_slab,
        iter);
      } // ilev=level..finest_level
-    } // FSI_sub_operation=0,1,2
+    } // FSI_sub_operation=SUB_OP_FSI_[CLEAR|COPY_TO|SYNC]_LAG_DATA
 
     if (level==0) {
      // fort_headermsg (SOLIDFLUID.F90)

@@ -9140,7 +9140,7 @@ REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
   else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then
    ! do nothing
   else
-   print *,"FSI_operation invalid"
+   print *,"FSI_operation invalid in CLSVOF_Init_aux_Box"
    stop
   endif
 
@@ -11535,7 +11535,7 @@ IMPLICIT NONE
    endif
 
    if ((touch_flag.ne.0).and.(touch_flag.ne.1)) then
-    print *,"touch_flag invalid"
+    print *,"touch_flag invalid in CLSVOF_InitBox"
     stop
    endif
    if ((FSI_operation.ne.2).and.(FSI_operation.ne.3)) then
@@ -12722,7 +12722,7 @@ IMPLICIT NONE
     enddo
 
     if ((touch_flag.ne.0).and.(touch_flag.ne.1)) then
-     print *,"touch_flag invalid"
+     print *,"touch_flag invalid in CLSVOF_InitBox"
      stop
     endif
 

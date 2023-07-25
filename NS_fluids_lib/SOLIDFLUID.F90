@@ -417,7 +417,7 @@
        endif
       enddo
       if ((touch_flag.ne.0).and.(touch_flag.ne.1)) then
-       print *,"touch_flag invalid"
+       print *,"touch_flag invalid in fort_headermsg"
        stop
       endif
       if ((CTML_FSI_init.ne.0).and. &

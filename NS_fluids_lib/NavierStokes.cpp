@@ -2728,7 +2728,7 @@ NavierStokes::read_params ()
      amrex::Error("ns_tiling invalid");
 
     if (thread_class::nthreads<1)
-     amrex::Error("thread_class::nthreads invalid ns init");
+     amrex::Error("thread_class::nthreads invalid NavierStokes::read_params");
 
     FSI_touch_flag.resize(thread_class::nthreads);
     for (int tid=0;tid<thread_class::nthreads;tid++) {
@@ -8891,15 +8891,15 @@ FIX ME if called from post_restart!
    if (localMF[DRAG_MF]->nComp()!=N_DRAG)
     amrex::Error("localMF[DRAG_MF] incorrect ncomp");
 
-    // FSI_sub_operation==0: call headermsg => call CLSVOF_clear_lag_data
-    // FSI_sub_operation==1: call headermsg => call CLSVOF_Copy_To_LAG
-    //  for data blocks owned by a given node.
-    // FSI_sub_operation==2: call headermsg => call CLSVOF_sync_lag_data
+    //FSI_sub_operation:
+    //  SUB_OP_FSI_CLEAR_LAG_DATA
+    //  SUB_OP_FSI_COPY_TO_LAG_DATA
+    //  SUB_OP_FSI_SYNC_LAG_DATA
     //
-   if ((FSI_sub_operation==0)|| //init VELADVECT_MF, fortran grid structure,...
-       (FSI_sub_operation==2)) {//delete VELADVECT_MF
+   if ((FSI_sub_operation==SUB_OP_FSI_CLEAR_LAG_DATA)|| 
+       (FSI_sub_operation==SUB_OP_FSI_SYNC_LAG_DATA)) {
 
-    if (FSI_sub_operation==0) {
+    if (FSI_sub_operation==SUB_OP_FSI_CLEAR_LAG_DATA) {
      // Two layers of ghost cells are needed if
      // (INTP_CORONA = 1) in UTIL_BOUNDARY_FORCE_FSI.F90
      if (ngrow_make_distance!=3)
@@ -8910,10 +8910,10 @@ FIX ME if called from post_restart!
 
       // in: NavierStokes::ns_header_msg_level
      create_fortran_grid_struct(cur_time,dt);
-    } else if (FSI_sub_operation==2) {
+    } else if (FSI_sub_operation==SUB_OP_FSI_SYNC_LAG_DATA) {
      delete_localMF(VELADVECT_MF,1);
     } else
-     amrex::Error("FSI_sub_operation invalid");
+     amrex::Error("FSI_sub_operation bad: NavierStokes::ns_header_msg_level");
 
     int ngrow_make_distance_unitfab=0;
     IntVect unitlo(D_DECL(0,0,0));
@@ -8988,8 +8988,8 @@ FIX ME if called from post_restart!
      FSI_output[im_index].force_list.dataPtr(),
      FSI_output[im_index].mass_list.dataPtr(),
      FSI_output[im_index].temperature_list.dataPtr(),
-     &FSI_operation, // 4
-     &FSI_sub_operation, // 0 (clear lag data) or 2 (sync lag data)
+     &FSI_operation, //OP_FSI_LAG_STRESS
+     &FSI_sub_operation, //SUB_OP_FSI_CLEAR_LAG_DATA or SYNC_LAG_DATA
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,
@@ -9024,7 +9024,7 @@ FIX ME if called from post_restart!
      &plot_interval,
      &ioproc);
 
-   } else if (FSI_sub_operation==1) {
+   } else if (FSI_sub_operation==SUB_OP_FSI_COPY_TO_LAG_DATA) {
 
     if (thread_class::nthreads<1)
      amrex::Error("thread_class::nthreads invalid");
@@ -9108,8 +9108,8 @@ FIX ME if called from post_restart!
       FSI_output[im_index].force_list.dataPtr(),
       FSI_output[im_index].mass_list.dataPtr(),
       FSI_output[im_index].temperature_list.dataPtr(),
-      &FSI_operation, //4 (copy eul. fluid vel/stress to lag. solid vel/stress)
-      &FSI_sub_operation, // 1 
+      &FSI_operation, //OP_FSI_LAG_STRESS
+      &FSI_sub_operation, //SUB_OP_FSI_COPY_TO_LAG_DATA
       tilelo,tilehi,
       fablo,fabhi,
       &bfact,
@@ -9150,10 +9150,10 @@ FIX ME if called from post_restart!
     ns_reconcile_d_num(LOOP_HEADERMSG_COPY_TO_LAG,"ns_header_msg_level");
 
    } else 
-    amrex::Error("FSI_sub_operation invalid");
+    amrex::Error("FSI_sub_operation invalid ns_header_msg_level");
 
   } else
-   amrex::Error("FSI_operation invalid");
+   amrex::Error("FSI_operation invalid ns_header_msg_level");
 
  } else
   amrex::Error("read_from_CAD invalid");
