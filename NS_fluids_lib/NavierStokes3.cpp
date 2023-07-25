@@ -539,7 +539,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
        FSI_sub_operation,
        cur_time_slab,
        dt_slab,
-       iter);
+       iter,
+       local_caller_string);
      } // ilev=level..finest_level
     } // FSI_sub_operation=SUB_OP_FSI_[CLEAR|COPY_TO|SYNC]_LAG_DATA
 
@@ -554,7 +555,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
       OP_FSI_UPDATE_NODES,
       SUB_OP_FSI_DEFAULT,
       cur_time_slab,
-      dt_slab,iter);
+      dt_slab,
+      iter,
+      local_caller_string);
     } else
      amrex::Error("expecting level==0");
 
