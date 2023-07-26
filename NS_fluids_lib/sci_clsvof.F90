@@ -52,6 +52,20 @@ implicit none
 
 INTEGER_T, PARAMETER :: sci_sdim=3
 
+type FSI_container_type
+ INTEGER_T CTML_num_solids
+ INTEGER_T max_num_nodes
+ INTEGER_T max_num_elements
+ REAL_T, pointer :: node_list_prev(:,:,:)
+ REAL_T, pointer :: node_list(:,:,:)
+ REAL_T, pointer :: init_node_list(:,:,:)
+ REAL_T, pointer :: velocity_list_prev(:,:,:)
+ REAL_T, pointer :: velocity_list(:,:,:)
+ REAL_T, pointer :: mass_list(:,:)
+ REAL_T, pointer :: temp_list(:,:)
+ INTEGER_T, pointer :: element_list(:,:,:)
+end type FSI_container_type
+
 type lag_type
  INTEGER_T :: n_nodes,n_elems
  REAL_T, pointer :: nd(:,:)    ! nd(dir,node_id) dir=1..3
@@ -190,6 +204,13 @@ INTEGER_T im_solid_mapF(MAX_PARTS) ! type: 0..num_materials-1
 INTEGER_T ctml_part_id_map(MAX_PARTS)
 INTEGER_T fsi_part_id_map(MAX_PARTS)
 
+INTEGER_T node_list_size
+INTEGER_T init_node_list_size
+INTEGER_T velocity_list_size
+INTEGER_T element_list_size
+INTEGER_T mass_list_size
+INTEGER_T temp_list_size
+
 INTEGER_T ctml_n_fib_bodies
 INTEGER_T ctml_max_n_fib_nodes
 INTEGER_T ctml_max_n_fib_elements
@@ -197,8 +218,8 @@ INTEGER_T ctml_max_n_fib_elements
 REAL_T, dimension(:), allocatable :: ctml_gx
 REAL_T, dimension(:), allocatable :: ctml_gy
 REAL_T, dimension(:), allocatable :: ctml_gz
-INTEGER_T :: ctml_nx,ctml_ny,ctml_nz
-REAL_T :: ctml_min_gridx,ctml_min_gridy,ctml_min_gridz
+INTEGER_T, dimension(3) :: ctml_num_nodes
+REAL_T, dimension(3) :: ctml_min_grid
 
 INTEGER_T, dimension(:), allocatable :: ctml_n_fib_active_nodes
 
@@ -9633,6 +9654,16 @@ INTEGER_T :: idimin
 INTEGER_T :: n_Read_in
 logical :: theboss
 
+INTEGER_T :: i
+
+  if ((local_caller_id.eq.caller_initData).or. &
+      (local_caller_id.eq.caller_post_restart)) then
+   ! do nothing
+  else
+   print *,"local_caller_id invalid"
+   stop
+  endif
+
   do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
        (FSI_refine_factor(im_sanity_check).gt.100)) then
@@ -9649,7 +9680,6 @@ logical :: theboss
    print *,"nparts_in invalid"
    stop
   endif
-
 
   TOTAL_NPARTS=nparts_in
   ctml_part_id=0
@@ -9706,6 +9736,7 @@ logical :: theboss
    print *,"h_small invalid"
    stop
   endif
+
   do dir=1,3
    problo_act(dir)=problo(dir)
    probhi_act(dir)=probhi(dir)
@@ -9717,6 +9748,7 @@ logical :: theboss
     stop
    endif
   enddo ! dir=1..3
+
   do dir=1,AMREX_SPACEDIM
    problo_ref(dir)=problo(dir)
    probhi_ref(dir)=probhi(dir)
@@ -9757,37 +9789,40 @@ logical :: theboss
     enddo
 
     dir=1
-    ctml_nx= NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
-    allocate(ctml_gx(1:ctml_nx))
-    do i=1,ctml_nx
+    ctml_num_nodes(dir)= &
+      NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
+    allocate(ctml_gx(1:ctml_num_nodes(dir)))
+    do i=1,ctml_num_nodes(dir)
      ctml_gx(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
     enddo
-    ctml_min_gridx=dx_max_level(dir)
+    ctml_min_grid(dir)=dx_max_level(dir)
 
     dir=2
-    ctml_ny= NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
-    allocate(ctml_gy(1:ctml_ny))
-    do i=1,ctml_ny
+    ctml_num_nodes(dir)= &
+      NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
+    allocate(ctml_gy(1:ctml_num_nodes(dir)))
+    do i=1,ctml_num_nodes(dir)
      ctml_gy(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
     enddo
-    ctml_min_gridy=dx_max_level(dir)
+    ctml_min_grid(dir)=dx_max_level(dir)
 
     if (AMREX_SPACEDIM.eq.2) then
-     ctml_nz=3
-     allocate(ctml_gz(1:ctml_nz))
-     ctml_min_gridz=sqrt(dx_max_level(1)*dx_max_level(2))
-     do i=1,ctml_nz
-      ctml_gz(i)=((i-1)*ctml_min_gridz)
+     dir=3
+     ctml_num_nodes(dir)=3
+     allocate(ctml_gz(1:ctml_num_nodes(dir)))
+     ctml_min_grid(dir)=sqrt(dx_max_level(1)*dx_max_level(2))
+     do i=1,ctml_num_nodes(dir)
+      ctml_gz(i)=((i-1)*ctml_min_grid(dir))
      enddo
     else if (AMREX_SPACEDIM.eq.3) then
      dir=AMREX_SPACEDIM
-     ctml_nz= NINT((prob_hi(dir) - prob_lo(dir)) / &
-             dx_max_level(dir))+1
+     ctml_num_nodes(dir)= &
+      NINT((prob_hi(dir) - prob_lo(dir))/dx_max_level(dir))+1
      allocate(ctml_gz(1:ctml_nz))
-     do i=1,ctml_nz
+     do i=1,ctml_num_nodes(dir)
       ctml_gz(i)=prob_lo(dir)+((i-1)*dx_max_level(dir))
      enddo
-     ctml_min_gridz=dx_max_level(dir)
+     ctml_min_grid(dir)=dx_max_level(dir)
     else 
      print *,"AMREX_SPACEDIM invalid"
      stop
@@ -9819,28 +9854,117 @@ logical :: theboss
        ctml_n_fib_active_nodes, &
        nIBM_r_fsh, &
        nIBM_r_esh,nIBM_r_fbc,dtypeDelta, &
-       ctml_min_gridx,ctml_min_gridy,ctml_min_gridz, &
-       ctml_nx,ctml_ny,ctml_nz, &
+       ctml_min_grid(1), &
+       ctml_min_grid(2), &
+       ctml_min_grid(3), &
+       ctml_num_nodes(1), &
+       ctml_num_nodes(2), &
+       ctml_num_nodes(3), &
        ctml_gx,ctml_gy,ctml_gz, &
        idimin, &
        n_Read_in, &
        the_boss)
 
+    if (NINT(FSI_input_flattened(FSIcontain_num_solids+1)).eq. &
+            ctml_n_fib_bodies) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened(FSIcontain_num_solids+1 bad"
+     stop
+    endif
+    if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+1)).eq. &
+            ctml_max_n_fib_nodes) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1 bad"
+     stop
+    endif
+    if (NINT(FSI_input_flattened(FSIcontain_max_num_elements+1)).eq. &
+            ctml_max_n_fib_elements) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened(FSIcontain_max_num_elements+1 bad"
+     stop
+    endif
+    node_list_size=2*ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    velocity_list_size=2*ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
+    init_node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    mass_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
+    temp_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
 
-    allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-          AMREX_SPACEDIM))
-    allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-          AMREX_SPACEDIM))
-    allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-          AMREX_SPACEDIM))
+    if (flatten_size.eq.FSIcontain_size) then
+     ! do nothing
+    else
+     print *,"flatten_size<>FSIcontain_size"
+     stop
+    endif
+
+    allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
+    allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
+    allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
     allocate(ctml_fib_mass(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
 
-    allocate(ctml_fib_pst_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-           AMREX_SPACEDIM))
-    allocate(ctml_fib_vel_prev( &
-           ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-           AMREX_SPACEDIM))
+    allocate(ctml_fib_pst_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
+    allocate(ctml_fib_vel_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
 
+    call copy_ibm_fib(ctml_fib_mass, &
+            ctml_fib_pst(1,1,1), &
+            ctml_fib_pst(1,1,2), &
+            ctml_fib_pst(1,1,3))
+
+    if (local_caller_id.eq.caller_initdata) then
+FIX ME (1) fortran flatten and unflatten and allocate and copy
+     i_flat=1
+     do dir=1,3
+      do j=1,ctml_max_n_fib_nodes
+       do i=1,ctml_n_fib_bodies
+        ctml_fib_vel(i,j,dir)=zero
+        ctml_fib_vel_prev(i,j,dir)=zero
+        ctml_fib_pst_prev(i,j,dir)=ctml_fib_pst(i,j,dir)
+        FSI_output_flattened(FSIcontain_node_list+i_flat)= &
+             ctml_fib_pst_prev(i,j,dir)
+        i_flat2=i_flat+node_list_size/2
+        FSI_output_flattened(FSIcontain_node_list+i_flat2)= &
+             ctml_fib_pst(i,j,dir)
+        FSI_output_flattened(FSIcontain_init_node_list+i_flat)= &
+             ctml_fib_pst(i,j,dir)
+        FSI_output_flattened(FSIcontain_velocity_list+i_flat)= &
+             ctml_fib_vel_prev(i,j,dir)
+        i_flat2=i_flat+velocity_list_size/2
+        FSI_output_flattened(FSIcontain_velocity_list+i_flat2)= &
+             ctml_fib_vel(i,j,dir)
+        i_flat=i_flat+1
+       enddo !i
+      enddo !j
+     enddo !dir
+
+     i_flat=1
+     do dir=1,4
+      do j=1,ctml_max_n_fib_elements
+       do i=1,ctml_n_fib_bodies
+        FSI_output_flattened(FSIcontain_element_list+i_flat)=j+dir-1
+        i_flat=i_flat+1
+       enddo 
+      enddo 
+     enddo 
+
+     i_flat=1
+     do j=1,ctml_max_n_fib_nodes
+      do i=1,ctml_n_fib_bodies
+       FSI_output_flattened(FSIcontain_mass_list+i_flat)= &
+           ctml_fib_mass(i,j,dir)
+       FSI_output_flattened(FSIcontain_temp_list+i_flat)=273.0d0
+       i_flat=i_flat+1
+      enddo !i
+     enddo !j
+
+    else if (local_caller_id.eq.caller_post_restart) then
+
+    else
+     print *,"local_caller_id invalid"
+     stop
+    endif
    FIX ME
    else if (CTML_FSI_INIT.eq.1) then
     ! do nothing
