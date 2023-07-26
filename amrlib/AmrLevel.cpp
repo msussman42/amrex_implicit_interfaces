@@ -32,8 +32,10 @@ if ((CTML_num_solids_init>=0)&&
  max_num_nodes=max_num_nodes_init;
  max_num_elements=max_num_elements_init;
 
- node_list.resize(CTML_num_solids*max_num_nodes*3*2);
- velocity_list.resize(CTML_num_solids*max_num_nodes*3*2);
+ prev_node_list.resize(CTML_num_solids*max_num_nodes*3);
+ node_list.resize(CTML_num_solids*max_num_nodes*3);
+ prev_velocity_list.resize(CTML_num_solids*max_num_nodes*3);
+ velocity_list.resize(CTML_num_solids*max_num_nodes*3);
  element_list.resize(CTML_num_solids*max_num_elements*4);
  init_node_list.resize(CTML_num_solids*max_num_nodes*3);
  mass_list.resize(CTML_num_solids*max_num_nodes);
@@ -58,9 +60,11 @@ void FSI_container_class::FSI_flatten(Vector< Real >& flattened_data) {
  flattened_data[FSIcontain_max_num_elements]=max_num_elements; 
  for (int i=0;i<node_list_size;i++) {
   flattened_data[FSIcontain_node_list+i]=node_list[i];
+  flattened_data[FSIcontain_prev_node_list+i]=prev_node_list[i];
  } 
  for (int i=0;i<velocity_list_size;i++) {
   flattened_data[FSIcontain_velocity_list+i]=velocity_list[i];
+  flattened_data[FSIcontain_prev_velocity_list+i]=prev_velocity_list[i];
  } 
  for (int i=0;i<element_list_size;i++) {
   flattened_data[FSIcontain_element_list+i]=element_list[i];
@@ -90,9 +94,11 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
  max_num_elements=flattened_data[FSIcontain_max_num_elements];
  for (int i=0;i<node_list_size;i++) {
   node_list[i]=flattened_data[FSIcontain_node_list+i];
+  prev_node_list[i]=flattened_data[FSIcontain_prev_node_list+i];
  } 
  for (int i=0;i<velocity_list_size;i++) {
   velocity_list[i]=flattened_data[FSIcontain_velocity_list+i];
+  prev_velocity_list[i]=flattened_data[FSIcontain_prev_velocity_list+i];
  } 
  for (int i=0;i<element_list_size;i++) {
   element_list[i]=flattened_data[FSIcontain_element_list+i];
@@ -124,7 +130,9 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
  for (int inode=0;inode<source_FSI.node_list.size();inode++) {
   node_list[inode]=source_FSI.node_list[inode];
+  prev_node_list[inode]=source_FSI.prev_node_list[inode];
   velocity_list[inode]=source_FSI.velocity_list[inode];
+  prev_velocity_list[inode]=source_FSI.prev_velocity_list[inode];
  } 
 
  for (int inode=0;inode<source_FSI.mass_list.size();inode++) {
