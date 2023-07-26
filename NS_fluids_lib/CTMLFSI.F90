@@ -27,314 +27,6 @@ stop
 
       contains
 
-      subroutine CTML_INIT_SOLID(&
-       dx_max_level,&
-       prob_lo,&
-       prob_hi, &
-       io_proc, &
-       n_fib_bodies,&
-       max_n_fib_nodes)
-
-      use probcommon_module
-      use dummy_module
-      use probf90_module
-      use flow_parameters 
-      use grid_arrays
-
-      IMPLICIT NONE
-      REAL_T, INTENT(in) :: dx_max_level(SDIM)
-      REAL_T, INTENT(in) :: prob_lo(SDIM)
-      REAL_T, INTENT(in) :: prob_hi(SDIM)
-      INTEGER_T, INTENT(in) :: io_proc
-      INTEGER_T, INTENT(out) :: n_fib_bodies
-      INTEGER_T, INTENT(out) :: max_n_fib_nodes
-      
-      INTEGER_T n_Read_in,i,dir
-      logical the_boss
-
-      if (1.eq.1) then
-       print *,"calling CTML_INIT_SOLID"
-      endif
-
-      do dir=1,SDIM
-       if (dx_max_level(dir).gt.zero) then
-        !do nothing
-       else
-        print *,"dx_max_level(dir) invalid: ",dir,dx_max_level(dir)
-        stop
-       endif
-      enddo
-
-      !! call CTML_InitVicarVariables(dx_max_level,prob_lo,prob_hi)
-      !! ******** x direction **********
-      nxc_GLBL = (prob_hi(1) - prob_lo(1)) / dx_max_level(1)
-      nx_GLBL = nxc_GLBL+1
-
-      allocate( x(0:nx_GLBL+1))
-      allocate(dx(0:nx_GLBL+1))
-
-      do i=0,nxc_GLBL+1
-       dx(i)=dx_max_level(1)
-      enddo
-       
-      do i=0,nx_GLBL+1
-        x(i)=prob_lo(1) + ((i-1)*dx_max_level(1))
-      enddo
-
-!! ******** y direction **********
-      nyc_GLBL = (prob_hi(2) - prob_lo(2)) / dx_max_level(2)
-      ny_GLBL = nyc_GLBL+1
-
-      allocate( y(0:ny_GLBL+1))
-      allocate(dy(0:ny_GLBL+1))
-
-      do i=0,nyc_GLBL+1
-       dy(i)=dx_max_level(2)
-      enddo
-
-      do i=0,ny_GLBL+1
-       y(i)=prob_lo(2) + ((i-1)*dx_max_level(2))
-      enddo
-
-!! ******** z direction **********
-!! if it is a 2D problem, fake it as a 3D problem!
-
-#if (AMREX_SPACEDIM==2)
-      nzc = 2
-      nz = nzc+1
-      allocate( z(0:nz+1))
-      allocate(dz(0:nz+1))
-
-      do i=0,nzc+1
-       dz(i)=sqrt(dx_max_level(1)*dx_max_level(2)) 
-      enddo
-
-      do i=0,nz+1
-       z(i)= (i-1)*sqrt(dx_max_level(1)*dx_max_level(2))
-      enddo
-
-
-#elif (AMREX_SPACEDIM==3)
-      nzc = (prob_hi(3) - prob_lo(3)) / dx_max_level(3)
-      nz = nzc+1
-
-      allocate( z(0:nz+1))
-      allocate(dz(0:nz+1))
-
-      do i=0,nzc+1
-       dz(i)=dx_max_level(3)
-      enddo
-
-      do i=0,nz+1
-       z(i)=problo(3) + ((i-1)*dx_max_level(3))
-      enddo
-
-#endif
-
-
-      n_Read_in = 0
-      the_boss = .true.
-
-       ! :set ignorecase  (ignore case for vi searches)
-       ! :set ic  (ignore case for vi searches)
-       ! grep -i  (ignore case)      
-       ! amrex_implicit_interfaces/Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
-       ! amrex_implicit_interfaces/Vicar3D/distFSI/grid_def
-       ! amrex_implicit_interfaces/Vicar3D/distFSI/initialize_ibm.F
-       ! amrex_implicit_interfaces/Vicar3D/distFSI/create_grid2.F 
-       ! open (9997,file='./inputdistibm.dat',status="unknown")
-      call init_membrane_solver(SDIM,n_Read_in,the_boss)
-
-      n_fib_bodies = nrIBM_fib
-      max_n_fib_nodes = nIBM_fib
-
-      vel_fib = zero
-      force_fib = zero
-
-      if (1.eq.1) then
-       print *,"done with CTML_INIT_SOLID"
-      endif
-
-      return
-      end subroutine CTML_INIT_SOLID
-
-      subroutine CTML_GET_FIB_NODE_COUNT(&
-       n_fib_bodies,&
-       n_fib_nodes)
-
-      use dummy_module
-  
-      IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: n_fib_bodies
-      INTEGER_T, INTENT(out) :: n_fib_nodes(n_fib_bodies)
-
-      integer i
-      do i=1,nrIBM_fib
-       n_fib_nodes(i) = nIBM_r_fib(i)
-      end do
- 
-      return
-      end subroutine CTML_GET_FIB_NODE_COUNT
-
-       ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
-      subroutine CTML_GET_POS_VEL_WT(&
-       fib_pst,&
-       fib_vel,&
-       fib_wt,&
-       n_fib_bodies,&
-       max_n_fib_nodes,&
-       ifib)
-
-      use dummy_module
-      use probcommon_module
-
-      IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: n_fib_bodies
-      INTEGER_T, INTENT(in) :: max_n_fib_nodes
-      INTEGER_T, INTENT(in) :: ifib
-      REAL_T, INTENT(inout) :: fib_pst(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, INTENT(inout) :: fib_vel(n_fib_bodies,max_n_fib_nodes,SDIM)
-      REAL_T, INTENT(inout) :: fib_wt(n_fib_bodies,max_n_fib_nodes)
-      INTEGER_T inode,idir,inode_cutoff
-
-      if (1.eq.1) then
-       print *,"calling CTML_GET_POS_VEL_WT"
-       print *,"ifib=",ifib
-      endif
-
-      if (n_fib_bodies.ne.nrIBM_fib) then
-       print *,"n_fib_bodies.ne.nrIBM_fib"
-       stop
-      endif
-      if (max_n_fib_nodes.ne.nIBM_fib) then
-       print *,"max_n_fib_nodes.ne.nIBM_fib"
-       stop
-      endif
-      if ((ifib.ge.1).and.(ifib.le.nrIBM_fib)) then
-       inode_cutoff=0
-       do inode=1,nIBM_fib
-        do idir=1,SDIM
-         fib_pst(ifib,inode,idir)=coord_fib(ifib,inode,idir)
-           ! section=1
-         fib_vel(ifib,inode,idir)=vel_fib(ifib,1,inode,idir)
-        end do
-        fib_wt(ifib,inode)=ds_fib(ifib,inode)
-        if (fib_wt(ifib,inode).gt.zero) then
-         ! do nothing
-        else if ((fib_wt(ifib,inode).eq.zero).and.(inode.gt.1)) then
-         if (inode_cutoff.eq.0) then
-          inode_cutoff=inode
-         endif
-        else 
-         print *,"fib_wt(ifib,inode) invalid"
-         print *,"ifib= ",ifib
-         print *,"inode= ",inode
-         print *,"nIBM_fib= ",nIBM_fib
-         print *,"nrIBM_fib= ",nrIBM_fib
-         print *,"ds_fib(ifib,inode)=",ds_fib(ifib,inode)
-         stop
-        endif
-       end do
-       if (inode_cutoff.ne.0) then
-        print *,"WARNING, ds_fib==0 for some nodes"
-        print *,"inode_cutoff=",inode_cutoff 
-        print *,"ifib= ",ifib
-        print *,"nIBM_fib= ",nIBM_fib
-        print *,"nrIBM_fib= ",nrIBM_fib
-       endif
-      else
-       print *,"ifib invalid"
-       stop
-      endif
-
-      if (1.eq.1) then
-       print *,"done with CTML_GET_POS_VEL_FORCE_WT"
-       print *,"ifib=",ifib
-      endif
-
-      return
-      end subroutine CTML_GET_POS_VEL_WT
-
-
-       ! dummy_module declared in: ../Vicar3D/UTIL_BOUNDARY_FORCE_FSI.F90
-      subroutine CTML_PUT_FORCE(&
-        !force_fib(_prev)=fib_frc
-       fib_frc,& !caller: ctml_fib_frc
-       n_fib_bodies,&
-       max_n_fib_nodes,&
-       ifib)
-
-      use dummy_module
-      use probcommon_module
-
-      IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: n_fib_bodies
-      INTEGER_T, INTENT(in) :: max_n_fib_nodes
-      INTEGER_T, INTENT(in) :: ifib
-      REAL_T, INTENT(inout) :: fib_frc(n_fib_bodies,max_n_fib_nodes,SDIM)
-      INTEGER_T inode,idir,inode_cutoff
-
-      if (1.eq.1) then
-       print *,"calling CTML_PUT_FORCE"
-       print *,"ifib=",ifib
-      endif
-
-      if (n_fib_bodies.ne.nrIBM_fib) then
-       print *,"n_fib_bodies.ne.nrIBM_fib"
-       stop
-      endif
-      if (max_n_fib_nodes.ne.nIBM_fib) then
-       print *,"max_n_fib_nodes.ne.nIBM_fib"
-       stop
-      endif
-      if ((ifib.ge.1).and.(ifib.le.nrIBM_fib)) then
-       inode_cutoff=0
-       do inode=1,nIBM_fib
-        do idir=1,SDIM
-          ! section=1
-         force_fib(ifib,1,inode,idir)= &
-           fib_frc(ifib,inode,idir)
-        enddo
-       enddo
-      else
-       print *,"ifib invalid"
-       stop
-      endif
-
-      if (1.eq.1) then
-       print *,"done with CTML_PUT_FORCE"
-       print *,"ifib=",ifib
-      endif
-
-      return
-      end subroutine CTML_PUT_FORCE
-
-
-
-      subroutine CTML_RESET_ARRAYS()
-
-      use probcommon_module
-      use dummy_module
-      use probf90_module
-      use flow_parameters 
-      use grid_arrays
-
-      IMPLICIT NONE
-
-      if (1.eq.1) then
-       print *,"calling CTML_RESET_ARRAYS"
-      endif
-
-      vel_fib = zero
-      force_fib = zero
-
-      if (1.eq.1) then
-       print *,"done with CTML_RESET_ARRAYS"
-      endif
-
-      return
-      end subroutine CTML_RESET_ARRAYS
-
        ! CTML_SOLVE_SOLID is called from CLSVOF_ReadNodes
       subroutine CTML_SOLVE_SOLID(&
        cur_time,& ! t^{n+1}
@@ -517,9 +209,111 @@ stop
       return
       end subroutine CTML_SOLVE_SOLID
 
+      subroutine CTML_INTERNAL_MAX_NODES(&
+       nmat_in,&
+       FSI_flag_in,&
+       CTML_max_num_nodes_list,&
+       CTML_max_num_elements_list)
+
+      IMPLICIT NONE
+      INTEGER_T, INTENT(in) :: nmat_in
+      INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
+      INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list
+      INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
+      INTEGER_T :: im
+      INTEGER_T :: Ns_IBM_fib_out
+      INTEGER_T :: Ns_IBM_fsh_out
+      INTEGER_T :: Nq_IBM_fsh_out
+      INTEGER_T :: Ns_IBM_esh_out
+      INTEGER_T :: Ns_IBM_fbc_out
+
+      INTEGER_T :: Nr_IBM_out
+      INTEGER_T :: Nr_IBM_fib_out
+      INTEGER_T :: Nr_IBM_fsh_out
+      INTEGER_T :: Nr_IBM_esh_out
+      INTEGER_T :: Nr_IBM_fbc_out
+
+      INTEGER_T :: CTML_num_solids_local
+
+      CTML_max_num_nodes_list=0
+      CTML_max_num_elements_list=0
+
+      CTML_num_solids_local=0
+      do im=1,nmat_in
+       if (FSI_flag_in(im).eq.FSI_SHOELE_CTML) then
+        CTML_num_solids_local=CTML_num_solids_local+1
+       endif
+      endif
+
+      if (CTML_num_solids_local.eq.0) then
+       !do nothing
+      else if ((CTML_num_solids_local.ge.1).and. &
+               (CTML_num_solids_local.le.nmat_in-1)) then
+
+#ifdef MVAHABFSI
+        call copy_nmaxIBM( &
+          nr_IBM_out, &
+          nr_IBM_fib_out, &
+          nr_IBM_fsh_out, &
+          nr_IBM_esh_out, &
+          nr_IBM_fbc_out, &
+          ns_IBM_fib_out, &
+          ns_IBM_fsh_out, &
+          nq_IBM_fsh_out, &
+          ns_IBM_esh_out, &
+          ns_IBM_fbc_out)
+
+        if (Nr_IBM_out.eq.CTML_num_solids_local) then
+         ! do nothing
+        else
+         print *,"Nr_IBM_out invalid"
+         stop
+        endif
+        if (Nr_IBM_fib_out.eq.Nr_IBM_out) then
+         ! do nothing
+        else
+         print *,"expecting Nr_IBM_fib_out.eq.Nr_IBM_out"
+         stop
+        endif
+        if (Nr_IBM_fsh_out.eq.0) then
+         ! do nothing
+        else
+         print *,"Nr_IBM_fsh_out invalid"
+         stop
+        endif
+        if (Nr_IBM_esh_out.eq.0) then
+         ! do nothing
+        else
+         print *,"Nr_IBM_esh_out invalid"
+         stop
+        endif
+        if (Nr_IBM_fbc_out.eq.0) then
+         ! do nothing
+        else
+         print *,"Nr_IBM_fbc_out invalid"
+         stop
+        endif
+
+        if (Ns_IBM_fib_out.ge.2) then
+         CTML_max_num_nodes_list=Ns_IBM_fib_out
+         CTML_max_num_elements_list=Ns_IBM_fib_out-1
+        else
+         print *,"Ns_IBM_fib_out invalid"
+         stop
+        endif
+#else
+        print *,"CTML(F): define MEHDI_VAHAB_FSI in GNUmakefile"
+        stop
+#endif
+      else
+       print *,"CTML_num_solids_local invalid"
+       stop
+      endif
+
+      return
+      end subroutine CTML_INTERNAL_MAX_NODES
 
       end module CTML_module
-
 
 subroutine fort_ctml_max_nodes(&
  nmat_in,&
@@ -528,105 +322,25 @@ subroutine fort_ctml_max_nodes(&
  CTML_max_num_elements_list) &
 bind(c,name='fort_ctml_max_nodes')
 
- use probcommon_module
- use global_utility_module
+use CTML_module
 
- IMPLICIT NONE
- INTEGER_T, INTENT(in) :: nmat_in
- INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
- INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list
- INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
- INTEGER_T :: im
- INTEGER_T :: Ns_IBM_fib_out
- INTEGER_T :: Ns_IBM_fsh_out
- INTEGER_T :: Nq_IBM_fsh_out
- INTEGER_T :: Ns_IBM_esh_out
- INTEGER_T :: Ns_IBM_fbc_out
+IMPLICIT NONE
 
- INTEGER_T :: Nr_IBM_out
- INTEGER_T :: Nr_IBM_fib_out
- INTEGER_T :: Nr_IBM_fsh_out
- INTEGER_T :: Nr_IBM_esh_out
- INTEGER_T :: Nr_IBM_fbc_out
+INTEGER_T, INTENT(in) :: nmat_in
+INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
+INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list
+INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
 
- INTEGER_T :: CTML_num_solids_local
+CTML_max_num_nodes_list=0
+CTML_max_num_elements_list=0
 
- CTML_max_num_nodes_list=0
- CTML_max_num_elements_list=0
+call CTML_INTERNAL_MAX_NODES(&
+ nmat_in,&
+ FSI_flag_in,&
+ CTML_max_num_nodes_list,&
+ CTML_max_num_elements_list) 
 
- CTML_num_solids_local=0
- do im=1,nmat_in
-  if (FSI_flag_in(im).eq.FSI_SHOELE_CTML) then
-   CTML_num_solids_local=CTML_num_solids_local+1
-  endif
- endif
-
- if (CTML_num_solids_local.eq.0) then
-  !do nothing
- else if ((CTML_num_solids_local.ge.1).and. &
-          (CTML_num_solids_local.le.nmat_in-1)) then
-
-#ifdef MVAHABFSI
-   call copy_nmaxIBM( &
-     nr_IBM_out, &
-     nr_IBM_fib_out, &
-     nr_IBM_fsh_out, &
-     nr_IBM_esh_out, &
-     nr_IBM_fbc_out, &
-     ns_IBM_fib_out, &
-     ns_IBM_fsh_out, &
-     nq_IBM_fsh_out, &
-     ns_IBM_esh_out, &
-     ns_IBM_fbc_out)
-
-   if (Nr_IBM_out.eq.CTML_num_solids_local) then
-    ! do nothing
-   else
-    print *,"Nr_IBM_out invalid"
-    stop
-   endif
-   if (Nr_IBM_fib_out.eq.Nr_IBM_out) then
-    ! do nothing
-   else
-    print *,"expecting Nr_IBM_fib_out.eq.Nr_IBM_out"
-    stop
-   endif
-   if (Nr_IBM_fsh_out.eq.0) then
-    ! do nothing
-   else
-    print *,"Nr_IBM_fsh_out invalid"
-    stop
-   endif
-   if (Nr_IBM_esh_out.eq.0) then
-    ! do nothing
-   else
-    print *,"Nr_IBM_esh_out invalid"
-    stop
-   endif
-   if (Nr_IBM_fbc_out.eq.0) then
-    ! do nothing
-   else
-    print *,"Nr_IBM_fbc_out invalid"
-    stop
-   endif
-
-   if (Ns_IBM_fib_out.ge.2) then
-    CTML_max_num_nodes_list=Ns_IBM_fib_out
-    CTML_max_num_elements_list=Ns_IBM_fib_out-1
-   else
-    print *,"Ns_IBM_fib_out invalid"
-    stop
-   endif
-#else
-   print *,"CTML(F): define MEHDI_VAHAB_FSI in GNUmakefile"
-   stop
-#endif
- else
-  print *,"CTML_num_solids_local invalid"
-  stop
- endif
-
- return
+return
 end subroutine fort_ctml_max_nodes
 
 

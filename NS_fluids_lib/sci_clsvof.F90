@@ -192,19 +192,22 @@ INTEGER_T fsi_part_id_map(MAX_PARTS)
 
 INTEGER_T ctml_n_fib_bodies
 INTEGER_T ctml_max_n_fib_nodes
-INTEGER_T, dimension(:), allocatable :: ctml_n_fib_nodes
+INTEGER_T ctml_max_n_fib_elements
+
+REAL_T, dimension(:), allocatable :: ctml_gx
+REAL_T, dimension(:), allocatable :: ctml_gy
+REAL_T, dimension(:), allocatable :: ctml_gz
+INTEGER_T :: ctml_nx,ctml_ny,ctml_nz
+REAL_T :: ctml_min_gridx,ctml_min_gridy,ctml_min_gridz
+
 INTEGER_T, dimension(:), allocatable :: ctml_n_fib_active_nodes
 
 REAL_T, dimension(:,:,:), allocatable :: ctml_fib_pst
+REAL_T, dimension(:,:,:), allocatable :: ctml_fib_pst_prev
 REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel
+REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel_prev
 REAL_T, dimension(:,:,:), allocatable :: ctml_fib_frc
 REAL_T, dimension(:,:), allocatable :: ctml_fib_mass
-
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_pst_prev
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel_halftime_prev
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel_prev
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_frc_prev
-REAL_T, dimension(:,:), allocatable :: ctml_fib_mass_prev
 
 contains
 
@@ -9618,6 +9621,18 @@ INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T idir,ielem,inode
 
+INTEGER_T, dimension(:), allocatable :: nIBM_rq
+INTEGER_T, dimension(:), allocatable :: nIBM_rq_fsh
+INTEGER_T, dimension(:), allocatable :: nIBM_r_fsh
+INTEGER_T, dimension(:), allocatable :: nIBM_r_esh
+INTEGER_T, dimension(:), allocatable :: nIBM_r_fbc
+INTEGER_T, dimension(:), allocatable :: nIBM_r
+
+REAL_T :: dtypeDelta(3)
+INTEGER_T :: idimin
+INTEGER_T :: n_Read_in
+logical :: theboss
+
   do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
        (FSI_refine_factor(im_sanity_check).gt.100)) then
@@ -9635,144 +9650,208 @@ INTEGER_T idir,ielem,inode
    stop
   endif
 
-  if (im_critical.eq.0) then
 
-   TOTAL_NPARTS=nparts_in
-   ctml_part_id=0
-   fsi_part_id=0
+  TOTAL_NPARTS=nparts_in
+  ctml_part_id=0
+  fsi_part_id=0
 
-   do part_id=1,TOTAL_NPARTS
+  do part_id=1,TOTAL_NPARTS
 
-    im_solid_mapF(part_id)=im_solid_map_in(part_id)
-    im_part=im_solid_mapF(part_id)+1
+   im_solid_mapF(part_id)=im_solid_map_in(part_id)
+   im_part=im_solid_mapF(part_id)+1
 
-    if (CTML_FSI_mat(im_part).eq.1) then 
-     ctml_part_id=ctml_part_id+1
-     ctml_part_id_map(part_id)=ctml_part_id
-    else if (CTML_FSI_mat(im_part).eq.0) then
-     ctml_part_id_map(part_id)=0
-    else
-     print *,"CTML_FSI_mat(im_part) invalid"
-     stop
-    endif
-
-    if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
-        (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
-        (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
-     fsi_part_id=fsi_part_id+1
-     fsi_part_id_map(part_id)=fsi_part_id
-    else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90).or. & 
-             (FSI_flag(im_part).eq.FSI_SHOELE_CTML)) then 
-     fsi_part_id_map(part_id)=0
-    else
-     print *,"FSI_flag(im_part) invalid in CLSVOF_ReadHeader"
-     print *,"part_id,im_part,FSI_flag(im_part) ", &
-             part_id,im_part,FSI_flag(im_part)
-     stop
-    endif
-
-    FSI(part_id)%flag_2D_to_3D=0
-    FSI(part_id)%normal_invert=0
-    FSI(part_id)%exclusive_doubly_wetted=0
-
-   enddo ! part_id=1,TOTAL_NPARTS
-
-   CTML_NPARTS=ctml_part_id
-   FSI_NPARTS=fsi_part_id
-   if (FSI_NPARTS+CTML_NPARTS.gt.TOTAL_NPARTS) then
-    print *,"FSI_NPARTS+CTML_NPARTS.gt.TOTAL_NPARTS"
+   if (CTML_FSI_mat(im_part).eq.1) then 
+    ctml_part_id=ctml_part_id+1
+    ctml_part_id_map(part_id)=ctml_part_id
+   else if (CTML_FSI_mat(im_part).eq.0) then
+    ctml_part_id_map(part_id)=0
+   else
+    print *,"CTML_FSI_mat(im_part) invalid"
     stop
    endif
 
-   if (h_small.gt.zero) then
+   if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_NODES).or. & 
+       (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
+       (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
+    fsi_part_id=fsi_part_id+1
+    fsi_part_id_map(part_id)=fsi_part_id
+   else if ((FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90).or. & 
+            (FSI_flag(im_part).eq.FSI_SHOELE_CTML)) then 
+    fsi_part_id_map(part_id)=0
+   else
+    print *,"FSI_flag(im_part) invalid in CLSVOF_ReadHeader"
+    print *,"part_id,im_part,FSI_flag(im_part) ", &
+            part_id,im_part,FSI_flag(im_part)
+    stop
+   endif
+
+   FSI(part_id)%flag_2D_to_3D=0
+   FSI(part_id)%normal_invert=0
+   FSI(part_id)%exclusive_doubly_wetted=0
+
+  enddo ! part_id=1,TOTAL_NPARTS
+
+  CTML_NPARTS=ctml_part_id
+  FSI_NPARTS=fsi_part_id
+  if (FSI_NPARTS+CTML_NPARTS.gt.TOTAL_NPARTS) then
+   print *,"FSI_NPARTS+CTML_NPARTS.gt.TOTAL_NPARTS"
+   stop
+  endif
+
+  ctml_n_fib_bodies=CTML_NPARTS
+
+  if (h_small.gt.zero) then
+   ! do nothing
+  else
+   print *,"h_small invalid"
+   stop
+  endif
+  do dir=1,3
+   problo_act(dir)=problo(dir)
+   probhi_act(dir)=probhi(dir)
+   problen_act(dir)=probhi(dir)-problo(dir)
+   if (problen_act(dir).gt.zero) then
     ! do nothing
    else
-    print *,"h_small invalid"
+    print *,"problen_act(dir).le.zero"
     stop
    endif
-   do dir=1,3
-    problo_act(dir)=problo(dir)
-    probhi_act(dir)=probhi(dir)
-    problen_act(dir)=probhi(dir)-problo(dir)
-    if (problen_act(dir).le.zero) then
-     print *,"problen_act(dir).le.zero"
-     stop
-    endif
-   enddo ! dir=1..3
-   do dir=1,AMREX_SPACEDIM
-    problo_ref(dir)=problo(dir)
-    probhi_ref(dir)=probhi(dir)
-    problen_ref(dir)=probhi(dir)-problo(dir)
-    if (problen_ref(dir).gt.zero) then
-     ! do nothing
-    else
-     print *,"problen_ref(dir).le.zero"
-     stop
-    endif
-    if (dx_max_level(dir).gt.zero) then
-     ! do nothing
-    else
-     print *,"dx_max_level(dir).le.zero"
-     stop
-    endif
-   enddo ! dir=1..AMREX_SPACEDIM
+  enddo ! dir=1..3
+  do dir=1,AMREX_SPACEDIM
+   problo_ref(dir)=problo(dir)
+   probhi_ref(dir)=probhi(dir)
+   problen_ref(dir)=probhi(dir)-problo(dir)
+   if (problen_ref(dir).gt.zero) then
+    ! do nothing
+   else
+    print *,"problen_ref(dir).le.zero"
+    stop
+   endif
+   if (dx_max_level(dir).gt.zero) then
+    ! do nothing
+   else
+    print *,"dx_max_level(dir).le.zero"
+    stop
+   endif
+  enddo ! dir=1..AMREX_SPACEDIM
 
-   use_temp=0
+  use_temp=0
 
-   if (CTML_FSI_flagF().eq.1) then 
+  if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
-    if (CTML_FSI_INIT.eq.0) then
-       ! CTML_INIT_SOLID is declared in CTMLFSI.F90
-       ! vel_fib and force_fib are initialized to 0.0d0
-     call CTML_INIT_SOLID( &
-      dx_max_level, &
-      problo_ref,probhi_ref, &
-      ioproc, &
-      ctml_n_fib_bodies, &
-      ctml_max_n_fib_nodes)
-     if (ctml_n_fib_bodies.eq.CTML_NPARTS) then
-      allocate(ctml_n_fib_nodes(ctml_n_fib_bodies))
-      allocate(ctml_n_fib_active_nodes(ctml_n_fib_bodies))
-       ! CTML_GET_FIB_NODE_COUNT is declared in CTMLFSI.F90
-      call CTML_GET_FIB_NODE_COUNT( &
-       ctml_n_fib_bodies, & !intent(in)
-       ctml_n_fib_nodes) ! intent(out)
+   if (CTML_FSI_INIT.eq.0) then
 
-      allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-             AMREX_SPACEDIM))
-      allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-             AMREX_SPACEDIM))
-      allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-             AMREX_SPACEDIM))
-      allocate(ctml_fib_mass(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
+    call CTML_INTERNAL_MAX_NODES( &
+      num_materials, &
+      FSI_flag, &
+      ctml_max_n_fib_nodes, &
+      ctml_max_n_fib_elements)
 
-      allocate(ctml_fib_pst_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-             AMREX_SPACEDIM))
-      allocate(ctml_fib_vel_halftime_prev( &
-             ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-             AMREX_SPACEDIM))
-      allocate(ctml_fib_vel_prev( &
-             ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-             AMREX_SPACEDIM))
-      allocate(ctml_fib_frc_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
-             AMREX_SPACEDIM))
-      allocate(ctml_fib_mass_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
-
+    do dir=1,AMREX_SPACEDIM
+     if (dx_max_level(dir).gt.zero) then
+      !do nothing
      else
-      print *,"ctml_n_fib_bodies.eq.CTML_NPARTS failed: ", &
-         ctml_n_fib_bodies,CTML_NPARTS
+      print *,"dx_max_level(dir) invalid: ",dir,dx_max_level(dir)
       stop
      endif
-    else if (CTML_FSI_INIT.eq.1) then
-     ! do nothing
-    else
-     print *,"CTML_FSI_INIT invalid"
+    enddo
+
+    dir=1
+    ctml_nx= NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
+    allocate(ctml_gx(1:ctml_nx))
+    do i=1,ctml_nx
+     ctml_gx(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
+    enddo
+    ctml_min_gridx=dx_max_level(dir)
+
+    dir=2
+    ctml_ny= NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
+    allocate(ctml_gy(1:ctml_ny))
+    do i=1,ctml_ny
+     ctml_gy(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
+    enddo
+    ctml_min_gridy=dx_max_level(dir)
+
+    if (AMREX_SPACEDIM.eq.2) then
+     ctml_nz=3
+     allocate(ctml_gz(1:ctml_nz))
+     ctml_min_gridz=sqrt(dx_max_level(1)*dx_max_level(2))
+     do i=1,ctml_nz
+      ctml_gz(i)=((i-1)*ctml_min_gridz)
+     enddo
+    else if (AMREX_SPACEDIM.eq.3) then
+     dir=AMREX_SPACEDIM
+     ctml_nz= NINT((prob_hi(dir) - prob_lo(dir)) / &
+             dx_max_level(dir))+1
+     allocate(ctml_gz(1:ctml_nz))
+     do i=1,ctml_nz
+      ctml_gz(i)=prob_lo(dir)+((i-1)*dx_max_level(dir))
+     enddo
+     ctml_min_gridz=dx_max_level(dir)
+    else 
+     print *,"AMREX_SPACEDIM invalid"
      stop
     endif
 
-    ctml_part_id=0
+    allocate(ctml_n_fib_active_nodes(ctml_n_fib_bodies))
 
-    do part_id=1,TOTAL_NPARTS
+    allocate(nIBM_rq(ctml_n_fib_bodies))
+    allocate(nIBM_rq_fsh(ctml_n_fib_bodies))
+    allocate(nIBM_r_fsh(ctml_n_fib_bodies))
+    allocate(nIBM_r_esh(ctml_n_fib_bodies))
+    allocate(nIBM_r_fbc(ctml_n_fib_bodies))
+    allocate(nIBM_r(ctml_n_fib_bodies))
+
+    n_Read_in = 0
+    idimin=AMREX_SPACEDIM
+
+    if (ioproc.eq.1) then
+     the_boss = .true.
+    else if (ioproc.eq.0) then
+     the_boss = .false.
+    else
+     print *,"ioproc invalid"
+     stop
+    endif
+
+    call initialize_ibm(nIBM_rq,nIBM_rq_fsh, &
+       nIBM_r, &
+       ctml_n_fib_active_nodes, &
+       nIBM_r_fsh, &
+       nIBM_r_esh,nIBM_r_fbc,dtypeDelta, &
+       ctml_min_gridx,ctml_min_gridy,ctml_min_gridz, &
+       ctml_nx,ctml_ny,ctml_nz, &
+       ctml_gx,ctml_gy,ctml_gz, &
+       idimin, &
+       n_Read_in, &
+       the_boss)
+
+
+    allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+          AMREX_SPACEDIM))
+    allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+          AMREX_SPACEDIM))
+    allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+          AMREX_SPACEDIM))
+    allocate(ctml_fib_mass(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
+
+    allocate(ctml_fib_pst_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+           AMREX_SPACEDIM))
+    allocate(ctml_fib_vel_prev( &
+           ctml_n_fib_bodies,ctml_max_n_fib_nodes, &
+           AMREX_SPACEDIM))
+
+   FIX ME
+   else if (CTML_FSI_INIT.eq.1) then
+    ! do nothing
+   else
+    print *,"CTML_FSI_INIT invalid"
+    stop
+   endif
+
+   ctml_part_id=0
+
+   do part_id=1,TOTAL_NPARTS
 
      im_part=im_solid_mapF(part_id)+1
      if (CTML_FSI_mat(im_part).eq.1) then 
@@ -9816,81 +9895,81 @@ INTEGER_T idir,ielem,inode
       print *,"CTML_FSI_mat(im_part) invalid"
       stop
      endif
-    enddo ! part_id=1,TOTAL_NPARTS
+   enddo ! part_id=1,TOTAL_NPARTS
    
 #else
-    print *,"define MVAHABFSI"
-    stop
+   print *,"define MVAHABFSI"
+   stop
 #endif
 
-   else if (CTML_FSI_flagF().eq.0) then
+  else if (CTML_FSI_flagF().eq.0) then
 
-    part_id=1
+   part_id=1
 
-    if((probtype.eq.538).or.(probtype.eq.541)) then ! needle, housing
+   if((probtype.eq.538).or.(probtype.eq.541)) then ! needle, housing
+    test_NPARTS=2
+    FSI(1)%deforming_part=0
+    FSI(2)%deforming_part=0
+    FSI(1)%CTML_flag=0
+    FSI(2)%CTML_flag=0
+   else if (probtype.eq.701) then  ! flapping wing - ReadHeader
+    if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
+     test_NPARTS=1
+     FSI(1)%deforming_part=0
+     FSI(1)%CTML_flag=0
+    else if (axis_dir.eq.1) then
      test_NPARTS=2
      FSI(1)%deforming_part=0
      FSI(2)%deforming_part=0
      FSI(1)%CTML_flag=0
      FSI(2)%CTML_flag=0
-    else if (probtype.eq.701) then  ! flapping wing - ReadHeader
-     if ((axis_dir.eq.0).or.(axis_dir.eq.2)) then
-      test_NPARTS=1
-      FSI(1)%deforming_part=0
-      FSI(1)%CTML_flag=0
-     else if (axis_dir.eq.1) then
-      test_NPARTS=2
-      FSI(1)%deforming_part=0
-      FSI(2)%deforming_part=0
-      FSI(1)%CTML_flag=0
-      FSI(2)%CTML_flag=0
-     else
-      print *,"axis_dir invalid"
-      stop
-     endif 
-    else if ((probtype.eq.57).or. &
-             (probtype.eq.562).or. & ! whale
-             (probtype.eq.561).or. & 
-             (probtype.eq.563).or. & 
-             (probtype.eq.536).or. & 
-             (probtype.eq.537).or. & 
-             (probtype.eq.539).or. & 
-             (probtype.eq.52).or. & 
-             (probtype.eq.56).or. & 
-             (probtype.eq.58).or. & 
-             (probtype.eq.50).or. &  ! paddle
-             (probtype.eq.5600).or. &  ! dog
-             (probtype.eq.5601).or. &  ! viorel sphere
-             (probtype.eq.5602).or. &  ! internal inflow
-             (probtype.eq.5700).or. &  ! microfluidics
-             (probtype.eq.53).or. &  
-             (probtype.eq.531).or. &  
-             (probtype.eq.5501)) then
-     test_NPARTS=1
-     FSI(part_id)%deforming_part=1
-     FSI(part_id)%CTML_flag=0
-    else if (probtype.eq.9) then ! ship
-     test_NPARTS=1
+    else
+     print *,"axis_dir invalid"
+     stop
+    endif 
+   else if ((probtype.eq.57).or. &
+            (probtype.eq.562).or. & ! whale
+            (probtype.eq.561).or. & 
+            (probtype.eq.563).or. & 
+            (probtype.eq.536).or. & 
+            (probtype.eq.537).or. & 
+            (probtype.eq.539).or. & 
+            (probtype.eq.52).or. & 
+            (probtype.eq.56).or. & 
+            (probtype.eq.58).or. & 
+            (probtype.eq.50).or. &  ! paddle
+            (probtype.eq.5600).or. &  ! dog
+            (probtype.eq.5601).or. &  ! viorel sphere
+            (probtype.eq.5602).or. &  ! internal inflow
+            (probtype.eq.5700).or. &  ! microfluidics
+            (probtype.eq.53).or. &  
+            (probtype.eq.531).or. &  
+            (probtype.eq.5501)) then
+    test_NPARTS=1
+    FSI(part_id)%deforming_part=1
+    FSI(part_id)%CTML_flag=0
+   else if (probtype.eq.9) then ! ship
+    test_NPARTS=1
+    FSI(part_id)%deforming_part=0
+    FSI(part_id)%CTML_flag=0
+   else
+    test_NPARTS=TOTAL_NPARTS
+    do part_id=1,TOTAL_NPARTS
      FSI(part_id)%deforming_part=0
      FSI(part_id)%CTML_flag=0
-    else
-     test_NPARTS=TOTAL_NPARTS
-     do part_id=1,TOTAL_NPARTS
-      FSI(part_id)%deforming_part=0
-      FSI(part_id)%CTML_flag=0
-     enddo
-    endif
-    if (test_NPARTS.ne.TOTAL_NPARTS) then
-     print *,"test_NPARTS.ne.TOTAL_NPARTS"
-     stop
-    endif
-   else
-    print *,"CTML_FSI_flagF invalid"
+    enddo
+   endif
+   if (test_NPARTS.ne.TOTAL_NPARTS) then
+    print *,"test_NPARTS.ne.TOTAL_NPARTS"
     stop
-   endif 
+   endif
+  else
+   print *,"CTML_FSI_flagF invalid"
+   stop
+  endif 
 
-   if ((TOTAL_NPARTS.ge.1).and. &
-       (TOTAL_NPARTS.le.MAX_PARTS)) then
+  if ((TOTAL_NPARTS.ge.1).and. &
+      (TOTAL_NPARTS.le.MAX_PARTS)) then
 
     do part_id=1,TOTAL_NPARTS
 
@@ -9948,10 +10027,10 @@ INTEGER_T idir,ielem,inode
 
     enddo ! part_id=1..TOTAL_NPARTS
 
-   else
-    print *,"TOTAL_NPARTS invalid: ",TOTAL_NPARTS
-    stop
-   endif
+  else
+   print *,"TOTAL_NPARTS invalid: ",TOTAL_NPARTS
+   stop
+  endif
 
   else if ((im_critical.ge.1).and. &
            (im_critical.lt.num_materials)) then
