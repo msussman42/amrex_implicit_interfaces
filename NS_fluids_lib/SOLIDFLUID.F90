@@ -100,41 +100,10 @@
         level, &
         finest_level, &
         max_level, &
-        im_critical, &
-        max_num_nodes_list, &
-        max_num_elements_list, &
-        num_nodes_list, &
-        num_elements_list, &
-        FSI_input_max_num_nodes, &
-        FSI_input_max_num_elements, &
-        FSI_input_num_nodes, &
-        FSI_input_num_elements, &
-        FSI_input_nodes_per_element, &
-        FSI_input_FSI_dt, &
-        FSI_input_FSI_time, &
-        FSI_input_node_list, &
-        FSI_input_element_list, &
-        FSI_input_displacement_list, &
-        FSI_input_velocity_halftime_list, &
-        FSI_input_velocity_list, &
-        FSI_input_force_list, &
-        FSI_input_mass_list, &
-        FSI_input_temperature_list, &
-        FSI_output_max_num_nodes, &
-        FSI_output_max_num_elements, &
-        FSI_output_num_nodes, &
-        FSI_output_num_elements, &
-        FSI_output_nodes_per_element, &
-        FSI_output_FSI_dt, &
-        FSI_output_FSI_time, &
-        FSI_output_node_list, &
-        FSI_output_element_list, &
-        FSI_output_displacement_list, &
-        FSI_output_velocity_halftime_list, &
-        FSI_output_velocity_list, &
-        FSI_output_force_list, &
-        FSI_output_mass_list, &
-        FSI_output_temperature_list, &
+        FSI_input_flattened, &
+        FSI_output_flattened, &
+        flatten_size, &
+        local_caller_id, &
         FSI_operation, &
         FSI_sub_operation, &
         tilelo,tilehi, &
@@ -189,59 +158,10 @@
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: max_level
 
-      INTEGER_T, INTENT(in) :: im_critical
-      INTEGER_T, INTENT(inout) :: max_num_nodes_list(num_materials)
-      INTEGER_T, INTENT(inout) :: max_num_elements_list(num_materials)
-      INTEGER_T, INTENT(inout) :: num_nodes_list(num_materials)
-      INTEGER_T, INTENT(inout) :: num_elements_list(num_materials)
-
-      INTEGER_T, INTENT(in) :: FSI_input_max_num_nodes
-      INTEGER_T, INTENT(in) :: FSI_input_max_num_elements
-      INTEGER_T, INTENT(in) :: FSI_input_num_nodes
-      INTEGER_T, INTENT(in) :: FSI_input_num_elements
-      INTEGER_T, INTENT(inout) :: FSI_input_nodes_per_element
-      REAL_T, INTENT(inout) :: FSI_input_FSI_dt
-      REAL_T, INTENT(inout) :: FSI_input_FSI_time
-      REAL_T, INTENT(inout) :: &
-        FSI_input_node_list(3*FSI_input_max_num_nodes)
-      INTEGER_T, INTENT(inout) :: &
-        FSI_input_element_list(4*FSI_input_max_num_elements)
-      REAL_T, INTENT(inout) :: &
-        FSI_input_displacement_list(3*FSI_input_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-        FSI_input_velocity_halftime_list(3*FSI_input_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-        FSI_input_velocity_list(3*FSI_input_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-        FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-        FSI_input_mass_list(FSI_input_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-        FSI_input_temperature_list(FSI_input_max_num_nodes)
-
-      INTEGER_T, INTENT(inout) :: FSI_output_max_num_nodes
-      INTEGER_T, INTENT(inout) :: FSI_output_max_num_elements
-      INTEGER_T, INTENT(inout) :: FSI_output_num_nodes
-      INTEGER_T, INTENT(inout) :: FSI_output_num_elements
-      INTEGER_T, INTENT(inout) :: FSI_output_nodes_per_element
-      REAL_T, INTENT(inout) :: FSI_output_FSI_dt
-      REAL_T, INTENT(inout) :: FSI_output_FSI_time
-      REAL_T, INTENT(inout) :: &
-       FSI_output_node_list(3*FSI_output_max_num_nodes)
-      INTEGER_T, INTENT(inout) :: &
-              FSI_output_element_list(4*FSI_output_max_num_elements)
-      REAL_T, INTENT(inout) :: &
-              FSI_output_displacement_list(3*FSI_output_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-          FSI_output_velocity_halftime_list(3*FSI_output_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-              FSI_output_velocity_list(3*FSI_output_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-      FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-              FSI_output_mass_list(FSI_output_max_num_nodes)
-      REAL_T, INTENT(inout) :: &
-              FSI_output_temperature_list(FSI_output_max_num_nodes)
+      INTEGER_T, INTENT(in) :: flatten_size
+      INTEGER_T, INTENT(in) :: local_caller_id
+      REAL_T, INTENT(inout) :: FSI_input_flattened(flatten_size)
+      REAL_T, INTENT(inout) :: FSI_output_flattened(flatten_size)
 
       INTEGER_T, INTENT(in) :: FSI_operation
       INTEGER_T, INTENT(in) :: FSI_sub_operation
@@ -319,10 +239,10 @@
       REAL_T, allocatable,target :: maskfiner3D(:,:,:,:)
       REAL_T, pointer :: maskfiner3D_ptr(:,:,:,:)
       INTEGER_T mask1,mask2
-      REAL_T xsten(-3:3,SDIM)
+      INTEGER_T, parameter :: nhalf=3
+      REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T ibase
       INTEGER_T partid
-      INTEGER_T nhalf
       INTEGER_T lev77
       INTEGER_T im_local
       INTEGER_T istress,jstress
@@ -331,8 +251,6 @@
       REAL_T xlo3D_tile(3)
       REAL_T xhi3D_tile(3)
  
-      nhalf=3
-
       FSIdata_ptr=>FSIdata
 
       if (nthread_parm.ne.geom_nthreads) then
@@ -386,9 +304,36 @@
         print *,"ngrow_make_distance_in invalid"
         stop
        endif
+       if ((local_caller_id.eq.caller_initData).or.
+           (local_caller_id.eq.caller_post_restart))then
+        !do nothing
+       else
+        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
+        stop
+       endif
       else if (FSI_operation.eq.OP_FSI_LAG_STRESS) then 
        if (ngrow_make_distance_in.ne.3) then
         print *,"ngrow_make_distance_in invalid"
+        stop
+       endif
+       if (local_caller_id.eq.caller_nonlinear_advection) then
+        !do nothing
+       else
+        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
+        stop
+       endif
+      else if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then 
+       if (local_caller_id.eq.caller_FSI_make_distance) then
+        !do nothing
+       else
+        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
+        stop
+       endif
+      else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then 
+       if (local_caller_id.eq.caller_FSI_make_distance) then
+        !do nothing
+       else
+        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
         stop
        endif
       else
@@ -570,35 +515,10 @@
        if (FSI_operation.eq.OP_FSI_INITIALIZE_NODES) then 
 
         call CLSVOF_ReadHeader( &
-          im_critical, &
-          max_num_nodes_list, &
-          max_num_elements_list, &
-          num_nodes_list, &
-          num_elements_list, &
-          FSI_input_max_num_nodes, &
-          FSI_input_max_num_elements, &
-          FSI_input_num_nodes, &
-          FSI_input_num_elements, &
-          FSI_input_node_list, &
-          FSI_input_element_list, &
-          FSI_input_displacement_list, &
-          FSI_input_velocity_halftime_list, &
-          FSI_input_velocity_list, &
-          FSI_input_force_list, &
-          FSI_input_mass_list, &
-          FSI_input_temperature_list, &
-          FSI_output_max_num_nodes, &
-          FSI_output_max_num_elements, &
-          FSI_output_num_nodes, &
-          FSI_output_num_elements, &
-          FSI_output_node_list, &
-          FSI_output_element_list, &
-          FSI_output_displacement_list, &
-          FSI_output_velocity_halftime_list, &
-          FSI_output_velocity_list, &
-          FSI_output_force_list, &
-          FSI_output_mass_list, &
-          FSI_output_temperature_list, &
+          FSI_input_flattened, &
+          FSI_output_flattened, &
+          flatten_size, &
+          local_caller_id, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
           nparts, &
@@ -617,35 +537,10 @@
          !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
          !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
         call CLSVOF_ReadNodes( &
-          im_critical, &
-          max_num_nodes_list, &
-          max_num_elements_list, &
-          num_nodes_list, &
-          num_elements_list, &
-          FSI_input_max_num_nodes, &
-          FSI_input_max_num_elements, &
-          FSI_input_num_nodes, &
-          FSI_input_num_elements, &
-          FSI_input_node_list, &
-          FSI_input_element_list, &
-          FSI_input_displacement_list, &
-          FSI_input_velocity_halftime_list, &
-          FSI_input_velocity_list, &
-          FSI_input_force_list, &
-          FSI_input_mass_list, &
-          FSI_input_temperature_list, &
-          FSI_output_max_num_nodes, &
-          FSI_output_max_num_elements, &
-          FSI_output_num_nodes, &
-          FSI_output_num_elements, &
-          FSI_output_node_list, &
-          FSI_output_element_list, &
-          FSI_output_displacement_list, &
-          FSI_output_velocity_halftime_list, &
-          FSI_output_velocity_list, &
-          FSI_output_force_list, &
-          FSI_output_mass_list, &
-          FSI_output_temperature_list, &
+          FSI_input_flattened, &
+          FSI_output_flattened, &
+          flatten_size, &
+          local_caller_id, &
           FSI_refine_factor, &
           FSI_bounding_box_ngrow, &
           cur_time, &

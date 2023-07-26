@@ -8361,6 +8361,7 @@ void NavierStokes::ns_header_msg_level(
 
   FSI_input.flatten(FSI_input_flattened);
   FSI_output.flatten(FSI_output_flattened);
+  int flatten_size=FSI_input_flattened.size();
 
   int nFSI=nparts*NCOMP_FSI;
 
@@ -8404,20 +8405,17 @@ void NavierStokes::ns_header_msg_level(
       &level,
       &finest_level,
       &max_level,
-
-      FIX ME
-
-      &im_critical,
-      FSI_input_flattend.dataPtr(),
-      FSI_output_flattend.dataPtr(),
+      FSI_input_flattened.dataPtr(),
+      FSI_output_flattened.dataPtr(),
+      &flatten_size,
       &local_caller_id,
       &FSI_operation, // OP_FSI_INITIALIZE(UPDATE)_NODES
       &FSI_sub_operation, // SUB_OP_FSI_DEFAULT
       tilelo,tilehi,
       fablo,fabhi,
       &bfact,
-      problo,
-      problen, 
+      problo, //xlo
+      problen, //dx
       dx_max_level, 
       velbc.dataPtr(),  
       vofbc.dataPtr(), 
