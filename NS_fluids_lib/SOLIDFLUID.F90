@@ -226,9 +226,11 @@
       REAL_T, allocatable,target :: FSIdata3D(:,:,:,:)
       REAL_T, pointer :: FSIdata3D_ptr(:,:,:,:)
 
+       ! i,j,k,6*num_materials
       REAL_T, allocatable,target :: stressdata3D(:,:,:,:)
       REAL_T, pointer :: stressdata3D_ptr(:,:,:,:)
 
+       ! i,j,k,num_materials
       REAL_T, allocatable,target :: stressflag3D(:,:,:,:)
       REAL_T, pointer :: stressflag3D_ptr(:,:,:,:)
 
@@ -304,11 +306,13 @@
         print *,"ngrow_make_distance_in invalid"
         stop
        endif
-       if ((local_caller_id.eq.caller_initData).or.
-           (local_caller_id.eq.caller_post_restart))then
+       if ((local_caller_id.eq.caller_initData).or. &
+           (local_caller_id.eq.caller_post_restart).or. &
+           (local_caller_id.eq.caller_nonlinear_advection))then
         !do nothing
        else
-        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
+        print *,"local_caller_id invalid in fort_headermsg(1): ", &
+          local_caller_id
         stop
        endif
       else if (FSI_operation.eq.OP_FSI_LAG_STRESS) then 
@@ -319,21 +323,24 @@
        if (local_caller_id.eq.caller_nonlinear_advection) then
         !do nothing
        else
-        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
+        print *,"local_caller_id invalid in fort_headermsg(2): ", &
+          local_caller_id
         stop
        endif
       else if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then 
        if (local_caller_id.eq.caller_FSI_make_distance) then
         !do nothing
        else
-        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
+        print *,"local_caller_id invalid in fort_headermsg(3): ", &
+          local_caller_id
         stop
        endif
       else if (FSI_operation.eq.OP_FSI_MAKE_SIGN) then 
        if (local_caller_id.eq.caller_FSI_make_distance) then
         !do nothing
        else
-        print *,"local_caller_id invalid in fort_headermsg: ",local_caller_id
+        print *,"local_caller_id invalid in fort_headermsg(4): ", &
+          local_caller_id
         stop
        endif
       else
@@ -442,8 +449,8 @@
 
          growlo3D(dir)=-ngrow_make_distance_in
          growhi3D(dir)=ngrow_make_distance_in
-        else if ((xmap3D(dir).ge.1).and. &
-                 (xmap3D(dir).le.2)) then
+        else if ((xmap3D(dir).eq.1).or. &
+                 (xmap3D(dir).eq.2)) then
          dx3D(dir)=dx(xmap3D(dir))
          problo3D(dir)=problo_array(xmap3D(dir))
          probhi3D(dir)=probhi_array(xmap3D(dir))
@@ -523,8 +530,11 @@
           FSI_bounding_box_ngrow, &
           nparts, &
           im_solid_map, &
-          h_small,dx_max_level,CTML_FSI_INIT, &
-          cur_time,problo3D,probhi3D,ioproc,isout)
+          h_small, &
+          dx_max_level, &
+          CTML_FSI_INIT, &
+          cur_time,problo3D,probhi3D, &
+          ioproc,isout)
 
        else if (FSI_operation.eq.OP_FSI_UPDATE_NODES) then 
 
@@ -1035,8 +1045,8 @@
                stress_3d(istress,jstress)
            enddo
 
-           stressflag3D(i,j,k,im_local)=drag(D_DECL(i2d,j2d,k2d), &
-                 DRAGCOMP_FLAG+im_local)
+           stressflag3D(i,j,k,im_local)= &
+            drag(D_DECL(i2d,j2d,k2d),DRAGCOMP_FLAG+im_local)
 
           enddo ! im_local=1..num_materials
 
@@ -1099,9 +1109,11 @@
              contain_elem(lev77)%num_grids_on_level
             print *,"contain_elem(lev77)%num_grids_on_level_proc ", &
              contain_elem(lev77)%num_grids_on_level_proc
-            print *,"contain_elem(lev77)%max_num_tiles_on_thread3D_proc ", &
+            print *, &
+             "contain_elem(lev77)%max_num_tiles_on_thread3D_proc ", &
              contain_elem(lev77)%max_num_tiles_on_thread3D_proc
-            print *,"contain_elem(lev77)%num_tiles_on_thread3D_proc(tid+1) ",&
+            print *, &
+             "contain_elem(lev77)%num_tiles_on_thread3D_proc(tid+1) ",&
              contain_elem(lev77)%num_tiles_on_thread3D_proc(tid+1)
             print *,"contain_elem(lev77)%gridno3D(tid+1,tilenum+1)=", &
              contain_elem(lev77)%gridno3D(tid+1,tilenum+1)
@@ -1154,7 +1166,8 @@
 
           else
            print *,"FSI_flag invalid in fort_headermsg"
-           print *,"im_part,FSI_flag(im_part) ",im_part,FSI_flag(im_part)
+           print *,"im_part,FSI_flag(im_part) ", &
+             im_part,FSI_flag(im_part)
            stop
           endif
 

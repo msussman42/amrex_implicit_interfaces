@@ -9574,35 +9574,10 @@ end subroutine CLSVOF_Read_aux_Header
 !     (  FSI_operation.eq.OP_FSI_UPDATE_NODES )
 ! isout==1 => verbose
 subroutine CLSVOF_ReadHeader( &
-  im_critical, &
-  max_num_nodes_list, &
-  max_num_elements_list, &
-  num_nodes_list, &
-  num_elements_list, &
-  FSI_input_max_num_nodes, &
-  FSI_input_max_num_elements, &
-  FSI_input_num_nodes, &
-  FSI_input_num_elements, &
-  FSI_input_node_list, &
-  FSI_input_element_list, &
-  FSI_input_displacement_list, &
-  FSI_input_velocity_halftime_list, &
-  FSI_input_velocity_list, &
-  FSI_input_force_list, &
-  FSI_input_mass_list, &
-  FSI_input_temperature_list, &
-  FSI_output_max_num_nodes, &
-  FSI_output_max_num_elements, &
-  FSI_output_num_nodes, &
-  FSI_output_num_elements, &
-  FSI_output_node_list, &
-  FSI_output_element_list, &
-  FSI_output_displacement_list, &
-  FSI_output_velocity_halftime_list, &
-  FSI_output_velocity_list, &
-  FSI_output_force_list, &
-  FSI_output_mass_list, &
-  FSI_output_temperature_list, &
+  FSI_input_flattened, &
+  FSI_output_flattened, &
+  flatten_size, &
+  local_caller_id, &
   FSI_refine_factor, &
   FSI_bounding_box_ngrow, &
   nparts_in, &
@@ -9619,44 +9594,10 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: im_critical
-INTEGER_T, INTENT(inout) :: max_num_nodes_list(num_materials)
-INTEGER_T, INTENT(inout) :: max_num_elements_list(num_materials)
-INTEGER_T, INTENT(inout) :: num_nodes_list(num_materials)
-INTEGER_T, INTENT(inout) :: num_elements_list(num_materials)
-INTEGER_T, INTENT(in) :: FSI_input_max_num_nodes
-INTEGER_T, INTENT(in) :: FSI_input_max_num_elements
-INTEGER_T, INTENT(in) :: FSI_input_num_nodes
-INTEGER_T, INTENT(in) :: FSI_input_num_elements
-REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_max_num_nodes)
-INTEGER_T, INTENT(inout) :: FSI_input_element_list(4*FSI_input_max_num_elements)
-REAL_T, INTENT(inout) :: FSI_input_displacement_list(3*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) ::  &
-        FSI_input_velocity_halftime_list(3*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) ::  &
-        FSI_input_velocity_list(3*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) ::  &
-        FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_input_mass_list(FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_input_temperature_list(FSI_input_max_num_nodes)
-
-INTEGER_T, INTENT(inout) :: FSI_output_max_num_nodes
-INTEGER_T, INTENT(inout) :: FSI_output_max_num_elements
-INTEGER_T, INTENT(inout) :: FSI_output_num_nodes
-INTEGER_T, INTENT(inout) :: FSI_output_num_elements
-REAL_T, INTENT(inout) :: FSI_output_node_list(3*FSI_output_max_num_nodes)
-INTEGER_T, INTENT(inout) :: &
-        FSI_output_element_list(4*FSI_output_max_num_elements)
-REAL_T, INTENT(inout) :: &
-        FSI_output_displacement_list(3*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_output_velocity_halftime_list(3*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_output_velocity_list(3*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_output_mass_list(FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_output_temperature_list(FSI_output_max_num_nodes)
+INTEGER_T, INTENT(in) :: flatten_size
+INTEGER_T, INTENT(in) :: local_caller_id
+REAL_T, INTENT(inout) :: FSI_input_flattened(flatten_size)
+REAL_T, INTENT(inout) :: FSI_output_flattened(flatten_size)
 
 INTEGER_T, INTENT(in) :: nparts_in
 INTEGER_T, INTENT(in) :: im_solid_map_in(nparts_in)
@@ -9672,8 +9613,8 @@ INTEGER_T :: part_id
 INTEGER_T :: dir
 INTEGER_T :: im_part
 INTEGER_T :: ctml_part_id,fsi_part_id
-INTEGER_T FSI_refine_factor(num_materials)
-INTEGER_T FSI_bounding_box_ngrow(num_materials)
+INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
+INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T idir,ielem,inode
 
