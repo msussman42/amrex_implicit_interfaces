@@ -43,10 +43,12 @@ public:
 int CTML_num_solids;
 int max_num_nodes;
 int max_num_elements;
-//node[0 or 1][0..num_solids-1][0..max_num_nodes-1][0..2]
+//node[0..num_solids-1][0..max_num_nodes-1][0..2]
 Vector< Real > node_list; 
-//velocity[0 or 1][0..num_solids-1][0..max_num_nodes-1][0..2]
+Vector< Real > prev_node_list; 
+//velocity[0..num_solids-1][0..max_num_nodes-1][0..2]
 Vector< Real > velocity_list; 
+Vector< Real > prev_velocity_list; 
 //element[0..num_solids-1][0..max_num_elements-1][0..3]
 Vector< int > element_list;
 //initial_node_list[0..num_solids-1][0..max_num_nodes-1][0..2]

@@ -56,10 +56,10 @@ type FSI_container_type
  INTEGER_T CTML_num_solids
  INTEGER_T max_num_nodes
  INTEGER_T max_num_elements
- REAL_T, pointer :: node_list_prev(:,:,:)
+ REAL_T, pointer :: prev_node_list(:,:,:)
  REAL_T, pointer :: node_list(:,:,:)
  REAL_T, pointer :: init_node_list(:,:,:)
- REAL_T, pointer :: velocity_list_prev(:,:,:)
+ REAL_T, pointer :: prev_velocity_list(:,:,:)
  REAL_T, pointer :: velocity_list(:,:,:)
  REAL_T, pointer :: mass_list(:,:)
  REAL_T, pointer :: temp_list(:,:)
@@ -9924,6 +9924,7 @@ FIX ME (1) fortran flatten and unflatten and allocate and copy
         ctml_fib_pst_prev(i,j,dir)=ctml_fib_pst(i,j,dir)
         FSI_output_flattened(FSIcontain_node_list+i_flat)= &
              ctml_fib_pst_prev(i,j,dir)
+FIX ME
         i_flat2=i_flat+node_list_size/2
         FSI_output_flattened(FSIcontain_node_list+i_flat2)= &
              ctml_fib_pst(i,j,dir)
@@ -9931,6 +9932,7 @@ FIX ME (1) fortran flatten and unflatten and allocate and copy
              ctml_fib_pst(i,j,dir)
         FSI_output_flattened(FSIcontain_velocity_list+i_flat)= &
              ctml_fib_vel_prev(i,j,dir)
+FIX ME
         i_flat2=i_flat+velocity_list_size/2
         FSI_output_flattened(FSIcontain_velocity_list+i_flat2)= &
              ctml_fib_vel(i,j,dir)
