@@ -214,21 +214,18 @@ INTEGER_T temp_list_size
 INTEGER_T ctml_n_fib_bodies
 INTEGER_T ctml_max_n_fib_nodes
 INTEGER_T ctml_max_n_fib_elements
+INTEGER_T ctml_flatten_size
 
 REAL_T, dimension(:), allocatable :: ctml_gx
 REAL_T, dimension(:), allocatable :: ctml_gy
 REAL_T, dimension(:), allocatable :: ctml_gz
-INTEGER_T, dimension(3) :: ctml_num_nodes
-REAL_T, dimension(3) :: ctml_min_grid
+INTEGER_T, dimension(3) :: ctml_ngrid_nodes
+REAL_T, dimension(3) :: ctml_min_grid_dx
 
 INTEGER_T, dimension(:), allocatable :: ctml_n_fib_active_nodes
 
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_pst
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_pst_prev
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_vel_prev
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_frc
-REAL_T, dimension(:,:), allocatable :: ctml_fib_mass
+type(FSI_container_type) :: ctml_FSI_container
+REAL_T, dimension(:,:), allocatable :: ctml_fib_frc
 
 contains
 
@@ -279,7 +276,7 @@ type(FSI_container_type), INTENT(in) :: source_FSI
 INTEGER_T :: local_num_solids
 INTEGER_T :: local_num_nodes
 INTEGER_T :: local_num_elements
-INTEGER_T :: i,j,k
+INTEGER_T :: i,j,k,i_flat
 
 local_num_solids=source_FSI%CTML_num_solids
 local_num_nodes=source_FSI%max_num_nodes
@@ -346,6 +343,89 @@ do i=1,local_num_solids
 enddo ! i
 
 end subroutine FSI_flatten
+
+
+subroutine FSI_unflatten( &
+  ncomp_flatten, &
+  source_FSI_flatten, &
+  dest_FSI)
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: ncomp_flatten
+REAL_T, INTENT(in) :: source_FSI_flatten(ncomp_flatten)
+type(FSI_container_type), INTENT(out) :: dest_FSI
+INTEGER_T :: local_num_solids
+INTEGER_T :: local_num_nodes
+INTEGER_T :: local_num_elements
+INTEGER_T :: i,j,k,i_flat
+
+local_num_solids=NINT(source_FSI_flatten(FSIcontain_num_solids+1))
+local_num_nodes=NINT(source_FSI_flatten(FSIcontain_max_num_nodes+1))
+local_num_elements=NINT(source_FSI_flatten(FSIcontain_max_num_elements+1))
+
+node_list_size=local_num_solids*local_num_nodes*3
+velocity_list_size=node_list_size
+element_list_size=local_num_solids*local_num_elements*4
+init_node_list_size=node_list_size
+mass_list_size=local_num_solids*local_num_nodes
+temp_list_size=mass_list_size
+
+if (FSI_contain_size.eq.ncomp_flatten) then
+ ! do nothing
+else
+ print *,"expecting FSI_contain_size.eq.ncomp_flatten"
+ stop
+endif
+
+dest_FSI%CTML_num_solids=local_num_solids
+dest_FSI%max_num_nodes=local_num_nodes
+dest_FSI%max_num_elements=local_num_elements
+
+i_flat=1
+do i=1,local_num_solids
+ do j=1,local_num_nodes
+  do k=1,3
+   dest_FSI%prev_node_list(i,j,k)= &
+    source_FSI_flatten(FSIcontain_prev_node_list+i_flat)
+   dest_FSI%node_list(i,j,k)= &
+    source_FSI_flatten(FSIcontain_node_list+i_flat)
+   dest_FSI%init_node_list(i,j,k)= &
+    source_FSI_flatten(FSIcontain_init_node_list+i_flat)
+
+   dest_FSI%velocity_list(i,j,k)= &
+    source_FSI_flatten(FSIcontain_velocity_list+i_flat)
+   dest_FSI%prev_velocity_list(i,j,k)= &
+    source_FSI_flatten(FSIcontain_prev_velocity_list+i_flat)
+
+   i_flat=i_flat+1
+  enddo ! k=1,3
+ enddo !j
+enddo ! i
+
+i_flat=1
+do i=1,local_num_solids
+ do j=1,local_num_nodes
+  dest_FSI%mass_list(i,j)= &
+   source_FSI_flatten(FSIcontain_mass_list+i_flat)
+  dest_FSI%temp_list(i,j)= &
+   source_FSI_flatten(FSIcontain_temp_list+i_flat)
+  i_flat=i_flat+1
+ enddo !j
+enddo ! i
+
+
+i_flat=1
+do i=1,local_num_solids
+ do j=1,local_num_elements
+  do k=1,4
+   dest_FSI%element_list(i,j,k)= &
+    NINT(source_FSI_flatten(FSIcontain_element_list+i_flat))
+   i_flat=i_flat+1
+  enddo !k
+ enddo !j
+enddo ! i
+
+end subroutine FSI_unflatten
 
 
 subroutine copyFrom_FSI( &
@@ -9967,40 +10047,40 @@ INTEGER_T :: i
     enddo
 
     dir=1
-    ctml_num_nodes(dir)= &
+    ctml_ngrid_nodes(dir)= &
       NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
-    allocate(ctml_gx(1:ctml_num_nodes(dir)))
-    do i=1,ctml_num_nodes(dir)
+    allocate(ctml_gx(1:ctml_ngrid_nodes(dir)))
+    do i=1,ctml_ngrid_nodes(dir)
      ctml_gx(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
     enddo
-    ctml_min_grid(dir)=dx_max_level(dir)
+    ctml_min_grid_dx(dir)=dx_max_level(dir)
 
     dir=2
-    ctml_num_nodes(dir)= &
+    ctml_ngrid_nodes(dir)= &
       NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
-    allocate(ctml_gy(1:ctml_num_nodes(dir)))
-    do i=1,ctml_num_nodes(dir)
+    allocate(ctml_gy(1:ctml_ngrid_nodes(dir)))
+    do i=1,ctml_ngrid_nodes(dir)
      ctml_gy(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
     enddo
-    ctml_min_grid(dir)=dx_max_level(dir)
+    ctml_min_grid_dx(dir)=dx_max_level(dir)
 
     if (AMREX_SPACEDIM.eq.2) then
      dir=3
-     ctml_num_nodes(dir)=3
-     allocate(ctml_gz(1:ctml_num_nodes(dir)))
-     ctml_min_grid(dir)=sqrt(dx_max_level(1)*dx_max_level(2))
-     do i=1,ctml_num_nodes(dir)
-      ctml_gz(i)=((i-1)*ctml_min_grid(dir))
+     ctml_ngrid_nodes(dir)=3
+     allocate(ctml_gz(1:ctml_ngrid_nodes(dir)))
+     ctml_min_grid_dx(dir)=sqrt(dx_max_level(1)*dx_max_level(2))
+     do i=1,ctml_ngrid_nodes(dir)
+      ctml_gz(i)=((i-1)*ctml_min_grid_dx(dir))
      enddo
     else if (AMREX_SPACEDIM.eq.3) then
      dir=AMREX_SPACEDIM
-     ctml_num_nodes(dir)= &
+     ctml_ngrid_nodes(dir)= &
       NINT((prob_hi(dir) - prob_lo(dir))/dx_max_level(dir))+1
-     allocate(ctml_gz(1:ctml_nz))
-     do i=1,ctml_num_nodes(dir)
+     allocate(ctml_gz(1:ctml_ngrid_nodes(dir)))
+     do i=1,ctml_ngrid_nodes(dir)
       ctml_gz(i)=prob_lo(dir)+((i-1)*dx_max_level(dir))
      enddo
-     ctml_min_grid(dir)=dx_max_level(dir)
+     ctml_min_grid_dx(dir)=dx_max_level(dir)
     else 
      print *,"AMREX_SPACEDIM invalid"
      stop
@@ -10032,12 +10112,12 @@ INTEGER_T :: i
        ctml_n_fib_active_nodes, &
        nIBM_r_fsh, &
        nIBM_r_esh,nIBM_r_fbc,dtypeDelta, &
-       ctml_min_grid(1), &
-       ctml_min_grid(2), &
-       ctml_min_grid(3), &
-       ctml_num_nodes(1), &
-       ctml_num_nodes(2), &
-       ctml_num_nodes(3), &
+       ctml_min_grid_dx(1), &
+       ctml_min_grid_dx(2), &
+       ctml_min_grid_dx(3), &
+       ctml_ngrid_nodes(1), &
+       ctml_ngrid_nodes(2), &
+       ctml_ngrid_nodes(3), &
        ctml_gx,ctml_gy,ctml_gz, &
        idimin, &
        n_Read_in, &
@@ -10078,14 +10158,17 @@ INTEGER_T :: i
      stop
     endif
 
-    allocate(ctml_fib_pst(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
-    allocate(ctml_fib_vel(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
+    ctml_flatten_size=flatten_size
+
+    initData_FSI( &
+       ctml_FSI_container, &
+       ctml_n_fib_bodies, &
+       ctml_max_n_fib_nodes, &
+       ctml_max_n_fib_elements)
+
     allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
-    allocate(ctml_fib_mass(ctml_n_fib_bodies,ctml_max_n_fib_nodes))
 
-    allocate(ctml_fib_pst_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
-    allocate(ctml_fib_vel_prev(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
-
+FIX ME
     call copy_ibm_fib(ctml_fib_mass, &
             ctml_fib_pst(1,1,1), &
             ctml_fib_pst(1,1,2), &
