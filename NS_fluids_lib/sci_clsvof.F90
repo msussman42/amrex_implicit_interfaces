@@ -35,16 +35,6 @@
 #define BoundingBoxRadNode 2
 #define BoundingBoxRadCell 3
 
-#ifdef BL_USE_MPI
-#define mpi_activate 1
-#else
-#ifdef BL_USE_MPI3
-#define mpi_activate 1
-#else
-#define mpi_activate 0
-#endif
-#endif
-
 module CLSVOFCouplerIO
 use probcommon_module
 
@@ -3780,14 +3770,14 @@ INTEGER_T :: ctml_part_id
     enddo
 
     do dir=1,AMREX_SPACEDIM
-     xval(dir)=ctml_fib_pst(ctml_part_id,inode,dir)
+     xval(dir)=ctml_FSI_container%node_list(ctml_part_id,inode,dir)
      if (inode.gt.1) then
-      xvalm1(dir)=ctml_fib_pst(ctml_part_id,inode-1,dir)
+      xvalm1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode-1,dir)
      endif
      if (inode.lt.orig_nodes) then
-      xvalp1(dir)=ctml_fib_pst(ctml_part_id,inode+1,dir)
+      xvalp1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode+1,dir)
      endif
-     vel_local(dir)=ctml_fib_vel(ctml_part_id,inode,dir)
+     vel_local(dir)=ctml_FSI_container%velocity_list(ctml_part_id,inode,dir)
     enddo
     volm1=zero
     volp1=zero
@@ -3810,9 +3800,9 @@ INTEGER_T :: ctml_part_id
      force_local(dir)=zero
     enddo
     do dir=1,AMREX_SPACEDIM
-     force_local(dir)=ctml_fib_frc(ctml_part_id,inode,dir)
+     force_local(dir)=zero
     enddo
-    mass_local=ctml_fib_mass(ctml_part_id,inode)
+    mass_local=ctml_FSI_container%mass_list(ctml_part_id,inode)
     if (mass_local.gt.zero) then
      ! do nothing
     else
@@ -3986,39 +3976,30 @@ INTEGER_T :: local_elements
 
    inode_crit=0  ! node index of first inactive node.
    inode=0
-#ifdef MVAHABFSI 
-    ! declared in: CTMLFSI.F90
-   call CTML_GET_POS_VEL_WT( &
-    ctml_fib_pst, & ! =coord_fib
-    ctml_fib_vel, & ! =vel_fib
-    ctml_fib_mass,& ! =ds_fib
-    ctml_n_fib_bodies, &
-    ctml_max_n_fib_nodes, &
-    ctml_part_id)
 
-   do inode=1,ctml_n_fib_nodes(ctml_part_id)
-    if (ctml_fib_mass(ctml_part_id,inode).gt.zero) then
+#ifdef MVAHABFSI 
+
+   do inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+    if (ctml_FSI_container%mass_list(ctml_part_id,inode).gt.zero) then
      ! do nothing
-    else if (ctml_fib_mass(ctml_part_id,inode).eq.zero) then 
+    else if (ctml_FSI_container%mass_list(ctml_part_id,inode).eq.zero) then 
      if (inode_crit.eq.0) then
       inode_crit=inode
      endif
     else
-     print *,"ctml_fib_mass(ctml_part_id,inode) invalid"
+     print *,"ctml_FSI_container%mass_list(ctml_part_id,inode) invalid"
      stop
     endif
    enddo ! inode=1,ctml_n_fib_nodes(ctml_part_id)
 
    if (inode_crit.eq.0) then
-     ! all the node masses are positive
-    ctml_n_fib_active_nodes(ctml_part_id)= &
-      ctml_n_fib_nodes(ctml_part_id)
+     ! all the active node masses are positive
    else if (inode_crit.gt.1) then
-    print *,"WARNING:inode_crit>1  inode_crit=",inode_crit
-    ctml_n_fib_active_nodes(ctml_part_id)=inode_crit-1
-    print *,"WARNING:ctml_part_id =",ctml_part_id
-    print *,"WARNING:ctml_n_fib_active_nodes =", &
+    print *,"inode_crit>1  inode_crit=",inode_crit
+    print *,"ctml_part_id =",ctml_part_id
+    print *,"ctml_n_fib_active_nodes =", &
      ctml_n_fib_active_nodes(ctml_part_id)
+    stop
    else
     print *,"inode_crit invalid"
     stop
@@ -9912,7 +9893,7 @@ INTEGER_T :: idimin
 INTEGER_T :: n_Read_in
 logical :: theboss
 
-INTEGER_T :: i
+INTEGER_T :: i,j
 
   if ((local_caller_id.eq.caller_initData).or. &
       (local_caller_id.eq.caller_post_restart)) then
@@ -10168,67 +10149,62 @@ INTEGER_T :: i
 
     allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
 
-FIX ME
-    call copy_ibm_fib(ctml_fib_mass, &
-            ctml_fib_pst(1,1,1), &
-            ctml_fib_pst(1,1,2), &
-            ctml_fib_pst(1,1,3))
-
     if (local_caller_id.eq.caller_initdata) then
-FIX ME (1) fortran flatten and unflatten and allocate and copy
-     i_flat=1
+
+     call copy_ibm_fib( &
+        ctml_FSI_container%mass_list, &
+        ctml_FSI_container%node_list(1,1,1), &
+        ctml_FSI_container%node_list(1,1,2), &
+        ctml_FSI_container%node_list(1,1,3))
+
      do dir=1,3
       do j=1,ctml_max_n_fib_nodes
        do i=1,ctml_n_fib_bodies
-        ctml_fib_vel(i,j,dir)=zero
-        ctml_fib_vel_prev(i,j,dir)=zero
-        ctml_fib_pst_prev(i,j,dir)=ctml_fib_pst(i,j,dir)
-        FSI_output_flattened(FSIcontain_node_list+i_flat)= &
-             ctml_fib_pst_prev(i,j,dir)
-FIX ME
-        i_flat2=i_flat+node_list_size/2
-        FSI_output_flattened(FSIcontain_node_list+i_flat2)= &
-             ctml_fib_pst(i,j,dir)
-        FSI_output_flattened(FSIcontain_init_node_list+i_flat)= &
-             ctml_fib_pst(i,j,dir)
-        FSI_output_flattened(FSIcontain_velocity_list+i_flat)= &
-             ctml_fib_vel_prev(i,j,dir)
-FIX ME
-        i_flat2=i_flat+velocity_list_size/2
-        FSI_output_flattened(FSIcontain_velocity_list+i_flat2)= &
-             ctml_fib_vel(i,j,dir)
-        i_flat=i_flat+1
+        ctml_FSI_container%prev_node_list(i,j,dir)= &
+           ctml_FSI_container%node_list(i,j,dir)
+        ctml_FSI_container%init_node_list(i,j,dir)= &
+           ctml_FSI_container%node_list(i,j,dir)
+        ctml_FSI_container%velocity_list(i,j,dir)=0.0d0
+        ctml_FSI_container%prev_velocity_list(i,j,dir)=0.0d0
        enddo !i
       enddo !j
      enddo !dir
 
-     i_flat=1
      do dir=1,4
       do j=1,ctml_max_n_fib_elements
        do i=1,ctml_n_fib_bodies
-        FSI_output_flattened(FSIcontain_element_list+i_flat)=j+dir-1
-        i_flat=i_flat+1
+        ctml_FSI_container%element_list(i,j,dir)=j+dir-1
        enddo 
       enddo 
      enddo 
 
-     i_flat=1
      do j=1,ctml_max_n_fib_nodes
       do i=1,ctml_n_fib_bodies
-       FSI_output_flattened(FSIcontain_mass_list+i_flat)= &
-           ctml_fib_mass(i,j,dir)
-       FSI_output_flattened(FSIcontain_temp_list+i_flat)=273.0d0
-       i_flat=i_flat+1
+       ctml_FSI_container%temp_list(i,j)=273.0d0
       enddo !i
      enddo !j
 
     else if (local_caller_id.eq.caller_post_restart) then
 
+     call FSI_unflatten( &
+        ncomp_flatten, &
+        FSI_input_flattened, &
+        CTML_FSI_container)
+
     else
      print *,"local_caller_id invalid"
      stop
     endif
-   FIX ME
+
+    call FSI_flatten( &
+       ncomp_flatten, &
+       FSI_input_flattened, &
+       CTML_FSI_container)
+    call FSI_flatten( &
+       ncomp_flatten, &
+       FSI_output_flattened, &
+       CTML_FSI_container)
+   
    else if (CTML_FSI_INIT.eq.1) then
     ! do nothing
    else
@@ -10388,12 +10364,7 @@ FIX ME
       !           init_helix, or init_from_cas)
       ! if CTML materials exists, then,
       !   overall_solid_init calls CTML_init_sci 
-      !   CTML_init_sci calls CTML_GET_POS_VEL_FORCE_WT 
-      !   (declared in CTMLFSI.F90)
-      ! ctml_fib_pst =coord_fib
-      ! ctml_fib_vel =vel_fib
-      ! ctml_fib_frc =force_fib
-      ! ctml_fib_mass=ds_fib
+      !   CTML_init_sci copies data from ctml_FSI_container
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       ! ReadHeader
