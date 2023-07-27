@@ -157,20 +157,47 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
   element_list[ielem]=source_FSI.element_list[ielem];
  } 
 
+ if (source_FSI.node_list.size()==
+     source_FSI.prev_node_list.size()) {
+  //do nothing
+ } else
+  amrex::Errror("node_list or prev_node_list size invalid");
+
+ if (source_FSI.node_list.size()==
+     source_FSI.init_node_list.size()) {
+  //do nothing
+ } else
+  amrex::Errror("node_list or init_node_list size invalid");
+
+ if (source_FSI.node_list.size()==
+     source_FSI.velocity_list.size()) {
+  //do nothing
+ } else
+  amrex::Errror("node_list or velocity_list size invalid");
+
+ if (source_FSI.node_list.size()==
+     source_FSI.prev_velocity_list.size()) {
+  //do nothing
+ } else
+  amrex::Errror("node_list or prev_velocity_list size invalid");
+
  for (int inode=0;inode<source_FSI.node_list.size();inode++) {
   node_list[inode]=source_FSI.node_list[inode];
   prev_node_list[inode]=source_FSI.prev_node_list[inode];
+  init_node_list[inode]=source_FSI.init_node_list[inode];
   velocity_list[inode]=source_FSI.velocity_list[inode];
   prev_velocity_list[inode]=source_FSI.prev_velocity_list[inode];
  } 
 
+ if (source_FSI.mass_list.size()==
+     source_FSI.temp_list.size()) {
+  //do nothing
+ } else
+  amrex::Errror("mass_list or temp_list size invalid");
+
  for (int inode=0;inode<source_FSI.mass_list.size();inode++) {
   mass_list[inode]=source_FSI.mass_list[inode];
   temp_list[inode]=source_FSI.temp_list[inode];
- }
-
- for (int inode=0;inode<source_FSI.init_node_list.size();inode++) {
-  init_node_list[inode]=source_FSI.init_node_list[inode];
  }
 
 } // end subroutine copyFrom_FSI

@@ -68,6 +68,13 @@ void initData_FSI(
 void copyFrom_FSI(const FSI_container_class& source_FSI);
 void clear_FSI();
 
+virtual ~FSI_container_class ();
+
+FSI_container_class() { 
+  CTML_num_solids=0;
+  max_num_nodes=0;
+  max_num_elements=0};
+
 };
 
 class AmrLevel
