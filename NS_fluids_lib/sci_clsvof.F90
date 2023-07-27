@@ -232,6 +232,158 @@ REAL_T, dimension(:,:), allocatable :: ctml_fib_mass
 
 contains
 
+subroutine initData_FSI( &
+  dest_FSI, &
+  CTML_num_solids_init, &
+  max_num_nodes_init, &
+  max_num_elements_init)
+IMPLICIT NONE
+
+type(FSI_container_type), INTENT(inout) :: dest_FSI
+INTEGER_T, INTENT(in) :: CTML_num_solids_init
+INTEGER_T, INTENT(in) :: max_num_nodes_init
+INTEGER_T, INTENT(in) :: max_num_elements_init
+
+dest_FSI%CTML_num_solids=CTML_num_solids_init
+dest_FSI%max_num_nodes=max_num_nodes_init
+dest_FSI%max_num_elements=max_num_elements_init
+
+allocate(dest_FSI%prev_node_list(CTML_num_solids_init, &
+   max_num_nodes_init,3))
+allocate(dest_FSI%node_list(CTML_num_solids_init, &
+   max_num_nodes_init,3))
+allocate(dest_FSI%init_node_list(CTML_num_solids_init, &
+   max_num_nodes_init,3))
+allocate(dest_FSI%prev_velocity_list(CTML_num_solids_init, &
+   max_num_nodes_init,3))
+allocate(dest_FSI%velocity_list(CTML_num_solids_init, &
+   max_num_nodes_init,3))
+allocate(dest_FSI%mass_list(CTML_num_solids_init, &
+   max_num_nodes_init))
+allocate(dest_FSI%temp_list(CTML_num_solids_init, &
+   max_num_nodes_init))
+allocate(dest_FSI%element_list(CTML_num_solids_init, &
+   max_num_elements_init,4))
+
+end subroutine initData_FSI
+
+subroutine FSI_flatten( &
+  ncomp_flatten, &
+  dest_FSI_flatten, &
+  source_FSI)
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: ncomp_flatten
+REAL_T, INTENT(out) :: dest_FSI_flatten(ncomp_flatten)
+type(FSI_container_type), INTENT(in) :: source_FSI
+INTEGER_T :: local_num_solids
+INTEGER_T :: local_num_nodes
+INTEGER_T :: local_num_elements
+INTEGER_T :: i,j,k
+
+local_num_solids=source_FSI%CTML_num_solids
+local_num_nodes=source_FSI%max_num_nodes
+local_num_elements=source_FSI%max_num_elements
+
+node_list_size=local_num_solids*local_num_nodes*3;
+    velocity_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
+    init_node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    mass_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
+    temp_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
+
+do i=1,local_num_solids
+ do j=1,local_num_nodes
+  do k=1,3
+   dest_FSI%prev_node_list(i,j,k)= &
+     source_FSI%prev_node_list(i,j,k)
+   dest_FSI%node_list(i,j,k)= &
+     source_FSI%node_list(i,j,k)
+   dest_FSI%init_node_list(i,j,k)= &
+     source_FSI%init_node_list(i,j,k)
+   dest_FSI%prev_velocity_list(i,j,k)= &
+     source_FSI%prev_velocity_list(i,j,k)
+   dest_FSI%velocity_list(i,j,k)= &
+     source_FSI%velocity_list(i,j,k)
+  enddo ! k=1,3
+  dest_FSI%mass_list(i,j)= &
+    source_FSI%mass_list(i,j)
+  dest_FSI%temp_list(i,j)= &
+    source_FSI%temp_list(i,j)
+ enddo !j
+ do j=1,local_num_elements
+  do k=1,4
+   dest_FSI%element_list(i,j,k)= &
+     source_FSI%element_list(i,j,k)
+  enddo !k
+ enddo ! j
+enddo ! i
+
+end subroutine copyFrom_FSI
+
+
+subroutine copyFrom_FSI( &
+  dest_FSI, &
+  source_FSI)
+IMPLICIT NONE
+
+type(FSI_container_type), INTENT(out) :: dest_FSI
+type(FSI_container_type), INTENT(in) :: source_FSI
+INTEGER_T :: local_num_solids
+INTEGER_T :: local_num_nodes
+INTEGER_T :: local_num_elements
+INTEGER_T :: i,j,k
+
+local_num_solids=source_FSI%CTML_num_solids
+local_num_nodes=source_FSI%max_num_nodes
+local_num_elements=source_FSI%max_num_elements
+
+do i=1,local_num_solids
+ do j=1,local_num_nodes
+  do k=1,3
+   dest_FSI%prev_node_list(i,j,k)= &
+     source_FSI%prev_node_list(i,j,k)
+   dest_FSI%node_list(i,j,k)= &
+     source_FSI%node_list(i,j,k)
+   dest_FSI%init_node_list(i,j,k)= &
+     source_FSI%init_node_list(i,j,k)
+   dest_FSI%prev_velocity_list(i,j,k)= &
+     source_FSI%prev_velocity_list(i,j,k)
+   dest_FSI%velocity_list(i,j,k)= &
+     source_FSI%velocity_list(i,j,k)
+  enddo ! k=1,3
+  dest_FSI%mass_list(i,j)= &
+    source_FSI%mass_list(i,j)
+  dest_FSI%temp_list(i,j)= &
+    source_FSI%temp_list(i,j)
+ enddo !j
+ do j=1,local_num_elements
+  do k=1,4
+   dest_FSI%element_list(i,j,k)= &
+     source_FSI%element_list(i,j,k)
+  enddo !k
+ enddo ! j
+enddo ! i
+
+end subroutine copyFrom_FSI
+
+subroutine deleteData_FSI(dest_FSI)
+IMPLICIT NONE
+
+type(FSI_container_type), INTENT(inout) :: dest_FSI
+
+deallocate(dest_FSI%prev_node_list)
+deallocate(dest_FSI%node_list)
+deallocate(dest_FSI%init_node_list)
+deallocate(dest_FSI%prev_velocity_list)
+deallocate(dest_FSI%velocity_list)
+deallocate(dest_FSI%mass_list)
+deallocate(dest_FSI%temp_list)
+deallocate(dest_FSI%element_list)
+
+end subroutine deleteData_FSI
+
+
 
 ! called from:
 !   initinjector,initflapping,init_from_cas,init_gingerbread2D,
@@ -9886,8 +10038,8 @@ INTEGER_T :: i
      print *,"FSI_input_flattened(FSIcontain_max_num_elements+1 bad"
      stop
     endif
-    node_list_size=2*ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
-    velocity_list_size=2*ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    velocity_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
     element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
     init_node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
     mass_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
