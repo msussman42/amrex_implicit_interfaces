@@ -10192,7 +10192,7 @@ INTEGER_T :: i,j
         CTML_FSI_container)
 
     else
-     print *,"local_caller_id invalid"
+     print *,"local_caller_id invalid in CLSVOF_ReadHeader: ",local_caller_id
      stop
     endif
 
@@ -10217,6 +10217,7 @@ INTEGER_T :: i,j
    do part_id=1,TOTAL_NPARTS
 
      im_part=im_solid_mapF(part_id)+1
+
      if (CTML_FSI_mat(im_part).eq.1) then 
 
       ctml_part_id=ctml_part_id+1
@@ -10230,30 +10231,11 @@ INTEGER_T :: i,j
       FSI(part_id)%deforming_part=1
       FSI(part_id)%CTML_flag=1
 
-      num_nodes_list(im_part)=ctml_n_fib_nodes(ctml_part_id)
-      num_elements_list(im_part)=ctml_n_fib_nodes(ctml_part_id)-1
-
-      if (max_num_nodes_list(im_part).eq.ctml_max_n_fib_nodes) then
-       ! do nothing
-      else
-       print *,"max_num_nodes_list(im_part).eq.ctml_max_n_fib_nodes failed: "
-       print *,"im_part=",im_part
-       print *,"max_num_nodes_list(im_part)=",max_num_nodes_list(im_part)
-       print *,"ctml_max_n_fib_nodes=",ctml_max_n_fib_nodes
-       stop
-      endif
-      if (max_num_elements_list(im_part).eq.ctml_max_n_fib_nodes-1) then
-       ! do nothing
-      else
-       print *,"max_num_elements_list(im_part).eq.ctml_max_n_fib_nodes-1 fail"
-       print *,"im_part=",im_part
-       print *,"max_num_elements_list(im_part)=",max_num_elements_list(im_part)
-       print *,"ctml_max_n_fib_nodes=",ctml_max_n_fib_nodes
-       stop
-      endif
      else if (CTML_FSI_mat(im_part).eq.0) then
+
       FSI(part_id)%deforming_part=0
       FSI(part_id)%CTML_flag=0
+
      else
       print *,"CTML_FSI_mat(im_part) invalid"
       stop
@@ -10390,90 +10372,6 @@ INTEGER_T :: i,j
    stop
   endif
 
-  else if ((im_critical.ge.1).and. &
-           (im_critical.lt.num_materials)) then
-   !do nothing
-  else
-   print *,"im_critical invalid"
-   stop
-  endif
-
-  if ((im_critical.ge.0).and. &
-      (im_critical.lt.num_materials)) then
-   ctml_part_id=0
-   do part_id=1,TOTAL_NPARTS
-    im_part=im_solid_mapF(part_id)+1
-    if (CTML_FSI_mat(im_part).eq.1) then 
-     ctml_part_id=ctml_part_id+1
-     if (ctml_part_id_map(part_id).eq.ctml_part_id) then
-      if (im_part.eq.im_critical+1) then
-
-       FSI_output_max_num_nodes=max_num_nodes_list(im_part)
-       FSI_output_max_num_elements=max_num_elements_list(im_part)
-       FSI_output_num_nodes=num_nodes_list(im_part)
-       FSI_output_num_elements=num_elements_list(im_part)
-
-       do inode=1,ctml_max_n_fib_nodes
-
-        do idir=1,NCOMP_FORCE_STRESS
-         FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)=zero
-        enddo
-
-        do idir=1,AMREX_SPACEDIM
-         FSI_output_node_list((inode-1)*3+idir)= &
-           ctml_fib_pst(ctml_part_id,inode,idir)
-         FSI_output_displacement_list((inode-1)*3+idir)=zero
-         FSI_output_velocity_halftime_list((inode-1)*3+idir)= &
-           ctml_fib_vel(ctml_part_id,inode,idir)
-         FSI_output_velocity_list((inode-1)*3+idir)= &
-           ctml_fib_vel(ctml_part_id,inode,idir)
-         FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)= &
-           ctml_fib_frc(ctml_part_id,inode,idir)
-        enddo !idir=1,sdim
-
-        FSI_output_mass_list(inode)=ctml_fib_mass(ctml_part_id,inode)
-        FSI_output_temperature_list(inode)=293.0d0
-       enddo ! inode=1,ctml_max_n_fib_nodes 
-
-       if (FSI_output_max_num_elements.eq. &
-           ctml_max_n_fib_nodes-1) then
-        do ielem=1,ctml_max_n_fib_nodes-1
-         do inode=1,AMREX_SPACEDIM
-          FSI_output_element_list(4*(ielem-1)+inode)=ielem+inode-1
-         enddo
-        enddo
-       else
-        print *,"mismatch:"
-        print *,"im_part=",im_part
-        print *,"FSI_output_max_num_elements=",  &
-          FSI_output_max_num_elements
-        print *,"ctml_max_n_fib_nodes ", &
-          ctml_max_n_fib_nodes
-        stop
-       endif
-      else if ((im_part.ge.1).and.(im_part.le.num_materials)) then
-       ! do nothing
-      else
-       print *,"im_part invalid"
-       stop
-      endif
-     else
-      print *,"ctml_part_id_map(part_id) invalid"
-      stop
-     endif
-    else if (CTML_FSI_mat(im_part).eq.0) then
-     ! do nothing
-    else
-     print *,"CTML_FSI_mat(im_part) invalid"
-     stop
-    endif
-   enddo ! part_id=1,TOTAL_NPARTS
-
-  else
-   print *,"im_critical invalid"
-   stop
-  endif
- 
 return
 end subroutine CLSVOF_ReadHeader
 
@@ -15498,6 +15396,8 @@ end subroutine find_grid_bounding_box_node
 ! (FSI_operation.eq.OP_FSI_UPDATE_NODES, 
 !  FSI_sub_operation.eq.SUB_OP_FSI_DEFAULT)
 ! isout==1 => verbose
+
+FIX ME
 subroutine CLSVOF_ReadNodes( &
   im_critical, & !0..2*num_materials-1
   max_num_nodes_list, &

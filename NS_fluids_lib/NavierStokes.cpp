@@ -8326,14 +8326,14 @@ void NavierStokes::ns_header_msg_level(
    //initialize node locations; generate_new_triangles
   if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
 
-   if (local_caller_id==caller_post_restart)  {
+   if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==0) {
+    //do nothing
+   } else if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
+ 	      CTML_FSI_numsolids) {
     FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
     FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
-   } else if (local_caller_id==caller_initData) {
-    //do nothing
-   } else {
-    amrex::Error("local_caller_id invalid");
-   }
+   } else
+    amrex::Error("new_data_FSI[slab_step+1].CTML_num_solids incorrect");
 
    //update node locations
   } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
@@ -8443,40 +8443,21 @@ void NavierStokes::ns_header_msg_level(
       &plot_interval,
       &ioproc);
 
-      FIX ME unflatten the output ...
+   FSI_input.FSI_unflatten(FSI_input_flattened);
+   FSI_output.FSI_unflatten(FSI_output_flattened);
 
-     if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
+   if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
 
-      if (max_num_nodes_list[im_index]>0) {
-       for (int i=0;i<=ns_time_order;i++) {
-        ns_level0.new_data_FSI[i][im_index]. 
-          copyFrom_FSI(FSI_output[im_index]); 
-       }
-      } else if (max_num_nodes_list[im_index]==0) {
-       //do nothing
-      } else 
-       amrex::Error("max_num_nodes_list invalid");
+    for (int i=0;i<=ns_time_order;i++) {
+     ns_level0.new_data_FSI[i].copyFrom_FSI(FSI_output); 
+    }
 
-     } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
+   } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
 
-      if (ipass==1) {
+    ns_level0.new_data_FSI[slab_step+1].copyFrom_FSI(FSI_output); 
 
-       if (max_num_nodes_list[im_index]>0) {
-        ns_level0.new_data_FSI[slab_step+1][im_index]. 
-          copyFrom_FSI(FSI_output[im_index]); 
-       } else if (max_num_nodes_list[im_index]==0) {
-        //do nothing
-       } else 
-        amrex::Error("max_num_nodes_list invalid");
-  
-      }
-
-     } else
-      amrex::Error("FSI_operation invalid");
-
-    } //im_index=0 ... num_materials-1
-
-   } // for (int ipass=0;ipass<number_passes;ipass++) {
+   } else
+    amrex::Error("FSI_operation invalid");
 
    CTML_FSI_init=1;
 
