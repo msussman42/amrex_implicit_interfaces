@@ -8443,6 +8443,8 @@ void NavierStokes::ns_header_msg_level(
       &plot_interval,
       &ioproc);
 
+      FIX ME unflatten the output ...
+
      if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
 
       if (max_num_nodes_list[im_index]>0) {
