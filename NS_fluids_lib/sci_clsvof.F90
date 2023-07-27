@@ -285,41 +285,67 @@ local_num_solids=source_FSI%CTML_num_solids
 local_num_nodes=source_FSI%max_num_nodes
 local_num_elements=source_FSI%max_num_elements
 
-node_list_size=local_num_solids*local_num_nodes*3;
-    velocity_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
-    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
-    init_node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
-    mass_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
-    temp_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
+node_list_size=local_num_solids*local_num_nodes*3
+velocity_list_size=node_list_size
+element_list_size=local_num_solids*local_num_elements*4
+init_node_list_size=node_list_size
+mass_list_size=local_num_solids*local_num_nodes
+temp_list_size=mass_list_size
 
+if (FSI_contain_size.eq.ncomp_flatten) then
+ ! do nothing
+else
+ print *,"expecting FSI_contain_size.eq.ncomp_flatten"
+ stop
+endif
+
+dest_FSI_flatten(FSIcontain_num_solids+1)=local_num_solids
+dest_FSI_flatten(FSIcontain_max_num_nodes+1)=local_num_nodes
+dest_FSI_flatten(FSIcontain_max_num_elements+1)=local_num_elements
+
+i_flat=1
 do i=1,local_num_solids
  do j=1,local_num_nodes
   do k=1,3
-   dest_FSI%prev_node_list(i,j,k)= &
+   dest_FSI_flatten(FSIcontain_prev_node_list+i_flat)= &
      source_FSI%prev_node_list(i,j,k)
-   dest_FSI%node_list(i,j,k)= &
+   dest_FSI_flatten(FSIcontain_node_list+i_flat)= &
      source_FSI%node_list(i,j,k)
-   dest_FSI%init_node_list(i,j,k)= &
+   dest_FSI_flatten(FSIcontain_init_node_list+i_flat)= &
      source_FSI%init_node_list(i,j,k)
-   dest_FSI%prev_velocity_list(i,j,k)= &
-     source_FSI%prev_velocity_list(i,j,k)
-   dest_FSI%velocity_list(i,j,k)= &
+   dest_FSI_flatten(FSIcontain_velocity_list+i_flat)= &
      source_FSI%velocity_list(i,j,k)
+   dest_FSI_flatten(FSIcontain_prev_velocity_list+i_flat)= &
+     source_FSI%prev_velocity_list(i,j,k)
+   i_flat=i_flat+1
   enddo ! k=1,3
-  dest_FSI%mass_list(i,j)= &
-    source_FSI%mass_list(i,j)
-  dest_FSI%temp_list(i,j)= &
-    source_FSI%temp_list(i,j)
  enddo !j
- do j=1,local_num_elements
-  do k=1,4
-   dest_FSI%element_list(i,j,k)= &
-     source_FSI%element_list(i,j,k)
-  enddo !k
- enddo ! j
 enddo ! i
 
-end subroutine copyFrom_FSI
+i_flat=1
+do i=1,local_num_solids
+ do j=1,local_num_nodes
+  dest_FSI_flatten(FSIcontain_mass_list+i_flat)= &
+    source_FSI%mass_list(i,j)
+  dest_FSI_flatten(FSIcontain_temp_list+i_flat)= &
+    source_FSI%temp_list(i,j)
+  i_flat=i_flat+1
+ enddo !j
+enddo ! i
+
+
+i_flat=1
+do i=1,local_num_solids
+ do j=1,local_num_elements
+  do k=1,4
+   dest_FSI_flatten(FSIcontain_element_list+i_flat)= &
+    source_FSI%element_list(i,j,k)
+   i_flat=i_flat+1
+  enddo !k
+ enddo !j
+enddo ! i
+
+end subroutine FSI_flatten
 
 
 subroutine copyFrom_FSI( &
