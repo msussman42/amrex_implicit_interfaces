@@ -1,10 +1,6 @@
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !@c
       subroutine restartInput_esh(nt0,nt,nnt)
-!@T 
-!routine to output gemtery of the FE shells in input format required 
-! to run Vicar3D.
-!@q
       USE HeaderFSI
       implicit none
       CHARACTER(LEN=60) :: Formatin,infile

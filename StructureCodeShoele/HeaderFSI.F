@@ -2,9 +2,6 @@
 !  Flow Physics and Computation Lab
 !   
 !
-!  FSI module for
-!  VICAR3D, a viscous, Cartesian, 3D flow solver.
-!
 !  This is a contineously developing project.
 !
 !  Starting Developers:
@@ -18,7 +15,7 @@
 
 !@T
 !\section{Introduction}
-! This subroutine provides FSI module for {\bf Vicar3D} solver\\
+! This subroutine provides FSI module for solver\\
 ! This version is written and modified by Kourosh Shoele 
 !@q
 
