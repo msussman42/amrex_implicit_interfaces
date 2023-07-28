@@ -3947,7 +3947,7 @@ INTEGER_T :: dir
 INTEGER_T, INTENT(in) :: istep
 INTEGER_T, INTENT(in) :: istop
 INTEGER_T :: ctml_part_id
-INTEGER_T :: inode_crit,inode
+INTEGER_T :: inode
 INTEGER_T :: orig_nodes
 INTEGER_T :: orig_elements
 INTEGER_T :: local_nodes
@@ -3974,7 +3974,6 @@ INTEGER_T :: local_elements
 
    FSI(part_id)%CTML_flag=1
 
-   inode_crit=0  ! node index of first inactive node.
    inode=0
 
 #ifdef MVAHABFSI 
@@ -3983,27 +3982,20 @@ INTEGER_T :: local_elements
     if (ctml_FSI_container%mass_list(ctml_part_id,inode).gt.zero) then
      ! do nothing
     else if (ctml_FSI_container%mass_list(ctml_part_id,inode).eq.zero) then 
-     if (inode_crit.eq.0) then
-      inode_crit=inode
-     endif
+     print *,"ctml_FSI_container%mass_list(ctml_part_id,inode)=0!"
+     print *,"ctml_part_id =",ctml_part_id
+     print *,"ctml_n_fib_active_nodes =", &
+      ctml_n_fib_active_nodes(ctml_part_id)
+     stop
     else
      print *,"ctml_FSI_container%mass_list(ctml_part_id,inode) invalid"
+     print *,"ctml_part_id =",ctml_part_id
+     print *,"ctml_n_fib_active_nodes =", &
+      ctml_n_fib_active_nodes(ctml_part_id)
      stop
     endif
    enddo ! inode=1,ctml_n_fib_nodes(ctml_part_id)
 
-   if (inode_crit.eq.0) then
-     ! all the active node masses are positive
-   else if (inode_crit.gt.1) then
-    print *,"inode_crit>1  inode_crit=",inode_crit
-    print *,"ctml_part_id =",ctml_part_id
-    print *,"ctml_n_fib_active_nodes =", &
-     ctml_n_fib_active_nodes(ctml_part_id)
-    stop
-   else
-    print *,"inode_crit invalid"
-    stop
-   endif
 #else
    print *,"in: CTML_init_sci; define MVAHABFSI"
    stop
@@ -10199,7 +10191,7 @@ INTEGER_T :: i,j
      call FSI_unflatten( &
         ncomp_flatten, &
         FSI_input_flattened, &
-        CTML_FSI_container)
+        ctml_FSI_container)
 
     else
      print *,"local_caller_id invalid in CLSVOF_ReadHeader: ",local_caller_id
@@ -10209,11 +10201,11 @@ INTEGER_T :: i,j
     call FSI_flatten( &
        ncomp_flatten, &
        FSI_input_flattened, &
-       CTML_FSI_container)
+       ctml_FSI_container)
     call FSI_flatten( &
        ncomp_flatten, &
        FSI_output_flattened, &
-       CTML_FSI_container)
+       ctml_FSI_container)
    
    else if (CTML_FSI_INIT.eq.1) then
     ! do nothing
@@ -15442,7 +15434,7 @@ REAL_T, INTENT(in) :: problo(3),probhi(3)
 INTEGER_T node_factor 
 INTEGER_T ctml_part_id 
 INTEGER_T fsi_part_id 
-INTEGER_T :: inode_crit,inode
+INTEGER_T :: inode
 INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
 INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
@@ -15462,7 +15454,7 @@ logical :: theboss
     print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid"
     stop
    endif
-  enddo
+  enddo ! do im_sanity_check=1,num_materials
 
   if (h_small.gt.zero) then
    ! do nothing
@@ -15470,10 +15462,12 @@ logical :: theboss
    print *,"h_small invalid"
    stop
   endif
+
   if (current_step.lt.0) then
    print *,"current_step invalid"
    stop
   endif
+
   if (plot_interval.lt.-1) then
    print *,"plot_interval invalid"
    stop
@@ -15501,6 +15495,7 @@ logical :: theboss
    enddo ! part_id=1,TOTAL_NPARTS
 
    if (CTML_FSI_flagF().eq.1) then 
+
 #ifdef MVAHABFSI
 
     if (NINT(FSI_input_flattened(FSIcontain_num_solids+1)).eq. &
@@ -15595,8 +15590,6 @@ logical :: theboss
        stop
       endif
 
-      inode_crit=0 ! node index of first inactive node.
-
       do inode=1,ctml_n_fib_active_nodes(ctml_part_id)
        if (FSI_input_container%mass_list(ctml_part_id,inode).gt.zero) then
          ! do nothing
@@ -15666,6 +15659,30 @@ logical :: theboss
     stop
 #endif
 
+    do dir=1,3
+     do j=1,ctml_max_n_fib_nodes
+      do i=1,ctml_n_fib_bodies
+       FSI_output_container%prev_node_list(i,j,dir)= &
+         FSI_input_container%node_list(i,j,dir)
+       FSI_output_container%init_node_list(i,j,dir)= &
+         FSI_input_container%init_node_list(i,j,dir)
+       FSI_output_container%prev_velocity_list(i,j,dir)= &
+         FSI_input_container%velocity_list(i,j,dir)
+      enddo !i
+     enddo !j
+    enddo !dir
+
+    do j=1,ctml_max_n_fib_nodes
+     do i=1,ctml_n_fib_bodies
+      FSI_output_container%temp_list(i,j)= &
+        FSI_input_container%temp_list(i,j)
+     enddo !i
+    enddo !j
+
+    call copyFrom_FSI(ctml_FSI_container,FSI_output_container)
+
+    call FSI_flatten(ncomp_flatten,FSI_output_flattened,FSI_output_container)
+
 #else
     print *,"define MVAHABFSI"
     stop
@@ -15677,206 +15694,120 @@ logical :: theboss
     stop
    endif
 
-    do part_id=1,TOTAL_NPARTS
+   do part_id=1,TOTAL_NPARTS
 
-     FSI(part_id)%part_id=part_id
+    FSI(part_id)%part_id=part_id
 
-     ctml_part_id=ctml_part_id_map(part_id)
-     fsi_part_id=fsi_part_id_map(part_id)
+    ctml_part_id=ctml_part_id_map(part_id)
+    fsi_part_id=fsi_part_id_map(part_id)
 
-     if (((ctml_part_id.ge.1).and. &
-          (ctml_part_id.le.CTML_NPARTS)).or. &
-         ((fsi_part_id.ge.1).and. &
-          (fsi_part_id.le.FSI_NPARTS))) then
+    if (((ctml_part_id.ge.1).and. &
+         (ctml_part_id.le.CTML_NPARTS)).or. &
+        ((fsi_part_id.ge.1).and. &
+         (fsi_part_id.le.FSI_NPARTS))) then
 
-      if ((ctml_part_id.gt.0).and. &
-          (ctml_part_id.le.CTML_NPARTS)) then
+     if ((ctml_part_id.gt.0).and. &
+         (ctml_part_id.le.CTML_NPARTS)) then
 
-       if (AMREX_SPACEDIM.eq.3) then
-        node_factor=1
-        print *,"3D not supported yet"
-       else if (AMREX_SPACEDIM.eq.2) then
-        node_factor=2
-       else
-        print *,"dimension bust"
-        stop
-       endif
-       if (FSI(part_id)%NumNodes.ne. &
-           ctml_n_fib_active_nodes(ctml_part_id)*node_factor) then
-        print *,"NumNodes is corrupt"
-        stop
-       endif
-       if (FSI(part_id)%NumIntElems.ne. &
-           (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor) then
-        print *,"NumIntElems is corrupt"
-        stop
-       endif
-       if (FSI(part_id)%IntElemDim.ne.3) then
-        print *,"FSI(part_id)%IntElemDim.ne.3"
-        stop
-       endif
-
-       if ((ctml_part_id.ge.1).and. &
-           (ctml_part_id.le.CTML_NPARTS)) then
-
-        inode_crit=0 ! node index of first inactive node.
-        inode=0
-#ifdef MVAHABFSI
-        call CTML_GET_POS_VEL_WT( &
-         ctml_fib_pst, &
-         ctml_fib_vel, &
-         ctml_fib_mass, &
-         ctml_n_fib_bodies, &
-         ctml_max_n_fib_nodes, &
-         ctml_part_id)
-
-        do inode=1,ctml_n_fib_nodes(ctml_part_id)
-         if (ctml_fib_mass(ctml_part_id,inode).gt.zero) then
-          ! do nothing
-         else if (ctml_fib_mass(ctml_part_id,inode).eq.zero) then 
-          if (inode_crit.eq.0) then
-           inode_crit=inode
-          endif
-         else
-          print *,"ctml_fib_mass(ctml_part_id,inode) invalid"
-          stop
-         endif
-        enddo ! inode=1,ctml_n_fib_nodes(ctml_part_id)
-
-        if (inode_crit.eq.0) then
-         ctml_n_fib_active_nodes(ctml_part_id)= &
-          ctml_n_fib_nodes(ctml_part_id)
-        else if (inode_crit.gt.1) then
-         print *,"WARNING inode_crit>1  inode_crit=",inode_crit
-          ctml_n_fib_active_nodes(ctml_part_id)=inode_crit-1
-        else
-         print *,"inode_crit invalid"
-         stop
-        endif
-#else
-        print *,"define MVAHABFSI"
-        stop
-#endif
-       else
-        print *,"ctml_part_id invalid"
-        stop
-       endif
-
-       call CTML_init_sci_node(ioproc,part_id,isout)
-      else if (ctml_part_id.eq.0) then
-       ! do nothing
+      if (AMREX_SPACEDIM.eq.3) then
+       node_factor=1
+       print *,"3D not supported yet"
+      else if (AMREX_SPACEDIM.eq.2) then
+       node_factor=2
       else
-       print *,"ctml_part_id invalid" 
+       print *,"dimension bust"
+       stop
+      endif
+      if (FSI(part_id)%NumNodes.ne. &
+          ctml_n_fib_active_nodes(ctml_part_id)*node_factor) then
+       print *,"NumNodes is corrupt"
+       stop
+      endif
+      if (FSI(part_id)%NumIntElems.ne. &
+          (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor) then
+       print *,"NumIntElems is corrupt"
+       stop
+      endif
+      if (FSI(part_id)%IntElemDim.ne.3) then
+       print *,"FSI(part_id)%IntElemDim.ne.3"
        stop
       endif
 
-      if ((fsi_part_id.ge.1).and. &
-          (fsi_part_id.le.FSI_NPARTS)) then
+      if ((ctml_part_id.ge.1).and. &
+          (ctml_part_id.le.CTML_NPARTS)) then
+
+#ifdef MVAHABFSI
+       do inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+        if (FSI_output_container%mass_list(ctml_part_id,inode).gt.zero) then
+         ! do nothing
+        else if &
+         (FSI_output_container%mass_list(ctml_part_id,inode).eq.zero) then
+         print *,"FSI_output_container%mass_list(ctml_part_id,inode)=0.0"
+         stop
+        else
+         print *,"FSI_output_container%mass_list(ctml_part_id,inode)<0.0"
+         stop
+        endif
+       enddo ! inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+
+#else
+       print *,"define MVAHABFSI"
+       stop
+#endif
+      else
+       print *,"ctml_part_id invalid"
+       stop
+      endif
+
+      call CTML_init_sci_node(ioproc,part_id,isout)
+
+     else if (ctml_part_id.eq.0) then
+      ! do nothing
+     else
+      print *,"ctml_part_id invalid" 
+      stop
+     endif
+
+     if ((fsi_part_id.ge.1).and. &
+         (fsi_part_id.le.FSI_NPARTS)) then
        ! ifirst=0 (iread=0) internal to overall_solid_advance.
        ! since ifirst=0 (iread=0) when initinjector called (if probtype=538),
        ! code initializes FSI%solid_displ and FSI%solid_speed
        ! if probtype=701 then initflapping called, but nothing done.
        ! overall_solid_advance calls e.g. whale_geominit, or geominit, or
        !  initinjector, etc
-       call overall_solid_advance(CLSVOF_curtime,CLSVOF_dt,part_id, &
+      call overall_solid_advance(CLSVOF_curtime,CLSVOF_dt,part_id, &
         ioproc,isout)
-      else if (fsi_part_id.eq.0) then
-       ! do nothing
-      else
-       print *,"fsi_part_id invalid"
-       stop
-      endif
-
-      initflag=0
-
-      if (FSI(part_id)%deforming_part.eq.0) then
-       ! do nothing
-      else if (FSI(part_id)%deforming_part.eq.1) then
-        !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
-       call post_process_nodes_elements(initflag,problo,probhi, &
-        FSI(part_id),part_id,TOTAL_NPARTS, &
-        ioproc,isout,h_small)
-      else
-       print *,"FSI(part_id)%deforming_part invalid"
-       stop
-      endif
-
-     else if ((ctml_part_id.eq.0).and. &
-              (fsi_part_id.eq.0)) then
+     else if (fsi_part_id.eq.0) then
       ! do nothing
      else
-      print *,"ctml_part_id or fsi_part_id invalid"
+      print *,"fsi_part_id invalid"
       stop
      endif
 
-    enddo ! part_id=1,TOTAL_NPARTS
+     initflag=0
 
-   endif
-
-   if ((im_critical.ge.num_materials).and. &
-       (im_critical.lt.2*num_materials)) then
-
-    ctml_part_id=0
-    do part_id=1,TOTAL_NPARTS
-     im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(im_part).eq.1) then 
-      ctml_part_id=ctml_part_id+1
-      if (ctml_part_id_map(part_id).eq.ctml_part_id) then
-       if (im_part.eq.im_critical-num_materials+1) then
-        do inode=1,ctml_max_n_fib_nodes
-
-         do idir=1,NCOMP_FORCE_STRESS
-          FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)=zero
-         enddo
-
-         do idir=1,AMREX_SPACEDIM
-          FSI_output_node_list((inode-1)*3+idir)= &
-           ctml_fib_pst(ctml_part_id,inode,idir)
-
-          FSI_output_velocity_halftime_list((inode-1)*3+idir)= &
-             (FSI_output_node_list((inode-1)*3+idir)- &
-              FSI_input_node_list((inode-1)*3+idir))/CLSVOF_dt
-
-          FSI_output_displacement_list((inode-1)*3+idir)= &
-            FSI_input_displacement_list((inode-1)*3+idir)+ &
-            CLSVOF_dt* &
-            FSI_output_velocity_halftime_list((inode-1)*3+idir)
-
-          FSI_output_velocity_list((inode-1)*3+idir)= &
-           ctml_fib_vel(ctml_part_id,inode,idir)
-
-          FSI_output_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)= &
-           ctml_fib_frc(ctml_part_id,inode,idir)
-
-         enddo !idir=1,sdim
-
-         FSI_output_mass_list(inode)=ctml_fib_mass(ctml_part_id,inode)
-         FSI_output_temperature_list(inode)=293.0d0
-        enddo ! inode=1,ctml_max_n_fib_nodes 
-        do ielem=1,ctml_max_n_fib_nodes
-         do inode=1,4
-          FSI_output_element_list(4*(ielem-1)+inode)=ielem
-         enddo
-        enddo
-       else if ((im_part.ge.1).and.(im_part.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_part invalid"
-        stop
-       endif
-      else
-       print *,"ctml_part_id_map(part_id) invalid"
-       stop
-      endif
-     else if (CTML_FSI_mat(im_part).eq.0) then
+     if (FSI(part_id)%deforming_part.eq.0) then
       ! do nothing
+     else if (FSI(part_id)%deforming_part.eq.1) then
+       !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
+      call post_process_nodes_elements(initflag,problo,probhi, &
+       FSI(part_id),part_id,TOTAL_NPARTS, &
+       ioproc,isout,h_small)
      else
-      print *,"CTML_FSI_mat(im_part) invalid"
+      print *,"FSI(part_id)%deforming_part invalid"
       stop
      endif
-    enddo ! part_id=1,TOTAL_NPARTS
 
-   endif
+    else if ((ctml_part_id.eq.0).and. &
+             (fsi_part_id.eq.0)) then
+     ! do nothing
+    else
+     print *,"ctml_part_id or fsi_part_id invalid"
+     stop
+    endif
+
+   enddo ! part_id=1,TOTAL_NPARTS
 
   else
    print *,"TOTAL_NPARTS invalid: ",TOTAL_NPARTS
