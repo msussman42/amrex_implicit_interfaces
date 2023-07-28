@@ -8330,16 +8330,28 @@ void NavierStokes::ns_header_msg_level(
     //do nothing
    } else if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
  	      CTML_FSI_numsolids) {
-    FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
-    FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
+    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes==
+        CTML_max_num_nodes_list) {
+     FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
+     FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
+    } else
+     amrex::Error("new_data_FSI[slab_step+1].max_num_nodes incorrect");
    } else
     amrex::Error("new_data_FSI[slab_step+1].CTML_num_solids incorrect");
 
    //update node locations
   } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
     
-   FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step]);
-   FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
+   if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
+       CTML_FSI_numsolids) {
+    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes==
+        CTML_max_num_nodes_list) {
+     FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step]);
+     FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
+    } else
+     amrex::Error("new_data_FSI[slab_step+1].max_num_nodes incorrect");
+   } else
+    amrex::Error("new_data_FSI[slab_step+1].CTML_num_solids incorrect");
 
    //make distance in narrow band
   } else if (FSI_operation==OP_FSI_MAKE_DISTANCE) {
