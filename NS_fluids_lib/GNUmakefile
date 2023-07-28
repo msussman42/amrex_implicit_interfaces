@@ -211,7 +211,7 @@ ifeq ($(CTML_FBC),TRUE)
 endif
 
 ifeq ($(MEHDI_VAHAB_FSI),TRUE)
-include $(MOF_HOME)/Vicar3D/Make.package
+include $(MOF_HOME)/StructureCodeShoele/Make.package
 endif
 
 ifeq ($(USE_LIBAMREX),FALSE)

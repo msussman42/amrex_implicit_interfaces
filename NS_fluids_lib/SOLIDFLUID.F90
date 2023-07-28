@@ -544,8 +544,7 @@
         endif
          ! cur_time=t^{n+1}
          ! if FSI_flag==FSI_SHOELE_CTML, then
-         !  a) CTML_SOLVE_SOLID is called (in CTMLFSI.F90)
-         !  b) tick is called (in ../Vicar3D/distFSI/tick.F)
+         !  tick_fib is called (in ../StructureCodeShoele/tick.F)
         call CLSVOF_ReadNodes( &
           FSI_input_flattened, &
           FSI_output_flattened, &

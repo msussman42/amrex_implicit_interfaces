@@ -2,9 +2,6 @@
 !  Flow Physics and Computation Lab
 !   
 !
-!  Matrix solver for FSI modules in
-!  VICAR3D, a viscous, Cartesian, 3D flow solver.
-!
 !  This is a contineously developing project.
 !
 !  Starting Developers:
