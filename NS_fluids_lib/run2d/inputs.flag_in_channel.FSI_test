@@ -54,9 +54,6 @@ ns.MOFITERMAX=15
 # 4 CTML
 ns.FSI_flag=0 0 4
 
-# Number of solid geometries
-ns.CTML_FSI_numsolids=1
-
 # 64 x 64 for live simulations
 amr.n_cell    = 64 64
 # 3 for live simulations

@@ -748,8 +748,8 @@ c
       return
       end
 
+      FIX ME (remove Vicar and rename distfib to Shoele_structures)
 c rtime = t^{n+1}
-c
       subroutine tick_fib(
 ! t^{n+1}              
      &     rtime
@@ -759,34 +759,31 @@ c
      &     ,monitorON
 ! plot_int
      &     ,ntsave
-! velocity at t^{n+1/2} uibm1out_fib=vibm1_fib=(x^{n+1}-x^{n})/dt
+     &     ,prev_uibm1in_fib,prev_uibm2in_fib,prev_uibm3in_fib
+     &     ,uibm1in_fib,uibm2in_fib,uibm3in_fib
      &     ,uibm1out_fib,uibm2out_fib,uibm3out_fib
-! force fibm1_fib=fibm1in_fib
      &     ,fibm1in_fib,fibm2in_fib,fibm3in_fib
-! position at t^{n+1}
+     &     ,prev_gx_ibm_massivein_fib
+     &     ,prev_gy_ibm_massivein_fib
+     &     ,prev_gz_ibm_massivein_fib
+     &     ,gx_ibm_massivein_fib
+     &     ,gy_ibm_massivein_fib
+     &     ,gz_ibm_massivein_fib
      &     ,gx_ibm_massiveout_fib
      &     ,gy_ibm_massiveout_fib
      &     ,gz_ibm_massiveout_fib
+     &     ,ds_ibm_fib_in
+     &     ,ds_ibm_fib_out
      &     ,theboss
      &       )
       USE HeaderFSI
-!@T This subroutine calls the structural solver and pass {\bf Vicar3D}
-!variables from subroutine [[solve_membranetest]] or [[solve_membrane]] \\
-
-! this subroutines are called from [[UTIL_BOUNDARY_FORCE_FSI.F90]] file.\\
-! Depending on the mass ratio of the structure $m_s$ different initial values
-! is assumed for the calculation at time $t (n)$ based on the variables at time
-! $t-\Delta t (n-1)$. \\
-!$ x^*=2 * x^{n} - x^{n-1}\/\/ \textrm{if}\/\/  m_s\/\/  \ge\/\/  1.05$ \\
-!$ x^*= x^{n}\/\/\/\/\/\/  \textrm{if}\/\/   m_s\/\/  \ge\/\/  1.05$ \\
-!@q
       implicit none
       real*8, INTENT(out),
      &       UIBM1out_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,UIBM2out_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,UIBM3out_fib(Nr_IBM_fib,Ns_IBM_fib) 
 
-      real*8, INTENT(in), 
+      real*8, INTENT(inout), 
      &       FIBM1in_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,FIBM2in_fib(Nr_IBM_fib,Ns_IBM_fib)
      &      ,FIBM3in_fib(Nr_IBM_fib,Ns_IBM_fib)

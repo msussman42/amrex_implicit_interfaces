@@ -215,7 +215,7 @@ REAL_T, dimension(3) :: ctml_min_grid_dx
 INTEGER_T, dimension(:), allocatable :: ctml_n_fib_active_nodes
 
 type(FSI_container_type) :: ctml_FSI_container
-REAL_T, dimension(:,:), allocatable :: ctml_fib_frc
+REAL_T, dimension(:,:,:), allocatable :: ctml_fib_frc
 
 contains
 
@@ -9888,6 +9888,8 @@ INTEGER_T, dimension(:), allocatable :: nIBM_r_esh
 INTEGER_T, dimension(:), allocatable :: nIBM_r_fbc
 INTEGER_T, dimension(:), allocatable :: nIBM_r
 
+INTEGER_T :: CTML_num_solids_local
+
 REAL_T :: dtypeDelta(3)
 INTEGER_T :: idimin
 INTEGER_T :: n_Read_in
@@ -10015,8 +10017,16 @@ INTEGER_T :: i,j
     call CTML_INTERNAL_MAX_NODES( &
       num_materials, &
       FSI_flag, &
+      CTML_num_solids_local, &
       ctml_max_n_fib_nodes, &
       ctml_max_n_fib_elements)
+
+    if (CTML_num_solids_local.eq.ctml_n_fib_bodies) then
+     !do nothing
+    else
+     print *,"CTML_num_solids_local.eq.ctml_n_fib_bodies test failed"
+     stop
+    endif
 
     do dir=1,AMREX_SPACEDIM
      if (dx_max_level(dir).gt.zero) then
@@ -10141,7 +10151,7 @@ INTEGER_T :: i,j
 
     ctml_flatten_size=flatten_size
 
-    initData_FSI( &
+    call initData_FSI( &
        ctml_FSI_container, &
        ctml_n_fib_bodies, &
        ctml_max_n_fib_nodes, &
@@ -15396,38 +15406,11 @@ end subroutine find_grid_bounding_box_node
 ! (FSI_operation.eq.OP_FSI_UPDATE_NODES, 
 !  FSI_sub_operation.eq.SUB_OP_FSI_DEFAULT)
 ! isout==1 => verbose
-
-FIX ME
 subroutine CLSVOF_ReadNodes( &
-  im_critical, & !0..2*num_materials-1
-  max_num_nodes_list, &
-  max_num_elements_list, &
-  num_nodes_list, &
-  num_elements_list, &
-  FSI_input_max_num_nodes, &
-  FSI_input_max_num_elements, &
-  FSI_input_num_nodes, &
-  FSI_input_num_elements, &
-  FSI_input_node_list, &
-  FSI_input_element_list, &
-  FSI_input_displacement_list, &
-  FSI_input_velocity_halftime_list, &
-  FSI_input_velocity_list, &
-  FSI_input_force_list, &
-  FSI_input_mass_list, &
-  FSI_input_temperature_list, &
-  FSI_output_max_num_nodes, &
-  FSI_output_max_num_elements, &
-  FSI_output_num_nodes, &
-  FSI_output_num_elements, &
-  FSI_output_node_list, &
-  FSI_output_element_list, &
-  FSI_output_displacement_list, &
-  FSI_output_velocity_halftime_list, &
-  FSI_output_velocity_list, &
-  FSI_output_force_list, &
-  FSI_output_mass_list, &
-  FSI_output_temperature_list, &
+  FSI_input_flattened, &
+  FSI_output_flattened, &
+  flatten_size, &
+  local_caller_id, &
   FSI_refine_factor, &
   FSI_bounding_box_ngrow, &
   CLSVOF_curtime, & ! t^{n+1}
@@ -15443,53 +15426,17 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: im_critical
-INTEGER_T, INTENT(inout) :: max_num_nodes_list(num_materials)
-INTEGER_T, INTENT(inout) :: max_num_elements_list(num_materials)
-INTEGER_T, INTENT(inout) :: num_nodes_list(num_materials)
-INTEGER_T, INTENT(inout) :: num_elements_list(num_materials)
-INTEGER_T, INTENT(in) :: FSI_input_max_num_nodes
-INTEGER_T, INTENT(in) :: FSI_input_max_num_elements
-INTEGER_T, INTENT(in) :: FSI_input_num_nodes
-INTEGER_T, INTENT(in) :: FSI_input_num_elements
-REAL_T, INTENT(inout) :: FSI_input_node_list(3*FSI_input_max_num_nodes)
-INTEGER_T, INTENT(inout) :: &
-        FSI_input_element_list(4*FSI_input_max_num_elements)
-REAL_T, INTENT(inout) :: &
-        FSI_input_displacement_list(3*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_input_velocity_halftime_list(3*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_input_velocity_list(3*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_input_force_list(NCOMP_FORCE_STRESS*FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_input_mass_list(FSI_input_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_input_temperature_list(FSI_input_max_num_nodes)
-
-INTEGER_T, INTENT(in) :: FSI_output_max_num_nodes
-INTEGER_T, INTENT(in) :: FSI_output_max_num_elements
-INTEGER_T, INTENT(in) :: FSI_output_num_nodes
-INTEGER_T, INTENT(in) :: FSI_output_num_elements
-REAL_T, INTENT(inout) :: FSI_output_node_list(3*FSI_output_max_num_nodes)
-INTEGER_T, INTENT(inout) :: &
-        FSI_output_element_list(4*FSI_output_max_num_elements)
-REAL_T, INTENT(inout) :: &
-        FSI_output_displacement_list(3*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_output_velocity_halftime_list(3*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_output_velocity_list(3*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: &
-        FSI_output_force_list(NCOMP_FORCE_STRESS*FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_output_mass_list(FSI_output_max_num_nodes)
-REAL_T, INTENT(inout) :: FSI_output_temperature_list(FSI_output_max_num_nodes)
-
+INTEGER_T, INTENT(in) :: flatten_size
+INTEGER_T, INTENT(in) :: local_caller_id
+REAL_T, INTENT(inout) :: FSI_input_flattened(flatten_size)
+REAL_T, INTENT(inout) :: FSI_output_flattened(flatten_size)
 
 INTEGER_T, INTENT(in) :: current_step,plot_interval
 INTEGER_T :: initflag
 INTEGER_T, INTENT(in) :: ioproc,isout
 INTEGER_T :: part_id
-REAL_T, INTENT(in) :: CLSVOF_curtime,CLSVOF_dt
+REAL_T, INTENT(in) :: CLSVOF_curtime
+REAL_T, INTENT(in) :: CLSVOF_dt
 REAL_T, INTENT(in) :: h_small
 REAL_T, INTENT(in) :: problo(3),probhi(3)
 INTEGER_T node_factor 
@@ -15500,6 +15447,10 @@ INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
 INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T :: idir,ielem,im_part
+type(FSI_container_type) :: FSI_input_container
+type(FSI_container_type) :: FSI_output_container
+logical :: monitorON
+logical :: theboss
 
   do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
@@ -15530,150 +15481,201 @@ INTEGER_T :: idir,ielem,im_part
 
   if ((TOTAL_NPARTS.ge.1).and.(TOTAL_NPARTS.le.MAX_PARTS)) then
 
-   if ((im_critical.ge.0).and. &
-       (im_critical.lt.num_materials)) then
-
-    ctml_part_id=0
-    do part_id=1,TOTAL_NPARTS
-     im_part=im_solid_mapF(part_id)+1
-     if (CTML_FSI_mat(im_part).eq.1) then 
-      ctml_part_id=ctml_part_id+1
-      if (ctml_part_id_map(part_id).eq.ctml_part_id) then
-       if (im_part.eq.im_critical+1) then
-        do inode=1,ctml_max_n_fib_nodes
-         do idir=1,AMREX_SPACEDIM
-          ctml_fib_pst_prev(ctml_part_id,inode,idir)= &
-            FSI_input_node_list((inode-1)*3+idir)
-          ctml_fib_vel_halftime_prev(ctml_part_id,inode,idir)= &
-            FSI_input_velocity_halftime_list((inode-1)*3+idir)
-          ctml_fib_vel_prev(ctml_part_id,inode,idir)= &
-            FSI_input_velocity_list((inode-1)*3+idir)
-          ctml_fib_frc(ctml_part_id,inode,idir)= &
-            FSI_input_force_list((inode-1)*NCOMP_FORCE_STRESS+idir)
-         enddo !idir=1,sdim
-         ctml_fib_mass_prev(ctml_part_id,inode)= &
-            FSI_input_mass_list(inode)
-        enddo ! inode=1,ctml_max_n_fib_nodes 
-       else if ((im_part.ge.1).and.(im_part.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_part invalid"
-        stop
-       endif
-      else
-       print *,"ctml_part_id_map(part_id) invalid"
-       stop
-      endif
-     else if (CTML_FSI_mat(im_part).eq.0) then
+   ctml_part_id=0
+   do part_id=1,TOTAL_NPARTS
+    im_part=im_solid_mapF(part_id)+1
+    if (CTML_FSI_mat(im_part).eq.1) then 
+     ctml_part_id=ctml_part_id+1
+     if (ctml_part_id_map(part_id).eq.ctml_part_id) then
       ! do nothing
      else
-      print *,"CTML_FSI_mat(im_part) invalid"
+      print *,"ctml_part_id_map(part_id) invalid"
       stop
      endif
-    enddo ! part_id=1,TOTAL_NPARTS
+    else if (CTML_FSI_mat(im_part).eq.0) then
+     ! do nothing
+    else
+     print *,"CTML_FSI_mat(im_part) invalid"
+     stop
+    endif
+   enddo ! part_id=1,TOTAL_NPARTS
 
-   else if ((im_critical.ge.num_materials).and. &
-            (im_critical.lt.2*num_materials)) then
-    ! do nothing
-   else
-    print *,"im_critical invalid"
-    stop
-   endif
-
-   if (im_critical.eq.num_materials) then
-
-    if (CTML_FSI_flagF().eq.1) then 
+   if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
 
-     do part_id=1,TOTAL_NPARTS
+    if (NINT(FSI_input_flattened(FSIcontain_num_solids+1)).eq. &
+            ctml_n_fib_bodies) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened(FSIcontain_num_solids+1 bad"
+     stop
+    endif
+    if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+1)).eq. &
+            ctml_max_n_fib_nodes) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1 bad"
+     stop
+    endif
+    if (NINT(FSI_input_flattened(FSIcontain_max_num_elements+1)).eq. &
+            ctml_max_n_fib_elements) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened(FSIcontain_max_num_elements+1 bad"
+     stop
+    endif
+    node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    velocity_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
+    init_node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+    mass_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
+    temp_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
 
-      ctml_part_id=ctml_part_id_map(part_id)
+    if (flatten_size.eq.FSIcontain_size) then
+     ! do nothing
+    else
+     print *,"flatten_size<>FSIcontain_size"
+     stop
+    endif
+    if (flatten_size.eq.ctml_flatten_size) then
+     ! do nothing
+    else
+     print *,"flatten_size<>ctml_flatten_size"
+     stop
+    endif
 
-      if ((ctml_part_id.ge.1).and. &
-          (ctml_part_id.le.CTML_NPARTS)) then
+    call initData_FSI( &
+       FSI_input_container, &
+       ctml_n_fib_bodies, &
+       ctml_max_n_fib_nodes, &
+       ctml_max_n_fib_elements)
+    call initData_FSI( &
+       FSI_output_container, &
+       ctml_n_fib_bodies, &
+       ctml_max_n_fib_nodes, &
+       ctml_max_n_fib_elements)
 
-       if (AMREX_SPACEDIM.eq.3) then
-        node_factor=1
-        print *,"3D not supported yet"
-       else if (AMREX_SPACEDIM.eq.2) then
-        node_factor=2
-       else
-        print *,"dimension bust"
-        stop
-       endif
-       if (FSI(part_id)%NumNodes.ne. &
-           ctml_n_fib_active_nodes(ctml_part_id)*node_factor) then
-        print *,"NumNodes is corrupt"
-        stop
-       endif
-       if (FSI(part_id)%NumIntElems.ne. &
-           (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor) then
-        print *,"NumIntElems is corrupt"
-        stop
-       endif
-       if (FSI(part_id)%IntElemDim.ne.3) then
-        print *,"FSI(part_id)%IntElemDim.ne.3"
-        stop
-       endif
+    call FSI_unflatten( &
+      ctml_flatten_size, &
+      FSI_input_flattened, &
+      FSI_input_container)
+    call FSI_unflatten( &
+      ctml_flatten_size, &
+      FSI_output_flattened, &
+      FSI_output_container)
 
-       inode_crit=0 ! node index of first inactive node.
-       call CTML_PUT_FORCE( &
-         ctml_fib_frc, &
-         ctml_n_fib_bodies, &
-         ctml_max_n_fib_nodes, &
-         ctml_part_id)
+    do part_id=1,TOTAL_NPARTS
 
-       do inode=1,ctml_n_fib_nodes(ctml_part_id)
-        if (ctml_fib_mass_prev(ctml_part_id,inode).gt.zero) then
-         ! do nothing
-        else if (ctml_fib_mass_prev(ctml_part_id,inode).eq.zero) then 
-         if (inode_crit.eq.0) then
-          inode_crit=inode
-         endif
-        else
-         print *,"ctml_fib_mass_prev(ctml_part_id,inode) invalid"
-         stop
-        endif
-       enddo ! inode=1,ctml_n_fib_nodes(ctml_part_id)
+     ctml_part_id=ctml_part_id_map(part_id)
 
-       if (inode_crit.eq.0) then
-        ctml_n_fib_active_nodes(ctml_part_id)= &
-         ctml_n_fib_nodes(ctml_part_id)
-       else if (inode_crit.gt.1) then
-        print *,"WARNING inode_crit>1  inode_crit=",inode_crit
-        ctml_n_fib_active_nodes(ctml_part_id)=inode_crit-1
-       else
-        print *,"inode_crit invalid"
-        stop
-       endif
+     if ((ctml_part_id.ge.1).and. &
+         (ctml_part_id.le.CTML_NPARTS)) then
 
-      else if (ctml_part_id.eq.0) then
-       ! do nothing
+      if (AMREX_SPACEDIM.eq.3) then
+       node_factor=1
+       print *,"3D not supported yet"
+      else if (AMREX_SPACEDIM.eq.2) then
+       node_factor=2
       else
-       print *,"ctml_part_id invalid" 
+       print *,"dimension bust"
+       stop
+      endif
+      if (FSI(part_id)%NumNodes.ne. &
+          ctml_n_fib_active_nodes(ctml_part_id)*node_factor) then
+       print *,"NumNodes is corrupt"
+       stop
+      endif
+      if (FSI(part_id)%NumIntElems.ne. &
+          (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor) then
+       print *,"NumIntElems is corrupt"
+       stop
+      endif
+      if (FSI(part_id)%IntElemDim.ne.3) then
+       print *,"FSI(part_id)%IntElemDim.ne.3"
        stop
       endif
 
-     enddo ! part_id=1,TOTAL_NPARTS
+      inode_crit=0 ! node index of first inactive node.
 
-     ! declared in: CTMLFSI.F90
-     call CTML_SOLVE_SOLID( &
-      CLSVOF_curtime, &
+      do inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+       if (FSI_input_container%mass_list(ctml_part_id,inode).gt.zero) then
+         ! do nothing
+       else if &
+         (FSI_input_container%mass_list(ctml_part_id,inode).eq.zero) then
+        print *,"FSI_input_container%mass_list(ctml_part_id,inode)=0.0"
+        stop
+       else
+        print *,"FSI_input_container%mass_list(ctml_part_id,inode)<0.0"
+        stop
+       endif
+      enddo ! inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+
+     else if (ctml_part_id.eq.0) then
+      ! do nothing
+     else
+      print *,"ctml_part_id invalid" 
+      stop
+     endif
+
+    enddo ! part_id=1,TOTAL_NPARTS
+
+    if (isout.gt.0) then
+     monitorON=.true.
+    else
+     monitorON=.false.
+    endif
+    if (ioproc.eq.1) then
+     theboss=.true.
+    else
+     theboss=.false.
+    endif
+
+#ifdef INCLUDE_FIB
+    call tick_fib( &
+      CLSVOF_cur_time, &  ! t^{n+1}
       CLSVOF_dt, &
       current_step, &
-      isout, &
+      monitorON, &
       plot_interval, &
-      ioproc)
-#else
-     print *,"define MVAHABFSI"
-     stop
+      FSI_input_container%prev_velocity_list(1,1,1), &
+      FSI_input_container%prev_velocity_list(1,1,2), &
+      FSI_input_container%prev_velocity_list(1,1,3), &
+      FSI_input_container%velocity_list(1,1,1), &
+      FSI_input_container%velocity_list(1,1,2), &
+      FSI_input_container%velocity_list(1,1,3), &
+      FSI_output_container%velocity_list(1,1,1), &
+      FSI_output_container%velocity_list(1,1,2), &
+      FSI_output_container%velocity_list(1,1,3), &
+      ctml_fib_frc(1,1,1), &
+      ctml_fib_frc(1,1,2), &
+      ctml_fib_frc(1,1,3), &
+      FSI_input_container%prev_node_list(1,1,1), &
+      FSI_input_container%prev_node_list(1,1,2), &
+      FSI_input_container%prev_node_list(1,1,3), &
+      FSI_input_container%node_list(1,1,1), &
+      FSI_input_container%node_list(1,1,2), &
+      FSI_input_container%node_list(1,1,3), &
+      FSI_output_container%node_list(1,1,1), &
+      FSI_output_container%node_list(1,1,2), &
+      FSI_output_container%node_list(1,1,3), &
+      FSI_input_container%mass_list(1,1,1), &
+      FSI_output_container%mass_list(1,1,1), &
+      theboss)
+#else 
+    print *,"include_fib not defined"
+    stop
 #endif
-    else if (CTML_FSI_flagF().eq.0) then
-     ! do nothing
-    else
-     print *,"CTML_FSI_flagF() invalid"
-     stop
-    endif
+
+#else
+    print *,"define MVAHABFSI"
+    stop
+#endif
+   else if (CTML_FSI_flagF().eq.0) then
+    ! do nothing
+   else
+    print *,"CTML_FSI_flagF() invalid"
+    stop
+   endif
 
     do part_id=1,TOTAL_NPARTS
 

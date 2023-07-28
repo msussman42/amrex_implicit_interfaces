@@ -1431,6 +1431,7 @@ void fortran_parameters() {
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
+ NavierStokes::CTML_FSI_numsolids=0;
  NavierStokes::CTML_max_num_nodes_list=0;
  NavierStokes::CTML_max_num_elements_list=0;
 
@@ -1497,6 +1498,7 @@ void fortran_parameters() {
  fort_ctml_max_nodes(
    &NavierStokes::num_materials,
    NavierStokes::FSI_flag.dataPtr(),
+   &NavierStokes::CTML_FSI_numsolids,
    &NavierStokes::CTML_max_num_nodes_list,
    &NavierStokes::CTML_max_num_elements_list);
 #endif
@@ -3056,7 +3058,6 @@ NavierStokes::read_params ()
     pp.queryAdd("FSI_refine_factor",FSI_refine_factor,num_materials);
     pp.queryAdd("FSI_bounding_box_ngrow",FSI_bounding_box_ngrow,num_materials);
 
-    pp.queryAdd("CTML_FSI_numsolids",CTML_FSI_numsolids);
     for (int i=0;i<num_materials;i++) {
      if (FSI_flag[i]==FSI_SHOELE_CTML) {
       if (FSI_interval==1) {

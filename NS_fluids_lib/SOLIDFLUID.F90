@@ -555,8 +555,10 @@
           FSI_bounding_box_ngrow, &
           cur_time, &
           dt, &
-          h_small,problo3D,probhi3D, &
-          current_step,plot_interval,ioproc,isout)
+          h_small, &
+          problo3D,probhi3D, &
+          current_step,plot_interval, &
+          ioproc,isout)
        else
         print *,"FSI_operation invalid: ",FSI_operation
         stop
