@@ -1068,6 +1068,7 @@ Real NavierStokes::advance(Real time,Real dt) {
    //copy bfact_time_order component to the
    //components: 0..bfact_time_order-1
    CopyNewToOldALL();
+
    // new_time=time+dt_new  old_time=time
    for (int ilev=level;ilev<=finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
