@@ -427,26 +427,14 @@ c calculating feedback force for matching bcs
         if(FluidForceFlag(i2g)) then
          do j=1,ns_ibm_r_fib(i)
            fk_mass1_fib(i,j)=fk_mass1o_fib(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_fib(i,j)-vibm1_fib(i,j))
-     &                   *timetemp2
            fk_mass2_fib(i,j)=fk_mass2o_fib(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_fib(i,j)-vibm2_fib(i,j))
-     &                   *timetemp2
 
            ffluidsum1_fib(i,j)= fk_mass1_fib(i,j)
-     &                   +beta_ibm*(uibm1_fib(i,j)-vibm1_fib(i,j))
-     &                   *timetemp2
-
            ffluidsum2_fib(i,j)= fk_mass2_fib(i,j)
-     &                   +beta_ibm*(uibm2_fib(i,j)-vibm2_fib(i,j))
-     &                   *timetemp2
+
            if(ndim .gt. 2) then
             fk_mass3_fib(i,j)=fk_mass3o_fib(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_fib(i,j)-vibm3_fib(i,j))
-     &                   *timetemp2
             ffluidsum3_fib(i,j)= fk_mass3_fib(i,j)
-     &                   +beta_ibm*(uibm3_fib(i,j)-vibm3_fib(i,j))
-     &                   *timetemp2
            endif
 
          end do
@@ -503,28 +491,13 @@ c calculating feedback force for matching bcs
        if(FluidForceFlag(i2g)) then
         do j=1,ns_ibm_r_esh(i)
            fk_mass1_esh(i,j)=fk_mass1o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_esh(i,j)-vibm1_esh(i,j))
-     &                   *timetemp2
-
-            fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_esh(i,j)-vibm2_esh(i,j))
-     &                   *timetemp2
-
-            ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
-     &                   +beta_ibm*(uibm1_esh(i,j)-vibm1_esh(i,j))
-     &                   *timetemp2
-            ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
-     &                   +beta_ibm*(uibm2_esh(i,j)-vibm2_esh(i,j))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
+           ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
+           ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
+           if(ndim .gt. 2) then
             fk_mass3_esh(i,j)=fk_mass3o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_esh(i,j)-vibm3_esh(i,j))
-     &                   *timetemp2
-
             ffluidsum3_esh(i,j)= fk_mass3_esh(i,j)
-     &                   +beta_ibm*(uibm3_esh(i,j)-vibm3_esh(i,j))
-     &                   *timetemp2
-            endif
+           endif
          end do
 
          do j=1,ns_ibm_r_esh(i)
@@ -582,27 +555,15 @@ c calculating feedback force for matching bcs
        do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
            fk_mass1_fsh(i,jq,j)=fk_mass1o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm1_fsh(i,jq,j)-vibm1_fsh(i,jq,j))
-     &                   *timetemp2
-            fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm2_fsh(i,jq,j)-vibm2_fsh(i,jq,j))
-     &                   *timetemp2
+           fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
 
-            ffluidsum1_fsh(i,jq,j)= fk_mass1_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm1_fsh(i,jq,j)-vibm1_fsh(i,jq,j))
-     &                   *timetemp2
+           ffluidsum1_fsh(i,jq,j)= fk_mass1_fsh(i,jq,j)
+           ffluidsum2_fsh(i,jq,j)= fk_mass2_fsh(i,jq,j)
 
-            ffluidsum2_fsh(i,jq,j)= fk_mass2_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm2_fsh(i,jq,j)-vibm2_fsh(i,jq,j))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           if(ndim .gt. 2) then
             fk_mass3_fsh(i,jq,j)=fk_mass3o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm3_fsh(i,jq,j)-vibm3_fsh(i,jq,j))
-     &                   *timetemp2
             ffluidsum3_fsh(i,jq,j)= fk_mass3_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm3_fsh(i,jq,j)-vibm3_fsh(i,jq,j))
-     &                   *timetemp2
-            endif
+           endif
 
         end do
         end do
@@ -671,31 +632,13 @@ c calculating feedback force for matching bcs
        if(FluidForceFlag(i2g)) then
         do j=1,ns_ibm_r_fbc(i)
            fk_mass1_fbc(i,j)=fk_mass1o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_fbc(i,j)-vibm1_fbc(i,j))
-     &                   *timetemp2
-
-            fk_mass2_fbc(i,j)=fk_mass2o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_fbc(i,j)-vibm2_fbc(i,j))
-     &                   *timetemp2
-
-            ffluidsum1_fbc(i,j)= fk_mass1_fbc(i,j)
-     &                   +beta_ibm*(uibm1_fbc(i,j)-vibm1_fbc(i,j))
-     &                   *timetemp2
-
-
-
-            ffluidsum2_fbc(i,j)= fk_mass2_fbc(i,j)
-     &                   +beta_ibm*(uibm2_fbc(i,j)-vibm2_fbc(i,j))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           fk_mass2_fbc(i,j)=fk_mass2o_fbc(i,j)
+           ffluidsum1_fbc(i,j)= fk_mass1_fbc(i,j)
+           ffluidsum2_fbc(i,j)= fk_mass2_fbc(i,j)
+           if(ndim .gt. 2) then
             fk_mass3_fbc(i,j)=fk_mass3o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_fbc(i,j)-vibm3_fbc(i,j))
-     &                   *timetemp2
-
             ffluidsum3_fbc(i,j)= fk_mass3_fbc(i,j)
-     &                   +beta_ibm*(uibm3_fbc(i,j)-vibm3_fbc(i,j))
-     &                   *timetemp2
-            endif
+           endif
          end do
 
          do j=1,ns_ibm_r_fbc(i)
@@ -1509,46 +1452,52 @@ c time step
       endif
 c
       do i=1,nr_ibm_fib
-       do j=1,ns_ibm_r_fib(i)
-           fk_mass1_fib(i,j)=fk_mass1o_fib(i,j)
-           fk_mass2_fib(i,j)=fk_mass2o_fib(i,j)
-           ffluidsum1_fib(i,j)= fk_mass1_fib(i,j)
-           ffluidsum2_fib(i,j)= fk_mass2_fib(i,j)
-           if(ndim .gt. 2) then
-            fk_mass3_fib(i,j)=fk_mass3o_fib(i,j)
-            ffluidsum3_fib(i,j)= fk_mass3_fib(i,j)
-           endif
-! j           
-       end do
+
        do j=1,ns_ibm_r_fib(i)
 
-              fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,j)
-              fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,j)
-              if(ndim .gt. 2) 
-     &           fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,j)
+        fk_mass1_fib(i,j)=fk_mass1o_fib(i,j)
+        fk_mass2_fib(i,j)=fk_mass2o_fib(i,j)
+        ffluidsum1_fib(i,j)= fk_mass1_fib(i,j)
+        ffluidsum2_fib(i,j)= fk_mass2_fib(i,j)
+        if(ndim .gt. 2) then
+         fk_mass3_fib(i,j)=fk_mass3o_fib(i,j)
+         ffluidsum3_fib(i,j)= fk_mass3_fib(i,j)
+        endif
+! j           
+       end do
+
+       do j=1,ns_ibm_r_fib(i)
+
+        fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,j)
+        fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,j)
+        if(ndim .gt. 2) then
+         fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,j)
+        endif
 !j
        end do
   
        do j=1,ns_ibm_r_fib(i)
-           vibm1_pre_fib(i,j)=vibm1_fib(i,j)
-           vibm2_pre_fib(i,j)=vibm2_fib(i,j)
-           if(ndim .gt. 2) 
-     &         vibm3_pre_fib(i,j)=vibm3_fib(i,j)
+        vibm1_pre_fib(i,j)=vibm1_fib(i,j)
+        vibm2_pre_fib(i,j)=vibm2_fib(i,j)
+        if(ndim .gt. 2) then
+         vibm3_pre_fib(i,j)=vibm3_fib(i,j)
+        endif
        end do
-      end do  !nr_ibm_fib
+
+      end do  !i=1,nr_ibm_fib
 
       if(dabs(del_s).gt.1.d-6) then
        do i=1,nr_ibm_fib
         i2g=Ilocglb_fib(i)
         if(ThermalForceFlag(i2g)) then
          do j=1,ns_ibm_r_fib(i)
-             tsibm_fib(i,j)= tsibmin(i2g)*timetemp2
-             q_mass_fib(i,j)=q_masso_fib(i,j)
-     &          +alphatemp_ibm*delta_t*(tfibm_fib(i,j)-tsibm_fib(i,j))
-     &                   *timetemp2
-             qibm_fib(i,j)=q_mass_fib(i,j)+
-     &                    betatemp_ibm*(tfibm_fib(i,j)-tsibm_fib(i,j))
-     &                   *timetemp2
+          tsibm_fib(i,j)= tsibmin(i2g)*timetemp2
+          q_mass_fib(i,j)=q_masso_fib(i,j)
+     &       +alphatemp_ibm*delta_t*(tfibm_fib(i,j)-tsibm_fib(i,j))
+     &       *timetemp2
+          qibm_fib(i,j)=q_mass_fib(i,j)+
+     &            betatemp_ibm*(tfibm_fib(i,j)-tsibm_fib(i,j))
+     &            *timetemp2
 ! j
          end do
         endif
@@ -1564,27 +1513,27 @@ c imposing bcs
       call boundary_ibm
 
       if(nr_ibm_fib.ge. 1) then
-         f_impuls1_fib=0.d0
-         f_impuls2_fib=0.d0
-         f_impuls3_fib=0.d0
-         force_points_fib=0.d0
-         f_link1_fib=0.0
-         f_link2_fib=0.0
-         f_link3_fib=0.0
+       f_impuls1_fib=0.d0
+       f_impuls2_fib=0.d0
+       f_impuls3_fib=0.d0
+       force_points_fib=0.d0
+       f_link1_fib=0.0
+       f_link2_fib=0.0
+       f_link3_fib=0.0
       endif
 
 
 !=============================  MAIN PART of the SOLVER ========================
       do ibdyg=1,nr_ibm
        if(bodytype(ibdyg) .eq. fiber) then
-          include "r_stang_Fib.Fi"
+        include "r_stang_Fib.Fi"
        endif
 !===============================================================================
 
 !CAUTION:need to be rewrite for fibrous shell
        if(iksh1 .ne. 0) then
-               print *,"expecting iksh1=0"
-               stop
+        print *,"expecting iksh1=0"
+        stop
        end if
 
       end do  !ibdy
@@ -1593,40 +1542,40 @@ c imposing bcs
 !CAUTION:need to be rewrite for fibrous shell
 
       if(iksh1 .ne. 0) then
-               print *,"expecting iksh1=0"
-               stop
+       print *,"expecting iksh1=0"
+       stop
       end if !iksh1
 
       do ibdy=1,nr_ibm
-        i=ibdy
-        if(BodyType(i) .eq. fiber) then 
-         i2l=Iglbloc_fib(i)
-         do j=1,ns_ibm_r_fib(i2l)
-          vibm1_fib(i2l,j)= 
-     &        (gx_ibm_massive_fib(i2l,j)-gx_ibm_fib(i2l,j))/dt
-          vibm2_fib(i2l,j)= 
-     &        (gy_ibm_massive_fib(i2l,j)-gy_ibm_fib(i2l,j))/dt
-          if(ndim .gt. 2) 
-     &     vibm3_fib(i2l,j)= 
-     &        (gz_ibm_massive_fib(i2l,j)-gz_ibm_fib(i2l,j))/dt
-         end do
+       i=ibdy
+       if(BodyType(i) .eq. fiber) then 
+        i2l=Iglbloc_fib(i)
+        do j=1,ns_ibm_r_fib(i2l)
+         vibm1_fib(i2l,j)= 
+     &       (gx_ibm_massive_fib(i2l,j)-gx_ibm_fib(i2l,j))/dt
+         vibm2_fib(i2l,j)= 
+     &       (gy_ibm_massive_fib(i2l,j)-gy_ibm_fib(i2l,j))/dt
+         if(ndim .gt. 2) 
+     &    vibm3_fib(i2l,j)= 
+     &       (gz_ibm_massive_fib(i2l,j)-gz_ibm_fib(i2l,j))/dt
+        end do
 
-        elseif((BodyType(i) .eq. shell).and. 
-     &         (Genalpha_timesolver(i) .le. 1)) then 
-                print *,"this code should not be called"
-                stop
-        elseif((BodyType(i) .eq. fabric).and. 
-     &         (Genalpha_timesolver(i) .le. 1)) then 
-                print *,"this code should not be called"
-                stop
-        elseif((BodyType(i) .eq. fibrousshell).and. 
-     &         (Genalpha_timesolver(i) .le. 1)) then   
-                print *,"this code should not be called"
-                stop
-        else
-                print *,"expecting BodyType(i)=fiber"
-                stop
-        endif 
+       elseif((BodyType(i) .eq. shell).and. 
+     &        (Genalpha_timesolver(i) .le. 1)) then 
+        print *,"this code should not be called"
+        stop
+       elseif((BodyType(i) .eq. fabric).and. 
+     &        (Genalpha_timesolver(i) .le. 1)) then 
+        print *,"this code should not be called"
+        stop
+       elseif((BodyType(i) .eq. fibrousshell).and. 
+     &        (Genalpha_timesolver(i) .le. 1)) then   
+        print *,"this code should not be called"
+        stop
+       else
+        print *,"expecting BodyType(i)=fiber"
+        stop
+       endif 
 
       end do ! ibdy
 
@@ -1644,18 +1593,18 @@ c imposing bcs
        stop
       end do  !nr_ibm_fsh
 
-3000    format(1x,24(f8.4,2x))
-3001    format(1x,1(i5,2x),24(f8.4,2x))
-3002    format(1x,2(i5,2x),24(f8.4,2x))
-3003    format(1x,3(i5,2x),24(f8.4,2x))
-3004    format(1x,4(i5,2x),24(f8.4,2x))
-3005    format(1x,5(i5,2x),24(f8.4,2x))
-3006    format(1x,6(i5,2x),24(f8.4,2x))
-3007    format(1x,7(i5,2x),24(f8.4,2x))
-3008    format(1x,8(i5,2x),24(f8.4,2x))
-3009    format(1x,9(i5,2x),24(f8.4,2x))
-3010    format(1x,10(i5,2x),24(f8.4,2x))
-3011    format(1x,11(i5,2x))
+3000  format(1x,24(f8.4,2x))
+3001  format(1x,1(i5,2x),24(f8.4,2x))
+3002  format(1x,2(i5,2x),24(f8.4,2x))
+3003  format(1x,3(i5,2x),24(f8.4,2x))
+3004  format(1x,4(i5,2x),24(f8.4,2x))
+3005  format(1x,5(i5,2x),24(f8.4,2x))
+3006  format(1x,6(i5,2x),24(f8.4,2x))
+3007  format(1x,7(i5,2x),24(f8.4,2x))
+3008  format(1x,8(i5,2x),24(f8.4,2x))
+3009  format(1x,9(i5,2x),24(f8.4,2x))
+3010  format(1x,10(i5,2x),24(f8.4,2x))
+3011  format(1x,11(i5,2x))
 
 #else 
       print *,"include_fib not defined"
