@@ -9859,8 +9859,10 @@ NavierStokes::init(
     
    for (int part_iter=0;part_iter<numparts;part_iter++) { 
      //FillPatch is declared in amrlib/AmrLevel.cpp
-    FillPatch(old,
-       S_new,scomp_part[part_iter],
+    FillPatch(
+       old,
+       S_new,
+       scomp_part[part_iter],
        upper_slab_time,
        local_index,
        scomp_part[part_iter],
@@ -9875,13 +9877,8 @@ NavierStokes::init(
 
  } // local_index=0..nstate-1
 
- NavierStokes& ns_level0=getLevel(0);
-
  if (level==0) {
-  for (int j=0;j<num_materials;j++) {
-   ns_level0.new_data_FSI[ns_time_order][j].
-	copyFrom_FSI(oldns->new_data_FSI[ns_time_order][j]);
-  }
+  new_data_FSI[ns_time_order].copyFrom_FSI(oldns->new_data_FSI[ns_time_order]);
  }
 
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
@@ -10028,8 +10025,10 @@ void NavierStokes::CopyNewToOldALL() {
 
  int finest_level=parent->finestLevel();
  const int max_level = parent->maxLevel();
+
  if (level!=0)
-  amrex::Error("level invalid CopyNewToOldALL");
+  amrex::Error("expecting level=0 in CopyNewToOldALL");
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
    // oldtime=newtime newtime+=dt
@@ -10042,6 +10041,10 @@ void NavierStokes::CopyNewToOldALL() {
    ns_level.state[k].CopyNewToOld(level,max_level);  
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++) 
+
+ for (int i=0;i<ns_time_order;i++) {
+  new_data_FSI[i].copyFrom_FSI(new_data_FSI[ns_time_order]); 
+ }
 
 }  // subroutine CopyNewToOldALL
 
