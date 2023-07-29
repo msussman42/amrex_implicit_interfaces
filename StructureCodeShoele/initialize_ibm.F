@@ -3222,7 +3222,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       return
       end 
 
-
       subroutine copy_ibm_fib(
      &   ds_fib
      &  ,gx_ibm_massiveout_fib
@@ -3232,18 +3231,20 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       implicit none
 
       real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,ds_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
+     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
+     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
+     &      ,ds_fib(Nr_IBM_fib,1-Ns_IBMB_fib:Ns_IBM_fib+Ns_IBMB_fib)
 
       integer i,j
 
       do i=1,nr_ibm_fib
-       do j=1,ns_ibm_r_fib(i)
+       do j=0,ns_ibm_r_fib(i)+1
           gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
           gy_ibm_massiveout_fib(i,j)=gy_ibm_massive_fib(i,j)
           gz_ibm_massiveout_fib(i,j)=gz_ibm_massive_fib(i,j)
+       end do
+       do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
           ds_fib(i,j)=ds_ibm_fib(i,j)
        end do
       enddo
@@ -3288,61 +3289,4 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       end 
 
 
-      subroutine copy_ibm_esh(
-     &   ds_esh
-     &  ,gx_ibm_massiveout_esh
-     &  ,gy_ibm_massiveout_esh
-     &  ,gz_ibm_massiveout_esh)
-      USE HeaderFSI
-      implicit none
-
-      real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
-     &      ,Gy_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
-     &      ,Gz_IBM_MASSIVEout_esh(Nr_IBM_esh,Ns_IBM_esh)
-     &      ,ds_esh(Nr_IBM_esh,Ns_IBM_esh)
-
-      integer i,j
-
-      do i=1,nr_ibm_esh
-       do j=1,ns_ibm_r_esh(i)
-          gx_ibm_massiveout_esh(i,j)=gx_ibm_massive_esh(i,j)
-          gy_ibm_massiveout_esh(i,j)=gy_ibm_massive_esh(i,j)
-          gz_ibm_massiveout_esh(i,j)=gz_ibm_massive_esh(i,j)
-          ds_esh(i,j)=ds_ibm_esh(i,j)
-       end do
-      enddo
-
-      return
-      end 
-
-      subroutine copy_ibm_fbc(
-     &   ds_fbc
-     &  ,gx_ibm_massiveout_fbc
-     &  ,gy_ibm_massiveout_fbc
-     &  ,gz_ibm_massiveout_fbc)
-      USE HeaderFSI
-      implicit none
-
-      real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_fbc(Nr_IBM_fbc,0:Ns_IBM_fbc+1)
-     &      ,Gy_IBM_MASSIVEout_fbc(Nr_IBM_fbc,0:Ns_IBM_fbc+1)
-     &      ,Gz_IBM_MASSIVEout_fbc(Nr_IBM_fbc,0:Ns_IBM_fbc+1)
-     &      ,ds_fbc(Nr_IBM_fbc,1-Ns_IBMB_fib:Ns_IBM_fbc+Ns_IBMB_fib)
-
-      integer i,j
-
-      do i=1,nr_ibm_fbc
-       do j=0,ns_ibm_r_fbc(i)+1
-          gx_ibm_massiveout_fbc(i,j)=gx_ibm_massive_fbc(i,j)
-          gy_ibm_massiveout_fbc(i,j)=gy_ibm_massive_fbc(i,j)
-          gz_ibm_massiveout_fbc(i,j)=gz_ibm_massive_fbc(i,j)
-       end do
-       do j=1-Ns_IBMB_fib,ns_ibm_r_fbc(i)+Ns_IBMB_fib
-          ds_fbc(i,j)=ds_ibm_fbc(i,j)
-       end do
-      enddo
-
-      return
-      end 
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
