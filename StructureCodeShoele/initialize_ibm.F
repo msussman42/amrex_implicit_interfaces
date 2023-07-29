@@ -3325,18 +3325,20 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       implicit none
 
       real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
-     &      ,Gy_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
-     &      ,Gz_IBM_MASSIVEout_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
-     &      ,ds_fbc(Nr_IBM_fbc,Ns_IBM_fbc)
+     &       GX_IBM_MASSIVEout_fbc(Nr_IBM_fbc,0:Ns_IBM_fbc+1)
+     &      ,Gy_IBM_MASSIVEout_fbc(Nr_IBM_fbc,0:Ns_IBM_fbc+1)
+     &      ,Gz_IBM_MASSIVEout_fbc(Nr_IBM_fbc,0:Ns_IBM_fbc+1)
+     &      ,ds_fbc(Nr_IBM_fbc,1-Ns_IBMB_fib:Ns_IBM_fbc+Ns_IBMB_fib)
 
       integer i,j
 
       do i=1,nr_ibm_fbc
-       do j=1,ns_ibm_r_fbc(i)
+       do j=0,ns_ibm_r_fbc(i)+1
           gx_ibm_massiveout_fbc(i,j)=gx_ibm_massive_fbc(i,j)
           gy_ibm_massiveout_fbc(i,j)=gy_ibm_massive_fbc(i,j)
           gz_ibm_massiveout_fbc(i,j)=gz_ibm_massive_fbc(i,j)
+       end do
+       do j=1-Ns_IBMB_fib,ns_ibm_r_fbc(i)+Ns_IBMB_fib
           ds_fbc(i,j)=ds_ibm_fbc(i,j)
        end do
       enddo
