@@ -9325,6 +9325,8 @@ NavierStokes::initData () {
  }
 
  SDC_setup();
+  //AMReX_AmrCore.cpp; AmrCore::Time_blockingFactor () const
+  //Time_blockingFactor returns "time_blocking_factor"
  ns_time_order=parent->Time_blockingFactor();
  slab_step=ns_time_order-1;
 
@@ -9878,7 +9880,9 @@ NavierStokes::init(
  } // local_index=0..nstate-1
 
  if (level==0) {
-  new_data_FSI[ns_time_order].copyFrom_FSI(oldns->new_data_FSI[ns_time_order]);
+  for (int i=0;i<=ns_time_order;i++) {
+   new_data_FSI[i].copyFrom_FSI(oldns->new_data_FSI[ns_time_order]);
+  }
  }
 
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
@@ -10029,6 +10033,11 @@ void NavierStokes::CopyNewToOldALL() {
  if (level!=0)
   amrex::Error("expecting level=0 in CopyNewToOldALL");
 
+ if (ns_time_order==parent->Time_blockingFactor()) {
+  //do nothing
+ } else
+  amrex::Error("expecting ns_time_order==parent->Time_blockingFactor()");
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
    // oldtime=newtime newtime+=dt
@@ -10053,8 +10062,15 @@ void NavierStokes::CopyOldToNewALL() {
 
  int finest_level=parent->finestLevel();
  const int max_level = parent->maxLevel();
+
  if (level!=0)
   amrex::Error("level invalid CopyOldToNewALL");
+
+ if (ns_time_order==parent->Time_blockingFactor()) {
+  //do nothing
+ } else
+  amrex::Error("expecting ns_time_order==parent->Time_blockingFactor()");
+
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   int nstate=ns_level.state.size();
@@ -10065,6 +10081,10 @@ void NavierStokes::CopyOldToNewALL() {
    ns_level.state[k].CopyOldToNew(level,max_level);
   }
  }// for (int ilev=level;ilev<=finest_level;ilev++)
+
+ for (int i=1;i<=ns_time_order;i++) {
+  new_data_FSI[i].copyFrom_FSI(new_data_FSI[0]); 
+ }
 
 } // subroutine CopyOldToNewALL
 

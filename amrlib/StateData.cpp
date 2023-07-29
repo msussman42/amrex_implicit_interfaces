@@ -93,6 +93,13 @@ StateData::define (
   int MAX_NUM_SLAB)
 {
 
+    AmrCore* parent=&papa;
+
+    if (time_order==parent->Time_blockingFactor()) {
+     //do nothing
+    } else
+     amrex::Error("expecting time_order==parent->Time_blockingFactor()");
+
     if (max_level>=0) {
      // do nothing
     } else
@@ -211,6 +218,13 @@ StateData::restart (
   const StateDescriptor& dGHOST,
   const std::string&     chkfile)
 {
+    AmrCore* parent=&papa;
+
+    if (time_order==parent->Time_blockingFactor()) {
+     //do nothing
+    } else
+     amrex::Error("expecting time_order==parent->Time_blockingFactor()");
+
     if (max_level>=0) {
      // do nothing
     } else
