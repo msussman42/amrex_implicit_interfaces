@@ -41,27 +41,25 @@ class FSI_container_class
 public:
 
 int CTML_num_solids;
-int max_num_nodes;
+int max_num_nodes[3];
 int max_num_elements;
 int structured_flag; //0=unstructured 1=structured
-int structure_dim;
+int structure_dim; //AMREX_SPACEDIM
 int structure_topology;  //0=filament (2d or 3d) 1=sheet (3d) 2=volumetric
 int ngrow_node;
-int ngrow_mass;
-int ngrow_velocity;
-//node[0..num_solids-1][0..max_num_nodes-1][0..2]
+//node[0..num_solids-1][0..max_num_nodes_grow-1][0..2]
 Vector< Real > node_list; 
 Vector< Real > prev_node_list; 
-//velocity[0..num_solids-1][0..max_num_nodes-1][0..2]
+//velocity[0..num_solids-1][0..max_num_nodes_grow-1][0..2]
 Vector< Real > velocity_list; 
 Vector< Real > prev_velocity_list; 
 //element[0..num_solids-1][0..max_num_elements-1][0..3]
 Vector< int > element_list;
-//initial_node_list[0..num_solids-1][0..max_num_nodes-1][0..2]
+//init_node_list[0..num_solids-1][0..max_num_nodes_grow-1][0..2]
 Vector< Real > init_node_list; 
-//mass[0..num_solids-1][0..max_num_nodes-1]
+//mass[0..num_solids-1][0..max_num_nodes_grow-1]
 Vector< Real > mass_list; 
-//temp[0..num_solids-1][0..max_num_nodes-1] (temperature)
+//temp[0..num_solids-1][0..max_num_nodes_grow-1] (temperature)
 Vector< Real > temp_list; 
 
 void FSI_flatten(Vector< Real >& flattened_data);
@@ -69,14 +67,13 @@ void FSI_unflatten(Vector< Real > flattened_data);
 
 void initData_FSI(
   int CTML_num_solids_init,
-  int max_num_nodes_init,
+  int max_num_nodes_init[3],
   int max_num_elements_init,
-  int structured_flag_init,
-  int structure_dim_init,
-  int structure_topology_init,
-  int ngrow_node_init,
-  int ngrow_mass_init,
-  int ngrow_velocity_init);
+  int structured_flag_init=1, //structured
+  int structure_dim_init=AMREX_SPACEDIM,
+  int structure_topology_init=0, //filament
+  int ngrow_node_init=2); //StructureCodeShoele
+
 void copyFrom_FSI(const FSI_container_class& source_FSI);
 void clear_FSI();
 
@@ -84,14 +81,14 @@ virtual ~FSI_container_class ();
 
 FSI_container_class() { 
   CTML_num_solids=0;
-  max_num_nodes=0;
+  max_num_nodes[0]=0;
+  max_num_nodes[1]=0;
+  max_num_nodes[2]=0;
   max_num_elements=0;
-  structured_flag=1;
+  structured_flag=1; //structured
   structure_dim=AMREX_SPACEDIM;
-  structure_topology=0;
-  ngrow_node=1;
-  ngrow_mass=2
-  ngrow_velocity=0};
+  structure_topology=0; //filament
+  ngrow_node=2}; //StructureCodeShoele
 
 };
 

@@ -3221,7 +3221,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       return
       end 
-
+FIX ME (grow, also derive ds from dsf every time step)
       subroutine copy_ibm_fib(
      &   ds_fib
      &  ,gx_ibm_massiveout_fib
