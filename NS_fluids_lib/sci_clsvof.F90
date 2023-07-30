@@ -10021,6 +10021,7 @@ INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
 INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
 INTEGER_T ielem,inode
+INTEGER_T datalo,datahi
 
 INTEGER_T, dimension(:), allocatable :: nIBM_rq
 INTEGER_T, dimension(:), allocatable :: nIBM_rq_fsh
@@ -10301,18 +10302,23 @@ INTEGER_T :: local_max_num_nodes(3)
        local_max_num_nodes, &
        ctml_max_n_fib_elements)
 
+    datalo=1-ctml_FSI_container%ngrow_node
+    datahi=ctml_FSI_container%max_num_nodes(1)+ &
+           ctml_FSI_container%ngrow_node
+
     allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
 
     if (local_caller_id.eq.caller_initdata) then
-FIX ME
+
      call copy_ibm_fib( &
-        ctml_FSI_container%mass_list, &
-        ctml_FSI_container%node_list(1,1,1), &
-        ctml_FSI_container%node_list(1,1,2), &
-        ctml_FSI_container%node_list(1,1,3))
-FIX ME
+      datalo,datahi, &
+      ctml_FSI_container%mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
+      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
+      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,3))
+
      do dir=1,3
-      do j=1,ctml_max_n_fib_nodes
+      do j=datalo,datahi
        do i=1,ctml_n_fib_bodies
         ctml_FSI_container%prev_node_list(i,j,dir)= &
            ctml_FSI_container%node_list(i,j,dir)
@@ -10332,8 +10338,7 @@ FIX ME
       enddo 
      enddo 
 
-     FIX ME
-     do j=1,ctml_max_n_fib_nodes
+     do j=datalo,datahi
       do i=1,ctml_n_fib_bodies
        ctml_FSI_container%temp_list(i,j)=273.0d0
       enddo !i
@@ -15596,6 +15601,7 @@ type(FSI_container_type) :: FSI_input_container
 type(FSI_container_type) :: FSI_output_container
 INTEGER_T :: dir
 INTEGER_T :: local_max_num_nodes(3)
+INTEGER_T :: datalo,datahi
 
 logical :: monitorON
 logical :: theboss
@@ -15780,38 +15786,60 @@ logical :: theboss
     else
      theboss=.false.
     endif
-FIX ME
+    datalo=1-FSI_input_container%ngrow_node
+    datahi=FSI_input_container%max_num_nodes(1)+FSI_input_container%ngrow_node
 
 #ifdef INCLUDE_FIB
     call tick_fib( &
+      datalo,datahi, &
       CLSVOF_cur_time, &  ! t^{n+1}
       CLSVOF_dt, &
       current_step, &
       monitorON, &
       plot_interval, &
-      FSI_input_container%prev_velocity_list(1,1,1), &
-      FSI_input_container%prev_velocity_list(1,1,2), &
-      FSI_input_container%prev_velocity_list(1,1,3), &
-      FSI_input_container%velocity_list(1,1,1), &
-      FSI_input_container%velocity_list(1,1,2), &
-      FSI_input_container%velocity_list(1,1,3), &
-      FSI_output_container%velocity_list(1,1,1), &
-      FSI_output_container%velocity_list(1,1,2), &
-      FSI_output_container%velocity_list(1,1,3), &
+      FSI_input_container% &
+       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+      FSI_input_container% &
+       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
+      FSI_input_container% &
+       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
+      FSI_input_container% &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+      FSI_input_container% &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
+      FSI_input_container% &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
+      FSI_output_container% &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+      FSI_output_container% &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
+      FSI_output_container% &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
       ctml_fib_frc(1,1,1), &
       ctml_fib_frc(1,1,2), &
       ctml_fib_frc(1,1,3), &
-      FSI_input_container%prev_node_list(1,1,1), &
-      FSI_input_container%prev_node_list(1,1,2), &
-      FSI_input_container%prev_node_list(1,1,3), &
-      FSI_input_container%node_list(1,1,1), &
-      FSI_input_container%node_list(1,1,2), &
-      FSI_input_container%node_list(1,1,3), &
-      FSI_output_container%node_list(1,1,1), &
-      FSI_output_container%node_list(1,1,2), &
-      FSI_output_container%node_list(1,1,3), &
-      FSI_input_container%mass_list(1,1,1), &
-      FSI_output_container%mass_list(1,1,1), &
+      FSI_input_container% &
+       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+      FSI_input_container% &
+       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
+      FSI_input_container% &
+       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
+      FSI_input_container% &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+      FSI_input_container% &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
+      FSI_input_container% &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
+      FSI_output_container% &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+      FSI_output_container% &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
+      FSI_output_container% &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
+      FSI_input_container% &
+       mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
+      FSI_output_container% &
+       mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
       theboss)
 #else 
     print *,"include_fib not defined"
@@ -15819,7 +15847,7 @@ FIX ME
 #endif
 
     do dir=1,3
-     do j=1,ctml_max_n_fib_nodes
+     do j=datalo,datahi
       do i=1,ctml_n_fib_bodies
        FSI_output_container%prev_node_list(i,j,dir)= &
          FSI_input_container%node_list(i,j,dir)
@@ -15831,7 +15859,7 @@ FIX ME
      enddo !j
     enddo !dir
 
-    do j=1,ctml_max_n_fib_nodes
+    do j=datalo,datahi
      do i=1,ctml_n_fib_bodies
       FSI_output_container%temp_list(i,j)= &
         FSI_input_container%temp_list(i,j)
