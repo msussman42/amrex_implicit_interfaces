@@ -3221,31 +3221,44 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       return
       end 
-FIX ME (grow, also derive ds from dsf every time step)
+
       subroutine copy_ibm_fib(
-     &   ds_fib
+     &   datalo,datahi
+     &  ,ds_fib
      &  ,gx_ibm_massiveout_fib
      &  ,gy_ibm_massiveout_fib
      &  ,gz_ibm_massiveout_fib)
       USE HeaderFSI
       implicit none
 
+      integer, intent(in) :: datalo,datahi
       real*8, intent(out) ::
-     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,ds_fib(Nr_IBM_fib,1-Ns_IBMB_fib:Ns_IBM_fib+Ns_IBMB_fib)
+     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,ds_fib(Nr_IBM_fib,datalo:datahi)
 
       integer i,j
 
       do i=1,nr_ibm_fib
+
+       if ((datalo.le.1-Ns_IBMB_fib).and. 
+     &     (datalo.le.0).and.
+     &     (datahi.ge.ns_ibm_r_fib(i)+1).and.
+     &     (datahi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib)) then
+!       do nothing
+       else
+        print *,"datalo,datahi invalid"
+        stop
+       endif
+
        do j=0,ns_ibm_r_fib(i)+1
-          gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
-          gy_ibm_massiveout_fib(i,j)=gy_ibm_massive_fib(i,j)
-          gz_ibm_massiveout_fib(i,j)=gz_ibm_massive_fib(i,j)
+        gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
+        gy_ibm_massiveout_fib(i,j)=gy_ibm_massive_fib(i,j)
+        gz_ibm_massiveout_fib(i,j)=gz_ibm_massive_fib(i,j)
        end do
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
-          ds_fib(i,j)=ds_ibm_fib(i,j)
+        ds_fib(i,j)=ds_ibm_fib(i,j)
        end do
       enddo
 

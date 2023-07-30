@@ -738,11 +738,11 @@ c
       return
       end
 
-      FIX ME (ngrow)
 c rtime = t^{n+1}
       subroutine tick_fib(
+     &      datalo,datahi
 ! t^{n+1}              
-     &     rtime
+     &     ,rtime
      &     ,dt
 ! step              
      &     ,nt
@@ -768,20 +768,21 @@ c rtime = t^{n+1}
      &       )
       USE HeaderFSI
       implicit none
+      integer, intent(in) :: datalo,datahi
       real*8, INTENT(out),
-     &       UIBM1out_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,UIBM2out_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,UIBM3out_fib(Nr_IBM_fib,Ns_IBM_fib) 
+     &       UIBM1out_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,UIBM2out_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,UIBM3out_fib(Nr_IBM_fib,datalo:datahi) 
 
       real*8, INTENT(inout), 
-     &       prev_uibm1in_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,prev_uibm2in_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,prev_uibm3in_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &       prev_uibm1in_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,prev_uibm2in_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,prev_uibm3in_fib(Nr_IBM_fib,datalo:datahi)
 
       real*8, INTENT(inout), 
-     &       uibm1in_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,uibm2in_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,uibm3in_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &       uibm1in_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,uibm2in_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,uibm3in_fib(Nr_IBM_fib,datalo:datahi)
 
       real*8, INTENT(inout), 
      &       FIBM1in_fib(Nr_IBM_fib,Ns_IBM_fib)
@@ -789,27 +790,25 @@ c rtime = t^{n+1}
      &      ,FIBM3in_fib(Nr_IBM_fib,Ns_IBM_fib)
 
       real*8, INTENT(out), 
-     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
+     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
 
       real*8, INTENT(inout), 
-     &       GX_IBM_MASSIVEin_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,Gz_IBM_MASSIVEin_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
+     &       GX_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,Gz_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
 
       real*8, INTENT(inout), 
-     &       prev_GX_IBM_MASSIVEin_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,prev_Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
-     &      ,prev_Gz_IBM_MASSIVEin_fib(Nr_IBM_fib,0:Ns_IBM_fib+1)
+     &       prev_GX_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,prev_Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
+     &      ,prev_Gz_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
 
       real*8, INTENT(out), 
-     &  ds_IBM_fib_out(Nr_IBM_fib
-     &                ,1-Ns_IBMB_fib:Ns_IBM_fib+Ns_IBMB_fib)
+     &  ds_IBM_fib_out(Nr_IBM_fib,datalo:datahi)
 
       real*8, INTENT(inout), 
-     &  ds_IBM_fib_in(Nr_IBM_fib
-     &                ,1-Ns_IBMB_fib:Ns_IBM_fib+Ns_IBMB_fib)
+     &  ds_IBM_fib_in(Nr_IBM_fib,datalo:datahi)
 
       real*8, INTENT(in), rtime, dt
       logical, INTENT(in), monitorON,theboss
@@ -831,6 +830,17 @@ c rtime = t^{n+1}
       endif
 ! passing old fiber values to pre variables and initialize new variables 
       do i=1,nr_ibm_fib
+
+       if ((datalo.le.1-Ns_IBMB_fib).and. 
+     &     (datalo.le.0).and.
+     &     (datahi.ge.ns_ibm_r_fib(i)+1).and.
+     &     (datahi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib)) then
+!       do nothing
+       else
+        print *,"datalo,datahi invalid"
+        stop
+       endif
+
        do j=0,ns_ibm_r_fib(i)+1
           ! gx_ibm_fib data (position) at t^{n-1}
         gx_ibmpre_fib(i,j)=prev_gx_ibm_massivein_fib(i,j)
@@ -986,6 +996,13 @@ c rtime = t^{n+1}
 
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
         DS_IBM_fib_out(i,j)=ds_IBM_fib(i,j)
+
+        if (abs(ds_ibm_fib_in(i,j)-ds_ibm_fib_out(i,j)).le.1.0D-10) then
+!        do nothing
+        else
+         print *,"expecting ds_ibm_fib not to change (dsf_ibm_fib?)"
+         stop
+        endif
        enddo
 
       end do
