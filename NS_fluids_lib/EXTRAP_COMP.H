@@ -342,16 +342,20 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 
 #define FSIcontain_num_solids 0
 #define FSIcontain_max_num_nodes 1
-#define FSIcontain_max_num_elements 2
-#define FSIcontain_node_list 3
+#define FSIcontain_max_num_elements (FSIcontain_max_num_nodes+3)
+#define FSIcontain_structured_flag (FSIcontain_max_num_elements+1)
+#define FSIcontain_structure_dim (FSIcontain_structured_flag+1)
+#define FSIcontain_structure_topology (FSIcontain_structure_dim+1)
+#define FSIcontain_ngrow_node (FSIcontain_structure_topology+1)
+#define FSIcontain_node_list (FSIcontain_ngrow_node+1)
 #define FSIcontain_prev_node_list (FSIcontain_node_list+node_list_size)
 #define FSIcontain_velocity_list (FSIcontain_prev_node_list+node_list_size)
-#define FSIcontain_prev_velocity_list (FSIcontain_velocity_list+velocity_list_size)
-#define FSIcontain_element_list (FSIcontain_prev_velocity_list+velocity_list_size)
+#define FSIcontain_prev_velocity_list (FSIcontain_velocity_list+node_list_size)
+#define FSIcontain_element_list (FSIcontain_prev_velocity_list+node_list_size)
 #define FSIcontain_init_node_list (FSIcontain_element_list+element_list_size)
-#define FSIcontain_mass_list (FSIcontain_init_node_list+init_node_list_size)
+#define FSIcontain_mass_list (FSIcontain_init_node_list+node_list_size)
 #define FSIcontain_temp_list (FSIcontain_mass_list+mass_list_size)
-#define FSIcontain_size (FSIcontain_temp_list+temp_list_size)
+#define FSIcontain_size (FSIcontain_temp_list+mass_list_size)
 
 #define POTGRAD_NULLOPTION 0
 #define POTGRAD_SURFTEN_INCREMENTAL_GRAV 1

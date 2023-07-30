@@ -738,6 +738,7 @@ c
       return
       end
 
+      FIX ME (ngrow)
 c rtime = t^{n+1}
       subroutine tick_fib(
 ! t^{n+1}              

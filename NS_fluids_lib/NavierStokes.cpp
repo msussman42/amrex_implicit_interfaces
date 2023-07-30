@@ -8317,9 +8317,14 @@ void NavierStokes::ns_header_msg_level(
   Vector< Real > FSI_input_flattened;
   Vector< Real > FSI_output_flattened;
 
-  FSI_input.initData_FSI(CTML_FSI_numsolids,CTML_max_num_nodes_list,
+  int max_num_nodes_array[3];
+  max_num_nodes_array[0]=CTML_max_num_nodes_list;
+  max_num_nodes_array[1]=0;
+  max_num_nodes_array[2]=0;
+
+  FSI_input.initData_FSI(CTML_FSI_numsolids,max_num_nodes_array,
     CTML_max_num_elements_list);
-  FSI_output.initData_FSI(CTML_FSI_numsolids,CTML_max_num_nodes_list,
+  FSI_output.initData_FSI(CTML_FSI_numsolids,max_num_nodes_array,
     CTML_max_num_elements_list);
 
   NavierStokes& ns_level0=getLevel(0);

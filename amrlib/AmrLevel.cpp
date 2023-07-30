@@ -20,26 +20,66 @@ DescriptorList AmrLevel::desc_lstGHOST;
 
 void FSI_container_class::initData_FSI(
   int CTML_num_solids_init,
-  int max_num_nodes_init,
-  int max_num_elements_init) {
+  int max_num_nodes_init[3],
+  int max_num_elements_init,
+  int structured_flag_init, 
+  int structure_dim_init,
+  int structure_topology_init,
+  int ngrow_node_init) {
 
 if ((CTML_num_solids_init>=0)&&
     (num_elements_init>=0)&&
-    (max_num_nodes_init>=0)&&
+    (max_num_nodes_init[0]>=0)&&
+    (max_num_nodes_init[1]>=0)&&
+    (max_num_nodes_init[2]>=0)&&
     (max_num_elements_init>=0)) {
 
  CTML_num_solids=CTML_num_solids_init;
- max_num_nodes=max_num_nodes_init;
+ for (int dir=0;dir<3;dir++) {
+  max_num_nodes[dir]=max_num_nodes_init[dir];
+ }
  max_num_elements=max_num_elements_init;
+ structured_flag=structured_flag_init;
+ structure_dim=structure_dim_init;
+ structure_topology=structure_topology_init;
+ ngrow_node=ngrow_node_init;
 
- prev_node_list.resize(CTML_num_solids*max_num_nodes*3);
- node_list.resize(CTML_num_solids*max_num_nodes*3);
- prev_velocity_list.resize(CTML_num_solids*max_num_nodes*3);
- velocity_list.resize(CTML_num_solids*max_num_nodes*3);
+ int max_num_nodes_grow=max_num_nodes[0];
+
+ if (structured_flag==0) {
+  //do nothing
+ } else if (structured_flag==1) {
+  if (structure_topology==0) { //filament
+   max_num_nodes_grow=max_num_nodes[0]+2*ngrow_node;
+  } else if (structure_topology==1) { //sheet
+   max_num_nodes_grow=
+    (max_num_nodes[0]+2*ngrow_node)*
+    (max_num_nodes[1]+2*ngrow_node);
+  } else if (structure_topology==2) { //volumetric
+   if (AMREX_SPACEDIM==2) {
+    max_num_nodes_grow=
+     (max_num_nodes[0]+2*ngrow_node)*
+     (max_num_nodes[1]+2*ngrow_node);
+   } else if (AMREX_SPACEDIM==3) {
+    max_num_nodes_grow=
+     (max_num_nodes[0]+2*ngrow_node)*
+     (max_num_nodes[1]+2*ngrow_node)*
+     (max_num_nodes[2]+2*ngrow_node);
+   } else
+    amrex::Error("AMREX_SPACEDIM invalid");
+  } else
+   amrex::Error("structure_topology invalid");
+ } else
+  amrex::Error("structured_flag invalid");
+
+ prev_node_list.resize(CTML_num_solids*max_num_nodes_grow*3);
+ node_list.resize(CTML_num_solids*max_num_nodes_grow*3);
+ prev_velocity_list.resize(CTML_num_solids*max_num_nodes_grow*3);
+ velocity_list.resize(CTML_num_solids*max_num_nodes_grow*3);
  element_list.resize(CTML_num_solids*max_num_elements*4);
- init_node_list.resize(CTML_num_solids*max_num_nodes*3);
- mass_list.resize(CTML_num_solids*max_num_nodes);
- temp_list.resize(CTML_num_solids*max_num_nodes);
+ init_node_list.resize(CTML_num_solids*max_num_nodes_grow*3);
+ mass_list.resize(CTML_num_solids*max_num_nodes_grow);
+ temp_list.resize(CTML_num_solids*max_num_nodes_grow);
 } else {
  amrex::Error("num_solids/nodes/ or elements invalid");
 }
@@ -49,33 +89,36 @@ if ((CTML_num_solids_init>=0)&&
 void FSI_container_class::FSI_flatten(Vector< Real >& flattened_data) {
 
  int node_list_size=node_list.size();
- int velocity_list_size=velocity_list.size();
 
- if (node_list_size==velocity_list_size) {
+ if (node_list_size==velocity_list.size()) {
   //do nothing
  } else
-  amrex::Error("expecting node_list_size==velocity_list_size");
+  amrex::Error("expecting node_list_size==velocity_list.size()");
 
  int element_list_size=element_list.size();
- int init_node_list_size=init_node_list.size();
 
- if (node_list_size==init_node_list_size) {
+ if (node_list_size==init_node_list.size()) {
   //do nothing
  } else
-  amrex::Error("expecting node_list_size==init_node_list_size");
+  amrex::Error("expecting node_list_size==init_node_list.size()");
 
  int mass_list_size=mass_list.size();
- int temp_list_size=temp_list.size();
 
- if (mass_list_size==temp_list_size) {
+ if (mass_list_size==temp_list.size()) {
   //do nothing
  } else
-  amrex::Error("expecting mass_list_size==temp_list_size");
+  amrex::Error("expecting mass_list_size==temp_list.size()");
 
  flattened_data.resize(FSIcontain_size);
  flattened_data[FSIcontain_num_solids]=CTML_num_solids; 
- flattened_data[FSIcontain_max_num_nodes]=max_num_nodes; 
+ for (int dir=0;dir<3;dir++) {
+  flattened_data[FSIcontain_max_num_nodes+dir]=max_num_nodes[dir]; 
+ }
  flattened_data[FSIcontain_max_num_elements]=max_num_elements; 
+ flattened_data[FSIcontain_structured_flag]=structured_flag; 
+ flattened_data[FSIcontain_structure_dim]=structure_dim; 
+ flattened_data[FSIcontain_structure_topology]=structure_topology; 
+ flattened_data[FSIcontain_ngrow_node]=ngrow_node; 
 
  for (int i=0;i<node_list_size;i++) {
   flattened_data[FSIcontain_node_list+i]=node_list[i];
@@ -96,36 +139,49 @@ void FSI_container_class::FSI_flatten(Vector< Real >& flattened_data) {
 
 void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
 
+ CTML_num_solids=flattened_data[FSIcontain_num_solids]; 
+ for (int dir=0;dir<3;dir++) {
+  max_num_nodes[dir]=flattened_data[FSIcontain_max_num_nodes+dir];
+ }
+ max_num_elements=flattened_data[FSIcontain_max_num_elements];
+
+ structured_flag=flattened_data[FSIcontain_structured_flag];
+ structure_dim=flattened_data[FSIcontain_structure_dim];
+ structure_topology=flattened_data[FSIcontain_structure_topology];
+ ngrow_node=flattened_data[FSIcontain_ngrow_node];
+
+ initData_FSI(
+  CTML_num_solids,
+  max_num_nodes,
+  max_num_elements,
+  structured_flag, 
+  structure_dim,
+  structure_topology,
+  ngrow_node);
+
  int node_list_size=node_list.size();
- int velocity_list_size=velocity_list.size();
  int element_list_size=element_list.size();
- int init_node_list_size=init_node_list.size();
  int mass_list_size=mass_list.size();
- int temp_list_size=temp_list.size();
 
- if (node_list_size==velocity_list_size) {
+ if (node_list_size==velocity_list.size()) {
   //do nothing
  } else
-  amrex::Error("expecting node_list_size==velocity_list_size");
+  amrex::Error("expecting node_list_size==velocity_list.size()");
 
- if (node_list_size==init_node_list_size) {
+ if (node_list_size==init_node_list.size()) {
   //do nothing
  } else
-  amrex::Error("expecting node_list_size==init_node_list_size");
+  amrex::Error("expecting node_list_size==init_node_list.size()");
 
- if (mass_list_size==temp_list_size) {
+ if (mass_list_size==temp_list.size()) {
   //do nothing
  } else
-  amrex::Error("expecting mass_list_size==temp_list_size");
+  amrex::Error("expecting mass_list_size==temp_list.size()");
 
  if (flattened_data.size()==FSIcontain_size) {
   //do nothing
  } else
   amrex::Error("flattened_data.size()==FSIcontain_size failed");
-
- CTML_num_solids=flattened_data[FSIcontain_num_solids]; 
- max_num_nodes=flattened_data[FSIcontain_max_num_nodes];
- max_num_elements=flattened_data[FSIcontain_max_num_elements];
 
  for (int i=0;i<node_list_size;i++) {
   node_list[i]=flattened_data[FSIcontain_node_list+i];
@@ -145,13 +201,16 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
 } //end subroutine FSI_unflatten
 
 
-
 void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
  initData_FSI(
    source_FSI.CTML_num_solids,
    source_FSI.max_num_nodes,
-   source_FSI.max_num_elements);
+   source_FSI.max_num_elements,
+   source_FSI.structured_flag,
+   source_FSI.structure_dim,
+   source_FSI.structure_topology,
+   source_FSI.ngrow_node);
 
  for (int ielem=0;ielem<source_FSI.element_list.size();ielem++) {
   element_list[ielem]=source_FSI.element_list[ielem];
@@ -204,7 +263,14 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
 
 void FSI_container_class::clear_FSI() {
 
- initData_FSI(0,0,0);
+ int local_num_solids=0;
+ int local_num_nodes[3];
+ for (int dir=0;dir<3;dir++) {
+  local_num_nodes[dir]=0;
+ }
+ int local_num_elements=0;
+
+ initData_FSI(local_num_solids,local_num_nodes,local_num_elements);
 
 } // end subroutine FSI_container_class::clear_FSI() 
 
@@ -274,7 +340,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
 
      for (int i=0;i<=time_order;i++) {
 
-      new_data_FSI[i].initData_FSI(0,0,0);
+      new_data_FSI[i].clear_FSI();
 
      }// for (int i=0;i<=time_order;i++) 
     } else if (level>0) {
@@ -363,7 +429,7 @@ AmrLevel::restart (AmrCore&      papa,
   for (int i=0;i<=time_order;i++) {
 
     //TODO: restart the FSI data.
-   new_data_FSI[i].initData_FSI(0,0,0);
+   new_data_FSI[i].clear_FSI();
 
   }//for (int i=0;i<=time_order;i++) 
 
