@@ -400,7 +400,7 @@ public:
      
     static Vector<int> FSI_flag; 
 
-    static int CTML_max_num_nodes_list; 
+    static int CTML_max_num_nodes_list[3]; 
     static int CTML_max_num_elements_list; 
 
     static Vector<int> material_type; // 0 incomp   

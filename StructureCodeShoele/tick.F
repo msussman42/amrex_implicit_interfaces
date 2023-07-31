@@ -749,19 +749,13 @@ c rtime = t^{n+1}
      &     ,monitorON
 ! plot_int
      &     ,ntsave
-     &     ,prev_uibm1in_fib,prev_uibm2in_fib,prev_uibm3in_fib
-     &     ,uibm1in_fib,uibm2in_fib,uibm3in_fib
-     &     ,uibm1out_fib,uibm2out_fib,uibm3out_fib
-     &     ,fibm1in_fib,fibm2in_fib,fibm3in_fib
-     &     ,prev_gx_ibm_massivein_fib
-     &     ,prev_gy_ibm_massivein_fib
-     &     ,prev_gz_ibm_massivein_fib
-     &     ,gx_ibm_massivein_fib
-     &     ,gy_ibm_massivein_fib
-     &     ,gz_ibm_massivein_fib
-     &     ,gx_ibm_massiveout_fib
-     &     ,gy_ibm_massiveout_fib
-     &     ,gz_ibm_massiveout_fib
+     &     ,prev_uibm123in_fib
+     &     ,uibm123in_fib
+     &     ,uibm123out_fib
+     &     ,fibm123in_fib
+     &     ,prev_gxyz_ibm_massivein_fib
+     &     ,gxyz_ibm_massivein_fib
+     &     ,gxyz_ibm_massiveout_fib
      &     ,ds_ibm_fib_in
      &     ,ds_ibm_fib_out
      &     ,theboss
@@ -770,39 +764,25 @@ c rtime = t^{n+1}
       implicit none
       integer, intent(in) :: datalo,datahi
       real*8, INTENT(out),
-     &       UIBM1out_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,UIBM2out_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,UIBM3out_fib(Nr_IBM_fib,datalo:datahi) 
+     &       UIBM123out_fib(Nr_IBM_fib,datalo:datahi,1:3)
 
       real*8, INTENT(inout), 
-     &       prev_uibm1in_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,prev_uibm2in_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,prev_uibm3in_fib(Nr_IBM_fib,datalo:datahi)
+     &       prev_uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
 
       real*8, INTENT(inout), 
-     &       uibm1in_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,uibm2in_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,uibm3in_fib(Nr_IBM_fib,datalo:datahi)
+     &       uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
 
       real*8, INTENT(inout), 
-     &       FIBM1in_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,FIBM2in_fib(Nr_IBM_fib,Ns_IBM_fib)
-     &      ,FIBM3in_fib(Nr_IBM_fib,Ns_IBM_fib)
+     &       FIBM123in_fib(Nr_IBM_fib,Ns_IBM_fib,1:3)
 
       real*8, INTENT(out), 
-     &       GX_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,Gy_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,Gz_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi)
+     &       GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi,1:3)
 
       real*8, INTENT(inout), 
-     &       GX_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,Gz_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
+     &       GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
 
       real*8, INTENT(inout), 
-     &       prev_GX_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,prev_Gy_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
-     &      ,prev_Gz_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi)
+     &       prev_GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
 
       real*8, INTENT(out), 
      &  ds_IBM_fib_out(Nr_IBM_fib,datalo:datahi)
@@ -843,23 +823,23 @@ c rtime = t^{n+1}
 
        do j=0,ns_ibm_r_fib(i)+1
           ! gx_ibm_fib data (position) at t^{n-1}
-        gx_ibmpre_fib(i,j)=prev_gx_ibm_massivein_fib(i,j)
-        gy_ibmpre_fib(i,j)=prev_gy_ibm_massivein_fib(i,j)
+        gx_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,1)
+        gy_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,2)
           ! gx_ibm_massive_fib data (position) at t^{n}
-        gx_ibm_fib(i,j)=gx_ibm_massivein_fib(i,j)
-        gy_ibm_fib(i,j)=gy_ibm_massivein_fib(i,j)
+        gx_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,1)
+        gy_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,2)
           ! gx_ibm_massive_fib data (position) at t^{n}
-        gx_ibmo1_fib(i,j)=gx_ibm_massivein_fib(i,j)
-        gy_ibmo1_fib(i,j)=gy_ibm_massivein_fib(i,j)
+        gx_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,1)
+        gy_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,2)
 ! j
        end do
 
        if(ndim .gt.2) then
 
         do j=0,ns_ibm_r_fib(i)+1
-         gz_ibmpre_fib(i,j)=prev_gz_ibm_massivein_fib(i,j)
-         gz_ibm_fib(i,j)=gz_ibm_massivein_fib(i,j)
-         gz_ibmo1_fib(i,j)=gz_ibm_massivein_fib(i,j)
+         gz_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,3)
+         gz_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,3)
+         gz_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,3)
         end do
 
        endif
@@ -867,11 +847,11 @@ c rtime = t^{n+1}
        do j=1,ns_ibm_r_fib(i)
         UIBM1_fib(i,j)=0.0d0
         UIBM2_fib(i,j)=0.0d0
-        vibm1_fib(i,j)=uibm1in_fib(i,j)
-        vibm2_fib(i,j)=uibm2in_fib(i,j)
+        vibm1_fib(i,j)=uibm123in_fib(i,j,1)
+        vibm2_fib(i,j)=uibm123in_fib(i,j,2)
 ! force
-        fk_mass1o_fib(i,j)=FIBM1in_fib(i,j)
-        fk_mass2o_fib(i,j)=FIBM2in_fib(i,j)
+        fk_mass1o_fib(i,j)=FIBM123in_fib(i,j,1)
+        fk_mass2o_fib(i,j)=FIBM123in_fib(i,j,2)
        end do
 
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
@@ -881,8 +861,8 @@ c rtime = t^{n+1}
        if(ndim .gt.2) then
         do j=1,ns_ibm_r_fib(i)
          UIBM3_fib(i,j)=0.0d0
-         vibm3_fib(i,j)=uibm3in_fib(i,j)
-         fk_mass3o_fib(i,j)=FIBM3in_fib(i,j)
+         vibm3_fib(i,j)=uibm123in_fib(i,j,3)
+         fk_mass3o_fib(i,j)=FIBM123in_fib(i,j,3)
         end do
        endif
 
@@ -978,19 +958,19 @@ c rtime = t^{n+1}
       do i=1,nr_ibm_fib
 
        do j=1,ns_ibm_r_fib(i)
-        uIBM1out_fib(i,j)=vibm1_fib(i,j)
-        uIBM2out_fib(i,j)=vibm2_fib(i,j)
+        uIBM123out_fib(i,j,1)=vibm1_fib(i,j)
+        uIBM123out_fib(i,j,2)=vibm2_fib(i,j)
         if(ndim .gt.2) then
-         uIBM3out_fib(i,j)=vibm3_fib(i,j)
+         uIBM123out_fib(i,j,3)=vibm3_fib(i,j)
         endif
        end do
 
        do j=0,ns_ibm_r_fib(i)+1
 ! position at t^{n+1}
-        gx_ibm_massiveout_fib(i,j)=gx_ibm_massive_fib(i,j)
-        gy_ibm_massiveout_fib(i,j)=gy_ibm_massive_fib(i,j)
+        gxyz_ibm_massiveout_fib(i,j,1)=gx_ibm_massive_fib(i,j)
+        gxyz_ibm_massiveout_fib(i,j,2)=gy_ibm_massive_fib(i,j)
         if(ndim .gt.2) then
-         gz_ibm_massiveout_fib(i,j)=gz_ibm_massive_fib(i,j)
+         gxyz_ibm_massiveout_fib(i,j,3)=gz_ibm_massive_fib(i,j)
         endif
        end do
 
