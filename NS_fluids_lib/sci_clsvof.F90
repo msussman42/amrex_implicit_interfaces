@@ -203,7 +203,7 @@ INTEGER_T element_list_size
 INTEGER_T mass_list_size
 
 INTEGER_T ctml_n_fib_bodies
-INTEGER_T ctml_max_n_fib_nodes
+INTEGER_T ctml_max_n_fib_nodes(3)
 INTEGER_T ctml_max_n_fib_elements
 INTEGER_T ctml_flatten_size
 
@@ -10040,22 +10040,28 @@ logical :: theboss
 INTEGER_T :: i,j
 INTEGER_T :: local_max_num_nodes(3)
 
+INTEGER_T :: local_structured_flag
+INTEGER_T :: local_structure_dim
+INTEGER_T :: local_structure_topology
+INTEGER_T :: local_ngrow_node
+INTEGER_T :: local_num_nodes_grow
+
   if ((local_caller_id.eq.caller_initData).or. &
       (local_caller_id.eq.caller_post_restart)) then
    ! do nothing
   else
-   print *,"local_caller_id invalid"
+   print *,"local_caller_id invalid in CLSVOF_ReadHeader"
    stop
   endif
 
   do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
        (FSI_refine_factor(im_sanity_check).gt.100)) then
-    print *,"FSI_refine_factor(im_sanity_check) invalid"
+    print *,"FSI_refine_factor(im_sanity_check) invalid,CLSVOF_ReadHeader"
     stop
    endif
    if (FSI_bounding_box_ngrow(im_sanity_check).ne.3) then
-    print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid"
+    print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid,CLSVOF_ReadHeader"
     stop
    endif
   enddo ! do im_sanity_check=1,num_materials
@@ -10261,40 +10267,58 @@ INTEGER_T :: local_max_num_nodes(3)
             ctml_n_fib_bodies) then
      ! do nothing
     else
-     print *,"FSI_input_flattened(FSIcontain_num_solids+1 bad"
+     print *,"FSI_input_flattened(FSIcontain_num_solids+1)bad"
      stop
     endif
     if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+1)).eq. &
-            ctml_max_n_fib_nodes) then
+            ctml_max_n_fib_nodes(1)) then
      ! do nothing
     else
-     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1 bad"
+     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1)bad"
      stop
     endif
     if (NINT(FSI_input_flattened(FSIcontain_max_num_elements+1)).eq. &
             ctml_max_n_fib_elements) then
      ! do nothing
     else
-     print *,"FSI_input_flattened(FSIcontain_max_num_elements+1 bad"
+     print *,"FSI_input_flattened(FSIcontain_max_num_elements+1)bad"
      stop
     endif
-    node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
-    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
-    mass_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
+
+    local_structured_flag=FSI_input_flattened(FSIcontain_structured_flag+1)
+    local_structure_dim=FSI_input_flattened(FSIcontain_structure_dim+1)
+    local_structure_topology= &
+         FSI_input_flattened(FSIcontain_structure_topology+1)
+    local_ngrow_node=FSI_input_flattened(FSIcontain_ngrow_node+1)
+
+    if ((local_structured_flag.eq.1).and. &
+        (local_structure_dim.eq.AMREX_SPACEDIM).and. &
+        (local_structure_topology.eq.0).and. &
+        (local_ngrow_node.eq.2)) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened: unexpected value(s),CLSVOF_ReadHeader"
+     stop
+    endif
+
+    local_num_nodes_grow=ctml_max_n_fib_nodes(1)+2*local_ngrow_node
+
+    node_list_size=local_num_nodes_grow*ctml_n_fib_bodies*3
+    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4
+    mass_list_size=local_num_nodes_grow*ctml_n_fib_bodies
 
     if (flatten_size.eq.FSIcontain_size) then
      ! do nothing
     else
-     print *,"flatten_size<>FSIcontain_size"
+     print *,"flatten_size<>FSIcontain_size,CLSVOF_ReadHeader"
      stop
     endif
 
     ctml_flatten_size=flatten_size
 
     do dir=1,3
-     local_max_num_nodes(dir)=0
+     local_max_num_nodes(dir)=ctml_max_n_fib_nodes(dir)
     enddo
-    local_max_num_nodes(1)=ctml_max_n_fib_nodes
 
     call initData_FSI( &
        ctml_FSI_container, &
@@ -10306,7 +10330,7 @@ INTEGER_T :: local_max_num_nodes(3)
     datahi=ctml_FSI_container%max_num_nodes(1)+ &
            ctml_FSI_container%ngrow_node
 
-    allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes,3))
+    allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes(1),3))
 
     if (local_caller_id.eq.caller_initdata) then
 
@@ -15599,6 +15623,13 @@ type(FSI_container_type) :: FSI_input_container
 type(FSI_container_type) :: FSI_output_container
 INTEGER_T :: dir
 INTEGER_T :: local_max_num_nodes(3)
+
+INTEGER_T :: local_structured_flag
+INTEGER_T :: local_structure_dim
+INTEGER_T :: local_structure_topology
+INTEGER_T :: local_ngrow_node
+INTEGER_T :: local_num_nodes_grow
+
 INTEGER_T :: datalo,datahi
 
 logical :: monitorON
@@ -15607,11 +15638,11 @@ logical :: theboss
   do im_sanity_check=1,num_materials
    if ((FSI_refine_factor(im_sanity_check).lt.0).or. &
        (FSI_refine_factor(im_sanity_check).gt.100)) then
-    print *,"FSI_refine_factor(im_sanity_check) invalid"
+    print *,"FSI_refine_factor(im_sanity_check) invalid, CLSVOF_ReadNodes"
     stop
    endif
    if (FSI_bounding_box_ngrow(im_sanity_check).ne.3) then
-    print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid"
+    print *,"FSI_bounding_box_ngrow(im_sanity_check) invalid, CLSVOF_ReadNodes"
     stop
    endif
   enddo ! do im_sanity_check=1,num_materials
@@ -15662,31 +15693,50 @@ logical :: theboss
             ctml_n_fib_bodies) then
      ! do nothing
     else
-     print *,"FSI_input_flattened(FSIcontain_num_solids+1 bad"
+     print *,"FSI_input_flattened(FSIcontain_num_solids+1)bad"
      stop
     endif
     if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+1)).eq. &
-            ctml_max_n_fib_nodes) then
+            ctml_max_n_fib_nodes(1)) then
      ! do nothing
     else
-     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1 bad"
+     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1)bad"
      stop
     endif
     if (NINT(FSI_input_flattened(FSIcontain_max_num_elements+1)).eq. &
             ctml_max_n_fib_elements) then
      ! do nothing
     else
-     print *,"FSI_input_flattened(FSIcontain_max_num_elements+1 bad"
+     print *,"FSI_input_flattened(FSIcontain_max_num_elements+1)bad"
      stop
     endif
-    node_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies*3;
+
+    local_structured_flag=FSI_input_flattened(FSIcontain_structured_flag+1)
+    local_structure_dim=FSI_input_flattened(FSIcontain_structure_dim+1)
+    local_structure_topology= &
+         FSI_input_flattened(FSIcontain_structure_topology+1)
+    local_ngrow_node=FSI_input_flattened(FSIcontain_ngrow_node+1)
+
+    if ((local_structured_flag.eq.1).and. &
+        (local_structure_dim.eq.AMREX_SPACEDIM).and. &
+        (local_structure_topology.eq.0).and. &
+        (local_ngrow_node.eq.2)) then
+     ! do nothing
+    else
+     print *,"FSI_input_flattened: unexpected value(s),CLSVOF_ReadNodes"
+     stop
+    endif
+
+    local_num_nodes_grow=ctml_max_n_fib_nodes(1)+2*local_ngrow_node
+
+    node_list_size=local_num_nodes_grow*ctml_n_fib_bodies*3;
     element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
-    mass_list_size=ctml_max_n_fib_nodes*ctml_n_fib_bodies;
+    mass_list_size=local_num_nodes_grow*ctml_n_fib_bodies;
 
     if (flatten_size.eq.FSIcontain_size) then
      ! do nothing
     else
-     print *,"flatten_size<>FSIcontain_size"
+     print *,"flatten_size<>FSIcontain_size,CLSVOF_ReadNodes"
      stop
     endif
     if (flatten_size.eq.ctml_flatten_size) then
@@ -15697,9 +15747,8 @@ logical :: theboss
     endif
 
     do dir=1,3
-     local_max_num_nodes(dir)=0
+     local_max_num_nodes(dir)=ctml_max_n_fib_nodes(dir)
     enddo
-    local_max_num_nodes(1)=ctml_max_n_fib_nodes
 
     call initData_FSI( &
        FSI_input_container, &

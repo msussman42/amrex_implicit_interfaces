@@ -916,7 +916,7 @@ int NavierStokes::ZEYU_DCA_SELECT=-1; // -1 = static angle
 // FSI_ICE_STATIC=9
 Vector<int> NavierStokes::FSI_flag; 
 
-int NavierStokes::CTML_max_num_nodes_list=0;
+Vector<int> NavierStokes::CTML_max_num_nodes_list;
 int NavierStokes::CTML_max_num_elements_list=0;
 
 int NavierStokes::FSI_interval=1;
@@ -1432,7 +1432,12 @@ void fortran_parameters() {
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
  NavierStokes::CTML_FSI_numsolids=0;
- NavierStokes::CTML_max_num_nodes_list=0;
+
+ NavierStokes::CTML_max_num_nodes_list.resize(3);
+ for (int dir=0;dir<3;dir++) {
+  NavierStokes::CTML_max_num_nodes_list[dir]=0;
+ }
+
  NavierStokes::CTML_max_num_elements_list=0;
 
  Vector<Real> Carreau_alpha_temp(NavierStokes::num_materials);
@@ -1499,7 +1504,7 @@ void fortran_parameters() {
    &NavierStokes::num_materials,
    NavierStokes::FSI_flag.dataPtr(),
    &NavierStokes::CTML_FSI_numsolids,
-   &NavierStokes::CTML_max_num_nodes_list,
+   NavierStokes::CTML_max_num_nodes_list.dataPtr(),
    &NavierStokes::CTML_max_num_elements_list);
 #endif
 
@@ -8318,9 +8323,9 @@ void NavierStokes::ns_header_msg_level(
   Vector< Real > FSI_output_flattened;
 
   int max_num_nodes_array[3];
-  max_num_nodes_array[0]=CTML_max_num_nodes_list;
-  max_num_nodes_array[1]=0;
-  max_num_nodes_array[2]=0;
+  for (int dir=0;dir<3;dir++) {
+   max_num_nodes_array[dir]=CTML_max_num_nodes_list[dir];
+  }
 
   FSI_input.initData_FSI(CTML_FSI_numsolids,max_num_nodes_array,
     CTML_max_num_elements_list);
@@ -8336,8 +8341,8 @@ void NavierStokes::ns_header_msg_level(
     //do nothing
    } else if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
  	      CTML_FSI_numsolids) {
-    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes==
-        CTML_max_num_nodes_list) {
+    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes[0]==
+        CTML_max_num_nodes_list[0]) {
      FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
      FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
     } else
@@ -8350,8 +8355,8 @@ void NavierStokes::ns_header_msg_level(
     
    if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
        CTML_FSI_numsolids) {
-    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes==
-        CTML_max_num_nodes_list) {
+    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes[0]==
+        CTML_max_num_nodes_list[0]) {
      FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step]);
      FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
     } else
@@ -8365,9 +8370,9 @@ void NavierStokes::ns_header_msg_level(
 
    if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
        CTML_FSI_numsolids) {
-    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes==
-        CTML_max_num_nodes_list) {
-     FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step]);
+    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes[0]==
+        CTML_max_num_nodes_list[0]) {
+     FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
      FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
     } else
      amrex::Error("new_data_FSI[slab_step+1].max_num_nodes incorrect");
@@ -8734,9 +8739,6 @@ void NavierStokes::ns_header_msg_level(
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    int im_index=0;
-    int im_critical=0;
-
     fort_headermsg(
      &tid_current,
      &num_tiles_on_thread_proc[tid_current],
@@ -8745,46 +8747,10 @@ void NavierStokes::ns_header_msg_level(
      &level,
      &finest_level,
      &max_level,
-     &im_critical, // =0 (default; 0<=im<=num_materials-1)
-
-     FIX ME 
-
-     max_num_nodes_list.dataPtr(),
-     max_num_elements_list.dataPtr(),
-     num_nodes_list.dataPtr(),
-     num_elements_list.dataPtr(),
-
-     FIX ME
-     &FSI_input[im_index].max_num_nodes,
-     &FSI_input[im_index].max_num_elements,
-     &FSI_input[im_index].num_nodes,
-     &FSI_input[im_index].num_elements,
-     &FSI_input[im_index].nodes_per_element,
-     &FSI_input[im_index].FSI_dt,
-     &FSI_input[im_index].FSI_time,
-     FSI_input[im_index].node_list.dataPtr(),
-     FSI_input[im_index].element_list.dataPtr(),
-     FSI_input[im_index].displacement_list.dataPtr(),
-     FSI_input[im_index].velocity_halftime_list.dataPtr(),
-     FSI_input[im_index].velocity_list.dataPtr(),
-     FSI_input[im_index].force_list.dataPtr(),
-     FSI_input[im_index].mass_list.dataPtr(),
-     FSI_input[im_index].temperature_list.dataPtr(),
-     &FSI_output[im_index].max_num_nodes,
-     &FSI_output[im_index].max_num_elements,
-     &FSI_output[im_index].num_nodes,
-     &FSI_output[im_index].num_elements,
-     &FSI_output[im_index].nodes_per_element,
-     &FSI_output[im_index].FSI_dt,
-     &FSI_output[im_index].FSI_time,
-     FSI_output[im_index].node_list.dataPtr(),
-     FSI_output[im_index].element_list.dataPtr(),
-     FSI_output[im_index].displacement_list.dataPtr(),
-     FSI_output[im_index].velocity_halftime_list.dataPtr(),
-     FSI_output[im_index].velocity_list.dataPtr(),
-     FSI_output[im_index].force_list.dataPtr(),
-     FSI_output[im_index].mass_list.dataPtr(),
-     FSI_output[im_index].temperature_list.dataPtr(),
+     FSI_input_flattened.dataPtr(),
+     FSI_output_flattened.dataPtr(),
+     &flatten_size,
+     &local_caller_id,
      &FSI_operation, // OP_FSI_MAKE_DISTANCE(SIGN)
      &FSI_sub_operation, // SUB_OP_FSI_DEFAULT
      tilelo,tilehi,
@@ -8943,8 +8909,6 @@ void NavierStokes::ns_header_msg_level(
 
     int tid=0;
     int gridno=0;
-    int im_index=0;
-    int im_critical=0;
 
     fort_headermsg(
      &tid,
@@ -8954,44 +8918,10 @@ void NavierStokes::ns_header_msg_level(
      &level,
      &finest_level,
      &max_level,
-     &im_critical, //==0
-
-     FIX ME
-
-     max_num_nodes_list.dataPtr(),
-     max_num_elements_list.dataPtr(),
-     num_nodes_list.dataPtr(),
-     num_elements_list.dataPtr(),
-     &FSI_input[im_index].max_num_nodes,
-     &FSI_input[im_index].max_num_elements,
-     &FSI_input[im_index].num_nodes,
-     &FSI_input[im_index].num_elements,
-     &FSI_input[im_index].nodes_per_element,
-     &FSI_input[im_index].FSI_dt,
-     &FSI_input[im_index].FSI_time,
-     FSI_input[im_index].node_list.dataPtr(),
-     FSI_input[im_index].element_list.dataPtr(),
-     FSI_input[im_index].displacement_list.dataPtr(),
-     FSI_input[im_index].velocity_halftime_list.dataPtr(),
-     FSI_input[im_index].velocity_list.dataPtr(),
-     FSI_input[im_index].force_list.dataPtr(),
-     FSI_input[im_index].mass_list.dataPtr(),
-     FSI_input[im_index].temperature_list.dataPtr(),
-     &FSI_output[im_index].max_num_nodes,
-     &FSI_output[im_index].max_num_elements,
-     &FSI_output[im_index].num_nodes,
-     &FSI_output[im_index].num_elements,
-     &FSI_output[im_index].nodes_per_element,
-     &FSI_output[im_index].FSI_dt,
-     &FSI_output[im_index].FSI_time,
-     FSI_output[im_index].node_list.dataPtr(),
-     FSI_output[im_index].element_list.dataPtr(),
-     FSI_output[im_index].displacement_list.dataPtr(),
-     FSI_output[im_index].velocity_halftime_list.dataPtr(),
-     FSI_output[im_index].velocity_list.dataPtr(),
-     FSI_output[im_index].force_list.dataPtr(),
-     FSI_output[im_index].mass_list.dataPtr(),
-     FSI_output[im_index].temperature_list.dataPtr(),
+     FSI_input_flattened.dataPtr(),
+     FSI_output_flattened.dataPtr(),
+     &flatten_size,
+     &local_caller_id,
      &FSI_operation, //OP_FSI_LAG_STRESS
      &FSI_sub_operation, //SUB_OP_FSI_CLEAR_LAG_DATA or SYNC_LAG_DATA
      tilelo,tilehi,
@@ -9060,9 +8990,6 @@ void NavierStokes::ns_header_msg_level(
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-     int im_index=0;
-     int im_critical=0;
-
      fort_headermsg(
       &tid_current,
       &num_tiles_on_thread_proc[tid_current],
@@ -9071,44 +8998,10 @@ void NavierStokes::ns_header_msg_level(
       &level,
       &finest_level,
       &max_level,
-      &im_critical, //=0
-
-      FIX ME
-
-      max_num_nodes_list.dataPtr(),
-      max_num_elements_list.dataPtr(),
-      num_nodes_list.dataPtr(),
-      num_elements_list.dataPtr(),
-      &FSI_input[im_index].max_num_nodes,
-      &FSI_input[im_index].max_num_elements,
-      &FSI_input[im_index].num_nodes,
-      &FSI_input[im_index].num_elements,
-      &FSI_input[im_index].nodes_per_element,
-      &FSI_input[im_index].FSI_dt,
-      &FSI_input[im_index].FSI_time,
-      FSI_input[im_index].node_list.dataPtr(),
-      FSI_input[im_index].element_list.dataPtr(),
-      FSI_input[im_index].displacement_list.dataPtr(),
-      FSI_input[im_index].velocity_halftime_list.dataPtr(),
-      FSI_input[im_index].velocity_list.dataPtr(),
-      FSI_input[im_index].force_list.dataPtr(),
-      FSI_input[im_index].mass_list.dataPtr(),
-      FSI_input[im_index].temperature_list.dataPtr(),
-      &FSI_output[im_index].max_num_nodes,
-      &FSI_output[im_index].max_num_elements,
-      &FSI_output[im_index].num_nodes,
-      &FSI_output[im_index].num_elements,
-      &FSI_output[im_index].nodes_per_element,
-      &FSI_output[im_index].FSI_dt,
-      &FSI_output[im_index].FSI_time,
-      FSI_output[im_index].node_list.dataPtr(),
-      FSI_output[im_index].element_list.dataPtr(),
-      FSI_output[im_index].displacement_list.dataPtr(),
-      FSI_output[im_index].velocity_halftime_list.dataPtr(),
-      FSI_output[im_index].velocity_list.dataPtr(),
-      FSI_output[im_index].force_list.dataPtr(),
-      FSI_output[im_index].mass_list.dataPtr(),
-      FSI_output[im_index].temperature_list.dataPtr(),
+      FSI_input_flattened.dataPtr(),
+      FSI_output_flattened.dataPtr(),
+      &flatten_size,
+      &local_caller_id,
       &FSI_operation, //OP_FSI_LAG_STRESS
       &FSI_sub_operation, //SUB_OP_FSI_COPY_TO_LAG_DATA
       tilelo,tilehi,
