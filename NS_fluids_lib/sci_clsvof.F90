@@ -10313,9 +10313,7 @@ INTEGER_T :: local_max_num_nodes(3)
      call copy_ibm_fib( &
       datalo,datahi, &
       ctml_FSI_container%mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
-      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
-      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
-      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,3))
+      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3))
 
      do dir=1,3
       do j=datalo,datahi
@@ -15798,44 +15796,18 @@ logical :: theboss
       monitorON, &
       plot_interval, &
       FSI_input_container% &
-       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
       FSI_input_container% &
-       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
-      FSI_input_container% &
-       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
-      FSI_input_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
-      FSI_input_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
-      FSI_input_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
       FSI_output_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
+       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
+      ctml_fib_frc(1,1,1:3), &
+      FSI_input_container% &
+       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
+      FSI_input_container% &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
       FSI_output_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
-      FSI_output_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
-      ctml_fib_frc(1,1,1), &
-      ctml_fib_frc(1,1,2), &
-      ctml_fib_frc(1,1,3), &
-      FSI_input_container% &
-       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
-      FSI_input_container% &
-       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
-      FSI_input_container% &
-       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
-      FSI_input_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
-      FSI_input_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
-      FSI_input_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
-      FSI_output_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,1), &
-      FSI_output_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,2), &
-      FSI_output_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,3), &
+       node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
       FSI_input_container% &
        mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
       FSI_output_container% &
