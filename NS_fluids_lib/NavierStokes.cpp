@@ -8226,7 +8226,7 @@ void NavierStokes::ns_header_msg_level(
    amrex::Error("iter invalid");
   if ((FSI_sub_operation<SUB_OP_FSI_CLEAR_LAG_DATA)||
       (FSI_sub_operation>SUB_OP_FSI_SYNC_LAG_DATA)) 
-   amrex::Error("FSI_sub_operation invalid");
+   amrex::Error("FSI_sub_operation invalid for OP_FSI_LAG_STRESS");
 
   if (local_caller_id==caller_nonlinear_advection) {
    //do nothing
@@ -8286,6 +8286,7 @@ void NavierStokes::ns_header_msg_level(
  int current_step = nStep();
  int plot_interval=parent->plotInt();
 
+  //ns_header_msg_level only called when read_from_CAD()==1
  if (read_from_CAD()==1) {
 
   int nparts=im_solid_map.size();
@@ -8337,6 +8338,11 @@ void NavierStokes::ns_header_msg_level(
    //initialize node locations; generate_new_triangles
   if (FSI_operation==OP_FSI_INITIALIZE_NODES) { 
 
+   if (slab_step==ns_time_order-1) {
+    //do nothing
+   } else
+    amrex::Error("expecting slab_step==ns_time_order-1");
+
    if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==0) {
     //do nothing
    } else if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
@@ -8353,6 +8359,11 @@ void NavierStokes::ns_header_msg_level(
    //update node locations
   } else if (FSI_operation==OP_FSI_UPDATE_NODES) { 
     
+   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+    //do nothing
+   } else
+    amrex::Error("slab_step invalid");
+
    if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
        CTML_FSI_numsolids) {
     if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes[0]==
@@ -8367,6 +8378,11 @@ void NavierStokes::ns_header_msg_level(
   } else if ((FSI_operation==OP_FSI_MAKE_DISTANCE)||
 	     (FSI_operation==OP_FSI_MAKE_SIGN)||
 	     (FSI_operation==OP_FSI_LAG_STRESS)) {
+
+   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+    //do nothing
+   } else
+    amrex::Error("slab_step invalid");
 
    if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
        CTML_FSI_numsolids) {

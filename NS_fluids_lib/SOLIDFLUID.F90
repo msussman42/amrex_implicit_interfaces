@@ -919,8 +919,21 @@
         stop
        endif
 
+        ! called on all of the processors
        if (FSI_sub_operation.eq.SUB_OP_FSI_CLEAR_LAG_DATA) then
+         ! ctml_fib_frc=0.0d0
+         !  for inode=1,num_nodes and dir=1..3,
+         ! FSI(part_id)%NodeVel(dir,inode)=0.0 
+         ! FSI(part_id)%NodeVel_old(dir,inode)=0.0 
+         ! FSI(part_id)%NodeVel_new(dir,inode)=0.0 
+         ! FSI(part_id)%NodeMass(inode)=1.0 
+         ! FSI(part_id)%NodeDensity(inode)=1.0 
+         ! FSI(part_id)%NodeForce(dir,inode)=0.0 
+         ! FSI(part_id)%NodeForce_old(dir,inode)=0.0 
+         ! FSI(part_id)%NodeForce_new(dir,inode)=0.0 
         call CLSVOF_clear_lag_data(ioproc,isout)
+
+        ! called only by the processors which own a given FAB.
        else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then 
 
         allocate(stressdata3D(DIMV3D(FSIdata3D),6*num_materials)) 
@@ -1132,7 +1145,8 @@
              stop
             endif 
            enddo ! dir=1..3
-
+            ! inode=1...num_nodes
+            ! copies to FSI(part_id)%NodeForce(dir,inode)
            call CLSVOF_Copy_To_LAG( &
             SDIM, &
             lev77, &
@@ -1190,6 +1204,7 @@
         deallocate(masknbr3D)
         deallocate(maskfiner3D)
 
+        ! called on all of the processors
        else if (FSI_sub_operation.eq.SUB_OP_FSI_SYNC_LAG_DATA) then 
         call CLSVOF_sync_lag_data(ioproc,isout)
        else
