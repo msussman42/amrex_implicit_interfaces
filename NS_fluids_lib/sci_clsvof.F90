@@ -9233,7 +9233,13 @@ INTEGER_T :: dir,inode,num_nodes
 
   if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
-   call CTML_RESET_ARRAYS() ! vel_fib=zero  force_fib=zero
+   do ctml_part_id=1,ctml_n_fib_bodies
+    do inode=1,ctml_max_n_fib_nodes(1)
+     do dir=1,3
+      ctml_fib_frc(ctml_part_id,inode,dir)=zero
+     enddo
+    enddo
+   enddo
 #else
    print *,"define MEHDI_VAHAB_FSI in GNUmakefile"
    stop
@@ -9255,15 +9261,7 @@ INTEGER_T :: dir,inode,num_nodes
 
     if ((ctml_part_id.gt.0).and. &
         (ctml_part_id.le.CTML_NPARTS)) then
-     do inode=1,ctml_n_fib_nodes(ctml_part_id)
-      do dir=1,AMREX_SPACEDIM
-       ctml_fib_vel(ctml_part_id,inode,dir)=zero
-      enddo
-      do dir=1,AMREX_SPACEDIM
-       ctml_fib_frc(ctml_part_id,inode,dir)=zero
-      enddo
-      ctml_fib_mass(ctml_part_id,inode)=one
-     enddo ! inode=1,ctml_n_fib_nodes(part_id)
+     ! do nothing
     else if (ctml_part_id.eq.0) then
      ! do nothing
     else
@@ -9322,12 +9320,6 @@ end subroutine CLSVOF_clear_lag_data
 ! the Lagrangian information.
 subroutine CLSVOF_sync_lag_data(ioproc,isout)
 use global_utility_module
-#ifdef MVAHABFSI
-use CTML_module
-#endif
-#if (mpi_activate==1)
-use mpi
-#endif
 
 IMPLICIT NONE
 
