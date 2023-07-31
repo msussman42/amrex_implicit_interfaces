@@ -38,7 +38,7 @@ stop
       INTEGER_T, INTENT(in) :: nmat_in
       INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
       INTEGER_T, INTENT(inout) :: CTML_num_solids_out
-      INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list
+      INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list(3)
       INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
       INTEGER_T :: im
       INTEGER_T :: Ns_IBM_fib_out
@@ -53,9 +53,14 @@ stop
       INTEGER_T :: Nr_IBM_fbc_out
 
       INTEGER_T :: CTML_num_solids_local
+      INTEGER_T :: dir
 
       CTML_num_solids_out=0
-      CTML_max_num_nodes_list=0
+
+      do dir=1,3
+       CTML_max_num_nodes_list(dir)=0
+      enddo
+
       CTML_max_num_elements_list=0
 
       CTML_num_solids_local=0
@@ -117,7 +122,7 @@ stop
         endif
 
         if (Ns_IBM_fib_out.ge.2) then
-         CTML_max_num_nodes_list=Ns_IBM_fib_out
+         CTML_max_num_nodes_list(1)=Ns_IBM_fib_out
          CTML_max_num_elements_list=Ns_IBM_fib_out-1
         else
          print *,"Ns_IBM_fib_out invalid"
@@ -152,11 +157,16 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: nmat_in
 INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
 INTEGER_T, INTENT(inout) :: CTML_num_solids_out
-INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list
+INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list(3)
 INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
+INTEGER_T :: dir
 
 CTML_num_solids_out=0
-CTML_max_num_nodes_list=0
+
+do dir=1,3
+ CTML_max_num_nodes_list(dir)=0
+enddo
+
 CTML_max_num_elements_list=0
 
 call CTML_INTERNAL_MAX_NODES(&
