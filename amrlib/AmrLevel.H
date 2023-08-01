@@ -80,6 +80,7 @@ void clear_FSI();
 virtual ~FSI_container_class ();
 
 FSI_container_class() { 
+
   CTML_num_solids=0;
   max_num_nodes[0]=0;
   max_num_nodes[1]=0;
@@ -88,7 +89,9 @@ FSI_container_class() {
   structured_flag=1; //structured
   structure_dim=AMREX_SPACEDIM;
   structure_topology=0; //filament
-  ngrow_node=2}; //StructureCodeShoele
+  ngrow_node=2;
+
+}
 
 };
 
