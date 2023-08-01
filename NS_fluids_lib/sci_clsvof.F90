@@ -9319,20 +9319,27 @@ end subroutine CLSVOF_clear_lag_data
 ! It is the job of this routine to insure that all nodes have all
 ! the Lagrangian information.
 subroutine CLSVOF_sync_lag_data(ioproc,isout)
+use iso_c_binding
 use global_utility_module
 
 IMPLICIT NONE
 
+interface
+subroutine cpp_reduce_real_sum(n,sync_data) bind(c)
+import c_int, c_double
+integer(kind=c_int), intent(in), value :: n
+real(kind=c_double)                    :: sync_data(n)
+end subroutine cpp_reduce_real_sum
+end interface
+
 INTEGER_T, INTENT(in) :: ioproc,isout
-INTEGER_T :: ierr1
-double precision, dimension(:), allocatable :: sync_force
-double precision, dimension(:), allocatable :: temp_force
+real(kind=c_double), dimension(:), allocatable :: sync_force
+integer(kind=c_int) :: n_sync
 
 INTEGER_T part_id
 INTEGER_T ctml_part_id
 INTEGER_T fsi_part_id
-INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
-
+INTEGER_T num_nodes,inode,inode_fiber,dir
 
  if (TOTAL_NPARTS.ge.1) then
 
@@ -9349,36 +9356,17 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
      print *,"num_nodes invalid"
      stop
     endif
-    sync_dim=num_nodes*3
+    n_sync=num_nodes*3
 
-    allocate(sync_force(sync_dim))
-    allocate(temp_force(sync_dim))
+    allocate(sync_force(n_sync))
 
     do inode=1,num_nodes
     do dir=1,3
      sync_force(3*(inode-1)+dir)=FSI(part_id)%NodeForce(dir,inode)
-     temp_force(3*(inode-1)+dir)=zero
     enddo
     enddo
-    ierr1=0
-#if (mpi_activate==1)
-    call MPI_BARRIER(MPI_COMM_WORLD,ierr1)
-     ! sync_force is input
-     ! temp_force is output
-    call MPI_ALLREDUCE(sync_force,temp_force,sync_dim, &
-     MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,ierr1)
-    call MPI_BARRIER(MPI_COMM_WORLD,ierr1)
-    do inode=1,num_nodes
-    do dir=1,3
-     sync_force(3*(inode-1)+dir)=temp_force(3*(inode-1)+dir)
-    enddo
-    enddo
-#elif (mpi_activate==0)
-    ! do nothing
-#else
-    print *,"mpi_activate invalid"
-    stop
-#endif
+    call cpp_reduce_real_sum(n,sync_force)
+
     do inode=1,num_nodes
     do dir=1,3
      FSI(part_id)%NodeForce(dir,inode)=sync_force(3*(inode-1)+dir)
@@ -9388,7 +9376,6 @@ INTEGER_T num_nodes,sync_dim,inode,inode_fiber,dir
     enddo
 
     deallocate(sync_force)
-    deallocate(temp_force)
 
     if ((ctml_part_id.ge.1).and. &
         (ctml_part_id.le.CTML_NPARTS)) then
