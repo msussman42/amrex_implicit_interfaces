@@ -234,6 +234,13 @@ INTEGER_T, INTENT(in) :: max_num_elements_init
 INTEGER_T :: dir
 INTEGER_T :: datalo,datahi
 
+if (max_num_nodes_init(1).gt.0) then
+ ! do nothing
+else
+ print *,"expecting max_num_nodes_init(1)>0"
+ stop
+endif
+
 dest_FSI%CTML_num_solids=CTML_num_solids_init
 
 do dir=1,3
@@ -251,11 +258,11 @@ datahi=max_num_nodes_init(1)+dest_FSI%ngrow_node
 
 allocate(dest_FSI%prev_node_list(CTML_num_solids_init,datalo:datahi,3))
 allocate(dest_FSI%node_list(CTML_num_solids_init,datalo:datahi,3))
-allocate(dest_FSI%init_node_list(CTML_num_solids_init,datalo:datahi,3)
-allocate(dest_FSI%prev_velocity_list(CTML_num_solids_init,datalo:datahi,3)
-allocate(dest_FSI%velocity_list(CTML_num_solids_init,datalo:datahi,3)
-allocate(dest_FSI%mass_list(CTML_num_solids_init,datalo:datahi)
-allocate(dest_FSI%temp_list(CTML_num_solids_init,datalo:datahi)
+allocate(dest_FSI%init_node_list(CTML_num_solids_init,datalo:datahi,3))
+allocate(dest_FSI%prev_velocity_list(CTML_num_solids_init,datalo:datahi,3))
+allocate(dest_FSI%velocity_list(CTML_num_solids_init,datalo:datahi,3))
+allocate(dest_FSI%mass_list(CTML_num_solids_init,datalo:datahi))
+allocate(dest_FSI%temp_list(CTML_num_solids_init,datalo:datahi))
 allocate(dest_FSI%element_list(CTML_num_solids_init,max_num_elements_init,4))
 
 end subroutine initData_FSI
@@ -331,7 +338,7 @@ node_list_size=local_num_solids*local_num_nodes_grow*3
 element_list_size=local_num_solids*local_num_elements*4
 mass_list_size=local_num_solids*local_num_nodes_grow
 
-if (FSI_contain_size.eq.ncomp_flatten) then
+if (FSIcontain_size.eq.ncomp_flatten) then
  ! do nothing
 else
  print *,"expecting FSI_contain_size.eq.ncomp_flatten"
@@ -468,10 +475,10 @@ node_list_size=local_num_solids*local_num_nodes_grow*3
 element_list_size=local_num_solids*local_num_elements*4
 mass_list_size=local_num_solids*local_num_nodes_grow
 
-if (FSI_contain_size.eq.ncomp_flatten) then
+if (FSIcontain_size.eq.ncomp_flatten) then
  ! do nothing
 else
- print *,"expecting FSI_contain_size.eq.ncomp_flatten"
+ print *,"expecting FSIcontain_size.eq.ncomp_flatten"
  stop
 endif
 
@@ -9365,7 +9372,7 @@ INTEGER_T num_nodes,inode,inode_fiber,dir
      sync_force(3*(inode-1)+dir)=FSI(part_id)%NodeForce(dir,inode)
     enddo
     enddo
-    call cpp_reduce_real_sum(n,sync_force)
+    call cpp_reduce_real_sum(n_sync,sync_force)
 
     do inode=1,num_nodes
     do dir=1,3
@@ -9968,7 +9975,8 @@ subroutine CLSVOF_ReadHeader( &
   h_small, &
   dx_max_level, &
   CTML_FSI_INIT, &
-  CLSVOFtime,problo,probhi, &
+  CLSVOFtime, &
+  problo,probhi, &
   ioproc,isout)
 use global_utility_module
 #ifdef MVAHABFSI
@@ -9999,7 +10007,6 @@ INTEGER_T :: ctml_part_id,fsi_part_id
 INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
 INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
-INTEGER_T ielem,inode
 INTEGER_T datalo,datahi
 
 INTEGER_T, dimension(:), allocatable :: nIBM_rq
@@ -10167,19 +10174,19 @@ INTEGER_T :: local_num_nodes_grow
 
     dir=1
     ctml_ngrid_nodes(dir)= &
-      NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
+      NINT((probhi(dir) - problo(dir)) / dx_max_level(dir))+1
     allocate(ctml_gx(1:ctml_ngrid_nodes(dir)))
     do i=1,ctml_ngrid_nodes(dir)
-     ctml_gx(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
+     ctml_gx(i)=problo(dir) + ((i-1)*dx_max_level(dir))
     enddo
     ctml_min_grid_dx(dir)=dx_max_level(dir)
 
     dir=2
     ctml_ngrid_nodes(dir)= &
-      NINT((prob_hi(dir) - prob_lo(dir)) / dx_max_level(dir))+1
+      NINT((probhi(dir) - problo(dir)) / dx_max_level(dir))+1
     allocate(ctml_gy(1:ctml_ngrid_nodes(dir)))
     do i=1,ctml_ngrid_nodes(dir)
-     ctml_gy(i)=prob_lo(dir) + ((i-1)*dx_max_level(dir))
+     ctml_gy(i)=problo(dir) + ((i-1)*dx_max_level(dir))
     enddo
     ctml_min_grid_dx(dir)=dx_max_level(dir)
 
@@ -10194,10 +10201,10 @@ INTEGER_T :: local_num_nodes_grow
     else if (AMREX_SPACEDIM.eq.3) then
      dir=AMREX_SPACEDIM
      ctml_ngrid_nodes(dir)= &
-      NINT((prob_hi(dir) - prob_lo(dir))/dx_max_level(dir))+1
+      NINT((probhi(dir) - problo(dir))/dx_max_level(dir))+1
      allocate(ctml_gz(1:ctml_ngrid_nodes(dir)))
      do i=1,ctml_ngrid_nodes(dir)
-      ctml_gz(i)=prob_lo(dir)+((i-1)*dx_max_level(dir))
+      ctml_gz(i)=problo(dir)+((i-1)*dx_max_level(dir))
      enddo
      ctml_min_grid_dx(dir)=dx_max_level(dir)
     else 
@@ -10218,9 +10225,9 @@ INTEGER_T :: local_num_nodes_grow
     idimin=AMREX_SPACEDIM
 
     if (ioproc.eq.1) then
-     the_boss = .true.
+     theboss = .true.
     else if (ioproc.eq.0) then
-     the_boss = .false.
+     theboss = .false.
     else
      print *,"ioproc invalid"
      stop
@@ -10240,7 +10247,7 @@ INTEGER_T :: local_num_nodes_grow
        ctml_gx,ctml_gy,ctml_gz, &
        idimin, &
        n_Read_in, &
-       the_boss)
+       theboss)
 
     if (NINT(FSI_input_flattened(FSIcontain_num_solids+1)).eq. &
             ctml_n_fib_bodies) then
@@ -10311,7 +10318,7 @@ INTEGER_T :: local_num_nodes_grow
 
     allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes(1),3))
 
-    if (local_caller_id.eq.caller_initdata) then
+    if (local_caller_id.eq.caller_initData) then
 
      call copy_ibm_fib( &
       datalo,datahi, &
@@ -10348,7 +10355,7 @@ INTEGER_T :: local_num_nodes_grow
     else if (local_caller_id.eq.caller_post_restart) then
 
      call FSI_unflatten( &
-        ncomp_flatten, &
+        flatten_size, &
         FSI_input_flattened, &
         ctml_FSI_container)
 
@@ -10358,11 +10365,11 @@ INTEGER_T :: local_num_nodes_grow
     endif
 
     call FSI_flatten( &
-       ncomp_flatten, &
+       flatten_size, &
        FSI_input_flattened, &
        ctml_FSI_container)
     call FSI_flatten( &
-       ncomp_flatten, &
+       flatten_size, &
        FSI_output_flattened, &
        ctml_FSI_container)
    
@@ -10514,7 +10521,8 @@ INTEGER_T :: local_num_nodes_grow
       initflag=1
        !EdgeNormal(dir,inode) and EdgeNormalBIG initialized here.
        !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
-      call post_process_nodes_elements(initflag,problo,probhi, &
+      call post_process_nodes_elements(initflag, &
+       problo,probhi, &
        FSI(part_id),part_id,TOTAL_NPARTS, &
        ioproc,isout,h_small)
 
@@ -13851,7 +13859,6 @@ end subroutine CLSVOF_InitBox
       INTEGER_T :: i,j,k
       INTEGER_T, dimension(3) :: idx
       REAL_T, dimension(3) :: velparm
-      REAL_T, dimension(3) :: total_vel
       INTEGER_T :: dir
       REAL_T :: total_weight,wt,dist_scale,df,support_size
 
@@ -15597,7 +15604,7 @@ INTEGER_T :: inode
 INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
 INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
-INTEGER_T :: ielem,im_part
+INTEGER_T :: im_part
 type(FSI_container_type) :: FSI_input_container
 type(FSI_container_type) :: FSI_output_container
 INTEGER_T :: dir
@@ -15818,7 +15825,7 @@ logical :: theboss
 #ifdef INCLUDE_FIB
     call tick_fib( &
       datalo,datahi, &
-      CLSVOF_cur_time, &  ! t^{n+1}
+      CLSVOF_curtime, &  ! t^{n+1}
       CLSVOF_dt, &
       current_step, &
       monitorON, &
@@ -15847,28 +15854,28 @@ logical :: theboss
 #endif
 
     do dir=1,3
-     do j=datalo,datahi
-      do i=1,ctml_n_fib_bodies
-       FSI_output_container%prev_node_list(i,j,dir)= &
-         FSI_input_container%node_list(i,j,dir)
-       FSI_output_container%init_node_list(i,j,dir)= &
-         FSI_input_container%init_node_list(i,j,dir)
-       FSI_output_container%prev_velocity_list(i,j,dir)= &
-         FSI_input_container%velocity_list(i,j,dir)
-      enddo !i
-     enddo !j
+     do inode=datalo,datahi
+      do ctml_part_id=1,ctml_n_fib_bodies
+       FSI_output_container%prev_node_list(ctml_part_id,inode,dir)= &
+         FSI_input_container%node_list(ctml_part_id,inode,dir)
+       FSI_output_container%init_node_list(ctml_part_id,inode,dir)= &
+         FSI_input_container%init_node_list(ctml_part_id,inode,dir)
+       FSI_output_container%prev_velocity_list(ctml_part_id,inode,dir)= &
+         FSI_input_container%velocity_list(ctml_part_id,inode,dir)
+      enddo !ctml_part_id
+     enddo !inode
     enddo !dir
 
-    do j=datalo,datahi
-     do i=1,ctml_n_fib_bodies
-      FSI_output_container%temp_list(i,j)= &
-        FSI_input_container%temp_list(i,j)
-     enddo !i
-    enddo !j
+    do inode=datalo,datahi
+     do ctml_part_id=1,ctml_n_fib_bodies
+      FSI_output_container%temp_list(ctml_part_id,inode)= &
+        FSI_input_container%temp_list(ctml_part_id,inode)
+     enddo !ctml_part_id
+    enddo !inode
 
     call copyFrom_FSI(ctml_FSI_container,FSI_output_container)
 
-    call FSI_flatten(ncomp_flatten,FSI_output_flattened,FSI_output_container)
+    call FSI_flatten(flatten_size,FSI_output_flattened,FSI_output_container)
 
 #else
     print *,"define MVAHABFSI"

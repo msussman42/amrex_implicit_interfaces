@@ -351,6 +351,8 @@ public:
 
     void explicit_fluxes(int state_idx,int scomp,int iupdate,MultiFab* Un);
 
+    static int CTML_FSI_numsolids;
+
     static Real inflow_pressure;
     static Real outflow_pressure;
     static Real period_time;
@@ -1632,7 +1634,6 @@ protected:
 
     static int FSI_interval; //default=1
 
-    static int CTML_FSI_numsolids;
     static int CTML_FSI_init;
 
     static Vector<int>  shock_timestep;

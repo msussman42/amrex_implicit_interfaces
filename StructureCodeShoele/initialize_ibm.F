@@ -20,23 +20,23 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       USE HeaderFSI
       implicit none
 
-      integer, INTENT(out) :: nIBM_r(nr_IBM)
-     &        ,nIBM_r_fib(nr_IBM_fib)
-     &        ,nIBM_r_fsh(nr_IBM_fsh)
-     &        ,nIBM_r_esh(nr_IBM_esh)
-     &        ,nIBM_r_fbc(nr_IBM_fbc)
+      integer nIBM_r(nr_IBM)
+      integer nIBM_r_fib(nr_IBM_fib)
+      integer nIBM_r_fsh(nr_IBM_fsh)
+      integer nIBM_r_esh(nr_IBM_esh)
+      integer nIBM_r_fbc(nr_IBM_fbc)
      
-      integer, INTENT(out) :: dtypeDelta(3) 
+      integer dtypeDelta(3) 
 
-      integer, INTENT(out) :: nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
+      integer nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
 
       integer i,j,k,ig,jq
 ! Eulerian grid spacing
-      real*8, intent(in) :: min_gridx,min_gridy,min_gridz
+      real*8 min_gridx,min_gridy,min_gridz
 
-      integer, intent(in) :: nx1,ny1,nz1
+      integer nx1,ny1,nz1
 
-      real*8, intent(in) :: gx1(nx1),gy1(ny1),gz1(nz1)
+      real*8 gx1(nx1),gy1(ny1),gz1(nz1)
 
       integer ibdy,np,bodypoint(3),npg,ne
      &    ,jtype,itype,nos,ntype,ntem,noi,noj,n 
@@ -53,7 +53,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       real*8 das,xj1,xj2,xj3,yj1,yj2,yj3,zj1,zj2,zj3  
 
-      integer, intent(in) :: idimin
+      integer idimin
       integer i2
 
       real*8 tmpv1val,tmpv2val,tmpv1(3),tmpv2(3),tmpv3(3),tmpv1x(3)
@@ -65,9 +65,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       integer jq_pm(2),j_pm(2)
       integer itmpnode(3)
 
-      integer, intent(in) :: nRead
+      integer nRead
       logical temprestart
-      logical, intent(in) :: theboss
+      logical theboss
 
       real*8 
      &     GXtmp(1:3,1-Nq_IBMB_fsh:Nq_IBM_fsh+Nq_IBMB_fsh 
@@ -3141,17 +3141,17 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       USE HeaderFSI
       implicit none
 
-      integer, INTENT(out) :: nIBM_r(nr_IBM)
-     &        ,nIBM_r_fib(nr_IBM_fib)
-     &        ,nIBM_r_fsh(nr_IBM_fsh)
-     &        ,nIBM_r_esh(nr_IBM_esh)
-     &        ,nIBM_r_fbc(nr_IBM_fbc)
-      integer, INTENT(out) :: nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
-      integer, INTENT(out) :: Ns_IBM_fib_out
-      integer, INTENT(out) :: Ns_IBM_fsh_out
-      integer, INTENT(out) :: Nq_IBM_fsh_out
-      integer, INTENT(out) :: Ns_IBM_esh_out
-      integer, INTENT(out) :: Ns_IBM_fbc_out
+      integer nIBM_r(nr_IBM)
+      integer nIBM_r_fib(nr_IBM_fib)
+      integer nIBM_r_fsh(nr_IBM_fsh)
+      integer nIBM_r_esh(nr_IBM_esh)
+      integer nIBM_r_fbc(nr_IBM_fbc)
+      integer nIBM_rq(nr_IBM),nIBM_rq_fsh(nr_IBM_fsh)
+      integer Ns_IBM_fib_out
+      integer Ns_IBM_fsh_out
+      integer Nq_IBM_fsh_out
+      integer Ns_IBM_esh_out
+      integer Ns_IBM_fbc_out
 
       integer i
 
@@ -3196,16 +3196,16 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       USE HeaderFSI
       implicit none
 
-      integer, INTENT(out) :: Nr_IBM_out
-      integer, INTENT(out) :: Nr_IBM_fib_out
-      integer, INTENT(out) :: Nr_IBM_fsh_out
-      integer, INTENT(out) :: Nr_IBM_esh_out
-      integer, INTENT(out) :: Nr_IBM_fbc_out
-      integer, INTENT(out) :: Ns_IBM_fib_out
-      integer, INTENT(out) :: Ns_IBM_fsh_out
-      integer, INTENT(out) :: Nq_IBM_fsh_out
-      integer, INTENT(out) :: Ns_IBM_esh_out
-      integer, INTENT(out) :: Ns_IBM_fbc_out
+      integer Nr_IBM_out
+      integer Nr_IBM_fib_out
+      integer Nr_IBM_fsh_out
+      integer Nr_IBM_esh_out
+      integer Nr_IBM_fbc_out
+      integer Ns_IBM_fib_out
+      integer Ns_IBM_fsh_out
+      integer Nq_IBM_fsh_out
+      integer Ns_IBM_esh_out
+      integer Ns_IBM_fbc_out
 
       Nr_IBM_out = Nr_IBM
       Nr_IBM_fib_out = Nr_IBM_fib
@@ -3229,10 +3229,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       USE HeaderFSI
       implicit none
 
-      integer, intent(in) :: datalo,datahi
-      real*8, intent(out) ::
-     &       GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi,3)
-     &      ,ds_fib(Nr_IBM_fib,datalo:datahi)
+      integer datalo,datahi
+      real*8 GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi,3)
+      real*8 ds_fib(Nr_IBM_fib,datalo:datahi)
 
       integer i,j
 
@@ -3263,17 +3262,13 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      
       subroutine copy_ibm_fsh(
      &   ds_fsh
-     &  ,gx_ibm_massiveout_fsh
-     &  ,gy_ibm_massiveout_fsh
-     &  ,gz_ibm_massiveout_fsh)
+     &  ,gxyz_ibm_massiveout_fsh)
       USE HeaderFSI
       implicit none
 
-      real*8, intent(out) ::
-     &    GX_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
-     &   ,Gy_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
-     &   ,Gz_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
-     &   ,ds_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
+      real*8
+     & GXYZ_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh,1:3)
+      real*8 ds_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
 
       integer i,j,jq
       real*8 tmpv1val
@@ -3282,9 +3277,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       do i=1,nr_ibm_fsh
        do jq=1,nq_ibm_r_fsh(i)
        do j=1,ns_ibm_r_fsh(i)
-          gx_ibm_massiveout_fsh(i,jq,j)=gx_ibm_massive_fsh(i,jq,j)
-          gy_ibm_massiveout_fsh(i,jq,j)=gy_ibm_massive_fsh(i,jq,j)
-          gz_ibm_massiveout_fsh(i,jq,j)=gz_ibm_massive_fsh(i,jq,j)
+          gxyz_ibm_massiveout_fsh(i,jq,j,1)=gx_ibm_massive_fsh(i,jq,j)
+          gxyz_ibm_massiveout_fsh(i,jq,j,2)=gy_ibm_massive_fsh(i,jq,j)
+          gxyz_ibm_massiveout_fsh(i,jq,j,3)=gz_ibm_massive_fsh(i,jq,j)
           tmpv1val=1.0d0;tmpv2val=1.0d0
           if(j .eq.1 .or. j .eq. ns_ibm_r_fsh(i)) tmpv1val=0.5d0
           if(jq.eq.1 .or. jq.eq. nq_ibm_r_fsh(i)) tmpv2val=0.5d0

@@ -762,38 +762,22 @@ c rtime = t^{n+1}
      &       )
       USE HeaderFSI
       implicit none
-      integer, intent(in) :: datalo,datahi
-      real*8, INTENT(out),
-     &       UIBM123out_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      integer datalo,datahi
+      real*8 UIBM123out_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      real*8 prev_uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      real*8 uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      real*8 FIBM123in_fib(Nr_IBM_fib,Ns_IBM_fib,1:3)
+      real*8 GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      real*8 GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      real*8 prev_GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
 
-      real*8, INTENT(inout), 
-     &       prev_uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      real*8 ds_IBM_fib_out(Nr_IBM_fib,datalo:datahi)
+      real*8 ds_IBM_fib_in(Nr_IBM_fib,datalo:datahi)
 
-      real*8, INTENT(inout), 
-     &       uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
-
-      real*8, INTENT(inout), 
-     &       FIBM123in_fib(Nr_IBM_fib,Ns_IBM_fib,1:3)
-
-      real*8, INTENT(out), 
-     &       GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi,1:3)
-
-      real*8, INTENT(inout), 
-     &       GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
-
-      real*8, INTENT(inout), 
-     &       prev_GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
-
-      real*8, INTENT(out), 
-     &  ds_IBM_fib_out(Nr_IBM_fib,datalo:datahi)
-
-      real*8, INTENT(inout), 
-     &  ds_IBM_fib_in(Nr_IBM_fib,datalo:datahi)
-
-      real*8, INTENT(in), rtime, dt
-      logical, INTENT(in), monitorON,theboss
+      real*8 rtime, dt
+      logical monitorON,theboss
     
-      integer, INTENT(in), nt, ntsave
+      integer nt, ntsave
       integer i,j,iiter2
       integer ibm_solve,isavesigma
       integer i_glb
@@ -900,7 +884,7 @@ c rtime = t^{n+1}
         gx_ibmo1_fib(i,j)=gx_ibm_massiveo_fib(i,j)
         gy_ibmo1_fib(i,j)=gy_ibm_massiveo_fib(i,j)
         if(ndim .gt.2) then
-     &   gz_ibmo1_fib(i,j)=gz_ibm_massiveo_fib(i,j)
+         gz_ibmo1_fib(i,j)=gz_ibm_massiveo_fib(i,j)
         endif
   
        end do
