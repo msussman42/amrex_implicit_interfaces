@@ -353,7 +353,7 @@
      &       ,ddNndvdw0    
 
 
-      real*8, allocatable, dimension(:,:,:) ::
+      real*8, allocatable, dimension(:,:) ::
      &        UIBM1_fib    
      &       ,UIBM2_fib    
      &       ,UIBM3_fib    

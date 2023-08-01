@@ -533,7 +533,8 @@
           h_small, &
           dx_max_level, &
           CTML_FSI_INIT, &
-          cur_time,problo3D,probhi3D, &
+          cur_time, &
+          problo3D,probhi3D, &
           ioproc,isout)
 
        else if (FSI_operation.eq.OP_FSI_UPDATE_NODES) then 
@@ -1156,7 +1157,6 @@
             nparts, &
             partid, &
             ngrow_make_distance, &
-            num_materials, &
             nFSI, &
             FSI_operation, &
             cur_time, &

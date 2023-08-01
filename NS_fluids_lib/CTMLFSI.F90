@@ -68,7 +68,7 @@ stop
        if (FSI_flag_in(im).eq.FSI_SHOELE_CTML) then
         CTML_num_solids_local=CTML_num_solids_local+1
        endif
-      endif
+      enddo
 
       if (CTML_num_solids_local.eq.0) then
        !do nothing

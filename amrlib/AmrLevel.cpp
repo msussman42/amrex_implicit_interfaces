@@ -19,16 +19,16 @@ DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
 void FSI_container_class::initData_FSI(
-  int CTML_num_solids_init,
-  int max_num_nodes_init[3],
-  int max_num_elements_init,
-  int structured_flag_init, 
-  int structure_dim_init,
-  int structure_topology_init,
-  int ngrow_node_init) {
+  const int CTML_num_solids_init,
+  const int max_num_nodes_init[3],
+  const int max_num_elements_init,
+  const int structured_flag_init, 
+  const int structure_dim_init,
+  const int structure_topology_init,
+  const int ngrow_node_init) {
 
 if ((CTML_num_solids_init>=0)&&
-    (num_elements_init>=0)&&
+    (ngrow_node_init>=0)&&
     (max_num_nodes_init[0]>=0)&&
     (max_num_nodes_init[1]>=0)&&
     (max_num_nodes_init[2]>=0)&&
@@ -50,23 +50,40 @@ if ((CTML_num_solids_init>=0)&&
   //do nothing
  } else if (structured_flag==1) {
   if (structure_topology==0) { //filament
-   max_num_nodes_grow=max_num_nodes[0]+2*ngrow_node;
+
+   if (max_num_nodes[0]==0) {
+    max_num_nodes_grow=0;
+   } else if (max_num_nodes[0]>0) {
+     max_num_nodes_grow=max_num_nodes[0]+2*ngrow_node;
+   } else
+    amrex::Error("max_num_nodes[0] invalid");
+
   } else if (structure_topology==1) { //sheet
-   max_num_nodes_grow=
-    (max_num_nodes[0]+2*ngrow_node)*
-    (max_num_nodes[1]+2*ngrow_node);
-  } else if (structure_topology==2) { //volumetric
-   if (AMREX_SPACEDIM==2) {
+   if (max_num_nodes[0]==0) {
+    max_num_nodes_grow=0;
+   } else if (max_num_nodes[0]>0) {
     max_num_nodes_grow=
      (max_num_nodes[0]+2*ngrow_node)*
      (max_num_nodes[1]+2*ngrow_node);
-   } else if (AMREX_SPACEDIM==3) {
-    max_num_nodes_grow=
-     (max_num_nodes[0]+2*ngrow_node)*
-     (max_num_nodes[1]+2*ngrow_node)*
-     (max_num_nodes[2]+2*ngrow_node);
    } else
-    amrex::Error("AMREX_SPACEDIM invalid");
+    amrex::Error("max_num_nodes[0] invalid");
+  } else if (structure_topology==2) { //volumetric
+   if (max_num_nodes[0]==0) {
+    max_num_nodes_grow=0;
+   } else if (max_num_nodes[0]>0) {
+    if (AMREX_SPACEDIM==2) {
+     max_num_nodes_grow=
+      (max_num_nodes[0]+2*ngrow_node)*
+      (max_num_nodes[1]+2*ngrow_node);
+    } else if (AMREX_SPACEDIM==3) {
+     max_num_nodes_grow=
+      (max_num_nodes[0]+2*ngrow_node)*
+      (max_num_nodes[1]+2*ngrow_node)*
+      (max_num_nodes[2]+2*ngrow_node);
+    } else
+     amrex::Error("AMREX_SPACEDIM invalid");
+   } else
+    amrex::Error("max_num_nodes[0] invalid");
   } else
    amrex::Error("structure_topology invalid");
  } else
@@ -139,16 +156,16 @@ void FSI_container_class::FSI_flatten(Vector< Real >& flattened_data) {
 
 void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
 
- CTML_num_solids=flattened_data[FSIcontain_num_solids]; 
+ CTML_num_solids=(int) flattened_data[FSIcontain_num_solids]; 
  for (int dir=0;dir<3;dir++) {
-  max_num_nodes[dir]=flattened_data[FSIcontain_max_num_nodes+dir];
+  max_num_nodes[dir]=(int) flattened_data[FSIcontain_max_num_nodes+dir];
  }
- max_num_elements=flattened_data[FSIcontain_max_num_elements];
+ max_num_elements=(int) flattened_data[FSIcontain_max_num_elements];
 
- structured_flag=flattened_data[FSIcontain_structured_flag];
- structure_dim=flattened_data[FSIcontain_structure_dim];
- structure_topology=flattened_data[FSIcontain_structure_topology];
- ngrow_node=flattened_data[FSIcontain_ngrow_node];
+ structured_flag=(int) flattened_data[FSIcontain_structured_flag];
+ structure_dim=(int) flattened_data[FSIcontain_structure_dim];
+ structure_topology=(int) flattened_data[FSIcontain_structure_topology];
+ ngrow_node=(int) flattened_data[FSIcontain_ngrow_node];
 
  initData_FSI(
   CTML_num_solids,
@@ -191,7 +208,7 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
   init_node_list[i]=flattened_data[FSIcontain_init_node_list+i];
  } 
  for (int i=0;i<element_list_size;i++) {
-  element_list[i]=flattened_data[FSIcontain_element_list+i];
+  element_list[i]=(int) flattened_data[FSIcontain_element_list+i];
  } 
  for (int i=0;i<mass_list_size;i++) {
   mass_list[i]=flattened_data[FSIcontain_mass_list+i];
@@ -220,25 +237,25 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
      source_FSI.prev_node_list.size()) {
   //do nothing
  } else
-  amrex::Errror("node_list or prev_node_list size invalid");
+  amrex::Error("node_list or prev_node_list size invalid");
 
  if (source_FSI.node_list.size()==
      source_FSI.init_node_list.size()) {
   //do nothing
  } else
-  amrex::Errror("node_list or init_node_list size invalid");
+  amrex::Error("node_list or init_node_list size invalid");
 
  if (source_FSI.node_list.size()==
      source_FSI.velocity_list.size()) {
   //do nothing
  } else
-  amrex::Errror("node_list or velocity_list size invalid");
+  amrex::Error("node_list or velocity_list size invalid");
 
  if (source_FSI.node_list.size()==
      source_FSI.prev_velocity_list.size()) {
   //do nothing
  } else
-  amrex::Errror("node_list or prev_velocity_list size invalid");
+  amrex::Error("node_list or prev_velocity_list size invalid");
 
  for (int inode=0;inode<source_FSI.node_list.size();inode++) {
   node_list[inode]=source_FSI.node_list[inode];
@@ -252,7 +269,7 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
      source_FSI.temp_list.size()) {
   //do nothing
  } else
-  amrex::Errror("mass_list or temp_list size invalid");
+  amrex::Error("mass_list or temp_list size invalid");
 
  for (int inode=0;inode<source_FSI.mass_list.size();inode++) {
   mass_list[inode]=source_FSI.mass_list[inode];

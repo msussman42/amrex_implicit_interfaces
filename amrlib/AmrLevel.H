@@ -66,18 +66,16 @@ void FSI_flatten(Vector< Real >& flattened_data);
 void FSI_unflatten(Vector< Real > flattened_data);
 
 void initData_FSI(
-  int CTML_num_solids_init,
-  int max_num_nodes_init[3],
-  int max_num_elements_init,
-  int structured_flag_init=1, //structured
-  int structure_dim_init=AMREX_SPACEDIM,
-  int structure_topology_init=0, //filament
-  int ngrow_node_init=2); //StructureCodeShoele
+  const int CTML_num_solids_init,
+  const int max_num_nodes_init[3],
+  const int max_num_elements_init,
+  const int structured_flag_init=1, //structured
+  const int structure_dim_init=AMREX_SPACEDIM,
+  const int structure_topology_init=0, //filament
+  const int ngrow_node_init=2); //StructureCodeShoele
 
 void copyFrom_FSI(const FSI_container_class& source_FSI);
 void clear_FSI();
-
-virtual ~FSI_container_class ();
 
 FSI_container_class() { 
 

@@ -8398,8 +8398,8 @@ void NavierStokes::ns_header_msg_level(
   } else
    amrex::Error("FSI_operation invalid");
 
-  FSI_input.flatten(FSI_input_flattened);
-  FSI_output.flatten(FSI_output_flattened);
+  FSI_input.FSI_flatten(FSI_input_flattened);
+  FSI_output.FSI_flatten(FSI_output_flattened);
   int flatten_size=FSI_input_flattened.size();
 
   int nFSI=nparts*NCOMP_FSI;
@@ -9062,6 +9062,9 @@ void NavierStokes::ns_header_msg_level(
 
   } else
    amrex::Error("FSI_operation invalid ns_header_msg_level");
+
+  FSI_input.clear_FSI();
+  FSI_output.clear_FSI();
 
  } else
   amrex::Error("read_from_CAD invalid");
