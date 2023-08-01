@@ -9,6 +9,8 @@
 
 #include <AMReX_AmrCore.H>
 
+extern "C" void cpp_reduce_real_sum(int n,double sync_data[]);
+
 using namespace amrex;
 
 namespace amrex{
@@ -17,6 +19,18 @@ extern void fortran_parameters();
 extern void fortran_deallocate_parameters();
 
 }
+
+void cpp_reduce_real_sum(int n,double sync_data[]) {
+
+ amrex::ParallelDescriptor::Barrier();
+
+ for (int i=0;i<n;i++) {
+
+ }
+
+ amrex::ParallelDescriptor::Barrier();
+
+} // end subroutine cpp_reduce_real_sum
 
 void
 fork_job(int fork_id) {
