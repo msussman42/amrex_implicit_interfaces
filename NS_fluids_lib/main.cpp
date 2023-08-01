@@ -23,11 +23,7 @@ extern void fortran_deallocate_parameters();
 void cpp_reduce_real_sum(int n,double sync_data[]) {
 
  amrex::ParallelDescriptor::Barrier();
-
- for (int i=0;i<n;i++) {
-
- }
-
+ amrex::ParallelDescriptor::ReduceRealSum(sync_data,n);
  amrex::ParallelDescriptor::Barrier();
 
 } // end subroutine cpp_reduce_real_sum
@@ -197,7 +193,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 07/31/23, 19:50 on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 08/01/23, 12:20 on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
