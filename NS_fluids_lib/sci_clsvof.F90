@@ -1080,7 +1080,7 @@ INTEGER_T sdim_local
 INTEGER_T dir
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
-  print *,"part_id invalid"
+  print *,"part_id invalid in xdist_project"
   stop
  endif
  if (FSI_mesh_type%flag_2D_to_3D.eq.1) then
@@ -1088,7 +1088,7 @@ INTEGER_T dir
  else if (FSI_mesh_type%flag_2D_to_3D.eq.0) then
   sdim_local=3
  else
-  print *,"FSI_mesh_type%flag_2D_to_3D invalid"
+  print *,"FSI_mesh_type%flag_2D_to_3D invalid in xdist_project"
   stop
  endif
  dist_project=zero
@@ -1098,7 +1098,7 @@ INTEGER_T dir
  if (dist_project.ge.zero) then
   dist_project=sqrt(dist_project)
  else
-  print *,"dist_project bust"
+  print *,"dist_project bust in xdist_project"
   stop
  endif
 
@@ -1109,7 +1109,7 @@ INTEGER_T dir
  if (dist_actual.ge.zero) then
   dist_actual=sqrt(dist_actual)
  else
-  print *,"dist_actual bust"
+  print *,"dist_actual bust in xdist_project"
   stop
  endif
 
@@ -3791,6 +3791,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  FSI_mesh_type%min_side_len_refined=smallest_h  
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
+  print *,"in:post_process_nodes_elements"
   print *,"part_id,flag_2D_to_3D ",part_id,FSI_mesh_type%flag_2D_to_3D
   print *,"part_id,max_side_len_refined,min_side_len_refined ",part_id, &
    FSI_mesh_type%max_side_len_refined,FSI_mesh_type%min_side_len_refined
@@ -3905,12 +3906,15 @@ INTEGER_T :: ctml_part_id
     if (orig_nodes*2.eq.FSI(part_id)%NumNodes) then
      ! do nothing
     else
+     print *,"CTML_init_sci_node: "
      print *,"orig_nodes invalid"
+     print *,"FSI(part_id)%flag_2D_to_3D=",FSI(part_id)%flag_2D_to_3D
      stop
     endif
    else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
     orig_nodes=FSI(part_id)%NumNodes
    else
+    print *,"CTML_init_sci_node: "
     print *,"FSI(part_id)%flag_2D_to_3D invalid"
     stop
    endif
@@ -3962,6 +3966,7 @@ INTEGER_T :: ctml_part_id
     if (mass_local.gt.zero) then
      ! do nothing
     else
+     print *,"CTML_init_sci_node: "
      print *,"mass_local invalid, mass_local=",mass_local
      stop
     endif
@@ -3969,6 +3974,9 @@ INTEGER_T :: ctml_part_id
      if (FSI(part_id)%flag_2D_to_3D.eq.1) then
       density_local=mass_local/(volm1+volp1)
      else
+      print *,"CTML_init_sci_node: "
+      print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1 ", &
+        FSI(part_id)%flag_2D_to_3D
       print *,"do not know how to fine density_local if 3d"
       stop
      endif
@@ -4028,12 +4036,15 @@ INTEGER_T :: ctml_part_id
     FSI(part_id)%NodeTemp(inode)=zero
     FSI(part_id)%NodeTemp_new(inode)=zero
 
+     !in:CTML_init_sci_node
     if (FSI(part_id)%flag_2D_to_3D.eq.1) then
      stand_alone_flag=0
+      ! add 2 nodes into the "z" direction
      call convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
     else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
      ! do nothing
     else
+     print *,"CTML_init_sci_node: "
      print *,"FSI(part_id)%flag_2D_to_3D invalid"
      stop
     endif
@@ -4171,10 +4182,11 @@ INTEGER_T :: local_elements
 
    if (AMREX_SPACEDIM.eq.3) then
     FSI(part_id)%flag_2D_to_3D=0
-    print *,"3D not supported yet"
+    print *,"flag_2D_to_3D==1 in 3D not supported yet"
    else if (AMREX_SPACEDIM.eq.2) then
     FSI(part_id)%flag_2D_to_3D=1
    else
+    print *,"CTML_init_sci:"
     print *,"dimension bust"
     stop
    endif
@@ -4182,6 +4194,7 @@ INTEGER_T :: local_elements
    orig_nodes=ctml_n_fib_active_nodes(ctml_part_id)
    orig_elements=ctml_n_fib_active_nodes(ctml_part_id)-1
 
+    !CTML_init_sci
    if (FSI(part_id)%flag_2D_to_3D.eq.1) then
     FSI(part_id)%NumNodes=orig_nodes*2
     FSI(part_id)%NumIntElems=orig_elements*2
@@ -4189,6 +4202,8 @@ INTEGER_T :: local_elements
     FSI(part_id)%NumNodes=orig_nodes
     FSI(part_id)%NumIntElems=orig_elements
    else
+    print *,"CTML_init_sci:"
+    print *,"dimension bust"
     print *,"FSI(part_id)%flag_2D_to_3D invalid"
     stop
    endif
@@ -4216,6 +4231,7 @@ INTEGER_T :: local_elements
     allocate(FSI(part_id)%NodeForce(3,FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%NodeTemp(FSI(part_id)%NumNodes))
    else
+    print *,"CTML_init_sci:"
     print *,"something wrong, ifirst should be 1 here"
     stop
    endif  ! ifirst.eq.1
@@ -4226,6 +4242,7 @@ INTEGER_T :: local_elements
    do iface=1,orig_elements
 
     if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+     print *,"CTML_init_sci:"
      print *,"3d not ready yet"
      stop
     else if (FSI(part_id)%flag_2D_to_3D.eq.1) then
@@ -4240,6 +4257,7 @@ INTEGER_T :: local_elements
      call convert_2D_to_3D_elements_FSI(part_id,iface)
 
     else
+     print *,"CTML_init_sci:"
      print *,"dimension bust"
      stop
     endif
@@ -4256,6 +4274,7 @@ INTEGER_T :: local_elements
    use_temp=0
 
   else
+   print *,"CTML_init_sci:"
    print *,"ctml_part_id invalid"
    stop
   endif
@@ -5063,6 +5082,7 @@ INTEGER_T local_nodes,orig_nodes,dir
  if (FSI(part_id)%flag_2D_to_3D.eq.1) then
   ! do nothing
  else
+  print *,"convert_2D_to_3D_nodes_FSI:"
   print *,"FSI(part_id)%flag_2D_to_3D invalid"
   stop
  endif
@@ -5130,14 +5150,17 @@ INTEGER_T local_nodes,orig_nodes,dir
        FSI(part_id)%NodeTemp_new(inode)
 
    else
+    print *,"convert_2D_to_3D_nodes_FSI:"
     print *,"stand_alone_flag invalid"
     stop
    endif
   else
+   print *,"convert_2D_to_3D_nodes_FSI:"
    print *,"inode out of range"
    stop
   endif
  else
+  print *,"convert_2D_to_3D_nodes_FSI:"
   print *,"local_nodes not divisible by 2"
   stop
  endif
@@ -5156,12 +5179,14 @@ INTEGER_T local_elements,orig_elements
 
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
-  print *,"part_id invalid"
+  print *,"convert_2D_to_3D_elements_FSI:"
+  print *,"part_id invalid: ",part_id
   stop
  endif
  if (FSI(part_id)%flag_2D_to_3D.eq.1) then
   ! do nothing
  else
+  print *,"convert_2D_to_3D_elements_FSI:"
   print *,"FSI(part_id)%flag_2D_to_3D invalid"
   stop
  endif
@@ -5188,10 +5213,12 @@ INTEGER_T local_elements,orig_elements
    FSI(part_id)%IntElem(3,iface+orig_elements)= &
      FSI(part_id)%IntElem(1,iface)
   else
+   print *,"convert_2D_to_3D_elements_FSI:"
    print *,"iface out of range"
    stop
   endif
  else
+  print *,"convert_2D_to_3D_elements_FSI:"
   print *,"local_nodes or local_elements not divisible by 2"
   stop
  endif
@@ -5234,6 +5261,7 @@ INTEGER_T :: stand_alone_flag
    stop
   endif
 
+   !init_gingerbread2D
   FSI(part_id)%flag_2D_to_3D=1
   FSI(part_id)%CTML_flag=0
 
@@ -5358,7 +5386,8 @@ INTEGER_T :: stand_alone_flag
      FSI(part_id)%Node_old(dir,inode)=xval1(dir)
      FSI(part_id)%Node_new(dir,inode)=xval1(dir)
     enddo
-   
+  
+     !in: init_gingerbread2D 
     stand_alone_flag=1 
     call convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 
@@ -5398,6 +5427,7 @@ INTEGER_T :: stand_alone_flag
      FSI(part_id)%IntElem(dir,iface)=localElem(dir)
     enddo
 
+      ! in: init_gingerbread2D
     call convert_2D_to_3D_elements_FSI(part_id,iface)
 
    enddo  ! iface, looping faces
@@ -5468,6 +5498,7 @@ INTEGER_T :: orig_elements,local_elements
    stop
   endif
 
+   ! in: init_helix
   FSI(part_id)%flag_2D_to_3D=0
   FSI(part_id)%CTML_flag=0
 
@@ -9386,6 +9417,25 @@ INTEGER_T num_nodes,inode,inode_fiber,dir
 
     if ((ctml_part_id.ge.1).and. &
         (ctml_part_id.le.CTML_NPARTS)) then
+     if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+      ! do nothing
+     else
+      print *,"CLSVOF_sync_lag_data: ctml_part_id= ",ctml_part_id
+      print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1: ", &
+        FSI(part_id)%flag_2D_to_3D
+      stop
+     endif
+     if (num_nodes.eq.2*ctml_n_fib_active_nodes(ctml_part_id)) then
+      ! do nothing
+     else 
+      print *,"expecting num_nodes= "
+      print *,"2*ctml_n_fib_active_nodes(ctml_part_id)"
+      print *,"num_nodes: ",num_nodes
+      print *,"ctml_n_fib_active_nodes(ctml_part_id): ", &
+        ctml_n_fib_active_nodes(ctml_part_id)
+      stop
+     endif
+ 
      do inode_fiber=1,ctml_n_fib_active_nodes(ctml_part_id)
       inode=inode_fiber
       do dir=1,AMREX_SPACEDIM
@@ -10090,7 +10140,8 @@ INTEGER_T :: local_num_nodes_grow
             part_id,im_part,FSI_flag(im_part)
     stop
    endif
-
+   
+    ! CLSVOF_ReadHeader
    FSI(part_id)%flag_2D_to_3D=0
    FSI(part_id)%normal_invert=0
    FSI(part_id)%exclusive_doubly_wetted=0
@@ -10515,6 +10566,7 @@ INTEGER_T :: local_num_nodes_grow
       ! if CTML materials exists, then,
       !   overall_solid_init calls CTML_init_sci 
       !   CTML_init_sci copies data from ctml_FSI_container
+      !   CTML_init_sci sets FSI(part_id)%flag_2D_to_3D=1
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       ! ReadHeader
@@ -15900,21 +15952,31 @@ logical :: theboss
         ((fsi_part_id.ge.1).and. &
          (fsi_part_id.le.FSI_NPARTS))) then
 
-     if ((ctml_part_id.gt.0).and. &
+     if ((ctml_part_id.ge.1).and. &
          (ctml_part_id.le.CTML_NPARTS)) then
 
       if (AMREX_SPACEDIM.eq.3) then
        node_factor=1
-       print *,"3D not supported yet"
+       print *,"3D not supported yet: CLSVOF_ReadNodes"
       else if (AMREX_SPACEDIM.eq.2) then
        node_factor=2
       else
        print *,"dimension bust"
        stop
       endif
+
+      if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+       ! do nothing
+      else
+       print *,"In: CLSVOF_ReadNodes"
+       print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1: ", &
+         FSI(part_id)%flag_2D_to_3D
+       stop
+      endif
+
       if (FSI(part_id)%NumNodes.ne. &
           ctml_n_fib_active_nodes(ctml_part_id)*node_factor) then
-       print *,"NumNodes is corrupt"
+       print *,"NumNodes is corrupt: CLSVOF_ReadNodes"
        stop
       endif
       if (FSI(part_id)%NumIntElems.ne. &
