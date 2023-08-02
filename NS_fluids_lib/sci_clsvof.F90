@@ -250,7 +250,7 @@ enddo
 dest_FSI%max_num_elements=max_num_elements_init
 dest_FSI%structured_flag=1 ! structured
 dest_FSI%structure_dim=AMREX_SPACEDIM
-dest_FSI%structure_topology=0 ! filament
+dest_FSI%structure_topology=AMREX_SPACEDIM-2 ! filament 2d, sheet 3d
 dest_FSI%ngrow_node=2 
 
 datalo=1-dest_FSI%ngrow_node
@@ -306,8 +306,20 @@ if (local_structured_flag.eq.0) then
  !do nothing
 else if (local_structured_flag.eq.1) then
  if (local_structure_topology.eq.0) then !filament
+  if (AMREX_SPACEDIM.eq.2) then
+   !do nothing
+  else
+   print *,"filament for 2d only"
+   stop
+  endif
   local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
  else if (local_structure_topology.eq.1) then !sheet
+  if (AMREX_SPACEDIM.eq.3) then
+   !do nothing
+  else
+   print *,"sheet for 3d only"
+   stop
+  endif
   local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
@@ -443,8 +455,20 @@ if (local_structured_flag.eq.0) then
  !do nothing
 else if (local_structured_flag.eq.1) then
  if (local_structure_topology.eq.0) then !filament
+  if (AMREX_SPACEDIM.eq.2) then
+   !do nothing
+  else
+   print *,"filament for 2d only"
+   stop
+  endif
   local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
  else if (local_structure_topology.eq.1) then !sheet
+  if (AMREX_SPACEDIM.eq.3) then
+   !do nothing
+  else
+   print *,"sheet for 3d only"
+   stop
+  endif
   local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
@@ -3859,6 +3883,7 @@ INTEGER_T :: stand_alone_flag
 INTEGER_T :: orig_nodes
 INTEGER_T :: ctml_part_id
 
+FIX ME for sheet in 3d
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
    stop
@@ -4101,6 +4126,7 @@ use global_utility_module
 use CTML_module
 #endif
 
+FIX ME for sheet in 3d
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: part_id
@@ -5067,6 +5093,7 @@ INTEGER_T, allocatable :: raw_elements(:,:)
 return
 end subroutine init_from_cas
 
+FIX ME
 subroutine convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 IMPLICIT NONE
 
@@ -5167,7 +5194,7 @@ INTEGER_T local_nodes,orig_nodes,dir
 
 end subroutine convert_2D_to_3D_nodes_FSI
 
-
+FIX ME
 subroutine convert_2D_to_3D_elements_FSI(part_id,iface)
 IMPLICIT NONE
 
@@ -9420,6 +9447,7 @@ INTEGER_T num_nodes,inode,inode_fiber,dir
      if (FSI(part_id)%flag_2D_to_3D.eq.1) then
       ! do nothing
      else
+             FIX ME
       print *,"CLSVOF_sync_lag_data: ctml_part_id= ",ctml_part_id
       print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1: ", &
         FSI(part_id)%flag_2D_to_3D
@@ -9428,6 +9456,7 @@ INTEGER_T num_nodes,inode,inode_fiber,dir
      if (num_nodes.eq.2*ctml_n_fib_active_nodes(ctml_part_id)) then
       ! do nothing
      else 
+             FIX ME
       print *,"expecting num_nodes= "
       print *,"2*ctml_n_fib_active_nodes(ctml_part_id)"
       print *,"num_nodes: ",num_nodes
@@ -10330,7 +10359,7 @@ INTEGER_T :: local_num_nodes_grow
 
     if ((local_structured_flag.eq.1).and. &
         (local_structure_dim.eq.AMREX_SPACEDIM).and. &
-        (local_structure_topology.eq.0).and. &
+        (local_structure_topology.eq.AMREX_SPACEDIM-2).and. &
         (local_ngrow_node.eq.2)) then
      ! do nothing
     else
@@ -10567,6 +10596,7 @@ INTEGER_T :: local_num_nodes_grow
       !   overall_solid_init calls CTML_init_sci 
       !   CTML_init_sci copies data from ctml_FSI_container
       !   CTML_init_sci sets FSI(part_id)%flag_2D_to_3D=1
+      FIX ME
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       ! ReadHeader
@@ -15757,7 +15787,7 @@ logical :: theboss
 
     if ((local_structured_flag.eq.1).and. &
         (local_structure_dim.eq.AMREX_SPACEDIM).and. &
-        (local_structure_topology.eq.0).and. &
+        (local_structure_topology.eq.AMREX_SPACEDIM-2).and. &
         (local_ngrow_node.eq.2)) then
      ! do nothing
     else
@@ -15965,6 +15995,7 @@ logical :: theboss
        stop
       endif
 
+      FIX ME
       if (FSI(part_id)%flag_2D_to_3D.eq.1) then
        ! do nothing
       else

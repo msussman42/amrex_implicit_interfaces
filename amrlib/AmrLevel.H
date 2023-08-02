@@ -45,7 +45,7 @@ int max_num_nodes[3];
 int max_num_elements;
 int structured_flag; //0=unstructured 1=structured
 int structure_dim; //AMREX_SPACEDIM
-int structure_topology;  //0=filament (2d or 3d) 1=sheet (3d) 2=volumetric
+int structure_topology;  //0=filament (2d) 1=sheet (3d) 2=volumetric
 int ngrow_node;
 //node[0..num_solids-1][0..max_num_nodes_grow-1][0..2]
 Vector< Real > node_list; 
@@ -82,7 +82,7 @@ void initData_FSI(
   const int max_num_elements_init,
   const int structured_flag_init=1, //structured
   const int structure_dim_init=AMREX_SPACEDIM,
-  const int structure_topology_init=0, //filament
+  const int structure_topology_init=AMREX_SPACEDIM-2,//filament 2d,sheet 3d
   const int ngrow_node_init=2); //StructureCodeShoele
 
 void copyFrom_FSI(const FSI_container_class& source_FSI);
@@ -97,7 +97,7 @@ FSI_container_class() {
   max_num_elements=0;
   structured_flag=1; //structured
   structure_dim=AMREX_SPACEDIM;
-  structure_topology=0; //filament
+  structure_topology=AMREX_SPACEDIM-2; //filament 2d, sheet 3d
   ngrow_node=2;
 
 }

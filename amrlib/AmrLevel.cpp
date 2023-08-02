@@ -189,6 +189,11 @@ if ((CTML_num_solids_init>=0)&&
  } else if (structured_flag==1) {
   if (structure_topology==0) { //filament
 
+   if (AMREX_SPACEDIM==2) {
+    //do nothing
+   } else
+    amrex::Error("filament only allowed in 2D");
+
    if (max_num_nodes[0]==0) {
     max_num_nodes_grow=0;
    } else if (max_num_nodes[0]>0) {
@@ -197,6 +202,12 @@ if ((CTML_num_solids_init>=0)&&
     amrex::Error("max_num_nodes[0] invalid");
 
   } else if (structure_topology==1) { //sheet
+
+   if (AMREX_SPACEDIM==3) {
+    //do nothing
+   } else
+    amrex::Error("sheet only allowed in 3D");
+
    if (max_num_nodes[0]==0) {
     max_num_nodes_grow=0;
    } else if (max_num_nodes[0]>0) {
