@@ -18,62 +18,143 @@ namespace amrex {
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
-std::ofstream FSI_container_class::CTML_log;
+std::ofstream FSI_container_class::CTML_checkpoint_file;
+std::istringstream* FSI_container_class::CTML_restart_is;
 
 void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 
 // use std::ios::in for restarting  (std::ofstream::in ok too?)
  if (ParallelDescriptor::IOProcessor()) {
   std::string CTML_FullPathName  = FullPath+"/CTML";
-  CTML_log.open(CTML_FullPathName.c_str(),std::ios::out);
-  if (!CTML_log.good())
+  CTML_checkpoint_file.open(CTML_FullPathName.c_str(),std::ios::out|std::ios::trunc|std::ios::binary);
+  if (!CTML_checkpoint_file.good())
    amrex::FileOpenFailed(CTML_FullPathName);
+  int old_prec=CTML_checkpoint_file.precision(15);
  }
 
 } //end subroutine open_checkpoint
 
+void FSI_container_class::open_restart(const std::string& FullPath) {
+
+ std::string CTML_FullPathName  = FullPath+"/CTML";
+
+ Vector<char> fileCharPtr;
+ ParallelDescriptor::ReadAndBcastFile(CTML_FullPathName, fileCharPtr);
+ std::string fileCharPtrString(fileCharPtr.dataPtr());
+ std::istringstream is(fileCharPtrString, std::istringstream::in);
+ CTML_restart_is=&is;
+
+} //end subroutine open_restart
+
+
 void FSI_container_class::close_checkpoint() {
 
  if (ParallelDescriptor::IOProcessor()) {
-  CTML_log.close();
+  CTML_checkpoint_file.close();
  }
 
+}
+
+void FSI_container_class::close_restart() {
+
+ //do nothing
+ 
 }
 
 void FSI_container_class::checkpoint(int check_id) {
 
  if (ParallelDescriptor::IOProcessor()) {
-  CTML_log << check_id << '\n';
+  CTML_checkpoint_file << check_id << '\n';
 
-  CTML_log << CTML_num_solids << '\n';
+  CTML_checkpoint_file << CTML_num_solids << '\n';
   for (int dir=0;dir<3;dir++) {
-   CTML_log << max_num_nodes[dir] << '\n';
+   CTML_checkpoint_file << max_num_nodes[dir] << '\n';
   }
-  CTML_log << max_num_elements << '\n';
-  CTML_log << structured_flag << '\n';
-  CTML_log << structure_dim << '\n';
-  CTML_log << structure_topology << '\n';
-  CTML_log << ngrow_node << '\n';
-  CTML_log << node_list.size() << '\n';
+  CTML_checkpoint_file << max_num_elements << '\n';
+  CTML_checkpoint_file << structured_flag << '\n';
+  CTML_checkpoint_file << structure_dim << '\n';
+  CTML_checkpoint_file << structure_topology << '\n';
+  CTML_checkpoint_file << ngrow_node << '\n';
+  CTML_checkpoint_file << node_list.size() << '\n';
   for (int i=0;i<node_list.size();i++) {
-   CTML_log << node_list[i] << '\n';
-   CTML_log << prev_node_list[i] << '\n';
-   CTML_log << velocity_list[i] << '\n';
-   CTML_log << prev_velocity_list[i] << '\n';
-   CTML_log << init_node_list[i] << '\n';
+   CTML_checkpoint_file << node_list[i] << '\n';
+   CTML_checkpoint_file << prev_node_list[i] << '\n';
+   CTML_checkpoint_file << velocity_list[i] << '\n';
+   CTML_checkpoint_file << prev_velocity_list[i] << '\n';
+   CTML_checkpoint_file << init_node_list[i] << '\n';
   }
-  CTML_log << element_list.size() << '\n';
+  CTML_checkpoint_file << element_list.size() << '\n';
   for (int i=0;i<element_list.size();i++) {
-   CTML_log << element_list[i] << '\n';
+   CTML_checkpoint_file << element_list[i] << '\n';
   }
-  CTML_log << mass_list.size() << '\n';
+  CTML_checkpoint_file << mass_list.size() << '\n';
   for (int i=0;i<mass_list.size();i++) {
-   CTML_log << mass_list[i] << '\n';
-   CTML_log << temp_list[i] << '\n';
+   CTML_checkpoint_file << mass_list[i] << '\n';
+   CTML_checkpoint_file << temp_list[i] << '\n';
   }
  }
 
 } //end subroutine checkpoint
+
+
+void FSI_container_class::restart(int check_id) {
+
+ int local_check_id;
+ (*CTML_restart_is) >> local_check_id;
+ if (local_check_id==check_id) {
+  //do nothing
+ } else
+  amrex::Error("local_check_id invalid");
+
+ int local_node_list_size;
+ int local_element_list_size;
+ int local_mass_list_size;
+
+ (*CTML_restart_is) >> CTML_num_solids;
+ for (int dir=0;dir<3;dir++) {
+  (*CTML_restart_is) >> max_num_nodes[dir];
+ }
+ (*CTML_restart_is) >> max_num_elements;
+ (*CTML_restart_is) >> structured_flag;
+ (*CTML_restart_is) >> structure_dim;
+ (*CTML_restart_is) >> structure_topology;
+ (*CTML_restart_is) >> ngrow_node;
+
+ (*CTML_restart_is) >> local_node_list_size;
+
+ node_list.resize(local_node_list_size);
+ init_node_list.resize(local_node_list_size);
+ prev_node_list.resize(local_node_list_size);
+ velocity_list.resize(local_node_list_size);
+ prev_velocity_list.resize(local_node_list_size);
+
+ for (int i=0;i<node_list.size();i++) {
+  (*CTML_restart_is) >> node_list[i];
+  (*CTML_restart_is) >> prev_node_list[i];
+  (*CTML_restart_is) >> velocity_list[i];
+  (*CTML_restart_is) >> prev_velocity_list[i];
+  (*CTML_restart_is) >> init_node_list[i];
+ }
+
+ (*CTML_restart_is) >> local_element_list_size;
+
+ element_list.resize(local_element_list_size);
+ for (int i=0;i<element_list.size();i++) {
+  (*CTML_restart_is) >> element_list[i];
+ }
+
+ (*CTML_restart_is) >> local_mass_list_size;
+
+ mass_list.resize(local_mass_list_size);
+ temp_list.resize(local_mass_list_size);
+
+ for (int i=0;i<mass_list.size();i++) {
+  (*CTML_restart_is) >> mass_list[i];
+  (*CTML_restart_is) >> temp_list[i];
+ }
+
+} //end subroutine restart
+
 
 void FSI_container_class::initData_FSI(
   const int CTML_num_solids_init,
@@ -492,20 +573,23 @@ AmrLevel::restart (AmrCore&      papa,
  }
  FullPath += Level_string;
 
+ //SUSSMAN: load CTML FSI checkpoint data
  if (level==0) {
 
-  std::string FullPathName=FullPath;
   int time_order=parent->Time_blockingFactor();
   int local_nmat=parent->global_AMR_num_materials;
 
   new_data_FSI.resize(level_MAX_NUM_SLAB);
 
+  new_data_FSI[0].open_restart(FullPath);
+
   for (int i=0;i<=time_order;i++) {
 
-    //TODO: restart the FSI data.
-   new_data_FSI[i].clear_FSI();
+   new_data_FSI[i].restart(i);
 
   }//for (int i=0;i<=time_order;i++) 
+
+  new_data_FSI[0].close_restart();
 
  } else if (level>0) {
   // do nothing
