@@ -65,6 +65,8 @@ Vector< Real > temp_list;
 void FSI_flatten(Vector< Real >& flattened_data);
 void FSI_unflatten(Vector< Real > flattened_data);
 
+void checkpoint(std::ofstream CTML_log);
+
 void initData_FSI(
   const int CTML_num_solids_init,
   const int max_num_nodes_init[3],

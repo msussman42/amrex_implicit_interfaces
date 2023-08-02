@@ -18,6 +18,37 @@ namespace amrex {
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
+void FSI_container_class::checkpoint(std::ofstream CTML_log) {
+
+ CTML_log << CTML_num_solids << '\n';
+ for (int dir=0;dir<3;dir++) {
+  CTML_log << max_num_nodes[dir] << '\n';
+ }
+ CTML_log << max_num_elements << '\n';
+ CTML_log << structured_flag << '\n';
+ CTML_log << structure_dim << '\n';
+ CTML_log << structure_topology << '\n';
+ CTML_log << ngrow_node << '\n';
+ CTML_log << node_list.size() << '\n';
+ for (int i=0;i<node_list.size();i++) {
+  CTML_log << node_list[i] << '\n';
+  CTML_log << prev_node_list[i] << '\n';
+  CTML_log << velocity_list[i] << '\n';
+  CTML_log << prev_velocity_list[i] << '\n';
+  CTML_log << init_node_list[i] << '\n';
+ }
+ CTML_log << element_list.size() << '\n';
+ for (int i=0;i<element_list.size();i++) {
+  CTML_log << element_list[i] << '\n';
+ }
+ CTML_log << mass_list.size() << '\n';
+ for (int i=0;i<mass_list.size();i++) {
+  CTML_log << mass_list[i] << '\n';
+  CTML_log << temp_list[i] << '\n';
+ }
+
+} //end subroutine checkpoint
+
 void FSI_container_class::initData_FSI(
   const int CTML_num_solids_init,
   const int max_num_nodes_init[3],
@@ -596,6 +627,25 @@ AmrLevel::checkPoint (const std::string& dir,
         state[icomp].checkPoint(PathNameInHdr, FullPathName, os,
 			level,max_level);
         
+    }
+
+      //SUSSMAN: output CTML FSI checkpoint data
+    if (level==0) {
+     int time_order=parent->Time_blockingFactor();
+     std::string CTML_FullPathName  = FullPath+"/CTML";
+     std::ofstream CTML_log;
+     if (ParallelDescriptor::IOProcessor()) {
+       // use std::ios::in for restarting  (std::ofstream::in ok too?)
+      CTML_log.open(CTML_FullPathName.c_str(),std::ios::out);
+      if (!CTML_log.good())
+       amrex::FileOpenFailed(CTML_FullPathName);
+      for (int i=0;i<=time_order;i++) {
+       CTML_log << i << '\n';
+       new_data_FSI[i].checkpoint(CTML_log);
+      }
+      CTML_log.close();
+     }
+     ParallelDescriptor::Barrier("AmrLevel::checkPoint");
     }
 } // end subroutine AmrLevel::checkPoint
 
