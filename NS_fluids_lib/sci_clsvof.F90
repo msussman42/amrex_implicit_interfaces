@@ -50,14 +50,16 @@ type FSI_container_type
  INTEGER_T structure_dim
  INTEGER_T structure_topology
  INTEGER_T ngrow_node
- REAL_T, pointer :: node_list(:,:,:)
- REAL_T, pointer :: prev_node_list(:,:,:)
- REAL_T, pointer :: velocity_list(:,:,:)
- REAL_T, pointer :: prev_velocity_list(:,:,:)
+
+FIX ME node vars live in 5D array: fiber num,x,y,z,dir
+ REAL_T, pointer :: node_list(:,:,:,:,:)
+ REAL_T, pointer :: prev_node_list(:,:,:,:,:)
+ REAL_T, pointer :: velocity_list(:,:,:,:,:)
+ REAL_T, pointer :: prev_velocity_list(:,:,:,:,:)
  INTEGER_T, pointer :: element_list(:,:,:)
- REAL_T, pointer :: init_node_list(:,:,:)
- REAL_T, pointer :: mass_list(:,:)
- REAL_T, pointer :: temp_list(:,:)
+ REAL_T, pointer :: init_node_list(:,:,:,:,:)
+ REAL_T, pointer :: mass_list(:,:,:,:)
+ REAL_T, pointer :: temp_list(:,:,:,:)
 end type FSI_container_type
 
 type lag_type

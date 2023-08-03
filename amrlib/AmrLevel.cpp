@@ -34,6 +34,8 @@ void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 
 } //end subroutine open_checkpoint
 
+FIX ME open_restart must be done in the AmrLevel class ("is" is DELETED
+at end of this routine); pass "is" as a parameter
 void FSI_container_class::open_restart(const std::string& FullPath) {
 
  std::string CTML_FullPathName  = FullPath+"/CTML";
