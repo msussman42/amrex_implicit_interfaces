@@ -740,7 +740,7 @@ c
 
 c rtime = t^{n+1}
       subroutine tick_fib(
-     &      datalo,datahi
+     &      ilo,ihi,jlo,jhi,klo,khi
 ! t^{n+1}              
      &     ,rtime
      &     ,dt
@@ -762,17 +762,25 @@ c rtime = t^{n+1}
      &       )
       USE HeaderFSI
       implicit none
-      integer datalo,datahi
-      real*8 UIBM123out_fib(Nr_IBM_fib,datalo:datahi,1:3)
-      real*8 prev_uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
-      real*8 uibm123in_fib(Nr_IBM_fib,datalo:datahi,1:3)
-      real*8 FIBM123in_fib(Nr_IBM_fib,Ns_IBM_fib,1:3)
-      real*8 GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi,1:3)
-      real*8 GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
-      real*8 prev_GXYZ_IBM_MASSIVEin_fib(Nr_IBM_fib,datalo:datahi,1:3)
+      integer ilo,ihi,jlo,jhi,klo,khi
+      real*8 UIBM123out_fib(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
+      real*8 prev_uibm123in_fib(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
+      real*8 uibm123in_fib(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
+      real*8 FIBM123in_fib(Nr_IBM_fib,Ns_IBM_fib,1,1,1:3)
+      real*8 GXYZ_IBM_MASSIVEout_fib(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
+      real*8 GXYZ_IBM_MASSIVEin_fib(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
+      real*8 prev_GXYZ_IBM_MASSIVEin_fib(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
 
-      real*8 ds_IBM_fib_out(Nr_IBM_fib,datalo:datahi)
-      real*8 ds_IBM_fib_in(Nr_IBM_fib,datalo:datahi)
+      real*8 ds_IBM_fib_out(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi)
+      real*8 ds_IBM_fib_in(
+     &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi)
 
       real*8 rtime, dt
       logical monitorON,theboss
@@ -795,35 +803,35 @@ c rtime = t^{n+1}
 ! passing old fiber values to pre variables and initialize new variables 
       do i=1,nr_ibm_fib
 
-       if ((datalo.le.1-Ns_IBMB_fib).and. 
-     &     (datalo.le.0).and.
-     &     (datahi.ge.ns_ibm_r_fib(i)+1).and.
-     &     (datahi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib)) then
+       if ((ilo.le.1-Ns_IBMB_fib).and. 
+     &     (ilo.le.0).and.
+     &     (ihi.ge.ns_ibm_r_fib(i)+1).and.
+     &     (ihi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib)) then
 !       do nothing
        else
-        print *,"datalo,datahi invalid"
+        print *,"ilo,ihi,jlo,jhi,klo,khi invalid"
         stop
        endif
 
        do j=0,ns_ibm_r_fib(i)+1
           ! gx_ibm_fib data (position) at t^{n-1}
-        gx_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,1)
-        gy_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,2)
+        gx_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,jlo,klo,1)
+        gy_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,jlo,klo,2)
           ! gx_ibm_massive_fib data (position) at t^{n}
-        gx_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,1)
-        gy_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,2)
+        gx_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,1)
+        gy_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,2)
           ! gx_ibm_massive_fib data (position) at t^{n}
-        gx_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,1)
-        gy_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,2)
+        gx_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,1)
+        gy_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,2)
 ! j
        end do
 
        if(ndim .gt.2) then
 
         do j=0,ns_ibm_r_fib(i)+1
-         gz_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,3)
-         gz_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,3)
-         gz_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,3)
+         gz_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,jlo,klo,3)
+         gz_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,3)
+         gz_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,3)
         end do
 
        endif
@@ -831,22 +839,22 @@ c rtime = t^{n+1}
        do j=1,ns_ibm_r_fib(i)
         UIBM1_fib(i,j)=0.0d0
         UIBM2_fib(i,j)=0.0d0
-        vibm1_fib(i,j)=uibm123in_fib(i,j,1)
-        vibm2_fib(i,j)=uibm123in_fib(i,j,2)
+        vibm1_fib(i,j)=uibm123in_fib(i,j,jlo,klo,1)
+        vibm2_fib(i,j)=uibm123in_fib(i,j,jlo,klo,2)
 ! force
-        fk_mass1o_fib(i,j)=FIBM123in_fib(i,j,1)
-        fk_mass2o_fib(i,j)=FIBM123in_fib(i,j,2)
+        fk_mass1o_fib(i,j)=FIBM123in_fib(i,j,1,1,1)
+        fk_mass2o_fib(i,j)=FIBM123in_fib(i,j,1,1,2)
        end do
 
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
-        DS_IBM_fib(i,j)=ds_IBM_fib_in(i,j)
+        DS_IBM_fib(i,j)=ds_IBM_fib_in(i,j,jlo,klo)
        enddo
 
        if(ndim .gt.2) then
         do j=1,ns_ibm_r_fib(i)
          UIBM3_fib(i,j)=0.0d0
-         vibm3_fib(i,j)=uibm123in_fib(i,j,3)
-         fk_mass3o_fib(i,j)=FIBM123in_fib(i,j,3)
+         vibm3_fib(i,j)=uibm123in_fib(i,j,jlo,klo,3)
+         fk_mass3o_fib(i,j)=FIBM123in_fib(i,j,1,1,3)
         end do
        endif
 
@@ -942,26 +950,27 @@ c rtime = t^{n+1}
       do i=1,nr_ibm_fib
 
        do j=1,ns_ibm_r_fib(i)
-        uIBM123out_fib(i,j,1)=vibm1_fib(i,j)
-        uIBM123out_fib(i,j,2)=vibm2_fib(i,j)
+        uIBM123out_fib(i,j,jlo,klo,1)=vibm1_fib(i,j)
+        uIBM123out_fib(i,j,jlo,klo,2)=vibm2_fib(i,j)
         if(ndim .gt.2) then
-         uIBM123out_fib(i,j,3)=vibm3_fib(i,j)
+         uIBM123out_fib(i,j,jlo,klo,3)=vibm3_fib(i,j)
         endif
        end do
 
        do j=0,ns_ibm_r_fib(i)+1
 ! position at t^{n+1}
-        gxyz_ibm_massiveout_fib(i,j,1)=gx_ibm_massive_fib(i,j)
-        gxyz_ibm_massiveout_fib(i,j,2)=gy_ibm_massive_fib(i,j)
+        gxyz_ibm_massiveout_fib(i,j,jlo,klo,1)=gx_ibm_massive_fib(i,j)
+        gxyz_ibm_massiveout_fib(i,j,jlo,klo,2)=gy_ibm_massive_fib(i,j)
         if(ndim .gt.2) then
-         gxyz_ibm_massiveout_fib(i,j,3)=gz_ibm_massive_fib(i,j)
+         gxyz_ibm_massiveout_fib(i,j,jlo,klo,3)=gz_ibm_massive_fib(i,j)
         endif
        end do
 
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
-        DS_IBM_fib_out(i,j)=ds_IBM_fib(i,j)
+        DS_IBM_fib_out(i,j,jlo,klo)=ds_IBM_fib(i,j)
 
-        if (abs(ds_ibm_fib_in(i,j)-ds_ibm_fib_out(i,j)).le.1.0D-10) then
+        if (abs(ds_ibm_fib_in(i,j,jlo,klo)-
+     &         ds_ibm_fib_out(i,j,jlo,klo)).le.1.0D-10) then
 !        do nothing
         else
          print *,"expecting ds_ibm_fib not to change (dsf_ibm_fib?)"

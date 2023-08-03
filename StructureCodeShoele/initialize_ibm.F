@@ -3223,37 +3223,39 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       end 
 
       subroutine copy_ibm_fib(
-     &   datalo,datahi
+     &   ilo,ihi,jlo,jhi,klo,khi
      &  ,ds_fib
      &  ,gxyz_ibm_massiveout_fib)
       USE HeaderFSI
       implicit none
 
-      integer datalo,datahi
-      real*8 GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib,datalo:datahi,3)
-      real*8 ds_fib(Nr_IBM_fib,datalo:datahi)
+      integer ilo,ihi,jlo,jhi,klo,khi
+      real*8 GXYZ_IBM_MASSIVEout_fib(Nr_IBM_fib
+     &   ,ilo:ihi,jlo:jhi,klo:khi,3)
+      real*8 ds_fib(Nr_IBM_fib
+     &   ,ilo:ihi,jlo:jhi,klo:khi)
 
       integer i,j
 
       do i=1,nr_ibm_fib
 
-       if ((datalo.le.1-Ns_IBMB_fib).and. 
-     &     (datalo.le.0).and.
-     &     (datahi.ge.ns_ibm_r_fib(i)+1).and.
-     &     (datahi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib)) then
+       if ((ilo.le.1-Ns_IBMB_fib).and. 
+     &     (ilo.le.0).and.
+     &     (ihi.ge.ns_ibm_r_fib(i)+1).and.
+     &     (ihi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib)) then
 !       do nothing
        else
-        print *,"datalo,datahi invalid"
+        print *,"ilo,ihi,jlo,jhi,klo,khi invalid"
         stop
        endif
 
        do j=0,ns_ibm_r_fib(i)+1
-        gxyz_ibm_massiveout_fib(i,j,1)=gx_ibm_massive_fib(i,j)
-        gxyz_ibm_massiveout_fib(i,j,2)=gy_ibm_massive_fib(i,j)
-        gxyz_ibm_massiveout_fib(i,j,3)=gz_ibm_massive_fib(i,j)
+        gxyz_ibm_massiveout_fib(i,j,jlo,klo,1)=gx_ibm_massive_fib(i,j)
+        gxyz_ibm_massiveout_fib(i,j,jlo,klo,2)=gy_ibm_massive_fib(i,j)
+        gxyz_ibm_massiveout_fib(i,j,jlo,klo,3)=gz_ibm_massive_fib(i,j)
        end do
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
-        ds_fib(i,j)=ds_ibm_fib(i,j)
+        ds_fib(i,j,jlo,klo)=ds_ibm_fib(i,j)
        end do
       enddo
 
@@ -3261,29 +3263,50 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       end 
      
       subroutine copy_ibm_fsh(
-     &   ds_fsh
+     &   ilo,ihi,jlo,jhi,klo,khi
+     &  ,ds_fsh
      &  ,gxyz_ibm_massiveout_fsh)
       USE HeaderFSI
       implicit none
 
-      real*8
-     & GXYZ_IBM_MASSIVEout_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh,1:3)
-      real*8 ds_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh)
+      integer ilo,ihi,jlo,jhi,klo,khi
+      real*8 GXYZ_IBM_MASSIVEout_fsh(Nr_IBM_fsh
+     &   ,ilo:ihi,jlo:jhi,klo:khi,3)
+      real*8 ds_fsh(Nr_IBM_fsh
+     &   ,ilo:ihi,jlo:jhi,klo:khi)
 
       integer i,j,jq
       real*8 tmpv1val
       real*8 tmpv2val
 
       do i=1,nr_ibm_fsh
+
+       if ((ilo.le.1-Nq_IBMB_fsh).and. 
+     &     (ilo.le.0).and.
+     &     (ihi.ge.Nq_IBM_fsh+1).and.
+     &     (ihi.ge.Nq_IBM_fsh+Nq_IBMB_fsh).and. &
+     &     (jlo.le.1-Ns_IBMB_fsh).and. 
+     &     (jlo.le.0).and.
+     &     (jhi.ge.Ns_IBM_fsh+1).and. 
+     &     (jhi.ge.Ns_IBM_fsh+Ns_IBMB_fsh)) then
+!       do nothing
+       else
+        print *,"ilo,ihi,jlo,jhi,klo,khi invalid"
+        stop
+       endif
+
        do jq=1,nq_ibm_r_fsh(i)
        do j=1,ns_ibm_r_fsh(i)
-          gxyz_ibm_massiveout_fsh(i,jq,j,1)=gx_ibm_massive_fsh(i,jq,j)
-          gxyz_ibm_massiveout_fsh(i,jq,j,2)=gy_ibm_massive_fsh(i,jq,j)
-          gxyz_ibm_massiveout_fsh(i,jq,j,3)=gz_ibm_massive_fsh(i,jq,j)
+          gxyz_ibm_massiveout_fsh(i,jq,j,klo,1)=
+     &       gx_ibm_massive_fsh(i,jq,j)
+          gxyz_ibm_massiveout_fsh(i,jq,j,klo,2)=
+     &       gy_ibm_massive_fsh(i,jq,j)
+          gxyz_ibm_massiveout_fsh(i,jq,j,klo,3)=
+     &       gz_ibm_massive_fsh(i,jq,j)
           tmpv1val=1.0d0;tmpv2val=1.0d0
           if(j .eq.1 .or. j .eq. ns_ibm_r_fsh(i)) tmpv1val=0.5d0
           if(jq.eq.1 .or. jq.eq. nq_ibm_r_fsh(i)) tmpv2val=0.5d0
-          ds_fsh(i,jq,j)=ds_ibm_fsh(i,jq,j)*ds2_ibm_fsh(i,jq,j)
+          ds_fsh(i,jq,j,klo)=ds_ibm_fsh(i,jq,j)*ds2_ibm_fsh(i,jq,j)
      &           *tmpv1val*tmpv2val
        enddo
        enddo
