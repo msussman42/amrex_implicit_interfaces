@@ -66,15 +66,12 @@ void FSI_flatten(Vector< Real >& flattened_data);
 void FSI_unflatten(Vector< Real > flattened_data);
 
 static std::ofstream CTML_checkpoint_file;
-static std::istringstream* CTML_restart_is;
 
 void open_checkpoint(const std::string& FullPath);
 void close_checkpoint();
 void checkpoint(int check_id);
 
-void open_restart(const std::string& FullPath);
-void close_restart();
-void restart(int check_id);
+void restart(int check_id,std::istream& is);
 
 void initData_FSI(
   const int CTML_num_solids_init,
