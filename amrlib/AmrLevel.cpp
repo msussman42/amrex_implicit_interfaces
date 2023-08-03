@@ -19,7 +19,6 @@ DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
 std::ofstream FSI_container_class::CTML_checkpoint_file;
-std::istringstream* FSI_container_class::CTML_restart_is;
 
 void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 
@@ -34,33 +33,12 @@ void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 
 } //end subroutine open_checkpoint
 
-FIX ME open_restart must be done in the AmrLevel class ("is" is DELETED
-at end of this routine); pass "is" as a parameter
-void FSI_container_class::open_restart(const std::string& FullPath) {
-
- std::string CTML_FullPathName  = FullPath+"/CTML";
-
- Vector<char> fileCharPtr;
- ParallelDescriptor::ReadAndBcastFile(CTML_FullPathName, fileCharPtr);
- std::string fileCharPtrString(fileCharPtr.dataPtr());
- std::istringstream is(fileCharPtrString, std::istringstream::in);
- CTML_restart_is=&is;
-
-} //end subroutine open_restart
-
-
 void FSI_container_class::close_checkpoint() {
 
  if (ParallelDescriptor::IOProcessor()) {
   CTML_checkpoint_file.close();
  }
 
-}
-
-void FSI_container_class::close_restart() {
-
- //do nothing
- 
 }
 
 void FSI_container_class::checkpoint(int check_id) {
@@ -99,10 +77,10 @@ void FSI_container_class::checkpoint(int check_id) {
 } //end subroutine checkpoint
 
 
-void FSI_container_class::restart(int check_id) {
+void FSI_container_class::restart(int check_id,std::istream& is) {
 
  int local_check_id;
- (*CTML_restart_is) >> local_check_id;
+ is >> local_check_id;
  if (local_check_id==check_id) {
   //do nothing
  } else
@@ -112,17 +90,17 @@ void FSI_container_class::restart(int check_id) {
  int local_element_list_size;
  int local_mass_list_size;
 
- (*CTML_restart_is) >> CTML_num_solids;
+ is >> CTML_num_solids;
  for (int dir=0;dir<3;dir++) {
-  (*CTML_restart_is) >> max_num_nodes[dir];
+  is >> max_num_nodes[dir];
  }
- (*CTML_restart_is) >> max_num_elements;
- (*CTML_restart_is) >> structured_flag;
- (*CTML_restart_is) >> structure_dim;
- (*CTML_restart_is) >> structure_topology;
- (*CTML_restart_is) >> ngrow_node;
+ is >> max_num_elements;
+ is >> structured_flag;
+ is >> structure_dim;
+ is >> structure_topology;
+ is >> ngrow_node;
 
- (*CTML_restart_is) >> local_node_list_size;
+ is >> local_node_list_size;
 
  node_list.resize(local_node_list_size);
  init_node_list.resize(local_node_list_size);
@@ -131,28 +109,28 @@ void FSI_container_class::restart(int check_id) {
  prev_velocity_list.resize(local_node_list_size);
 
  for (int i=0;i<node_list.size();i++) {
-  (*CTML_restart_is) >> node_list[i];
-  (*CTML_restart_is) >> prev_node_list[i];
-  (*CTML_restart_is) >> velocity_list[i];
-  (*CTML_restart_is) >> prev_velocity_list[i];
-  (*CTML_restart_is) >> init_node_list[i];
+  is >> node_list[i];
+  is >> prev_node_list[i];
+  is >> velocity_list[i];
+  is >> prev_velocity_list[i];
+  is >> init_node_list[i];
  }
 
- (*CTML_restart_is) >> local_element_list_size;
+ is >> local_element_list_size;
 
  element_list.resize(local_element_list_size);
  for (int i=0;i<element_list.size();i++) {
-  (*CTML_restart_is) >> element_list[i];
+  is >> element_list[i];
  }
 
- (*CTML_restart_is) >> local_mass_list_size;
+ is >> local_mass_list_size;
 
  mass_list.resize(local_mass_list_size);
  temp_list.resize(local_mass_list_size);
 
  for (int i=0;i<mass_list.size();i++) {
-  (*CTML_restart_is) >> mass_list[i];
-  (*CTML_restart_is) >> temp_list[i];
+  is >> mass_list[i];
+  is >> temp_list[i];
  }
 
 } //end subroutine restart
@@ -594,15 +572,19 @@ AmrLevel::restart (AmrCore&      papa,
 
   new_data_FSI.resize(level_MAX_NUM_SLAB);
 
-  new_data_FSI[0].open_restart(FullPath);
+  std::string CTML_FullPathName  = FullPath+"/CTML";
+
+  Vector<char> fileCharPtr;
+   //we assume that all of the CTML data fits on each "core"
+  ParallelDescriptor::ReadAndBcastFile(CTML_FullPathName, fileCharPtr);
+  std::string fileCharPtrString(fileCharPtr.dataPtr());
+  std::istringstream CTML_is(fileCharPtrString, std::istringstream::in);
 
   for (int i=0;i<=time_order;i++) {
 
-   new_data_FSI[i].restart(i);
+   new_data_FSI[i].restart(i,CTML_is);
 
   }//for (int i=0;i<=time_order;i++) 
-
-  new_data_FSI[0].close_restart();
 
  } else if (level>0) {
   // do nothing
