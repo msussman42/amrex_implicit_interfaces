@@ -115,7 +115,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       read(9997,*) BucketdX(1:3)
       read(9997,*) Bucketntinterval
       read(9997,*) delta_typex, delta_typey, delta_typez
-      read(9997,*) alpha_ibm , beta_ibm, alphabetaRise
       read(9997,*) save_force_int, del_force,  check_int, fr
       read(9997,*) phi_grav,the_grav
       read(9997,*) gammaglobal
@@ -123,7 +122,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &            ,maxiter
       read(9997,*) Solverabstol,Solverreltol,SolverOutiter
      &             ,SolverIniter,SolverILU,SolverPre
-      read(9997,*) del_s,alphatemp_ibm,betatemp_ibm
       read(9997,*) channelcontacty,channelcontactz
       read(9997,*) flag_restartfile, t0_restartfile,dt_restartfile
       read(9997,*) 
@@ -213,6 +211,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
              Ilocglb_fib(in_fib)=i+1
              Iglbloc_fib(i+1)=in_fib
           elseif(bodytype(i+1).eq. shell) then
+             print *,"pressure/vel coupling not supported"
+             stop
              in_esh=in_esh+1
              Ilocglb_esh(in_esh)=i+1
              Iglbloc_esh(i+1)=in_esh
@@ -221,6 +221,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
              Ilocglb_fsh(in_fsh)=i+1
              Iglbloc_fsh(i+1)=in_fsh
           elseif(bodytype(i+1).eq. fabric) then
+             print *,"pressure/vel coupling not supported"
+             stop
              in_fbc=in_fbc+1
              Ilocglb_fbc(in_fbc)=i+1
              Iglbloc_fbc(i+1)=in_fbc
@@ -269,7 +271,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
           if(theboss) print*,'contactplanesFlag=',contactplanesFlag(i+1) 
           if( contactplanesFlag(i+1)) then
              read(9997,*) Ncontactplanes(i+1)
-          if(theboss)print*,'Num of Contact planes=',Ncontactplanes(i+1)
+             if(theboss) then
+              print*,'Num of Contact planes=',Ncontactplanes(i+1)
+             endif
              do j=1,Ncontactplanes(i+1)
                if(j .eq. 1) then
                 if(theboss)print*,'================================='
@@ -1900,7 +1904,7 @@ c variable stiffness
                   do j2=1,3
                      ifound=0
                      iv0=nea_fbc(in_fbc,j,mod(j2-1,3)+1)
-                     iv1=nea_fbc(in_fbc,j,mod(j2  ,3)+1)                  
+                     iv1=nea_fbc(in_fbc,j,mod(j2  ,3)+1) 
                      do k=1,faces_nvertisin_fbc(in_fbc,iv0)
                         ie0=faces_vertisin_fbc(in_fbc,iv0,k)
                         if(ie0 .ne. j) then

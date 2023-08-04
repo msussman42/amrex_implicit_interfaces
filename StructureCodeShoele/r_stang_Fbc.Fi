@@ -1965,7 +1965,7 @@ c calculation of total forces
      &                 -fibm1_fbc(i,j)   
      &                 +finer_1_ibm_fbc(i,j)
      &                 +temp_ibm1
-     &                  *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*cos(the_grav)*sin(phi_grav)
      &                 ) 
      &                +dt2*f_impuls1_fbc(i,j)
 
@@ -1974,7 +1974,7 @@ c calculation of total forces
      &                 -fibm2_fbc(i,j)    
      &                 +finer_2_ibm_fbc(i,j) 
      &                 +temp_ibm1
-     &                  *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*sin(the_grav)*sin(phi_grav)
      &                 ) 
      &                 +dt2*f_impuls2_fbc(i,j)
 
@@ -1983,7 +1983,7 @@ c calculation of total forces
      &                 -fibm3_fbc(i,j)    
      &                 +finer_3_ibm_fbc(i,j) 
      &                 +temp_ibm1
-     &                  *fr*cos(phi_grav)*timetemp2
+     &                  *fr*cos(phi_grav)
      &                 ) 
      &                 +dt2*f_impuls3_fbc(i,j)
         end do
@@ -2001,7 +2001,7 @@ c calculation of total forces
      &          +dt2*(-FabricMesh_force_points(j,1:3)
      &                -FabricMesh_force(i,j,1:3)
      &                +FabricMesh_attr(i,j,iMm0)
-     &                   *fr*timetemp2*tmpcoord(1:3)
+     &                   *fr*tmpcoord(1:3)
      &                )
          enddo
       endif
@@ -2014,7 +2014,7 @@ c calculation of total forces
      &          +dt2*(-FabricLine_force_points(j,1:3)
      &                -FabricLine_force(i,j,1:3)
      &                +FabricLine_attr(i,j,iLm0)
-     &                   *fr*timetemp2*tmpcoord(1:3)
+     &                   *fr*tmpcoord(1:3)
      &                )
          enddo
       endif
@@ -2463,33 +2463,16 @@ c calculation of total forces
 c
 c calculating feedback force for matching bcs
        i2g=Ilocglb_fbc(ibdy)
-       ImplicitFSI_coef=0.0
        if(FluidForceFlag(i2g)) then
-        ImplicitFSI_coef=(alpha_ibm*delta_t+beta_ibm)*timetemp2
         do j=1,ns_ibm_r_fbc(i)
            fk_mass1_fbc(i,j)=fk_mass1o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_fbc(i,j)-dX_na_fbc(j,1))
-     &                   *timetemp2
-
-            fk_mass2_fbc(i,j)=fk_mass2o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_fbc(i,j)-dX_na_fbc(j,2))
-     &                   *timetemp2
-
-            ffluidsum1_fbc(i,j)= fk_mass1_fbc(i,j)
-     &                   +beta_ibm*(uibm1_fbc(i,j)-dX_na_fbc(j,1))
-     &                   *timetemp2
-            ffluidsum2_fbc(i,j)= fk_mass2_fbc(i,j)
-     &                   +beta_ibm*(uibm2_fbc(i,j)-dX_na_fbc(j,2))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           fk_mass2_fbc(i,j)=fk_mass2o_fbc(i,j)
+           ffluidsum1_fbc(i,j)= fk_mass1_fbc(i,j)
+           ffluidsum2_fbc(i,j)= fk_mass2_fbc(i,j)
+           if(ndim .gt. 2) then
             fk_mass3_fbc(i,j)=fk_mass3o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_fbc(i,j)-dX_na_fbc(j,3))
-     &                   *timetemp2
-
             ffluidsum3_fbc(i,j)= fk_mass3_fbc(i,j)
-     &                   +beta_ibm*(uibm3_fbc(i,j)-dX_na_fbc(j,3))
-     &                   *timetemp2
-            endif
+           endif
          end do
          do j=1,ns_ibm_r_fbc(i)
               fibm1_fbc(i,j)=fibm1_fbc(i,j)+ffluidsum1_fbc(i,j)
@@ -5421,21 +5404,6 @@ c calculating feedback force for matching bcs
          enddo
          endif
 
-       if(FluidForceFlag(i2g) .and. (1==1)) then
-          j2=ns_ibm_r_fbc(i)+ns_ibm_i_fbc(i)
-          do j=1,j2
-           aamat_fbc(j,j)
-     &       =aamat_fbc(j,j)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_fbc(i,j)
-           aamat_fbc(j+j2,j+j2)
-     &       =aamat_fbc(j+j2,j+j2)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_fbc(i,j)
-           aamat_fbc(j+2*j2,j+2*j2)
-     &       =aamat_fbc(j+2*j2,j+2*j2)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_fbc(i,j)
-          enddo
-        endif
-
         j2=ns_ibm_r_fbc(i)+ns_ibm_i_fbc(i)
         do j=1,target_num(i2g)
              k=target_point_num_fbc(i,j)
@@ -6335,7 +6303,7 @@ c calculation of total forces
      &                  + (
      &                 -fibm1_fbc(i,j)   
      &                 +temp_ibm1
-     &                  *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*cos(the_grav)*sin(phi_grav)
      &                 ) 
      &                +f_impuls1_fbc(i,j)
 
@@ -6343,7 +6311,7 @@ c calculation of total forces
      &                  + (
      &                 -fibm2_fbc(i,j)    
      &                 +temp_ibm1
-     &                  *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*sin(the_grav)*sin(phi_grav)
      &                 ) 
      &                 +f_impuls2_fbc(i,j)
 
@@ -6351,7 +6319,7 @@ c calculation of total forces
      &                  +(
      &                 -fibm3_fbc(i,j)    
      &                 +temp_ibm1
-     &                  *fr*cos(phi_grav)*timetemp2
+     &                  *fr*cos(phi_grav)
      &                 ) 
      &                 +f_impuls3_fbc(i,j)
         end do
@@ -6379,7 +6347,7 @@ c calculation of total forces
      &          -FabricLine_force_points(j,1:3)
      &          -FabricLine_force(i,j,1:3)
      &          +FabricMesh_attr(i,j,iMm0)
-     &                   *fr*timetemp2*tmpcoord(1:3)
+     &                   *fr*tmpcoord(1:3)
         enddo
        noi=3*np
        noj=ns_ibm_r_fbc(i)+ns_ibm_i_fbc(i)
@@ -6431,7 +6399,7 @@ c calculation of total forces
      &          -FabricLine_force_points(j,1:3)
      &          -FabricLine_force(i,j,1:3)
      &          +FabricLine_attr(i,j,iLm0)
-     &                   *fr*timetemp2*tmpcoord(1:3)
+     &                   *fr*tmpcoord(1:3)
         enddo
        noi=3*np
        noj=ns_ibm_r_fbc(i)+ns_ibm_i_fbc(i)

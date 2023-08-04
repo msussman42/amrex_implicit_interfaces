@@ -3,21 +3,19 @@
 -5.0 -5.0 -5.0                         /bucket start (x,y,z)
 35.0 35.0 35.0                         /bucket end (x,y,z)   
 150.5 150.5 150.5                      /bucket dx (dx,dy,dz)
-100.0                                  /bucketdeltat                                  
+100.0                                  /bucketdeltat (Bucketinterval) 
 2           2           2              /Delta_typeX, Delta_typeY, Delta_typeZ
--1.0d4     -2.0d0        0.05          /alpha_IBM , beta_IBM, alphabetaRise
-1           1          1        0.5    /SAVE_FORCE_INT, Del_FORCE,  CHECK_INT, g
+1           1          1        0.5    /SAVE_FORCE_INT,Del_FORCE,CHECK_INT,g(fr)
 90.0       0.0                         /phi_grav,the_grav
-2.45                                    /baseLengthofaBeam
+2.45                                   /baseLengthofaBeam(gammaglobal)
 10 1.0d-12 1 1.0d-5  0                 /maxnstruct,maxErrorstruct,maxnfluid,maxErrorfluid,maxiter
 1.0d-13 1.0d-11 15  200 1  2           /Solverabstol,Solverreltol,SolverOutiter,SolverIniter,SolverPre{0:no Pre;1:diag Pre; 2:iLU}
-0.0  -00.0  0.00                       /del_s(~0: with thermal calculation),alphaTEMP_IBM,betaTEMP_IBM
 .false. .false.                        /channelcontacty,channelcontactz
 .false.  500  500                       /flag_restartfile, t0_restartfile, dt_restartfile flag_restartfile=false (only _esh restart implemented)
 c Start of main inputs; this file read from create_grid2.F
 1 1                                    /nr_ibm_f, nr_ibm_fb    Number of flexible bodies, num of interacting bodies for penalty to prevent intersection
 ./tringulareFix.dat                   /name of externalcontact trinagular
-0 0                                    /nFixcontact,nFixcontactL:num of nodes and elements in the above file
+0 0                                   /nFixcontact,nFixcontactL:num of nodes and elements in the above file
 c======global inputs 1-------------------------
 0			               /0:fiber structure 1:shell structure 2:fibrous shell
 .true.                                 /flag record position    
@@ -31,7 +29,7 @@ c======global inputs 1-------------------------
 0.0 0.0 0.0                            /cenetr of rotation in local coordinates
 0.0 0.0 18 1230                        /rotational angle in Euler sequance (deg)  :Euler sequence{1:X;2:Y;3:Z;<0,1>:<current,fixed> coodinate}
 c----2D Fiber ------------------------
-1.0   0.001  0   1                     /ks_ibm,  kb_ibm, iflaginext{1:inex; 0:ext},  implicitflag{1:solve all implicitly 0:semi-implicit}
+1.0   0.001  1   1                     /ks_ibm,  kb_ibm, iflaginext{1:inex; 0:ext},  implicitflag{1:solve all implicitly 0:semi-implicit}
 1                                      /FlagForTypeOfInput  1=create fiber mesh 0= read fiber mesh
 111                                    /fiberbdry {look at the end of this file}
 0.0 0.0 0.0  1.0 0.0 0.0               / if{FlagForTypeOfInput eq 1 we should have this line   {x0,y0,z0:start point of a line,x1,y1,z1:end point of a line} 
@@ -49,7 +47,7 @@ c----2D Fiber ------------------------
 1   1  1  1                            /xfixed  1 if fixed {1:i_fintype} 
 0 0.0d0                                /flag_TDpt_Pnormal_Ext{1:read external pressure on the surface from the following file and multipy by the number in this line,0: just use this line },Pnormal_Ext(i+1){pressure magnitude}
 PressureTimeNew.dat                    /file for pressure data
-c------------------- Rigid Body motion of this body and ramping time --------------
+c------- Rigid Body motion of this body and ramping time --------------
 0.0 0.0 0.0        /Gt0 center of rotation of thebody in its defined local coordinate x,y,z
 0.0 3000.0         /Tramps [1: starting time for motion; 2: ramping period for local motion
 4.0 4.0 4.0        /TrampX ramping time of transitional motion in X,Y,and Z
