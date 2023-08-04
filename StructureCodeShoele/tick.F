@@ -837,46 +837,54 @@ c
      &   gxyz_ibm_massivein_fsh(i,jq,j,klo,2)
        end do
        end do
+
        if(ndim .gt.2) then
-       do jq=1,nq_ibm_r_fsh(i)
-       do j=1,ns_ibm_r_fsh(i)
+        do jq=1,nq_ibm_r_fsh(i)
+        do j=1,ns_ibm_r_fsh(i)
 
-        gz_ibmpre_fsh(i,jq,j)=
-     &   prev_gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
+         gz_ibmpre_fsh(i,jq,j)=
+     &    prev_gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
 
-        gz_ibm_fsh(i,jq,j)= 
-     &   gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
+         gz_ibm_fsh(i,jq,j)= 
+     &    gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
 
-        gz_ibmo1_fsh(i,jq,j)= 
-     &   gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
-       end do
-       end do
+         gz_ibmo1_fsh(i,jq,j)= 
+     &    gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
+        end do
+        end do
        endif
 
        i_glb=Ilocglb_fsh(i);
+
        if(Electromechanical(i_glb)) then
+        print *,"FIX ME for outer iter"
+        stop
+        do jq=1,nq_ibm_r_fsh(i)
+        do j=1,ns_ibm_r_fsh(i)
+          ndotpre_ibm_fsh(i,jq,j)=ndotold_ibm_fsh(i,jq,j)
+          ndotold_ibm_fsh(i,jq,j)=ndot_ibm_fsh(i,jq,j)
+        end do
+        end do
+
+        if(Piezo_Dist_Flag(i_glb)) then
+         print *,"FIX ME for outer iter"
+         stop
          do jq=1,nq_ibm_r_fsh(i)
          do j=1,ns_ibm_r_fsh(i)
-            ndotpre_ibm_fsh(i,jq,j)=ndotold_ibm_fsh(i,jq,j)
-            ndotold_ibm_fsh(i,jq,j)=ndot_ibm_fsh(i,jq,j)
-         end do
-         end do
-
-         if(Piezo_Dist_Flag(i_glb)) then
-           do jq=1,nq_ibm_r_fsh(i)
-           do j=1,ns_ibm_r_fsh(i)
-              vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)
-              vPiezoold_fsh(i,jq,j)=vPiezo_fsh(i,jq,j)
-           enddo
-           enddo
-          else
-           do jq=1,1
-           do j=1,1
-              vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)
-              vPiezoold_fsh(i,jq,j)=vPiezo_fsh(i,jq,j)
-           enddo
-           enddo
-          endif
+          vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)
+          vPiezoold_fsh(i,jq,j)=vPiezo_fsh(i,jq,j)
+         enddo
+         enddo
+        else
+         print *,"FIX ME for outer iter"
+         stop
+         do jq=1,1
+         do j=1,1
+          vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)
+          vPiezoold_fsh(i,jq,j)=vPiezo_fsh(i,jq,j)
+         enddo
+         enddo
+        endif
        endif
 
        do jq=1,nq_ibm_r_fsh(i)
@@ -897,12 +905,12 @@ c
        enddo
 
        if(ndim .gt.2) then
-       do jq=1,nq_ibm_r_fsh(i)
-       do j=1,ns_ibm_r_fsh(i)
-        UIBM3_fsh(i,jq,j)=0.0d0
-        fk_mass3o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,3)
-       end do
-       end do
+        do jq=1,nq_ibm_r_fsh(i)
+        do j=1,ns_ibm_r_fsh(i)
+         UIBM3_fsh(i,jq,j)=0.0d0
+         fk_mass3o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,3)
+        end do
+        end do
        endif
 ! i
       end do
@@ -988,10 +996,10 @@ c
 
        do jq=1,nq_ibm_r_fsh(i)
        do j=1,ns_ibm_r_fsh(i)
-        uIBM123out_fsh(i,j,jlo,klo,1)=vibm1_fsh(i,j)
-        uIBM123out_fsh(i,j,jlo,klo,2)=vibm2_fsh(i,j)
+        uIBM123out_fsh(i,jq,j,klo,1)=vibm1_fsh(i,jq,j)
+        uIBM123out_fsh(i,jq,j,klo,2)=vibm2_fsh(i,jq,j)
         if(ndim .gt.2) then
-         uIBM123out_fsh(i,j,jlo,klo,3)=vibm3_fsh(i,j)
+         uIBM123out_fsh(i,jq,j,klo,3)=vibm3_fsh(i,jq,j)
         endif
        end do
        end do
@@ -1022,8 +1030,8 @@ c
          stop
         endif
        enddo
+       enddo
 
-      end do
       end do
 
 #else 
