@@ -109,7 +109,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &      ,tdxnm1_2_fib(nr_ibm_fib)    
      &      ,tdxnm1_3_fib(nr_ibm_fib)    
 
-      real*8  timetemp2,s_function
+      real*8  s_function
       logical fix_bc,free_bc,fix_bcb,free_bcb 
       integer itmax,precond,success,itconverge
       real*8 tol,h_channel,KB_ibmt
@@ -164,7 +164,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8  matFib_Esh(3,3)
       real*8  R_Fibmat(3,3),xposFib(3),x_FibVec(maxordern,3)
      &       ,n_FibVec(3),n3_FibVec(3),temp_piezo
-     &       ,ImplicitFSI_coef
 
 !variable for genralized alpha
       real*8 X_n_esh(ns_ibm_esh,3)
@@ -402,11 +401,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 c time step
       dt=delta_t
       dt2=dt**2.0
-      if(alphabetaRise .lt. delta_t) then
-         timetemp2=1.d0
-      else
-         timetemp2=(1.d0-exp(-time2/alphabetaRise))           
-      endif
       eps=1.0d-8
 
       if(ibm_solve .ne. 2) then
@@ -455,23 +449,6 @@ c calculating feedback force for matching bcs
      &         vibm3_pre_fib(i,j)=vibm3_fib(i,j)
         end do
       end do  !nr_ibm_fib
-
-      if(dabs(del_s).gt.1.d-6) then
-      do i=1,nr_ibm_fib
-       i2g=Ilocglb_fib(i)
-       if(ThermalForceFlag(i2g)) then
-        do j=1,ns_ibm_r_fib(i)
-             tsibm_fib(i,j)= tsibmin(i2g)*timetemp2
-             q_mass_fib(i,j)=q_masso_fib(i,j)
-     &          +alphatemp_ibm*delta_t*(tfibm_fib(i,j)-tsibm_fib(i,j))
-     &                   *timetemp2
-             qibm_fib(i,j)=q_mass_fib(i,j)+
-     &                    betatemp_ibm*(tfibm_fib(i,j)-tsibm_fib(i,j))
-     &                   *timetemp2
-        end do
-        endif
-      end do
-      endif
 #endif      
 #ifdef INCLUDE_ESH
       if(nr_ibm_esh.ge. 1) then
@@ -487,7 +464,6 @@ c calculating feedback force for matching bcs
 
       do i=1,nr_ibm_esh
        i2g=Ilocglb_esh(i)
-      if(Genalpha_timesolver(i2g) .le. 1) then
        if(FluidForceFlag(i2g)) then
         do j=1,ns_ibm_r_esh(i)
            fk_mass1_esh(i,j)=fk_mass1o_esh(i,j)
@@ -507,7 +483,6 @@ c calculating feedback force for matching bcs
      &           fibm3_esh(i,j)=fibm3_esh(i,j)+ffluidsum3_esh(i,j)
           end do
         endif  
-      endif  !Genalpha_timesolver(i2g)
       end do  !nr_ibm_esh
 
 
@@ -520,22 +495,6 @@ c calculating feedback force for matching bcs
         end do
       end do  !nr_ibm_esh
 
-      if(dabs(del_s).gt.1.d-6) then
-      do i=1,nr_ibm_esh
-       i2g=Ilocglb_fib(i)
-       if(ThermalForceFlag(i2g)) then
-        do j=1,ns_ibm_r_esh(i)
-             tsibm_esh(i,j)= tsibmin(i2g)*timetemp2
-             q_mass_esh(i,j)=q_masso_esh(i,j)
-     &          +alphatemp_ibm*delta_t*(tfibm_esh(i,j)-tsibm_esh(i,j))
-     &                   *timetemp2
-             qibm_esh(i,j)=q_mass_esh(i,j)+
-     &                    betatemp_ibm*(tfibm_esh(i,j)-tsibm_esh(i,j))
-     &                   *timetemp2
-        end do
-        endif
-      end do
-      endif
 #endif
 #ifdef INCLUDE_FSH
       if(nr_ibm_fsh.ge. 1) then
@@ -550,7 +509,6 @@ c
 c calculating feedback force for matching bcs
       do i=1,nr_ibm_fsh
        i2g=Ilocglb_fsh(i)
-       if(Genalpha_timesolver(i2g) .le. 1) then
        if(FluidForceFlag(i2g)) then
        do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
@@ -579,7 +537,6 @@ c calculating feedback force for matching bcs
           end do
         end do
         endif  
-      endif  !Genalpha_timesolver(i2g)
       end do  !nr_ibm_fsh
   
       do i=1,nr_ibm_fsh
@@ -593,26 +550,6 @@ c calculating feedback force for matching bcs
        enddo
       end do  !nr_ibm_fsh
 
-      if(dabs(del_s).gt.1.d-6) then
-      do i=1,nr_ibm_fsh
-       i2g=Ilocglb_fsh(i)
-       if(ThermalForceFlag(i2g)) then
-       do jq=1,nq_ibm_r_fsh(i)
-        do j=1,ns_ibm_r_fsh(i)
-             tsibm_fsh(i,jq,j)= tsibmin(i2g)*timetemp2
-             q_mass_fsh(i,jq,j)=q_masso_fsh(i,jq,j)
-     &          +alphatemp_ibm
-     &          *delta_t*(tfibm_fsh(i,jq,j)-tsibm_fsh(i,jq,j))
-     &                   *timetemp2
-             qibm_fsh(i,jq,j)=q_mass_fsh(i,jq,j)
-     &          +betatemp_ibm
-     &          *(tfibm_fsh(i,jq,j)-tsibm_fsh(i,jq,j))
-     &                   *timetemp2
-        end do
-        end do
-        endif
-      end do
-      endif
 #endif
 #ifdef INCLUDE_FBC
       if(nr_ibm_fbc.ge. 1) then
@@ -628,7 +565,6 @@ c calculating feedback force for matching bcs
 
       do i=1,nr_ibm_fbc
        i2g=Ilocglb_fbc(i)
-      if(Genalpha_timesolver(i2g) .le. 1) then
        if(FluidForceFlag(i2g)) then
         do j=1,ns_ibm_r_fbc(i)
            fk_mass1_fbc(i,j)=fk_mass1o_fbc(i,j)
@@ -648,7 +584,6 @@ c calculating feedback force for matching bcs
      &           fibm3_fbc(i,j)=fibm3_fbc(i,j)+ffluidsum3_fbc(i,j)
           end do
         endif  
-      endif  !Genalpha_timesolver(i2g)
       end do  !nr_ibm_fbc
 
 
@@ -661,22 +596,6 @@ c calculating feedback force for matching bcs
         end do
       end do  !nr_ibm_fbc
 
-      if(dabs(del_s).gt.1.d-6) then
-      do i=1,nr_ibm_fbc
-       i2g=Ilocglb_fib(i)
-       if(ThermalForceFlag(i2g)) then
-        do j=1,ns_ibm_r_fbc(i)
-             tsibm_fbc(i,j)= tsibmin(i2g)*timetemp2
-             q_mass_fbc(i,j)=q_masso_fbc(i,j)
-     &          +alphatemp_ibm*delta_t*(tfibm_fbc(i,j)-tsibm_fbc(i,j))
-     &                   *timetemp2
-             qibm_fbc(i,j)=q_mass_fbc(i,j)+
-     &                    betatemp_ibm*(tfibm_fbc(i,j)-tsibm_fbc(i,j))
-     &                   *timetemp2
-        end do
-        endif
-      end do
-      endif
 #endif
 
 401   format(3(i8,' '),20(f20.9,' '))
@@ -964,8 +883,7 @@ c initialized master matrices for later use
      &        (gz_ibm_massive_fib(i2l,j)-gz_ibm_fib(i2l,j))/dt
         end do
 
-        elseif((BodyType(i) .eq. shell).and. 
-     &         (Genalpha_timesolver(i) .le. 1)) then 
+        elseif(BodyType(i) .eq. shell) then
         i2l=Iglbloc_esh(i)
         do j=1,ns_ibm_r_esh(i2l)
           vibm1_esh(i2l,j)= 
@@ -976,8 +894,7 @@ c initialized master matrices for later use
      &     vibm3_esh(i2l,j)= 
      &        (gz_ibm_massive_esh(i2l,j)-gz_ibm_esh(i2l,j))/dt
         end do
-        elseif((BodyType(i) .eq. fabric).and. 
-     &         (Genalpha_timesolver(i) .le. 1)) then 
+        elseif(BodyType(i) .eq. fabric) then
         i2l=Iglbloc_fbc(i)
         do j=1,ns_ibm_r_fbc(i2l)
           vibm1_fbc(i2l,j)= 
@@ -1002,8 +919,7 @@ c initialized master matrices for later use
      &       - FabricLine_coord(i2l,j,1:3) )/dt
           enddo
         endif
-        elseif((BodyType(i) .eq. fibrousshell).and. 
-     &         (Genalpha_timesolver(i) .le. 1)) then   
+        elseif(BodyType(i) .eq. fibrousshell) then
         i2l=Iglbloc_fsh(i)
         do jq=1,nq_ibm_r_fsh(i2l)
         do j=1,ns_ibm_r_fsh(i2l)
@@ -1029,30 +945,15 @@ c initialized master matrices for later use
        fibm3_esh(i,1:Ns_IBM_esh)=0.0
 
        if(FluidForceFlag(i2g)) then
-        do j=1,ns_ibm_r_esh(i)
+         do j=1,ns_ibm_r_esh(i)
            fk_mass1_esh(i,j)=fk_mass1o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_esh(i,j)-vibm1_esh(i,j))
-     &                   *timetemp2
-
-            fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_esh(i,j)-vibm2_esh(i,j))
-     &                   *timetemp2
-
-            ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
-     &                   +beta_ibm*(uibm1_esh(i,j)-vibm1_esh(i,j))
-     &                   *timetemp2
-            ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
-     &                   +beta_ibm*(uibm2_esh(i,j)-vibm2_esh(i,j))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
+           ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
+           ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
+           if(ndim .gt. 2) then
             fk_mass3_esh(i,j)=fk_mass3o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_esh(i,j)-vibm3_esh(i,j))
-     &                   *timetemp2
-
             ffluidsum3_esh(i,j)= fk_mass3_esh(i,j)
-     &                   +beta_ibm*(uibm3_esh(i,j)-vibm3_esh(i,j))
-     &                   *timetemp2
-            endif
+           endif
          end do
 
          do j=1,ns_ibm_r_esh(i)
@@ -1074,27 +975,13 @@ c initialized master matrices for later use
        if(FluidForceFlag(i2g)) then
         do j=1,ns_ibm_r_fbc(i)
            fk_mass1_fbc(i,j)=fk_mass1o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_fbc(i,j)-vibm1_fbc(i,j))
-     &                   *timetemp2
-
-            fk_mass2_fbc(i,j)=fk_mass2o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_fbc(i,j)-vibm2_fbc(i,j))
-     &                   *timetemp2
+           fk_mass2_fbc(i,j)=fk_mass2o_fbc(i,j)
 
             ffluidsum1_fbc(i,j)= fk_mass1_fbc(i,j)
-     &                   +beta_ibm*(uibm1_fbc(i,j)-vibm1_fbc(i,j))
-     &                   *timetemp2
             ffluidsum2_fbc(i,j)= fk_mass2_fbc(i,j)
-     &                   +beta_ibm*(uibm2_fbc(i,j)-vibm2_fbc(i,j))
-     &                   *timetemp2
             if(ndim .gt. 2) then
-            fk_mass3_fbc(i,j)=fk_mass3o_fbc(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_fbc(i,j)-vibm3_fbc(i,j))
-     &                   *timetemp2
-
-            ffluidsum3_fbc(i,j)= fk_mass3_fbc(i,j)
-     &                   +beta_ibm*(uibm3_fbc(i,j)-vibm3_fbc(i,j))
-     &                   *timetemp2
+             fk_mass3_fbc(i,j)=fk_mass3o_fbc(i,j)
+             ffluidsum3_fbc(i,j)= fk_mass3_fbc(i,j)
             endif
          end do
 
@@ -1111,35 +998,19 @@ c initialized master matrices for later use
       do i=1,nr_ibm_fsh
        i2g=Ilocglb_fsh(i)
 
-       if(Genalpha_timesolver(i2g) .gt. 1) then
        if(FluidForceFlag(i2g)) then
        do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
            fk_mass1_fsh(i,jq,j)=fk_mass1o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm1_fsh(i,jq,j)-vibm1_fsh(i,jq,j))
-     &                   *timetemp2
-            fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
-
-     &          +alpha_ibm*delta_t*(uibm2_fsh(i,jq,j)-vibm2_fsh(i,jq,j))
-     &                   *timetemp2
-
-            ffluidsum1_fsh(i,jq,j)= fk_mass1_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm1_fsh(i,jq,j)-vibm1_fsh(i,jq,j))
-     &                   *timetemp2
-
-            ffluidsum2_fsh(i,jq,j)= fk_mass2_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm2_fsh(i,jq,j)-vibm2_fsh(i,jq,j))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
+           ffluidsum1_fsh(i,jq,j)= fk_mass1_fsh(i,jq,j)
+           ffluidsum2_fsh(i,jq,j)= fk_mass2_fsh(i,jq,j)
+           if(ndim .gt. 2) then
             fk_mass3_fsh(i,jq,j)=fk_mass3o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm3_fsh(i,jq,j)-vibm3_fsh(i,jq,j))
-     &                   *timetemp2
             ffluidsum3_fsh(i,jq,j)= fk_mass3_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm3_fsh(i,jq,j)-vibm3_fsh(i,jq,j))
-     &                   *timetemp2
-            endif
-          end do
+           endif
         end do
+       end do
 
        do jq=1,nq_ibm_r_fsh(i)
          do j=1,ns_ibm_r_fsh(i)
@@ -1152,7 +1023,6 @@ c initialized master matrices for later use
           end do
         end do
         endif
-      endif  !Genalpha_timesolver(i2g)
       end do  !nr_ibm_fsh
 
 
@@ -1259,7 +1129,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &      ,tdxnm1_2_fib(nr_ibm_fib)    
      &      ,tdxnm1_3_fib(nr_ibm_fib)    
 
-      real*8  timetemp2,s_function
+      real*8  s_function
       logical fix_bc,free_bc,fix_bcb,free_bcb 
       integer itmax,precond,success,itconverge
       real*8 tol,h_channel,KB_ibmt
@@ -1304,7 +1174,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8  matFib_Esh(3,3)
       real*8  R_Fibmat(3,3),xposFib(3),x_FibVec(maxordern,3)
      &       ,n_FibVec(3),n3_FibVec(3)
-     &       ,ImplicitFSI_coef
 
 !variable for genralized alpha
       real*8  timeMarchcoef(20)
@@ -1428,11 +1297,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 c time step
       dt=delta_t
       dt2=dt**2.0
-      if(alphabetaRise .lt. delta_t) then
-         timetemp2=1.d0
-      else
-         timetemp2=(1.d0-exp(-time2/alphabetaRise))           
-      endif
       eps=1.0d-8
 
       if(ibm_solve .ne. 2) then
@@ -1485,25 +1349,6 @@ c
        end do
 
       end do  !i=1,nr_ibm_fib
-
-      if(dabs(del_s).gt.1.d-6) then
-       do i=1,nr_ibm_fib
-        i2g=Ilocglb_fib(i)
-        if(ThermalForceFlag(i2g)) then
-         do j=1,ns_ibm_r_fib(i)
-          tsibm_fib(i,j)= tsibmin(i2g)*timetemp2
-          q_mass_fib(i,j)=q_masso_fib(i,j)
-     &       +alphatemp_ibm*delta_t*(tfibm_fib(i,j)-tsibm_fib(i,j))
-     &       *timetemp2
-          qibm_fib(i,j)=q_mass_fib(i,j)+
-     &            betatemp_ibm*(tfibm_fib(i,j)-tsibm_fib(i,j))
-     &            *timetemp2
-! j
-         end do
-        endif
-! i
-       end do
-      endif
 
 401   format(3(i8,' '),20(f20.9,' '))
 
@@ -1564,16 +1409,13 @@ c imposing bcs
          endif
         end do
 
-       elseif((BodyType(i) .eq. shell).and. 
-     &        (Genalpha_timesolver(i) .le. 1)) then 
+       elseif(BodyType(i) .eq. shell) then
         print *,"this code should not be called"
         stop
-       elseif((BodyType(i) .eq. fabric).and. 
-     &        (Genalpha_timesolver(i) .le. 1)) then 
+       elseif(BodyType(i) .eq. fabric) then
         print *,"this code should not be called"
         stop
-       elseif((BodyType(i) .eq. fibrousshell).and. 
-     &        (Genalpha_timesolver(i) .le. 1)) then   
+       elseif(BodyType(i) .eq. fibrousshell)then
         print *,"this code should not be called"
         stop
        else
@@ -1729,7 +1571,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &      ,tdxnm1_2_fib(nr_ibm_fib)    
      &      ,tdxnm1_3_fib(nr_ibm_fib)    
 
-      real*8  timetemp2,s_function
+      real*8  s_function
       logical fix_bc,free_bc,fix_bcb,free_bcb 
       integer itmax,precond,success,itconverge
       real*8 tol,h_channel,KB_ibmt
@@ -1784,7 +1626,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8  matFib_Esh(3,3)
       real*8  R_Fibmat(3,3),xposFib(3),x_FibVec(maxordern,3)
      &       ,n_FibVec(3),n3_FibVec(3),temp_piezo
-     &       ,ImplicitFSI_coef
 
 !variable for genralized alpha
       real*8 X_n_esh(ns_ibm_esh,3)
@@ -2029,11 +1870,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 c time step
       dt=delta_t
       dt2=dt**2.0
-      if(alphabetaRise .lt. delta_t) then
-         timetemp2=1.d0
-      else
-         timetemp2=(1.d0-exp(-time2/alphabetaRise))           
-      endif
       eps=1.0d-8
 
       if(ibm_solve .ne. 2) then
@@ -2050,7 +1886,6 @@ c
 c calculating feedback force for matching bcs
        do i=1,nr_ibm_fsh
         i2g=Ilocglb_fsh(i)
-        if(Genalpha_timesolver(i2g) .le. 1) then
          if(FluidForceFlag(i2g)) then
           do jq=1,nq_ibm_r_fsh(i)
           do j=1,ns_ibm_r_fsh(i)
@@ -2079,7 +1914,6 @@ c calculating feedback force for matching bcs
           end do
           end do
          endif  
-        endif  !Genalpha_timesolver(i2g)
        end do  !nr_ibm_fsh
   
        do i=1,nr_ibm_fsh
@@ -2092,27 +1926,6 @@ c calculating feedback force for matching bcs
         end do
         enddo
        end do  !nr_ibm_fsh
-
-       if(dabs(del_s).gt.1.d-6) then
-        do i=1,nr_ibm_fsh
-         i2g=Ilocglb_fsh(i)
-         if(ThermalForceFlag(i2g)) then
-          do jq=1,nq_ibm_r_fsh(i)
-          do j=1,ns_ibm_r_fsh(i)
-           tsibm_fsh(i,jq,j)= tsibmin(i2g)*timetemp2
-           q_mass_fsh(i,jq,j)=q_masso_fsh(i,jq,j)
-     &       +alphatemp_ibm
-     &       *delta_t*(tfibm_fsh(i,jq,j)-tsibm_fsh(i,jq,j))
-     &               *timetemp2
-           qibm_fsh(i,jq,j)=q_mass_fsh(i,jq,j)
-     &       +betatemp_ibm
-     &       *(tfibm_fsh(i,jq,j)-tsibm_fsh(i,jq,j))
-     &       *timetemp2
-          end do
-          end do
-         endif
-        end do
-       endif
 
 401    format(3(i8,' '),20(f20.9,' '))
 
@@ -2187,16 +2000,13 @@ c imposing bcs
        if(BodyType(i) .eq. fiber) then 
         print *,"this code should not be called"
         stop
-       elseif((BodyType(i) .eq. shell).and. 
-     &        (Genalpha_timesolver(i) .le. 1)) then 
+       elseif(BodyType(i) .eq. shell) then
         print *,"this code should not be called"
         stop
-       elseif((BodyType(i) .eq. fabric).and. 
-     &        (Genalpha_timesolver(i) .le. 1)) then 
+       elseif(BodyType(i) .eq. fabric) then
         print *,"this code should not be called"
         stop
-       elseif((BodyType(i) .eq. fibrousshell).and. 
-     &        (Genalpha_timesolver(i) .le. 1)) then   
+       elseif(BodyType(i) .eq. fibrousshell) then
         i2l=Iglbloc_fsh(i)
         do jq=1,nq_ibm_r_fsh(i2l)
         do j=1,ns_ibm_r_fsh(i2l)

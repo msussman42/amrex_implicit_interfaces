@@ -1971,7 +1971,6 @@
      &        ,1
      &        ,FlagForceCalculation(1:nq_ibm_r_fsh(i) 
      &                             ,1:ns_ibm_r_fsh(i)))
-!      timetemp2=1.0 !(1.d0-exp(-time2/0.05))
        else
        Call  matfibrous_Huang(
      &         ns_ibm_fsh*nq_ibm_fsh,ntermiMAXfibershell
@@ -2135,7 +2134,6 @@
                     ksh_tmp=-fibm1_fsh(i,jq,j) - f_link1_fsh(i,jq,j)
      &                 +finer_1_ibm_fsh(i,jq,j) 
      &                 +density_coef(i2g)*fr*sin(phi_grav)*cos(the_grav)
-     &                 *timetemp2
      &                 +FB_1_IBM_fsh(i,jq,j)
      &                 +Fpiezo1_fsh(i,jq,j)
 
@@ -2219,7 +2217,6 @@
                     ksh_tmp=-fibm2_fsh(i,jq,j) - f_link2_fsh(i,jq,j)
      &                 + finer_2_ibm_fsh(i,jq,j)  
      &                 +density_coef(i2g)*fr*sin(phi_grav)*sin(the_grav)
-     &                  *timetemp2                 
      &                 +FB_2_IBM_fsh(i,jq,j)
      &                 +Fpiezo2_fsh(i,jq,j)
 
@@ -2302,7 +2299,6 @@
                     ksh_tmp=-fibm3_fsh(i,jq,j) -f_link3_fsh(i,jq,j)
      &                 +finer_3_ibm_fsh(i,jq,j)  
      &                 +density_coef(i2g)*fr*cos(phi_grav)
-     &                  *timetemp2
      &                 +FB_3_IBM_fsh(i,jq,j)
      &                 +Fpiezo3_fsh(i,jq,j)
 
@@ -2764,48 +2760,32 @@
         f_link3_fsh(i,1:nq_ibm_fsh,1:ns_ibm_fsh)=0.0
 
        i2g=Ilocglb_fsh(ibdy)
-       ImplicitFSI_coef=0.0
        if(FluidForceFlag(i2g)) then
-        ImplicitFSI_coef=(alpha_ibm*delta_t+beta_ibm)*timetemp2
-       do jq=1,nq_ibm_r_fsh(i)
+        do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
            fk_mass1_fsh(i,jq,j)=fk_mass1o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm1_fsh(i,jq,j)-dX_na_fsh(jq,j,1))
-     &                   *timetemp2
-            fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm2_fsh(i,jq,j)-dX_na_fsh(jq,j,2))
-     &                   *timetemp2
-
-            ffluidsum1_fsh(i,jq,j)= fk_mass1_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm1_fsh(i,jq,j)-dX_na_fsh(jq,j,1))
-     &                   *timetemp2
-
-            ffluidsum2_fsh(i,jq,j)= fk_mass2_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm2_fsh(i,jq,j)-dX_na_fsh(jq,j,2))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
+           ffluidsum1_fsh(i,jq,j)= fk_mass1_fsh(i,jq,j)
+           ffluidsum2_fsh(i,jq,j)= fk_mass2_fsh(i,jq,j)
+           if(ndim .gt. 2) then
             fk_mass3_fsh(i,jq,j)=fk_mass3o_fsh(i,jq,j)
-     &          +alpha_ibm*delta_t*(uibm3_fsh(i,jq,j)-dX_na_fsh(jq,j,3))
-     &                   *timetemp2
             ffluidsum3_fsh(i,jq,j)= fk_mass3_fsh(i,jq,j)
-     &                   +beta_ibm*(uibm3_fsh(i,jq,j)-dX_na_fsh(jq,j,3))
-     &                   *timetemp2
-            endif
+           endif
 
-         end do
+        end do
         end do
 
-       do jq=1,nq_ibm_r_fsh(i)
-         do j=1,ns_ibm_r_fsh(i)
+        do jq=1,nq_ibm_r_fsh(i)
+        do j=1,ns_ibm_r_fsh(i)
 
               fibm1_fsh(i,jq,j)=fibm1_fsh(i,jq,j)+ffluidsum1_fsh(i,jq,j)
               fibm2_fsh(i,jq,j)=fibm2_fsh(i,jq,j)+ffluidsum2_fsh(i,jq,j)
               if(ndim .gt. 2) 
      &        fibm3_fsh(i,jq,j)=fibm3_fsh(i,jq,j)+ffluidsum3_fsh(i,jq,j)
 
-          end do
         end do
-        endif  
+        end do
+       endif  
 
         call boundary_ibm_generalalpha_fsh(
      &       i2g
@@ -2814,14 +2794,14 @@
      &      ,X0_np1_fsh)
 
         do npg=1,target_num(i2g)
-             j=target_point_num_fsh(i,1,npg)
-             jq=target_point_num_fsh(i,2,npg)
-           Xtar_na_fsh(npg,1:3)= alphaf_Coef(ibdyg)
-     &                        *target_points_fsh(i,npg,1:3)
-     &                      +timeMarchcoef(6)*Xtar_na_fsh(npg,1:3)
-          dXtar_na_fsh(npg,1:3)= alphaf_Coef(ibdyg)
-     &                        *target_points_v_fsh(i,npg,1:3)
-     &                      +timeMarchcoef(6)*dXtar_na_fsh(npg,1:3)
+         j=target_point_num_fsh(i,1,npg)
+         jq=target_point_num_fsh(i,2,npg)
+         Xtar_na_fsh(npg,1:3)= alphaf_Coef(ibdyg)
+     &          *target_points_fsh(i,npg,1:3)
+     &          +timeMarchcoef(6)*Xtar_na_fsh(npg,1:3)
+         dXtar_na_fsh(npg,1:3)= alphaf_Coef(ibdyg)
+     &         *target_points_v_fsh(i,npg,1:3)
+     &         +timeMarchcoef(6)*dXtar_na_fsh(npg,1:3)
         end do
 
         fibm1pres_fsh=0.0
@@ -2829,28 +2809,28 @@
         fibm3pres_fsh=0.0
 
         do jq=1,nq_ibm_r_fsh(i)
-           do j=1,ns_ibm_r_fsh(i)
-               GXtmp(1,jq,j)=X_na_fsh(jq,j,1)
-               GXtmp(2,jq,j)=X_na_fsh(jq,j,2)
-               GXtmp(3,jq,j)=X_na_fsh(jq,j,3)
-           enddo
-         enddo
+        do j=1,ns_ibm_r_fsh(i)
+         GXtmp(1,jq,j)=X_na_fsh(jq,j,1)
+         GXtmp(2,jq,j)=X_na_fsh(jq,j,2)
+         GXtmp(3,jq,j)=X_na_fsh(jq,j,3)
+        enddo
+        enddo
         do jq=1,nq_ibm_r_fsh(i)
-           do j=1,ns_ibm_r_fsh(i)
-               dGXtmp(1,jq,j)=
-     &         propDamp(2,i2g)*
-     &         (timeMarchcoef(3)*
-     &          X_np1_fsh(jq,j,1)-dX_in_fsh(jq,j,1))
-               dGXtmp(2,jq,j)=
-     &         propDamp(2,i2g)*
-     &         (timeMarchcoef(3)*
-     &          X_np1_fsh(jq,j,2)-dX_in_fsh(jq,j,2))
-               dGXtmp(3,jq,j)=
-     &         propDamp(2,i2g)*
-     &         (timeMarchcoef(3)*
-     &          X_np1_fsh(jq,j,3)-dX_in_fsh(jq,j,3))
-           enddo
+         do j=1,ns_ibm_r_fsh(i)
+          dGXtmp(1,jq,j)=
+     &     propDamp(2,i2g)*
+     &     (timeMarchcoef(3)*
+     &     X_np1_fsh(jq,j,1)-dX_in_fsh(jq,j,1))
+          dGXtmp(2,jq,j)=
+     &     propDamp(2,i2g)*
+     &     (timeMarchcoef(3)*
+     &     X_np1_fsh(jq,j,2)-dX_in_fsh(jq,j,2))
+          dGXtmp(3,jq,j)=
+     &     propDamp(2,i2g)*
+     &     (timeMarchcoef(3)*
+     &     X_np1_fsh(jq,j,3)-dX_in_fsh(jq,j,3))
          enddo
+        enddo
 
 
 
@@ -4883,21 +4863,6 @@
            i=ibdy
 
 
-       if(FluidForceFlag(i2g)) then
-           do jq=1,nq_ibm_r_fsh(i)
-           do j=1,ns_ibm_r_fsh(i)
-             do j2=1,3
-               aamat_fsh((jq-1)*ns_ibm_r_fsh(i)+j,j2,j2)
-     &        =aamat_fsh((jq-1)*ns_ibm_r_fsh(i)+j,j2,j2)
-     &        -timeMarchcoef(3)
-     &        *ImplicitFSI_coef
-
-             enddo
-          enddo
-          enddo
-        endif
-
-
 ! link forces
          i2l=i
          do j=1,target_num(i2g)
@@ -5078,7 +5043,6 @@
      &        ,ImplicitElecMech(i2g)
      &        ,FlagForceCalculation(1:nq_ibm_r_fsh(i) 
      &                             ,1:ns_ibm_r_fsh(i)) )   
-!      timetemp2=1.0 !(1.d0-exp(-time2/0.05))
        else
          Call matfibrous_Huang_GALPHAPiezo(
      &         ns_ibm_fsh*nq_ibm_fsh*3,ntermiMAXfibershell
@@ -5214,21 +5178,21 @@
      &                       -f_link1_fsh(i,jq,j)
      &                       -fibm1_fsh(i,jq,j)
      &                       +density_coef(i2g)
-     &                        *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                        *fr*cos(the_grav)*sin(phi_grav)
      &                       +f_impuls1_fsh(i,jq,j)
 
                 fibm2_fsh(i,jq,j)=
      &                       -f_link2_fsh(i,jq,j)
      &                       -fibm2_fsh(i,jq,j)
      &                       +density_coef(i2g)
-     &                        *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                        *fr*sin(the_grav)*sin(phi_grav)
      &                       +f_impuls2_fsh(i,jq,j)
 
                 fibm3_fsh(i,jq,j)=
      &                       -f_link3_fsh(i,jq,j)
      &                       -fibm3_fsh(i,jq,j)
      &                       +density_coef(i2g)
-     &                        *fr*cos(phi_grav)*timetemp2
+     &                        *fr*cos(phi_grav)
      &                       +f_impuls3_fsh(i,jq,j)
                endif
               vecRHSfibershell(j2+1)=fibm1_fsh(i,jq,j)
@@ -5438,7 +5402,6 @@
      &        ,ksh_tmp
      &        ,FlagForceCalculation(1:nq_ibm_r_fsh(i) 
      &                             ,1:ns_ibm_r_fsh(i)) )   
-!      timetemp2=1.0 !(1.d0-exp(-time2/0.05))
        else
 
          Call matfibrous_Huang_GALPHA(
@@ -5556,21 +5519,21 @@
      &                       -f_link1_fsh(i,jq,j)
      &                       -fibm1_fsh(i,jq,j)
      &                       +density_coef(i2g)
-     &                        *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                        *fr*cos(the_grav)*sin(phi_grav)
      &                       +f_impuls1_fsh(i,jq,j)
 
                 fibm2_fsh(i,jq,j)=
      &                       -f_link2_fsh(i,jq,j)
      &                       -fibm2_fsh(i,jq,j)
      &                       +density_coef(i2g)
-     &                        *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                        *fr*sin(the_grav)*sin(phi_grav)
      &                       +f_impuls2_fsh(i,jq,j)
 
                 fibm3_fsh(i,jq,j)=
      &                       -f_link3_fsh(i,jq,j)
      &                       -fibm3_fsh(i,jq,j)
      &                       +density_coef(i2g)
-     &                        *fr*cos(phi_grav)*timetemp2
+     &                        *fr*cos(phi_grav)
      &                       +f_impuls3_fsh(i,jq,j)
                endif
               vecRHSfibershell(j2+1)=fibm1_fsh(i,jq,j)

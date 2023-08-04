@@ -67,9 +67,6 @@
      &       ,Ky_SPRING
      &       ,Ut0
      &       ,Vt0
-     &       ,alpha_IBM
-     &       ,beta_IBM
-     &       ,alphabetaRise
      &       ,Fr
      &       ,the_grav
      &       ,phi_grav                                               
@@ -530,11 +527,6 @@
      &       ,Piezo_Dist_Flag
 
 C IBM parameters
-      real*8  
-     &        del_S
-     &       ,alphaTEMP_IBM
-     &       ,betaTEMP_IBM
-
 
       real*8, allocatable, dimension(:) ::
      &        TSIBMin    

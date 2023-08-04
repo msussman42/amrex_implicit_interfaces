@@ -2859,7 +2859,7 @@ c calculation of total forces
      &                 -fibm1_esh(i,j)   
      &                 +finer_1_ibm_esh(i,j)
      &                 +density_coef(i2g)
-     &                  *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*cos(the_grav)*sin(phi_grav)
      &                 ) 
      &                +dt2*f_impuls1_esh(i,j)
 
@@ -2870,7 +2870,7 @@ c calculation of total forces
      &                 -fibm2_esh(i,j)    
      &                 +finer_2_ibm_esh(i,j) 
      &                 +density_coef(i2g)
-     &                  *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*sin(the_grav)*sin(phi_grav)
      &                 ) 
      &                 +dt2*f_impuls2_esh(i,j)
 
@@ -2881,7 +2881,7 @@ c calculation of total forces
      &                 -fibm3_esh(i,j)    
      &                 +finer_3_ibm_esh(i,j) 
      &                 +density_coef(i2g)
-     &                  *fr*cos(phi_grav)*timetemp2
+     &                  *fr*cos(phi_grav)
      &                 ) 
      &                 +dt2*f_impuls3_esh(i,j)
         end do
@@ -3255,28 +3255,13 @@ c calculating feedback force for matching bcs
        if(FluidForceFlag(i2g)) then
         do j=1,ns_ibm_r_esh(i)
            fk_mass1_esh(i,j)=fk_mass1o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
-
-            fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
-
-            ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
-     &                   +beta_ibm*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
-            ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
-     &                   +beta_ibm*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
+           ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
+           ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
+           if(ndim .gt. 2) then
             fk_mass3_esh(i,j)=fk_mass3o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
-
             ffluidsum3_esh(i,j)= fk_mass3_esh(i,j)
-     &                   +beta_ibm*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
-            endif
+           endif
          end do
          do j=1,ns_ibm_r_esh(i)
               fibm1_esh(i,j)=fibm1_esh(i,j)+ffluidsum1_esh(i,j)
@@ -4460,7 +4445,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm1_esh(i,j)   
      &                 +density_coef(i2g)
-     &                  *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*cos(the_grav)*sin(phi_grav)
      &                 ) 
      &                +f_impuls1_esh(i,j)
 
@@ -4468,7 +4453,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm2_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*sin(the_grav)*sin(phi_grav)
      &                 ) 
      &                 +f_impuls2_esh(i,j)
 
@@ -4476,7 +4461,7 @@ c calculation of total forces
      &                  +areapnt_esh(i,j)*(
      &                 -fibm3_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*cos(phi_grav)*timetemp2
+     &                  *fr*cos(phi_grav)
      &                 ) 
      &                 +f_impuls3_esh(i,j)
         end do
@@ -4840,27 +4825,12 @@ c calculating feedback force for matching bcs
        if(FluidForceFlag(i2g)) then
         do j=1,ns_ibm_r_esh(i)
            fk_mass1_esh(i,j)=fk_mass1o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
-
             fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
-
             ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
-     &                   +beta_ibm*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
             ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
-     &                   +beta_ibm*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
             if(ndim .gt. 2) then
             fk_mass3_esh(i,j)=fk_mass3o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
-
             ffluidsum3_esh(i,j)= fk_mass3_esh(i,j)
-     &                   +beta_ibm*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
             endif
          end do
          do j=1,ns_ibm_r_esh(i)
@@ -6074,7 +6044,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm1_esh(i,j)   
      &                 +density_coef(i2g)
-     &                  *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*cos(the_grav)*sin(phi_grav)
      &                 ) 
      &                +f_impuls1_esh(i,j)
 
@@ -6082,7 +6052,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm2_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*sin(the_grav)*sin(phi_grav)
      &                 ) 
      &                 +f_impuls2_esh(i,j)
 
@@ -6090,7 +6060,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm3_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*cos(phi_grav)*timetemp2
+     &                  *fr*cos(phi_grav)
      &                 ) 
      &                 +f_impuls3_esh(i,j)
         end do
@@ -6450,32 +6420,16 @@ c calculation of total forces
 c
 c calculating feedback force for matching bcs
        i2g=Ilocglb_esh(ibdy)
-       ImplicitFSI_coef=0.0
        if(FluidForceFlag(i2g)) then
-        ImplicitFSI_coef=(alpha_ibm*delta_t+beta_ibm)*timetemp2
         do j=1,ns_ibm_r_esh(i)
            fk_mass1_esh(i,j)=fk_mass1o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
 
             fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
-
             ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
-     &                   +beta_ibm*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
             ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
-     &                   +beta_ibm*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
             if(ndim .gt. 2) then
-            fk_mass3_esh(i,j)=fk_mass3o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
-
-            ffluidsum3_esh(i,j)= fk_mass3_esh(i,j)
-     &                   +beta_ibm*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
+             fk_mass3_esh(i,j)=fk_mass3o_esh(i,j)
+             ffluidsum3_esh(i,j)= fk_mass3_esh(i,j)
             endif
          end do
          do j=1,ns_ibm_r_esh(i)
@@ -7586,21 +7540,6 @@ c calculating feedback force for matching bcs
           enddo
         enddo
 
-       if(FluidForceFlag(i2g) ) then
-          j2=ns_ibm_r_esh(i)+ns_ibm_i_esh(i)
-          do j=1,j2
-           aamat_esh(j,j)
-     &       =aamat_esh(j,j)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_esh(i,j)
-           aamat_esh(j+j2,j+j2)
-     &       =aamat_esh(j+j2,j+j2)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_esh(i,j)
-           aamat_esh(j+2*j2,j+2*j2)
-     &       =aamat_esh(j+2*j2,j+2*j2)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_esh(i,j)
-          enddo
-        endif
-
         j2=ns_ibm_r_esh(i)+ns_ibm_i_esh(i)
         do j=1,target_num(i2g)
              k=target_point_num_esh(i,j)
@@ -8360,7 +8299,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm1_esh(i,j)   
      &                 +density_coef(i2g)
-     &                  *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*cos(the_grav)*sin(phi_grav)
      &                 ) 
      &                +f_impuls1_esh(i,j)
 
@@ -8368,7 +8307,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm2_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*sin(the_grav)*sin(phi_grav)
      &                 ) 
      &                 +f_impuls2_esh(i,j)
 
@@ -8376,7 +8315,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm3_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*cos(phi_grav)*timetemp2
+     &                  *fr*cos(phi_grav)
      &                 ) 
      &                 +f_impuls3_esh(i,j)
         end do
@@ -8783,33 +8722,17 @@ c calculation of total forces
 c
 c calculating feedback force for matching bcs
        i2g=Ilocglb_esh(ibdy)
-       ImplicitFSI_coef=0.0
        if(FluidForceFlag(i2g)) then
-        ImplicitFSI_coef=(alpha_ibm*delta_t+beta_ibm)*timetemp2
         do j=1,ns_ibm_r_esh(i)
            fk_mass1_esh(i,j)=fk_mass1o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
+           fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
 
-            fk_mass2_esh(i,j)=fk_mass2o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
-
-            ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
-     &                   +beta_ibm*(uibm1_esh(i,j)-dX_na_esh(j,1))
-     &                   *timetemp2
-            ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
-     &                   +beta_ibm*(uibm2_esh(i,j)-dX_na_esh(j,2))
-     &                   *timetemp2
-            if(ndim .gt. 2) then
+           ffluidsum1_esh(i,j)= fk_mass1_esh(i,j)
+           ffluidsum2_esh(i,j)= fk_mass2_esh(i,j)
+           if(ndim .gt. 2) then
             fk_mass3_esh(i,j)=fk_mass3o_esh(i,j)
-     &          +alpha_ibm*delta_t*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
-
             ffluidsum3_esh(i,j)= fk_mass3_esh(i,j)
-     &                   +beta_ibm*(uibm3_esh(i,j)-dX_na_esh(j,3))
-     &                   *timetemp2
-            endif
+           endif
          end do
          do j=1,ns_ibm_r_esh(i)
               fibm1_esh(i,j)=fibm1_esh(i,j)+ffluidsum1_esh(i,j)
@@ -10084,21 +10007,6 @@ c calculating feedback force for matching bcs
           enddo
         enddo
 
-       if(FluidForceFlag(i2g) .and. (1==1)) then
-          j2=ns_ibm_r_esh(i)+ns_ibm_i_esh(i)
-          do j=1,j2
-           aamat_esh(j,j)
-     &       =aamat_esh(j,j)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_esh(i,j)
-           aamat_esh(j+j2,j+j2)
-     &       =aamat_esh(j+j2,j+j2)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_esh(i,j)
-           aamat_esh(j+2*j2,j+2*j2)
-     &       =aamat_esh(j+2*j2,j+2*j2)-timeMarchcoef(3)
-     &        *ImplicitFSI_coef*areapnt_esh(i,j)
-          enddo
-        endif
-
         j2=ns_ibm_r_esh(i)+ns_ibm_i_esh(i)
         do j=1,target_num(i2g)
              k=target_point_num_esh(i,j)
@@ -10831,7 +10739,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm1_esh(i,j)   
      &                 +density_coef(i2g)
-     &                  *fr*cos(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*cos(the_grav)*sin(phi_grav)
      &                 ) 
      &                +f_impuls1_esh(i,j)
 
@@ -10839,7 +10747,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm2_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*sin(the_grav)*sin(phi_grav)*timetemp2
+     &                  *fr*sin(the_grav)*sin(phi_grav)
      &                 ) 
      &                 +f_impuls2_esh(i,j)
 
@@ -10847,7 +10755,7 @@ c calculation of total forces
      &                  + areapnt_esh(i,j)*(
      &                 -fibm3_esh(i,j)    
      &                 +density_coef(i2g)
-     &                  *fr*cos(phi_grav)*timetemp2
+     &                  *fr*cos(phi_grav)
      &                 ) 
      &                 +f_impuls3_esh(i,j)
         end do

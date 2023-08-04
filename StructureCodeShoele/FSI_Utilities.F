@@ -1489,7 +1489,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        end do
        ecm=matmul(nt,tn)
       return
-      end ! subroutine ecmatdel_s,betatemp_ibm,tsibmin
+      end ! subroutine ecmatdel_s,tsibmin
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       subroutine cjgr( x, a, b ,cgtol,cg_max_iter,n) 

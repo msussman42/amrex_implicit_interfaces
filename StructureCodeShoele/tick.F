@@ -525,7 +525,7 @@ c
        if(density_coef(i_glb) .ge. 1.05) then
        if(FabricMeshFlag_fbc(i)) then
         do j=1,FabricMesh_numrecord(i)
-          FabricMesh_coordMass(i,j,1:3)=FabricMesh_coordMasso(i,j,1:3)       
+         FabricMesh_coordMass(i,j,1:3)=FabricMesh_coordMasso(i,j,1:3)   
         enddo
        endif
        if(FabricLineFlag_fbc(i)) then
