@@ -908,6 +908,7 @@ c
         do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
          UIBM3_fsh(i,jq,j)=0.0d0
+         vibm3_fsh(i,jq,j)=uibm123in_fsh(i,jq,j,klo,3)
          fk_mass3o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,3)
         end do
         end do
@@ -1041,12 +1042,6 @@ c
 
       return
       end
-
-
-
-
-
-
 
 c rtime = t^{n+1}
       subroutine tick_fib(
