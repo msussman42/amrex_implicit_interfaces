@@ -204,9 +204,9 @@ INTEGER_T node_list_size
 INTEGER_T element_list_size
 INTEGER_T mass_list_size
 
-INTEGER_T ctml_n_fib_bodies
-INTEGER_T ctml_max_n_fib_nodes(3)
-INTEGER_T ctml_max_n_fib_elements
+INTEGER_T ctml_n_bodies
+INTEGER_T ctml_max_n_nodes(3)
+INTEGER_T ctml_max_n_elements
 INTEGER_T ctml_flatten_size
 
 REAL_T, dimension(:), allocatable :: ctml_gx
@@ -215,10 +215,10 @@ REAL_T, dimension(:), allocatable :: ctml_gz
 INTEGER_T, dimension(3) :: ctml_ngrid_nodes
 REAL_T, dimension(3) :: ctml_min_grid_dx
 
-INTEGER_T, dimension(:), allocatable :: ctml_n_fib_active_nodes
+INTEGER_T, dimension(:,:), allocatable :: ctml_n_active_nodes
 
 type(FSI_container_type) :: ctml_FSI_container
-REAL_T, dimension(:,:,:), allocatable :: ctml_fib_frc
+REAL_T, dimension(:,:,:,:,:), allocatable :: ctml_frc
 
 contains
 
@@ -4359,11 +4359,12 @@ INTEGER_T :: dir
 INTEGER_T, INTENT(in) :: istep
 INTEGER_T, INTENT(in) :: istop
 INTEGER_T :: ctml_part_id
-INTEGER_T :: inode
+INTEGER_T :: inode,jnode,jnode_hi
 INTEGER_T :: orig_nodes
 INTEGER_T :: orig_elements
 INTEGER_T :: local_nodes
 INTEGER_T :: local_elements
+REAL_T :: test_mass
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
@@ -4387,26 +4388,41 @@ INTEGER_T :: local_elements
    FSI(part_id)%CTML_flag=1
 
    inode=0
+   jnode=0
 
 #ifdef MVAHABFSI 
 
-   do inode=1,ctml_n_fib_active_nodes(ctml_part_id)
-    if (ctml_FSI_container%mass_list(ctml_part_id,inode).gt.zero) then
+   if (AMREX_SPACEDIM.eq.2) then
+    jnode_hi=1
+   else if (AMREX_SPACEDIM.eq.3) then
+    jnode_hi=ctml_n_active_nodes(ctml_part_id,2)
+   else
+    print *,"AMREX_SPACEDIM invalid"
+    stop
+   endif
+
+   do inode=1,ctml_n_active_nodes(ctml_part_id,1)
+   do jnode=1,jnode_hi
+    test_mass=ctml_FSI_container%mass_list(ctml_part_id,inode,jnode,1)
+    if (test_mass.gt.zero) then
      ! do nothing
-    else if (ctml_FSI_container%mass_list(ctml_part_id,inode).eq.zero) then 
-     print *,"ctml_FSI_container%mass_list(ctml_part_id,inode)=0!"
+    else if (test_mass.eq.zero) then 
+     print *,"ctml_FSI_container%mass_list=0!"
      print *,"ctml_part_id =",ctml_part_id
-     print *,"ctml_n_fib_active_nodes =", &
-      ctml_n_fib_active_nodes(ctml_part_id)
+     print *,"ctml_n_active_nodes =", &
+      ctml_n_active_nodes(ctml_part_id,1), &
+      ctml_n_active_nodes(ctml_part_id,2)
      stop
     else
-     print *,"ctml_FSI_container%mass_list(ctml_part_id,inode) invalid"
+     print *,"ctml_FSI_container%mass_list invalid"
      print *,"ctml_part_id =",ctml_part_id
-     print *,"ctml_n_fib_active_nodes =", &
-      ctml_n_fib_active_nodes(ctml_part_id)
+     print *,"ctml_n_active_nodes =", &
+      ctml_n_active_nodes(ctml_part_id,1), &
+      ctml_n_active_nodes(ctml_part_id,2)
      stop
     endif
-   enddo ! inode=1,ctml_n_fib_nodes(ctml_part_id)
+   enddo ! jnode
+   enddo ! inode
 
 #else
    print *,"in: CTML_init_sci; define MVAHABFSI"
@@ -4427,7 +4443,6 @@ INTEGER_T :: local_elements
 
    if (AMREX_SPACEDIM.eq.3) then
     FSI(part_id)%flag_2D_to_3D=0
-    print *,"flag_2D_to_3D==1 in 3D not supported yet"
    else if (AMREX_SPACEDIM.eq.2) then
     FSI(part_id)%flag_2D_to_3D=1
    else
@@ -4436,6 +4451,7 @@ INTEGER_T :: local_elements
     stop
    endif
 
+   FIX ME 2d or 3d here
    orig_nodes=ctml_n_fib_active_nodes(ctml_part_id)
    orig_elements=ctml_n_fib_active_nodes(ctml_part_id)-1
 
