@@ -96,18 +96,38 @@ stop
          print *,"CTML_num_solids_local: ",CTML_num_solids_local
          stop
         endif
-        if (Nr_IBM_fib_out.eq.CTML_num_solids_out) then
-         ! do nothing
+
+        if (AMREX_SPACEDIM.eq.2) then
+         if (Nr_IBM_fib_out.eq.CTML_num_solids_out) then
+          ! do nothing
+         else
+          print *,"expecting Nr_IBM_fib_out.eq.CTML_num_solids_out"
+          stop
+         endif
+         if (Nr_IBM_fsh_out.eq.0) then
+          ! do nothing
+         else
+          print *,"Nr_IBM_fsh_out invalid"
+          stop
+         endif
+        else if (AMREX_SPACEDIM.eq.3) then
+         if (Nr_IBM_fib_out.eq.0) then
+          ! do nothing
+         else
+          print *,"expecting Nr_IBM_fib_out.eq.0"
+          stop
+         endif
+         if (Nr_IBM_fsh_out.eq.CTML_num_solids_out) then
+          ! do nothing
+         else
+          print *,"Nr_IBM_fsh_out invalid"
+          stop
+         endif
         else
-         print *,"expecting Nr_IBM_fib_out.eq.CTML_num_solids_out"
+         print *,"AMREX_SPACEDIM invalid"
          stop
         endif
-        if (Nr_IBM_fsh_out.eq.0) then
-         ! do nothing
-        else
-         print *,"Nr_IBM_fsh_out invalid"
-         stop
-        endif
+
         if (Nr_IBM_esh_out.eq.0) then
          ! do nothing
         else
@@ -121,11 +141,27 @@ stop
          stop
         endif
 
-        if (Ns_IBM_fib_out.ge.2) then
-         CTML_max_num_nodes_list(1)=Ns_IBM_fib_out
-         CTML_max_num_elements_list=Ns_IBM_fib_out-1
+        if (AMREX_SPACEDIM.eq.2) then
+         if (Ns_IBM_fib_out.ge.2) then
+          CTML_max_num_nodes_list(1)=Ns_IBM_fib_out
+          CTML_max_num_elements_list=Ns_IBM_fib_out-1
+         else
+          print *,"Ns_IBM_fib_out invalid"
+          stop
+         endif
+        else if (AMREX_SPACEDIM.eq.3) then
+         if ((Nq_IBM_fsh_out.ge.2).and. &
+             (Ns_IBM_fsh_out.ge.2) then
+          CTML_max_num_nodes_list(1)=Nq_IBM_fsh_out
+          CTML_max_num_nodes_list(2)=Ns_IBM_fsh_out
+          CTML_max_num_elements_list= &
+              (Ns_IBM_fsh_out-1)*(Nq_IBM_fsh_out-1)
+         else
+          print *,"N[sq]_IBM_fsh_out invalid"
+          stop
+         endif
         else
-         print *,"Ns_IBM_fib_out invalid"
+         print *,"AMREX_SPACEDIM invalid"
          stop
         endif
 #else
