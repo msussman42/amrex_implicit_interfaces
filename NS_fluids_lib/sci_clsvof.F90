@@ -234,7 +234,7 @@ INTEGER_T, INTENT(in) :: CTML_num_solids_init
 INTEGER_T, INTENT(in) :: max_num_nodes_init(3)
 INTEGER_T, INTENT(in) :: max_num_elements_init
 INTEGER_T :: dir
-INTEGER_T :: datalo,datahi
+INTEGER_T :: ilo,ihi,jlo,jhi
 
 if (max_num_nodes_init(1).gt.0) then
  ! do nothing
@@ -255,16 +255,61 @@ dest_FSI%structure_dim=AMREX_SPACEDIM
 dest_FSI%structure_topology=AMREX_SPACEDIM-2 ! filament 2d, sheet 3d
 dest_FSI%ngrow_node=2 
 
-datalo=1-dest_FSI%ngrow_node
-datahi=max_num_nodes_init(1)+dest_FSI%ngrow_node
+ilo=1-dest_FSI%ngrow_node
+ihi=max_num_nodes_init(1)+dest_FSI%ngrow_node
 
-allocate(dest_FSI%prev_node_list(CTML_num_solids_init,datalo:datahi,3))
-allocate(dest_FSI%node_list(CTML_num_solids_init,datalo:datahi,3))
-allocate(dest_FSI%init_node_list(CTML_num_solids_init,datalo:datahi,3))
-allocate(dest_FSI%prev_velocity_list(CTML_num_solids_init,datalo:datahi,3))
-allocate(dest_FSI%velocity_list(CTML_num_solids_init,datalo:datahi,3))
-allocate(dest_FSI%mass_list(CTML_num_solids_init,datalo:datahi))
-allocate(dest_FSI%temp_list(CTML_num_solids_init,datalo:datahi))
+if (dest_FSI%structured_flag.eq.0) then
+ ilo=1
+ ihi=max_num_nodes_init(1)
+ jlo=1
+ jhi=1
+else if (dest_FSI%structured_flag.eq.1) then
+
+ if (AMREX_SPACEDIM.eq.2) then
+  if (max_num_nodes_init(2).eq.0) then
+   ! do nothing
+  else
+   print *,"expecting max_num_nodes_init(2)=0"
+   stop
+  endif
+  jlo=1
+  jhi=1
+ else if (AMREX_SPACEDIM.eq.3) then
+  if (max_num_nodes_init(2).gt.0) then
+   ! do nothing
+  else
+   print *,"expecting max_num_nodes_init(2)>0"
+   stop
+  endif
+  jlo=1-dest_FSI%ngrow_node
+  jhi=max_num_nodes_init(2)+dest_FSI%ngrow_node
+ else
+  print *,"AMREX_SPACEDIM invalid"
+  stop
+ endif
+
+else
+ print *,"structured_flag invalid"
+ stop
+endif
+
+allocate(dest_FSI%prev_node_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,1,3))
+allocate(dest_FSI%node_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,1,3))
+allocate(dest_FSI%init_node_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,1,3))
+
+allocate(dest_FSI%prev_velocity_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,1,3))
+allocate(dest_FSI%velocity_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,1,3))
+
+allocate(dest_FSI%mass_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,1))
+allocate(dest_FSI%temp_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,1))
+
 allocate(dest_FSI%element_list(CTML_num_solids_init,max_num_elements_init,4))
 
 end subroutine initData_FSI
@@ -288,8 +333,9 @@ INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
 
 INTEGER_T :: local_num_nodes_grow
-INTEGER_T :: i,j,k,i_flat,dir
-INTEGER_T :: datalo,datahi
+INTEGER_T :: i,i_flat,dir
+INTEGER_T :: ii,jj,kk
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=source_FSI%CTML_num_solids
 do dir=1,3
@@ -305,7 +351,12 @@ local_ngrow_node=source_FSI%ngrow_node
 local_num_nodes_grow=local_num_nodes(1)
 
 if (local_structured_flag.eq.0) then
- !do nothing
+ ilo=1
+ ihi=local_num_nodes_grow
+ jlo=1
+ jhi=1
+ klo=1
+ khi=1
 else if (local_structured_flag.eq.1) then
  if (local_structure_topology.eq.0) then !filament
   if (AMREX_SPACEDIM.eq.2) then
@@ -315,6 +366,12 @@ else if (local_structured_flag.eq.1) then
    stop
   endif
   local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
+  ilo=1-local_ngrow_node
+  ihi=local_num_nodes(1)+local_ngrow_node
+  jlo=1
+  jhi=1
+  klo=1
+  khi=1
  else if (local_structure_topology.eq.1) then !sheet
   if (AMREX_SPACEDIM.eq.3) then
    !do nothing
@@ -325,16 +382,34 @@ else if (local_structured_flag.eq.1) then
   local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
+  ilo=1-local_ngrow_node
+  ihi=local_num_nodes(1)+local_ngrow_node
+  jlo=1-local_ngrow_node
+  jhi=local_num_nodes(2)+local_ngrow_node
+  klo=1
+  khi=1
  else if (local_structure_topology.eq.2) then !volumetric
   if (AMREX_SPACEDIM.eq.2) then
    local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
+   ilo=1-local_ngrow_node
+   ihi=local_num_nodes(1)+local_ngrow_node
+   jlo=1-local_ngrow_node
+   jhi=local_num_nodes(2)+local_ngrow_node
+   klo=1
+   khi=1
   else if (AMREX_SPACEDIM.eq.3) then
    local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)* &
        (local_num_nodes(3)+2*local_ngrow_node)
+   ilo=1-local_ngrow_node
+   ihi=local_num_nodes(1)+local_ngrow_node
+   jlo=1-local_ngrow_node
+   jhi=local_num_nodes(2)+local_ngrow_node
+   klo=1-local_ngrow_node
+   khi=local_num_nodes(3)+local_ngrow_node
   else
    print *,"AMREX_SPACEDIM invalid"
    stop
@@ -345,6 +420,13 @@ else if (local_structured_flag.eq.1) then
  endif
 else
  print *,"local_structured_flag invalid"
+ stop
+endif
+
+if ((khi-klo)*(jhi-jlo)*(ihi-ilo).eq.local_num_nodes_grow) then
+ ! do nothing
+else
+ print *,"[ijk]lo and/or [ijk]hi invalid"
  stop
 endif
 
@@ -370,50 +452,54 @@ dest_FSI_flatten(FSIcontain_structure_dim+1)=local_structure_dim
 dest_FSI_flatten(FSIcontain_structure_topology+1)=local_structure_topology
 dest_FSI_flatten(FSIcontain_ngrow_node+1)=local_ngrow_node
 
-datalo=1-local_ngrow_node
-datahi=local_num_nodes(1)+local_ngrow_node
-
 i_flat=1
 do i=1,local_num_solids
- do j=datalo,datahi
-  do k=1,3
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
+  do dir=1,3
    dest_FSI_flatten(FSIcontain_prev_node_list+i_flat)= &
-     source_FSI%prev_node_list(i,j,k)
+     source_FSI%prev_node_list(i,ii,jj,kk,dir)
    dest_FSI_flatten(FSIcontain_node_list+i_flat)= &
-     source_FSI%node_list(i,j,k)
+     source_FSI%node_list(i,ii,jj,kk,dir)
    dest_FSI_flatten(FSIcontain_init_node_list+i_flat)= &
-     source_FSI%init_node_list(i,j,k)
+     source_FSI%init_node_list(i,ii,jj,kk,dir)
    dest_FSI_flatten(FSIcontain_velocity_list+i_flat)= &
-     source_FSI%velocity_list(i,j,k)
+     source_FSI%velocity_list(i,ii,jj,kk,dir)
    dest_FSI_flatten(FSIcontain_prev_velocity_list+i_flat)= &
-     source_FSI%prev_velocity_list(i,j,k)
+     source_FSI%prev_velocity_list(i,ii,jj,kk,dir)
    i_flat=i_flat+1
-  enddo ! k=1,3
- enddo !j
+  enddo ! dir=1,3
+ enddo !kk
+ enddo !jj
+ enddo !ii
 enddo ! i
 
 i_flat=1
 do i=1,local_num_solids
- do j=datalo,datahi
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
   dest_FSI_flatten(FSIcontain_mass_list+i_flat)= &
-    source_FSI%mass_list(i,j)
+    source_FSI%mass_list(i,ii,jj,kk)
   dest_FSI_flatten(FSIcontain_temp_list+i_flat)= &
-    source_FSI%temp_list(i,j)
+    source_FSI%temp_list(i,ii,jj,kk)
   i_flat=i_flat+1
- enddo !j
+ enddo !kk
+ enddo !jj
+ enddo !ii
 enddo ! i
-
 
 i_flat=1
 do i=1,local_num_solids
- do j=1,local_num_elements
-  do k=1,4
+ do ii=1,local_num_elements
+  do dir=1,4
    dest_FSI_flatten(FSIcontain_element_list+i_flat)= &
-    source_FSI%element_list(i,j,k)
+    source_FSI%element_list(i,ii,dir)
    i_flat=i_flat+1
-  enddo !k
- enddo !j
-enddo ! i
+  enddo !dir
+ enddo !ii
+enddo !i
 
 end subroutine FSI_flatten
 
@@ -437,8 +523,9 @@ INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
 
-INTEGER_T :: i,j,k,i_flat,dir
-INTEGER_T :: datalo,datahi
+INTEGER_T :: i,i_flat,dir
+INTEGER_T :: ii,jj,kk
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=NINT(source_FSI_flatten(FSIcontain_num_solids+1))
 do dir=1,3
@@ -454,7 +541,12 @@ local_ngrow_node=source_FSI_flatten(FSIcontain_ngrow_node+1)
 local_num_nodes_grow=local_num_nodes(1)
 
 if (local_structured_flag.eq.0) then
- !do nothing
+ ilo=1
+ ihi=local_num_nodes_grow
+ jlo=1
+ jhi=1
+ klo=1
+ khi=1
 else if (local_structured_flag.eq.1) then
  if (local_structure_topology.eq.0) then !filament
   if (AMREX_SPACEDIM.eq.2) then
@@ -464,6 +556,12 @@ else if (local_structured_flag.eq.1) then
    stop
   endif
   local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
+  ilo=1-local_ngrow_node
+  ihi=local_num_nodes(1)+local_ngrow_node
+  jlo=1
+  jhi=1
+  klo=1
+  khi=1
  else if (local_structure_topology.eq.1) then !sheet
   if (AMREX_SPACEDIM.eq.3) then
    !do nothing
@@ -474,16 +572,34 @@ else if (local_structured_flag.eq.1) then
   local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
+  ilo=1-local_ngrow_node
+  ihi=local_num_nodes(1)+local_ngrow_node
+  jlo=1-local_ngrow_node
+  jhi=local_num_nodes(2)+local_ngrow_node
+  klo=1
+  khi=1
  else if (local_structure_topology.eq.2) then !volumetric
   if (AMREX_SPACEDIM.eq.2) then
    local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
+   ilo=1-local_ngrow_node
+   ihi=local_num_nodes(1)+local_ngrow_node
+   jlo=1-local_ngrow_node
+   jhi=local_num_nodes(2)+local_ngrow_node
+   klo=1
+   khi=1
   else if (AMREX_SPACEDIM.eq.3) then
    local_num_nodes_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)* &
        (local_num_nodes(3)+2*local_ngrow_node)
+   ilo=1-local_ngrow_node
+   ihi=local_num_nodes(1)+local_ngrow_node
+   jlo=1-local_ngrow_node
+   jhi=local_num_nodes(2)+local_ngrow_node
+   klo=1-local_ngrow_node
+   khi=local_num_nodes(3)+local_ngrow_node
   else
    print *,"AMREX_SPACEDIM invalid"
    stop
@@ -494,6 +610,13 @@ else if (local_structured_flag.eq.1) then
  endif
 else
  print *,"local_structured_flag invalid"
+ stop
+endif
+
+if ((khi-klo)*(jhi-jlo)*(ihi-ilo).eq.local_num_nodes_grow) then
+ ! do nothing
+else
+ print *,"[ijk]lo and/or [ijk]hi invalid"
  stop
 endif
 
@@ -526,46 +649,54 @@ datahi=dest_FSI%max_num_nodes(1)+dest_FSI%ngrow_node
 
 i_flat=1
 do i=1,local_num_solids
- do j=datalo,datahi
-  do k=1,3
-   dest_FSI%prev_node_list(i,j,k)= &
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
+  do dir=1,3
+   dest_FSI%prev_node_list(i,ii,jj,kk,dir)= &
     source_FSI_flatten(FSIcontain_prev_node_list+i_flat)
-   dest_FSI%node_list(i,j,k)= &
+   dest_FSI%node_list(i,ii,jj,kk,dir)= &
     source_FSI_flatten(FSIcontain_node_list+i_flat)
-   dest_FSI%init_node_list(i,j,k)= &
+   dest_FSI%init_node_list(i,ii,jj,kk,dir)= &
     source_FSI_flatten(FSIcontain_init_node_list+i_flat)
 
-   dest_FSI%velocity_list(i,j,k)= &
+   dest_FSI%velocity_list(i,ii,jj,kk,dir)= &
     source_FSI_flatten(FSIcontain_velocity_list+i_flat)
-   dest_FSI%prev_velocity_list(i,j,k)= &
+   dest_FSI%prev_velocity_list(i,ii,jj,kk,dir)= &
     source_FSI_flatten(FSIcontain_prev_velocity_list+i_flat)
 
    i_flat=i_flat+1
-  enddo ! k=1,3
- enddo !j
+  enddo ! dir=1,3
+ enddo !kk
+ enddo !jj
+ enddo !ii
 enddo ! i
 
 i_flat=1
 do i=1,local_num_solids
- do j=datalo,datahi
-  dest_FSI%mass_list(i,j)= &
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
+  dest_FSI%mass_list(i,ii,jj,kk)= &
    source_FSI_flatten(FSIcontain_mass_list+i_flat)
-  dest_FSI%temp_list(i,j)= &
+  dest_FSI%temp_list(i,ii,jj,kk)= &
    source_FSI_flatten(FSIcontain_temp_list+i_flat)
   i_flat=i_flat+1
- enddo !j
+ enddo !kk
+ enddo !jj
+ enddo !ii
 enddo ! i
 
 
 i_flat=1
 do i=1,local_num_solids
- do j=1,local_num_elements
-  do k=1,4
-   dest_FSI%element_list(i,j,k)= &
+ do ii=1,local_num_elements
+  do dir=1,4
+   dest_FSI%element_list(i,ii,dir)= &
     NINT(source_FSI_flatten(FSIcontain_element_list+i_flat))
    i_flat=i_flat+1
-  enddo !k
- enddo !j
+  enddo !dir
+ enddo !ii
 enddo ! i
 
 end subroutine FSI_unflatten
@@ -580,6 +711,7 @@ type(FSI_container_type), INTENT(out) :: dest_FSI
 type(FSI_container_type), INTENT(in) :: source_FSI
 INTEGER_T :: local_num_solids
 INTEGER_T :: local_num_nodes(3)
+INTEGER_T :: local_num_nodes_grow
 INTEGER_T :: local_num_elements
 
 INTEGER_T :: local_structured_flag
@@ -587,8 +719,9 @@ INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
 
-INTEGER_T :: i,j,k,dir
-INTEGER_T :: datalo,datahi
+INTEGER_T :: i,dir
+INTEGER_T :: ii,jj,kk
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=source_FSI%CTML_num_solids
 dest_FSI%CTML_num_solids=local_num_solids
@@ -613,34 +746,118 @@ dest_FSI%structure_topology=source_FSI%structure_topology
 local_ngrow_node=source_FSI%ngrow_node
 dest_FSI%ngrow_node=source_FSI%ngrow_node
 
-datalo=1-source_FSI%ngrow_node
-datahi=local_num_nodes(1)+source_FSI%ngrow_node
+local_num_nodes_grow=local_num_nodes(1)
+
+if (local_structured_flag.eq.0) then
+ ilo=1
+ ihi=local_num_nodes_grow
+ jlo=1
+ jhi=1
+ klo=1
+ khi=1
+else if (local_structured_flag.eq.1) then
+ if (local_structure_topology.eq.0) then !filament
+  if (AMREX_SPACEDIM.eq.2) then
+   !do nothing
+  else
+   print *,"filament for 2d only"
+   stop
+  endif
+  local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
+  ilo=1-local_ngrow_node
+  ihi=local_num_nodes(1)+local_ngrow_node
+  jlo=1
+  jhi=1
+  klo=1
+  khi=1
+ else if (local_structure_topology.eq.1) then !sheet
+  if (AMREX_SPACEDIM.eq.3) then
+   !do nothing
+  else
+   print *,"sheet for 3d only"
+   stop
+  endif
+  local_num_nodes_grow= &
+       (local_num_nodes(1)+2*local_ngrow_node)* &
+       (local_num_nodes(2)+2*local_ngrow_node)
+  ilo=1-local_ngrow_node
+  ihi=local_num_nodes(1)+local_ngrow_node
+  jlo=1-local_ngrow_node
+  jhi=local_num_nodes(2)+local_ngrow_node
+  klo=1
+  khi=1
+ else if (local_structure_topology.eq.2) then !volumetric
+  if (AMREX_SPACEDIM.eq.2) then
+   local_num_nodes_grow= &
+       (local_num_nodes(1)+2*local_ngrow_node)* &
+       (local_num_nodes(2)+2*local_ngrow_node)
+   ilo=1-local_ngrow_node
+   ihi=local_num_nodes(1)+local_ngrow_node
+   jlo=1-local_ngrow_node
+   jhi=local_num_nodes(2)+local_ngrow_node
+   klo=1
+   khi=1
+  else if (AMREX_SPACEDIM.eq.3) then
+   local_num_nodes_grow= &
+       (local_num_nodes(1)+2*local_ngrow_node)* &
+       (local_num_nodes(2)+2*local_ngrow_node)* &
+       (local_num_nodes(3)+2*local_ngrow_node)
+   ilo=1-local_ngrow_node
+   ihi=local_num_nodes(1)+local_ngrow_node
+   jlo=1-local_ngrow_node
+   jhi=local_num_nodes(2)+local_ngrow_node
+   klo=1-local_ngrow_node
+   khi=local_num_nodes(3)+local_ngrow_node
+  else
+   print *,"AMREX_SPACEDIM invalid"
+   stop
+  endif
+ else
+  print *,"structure_topology invalid"
+  stop
+ endif
+else
+ print *,"local_structured_flag invalid"
+ stop
+endif
+
+if ((khi-klo)*(jhi-jlo)*(ihi-ilo).eq.local_num_nodes_grow) then
+ ! do nothing
+else
+ print *,"[ijk]lo and/or [ijk]hi invalid"
+ stop
+endif
 
 do i=1,local_num_solids
- do j=datalo,datahi
-  do k=1,3
-   dest_FSI%prev_node_list(i,j,k)= &
-     source_FSI%prev_node_list(i,j,k)
-   dest_FSI%node_list(i,j,k)= &
-     source_FSI%node_list(i,j,k)
-   dest_FSI%init_node_list(i,j,k)= &
-     source_FSI%init_node_list(i,j,k)
-   dest_FSI%prev_velocity_list(i,j,k)= &
-     source_FSI%prev_velocity_list(i,j,k)
-   dest_FSI%velocity_list(i,j,k)= &
-     source_FSI%velocity_list(i,j,k)
-  enddo ! k=1,3
-  dest_FSI%mass_list(i,j)= &
-    source_FSI%mass_list(i,j)
-  dest_FSI%temp_list(i,j)= &
-    source_FSI%temp_list(i,j)
- enddo !j
- do j=1,local_num_elements
-  do k=1,4
-   dest_FSI%element_list(i,j,k)= &
-     source_FSI%element_list(i,j,k)
-  enddo !k
- enddo ! j
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
+  do dir=1,3
+   dest_FSI%prev_node_list(i,ii,jj,kk,dir)= &
+     source_FSI%prev_node_list(i,ii,jj,kk,dir)
+   dest_FSI%node_list(i,ii,jj,kk,dir)= &
+     source_FSI%node_list(i,ii,jj,kk,dir)
+   dest_FSI%init_node_list(i,ii,jj,kk,dir)= &
+     source_FSI%init_node_list(i,ii,jj,kk,dir)
+   dest_FSI%prev_velocity_list(i,ii,jj,kk,dir)= &
+     source_FSI%prev_velocity_list(i,ii,jj,kk,dir)
+   dest_FSI%velocity_list(i,ii,jj,kk,dir)= &
+     source_FSI%velocity_list(i,ii,jj,kk,dir)
+  enddo ! dir=1,3
+  dest_FSI%mass_list(i,ii,jj,kk)= &
+    source_FSI%mass_list(i,ii,jj,kk)
+  dest_FSI%temp_list(i,ii,jj,kk)= &
+    source_FSI%temp_list(i,ii,jj,kk)
+ enddo !kk
+ enddo !jj
+ enddo !ii
+
+ do ii=1,local_num_elements
+  do dir=1,4
+   dest_FSI%element_list(i,ii,dir)= &
+     source_FSI%element_list(i,ii,dir)
+  enddo !dir
+ enddo ! ii
 enddo ! i
 
 end subroutine copyFrom_FSI

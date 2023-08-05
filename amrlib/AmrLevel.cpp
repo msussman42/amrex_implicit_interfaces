@@ -25,7 +25,8 @@ void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 // use std::ios::in for restarting  (std::ofstream::in ok too?)
  if (ParallelDescriptor::IOProcessor()) {
   std::string CTML_FullPathName  = FullPath+"/CTML";
-  CTML_checkpoint_file.open(CTML_FullPathName.c_str(),std::ios::out|std::ios::trunc|std::ios::binary);
+  CTML_checkpoint_file.open(CTML_FullPathName.c_str(),
+    std::ios::out|std::ios::trunc|std::ios::binary);
   if (!CTML_checkpoint_file.good())
    amrex::FileOpenFailed(CTML_FullPathName);
   int old_prec=CTML_checkpoint_file.precision(15);
