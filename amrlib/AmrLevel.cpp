@@ -48,6 +48,7 @@ void FSI_container_class::checkpoint(int check_id) {
   CTML_checkpoint_file << check_id << '\n';
 
   CTML_checkpoint_file << CTML_num_solids << '\n';
+  CTML_checkpoint_file << FSI_num_scalars << '\n';
   for (int dir=0;dir<3;dir++) {
    CTML_checkpoint_file << max_num_nodes[dir] << '\n';
   }
@@ -73,6 +74,11 @@ void FSI_container_class::checkpoint(int check_id) {
    CTML_checkpoint_file << mass_list[i] << '\n';
    CTML_checkpoint_file << temp_list[i] << '\n';
   }
+  CTML_checkpoint_file << scalar_list.size() << '\n';
+  for (int i=0;i<scalar_list.size();i++) {
+   CTML_checkpoint_file << scalar_list[i] << '\n';
+   CTML_checkpoint_file << prev_scalar_list[i] << '\n';
+  }
  }
 
 } //end subroutine checkpoint
@@ -90,8 +96,10 @@ void FSI_container_class::restart(int check_id,std::istream& is) {
  int local_node_list_size;
  int local_element_list_size;
  int local_mass_list_size;
+ int local_scalar_list_size;
 
  is >> CTML_num_solids;
+ is >> FSI_num_scalars;
  for (int dir=0;dir<3;dir++) {
   is >> max_num_nodes[dir];
  }
@@ -134,6 +142,14 @@ void FSI_container_class::restart(int check_id,std::istream& is) {
   is >> temp_list[i];
  }
 
+ is >> local_scalar_list_size;
+ scalar_list.resize(local_scalar_list_size);
+ prev_scalar_list.resize(local_scalar_list_size);
+ for (int i=0;i<scalar_list.size();i++) {
+  is >> scalar_list[i];
+  is >> prev_scalar_list[i];
+ }
+
 } //end subroutine restart
 
 
@@ -141,6 +157,7 @@ void FSI_container_class::initData_FSI(
   const int CTML_num_solids_init,
   const int max_num_nodes_init[3],
   const int max_num_elements_init,
+  const int FSI_num_scalars_init,
   const int structured_flag_init, 
   const int structure_dim_init,
   const int structure_topology_init,
@@ -151,9 +168,11 @@ if ((CTML_num_solids_init>=0)&&
     (max_num_nodes_init[0]>=0)&&
     (max_num_nodes_init[1]>=0)&&
     (max_num_nodes_init[2]>=0)&&
-    (max_num_elements_init>=0)) {
+    (max_num_elements_init>=0)&&
+    (FSI_num_scalars_init>=0) {
 
  CTML_num_solids=CTML_num_solids_init;
+ FSI_num_scalars=FSI_num_scalars_init;
  for (int dir=0;dir<3;dir++) {
   max_num_nodes[dir]=max_num_nodes_init[dir];
  }
@@ -227,8 +246,10 @@ if ((CTML_num_solids_init>=0)&&
  init_node_list.resize(CTML_num_solids*max_num_nodes_grow*3);
  mass_list.resize(CTML_num_solids*max_num_nodes_grow);
  temp_list.resize(CTML_num_solids*max_num_nodes_grow);
+ scalar_list.resize(CTML_num_solids*max_num_nodes_grow*FSI_num_scalars);
+ prev_scalar_list.resize(CTML_num_solids*max_num_nodes_grow*FSI_num_scalars);
 } else {
- amrex::Error("num_solids/nodes/ or elements invalid");
+ amrex::Error("num_solids/nodes/scalars or elements invalid");
 }
 
 } // end subroutine initData_FSI()
@@ -256,8 +277,16 @@ void FSI_container_class::FSI_flatten(Vector< Real >& flattened_data) {
  } else
   amrex::Error("expecting mass_list_size==temp_list.size()");
 
+ int scalar_list_size=scalar_list.size();
+
+ if (scalar_list_size==prev_scalar_list.size()) {
+  //do nothing
+ } else
+  amrex::Error("expecting scalar_list_size==prev_scalar_list.size()");
+
  flattened_data.resize(FSIcontain_size);
  flattened_data[FSIcontain_num_solids]=CTML_num_solids; 
+ flattened_data[FSIcontain_num_scalars]=FSI_num_scalars; 
  for (int dir=0;dir<3;dir++) {
   flattened_data[FSIcontain_max_num_nodes+dir]=max_num_nodes[dir]; 
  }
@@ -281,12 +310,17 @@ void FSI_container_class::FSI_flatten(Vector< Real >& flattened_data) {
   flattened_data[FSIcontain_mass_list+i]=mass_list[i];
   flattened_data[FSIcontain_temp_list+i]=temp_list[i];
  } 
+ for (int i=0;i<scalar_list_size;i++) {
+  flattened_data[FSIcontain_scalar_list+i]=scalar_list[i];
+  flattened_data[FSIcontain_prev_scalar_list+i]=prev_scalar_list[i];
+ } 
 
 } //end subroutine FSI_flatten
 
 void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
 
  CTML_num_solids=(int) flattened_data[FSIcontain_num_solids]; 
+ FSI_num_scalars=(int) flattened_data[FSIcontain_num_scalars]; 
  for (int dir=0;dir<3;dir++) {
   max_num_nodes[dir]=(int) flattened_data[FSIcontain_max_num_nodes+dir];
  }
@@ -301,6 +335,7 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
   CTML_num_solids,
   max_num_nodes,
   max_num_elements,
+  FSI_num_scalars,
   structured_flag, 
   structure_dim,
   structure_topology,
@@ -309,6 +344,7 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
  int node_list_size=node_list.size();
  int element_list_size=element_list.size();
  int mass_list_size=mass_list.size();
+ int scalar_list_size=scalar_list.size();
 
  if (node_list_size==velocity_list.size()) {
   //do nothing
@@ -324,6 +360,11 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
   //do nothing
  } else
   amrex::Error("expecting mass_list_size==temp_list.size()");
+
+ if (scalar_list_size==prev_scalar_list.size()) {
+  //do nothing
+ } else
+  amrex::Error("expecting scalar_list_size==prev_scalar_list.size()");
 
  if (flattened_data.size()==FSIcontain_size) {
   //do nothing
@@ -344,6 +385,10 @@ void FSI_container_class::FSI_unflatten(Vector< Real > flattened_data) {
   mass_list[i]=flattened_data[FSIcontain_mass_list+i];
   temp_list[i]=flattened_data[FSIcontain_temp_list+i];
  } 
+ for (int i=0;i<scalar_list_size;i++) {
+  scalar_list[i]=flattened_data[FSIcontain_scalar_list+i];
+  prev_scalar_list[i]=flattened_data[FSIcontain_prev_scalar_list+i];
+ } 
 
 } //end subroutine FSI_unflatten
 
@@ -354,6 +399,7 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
    source_FSI.CTML_num_solids,
    source_FSI.max_num_nodes,
    source_FSI.max_num_elements,
+   source_FSI.FSI_num_scalars,
    source_FSI.structured_flag,
    source_FSI.structure_dim,
    source_FSI.structure_topology,
@@ -406,18 +452,32 @@ void FSI_container_class::copyFrom_FSI(const FSI_container_class& source_FSI) {
   temp_list[inode]=source_FSI.temp_list[inode];
  }
 
+ if (source_FSI.scalar_list.size()==
+     source_FSI.prev_scalar_list.size()) {
+  //do nothing
+ } else
+  amrex::Error("scalar_list or prev_scalar_list size invalid");
+
+ for (int inode=0;inode<source_FSI.scalar_list.size();inode++) {
+  scalar_list[inode]=source_FSI.scalar_list[inode];
+  prev_scalar_list[inode]=source_FSI.prev_scalar_list[inode];
+ }
+
 } // end subroutine copyFrom_FSI
 
 void FSI_container_class::clear_FSI() {
 
  int local_num_solids=0;
+ int local_num_scalars=0;
+
  int local_num_nodes[3];
  for (int dir=0;dir<3;dir++) {
   local_num_nodes[dir]=0;
  }
  int local_num_elements=0;
 
- initData_FSI(local_num_solids,local_num_nodes,local_num_elements);
+ initData_FSI(local_num_solids,local_num_nodes,
+	local_num_elements,local_num_scalars);
 
 } // end subroutine FSI_container_class::clear_FSI() 
 

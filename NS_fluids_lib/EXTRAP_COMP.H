@@ -341,7 +341,8 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 #define OP_FSI_LAG_STRESS 4
 
 #define FSIcontain_num_solids 0
-#define FSIcontain_max_num_nodes 1
+#define FSIcontain_num_scalars 1
+#define FSIcontain_max_num_nodes 2
 #define FSIcontain_max_num_elements (FSIcontain_max_num_nodes+3)
 #define FSIcontain_structured_flag (FSIcontain_max_num_elements+1)
 #define FSIcontain_structure_dim (FSIcontain_structured_flag+1)
@@ -355,7 +356,9 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 #define FSIcontain_init_node_list (FSIcontain_element_list+element_list_size)
 #define FSIcontain_mass_list (FSIcontain_init_node_list+node_list_size)
 #define FSIcontain_temp_list (FSIcontain_mass_list+mass_list_size)
-#define FSIcontain_size (FSIcontain_temp_list+mass_list_size)
+#define FSIcontain_scalar_list (FSIcontain_temp_list+mass_list_size)
+#define FSIcontain_prev_scalar_list (FSIcontain_scalar_list+scalar_list_size)
+#define FSIcontain_size (FSIcontain_prev_scalar_list+scalar_list_size)
 
 #define POTGRAD_NULLOPTION 0
 #define POTGRAD_SURFTEN_INCREMENTAL_GRAV 1

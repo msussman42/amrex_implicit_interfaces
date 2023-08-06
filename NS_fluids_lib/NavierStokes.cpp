@@ -918,6 +918,7 @@ Vector<int> NavierStokes::FSI_flag;
 
 Vector<int> NavierStokes::CTML_max_num_nodes_list;
 int NavierStokes::CTML_max_num_elements_list=0;
+int NavierStokes::CTML_FSI_num_scalars=0;
 
 int NavierStokes::FSI_interval=1;
 int NavierStokes::num_local_aux_grids=0;
@@ -1439,6 +1440,7 @@ void fortran_parameters() {
  }
 
  NavierStokes::CTML_max_num_elements_list=0;
+ NavierStokes::CTML_FSI_num_scalars=0;
 
  Vector<Real> Carreau_alpha_temp(NavierStokes::num_materials);
  Vector<Real> Carreau_beta_temp(NavierStokes::num_materials);
@@ -1505,7 +1507,8 @@ void fortran_parameters() {
    NavierStokes::FSI_flag.dataPtr(),
    &NavierStokes::CTML_FSI_numsolids,
    NavierStokes::CTML_max_num_nodes_list.dataPtr(),
-   &NavierStokes::CTML_max_num_elements_list);
+   &NavierStokes::CTML_max_num_elements_list,
+   &NavierStokes::CTML_FSI_num_scalars);
 #endif
 
  int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;
@@ -8329,9 +8332,9 @@ void NavierStokes::ns_header_msg_level(
   }
 
   FSI_input.initData_FSI(CTML_FSI_numsolids,max_num_nodes_array,
-    CTML_max_num_elements_list);
+    CTML_max_num_elements_list,CTML_FSI_num_scalars);
   FSI_output.initData_FSI(CTML_FSI_numsolids,max_num_nodes_array,
-    CTML_max_num_elements_list);
+    CTML_max_num_elements_list,CTML_FSI_num_scalars);
 
   NavierStokes& ns_level0=getLevel(0);
 

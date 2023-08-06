@@ -41,6 +41,7 @@ class FSI_container_class
 public:
 
 int CTML_num_solids;
+int FSI_num_scalars;
 int max_num_nodes[3];
 int max_num_elements;
 int structured_flag; //0=unstructured 1=structured
@@ -61,6 +62,9 @@ Vector< Real > init_node_list;
 Vector< Real > mass_list; 
 //temp[0..num_solids-1][0..max_num_nodes_grow-1] (temperature)
 Vector< Real > temp_list; 
+//scalar[0..num_solids-1][0..max_num_nodes_grow-1][0..FSI_num_scalars-1]
+Vector< Real > scalar_list; 
+Vector< Real > prev_scalar_list; 
 
 void FSI_flatten(Vector< Real >& flattened_data);
 void FSI_unflatten(Vector< Real > flattened_data);
@@ -77,6 +81,7 @@ void initData_FSI(
   const int CTML_num_solids_init,
   const int max_num_nodes_init[3],
   const int max_num_elements_init,
+  const int FSI_num_scalars_init,
   const int structured_flag_init=1, //structured
   const int structure_dim_init=AMREX_SPACEDIM,
   const int structure_topology_init=AMREX_SPACEDIM-2,//filament 2d,sheet 3d
@@ -92,6 +97,7 @@ FSI_container_class() {
   max_num_nodes[1]=0;
   max_num_nodes[2]=0;
   max_num_elements=0;
+  FSI_num_scalars=0;
   structured_flag=1; //structured
   structure_dim=AMREX_SPACEDIM;
   structure_topology=AMREX_SPACEDIM-2; //filament 2d, sheet 3d
