@@ -1506,9 +1506,9 @@ void fortran_parameters() {
    &NavierStokes::num_materials,
    NavierStokes::FSI_flag.dataPtr(),
    &NavierStokes::CTML_FSI_numsolids,
+   &NavierStokes::CTML_FSI_num_scalars,
    NavierStokes::CTML_max_num_nodes_list.dataPtr(),
-   &NavierStokes::CTML_max_num_elements_list,
-   &NavierStokes::CTML_FSI_num_scalars);
+   &NavierStokes::CTML_max_num_elements_list);
 #endif
 
  int num_local_aux_grids_temp=NavierStokes::num_local_aux_grids;

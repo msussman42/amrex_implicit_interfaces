@@ -31,6 +31,7 @@ stop
        nmat_in,&
        FSI_flag_in,&
        CTML_num_solids_out, &
+       CTML_num_scalars_out, &
        CTML_max_num_nodes_list,&
        CTML_max_num_elements_list)
 
@@ -38,6 +39,7 @@ stop
       INTEGER_T, INTENT(in) :: nmat_in
       INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
       INTEGER_T, INTENT(inout) :: CTML_num_solids_out
+      INTEGER_T, INTENT(inout) :: CTML_num_scalars_out
       INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list(3)
       INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
       INTEGER_T :: im
@@ -56,6 +58,7 @@ stop
       INTEGER_T :: dir
 
       CTML_num_solids_out=0
+      CTML_num_scalars_out=0
 
       do dir=1,3
        CTML_max_num_nodes_list(dir)=0
@@ -78,6 +81,7 @@ stop
 #ifdef MVAHABFSI
         call copy_nmaxIBM( &
           CTML_num_solids_out, &
+          CTML_num_scalars_out, &
           nr_IBM_fib_out, &
           nr_IBM_fsh_out, &
           nr_IBM_esh_out, &
@@ -182,6 +186,7 @@ subroutine fort_ctml_max_nodes(&
  nmat_in,&
  FSI_flag_in,&
  CTML_num_solids_out, &
+ CTML_num_scalars_out, &
  CTML_max_num_nodes_list,&
  CTML_max_num_elements_list) &
 bind(c,name='fort_ctml_max_nodes')
@@ -193,11 +198,13 @@ IMPLICIT NONE
 INTEGER_T, INTENT(in) :: nmat_in
 INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
 INTEGER_T, INTENT(inout) :: CTML_num_solids_out
+INTEGER_T, INTENT(inout) :: CTML_num_scalars_out
 INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list(3)
 INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
 INTEGER_T :: dir
 
 CTML_num_solids_out=0
+CTML_num_scalars_out=0
 
 do dir=1,3
  CTML_max_num_nodes_list(dir)=0
@@ -209,6 +216,7 @@ call CTML_INTERNAL_MAX_NODES(&
  nmat_in,&
  FSI_flag_in,&
  CTML_num_solids_out,&
+ CTML_num_scalars_out,&
  CTML_max_num_nodes_list,&
  CTML_max_num_elements_list) 
 

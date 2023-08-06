@@ -15,6 +15,7 @@ extern "C" {
   const int* num_materials,
   const int* FSI_flag,
   int* CTML_FSI_numsolids,
+  int* CTML_FSI_num_scalars,
   int* max_num_nodes_list,
   int* max_num_elements_list);
 

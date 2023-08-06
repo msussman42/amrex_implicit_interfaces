@@ -44,6 +44,7 @@ INTEGER_T, PARAMETER :: sci_sdim=3
 
 type FSI_container_type
  INTEGER_T CTML_num_solids
+ INTEGER_T FSI_num_scalars
  INTEGER_T max_num_nodes(3)
  INTEGER_T max_num_elements
  INTEGER_T structured_flag
@@ -60,6 +61,8 @@ FIX ME node vars live in 5D array: fiber num,x,y,z,dir
  REAL_T, pointer :: init_node_list(:,:,:,:,:)
  REAL_T, pointer :: mass_list(:,:,:,:)
  REAL_T, pointer :: temp_list(:,:,:,:)
+ REAL_T, pointer :: scalar_list(:,:,:,:,:)
+ REAL_T, pointer :: prev_scalar_list(:,:,:,:,:)
 end type FSI_container_type
 
 type lag_type
@@ -203,6 +206,7 @@ INTEGER_T fsi_part_id_map(MAX_PARTS)
 INTEGER_T node_list_size
 INTEGER_T element_list_size
 INTEGER_T mass_list_size
+INTEGER_T scalar_list_size
 
 INTEGER_T ctml_n_bodies
 INTEGER_T ctml_max_n_nodes(3)
@@ -218,6 +222,7 @@ REAL_T, dimension(3) :: ctml_min_grid_dx
 INTEGER_T, dimension(:,:), allocatable :: ctml_n_active_nodes
 
 type(FSI_container_type) :: ctml_FSI_container
+! nsolid,i,j,k,dir
 REAL_T, dimension(:,:,:,:,:), allocatable :: ctml_frc
 
 contains
@@ -226,15 +231,17 @@ subroutine initData_FSI( &
   dest_FSI, &
   CTML_num_solids_init, &
   max_num_nodes_init, &
-  max_num_elements_init)
+  max_num_elements_init, &
+  FSI_num_scalars_init)
 IMPLICIT NONE
 
 type(FSI_container_type), INTENT(inout) :: dest_FSI
 INTEGER_T, INTENT(in) :: CTML_num_solids_init
 INTEGER_T, INTENT(in) :: max_num_nodes_init(3)
 INTEGER_T, INTENT(in) :: max_num_elements_init
+INTEGER_T, INTENT(in) :: FSI_num_scalars_init
 INTEGER_T :: dir
-INTEGER_T :: ilo,ihi,jlo,jhi
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 if (max_num_nodes_init(1).gt.0) then
  ! do nothing
@@ -244,6 +251,7 @@ else
 endif
 
 dest_FSI%CTML_num_solids=CTML_num_solids_init
+dest_FSI%FSI_num_scalars=FSI_num_scalars_init
 
 do dir=1,3
  dest_FSI%max_num_nodes(dir)=max_num_nodes_init(dir)
@@ -255,14 +263,20 @@ dest_FSI%structure_dim=AMREX_SPACEDIM
 dest_FSI%structure_topology=AMREX_SPACEDIM-2 ! filament 2d, sheet 3d
 dest_FSI%ngrow_node=2 
 
-ilo=1-dest_FSI%ngrow_node
-ihi=max_num_nodes_init(1)+dest_FSI%ngrow_node
+ilo=1
+ihi=max_num_nodes_init(1)
+jlo=1
+jhi=1
+klo=1
+khi=1
 
 if (dest_FSI%structured_flag.eq.0) then
  ilo=1
  ihi=max_num_nodes_init(1)
  jlo=1
  jhi=1
+ klo=1
+ khi=1
 else if (dest_FSI%structured_flag.eq.1) then
 
  if (AMREX_SPACEDIM.eq.2) then
@@ -272,8 +286,12 @@ else if (dest_FSI%structured_flag.eq.1) then
    print *,"expecting max_num_nodes_init(2)=0"
    stop
   endif
+  ilo=1-dest_FSI%ngrow_node
+  ihi=max_num_nodes_init(1)+dest_FSI%ngrow_node
   jlo=1
   jhi=1
+  klo=1
+  khi=1
  else if (AMREX_SPACEDIM.eq.3) then
   if (max_num_nodes_init(2).gt.0) then
    ! do nothing
@@ -281,8 +299,12 @@ else if (dest_FSI%structured_flag.eq.1) then
    print *,"expecting max_num_nodes_init(2)>0"
    stop
   endif
+  ilo=1-dest_FSI%ngrow_node
+  ihi=max_num_nodes_init(1)+dest_FSI%ngrow_node
   jlo=1-dest_FSI%ngrow_node
   jhi=max_num_nodes_init(2)+dest_FSI%ngrow_node
+  klo=1
+  khi=1
  else
   print *,"AMREX_SPACEDIM invalid"
   stop
@@ -294,21 +316,26 @@ else
 endif
 
 allocate(dest_FSI%prev_node_list(CTML_num_solids_init, &
-        ilo:ihi,jlo:jhi,1,3))
+        ilo:ihi,jlo:jhi,klo:khi,3))
 allocate(dest_FSI%node_list(CTML_num_solids_init, &
-        ilo:ihi,jlo:jhi,1,3))
+        ilo:ihi,jlo:jhi,klo:khi,3))
 allocate(dest_FSI%init_node_list(CTML_num_solids_init, &
-        ilo:ihi,jlo:jhi,1,3))
+        ilo:ihi,jlo:jhi,klo:khi,3))
 
 allocate(dest_FSI%prev_velocity_list(CTML_num_solids_init, &
-        ilo:ihi,jlo:jhi,1,3))
+        ilo:ihi,jlo:jhi,klo:khi,3))
 allocate(dest_FSI%velocity_list(CTML_num_solids_init, &
-        ilo:ihi,jlo:jhi,1,3))
+        ilo:ihi,jlo:jhi,klo:khi,3))
 
 allocate(dest_FSI%mass_list(CTML_num_solids_init, &
-        ilo:ihi,jlo:jhi,1))
+        ilo:ihi,jlo:jhi,klo:khi))
 allocate(dest_FSI%temp_list(CTML_num_solids_init, &
-        ilo:ihi,jlo:jhi,1))
+        ilo:ihi,jlo:jhi,klo:khi))
+
+allocate(dest_FSI%scalar_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,klo:khi,FSI_num_scalars))
+allocate(dest_FSI%prev_scalar_list(CTML_num_solids_init, &
+        ilo:ihi,jlo:jhi,klo:khi,FSI_num_scalars))
 
 allocate(dest_FSI%element_list(CTML_num_solids_init,max_num_elements_init,4))
 
@@ -324,6 +351,7 @@ INTEGER_T, INTENT(in) :: ncomp_flatten
 REAL_T, INTENT(out) :: dest_FSI_flatten(ncomp_flatten)
 type(FSI_container_type), INTENT(in) :: source_FSI
 INTEGER_T :: local_num_solids
+INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_nodes(3)
 INTEGER_T :: local_num_elements
 
@@ -338,6 +366,7 @@ INTEGER_T :: ii,jj,kk
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=source_FSI%CTML_num_solids
+local_num_scalars=source_FSI%FSI_num_scalars
 do dir=1,3
  local_num_nodes(dir)=source_FSI%max_num_nodes(dir)
 enddo
@@ -433,6 +462,7 @@ endif
 node_list_size=local_num_solids*local_num_nodes_grow*3
 element_list_size=local_num_solids*local_num_elements*4
 mass_list_size=local_num_solids*local_num_nodes_grow
+scalar_list_size=local_num_solids*local_num_nodes_grow*local_num_scalars
 
 if (FSIcontain_size.eq.ncomp_flatten) then
  ! do nothing
@@ -514,6 +544,7 @@ INTEGER_T, INTENT(in) :: ncomp_flatten
 REAL_T, INTENT(in) :: source_FSI_flatten(ncomp_flatten)
 type(FSI_container_type), INTENT(out) :: dest_FSI
 INTEGER_T :: local_num_solids
+INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_nodes(3)
 INTEGER_T :: local_num_nodes_grow
 INTEGER_T :: local_num_elements
@@ -528,6 +559,7 @@ INTEGER_T :: ii,jj,kk
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=NINT(source_FSI_flatten(FSIcontain_num_solids+1))
+local_num_scalars=NINT(source_FSI_flatten(FSIcontain_num_scalars+1))
 do dir=1,3
  local_num_nodes(dir)=NINT(source_FSI_flatten(FSIcontain_max_num_nodes+dir))
 enddo
@@ -623,6 +655,7 @@ endif
 node_list_size=local_num_solids*local_num_nodes_grow*3
 element_list_size=local_num_solids*local_num_elements*4
 mass_list_size=local_num_solids*local_num_nodes_grow
+scalar_list_size=local_num_solids*local_num_nodes_grow*local_num_scalars
 
 if (FSIcontain_size.eq.ncomp_flatten) then
  ! do nothing
@@ -632,6 +665,7 @@ else
 endif
 
 dest_FSI%CTML_num_solids=local_num_solids
+dest_FSI%FSI_num_scalars=local_num_scalars
 
 do dir=1,3
  dest_FSI%max_num_nodes(dir)=local_num_nodes(dir)
@@ -10468,6 +10502,7 @@ INTEGER_T :: local_num_nodes_grow
       num_materials, &
       FSI_flag, &
       CTML_num_solids_local, &
+      CTML_FSI_num_scalars, &
       ctml_max_n_fib_nodes, &
       ctml_max_n_fib_elements)
 
@@ -10607,6 +10642,8 @@ INTEGER_T :: local_num_nodes_grow
     node_list_size=local_num_nodes_grow*ctml_n_fib_bodies*3
     element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4
     mass_list_size=local_num_nodes_grow*ctml_n_fib_bodies
+    scalar_list_size= &
+      local_num_nodes_grow*ctml_n_fib_bodies*CTML_FSI_num_scalars
 
     if (flatten_size.eq.FSIcontain_size) then
      ! do nothing
@@ -10625,14 +10662,15 @@ INTEGER_T :: local_num_nodes_grow
        ctml_FSI_container, &
        ctml_n_fib_bodies, &
        local_max_num_nodes, &
-       ctml_max_n_fib_elements)
+       ctml_max_n_fib_elements, &
+       CTML_FSI_num_scalars)
 
     datalo=1-ctml_FSI_container%ngrow_node
     datahi=ctml_FSI_container%max_num_nodes(1)+ &
            ctml_FSI_container%ngrow_node
 
     allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes(1),3))
-
+FIX ME HERE CTML_FSI_num_scalars
     if (local_caller_id.eq.caller_initData) then
 
      call copy_ibm_fib( &
