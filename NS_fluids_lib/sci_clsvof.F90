@@ -472,6 +472,8 @@ else
 endif
 
 dest_FSI_flatten(FSIcontain_num_solids+1)=local_num_solids
+dest_FSI_flatten(FSIcontain_num_scalars+1)=local_num_scalars
+
 do dir=1,3
  dest_FSI_flatten(FSIcontain_max_num_nodes+dir)=local_num_nodes(dir)
 enddo
@@ -522,6 +524,24 @@ enddo ! i
 
 i_flat=1
 do i=1,local_num_solids
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
+  do dir=1,local_num_scalars
+   dest_FSI_flatten(FSIcontain_scalar_list+i_flat)= &
+    source_FSI%scalar_list(i,ii,jj,kk,dir)
+   dest_FSI_flatten(FSIcontain_prev_scalar_list+i_flat)= &
+    source_FSI%prev_scalar_list(i,ii,jj,kk,dir)
+   i_flat=i_flat+1
+  enddo ! dir
+ enddo !kk
+ enddo !jj
+ enddo !ii
+enddo ! i
+
+
+i_flat=1
+do i=1,local_num_solids
  do ii=1,local_num_elements
   do dir=1,4
    dest_FSI_flatten(FSIcontain_element_list+i_flat)= &
@@ -560,6 +580,7 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=NINT(source_FSI_flatten(FSIcontain_num_solids+1))
 local_num_scalars=NINT(source_FSI_flatten(FSIcontain_num_scalars+1))
+
 do dir=1,3
  local_num_nodes(dir)=NINT(source_FSI_flatten(FSIcontain_max_num_nodes+dir))
 enddo
@@ -721,6 +742,23 @@ do i=1,local_num_solids
  enddo !ii
 enddo ! i
 
+i_flat=1
+do i=1,local_num_solids
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
+  do dir=1,local_num_scalars
+   dest_FSI%scalar_list(i,ii,jj,kk,dir)= &
+    source_FSI_flatten(FSIcontain_scalar_list+i_flat)
+   dest_FSI%prev_scalar_list(i,ii,jj,kk,dir)= &
+    source_FSI_flatten(FSIcontain_prev_scalar_list+i_flat)
+   i_flat=i_flat+1
+  enddo ! dir
+ enddo !kk
+ enddo !jj
+ enddo !ii
+enddo ! i
+
 
 i_flat=1
 do i=1,local_num_solids
@@ -744,6 +782,7 @@ IMPLICIT NONE
 type(FSI_container_type), INTENT(out) :: dest_FSI
 type(FSI_container_type), INTENT(in) :: source_FSI
 INTEGER_T :: local_num_solids
+INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_nodes(3)
 INTEGER_T :: local_num_nodes_grow
 INTEGER_T :: local_num_elements
@@ -759,6 +798,9 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=source_FSI%CTML_num_solids
 dest_FSI%CTML_num_solids=local_num_solids
+
+local_num_scalars=source_FSI%CTML_num_scalars
+dest_FSI%CTML_num_scalars=local_num_scalars
 
 do dir=1,3
  local_num_nodes(dir)=source_FSI%max_num_nodes(dir)
@@ -863,6 +905,7 @@ else
 endif
 
 do i=1,local_num_solids
+
  do ii=ilo,ihi
  do jj=jlo,jhi
  do kk=klo,khi
@@ -882,9 +925,20 @@ do i=1,local_num_solids
     source_FSI%mass_list(i,ii,jj,kk)
   dest_FSI%temp_list(i,ii,jj,kk)= &
     source_FSI%temp_list(i,ii,jj,kk)
+
+  do dir=1,local_num_scalars
+   dest_FSI%scalar_list(i,ii,jj,kk,dir)= &
+    source_FSI%scalar_list(i,ii,jj,kk,dir)
+   dest_FSI%prev_scalar_list(i,ii,jj,kk,dir)= &
+    source_FSI%prev_scalar_list(i,ii,jj,kk,dir)
+  enddo
+
+  enddo
  enddo !kk
  enddo !jj
  enddo !ii
+
+
 
  do ii=1,local_num_elements
   do dir=1,4
@@ -908,6 +962,8 @@ deallocate(dest_FSI%prev_velocity_list)
 deallocate(dest_FSI%velocity_list)
 deallocate(dest_FSI%mass_list)
 deallocate(dest_FSI%temp_list)
+deallocate(dest_FSI%scalar_list)
+deallocate(dest_FSI%prev_scalar_list)
 deallocate(dest_FSI%element_list)
 
 end subroutine deleteData_FSI
@@ -4180,23 +4236,34 @@ FIX ME for sheet in 3d
    enddo
 
    if (FSI(part_id)%flag_2D_to_3D.eq.1) then
-    orig_nodes=FSI(part_id)%NumNodes/2
-    if (orig_nodes*2.eq.FSI(part_id)%NumNodes) then
-     ! do nothing
+
+    if (AMREX_SPACEDIM.eq.2) then
+     orig_nodes=FSI(part_id)%NumNodes/2
+     if (orig_nodes*2.eq.FSI(part_id)%NumNodes) then
+      ! do nothing
+     else
+      print *,"CTML_init_sci_node: "
+      print *,"orig_nodes invalid"
+      print *,"FSI(part_id)%flag_2D_to_3D=",FSI(part_id)%flag_2D_to_3D
+      stop
+     endif
     else
-     print *,"CTML_init_sci_node: "
-     print *,"orig_nodes invalid"
-     print *,"FSI(part_id)%flag_2D_to_3D=",FSI(part_id)%flag_2D_to_3D
+     print *,"expecting 2d"
      stop
     endif
+
    else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
-    orig_nodes=FSI(part_id)%NumNodes
+    if (AMREX_SPACEDIM.eq.3) then
+     orig_nodes=FSI(part_id)%NumNodes
+    else
+     print *,"expecting 3d"
+     stop
+    endif
    else
     print *,"CTML_init_sci_node: "
     print *,"FSI(part_id)%flag_2D_to_3D invalid"
     stop
    endif
-
 
    do inode=1,orig_nodes
 
@@ -4207,31 +4274,63 @@ FIX ME for sheet in 3d
      vel_local(dir)=zero
     enddo
 
-    do dir=1,AMREX_SPACEDIM
-     xval(dir)=ctml_FSI_container%node_list(ctml_part_id,inode,dir)
-     if (inode.gt.1) then
-      xvalm1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode-1,dir)
-     endif
-     if (inode.lt.orig_nodes) then
-      xvalp1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode+1,dir)
-     endif
-     vel_local(dir)=ctml_FSI_container%velocity_list(ctml_part_id,inode,dir)
-    enddo
-    volm1=zero
-    volp1=zero
-    if (inode.gt.1) then
+    if (AMREX_SPACEDIM.eq.2) then
+
+     do dir=1,AMREX_SPACEDIM
+      xval(dir)=ctml_FSI_container%node_list(ctml_part_id,inode,dir)
+      if (inode.gt.1) then
+       xvalm1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode-1,dir)
+      endif
+      if (inode.lt.orig_nodes) then
+       xvalp1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode+1,dir)
+      endif
+      vel_local(dir)=ctml_FSI_container%velocity_list(ctml_part_id,inode,dir)
+     enddo
      volm1=zero
-     do dir=1,AMREX_SPACEDIM
-      volm1=volm1+(xval(dir)-xvalm1(dir))**2
-     enddo
-     volm1=half*sqrt(volm1)
-    endif 
-    if (inode.lt.orig_nodes) then
      volp1=zero
-     do dir=1,AMREX_SPACEDIM
-      volp1=volp1+(xval(dir)-xvalp1(dir))**2
-     enddo
-     volp1=half*sqrt(volp1)
+     if (inode.gt.1) then
+      volm1=zero
+      do dir=1,AMREX_SPACEDIM
+       volm1=volm1+(xval(dir)-xvalm1(dir))**2
+      enddo
+      volm1=half*sqrt(volm1)
+     endif 
+     if (inode.lt.orig_nodes) then
+      volp1=zero
+      do dir=1,AMREX_SPACEDIM
+       volp1=volp1+(xval(dir)-xvalp1(dir))**2
+      enddo
+      volp1=half*sqrt(volp1)
+     endif
+
+     mass_local=ctml_FSI_container%mass_list(ctml_part_id,inode)
+     if (mass_local.gt.zero) then
+      ! do nothing
+     else
+      print *,"CTML_init_sci_node: "
+      print *,"mass_local invalid, mass_local=",mass_local
+      stop
+     endif
+     if (volm1+volp1.gt.zero) then
+      if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+       density_local=mass_local/(volm1+volp1)
+      else
+       print *,"CTML_init_sci_node: "
+       print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1 ", &
+        FSI(part_id)%flag_2D_to_3D
+       print *,"do not know how to fine density_local if 3d"
+       stop
+      endif
+     else
+      print *,"volm1 or volp1 invalid",volm1,volp1
+      stop
+     endif
+
+    else if (AMREX_SPACEDIM.eq.3) then
+FIX ME
+    else
+     print *,"dimension problem"
+     stop
     endif
 
     do dir=1,NCOMP_FORCE_STRESS
@@ -4240,28 +4339,6 @@ FIX ME for sheet in 3d
     do dir=1,AMREX_SPACEDIM
      force_local(dir)=zero
     enddo
-    mass_local=ctml_FSI_container%mass_list(ctml_part_id,inode)
-    if (mass_local.gt.zero) then
-     ! do nothing
-    else
-     print *,"CTML_init_sci_node: "
-     print *,"mass_local invalid, mass_local=",mass_local
-     stop
-    endif
-    if (volm1+volp1.gt.zero) then
-     if (FSI(part_id)%flag_2D_to_3D.eq.1) then
-      density_local=mass_local/(volm1+volp1)
-     else
-      print *,"CTML_init_sci_node: "
-      print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1 ", &
-        FSI(part_id)%flag_2D_to_3D
-      print *,"do not know how to fine density_local if 3d"
-      stop
-     endif
-    else
-     print *,"volm1 or volp1 invalid",volm1,volp1
-     stop
-    endif
 
     do dir=1,3
      if ((minnodebefore(dir).gt.xval(dir)).or.(inode.eq.1)) then

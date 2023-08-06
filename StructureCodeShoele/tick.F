@@ -740,7 +740,7 @@ c
 
 
       subroutine tick_fsh(
-     &      ilo,ihi,jlo,jhi,klo,khi
+     &      ilo,ihi,jlo,jhi,klo,khi,nscalar
      &     ,rtime
      &     ,dt
      &     ,nt
@@ -753,13 +753,16 @@ c
      &     ,prev_gxyz_ibm_massivein_fsh
      &     ,gxyz_ibm_massivein_fsh
      &     ,gxyz_ibm_massiveout_fsh
-     &     ,ds_ibm_fsh_in
-     &     ,ds_ibm_fsh_out
+     &     ,ds_fsh_in
+     &     ,ds_fsh_out
+     &     ,prev_scalar_fsh_in
+     &     ,scalar_fsh_in
+     &     ,scalar_fsh_out
      &     ,theboss
      &       )
       USE HeaderFSI
       implicit none
-      integer ilo,ihi,jlo,jhi,klo,khi
+      integer ilo,ihi,jlo,jhi,klo,khi,nscalar
 
       real*8 UIBM123out_fsh(
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,1:3)
@@ -775,10 +778,17 @@ c
       real*8 prev_GXYZ_IBM_MASSIVEin_fsh(
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,1:3)
 
-      real*8 ds_IBM_fsh_out(
+      real*8 ds_fsh_out(
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi)
-      real*8 ds_IBM_fsh_in(
+      real*8 ds_fsh_in(
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi)
+
+      real*8 prev_scalar_fsh_in(
+     &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,nscalar)
+      real*8 scalar_fsh_in(
+     &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,nscalar)
+      real*8 scalar_fsh_out(
+     &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,nscalar)
 
       real*8 rtime, dt
       logical monitorON,theboss
@@ -789,8 +799,17 @@ c
       integer i_glb, ne1,i1
       real*8 x(3,3) ,xcont(3,3), xp1cont(3)
      &          ,xp2cont(3), outcont(3),outcont2(3)
+      real*8 tmpv1val
+      real*8 tmpv2val
 
 #ifdef INCLUDE_FSH
+
+      if (nscalar.eq.2) then
+! do nothing
+      else
+       print *,"expecting nscalar.eq.2"
+       stop
+      endif
 
       ibm_solve=0
 ! if converged
@@ -809,7 +828,9 @@ c
      &     (jlo.le.1-Ns_IBMB_fsh).and.
      &     (jlo.le.0).and.
      &     (jhi.ge.ns_ibm_r_fsh(i)+1).and.
-     &     (jhi.ge.ns_ibm_r_fsh(i)+Ns_IBMB_fsh)
+     &     (jhi.ge.ns_ibm_r_fsh(i)+Ns_IBMB_fsh).and. 
+     &     (klo.eq.1).and. 
+     &     (khi.eq.1)
      &     ) then
 !       do nothing
        else
@@ -859,23 +880,29 @@ c
        if(Electromechanical(i_glb)) then
         do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
-          ndotpre_ibm_fsh(i,jq,j)=ndotold_ibm_fsh(i,jq,j)
-          ndotold_ibm_fsh(i,jq,j)=ndot_ibm_fsh(i,jq,j)
+          ndotpre_ibm_fsh(i,jq,j)=
+     &     prev_scalar_fsh_in(i,jq,j,klo,1)
+          ndotold_ibm_fsh(i,jq,j)=
+     &     scalar_fsh_in(i,jq,j,klo,1)
         end do
         end do
 
         if(Piezo_Dist_Flag(i_glb)) then
          do jq=1,nq_ibm_r_fsh(i)
          do j=1,ns_ibm_r_fsh(i)
-          vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)
-          vPiezoold_fsh(i,jq,j)=vPiezo_fsh(i,jq,j)
+          vPiezopre_fsh(i,jq,j)=
+     &     prev_scalar_fsh_in(i,jq,j,klo,2)
+          vPiezoold_fsh(i,jq,j)=
+     &     scalar_fsh_in(i,jq,j,klo,2)
          enddo
          enddo
         else
          do jq=1,1
          do j=1,1
-          vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)
-          vPiezoold_fsh(i,jq,j)=vPiezo_fsh(i,jq,j)
+          vPiezopre_fsh(i,jq,j)=
+     &     prev_scalar_fsh_in(i,jq,j,klo,2)
+          vPiezoold_fsh(i,jq,j)=
+     &     scalar_fsh_in(i,jq,j,klo,2)
          enddo
          enddo
         endif
@@ -894,7 +921,7 @@ c
 
        do jq=1-Nq_IBMB_fsh,nq_ibm_r_fsh(i)+Nq_IBMB_fsh
        do j=1-Ns_IBMB_fsh,ns_ibm_r_fsh(i)+Ns_IBMB_fsh
-        DS_IBM_fsh(i,jq,j)=ds_IBM_fsh_in(i,jq,j,klo)
+! do nothing DS_IBM_fsh(i,jq,j) and DS2_IBM_fsh(i,jq,j) never change.
        enddo
        enddo
 
@@ -989,6 +1016,33 @@ c
 
       do i=1,nr_ibm_fsh
 
+       i_glb=Ilocglb_fsh(i);
+
+       if(Electromechanical(i_glb)) then
+        do jq=1,nq_ibm_r_fsh(i)
+        do j=1,ns_ibm_r_fsh(i)
+          scalar_fsh_out(i,jq,j,klo,1)=
+     &     ndot_ibm_fsh(i,jq,j)
+        end do
+        end do
+
+        if(Piezo_Dist_Flag(i_glb)) then
+         do jq=1,nq_ibm_r_fsh(i)
+         do j=1,ns_ibm_r_fsh(i)
+          scalar_fsh_out(i,jq,j,klo,2)=
+     &     vPiezo_fsh(i,jq,j)
+         enddo
+         enddo
+        else
+         do jq=1,1
+         do j=1,1
+          scalar_fsh_out(i,jq,j,klo,2)=
+     &     vPiezo_fsh(i,jq,j)
+         enddo
+         enddo
+        endif
+       endif
+
        do jq=1,nq_ibm_r_fsh(i)
        do j=1,ns_ibm_r_fsh(i)
         uIBM123out_fsh(i,jq,j,klo,1)=vibm1_fsh(i,jq,j)
@@ -1013,15 +1067,20 @@ c
        end do
        end do
 
-       do jq=1-Nq_IBMB_fsh,nq_ibm_r_fsh(i)+Nq_IBMB_fsh
-       do j=1-Ns_IBMB_fsh,ns_ibm_r_fsh(i)+Ns_IBMB_fsh
-        DS_IBM_fsh_out(i,jq,j,klo)=ds_IBM_fsh(i,jq,j)
+       do jq=1,nq_ibm_r_fsh(i)
+       do j=1,ns_ibm_r_fsh(i)
+        tmpv1val=1.0d0
+        tmpv2val=1.0d0
+        if(j .eq.1 .or. j .eq. ns_ibm_r_fsh(i)) tmpv1val=0.5d0
+        if(jq.eq.1 .or. jq.eq. nq_ibm_r_fsh(i)) tmpv2val=0.5d0
+        ds_fsh_out(i,jq,j,klo)=ds_ibm_fsh(i,jq,j)*ds2_ibm_fsh(i,jq,j)
+     &           *tmpv1val*tmpv2val
 
-        if (abs(ds_ibm_fsh_in(i,jq,j,klo)-
-     &         ds_ibm_fsh_out(i,jq,j,klo)).le.1.0D-10) then
+        if (abs(ds_fsh_in(i,jq,j,klo)-
+     &         ds_fsh_out(i,jq,j,klo)).le.1.0D-10) then
 !        do nothing
         else
-         print *,"expecting ds_ibm_fsh not to change (dsf_ibm_fsh?)"
+         print *,"expecting ds_fsh not to change"
          stop
         endif
        enddo
@@ -1055,8 +1114,8 @@ c rtime = t^{n+1}
      &     ,prev_gxyz_ibm_massivein_fib
      &     ,gxyz_ibm_massivein_fib
      &     ,gxyz_ibm_massiveout_fib
-     &     ,ds_ibm_fib_in
-     &     ,ds_ibm_fib_out
+     &     ,ds_fib_in
+     &     ,ds_fib_out
      &     ,theboss
      &       )
       USE HeaderFSI
@@ -1076,9 +1135,9 @@ c rtime = t^{n+1}
       real*8 prev_GXYZ_IBM_MASSIVEin_fib(
      &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
 
-      real*8 ds_IBM_fib_out(
+      real*8 ds_fib_out(
      &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi)
-      real*8 ds_IBM_fib_in(
+      real*8 ds_fib_in(
      &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi)
 
       real*8 rtime, dt
@@ -1146,7 +1205,7 @@ c rtime = t^{n+1}
        end do
 
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
-        DS_IBM_fib(i,j)=ds_IBM_fib_in(i,j,jlo,klo)
+! do nothing ds_ibm_fib not expected to change.
        enddo
 
        if(ndim .gt.2) then
@@ -1256,14 +1315,14 @@ c rtime = t^{n+1}
         endif
        end do
 
-       do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
-        DS_IBM_fib_out(i,j,jlo,klo)=ds_IBM_fib(i,j)
+       do j=1,ns_ibm_r_fib(i)
+        DS_fib_out(i,j,jlo,klo)=ds_IBM_fib(i,j)
 
-        if (abs(ds_ibm_fib_in(i,j,jlo,klo)-
-     &         ds_ibm_fib_out(i,j,jlo,klo)).le.1.0D-10) then
+        if (abs(ds_fib_in(i,j,jlo,klo)-
+     &         ds_fib_out(i,j,jlo,klo)).le.1.0D-10) then
 !        do nothing
         else
-         print *,"expecting ds_ibm_fib not to change (dsf_ibm_fib?)"
+         print *,"expecting ds_ibm_fib not to change"
          stop
         endif
        enddo
