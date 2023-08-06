@@ -857,8 +857,6 @@ c
        i_glb=Ilocglb_fsh(i);
 
        if(Electromechanical(i_glb)) then
-        print *,"FIX ME for outer iter"
-        stop
         do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
           ndotpre_ibm_fsh(i,jq,j)=ndotold_ibm_fsh(i,jq,j)
@@ -867,8 +865,6 @@ c
         end do
 
         if(Piezo_Dist_Flag(i_glb)) then
-         print *,"FIX ME for outer iter"
-         stop
          do jq=1,nq_ibm_r_fsh(i)
          do j=1,ns_ibm_r_fsh(i)
           vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)
@@ -876,8 +872,6 @@ c
          enddo
          enddo
         else
-         print *,"FIX ME for outer iter"
-         stop
          do jq=1,1
          do j=1,1
           vPiezopre_fsh(i,jq,j)=vPiezoold_fsh(i,jq,j)

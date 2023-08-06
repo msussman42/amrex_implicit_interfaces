@@ -3184,6 +3184,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       subroutine copy_nmaxIBM( 
      &  nr_IBM_out
+     & ,CTML_num_scalars_out,
      & ,nr_IBM_fib_out
      & ,nr_IBM_fsh_out
      & ,nr_IBM_esh_out
@@ -3197,6 +3198,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       implicit none
 
       integer Nr_IBM_out
+      integer CTML_num_scalars_out
       integer Nr_IBM_fib_out
       integer Nr_IBM_fsh_out
       integer Nr_IBM_esh_out
@@ -3208,6 +3210,17 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       integer Ns_IBM_fbc_out
 
       Nr_IBM_out = Nr_IBM
+      CTML_num_scalars_out=0
+      if (Nr_IBM_fsh.eq.0) then
+! do nothing
+      else if (Nr_IBM_fsh.gt.0) then
+! ndot, vPiezo
+       CTML_num_scalars_out=2
+      else
+       print *,"Nr_IBM_fsh invalid"
+       stop
+      endif
+
       Nr_IBM_fib_out = Nr_IBM_fib
       Nr_IBM_fsh_out = Nr_IBM_fsh
       Nr_IBM_esh_out = Nr_IBM_esh
