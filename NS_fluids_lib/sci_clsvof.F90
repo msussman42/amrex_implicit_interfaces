@@ -220,6 +220,12 @@ INTEGER_T, dimension(3) :: ctml_ngrid_nodes
 REAL_T, dimension(3) :: ctml_min_grid_dx
 
 INTEGER_T, dimension(:,:), allocatable :: ctml_n_active_nodes
+INTEGER_T, dimension(:), allocatable :: ilo_active,ihi_active
+INTEGER_T, dimension(:), allocatable :: jlo_active,jhi_active
+INTEGER_T, dimension(:), allocatable :: klo_active,khi_active
+INTEGER_T, dimension(:), allocatable :: ilo_elem,ihi_elem
+INTEGER_T, dimension(:), allocatable :: jlo_elem,jhi_elem
+INTEGER_T, dimension(:), allocatable :: klo_elem,khi_elem
 
 type(FSI_container_type) :: ctml_FSI_container
 ! nsolid,i,j,k,dir
@@ -452,7 +458,7 @@ else
  stop
 endif
 
-if ((khi-klo)*(jhi-jlo)*(ihi-ilo).eq.local_num_nodes_grow) then
+if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
  ! do nothing
 else
  print *,"[ijk]lo and/or [ijk]hi invalid"
@@ -666,7 +672,7 @@ else
  stop
 endif
 
-if ((khi-klo)*(jhi-jlo)*(ihi-ilo).eq.local_num_nodes_grow) then
+if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
  ! do nothing
 else
  print *,"[ijk]lo and/or [ijk]hi invalid"
@@ -897,7 +903,7 @@ else
  stop
 endif
 
-if ((khi-klo)*(jhi-jlo)*(ihi-ilo).eq.local_num_nodes_grow) then
+if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
  ! do nothing
 else
  print *,"[ijk]lo and/or [ijk]hi invalid"
@@ -4256,69 +4262,26 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
     endif
 
    else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+
     if (AMREX_SPACEDIM.eq.3) then
      orig_nodes=FSI(part_id)%NumNodes
     else
      print *,"expecting 3d"
      stop
     endif
+
    else
     print *,"CTML_init_sci_node: "
     print *,"FSI(part_id)%flag_2D_to_3D invalid"
     stop
    endif
 
-   ilo=1
-   ihi=ctml_FSI_container%max_num_nodes(1)
-   jlo=1
-   jhi=1
-   klo=1
-   khi=1
-
-   if (ctml_FSI_container%structured_flag.eq.0) then
-    ilo=1
-    ihi=ctml_FSI_container%max_num_nodes(1)
-    jlo=1
-    jhi=1
-    klo=1
-    khi=1
-   else if (ctml_FSI_container%structured_flag.eq.1) then
-
-    if (AMREX_SPACEDIM.eq.2) then
-     if (ctml_FSI_container%max_num_nodes(2).eq.0) then
-      ! do nothing
-     else
-      print *,"expecting max_num_nodes(2)=0"
-      stop
-     endif
-     ilo=1
-     ihi=ctml_FSI_container%max_num_nodes(1)
-     jlo=1
-     jhi=1
-     klo=1
-     khi=1
-    else if (AMREX_SPACEDIM.eq.3) then
-     if (ctml_FSI_container%max_num_nodes(2).gt.0) then
-      ! do nothing
-     else
-      print *,"expecting max_num_nodes(2)>0"
-      stop
-     endif
-     ilo=1
-     ihi=ctml_FSI_container%max_num_nodes(1)
-     jlo=1
-     jhi=ctml_FSI_container%max_num_nodes(2)
-     klo=1
-     khi=1
-    else
-     print *,"AMREX_SPACEDIM invalid"
-     stop
-    endif
-
-   else
-    print *,"structured_flag not supported yet"
-    stop
-   endif
+   ilo=ilo_active(ctml_part_id)
+   ihi=ihi_active(ctml_part_id)
+   jlo=jlo_active(ctml_part_id)
+   jhi=jhi_active(ctml_part_id)
+   klo=klo_active(ctml_part_id)
+   khi=khi_active(ctml_part_id)
 
    inode=0
    do ii=ilo,ihi
@@ -4338,6 +4301,7 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
     enddo
 
     mass_local=ctml_FSI_container%mass_list(ctml_part_id,ii,jj,kk)
+
     if (mass_local.gt.zero) then
      ! do nothing
     else
@@ -4488,7 +4452,7 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
      stop
     endif
        
-   enddo  !kk
+   enddo  !kk=klo..khi => klo_active(ctml_part_id)..khi_active(ctml_part_id)
    enddo  !jj
    enddo  !ii
      
@@ -4585,72 +4549,19 @@ REAL_T :: test_mass
 
    FSI(part_id)%CTML_flag=1
 
-   ilo=1
-   ihi=ctml_FSI_container%max_num_nodes(1)
-   jlo=1
-   jhi=1
-   klo=1
-   khi=1
-
-   if (ctml_FSI_container%structured_flag.eq.0) then
-    ilo=1
-    ihi=ctml_FSI_container%max_num_nodes(1)
-    jlo=1
-    jhi=1
-    klo=1
-    khi=1
-   else if (ctml_FSI_container%structured_flag.eq.1) then
-
-    if (AMREX_SPACEDIM.eq.2) then
-     if (ctml_FSI_container%max_num_nodes(2).eq.0) then
-      ! do nothing
-     else
-      print *,"expecting max_num_nodes(2)=0"
-      stop
-     endif
-     ilo=1
-     ihi=ctml_FSI_container%max_num_nodes(1)
-     jlo=1
-     jhi=1
-     klo=1
-     khi=1
-    else if (AMREX_SPACEDIM.eq.3) then
-     if (ctml_FSI_container%max_num_nodes(2).gt.0) then
-      ! do nothing
-     else
-      print *,"expecting max_num_nodes(2)>0"
-      stop
-     endif
-     ilo=1
-     ihi=ctml_FSI_container%max_num_nodes(1)
-     jlo=1
-     jhi=ctml_FSI_container%max_num_nodes(2)
-     klo=1
-     khi=1
-    else
-     print *,"AMREX_SPACEDIM invalid"
-     stop
-    endif
-
-   else
-    print *,"structured_flag not supported yet"
-    stop
-   endif
+   ilo=ilo_active(ctml_part_id)
+   ihi=ihi_active(ctml_part_id)
+   jlo=jlo_active(ctml_part_id)
+   jhi=jhi_active(ctml_part_id)
+   klo=klo_active(ctml_part_id)
+   khi=khi_active(ctml_part_id)
 
 #ifdef MVAHABFSI 
 
-   if (AMREX_SPACEDIM.eq.2) then
-    jnode_hi=1
-   else if (AMREX_SPACEDIM.eq.3) then
-    jnode_hi=ctml_n_active_nodes(ctml_part_id,2)
-   else
-    print *,"AMREX_SPACEDIM invalid"
-    stop
-   endif
-
-   do inode=1,ctml_n_active_nodes(ctml_part_id,1)
-   do jnode=1,jnode_hi
-    test_mass=ctml_FSI_container%mass_list(ctml_part_id,inode,jnode,1)
+   do ii=ilo,ihi
+   do jj=jlo,jhi
+   do kk=klo,khi
+    test_mass=ctml_FSI_container%mass_list(ctml_part_id,ii,jj,kk)
     if (test_mass.gt.zero) then
      ! do nothing
     else if (test_mass.eq.zero) then 
@@ -4668,8 +4579,9 @@ REAL_T :: test_mass
       ctml_n_active_nodes(ctml_part_id,2)
      stop
     endif
-   enddo ! jnode
-   enddo ! inode
+   enddo  !kk
+   enddo  !jj
+   enddo  !ii
 
 #else
    print *,"in: CTML_init_sci; define MVAHABFSI"
@@ -4690,25 +4602,26 @@ REAL_T :: test_mass
 
    if (AMREX_SPACEDIM.eq.3) then
     FSI(part_id)%flag_2D_to_3D=0
+    orig_nodes=ihi-ilo+1
+    orig_elements=ihi-ilo
    else if (AMREX_SPACEDIM.eq.2) then
     FSI(part_id)%flag_2D_to_3D=1
+    orig_elements=(ihi-ilo)*(jhi-jlo)
    else
     print *,"CTML_init_sci:"
     print *,"dimension bust"
     stop
    endif
 
-   FIX ME 2d or 3d here
-   orig_nodes=ctml_n_active_nodes(ctml_part_id,?)
-   orig_elements=ctml_n_active_nodes(ctml_part_id,?)-1
-
     !CTML_init_sci
    if (FSI(part_id)%flag_2D_to_3D.eq.1) then
     FSI(part_id)%NumNodes=orig_nodes*2
     FSI(part_id)%NumIntElems=orig_elements*2
+    FSI(part_id)%IntElemDim=3
    else if (FSI(part_id)%flag_2D_to_3D.eq.0) then
     FSI(part_id)%NumNodes=orig_nodes
     FSI(part_id)%NumIntElems=orig_elements
+    FSI(part_id)%IntElemDim=4
    else
     print *,"CTML_init_sci:"
     print *,"dimension bust"
@@ -4717,7 +4630,6 @@ REAL_T :: test_mass
    endif
    local_nodes=FSI(part_id)%NumNodes
    local_elements=FSI(part_id)%NumIntElems
-   FSI(part_id)%IntElemDim=3
  
     ! in: CTML_init_sci 
    if (ifirst.eq.1) then
@@ -4747,13 +4659,31 @@ REAL_T :: test_mass
     ! initialize nodes, velocity, mass, and density from CTML data.
    call CTML_init_sci_node(ioproc,part_id,isout)
 
-   do iface=1,orig_elements
+   iface=0
+
+   do ii=ilo_elem(ctml_part_id),ihi_elem(ctml_part_id)
+   do jj=jlo_elem(ctml_part_id),jhi_elem(ctml_part_id)
+   do kk=klo_elem(ctml_part_id),khi_elem(ctml_part_id)
+
+    iface=iface+1
 
     if (FSI(part_id)%flag_2D_to_3D.eq.0) then
-     print *,"CTML_init_sci:"
-     print *,"3d not ready yet"
-     stop
+
+     FSI(part_id)%IntElem(1,iface)= &
+       (ii-1)*ctml_n_active_nodes(ctml_part_id,2)+jj
+     FSI(part_id)%IntElem(2,iface)= &
+       (ii+1-1)*ctml_n_active_nodes(ctml_part_id,2)+jj
+     FSI(part_id)%IntElem(3,iface)= &
+       (ii+1-1)*ctml_n_active_nodes(ctml_part_id,2)+jj+1
+     FSI(part_id)%IntElem(4,iface)= &
+       (ii-1)*ctml_n_active_nodes(ctml_part_id,2)+jj+1
+
+     FSI(part_id)%ElemData(1,iface)=4   ! number of nodes in element
+     FSI(part_id)%ElemData(2,iface)=1   ! part number
+     FSI(part_id)%ElemData(DOUBLYCOMP,iface)=1 !doubly wetted (0=singly wetted)
+
     else if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+
      FSI(part_id)%IntElem(1,iface)=iface
      FSI(part_id)%IntElem(2,iface)=iface+1
      FSI(part_id)%IntElem(3,iface)=iface+1+orig_nodes
@@ -4770,7 +4700,16 @@ REAL_T :: test_mass
      stop
     endif
 
-   enddo ! iface=1,orig_elements
+   enddo ! kk
+   enddo ! jj
+   enddo ! ii
+
+   if (iface.eq.orig_elements) then
+    ! do nothing
+   else
+    print *,"expecting iface.eq.orig_elements"
+    stop
+   endif
 
    do dir=1,3
     FSI(part_id)%solid_displ(dir)=0.
@@ -10584,7 +10523,10 @@ INTEGER_T :: idimin
 INTEGER_T :: n_Read_in
 logical :: theboss
 
-INTEGER_T :: i,j
+INTEGER_T :: i
+INTEGER_T :: i_elem
+INTEGER_T :: inode(4)
+INTEGER_T :: ii,jj,kk
 INTEGER_T :: local_max_num_nodes(3)
 
 INTEGER_T :: local_structured_flag
@@ -10592,6 +10534,7 @@ INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
 INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: local_num_scalars
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
@@ -10781,6 +10724,20 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
     allocate(ctml_n_active_nodes(ctml_n_bodies,3))
 
+    allocate(ilo_active(ctml_n_bodies))
+    allocate(ihi_active(ctml_n_bodies))
+    allocate(jlo_active(ctml_n_bodies))
+    allocate(jhi_active(ctml_n_bodies))
+    allocate(klo_active(ctml_n_bodies))
+    allocate(khi_active(ctml_n_bodies))
+
+    allocate(ilo_elem(ctml_n_bodies))
+    allocate(ihi_elem(ctml_n_bodies))
+    allocate(jlo_elem(ctml_n_bodies))
+    allocate(jhi_elem(ctml_n_bodies))
+    allocate(klo_elem(ctml_n_bodies))
+    allocate(khi_elem(ctml_n_bodies))
+
     allocate(nIBM_rq(ctml_n_bodies))
     allocate(nIBM_rq_fsh(ctml_n_bodies))
     allocate(nIBM_r_fib(ctml_n_bodies))
@@ -10842,16 +10799,19 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
      stop
     endif
 
-    local_structured_flag=FSI_input_flattened(FSIcontain_structured_flag+1)
-    local_structure_dim=FSI_input_flattened(FSIcontain_structure_dim+1)
+    local_structured_flag= &
+         NINT(FSI_input_flattened(FSIcontain_structured_flag+1))
+    local_structure_dim=NINT(FSI_input_flattened(FSIcontain_structure_dim+1))
     local_structure_topology= &
-         FSI_input_flattened(FSIcontain_structure_topology+1)
-    local_ngrow_node=FSI_input_flattened(FSIcontain_ngrow_node+1)
+         NINT(FSI_input_flattened(FSIcontain_structure_topology+1))
+    local_ngrow_node=NINT(FSI_input_flattened(FSIcontain_ngrow_node+1))
+    local_num_scalars=NINT(FSI_input_flattened(FSIcontain_num_scalars+1))
 
     if ((local_structured_flag.eq.1).and. &
         (local_structure_dim.eq.AMREX_SPACEDIM).and. &
         (local_structure_topology.eq.AMREX_SPACEDIM-2).and. &
-        (local_ngrow_node.eq.2)) then
+        (local_ngrow_node.eq.2).and. &
+        (local_num_scalars.eq.CTML_FSI_num_scalars)) then
      ! do nothing
     else
      print *,"FSI_input_flattened: unexpected value(s),CLSVOF_ReadHeader"
@@ -10879,12 +10839,12 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
      jhi=1
      klo=1
      khi=1
-    ilo_dom=1
-    ihi_dom=ctml_max_n_nodes(1)
-    jlo_dom=1
-    jhi_dom=1
-    klo_dom=1
-    khi_dom=1
+     ilo_dom=1
+     ihi_dom=ctml_max_n_nodes(1)
+     jlo_dom=1
+     jhi_dom=1
+     klo_dom=1
+     khi_dom=1
     else if (local_structured_flag.eq.1) then
 
      if (AMREX_SPACEDIM.eq.2) then
@@ -10900,12 +10860,12 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
       jhi=1
       klo=1
       khi=1
-    ilo_dom=1
-    ihi_dom=ctml_max_n_nodes(1)
-    jlo_dom=1
-    jhi_dom=1
-    klo_dom=1
-    khi_dom=1
+      ilo_dom=1
+      ihi_dom=ctml_max_n_nodes(1)
+      jlo_dom=1
+      jhi_dom=1
+      klo_dom=1
+      khi_dom=1
      else if (AMREX_SPACEDIM.eq.3) then
       if (ctml_max_n_nodes(2).gt.0) then
        ! do nothing
@@ -10919,12 +10879,12 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
       jhi=ctml_max_n_nodes(2)+local_ngrow_node
       klo=1
       khi=1
-    ilo_dom=1
-    ihi_dom=ctml_max_n_nodes(1)
-    jlo_dom=1
-    jhi_dom=ctml_max_n_nodes(2)
-    klo_dom=1
-    khi_dom=1
+      ilo_dom=1
+      ihi_dom=ctml_max_n_nodes(1)
+      jlo_dom=1
+      jhi_dom=ctml_max_n_nodes(2)
+      klo_dom=1
+      khi_dom=1
      else
       print *,"AMREX_SPACEDIM invalid"
       stop
@@ -10935,7 +10895,7 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
      stop
     endif
 
-    local_num_nodes_grow=(khi-klo)*(jhi-jlo)*(ihi-ilo)
+    local_num_nodes_grow=(khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1)
 
     node_list_size=local_num_nodes_grow*ctml_n_bodies*3
     element_list_size=ctml_max_n_elements*ctml_n_bodies*4
@@ -10963,42 +10923,138 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
        ctml_max_n_elements, &
        CTML_FSI_num_scalars)
 
-FIX ME
-    allocate(ctml_frc(ctml_n_bodies,ctml_max_n_nodes(1),3))
-FIX ME HERE CTML_FSI_num_scalars
+    allocate(ctml_frc(ctml_n_bodies, &
+      ilo_dom:ihi_dom,jlo_dom:jhi_dom,klo_dom:khi_dom,3))
+   
+    do i=1,ctml_n_bodies
+     do dir=1,3
+      ctml_n_active_nodes(i,dir)=0
+     enddo
+    enddo
+
+    if (AMREX_SPACEDIM.eq.2) then
+     do i=1,ctml_n_bodies
+      ctml_n_active_nodes(i,1)=nIBM_r_fib(i)
+      ilo_active(i)=1
+      ihi_active(i)=ctml_n_active_nodes(i,1)
+      jlo_active(i)=1
+      jhi_active(i)=1
+      klo_active(i)=1
+      khi_active(i)=1
+
+      ilo_elem(i)=1
+      ihi_elem(i)=ctml_n_active_nodes(i,1)-1
+      jlo_elem(i)=1
+      jhi_elem(i)=1
+      klo_elem(i)=1
+      khi_elem(i)=1
+     enddo  
+    else if (AMREX_SPACEDIM.eq.3) then
+     do i=1,ctml_n_bodies
+      ctml_n_active_nodes(i,1)=nIBM_rq_fsh(i)
+      ctml_n_active_nodes(i,2)=nIBM_r_fsh(i)
+      ilo_active(i)=1
+      ihi_active(i)=ctml_n_active_nodes(i,1)
+      jlo_active(i)=1
+      jhi_active(i)=ctml_n_active_nodes(i,2)
+      klo_active(i)=1
+      khi_active(i)=1
+
+      ilo_elem(i)=1
+      ihi_elem(i)=ctml_n_active_nodes(i,1)-1
+      jlo_elem(i)=1
+      jhi_elem(i)=ctml_n_active_nodes(i,2)-1
+      klo_elem(i)=1
+      khi_elem(i)=1
+     enddo  
+    else
+     print *,"dimension bust"
+     stop
+    endif
+
     if (local_caller_id.eq.caller_initData) then
 
-     call copy_ibm_fib( &
-      datalo,datahi, &
-      ctml_FSI_container%mass_list(1:ctml_n_bodies,datalo:datahi), &
-      ctml_FSI_container%node_list(1:ctml_n_bodies,datalo:datahi,1:3))
+     if (AMREX_SPACEDIM.eq.2) then
+      call copy_ibm_fib( &
+       ilo,ihi,jlo,jhi,klo,khi, &
+       ctml_FSI_container%mass_list(1:ctml_n_bodies, &
+         ilo:ihi,jlo:jhi,klo:khi), &
+       ctml_FSI_container%node_list(1:ctml_n_bodies, &
+         ilo:ihi,jlo:jhi,klo:khi,1:3))
+     else if (AMREX_SPACEDIM.eq.3) then
+      call copy_ibm_fsh( &
+       ilo,ihi,jlo,jhi,klo,khi, &
+       CTML_FSI_num_scalars, &
+       ctml_FSI_container%mass_list(1:ctml_n_bodies, &
+         ilo:ihi,jlo:jhi,klo:khi), &
+       ctml_FSI_container%scalar_list(1:ctml_n_bodies, &
+         ilo:ihi,jlo:jhi,klo:khi,CTML_FSI_num_scalars), &
+       ctml_FSI_container%node_list(1:ctml_n_bodies, &
+         ilo:ihi,jlo:jhi,klo:khi,1:3))
+     else
+      print *,"dimension bust"
+      stop
+     endif
 
-     do dir=1,3
-      do j=datalo,datahi
-       do i=1,ctml_n_bodies
-        ctml_FSI_container%prev_node_list(i,j,dir)= &
-           ctml_FSI_container%node_list(i,j,dir)
-        ctml_FSI_container%init_node_list(i,j,dir)= &
-           ctml_FSI_container%node_list(i,j,dir)
-        ctml_FSI_container%velocity_list(i,j,dir)=0.0d0
-        ctml_FSI_container%prev_velocity_list(i,j,dir)=0.0d0
-       enddo !i
-      enddo !j
-     enddo !dir
+     do i=1,ctml_n_bodies
+      do ii=ilo,ihi
+      do jj=jlo,jhi
+      do kk=klo,khi
+       do dir=1,3
+        ctml_FSI_container%prev_node_list(i,ii,jj,kk,dir)= &
+           ctml_FSI_container%node_list(i,ii,jj,kk,dir)
+        ctml_FSI_container%init_node_list(i,ii,jj,kk,dir)= &
+           ctml_FSI_container%node_list(i,ii,jj,kk,dir)
+        ctml_FSI_container%velocity_list(i,ii,jj,kk,dir)=0.0d0
+        ctml_FSI_container%prev_velocity_list(i,ii,jj,kk,dir)=0.0d0
+       enddo !dir=1..3
+       ctml_FSI_container%temp_list(i,ii,jj,kk)=273.0d0
+      enddo !kk
+      enddo !jj
+      enddo !ii
+     enddo !i
 
-     do dir=1,4
-      do j=1,ctml_max_n_elements
-       do i=1,ctml_n_bodies
-        ctml_FSI_container%element_list(i,j,dir)=j+dir-1
+     do i=1,ctml_n_bodies
+      do ii=ilo,ihi
+      do jj=jlo,jhi
+      do kk=klo,khi
+       do dir=1,CTML_FSI_num_scalars
+        ctml_FSI_container%prev_scalar_list(i,ii,jj,kk,dir)= &
+           ctml_FSI_container%scalar_list(i,ii,jj,kk,dir)
+       enddo !dir
+      enddo !kk
+      enddo !jj
+      enddo !ii
+     enddo !i=1,ctml_n_bodies
+
+     do i=1,ctml_n_bodies
+      i_elem=0
+      do ii=ilo_elem(i),ihi_elem(i)
+      do jj=jlo_elem(i),jhi_elem(i)
+      do kk=klo_elem(i),khi_elem(i)
+       i_elem=i_elem+1
+       do dir=1,4
+        inode(dir)=0
+       enddo
+       if (AMREX_SPACEDIM.eq.2) then
+        inode(1)=i_elem
+        inode(2)=i_elem+1
+       else if (AMREX_SPACEDIM.eq.3) then
+        inode(1)=(ii-1)*ctml_n_active_nodes(i,2)+jj
+        inode(2)=(ii+1-1)*ctml_n_active_nodes(i,2)+jj
+        inode(3)=(ii+1-1)*ctml_n_active_nodes(i,2)+jj+1
+        inode(4)=(ii-1)*ctml_n_active_nodes(i,2)+jj+1
+       else
+        print *,"dimension bust"
+        stop
+       endif
+       do dir=1,4
+        ctml_FSI_container%element_list(i,i_elem,dir)=inode(dir)
        enddo 
-      enddo 
-     enddo 
-
-     do j=datalo,datahi
-      do i=1,ctml_n_bodies
-       ctml_FSI_container%temp_list(i,j)=273.0d0
-      enddo !i
-     enddo !j
+      enddo  !kk
+      enddo  !jj
+      enddo  !ii
+     enddo ! i=1,ctml_n_bodies
 
     else if (local_caller_id.eq.caller_post_restart) then
 
@@ -11164,7 +11220,6 @@ FIX ME HERE CTML_FSI_num_scalars
       !   overall_solid_init calls CTML_init_sci 
       !   CTML_init_sci copies data from ctml_FSI_container
       !   CTML_init_sci sets FSI(part_id)%flag_2D_to_3D=1
-      FIX ME
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       ! ReadHeader
