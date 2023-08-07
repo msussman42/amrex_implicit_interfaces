@@ -311,7 +311,7 @@ else if (dest_FSI%structured_flag.eq.1) then
  endif
 
 else
- print *,"structured_flag invalid"
+ print *,"structured_flag not supported"
  stop
 endif
 
@@ -4504,7 +4504,7 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
    endif
 
   else
-   print *,"ctml_part_id invalid"
+   print *,"ctml_part_id invalid: ",ctml_part_id
    stop
   endif
   
@@ -4542,7 +4542,6 @@ use global_utility_module
 use CTML_module
 #endif
 
-FIX ME for sheet in 3d
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: part_id
@@ -4556,7 +4555,9 @@ INTEGER_T :: dir
 INTEGER_T, INTENT(in) :: istep
 INTEGER_T, INTENT(in) :: istop
 INTEGER_T :: ctml_part_id
-INTEGER_T :: inode,jnode,jnode_hi
+INTEGER_T :: inode
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+INTEGER_T :: ii,jj,kk
 INTEGER_T :: orig_nodes
 INTEGER_T :: orig_elements
 INTEGER_T :: local_nodes
@@ -4584,8 +4585,57 @@ REAL_T :: test_mass
 
    FSI(part_id)%CTML_flag=1
 
-   inode=0
-   jnode=0
+   ilo=1
+   ihi=ctml_FSI_container%max_num_nodes(1)
+   jlo=1
+   jhi=1
+   klo=1
+   khi=1
+
+   if (ctml_FSI_container%structured_flag.eq.0) then
+    ilo=1
+    ihi=ctml_FSI_container%max_num_nodes(1)
+    jlo=1
+    jhi=1
+    klo=1
+    khi=1
+   else if (ctml_FSI_container%structured_flag.eq.1) then
+
+    if (AMREX_SPACEDIM.eq.2) then
+     if (ctml_FSI_container%max_num_nodes(2).eq.0) then
+      ! do nothing
+     else
+      print *,"expecting max_num_nodes(2)=0"
+      stop
+     endif
+     ilo=1
+     ihi=ctml_FSI_container%max_num_nodes(1)
+     jlo=1
+     jhi=1
+     klo=1
+     khi=1
+    else if (AMREX_SPACEDIM.eq.3) then
+     if (ctml_FSI_container%max_num_nodes(2).gt.0) then
+      ! do nothing
+     else
+      print *,"expecting max_num_nodes(2)>0"
+      stop
+     endif
+     ilo=1
+     ihi=ctml_FSI_container%max_num_nodes(1)
+     jlo=1
+     jhi=ctml_FSI_container%max_num_nodes(2)
+     klo=1
+     khi=1
+    else
+     print *,"AMREX_SPACEDIM invalid"
+     stop
+    endif
+
+   else
+    print *,"structured_flag not supported yet"
+    stop
+   endif
 
 #ifdef MVAHABFSI 
 
@@ -4649,8 +4699,8 @@ REAL_T :: test_mass
    endif
 
    FIX ME 2d or 3d here
-   orig_nodes=ctml_n_fib_active_nodes(ctml_part_id)
-   orig_elements=ctml_n_fib_active_nodes(ctml_part_id)-1
+   orig_nodes=ctml_n_active_nodes(ctml_part_id,?)
+   orig_elements=ctml_n_active_nodes(ctml_part_id,?)-1
 
     !CTML_init_sci
    if (FSI(part_id)%flag_2D_to_3D.eq.1) then
@@ -4733,7 +4783,7 @@ REAL_T :: test_mass
 
   else
    print *,"CTML_init_sci:"
-   print *,"ctml_part_id invalid"
+   print *,"ctml_part_id invalid: ",ctml_part_id
    stop
   endif
   
@@ -9727,13 +9777,13 @@ INTEGER_T :: fsi_part_id
 INTEGER_T :: dir,inode,num_nodes
 
  if (TOTAL_NPARTS.ge.1) then
-
+FIX ME
   if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
-   do ctml_part_id=1,ctml_n_fib_bodies
-    do inode=1,ctml_max_n_fib_nodes(1)
+   do ctml_part_id=1,ctml_n_bodies
+    do inode=1,ctml_max_n_nodes(1)
      do dir=1,3
-      ctml_fib_frc(ctml_part_id,inode,dir)=zero
+      ctml_frc(ctml_part_id,inode,dir)=zero
      enddo
     enddo
    enddo
@@ -9885,22 +9935,22 @@ INTEGER_T num_nodes,inode,inode_fiber,dir
         FSI(part_id)%flag_2D_to_3D
       stop
      endif
-     if (num_nodes.eq.2*ctml_n_fib_active_nodes(ctml_part_id)) then
+     if (num_nodes.eq.2*ctml_n_active_nodes(ctml_part_id,?)) then
       ! do nothing
      else 
              FIX ME
       print *,"expecting num_nodes= "
-      print *,"2*ctml_n_fib_active_nodes(ctml_part_id)"
+      print *,"2*ctml_n_active_nodes(ctml_part_id,?)"
       print *,"num_nodes: ",num_nodes
-      print *,"ctml_n_fib_active_nodes(ctml_part_id): ", &
-        ctml_n_fib_active_nodes(ctml_part_id)
+      print *,"ctml_n_active_nodes(ctml_part_id,?): ", &
+        ctml_n_active_nodes(ctml_part_id,?)
       stop
      endif
  
-     do inode_fiber=1,ctml_n_fib_active_nodes(ctml_part_id)
+     do inode_fiber=1,ctml_n_active_nodes(ctml_part_id,?)
       inode=inode_fiber
       do dir=1,AMREX_SPACEDIM
-       ctml_fib_frc(ctml_part_id,inode_fiber,dir)= &
+       ctml_frc(ctml_part_id,inode_fiber,dir)= &
         FSI(part_id)%NodeForce(dir,inode)
       enddo
      enddo
@@ -10518,10 +10568,10 @@ INTEGER_T :: ctml_part_id,fsi_part_id
 INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
 INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
 INTEGER_T im_sanity_check
-INTEGER_T datalo,datahi
 
 INTEGER_T, dimension(:), allocatable :: nIBM_rq
 INTEGER_T, dimension(:), allocatable :: nIBM_rq_fsh
+INTEGER_T, dimension(:), allocatable :: nIBM_r_fib
 INTEGER_T, dimension(:), allocatable :: nIBM_r_fsh
 INTEGER_T, dimension(:), allocatable :: nIBM_r_esh
 INTEGER_T, dimension(:), allocatable :: nIBM_r_fbc
@@ -10542,6 +10592,8 @@ INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
 INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
   if ((local_caller_id.eq.caller_initData).or. &
       (local_caller_id.eq.caller_post_restart)) then
@@ -10616,7 +10668,7 @@ INTEGER_T :: local_num_nodes_grow
    stop
   endif
 
-  ctml_n_fib_bodies=CTML_NPARTS
+  ctml_n_bodies=CTML_NPARTS
 
   if (h_small.gt.zero) then
    ! do nothing
@@ -10666,13 +10718,15 @@ INTEGER_T :: local_num_nodes_grow
       FSI_flag, &
       CTML_num_solids_local, &
       CTML_FSI_num_scalars, &
-      ctml_max_n_fib_nodes, &
-      ctml_max_n_fib_elements)
+      ctml_max_n_nodes, &
+      ctml_max_n_elements)
 
-    if (CTML_num_solids_local.eq.ctml_n_fib_bodies) then
+    if (CTML_num_solids_local.eq.ctml_n_bodies) then
      !do nothing
     else
-     print *,"CTML_num_solids_local.eq.ctml_n_fib_bodies test failed"
+     print *,"CTML_num_solids_local.eq.ctml_n_bodies test failed"
+     print *,"CTML_num_solids_local: ",CTML_num_solids_local
+     print *,"ctml_n_bodies: ",ctml_n_bodies
      stop
     endif
 
@@ -10725,14 +10779,15 @@ INTEGER_T :: local_num_nodes_grow
      stop
     endif
 
-    allocate(ctml_n_fib_active_nodes(ctml_n_fib_bodies))
+    allocate(ctml_n_active_nodes(ctml_n_bodies,3))
 
-    allocate(nIBM_rq(ctml_n_fib_bodies))
-    allocate(nIBM_rq_fsh(ctml_n_fib_bodies))
-    allocate(nIBM_r_fsh(ctml_n_fib_bodies))
-    allocate(nIBM_r_esh(ctml_n_fib_bodies))
-    allocate(nIBM_r_fbc(ctml_n_fib_bodies))
-    allocate(nIBM_r(ctml_n_fib_bodies))
+    allocate(nIBM_rq(ctml_n_bodies))
+    allocate(nIBM_rq_fsh(ctml_n_bodies))
+    allocate(nIBM_r_fib(ctml_n_bodies))
+    allocate(nIBM_r_fsh(ctml_n_bodies))
+    allocate(nIBM_r_esh(ctml_n_bodies))
+    allocate(nIBM_r_fbc(ctml_n_bodies))
+    allocate(nIBM_r(ctml_n_bodies))
 
     n_Read_in = 0
     idimin=AMREX_SPACEDIM
@@ -10748,7 +10803,7 @@ INTEGER_T :: local_num_nodes_grow
 
     call initialize_ibm(nIBM_rq,nIBM_rq_fsh, &
        nIBM_r, &
-       ctml_n_fib_active_nodes, &
+       nIBM_r_fib, &
        nIBM_r_fsh, &
        nIBM_r_esh,nIBM_r_fbc,dtypeDelta, &
        ctml_min_grid_dx(1), &
@@ -10763,21 +10818,24 @@ INTEGER_T :: local_num_nodes_grow
        theboss)
 
     if (NINT(FSI_input_flattened(FSIcontain_num_solids+1)).eq. &
-            ctml_n_fib_bodies) then
+            ctml_n_bodies) then
      ! do nothing
     else
      print *,"FSI_input_flattened(FSIcontain_num_solids+1)bad"
      stop
     endif
-    if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+1)).eq. &
-            ctml_max_n_fib_nodes(1)) then
+
+    do dir=1,AMREX_SPACEDIM-1
+     if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+dir)).eq. &
+         ctml_max_n_nodes(dir)) then
      ! do nothing
     else
-     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1)bad"
+     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+dir)bad"
      stop
     endif
+
     if (NINT(FSI_input_flattened(FSIcontain_max_num_elements+1)).eq. &
-            ctml_max_n_fib_elements) then
+            ctml_max_n_elements) then
      ! do nothing
     else
      print *,"FSI_input_flattened(FSIcontain_max_num_elements+1)bad"
@@ -10800,13 +10858,90 @@ INTEGER_T :: local_num_nodes_grow
      stop
     endif
 
-    local_num_nodes_grow=ctml_max_n_fib_nodes(1)+2*local_ngrow_node
+    ilo=1
+    ihi=ctml_max_n_nodes(1)
+    jlo=1
+    jhi=1
+    klo=1
+    khi=1
 
-    node_list_size=local_num_nodes_grow*ctml_n_fib_bodies*3
-    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4
-    mass_list_size=local_num_nodes_grow*ctml_n_fib_bodies
+    ilo_dom=1
+    ihi_dom=ctml_max_n_nodes(1)
+    jlo_dom=1
+    jhi_dom=1
+    klo_dom=1
+    khi_dom=1
+
+    if (local_structured_flag.eq.0) then
+     ilo=1
+     ihi=ctml_max_n_nodes(1)
+     jlo=1
+     jhi=1
+     klo=1
+     khi=1
+    ilo_dom=1
+    ihi_dom=ctml_max_n_nodes(1)
+    jlo_dom=1
+    jhi_dom=1
+    klo_dom=1
+    khi_dom=1
+    else if (local_structured_flag.eq.1) then
+
+     if (AMREX_SPACEDIM.eq.2) then
+      if (ctml_max_n_nodes(2).eq.0) then
+       ! do nothing
+      else
+       print *,"expecting ctml_max_n_nodes(2)=0"
+       stop
+      endif
+      ilo=1-local_ngrow_node
+      ihi=ctml_max_n_nodes(1)+local_ngrow_node
+      jlo=1
+      jhi=1
+      klo=1
+      khi=1
+    ilo_dom=1
+    ihi_dom=ctml_max_n_nodes(1)
+    jlo_dom=1
+    jhi_dom=1
+    klo_dom=1
+    khi_dom=1
+     else if (AMREX_SPACEDIM.eq.3) then
+      if (ctml_max_n_nodes(2).gt.0) then
+       ! do nothing
+      else
+       print *,"expecting ctml_max_n_nodes(2)>0"
+       stop
+      endif
+      ilo=1-local_ngrow_node
+      ihi=ctml_max_n_nodes(1)+local_ngrow_node
+      jlo=1-local_ngrow_node
+      jhi=ctml_max_n_nodes(2)+local_ngrow_node
+      klo=1
+      khi=1
+    ilo_dom=1
+    ihi_dom=ctml_max_n_nodes(1)
+    jlo_dom=1
+    jhi_dom=ctml_max_n_nodes(2)
+    klo_dom=1
+    khi_dom=1
+     else
+      print *,"AMREX_SPACEDIM invalid"
+      stop
+     endif
+
+    else
+     print *,"structured_flag not supported"
+     stop
+    endif
+
+    local_num_nodes_grow=(khi-klo)*(jhi-jlo)*(ihi-ilo)
+
+    node_list_size=local_num_nodes_grow*ctml_n_bodies*3
+    element_list_size=ctml_max_n_elements*ctml_n_bodies*4
+    mass_list_size=local_num_nodes_grow*ctml_n_bodies
     scalar_list_size= &
-      local_num_nodes_grow*ctml_n_fib_bodies*CTML_FSI_num_scalars
+      local_num_nodes_grow*ctml_n_bodies*CTML_FSI_num_scalars
 
     if (flatten_size.eq.FSIcontain_size) then
      ! do nothing
@@ -10818,32 +10953,29 @@ INTEGER_T :: local_num_nodes_grow
     ctml_flatten_size=flatten_size
 
     do dir=1,3
-     local_max_num_nodes(dir)=ctml_max_n_fib_nodes(dir)
+     local_max_num_nodes(dir)=ctml_max_n_nodes(dir)
     enddo
 
     call initData_FSI( &
        ctml_FSI_container, &
-       ctml_n_fib_bodies, &
+       ctml_n_bodies, &
        local_max_num_nodes, &
-       ctml_max_n_fib_elements, &
+       ctml_max_n_elements, &
        CTML_FSI_num_scalars)
 
-    datalo=1-ctml_FSI_container%ngrow_node
-    datahi=ctml_FSI_container%max_num_nodes(1)+ &
-           ctml_FSI_container%ngrow_node
-
-    allocate(ctml_fib_frc(ctml_n_fib_bodies,ctml_max_n_fib_nodes(1),3))
+FIX ME
+    allocate(ctml_frc(ctml_n_bodies,ctml_max_n_nodes(1),3))
 FIX ME HERE CTML_FSI_num_scalars
     if (local_caller_id.eq.caller_initData) then
 
      call copy_ibm_fib( &
       datalo,datahi, &
-      ctml_FSI_container%mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
-      ctml_FSI_container%node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3))
+      ctml_FSI_container%mass_list(1:ctml_n_bodies,datalo:datahi), &
+      ctml_FSI_container%node_list(1:ctml_n_bodies,datalo:datahi,1:3))
 
      do dir=1,3
       do j=datalo,datahi
-       do i=1,ctml_n_fib_bodies
+       do i=1,ctml_n_bodies
         ctml_FSI_container%prev_node_list(i,j,dir)= &
            ctml_FSI_container%node_list(i,j,dir)
         ctml_FSI_container%init_node_list(i,j,dir)= &
@@ -10855,15 +10987,15 @@ FIX ME HERE CTML_FSI_num_scalars
      enddo !dir
 
      do dir=1,4
-      do j=1,ctml_max_n_fib_elements
-       do i=1,ctml_n_fib_bodies
+      do j=1,ctml_max_n_elements
+       do i=1,ctml_n_bodies
         ctml_FSI_container%element_list(i,j,dir)=j+dir-1
        enddo 
       enddo 
      enddo 
 
      do j=datalo,datahi
-      do i=1,ctml_n_fib_bodies
+      do i=1,ctml_n_bodies
        ctml_FSI_container%temp_list(i,j)=273.0d0
       enddo !i
      enddo !j
@@ -16194,7 +16326,7 @@ logical :: theboss
 #ifdef MVAHABFSI
 
     if (NINT(FSI_input_flattened(FSIcontain_num_solids+1)).eq. &
-            ctml_n_fib_bodies) then
+            ctml_n_bodies) then
      ! do nothing
     else
      print *,"FSI_input_flattened(FSIcontain_num_solids+1)bad"
@@ -16208,7 +16340,7 @@ logical :: theboss
      stop
     endif
     if (NINT(FSI_input_flattened(FSIcontain_max_num_elements+1)).eq. &
-            ctml_max_n_fib_elements) then
+            ctml_max_n_elements) then
      ! do nothing
     else
      print *,"FSI_input_flattened(FSIcontain_max_num_elements+1)bad"
@@ -16233,9 +16365,9 @@ logical :: theboss
 
     local_num_nodes_grow=ctml_max_n_fib_nodes(1)+2*local_ngrow_node
 
-    node_list_size=local_num_nodes_grow*ctml_n_fib_bodies*3;
-    element_list_size=ctml_max_n_fib_elements*ctml_n_fib_bodies*4;
-    mass_list_size=local_num_nodes_grow*ctml_n_fib_bodies;
+    node_list_size=local_num_nodes_grow*ctml_n_bodies*3;
+    element_list_size=ctml_max_n_elements*ctml_n_bodies*4;
+    mass_list_size=local_num_nodes_grow*ctml_n_bodies;
 
     if (flatten_size.eq.FSIcontain_size) then
      ! do nothing
@@ -16256,14 +16388,14 @@ logical :: theboss
 
     call initData_FSI( &
        FSI_input_container, &
-       ctml_n_fib_bodies, &
+       ctml_n_bodies, &
        local_max_num_nodes, &
-       ctml_max_n_fib_elements)
+       ctml_max_n_elements)
     call initData_FSI( &
        FSI_output_container, &
-       ctml_n_fib_bodies, &
+       ctml_n_bodies, &
        local_max_num_nodes, &
-       ctml_max_n_fib_elements)
+       ctml_max_n_elements)
 
     call FSI_unflatten( &
       ctml_flatten_size, &
@@ -16291,12 +16423,12 @@ logical :: theboss
        stop
       endif
       if (FSI(part_id)%NumNodes.ne. &
-          ctml_n_fib_active_nodes(ctml_part_id)*node_factor) then
+          ctml_n_active_nodes(ctml_part_id)*node_factor) then
        print *,"NumNodes is corrupt"
        stop
       endif
       if (FSI(part_id)%NumIntElems.ne. &
-          (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor) then
+          (ctml_n_active_nodes(ctml_part_id)-1)*node_factor) then
        print *,"NumIntElems is corrupt"
        stop
       endif
@@ -16305,7 +16437,7 @@ logical :: theboss
        stop
       endif
 
-      do inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+      do inode=1,ctml_n_active_nodes(ctml_part_id)
        if (FSI_input_container%mass_list(ctml_part_id,inode).gt.zero) then
          ! do nothing
        else if &
@@ -16316,7 +16448,7 @@ logical :: theboss
         print *,"FSI_input_container%mass_list(ctml_part_id,inode)<0.0"
         stop
        endif
-      enddo ! inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+      enddo ! inode=1,ctml_n_active_nodes(ctml_part_id)
 
      else if (ctml_part_id.eq.0) then
       ! do nothing
@@ -16349,22 +16481,22 @@ logical :: theboss
       monitorON, &
       plot_interval, &
       FSI_input_container% &
-       prev_velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
+       prev_velocity_list(1:ctml_n_bodies,datalo:datahi,1:3), &
       FSI_input_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
+       velocity_list(1:ctml_n_bodies,datalo:datahi,1:3), &
       FSI_output_container% &
-       velocity_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
-      ctml_fib_frc(1,1,1:3), &
+       velocity_list(1:ctml_n_bodies,datalo:datahi,1:3), &
+      ctml_frc(1,1,1:3), &
       FSI_input_container% &
-       prev_node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
+       prev_node_list(1:ctml_n_bodies,datalo:datahi,1:3), &
       FSI_input_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
+       node_list(1:ctml_n_bodies,datalo:datahi,1:3), &
       FSI_output_container% &
-       node_list(1:ctml_n_fib_bodies,datalo:datahi,1:3), &
+       node_list(1:ctml_n_bodies,datalo:datahi,1:3), &
       FSI_input_container% &
-       mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
+       mass_list(1:ctml_n_bodies,datalo:datahi), &
       FSI_output_container% &
-       mass_list(1:ctml_n_fib_bodies,datalo:datahi), &
+       mass_list(1:ctml_n_bodies,datalo:datahi), &
       theboss)
 #else 
     print *,"include_fib not defined"
@@ -16373,7 +16505,7 @@ logical :: theboss
 
     do dir=1,3
      do inode=datalo,datahi
-      do ctml_part_id=1,ctml_n_fib_bodies
+      do ctml_part_id=1,ctml_n_bodies
        FSI_output_container%prev_node_list(ctml_part_id,inode,dir)= &
          FSI_input_container%node_list(ctml_part_id,inode,dir)
        FSI_output_container%init_node_list(ctml_part_id,inode,dir)= &
@@ -16385,7 +16517,7 @@ logical :: theboss
     enddo !dir
 
     do inode=datalo,datahi
-     do ctml_part_id=1,ctml_n_fib_bodies
+     do ctml_part_id=1,ctml_n_bodies
       FSI_output_container%temp_list(ctml_part_id,inode)= &
         FSI_input_container%temp_list(ctml_part_id,inode)
      enddo !ctml_part_id
@@ -16442,12 +16574,12 @@ logical :: theboss
       endif
 
       if (FSI(part_id)%NumNodes.ne. &
-          ctml_n_fib_active_nodes(ctml_part_id)*node_factor) then
+          ctml_n_active_nodes(ctml_part_id)*node_factor) then
        print *,"NumNodes is corrupt: CLSVOF_ReadNodes"
        stop
       endif
       if (FSI(part_id)%NumIntElems.ne. &
-          (ctml_n_fib_active_nodes(ctml_part_id)-1)*node_factor) then
+          (ctml_n_active_nodes(ctml_part_id)-1)*node_factor) then
        print *,"NumIntElems is corrupt"
        stop
       endif
@@ -16460,7 +16592,7 @@ logical :: theboss
           (ctml_part_id.le.CTML_NPARTS)) then
 
 #ifdef MVAHABFSI
-       do inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+       do inode=1,ctml_n_active_nodes(ctml_part_id)
         if (FSI_output_container%mass_list(ctml_part_id,inode).gt.zero) then
          ! do nothing
         else if &
@@ -16471,7 +16603,7 @@ logical :: theboss
          print *,"FSI_output_container%mass_list(ctml_part_id,inode)<0.0"
          stop
         endif
-       enddo ! inode=1,ctml_n_fib_active_nodes(ctml_part_id)
+       enddo ! inode=1,ctml_n_active_nodes(ctml_part_id)
 
 #else
        print *,"define MVAHABFSI"
