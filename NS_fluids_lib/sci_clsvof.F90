@@ -4177,7 +4177,9 @@ INTEGER_T, INTENT(in) :: isout
 INTEGER_T :: inode
 INTEGER_T, INTENT(in) :: ioproc
 REAL_T, dimension(3) :: maxnode,minnode
-REAL_T, dimension(3) :: xval,xval1,xval2,xvalm1,xvalp1
+REAL_T, dimension(3) :: xval,xval1,xval2
+REAL_T, dimension(3,3,3) :: xval_wt
+REAL_T :: distA,distB
 REAL_T, dimension(3) :: maxnodebefore,minnodebefore
 INTEGER_T :: dir
 
@@ -4185,14 +4187,15 @@ REAL_T, dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
 REAL_T, dimension(3) :: vel_local
 REAL_T, dimension(NCOMP_FORCE_STRESS) :: force_local
 REAL_T :: mass_local
+REAL_T :: volume_node
 REAL_T :: density_local
-REAL_T :: volm1,volp1
 REAL_T :: radradblob1,radradblob2
 INTEGER_T :: stand_alone_flag
 INTEGER_T :: orig_nodes
 INTEGER_T :: ctml_part_id
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+INTEGER_T :: ii,jj,kk,iwt,jwt
 
-FIX ME for sheet in 3d
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
    stop
@@ -4265,71 +4268,152 @@ FIX ME for sheet in 3d
     stop
    endif
 
-   do inode=1,orig_nodes
+   ilo=1
+   ihi=ctml_FSI_container%max_num_nodes(1)
+   jlo=1
+   jhi=1
+   klo=1
+   khi=1
+
+   if (ctml_FSI_container%structured_flag.eq.0) then
+    ilo=1
+    ihi=ctml_FSI_container%max_num_nodes(1)
+    jlo=1
+    jhi=1
+    klo=1
+    khi=1
+   else if (ctml_FSI_container%structured_flag.eq.1) then
+
+    if (AMREX_SPACEDIM.eq.2) then
+     if (ctml_FSI_container%max_num_nodes(2).eq.0) then
+      ! do nothing
+     else
+      print *,"expecting max_num_nodes(2)=0"
+      stop
+     endif
+     ilo=1
+     ihi=ctml_FSI_container%max_num_nodes(1)
+     jlo=1
+     jhi=1
+     klo=1
+     khi=1
+    else if (AMREX_SPACEDIM.eq.3) then
+     if (ctml_FSI_container%max_num_nodes(2).gt.0) then
+      ! do nothing
+     else
+      print *,"expecting max_num_nodes(2)>0"
+      stop
+     endif
+     ilo=1
+     ihi=ctml_FSI_container%max_num_nodes(1)
+     jlo=1
+     jhi=ctml_FSI_container%max_num_nodes(2)
+     klo=1
+     khi=1
+    else
+     print *,"AMREX_SPACEDIM invalid"
+     stop
+    endif
+
+   else
+    print *,"structured_flag not supported yet"
+    stop
+   endif
+
+   inode=0
+   do ii=ilo,ihi
+   do jj=jlo,jhi
+   do kk=klo,khi
+    inode=inode+1
 
     do dir=1,3
      xval(dir)=zero
-     xvalm1(dir)=zero
-     xvalp1(dir)=zero
+
+     do iwt=1,3
+     do jwt=1,3
+      xvalwt(iwt,jwt,dir)=zero
+     enddo
+     enddo
      vel_local(dir)=zero
     enddo
 
+    mass_local=ctml_FSI_container%mass_list(ctml_part_id,ii,jj,kk)
+    if (mass_local.gt.zero) then
+     ! do nothing
+    else
+     print *,"CTML_init_sci_node: "
+     print *,"mass_local invalid, mass_local=",mass_local
+     stop
+    endif
+
+    do dir=1,AMREX_SPACEDIM
+     vel_local(dir)= &
+      ctml_FSI_container%velocity_list(ctml_part_id,ii,jj,kk,dir)
+     xval(dir)= &
+      ctml_FSI_container%node_list(ctml_part_id,ii,jj,kk,dir)
+     do iwt=1,3
+     do jwt=1,3
+      if ((ii+iwt-2.ge.ilo).and. &
+          (ii+iwt-2.le.ihi).and. &
+          (jj+jwt-2.ge.jlo).and. &
+          (jj+jwt-2.le.jhi)) then
+       xval_wt(iwt,jwt,dir)= &
+        ctml_FSI_container%node_list(ctml_part_id,ii+iwt-2,jj+jwt-2,kk,dir)
+      endif
+     enddo !jwt
+     enddo !iwt
+    enddo !do dir=1,AMREX_SPACEDIM
+
+    volume_node=0.0d0
+
     if (AMREX_SPACEDIM.eq.2) then
 
-     do dir=1,AMREX_SPACEDIM
-      xval(dir)=ctml_FSI_container%node_list(ctml_part_id,inode,dir)
-      if (inode.gt.1) then
-       xvalm1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode-1,dir)
-      endif
-      if (inode.lt.orig_nodes) then
-       xvalp1(dir)=ctml_FSI_container%node_list(ctml_part_id,inode+1,dir)
-      endif
-      vel_local(dir)=ctml_FSI_container%velocity_list(ctml_part_id,inode,dir)
-     enddo
-     volm1=zero
-     volp1=zero
-     if (inode.gt.1) then
-      volm1=zero
-      do dir=1,AMREX_SPACEDIM
-       volm1=volm1+(xval(dir)-xvalm1(dir))**2
-      enddo
-      volm1=half*sqrt(volm1)
-     endif 
-     if (inode.lt.orig_nodes) then
-      volp1=zero
-      do dir=1,AMREX_SPACEDIM
-       volp1=volp1+(xval(dir)-xvalp1(dir))**2
-      enddo
-      volp1=half*sqrt(volp1)
-     endif
+     jwt=2
 
-     mass_local=ctml_FSI_container%mass_list(ctml_part_id,inode)
-     if (mass_local.gt.zero) then
-      ! do nothing
-     else
-      print *,"CTML_init_sci_node: "
-      print *,"mass_local invalid, mass_local=",mass_local
-      stop
-     endif
-     if (volm1+volp1.gt.zero) then
-      if (FSI(part_id)%flag_2D_to_3D.eq.1) then
-       density_local=mass_local/(volm1+volp1)
-      else
-       print *,"CTML_init_sci_node: "
-       print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1 ", &
-        FSI(part_id)%flag_2D_to_3D
-       print *,"do not know how to fine density_local if 3d"
-       stop
+     do iwt=1,2
+      if ((ii+iwt-2.ge.ilo).and. &
+          (ii+iwt-2.lt.ihi)) then
+       distA=0.0d0
+       do dir=1,AMREX_SPACEDIM
+        distA=distA+(xval_wt(iwt+1,jwt,dir)-xval_wt(iwt,jwt,dir))**2
+       enddo
+       distA=sqrt(distA)
+       volume_node=volume_node+0.5d0*distA
       endif
-     else
-      print *,"volm1 or volp1 invalid",volm1,volp1
-      stop
-     endif
+     enddo !iwt
 
     else if (AMREX_SPACEDIM.eq.3) then
-FIX ME
+
+     do iwt=1,2
+     do jwt=1,2
+      if ((ii+iwt-2.ge.ilo).and. &
+          (ii+iwt-2.lt.ihi).and. &
+          (jj+jwt-2.ge.jlo).and. &
+          (jj+jwt-2.lt.jhi)) then
+       distA=0.0d0
+       distB=0.0d0
+       do dir=1,AMREX_SPACEDIM
+        distA=distA+ &
+         (xval_wt(iwt+1,jwt,dir)-xval_wt(iwt,jwt,dir))**2
+        distB=distB+ &
+         (xval_wt(iwt,jwt+1,dir)-xval_wt(iwt,jwt,dir))**2
+       enddo
+       distA=sqrt(distA)
+       distB=sqrt(distB)
+       volume_node=volume_node+0.25d0*distA*distB
+      endif
+     enddo !jwt
+     enddo !iwt
+
     else
-     print *,"dimension problem"
+     print *,"dimension bust"
+     stop
+    endif
+
+    if (volume_node.gt.zero) then
+     density_local=mass_local/volume_node
+    else
+     print *,"volume_node invalid"
      stop
     endif
 
@@ -4404,7 +4488,9 @@ FIX ME
      stop
     endif
        
-   enddo  ! inode=1,NumNodes
+   enddo  !kk
+   enddo  !jj
+   enddo  !ii
      
    if ((ioproc.eq.1).and.(isout.eq.1)) then
 
@@ -4608,7 +4694,7 @@ REAL_T :: test_mass
     stop
    endif  ! ifirst.eq.1
 
-    ! initialize nodes, elements,... from CTML data.
+    ! initialize nodes, velocity, mass, and density from CTML data.
    call CTML_init_sci_node(ioproc,part_id,isout)
 
    do iface=1,orig_elements
