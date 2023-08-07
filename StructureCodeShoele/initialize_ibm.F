@@ -1,8 +1,12 @@
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !@c
       subroutine initialize_ibm(nIBM_rq,nIBM_rq_fsh
-     &                         ,nIBM_r,nIBM_r_fib,nIBM_r_fsh
-     &                         ,nIBM_r_esh,nIBM_r_fbc,dtypeDelta 
+     &                         ,nIBM_r
+     &                         ,nIBM_r_fib
+     &                         ,nIBM_r_fsh
+     &                         ,nIBM_r_esh
+     &                         ,nIBM_r_fbc
+     &                         ,dtypeDelta 
      &                         ,min_gridx
      &                         ,min_gridy
      &                         ,min_gridz
