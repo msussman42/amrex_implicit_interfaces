@@ -52,7 +52,6 @@ type FSI_container_type
  INTEGER_T structure_topology
  INTEGER_T ngrow_node
 
-FIX ME node vars live in 5D array: fiber num,x,y,z,dir
  REAL_T, pointer :: node_list(:,:,:,:,:)
  REAL_T, pointer :: prev_node_list(:,:,:,:,:)
  REAL_T, pointer :: velocity_list(:,:,:,:,:)
@@ -5514,7 +5513,6 @@ INTEGER_T, allocatable :: raw_elements(:,:)
 return
 end subroutine init_from_cas
 
-FIX ME
 subroutine convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 IMPLICIT NONE
 
@@ -5615,7 +5613,6 @@ INTEGER_T local_nodes,orig_nodes,dir
 
 end subroutine convert_2D_to_3D_nodes_FSI
 
-FIX ME
 subroutine convert_2D_to_3D_elements_FSI(part_id,iface)
 IMPLICIT NONE
 
@@ -9713,19 +9710,46 @@ INTEGER_T, INTENT(in) :: ioproc,isout
 INTEGER_T :: part_id
 INTEGER_T :: ctml_part_id
 INTEGER_T :: fsi_part_id
-INTEGER_T :: dir,inode,num_nodes
+INTEGER_T :: dir
+INTEGER_T :: num_nodes
+INTEGER_T :: inode
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+INTEGER_T :: ii,jj,kk
 
  if (TOTAL_NPARTS.ge.1) then
-FIX ME
+
   if (CTML_FSI_flagF().eq.1) then 
 #ifdef MVAHABFSI
+   if (AMREX_SPACEDIM.eq.2) then
+    ilo=1
+    ihi=ctml_max_n_nodes(1)
+    jlo=1
+    jhi=1
+    klo=1
+    khi=1
+   else if (AMREX_SPACEDIM.eq.3) then
+    ilo=1
+    ihi=ctml_max_n_nodes(1)
+    jlo=1
+    jhi=ctml_max_n_nodes(2)
+    klo=1
+    khi=1
+   else
+    print *,"dimension bust"
+    stop
+   endif
+
    do ctml_part_id=1,ctml_n_bodies
-    do inode=1,ctml_max_n_nodes(1)
+    do ii=ilo,ihi
+    do jj=jlo,jhi
+    do kk=klo,khi
      do dir=1,3
-      ctml_frc(ctml_part_id,inode,dir)=zero
+      ctml_frc(ctml_part_id,ii,jj,kk,dir)=zero
      enddo
-    enddo
-   enddo
+    enddo !kk
+    enddo !jj
+    enddo !ii
+   enddo !ctml_part_id
 #else
    print *,"define MEHDI_VAHAB_FSI in GNUmakefile"
    stop
@@ -9825,7 +9849,10 @@ integer(kind=c_int) :: n_sync
 INTEGER_T part_id
 INTEGER_T ctml_part_id
 INTEGER_T fsi_part_id
-INTEGER_T num_nodes,inode,inode_fiber,dir
+INTEGER_T num_nodes,inode,
+INTEGER_T :: dir
+INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+INTEGER_T :: ii,jj,kk
 
  if (TOTAL_NPARTS.ge.1) then
 
@@ -9854,45 +9881,88 @@ INTEGER_T num_nodes,inode,inode_fiber,dir
     call cpp_reduce_real_sum(n_sync,sync_force)
 
     do inode=1,num_nodes
-    do dir=1,3
-     FSI(part_id)%NodeForce(dir,inode)=sync_force(3*(inode-1)+dir)
-     FSI(part_id)%NodeForce_old(dir,inode)=sync_force(3*(inode-1)+dir)
-     FSI(part_id)%NodeForce_new(dir,inode)=sync_force(3*(inode-1)+dir)
-    enddo
+     do dir=1,3
+      FSI(part_id)%NodeForce(dir,inode)=sync_force(3*(inode-1)+dir)
+      FSI(part_id)%NodeForce_old(dir,inode)=sync_force(3*(inode-1)+dir)
+      FSI(part_id)%NodeForce_new(dir,inode)=sync_force(3*(inode-1)+dir)
+     enddo
     enddo
 
     deallocate(sync_force)
 
     if ((ctml_part_id.ge.1).and. &
         (ctml_part_id.le.CTML_NPARTS)) then
-     if (FSI(part_id)%flag_2D_to_3D.eq.1) then
-      ! do nothing
-     else
-             FIX ME
-      print *,"CLSVOF_sync_lag_data: ctml_part_id= ",ctml_part_id
-      print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1: ", &
+
+     if (AMREX_SPACEDIM.eq.2) then
+
+      if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+       ! do nothing
+      else
+       print *,"CLSVOF_sync_lag_data: ctml_part_id= ",ctml_part_id
+       print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1: ", &
         FSI(part_id)%flag_2D_to_3D
+       stop
+      endif
+      if (num_nodes.eq.2*ctml_n_active_nodes(ctml_part_id,1)) then
+       ! do nothing
+      else 
+       print *,"expecting num_nodes= "
+       print *,"2*ctml_n_active_nodes(ctml_part_id,1)"
+       print *,"num_nodes: ",num_nodes
+       print *,"ctml_n_active_nodes(ctml_part_id,1): ", &
+        ctml_n_active_nodes(ctml_part_id,1)
+       stop
+      endif
+
+     else if (AMREX_SPACEDIM.eq.3) then
+
+      if (FSI(part_id)%flag_2D_to_3D.eq.0) then
+       ! do nothing
+      else
+       print *,"CLSVOF_sync_lag_data: ctml_part_id= ",ctml_part_id
+       print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.0: ", &
+        FSI(part_id)%flag_2D_to_3D
+       stop
+      endif
+      if (num_nodes.eq. &
+          ctml_n_active_nodes(ctml_part_id,1)* &
+          ctml_n_active_nodes(ctml_part_id,2)) then
+       ! do nothing
+      else 
+       print *,"expecting num_nodes= "
+       print *,"ctml_n_active_nodes(ctml_part_id,1)*"
+       print *,"ctml_n_active_nodes(ctml_part_id,2)"
+       print *,"num_nodes: ",num_nodes
+       print *,"ctml_n_active_nodes(ctml_part_id,1): ", &
+        ctml_n_active_nodes(ctml_part_id,1)
+       print *,"ctml_n_active_nodes(ctml_part_id,2): ", &
+        ctml_n_active_nodes(ctml_part_id,2)
+       stop
+      endif
+
+     else
+      print *,"dimension bust"
       stop
      endif
-     if (num_nodes.eq.2*ctml_n_active_nodes(ctml_part_id,?)) then
-      ! do nothing
-     else 
-             FIX ME
-      print *,"expecting num_nodes= "
-      print *,"2*ctml_n_active_nodes(ctml_part_id,?)"
-      print *,"num_nodes: ",num_nodes
-      print *,"ctml_n_active_nodes(ctml_part_id,?): ", &
-        ctml_n_active_nodes(ctml_part_id,?)
-      stop
-     endif
- 
-     do inode_fiber=1,ctml_n_active_nodes(ctml_part_id,?)
-      inode=inode_fiber
+
+     ilo=ilo_active(ctml_part_id)
+     ihi=ihi_active(ctml_part_id)
+     jlo=jlo_active(ctml_part_id)
+     jhi=jhi_active(ctml_part_id)
+     klo=klo_active(ctml_part_id)
+     khi=khi_active(ctml_part_id)
+     inode=0
+     do ii=ilo,ihi
+     do jj=jlo,jhi
+     do kk=klo,khi
+      inode=inode+1
       do dir=1,AMREX_SPACEDIM
-       ctml_frc(ctml_part_id,inode_fiber,dir)= &
+       ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
         FSI(part_id)%NodeForce(dir,inode)
       enddo
-     enddo
+     enddo !kk
+     enddo !jj
+     enddo !ii
     else if (ctml_part_id.eq.0) then
      ! do nothing
     else 
@@ -16320,6 +16390,7 @@ INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
 INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: local_num_scalars
 
 INTEGER_T :: datalo,datahi
 
@@ -16387,13 +16458,17 @@ logical :: theboss
      print *,"FSI_input_flattened(FSIcontain_num_solids+1)bad"
      stop
     endif
-    if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+1)).eq. &
-            ctml_max_n_fib_nodes(1)) then
-     ! do nothing
-    else
-     print *,"FSI_input_flattened(FSIcontain_max_num_nodes+1)bad"
-     stop
-    endif
+
+    do dir=1,AMREX_SPACEDIM-1
+     if (NINT(FSI_input_flattened(FSIcontain_max_num_nodes+dir)).eq. &
+         ctml_max_n_nodes(dir)) then
+      ! do nothing
+     else
+      print *,"FSI_input_flattened(FSIcontain_max_num_nodes+dir)bad"
+      stop
+     endif
+    enddo !dir=1..amrex_spacedim-1
+
     if (NINT(FSI_input_flattened(FSIcontain_max_num_elements+1)).eq. &
             ctml_max_n_elements) then
      ! do nothing
@@ -16407,22 +16482,112 @@ logical :: theboss
     local_structure_topology= &
          FSI_input_flattened(FSIcontain_structure_topology+1)
     local_ngrow_node=FSI_input_flattened(FSIcontain_ngrow_node+1)
+    local_num_scalars=FSI_input_flattened(FSIcontain_num_scalars+1)
 
     if ((local_structured_flag.eq.1).and. &
         (local_structure_dim.eq.AMREX_SPACEDIM).and. &
         (local_structure_topology.eq.AMREX_SPACEDIM-2).and. &
-        (local_ngrow_node.eq.2)) then
+        (local_ngrow_node.eq.2).and. &
+        (local_num_scalars.ge.0)) then
      ! do nothing
     else
      print *,"FSI_input_flattened: unexpected value(s),CLSVOF_ReadNodes"
      stop
     endif
 
-    local_num_nodes_grow=ctml_max_n_fib_nodes(1)+2*local_ngrow_node
+    local_num_nodes_grow=ctml_max_n_nodes(1)
 
-    node_list_size=local_num_nodes_grow*ctml_n_bodies*3;
-    element_list_size=ctml_max_n_elements*ctml_n_bodies*4;
-    mass_list_size=local_num_nodes_grow*ctml_n_bodies;
+    if (local_structured_flag.eq.0) then
+     ilo=1
+     ihi=local_num_nodes_grow
+     jlo=1
+     jhi=1
+     klo=1
+     khi=1
+    else if (local_structured_flag.eq.1) then
+     if (local_structure_topology.eq.0) then !filament
+      if (AMREX_SPACEDIM.eq.2) then
+       !do nothing
+      else
+       print *,"filament for 2d only"
+       stop
+      endif
+      local_num_nodes_grow=ctml_max_n_nodes(1)+2*local_ngrow_node;
+      ilo=1-local_ngrow_node
+      ihi=ctml_max_n_nodes(1)+local_ngrow_node
+      jlo=1
+      jhi=1
+      klo=1
+      khi=1
+     else if (local_structure_topology.eq.1) then !sheet
+      if (AMREX_SPACEDIM.eq.3) then
+       !do nothing
+      else
+       print *,"sheet for 3d only"
+       stop
+      endif
+      local_num_nodes_grow= &
+       (ctml_max_n_nodes(1)+2*local_ngrow_node)* &
+       (ctml_max_n_nodes(2)+2*local_ngrow_node)
+      ilo=1-local_ngrow_node
+      ihi=ctml_max_n_nodes(1)+local_ngrow_node
+      jlo=1-local_ngrow_node
+      jhi=ctml_max_n_nodes(2)+local_ngrow_node
+      klo=1
+      khi=1
+     else if (local_structure_topology.eq.2) then !volumetric
+      if (AMREX_SPACEDIM.eq.2) then
+       local_num_nodes_grow= &
+        (ctml_max_n_nodes(1)+2*local_ngrow_node)* &
+        (ctml_max_n_nodes(2)+2*local_ngrow_node)
+       ilo=1-local_ngrow_node
+       ihi=ctml_max_n_nodes(1)+local_ngrow_node
+       jlo=1-local_ngrow_node
+       jhi=ctml_max_n_nodes(2)+local_ngrow_node
+       klo=1
+       khi=1
+      else if (AMREX_SPACEDIM.eq.3) then
+       local_num_nodes_grow= &
+        (ctml_max_n_nodes(1)+2*local_ngrow_node)* &
+        (ctml_max_n_nodes(2)+2*local_ngrow_node)* &
+        (ctml_max_n_nodes(3)+2*local_ngrow_node)
+       ilo=1-local_ngrow_node
+       ihi=ctml_max_n_nodes(1)+local_ngrow_node
+       jlo=1-local_ngrow_node
+       jhi=ctml_max_n_nodes(2)+local_ngrow_node
+       klo=1-local_ngrow_node
+       khi=ctml_max_n_nodes(3)+local_ngrow_node
+      else
+       print *,"AMREX_SPACEDIM invalid"
+       stop
+      endif
+     else
+      print *,"structure_topology invalid"
+      stop
+     endif
+    else
+     print *,"local_structured_flag invalid"
+     stop
+    endif
+
+    if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
+     ! do nothing
+    else
+     print *,"[ijk]lo and/or [ijk]hi invalid"
+     stop
+    endif
+
+    node_list_size=local_num_solids*local_num_nodes_grow*3
+    element_list_size=local_num_solids*local_num_elements*4
+    mass_list_size=local_num_solids*local_num_nodes_grow
+    scalar_list_size=local_num_solids*local_num_nodes_grow*local_num_scalars
+
+    if (FSIcontain_size.eq.ncomp_flatten) then
+     ! do nothing
+    else
+     print *,"expecting FSI_contain_size.eq.ncomp_flatten"
+     stop
+    endif
 
     if (flatten_size.eq.FSIcontain_size) then
      ! do nothing
@@ -16438,20 +16603,23 @@ logical :: theboss
     endif
 
     do dir=1,3
-     local_max_num_nodes(dir)=ctml_max_n_fib_nodes(dir)
+     local_max_num_nodes(dir)=ctml_max_n_nodes(dir)
     enddo
 
     call initData_FSI( &
        FSI_input_container, &
        ctml_n_bodies, &
        local_max_num_nodes, &
-       ctml_max_n_elements)
+       ctml_max_n_elements, &
+       local_num_scalars)
     call initData_FSI( &
        FSI_output_container, &
        ctml_n_bodies, &
        local_max_num_nodes, &
-       ctml_max_n_elements)
+       ctml_max_n_elements, &
+       local_num_scalars)
 
+FIX ME
     call FSI_unflatten( &
       ctml_flatten_size, &
       FSI_input_flattened, &
