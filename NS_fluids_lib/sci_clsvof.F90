@@ -248,6 +248,7 @@ INTEGER_T, INTENT(in) :: max_num_elements_init
 INTEGER_T, INTENT(in) :: FSI_num_scalars_init
 INTEGER_T :: dir
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+INTEGER_T :: i,ii,jj,kk
 
 if (max_num_nodes_init(1).gt.0) then
  ! do nothing
@@ -344,6 +345,34 @@ allocate(dest_FSI%prev_scalar_list(CTML_num_solids_init, &
         ilo:ihi,jlo:jhi,klo:khi,FSI_num_scalars_init))
 
 allocate(dest_FSI%element_list(CTML_num_solids_init,max_num_elements_init,4))
+
+do i=1,CTML_num_solids_init
+ do ii=ilo,ihi
+ do jj=jlo,jhi
+ do kk=klo,khi
+  do dir=1,3
+   dest_FSI%prev_node_list(i,ii,jj,kk,dir)=0.0d0
+   dest_FSI%node_list(i,ii,jj,kk,dir)=0.0d0
+   dest_FSI%init_node_list(i,ii,jj,kk,dir)=0.0d0
+   dest_FSI%prev_velocity_list(i,ii,jj,kk,dir)=0.0d0
+   dest_FSI%velocity_list(i,ii,jj,kk,dir)=0.0d0
+  enddo
+  dest_FSI%mass_list(i,ii,jj,kk)=0.0d0
+  dest_FSI%temp_list(i,ii,jj,kk)=0.0d0
+
+  do dir=1,FSI_num_scalars_init
+   dest_FSI%prev_scalar_list(i,ii,jj,kk,dir)=0.0d0
+   dest_FSI%scalar_list(i,ii,jj,kk,dir)=0.0d0
+  enddo
+ enddo !kk
+ enddo !jj
+ enddo !ii
+ do ii=1,max_num_elements_init
+  do dir=1,4
+   dest_FSI%element_list(i,ii,dir)=0
+  enddo
+ enddo
+enddo !i=1,CTML_num_solids_init
 
 end subroutine initData_FSI
 
@@ -592,10 +621,14 @@ do dir=1,3
 enddo
 local_num_elements=NINT(source_FSI_flatten(FSIcontain_max_num_elements+1))
 
-local_structured_flag=source_FSI_flatten(FSIcontain_structured_flag+1)
-local_structure_dim=source_FSI_flatten(FSIcontain_structure_dim+1)
-local_structure_topology=source_FSI_flatten(FSIcontain_structure_topology+1)
-local_ngrow_node=source_FSI_flatten(FSIcontain_ngrow_node+1)
+local_structured_flag= &
+        NINT(source_FSI_flatten(FSIcontain_structured_flag+1))
+local_structure_dim= &
+        NINT(source_FSI_flatten(FSIcontain_structure_dim+1))
+local_structure_topology= &
+        NINT(source_FSI_flatten(FSIcontain_structure_topology+1))
+local_ngrow_node= &
+        NINT(source_FSI_flatten(FSIcontain_ngrow_node+1))
 
 local_num_nodes_grow=local_num_nodes(1)
 
@@ -784,6 +817,7 @@ IMPLICIT NONE
 
 type(FSI_container_type), INTENT(out) :: dest_FSI
 type(FSI_container_type), INTENT(in) :: source_FSI
+
 INTEGER_T :: local_num_solids
 INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_nodes(3)
@@ -947,7 +981,7 @@ do i=1,local_num_solids
   enddo !dir
  enddo ! ii
 
-enddo ! i
+enddo ! i=1,local_num_solids
 
 end subroutine copyFrom_FSI
 
