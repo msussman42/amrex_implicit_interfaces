@@ -48,21 +48,21 @@ int structured_flag; //0=unstructured 1=structured
 int structure_dim; //AMREX_SPACEDIM
 int structure_topology;  //0=filament (2d) 1=sheet (3d) 2=volumetric
 int ngrow_node;
-//node[0..num_solids-1][0..max_num_nodes_grow-1][0..2]
+//node[0..num_solids-1][0..max_num_nodes_total_grow-1][0..2]
 Vector< Real > node_list; 
 Vector< Real > prev_node_list; 
-//velocity[0..num_solids-1][0..max_num_nodes_grow-1][0..2]
+//velocity[0..num_solids-1][0..max_num_nodes_total_grow-1][0..2]
 Vector< Real > velocity_list; 
 Vector< Real > prev_velocity_list; 
 //element[0..num_solids-1][0..max_num_elements-1][0..3]
 Vector< int > element_list;
-//init_node_list[0..num_solids-1][0..max_num_nodes_grow-1][0..2]
+//init_node_list[0..num_solids-1][0..max_num_nodes_total_grow-1][0..2]
 Vector< Real > init_node_list; 
-//mass[0..num_solids-1][0..max_num_nodes_grow-1]
+//mass[0..num_solids-1][0..max_num_nodes_total_grow-1]
 Vector< Real > mass_list; 
-//temp[0..num_solids-1][0..max_num_nodes_grow-1] (temperature)
+//temp[0..num_solids-1][0..max_num_nodes_total_grow-1] (temperature)
 Vector< Real > temp_list; 
-//scalar[0..num_solids-1][0..max_num_nodes_grow-1][0..FSI_num_scalars-1]
+//scalar[0..num_solids-1][0..max_num_nodes_total_grow-1][0..FSI_num_scalars-1]
 Vector< Real > scalar_list; 
 Vector< Real > prev_scalar_list; 
 

@@ -182,10 +182,10 @@ if ((CTML_num_solids_init>=0)&&
  structure_topology=structure_topology_init;
  ngrow_node=ngrow_node_init;
 
- int max_num_nodes_grow=max_num_nodes[0];
+ int max_num_nodes_total_grow=max_num_nodes[0];
 
  if (structured_flag==0) {
-  //do nothing
+  max_num_nodes_total_grow=max_num_nodes[0];
  } else if (structured_flag==1) {
   if (structure_topology==0) { //filament
 
@@ -195,9 +195,9 @@ if ((CTML_num_solids_init>=0)&&
     amrex::Error("filament only allowed in 2D");
 
    if (max_num_nodes[0]==0) {
-    max_num_nodes_grow=0;
+    max_num_nodes_total_grow=0;
    } else if (max_num_nodes[0]>0) {
-     max_num_nodes_grow=max_num_nodes[0]+2*ngrow_node;
+     max_num_nodes_total_grow=max_num_nodes[0]+2*ngrow_node;
    } else
     amrex::Error("max_num_nodes[0] invalid");
 
@@ -209,23 +209,23 @@ if ((CTML_num_solids_init>=0)&&
     amrex::Error("sheet only allowed in 3D");
 
    if (max_num_nodes[0]==0) {
-    max_num_nodes_grow=0;
+    max_num_nodes_total_grow=0;
    } else if (max_num_nodes[0]>0) {
-    max_num_nodes_grow=
+    max_num_nodes_total_grow=
      (max_num_nodes[0]+2*ngrow_node)*
      (max_num_nodes[1]+2*ngrow_node);
    } else
     amrex::Error("max_num_nodes[0] invalid");
   } else if (structure_topology==2) { //volumetric
    if (max_num_nodes[0]==0) {
-    max_num_nodes_grow=0;
+    max_num_nodes_total_grow=0;
    } else if (max_num_nodes[0]>0) {
     if (AMREX_SPACEDIM==2) {
-     max_num_nodes_grow=
+     max_num_nodes_total_grow=
       (max_num_nodes[0]+2*ngrow_node)*
       (max_num_nodes[1]+2*ngrow_node);
     } else if (AMREX_SPACEDIM==3) {
-     max_num_nodes_grow=
+     max_num_nodes_total_grow=
       (max_num_nodes[0]+2*ngrow_node)*
       (max_num_nodes[1]+2*ngrow_node)*
       (max_num_nodes[2]+2*ngrow_node);
@@ -238,16 +238,17 @@ if ((CTML_num_solids_init>=0)&&
  } else
   amrex::Error("structured_flag invalid");
 
- prev_node_list.resize(CTML_num_solids*max_num_nodes_grow*3);
- node_list.resize(CTML_num_solids*max_num_nodes_grow*3);
- prev_velocity_list.resize(CTML_num_solids*max_num_nodes_grow*3);
- velocity_list.resize(CTML_num_solids*max_num_nodes_grow*3);
+ prev_node_list.resize(CTML_num_solids*max_num_nodes_total_grow*3);
+ node_list.resize(CTML_num_solids*max_num_nodes_total_grow*3);
+ prev_velocity_list.resize(CTML_num_solids*max_num_nodes_total_grow*3);
+ velocity_list.resize(CTML_num_solids*max_num_nodes_total_grow*3);
  element_list.resize(CTML_num_solids*max_num_elements*4);
- init_node_list.resize(CTML_num_solids*max_num_nodes_grow*3);
- mass_list.resize(CTML_num_solids*max_num_nodes_grow);
- temp_list.resize(CTML_num_solids*max_num_nodes_grow);
- scalar_list.resize(CTML_num_solids*max_num_nodes_grow*FSI_num_scalars);
- prev_scalar_list.resize(CTML_num_solids*max_num_nodes_grow*FSI_num_scalars);
+ init_node_list.resize(CTML_num_solids*max_num_nodes_total_grow*3);
+ mass_list.resize(CTML_num_solids*max_num_nodes_total_grow);
+ temp_list.resize(CTML_num_solids*max_num_nodes_total_grow);
+ scalar_list.resize(CTML_num_solids*max_num_nodes_total_grow*FSI_num_scalars);
+ prev_scalar_list.resize(
+   CTML_num_solids*max_num_nodes_total_grow*FSI_num_scalars);
 } else {
  amrex::Error("num_solids/nodes/scalars or elements invalid");
 }

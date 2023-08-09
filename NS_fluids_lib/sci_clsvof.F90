@@ -395,7 +395,7 @@ INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
 
-INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: local_num_nodes_total_grow
 INTEGER_T :: i,i_flat,dir
 INTEGER_T :: ii,jj,kk
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
@@ -412,11 +412,11 @@ local_structure_dim=source_FSI%structure_dim
 local_structure_topology=source_FSI%structure_topology
 local_ngrow_node=source_FSI%ngrow_node
 
-local_num_nodes_grow=local_num_nodes(1)
+local_num_nodes_total_grow=local_num_nodes(1)
 
 if (local_structured_flag.eq.0) then
  ilo=1
- ihi=local_num_nodes_grow
+ ihi=local_num_nodes_total_grow
  jlo=1
  jhi=1
  klo=1
@@ -429,7 +429,7 @@ else if (local_structured_flag.eq.1) then
    print *,"filament for 2d only"
    stop
   endif
-  local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
+  local_num_nodes_total_grow=local_num_nodes(1)+2*local_ngrow_node;
   ilo=1-local_ngrow_node
   ihi=local_num_nodes(1)+local_ngrow_node
   jlo=1
@@ -443,7 +443,7 @@ else if (local_structured_flag.eq.1) then
    print *,"sheet for 3d only"
    stop
   endif
-  local_num_nodes_grow= &
+  local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
   ilo=1-local_ngrow_node
@@ -454,7 +454,7 @@ else if (local_structured_flag.eq.1) then
   khi=1
  else if (local_structure_topology.eq.2) then !volumetric
   if (AMREX_SPACEDIM.eq.2) then
-   local_num_nodes_grow= &
+   local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
    ilo=1-local_ngrow_node
@@ -464,7 +464,7 @@ else if (local_structured_flag.eq.1) then
    klo=1
    khi=1
   else if (AMREX_SPACEDIM.eq.3) then
-   local_num_nodes_grow= &
+   local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)* &
        (local_num_nodes(3)+2*local_ngrow_node)
@@ -487,17 +487,17 @@ else
  stop
 endif
 
-if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
+if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_total_grow) then
  ! do nothing
 else
  print *,"[ijk]lo and/or [ijk]hi invalid"
  stop
 endif
 
-node_list_size=local_num_solids*local_num_nodes_grow*3
+node_list_size=local_num_solids*local_num_nodes_total_grow*3
 element_list_size=local_num_solids*local_num_elements*4
-mass_list_size=local_num_solids*local_num_nodes_grow
-scalar_list_size=local_num_solids*local_num_nodes_grow*local_num_scalars
+mass_list_size=local_num_solids*local_num_nodes_total_grow
+scalar_list_size=local_num_solids*local_num_nodes_total_grow*local_num_scalars
 
 if (FSIcontain_size.eq.ncomp_flatten) then
  ! do nothing
@@ -601,7 +601,7 @@ type(FSI_container_type), INTENT(out) :: dest_FSI
 INTEGER_T :: local_num_solids
 INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_nodes(3)
-INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: local_num_nodes_total_grow
 INTEGER_T :: local_num_elements
 
 INTEGER_T :: local_structured_flag
@@ -630,11 +630,11 @@ local_structure_topology= &
 local_ngrow_node= &
         NINT(source_FSI_flatten(FSIcontain_ngrow_node+1))
 
-local_num_nodes_grow=local_num_nodes(1)
+local_num_nodes_total_grow=local_num_nodes(1)
 
 if (local_structured_flag.eq.0) then
  ilo=1
- ihi=local_num_nodes_grow
+ ihi=local_num_nodes_total_grow
  jlo=1
  jhi=1
  klo=1
@@ -647,7 +647,7 @@ else if (local_structured_flag.eq.1) then
    print *,"filament for 2d only"
    stop
   endif
-  local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
+  local_num_nodes_total_grow=local_num_nodes(1)+2*local_ngrow_node;
   ilo=1-local_ngrow_node
   ihi=local_num_nodes(1)+local_ngrow_node
   jlo=1
@@ -661,7 +661,7 @@ else if (local_structured_flag.eq.1) then
    print *,"sheet for 3d only"
    stop
   endif
-  local_num_nodes_grow= &
+  local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
   ilo=1-local_ngrow_node
@@ -672,7 +672,7 @@ else if (local_structured_flag.eq.1) then
   khi=1
  else if (local_structure_topology.eq.2) then !volumetric
   if (AMREX_SPACEDIM.eq.2) then
-   local_num_nodes_grow= &
+   local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
    ilo=1-local_ngrow_node
@@ -682,7 +682,7 @@ else if (local_structured_flag.eq.1) then
    klo=1
    khi=1
   else if (AMREX_SPACEDIM.eq.3) then
-   local_num_nodes_grow= &
+   local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)* &
        (local_num_nodes(3)+2*local_ngrow_node)
@@ -705,17 +705,17 @@ else
  stop
 endif
 
-if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
+if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_total_grow) then
  ! do nothing
 else
  print *,"[ijk]lo and/or [ijk]hi invalid"
  stop
 endif
 
-node_list_size=local_num_solids*local_num_nodes_grow*3
+node_list_size=local_num_solids*local_num_nodes_total_grow*3
 element_list_size=local_num_solids*local_num_elements*4
-mass_list_size=local_num_solids*local_num_nodes_grow
-scalar_list_size=local_num_solids*local_num_nodes_grow*local_num_scalars
+mass_list_size=local_num_solids*local_num_nodes_total_grow
+scalar_list_size=local_num_solids*local_num_nodes_total_grow*local_num_scalars
 
 if (FSIcontain_size.eq.ncomp_flatten) then
  ! do nothing
@@ -821,7 +821,7 @@ type(FSI_container_type), INTENT(in) :: source_FSI
 INTEGER_T :: local_num_solids
 INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_nodes(3)
-INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: local_num_nodes_total_grow
 INTEGER_T :: local_num_elements
 
 INTEGER_T :: local_structured_flag
@@ -859,11 +859,11 @@ dest_FSI%structure_topology=source_FSI%structure_topology
 local_ngrow_node=source_FSI%ngrow_node
 dest_FSI%ngrow_node=source_FSI%ngrow_node
 
-local_num_nodes_grow=local_num_nodes(1)
+local_num_nodes_total_grow=local_num_nodes(1)
 
 if (local_structured_flag.eq.0) then
  ilo=1
- ihi=local_num_nodes_grow
+ ihi=local_num_nodes_total_grow
  jlo=1
  jhi=1
  klo=1
@@ -876,7 +876,7 @@ else if (local_structured_flag.eq.1) then
    print *,"filament for 2d only"
    stop
   endif
-  local_num_nodes_grow=local_num_nodes(1)+2*local_ngrow_node;
+  local_num_nodes_total_grow=local_num_nodes(1)+2*local_ngrow_node;
   ilo=1-local_ngrow_node
   ihi=local_num_nodes(1)+local_ngrow_node
   jlo=1
@@ -890,7 +890,7 @@ else if (local_structured_flag.eq.1) then
    print *,"sheet for 3d only"
    stop
   endif
-  local_num_nodes_grow= &
+  local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
   ilo=1-local_ngrow_node
@@ -901,7 +901,7 @@ else if (local_structured_flag.eq.1) then
   khi=1
  else if (local_structure_topology.eq.2) then !volumetric
   if (AMREX_SPACEDIM.eq.2) then
-   local_num_nodes_grow= &
+   local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)
    ilo=1-local_ngrow_node
@@ -911,7 +911,7 @@ else if (local_structured_flag.eq.1) then
    klo=1
    khi=1
   else if (AMREX_SPACEDIM.eq.3) then
-   local_num_nodes_grow= &
+   local_num_nodes_total_grow= &
        (local_num_nodes(1)+2*local_ngrow_node)* &
        (local_num_nodes(2)+2*local_ngrow_node)* &
        (local_num_nodes(3)+2*local_ngrow_node)
@@ -934,7 +934,7 @@ else
  stop
 endif
 
-if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
+if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_total_grow) then
  ! do nothing
 else
  print *,"[ijk]lo and/or [ijk]hi invalid"
@@ -4332,6 +4332,14 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
    do kk=klo,khi
     inode=inode+1
 
+    if ((inode.ge.1).and. &
+        (inode.le.FSI(part_id)%NumNodes)) then
+     !do nothing
+    else
+     print *,"inode out of range"
+     stop
+    endif
+
     do dir=1,3
      xval(dir)=zero
 
@@ -4375,6 +4383,14 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
 
     if (AMREX_SPACEDIM.eq.2) then
 
+     if ((inode.ge.1).and. &
+         (inode.le.FSI(part_id)%NumNodes/2)) then
+      !do nothing
+     else
+      print *,"inode out of range"
+      stop
+     endif
+
      jwt=2
 
      do iwt=1,2
@@ -4387,7 +4403,7 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
        distA=sqrt(distA)
        volume_node=volume_node+0.5d0*distA
       endif
-     enddo !iwt
+     enddo !iwt=1,2
 
     else if (AMREX_SPACEDIM.eq.3) then
 
@@ -4409,8 +4425,8 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
        distB=sqrt(distB)
        volume_node=volume_node+0.25d0*distA*distB
       endif
-     enddo !jwt
-     enddo !iwt
+     enddo !jwt=1,2
+     enddo !iwt=1,2
 
     else
      print *,"dimension bust"
@@ -4612,6 +4628,7 @@ REAL_T :: test_mass
      print *,"ctml_n_active_nodes =", &
       ctml_n_active_nodes(ctml_part_id,1), &
       ctml_n_active_nodes(ctml_part_id,2)
+     print *,"test_mass=",test_mass
      stop
     else
      print *,"ctml_FSI_container%mass_list invalid"
@@ -4619,6 +4636,7 @@ REAL_T :: test_mass
      print *,"ctml_n_active_nodes =", &
       ctml_n_active_nodes(ctml_part_id,1), &
       ctml_n_active_nodes(ctml_part_id,2)
+     print *,"test_mass=",test_mass
      stop
     endif
    enddo  !kk
@@ -4644,11 +4662,12 @@ REAL_T :: test_mass
 
    if (AMREX_SPACEDIM.eq.3) then
     FSI(part_id)%flag_2D_to_3D=0
-    orig_nodes=ihi-ilo+1
-    orig_elements=ihi-ilo
+    orig_nodes=(ihi-ilo+1)*(jhi-jlo+1)
+    orig_elements=(ihi-ilo)*(jhi-jlo)
    else if (AMREX_SPACEDIM.eq.2) then
     FSI(part_id)%flag_2D_to_3D=1
-    orig_elements=(ihi-ilo)*(jhi-jlo)
+    orig_nodes=ihi-ilo+1
+    orig_elements=ihi-ilo
    else
     print *,"CTML_init_sci:"
     print *,"dimension bust"
@@ -4711,6 +4730,13 @@ REAL_T :: test_mass
 
     if (FSI(part_id)%flag_2D_to_3D.eq.0) then
 
+     if ((iface.ge.1).and.(iface.le.FSI(part_id)%NumIntElems)) then
+      ! do nothing
+     else
+      print *,"iface invalid"
+      stop
+     endif
+
      FSI(part_id)%IntElem(1,iface)= &
        (ii-1)*ctml_n_active_nodes(ctml_part_id,2)+jj
      FSI(part_id)%IntElem(2,iface)= &
@@ -4725,6 +4751,13 @@ REAL_T :: test_mass
      FSI(part_id)%ElemData(DOUBLYCOMP,iface)=1 !doubly wetted (0=singly wetted)
 
     else if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+
+     if ((iface.ge.1).and.(iface.le.FSI(part_id)%NumIntElems/2)) then
+      ! do nothing
+     else
+      print *,"iface invalid"
+      stop
+     endif
 
      FSI(part_id)%IntElem(1,iface)=iface
      FSI(part_id)%IntElem(2,iface)=iface+1
@@ -10646,7 +10679,7 @@ INTEGER_T :: local_structured_flag
 INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
-INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: local_num_nodes_total_grow
 INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_elements
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
@@ -10992,6 +11025,12 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
        print *,"expecting ctml_max_n_nodes(2)>0"
        stop
       endif
+      if (ctml_max_n_nodes(3).eq.0) then
+       ! do nothing
+      else
+       print *,"expecting ctml_max_n_nodes(3)=0"
+       stop
+      endif
       ilo=1-local_ngrow_node
       ihi=ctml_max_n_nodes(1)+local_ngrow_node
       jlo=1-local_ngrow_node
@@ -11014,13 +11053,13 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
      stop
     endif
 
-    local_num_nodes_grow=(khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1)
+    local_num_nodes_total_grow=(khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1)
 
-    node_list_size=local_num_nodes_grow*ctml_n_bodies*3
+    node_list_size=local_num_nodes_total_grow*ctml_n_bodies*3
     element_list_size=ctml_max_n_elements*ctml_n_bodies*4
-    mass_list_size=local_num_nodes_grow*ctml_n_bodies
+    mass_list_size=local_num_nodes_total_grow*ctml_n_bodies
     scalar_list_size= &
-      local_num_nodes_grow*ctml_n_bodies*ctml_fsi_num_scalars
+      local_num_nodes_total_grow*ctml_n_bodies*ctml_fsi_num_scalars
 
     if (flatten_size.eq.FSIcontain_size) then
      ! do nothing
@@ -11158,21 +11197,51 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
        if (AMREX_SPACEDIM.eq.2) then
         inode(1)=i_elem
         inode(2)=i_elem+1
+        do dir=1,2
+         if ((inode(dir).ge.1).and. &
+             (inode(dir).le.local_num_nodes_total_grow)) then
+         ! do nothing
+         else
+          print *,"inode(dir) invalid"
+          stop
+         endif
+        enddo
        else if (AMREX_SPACEDIM.eq.3) then
         inode(1)=(ii-1)*ctml_n_active_nodes(i,2)+jj
         inode(2)=(ii+1-1)*ctml_n_active_nodes(i,2)+jj
         inode(3)=(ii+1-1)*ctml_n_active_nodes(i,2)+jj+1
         inode(4)=(ii-1)*ctml_n_active_nodes(i,2)+jj+1
+
+        do dir=1,4
+         if ((inode(dir).ge.1).and. &
+             (inode(dir).le.local_num_nodes_total_grow)) then
+         ! do nothing
+         else
+          print *,"inode(dir) invalid"
+          stop
+         endif
+        enddo !dir=1,4
+
        else
         print *,"dimension bust"
         stop
        endif
+
        do dir=1,4
         ctml_FSI_container%element_list(i,i_elem,dir)=inode(dir)
        enddo 
+
       enddo  !kk
       enddo  !jj
       enddo  !ii
+
+      if ((i_elem.ge.1).and.(i_elem.le.ctml_max_n_elements)) then
+       ! do nothing
+      else
+       print *,"i_elem invalid"
+       stop
+      endif
+
      enddo ! i=1,ctml_n_bodies
 
     else if (local_caller_id.eq.caller_post_restart) then
@@ -16437,7 +16506,7 @@ INTEGER_T :: local_structured_flag
 INTEGER_T :: local_structure_dim
 INTEGER_T :: local_structure_topology
 INTEGER_T :: local_ngrow_node
-INTEGER_T :: local_num_nodes_grow
+INTEGER_T :: local_num_nodes_total_grow
 INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_elements
 
@@ -16561,14 +16630,14 @@ logical :: theboss
      stop
     endif
 
-    local_num_nodes_grow=ctml_max_n_nodes(1)
+    local_num_nodes_total_grow=ctml_max_n_nodes(1)
 
     if (local_structured_flag.eq.0) then
      print *,"CTML unstructured not supported yet"
      stop
 
      ilo=1
-     ihi=local_num_nodes_grow
+     ihi=local_num_nodes_total_grow
      jlo=1
      jhi=1
      klo=1
@@ -16581,7 +16650,7 @@ logical :: theboss
        print *,"filament for 2d only"
        stop
       endif
-      local_num_nodes_grow=ctml_max_n_nodes(1)+2*local_ngrow_node;
+      local_num_nodes_total_grow=ctml_max_n_nodes(1)+2*local_ngrow_node;
       ilo=1-local_ngrow_node
       ihi=ctml_max_n_nodes(1)+local_ngrow_node
       jlo=1
@@ -16595,7 +16664,7 @@ logical :: theboss
        print *,"sheet for 3d only"
        stop
       endif
-      local_num_nodes_grow= &
+      local_num_nodes_total_grow= &
        (ctml_max_n_nodes(1)+2*local_ngrow_node)* &
        (ctml_max_n_nodes(2)+2*local_ngrow_node)
       ilo=1-local_ngrow_node
@@ -16609,7 +16678,7 @@ logical :: theboss
       stop
 
       if (AMREX_SPACEDIM.eq.2) then
-       local_num_nodes_grow= &
+       local_num_nodes_total_grow= &
         (ctml_max_n_nodes(1)+2*local_ngrow_node)* &
         (ctml_max_n_nodes(2)+2*local_ngrow_node)
        ilo=1-local_ngrow_node
@@ -16619,7 +16688,7 @@ logical :: theboss
        klo=1
        khi=1
       else if (AMREX_SPACEDIM.eq.3) then
-       local_num_nodes_grow= &
+       local_num_nodes_total_grow= &
         (ctml_max_n_nodes(1)+2*local_ngrow_node)* &
         (ctml_max_n_nodes(2)+2*local_ngrow_node)* &
         (ctml_max_n_nodes(3)+2*local_ngrow_node)
@@ -16642,17 +16711,18 @@ logical :: theboss
      stop
     endif
 
-    if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_grow) then
+    if ((khi-klo+1)*(jhi-jlo+1)*(ihi-ilo+1).eq.local_num_nodes_total_grow) then
      ! do nothing
     else
      print *,"[ijk]lo and/or [ijk]hi invalid"
      stop
     endif
 
-    node_list_size=local_num_solids*local_num_nodes_grow*3
+    node_list_size=local_num_solids*local_num_nodes_total_grow*3
     element_list_size=local_num_solids*local_num_elements*4
-    mass_list_size=local_num_solids*local_num_nodes_grow
-    scalar_list_size=local_num_solids*local_num_nodes_grow*local_num_scalars
+    mass_list_size=local_num_solids*local_num_nodes_total_grow
+    scalar_list_size= &
+        local_num_solids*local_num_nodes_total_grow*local_num_scalars
 
     if (FSIcontain_size.eq.flatten_size) then
      ! do nothing
@@ -16903,7 +16973,7 @@ logical :: theboss
      enddo !kk
      enddo !jj
      enddo !ii
-    enddo !dir
+    enddo !dir=1..local_num_scalars
 
     do ii=ilo,ihi
     do jj=jlo,jhi
