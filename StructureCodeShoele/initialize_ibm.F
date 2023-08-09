@@ -3188,7 +3188,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       subroutine copy_nmaxIBM( 
      &  nr_IBM_out
-     & ,CTML_num_scalars_out,
+     & ,CTML_num_scalars_out
      & ,nr_IBM_fib_out
      & ,nr_IBM_fsh_out
      & ,nr_IBM_esh_out
@@ -3315,7 +3315,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        if ((ilo.le.1-Nq_IBMB_fsh).and. 
      &     (ilo.le.0).and.
      &     (ihi.ge.Nq_IBM_fsh+1).and.
-     &     (ihi.ge.Nq_IBM_fsh+Nq_IBMB_fsh).and. &
+     &     (ihi.ge.Nq_IBM_fsh+Nq_IBMB_fsh).and. 
      &     (jlo.le.1-Ns_IBMB_fsh).and. 
      &     (jlo.le.0).and.
      &     (jhi.ge.Ns_IBM_fsh+1).and. 
@@ -3349,7 +3349,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         else
          do jq=1,1
          do j=1,1
-          scalar_fsh_out(i,jq,j,klo,2)=
+          scalar_fsh(i,jq,j,klo,2)=
      &     vPiezo_fsh(i,jq,j)
          enddo
          enddo
