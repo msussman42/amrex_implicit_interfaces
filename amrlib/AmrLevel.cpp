@@ -169,7 +169,7 @@ if ((CTML_num_solids_init>=0)&&
     (max_num_nodes_init[1]>=0)&&
     (max_num_nodes_init[2]>=0)&&
     (max_num_elements_init>=0)&&
-    (FSI_num_scalars_init>=0) {
+    (FSI_num_scalars_init>=0)) {
 
  CTML_num_solids=CTML_num_solids_init;
  FSI_num_scalars=FSI_num_scalars_init;

@@ -5074,8 +5074,8 @@
      &             ,Nz(iiflag(ij),jjflag(ij))
      &             ,al(iiflag(ij),jjflag(ij))
      &             ,V(iiflag(ij),jjflag(ij))
-     &             ,A0N(1:31)
-     &             ,TAG0N(1:31)
+     &             ,A0N(1:32)
+     &             ,TAG0N(1:32)
      &             ,iiflag(ij),jjflag(ij))  
        i2=6
        k0=iFEnorm(i2,ij)  
@@ -5145,8 +5145,8 @@
      &             ,Nz(iiflag(ij),jjflag(ij))
      &             ,al(iiflag(ij),jjflag(ij))
      &             ,V(iiflag(ij),jjflag(ij))
-     &             ,A0N(1:31)
-     &             ,TAG0N(1:31)
+     &             ,A0N(1:32)
+     &             ,TAG0N(1:32)
      &             ,iiflag(ij),jjflag(ij))  
        i2=8
        k0=iFEnorm(i2,ij)  
@@ -5181,8 +5181,8 @@
      &             ,Nz(iiflag(ij),jjflag(ij))
      &             ,al(iiflag(ij),jjflag(ij))
      &             ,V(iiflag(ij),jjflag(ij))
-     &             ,A0N(1:31)
-     &             ,TAG0N(1:31)
+     &             ,A0N(1:32)
+     &             ,TAG0N(1:32)
      &             ,iiflag(ij),jjflag(ij))  
        i2=9
        k0=iFEnorm(i2,ij)  
@@ -5217,8 +5217,8 @@
      &             ,Nz(iiflag(ij),jjflag(ij))
      &             ,al(iiflag(ij),jjflag(ij))
      &             ,V(iiflag(ij),jjflag(ij))
-     &             ,A0N(1:31)
-     &             ,TAG0N(1:31)
+     &             ,A0N(1:32)
+     &             ,TAG0N(1:32)
      &             ,iiflag(ij),jjflag(ij))  
        i2=10
        k0=iFEnorm(i2,ij)  

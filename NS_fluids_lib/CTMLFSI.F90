@@ -155,7 +155,7 @@ stop
          endif
         else if (AMREX_SPACEDIM.eq.3) then
          if ((Nq_IBM_fsh_out.ge.2).and. &
-             (Ns_IBM_fsh_out.ge.2) then
+             (Ns_IBM_fsh_out.ge.2)) then
           CTML_max_num_nodes_list(1)=Nq_IBM_fsh_out
           CTML_max_num_nodes_list(2)=Ns_IBM_fsh_out
           CTML_max_num_elements_list= &
