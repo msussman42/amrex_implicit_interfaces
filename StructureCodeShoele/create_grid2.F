@@ -30,7 +30,10 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       integer i_fintype(ns_ibm_esh+ns_ibm_fsh+ns_ibm_fib),numi,numj
       real*8 maxtmpx,maxtmpy,maxtmpz
      &      ,coefmaxtmpx,coefmaxtmpy,coefmaxtmpz,phi_ben2_coef
-      character*34 infile,infilepres,infileFabricMesh,infileFabricLine
+      character*60 infile
+      character*60 infilepres
+      character*60 infileFabricMesh
+      character*60 infileFabricLine
       character*150 namebody
       character*10 numalphafile ,numtausfile 
       integer i_phi_mem_coefFLG,i_phi_mem_coef
@@ -86,8 +89,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       FabricLine_numattMax=0
       FabricLine_numtargetMax=0
      
-      open (9997,file='./inputdistibm.dat',status="unknown")
-
+!     open (9997,file='./inputdistibm.dat',status="unknown")
+      open (9997,file='./inputStructureSolver.flag_in_channel.dat'
+     &     ,status="unknown")
 
       pi1 = 4. * atan(1.0)
       temp4=0.01
@@ -495,13 +499,13 @@ c variable stiffness
                    i_fix=i_fix+1
                 end do
                target_num(i+1)=i_fix-1
-               read(9997,*) target_k_link_fib(in_fib,1:target_num(i+1)) 
-               read(9997,*) target_t_link_fib(in_fib,1:target_num(i+1))   
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),1)    
-               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),1)    
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),2)    
+               read(9997,*) target_k_link_fib(in_fib,1:target_num(i+1))
+               read(9997,*) target_t_link_fib(in_fib,1:target_num(i+1))
+               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),1) 
+               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),1) 
+               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),2) 
                read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),2)
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),3)    
+               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),3) 
                read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),3)
                read(9997,*) flagfixed_fib(in_fib,1:target_num(i+1))
 

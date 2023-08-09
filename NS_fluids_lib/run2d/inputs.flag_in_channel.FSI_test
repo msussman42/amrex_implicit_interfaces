@@ -76,8 +76,7 @@ amr.plot_int        = 1
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 # change this if tiling vs. no tiling.
-# 32 for live simulations
-amr.max_grid_size   = 32
+amr.max_grid_size   = 64
 amr.file_name_digits= 7
 #amr.restart         = chk4400
 #amr.trace   =1

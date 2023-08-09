@@ -71,7 +71,7 @@ type lag_type
   ! ndmass=nddensity * ndvolume
  REAL_T, pointer :: ndmass(:) ! ndmass(node_id) 
  REAL_T, pointer :: nddensity(:) ! nddensity(node_id) 
- REAL_T, pointer :: ndforce(:,:) ! ndforce(dir,node_id)  dir=1..6
+ REAL_T, pointer :: ndforce(:,:)!ndforce(dir,node_id) dir=1..NCOMP_FORCE_STRESS
  REAL_T, pointer :: ndtemp(:)  ! ndtemp(node_id)
   ! number of nodes in element=elemdt(1,elemid)
   ! part number=elemdt(2,elemid)
@@ -1375,8 +1375,10 @@ INTEGER_T :: dir
  allocate(FSI_mesh_type%Node_current(3,FSI_mesh_type%NumNodes))
  allocate(FSI_mesh_type%NodeVel_old(3,FSI_mesh_type%NumNodes))
  allocate(FSI_mesh_type%NodeVel_new(3,FSI_mesh_type%NumNodes))
- allocate(FSI_mesh_type%NodeForce_old(3,FSI_mesh_type%NumNodes))
- allocate(FSI_mesh_type%NodeForce_new(3,FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeForce_old(NCOMP_FORCE_STRESS, &
+           FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeForce_new(NCOMP_FORCE_STRESS, &
+           FSI_mesh_type%NumNodes))
  allocate(FSI_mesh_type%NodeTemp_old(FSI_mesh_type%NumNodes))
  allocate(FSI_mesh_type%NodeTemp_new(FSI_mesh_type%NumNodes))
 
@@ -1397,7 +1399,7 @@ INTEGER_T :: dir
    FSI_mesh_type%NodeVel_old(dir,inode)=0.0
    FSI_mesh_type%NodeVel_new(dir,inode)=0.0
   enddo
-  do dir=1,3
+  do dir=1,NCOMP_FORCE_STRESS
    FSI_mesh_type%NodeForce_old(dir,inode)=0.0
    FSI_mesh_type%NodeForce_new(dir,inode)=0.0
   enddo
@@ -2294,7 +2296,7 @@ INTEGER_T :: num_nodes_local
 
  allocate(NodeBIG_local(3,num_nodes_local))
  allocate(NodeVelBIG_local(3,num_nodes_local))
- allocate(NodeForceBIG_local(3,num_nodes_local))
+ allocate(NodeForceBIG_local(NCOMP_FORCE_STRESS,num_nodes_local))
  allocate(NodeDensityBIG_local(num_nodes_local))
  allocate(NodeMassBIG_local(num_nodes_local))
  allocate(NodeTempBIG_local(num_nodes_local))
@@ -2321,8 +2323,11 @@ INTEGER_T :: num_nodes_local
   do dir=1,3
    NodeBIG_local(dir,knode)=FSI_mesh_type%NodeBIG(dir,inode)
    NodeVelBIG_local(dir,knode)=FSI_mesh_type%NodeVelBIG(dir,inode)
+  enddo
+  do dir=1,NCOMP_FORCE_STRESS
    NodeForceBIG_local(dir,knode)=FSI_mesh_type%NodeForceBIG(dir,inode)
   enddo
+
   NodeDensityBIG_local(knode)=FSI_mesh_type%NodeDensityBIG(inode)
   NodeMassBIG_local(knode)=FSI_mesh_type%NodeMassBIG(inode)
   NodeTempBIG_local(knode)=FSI_mesh_type%NodeTempBIG(inode)
@@ -2341,7 +2346,7 @@ INTEGER_T :: num_nodes_local
 
  allocate(FSI_mesh_type%NodeBIG(3,num_nodes_local))
  allocate(FSI_mesh_type%NodeVelBIG(3,num_nodes_local))
- allocate(FSI_mesh_type%NodeForceBIG(3,num_nodes_local))
+ allocate(FSI_mesh_type%NodeForceBIG(NCOMP_FORCE_STRESS,num_nodes_local))
  allocate(FSI_mesh_type%NodeDensityBIG(num_nodes_local))
  allocate(FSI_mesh_type%NodeMassBIG(num_nodes_local))
  allocate(FSI_mesh_type%NodeTempBIG(num_nodes_local))
@@ -2354,10 +2359,13 @@ INTEGER_T :: num_nodes_local
   do dir=1,3
    FSI_mesh_type%NodeBIG(dir,knode)=NodeBIG_local(dir,knode)
    FSI_mesh_type%NodeVelBIG(dir,knode)=NodeVelBIG_local(dir,knode)
-   FSI_mesh_type%NodeForceBIG(dir,knode)=NodeForceBIG_local(dir,knode)
    FSI_mesh_type%NodeNormalBIG(dir,knode)=zero
    FSI_mesh_type%NodeNormalEdgeBIG(dir,knode)=zero
   enddo
+  do dir=1,NCOMP_FORCE_STRESS
+   FSI_mesh_type%NodeForceBIG(dir,knode)=NodeForceBIG_local(dir,knode)
+  enddo
+
   FSI_mesh_type%NodeDensityBIG(knode)=NodeDensityBIG_local(knode)
   FSI_mesh_type%NodeMassBIG(knode)=NodeMassBIG_local(knode)
   FSI_mesh_type%NodeTempBIG(knode)=NodeTempBIG_local(knode)
@@ -2957,7 +2965,7 @@ INTEGER_T :: new_NumIntElems
 REAL_T :: generate_time
 REAL_T, dimension(3) :: x1,x2,x3
 REAL_T, dimension(3) :: vel1,vel2,vel3
-REAL_T, dimension(6) :: force1,force2,force3,forcesplit
+REAL_T, dimension(NCOMP_FORCE_STRESS) :: force1,force2,force3,forcesplit
 REAL_T, dimension(3) :: xsplit
 REAL_T, dimension(3) :: velsplit
 REAL_T :: biggest_h
@@ -3418,7 +3426,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  multi_lag(1)%n_elems=new_NumIntElems
  allocate(multi_lag(1)%nd(3,FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%ndvel(3,FSI_mesh_type%NumNodes))
- allocate(multi_lag(1)%ndforce(6,FSI_mesh_type%NumNodes))
+ allocate(multi_lag(1)%ndforce(NCOMP_FORCE_STRESS,FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%ndmass(FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%nddensity(FSI_mesh_type%NumNodes))
  allocate(multi_lag(1)%ndtemp(FSI_mesh_type%NumNodes))
@@ -3432,7 +3440,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
   enddo
   multi_lag(1)%ndmass(inode_list)=FSI_mesh_type%NodeMass(inode_list)
   multi_lag(1)%nddensity(inode_list)=FSI_mesh_type%NodeDensity(inode_list)
-  do dir=1,3
+  do dir=1,NCOMP_FORCE_STRESS
    multi_lag(1)%ndforce(dir,inode_list)=FSI_mesh_type%NodeForce(dir,inode_list)
   enddo
   multi_lag(1)%ndtemp(inode_list)=FSI_mesh_type%NodeTemp(inode_list)
@@ -3476,7 +3484,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     save_n_nodes=multi_lag(ilevel+1)%n_nodes 
     allocate(multi_lag(ilevel+1)%nd(3,save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndvel(3,save_n_nodes))
-    allocate(multi_lag(ilevel+1)%ndforce(6,save_n_nodes))
+    allocate(multi_lag(ilevel+1)%ndforce(NCOMP_FORCE_STRESS,save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndmass(save_n_nodes))
     allocate(multi_lag(ilevel+1)%nddensity(save_n_nodes))
     allocate(multi_lag(ilevel+1)%ndtemp(save_n_nodes))
@@ -3494,7 +3502,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
         multi_lag(ilevel)%ndmass(inode_list)
      multi_lag(ilevel+1)%nddensity(inode_list)= &
         multi_lag(ilevel)%nddensity(inode_list)
-     do dir=1,3
+     do dir=1,NCOMP_FORCE_STRESS
       multi_lag(ilevel+1)%ndforce(dir,inode_list)= &
         multi_lag(ilevel)%ndforce(dir,inode_list)
      enddo
@@ -3527,7 +3535,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     den1=multi_lag(ilevel_current)%nddensity(node1)
     den2=multi_lag(ilevel_current)%nddensity(node2)
     den3=multi_lag(ilevel_current)%nddensity(node3)
-    do dir=1,3
+    do dir=1,NCOMP_FORCE_STRESS
      force1(dir)=multi_lag(ilevel)%ndforce(dir,node1)
      force2(dir)=multi_lag(ilevel)%ndforce(dir,node2)
      force3(dir)=multi_lag(ilevel)%ndforce(dir,node3)
@@ -3553,7 +3561,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
       xsplit(dir)=0.5d0*(x1(dir)+x2(dir))
       velsplit(dir)=0.5d0*(vel1(dir)+vel2(dir))
      enddo
-     do dir=1,3
+     do dir=1,NCOMP_FORCE_STRESS
       forcesplit(dir)=0.5d0*(force1(dir)+force2(dir))
      enddo
 
@@ -3595,7 +3603,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
        multi_lag(ilevel+1)%nd(dir,nsplit)=xsplit(dir)
        multi_lag(ilevel+1)%ndvel(dir,nsplit)=velsplit(dir)
       enddo 
-      do dir=1,3
+      do dir=1,NCOMP_FORCE_STRESS
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
       multi_lag(ilevel+1)%nddensity(nsplit)=den_split
@@ -3637,7 +3645,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
       xsplit(dir)=0.5d0*(x2(dir)+x3(dir))
       velsplit(dir)=0.5d0*(vel2(dir)+vel3(dir))
      enddo
-     do dir=1,3
+     do dir=1,NCOMP_FORCE_STRESS
       forcesplit(dir)=0.5d0*(force2(dir)+force3(dir))
      enddo
  
@@ -3676,7 +3684,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
        multi_lag(ilevel+1)%nd(dir,nsplit)=xsplit(dir)
        multi_lag(ilevel+1)%ndvel(dir,nsplit)=velsplit(dir)
       enddo 
-      do dir=1,3
+      do dir=1,NCOMP_FORCE_STRESS
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
       multi_lag(ilevel+1)%nddensity(nsplit)=den_split
@@ -3715,7 +3723,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
       xsplit(dir)=0.5d0*(x1(dir)+x3(dir))
       velsplit(dir)=0.5d0*(vel1(dir)+vel3(dir))
      enddo
-     do dir=1,3
+     do dir=1,NCOMP_FORCE_STRESS
       forcesplit(dir)=0.5d0*(force1(dir)+force3(dir))
      enddo
 
@@ -3754,7 +3762,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
        multi_lag(ilevel+1)%nd(dir,nsplit)=xsplit(dir)
        multi_lag(ilevel+1)%ndvel(dir,nsplit)=velsplit(dir)
       enddo 
-      do dir=1,3
+      do dir=1,NCOMP_FORCE_STRESS
        multi_lag(ilevel+1)%ndforce(dir,nsplit)=forcesplit(dir)
       enddo
       multi_lag(ilevel+1)%nddensity(nsplit)=den_split
@@ -3839,7 +3847,8 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  allocate(FSI_mesh_type%NodeNormalBIG(3,FSI_mesh_type%NumNodesBIG))
  allocate(FSI_mesh_type%NodeNormalEdgeBIG(3,FSI_mesh_type%NumNodesBIG))
  allocate(FSI_mesh_type%NodeVelBIG(3,FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeForceBIG(3,FSI_mesh_type%NumNodesBIG))
+ allocate(FSI_mesh_type%NodeForceBIG(NCOMP_FORCE_STRESS, &
+           FSI_mesh_type%NumNodesBIG))
  allocate(FSI_mesh_type%NodeMassBIG(FSI_mesh_type%NumNodesBIG))
  allocate(FSI_mesh_type%NodeDensityBIG(FSI_mesh_type%NumNodesBIG))
  allocate(FSI_mesh_type%NodeTempBIG(FSI_mesh_type%NumNodesBIG))
@@ -3885,7 +3894,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
    FSI_mesh_type%NodeVelBIG(dir,inode_list)= &
       multi_lag(n_lag_levels)%ndvel(dir,inode_list)
   enddo
-  do dir=1,3
+  do dir=1,NCOMP_FORCE_STRESS
    FSI_mesh_type%NodeForceBIG(dir,inode_list)= &
      multi_lag(n_lag_levels)%ndforce(dir,inode_list)
   enddo
@@ -4709,7 +4718,7 @@ REAL_T :: test_mass
     allocate(FSI(part_id)%NodeNormalEdge(3,FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%ElemNodeCount(FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%ElemNodeCountEdge(FSI(part_id)%NumNodes))
-    allocate(FSI(part_id)%NodeForce(3,FSI(part_id)%NumNodes))
+    allocate(FSI(part_id)%NodeForce(NCOMP_FORCE_STRESS,FSI(part_id)%NumNodes))
     allocate(FSI(part_id)%NodeTemp(FSI(part_id)%NumNodes))
    else
     print *,"CTML_init_sci:"
@@ -5652,7 +5661,7 @@ INTEGER_T local_nodes,orig_nodes,dir
      FSI(part_id)%NodeVel_new(dir,inode+orig_nodes)= &
         FSI(part_id)%NodeVel(dir,orig_nodes)
     enddo ! dir=1..3
-    do dir=1,3
+    do dir=1,NCOMP_FORCE_STRESS
      FSI(part_id)%NodeForce(dir,inode+orig_nodes)= &
         FSI(part_id)%NodeForce(dir,inode)
      FSI(part_id)%NodeForce_old(dir,inode+orig_nodes)= &
@@ -8947,7 +8956,7 @@ INTEGER_T :: i,dir,istep
    FSI(part_id)%Node_old(dir,i)=FSI(part_id)%Node_new(dir,i)
    FSI(part_id)%NodeVel_old(dir,i)=FSI(part_id)%NodeVel_new(dir,i)
   enddo
-  do dir=1,3
+  do dir=1,NCOMP_FORCE_STRESS
    FSI(part_id)%NodeForce_old(dir,i)=FSI(part_id)%NodeForce_new(dir,i)
   enddo
  enddo
@@ -8957,7 +8966,7 @@ INTEGER_T :: i,dir,istep
    FSI(part_id)%Node(dir,i)=FSI(part_id)%Node_new(dir,i)
    FSI(part_id)%NodeVel(dir,i)=FSI(part_id)%NodeVel_new(dir,i)
   enddo
-  do dir=1,3
+  do dir=1,NCOMP_FORCE_STRESS
    FSI(part_id)%NodeForce(dir,i)=FSI(part_id)%NodeForce_new(dir,i)
   enddo
 
@@ -9002,7 +9011,7 @@ INTEGER_T :: i,dir,istep
    do dir=1,3
     FSI(part_id)%NodeVel_new(dir,i)=0.0
    enddo
-   do dir=1,3
+   do dir=1,NCOMP_FORCE_STRESS
     FSI(part_id)%NodeForce_new(dir,i)=0.0
    enddo
   enddo
@@ -9249,12 +9258,14 @@ REAL_T, dimension(3) :: velparm
    stop
   endif
 
-  call get_target_from_foot(xfoot,xtarget, &
+  call get_target_from_foot( &
+    xfoot,xtarget, &
     velparm,time, &
     FSI_mesh_type, &
     part_id, &
     max_part_id)
-  call get_target_from_foot(xfoot_pert,xtarget_pert, &
+  call get_target_from_foot( &
+    xfoot_pert,xtarget_pert, &
     velparm,time, &
     FSI_mesh_type, &
     part_id, &
@@ -9266,13 +9277,19 @@ REAL_T, dimension(3) :: velparm
   enddo
   mag=sqrt(mag)
   if (mag.gt.zero) then
-   ! do nothing
+   do dir=1,3
+    nnode(1,dir)=ntarget(dir)/mag
+   enddo
+  else if (mag.eq.zero) then
+   print *,"WARNING: mag.eq.zero in checkinlineBIG 0"
+   do dir=1,3
+    nnode(1,dir)=zero
+   enddo
   else
    print *,"mag invalid checkinlineBIG 0"
    stop
   endif
   do dir=1,3
-   nnode(1,dir)=ntarget(dir)/mag
    xnode(1,dir)=xtarget(dir)
   enddo
 
@@ -9309,13 +9326,19 @@ REAL_T, dimension(3) :: velparm
   enddo
   mag=sqrt(mag)
   if (mag.gt.zero) then
-   ! do nothing
+   do dir=1,3
+    nnode(2,dir)=ntarget(dir)/mag
+   enddo
+  else if (mag.eq.zero) then
+   print *,"WARNING: mag.eq.zero in checkinlineBIG 1"
+   do dir=1,3
+    nnode(2,dir)=zero
+   enddo
   else
    print *,"mag invalid checkinlineBIG 1"
    stop
   endif
   do dir=1,3
-   nnode(2,dir)=ntarget(dir)/mag
    xnode(2,dir)=xtarget(dir)
   enddo
 
@@ -9870,7 +9893,7 @@ INTEGER_T :: ii,jj,kk
      enddo ! dir=1,3
      FSI(part_id)%NodeMass(inode)=one
      FSI(part_id)%NodeDensity(inode)=one
-     do dir=1,3
+     do dir=1,NCOMP_FORCE_STRESS
       FSI(part_id)%NodeForce(dir,inode)=zero
       FSI(part_id)%NodeForce_old(dir,inode)=zero
       FSI(part_id)%NodeForce_new(dir,inode)=zero
@@ -13267,7 +13290,9 @@ IMPLICIT NONE
               mag_x=sqrt(mag_x)
 
               if (abs(mag_x).le.unsigned_mindist) then
-               xclosest_project(dir)=element_xclosest(dir)
+               do dir=1,3
+                xclosest_project(dir)=element_xclosest(dir)
+               enddo
                unsigned_mindist=abs(mag_x)
               endif
 
@@ -14773,7 +14798,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T idoubly
       INTEGER_T istress,jstress
       REAL_T stress_3d(3,3)
-      REAL_T local_force(3)
+      REAL_T local_force(NCOMP_FORCE_STRESS)
 
       debug_all=0
 
@@ -15164,7 +15189,7 @@ end subroutine CLSVOF_InitBox
             stress_3d(2,1)=stress_3d(1,2)
             stress_3d(3,1)=stress_3d(1,3)
             stress_3d(3,2)=stress_3d(2,3)
-            do dir=1,3
+            do dir=1,NCOMP_FORCE_STRESS
              local_force(dir)=zero
             enddo
             do istress=1,3
@@ -15176,7 +15201,7 @@ end subroutine CLSVOF_InitBox
             enddo
 
              !NodeForce used in CLSVOF_sync_lag_data 
-            do dir=1,3
+            do dir=1,NCOMP_FORCE_STRESS
              FSI(part_id)%NodeForce(dir,inode)= &
                FSI(part_id)%NodeForce(dir,inode)+ &
                local_force(dir)
