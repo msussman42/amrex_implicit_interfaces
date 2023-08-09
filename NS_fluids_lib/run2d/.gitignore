@@ -20,6 +20,7 @@ Nucleate_Slant_Refine/
 cavity_surface/
 ctest/
 boiling_flag/
+flag_in_channel/
 spherical_boil/
 rieber/
 Drop-impact/
