@@ -2499,7 +2499,9 @@ REAL_T :: opp_edge_data(6)
   print *,"FSI_mesh_type%part_id.ne.part_id"
   stop
  endif
+
  if (edit_refined_data.eq.0) then
+
   nelems=FSI_mesh_type%NumIntElems
 
   nodes_per_elem=FSI_mesh_type%IntElemDim
@@ -2525,7 +2527,9 @@ REAL_T :: opp_edge_data(6)
    print *,"nodes_per_elem invalid"
    stop
   endif
+
  else if (edit_refined_data.eq.1) then
+
   nelems=FSI_mesh_type%NumIntElemsBIG
   nodes_per_elem=3
   if (nelems.eq.UBOUND(FSI_mesh_type%IntElemBIG,2)) then
@@ -2599,7 +2603,7 @@ REAL_T :: opp_edge_data(6)
      enddo
     enddo
    else
-    print *,"local_nodes_per_elem invalid"
+    print *,"expecting local_nodes_per_elem.eq.3: ",local_nodes_per_elem
     stop
    endif
   else
@@ -2867,6 +2871,12 @@ REAL_T :: opp_edge_data(6)
       local_normal(dir)=local_normal(dir)/mag
      enddo
     else if (mag.eq.zero) then
+     print *,"WARNING: mag.eq.zero in init_EdgeNormal"
+     print *,"edit_refined_data: ",edit_refined_data
+     print *,"inode,inode_opp ",inode,inode_opp
+     print *,"ielem,ielem_opp ",ielem,ielem_opp
+     print *,"normal=",normal
+     print *,"normal_opp=",normal_opp
      do dir=1,3
       local_normal(dir)=zero
      enddo
@@ -2928,6 +2938,57 @@ REAL_T :: opp_edge_data(6)
   iedge=iedge+num_equal+1
 
  enddo !while (iedge.lt.edge_id)
+
+  !kluge: replace EdgeNormal=zero vector with the corresponding element normal
+ do ielem=1,nelems
+  do iedge=1,nodes_per_elem
+   do dir=1,3
+    if (edit_refined_data.eq.0) then
+     local_normal(dir)=FSI_mesh_type%EdgeNormal(3*(iedge-1)+dir,ielem)
+    else if (edit_refined_data.eq.1) then
+     local_normal(dir)=FSI_mesh_type%EdgeNormalBIG(3*(iedge-1)+dir,ielem)
+    else
+     print *,"edit_refined_data invalid"
+     stop
+    endif
+   enddo !dir=1,3
+   mag=zero
+   do dir=1,3
+    mag=mag+local_normal(dir)**2
+   enddo
+   mag=sqrt(mag)
+   if (mag.gt.zero) then
+    ! do nothing
+   else if (mag.eq.zero) then
+    print *,"WARNING: mag.eq.zero in EdgeNormal(BIG) sanity check"
+    print *,"iedge=",iedge
+    print *,"ielem=",ielem
+    print *,"edit_refined_data=",edit_refined_data
+    if (edit_refined_data.eq.0) then
+     call scinormal(ielem,normal, &
+      FSI_mesh_type,part_id,max_part_id, &
+      generate_time)
+     do dir=1,3
+      FSI_mesh_type%EdgeNormal(3*(iedge-1)+dir,ielem)=normal(dir)
+     enddo
+    else if (edit_refined_data.eq.1) then
+     call scinormalBIG(ielem,normal, &
+      FSI_mesh_type,part_id,max_part_id, &
+      generate_time)
+     do dir=1,3
+      FSI_mesh_type%EdgeNormalBIG(3*(iedge-1)+dir,ielem)=normal(dir)
+     enddo
+    else
+     print *,"edit_refined_data invalid"
+     stop
+    endif
+    print *,"replacing the zero normal with the element normal: ",normal
+   else
+    print *,"mag invalid"
+    stop
+   endif
+  enddo !iedge=1,nodes_per_elem
+ enddo !ielem=1,nelems
 
  deallocate(FSI_mesh_type%edge_endpoints)
  deallocate(FSI_mesh_type%edge_ielem)
@@ -3957,8 +4018,12 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
   do dir=1,3
    FSI_mesh_type%ElemDataXnotBIG(dir,ielem)=0.0
   enddo
-  call scinormalBIG(ielem,normal, &
-     FSI_mesh_type,part_id,max_part_id, &
+  call scinormalBIG( &
+     ielem, & !intent(in)
+     normal, & !intent(out)
+     FSI_mesh_type, & !intent(in)
+     part_id, & !intent(in)
+     max_part_id, & !intent(in)
      generate_time)
   do inode_elem=1,nodes_per_elem
    inode_list=FSI_mesh_type%IntElemBIG(inode_elem,ielem)
@@ -3994,7 +4059,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)= &
       FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)+ &
        FSI_mesh_type%EdgeNormalBIG(3*(inode_elem_p1-1)+dir,ielem)
-   enddo
+   enddo !dir=1..3
    FSI_mesh_type%ElemNodeCountBIG(inode_list)= &
      FSI_mesh_type%ElemNodeCountBIG(inode_list)+1
    FSI_mesh_type%ElemNodeCountEdgeBIG(inode_list)= &
@@ -9239,9 +9304,14 @@ REAL_T, dimension(3) :: velparm
      FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
 
    if (1.eq.0) then
+    ! this normal is the average of element normals summed over 
+    ! node-neighboring elements.
     local_normal= &
      FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
    else
+     ! this normal is the average of element normals summed over
+     ! edge-neighboring elements.
+     ! 1<=inode<=3
     local_normal= &
      FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,elemnum)
    endif
@@ -9281,10 +9351,14 @@ REAL_T, dimension(3) :: velparm
     nnode(1,dir)=ntarget(dir)/mag
    enddo
   else if (mag.eq.zero) then
-   print *,"WARNING: mag.eq.zero in checkinlineBIG 0"
+   print *,"ERROR: mag.eq.zero in checkinlineBIG 0"
+   print *,"inode=",inode
+   print *,"inodep1=",inodep1
+   print *,"xtarget= ",xtarget
    do dir=1,3
     nnode(1,dir)=zero
    enddo
+   stop
   else
    print *,"mag invalid checkinlineBIG 0"
    stop
@@ -9298,9 +9372,14 @@ REAL_T, dimension(3) :: velparm
     FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,elemnum))
 
    if (1.eq.0) then
+    ! this normal is the average of element normals summed over 
+    ! node-neighboring elements.
     local_normal= &
      FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,elemnum))
    else
+      ! this normal is the average of element normals summed over
+      ! edge-neighboring elements.
+      ! 1<=inode<=3
     local_normal= &
      FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,elemnum)
    endif
@@ -9330,10 +9409,14 @@ REAL_T, dimension(3) :: velparm
     nnode(2,dir)=ntarget(dir)/mag
    enddo
   else if (mag.eq.zero) then
-   print *,"WARNING: mag.eq.zero in checkinlineBIG 1"
+   print *,"ERROR: mag.eq.zero in checkinlineBIG 1"
+   print *,"inode=",inode
+   print *,"inodep1=",inodep1
+   print *,"xtarget= ",xtarget
    do dir=1,3
     nnode(2,dir)=zero
    enddo
+   stop
   else
    print *,"mag invalid checkinlineBIG 1"
    stop
@@ -9349,7 +9432,7 @@ REAL_T, dimension(3) :: velparm
         normal_closest) ! INTENT(inout)
 
  else
-  print *,"inode invalid in checkinlineBIG"
+  print *,"expecting 1<=inode<=3 in checkinlineBIG: ",inode
   stop
  endif
 
