@@ -22194,6 +22194,14 @@ NavierStokes::post_init_state () {
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);
 
+ if (step_through_data==1) {
+  int nsteps_local=0;
+  parent->writeDEBUG_PlotFile(nsteps_local,SDC_outer_sweeps,slab_step);
+  std::cout << "press any number then enter (prior post_init_pressure) \n";
+  int n_input;
+  std::cin >> n_input;
+ }
+
  if ((post_init_pressure_solve==1)&&
      (!is_zalesak())) { 
 
