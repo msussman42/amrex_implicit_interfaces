@@ -8380,7 +8380,7 @@ void NavierStokes::ns_header_msg_level(
 
   } else if ((FSI_operation==OP_FSI_MAKE_DISTANCE)||
 	     (FSI_operation==OP_FSI_MAKE_SIGN)||
-	     (FSI_operation==OP_FSI_LAG_STRESS)) {
+             (FSI_operation==OP_FSI_LAG_STRESS)) {
 
    if ((slab_step>=0)&&(slab_step<ns_time_order)) {
     //do nothing
@@ -8389,8 +8389,12 @@ void NavierStokes::ns_header_msg_level(
 
    if (ns_level0.new_data_FSI[slab_step+1].CTML_num_solids==
        CTML_FSI_numsolids) {
-    if (ns_level0.new_data_FSI[slab_step+1].max_num_nodes[0]==
-        CTML_max_num_nodes_list[0]) {
+    if ((ns_level0.new_data_FSI[slab_step+1].max_num_nodes[0]==
+         CTML_max_num_nodes_list[0])&&
+        (ns_level0.new_data_FSI[slab_step+1].max_num_nodes[1]==
+         CTML_max_num_nodes_list[1])&&
+        (ns_level0.new_data_FSI[slab_step+1].max_num_nodes[2]==
+         CTML_max_num_nodes_list[2])) {
      FSI_input.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
      FSI_output.copyFrom_FSI(ns_level0.new_data_FSI[slab_step+1]);
     } else
@@ -16931,6 +16935,8 @@ NavierStokes::split_scalar_advection() {
   // velocity and pressure
  int scomp_init=STATECOMP_VEL;
  int ncomp_init=STATE_NCOMP_VEL+STATE_NCOMP_PRES; 
+ FIX ME (do not overwrite the pressure if divu_outer_sweeps>0)
+	pass divu_outer_sweeps to fort_vfrac_split
  S_new.setVal(0.0,scomp_init,ncomp_init,1);
 
  for (int im=0;im<num_materials;im++) {
@@ -22092,8 +22098,6 @@ NavierStokes::post_init_state () {
  int update_flux=0;
  int interface_cond_avail=0;
 
- int project_option=SOLVETYPE_INITPROJ;  
-
  const int finest_level = parent->finestLevel();
 
    // inside of post_init_state
@@ -22190,8 +22194,10 @@ NavierStokes::post_init_state () {
  Real beta=0.0;
 
  increment_face_velocityALL(
-   operation_flag,project_option,
-   idx_velcell,beta,blobdata); 
+   operation_flag,
+   SOLVETYPE_INITPROJ,
+   idx_velcell,
+   beta,blobdata); 
 
  delete_array(TYPE_MF);
  delete_array(COLOR_MF);
@@ -22237,7 +22243,7 @@ NavierStokes::post_init_state () {
    ns_level.make_MAC_velocity_consistent();
   }
 
-  multiphase_project(project_option); // initial project
+  multiphase_project(SOLVETYPE_INITPROJ); 
 
    // U^CELL and U^MAC
   for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -23364,11 +23370,10 @@ void NavierStokes::cpp_overridepbc(int homflag_in,int project_option_in) {
 MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 		int scomp,int ncomp,Real time) {
 
- int project_option=SOLVETYPE_PRES; 
  int save_bc_status=override_bc_to_homogeneous;
   //cpp_overridepbc is declared in: NavierStokes.cpp
   //homflag_in=1
- cpp_overridepbc(1,project_option);
+ cpp_overridepbc(1,SOLVETYPE_PRES);
 
  MultiFab& S_new=get_new_data(DIV_Type,slab_step+1);
  int ntotal=S_new.nComp();
@@ -23382,7 +23387,7 @@ MultiFab* NavierStokes::getStateDIV_DATA(int ngrow,
 
  ParallelDescriptor::Barrier();
 
- cpp_overridepbc(save_bc_status,project_option);
+ cpp_overridepbc(save_bc_status,SOLVETYPE_PRES);
 
  return mf;
 } // subroutine getStateDIV_DATA

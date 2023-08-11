@@ -3539,7 +3539,7 @@ void NavierStokes::VELMAC_TO_CELL(int dest_idx) {
    im_solid_map_ptr,
    &level,
    &finest_level,
-   &project_option,
+   &project_option, //SOLVETYPE_PRES
    &local_enable_spectral, 
    &ncphys_proxy,
    velbc.dataPtr(),

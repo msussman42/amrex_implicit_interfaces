@@ -12639,6 +12639,8 @@ stop
       return
       end subroutine fort_aggressive
 
+      FIX ME pass divu_outer_sweeps to fort_vfrac_split
+
          ! "coarray fortran"  (MPI functionality built in)
          ! masknbr=1.0 in the interior
          !        =1.0 fine-fine ghost cells
@@ -14480,6 +14482,7 @@ stop
          endif
    
          ! pressure
+         FIX ME when divu_outer_sweeps>0 (just have snew_hold=snew ...)
          statecomp_data=STATECOMP_PRES+1
          snew_hold(statecomp_data)= &
            velfab(D_DECL(icrse,jcrse,kcrse),statecomp_data)

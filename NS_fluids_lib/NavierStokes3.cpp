@@ -8536,8 +8536,16 @@ void NavierStokes::multiphase_project(int project_option) {
   amrex::Error("slab_step invalid");
 
  const Real* coarse_dx=geom.CellSize();
- 
- if (project_option==SOLVETYPE_PRESGRAVITY) {
+
+  // initial pressure needed for FSI (very first time step)
+ if (project_option==SOLVETYPE_INITPROJ) {
+
+   //ngrow,ncomp,grid_type
+  allocate_array(1,1,-1,PRESSURE_SAVE_MF);
+  Copy_array(PRESSURE_SAVE_MF,GET_NEW_DATA_OFFSET+State_Type,
+	  STATECOMP_PRES,0,STATE_NCOMP_PRES,1);
+
+ } else if (project_option==SOLVETYPE_PRESGRAVITY) {
 
    //ngrow,ncomp,grid_type
   allocate_array(1,1,-1,PRESSURE_SAVE_MF);
@@ -10774,6 +10782,12 @@ void NavierStokes::multiphase_project(int project_option) {
    ns_level.avgDown(State_Type,STATECOMP_PRES,STATE_NCOMP_PRES,
      SPECTRAL_ORDER_AVGDOWN); 
   }
+  delete_array(PRESSURE_SAVE_MF);
+
+ } else if (project_option==SOLVETYPE_INITPROJ) {
+
+  Copy_array(GET_NEW_DATA_OFFSET+State_Type,PRESSURE_SAVE_MF,
+	  0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
   delete_array(PRESSURE_SAVE_MF);
 
  } else if (project_option==SOLVETYPE_PRESGRAVITY) {
