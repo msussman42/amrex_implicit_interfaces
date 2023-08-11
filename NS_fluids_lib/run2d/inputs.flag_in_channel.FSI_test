@@ -34,6 +34,10 @@ ns.temperature_weight_model=0 # 0=mass wtd avg 1=GFM
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
 cg.maxiter = 200
 mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
@@ -87,8 +91,10 @@ ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-10  # was 1.0e-11
 ns.minimum_relative_error=1.0e-22
-ns.initial_project_cycles=2
-ns.initial_cg_cycles=2
+#number of iterations to get the initial guess. 
+#NavierStokes::jacobi_cycles (update_vel==1)
+ns.initial_project_cycles=100
+ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 
