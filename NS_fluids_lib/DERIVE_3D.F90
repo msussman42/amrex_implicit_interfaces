@@ -2241,6 +2241,9 @@ stop
          print *,"WARNING: mass=0"
          print *,"im_test=",im_test
          print *,"FSI_flag(im_test)=",FSI_flag(im_test)
+         do im=1,num_materials
+          print *,"im,mass ",im,globalsum(DRAGCOMP_IQ_MASS+im)
+         enddo
          do dir=1,SDIM
           global_centroid(dir)=zero
          enddo

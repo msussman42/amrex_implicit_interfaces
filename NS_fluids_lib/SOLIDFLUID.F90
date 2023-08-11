@@ -304,6 +304,8 @@
           (FSI_operation.eq.OP_FSI_UPDATE_NODES)) then  
        if (ngrow_make_distance_in.ne.0) then
         print *,"ngrow_make_distance_in invalid"
+        print *,"fort_headermsg"
+        print *,"ngrow_make_distance_in=",ngrow_make_distance_in
         stop
        endif
        if ((local_caller_id.eq.caller_initData).or. &
@@ -318,6 +320,8 @@
       else if (FSI_operation.eq.OP_FSI_LAG_STRESS) then 
        if (ngrow_make_distance_in.ne.3) then
         print *,"ngrow_make_distance_in invalid"
+        print *,"fort_headermsg 2"
+        print *,"ngrow_make_distance_in=",ngrow_make_distance_in
         stop
        endif
        if (local_caller_id.eq.caller_nonlinear_advection) then

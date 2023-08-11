@@ -12965,6 +12965,8 @@ IMPLICIT NONE
    endif
    if (ngrow_make_distance_in.ne.3) then
     print *,"ngrow_make_distance_in invalid"
+    print *,"CLSVOF_InitBox"
+    print *,"ngrow_make_distance_in=",ngrow_make_distance_in
     stop
    endif
 
@@ -15031,6 +15033,8 @@ end subroutine CLSVOF_InitBox
        endif
        if (ngrow_make_distance_in.ne.3) then
         print *,"ngrow_make_distance_in invalid"
+        print *,"CLSVOF_Copy_To_LAG"
+        print *,"ngrow_make_distance_in=",ngrow_make_distance_in
         stop
        endif
 
@@ -16405,6 +16409,8 @@ IMPLICIT NONE
 
  if (ngrow_make_distance_in.ne.3) then
   print *,"ngrow_make_distance_in invalid"
+  print *,"find_grid_bounding_box_node"
+  print *,"ngrow_make_distance_in=",ngrow_make_distance_in
   stop
  endif
 
