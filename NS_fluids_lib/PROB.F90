@@ -23464,6 +23464,8 @@ end subroutine initialize2d
       endif
       if (ngrow_make_distance_in.ne.3) then
        print *,"ngrow_make_distance_in invalid"
+       print *,"fort_initdatasolid"
+       print *,"ngrow_make_distance_in=",ngrow_make_distance_in
        stop
       endif
 

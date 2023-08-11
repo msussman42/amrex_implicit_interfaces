@@ -8510,6 +8510,8 @@ stop
       endif
       if (ngrow_make_distance_in.ne.3) then
        print *,"ngrow_make_distance_in invalid"
+       print *,"fort_build_moment"
+       print *,"ngrow_make_distance_in=",ngrow_make_distance_in
        stop
       endif
       if ((level.lt.0).or.(level.gt.finest_level)) then
