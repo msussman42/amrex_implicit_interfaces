@@ -318,12 +318,27 @@
         stop
        endif
       else if (FSI_operation.eq.OP_FSI_LAG_STRESS) then 
-       if (ngrow_make_distance_in.ne.3) then
-        print *,"ngrow_make_distance_in invalid"
-        print *,"fort_headermsg 2"
-        print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+
+       if ((FSI_sub_operation.eq.SUB_OP_FSI_CLEAR_LAG_DATA).or. &
+           (FSI_sub_operation.eq.SUB_OP_FSI_SYNC_LAG_DATA)) then
+        if (ngrow_make_distance_in.ne.0) then
+         print *,"expecting ngrow_make_distance_in==0"
+         print *,"fort_headermsg 2a"
+         print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+         stop
+        endif
+       else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then
+        if (ngrow_make_distance_in.ne.3) then
+         print *,"expecting ngrow_make_distance_in==3"
+         print *,"fort_headermsg 2b"
+         print *,"ngrow_make_distance_in=",ngrow_make_distance_in
+         stop
+        endif
+       else
+        print *,"FSI_sub_operation invalid"
         stop
        endif
+
        if (local_caller_id.eq.caller_nonlinear_advection) then
         !do nothing
        else
@@ -331,6 +346,7 @@
           local_caller_id
         stop
        endif
+
       else if (FSI_operation.eq.OP_FSI_MAKE_DISTANCE) then 
        if (local_caller_id.eq.caller_FSI_make_distance) then
         !do nothing
