@@ -17901,6 +17901,8 @@ void NavierStokes::project_right_hand_side(
 
  change_flag=0;
 
+  //SOLVETYPE_PRES, SOLVETYPE_PRESGRAVITY, SOLVETYPE_INITPROJ,
+  //SOLVETYPE_PRESEXTRAP
  if (project_option_singular_possible(project_option)==1) {
 
   int at_least_one_active=0;
