@@ -747,6 +747,8 @@ extern "C"
      int* distribute_from_target,
      int* constant_density_all_time,
      int* velbc,
+     int* divu_outer_sweeps,
+     int* num_divu_outer_sweeps,
      int* EILE_flag,
      int* dir_counter,
      int* normdir,
