@@ -33,6 +33,8 @@ geometry.is_periodic = 0 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+mg.presmooth=2
+mg.postsmooth=2
 
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
@@ -57,18 +59,18 @@ ns.MOFITERMAX=15
 # 4 CTML
 ns.FSI_flag=0 0 4
 
-# 256x256 for live simulations
-amr.n_cell    = 256 256
-# 1 for live simulations
-amr.max_level = 1
+# 64x64 for live simulations
+amr.n_cell    = 64 64
+# 3 for live simulations
+amr.max_level = 3
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid  ??
-amr.n_error_buf     = 2 2 2 2 2 2  
+amr.n_error_buf     = 4 4 4 4 4 4  
 amr.grid_eff        = 0.75 
 
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
-amr.blocking_factor = 8 8
+amr.blocking_factor = 16 16 8 8
 amr.space_blocking_factor=1 1 1 1
 amr.time_blocking_factor=1	
 ns.init_shrink    = 1.0      # scale back initial timestep
@@ -92,7 +94,8 @@ mac.mac_abs_tol    = 1.0e-10  # was 1.0e-11
 ns.minimum_relative_error=1.0e-22
 #number of iterations to get the initial guess. 
 #NavierStokes::jacobi_cycles (update_vel==1)
-ns.initial_project_cycles=100
+ns.initial_project_cycles=10
+ns.mglib_max_ratio=1.0e+5
 ns.initial_viscosity_cycles=10
 ns.initial_thermal_cycles=10
 ns.initial_cg_cycles=10
