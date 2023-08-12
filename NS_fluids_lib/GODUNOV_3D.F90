@@ -12639,13 +12639,11 @@ stop
       return
       end subroutine fort_aggressive
 
-      FIX ME pass divu_outer_sweeps to fort_vfrac_split
-
-         ! "coarray fortran"  (MPI functionality built in)
-         ! masknbr=1.0 in the interior
-         !        =1.0 fine-fine ghost cells
-         !        =0.0 coarse-fine ghost cells and outside the domain.
-         ! mask=tag if not covered by level+1 or outside the domain.
+       ! "coarray fortran"  (MPI functionality built in)
+       ! masknbr=1.0 in the interior
+       !        =1.0 fine-fine ghost cells
+       !        =0.0 coarse-fine ghost cells and outside the domain.
+       ! mask=tag if not covered by level+1 or outside the domain.
       subroutine fort_vfrac_split( &
        nprocessed, &
        tid, &
@@ -12656,6 +12654,8 @@ stop
        distribute_from_target, &
        constant_density_all_time, &
        velbc, &
+       divu_outer_sweeps, &
+       num_divu_outer_sweeps, &
        EILE_flag, &
        dir_counter, &
        normdir, &
@@ -12742,6 +12742,8 @@ stop
 
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: dombc(SDIM,2)
+      INTEGER_T, INTENT(in) :: divu_outer_sweeps
+      INTEGER_T, INTENT(in) :: num_divu_outer_sweeps
       INTEGER_T, INTENT(in) :: EILE_flag
       REAL_T, INTENT(in) :: cur_time
       REAL_T, INTENT(in) :: passive_veltime
@@ -13193,6 +13195,14 @@ stop
        ! do nothing
       else
        print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+       stop
+      endif
+
+      if ((divu_outer_sweeps.ge.0).and. &
+          (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
+       ! do nothing
+      else
+       print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
        stop
       endif
 
@@ -14482,10 +14492,19 @@ stop
          endif
    
          ! pressure
-         FIX ME when divu_outer_sweeps>0 (just have snew_hold=snew ...)
          statecomp_data=STATECOMP_PRES+1
-         snew_hold(statecomp_data)= &
-           velfab(D_DECL(icrse,jcrse,kcrse),statecomp_data)
+
+         if (divu_outer_sweeps.eq.0) then
+          snew_hold(statecomp_data)= &
+            velfab(D_DECL(icrse,jcrse,kcrse),statecomp_data)
+         else if ((divu_outer_sweeps.ge.1).and. &
+                  (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
+          snew_hold(statecomp_data)= &
+            snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)
+         else
+          print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
+          stop
+         endif
 
          ! density
          do im=1,num_materials

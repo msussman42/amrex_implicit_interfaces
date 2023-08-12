@@ -16717,13 +16717,16 @@ NavierStokes::split_scalar_advection() {
  // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
  getStateMOM_DEN(MOM_DEN_MF,ngrow_mass,advect_time_slab);
 
- int TENSOR_RECON_MF_local=TENSOR_RECON_MF;
- int Tensor_Type_local=Tensor_Type;
+ int TENSOR_RECON_MF_local=-1;
+ int Tensor_Type_local=-1;
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
+  TENSOR_RECON_MF_local=TENSOR_RECON_MF;
+  Tensor_Type_local=Tensor_Type;
    //ngrow_scalar=1
-  getStateTensor_localMF(TENSOR_RECON_MF_local,
+  getStateTensor_localMF(
+   TENSOR_RECON_MF_local,
    ngrow_scalar,0,
    NUM_CELL_ELASTIC,
    advect_time_slab);
@@ -17093,6 +17096,8 @@ NavierStokes::split_scalar_advection() {
    distribute_from_target.dataPtr(),
    constant_density_all_time.dataPtr(),
    velbc.dataPtr(),
+   &divu_outer_sweeps,
+   &num_divu_outer_sweeps,
    &EILE_flag,
    &dir_absolute_direct_split,
    &normdir_here,
