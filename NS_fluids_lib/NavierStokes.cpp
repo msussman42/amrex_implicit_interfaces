@@ -16929,30 +16929,32 @@ NavierStokes::split_scalar_advection() {
   profile_time_start=ParallelDescriptor::second();
  }
 
-  // in: split_scalar_advection
-  // initialize selected state variables 
+ // in: split_scalar_advection
+ // initialize selected state variables 
 
-  // velocity and pressure
- int scomp_init=STATECOMP_VEL;
- int ncomp_init=STATE_NCOMP_VEL+STATE_NCOMP_PRES; 
- FIX ME (do not overwrite the pressure if divu_outer_sweeps>0)
-	pass divu_outer_sweeps to fort_vfrac_split
- S_new.setVal(0.0,scomp_init,ncomp_init,1);
+ S_new.setVal(0.0,STATECOMP_VEL,STATE_NCOMP_VEL,1);
+
+ if (divu_outer_sweeps==0) {
+  S_new.setVal(0.0,STATECOMP_PRES,STATE_NCOMP_PRES,1);
+ } else if ((divu_outer_sweeps>=1)&&
+            (divu_outer_sweeps<num_divu_outer_sweeps)) {
+  //do nothing
+ } else
+  amrex::Error("divu_outer_sweeps invalid");
 
  for (int im=0;im<num_materials;im++) {
   if (ns_is_rigid(im)==0) {
-   scomp_init=STATECOMP_STATES+im*num_state_material;
-   ncomp_init=num_state_material;
-   S_new.setVal(0.0,scomp_init,ncomp_init,1);
-   scomp_init=STATECOMP_MOF+im*ngeom_raw;
-   ncomp_init=ngeom_raw;
-   S_new.setVal(0.0,scomp_init,ncomp_init,1);
+   S_new.setVal(0.0,
+      STATECOMP_STATES+im*num_state_material,
+      num_state_material,1);
+   S_new.setVal(0.0,
+      STATECOMP_MOF+im*ngeom_raw,
+      ngeom_raw,1);
    LS_new.setVal(0.0,im,1,1);
   } else if (ns_is_rigid(im)==1) {
    if (solidheat_flag==0) {  // thermal diffuse in solid (default)
-    scomp_init=STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR;
-    ncomp_init=1;
-    S_new.setVal(0.0,scomp_init,ncomp_init,1);
+    S_new.setVal(0.0,
+     STATECOMP_STATES+im*num_state_material+ENUM_TEMPERATUREVAR,1,1);
    } else if (solidheat_flag==2) { // Neumann
     // do nothing
    } else if (solidheat_flag==1) { // dirichlet
@@ -16965,6 +16967,11 @@ NavierStokes::split_scalar_advection() {
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
+
+  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_ELASTIC invalid");
 
   if (Tensor_new.nComp()==NUM_CELL_ELASTIC) {
    // do nothing
