@@ -35,8 +35,8 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-amr.n_cell    = 48 48
-amr.max_level =  3  # 3 levels for finest
+amr.n_cell    = 192 192
+amr.max_level =  1  # 1 level for finest
 ns.ns_tiling=false
 #amr.max_level =  0
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -53,7 +53,7 @@ amr.check_file      = chk    # root name of checkpoint file
 amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 32
+amr.max_grid_size   = 64
 amr.file_name_digits = 7
 #amr.restart         = ch64k1000
 #amr.trace   =1
@@ -98,7 +98,6 @@ ns.stiffCP=4217.0 2029.0 4217.0
 # Joule/kg
 ns.latent_heat=2257e+3 0.0 0.0 0.0 0.0 0.0  
 ns.saturation_temp=373.0 0.0 0.0 0.0 0.0 0.0
-ns.temperature_weight_model=1   # ??????
 #ns.fixed_dt	  = 0.1     # hardwire dt
 ns.sum_interval   = 100        # timesteps between computing mass 
 
@@ -142,10 +141,10 @@ ns.heatviscconst_interface=0.0 0.0 0.0
 ns.viscconst=279E-6 12.02e-6 279E-6
 # density: kg/m^3
 ns.denconst=958 0.5956 958
-ns.FSI_flag = 0 0 1  ????
+ns.FSI_flag = 0 0 1  
 # 0=diffuse in solid, 1=dirichlet, 2=neumann
 # if solidheat_flag=2, then "tempfluxsolid" is called.
-ns.solidheat_flag=1  ????
+ns.solidheat_flag=1  
 
 # February 21, 2018: parameters for new microlayer model:
 # material id for the substrate material that neighbors the thin film
@@ -170,8 +169,8 @@ ns.microlayer_size=1.0e-9  0.0 0.0                      # dimensional
 ns.macrolayer_size=6.25e-5 0.0 0.0            
 
 ns.tempconst=372.8 373.0 378.3 
-ns.tempcutoff=373.0 373.0 373.0  ????
-ns.tempcutoffmax=383.0 383.0 383.0 ????
+ns.tempcutoff=373.0 373.0 373.0  
+ns.tempcutoffmax=383.0 383.0 383.0 
 #(xblob,yblob)=center of vapor bubble
 ns.xblob=0.0  
 # 45 degrees: center-substrate=R * sin(pi/2 - theta)=2.83e-4
@@ -211,8 +210,8 @@ ns.prescribe_temperature_outflow=3
 
 ns.lo_bc          = 1 5
 ns.hi_bc          = 1 2
-ns.temperature_lo_bc = 1 5  ???
-ns.temperature_hi_bc = 1 2  ???
+ns.temperature_lo_bc = 1 5  
+ns.temperature_hi_bc = 1 2  
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
