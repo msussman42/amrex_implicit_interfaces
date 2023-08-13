@@ -23,8 +23,9 @@ stop_time =  1000.0  # maximum problem time
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
-geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  8.0 8.0  
+#big domain is 8x8
+geometry.prob_lo   =  1.5 3.5
+geometry.prob_hi   =  3.5 4.5  
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -59,10 +60,10 @@ ns.MOFITERMAX=15
 # 4 CTML
 ns.FSI_flag=0 0 4
 
-# 64x64 for live simulations
-amr.n_cell    = 64 64
-# 3 for live simulations
-amr.max_level = 3
+# 128x64 for live simulations
+amr.n_cell    = 128 64
+# 0 for live simulations
+amr.max_level = 0
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid  ??
 amr.n_error_buf     = 4 4 4 4 4 4  
@@ -70,7 +71,7 @@ amr.grid_eff        = 0.75
 
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
-amr.blocking_factor = 16 16 8 8
+amr.blocking_factor = 8 8 8 8
 amr.space_blocking_factor=1 1 1 1
 amr.time_blocking_factor=1	
 ns.init_shrink    = 1.0      # scale back initial timestep
@@ -113,7 +114,7 @@ mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.5  # abs(g)
 ns.invert_gravity=1  # 0=> gravity points down (or to the left)  
                      # 1=> gravity points up (or to the right)
-ns.gravity_dir=1 # x direction
+ns.gravity_dir=1 # x direction (AMREX_SPACEDIM is the default)
 
 ns.tension        = 0.0 0.0 0.0
 ns.min_velocity_for_dt=10.0 #take into account gravity in horizontal dir.
