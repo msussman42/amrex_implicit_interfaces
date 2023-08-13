@@ -226,6 +226,7 @@ INTEGER_T, dimension(:), allocatable :: klo_active,khi_active
 INTEGER_T, dimension(:), allocatable :: ilo_elem,ihi_elem
 INTEGER_T, dimension(:), allocatable :: jlo_elem,jhi_elem
 INTEGER_T, dimension(:), allocatable :: klo_elem,khi_elem
+INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
 type(FSI_container_type) :: ctml_FSI_container
 ! nsolid,i,j,k,dir
@@ -10139,8 +10140,13 @@ INTEGER_T :: ii,jj,kk
      do kk=klo,khi
       inode=inode+1
       do dir=1,AMREX_SPACEDIM
-       ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
-        FSI(part_id)%NodeForce(dir,inode)
+       if (abs(FSI(part_id)%NodeForce(dir,inode)).le.1.0D+20) then
+        ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
+         FSI(part_id)%NodeForce(dir,inode)
+       else
+        print *,"Force overflow sci_clsvof.F90 10146"
+        stop
+       endif
       enddo
      enddo !kk
      enddo !jj
@@ -10789,7 +10795,6 @@ INTEGER_T :: local_num_nodes_total_grow
 INTEGER_T :: local_num_scalars
 INTEGER_T :: local_num_elements
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
   if ((local_caller_id.eq.caller_initData).or. &
       (local_caller_id.eq.caller_post_restart)) then
@@ -16984,6 +16989,7 @@ logical :: theboss
 #ifdef INCLUDE_FIB
      call tick_fib( &
       ilo,ihi,jlo,jhi,klo,khi, &
+      ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom, &
       CLSVOF_curtime, &  ! t^{n+1}
       CLSVOF_dt, &
       current_step, &
@@ -16995,7 +17001,8 @@ logical :: theboss
        velocity_list(1:ctml_n_bodies,ilo:ihi,jlo:jhi,klo:khi,1:3), &
       FSI_output_container% &
        velocity_list(1:ctml_n_bodies,ilo:ihi,jlo:jhi,klo:khi,1:3), &
-      ctml_frc(1,1,1,1,1:3), &
+      ctml_frc(1:ctml_n_bodies, &
+       ilo_dom:ihi_dom,jlo_dom:jhi_dom,klo_dom:khi_dom,1:3), &
       FSI_input_container% &
        prev_node_list(1:ctml_n_bodies,ilo:ihi,jlo:jhi,klo:khi,1:3), &
       FSI_input_container% &
@@ -17016,7 +17023,9 @@ logical :: theboss
    
 #ifdef INCLUDE_FSH
      call tick_fsh( &
-      ilo,ihi,jlo,jhi,klo,khi,local_num_scalars, &
+      ilo,ihi,jlo,jhi,klo,khi, &
+      local_num_scalars, &
+      ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom, &
       CLSVOF_curtime, &  ! t^{n+1}
       CLSVOF_dt, &
       current_step, &
@@ -17028,7 +17037,8 @@ logical :: theboss
        velocity_list(1:ctml_n_bodies,ilo:ihi,jlo:jhi,klo:khi,1:3), &
       FSI_output_container% &
        velocity_list(1:ctml_n_bodies,ilo:ihi,jlo:jhi,klo:khi,1:3), &
-      ctml_frc(1,1,1,1,1:3), &
+      ctml_frc(1:ctml_n_bodies, &
+       ilo_dom:ihi_dom,jlo_dom:jhi_dom,klo_dom:khi_dom,1:3), &
       FSI_input_container% &
        prev_node_list(1:ctml_n_bodies,ilo:ihi,jlo:jhi,klo:khi,1:3), &
       FSI_input_container% &
