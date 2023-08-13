@@ -13,7 +13,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       integer nt,nnt,md,i,j,k,jtype,itype,jq,jq2,i2,inode(2)
       real*8  ysecIBM,zsecIBM
 !
-      integer  flag,kflag,mk1,mk2,mk3,iadd1,iadd2	
+      integer  flag,kflag,mk1,mk2,mk3,iadd1,iadd2
       character  num*7, filename*52,numbdy*4,numk*4
 
 !
@@ -36,7 +36,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
           write(840,2497)
 2497      format('title = "2d immersed boundary data"')
       endif
-332   format('variables= x,y,z,u,v,w,p,lev,rho,s')
+332   format('variables=x,y,z,u,v,w,p,lev,rho,s,xp,yp,zp,fx,fy,fz')
       write(840,332)
 
       write(840,499) md,ns_ibm_r_fib(i),ns_ibm_r_fib(i)-1
@@ -53,6 +53,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +    ,vibm3_fib(i,j)
      +    ,0.d0,0.d0,0.d0
      +    ,tsibm_fib(i,j)
+     +    ,gx_ibmpre_fib(i,j)
+     +    ,gy_ibmpre_fib(i,j)
+     +    ,gz_ibmpre_fib(i,j)
+     +    ,fk_mass1o_fib(i,j)
+     +    ,fk_mass2o_fib(i,j)
+     +    ,fk_mass3o_fib(i,j)
          else
           write(840,401) 
      +     gx_ibm_massive_fib(i,j)
@@ -63,6 +69,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +    ,0.0
      +    ,0.d0,0.d0,0.d0
      +    ,tsibm_fib(i,j)
+     +    ,gx_ibmpre_fib(i,j)
+     +    ,gy_ibmpre_fib(i,j)
+     +    ,0.0d0
+     +    ,fk_mass1o_fib(i,j)
+     +    ,fk_mass2o_fib(i,j)
+     +    ,0.0d0
          endif
       enddo
       do j=1,ns_ibm_r_fib(i)-1
@@ -88,7 +100,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
           write(840,2498)
 2498      format('title = "2d immersed boundary data"')
       endif
-3321  format('variables= x,y,z,u,v,w,p,lev,rho,s')
+3321  format('variables= x,y,z,u,v,w,p,lev,rho,s,xp,yp,zp,fx,fy,fz')
 
       write(840,3321)
 
@@ -113,6 +125,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm3_fsh(i,jq,j)
      +   ,0.d0,0.d0,0.d0
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,gz_ibmpre_fsh(i,jq,j)
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,fk_mass3o_fsh(i,jq,j)
         else
           write(840,401) 
      +    gx_ibm_massive_fsh(i,jq,j)
@@ -123,6 +141,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,0.0
      +   ,0.d0,0.d0,0.d0
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,0.0d0
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,0.0d0
         endif
       enddo
       if (BoundaryFibShell_fsh(i,1,1) .eq. 3) then
@@ -137,6 +161,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm3_fsh(i,jq,j)
      +   ,0.d0,0.d0,0.d0
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,gz_ibmpre_fsh(i,jq,j)
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,fk_mass3o_fsh(i,jq,j)
         else
           write(840,401) 
      +    gx_ibm_massive_fsh(i,jq,j)
@@ -147,6 +177,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,0.0
      +   ,0.d0,0.d0,0.d0
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,0.0d0
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,0.0d0
         endif
       endif
       enddo
@@ -164,6 +200,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm3_fsh(i,jq,j)
      +   ,0.d0,0.d0,0.d0
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,gz_ibmpre_fsh(i,jq,j)
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,fk_mass3o_fsh(i,jq,j)
         else
           write(840,401) 
      +    gx_ibm_massive_fsh(i,jq,j)
@@ -174,6 +216,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,0.0
      +   ,0.d0,0.d0,0.d0
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,0.0d0
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,0.0d0
         endif
       enddo
       if (BoundaryFibShell_fsh(i,1,1) .eq. 3) then
@@ -190,6 +238,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,aibm2_fsh(i,jq,j)
      +   ,aibm3_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,gz_ibmpre_fsh(i,jq,j)
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,fk_mass3o_fsh(i,jq,j)
         else
           write(840,401) 
      +    gx_ibm_massive_fsh(i,jq,j)
@@ -202,6 +256,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,aibm2_fsh(i,jq,j)
      +   ,0.0
      +   ,tsibm_fsh(i,jq,j)
+     +   ,gx_ibmpre_fsh(i,jq,j)
+     +   ,gy_ibmpre_fsh(i,jq,j)
+     +   ,0.0d0
+     +   ,fk_mass1o_fsh(i,jq,j)
+     +   ,fk_mass2o_fsh(i,jq,j)
+     +   ,0.0d0
         endif
       endif
       endif

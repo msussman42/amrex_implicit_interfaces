@@ -856,6 +856,12 @@ c
      &   gxyz_ibm_massivein_fsh(i,jq,j,klo,1)
         gy_ibmo1_fsh(i,jq,j)= 
      &   gxyz_ibm_massivein_fsh(i,jq,j,klo,2)
+
+        gx_ibm_massive_fsh(i,jq,j)= 
+     &   gxyz_ibm_massivein_fsh(i,jq,j,klo,1)
+        gy_ibm_massive_fsh(i,jq,j)= 
+     &   gxyz_ibm_massivein_fsh(i,jq,j,klo,2)
+
        end do
        end do
 
@@ -870,6 +876,9 @@ c
      &    gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
 
          gz_ibmo1_fsh(i,jq,j)= 
+     &    gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
+
+         gz_ibm_massive_fsh(i,jq,j)= 
      &    gxyz_ibm_massivein_fsh(i,jq,j,klo,3)
         end do
         end do
@@ -1147,8 +1156,14 @@ c rtime = t^{n+1}
       integer i,j,iiter2
       integer ibm_solve,isavesigma
       integer i_glb
+      integer debug_fib
+      integer debug_user
+      integer ntsave_debug
 
 #ifdef INCLUDE_FIB
+ 
+      debug_fib=1
+      ntsave_debug=1
 
       ibm_solve=0
 ! if converged
@@ -1181,6 +1196,9 @@ c rtime = t^{n+1}
           ! gx_ibm_massive_fib data (position) at t^{n}
         gx_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,1)
         gy_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,2)
+          ! gx_ibm_massive_fib data (position) at t^{n}
+        gx_ibm_massive_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,1)
+        gy_ibm_massive_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,2)
 ! j
        end do
 
@@ -1190,6 +1208,7 @@ c rtime = t^{n+1}
          gz_ibmpre_fib(i,j)=prev_gxyz_ibm_massivein_fib(i,j,jlo,klo,3)
          gz_ibm_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,3)
          gz_ibmo1_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,3)
+         gz_ibm_massive_fib(i,j)=gxyz_ibm_massivein_fib(i,j,jlo,klo,3)
         end do
 
        endif
@@ -1259,6 +1278,23 @@ c rtime = t^{n+1}
       delta_t=dt
       time=rtime
       time2=rtime
+
+      if(theboss) then
+
+       if (debug_fib.eq.0) then
+! do nothing
+       else if (debug_fib.eq.1) then
+        call outputstr(nt,ntsave_debug)
+        print *,"debug_fib before r_stang"
+        print *,"press any number then return"
+        read (*,*) debug_user
+       else
+        print *,"debug_fib invalid"
+        stop
+       endif
+
+      endif
+
 !perfrom iteration over structural solver
       do iiter2=1,maxiter
 
@@ -1282,6 +1318,24 @@ c rtime = t^{n+1}
       endif
 
       call r_stang_fib(ibm_solve,monitorON,isavesigma)
+
+
+      if(theboss) then
+
+       if (debug_fib.eq.0) then
+! do nothing
+       else if (debug_fib.eq.1) then
+        call outputstr(nt,ntsave_debug)
+        print *,"debug_fib after r_stang"
+        print *,"press any number then return"
+        read (*,*) debug_user
+       else
+        print *,"debug_fib invalid"
+        stop
+       endif
+
+      endif
+
 
       if(theboss) then
 

@@ -481,6 +481,8 @@ implicit none
 
       REAL_T, PARAMETER :: TANGENT_EPS=1.0D-2
 
+      REAL_T, PARAMETER :: FSI_PRESSURE_FORCE_ONLY=1
+
        !SEM_IMAGE_BC_ALG=1 => use "reflect_odd" for dirichlet,
        !                      use "reflect even" for Neumann
       INTEGER_T, PARAMETER :: SEM_IMAGE_BC_ALG=0

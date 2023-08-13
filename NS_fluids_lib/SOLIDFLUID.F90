@@ -986,8 +986,13 @@
 
           call gridsten_level(xsten,i,j,k,level,nhalf)
           do dir=1,6*num_materials
-           stressdata3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
+           if (FSI_PRESSURE_FORCE_ONLY.eq.1) then
+            stressdata3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
              DRAGCOMP_PSTRESS+dir)
+           else
+            print *,"only FSI_PRESSURE_FORCE_ONLY.eq.1 supported"
+            stop
+           endif
           enddo
           do dir=1,num_materials
            stressflag3D(i,j,k,dir)=drag(D_DECL(i,j,k), &
@@ -1041,8 +1046,13 @@
            enddo
            do dir=1,6
             call stress_index(dir,istress,jstress)
-            stress_2d(istress,jstress)= &
+            if (FSI_PRESSURE_FORCE_ONLY.eq.1) then
+             stress_2d(istress,jstress)= &
                drag(D_DECL(i2d,j2d,k2d),DRAGCOMP_PSTRESS+ibase+dir)
+            else
+             print *,"only FSI_PRESSURE_FORCE_ONLY.eq.1 supported"
+             stop
+            endif
            enddo
            stress_2d(2,1)=stress_2d(1,2)
            stress_2d(3,1)=stress_2d(1,3)
