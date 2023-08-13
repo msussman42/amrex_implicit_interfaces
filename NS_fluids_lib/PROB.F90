@@ -7794,6 +7794,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        enddo
 
+       !in: materialdist_batch
       else if (probtype.eq.220) then
        if (num_materials.ne.3) then
         print *,"num_materials invalid for unimaterial problem"

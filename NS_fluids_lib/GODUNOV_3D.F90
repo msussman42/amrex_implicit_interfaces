@@ -4211,7 +4211,14 @@ stop
         if (abs(delta).ge.(one-0.001)*hx) then
          print *,"in: velmac_override"
          print *,"MAC: displacement exceeds grid cell"
-         print *,"reduce cfl"
+         print *,"parameters to check:"
+         print *,"ns.cfl"
+         print *,"ns.fixed_dt"
+         print *,"ns.fixed_dt_init"
+         print *,"ns.min_velocity_for_dt"
+         print *,"ns.init_shrink"
+         print *,"ns.change_max"
+         print *,"initial velocity"
          print *,"umactemp ",umactemp(D_DECL(i,j,k))
          print *,"delta (u dt) = ",delta
          print *,"hx=    ",hx
