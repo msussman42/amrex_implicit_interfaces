@@ -740,7 +740,11 @@ c
 
 
       subroutine tick_fsh(
-     &      ilo,ihi,jlo,jhi,klo,khi,nscalar
+     &      ilo,ihi,jlo,jhi,klo,khi
+     &     ,nscalar
+     &     ,ilo_dom,ihi_dom
+     &     ,jlo_dom,jhi_dom
+     &     ,klo_dom,khi_dom
      &     ,rtime
      &     ,dt
      &     ,nt
@@ -762,7 +766,9 @@ c
      &       )
       USE HeaderFSI
       implicit none
-      integer ilo,ihi,jlo,jhi,klo,khi,nscalar
+      integer ilo,ihi,jlo,jhi,klo,khi
+      integer nscalar
+      integer ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
       real*8 UIBM123out_fsh(
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,1:3)
@@ -770,7 +776,9 @@ c
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,1:3)
       real*8 uibm123in_fsh(
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,1:3)
-      real*8 FIBM123in_fsh(Nr_IBM_fsh,Nq_IBM_fsh,Ns_IBM_fsh,1,1:3)
+      real*8 FIBM123in_fsh(
+     &  Nr_IBM_fsh,ilo_dom:ihi_dom,jlo_dom:jhi_dom
+     & ,klo_dom:khi_dom,1:3)
       real*8 GXYZ_IBM_MASSIVEout_fsh(
      &  Nr_IBM_fsh,ilo:ihi,jlo:jhi,klo:khi,1:3)
       real*8 GXYZ_IBM_MASSIVEin_fsh(
@@ -801,8 +809,14 @@ c
      &          ,xp2cont(3), outcont(3),outcont2(3)
       real*8 tmpv1val
       real*8 tmpv2val
+      integer debug_fsh
+      integer debug_user
+      integer ntsave_debug
 
 #ifdef INCLUDE_FSH
+
+      debug_fsh=0
+      ntsave_debug=1
 
       if (nscalar.eq.2) then
 ! do nothing
@@ -924,7 +938,19 @@ c
         vibm1_fsh(i,jq,j)=uibm123in_fsh(i,jq,j,klo,1)
         vibm2_fsh(i,jq,j)=uibm123in_fsh(i,jq,j,klo,2)
         fk_mass1o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,1)
+        if (abs(fk_mass1o_fsh(i,jq,j)).le.1.0D+20) then
+!do nothing
+        else
+         print *,"fk_mass1o_fsh overflow tick.F"
+         stop
+        endif
         fk_mass2o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,2)
+        if (abs(fk_mass2o_fsh(i,jq,j)).le.1.0D+20) then
+!do nothing
+        else
+         print *,"fk_mass2o_fsh overflow tick.F"
+         stop
+        endif
        end do
        end do
 
@@ -940,6 +966,12 @@ c
          UIBM3_fsh(i,jq,j)=0.0d0
          vibm3_fsh(i,jq,j)=uibm123in_fsh(i,jq,j,klo,3)
          fk_mass3o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,3)
+         if (abs(fk_mass3o_fsh(i,jq,j)).le.1.0D+20) then
+!do nothing
+         else
+          print *,"fk_mass3o_fsh overflow tick.F"
+          stop
+         endif
         end do
         end do
        endif
@@ -987,6 +1019,23 @@ c
       delta_t=dt
       time=rtime
       time2=rtime
+
+      if(theboss) then
+
+       if (debug_fsh.eq.0) then
+! do nothing
+       else if (debug_fsh.eq.1) then
+        call outputstr(nt,ntsave_debug)
+        print *,"debug_fsh before r_stang"
+        print *,"type go to continue"
+        PAUSE
+       else
+        print *,"debug_fsh invalid"
+        stop
+       endif
+
+      endif
+
 !perfrom iteration over structural solver
       do iiter2=1,maxiter
 
@@ -1013,6 +1062,22 @@ c
       endif
 
       call r_stang_fsh(ibm_solve,monitorON,isavesigma)
+
+      if(theboss) then
+
+       if (debug_fsh.eq.0) then
+! do nothing
+       else if (debug_fsh.eq.1) then
+        call outputstr(nt,ntsave_debug)
+        print *,"debug_fsh after r_stang"
+        print *,"type go to continue"
+        PAUSE
+       else
+        print *,"debug_fsh invalid"
+        stop
+       endif
+
+      endif
 
       if(theboss) then
 
@@ -1108,6 +1173,9 @@ c
 c rtime = t^{n+1}
       subroutine tick_fib(
      &      ilo,ihi,jlo,jhi,klo,khi
+     &     ,ilo_dom,ihi_dom
+     &     ,jlo_dom,jhi_dom
+     &     ,klo_dom,khi_dom
 ! t^{n+1}              
      &     ,rtime
      &     ,dt
@@ -1130,13 +1198,16 @@ c rtime = t^{n+1}
       USE HeaderFSI
       implicit none
       integer ilo,ihi,jlo,jhi,klo,khi
+      integer ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
       real*8 UIBM123out_fib(
      &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
       real*8 prev_uibm123in_fib(
      &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
       real*8 uibm123in_fib(
      &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
-      real*8 FIBM123in_fib(Nr_IBM_fib,Ns_IBM_fib,1,1,1:3)
+      real*8 FIBM123in_fib(
+     &  Nr_IBM_fib,ilo_dom:ihi_dom,jlo_dom:jhi_dom
+     & ,klo_dom:khi_dom,1:3)
       real*8 GXYZ_IBM_MASSIVEout_fib(
      &  Nr_IBM_fib,ilo:ihi,jlo:jhi,klo:khi,1:3)
       real*8 GXYZ_IBM_MASSIVEin_fib(
@@ -1175,7 +1246,7 @@ c rtime = t^{n+1}
       endif
 ! passing old fiber values to pre variables and initialize new variables 
       do i=1,nr_ibm_fib
-
+!FIX ME check ilo_dom etc.
        if ((ilo.le.1-Ns_IBMB_fib).and. 
      &     (ilo.le.0).and.
      &     (ihi.ge.ns_ibm_r_fib(i)+1).and.
@@ -1220,7 +1291,19 @@ c rtime = t^{n+1}
         vibm2_fib(i,j)=uibm123in_fib(i,j,jlo,klo,2)
 ! force
         fk_mass1o_fib(i,j)=FIBM123in_fib(i,j,1,1,1)
+        if (abs(fk_mass1o_fib(i,j)).le.1.0D+20) then
+!do nothing
+        else
+         print *,"fk_mass1 overflow tick.F 1232"
+         stop
+        endif
         fk_mass2o_fib(i,j)=FIBM123in_fib(i,j,1,1,2)
+        if (abs(fk_mass2o_fib(i,j)).le.1.0D+20) then
+!do nothing
+        else
+         print *,"fk_mass2 overflow tick.F 1239"
+         stop
+        endif
        end do
 
        do j=1-Ns_IBMB_fib,ns_ibm_r_fib(i)+Ns_IBMB_fib
@@ -1232,6 +1315,12 @@ c rtime = t^{n+1}
          UIBM3_fib(i,j)=0.0d0
          vibm3_fib(i,j)=uibm123in_fib(i,j,jlo,klo,3)
          fk_mass3o_fib(i,j)=FIBM123in_fib(i,j,1,1,3)
+         if (abs(fk_mass3o_fib(i,j)).le.1.0D+20) then
+!do nothing
+         else
+          print *,"fk_mass3 overflow tick.F 1239"
+          stop
+         endif
         end do
        endif
 
@@ -1286,8 +1375,8 @@ c rtime = t^{n+1}
        else if (debug_fib.eq.1) then
         call outputstr(nt,ntsave_debug)
         print *,"debug_fib before r_stang"
-        print *,"press any number then return"
-        read (*,*) debug_user
+        print *,"type go to continue"
+        PAUSE
        else
         print *,"debug_fib invalid"
         stop
@@ -1319,7 +1408,6 @@ c rtime = t^{n+1}
 
       call r_stang_fib(ibm_solve,monitorON,isavesigma)
 
-
       if(theboss) then
 
        if (debug_fib.eq.0) then
@@ -1327,8 +1415,8 @@ c rtime = t^{n+1}
        else if (debug_fib.eq.1) then
         call outputstr(nt,ntsave_debug)
         print *,"debug_fib after r_stang"
-        print *,"press any number then return"
-        read (*,*) debug_user
+        print *,"type go to continue"
+        PAUSE
        else
         print *,"debug_fib invalid"
         stop

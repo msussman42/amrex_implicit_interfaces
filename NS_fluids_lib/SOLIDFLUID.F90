@@ -1086,8 +1086,13 @@
 
            do dir=1,6
             call stress_index(dir,istress,jstress)
-            stressdata3D(i,j,k,ibase+dir)= &
+            if (abs(stress_3d(istress,jstress)).le.1.0D+20) then
+             stressdata3D(i,j,k,ibase+dir)= &
                stress_3d(istress,jstress)
+            else
+             print *,"stress_3d overflow SOLIDFLUID.F90 1093"
+             stop
+            endif
            enddo
 
            stressflag3D(i,j,k,im_local)= &
