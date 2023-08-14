@@ -848,7 +848,18 @@ c
      &     ) then
 !       do nothing
        else
-        print *,"ilo,ihi,jlo,jhi,klo,khi invalid"
+        print *,"ilo,ihi,jlo,jhi,klo, or khi invalid"
+        stop
+       endif
+
+       if ((ilo_dom.eq.1).and. 
+     &     (ihi_dom.ge.nq_ibm_r_fsh(i)).and.
+     &     (jlo_dom.eq.1).and.
+     &     (jhi_dom.ge.ns_ibm_r_fsh(i)).and.
+     &     (klo_dom.eq.1).and.(khi_dom.eq.1)) then
+!       do nothing
+       else
+        print *,"ilo_dom,ihi_dom,..., or khi_dom invalid"
         stop
        endif
 
@@ -1246,14 +1257,25 @@ c rtime = t^{n+1}
       endif
 ! passing old fiber values to pre variables and initialize new variables 
       do i=1,nr_ibm_fib
-!FIX ME check ilo_dom etc.
        if ((ilo.le.1-Ns_IBMB_fib).and. 
      &     (ilo.le.0).and.
      &     (ihi.ge.ns_ibm_r_fib(i)+1).and.
-     &     (ihi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib)) then
+     &     (ihi.ge.ns_ibm_r_fib(i)+Ns_IBMB_fib).and. 
+     &     (jlo.eq.1).and.(jhi.eq.1).and.
+     &     (klo.eq.1).and.(khi.eq.1)) then
 !       do nothing
        else
-        print *,"ilo,ihi,jlo,jhi,klo,khi invalid"
+        print *,"ilo,ihi,jlo,jhi,klo, or khi invalid"
+        stop
+       endif
+
+       if ((ilo_dom.eq.1).and. 
+     &     (ihi_dom.ge.ns_ibm_r_fib(i)).and.
+     &     (jlo_dom.eq.1).and.(jhi_dom.eq.1).and.
+     &     (klo_dom.eq.1).and.(khi_dom.eq.1)) then
+!       do nothing
+       else
+        print *,"ilo_dom,ihi_dom,..., or khi_dom invalid"
         stop
        endif
 
