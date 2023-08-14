@@ -1038,8 +1038,7 @@ c
        else if (debug_fsh.eq.1) then
         call outputstr(nt,ntsave_debug)
         print *,"debug_fsh before r_stang"
-        print *,"type go to continue"
-        PAUSE
+        call SOLIDFLUID_F90_KEYBOARD()
        else
         print *,"debug_fsh invalid"
         stop
@@ -1081,8 +1080,7 @@ c
        else if (debug_fsh.eq.1) then
         call outputstr(nt,ntsave_debug)
         print *,"debug_fsh after r_stang"
-        print *,"type go to continue"
-        PAUSE
+        call SOLIDFLUID_F90_KEYBOARD()
        else
         print *,"debug_fsh invalid"
         stop
@@ -1397,8 +1395,7 @@ c rtime = t^{n+1}
        else if (debug_fib.eq.1) then
         call outputstr(nt,ntsave_debug)
         print *,"debug_fib before r_stang"
-        print *,"type go to continue"
-        PAUSE
+        call SOLIDFLUID_F90_KEYBOARD()
        else
         print *,"debug_fib invalid"
         stop
@@ -1437,8 +1434,7 @@ c rtime = t^{n+1}
        else if (debug_fib.eq.1) then
         call outputstr(nt,ntsave_debug)
         print *,"debug_fib after r_stang"
-        print *,"type go to continue"
-        PAUSE
+        call SOLIDFLUID_F90_KEYBOARD()
        else
         print *,"debug_fib invalid"
         stop
