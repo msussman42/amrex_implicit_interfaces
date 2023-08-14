@@ -21,6 +21,20 @@
 #include "EXTRAP_COMP.H"
 #include "SOLIDFLUID_F.H"
 
+      subroutine SOLIDFLUID_F90_KEYBOARD()
+      use iso_c_binding
+      IMPLICIT NONE
+
+      interface 
+      subroutine main_cpp_keyboard() bind(c)
+      end subroutine main_cpp_keyboard
+      end interface 
+
+      call main_cpp_keyboard()
+
+      return
+      end subroutine SOLIDFLUID_F90_KEYBOARD
+
       module solidfluid_module
 
       contains

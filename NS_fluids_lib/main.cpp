@@ -10,6 +10,7 @@
 #include <AMReX_AmrCore.H>
 
 extern "C" void cpp_reduce_real_sum(int n,double sync_data[]);
+extern "C" void main_cpp_keyboard();
 
 using namespace amrex;
 
@@ -19,6 +20,15 @@ extern void fortran_parameters();
 extern void fortran_deallocate_parameters();
 
 }
+
+void main_cpp_keyboard() {
+
+  std::cout << 
+   "press any number then enter (called from SOLIDFLUID_F90_KEYBOARD) \n";
+  int n_input;
+  std::cin >> n_input;
+
+} //end subroutine main_cpp_keyboard
 
 void cpp_reduce_real_sum(int n,double sync_data[]) {
 
