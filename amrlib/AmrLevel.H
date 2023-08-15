@@ -119,7 +119,9 @@ public:
     //
     virtual void writePlotFile (
      int do_plot,int do_slice,
-     int SDC_outer_sweeps_in,int slab_step_in) = 0;
+     int SDC_outer_sweeps_in,
+     int slab_step_in,
+     int divu_outer_sweeps_in) = 0;
 
     //
     // Write current state to checkpoint file.

@@ -261,7 +261,9 @@ public:
 
     virtual void writePlotFile (
      int do_plot,int do_slice,
-     int SDC_outer_sweeps_in,int slab_step_in);
+     int SDC_outer_sweeps_in,
+     int slab_step_in,
+     int divu_outer_sweeps_in);
 
     void debug_ParallelCopy();
 

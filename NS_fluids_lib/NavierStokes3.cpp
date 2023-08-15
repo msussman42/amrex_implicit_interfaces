@@ -1821,7 +1821,11 @@ void NavierStokes::nucleation_code_segment(
 
  if (1==0) {
   int basestep_debug=nStep();
-  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+  parent->writeDEBUG_PlotFile(
+    basestep_debug,
+    SDC_outer_sweeps,
+    slab_step,
+    divu_outer_sweeps);
   std::cout << "press any number then enter: before nucleate_bubbles\n";
   int n_input;
   std::cin >> n_input;
@@ -1903,7 +1907,11 @@ void NavierStokes::nucleation_code_segment(
 
  if (1==0) {
   int basestep_debug=nStep();
-  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+  parent->writeDEBUG_PlotFile(
+    basestep_debug,
+    SDC_outer_sweeps,
+    slab_step,
+    divu_outer_sweeps);
   std::cout << "press any number then enter: after nucleate_bubbles\n";
   int n_input;
   std::cin >> n_input;
@@ -2135,7 +2143,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if (step_through_data==1) {
        int basestep_debug=nStep();
-       parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+       parent->writeDEBUG_PlotFile(
+	 basestep_debug,
+	 SDC_outer_sweeps,
+	 slab_step,
+	 divu_outer_sweeps);
        std::cout << "press any number then enter: after nonlinear_advection\n";
        std::cout << "timeSEM= " << timeSEM << '\n';
        std::cout << "dtSEM= " << dtSEM << '\n';
@@ -2383,7 +2395,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     if (1==0) {
      int basestep_debug=nStep();
-     parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+     parent->writeDEBUG_PlotFile(
+	basestep_debug,
+	SDC_outer_sweeps,
+	slab_step,
+	divu_outer_sweeps);
      std::cout << "press any number then enter: before make_physics_varsALL\n";
      int n_input;
      std::cin >> n_input;
@@ -2410,7 +2426,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     if (1==0) {
      int basestep_debug=nStep();
-     parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+     parent->writeDEBUG_PlotFile(
+       basestep_debug,
+       SDC_outer_sweeps,
+       slab_step,
+       divu_outer_sweeps);
      std::cout << "press any number then enter: after make_physics_varsALL\n";
      int n_input;
      std::cin >> n_input;
@@ -2696,7 +2716,11 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
        if (1==0) {
         int basestep_debug=nStep();
-        parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+        parent->writeDEBUG_PlotFile(
+	  basestep_debug,
+	  SDC_outer_sweeps,
+	  slab_step,
+	  divu_outer_sweeps);
        }
 
         //NavierStokes::Mass_Energy_Sources_SinksALL declared in 
@@ -8843,7 +8867,11 @@ void NavierStokes::multiphase_project(int project_option) {
 
   if (1==0) {
    int basestep_debug=nStep()+1;
-   parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+   parent->writeDEBUG_PlotFile(
+     basestep_debug,
+     SDC_outer_sweeps,
+     slab_step,
+     divu_outer_sweeps);
    std::cout << "press any number then enter AFTER GRAV\n";
    int n_input;
    std::cin >> n_input;
