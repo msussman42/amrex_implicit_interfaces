@@ -104,7 +104,11 @@ public:
     std::ostream& DataLog (int i);
     //
 
-    void writeDEBUG_PlotFile(int num,int SDC_outer_sweeps_in,int slab_step_in);
+    void writeDEBUG_PlotFile(
+      int num,
+      int SDC_outer_sweeps_in,
+      int slab_step_in,
+      int divu_outer_sweeps_in);
 
     void print_cells_advanced();
 
@@ -120,7 +124,9 @@ protected:
     //
     void writePlotFile (
      int do_plot,int do_slice,
-     int SDC_outer_sweeps_in,int slab_step_in);
+     int SDC_outer_sweeps_in,
+     int slab_step_in,
+     int divu_outer_sweeps_in);
     //
     // Initialize grid hierarchy.
     //

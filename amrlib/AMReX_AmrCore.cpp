@@ -533,9 +533,12 @@ AmrCore::~AmrCore ()
      int do_slice=((slice_int>0) ? 1 : 0);
      int SDC_outer_sweeps=0;
      int slab_step=Time_blockingFactor()-1;
+     int divu_outer_sweeps=0;
      writePlotFile(
       do_plot,do_slice,
-      SDC_outer_sweeps,slab_step);
+      SDC_outer_sweeps,
+      slab_step,
+      divu_outer_sweeps);
     }
 
     levelbld->variableCleanUp();
@@ -611,7 +614,11 @@ AmrCore::okToContinue () noexcept
 }
 
 void
-AmrCore::writeDEBUG_PlotFile(int num,int SDC_outer_sweeps,int slab_step) {
+AmrCore::writeDEBUG_PlotFile(
+  int num,
+  int SDC_outer_sweeps,
+  int slab_step,
+  int divu_outer_sweeps) {
 
  if (num>=0) {
   //do nothing
@@ -622,21 +629,28 @@ AmrCore::writeDEBUG_PlotFile(int num,int SDC_outer_sweeps,int slab_step) {
  int do_slice=((slice_int>0) ? 1 : 0);
  writePlotFile(
    do_plot,do_slice,
-   SDC_outer_sweeps,slab_step);
+   SDC_outer_sweeps,
+   slab_step,
+   divu_outer_sweeps);
 
 }
 
 void
-AmrCore::writePlotFile (int do_plot,int do_slice,
-                    int SDC_outer_sweeps,int slab_step) {
+AmrCore::writePlotFile (
+  int do_plot,int do_slice,
+  int SDC_outer_sweeps,
+  int slab_step,
+  int divu_outer_sweeps) {
 
  if ((do_plot==1)||
      ((do_plot==0)&&(do_slice==1))) {
 
    for (int k(0); k <= finest_level; ++k) {
     amr_level[k]->writePlotFile(
-	do_plot,do_slice,
-        SDC_outer_sweeps,slab_step);
+      do_plot,do_slice,
+      SDC_outer_sweeps,
+      slab_step,
+      divu_outer_sweeps);
    }
 
  } else if ((do_plot==0)&&(do_slice==0)) {
@@ -795,24 +809,24 @@ AmrCore::AMR_checkInput ()
 void
 AmrCore::init (Real strt_time, Real stop_time) {
 
-    if (!restart_file.empty() && restart_file != "init")
-    {
-        restart(restart_file);
-    }
-    else
-    {
-        initialInit(strt_time,stop_time);
-        checkPoint();
-        if (plot_int > 0 || plot_per > 0) {
-         int do_plot=1;
-         int do_slice=((slice_int>0) ? 1 : 0);
-         int SDC_outer_sweeps=0;
-         int slab_step=Time_blockingFactor()-1;
-         writePlotFile(
-          do_plot,do_slice,
-          SDC_outer_sweeps,slab_step);
-        }
-    }
+ if (!restart_file.empty() && restart_file != "init") {
+  restart(restart_file);
+ } else {
+  initialInit(strt_time,stop_time);
+  checkPoint();
+  if (plot_int > 0 || plot_per > 0) {
+   int do_plot=1;
+   int do_slice=((slice_int>0) ? 1 : 0);
+   int SDC_outer_sweeps=0;
+   int slab_step=Time_blockingFactor()-1;
+   int divu_outer_sweeps=0;
+   writePlotFile(
+    do_plot,do_slice,
+    SDC_outer_sweeps,
+    slab_step,
+    divu_outer_sweeps);
+  }
+ }
 }
 
 void
@@ -1390,9 +1404,12 @@ AmrCore::timeStep (Real time,
   int do_slice=((slice_int>0) ? 1 : 0);
   int SDC_outer_sweeps=0;
   int slab_step=Time_blockingFactor()-1;
+  int divu_outer_sweeps=0;
   writePlotFile(
    do_plot,do_slice,
-   SDC_outer_sweeps,slab_step);
+   SDC_outer_sweeps,
+   slab_step,
+   divu_outer_sweeps);
  }
 
  for (int level=0;level<=finest_level;level++) {
@@ -1611,13 +1628,17 @@ AmrCore::coarseTimeStep (Real stop_time)
      do_slice=1;
     
     if ((do_plot==1)||(do_slice==1)) { 
-     if (do_plot==1)
+     if (do_plot==1) {
       last_plotfile = level_steps[0];
+     }
      int SDC_outer_sweeps=0;
      int slab_step=Time_blockingFactor()-1;
+     int divu_outer_sweeps=0;
      writePlotFile(
       do_plot,do_slice,
-      SDC_outer_sweeps,slab_step);
+      SDC_outer_sweeps,
+      slab_step,
+      divu_outer_sweeps);
     }
 
     if (to_stop)

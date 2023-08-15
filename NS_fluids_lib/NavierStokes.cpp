@@ -20574,14 +20574,14 @@ void
 NavierStokes::writePlotFile (
   int do_plot,int do_slice,
   int SDC_outer_sweeps_in,
-  int slab_step_in) {
+  int slab_step_in,
+  int divu_outer_sweeps_in) {
 
  std::string path1="./temptecplot";
  UtilCreateDirectoryDestructive(path1);
 
  std::string local_caller_string="writePlotFile";
 
- FIX ME THIS OVERWRITES ALL THE TIME STEPPING STUFF
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
 
@@ -20590,11 +20590,18 @@ NavierStokes::writePlotFile (
      (SDC_outer_sweeps<ns_time_order)) {
   // do nothing
  } else
-  amrex::Error("SDC_outer_sweeps invalid");
+  amrex::Error("SDC_outer_sweeps invalid in writePlotFile");
 
  slab_step=slab_step_in; 
 
  SDC_setup_step();
+
+ divu_outer_sweeps=divu_outer_sweeps_in;
+ if ((divu_outer_sweeps>=0)&&
+     (divu_outer_sweeps<num_divu_outer_sweeps)) {
+  // do nothing
+ } else
+  amrex::Error("divu_outer_sweeps invalid in writePlotFile");
 
   // metrics_dataALL
   // MASKCOEF_MF
@@ -21531,7 +21538,6 @@ NavierStokes::volWgtSumALL(
  VOF_Recon_ALL(1,cur_time_slab,update_flag,
    init_vof_prev_time); 
 
- int project_option=SOLVETYPE_INITPROJ;
   // need to initialize viscosity and density temporary 
   // variables.
   // in: volWgtSumALL
@@ -21558,7 +21564,7 @@ NavierStokes::volWgtSumALL(
 
  if (fast_mode==0) {
   //make_physics_varsALL calls "init_gradu_tensor_and_material_visc_ALL"
-  make_physics_varsALL(project_option,local_caller_string);
+  make_physics_varsALL(SOLVETYPE_INITPROJ,local_caller_string);
  } else if (fast_mode==1) {
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //responsibility of caller to issue commands,
@@ -21962,7 +21968,7 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  } else
   amrex::Error("finest_level invalid");
 
-  // init VOLUME_MF and AREA_MF
+ //init VOLUME_MF and AREA_MF; metrics_dataALL is declared in NavierStokes2.cpp
  metrics_dataALL(1);
 
 //note: fort_initgridmap is called from:
@@ -22037,8 +22043,6 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  } else
   amrex::Error("local_caller_string invalid 22091");
 	
- int project_option=SOLVETYPE_INITPROJ; 
-
   //output:SLOPE_RECON_MF
  VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
   init_vof_prev_time);
@@ -22052,12 +22056,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 		  renormalize_only,
 		  local_truncate,
 		  local_caller_string);
-  project_option=SOLVETYPE_INITPROJ;
 
  } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile
-
-  project_option=SOLVETYPE_INITPROJ;
 
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
   // called from post_restart
@@ -22070,12 +22071,11 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 		   local_truncate,
 		   local_caller_string);
   }
-  project_option=SOLVETYPE_INITPROJ;  // initial project
 
  } else
   amrex::Error("local_caller_string invalid 22125");
 
- make_physics_varsALL(project_option,local_caller_string);
+ make_physics_varsALL(SOLVETYPE_INITPROJ,local_caller_string);
  delete_array(CELLTENSOR_MF);
  delete_array(FACETENSOR_MF);
 
@@ -22199,7 +22199,7 @@ NavierStokes::post_init_state () {
   amrex::Error("is_zalesak() invalid");
 
   // unew^{f} = unew^{c->f}
-  // in post_init_state (project_option==SOLVETYPE_INITPROJ)
+  // in post_init_state 
   // if project_option==SOLVETYPE_INITPROJ, then the velocity in the ice
   // is overwritten with a projected rigid body velocity.
  operation_flag=OP_UNEW_CELL_TO_MAC;
@@ -22217,7 +22217,11 @@ NavierStokes::post_init_state () {
 
  if (step_through_data==1) {
   int basestep_debug=nStep();
-  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+  parent->writeDEBUG_PlotFile(
+    basestep_debug,
+    SDC_outer_sweeps,
+    slab_step,
+    divu_outer_sweeps);
   std::cout << "press any number then enter (prior post_init_pressure) \n";
   int n_input;
   std::cin >> n_input;
@@ -22312,7 +22316,11 @@ NavierStokes::post_init_state () {
 
  if (step_through_data==1) {
   int basestep_debug=nStep();
-  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
+  parent->writeDEBUG_PlotFile(
+    basestep_debug,
+    SDC_outer_sweeps,
+    slab_step,
+    divu_outer_sweeps);
   std::cout << "press any number then enter: post_init_state\n";
   int n_input;
   std::cin >> n_input;
