@@ -1963,6 +1963,11 @@
        endif
       enddo ! tilenum=1,tile_dim
 
+       !in 3d: xmap3D(dir)=dir
+       !in 2d: if (xmap3D(dir).eq.0) then "dir" is the thin coordinate.
+       !       if (xmap3D(dir).eq.1) then "1" (2d grid) is mapped to "dir"
+       !       if (xmap3D(dir).eq.2) then "2" (2d grid) is mapped to "dir"
+       !       dir=1..3
       call init_3D_map(xmap3D,xslice3D,problo3D,probhi3D,dx_max_level)
 
       if (SDIM.eq.3) then
@@ -2023,7 +2028,7 @@
                         level_node_data(tid,partid,tilenum)%  &
                         NodeData)
             else
-             print *,"local_nnodes invalid"
+             print *,"local_nnodes invalid: ",local_nnodes
              stop
             endif
            enddo ! tilenum
@@ -2035,7 +2040,8 @@
           deallocate(contain_elem(lev77)%level_elem_data)
           deallocate(contain_elem(lev77)%level_node_data)
          enddo ! tid=1,nthread_parm
-        else if (contain_elem(lev77)%max_num_tiles_on_thread3D_proc.eq.0) then
+        else if &
+         (contain_elem(lev77)%max_num_tiles_on_thread3D_proc.eq.0) then
          ! do nothing
         else
          print *,"max_num_tiles_on_thread3D_proc invalid"
@@ -2144,7 +2150,7 @@
              (FSI_flag(im_part).eq.FSI_ICE_NODES_INIT).or. & 
              (FSI_flag(im_part).eq.FSI_FLUID_NODES_INIT)) then 
           call CLSVOF_FILLCONTAINER(lev77,sci_max_level,nthread_parm, &
-           dx3D,partid,im_part,cur_time,dt)
+           dx3D,partid,im_part,cur_time,dt,xmap3D)
          else if (FSI_flag(im_part).eq.FSI_PRESCRIBED_PROBF90) then 
           ! do nothing
          else
