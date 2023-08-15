@@ -51,7 +51,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +    ,vibm1_fib(i,j)
      +    ,vibm2_fib(i,j)
      +    ,vibm3_fib(i,j)
-     +    ,0.d0,0.d0,0.d0
+     +    ,0.d0,0.d0
+     +    ,ds_ibm_fib(i,j)
      +    ,tsibm_fib(i,j)
      +    ,gx_ibmpre_fib(i,j)
      +    ,gy_ibmpre_fib(i,j)
@@ -67,7 +68,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +    ,vibm1_fib(i,j)
      +    ,vibm2_fib(i,j)
      +    ,0.0
-     +    ,0.d0,0.d0,0.d0
+     +    ,0.d0,0.d0
+     +    ,ds_ibm_fib(i,j)
      +    ,tsibm_fib(i,j)
      +    ,gx_ibmpre_fib(i,j)
      +    ,gy_ibmpre_fib(i,j)
@@ -123,7 +125,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm1_fsh(i,jq,j)
      +   ,vibm2_fsh(i,jq,j)
      +   ,vibm3_fsh(i,jq,j)
-     +   ,0.d0,0.d0,0.d0
+     +   ,0.d0,0.d0
+     +   ,ds_ibm_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
      +   ,gx_ibmpre_fsh(i,jq,j)
      +   ,gy_ibmpre_fsh(i,jq,j)
@@ -139,7 +142,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm1_fsh(i,jq,j)
      +   ,vibm2_fsh(i,jq,j)
      +   ,0.0
-     +   ,0.d0,0.d0,0.d0
+     +   ,0.d0,0.d0
+     +   ,ds_ibm_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
      +   ,gx_ibmpre_fsh(i,jq,j)
      +   ,gy_ibmpre_fsh(i,jq,j)
@@ -159,7 +163,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm1_fsh(i,jq,j)
      +   ,vibm2_fsh(i,jq,j)
      +   ,vibm3_fsh(i,jq,j)
-     +   ,0.d0,0.d0,0.d0
+     +   ,0.d0,0.d0
+     +   ,ds_ibm_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
      +   ,gx_ibmpre_fsh(i,jq,j)
      +   ,gy_ibmpre_fsh(i,jq,j)
@@ -175,7 +180,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm1_fsh(i,jq,j)
      +   ,vibm2_fsh(i,jq,j)
      +   ,0.0
-     +   ,0.d0,0.d0,0.d0
+     +   ,0.d0,0.d0
+     +   ,ds_ibm_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
      +   ,gx_ibmpre_fsh(i,jq,j)
      +   ,gy_ibmpre_fsh(i,jq,j)
@@ -198,7 +204,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm1_fsh(i,jq,j)
      +   ,vibm2_fsh(i,jq,j)
      +   ,vibm3_fsh(i,jq,j)
-     +   ,0.d0,0.d0,0.d0
+     +   ,0.d0,0.d0
+     +   ,ds_ibm_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
      +   ,gx_ibmpre_fsh(i,jq,j)
      +   ,gy_ibmpre_fsh(i,jq,j)
@@ -214,7 +221,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,vibm1_fsh(i,jq,j)
      +   ,vibm2_fsh(i,jq,j)
      +   ,0.0
-     +   ,0.d0,0.d0,0.d0
+     +   ,0.d0,0.d0
+     +   ,ds_ibm_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
      +   ,gx_ibmpre_fsh(i,jq,j)
      +   ,gy_ibmpre_fsh(i,jq,j)
@@ -254,7 +262,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      +   ,0.0
      +   ,aibm1_fsh(i,jq,j)
      +   ,aibm2_fsh(i,jq,j)
-     +   ,0.0
+     +   ,ds_ibm_fsh(i,jq,j)
      +   ,tsibm_fsh(i,jq,j)
      +   ,gx_ibmpre_fsh(i,jq,j)
      +   ,gy_ibmpre_fsh(i,jq,j)

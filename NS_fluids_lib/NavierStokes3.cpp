@@ -2134,9 +2134,20 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       nonlinear_advection(local_caller_string);
 
       if (step_through_data==1) {
-       int nsteps_local=0;
-       parent->writeDEBUG_PlotFile(nsteps_local,SDC_outer_sweeps,slab_step);
+       int basestep_debug=nStep();
+       parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
        std::cout << "press any number then enter: after nonlinear_advection\n";
+       std::cout << "timeSEM= " << timeSEM << '\n';
+       std::cout << "dtSEM= " << dtSEM << '\n';
+       std::cout << "divu_outer_sweeps= " << divu_outer_sweeps << '\n';
+       std::cout << "local_num_divu_outer_sweeps= " << 
+	       local_num_divu_outer_sweeps << '\n';
+       std::cout << "num_divu_outer_sweeps= " << 
+	       num_divu_outer_sweeps << '\n';
+       std::cout << "slab_step= " << 
+	       slab_step << '\n';
+       std::cout << "SDC_outer_sweeps= " << 
+	       SDC_outer_sweeps << '\n';
        int n_input;
        std::cin >> n_input;
       }
