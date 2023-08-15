@@ -61,7 +61,7 @@ ns.MOFITERMAX=15
 ns.FSI_flag=0 0 4
 
 # 128x64 for live simulations
-amr.n_cell    = 128 64
+amr.n_cell    = 64 32
 # 0 for live simulations
 amr.max_level = 0
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -76,7 +76,7 @@ amr.space_blocking_factor=1 1 1 1
 amr.time_blocking_factor=1	
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.enable_spectral=0
-ns.step_through_data=0
+ns.step_through_data=1
 amr.check_int       = 100000  # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 1

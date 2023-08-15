@@ -3321,7 +3321,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  else if (FSI_mesh_type%NumNodes.eq.0) then
   ! do nothing
  else
-  print *,"NumNodes invalid"
+  print *,"NumNodes invalid in post_process_nodes_elements"
   stop
  endif
 
@@ -11597,7 +11597,7 @@ end function vel_valid
 
 
 subroutine check_overlap(part_id,ielem,time,minnode,maxnode, &
- tid,tilenum,dx3D,lev77,interior_flag,overlap,isweep)
+ tid,tilenum,dx3D,lev77,interior_flag,overlap,isweep,xmap3D)
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: part_id
@@ -11611,6 +11611,7 @@ REAL_T, INTENT(in) :: time
 REAL_T, INTENT(in) :: dx3D(3)
 REAL_T, INTENT(in) :: minnode(3)
 REAL_T, INTENT(in) :: maxnode(3)
+INTEGER_T, INTENT(in) :: xmap3D(3)
 INTEGER_T local_nelems
 INTEGER_T dir
 INTEGER_T tilelo,tilehi
@@ -11618,6 +11619,17 @@ REAL_T xlo,xhi
 INTEGER_T local_iband
 REAL_T local_max_side
 REAL_T local_buffer(3)
+INTEGER_T, PARAMETER :: debug_overlap_element=0
+
+ do dir=1,3
+  if ((xmap3D(dir).ge.0).and. &
+      (xmap3D(dir).le.3)) then
+   ! do nothing
+  else
+   print *,"xmap3D invalid"
+   stop
+  endif
+ enddo
 
  if (lev77.lt.1) then
   print *,"lev77 invalid"
@@ -11627,6 +11639,12 @@ REAL_T local_buffer(3)
   print *,"part_id invalid"
   stop
  endif
+
+ if (debug_overlap_element.eq.1) then
+  print *,"debug_overlap_element"
+  print *,"part_id,ielem,tid,tilenum ",part_id,ielem,tid,tilenum
+ endif
+
  local_iband=FSI(part_id)%bounding_box_ngrow
  local_max_side=FSI(part_id)%max_side_len_refined
  if ((local_iband.eq.BoundingBoxRadCell).and. &
@@ -11640,7 +11658,7 @@ REAL_T local_buffer(3)
  endif
 
  if (ielem.le.0) then
-  print *,"ielem invalid"
+  print *,"ielem invalid in check_overlap"
   stop
  endif
 
@@ -11671,30 +11689,43 @@ REAL_T local_buffer(3)
   overlap=1
   interior_flag=1
   do dir=1,3
-   xlo=contain_elem(lev77)%xlo3D(tid,tilenum,dir) 
-   tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
-   tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
-   xhi=xlo+dx3D(dir)*(tilehi-tilelo+1)
-   if (xhi.gt.xlo) then
+   if ((xmap3D(dir).ge.1).and. &
+       (xmap3D(dir).le.3)) then
+    xlo=contain_elem(lev77)%xlo3D(tid,tilenum,dir) 
+    tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
+    tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
+    xhi=xlo+dx3D(dir)*(tilehi-tilelo+1)
+    if (xhi.gt.xlo) then
+     ! do nothing
+    else
+     print *,"xhi.le.xlo in check_overlap"
+     stop
+    endif
+    if (maxnode(dir).lt.xlo-local_buffer(dir)) then
+     overlap=0
+    endif
+    if (minnode(dir).gt.xhi+local_buffer(dir)) then
+     overlap=0
+    endif
+    if ((minnode(dir).lt.xlo+local_buffer(dir)).or. &
+        (maxnode(dir).gt.xhi-local_buffer(dir))) then
+     interior_flag=0
+    endif
+    if (minnode(dir).le.maxnode(dir)) then
+     ! do nothing
+    else
+     print *,"minnode(dir).gt.maxnode(dir) in check_overlap"
+     stop
+    endif
+    if (debug_overlap_element.eq.1) then
+     print *,"dir,ielem,xlo,xhi,tilelo,tilehi,minnode,maxnode,local_buffer ", &
+      dir,ielem,xlo,xhi,tilelo,tilehi,minnode(dir),maxnode(dir), &
+      local_buffer(dir)
+    endif
+   else if (xmap3D(dir).eq.0) then
     ! do nothing
    else
-    print *,"xhi.le.xlo"
-    stop
-   endif
-   if (maxnode(dir).lt.xlo-local_buffer(dir)) then
-    overlap=0
-   endif
-   if (minnode(dir).gt.xhi+local_buffer(dir)) then
-    overlap=0
-   endif
-   if ((minnode(dir).lt.xlo+local_buffer(dir)).or. &
-       (maxnode(dir).gt.xhi-local_buffer(dir))) then
-    interior_flag=0
-   endif
-   if (minnode(dir).le.maxnode(dir)) then
-    ! do nothing
-   else
-    print *,"minnode(dir).gt.maxnode(dir)"
+    print *,"xmap3D invalid"
     stop
    endif
   enddo ! dir=1..3
@@ -11733,7 +11764,10 @@ end subroutine check_overlap
 
 subroutine check_overlap_nodeBIG(part_id,inode,time, &
  minnode, &
- tid,tilenum,dx3D,lev77,overlap)
+ tid,tilenum, &
+ dx3D,lev77, &
+ overlap, &
+ xmap3D)
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: part_id
@@ -11744,10 +11778,23 @@ INTEGER_T, INTENT(out) :: overlap
 REAL_T, INTENT(in) :: time
 REAL_T, INTENT(in) :: dx3D(3)
 REAL_T, INTENT(in) :: minnode(3)
+INTEGER_T, INTENT(in) :: xmap3D(3)
 INTEGER_T local_nnodes
 INTEGER_T dir
 INTEGER_T tilelo,tilehi
 REAL_T xlo,xhi
+INTEGER_T, PARAMETER :: debug_overlap_node=0
+
+
+ do dir=1,3
+  if ((xmap3D(dir).ge.0).and. &
+      (xmap3D(dir).le.3)) then
+   ! do nothing
+  else
+   print *,"xmap3D invalid"
+   stop
+  endif
+ enddo
 
  if (lev77.lt.1) then
   print *,"lev77 invalid"
@@ -11756,6 +11803,11 @@ REAL_T xlo,xhi
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
   stop
+ endif
+
+ if (debug_overlap_node.eq.1) then
+  print *,"debug_overlap_node"
+  print *,"part_id,inode,tid,tilenum ",part_id,inode,tid,tilenum
  endif
 
  if ((inode.ge.1).and. &
@@ -11786,37 +11838,45 @@ REAL_T xlo,xhi
 
    overlap=1
    do dir=1,3
-    xlo=contain_elem(lev77)%xlo3D(tid,tilenum,dir) 
-    tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
-    tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
-    xhi=xlo+dx3D(dir)*(tilehi-tilelo+1)
-    if (xhi.gt.xlo) then
+    if ((xmap3D(dir).ge.1).and. &
+        (xmap3D(dir).le.3)) then
+     xlo=contain_elem(lev77)%xlo3D(tid,tilenum,dir) 
+     tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
+     tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
+     xhi=xlo+dx3D(dir)*(tilehi-tilelo+1)
+     if (xhi.gt.xlo) then
+      ! do nothing
+     else
+      print *,"xhi.le.xlo"
+      stop
+     endif
+     if (minnode(dir).lt.xlo) then
+      overlap=0
+     endif
+     if (minnode(dir).gt.xhi) then
+      overlap=0
+     endif
+     if (debug_overlap_node.eq.1) then
+      print *,"dir,inode,xlo,xhi,tilelo,tilehi,xnode ", &
+       dir,inode,xlo,xhi,tilelo,tilehi,minnode(dir)
+     endif
+    else if (xmap3D(dir).eq.0) then
      ! do nothing
     else
-     print *,"xhi.le.xlo"
+     print *,"xmap3D invalid"
      stop
-    endif
-    if (minnode(dir).lt.xlo) then
-     overlap=0
-    endif
-    if (minnode(dir).gt.xhi) then
-     overlap=0
-    endif
-    if (1.eq.0) then
-     print *,"dir,inode,xlo,xhi,tilelo,tilehi,xnode ", &
-      dir,inode,xlo,xhi,tilelo,tilehi,minnode(dir)
     endif
    enddo ! dir=1..3
    if (overlap.eq.1) then
     local_nnodes=contain_elem(lev77)% &
-                 level_node_data(tid,part_id,tilenum)%numNodes
+          level_node_data(tid,part_id,tilenum)%numNodes
     local_nnodes=local_nnodes+1
     contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes= &
        local_nnodes
    else if (overlap.eq.0) then
     ! do nothing
    else
-    print *,"overlap invalid"
+    print *,"overlap invalid in check_overlap_nodeBIG"
     stop
    endif
 
@@ -11958,7 +12018,8 @@ subroutine CLSVOF_FILLCONTAINER( &
  part_id, &
  im_part, &
  cur_time, &
- dt)
+ dt, &
+ xmap3D)
 use global_utility_module
 
 IMPLICIT NONE
@@ -11971,6 +12032,7 @@ IMPLICIT NONE
  INTEGER_T, INTENT(in) :: im_part
  REAL_T, INTENT(in) :: cur_time
  REAL_T, INTENT(in) :: dt
+ INTEGER_T, INTENT(in) :: xmap3D(3)
 
  INTEGER_T interior_flag
  INTEGER_T overlap
@@ -11979,7 +12041,8 @@ IMPLICIT NONE
  INTEGER_T ielem,inode,isweep
  INTEGER_T local_nelems,local_nnodes
  INTEGER_T num_elements,num_nodes
- INTEGER_T total_num_elements,total_num_nodes
+ INTEGER_T total_num_elements
+ INTEGER_T total_num_nodes
  INTEGER_T total_num_elements_check,total_num_nodes_check
 
  INTEGER_T tid,tid_loop,tilenum,tilenum_loop
@@ -11993,6 +12056,8 @@ IMPLICIT NONE
 
  INTEGER_T, dimension(:), allocatable :: tid_node
  INTEGER_T, dimension(:), allocatable :: tilenum_node
+
+ INTEGER_T :: dir
 
  INTEGER_T ctml_part_id
  INTEGER_T fsi_part_id
@@ -12020,14 +12085,23 @@ IMPLICIT NONE
 
  num_elements=FSI(part_id)%NumIntElemsBIG
  if (num_elements.le.0) then
-  print *,"num_elements invalid"
+  print *,"num_elements invalid CLSVOF_FILLCONTAINER"
   stop
  endif
  num_nodes=FSI(part_id)%NumNodesBIG
  if (num_nodes.le.0) then
-  print *,"num_nodes invalid"
+  print *,"num_nodes invalid CLSVOF_FILLCONTAINER"
   stop
  endif
+ do dir=1,3
+  if ((xmap3D(dir).ge.0).and. &
+      (xmap3D(dir).le.3)) then
+   ! do nothing
+  else
+   print *,"xmap3D invalid"
+   stop
+  endif
+ enddo
 
  ctml_part_id=ctml_part_id_map(part_id)
  fsi_part_id=fsi_part_id_map(part_id)
@@ -12088,10 +12162,10 @@ IMPLICIT NONE
 
    do isweep=1,2
 
-    if (isweep.eq.2) then
+    total_num_nodes=0
+    total_num_elements=0
 
-     total_num_nodes=0
-     total_num_elements=0
+    if (isweep.eq.2) then
 
      do tid=1,nthread_parm
 
@@ -12109,6 +12183,7 @@ IMPLICIT NONE
                 ElemData(local_nelems))
        else
         print *,"local_nelems invalid"
+        print *,"lev77,tid,part_id,tilenum ",lev77,tid,part_id,tilenum
         stop
        endif
        contain_elem(lev77)%level_elem_data(tid,part_id,tilenum)%numElems=0
@@ -12124,7 +12199,8 @@ IMPLICIT NONE
         allocate(contain_elem(lev77)%level_node_data(tid,part_id,tilenum)% &
                 NodeData(local_nnodes))
        else
-        print *,"local_nnodes invalid"
+        print *,"local_nnodes invalid in CLSVOF_FILLCONTAINER"
+        print *,"lev77,tid,part_id,tilenum ",lev77,tid,part_id,tilenum
         stop
        endif
        contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes=0
@@ -12152,7 +12228,7 @@ IMPLICIT NONE
       else if ((tid.ge.1).and.(tid.le.nthread_parm).and. &
                (tilenum.ge.1)) then
        if (tilenum.gt.contain_elem(lev77)%num_tiles_on_thread3D_proc(tid)) then
-        print *,"tilenum out of range"
+        print *,"tilenum out of range CLSVOF_FILLCONTAINER"
         stop
        endif
        local_nelems=contain_elem(lev77)% &
@@ -12166,17 +12242,19 @@ IMPLICIT NONE
         ! do nothing
        else if (interior_flag.eq.0) then
         call get_minmax_nodeBIG( &
-                FSI(part_id), &
-                part_id, &
-                TOTAL_NPARTS, &
-                ielem,cur_time,minnode,maxnode) 
+          FSI(part_id), &
+          part_id, &
+          TOTAL_NPARTS, &
+          ielem,cur_time,minnode,maxnode) 
         do tid_loop=1,nthread_parm
         do tilenum_loop=1, &
                contain_elem(lev77)%num_tiles_on_thread3D_proc(tid_loop)
          if ((tid_loop.ne.tid).or.(tilenum_loop.ne.tilenum)) then
            ! isweep==2
+           ! element data updated
           call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
-            tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep)
+           tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep, &
+           xmap3D)
          endif
         enddo
         enddo
@@ -12213,9 +12291,14 @@ IMPLICIT NONE
        ! isweep==1
        ! check_overlap increments
        !  contain_elem(lev77)%level_elem_data(tid,part_id,tilenum)%numElems
-      call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
+      call check_overlap(part_id,ielem,cur_time, &
+        minnode,maxnode, &
         tid_predict,tilenum_predict, &
-        dx3D,lev77,interior_flag,overlap,isweep)
+        dx3D,lev77, &
+        interior_flag, &
+        overlap, &
+        isweep, &
+        xmap3D)
       cache_saved=0
       if (overlap.eq.1) then
        cache_saved=1
@@ -12238,7 +12321,8 @@ IMPLICIT NONE
             (tilenum_loop.ne.tilenum_predict)) then
           ! isweep==1
          call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
-          tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep)
+          tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep, &
+          xmap3D)
          if (overlap.eq.1) then
           if ((cache_saved.eq.0).or.(interior_flag.eq.1)) then
            tid_elem(ielem)=tid_loop
@@ -12295,18 +12379,18 @@ IMPLICIT NONE
       else if ((tid.ge.1).and.(tid.le.nthread_parm).and. &
                (tilenum.ge.1)) then
        if (tilenum.gt.contain_elem(lev77)%num_tiles_on_thread3D_proc(tid)) then
-        print *,"tilenum out of range"
+        print *,"tilenum out of range CLSVOF_FILLCONTAINER"
         stop
        endif
        local_nnodes=contain_elem(lev77)% &
-                    level_node_data(tid,part_id,tilenum)%numNodes
+              level_node_data(tid,part_id,tilenum)%numNodes
        local_nnodes=local_nnodes+1
        contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes= &
           local_nnodes
        contain_elem(lev77)%level_node_data(tid,part_id,tilenum)% &
                            NodeData(local_nnodes)=inode
       else
-       print *,"tid or tilenum invalid"
+       print *,"tid or tilenum invalid CLSVOF_FILLCONTAINER"
        stop
       endif 
 
@@ -12331,7 +12415,8 @@ IMPLICIT NONE
       call check_overlap_nodeBIG(part_id,inode,cur_time, &
         minnode, &
         tid_predict,tilenum_predict, &
-        dx3D,lev77,overlap)
+        dx3D,lev77, &
+        overlap,xmap3D)
 
       if (overlap.eq.1) then
 
@@ -12342,7 +12427,7 @@ IMPLICIT NONE
 
        do tid_loop=1,nthread_parm
        do tilenum_loop=1, &
-               contain_elem(lev77)%num_tiles_on_thread3D_proc(tid_loop)
+             contain_elem(lev77)%num_tiles_on_thread3D_proc(tid_loop)
 
         if (overlap.eq.0) then
          if ((tid_loop.ne.tid_predict).or. &
@@ -12351,7 +12436,8 @@ IMPLICIT NONE
           call check_overlap_nodeBIG(part_id,inode,cur_time, &
            minnode, &
            tid_loop,tilenum_loop, &
-           dx3D,lev77,overlap)
+           dx3D,lev77, &
+           overlap,xmap3D)
           if (overlap.eq.1) then
            tid_node(inode)=tid_loop
            tilenum_node(inode)=tilenum_loop
@@ -12408,7 +12494,7 @@ IMPLICIT NONE
 
 
        local_nnodes=contain_elem(lev77)% &
-                    level_node_data(tid,part_id,tilenum)%numNodes
+          level_node_data(tid,part_id,tilenum)%numNodes
 
        total_num_nodes_check=total_num_nodes_check+local_nnodes
 
@@ -12426,8 +12512,14 @@ IMPLICIT NONE
 
      if (1.eq.1) then
       print *,"CLSVOF_FILLCONTAINER"
+      print *,"sci_max_level= ",sci_max_level
+      print *,"nthread_parm= ",nthread_parm
+      print *,"dx3D= ",dx3D
       print *,"lev77=",lev77
       print *,"part_id=",part_id
+      print *,"im_part=",im_part
+      print *,"cur_time=",cur_time
+      print *,"dt=",dt
       print *,"FSI(part_id)%NumNodesBIG ",FSI(part_id)%NumNodesBIG
       print *,"FSI(part_id)%NumIntElemsBIG ",FSI(part_id)%NumIntElemsBIG
       print *,"total_num_elements ",total_num_elements 
@@ -12569,7 +12661,7 @@ subroutine CLSVOF_InitBox(  &
   time, & ! =0.0 for aux
   dt, &   ! =1.0 for aux
   problo3D,probhi3D, & ! unused
-  xmap3D, & ! unused
+  xmap3D, & 
   dx3D, &
   xlo3D_tile, &
   xhi3D_tile, &
@@ -13143,7 +13235,8 @@ IMPLICIT NONE
         growlo3D,growhi3D, &
         xdata3D, &
         gridloBB,gridhiBB, &
-        dxBB) ! for spectral methods, the element size is bfact*dxBB
+        dxBB, & ! for spectral methods, the element size is bfact*dxBB
+        xmap3D)
 
       dxBB_min=dxBB(1)
       do dir=1,3
@@ -14913,12 +15006,15 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, dimension(3) :: idx
       REAL_T, dimension(3) :: velparm
       INTEGER_T :: dir
-      REAL_T :: total_weight,wt,dist_scale,df,support_size
+      REAL_T :: total_weight
+      REAL_T :: wt
+      REAL_T :: wt_flag
+      REAL_T :: dist_scale,df,support_size
 
       INTEGER_T local_mask
       INTEGER_T num_nodes
       INTEGER_T num_nodes_container
-      INTEGER_T debug_all
+      INTEGER_T, PARAMETER :: debug_all=0
       INTEGER_T ctml_part_id
       INTEGER_T fsi_part_id
       INTEGER_T inside_interior_box
@@ -14934,8 +15030,6 @@ end subroutine CLSVOF_InitBox
       INTEGER_T istress,jstress
       REAL_T stress_3d(3,3)
       REAL_T local_force(NCOMP_FORCE_STRESS)
-
-      debug_all=0
 
       if ((part_id.lt.1).or.(part_id.gt.nparts)) then
        print *,"part_id invalid"
@@ -15015,10 +15109,10 @@ end subroutine CLSVOF_InitBox
           ((fsi_part_id.ge.1).and. &
            (fsi_part_id.le.FSI_NPARTS))) then
 
-       num_nodes=FSI(part_id)%NumNodes
+       num_nodes=FSI(part_id)%NumNodesBIG
 
        if (num_nodes.le.0) then
-        print *,"num_nodes invalid"
+        print *,"num_nodes invalid: ",num_nodes
         stop
        endif
        if ((ioproc.ne.1).and.(ioproc.ne.0)) then
@@ -15046,7 +15140,7 @@ end subroutine CLSVOF_InitBox
         ! do nothing
        else if (isout.eq.1) then
         print *,"in (START): CLSVOF_Copy_To_LAG"
-        print *,"num_nodes(NumNodes)=",num_nodes
+        print *,"num_nodes(NumNodesBIG)=",num_nodes
         print *,"sdim_AMR=",sdim_AMR 
         print *,"im_part=",im_part
         print *,"part_id=",part_id
@@ -15164,7 +15258,8 @@ end subroutine CLSVOF_InitBox
          FSI_lo,FSI_hi, &
          FSI_growlo,FSI_growhi, &
          xdata3D, &
-         gridloBB,gridhiBB,dxBB) 
+         gridloBB,gridhiBB,dxBB, &
+         xmap3D) 
 
         do dir=1,3
          if (abs(dxBB(dir)-dx3D(dir)).le.VOFTOL*dxBB(dir)) then
@@ -15253,8 +15348,10 @@ end subroutine CLSVOF_InitBox
             stop
            endif
 
-           xprobe(dir)=xnot(dir)+ &
+           do dir=1,3
+            xprobe(dir)=xnot(dir)+ &
              sign_normal*probe_size*dx3D_min*local_node_normal(dir)
+           enddo
 
            call find_grid_bounding_box_node( &
             ngrow_make_distance_in, &
@@ -15263,7 +15360,8 @@ end subroutine CLSVOF_InitBox
             FSI_lo,FSI_hi, &
             FSI_growlo,FSI_growhi, &
             xdata3D, &
-            gridloBB_probe,gridhiBB_probe,dxBB_probe) 
+            gridloBB_probe,gridhiBB_probe,dxBB_probe, &
+            xmap3D) 
 
            total_weight=zero
            do dir=1,6
@@ -15273,6 +15371,7 @@ end subroutine CLSVOF_InitBox
            do j=gridloBB_probe(2),gridhiBB_probe(2)
            do k=gridloBB_probe(3),gridhiBB_probe(3)
             wt=one
+            wt_flag=one
             do dir=1,3
              call safe_data3D(i,j,k,dir,xdata3D,data_out)
              dist_scale=abs(data_out-xprobe(dir))/dxBB_probe(dir)
@@ -15299,7 +15398,7 @@ end subroutine CLSVOF_InitBox
 
             call safe_data3D(i,j,k,im_part,stressflag3D,data_out)
             if (data_out.eq.zero) then
-             wt=zero
+             wt_flag=zero
             else if (data_out.eq.one) then ! drag initialized
              ! do nothing
             else if (data_out.eq.two) then ! drag extended
@@ -15309,10 +15408,17 @@ end subroutine CLSVOF_InitBox
              stop
             endif
 
-            total_weight=total_weight+wt
+            total_weight=total_weight+wt*wt_flag
             do dir=1,6
              call safe_data3D(i,j,k,6*(im_part-1)+dir,stressdata3D,data_out)
-             total_stress(dir)=total_stress(dir)+wt*data_out
+             total_stress(dir)=total_stress(dir)+ &
+               wt*wt_flag*data_out
+
+             if (debug_all.eq.1) then
+              print *,"i,j,k,dir,xprobe,wt,wt_flag,data_out ", &
+                  i,j,k,dir,xprobe,wt,wt_flag,data_out
+             endif
+
             enddo
            enddo
            enddo
@@ -15365,6 +15471,10 @@ end subroutine CLSVOF_InitBox
         endif
 
        enddo ! inode_container=1,num_nodes_container
+
+       if (debug_all.eq.1) then
+        call SOLIDFLUID_F90_KEYBOARD()
+       endif
 
       else if ((ctml_part_id.eq.0).and. &
                (fsi_part_id.eq.0)) then
@@ -16237,7 +16347,8 @@ subroutine find_grid_bounding_box( &
  FSI_growlo,FSI_growhi,  &
  growlo3D,growhi3D,  &
  xdata3D, &
- gridloBB,gridhiBB,dxBB)
+ gridloBB,gridhiBB,dxBB, &
+ xmap3D)
 
 use global_utility_module
 IMPLICIT NONE
@@ -16253,6 +16364,7 @@ IMPLICIT NONE
  REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
  INTEGER_T, INTENT(out) :: gridloBB(3),gridhiBB(3)
  REAL_T, INTENT(out) :: dxBB(3)
+ INTEGER_T, INTENT(in) :: xmap3D(3)
  INTEGER_T dir
  INTEGER_T ii,jj,kk
  INTEGER_T i,j,k,incr,iter
@@ -16261,6 +16373,15 @@ IMPLICIT NONE
  INTEGER_T ngrow,ngrowtest
  INTEGER_T local_iband
 
+ do dir=1,3
+  if ((xmap3D(dir).ge.0).and. &
+      (xmap3D(dir).le.3)) then
+   ! do nothing
+  else
+   print *,"xmap3D invalid"
+   stop
+  endif
+ enddo
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
   stop
@@ -16349,52 +16470,38 @@ IMPLICIT NONE
    j=FSI_lo(2)
    k=FSI_lo(3)
 
-   gridloBB(dir)=NINT( (minnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
-   if (gridloBB(dir).lt.growlo3D(dir)) then
+   if (xmap3D(dir).eq.0) then
     gridloBB(dir)=growlo3D(dir)
-   endif
-   if (gridloBB(dir).gt.growhi3D(dir)) then
-    gridloBB(dir)=growhi3D(dir)
-    null_intersection=1
-   endif
-
-   if (null_intersection.eq.0) then
-
-    incr=gridloBB(dir)-FSI_lo(dir)
-    xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
-    xcost=minnode(dir)-local_iband*dxBB(dir)
-    iter=0
-    do while ((gridloBB(dir).gt.growlo3D(dir)).and. &
-              (xcontrol.gt.xcost))
-     gridloBB(dir)=gridloBB(dir)-1
-     incr=gridloBB(dir)-FSI_lo(dir)
-     xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
-     iter=iter+1
-     if (iter.gt.FSI_growhi(dir)-FSI_growlo(dir)+1) then
-      print *,"failure to find xcontrol"
-      stop
-     endif
-    enddo
-  
-    gridhiBB(dir)=NINT( (maxnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
-    if (gridhiBB(dir).gt.growhi3D(dir)) then
-     gridhiBB(dir)=growhi3D(dir)
+    gridhiBB(dir)=growhi3D(dir)
+    if (growlo3D(dir).gt.0) then
+     print *,"expecting growlo3D.le.0"
+     stop
     endif
-    if (gridhiBB(dir).lt.growlo3D(dir)) then
-     gridhiBB(dir)=growlo3D(dir)
+    if (growhi3D(dir).lt.0) then
+     print *,"expecting growhi3D.ge.0"
+     stop
+    endif
+   else if ((xmap3D(dir).ge.1).and. &
+            (xmap3D(dir).le.3)) then
+    gridloBB(dir)=NINT( (minnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
+    if (gridloBB(dir).lt.growlo3D(dir)) then
+     gridloBB(dir)=growlo3D(dir)
+    endif
+    if (gridloBB(dir).gt.growhi3D(dir)) then
+     gridloBB(dir)=growhi3D(dir)
      null_intersection=1
     endif
 
     if (null_intersection.eq.0) then
 
-     incr=gridhiBB(dir)-FSI_lo(dir)
+     incr=gridloBB(dir)-FSI_lo(dir)
      xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
-     xcost=maxnode(dir)+local_iband*dxBB(dir)
+     xcost=minnode(dir)-local_iband*dxBB(dir)
      iter=0
-     do while ((gridhiBB(dir).lt.growhi3D(dir)).and. &
-               (xcontrol.lt.xcost))
-      gridhiBB(dir)=gridhiBB(dir)+1
-      incr=gridhiBB(dir)-FSI_lo(dir)
+     do while ((gridloBB(dir).gt.growlo3D(dir)).and. &
+               (xcontrol.gt.xcost))
+      gridloBB(dir)=gridloBB(dir)-1
+      incr=gridloBB(dir)-FSI_lo(dir)
       xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
       iter=iter+1
       if (iter.gt.FSI_growhi(dir)-FSI_growlo(dir)+1) then
@@ -16402,17 +16509,48 @@ IMPLICIT NONE
        stop
       endif
      enddo
+  
+     gridhiBB(dir)=NINT( (maxnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
+     if (gridhiBB(dir).gt.growhi3D(dir)) then
+      gridhiBB(dir)=growhi3D(dir)
+     endif
+     if (gridhiBB(dir).lt.growlo3D(dir)) then
+      gridhiBB(dir)=growlo3D(dir)
+      null_intersection=1
+     endif
 
+     if (null_intersection.eq.0) then
+
+      incr=gridhiBB(dir)-FSI_lo(dir)
+      xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
+      xcost=maxnode(dir)+local_iband*dxBB(dir)
+      iter=0
+      do while ((gridhiBB(dir).lt.growhi3D(dir)).and. &
+                (xcontrol.lt.xcost))
+       gridhiBB(dir)=gridhiBB(dir)+1
+       incr=gridhiBB(dir)-FSI_lo(dir)
+       xcontrol=xdata3D(i+ii*incr,j+jj*incr,k+kk*incr,dir)
+       iter=iter+1
+       if (iter.gt.FSI_growhi(dir)-FSI_growlo(dir)+1) then
+        print *,"failure to find xcontrol"
+        stop
+       endif
+      enddo
+
+     else if (null_intersection.eq.1) then
+      ! do nothing
+     else
+      print *,"null_intersection invalid"
+      stop
+     endif
     else if (null_intersection.eq.1) then
      ! do nothing
     else
      print *,"null_intersection invalid"
      stop
     endif
-   else if (null_intersection.eq.1) then
-    ! do nothing
    else
-    print *,"null_intersection invalid"
+    print *,"xmap3D invalid"
     stop
    endif
   else if (null_intersection.eq.1) then
@@ -16435,7 +16573,8 @@ subroutine find_grid_bounding_box_node( &
  FSI_lo,FSI_hi, &
  FSI_growlo,FSI_growhi,  &
  xdata3D, &
- gridloBB,gridhiBB,dxBB)
+ gridloBB,gridhiBB,dxBB, &
+ xmap3D)
 
 use global_utility_module
 IMPLICIT NONE
@@ -16448,6 +16587,7 @@ IMPLICIT NONE
  REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
  INTEGER_T, INTENT(out) :: gridloBB(3),gridhiBB(3)
  REAL_T, INTENT(out) :: dxBB(3)
+ INTEGER_T, INTENT(in) :: xmap3D(3)
  INTEGER_T dir,dirloc
  INTEGER_T idx(3),idxL(3),idxR(3)
  INTEGER_T iter,change
@@ -16456,6 +16596,16 @@ IMPLICIT NONE
  INTEGER_T ngrowtest
  INTEGER_T interp_support
  INTEGER_T i_probe_size
+
+ do dir=1,3
+  if ((xmap3D(dir).ge.0).and. &
+      (xmap3D(dir).le.3)) then
+   ! do nothing
+  else
+   print *,"xmap3D invalid"
+   stop
+  endif
+ enddo
 
  if (ngrow_make_distance_in.ne.3) then
   print *,"ngrow_make_distance_in invalid"
@@ -16524,91 +16674,102 @@ IMPLICIT NONE
 
  do dir=1,3
 
-  if (xnot(dir).ge.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
-   ! do nothing
-  else
-   print *,"node should be within grid interior"
-   stop
-  endif
-  if (xnot(dir).le.xhi(dir)+(VOFTOL+probe_size)*dxBB(dir)) then
-   ! do nothing
-  else
-   print *,"node should be within grid interior"
-   stop
-  endif
-  if (xnot(dir).le.xlo(dir)+(VOFTOL-probe_size)*dxBB(dir)) then
-   gridloBB(dir)=FSI_lo(dir)-i_probe_size
-  else if (xnot(dir).ge.xhi(dir)-(VOFTOL-probe_size)*dxBB(dir)) then
-   gridloBB(dir)=FSI_hi(dir)+i_probe_size
-  else if ((xnot(dir).ge.xlo(dir)-probe_size*dxBB(dir)).and. &
-           (xnot(dir).le.xhi(dir)+probe_size*dxBB(dir))) then
-      ! for evenly spaced points:
-      ! x=xlo+(i-ilo+1/2)*dx
-      ! (x-xlo)/dx -1/2 = i-ilo
-      ! i=ilo+(x-xlo)/dx -1/2
-   gridloBB(dir)=NINT( (xnot(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
-   if ((gridloBB(dir).lt.FSI_lo(dir)-i_probe_size).or. &
-       (gridloBB(dir).gt.FSI_hi(dir)+i_probe_size)) then
-    print *,"node should be within (probe biased) grid interior"
+  if (xmap3D(dir).eq.0) then
+   gridloBB(dir)=FSI_lo(dir)-interp_support
+   gridhiBB(dir)=FSI_hi(dir)+interp_support
+  else if ((xmap3D(dir).ge.1).and. &
+           (xmap3D(dir).le.3)) then
+
+   if (xnot(dir).ge.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
+    ! do nothing
+   else
+    print *,"node should be within grid interior"
     stop
    endif
-   do dirloc=1,3
-    idx(dirloc)=FSI_lo(dirloc)
-   enddo
-   idx(dir)=gridloBB(dir)
-   dist=abs(xdata3D(idx(1),idx(2),idx(3),dir)-xnot(dir)) 
-   change=1
-   iter=0
-   do while (change.eq.1)
+   if (xnot(dir).le.xhi(dir)+(VOFTOL+probe_size)*dxBB(dir)) then
+    ! do nothing
+   else
+    print *,"node should be within grid interior"
+    stop
+   endif
+   if (xnot(dir).le.xlo(dir)+(VOFTOL-probe_size)*dxBB(dir)) then
+    gridloBB(dir)=FSI_lo(dir)-i_probe_size
+   else if (xnot(dir).ge.xhi(dir)-(VOFTOL-probe_size)*dxBB(dir)) then
+    gridloBB(dir)=FSI_hi(dir)+i_probe_size
+   else if ((xnot(dir).ge.xlo(dir)-probe_size*dxBB(dir)).and. &
+            (xnot(dir).le.xhi(dir)+probe_size*dxBB(dir))) then
+       ! for evenly spaced points:
+       ! x=xlo+(i-ilo+1/2)*dx
+       ! (x-xlo)/dx -1/2 = i-ilo
+       ! i=ilo+(x-xlo)/dx -1/2
+    gridloBB(dir)=NINT( (xnot(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
+    if ((gridloBB(dir).lt.FSI_lo(dir)-i_probe_size).or. &
+        (gridloBB(dir).gt.FSI_hi(dir)+i_probe_size)) then
+     print *,"node should be within (probe biased) grid interior"
+     stop
+    endif
     do dirloc=1,3
-     idxL(dirloc)=idx(dirloc)
-     idxR(dirloc)=idx(dirloc)
+     idx(dirloc)=FSI_lo(dirloc)
     enddo
-    idxL(dir)=idx(dir)-1
-    idxR(dir)=idx(dir)+1
-    if ((idxL(dir).ge.FSI_growlo(dir)).and. &
-        (idxL(dir).le.FSI_growhi(dir)).and. &
-        (idxR(dir).ge.FSI_growlo(dir)).and. &
-        (idxR(dir).le.FSI_growhi(dir))) then
-     distL=abs(xdata3D(idxL(1),idxL(2),idxL(3),dir)-xnot(dir))
-     distR=abs(xdata3D(idxR(1),idxR(2),idxR(3),dir)-xnot(dir))
-     if ((distL.le.dist).and.(distR.le.dist)) then
-      print *,"distL or distR invalid"
-      stop
-     endif
-     if (distL.lt.dist) then
-      change=1
-      dist=distL
-      idx(dir)=idx(dir)-1
-     else if (distR.lt.dist) then
-      change=1
-      dist=distR
-      idx(dir)=idx(dir)+1
-     else if ((distL.ge.dist).and. &
-              (distR.ge.dist)) then
-      change=0
+    idx(dir)=gridloBB(dir)
+    dist=abs(xdata3D(idx(1),idx(2),idx(3),dir)-xnot(dir)) 
+    change=1
+    iter=0
+    do while (change.eq.1)
+     do dirloc=1,3
+      idxL(dirloc)=idx(dirloc)
+      idxR(dirloc)=idx(dirloc)
+     enddo
+     idxL(dir)=idx(dir)-1
+     idxR(dir)=idx(dir)+1
+     if ((idxL(dir).ge.FSI_growlo(dir)).and. &
+         (idxL(dir).le.FSI_growhi(dir)).and. &
+         (idxR(dir).ge.FSI_growlo(dir)).and. &
+         (idxR(dir).le.FSI_growhi(dir))) then
+      distL=abs(xdata3D(idxL(1),idxL(2),idxL(3),dir)-xnot(dir))
+      distR=abs(xdata3D(idxR(1),idxR(2),idxR(3),dir)-xnot(dir))
+      if ((distL.le.dist).and.(distR.le.dist)) then
+       print *,"distL or distR invalid"
+       stop
+      endif
+      if (distL.lt.dist) then
+       change=1
+       dist=distL
+       idx(dir)=idx(dir)-1
+      else if (distR.lt.dist) then
+       change=1
+       dist=distR
+       idx(dir)=idx(dir)+1
+      else if ((distL.ge.dist).and. &
+               (distR.ge.dist)) then
+       change=0
+      else
+       print *,"distL or distR invalid"
+       stop
+      endif
      else
-      print *,"distL or distR invalid"
+      print *,"idxL or idxR out of range"
       stop
      endif
-    else
-     print *,"idxL or idxR out of range"
-     stop
-    endif
-    iter=iter+1
-    if (iter.gt.FSI_hi(dir)-FSI_lo(dir)+1+2*i_probe_size) then
-     print *,"iter.gt.FSI_hi(dir)-FSI_lo(dir)+1+2*i_probe_size"
-     stop
-    endif
-   enddo ! while (change==1)
-   gridloBB(dir)=idx(dir)
+     iter=iter+1
+     if (iter.gt.FSI_hi(dir)-FSI_lo(dir)+1+2*i_probe_size) then
+      print *,"iter.gt.FSI_hi(dir)-FSI_lo(dir)+1+2*i_probe_size"
+      stop
+     endif
+    enddo ! while (change==1)
+    gridloBB(dir)=idx(dir)
+   else
+    print *,"xnot(dir) invalid"
+    stop
+   endif
+
+   gridhiBB(dir)=gridloBB(dir)+interp_support 
+   gridloBB(dir)=gridloBB(dir)-interp_support 
+
   else
-   print *,"xnot(dir) invalid"
+   print *,"xmap3D invalid"
    stop
   endif
-
-  gridhiBB(dir)=gridloBB(dir)+interp_support 
-  gridloBB(dir)=gridloBB(dir)-interp_support 
 
  enddo  ! dir=1..sdim
 
