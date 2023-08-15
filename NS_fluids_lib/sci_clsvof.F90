@@ -9561,9 +9561,13 @@ end subroutine checkinplaneBIG
 !        -1 0   0
 !        0  0   1  = (0,1,0)
 !
-subroutine scinormalBIG(elemnum,normal, &
-     FSI_mesh_type,part_id,max_part_id, &
-     time)
+subroutine scinormalBIG( &
+  elemnum, & !intent(in)
+  normal, & !intent(out)
+  FSI_mesh_type, & !intent(in)
+  part_id, &  ! intent(in)
+  max_part_id, & !intent(in)
+  time) !intent(in)
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
@@ -12647,6 +12651,7 @@ IMPLICIT NONE
   REAL_T :: massparm
   INTEGER_T :: dir
   REAL_T :: dotprod
+  REAL_T :: vel_dot_n
   REAL_T :: unsigned_mindist  ! unsigned
   REAL_T :: element_unsigned_mindist  ! unsigned
   REAL_T :: weighttotal,distwt,weight
@@ -12901,7 +12906,7 @@ IMPLICIT NONE
     if (im_part.eq.part_id) then
      ! do nothing
     else
-     print *,"im_part invalid"
+     print *,"im_part invalid: ",im_part
      stop
     endif
     if (nFSI.ne.NCOMP_FSI) then
@@ -12913,7 +12918,8 @@ IMPLICIT NONE
    else if (lev77.ge.1) then
 
     if ((im_part.lt.1).or.(im_part.gt.num_materials)) then
-     print *,"im_part invalid"
+     print *,"im_part invalid: ",im_part
+     print *,"lev77: ",lev77
      stop
     endif
     if (nFSI.ne.nparts*NCOMP_FSI) then
@@ -12927,7 +12933,7 @@ IMPLICIT NONE
     ibase=(part_id-1)*NCOMP_FSI
 
    else
-    print *,"lev77 invalid"
+    print *,"lev77 invalid: ",lev77
     stop
    endif
 
@@ -13058,12 +13064,13 @@ IMPLICIT NONE
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid (the sign will be switched later)
      ! this is the element normal (in contrast to the node normal)
-     call scinormalBIG(ielem, &
-       normal, &
-       FSI_mesh_type, &
-       part_id, &
-       nparts, &
-       time)
+     call scinormalBIG( &
+       ielem, & !intent(in)
+       normal, & !intent(out)
+       FSI_mesh_type, & !intent(in)
+       part_id, & !intent(in)
+       nparts, & !intent(in)
+       time) !intent(in)
 
      test_scale=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
 
@@ -13142,14 +13149,19 @@ IMPLICIT NONE
       do dir=1,3
        if (dxBB(dir).lt.dxBB_min) then
         dxBB_min=dxBB(dir)
+       else if (dxBB(dir).ge.dxBB_min) then
+        ! do nothing
+       else
+        print *,"dxBB(dir) invalid: ",dxBB(dir)
+        stop
        endif
-      enddo
+      enddo !dir=1,3
       FSI_delta_cutoff=3.0d0*dxBB_min
 
       if (test_scale_max.gt.zero) then
        eul_over_lag_scale=min(one,dxBB_min/test_scale_max)
       else
-       print *,"test_scale_max must be positive"
+       print *,"test_scale_max must be positive: ",test_scale_max
        stop
       endif
 
@@ -13602,9 +13614,11 @@ IMPLICIT NONE
          sign_conflict=sign_conflict_local
 
          mask_local=NINT(FSIdata3D(i,j,k,ibase+FSI_EXTRAP_FLAG+1))
+
          do dir=1,3
           vel_local(dir)=FSIdata3D(i,j,k,ibase+FSI_VELOCITY+dir)
          enddo
+
          temp_local=FSIdata3D(i,j,k,ibase+FSI_TEMPERATURE+1)
 
          if (hitflag.eq.1) then
@@ -13848,15 +13862,45 @@ IMPLICIT NONE
            if (massparm.gt.zero) then
             ! do nothing
            else
-            print *,"massparm invalid"
+            print *,"massparm invalid: ",massparm
             stop
            endif
+
            call get_target_from_foot(xfoot,xtarget, &
-             velparm,time, &
+             velparm, &
+             time, &
              FSI_mesh_type, &
              part_id, &
              nparts)
-   
+
+           if (FSI_PRESSURE_FORCE_ONLY.eq.1) then
+
+            if ((ctml_part_id.ge.1).and. &
+                (ctml_part_id.le.CTML_NPARTS)) then
+             ! u=alpha n + beta1 t1 + beta2 t2
+             ! u dot n=alpha
+             ! u=(u dot n)n
+             vel_dot_n=zero
+             do dir=1,3
+              vel_dot_n=vel_dot_n+velparm(dir)*normal(dir)
+             enddo
+             do dir=1,3
+              velparm(dir)=vel_dot_n*normal(dir)
+             enddo
+            else if (ctml_part_id.eq.0) then
+             ! do nothing
+            else
+             print *,"ctml_part_id invalid"
+             stop
+            endif
+
+           else if (FSI_PRESSURE_FORCE_ONLY.eq.0) then
+            ! do nothing
+           else
+            print *,"FSI_PRESSURE_FORCE_ONLY invalid"
+            stop
+           endif 
+
              ! xtarget is Lagrangian coordinate
              ! xx is grid coordinate 
            if (CTML_DEBUG_Mass.eq.1) then
@@ -13948,7 +13992,7 @@ IMPLICIT NONE
      else if ((test_scale.ge.zero).and.(test_scale.le.one-VOFTOL)) then
       ! do nothing
      else
-      print *,"test_scale invalid"
+      print *,"test_scale invalid: ",test_scale
       stop
      endif
 
@@ -13958,7 +14002,7 @@ IMPLICIT NONE
      if (dx3D(dir).gt.zero) then
       ! do nothing
      else
-      print *,"dx3D(dir).le.zero"
+      print *,"dx3D(dir).le.zero: dx3D(dir)=",dx3D(dir)
       stop
      endif
     enddo ! dir=1..3
@@ -14289,7 +14333,8 @@ IMPLICIT NONE
             xelem(dir)=FSI_mesh_type%ElemDataXnotBIG(dir,ielem)
            enddo 
            call get_target_from_foot(xelem,xnot, &
-            velparm,time, &
+            velparm, &
+            time, &
             FSI_mesh_type, &
             part_id, &
             nparts)

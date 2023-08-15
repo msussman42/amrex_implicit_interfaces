@@ -20581,6 +20581,7 @@ NavierStokes::writePlotFile (
 
  std::string local_caller_string="writePlotFile";
 
+ FIX ME THIS OVERWRITES ALL THE TIME STEPPING STUFF
  SDC_setup();
  ns_time_order=parent->Time_blockingFactor();
 
@@ -22215,8 +22216,8 @@ NavierStokes::post_init_state () {
  delete_array(COLOR_MF);
 
  if (step_through_data==1) {
-  int nsteps_local=0;
-  parent->writeDEBUG_PlotFile(nsteps_local,SDC_outer_sweeps,slab_step);
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
   std::cout << "press any number then enter (prior post_init_pressure) \n";
   int n_input;
   std::cin >> n_input;
@@ -22310,8 +22311,8 @@ NavierStokes::post_init_state () {
  CopyNewToOldALL();
 
  if (step_through_data==1) {
-  int nsteps_local=0;
-  parent->writeDEBUG_PlotFile(nsteps_local,SDC_outer_sweeps,slab_step);
+  int basestep_debug=nStep();
+  parent->writeDEBUG_PlotFile(basestep_debug,SDC_outer_sweeps,slab_step);
   std::cout << "press any number then enter: post_init_state\n";
   int n_input;
   std::cin >> n_input;
