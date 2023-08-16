@@ -11600,7 +11600,8 @@ end function vel_valid
 subroutine check_overlap( &
  FSI_mesh_type, &
  part_id,ielem,time,minnode,maxnode, &
- tid,tilenum,dx3D,lev77,interior_flag,overlap,isweep,xmap3D)
+ tid,tilenum,dx3D,lev77,interior_flag,overlap,isweep, &
+ xmap3D)
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
@@ -11697,8 +11698,7 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
        (xmap3D(dir).eq.2).or. &
        (xmap3D(dir).eq.3).or. &
        ((xmap3D(dir).eq.0).and. &
-       FIX ME STARTING HERE
-        (FSI_mesh_typer%flag_2D_to_3D.eq.0))) then
+        (FSI_mesh_type%flag_2D_to_3D.eq.0))) then
     xlo=contain_elem(lev77)%xlo3D(tid,tilenum,dir) 
     tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
     tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
@@ -11730,10 +11730,11 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
       dir,ielem,xlo,xhi,tilelo,tilehi,minnode(dir),maxnode(dir), &
       local_buffer(dir)
     endif
-   else if (xmap3D(dir).eq.0) then
+   else if ((xmap3D(dir).eq.0).and. &
+            (FSI_mesh_type%flag_2D_to_3D.eq.1)) then
     ! do nothing
    else
-    print *,"xmap3D invalid"
+    print *,"xmap3D or flag_2D_to_3D invalid"
     stop
    endif
   enddo ! dir=1..3
@@ -11771,7 +11772,7 @@ return
 end subroutine check_overlap
 
 subroutine check_overlap_nodeBIG( &
- type(mesh_type), INTENT(in) :: FSI_mesh_type
+ FSI_mesh_type, &
  part_id,inode,time, &
  minnode, &
  tid,tilenum, &
@@ -11780,6 +11781,7 @@ subroutine check_overlap_nodeBIG( &
  xmap3D)
 IMPLICIT NONE
 
+type(mesh_type), INTENT(in) :: FSI_mesh_type 
 INTEGER_T, INTENT(in) :: part_id
 INTEGER_T, INTENT(in) :: tid,tilenum
 INTEGER_T, INTENT(in) :: inode
@@ -11848,8 +11850,11 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
 
    overlap=1
    do dir=1,3
-    if ((xmap3D(dir).ge.1).and. &
-        (xmap3D(dir).le.3)) then
+    if ((xmap3D(dir).eq.1).or. &
+        (xmap3D(dir).eq.2).or. &
+        (xmap3D(dir).eq.3).or. &
+        ((xmap3D(dir).eq.0).and. &
+         (FSI_mesh_type%flag_2D_to_3D.eq.0))) then
      xlo=contain_elem(lev77)%xlo3D(tid,tilenum,dir) 
      tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
      tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
@@ -11870,10 +11875,11 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
       print *,"dir,inode,xlo,xhi,tilelo,tilehi,xnode ", &
        dir,inode,xlo,xhi,tilelo,tilehi,minnode(dir)
      endif
-    else if (xmap3D(dir).eq.0) then
+    else if ((xmap3D(dir).eq.0).and. &
+             (FSI_mesh_type%flag_2D_to_3D.eq.1)) then
      ! do nothing
     else
-     print *,"xmap3D invalid"
+     print *,"xmap3D invalid or flag_2D_to_3D invalid"
      stop
     endif
    enddo ! dir=1..3
@@ -12434,7 +12440,8 @@ IMPLICIT NONE
         minnode, &
         tid_predict,tilenum_predict, &
         dx3D,lev77, &
-        overlap,xmap3D)
+        overlap, &
+        xmap3D)
 
       if (overlap.eq.1) then
 
@@ -12457,7 +12464,8 @@ IMPLICIT NONE
            minnode, &
            tid_loop,tilenum_loop, &
            dx3D,lev77, &
-           overlap,xmap3D)
+           overlap, &
+           xmap3D)
           if (overlap.eq.1) then
            tid_node(inode)=tid_loop
            tilenum_node(inode)=tilenum_loop
@@ -15257,7 +15265,8 @@ end subroutine CLSVOF_InitBox
          xnode(dir)=FSI(part_id)%Node(dir,inode)
          velparm(dir)=zero
         enddo 
-        call get_target_from_foot(xnode,xnot, &
+        call get_target_from_foot( &
+          xnode,xnot, &
           velparm,time, &
           FSI(part_id), &
           part_id, &
@@ -15272,6 +15281,7 @@ end subroutine CLSVOF_InitBox
         endif
 
         call find_grid_bounding_box_node( &
+         FSI(part_id), &
          ngrow_make_distance_in, &
          null_probe_size, &
          xnot, &
@@ -15323,10 +15333,13 @@ end subroutine CLSVOF_InitBox
             stop
            endif
           else if (sdim_AMR.eq.2) then
-           if (xmap3D(dir).eq.0) then
+           if ((xmap3D(dir).eq.0).and. &
+               (FSI(part_id)%flag_2D_to_3D.eq.1)) then
             ! do nothing
            else if ((xmap3D(dir).eq.1).or. &
-                    (xmap3D(dir).eq.2)) then
+                    (xmap3D(dir).eq.2).or. &
+                    ((xmap3D(dir).eq.0).and. &
+                     (FSI(part_id)%flag_2D_to_3D.eq.0))) then
             if ((xnot(dir).lt.xhi3D_tile(dir)).and. &
                 (xnot(dir).ge.xlo3D_tile(dir))) then
              ! do nothing
@@ -15374,6 +15387,7 @@ end subroutine CLSVOF_InitBox
            enddo
 
            call find_grid_bounding_box_node( &
+            FSI(part_id), &
             ngrow_make_distance_in, &
             probe_size, &
             xprobe, &
@@ -15400,13 +15414,16 @@ end subroutine CLSVOF_InitBox
              if (sdim_AMR.eq.3) then
               wt=wt*df
              else if (sdim_AMR.eq.2) then
-              if (xmap3D(dir).eq.0) then
+              if ((xmap3D(dir).eq.0).and. &
+                  (FSI(part_id)%flag_2D_to_3D.eq.1)) then
                ! do nothing
               else if ((xmap3D(dir).eq.1).or. &
-                       (xmap3D(dir).eq.2)) then
+                       (xmap3D(dir).eq.2).or. &
+                       ((xmap3D(dir).eq.0).and. &
+                        (FSI(part_id)%flag_2D_to_3D.eq.0))) then
                wt=wt*df
               else
-               print *,"xmap3D invalid"
+               print *,"xmap3D or flag_2D_to_3D invalid"
                stop
               endif
              else
@@ -15464,9 +15481,11 @@ end subroutine CLSVOF_InitBox
             enddo
 
              !NodeForce used in CLSVOF_sync_lag_data 
+             !local_force \prop -grad p=-int div pI dV/|Omega|=
+             ! -int pI dot n dS/|Omega|
             do dir=1,NCOMP_FORCE_STRESS
              FSI(part_id)%NodeForce(dir,inode)= &
-               FSI(part_id)%NodeForce(dir,inode)+ &
+               FSI(part_id)%NodeForce(dir,inode)- &
                local_force(dir)
             enddo
 
@@ -16490,7 +16509,8 @@ IMPLICIT NONE
    j=FSI_lo(2)
    k=FSI_lo(3)
 
-   if (xmap3D(dir).eq.0) then
+   if ((xmap3D(dir).eq.0).and. &
+       (FSI_mesh_type%flag_2D_to_3D.eq.1)) then
     gridloBB(dir)=growlo3D(dir)
     gridhiBB(dir)=growhi3D(dir)
     if (growlo3D(dir).gt.0) then
@@ -16501,8 +16521,11 @@ IMPLICIT NONE
      print *,"expecting growhi3D.ge.0"
      stop
     endif
-   else if ((xmap3D(dir).ge.1).and. &
-            (xmap3D(dir).le.3)) then
+   else if ((xmap3D(dir).eq.1).or. &
+            (xmap3D(dir).eq.2).or. &
+            (xmap3D(dir).eq.3).or. &
+            ((xmap3D(dir).eq.0).and. &
+             (FSI_mesh_type%flag_2D_to_3D.eq.0))) then
     gridloBB(dir)=NINT( (minnode(dir)-xlo(dir))/dxBB(dir)-half+FSI_lo(dir) )
     if (gridloBB(dir).lt.growlo3D(dir)) then
      gridloBB(dir)=growlo3D(dir)
@@ -16587,6 +16610,7 @@ end subroutine find_grid_bounding_box
 
 
 subroutine find_grid_bounding_box_node( &
+ FSI_mesh_type, &
  ngrow_make_distance_in, &
  probe_size, &
  xnot, &
@@ -16599,6 +16623,7 @@ subroutine find_grid_bounding_box_node( &
 use global_utility_module
 IMPLICIT NONE
 
+ type(mesh_type), INTENT(in) :: FSI_mesh_type
  INTEGER_T, INTENT(in) :: ngrow_make_distance_in
  REAL_T, INTENT(in) :: probe_size
  REAL_T, INTENT(in) :: xnot(3)
@@ -16694,11 +16719,17 @@ IMPLICIT NONE
 
  do dir=1,3
 
-  if (xmap3D(dir).eq.0) then
+  if ((xmap3D(dir).eq.0).and. &
+      (FSI_mesh_type%flag_2D_to_3D.eq.1)) then
+
    gridloBB(dir)=FSI_lo(dir)-interp_support
    gridhiBB(dir)=FSI_hi(dir)+interp_support
-  else if ((xmap3D(dir).ge.1).and. &
-           (xmap3D(dir).le.3)) then
+
+  else if ((xmap3D(dir).eq.1).or. &
+           (xmap3D(dir).eq.2).or. &
+           (xmap3D(dir).eq.3).or. &
+           ((xmap3D(dir).eq.0).and. &
+            (FSI_mesh_type%flag_2D_to_3D.eq.0))) then
 
    if (xnot(dir).ge.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
     ! do nothing
@@ -16787,7 +16818,7 @@ IMPLICIT NONE
    gridloBB(dir)=gridloBB(dir)-interp_support 
 
   else
-   print *,"xmap3D invalid"
+   print *,"xmap3D or flag_2D_to_3D invalid"
    stop
   endif
 
