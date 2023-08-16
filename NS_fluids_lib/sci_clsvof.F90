@@ -10860,7 +10860,7 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
    endif
    
     ! CLSVOF_ReadHeader
-   FSI(part_id)%flag_2D_to_3D=0
+   FSI(part_id)%flag_2D_to_3D=0 ! default (assume solid geom specified in 3d)
    FSI(part_id)%normal_invert=0
    FSI(part_id)%exclusive_doubly_wetted=0
 
@@ -11522,7 +11522,8 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
       ! if CTML materials exists, then,
       !   overall_solid_init calls CTML_init_sci 
       !   CTML_init_sci copies data from ctml_FSI_container
-      !   CTML_init_sci sets FSI(part_id)%flag_2D_to_3D=1
+      !   CTML_init_sci sets FSI(part_id)%flag_2D_to_3D=1 if 
+      !   FIB, and flag_2D_to_3D=0 if FSH.
       call overall_solid_init(CLSVOFtime,ioproc,part_id,isout)  
 
       ! ReadHeader
@@ -11596,10 +11597,13 @@ endif
 end function vel_valid
 
 
-subroutine check_overlap(part_id,ielem,time,minnode,maxnode, &
+subroutine check_overlap( &
+ FSI_mesh_type, &
+ part_id,ielem,time,minnode,maxnode, &
  tid,tilenum,dx3D,lev77,interior_flag,overlap,isweep,xmap3D)
 IMPLICIT NONE
 
+type(mesh_type), INTENT(in) :: FSI_mesh_type
 INTEGER_T, INTENT(in) :: part_id
 INTEGER_T, INTENT(in) :: tid,tilenum
 INTEGER_T, INTENT(in) :: ielem
@@ -11689,8 +11693,12 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
   overlap=1
   interior_flag=1
   do dir=1,3
-   if ((xmap3D(dir).ge.1).and. &
-       (xmap3D(dir).le.3)) then
+   if ((xmap3D(dir).eq.1).or. &
+       (xmap3D(dir).eq.2).or. &
+       (xmap3D(dir).eq.3).or. &
+       ((xmap3D(dir).eq.0).and. &
+       FIX ME STARTING HERE
+        (FSI_mesh_typer%flag_2D_to_3D.eq.0))) then
     xlo=contain_elem(lev77)%xlo3D(tid,tilenum,dir) 
     tilelo=contain_elem(lev77)%tilelo3D(tid,tilenum,dir) 
     tilehi=contain_elem(lev77)%tilehi3D(tid,tilenum,dir) 
@@ -11762,7 +11770,9 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
 return
 end subroutine check_overlap
 
-subroutine check_overlap_nodeBIG(part_id,inode,time, &
+subroutine check_overlap_nodeBIG( &
+ type(mesh_type), INTENT(in) :: FSI_mesh_type
+ part_id,inode,time, &
  minnode, &
  tid,tilenum, &
  dx3D,lev77, &
@@ -12252,7 +12262,9 @@ IMPLICIT NONE
          if ((tid_loop.ne.tid).or.(tilenum_loop.ne.tilenum)) then
            ! isweep==2
            ! element data updated
-          call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
+          call check_overlap( &
+           FSI(part_id), &
+           part_id,ielem,cur_time,minnode,maxnode, &
            tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep, &
            xmap3D)
          endif
@@ -12291,7 +12303,9 @@ IMPLICIT NONE
        ! isweep==1
        ! check_overlap increments
        !  contain_elem(lev77)%level_elem_data(tid,part_id,tilenum)%numElems
-      call check_overlap(part_id,ielem,cur_time, &
+      call check_overlap( &
+        FSI(part_id), &
+        part_id,ielem,cur_time, &
         minnode,maxnode, &
         tid_predict,tilenum_predict, &
         dx3D,lev77, &
@@ -12320,7 +12334,9 @@ IMPLICIT NONE
         if ((tid_loop.ne.tid_predict).or. &
             (tilenum_loop.ne.tilenum_predict)) then
           ! isweep==1
-         call check_overlap(part_id,ielem,cur_time,minnode,maxnode, &
+         call check_overlap( &
+          FSI(part_id), &
+          part_id,ielem,cur_time,minnode,maxnode, &
           tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep, &
           xmap3D)
          if (overlap.eq.1) then
@@ -12412,7 +12428,9 @@ IMPLICIT NONE
        ! isweep==1
        ! check_overlap_nodeBIG increments
        !  contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes
-      call check_overlap_nodeBIG(part_id,inode,cur_time, &
+      call check_overlap_nodeBIG( &
+        FSI(part_id), &
+        part_id,inode,cur_time, &
         minnode, &
         tid_predict,tilenum_predict, &
         dx3D,lev77, &
@@ -12433,7 +12451,9 @@ IMPLICIT NONE
          if ((tid_loop.ne.tid_predict).or. &
              (tilenum_loop.ne.tilenum_predict)) then
            ! isweep==1
-          call check_overlap_nodeBIG(part_id,inode,cur_time, &
+          call check_overlap_nodeBIG( &
+           FSI(part_id), &
+           part_id,inode,cur_time, &
            minnode, &
            tid_loop,tilenum_loop, &
            dx3D,lev77, &
