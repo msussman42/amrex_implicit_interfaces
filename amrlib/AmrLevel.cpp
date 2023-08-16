@@ -544,6 +544,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
 
     if (level==0) {
 
+      //in the constructor
      new_data_FSI.resize(level_MAX_NUM_SLAB);
 
      for (int i=0;i<=time_order;i++) {
@@ -628,25 +629,59 @@ AmrLevel::restart (AmrCore&      papa,
 
  //SUSSMAN: load CTML FSI checkpoint data
  if (level==0) {
-
-  int time_order=parent->Time_blockingFactor();
-  int local_nmat=parent->global_AMR_num_materials;
-
   new_data_FSI.resize(level_MAX_NUM_SLAB);
 
-  std::string CTML_FullPathName  = FullPath+"/CTML";
+  ParmParse ppns("ns");
 
-  Vector<char> fileCharPtr;
-   //we assume that all of the CTML data fits on each "core"
-  ParallelDescriptor::ReadAndBcastFile(CTML_FullPathName, fileCharPtr);
-  std::string fileCharPtrString(fileCharPtr.dataPtr());
-  std::istringstream CTML_is(fileCharPtrString, std::istringstream::in);
+  int local_num_materials=0;
+  ppns.get("num_materials",local_num_materials);
+  if (local_num_materials>0) {
+   //do nothing
+  } else
+   amrex::Error("local_num_materials invalid");
 
-  for (int i=0;i<=time_order;i++) {
+  Vector< int > FSI_flag;
+  FSI_flag.resize(local_num_materials);
 
-   new_data_FSI[i].restart(i,CTML_is);
+  int query_status=ppns.queryarr("FSI_flag",FSI_flag,0,local_num_materials);
 
-  }//for (int i=0;i<=time_order;i++) 
+  if (query_status==1) {
+
+   int ctml_count=0;
+   for (int i=0;i<FSI_flag.size();i++) {
+    if (FSI_flag[i]==FSI_SHOELE_CTML) {
+     ctml_count++;
+    }
+   }
+
+   if (ctml_count>0) {
+
+    int time_order=parent->Time_blockingFactor();
+    int local_nmat=parent->global_AMR_num_materials;
+
+    std::string CTML_FullPathName  = FullPath+"/CTML";
+
+    Vector<char> fileCharPtr;
+     //we assume that all of the CTML data fits on each "core"
+    ParallelDescriptor::ReadAndBcastFile(CTML_FullPathName, fileCharPtr);
+    std::string fileCharPtrString(fileCharPtr.dataPtr());
+    std::istringstream CTML_is(fileCharPtrString, std::istringstream::in);
+
+    for (int i=0;i<=time_order;i++) {
+
+     new_data_FSI[i].restart(i,CTML_is);
+
+    }//for (int i=0;i<=time_order;i++) 
+
+   } else if (ctml_count==0) {
+    //do nothing
+   } else
+    amrex::Error("ctml_count invalid");
+
+  } else if (query_status==0) {
+   //do nothing
+  } else
+   amrex::Error("query_status invalid");
 
  } else if (level>0) {
   // do nothing
@@ -798,12 +833,48 @@ AmrLevel::checkPoint (const std::string& dir,
 
       //SUSSMAN: output CTML FSI checkpoint data
     if (level==0) {
-     int time_order=parent->Time_blockingFactor();
-     new_data_FSI[0].open_checkpoint(FullPath);
-     for (int i=0;i<=time_order;i++) {
-      new_data_FSI[i].checkpoint(i);
-     }
-     new_data_FSI[0].close_checkpoint();
+
+     ParmParse ppns("ns");
+
+     int local_num_materials=0;
+     ppns.get("num_materials",local_num_materials);
+     if (local_num_materials>0) {
+      //do nothing
+     } else
+      amrex::Error("local_num_materials invalid");
+
+     Vector< int > FSI_flag;
+     FSI_flag.resize(local_num_materials);
+
+     int query_status=ppns.queryarr("FSI_flag",FSI_flag,0,local_num_materials);
+
+     if (query_status==1) {
+
+      int ctml_count=0;
+      for (int i=0;i<FSI_flag.size();i++) {
+       if (FSI_flag[i]==FSI_SHOELE_CTML) {
+        ctml_count++;
+       }
+      }
+
+      if (ctml_count>0) {
+
+       int time_order=parent->Time_blockingFactor();
+       new_data_FSI[0].open_checkpoint(FullPath);
+       for (int i=0;i<=time_order;i++) {
+        new_data_FSI[i].checkpoint(i);
+       }
+       new_data_FSI[0].close_checkpoint();
+
+      } else if (ctml_count==0) {
+       //do nothing
+      } else
+       amrex::Error("ctml_count invalid");
+
+     } else if (query_status==0) {
+      //do nothing
+     } else
+      amrex::Error("query_status invalid");
 
      ParallelDescriptor::Barrier("AmrLevel::checkPoint");
     }
