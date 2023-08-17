@@ -16768,13 +16768,17 @@ IMPLICIT NONE
    if (xnot(dir).ge.xlo(dir)-(VOFTOL+probe_size)*dxBB(dir)) then
     ! do nothing
    else
-    print *,"node should be within grid interior"
+    print *,"node should be within grid interior find_grid_bounding_box_node"
+    print *,"dir,xnot,xlo,probe_size,dxBB ",dir,xnot(dir),xlo(dir), &
+            probe_size,dxBB(dir)
     stop
    endif
    if (xnot(dir).le.xhi(dir)+(VOFTOL+probe_size)*dxBB(dir)) then
     ! do nothing
    else
-    print *,"node should be within grid interior"
+    print *,"node should be within grid interior find_grid_bounding_box_node"
+    print *,"dir,xnot,xhi,probe_size,dxBB ",dir,xnot(dir),xhi(dir), &
+            probe_size,dxBB(dir)
     stop
    endif
    if (xnot(dir).le.xlo(dir)+(VOFTOL-probe_size)*dxBB(dir)) then
