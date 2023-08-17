@@ -104,26 +104,26 @@ type mesh_type
  REAL_T, pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements) 
  INTEGER_T, pointer :: EdgeElemId(:,:) !(nodes_per_elem,nelements)
  INTEGER_T, pointer :: EdgeElemIdNode(:,:) !(nodes_per_elem,nelements)
- INTEGER_T :: NumNodesBIG
- INTEGER_T :: NumIntElemsBIG
- INTEGER_T, pointer :: ElemNodeCountBIG(:)
- INTEGER_T, pointer :: ElemNodeCountEdgeBIG(:)
- REAL_T, pointer :: NodeBIG(:,:)  ! (3,node_id)
- REAL_T, pointer :: NodeVelBIG(:,:)
- REAL_T, pointer :: NodeForceBIG(:,:)  ! (NCOMP_FORCE_STRESS,node_id)
- REAL_T, pointer :: NodeDensityBIG(:)
- REAL_T, pointer :: NodeMassBIG(:)
- REAL_T, pointer :: NodeTempBIG(:)  
- REAL_T, pointer :: NodeNormalBIG(:,:)
- REAL_T, pointer :: NodeNormalEdgeBIG(:,:) ! sanity check purposes
- REAL_T, pointer :: ElemDataXnotBIG(:,:)
- INTEGER_T, pointer :: ElemDataBIG(:,:)
-  ! root (parent) element id = IntElemBIG(4,elemid)
- INTEGER_T, pointer :: IntElemBIG(:,:) ! IntElemBIG(inode,ielem)
+ INTEGER_T :: NumNodesFINE
+ INTEGER_T :: NumIntElemsFINE
+ INTEGER_T, pointer :: ElemNodeCountFINE(:)
+ INTEGER_T, pointer :: ElemNodeCountEdgeFINE(:)
+ REAL_T, pointer :: NodeFINE(:,:)  ! (3,node_id)
+ REAL_T, pointer :: NodeVelFINE(:,:)
+ REAL_T, pointer :: NodeForceFINE(:,:)  ! (NCOMP_FORCE_STRESS,node_id)
+ REAL_T, pointer :: NodeDensityFINE(:)
+ REAL_T, pointer :: NodeMassFINE(:)
+ REAL_T, pointer :: NodeTempFINE(:)  
+ REAL_T, pointer :: NodeNormalFINE(:,:)
+ REAL_T, pointer :: NodeNormalEdgeFINE(:,:) ! sanity check purposes
+ REAL_T, pointer :: ElemDataXnotFINE(:,:)
+ INTEGER_T, pointer :: ElemDataFINE(:,:)
+  ! root (parent) element id = IntElemFINE(4,elemid)
+ INTEGER_T, pointer :: IntElemFINE(:,:) ! IntElemFINE(inode,ielem)
  !average of adjoining element normals.
- REAL_T, pointer :: EdgeNormalBIG(:,:) ! EdgeNormalBIG(3*(inode-1)+dir,ielem)
- INTEGER_T, pointer :: EdgeElemIdBIG(:,:)!EdgeElemIdBIG(inode,ielem)
- INTEGER_T, pointer :: EdgeElemIdNodeBIG(:,:)!EdgeElemIdNodeBIG(inode,ielem)
+ REAL_T, pointer :: EdgeNormalFINE(:,:) ! EdgeNormalFINE(3*(inode-1)+dir,ielem)
+ INTEGER_T, pointer :: EdgeElemIdFINE(:,:)!EdgeElemIdFINE(inode,ielem)
+ INTEGER_T, pointer :: EdgeElemIdNodeFINE(:,:)!EdgeElemIdNodeFINE(inode,ielem)
  REAL_T, pointer :: Node(:,:)  ! Node(dir,inode)
  REAL_T, pointer :: Node_old(:,:)
  REAL_T, pointer :: Node_new(:,:)
@@ -1857,8 +1857,8 @@ INTEGER_T :: dir
  endif
 
  do dir=1,3
-  nodej(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnode))
-  nodejp1(dir)=FSI_mesh_type%NodeBIG(dir,sorted_node_list(jnodep1))
+  nodej(dir)=FSI_mesh_type%NodeFINE(dir,sorted_node_list(jnode))
+  nodejp1(dir)=FSI_mesh_type%NodeFINE(dir,sorted_node_list(jnodep1))
  enddo
  call compare_core(nodej,nodejp1,coord_scale,compare_flag,3)
 
@@ -1872,7 +1872,7 @@ INTEGER_T, INTENT(in) :: view_refined
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
 
 character*2 partstr
-character*20 auxfilename20
+character*21 auxfilename21
 INTEGER_T :: stat
 INTEGER_T :: nodes,cells
 INTEGER_T :: dir
@@ -1894,18 +1894,18 @@ INTEGER_T :: inode(3)
 
    if (view_refined.eq.1) then
     if (node_select.eq.1) then
-     write(auxfilename20,'(A14,A2,A4)') 'auxfileBIGNODE',partstr,'.plt'
+     write(auxfilename21,'(A15,A2,A4)') 'auxfileFINENODE',partstr,'.plt'
     else if (node_select.eq.2) then
-     write(auxfilename20,'(A14,A2,A4)') 'auxfileBIGEDGE',partstr,'.plt'
+     write(auxfilename21,'(A15,A2,A4)') 'auxfileFINEEDGE',partstr,'.plt'
     else
      print *,"node_select invalid"
      stop
     endif
    else if (view_refined.eq.0) then
     if (node_select.eq.1) then
-     write(auxfilename20,'(A14,A2,A4)') 'auxfileREGNODE',partstr,'.plt'
+     write(auxfilename21,'(A15,A2,A4)') 'auxfileCRSENODE',partstr,'.plt'
     else if (node_select.eq.2) then
-     write(auxfilename20,'(A14,A2,A4)') 'auxfileREGEDGE',partstr,'.plt'
+     write(auxfilename21,'(A15,A2,A4)') 'auxfileCRSEEDGE',partstr,'.plt'
     else
      print *,"node_select invalid"
      stop
@@ -1915,16 +1915,16 @@ INTEGER_T :: inode(3)
     stop
    endif
 
-   print *,"auxfilename20 ",auxfilename20
-   open(unit=4, file= auxfilename20,status='unknown',iostat=stat)
+   print *,"auxfilename21 ",auxfilename21
+   open(unit=4, file= auxfilename21,status='unknown',iostat=stat)
    if (stat.ne.0) then
-    print *,auxfilename20," can not be opened"
+    print *,auxfilename21," can not be opened"
     stop
    endif
 
    if (view_refined.eq.1) then
-    nodes=FSI_mesh_type%NumNodesBIG
-    cells=FSI_mesh_type%NumIntElemsBIG
+    nodes=FSI_mesh_type%NumNodesFINE
+    cells=FSI_mesh_type%NumIntElemsFINE
    else if (view_refined.eq.0) then
     nodes=FSI_mesh_type%NumNodes
     cells=FSI_mesh_type%NumIntElems
@@ -1942,11 +1942,11 @@ INTEGER_T :: inode(3)
    do i=1,Nodes
     if (view_refined.eq.1) then
      do dir=1,3
-      xnode(dir)=FSI_mesh_type%NodeBIG(dir,i)
+      xnode(dir)=FSI_mesh_type%NodeFINE(dir,i)
       if (node_select.eq.1) then
-       nnode(dir)=FSI_mesh_type%NodeNormalBIG(dir,i)
+       nnode(dir)=FSI_mesh_type%NodeNormalFINE(dir,i)
       else if (node_select.eq.2) then
-       nnode(dir)=FSI_mesh_type%NodeNormalEdgeBIG(dir,i)
+       nnode(dir)=FSI_mesh_type%NodeNormalEdgeFINE(dir,i)
       else
        print *,"node_select invalid"
        stop
@@ -1973,9 +1973,9 @@ INTEGER_T :: inode(3)
 
    do i=1,Cells
     if (view_refined.eq.1) then
-     ! root (parent) element id = IntElemBIG(4,elemid)
+     ! root (parent) element id = IntElemFINE(4,elemid)
      do dir=1,3
-      inode(dir)=FSI_mesh_type%IntElemBIG(dir,i)
+      inode(dir)=FSI_mesh_type%IntElemFINE(dir,i)
      enddo
     else if (view_refined.eq.0) then
      do dir=1,3
@@ -2156,12 +2156,12 @@ INTEGER_T, allocatable :: B_list(:)
 INTEGER_T, allocatable :: alternate_node_list(:)
 INTEGER_T, allocatable :: new_node_list(:)
 INTEGER_T, allocatable :: old_node_list(:)
-REAL_T, allocatable :: NodeBIG_local(:,:)
-REAL_T, allocatable :: NodeVelBIG_local(:,:)
-REAL_T, allocatable :: NodeForceBIG_local(:,:)
-REAL_T, allocatable :: NodeDensityBIG_local(:)
-REAL_T, allocatable :: NodeMassBIG_local(:)
-REAL_T, allocatable :: NodeTempBIG_local(:)
+REAL_T, allocatable :: NodeFINE_local(:,:)
+REAL_T, allocatable :: NodeVelFINE_local(:,:)
+REAL_T, allocatable :: NodeForceFINE_local(:,:)
+REAL_T, allocatable :: NodeDensityFINE_local(:)
+REAL_T, allocatable :: NodeMassFINE_local(:)
+REAL_T, allocatable :: NodeTempFINE_local(:)
 INTEGER_T :: inode,jnode,knode
 INTEGER_T :: ilocal
 INTEGER_T :: ielem
@@ -2186,13 +2186,13 @@ INTEGER_T :: num_nodes_local
 
  print *,"removing duplicate nodes"
 
- allocate(sorted_node_list(FSI_mesh_type%NumNodesBIG))
- allocate(B_list(FSI_mesh_type%NumNodesBIG))
- allocate(alternate_node_list(FSI_mesh_type%NumNodesBIG))
- allocate(new_node_list(FSI_mesh_type%NumNodesBIG))
- allocate(old_node_list(FSI_mesh_type%NumNodesBIG))
+ allocate(sorted_node_list(FSI_mesh_type%NumNodesFINE))
+ allocate(B_list(FSI_mesh_type%NumNodesFINE))
+ allocate(alternate_node_list(FSI_mesh_type%NumNodesFINE))
+ allocate(new_node_list(FSI_mesh_type%NumNodesFINE))
+ allocate(old_node_list(FSI_mesh_type%NumNodesFINE))
 
- do inode=1,FSI_mesh_type%NumNodesBIG
+ do inode=1,FSI_mesh_type%NumNodesFINE
   sorted_node_list(inode)=inode
   B_list(inode)=inode
   alternate_node_list(inode)=inode
@@ -2202,9 +2202,9 @@ INTEGER_T :: num_nodes_local
 
  min_coord=1.0D+20
  max_coord=-1.0D+20
- do inode=1,FSI_mesh_type%NumNodesBIG
+ do inode=1,FSI_mesh_type%NumNodesFINE
   do dir=1,3
-   test_coord=FSI_mesh_type%NodeBIG(dir,inode)
+   test_coord=FSI_mesh_type%NodeFINE(dir,inode)
    if (test_coord.lt.min_coord) then
     min_coord=test_coord
    endif
@@ -2228,11 +2228,11 @@ INTEGER_T :: num_nodes_local
  sort_nodes_flag=1
  call TopDownMergeSort(FSI_mesh_type,coord_scale, &
         sorted_node_list,B_list, &
-        FSI_mesh_type%NumNodesBIG, &
+        FSI_mesh_type%NumNodesFINE, &
         sort_nodes_flag)
 
   ! sanity check
- do inode=1,FSI_mesh_type%NumNodesBIG-1
+ do inode=1,FSI_mesh_type%NumNodesFINE-1
   call compare_nodes(FSI_mesh_type, &
         inode,inode+1, &
         sorted_node_list, &
@@ -2247,11 +2247,11 @@ INTEGER_T :: num_nodes_local
    print *,"compare_flag invalid"
    stop
   endif
- enddo ! do inode=1,FSI_mesh_type%NumNodesBIG-1 (sanity check)
+ enddo ! do inode=1,FSI_mesh_type%NumNodesFINE-1 (sanity check)
 
  inode=1
  knode=1
- do while (inode.lt.FSI_mesh_type%NumNodesBIG)
+ do while (inode.lt.FSI_mesh_type%NumNodesFINE)
   new_node_list(sorted_node_list(inode))=knode
   old_node_list(knode)=sorted_node_list(inode)
   jnode=inode
@@ -2260,16 +2260,16 @@ INTEGER_T :: num_nodes_local
     sorted_node_list, &
     coord_scale,compare_flag)
   do while ((compare_flag.eq.0).and. &
-            (jnode.lt.FSI_mesh_type%NumNodesBIG))
+            (jnode.lt.FSI_mesh_type%NumNodesFINE))
    jnode=jnode+1
    new_node_list(sorted_node_list(jnode))=knode
    alternate_node_list(sorted_node_list(jnode))=sorted_node_list(inode)
-   if (jnode.lt.FSI_mesh_type%NumNodesBIG) then
+   if (jnode.lt.FSI_mesh_type%NumNodesFINE) then
     call compare_nodes(FSI_mesh_type, &
      jnode,jnode+1, &
      sorted_node_list, &
      coord_scale,compare_flag)
-   else if (jnode.eq.FSI_mesh_type%NumNodesBIG) then
+   else if (jnode.eq.FSI_mesh_type%NumNodesFINE) then
     compare_flag=0
    else 
     print *,"jnode invalid"
@@ -2279,18 +2279,18 @@ INTEGER_T :: num_nodes_local
   inode=jnode+1
   knode=knode+1
  enddo
- if (inode.eq.FSI_mesh_type%NumNodesBIG) then
+ if (inode.eq.FSI_mesh_type%NumNodesFINE) then
   new_node_list(sorted_node_list(inode))=knode
   old_node_list(knode)=sorted_node_list(inode)
   inode=inode+1
   knode=knode+1
- else if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
+ else if (inode.eq.FSI_mesh_type%NumNodesFINE+1) then
   ! do nothing
  else
   print *,"inode invalid1: inode=",inode
   stop
  endif
- if (inode.eq.FSI_mesh_type%NumNodesBIG+1) then
+ if (inode.eq.FSI_mesh_type%NumNodesFINE+1) then
   ! do nothing
  else
   print *,"inode invalid2: inode=",inode
@@ -2299,93 +2299,93 @@ INTEGER_T :: num_nodes_local
 
  num_nodes_local=knode-1
 
- allocate(NodeBIG_local(3,num_nodes_local))
- allocate(NodeVelBIG_local(3,num_nodes_local))
- allocate(NodeForceBIG_local(NCOMP_FORCE_STRESS,num_nodes_local))
- allocate(NodeDensityBIG_local(num_nodes_local))
- allocate(NodeMassBIG_local(num_nodes_local))
- allocate(NodeTempBIG_local(num_nodes_local))
+ allocate(NodeFINE_local(3,num_nodes_local))
+ allocate(NodeVelFINE_local(3,num_nodes_local))
+ allocate(NodeForceFINE_local(NCOMP_FORCE_STRESS,num_nodes_local))
+ allocate(NodeDensityFINE_local(num_nodes_local))
+ allocate(NodeMassFINE_local(num_nodes_local))
+ allocate(NodeTempFINE_local(num_nodes_local))
 
- do ielem=1,FSI_mesh_type%NumIntElemsBIG
-  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElemsFINE
+  nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,ielem)
   if (nodes_per_elem.ne.3) then
    print *,"nodes_per_elem.ne.3 not supported"
    stop
   endif
-  ! root (parent) element id = IntElemBIG(4,elemid)
+  ! root (parent) element id = IntElemFINE(4,elemid)
   do ilocal=1,nodes_per_elem
-   inode=FSI_mesh_type%IntElemBIG(ilocal,ielem)
-   FSI_mesh_type%IntElemBIG(ilocal,ielem)=new_node_list(inode)
+   inode=FSI_mesh_type%IntElemFINE(ilocal,ielem)
+   FSI_mesh_type%IntElemFINE(ilocal,ielem)=new_node_list(inode)
   enddo
- enddo ! do ielem=1,FSI_mesh_type%NumIntElemsBIG
+ enddo ! do ielem=1,FSI_mesh_type%NumIntElemsFINE
 
- print *,"old nodes ",FSI_mesh_type%NumNodesBIG
+ print *,"old nodes ",FSI_mesh_type%NumNodesFINE
  print *,"new nodes ",num_nodes_local
 
  do knode=1,num_nodes_local
   inode=old_node_list(knode)
 
   do dir=1,3
-   NodeBIG_local(dir,knode)=FSI_mesh_type%NodeBIG(dir,inode)
-   NodeVelBIG_local(dir,knode)=FSI_mesh_type%NodeVelBIG(dir,inode)
+   NodeFINE_local(dir,knode)=FSI_mesh_type%NodeFINE(dir,inode)
+   NodeVelFINE_local(dir,knode)=FSI_mesh_type%NodeVelFINE(dir,inode)
   enddo
   do dir=1,NCOMP_FORCE_STRESS
-   NodeForceBIG_local(dir,knode)=FSI_mesh_type%NodeForceBIG(dir,inode)
+   NodeForceFINE_local(dir,knode)=FSI_mesh_type%NodeForceFINE(dir,inode)
   enddo
 
-  NodeDensityBIG_local(knode)=FSI_mesh_type%NodeDensityBIG(inode)
-  NodeMassBIG_local(knode)=FSI_mesh_type%NodeMassBIG(inode)
-  NodeTempBIG_local(knode)=FSI_mesh_type%NodeTempBIG(inode)
+  NodeDensityFINE_local(knode)=FSI_mesh_type%NodeDensityFINE(inode)
+  NodeMassFINE_local(knode)=FSI_mesh_type%NodeMassFINE(inode)
+  NodeTempFINE_local(knode)=FSI_mesh_type%NodeTempFINE(inode)
  enddo !knode=1,num_nodes_local
 
- deallocate(FSI_mesh_type%NodeBIG)
- deallocate(FSI_mesh_type%NodeVelBIG)
- deallocate(FSI_mesh_type%NodeForceBIG)
- deallocate(FSI_mesh_type%NodeDensityBIG)
- deallocate(FSI_mesh_type%NodeMassBIG)
- deallocate(FSI_mesh_type%NodeTempBIG)
- deallocate(FSI_mesh_type%NodeNormalBIG)
- deallocate(FSI_mesh_type%NodeNormalEdgeBIG)
- deallocate(FSI_mesh_type%ElemNodeCountBIG)
- deallocate(FSI_mesh_type%ElemNodeCountEdgeBIG)
+ deallocate(FSI_mesh_type%NodeFINE)
+ deallocate(FSI_mesh_type%NodeVelFINE)
+ deallocate(FSI_mesh_type%NodeForceFINE)
+ deallocate(FSI_mesh_type%NodeDensityFINE)
+ deallocate(FSI_mesh_type%NodeMassFINE)
+ deallocate(FSI_mesh_type%NodeTempFINE)
+ deallocate(FSI_mesh_type%NodeNormalFINE)
+ deallocate(FSI_mesh_type%NodeNormalEdgeFINE)
+ deallocate(FSI_mesh_type%ElemNodeCountFINE)
+ deallocate(FSI_mesh_type%ElemNodeCountEdgeFINE)
 
- allocate(FSI_mesh_type%NodeBIG(3,num_nodes_local))
- allocate(FSI_mesh_type%NodeVelBIG(3,num_nodes_local))
- allocate(FSI_mesh_type%NodeForceBIG(NCOMP_FORCE_STRESS,num_nodes_local))
- allocate(FSI_mesh_type%NodeDensityBIG(num_nodes_local))
- allocate(FSI_mesh_type%NodeMassBIG(num_nodes_local))
- allocate(FSI_mesh_type%NodeTempBIG(num_nodes_local))
- allocate(FSI_mesh_type%NodeNormalBIG(3,num_nodes_local))
- allocate(FSI_mesh_type%NodeNormalEdgeBIG(3,num_nodes_local))
- allocate(FSI_mesh_type%ElemNodeCountBIG(num_nodes_local))
- allocate(FSI_mesh_type%ElemNodeCountEdgeBIG(num_nodes_local))
+ allocate(FSI_mesh_type%NodeFINE(3,num_nodes_local))
+ allocate(FSI_mesh_type%NodeVelFINE(3,num_nodes_local))
+ allocate(FSI_mesh_type%NodeForceFINE(NCOMP_FORCE_STRESS,num_nodes_local))
+ allocate(FSI_mesh_type%NodeDensityFINE(num_nodes_local))
+ allocate(FSI_mesh_type%NodeMassFINE(num_nodes_local))
+ allocate(FSI_mesh_type%NodeTempFINE(num_nodes_local))
+ allocate(FSI_mesh_type%NodeNormalFINE(3,num_nodes_local))
+ allocate(FSI_mesh_type%NodeNormalEdgeFINE(3,num_nodes_local))
+ allocate(FSI_mesh_type%ElemNodeCountFINE(num_nodes_local))
+ allocate(FSI_mesh_type%ElemNodeCountEdgeFINE(num_nodes_local))
 
  do knode=1,num_nodes_local
   do dir=1,3
-   FSI_mesh_type%NodeBIG(dir,knode)=NodeBIG_local(dir,knode)
-   FSI_mesh_type%NodeVelBIG(dir,knode)=NodeVelBIG_local(dir,knode)
-   FSI_mesh_type%NodeNormalBIG(dir,knode)=zero
-   FSI_mesh_type%NodeNormalEdgeBIG(dir,knode)=zero
+   FSI_mesh_type%NodeFINE(dir,knode)=NodeFINE_local(dir,knode)
+   FSI_mesh_type%NodeVelFINE(dir,knode)=NodeVelFINE_local(dir,knode)
+   FSI_mesh_type%NodeNormalFINE(dir,knode)=zero
+   FSI_mesh_type%NodeNormalEdgeFINE(dir,knode)=zero
   enddo
   do dir=1,NCOMP_FORCE_STRESS
-   FSI_mesh_type%NodeForceBIG(dir,knode)=NodeForceBIG_local(dir,knode)
+   FSI_mesh_type%NodeForceFINE(dir,knode)=NodeForceFINE_local(dir,knode)
   enddo
 
-  FSI_mesh_type%NodeDensityBIG(knode)=NodeDensityBIG_local(knode)
-  FSI_mesh_type%NodeMassBIG(knode)=NodeMassBIG_local(knode)
-  FSI_mesh_type%NodeTempBIG(knode)=NodeTempBIG_local(knode)
-  FSI_mesh_type%ElemNodeCountBIG(knode)=0
-  FSI_mesh_type%ElemNodeCountEdgeBIG(knode)=0
+  FSI_mesh_type%NodeDensityFINE(knode)=NodeDensityFINE_local(knode)
+  FSI_mesh_type%NodeMassFINE(knode)=NodeMassFINE_local(knode)
+  FSI_mesh_type%NodeTempFINE(knode)=NodeTempFINE_local(knode)
+  FSI_mesh_type%ElemNodeCountFINE(knode)=0
+  FSI_mesh_type%ElemNodeCountEdgeFINE(knode)=0
  enddo !knode=1,num_nodes_local
 
- FSI_mesh_type%NumNodesBIG=num_nodes_local
+ FSI_mesh_type%NumNodesFINE=num_nodes_local
 
- deallocate(NodeBIG_local)
- deallocate(NodeVelBIG_local)
- deallocate(NodeForceBIG_local)
- deallocate(NodeDensityBIG_local)
- deallocate(NodeMassBIG_local)
- deallocate(NodeTempBIG_local)
+ deallocate(NodeFINE_local)
+ deallocate(NodeVelFINE_local)
+ deallocate(NodeForceFINE_local)
+ deallocate(NodeDensityFINE_local)
+ deallocate(NodeMassFINE_local)
+ deallocate(NodeTempFINE_local)
  
  deallocate(old_node_list)
  deallocate(new_node_list)
@@ -2420,13 +2420,13 @@ REAL_T :: x2(3)
    x2(dir)=FSI_mesh_type%Node(dir,FSI_mesh_type%IntElem(inodep1,ielem))
   enddo
  else if (edit_refined_data.eq.1) then
-  local_nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+  local_nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,ielem)
   if (inode.eq.local_nodes_per_elem) then
    inodep1=1
   endif 
   do dir=1,3
-   x1(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,ielem))
-   x2(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,ielem))
+   x1(dir)=FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(inode,ielem))
+   x2(dir)=FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(inodep1,ielem))
   enddo
  else
   print *,"edit_refined_data invalid"
@@ -2445,7 +2445,7 @@ REAL_T :: x2(3)
 end subroutine print_edge
 
 !edit_refined_data.eq.0 => original FSI_mesh_type data investigated.
-!edit_refined_data.eq.1 => "BIG" (refined) FSI_mesh_type data investigated.
+!edit_refined_data.eq.1 => "FINE" (refined) FSI_mesh_type data investigated.
 subroutine init_EdgeNormal( &
    FSI_mesh_type,part_id,max_part_id,ioproc,isout, &
    edit_refined_data, &
@@ -2535,16 +2535,16 @@ REAL_T :: opp_edge_data(6)
 
  else if (edit_refined_data.eq.1) then
 
-  nelems=FSI_mesh_type%NumIntElemsBIG
+  nelems=FSI_mesh_type%NumIntElemsFINE
   nodes_per_elem=3
-  if (nelems.eq.UBOUND(FSI_mesh_type%IntElemBIG,2)) then
+  if (nelems.eq.UBOUND(FSI_mesh_type%IntElemFINE,2)) then
    ! do nothing
   else
    print *,"nelems invalid"
    stop
   endif
-  ! root (parent) element id = IntElemBIG(4,elemid)
-  if (nodes_per_elem+1.eq.UBOUND(FSI_mesh_type%IntElemBIG,1)) then
+  ! root (parent) element id = IntElemFINE(4,elemid)
+  if (nodes_per_elem+1.eq.UBOUND(FSI_mesh_type%IntElemFINE,1)) then
    ! do nothing
   else
    print *,"nodes_per_elem invalid"
@@ -2593,18 +2593,18 @@ REAL_T :: opp_edge_data(6)
   else if (edit_refined_data.eq.1) then
    do dir=1,3*nodes_per_elem
     !average of adjoining element normals.
-    FSI_mesh_type%EdgeNormalBIG(dir,ielem)=zero
+    FSI_mesh_type%EdgeNormalFINE(dir,ielem)=zero
    enddo
    do dir=1,nodes_per_elem
-    FSI_mesh_type%EdgeElemIdBIG(dir,ielem)=0
-    FSI_mesh_type%EdgeElemIdNodeBIG(dir,ielem)=0
+    FSI_mesh_type%EdgeElemIdFINE(dir,ielem)=0
+    FSI_mesh_type%EdgeElemIdNodeFINE(dir,ielem)=0
    enddo
-   local_nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+   local_nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,ielem)
    if (local_nodes_per_elem.eq.3) then
     do inode=1,local_nodes_per_elem
      do dir=1,3
       xnode(inode,dir)= &
-       FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,ielem))
+       FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(inode,ielem))
      enddo
     enddo
    else
@@ -2726,11 +2726,11 @@ REAL_T :: opp_edge_data(6)
     old_edge_id_node_opp=old_edge_id_node
     doubly_flag=FSI_mesh_type%ElemData(DOUBLYCOMP,ielem)
    else if (edit_refined_data.eq.1) then
-    old_edge_id=FSI_mesh_type%EdgeElemIdBIG(inode,ielem)
+    old_edge_id=FSI_mesh_type%EdgeElemIdFINE(inode,ielem)
     old_edge_id_opp=old_edge_id
-    old_edge_id_node=FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)
+    old_edge_id_node=FSI_mesh_type%EdgeElemIdNodeFINE(inode,ielem)
     old_edge_id_node_opp=old_edge_id_node
-    doubly_flag=FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem)
+    doubly_flag=FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem)
    else
     print *,"edit_refined_data invalid"
     stop
@@ -2756,10 +2756,10 @@ REAL_T :: opp_edge_data(6)
     old_edge_id_node=FSI_mesh_type%EdgeElemIdNode(inode,ielem)
     old_edge_id_node_opp=FSI_mesh_type%EdgeElemIdNode(inode_opp,ielem_opp)
    else if (edit_refined_data.eq.1) then
-    old_edge_id=FSI_mesh_type%EdgeElemIdBIG(inode,ielem)
-    old_edge_id_opp=FSI_mesh_type%EdgeElemIdBIG(inode_opp,ielem_opp)
-    old_edge_id_node=FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)
-    old_edge_id_node_opp=FSI_mesh_type%EdgeElemIdNodeBIG(inode_opp,ielem_opp)
+    old_edge_id=FSI_mesh_type%EdgeElemIdFINE(inode,ielem)
+    old_edge_id_opp=FSI_mesh_type%EdgeElemIdFINE(inode_opp,ielem_opp)
+    old_edge_id_node=FSI_mesh_type%EdgeElemIdNodeFINE(inode,ielem)
+    old_edge_id_node_opp=FSI_mesh_type%EdgeElemIdNodeFINE(inode_opp,ielem_opp)
    else
     print *,"edit_refined_data invalid"
     stop
@@ -2852,14 +2852,14 @@ REAL_T :: opp_edge_data(6)
        (old_edge_id_opp.eq.0).and. &
        (old_edge_id_node.eq.0).and. &
        (old_edge_id_node_opp.eq.0)) then
-    FSI_mesh_type%EdgeElemIdBIG(inode,ielem)=ielem_opp
-    FSI_mesh_type%EdgeElemIdBIG(inode_opp,ielem_opp)=ielem
-    FSI_mesh_type%EdgeElemIdNodeBIG(inode,ielem)=inode_opp
-    FSI_mesh_type%EdgeElemIdNodeBIG(inode_opp,ielem_opp)=inode
-    call scinormalBIG(ielem,normal, &
+    FSI_mesh_type%EdgeElemIdFINE(inode,ielem)=ielem_opp
+    FSI_mesh_type%EdgeElemIdFINE(inode_opp,ielem_opp)=ielem
+    FSI_mesh_type%EdgeElemIdNodeFINE(inode,ielem)=inode_opp
+    FSI_mesh_type%EdgeElemIdNodeFINE(inode_opp,ielem_opp)=inode
+    call scinormalFINE(ielem,normal, &
       FSI_mesh_type,part_id,max_part_id, &
       generate_time)
-    call scinormalBIG(ielem_opp,normal_opp, &
+    call scinormalFINE(ielem_opp,normal_opp, &
       FSI_mesh_type,part_id,max_part_id, &
       generate_time)
     do dir=1,3
@@ -2891,9 +2891,9 @@ REAL_T :: opp_edge_data(6)
     endif
 
     do dir=1,3
-     FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,ielem)= &
+     FSI_mesh_type%EdgeNormalFINE(3*(inode-1)+dir,ielem)= &
              local_normal(dir)
-     FSI_mesh_type%EdgeNormalBIG(3*(inode_opp-1)+dir,ielem_opp)= &
+     FSI_mesh_type%EdgeNormalFINE(3*(inode_opp-1)+dir,ielem_opp)= &
              local_normal(dir)
     enddo
    else
@@ -2951,7 +2951,7 @@ REAL_T :: opp_edge_data(6)
     if (edit_refined_data.eq.0) then
      local_normal(dir)=FSI_mesh_type%EdgeNormal(3*(iedge-1)+dir,ielem)
     else if (edit_refined_data.eq.1) then
-     local_normal(dir)=FSI_mesh_type%EdgeNormalBIG(3*(iedge-1)+dir,ielem)
+     local_normal(dir)=FSI_mesh_type%EdgeNormalFINE(3*(iedge-1)+dir,ielem)
     else
      print *,"edit_refined_data invalid"
      stop
@@ -2965,7 +2965,7 @@ REAL_T :: opp_edge_data(6)
    if (mag.gt.zero) then
     ! do nothing
    else if (mag.eq.zero) then
-    print *,"WARNING: mag.eq.zero in EdgeNormal(BIG) sanity check"
+    print *,"WARNING: mag.eq.zero in EdgeNormal(FINE) sanity check"
     print *,"iedge=",iedge
     print *,"ielem=",ielem
     print *,"edit_refined_data=",edit_refined_data
@@ -2977,11 +2977,11 @@ REAL_T :: opp_edge_data(6)
       FSI_mesh_type%EdgeNormal(3*(iedge-1)+dir,ielem)=normal(dir)
      enddo
     else if (edit_refined_data.eq.1) then
-     call scinormalBIG(ielem,normal, &
+     call scinormalFINE(ielem,normal, &
       FSI_mesh_type,part_id,max_part_id, &
       generate_time)
      do dir=1,3
-      FSI_mesh_type%EdgeNormalBIG(3*(iedge-1)+dir,ielem)=normal(dir)
+      FSI_mesh_type%EdgeNormalFINE(3*(iedge-1)+dir,ielem)=normal(dir)
      enddo
     else
      print *,"edit_refined_data invalid"
@@ -3883,96 +3883,96 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
   endif
  enddo ! ilevel
 
- FSI_mesh_type%NumNodesBIG=multi_lag(n_lag_levels)%n_nodes
- FSI_mesh_type%NumIntElemsBIG=multi_lag(n_lag_levels)%n_elems
+ FSI_mesh_type%NumNodesFINE=multi_lag(n_lag_levels)%n_nodes
+ FSI_mesh_type%NumIntElemsFINE=multi_lag(n_lag_levels)%n_elems
 
   ! in: post_process_nodes_elements
  if (initflag.eq.0) then 
-  deallocate(FSI_mesh_type%NodeBIG)
-  deallocate(FSI_mesh_type%NodeVelBIG)
-  deallocate(FSI_mesh_type%NodeForceBIG)
-  deallocate(FSI_mesh_type%NodeMassBIG)
-  deallocate(FSI_mesh_type%NodeDensityBIG)
-  deallocate(FSI_mesh_type%NodeTempBIG)
-  deallocate(FSI_mesh_type%NodeNormalBIG)
-  deallocate(FSI_mesh_type%NodeNormalEdgeBIG)
-  deallocate(FSI_mesh_type%ElemNodeCountBIG)
-  deallocate(FSI_mesh_type%ElemNodeCountEdgeBIG)
+  deallocate(FSI_mesh_type%NodeFINE)
+  deallocate(FSI_mesh_type%NodeVelFINE)
+  deallocate(FSI_mesh_type%NodeForceFINE)
+  deallocate(FSI_mesh_type%NodeMassFINE)
+  deallocate(FSI_mesh_type%NodeDensityFINE)
+  deallocate(FSI_mesh_type%NodeTempFINE)
+  deallocate(FSI_mesh_type%NodeNormalFINE)
+  deallocate(FSI_mesh_type%NodeNormalEdgeFINE)
+  deallocate(FSI_mesh_type%ElemNodeCountFINE)
+  deallocate(FSI_mesh_type%ElemNodeCountEdgeFINE)
 
-  deallocate(FSI_mesh_type%ElemDataXnotBIG)
-  deallocate(FSI_mesh_type%ElemDataBIG)
-  deallocate(FSI_mesh_type%IntElemBIG)
-  deallocate(FSI_mesh_type%EdgeNormalBIG)
-  deallocate(FSI_mesh_type%EdgeElemIdBIG)
-  deallocate(FSI_mesh_type%EdgeElemIdNodeBIG)
+  deallocate(FSI_mesh_type%ElemDataXnotFINE)
+  deallocate(FSI_mesh_type%ElemDataFINE)
+  deallocate(FSI_mesh_type%IntElemFINE)
+  deallocate(FSI_mesh_type%EdgeNormalFINE)
+  deallocate(FSI_mesh_type%EdgeElemIdFINE)
+  deallocate(FSI_mesh_type%EdgeElemIdNodeFINE)
 
  endif
 
   ! in: post_process_nodes_elements
- allocate(FSI_mesh_type%NodeBIG(3,FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeNormalBIG(3,FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeNormalEdgeBIG(3,FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeVelBIG(3,FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeForceBIG(NCOMP_FORCE_STRESS, &
-           FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeMassBIG(FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeDensityBIG(FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%NodeTempBIG(FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%ElemNodeCountBIG(FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%ElemNodeCountEdgeBIG(FSI_mesh_type%NumNodesBIG))
- allocate(FSI_mesh_type%ElemDataXnotBIG(3,FSI_mesh_type%NumIntElemsBIG))
- allocate(FSI_mesh_type%ElemDataBIG(flags_per_element, &
-          FSI_mesh_type%NumIntElemsBIG))
-  ! root (parent) element id = IntElemBIG(4,elemid)
- allocate(FSI_mesh_type%IntElemBIG(4,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%NodeFINE(3,FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%NodeNormalFINE(3,FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%NodeNormalEdgeFINE(3,FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%NodeVelFINE(3,FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%NodeForceFINE(NCOMP_FORCE_STRESS, &
+           FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%NodeMassFINE(FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%NodeDensityFINE(FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%NodeTempFINE(FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%ElemNodeCountFINE(FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%ElemNodeCountEdgeFINE(FSI_mesh_type%NumNodesFINE))
+ allocate(FSI_mesh_type%ElemDataXnotFINE(3,FSI_mesh_type%NumIntElemsFINE))
+ allocate(FSI_mesh_type%ElemDataFINE(flags_per_element, &
+          FSI_mesh_type%NumIntElemsFINE))
+  ! root (parent) element id = IntElemFINE(4,elemid)
+ allocate(FSI_mesh_type%IntElemFINE(4,FSI_mesh_type%NumIntElemsFINE))
  !average of adjoining element normals.
- allocate(FSI_mesh_type%EdgeNormalBIG(9,FSI_mesh_type%NumIntElemsBIG))
- allocate(FSI_mesh_type%EdgeElemIdBIG(3,FSI_mesh_type%NumIntElemsBIG))
- allocate(FSI_mesh_type%EdgeElemIdNodeBIG(3,FSI_mesh_type%NumIntElemsBIG))
+ allocate(FSI_mesh_type%EdgeNormalFINE(9,FSI_mesh_type%NumIntElemsFINE))
+ allocate(FSI_mesh_type%EdgeElemIdFINE(3,FSI_mesh_type%NumIntElemsFINE))
+ allocate(FSI_mesh_type%EdgeElemIdNodeFINE(3,FSI_mesh_type%NumIntElemsFINE))
 
  if ((ioproc.eq.1).and.(isout.eq.1)) then
   print *,"NumNodes, NumIntElems ",FSI_mesh_type%NumNodes, &
    FSI_mesh_type%NumIntElems
-  print *,"NumNodesBIG, NumIntElemsBIG ",FSI_mesh_type%NumNodesBIG, &
-   FSI_mesh_type%NumIntElemsBIG
+  print *,"NumNodesFINE, NumIntElemsFINE ",FSI_mesh_type%NumNodesFINE, &
+   FSI_mesh_type%NumIntElemsFINE
  endif
 
   ! in: post_process_nodes_elements
- do ielem=1,FSI_mesh_type%NumIntElemsBIG
+ do ielem=1,FSI_mesh_type%NumIntElemsFINE
   ! root (parent) element id = intelemdt(4,elemid)
   do dir=1,4
-   FSI_mesh_type%IntElemBIG(dir,ielem)= &
+   FSI_mesh_type%IntElemFINE(dir,ielem)= &
      multi_lag(n_lag_levels)%intelemdt(dir,ielem)
   enddo
-   ! ElemDataBIG(DOUBLYCOMP,ielem) is the doubly wetted flag
+   ! ElemDataFINE(DOUBLYCOMP,ielem) is the doubly wetted flag
   do dir=1,flags_per_element
-   FSI_mesh_type%ElemDataBIG(dir,ielem)= &
+   FSI_mesh_type%ElemDataFINE(dir,ielem)= &
        multi_lag(n_lag_levels)%elemdt(dir,ielem)
   enddo
  enddo
   ! in: post_process_nodes_elements
- do inode_list=1,FSI_mesh_type%NumNodesBIG
+ do inode_list=1,FSI_mesh_type%NumNodesFINE
   do dir=1,3
-   FSI_mesh_type%NodeNormalBIG(dir,inode_list)=0.0
-   FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)=0.0
-   FSI_mesh_type%NodeBIG(dir,inode_list)= &
+   FSI_mesh_type%NodeNormalFINE(dir,inode_list)=0.0
+   FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)=0.0
+   FSI_mesh_type%NodeFINE(dir,inode_list)= &
       multi_lag(n_lag_levels)%nd(dir,inode_list)
-   FSI_mesh_type%NodeVelBIG(dir,inode_list)= &
+   FSI_mesh_type%NodeVelFINE(dir,inode_list)= &
       multi_lag(n_lag_levels)%ndvel(dir,inode_list)
   enddo
   do dir=1,NCOMP_FORCE_STRESS
-   FSI_mesh_type%NodeForceBIG(dir,inode_list)= &
+   FSI_mesh_type%NodeForceFINE(dir,inode_list)= &
      multi_lag(n_lag_levels)%ndforce(dir,inode_list)
   enddo
-  FSI_mesh_type%NodeMassBIG(inode_list)= &
+  FSI_mesh_type%NodeMassFINE(inode_list)= &
      multi_lag(n_lag_levels)%ndmass(inode_list)
-  FSI_mesh_type%NodeDensityBIG(inode_list)= &
+  FSI_mesh_type%NodeDensityFINE(inode_list)= &
      multi_lag(n_lag_levels)%nddensity(inode_list)
-  FSI_mesh_type%NodeTempBIG(inode_list)= &
+  FSI_mesh_type%NodeTempFINE(inode_list)= &
      multi_lag(n_lag_levels)%ndtemp(inode_list)
-  FSI_mesh_type%ElemNodeCountBIG(inode_list)=0
-  FSI_mesh_type%ElemNodeCountEdgeBIG(inode_list)=0
- enddo ! inode_list=1,FSI_mesh_type%NumNodesBIG
+  FSI_mesh_type%ElemNodeCountFINE(inode_list)=0
+  FSI_mesh_type%ElemNodeCountEdgeFINE(inode_list)=0
+ enddo ! inode_list=1,FSI_mesh_type%NumNodesFINE
 
  do ilev_lag=1,n_lag_levels
   deallocate(multi_lag(ilev_lag)%intelemdt)
@@ -4000,30 +4000,30 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
   print *,"creating normals for the nodes and Xnot"
  endif
 
- ! UPDATE NODENORMALBIG ON REFINED LAGRANGIAN GRID --------------
+ ! UPDATE NODENORMALFINE ON REFINED LAGRANGIAN GRID --------------
 
- allocate(DoublyWettedNode(FSI_mesh_type%NumNodesBIG))
+ allocate(DoublyWettedNode(FSI_mesh_type%NumNodesFINE))
 
- do inode_list=1,FSI_mesh_type%NumNodesBIG
+ do inode_list=1,FSI_mesh_type%NumNodesFINE
   do dir=1,3
-   FSI_mesh_type%NodeNormalBIG(dir,inode_list)=0.0
-   FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)=0.0
+   FSI_mesh_type%NodeNormalFINE(dir,inode_list)=0.0
+   FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)=0.0
   enddo
-  FSI_mesh_type%ElemNodeCountBIG(inode_list)=0
-  FSI_mesh_type%ElemNodeCountEdgeBIG(inode_list)=0
+  FSI_mesh_type%ElemNodeCountFINE(inode_list)=0
+  FSI_mesh_type%ElemNodeCountEdgeFINE(inode_list)=0
   DoublyWettedNode(inode_list)=1
- enddo ! inode_list=1,FSI_mesh_type%NumNodesBIG
+ enddo ! inode_list=1,FSI_mesh_type%NumNodesFINE
 
- do ielem=1,FSI_mesh_type%NumIntElemsBIG
-  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElemsFINE
+  nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,ielem)
   if (nodes_per_elem.ne.3) then
    print *,"nodes_per_elem invalid"
    stop
   endif
   do dir=1,3
-   FSI_mesh_type%ElemDataXnotBIG(dir,ielem)=0.0
+   FSI_mesh_type%ElemDataXnotFINE(dir,ielem)=0.0
   enddo
-  call scinormalBIG( &
+  call scinormalFINE( &
      ielem, & !intent(in)
      normal, & !intent(out)
      FSI_mesh_type, & !intent(in)
@@ -4031,7 +4031,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
      max_part_id, & !intent(in)
      generate_time)
   do inode_elem=1,nodes_per_elem
-   inode_list=FSI_mesh_type%IntElemBIG(inode_elem,ielem)
+   inode_list=FSI_mesh_type%IntElemFINE(inode_elem,ielem)
 
    if ((inode_elem.ge.1).and.(inode_elem.lt.nodes_per_elem)) then
     inode_elem_p1=inode_elem+1
@@ -4042,42 +4042,42 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     stop
    endif
 
-   if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then 
+   if (FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem).eq.0) then 
     DoublyWettedNode(inode_list)=0
-   else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
+   else if (FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem).eq.1) then 
     ! do nothing
    else
-    print *,"ElemDataBIG(DOUBLYCOMP) invalid"
+    print *,"ElemDataFINE(DOUBLYCOMP) invalid"
     stop
    endif
 
    do dir=1,3
-    FSI_mesh_type%NodeNormalBIG(dir,inode_list)= &
-      FSI_mesh_type%NodeNormalBIG(dir,inode_list)+normal(dir)
-    FSI_mesh_type%ElemDataXnotBIG(dir,ielem)= &
-      FSI_mesh_type%ElemDataXnotBIG(dir,ielem)+ &
-      FSI_mesh_type%NodeBIG(dir,inode_list)
+    FSI_mesh_type%NodeNormalFINE(dir,inode_list)= &
+      FSI_mesh_type%NodeNormalFINE(dir,inode_list)+normal(dir)
+    FSI_mesh_type%ElemDataXnotFINE(dir,ielem)= &
+      FSI_mesh_type%ElemDataXnotFINE(dir,ielem)+ &
+      FSI_mesh_type%NodeFINE(dir,inode_list)
 
-    FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)= &
-      FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)+ &
-       FSI_mesh_type%EdgeNormalBIG(3*(inode_elem-1)+dir,ielem)
-    FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)= &
-      FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)+ &
-       FSI_mesh_type%EdgeNormalBIG(3*(inode_elem_p1-1)+dir,ielem)
+    FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)= &
+      FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)+ &
+       FSI_mesh_type%EdgeNormalFINE(3*(inode_elem-1)+dir,ielem)
+    FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)= &
+      FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)+ &
+       FSI_mesh_type%EdgeNormalFINE(3*(inode_elem_p1-1)+dir,ielem)
    enddo !dir=1..3
-   FSI_mesh_type%ElemNodeCountBIG(inode_list)= &
-     FSI_mesh_type%ElemNodeCountBIG(inode_list)+1
-   FSI_mesh_type%ElemNodeCountEdgeBIG(inode_list)= &
-     FSI_mesh_type%ElemNodeCountEdgeBIG(inode_list)+2
+   FSI_mesh_type%ElemNodeCountFINE(inode_list)= &
+     FSI_mesh_type%ElemNodeCountFINE(inode_list)+1
+   FSI_mesh_type%ElemNodeCountEdgeFINE(inode_list)= &
+     FSI_mesh_type%ElemNodeCountEdgeFINE(inode_list)+2
   enddo ! inode_elem=1,nodes_per_elem
   do dir=1,3
-   FSI_mesh_type%ElemDataXnotBIG(dir,ielem)= &
-    FSI_mesh_type%ElemDataXnotBIG(dir,ielem)/3.0
+   FSI_mesh_type%ElemDataXnotFINE(dir,ielem)= &
+    FSI_mesh_type%ElemDataXnotFINE(dir,ielem)/3.0
   enddo
- enddo ! do ielem=1,FSI_mesh_type%NumIntElemsBIG
+ enddo ! do ielem=1,FSI_mesh_type%NumIntElemsFINE
 
- do inode_list=1,FSI_mesh_type%NumNodesBIG
-  normal_cnt=FSI_mesh_type%ElemNodeCountBIG(inode_list)
+ do inode_list=1,FSI_mesh_type%NumNodesFINE
+  normal_cnt=FSI_mesh_type%ElemNodeCountFINE(inode_list)
   if (normal_cnt.gt.0) then
 
    if (normal_cnt.ge.3) then
@@ -4087,22 +4087,22 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     if (DoublyWettedNode(inode_list).eq.1) then
      ! do nothing
     else
-     print *,"warning(BIG): expecting normal_cnt>=3; normal_cnt=",normal_cnt
+     print *,"warning(FINE): expecting normal_cnt>=3; normal_cnt=",normal_cnt
     endif
 
    endif
 
    mag=zero
    do dir=1,3
-    FSI_mesh_type%NodeNormalBIG(dir,inode_list)= &
-     FSI_mesh_type%NodeNormalBIG(dir,inode_list)/normal_cnt
-    mag=mag+FSI_mesh_type%NodeNormalBIG(dir,inode_list)**2
+    FSI_mesh_type%NodeNormalFINE(dir,inode_list)= &
+     FSI_mesh_type%NodeNormalFINE(dir,inode_list)/normal_cnt
+    mag=mag+FSI_mesh_type%NodeNormalFINE(dir,inode_list)**2
    enddo ! dir=1,3
    mag=sqrt(mag)
    if (mag.gt.zero) then
     do dir=1,3
-     FSI_mesh_type%NodeNormalBIG(dir,inode_list)= &
-       FSI_mesh_type%NodeNormalBIG(dir,inode_list)/mag
+     FSI_mesh_type%NodeNormalFINE(dir,inode_list)= &
+       FSI_mesh_type%NodeNormalFINE(dir,inode_list)/mag
     enddo
    else if (mag.eq.zero) then
     ! do nothing
@@ -4112,10 +4112,10 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
    endif 
   else if (normal_cnt.eq.0) then
    do dir=1,3
-    if (FSI_mesh_type%NodeNormalBIG(dir,inode_list).eq.zero) then
+    if (FSI_mesh_type%NodeNormalFINE(dir,inode_list).eq.zero) then
      ! do nothing
     else
-     print *,"FSI_mesh_type%NodeNormalBIG(dir,inode_list) invalid"
+     print *,"FSI_mesh_type%NodeNormalFINE(dir,inode_list) invalid"
      stop
     endif
    enddo
@@ -4124,7 +4124,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
    stop
   endif
 
-  normal_cnt=FSI_mesh_type%ElemNodeCountEdgeBIG(inode_list)
+  normal_cnt=FSI_mesh_type%ElemNodeCountEdgeFINE(inode_list)
   if (normal_cnt.gt.0) then
 
    if (normal_cnt.ge.6) then
@@ -4134,22 +4134,22 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
     if (DoublyWettedNode(inode_list).eq.1) then
      ! do nothing
     else
-     print *,"warning(BIG): expecting normal_cnt>=6, normal_cnt=",normal_cnt
+     print *,"warning(FINE): expecting normal_cnt>=6, normal_cnt=",normal_cnt
     endif
 
    endif
 
    mag=zero
    do dir=1,3
-    FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)= &
-     FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)/normal_cnt
-    mag=mag+FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)**2
+    FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)= &
+     FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)/normal_cnt
+    mag=mag+FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)**2
    enddo ! dir=1,3
    mag=sqrt(mag)
    if (mag.gt.zero) then
     do dir=1,3
-     FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)= &
-       FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list)/mag
+     FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)= &
+       FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list)/mag
     enddo
    else if (mag.eq.zero) then
     ! do nothing
@@ -4162,10 +4162,10 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
    stop
 
    do dir=1,3
-    if (FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list).eq.zero) then
+    if (FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list).eq.zero) then
      ! do nothing
     else
-     print *,"FSI_mesh_type%NodeNormalEdgeBIG(dir,inode_list) invalid"
+     print *,"FSI_mesh_type%NodeNormalEdgeFINE(dir,inode_list) invalid"
      stop
     endif
    enddo
@@ -4174,7 +4174,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
    stop
   endif
 
- enddo ! do inode_list=1,FSI_mesh_type%NumNodesBIG
+ enddo ! do inode_list=1,FSI_mesh_type%NumNodesFINE
 
  deallocate(DoublyWettedNode)
 
@@ -4182,26 +4182,26 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  smallest_h=0.0
  first_measure=0
 
- do ielem=1,FSI_mesh_type%NumIntElemsBIG
-  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+ do ielem=1,FSI_mesh_type%NumIntElemsFINE
+  nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,ielem)
   if (nodes_per_elem.ne.3) then
    print *,"nodes_per_elem invalid"
    stop
   endif
-  node1=FSI_mesh_type%IntElemBIG(1,ielem)
-  node2=FSI_mesh_type%IntElemBIG(2,ielem)
-  node3=FSI_mesh_type%IntElemBIG(3,ielem)
+  node1=FSI_mesh_type%IntElemFINE(1,ielem)
+  node2=FSI_mesh_type%IntElemFINE(2,ielem)
+  node3=FSI_mesh_type%IntElemFINE(3,ielem)
   do dir=1,3
-   x1(dir)=FSI_mesh_type%NodeBIG(dir,node1) 
-   x2(dir)=FSI_mesh_type%NodeBIG(dir,node2)
-   x3(dir)=FSI_mesh_type%NodeBIG(dir,node3)
+   x1(dir)=FSI_mesh_type%NodeFINE(dir,node1) 
+   x2(dir)=FSI_mesh_type%NodeFINE(dir,node2)
+   x3(dir)=FSI_mesh_type%NodeFINE(dir,node3)
 
    if ((abs(x1(dir)).lt.CTMLoverflow).and. &
        (abs(x2(dir)).lt.CTMLoverflow).and. &
        (abs(x3(dir)).lt.CTMLoverflow)) then
     ! do nothing
    else 
-    print *,"x1,x2, or x3 overflow (BIG)"
+    print *,"x1,x2, or x3 overflow (FINE)"
     print *,"dir,part_id,node1,node2,node3 ", &
       dir,part_id,node1,node2,node3
     print *,"x1,x2,x3 ",x1(dir),x2(dir),x3(dir)
@@ -4246,7 +4246,7 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
    smallest_h=d13_3D
   endif
 
- enddo ! ielem=1..FSI_mesh_type%NumIntElemsBIG
+ enddo ! ielem=1..FSI_mesh_type%NumIntElemsFINE
 
  FSI_mesh_type%max_side_len_refined=biggest_h  
  FSI_mesh_type%min_side_len_refined=smallest_h  
@@ -9104,7 +9104,7 @@ end subroutine advance_solid
 ! --------------------  SOLID ADVANCE STUFF ENDS HERE --------------
 
 
-subroutine checkinpointBIG( &
+subroutine checkinpointFINE( &
   xclosest, &
   normal_closest, &
   inode,elemnum, &
@@ -9154,7 +9154,7 @@ REAL_T, dimension(3) :: velparm
   stop
  endif
 
- nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
+ nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,elemnum)
 
  if (nodes_per_elem.ne.3) then
   print *,"nodes_per_elem invalid"
@@ -9169,9 +9169,9 @@ REAL_T, dimension(3) :: velparm
    stop
   endif
   xfoot(dir)= &
-    FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
+    FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(inode,elemnum))
   xfoot_pert(dir)=xfoot(dir)+0.1*dx(1)* &
-    FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
+    FSI_mesh_type%NodeNormalFINE(dir,FSI_mesh_type%IntElemFINE(inode,elemnum))
   velparm(dir)=zero
  enddo
  call get_target_from_foot(xfoot,xtarget, &
@@ -9193,7 +9193,7 @@ REAL_T, dimension(3) :: velparm
  if (mag.gt.zero) then
   ! do nothing
  else
-  print *,"mag invalid checkinpointBIG 0"
+  print *,"mag invalid checkinpointFINE 0"
   stop
  endif
  do dir=1,3
@@ -9225,10 +9225,10 @@ REAL_T, dimension(3) :: velparm
  endif
 
 return
-end subroutine checkinpointBIG
+end subroutine checkinpointFINE
 
 
-subroutine checkinlineBIG( &
+subroutine checkinlineFINE( &
   eul_over_lag_scale, &
   xclosest, &
   normal_closest, &
@@ -9297,7 +9297,7 @@ REAL_T, dimension(3) :: velparm
    stop
   endif
 
-  nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
+  nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,elemnum)
   if (nodes_per_elem.ne.3) then
    print *,"nodes_per_elem invalid"
    stop
@@ -9312,19 +9312,19 @@ REAL_T, dimension(3) :: velparm
    endif
 
    xfoot(dir)= &
-     FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
+     FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(inode,elemnum))
 
    if (1.eq.0) then
     ! this normal is the average of element normals summed over 
     ! node-neighboring elements.
     local_normal= &
-     FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inode,elemnum))
+     FSI_mesh_type%NodeNormalFINE(dir,FSI_mesh_type%IntElemFINE(inode,elemnum))
    else
      ! this normal is the average of element normals summed over
      ! edge-neighboring elements.
      ! 1<=inode<=3
     local_normal= &
-     FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,elemnum)
+     FSI_mesh_type%EdgeNormalFINE(3*(inode-1)+dir,elemnum)
    endif
 
    xfoot_pert(dir)=xfoot(dir)+0.1d0*dx(1)*local_normal
@@ -9362,7 +9362,7 @@ REAL_T, dimension(3) :: velparm
     nnode(1,dir)=ntarget(dir)/mag
    enddo
   else if (mag.eq.zero) then
-   print *,"ERROR: mag.eq.zero in checkinlineBIG 0"
+   print *,"ERROR: mag.eq.zero in checkinlineFINE 0"
    print *,"inode=",inode
    print *,"inodep1=",inodep1
    print *,"xtarget= ",xtarget
@@ -9371,7 +9371,7 @@ REAL_T, dimension(3) :: velparm
    enddo
    stop
   else
-   print *,"mag invalid checkinlineBIG 0"
+   print *,"mag invalid checkinlineFINE 0"
    stop
   endif
   do dir=1,3
@@ -9380,19 +9380,19 @@ REAL_T, dimension(3) :: velparm
 
   do dir=1,3
    xfoot(dir)= &
-    FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,elemnum))
+    FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(inodep1,elemnum))
 
    if (1.eq.0) then
     ! this normal is the average of element normals summed over 
     ! node-neighboring elements.
     local_normal= &
-     FSI_mesh_type%NodeNormalBIG(dir,FSI_mesh_type%IntElemBIG(inodep1,elemnum))
+     FSI_mesh_type%NodeNormalFINE(dir,FSI_mesh_type%IntElemFINE(inodep1,elemnum))
    else
       ! this normal is the average of element normals summed over
       ! edge-neighboring elements.
       ! 1<=inode<=3
     local_normal= &
-     FSI_mesh_type%EdgeNormalBIG(3*(inode-1)+dir,elemnum)
+     FSI_mesh_type%EdgeNormalFINE(3*(inode-1)+dir,elemnum)
    endif
 
    xfoot_pert(dir)=xfoot(dir)+0.1d0*dx(1)*local_normal
@@ -9420,7 +9420,7 @@ REAL_T, dimension(3) :: velparm
     nnode(2,dir)=ntarget(dir)/mag
    enddo
   else if (mag.eq.zero) then
-   print *,"ERROR: mag.eq.zero in checkinlineBIG 1"
+   print *,"ERROR: mag.eq.zero in checkinlineFINE 1"
    print *,"inode=",inode
    print *,"inodep1=",inodep1
    print *,"xtarget= ",xtarget
@@ -9429,7 +9429,7 @@ REAL_T, dimension(3) :: velparm
    enddo
    stop
   else
-   print *,"mag invalid checkinlineBIG 1"
+   print *,"mag invalid checkinlineFINE 1"
    stop
   endif
   do dir=1,3
@@ -9443,14 +9443,14 @@ REAL_T, dimension(3) :: velparm
         normal_closest) ! INTENT(inout)
 
  else
-  print *,"expecting 1<=inode<=3 in checkinlineBIG: ",inode
+  print *,"expecting 1<=inode<=3 in checkinlineFINE: ",inode
   stop
  endif
 
 return
-end subroutine checkinlineBIG
+end subroutine checkinlineFINE
 
-subroutine checkinplaneBIG( &
+subroutine checkinplaneFINE( &
   eul_over_lag_scale, &
   xc, &  ! target point at which the signed distance is sought.
   xclosest, &
@@ -9501,7 +9501,7 @@ REAL_T, dimension(3,3) :: xnode ! (ipoint,dir)
   stop
  endif
 
- nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
+ nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,elemnum)
  if (nodes_per_elem.ne.3) then
   print *,"nodes_per_elem invalid"
   stop
@@ -9514,7 +9514,7 @@ REAL_T, dimension(3,3) :: xnode ! (ipoint,dir)
 
  do i=1,3
   do dir=1,3
-   xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(i,elemnum))
+   xfoot(dir)=FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(i,elemnum))
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
@@ -9539,7 +9539,7 @@ REAL_T, dimension(3,3) :: xnode ! (ipoint,dir)
          xclosest_project,inplane)
 
 return
-end subroutine checkinplaneBIG
+end subroutine checkinplaneFINE
 
 
 
@@ -9571,7 +9571,7 @@ end subroutine checkinplaneBIG
 !        -1 0   0
 !        0  0   1  = (0,1,0)
 !
-subroutine scinormalBIG( &
+subroutine scinormalFINE( &
   elemnum, & !intent(in)
   normal, & !intent(out)
   FSI_mesh_type, & !intent(in)
@@ -9613,7 +9613,7 @@ INTEGER_T :: local_normal_invert
   stop
  endif
 
- nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,elemnum)
+ nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,elemnum)
  if (nodes_per_elem.gt.3) then
   print *,"nodes_per_elem>3 not supported"
   stop
@@ -9625,7 +9625,7 @@ INTEGER_T :: local_normal_invert
 
  do i=1,3
   do dir=1,3
-   xfoot(dir)=FSI_mesh_type%NodeBIG(dir,FSI_mesh_type%IntElemBIG(i,elemnum))
+   xfoot(dir)=FSI_mesh_type%NodeFINE(dir,FSI_mesh_type%IntElemFINE(i,elemnum))
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
@@ -9700,7 +9700,7 @@ INTEGER_T :: local_normal_invert
  endif
 
 return
-end subroutine scinormalBIG
+end subroutine scinormalFINE
 
 ! Note: meshlab is a software that can fix normal orientation.
 ! Note: Tecplot normals face out of object if oriented 
@@ -9859,7 +9859,7 @@ REAL_T :: aa,bb,cc
   stop
  endif
 
- nodes_per_elem=FSI(part_id)%ElemDataBIG(1,elemnum)
+ nodes_per_elem=FSI(part_id)%ElemDataFINE(1,elemnum)
  if (nodes_per_elem.ne.3) then
   print *,"nodes in element?  elem,nodes_per_elem ",elemnum,nodes_per_elem   
   stop
@@ -9867,7 +9867,7 @@ REAL_T :: aa,bb,cc
 
  do i=1,3
   do j=1,3
-   nodesave(i,j)=FSI(part_id)%NodeBIG(j,FSI(part_id)%IntElemBIG(i,elemnum))
+   nodesave(i,j)=FSI(part_id)%NodeFINE(j,FSI(part_id)%IntElemFINE(i,elemnum))
   enddo
  enddo
 
@@ -10713,8 +10713,8 @@ INTEGER_T, PARAMETER :: aux_unit_id=14
 
   if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.0) then
 
-    !EdgeNormal(dir,inode) and EdgeNormalBIG initialized here.
-    !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
+    !EdgeNormal(dir,inode) and EdgeNormalFINE initialized here.
+    !NodeNormal(dir,inode) and NodeNormalFINE initialized here.
    call post_process_nodes_elements(initflag, &
           contain_aux(auxcomp)%xlo3D, &
           contain_aux(auxcomp)%xhi3D, &
@@ -11551,8 +11551,8 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 
       ! ReadHeader
       initflag=1
-       !EdgeNormal(dir,inode) and EdgeNormalBIG initialized here.
-       !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
+       !EdgeNormal(dir,inode) and EdgeNormalFINE initialized here.
+       !NodeNormal(dir,inode) and NodeNormalFINE initialized here.
       call post_process_nodes_elements(initflag, &
        problo,probhi, &
        FSI(part_id),part_id,TOTAL_NPARTS, &
@@ -11685,7 +11685,8 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
   stop
  endif
 
- if ((ielem.ge.1).and.(elem.le.FSI_mesh_type%NumIntElemsBIG)) then
+ if ((ielem.ge.1).and. &
+     (ielem.le.FSI_mesh_type%NumIntElemsFINE)) then
   !do nothing
  else
   print *,"ielem invalid in check_overlap"
@@ -11796,7 +11797,7 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
 return
 end subroutine check_overlap
 
-subroutine check_overlap_nodeBIG( &
+subroutine check_overlap_nodeCRSE( &
  FSI_mesh_type, &
  part_id,inode,time, &
  minnode, &
@@ -11848,7 +11849,7 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
  endif
 
  if ((inode.ge.1).and. &
-     (inode.le.FSI(part_id)%NumNodesBIG)) then
+     (inode.le.FSI(part_id)%NumNodes)) then
 
   if ((tid.eq.0).or.(tilenum.eq.0)) then
 
@@ -11926,7 +11927,7 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
    else if (overlap.eq.0) then
     ! do nothing
    else
-    print *,"overlap invalid in check_overlap_nodeBIG"
+    print *,"overlap invalid in check_overlap_nodeCRSE"
     stop
    endif
 
@@ -11941,10 +11942,10 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
  endif
 
 return
-end subroutine check_overlap_nodeBIG
+end subroutine check_overlap_nodeCRSE
 
 
-subroutine get_minmax_nodeBIG( &
+subroutine get_minmax_nodeFINE( &
      FSI_mesh_type, &
      part_id, &
      max_part_id, &
@@ -11965,13 +11966,13 @@ REAL_T xfoot(3)
 REAL_T velparm(3)
 
  if ((ielem.ge.1).and. &
-     (ielem.le.FSI_mesh_type%NumIntElemsBIG)) then
+     (ielem.le.FSI_mesh_type%NumIntElemsFINE)) then
   do inode=1,3
    do dir=1,3
-    node_id=FSI_mesh_type%IntElemBIG(inode,ielem)
+    node_id=FSI_mesh_type%IntElemFINE(inode,ielem)
     if ((node_id.ge.1).and. &
-        (node_id.le.FSI_mesh_type%NumNodesBIG)) then
-     xfoot(dir)=FSI_mesh_type%NodeBIG(dir,node_id)
+        (node_id.le.FSI_mesh_type%NumNodesFINE)) then
+     xfoot(dir)=FSI_mesh_type%NodeFINE(dir,node_id)
      if (abs(xfoot(dir)).le.CTMLoverflow) then
       ! do nothing
      else
@@ -12018,10 +12019,10 @@ REAL_T velparm(3)
  endif
 
 return
-end subroutine get_minmax_nodeBIG
+end subroutine get_minmax_nodeFINE
 
 
-subroutine get_contained_nodeBIG(part_id,inode,time,minnode)
+subroutine get_contained_nodeCRSE(part_id,inode,time,minnode)
 IMPLICIT NONE
 
 INTEGER_T, INTENT(in) :: part_id
@@ -12035,10 +12036,10 @@ REAL_T velparm(3)
 
 
  if ((inode.ge.1).and. &
-     (inode.le.FSI(part_id)%NumNodesBIG)) then
+     (inode.le.FSI(part_id)%NumNodes)) then
 
   do dir=1,3
-   xfoot(dir)=FSI(part_id)%NodeBIG(dir,inode)
+   xfoot(dir)=FSI(part_id)%Node(dir,inode)
    velparm(dir)=zero
   enddo
   call get_target_from_foot(xfoot,xtarget, &
@@ -12055,7 +12056,7 @@ REAL_T velparm(3)
  endif
 
 return
-end subroutine get_contained_nodeBIG
+end subroutine get_contained_nodeCRSE
 
 ! elem_contain_type, node_contain_type,
 ! level_contain_type, contain_elem
@@ -12133,12 +12134,12 @@ IMPLICIT NONE
   stop
  endif
 
- num_elements=FSI(part_id)%NumIntElemsBIG
+ num_elements=FSI(part_id)%NumIntElemsFINE
  if (num_elements.le.0) then
   print *,"num_elements invalid CLSVOF_FILLCONTAINER"
   stop
  endif
- num_nodes=FSI(part_id)%NumNodesBIG
+ num_nodes=FSI(part_id)%NumNodes
  if (num_nodes.le.0) then
   print *,"num_nodes invalid CLSVOF_FILLCONTAINER"
   stop
@@ -12291,7 +12292,7 @@ IMPLICIT NONE
        if (interior_flag.eq.1) then
         ! do nothing
        else if (interior_flag.eq.0) then
-        call get_minmax_nodeBIG( &
+        call get_minmax_nodeFINE( &
           FSI(part_id), &
           part_id, &
           TOTAL_NPARTS, &
@@ -12323,9 +12324,9 @@ IMPLICIT NONE
 
      else if (isweep.eq.1) then
 
-         ! traverse FSI(part_id)%IntElemBIG(inode,ielem)
-         ! look at FSI(part_id)%NodeBIG(dir,node_id)
-      call get_minmax_nodeBIG( &
+         ! traverse FSI(part_id)%IntElemFINE(inode,ielem)
+         ! look at FSI(part_id)%NodeFINE(dir,node_id)
+      call get_minmax_nodeFINE( &
               FSI(part_id), &
               part_id, &
               TOTAL_NPARTS, &
@@ -12465,12 +12466,12 @@ IMPLICIT NONE
        stop
       endif
 
-      call get_contained_nodeBIG(part_id,inode,cur_time,minnode)
+      call get_contained_nodeCRSE(part_id,inode,cur_time,minnode)
 
        ! isweep==1
-       ! check_overlap_nodeBIG increments
+       ! check_overlap_nodeCRSE increments
        !  contain_elem(lev77)%level_node_data(tid,part_id,tilenum)%numNodes
-      call check_overlap_nodeBIG( &
+      call check_overlap_nodeCRSE( &
         FSI(part_id), &
         part_id,inode,cur_time, &
         minnode, &
@@ -12494,7 +12495,7 @@ IMPLICIT NONE
          if ((tid_loop.ne.tid_predict).or. &
              (tilenum_loop.ne.tilenum_predict)) then
            ! isweep==1
-          call check_overlap_nodeBIG( &
+          call check_overlap_nodeCRSE( &
            FSI(part_id), &
            part_id,inode,cur_time, &
            minnode, &
@@ -12585,8 +12586,8 @@ IMPLICIT NONE
       print *,"im_part=",im_part
       print *,"cur_time=",cur_time
       print *,"dt=",dt
-      print *,"FSI(part_id)%NumNodesBIG ",FSI(part_id)%NumNodesBIG
-      print *,"FSI(part_id)%NumIntElemsBIG ",FSI(part_id)%NumIntElemsBIG
+      print *,"FSI(part_id)%NumNodes ",FSI(part_id)%NumNodes
+      print *,"FSI(part_id)%NumIntElemsFINE ",FSI(part_id)%NumIntElemsFINE
       print *,"total_num_elements ",total_num_elements 
       print *,"total_num_nodes ",total_num_nodes
      endif
@@ -13031,7 +13032,7 @@ IMPLICIT NONE
       ((fsi_part_id.ge.1).and. &
        (fsi_part_id.le.nparts))) then
 
-   num_elements=FSI_mesh_type%NumIntElemsBIG
+   num_elements=FSI_mesh_type%NumIntElemsFINE
 
    if (num_elements.le.0) then
     print *,"num_elements invalid"
@@ -13098,7 +13099,7 @@ IMPLICIT NONE
     ! do nothing
    else if (isout.eq.1) then
     print *,"in (START): CLSVOF_InitBox"
-    print *,"num_elements(NumIntElemsBIG)=",num_elements
+    print *,"num_elements(NumIntElemsFINE)=",num_elements
     print *,"NumIntElems=",FSI_mesh_type%NumIntElems
     print *,"sdim_AMR=",sdim_AMR 
     print *,"im_part=",im_part
@@ -13149,7 +13150,7 @@ IMPLICIT NONE
     ngrow_make_distance_in,-1)
 
    if (lev77.eq.-1) then
-    num_elements_container=FSI_mesh_type%NumIntElemsBIG
+    num_elements_container=FSI_mesh_type%NumIntElemsFINE
    else if (lev77.ge.1) then           
     num_elements_container=contain_elem(lev77)% &
          level_elem_data(tid+1,part_id,tilenum+1)% &
@@ -13203,7 +13204,7 @@ IMPLICIT NONE
      endif
 
      do dir=1,3
-      xelem(dir)=FSI_mesh_type%ElemDataXnotBIG(dir,ielem)
+      xelem(dir)=FSI_mesh_type%ElemDataXnotFINE(dir,ielem)
       velparm(dir)=zero
      enddo 
      call get_target_from_foot(xelem,xnot, &
@@ -13212,7 +13213,7 @@ IMPLICIT NONE
        part_id, &
        nparts)
 
-     nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+     nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,ielem)
      if (nodes_per_elem.lt.3) then
       print *,"elem,nodes_per_elem ",ielem,nodes_per_elem   
       stop
@@ -13221,7 +13222,7 @@ IMPLICIT NONE
      ! phi=n dot (x-xnot)
      ! phi>0 in the fluid (the sign will be switched later)
      ! this is the element normal (in contrast to the node normal)
-     call scinormalBIG( &
+     call scinormalFINE( &
        ielem, & !intent(in)
        normal, & !intent(out)
        FSI_mesh_type, & !intent(in)
@@ -13250,7 +13251,7 @@ IMPLICIT NONE
        ! get_target_from_foot
        ! minnode and maxnode are needed in order to find the
        ! stencil of surrounding Eulerian cells to lagrangian element (triangle)
-      call get_minmax_nodeBIG( &
+      call get_minmax_nodeFINE( &
         FSI_mesh_type, &
         part_id, &
         nparts, &
@@ -13420,7 +13421,7 @@ IMPLICIT NONE
           endif
          endif
 
-         call checkinplaneBIG( &
+         call checkinplaneFINE( &
           eul_over_lag_scale, &
           xx, & ! target point at which the signed distance is sought.
           xclosest, &
@@ -13436,10 +13437,10 @@ IMPLICIT NONE
 
          element_inplane=element_node_edge_inplane
 
-! investigate using NodeNormalBIG (normal defined at nodes)
+! investigate using NodeNormalFINE (normal defined at nodes)
          do inode=1,nodes_per_elem
           ! check distance to the edges of a triangular element.
-          call checkinlineBIG( &
+          call checkinlineFINE( &
            eul_over_lag_scale, &
            xclosest_project, & !INTENT(inout)
            normal_closest, & ! INTENT(inout), initially normal of element.
@@ -13453,7 +13454,7 @@ IMPLICIT NONE
            time,dxBB)
           ! check distance to the nodes of a triangular element.
           ! normal_closest is the element normal.
-          call checkinpointBIG( &
+          call checkinpointFINE( &
            xclosest_project, & !INTENT(inout)
            normal_closest, & ! INTENT(inout)
            inode,ielem, &
@@ -13593,7 +13594,7 @@ IMPLICIT NONE
           endif
 
          else if (element_node_edge_inplane.eq.0) then
-          print *,"checkinpointBIG should guarantee inplane=1, aborting"
+          print *,"checkinpointFINE should guarantee inplane=1, aborting"
           stop
          else
           print *,"element_node_edge_inplane invalid"
@@ -13684,7 +13685,7 @@ IMPLICIT NONE
              endif
             enddo  ! dir=1..3
 
-            call checkinplaneBIG( &
+            call checkinplaneFINE( &
              eul_over_lag_scale, &
              xx, & ! target point at which the signed distance is sought.
              xcrit, & !INTENT(in)
@@ -13875,14 +13876,14 @@ IMPLICIT NONE
 
           if ((ctml_part_id.ge.1).and. &
               (ctml_part_id.le.CTML_NPARTS)) then
-           if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
+           if (FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem).eq.1) then 
             ! do nothing
            else
             print *,"expecting doubly wetted"
             print *,"ctml_part_id=",ctml_part_id
             print *,"ielem=",ielem
-            print *,"FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem)=", &
-              FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem)
+            print *,"FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem)=", &
+              FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem)
             stop
            endif
           else if (ctml_part_id.eq.0) then
@@ -13892,13 +13893,13 @@ IMPLICIT NONE
            stop
           endif
 
-          if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.1) then 
+          if (FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem).eq.1) then 
 
            mask_local=FSI_DOUBLY_WETTED_SIGN_LS_VEL_VALID
            ls_local=-unsigned_mindist
            sign_conflict=sign_conflict_local
 
-          else if (FSI_mesh_type%ElemDataBIG(DOUBLYCOMP,ielem).eq.0) then
+          else if (FSI_mesh_type%ElemDataFINE(DOUBLYCOMP,ielem).eq.0) then
 
            if (FSI_mesh_type%exclusive_doubly_wetted.eq.0) then
             ! do nothing
@@ -14011,12 +14012,12 @@ IMPLICIT NONE
 
           weighttotal=0.0d0
           do inode=1,nodes_per_elem
-           nodeptr=FSI_mesh_type%IntElemBIG(inode,ielem)
+           nodeptr=FSI_mesh_type%IntElemFINE(inode,ielem)
            do dir=1,3
-            xfoot(dir)=FSI_mesh_type%NodeBIG(dir,nodeptr)
-            velparm(dir)=FSI_mesh_type%NodeVelBIG(dir,nodeptr)
+            xfoot(dir)=FSI_mesh_type%NodeFINE(dir,nodeptr)
+            velparm(dir)=FSI_mesh_type%NodeVelFINE(dir,nodeptr)
            enddo
-           massparm=FSI_mesh_type%NodeMassBIG(nodeptr)
+           massparm=FSI_mesh_type%NodeMassFINE(nodeptr)
            if (massparm.gt.zero) then
             ! do nothing
            else
@@ -14078,10 +14079,10 @@ IMPLICIT NONE
            enddo
            do dir=1,NCOMP_FORCE_STRESS
             force_local(dir)=force_local(dir)+ &
-             weight*FSI_mesh_type%NodeForceBIG(dir,nodeptr)
+             weight*FSI_mesh_type%NodeForceFINE(dir,nodeptr)
            enddo
            temp_local=temp_local+ & 
-            weight*FSI_mesh_type%NodeTempBIG(nodeptr)
+            weight*FSI_mesh_type%NodeTempFINE(nodeptr)
            weighttotal=weighttotal+weight
           enddo ! inode=1..nodes_per_elem
 
@@ -14488,7 +14489,7 @@ IMPLICIT NONE
            endif
 
            do dir=1,3
-            xelem(dir)=FSI_mesh_type%ElemDataXnotBIG(dir,ielem)
+            xelem(dir)=FSI_mesh_type%ElemDataXnotFINE(dir,ielem)
            enddo 
            call get_target_from_foot(xelem,xnot, &
             velparm, &
@@ -14497,12 +14498,12 @@ IMPLICIT NONE
             part_id, &
             nparts)
 
-           nodes_per_elem=FSI_mesh_type%ElemDataBIG(1,ielem)
+           nodes_per_elem=FSI_mesh_type%ElemDataFINE(1,ielem)
            if (nodes_per_elem.lt.3) then
             print *,"elem,nodes_per_elem ",ielem,nodes_per_elem   
             stop
            endif
-           call scinormalBIG(ielem, &
+           call scinormalFINE(ielem, &
             normal, &
             FSI_mesh_type, &
             part_id, &
@@ -14534,7 +14535,7 @@ IMPLICIT NONE
                xclosest(dir)=xcen(dir)+t_crit*xright(dir)
               enddo 
 
-              call checkinplaneBIG( &
+              call checkinplaneFINE( &
                eul_over_lag_scale, &
                xcen, & ! not used
                xclosest, &
@@ -15177,7 +15178,7 @@ end subroutine CLSVOF_InitBox
           ((fsi_part_id.ge.1).and. &
            (fsi_part_id.le.FSI_NPARTS))) then
 
-       num_nodes=FSI(part_id)%NumNodesBIG
+       num_nodes=FSI(part_id)%NumNodes
 
        if (num_nodes.le.0) then
         print *,"num_nodes invalid: ",num_nodes
@@ -15208,7 +15209,7 @@ end subroutine CLSVOF_InitBox
         ! do nothing
        else if (isout.eq.1) then
         print *,"in (START): CLSVOF_Copy_To_LAG"
-        print *,"num_nodes(NumNodesBIG)=",num_nodes
+        print *,"num_nodes(NumNodes)=",num_nodes
         print *,"sdim_AMR=",sdim_AMR 
         print *,"im_part=",im_part
         print *,"part_id=",part_id
@@ -15301,7 +15302,6 @@ end subroutine CLSVOF_InitBox
          stop
         endif
 
-         FIX ME use NodeBIG
         do dir=1,3
          xnode(dir)=FSI(part_id)%Node(dir,inode)
          velparm(dir)=zero
@@ -17564,7 +17564,7 @@ logical :: theboss
      if (FSI(part_id)%deforming_part.eq.0) then
       ! do nothing
      else if (FSI(part_id)%deforming_part.eq.1) then
-       !NodeNormal(dir,inode) and NodeNormalBIG initialized here.
+       !NodeNormal(dir,inode) and NodeNormalFINE initialized here.
       call post_process_nodes_elements(initflag,problo,probhi, &
        FSI(part_id),part_id,TOTAL_NPARTS, &
        ioproc,isout,h_small)
