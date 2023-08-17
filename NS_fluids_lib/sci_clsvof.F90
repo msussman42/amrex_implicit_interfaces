@@ -140,6 +140,7 @@ type mesh_type
  REAL_T, pointer :: NodeForce_new(:,:) ! NCOMP_FORCE_STRESS, NumNodes
  REAL_T, pointer :: NodeDensity(:)
  REAL_T, pointer :: NodeMass(:)
+ REAL_T, pointer :: NodeRollCall(:)
  REAL_T, pointer :: NodeTemp(:)
  REAL_T, pointer :: NodeTemp_old(:)
  REAL_T, pointer :: NodeTemp_new(:)
@@ -1340,6 +1341,7 @@ INTEGER_T :: dir
    FSI_mesh_type%NodeForce_new(dir,inode)=FSI_mesh_type%NodeForce_old(dir,inode)
   enddo
   FSI_mesh_type%NodeMass(inode)=one
+  FSI_mesh_type%NodeRollCall(inode)=zero
   FSI_mesh_type%NodeDensity(inode)=one
  enddo  ! inode=1,NumNodes
 
@@ -1384,11 +1386,13 @@ INTEGER_T :: dir
  allocate(FSI_mesh_type%NodeTemp_new(FSI_mesh_type%NumNodes))
 
  allocate(FSI_mesh_type%NodeMass(FSI_mesh_type%NumNodes))
+ allocate(FSI_mesh_type%NodeRollCall(FSI_mesh_type%NumNodes))
  allocate(FSI_mesh_type%NodeDensity(FSI_mesh_type%NumNodes))
 
  do inode=1,FSI_mesh_type%NumNodes
 
   FSI_mesh_type%NodeMass(inode)=one
+  FSI_mesh_type%NodeRollCall(inode)=zero
   FSI_mesh_type%NodeDensity(inode)=one
 
   FSI_mesh_type%NodeTemp_old(inode)=0.0
@@ -4568,6 +4572,7 @@ INTEGER_T :: ii,jj,kk,iwt,jwt
 
      ! in: CTML_init_sci_node
     FSI(part_id)%NodeMass(inode)=mass_local
+    FSI(part_id)%NodeRollCall(inode)=zero
     FSI(part_id)%NodeDensity(inode)=density_local
 
     FSI(part_id)%NodeTemp(inode)=zero
@@ -4773,9 +4778,10 @@ REAL_T :: test_mass
     ! allocates and inits: ElemData,EdgeNormal(just allocates),
     !  EdgeElemId(just allocates),IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
-    !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
+    !  NodeForce_new,NodeTemp_old,NodeTemp_new,
+    !  NodeRollCall,NodeMass,NodeDensity
     ! allocate_intelem=1
-    ! allocates NodeMass,NodeDensity
+    ! allocates NodeRollCall, NodeMass, NodeDensity
     call init_FSI(part_id,1)  
 
     allocate(FSI(part_id)%Node(3,FSI(part_id)%NumNodes))
@@ -5069,7 +5075,7 @@ REAL_T :: radradblob1,radradblob2
     FSI(part_id)%IntElemDim=3
   
     if (ifirst.eq.1) then
-     ! allocates NodeMass,NodeDensity
+     ! allocates NodeMass, NodeRollCall, NodeDensity
      ! allocate_intelem=1
      call init_FSI(part_id,1)  
     else
@@ -5736,6 +5742,8 @@ INTEGER_T local_nodes,orig_nodes,dir
         FSI(part_id)%NodeForce_new(dir,inode)
     enddo
 
+    FSI(part_id)%NodeRollCall(inode+orig_nodes)= &
+       FSI(part_id)%NodeRollCall(inode)
     FSI(part_id)%NodeMass(inode+orig_nodes)= &
        FSI(part_id)%NodeMass(inode)
     FSI(part_id)%NodeDensity(inode+orig_nodes)= &
@@ -5942,7 +5950,8 @@ INTEGER_T :: stand_alone_flag
 
     ! allocates and inits: ElemData,IntElem,Node_old,
     !  Node_new,Node_current,NodeVel_old,NodeVel_new,NodeForce_old,
-    !  NodeForce_new,NodeTemp_old,NodeTemp_new,NodeMass,NodeDensity
+    !  NodeForce_new,NodeTemp_old,NodeTemp_new,
+    !  NodeMass, NodeRollCall, NodeDensity
    call init_FSI(part_id,1)  ! allocate_intelem=1
 
    do dir=1,3
@@ -6994,7 +7003,7 @@ INTEGER_T :: local_part_id
     endif
 
     if ((ifirst.eq.1).and.(i1.eq.1)) then
-      ! allocates NodeMass, NodeDensity + other variables.
+      ! allocates NodeMass, NodeRollCall, NodeDensity + other variables.
       ! it is assumed that the number of nodes and elements does not
       ! change from frame to frame.
      call init_FSI(local_part_id,1)
@@ -9037,10 +9046,11 @@ INTEGER_T :: i,dir,istep
   enddo
 
    ! in: advance_solid
+  FSI(part_id)%NodeRollCall(i)=zero
   FSI(part_id)%NodeMass(i)=one
   FSI(part_id)%NodeDensity(i)=one
   FSI(part_id)%NodeTemp(i)=FSI(part_id)%NodeTemp_new(i)
- enddo
+ enddo ! i=1,FSI(part_id)%NumNodes
 
  dtB=0.0
  if (curtime.gt.timeB) then
@@ -9979,6 +9989,7 @@ INTEGER_T :: ii,jj,kk
       FSI(part_id)%NodeVel_old(dir,inode)=zero
       FSI(part_id)%NodeVel_new(dir,inode)=zero
      enddo ! dir=1,3
+     FSI(part_id)%NodeRollCall(inode)=zero
      FSI(part_id)%NodeMass(inode)=one
      FSI(part_id)%NodeDensity(inode)=one
      do dir=1,NCOMP_FORCE_STRESS
@@ -10031,6 +10042,7 @@ end interface
 
 INTEGER_T, INTENT(in) :: ioproc,isout
 real(kind=c_double), dimension(:), allocatable :: sync_force
+real(kind=c_double), dimension(:), allocatable :: sync_RollCall
 integer(kind=c_int) :: n_sync
 
 INTEGER_T part_id
@@ -10059,15 +10071,25 @@ INTEGER_T :: ii,jj,kk
     n_sync=num_nodes*3
 
     allocate(sync_force(n_sync))
+    allocate(sync_RollCall(num_nodes))
 
     do inode=1,num_nodes
-    do dir=1,3
-     sync_force(3*(inode-1)+dir)=FSI(part_id)%NodeForce(dir,inode)
-    enddo
+     sync_RollCall(inode)=FSI(part_id)%NodeRollCall(inode)
+     do dir=1,3
+      sync_force(3*(inode-1)+dir)=FSI(part_id)%NodeForce(dir,inode)
+     enddo
     enddo
     call cpp_reduce_real_sum(n_sync,sync_force)
+    call cpp_reduce_real_sum(num_nodes,sync_RollCall)
 
     do inode=1,num_nodes
+     if (sync_RollCall(inode).eq.one) then
+      !do nothing
+     else
+      print *,"expecting sync_RollCall(inode).eq.one"
+      stop
+     endif
+     FSI(part_id)%NodeRollCall(inode)=sync_RollCall(inode)
      do dir=1,3
       FSI(part_id)%NodeForce(dir,inode)=sync_force(3*(inode-1)+dir)
       FSI(part_id)%NodeForce_old(dir,inode)=sync_force(3*(inode-1)+dir)
@@ -10076,6 +10098,7 @@ INTEGER_T :: ii,jj,kk
     enddo
 
     deallocate(sync_force)
+    deallocate(sync_RollCall)
 
     if ((ctml_part_id.ge.1).and. &
         (ctml_part_id.le.CTML_NPARTS)) then
@@ -15325,10 +15348,10 @@ end subroutine CLSVOF_InitBox
          inside_interior_box=1
          do dir=1,3
           if (sdim_AMR.eq.3) then
-           if ((xnot(dir).lt.xhi3D_tile(dir)).and. &
+           if ((xnot(dir).le.xhi3D_tile(dir)).and. &
                (xnot(dir).ge.xlo3D_tile(dir))) then
             ! do nothing
-           else if ((xnot(dir).ge.xhi3D_tile(dir)).or. &
+           else if ((xnot(dir).gt.xhi3D_tile(dir)).or. &
                     (xnot(dir).lt.xlo3D_tile(dir))) then
             inside_interior_box=0
            else
@@ -15343,10 +15366,10 @@ end subroutine CLSVOF_InitBox
                     (xmap3D(dir).eq.2).or. &
                     ((xmap3D(dir).eq.0).and. &
                      (FSI(part_id)%flag_2D_to_3D.eq.0))) then
-            if ((xnot(dir).lt.xhi3D_tile(dir)).and. &
+            if ((xnot(dir).le.xhi3D_tile(dir)).and. &
                 (xnot(dir).ge.xlo3D_tile(dir))) then
              ! do nothing
-            else if ((xnot(dir).ge.xhi3D_tile(dir)).or. &
+            else if ((xnot(dir).gt.xhi3D_tile(dir)).or. &
                      (xnot(dir).lt.xlo3D_tile(dir))) then
              inside_interior_box=0
             else
@@ -15372,6 +15395,7 @@ end subroutine CLSVOF_InitBox
           do dir=1,3
            FSI(part_id)%NodeForce(dir,inode)=zero
           enddo
+          FSI(part_id)%NodeRollCall(inode)=one
 
           do idoubly=1,2
 
@@ -16727,6 +16751,13 @@ IMPLICIT NONE
 
    gridloBB(dir)=FSI_lo(dir)-interp_support
    gridhiBB(dir)=FSI_hi(dir)+interp_support
+
+   if (gridhiBB(dir)-gridloBB(dir).eq.2*interp_support) then
+    ! do nothing
+   else
+    print *,"expecting gridhiBB(dir)-gridloBB(dir).eq.2*interp_support"
+    stop
+   endif
 
   else if ((xmap3D(dir).eq.1).or. &
            (xmap3D(dir).eq.2).or. &
