@@ -11863,6 +11863,8 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
       ! do nothing
      else
       print *,"xhi.le.xlo"
+      print *,"xlo=",xlo
+      print *,"xhi=",xhi
       stop
      endif
      if (minnode(dir).lt.xlo) then
@@ -12483,8 +12485,9 @@ IMPLICIT NONE
           stop
          endif
         else if (overlap.eq.1) then
-         ! do nothing, node already added, do not want double counting,
-         ! algorithm needs to be threead safe.
+         ! do nothing, node already added.  Even if a node is located 
+         ! exactly on a tile boundary, the node will appear in only one
+         ! container.
         else
          print *,"overlap invalid"
          stop
@@ -13148,9 +13151,9 @@ IMPLICIT NONE
 
     do ielem_container=1,num_elements_container
 
-     if (lev77.eq.-1) then
+     if (lev77.eq.-1) then  ! traverse all the elements
       ielem=ielem_container
-     else if (lev77.ge.1) then           
+     else if (lev77.ge.1) then ! traverse only elements overlapping the tile.  
       ielem=contain_elem(lev77)% &
            level_elem_data(tid+1,part_id,tilenum+1)% &
            ElemData(ielem_container)
