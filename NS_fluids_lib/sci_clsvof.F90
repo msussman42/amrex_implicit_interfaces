@@ -11685,7 +11685,9 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
   stop
  endif
 
- if (ielem.le.0) then
+ if ((ielem.ge.1).and.(elem.le.FSI_mesh_type%NumIntElemsBIG)) then
+  !do nothing
+ else
   print *,"ielem invalid in check_overlap"
   stop
  endif
@@ -11890,12 +11892,19 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
       print *,"xhi=",xhi
       stop
      endif
+
      if (minnode(dir).lt.xlo) then
       overlap=0
-     endif
-     if (minnode(dir).gt.xhi) then
+     else if (minnode(dir).gt.xhi) then
       overlap=0
+     else if ((minnode(dir).ge.xlo).and. &
+              (minnode(dir).le.xhi)) then
+      !do nothing
+     else
+      print *,"minnode(dir invalid"
+      stop
      endif
+
      if (debug_overlap_node.eq.1) then
       print *,"dir,inode,xlo,xhi,tilelo,tilehi,xnode ", &
        dir,inode,xlo,xhi,tilelo,tilehi,minnode(dir)
@@ -12295,7 +12304,9 @@ IMPLICIT NONE
            ! element data updated
           call check_overlap( &
            FSI(part_id), &
-           part_id,ielem,cur_time,minnode,maxnode, &
+           part_id, &
+           ielem, &
+           cur_time,minnode,maxnode, &
            tid_loop,tilenum_loop,dx3D,lev77,interior_flag,overlap,isweep, &
            xmap3D)
          endif
@@ -15094,7 +15105,10 @@ end subroutine CLSVOF_InitBox
        stop
       endif
 
-      if ((lev77.lt.1).or.(tid.lt.0).or.(tilenum.lt.0)) then
+      if ((lev77.lt.1).or. &
+          (lev77-1.gt.fort_finest_level).or. &
+          (tid.lt.0).or. &
+          (tilenum.lt.0)) then
        print *,"lev77 or tid or tilenum invalid"
        stop
       endif
@@ -15287,6 +15301,7 @@ end subroutine CLSVOF_InitBox
          stop
         endif
 
+         FIX ME use NodeBIG
         do dir=1,3
          xnode(dir)=FSI(part_id)%Node(dir,inode)
          velparm(dir)=zero
@@ -15344,6 +15359,14 @@ end subroutine CLSVOF_InitBox
         local_mask=NINT(maskfiner3D(idx(1),idx(2),idx(3),1))
 
         if (local_mask.eq.1) then
+
+         if (lev77-1.eq.fort_finest_level) then
+          !do nothing
+         else
+          print *,"prescribed solid should be wholly contained on finest level"
+          print *,"increase error_buf"
+          stop
+         endif
 
          inside_interior_box=1
          do dir=1,3
