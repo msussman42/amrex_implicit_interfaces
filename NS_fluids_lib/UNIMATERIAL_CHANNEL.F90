@@ -31,9 +31,11 @@
   REAL_T :: TEMP_MAT      ! temperature
   REAL_T :: PRES_MAT      ! pressure
   REAL_T :: VELO_AVG      ! average inflow velocity  
+  REAL_T :: RAMP_TIME
 
  contains
 
+   !called from PROB_CPP_PARMS.F90 (subroutine fort_override)
   subroutine UNIMAT_INIT_MODULE( &
    DENS_IN, &
    TEMP_IN, &
