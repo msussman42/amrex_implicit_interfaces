@@ -10087,6 +10087,11 @@ INTEGER_T :: ii,jj,kk
       !do nothing
      else
       print *,"expecting sync_RollCall(inode).eq.one"
+      print *,"inode=",inode
+      print *,"sync_RollCall(inode): ",sync_RollCall(inode)
+      print *,"part_id=",part_id
+      print *,"FSI(part_id)%NodeRollCall(inode)=", &
+        FSI(part_id)%NodeRollCall(inode)
       stop
      endif
      FSI(part_id)%NodeRollCall(inode)=sync_RollCall(inode)
