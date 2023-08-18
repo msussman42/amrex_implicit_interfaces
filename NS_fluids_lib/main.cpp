@@ -32,9 +32,46 @@ void main_cpp_keyboard() {
 
 void cpp_reduce_real_sum(int n,double sync_data[]) {
 
+ int debug_reduce=1;
+
+ if (debug_reduce==1) {
+  std::fflush(NULL);
+  amrex::ParallelDescriptor::Barrier();
+
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    for (int i=0;i<n;i++) {
+     std::cout << "BEFORE proc= " << pid << " i= " << i << " data= " <<
+      sync_data[i] << '\n';
+    }
+    std::fflush(NULL);
+   }
+  }  // pid=0..NProcs-1
+ }
+
+
  amrex::ParallelDescriptor::Barrier();
  amrex::ParallelDescriptor::ReduceRealSum(sync_data,n);
  amrex::ParallelDescriptor::Barrier();
+
+ if (debug_reduce==1) {
+  std::fflush(NULL);
+  amrex::ParallelDescriptor::Barrier();
+
+  for (int pid=0;pid<amrex::ParallelDescriptor::NProcs();pid++) {
+   amrex::ParallelDescriptor::Barrier();
+   if (amrex::ParallelDescriptor::MyProc()==pid) {
+    std::fflush(NULL);
+    for (int i=0;i<n;i++) {
+     std::cout << "AFTER proc= " << pid << " i= " << i << " data= " <<
+      sync_data[i] << '\n';
+    }
+    std::fflush(NULL);
+   }
+  }  // pid=0..NProcs-1
+ }
 
 } // end subroutine cpp_reduce_real_sum
 
