@@ -1306,14 +1306,6 @@ c time step
        stop
       endif
 
-      if(nr_ibm_fib.ge. 1) then
-       fibm1_fib=0.0
-       fibm2_fib=0.0
-       fibm3_fib=0.0
-       ffluidsum1_fib=0.0
-       ffluidsum2_fib=0.0
-       ffluidsum3_fib=0.0
-      endif
 c
       do i=1,nr_ibm_fib
 
@@ -1321,25 +1313,23 @@ c
 
         fk_mass1_fib(i,j)=fk_mass1o_fib(i,j)
         fk_mass2_fib(i,j)=fk_mass2o_fib(i,j)
-        ffluidsum1_fib(i,j)= fk_mass1_fib(i,j)
-        ffluidsum2_fib(i,j)= fk_mass2_fib(i,j)
+        fk_mass3_fib(i,j)=0.0
+        ffluidsum1_fib(i,j)= fk_mass1o_fib(i,j)
+        ffluidsum2_fib(i,j)= fk_mass2o_fib(i,j)
+        ffluidsum3_fib(i,j)=0.0 
+        fibm1_fib(i,j)=fk_mass1o_fib(i,j)
+        fibm2_fib(i,j)=fk_mass2o_fib(i,j)
+        fibm3_fib(i,j)=0.0
         if(ndim .gt. 2) then
+         print *,"3d fibers not supported, try FSH"
+         stop
          fk_mass3_fib(i,j)=fk_mass3o_fib(i,j)
-         ffluidsum3_fib(i,j)= fk_mass3_fib(i,j)
+         ffluidsum3_fib(i,j)= fk_mass3o_fib(i,j)
+         fibm3_fib(i,j)=fk_mass3o_fib(i,j)
         endif
 ! j           
        end do
 
-       do j=1,ns_ibm_r_fib(i)
-
-        fibm1_fib(i,j)=fibm1_fib(i,j)+ffluidsum1_fib(i,j)
-        fibm2_fib(i,j)=fibm2_fib(i,j)+ffluidsum2_fib(i,j)
-        if(ndim .gt. 2) then
-         fibm3_fib(i,j)=fibm3_fib(i,j)+ffluidsum3_fib(i,j)
-        endif
-!j
-       end do
-  
        do j=1,ns_ibm_r_fib(i)
         vibm1_pre_fib(i,j)=vibm1_fib(i,j)
         vibm2_pre_fib(i,j)=vibm2_fib(i,j)
@@ -1874,47 +1864,28 @@ c time step
 
       if(ibm_solve .ne. 2) then
 
-       if(nr_ibm_fsh.ge. 1) then
-        fibm1_fsh=0.0
-        fibm2_fsh=0.0
-        fibm3_fsh=0.0
-        ffluidsum1_fsh=0.0
-        ffluidsum2_fsh=0.0
-        ffluidsum3_fsh=0.0
-       endif
-c
-c calculating feedback force for matching bcs
        do i=1,nr_ibm_fsh
-        i2g=Ilocglb_fsh(i)
-         if(FluidForceFlag(i2g)) then
-          do jq=1,nq_ibm_r_fsh(i)
-          do j=1,ns_ibm_r_fsh(i)
-           fk_mass1_fsh(i,jq,j)=fk_mass1o_fsh(i,jq,j)
-           fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
+        do jq=1,nq_ibm_r_fsh(i)
+        do j=1,ns_ibm_r_fsh(i)
 
-           ffluidsum1_fsh(i,jq,j)= fk_mass1_fsh(i,jq,j)
-           ffluidsum2_fsh(i,jq,j)= fk_mass2_fsh(i,jq,j)
-
-           if(ndim .gt. 2) then
-            fk_mass3_fsh(i,jq,j)=fk_mass3o_fsh(i,jq,j)
-            ffluidsum3_fsh(i,jq,j)= fk_mass3_fsh(i,jq,j)
-           endif
-
-          end do
-          end do
-
-          do jq=1,nq_ibm_r_fsh(i)
-          do j=1,ns_ibm_r_fsh(i)
-
-           fibm1_fsh(i,jq,j)=fibm1_fsh(i,jq,j)+ffluidsum1_fsh(i,jq,j)
-           fibm2_fsh(i,jq,j)=fibm2_fsh(i,jq,j)+ffluidsum2_fsh(i,jq,j)
-           if(ndim .gt. 2) 
-     &      fibm3_fsh(i,jq,j)=fibm3_fsh(i,jq,j)+ffluidsum3_fsh(i,jq,j)
-
-          end do
-          end do
-         endif  
-       end do  !nr_ibm_fsh
+         fk_mass1_fsh(i,jq,j)=fk_mass1o_fsh(i,jq,j)
+         fk_mass2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
+         fk_mass3_fsh(i,jq,j)=0.0
+         ffluidsum1_fsh(i,jq,j)= fk_mass1o_fsh(i,jq,j)
+         ffluidsum2_fsh(i,jq,j)= fk_mass2o_fsh(i,jq,j)
+         ffluidsum3_fsh(i,jq,j)=0.0 
+         fibm1_fsh(i,jq,j)=fk_mass1o_fsh(i,jq,j)
+         fibm2_fsh(i,jq,j)=fk_mass2o_fsh(i,jq,j)
+         fibm3_fsh(i,jq,j)=0.0
+         if(ndim .gt. 2) then
+          fk_mass3_fsh(i,jq,j)=fk_mass3o_fsh(i,jq,j)
+          ffluidsum3_fsh(i,jq,j)= fk_mass3o_fsh(i,jq,j)
+          fibm3_fsh(i,jq,j)=fk_mass3o_fsh(i,jq,j)
+         endif
+        end do
+        end do
+!nr_ibm_fsh
+       end do  
   
        do i=1,nr_ibm_fsh
         do jq=1,nq_ibm_r_fsh(i)
