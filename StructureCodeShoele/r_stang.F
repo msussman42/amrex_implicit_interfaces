@@ -1862,9 +1862,7 @@ c time step
       dt2=dt**2.0
       eps=1.0d-8
 
-      if(ibm_solve .ne. 2) then
-
-       do i=1,nr_ibm_fsh
+      do i=1,nr_ibm_fsh
         do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
 
@@ -1885,9 +1883,9 @@ c time step
         end do
         end do
 !nr_ibm_fsh
-       end do  
+      end do  
   
-       do i=1,nr_ibm_fsh
+      do i=1,nr_ibm_fsh
         do jq=1,nq_ibm_r_fsh(i)
         do j=1,ns_ibm_r_fsh(i)
          vibm1_pre_fsh(i,jq,j)=vibm1_fsh(i,jq,j)
@@ -1896,25 +1894,9 @@ c time step
      &    vibm3_pre_fsh(i,jq,j)=vibm3_fsh(i,jq,j)
         end do
         enddo
-       end do  !nr_ibm_fsh
+      end do  !nr_ibm_fsh
 
-401    format(3(i8,' '),20(f20.9,' '))
-
-      else  ! ibm_solve ==2 and only structure
-
-       if(nr_ibm_fsh.ge. 1) then
-        fibm1_fsh=0.0
-        fibm2_fsh=0.0
-        fibm3_fsh=0.0
-        ffluidsum1_fsh=0.0
-        ffluidsum2_fsh=0.0
-        ffluidsum3_fsh=0.0
-       else
-        print *,"expecting nr_ibm_fsh.ge.1"
-        stop
-       endif
-
-      endif  !ibm_solve
+401   format(3(i8,' '),20(f20.9,' '))
 
       n=1
 
