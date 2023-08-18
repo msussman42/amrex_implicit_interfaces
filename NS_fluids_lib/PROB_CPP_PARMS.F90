@@ -1874,7 +1874,8 @@ stop
         fort_denconst(1), &
         fort_tempconst(1), &
         outflow_pressure, &
-        velfact, &
+        velfact, & !inflow velocity
+        xblob2, &  !ramp time
         probhix, &
         probhiy) 
       

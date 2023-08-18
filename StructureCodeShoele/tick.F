@@ -1242,7 +1242,7 @@ c rtime = t^{n+1}
 
 #ifdef INCLUDE_FIB
  
-      debug_fib=1
+      debug_fib=0
       ntsave_debug=1
 
       ibm_solve=0

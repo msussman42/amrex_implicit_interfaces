@@ -70,15 +70,15 @@ amr.grid_eff        = 0.75
 
 ns.ns_tiling=false
 #fabarray.mfiter_tile_size=32 32
-amr.blocking_factor = 16 16 8 8
+amr.blocking_factor = 8 8 8 8
 amr.space_blocking_factor=1 1 1 1
 amr.time_blocking_factor=1	
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.enable_spectral=0
-ns.step_through_data=1
-amr.check_int       = 100000  # number of timesteps between checkpoints
+ns.step_through_data=0
+amr.check_int       = 500  # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1
+amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 # change this if tiling vs. no tiling.
@@ -113,7 +113,7 @@ mac.visc_abs_tol   = 1.0e-10
 ns.gravity        = 0.5  # abs(g)
 ns.invert_gravity=1  # 0=> gravity points down (or to the left)  
                      # 1=> gravity points up (or to the right)
-ns.gravity_dir=1 # x direction
+ns.gravity_dir=1 # x direction (AMREX_SPACEDIM is the default)
 
 ns.tension        = 0.0 0.0 0.0
 ns.min_velocity_for_dt=10.0 #take into account gravity in horizontal dir.
@@ -143,10 +143,11 @@ ns.zblob=0.0
 ns.radblob=0.0
 ns.denfact=0.0
 ns.velfact=1.0  # constant inflow velocity 
+ns.xblob2=1.0 #ramp time(u_inflow=velfact * time/ramp_time if time<ramp_time)
 ns.probtype=220 # UNIMATERIAL problem
 
 #ns.mem_debug = 1
-ns.v = 1
+#ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS

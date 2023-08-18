@@ -41,20 +41,23 @@
    TEMP_IN, &
    PRES_IN, &
    VELO_IN, &
+   RAMP_IN, &
    SIZE_L_IN, &
    SIZE_H_IN)
    IMPLICIT NONE
 
-   REAL_T DENS_IN
-   REAL_T TEMP_IN
-   REAL_T PRES_IN
-   REAL_T VELO_IN
-   REAL_T SIZE_L_IN,SIZE_H_IN
+   REAL_T, INTENT(in) :: DENS_IN
+   REAL_T, INTENT(in) :: TEMP_IN
+   REAL_T, INTENT(in) :: PRES_IN
+   REAL_T, INTENT(in) :: VELO_IN
+   REAL_T, INTENT(in) :: RAMP_IN
+   REAL_T, INTENT(in) :: SIZE_L_IN,SIZE_H_IN
 
    DENS_MAT=DENS_IN
    TEMP_MAT=TEMP_IN
    PRES_MAT=PRES_IN
    VELO_AVG=VELO_IN
+   RAMP_TIME=RAMP_IN
    SIZE_L=SIZE_L_IN
    SIZE_H=SIZE_H_IN
 
@@ -80,13 +83,22 @@
 
   !****************************************************
   subroutine UNIMAT_INIT_VEL(x,y,z,vel)
-   REAL_T x,y,z,v_avg
-   REAL_T vel(SDIM)
-   
-    vel(1)= VELO_AVG 
+   REAL_T, INTENT(in) :: x,y,z
+   REAL_T, INTENT(out) :: vel(SDIM)
+
+    if (RAMP_TIME.eq.zero) then
+     vel(1)= VELO_AVG 
+    else if (RAMP_TIME.gt.zero) then
+     vel(1)=zero 
+    else
+     print *,"RAMP_TIME invalid"
+     stop
+    endif
+
     vel(2)= zero
 
   end subroutine UNIMAT_INIT_VEL
+
   ! Boundary condition
   ! Left: Inflow
   !---------------------
@@ -225,23 +237,39 @@
    x,y,z, &                 ! boundary point position
    dx)                      ! dx
 
-   INTEGER_T dir,side,veldir
-   REAL_T time,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   INTEGER_T, INTENT(in) :: dir,side,veldir
+   REAL_T, INTENT(in) :: time,x,y,z
+   REAL_T, INTENT(out) :: q_out
+   REAL_T, INTENT(in) :: q_in
+   REAL_T, INTENT(in) :: dx(SDIM)
    REAL_T rad,R
 
 
    if (SDIM.ne.2) then
-    print *,"invalid system dimension &
-     &(UNIMATERIAL_CHANNEL->VELO_BC)"
+    print *,"invalid system dimension (UNIMATERIAL_CHANNEL->VELO_BC)"
     stop
    endif
 
    if(dir.eq.1) then
     if (side.eq.1) then ! xlo
      if (veldir.eq.1) then
-      q_out = VELO_AVG 
+
+      if (RAMP_TIME.eq.zero) then
+       q_out = VELO_AVG 
+      else if (RAMP_TIME.gt.zero) then
+       if (time.ge.RAMP_TIME) then
+        q_out = VELO_AVG 
+       else if ((time.ge.zero).and.(time.le.RAMP_TIME)) then
+        q_out=VELO_AVG*time/RAMP_TIME
+       else
+        print *,"time invalid"
+        stop
+       endif
+      else
+       print *,"RAMP_TIME invalid"
+       stop
+      endif
+
      else if (veldir.eq.2) then 
       q_out = zero  
     else if (side.eq.2) then ! xhi
@@ -251,14 +279,29 @@
       stop
      endif
     else 
-     print *,"invalid side in x dirction &
-      &(UNIMATERIAL_CHANNEL->VELO_BC)"
+     print *,"invalid side in x dirction (UNIMATERIAL_CHANNEL->VELO_BC)"
      stop
     endif
    else if (dir.eq.2) then  ! SLIP WALL
     if (side.eq.1) then
      if (veldir.eq.1) then
-      q_out = VELO_AVG ! q_in
+
+      if (RAMP_TIME.eq.zero) then
+       q_out = VELO_AVG 
+      else if (RAMP_TIME.gt.zero) then
+       if (time.ge.RAMP_TIME) then
+        q_out = VELO_AVG 
+       else if ((time.ge.zero).and.(time.le.RAMP_TIME)) then
+        q_out=VELO_AVG*time/RAMP_TIME
+       else
+        print *,"time invalid"
+        stop
+       endif
+      else
+       print *,"RAMP_TIME invalid"
+       stop
+      endif
+
      else if (veldir.eq.2) then
       q_out = zero
      else 
@@ -267,7 +310,23 @@
      endif
     else if (side.eq.2) then
      if (veldir.eq.1) then
-      q_out = VELO_AVG ! q_in
+
+      if (RAMP_TIME.eq.zero) then
+       q_out = VELO_AVG 
+      else if (RAMP_TIME.gt.zero) then
+       if (time.ge.RAMP_TIME) then
+        q_out = VELO_AVG 
+       else if ((time.ge.zero).and.(time.le.RAMP_TIME)) then
+        q_out=VELO_AVG*time/RAMP_TIME
+       else
+        print *,"time invalid"
+        stop
+       endif
+      else
+       print *,"RAMP_TIME invalid"
+       stop
+      endif
+
      else if (veldir.eq.2) then
       q_out = zero
      else 
@@ -275,13 +334,11 @@
       stop
      endif
     else 
-     print *,"invalid side in x dirction &
-      &(HYDRATE_REACTOR->VELO_BC)"
+     print *,"invalid side in x dirction (UNIMATERIAL_CHANNEL->VELO_BC)"
      stop
     endif
    else
-    print *,"invalid direction &
-     & (UNIMATERIAL_CHANNEL->VELO_BC)"
+    print *,"invalid direction (UNIMATERIAL_CHANNEL->VELO_BC)"
     stop
    endif
   end subroutine UNIMAT_VELO_BC
