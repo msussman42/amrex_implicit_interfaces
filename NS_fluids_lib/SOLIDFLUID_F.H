@@ -14,6 +14,7 @@ namespace amrex{
     void fort_init_aux_data(int* ioproc);
 
     void fort_headermsg(
+     int* processor_id,
      int* tid,
      int* tilenum,
      const int* gridno,

@@ -12885,7 +12885,7 @@ IMPLICIT NONE
   REAL_T test_scale_max
   REAL_T eul_over_lag_scale
 
-  INTEGER_T debug_all
+  INTEGER_T, PARAMETER :: debug_all=0
   INTEGER_T mask1,mask2
   INTEGER_T null_intersection
   INTEGER_T ctml_part_id
@@ -12895,8 +12895,6 @@ IMPLICIT NONE
   type(mesh_type) :: FSI_mesh_type
 
   call FLUSH(6)  ! 6=screen
-
-  debug_all=0
 
   CTML_DEBUG_Mass=0
 
@@ -15003,6 +15001,7 @@ end subroutine CLSVOF_InitBox
         ! CLSVOF_sync_lag_data must be called later in order to synchronize
         ! all of the Lagrangian data across all of the nodes.
       subroutine CLSVOF_Copy_To_LAG(  &
+       processor_id, &
        sdim_AMR, &
        lev77, &
        tid, &
@@ -15037,6 +15036,7 @@ end subroutine CLSVOF_InitBox
 
       INTEGER_T, INTENT(in) :: sdim_AMR
       INTEGER_T, INTENT(in) :: lev77
+      INTEGER_T, INTENT(in) :: processor_id
       INTEGER_T, INTENT(in) :: tid
       INTEGER_T, INTENT(in) :: tilenum
       INTEGER_T, INTENT(in) :: im_part ! 1..num_materials
@@ -15111,8 +15111,7 @@ end subroutine CLSVOF_InitBox
        stop
       endif
 
-      if ((lev77.lt.1).or. &
-          (lev77-1.gt.fort_finest_level).or. &
+      if ((lev77-1.ne.fort_finest_level).or. &
           (tid.lt.0).or. &
           (tilenum.lt.0)) then
        print *,"lev77 or tid or tilenum invalid"
@@ -15423,6 +15422,23 @@ end subroutine CLSVOF_InitBox
           do dir=1,3
            FSI(part_id)%NodeForce(dir,inode)=zero
           enddo
+
+          if (FSI(part_id)%NodeRollCall(inode).eq.zero) then
+           !do nothing
+          else
+           print *,"expecting FSI(part_id)%NodeRollCall(inode).eq.zero"
+           print *,"processor_id,inode ",processor_id,inode
+           print *,"lev77=",lev77
+           print *,"tid= ",tid
+           print *,"part_id= ",part_id
+           print *,"tilenum= ",tilenum
+           print *,"num_nodes_container= ",num_nodes_container
+           stop
+          endif
+
+          if (debug_all.eq.2) then
+           print *,"setting RollCall: processor_id,inode ",processor_id,inode
+          endif
           FSI(part_id)%NodeRollCall(inode)=one
 
           do idoubly=1,2
