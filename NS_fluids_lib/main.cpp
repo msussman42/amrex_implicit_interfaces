@@ -32,7 +32,7 @@ void main_cpp_keyboard() {
 
 void cpp_reduce_real_sum(int n,double sync_data[]) {
 
- int debug_reduce=1;
+ int debug_reduce=0;
 
  if (debug_reduce==1) {
   std::fflush(NULL);
@@ -240,7 +240,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 08/18/23, 15:20pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 08/19/23, 1:20am on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';

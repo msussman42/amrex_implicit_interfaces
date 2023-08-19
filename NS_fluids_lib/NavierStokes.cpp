@@ -8139,6 +8139,9 @@ void NavierStokes::ns_header_msg_level(
 
  int local_caller_id=caller_FSI_make_distance;
 
+ const int max_level = parent->maxLevel();
+ int finest_level=parent->finestLevel();
+
  if (pattern_test(local_caller_string,"FSI_make_distance")==1) {
   local_caller_id=caller_FSI_make_distance;
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
@@ -8225,10 +8228,19 @@ void NavierStokes::ns_header_msg_level(
   //copy Eulerian pressure to Lagrangian pressure
  } else if (FSI_operation==OP_FSI_LAG_STRESS) { 
 
+  if (level==finest_level) {
+   //do nothing
+  } else
+   amrex::Error("expecting level==finest_level if OP_FSI_LAG_STRESS");
+
   if (iter!=0)
    amrex::Error("iter invalid");
-  if ((FSI_sub_operation<SUB_OP_FSI_CLEAR_LAG_DATA)||
-      (FSI_sub_operation>SUB_OP_FSI_SYNC_LAG_DATA)) 
+
+  if ((FSI_sub_operation==SUB_OP_FSI_CLEAR_LAG_DATA)||
+      (FSI_sub_operation==SUB_OP_FSI_SYNC_LAG_DATA)||
+      (FSI_sub_operation==SUB_OP_FSI_COPY_TO_LAG_DATA)) {
+   //do nothing
+  } else
    amrex::Error("FSI_sub_operation invalid for OP_FSI_LAG_STRESS");
 
   if (local_caller_id==caller_nonlinear_advection) {
@@ -8242,9 +8254,6 @@ void NavierStokes::ns_header_msg_level(
  for (int tid=0;tid<thread_class::nthreads;tid++) {
   FSI_touch_flag[tid]=0;
  }
-
- const int max_level = parent->maxLevel();
- int finest_level=parent->finestLevel();
 
  if ((level>max_level)||(finest_level>max_level))
   amrex::Error("(level>max_level)||(finest_level>max_level)");
@@ -8441,9 +8450,11 @@ void NavierStokes::ns_header_msg_level(
 
    int tid=0;
    int gridno=0;
+   int proc=ParallelDescriptor::MyProc();
 
     // fort_headermsg is declared in SOLIDFLUID.F90
    fort_headermsg(
+      &proc,
       &tid,
       &num_tiles_on_thread_proc[tid],
       &gridno,
@@ -8761,8 +8772,10 @@ void NavierStokes::ns_header_msg_level(
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
     thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+    int proc=ParallelDescriptor::MyProc();
 
     fort_headermsg(
+     &proc,
      &tid_current,
      &num_tiles_on_thread_proc[tid_current],
      &gridno,
@@ -8864,6 +8877,11 @@ void NavierStokes::ns_header_msg_level(
    //copy Eulerian velocity and stress to Lagrangian velocity and stress
   } else if (FSI_operation==OP_FSI_LAG_STRESS) { 
 
+   if (level==finest_level) {
+    //do nothing
+   } else
+    amrex::Error("expecting level==finest_level");
+
    if (ngrow_make_distance!=3)
     amrex::Error("ngrow_make_distance invalid");
    if ((FSI_sub_operation!=SUB_OP_FSI_CLEAR_LAG_DATA)&&
@@ -8932,8 +8950,10 @@ void NavierStokes::ns_header_msg_level(
 
     int tid=0;
     int gridno=0;
+    int proc=ParallelDescriptor::MyProc();
 
     fort_headermsg(
+     &proc,
      &tid,
      &num_tiles_on_thread_proc[tid],
      &gridno,
@@ -9012,8 +9032,10 @@ void NavierStokes::ns_header_msg_level(
      if ((tid_current<0)||(tid_current>=thread_class::nthreads))
       amrex::Error("tid_current invalid");
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+     int proc=ParallelDescriptor::MyProc();
 
      fort_headermsg(
+      &proc,
       &tid_current,
       &num_tiles_on_thread_proc[tid_current],
       &gridno,

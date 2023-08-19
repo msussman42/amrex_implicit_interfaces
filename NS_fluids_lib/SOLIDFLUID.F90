@@ -107,6 +107,7 @@
        !  FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA
        !  FSI_sub_operation.eq.SUB_OP_FSI_SYNC_LAG_DATA
       subroutine fort_headermsg( &
+        processor_id, &
         tid, &
         tilenum, &
         gridno, &
@@ -164,6 +165,7 @@
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: processor_id
       INTEGER_T, INTENT(in) :: tid
       INTEGER_T, INTENT(in) :: tilenum
       INTEGER_T, INTENT(in) :: gridno
@@ -949,6 +951,14 @@
 
        isout=1 ! verbose on in sci_clsvof.F90
 
+       if (lev77-1.eq.fort_finest_level) then
+        !do nothing
+       else
+        print *, &
+         "expecting lev77-1.eq.fort_finest_level if OP_FSI_LAG_STRESS"
+        stop
+       endif
+
        if (CTML_FSI_INIT.ne.1) then
         print *,"CTML_FSI_INIT.ne.1"
         stop
@@ -971,6 +981,8 @@
         call CLSVOF_clear_lag_data(ioproc,isout)
 
         ! called only by the processors which own a given FAB.
+        ! called only on the finest level (i.e. solid must be wholly
+        ! contained on the finest level)
        else if (FSI_sub_operation.eq.SUB_OP_FSI_COPY_TO_LAG_DATA) then 
 
         allocate(stressdata3D(DIMV3D(FSIdata3D),6*num_materials)) 
@@ -1200,6 +1212,7 @@
             ! inode=1...num_nodes
             ! copies to FSI(part_id)%NodeForce(dir,inode)
            call CLSVOF_Copy_To_LAG( &
+            processor_id, &
             SDIM, &
             lev77, &
             tid, &

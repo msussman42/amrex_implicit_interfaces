@@ -528,21 +528,35 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else if (ok_copy_FSI_old_to_new()==0) { //deforming solid
 
     int iter=0;
-    int FSI_sub_operation=SUB_OP_FSI_CLEAR_LAG_DATA;
-    for (FSI_sub_operation=SUB_OP_FSI_CLEAR_LAG_DATA;
-         FSI_sub_operation<=SUB_OP_FSI_SYNC_LAG_DATA;FSI_sub_operation++) {
-     for (int ilev=level;ilev<=finest_level;ilev++) {
-      NavierStokes& ns_level=getLevel(ilev);
-      ns_level.resize_mask_nbr(ngrow_make_distance);
-      ns_level.ns_header_msg_level(
+
+     //CTML solid must be wholly contained on the finest level.
+    NavierStokes& ns_finest=getLevel(finest_level);
+
+    ns_finest.resize_mask_nbr(ngrow_make_distance);
+
+    ns_finest.ns_header_msg_level(
        OP_FSI_LAG_STRESS,
-       FSI_sub_operation,
+       SUB_OP_FSI_CLEAR_LAG_DATA,
        cur_time_slab,
        dt_slab,
        iter,
        local_caller_string);
-     } // ilev=level..finest_level
-    } // FSI_sub_operation=SUB_OP_FSI_[CLEAR|COPY_TO|SYNC]_LAG_DATA
+
+    ns_finest.ns_header_msg_level(
+       OP_FSI_LAG_STRESS,
+       SUB_OP_FSI_COPY_TO_LAG_DATA,
+       cur_time_slab,
+       dt_slab,
+       iter,
+       local_caller_string);
+
+    ns_finest.ns_header_msg_level(
+       OP_FSI_LAG_STRESS,
+       SUB_OP_FSI_SYNC_LAG_DATA,
+       cur_time_slab,
+       dt_slab,
+       iter,
+       local_caller_string);
 
     if (level==0) {
      // fort_headermsg (SOLIDFLUID.F90)
