@@ -14,7 +14,7 @@
 .false.  500  500                       /flag_restartfile, t0_restartfile, dt_restartfile flag_restartfile=false (only _esh restart implemented)
 c Start of main inputs; this file read from create_grid2.F
 1 1                                    /nr_ibm_f, nr_ibm_fb    Number of flexible bodies, num of interacting bodies for penalty to prevent intersection
-./tringulareFix.flag_in_channel.dat 
+./tringulareFix.flag_in_channel.dat
 0 0                                   /nFixcontact,nFixcontactL:num of nodes and elements in the above file
 c======global inputs 1-------------------------
 0			               /0:fiber structure 1:shell structure 2:fibrous shell

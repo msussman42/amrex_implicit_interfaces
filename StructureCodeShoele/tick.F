@@ -2,7 +2,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 c rtime = t^{n+1}
 c
       subroutine tick(rtime
-     &     ,dt,nt,monitorON,ntsave
+     &     ,dt,current_step,monitorON,plot_interval
      &     ,uibm1in_fib,uibm2in_fib,uibm3in_fib
      &     ,uibm1in_fsh,uibm2in_fsh,uibm3in_fsh
      &     ,uibm1in_esh,uibm2in_esh,uibm3in_esh
@@ -66,7 +66,7 @@ c
       real*8 rtime, dt
       logical monitorON,theboss
     
-      integer nt, ntsave,i,j,iiter2,jq,jq2
+      integer current_step, plot_interval,i,j,iiter2,jq,jq2
       integer ibm_solve,isavesigma
       integer i_glb, ne1,i1
       real*8 x(3,3) ,xcont(3,3), xp1cont(3)
@@ -618,11 +618,11 @@ c
           end do
           
 ! call one more time at the end of the iteration
-         time_step=nt
-         if(mod(time_step,ntsave).eq. 0 ) isavesigma=1         
+         time_step=current_step
+         if(mod(time_step,plot_interval).eq. 0 ) isavesigma=1         
          call r_stang(ibm_solve,monitorON,isavesigma)
 !!?!!         call r_stang(ibm_solve,monitorON)
-!!?!!         time_step=nt
+!!?!!         time_step=current_step
 !computing output forces
 
          if(theboss) then
@@ -635,8 +635,8 @@ c
          endif
 
 ! write tecplot files for structural components
-           if(mod(time_step,ntsave).eq. 0 ) then
-              call outputstr(nt,ntsave)
+           if(mod(time_step,plot_interval).eq. 0 ) then
+              call outputstr(current_step,plot_interval,rtime)
            endif
 
 ! write geometrical restart file for Fe shell  structures
@@ -644,7 +644,8 @@ c
      &        .and.(time_step .ge.t0_restartfile) 
      &        .and.(mod(time_step,dt_restartfile).eq. 0 ) 
      &       ) then
-            call restartInput_esh(nt,nt-t0_restartfile,dt_restartfile)
+            call restartInput_esh(current_step
+     &       ,current_step-t0_restartfile,dt_restartfile)
            endif
          endif
 
@@ -747,9 +748,9 @@ c
      &     ,klo_dom,khi_dom
      &     ,rtime
      &     ,dt
-     &     ,nt
+     &     ,current_step
      &     ,monitorON
-     &     ,ntsave
+     &     ,plot_interval
      &     ,prev_uibm123in_fsh
      &     ,uibm123in_fsh
      &     ,uibm123out_fsh
@@ -801,7 +802,7 @@ c
       real*8 rtime, dt
       logical monitorON,theboss
     
-      integer nt, ntsave
+      integer current_step, plot_interval
       integer i,j,iiter2,jq,jq2
       integer ibm_solve,isavesigma
       integer i_glb, ne1,i1
@@ -811,12 +812,12 @@ c
       real*8 tmpv2val
       integer debug_fsh
       integer debug_user
-      integer ntsave_debug
+      integer plot_interval_debug
 
 #ifdef INCLUDE_FSH
 
       debug_fsh=0
-      ntsave_debug=1
+      plot_interval_debug=1
 
       if (nscalar.eq.2) then
 ! do nothing
@@ -1036,7 +1037,7 @@ c
        if (debug_fsh.eq.0) then
 ! do nothing
        else if (debug_fsh.eq.1) then
-        call outputstr(nt,ntsave_debug)
+        call outputstr(current_step,plot_interval_debug,rtime)
         print *,"debug_fsh before r_stang"
         call SOLIDFLUID_F90_KEYBOARD()
        else
@@ -1066,8 +1067,8 @@ c
       end do
           
 ! call one more time at the end of the iteration
-      time_step=nt
-      if(mod(time_step,ntsave).eq. 0 ) then
+      time_step=current_step
+      if(mod(time_step,plot_interval).eq. 0 ) then
        isavesigma=1         
       endif
 
@@ -1078,7 +1079,7 @@ c
        if (debug_fsh.eq.0) then
 ! do nothing
        else if (debug_fsh.eq.1) then
-        call outputstr(nt,ntsave_debug)
+        call outputstr(current_step,plot_interval_debug,rtime)
         print *,"debug_fsh after r_stang"
         call SOLIDFLUID_F90_KEYBOARD()
        else
@@ -1091,8 +1092,8 @@ c
       if(theboss) then
 
 ! write tecplot files for structural components
-       if(mod(time_step,ntsave).eq. 0 ) then
-        call outputstr(nt,ntsave)
+       if(mod(time_step,plot_interval).eq. 0 ) then
+        call outputstr(current_step,plot_interval,rtime)
        endif
 
       endif
@@ -1189,10 +1190,10 @@ c rtime = t^{n+1}
      &     ,rtime
      &     ,dt
 ! step              
-     &     ,nt
+     &     ,current_step
      &     ,monitorON
 ! plot_int
-     &     ,ntsave
+     &     ,plot_interval
      &     ,prev_uibm123in_fib
      &     ,uibm123in_fib
      &     ,uibm123out_fib
@@ -1232,18 +1233,18 @@ c rtime = t^{n+1}
       real*8 rtime, dt
       logical monitorON,theboss
     
-      integer nt, ntsave
+      integer current_step, plot_interval
       integer i,j,iiter2
       integer ibm_solve,isavesigma
       integer i_glb
       integer debug_fib
       integer debug_user
-      integer ntsave_debug
+      integer plot_interval_debug
 
 #ifdef INCLUDE_FIB
  
       debug_fib=0
-      ntsave_debug=1
+      plot_interval_debug=1
 
       ibm_solve=0
 ! if converged
@@ -1393,7 +1394,7 @@ c rtime = t^{n+1}
        if (debug_fib.eq.0) then
 ! do nothing
        else if (debug_fib.eq.1) then
-        call outputstr(nt,ntsave_debug)
+        call outputstr(current_step,plot_interval_debug,rtime)
         print *,"debug_fib before r_stang"
         call SOLIDFLUID_F90_KEYBOARD()
        else
@@ -1420,8 +1421,8 @@ c rtime = t^{n+1}
       end do
           
 ! call one more time at the end of the iteration
-      time_step=nt
-      if(mod(time_step,ntsave).eq. 0 ) then
+      time_step=current_step
+      if(mod(time_step,plot_interval).eq. 0 ) then
        isavesigma=1  
       endif
 
@@ -1432,7 +1433,7 @@ c rtime = t^{n+1}
        if (debug_fib.eq.0) then
 ! do nothing
        else if (debug_fib.eq.1) then
-        call outputstr(nt,ntsave_debug)
+        call outputstr(current_step,plot_interval_debug,rtime)
         print *,"debug_fib after r_stang"
         call SOLIDFLUID_F90_KEYBOARD()
        else
@@ -1450,8 +1451,8 @@ c rtime = t^{n+1}
 ! vibm[1-3]_fib(i,j)
 ! filename='ibm-2dFib-B ... .dat'
 ! filename='ibm-3dFib-B ... .dat'
-       if(mod(time_step,ntsave).eq. 0 ) then
-        call outputstr(nt,ntsave)
+       if(mod(time_step,plot_interval).eq. 0 ) then
+        call outputstr(current_step,plot_interval,rtime)
        endif
 
       endif
