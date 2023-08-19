@@ -149,8 +149,8 @@
         touch_flag, &
         CTML_FSI_INIT, &
         iter, &
-        current_step, &
-        plot_interval, &
+        current_step, & !current_step = nstep ()=parent->levelSteps(level)
+        plot_interval, & !plot_interval = parent->plotInt()
         ioproc) &
       bind(c,name='fort_headermsg')
 
@@ -593,7 +593,8 @@
           dt, &
           h_small, &
           problo3D,probhi3D, &
-          current_step,plot_interval, &
+          current_step, &
+          plot_interval, &
           ioproc,isout)
        else
         print *,"FSI_operation invalid: ",FSI_operation

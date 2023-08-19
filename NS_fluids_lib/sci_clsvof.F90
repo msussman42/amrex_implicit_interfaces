@@ -11381,7 +11381,7 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
       if ((i_elem.ge.1).and.(i_elem.le.ctml_max_n_elements)) then
        ! do nothing
       else
-       print *,"i_elem invalid"
+       print *,"i_elem invalid (CLSVOF_ReadHeader): ",i_elem
        stop
       endif
 
@@ -16926,7 +16926,8 @@ subroutine CLSVOF_ReadNodes( &
   CLSVOF_dt, &
   h_small, &
   problo,probhi, &
-  current_step,plot_interval, &
+  current_step, & !current_step=nstep ()=parent->levelSteps(level)
+  plot_interval, & !plot_interval=parent->plotInt()
   ioproc,isout)
   use global_utility_module
 #ifdef MVAHABFSI

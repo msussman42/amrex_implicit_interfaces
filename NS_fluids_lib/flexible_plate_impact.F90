@@ -48,40 +48,8 @@ implicit none
 REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
 REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 
-REAL_T substrate_height
-
-if ((radblob2.gt.zero).and. &
-    (radblob3.gt.zero).and. &
-    (radblob4.gt.zero)) then
- ! do nothing
-else
- print *,"radblob2, radblob3, or radblob4 invalid"
- stop
-endif
-
-if (SDIM.eq.2) then
- call squaredist(x(1),x(2), & ! substrate_height<0 in object
-   xblob2-radblob2, &
-   xblob2+radblob2, &
-   yblob2-radblob3, &
-   yblob2+radblob3, &
-   substrate_height)
-else if (SDIM.eq.3) then
- call cubedist( &
-   xblob2-radblob2, &
-   xblob2+radblob2, &
-   yblob2-radblob3, &
-   yblob2+radblob3, &
-   zblob2-radblob4, &
-   zblob2+radblob4, &
-   x(1),x(2),x(SDIM), &
-   substrate_height) ! substrate_height<0 in object
-else
- print *,"dimension bust"
- stop
-endif
-
- Phi=-substrate_height
+!CTML takes care of this.
+Phi=-99999.0
 
 end subroutine flexible_substrateLS
 
@@ -104,6 +72,7 @@ IMPLICIT NONE
   endif
 
 if ((num_materials.eq.3).and.(probtype.eq.2000)) then
+
  ! liquid
  if (SDIM.eq.3) then
   LS(1)=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
@@ -116,16 +85,6 @@ if ((num_materials.eq.3).and.(probtype.eq.2000)) then
  LS(2)=-LS(1)
 
  call flexible_substrateLS(x,LS(3))
-
- if (LS(2).ge.zero) then
-  ! intersection of the complements of the liquid and plate
-  LS(2)=min(-LS(1),-LS(3)) 
- else if (LS(2).le.zero) then
-  ! do nothing
- else
-  print *,"LS(2) invalid"
-  stop
- endif
 
 else
  print *,"num_materials or probtype invalid"
@@ -158,13 +117,7 @@ else
 endif
 
 if (probtype.eq.2000) then
- if (vel.eq.0.0d0) then
-  ! do nothing
- else
-  print *,"flexible_plate_check_vel_rigid: vel not expected"
-  print *,"t,dir,vel ",t,dir,vel
-  stop
- endif
+ ! do nothing
 else
  print *,"probtype invalid"
  stop
@@ -186,41 +139,18 @@ IMPLICIT NONE
   REAL_T, INTENT(out) :: vel(SDIM)
   REAL_T, INTENT(out) :: temperature
   INTEGER_T, INTENT(out) :: prescribed_flag
-  REAL_T :: LS_left,LS_right
-  REAL_T :: clamped_height
   INTEGER_T :: dir
 
 
 if (probtype.eq.2000) then
 
  prescribed_flag=0
+ do dir=1,SDIM
+  vel(dir)=zero
+ enddo
+ LS=-99999.0d0
+ temperature=293.0d0
 
- clamped_height=two*radblob3
-
- if (SDIM.eq.2) then
-  call squaredist(x(1),x(2), & ! LS_right<0 in object
-   xblob2+radblob2-radblob5, &
-   xblob2+radblob2, &
-   yblob2-clamped_height, &
-   yblob2+clamped_height, &
-   LS_right)
-  call squaredist(x(1),x(2), & ! LS_left<0 in object
-   xblob2-radblob2, &
-   xblob2-radblob2+radblob5, &
-   yblob2-clamped_height, &
-   yblob2+clamped_height, &
-   LS_left)
-  LS_left=-LS_left
-  LS_right=-LS_right
-  LS=max(LS_left,LS_right)
-  do dir=1,SDIM
-   vel(dir)=zero
-  enddo
-  temperature=293.0d0  ! room temperature
- else
-  print *,"this code only for 2d for now"
-  stop
- endif
 else
  print *,"probtype invalid"
  stop
@@ -270,16 +200,6 @@ enddo
 
 if (adv_dir.eq.SDIM) then
 
-  ! material 3 is the substrate
-  ! velsolid_flag==1 if initializing the solid velocity.
- if ((LS(3).ge.zero).or.(velsolid_flag.eq.1)) then
-  ! in solid
-  do dir=1,SDIM
-   VEL(dir)=zero
-  enddo
- else if ((LS(3).le.zero).and. &
-          (velsolid_flag.eq.0)) then
-
      ! material 1 is the drop
   if ((LS(1).ge.zero).or. &
       (LS(1).ge.-two*dx(1))) then
@@ -298,10 +218,6 @@ if (adv_dir.eq.SDIM) then
    print *,"LS bust"
    stop
   endif
- else
-  print *,"LS(3) or velsolid bust"
-  stop
- endif
 
 else
  print *,"expecting adv_dir = SDIM in flexible_plate_impact_VEL"

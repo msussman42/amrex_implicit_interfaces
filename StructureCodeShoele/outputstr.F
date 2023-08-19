@@ -1,6 +1,6 @@
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !@c
-      subroutine outputstr(nt,nnt)
+      subroutine outputstr(current_step,plot_interval,rtime)
 !@T routine to output data of the structures in Tecplot format.
 !Tecplot files are named as \\
 ![[ibm-X{2,3}d{Fib,Fsh,Esh}-B{Body num}_{time step}.dat]]
@@ -10,16 +10,26 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !
       USE HeaderFSI
       implicit none
-      integer nt,nnt,md,i,j,k,jtype,itype,jq,jq2,i2,inode(2)
+      integer current_step,plot_interval
+      integer md,i,j,k,jtype,itype,jq,jq2,i2,inode(2)
+      real*8  rtime
       real*8  ysecIBM,zsecIBM
 !
       integer  flag,kflag,mk1,mk2,mk3,iadd1,iadd2
       character  num*7, filename*52,numbdy*4,numk*4
+      integer strandid
+      real*8 r_current_step
+      real*8 r_plot_interval
 
 !
-      if(mod(nt,nnt).eq.0)then
+      r_current_step=current_step
+      r_plot_interval=plot_interval
 
-      md = nt
+      strandid=NINT(r_current_step/r_plot_interval)+1
+
+      if(mod(current_step,plot_interval).eq.0)then
+
+      md = current_step
       write(num,'(i7.7)') md/1
 
       do i=1,nr_ibm_fib
@@ -40,8 +50,11 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       write(840,332)
 
       write(840,499) md,ns_ibm_r_fib(i),ns_ibm_r_fib(i)-1
+     &  ,rtime,strandid
 499   format(1x,'zone T="ibm_',i7,'", n=',i7,', e=',
-     &    i7,', zonetype=felineseg, datapacking=point')
+     &    i7,', zonetype=felineseg, datapacking=point',
+     &    ' ,solutiontime=',f20.9,
+     &    ' ,strandid=',i7)
       do j=1,ns_ibm_r_fib(i)
           if(ndim .gt.2) then
            write(840,401) 
@@ -299,10 +312,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       endif
 
       write(840,498) time_step,ns_ibm_r_esh(i),numelr(i)
-
+     &  ,rtime,strandid
 
 498   format(1x,'zone t="ibm',i7,'" ,n=',i7,' e=',
-     &     i7,' ,zonetype=fetriangle, datapacking=point')
+     &     i7,' ,zonetype=fetriangle, datapacking=point',
+     &    ' ,solutiontime=',f20.9,
+     &    ' ,strandid=',i7)
       if(flag_fractal_esh(i)) then
           do j=1,ns_ibm_r_esh(i)
                   write(840,401) 
@@ -366,9 +381,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       write(840,3323)
       write(840,4991) time_step,ns_ibm_r_fbc(i),numelr(i)
+     &  ,rtime,strandid
 
 4991      format(1x,'zone t="ibm',i7,'" ,n=',i7,' e=',
-     &             i7,' ,zonetype=fetriangle, datapacking=point')
+     &      i7,' ,zonetype=fetriangle, datapacking=point',
+     &    ' ,solutiontime=',f20.9,
+     &    ' ,strandid=',i7)
           do j=1,ns_ibm_r_fbc(i)
                   write(840,401) 
      +             gx_ibm_massive_fbc(i,j)

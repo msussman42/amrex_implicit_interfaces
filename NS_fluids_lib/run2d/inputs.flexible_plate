@@ -1,7 +1,7 @@
 max_step  =  99999   # maximum timestep ZEYU
 #stop_time =  0.05  # maximum problem time Yongsheng
 #stop_time=0.02 # ZEYU 60 ms
-stop_time=10.0
+stop_time=10000.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -16,7 +16,7 @@ geometry.prob_lo   =  0.0 0.0  # ZEYU
 #   drop radius=1 mm
 #   flexible string=6 mm
 # symmetric BC at r=0
-geometry.prob_hi   =  3.0e-3 6.0e-3  # MKS
+geometry.prob_hi   =  3.0 6.0  #CGS
 geometry.is_periodic = 0 0
 
 # multigrid class
@@ -25,23 +25,25 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 9000
+mg.presmooth=2
+mg.postsmooth=2
+
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
 ns.post_init_pressure_solve=1  # make sure initial velocity is solonoidal
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
-Lp.v = 1
+#Lp.v = 1
 
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
-ns.num_divu_outer_sweeps=1
+ns.num_divu_outer_sweeps=2
 ns.num_species_var=0
-# 3=no limiter with slope=0 at interface
 # 0 = MOF (moment of fluid)
 # 1=CMOF (continuous moment of fluid)
 ns.continuous_mof=1
-ns.FD_curv_interp=1
-# 0=Sussman and Puckett algorithm 
-# 1=EILE (default), -1=Weymouth Yue
-# 2=always EI   3=always LE
+# -1=Weymouth Yue
 ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 #ns.show_mem=1
@@ -53,15 +55,17 @@ amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
 amr.max_level=0 # ZEYU
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
-ns.mof_ordering=1 4 2 #non-wetting drop has highest priority.  gas lowest.
+ns.mof_ordering=1 4 1 #liquid, gas, substrate
 
 ns.truncate_thickness=2.0
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=10
-ns.initial_project_cycles=3
-ns.initial_viscosity_cycles=1
-ns.initial_thermal_cycles=1
+ns.mglib_max_ratio=1.0e+5
+
+ns.initial_viscosity_cycles=10
+ns.initial_thermal_cycles=10
+ns.initial_project_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # 0=GSRB 1=ICRB 2=ILU
@@ -90,12 +94,11 @@ ns.dt_cutoff      = 1.0e-10  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-10
 
-#ns.cfl            = 0.5      # cfl number for hyperbolic system
-ns.cfl            = 0.05      # cfl number for hyperbolic system
+ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
-ns.change_max=1.01      # scale back initial timestep
-#ns.visc_coef      = 0.16     # coef of viscosity Yongsheng
+ns.change_max=1.01     
 ns.visc_coef=1.0 
+mac.visc_abs_tol   = 1.0e-10
 ns.gravity=0.0  # Yongsheng
 #ns.gravity        = -9.8  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
@@ -127,7 +130,8 @@ ns.gravity=0.0  # Yongsheng
 #gamma2=(sigma12-sigma23-sigma13)/2
 #gamma3=(-sigma12+sigma23+sigma13)/2
 #dry: sigma13=sigma12 sigma23=0
-ns.tension=0.073 0.073 0.0
+ns.tension=73.0 73.0 0.0
+ns.min_velocity_for_dt=500.0 
 # law_of_the_wall and ZEYU_DCA_SELECT not used for flexible plate problem
 #ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
 #law_of_the_wall=0 0 0 if static angle condition or non-GNBC dynamic angle 
@@ -156,82 +160,40 @@ ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
 #ns.advbot=77.0 # Yongsheng
-#ns.advbot=1.0 # m/s
-ns.advbot=0.1 # m/s
+ns.advbot=100.0 # cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 # 0.0 0.4 Yongsheng
 # 0.0 0.1053027 Kensuke
-ns.xblob=0.0  # center of falling droplet ZEYU
-ns.yblob=2.5e-3
-ns.zblob=2.5e-3  # (1.5e-3)+(1.0e-3) MKS
+ns.xblob=1.5  # center of falling droplet ZEYU
+ns.yblob=2.5
+ns.zblob=2.5  # (1.5e-3)+(1.0e-3) MKS
 # 0.18 Yongsheng
 # 0.186/2=0.093 Kensuke
-ns.radblob=1.0e-3 # ZEYU
-ns.xblob2=0.0
-# EUL-EUL FSI
-ns.radblob2=2.0e-3  # plate extends 2/3 of the way to the end of the domain. 
-ns.yblob2=1.25e-3 # center of plate (plate y coordinate)
-ns.zblob2=1.25e-3 # plate z coordinate
-# EUL-EUL FSI
-ns.radblob3=0.25e-3  # vertical radius of the plate (2D)
-# EUL-EUL FSI
-ns.radblob4=0.25e-3
-# EUL-EUL FSI
-ns.radblob5=0.25e-3  # width of clamped region
-# LAG-EUL FSI
-#ns.radblob5=0.0  # width of clamped region
+ns.radblob=1.0 # ZEYU
 ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
 ns.probtype=2000
-# EUL-EUL FSI
-ns.material_type=0 0 0
-# LAG-EUL FSI
-#ns.material_type=0 0 999
-# EUL-EUL FSI
-ns.FSI_flag=0 0 0
-# EUL-EUL FSI
-# LAG-EUL FSI
-#ns.FSI_flag=0 0 8
+ns.material_type=0 0 999
+# FSI_flag for avaiable phase/material
+# 0 fluid (default)
+# 1 solid (PROB_[23]D.F90)
+# 2 solid (lagrangian)
+# 3 ice
+# 4 CTML
+ns.FSI_flag=0 0 4
 ns.heatviscconst=0.0 0.0 0.0
 #ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
 #material 1 is water
 #material 2 is gas
 #material 3 is substrate
-#speed of sound in air: 343 m/s
-#speed of sound in water: 1481 m/s
-#elastic wave speed should be at least comparable to water?
-#1500=sqrt(beta/rho)
-#2.25E+6=beta/1E+3  beta=2.25E+9
-#note: bulk modulus of rubber: 1.5E+9 Pascal  1Pascal=kg/(m s^2)
-#ns.elastic_viscosity=0.0 0.0 1.5e+9
-ns.elastic_viscosity=0.0 0.0 1.5e+5
-# elastic_time is not used for viscoelastic_model==2 or 3?
-ns.elastic_time=0.0 0.0 1.0e+9
-ns.polymer_factor=0.0 0.0 1.0e-9   # parameter, 1/L
-# viscoelastic_model=0 FENE-CR  f_R=(A-I)/(1-tr(A)/L^2) f_S=f_R
-# viscoelastic_model=1 Oldroyd-B  f_R=(A-I) f_S=f_R
-# viscoelastic_model=2 Q ~ (grad X + grad X^T) 
-# viscoelastic_model=3 incremental elastic material, Jaumann derivative
-# viscoelastic_model=5 FENE-P  f_R=A/(1-tr(A)/L^2)-I  f_S=f_R
-#    f_R=(1/(1-tr(A)/L^2))*(A-I(1-tr(A)/L^2))=
-#        (1/(1-tr(A)/L^2))*(A-I+I tr(A)/L^2)
-#
-# viscoelastic_model=6 Linear PTT 
-#     f_R=(1+Tr(A-I)/L^2)(A-I)
-#     f_S=A-I
-# viscoelastic_model=7 Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
-#         Xia, Lu, Tryggvason 2018
-# for INCOMPRESSIBLE Neo-Hookean model, there is not "determinant factor"
-#
-# EUL-EUL FSI
-#ns.viscoelastic_model=0 0 3
-#ns.viscoelastic_model=0 0 7
-ns.viscoelastic_model=0 0 7
-ns.viscconst=8.9e-4 0.0000181 1.0e-3 #  MKS
-#ns.denconst=1.0 0.001226 1.0 #Yongsheng
-ns.denconst=997.0 1.25 100000.0 
+ns.elastic_viscosity=0.0 0.0 0.0
+ns.elastic_time=0.0 0.0 0.0
+ns.polymer_factor=0.0 0.0 0.0
+ns.viscoelastic_model=0 0 0
+ns.viscconst=0.01 0.000181 0.01 #CGS
+ns.denconst=1.0 0.001225 1.0 
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
 # ----------------  PROBLEM DEPENDENT INPUTS

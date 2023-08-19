@@ -68,6 +68,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8  maxlength_fbc(ns_ibm_fbc), avlength_fbc(ns_ibm_fbc)
       integer FabricMeshGeneration,FabricLineGeneration
      &       ,numrecord,numrecordL,iMeshmax,ilinemax,tmpint(0:2)
+      integer probtype
+
+      probtype=2000
 
       FabricMeshGeneration=0
       FabricLineGeneration=0
@@ -88,10 +91,19 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       numLinepointMax=0
       FabricLine_numattMax=0
       FabricLine_numtargetMax=0
-     
-!     open (9997,file='./inputdistibm.dat',status="unknown")
-      open (9997,file='./inputStructureSolver.flag_in_channel.dat'
+    
+      if (probtype.eq.-1) then 
+       open (9997,file='./inputdistibm.dat',status="unknown")
+      else if (probtype.eq.220) then
+       open (9997,file='./inputStructureSolver.flag_in_channel.dat'
      &     ,status="unknown")
+      else if (probtype.eq.2000) then
+       open (9997,file='./inputStructureSolver.flexible_plate.dat'
+     &     ,status="unknown")
+      else
+       print *,"probtype invalid"
+       stop
+      endif
 
       pi1 = 4. * atan(1.0)
       temp4=0.01
