@@ -3294,17 +3294,33 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
  if (FSI_mesh_type%NumNodes.gt.0) then
   do dir=1,3
    FSI_mesh_type%center_BB(dir)= &
-       FSI_mesh_type%center_BB(dir)/FSI_mesh_type%NumNodes
-   if ((FSI_mesh_type%center_BB(dir).ge. &
-        FSI_mesh_type%exterior_BB(dir,1)).and. &
-       (FSI_mesh_type%center_BB(dir).le. &
-        FSI_mesh_type%exterior_BB(dir,2))) then
-    ! do nothing
+     FSI_mesh_type%center_BB(dir)/FSI_mesh_type%NumNodes
+   mag=FSI_mesh_type%exterior_BB(dir,2)-FSI_mesh_type%exterior_BB(dir,1)
+
+   if (mag.ge.zero) then
+    if (mag.lt.one) then
+     mag=one
+    else if (mag.ge.one) then
+     ! do nothing
+    else
+     print *,"mag invalid"
+     stop
+    endif
+    if ((FSI_mesh_type%center_BB(dir).ge. &
+         FSI_mesh_type%exterior_BB(dir,1)-VOFTOL*mag).and. &
+        (FSI_mesh_type%center_BB(dir).le. &
+         FSI_mesh_type%exterior_BB(dir,2)+VOFTOL*mag)) then
+     ! do nothing
+    else
+     print *,"center_BB invalid(post_process_nodes_elements):dir,center_BB: ",&
+       dir,FSI_mesh_type%center_BB(dir)
+     stop
+    endif
    else
-    print *,"center_BB invalid: dir,center_BB: ", &
-      dir,FSI_mesh_type%center_BB(dir)
+    print *,"mag (exterior_BB diff) invalid: ",mag
     stop
    endif
+
    FSI_mesh_type%interior_BB(dir,1)=FSI_mesh_type%exterior_BB(dir,1)
    FSI_mesh_type%interior_BB(dir,2)=FSI_mesh_type%exterior_BB(dir,2)
   enddo !dir=1..3
@@ -15142,6 +15158,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T :: inode
       INTEGER_T :: inode_container
       REAL_T, dimension(3) :: xnot
+      REAL_T, dimension(3) :: local_xnot
       REAL_T, dimension(3) :: xprobe
       REAL_T, dimension(3) :: xnode
       INTEGER_T, dimension(3) :: gridloBB,gridhiBB
@@ -15390,10 +15407,43 @@ end subroutine CLSVOF_InitBox
           part_id, &
           TOTAL_NPARTS)
 
+        do dir=1,3
+         local_xnot(dir)=xnot(dir)
+        enddo
+
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         ! do nothing
+        else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+                 (levelrz.eq.COORDSYS_RZ)) then
+         do dir=1,3
+          if (xmap3D(dir).eq.1) then
+           if (local_xnot(dir).ge.zero) then
+            !do nothing
+           else if (local_xnot(dir).lt.zero) then
+            local_xnot(dir)=-local_xnot(dir)
+           else
+            print *,"local_xnot(dir) invalid"
+            stop
+           endif
+          else if ((xmap3D(dir).eq.2).or. &
+                   (xmap3D(dir).eq.3).or. &
+                   (xmap3D(dir).eq.0)) then
+           ! do nothing
+          else
+           print *,"xmap3D invalid"
+           stop
+          endif
+         enddo !dir=1,3
+        else
+         print *,"levelrz invalid (CLSVOF_Copy_To_LAG): ",levelrz
+         stop
+        endif
+
         if (debug_all.eq.1) then
          print *,"inode=",inode
          do dir=1,3
           print *,"dir,xnode ",dir,xnode(dir)
+          print *,"dir,local_xnot  ",dir,local_xnot(dir)
           print *,"dir,xnot  ",dir,xnot(dir)
          enddo
         endif
@@ -15402,7 +15452,7 @@ end subroutine CLSVOF_InitBox
          FSI(part_id), &
          ngrow_make_distance_in, &
          null_probe_size, &
-         xnot, &
+         local_xnot, &
          FSI_lo,FSI_hi, &
          FSI_growlo,FSI_growhi, &
          xdata3D, &
@@ -15448,14 +15498,14 @@ end subroutine CLSVOF_InitBox
          inside_interior_box=1
          do dir=1,3
           if (sdim_AMR.eq.3) then
-           if ((xnot(dir).le.xhi3D_tile(dir)).and. &
-               (xnot(dir).ge.xlo3D_tile(dir))) then
+           if ((local_xnot(dir).le.xhi3D_tile(dir)).and. &
+               (local_xnot(dir).ge.xlo3D_tile(dir))) then
             ! do nothing
-           else if ((xnot(dir).gt.xhi3D_tile(dir)).or. &
-                    (xnot(dir).lt.xlo3D_tile(dir))) then
+           else if ((local_xnot(dir).gt.xhi3D_tile(dir)).or. &
+                    (local_xnot(dir).lt.xlo3D_tile(dir))) then
             inside_interior_box=0
            else
-            print *,"xnot,xlo3d, or xhibc NaN"
+            print *,"local_xnot,xlo3d, or xhibc NaN"
             stop
            endif
           else if (sdim_AMR.eq.2) then
@@ -15466,14 +15516,14 @@ end subroutine CLSVOF_InitBox
                     (xmap3D(dir).eq.2).or. &
                     ((xmap3D(dir).eq.0).and. &
                      (FSI(part_id)%flag_2D_to_3D.eq.0))) then
-            if ((xnot(dir).le.xhi3D_tile(dir)).and. &
-                (xnot(dir).ge.xlo3D_tile(dir))) then
+            if ((local_xnot(dir).le.xhi3D_tile(dir)).and. &
+                (local_xnot(dir).ge.xlo3D_tile(dir))) then
              ! do nothing
-            else if ((xnot(dir).gt.xhi3D_tile(dir)).or. &
-                     (xnot(dir).lt.xlo3D_tile(dir))) then
+            else if ((local_xnot(dir).gt.xhi3D_tile(dir)).or. &
+                     (local_xnot(dir).lt.xlo3D_tile(dir))) then
              inside_interior_box=0
             else
-             print *,"xnot,xlo3d, or xhibc NaN"
+             print *,"local_xnot,xlo3d, or xhibc NaN"
              stop
             endif
            else
@@ -15526,7 +15576,7 @@ end subroutine CLSVOF_InitBox
            endif
 
            do dir=1,3
-            xprobe(dir)=xnot(dir)+ &
+            xprobe(dir)=local_xnot(dir)+ &
              sign_normal*probe_size*dx3D_min*local_node_normal(dir)
            enddo
 

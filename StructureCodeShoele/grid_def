@@ -30,7 +30,7 @@
       PARAMETER (NMaxnumbuck=2)  ! Number of buckets
 
 !==Fiber paramters
-      PARAMETER (Ns_IBM_fib=200)    ! maximum number of points in each bdy
+      PARAMETER (Ns_IBM_fib=1600)    ! maximum number of points in each bdy
       PARAMETER (Ns_IBMB_fib=2)    ! boundary points always more than 1
 
 !==fibrous shell parameters
