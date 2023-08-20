@@ -11652,6 +11652,7 @@ REAL_T xlo,xhi
 INTEGER_T local_iband
 REAL_T local_max_side
 REAL_T local_buffer(3)
+REAL_T local_minnode,local_maxnode,local_avgnode,swap_node
 INTEGER_T, PARAMETER :: debug_overlap_element=0
 
  do dir=1,3
@@ -11738,28 +11739,69 @@ INTEGER_T, PARAMETER :: debug_overlap_element=0
      ! do nothing
     else
      print *,"xhi.le.xlo in check_overlap"
+     print *,"xlo=",xlo
+     print *,"xhi=",xhi
      stop
     endif
-    if (maxnode(dir).lt.xlo-local_buffer(dir)) then
+    local_maxnode=maxnode(dir)
+    local_minnode=minnode(dir)
+    local_avgnode=half*(local_maxnode+local_minnode)
+
+    if (levelrz.eq.COORDSYS_CARTESIAN) then
+     ! do nothing
+    else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+             (levelrz.eq.COORDSYS_RZ)) then
+     if (xmap3D(dir).eq.1) then
+      if (local_avgnode.ge.zero) then
+       !do nothing
+      else if (local_avgnode.lt.zero) then
+       swap_node=local_minnode
+       local_minnode=-local_maxnode
+       local_maxnode=-swap_node
+      else
+       print *,"local_avgnode invalid"
+       stop
+      endif
+     else if ((xmap3D(dir).eq.2).or. &
+              (xmap3D(dir).eq.3).or. &
+              (xmap3D(dir).eq.0)) then
+      ! do nothing
+     else
+      print *,"xmap3D invalid"
+      stop
+     endif
+    else
+     print *,"levelrz invalid"
+     stop
+    endif
+
+    if (local_maxnode.lt.xlo-local_buffer(dir)) then
      overlap=0
     endif
-    if (minnode(dir).gt.xhi+local_buffer(dir)) then
+    if (local_minnode.gt.xhi+local_buffer(dir)) then
      overlap=0
     endif
-    if ((minnode(dir).lt.xlo+local_buffer(dir)).or. &
-        (maxnode(dir).gt.xhi-local_buffer(dir))) then
+    if ((local_minnode.lt.xlo+local_buffer(dir)).or. &
+        (local_maxnode.gt.xhi-local_buffer(dir))) then
      interior_flag=0
+    else if ((local_minnode.ge.xlo+local_buffer(dir)).and. &
+             (local_maxnode.le.xhi-local_buffer(dir))) then
+     !do nothing
+    else
+     print *,"local_minnode or local_maxnode is NaN"
+     stop
     endif
-    if (minnode(dir).le.maxnode(dir)) then
+    if (local_minnode.le.local_maxnode) then
      ! do nothing
     else
-     print *,"minnode(dir).gt.maxnode(dir) in check_overlap"
+     print *,"local_minnode.gt.local_maxnode in check_overlap"
      stop
     endif
     if (debug_overlap_element.eq.1) then
      print *,"dir,ielem,xlo,xhi,tilelo,tilehi,minnode,maxnode,local_buffer ", &
       dir,ielem,xlo,xhi,tilelo,tilehi,minnode(dir),maxnode(dir), &
       local_buffer(dir)
+     print *,"local_minnode, local_maxnode ",local_minnode,local_maxnode
     endif
    else if ((xmap3D(dir).eq.0).and. &
             (FSI_mesh_type%flag_2D_to_3D.eq.1)) then
@@ -11826,6 +11868,7 @@ INTEGER_T local_nnodes
 INTEGER_T dir
 INTEGER_T tilelo,tilehi
 REAL_T xlo,xhi
+REAL_T local_minnode
 INTEGER_T, PARAMETER :: debug_overlap_node=0
 
 
@@ -11893,21 +11936,51 @@ INTEGER_T, PARAMETER :: debug_overlap_node=0
      if (xhi.gt.xlo) then
       ! do nothing
      else
-      print *,"xhi.le.xlo"
+      print *,"xhi.le.xlo in check_overlap_nodeCRSE"
       print *,"xlo=",xlo
       print *,"xhi=",xhi
       stop
      endif
 
-     if (minnode(dir).lt.xlo) then
+     local_minnode=minnode(dir)
+
+     if (levelrz.eq.COORDSYS_CARTESIAN) then
+      ! do nothing
+     else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+              (levelrz.eq.COORDSYS_RZ)) then
+      if (xmap3D(dir).eq.1) then
+       if (local_minnode.ge.zero) then
+        !do nothing
+       else if (local_minnode.lt.zero) then
+        local_minnode=-local_minnode
+       else
+        print *,"local_minnode invalid"
+        stop
+       endif
+      else if ((xmap3D(dir).eq.2).or. &
+               (xmap3D(dir).eq.3).or. &
+               (xmap3D(dir).eq.0)) then
+       ! do nothing
+      else
+       print *,"xmap3D invalid"
+       stop
+      endif
+     else
+      print *,"levelrz invalid"
+      stop
+     endif
+
+     if (local_minnode.lt.xlo) then
       overlap=0
-     else if (minnode(dir).gt.xhi) then
+     else if (local_minnode.gt.xhi) then
       overlap=0
-     else if ((minnode(dir).ge.xlo).and. &
-              (minnode(dir).le.xhi)) then
+     else if ((local_minnode.ge.xlo).and. &
+              (local_minnode.le.xhi)) then
       !do nothing
      else
-      print *,"minnode(dir invalid"
+      print *,"minnode(dir) (local_minnode) invalid"
+      print *,"minnode(dir)=",minnode(dir)
+      print *,"local_minnode=",local_minnode
       stop
      endif
 
