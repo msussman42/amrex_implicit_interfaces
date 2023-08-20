@@ -36,15 +36,15 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       write(numbdy,'(i4.4)') i
       if(ndim .gt.2) then
-         filename='ibm-3dFib-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
-          open(840,file = filename)
-          write(840,497)
-497       format('title = "3d immersed boundary data"')
+         filename='ibm-3dFib-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
+         open(840,file = filename)
+         write(840,497)
+497      format('title = "3d immersed boundary data"')
       else
-         filename='ibm-2dFib-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
-          open(840,file = filename)
-          write(840,2497)
-2497      format('title = "2d immersed boundary data"')
+         filename='ibm-2dFib-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
+         open(840,file = filename)
+         write(840,2497)
+2497     format('title = "2d immersed boundary data"')
       endif
 332   format('variables=x,y,z,u,v,w,p,lev,rho,s,xp,yp,zp,fx,fy,fz')
       write(840,332)
@@ -105,12 +105,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       write(numbdy,'(i4.4)') i
       if(ndim .gt.2) then
-          filename='ibm-3dFsh-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
+          filename='ibm-3dFsh-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
           open(840,file = filename)
           write(840,4971)
 4971      format('title = "3d immersed boundary data"')
       else
-          filename='ibm-2dFsh-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
+          filename='ibm-2dFsh-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
           open(840,file = filename)
           write(840,2498)
 2498      format('title = "2d immersed boundary data"')
@@ -293,12 +293,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       write(numbdy,'(i4.4)') i
       if(ndim .gt.2) then
-          filename='ibm-3dEsh-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
+          filename='ibm-3dEsh-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
           open(840,file = filename)
           write(840,4972)
 4972      format('title = "3d immersed boundary data"')
       else
-          filename='ibm-2dEsh-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
+          filename='ibm-2dEsh-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
           open(840,file = filename)
           write(840,2499)
 2499      format('title = "2d immersed boundary data"')
@@ -367,12 +367,12 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       write(numbdy,'(i4.4)') i
       if(ndim .gt.2) then
-          filename='ibm-3dFbc-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
+          filename='ibm-3dFbc-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
           open(840,file = filename)
           write(840,4976)
 4976      format('title = "3d immersed boundary data for Fabric"')
       else
-          filename='ibm-2dFbc-B'//numbdy(1:4)//'_'//num(1:7)//'.dat'
+          filename='ibm-2dFbc-B'//numbdy(1:4)//'_'//num(1:7)//'.tec'
           open(840,file = filename)
           write(840,2501)
 2501      format('title = "2d immersed boundary data for Fabric"')
@@ -408,9 +408,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        close(840)
        if(FabricMeshFlag_fbc(i)) then
          do k=1,FabricMesh_nMesh(i)
-	         write(numk,'(i3.3)') k
+           write(numk,'(i3.3)') k
            filename='ibm-3dFbc-B'//numbdy(1:4)//'_M'//numk(1:4)
-     +                          //'_'//num(1:7)//'.dat'
+     +                          //'_'//num(1:7)//'.tec'
            open(840,file = filename)
            write(840,3776)
 3776       format('title = "3d immersed boundary data for Mesh Fabric"')
@@ -441,9 +441,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         endif
         if(FabricLineFlag_fbc(i)) then
          do k=1,FabricLine_nLine(i)
-	         write(numk,'(i3.3)') k
+           write(numk,'(i3.3)') k
            filename='ibm-3dFbc-B'//numbdy(1:4)//'_L'//numk(1:4)
-     +                          //'_'//num(1:7)//'.dat'
+     +                          //'_'//num(1:7)//'.tec'
            open(840,file = filename)
            write(840,3676)
 3676       format('title = "3d immersed boundary data for Line Fabric"')

@@ -394,6 +394,15 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
               ns_ibm_r(i+1)=int(dble(ns_ibm_fib)/lmax_f*a_r)+0
               ns_ibm_r_fib(in_fib)= ns_ibm_r(i+1)
+
+              if (theboss) then
+               print *,"ns_ibm_fib=",ns_ibm_fib
+               print *,"lmax_f (gammaglobal)=",lmax_f
+               print *,"length of fiber (a_r)=",a_r
+               print *,"ns_ibm_r=ns_ibm_fib/lmax_f*a_r=",
+     &          ns_ibm_r_fib(in_fib)
+              endif
+
               ns_ibm_i_fib(in_fib)=0
 
               nq_ibm_r(i+1)=1
