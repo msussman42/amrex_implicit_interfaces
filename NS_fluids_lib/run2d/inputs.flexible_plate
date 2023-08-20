@@ -1,21 +1,9 @@
-max_step  =  99999   # maximum timestep ZEYU
-#stop_time =  0.05  # maximum problem time Yongsheng
-#stop_time=0.02 # ZEYU 60 ms
+max_step  =  99999   # maximum timestep 
 stop_time=10000.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
-# set up for bubble
-geometry.coord_sys      = 0        # 0 => cart, 1 => RZ ZEYU
-geometry.prob_lo   =  0.0 0.0  # ZEYU
-#geometry.prob_hi   =  0.8 0.8  # Yongsheng
-# Figure 15, JCP 2013, 252-271  Kensuke
-# 2 * 0.3936864 = 0.7873728
-# dz_fine=0.3936864/128=0.003075675
-# DIAMETER OF DROP IS 2mm page 651, Pasandidah-Fard 1996, POF
-# for drop hitting a flexible surface, assume:
-#   drop radius=1 mm
-#   flexible string=6 mm
-# symmetric BC at r=0
+geometry.coord_sys      = 1    # 0 => cart, 1 => RZ 
+geometry.prob_lo   =  0.0 0.0  
 geometry.prob_hi   =  3.0 6.0  #CGS
 geometry.is_periodic = 0 0
 
@@ -48,11 +36,8 @@ ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 #ns.show_mem=1
 ns.MOFITERMAX=15
-#amr.n_cell    = 24 24 # Yongsheng
-#amr.n_cell=32 24 # Kensuke
-amr.n_cell=32 64 # ZEYU Production run effective fine grid resolution 512^2
-#amr.max_level =  0   # Yongsheng 2= 43.2 points per diameter
-amr.max_level=0 # ZEYU
+amr.n_cell=32 64 
+amr.max_level=0 
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
 ns.mof_ordering=1 4 1 #liquid, gas, substrate
@@ -78,7 +63,7 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 4 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 4       # block factor in grid generation
+amr.blocking_factor = 8 8 8       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 200     # 200 for production runs
@@ -99,45 +84,12 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01     
 ns.visc_coef=1.0 
 mac.visc_abs_tol   = 1.0e-10
-ns.gravity=0.0  # Yongsheng
-#ns.gravity        = -9.8  
+ns.gravity=0.0  
+#ns.gravity        = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
-# 45 degrees=>sigma_{SV}=sigma_{LV}  and
-# sigma_{SL}/sigma_{LV}=1-2^{-1/2}
-#ns.tension        = 71.7 68.2 71.7   # LV SL SV Yongsheng
-#ns.tension        = 71.7 71.7 71.7   # LV SL SV Yongsheng
-# Kensuke: sigmaSV-sigmaSL=72 cos(163)
-# sigma_SL/sigma_SV=1-cos(163)
-# sigma_SV=72
-# sigma_SL=140.9
-# if hydrophobic,
-# sigma_SL/sigma_SV=2
-# sigma_SL=2 * 72
-#   -----
-#  | 13 | 23 
-#  ZEYU: material 1=liquid material 2=gas  3=substrate
-#  sigma_{SV}=sigma_{23}
-#  sigma_{SL}=sigma_{13}
-#  sigma_{LV}=sigma_{12}
-#  sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
-#  if theta=90 degrees,
-#  sigma_SV=sigma_SL
-#  12=LV,13=SL,23=SV
-#ns.tension=0.073 0.073 0.073  #ZEYU  N/m
-#triple point: 
-#sin(theta3)/sigma12 = sin(theta1)/sigma23=sin(thea2)/sigma13
-#gamma1=(sigma12-sigma23+sigma13)/2
-#gamma2=(sigma12-sigma23-sigma13)/2
-#gamma3=(-sigma12+sigma23+sigma13)/2
-#dry: sigma13=sigma12 sigma23=0
-ns.tension=73.0 73.0 0.0
+# 90 degrees=>sigma_{SV}=sigma_{LV} 
+ns.tension=73.0 73.0 73.0
 ns.min_velocity_for_dt=500.0 
-# law_of_the_wall and ZEYU_DCA_SELECT not used for flexible plate problem
-#ns.tension=72.0 144.9 72.0  #Kensuke hydrophobic surface dyne/cm
-#law_of_the_wall=0 0 0 if static angle condition or non-GNBC dynamic angle 
-#                  conditions.
-#if law_of_the_wall=2 2 2 (GNBC) then
-# calls to FORT_WALLFUNCTION and getGhostVel are made.
 ns.law_of_the_wall=0 0 0
 # =-1 static angle
 # =1 GNBC
@@ -159,18 +111,13 @@ ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
-#ns.advbot=77.0 # Yongsheng
 ns.advbot=100.0 # cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
-# 0.0 0.4 Yongsheng
-# 0.0 0.1053027 Kensuke
-ns.xblob=1.5  # center of falling droplet ZEYU
+ns.xblob=0.0 #center of falling drop
 ns.yblob=2.5
-ns.zblob=2.5  # (1.5e-3)+(1.0e-3) MKS
-# 0.18 Yongsheng
-# 0.186/2=0.093 Kensuke
-ns.radblob=1.0 # ZEYU
+ns.zblob=2.5  
+ns.radblob=1.0 
 ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
@@ -184,10 +131,6 @@ ns.material_type=0 0 999
 # 4 CTML
 ns.FSI_flag=0 0 4
 ns.heatviscconst=0.0 0.0 0.0
-#ns.viscconst=1.0 0.0156552 1.0 # Yongsheng
-#material 1 is water
-#material 2 is gas
-#material 3 is substrate
 ns.elastic_viscosity=0.0 0.0 0.0
 ns.elastic_time=0.0 0.0 0.0
 ns.polymer_factor=0.0 0.0 0.0

@@ -1,4 +1,4 @@
-1.0 0 0.8 0.0 0.0 -1 0.05  0.05       /K_LINK,  SimulationType(0:fiber or shell/~0:shell+fiber), impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling); this file read from create_grid2.F
+1.0 0 0.8 0.0 0.0 -1 0.05  0.05       /K_LINK,SimulationType(0:fiber or shell/~0:shell+fiber),impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling); this file read from create_grid2.F
 0.7 5.0 4.9  3.5  0.45 0.25 100 1.0d-9 1.5 0.20   /Contact Paramters 0:9
 -5.0 -5.0 -5.0                         /bucket start (x,y,z)
 35.0 35.0 35.0                         /bucket end (x,y,z)   
@@ -23,7 +23,7 @@ c======global inputs 1-------------------------
 0.0                                    /TSIBMin (temperature)
 0.0  0.0000   1.5  0.0                 /Cs_IBM, CS_IBM_rays, Density_Coef, Density_coefP
 .true.  .false.   .false.  .flase.  .false.   .false.         /6 records:1FluidForceFlag,2ThermalForceFlag,3ContactForceFlag,4ExternalPressureFlag,Electromehcanical,ImplicitElecMech
-.false.                                /plane contact   if true need to add following lines
+.false.                                /plane contact if true need to add following lines
 0.0 0.0 0.0                            /shift coordinates was (2.0,4.0,0.0)
 0.0 0.0 0.0 1.0 1.0 1.0                /scaling paramter( xo,yo,zo , Scal_x,Scal_y,Scal_z)
 0.0 0.0 0.0                            /cenetr of rotation in local coordinates
@@ -32,7 +32,7 @@ c----2D Fiber -------was 1.0 0.001 1 1-----------------
 10.0   0.001  0   1                     /ks_ibm,  kb_ibm, iflaginext{1:inex; 0:ext},  implicitflag{1:solve all implicitly 0:semi-implicit}
 1                                      /FlagForTypeOfInput  1=create fiber mesh 0= read fiber mesh
 111                                    /fiberbdry {look at the end of this file}
-0.5 1.25 0.0  2.5 1.25 0.0 / if{FlagForTypeOfInput eq 1 we should have this line   {x0,y0,z0:start point of a line,x1,y1,z1:end point of a line} 
+-2.5 1.25 0.0  2.5 1.25 0.0 / if{FlagForTypeOfInput eq 1 we should have this line   {x0,y0,z0:start point of a line,x1,y1,z1:end point of a line} 
 1.0 1.0 1.0                            /frequncy of motion (fx,fy,fz)  
 4                                      /i_fintype {number of attached spring types}
 1 2 -1 0                               /position of the rays
