@@ -29,7 +29,7 @@ c======global inputs 1-------------------------
 0.0 0.0 0.0                            /cenetr of rotation in local coordinates
 0.0 0.0 0.0 1230                       /rotational angle (deg was 18) :Euler sequence{1:X;2:Y;3:Z;<0,1>:<current,fixed> coodinate}
 c----2D Fiber -------was 1.0 0.001 1 1-----------------
-20.0   0.01  0   1                     /ks_ibm,  kb_ibm, iflaginext{1:inex; 0:ext},  implicitflag{1:solve all implicitly 0:semi-implicit}
+100.0   1.0  0   1                     /ks_ibm,  kb_ibm, iflaginext{1:inex; 0:ext},  implicitflag{1:solve all implicitly 0:semi-implicit}
 1                                      /FlagForTypeOfInput  1=create fiber mesh 0= read fiber mesh
 111                                    /fiberbdry {look at the end of this file}
 -1.5 1.25 0.0  1.5 1.25 0.0 / if{FlagForTypeOfInput eq 1 we should have this line   {x0,y0,z0:start point of a line,x1,y1,z1:end point of a line} 
