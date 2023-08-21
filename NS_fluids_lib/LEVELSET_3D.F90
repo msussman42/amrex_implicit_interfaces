@@ -12312,10 +12312,12 @@ stop
 
          masscell=mass_side(1)+mass_side(2)
 
-         if ((mass_side(1).le.zero).or. &
-             (mass_side(2).le.zero).or. &
-             (masscell.le.zero)) then
-          print *,"mass invalid"
+         if ((mass_side(1).gt.zero).and. &
+             (mass_side(2).gt.zero).and. &
+             (masscell.gt.zero)) then
+          !do nothing
+         else
+          print *,"mass_side(1) or mass_side(2) or masscell invalid"
           stop
          endif
 
@@ -12348,7 +12350,8 @@ stop
          if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
           ! do nothing
          else if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then
-
+   
+              ! -dt div(u p)/rho
           Eforce_conservative=Eforce_conservative- &
             dt*(AFACE(2)*uface(2)*pres_face(2)- &
                 AFACE(1)*uface(1)*pres_face(1))/ &
@@ -12381,9 +12384,19 @@ stop
 
          else if (use_face_pres_cen.eq.1) then
 
+              ! -dt div(up)/rho
           rhs(D_DECL(i,j,k),1)=Eforce_conservative
 
            ! update the temperature
+           ! summary:
+           ! 1. cell centered advection to get E^advect, UCELL^advect
+           ! 2. e^advect + rho UCELL^2^advect/2 = E^advect
+           ! 3. UCELL^*=interp_mac_to_cell UMAC^advect
+           ! 4. e^advect + rho UCELL^2^advect/2 = e^* + rho UCELL^2^*/2
+           ! 5. e^*=e^advect+rho UCELL^2^advect/2-rho UCELL^2^*/2
+           ! 6. E^proj=E^advect-div(up)=E^*-div(up)
+           ! 7. e^proj+rho UCELL^2^proj/2=E^proj=E^*-div(up)
+           ! 8. e^proj=e^*+rho UCELL^2^*/2-rho UCELL^2^proj/2 - div(up)
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
            do im=1,num_materials
@@ -12454,6 +12467,7 @@ stop
                stop
               endif
 
+              ! e^proj=e^*+(rho U^2^*/2-rho U^2^proj/2)-dt div(up)
               internal_e=internal_e+KE_diff+Eforce_conservative
 
               if (internal_e.le.zero) then
@@ -14117,7 +14131,7 @@ stop
                  velcomp=1
                  primary_velmaterial=local_vel_MAC
 
-                 !primary_vel_data="vel"=idx_velcell;  // increment
+                 !primary_vel_data="vel"=idx_velcell;  (increment)
                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then
                  velcomp=dir+1

@@ -11113,7 +11113,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
     amrex::Error("REGISTER_MARK_MF invalid ngrow");
 
     // umacnew+=INTERP_TO_MAC(unew-register_mark)  
-    // (umacnew=INTERP_TO_MAC(unew) is disabled; too dissipative)
+    // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
     // register_mark=unew
@@ -11430,6 +11430,8 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
     SPECTRAL_ORDER_AVGDOWN);
 
+  // umacnew+=INTERP_TO_MAC(unew-register_mark)  
+  // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
@@ -11468,6 +11470,7 @@ void NavierStokes::veldiffuseALL() {
       SPECTRAL_ORDER_AVGDOWN);
 
    // umacnew+=INTERP_TO_MAC(unew-register_mark)
+   // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
    // register_mark=unew
@@ -11501,7 +11504,8 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
     SPECTRAL_ORDER_AVGDOWN);
 
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+  // umacnew+=INTERP_TO_MAC(unew-register_mark)
+  // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
   // spectral_override==1 => not always low order
@@ -11523,6 +11527,7 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
 		 SPECTRAL_ORDER_AVGDOWN);
   // umacnew+=INTERP_TO_MAC(unew-register_mark)
+  // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
 // ---------------- begin thermal diffusion ---------------------
@@ -12091,6 +12096,7 @@ void NavierStokes::APPLY_VISCOUS_HEATING(int source_mf) {
 
 //REGISTER_CURRENT_MF=unew-source_mf
 //uface+=INTERP_TO_MAC(REGISTER_CURRENT_MF)
+// (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
 void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf) {
 
  if (level!=0)
@@ -12130,6 +12136,7 @@ void NavierStokes::INCREMENT_REGISTERS_ALL(int source_mf) {
 
 // 1. allocate REGISTER_CURRENT_MF
 // 2. REGISTER_CURRENT_MF=(unew-source)
+// (OP_UMAC_PLUS_VISC_CELL_TO_MAC uses this data)
 void NavierStokes::INCREMENT_REGISTERS(int source_mf) {
 
  if (num_state_base!=2)
