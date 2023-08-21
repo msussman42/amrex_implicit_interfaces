@@ -10873,7 +10873,8 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
      stop
     endif
 
-    call initialize_ibm(nIBM_rq,nIBM_rq_fsh, &
+    call initialize_ibm(probtype, &
+       nIBM_rq,nIBM_rq_fsh, &
        nIBM_r, &
        nIBM_r_fib, &
        nIBM_r_fsh, &

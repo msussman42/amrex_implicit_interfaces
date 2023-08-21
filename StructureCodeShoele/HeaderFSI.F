@@ -62,7 +62,7 @@
      &       ,KS_IBM
      &       ,KB_IBM
      &       ,K_MASSIVE_IBM
-     &       ,k_link	
+     &       ,k_link
      &       ,Kx_SPRING
      &       ,Ky_SPRING
      &       ,Ut0

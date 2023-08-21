@@ -1,5 +1,6 @@
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
-      subroutine create_grid2(ds_ibm0,dr_ibm0,contactlength,theboss)
+      subroutine create_grid2(probtype
+     &   ,ds_ibm0,dr_ibm0,contactlength,theboss)
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 c this subroutine reads input fuile and create the structures
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
@@ -69,8 +70,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       integer FabricMeshGeneration,FabricLineGeneration
      &       ,numrecord,numrecordL,iMeshmax,ilinemax,tmpint(0:2)
       integer probtype
-
-      probtype=2000
 
       FabricMeshGeneration=0
       FabricLineGeneration=0

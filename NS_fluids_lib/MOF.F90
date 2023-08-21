@@ -4339,9 +4339,14 @@ end subroutine intersection_volume_and_map
        if (xmin(j_dir).gt.xmax(j_dir)) then
         print *,"xmin(j_dir).gt.xmax(j_dir)"
         stop
+       else if (xmin(j_dir).le.xmax(j_dir)) then
+        ! do nothing
+       else
+        print *,"xmin or xmax is NaN"
+        stop
        endif
 
-       if (dxmax.gt.zero) then
+       if (dxmax.ge.zero) then
         !do nothing
        else
         print *,"dxmax invalid"
@@ -4715,6 +4720,18 @@ end subroutine intersection_volume_and_map
 
        if (xmin(j_dir).gt.xmax(j_dir)) then
         print *,"xmin(j_dir).gt.xmax(j_dir)"
+        stop
+       else if (xmin(j_dir).le.xmax(j_dir)) then
+        ! do nothing
+       else
+        print *,"xmin or xmax is NaN"
+        stop
+       endif
+
+       if (dxmax.ge.zero) then
+        !do nothing
+       else
+        print *,"dxmax invalid"
         stop
        endif
 

@@ -7,14 +7,14 @@
 2           2           2              /Delta_typeX, Delta_typeY, Delta_typeZ
 1           1          1        0.5    /SAVE_FORCE_INT,Del_FORCE,CHECK_INT,g(fr)
 90.0       0.0                         /phi_grav,the_grav
-2.45                                   /baseLengthofaBeam(gammaglobal)
+19.6                                   /baseLengthofaBeam(gammaglobal)
 10 1.0d-12 1 1.0d-5  0                 /maxnstruct,maxErrorstruct,maxnfluid,maxErrorfluid,maxiter
 1.0d-13 1.0d-11 15  200 1  2           /Solverabstol,Solverreltol,SolverOutiter,SolverIniter,SolverPre{0:no Pre;1:diag Pre; 2:iLU}
 .false. .false.                        /channelcontacty,channelcontactz
 .false.  500  500                       /flag_restartfile, t0_restartfile, dt_restartfile flag_restartfile=false (only _esh restart implemented)
 c Start of main inputs; this file read from create_grid2.F
 1 1                                    /nr_ibm_f, nr_ibm_fb    Number of flexible bodies, num of interacting bodies for penalty to prevent intersection
-./tringulareFix.flag_in_channel.dat
+./tringulareFix.flag_in_channel.dat 
 0 0                                   /nFixcontact,nFixcontactL:num of nodes and elements in the above file
 c======global inputs 1-------------------------
 0			               /0:fiber structure 1:shell structure 2:fibrous shell
@@ -31,7 +31,7 @@ c======global inputs 1-------------------------
 c----2D Fiber -------- was 1.0 0.001  1  1----------------
 10.0   0.001  0   1                     /ks_ibm,  kb_ibm, iflaginext{1:inex; 0:ext},  implicitflag{1:solve all implicitly 0:semi-implicit}
 1                                      /FlagForTypeOfInput  1=create fiber mesh 0= read fiber mesh
-101                                    /fiberbdry {look at the end of this file}
+101                                    /fiberbdry{look at the end of this file}
 0.0 0.0 0.0  1.0 0.0 0.0               / if{FlagForTypeOfInput eq 1 we should have this line   {x0,y0,z0:start point of a line,x1,y1,z1:end point of a line} 
 1.0 1.0 1.0                            /frequncy of motion (fx,fy,fz)  
 4                                      /i_fintype {number of attached spring types}
