@@ -1,6 +1,7 @@
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !@c
-      subroutine initialize_ibm(nIBM_rq,nIBM_rq_fsh
+      subroutine initialize_ibm(probtype
+     &                         ,nIBM_rq,nIBM_rq_fsh
      &                         ,nIBM_r
      &                         ,nIBM_r_fib
      &                         ,nIBM_r_fsh
@@ -24,6 +25,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       USE HeaderFSI
       implicit none
 
+      integer probtype
       integer nIBM_r(nr_IBM)
       integer nIBM_r_fib(nr_IBM_fib)
       integer nIBM_r_fsh(nr_IBM_fsh)
@@ -192,7 +194,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       if(theboss)  print*, 'start with IBM input read'
 ! read input files and create structures
-       call create_grid2(ds_ibm0,dr_ibm0,contactlength,theboss)
+       call create_grid2(probtype,ds_ibm0,dr_ibm0,contactlength,theboss)
       if(theboss)  print*, 'done with  IBM input read'
 
 !write section information for ourtput
