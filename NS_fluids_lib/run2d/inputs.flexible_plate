@@ -66,7 +66,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8 8 8       # block factor in grid generation
 amr.check_int       = 400 # number of timesteps between checkpoints - ZEYU
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 1     # 200 for production runs
+amr.plot_int        = 50     # 200 for production runs
 #amr.plot_int        = 100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -89,7 +89,7 @@ ns.gravity=0.0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 90 degrees=>sigma_{SV}=sigma_{LV} 
 ns.tension=73.0 73.0 73.0
-ns.min_velocity_for_dt=500.0 
+ns.min_velocity_for_dt=5.0 
 ns.law_of_the_wall=0 0 0
 # =-1 static angle
 # =1 GNBC
@@ -111,7 +111,7 @@ ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=0.0
 ns.vinletgas=0.0
 #INITIAL DROP SPEED
-ns.advbot=100.0 # cm/s
+ns.advbot=1.0 # cm/s
 ns.adv_vel=0.0
 ns.adv_dir=2       # inflow direction in the falling drop direction.
 ns.xblob=0.0 #center of falling drop
