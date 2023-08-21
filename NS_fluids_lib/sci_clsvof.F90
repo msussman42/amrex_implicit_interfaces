@@ -980,6 +980,7 @@ enddo ! i=1,local_num_solids
 
 end subroutine copyFrom_FSI
 
+!call initData_FSI to allocate.
 subroutine deleteData_FSI(dest_FSI)
 IMPLICIT NONE
 
@@ -988,10 +989,13 @@ type(FSI_container_type), INTENT(inout) :: dest_FSI
 deallocate(dest_FSI%prev_node_list)
 deallocate(dest_FSI%node_list)
 deallocate(dest_FSI%init_node_list)
+
 deallocate(dest_FSI%prev_velocity_list)
 deallocate(dest_FSI%velocity_list)
+
 deallocate(dest_FSI%mass_list)
 deallocate(dest_FSI%temp_list)
+
 deallocate(dest_FSI%scalar_list)
 deallocate(dest_FSI%prev_scalar_list)
 deallocate(dest_FSI%element_list)
@@ -17376,6 +17380,9 @@ logical :: theboss
     call copyFrom_FSI(ctml_FSI_container,FSI_output_container)
 
     call FSI_flatten(flatten_size,FSI_output_flattened,FSI_output_container)
+
+    deleteData_FSI(FSI_input_container)
+    deleteData_FSI(FSI_output_container)
 
 #else
     print *,"define MVAHABFSI"
