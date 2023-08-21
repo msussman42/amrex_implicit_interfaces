@@ -87,8 +87,11 @@ mac.visc_abs_tol   = 1.0e-10
 ns.gravity=0.0  
 #ns.gravity        = -980.0  
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
-# 90 degrees=>sigma_{SV}=sigma_{LV} 
-ns.tension=73.0 73.0 73.0
+# 90 degrees=>sigma_{SV}=sigma_{SL}=sigma_{LV} 
+# 180 degrees=>sigma_{SV}-sigma_{SL}=-sigma_{LV} => 
+#   sigma_{SV}=0  sigma_{SL}=sigma_{LV}
+#ns.tension=73.0 73.0 73.0 #90 degrees
+ns.tension=73.0 73.0 0.0 #180 degrees
 ns.min_velocity_for_dt=5.0 
 ns.law_of_the_wall=0 0 0
 # =-1 static angle
