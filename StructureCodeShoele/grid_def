@@ -1,4 +1,4 @@
-
+!touch all files in the StructureCodeShoele directory if grid_def modified.
       INTEGER   Nr_IBM
       INTEGER   Nr_IBM_fib,Nr_IBM_fsh,Nr_IBM_esh,Nr_IBM_fbc
       INTEGER   Ns_IBM_fib,Ns_IBM_fsh,Ns_IBM_esh,Ns_IBM_fbc
@@ -17,8 +17,11 @@
 !----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 ! Fixed array sizes 
 !----*|--.---------.---------.---------.---------.---------.---------.-|-------|
+!touch all files in the StructureCodeShoele directory if grid_def modified.
       PARAMETER (Nr_IBM_fib=1)      ! Number of bodies
+!touch all files in the StructureCodeShoele directory if grid_def modified.
       PARAMETER (Nr_IBM_fsh=0)      ! Number of bodies
+!touch all files in the StructureCodeShoele directory if grid_def modified.
       PARAMETER (Nr_IBM_esh=0)      ! Number of bodies
       PARAMETER (Nr_IBM_fbc=0)      ! Number of bodies
       PARAMETER (Nr_IBM=Nr_IBM_fib+Nr_IBM_fsh+Nr_IBM_esh+Nr_IBM_fbc)      ! Number of bodies
@@ -29,10 +32,12 @@
 !contact buckets
       PARAMETER (NMaxnumbuck=2)  ! Number of buckets
 
+!touch all files in the StructureCodeShoele directory if grid_def modified.
 !==Fiber paramters
       PARAMETER (Ns_IBM_fib=1600)    ! maximum number of points in each bdy
       PARAMETER (Ns_IBMB_fib=2)    ! boundary points always more than 1
 
+!touch all files in the StructureCodeShoele directory if grid_def modified.
 !==fibrous shell parameters
       PARAMETER (Ns_IBM_fsh=1)    ! maximum number of points in each bdy
       PARAMETER (Ns_IBMB_fsh=0)    ! boundary points always more than 1
@@ -42,6 +47,7 @@
 
       PARAMETER (Nmat_IBM_fsh =1) !maximum number of spatial material parameters for inplane forces
 
+!touch all files in the StructureCodeShoele directory if grid_def modified.
 !==finite element shell parameters
       PARAMETER (Ns_IBM_esh=1)    ! maximum number of points in each bdy
       PARAMETER (Ns_IBMB_esh=1)    ! boundary points always more than 1
@@ -60,6 +66,7 @@
       PARAMETER (igauh=1)   ! GL point in thickness
       PARAMETER (igauCont=1)   ! 2->3 point  1 ->1point GL point  (current version should be fixed to be 1)
 
+!touch all files in the StructureCodeShoele directory if grid_def modified.
 !== discrete fabric shell paramter
       PARAMETER (Ns_IBM_fbc=1)    ! maximum number of points in each bdy
       PARAMETER (Ns_IBMB_fbc=1)    ! boundary points always more than 1
@@ -71,6 +78,7 @@
       PARAMETER (numedgeMAX_fbc=1) !maximum number of edges  !good guess is 3*Ns_IBM_fbc
       PARAMETER (numeFacePairMAX_fbc=1) !maximum number of elementpairs  ! good guess is numedgeMAX_fbc
 
+!touch all files in the StructureCodeShoele directory if grid_def modified.
       PARAMETER (fiber=0)
       PARAMETER (shell=1)
       PARAMETER (fibrousshell=2)
