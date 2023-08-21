@@ -4121,6 +4121,7 @@ end subroutine intersection_volume_and_map
       REAL_T :: dxmax
       REAL_T dxpos(sdim)
       REAL_T total_weight
+      REAL_T centroid_eps
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid"
@@ -4340,20 +4341,29 @@ end subroutine intersection_volume_and_map
         stop
        endif
 
-       if (centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir)) then
-        print *,"WARN centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir) XYZ"
+       if (dxmax.gt.zero) then
+        !do nothing
+       else
+        print *,"dxmax invalid"
+        stop
+       endif
+
+       centroid_eps=CENTOL*max(dxmax,one)
+
+       if (centroid(j_dir)+centroid_eps.lt.xmin(j_dir)) then
+        print *,"WARN centroid(j_dir)+centroid_eps.lt.xmin(j_dir) XYZ"
         print *,"j_dir,centroid,CENTOL,dxmax,xmin ",j_dir, &
          centroid(j_dir),CENTOL,dxmax,xmin(j_dir)
         centroid(j_dir)=xmin(j_dir)
-       else if (centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir)) then
-        print *,"WARN centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir) XYZ"
+       else if (centroid(j_dir)-centroid_eps.gt.xmax(j_dir)) then
+        print *,"WARN centroid(j_dir)-centroid_eps.gt.xmax(j_dir) XYZ"
         print *,"j_dir,centroid,CENTOL,dxmax,xmax ",j_dir, &
          centroid(j_dir),CENTOL,dxmax,xmax(j_dir)
         centroid(j_dir)=xmax(j_dir)
        endif
 
-       if ((centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir)).or. &
-           (centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir))) then
+       if ((centroid(j_dir)+centroid_eps.lt.xmin(j_dir)).or. &
+           (centroid(j_dir)-centroid_eps.gt.xmax(j_dir))) then
         print *,"centroid still invalid XYZ"
         stop
        endif
@@ -4403,6 +4413,7 @@ end subroutine intersection_volume_and_map
       REAL_T dxpos(sdim)
       REAL_T total_weight
       REAL_T xfactor
+      REAL_T centroid_eps
 
       if ((normdir.lt.0).or.(normdir.ge.sdim)) then
        print *,"normdir invalid"
@@ -4707,20 +4718,22 @@ end subroutine intersection_volume_and_map
         stop
        endif
 
-       if (centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir)) then
-        print *,"WARN centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir) XYZ"
+       centroid_eps=CENTOL*max(dxmax,one)
+
+       if (centroid(j_dir)+centroid_eps.lt.xmin(j_dir)) then
+        print *,"WARN centroid(j_dir)+centroid_eps.lt.xmin(j_dir) XYZ"
         print *,"j_dir,centroid,CENTOL,dxmax,xmin ",j_dir, &
          centroid(j_dir),CENTOL,dxmax,xmin(j_dir)
         centroid(j_dir)=xmin(j_dir)
-       else if (centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir)) then
-        print *,"WARN centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir) XYZ"
+       else if (centroid(j_dir)-centroid_eps.gt.xmax(j_dir)) then
+        print *,"WARN centroid(j_dir)-centroid_eps.gt.xmax(j_dir) XYZ"
         print *,"j_dir,centroid,CENTOL,dxmax,xmax ",j_dir, &
          centroid(j_dir),CENTOL,dxmax,xmax(j_dir)
         centroid(j_dir)=xmax(j_dir)
        endif
 
-       if ((centroid(j_dir)+CENTOL*dxmax.lt.xmin(j_dir)).or. &
-           (centroid(j_dir)-CENTOL*dxmax.gt.xmax(j_dir))) then
+       if ((centroid(j_dir)+centroid_eps.lt.xmin(j_dir)).or. &
+           (centroid(j_dir)-centroid_eps.gt.xmax(j_dir))) then
         print *,"centroid still invalid XYZ"
         stop
        endif

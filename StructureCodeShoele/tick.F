@@ -949,14 +949,14 @@ c
         UIBM2_fsh(i,jq,j)=0.0d0
         vibm1_fsh(i,jq,j)=uibm123in_fsh(i,jq,j,klo,1)
         vibm2_fsh(i,jq,j)=uibm123in_fsh(i,jq,j,klo,2)
-        fk_mass1o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,1)
+        fk_mass1o_fsh(i,jq,j)=-FIBM123in_fsh(i,jq,j,1,1)
         if (abs(fk_mass1o_fsh(i,jq,j)).le.1.0D+20) then
 !do nothing
         else
          print *,"fk_mass1o_fsh overflow tick.F"
          stop
         endif
-        fk_mass2o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,2)
+        fk_mass2o_fsh(i,jq,j)=-FIBM123in_fsh(i,jq,j,1,2)
         if (abs(fk_mass2o_fsh(i,jq,j)).le.1.0D+20) then
 !do nothing
         else
@@ -977,7 +977,7 @@ c
         do j=1,ns_ibm_r_fsh(i)
          UIBM3_fsh(i,jq,j)=0.0d0
          vibm3_fsh(i,jq,j)=uibm123in_fsh(i,jq,j,klo,3)
-         fk_mass3o_fsh(i,jq,j)=FIBM123in_fsh(i,jq,j,1,3)
+         fk_mass3o_fsh(i,jq,j)=-FIBM123in_fsh(i,jq,j,1,3)
          if (abs(fk_mass3o_fsh(i,jq,j)).le.1.0D+20) then
 !do nothing
          else
@@ -1311,14 +1311,14 @@ c rtime = t^{n+1}
         vibm1_fib(i,j)=uibm123in_fib(i,j,jlo,klo,1)
         vibm2_fib(i,j)=uibm123in_fib(i,j,jlo,klo,2)
 ! force
-        fk_mass1o_fib(i,j)=FIBM123in_fib(i,j,1,1,1)
+        fk_mass1o_fib(i,j)=-FIBM123in_fib(i,j,1,1,1)
         if (abs(fk_mass1o_fib(i,j)).le.1.0D+20) then
 !do nothing
         else
          print *,"fk_mass1 overflow tick.F 1232"
          stop
         endif
-        fk_mass2o_fib(i,j)=FIBM123in_fib(i,j,1,1,2)
+        fk_mass2o_fib(i,j)=-FIBM123in_fib(i,j,1,1,2)
         if (abs(fk_mass2o_fib(i,j)).le.1.0D+20) then
 !do nothing
         else
@@ -1335,7 +1335,7 @@ c rtime = t^{n+1}
         do j=1,ns_ibm_r_fib(i)
          UIBM3_fib(i,j)=0.0d0
          vibm3_fib(i,j)=uibm123in_fib(i,j,jlo,klo,3)
-         fk_mass3o_fib(i,j)=FIBM123in_fib(i,j,1,1,3)
+         fk_mass3o_fib(i,j)=-FIBM123in_fib(i,j,1,1,3)
          if (abs(fk_mass3o_fib(i,j)).le.1.0D+20) then
 !do nothing
          else
