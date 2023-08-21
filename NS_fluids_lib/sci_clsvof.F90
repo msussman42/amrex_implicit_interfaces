@@ -4213,7 +4213,7 @@ INTEGER_T :: stand_alone_flag
 INTEGER_T :: orig_nodes
 INTEGER_T :: ctml_part_id
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: ii,jj,kk,iwt,jwt
+INTEGER_T :: ii,jj,kk
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
@@ -17381,8 +17381,31 @@ logical :: theboss
 
     call FSI_flatten(flatten_size,FSI_output_flattened,FSI_output_container)
 
-    deleteData_FSI(FSI_input_container)
-    deleteData_FSI(FSI_output_container)
+     ! sanity check
+    do ctml_part_id=1,ctml_n_bodies
+     if ((ctml_part_id.ge.1).and. &
+         (ctml_part_id.le.CTML_NPARTS)) then
+      do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
+      do jj=jlo_active(ctml_part_id),jhi_active(ctml_part_id)
+      do kk=klo_active(ctml_part_id),khi_active(ctml_part_id)
+       if (FSI_output_container% &
+           mass_list(ctml_part_id,ii,jj,kk).gt.zero) then
+        ! do nothing
+       else
+        print *,"mass_list(ctml_part_id,ii,jj,kk) invalid"
+        stop
+       endif
+      enddo
+      enddo
+      enddo
+     else 
+      print *,"ctml_part_id invalid"
+      stop
+     endif
+    enddo !ctml_part_id=1,ctml_n_bodies
+
+    call deleteData_FSI(FSI_input_container)
+    call deleteData_FSI(FSI_output_container)
 
 #else
     print *,"define MVAHABFSI"
@@ -17409,20 +17432,6 @@ logical :: theboss
 
      if ((ctml_part_id.ge.1).and. &
          (ctml_part_id.le.CTML_NPARTS)) then
-
-      do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
-      do jj=jlo_active(ctml_part_id),jhi_active(ctml_part_id)
-      do kk=klo_active(ctml_part_id),khi_active(ctml_part_id)
-       if (FSI_output_container% &
-           mass_list(ctml_part_id,ii,jj,kk).gt.zero) then
-        ! do nothing
-       else
-        print *,"mass_list(ctml_part_id,ii,jj,kk) invalid"
-        stop
-       endif
-      enddo
-      enddo
-      enddo
 
       if (AMREX_SPACEDIM.eq.2) then
 
