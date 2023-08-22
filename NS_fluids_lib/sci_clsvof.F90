@@ -3067,6 +3067,8 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
   if (nodes_per_elem.gt.4) then
    print *,"WARNING: nodes_per_elem>4"
   endif
+   !scinormal calls "get_target_from_foot" for ideal cases in which the
+   !solid motion is prescribed rigid body motion.
   call scinormal(ielem,normal, &
      FSI_mesh_type,part_id,max_part_id, &
      generate_time)
@@ -14971,6 +14973,7 @@ end subroutine CLSVOF_InitBox
       INTEGER_T, dimension(3) :: idx
       REAL_T, dimension(3) :: velparm
       INTEGER_T :: dir
+      INTEGER_T :: reflect_dir
       REAL_T :: total_weight
       REAL_T :: wt
       REAL_T :: wt_flag
@@ -15215,6 +15218,8 @@ end subroutine CLSVOF_InitBox
          local_xnot(dir)=xnot(dir)
         enddo
 
+        reflect_dir=0
+
         if (levelrz.eq.COORDSYS_CARTESIAN) then
          ! do nothing
         else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
@@ -15225,6 +15230,7 @@ end subroutine CLSVOF_InitBox
             !do nothing
            else if (local_xnot(dir).lt.zero) then
             local_xnot(dir)=-local_xnot(dir)
+            reflect_dir=dir
            else
             print *,"local_xnot(dir) invalid"
             stop
@@ -15344,7 +15350,17 @@ end subroutine CLSVOF_InitBox
 
           do dir=1,3
            local_node_normal(dir)=FSI(part_id)%NodeNormal(dir,inode)
-          enddo
+           if (reflect_dir.eq.0) then
+            ! do nothing
+           else if ((reflect_dir.ge.1).and.(reflect_dir.le.3)) then
+            if (dir.eq.reflect_dir) then
+             local_node_normal(dir)=-local_node_normal(dir)
+            endif
+           else
+            print *,"reflect_dir invalid"
+            stop
+           endif
+          enddo !dir=1,3
 
           do dir=1,3
            FSI(part_id)%NodeForce(dir,inode)=zero
