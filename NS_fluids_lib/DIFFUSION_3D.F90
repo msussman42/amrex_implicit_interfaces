@@ -880,4 +880,180 @@ stop
        return
        end subroutine fort_hoopimplicit
 
+       subroutine fort_user_defined_momentum_force( &
+         thermal,DIMS(thermal), &
+         xlo,dx, &
+         uold,DIMS(uold), &
+         unew,DIMS(unew), &
+         lsnew,DIMS(lsnew), &
+         den,DIMS(den), &  ! 1/density
+         tilelo,tilehi, &
+         fablo,fabhi, &
+         bfact, &
+         level, &
+         finest_level, &
+         dt, &
+         cur_time_slab, &
+         rzflag, &
+         nparts, &
+         nparts_def, &
+         im_solid_map) &
+       bind(c,name='fort_user_defined_momentum_force')
+
+       use probf90_module
+       use global_utility_module 
+
+       IMPLICIT NONE
+
+       INTEGER_T, INTENT(in) :: nparts
+       INTEGER_T, INTENT(in) :: nparts_def
+       INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
+       INTEGER_T, INTENT(in) :: level
+       INTEGER_T, INTENT(in) :: finest_level
+       INTEGER_T, INTENT(in) :: rzflag
+       REAL_T, INTENT(in) :: dt
+       REAL_T, INTENT(in) :: cur_time_slab
+       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       INTEGER_T, target, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       INTEGER_T :: growlo(3),growhi(3)
+       INTEGER_T, INTENT(in) :: bfact
+    
+       INTEGER_T, INTENT(in) :: DIMDEC(thermal)
+       INTEGER_T, INTENT(in) :: DIMDEC(uold)
+       INTEGER_T, INTENT(in) :: DIMDEC(unew)
+       INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
+       INTEGER_T, INTENT(in) :: DIMDEC(den)
+
+       REAL_T, INTENT(in),target :: thermal(DIMV(thermal))
+       REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
+       REAL_T, INTENT(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
+       REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
+       REAL_T, INTENT(inout),target :: unew(DIMV(unew),STATE_NCOMP)
+       REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
+       REAL_T, INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+       REAL_T, INTENT(in),target :: den(DIMV(den))
+       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
+       REAL_T, target, INTENT(in) ::  xlo(SDIM)
+       INTEGER_T, PARAMETER :: nhalf=3
+       REAL_T :: xsten(-nhalf:nhalf,SDIM)
+       REAL_T :: xpoint(SDIM)
+       REAL_T, target, INTENT(in) :: dx(SDIM)
+
+       INTEGER_T :: i,j,k
+       INTEGER_T :: dir
+       REAL_T :: inverseden
+       REAL_T :: output_force(SDIM)
+
+       type(user_defined_force_parm_type_input) :: force_input
+
+       force_input%thermal=>thermal
+       force_input%uold=>uold
+       force_input%lsnew=>lsnew
+       force_input%one_over_den=>den
+
+       force_input%dx=>dx
+       force_input%xlo=>xlo
+       force_input%fablo=>fablo
+       force_input%fabhi=>fabhi
+       
+       force_input%dt=dt
+       force_input%cur_time=cur_time_slab
+
+       if (dt.gt.zero) then
+        ! do nothing
+       else
+        print *,"expecting dt>0"
+        stop
+       endif
+       if (cur_time_slab.ge.zero) then
+        ! do nothing
+       else
+        print *,"expecting cur_time_slab>=0.0d0"
+        stop
+       endif
+
+       if ((level.lt.0).or.(level.gt.finest_level)) then
+        print *,"level invalid hoop implicit"
+        stop
+       endif
+       if ((nparts.lt.0).or.(nparts.gt.num_materials)) then
+        print *,"nparts invalid fort_hoopimplicit"
+        stop
+       endif
+       if ((nparts_def.lt.1).or.(nparts_def.gt.num_materials)) then
+        print *,"nparts_def invalid fort_hoopimplicit"
+        stop
+       endif
+
+       if (bfact.lt.1) then
+        print *,"bfact invalid8"
+        stop
+       endif
+
+       if (rzflag.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (rzflag.eq.COORDSYS_RZ) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
+         stop
+        endif
+       else if (rzflag.eq.COORDSYS_CYLINDRICAL) then
+        ! do nothing
+       else 
+        print *,"rzflag invalid"
+        stop
+       endif
+       if (num_state_base.ne.2) then
+        print *,"num_state_base invalid"
+        stop
+       endif
+
+       thermal_ptr=>thermal
+       call checkbound_array1(fablo,fabhi,thermal_ptr,1,-1)
+       uold_ptr=>uold
+       call checkbound_array(fablo,fabhi,uold_ptr,1,-1)
+       unew_ptr=>unew
+       call checkbound_array(fablo,fabhi,unew_ptr,1,-1)
+       lsnew_ptr=>lsnew
+       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
+
+       den_ptr=>den
+       call checkbound_array1(fablo,fabhi,den_ptr,1,-1)
+
+       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
+
+       do i=growlo(1),growhi(1)
+       do j=growlo(2),growhi(2)
+       do k=growlo(3),growhi(3)
+
+        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+        do dir=1,SDIM
+         xpoint(dir)=xsten(0,dir)
+        enddo
+
+        inverseden=den(D_DECL(i,j,k))
+
+        if (inverseden.gt.zero) then
+         ! do nothing
+        else
+         print *,"inverseden invalid"
+         stop
+        endif
+
+        force_input%i=i
+        force_input%j=j
+        force_input%k=k
+        call SUB_USER_DEFINED_FORCE(xpoint,output_force,force_input)
+        do dir=1,SDIM
+         unew(D_DECL(i,j,k),dir)=uold(D_DECL(i,j,k),dir)+ &
+                dt*output_force(dir)*inverseden
+        enddo
+       enddo
+       enddo
+       enddo
+
+       return
+       end subroutine fort_user_defined_momentum_force
 

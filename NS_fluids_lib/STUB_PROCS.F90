@@ -1073,6 +1073,39 @@ k=GRID_DATA_IN%kgrid
 
 end subroutine STUB_SUMINT
 
+
+subroutine STUB_USER_DEFINED_FORCE(xpoint,output_force,force_input)
+use probcommon_module_types
+use probcommon_module
+IMPLICIT NONE
+
+type(user_defined_force_parm_type_input), INTENT(in) :: force_input
+REAL_T, INTENT(in) :: xpoint(AMREX_SPACEDIM)
+REAL_T, INTENT(out) :: output_force(AMREX_SPACEDIM)
+
+INTEGER_T :: dir
+INTEGER_T :: i,j,k
+REAL_T :: one_over_den
+
+i=force_input%i
+j=force_input%j
+k=force_input%k
+
+one_over_den=force_input%one_over_den(D_DECL(i,j,k))
+if (one_over_den.gt.zero) then
+ ! do nothing
+else
+ print *,"one_over_den invalid in STUB_USER_DEFINED_FORCE"
+ stop
+endif
+
+do dir=1,AMREX_SPACEDIM
+ output_force(dir)=zero
+enddo
+
+end subroutine STUB_USER_DEFINED_FORCE
+
+
 subroutine STUB_wallfunc( &
   dir, & ! =1,2,3
   data_dir, & ! =0,1,2

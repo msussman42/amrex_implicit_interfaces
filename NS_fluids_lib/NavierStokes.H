@@ -1089,6 +1089,9 @@ void mac_update(MultiFab* mac_phi_crse,int project_option,int nsolve);
 
 void diffuse_coefficients();
 
+void user_defined_momentum_forceALL(int idx_vel,int idx_thermal);
+void user_defined_momentum_force(int idx_vel,int idx_thermal);
+
 void diffuse_hoopALL(int idx_vel,int idx_thermal,
  int idx_force,int update_state);
 void diffuse_hoop(int idx_vel,int idx_thermal,
@@ -1640,6 +1643,8 @@ protected:
     static int CTML_FSI_init;
 
     static Vector<int>  shock_timestep;
+
+    static int MAC_grid_compressible;
 
      // vel, pres, num_state_material x num_materials, 
      // ngeom_raw x num_materials, error ind

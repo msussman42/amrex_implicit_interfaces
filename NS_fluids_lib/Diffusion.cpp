@@ -295,6 +295,148 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
 }  // end subroutine diffuse_hoop
 
+void NavierStokes::user_defined_momentum_forceALL(
+  int idx_vel,int idx_thermal) {
+
+ int finest_level=parent->finestLevel();
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.user_defined_momentum_force(idx_vel,idx_thermal);
+ } // ilev
+
+} // subroutine user_defined_momentum_forceALL
+
+void NavierStokes::user_defined_momentum_force(int idx_vel,int idx_thermal) {
+ 
+ std::string local_caller_string="user_defined_momentum_force";
+
+ bool use_tiling=ns_tiling;
+
+ int finest_level=parent->finestLevel();
+
+ const Real* dx = geom.CellSize();
+
+ int nparts=im_solid_map.size();
+ if ((nparts<0)||(nparts>num_materials))
+  amrex::Error("nparts invalid");
+ Vector<int> im_solid_map_null;
+ im_solid_map_null.resize(1);
+
+ int* im_solid_map_ptr;
+ int nparts_def=nparts;
+ if (nparts==0) {
+  im_solid_map_ptr=im_solid_map_null.dataPtr();
+  nparts_def=1;
+ } else if ((nparts>=1)&&(nparts<=num_materials)) {
+  im_solid_map_ptr=im_solid_map.dataPtr();
+ } else
+  amrex::Error("nparts invalid");
+
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nGrow()!=0");
+  if (localMF[FSI_GHOST_MAC_MF+data_dir]->nComp()!=nparts_def*AMREX_SPACEDIM)
+   amrex::Error("localMF[FSI_GHOST_MAC_MF+data_dir]->nComp() bad");
+ }
+ for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
+  debug_ngrow(FSI_GHOST_MAC_MF+data_dir,0,local_caller_string);
+ }
+
+ debug_ngrow(FACE_VAR_MF,0,local_caller_string);
+
+ debug_ngrow(idx_vel,1,local_caller_string);
+ if (localMF[idx_vel]->nComp()!=AMREX_SPACEDIM)
+  amrex::Error("localMF[idx_vel]->nComp() invalid");
+
+ debug_ngrow(idx_thermal,1,local_caller_string);
+ if (localMF[idx_thermal]->nComp()!=1)
+  amrex::Error("localMF[idx_thermal]->nComp() invalid");
+
+ debug_ngrow(CELL_DEN_MF,1,local_caller_string);
+
+ if (localMF[CELL_DEN_MF]->nComp()!=1)
+  amrex::Error("localMF[CELL_DEN_MF]->nComp() invalid");
+
+ MultiFab* Un=localMF[idx_vel];
+
+ MultiFab& U_new=get_new_data(State_Type,slab_step+1);
+ if (U_new.nComp()!=STATE_NCOMP) 
+  amrex::Error("U_new.nComp()!=STATE_NCOMP");
+
+ MultiFab& LS_new=get_new_data(LS_Type,slab_step+1);
+ if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1)");
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(U_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(U_new,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  FArrayBox& uoldfab=(*Un)[mfi];
+  FArrayBox& unewfab=U_new[mfi];
+  FArrayBox& lsfab=LS_new[mfi];
+  FArrayBox& denfab=(*localMF[CELL_DEN_MF])[mfi]; 
+  FArrayBox& thermalfab=(*localMF[idx_thermal])[mfi];
+
+  int tid_current=0;
+#ifdef _OPENMP
+  tid_current = omp_get_thread_num();
+#endif
+  if ((tid_current>=0)&&(tid_current<thread_class::nthreads)) {
+   // do nothing
+  } else
+   amrex::Error("tid_current invalid");
+
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+    // declared in: DIFFUSION_3D.F90
+  fort_user_defined_momentum_force(
+   thermalfab.dataPtr(),
+   ARLIM(thermalfab.loVect()),ARLIM(thermalfab.hiVect()),
+   xlo,dx,
+   uoldfab.dataPtr(),ARLIM(uoldfab.loVect()),ARLIM(uoldfab.hiVect()),
+   unewfab.dataPtr(),ARLIM(unewfab.loVect()),ARLIM(unewfab.hiVect()),
+   lsfab.dataPtr(),ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
+   denfab.dataPtr(),
+   ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
+   tilelo,tilehi,
+   fablo,fabhi,
+   &bfact,
+   &level,
+   &finest_level,
+   &dt_slab,
+   &cur_time_slab,
+   &NS_geometry_coord,
+   &nparts,
+   &nparts_def,
+   im_solid_map_ptr);
+ } // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_USER_DEFINED_MOM_FORCE,"user_defined_mom_force");
+
+}  // end subroutine user_defined_momentum_force
+
+
+
+
+
 
 // fluxes expected to approximate -dt k grad S
 void NavierStokes::viscous_boundary_fluxes(

@@ -11436,6 +11436,21 @@ void NavierStokes::veldiffuseALL() {
 
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
+  // register_mark=unew (1 ghost cell)
+ SET_STOKES_MARK(REGISTER_MARK_MF);
+
+ user_defined_momentum_forceALL(
+   REGISTER_MARK_MF, //velocity
+   BOUSSINESQ_TEMP_MF); //temperature
+
+   // spectral_override==1 => order derived from "enable_spectral"
+ avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+    SPECTRAL_ORDER_AVGDOWN);
+
+  // umacnew+=INTERP_TO_MAC(unew-register_mark)  
+  // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
+ INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
+
   // register_mark=unew
  SET_STOKES_MARK(REGISTER_MARK_MF);
 
@@ -12222,7 +12237,9 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
 
 void NavierStokes::prepare_advect_vars(Real time) {
 
- if (time<0.0)
+ if (time>=0.0) {
+  //do nothing
+ } else
   amrex::Error("time invalid");
 
  if (enable_spectral==0) {
