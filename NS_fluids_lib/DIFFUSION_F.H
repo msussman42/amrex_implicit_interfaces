@@ -51,6 +51,28 @@ extern "C"
       int* nparts_def,
       int* im_solid_map);
 
+
+    void fort_user_defined_momentum_force(
+      Real *thermal,AMREX_ARLIM_P(thermallo),AMREX_ARLIM_P(thermalhi),
+      const Real *xlo,const Real* dx,
+      Real *uold,AMREX_ARLIM_P(uoldlo),AMREX_ARLIM_P(uoldhi),
+      Real *unew,AMREX_ARLIM_P(unewlo),AMREX_ARLIM_P(unewhi),
+      Real *lsnew,AMREX_ARLIM_P(lsnewlo),AMREX_ARLIM_P(lsnewhi),
+      Real *den,
+      AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),  
+      const int* tilelo, const int* tilehi,
+      const int* fablo, const int* fabhi,
+      int* bfact,
+      int* level,
+      int* finest_level,
+      Real* dt,
+      Real* cur_time_slab,
+      int* rzflag,
+      int* nparts,
+      int* nparts_def,
+      int* im_solid_map);
+
+
 }
 
 }/* namespace amrex */

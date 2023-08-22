@@ -122,6 +122,19 @@ module probcommon_module_types
        REAL_T :: dt
       end type nucleation_parm_type_input
 
+      type user_defined_force_parm_type_input
+       INTEGER_T :: i,j,k
+       REAL_T, pointer :: dx(:)
+       REAL_T, pointer :: xlo(:)
+       INTEGER_T, pointer :: fablo(:)
+       INTEGER_T, pointer :: fabhi(:)
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: thermal
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: uold
+       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: lsnew
+       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: one_over_den 
+       REAL_T :: cur_time
+       REAL_T :: dt
+      end type user_defined_force_parm_type_input
 
       type assimilate_parm_type
       INTEGER_T :: level
@@ -908,6 +921,14 @@ implicit none
       REAL_T, INTENT(in) :: dx(SDIM)
       end subroutine TEMPLATE_CFL_HELPER
 
+      subroutine TEMPLATE_USER_DEFINED_FORCE(xpoint,output_force, &
+                      force_input)
+      use probcommon_module_types
+
+      type(user_defined_force_parm_type_input), INTENT(in) :: force_input
+      REAL_T, INTENT(in) :: xpoint(AMREX_SPACEDIM)
+      REAL_T, INTENT(out) :: output_force(AMREX_SPACEDIM)
+      end subroutine TEMPLATE_USER_DEFINED_FORCE
 
       subroutine TEMPLATE_SUMINT(GRID_DATA_IN,increment_out1, &
             increment_out2,nsum1,nsum2,isweep)
@@ -1262,6 +1283,7 @@ implicit none
               SUB_correct_pres_rho_hydrostatic
       PROCEDURE(TEMPLATE_CFL_HELPER), POINTER :: SUB_CFL_HELPER
       PROCEDURE(TEMPLATE_SUMINT), POINTER :: SUB_SUMINT
+      PROCEDURE(TEMPLATE_USER_DEFINED_FORCE), POINTER :: SUB_USER_DEFINED_FORCE
       PROCEDURE(TEMPLATE_LS), POINTER :: SUB_LS
       PROCEDURE(TEMPLATE_OVERRIDE_TAGFLAG), POINTER :: SUB_OVERRIDE_TAGFLAG
       PROCEDURE(TEMPLATE_AUX_DATA), POINTER :: SUB_AUX_DATA
