@@ -12879,7 +12879,8 @@ stop
 ! operation_flag=11 
 !   (i) unew^{f} in incompressible non-solid regions
 !   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
-!   (iii) (unew^{c})^{c->f}   compressible regions.
+!   (iii) (unew^{c})^{c->f} (MAC_grid_compressible=0) compressible regions.
+!   (iii) unew^{f} (MAC_grid_compressible=1) compressible regions.
 !   (iv) usolid in solid regions
 
       subroutine fort_cell_to_mac( &
@@ -12941,7 +12942,8 @@ stop
        blob_array, &
        blob_array_size, &
        num_colors, &
-       project_option) &
+       project_option, &
+       MAC_grid_compressible) &
       bind(c,name='fort_cell_to_mac')
 
       use global_utility_module
@@ -13008,6 +13010,7 @@ stop
       INTEGER_T, INTENT(in) :: rz_flag
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: project_option
+      INTEGER_T, INTENT(in) :: MAC_grid_compressible
 
       REAL_T, INTENT(in), target :: mask(DIMV(mask))
       REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
@@ -13736,7 +13739,11 @@ stop
                    (is_compressible_mat(im_right).eq.0)) then
            local_compressible=0
           else
-           print *,"is_compressible invalid"
+           print *,"is_compressible_mat invalid"
+           print *,"im_left,is_compressible_mat ",im_left, &
+                   is_compressible_mat(im_left)
+           print *,"im_right,is_compressible_mat ",im_right, &
+                   is_compressible_mat(im_right)
            stop
           endif
 
@@ -14155,20 +14162,35 @@ stop
                  !primary_vel_data="vel"=DELTA_CELL_VEL_MF; 
                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
-                 if (local_compressible.eq.0) then
+
+                 if (MAC_grid_compressible.eq.1) then
+
                   velcomp=1
                    !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
                   primary_velmaterial=local_vel_MAC
-                 else if (local_compressible.eq.1) then
-                  ! UMAC^{ADVECT}= 
-                  !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
-                  velcomp=dir+1
+
+                 else if (MAC_grid_compressible.eq.0) then
+
+                  if (local_compressible.eq.0) then
+                   velcomp=1
+                    !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
+                   primary_velmaterial=local_vel_MAC
+                  else if (local_compressible.eq.1) then
+                   ! UMAC^{ADVECT}= 
+                   !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
+                   velcomp=dir+1
                    !"mgoni"=secondary_vel_data=CURRENT_CELL_VEL_MF; 
-                  primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
+                   primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
+                  else
+                   print *,"local_compressible invalid:",local_compressible
+                   stop
+                  endif
+
                  else
-                  print *,"local_compressible invalid"
+                  print *,"MAC_grid_compressible invalid"
                   stop
                  endif
+
                 else
                  print *,"operation_flag invalid16"
                  stop
@@ -14526,7 +14548,7 @@ stop
           else if (local_compressible.eq.1) then
            ! do nothing
           else
-           print *,"local_compressible invalid"
+           print *,"local_compressible invalid:",local_compressible
            stop
           endif
 
