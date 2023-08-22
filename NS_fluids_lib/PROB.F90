@@ -25330,34 +25330,34 @@ end subroutine initialize2d
 
            if (axis_dir.eq.0) then  ! Sod shock tube
             den_jwl_left=one
-            den_jwl_right=0.125
+            den_jwl_right=0.125d0
             p_jwl_left=one
-            p_jwl_right=0.1
+            p_jwl_right=0.1d0
             u_jwl_left=zero
             u_jwl_right=zero
             xshock=half
            else if (axis_dir.eq.1) then ! strong shock tube
             den_jwl_left=one
-            den_jwl_right=0.125
+            den_jwl_right=0.125d0
             p_jwl_left=1.0D+10
-            p_jwl_right=0.1
+            p_jwl_right=0.1d0
             u_jwl_left=zero
             u_jwl_right=zero
             xshock=half
            else if (axis_dir.eq.2) then ! shock turbulence interaction
-            den_jwl_left=3.857148
+            den_jwl_left=3.857148d0
             den_jwl_right=one+0.2d0*sin(five*x-five)
-            p_jwl_left=10.333333
+            p_jwl_left=10.333333d0
             p_jwl_right=one
-            u_jwl_left=2.629369
+            u_jwl_left=2.629369d0
             u_jwl_right=zero
             xshock=one
            else if (axis_dir.eq.3) then ! mach>4
-            den_jwl_left=10.0
-            den_jwl_right=1.0
-            p_jwl_left=10.0*(1.4-1.0)
-            p_jwl_right=(1.4-1.0)
-            u_jwl_left=5.0
+            den_jwl_left=10.0d0
+            den_jwl_right=1.0d0
+            p_jwl_left=10.0d0*(1.4d0-1.0d0)
+            p_jwl_right=(1.4d0-1.0d0)
+            u_jwl_left=5.0d0
             u_jwl_right=zero
             xshock=one
             ! Kadioglu, Sussman, Osher, Wright, Kang (smooth test problem)
@@ -25374,7 +25374,7 @@ end subroutine initialize2d
              print *,"adv_dir invalid probtype==92,93 (12)"
              stop
             endif
-            p_jwl_left=(1.0D+6)+60.0*cos(two*Pi*rr)+100.0*sin(four*Pi*rr)
+            p_jwl_left=(1.0D+6)+60.0d0*cos(two*Pi*rr)+100.0d0*sin(four*Pi*rr)
             p_jwl_right=p_jwl_left
             den_jwl_left=fort_denconst(2)*((p_jwl/1.0D+6)**(one/gamma_jwl))
             den_jwl_right=den_jwl_left
