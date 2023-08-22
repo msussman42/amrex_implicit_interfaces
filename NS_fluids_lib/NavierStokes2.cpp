@@ -2080,7 +2080,8 @@ void NavierStokes::init_divup_cell_vel_cell(
      blob_array.dataPtr(),
      &blob_array_size,
      &num_colors,
-     &project_option);
+     &project_option,
+     &MAC_grid_compressible);
    } // mfi
 } // omp
    ns_reconcile_d_num(LOOP_PRES_CELL_TO_MAC,"init_divup_cell_vel_cell");
@@ -2523,7 +2524,8 @@ void NavierStokes::increment_face_velocityALL(
 // OP_U_COMP_CELL_MAC_TO_MAC unew^{f} = 
 //   (i) unew^{f} in incompressible non-solid regions
 //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
-//   (iii) (unew^{c})^{c->f} in compressible regions.
+//   (iii) (unew^{c})^{c->f} (MAC_grid_compressible=0) compressible regions.
+//   (iii) unew^{f} (MAC_grid_compressible=1) compressible regions.
 //   (iv) usolid in solid regions
 // called from: post_init_state, do_the_advance, multiphase_project
 // (when project_option==SOLVETYPE_PRES,SOLVETYPE_INITPROJ,
@@ -2988,7 +2990,8 @@ void NavierStokes::increment_face_velocity(
        blob_array.dataPtr(),
        &blob_array_size,
        &num_colors,
-       &project_option);
+       &project_option,
+       &MAC_grid_compressible);
     } // mfi
 } // omp
     ns_reconcile_d_num(LOOP_VEL_CELL_TO_MAC,"increment_face_velocity");
@@ -4787,7 +4790,8 @@ void NavierStokes::apply_pressure_grad(
      blob_array.dataPtr(),
      &blob_array_size,
      &num_colors,
-     &project_option);
+     &project_option,
+     &MAC_grid_compressible);
 
    }  // mfi
 } // omp
@@ -6196,7 +6200,8 @@ void NavierStokes::process_potential_force_face(
     blob_array.dataPtr(),
     &blob_array_size,
     &num_colors,
-    &project_option);
+    &project_option,
+    &MAC_grid_compressible);
   } // mfi
 } // omp
   ns_reconcile_d_num(LOOP_POTGRAD_TO_MAC,"process_potential_force_face");
