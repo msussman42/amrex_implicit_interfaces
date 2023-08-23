@@ -15343,6 +15343,11 @@ end subroutine CLSVOF_InitBox
           endif
           FSI(part_id)%NodeRollCall(inode)=one
 
+          if (debug_all.eq.3) then
+           print *,"time,reflect_dir,inode,local_xnot,local_node_normal=", &
+             time,reflect_dir,inode,local_xnot,local_node_normal
+          endif
+
           do idoubly=1,2
 
            if (idoubly.eq.1) then
@@ -15476,6 +15481,20 @@ end subroutine CLSVOF_InitBox
            endif
 
           enddo ! idoubly=1,2
+
+          do dir=1,3
+           if (reflect_dir.eq.0) then
+            ! do nothing
+           else if ((reflect_dir.ge.1).and.(reflect_dir.le.3)) then
+            if (dir.eq.reflect_dir) then
+             FSI(part_id)%NodeForce(dir,inode)= &
+               -FSI(part_id)%NodeForce(dir,inode)
+            endif
+           else
+            print *,"reflect_dir invalid"
+            stop
+           endif
+          enddo !dir=1,3
 
          else if (inside_interior_box.eq.0) then
           ! do nothing
