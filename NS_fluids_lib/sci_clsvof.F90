@@ -16883,6 +16883,8 @@ INTEGER_T :: local_num_elements
 
 INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 INTEGER_T :: ii,jj,kk
+INTEGER_T :: imid,inull,ii_opp
+REAL_T :: rval
 
 logical :: monitorON
 logical :: theboss
@@ -17309,7 +17311,7 @@ logical :: theboss
             if (ii.eq.ii_opp) then
              !do nothing
             else
-             print *,"ii or ii_opp invalid"
+             print *,"ii or ii_opp invalid: ",ii,ii_opp
              stop
             endif
             FSI_output_container%node_list(ctml_part_id,ii,jj,kk,1)=zero
@@ -17319,6 +17321,7 @@ logical :: theboss
              ! do nothing
             else
              print *,"expecting rval<0"
+             print *,"ii,imid,rval ",ii,imid,rval
              stop
             endif
             FSI_output_container%node_list(ctml_part_id,ii,jj,kk,1)= &
@@ -17335,13 +17338,14 @@ logical :: theboss
             FSI_output_container%velocity_list(ctml_part_id,ii,jj,kk,3)= &
              FSI_output_container%velocity_list(ctml_part_id,ii_opp,jj,kk,3)
 
-            FSI_output_container%mass_list(ctml_part_id,ii,jj,kk,3)= &
-             FSI_output_container%mass_list(ctml_part_id,ii_opp,jj,kk,3)
+            FSI_output_container%mass_list(ctml_part_id,ii,jj,kk)= &
+             FSI_output_container%mass_list(ctml_part_id,ii_opp,jj,kk)
            else if (ii.gt.imid) then
             if (rval.gt.zero) then
              !do nothing
             else
              print *,"expecting rval>0"
+             print *,"ii,imid,rval ",ii,imid,rval
              stop
             endif
            else
@@ -17356,7 +17360,7 @@ logical :: theboss
           stop
          endif
         else
-         print *,"expecting (FSI(part_id)%flag_2D_to_3D.eq.1)"
+         print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1"
          stop
         endif 
        else if (ctml_part_id.eq.0) then
@@ -17367,7 +17371,7 @@ logical :: theboss
        endif
       enddo !part_id=1,TOTAL_NPARTS
      else
-      print *,"levelrz invalid"
+      print *,"levelrz invalid in CLSVOF_ReadNodes: ",levelrz
       stop
      endif
 
