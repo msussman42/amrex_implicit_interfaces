@@ -470,7 +470,11 @@
        endif
       enddo
 
-      call init_3D_map(xmap3D,xslice3D,problo3D,probhi3D,dx_max_level)
+      call init_3D_map( &
+       xmap3D, & !intent(out)
+       xslice3D, & !intent(out) 
+       problo3D,probhi3D, & !intent(out) 
+       dx_max_level) !intent(in)
 
       if (SDIM.eq.2) then
 
@@ -583,6 +587,7 @@
          ! if FSI_flag==FSI_SHOELE_CTML, then
          !  tick_fib is called (in ../StructureCodeShoele/tick.F)
         call CLSVOF_ReadNodes( &
+          xmap3D, &
           FSI_input_flattened, &
           FSI_output_flattened, &
           flatten_size, &
