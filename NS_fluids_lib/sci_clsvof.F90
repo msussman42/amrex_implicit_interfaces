@@ -2990,9 +2990,6 @@ REAL_T :: biggest_h
 REAL_T :: smallest_h
 INTEGER_T :: first_measure
 REAL_T :: temp_h
-REAL_T :: mass1,mass2,mass3,mass_split
-REAL_T :: new_massL,new_massR
-REAL_T :: den1,den2,den3,den_split
 REAL_T :: d12_2D,d23_2D,d13_2D
 REAL_T :: d12_3D,d23_3D,d13_3D
 REAL_T :: temp1,temp2,temp3
@@ -3585,20 +3582,6 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
      enddo
 
      tempsplit=0.5d0*(temp1+temp2)
-     den_split=0.5d0*(den1+den2)
-
-     mass_split=0.5d0*(mass1+mass2)
-     new_massL=mass1
-     new_massR=mass2
-
-     if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
-      ! do nothing
-     else
-      print *,"new_massL or new_massR invalid"
-      print *,"new_massL=",new_massL
-      print *,"new_massR=",new_massR
-      stop
-     endif
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+2
@@ -3653,18 +3636,6 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
      enddo
  
      tempsplit=0.5d0*(temp2+temp3)
-     den_split=0.5d0*(den2+den3)
-
-     mass_split=0.5d0*(mass2+mass3)
-     new_massL=mass2
-     new_massR=mass3
-
-     if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
-      ! do nothing
-     else
-      print *,"new_massL or new_massR invalid"
-      stop
-     endif
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+2
@@ -3716,18 +3687,6 @@ INTEGER_T, allocatable :: DoublyWettedNode(:)
      enddo
 
      tempsplit=0.5d0*(temp1+temp3)
-     den_split=0.5d0*(den1+den3)
-
-     mass_split=0.5d0*(mass1+mass3)
-     new_massL=mass1
-     new_massR=mass3
-
-     if ((new_massL.gt.0.0d0).and.(new_massR.gt.0.0d0)) then
-      ! do nothing
-     else
-      print *,"new_massL or new_massR invalid"
-      stop
-     endif
 
      multi_lag(ilevel+1)%n_nodes=multi_lag(ilevel+1)%n_nodes+1
      multi_lag(ilevel+1)%n_elems=multi_lag(ilevel+1)%n_elems+2
