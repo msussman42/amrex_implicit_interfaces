@@ -1240,9 +1240,6 @@ void apply_pressure_grad(
 
     void VELMAC_TO_CELL(int dest_idx);
 
-    void increment_KE(Real beta);
-    void increment_KE_ALL(Real beta);
-
     void INCREMENT_REGISTERS_ALL(int source_mf);
     void INCREMENT_REGISTERS(int source_mf);
     void push_back_state_register(int idx_MF,Real time);

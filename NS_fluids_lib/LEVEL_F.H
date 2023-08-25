@@ -311,18 +311,6 @@ namespace amrex{
         int* blob_array_size,
         int* num_colors);
 
-      void fort_inc_temp(
-        Real* beta,
-        int* level,
-        int* finest_level,
-        int* ncomp_state,
-        const int* tilelo,const int* tilehi,
-        const int* fablo,const int* fabhi,
-        Real* state,AMREX_ARLIM_P(statelo),AMREX_ARLIM_P(statehi), 
-         //1==not covered
-        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi)); 
-
-
       void fort_mac_to_cell(
         int* ns_time_order,
         int* divu_outer_sweeps,
