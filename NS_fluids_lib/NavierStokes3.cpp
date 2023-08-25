@@ -1545,8 +1545,9 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  //      regions 
  //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
  //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
- // (iii) (unew^{c})^{c->f} in compressible regions.
- // (iii) usolid in solid regions
+ // (iii) (unew^{c})^{c->f} (MAC_grid_compressible=0) compressible regions.
+ // (iii) unew^{f} (MAC_grid_compressible=1) compressible regions.
+ // (iv) usolid in solid regions
  int operation_flag=OP_U_COMP_CELL_MAC_TO_MAC;  
 
  Vector<blobclass> blobdata;
@@ -2473,14 +2474,15 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-       //  unew^{f}=
-       // (i) unew^{f} in incompressible non-solid regions
-       // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
-       //      regions.
-       //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
-       //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
-       // (iii) (unew^{c})^{c->f} in compressible regions.
-       // (iv) usolid in solid regions
+      //  unew^{f}=
+      // (i) unew^{f} in incompressible non-solid regions
+      // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
+      //      regions.
+      //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
+      //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
+      // (iii)(unew^{c})^{c->f} (MAC_grid_compressible=0) compressible regions.
+      // (iii)unew^{f} (MAC_grid_compressible=1) compressible regions.
+      // (iv) usolid in solid regions
       if (is_zalesak()) {
        advance_MAC_velocity(SOLVETYPE_INITPROJ);
       } else {
@@ -2499,15 +2501,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       } else
        amrex::Error("enable_spectral invalid");
-
-      Real beta=1.0;
-      int dest_idx=-1;  // update State_Type
-
-       // maintain conservation of energy for compressible materials.
-      increment_KE_ALL(beta);
-      VELMAC_TO_CELLALL(dest_idx);
-      beta=-1.0;
-      increment_KE_ALL(beta);
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
