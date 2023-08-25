@@ -14575,7 +14575,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        maskdivres, & ! DEN_RECON_MF, OP_ISCHEME_CELL
        pold, & 
        denold, & 
-       ustar, & 
+       vel_old_fab, & 
        veldest, &
        dendest, &
        divdest)
@@ -14629,7 +14629,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in), pointer :: pold(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: denold(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: dendest(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), pointer :: ustar(D_DECL(:,:,:),:)
+      REAL_T, INTENT(in), pointer :: vel_old_fab(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: veldest(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), pointer :: divdest(D_DECL(:,:,:),:)
       REAL_T local_data(bfact+1)
@@ -14662,7 +14662,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T local_POLD
       REAL_T local_POLD_DUAL
       REAL_T divflux(ncomp)
-      REAL_T vel_old,mom_new,T_old,T_new
+      REAL_T vel_old,vel_update,T_old,T_new
       REAL_T vel_new(SDIM)
       REAL_T VOLTERM
       INTEGER_T nbase
@@ -15501,8 +15501,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               enddo ! nc2
 
               do nc2=1,SDIM
-               vel_old=ustar(D_DECL(ic,jc,kc),nc2) 
-               mom_new=vel_old-dt*divflux(nc2)
+               vel_old=vel_old_fab(D_DECL(ic,jc,kc),nc2) 
+               vel_update=vel_old-dt*divflux(nc2)
 
                 ! SDC correction term: momentum
                if ((ns_time_order.ge.2).and. &
@@ -15510,7 +15510,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                    (advect_iter.eq.SUB_OP_ISCHEME_CORRECT).and. &
                    (SDC_outer_sweeps.gt.0).and. &
                    (divu_outer_sweeps+1.eq.num_divu_outer_sweeps)) then
-                mom_new=mom_new-cterm(D_DECL(ic,jc,kc),nc2)
+                vel_update=vel_update-cterm(D_DECL(ic,jc,kc),nc2)
                else if ((ns_time_order.eq.1).or. &
                         (advect_iter.eq.SUB_OP_ISCHEME_PREDICT).or. &
                         (SDC_outer_sweeps.eq.0).or. &
@@ -15521,7 +15521,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                 stop
                endif
 
-               vel_new(nc2)=mom_new
+               vel_new(nc2)=vel_update
               enddo ! nc2=1..sdim
 
               T_old=denold(D_DECL(ic,jc,kc),ibase+ENUM_TEMPERATUREVAR+1)

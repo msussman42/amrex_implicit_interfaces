@@ -10687,7 +10687,9 @@ stop
        cterm,DIMS(cterm), &
        pold,DIMS(pold), &
        denold,DIMS(denold), &
-       ustar,DIMS(ustar), &
+        !u_advect used for OP_VEL_DIVUP_TO_CELL and 
+        !OP_ISCHEME_CELL (source term.eq.SUB_OP_SDC_ISCHEME)
+       u_advect,DIMS(u_advect), &
        mdotcell,DIMS(mdotcell), & !VELADVECT_MF if OP_ISCHEME_CELL
        maskdivres,DIMS(maskdivres), & !DEN_RECON_MF if OP_ISCHEME_CELL
        maskres,DIMS(maskres), &
@@ -10759,7 +10761,7 @@ stop
       INTEGER_T, INTENT(in) :: DIMDEC(cterm)
       INTEGER_T, INTENT(in) :: DIMDEC(pold)
       INTEGER_T, INTENT(in) :: DIMDEC(denold)
-      INTEGER_T, INTENT(in) :: DIMDEC(ustar)
+      INTEGER_T, INTENT(in) :: DIMDEC(u_advect)
       INTEGER_T, INTENT(in) :: DIMDEC(mdotcell)
       INTEGER_T, INTENT(in) :: DIMDEC(maskdivres)
       INTEGER_T, INTENT(in) :: DIMDEC(maskres)
@@ -10821,8 +10823,8 @@ stop
       REAL_T, pointer :: pold_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: denold(DIMV(denold),ncomp_denold)
       REAL_T, pointer :: denold_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(inout), target :: ustar(DIMV(ustar),SDIM) 
-      REAL_T, pointer :: ustar_ptr(D_DECL(:,:,:),:)
+      REAL_T, INTENT(inout), target :: u_advect(DIMV(u_advect),SDIM) 
+      REAL_T, pointer :: u_advect_ptr(D_DECL(:,:,:),:)
       REAL_T, INTENT(in), target :: &
        mdotcell(DIMV(mdotcell),nsolve) !VELADVECT_MF if OP_ISCHEME_CELL
       REAL_T, pointer :: mdotcell_ptr(D_DECL(:,:,:),:)
@@ -10906,7 +10908,7 @@ stop
       veldest_ptr=>veldest
       dendest_ptr=>dendest
       cterm_ptr=>cterm
-      ustar_ptr=>ustar
+      u_advect_ptr=>u_advect
       xface_ptr=>xface
       yface_ptr=>yface
       zface_ptr=>zface
@@ -11315,7 +11317,7 @@ stop
       call checkbound_array(fablo,fabhi,cterm_ptr,0,-1)
       call checkbound_array(fablo,fabhi,pold_ptr,0,-1)
       call checkbound_array(fablo,fabhi,denold_ptr,0,-1)
-      call checkbound_array(fablo,fabhi,ustar_ptr,0,-1)
+      call checkbound_array(fablo,fabhi,u_advect_ptr,0,-1)
 
       call checkbound_array(fablo,fabhi,mdotcell_ptr,0,-1)
       call checkbound_array(fablo,fabhi,maskdivres_ptr,0,-1)
@@ -12192,12 +12194,9 @@ stop
            ! summary:
            ! 1. cell centered advection to get E^advect, UCELL^advect
            ! 2. e^advect + rho UCELL^2^advect/2 = E^advect
-           ! 3. UCELL^*=interp_mac_to_cell UMAC^advect
-           ! 4. e^advect + rho UCELL^2^advect/2 = e^* + rho UCELL^2^*/2
-           ! 5. e^*=e^advect+rho UCELL^2^advect/2-rho UCELL^2^*/2
-           ! 6. E^proj=E^advect-div(up)=E^*-div(up)
-           ! 7. e^proj+rho UCELL^2^proj/2=E^proj=E^*-div(up)
-           ! 8. e^proj=e^*+rho UCELL^2^*/2-rho UCELL^2^proj/2 - div(up)
+           ! 3. E^proj=E^advect-div(up)=e^advect+rho UCELL^2^advect/2-div(up)
+           ! 4. e^proj+rho UCELL^2^proj/2=E^proj=E^advect-div(up)
+           ! 5. e^proj=e^advect+rho UCELL^2^advect/2-rho UCELL^2^proj/2-div(up)
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
            do im=1,num_materials
@@ -12205,7 +12204,7 @@ stop
             KE_diff=zero
             do velcomp=1,SDIM
              KE_diff=KE_diff+ &
-              half*ustar(D_DECL(i,j,k),velcomp)**2- &
+              half*u_advect(D_DECL(i,j,k),velcomp)**2- &
               half*veldest(D_DECL(i,j,k),velcomp)**2
             enddo ! velcomp=1..sdim
 
@@ -12247,9 +12246,13 @@ stop
                endif
               enddo ! ispec=1..num_species_var
 
-              call INTERNAL_material(rho,massfrac_parm, &
-               TEMPERATURE,internal_e, &
-               imattype,im)
+               !INTERNAL_material is declared in GLOBALUTIL.F90
+              call INTERNAL_material( &
+               rho, & !intent(in)
+               massfrac_parm, & !intent(in)
+               TEMPERATURE, & !intent(in)
+               internal_e, & !intent(out)
+               imattype,im) !intent(in)
 
               ! sanity checks
               if (internal_e.gt.zero) then
@@ -12268,7 +12271,7 @@ stop
                stop
               endif
 
-              ! e^proj=e^*+(rho U^2^*/2-rho U^2^proj/2)-dt div(up)
+              ! e^proj=e^*+(rho U^2^advect/2-rho U^2^proj/2)-dt div(up)
               internal_e=internal_e+KE_diff+Eforce_conservative
 
               if (internal_e.le.zero) then
@@ -12507,7 +12510,7 @@ stop
                 maskdivres_ptr, & !DEN_RECON_MF, OP_ISCHEME_CELL
                 pold_ptr, &
                 denold_ptr, &
-                ustar_ptr, &
+                u_advect_ptr, &
                 veldest_ptr, &
                 dendest_ptr, &
                 rhs_ptr)  ! divdest
@@ -12552,7 +12555,7 @@ stop
                 maskdivres_ptr, & !DEN_RECON_MF, OP_ISCHEME_CELL
                 pold_ptr, &
                 denold_ptr, &
-                ustar_ptr, &
+                u_advect_ptr, &
                 veldest_ptr, &
                 dendest_ptr, &
                 rhs_ptr)  ! divdest
@@ -12597,7 +12600,7 @@ stop
                 maskdivres_ptr, & !DEN_RECON_MF, OP_ISCHEME_CELL
                 pold_ptr, &
                 denold_ptr, &
-                ustar_ptr, &
+                u_advect_ptr, &
                 veldest_ptr, &
                 dendest_ptr, &
                 rhs_ptr) ! divdest
