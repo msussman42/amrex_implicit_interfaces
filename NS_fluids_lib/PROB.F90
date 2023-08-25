@@ -17223,7 +17223,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
   
          else if (SDIM.eq.2) then
 
-          if ((probtype.eq.92).or.(probtype.eq.93)) then
+          if ((probtype.eq.92).or. & !contact captured
+              (probtype.eq.93)) then !contact tracked
            if (axis_dir.eq.2) then ! shock-turbulence pressure xlo
             ADV=10.333333
            else if (axis_dir.eq.3) then ! mach>4
@@ -17292,7 +17293,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
          else if (SDIM.eq.2) then
 
-          if ((probtype.eq.92).or.(probtype.eq.93)) then
+          if ((probtype.eq.92).or. & !contact captured
+              (probtype.eq.93)) then !contact tracked
            if (axis_dir.eq.2) then ! shock-turbulence pressure xhi
             ADV=one
            else if (axis_dir.eq.3) then ! mach>4
@@ -25325,7 +25327,8 @@ end subroutine initialize2d
            ! do not use material_type=5 (EOS_air),
            ! use material_type=18 instead.
            ! (results should be similar though)
-          if ((probtype.eq.92).or.(probtype.eq.93)) then
+          if ((probtype.eq.92).or. & !contact captured
+              (probtype.eq.93)) then !contact tracked
            gamma_jwl=1.4
 
            if (axis_dir.eq.0) then  ! Sod shock tube
@@ -25380,7 +25383,7 @@ end subroutine initialize2d
             den_jwl_right=den_jwl_left
             xshock=one
            else 
-            print *,"axis_dir invalid probtype=92 or 93"
+            print *,"axis_dir invalid probtype=92 or 93: ",axis_dir
             stop
            endif
            if ((axis_dir.eq.0).or. &
@@ -25404,7 +25407,7 @@ end subroutine initialize2d
             print *,"axis_dir invalid"
             stop
            endif
-           if (probtype.eq.92) then
+           if (probtype.eq.92) then!the contact discontinuity is captured.
             if (x.le.xshock) then
              den_jwl=den_jwl_left 
              temp_jwl=temp_jwl_left 
@@ -25415,7 +25418,7 @@ end subroutine initialize2d
              print *,"x invalid"
              stop
             endif
-           else if (probtype.eq.93) then
+           else if (probtype.eq.93) then!the contact discontinuity is tracked.
             if (xblob.lt.xshock) then
              if (im.eq.1) then
               den_jwl=den_jwl_left
@@ -26990,7 +26993,8 @@ end subroutine initialize2d
          endif ! advbot <> 0
 
          ! shock tube problems (initvelocity)
-        else if ((probtype.eq.92).or.(probtype.eq.93)) then 
+        else if ((probtype.eq.92).or. & !contact is captured
+                 (probtype.eq.93)) then !contact is tracked
          x_vel=zero
          y_vel=zero
          z_vel=zero
@@ -27023,7 +27027,7 @@ end subroutine initialize2d
           y_vel=zero
           z_vel=zero
          else
-          print *,"axis_dir invalid probtype=92"
+          print *,"axis_dir invalid probtype=92,93: ",axis_dir
           stop
          endif
 
