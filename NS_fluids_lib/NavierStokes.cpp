@@ -940,7 +940,7 @@ int NavierStokes::CTML_FSI_init = 0;
 // 2=never take into account sound speed
 Vector<int> NavierStokes::shock_timestep; 
 
-int NavierStokes::MAC_grid_compressible=1;
+int NavierStokes::MAC_grid_compressible=0;
 
 Real NavierStokes::visc_coef=0.0;
 
