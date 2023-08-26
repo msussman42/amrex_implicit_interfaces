@@ -123,7 +123,7 @@ ns.zblob=0.0
 ns.radblob=0.1 
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=92
+ns.probtype=92 #92=>contact is captured, 93=>contact is tracked.
 
 #ns.mem_debug = 1
 ns.v = 1
