@@ -7,9 +7,8 @@ stop_time =  0.15  # maximum problem time
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1.0 0.01   # 1/100
-# 0=cell
-# 1=face
-ns.EILE_flag=1  # alternate EI-LE 
+
+ns.num_divu_outer_sweeps=2
 
 # multigrid class
 mg.verbose = 0
@@ -17,7 +16,13 @@ cg.verbose = 0
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 400
+mg.presmooth=2
+mg.postsmooth=2
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
+
 ns.projection_pressure_scale=1.0
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
@@ -26,10 +31,24 @@ Lp.v = 0
 ns.num_materials=2
 ns.num_species_var=0
 
+ns.continuous_mof=0
+ns.EILE_flag=1 # -1=Weymouth and Yue 1=alternate EI and LE
+ns.MOFITERMAX=15
+# FSI_flag for avaiable phase/material
+# 0 fluid (default)
+# 1 solid (PROB_[23]D.F90)
+# 2 solid (lagrangian)
+# 3 ice
+# 4 CTML
+ns.FSI_flag=0 0
+
 ns.post_init_pressure_solve=0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.minimum_relative_error=1.0e-24
-ns.initial_project_cycles=3  # number of initial jacobi iterations
+ns.initial_project_cycles=4  # number of initial jacobi iterations
+ns.initial_viscosity_cycles=2
+ns.initial_thermal_cycles=2
+ns.mglib_max_ratio=1.0e+5
 ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                         # decent sized residual.
 # 0=GSRB 1=ICRB 2=ILU
@@ -51,7 +70,7 @@ amr.plot_int        = 100
 amr.slice_int=100
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 2048
 #amr.restart         = chk0014
 #amr.trace   =1
 
@@ -68,6 +87,7 @@ mac.mac_abs_tol    = 1.0e-10
 # for cfl=3, 6 * 8.56E-5 = 0.0005
 # This is same as cfl=0.02  and min dx/u used (at t=0).
 ns.shock_timestep=1 1
+ns.MAC_grid_compressible=0
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
 ns.init_shrink    = 0.1      # scale back initial timestep

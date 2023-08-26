@@ -1,10 +1,3 @@
-
-
-# ------------------  INPUTS TO MAIN PROGRAM  -------------------
-# CHANGES FROM PAST VERSION:
-# no more raster stuff (hdf), add mac.mac_abs_tol
-# blob.* now becomes ns.*
-#
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  1.8  # maximum problem time
@@ -52,7 +45,7 @@ ns.FSI_flag=0 0
 ns.post_init_pressure_solve=0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.minimum_relative_error=1.0e-24
-ns.initial_project_cycles=10  # number of initial jacobi iterations
+ns.initial_project_cycles=4  # number of initial jacobi iterations
 ns.initial_viscosity_cycles=2
 ns.initial_thermal_cycles=2
 ns.mglib_max_ratio=1.0e+5
