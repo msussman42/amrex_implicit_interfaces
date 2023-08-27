@@ -157,84 +157,100 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       call DistFSI_allocate_memory(0)
 
       if (nRead .eq. 1) then
+       print *,"restarting handled from amrex_implicit_interfaces"
+       stop
        temprestart=.true.
        call write_restart_DISRIBM(temp_ibm1,1,1)
       else
         
-      min_grid_x=min_gridx
-      min_grid_y=min_gridy
-      min_grid_z=min_gridz
+       if(theboss) then
+        print *,"in initialize_ibm"
+        print *,"min_gridx: ",min_gridx
+        print *,"min_gridy: ",min_gridy
+        print *,"min_gridz: ",min_gridz
+        print *,"nx1: ",nx1
+        print *,"ny1: ",ny1
+        print *,"nz1: ",nz1
+        print *,"idimin ",idimin
 
-      nxgrid_ibm=nx1
-      nygrid_ibm=ny1
-      nzgrid_ibm=nz1
+        write(*,*) 'ibm grid size: nr_ibm =',nr_ibm
+        write (*,*) 'coordinate of ibm points in r'
+        write(*,*) 'ibm grid size: ns_ibm_fib =',ns_ibm_fib
+        write(*,*) 'ibm grid size: ns_ibm_fsh =',ns_ibm_fsh
+        write(*,*) 'ibm grid size: nq_ibm_fsh =',nq_ibm_fsh
+        write(*,*) 'ibm grid size: ns_ibm_esh =',ns_ibm_esh
+        write(*,*) 'ibm grid size: ns_ibm_fbc =',ns_ibm_fbc
+       endif
 
-      gx(1:nx1)=gx1(1:nx1)
-      gy(1:ny1)=gy1(1:ny1) 
-      gz(1:nz1)=gz1(1:nz1)
+       min_grid_x=min_gridx
+       min_grid_y=min_gridy
+       min_grid_z=min_gridz
 
-      ndim=idimin
-      if(theboss) then
-       write(*,*) 'ibm grid size: nr_ibm =',nr_ibm
-       write (*,*) 'coordinate of ibm points in r'
-       write(*,*) 'ibm grid size: ns_ibm_fib =',ns_ibm_fib
-       write(*,*) 'ibm grid size: ns_ibm_fsh =',ns_ibm_fsh
-       write(*,*) 'ibm grid size: nq_ibm_fsh =',nq_ibm_fsh
-       write(*,*) 'ibm grid size: ns_ibm_esh =',ns_ibm_esh
-       write(*,*) 'ibm grid size: ns_ibm_fbc =',ns_ibm_fbc
-      endif
+       nxgrid_ibm=nx1
+       nygrid_ibm=ny1
+       nzgrid_ibm=nz1
+ 
+       gx(1:nx1)=gx1(1:nx1)
+       gy(1:ny1)=gy1(1:ny1) 
+       gz(1:nz1)=gz1(1:nz1)
+
+       ndim=idimin
+
 ! initialized ibm grid or reading saved grid file
-      ds_ibm0=0.0
-      dr_ibm0=0.0
-      dt_ibm0=0.0
-      create_ibm_flag=.true.
-      create_new_flow=.true.
-      massive_ibm =.true.
-      para_coor_flag= .false.
+       ds_ibm0=0.0
+       dr_ibm0=0.0
+       dt_ibm0=0.0
+       create_ibm_flag=.true.
+       create_new_flow=.true.
+       massive_ibm =.true.
+       para_coor_flag= .false.
 
-      if(theboss)  print*, 'start with IBM input read'
+       if(theboss)  print*, 'start with IBM input read'
+
 ! read input files and create structures
-       call create_grid2(probtype,ds_ibm0,dr_ibm0,contactlength,theboss)
-      if(theboss)  print*, 'done with  IBM input read'
+       call create_grid2(probtype,ds_ibm0
+     &        ,dr_ibm0,contactlength,theboss)
+
+       if(theboss)  print*, 'done with  IBM input read'
 
 !write section information for ourtput
  
-      if (create_ibm_flag) then
-       if (create_new_flow) then
-        do i=1,nr_ibm_fib
-          do j=1,ns_ibm_fib
-             fk_mass1_fib(i,j)=0.0d0
-             fk_mass2_fib(i,j)=0.0d0
-             fk_mass3_fib(i,j)=0.0d0
-          enddo
-          do j=1,ns_ibm_fib
-             if(  j .le. ns_ibm_r_fib(i)
-     &          ) then
-!             write(14,*)gx_ibm_fib(i,j),gy_ibm_fib(i,j),gz_ibm_fib(i,j)
-             end if
-          end do
-        end do 
+       if (create_ibm_flag) then
+        if (create_new_flow) then
+         do i=1,nr_ibm_fib
+           do j=1,ns_ibm_fib
+              fk_mass1_fib(i,j)=0.0d0
+              fk_mass2_fib(i,j)=0.0d0
+              fk_mass3_fib(i,j)=0.0d0
+           enddo
+           do j=1,ns_ibm_fib
+              if(  j .le. ns_ibm_r_fib(i)
+     &           ) then
+!              write(14,*)gx_ibm_fib(i,j),gy_ibm_fib(i,j),gz_ibm_fib(i,j)
+              end if
+           end do
+         end do 
 
-        do i=1,nr_ibm_fsh
+         do i=1,nr_ibm_fsh
            do jq=1,nq_ibm_fsh
            do j=1,ns_ibm_fsh
              fk_mass1_fsh(i,jq,j)=0.0d0
              fk_mass2_fsh(i,jq,j)=0.0d0
              fk_mass3_fsh(i,jq,j)=0.0d0
-            enddo
-          enddo
-          do jq=1,nq_ibm_fsh
-          do j=1,ns_ibm_fsh
+           enddo
+           enddo
+           do jq=1,nq_ibm_fsh
+           do j=1,ns_ibm_fsh
              if(   ( j .le. ns_ibm_r_fsh(i))
      &       .and. (jq .le. nq_ibm_r_fsh(i))) then
 !             write(14,*)
 !     &      gx_ibm_fsh(i,jq,j),gy_ibm_fsh(i,jq,j),gz_ibm_fsh(i,jq,j)
              end if
-          end do
-          end do
-        end do 
-        jq=0
-        do i=1,nr_ibm_esh
+           end do
+           end do
+         end do 
+         jq=0
+         do i=1,nr_ibm_esh
           jq=max(jq,abs(ShellModelType_esh(i)))
           do j=1,ns_ibm_esh
              fk_mass1_esh(i,j)=0.0d0
@@ -247,11 +263,11 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !             write(14,*)gx_ibm_esh(i,j),gy_ibm_esh(i,j),gz_ibm_esh(i,j)
              end if
           end do
-        end do 
+         end do 
 !        close(14)
 
-       if(jq .gt. 1) then
-         if(.not. (allocated(gmetric_con0SAVE_esh)))  
+         if(jq .gt. 1) then
+          if(.not. (allocated(gmetric_con0SAVE_esh)))  
      &      allocate(gmetric_con0SAVE_esh(Nr_IBM_esh 
      &                                   ,Ns_IBMEle_esh 
      &                                   ,ngaumax 
@@ -259,7 +275,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &                                   ,2
      &                                   ,2) 
      &                                   )
-         if(.not. (allocated(gbase_con0SAVE_esh)))  
+          if(.not. (allocated(gbase_con0SAVE_esh)))  
      &      allocate(gbase_con0SAVE_esh(Nr_IBM_esh 
      &                                   ,Ns_IBMEle_esh 
      &                                   ,ngaumax 
@@ -268,16 +284,16 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &                                   ,3)
      &                                   )
 
-         if(.not. (allocated(detC_inplane0SAVE_esh)))  
+          if(.not. (allocated(detC_inplane0SAVE_esh)))  
      &      allocate(detC_inplane0SAVE_esh(Nr_IBM_esh 
      &                                   ,Ns_IBMEle_esh 
      &                                   ,ngaumax 
      &                                   ,ngaumaxh)
      &                                   )
-       endif
+         endif
 
 
-        do i=1,nr_ibm_fbc
+         do i=1,nr_ibm_fbc
           do j=1,ns_ibm_fbc
              fk_mass1_fbc(i,j)=0.0d0
              fk_mass2_fbc(i,j)=0.0d0
@@ -289,40 +305,40 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !             write(14,*)gx_ibm_esh(i,j),gy_ibm_esh(i,j),gz_ibm_esh(i,j)
              end if
           end do
-        end do 
+         end do 
 !        close(14)
 
-        if (massive_ibm) then 
-!        open (15,file='massibm.txt',form='formatted',status='unknown')
-!         write(15,*) nr_ibm_fib,ns_ibm_fib
-         do i=1,nr_ibm_fib
+         if (massive_ibm) then 
+!         open (15,file='massibm.txt',form='formatted',status='unknown')
+!          write(15,*) nr_ibm_fib,ns_ibm_fib
+          do i=1,nr_ibm_fib
            do j=1,ns_ibm_r_fib(i)
 !             write(15,*) mass_ibm_fib(i,j)
            end do
-         end do
-         do i=1,nr_ibm_fsh
+          end do
+          do i=1,nr_ibm_fsh
            do jq=1,nq_ibm_r_fsh(i)
            do j=1,ns_ibm_r_fsh(i)
 !             write(15,*) mass_ibm_fsh(i,jq,j)
            end do
            end do
-         end do
-         do i=1,nr_ibm_esh
+          end do
+          do i=1,nr_ibm_esh
            do j=1,ns_ibm_r_esh(i)+ns_ibm_i_esh(i)
 !             write(15,*) mass_ibm_esh(i,j)
            end do
-         end do
+          end do
 !         close(15)
-         do i=1,nr_ibm_fbc
+          do i=1,nr_ibm_fbc
            do j=1,ns_ibm_r_fbc(i)+ns_ibm_i_fbc(i)
 !             write(15,*) mass_ibm_esh(i,j)
            end do
-         end do
+          end do
 !         close(15)
-        end if
+         end if
 
-       end if !(create_new_flow)
-      end if  !(create_ibm_flag)    
+        end if !(create_new_flow)
+       end if  !(create_ibm_flag)    
    
 
 ! initialize lagrangian coord. massive part
@@ -417,7 +433,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !j'=j+1/2
 !dsf_{j'}= | X_{j+1} - X_{j}    |
 !ds_{j}  = | X_{j'}  - X_{j'-1} | 
-      if (create_new_flow) then
+       if (create_new_flow) then
         if (para_coor_flag .eqv. .false.) then
           do i=1,nr_ibm_fib
            s_start=1 
@@ -609,15 +625,15 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
            vibm2_fbc=0.0d0;vibm2_pre_fbc=0.0d0;aibm2_fbc=0.0d0
            vibm3_fbc=0.0d0;vibm3_pre_fbc=0.0d0;aibm3_fbc=0.0d0
         endif
-      endif !(create_new_flow) then
+       endif !(create_new_flow) then
 
 ! determine the width of delta function
-      call delta_width(del_x,del_y,del_z
+       call delta_width(del_x,del_y,del_z
      &                ,delta_typex,delta_typey,delta_typez)
-      close(12)
-      if(nr_ibm_fsh>=1) ContactShellFlag_fsh=0
-      if(nr_ibm_esh>=1) ContactShellFlag_esh=0
-      if(nr_ibm_fbc>=1) ContactShellFlag_fbc=0
+       close(12)
+       if(nr_ibm_fsh>=1) ContactShellFlag_fsh=0
+       if(nr_ibm_esh>=1) ContactShellFlag_esh=0
+       if(nr_ibm_fbc>=1) ContactShellFlag_fbc=0
 
 #ifdef INCLUDE_ESH
 !!======== Perform intial calculations for FE shells
@@ -3089,7 +3105,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       enddo ! nr_ibm_fsh
 #endif
       
-      endif  !nRead
+      endif  !nRead (nRead should not be equal to 1)
 
 ! passing to outputs
 

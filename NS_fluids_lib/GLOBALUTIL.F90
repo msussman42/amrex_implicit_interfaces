@@ -19943,7 +19943,8 @@ end subroutine print_visual_descriptor
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T rho,pressure
+      REAL_T, INTENT(in) :: rho
+      REAL_T, INTENT(out) :: pressure
       REAL_T A,B,rhobar,pcav
 
 
@@ -21081,9 +21082,7 @@ end subroutine print_visual_descriptor
       REAL_T rho,internal_energy,gamma_constant,pressure,omega
       REAL_T cp,cv,R,pressure_adjust,preshydro,rhohydro
       REAL_T xpos(SDIM)
-      INTEGER_T from_boundary_hydrostatic
-
-      from_boundary_hydrostatic=0
+      INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
 
       call air_parms(R,cp,cv,gamma_constant,omega) 
       if (rho.le.zero) then
@@ -21145,9 +21144,7 @@ end subroutine print_visual_descriptor
       REAL_T cp,cv,R,rhohydro,omega
       REAL_T RHOI,PI
       REAL_T xpos(SDIM)
-      INTEGER_T from_boundary_hydrostatic
-
-      from_boundary_hydrostatic=0
+      INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
 
       RHOI=fort_denconst(2)
       call general_hydrostatic_pressure(PI)
@@ -21244,9 +21241,7 @@ end subroutine print_visual_descriptor
       REAL_T soundsqr
       REAL_T cp,cv,R,pressure_adjust,preshydro,rhohydro
       REAL_T xpos(SDIM)
-      INTEGER_T from_boundary_hydrostatic
-
-      from_boundary_hydrostatic=0
+      INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
 
       call air_parms(R,cp,cv,gamma_constant,omega)
     

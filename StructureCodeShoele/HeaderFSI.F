@@ -31,9 +31,9 @@
 ! The code needs to recompile as [[grid_def]] is modified.
 !@q
       REAL*8  DELTA_T
-     &       ,gx(2000)
-     &       ,gy(2000)
-     &       ,gz(2000)
+     &       ,gx(10000)
+     &       ,gy(10000)
+     &       ,gz(10000)
      &       ,TIME,TIME2
      &       ,PI1
      &       ,EPS
