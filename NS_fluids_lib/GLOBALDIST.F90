@@ -456,7 +456,7 @@ end subroutine nozzle2d
           print *,"axis_dir invalid probtype=531"
           stop
          endif
-        elseif (probtype.eq.bubbleInPackedColumn) then ! in materialdistsolid
+        else if (probtype.eq.bubbleInPackedColumn) then ! in materialdistsolid
          continue
         endif
 
@@ -855,10 +855,15 @@ end subroutine nozzle2d
       return
       end subroutine barbelldist
 
+       !jetting_plate_dist is called from soliddist.
+       !soliddist is called from materialdistsolid.
+       !dist<0 in the plate.
       subroutine jetting_plate_dist(x,y,z,dist)
       use global_utility_module
       IMPLICIT NONE
-      REAL_T x,y,z,dist,aspect,offset,distplate,hugedist
+      REAL_T, INTENT(in) :: x,y,z
+      REAL_T, INTENT(out) :: dist
+      REAL_T :: aspect,offset,distplate,hugedist
 
       hugedist=99999.0
 
@@ -1231,8 +1236,10 @@ end subroutine nozzle2d
 
       IMPLICIT NONE
 
-      INTEGER_T im
-      REAL_T x,y,z,dist,dist1,temprad
+      INTEGER_T, intent(in) :: im
+      REAL_T, intent(in) :: x,y,z
+      REAL_T, intent(out) :: dist
+      REAL_T dist1,temprad
       REAL_T rr,xx,yy,zz,aspect,offset
       REAL_T xlarge
       INTEGER_T igeom
@@ -1341,6 +1348,8 @@ end subroutine nozzle2d
        endif
       else if (probtype.eq.42) then ! bubble jetting (soliddist)
 
+       !dist<0 in the solid
+       !soliddist is called by: subroutine materialdistsolid 
        call jetting_plate_dist(x,y,z,dist)
 
        ! soliddist
