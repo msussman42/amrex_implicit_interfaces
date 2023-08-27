@@ -99,6 +99,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       else if (probtype.eq.2000) then
        open (9997,file='./inputStructureSolver.flexible_plate.dat'
      &     ,status="unknown")
+      else if (probtype.eq.42) then
+       open (9997,file='./inputStructureSolver.bubble_jetting.dat'
+     &     ,status="unknown")
       else
        print *,"probtype invalid"
        stop

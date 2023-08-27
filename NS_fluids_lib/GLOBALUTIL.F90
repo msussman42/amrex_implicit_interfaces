@@ -20989,10 +20989,23 @@ end subroutine print_visual_descriptor
        z_at_depth=yblob
        if (xpos(SDIM).gt.zfree) then
         rho=denfree
+       else if (xpos(SDIM).le.zfree) then
+        if (z_at_depth.ne.zfree) then
+         if (density_at_depth.gt.zero) then
+          rho= &
+           ((density_at_depth-denfree)/ &
+            (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+         else 
+          print *,"density_at_depth invalid"
+          stop
+         endif
+        else 
+         print *,"z_at_depth invalid"
+         stop
+        endif
        else
-        rho= &
-          ((density_at_depth-denfree)/ &
-           (z_at_depth-zfree))*(xpos(SDIM)-zfree)+denfree
+        print *,"xpos invalid"
+        stop
        endif
        call EOS_tait_ADIABATIC(rho,pres)
 
@@ -24315,7 +24328,9 @@ else if ((probtype.eq.46).and.(SDIM.eq.2)) then
  endif
 else if (fort_material_type(1).eq.13) then
 
- if (abs(gravity).eq.zero) then
+ if (abs(gravity).gt.zero) then
+  !do nothing
+ else
   print *,"gravity invalid"
   stop
  endif
@@ -24336,13 +24351,17 @@ else if (fort_material_type(1).eq.13) then
   stop
  endif
  
-!       print *,"depth= ",depth
+! print *,"depth= ",depth
 
- if (depth.le.zero) then
+ if (depth.gt.zero) then
+  !do nothing
+ else
   print *,"depth invalid"
   stop
  endif
- if (surface_den.le.zero) then
+ if (surface_den.gt.zero) then
+  !do nothing
+ else
   print *,"surface den invalid"
   stop
  endif
