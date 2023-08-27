@@ -2795,7 +2795,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 ! err is initialized already with the slope error
 ! pres_in comes from the pressure computed from the compressible
 ! projection method, not the equation of state.
-! err=max(err,VOFTOL)
+! err=max(err,1.0d0)
 ! this routine called from: fort_pressure_indicator
       subroutine EOS_error_ind( &
        pressure_error_flag, &
@@ -2852,8 +2852,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! do nothing
       else if (vorterr.gt.zero) then
        if (vort*global_velocity_scale.gt.vorterr) then
-        if (err.lt.VOFTOL) then
-         err=VOFTOL
+        if (err.eq.zero) then
+         err=one
+        else if (err.eq.one) then
+         ! do nothing
+        else
+         print *,"err invalid"
+         stop
         endif
        endif
       else
@@ -2892,9 +2897,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        temp_variation=temp_variation/(two*SDIM)
 
        if (temp_variation.gt.temperature_cutoff) then
-        if (err.lt.VOFTOL) then
-         err=VOFTOL
+
+        if (err.eq.zero) then
+         err=one
+        else if (err.eq.one) then
+         ! do nothing
+        else
+         print *,"err invalid"
+         stop
         endif
+
        endif
 
       else
@@ -2969,9 +2981,16 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
 
         if (pres_test/atmos_pres.gt.pressure_cutoff) then
-         if (err.lt.VOFTOL) then
-          err=VOFTOL
+
+         if (err.eq.zero) then
+          err=one
+         else if (err.eq.one) then
+          ! do nothing
+         else
+          print *,"err invalid"
+          stop
          endif
+
         endif
 
        else
@@ -5633,7 +5652,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! called from SLOPERECON and INITDATA
        ! (note see NavierStokes::init_pressure_error_indicator() too,
        !  which calls fort_pressure_indicator, which calls
-       !  EOS_error_ind)
+       !  EOS_error_ind; init_pressure_error_indicator() is called from 
+       !  multiphase_project with project_option=SOLVETYPE_PRES)
       subroutine calc_error_indicator( &
         level, &
         max_level, &
@@ -6848,7 +6868,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else if (rflag.eq.zero) then
          ! do nothing
         else
-         print *,"rflag invalid"
+         print *,"rflag invalid: ",rflag
+         print *,"probtype: ",probtype
+         print *,"axis_dir: ",axis_dir
          stop
         endif
        else if ((axis_dir.eq.0).or.(SDIM.eq.3)) then
@@ -22796,7 +22818,9 @@ end subroutine initialize2d
         else if (rflag.eq.zero) then
          ! do nothing
         else
-         print *,"rflag invalid"
+         print *,"rflag invalid in fort_vfracerror: ",rflag
+         print *,"probtype=",probtype
+         print *,"axis_dir=",axis_dir
          stop
         endif
 
