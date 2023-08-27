@@ -13,8 +13,6 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  1024.0 1024.0
 geometry.prob_hi   =  256.0 256.0  # Jemison, Sussman, Arienti Fig 27
-# 0=cell
-# 1=face
 
 # multigrid class
 mg.verbose = 0
@@ -72,7 +70,7 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
 amr.grid_eff        = 0.6   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8       # block factor in grid generation
+amr.blocking_factor = 8 8 8 8 8 8 8 # block factor in grid generation
 amr.check_int       = 100    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100
