@@ -2607,6 +2607,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! force=grad p=dt( \vec{g} + Omega^2 r r^hat )
        !
        ! called from fort_init_potential. (NAVIERSTOKES_3D.F90)
+       ! called from EOS_error_ind (PROB.F90)
+       ! called from presBDRYCOND (PROB.F90)
+       ! called from fort_initdata (PROB.F90)
       subroutine general_hydrostatic_pressure_density( &
         i,j,k,level, &
         angular_velocity, &!intent(in) general_hydrostatic_pressure_density
@@ -2631,6 +2634,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T xcell(SDIM)
       INTEGER_T :: local_dir
       INTEGER_T :: gravity_dir
+      INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
 
       call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
@@ -2641,19 +2645,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if ((probtype.eq.42).or. & ! bubble jetting
-          (probtype.eq.46)) then ! cavitation
-
-       if (gravity_vector(gravity_dir).eq.zero) then
-        ! do nothing
-       else if (gravity_vector(gravity_dir).ne.zero) then
-        print *,"see tait_hydrostatic_pressure_density and make user def."
-        stop
-       else
-        print *,"gravity_vector is NaN"
-        stop
-       endif
-
+      if (gravity_vector(gravity_dir).eq.zero) then
+       ! do nothing
+      else if (gravity_vector(gravity_dir).ne.zero) then
+       ! do nothing
+      else
+       print *,"gravity_vector is NaN"
+       stop
       endif
 
       call gridsten_level(xsten,i,j,k,level,nhalf)
@@ -2739,6 +2737,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         rho_hydrostatic, &
         pres_hydrostatic, &
         state_ptr)
+      else if (fort_material_type(1).eq.1) then !TAIT EOS
+       call tait_hydrostatic_pressure_density(xcell, &
+         rho_hydrostatic, &
+         pres_hydrostatic, &
+         from_boundary_hydrostatic)
       endif
 
       if (1.eq.0) then
@@ -2761,9 +2764,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T, INTENT(in) :: xpos(SDIM)
       REAL_T, INTENT(inout) :: rho
       REAL_T, INTENT(inout) :: pres
-      INTEGER_T from_boundary_hydrostatic
-
-      from_boundary_hydrostatic=1
+      INTEGER_T, PARAMETER :: from_boundary_hydrostatic=1
 
        ! first material obeys TAIT EOS
       if (fort_material_type(1).eq.13) then
@@ -2777,6 +2778,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"modify: tait_hydrostatic_pressure_density for microgravity"
           stop
          endif
+          !calling from boundary_hydrostatic
+          !boundary_hydrostatic is called from presBDRYCOND
          call tait_hydrostatic_pressure_density(xpos,rho,pres, &
                  from_boundary_hydrostatic)
         else
@@ -2828,9 +2831,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T temp_variation
       REAL_T pres_variation
       INTEGER_T dir,side,ii,jj,kk
-      INTEGER_T from_boundary_hydrostatic
-
-      from_boundary_hydrostatic=0
+      INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -2969,7 +2970,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
 
-        if (imattype.eq.1) then  ! tait EOS
+        if (imattype.eq.1) then  ! tait EOS 
+           !calling from EOS_error_ind
          call tait_hydrostatic_pressure_density(xpos,atmos_den,atmos_pres, &
                  from_boundary_hydrostatic)
         else if ((imattype.ge.2).and. &
@@ -17037,6 +17039,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine extrapBC
 
+       !called from fort_pressurefill
       subroutine presBDRYCOND(time,dir,side,ADV,ADVwall_in, &
         xsten,nhalf,dx,bfact)
       use global_utility_module
@@ -17073,11 +17076,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       REAL_T xpos(SDIM)
       INTEGER_T local_dir
       REAL_T local_LS(num_materials)
-      INTEGER_T from_boundary_hydrostatic
+      INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
 
       INTEGER_T :: gravity_dir
-
-      from_boundary_hydrostatic=0
 
       call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
@@ -17334,17 +17335,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! xhi
            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then
+            !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
           else if (probtype.eq.42) then ! bubble jetting 2D
+            !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
             ! in presBDRYCOND: 2d, xhi
           else if (probtype.eq.46) then ! cavitation 2D
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+             !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then
+             !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.20) then
@@ -17411,16 +17416,20 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then ! ylo
            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then
+             !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
           else if (probtype.eq.42) then ! bubble jetting 2D
+             !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
           else if (probtype.eq.46) then ! cavitation ylo 2D
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+             !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then
+             !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.20) then
@@ -17433,7 +17442,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! ylo, presBDRYCOND, 2D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (y.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV= &
+             -fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
            else
             ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
            endif
@@ -17476,9 +17486,11 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! ylo, presBDRYCOND, 3D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (z.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV= &
+             -fort_denconst(1)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
+            ADV= &
+             -fort_denconst(2)*abs(gravity_vector(gravity_dir))*(z-waterdepth)
            endif
           endif
 
@@ -17510,23 +17522,29 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           else if ((probtype.eq.36).and.(axis_dir.eq.0)) then
            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*y
           else if ((probtype.eq.36).and.(axis_dir.eq.2)) then  ! yhi
+            !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
            ! yhi, presBDRYCOND, 2D
           else if ((probtype.eq.9).and.(axis_dir.eq.1)) then  
            if (y.le.waterdepth) then
-            ADV=-fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV= &
+             -fort_denconst(1)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
            else
-            ADV=-fort_denconst(2)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
+            ADV= &
+             -fort_denconst(2)*abs(gravity_vector(gravity_dir))*(y-waterdepth)
            endif
           else if (probtype.eq.42) then ! bubble jetting 2D
+            !calling from presBDRYCOND
            call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                    from_boundary_hydrostatic)
           else if (probtype.eq.46) then ! cavitation yhi 2D
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
+             !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.10) then
+             !calling from presBDRYCOND
             call tait_hydrostatic_pressure_density(xpos,rhohydro,ADV, &
                     from_boundary_hydrostatic)
            else if (axis_dir.eq.20) then
@@ -17555,8 +17573,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             else if (x.lt.xblob) then
              ADV=fort_denconst(2)*abs(gravity_vector(gravity_dir))*(x-pipexlo)
             else
-             ADV=fort_denconst(2)*abs(gravity_vector(gravity_dir))*(xblob-pipexlo)+ &
-                 fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x-xblob) 
+             ADV= &
+              fort_denconst(2)*abs(gravity_vector(gravity_dir))* &
+              (xblob-pipexlo)+ &
+              fort_denconst(1)*abs(gravity_vector(gravity_dir))*(x-xblob) 
             endif
 
            else if (axis_dir.eq.2) then
@@ -24699,7 +24719,7 @@ end subroutine initialize2d
        INTEGER_T local_ibase
        INTEGER_T tessellate
        INTEGER_T bcflag
-       INTEGER_T from_boundary_hydrostatic
+       INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
        INTEGER_T, parameter :: nhalf_box=1
        INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
        REAL_T theta_initdata
@@ -24728,8 +24748,6 @@ end subroutine initialize2d
 
        scal_ptr=>scal
        LS_ptr=>LS
-
-       from_boundary_hydrostatic=0
 
        tessellate=0
 
@@ -25244,6 +25262,7 @@ end subroutine initialize2d
           if ((probtype.eq.36).and.(axis_dir.eq.2).and. &
               (SDIM.eq.2)) then
            if (im.eq.1) then
+             !calling from fort_initdata
             call tait_hydrostatic_pressure_density(xpos, &
              rhohydro,preshydro,from_boundary_hydrostatic)
             scalc(ibase+ENUM_DENVAR+1)=rhohydro
@@ -25516,7 +25535,7 @@ end subroutine initialize2d
            ! material=1 is TAIT EOS
           if (fort_material_type(1).eq.13) then
            if (im.eq.1) then
-
+             !calling from fort_initdata
             call tait_hydrostatic_pressure_density(xpos, &
              rhohydro,preshydro,from_boundary_hydrostatic)
             scalc(ibase+ENUM_DENVAR+1)=rhohydro
@@ -25529,6 +25548,7 @@ end subroutine initialize2d
           if ((probtype.eq.42).and.(axis_dir.eq.1)) then
            if (im.eq.1) then
 
+             !calling from fort_initdata
             call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
                     from_boundary_hydrostatic)
             scalc(ibase+ENUM_DENVAR+1)=rhohydro
@@ -25559,6 +25579,7 @@ end subroutine initialize2d
            if ((axis_dir.ge.0).and.(axis_dir.lt.10)) then
             if (im.eq.1) then ! water
 
+              !calling from fort_initdata
              call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
                      from_boundary_hydrostatic)
              scalc(ibase+ENUM_DENVAR+1)=rhohydro
@@ -25592,6 +25613,7 @@ end subroutine initialize2d
             endif
            else if (axis_dir.eq.10) then
             if (im.eq.1) then ! water
+              !calling from fort_initdata
              call tait_hydrostatic_pressure_density(xpos,rhohydro,preshydro, &
                      from_boundary_hydrostatic)
              scalc(ibase+ENUM_DENVAR+1)=rhohydro

@@ -11,6 +11,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       real*8  temp_ibm2
       CHARACTER*80 fname1
 
+      print *,"amrex_implicit_interfaces takes care of restart"
+      stop
+
       write(*,*) 'temp_ibm2,myoutput,input_Flag'
       write(*,*)  temp_ibm2,myoutput,input_Flag 
 
@@ -23,9 +26,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       WRITE(ifuRstrtDistIBMOut)
      &        DELTA_T
-     &       ,gx(2000)
-     &       ,gy(2000)
-     &       ,gz(2000)
+     &       ,gx(10000)
+     &       ,gy(10000)
+     &       ,gz(10000)
      &       ,TIME,TIME2
      &       ,PI1,EPS,TIME_STEP,ndim,nxgrid_ibm
      &       ,nygrid_ibm,nzgrid_ibm,Imp_vol_flag

@@ -30,7 +30,7 @@
 !contact virtual planes      
       PARAMETER (NPlanesIBM =1 ) !number of contact plane for each body
 !contact buckets
-      PARAMETER (NMaxnumbuck=2)  ! Number of buckets
+      PARAMETER (NMaxnumbuck=8)  ! Number of buckets
 
 !touch all files in the StructureCodeShoele directory if grid_def modified.
 !==Fiber paramters

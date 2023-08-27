@@ -96,12 +96,15 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       else if (probtype.eq.220) then
        open (9997,file='./inputStructureSolver.flag_in_channel.dat'
      &     ,status="unknown")
+       print *,"opening inputStructureSolver.flag_in_channel.dat"
       else if (probtype.eq.2000) then
        open (9997,file='./inputStructureSolver.flexible_plate.dat'
      &     ,status="unknown")
+       print *,"opening inputStructureSolver.flexible_plate.dat"
       else if (probtype.eq.42) then
        open (9997,file='./inputStructureSolver.bubble_jetting.dat'
      &     ,status="unknown")
+       print *,"opening inputStructureSolver.bubble_jetting.dat"
       else
        print *,"probtype invalid"
        stop
@@ -117,6 +120,11 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       dr_ibm0=0.0
       Genalpha_timesolver=0  !initialization of timemarching method
 
+      print *,"ns_ibm_fib=",ns_ibm_fib
+      if (ns_ibm_fib.le.1) then
+       print *,"ns_ibm_fib became corrupt:",ns_ibm_fib
+       stop
+      endif
       if (nr_ibm_fib .gt. 1) dr_ibm0=1./dble(nr_ibm_fib-1)
       ds_ibm0=1.d0/dble(ns_ibm_fib-1)
       r0= dr_ibm0/2. ; s0=0.0*ds_ibm0/2.
