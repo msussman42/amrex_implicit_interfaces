@@ -1,3 +1,4 @@
+c  August 31, 2023 grid_def.F changed
 c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        subroutine shapeinitialize(jtypeall
      *   ,nn,dnndv,dnndw,ddnndvdv,ddnndwdw,ddnndvdw

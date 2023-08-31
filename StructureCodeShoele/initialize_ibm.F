@@ -38,7 +38,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
       integer i,j,k,ig,jq
 ! Eulerian grid spacing
-      real*8 min_gridx,min_gridy,min_gridz
+      real*8 min_gridx
+      real*8 min_gridy
+      real*8 min_gridz
 
       integer nx1,ny1,nz1
 
@@ -162,7 +164,15 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        temprestart=.true.
        call write_restart_DISRIBM(temp_ibm1,1,1)
       else
-        
+       if ((min_gridx.gt.0.0d0).and.
+     &     (min_gridy.gt.0.0d0).and.
+     &     (min_gridz.gt.0.0d0)) then
+c do nothing
+       else
+        print *,"min_grid invalid"
+        stop
+       endif
+
        if(theboss) then
         print *,"in initialize_ibm"
         print *,"min_gridx: ",min_gridx
@@ -182,6 +192,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
         write(*,*) 'ibm grid size: ns_ibm_fbc =',ns_ibm_fbc
        endif
 
+c min_grid_[xyz] declared in HeaderFSI.F
        min_grid_x=min_gridx
        min_grid_y=min_gridy
        min_grid_z=min_gridz
