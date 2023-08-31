@@ -460,6 +460,7 @@ c do nothing
           print *,"length of fiber (a_r)=",a_r
           print *,"ns_ibm_r=ns_ibm_fib/lmax_f*a_r=",
      &     ns_ibm_r_fib(in_fib)
+          print *,"dx_fiber=",dx_fiber
          endif
 
          ns_ibm_i_fib(in_fib)=0

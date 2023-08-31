@@ -33,7 +33,8 @@
       PARAMETER (NMaxnumbuck=8)  ! Number of buckets
 
 !touch all files in the StructureCodeShoele directory if grid_def modified.
-!HeaderFSI.F, matread.F, quad1d.F, quad2d3n.F, shapeinitialize.F
+!HeaderFSI.F, matread.F, quad1d.F, quad2d3n.F, shapeinitialize.F AND
+!all files that use the module in HeaderFSI.F
 !==Fiber paramters
       PARAMETER (Ns_IBM_fib=4096)    ! maximum number of points in each bdy
       PARAMETER (Ns_IBMB_fib=2)    ! boundary points always more than 1
