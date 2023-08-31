@@ -265,9 +265,9 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        !  print*,'K=',2
       READ (ifuRstrtDistIBMin)
      &        DELTA_T
-     &       ,gx(2000)
-     &       ,gy(2000)
-     &       ,gz(2000)
+     &       ,gx(10000)
+     &       ,gy(10000)
+     &       ,gz(10000)
      &       ,TIME,TIME2
      &       ,PI1,EPS,TIME_STEP,ndim,nxgrid_ibm
      &       ,nygrid_ibm,nzgrid_ibm,Imp_vol_flag

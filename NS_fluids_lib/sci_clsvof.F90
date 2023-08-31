@@ -10762,41 +10762,45 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
      endif
     enddo
 
+    do dir=1,3
+     if ((dir.ge.1).and.(dir.le.AMREX_SPACEDIM)) then
+      ctml_ngrid_nodes(dir)= &
+        NINT((probhi(dir) - problo(dir)) / dx_max_level(dir))+1
+     else if ((dir.eq.3).and.(AMREX_SPACEDIM.eq.2)) then
+      ctml_ngrid_nodes(dir)=3
+     else
+      print *,"dir or amrex_spacedim invalid"
+      stop
+     endif
+    enddo ! dir=1,3
+
     dir=1
-    ctml_ngrid_nodes(dir)= &
-      NINT((probhi(dir) - problo(dir)) / dx_max_level(dir))+1
     allocate(ctml_gx(1:ctml_ngrid_nodes(dir)))
-    do i=1,ctml_ngrid_nodes(dir)
-     ctml_gx(i)=problo(dir) + ((i-1)*dx_max_level(dir))
-    enddo
     ctml_min_grid_dx(dir)=dx_max_level(dir)
+    do i=1,ctml_ngrid_nodes(dir)
+     ctml_gx(i)=problo(dir) + ((i-1)*ctml_min_grid_dx(dir))
+    enddo
 
     dir=2
-    ctml_ngrid_nodes(dir)= &
-      NINT((probhi(dir) - problo(dir)) / dx_max_level(dir))+1
     allocate(ctml_gy(1:ctml_ngrid_nodes(dir)))
-    do i=1,ctml_ngrid_nodes(dir)
-     ctml_gy(i)=problo(dir) + ((i-1)*dx_max_level(dir))
-    enddo
     ctml_min_grid_dx(dir)=dx_max_level(dir)
+    do i=1,ctml_ngrid_nodes(dir)
+     ctml_gy(i)=problo(dir) + ((i-1)*ctml_min_grid_dx(dir))
+    enddo
+
+    dir=3
+    allocate(ctml_gz(1:ctml_ngrid_nodes(dir)))
 
     if (AMREX_SPACEDIM.eq.2) then
-     dir=3
-     ctml_ngrid_nodes(dir)=3
-     allocate(ctml_gz(1:ctml_ngrid_nodes(dir)))
      ctml_min_grid_dx(dir)=sqrt(dx_max_level(1)*dx_max_level(2))
      do i=1,ctml_ngrid_nodes(dir)
       ctml_gz(i)=((i-1)*ctml_min_grid_dx(dir))
      enddo
     else if (AMREX_SPACEDIM.eq.3) then
-     dir=AMREX_SPACEDIM
-     ctml_ngrid_nodes(dir)= &
-      NINT((probhi(dir) - problo(dir))/dx_max_level(dir))+1
-     allocate(ctml_gz(1:ctml_ngrid_nodes(dir)))
-     do i=1,ctml_ngrid_nodes(dir)
-      ctml_gz(i)=problo(dir)+((i-1)*dx_max_level(dir))
-     enddo
      ctml_min_grid_dx(dir)=dx_max_level(dir)
+     do i=1,ctml_ngrid_nodes(dir)
+      ctml_gz(i)=problo(dir)+((i-1)*ctml_min_grid_dx(dir))
+     enddo
     else 
      print *,"AMREX_SPACEDIM invalid"
      stop

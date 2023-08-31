@@ -8278,9 +8278,11 @@ void NavierStokes::ns_header_msg_level(
  Real dx_max_level[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
   dx_max_level[dir]=dx[dir];
- for (int ilev=level+1;ilev<=max_level;ilev++) 
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++)
+ for (int ilev=level+1;ilev<=max_level;ilev++) {
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    dx_max_level[dir]/=2.0;
+  }
+ }
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {

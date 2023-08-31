@@ -16,6 +16,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &     ,delta_tmp2z,delta_tmp4z,temp3z,contactlength,contactdx
      &     ,tmpdata(10)
 
+      real*8 dx_fiber
+
       integer  itmpdata(10),ialphafile,itausfile
       integer  target_ktype
      &                 (nq_ibm_fsh+1,ns_ibm_fbc+ns_ibm_esh+ns_ibm_fsh)
@@ -402,7 +404,37 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &                    (delta_tmp2-delta_tmp4  )**2+
      &                    (delta_tmp2z-delta_tmp4z)**2)
 
+              if (a_r.gt.0.0d0) then
+c do nothing
+              else
+               print *,"a_r must be positive"
+               stop
+              endif
+              if (lmax_f.gt.0.0d0) then
+c do nothing
+              else
+               print *,"lmax_f must be positive"
+               stop
+              endif
               ns_ibm_r(i+1)=int(dble(ns_ibm_fib)/lmax_f*a_r)+0
+
+              if (ns_ibm_r(i+1).ge.2) then
+c do nothing
+              else
+               print *,"ns_ibm_r(i+1) invalid"
+               stop
+              endif
+
+              dx_fiber=a_r/(dbl(ns_ibm_r(i+1))-1.0d0)
+              if (dx_fiber.le.min_grid_x) then
+c do nothing
+              else
+               print *,"require dx_fiber<=min_grid_x" 
+               print *,"dx_fiber=",dx_fiber
+               print *,"min_grid_x=",min_grid_x
+               stop
+              endif
+
               ns_ibm_r_fib(in_fib)= ns_ibm_r(i+1)
 
               if (theboss) then
