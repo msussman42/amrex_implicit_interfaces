@@ -17273,6 +17273,90 @@ logical :: theboss
     endif
 
     if (AMREX_SPACEDIM.eq.2) then
+
+     if (levelrz.eq.COORDSYS_CARTESIAN) then
+      ! do nothing
+     else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+              (levelrz.eq.COORDSYS_RZ)) then
+
+      do part_id=1,TOTAL_NPARTS
+       ctml_part_id=ctml_part_id_map(part_id)
+       if ((ctml_part_id.ge.1).and. &
+           (ctml_part_id.le.CTML_NPARTS)) then
+        if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+         if (xmap3D(1).eq.1) then
+          imid=(ihi_active(ctml_part_id)+ilo_active(ctml_part_id))/2
+          if (2*imid.eq.ihi_active(ctml_part_id)+ilo_active(ctml_part_id)) then
+           inull=imid
+          else
+           inull=ilo_active(ctml_part_id)-1
+          endif
+          do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
+          do jj=jlo,jhi
+          do kk=klo,khi
+
+           rval=FSI_input_container%node_list(ctml_part_id,ii,jj,kk,1)
+           ii_opp=ihi_active(ctml_part_id)-ii+ilo_active(ctml_part_id)
+
+           if (ii.eq.inull) then
+            if (ii.eq.ii_opp) then
+             !do nothing
+            else
+             print *,"ii or ii_opp invalid: ",ii,ii_opp
+             stop
+            endif
+            ctml_frc(ctml_part_id,ii,jj,kk,1)=zero
+           else if (ii.le.imid) then
+            if (rval.lt.zero) then
+             ! do nothing
+            else
+             print *,"expecting rval<0"
+             print *,"ii,imid,rval ",ii,imid,rval
+             stop
+            endif
+            ctml_frc(ctml_part_id,ii,jj,kk,1)= &
+             -ctml_frc(ctml_part_id,ii_opp,jj,kk,1)
+            ctml_frc(ctml_part_id,ii,jj,kk,2)= &
+             ctml_frc(ctml_part_id,ii_opp,jj,kk,2)
+            ctml_frc(ctml_part_id,ii,jj,kk,3)= &
+             ctml_frc(ctml_part_id,ii_opp,jj,kk,3)
+    
+           else if (ii.gt.imid) then
+            if (rval.gt.zero) then
+             !do nothing
+            else
+             print *,"expecting rval>0"
+             print *,"ii,imid,rval ",ii,imid,rval
+             stop
+            endif
+           else
+            print *,"ii or imid invalid",ii,imid
+            stop
+           endif
+          enddo !kk
+          enddo !jj
+          enddo !ii
+         else
+          print *,"expecting (xmap3D(1).eq.1)"
+          stop
+         endif
+        else
+         print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1"
+         stop
+        endif 
+       else if (ctml_part_id.eq.0) then
+        !do nothing
+       else
+        print *,"ctml_part_id invalid"
+        stop
+       endif
+      enddo !part_id=1,TOTAL_NPARTS
+     else
+      print *,"levelrz invalid in CLSVOF_ReadNodes: ",levelrz
+      stop
+     endif
+
+
 #ifdef INCLUDE_FIB
      call tick_fib( &
       ilo,ihi,jlo,jhi,klo,khi, &

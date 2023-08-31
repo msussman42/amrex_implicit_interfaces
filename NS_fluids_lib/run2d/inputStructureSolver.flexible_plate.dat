@@ -7,7 +7,7 @@
 2           2           2              /Delta_typeX, Delta_typeY, Delta_typeZ
 1           1          1        0.5    /SAVE_FORCE_INT,Del_FORCE,CHECK_INT,g(fr)
 90.0       0.0                         /phi_grav,the_grav
-24.0                                   /baseLengthofaBeam(gammaglobal)
+60.0                                   /baseLengthofaBeam(gammaglobal)
 10 1.0d-12 1 1.0d-5  0                 /maxnstruct,maxErrorstruct,maxnfluid,maxErrorfluid,maxiter
 1.0d-13 1.0d-11 15  200 1  2           /Solverabstol,Solverreltol,SolverOutiter,SolverIniter,SolverPre{0:no Pre;1:diag Pre; 2:iLU}
 .false. .false.                        /channelcontacty,channelcontactz

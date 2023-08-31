@@ -162,7 +162,6 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       min_grid_y=min(min_grid_y,contactlength)
       min_grid_z=min(min_grid_z,contactlength)
 
-
 ! ====== intial Contact calculations /Scaling ===================
 ! scale Ccont for the contact model
 !Ccont(0) : angle separation
@@ -178,26 +177,25 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 !Ccont(10):viscoelastic damping
 !Ccont(15) :Contact penalty (scale by 1/dx)
 
-          scalegriddx=contactdx
-          Ccont(1)=Ccont(1)*scalegriddx
-          Ccont(2)=Ccont(2)*scalegriddx
-          Ccont(3)=Ccont(3)*scalegriddx
-          Ccont(4)=Ccont(4)*scalegriddx
-          Ccont(5)=Ccont(5)*scalegriddx
-          Ccont(15)=impactpen(1)/scalegriddx
+      scalegriddx=contactdx
+      Ccont(1)=Ccont(1)*scalegriddx
+      Ccont(2)=Ccont(2)*scalegriddx
+      Ccont(3)=Ccont(3)*scalegriddx
+      Ccont(4)=Ccont(4)*scalegriddx
+      Ccont(5)=Ccont(5)*scalegriddx
+      Ccont(15)=impactpen(1)/scalegriddx
 !bucketCalculation
-       do j=1,3
+      do j=1,3
        IBucketnum(j)=int((BucketXEnd(j)-BucketXStart(j))/BucketdX(j))+1
        BucketdX(j)=(BucketXEnd(j)-BucketXStart(j))/dble(IBucketnum(j))
-       enddo
+      enddo
 
-       NBucketnum=IBucketnum(1)*IBucketnum(2)*IBucketnum(3)
-       if (NBucketnum .gt. NMaxnumbuck) then
-              write(*,*)'More than Max Buck=',NMaxnumbuck
-     &         ,' have beenused=',IBucketnum
-              stop 
-       endif
-
+      NBucketnum=IBucketnum(1)*IBucketnum(2)*IBucketnum(3)
+      if (NBucketnum .gt. NMaxnumbuck) then
+       write(*,*)'More than Max Buck=',NMaxnumbuck
+     &   ,' have beenused=',IBucketnum
+       stop 
+      endif
 
       k_massive_ibm=0.0
       the_grav=the_grav/180.d0*4.d0*atan(1.d0)
@@ -214,7 +212,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       allocate(xFixcontact(nFixcontact,3),EleFixcontact(nFixcontactL,3))
 
       do k=1,nFixcontact
-             read(9995,*)xFixcontact(k,1:3)
+       read(9995,*)xFixcontact(k,1:3)
       enddo
       do k=1,nFixcontactL
              read(9995,*)EleFixcontact(k,1:3)
@@ -227,107 +225,108 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
       in_fsh=0
       in_esh=0
       in_fbc=0
-      do i=0,nr_ibm-1
-          i_fix=1
 
-          read(9997,*) 
-          read(9997,*)  bodytype(i+1)
+      do i=0,nr_ibm-1
+       i_fix=1
+
+       read(9997,*) 
+       read(9997,*)  bodytype(i+1)
 !     bodytype =0 fiber, =1 shell, =2 fibrous Shell,  =3 fabric
 
-          if(bodytype(i+1).eq. fiber) then
-             in_fib=in_fib+1
-             Ilocglb_fib(in_fib)=i+1
-             Iglbloc_fib(i+1)=in_fib
-          elseif(bodytype(i+1).eq. shell) then
-             print *,"pressure/vel coupling not supported"
-             stop
-             in_esh=in_esh+1
-             Ilocglb_esh(in_esh)=i+1
-             Iglbloc_esh(i+1)=in_esh
-          elseif(bodytype(i+1).eq. fibrousshell) then
-             in_fsh=in_fsh+1
-             Ilocglb_fsh(in_fsh)=i+1
-             Iglbloc_fsh(i+1)=in_fsh
-          elseif(bodytype(i+1).eq. fabric) then
-             print *,"pressure/vel coupling not supported"
-             stop
-             in_fbc=in_fbc+1
-             Ilocglb_fbc(in_fbc)=i+1
-             Iglbloc_fbc(i+1)=in_fbc
-          endif
+       if(bodytype(i+1).eq. fiber) then
+         in_fib=in_fib+1
+         Ilocglb_fib(in_fib)=i+1
+         Iglbloc_fib(i+1)=in_fib
+       elseif(bodytype(i+1).eq. shell) then
+         print *,"pressure/vel coupling not supported"
+         stop
+         in_esh=in_esh+1
+         Ilocglb_esh(in_esh)=i+1
+         Iglbloc_esh(i+1)=in_esh
+       elseif(bodytype(i+1).eq. fibrousshell) then
+         in_fsh=in_fsh+1
+         Ilocglb_fsh(in_fsh)=i+1
+         Iglbloc_fsh(i+1)=in_fsh
+       elseif(bodytype(i+1).eq. fabric) then
+         print *,"pressure/vel coupling not supported"
+         stop
+         in_fbc=in_fbc+1
+         Ilocglb_fbc(in_fbc)=i+1
+         Iglbloc_fbc(i+1)=in_fbc
+       endif
 
-          if(theboss) print*,  '==>=>start reading bdy',i+1
-          if(theboss) print*, 'BODYtype=',bodytype(i+1)
+       if(theboss) print*,  '==>=>start reading bdy',i+1
+       if(theboss) print*, 'BODYtype=',bodytype(i+1)
 
-          read(9997,*) infileflag
-          read(9997,'(a)') infile
-          if(infileflag) then
-          if(theboss) print*,  '==>=>start reading ',infile
+       read(9997,*) infileflag
+       read(9997,'(a)') infile
+       if(infileflag) then
+        if(theboss) print*,  '==>=>start reading ',infile
 
-          open(9995,file=infile,status='old',form='formatted')
-          read(9995,*) nibmptrecord(i+1)
-          do k=1,nibmptrecord(i+1)
-             read(9995,*)ibmptrecord(i+1,k,1:2)
-          enddo
-          close(9995)
-          else
-           nibmptrecord(i+1)=0
-          endif
+        open(9995,file=infile,status='old',form='formatted')
+        read(9995,*) nibmptrecord(i+1)
+        do k=1,nibmptrecord(i+1)
+         read(9995,*)ibmptrecord(i+1,k,1:2)
+        enddo
+        close(9995)
+       else
+        nibmptrecord(i+1)=0
+       endif
 
-          read(9997,*)  tsibmin(i+1)    !temprature of the body
-          if(theboss) print*, 'tsibmin=',tsibmin(i+1)
-          read(9997,*)  cs_ibm(i+1),cs_ibm_target(i+1)
-     &                 ,density_coef(i+1),density_coefp(i+1)
-          if(theboss) print*, 'cs_ibm=',cs_ibm(i+1)
-          if(theboss) print*, 'cs_ibm_target=',cs_ibm_target(i+1)
-          if(theboss) print*, 'density_coef=',density_coef(i+1)
-          if(theboss) print*, 'Virtual Addedmass=',density_coefp(i+1)
+       read(9997,*)  tsibmin(i+1)    !temprature of the body
+       if(theboss) print*, 'tsibmin=',tsibmin(i+1)
+       read(9997,*)  cs_ibm(i+1),cs_ibm_target(i+1)
+     &             ,density_coef(i+1),density_coefp(i+1)
+       if(theboss) print*, 'cs_ibm=',cs_ibm(i+1)
+       if(theboss) print*, 'cs_ibm_target=',cs_ibm_target(i+1)
+       if(theboss) print*, 'density_coef=',density_coef(i+1)
+       if(theboss) print*, 'Virtual Addedmass=',density_coefp(i+1)
 
-          read(9997,*)  FluidForceFlag(i+1),ThermalForceFlag(i+1)
-     &       ,ContactForceFlag(i+1),ExternalPressureFlag(i+1)
-     &       ,Electromechanical(i+1),ImplicitElecMech(i+1)
+       read(9997,*)  FluidForceFlag(i+1),ThermalForceFlag(i+1)
+     &   ,ContactForceFlag(i+1),ExternalPressureFlag(i+1)
+     &   ,Electromechanical(i+1),ImplicitElecMech(i+1)
 
-          if(theboss) print*, 'FluidForceFlag=',FluidForceFlag(i+1)
-          if(theboss) print*, 'ThermalFlag=',ThermalForceFlag(i+1)
-          if(theboss) print*, 'ContactFlag=',ContactForceFlag(i+1)
-          if(theboss) print*, 'ExtPresFlag=',ExternalPressureFlag(i+1)
-          if(theboss) print*, 'EleMechFlag=',Electromechanical(i+1)
-          if(theboss) print*, 'Implicit EleMechFlag='
-     &                        ,ImplicitElecMech(i+1)
+       if(theboss) print*, 'FluidForceFlag=',FluidForceFlag(i+1)
+       if(theboss) print*, 'ThermalFlag=',ThermalForceFlag(i+1)
+       if(theboss) print*, 'ContactFlag=',ContactForceFlag(i+1)
+       if(theboss) print*, 'ExtPresFlag=',ExternalPressureFlag(i+1)
+       if(theboss) print*, 'EleMechFlag=',Electromechanical(i+1)
+       if(theboss) print*, 'Implicit EleMechFlag='
+     &                    ,ImplicitElecMech(i+1)
 
-          read(9997,*) contactplanesFlag(i+1)
-          if(theboss) print*,'contactplanesFlag=',contactplanesFlag(i+1) 
-          if( contactplanesFlag(i+1)) then
-             read(9997,*) Ncontactplanes(i+1)
-             if(theboss) then
-              print*,'Num of Contact planes=',Ncontactplanes(i+1)
-             endif
-             do j=1,Ncontactplanes(i+1)
-               if(j .eq. 1) then
-                if(theboss)print*,'================================='
-               endif
-               read(9997,*) contactplanesPara(i+1,j,1:6)
+       read(9997,*) contactplanesFlag(i+1)
+       if(theboss) print*,'contactplanesFlag=',contactplanesFlag(i+1) 
+       if( contactplanesFlag(i+1)) then
+         read(9997,*) Ncontactplanes(i+1)
+         if(theboss) then
+          print*,'Num of Contact planes=',Ncontactplanes(i+1)
+         endif
+         do j=1,Ncontactplanes(i+1)
+           if(j .eq. 1) then
+            if(theboss)print*,'================================='
+           endif
+           read(9997,*) contactplanesPara(i+1,j,1:6)
 !     X0 and n of plate   
-               ctmp1=sqrt(contactplanesPara(i+1,j,4)**2
+           ctmp1=sqrt(contactplanesPara(i+1,j,4)**2
 !     normalized the normal vector
-     &                    +contactplanesPara(i+1,j,5)**2 
-     &                    +contactplanesPara(i+1,j,6)**2)  
+     &         +contactplanesPara(i+1,j,5)**2 
+     &         +contactplanesPara(i+1,j,6)**2)  
                 contactplanesPara(i+1,j,4:6)= 
      &                    contactplanesPara(i+1,j,4:6)/ctmp1 
-                if(theboss)print*,contactplanesPara(i+1,j,1:6)        
-             enddo
-          endif
+           if(theboss)print*,contactplanesPara(i+1,j,1:6)        
+         enddo
+       endif
 
 
-          read(9997,*) tmpcoordshift(1:3)
-          if(theboss)print*,'coordshift=',tmpcoordshift(1:3)
-          read(9997,*) tmpcoordscale(1:6)
-          if(theboss)print*,'coordscale=',tmpcoordscale(1:6)
-          read(9997,*) tmpcoordR(1:3)
-          if(theboss)print*,'Rotation center=',tmpcoordR(1:3)
-          read(9997,*) tmpangle(1:3),tmpseq
-          if(theboss)print*,'Rot angle(deg)=',tmpangle(1:3)
-          if(theboss)print*,'Rot sequence=',tmpseq      
+       read(9997,*) tmpcoordshift(1:3)
+       if(theboss)print*,'coordshift=',tmpcoordshift(1:3)
+       read(9997,*) tmpcoordscale(1:6)
+       if(theboss)print*,'coordscale=',tmpcoordscale(1:6)
+       read(9997,*) tmpcoordR(1:3)
+       if(theboss)print*,'Rotation center=',tmpcoordR(1:3)
+       read(9997,*) tmpangle(1:3),tmpseq
+       if(theboss)print*,'Rot angle(deg)=',tmpangle(1:3)
+       if(theboss)print*,'Rot sequence=',tmpseq      
 !for angle convention look at http://en.wikipedia.org/wiki/Euler_angles
        tmpangle(1:3)=tmpangle(1:3)/180.0d0*pi1
        ctmp1=cos(tmpangle(1))
@@ -360,327 +359,345 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        i2tmp=mod(int(i0tmp/10),10)
 
        if(iseqtmp.eq. 0)  then !current coordinate
-       tmpRmat(1:3,1:3)=matmul(Rmattmp(i2tmp,1:3,1:3)
+        tmpRmat(1:3,1:3)=matmul(Rmattmp(i2tmp,1:3,1:3)
      &               ,Rmattmp(i3tmp,1:3,1:3))
-       tmpRmat(1:3,1:3)=matmul(Rmattmp(i1tmp,1:3,1:3)
+        tmpRmat(1:3,1:3)=matmul(Rmattmp(i1tmp,1:3,1:3)
      &               ,tmpRmat(1:3,1:3))
        else !fixed coordinate
-       tmpRmat(1:3,1:3)=matmul(Rmattmp(i2tmp,1:3,1:3)
+        tmpRmat(1:3,1:3)=matmul(Rmattmp(i2tmp,1:3,1:3)
      &               ,Rmattmp(i1tmp,1:3,1:3))
-       tmpRmat(1:3,1:3)=matmul(Rmattmp(i3tmp,1:3,1:3)
+        tmpRmat(1:3,1:3)=matmul(Rmattmp(i3tmp,1:3,1:3)
      &               ,tmpRmat(1:3,1:3))
        endif
        read(9997,*) 
 !==================== FIBER ============================================
-      if (bodytype(i+1) .eq. fiber) then   !fiber
-         read(9997,*)  ks_ibm,  kb_ibm, iflaginext(i+1)
+       if (bodytype(i+1) .eq. fiber) then   !fiber
+        read(9997,*)  ks_ibm,  kb_ibm, iflaginext(i+1)
      &               , implicitflag(i+1)
-          if(theboss)print*,'ks_ibm,  kb_ibm, iflaginext(i+1)'
+        if(theboss)print*,'ks_ibm,  kb_ibm, iflaginext(i+1)'
      &               , 'implicitflag(i+1)'
-          if(theboss)print*, ks_ibm,  kb_ibm, iflaginext(i+1)
+        if(theboss)print*, ks_ibm,  kb_ibm, iflaginext(i+1)
      &               , implicitflag(i+1)
-          read(9997,*)  type_tmp1
+        read(9997,*)  type_tmp1
 !     1=create fiber mesh 0= read fiber mesh
-          if(theboss)print*,' type of fiber creation=',type_tmp1
-         read(9997,*)  fiberbdry(i+1)
-          if(theboss)print*,' Boundary code=',fiberbdry(i+1)
+        if(theboss)print*,' type of fiber creation=',type_tmp1
+        read(9997,*)  fiberbdry(i+1)
+        if(theboss)print*,' Boundary code=',fiberbdry(i+1)
 
-         if (real(type_tmp1) .gt. 0.5) then
-             read(9997,*)  delta_tmp1,delta_tmp2,delta_tmp2z, 
-     &                     delta_tmp3,delta_tmp4, 
-     &                     delta_tmp4z
-              if(theboss)print*,' coordinate of the first point='
-     &                          ,delta_tmp1,delta_tmp2,delta_tmp2z
-              if(theboss)print*,' coordinate of the last point='
-     &                          ,delta_tmp3,delta_tmp4,delta_tmp4z
-             if(ndim .lt. 3) then
-               delta_tmp2z=0.0
-               delta_tmp4z=0.0
-             endif
+        if (real(type_tmp1) .gt. 0.5) then
+         read(9997,*)  delta_tmp1,delta_tmp2,delta_tmp2z, 
+     &      delta_tmp3,delta_tmp4,delta_tmp4z
+         if(theboss)print*,' coordinate of the first point='
+     &        ,delta_tmp1,delta_tmp2,delta_tmp2z
+         if(theboss)print*,' coordinate of the last point='
+     &        ,delta_tmp3,delta_tmp4,delta_tmp4z
+         if(ndim .lt. 3) then
+          delta_tmp2z=0.0
+          delta_tmp4z=0.0
+         endif
  
-              masterbdy(i+1)=0
+         masterbdy(i+1)=0
 
-              a_r  =sqrt( (delta_tmp1-delta_tmp3  )**2+
-     &                    (delta_tmp2-delta_tmp4  )**2+
-     &                    (delta_tmp2z-delta_tmp4z)**2)
+         a_r  =sqrt( (delta_tmp1-delta_tmp3  )**2+
+     &               (delta_tmp2-delta_tmp4  )**2+
+     &               (delta_tmp2z-delta_tmp4z)**2)
 
-              if (a_r.gt.0.0d0) then
+         if (a_r.gt.0.0d0) then
 c do nothing
-              else
-               print *,"a_r must be positive"
-               stop
-              endif
-              if (lmax_f.gt.0.0d0) then
+         else
+          print *,"a_r must be positive"
+          stop
+         endif
+         if (lmax_f.gt.0.0d0) then
 c do nothing
-              else
-               print *,"lmax_f must be positive"
-               stop
-              endif
-              ns_ibm_r(i+1)=int(dble(ns_ibm_fib)/lmax_f*a_r)+0
+         else
+          print *,"lmax_f must be positive"
+          stop
+         endif
+         ns_ibm_r(i+1)=int(dble(ns_ibm_fib)/lmax_f*a_r)+0
 
-              if (ns_ibm_r(i+1).ge.2) then
+         if (ns_ibm_r(i+1).ge.2) then
 c do nothing
-              else
-               print *,"ns_ibm_r(i+1) invalid"
-               stop
-              endif
+         else
+          print *,"ns_ibm_r(i+1) invalid"
+          stop
+         endif
 
-              dx_fiber=a_r/(dbl(ns_ibm_r(i+1))-1.0d0)
-              if (dx_fiber.le.min_grid_x) then
+         dx_fiber=a_r/(dble(ns_ibm_r(i+1))-1.0d0)
+         if (dx_fiber.le.min_grid_x) then
 c do nothing
-              else
-               print *,"require dx_fiber<=min_grid_x" 
-               print *,"dx_fiber=",dx_fiber
-               print *,"min_grid_x=",min_grid_x
-               stop
-              endif
+         else
+          print *,"require dx_fiber<=min_grid_x" 
+          print *,"dx_fiber=",dx_fiber
+          print *,"min_grid_x=",min_grid_x
+          stop
+         endif
 
-              ns_ibm_r_fib(in_fib)= ns_ibm_r(i+1)
+         if (dx_fiber.le.min_grid_y) then
+c do nothing
+         else
+          print *,"require dx_fiber<=min_grid_y" 
+          print *,"dx_fiber=",dx_fiber
+          print *,"min_grid_y=",min_grid_y
+          stop
+         endif
 
-              if (theboss) then
-               print *,"ns_ibm_fib=",ns_ibm_fib
-               print *,"lmax_f (gammaglobal)=",lmax_f
-               print *,"length of fiber (a_r)=",a_r
-               print *,"ns_ibm_r=ns_ibm_fib/lmax_f*a_r=",
-     &          ns_ibm_r_fib(in_fib)
-              endif
+         if (dx_fiber.le.min_grid_z) then
+c do nothing
+         else
+          print *,"require dx_fiber<=min_grid_z" 
+          print *,"dx_fiber=",dx_fiber
+          print *,"min_grid_z=",min_grid_z
+          stop
+         endif
 
-              ns_ibm_i_fib(in_fib)=0
 
-              nq_ibm_r(i+1)=1
-              ds_ibm0=1.d0/dble(ns_ibm_r(i+1)-1)
-              s0=0.0*ds_ibm0/2.
-              r=r0+(i)*dr_ibm0
-              a_r=1.0   ! +dsin(2*pi1*r-pi1/2.)
+         ns_ibm_r_fib(in_fib)= ns_ibm_r(i+1)
+
+         if (theboss) then
+          print *,"ns_ibm_fib=",ns_ibm_fib
+          print *,"lmax_f (gammaglobal)=",lmax_f
+          print *,"length of fiber (a_r)=",a_r
+          print *,"ns_ibm_r=ns_ibm_fib/lmax_f*a_r=",
+     &     ns_ibm_r_fib(in_fib)
+         endif
+
+         ns_ibm_i_fib(in_fib)=0
+
+         nq_ibm_r(i+1)=1
+         ds_ibm0=1.d0/dble(ns_ibm_r(i+1)-1)
+         s0=0.0*ds_ibm0/2.
+         r=r0+(i)*dr_ibm0
+         a_r=1.0   ! +dsin(2*pi1*r-pi1/2.)
 c variable stiffness
-              ks_ibm_r(i+1)=ks_ibm*a_r
-              kb_ibm_r(i+1)=kb_ibm*a_r
-              k_massive_ibm_r(i+1)=k_massive_ibm*a_r
-              temp=0.5*(alpha+beta)
-            if (create_new_flow) then
-              gama= gammaglobal !gamma here length of body 
+         ks_ibm_r(i+1)=ks_ibm*a_r
+         kb_ibm_r(i+1)=kb_ibm*a_r
+         k_massive_ibm_r(i+1)=k_massive_ibm*a_r
+         temp=0.5*(alpha+beta)
+         if (create_new_flow) then
+          gama= gammaglobal !gamma here length of body 
 
-              gx_ibm_fib(in_fib,1)=delta_tmp1
-              gy_ibm_fib(in_fib,1)=delta_tmp2
-              gz_ibm_fib(in_fib,1)=delta_tmp2z
+          gx_ibm_fib(in_fib,1)=delta_tmp1
+          gy_ibm_fib(in_fib,1)=delta_tmp2
+          gz_ibm_fib(in_fib,1)=delta_tmp2z
 
 
-              read(9997,*) frequency_fin(i+1,1:3)
-              read(9997,*) i_fin
-              read(9997,*) ixfin(1:i_fin)    
-              do j=1,i_fin
-                    if(ixfin(j) .le. 0) then
-                        target_point_num_fib(in_fib,j)
-     &                                =ns_ibm_r_fib(in_fib)+ixfin(j)+0
-                    else
-                        target_point_num_fib(in_fib,j)=ixfin(j)+0
-                    endif
-                    i_fix=i_fix+1
-              end do
+          read(9997,*) frequency_fin(i+1,1:3)
+          read(9997,*) i_fin
+          read(9997,*) ixfin(1:i_fin)    
+          do j=1,i_fin
+                if(ixfin(j) .le. 0) then
+                    target_point_num_fib(in_fib,j)
+     &                            =ns_ibm_r_fib(in_fib)+ixfin(j)+0
+                else
+                    target_point_num_fib(in_fib,j)=ixfin(j)+0
+                endif
+                i_fix=i_fix+1
+          end do
 
-              do j=0,ns_ibm_r_fib(in_fib)
+          do j=0,ns_ibm_r_fib(in_fib)
 
-                 s=s0+dble(j)*ds_ibm0
-                 gx_ibm_fib(in_fib,j+1)=delta_tmp1
-     &                     +(delta_tmp3-delta_tmp1)*s
-                 gy_ibm_fib(in_fib,j+1)=delta_tmp2
-     &                +(delta_tmp4-delta_tmp2)*s
+             s=s0+dble(j)*ds_ibm0
+             gx_ibm_fib(in_fib,j+1)=delta_tmp1
+     &                 +(delta_tmp3-delta_tmp1)*s
+             gy_ibm_fib(in_fib,j+1)=delta_tmp2
+     &            +(delta_tmp4-delta_tmp2)*s
 !     dsin(2.0d0*pi1*s)
-                 gz_ibm_fib(in_fib,j+1)=delta_tmp2z
+             gz_ibm_fib(in_fib,j+1)=delta_tmp2z
      &                +(delta_tmp4z-delta_tmp2z)*s
 !     dsin(2.0d0*pi1*s)
 
-                 tmpcoord(1:3)=
-     &           (/gx_ibm_fib(in_fib,j+1)
-     &           , gy_ibm_fib(in_fib,j+1)
-     &           , gz_ibm_fib(in_fib,j+1) /)
+             tmpcoord(1:3)=
+     &         (/gx_ibm_fib(in_fib,j+1)
+     &         , gy_ibm_fib(in_fib,j+1)
+     &         , gz_ibm_fib(in_fib,j+1) /)
 
-                 do jq=1,3
-                     tmpcoord(jq)=tmpcoordscale(jq)
-     &                           +(tmpcoord(jq)-tmpcoordscale(jq))
-     &                            *tmpcoordscale(3+jq)
-                 enddo
+             do jq=1,3
+              tmpcoord(jq)=tmpcoordscale(jq)
+     &           +(tmpcoord(jq)-tmpcoordscale(jq))
+     &           *tmpcoordscale(3+jq)
+             enddo
 
-                 tmpcoord(1:3)=tmpcoord(1:3)-tmpcoordR(1:3)
-                 tmpcoord(1:3)=
-     &                tmpcoordshift(1:3)+matmul(tmpRmat,tmpcoord(1:3))
-     &               +tmpcoordR(1:3)
+             tmpcoord(1:3)=tmpcoord(1:3)-tmpcoordR(1:3)
+             tmpcoord(1:3)=
+     &            tmpcoordshift(1:3)+matmul(tmpRmat,tmpcoord(1:3))
+     &           +tmpcoordR(1:3)
 
-                 gx_ibm_fib(in_fib,j+1)=tmpcoord(1)
-                 gy_ibm_fib(in_fib,j+1)=tmpcoord(2)
-                 gz_ibm_fib(in_fib,j+1)=tmpcoord(3)
+             gx_ibm_fib(in_fib,j+1)=tmpcoord(1)
+             gy_ibm_fib(in_fib,j+1)=tmpcoord(2)
+             gz_ibm_fib(in_fib,j+1)=tmpcoord(3)
 
-                 gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                 gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                 gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-                if (j .eq. 0) then 
-                   temp2=gx_bp_fib(in_fib,1)-gx_ibm_fib(in_fib,1)
-                   temp3=gy_bp_fib(in_fib,1)-gy_ibm_fib(in_fib,1)
-                   temp3z=gz_bp_fib(in_fib,1)-gz_ibm_fib(in_fib,1)
-                end if
-                 gx_ibm_fib(in_fib,j+1)=temp2+gx_ibm_fib(in_fib,j+1)
-                 gy_ibm_fib(in_fib,j+1)=temp3+gy_ibm_fib(in_fib,j+1)
-                 gz_ibm_fib(in_fib,j+1)=temp3z+gz_ibm_fib(in_fib,j+1)
+             gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+             if (j .eq. 0) then 
+                temp2=gx_bp_fib(in_fib,1)-gx_ibm_fib(in_fib,1)
+                temp3=gy_bp_fib(in_fib,1)-gy_ibm_fib(in_fib,1)
+                temp3z=gz_bp_fib(in_fib,1)-gz_ibm_fib(in_fib,1)
+             end if
+             gx_ibm_fib(in_fib,j+1)=temp2+gx_ibm_fib(in_fib,j+1)
+             gy_ibm_fib(in_fib,j+1)=temp3+gy_ibm_fib(in_fib,j+1)
+             gz_ibm_fib(in_fib,j+1)=temp3z+gz_ibm_fib(in_fib,j+1)
 
-                 gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                 gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                 gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-                 gx_bp_fib0(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                 gy_bp_fib0(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                 gz_bp_fib0(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-                 gx_ibmpre_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                 gy_ibmpre_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                 gz_ibmpre_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-                 if (massive_ibm) mass_ibm_fib(in_fib,j+1)=1.0*ds_ibm0
-              end do
-            end if
-               target_num(i+1)=i_fix-1
-               read(9997,*) target_k_link_fib(in_fib,1:target_num(i+1)) 
-               read(9997,*) target_t_link_fib(in_fib,1:target_num(i+1))   
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),1)    
-               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),1)    
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),2)    
-               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),2)
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),3)    
-               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),3)  
-               read(9997,*) flagfixed_fib(in_fib,1:target_num(i+1))   
-            else
-                a_r=1.0   ! +dsin(2*pi1*r-pi1/2.)
+             gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+             gx_bp_fib0(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_bp_fib0(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_bp_fib0(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+             gx_ibmpre_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_ibmpre_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_ibmpre_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+             if (massive_ibm) mass_ibm_fib(in_fib,j+1)=1.0*ds_ibm0
+          end do
+         end if
+         target_num(i+1)=i_fix-1
+         read(9997,*) target_k_link_fib(in_fib,1:target_num(i+1)) 
+         read(9997,*) target_t_link_fib(in_fib,1:target_num(i+1))   
+         read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),1)    
+         read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),1)    
+         read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),2)    
+         read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),2)
+         read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),3)    
+         read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),3)  
+         read(9997,*) flagfixed_fib(in_fib,1:target_num(i+1))   
+        else
+         a_r=1.0   ! +dsin(2*pi1*r-pi1/2.)
 c variable stiffness
-                ks_ibm_r(i+1)=ks_ibm*a_r
-                kb_ibm_r(i+1)=kb_ibm*a_r
-                k_massive_ibm_r(i+1)=k_massive_ibm*a_r
-                i2=i+1
+         ks_ibm_r(i+1)=ks_ibm*a_r
+         kb_ibm_r(i+1)=kb_ibm*a_r
+         k_massive_ibm_r(i+1)=k_massive_ibm*a_r
+         i2=i+1
 
-                read(9997,*)  fiberbdry(i+1)
-                read(9997,'(a)') infile
-                read(9997,*) frequency_fin(i+1,1:3)
-                read(9997,*) i_fin
-                read(9997,*) ixfin(1:i_fin) 
-                i_fix=0;   
-                do j=1,i_fin
-                   i_fix=i_fix+1
-                end do
-               target_num(i+1)=i_fix-1
-               read(9997,*) target_k_link_fib(in_fib,1:target_num(i+1))
-               read(9997,*) target_t_link_fib(in_fib,1:target_num(i+1))
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),1) 
-               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),1) 
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),2) 
-               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),2)
-               read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),3) 
-               read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),3)
-               read(9997,*) flagfixed_fib(in_fib,1:target_num(i+1))
-
-
-               open(9998,file=infile,status='old',form='formatted')
-               read(9998,'(a)') namebody(i*10+1:(i2)*10)
-               read(9998,*) ns_ibm_r(i2),ns_ibm_i(i2) 
-     &                     ,ns_ibm_rall(i2)
-     &                     ,masterbdy(i2)
-
-                ns_ibm_r_fib(in_fib)=ns_ibm_r(i2)
-                ns_ibm_rall_fib(in_fib)=ns_ibm_rall(i2)
-                ns_ibm_i_fib(in_fib)=ns_ibm_i(i2)
-
-                do j=1,i_fin
-                    if(ixfin(j) .le. 0) then
-                        target_point_num_fib(in_fib,j)=
-     &                                ns_ibm_r_fib(in_fib)+ixfin(j)+0
-                    else
-                        target_point_num_fib(in_fib,j)=ixfin(j)+0
-                    endif
-                end do
- 
-           
-                 do j=1,ns_ibm_rall_fib(in_fib)
-                      read(9998,*)   
-     &                     numi   
-     &                    ,gx_ibm_fib(in_fib,j)   
-     &                    ,gy_ibm_fib(in_fib,j)   
-     &                    ,gz_ibm_fib(in_fib,j) 
-
-                 tmpcoord(1:3)=
-     &           (/gx_ibm_fib(in_fib,j)
-     &           , gy_ibm_fib(in_fib,j)
-     &           , gz_ibm_fib(in_fib,j) /)
-
-                 do jq=1,3
-                     tmpcoord(jq)=tmpcoordscale(jq)
-     &                           +(tmpcoord(jq)-tmpcoordscale(jq))
-     &                            *tmpcoordscale(3+jq)
-                 enddo
+         read(9997,*)  fiberbdry(i+1)
+         read(9997,'(a)') infile
+         read(9997,*) frequency_fin(i+1,1:3)
+         read(9997,*) i_fin
+         read(9997,*) ixfin(1:i_fin) 
+         i_fix=0;   
+         do j=1,i_fin
+            i_fix=i_fix+1
+         end do
+         target_num(i+1)=i_fix-1
+         read(9997,*) target_k_link_fib(in_fib,1:target_num(i+1))
+         read(9997,*) target_t_link_fib(in_fib,1:target_num(i+1))
+         read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),1) 
+         read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),1) 
+         read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),2) 
+         read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),2)
+         read(9997,*) a_fin_fib(in_fib,1:target_num(i+1),3) 
+         read(9997,*) phi_fin_fib(in_fib,1:target_num(i+1),3)
+         read(9997,*) flagfixed_fib(in_fib,1:target_num(i+1))
 
 
-                 tmpcoord(1:3)=tmpcoord(1:3)-tmpcoordR(1:3)
-                 tmpcoord(1:3)=
-     &                tmpcoordshift(1:3)+matmul(tmpRmat,tmpcoord(1:3))
-     &               +tmpcoordR(1:3)
-                 gx_ibm_fib(in_fib,j)=tmpcoord(1)
-                 gy_ibm_fib(in_fib,j)=tmpcoord(2)
-                 gz_ibm_fib(in_fib,j)=tmpcoord(3)
+         open(9998,file=infile,status='old',form='formatted')
+         read(9998,'(a)') namebody(i*10+1:(i2)*10)
+         read(9998,*) ns_ibm_r(i2),ns_ibm_i(i2) 
+     &      ,ns_ibm_rall(i2)
+     &      ,masterbdy(i2)
 
-                 end do
+         ns_ibm_r_fib(in_fib)=ns_ibm_r(i2)
+         ns_ibm_rall_fib(in_fib)=ns_ibm_rall(i2)
+         ns_ibm_i_fib(in_fib)=ns_ibm_i(i2)
 
-                if (masterbdy(i2) .gt. 0) then
-                   do j=1,ns_ibm_r_fib(in_fib)
-                      read(9998,*)  
-     &                    numi, npos_fib(in_fib,j)
-                   end do
-
-                 end if
-                 do j=1,ns_ibm_r_fib(in_fib)
-                    gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                    gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                    gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-                    if (j .eq. 0) then 
-                       temp2=gx_bp_fib(in_fib,1)-gx_ibm_fib(in_fib,1)
-                       temp3=gy_bp_fib(in_fib,1)-gy_ibm_fib(in_fib,1)
-                       temp3z=gz_bp_fib(in_fib,1)-gz_ibm_fib(in_fib,1)
-                    end if
-                    gx_ibm_fib(in_fib,j+1)=temp2+gx_ibm_fib(in_fib,j+1)
-                    gy_ibm_fib(in_fib,j+1)=temp3+gy_ibm_fib(in_fib,j+1)
-                    gz_ibm_fib(in_fib,j+1)=temp3z+gz_ibm_fib(in_fib,j+1)
-                    gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                    gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                    gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-
-                    gx_bp_fib0(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                    gy_bp_fib0(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                    gz_bp_fib0(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-
-                    gx_ibmpre_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
-                    gy_ibmpre_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
-                    gz_ibmpre_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
-                    if (massive_ibm) mass_ibm_fib(in_fib,j+1)=0.0
-                 enddo
-
-                close (9998)
-
+         do j=1,i_fin
+             if(ixfin(j) .le. 0) then
+                 target_point_num_fib(in_fib,j)=
+     &                         ns_ibm_r_fib(in_fib)+ixfin(j)+0
+             else
+                 target_point_num_fib(in_fib,j)=ixfin(j)+0
              endif
+         end do
+ 
+         
+         do j=1,ns_ibm_rall_fib(in_fib)
+          read(9998,*)   
+     &       numi   
+     &      ,gx_ibm_fib(in_fib,j)   
+     &      ,gy_ibm_fib(in_fib,j)   
+     &      ,gz_ibm_fib(in_fib,j) 
+
+          tmpcoord(1:3)=
+     &    (/gx_ibm_fib(in_fib,j)
+     &    , gy_ibm_fib(in_fib,j)
+     &    , gz_ibm_fib(in_fib,j) /)
+
+          do jq=1,3
+              tmpcoord(jq)=tmpcoordscale(jq)
+     &                    +(tmpcoord(jq)-tmpcoordscale(jq))
+     &                     *tmpcoordscale(3+jq)
+          enddo
+
+
+          tmpcoord(1:3)=tmpcoord(1:3)-tmpcoordR(1:3)
+          tmpcoord(1:3)=
+     &         tmpcoordshift(1:3)+matmul(tmpRmat,tmpcoord(1:3))
+     &        +tmpcoordR(1:3)
+          gx_ibm_fib(in_fib,j)=tmpcoord(1)
+          gy_ibm_fib(in_fib,j)=tmpcoord(2)
+          gz_ibm_fib(in_fib,j)=tmpcoord(3)
+
+         end do
+
+         if (masterbdy(i2) .gt. 0) then
+            do j=1,ns_ibm_r_fib(in_fib)
+               read(9998,*)  
+     &             numi, npos_fib(in_fib,j)
+            end do
+
+         end if
+         do j=1,ns_ibm_r_fib(in_fib)
+             gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+             if (j .eq. 0) then 
+                temp2=gx_bp_fib(in_fib,1)-gx_ibm_fib(in_fib,1)
+                temp3=gy_bp_fib(in_fib,1)-gy_ibm_fib(in_fib,1)
+                temp3z=gz_bp_fib(in_fib,1)-gz_ibm_fib(in_fib,1)
+             end if
+             gx_ibm_fib(in_fib,j+1)=temp2+gx_ibm_fib(in_fib,j+1)
+             gy_ibm_fib(in_fib,j+1)=temp3+gy_ibm_fib(in_fib,j+1)
+             gz_ibm_fib(in_fib,j+1)=temp3z+gz_ibm_fib(in_fib,j+1)
+             gx_bp_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_bp_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_bp_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+
+             gx_bp_fib0(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_bp_fib0(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_bp_fib0(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+
+             gx_ibmpre_fib(in_fib,j+1)=gx_ibm_fib(in_fib,j+1)
+             gy_ibmpre_fib(in_fib,j+1)=gy_ibm_fib(in_fib,j+1)
+             gz_ibmpre_fib(in_fib,j+1)=gz_ibm_fib(in_fib,j+1)
+             if (massive_ibm) mass_ibm_fib(in_fib,j+1)=0.0
+         enddo
+
+         close (9998)
+
+        endif
 !     end of whether to make the mesh or read that for fibers
 
-               read(9997,*) flag_TDpt_Pnormal_Ext(i+1),Pnormal_Ext(i+1)
-               read(9997,'(a)') infilepres
-               if (flag_TDpt_Pnormal_Ext(i+1) .eq. 1) then
-                  open(9998,
-     &                 file=infilepres,status='old',form='formatted' )
-                  read(9998,*) n_TDpt_Pnormal_Ext(i+1)
-                  if (n_TDpt_Pnormal_Ext(i+1) .gt. 1000) then
-                     write(*,*) 'size of press is larger than allowed'
-                     write(*,*) 'For body', i+1
+        read(9997,*) flag_TDpt_Pnormal_Ext(i+1),Pnormal_Ext(i+1)
+        read(9997,'(a)') infilepres
+        if (flag_TDpt_Pnormal_Ext(i+1) .eq. 1) then
+         open(9998,
+     &      file=infilepres,status='old',form='formatted' )
+         read(9998,*) n_TDpt_Pnormal_Ext(i+1)
+         if (n_TDpt_Pnormal_Ext(i+1) .gt. 1000) then
+          write(*,*) 'size of press is larger than allowed'
+          write(*,*) 'For body', i+1
 
 
-                     stop
-                  endif
-                  do j=1,n_TDpt_Pnormal_Ext(i+1)
-                     read(9998,*) data_TDpt_Pnormal_Ext(i+1,j,1)
-     &                           ,data_TDpt_Pnormal_Ext(i+1,j,2)
-                  enddo
-                  close (9998)
-               endif
+          stop
+         endif
+         do j=1,n_TDpt_Pnormal_Ext(i+1)
+          read(9998,*) data_TDpt_Pnormal_Ext(i+1,j,1)
+     &                ,data_TDpt_Pnormal_Ext(i+1,j,2)
+         enddo
+         close (9998)
+        endif
 !============= SHELL FE ================================================
-          elseif (bodytype(i+1) .eq. shell) then    ! shell input read 
+       elseif (bodytype(i+1) .eq. shell) then    ! shell input read 
                 i2=i+1
                 read(9997,'(a)') infile
                 read(9997,*) ShellModelType_esh(in_esh)   
