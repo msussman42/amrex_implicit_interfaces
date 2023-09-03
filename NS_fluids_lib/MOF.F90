@@ -7179,6 +7179,48 @@ end subroutine volume_sanity_check
 
 
        ! centroid is in absolute coordinate system 
+      subroutine Box_volumeTRI_TET( &
+        bfact,dx,xsten,nhalf, &
+        volume,centroid,sdim)
+      use probcommon_module
+      IMPLICIT NONE
+
+      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
+      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      REAL_T, INTENT(in) :: dx(sdim)
+      REAL_T, INTENT(out) :: volume
+      REAL_T, INTENT(out) :: centroid(sdim)
+      REAL_T :: x(sdim+1,sdim)
+      INTEGER_T i
+      INTEGER_T dir
+      REAL_T rval,dr
+    
+      if ((sdim.ne.2).and.(sdim.ne.3)) then
+       print *,"sdim invalid Box_volumeTRI_TET: ",sdim
+       stop
+      endif 
+      if (nhalf.lt.2) then
+       print *,"nhalf invalid Box_volumeTRI_TET: ",nhalf
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid127 Box_volumeTRI_TET: ",bfact
+       stop
+      endif
+
+      do i=1,sdim+1
+       do dir=1,sdim
+        x(i,dir)=xsten(-nhalf+i-1,dir)
+       enddo
+      enddo
+
+      call tetrahedron_volume(x,volume,centroid,sdim)
+
+      return
+      end subroutine Box_volumeTRI_TET
+
+
+       ! centroid is in absolute coordinate system 
       subroutine Box_volumeFAST_and_map(normdir,coeff, &
         bfact,dx,xsten,nhalf, &
         volume,centroid, &
@@ -8706,7 +8748,8 @@ contains
 ! find volume, centroid and area of intersection of a line with a 
 ! collection of triangles.
       subroutine multi_cell_intersection( &
-        bfact,dx,xsten,nhalf, &
+        bfact,dx, &
+        xsten,nhalf, &
         slope,intercept, &
         volume,centroid,area, &
         xtetlist, & !intent(in)
@@ -9047,7 +9090,8 @@ contains
 
        ! centroid relative to absolute coordinate system
 
-      subroutine multi_ff(bfact,dx,xsten0,nhalf0, &
+      subroutine multi_ff(bfact,dx, &
+        xsten0,nhalf0, &
         ff,slope, &
         intercept, & !intent(in)
         continuous_mof, &
@@ -9086,6 +9130,8 @@ contains
       REAL_T, INTENT(out) :: centroid(sdim)
       INTEGER_T shapeflag
       REAL_T xtet(sdim+1,sdim)
+      REAL_T xsten_local(-nhalf0:nhalf0,sdim)
+      INTEGER_T i,dir
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid multi_ff"
@@ -9098,6 +9144,7 @@ contains
        stop
       endif
       if ((continuous_mof.eq.0).or. & !MOF
+          (continuous_mof.eq.-2).or. & !MOF-triangle/tetra
           (continuous_mof.eq.-1).or. &!CMOF both X and F.
           (continuous_mof.ge.1)) then !CMOF just X.
        ! do nothing
@@ -9114,6 +9161,13 @@ contains
           (continuous_mof.ge.1)) then !CMOF just X
        call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
+         volcell, &
+         cencell, &
+         sdim)
+      else if (continuous_mof.eq.-2) then !triangle/tetra
+       call Box_volumeTRI_TET( &
+         bfact,dx, &
+         xsten0,nhalf0, &
          volcell, &
          cencell, &
          sdim)
@@ -9137,9 +9191,26 @@ contains
       endif
 
       if (fastflag.eq.0) then
-         ! xsten0 used for LS dist.
+
+         ! xsten_local used for LS dist.
+       do i=-nhalf0,nhalf0
+       do dir=1,sdim
+        if (continuous_mof.eq.-2) then
+         xsten_local(i,dir)=cencell(dir)+i*dx(dir)
+        else if ((continuous_mof.eq.-1).or. & !CMOF X and F
+                 (continuous_mof.eq.0).or. &  !MOF
+                 (continuous_mof.eq.1)) then  !CMOF X
+         xsten_local(i,dir)=xsten0(i,dir)
+        else
+         print *,"continuous_mof invalid: ",continuous_mof
+         stop
+        endif
+       enddo
+       enddo
+
        call multi_cell_intersection( &
-         bfact,dx,xsten0,nhalf0, &
+         bfact,dx, &
+         xsten_local,nhalf0, &
          slope, &
          intercept, &
          voln, &
@@ -9149,7 +9220,9 @@ contains
          nlist, &
          nmax, &
          sdim)
+
       else if (fastflag.eq.1) then
+
        shapeflag=0
 
        if ((continuous_mof.eq.0).or. & !MOF
@@ -9161,8 +9234,10 @@ contains
          xsten0,nhalf0,xtet,shapeflag,sdim) 
        else
         print *,"continuous_mof invalid: ",continuous_mof
+        print *,"fastflag=",fastflag
         stop
        endif
+
       else
        print *,"fastflag invalid multi_ff"
        stop
@@ -9174,7 +9249,8 @@ contains
       end subroutine multi_ff
 
 
-      subroutine single_ff(bfact,dx,xsten0,nhalf0, &
+      subroutine single_ff(bfact,dx, &
+        xsten0,nhalf0, &
         ff,slope,intercept, &
         arean, &
         vtarget, &
@@ -9868,7 +9944,8 @@ contains
        nMAT_OPT, & ! 1 or 3
        nDOF, & ! sdim-1  or 1
        nEQN, & ! sdim or 3 * sdim
-       bfact,dx,xsten0,nhalf0, &
+       bfact,dx, &
+       xsten0,nhalf0, &
        slope,intercept, &
        vfrac, &
        centroid,sdim)
@@ -14744,6 +14821,17 @@ contains
 
        if (is_rigid_local(imaterial).eq.1) then
 
+        if ((continuous_mof.eq.0).or. & !MOF
+            (continuous_mof.eq.1).or. & !CMOF X
+            (continuous_mof.eq.-1)) then !CMOF F and X
+         continuous_mof_rigid=0
+        else if (continuous_mof.eq.-2) then !TRI-TET
+         continuous_mof_rigid=-2
+        else
+         print *,"continuous_mof invalid"
+         stop
+        endif
+
         order_algorithm_in(imaterial)=1
 
          ! centroid is in absolute coordinate system 
@@ -14778,7 +14866,6 @@ contains
            mag,centroid_free,centroid_ref, &
            bfact,dx,xsten0,nhalf0,sdim)
 
-         continuous_mof_rigid=0
          nlist_vof=0
          nlist_cen=0
          refvfrac(1)=mofdata(vofcomp)
@@ -14852,7 +14939,8 @@ contains
            nMAT_OPT_standard, & !nMAT_OPT_standard=1
            nDOF_standard, & !nDOF_standard=sdim-1
            nEQN_standard, &  !nEQN_standard=sdim
-           bfact,dx,xsten0,nhalf0, &
+           bfact,dx, &
+           xsten0,nhalf0, &
            npredict, &
            intercept(1), &
            refvfrac(1), &
