@@ -76,7 +76,7 @@ contains
       &               objective, gradient                 &
       &            )
       use mod_cg3_points, only: cg3_cross_product
-      logical, parameter :: mof_use_symmetric_reconstruction=.true.
+      logical, parameter :: mof_use_symmetric_reconstruction=.false.
       double precision, dimension(3), intent(in) :: p0, p1, p2, p3
       double precision, dimension(2), intent(in) :: angles
       double precision, dimension(3), intent(in) :: ref_centroid1, ref_centroid2
@@ -173,7 +173,7 @@ contains
       &               jacobian                   &
       &            )
       use mod_cg3_points, only: cg3_cross_product
-      logical, parameter :: mof_use_symmetric_reconstruction=.true.
+      logical, parameter :: mof_use_symmetric_reconstruction=.false.
       double precision, dimension(3), intent(in) :: p0, p1, p2, p3
       double precision, dimension(2), intent(in) :: angles
       double precision, dimension(3), intent(in) :: ref_centroid1, ref_centroid2
