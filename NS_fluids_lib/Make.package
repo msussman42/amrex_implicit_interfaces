@@ -97,8 +97,11 @@ F90EXE_sources += \
   CAVITY_PHASE_CHANGE.F90 \
   TECPLOTUTIL.F90 \
   GLOBALDIST.F90 \
+  points.F90 \
+  polyhedron.F90 \
   mof2d_analytic_centroid.F90 \
   mof3d_analytic_centroid.F90 \
+  mof3d_tetra_analytic_centroid.F90 \
   MOF.F90 \
   DROP_IN_SHEAR.F90 \
   passive_advect.F90 \
