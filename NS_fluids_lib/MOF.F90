@@ -14553,7 +14553,7 @@ contains
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
       else
-       print *,"nlist_alloc invalid"
+       print *,"nlist_alloc invalid: ",nlist_alloc
        stop
       endif
 
@@ -14570,10 +14570,12 @@ contains
        nhalf_box=3
       else if (continuous_mof.eq.-1) then !CMOF X and F
        nhalf_box=3
+      else if (continuous_mof.eq.-2) then !MOF TRI_TET
+       nhalf_box=2
       else if (continuous_mof.eq.0) then !MOF
        nhalf_box=1
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
 
@@ -14594,7 +14596,9 @@ contains
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
-      if (continuous_mof.ge.0) then !MOF
+      if (continuous_mof.ge.0) then !MOF or CMOF X
+       dxmaxLS_volume_constraint=dxmaxLS
+      else if (continuous_mof.eq.-2) then !MOF TRI_TET
        dxmaxLS_volume_constraint=dxmaxLS
       else if (continuous_mof.eq.-1) then !CMOF X and F
        dxmaxLS_volume_constraint=three*dxmaxLS
@@ -14650,6 +14654,7 @@ contains
        else if (is_rigid(imaterial).eq.0) then
 
         if ((continuous_mof.eq.0).or. & !MOF
+            (continuous_mof.eq.-2).or. & !MOF TRI_TET
             (continuous_mof.eq.-1)) then !CMOF X and F
          if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
           !do nothing
@@ -14671,7 +14676,7 @@ contains
           endif
          endif
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof invalid: ",continuous_mof
          stop
         endif
 
@@ -14688,6 +14693,16 @@ contains
       allocate(ls_intercept(num_materials))
 
       if (use_ls_data.eq.1) then
+
+       if ((continuous_mof.eq.0).or. & !MOF
+           (continuous_mof.ge.1).or. & !CMOF X
+           (continuous_mof.eq.-1)) then !CMOF X and F
+        !do nothing
+       else
+        print *,"continuous_mof invalid: ",continuous_mof
+        stop
+       endif
+
        do i1=-1,1
        do j1=-1,1
        do k1=k1lo,k1hi
@@ -14721,17 +14736,20 @@ contains
           sdim)
  
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof invalid: ",continuous_mof
          stop 
         endif
 
-       enddo ! imaterial
+       enddo ! imaterial=1,num_materials
+
       else if (use_ls_data.eq.0) then
+
        do imaterial=1,num_materials
         lsnormal_valid(imaterial)=0
        enddo
+
       else
-       print *,"use_ls_data invalid"
+       print *,"use_ls_data invalid: ",use_ls_data
        stop
       endif
 
@@ -14777,7 +14795,7 @@ contains
         cmofsten, &
         xsten0, &
         nhalf0, &
-        nhalf_box, & !=3 if CMOF, =1 if MOF
+        nhalf_box, & !=3 if CMOF, =1 if MOF, =2 if MOF TRI_TET
         bfact,dx, &
         tessellate, &  ! =0
         mofdata, &
@@ -15963,13 +15981,16 @@ contains
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: nhalf,nhalf_box
+      INTEGER_T, INTENT(in) :: nhalf
+      INTEGER_T, INTENT(in) :: nhalf_box
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
       INTEGER_T, INTENT(in) :: tessellate
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
-      INTEGER_T im,dir,vofcomp
+      INTEGER_T im
+      INTEGER_T dir
+      INTEGER_T vofcomp
       REAL_T voffluid,vofsolid,vofsolid_max
       INTEGER_T im_solid_max
       INTEGER_T is_rigid_local(num_materials)
@@ -15978,8 +15999,9 @@ contains
 
       if ((nhalf.ge.1).and. &
           (nhalf_box.le.nhalf).and. &
-          ((nhalf_box.eq.1).or. &
-           (nhalf_box.eq.3))) then
+          ((nhalf_box.eq.1).or. & !MOF
+           (nhalf_box.eq.2).or. & !MOF TRI_TET
+           (nhalf_box.eq.3))) then !CMOF
        ! do nothing
       else
        print *,"nhalf or nhalf_box invalid: ",nhalf,nhalf_box
@@ -16027,9 +16049,21 @@ contains
       vofsolid_max=zero
       im_solid_max=0
 
-      if (nhalf_box.eq.1) then
-       call Box_volumeFAST(bfact,dx,xsten,nhalf,volcell,cencell,sdim)
-      else if (nhalf_box.eq.3) then
+      if (nhalf_box.eq.1) then !MOF
+       call Box_volumeFAST( &
+         bfact,dx, &
+         xsten,nhalf, &
+         volcell, &
+         cencell, &
+         sdim)
+      else if (nhalf_box.eq.2) then !MOF TRI_TET
+       call Box_volumeTRI_TET( &
+         bfact,dx, &
+         xsten,nhalf, &
+         volcell, &
+         cencell, &
+         sdim)
+      else if (nhalf_box.eq.3) then ! CMOF
         ! sum_i',j' V_i+i',j+j'
         ! volume r<0 subbox is positive; centroid(1)<0 for r<0 subbox
        call Box_volume_super( &
@@ -16136,25 +16170,45 @@ contains
         enddo
        else if ((mofdata(vofcomp).gt.zero).and. &
                 (mofdata(vofcomp).lt.one)) then
-        do dir=1,sdim
-         if (mofdata(vofcomp+dir)+cencell(dir).le. &
-             xsten(-nhalf_box,dir)) then
-          mofdata(vofcomp+dir)=xsten(-nhalf_box,dir)-cencell(dir)+ &
+
+        if ((nhalf_box.eq.1).or. & !MOF
+            (nhalf_box.eq.3)) then !CMOF
+         do dir=1,sdim
+          if (mofdata(vofcomp+dir)+cencell(dir).le. &
+              xsten(-nhalf_box,dir)) then
+           mofdata(vofcomp+dir)=xsten(-nhalf_box,dir)-cencell(dir)+ &
             CENTOL*dx(dir)
-         else if (mofdata(vofcomp+dir)+cencell(dir).ge. &
-                  xsten(nhalf_box,dir)) then
-          mofdata(vofcomp+dir)=xsten(nhalf_box,dir)-cencell(dir)- &
+          else if (mofdata(vofcomp+dir)+cencell(dir).ge. &
+                   xsten(nhalf_box,dir)) then
+           mofdata(vofcomp+dir)=xsten(nhalf_box,dir)-cencell(dir)- &
             CENTOL*dx(dir)
-         else if ((mofdata(vofcomp+dir)+cencell(dir).gt. &
-                   xsten(-nhalf_box,dir)).and. &
-                  (mofdata(vofcomp+dir)+cencell(dir).lt. &
-                   xsten(nhalf_box,dir))) then
-          ! do nothing
-         else
-          print *,"mofdata(vofcomp+dir) invalid"
-          stop
-         endif
-        enddo !dir=1..sdim
+          else if ((mofdata(vofcomp+dir)+cencell(dir).gt. &
+                    xsten(-nhalf_box,dir)).and. &
+                   (mofdata(vofcomp+dir)+cencell(dir).lt. &
+                    xsten(nhalf_box,dir))) then
+           ! do nothing
+          else
+           print *,"mofdata(vofcomp+dir) invalid"
+           stop
+          endif
+         enddo !dir=1..sdim
+        else if (nhalf_box.eq.2) then ! MOF TRI_TET
+         do i=1,sdim+1
+         do dir=1,sdim
+          xtet(i,dir)=xsten(-nhalf_box+i-1,dir)
+         enddo
+         enddo
+         do dir=1,sdim
+          xtarget(dir)=mofdata(vofcomp+dir)+cencell(dir)
+         enddo
+         enddo 
+          !project_to_tet is declared in GLOBALUTIL.F90
+         call project_to_tet(sdim,xtarget,xtet)
+        else
+         print *,"nhalf_box invalid"
+         stop
+        endif
+
        else
         print *,"mofdata(vofcomp) invalid"
         stop
