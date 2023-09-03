@@ -5932,13 +5932,14 @@ end subroutine print_matrix
 
 subroutine matrix_inverse(AA,xx,matstatus,numelem)
 IMPLICIT NONE
-INTEGER_T numelem
-REAL_T AA(numelem,numelem)
+INTEGER_T, INTENT(in) :: numelem
+REAL_T, INTENT(inout) :: AA(numelem,numelem)
 REAL_T AAhold(numelem,numelem)
-REAL_T xx(numelem,numelem)
+REAL_T, INTENT(out) :: xx(numelem,numelem)
 REAL_T bb(numelem,numelem)
 REAL_T alpha,holdvalue
-INTEGER_T i,j,k,holdj,matstatus
+INTEGER_T i,j,k,holdj
+INTEGER_T, INTENT(out) :: matstatus
 
 do i=1,numelem
  do j=1,numelem
@@ -6033,6 +6034,91 @@ endif
 
 return
 end subroutine matrix_inverse
+
+subroutine project_to_tet(sdim,xtarget,xtet)
+IMPLICIT NONE
+
+INTEGER_T, INTENT(in) :: sdim
+REAL_T, INTENT(inout) :: xtarget(sdim)
+REAL_T, INTENT(in) :: xtet(sdim+1,sdim)
+REAL_T :: mapmat(sdim,sdim)
+REAL_T :: mapmat_inv(sdim,sdim)
+REAL_T :: mapmat_scratch(sdim,sdim)
+REAL_T :: xcomp(sdim)
+REAL_T :: xcomp_sum
+
+INTEGER_T i,j
+INTEGER_T matstatus
+
+! xphys = A xcomp + x0
+! xcomp=Ainv(xphys-x0)
+! A=x1-x0 y1-y0 z1-z0
+!   x2-x0 y2-y0 z2-z0
+!   x3-x0 y3-y0 z3-z0
+do i=1,sdim
+do j=1,sdim
+ mapmat(i,j)=xtet(i+1,j)-xtet(1,j)
+ mapmat_inv(i,j)=mapmat(i,j)
+ mapmat_scratch(i,j)=mapmat(i,j)
+enddo
+enddo
+
+call matrix_inverse(mapmat_scratch,mapmat_inv,matstatus,sdim)
+
+if (matstatus.eq.1) then
+ do i=1,sdim
+  xcomp(i)=zero
+  do j=1,sdim
+   xcomp(i)=xcomp(i)+mapmat_inv(i,j)*(xtarget(j)-xtet(1,j))
+  enddo
+ enddo
+
+ do j=1,sdim
+  if (xcomp(j).gt.one) then
+   xcomp(j)=one
+  endif
+  if (xcomp(j).lt.zero) then
+   xcomp(j)=zero
+  endif
+ enddo
+
+ xcomp_sum=zero
+ do j=1,sdim
+  xcomp_sum=xcomp_sum+xcomp(j)
+ enddo
+ if (xcomp_sum.gt.one) then
+  do j=1,sdim
+   xcomp(j)=xcomp(j)+(one-xcomp_sum)/dble(sdim)
+  enddo
+ else if ((xcomp_sum.ge.zero).and.(xcomp_sum.le.one)) then
+  ! do nothing
+ else
+  print *,"xcomp_sum invalid"
+  stop
+ endif
+
+ do j=1,sdim
+  if (xcomp(j).gt.one) then
+   xcomp(j)=one
+  endif
+  if (xcomp(j).lt.zero) then
+   xcomp(j)=zero
+  endif
+ enddo
+
+ do i=1,sdim
+  xtarget(i)=zero
+  do j=1,sdim
+   xtarget(i)=xtarget(i)+mapmat(i,j)*xcomp(j)
+  enddo
+  xtarget(i)=xtarget(i)+xtet(1,i)
+ enddo
+else
+ print *,"matstatus invalid"
+ stop
+endif
+
+end subroutine project_to_tet
 
 subroutine print_visual_descriptor(im,n_fortran)
 use probcommon_module
