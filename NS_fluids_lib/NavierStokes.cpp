@@ -104,7 +104,7 @@ int  NavierStokes::MOFITERMAX=DEFAULT_MOFITERMAX;
 int  NavierStokes::MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;
 
 /*
- continuous_mof=0
+ continuous_mof=STANDARD_MOF
 
   regular MOF  minimize E=||x_ij^ref-x_ij^derived||
   subject to the constraint that F_ij^ref=F_ij^derived
@@ -116,7 +116,7 @@ int  NavierStokes::MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;
    F_ij^derived=derived volume fraction in cell ij for a given slope and
      intercept.   
 
-continuous_mof>0 
+continuous_mof>STANDARD_MOF
 
   CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
   subject to the constraint that F_ij^ref=F_ij^derived
@@ -137,7 +137,7 @@ materials are immersed into the fluid(s).
 
 */
 
-int  NavierStokes::continuous_mof=1;
+int  NavierStokes::continuous_mof=CMOF_X;
 int  NavierStokes::update_centroid_after_recon=0;
 
 //make MOFITERMAX_AFTER_PREDICT=0 if mof_decision_tree_learning>=100^d
@@ -2652,17 +2652,17 @@ NavierStokes::read_params ()
     pp.queryAdd("continuous_mof",continuous_mof);
     if (continuous_mof==2) {
      amrex::Error("continuous_mof==2 is an anachronism, set to 1");
-    } else if (continuous_mof>=0) {
+    } else if (continuous_mof>=STANDARD_MOF) {
      //do nothing
     } else
      amrex::Error("continuous_mof invalid");
 
     pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
     if (update_centroid_after_recon==0) {
-     if (continuous_mof>1)
+     if (continuous_mof>CMOF_X)
       amrex::Error("expecting update_centroid_after_recon=1");
     } else if (update_centroid_after_recon==1) {
-     if (continuous_mof==0)
+     if (continuous_mof==STANDARD_MOF)
       amrex::Error("expecting update_centroid_after_recon=0");
     } else
      amrex::Error("expecting update_centroid_after_recon=0 or 1");

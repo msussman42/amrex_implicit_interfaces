@@ -19770,7 +19770,7 @@ end subroutine RatePhaseChange
       INTEGER_T nmax
       INTEGER_T, parameter :: use_ls_data=0
       INTEGER_T, parameter :: mof_verbose=0
-      INTEGER_T, parameter :: continuous_mof=0
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T :: grid_index(SDIM)
@@ -20019,7 +20019,7 @@ end subroutine RatePhaseChange
          mofdata, &
          vof_super, &
          multi_centroidA, &
-         continuous_mof, & ! =0
+         continuous_mof, & ! =STANDARD_MOF
          cmofsten, &
          grid_index, &
          grid_level, &
@@ -29161,7 +29161,7 @@ end subroutine initialize2d
       INTEGER_T ibasedst
       INTEGER_T, parameter :: use_ls_data=0
       INTEGER_T, parameter :: mof_verbose=0
-      INTEGER_T, parameter :: continuous_mof=0
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T :: grid_index(SDIM)
@@ -29411,7 +29411,7 @@ end subroutine initialize2d
           mofdata, &
           vof_super, &
           multi_centroidA, &
-          continuous_mof, & !=0
+          continuous_mof, & !=STANDARD_MOF
           cmofsten, &
           grid_index, &
           grid_level, &

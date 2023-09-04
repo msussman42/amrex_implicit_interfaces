@@ -244,9 +244,9 @@ stop
        print *,"ngrow invalid in fort_sloperecon"
        stop
       endif
-      if ((continuous_mof.eq.0).or. & ! MOF
-          ((continuous_mof.ge.1).and. &
-           (continuous_mof.le.4096))) then ! CMOF
+      if ((continuous_mof.eq.STANDARD_MOF).or. & ! MOF
+          ((continuous_mof.ge.CMOF_X).and. &
+           (continuous_mof.le.CMOF_MAXITER))) then ! CMOF
        ! do nothing
       else
        print *,"continuous_mof invalid (fort_sloperecon): ",continuous_mof
@@ -529,13 +529,13 @@ stop
 
          ! always use MOF on the coarser levels or if decision tree data
          ! is not available.
-         continuous_mof_parm=0
+         continuous_mof_parm=STANDARD_MOF
 
         else if ((level.eq.max_level).and. &
                  (level.eq.decision_tree_max_level)) then
 
          if (num_fluid_materials_in_cell.eq.1) then
-          continuous_mof_parm=0
+          continuous_mof_parm=STANDARD_MOF
          else if ((num_fluid_materials_in_cell.ge.2).and. &
                   (num_fluid_materials_in_cell.le.num_materials)) then
 
@@ -557,8 +557,8 @@ stop
 
          ! supercell for centroid cost function.
          ! center cell for volume constraint.
-        if ((continuous_mof_parm.ge.1).and. &
-            (continuous_mof_parm.le.4096)) then
+        if ((continuous_mof_parm.ge.CMOF_X).and. &
+            (continuous_mof_parm.le.CMOF_MAXITER)) then
   
          volume_super=zero ! volume of the extended region
          volume_super_mofdata=zero !same as volume_super, except by im_fluid.
@@ -797,7 +797,7 @@ stop
 
          enddo ! im=1..num_materials
 
-        else if (continuous_mof_parm.eq.0) then
+        else if (continuous_mof_parm.eq.STANDARD_MOF) then
          ! do nothing
         else
          print *,"continuous_mof_parm invalid: ",continuous_mof_parm
@@ -831,7 +831,7 @@ stop
          stop
         endif
 
-        if ((continuous_mof_parm.eq.0).or. &
+        if ((continuous_mof_parm.eq.STANDARD_MOF).or. &
             (num_fluid_materials_in_stencil.eq.1).or. &
             (num_fluid_materials_in_stencil.eq.2).or. &
             ((num_fluid_materials_in_stencil.ge.3).and. &
@@ -858,8 +858,8 @@ stop
           grid_level, &
           SDIM)
 
-         if ((continuous_mof_parm.ge.1).and. &
-             (continuous_mof_parm.le.4096)) then
+         if ((continuous_mof_parm.ge.CMOF_X).and. &
+             (continuous_mof_parm.le.CMOF_MAXITER)) then
            ! center cell centroids.
           do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
@@ -867,7 +867,7 @@ stop
             mofdata_super(vofcomprecon+dir)=mofdata(vofcomprecon+dir)
            enddo
           enddo ! im
-         else if (continuous_mof_parm.eq.0) then
+         else if (continuous_mof_parm.eq.STANDARD_MOF) then
           ! do nothing
          else
           print *,"continuous_mof_parm invalid(2) ",continuous_mof_parm
@@ -897,13 +897,13 @@ stop
          !  the CMOF stencil, just do one step:
          ! 1. find CMOF reconstruction using CMOF centroids and MOF 
          !    (cell center) volumes.
-        else if ((continuous_mof_parm.ge.1).and. &
-                 (continuous_mof_parm.le.4096).and. &
+        else if ((continuous_mof_parm.ge.CMOF_X).and. &
+                 (continuous_mof_parm.le.CMOF_MAXITER).and. &
                  (num_fluid_materials_in_stencil.ge.3).and. &
                  (num_fluid_materials_in_stencil.gt. &
                   num_fluid_materials_in_cell)) then
 
-         continuous_mof_parm_super=-1
+         continuous_mof_parm_super=CMOF_F_AND_X
 
          do dir=1,num_materials*ngeom_recon
           mofdata_super_vfrac(dir)=mofdata_super(dir)
@@ -1045,7 +1045,7 @@ stop
           endif
          enddo ! im=1,num_materials
 
-         continuous_mof_parm=0
+         continuous_mof_parm=STANDARD_MOF
 
          call multimaterial_MOF( &
           bfact,dx, &
@@ -1270,7 +1270,7 @@ stop
       INTEGER_T, INTENT(in) :: i,j,k
       INTEGER_T, INTENT(in) :: finest_level
       INTEGER_T, INTENT(in) :: max_level
-      INTEGER_T, INTENT(in) :: continuous_mof ! =0 or 1
+      INTEGER_T, INTENT(in) :: continuous_mof !=STANDARD_MOF or CMOF_X
       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       INTEGER_T, INTENT(in) :: bfact
       REAL_T, INTENT(in) :: dx(SDIM)
@@ -1360,8 +1360,8 @@ stop
        stop
       endif
 
-      if ((continuous_mof.eq.0).or. & ! MOF
-          (continuous_mof.eq.1)) then ! CMOF
+      if ((continuous_mof.eq.STANDARD_MOF).or. & ! MOF
+          (continuous_mof.eq.CMOF_X)) then ! CMOF
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -1511,7 +1511,7 @@ stop
           call angle_init_from_angle_recon_and_F( &
            bfact,dx,xsten,nhalf, &
            refvfrac, & 
-           continuous_mof, &  !=0 or 1
+           continuous_mof, & !=STANDARD_MOF or CMOF_X
            cmofsten, & 
            geom_xtetlist(1,1,1,tid+1), &
            geom_xtetlist_old(1,1,1,tid+1), &
@@ -1720,10 +1720,10 @@ stop
 
         ! sanity test for sk2f.py
        if (1.eq.0) then
-        if (continuous_mof.eq.0) then
-         cmof_idx=0
-        else if (continuous_mof.ge.1) then
-         cmof_idx=1
+        if (continuous_mof.eq.STANDARD_MOF) then
+         cmof_idx=STANDARD_MOF
+        else if (continuous_mof.ge.CMOF_X) then
+         cmof_idx=CMOF_X
         else
          print *,"continuous_mof invalid"
          stop
@@ -1820,10 +1820,10 @@ stop
         endif
        enddo ! do dir=1,sdim
 
-       if (continuous_mof.eq.0) then
-        cmof_idx=0
-       else if (continuous_mof.ge.1) then
-        cmof_idx=1
+       if (continuous_mof.eq.STANDARD_MOF) then
+        cmof_idx=STANDARD_MOF
+       else if (continuous_mof.ge.CMOF_X) then
+        cmof_idx=CMOF_X
        else
         print *,"continuous_mof invalid"
         stop
@@ -2233,7 +2233,7 @@ stop
 
         endif
 
-       enddo !local_continuous_mof=0,1
+       enddo !local_continuous_mof=STANDARD_MOF,CMOF_X
        enddo !k
        enddo !j
        enddo !i

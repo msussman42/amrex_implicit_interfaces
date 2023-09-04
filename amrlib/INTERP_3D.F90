@@ -173,7 +173,7 @@ stop
       REAL_T vof_super(num_materials)
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
-      INTEGER_T, PARAMETER :: continuous_mof=0
+      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, PARAMETER :: use_ls_data=0
       INTEGER_T, PARAMETER ::  mof_verbose=0
@@ -300,7 +300,7 @@ stop
          mofdata, &
          vof_super, &
          multi_centroidA, &
-         continuous_mof, & ! continuous_mof=0
+         continuous_mof, & ! continuous_mof=STANDARD_MOF
          cmofsten, &
          grid_index, &
          grid_level, &
@@ -796,7 +796,7 @@ stop
 
       INTEGER_T, PARAMETER :: use_ls_data=0
       INTEGER_T, PARAMETER ::  mof_verbose=0
-      INTEGER_T, PARAMETER :: continuous_mof=0
+      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T multi_centroidA(num_materials,SDIM)
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
@@ -1079,7 +1079,7 @@ stop
          mofdata, &
          vof_super, &
          multi_centroidA, &
-         continuous_mof, & ! continuous_mof=0
+         continuous_mof, & ! continuous_mof=STANDARD_MOF
          cmofsten, &
          grid_index, &
          grid_level, &

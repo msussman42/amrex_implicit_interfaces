@@ -6093,7 +6093,7 @@ if (matstatus.eq.1) then
  else if ((xcomp_sum.ge.zero).and.(xcomp_sum.le.one)) then
   ! do nothing
  else
-  print *,"xcomp_sum invalid"
+  print *,"xcomp_sum invalid: ",xcomp_sum
   stop
  endif
 
@@ -6114,7 +6114,7 @@ if (matstatus.eq.1) then
   xtarget(i)=xtarget(i)+xtet(1,i)
  enddo
 else
- print *,"matstatus invalid"
+ print *,"matstatus invalid: ",matstatus
  stop
 endif
 
