@@ -5991,8 +5991,10 @@ end subroutine volume_sanity_check
 !  not subtracted from the uncaptured region.
 !
       subroutine tets_box_planes( &
+       continuous_mof, &
        tessellate, &
-       bfact,dx,xsten0,nhalf0, &
+       bfact,dx, &
+       xsten0,nhalf0, &
        xsten_box,nhalf_box, &
        mofdata, &
        xtetlist, &
@@ -6007,6 +6009,7 @@ end subroutine volume_sanity_check
       IMPLICIT NONE
 
       INTEGER_T, INTENT(in) :: nlist_alloc
+      INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: tessellate
       INTEGER_T, INTENT(in) :: sdim,bfact,nhalf0,nhalf_box
       INTEGER_T symmetry_flag,ntetbox
@@ -6067,7 +6070,8 @@ end subroutine volume_sanity_check
        stop
       endif
 
-      if ((nhalf0.lt.1).or.(nhalf_box.lt.1)) then
+      if ((nhalf0.lt.1).or. &
+          (nhalf_box.lt.1)) then
        print *,"nhalf invalid tets box planes"
        stop
       endif
@@ -6084,55 +6088,82 @@ end subroutine volume_sanity_check
        print *,"bfact invalid121"
        stop
       endif
- 
-! YANG: get number of tetrahedra here.
-      inode=1
 
-      symmetry_flag=0
-      call get_ntetbox(ntetbox,symmetry_flag,sdim)
-      nlist_old=ntetbox
-      nlist=ntetbox
+      if ((continuous_mof.eq.STANDARD_MOF).or. &
+          (continuous_mof.ge.CMOF_X).or. &
+          (continuous_mof.eq.CMOF_F_AND_X)) then
 
-! YANG: CONVERT xsten_box to xnode.
-      if (sdim.eq.3) then
-       do k_grid_node=-1,1,2
-       do j_grid_node=-1,1,2
-       do i_grid_node=-1,1,2 
-        xnode(inode,1)=xsten_box(i_grid_node,1)
-        xnode(inode,2)=xsten_box(j_grid_node,2)
-        xnode(inode,sdim)=xsten_box(k_grid_node,sdim)
-        phinode(inode)=one
-        inode=inode+1
-       enddo
-       enddo
-       enddo
-      else if (sdim.eq.2) then
-       do j_grid_node=-1,1,2
-       do i_grid_node=-1,1,2 
-        xnode(inode,1)=xsten_box(i_grid_node,1)
-        xnode(inode,2)=xsten_box(j_grid_node,2)
-        phinode(inode)=one
-        inode=inode+1
-       enddo
-       enddo
-      else
-       print *,"sdim invalid"
-       stop
-      endif
+       symmetry_flag=0
+       call get_ntetbox(ntetbox,symmetry_flag,sdim)
 
-! YANG: add these tetrahedra to your data structure.
-      do id=1,ntetbox
-       call extract_tet(xnode,phinode,xx,dummyphi,id,symmetry_flag,sdim)
+       inode=1
+
+       if (sdim.eq.3) then
+        do k_grid_node=-1,1,2
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xsten_box(i_grid_node,1)
+         xnode(inode,2)=xsten_box(j_grid_node,2)
+         xnode(inode,sdim)=xsten_box(k_grid_node,sdim)
+         phinode(inode)=one
+         inode=inode+1
+        enddo
+        enddo
+        enddo
+       else if (sdim.eq.2) then
+        do j_grid_node=-1,1,2
+        do i_grid_node=-1,1,2 
+         xnode(inode,1)=xsten_box(i_grid_node,1)
+         xnode(inode,2)=xsten_box(j_grid_node,2)
+         phinode(inode)=one
+         inode=inode+1
+        enddo
+        enddo
+       else
+        print *,"sdim invalid"
+        stop
+       endif
+
+       do id=1,ntetbox
+        call extract_tet(xnode,phinode,xx,dummyphi,id,symmetry_flag,sdim)
+        do i_tet_node=1,sdim+1
+        do j_dir=1,sdim
+         xtetlist_old(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
+         xtetlist(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
+        enddo 
+        enddo 
+       enddo !id=1,ntetbox
+
+      else if (continuous_mof.eq.MOF_TRI_TET) then
+
+       if (nhalf0.lt.2) then
+        print *,"nhalf0 invalid tets box planes"
+        print *,"nhalf0=",nhalf0
+        print *,"continuous_mof=",continuous_mof
+        stop
+       endif
+
+       id=1
+
        do i_tet_node=1,sdim+1
        do j_dir=1,sdim
+        xx(i_tet_node,j_dir)=xsten0(-nhalf0+i_tet_node-1,j_dir)
+
         xtetlist_old(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
         xtetlist(i_tet_node,j_dir,id)=xx(i_tet_node,j_dir)
        enddo 
        enddo 
-      enddo
+              
+       ntetbox=1
 
+      else
+       print *,"continuous_mof invalid"
+       stop
+      endif
+
+      nlist_old=ntetbox
+      nlist=ntetbox
      
-! EXAMPLE OF TRAVERSING THE PLANES IN THE PROPER ORDER.
       do iplane=1,num_materials
        icrit=0
        do im=1,num_materials
@@ -6255,6 +6286,7 @@ end subroutine volume_sanity_check
 !  not subtracted from the uncaptured region.
 !
       subroutine tets_box_planes_super( &
+       continuous_mof, &
        tessellate, &
        tid, &
        bfact,dx,xsten0,nhalf0, &
@@ -6271,6 +6303,7 @@ end subroutine volume_sanity_check
 
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: nlist_alloc
+      INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: tessellate
       INTEGER_T, INTENT(in) :: tid
       INTEGER_T, INTENT(in) :: bfact,nhalf0
@@ -6332,8 +6365,10 @@ end subroutine volume_sanity_check
        ! in: tets_box_planes_super
       if (use_super_cell.eq.0) then
        call tets_box_planes( &
+        continuous_mof, &
         tessellate, &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         xsten0,nhalf0, &
         mofdata, &
         xtetlist, &
@@ -6372,8 +6407,10 @@ end subroutine volume_sanity_check
 
          ! in: tets_box_planes_super
          call tets_box_planes( &
+          continuous_mof, &
           tessellate, &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten0,nhalf0, &
           xsten2,nhalf2, &
           mofdata, &
           geom_xtetlist_local(1,1,1,tid+1), &
@@ -12325,7 +12362,7 @@ contains
 
       return
       end subroutine find_cut_geom_slope
-
+FIX ME STARTING HERE GOING BACKWARDS
 
       subroutine find_predict_slope(slope, &
        mag,cen_free,cen_ref, &
@@ -12570,9 +12607,10 @@ contains
        print *,"nmax too small"
        stop
       endif
-      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-          (continuous_mof.eq.CMOF_F_AND_X).or. &!CMOF X and F
-          (continuous_mof.ge.CMOF_X)) then !CMOF X
+      if ((continuous_mof.eq.STANDARD_MOF).or. & 
+          (continuous_mof.eq.MOF_TRI_TET).or. &
+          (continuous_mof.eq.CMOF_F_AND_X).or. &
+          (continuous_mof.ge.CMOF_X)) then 
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -12588,7 +12626,8 @@ contains
 
        ! cencell_vof,cencell_cen is in absolute coordinate system
 
-      if (continuous_mof.eq.STANDARD_MOF) then !MOF
+      if (continuous_mof.eq.STANDARD_MOF) then 
+
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell_vof, &
@@ -12599,7 +12638,22 @@ contains
         volcell_cen, &
         cencell_cen, &
         sdim)
-      else if (continuous_mof.ge.CMOF_X) then !CMOF X
+
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
+
+       call Box_volumeTRI_TET( &
+        bfact,dx,xsten0,nhalf0, &
+        volcell_vof, &
+        cencell_vof, &
+        sdim)
+       call Box_volumeTRI_TET( &
+        bfact,dx,xsten0,nhalf0, &
+        volcell_cen, &
+        cencell_cen, &
+        sdim)
+
+      else if (continuous_mof.ge.CMOF_X) then
+
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell_vof, &
@@ -12612,7 +12666,8 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+
+      else if (continuous_mof.eq.CMOF_F_AND_X) then
        call Box_volume_super( &
          cmofsten, &
          bfact,dx, &
@@ -12634,7 +12689,7 @@ contains
 
        ! imaterial_count-1=number of materials already reconstructed.
 
-      if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+      if (continuous_mof.eq.CMOF_F_AND_X) then 
 
        if ((imaterial_count.ge.1).and. &
            (imaterial_count.le.num_materials)) then
@@ -12644,7 +12699,29 @@ contains
         stop
        endif
 
-      else if (continuous_mof.ge.0) then !MOF
+      else if ((continuous_mof.eq.MOF_TRI_TET) then 
+
+       if ((imaterial_count.ge.1).and. &
+           (imaterial_count.le.num_materials)) then
+        fastflag=0
+       else 
+        print *,"imaterial_count invalid"
+        stop
+       endif
+
+      else if ((continuous_mof.eq.STANDARD_MOF) then 
+
+       if ((imaterial_count.gt.1).and. &
+           (imaterial_count.le.num_materials)) then
+        fastflag=0
+       else if (imaterial_count.eq.1) then
+        fastflag=1
+       else 
+        print *,"imaterial_count invalid"
+        stop
+       endif
+
+      else if ((continuous_mof.ge.CMOF_X) then 
 
        if ((imaterial_count.gt.1).and. &
            (imaterial_count.le.num_materials)) then
@@ -12667,9 +12744,11 @@ contains
 
          ! get triangulation of uncaptured space in the cell
          ! in: individual_MOF
-       if (continuous_mof.eq.STANDARD_MOF) then !MOF
+       if ((continuous_mof.eq.STANDARD_MOF).or. &
+           (continuous_mof.eq.MOF_TRI_TET)) then 
         use_super_cell=0
         call tets_box_planes_super( &
+         continuous_mof, &
          tessellate, & ! =0 (is_rigid==1 regions not subtracted)
          tid, &
          bfact,dx, &
@@ -12684,6 +12763,7 @@ contains
          sdim)
         use_super_cell=0
         call tets_box_planes_super( &
+         continuous_mof, &
          tessellate, & ! =0
          tid, &
          bfact,dx, &
@@ -12699,6 +12779,7 @@ contains
        else if (continuous_mof.ge.CMOF_X) then !CMOF X
         use_super_cell=0
         call tets_box_planes_super( &
+         continuous_mof, &
          tessellate, & ! =0
          tid, &
          bfact,dx, &
@@ -12713,6 +12794,7 @@ contains
          sdim)
         use_super_cell=1
         call tets_box_planes_super( &
+         continuous_mof, &
          tessellate, & ! =0
          tid, &
          bfact,dx, &
@@ -12729,6 +12811,7 @@ contains
         use_super_cell=1
 
         call tets_box_planes_super( &
+         continuous_mof, &
          tessellate, & ! =0
          tid, &
          bfact,dx, &
@@ -12743,6 +12826,7 @@ contains
          sdim)
         use_super_cell=1
         call tets_box_planes_super( &
+         continuous_mof, &
          tessellate, & ! =0
          tid, &
          bfact,dx, &
@@ -14582,14 +14666,16 @@ contains
 
       call get_dxmaxLS(dx,bfact,dxmaxLS)
 
-      if (continuous_mof.ge.0) then !MOF or CMOF X
+      if (continuous_mof.eq.STANDARD_MOF) then
        dxmaxLS_volume_constraint=dxmaxLS
-      else if (continuous_mof.eq.MOF_TRI_TET) then !MOF TRI_TET
+      else if (continuous_mof.ge.CMOF_X) then 
        dxmaxLS_volume_constraint=dxmaxLS
-      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
+       dxmaxLS_volume_constraint=dxmaxLS
+      else if (continuous_mof.eq.CMOF_F_AND_X) then 
        dxmaxLS_volume_constraint=three*dxmaxLS
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid(14594): ",continuous_mof
        stop
       endif
       null_intercept=two*bfact*dxmaxLS_volume_constraint
@@ -14639,9 +14725,9 @@ contains
 
        else if (is_rigid(imaterial).eq.0) then
 
-        if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-            (continuous_mof.eq.MOF_TRI_TET).or. & !MOF TRI_TET
-            (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF X and F
+        if ((continuous_mof.eq.STANDARD_MOF).or. &
+            (continuous_mof.eq.MOF_TRI_TET).or. & 
+            (continuous_mof.eq.CMOF_F_AND_X)) then 
          if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
           !do nothing
          else
@@ -14652,7 +14738,7 @@ contains
           print *,"continuous_mof=",continuous_mof
           stop
          endif
-        else if (continuous_mof.ge.CMOF_X) then !CMOF X
+        else if (continuous_mof.ge.CMOF_X) then 
          if (voftest(imaterial).gt.zero) then
           if (vof_super(imaterial).gt.zero) then
            ! do nothing
@@ -14704,9 +14790,9 @@ contains
 
          lsnormal_valid(imaterial)=0
 
-        else if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-                 (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F.
-                 (continuous_mof.ge.CMOF_X)) then !CMOF X
+        else if ((continuous_mof.eq.STANDARD_MOF).or. & 
+                 (continuous_mof.eq.CMOF_F_AND_X).or. & 
+                 (continuous_mof.ge.CMOF_X)) then 
  
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
@@ -14798,9 +14884,10 @@ contains
        mof_calls(tid+1,imaterial)=0
        vofcomp=(imaterial-1)*ngeom_recon+1
 
-       if ((continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-           (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-           (continuous_mof.ge.CMOF_X)) then  !CMOF X
+       if ((continuous_mof.eq.STANDARD_MOF).or. & 
+           (continuous_mof.eq.MOF_TRI_TET).or. & 
+           (continuous_mof.eq.CMOF_F_AND_X).or. & 
+           (continuous_mof.ge.CMOF_X)) then 
         mofdata(vofcomp+sdim+1)=zero  ! order=0
         do dir=1,sdim
          mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
@@ -14839,8 +14926,20 @@ contains
         order_algorithm_in(imaterial)=1
 
          ! centroid is in absolute coordinate system 
-        call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
+        if (continuous_mof_rigid.eq.STANDARD_MOF) then
+         call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
           uncaptured_centroid_vof,sdim)
+        else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
+         call Box_volumeTRI_TET( &
+           bfact,dx, &
+           xsten0,nhalf0, &
+           uncaptured_volume_vof, &
+           uncaptured_centroid_vof, &
+           sdim)
+        else
+         print *,"continuous_mof_rigid invalid"
+         stop
+        endif
 
         fastflag=1
 
@@ -14884,7 +14983,7 @@ contains
           ! cell.
           ! find_cut_geom_slope called from: multimaterial_MOF
           ! This call is for the reconstruction of is_rigid=1 materials;
-          ! continuous_mof_rigid=STANDARD_MOF
+          ! continuous_mof_rigid=STANDARD_MOF or MOF_TRI_TET
           call find_cut_geom_slope( &
            tid, &
            uncaptured_volume_vof, &
@@ -14985,9 +15084,11 @@ contains
          remaining_vfrac=remaining_vfrac+mofdata(vofcomp)
         endif
 
-        if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-            (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-            (continuous_mof.ge.CMOF_X)) then !CMOF X
+        if ((continuous_mof.eq.STANDARD_MOF).or. & 
+            (continuous_mof.eq.MOF_TRI_TET).or. &
+            (continuous_mof.eq.CMOF_F_AND_X).or. &
+            (continuous_mof.ge.CMOF_X)) then 
+
          order_algorithm_in(imaterial)=order_algorithm(imaterial)
  
          if (order_algorithm(imaterial).eq.0) then
@@ -15211,7 +15312,7 @@ contains
           ! no need to pick an optimal ordering
        if (n_ndef.eq.0) then
 
-        if (continuous_mof.eq.STANDARD_MOF) then !MOF
+        if (continuous_mof.eq.STANDARD_MOF) then 
 
          call Box_volumeFAST( &
           bfact,dx,xsten0,nhalf0, &
@@ -15224,7 +15325,23 @@ contains
           uncaptured_centroid_cen, &
           sdim)
 
-        else if (continuous_mof.ge.CMOF_X) then !CMOF X
+        else if (continuous_mof.eq.MOF_TRI_TET) then
+
+         call Box_volumeTRI_TET( &
+           bfact,dx, &
+           xsten0,nhalf0, &
+           uncaptured_volume_vof, &
+           uncaptured_centroid_vof, &
+           sdim)
+
+         call Box_volumeTRI_TET( &
+           bfact,dx, &
+           xsten0,nhalf0, &
+           uncaptured_volume_cen, &
+           uncaptured_centroid_cen, &
+           sdim)
+
+        else if (continuous_mof.ge.CMOF_X) then
 
          call Box_volumeFAST( &
           bfact,dx,xsten0,nhalf0, &
@@ -15238,7 +15355,7 @@ contains
           uncaptured_centroid_cen, &
           sdim)
 
-        else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+        else if (continuous_mof.eq.CMOF_F_AND_X) then 
 
          call Box_volume_super( &
           cmofsten, &
@@ -15388,7 +15505,7 @@ contains
 
          enddo ! iflex=1...n_ndef
         
-         if (continuous_mof.eq.STANDARD_MOF) then !MOF
+         if (continuous_mof.eq.STANDARD_MOF) then 
 
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
@@ -15401,7 +15518,23 @@ contains
            uncaptured_centroid_cen, &
            sdim)
 
-         else if (continuous_mof.ge.CMOF_X) then !CMOF X
+         else if (continuous_mof.eq.MOF_TRI_TET) then
+
+          call Box_volumeTRI_TET( &
+           bfact,dx, &
+           xsten0,nhalf0, &
+           uncaptured_volume_vof, &
+           uncaptured_centroid_vof, &
+           sdim)
+
+          call Box_volumeTRI_TET( &
+           bfact,dx, &
+           xsten0,nhalf0, &
+           uncaptured_volume_cen, &
+           uncaptured_centroid_cen, &
+           sdim)
+
+         else if (continuous_mof.ge.CMOF_X) then 
 
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
@@ -15732,8 +15865,9 @@ contains
       enddo
 
       nsamples=90000
-      if (nmax.ne.400) then
+      if (nmax.ne.POLYGON_LIST_MAX) then
        print *,"nmax invalid diagnostic MOF nmax=",nmax
+       print *,"POLYGON_LIST_MAX=",POLYGON_LIST_MAX
        stop
       endif
       if ((num_materials.ge.2).and.(num_materials.le.MAX_NUM_MATERIALS)) then
@@ -15831,7 +15965,9 @@ contains
          total_volume, &
          total_centroid,sdim)
 
-       if (total_volume.lt.zero) then
+       if (total_volume.ge.zero) then
+        !do nothing
+       else
         print *,"total_volume invalid"
         stop
        endif
@@ -16249,7 +16385,8 @@ contains
          enddo
 
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof invalid(make_vfrac_sum_ok_base):", &
+             continuous_mof
          stop
         endif
 
@@ -17079,8 +17216,10 @@ contains
              ! only xsten0(0,dir) dir=1..sdim used
              ! in: multi_volume_grid
             call tets_box_planes( &
+              continuous_mof, &
               new_tessellate_local, & ! new_tessellate_local=1 or 2
-              bfact,dx,xsten0,nhalf0, &
+              bfact,dx, &
+              xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
               mofdatalocal, &
               xtetlist, &
@@ -17428,6 +17567,7 @@ contains
              ! only xsten0(0,dir) dir=1..sdim used
              ! in: multi_volume_grid
             call tets_box_planes( &
+             continuous_mof, &
              new_tessellate_local, & ! =0,1, or 2
              bfact,dx,xsten0,nhalf0, &
              xsten_grid,nhalf_grid, &
@@ -18169,7 +18309,8 @@ contains
       uncaptured_area=uncaptured_volume_START/(2.0*dxthin)
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
-      else if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      else if ((levelrz.eq.COORDSYS_RZ).or. &
+               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (dir_plus.eq.1) then
         if ((xsten0_minus(0,dir_plus).lt.zero).and. &
             (xsten0_plus(0,dir_plus).gt.zero)) then
@@ -18327,6 +18468,7 @@ contains
          ! 1<=material_used(im)<=num_materials)
 
          call tets_box_planes( &
+           continuous_mof, &
            local_tessellate_in, & ! =0 or 2
            bfact,dx, &
            xsten0_minus,nhalf0, &
@@ -19145,7 +19287,8 @@ contains
          new_tessellate_local=1
         else if (local_tessellate.eq.2) then
          new_tessellate_local=2
-         if ((num_materials_solid.eq.0).and.(num_materials_fluid.eq.num_materials)) then
+         if ((num_materials_solid.eq.0).and. &
+             (num_materials_fluid.eq.num_materials)) then
           ! do nothing
          else
           print *,"num_materials_solid or num_materials_fluid invalid"
@@ -19251,6 +19394,7 @@ contains
             ! only xsten0(0,dir) dir=1..sdim used
             ! in: multi_volume_grid_simple
            call tets_box_planes( &
+              continuous_mof, &
               new_tessellate_local, & ! 1 or 2
               bfact,dx,xsten0,nhalf0, &
               xsten_grid,nhalf_grid, &
@@ -19580,6 +19724,7 @@ contains
             ! only xsten0(0,dir) dir=1..sdim used
             ! in: multi_volume_grid
            call tets_box_planes( &
+            continuous_mof, &
             new_tessellate_local, & ! 0,1, or 2
             bfact,dx,xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
@@ -20183,6 +20328,7 @@ contains
            ! in: multi_volume_grid_and_map
            ! STILL in first sweep: only is_rigid==1 materials in this sweep.
           call tets_box_planes( &
+            continuous_mof, &
             tessellate_local, &  ! =1 (recognize the is_rigid==1 mat.)
             bfact,dx,xsten0,nhalf0, &
             xsten_grid,nhalf_grid, &
@@ -20476,6 +20622,7 @@ contains
            ! only xsten0(0,dir) dir=1..sdim used
            ! in: multi_volume_grid
           call tets_box_planes( &
+           continuous_mof, &
            tessellate_local, & ! =0
            bfact,dx,xsten0,nhalf0, &
            xsten_grid,nhalf_grid, &
@@ -23652,8 +23799,10 @@ contains
        print *,"nthreads invalid"
        stop
       endif
-      if (nmax_in.lt.200) then
-       print *,"nmax_in too small"
+      if (nmax_in.ne.POLYGON_LIST_MAX) then
+       print *,"expecting nmax_in = POLYGON_LIST_MAX"
+       print *,"nmax_in=",nmax_in
+       print *,"POLYGON_LIST_MAX=",POLYGON_LIST_MAX
        stop
       endif
 
@@ -23680,7 +23829,7 @@ contains
       endif
       if (1.eq.0) then
        sdim=2
-       nmax_test=1000
+       nmax_test=POLYGON_LIST_MAX
        call diagnostic_MOF(sdim,nmax_test)
        stop
       endif
