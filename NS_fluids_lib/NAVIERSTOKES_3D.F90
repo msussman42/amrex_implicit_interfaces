@@ -13338,7 +13338,6 @@ END SUBROUTINE SIMP
       INTEGER_T fine_covered
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       INTEGER_T nmax
-      INTEGER_T, parameter :: nhalf_box=1
 
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
@@ -13513,7 +13512,8 @@ END SUBROUTINE SIMP
                 ! sum F_fluid=1  sum F_solid<=1
                call make_vfrac_sum_ok_base( &
                  cmofsten, &
-                 xstenfine,nhalf,nhalf_box, &
+                 xstenfine,nhalf, &
+                 continuous_mof, &
                  bfact_f,dxf, &
                  tessellate, &
                  mofdatafine, &

@@ -169,7 +169,7 @@ stop
       INTEGER_T debugslope
       INTEGER_T, parameter :: tessellate=0
       INTEGER_T, parameter :: shapeflag=0
-      INTEGER_T, parameter :: nhalf_box=1
+      INTEGER_T, parameter :: continuous_mof_standard=STANDARD_MOF
 
       REAL_T vfrac_fluid_sum
       REAL_T vfrac_solid_sum
@@ -393,7 +393,7 @@ stop
          cmofsten, &  ! INTENT(in)
          xsten, &
          nhalf, &
-         nhalf_box, &
+         continuous_mof_standard, &
          bfact,dx, &
          tessellate, & ! =0
          mofdata, &  ! INTENT(inout)
@@ -615,7 +615,7 @@ stop
             cmofsten, & !intent(in)
             xstenbox, &
             nhalfbox_sten, & ! =1
-            nhalf_box, & ! =1
+            continuous_mof_standard, & ! =STANDARD_MOF
             bfact,dx, &
             tessellate, & ! =0
             mofsten, &

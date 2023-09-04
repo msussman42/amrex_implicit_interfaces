@@ -19792,7 +19792,6 @@ end subroutine RatePhaseChange
       REAL_T cen_dst(SDIM)
       REAL_T vfluid_sum
       REAL_T VOF_source,VOF_dest
-      INTEGER_T, parameter :: nhalf_box=1
       INTEGER_T local_tessellate
 
       nmax=POLYGON_LIST_MAX 
@@ -19993,7 +19992,8 @@ end subroutine RatePhaseChange
 
         call make_vfrac_sum_ok_base( &
           cmofsten, &
-          xsten,nhalf,nhalf_box, &
+          xsten,nhalf, &
+          continuous_mof, &
           nucleate_in%bfact, &
           nucleate_in%dx, &
           tessellate, &  ! =0
@@ -24720,7 +24720,7 @@ end subroutine initialize2d
        INTEGER_T tessellate
        INTEGER_T bcflag
        INTEGER_T, PARAMETER :: from_boundary_hydrostatic=0
-       INTEGER_T, parameter :: nhalf_box=1
+       INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
        INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
        REAL_T theta_initdata
        REAL_T concentration_initdata
@@ -26054,7 +26054,7 @@ end subroutine initialize2d
         call make_vfrac_sum_ok_base( &
           cmofsten, &
           xsten,nhalf, &
-          nhalf_box, & !nhalf_box=1=>cmofsten is not used(standard MOF here)
+          continuous_mof, &
           bfact,dx, &
           tessellate, & ! =0
           mofdata,SDIM)
@@ -29187,7 +29187,6 @@ end subroutine initialize2d
       INTEGER_T tessellate
 
       INTEGER_T, parameter :: nhalf=3
-      INTEGER_T, parameter :: nhalf_box=1
 
       REAL_T xsten(-nhalf:nhalf,SDIM)
       INTEGER_T tid,nmax
@@ -29388,7 +29387,8 @@ end subroutine initialize2d
 
          call make_vfrac_sum_ok_base( &
            cmofsten, &
-           xsten,nhalf,nhalf_box, &
+           xsten,nhalf, &
+           continuous_mof, &
            bfact,dx, &
            tessellate, &  ! =0
            mofdata, &

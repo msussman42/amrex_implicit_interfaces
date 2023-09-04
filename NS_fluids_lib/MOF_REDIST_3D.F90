@@ -3408,7 +3408,8 @@ stop
       REAL_T, pointer :: facefab_ptr(D_DECL(:,:,:),:)
 
       REAL_T, INTENT(in), target :: maskfab(DIMV(maskfab),2)
-      REAL_T, INTENT(in), target :: vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
+      REAL_T, INTENT(in), target :: &
+          vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
 
       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3449,11 +3450,9 @@ stop
       INTEGER_T mask1,mask2
       INTEGER_T normalize_tessellate
       INTEGER_T local_tessellate
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
-      nhalf_box=1
- 
       facefab_ptr=>facefab
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -3555,7 +3554,8 @@ stop
         normalize_tessellate=0
         call make_vfrac_sum_ok_copy( &
          cmofsten, &
-         xsten,nhalf,nhalf_box, &
+         xsten,nhalf, &
+         continuous_mof, &
          bfact,dx, &
          normalize_tessellate, &  ! =0
          mofdata,mofdatavalid, &

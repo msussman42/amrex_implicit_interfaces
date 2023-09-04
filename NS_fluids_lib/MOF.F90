@@ -5993,7 +5993,8 @@ end subroutine volume_sanity_check
       subroutine tets_box_planes( &
        tessellate, &
        bfact,dx,xsten0,nhalf0, &
-       xsten_box,nhalf_box,mofdata, &
+       xsten_box,nhalf_box, &
+       mofdata, &
        xtetlist, &
        nlist_alloc, &
        nlist, &
@@ -9199,7 +9200,7 @@ contains
          xsten_local(i,dir)=cencell(dir)+i*dx(dir)
         else if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
                  (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-                 (continuous_mof.eq.CMOF_X)) then  !CMOF X
+                 (continuous_mof.ge.CMOF_X)) then  !CMOF X
          xsten_local(i,dir)=xsten0(i,dir)
         else
          print *,"continuous_mof invalid: ",continuous_mof
@@ -11086,7 +11087,7 @@ contains
         print *,"levelrz invalid"
         stop
        endif
-      else if (continuous_mof.eq.CMOF_X) then !CMOF X
+      else if (continuous_mof.ge.CMOF_X) then !CMOF X
        use_MilcentLemoine=0
       else
        print *,"continuous_mof invalid, angle_init_from_angle_recon_and_F"
@@ -11562,7 +11563,7 @@ contains
           mof_stencil_ok=1
           if (continuous_mof.eq.STANDARD_MOF) then !standard MOF
            ! do nothing
-          else if (continuous_mof.eq.CMOF_F_AND_X) then!refcen and refvfrac on supercell
+          else if (continuous_mof.eq.CMOF_F_AND_X) then
            mof_stencil_ok=0
           else if (continuous_mof.ge.CMOF_X) then!refcen only on supercell
 
@@ -14474,8 +14475,6 @@ contains
       INTEGER_T :: nEQN_standard
       INTEGER_T is_rigid_local(num_materials)
 
-      INTEGER_T nhalf_box
-
       INTEGER_T :: tid=0
 
 #ifdef _OPENMP
@@ -14563,19 +14562,6 @@ contains
        print *,"multimaterial_MOF: nmax<>geom_nmax"
        print *,"nmax= ",nmax
        print *,"geom_nmax= ",geom_nmax
-       stop
-      endif
-
-      if (continuous_mof.ge.CMOF_X) then !CMOF X
-       nhalf_box=3
-      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
-       nhalf_box=3
-      else if (continuous_mof.eq.MOF_TRI_TET) then !MOF TRI_TET
-       nhalf_box=2
-      else if (continuous_mof.eq.STANDARD_MOF) then !MOF
-       nhalf_box=1
-      else
-       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
 
@@ -14795,7 +14781,7 @@ contains
         cmofsten, &
         xsten0, &
         nhalf0, &
-        nhalf_box, & !=3 if CMOF, =1 if MOF, =2 if MOF TRI_TET
+        continuous_mof, & 
         bfact,dx, &
         tessellate, &  ! =0
         mofdata, &
@@ -14840,7 +14826,7 @@ contains
        if (is_rigid_local(imaterial).eq.1) then
 
         if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-            (continuous_mof.eq.CMOF_X).or. & !CMOF X
+            (continuous_mof.ge.CMOF_X).or. & !CMOF X
             (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF F and X
          continuous_mof_rigid=STANDARD_MOF
         else if (continuous_mof.eq.MOF_TRI_TET) then !TRI-TET
@@ -15964,10 +15950,10 @@ contains
 
 ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_base( &
-        cmofsten, &  !intent(in) used if nhalf_box=3
+        cmofsten, & !intent(in) continuous_mof.ge.CMOF_X or CMOF_F_AND_X
         xsten, &
         nhalf, &
-        nhalf_box, & 
+        continuous_mof, & 
         bfact,dx, &
         tessellate, &
         mofdata, &
@@ -15982,7 +15968,7 @@ contains
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: nhalf
-      INTEGER_T, INTENT(in) :: nhalf_box
+      INTEGER_T, INTENT(in) :: continuous_mof
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
       INTEGER_T, INTENT(in) :: tessellate
@@ -15999,23 +15985,53 @@ contains
       REAL_T cencell(sdim)
       REAL_T xtet(sdim+1,sdim)
       REAL_T xtarget(sdim)
+      REAL_T boxlo,boxhi
 
-      if ((nhalf.ge.1).and. &
-          (nhalf_box.le.nhalf).and. &
-          ((nhalf_box.eq.1).or. & !MOF
-           (nhalf_box.eq.2).or. & !MOF TRI_TET
-           (nhalf_box.eq.3))) then !CMOF
-       ! do nothing
+      if (continuous_mof.eq.STANDARD_MOF) then
+       if (nhalf.ge.1) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_base"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
+      else if (continuous_mof.ge.CMOF_X) then
+       if (nhalf.ge.3) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_base"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
+      else if (continuous_mof.eq.CMOF_F_AND_X) then
+       if (nhalf.ge.3) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_base"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
+      else if (continuous_mof.eq.MOF_TRI_TET) then
+       if (nhalf.ge.2) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_base"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
       else
-       print *,"nhalf or nhalf_box invalid: ",nhalf,nhalf_box
+       print *,"continuous_mof invalid make_vfrac_sum_ok_base: ", &
+          continuous_mof
        stop
       endif
+
       if (bfact.ge.1) then
        ! do nothing
       else
        print *,"bfact invalid: ",bfact
        stop
       endif
+
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
        if (tessellate.eq.2) then
@@ -16052,21 +16068,22 @@ contains
       vofsolid_max=zero
       im_solid_max=0
 
-      if (nhalf_box.eq.1) then !MOF
+      if (continuous_mof.eq.STANDARD_MOF) then !MOF
        call Box_volumeFAST( &
          bfact,dx, &
          xsten,nhalf, &
          volcell, &
          cencell, &
          sdim)
-      else if (nhalf_box.eq.2) then !MOF TRI_TET
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
        call Box_volumeTRI_TET( &
          bfact,dx, &
          xsten,nhalf, &
          volcell, &
          cencell, &
          sdim)
-      else if (nhalf_box.eq.3) then ! CMOF
+      else if ((continuous_mof.ge.CMOF_X).or. &
+               (continuous_mof.eq.CMOF_F_AND_X)) then ! CMOF
         ! sum_i',j' V_i+i',j+j'
         ! volume r<0 subbox is positive; centroid(1)<0 for r<0 subbox
        call Box_volume_super( &
@@ -16077,7 +16094,8 @@ contains
          cencell, &
          sdim)
       else
-       print *,"nhalf_box invalid: ",nhalf_box
+       print *,"continuous_mof invalid make_vfrac_sum_ok_base(16110): ", &
+          continuous_mof
        stop
       endif
 
@@ -16177,44 +16195,61 @@ contains
        else if ((mofdata(vofcomp).gt.zero).and. &
                 (mofdata(vofcomp).lt.one)) then
 
-        if ((nhalf_box.eq.1).or. & !MOF
-            (nhalf_box.eq.3)) then !CMOF
+        do dir=1,sdim
+         xtarget(dir)=mofdata(vofcomp+dir)+cencell(dir)
+        enddo
+
+        if ((continuous_mof.eq.STANDARD_MOF).or. &
+            (continuous_mof.ge.CMOF_X).or. &
+            (continuous_mof.eq.CMOF_F_AND_X)) then
+
          do dir=1,sdim
-          if (mofdata(vofcomp+dir)+cencell(dir).le. &
-              xsten(-nhalf_box,dir)) then
-           mofdata(vofcomp+dir)=xsten(-nhalf_box,dir)-cencell(dir)+ &
-            CENTOL*dx(dir)
-          else if (mofdata(vofcomp+dir)+cencell(dir).ge. &
-                   xsten(nhalf_box,dir)) then
-           mofdata(vofcomp+dir)=xsten(nhalf_box,dir)-cencell(dir)- &
-            CENTOL*dx(dir)
-          else if ((mofdata(vofcomp+dir)+cencell(dir).gt. &
-                    xsten(-nhalf_box,dir)).and. &
-                   (mofdata(vofcomp+dir)+cencell(dir).lt. &
-                    xsten(nhalf_box,dir))) then
+          if (continuous_mof.eq.STANDARD_MOF) then
+           boxlo=xsten(-1,dir)
+           boxhi=xsten(1,dir)
+          else if ((continuous_mof.ge.CMOF_X).or. &
+                   (continuous_mof.eq.CMOF_F_AND_X)) then
+           boxlo=xsten(-3,dir)
+           boxhi=xsten(3,dir)
+          else
+           print *,"continuous_mof invalid"
+           stop
+          endif
+          if (boxhi.gt.boxlo) then
            ! do nothing
           else
-           print *,"mofdata(vofcomp+dir) invalid"
+           print *,"boxhi>boxlo condition failed"
+           stop
+          endif
+
+          if (xtarget(dir).le.boxlo) then
+           mofdata(vofcomp+dir)=boxlo-cencell(dir)+CENTOL*dx(dir)
+          else if (xtarget(dir).ge.boxhi) then
+           mofdata(vofcomp+dir)=boxhi-cencell(dir)-CENTOL*dx(dir)
+          else if ((xtarget(dir).gt.boxlo).and. &
+                   (xtarget(dir).lt.boxhi)) then
+           ! do nothing
+          else
+           print *,"xtarget(dir) invalid: ",xtarget(dir)
            stop
           endif
          enddo !dir=1..sdim
-        else if (nhalf_box.eq.2) then ! MOF TRI_TET
+
+        else if (continuous_mof.eq.MOF_TRI_TET) then 
 
          do i=1,sdim+1
          do dir=1,sdim
           xtet(i,dir)=xsten(-nhalf+i-1,dir)
          enddo
          enddo
-         do dir=1,sdim
-          xtarget(dir)=mofdata(vofcomp+dir)+cencell(dir)
-         enddo
           !project_to_tet is declared in GLOBALUTIL.F90
          call project_to_tet(sdim,xtarget,xtet)
          do dir=1,sdim
           mofdata(vofcomp+dir)=xtarget(dir)-cencell(dir)
          enddo
+
         else
-         print *,"nhalf_box invalid"
+         print *,"continuous_mof invalid"
          stop
         endif
 
@@ -16231,7 +16266,8 @@ contains
 ! vof,ref centroid,order,slope,intercept  x num_materials
       subroutine make_vfrac_sum_ok_copy( &
         cmofsten, &
-        xsten,nhalf,nhalf_box, &
+        xsten,nhalf, &
+        continuous_mof, &
         bfact,dx, &
         tessellate, &
         mofdata,mofdatavalid, &
@@ -16245,7 +16281,8 @@ contains
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: nhalf,nhalf_box
+      INTEGER_T, INTENT(in) :: nhalf
+      INTEGER_T, INTENT(in) :: continuous_mof
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
 
@@ -16258,14 +16295,44 @@ contains
       REAL_T voffluid,vofsolid,vof_test
       INTEGER_T is_rigid_local(num_materials)
 
-      if ((nhalf.ge.1).and. &
-          (nhalf_box.le.nhalf).and. &
-          ((nhalf_box.eq.1).or.(nhalf_box.eq.3))) then
-       ! do nothing
+      if (continuous_mof.eq.STANDARD_MOF) then
+       if (nhalf.ge.1) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
+      else if (continuous_mof.ge.CMOF_X) then
+       if (nhalf.ge.3) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
+      else if (continuous_mof.eq.CMOF_F_AND_X) then
+       if (nhalf.ge.3) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
+      else if (continuous_mof.eq.MOF_TRI_TET) then
+       if (nhalf.ge.2) then
+        ! do nothing
+       else
+        print *,"nhalf invalid in make_vfrac_sum_ok_copy"
+        print *,"nhalf,continuous_mof ",nhalf,continuous_mof
+        stop
+       endif
       else
-       print *,"nhalf or nhalf_box invalid"
+       print *,"continuous_mof invalid make_vfrac_sum_ok_copy: ", &
+          continuous_mof
        stop
       endif
+
       if (bfact.ge.1) then
        ! do nothing
       else
@@ -16349,7 +16416,9 @@ contains
 
       call make_vfrac_sum_ok_base( &
        cmofsten, &
-       xsten,nhalf,nhalf_box, &
+       xsten, &
+       nhalf, &
+       continuous_mof, &
        bfact,dx, &
        tessellate, &
        mofdatavalid, &
@@ -16613,11 +16682,9 @@ contains
       INTEGER_T loop_counter
       INTEGER_T new_tessellate_local
       INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T local_tessellate
       REAL_T vfrac_raster_solid
-
-      nhalf_box=1
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -16691,7 +16758,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0,nhalf0, &
-        nhalf_box, & ! =1 (=> do not use cmofsten)
+        continuous_mof, & 
         bfact,dx, &
         local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2
         mofdata,mofdatavalid,sdim)
@@ -17896,11 +17963,9 @@ contains
 
       REAL_T nrecon(sdim)
       REAL_T intercept
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
 
       nhalf_thin=1
-
-      nhalf_box=1
 
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
@@ -17994,7 +18059,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0_plus,nhalf0, &
-        nhalf_box, & !=1 (=> do not use cmofsten)
+        continuous_mof, &
         bfact,dx, &
         normalize_tessellate, &  ! =0
         mofdata_plus,mofdatavalid_plus, &
@@ -18002,7 +18067,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0_minus,nhalf0, &
-        nhalf_box, & !=1 (=> do not use cmofsten)
+        continuous_mof, &
         bfact,dx, &
         normalize_tessellate, & ! =0
         mofdata_minus,mofdatavalid_minus, &
@@ -18783,13 +18848,11 @@ contains
       INTEGER_T loop_counter
       INTEGER_T local_tessellate
       INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T im_raster_solid
       INTEGER_T new_tessellate_local
       INTEGER_T return_raster_info
       REAL_T vfrac_raster_solid
-
-      nhalf_box=1
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -18872,7 +18935,7 @@ contains
       call make_vfrac_sum_ok_copy( &
        cmofsten, &
        xsten0,nhalf0, &
-       nhalf_box, & !=1 (=> do not use cmofsten)
+       continuous_mof, &
        bfact,dx, &
        local_tessellate, & ! makes is_rigid_local=0 if local_tessellate==2  
        mofdata,mofdatavalid,sdim)
@@ -19802,9 +19865,7 @@ contains
       INTEGER_T loop_counter
       INTEGER_T :: tessellate_local=0
       INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T nhalf_box
-
-      nhalf_box=1
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -19881,7 +19942,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0,nhalf0, &
-        nhalf_box, & !=1 (=> do not use cmofsten)
+        continuous_mof, &
         bfact,dx, &
         tessellate_local, & ! =0 (only tessellate_local==2 is used)
         mofdata,mofdatavalid,sdim)
@@ -20851,11 +20912,9 @@ contains
       INTEGER_T vofcomp_solid
       INTEGER_T imcrit,im_solid
       INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T im_raster_solid
       REAL_T vfrac_raster_solid
-
-      nhalf_box=1
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -20914,7 +20973,7 @@ contains
       call make_vfrac_sum_ok_base( &
        cmofsten, &
        xsten0,nhalf0, &
-       nhalf_box, & !=1 (=> do not use cmofsten)
+       continuous_mof, &
        bfact,dx, &
        renorm_tessellate, & !=0
        mofdata,sdim)
@@ -21951,9 +22010,7 @@ contains
        INTEGER_T im,vofcomp,FSI_exclude,irank,testflag,dir
        INTEGER_T is_rigid_local(num_materials)
        INTEGER_T, PARAMETER :: tessellate=0
-       INTEGER_T nhalf_box
-
-       nhalf_box=1
+       INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
 
        do im=1,num_materials
         is_rigid_local(im)=is_rigid(im)
@@ -22005,7 +22062,7 @@ contains
        call make_vfrac_sum_ok_copy( &
          cmofsten, &
          xsten0,nhalf0, &
-         nhalf_box, & !=1 (=> do not use cmofsten)
+         continuous_mof, &
          bfact,dx, &
          tessellate, & ! =0  (if tessellate==2 then is_rigid=0)
          mofdata,mofdatavalid,sdim)
@@ -22140,9 +22197,7 @@ contains
       REAL_T xgrid_minus2(sdim)
       INTEGER_T, PARAMETER :: tessellate=0
       INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T nhalf_box
-
-      nhalf_box=1
+      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -22208,7 +22263,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten_recon,nhalf_recon, &
-        nhalf_box, & !=1 (=> do not use cmofsten)
+        continuous_mof, &
         bfact,dx, &
         tessellate, &  ! =0 (if tessellate==2, set is_rigid=0)
         mofdata,mofdatavalid,sdim)
@@ -22717,7 +22772,7 @@ contains
       REAL_T vfrac_data(num_materials)
       INTEGER_T vfrac_checked(num_materials)
       INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T nhalf_box
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T im_raster_solid
       INTEGER_T return_raster_info
       INTEGER_T local_tessellate
@@ -22727,8 +22782,6 @@ contains
 
 
 #include "mofdata.H"
-
-      nhalf_box=1
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -22786,7 +22839,7 @@ contains
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0,nhalf0, &
-        nhalf_box, & !=1 (=> do not use cmofsten)
+        continuous_mof, &
         bfact,dx, &
         local_tessellate, & ! =0
         mofdata,mofdatavalid,sdim)
