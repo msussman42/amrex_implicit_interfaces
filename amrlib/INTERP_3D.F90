@@ -185,7 +185,6 @@ stop
       REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
       INTEGER_T n_overlap
       INTEGER_T tessellate
-      INTEGER_T, parameter :: nhalf_box=1
 
       INTEGER_T tid
 #ifdef _OPENMP
@@ -272,7 +271,8 @@ stop
         ! sum F_fluid=1  sum F_solid <= 1
        call make_vfrac_sum_ok_base( &
          cmofsten, &
-         xsten,nhalf,nhalf_box, &
+         xsten,nhalf, &
+         continuous_mof, &
          bfact_coarse,dxc, &
          tessellate, & !=0
          mofdata,SDIM)
@@ -801,8 +801,6 @@ stop
       REAL_T multi_centroidA(num_materials,SDIM)
       REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      INTEGER_T, parameter :: nhalf_box=1
-
       INTEGER_T tid
 #ifdef _OPENMP
       INTEGER_T omp_get_thread_num
@@ -1057,7 +1055,8 @@ stop
         ! sum F_fluid=1  sum F_solid<=1
        call make_vfrac_sum_ok_base( &
          cmofsten, &
-         xstenfine,nhalf,nhalf_box, &
+         xstenfine,nhalf, &
+         continuous_mof, &
          bfact_fine,dxf, &
          tessellate, & !=0
          mofdata,SDIM)

@@ -3960,7 +3960,6 @@ stop
       REAL_T intercept_dest
       REAL_T LS_dest_old,LS_dest_new
       REAL_T mass_frac_limit
-      INTEGER_T, parameter :: nhalf_box=1
       INTEGER_T vofcomp_local
       INTEGER_T im_local
       INTEGER_T im_trust
@@ -6236,7 +6235,8 @@ stop
              tessellate=0
              call make_vfrac_sum_ok_base( &
                cmofsten, &
-               u_xsten_updatecell,nhalf,nhalf_box, &
+               u_xsten_updatecell,nhalf, &
+               continuous_mof_parm, &
                bfact,dx, &
                tessellate,mofdata,SDIM)
 

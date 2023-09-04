@@ -2321,7 +2321,7 @@ stop
       INTEGER_T mask1,mask2
       INTEGER_T iten
       INTEGER_T is_processed(num_interfaces)
-      INTEGER_T, parameter :: nhalf_box=1
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T local_tessellate
  
@@ -2464,7 +2464,8 @@ stop
          local_tessellate=0
          call make_vfrac_sum_ok_copy( &
            cmofsten, &
-           xsten,nhalf,nhalf_box, &
+           xsten,nhalf, &
+           continuous_mof, &
            bfact,dx, &
            local_tessellate, & ! =0 
            mofdata,mofdatavalid, &
@@ -16615,7 +16616,6 @@ stop
       REAL_T xSOLID_BULK(SDIM)
       REAL_T local_XPOS(SDIM)
       REAL_T local_mag
-      INTEGER_T, parameter :: nhalf_box=1
 
       if (renormalize_only.eq.1) then
        if (num_LS_extrap_iter.eq.1) then
@@ -17836,7 +17836,8 @@ stop
             tessellate=0
             call make_vfrac_sum_ok_base( &
               cmofsten, &
-              xsten,nhalf,nhalf_box, &
+              xsten,nhalf, &
+              continuous_mof_parm, &
               bfact,dx, &
               tessellate, &
               local_mof, &
@@ -17997,7 +17998,8 @@ stop
           ! sum of F_rigid<=1
          call make_vfrac_sum_ok_base( &
            cmofsten, &
-           xsten,nhalf,nhalf_box, &
+           xsten,nhalf, &
+           continuous_mof_parm, &
            bfact,dx, &
            tessellate,mofnew,SDIM)
 
@@ -18015,7 +18017,8 @@ stop
 
          call make_vfrac_sum_ok_base( &
            cmofsten, &
-           xsten,nhalf,nhalf_box, &
+           xsten,nhalf, &
+           continuous_mof_parm, &
            bfact,dx, &
            tessellate,mofnew,SDIM)
         else
@@ -18114,7 +18117,7 @@ stop
       INTEGER_T mask_test
       INTEGER_T FSI_exclude
       INTEGER_T tessellate
-      INTEGER_T, parameter :: nhalf_box=1
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       tessellate=0
@@ -18286,7 +18289,8 @@ stop
          ! sum F_fluid=1  sum F_solid <=1
         call make_vfrac_sum_ok_base( &
           cmofsten, &
-          xsten,nhalf,nhalf_box, &
+          xsten,nhalf, &
+          continuous_mof, &
           bfact,dx, &
           tessellate,mofdata,SDIM)
 
