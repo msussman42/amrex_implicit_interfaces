@@ -13332,7 +13332,7 @@ END SUBROUTINE SIMP
       REAL_T multi_volume(num_materials)
       REAL_T multi_cen(SDIM,num_materials)
       INTEGER_T tessellate
-      INTEGER_T, parameter :: continuous_mof=0
+      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
       INTEGER_T, parameter :: mof_verbose=0
       INTEGER_T, parameter :: use_ls_data=0
       INTEGER_T fine_covered
@@ -13536,7 +13536,7 @@ END SUBROUTINE SIMP
                 mofdatafine, &
                 vof_super, &
                 multi_centroidA, &
-                continuous_mof, & !=0
+                continuous_mof, & !=STANDARD_MOF
                 cmofsten, &
                 grid_index, &
                 grid_level, &

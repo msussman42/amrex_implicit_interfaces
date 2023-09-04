@@ -9143,10 +9143,10 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
-      if ((continuous_mof.eq.0).or. & !MOF
-          (continuous_mof.eq.-2).or. & !MOF-triangle/tetra
-          (continuous_mof.eq.-1).or. &!CMOF both X and F.
-          (continuous_mof.ge.1)) then !CMOF just X.
+      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+          (continuous_mof.eq.MOF_TRI_TET).or. & !MOF-triangle/tetra
+          (continuous_mof.eq.CMOF_F_AND_X).or. &!CMOF both X and F.
+          (continuous_mof.ge.CMOF_X)) then !CMOF just X.
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -9157,21 +9157,21 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.0).or. & !MOF
-          (continuous_mof.ge.1)) then !CMOF just X
+      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+          (continuous_mof.ge.CMOF_X)) then !CMOF just X
        call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell, &
          cencell, &
          sdim)
-      else if (continuous_mof.eq.-2) then !triangle/tetra
+      else if (continuous_mof.eq.MOF_TRI_TET) then !triangle/tetra
        call Box_volumeTRI_TET( &
          bfact,dx, &
          xsten0,nhalf0, &
          volcell, &
          cencell, &
          sdim)
-      else if (continuous_mof.eq.-1) then !CMOF X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
        call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
@@ -9195,11 +9195,11 @@ contains
          ! xsten_local used for LS dist.
        do i=-nhalf0,nhalf0
        do dir=1,sdim
-        if (continuous_mof.eq.-2) then
+        if (continuous_mof.eq.MOF_TRI_TET) then
          xsten_local(i,dir)=cencell(dir)+i*dx(dir)
-        else if ((continuous_mof.eq.-1).or. & !CMOF X and F
-                 (continuous_mof.eq.0).or. &  !MOF
-                 (continuous_mof.eq.1)) then  !CMOF X
+        else if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+                 (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
+                 (continuous_mof.eq.CMOF_X)) then  !CMOF X
          xsten_local(i,dir)=xsten0(i,dir)
         else
          print *,"continuous_mof invalid: ",continuous_mof
@@ -9225,8 +9225,8 @@ contains
 
        shapeflag=0
 
-       if ((continuous_mof.eq.0).or. & !MOF
-           (continuous_mof.ge.1)) then !CMOF just X.
+       if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+           (continuous_mof.ge.CMOF_X)) then !CMOF just X.
         call fast_cut_cell_intersection( &
          bfact,dx,xsten0,nhalf0, &
          slope,intercept, &
@@ -9419,9 +9419,9 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.0).or. &  !MOF
-          (continuous_mof.eq.-1).or. & !CMOF X and F
-          (continuous_mof.ge.1)) then  !CMOF just X
+      if ((continuous_mof.eq.STANDARD_MOF).or. &  !MOF
+          (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+          (continuous_mof.ge.CMOF_X)) then  !CMOF just X
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -9451,14 +9451,14 @@ contains
 ! if fastflag=0, 
 !  search the vertices of all triangles that make up the "cut" domain.
 
-      if ((continuous_mof.eq.0).or. & !MOF
-          (continuous_mof.ge.1)) then !CMOF just X
+      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+          (continuous_mof.ge.CMOF_X)) then !CMOF just X
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell, &
         cencell, &
         sdim)
-      else if (continuous_mof.eq.-1) then !CMOF both X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF both X and F
        call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
@@ -9516,8 +9516,8 @@ contains
        maxphi=-1.0D+10
        null_intercept=zero
 
-       if ((continuous_mof.eq.0).or. & !MOF
-           (continuous_mof.ge.1)) then !CMOF X
+       if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+           (continuous_mof.ge.CMOF_X)) then !CMOF X
 
         do k=klo_stencil,khi_stencil,2
         do j=-1,1,2
@@ -10439,9 +10439,9 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.0).or. & !MOF
-          (continuous_mof.eq.-1).or. &!CMOF X and F
-          (continuous_mof.ge.1)) then !CMOF X
+      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+          (continuous_mof.eq.CMOF_F_AND_X).or. &!CMOF X and F
+          (continuous_mof.ge.CMOF_X)) then !CMOF X
        ! do nothing
       else
        print *,"continuous_mof invalid: ",continuous_mof
@@ -10476,7 +10476,7 @@ contains
 
         ! if RZ, cencell can be negative
 
-       if (continuous_mof.eq.0) then !MOF
+       if (continuous_mof.eq.STANDARD_MOF) then !MOF
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
@@ -10487,7 +10487,7 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-       else if (continuous_mof.ge.1) then !CMOF X
+       else if (continuous_mof.ge.CMOF_X) then !CMOF X
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
@@ -10499,7 +10499,7 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-       else if (continuous_mof.eq.-1) then !CMOF X and F
+       else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
         call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten0,nhalf0, &
@@ -10563,7 +10563,7 @@ contains
          ! testcen in absolute coordinate system
        if (fastflag.eq.0) then
           ! xcell used for LS dist.
-        if (continuous_mof.eq.0) then !MOF
+        if (continuous_mof.eq.STANDARD_MOF) then !MOF
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
          call multi_cell_intersection( &
@@ -10578,7 +10578,7 @@ contains
           nlist_vof, &
           nmax, &
           sdim)
-        else if (continuous_mof.ge.1) then !CMOF X
+        else if (continuous_mof.ge.CMOF_X) then !CMOF X
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
           ! This step is needed since xtetlist_cen!=xtetlist_vof
@@ -10594,7 +10594,7 @@ contains
           nlist_cen, &
           nmax, &
           sdim)
-        else if (continuous_mof.eq.-1) then !CMOF X and F
+        else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
           ! This step is redundant since for continuous_mof==-1, 
@@ -10619,7 +10619,7 @@ contains
        else if (fastflag.eq.1) then
 
         shapeflag=0
-        if (continuous_mof.eq.0) then !MOF
+        if (continuous_mof.eq.STANDARD_MOF) then !MOF
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
          call fast_cut_cell_intersection( &
@@ -10628,7 +10628,7 @@ contains
           intercept(1), &
           volume_cut,testcen,facearea, &
           xsten0,nhalf0,xtet,shapeflag,sdim) 
-        else if (continuous_mof.ge.1) then !CMOF X
+        else if (continuous_mof.ge.CMOF_X) then !CMOF X
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
          volume_cut=zero
@@ -10714,7 +10714,7 @@ contains
 
       else if (use_MilcentLemoine.eq.1) then
 
-       if (continuous_mof.eq.0) then !MOF
+       if (continuous_mof.eq.STANDARD_MOF) then !MOF
         ! do nothing
        else
         print *,"continuous_mof==-1 or 1 not allowed if use_MilcentLemoine==1"
@@ -11076,7 +11076,7 @@ contains
        refcentroid(dir)=zero
       enddo
 
-      if (continuous_mof.eq.0) then !MOF
+      if (continuous_mof.eq.STANDARD_MOF) then !MOF
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         use_MilcentLemoine=1
        else if ((levelrz.eq.COORDSYS_RZ).or. &
@@ -11086,7 +11086,7 @@ contains
         print *,"levelrz invalid"
         stop
        endif
-      else if (continuous_mof.eq.1) then !CMOF X
+      else if (continuous_mof.eq.CMOF_X) then !CMOF X
        use_MilcentLemoine=0
       else
        print *,"continuous_mof invalid, angle_init_from_angle_recon_and_F"
@@ -11385,17 +11385,17 @@ contains
        print *,"critical_material invalid"
        stop
       endif
-      if (continuous_mof.eq.0) then !MOF
+      if (continuous_mof.eq.STANDARD_MOF) then !MOF
        if (nhalf0.lt.1) then
         print *,"expecting nhalf0>=1: ",nhalf0
         stop
        endif
-      else if (continuous_mof.ge.1) then !CMOF X
+      else if (continuous_mof.ge.CMOF_X) then !CMOF X
        if (nhalf0.lt.3) then
         print *,"expecting nhalf0>=3: ",nhalf0
         stop
        endif
-      else if (continuous_mof.eq.-1) then !CMOF X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
        if (nhalf0.lt.3) then
         print *,"expecting nhalf0>=3: ",nhalf0
         stop
@@ -11429,14 +11429,14 @@ contains
       endif
 
       if ((fastflag.eq.1).and. &
-          (continuous_mof.eq.0).and. & !MOF
+          (continuous_mof.eq.STANDARD_MOF).and. & !MOF
           (levelrz.eq.COORDSYS_CARTESIAN)) then
 
        use_MilcentLemoine=1
 
       else if ((fastflag.eq.0).or. &
-               (continuous_mof.ge.1).or. & !CMOF X
-               (continuous_mof.eq.-1).or. & !CMOF X and F
+               (continuous_mof.ge.CMOF_X).or. & !CMOF X
+               (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
                (levelrz.eq.COORDSYS_RZ).or. &
                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
@@ -11495,9 +11495,9 @@ contains
 
        training_nguess=0
 
-       if ((continuous_mof.eq.0).or. &  !MOF
-           (continuous_mof.eq.-1).or. & !CMOF X and F
-           (continuous_mof.ge.1)) then  !CMOF X
+       if ((continuous_mof.eq.STANDARD_MOF).or. &  !MOF
+           (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+           (continuous_mof.ge.CMOF_X)) then  !CMOF X
 
           ! -pi < angle < pi
         call slope_to_angle(npredict,angle_init,sdim)
@@ -11560,11 +11560,11 @@ contains
 
          if (grid_level.eq.decision_tree_max_level) then
           mof_stencil_ok=1
-          if (continuous_mof.eq.0) then !standard MOF
+          if (continuous_mof.eq.STANDARD_MOF) then !standard MOF
            ! do nothing
-          else if (continuous_mof.eq.-1) then!refcen and refvfrac on supercell
+          else if (continuous_mof.eq.CMOF_F_AND_X) then!refcen and refvfrac on supercell
            mof_stencil_ok=0
-          else if (continuous_mof.ge.1) then!refcen only on supercell
+          else if (continuous_mof.ge.CMOF_X) then!refcen only on supercell
 
            if (sdim.eq.3) then
             ksten_low=-1
@@ -11609,9 +11609,9 @@ contains
             enddo
             angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
 
-            if (continuous_mof.eq.0) then !MOF
+            if (continuous_mof.eq.STANDARD_MOF) then !MOF
              cmofML=0
-            else if (continuous_mof.ge.1) then !CMOF X
+            else if (continuous_mof.ge.CMOF_X) then !CMOF X
              cmofML=1
             else
              print *,"continuous_mof invalid"
@@ -11668,11 +11668,11 @@ contains
 
          if (grid_level.eq.training_max_level) then
           mof_stencil_ok=1
-          if (continuous_mof.eq.0) then !MOF
+          if (continuous_mof.eq.STANDARD_MOF) then !MOF
            ! do nothing
-          else if (continuous_mof.eq.-1) then!refcen and refvfrac on supermesh
+          else if (continuous_mof.eq.CMOF_F_AND_X) then!refcen and refvfrac on supermesh
            mof_stencil_ok=0
-          else if (continuous_mof.ge.1) then!refcen on supermesh
+          else if (continuous_mof.ge.CMOF_X) then!refcen on supermesh
 
            if (sdim.eq.3) then
             ksten_low=-1
@@ -11717,9 +11717,9 @@ contains
             enddo
             angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
 
-            if (continuous_mof.eq.0) then !MOF
+            if (continuous_mof.eq.STANDARD_MOF) then !MOF
              cmofML=0
-            else if (continuous_mof.ge.1) then !CMOF X
+            else if (continuous_mof.ge.CMOF_X) then !CMOF X
              cmofML=1
             else
              print *,"continuous_mof invalid"
@@ -12569,9 +12569,9 @@ contains
        print *,"nmax too small"
        stop
       endif
-      if ((continuous_mof.eq.0).or. & !MOF
-          (continuous_mof.eq.-1).or. &!CMOF X and F
-          (continuous_mof.ge.1)) then !CMOF X
+      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+          (continuous_mof.eq.CMOF_F_AND_X).or. &!CMOF X and F
+          (continuous_mof.ge.CMOF_X)) then !CMOF X
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -12587,7 +12587,7 @@ contains
 
        ! cencell_vof,cencell_cen is in absolute coordinate system
 
-      if (continuous_mof.eq.0) then !MOF
+      if (continuous_mof.eq.STANDARD_MOF) then !MOF
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell_vof, &
@@ -12598,7 +12598,7 @@ contains
         volcell_cen, &
         cencell_cen, &
         sdim)
-      else if (continuous_mof.ge.1) then !CMOF X
+      else if (continuous_mof.ge.CMOF_X) then !CMOF X
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell_vof, &
@@ -12611,7 +12611,7 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-      else if (continuous_mof.eq.-1) then !CMOF X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
        call Box_volume_super( &
          cmofsten, &
          bfact,dx, &
@@ -12633,7 +12633,7 @@ contains
 
        ! imaterial_count-1=number of materials already reconstructed.
 
-      if (continuous_mof.eq.-1) then !CMOF X and F
+      if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
 
        if ((imaterial_count.ge.1).and. &
            (imaterial_count.le.num_materials)) then
@@ -12666,7 +12666,7 @@ contains
 
          ! get triangulation of uncaptured space in the cell
          ! in: individual_MOF
-       if (continuous_mof.eq.0) then !MOF
+       if (continuous_mof.eq.STANDARD_MOF) then !MOF
         use_super_cell=0
         call tets_box_planes_super( &
          tessellate, & ! =0 (is_rigid==1 regions not subtracted)
@@ -12695,7 +12695,7 @@ contains
          use_super_cell, &
          cmofsten, &
          sdim)
-       else if (continuous_mof.ge.1) then !CMOF X
+       else if (continuous_mof.ge.CMOF_X) then !CMOF X
         use_super_cell=0
         call tets_box_planes_super( &
          tessellate, & ! =0
@@ -12724,7 +12724,7 @@ contains
          use_super_cell, &
          cmofsten, &
          sdim)
-       else if (continuous_mof.eq.-1) then !CMOF X and F
+       else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
         use_super_cell=1
 
         call tets_box_planes_super( &
@@ -14296,7 +14296,7 @@ contains
 
 
 !
-! continuous_mof=0 (MOF )
+! continuous_mof=STANDARD_MOF (MOF )
 !  regular MOF  minimize E=||x_ij^ref-x_ij^derived||
 !  subject to the constraint that F_ij^ref=F_ij^derived
 !   x_ij^ref=reference centroid in cell ij
@@ -14305,7 +14305,7 @@ contains
 !   F_ij^ref=reference volume fraction in cell ij
 !   F_ij^derived=derived volume fraction in cell ij for a given slope and
 !     intercept.   
-!continuous_mof>=1 (CMOF X)
+!continuous_mof>=CMOF_X (CMOF X)
 !  CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
 !  subject to the constraint that F_ij^ref=F_ij^derived
 !   xS_ij^ref=reference centroid in cell stencil i'=i-1,..,i+1,
@@ -14315,8 +14315,8 @@ contains
 !   F_ij^ref=reference volume fraction in cell
 !   F_ij^derived=derived volume fraction in cell for a given
 !     slope and intercept.
-!continuous_mof=-1 (CMOF X and F)
-!  same as continuous_mof>=1 except that:
+!continuous_mof=CMOF_F_AND_X (CMOF X and F)
+!  same as continuous_mof>=CMOF_X except that:
 !   F_ij^ref=reference volume fraction in "super" cell
 !   F_ij^derived=derived volume fraction in "super" cell for a given
 !     slope and intercept.
@@ -14326,7 +14326,7 @@ contains
 ! ref centroid,multi_centroidA relative to supercell centroid(not cell center).
 ! xcell is cell center (not cell centroid)
 !
-! if continuous_mof>=1:
+! if continuous_mof>=CMOF_X:
 !  centroids: 3x3 super cell unless near Fsolid>1/2 cell (cmofsten)
 !  vfrac    : center cell
 !
@@ -14566,13 +14566,13 @@ contains
        stop
       endif
 
-      if (continuous_mof.ge.1) then !CMOF X
+      if (continuous_mof.ge.CMOF_X) then !CMOF X
        nhalf_box=3
-      else if (continuous_mof.eq.-1) then !CMOF X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
        nhalf_box=3
-      else if (continuous_mof.eq.-2) then !MOF TRI_TET
+      else if (continuous_mof.eq.MOF_TRI_TET) then !MOF TRI_TET
        nhalf_box=2
-      else if (continuous_mof.eq.0) then !MOF
+      else if (continuous_mof.eq.STANDARD_MOF) then !MOF
        nhalf_box=1
       else
        print *,"continuous_mof invalid: ",continuous_mof
@@ -14598,9 +14598,9 @@ contains
 
       if (continuous_mof.ge.0) then !MOF or CMOF X
        dxmaxLS_volume_constraint=dxmaxLS
-      else if (continuous_mof.eq.-2) then !MOF TRI_TET
+      else if (continuous_mof.eq.MOF_TRI_TET) then !MOF TRI_TET
        dxmaxLS_volume_constraint=dxmaxLS
-      else if (continuous_mof.eq.-1) then !CMOF X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
        dxmaxLS_volume_constraint=three*dxmaxLS
       else
        print *,"continuous_mof invalid"
@@ -14653,9 +14653,9 @@ contains
 
        else if (is_rigid(imaterial).eq.0) then
 
-        if ((continuous_mof.eq.0).or. & !MOF
-            (continuous_mof.eq.-2).or. & !MOF TRI_TET
-            (continuous_mof.eq.-1)) then !CMOF X and F
+        if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+            (continuous_mof.eq.MOF_TRI_TET).or. & !MOF TRI_TET
+            (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF X and F
          if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
           !do nothing
          else
@@ -14666,7 +14666,7 @@ contains
           print *,"continuous_mof=",continuous_mof
           stop
          endif
-        else if (continuous_mof.ge.1) then !CMOF X
+        else if (continuous_mof.ge.CMOF_X) then !CMOF X
          if (voftest(imaterial).gt.zero) then
           if (vof_super(imaterial).gt.zero) then
            ! do nothing
@@ -14694,9 +14694,9 @@ contains
 
       if (use_ls_data.eq.1) then
 
-       if ((continuous_mof.eq.0).or. & !MOF
-           (continuous_mof.ge.1).or. & !CMOF X
-           (continuous_mof.eq.-1)) then !CMOF X and F
+       if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+           (continuous_mof.ge.CMOF_X).or. & !CMOF X
+           (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF X and F
         !do nothing
        else
         print *,"continuous_mof invalid: ",continuous_mof
@@ -14718,9 +14718,9 @@ contains
 
          lsnormal_valid(imaterial)=0
 
-        else if ((continuous_mof.eq.0).or. & !MOF
-                 (continuous_mof.eq.-1).or. & !CMOF X and F.
-                 (continuous_mof.ge.1)) then !CMOF X
+        else if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+                 (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F.
+                 (continuous_mof.ge.CMOF_X)) then !CMOF X
  
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
@@ -14812,9 +14812,9 @@ contains
        mof_calls(tid+1,imaterial)=0
        vofcomp=(imaterial-1)*ngeom_recon+1
 
-       if ((continuous_mof.eq.0).or. &  !MOF
-           (continuous_mof.eq.-1).or. & !CMOF X and F
-           (continuous_mof.ge.1)) then  !CMOF X
+       if ((continuous_mof.eq.STANDARD_MOF).or. &  !MOF
+           (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+           (continuous_mof.ge.CMOF_X)) then  !CMOF X
         mofdata(vofcomp+sdim+1)=zero  ! order=0
         do dir=1,sdim
          mofdata(vofcomp+sdim+1+dir)=zero  ! slope=0 
@@ -14839,12 +14839,12 @@ contains
 
        if (is_rigid_local(imaterial).eq.1) then
 
-        if ((continuous_mof.eq.0).or. & !MOF
-            (continuous_mof.eq.1).or. & !CMOF X
-            (continuous_mof.eq.-1)) then !CMOF F and X
-         continuous_mof_rigid=0
-        else if (continuous_mof.eq.-2) then !TRI-TET
-         continuous_mof_rigid=-2
+        if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+            (continuous_mof.eq.CMOF_X).or. & !CMOF X
+            (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF F and X
+         continuous_mof_rigid=STANDARD_MOF
+        else if (continuous_mof.eq.MOF_TRI_TET) then !TRI-TET
+         continuous_mof_rigid=MOF_TRI_TET
         else
          print *,"continuous_mof invalid"
          stop
@@ -14898,7 +14898,7 @@ contains
           ! cell.
           ! find_cut_geom_slope called from: multimaterial_MOF
           ! This call is for the reconstruction of is_rigid=1 materials;
-          ! continuous_mof_rigid=0
+          ! continuous_mof_rigid=STANDARD_MOF
           call find_cut_geom_slope( &
            tid, &
            uncaptured_volume_vof, &
@@ -14999,9 +14999,9 @@ contains
          remaining_vfrac=remaining_vfrac+mofdata(vofcomp)
         endif
 
-        if ((continuous_mof.eq.0).or. & !MOF
-            (continuous_mof.eq.-1).or. & !CMOF X and F
-            (continuous_mof.ge.1)) then !CMOF X
+        if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+            (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+            (continuous_mof.ge.CMOF_X)) then !CMOF X
          order_algorithm_in(imaterial)=order_algorithm(imaterial)
  
          if (order_algorithm(imaterial).eq.0) then
@@ -15225,7 +15225,7 @@ contains
           ! no need to pick an optimal ordering
        if (n_ndef.eq.0) then
 
-        if (continuous_mof.eq.0) then !MOF
+        if (continuous_mof.eq.STANDARD_MOF) then !MOF
 
          call Box_volumeFAST( &
           bfact,dx,xsten0,nhalf0, &
@@ -15238,7 +15238,7 @@ contains
           uncaptured_centroid_cen, &
           sdim)
 
-        else if (continuous_mof.ge.1) then !CMOF X
+        else if (continuous_mof.ge.CMOF_X) then !CMOF X
 
          call Box_volumeFAST( &
           bfact,dx,xsten0,nhalf0, &
@@ -15252,7 +15252,7 @@ contains
           uncaptured_centroid_cen, &
           sdim)
 
-        else if (continuous_mof.eq.-1) then !CMOF X and F
+        else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
 
          call Box_volume_super( &
           cmofsten, &
@@ -15402,7 +15402,7 @@ contains
 
          enddo ! iflex=1...n_ndef
         
-         if (continuous_mof.eq.0) then !MOF
+         if (continuous_mof.eq.STANDARD_MOF) then !MOF
 
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
@@ -15415,7 +15415,7 @@ contains
            uncaptured_centroid_cen, &
            sdim)
 
-         else if (continuous_mof.ge.1) then !CMOF X
+         else if (continuous_mof.ge.CMOF_X) then !CMOF X
 
           call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
@@ -15429,7 +15429,7 @@ contains
            uncaptured_centroid_cen, &
            sdim)
 
-         else if (continuous_mof.eq.-1) then !CMOF X and F
+         else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
 
           call Box_volume_super( &
            cmofsten, &
@@ -15669,7 +15669,7 @@ contains
       REAL_T vof_super(num_materials)
 
       REAL_T multi_centroidA(num_materials,sdim)
-      INTEGER_T, PARAMETER :: continuous_mof=0
+      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T angle(sdim-1)
       REAL_T xpoint(sdim)
@@ -15895,7 +15895,7 @@ contains
         mofdata, &
         vof_super, &
         multi_centroidA, &
-        continuous_mof, & ! continuous_mof=0
+        continuous_mof, & ! continuous_mof=STANDARD_MOF
         cmofsten, &
         grid_index, &
         grid_level, &
@@ -15989,6 +15989,7 @@ contains
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
       INTEGER_T im
+      INTEGER_T i
       INTEGER_T dir
       INTEGER_T vofcomp
       REAL_T voffluid,vofsolid,vofsolid_max
@@ -15996,6 +15997,8 @@ contains
       INTEGER_T is_rigid_local(num_materials)
       REAL_T volcell
       REAL_T cencell(sdim)
+      REAL_T xtet(sdim+1,sdim)
+      REAL_T xtarget(sdim)
 
       if ((nhalf.ge.1).and. &
           (nhalf_box.le.nhalf).and. &
@@ -16068,10 +16071,13 @@ contains
         ! volume r<0 subbox is positive; centroid(1)<0 for r<0 subbox
        call Box_volume_super( &
          cmofsten, &
-         bfact,dx,xsten,nhalf, &
-         volcell,cencell,sdim)
+         bfact,dx, &
+         xsten,nhalf, &
+         volcell, &
+         cencell, &
+         sdim)
       else
-       print *,"nhalf_box invalid"
+       print *,"nhalf_box invalid: ",nhalf_box
        stop
       endif
 
@@ -16150,7 +16156,7 @@ contains
                  (vofsolid.le.one)) then
          ! do nothing
         else
-         print *,"vofsolid invalid"
+         print *,"vofsolid invalid: ",vofsolid
          stop
         endif
        else if (is_rigid_local(im).eq.0) then
@@ -16193,17 +16199,20 @@ contains
           endif
          enddo !dir=1..sdim
         else if (nhalf_box.eq.2) then ! MOF TRI_TET
+
          do i=1,sdim+1
          do dir=1,sdim
-          xtet(i,dir)=xsten(-nhalf_box+i-1,dir)
+          xtet(i,dir)=xsten(-nhalf+i-1,dir)
          enddo
          enddo
          do dir=1,sdim
           xtarget(dir)=mofdata(vofcomp+dir)+cencell(dir)
          enddo
-         enddo 
           !project_to_tet is declared in GLOBALUTIL.F90
          call project_to_tet(sdim,xtarget,xtet)
+         do dir=1,sdim
+          mofdata(vofcomp+dir)=xtarget(dir)-cencell(dir)
+         enddo
         else
          print *,"nhalf_box invalid"
          stop

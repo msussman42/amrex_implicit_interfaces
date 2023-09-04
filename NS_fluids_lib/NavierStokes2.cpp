@@ -8955,7 +8955,7 @@ void NavierStokes::MOF_training() {
  int cpp_i=0;
  int cpp_j=0;
  int cpp_k=0;
- int local_continuous_mof=0;
+ int local_continuous_mof=STANDARD_MOF;
 
   // fort_MOF_DT_training is declared in: PLIC_3D.F90
   // "local_continuous_mof" varied internally.
@@ -8993,8 +8993,9 @@ void NavierStokes::MOF_training() {
 #if (AMREX_SPACEDIM==3)
   for (cpp_k=cpp_training_lo[2];cpp_k<=cpp_training_hi[2];cpp_k++) {
 #endif
-  for (local_continuous_mof=0;local_continuous_mof<=1; 
- 		              local_continuous_mof++) {
+  for (local_continuous_mof=STANDARD_MOF;
+       local_continuous_mof<=CMOF_X; 
+       local_continuous_mof++) {
    op_training=1;  // generate data and do python processing.
    ParallelDescriptor::Barrier();
    if (ParallelDescriptor::IOProcessor()) {

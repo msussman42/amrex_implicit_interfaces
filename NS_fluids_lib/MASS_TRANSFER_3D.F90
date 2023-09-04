@@ -3944,7 +3944,7 @@ stop
       REAL_T temperature_sten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
-      INTEGER_T, parameter :: continuous_mof_parm=0
+      INTEGER_T, parameter :: continuous_mof_parm=STANDARD_MOF
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       INTEGER_T :: grid_index(SDIM)
@@ -5399,7 +5399,7 @@ stop
              mofdata_new, &
              vof_super, &
              multi_centroidA, &
-             continuous_mof_parm, & !=0
+             continuous_mof_parm, & !=STANDARD_MOF
              cmofsten, &
              grid_index, &
              grid_level, &
