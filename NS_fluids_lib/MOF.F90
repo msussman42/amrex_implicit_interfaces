@@ -9202,7 +9202,7 @@ contains
          volcell, &
          cencell, &
          sdim)
-      else if (continuous_mof.eq.MOF_TRI_TET) then !triangle/tetra
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
        call Box_volumeTRI_TET( &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -10314,7 +10314,7 @@ contains
         nlist_cen, & !intent(inout)
         nlist_alloc, & !intent(in)
         nmax, &
-        refcentroid, &
+        refcentroid, & !relative to supercell centroid
         refvfrac, &
         continuous_mof, &
         cmofsten, &
@@ -10328,6 +10328,7 @@ contains
       use probcommon_module
       use geometry_intersect_module
       use global_utility_module
+      use mod_mof3d_tetra_analytic_centroid
       use mod_mof3d_analytic_centroid
       use mod_mof2d_analytic_centroid
 
@@ -10399,6 +10400,13 @@ contains
       REAL_T local_centroid(3)
       REAL_T local_gradient(2)
       REAL_T local_refvfrac
+      REAL_T p0(3)
+      REAL_T p1(3)
+      REAL_T p2(3)
+      REAL_T p3(3)
+      REAL_T objective
+      REAL_T gradient(2)
+
       INTEGER_T, PARAMETER :: use_super_cell=1
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -10477,9 +10485,10 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-          (continuous_mof.eq.CMOF_F_AND_X).or. &!CMOF X and F
-          (continuous_mof.ge.CMOF_X)) then !CMOF X
+      if ((continuous_mof.eq.STANDARD_MOF).or. & 
+          (continuous_mof.eq.MOF_TRI_TET).or. &
+          (continuous_mof.eq.CMOF_F_AND_X).or. &
+          (continuous_mof.ge.CMOF_X)) then 
        ! do nothing
       else
        print *,"continuous_mof invalid: ",continuous_mof
@@ -10514,7 +10523,7 @@ contains
 
         ! if RZ, cencell can be negative
 
-       if (continuous_mof.eq.STANDARD_MOF) then !MOF
+       if (continuous_mof.eq.STANDARD_MOF) then 
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
@@ -10522,6 +10531,19 @@ contains
          sdim)
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
+         volcell_cen, &
+         cencell_cen, &
+         sdim)
+       else if (continuous_mof.eq.MOF_TRI_TET) then 
+        call Box_volumeTRI_TET( &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         volcell_vof, &
+         cencell_vof, &
+         sdim)
+        call Box_volumeTRI_TET( &
+         bfact,dx, &
+         xsten0,nhalf0, &
          volcell_cen, &
          cencell_cen, &
          sdim)
@@ -10551,7 +10573,7 @@ contains
          cencell_cen, &
          sdim)
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
 
@@ -10601,7 +10623,7 @@ contains
          ! testcen in absolute coordinate system
        if (fastflag.eq.0) then
           ! xcell used for LS dist.
-        if (continuous_mof.eq.STANDARD_MOF) then !MOF
+        if (continuous_mof.eq.STANDARD_MOF) then 
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
          call multi_cell_intersection( &
@@ -10616,7 +10638,22 @@ contains
           nlist_vof, &
           nmax, &
           sdim)
-        else if (continuous_mof.ge.CMOF_X) then !CMOF X
+        else if (continuous_mof.eq.MOF_TRI_TET) then 
+
+         call multi_cell_intersection( &
+          bfact,dx,xsten0,nhalf0, &
+          nslope, &
+          intercept(1), &
+          volume_cut, & !intent(out)
+          testcen, & !intent(out)
+          facearea, & !intent(out)
+          xtetlist_vof, & !intent(in)
+          nlist_alloc, &
+          nlist_vof, &
+          nmax, &
+          sdim)
+
+        else if (continuous_mof.ge.CMOF_X) then 
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
           ! This step is needed since xtetlist_cen!=xtetlist_vof
@@ -10632,7 +10669,7 @@ contains
           nlist_cen, &
           nmax, &
           sdim)
-        else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+        else if (continuous_mof.eq.CMOF_F_AND_X) then 
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
           ! This step is redundant since for continuous_mof==-1, 
@@ -10650,7 +10687,7 @@ contains
           nmax, &
           sdim)
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof invalid: ",continuous_mof
          stop
         endif
 
@@ -10752,10 +10789,12 @@ contains
 
       else if (use_MilcentLemoine.eq.1) then
 
-       if (continuous_mof.eq.STANDARD_MOF) then !MOF
+       if (continuous_mof.eq.STANDARD_MOF) then 
+        ! do nothing
+       else if (continuous_mof.eq.MOF_TRI_TET) then 
         ! do nothing
        else
-        print *,"continuous_mof==-1 or 1 not allowed if use_MilcentLemoine==1"
+        print *,"continuous_mof invalid if use_MilcentLemoine==1"
         stop
        endif
 
@@ -10774,118 +10813,175 @@ contains
         local_ref_centroid(dir)=refcentroid(dir)
        enddo
 
-       if ((refvfrac(1).ge.half).and. &
-           (refvfrac(1).lt.one)) then
-        local_refvfrac=one-refvfrac(1)
-        do dir=1,sdim
-         local_ref_centroid(dir)= &
-           -refvfrac(1)*refcentroid(dir)/local_refvfrac
-         local_nslope(dir)=-local_nslope(dir)
-        enddo
-        call slope_to_angle(local_nslope,local_angles,sdim)
-       else if ((refvfrac(1).gt.zero).and. &
-                (refvfrac(1).le.half)) then
-        ! do nothing
-       else
-        print *,"refvfrac(1) invalid"
-        stop
-       endif
+       if (continuous_mof.eq.STANDARD_MOF) then 
 
-       local_volume=local_refvfrac
-       do dir=1,sdim
-        local_c(dir)=xsten0(1,dir)-xsten0(-1,dir)
-        if (local_c(dir).gt.zero) then
-         local_volume=local_volume*local_c(dir)
-         if ((local_refvfrac.gt.zero).and. &
-             (local_refvfrac.le.half)) then
-          local_ref_centroid(dir)=local_ref_centroid(dir)+half*local_c(dir)
+        if ((refvfrac(1).ge.half).and. &
+            (refvfrac(1).lt.one)) then
+         local_refvfrac=one-refvfrac(1)
+         do dir=1,sdim
+          local_ref_centroid(dir)= &
+            -refvfrac(1)*refcentroid(dir)/local_refvfrac
+          local_nslope(dir)=-local_nslope(dir)
+         enddo
+         call slope_to_angle(local_nslope,local_angles,sdim)
+        else if ((refvfrac(1).gt.zero).and. &
+                 (refvfrac(1).le.half)) then
+         ! do nothing
+        else
+         print *,"refvfrac(1) invalid"
+         stop
+        endif
+
+        local_volume=local_refvfrac
+        do dir=1,sdim
+         local_c(dir)=xsten0(1,dir)-xsten0(-1,dir)
+         if (local_c(dir).gt.zero) then
+          local_volume=local_volume*local_c(dir)
+          if ((local_refvfrac.gt.zero).and. &
+              (local_refvfrac.le.half)) then
+           local_ref_centroid(dir)=local_ref_centroid(dir)+half*local_c(dir)
+          else
+           print *,"local_refvfrac invalid"
+           stop
+          endif
          else
-          print *,"local_refvfrac invalid"
+          print *,"local_c invalid"
+          stop
+         endif 
+        enddo ! dir=1..sdim
+
+        if (sdim.eq.3) then
+         ! do nothing
+        else if (sdim.eq.2) then
+         local_angles(2)=half*Pi
+         local_nslope(3)=zero
+         local_c(3)=one
+         local_ref_centroid(3)=half
+        else
+         print *,"sdim invalid"
+         stop
+        endif
+
+        if (1.eq.0) then
+         print *,"BEFORE"
+         print *,"refvfrac ",refvfrac(1)
+         print *,"refvfrac(opp) ",one-refvfrac(1)
+         print *,"nslope ",nslope(1), &
+            nslope(2),nslope(sdim)
+         print *,"local_nslope ",local_nslope(1), &
+            local_nslope(2),local_nslope(sdim)
+         print *,"refcentroid ",refcentroid(1), &
+            refcentroid(2),refcentroid(sdim)
+         print *,"refcentroid(opp) ", &
+            -refvfrac(1)*refcentroid(1)/(one-refvfrac(1)), &
+            -refvfrac(1)*refcentroid(2)/(one-refvfrac(1)), &
+            -refvfrac(1)*refcentroid(sdim)/(one-refvfrac(1))
+         print *,"local_refvfrac ",local_refvfrac
+         print *,"local_volume ",local_volume
+         print *,"angle ",angle(1),angle(sdim-1)
+         print *,"local_angles ",local_angles(1),local_angles(2)
+         print *,"local_ref_centroid ",local_ref_centroid(1), &
+            local_ref_centroid(2),local_ref_centroid(sdim)
+         print *,"local_c ",local_c(1), &
+            local_c(2),local_c(sdim)
+        endif
+
+        if (sdim.eq.3) then
+         call mof3d_compute_analytic_gradient( &
+          local_angles,local_ref_centroid, &
+          local_volume,local_c,local_centroid, &
+          local_gradient)
+        else if (sdim.eq.2) then
+         call mof2d_compute_analytic_gradient( &
+          local_angles, &
+          local_volume,local_c,local_centroid)
+        else
+         print *,"sdim invalid"
+         stop
+        endif
+
+        do dir=1,sdim
+         local_centroid(dir)=local_centroid(dir)-half*local_c(dir)
+        enddo
+
+        do dir=1,sdim
+         testcen(dir)=local_centroid(dir)
+        enddo
+
+        if ((refvfrac(1).ge.half).and. &
+            (refvfrac(1).lt.one)) then
+         do dir=1,sdim
+          testcen(dir)=-local_refvfrac*testcen(dir)/refvfrac(1)
+         enddo
+        else if ((refvfrac(1).gt.zero).and. &
+                 (refvfrac(1).le.half)) then
+         ! do nothing
+        else
+         print *,"refvfrac(1) invalid"
+         stop
+        endif
+
+        if (1.eq.0) then
+         print *,"AFTER"
+         print *,"testcen ",testcen(1),testcen(2),testcen(sdim)
+         print *,"local_centroid ",local_centroid(1), &
+            local_centroid(2),local_centroid(sdim)
+         print *,"local_gradient ",local_gradient(1),local_gradient(2)
+        endif
+
+       else if (continuous_mof.eq.MOF_TRI_TET) then 
+
+        if (sdim.eq.3) then
+
+         if ((nlist_vof.eq.1).and.(nlist_cen.eq.1)) then
+          ! do nothing
+         else
+          print *,"expecting nlist_vof=nlist_cen=1"
           stop
          endif
+
+         call Box_volumeTRI_TET( &
+          bfact,dx, &
+          xsten0,nhalf0, &
+          volcell_vof, &
+          cencell_vof, &
+          sdim)
+
+         local_volume=local_refvfrac*volcell_vof
+         do dir=1,sdim
+          local_ref_centroid(dir)=local_ref_centroid(dir)+cencell_vof(dir)
+          p0(dir)=xtetlist_vof(1,dir,1)
+          p1(dir)=xtetlist_vof(2,dir,1)
+          p2(dir)=xtetlist_vof(3,dir,1)
+          p3(dir)=xtetlist_vof(4,dir,1)
+         enddo
+
+         call mof3d_tetra_compute_analytic_gradient( &
+          p0,p1,p2,p3, &
+          local_angles, & !dimension(2)
+          local_ref_centroid, &
+          local_ref_centroid, &
+          local_volume, &  !Not a volume FRACTION
+          objective, &
+          gradient, & !dimension(2)
+          local_centroid)
+
+         do dir=1,sdim
+          local_centroid(dir)=local_centroid(dir)-cencell_vof(dir)
+         enddo
+
+         do dir=1,sdim
+          testcen(dir)=local_centroid(dir)
+         enddo
+
         else
-         print *,"local_c invalid"
+         print *,"expecting sdim.eq.3"
          stop
-        endif 
-       enddo ! dir=1..sdim
+        endif
 
-       if (sdim.eq.3) then
-        ! do nothing
-       else if (sdim.eq.2) then
-        local_angles(2)=half*Pi
-        local_nslope(3)=zero
-        local_c(3)=one
-        local_ref_centroid(3)=half
        else
-        print *,"sdim invalid"
+        print *,"continuous_mof invalid"
         stop
-       endif
-
-       if (1.eq.0) then
-        print *,"BEFORE"
-        print *,"refvfrac ",refvfrac(1)
-        print *,"refvfrac(opp) ",one-refvfrac(1)
-        print *,"nslope ",nslope(1), &
-                nslope(2),nslope(sdim)
-        print *,"local_nslope ",local_nslope(1), &
-                local_nslope(2),local_nslope(sdim)
-        print *,"refcentroid ",refcentroid(1), &
-                refcentroid(2),refcentroid(sdim)
-        print *,"refcentroid(opp) ", &
-                -refvfrac(1)*refcentroid(1)/(one-refvfrac(1)), &
-                -refvfrac(1)*refcentroid(2)/(one-refvfrac(1)), &
-                -refvfrac(1)*refcentroid(sdim)/(one-refvfrac(1))
-        print *,"local_refvfrac ",local_refvfrac
-        print *,"local_volume ",local_volume
-        print *,"angle ",angle(1),angle(sdim-1)
-        print *,"local_angles ",local_angles(1),local_angles(2)
-        print *,"local_ref_centroid ",local_ref_centroid(1), &
-                local_ref_centroid(2),local_ref_centroid(sdim)
-        print *,"local_c ",local_c(1), &
-                local_c(2),local_c(sdim)
-       endif
-
-       if (sdim.eq.3) then
-        call mof3d_compute_analytic_gradient( &
-         local_angles,local_ref_centroid, &
-         local_volume,local_c,local_centroid, &
-         local_gradient)
-       else if (sdim.eq.2) then
-        call mof2d_compute_analytic_gradient( &
-         local_angles, &
-         local_volume,local_c,local_centroid)
-       else
-        print *,"sdim invalid"
-        stop
-       endif
-
-       do dir=1,sdim
-        local_centroid(dir)=local_centroid(dir)-half*local_c(dir)
-       enddo
-
-       do dir=1,sdim
-        testcen(dir)=local_centroid(dir)
-       enddo
-
-       if ((refvfrac(1).ge.half).and. &
-           (refvfrac(1).lt.one)) then
-        do dir=1,sdim
-         testcen(dir)=-local_refvfrac*testcen(dir)/refvfrac(1)
-        enddo
-       else if ((refvfrac(1).gt.zero).and. &
-                (refvfrac(1).le.half)) then
-        ! do nothing
-       else
-        print *,"refvfrac(1) invalid"
-        stop
-       endif
-
-       if (1.eq.0) then
-        print *,"AFTER"
-        print *,"testcen ",testcen(1),testcen(2),testcen(sdim)
-        print *,"local_centroid ",local_centroid(1), &
-                local_centroid(2),local_centroid(sdim)
-        print *,"local_gradient ",local_gradient(1),local_gradient(2)
        endif
 
        do dir=1,sdim
@@ -11035,7 +11131,7 @@ contains
       subroutine angle_init_from_angle_recon_and_F( &
         bfact,dx,xsten0,nhalf0, &
         refvfrac, &
-        continuous_mof, & ! =0 or 1
+        continuous_mof, & 
         cmofsten, &
         xtetlist_vof, & !intent(inout)
         xtetlist_cen, & !intent(inout)
@@ -11057,7 +11153,7 @@ contains
       INTEGER_T :: nDOF_standard
       INTEGER_T :: nEQN_standard
 
-      INTEGER_T, INTENT(in) :: continuous_mof !=0 or 1
+      INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: nlist_alloc
@@ -11114,7 +11210,8 @@ contains
        refcentroid(dir)=zero
       enddo
 
-      if (continuous_mof.eq.STANDARD_MOF) then !MOF
+      if (continuous_mof.eq.STANDARD_MOF) then 
+
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         use_MilcentLemoine=1
        else if ((levelrz.eq.COORDSYS_RZ).or. &
@@ -11124,13 +11221,17 @@ contains
         print *,"levelrz invalid"
         stop
        endif
+
       else if (continuous_mof.ge.CMOF_X) then !CMOF X
+
        use_MilcentLemoine=0
+
       else
        print *,"continuous_mof invalid, angle_init_from_angle_recon_and_F"
        print *,"continuous_mof=",continuous_mof
        stop
       endif
+
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
        stop
@@ -11225,7 +11326,8 @@ contains
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         refcentroid, & ! relative to cell centroid of the super cell.
         refvfrac, &
         npredict, &
@@ -11402,6 +11504,16 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
+      if ((nlist_vof.le.nlist_alloc).and. &
+          (nlist_cen.le.nlist_alloc)) then
+       !do nothing
+      else
+       print *,"nlist_vof or nlist_cen corrupt"
+       print *,"nlist_vof=",nlist_vof
+       print *,"nlist_cen=",nlist_cen
+       print *,"nlist_alloc=",nlist_alloc
+       stop
+      endif
 
       if ((MOFITERMAX.lt.num_materials+3).or. &
           (MOFITERMAX.gt.50)) then
@@ -11414,7 +11526,8 @@ contains
        stop
       endif 
 
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid find cut geom slope"
        stop
       endif
@@ -11423,23 +11536,28 @@ contains
        print *,"critical_material invalid"
        stop
       endif
-      if (continuous_mof.eq.STANDARD_MOF) then !MOF
+      if (continuous_mof.eq.STANDARD_MOF) then 
        if (nhalf0.lt.1) then
         print *,"expecting nhalf0>=1: ",nhalf0
         stop
        endif
-      else if (continuous_mof.ge.CMOF_X) then !CMOF X
+      else if (continuous_mof.ge.CMOF_X) then 
        if (nhalf0.lt.3) then
         print *,"expecting nhalf0>=3: ",nhalf0
         stop
        endif
-      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then 
        if (nhalf0.lt.3) then
         print *,"expecting nhalf0>=3: ",nhalf0
+        stop
+       endif
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
+       if (nhalf0.lt.2) then
+        print *,"expecting nhalf0>=2: ",nhalf0
         stop
        endif
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
 
@@ -11450,7 +11568,7 @@ contains
        stop
       endif
 
-      if (nMAT_OPT.eq.1) then
+      if (nMAT_OPT.eq.1) then !only optimize one material at a time.
 
        if ((nMAT_OPT.eq.1).and. &
            (nDOF.eq.sdim-1).and. &
@@ -11466,22 +11584,78 @@ contains
        stop
       endif
 
-      if ((fastflag.eq.1).and. &
-          (continuous_mof.eq.STANDARD_MOF).and. & !MOF
-          (levelrz.eq.COORDSYS_CARTESIAN)) then
+      if (continuous_mof.eq.STANDARD_MOF) then
 
-       use_MilcentLemoine=1
+       if ((fastflag.eq.1).and. &
+           (levelrz.eq.COORDSYS_CARTESIAN)) then
+        use_MilcentLemoine=1
+       else if ((fastflag.eq.0).or. &
+                (levelrz.eq.COORDSYS_RZ).or. &
+                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+        use_MilcentLemoine=0
+       else
+        print *,"parameters invalid"
+        print *,"continuous_mof ",continuous_mof
+        print *,"fastflag ",fastflag
+        print *,"levelrz ",levelrz
+        stop
+       endif
 
-      else if ((fastflag.eq.0).or. &
-               (continuous_mof.ge.CMOF_X).or. & !CMOF X
-               (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-               (levelrz.eq.COORDSYS_RZ).or. &
-               (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      else if (continuous_mof.eq.MOF_TRI_TET) then
+
+       if ((fastflag.eq.0).and. &
+           (nlist_vof.eq.nlist_cen)) then
+        !do nothing
+       else
+        print *,"parameters invalid"
+        print *,"continuous_mof ",continuous_mof
+        print *,"fastflag ",fastflag
+        print *,"levelrz ",levelrz
+        print *,"nlist_vof ",nlist_vof
+        print *,"nlist_cen ",nlist_cen
+        stop
+       endif
+        
+       if ((levelrz.eq.COORDSYS_CARTESIAN).and. &
+           (sdim.eq.3).and. &
+           (nlist_vof.eq.1)) then
+
+        use_MilcentLemoine=1
+
+       else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
+                (levelrz.eq.COORDSYS_RZ).or. &
+                (nlist_vof.gt.1).or. &
+                (sdim.eq.2)) then
+
+        use_MilcentLemoine=0
+        
+       else
+ 
+        print *,"parameters corrupt"
+        print *,"continuous_mof=",continuous_mof
+        print *,"levelrz=",levelrz
+        print *,"nlist_vof=",nlist_vof 
+        print *,"nlist_cen=",nlist_cen
+        print *,"sdim=",sdim
+        print *,"fastflag=",fastflag
+        stop
+
+       endif
+
+      else if ((continuous_mof.ge.CMOF_X).or. &
+               (continuous_mof.eq.CMOF_F_AND_X)) then
 
        use_MilcentLemoine=0
 
       else
-       print *,"fastflag,continuous_mof, or levelrz invalid"
+       print *,"continuous_mof invalid"
+       print *,"continuous_mof=",continuous_mof
+       print *,"levelrz=",levelrz
+       print *,"nlist_vof=",nlist_vof 
+       print *,"nlist_cen=",nlist_cen
+       print *,"nlist_alloc=",nlist_alloc
+       print *,"sdim=",sdim
+       print *,"fastflag=",fastflag
        stop
       endif
 
@@ -11533,9 +11707,10 @@ contains
 
        training_nguess=0
 
-       if ((continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-           (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-           (continuous_mof.ge.CMOF_X)) then  !CMOF X
+       if ((continuous_mof.eq.STANDARD_MOF).or. &  
+           (continuous_mof.eq.MOF_TRI_TET).or. & 
+           (continuous_mof.eq.CMOF_F_AND_X).or. & 
+           (continuous_mof.ge.CMOF_X)) then  
 
           ! -pi < angle < pi
         call slope_to_angle(npredict,angle_init,sdim)
@@ -11592,17 +11767,19 @@ contains
          print *,"grid_index_ML ",grid_index_ML
         endif
 
-        if (decision_tree_max_level.eq.-1) then
-         ! do nothing
+        if (continuous_mof.eq.MOF_TRI_TET) then
+         !do nothing
+        else if (decision_tree_max_level.eq.-1) then
+         !do nothing
         else if (decision_tree_max_level.ge.0) then
 
          if (grid_level.eq.decision_tree_max_level) then
           mof_stencil_ok=1
-          if (continuous_mof.eq.STANDARD_MOF) then !standard MOF
+          if (continuous_mof.eq.STANDARD_MOF) then 
            ! do nothing
           else if (continuous_mof.eq.CMOF_F_AND_X) then
            mof_stencil_ok=0
-          else if (continuous_mof.ge.CMOF_X) then!refcen only on supercell
+          else if (continuous_mof.ge.CMOF_X) then
 
            if (sdim.eq.3) then
             ksten_low=-1
@@ -11631,7 +11808,7 @@ contains
            enddo ! i1,j1,k1
 
           else
-           print *,"continuous_mof invalid"
+           print *,"continuous_mof invalid: ",continuous_mof
            stop
           endif
 
@@ -11700,17 +11877,19 @@ contains
          stop
         endif
 
-        if (training_max_level.eq.-1) then
+        if (continuous_mof.eq.MOF_TRI_TET) then
+         !do nothing
+        else if (training_max_level.eq.-1) then
          ! do nothing
         else if (training_max_level.ge.0) then
 
          if (grid_level.eq.training_max_level) then
           mof_stencil_ok=1
-          if (continuous_mof.eq.STANDARD_MOF) then !MOF
+          if (continuous_mof.eq.STANDARD_MOF) then 
            ! do nothing
-          else if (continuous_mof.eq.CMOF_F_AND_X) then!refcen and refvfrac on supermesh
+          else if (continuous_mof.eq.CMOF_F_AND_X) then
            mof_stencil_ok=0
-          else if (continuous_mof.ge.CMOF_X) then!refcen on supermesh
+          else if (continuous_mof.ge.CMOF_X) then
 
            if (sdim.eq.3) then
             ksten_low=-1
@@ -11739,7 +11918,7 @@ contains
            enddo ! i1,j1,k1
 
           else
-           print *,"continuous_mof invalid"
+           print *,"continuous_mof invalid: ",continuous_mof
            stop
           endif
 
@@ -11755,9 +11934,9 @@ contains
             enddo
             angle_init_ML(MOF_TRAINING_NDIM_DECISIONS)=refvfrac(1)
 
-            if (continuous_mof.eq.STANDARD_MOF) then !MOF
+            if (continuous_mof.eq.STANDARD_MOF) then 
              cmofML=0
-            else if (continuous_mof.ge.CMOF_X) then !CMOF X
+            else if (continuous_mof.ge.CMOF_X) then 
              cmofML=1
             else
              print *,"continuous_mof invalid"
@@ -11808,7 +11987,7 @@ contains
         endif
 
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
 
@@ -12333,10 +12512,11 @@ contains
        use_initial_guess=0
 
        call multi_find_intercept( &
-        nMAT_OPT, & ! 1 or 3
-        nDOF, & ! sdim-1  or 1
-        nEQN, & ! sdim or 3 * sdim
-        bfact,dx,xsten0,nhalf0, &
+        nMAT_OPT, & ! 1 
+        nDOF, & ! sdim-1
+        nEQN, & ! sdim
+        bfact,dx, &
+        xsten0,nhalf0, &
         nslope, &
         intercept(1), &
         continuous_mof, &
@@ -12362,7 +12542,6 @@ contains
 
       return
       end subroutine find_cut_geom_slope
-FIX ME STARTING HERE GOING BACKWARDS
 
       subroutine find_predict_slope(slope, &
        mag,cen_free,cen_ref, &
