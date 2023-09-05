@@ -73,7 +73,7 @@ contains
       &               angles,                             &
       &               ref_centroid1, ref_centroid2,       &
       &               ref_volume,                         &
-      &               objective, gradient                 &
+      &               objective, gradient, t_centroid     &
       &            )
       use mod_cg3_points, only: cg3_cross_product
       logical, parameter :: mof_use_symmetric_reconstruction=.false.
@@ -82,10 +82,11 @@ contains
       double precision, dimension(3), intent(in) :: ref_centroid1, ref_centroid2
       double precision, intent(in) :: ref_volume
       double precision, intent(out) :: objective
+      double precision, dimension(3), intent(out) :: t_centroid
       double precision, dimension(2), intent(out) :: gradient
 
       double precision, dimension(3,2) :: partial_derivative
-      double precision, dimension(3)   :: centroid, t_centroid, diff1, diff2, sum_diff, special_centroid
+      double precision, dimension(3)   :: centroid, diff1, diff2, sum_diff, special_centroid
       double precision, dimension(3,3) :: transformation
       double precision, dimension(2) :: t_angles
       double precision :: cell_volume, volume, determinant, dual_coef
