@@ -2130,23 +2130,21 @@ REAL_T, INTENT(out) :: cum_centroid(sdim)
 INTEGER_T, INTENT(in) :: nodedomain
 INTEGER_T, INTENT(in) :: fullelementfast
 INTEGER_T, INTENT(in) :: linearcut
-INTEGER_T :: bfact
+INTEGER_T, PARAMETER :: bfact=1
 REAL_T, INTENT(in) :: phinode(nodedomain)
 REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,power2
 REAL_T xsten_grid(-3:3,sdim)
 REAL_T dxgrid(sdim)
-INTEGER_T shapeflag,symmetry_flag,ntetbox,dir
+INTEGER_T shapeflag
+INTEGER_T, PARAMETER :: symmetry_flag=0
+INTEGER_T ntetbox,dir
 REAL_T phimax
 INTEGER_T checksum,maxnode,n,n_nodes,id,sub_nodedomain
 REAL_T xx(sdim+1,sdim)
 REAL_T ls(sdim+1)
-INTEGER_T nhalf
+INTEGER_T, PARAMETER :: nhalf=3
 
- nhalf=3
-
- bfact=1
- symmetry_flag=0
  call get_ntetbox(ntetbox,symmetry_flag,sdim)
 
  if (sdim.eq.2) then
@@ -9350,7 +9348,8 @@ contains
        nMAT_OPT, & ! 1 
        nDOF, & ! sdim-1
        nEQN, & ! sdim
-       bfact,dx,xsten0,nhalf0, &
+       bfact,dx, &
+       xsten0,nhalf0, &
        slope, &
        intercept, &
        continuous_mof, &
@@ -9361,7 +9360,7 @@ contains
        nmax, & !intent(in)
        vfrac, &
        use_initial_guess, &
-       centroid, &
+       centroid, & !intent(out)
        fastflag,sdim)
 
       use probcommon_module
@@ -9985,9 +9984,9 @@ contains
 
        ! centroid in absolute coordinate system
       subroutine single_find_intercept( &
-       nMAT_OPT, & ! 1 or 3
-       nDOF, & ! sdim-1  or 1
-       nEQN, & ! sdim or 3 * sdim
+       nMAT_OPT, & ! 1 
+       nDOF, & ! sdim-1
+       nEQN, & ! sdim
        bfact,dx, &
        xsten0,nhalf0, &
        slope,intercept, &
@@ -10000,9 +9999,9 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim 
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: sdim
       REAL_T, INTENT(in) :: slope(sdim)
@@ -10242,7 +10241,8 @@ contains
 
             niter=niter+1
             if (debug_root.eq.1) then
-             print *,"bisection(single): niter,intercept,fc ",niter,intercept,fc
+             print *,"bisection(single): niter,intercept,fc ", &
+                niter,intercept,fc
             endif  
            enddo ! bisection while
           else if ((intercept_test.gt.intercept_lower).and. &
@@ -10314,10 +10314,10 @@ contains
         use_MilcentLemoine, &
         bfact,dx, &
         xsten0,nhalf0, &
-        xtetlist_vof, & !intent(inout)
-        nlist_vof, & !intent(inout)
-        xtetlist_cen, & !intent(inout)
-        nlist_cen, & !intent(inout)
+        xtetlist_vof, & !intent(in)
+        nlist_vof, & !intent(in)
+        xtetlist_cen, & !intent(in)
+        nlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
         nmax, &
         refcentroid, & !relative to supercell centroid
@@ -12525,7 +12525,8 @@ contains
         nmax, &
         refvfrac(1), &
         use_initial_guess, &
-        cen_derive_init,fastflag,sdim)
+        cen_derive_init, & !intent(out)
+        fastflag,sdim)
       else
        print *,"use_MilcentLemoine invalid"
        stop
@@ -14732,6 +14733,7 @@ contains
 
       INTEGER_T, PARAMETER :: tessellate=0
       INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
+      INTEGER_T, PARAMETER :: use_initial_guess=0
       INTEGER_T :: nDOF_standard
       INTEGER_T :: nEQN_standard
       INTEGER_T is_rigid_local(num_materials)
@@ -15106,6 +15108,9 @@ contains
         if (continuous_mof_rigid.eq.STANDARD_MOF) then
          call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
           uncaptured_centroid_vof,sdim)
+         fastflag=1
+         nlist_vof=0
+         nlist_cen=0
         else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
          call Box_volumeTRI_TET( &
            bfact,dx, &
@@ -15113,12 +15118,19 @@ contains
            uncaptured_volume_vof, &
            uncaptured_centroid_vof, &
            sdim)
+         fastflag=0
+         nlist_vof=1
+         nlist_cen=1
+         do i1=1,sdim+1
+         do dir=1,sdim
+          xtetlist_vof(i1,dir,nlist_vof)=xsten0(-nhalf0+i1-1,dir) 
+          xtetlist_cen(i1,dir,nlist_vof)=xsten0(-nhalf0+i1-1,dir) 
+         enddo
+         enddo
         else
          print *,"continuous_mof_rigid invalid"
          stop
         endif
-
-        fastflag=1
 
         refvfrac(1)=mofdata(vofcomp)
         if (abs(refvfrac(1)-vof_super(imaterial)).le.1.0d-12) then
@@ -15146,8 +15158,6 @@ contains
            mag,centroid_free,centroid_ref, &
            bfact,dx,xsten0,nhalf0,sdim)
 
-         nlist_vof=0
-         nlist_cen=0
          refvfrac(1)=mofdata(vofcomp)
 
          if (mag.gt.VOFTOL*dx(1)) then
@@ -15215,17 +15225,45 @@ contains
 
           refvfrac(1)=mofdata(vofcomp)
 
-          call single_find_intercept( &
-           nMAT_OPT_standard, & !nMAT_OPT_standard=1
-           nDOF_standard, & !nDOF_standard=sdim-1
-           nEQN_standard, &  !nEQN_standard=sdim
-           bfact,dx, &
-           xsten0,nhalf0, &
-           npredict, &
-           intercept(1), &
-           refvfrac(1), &
-           centroidA, & ! centroid in absolute coordinate system
-           sdim)
+          if (continuous_mof_rigid.eq.STANDARD_MOF) then
+
+           call single_find_intercept( &
+            nMAT_OPT_standard, & !nMAT_OPT_standard=1
+            nDOF_standard, & !nDOF_standard=sdim-1
+            nEQN_standard, &  !nEQN_standard=sdim
+            bfact,dx, &
+            xsten0,nhalf0, &
+            npredict, &
+            intercept(1), &
+            refvfrac(1), &
+            centroidA, & ! centroid in absolute coordinate system
+            sdim)
+
+          else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
+
+           call multi_find_intercept( &
+            nMAT_OPT_standard, & !nMAT_OPT_standard=1
+            nDOF_standard, & !nDOF_standard=sdim-1
+            nEQN_standard, &  !nEQN_standard=sdim
+            bfact,dx, &
+            xsten0,nhalf0, &
+            npredict, &
+            intercept(1), &
+            continuous_mof_rigid, &
+            cmofsten, &
+            xtetlist_vof, & !intent(in)
+            nlist_alloc, &
+            nlist_vof, & !intent(in)
+            nmax, & !intent(in)
+            refvfrac(1), &
+            use_initial_guess, & !=1
+            centroidA, & ! centroid in absolute coordinate system
+            fastflag, &
+            sdim)
+          else
+           print *,"continuous_mof_rigid invalid: ",continuous_mof_rigid
+           stop
+          endif
 
           mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
@@ -15965,11 +16003,13 @@ contains
       REAL_T vof_super(num_materials)
 
       REAL_T multi_centroidA(num_materials,sdim)
-      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
+      INTEGER_T :: continuous_mof
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T angle(sdim-1)
       REAL_T xpoint(sdim)
-      INTEGER_T nrecon,nsamples,im,ntry,iangle,vofcomp
+      INTEGER_T nrecon
+      INTEGER_T, parameter :: nsamples=90000
+      INTEGER_T im,ntry,iangle,vofcomp
       INTEGER_T dir,dir2
       INTEGER_T seed
       REAL_T max_mof_error,moferror
@@ -15994,15 +16034,15 @@ contains
       REAL_T total_errors(num_materials)
       INTEGER_T max_iterations(num_materials)
       REAL_T shrink_factor
-      INTEGER_T mof_verbose
-      INTEGER_T use_ls_data
+      INTEGER_T, parameter :: mof_verbose=0
+      INTEGER_T, parameter :: use_ls_data=0
       INTEGER_T isten
       INTEGER_T grid_index(sdim)
       INTEGER_T, parameter :: grid_level=-1
-      INTEGER_T bfact
+      INTEGER_T, parameter :: bfact=1
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: LS_stencil
       INTEGER_T i1,j1,k1,k1lo,k1hi
-      INTEGER_T nhalf0
+      INTEGER_T, PARAMETER :: nhalf0=3
 
 #include "mofdata.H"
 
@@ -16011,8 +16051,6 @@ contains
       print *,"in diagnostic_MOF"
       print *,"DO NOT RUN THIS TEST WITH MULTIPLE THREADS"
 
-      nhalf0=3
-      bfact=2
       shrink_factor=one/three
 
       if (ngeom_recon.ne.2*sdim+3) then
@@ -16041,13 +16079,13 @@ contains
       enddo
       enddo
 
-      nsamples=90000
       if (nmax.ne.POLYGON_LIST_MAX) then
        print *,"nmax invalid diagnostic MOF nmax=",nmax
        print *,"POLYGON_LIST_MAX=",POLYGON_LIST_MAX
        stop
       endif
-      if ((num_materials.ge.2).and.(num_materials.le.MAX_NUM_MATERIALS)) then
+      if ((num_materials.ge.2).and. &
+          (num_materials.le.MAX_NUM_MATERIALS)) then
        ! do nothing
       else
        print *,"num_materials not initialized properly"
@@ -16065,195 +16103,196 @@ contains
        stop
       endif
 
-       ! do test for [-1/2,1/2]^sdim cube
-      do dir=1,sdim
-       dx(dir)=one
-       do isten=-nhalf0,nhalf0
-        xsten0(isten,dir)=isten*half*dx(dir)
-       enddo
-      enddo ! dir
-      do im=1,num_materials
-       total_calls(im)=zero
-       total_iterations(im)=zero
-       total_errors(im)=zero
-       max_iterations(im)=0
-      enddo
+      do shapeflag=1,2 
 
-      seed=86456
-#if (USERAND==1)
-      call srand(seed)
-#else
-        print *,"set userand (caps) = 1"
-        stop
-#endif
+       if (shapeflag.eq.1) then
+        continuous_mof=STANDARD_MOF
 
-      max_mof_error=zero
-
-      do ntry=1,nsamples
-
-        ! 0<=rand()<=1
-       do iangle=1,nDOF_standard
-#if (USERAND==1)
-        angle(iangle)=rand()
-#else
-        print *,"set userand (caps) = 1"
-        stop
-#endif
-        angle(iangle)=angle(iangle)*two*Pi 
-       enddo ! iangle
-
-       call angle_to_slope(angle,nslope,sdim)
-
-        ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
-        ! intercept=n dot (xcell-xpoint)
-       intercept=zero
-       do dir=1,sdim
-        nslope2(dir)=-nslope(dir)
-
-#if (USERAND==1)
-        xpoint(dir)=rand()
-#else
-        print *,"set userand (caps) = 1"
-        stop
-#endif
-
-         ! make: -1/2 <= xpoint <= 1/2
-        xpoint(dir)=xpoint(dir)-half
-         ! make: -shrink_factor/2 <= xpoint <= shrink_factor/2
-        xpoint(dir)=xpoint(dir)*shrink_factor
-
-        intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
-       enddo  ! dir
-       intercept2=-intercept
-       shapeflag=0
-       call fast_cut_cell_intersection( &
-        bfact,dx,xsten0,nhalf0, &
-        nslope,intercept, &
-        volcut,cencut,areacut, &
-        xsten0,nhalf0,xtet,shapeflag,sdim)
-       call fast_cut_cell_intersection( &
-        bfact,dx,xsten0,nhalf0, &
-        nslope2,intercept2, &
-        volcut2,cencut2,areacut2, &
-        xsten0,nhalf0,xtet,shapeflag,sdim)
-
-       call Box_volumeFAST( &
-         bfact,dx,xsten0,nhalf0, &
-         total_volume, &
-         total_centroid,sdim)
-
-       if (total_volume.ge.zero) then
-        !do nothing
-       else
-        print *,"total_volume invalid"
-        stop
-       endif
-
-       do dir2=1,nrecon
-        mofdata(dir2)=zero
-       enddo
-       do im=1,num_materials
-        vof_super(im)=zero
-       enddo
-
-       im=1
-       vofcomp=(im-1)*(2*sdim+3)+1
-       mofdata(vofcomp)=volcut/total_volume
-       vof_super(im)=mofdata(vofcomp)
-
-       do dir=1,sdim
-        mofdata(vofcomp+dir)=cencut(dir)-total_centroid(dir)
-       enddo
-
-       im=2
-       vofcomp=(im-1)*(2*sdim+3)+1
-       mofdata(vofcomp)=volcut2/total_volume
-       vof_super(im)=mofdata(vofcomp)
-
-       do dir=1,sdim
-        mofdata(vofcomp+dir)=cencut2(dir)-total_centroid(dir)
-       enddo
-
-        ! diagnostic_MOF
-       mof_verbose=0
-       use_ls_data=0
-
-       do dir=1,sdim
-        grid_index(dir)=0
-       enddo
-
-       call multimaterial_MOF( &
-        bfact,dx,xsten0,nhalf0, &
-        mof_verbose, &
-        use_ls_data, &
-        LS_stencil, &
-        xtetlist, &
-        xtetlist, &
-        nmax, &
-        nmax, &
-        mofdata, &
-        vof_super, &
-        multi_centroidA, &
-        continuous_mof, & ! continuous_mof=STANDARD_MOF
-        cmofsten, &
-        grid_index, &
-        grid_level, &
-        sdim)
-
-       moferror=zero
-       do im=1,num_materials
-        vofcomp=(im-1)*(2*sdim+3)+1
-
+         ! do test for [-1/2,1/2]^sdim cube
         do dir=1,sdim
-         xref_mat(dir)=mofdata(vofcomp+dir)
-         xact_mat(dir)=multi_centroidA(im,dir)
+         dx(dir)=one
+         do isten=-nhalf0,nhalf0
+          xsten0(isten,dir)=isten*half*dx(dir)
+         enddo
+        enddo ! dir
+        do im=1,num_materials
+         total_calls(im)=zero
+         total_iterations(im)=zero
+         total_errors(im)=zero
+         max_iterations(im)=0
         enddo
-        call RT_transform_offset(xref_mat,total_centroid,xref_matT)
-        call RT_transform_offset(xact_mat,total_centroid,xact_matT)
 
-        do dir=1,sdim
-         moferror=moferror+ &
-          mofdata(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
+        seed=86456
+#if (USERAND==1)
+        call srand(seed)
+#else
+        print *,"set userand (caps) = 1"
+        stop
+#endif
+
+        max_mof_error=zero
+
+        do ntry=1,nsamples
+
+          ! 0<=rand()<=1
+         do iangle=1,nDOF_standard
+#if (USERAND==1)
+          angle(iangle)=rand()
+#else
+          print *,"set userand (caps) = 1"
+          stop
+#endif
+          angle(iangle)=angle(iangle)*two*Pi 
+         enddo ! iangle
+
+         call angle_to_slope(angle,nslope,sdim)
+
+          ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
+          ! intercept=n dot (xcell-xpoint)
+         intercept=zero
+         do dir=1,sdim
+          nslope2(dir)=-nslope(dir)
+
+#if (USERAND==1)
+          xpoint(dir)=rand()
+#else
+          print *,"set userand (caps) = 1"
+          stop
+#endif
+
+           ! make: -1/2 <= xpoint <= 1/2
+          xpoint(dir)=xpoint(dir)-half
+           ! make: -shrink_factor/2 <= xpoint <= shrink_factor/2
+          xpoint(dir)=xpoint(dir)*shrink_factor
+
+          intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
+         enddo  ! dir
+         intercept2=-intercept
+         shapeflag=0
+         call fast_cut_cell_intersection( &
+          bfact,dx,xsten0,nhalf0, &
+          nslope,intercept, &
+          volcut,cencut,areacut, &
+          xsten0,nhalf0,xtet,shapeflag,sdim)
+         call fast_cut_cell_intersection( &
+          bfact,dx,xsten0,nhalf0, &
+          nslope2,intercept2, &
+          volcut2,cencut2,areacut2, &
+          xsten0,nhalf0,xtet,shapeflag,sdim)
+
+         call Box_volumeFAST( &
+           bfact,dx,xsten0,nhalf0, &
+           total_volume, &
+           total_centroid,sdim)
+
+         if (total_volume.ge.zero) then
+          !do nothing
+         else
+          print *,"total_volume invalid"
+          stop
+         endif
+
+         do dir2=1,nrecon
+          mofdata(dir2)=zero
+         enddo
+         do im=1,num_materials
+          vof_super(im)=zero
+         enddo
+
+         im=1
+         vofcomp=(im-1)*(2*sdim+3)+1
+         mofdata(vofcomp)=volcut/total_volume
+         vof_super(im)=mofdata(vofcomp)
+
+         do dir=1,sdim
+          mofdata(vofcomp+dir)=cencut(dir)-total_centroid(dir)
+         enddo
+
+         im=2
+         vofcomp=(im-1)*(2*sdim+3)+1
+         mofdata(vofcomp)=volcut2/total_volume
+         vof_super(im)=mofdata(vofcomp)
+
+         do dir=1,sdim
+          mofdata(vofcomp+dir)=cencut2(dir)-total_centroid(dir)
+         enddo
+
+         do dir=1,sdim
+          grid_index(dir)=0
+         enddo
+FIX ME
+         call multimaterial_MOF( &
+          bfact,dx,xsten0,nhalf0, &
+          mof_verbose, &
+          use_ls_data, &
+          LS_stencil, &
+          xtetlist, &
+          xtetlist, &
+          nmax, &
+          nmax, &
+          mofdata, &
+          vof_super, &
+          multi_centroidA, &
+          continuous_mof, & ! continuous_mof=STANDARD_MOF
+          cmofsten, &
+          grid_index, &
+          grid_level, &
+          sdim)
+
+         moferror=zero
+         do im=1,num_materials
+          vofcomp=(im-1)*(2*sdim+3)+1
+
+          do dir=1,sdim
+           xref_mat(dir)=mofdata(vofcomp+dir)
+           xact_mat(dir)=multi_centroidA(im,dir)
+          enddo
+          call RT_transform_offset(xref_mat,total_centroid,xref_matT)
+          call RT_transform_offset(xact_mat,total_centroid,xact_matT)
+
+          do dir=1,sdim
+           moferror=moferror+ &
+            mofdata(vofcomp)*((xref_matT(dir)-xact_matT(dir))**2)
+          enddo
+         enddo  ! im
+         moferror=sqrt(moferror)/dx(1)
+
+         if (moferror.gt.max_mof_error) then
+          max_mof_error=moferror
+         endif
+
+          ! diagnostic_MOF
+         do im=1,num_materials
+          total_calls(im)=total_calls(im)+mof_calls(1,im)
+          total_iterations(im)= &
+              total_iterations(im)+mof_iterations(1,im)
+          total_errors(im)= &
+              total_errors(im)+mof_errors(1,im)
+          if (mof_iterations(1,im).gt.max_iterations(im)) then
+           max_iterations(im)=mof_iterations(1,im)
+          endif
+         enddo
+
+        enddo ! ntry
+
+        print *,"sdim= ",sdim
+        print *,"MOFITERMAX= ",MOFITERMAX
+        print *,"MOFITERMAX_AFTER_PREDICT= ", &
+           MOFITERMAX_AFTER_PREDICT
+        print *,"nsamples= ",nsamples
+        print *,"shrink_factor=",shrink_factor
+        do im=1,num_materials
+         print *,"im= ",im
+         print *,"total calls= ",total_calls(im)
+         if (total_calls(im).gt.zero) then
+          avgiter=total_iterations(im)/total_calls(im)
+          avgerror=total_errors(im)/total_calls(im)
+          print *,"avgiter= ",avgiter
+          print *,"avgerror= ",avgerror
+         endif
+         print *,"max iterations= ",max_iterations(im)
         enddo
-       enddo  ! im
-       moferror=sqrt(moferror)/dx(1)
-
-       if (moferror.gt.max_mof_error) then
-        max_mof_error=moferror
-       endif
-
-        ! diagnostic_MOF
-       do im=1,num_materials
-        total_calls(im)=total_calls(im)+mof_calls(1,im)
-        total_iterations(im)= &
-            total_iterations(im)+mof_iterations(1,im)
-        total_errors(im)= &
-            total_errors(im)+mof_errors(1,im)
-        if (mof_iterations(1,im).gt.max_iterations(im)) then
-         max_iterations(im)=mof_iterations(1,im)
-        endif
-       enddo
-
-      enddo ! ntry
-
-      print *,"sdim= ",sdim
-      print *,"MOFITERMAX= ",MOFITERMAX
-      print *,"MOFITERMAX_AFTER_PREDICT= ", &
-         MOFITERMAX_AFTER_PREDICT
-      print *,"nsamples= ",nsamples
-      print *,"shrink_factor=",shrink_factor
-      do im=1,num_materials
-       print *,"im= ",im
-       print *,"total calls= ",total_calls(im)
-       if (total_calls(im).gt.zero) then
-        avgiter=total_iterations(im)/total_calls(im)
-        avgerror=total_errors(im)/total_calls(im)
-        print *,"avgiter= ",avgiter
-        print *,"avgerror= ",avgerror
-       endif
-       print *,"max iterations= ",max_iterations(im)
-      enddo
-      print *,"max_mof_error=",max_mof_error
+        print *,"max_mof_error=",max_mof_error
 
       deallocate(LS_stencil)
 
