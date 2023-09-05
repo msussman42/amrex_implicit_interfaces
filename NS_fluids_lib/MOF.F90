@@ -2685,20 +2685,19 @@ end subroutine intersection_volume_and_map
 
       subroutine angle_to_slope_general( &
         npredict, &
-        nMAT_OPT, & ! 1 or 3
-        nDOF, & !sdim-1 or 1
-        nEQN, & !sdim or 3*sdim
+        nMAT_OPT, & ! 1 
+        nDOF, & !sdim-1
+        nEQN, & !sdim 
         angle,nslope,sdim)
       use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim 
       REAL_T, INTENT(in) :: npredict(nEQN)
       INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, PARAMETER :: sdim2d=2
       REAL_T, INTENT(out) :: nslope(nEQN)
       REAL_T, INTENT(in) :: angle(nDOF)
 
@@ -9181,13 +9180,13 @@ contains
        print *,"nlist_alloc invalid"
        stop
       endif
-      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-          (continuous_mof.eq.MOF_TRI_TET).or. & !MOF-triangle/tetra
-          (continuous_mof.eq.CMOF_F_AND_X).or. &!CMOF both X and F.
-          (continuous_mof.ge.CMOF_X)) then !CMOF just X.
+      if ((continuous_mof.eq.STANDARD_MOF).or. & 
+          (continuous_mof.eq.MOF_TRI_TET).or. & 
+          (continuous_mof.eq.CMOF_F_AND_X).or. &
+          (continuous_mof.ge.CMOF_X)) then 
        ! do nothing
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
       if (nhalf0.lt.1) then
@@ -9224,7 +9223,7 @@ contains
       if (volcell.gt.zero) then
        ! do nothing
       else
-       print *,"volcell bust"
+       print *,"volcell bust: ",volcell
        stop
       endif
 
@@ -9234,7 +9233,7 @@ contains
        do i=-nhalf0,nhalf0
        do dir=1,sdim
         if (continuous_mof.eq.MOF_TRI_TET) then
-         xsten_local(i,dir)=cencell(dir)+i*dx(dir)
+         xsten_local(i,dir)=cencell(dir)+half*i*dx(dir)
         else if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
                  (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
                  (continuous_mof.ge.CMOF_X)) then  !CMOF X
@@ -9348,9 +9347,9 @@ contains
 
        ! centroid in absolute coordinate system
       subroutine multi_find_intercept( &
-       nMAT_OPT, & ! 1 or 3
-       nDOF, & ! sdim-1  or 1
-       nEQN, & ! sdim or 3 * sdim
+       nMAT_OPT, & ! 1 
+       nDOF, & ! sdim-1
+       nEQN, & ! sdim
        bfact,dx,xsten0,nhalf0, &
        slope, &
        intercept, &
@@ -9371,9 +9370,9 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 or 3
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1 or 1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim or 3 * sdim
+      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1
+      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
+      INTEGER_T, INTENT(in) :: nEQN ! sdim 
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -9457,9 +9456,10 @@ contains
        stop
       endif
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. &  !MOF
-          (continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
-          (continuous_mof.ge.CMOF_X)) then  !CMOF just X
+      if ((continuous_mof.eq.STANDARD_MOF).or. &  
+          (continuous_mof.eq.MOF_TRI_TET).or. & 
+          (continuous_mof.eq.CMOF_F_AND_X).or. & 
+          (continuous_mof.ge.CMOF_X)) then  
        ! do nothing
       else
        print *,"continuous_mof invalid"
@@ -9489,14 +9489,20 @@ contains
 ! if fastflag=0, 
 !  search the vertices of all triangles that make up the "cut" domain.
 
-      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-          (continuous_mof.ge.CMOF_X)) then !CMOF just X
+      if ((continuous_mof.eq.STANDARD_MOF).or. & 
+          (continuous_mof.ge.CMOF_X)) then 
        call Box_volumeFAST( &
         bfact,dx,xsten0,nhalf0, &
         volcell, &
         cencell, &
         sdim)
-      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF both X and F
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
+       call Box_volumeTRI_TET( &
+        bfact,dx,xsten0,nhalf0, &
+        volcell, &
+        cencell, &
+        sdim)
+      else if (continuous_mof.eq.CMOF_F_AND_X) then 
        call Box_volume_super( &
         cmofsten, &
         bfact,dx,xsten0,nhalf0, &
@@ -9554,8 +9560,8 @@ contains
        maxphi=-1.0D+10
        null_intercept=zero
 
-       if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-           (continuous_mof.ge.CMOF_X)) then !CMOF X
+       if ((continuous_mof.eq.STANDARD_MOF).or. & 
+           (continuous_mof.ge.CMOF_X)) then 
 
         do k=klo_stencil,khi_stencil,2
         do j=-1,1,2
@@ -10338,7 +10344,6 @@ contains
       INTEGER_T, INTENT(in) :: nlist_alloc
 
       REAL_T, INTENT(in) :: uncaptured_volume_vof
-      REAL_T :: uncaptured_volume_vof_local
 
       REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
@@ -10354,13 +10359,13 @@ contains
       INTEGER_T, INTENT(in) :: use_MilcentLemoine
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: nhalf0
-      INTEGER_T,INTENT(inout):: nlist_vof
-      INTEGER_T,INTENT(inout):: nlist_cen
+      INTEGER_T,INTENT(in):: nlist_vof
+      INTEGER_T,INTENT(in):: nlist_cen
 
       INTEGER_T, INTENT(in) :: nmax,fastflag
-      REAL_T, INTENT(inout) :: xtetlist_vof(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
 
-      REAL_T, INTENT(inout) :: xtetlist_cen(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
 
       REAL_T, INTENT(in) :: refcentroid(nEQN)
       REAL_T refcentroidT(nEQN)
@@ -10394,7 +10399,7 @@ contains
       REAL_T censten(sdim)
       REAL_T local_angles(2)
       REAL_T local_volume
-      REAL_T local_c(3)
+      REAL_T local_cell_size(3)
       REAL_T local_nslope(3)
       REAL_T local_ref_centroid(3)
       REAL_T local_centroid(3)
@@ -10494,13 +10499,12 @@ contains
        print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
+
       if ((use_initial_guess.ne.0).and. &
           (use_initial_guess.ne.1)) then
        print *,"use_initial_guess invalid multirotatefunc"
        stop
       endif
-
-      uncaptured_volume_vof_local=uncaptured_volume_vof
 
       if (uncaptured_volume_vof.gt.zero) then
        ! do nothing
@@ -10508,22 +10512,14 @@ contains
        print *,"uncaptured_volume_vof invalid"
        stop
       endif
-      if (uncaptured_volume_vof_local.gt.zero) then
-       ! do nothing
-      else
-       print *,"uncaptured_volume_vof_local invalid"
-       stop
-      endif
 
       do dir=1,nEQN
        ff(dir)=zero
       enddo
 
-      if (use_MilcentLemoine.eq.0) then
+       ! if RZ, cencell can be negative
 
-        ! if RZ, cencell can be negative
-
-       if (continuous_mof.eq.STANDARD_MOF) then 
+      if (continuous_mof.eq.STANDARD_MOF) then 
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
@@ -10534,7 +10530,7 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-       else if (continuous_mof.eq.MOF_TRI_TET) then 
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
         call Box_volumeTRI_TET( &
          bfact,dx, &
          xsten0,nhalf0, &
@@ -10547,7 +10543,7 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-       else if (continuous_mof.ge.CMOF_X) then !CMOF X
+      else if (continuous_mof.ge.CMOF_X) then !CMOF X
         call Box_volumeFAST( &
          bfact,dx,xsten0,nhalf0, &
          volcell_vof, &
@@ -10559,7 +10555,7 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-       else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+      else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
         call Box_volume_super( &
          cmofsten, &
          bfact,dx,xsten0,nhalf0, &
@@ -10572,12 +10568,12 @@ contains
          volcell_cen, &
          cencell_cen, &
          sdim)
-       else
+      else
         print *,"continuous_mof invalid: ",continuous_mof
         stop
-       endif
+      endif
 
-       call angle_to_slope_general( &
+      call angle_to_slope_general( &
         npredict, &
         nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
@@ -10585,6 +10581,8 @@ contains
         angle, &
         nslope, &
         sdim)
+
+      if (use_MilcentLemoine.eq.0) then
 
        if (sdim.eq.3) then
         ksten_low=-1
@@ -10606,7 +10604,8 @@ contains
         nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN, & ! sdim 
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         nslope, &  ! intent(in)
         intercept(1), & ! intent(inout)
         continuous_mof, &
@@ -10627,7 +10626,8 @@ contains
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
          call multi_cell_intersection( &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten0,nhalf0, &
           nslope, &
           intercept(1), &
           volume_cut, & !intent(out)
@@ -10771,7 +10771,8 @@ contains
          enddo ! dir=1..sdim
 
         else
-         print *,"continuous_mof invalid: ", continuous_mof
+         print *,"continuous_mof invalid: ",continuous_mof
+         print *,"fastflag: ",fastflag
          stop
         endif
 
@@ -10801,8 +10802,7 @@ contains
        intercept(1)=zero
 
         ! MilcentLemoine slope points away from the material,
-        ! so we have to reverse the normal
-       call angle_to_slope(angle,nslope,sdim)
+        ! so we have to reverse the normal and angles
        do dir=1,sdim
         local_nslope(dir)=-nslope(dir)
        enddo
@@ -10828,24 +10828,25 @@ contains
                  (refvfrac(1).le.half)) then
          ! do nothing
         else
-         print *,"refvfrac(1) invalid"
+         print *,"refvfrac(1) invalid: ",refvfrac(1)
          stop
         endif
 
-        local_volume=local_refvfrac
+        local_volume=local_refvfrac*volcell_vof
+
         do dir=1,sdim
-         local_c(dir)=xsten0(1,dir)-xsten0(-1,dir)
-         if (local_c(dir).gt.zero) then
-          local_volume=local_volume*local_c(dir)
+         local_cell_size(dir)=xsten0(1,dir)-xsten0(-1,dir)
+         if (local_cell_size(dir).gt.zero) then
           if ((local_refvfrac.gt.zero).and. &
               (local_refvfrac.le.half)) then
-           local_ref_centroid(dir)=local_ref_centroid(dir)+half*local_c(dir)
+           local_ref_centroid(dir)=local_ref_centroid(dir)+ &
+                half*local_cell_size(dir)
           else
-           print *,"local_refvfrac invalid"
+           print *,"local_refvfrac invalid: ",local_refvfrac
            stop
           endif
          else
-          print *,"local_c invalid"
+          print *,"local_cell_size(dir) invalid: ",dir,local_cell_size(dir)
           stop
          endif 
         enddo ! dir=1..sdim
@@ -10855,7 +10856,7 @@ contains
         else if (sdim.eq.2) then
          local_angles(2)=half*Pi
          local_nslope(3)=zero
-         local_c(3)=one
+         local_cell_size(3)=one
          local_ref_centroid(3)=half
         else
          print *,"sdim invalid"
@@ -10882,26 +10883,29 @@ contains
          print *,"local_angles ",local_angles(1),local_angles(2)
          print *,"local_ref_centroid ",local_ref_centroid(1), &
             local_ref_centroid(2),local_ref_centroid(sdim)
-         print *,"local_c ",local_c(1), &
-            local_c(2),local_c(sdim)
+         print *,"local_cell_size ",local_cell_size(1), &
+            local_cell_size(2),local_cell_size(sdim)
         endif
 
         if (sdim.eq.3) then
          call mof3d_compute_analytic_gradient( &
-          local_angles,local_ref_centroid, &
-          local_volume,local_c,local_centroid, &
+          local_angles, & !intent(in)
+          local_ref_centroid, & !intent(in)
+          local_volume,local_cell_size, &
+          local_centroid, & !intent(out)
           local_gradient)
         else if (sdim.eq.2) then
          call mof2d_compute_analytic_gradient( &
-          local_angles, &
-          local_volume,local_c,local_centroid)
+          local_angles, & !intent(in)
+          local_volume,local_cell_size, &
+          local_centroid)  !intent(out)
         else
          print *,"sdim invalid"
          stop
         endif
 
         do dir=1,sdim
-         local_centroid(dir)=local_centroid(dir)-half*local_c(dir)
+         local_centroid(dir)=local_centroid(dir)-half*local_cell_size(dir)
         enddo
 
         do dir=1,sdim
@@ -10940,14 +10944,8 @@ contains
           stop
          endif
 
-         call Box_volumeTRI_TET( &
-          bfact,dx, &
-          xsten0,nhalf0, &
-          volcell_vof, &
-          cencell_vof, &
-          sdim)
-
          local_volume=local_refvfrac*volcell_vof
+
          do dir=1,sdim
           local_ref_centroid(dir)=local_ref_centroid(dir)+cencell_vof(dir)
           p0(dir)=xtetlist_vof(1,dir,1)
@@ -10980,7 +10978,7 @@ contains
         endif
 
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
 
@@ -11133,8 +11131,8 @@ contains
         refvfrac, &
         continuous_mof, & 
         cmofsten, &
-        xtetlist_vof, & !intent(inout)
-        xtetlist_cen, & !intent(inout)
+        xtetlist_vof, & !intent(in)
+        xtetlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
         angle_init, & ! INTENT(out)
         refcen, &  !INTENT(out)
@@ -11158,8 +11156,8 @@ contains
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: nlist_alloc
       INTEGER_T, INTENT(in) :: nmax
-      REAL_T, INTENT(inout) :: xtetlist_vof(4,3,nlist_alloc)
-      REAL_T, INTENT(inout) :: xtetlist_cen(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: refvfrac(nMAT_OPT_standard)
@@ -11272,8 +11270,8 @@ contains
        nEQN_standard, & ! sdim
        use_MilcentLemoine, &
        bfact,dx,xsten0,nhalf0, &
-       xtetlist_vof,nlist_vof, & !intent(inout)
-       xtetlist_cen,nlist_cen, & !intent(inout)
+       xtetlist_vof,nlist_vof, & !intent(in)
+       xtetlist_cen,nlist_cen, & !intent(in)
        nlist_alloc, & !intent(in)
        nmax, &
        refcentroid, &
@@ -11334,10 +11332,10 @@ contains
         continuous_mof, &
         cmofsten, &
         nslope,intercept, &
-        xtetlist_vof, & !intent(inout)
-        nlist_vof, &  !intent(inout)
-        xtetlist_cen, & !intent(inout)
-        nlist_cen, & !intent(inout)
+        xtetlist_vof, & !intent(in)
+        nlist_vof, &  !intent(in)
+        xtetlist_cen, & !intent(in)
+        nlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
         centroidA, &
         nmax, &
@@ -11372,13 +11370,13 @@ contains
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(inout) :: nlist_vof
-      INTEGER_T, INTENT(inout) :: nlist_cen
+      INTEGER_T, INTENT(in) :: nlist_vof
+      INTEGER_T, INTENT(in) :: nlist_cen
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T, INTENT(in) :: critical_material
       INTEGER_T, INTENT(in) :: fastflag
-      REAL_T, INTENT(inout) :: xtetlist_vof(4,3,nlist_alloc)
-      REAL_T, INTENT(inout) :: xtetlist_cen(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
+      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: refcentroid(nEQN)
@@ -12022,10 +12020,10 @@ contains
         nEQN, & ! sdim
         use_MilcentLemoine, &
         bfact,dx,xsten0,nhalf0, &
-        xtetlist_vof, & !intent(inout)
-        nlist_vof, & !intent(inout)
-        xtetlist_cen, & !intent(inout)
-        nlist_cen, & !intent(inout)
+        xtetlist_vof, & !intent(in)
+        nlist_vof, & !intent(in)
+        xtetlist_cen, & !intent(in)
+        nlist_cen, & !intent(in)
         nlist_alloc, & !intent(in)
         nmax, &
         refcentroid, &
@@ -12154,10 +12152,10 @@ contains
          nEQN, & ! sdim 
          use_MilcentLemoine, &
          bfact,dx,xsten0,nhalf0, &
-         xtetlist_vof, & !intent(inout)
-         nlist_vof, & !intent(inout)
-         xtetlist_cen, & !intent(inout)
-         nlist_cen, & !intent(inout)
+         xtetlist_vof, & !intent(in)
+         nlist_vof, & !intent(in)
+         xtetlist_cen, & !intent(in)
+         nlist_cen, & !intent(in)
          nlist_alloc, & !intent(in)
          nmax, &
          refcentroid, &
@@ -12200,10 +12198,10 @@ contains
          nEQN, & ! sdim or 3 * sdim
          use_MilcentLemoine, &
          bfact,dx,xsten0,nhalf0, &
-         xtetlist_vof, & !intent(inout)
-         nlist_vof, & !intent(inout)
-         xtetlist_cen, & !intent(inout)
-         nlist_cen, & !intent(inout)
+         xtetlist_vof, & !intent(in)
+         nlist_vof, & !intent(in)
+         xtetlist_cen, & !intent(in)
+         nlist_cen, & !intent(in)
          nlist_alloc, & !intent(in)
          nmax, &
          refcentroid,refvfrac, &
@@ -12338,10 +12336,10 @@ contains
          nEQN, & ! sdim
          use_MilcentLemoine, &
          bfact,dx,xsten0,nhalf0, &
-         xtetlist_vof, & !intent(inout)
-         nlist_vof, & !intent(inout)
-         xtetlist_cen, & !intent(inout)
-         nlist_cen, & !intent(inout)
+         xtetlist_vof, & !intent(in)
+         nlist_vof, & !intent(in)
+         xtetlist_cen, & !intent(in)
+         nlist_cen, & !intent(in)
          nlist_alloc, & !intent(in)
          nmax, &
          refcentroid, &
@@ -13270,10 +13268,10 @@ contains
            cmofsten, &
            nslope, &
            intercept, &
-           xtetlist_vof, & !intent(inout)
-           nlist_vof, & !intent(inout)
-           xtetlist_cen, & !intent(inout)
-           nlist_cen, & !intent(inout)
+           xtetlist_vof, & !intent(in)
+           nlist_vof, & !intent(in)
+           xtetlist_cen, & !intent(in)
+           nlist_cen, & !intent(in)
            nlist_alloc, & !intent(in)
            centroidA, &
            nmax, &
@@ -15181,10 +15179,10 @@ contains
            cmofsten, &
            nslope, &
            intercept, &
-           xtetlist_vof, & !intent(inout)
-           nlist_vof, & !intent(inout)
-           xtetlist_cen, & !intent(inout)
-           nlist_cen, & !intent(inout)
+           xtetlist_vof, & !intent(in)
+           nlist_vof, & !intent(in)
+           xtetlist_cen, & !intent(in)
+           nlist_cen, & !intent(in)
            nlist_alloc, & !intent(in)
            centroidA, &
            nmax, &
