@@ -15996,7 +15996,6 @@ contains
       INTEGER_T :: nDOF_standard
 
       REAL_T xtetlist(4,3,nmax)
-      REAL_T xsten0(-3:3,sdim) 
       REAL_T dx(sdim) 
 
       REAL_T mofdata(num_materials*(2*sdim+3))
@@ -16043,6 +16042,9 @@ contains
       REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: LS_stencil
       INTEGER_T i1,j1,k1,k1lo,k1hi
       INTEGER_T, PARAMETER :: nhalf0=3
+      REAL_T, PARAMETER :: shrink_factor=0.333333333333d0
+      REAL_T xsten0(-nhalf0:nhalf0,sdim) 
+      REAL_T xsten_tet(-nhalf0:nhalf0,sdim) 
 
 #include "mofdata.H"
 
@@ -16050,8 +16052,6 @@ contains
 
       print *,"in diagnostic_MOF"
       print *,"DO NOT RUN THIS TEST WITH MULTIPLE THREADS"
-
-      shrink_factor=one/three
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon invalid"
@@ -16103,36 +16103,73 @@ contains
        stop
       endif
 
-      do shapeflag=1,2 
+      do dir=1,sdim
+       dx(dir)=one
+      enddo
 
-       if (shapeflag.eq.1) then
+      do shapeflag=0,1 
+
+       if (shapeflag.eq.0) then
         continuous_mof=STANDARD_MOF
 
          ! do test for [-1/2,1/2]^sdim cube
         do dir=1,sdim
-         dx(dir)=one
          do isten=-nhalf0,nhalf0
           xsten0(isten,dir)=isten*half*dx(dir)
          enddo
         enddo ! dir
-        do im=1,num_materials
+       else if (shapeflag.eq.1) then
+        continuous_mof=MOF_TRI_TET
+
+        ! tetrahedra "origin" (-1/2,-1/2,-1/2)
+        do inode=1,sdim+1
+        do dir=1,sdim
+         xtet_domain(inode,dir)=0.0d0
+        enddo
+        enddo
+        do dir=1,sdim
+         xtet_domain(dir+1,dir)=1.0d0
+        enddo
+        do inode=1,sdim+1
+        do dir=1,sdim
+         xtet_domain(inode,dir)=xtet_domain(inode,dir)-0.5d0
+         xsten_tet(-nhalf0+inode-1,dir)=xtet_domain(inode,dir)
+        enddo
+        enddo
+        call Box_volumeTRI_TET( &
+         bfact,dx, &
+         xsten_tet,nhalf0, &
+         volcell_tet, &
+         cencell_tet, &
+         sdim)
+        do dir=1,sdim
+         do isten=-nhalf0,nhalf0
+          xsten0(isten,dir)=isten*half*dx(dir)+cencell_tet(dir)
+         enddo
+        enddo ! dir
+       else
+        print *,"shapeflag invalid"
+        stop
+       endif
+
+       do im=1,num_materials
          total_calls(im)=zero
          total_iterations(im)=zero
          total_errors(im)=zero
          max_iterations(im)=0
-        enddo
+       enddo
 
-        seed=86456
+       seed=86456
 #if (USERAND==1)
-        call srand(seed)
+       call srand(seed)
 #else
-        print *,"set userand (caps) = 1"
-        stop
+       print *,"set userand (caps) = 1"
+       stop
 #endif
 
-        max_mof_error=zero
+       max_mof_error=zero
 
-        do ntry=1,nsamples
+       do ntry=1,nsamples
 
           ! 0<=rand()<=1
          do iangle=1,nDOF_standard
@@ -16149,7 +16186,7 @@ contains
 
           ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
           ! intercept=n dot (xcell-xpoint)
-         intercept=zero
+
          do dir=1,sdim
           nslope2(dir)=-nslope(dir)
 
@@ -16159,26 +16196,84 @@ contains
           print *,"set userand (caps) = 1"
           stop
 #endif
+         enddo
 
+         if (shapeflag.eq.1) then
+          do dir=1,sdim
+           xpoint(dir)=xpoint(dir)*shrink_factor
+          enddo
+          xpoint_sum=0.0d0
+          do dir=1,sdim
+           xpoint_sum=xpoint_sum+xpoint(dir)
+          enddo
+          if (xpoint_sum.ge.0.9d0) then
+           do dir=1,sdim
+            xpoint(dir)=xpoint(dir)*0.9d0/xpoint_sum
+           enddo
+          endif
+          do dir=1,sdim
            ! make: -1/2 <= xpoint <= 1/2
-          xpoint(dir)=xpoint(dir)-half
-           ! make: -shrink_factor/2 <= xpoint <= shrink_factor/2
-          xpoint(dir)=xpoint(dir)*shrink_factor
+           xpoint(dir)=xpoint(dir)-half
+          enddo
+         else if (shapeflag.eq.0) then
 
-          intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
-         enddo  ! dir
-         intercept2=-intercept
-         shapeflag=0
-         call fast_cut_cell_intersection( &
-          bfact,dx,xsten0,nhalf0, &
-          nslope,intercept, &
-          volcut,cencut,areacut, &
-          xsten0,nhalf0,xtet,shapeflag,sdim)
-         call fast_cut_cell_intersection( &
-          bfact,dx,xsten0,nhalf0, &
-          nslope2,intercept2, &
-          volcut2,cencut2,areacut2, &
-          xsten0,nhalf0,xtet,shapeflag,sdim)
+          do dir=1,sdim
+           ! make: -1/2 <= xpoint <= 1/2
+           xpoint(dir)=xpoint(dir)-half
+           ! make: -shrink_factor/2 <= xpoint <= shrink_factor/2
+           xpoint(dir)=xpoint(dir)*shrink_factor
+          enddo
+
+         else
+          print *,"shapeflag invalid"
+          stop
+         endif
+          ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
+          ! intercept=n dot (xcell-xpoint)
+
+         if (shapeflag.eq.0) then
+          intercept=zero
+          do dir=1,sdim
+           intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
+          enddo  ! dir
+          intercept2=-intercept
+
+          call fast_cut_cell_intersection( &
+           bfact,dx,xsten0,nhalf0, &
+           nslope,intercept, &
+           volcut,cencut,areacut, &
+           xsten0,nhalf0,xtet,shapeflag,sdim)
+          call fast_cut_cell_intersection( &
+           bfact,dx,xsten0,nhalf0, &
+           nslope2,intercept2, &
+           volcut2,cencut2,areacut2, &
+           xsten0,nhalf0,xtet,shapeflag,sdim)
+
+         else if (shapeflag.eq.1) then      
+
+          intercept=zero
+          do dir=1,sdim
+           intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
+          enddo  ! dir
+          intercept2=-intercept
+
+          call fast_cut_cell_intersection( &
+           bfact,dx,xsten0,nhalf0, &
+           nslope,intercept, &
+           volcut,cencut,areacut, &
+           xsten0,nhalf0,xtet_domain,shapeflag,sdim)
+          call fast_cut_cell_intersection( &
+           bfact,dx,xsten0,nhalf0, &
+           nslope2,intercept2, &
+           volcut2,cencut2,areacut2, &
+           xsten0,nhalf0,xtet_domain,shapeflag,sdim)
+
+         else
+          print *,"shapeflag invalid"
+          stop
+         endif
+
+
 
          call Box_volumeFAST( &
            bfact,dx,xsten0,nhalf0, &
@@ -16220,7 +16315,7 @@ contains
          do dir=1,sdim
           grid_index(dir)=0
          enddo
-FIX ME
+
          call multimaterial_MOF( &
           bfact,dx,xsten0,nhalf0, &
           mof_verbose, &
