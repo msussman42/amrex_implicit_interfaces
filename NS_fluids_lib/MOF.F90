@@ -12877,7 +12877,7 @@ contains
         stop
        endif
 
-      else if ((continuous_mof.eq.MOF_TRI_TET) then 
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
 
        if ((imaterial_count.ge.1).and. &
            (imaterial_count.le.num_materials)) then
@@ -12887,7 +12887,7 @@ contains
         stop
        endif
 
-      else if ((continuous_mof.eq.STANDARD_MOF) then 
+      else if (continuous_mof.eq.STANDARD_MOF) then 
 
        if ((imaterial_count.gt.1).and. &
            (imaterial_count.le.num_materials)) then
@@ -12899,7 +12899,7 @@ contains
         stop
        endif
 
-      else if ((continuous_mof.ge.CMOF_X) then 
+      else if (continuous_mof.ge.CMOF_X) then 
 
        if ((imaterial_count.gt.1).and. &
            (imaterial_count.le.num_materials)) then
@@ -16006,9 +16006,11 @@ contains
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T angle(sdim-1)
       REAL_T xpoint(sdim)
+      REAL_T xpoint_sum
       INTEGER_T nrecon
       INTEGER_T, parameter :: nsamples=90000
       INTEGER_T im,ntry,iangle,vofcomp
+      INTEGER_T inode
       INTEGER_T dir,dir2
       INTEGER_T seed
       REAL_T max_mof_error,moferror
@@ -16020,6 +16022,7 @@ contains
       REAL_T cencut(sdim)
       REAL_T cencut2(sdim)
       REAL_T xtet(sdim+1,sdim)
+      REAL_T xtet_domain(sdim+1,sdim)
       REAL_T total_volume
       REAL_T total_centroid(sdim)
       REAL_T xref_mat(sdim)
@@ -16032,7 +16035,6 @@ contains
       REAL_T total_iterations(num_materials)
       REAL_T total_errors(num_materials)
       INTEGER_T max_iterations(num_materials)
-      REAL_T shrink_factor
       INTEGER_T, parameter :: mof_verbose=0
       INTEGER_T, parameter :: use_ls_data=0
       INTEGER_T isten
@@ -16045,6 +16047,9 @@ contains
       REAL_T, PARAMETER :: shrink_factor=0.333333333333d0
       REAL_T xsten0(-nhalf0:nhalf0,sdim) 
       REAL_T xsten_tet(-nhalf0:nhalf0,sdim) 
+      REAL_T volcell_tet
+      REAL_T cencell_tet(sdim)
+
 
 #include "mofdata.H"
 
@@ -16110,6 +16115,7 @@ contains
       do shapeflag=0,1 
 
        if (shapeflag.eq.0) then
+
         continuous_mof=STANDARD_MOF
 
          ! do test for [-1/2,1/2]^sdim cube
@@ -16118,7 +16124,9 @@ contains
           xsten0(isten,dir)=isten*half*dx(dir)
          enddo
         enddo ! dir
+
        else if (shapeflag.eq.1) then
+
         continuous_mof=MOF_TRI_TET
 
         ! tetrahedra "origin" (-1/2,-1/2,-1/2)
@@ -16215,6 +16223,7 @@ contains
            ! make: -1/2 <= xpoint <= 1/2
            xpoint(dir)=xpoint(dir)-half
           enddo
+
          else if (shapeflag.eq.0) then
 
           do dir=1,sdim
@@ -16272,7 +16281,6 @@ contains
           print *,"shapeflag invalid"
           stop
          endif
-
 
 
          call Box_volumeFAST( &
@@ -16368,15 +16376,15 @@ contains
           endif
          enddo
 
-        enddo ! ntry
+       enddo ! ntry
 
-        print *,"sdim= ",sdim
-        print *,"MOFITERMAX= ",MOFITERMAX
-        print *,"MOFITERMAX_AFTER_PREDICT= ", &
+       print *,"sdim= ",sdim
+       print *,"MOFITERMAX= ",MOFITERMAX
+       print *,"MOFITERMAX_AFTER_PREDICT= ", &
            MOFITERMAX_AFTER_PREDICT
-        print *,"nsamples= ",nsamples
-        print *,"shrink_factor=",shrink_factor
-        do im=1,num_materials
+       print *,"nsamples= ",nsamples
+       print *,"shrink_factor=",shrink_factor
+       do im=1,num_materials
          print *,"im= ",im
          print *,"total calls= ",total_calls(im)
          if (total_calls(im).gt.zero) then
@@ -16386,8 +16394,10 @@ contains
           print *,"avgerror= ",avgerror
          endif
          print *,"max iterations= ",max_iterations(im)
-        enddo
-        print *,"max_mof_error=",max_mof_error
+       enddo
+       print *,"max_mof_error=",max_mof_error
+
+      enddo ! shapeflag
 
       deallocate(LS_stencil)
 
