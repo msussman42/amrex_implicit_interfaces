@@ -16178,7 +16178,10 @@ contains
          cencell_recon(dir)=cencell_tet(dir)
          do isten=-nhalf0,nhalf0
           xsten0(isten,dir)=isten*half*dx(dir)+cencell_tet(dir)
-          xsten0_recon(isten,dir)=xsten_tet(isten,dir)
+          xsten0_recon(isten,dir)=xsten0(isten,dir)
+          if (isten+nhalf0+1.le.sdim+1) then
+           xsten0_recon(isten,dir)=xsten_tet(isten+nhalf0+1,dir)
+          endif
          enddo
         enddo ! dir
 
