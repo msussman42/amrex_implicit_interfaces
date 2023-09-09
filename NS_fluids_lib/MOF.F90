@@ -1241,7 +1241,8 @@ subroutine create_xnodelist( &
   n_vol,n_area, &
   cum_volume,cum_area,cum_centroid, &
   xnode,phinode,checksum,maxnode, &
-  shapeflag,nodedomain,sdim)
+  shapeflag, & !0=regular hexahedron  1=tetrahedron
+  nodedomain,sdim)
 
 IMPLICIT NONE
 
@@ -1479,7 +1480,8 @@ subroutine create_xnodelist_simple( &
   n_vol, &
   cum_volume,cum_centroid, &
   xnode,phinode,checksum,maxnode, &
-  shapeflag,nodedomain,sdim)
+  shapeflag, & !0=regular hexahedron 1=tetrahedron
+  nodedomain,sdim)
 
 IMPLICIT NONE
 
@@ -1651,7 +1653,8 @@ subroutine create_xnodelist_and_map( &
   cum_volume,cum_centroid, &
   cum_volume_map,cum_centroid_map, &
   xnode,phinode,checksum,maxnode, &
-  shapeflag,nodedomain,sdim)
+  shapeflag, & !0=regular hexahedron  1=tetrahedron
+  nodedomain,sdim)
 
 IMPLICIT NONE
 
@@ -1855,7 +1858,8 @@ REAL_T, INTENT(in) :: phinode(nodedomain)
 REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,checksum,power2,n
 REAL_T phimax
-INTEGER_T maxnode,n_nodes,shapeflag
+INTEGER_T maxnode,n_nodes
+INTEGER_T, PARAMETER :: shapeflag=1  !tetrahedron
 
  if (nodedomain.ne.sdim+1) then
   print *,"nodedomain invalid"
@@ -1909,7 +1913,6 @@ INTEGER_T maxnode,n_nodes,shapeflag
     stop
    endif
 
-   shapeflag=1
    call create_xnodelist( &
     n_vol,n_area, &
     cum_volume,cum_area,cum_centroid, &
@@ -1941,7 +1944,7 @@ REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,checksum,power2,n
 REAL_T phimax
 INTEGER_T maxnode,n_nodes
-INTEGER_T shapeflag
+INTEGER_T, PARAMETER :: shapeflag=1 !tetrahedron
 
  if (nodedomain.ne.sdim+1) then
   print *,"nodedomain invalid"
@@ -1995,7 +1998,6 @@ INTEGER_T shapeflag
     stop
    endif
 
-   shapeflag=1
    call create_xnodelist_simple( &
     n_vol, &
     cum_volume,cum_centroid, &
@@ -2033,7 +2035,8 @@ REAL_T, INTENT(in) :: phinode(nodedomain)
 REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
 INTEGER_T maxchecksum,checksum,power2,n
 REAL_T phimax
-INTEGER_T maxnode,n_nodes,shapeflag
+INTEGER_T maxnode,n_nodes
+INTEGER_T, PARAMETER :: shapeflag=1 !tetrahedron
 
  if ((normdir.lt.0).or.(normdir.ge.sdim)) then
   print *,"normdir invalid"
@@ -2095,7 +2098,6 @@ INTEGER_T maxnode,n_nodes,shapeflag
     stop
    endif
 
-   shapeflag=1
    call create_xnodelist_and_map( &
     normdir,coeff, &
     n_vol, &
@@ -2339,9 +2341,7 @@ INTEGER_T checksum,maxnode,n,n_nodes,id,sub_nodedomain
 REAL_T xx(sdim+1,sdim)
 REAL_T ls(sdim+1)
 INTEGER_T nhalf
-INTEGER_T shapeflag
-
- shapeflag=0
+INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
 
  nhalf=3
 
@@ -2504,9 +2504,7 @@ INTEGER_T checksum,maxnode,n,n_nodes,id,sub_nodedomain
 REAL_T xx(sdim+1,sdim)
 REAL_T ls(sdim+1)
 INTEGER_T nhalf
-INTEGER_T shapeflag
-
- shapeflag=0
+INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
 
  if ((normdir.lt.0).or.(normdir.ge.sdim)) then
   print *,"normdir invalid"
@@ -4920,7 +4918,7 @@ REAL_T xsten0(-3:3,3)
 REAL_T hangle,hintercept,intercept
 REAL_T angle(2)
 REAL_T nslope(3)
-INTEGER_T Nangle,shapeflag,sdim,Nangle2,nodedomain
+INTEGER_T Nangle,sdim,Nangle2,nodedomain
 INTEGER_T i_int,a1,a2,inode,dir
 INTEGER_T isten_loop
 INTEGER_T i_grid_node
@@ -4957,7 +4955,6 @@ REAL_T local_scale
  Nangle=512
  hangle=2*Pi/Nangle
  hintercept=two*dxgrid(3)/Nangle
- shapeflag=0
 
  call cpu_time(t1)
 
@@ -9163,7 +9160,7 @@ contains
       REAL_T volcell
       REAL_T cencell(sdim)
       REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T shapeflag
+      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
       REAL_T xtet(sdim+1,sdim)
       REAL_T xsten_local(-nhalf0:nhalf0,sdim)
       INTEGER_T i,dir
@@ -9258,8 +9255,6 @@ contains
 
       else if (fastflag.eq.1) then
 
-       shapeflag=0
-
        if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
            (continuous_mof.ge.CMOF_X)) then !CMOF just X.
         call fast_cut_cell_intersection( &
@@ -9309,7 +9304,7 @@ contains
       REAL_T volcell
       REAL_T cencell(sdim)
       REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T shapeflag
+      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
       REAL_T xtet(sdim+1,sdim)
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
@@ -9328,8 +9323,6 @@ contains
        print *,"volcell bust"
        stop
       endif
-
-      shapeflag=0
 
       call fast_cut_cell_intersection( &
        bfact,dx,xsten0,nhalf0, &
@@ -10392,7 +10385,7 @@ contains
       REAL_T cencell_vof(sdim)
       REAL_T cencell_cen(sdim)
       REAL_T xtet(sdim+1,sdim)
-      INTEGER_T shapeflag
+      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
       INTEGER_T ksten_low,ksten_high
       REAL_T volsten
       REAL_T areasten
@@ -10693,7 +10686,6 @@ contains
 
        else if (fastflag.eq.1) then
 
-        shapeflag=0
         if (continuous_mof.eq.STANDARD_MOF) then !MOF
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
@@ -16129,7 +16121,7 @@ contains
 
         continuous_mof=MOF_TRI_TET
 
-        ! tetrahedra "origin" (-1/2,-1/2,-1/2)
+        ! tetrahedra "origin node" mapped to (-1/2,-1/2,-1/2)
         do inode=1,sdim+1
         do dir=1,sdim
          xtet_domain(inode,dir)=0.0d0
@@ -16156,7 +16148,7 @@ contains
          enddo
         enddo ! dir
        else
-        print *,"shapeflag invalid"
+        print *,"shapeflag invalid: ",shapeflag
         stop
        endif
 
@@ -16198,15 +16190,17 @@ contains
          do dir=1,sdim
           nslope2(dir)=-nslope(dir)
 
+          ! 0<=rand()<=1
 #if (USERAND==1)
           xpoint(dir)=rand()
 #else
           print *,"set userand (caps) = 1"
           stop
 #endif
-         enddo
-
-         if (shapeflag.eq.1) then
+         enddo !dir=1..sdim
+FIX ME
+          ! 0<=rand()<=1
+         if (shapeflag.eq.1) then !tetrahedron
           do dir=1,sdim
            xpoint(dir)=xpoint(dir)*shrink_factor
           enddo
@@ -16224,7 +16218,7 @@ contains
            xpoint(dir)=xpoint(dir)-half
           enddo
 
-         else if (shapeflag.eq.0) then
+         else if (shapeflag.eq.0) then !regular hexahedron
 
           do dir=1,sdim
            ! make: -1/2 <= xpoint <= 1/2
@@ -18148,7 +18142,7 @@ contains
       REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
       INTEGER_T dir_local
       INTEGER_T im
-      INTEGER_T shapeflag
+      INTEGER_T, PARAMETER :: shapeflag=1 !tetrahedron
       REAL_T :: multi_volume_sub(num_materials)
       REAL_T :: multi_cen_sub(sdim,num_materials)
       REAL_T :: multi_area_sub(num_materials)
@@ -18214,7 +18208,6 @@ contains
           xtet(itet_node,dir_local)=xtetlist_in(itet_node,dir_local,i_list)
          enddo
         enddo
-        shapeflag=1
          ! multi_cen_sub is "absolute" (not relative to cell centroid)
         call multi_get_volume_grid( &
           tessellate, &  ! =0 or 2
@@ -18373,7 +18366,7 @@ contains
       REAL_T dxthin
       REAL_T xsten_thin(-1:1,sdim)
       REAL_T xtet(sdim+1,sdim)
-      INTEGER_T shapeflag
+      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
 
       REAL_T multi_volume_plus_thin(num_materials)
       REAL_T multi_area_plus_thin(num_materials)
@@ -18600,8 +18593,6 @@ contains
         bfact,dx,xsten0_minus,nhalf0, &
         mofdatavalid_minus,mofdataproject_minus, &
         sdim,dir_plus,side)
-
-      shapeflag=0
 
        ! since multi_get_volume_tessellate tessellates each cell with 
        ! fluids and solids (tess=1,3), the flag "is_rigid" should be ignored.
@@ -21352,7 +21343,7 @@ contains
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T shapeflag
+      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
       INTEGER_T, INTENT(in) :: bfact,nhalf0
       INTEGER_T, INTENT(in) :: tessellate_in  ! =1 or 3
       REAL_T xtet(sdim+1,sdim)
@@ -21567,7 +21558,6 @@ contains
         stop
        endif
 
-       shapeflag=0
        call multi_get_volume_grid( &
         local_tessellate, & ! =1 or 2
         bfact,dx,xsten0,nhalf0, &
