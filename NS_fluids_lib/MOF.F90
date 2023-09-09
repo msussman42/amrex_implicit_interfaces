@@ -7225,7 +7225,6 @@ end subroutine volume_sanity_check
       REAL_T :: x(sdim+1,sdim)
       INTEGER_T i
       INTEGER_T dir
-      REAL_T rval,dr
     
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid Box_volumeTRI_TET: ",sdim
@@ -15998,7 +15997,9 @@ contains
       INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
       REAL_T angle(sdim-1)
       REAL_T xpoint(sdim)
-      REAL_T xpoint_sum
+      REAL_T xpoint2(sdim)
+      REAL_T xpoint3(sdim)
+      REAL_T xpoint4(sdim)
       INTEGER_T nrecon
       INTEGER_T, parameter :: nsamples=90000
       INTEGER_T im,ntry,iangle,vofcomp
@@ -16013,10 +16014,9 @@ contains
       REAL_T volcut,volcut2,areacut,areacut2
       REAL_T cencut(sdim)
       REAL_T cencut2(sdim)
-      REAL_T xtet(sdim+1,sdim)
       REAL_T xtet_domain(sdim+1,sdim)
-      REAL_T total_volume
-      REAL_T total_centroid(sdim)
+      REAL_T volcell_hex
+      REAL_T cencell_hex(sdim)
       REAL_T xref_mat(sdim)
       REAL_T xact_mat(sdim)
       REAL_T xref_matT(sdim)
@@ -16038,10 +16038,12 @@ contains
       INTEGER_T, PARAMETER :: nhalf0=3
       REAL_T, PARAMETER :: shrink_factor=0.333333333333d0
       REAL_T xsten0(-nhalf0:nhalf0,sdim) 
+      REAL_T xsten0_recon(-nhalf0:nhalf0,sdim) 
       REAL_T xsten_tet(-nhalf0:nhalf0,sdim) 
       REAL_T volcell_tet
       REAL_T cencell_tet(sdim)
-
+      REAL_T volcell_recon
+      REAL_T cencell_recon(sdim)
 
 #include "mofdata.H"
 
@@ -16104,16 +16106,64 @@ contains
        dx(dir)=one
       enddo
 
+      ! tetrahedra "origin node" mapped to (-1/2,-1/2,-1/2)
+      do inode=1,sdim+1
+      do dir=1,sdim
+       xtet_domain(inode,dir)=0.0d0
+      enddo
+      enddo
+      do dir=1,sdim
+       xtet_domain(dir+1,dir)=1.0d0
+      enddo
+      do inode=1,sdim+1
+      do dir=1,sdim
+       xtet_domain(inode,dir)=xtet_domain(inode,dir)-0.5d0
+       xsten_tet(-nhalf0+inode-1,dir)=xtet_domain(inode,dir)
+      enddo
+      enddo
+
+      call Box_volumeTRI_TET( &
+       bfact,dx, &
+       xsten_tet,nhalf0, &
+       volcell_tet, &
+       cencell_tet, &
+       sdim)
+
+      if (volcell_tet.ge.zero) then
+       !do nothing
+      else
+       print *,"volcell_tet invalid"
+       stop
+      endif
+
+      call Box_volumeFAST( &
+       bfact,dx, &
+       xsten0,nhalf0, &
+       volcell_hex, &
+       cencell_hex, &
+       sdim)
+
+      if (volcell_hex.ge.zero) then
+       !do nothing
+      else
+       print *,"volcell_hex invalid"
+       stop
+      endif
+
       do shapeflag=0,1 
 
        if (shapeflag.eq.0) then
 
         continuous_mof=STANDARD_MOF
 
-         ! do test for [-1/2,1/2]^sdim cube
+        volcell_recon=volcell_hex
+
+        ! do test for [-1/2,1/2]^sdim cube
         do dir=1,sdim
+         cencell_recon(dir)=cencell_hex(dir)
          do isten=-nhalf0,nhalf0
           xsten0(isten,dir)=isten*half*dx(dir)
+          xsten0_recon(isten,dir)=xsten0(isten,dir)
          enddo
         enddo ! dir
 
@@ -16121,32 +16171,17 @@ contains
 
         continuous_mof=MOF_TRI_TET
 
+        volcell_recon=volcell_tet
+
         ! tetrahedra "origin node" mapped to (-1/2,-1/2,-1/2)
-        do inode=1,sdim+1
         do dir=1,sdim
-         xtet_domain(inode,dir)=0.0d0
-        enddo
-        enddo
-        do dir=1,sdim
-         xtet_domain(dir+1,dir)=1.0d0
-        enddo
-        do inode=1,sdim+1
-        do dir=1,sdim
-         xtet_domain(inode,dir)=xtet_domain(inode,dir)-0.5d0
-         xsten_tet(-nhalf0+inode-1,dir)=xtet_domain(inode,dir)
-        enddo
-        enddo
-        call Box_volumeTRI_TET( &
-         bfact,dx, &
-         xsten_tet,nhalf0, &
-         volcell_tet, &
-         cencell_tet, &
-         sdim)
-        do dir=1,sdim
+         cencell_recon(dir)=cencell_tet(dir)
          do isten=-nhalf0,nhalf0
           xsten0(isten,dir)=isten*half*dx(dir)+cencell_tet(dir)
+          xsten0_recon(isten,dir)=xsten_tet(isten,dir)
          enddo
         enddo ! dir
+
        else
         print *,"shapeflag invalid: ",shapeflag
         stop
@@ -16198,96 +16233,69 @@ contains
           stop
 #endif
          enddo !dir=1..sdim
-FIX ME
+
           ! 0<=rand()<=1
          if (shapeflag.eq.1) then !tetrahedron
+
+           ! point in [-1,1]^3
           do dir=1,sdim
-           xpoint(dir)=xpoint(dir)*shrink_factor
+           xpoint(dir)=two*(xpoint(dir)-half)*shrink_factor
           enddo
-          xpoint_sum=0.0d0
           do dir=1,sdim
-           xpoint_sum=xpoint_sum+xpoint(dir)
+           xpoint2(dir)=xpoint(dir)
           enddo
-          if (xpoint_sum.ge.0.9d0) then
-           do dir=1,sdim
-            xpoint(dir)=xpoint(dir)*0.9d0/xpoint_sum
-           enddo
-          endif
+          xpoint2(1)=(one+xpoint(1))*(one-xpoint(sdim))/two-one
           do dir=1,sdim
-           ! make: -1/2 <= xpoint <= 1/2
-           xpoint(dir)=xpoint(dir)-half
+           xpoint3(dir)=xpoint2(dir)
+          enddo
+          xpoint3(1)=(one+xpoint2(1))*(one-xpoint2(2))/two-one
+          do dir=1,sdim
+           xpoint4(dir)=xpoint3(dir)
+          enddo
+          xpoint4(2)=(one+xpoint3(2))*(one-xpoint3(sdim))/two-one
+
+          do dir=1,sdim
+           if (sdim.eq.2) then
+            xpoint(dir)=half*xpoint2(dir)
+           else if (sdim.eq.3) then
+            xpoint(dir)=half*xpoint4(dir)
+           else
+            print *,"sdim invalid"
+            stop
+           endif
           enddo
 
          else if (shapeflag.eq.0) then !regular hexahedron
 
           do dir=1,sdim
-           ! make: -1/2 <= xpoint <= 1/2
-           xpoint(dir)=xpoint(dir)-half
            ! make: -shrink_factor/2 <= xpoint <= shrink_factor/2
-           xpoint(dir)=xpoint(dir)*shrink_factor
+           xpoint(dir)=(xpoint(dir)-half)*shrink_factor
           enddo
 
          else
-          print *,"shapeflag invalid"
+          print *,"shapeflag invalid: ",shapeflag
           stop
          endif
+
           ! phi=n dot (x-xpoint)= n dot (x-xcell) +intercept
           ! intercept=n dot (xcell-xpoint)
 
-         if (shapeflag.eq.0) then
-          intercept=zero
-          do dir=1,sdim
-           intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
-          enddo  ! dir
-          intercept2=-intercept
+         intercept=zero
+         do dir=1,sdim
+          intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
+         enddo  ! dir
+         intercept2=-intercept
 
-          call fast_cut_cell_intersection( &
-           bfact,dx,xsten0,nhalf0, &
-           nslope,intercept, &
-           volcut,cencut,areacut, &
-           xsten0,nhalf0,xtet,shapeflag,sdim)
-          call fast_cut_cell_intersection( &
-           bfact,dx,xsten0,nhalf0, &
-           nslope2,intercept2, &
-           volcut2,cencut2,areacut2, &
-           xsten0,nhalf0,xtet,shapeflag,sdim)
-
-         else if (shapeflag.eq.1) then      
-
-          intercept=zero
-          do dir=1,sdim
-           intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
-          enddo  ! dir
-          intercept2=-intercept
-
-          call fast_cut_cell_intersection( &
+         call fast_cut_cell_intersection( &
            bfact,dx,xsten0,nhalf0, &
            nslope,intercept, &
            volcut,cencut,areacut, &
            xsten0,nhalf0,xtet_domain,shapeflag,sdim)
-          call fast_cut_cell_intersection( &
+         call fast_cut_cell_intersection( &
            bfact,dx,xsten0,nhalf0, &
            nslope2,intercept2, &
            volcut2,cencut2,areacut2, &
            xsten0,nhalf0,xtet_domain,shapeflag,sdim)
-
-         else
-          print *,"shapeflag invalid"
-          stop
-         endif
-
-
-         call Box_volumeFAST( &
-           bfact,dx,xsten0,nhalf0, &
-           total_volume, &
-           total_centroid,sdim)
-
-         if (total_volume.ge.zero) then
-          !do nothing
-         else
-          print *,"total_volume invalid"
-          stop
-         endif
 
          do dir2=1,nrecon
           mofdata(dir2)=zero
@@ -16298,20 +16306,20 @@ FIX ME
 
          im=1
          vofcomp=(im-1)*(2*sdim+3)+1
-         mofdata(vofcomp)=volcut/total_volume
+         mofdata(vofcomp)=volcut/volcell_recon
          vof_super(im)=mofdata(vofcomp)
 
          do dir=1,sdim
-          mofdata(vofcomp+dir)=cencut(dir)-total_centroid(dir)
+          mofdata(vofcomp+dir)=cencut(dir)-cencell_recon(dir)
          enddo
 
          im=2
          vofcomp=(im-1)*(2*sdim+3)+1
-         mofdata(vofcomp)=volcut2/total_volume
+         mofdata(vofcomp)=volcut2/volcell_recon
          vof_super(im)=mofdata(vofcomp)
 
          do dir=1,sdim
-          mofdata(vofcomp+dir)=cencut2(dir)-total_centroid(dir)
+          mofdata(vofcomp+dir)=cencut2(dir)-cencell_recon(dir)
          enddo
 
          do dir=1,sdim
@@ -16319,7 +16327,8 @@ FIX ME
          enddo
 
          call multimaterial_MOF( &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten0_recon,nhalf0, &
           mof_verbose, &
           use_ls_data, &
           LS_stencil, &
@@ -16330,7 +16339,7 @@ FIX ME
           mofdata, &
           vof_super, &
           multi_centroidA, &
-          continuous_mof, & ! continuous_mof=STANDARD_MOF
+          continuous_mof, & 
           cmofsten, &
           grid_index, &
           grid_level, &
@@ -16344,8 +16353,8 @@ FIX ME
            xref_mat(dir)=mofdata(vofcomp+dir)
            xact_mat(dir)=multi_centroidA(im,dir)
           enddo
-          call RT_transform_offset(xref_mat,total_centroid,xref_matT)
-          call RT_transform_offset(xact_mat,total_centroid,xact_matT)
+          call RT_transform_offset(xref_mat,cencell_recon,xref_matT)
+          call RT_transform_offset(xact_mat,cencell_recon,xact_matT)
 
           do dir=1,sdim
            moferror=moferror+ &
