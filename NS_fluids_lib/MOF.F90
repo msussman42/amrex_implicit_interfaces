@@ -6002,7 +6002,6 @@ end subroutine volume_sanity_check
 !  multi_get_volume_grid_and_map(continuous_mof==STANDARD_MOF),
 !  multi_get_area_pairs(continuous_mof==STANDARD_MOF)
 ! tets_box_planes_super is called from individual_MOF
-FIX ME tet LS x0=centroid(tet domain)
       subroutine tets_box_planes( &
        continuous_mof, &
        tessellate, &
@@ -6038,6 +6037,7 @@ FIX ME tet LS x0=centroid(tet domain)
       INTEGER_T dir
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      REAL_T :: xsten0_LS(-nhalf0:nhalf0,sdim)
       REAL_T, INTENT(in) :: xsten_box(-nhalf_box:nhalf_box,sdim)
       REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
       REAL_T xtetlist_old(4,3,nlist_alloc)
@@ -6047,6 +6047,8 @@ FIX ME tet LS x0=centroid(tet domain)
       REAL_T phi1(sdim+1),dummyphi(sdim+1)
       REAL_T voltest
       REAL_T centroidtest(sdim)
+      REAL_T voltet
+      REAL_T centet(sdim)
       REAL_T xcandidate(sdim+1,sdim)
       REAL_T xx(sdim+1,sdim)
       REAL_T x1old(sdim+1,sdim)
@@ -6102,6 +6104,12 @@ FIX ME tet LS x0=centroid(tet domain)
        stop
       endif
 
+      do i_tet_node=-nhalf0,nhalf0
+      do j_dir=1,sdim
+       xsten0_LS(i_tet_node,j_dir)=xsten0(i_tet_node,j_dir)
+      enddo
+      enddo
+
       if ((continuous_mof.eq.STANDARD_MOF).or. &
           (continuous_mof.ge.CMOF_X).or. &
           (continuous_mof.eq.CMOF_F_AND_X)) then
@@ -6155,6 +6163,19 @@ FIX ME tet LS x0=centroid(tet domain)
         print *,"continuous_mof=",continuous_mof
         stop
        endif
+
+       call Box_volumeTRI_TET( &
+        bfact,dx, &
+        xsten0,nhalf0, &
+        voltet, &
+        centet, &
+        sdim)
+
+       do i_tet_node=-nhalf0,nhalf0
+       do j_dir=1,sdim
+        xsten0_LS(i_tet_node,j_dir)=i_tet_node*half*dx(j_dir)+centet(j_dir)
+       enddo
+       enddo
 
        id=1
 
@@ -6219,7 +6240,7 @@ FIX ME tet LS x0=centroid(tet domain)
           phi1(i_tet_node)=intercept
           do j_dir=1,sdim
            phi1(i_tet_node)=phi1(i_tet_node)+ &
-                nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
+             nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0_LS(0,j_dir))
           enddo
          enddo
           ! tetrahedras representing intersection of region where phi1>0
