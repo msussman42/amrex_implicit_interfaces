@@ -6000,8 +6000,8 @@ end subroutine volume_sanity_check
        continuous_mof, &
        tessellate, &
        bfact,dx, &
-       xsten0,nhalf0, &
-       xsten_box,nhalf_box, &
+       xsten0,nhalf0, & !tet domain, hex LS x0
+       xsten_box,nhalf_box, & !hex domain
        mofdata, &
        xtetlist, &
        nlist_alloc, &
@@ -6212,6 +6212,7 @@ end subroutine volume_sanity_check
           phi1(i_tet_node)=intercept
           do j_dir=1,sdim
            phi1(i_tet_node)=phi1(i_tet_node)+ &
+FIX ME IF CALLED FROM RECONSTRUCTION ROUTINES ? versus volume routines
                    nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
           enddo
          enddo
@@ -6295,7 +6296,8 @@ end subroutine volume_sanity_check
        continuous_mof, &
        tessellate, &
        tid, &
-       bfact,dx,xsten0,nhalf0, &
+       bfact,dx, &
+       xsten0,nhalf0, &
        mofdata, &
        xtetlist, &
        nlist_alloc, &
@@ -6466,7 +6468,8 @@ end subroutine volume_sanity_check
        ! only called when tessellate=0, 1 or 2.
       subroutine tets_tet_planes( &
         tessellate, &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         xtet,mofdata, &
         xtetlist, &
         nlist_alloc, &
@@ -7226,7 +7229,8 @@ end subroutine volume_sanity_check
 
        ! centroid is in absolute coordinate system 
       subroutine Box_volumeTRI_TET( &
-        bfact,dx,xsten,nhalf, &
+        bfact,dx, &
+        xsten,nhalf, &
         volume,centroid,sdim)
       use probcommon_module
       IMPLICIT NONE
@@ -8653,30 +8657,39 @@ contains
 ! intercept=-maxphi  => refvfrac=0
 ! intercept=-minphi  => refvfrac=1
       subroutine multi_phi_bounds( &
-        bfact,dx,xsten,nhalf, &
+        continuous_mof, &
+        bfact,dx, &
+        xsten,nhalf, &
         slope, &
         xtetlist, &
         nlist_alloc, &
         nlist, &
         nmax, &
-        minphi,maxphi,sdim)
+        minphi,maxphi, &
+        sdim)
 
       use global_utility_module
+      use geometry_intersect_module
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: nlist_alloc
       INTEGER_T, INTENT(in) :: nlist,nmax,sdim,bfact,nhalf
       REAL_T, INTENT(in) :: xtetlist(4,3,nlist_alloc)
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      REAL_T :: xsten_local(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: slope(sdim)
       REAL_T xtarget(sdim)
       REAL_T, INTENT(in) :: dx(sdim)
       INTEGER_T dir
       INTEGER_T i_tet_node
+      INTEGER_T i_stencil_node
       INTEGER_T n
       REAL_T, INTENT(out) :: minphi,maxphi
       REAL_T intercept,dist
+      REAL_T volcell
+      REAL_T cencell(sdim)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid multi phi bounds 3d"
@@ -8693,6 +8706,41 @@ contains
        stop
       endif
 
+
+      if ((continuous_mof.eq.STANDARD_MOF).or. & 
+          (continuous_mof.ge.CMOF_X)) then 
+       ! do nothing
+      else if (continuous_mof.eq.MOF_TRI_TET) then 
+       call Box_volumeTRI_TET( &
+        bfact,dx, &
+        xsten,nhalf, &
+        volcell, &
+        cencell, &
+        sdim)
+      else if (continuous_mof.eq.CMOF_F_AND_X) then 
+       ! do nothing
+      else
+       print *,"continuous_mof invalid(multi_phi_bounds): ",continuous_mof
+       stop
+      endif
+
+       ! xsten_local used for LS dist.
+      do i_stencil_node=-nhalf,nhalf
+      do dir=1,sdim
+       if (continuous_mof.eq.MOF_TRI_TET) then
+        xsten_local(i_stencil_node,dir)=cencell(dir)+ &
+          half*i_stencil_node*dx(dir)
+       else if ((continuous_mof.eq.CMOF_F_AND_X).or. & !CMOF X and F
+                (continuous_mof.eq.STANDARD_MOF).or. &  !MOF
+                (continuous_mof.ge.CMOF_X)) then  !CMOF X
+        xsten_local(i_stencil_node,dir)=xsten(i_stencil_node,dir)
+       else
+        print *,"continuous_mof invalid: ",continuous_mof
+        stop
+       endif
+      enddo !dir
+      enddo !i_stencil_node
+
       intercept=zero
       minphi=1.0D+10
       maxphi=-1.0D+10
@@ -8702,7 +8750,7 @@ contains
          xtarget(dir)=xtetlist(i_tet_node,dir,n)
         enddo
 
-        call distfunc(bfact,dx,xsten,nhalf, &
+        call distfunc(bfact,dx,xsten_local,nhalf, &
          intercept,slope,xtarget,dist,sdim)
 
         if (dist.lt.minphi) then
@@ -9497,13 +9545,15 @@ contains
       if ((continuous_mof.eq.STANDARD_MOF).or. & 
           (continuous_mof.ge.CMOF_X)) then 
        call Box_volumeFAST( &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         volcell, &
         cencell, &
         sdim)
       else if (continuous_mof.eq.MOF_TRI_TET) then 
        call Box_volumeTRI_TET( &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         volcell, &
         cencell, &
         sdim)
@@ -9546,7 +9596,9 @@ contains
          cencut,sdim)
 
        call multi_phi_bounds( &
-         bfact,dx,xsten0,nhalf0, &
+         continuous_mof, &
+         bfact,dx, &
+         xsten0,nhalf0, &
          slope, &
          xtetlist, & !intent(in) 
          nlist_alloc, &
@@ -9735,7 +9787,7 @@ contains
         else
          print *,"(breakpoint) break point and gdb: "
          print *,"(1) compile with the -g option"
-         print *,"(2) break MOF.F90:9738"
+         print *,"(2) break MOF.F90:9740"
          print *,"intercept is NaN (multi_find_intercept): ",intercept
          stop 
         endif
@@ -9821,7 +9873,8 @@ contains
             else if (fa*fb.lt.zero) then
              intercept=half*(aa+bb)
              call multi_ff( &
-              bfact,dx,xsten0,nhalf0, &
+              bfact,dx, &
+              xsten0,nhalf0, &
               fc,slope, &
               intercept, & !intent(in)
               continuous_mof, &
@@ -9851,6 +9904,9 @@ contains
               stop
              endif
             else
+             print *,"(breakpoint) break point and gdb: "
+             print *,"(1) compile with the -g option"
+             print *,"(2) break MOF.F90:9859"
              print *,"signs of fa and fb are inconsistent"
              stop
             endif
@@ -10241,6 +10297,9 @@ contains
               stop
              endif
             else
+             print *,"(breakpoint) break point and gdb: "
+             print *,"(1) compile with the -g option"
+             print *,"(2) break MOF.F90:10252"
              print *,"signs of fa and fb are inconsistent"
              stop
             endif
@@ -12796,7 +12855,7 @@ contains
           (continuous_mof.ge.CMOF_X)) then 
        ! do nothing
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
 
@@ -13049,9 +13108,42 @@ contains
       if (abs(volcut_vof-uncaptured_volume_vof).le.VOFTOL*volcell_vof) then
         !do nothing
       else
+        print *,"(breakpoint) break point and gdb: "
+        print *,"(1) compile with the -g option"
+        print *,"(2) break MOF.F90:13110"
         print *,"volcut_vof invalid individual mof"
+        print *,"continuous_mof ",continuous_mof
+        print *,"imaterial_count ",imaterial_count
+        print *,"order_algorithm_in ",order_algorithm_in
+        print *,"bfact ",bfact
+        print *,"dx ",dx
+        do dir=1,sdim
+        do im=-nhalf0,nhalf0
+         print *,"i,dir,xsten0(i,dir) ",im,dir,xsten0(im,dir)
+        enddo
+        enddo
+        print *,"xsten0 ",xsten0
+        print *,"nhalf0 ",nhalf0
+        print *,"fastflag ",fastflag
+        print *,"nlist_alloc ",nlist_alloc
+        print *,"nlist_vof ",nlist_vof
+        print *,"nlist_cen ",nlist_cen
+        print *,"volcell_vof ",volcell_vof
+        print *,"cencell_vof ",cencell_vof
         print *,"volcut_vof ",volcut_vof
+        print *,"cencut_vof ",cencut_vof
         print *,"uncaptured_volume_vof ",uncaptured_volume_vof
+        print *,"uncaptured_volume_cen ",uncaptured_volume_cen
+        do im=1,num_materials
+         vofcomp=(im-1)*ngeom_recon+1
+         print *,"im,vof,centroid ",im,mofdata(vofcomp),mofdata(vofcomp+1), &
+           mofdata(vofcomp+2),mofdata(vofcomp+sdim)
+         print *,"im,flag ",mofdata(vofcomp+sdim+1)
+         print *,"im,slope ",im,mofdata(vofcomp+sdim+2), &
+            mofdata(vofcomp+sdim+3), &
+            mofdata(vofcomp+sdim+sdim+1)
+         print *,"im,intercept ",im,mofdata(vofcomp+2*sdim+2)
+        enddo
         stop
       endif
 
@@ -16015,7 +16107,7 @@ contains
       REAL_T xpoint3(sdim)
       REAL_T xpoint4(sdim)
       INTEGER_T nrecon
-      INTEGER_T, parameter :: nsamples=10000 !90000 
+      INTEGER_T, parameter :: nsamples=1000 !90000 
       INTEGER_T im,ntry,iangle,vofcomp
       INTEGER_T inode
       INTEGER_T dir,dir2
@@ -16201,7 +16293,7 @@ contains
           xsten0(isten,dir)=isten*half*dx(dir)+cencell_tet(dir)
           xsten0_recon(isten,dir)=xsten0(isten,dir)
           if (isten+nhalf0+1.le.sdim+1) then
-           xsten0_recon(isten,dir)=xsten_tet(isten+nhalf0+1,dir)
+           xsten0_recon(isten,dir)=xsten_tet(isten,dir)
           endif
          enddo
         enddo ! dir
@@ -24173,7 +24265,7 @@ contains
        call volume_sanity_check()
       endif
       if (1.eq.1) then
-       sdim=2
+       sdim=3
        nmax_test=POLYGON_LIST_MAX
        call diagnostic_MOF(sdim,nmax_test)
        stop
