@@ -25,7 +25,7 @@
 #define LSTHICK (1.0D-4) 
 ! used for redistancing:
 #define GPHI_TOL (1.0D-12)
-#define USERAND (0)
+#define USERAND (1)
 
 ! Author: Mark Sussman sussman@math.fsu.edu
 ! Department of Mathematics
@@ -3208,7 +3208,7 @@ end subroutine intersection_volume_and_map
       REAL_T, INTENT(out) :: xmax(sdim)
       REAL_T, INTENT(out) :: dxmax
       REAL_T :: dxtrial
-      INTEGER_T i,dir
+      INTEGER_T i,dir,dir2
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -3234,7 +3234,19 @@ end subroutine intersection_volume_and_map
        if (dxtrial.ge.zero) then
         ! do nothing
        else
-        print *,"dxtrial is corrupt"
+        print *,"(breakpoint) break point and gdb: "
+        print *,"(1) compile with the -g option"
+        print *,"(2) break MOF.F90:3239"
+        print *,"dxtrial is corrupt: ",dxtrial
+        print *,"sdim ",sdim
+        print *,"npoints ",npoints
+        do i=1,npoints
+        do dir2=1,sdim
+         print *,"i,dir2,x ",i,dir2,x(i,dir)
+        enddo
+        enddo
+        print *,"xmin ",xmin
+        print *,"xmax ",xmax
         stop
        endif
        if (dxtrial.gt.dxmax) then
@@ -7097,7 +7109,9 @@ end subroutine volume_sanity_check
 
 
        ! centroid is in absolute coordinate system 
-      subroutine Box_volumeFAST(bfact,dx,xsten,nhalf, &
+      subroutine Box_volumeFAST( &
+        bfact,dx, &
+        xsten,nhalf, &
         volume,centroid,sdim)
       use probcommon_module
       IMPLICIT NONE
@@ -9721,7 +9735,7 @@ contains
         else
          print *,"(breakpoint) break point and gdb: "
          print *,"(1) compile with the -g option"
-         print *,"(2) break MOF.F90:10161"
+         print *,"(2) break MOF.F90:9738"
          print *,"intercept is NaN (multi_find_intercept): ",intercept
          stop 
         endif
@@ -16001,7 +16015,7 @@ contains
       REAL_T xpoint3(sdim)
       REAL_T xpoint4(sdim)
       INTEGER_T nrecon
-      INTEGER_T, parameter :: nsamples=90000
+      INTEGER_T, parameter :: nsamples=10000 !90000 
       INTEGER_T im,ntry,iangle,vofcomp
       INTEGER_T inode
       INTEGER_T dir,dir2
@@ -16038,6 +16052,7 @@ contains
       INTEGER_T, PARAMETER :: nhalf0=3
       REAL_T, PARAMETER :: shrink_factor=0.333333333333d0
       REAL_T xsten0(-nhalf0:nhalf0,sdim) 
+      REAL_T xsten0_hex(-nhalf0:nhalf0,sdim) 
       REAL_T xsten0_recon(-nhalf0:nhalf0,sdim) 
       REAL_T xsten_tet(-nhalf0:nhalf0,sdim) 
       REAL_T volcell_tet
@@ -16136,9 +16151,15 @@ contains
        stop
       endif
 
+      do dir=1,sdim
+      do isten=-nhalf0,nhalf0
+       xsten0_hex(isten,dir)=isten*half*dx(dir)
+      enddo
+      enddo ! dir
+
       call Box_volumeFAST( &
        bfact,dx, &
-       xsten0,nhalf0, &
+       xsten0_hex,nhalf0, &
        volcell_hex, &
        cencell_hex, &
        sdim)
@@ -16146,7 +16167,7 @@ contains
       if (volcell_hex.ge.zero) then
        !do nothing
       else
-       print *,"volcell_hex invalid"
+       print *,"volcell_hex invalid: ",volcell_hex
        stop
       endif
 
@@ -16162,7 +16183,7 @@ contains
         do dir=1,sdim
          cencell_recon(dir)=cencell_hex(dir)
          do isten=-nhalf0,nhalf0
-          xsten0(isten,dir)=isten*half*dx(dir)
+          xsten0(isten,dir)=xsten0_hex(isten,dir)
           xsten0_recon(isten,dir)=xsten0(isten,dir)
          enddo
         enddo ! dir
@@ -16385,6 +16406,7 @@ contains
        enddo ! ntry
 
        print *,"sdim= ",sdim
+       print *,"shapeflag= ",shapeflag
        print *,"MOFITERMAX= ",MOFITERMAX
        print *,"MOFITERMAX_AFTER_PREDICT= ", &
            MOFITERMAX_AFTER_PREDICT
@@ -24150,7 +24172,7 @@ contains
       if (1.eq.0) then
        call volume_sanity_check()
       endif
-      if (1.eq.0) then
+      if (1.eq.1) then
        sdim=2
        nmax_test=POLYGON_LIST_MAX
        call diagnostic_MOF(sdim,nmax_test)
