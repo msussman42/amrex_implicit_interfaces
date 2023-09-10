@@ -10,7 +10,9 @@
 
 #include "EXTRAP_COMP.H"
 
-#define MOFDEB (0)
+#define MOF_INITIAL_GUESS_N_ANGLE (2.0d0*2.0d0)
+
+#define MOFDEB (1)
 
 #define MAXTET (5)
 #define MAXAREA (5)
@@ -8634,14 +8636,19 @@ contains
       MOFITERMAX=MOFITERMAX_in
       MOFITERMAX_AFTER_PREDICT=MOFITERMAX_AFTER_PREDICT_in
       if ((MOFITERMAX.lt.0).or. &
-          (MOFITERMAX.gt.50)) then
+          (MOFITERMAX.gt.MOFITERMAX_LIMIT)) then
        print *,"MOFITERMAX invalid in set mofitermax"
+       print *,"MOFITERMAX ",MOFITERMAX
+       print *,"MOFITERMAX_LIMIT ",MOFITERMAX_LIMIT
        stop
       endif
       if ((MOFITERMAX_AFTER_PREDICT.lt.0).or. &
-          (MOFITERMAX_AFTER_PREDICT.gt.50).or. &
+          (MOFITERMAX_AFTER_PREDICT.gt.MOFITERMAX_LIMIT).or. &
           (MOFITERMAX_AFTER_PREDICT.gt.MOFITERMAX)) then
        print *,"MOFITERMAX_AFTER_PREDICT invalid in set mofitermax"
+       print *,"MOFITERMAX_AFTER_PREDICT : ",MOFITERMAX_AFTER_PREDICT
+       print *,"MOFITERMAX : ",MOFITERMAX
+       print *,"MOFITERMAX_LIMIT : ",MOFITERMAX_LIMIT
        stop
       endif
 
@@ -11521,6 +11528,7 @@ contains
       REAL_T fgrad(nEQN,nDOF)  
       INTEGER_T ii,iicrit
       INTEGER_T i_angle,j_angle
+      INTEGER_T i_angle_grid,j_angle_grid
       REAL_T delangle(nDOF)
       REAL_T RHS(nDOF)
       REAL_T JTJ(nDOF,nDOF)
@@ -11579,6 +11587,10 @@ contains
        stop
       endif 
 
+      if (MOF_PI.eq.zero) then
+       MOF_PI=four*atan(one)
+      endif
+
       if (nhalf0.lt.1) then
        print *,"expecting nhalf0>=1: ",nhalf0
        stop
@@ -11604,9 +11616,14 @@ contains
        stop
       endif
 
-      if ((MOFITERMAX.lt.num_materials+3).or. &
-          (MOFITERMAX.gt.50)) then
+      if ((MOFITERMAX.lt.num_materials+3+NINT(MOF_INITIAL_GUESS_N_ANGLE)).or. &
+          (MOFITERMAX.gt.MOFITERMAX_LIMIT)) then
        print *,"MOFITERMAX out of range find cut geom slope"
+       print *,"MOFITERMAX: ",MOFITERMAX
+       print *,"MOFITERMAX_LIMIT: ",MOFITERMAX_LIMIT
+       print *,"MOF_INITIAL_GUESS_N_ANGLE: ",MOF_INITIAL_GUESS_N_ANGLE
+       print *,"num_materials: ",num_materials
+
        stop
       endif
 
@@ -11807,6 +11824,63 @@ contains
         do dir=1,nDOF
          angle_array(dir,nguess)=angle_init(dir)
         enddo
+
+        if (num_materials+5+NINT(MOF_INITIAL_GUESS_N_ANGLE).le.MOFITERMAX) then
+         ! do nothing
+        else
+         print *,"no room for initial guess"
+         print *,"MOFITERMAX ",MOFITERMAX
+         print *,"MOF_INITIAL_GUESS_N_ANGLE ",MOF_INITIAL_GUESS_N_ANGLE
+         print *,"num_materials ",num_materials
+         stop
+        endif
+
+        i_angle=0
+        j_angle=0
+        if (sdim.eq.2) then
+         i_angle_grid=NINT(MOF_INITIAL_GUESS_N_ANGLE)
+         j_angle_grid=1
+         if (nDOF.eq.1) then
+          ! do nothing
+         else
+          print *,"nDOF invalid"
+          stop
+         endif
+
+        else if (sdim.eq.3) then
+         i_angle_grid=NINT(sqrt(MOF_INITIAL_GUESS_N_ANGLE))
+         j_angle_grid=i_angle_grid
+         if (i_angle_grid*j_angle_grid.ne.NINT(MOF_INITIAL_GUESS_N_ANGLE)) then
+          print *,"MOF_INITIAL_GUESS_N_ANGLE not perfect square"
+          stop
+         endif
+         if (nDOF.eq.2) then
+          ! do nothing
+         else
+          print *,"nDOF invalid"
+          stop
+         endif
+        else
+         print *,"sdim invalid" 
+         stop
+        endif
+
+        if (i_angle_grid.gt.0) then
+         delangle(1)=two*MOF_PI/i_angle_grid
+        endif
+
+        do ii=1,NINT(MOF_INITIAL_GUESS_N_ANGLE)
+         nguess=nguess+1
+         angle_array(1,nguess)=-MOF_PI+(i_angle+half)*delangle(1)
+         if (sdim.eq.3) then
+          angle_array(nDOF,nguess)=-MOF_PI+(j_angle+half)*delangle(1)
+         endif
+         i_angle=i_angle+1
+         if (i_angle.ge.i_angle_grid) then
+          i_angle=0
+          j_angle=j_angle+1
+         endif
+        enddo !ii=1..MOF_INITIAL_GUESS_N_ANGLE
 
         do dir=1,sdim
          grid_index_ML(dir)=grid_index(dir)/bfact
@@ -12140,6 +12214,12 @@ contains
         f_array(dir,iter)=finit(dir)
        enddo
        err_array(iter)=err
+
+       if (MOFDEB.eq.1) then
+        print *,"initial guess iter,angle,err ",iter, &
+          angle_array(1,iter),angle_array(2,iter), &
+          err_array(iter)
+       endif
 
        do dir=1,nMAT_OPT
         intercept_array(dir,iter)=intercept_init(dir)
@@ -12555,6 +12635,12 @@ contains
        if (err_array(ii+1).le.err_array(iicrit+1)) then
         iicrit=ii
        endif
+       if (MOFDEB.eq.1) then
+        print *,"regular iter,angle,err ",ii+1, &
+          angle_array(1,ii+1),angle_array(2,ii+1), &
+          err_array(ii+1)
+       endif
+
       enddo ! ii=0..iter
 
       if ((MOF_DEBUG_RECON.eq.1).or. &
@@ -16135,7 +16221,7 @@ contains
       REAL_T xpoint3(sdim)
       REAL_T xpoint4(sdim)
       INTEGER_T nrecon
-      INTEGER_T, parameter :: nsamples=1000 !90000 
+      INTEGER_T, parameter :: nsamples=100 !90000 
       INTEGER_T im,ntry,iangle,vofcomp
       INTEGER_T inode
       INTEGER_T dir,dir2
