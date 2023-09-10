@@ -1308,17 +1308,23 @@ void fortran_parameters() {
   // this is local variable, not static variable
  int MOFITERMAX=DEFAULT_MOFITERMAX;  
  pp.queryAdd("MOFITERMAX",MOFITERMAX);
- if ((MOFITERMAX<0)||(MOFITERMAX>50))
+ if ((MOFITERMAX<0)||(MOFITERMAX>MOFITERMAX_LIMIT)) {
+  std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
+  std::cout << "MOFITERMAX_LIMIT= " << MOFITERMAX_LIMIT << '\n';
   amrex::Error("mof iter max invalid in navierstokes");
+ }
 
   // this is local variable, not static variable
  int MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;  
  pp.queryAdd("MOFITERMAX_AFTER_PREDICT",MOFITERMAX_AFTER_PREDICT);
  if ((MOFITERMAX_AFTER_PREDICT<0)|| 
-     (MOFITERMAX_AFTER_PREDICT>50)||
-     (MOFITERMAX_AFTER_PREDICT>MOFITERMAX))
+     (MOFITERMAX_AFTER_PREDICT>MOFITERMAX_LIMIT)||
+     (MOFITERMAX_AFTER_PREDICT>MOFITERMAX)) {
+  std::cout << "MOFITERMAX_AFTER_PREDICT= " << 
+    MOFITERMAX_AFTER_PREDICT << '\n';
+  std::cout << "MOFITERMAX_LIMIT= " << MOFITERMAX_LIMIT << '\n';
   amrex::Error("mof iter max after predict invalid in navierstokes");
-
+ }
  int MOF_TURN_OFF_LS=NavierStokes::MOF_TURN_OFF_LS;
  pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);
  if ((MOF_TURN_OFF_LS!=0)&&(MOF_TURN_OFF_LS!=1))
@@ -3324,15 +3330,23 @@ NavierStokes::read_params ()
 
     MOFITERMAX=DEFAULT_MOFITERMAX;
     pp.queryAdd("MOFITERMAX",MOFITERMAX);
-    if ((MOFITERMAX<0)||(MOFITERMAX>50))
+    if ((MOFITERMAX<0)||(MOFITERMAX>MOFITERMAX_LIMIT)) {
+     std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
+     std::cout << "MOFITERMAX_LIMIT= " << MOFITERMAX_LIMIT << '\n';
      amrex::Error("mof iter max invalid in navierstokes");
+    }
 
     MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;  
     pp.queryAdd("MOFITERMAX_AFTER_PREDICT",MOFITERMAX_AFTER_PREDICT);
     if ((MOFITERMAX_AFTER_PREDICT<0)||
-	(MOFITERMAX_AFTER_PREDICT>50)||
-	(MOFITERMAX_AFTER_PREDICT>MOFITERMAX))
+	(MOFITERMAX_AFTER_PREDICT>MOFITERMAX_LIMIT)||
+	(MOFITERMAX_AFTER_PREDICT>MOFITERMAX)) {
+     std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
+     std::cout << "MOFITERMAX_LIMIT= " << MOFITERMAX_LIMIT << '\n';
+     std::cout << "MOFITERMAX_AFTER_PREDICT= " << 
+       MOFITERMAX_AFTER_PREDICT << '\n';
      amrex::Error("mof iter max after predict invalid in navierstokes");
+    }
 
     MOF_TURN_OFF_LS=0;  
     pp.queryAdd("MOF_TURN_OFF_LS",MOF_TURN_OFF_LS);

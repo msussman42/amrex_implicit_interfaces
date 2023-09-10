@@ -561,4 +561,6 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 #define caller_initData 2
 #define caller_nonlinear_advection 3
 
+#define MOFITERMAX_LIMIT 1000
+
 #endif 
