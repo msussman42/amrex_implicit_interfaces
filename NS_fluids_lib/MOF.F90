@@ -5996,12 +5996,19 @@ end subroutine volume_sanity_check
 ! if tessellate==0, then material regions with is_rigid_local==1 are 
 !  not subtracted from the uncaptured region.
 !
+! tets_box_planes is called from tets_box_planes_super,
+!  multi_get_volume_grid(continuous_mof==STANDARD_MOF),
+!  multi_get_volume_grid_simple(continuous_mof==STANDARD_MOF),
+!  multi_get_volume_grid_and_map(continuous_mof==STANDARD_MOF),
+!  multi_get_area_pairs(continuous_mof==STANDARD_MOF)
+! tets_box_planes_super is called from individual_MOF
+FIX ME tet LS x0=centroid(tet domain)
       subroutine tets_box_planes( &
        continuous_mof, &
        tessellate, &
        bfact,dx, &
-       xsten0,nhalf0, & !tet domain, hex LS x0
-       xsten_box,nhalf_box, & !hex domain
+       xsten0,nhalf0, &!tet domain,tet LS x0=centroid(tet domain),hex LS x0
+       xsten_box,nhalf_box, &!hex domain;might be different from xsten0 if CMOF
        mofdata, &
        xtetlist, &
        nlist_alloc, &
@@ -6212,8 +6219,7 @@ end subroutine volume_sanity_check
           phi1(i_tet_node)=intercept
           do j_dir=1,sdim
            phi1(i_tet_node)=phi1(i_tet_node)+ &
-FIX ME IF CALLED FROM RECONSTRUCTION ROUTINES ? versus volume routines
-                   nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
+                nn(j_dir)*(x1old(i_tet_node,j_dir)-xsten0(0,j_dir))
           enddo
          enddo
           ! tetrahedras representing intersection of region where phi1>0
@@ -15697,7 +15703,8 @@ contains
           ls_mof, &
           lsnormal, &
           lsnormal_valid, &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten0,nhalf0, &
           order_algorithm_in, &
           xtetlist_vof, & !intent(out)
           xtetlist_cen, & !intent(out)
@@ -16143,7 +16150,7 @@ contains
       INTEGER_T i1,j1,k1,k1lo,k1hi
       INTEGER_T, PARAMETER :: nhalf0=3
       REAL_T, PARAMETER :: shrink_factor=0.333333333333d0
-      REAL_T xsten0(-nhalf0:nhalf0,sdim) 
+      REAL_T xsten0_LS(-nhalf0:nhalf0,sdim) 
       REAL_T xsten0_hex(-nhalf0:nhalf0,sdim) 
       REAL_T xsten0_recon(-nhalf0:nhalf0,sdim) 
       REAL_T xsten_tet(-nhalf0:nhalf0,sdim) 
@@ -16275,8 +16282,8 @@ contains
         do dir=1,sdim
          cencell_recon(dir)=cencell_hex(dir)
          do isten=-nhalf0,nhalf0
-          xsten0(isten,dir)=xsten0_hex(isten,dir)
-          xsten0_recon(isten,dir)=xsten0(isten,dir)
+          xsten0_LS(isten,dir)=xsten0_hex(isten,dir)
+          xsten0_recon(isten,dir)=xsten0_LS(isten,dir)
          enddo
         enddo ! dir
 
@@ -16290,8 +16297,8 @@ contains
         do dir=1,sdim
          cencell_recon(dir)=cencell_tet(dir)
          do isten=-nhalf0,nhalf0
-          xsten0(isten,dir)=isten*half*dx(dir)+cencell_tet(dir)
-          xsten0_recon(isten,dir)=xsten0(isten,dir)
+          xsten0_LS(isten,dir)=isten*half*dx(dir)+cencell_tet(dir)
+          xsten0_recon(isten,dir)=xsten0_LS(isten,dir)
           if (isten+nhalf0+1.le.sdim+1) then
            xsten0_recon(isten,dir)=xsten_tet(isten,dir)
           endif
@@ -16398,20 +16405,22 @@ contains
 
          intercept=zero
          do dir=1,sdim
-          intercept=intercept+nslope(dir)*(xsten0(0,dir)-xpoint(dir))
+          intercept=intercept+nslope(dir)*(xsten0_LS(0,dir)-xpoint(dir))
          enddo  ! dir
          intercept2=-intercept
 
          call fast_cut_cell_intersection( &
-           bfact,dx,xsten0,nhalf0, &
+           bfact,dx, &
+           xsten0_LS,nhalf0, &
            nslope,intercept, &
            volcut,cencut,areacut, &
-           xsten0,nhalf0,xtet_domain,shapeflag,sdim)
+           xsten0_LS,nhalf0,xtet_domain,shapeflag,sdim)
          call fast_cut_cell_intersection( &
-           bfact,dx,xsten0,nhalf0, &
+           bfact,dx, &
+           xsten0_LS,nhalf0, &
            nslope2,intercept2, &
            volcut2,cencut2,areacut2, &
-           xsten0,nhalf0,xtet_domain,shapeflag,sdim)
+           xsten0_LS,nhalf0,xtet_domain,shapeflag,sdim)
 
          do dir2=1,nrecon
           mofdata(dir2)=zero
@@ -17675,7 +17684,8 @@ contains
              ! xtetlist=xtet - highest order material
             call tets_tet_planes( &
               new_tessellate_local, &  ! new_tessellate_local=1 or 2
-              bfact,dx,xsten0,nhalf0, &
+              bfact,dx, &
+              xsten0,nhalf0, &
               xtet,mofdatalocal, &
               xtetlist, &
               nlist_alloc, &
