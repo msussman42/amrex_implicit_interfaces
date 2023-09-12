@@ -14353,6 +14353,7 @@ contains
       INTEGER_T, INTENT(in) :: im
       INTEGER_T, INTENT(in) :: sdim
       REAL_T, INTENT(in)    :: xsten0(-nhalf0:nhalf0,sdim)
+      REAL_T :: xtet(sdim+1,sdim)
       REAL_T, INTENT(in)    :: dx(sdim)
       REAL_T, INTENT(in)    :: dxmaxLS_volume_constraint
       REAL_T xpoint(sdim)
@@ -14364,13 +14365,17 @@ contains
       REAL_T aa(sdim+1,sdim+1)
       REAL_T xx(sdim+1)
       REAL_T bb(sdim+1)
+      REAL_T :: mapmat(sdim,sdim)
+      REAL_T :: mapmat_inv(sdim,sdim)
+      REAL_T :: mapmat_scratch(sdim,sdim)
       INTEGER_T matstatus
       REAL_T wx,wy,wz
       INTEGER_T ii,jj,kk
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
       INTEGER_T itet
-      INTEGER_T klo,khi,dir
+      INTEGER_T klo,khi
+      INTEGER_T dir
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       REAL_T :: ls_mof_tet(sdim+1)
@@ -14442,6 +14447,11 @@ contains
 
        if (abs(LS_cen).gt.three*dxmaxLS_volume_constraint) then
         lsnormal_valid(im)=0
+       else if (abs(LS_cen).le.three*dxmaxLS_volume_constraint) then
+        !do nothing
+       else
+        print *,"LS_cen invalid"
+        stop
        endif
 
        if (lsnormal_valid(im).eq.1) then
@@ -14703,8 +14713,11 @@ contains
        endif
 
       else if (continuous_mof.eq.MOF_TRI_TET) then
+
+       LS_cen=zero
+
        do itet=1,sdim+1
-        i1=itet
+        i1=itet-2
         j1=-1
         k1=-1
         if ((itet.ge.1).and.(itet.le.3)) then
@@ -14717,8 +14730,94 @@ contains
          stop
         endif
         ls_mof_tet(itet)=ls_mof(D_DECL(i1,j1,k1),im)
+
+        if (abs(ls_mof_tet(itet)).gt.three*dxmaxLS_volume_constraint) then
+         lsnormal_valid(im)=0
+        else if (abs(ls_mof_tet(itet)).le.three*dxmaxLS_volume_constraint) then
+         !do nothing
+        else
+         print *,"ls_mof_tet invalid"
+         stop
+        endif
+
+        LS_cen=LS_cen+ls_mof_tet(itet)
+        do dir=1,sdim
+         xtet(itet,dir)=xsten0(itet-nhalf0-1,dir)
+        enddo
        enddo !itet=1,sdim+1
-       FIX ME xtet
+       LS_cen=LS_cen/(sdim+1)
+       if (abs(LS_cen).gt.three*dxmaxLS_volume_constraint) then
+        lsnormal_valid(im)=0
+       else if (abs(LS_cen).le.three*dxmaxLS_volume_constraint) then
+        !do nothing
+       else
+        print *,"LS_cen invalid"
+        stop
+       endif
+
+       if (lsnormal_valid(im).eq.1) then
+
+        ! xphys = A xcomp + x0
+        ! xcomp=Ainv(xphys-x0)
+        ! A=x1-x0 y1-y0 z1-z0
+        !   x2-x0 y2-y0 z2-z0
+        !   x3-x0 y3-y0 z3-z0
+        do i=1,sdim
+        do j=1,sdim
+         mapmat(i,j)=xtet(i+1,j)-xtet(1,j)
+         mapmat_inv(i,j)=mapmat(i,j)
+         mapmat_scratch(i,j)=mapmat(i,j)
+        enddo
+        enddo
+
+        call matrix_inverse(mapmat_scratch,mapmat_inv,matstatus,sdim)
+        if (matstatus.eq.1) then
+         distsimple=zero
+         do dir=1,sdim
+          nsimple(dir)=ls_mof_tet(dir+1)-ls_mof_tet(1)
+          distsimple=distsimple+nsimple(dir)**2
+         enddo
+         distsimple=sqrt(distsimple)
+         if (distsimple.gt.zero) then
+          !f=f(y(x))   x=Ay+x0  y=AINV(x-x0)  dfdx=dfdy dydx
+          !df_dxi=df_yj dyj_dxi  dyj_dxi=AINV_ji
+          dist=zero
+          do dir=1,sdim
+           nn(dir)=zero
+           do j=1,sdim
+            nn(dir)=nn(dir)+nsimple(j)*mapmat_inv(j,dir)
+           enddo
+           dist=dist+nn(dir)**2
+          enddo !dir=1,sdim
+          dist=sqrt(dist)
+          if (dist.gt.zero) then
+           do dir=1,sdim
+            nn(dir)=nn(dir)/dist
+            lsnormal(im,dir)=nn(dir)
+           enddo
+           ls_intercept(im)=LS_cen
+          else
+           print *,"dist invalid"
+           stop
+          endif
+         else if (distsimple.eq.zero) then
+          lsnormal_valid(im)=0
+         else
+          print *,"distsimple invalid"
+          stop
+         endif
+        else
+         print *,"matstatus invalid find_cut_geom_slope_CLSVOF: ",matstatus
+         stop
+        endif
+
+       else if (lsnormal_valid(im).eq.0) then
+        ! do nothing
+       else
+        print *,"lsnormal_valid(im) invalid"
+        stop
+       endif
+       
       else
        print *,"continuous_mof bad(find_cut_geom_slope_CLSVOF) ",continuous_mof
        stop
@@ -15233,7 +15332,7 @@ contains
           imaterial, & !intent(in)
           dxmaxLS_volume_constraint, & !intent(in)
           sdim) !intent(in)
-FIX ME 
+ 
         else
          print *,"continuous_mof invalid: ",continuous_mof
          stop 
