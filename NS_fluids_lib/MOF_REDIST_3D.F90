@@ -301,6 +301,7 @@ stop
       INTEGER_T dcomp
       REAL_T local_LS(num_materials)
       INTEGER_T im_primary,im_secondary,triple_point_flag
+      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
 
       nhalf=3 
 
@@ -422,6 +423,7 @@ stop
           if (abs(local_LS(im)).le.two*dxmaxLS) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
             call find_cut_geom_slope_CLSVOF( &
+             continuous_mof, &
              ls_stencil, & ! (-1,1)^3,num_materials
              lsnormal, &  ! (num_materials,sdim)
              lsnormal_valid, &  ! num_materials

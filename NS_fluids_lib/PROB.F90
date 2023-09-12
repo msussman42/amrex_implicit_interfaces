@@ -26116,6 +26116,7 @@ end subroutine initialize2d
 
         do imls=1,num_materials 
          call find_cut_geom_slope_CLSVOF( &
+          continuous_mof, &
           LS_stencil, &
           lsnormal, &
           lsnormal_valid, &
