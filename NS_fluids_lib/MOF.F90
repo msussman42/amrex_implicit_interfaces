@@ -14330,6 +14330,7 @@ contains
 ! grad=(d/dr,d/dz) or
 ! grad=(d/dr,d/dtheta,d/dz)
       subroutine find_cut_geom_slope_CLSVOF( &
+        continuous_mof, &
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
@@ -14346,6 +14347,7 @@ contains
 
       IMPLICIT NONE
 
+      INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: bfact
       INTEGER_T, INTENT(in) :: nhalf0
       INTEGER_T, INTENT(in) :: im
@@ -14367,9 +14369,12 @@ contains
       INTEGER_T ii,jj,kk
       INTEGER_T i,j,k
       INTEGER_T i1,j1,k1
+      INTEGER_T itet
       INTEGER_T klo,khi,dir
 
       REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      REAL_T :: ls_mof_tet(sdim+1)
+
       REAL_T, INTENT(out)    :: lsnormal(num_materials,sdim)
       INTEGER_T, INTENT(out) :: lsnormal_valid(num_materials)
       REAL_T, INTENT(out)    :: ls_intercept(num_materials)
@@ -14428,67 +14433,80 @@ contains
       endif
 
       lsnormal_valid(im)=1
-      LS_cen=ls_mof(D_DECL(0,0,0),im)
 
-      if (abs(LS_cen).gt.three*dxmaxLS_volume_constraint) then
-       lsnormal_valid(im)=0
-      endif
+      if ((continuous_mof.eq.STANDARD_MOF).or. &
+          (continuous_mof.ge.CMOF_X).or. &
+          (continuous_mof.ge.CMOF_F_AND_X)) then
 
-      if (lsnormal_valid(im).eq.1) then
+       LS_cen=ls_mof(D_DECL(0,0,0),im)
 
-       do dir=1,sdim
-        ii=0
-        jj=0
-        kk=0
-        if (dir.eq.1) then
-         ii=1
-        else if (dir.eq.2) then
-         jj=1
-        else if ((dir.eq.3).and.(sdim.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid CLSVOF slope"
-         stop
-        endif
-        dxplus=xsten0(2,dir)-xsten0(0,dir)
-        dxminus=xsten0(0,dir)-xsten0(-2,dir)
-        LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
-        LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
+       if (abs(LS_cen).gt.three*dxmaxLS_volume_constraint) then
+        lsnormal_valid(im)=0
+       endif
 
-        if ((abs(LS_plus).gt.three*dxmaxLS_volume_constraint).or. &
-            (abs(LS_minus).gt.three*dxmaxLS_volume_constraint)) then
-         lsnormal_valid(im)=0
-        endif
- 
-        if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
+       if (lsnormal_valid(im).eq.1) then
 
-         slope_plus=(LS_plus-LS_cen)/dxplus
-         slope_minus=(LS_cen-LS_minus)/dxminus
+        do dir=1,sdim
+         ii=0
+         jj=0
+         kk=0
+         if (dir.eq.1) then
+          ii=1
+         else if (dir.eq.2) then
+          jj=1
+         else if ((dir.eq.3).and.(sdim.eq.3)) then
+          kk=1
+         else
+          print *,"dir invalid CLSVOF slope"
+          stop
+         endif
+         dxplus=xsten0(2,dir)-xsten0(0,dir)
+         dxminus=xsten0(0,dir)-xsten0(-2,dir)
+         LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
+         LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
 
-         if ((LS_plus*LS_cen.le.zero).and. &
-             (LS_minus*LS_cen.gt.zero)) then
-          nsimple(dir)=slope_plus
-         else if ((LS_plus*LS_cen.gt.zero).and. &
-                  (LS_minus*LS_cen.le.zero)) then
-          nsimple(dir)=slope_minus
-         else if ((LS_plus*LS_cen.le.zero).and. &
-                  (LS_minus*LS_cen.le.zero)) then
-          if ((LS_plus.eq.zero).and.(LS_cen.eq.zero)) then
-           nsimple(dir)=zero
-          else if ((LS_minus.eq.zero).and.(LS_cen.eq.zero)) then
-           nsimple(dir)=zero
-          else if ((abs(LS_plus).gt.zero).or. &
-                   (abs(LS_minus).gt.zero).or. &
-                   (abs(LS_cen).gt.zero)) then
-           theta_plus=abs(LS_plus/(LS_plus-LS_cen)-half)
-           theta_minus=abs(LS_minus/(LS_minus-LS_cen)-half)
-           if ((theta_plus.le.half).and.(theta_minus.le.half)) then
-            if (theta_plus.le.theta_minus) then
-             nsimple(dir)=slope_plus
-            else if (theta_minus.le.theta_plus) then
-             nsimple(dir)=slope_minus
+         if ((abs(LS_plus).gt.three*dxmaxLS_volume_constraint).or. &
+             (abs(LS_minus).gt.three*dxmaxLS_volume_constraint)) then
+          lsnormal_valid(im)=0
+         endif
+  
+         if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
+
+          slope_plus=(LS_plus-LS_cen)/dxplus
+          slope_minus=(LS_cen-LS_minus)/dxminus
+
+          if ((LS_plus*LS_cen.le.zero).and. &
+              (LS_minus*LS_cen.gt.zero)) then
+           nsimple(dir)=slope_plus
+          else if ((LS_plus*LS_cen.gt.zero).and. &
+                   (LS_minus*LS_cen.le.zero)) then
+           nsimple(dir)=slope_minus
+          else if ((LS_plus*LS_cen.le.zero).and. &
+                   (LS_minus*LS_cen.le.zero)) then
+           if ((LS_plus.eq.zero).and.(LS_cen.eq.zero)) then
+            nsimple(dir)=zero
+           else if ((LS_minus.eq.zero).and.(LS_cen.eq.zero)) then
+            nsimple(dir)=zero
+           else if ((abs(LS_plus).gt.zero).or. &
+                    (abs(LS_minus).gt.zero).or. &
+                    (abs(LS_cen).gt.zero)) then
+            theta_plus=abs(LS_plus/(LS_plus-LS_cen)-half)
+            theta_minus=abs(LS_minus/(LS_minus-LS_cen)-half)
+            if ((theta_plus.le.half).and.(theta_minus.le.half)) then
+             if (theta_plus.le.theta_minus) then
+              nsimple(dir)=slope_plus
+             else if (theta_minus.le.theta_plus) then
+              nsimple(dir)=slope_minus
+             else
+              print *,"theta_plus or theta_minus invalid1"
+              print *,"LS_plus,LS_minus,LS_cen ", &
+               LS_plus,LS_minus,LS_cen
+              print *,"theta_plus,theta_minus ", &
+               theta_plus,theta_minus
+              stop
+             endif
             else
-             print *,"theta_plus or theta_minus invalid1"
+             print *,"theta_plus or theta_minus invalid2"
              print *,"LS_plus,LS_minus,LS_cen ", &
               LS_plus,LS_minus,LS_cen
              print *,"theta_plus,theta_minus ", &
@@ -14496,179 +14514,178 @@ contains
              stop
             endif
            else
-            print *,"theta_plus or theta_minus invalid2"
-            print *,"LS_plus,LS_minus,LS_cen ", &
-             LS_plus,LS_minus,LS_cen
-            print *,"theta_plus,theta_minus ", &
-             theta_plus,theta_minus
+            print *,"LS_plus, LS_minus, or LS_cen invalid"
+            stop
+           endif
+          else if ((LS_plus*LS_cen.gt.zero).and. &
+                   (LS_minus*LS_cen.gt.zero)) then
+           if (abs(LS_plus).le.abs(LS_minus)) then
+            nsimple(dir)=slope_plus
+           else if (abs(LS_plus).ge.abs(LS_minus)) then
+            nsimple(dir)=slope_minus
+           else
+            print *,"LS_plus or LS_minus invalid"
             stop
            endif
           else
            print *,"LS_plus, LS_minus, or LS_cen invalid"
            stop
           endif
-         else if ((LS_plus*LS_cen.gt.zero).and. &
-                  (LS_minus*LS_cen.gt.zero)) then
-          if (abs(LS_plus).le.abs(LS_minus)) then
-           nsimple(dir)=slope_plus
-          else if (abs(LS_plus).ge.abs(LS_minus)) then
-           nsimple(dir)=slope_minus
-          else
-           print *,"LS_plus or LS_minus invalid"
-           stop
-          endif
+
          else
-          print *,"LS_plus, LS_minus, or LS_cen invalid"
+          print *,"dxplus or dxminus invalid"
           stop
          endif
 
-        else
-         print *,"dxplus or dxminus invalid"
-         stop
-        endif
-
-       enddo ! dir=1..sdim
-
-       if (lsnormal_valid(im).eq.1) then
-
-        distsimple=zero
-        do dir=1,sdim
-         distsimple=distsimple+nsimple(dir)**2
-        enddo
-        distsimple=sqrt(distsimple)
-        if (distsimple.gt.zero) then
-         do dir=1,sdim
-          nsimple(dir)=nsimple(dir)/distsimple
-         enddo
-         ls_intercept(im)=LS_cen/distsimple
-        else if (distsimple.eq.zero) then
-         lsnormal_valid(im)=0
-        else
-         print *,"distsimple invalid"
-         stop
-        endif
+        enddo ! dir=1..sdim
 
         if (lsnormal_valid(im).eq.1) then
 
-         if (always_use_default.eq.1) then
+         distsimple=zero
+         do dir=1,sdim
+          distsimple=distsimple+nsimple(dir)**2
+         enddo
+         distsimple=sqrt(distsimple)
+         if (distsimple.gt.zero) then
           do dir=1,sdim
-           lsnormal(im,dir)=nsimple(dir)
+           nsimple(dir)=nsimple(dir)/distsimple
           enddo
-         else if (always_use_default.eq.0) then
+          ls_intercept(im)=LS_cen/distsimple
+         else if (distsimple.eq.zero) then
+          lsnormal_valid(im)=0
+         else
+          print *,"distsimple invalid"
+          stop
+         endif
 
-          do i=-1,1
-          do j=-1,1
-          do k=klo,khi
-           wx=twelve
-           wy=twelve
-           wz=twelve
-           if (i.ne.0) then
-            wx=one
-           endif
-           if (j.ne.0) then
-            wy=one
-           endif
-           if (k.ne.0) then
-            wz=one
-           endif
+         if (lsnormal_valid(im).eq.1) then
 
-           wx=wx*(xsten0(2*i+1,1)-xsten0(2*i-1,1))
-           wy=wy*(xsten0(2*j+1,2)-xsten0(2*j-1,2))
-           if (sdim.eq.3) then
-            wz=wz*(xsten0(2*k+1,sdim)-xsten0(2*k-1,sdim))
-           endif
-
-           LSWT=abs(ls_mof(D_DECL(i,j,k),im))
-           if (LSWT.gt.three*dxmaxLS_volume_constraint) then
-            lsnormal_valid(im)=0
-           endif
-           w(D_DECL(i,j,k))=hsprime(LSWT,cutoff)*wx*wy*wz
-          enddo
-          enddo
-          enddo ! i,j,k
-
-          if (lsnormal_valid(im).eq.1) then
-
-           do i=1,sdim+1
-            do j=1,sdim+1
-             aa(i,j)=zero
-            enddo
-            bb(i)=zero
+          if (always_use_default.eq.1) then
+           do dir=1,sdim
+            lsnormal(im,dir)=nsimple(dir)
            enddo
+          else if (always_use_default.eq.0) then
 
-           do i1=-1,1
-           do j1=-1,1
-           do k1=klo,khi
-            xpoint(1)=xsten0(2*i1,1)-xsten0(0,1)
-            xpoint(2)=xsten0(2*j1,2)-xsten0(0,2)
-            if (sdim.eq.3) then
-             xpoint(sdim)=xsten0(2*k1,sdim)-xsten0(0,sdim)
+           do i=-1,1
+           do j=-1,1
+           do k=klo,khi
+            wx=twelve
+            wy=twelve
+            wz=twelve
+            if (i.ne.0) then
+             wx=one
             endif
-    
+            if (j.ne.0) then
+             wy=one
+            endif
+            if (k.ne.0) then
+             wz=one
+            endif
+
+            wx=wx*(xsten0(2*i+1,1)-xsten0(2*i-1,1))
+            wy=wy*(xsten0(2*j+1,2)-xsten0(2*j-1,2))
+            if (sdim.eq.3) then
+             wz=wz*(xsten0(2*k+1,sdim)-xsten0(2*k-1,sdim))
+            endif
+
+            LSWT=abs(ls_mof(D_DECL(i,j,k),im))
+            if (LSWT.gt.three*dxmaxLS_volume_constraint) then
+             lsnormal_valid(im)=0
+            endif
+            w(D_DECL(i,j,k))=hsprime(LSWT,cutoff)*wx*wy*wz
+           enddo
+           enddo
+           enddo ! i,j,k
+
+           if (lsnormal_valid(im).eq.1) then
+
             do i=1,sdim+1
-             if (i.eq.sdim+1) then
-              m1=one
-             else
-              m1=xpoint(i)
-             endif
-
              do j=1,sdim+1
-              if (j.eq.sdim+1) then
-               m2=one
-              else
-               m2=xpoint(j)
-              endif
-              aa(i,j)=aa(i,j)+w(D_DECL(i1,j1,k1))*m1*m2
-             enddo ! j=1,sdim+1 
-             bb(i)=bb(i)+ &
-              w(D_DECL(i1,j1,k1))*m1*ls_mof(D_DECL(i1,j1,k1),im)
-            enddo ! i=1,sdim+1
-           enddo
-           enddo
-           enddo ! i1,j1,k1
-
-           call matrix_solve(aa,xx,bb,matstatus,sdim+1)
-           if (matstatus.eq.1) then
-            dist=zero
-            do dir=1,sdim
-             nn(dir)=xx(dir)
-             dist=dist+nn(dir)**2
-            enddo
-            dist=sqrt(dist)
-            if (dist.gt.zero) then
-             do dir=1,sdim
-              nn(dir)=nn(dir)/dist
+              aa(i,j)=zero
              enddo
-             ls_intercept(im)=xx(sdim+1)/dist 
-            else if (dist.eq.zero) then
+             bb(i)=zero
+            enddo
+
+            do i1=-1,1
+            do j1=-1,1
+            do k1=klo,khi
+             xpoint(1)=xsten0(2*i1,1)-xsten0(0,1)
+             xpoint(2)=xsten0(2*j1,2)-xsten0(0,2)
+             if (sdim.eq.3) then
+              xpoint(sdim)=xsten0(2*k1,sdim)-xsten0(0,sdim)
+             endif
+     
+             do i=1,sdim+1
+              if (i.eq.sdim+1) then
+               m1=one
+              else
+               m1=xpoint(i)
+              endif
+
+              do j=1,sdim+1
+               if (j.eq.sdim+1) then
+                m2=one
+               else
+                m2=xpoint(j)
+               endif
+               aa(i,j)=aa(i,j)+w(D_DECL(i1,j1,k1))*m1*m2
+              enddo ! j=1,sdim+1 
+              bb(i)=bb(i)+ &
+               w(D_DECL(i1,j1,k1))*m1*ls_mof(D_DECL(i1,j1,k1),im)
+             enddo ! i=1,sdim+1
+            enddo
+            enddo
+            enddo ! i1,j1,k1
+
+            call matrix_solve(aa,xx,bb,matstatus,sdim+1)
+            if (matstatus.eq.1) then
+             dist=zero
+             do dir=1,sdim
+              nn(dir)=xx(dir)
+              dist=dist+nn(dir)**2
+             enddo
+             dist=sqrt(dist)
+             if (dist.gt.zero) then
+              do dir=1,sdim
+               nn(dir)=nn(dir)/dist
+              enddo
+              ls_intercept(im)=xx(sdim+1)/dist 
+             else if (dist.eq.zero) then
+              do dir=1,sdim
+               nn(dir)=nsimple(dir)
+              enddo
+             else
+              print *,"dist invalid"
+              stop
+             endif
+            else if (matstatus.eq.0) then
              do dir=1,sdim
               nn(dir)=nsimple(dir)
              enddo
             else
-             print *,"dist invalid"
+             print *,"matstatus invalid"
              stop
             endif
-           else if (matstatus.eq.0) then
             do dir=1,sdim
-             nn(dir)=nsimple(dir)
+             lsnormal(im,dir)=nn(dir)
             enddo
+
+           else if (lsnormal_valid(im).eq.0) then
+            ! do nothing
            else
-            print *,"matstatus invalid"
+            print *,"lsnormal_valid(im) invalid"
             stop
            endif
-           do dir=1,sdim
-            lsnormal(im,dir)=nn(dir)
-           enddo
 
-          else if (lsnormal_valid(im).eq.0) then
-           ! do nothing
-          else
-           print *,"lsnormal_valid(im) invalid"
+          else 
+           print *,"always_use_default invalid"
            stop
           endif
 
-         else 
-          print *,"always_use_default invalid"
+         else if (lsnormal_valid(im).eq.0) then
+          ! do nothing
+         else
+          print *,"lsnormal_valid(im) invalid"
           stop
          endif
 
@@ -14678,17 +14695,32 @@ contains
          print *,"lsnormal_valid(im) invalid"
          stop
         endif
-
        else if (lsnormal_valid(im).eq.0) then
         ! do nothing
        else
         print *,"lsnormal_valid(im) invalid"
         stop
        endif
-      else if (lsnormal_valid(im).eq.0) then
-       ! do nothing
+
+      else if (continuous_mof.eq.MOF_TRI_TET) then
+       do itet=1,sdim+1
+        i1=itet
+        j1=-1
+        k1=-1
+        if ((itet.ge.1).and.(itet.le.3)) then
+         !do nothing
+        else if ((itet.eq.4).and.(sdim.eq.3)) then
+         i1=-1
+         j1=0
+        else
+         print *,"itet invalid"
+         stop
+        endif
+        ls_mof_tet(itet)=ls_mof(D_DECL(i1,j1,k1),im)
+       enddo !itet=1,sdim+1
+       FIX ME xtet
       else
-       print *,"lsnormal_valid(im) invalid"
+       print *,"continuous_mof bad(find_cut_geom_slope_CLSVOF) ",continuous_mof
        stop
       endif
        
@@ -14814,7 +14846,8 @@ contains
 ! use_ls_data==1 => 
 !  1. LS_stencil is copied to ls_mof
 !  2. ls_mof is used to create initial guess
-!     in which "subroutine find_cut_geom_slope_CLSVOF" returns a normal
+!     in which "subroutine find_cut_geom_slope_CLSVOF" (reconstruction in
+!     a box) returns a normal
 !     (lsnormal) given ls_mof.
 !
 ! COMMENTS ON THE order:
@@ -15155,15 +15188,18 @@ contains
 
       if (use_ls_data.eq.1) then
 
-       if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
-           (continuous_mof.ge.CMOF_X).or. & !CMOF X
-           (continuous_mof.eq.CMOF_F_AND_X)) then !CMOF X and F
+       if ((continuous_mof.eq.STANDARD_MOF).or. & 
+           (continuous_mof.eq.MOF_TRI_TET).or. & 
+           (continuous_mof.ge.CMOF_X).or. & 
+           (continuous_mof.eq.CMOF_F_AND_X)) then 
         !do nothing
        else
         print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
 
+        ! i1=-1,1  j1=-1  corresponds to first 3 corners if MOF_TRI_TET
+        ! i1=-1    j1=0   corresponds to last corner if MOF_TRI_TET
        do i1=-1,1
        do j1=-1,1
        do k1=k1lo,k1hi
@@ -15180,22 +15216,24 @@ contains
          lsnormal_valid(imaterial)=0
 
         else if ((continuous_mof.eq.STANDARD_MOF).or. & 
+                 (continuous_mof.eq.MOF_TRI_TET).or. & 
                  (continuous_mof.eq.CMOF_F_AND_X).or. & 
                  (continuous_mof.ge.CMOF_X)) then 
  
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
          call find_cut_geom_slope_CLSVOF( &
-          ls_mof, &
-          lsnormal, &
-          lsnormal_valid, &
-          ls_intercept, &
-          bfact,dx, &
-          xsten0,nhalf0, &
-          imaterial, &
-          dxmaxLS_volume_constraint, &
-          sdim)
- 
+          continuous_mof, & !intent(in)
+          ls_mof, & !intent(in)
+          lsnormal, & !intent(out)
+          lsnormal_valid, & !intent(out)
+          ls_intercept, & !intent(out)
+          bfact,dx, & !intent(in)
+          xsten0,nhalf0, & !intent(in)
+          imaterial, & !intent(in)
+          dxmaxLS_volume_constraint, & !intent(in)
+          sdim) !intent(in)
+FIX ME 
         else
          print *,"continuous_mof invalid: ",continuous_mof
          stop 
