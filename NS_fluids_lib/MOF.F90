@@ -14729,6 +14729,13 @@ contains
          print *,"itet invalid"
          stop
         endif
+        if (itet.eq.i1+2+(j1+1)*3) then
+         !do nothing
+        else
+         print *,"i1 or j1 invalid"
+         stop
+        endif
+
         ls_mof_tet(itet)=ls_mof(D_DECL(i1,j1,k1),im)
 
         if (abs(ls_mof_tet(itet)).gt.three*dxmaxLS_volume_constraint) then
@@ -16385,7 +16392,7 @@ contains
       REAL_T total_errors(num_materials)
       INTEGER_T max_iterations(num_materials)
       INTEGER_T, parameter :: mof_verbose=0
-      INTEGER_T, parameter :: use_ls_data=0
+      INTEGER_T, parameter :: use_ls_data=1
       INTEGER_T isten
       INTEGER_T grid_index(sdim)
       INTEGER_T, parameter :: grid_level=-1
@@ -16402,6 +16409,8 @@ contains
       REAL_T cencell_tet(sdim)
       REAL_T volcell_recon
       REAL_T cencell_recon(sdim)
+      REAL_T LS_local
+      REAL_T x_stencil(sdim)
 
 #include "mofdata.H"
 
@@ -16693,6 +16702,55 @@ contains
 
          do dir=1,sdim
           grid_index(dir)=0
+         enddo
+
+         do i1=-1,1
+         do j1=-1,1
+         do k1=k1lo,k1hi
+          dir=1
+          x_stencil(dir)=xsten0_recon(i1,dir)
+          dir=2
+          x_stencil(dir)=xsten0_recon(j1,dir)
+          if (sdim.eq.2) then
+           ! do nothing
+          else if (sdim.eq.3) then
+           dir=sdim
+           x_stencil(dir)=xsten0_recon(k1,dir)
+          else
+           print *,"sdim invalid"
+           stop
+          endif
+
+          if (shapeflag.eq.0) then !regular hexahedron
+           !do nothing
+          else if (shapeflag.eq.1) then !tetrahedron
+           itet=i1+2+(j1+1)*3
+           if ((itet.ge.1).and.(itet.le.sdim+1)) then
+            do dir=1,sdim
+             xstencil(dir)=xtet_domain(itet,dir)
+            enddo
+           else if ((itet.gt.sdim+1).and.(itet.le.9)) then
+            ! do nothing
+           else
+            print *,"itet invalid"
+            stop
+           endif
+          else
+           print *,"shapeflag invalid"
+           stop
+          endif
+
+          LS_local=intercept
+          do dir=1,sdim
+           LS_local=LS_local+nslope(dir)*(x_stencil(dir)-xsten0_LS(0,dir))
+          enddo
+
+          im=1
+          LS_stencil(D_DECL(i1,j1,k1),im)=LS_local
+          im=2
+          LS_stencil(D_DECL(i1,j1,k1),im)=-LS_local
+         enddo
+         enddo
          enddo
 
          call multimaterial_MOF( &
