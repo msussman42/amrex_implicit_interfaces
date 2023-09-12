@@ -12,7 +12,7 @@
 
 #define MOF_INITIAL_GUESS_N_ANGLE (2.0d0*2.0d0)
 
-#define MOFDEB (1)
+#define MOFDEB (0)
 
 #define MAXTET (5)
 #define MAXAREA (5)
@@ -9335,6 +9335,7 @@ contains
        enddo
        enddo
 
+         !calling from "multi_ff"
        call multi_cell_intersection( &
          bfact,dx, &
          xsten_local,nhalf0, &
@@ -9667,7 +9668,8 @@ contains
           xtarget(dir)=xsten0(k,dir)
          endif
 
-         call distfunc(bfact,dx,xsten0,nhalf0, &
+         call distfunc(bfact,dx, &
+          xsten0,nhalf0, &
           null_intercept,slope, &
           xtarget,dist,sdim)
 
@@ -9761,7 +9763,8 @@ contains
 
          ! fc_default=(voln-vtarget)/volcell
        call multi_ff( &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         fc_default,slope, &
         intercept_default, & !intent(in)
         continuous_mof, &
@@ -9797,7 +9800,8 @@ contains
 
           ! fc=(voln-vtarget)/volcell
          call multi_ff( &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten0,nhalf0, &
           fc,slope, &
           intercept, & !intent(in)
           continuous_mof, &
@@ -9865,7 +9869,8 @@ contains
 
             if (niter.eq.0) then
              call multi_ff( &
-              bfact,dx,xsten0,nhalf0, &
+              bfact,dx, &
+              xsten0,nhalf0, &
               fa,slope, &
               aa, & !intent(in)
               continuous_mof, &
@@ -9973,7 +9978,8 @@ contains
             !intercept_test=intercept-fc*volcell/arean
            intercept=intercept_test
            call multi_ff( &
-            bfact,dx,xsten0,nhalf0, &
+            bfact,dx, &
+            xsten0,nhalf0, &
             fc,slope, &
             intercept, & !intent(in)
             continuous_mof, &
@@ -10476,6 +10482,7 @@ contains
       REAL_T, INTENT(in) :: angle(nDOF)
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      REAL_T xsten_local(-nhalf0:nhalf0,sdim)
       REAL_T xsten2(-1:1,sdim)
       INTEGER_T isten
       INTEGER_T, PARAMETER :: nhalf2=1
@@ -10720,13 +10727,30 @@ contains
 
          ! testcen in absolute coordinate system
        if (fastflag.eq.0) then
-          ! xcell used for LS dist.
+          ! xsten_local used for LS dist.
+        do isten=-nhalf0,nhalf0
+        do dir=1,sdim
+
+         if (continuous_mof.eq.MOF_TRI_TET) then
+          xsten_local(isten,dir)=cencell_vof(dir)+half*isten*dx(dir)
+         else if ((continuous_mof.eq.CMOF_F_AND_X).or. & 
+                  (continuous_mof.eq.STANDARD_MOF).or. &
+                  (continuous_mof.ge.CMOF_X)) then 
+          xsten_local(isten,dir)=xsten0(isten,dir)
+         else
+          print *,"continuous_mof invalid: ",continuous_mof
+          stop
+         endif
+        enddo
+        enddo
+
         if (continuous_mof.eq.STANDARD_MOF) then 
           ! (testcen is the centroid of the intersection of
           !  the material region with the center cell)
+          ! calling from "mult_rotatefunc"
          call multi_cell_intersection( &
           bfact,dx, &
-          xsten0,nhalf0, &
+          xsten_local,nhalf0, &
           nslope, &
           intercept(1), &
           volume_cut, & !intent(out)
@@ -10739,8 +10763,10 @@ contains
           sdim)
         else if (continuous_mof.eq.MOF_TRI_TET) then 
 
+          ! calling from "mult_rotatefunc"
          call multi_cell_intersection( &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten_local,nhalf0, &
           nslope, &
           intercept(1), &
           volume_cut, & !intent(out)
@@ -10756,8 +10782,10 @@ contains
           ! (testcen is the centroid of the intersection of
           !  the material region with the super cell)
           ! This step is needed since xtetlist_cen!=xtetlist_vof
+          ! calling from "mult_rotatefunc"
          call multi_cell_intersection( &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten_local,nhalf0, &
           nslope, &
           intercept(1), &
           volume_cut, & !intent(out)
@@ -10773,8 +10801,10 @@ contains
           !  the material region with the super cell)
           ! This step is redundant since for continuous_mof==-1, 
           ! xtetlist_cen=xtetlist_vof
+          ! calling from "mult_rotatefunc"
          call multi_cell_intersection( &
-          bfact,dx,xsten0,nhalf0, &
+          bfact,dx, &
+          xsten_local,nhalf0, &
           nslope, &
           intercept(1), &
           volume_cut, & !intent(out)
@@ -11724,7 +11754,7 @@ contains
         
        if ((levelrz.eq.COORDSYS_CARTESIAN).and. &
            (sdim.eq.3).and. &
-           (nlist_vof.eq.1)) then
+           (nlist_vof.eq.1)) then !just one tetrahedra=uncaptured space.
 
         use_MilcentLemoine=1
 
@@ -12184,7 +12214,8 @@ contains
         nDOF, & ! sdim-1
         nEQN, & ! sdim
         use_MilcentLemoine, &
-        bfact,dx,xsten0,nhalf0, &
+        bfact,dx, &
+        xsten0,nhalf0, &
         xtetlist_vof, & !intent(in)
         nlist_vof, & !intent(in)
         xtetlist_cen, & !intent(in)
@@ -16392,7 +16423,7 @@ contains
       REAL_T total_errors(num_materials)
       INTEGER_T max_iterations(num_materials)
       INTEGER_T, parameter :: mof_verbose=0
-      INTEGER_T, parameter :: use_ls_data=1
+      INTEGER_T, parameter :: use_ls_data=0
       INTEGER_T isten
       INTEGER_T grid_index(sdim)
       INTEGER_T, parameter :: grid_level=-1
@@ -16724,15 +16755,15 @@ contains
           if (shapeflag.eq.0) then !regular hexahedron
            !do nothing
           else if (shapeflag.eq.1) then !tetrahedron
-           itet=i1+2+(j1+1)*3
-           if ((itet.ge.1).and.(itet.le.sdim+1)) then
+           inode=i1+2+(j1+1)*3
+           if ((inode.ge.1).and.(inode.le.sdim+1)) then
             do dir=1,sdim
-             xstencil(dir)=xtet_domain(itet,dir)
+             x_stencil(dir)=xtet_domain(inode,dir)
             enddo
-           else if ((itet.gt.sdim+1).and.(itet.le.9)) then
+           else if ((inode.gt.sdim+1).and.(inode.le.9)) then
             ! do nothing
            else
-            print *,"itet invalid"
+            print *,"inode invalid"
             stop
            endif
           else
@@ -18073,9 +18104,11 @@ contains
            intercept=mofdatalocal(vofcomp+2*sdim+2)
 
            if (fastflag.eq.0) then
-             ! only xsten0(0,dir) dir=1..sdim used
+             !only xsten0(0,dir) dir=1..sdim used
+             !calling from "multi_get_volume_grid"
             call multi_cell_intersection( &
-              bfact,dx,xsten0,nhalf0, &
+              bfact,dx, &
+              xsten0,nhalf0, &
               nrecon,intercept, &
               voltemp,centemp,areatemp, &
               xtetlist, &
@@ -18427,6 +18460,7 @@ contains
 
            if (fastflag.eq.0) then
              ! only xsten0(0,dir) dir=1..sdim used
+             ! calling from "multi_get_volume_grid"
             call multi_cell_intersection( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
@@ -19457,6 +19491,7 @@ contains
           intercept=mofdataproject_minus(vofcomp+2*sdim+2)
 
           if (fastflag.eq.0) then
+            !calling from "multi_get_area_pairs"
            call multi_cell_intersection( &
             bfact,dx, &
             xsten0_minus,nhalf0, &
@@ -20229,6 +20264,7 @@ contains
 
            if (fastflag.eq.0) then
              ! only xsten0(0,dir) dir=1..sdim used
+             ! calling from "multi_get_volume_grid_simple"
             call multi_cell_intersection_simple( &
               bfact,dx,xsten0,nhalf0, &
               nrecon,intercept, &
@@ -20563,6 +20599,7 @@ contains
 
            if (fastflag.eq.0) then
              ! only xsten0(0,dir) dir=1..sdim used
+             ! calling from "multi_get_volume_grid_simple"
             call multi_cell_intersection_simple( &
              bfact,dx,xsten0,nhalf0, &
              nrecon,intercept, &
@@ -21163,6 +21200,7 @@ contains
 
           if (fastflag.eq.0) then
             ! only xsten0(0,dir) dir=1..sdim used
+            ! calling from "multi_get_volume_grid_and_map"
            call multi_cell_intersection_and_map( &
              normdir, &
              coeff, &
@@ -21461,6 +21499,7 @@ contains
 
           if (fastflag.eq.0) then
             ! only xsten0(0,dir) dir=1..sdim used
+            ! calling from "multi_get_volume_grid_and_map"
            call multi_cell_intersection_and_map( &
             normdir, &
             coeff, &
