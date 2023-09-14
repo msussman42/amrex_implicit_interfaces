@@ -1302,9 +1302,10 @@ stop
 
       INTEGER_T :: grid_index(SDIM)
       INTEGER_T :: grid_level
-      REAL_T :: npredict(SDIM)
+      REAL_T :: npredict(3,SDIM)
+      REAL_T :: vof_null
       REAL_T :: centroid_null(SDIM)
-      REAL_T :: mag_centroid
+      REAL_T :: mag_centroid(3)
       INTEGER_T :: critical_material
 
       REAL_T :: DT_cost,NN_cost,RF_cost
@@ -1567,29 +1568,33 @@ stop
            grid_index(dir)=0
            centroid_null(dir)=zero
           enddo
+          vof_null=one
+
           grid_level=-1
           critical_material=1
           call find_predict_slope( &
            npredict, & ! INTENT(out)
            mag_centroid, & ! INTENT(out)
+           vof_null, &
            centroid_null, & ! centroid of uncaptured region
+           refvfrac(1), &
             ! relative to cell centroid of the super cell; INTENT(in)
            refcen, & 
            bfact,dx,xsten,nhalf,SDIM)
 
           try_new_vfrac=0
 
-          if (mag_centroid.gt.VOFTOL*dx(1)) then
+          if (mag_centroid(1).gt.VOFTOL*dx(1)) then
            ! do nothing
-          else if (mag_centroid.le.VOFTOL*dx(1)) then
+          else if (mag_centroid(1).le.VOFTOL*dx(1)) then
            try_new_vfrac=1
           else
-           print *,"mag_centroid bust"
+           print *,"mag_centroid bust: ",mag_centroid(1)
            stop
           endif
 
          else 
-          print *,"refvfrac(1) out of range"
+          print *,"refvfrac(1) out of range: ",refvfrac(1)
           stop
          endif
 
@@ -1901,9 +1906,10 @@ stop
 
       INTEGER_T :: grid_index(SDIM)
       INTEGER_T :: grid_level
-      REAL_T :: npredict(SDIM)
+      REAL_T :: npredict(3,SDIM)
+      REAL_T :: vof_null
       REAL_T :: centroid_null(SDIM)
-      REAL_T :: mag_centroid
+      REAL_T :: mag_centroid(3)
       INTEGER_T :: critical_material
 
       REAL_T :: DT_cost
@@ -2146,21 +2152,25 @@ stop
             grid_index(dir)=0
             centroid_null(dir)=zero
            enddo
+           vof_null=one
+
            grid_level=-1
            critical_material=1
            call find_predict_slope( &
             npredict, & ! INTENT(out)
             mag_centroid, & ! INTENT(out)
+            vof_null, &
             centroid_null, & ! centroid of uncaptured region
+            refvfrac(1), &
              ! relative to cell centroid of the super cell; INTENT(in)
             refcen, & 
             bfact,dx,xsten,nhalf,SDIM)
 
            try_new_vfrac=0
 
-           if (mag_centroid.gt.VOFTOL*dx(1)) then
+           if (mag_centroid(1).gt.VOFTOL*dx(1)) then
             ! do nothing
-           else if (mag_centroid.le.VOFTOL*dx(1)) then
+           else if (mag_centroid(1).le.VOFTOL*dx(1)) then
             try_new_vfrac=1
            else
             print *,"mag_centroid bust"
