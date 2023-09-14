@@ -13754,7 +13754,6 @@ contains
            nDOF_standard, & !sdim-1
            nEQN_standard, & !sdim
            bfact,dx,xsten0,nhalf0, &
-           npredict, &
            intercept(1), &
            continuous_mof, &
            cmofsten, &
@@ -15711,6 +15710,7 @@ contains
             nEQN_standard, &  !nEQN_standard=sdim
             bfact,dx, &
             xsten0,nhalf0, &
+FIX ME
             npredict, &
             intercept(1), &
             refvfrac(1), &
@@ -15725,7 +15725,6 @@ contains
             nEQN_standard, &  !nEQN_standard=sdim
             bfact,dx, &
             xsten0,nhalf0, &
-            npredict, &
             intercept(1), &
             continuous_mof_rigid, &
             cmofsten, &
