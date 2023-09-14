@@ -1509,7 +1509,8 @@ stop
 
            ! given the slope, find the centroid.
           call angle_init_from_angle_recon_and_F( &
-           bfact,dx,xsten,nhalf, &
+           bfact,dx, &
+           xsten,nhalf, &
            refvfrac, & 
            continuous_mof, & !=STANDARD_MOF or CMOF_X
            cmofsten, & 
