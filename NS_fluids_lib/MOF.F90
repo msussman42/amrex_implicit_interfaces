@@ -10,7 +10,7 @@
 
 #include "EXTRAP_COMP.H"
 
-#define MOF_INITIAL_GUESS_N_ANGLE (2.0d0*2.0d0)
+#define MOF_INITIAL_GUESS_N_ANGLE (0.0d0*0.0d0)
 
 #define MOFDEB (0)
 
@@ -12874,9 +12874,11 @@ contains
       INTEGER_T, INTENT (IN) :: bfact
       REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
       REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
+      REAL_T, DIMENSION(-nhalf0:nhalf0,sdim) :: xsten_local
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
       INTEGER_T dir
+      INTEGER_T i_stencil_node
       INTEGER_T, INTENT(in) :: nmax
       INTEGER_T, INTENT(in) :: order_algorithm_in(num_materials)
       REAL_T, INTENT(inout) :: uncaptured_volume_vof 
@@ -13010,6 +13012,13 @@ contains
        stop
       endif
 
+      do i_stencil_node=-nhalf0,nhalf0
+      do dir=1,sdim
+       xsten_local(i_stencil_node,dir)=xsten0(i_stencil_node,dir)
+      enddo !dir
+      enddo !i_stencil_node
+
+
        ! cencell_vof,cencell_cen is in absolute coordinate system
 
       if (continuous_mof.eq.STANDARD_MOF) then 
@@ -13037,6 +13046,13 @@ contains
         volcell_cen, &
         cencell_cen, &
         sdim)
+
+       do i_stencil_node=-nhalf0,nhalf0
+       do dir=1,sdim
+        xsten_local(i_stencil_node,dir)=cencell_vof(dir)+ &
+          half*i_stencil_node*dx(dir)
+       enddo !dir
+       enddo !i_stencil_node
 
       else if (continuous_mof.ge.CMOF_X) then
 
@@ -13261,11 +13277,13 @@ contains
         print *,"order_algorithm_in ",order_algorithm_in
         print *,"bfact ",bfact
         print *,"dx ",dx
+
         do dir=1,sdim
         do im=-nhalf0,nhalf0
          print *,"i,dir,xsten0(i,dir) ",im,dir,xsten0(im,dir)
         enddo
         enddo
+
         print *,"xsten0 ",xsten0
         print *,"nhalf0 ",nhalf0
         print *,"fastflag ",fastflag
@@ -13398,7 +13416,8 @@ contains
              mag, & !intent(out)
              centroid_free, & !centroid of uncaptured region
              centroid_ref, &  !absolute coordinate system
-             bfact,dx,xsten0,nhalf0,sdim)
+             bfact,dx, &
+             xsten_local,nhalf0,sdim)
           
            if (mag.gt.VOFTOL*dx(1)) then
 
@@ -13478,7 +13497,8 @@ contains
            mag, & !intent(out)
            centroid_free, & !centroid of uncaptured region
            centroid_ref, &  !absolute coordinate system
-           bfact,dx,xsten0,nhalf0,sdim)
+           bfact,dx, &
+           xsten_local,nhalf0,sdim)
 
          if (mag.lt.MLSVOFTOL*dx(1)) then
           print *,"mag underflow"
@@ -13502,7 +13522,8 @@ contains
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
-           bfact,dx,xsten0,nhalf0, &
+           bfact,dx, &
+           xsten0,nhalf0, &
            refcentroid, &
            refvfrac, &
            npredict, &
@@ -13633,7 +13654,8 @@ contains
            ! centroid_ref-centroid_free
            call find_predict_slope( &
             npredict,mag,centroid_free,centroid_ref, &
-            bfact,dx,xsten0,nhalf0,sdim)
+            bfact,dx, &
+            xsten_local,nhalf0,sdim)
            if (mag.gt.VOFTOL*dx(1)) then
             ! do nothing
            else
