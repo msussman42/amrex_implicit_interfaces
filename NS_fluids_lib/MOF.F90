@@ -2681,48 +2681,6 @@ end subroutine intersection_volume_and_map
       return
       end subroutine angle_to_slope
 
-      subroutine angle_to_slope_general( &
-        npredict, &
-        nMAT_OPT, & ! 1 
-        nDOF, & !sdim-1
-        nEQN, & !sdim 
-        angle,nslope,sdim)
-      use probcommon_module
-      use global_utility_module
-      IMPLICIT NONE
-
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim 
-      REAL_T, INTENT(in) :: npredict(nEQN)
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(out) :: nslope(nEQN)
-      REAL_T, INTENT(in) :: angle(nDOF)
-
-      if (nMAT_OPT.eq.1) then
-
-       if ((nMAT_OPT.eq.1).and. &
-           (nDOF.eq.sdim-1).and. &
-           (nEQN.eq.sdim)) then
-        ! do nothing
-       else
-        print *,"invalid nMAT_OPT,nDOF, or nEQN"
-        stop
-       endif
-        ! in 3d: angle=0 => n=(0 0 1)
-        ! in 2d: angle=0 => n=(1 0)
-       call angle_to_slope(angle,nslope,sdim)
-
-      else
-       print *,"nMAT_OPT invalid"
-       stop
-      endif
-
-      return
-      end subroutine angle_to_slope_general
-
-
-
         ! returns centroid in absolute coordinate system
 
       subroutine cell_intersection_grid( &
@@ -10410,9 +10368,8 @@ contains
         ! refcentroid is relative to cell centroid of the super cell.
       subroutine multi_rotatefunc( &
         tid, &
-        uncaptured_volume_vof, &
+        uncaptured_volume_vof, & !intent(in)
         mofdata, &
-        npredict, &
         nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1 
         nEQN, & ! sdim 
@@ -10457,7 +10414,6 @@ contains
       INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 
       INTEGER_T, INTENT(in) :: nDOF ! sdim-1
       INTEGER_T, INTENT(in) :: nEQN ! sdim 
-      REAL_T, INTENT(in) :: npredict(nEQN)
       INTEGER_T, INTENT(in) :: sdim
       INTEGER_T, INTENT(in) :: continuous_mof
       INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -10679,11 +10635,7 @@ contains
         stop
       endif
 
-      call angle_to_slope_general( &
-        npredict, &
-        nMAT_OPT, & ! 1 
-        nDOF, & ! sdim-1
-        nEQN, & ! sdim 
+      call angle_to_slope( &
         angle, &
         nslope, &
         sdim)
@@ -11255,8 +11207,9 @@ contains
        ! 2. n_init=(x - xcell)
        ! 3. call slope_to_angle(n_init,angle_init,sdim)
       subroutine angle_init_from_angle_recon_and_F( &
-        bfact,dx,xsten0,nhalf0, &
-        refvfrac, &
+        bfact,dx, &
+        xsten0,nhalf0, &
+        refvfrac, & !intent(in)
         continuous_mof, & 
         cmofsten, &
         xtetlist_vof, & !intent(in)
@@ -11308,8 +11261,9 @@ contains
       REAL_T :: intercept_placeholder(nMAT_OPT_standard)
       REAL_T :: cen_derive_placeholder(sdim)
       REAL_T :: cen_free_placeholder(sdim)
-      REAL_T :: npredict(sdim)
-      REAL_T :: mag 
+      REAL_T :: npredict(3,sdim)
+      REAL_T :: local_npredict(sdim)
+      REAL_T :: mag(3) 
       INTEGER_T, PARAMETER :: im_primary_mat=0
       INTEGER_T, PARAMETER :: im_secondary_mat=0
       INTEGER_T, PARAMETER :: im_tertiary_mat=0
@@ -11385,14 +11339,21 @@ contains
        angle_init_local(dir)=angle_recon(dir)
       enddo
 
+      if ((refvfrac(1).ge.zero).and. &
+          (refvfrac(1).le.one)) then
+       !do nothing
+      else
+       print *,"expecting 0<=refvfrac<=1: ",refvfrac(1)
+       stop
+      endif
+
         ! find the actual centroid given the angle.
         ! calling from:
         !   angle_init_from_angle_recon_and_F
       call multi_rotatefunc( &
        tid, &
-       uncaptured_volume_vof_placeholder, &
+       uncaptured_volume_vof_placeholder, & !intent(in)
        mofdata, &
-       npredict, &
        nMAT_OPT_standard, & ! 1
        nDOF_standard, & ! sdim-1 
        nEQN_standard, & ! sdim
@@ -11402,7 +11363,7 @@ contains
        xtetlist_cen,nlist_cen, & !intent(in)
        nlist_alloc, & !intent(in)
        nmax, &
-       refcentroid, &
+       refcentroid, & !relative to supercell centroid(CMOF)
        refvfrac, &
        continuous_mof, & ! = 0 or 1
        cmofsten, &
@@ -11425,12 +11386,19 @@ contains
       call find_predict_slope( &
         npredict, & !intent(out)
         mag, & !intent(out)
+        uncaptured_volume_vof_placeholder, &
         cen_free_placeholder, & !centroid of uncaptured region
-        cen_derive_placeholder, &!relative to supermesh centroid(CMOF=2)
-        bfact,dx,xsten0,nhalf0,sdim)
+        refvfrac(1), &
+        cen_derive_placeholder, &!relative to supermesh centroid(CMOF case)
+        bfact,dx, &
+        xsten0,nhalf0,sdim)
+
+      do dir=1,sdim
+       local_npredict(dir)=npredict(1,dir)
+      enddo
 
       ! -pi < angle < pi
-      call slope_to_angle(npredict,angle_init,sdim)
+      call slope_to_angle(local_npredict,angle_init,sdim)
       do dir=1,nEQN_standard
        refcen(dir)=cen_derive_placeholder(dir)
       enddo
@@ -11509,7 +11477,9 @@ contains
       REAL_T, INTENT(in) :: dx(sdim)
       REAL_T, INTENT(in) :: refcentroid(nEQN)
       REAL_T, INTENT(in) :: refvfrac(nMAT_OPT)
-      REAL_T, INTENT(in) :: npredict(nEQN)
+      INTEGER_T :: ipredict
+      REAL_T :: local_npredict(nEQN)
+      REAL_T, INTENT(in) :: npredict(3,nEQN)
       REAL_T, INTENT(out) :: intercept(nMAT_OPT)
       REAL_T, INTENT(out) :: nslope(nEQN) 
 
@@ -11848,12 +11818,19 @@ contains
            (continuous_mof.eq.CMOF_F_AND_X).or. & 
            (continuous_mof.ge.CMOF_X)) then  
 
+        do ipredict=1,3
+
+         do dir=1,sdim
+          local_npredict(dir)=npredict(ipredict,dir)
+         enddo
           ! -pi < angle < pi
-        call slope_to_angle(npredict,angle_init,sdim)
-        nguess=nguess+1
-        do dir=1,nDOF
-         angle_array(dir,nguess)=angle_init(dir)
-        enddo
+         call slope_to_angle(local_npredict,angle_init,sdim)
+         nguess=nguess+1
+         do dir=1,nDOF
+          angle_array(dir,nguess)=angle_init(dir)
+         enddo
+
+        enddo !ipredict=1,3
 
         if (num_materials+5+NINT(MOF_INITIAL_GUESS_N_ANGLE).le.MOFITERMAX) then
          ! do nothing
@@ -12209,7 +12186,6 @@ contains
         tid, &
         uncaptured_volume_vof, &
         mofdata, &
-        npredict, &
         nMAT_OPT, & ! 1 
         nDOF, & ! sdim-1
         nEQN, & ! sdim
@@ -12348,7 +12324,6 @@ contains
          tid, &
          uncaptured_volume_vof, &
          mofdata, &
-         npredict, &
          nMAT_OPT, & ! 1 
          nDOF, & ! sdim-1
          nEQN, & ! sdim 
@@ -12394,7 +12369,6 @@ contains
          tid, &
          uncaptured_volume_vof, &
          mofdata, &
-         npredict, &
          nMAT_OPT, & ! 1 
          nDOF, & ! sdim-
          nEQN, & ! sdim or 3 * sdim
@@ -12532,7 +12506,6 @@ contains
          tid, &
          uncaptured_volume_vof, &
          mofdata, &
-         npredict, &
          nMAT_OPT, & ! 1 
          nDOF, & ! sdim-1
          nEQN, & ! sdim
@@ -12691,11 +12664,7 @@ contains
        intercept(dir)=intercept_array(dir,iicrit+1)
       enddo
 
-      call angle_to_slope_general( &
-        npredict, &
-        nMAT_OPT, & ! 1 
-        nDOF, & ! sdim-1
-        nEQN, & ! sdim 
+      call angle_to_slope( &
         new_angle,nslope,sdim)
 
       do dir=1,nEQN
@@ -12750,9 +12719,15 @@ contains
       return
       end subroutine find_cut_geom_slope
 
-      subroutine find_predict_slope(slope, &
-       mag,cen_free,cen_ref, &
-       bfact,dx,xsten,nhalf,sdim)
+      subroutine find_predict_slope( &
+       slope, &
+       mag, &
+       vof_free, &
+       cen_free, &
+       vof_ref, &
+       cen_ref, &
+       bfact,dx, &
+       xsten,nhalf,sdim)
       use probcommon_module
       use global_utility_module
 
@@ -12764,14 +12739,22 @@ contains
       INTEGER_T :: dir
       REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
       REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: slope(sdim)
+      REAL_T, INTENT(out) :: slope(3,sdim)
+      REAL_T local_slope(sdim)
       REAL_T slopeRT(sdim)
+      REAL_T, INTENT(in) :: vof_free
       REAL_T, INTENT(in) :: cen_free(sdim)
+      REAL_T, INTENT(in) :: vof_ref
       REAL_T, INTENT(in) :: cen_ref(sdim)
+      REAL_T :: local_ref(sdim)
+      REAL_T :: local_free(sdim)
+      REAL_T :: dual_vof_ref
+      REAL_T :: dual_cen_ref(sdim)
       REAL_T cen_freeXYZ(sdim)
       REAL_T cen_refXYZ(sdim)
-      REAL_T, INTENT(out) :: mag
+      REAL_T, INTENT(out) :: mag(3)
       REAL_T RR,theta,mag_temp
+      INTEGER_T ipredict
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -12789,43 +12772,86 @@ contains
        print *,"dimension bust"
        stop
       endif
-
-      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-          (levelrz.eq.COORDSYS_RZ)) then
-       RR=one
-       do dir=1,sdim
-        slope(dir)=cen_ref(dir)-cen_free(dir)
-       enddo
-        ! mag=|slope|
-       call prepare_normal(slope,RR,mag)
-      else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-       call RT_transform(cen_ref,cen_refXYZ) 
-       call RT_transform(cen_free,cen_freeXYZ) 
-       do dir=1,sdim
-        slope(dir)=cen_refXYZ(dir)-cen_freeXYZ(dir)
-       enddo
-       RR=one
-       call prepare_normal(slope,RR,mag)
-       theta=xsten(0,2)
-       slopeRT(1)=cos(theta)*slope(1)+sin(theta)*slope(2)
-       slopeRT(2)=-sin(theta)*slope(1)+cos(theta)*slope(2)
-       if (sdim.eq.3) then
-        slopeRT(sdim)=slope(sdim)
-       endif
-       if (xsten(0,1).gt.zero) then
-        RR=one/xsten(0,1)
-        call prepare_normal(slopeRT,RR,mag_temp)
-        do dir=1,sdim
-         slope(dir)=slopeRT(dir)
-        enddo
-       else
-        print *,"xsten(0,1) must be positive"
-        stop
-       endif
+      if ((vof_ref.ge.zero).and. &
+          (vof_free.ge.zero)) then
+       !do nothing
       else
-       print *,"find_predict_slope: levelrz invalid"
+       print *,"vof_ref or vof_free invalid"
        stop
       endif
+
+      dual_vof_ref=vof_free-vof_ref
+      do dir=1,sdim
+       if (dual_vof_ref.gt.zero) then
+        dual_cen_ref(dir)= &
+         (vof_free*cen_free(dir)-vof_ref*cen_ref(dir))/dual_vof_ref
+       else if (dual_vof_ref.eq.zero) then
+        dual_cen_ref(dir)=zero
+       else
+        print *,"dual_vof_ref invalid: ",dual_vof_ref
+        stop
+       endif
+      enddo !dir=1,sdim
+
+      do ipredict=1,3
+
+       do dir=1,sdim
+        if (ipredict.eq.1) then
+         local_ref(dir)=cen_ref(dir)
+         local_free(dir)=cen_free(dir)
+        else if (ipredict.eq.2) then
+         local_ref(dir)=cen_free(dir)
+         local_free(dir)=dual_cen_ref(dir)
+        else if (ipredict.eq.3) tjem
+         local_ref(dir)=cen_ref(dir)
+         local_free(dir)=dual_cen_ref(dir)
+        else
+         print *,"ipredict invalid"
+         stop
+        endif
+       enddo !dir=1,sdim
+           
+       if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+           (levelrz.eq.COORDSYS_RZ)) then
+        RR=one
+        do dir=1,sdim
+         local_slope(dir)=local_ref(dir)-local_free(dir)
+        enddo
+        ! mag=|slope|
+        call prepare_normal(local_slope,RR,mag(ipredict))
+        do dir=1,sdim
+         slope(ipredict,dir)=local_slope(dir)
+        enddo
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        call RT_transform(local_ref,cen_refXYZ) 
+        call RT_transform(local_free,cen_freeXYZ) 
+        do dir=1,sdim
+         local_slope(dir)=cen_refXYZ(dir)-cen_freeXYZ(dir)
+        enddo
+        RR=one
+        call prepare_normal(local_slope,RR,mag(ipredict))
+        theta=xsten(0,2)
+        slopeRT(1)=cos(theta)*local_slope(1)+sin(theta)*local_slope(2)
+        slopeRT(2)=-sin(theta)*local_slope(1)+cos(theta)*local_slope(2)
+        if (sdim.eq.3) then
+         slopeRT(sdim)=local_slope(sdim)
+        endif
+        if (xsten(0,1).gt.zero) then
+         RR=one/xsten(0,1)
+         call prepare_normal(slopeRT,RR,mag_temp)
+         do dir=1,sdim
+          slope(ipredict,dir)=slopeRT(dir)
+         enddo
+        else
+         print *,"xsten(0,1) must be positive: ",xsten(0,1)
+         stop
+        endif
+       else
+        print *,"find_predict_slope: levelrz invalid:",levelrz
+        stop
+       endif
+
+      enddo !ipredict=1,3
 
       return
       end subroutine find_predict_slope
@@ -12893,7 +12919,7 @@ contains
       INTEGER_T critical_material,override_selected
       REAL_T volcut_vof,volcell_vof
       REAL_T volcut_cen,volcell_cen
-      REAL_T mag
+      REAL_T mag(3)
       REAL_T cencut_vof(sdim)
       REAL_T cencell_vof(sdim)
       REAL_T cencut_cen(sdim)
@@ -12907,7 +12933,8 @@ contains
       INTEGER_T test_order
       REAL_T test_vfrac,max_vfrac
       INTEGER_T use_initial_guess
-      REAL_T npredict(num_materials*sdim)
+      INTEGER_T ipredict
+      REAL_T npredict(3,sdim)
       REAL_T refcentroid(num_materials*sdim)
       REAL_T centroid_ref(sdim)
       REAL_T centroid_free(sdim)
@@ -13414,12 +13441,14 @@ contains
            call find_predict_slope( &
              npredict, & !intent(out)
              mag, & !intent(out)
+             volcut_vof, &
              centroid_free, & !centroid of uncaptured region
+             single_volume, &
              centroid_ref, &  !absolute coordinate system
              bfact,dx, &
              xsten_local,nhalf0,sdim)
           
-           if (mag.gt.VOFTOL*dx(1)) then
+           if (mag(1).gt.VOFTOL*dx(1)) then
 
              ! order_min initialized to be 9999.
             if (order_algorithm_in(im).le.0) then
@@ -13427,18 +13456,24 @@ contains
              stop
             else if ((order_algorithm_in(im).lt.order_min).and. &
                      (override_selected.eq.0)) then
-             distmax=mag
+             distmax=mag(1)
              order_min=order_algorithm_in(im)
              critical_material=im
             else if ((order_algorithm_in(im).eq.order_min).and. &
                      (override_selected.eq.0)) then
-             if (mag.gt.distmax) then
-              distmax=mag
+             if (mag(1).gt.distmax) then
+              distmax=mag(1)
               critical_material=im
              endif
             endif
 
-           endif ! mag>vof_cutoff*dx(1)
+           else if (mag(1).ge.zero) then
+            ! do nothing
+           else
+            print *,"mag(1) invalid: ",mag(1)
+            stop
+           endif
+
           else if ((NINT(mofdata(vofcomp+sdim+1)).ge.1).or. & ! order>=1?
                    (abs(single_volume).le.VOFTOL*volcell_vof).or. &
                    (single_volume.ge.(one-VOFTOL)*uncaptured_volume_vof)) then
@@ -13490,18 +13525,24 @@ contains
           centroid_ref(dir)=mofdata(vofcomp+dir)+cencell_cen(dir)
          enddo
 
+         single_volume=mofdata(vofcomp)*volcell_vof
+
           ! centroid_ref-centroid_free
           ! normal points from light to dark
          call find_predict_slope( &
            npredict, & !intent(out)
            mag, & !intent(out)
+           volcut_vof, &
            centroid_free, & !centroid of uncaptured region
+           single_volume, &
            centroid_ref, &  !absolute coordinate system
            bfact,dx, &
            xsten_local,nhalf0,sdim)
 
-         if (mag.lt.MLSVOFTOL*dx(1)) then
-          print *,"mag underflow"
+         if (mag(1).ge.MLSVOFTOL*dx(1)) then
+          !do nothing
+         else
+          print *,"mag(1) underflow: ",mag(1)
           stop
          endif
 
@@ -13636,14 +13677,17 @@ contains
           stop
          endif
 
-         if ((mat_before.ge.1).and.(mat_before.le.num_materials)) then
+         if ((mat_before.ge.1).and. &
+             (mat_before.le.num_materials)) then
            if (is_rigid_local(mat_before).ne.0) then
             print *,"is_rigid invalid MOF.F90"
             stop
            endif
            vofcomp_before=(mat_before-1)*ngeom_recon+1
-           do dir=1,sdim
-            npredict(dir)=-mofdata(vofcomp_before+sdim+1+dir)
+           do ipredict=1,3
+            do dir=1,sdim
+             npredict(ipredict,dir)=-mofdata(vofcomp_before+sdim+1+dir)
+            enddo
            enddo
            intercept=-mofdata(vofcomp_before+2*sdim+2)
          else if (mat_before.eq.0) then
@@ -13651,18 +13695,30 @@ contains
             centroid_free(dir)=cencell_cen(dir)
             centroid_ref(dir)=cencut_cen(dir)
            enddo
+
            ! centroid_ref-centroid_free
            call find_predict_slope( &
-            npredict,mag,centroid_free,centroid_ref, &
+            npredict, &
+            mag, &
+            volcell_vof, &
+            centroid_free, &
+            volcut_vof, &
+            centroid_ref, &
             bfact,dx, &
             xsten_local,nhalf0,sdim)
-           if (mag.gt.VOFTOL*dx(1)) then
+
+           if (mag(1).gt.VOFTOL*dx(1)) then
             ! do nothing
-           else
-            do dir=1,sdim
-             npredict(dir)=zero
+           else if (mag(1).ge.zero) then
+            do ipredict=1,3
+             do dir=1,sdim
+              npredict(ipredict,dir)=zero
+             enddo
+             npredict(ipredict,1)=one
             enddo
-            npredict(1)=one
+           else
+            print *,"mag(1) invalid: ",mag(1)
+            stop
            endif
            intercept=mofdata(vofcomp)-half
          else
@@ -13677,7 +13733,7 @@ contains
 
           mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=npredict(dir)
+           mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
             ! cencut_cen is the uncaptured centroid in absolute frame 
            centroidA(dir)=cencut_cen(dir)
            multi_centroidA(critical_material,dir)= &
@@ -13730,7 +13786,7 @@ contains
           mofdata(vofcomp+2*sdim+2)=intercept(1)
            ! cencell is the supercell centroid
           do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=npredict(dir)
+           mofdata(vofcomp+sdim+1+dir)=npredict(1,dir)
            multi_centroidA(critical_material,dir)= &
             centroidA(dir)-cencell_cen(dir)
           enddo 
@@ -15126,10 +15182,12 @@ contains
       REAL_T centroid_ref(sdim)
       REAL_T refcentroid(sdim)
       REAL_T refvfrac(1)
+      REAL_T single_volume
       REAL_T nslope(sdim)
       REAL_T intercept(1)
-      REAL_T npredict(sdim)
-      REAL_T mag
+      INTEGER_T ipredict
+      REAL_T npredict(3,sdim)
+      REAL_T mag(3)
       INTEGER_T continuous_mof_rigid
       INTEGER_T nlist_vof,nlist_cen
 
@@ -15540,6 +15598,7 @@ contains
         endif
 
         refvfrac(1)=mofdata(vofcomp)
+
         if (abs(refvfrac(1)-vof_super(imaterial)).le.1.0d-12) then
          !do nothing
         else
@@ -15559,15 +15618,22 @@ contains
           centroid_free(dir)=uncaptured_centroid_vof(dir)
           centroid_ref(dir)=mofdata(vofcomp+dir)+uncaptured_centroid_vof(dir)
          enddo
+
+         single_volume=refvfrac(1)*uncaptured_volume_vof
+
           ! centroid_ref-centroid_free
           ! normal points from light to dark
-         call find_predict_slope(npredict, &
-           mag,centroid_free,centroid_ref, &
-           bfact,dx,xsten0,nhalf0,sdim)
+         call find_predict_slope( &
+           npredict, &
+           mag, &
+           uncaptured_volume_vof, &
+           centroid_free, &
+           single_volume, &
+           centroid_ref, &
+           bfact,dx, &
+           xsten0,nhalf0,sdim)
 
-         refvfrac(1)=mofdata(vofcomp)
-
-         if (mag.gt.VOFTOL*dx(1)) then
+         if (mag(1).gt.VOFTOL*dx(1)) then
 
           do dir=1,sdim
            refcentroid(dir)=mofdata(vofcomp+dir)
@@ -15617,14 +15683,19 @@ contains
            multi_centroidA(imaterial,dir)=centroidA(dir)
           enddo 
 
-         else if ((mag.ge.zero).and. &
-                  (mag.le.VOFTOL*dx(1))) then
+         else if ((mag(1).ge.zero).and. &
+                  (mag(1).le.VOFTOL*dx(1))) then
+
+          do ipredict=1,3
+           do dir=1,sdim
+            npredict(ipredict,dir)=zero
+           enddo
+           npredict(ipredict,1)=one
+          enddo
 
           do dir=1,sdim
-           npredict(dir)=zero
            centroidA(dir)=zero
           enddo
-          npredict(1)=one
           intercept(1)=mofdata(vofcomp)-half
 
           mofdata(vofcomp+sdim+1)=one ! order=1
@@ -15680,7 +15751,7 @@ contains
           enddo 
 
          else
-          print *,"mag invalid MOF.F90 14595: ",mag
+          print *,"mag invalid MOF.F90 14595: ",mag(1)
           stop
          endif
 
