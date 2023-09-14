@@ -10049,7 +10049,8 @@ contains
        nEQN, & ! sdim
        bfact,dx, &
        xsten0,nhalf0, &
-       slope,intercept, &
+       slope, &
+       intercept, &
        vfrac, &
        centroid,sdim)
 
@@ -12802,7 +12803,7 @@ contains
         else if (ipredict.eq.2) then
          local_ref(dir)=cen_free(dir)
          local_free(dir)=dual_cen_ref(dir)
-        else if (ipredict.eq.3) tjem
+        else if (ipredict.eq.3) then
          local_ref(dir)=cen_ref(dir)
          local_free(dir)=dual_cen_ref(dir)
         else
@@ -12935,6 +12936,7 @@ contains
       INTEGER_T use_initial_guess
       INTEGER_T ipredict
       REAL_T npredict(3,sdim)
+      REAL_T local_npredict(sdim)
       REAL_T refcentroid(num_materials*sdim)
       REAL_T centroid_ref(sdim)
       REAL_T centroid_free(sdim)
@@ -13715,7 +13717,7 @@ contains
               npredict(ipredict,dir)=zero
              enddo
              npredict(ipredict,1)=one
-            enddo
+            enddo !ipredict
            else
             print *,"mag(1) invalid: ",mag(1)
             stop
@@ -13725,7 +13727,11 @@ contains
           print *,"mat_before invalid"
           stop
          endif
-  
+ 
+         do dir=1,sdim
+          local_npredict(dir)=npredict(1,dir)
+         enddo
+
          if ((single_material_takes_all.eq.1).and. &
              (mat_before.ge.1).and.(mat_before.le.num_materials)) then
 
@@ -13753,7 +13759,9 @@ contains
            nMAT_OPT_standard, & !1
            nDOF_standard, & !sdim-1
            nEQN_standard, & !sdim
-           bfact,dx,xsten0,nhalf0, &
+           bfact,dx, &
+           xsten0,nhalf0, &
+           local_npredict, &
            intercept(1), &
            continuous_mof, &
            cmofsten, &
@@ -15185,6 +15193,7 @@ contains
       REAL_T nslope(sdim)
       REAL_T intercept(1)
       INTEGER_T ipredict
+      REAL_T local_npredict(sdim)
       REAL_T npredict(3,sdim)
       REAL_T mag(3)
       INTEGER_T continuous_mof_rigid
@@ -15691,6 +15700,9 @@ contains
            enddo
            npredict(ipredict,1)=one
           enddo
+          do dir=1,sdim
+           local_npredict(dir)=npredict(1,dir)
+          enddo
 
           do dir=1,sdim
            centroidA(dir)=zero
@@ -15710,8 +15722,7 @@ contains
             nEQN_standard, &  !nEQN_standard=sdim
             bfact,dx, &
             xsten0,nhalf0, &
-FIX ME
-            npredict, &
+            local_npredict, &
             intercept(1), &
             refvfrac(1), &
             centroidA, & ! centroid in absolute coordinate system
@@ -15725,6 +15736,7 @@ FIX ME
             nEQN_standard, &  !nEQN_standard=sdim
             bfact,dx, &
             xsten0,nhalf0, &
+            local_npredict, &
             intercept(1), &
             continuous_mof_rigid, &
             cmofsten, &
@@ -15744,7 +15756,7 @@ FIX ME
 
           mofdata(vofcomp+2*sdim+2)=intercept(1)
           do dir=1,sdim
-           mofdata(vofcomp+sdim+1+dir)=npredict(dir)
+           mofdata(vofcomp+sdim+1+dir)=local_npredict(dir)
            multi_centroidA(imaterial,dir)= &
               centroidA(dir)-uncaptured_centroid_vof(dir)
           enddo 
