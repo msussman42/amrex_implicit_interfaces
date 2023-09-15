@@ -2535,7 +2535,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
 
           else
-           print *,"max_den_interface invalid"
+           print *,"max_den_interface invalid: ",max_den_interface
            stop
           endif
          else if (is_rigid(im_opp).eq.1) then
