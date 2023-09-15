@@ -11,8 +11,9 @@
 #include "EXTRAP_COMP.H"
 
 #define MOF_INITIAL_GUESS_N_ANGLE (0.0d0*0.0d0)
+#define MOF_INITIAL_GUESS_CENTROIDS (3)
 
-#define MOFDEB (0)
+#define MOFDEB (1)
 
 #define MAXTET (5)
 #define MAXAREA (5)
@@ -11262,7 +11263,7 @@ contains
       REAL_T :: intercept_placeholder(nMAT_OPT_standard)
       REAL_T :: cen_derive_placeholder(sdim)
       REAL_T :: cen_free_placeholder(sdim)
-      REAL_T :: npredict(3,sdim)
+      REAL_T :: npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
       REAL_T :: local_npredict(sdim)
       REAL_T :: mag(3) 
       INTEGER_T, PARAMETER :: im_primary_mat=0
@@ -11480,7 +11481,7 @@ contains
       REAL_T, INTENT(in) :: refvfrac(nMAT_OPT)
       INTEGER_T :: ipredict
       REAL_T :: local_npredict(nEQN)
-      REAL_T, INTENT(in) :: npredict(3,nEQN)
+      REAL_T, INTENT(in) :: npredict(MOF_INITIAL_GUESS_CENTROIDS,nEQN)
       REAL_T, INTENT(out) :: intercept(nMAT_OPT)
       REAL_T, INTENT(out) :: nslope(nEQN) 
 
@@ -11501,6 +11502,8 @@ contains
       REAL_T angle_array(nDOF,MOFITERMAX+1)
       REAL_T f_array(nEQN,MOFITERMAX+1)  
       REAL_T err_array(MOFITERMAX+1)
+      REAL_T delangle_array(MOFITERMAX+1)
+      REAL_T delta_theta_local
 
       INTEGER_T dir,iter
       REAL_T best_error
@@ -11617,7 +11620,8 @@ contains
        stop
       endif
 
-      if ((MOFITERMAX.lt.num_materials+3+NINT(MOF_INITIAL_GUESS_N_ANGLE)).or. &
+      if ((MOFITERMAX.lt.num_materials+2+MOF_INITIAL_GUESS_CENTROIDS+ &
+           NINT(MOF_INITIAL_GUESS_N_ANGLE)).or. &
           (MOFITERMAX.gt.MOFITERMAX_LIMIT)) then
        print *,"MOFITERMAX out of range find cut geom slope"
        print *,"MOFITERMAX: ",MOFITERMAX
@@ -11819,7 +11823,7 @@ contains
            (continuous_mof.eq.CMOF_F_AND_X).or. & 
            (continuous_mof.ge.CMOF_X)) then  
 
-        do ipredict=1,3
+        do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
          do dir=1,sdim
           local_npredict(dir)=npredict(ipredict,dir)
@@ -11831,13 +11835,15 @@ contains
           angle_array(dir,nguess)=angle_init(dir)
          enddo
 
-        enddo !ipredict=1,3
+        enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
-        if (num_materials+5+NINT(MOF_INITIAL_GUESS_N_ANGLE).le.MOFITERMAX) then
+        if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS+ &
+            NINT(MOF_INITIAL_GUESS_N_ANGLE).le.MOFITERMAX) then
          ! do nothing
         else
          print *,"no room for initial guess"
          print *,"MOFITERMAX ",MOFITERMAX
+         print *,"MOF_INITIAL_GUESS_CENTROIDS ",MOF_INITIAL_GUESS_CENTROIDS
          print *,"MOF_INITIAL_GUESS_N_ANGLE ",MOF_INITIAL_GUESS_N_ANGLE
          print *,"num_materials ",num_materials
          stop
@@ -12222,10 +12228,12 @@ contains
         f_array(dir,iter)=finit(dir)
        enddo
        err_array(iter)=err
+       delangle_array(iter)=zero
 
        if (MOFDEB.eq.1) then
-        print *,"initial guess iter,angle,err ",iter, &
+        print *,"initial guess iter,angle,del,err ",iter, &
           angle_array(1,iter),angle_array(2,iter), &
+          delangle_array(iter), &
           err_array(iter)
        endif
 
@@ -12260,6 +12268,7 @@ contains
        f_array(dir,1)=f_array(dir,iicrit)
       enddo
       err_array(1)=err_array(iicrit)
+      delangle_array(1)=zero
       do dir=1,nMAT_OPT
        intercept_array(dir,1)=intercept_array(dir,iicrit)
       enddo
@@ -12285,6 +12294,7 @@ contains
 
       delta_theta=Pi/180.0d0  ! 1 degree=pi/180
       delta_theta_max=10.0d0*Pi/180.0d0  ! 10 degrees
+      delta_theta_local=delta_theta
 
       do while ((iter.lt.local_MOFITERMAX).and. &
                 (err.gt.tol).and. &
@@ -12304,8 +12314,8 @@ contains
          angle_plus(j_angle)=angle_base(j_angle)
          angle_minus(j_angle)=angle_base(j_angle)
         enddo
-        angle_plus(i_angle)=angle_plus(i_angle)+delta_theta
-        angle_minus(i_angle)=angle_minus(i_angle)-delta_theta
+        angle_plus(i_angle)=angle_plus(i_angle)+delta_theta_local
+        angle_minus(i_angle)=angle_minus(i_angle)-delta_theta_local
 
         do dir=1,nMAT_OPT
          intp(dir,i_angle)=intercept_array(dir,iter+1)
@@ -12410,7 +12420,7 @@ contains
 
          ! fgrad ~ df/dtheta  (has dimensions of length)
         do dir=1,nEQN
-         fgrad(dir,i_angle)=(fp(dir)-fm(dir))/(two*delta_theta)
+         fgrad(dir,i_angle)=(fp(dir)-fm(dir))/(two*delta_theta_local)
         enddo
 
        enddo  ! i_angle=1..sdim-1
@@ -12565,8 +12575,8 @@ contains
           angle_plus(j_angle)=angle_previous(j_angle)
           angle_minus(j_angle)=angle_previous(j_angle)
          enddo
-         angle_plus(i_angle)=angle_plus(i_angle)+delta_theta
-         angle_minus(i_angle)=angle_minus(i_angle)-delta_theta
+         angle_plus(i_angle)=angle_plus(i_angle)+delta_theta_local
+         angle_minus(i_angle)=angle_minus(i_angle)-delta_theta_local
 
          if ((err.le.err_plus(i_angle)).and. &
              (err.le.err_minus(i_angle))) then
@@ -12620,12 +12630,22 @@ contains
        do i_angle=1,nDOF
         angle_array(i_angle,iter+2)=angle_base(i_angle) 
        enddo
+       delangle_array(iter+2)=delta_theta_local
+
        err_array(iter+2)=err
 
        do dir=1,nMAT_OPT
         intercept_array(dir,iter+2)=intopt(dir)
        enddo
 
+       if (iter.ge.1) then
+        if (err_array(iter+2).lt.err_array(iter+1)) then
+         delta_theta_local=min(two*delta_theta_local,delta_theta)
+        else
+         delta_theta_local=half*delta_theta_local
+        endif
+       endif
+         
        iter=iter+1
       enddo ! while error>tol and iter<local_MOFITERMAX
 
@@ -12633,17 +12653,19 @@ contains
       do ii=0,iter
 
        if ((MOF_DEBUG_RECON.eq.1).or. &
+           (MOFDEB.eq.1).or. &
            ((MOF_DEBUG_RECON.eq.2).and.(fastflag.eq.0))) then
-        print *,"iimof,eemof ",ii,err_array(ii+1)
+        print *,"iimof,eemof,delta ",ii,err_array(ii+1), &
+           delangle_array(ii+1)
        endif
 
        if (err_array(ii+1).le.err_array(iicrit+1)) then
         iicrit=ii
        endif
        if (MOFDEB.eq.1) then
-        print *,"regular iter,angle,err ",ii+1, &
+        print *,"regular iter,angle,err,del ",ii+1, &
           angle_array(1,ii+1),angle_array(2,ii+1), &
-          err_array(ii+1)
+          err_array(ii+1),delangle_array(ii+1)
        endif
 
       enddo ! ii=0..iter
@@ -12794,7 +12816,7 @@ contains
        endif
       enddo !dir=1,sdim
 
-      do ipredict=1,3
+      do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
        do dir=1,sdim
         if (ipredict.eq.1) then
@@ -12852,7 +12874,7 @@ contains
         stop
        endif
 
-      enddo !ipredict=1,3
+      enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
       return
       end subroutine find_predict_slope
@@ -12935,7 +12957,7 @@ contains
       REAL_T test_vfrac,max_vfrac
       INTEGER_T use_initial_guess
       INTEGER_T ipredict
-      REAL_T npredict(3,sdim)
+      REAL_T npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
       REAL_T local_npredict(sdim)
       REAL_T refcentroid(num_materials*sdim)
       REAL_T centroid_ref(sdim)
@@ -13686,7 +13708,7 @@ contains
             stop
            endif
            vofcomp_before=(mat_before-1)*ngeom_recon+1
-           do ipredict=1,3
+           do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
             do dir=1,sdim
              npredict(ipredict,dir)=-mofdata(vofcomp_before+sdim+1+dir)
             enddo
@@ -13712,7 +13734,7 @@ contains
            if (mag(1).gt.VOFTOL*dx(1)) then
             ! do nothing
            else if (mag(1).ge.zero) then
-            do ipredict=1,3
+            do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
              do dir=1,sdim
               npredict(ipredict,dir)=zero
              enddo
@@ -15194,7 +15216,7 @@ contains
       REAL_T intercept(1)
       INTEGER_T ipredict
       REAL_T local_npredict(sdim)
-      REAL_T npredict(3,sdim)
+      REAL_T npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
       REAL_T mag(3)
       INTEGER_T continuous_mof_rigid
       INTEGER_T nlist_vof,nlist_cen
@@ -15694,7 +15716,7 @@ contains
          else if ((mag(1).ge.zero).and. &
                   (mag(1).le.VOFTOL*dx(1))) then
 
-          do ipredict=1,3
+          do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
            do dir=1,sdim
             npredict(ipredict,dir)=zero
            enddo
