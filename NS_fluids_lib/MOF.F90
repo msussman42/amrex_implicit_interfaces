@@ -12314,8 +12314,8 @@ contains
          angle_plus(j_angle)=angle_base(j_angle)
          angle_minus(j_angle)=angle_base(j_angle)
         enddo
-        angle_plus(i_angle)=angle_plus(i_angle)+delta_theta_local
-        angle_minus(i_angle)=angle_minus(i_angle)-delta_theta_local
+        call advance_angle(angle_plus(i_angle),delta_theta_local)
+        call advance_angle(angle_minus(i_angle),-delta_theta_local)
 
         do dir=1,nMAT_OPT
          intp(dir,i_angle)=intercept_array(dir,iter+1)
@@ -12416,9 +12416,8 @@ contains
 ! jacobian matrix has:
 !   f1_1  f1_2
 !   f2_1  f2_2
-!   f3_1  f3_2  ....
+!   f3_1  f3_2 
 
-         ! fgrad ~ df/dtheta  (has dimensions of length)
         do dir=1,nEQN
          if (err_minus(i_angle).lt.err_plus(i_angle)) then
           fgrad(dir,i_angle)=(fbase(dir)-fm(dir))/(delta_theta_local)
@@ -12444,7 +12443,14 @@ contains
         enddo
        enddo
 
-       do i_angle=1,nDOF  ! compute -JT * r
+! jacobian matrix has:
+!   f1_1  f1_2
+!   f2_1  f2_2
+!   f3_1  f3_2 
+! cost=f dot f
+! grad cost = 2 sum_{ij} fi,j * fi   i=1,sdim j=1,sdim-1
+! -JT * f = -grad cost/2
+       do i_angle=1,nDOF  
         RHS(i_angle)=zero
         do dir=1,nEQN
          RHS(i_angle)=RHS(i_angle)-fgrad(dir,i_angle)*fbase(dir)
