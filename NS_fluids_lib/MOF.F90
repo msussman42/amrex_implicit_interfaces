@@ -12420,8 +12420,17 @@ contains
 
          ! fgrad ~ df/dtheta  (has dimensions of length)
         do dir=1,nEQN
-         fgrad(dir,i_angle)=(fp(dir)-fm(dir))/(two*delta_theta_local)
-        enddo
+         if (err_minus(i_angle).lt.err_plus(i_angle)) then
+          fgrad(dir,i_angle)=(fbase(dir)-fm(dir))/(delta_theta_local)
+         else if (err_minus(i_angle).gt.err_plus(i_angle)) then
+          fgrad(dir,i_angle)=(fp(dir)-fbase(dir))/(delta_theta_local)
+         else if (err_minus(i_angle).eq.err_plus(i_angle)) then
+          fgrad(dir,i_angle)=(fp(dir)-fm(dir))/(two*delta_theta_local)
+         else
+          print *,"err_minus or err_plus corruption"
+          stop
+         endif
+        enddo !do dir=1,nEQN
 
        enddo  ! i_angle=1..sdim-1
 
@@ -12434,6 +12443,19 @@ contains
          enddo
         enddo
        enddo
+
+       do i_angle=1,nDOF  ! compute -JT * r
+        RHS(i_angle)=zero
+        do dir=1,nEQN
+         RHS(i_angle)=RHS(i_angle)-fgrad(dir,i_angle)*fbase(dir)
+        enddo
+       enddo !i_angle=1,nDOF
+
+       err_local_min=zero
+       do i_angle=1,nDOF  
+        err_local_min=err_local_min+RHS(i_angle)**2
+       enddo
+       err_local_min=sqrt(err_local_min)
 
        if (sdim.eq.3) then
         DET=JTJ(1,1)*JTJ(2,2)-JTJ(1,2)*JTJ(2,1)
@@ -12474,19 +12496,6 @@ contains
          enddo
         enddo
 
-        do i_angle=1,nDOF  ! compute -JT * r
-         RHS(i_angle)=zero
-         do dir=1,nEQN
-          RHS(i_angle)=RHS(i_angle)-fgrad(dir,i_angle)*fbase(dir)
-         enddo
-        enddo
-
-        err_local_min=zero
-        do i_angle=1,nDOF  
-         err_local_min=err_local_min+RHS(i_angle)**2
-        enddo
-        err_local_min=sqrt(err_local_min)
-  
         do i_angle=1,nDOF  ! compute JTJ^-1 (RHS)
          delangle(i_angle)=zero
          do j_angle=1,nDOF
