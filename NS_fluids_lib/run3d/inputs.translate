@@ -34,8 +34,8 @@ ns.projection_pressure_scale=100.0
 ns.continuous_mof=1
 ns.mof_decision_tree_learning=1000 #1000000
 ns.mof_machine_learning=0
-ns.MOFITERMAX=15
-ns.MOFITERMAX_AFTER_PREDICT=15 #0
+ns.MOFITERMAX=100
+ns.MOFITERMAX_AFTER_PREDICT=100 #0
 
 # OCTOBER 22 - EILE_flag=-1 performs best
 ns.EILE_flag=-1  # EILE_flag=1 (EILE)  EILE_flag=-1 (weymouth yue)

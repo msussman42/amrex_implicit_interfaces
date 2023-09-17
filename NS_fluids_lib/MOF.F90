@@ -13,7 +13,7 @@
 #define MOF_INITIAL_GUESS_N_ANGLE (0.0d0*0.0d0)
 #define MOF_INITIAL_GUESS_CENTROIDS (3)
 
-#define MOFDEB (1)
+#define MOFDEB (0)
 
 #define MAXTET (5)
 #define MAXAREA (5)
@@ -8555,7 +8555,7 @@ module MOF_routines_module
       INTEGER_T :: MOF_DEBUG_RECON_COUNT
        ! 1=>output errors when fastflag=0 or 1
        ! 2=>output errors when fastflag=0 
-      INTEGER_T :: MOF_DEBUG_RECON
+      INTEGER_T :: MOF_DEBUG_RECON=0
       INTEGER_T :: MOF_TURN_OFF_LS
 
 contains
@@ -11486,11 +11486,15 @@ contains
       REAL_T, INTENT(out) :: nslope(nEQN) 
 
       REAL_T new_angle(nDOF)
+      REAL_T angle_opt(nDOF)
 
-      REAL_T angle_previous(nDOF)
       REAL_T angle_base(nDOF)
       REAL_T angle_plus(nDOF)
       REAL_T angle_minus(nDOF)
+      REAL_T angle_plus_archive(nDOF,nDOF)
+      REAL_T angle_minus_archive(nDOF,nDOF)
+      REAL_T angle_gauss_newton(nDOF)
+      REAL_T angle_steepest(nDOF)
 
       REAL_T angle_init(nDOF)
 
@@ -11511,6 +11515,8 @@ contains
       REAL_T fp(nEQN)
       REAL_T fm(nEQN)
       REAL_T fopt(nEQN)
+      REAL_T f_gauss_newton(nEQN)
+      REAL_T f_steepest(nEQN)
       REAL_T fbase(nEQN)
       REAL_T f_plus(nEQN,nDOF)
       REAL_T f_minus(nEQN,nDOF)
@@ -11519,6 +11525,10 @@ contains
 
       REAL_T intp(nMAT_OPT,nDOF)
       REAL_T intm(nMAT_OPT,nDOF)
+      REAL_T int_gauss_newton(nMAT_OPT)
+      REAL_T int_steepest(nMAT_OPT)
+      REAL_T cen_gauss_newton(nEQN)
+      REAL_T cen_steepest(nEQN)
       REAL_T intopt(nMAT_OPT)
       REAL_T cenp(nEQN)
       REAL_T cenm(nEQN)
@@ -11529,6 +11539,8 @@ contains
       REAL_T delta_theta
       REAL_T delta_theta_max
       REAL_T err
+      REAL_T err_gauss_newton
+      REAL_T err_steepest
       REAL_T fgrad(nEQN,nDOF)  
       INTEGER_T ii,iicrit
       INTEGER_T i_angle,j_angle
@@ -12655,7 +12667,7 @@ contains
 
         do i_angle=1,nDOF
 
-         if (err.le.err_plus(i_angle) then
+         if (err.le.err_plus(i_angle)) then
           ! do nothing
          else if (err.ge.err_plus(i_angle)) then
 
@@ -12675,7 +12687,7 @@ contains
           stop
          endif
 
-         if (err.le.err_minus(i_angle) then
+         if (err.le.err_minus(i_angle)) then
           ! do nothing
          else if (err.ge.err_minus(i_angle)) then
           err=err_minus(i_angle)
@@ -12736,6 +12748,11 @@ contains
         else
          print *,"err or err_steepest bad:",err,err_steepest
          stop
+        endif
+
+        if (MOFDEB.eq.1) then
+         print *,"iter,err_plus,err_minus,err_gauss_newton,err_steepest ", &
+          iter,err_plus,err_minus,err_gauss_newton,err_steepest
         endif
 
        else
@@ -16643,7 +16660,7 @@ contains
       REAL_T xpoint3(sdim)
       REAL_T xpoint4(sdim)
       INTEGER_T nrecon
-      INTEGER_T, parameter :: nsamples=100 !90000 
+      INTEGER_T, parameter :: nsamples=10000 !10000 
       INTEGER_T im,ntry,iangle,vofcomp
       INTEGER_T inode
       INTEGER_T dir,dir2
@@ -24862,8 +24879,8 @@ contains
       if (1.eq.0) then
        call volume_sanity_check()
       endif
-      if (1.eq.1) then
-       sdim=3
+      if (1.eq.0) then
+       sdim=2
        nmax_test=POLYGON_LIST_MAX
        call diagnostic_MOF(sdim,nmax_test)
        stop
