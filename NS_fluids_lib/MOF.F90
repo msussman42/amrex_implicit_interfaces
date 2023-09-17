@@ -11550,8 +11550,6 @@ contains
       INTEGER_T nguess
       REAL_T nLS(sdim)
 
-      INTEGER_T singular_flag
-
       INTEGER_T ksten_low,ksten_high
       INTEGER_T i1,j1,k1
       INTEGER_T mof_stencil_ok
@@ -12314,8 +12312,14 @@ contains
          angle_plus(j_angle)=angle_base(j_angle)
          angle_minus(j_angle)=angle_base(j_angle)
         enddo
+
         call advance_angle(angle_plus(i_angle),delta_theta_local)
         call advance_angle(angle_minus(i_angle),-delta_theta_local)
+
+        do j_angle=1,nDOF
+         angle_plus_archive(i_angle,j_angle)=angle_plus(j_angle)
+         angle_minus_archive(i_angle,j_angle)=angle_minus(j_angle)
+        enddo
 
         do dir=1,nMAT_OPT
          intp(dir,i_angle)=intercept_array(dir,iter+1)
@@ -12350,10 +12354,10 @@ contains
          refvfrac, &
          continuous_mof, &
          cmofsten, &
-         angle_plus, &
-         fp, &
-         local_int, &
-         cenp, &
+         angle_plus, & !intent(in)
+         fp, & !intent(out)
+         local_int, & !intent(inout)
+         cenp, & !intent(out)
          use_initial_guess, &
          fastflag,sdim)
 
@@ -12394,10 +12398,10 @@ contains
          refcentroid,refvfrac, &
          continuous_mof, &
          cmofsten, &
-         angle_minus, &
-         fm, &
-         local_int, &
-         cenm, &
+         angle_minus, & !intent(in)
+         fm, & !intent(out)
+         local_int, & !intent(inout)
+         cenm, & !intent(out)
          use_initial_guess, &
          fastflag,sdim)
 
@@ -12474,15 +12478,15 @@ contains
 
         ! DET has dimensions of length squared
        if (abs(DET).ge.CENTOL*(dx_normalize**2)) then 
-        singular_flag=0
+        !do nothing
        else if (abs(DET).le.CENTOL*(dx_normalize**2)) then
-        singular_flag=1
         err_local_min=zero
        else
         print *,"DET invalid: ",DET
         stop
        endif
 
+        !err_local_min=||grad COST(angles)||
        if (err_local_min.le.local_tol) then
 
         do dir=1,nEQN
@@ -12490,12 +12494,19 @@ contains
          cenopt(dir)=cen_array(dir,iter+1)
         enddo
         do i_angle=1,nDOF
-         angle_base(i_angle)=angle_array(i_angle,iter+1)
+         angle_opt(i_angle)=angle_array(i_angle,iter+1)
         enddo
         do dir=1,nMAT_OPT
          intopt(dir)=intercept_array(dir,iter+1)
         enddo
 
+        err=zero 
+        do dir=1,nEQN
+         err=err+fopt(dir)**2
+        enddo
+        err=sqrt(err)
+
+        !err_local_min=||grad COST(angles)||
        else if (err_local_min.gt.local_tol) then
 
         if (sdim.eq.3) then
@@ -12562,9 +12573,9 @@ contains
          refvfrac, &
          continuous_mof, &
          cmofsten, &
-         angle_gauss_newton, &
+         angle_gauss_newton, & !intent(in)
          f_gauss_newton, & !intent(out)
-         int_gauss_newton, & 
+         int_gauss_newton, & !intent(inout)
          cen_gauss_newton, & !REAL_T, INTENT(out) :: testcen(nEQN)
          use_initial_guess, &
          fastflag,sdim)
@@ -12613,72 +12624,71 @@ contains
          use_initial_guess, &
          fastflag,sdim)
 
-
-FIX ME
-
+        do dir=1,nEQN
+         fopt(dir)=fbase(dir)
+         cenopt(dir)=cen_array(dir,iter+1)
+        enddo
+        do i_angle=1,nDOF
+         angle_opt(i_angle)=angle_array(i_angle,iter+1)
+        enddo
+        do dir=1,nMAT_OPT
+         intopt(dir)=intercept_array(dir,iter+1)
+        enddo
      
-       err=zero 
-       do dir=1,nEQN
-        err=err+fopt(dir)**2
-       enddo
-       err=sqrt(err)
-
-       if (singular_flag.eq.1) then
-        ! do nothing
-       else if (singular_flag.eq.0) then
+        err=zero 
+        do dir=1,nEQN
+         err=err+fopt(dir)**2
+        enddo
+        err=sqrt(err)
 
         do i_angle=1,nDOF
 
-         do j_angle=1,nDOF
-          angle_plus(j_angle)=angle_previous(j_angle)
-          angle_minus(j_angle)=angle_previous(j_angle)
-         enddo
-         angle_plus(i_angle)=angle_plus(i_angle)+delta_theta_local
-         angle_minus(i_angle)=angle_minus(i_angle)-delta_theta_local
-
-         if ((err.le.err_plus(i_angle)).and. &
-             (err.le.err_minus(i_angle))) then
+         if (err.le.err_plus(i_angle) then
           ! do nothing
-         else if ((err.ge.err_plus(i_angle)).or. &
-                  (err.ge.err_minus(i_angle))) then
+         else if (err.ge.err_plus(i_angle)) then
 
-          if (err.ge.err_plus(i_angle)) then
-           err=err_plus(i_angle)
-           do dir=1,nEQN
-            fopt(dir)=f_plus(dir,i_angle)
-            cenopt(dir)=cen_plus(dir,i_angle)
-           enddo 
-           intopt(1)=intp(1,i_angle)
-           do j_angle=1,nDOF
-            angle_base(j_angle)=angle_plus(j_angle)
-           enddo
-          endif
-
-          if (err.ge.err_minus(i_angle)) then
-           err=err_minus(i_angle)
-           do dir=1,nEQN
-            fopt(dir)=f_minus(dir,i_angle)
-            cenopt(dir)=cen_minus(dir,i_angle)
-           enddo
-           do dir=1,nMAT_OPT
-            intopt(dir)=intm(dir,i_angle)
-           enddo
-           do j_angle=1,nDOF
-            angle_base(j_angle)=angle_minus(j_angle)
-           enddo
-          endif
- 
+          err=err_plus(i_angle)
+          do dir=1,nEQN
+           fopt(dir)=f_plus(dir,i_angle)
+           cenopt(dir)=cen_plus(dir,i_angle)
+          enddo 
+          do dir=1,nMAT_OPT
+           intopt(dir)=intp(dir,i_angle)
+          enddo
+          do j_angle=1,nDOF
+           angle_opt(j_angle)=angle_plus_archive(i_angle,j_angle)
+          enddo
          else
-          print *,"err,err_plus, or err_minus invalid"
+          print *,"err is NaN"
           stop
-         endif 
+         endif
+
+         if (err.le.err_minus(i_angle) then
+          ! do nothing
+         else if (err.ge.err_minus(i_angle)) then
+          err=err_minus(i_angle)
+          do dir=1,nEQN
+           fopt(dir)=f_minus(dir,i_angle)
+           cenopt(dir)=cen_minus(dir,i_angle)
+          enddo 
+          do dir=1,nMAT_OPT
+           intopt(dir)=intm(dir,i_angle)
+          enddo
+          do j_angle=1,nDOF
+           angle_opt(j_angle)=angle_minus_archive(i_angle,j_angle)
+          enddo
+         else
+          print *,"err is NaN"
+          stop
+         endif
 
         enddo ! i_angle=1..nDOF
-    
-       else
-        print *,"singular_flag invalid"
-        stop
-       endif
+   
+
+
+FIX ME compare with steepest descent and gauss newton
+
+
 
        do dir=1,nEQN
         f_array(dir,iter+2)=fopt(dir)
