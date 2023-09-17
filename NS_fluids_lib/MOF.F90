@@ -10388,10 +10388,10 @@ contains
         refvfrac, &
         continuous_mof, &
         cmofsten, &
-        angle, &
-        ff, &
-        intercept, &
-        testcen, &
+        angle, & !intent(in)
+        ff, & !intent(out)
+        intercept, & !intent(inout)
+        testcen, &  !intent(out)
         use_initial_guess, &
         fastflag,sdim)
 
@@ -12440,8 +12440,8 @@ contains
           JTJ(i_angle,j_angle)=JTJ(i_angle,j_angle)+ &
            fgrad(dir,i_angle)*fgrad(dir,j_angle)
          enddo
-        enddo
-       enddo
+        enddo !j_angle
+       enddo !i_angle
 
 ! jacobian matrix has:
 !   f1_1  f1_2
@@ -12477,12 +12477,26 @@ contains
         singular_flag=0
        else if (abs(DET).le.CENTOL*(dx_normalize**2)) then
         singular_flag=1
+        err_local_min=zero
        else
-        print *,"DET bust"
+        print *,"DET invalid: ",DET
         stop
        endif
 
-       if (singular_flag.eq.0) then
+       if (err_local_min.le.local_tol) then
+
+        do dir=1,nEQN
+         fopt(dir)=fbase(dir)
+         cenopt(dir)=cen_array(dir,iter+1)
+        enddo
+        do i_angle=1,nDOF
+         angle_base(i_angle)=angle_array(i_angle,iter+1)
+        enddo
+        do dir=1,nMAT_OPT
+         intopt(dir)=intercept_array(dir,iter+1)
+        enddo
+
+       else if (err_local_min.gt.local_tol) then
 
         if (sdim.eq.3) then
          JTJINV(1,1)=JTJ(2,2)
@@ -12513,15 +12527,16 @@ contains
          else if (delangle(i_angle).lt.-delta_theta_max) then
           delangle(i_angle)=-delta_theta_max
          endif
-        enddo
+        enddo !i_angle=1,nDOF
+
          ! -pi<angle<pi 
         do i_angle=1,nDOF
-         angle_previous(i_angle)=angle_base(i_angle)
-         call advance_angle(angle_base(i_angle),delangle(i_angle))
+         angle_gauss_newton(i_angle)=angle_base(i_angle)
+         call advance_angle(angle_gauss_newton(i_angle),delangle(i_angle))
         enddo
 
         do dir=1,nMAT_OPT
-         intopt(dir)=intercept_array(dir,iter+1)
+         int_gauss_newton(dir)=intercept_array(dir,iter+1)
         enddo
 
         use_initial_guess=1
@@ -12547,32 +12562,60 @@ contains
          refvfrac, &
          continuous_mof, &
          cmofsten, &
-         angle_base, &
-         fopt, &
-         intopt, &
-         cenopt, & !REAL_T, INTENT(out) :: testcen(nEQN)
+         angle_gauss_newton, &
+         f_gauss_newton, & !intent(out)
+         int_gauss_newton, & 
+         cen_gauss_newton, & !REAL_T, INTENT(out) :: testcen(nEQN)
          use_initial_guess, &
          fastflag,sdim)
 
-       else if (singular_flag.eq.1) then
+        do i_angle=1,nDOF  !  delta_theta_local*(RHS)/||RHS||
+         delangle(i_angle)=delta_theta_local*RHS(i_angle)/err_local_min
+        enddo !i_angle=1,nDOF
 
-        err_local_min=zero
-
-        do dir=1,nEQN
-         fopt(dir)=fbase(dir)
-         cenopt(dir)=cen_array(dir,iter+1)
-        enddo
+         ! -pi<angle<pi 
         do i_angle=1,nDOF
-         angle_base(i_angle)=angle_array(i_angle,iter+1)
-        enddo
-        do dir=1,nMAT_OPT
-         intopt(dir)=intercept_array(dir,iter+1)
+         angle_steepest(i_angle)=angle_base(i_angle)
+         call advance_angle(angle_steepest(i_angle),delangle(i_angle))
         enddo
 
-       else
-        print *,"singular_flag invalid"
-        stop
-       endif 
+        do dir=1,nMAT_OPT
+         int_steepest(dir)=intercept_array(dir,iter+1)
+        enddo
+
+        use_initial_guess=1
+
+         ! calling from:
+         !   find_cut_geom_slope
+        call multi_rotatefunc( &
+         tid, &
+         uncaptured_volume_vof, &
+         mofdata, &
+         nMAT_OPT, & ! 1 
+         nDOF, & ! sdim-1
+         nEQN, & ! sdim
+         use_MilcentLemoine, &
+         bfact,dx,xsten0,nhalf0, &
+         xtetlist_vof, & !intent(in)
+         nlist_vof, & !intent(in)
+         xtetlist_cen, & !intent(in)
+         nlist_cen, & !intent(in)
+         nlist_alloc, & !intent(in)
+         nmax, &
+         refcentroid, &
+         refvfrac, &
+         continuous_mof, &
+         cmofsten, &
+         angle_steepest, & !intent(in)
+         f_steepest, & !intent(out)
+         int_steepest, &  !intent(inout)
+         cen_steepest, & !REAL_T, INTENT(out) :: testcen(nEQN)
+         use_initial_guess, &
+         fastflag,sdim)
+
+
+FIX ME
+
      
        err=zero 
        do dir=1,nEQN
