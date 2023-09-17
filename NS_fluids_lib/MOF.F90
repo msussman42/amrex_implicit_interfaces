@@ -12486,7 +12486,7 @@ contains
         stop
        endif
 
-        !err_local_min=||grad COST(angles)||
+        !err_local_min=||grad COST(angle(s))||
        if (err_local_min.le.local_tol) then
 
         do dir=1,nEQN
@@ -12580,6 +12580,12 @@ contains
          use_initial_guess, &
          fastflag,sdim)
 
+        err_gauss_newton=zero
+        do dir=1,nEQN
+         err_gauss_newton=err_gauss_newton+f_gauss_newton(dir)**2
+        enddo
+        err_gauss_newton=sqrt(err_gauss_newton)
+
         do i_angle=1,nDOF  !  delta_theta_local*(RHS)/||RHS||
          delangle(i_angle)=delta_theta_local*RHS(i_angle)/err_local_min
         enddo !i_angle=1,nDOF
@@ -12624,6 +12630,12 @@ contains
          use_initial_guess, &
          fastflag,sdim)
 
+        err_steepest=zero
+        do dir=1,nEQN
+         err_steepest=err_steepest+f_steepest(dir)**2
+        enddo
+        err_steepest=sqrt(err_steepest)
+
         do dir=1,nEQN
          fopt(dir)=fbase(dir)
          cenopt(dir)=cen_array(dir,iter+1)
@@ -12659,7 +12671,7 @@ contains
            angle_opt(j_angle)=angle_plus_archive(i_angle,j_angle)
           enddo
          else
-          print *,"err is NaN"
+          print *,"err or err_plus bad:",i_angle,err,err_plus(i_angle)
           stop
          endif
 
@@ -12678,17 +12690,58 @@ contains
            angle_opt(j_angle)=angle_minus_archive(i_angle,j_angle)
           enddo
          else
-          print *,"err is NaN"
+          print *,"err or err_minus bad:",i_angle,err,err_minus(i_angle)
           stop
          endif
 
         enddo ! i_angle=1..nDOF
    
+        if (err.le.err_gauss_newton) then
+         ! do nothing
+        else if (err.ge.err_gauss_newton) then
 
+         err=err_gauss_newton
+         do dir=1,nEQN
+          fopt(dir)=f_gauss_newton(dir)
+          cenopt(dir)=cen_gauss_newton(dir)
+         enddo 
+         do dir=1,nMAT_OPT
+          intopt(dir)=int_gauss_newton(dir)
+         enddo
+         do j_angle=1,nDOF
+          angle_opt(j_angle)=angle_gauss_newton(j_angle)
+         enddo
 
-FIX ME compare with steepest descent and gauss newton
+        else
+         print *,"err or err_gauss_newton bad:",err,err_gauss_newton
+         stop
+        endif
 
+        if (err.le.err_steepest) then
+         ! do nothing
+        else if (err.ge.err_steepest) then
 
+         err=err_steepest
+         do dir=1,nEQN
+          fopt(dir)=f_steepest(dir)
+          cenopt(dir)=cen_steepest(dir)
+         enddo 
+         do dir=1,nMAT_OPT
+          intopt(dir)=int_steepest(dir)
+         enddo
+         do j_angle=1,nDOF
+          angle_opt(j_angle)=angle_steepest(j_angle)
+         enddo
+
+        else
+         print *,"err or err_steepest bad:",err,err_steepest
+         stop
+        endif
+
+       else
+        print *,"err_local_min invalid ",err_local_min
+        stop
+       endif
 
        do dir=1,nEQN
         f_array(dir,iter+2)=fopt(dir)
@@ -12696,7 +12749,7 @@ FIX ME compare with steepest descent and gauss newton
        enddo
 
        do i_angle=1,nDOF
-        angle_array(i_angle,iter+2)=angle_base(i_angle) 
+        angle_array(i_angle,iter+2)=angle_opt(i_angle) 
        enddo
        delangle_array(iter+2)=delta_theta_local
 
