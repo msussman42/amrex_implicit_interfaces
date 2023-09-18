@@ -10,7 +10,6 @@
 
 #include "EXTRAP_COMP.H"
 
-#define MOF_INITIAL_GUESS_N_ANGLE (0.0d0*0.0d0)
 #define MOF_INITIAL_GUESS_CENTROIDS (3)
 
 #define MOFDEB (0)
@@ -11544,7 +11543,6 @@ contains
       REAL_T fgrad(nEQN,nDOF)  
       INTEGER_T ii,iicrit
       INTEGER_T i_angle,j_angle
-      INTEGER_T i_angle_grid,j_angle_grid
       REAL_T delangle(nDOF)
       REAL_T RHS(nDOF)
       REAL_T JTJ(nDOF,nDOF)
@@ -11630,13 +11628,11 @@ contains
        stop
       endif
 
-      if ((MOFITERMAX.lt.num_materials+2+MOF_INITIAL_GUESS_CENTROIDS+ &
-           NINT(MOF_INITIAL_GUESS_N_ANGLE)).or. &
+      if ((MOFITERMAX.lt.num_materials+2+MOF_INITIAL_GUESS_CENTROIDS).or. &
           (MOFITERMAX.gt.MOFITERMAX_LIMIT)) then
        print *,"MOFITERMAX out of range find cut geom slope"
        print *,"MOFITERMAX: ",MOFITERMAX
        print *,"MOFITERMAX_LIMIT: ",MOFITERMAX_LIMIT
-       print *,"MOF_INITIAL_GUESS_N_ANGLE: ",MOF_INITIAL_GUESS_N_ANGLE
        print *,"num_materials: ",num_materials
 
        stop
@@ -11847,37 +11843,24 @@ contains
 
         enddo !ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
-        if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS+ &
-            NINT(MOF_INITIAL_GUESS_N_ANGLE).le.MOFITERMAX) then
+        if (num_materials+3+MOF_INITIAL_GUESS_CENTROIDS.le.MOFITERMAX) then
          ! do nothing
         else
          print *,"no room for initial guess"
          print *,"MOFITERMAX ",MOFITERMAX
          print *,"MOF_INITIAL_GUESS_CENTROIDS ",MOF_INITIAL_GUESS_CENTROIDS
-         print *,"MOF_INITIAL_GUESS_N_ANGLE ",MOF_INITIAL_GUESS_N_ANGLE
          print *,"num_materials ",num_materials
          stop
         endif
 
-        i_angle=0
-        j_angle=0
         if (sdim.eq.2) then
-         i_angle_grid=NINT(MOF_INITIAL_GUESS_N_ANGLE)
-         j_angle_grid=1
          if (nDOF.eq.1) then
           ! do nothing
          else
           print *,"nDOF invalid"
           stop
          endif
-
         else if (sdim.eq.3) then
-         i_angle_grid=NINT(sqrt(MOF_INITIAL_GUESS_N_ANGLE))
-         j_angle_grid=i_angle_grid
-         if (i_angle_grid*j_angle_grid.ne.NINT(MOF_INITIAL_GUESS_N_ANGLE)) then
-          print *,"MOF_INITIAL_GUESS_N_ANGLE not perfect square"
-          stop
-         endif
          if (nDOF.eq.2) then
           ! do nothing
          else
@@ -11888,23 +11871,6 @@ contains
          print *,"sdim invalid" 
          stop
         endif
-
-        if (i_angle_grid.gt.0) then
-         delangle(1)=two*MOF_PI/i_angle_grid
-        endif
-
-        do ii=1,NINT(MOF_INITIAL_GUESS_N_ANGLE)
-         nguess=nguess+1
-         angle_array(1,nguess)=-MOF_PI+(i_angle+half)*delangle(1)
-         if (sdim.eq.3) then
-          angle_array(nDOF,nguess)=-MOF_PI+(j_angle+half)*delangle(1)
-         endif
-         i_angle=i_angle+1
-         if (i_angle.ge.i_angle_grid) then
-          i_angle=0
-          j_angle=j_angle+1
-         endif
-        enddo !ii=1..MOF_INITIAL_GUESS_N_ANGLE
 
         do dir=1,sdim
          grid_index_ML(dir)=grid_index(dir)/bfact
@@ -24880,7 +24846,7 @@ contains
        call volume_sanity_check()
       endif
       if (1.eq.0) then
-       sdim=2
+       sdim=3
        nmax_test=POLYGON_LIST_MAX
        call diagnostic_MOF(sdim,nmax_test)
        stop
