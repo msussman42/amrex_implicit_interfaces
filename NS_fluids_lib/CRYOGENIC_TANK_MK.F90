@@ -46,7 +46,7 @@ INTEGER_T :: num_aux_expect
 ! x3D(3)=x(dir_y)=x(2) if SDIM==3
 INTEGER_T, PARAMETER :: dir_x = 1
 INTEGER_T, PARAMETER :: dir_z = SDIM ! vertical direction of gravity force
-! dir_y is not used if SDIM==2
+! dir_y should not be used if SDIM==2 (dir_y=-1 as a placeholder)
 ! dir_y=2 if SDIM==3
 INTEGER_T :: dir_y  
 
