@@ -789,7 +789,9 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
   velphys(dir)=zero
  enddo
 
- if(NINT(radblob7).eq.1) then
+ if(NINT(radblob7).eq.0) then
+  !do nothing
+ elseif(NINT(radblob7).eq.1) then
   xdisp_amplitude=xblob7   
   xdisp_freq=yblob7
 
@@ -875,7 +877,7 @@ subroutine rigid_displacement(xfoot,t,xphys,velphys)
    stop
   endif
  else
-  print *,"radblob7 invalid (rigid motion type invalid)"
+  print *,"radblob7 invalid (rigid motion type invalid): ",radblob7
   stop
  endif
 

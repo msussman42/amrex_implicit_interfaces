@@ -46,6 +46,7 @@ stop_time=20.0
 #  tpce_ladhousing.vtk
 ns.probtype         = 423
 # variable accessible from plug-in:
+#ns.axis_dir        = 0 #heater only on side (see e.g. run2d/inputs.ZBOT)
 ns.axis_dir         = 1 #heater on top
 # ns.axis_dir         = 2 # user defined geometry files for TPCE
 # for ZBOT:
@@ -151,7 +152,8 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
 #amr.n_cell          = 128 128 128
-amr.n_cell          = 64 64 64 # 8 cores compute1
+amr.n_cell          = 32 32 32 #for debugging
+#amr.n_cell          = 64 64 64 #8 cores, compute1
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
