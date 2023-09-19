@@ -19,6 +19,31 @@ stop_time=20.0
 
 # unique problem identifier associated with each new plug-in:
 # CRYOGENIC_TANK_MK.F90
+# if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID).and.(axis_dir.eq.2) then
+#  zbot_flight_heatera.vtk
+#  zbot_flight_heaterb.vtk
+#  zbot_flight_inflow_thick.vtk
+#  zbot_flight_outflow_thick.vtk
+#  zbot_flight_tank_thicknozzles.vtk
+#  zbot_flight_inletnozzle_thick.vtk
+#  zbot_flight_outletnozzle_thick.vtk
+# if (TANK_MK_GEOM_DESCRIPTOR.eq.TPCE_FLIGHT_ID).and.(axis_dir.eq.2).and.
+#    (TANK_MK_THICK_WALLS.eq.1) then
+#  heatera_coarse.vtk
+#  heaterb_coarse.vtk
+#  nozzlesource_coarse.vtk
+#  sink_coarse.vtk
+#  tank_coarse.vtk
+#  nozzle_coarse.vtk
+# if (TANK_MK_GEOM_DESCRIPTOR.eq.TPCE_FLIGHT_ID).and.(axis_dir.eq.2).and.
+#    (TANK_MK_THICK_WALLS.eq.0) then
+#  tpce_heatera.vtk
+#  tpce_heaterb.vtk
+#  nozzlesource_15deg.vtk
+#  tpce_sink.vtk
+#  tpce_shell.vtk
+#  nozzle_15deg.vtk or nozzle_15deg_01thick.vtk 
+#  tpce_ladhousing.vtk
 ns.probtype         = 423
 # variable accessible from plug-in:
 ns.axis_dir         = 1 #heater on top
