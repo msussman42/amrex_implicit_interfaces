@@ -183,6 +183,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
                      print *,"Nr_IBM: ",Nr_IBM
                      stop
                     endif
+
                     IBucketx=
      &        int((gx_ibm_fib(i2l,j)-BucketXStart(1))/BucketdX(1))+1
              
