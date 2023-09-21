@@ -19,7 +19,10 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &      ,tdxnm1_1(nr_ibm_fib)
      &      ,tdxnm1_2(nr_ibm_fib)
      &      ,tdxnm1_3(nr_ibm_fib)
-      logical free_bc,free_bcb
+      logical free_bc,free_bcb,implicit_tension
+
+      implicit_tension=.false.
+
       temp3dt = dt2
 !     here dt acually is delta_t^2 in input to subroutine
 c here {dt^2} bring to t^{n+1/2} to have a good matrix shape
@@ -32,9 +35,19 @@ c adding (dx.dx)^{n-1} to rhs  rhs <-- \frac{(1+(dx.dx)^{n-1})}
      &           *(1.0d0+fs_1_ibmo_fib(i,j))/2.0d0
 !     +density_coefp(i)/2.0d0
 c computing (dx.dx)^{n}
+! num_divu_outer increased ....?
+! perhaps increase "maxiter"
+! 
+            if (implicit_tension.eqv..true.) then
+             temp1=(gx_ibm_massive_fib(i,j+1)-gx_ibm_massive_fib(i,j))/
+     &          dsf_ibm_fib(i,j)
+             temp2=(gy_ibm_massive_fib(i,j+1)-gy_ibm_massive_fib(i,j))/
+     &          dsf_ibm_fib(i,j) 
+            else
+             temp1=(gx_ibm_fib(i,j+1)-gx_ibm_fib(i,j))/dsf_ibm_fib(i,j)
+             temp2=(gy_ibm_fib(i,j+1)-gy_ibm_fib(i,j))/dsf_ibm_fib(i,j) 
+            endif
 
-            temp1=(gx_ibm_fib(i,j+1)-gx_ibm_fib(i,j))/dsf_ibm_fib(i,j)
-            temp2=(gy_ibm_fib(i,j+1)-gy_ibm_fib(i,j))/dsf_ibm_fib(i,j) 
             temp3=0.0
             if(ndim .gt. 2) 
      &      temp3=(gz_ibm_fib(i,j+1)-gz_ibm_fib(i,j))/dsf_ibm_fib(i,j) 
