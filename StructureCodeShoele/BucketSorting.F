@@ -7,6 +7,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        implicit none
        integer i2,jq,j,IBucketx,IBuckety,IBucketz,ibkt,k,i2l
      & ,ne2,jtype2,itype2,ntype2,ItypecontELE(3),ntem2,nos2,noj
+       integer bucket_index
        real*8 Xcont(3)
           if(nr_ibm_fib.ge. 1) then 
             IBucket_fib=0
@@ -236,9 +237,34 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
              elseif (bodytype(i2) .eq. fiber)then
                 i2l=Iglbloc_fib(i2)
                  do j=1,ns_ibm_r_fib(i2l)
+                    if ((i2l.ge.1).and.(i2l.le.Nr_IBM_fib)) then
+!                    do nothing
+                    else
+                     print *,"i2l invalid: ",i2l
+                     print *,"Nr_IBM_fib: ",Nr_IBM_fib
+                     stop
+                    endif
                     k=IBucket_fib(i2l,j)
+                    if ((k.ge.1).and.(k.le.NMaxnumbuck)) then
+!                    do nothing
+                    else
+                     print *,"k invalid: ",k
+                     print *,"NMaxnumbuck ",NMaxnumbuck
+                     stop
+                    endif
                     NBucket(i2,k)= NBucket(i2,k)+1
-                    sBucket_fib(i2l,k,NBucket(i2,k)+PBucket(i2,k)-1)=j
+
+                    bucket_index=NBucket(i2,k)+PBucket(i2,k)-1
+
+                    if ((bucket_index.ge.1).and.
+     &                  (bucket_index.le.Ns_IBM_fib)) then
+!                    do nothing
+                    else
+                     print *,"bucket_index invalid: ",bucket_index
+                     print *,"Ns_IBM_fib: ",Ns_IBM_fib
+                     stop
+                    endif
+                    sBucket_fib(i2l,k,bucket_index)=j
 
                 enddo             
              elseif (bodytype(i2) .eq. fibrousshell)then

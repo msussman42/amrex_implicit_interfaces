@@ -3001,12 +3001,18 @@ C Target Points
       ENDIF ! iErr 
 
 C Bucket Search
+      print *,"allocating NBucket(Nr_IBM,NMaxnumbuck) "
+     &  ,Nr_IBM,NMaxnumbuck
+
       ALLOCATE(NBucket(Nr_IBM,NMaxnumbuck),STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
      &  'Allocate_memory: Memory Allocation Error for NBucket'
         STOP
       ENDIF ! iErr
+
+      print *,"allocating PBucket(Nr_IBM,NMaxnumbuck) "
+     &  ,Nr_IBM,NMaxnumbuck
 
       ALLOCATE(PBucket(Nr_IBM,NMaxnumbuck),STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
@@ -3015,12 +3021,18 @@ C Bucket Search
         STOP
       ENDIF ! iErr
 
+      print *,"allocate IBucket_fib(Nr_IBM_fib,Ns_IBM_fib) "
+     &  ,Nr_IBM_fib,Ns_IBM_fib
+
       ALLOCATE(IBucket_fib(Nr_IBM_fib,Ns_IBM_fib),STAT=iErr)
       IF ( iErr /= ERR_NONE ) THEN
         WRITE(*,*) 
      &  'Allocate_memory: Memory Allocation Error for IBucket_fib'
         STOP
       ENDIF ! iErr
+
+      print *,"alloc SBucket_fib(Nr_IBM_fib,NMaxnumbuck,Ns_IBM_fib) "
+     &  ,Nr_IBM_fib,NMaxnumbuck,Ns_IBM_fib
 
       ALLOCATE(SBucket_fib(Nr_IBM_fib,NMaxnumbuck,Ns_IBM_fib)
      &         ,STAT=iErr)
