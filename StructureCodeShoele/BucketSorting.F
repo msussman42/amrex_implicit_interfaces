@@ -8,27 +8,23 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
        integer i2,jq,j,IBucketx,IBuckety,IBucketz,ibkt,k,i2l
      & ,ne2,jtype2,itype2,ntype2,ItypecontELE(3),ntem2,nos2,noj
        integer bucket_index
+       integer bucket_index_A
+       integer bucket_index_B
        real*8 Xcont(3)
-          if(nr_ibm_fib.ge. 1) then 
-            IBucket_fib=0
-            SBucket_fib=0
-          endif
-          if(nr_ibm_fsh.ge. 1) then 
-            IBucket_fsh=0
-            SBucket_fsh=0
-          endif
-          if(nr_ibm_esh.ge. 1) then 
-            IBucket_esh=0
-            SBucket_esh=0
-          endif
-          if(nr_ibm_fbc.ge. 1) then 
-            IBucket_fbc=0
-            SBucket_fbc=0
-          endif
+          IBucket_fib=0
+          SBucket_fib=0
+          IBucket_fsh=0
+          SBucket_fsh=0
+          IBucket_esh=0
+          SBucket_esh=0
+          IBucket_fbc=0
+          SBucket_fbc=0
 
           do i2=1,nr_ibm
             NBucket(i2,1:NBucketnum)=0
            if (bodytype(i2) .eq. shell)then
+                print *,"bucket unsupported"
+                stop
                 i2l=Iglbloc_esh(i2)
                 if(contacttype .gt. 1) then
                 do ne2=1,numelr(i2)
@@ -107,6 +103,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
                 enddo
               endif
            elseif (bodytype(i2) .eq. fabric)then
+                print *,"bucket unsupported"
+                stop
                 i2l=Iglbloc_fbc(i2)
                 if(contacttype .gt. 1) then
                 do ne2=1,numelr(i2)
@@ -171,6 +169,20 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
             elseif (bodytype(i2) .eq. fiber)then
                 i2l=Iglbloc_fib(i2)              
                  do j=1,ns_ibm_r_fib(i2l)
+                    if ((i2l.ge.1).and.(i2l.le.Nr_IBM_fib)) then
+!                    do nothing
+                    else
+                     print *,"i2l invalid: ",i2l
+                     print *,"Nr_IBM_fib: ",Nr_IBM_fib
+                     stop
+                    endif
+                    if ((i2.ge.1).and.(i2.le.Nr_IBM)) then
+!                    do nothing
+                    else
+                     print *,"i2 invalid: ",i2
+                     print *,"Nr_IBM: ",Nr_IBM
+                     stop
+                    endif
                     IBucketx=
      &        int((gx_ibm_fib(i2l,j)-BucketXStart(1))/BucketdX(1))+1
              
@@ -184,10 +196,33 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &                       IBucketx
      &                     +(IBuckety-1)*IBucketnum(1)
      &                     +(IBucketz-1)*IBucketnum(1)*IBucketnum(2)
-                    NBucket(i2,IBucket_fib(i2l,j))=
-     &              NBucket(i2,IBucket_fib(i2,j))+1
+
+                    bucket_index_A=Ibucket_fib(i2l,j)
+                    bucket_index_B=Ibucket_fib(i2,j)
+
+                    if ((bucket_index_A.ge.1).and.
+     &                  (bucket_index_A.le.NMaxnumbuck)) then
+!                    do nothing
+                    else
+                     print *,"bucket_index_A invalid: ",bucket_index_A
+                     print *,"NMaxnumbuck: ",NMaxnumbuck
+                     stop
+                    endif
+                    if ((bucket_index_B.ge.1).and.
+     &                  (bucket_index_B.le.NMaxnumbuck)) then
+!                    do nothing
+                    else
+                     print *,"bucket_index_B invalid: ",bucket_index_B
+                     print *,"NMaxnumbuck: ",NMaxnumbuck
+                     stop
+                    endif
+
+                    NBucket(i2,bucket_index_A)=
+     &               NBucket(i2,bucket_index_B)+1
                  enddo
             elseif (bodytype(i2) .eq. fibrousshell)then
+                print *,"bucket unsupported"
+                stop
                 i2l=Iglbloc_fsh(i2)              
                  do jq=1,nq_ibm_r_fsh(i2l)               
                  do j=1,ns_ibm_r_fsh(i2l)
@@ -216,6 +251,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
             enddo
             NBucket(i2,1:NBucketnum)=0
             if (bodytype(i2) .eq. shell)then
+                print *,"bucket unsupported"
+                stop
                 i2l=Iglbloc_esh(i2)
                 if(contacttype .gt. 1) then
                 do ne2=1,numelr(i2)
@@ -268,6 +305,8 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
 
                 enddo             
              elseif (bodytype(i2) .eq. fibrousshell)then
+                print *,"bucket unsupported"
+                stop
                 i2l=Iglbloc_fsh(i2)
                  do jq=1,nq_ibm_r_fsh(i2l)             
                  do j=1,ns_ibm_r_fsh(i2l)
