@@ -21,7 +21,7 @@ c======global inputs 1-------------------------
 .true.                                 /flag record position    
 ./posFib1.bubble_jetting.dat
 0.0                                    /TSIBMin (temperature)
-2.0  0.0000   1.5  0.0                 /Cs_IBM(damping), CS_IBM_rays, Density_Coef, Density_coefP
+20.0  0.0000   1.5  0.0                /Cs_IBM(damping), CS_IBM_rays, Density_Coef, Density_coefP
 .true.  .false.   .false.  .flase.  .false.   .false.         /6 records:1FluidForceFlag,2ThermalForceFlag,3ContactForceFlag,4ExternalPressureFlag,Electromehcanical,ImplicitElecMech
 .false.                                /plane contact if true need to add following lines
 0.0 0.0 0.0                            /shift coordinates was (2.0,4.0,0.0)
