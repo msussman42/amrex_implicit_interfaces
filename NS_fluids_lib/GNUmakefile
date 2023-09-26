@@ -23,7 +23,7 @@ MOF_HOME = ..
 #
 
 PRECISION = DOUBLE
-DEBUG	  = FALSE
+DEBUG	  = TRUE
 USE_ASSERTION = TRUE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
@@ -78,36 +78,43 @@ CTML_FBC = FALSE
 
 MAC_LAPTOP = FALSE
 LINUX_DESKTOP = TRUE
-HPC_INTEL = FALSE
 HPC_GNU = FALSE
-NASA_INTEL = FALSE
 
-#CXXSTD = gnu++14
-#CXXSTD = c++17
-CXXSTD = c++14
-
-ifeq ($(NASA_INTEL),TRUE)
-#module purge
-#module load mpi-hpe/mpt
-#module load comp-intel/2020.4.304
- HOSTNAME=nasaintel
- COMP = nasaintel
- FCOMP = intel
- AMREX_CCOMP=nasaintel
- AMREX_FCOMP=intel
-endif
-ifeq ($(HPC_INTEL),TRUE)
- COMP = intel
- FCOMP = intel
-endif
 ifeq ($(HPC_GNU),TRUE)
  COMP = g++
  FCOMP = gfortran
 endif
 ifeq ($(LINUX_DESKTOP),TRUE)
- COMP = g++
- FCOMP = gfortran
+ COMP = gnu
+
+# ask gfortran the name of the library to link in.  First check for the
+# static version.  If it returns only the name w/o a path, then it
+# was not found.  In that case, ask for the shared-object version.
+gfortran_liba  = $(shell $(F90) -print-file-name=libgfortran.a)
+gfortran_libso = $(shell $(F90) -print-file-name=libgfortran.so)
+
+ifneq ($(gfortran_liba),libgfortran.a)  # if found the full path is printed, thus `neq`.
+  LIBRARY_LOCATIONS += $(dir $(gfortran_liba))
+else
+  LIBRARY_LOCATIONS += $(dir $(gfortran_libso))
 endif
+
+override XTRALIBS += -lgfortran
+
+quadmath_liba  = $(shell $(F90) -print-file-name=libquadmath.a)
+quadmath_libso = $(shell $(F90) -print-file-name=libquadmath.so)
+
+ifneq ($(quadmath_liba),libquadmath.a)
+  override XTRALIBS += -lquadmath
+else ifneq ($(quadmath_libso),libquadmath.so)
+  override XTRALIBS += -lquadmath
+endif
+
+FFLAGS   += $(GENERIC_GNU_FLAGS)
+F90FLAGS += $(GENERIC_GNU_FLAGS)
+
+endif
+
 ifeq ($(MAC_LAPTOP),TRUE)
  COMP = g++-8
  FCOMP = gfortran-8
@@ -160,7 +167,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = TRUE
+USE_MPI = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE

@@ -50,7 +50,7 @@ ifeq ($(WARN_ALL),TRUE)
     warning_flags += -Wshadow
   endif
 
-  CXXFLAGS += $(warning_flags) -Woverloaded-virtual
+  CXXFLAGS += $(warning_flags) -Woverloaded-virtual -Wnon-virtual-dtor
   CFLAGS += $(warning_flags)
 endif
 
@@ -60,18 +60,18 @@ ifeq ($(WARN_ERROR),TRUE)
 endif
 
 # disable some warnings
-CXXFLAGS += -Wno-pass-failed -Wno-c++17-extensions
+CXXFLAGS += -Wno-c++17-extensions
 
 ########################################################################
 
 ifdef CXXSTD
   CXXSTD := $(strip $(CXXSTD))
 else
-  CXXSTD := c++14
+  CXXSTD := c++17
 endif
 
 CXXFLAGS += -std=$(CXXSTD)
-CFLAGS   += -std=c99
+CFLAGS   += -std=c11
 
 FFLAGS   += -ffixed-line-length-none -fno-range-check -fno-second-underscore
 F90FLAGS += -ffree-line-length-none -fno-range-check -fno-second-underscore -fimplicit-none
@@ -106,7 +106,7 @@ F90FLAGS += $(GENERIC_COMP_FLAGS)
 
 ########################################################################
 
-#SUSSMAN
+ifneq ($(BL_NO_FORT),TRUE)
 
 # ask gfortran the name of the library to link in.  First check for the
 # static version.  If it returns only the name w/o a path, then it
@@ -120,8 +120,21 @@ else
   LIBRARY_LOCATIONS += $(dir $(gfortran_libso))
 endif
 
-override XTRALIBS += -lgfortran -lquadmath
+override XTRALIBS += -lgfortran
+
+quadmath_liba  = $(shell $(F90) -print-file-name=libquadmath.a)
+quadmath_libso = $(shell $(F90) -print-file-name=libquadmath.so)
+
+ifneq ($(quadmath_liba),libquadmath.a)
+  override XTRALIBS += -lquadmath
+else ifneq ($(quadmath_libso),libquadmath.so)
+  override XTRALIBS += -lquadmath
+endif
+
+endif
 
 ifeq ($(FSANITIZER),TRUE)
-  override XTRALIBS += -lubsan
+  ifneq ($(shell uname),Darwin)
+    override XTRALIBS += -lubsan
+  endif
 endif
