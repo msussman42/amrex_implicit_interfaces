@@ -1,18 +1,13 @@
 
 AMREX_HOME := $(shell pwd)
 
-#SUSSMAN
-CXXSTD = c++14
-
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 ifeq ($(USE_CUDA),TRUE)
   ALLOW_DIFFERENT_COMP = TRUE
 endif
 
-#SUSSMAN
-#Pdirs := Base AmrCore Amr Boundary
-Pdirs := Base 
+Pdirs := Base AmrCore Amr Boundary
 ifeq ($(USE_PARTICLES),TRUE)
     Pdirs += Particle
    ifeq ($(USE_FORTRAN_INTERFACE),TRUE)
@@ -24,6 +19,9 @@ ifeq ($(USE_FORTRAN_INTERFACE),TRUE)
 endif
 ifeq ($(USE_LINEAR_SOLVERS),TRUE)
    Pdirs += LinearSolvers/MLMG
+   ifeq ($(DIM),3)
+     Pdirs += LinearSolvers/OpenBC
+   endif
    ifeq ($(USE_FORTRAN_INTERFACE),TRUE)
      Pdirs += F_Interfaces/LinearSolvers
    endif
@@ -49,6 +47,8 @@ ifeq ($(USE_SUNDIALS),TRUE)
 endif
 Ppack := $(foreach dir, $(Pdirs), $(AMREX_HOME)/Src/$(dir)/Make.package)
 include $(Ppack)
+
+Pdirs += Base/Parser
 
 all: $(amrexlib)
 	@echo SUCCESS

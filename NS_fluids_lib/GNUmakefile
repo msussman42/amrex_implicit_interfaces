@@ -6,15 +6,6 @@
 # For post processing:
 # git clone https://github.com/AMReX-Codes/amrex.git
 # git clone https://github.com/AMReX-Combustion/PeleAnalysis.git 
-# For libamrex (in the amrex-master directory):
-# ./configure -h
-# example:
-# (1)
-# ./configure --dim 2 --with-fortran no --with-mpi no --with-omp no --comp gnu 
-#    --debug no --enable-particle no --enable-fortran-api no 
-#    --enable-linear-solver no --sensei-amr-inst no --enable-probinit no
-# (2) make
-# (3) tmp_build_dir/o/2d.gnu.EXE/libamrex.a 
 AMREX_HOME = ../amrex-master
 MOF_HOME = ..
 
@@ -31,7 +22,6 @@ MOF_HOME = ..
 # endif
 #
 
-USE_LIBAMREX = FALSE
 PRECISION = DOUBLE
 DEBUG	  = FALSE
 USE_ASSERTION = TRUE
@@ -214,16 +204,7 @@ ifeq ($(MEHDI_VAHAB_FSI),TRUE)
 include $(MOF_HOME)/StructureCodeShoele/Make.package
 endif
 
-ifeq ($(USE_LIBAMREX),FALSE)
 include $(AMREX_HOME)/Src/Base/Make.package
-endif
-LIBAMREX_FILE_DIR = $(AMREX_HOME)/tmp_build_dir/o/2d.gnu.DEBUG.EXE/
-ifeq ($(USE_LIBAMREX),TRUE)
-INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base
-INCLUDE_LOCATIONS += $(AMREX_HOME)/Src/Base/Parser
-LDFLAGS += -L$(LIBAMREX_FILE_DIR)
-override XTRALIBS += -lamrex
-endif
 
 include ./Make.package
 include $(MOF_HOME)/amrlib/Make.package
