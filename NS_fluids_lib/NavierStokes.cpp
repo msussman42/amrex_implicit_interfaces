@@ -2811,7 +2811,7 @@ NavierStokes::read_params ()
       }
      } //local_dir=0 ... sdim-1
      gravity_reference_wavelen_default= 
-	  sqrt(gravity_reference_wavelen_default);
+	  std::sqrt(gravity_reference_wavelen_default);
 
     } else
      amrex::Error("gravity_max_index invalid; NavierStokes::read_params() ");
@@ -4360,7 +4360,7 @@ NavierStokes::read_params ()
     if (projection_pressure_scale<=0.0)
      amrex::Error("projection pressure scale invalid");
 
-    projection_velocity_scale=sqrt(projection_pressure_scale);
+    projection_velocity_scale=std::sqrt(projection_pressure_scale);
 
     num_divu_outer_sweeps=1;
 
@@ -19650,7 +19650,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    // liquid viscosity=etaS+etaP ( 1+ (beta gamma_dot)^alpha )^((n-1)/alpha)
    //
    // for each material, there are 5 components:
-   // 1. \dot{gamma}=sqrt(2 * D:D)  D=(grad U + grad U^T)/2 (plot label: DT)
+   // 1. \dot{gamma}=std::sqrt(2 * D:D)  D=(grad U + grad U^T)/2 (plot label: DT)
    // 2. Tr(A) if viscoelastic (plot label: TR)
    //    \dot{gamma} o.t.
    // 3. Tr(A) (liquid viscosity - etaS)/etaP  if FENE-CR+Carreau
@@ -23502,7 +23502,7 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,
   } else
    amrex::Error("problen[dir] invalid");
  }
- max_problen=sqrt(max_problen);
+ max_problen=std::sqrt(max_problen);
  if (max_problen>0.0) {
   // do nothing
  } else

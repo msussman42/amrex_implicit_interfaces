@@ -2645,7 +2645,7 @@ ABecLaplacian::CG_solve(
 #endif
 
  if (rnorm>=0.0) {
-  rnorm=sqrt(rnorm);
+  rnorm=std::sqrt(rnorm);
  } else {
   amrex::Error("rnorm invalid");
  }
@@ -2744,7 +2744,7 @@ ABecLaplacian::CG_solve(
   rnorm=LPnorm(*CG_r[coarsefine],level);
 
   if (rnorm>=0.0) {
-   rnorm=sqrt(rnorm);
+   rnorm=std::sqrt(rnorm);
   } else {
    amrex::Error("rnorm invalid mglib");
   }
@@ -3070,7 +3070,7 @@ ABecLaplacian::CG_solve(
 
   Real testnorm=LPnorm(*CG_r[coarsefine],level);
   if (testnorm>=0.0) {
-   testnorm=sqrt(testnorm);
+   testnorm=std::sqrt(testnorm);
   } else {
    amrex::Error("testnorm invalid mglib");
   }
@@ -3205,7 +3205,7 @@ ABecLaplacian::MG_errorEstimate(int level,
  if (ncomp!=nsolve_ABec)
   amrex::Error("ncomp invalid");
 
- Real local_error=sqrt(LPnorm(resid,level));
+ Real local_error=std::sqrt(LPnorm(resid,level));
      
  return local_error;
 }  // end subroutine MG_errorEstimate

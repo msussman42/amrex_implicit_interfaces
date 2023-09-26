@@ -57,18 +57,18 @@ ifeq ($(WARN_ERROR),TRUE)
 endif
 
 # disable some warnings
-CXXFLAGS += -Wno-pass-failed -Wno-c++17-extensions
+CXXFLAGS += -Wno-c++17-extensions
 
 ########################################################################
 
 ifdef CXXSTD
   CXXSTD := $(strip $(CXXSTD))
 else
-  CXXSTD := c++14
+  CXXSTD := c++17
 endif
 
 CXXFLAGS += -std=$(CXXSTD)
-CFLAGS   += -std=c99
+CFLAGS   += -std=c11
 
 FMODULES = -J$(fmoddir) -I $(fmoddir)
 
@@ -100,8 +100,9 @@ F90FLAGS += $(GENERIC_COMP_FLAGS)
 
 ########################################################################
 
-#SUSSMAN
-override XTRALIBS += -lflang
+ifneq ($(BL_NO_FORT),TRUE)
+  override XTRALIBS += -lflang
+endif
 
 ifeq ($(FSANITIZER),TRUE)
   override XTRALIBS += -lubsan

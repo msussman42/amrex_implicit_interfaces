@@ -2125,7 +2125,7 @@ NavierStokes::sum_integrated_quantities (
       // r=(3V/(4pi))^(1/3)
       // r^3=3V/(4pi)
       // V=4 pi r^3/3
-      Real gdiam=2.0*exp(log(3.0*gvol_modify/(4.0*NS_PI))/3.0);
+      Real gdiam=2.0*std::exp(std::log(3.0*gvol_modify/(4.0*NS_PI))/3.0);
       std::cout << "TIME= " << upper_slab_time << " isort= " << isort1 << 
        " im= " << imbase <<
        " volume = " << gvol_modify << '\n';
@@ -2285,7 +2285,7 @@ NavierStokes::sum_integrated_quantities (
   for (int im=0;im<num_materials;im++) {
    if (denconst[im]>0.0) {
     Real elastic_wave_speed=elastic_viscosity[im]/denconst[im];
-    elastic_wave_speed=sqrt(elastic_wave_speed);
+    elastic_wave_speed=std::sqrt(elastic_wave_speed);
     std::cout << "TIME= "<<upper_slab_time<<" im= " << im <<
      " elastic_wave_speed=" << elastic_wave_speed << '\n';
    } else
@@ -2295,7 +2295,7 @@ NavierStokes::sum_integrated_quantities (
   Real ccsqr=vel_max_estdt[AMREX_SPACEDIM];
   if (ccsqr<0.0)
    amrex::Error("cannot have negative c^2");
-  Real USOUND=sqrt(ccsqr);
+  Real USOUND=std::sqrt(ccsqr);
   if (USOUND>0.0)
    UMACH=UMACH/USOUND;
   else
@@ -2342,15 +2342,15 @@ NavierStokes::sum_integrated_quantities (
     if (AMREX_SPACEDIM==2) {
      if ((NS_geometry_coord==COORDSYS_RZ)||
          (NS_geometry_coord==COORDSYS_CYLINDRICAL)) {
-      A_ratio=exp(log(A_ratio)*2.0/3.0);
+      A_ratio=std::exp(std::log(A_ratio)*2.0/3.0);
      } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
-      A_ratio=exp(log(A_ratio)/2.0);
+      A_ratio=std::exp(std::log(A_ratio)/2.0);
      } else
       amrex::Error("NS_geometry_coord invalid"); 
     } else if (AMREX_SPACEDIM==3) {
      if ((NS_geometry_coord==COORDSYS_CARTESIAN)||
          (NS_geometry_coord==COORDSYS_CYLINDRICAL)) {
-      A_ratio=exp(log(A_ratio)*2.0/3.0);
+      A_ratio=std::exp(std::log(A_ratio)*2.0/3.0);
      } else
       amrex::Error("NS_geometry_coord invalid"); 
     } else
@@ -2756,24 +2756,24 @@ NavierStokes::sum_integrated_quantities (
    // bubble jetting problem
   if (probtype==42) {
    Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
-   Real radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
+   Real radbubble=std::exp(std::log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
    std::cout << "TIME= " << upper_slab_time << " JETTINGVOL=  " << 
     radbubble << '\n';
   }
 
    // inputs.circular_freeze
    // pi r^2/4=F
-   // r=sqrt(4F/pi)
+   // r=std::sqrt(4F/pi)
   if ((probtype==801)&&(axis_dir==3)) {
    Real bubble_volume=NS_sumdata[IQ_FE_SUM_COMP+2];
    Real radbubble=0.0;
    if (NS_geometry_coord==COORDSYS_CARTESIAN) {
-    radbubble=sqrt(4.0*bubble_volume/NS_PI);
+    radbubble=std::sqrt(4.0*bubble_volume/NS_PI);
 
    // 4/3 pi r^3 = 2V
    // r=(3V/(2 pi))^{1/3}
    } else if (NS_geometry_coord==COORDSYS_RZ) {
-    radbubble=exp(log(3.0*bubble_volume/(2.0*NS_PI))/3.0);
+    radbubble=std::exp(std::log(3.0*bubble_volume/(2.0*NS_PI))/3.0);
    } else
     amrex::Error("NS_geometry_coord invalid");
 
@@ -2793,14 +2793,14 @@ NavierStokes::sum_integrated_quantities (
     // 4/3 pi r^3 = V
     // r=(3V/(4 pi))^{1/3}
     if (NS_geometry_coord==COORDSYS_RZ) {
-     radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
+     radbubble=std::exp(std::log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
     } else if (NS_geometry_coord==COORDSYS_CARTESIAN) {
     // pi r^2 = 2V
-     radbubble=sqrt(2.0*bubble_volume/NS_PI);
+     radbubble=std::sqrt(2.0*bubble_volume/NS_PI);
     } else
      amrex::Error("NS_geometry_coord invalid");
    } else if (AMREX_SPACEDIM==3) {
-    radbubble=exp(log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
+    radbubble=std::exp(std::log(3.0*bubble_volume/(4.0*NS_PI))/3.0);
    } else
     amrex::Error("sdim bust");
 

@@ -764,8 +764,8 @@ void NavierStokes::tensor_advection_updateALL() {
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   // get sqrt(2 D:D),D,grad U 
-   // DERIVE_TENSOR_MAG: sqrt(2 * D : D)
+   // get std::sqrt(2 D:D),D,grad U 
+   // DERIVE_TENSOR_MAG: std::sqrt(2 * D : D)
    // DERIVE_TENSOR_RATE_DEFORM: D11,D12,D13,D21,D22,D23,D31,D32,D33
    // DERIVE_TENSOR_GRAD_VEL: ux,uy,uz,vx,vy,vz,wx,wy,wz
    int only_scalar=0; 
@@ -6310,7 +6310,7 @@ NavierStokes::ColorSumALL(
          if (proposed_KE>original_KE) {
           for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
            int ibase=veltype*(2*AMREX_SPACEDIM)+dir;
-  	   blobdata[i].blob_velocity[ibase]*=sqrt(original_KE/proposed_KE);
+  	   blobdata[i].blob_velocity[ibase]*=std::sqrt(original_KE/proposed_KE);
 	  } //dir=0..sdim-1
           if (verbose>0) {
            if (ParallelDescriptor::IOProcessor()) {
@@ -8051,7 +8051,7 @@ void NavierStokes::jacobi_cycles(
 
    Real local_error;
    dot_productALL(project_option,RESID_MF,RESID_MF,local_error,nsolve);
-   local_error=sqrt(local_error);
+   local_error=std::sqrt(local_error);
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "vcycle_jacobi,error " << vcycle_jacobi << ' ' << 
@@ -8134,7 +8134,7 @@ void NavierStokes::jacobi_cycles(
 
    Real local_error;
    dot_productALL(project_option,RESID_MF,RESID_MF,local_error,nsolve);
-   local_error=sqrt(local_error);
+   local_error=std::sqrt(local_error);
    if (verbose>0) {
     if (ParallelDescriptor::IOProcessor()) {
      std::cout << "jacobi after last cycle,error " << local_error << '\n';
@@ -9599,7 +9599,7 @@ void NavierStokes::multiphase_project(int project_option) {
      dot_productALL(project_option,CGRESID_MF,CGRESID_MF,
       	      local_error_n,nsolve);
      if (local_error_n>=0.0) {
-      local_error_n=sqrt(local_error_n);
+      local_error_n=std::sqrt(local_error_n);
      } else
       amrex::Error("local_error_n invalid");
 
@@ -9750,7 +9750,7 @@ void NavierStokes::multiphase_project(int project_option) {
         // MAC_PHI_CRSE(U1) and U0 are the same at this point.
       dot_productALL(project_option,CGRESID_MF,CGRESID_MF,error_n,nsolve);
       if (error_n>=0.0) {
-       error_n=sqrt(error_n);
+       error_n=std::sqrt(error_n);
       } else
        amrex::Error("error_n invalid");
 
@@ -9843,7 +9843,7 @@ void NavierStokes::multiphase_project(int project_option) {
            dot_productALL(project_option,CGRESID_MF,CGRESID_MF,
              PCG_error_n,nsolve);
            if (PCG_error_n>=0.0) {
-            PCG_error_n=sqrt(PCG_error_n);
+            PCG_error_n=std::sqrt(PCG_error_n);
            } else
             amrex::Error("PCG_error_n invalid");
 
@@ -9888,7 +9888,7 @@ void NavierStokes::multiphase_project(int project_option) {
         if (vcycle==0) { // R0hat=R when vcycle==0
 
          if (rho1>0.0) {
-          Real sanity_error=sqrt(rho1);
+          Real sanity_error=std::sqrt(rho1);
           if (sanity_error>0.9*save_mac_abs_tol) {
            // do nothing
           } else
@@ -10024,7 +10024,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  // dnorm=R1 dot R1
           dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
 	  if (dnorm>=0.0) {
-           dnorm=sqrt(dnorm);
+           dnorm=std::sqrt(dnorm);
 	  } else
            amrex::Error("dnorm invalid Nav3");
 
@@ -10144,7 +10144,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	  // dnorm=R1 dot R1
           dot_productALL(project_option,bicg_R1_MF,bicg_R1_MF,dnorm,nsolve);
 	  if (dnorm>=0.0) {
-           dnorm=sqrt(dnorm);
+           dnorm=std::sqrt(dnorm);
 	  } else
 	   amrex::Error("dnorm invalid Nav3");
 
@@ -10246,7 +10246,7 @@ void NavierStokes::multiphase_project(int project_option) {
 	// dnorm=RESID dot RESID
         dot_productALL(project_option,CGRESID_MF,CGRESID_MF,dnorm,nsolve);
 	if (dnorm>=0.0) {
-         dnorm=sqrt(dnorm);
+         dnorm=std::sqrt(dnorm);
 	} else
          amrex::Error("dnorm invalid Nav3");
 
@@ -10501,7 +10501,7 @@ void NavierStokes::multiphase_project(int project_option) {
     dot_productALL(project_option,
       OUTER_RESID_MF,OUTER_RESID_MF,outer_error,nsolve);
     if (outer_error>=0.0) {
-     outer_error=sqrt(outer_error);
+     outer_error=std::sqrt(outer_error);
     } else
      amrex::Error("outer_error invalid");
 
