@@ -21,7 +21,7 @@ c----*|--.---------.---------.---------.---------.---------.---------.-|-------|
      &      ,tdxnm1_3(nr_ibm_fib)
       logical free_bc,free_bcb,implicit_tension
 
-      implicit_tension=.false.
+      implicit_tension=.true.
 
       temp3dt = dt2
 !     here dt acually is delta_t^2 in input to subroutine
@@ -43,9 +43,12 @@ c computing (dx.dx)^{n}
      &          dsf_ibm_fib(i,j)
              temp2=(gy_ibm_massive_fib(i,j+1)-gy_ibm_massive_fib(i,j))/
      &          dsf_ibm_fib(i,j) 
-            else
+            else if (implicit_tension.eqv..false.) then
              temp1=(gx_ibm_fib(i,j+1)-gx_ibm_fib(i,j))/dsf_ibm_fib(i,j)
              temp2=(gy_ibm_fib(i,j+1)-gy_ibm_fib(i,j))/dsf_ibm_fib(i,j) 
+            else
+             print *,"implicit_tension corrupt logical"
+             stop
             endif
 
             temp3=0.0
