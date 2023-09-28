@@ -1,0 +1,4 @@
+scl enable devtoolset-8 bash
+module load mpi/openmpi-4-gcc8
+export PATH=/usr/local/cuda/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda/lib64
