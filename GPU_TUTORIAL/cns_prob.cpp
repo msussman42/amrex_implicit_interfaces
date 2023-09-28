@@ -11,6 +11,11 @@ extern "C" {
                          const amrex_real* /*problo*/,
                          const amrex_real* /*probhi*/)
     {
+
+        amrex_real test_float_size=1.0/10.0;
+        std::cout << "sizeof(test_float_size)=" << 
+         sizeof(test_float_size) << '\n';
+
         amrex::ParmParse pp("prob");
 
         pp.query("p_l", CNS::h_prob_parm->p_l);
