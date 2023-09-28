@@ -225,6 +225,7 @@ INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 type(FSI_container_type) :: ctml_FSI_container
 ! nsolid,i,j,k,dir
 REAL_T, dimension(:,:,:,:,:), allocatable :: ctml_frc
+REAL_T, dimension(:,:,:,:,:), allocatable :: ctml_frc_smooth
 
 contains
 
@@ -9733,6 +9734,7 @@ INTEGER_T :: ii,jj,kk
     do kk=klo,khi
      do dir=1,3
       ctml_frc(ctml_part_id,ii,jj,kk,dir)=zero
+      ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)=zero
      enddo
     enddo !kk
     enddo !jj
@@ -9964,6 +9966,8 @@ INTEGER_T :: ii,jj,kk
        if (abs(FSI(part_id)%NodeForce(dir,inode)).le.1.0D+20) then
         ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
          FSI(part_id)%NodeForce(dir,inode)
+        ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)= &
+         ctml_frc(ctml_part_id,ii,jj,kk,dir)
        else
         print *,"Force overflow sci_clsvof.F90 10146"
         stop
@@ -11019,6 +11023,8 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
        ctml_fsi_num_scalars)
 
     allocate(ctml_frc(ctml_n_bodies, &
+      ilo_dom:ihi_dom,jlo_dom:jhi_dom,klo_dom:khi_dom,3))
+    allocate(ctml_frc_smooth(ctml_n_bodies, &
       ilo_dom:ihi_dom,jlo_dom:jhi_dom,klo_dom:khi_dom,3))
    
     do i=1,ctml_n_bodies
@@ -16909,6 +16915,12 @@ INTEGER_T :: ii,jj,kk
 INTEGER_T :: imid,inull,ii_opp
 REAL_T :: rval
 
+REAL_T :: dx_left,dx_right,dx_cen,dtau
+REAL_T :: flux_left(3)
+REAL_T :: flux_right(3)
+INTEGER_T :: ismooth
+INTEGER_T, PARAMETER :: nsmooth=32
+
 logical :: monitorON
 logical :: theboss
 
@@ -17356,6 +17368,99 @@ logical :: theboss
       stop
      endif
 
+     do part_id=1,TOTAL_NPARTS
+      ctml_part_id=ctml_part_id_map(part_id)
+      if ((ctml_part_id.ge.1).and. &
+          (ctml_part_id.le.CTML_NPARTS)) then
+       if (FSI(part_id)%flag_2D_to_3D.eq.1) then
+
+        do ismooth=1,nsmooth
+
+         do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
+         do jj=jlo,jhi
+         do kk=klo,khi
+          if (ii.eq.ilo_active(ctml_part_id)) then
+           dx_left=zero
+           do dir=1,3
+            flux_left(dir)=zero
+           enddo
+          else
+           dx_left=zero
+           do dir=1,3
+            dx_left=dx_left+ &
+             (FSI_input_container%node_list(ctml_part_id,ii,jj,kk,dir)- &
+              FSI_input_container%node_list(ctml_part_id,ii-1,jj,kk,dir))**2
+           enddo
+           dx_left=sqrt(dx_left)
+           if (dx_left.gt.zero) then
+            do dir=1,3
+             flux_left(dir)= &
+              (ctml_frc(ctml_part_id,ii,jj,kk,dir)- &
+               ctml_frc(ctml_part_id,ii-1,jj,kk,dir))/dx_left
+            enddo
+           else
+            print *,"dx_left invalid: ",dx_left
+            stop
+           endif
+          endif
+          if (ii.eq.ihi_active(ctml_part_id)) then
+           dx_right=zero
+           do dir=1,3
+            flux_right(dir)=zero
+           enddo
+          else
+           dx_right=zero
+           do dir=1,3
+            dx_right=dx_right+ &
+             (FSI_input_container%node_list(ctml_part_id,ii+1,jj,kk,dir)- &
+              FSI_input_container%node_list(ctml_part_id,ii,jj,kk,dir))**2
+           enddo
+           dx_right=sqrt(dx_right)
+
+           if (dx_right.gt.zero) then
+            do dir=1,3
+             flux_right(dir)= &
+              (ctml_frc(ctml_part_id,ii+1,jj,kk,dir)- &
+               ctml_frc(ctml_part_id,ii,jj,kk,dir))/dx_right
+            enddo
+           else
+            print *,"dx_right invalid: ",dx_right
+            stop
+           endif
+          endif
+          dx_cen=half*(dx_left+dx_right)
+          dtau=dx_cen**2/four
+          do dir=1,3
+           ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)= &
+             ctml_frc(ctml_part_id,ii,jj,kk,dir)+ &
+             dtau*(flux_right(dir)-flux_left(dir))/dx_cen
+          enddo
+         enddo !kk
+         enddo !jj
+         enddo !ii
+
+         do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
+         do jj=jlo,jhi
+         do kk=klo,khi
+          ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
+            ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)
+         enddo !kk
+         enddo !jj
+         enddo !ii
+
+        enddo !ismooth=1,nsmooth
+
+       else
+        print *,"expecting FSI(part_id)%flag_2D_to_3D.eq.1"
+        stop
+       endif 
+      else if (ctml_part_id.eq.0) then
+       !do nothing
+      else
+       print *,"ctml_part_id invalid: ",ctml_part_id
+       stop
+      endif
+     enddo !part_id=1,TOTAL_NPARTS
 
 #ifdef INCLUDE_FIB
      call tick_fib( &
