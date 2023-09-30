@@ -17376,6 +17376,11 @@ logical :: theboss
 
         do ismooth=1,nsmooth
 
+         if (1.eq.1) then
+          print *,"ismooth,part_id,ctml_part_id ", &
+            ismooth,part_id,ctml_part_id
+         endif
+
          do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
          do jj=jlo,jhi
          do kk=klo,khi
@@ -17428,12 +17433,28 @@ logical :: theboss
             stop
            endif
           endif
-          dx_cen=half*(dx_left+dx_right)
+          if ((dx_left.gt.zero).and.(dx_right.gt.zero)) then
+           dx_cen=half*(dx_left+dx_right)
+          else if ((dx_left.eq.zero).and.(dx_right.gt.zero)) then
+           dx_cen=dx_right
+          else if ((dx_right.eq.zero).and.(dx_left.gt.zero)) then
+           dx_cen=dx_left
+          else
+           print *,"dx_left or dx_right invalid ",dx_left,dx_right
+           stop
+          endif
+       
           dtau=dx_cen**2/four
           do dir=1,3
            ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)= &
              ctml_frc(ctml_part_id,ii,jj,kk,dir)+ &
              dtau*(flux_right(dir)-flux_left(dir))/dx_cen
+           if (1.eq.1) then
+            print *,"ii,jj,kk,dir,dt,dxL,dxR,dxC,fnew,fold ", &
+             ii,jj,kk,dir,dtau,dx_left,dx_right,dx_cen, &
+               ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir), &
+               ctml_frc(ctml_part_id,ii,jj,kk,dir)
+           endif
           enddo
          enddo !kk
          enddo !jj
