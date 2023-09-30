@@ -16919,7 +16919,7 @@ REAL_T :: dx_left,dx_right,dx_cen,dtau
 REAL_T :: flux_left(3)
 REAL_T :: flux_right(3)
 INTEGER_T :: ismooth
-INTEGER_T, PARAMETER :: nsmooth=32
+INTEGER_T, PARAMETER :: nsmooth=128
 
 logical :: monitorON
 logical :: theboss
@@ -17376,7 +17376,7 @@ logical :: theboss
 
         do ismooth=1,nsmooth
 
-         if (1.eq.1) then
+         if (1.eq.0) then
           print *,"ismooth,part_id,ctml_part_id ", &
             ismooth,part_id,ctml_part_id
          endif
@@ -17389,7 +17389,7 @@ logical :: theboss
            do dir=1,3
             flux_left(dir)=zero
            enddo
-          else
+          else if (ii.gt.ilo_active(ctml_part_id)) then
            dx_left=zero
            do dir=1,3
             dx_left=dx_left+ &
@@ -17407,13 +17407,16 @@ logical :: theboss
             print *,"dx_left invalid: ",dx_left
             stop
            endif
+          else
+           print *,"ii invalid"
+           stop
           endif
           if (ii.eq.ihi_active(ctml_part_id)) then
            dx_right=zero
            do dir=1,3
             flux_right(dir)=zero
            enddo
-          else
+          else if (ii.lt.ihi_active(ctml_part_id)) then
            dx_right=zero
            do dir=1,3
             dx_right=dx_right+ &
@@ -17432,6 +17435,9 @@ logical :: theboss
             print *,"dx_right invalid: ",dx_right
             stop
            endif
+          else
+           print *,"ii invalid"
+           stop
           endif
           if ((dx_left.gt.zero).and.(dx_right.gt.zero)) then
            dx_cen=half*(dx_left+dx_right)
@@ -17449,7 +17455,7 @@ logical :: theboss
            ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)= &
              ctml_frc(ctml_part_id,ii,jj,kk,dir)+ &
              dtau*(flux_right(dir)-flux_left(dir))/dx_cen
-           if (1.eq.1) then
+           if (1.eq.0) then
             print *,"ii,jj,kk,dir,dt,dxL,dxR,dxC,fnew,fold ", &
              ii,jj,kk,dir,dtau,dx_left,dx_right,dx_cen, &
                ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir), &
@@ -17463,8 +17469,10 @@ logical :: theboss
          do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
          do jj=jlo,jhi
          do kk=klo,khi
-          ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
+          do dir=1,3
+           ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
             ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)
+          enddo
          enddo !kk
          enddo !jj
          enddo !ii
