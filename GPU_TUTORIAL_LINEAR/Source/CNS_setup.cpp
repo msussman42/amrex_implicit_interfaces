@@ -109,23 +109,22 @@ CNS::variableSetUp ()
 
     read_params();
 
+    int NUM_STATE=h_parm->num_state_variables;
+    BL_ASSERT(NUM_STATE==2);
+   
     bool state_data_extrap = false;
     bool store_in_checkpoint = true;
-    desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
+    desc_lst.addDescriptor(State_Type,IndexType::TheNodeType(),
                            StateDescriptor::Point,NUM_GROW,NUM_STATE,
-                           &cell_cons_interp,state_data_extrap,store_in_checkpoint);
+                           &node_bilinear_interp,
+			   state_data_extrap,store_in_checkpoint);
 
     Vector<BCRec>       bcs(NUM_STATE);
     Vector<std::string> name(NUM_STATE);
     BCRec bc;
     int cnt = 0;
-    set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "density";
-    cnt++; set_x_vel_bc(bc,phys_bc);  bcs[cnt] = bc; name[cnt] = "xmom";
-    cnt++; set_y_vel_bc(bc,phys_bc);  bcs[cnt] = bc; name[cnt] = "ymom";
-    cnt++; set_z_vel_bc(bc,phys_bc);  bcs[cnt] = bc; name[cnt] = "zmom";
-    cnt++; set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "rho_E";
-    cnt++; set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "rho_e";
-    cnt++; set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "Temp";
+    set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "V1";
+    cnt++; set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "V2";
 
     StateDescriptor::BndryFunc bndryfunc(cns_bcfill);
     bndryfunc.setRunOnGPU(true);  // I promise the bc function will launch gpu kernels.
