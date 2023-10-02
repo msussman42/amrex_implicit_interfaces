@@ -8,6 +8,7 @@ using namespace amrex::literals;
 
 struct ProbParm
 {
+FIX ME need support for 3D wave equation.
     int num_state_variables=0;
     Vector< amrex::Real > eigenvalues;
     Vector< amrex::Real > Reigenvector1;

@@ -20,6 +20,7 @@ extern "C" {
 
         pp.get("num_state_variables", CNS::h_prob_parm->num_state_variables);
 	int local_nstate=CNS::h_prob_parm->num_state_variables;
+FIX ME need local_nstate = 1+3 = 4
 	BL_ASSERT(local_nstate==2);
         pp.getarr("eigenvalues", CNS::h_prob_parm->eigenvalues,0,local_nstate);
 	 //A P^{-1} = P^{-1} \Lambda
