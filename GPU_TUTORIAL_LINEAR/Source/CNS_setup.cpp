@@ -1,6 +1,5 @@
 
 #include <CNS.H>
-#include <CNS_derive.H>
 
 using namespace amrex;
 
@@ -132,7 +131,7 @@ CNS::variableSetUp ()
 
     read_params();
 
-    int NUM_STATE=h_parm->num_state_variables;
+    int NUM_STATE=h_prob_parm->num_state_variables;
     AMREX_ALWAYS_ASSERT(NUM_STATE==4);
     AMREX_ALWAYS_ASSERT(NUM_GROW==1);
    

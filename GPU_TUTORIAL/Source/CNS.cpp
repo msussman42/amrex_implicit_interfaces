@@ -357,7 +357,11 @@ CNS::read_params ()
     pp.query("eos_gamma", h_parm->eos_gamma);
 
     h_parm->Initialize();
+#ifdef AMREX_USE_CUDA
     amrex::Gpu::htod_memcpy(d_parm, h_parm, sizeof(Parm));
+#else
+    std::memcpy(d_parm, h_parm, sizeof(Parm));
+#endif
 }
 
 void

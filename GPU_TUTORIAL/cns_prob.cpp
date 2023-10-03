@@ -25,6 +25,10 @@ extern "C" {
         pp.query("u_l", CNS::h_prob_parm->u_l);
         pp.query("u_r", CNS::h_prob_parm->u_r);
 
+#ifdef AMREX_USE_CUDA
         amrex::Gpu::htod_memcpy(CNS::d_prob_parm, CNS::h_prob_parm, sizeof(ProbParm));
+#else
+	std::memcpy(CNS::d_prob_parm, CNS::h_prob_parm, sizeof(ProbParm));
+#endif
     }
 }

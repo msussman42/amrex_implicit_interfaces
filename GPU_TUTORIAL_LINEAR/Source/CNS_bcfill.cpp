@@ -16,6 +16,7 @@ struct CnsFillExtDir
         {
             // do something for external Dirichlet (BCType::ext_dir)
 	    const Real* prob_lo=geom.ProbLo();
+	    const Real* prob_hi=geom.ProbHi();
 	    const Real* dx=geom.CellSize();
 	    Real x[3];
 	    int i=iv[0];

@@ -3,7 +3,6 @@
 
 #include <AMReX_Geometry.H>
 #include <AMReX_FArrayBox.H>
-#include "CNS_index_macros.H"
 #include "CNS_parm.H"
 #include "cns_prob_parm.H"
 

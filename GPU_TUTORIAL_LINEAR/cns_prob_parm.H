@@ -9,11 +9,7 @@ using namespace amrex::literals;
 struct ProbParm
 {
     int num_state_variables=0;
-    Vector< amrex::Real > eigenvalues;
-    Vector< amrex::Real > Reigenvector1;
-    Vector< amrex::Real > Reigenvector2;
-    Vector< amrex::Real > Leigenvector1;
-    Vector< amrex::Real > Leigenvector2;
+    amrex::Real sound_speed;
 };
 
 #endif

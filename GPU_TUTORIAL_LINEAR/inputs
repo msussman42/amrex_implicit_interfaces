@@ -58,8 +58,4 @@ amr.plot_int          = 10      # number of timesteps between plotfiles
 # lambda3=0   r3=(0  0 1 0)
 # lambda4=0   r3=(0  0 0 1)
 prob.num_state_variables = 4
-prob.eigenvalues = 1.0 -1.0
-prob.Reigenvectors1 = 1.0 1.0
-prob.Reigenvectors2 = -1.0 1.0
-prob.Leigenvectors1 = 0.5 0.5
-prob.Leigenvectors2 = -0.5 0.5
+prob.sound_speed = 1.0 
