@@ -21,19 +21,19 @@ extern "C" {
         pp.get("num_state_variables", CNS::h_prob_parm->num_state_variables);
 	int local_nstate=CNS::h_prob_parm->num_state_variables;
 	AMREX_ALWAYS_ASSERT(local_nstate==4);
-        pp.getarr("eigenvalues", CNS::h_prob_parm->eigenvalues,0,local_nstate);
+        pp.get("sound_speed", CNS::h_prob_parm->sound_speed);
 	 //A P^{-1} = P^{-1} \Lambda
 	 //A = P^{-1} \Lambda P
 	 //right eigenvectors are columns of P^{-1}
 	 //left eigenvectors are rows of P
 	 //P A P^{-1} = P P^{-1} \Lambda = \Lambda
 	 //P A = \Lambda P
-        pp.query("Reigenvector1", CNS::h_prob_parm->Reigenvector1,0,2);
-        pp.query("Reigenvector2", CNS::h_prob_parm->Reigenvector2,0,2);
-        pp.query("Leigenvector1", CNS::h_prob_parm->Leigenvector1,0,2);
-        pp.query("Leigenvector2", CNS::h_prob_parm->Leigenvector2,0,2);
 
+#ifdef AMREX_USE_CUDA
         amrex::Gpu::htod_memcpy(CNS::d_prob_parm, CNS::h_prob_parm, 
 		sizeof(ProbParm));
+#else
+        std::memcpy(CNS::d_prob_parm, CNS::h_prob_parm,sizeof(ProbParm));
+#endif
     }
 }

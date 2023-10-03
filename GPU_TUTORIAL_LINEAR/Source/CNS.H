@@ -125,10 +125,7 @@ protected:
     // Compute initial time step.
     amrex::Real initialTimeStep ();
 
-    void computeTemp (amrex::MultiFab& State, int ng);
-
-    void compute_dSdt (const amrex::MultiFab& S, amrex::MultiFab& dSdt, amrex::Real dt,
-                       amrex::FluxRegister* fr_as_crse, amrex::FluxRegister* fr_as_fine);
+    void compute_dSdt (const amrex::MultiFab& S, amrex::MultiFab& dSdt, amrex::Real dt);
 
     void printTotal () const;
 

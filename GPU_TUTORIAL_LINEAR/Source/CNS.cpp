@@ -284,26 +284,24 @@ CNS::errorEst (TagBoxArray& tags, int, int, Real /*time*/, int, int)
     MultiFab p(S_new.boxArray(), S_new.DistributionMap(), 1, 1);
     FillPatch(*this, p, p.nGrow(), cur_time, State_Type, 0, 1, 0);
 
-        const char   tagval = TagBox::SET;
-//        const char clearval = TagBox::CLEAR;
-        const Real p_threshold = 1.0e+20;
+    const char   tagval = TagBox::SET;
+//  const char clearval = TagBox::CLEAR;
+    const Real p_threshold = 1.0e+20;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-        for (MFIter mfi(p,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-        {
-            const Box& bx = mfi.tilebox();
+    for (MFIter mfi(p,TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+     const Box& bx = mfi.tilebox();
 
-            const auto pfab = p.array(mfi);
-            auto tag = tags.array(mfi);
+     const auto pfab = p.array(mfi);
+     auto tag = tags.array(mfi);
 
-            amrex::ParallelFor(bx,
-            [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-            {
-                cns_tag_perror(i, j, k, tag, pfab, p_threshold, tagval);
-            });
-        }
+     amrex::ParallelFor(bx,
+       [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+       {
+        cns_tag_perror(i, j, k, tag, pfab, p_threshold, tagval);
+       });
     }
 }
 
@@ -331,7 +329,12 @@ CNS::read_params ()
     }
 
     h_parm->Initialize();
+#ifdef AMREX_USE_CUDA
     amrex::Gpu::htod_memcpy(d_parm, h_parm, sizeof(Parm));
+#else
+    std::memcpy(d_parm, h_parm, sizeof(Parm));
+#endif
+
 }
 
 void
@@ -369,11 +372,12 @@ CNS::estTimeStep ()
     const auto dx = geom.CellSizeArray();
     const MultiFab& S = get_new_data(State_Type);
     Parm const* lparm = d_parm;
+    ProbParm const* lprob_parm = d_prob_parm;
 
     Real estdt = amrex::ReduceMin(S, 0,
     [=] AMREX_GPU_HOST_DEVICE (Box const& bx, Array4<Real const> const& fab) -> Real
     {
-        return cns_estdt(bx, fab, dx, *lparm);
+        return cns_estdt(bx, fab, dx, *lparm,*lprob_parm);
     });
 
     estdt *= cfl;
