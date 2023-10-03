@@ -4,7 +4,7 @@
 
 using namespace amrex;
 
-int CNS::num_state_data_types = NUM_STATE_DATA_TYPE;
+int CNS::num_state_data_types = 0;
 Parm* CNS::h_parm = nullptr;
 Parm* CNS::d_parm = nullptr;
 ProbParm* CNS::h_prob_parm = nullptr;
@@ -19,9 +19,17 @@ static Box the_same_box (const Box& b) { return b; }
 //
 static int scalar_bc[] =
 {
-    BCType::int_dir, BCType::ext_dir, BCType::foextrap, BCType::reflect_even, BCType::reflect_even, BCType::reflect_even
+  BCType::int_dir, BCType::ext_dir, BCType::foextrap, BCType::reflect_even, 
+  BCType::reflect_even, BCType::reflect_even
 };
 
+static int pres_bc[] =
+{
+  BCType::int_dir, BCType::reflect_even, BCType::ext_dir, BCType::reflect_even, 
+  BCType::reflect_even, BCType::reflect_even
+};
+
+//  Interior, Inflow, Outflow,  Symmetry,     SlipWall,     NoSlipWall
 static int norm_vel_bc[] =
 {
     BCType::int_dir, BCType::ext_dir, BCType::foextrap, BCType::reflect_odd,  BCType::reflect_odd,  BCType::reflect_odd
@@ -44,6 +52,21 @@ set_scalar_bc (BCRec& bc, const BCRec& phys_bc)
         bc.setHi(i,scalar_bc[hi_bc[i]]);
     }
 }
+
+
+static
+void
+set_pres_bc (BCRec& bc, const BCRec& phys_bc)
+{
+    const int* lo_bc = phys_bc.lo();
+    const int* hi_bc = phys_bc.hi();
+    for (int i = 0; i < AMREX_SPACEDIM; i++)
+    {
+        bc.setLo(i,pres_bc[lo_bc[i]]);
+        bc.setHi(i,pres_bc[hi_bc[i]]);
+    }
+}
+
 
 static
 void
@@ -110,55 +133,37 @@ CNS::variableSetUp ()
     read_params();
 
     int NUM_STATE=h_parm->num_state_variables;
-    BL_ASSERT(NUM_STATE==2);
+    AMREX_ALWAYS_ASSERT(NUM_STATE==4);
+    AMREX_ALWAYS_ASSERT(NUM_GROW==1);
    
     bool state_data_extrap = false;
     bool store_in_checkpoint = true;
-    desc_lst.addDescriptor(State_Type,IndexType::TheNodeType(),
+    desc_lst.addDescriptor(State_Type,IndexType::TheCellType(),
                            StateDescriptor::Point,NUM_GROW,NUM_STATE,
-                           &node_bilinear_interp,
+                           &cell_cons_interp,
 			   state_data_extrap,store_in_checkpoint);
 
     Vector<BCRec>       bcs(NUM_STATE);
     Vector<std::string> name(NUM_STATE);
     BCRec bc;
     int cnt = 0;
-    set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "V1";
-    cnt++; set_scalar_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "V2";
+    set_pres_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "P";
+    cnt++; set_x_vel_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "U";
+    cnt++; set_y_vel_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "V";
+    cnt++; set_z_vel_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "W";
 
     StateDescriptor::BndryFunc bndryfunc(cns_bcfill);
     bndryfunc.setRunOnGPU(true);  // I promise the bc function will launch gpu kernels.
 
+    int start_comp=0;
     desc_lst.setComponent(State_Type,
-                          Density,
+                          start_comp,
                           name,
                           bcs,
                           bndryfunc);
 
     num_state_data_types = desc_lst.size();
 
-    // DEFINE DERIVED QUANTITIES
-
-    // Pressure
-    derive_lst.add("pressure",IndexType::TheCellType(),1,
-                   cns_derpres,the_same_box);
-    derive_lst.addComponent("pressure",desc_lst,State_Type,Eint,1);
-
-    // Velocities
-    derive_lst.add("x_velocity",IndexType::TheCellType(),1,
-                   cns_dervel,the_same_box);
-    derive_lst.addComponent("x_velocity",desc_lst,State_Type,Density,1);
-    derive_lst.addComponent("x_velocity",desc_lst,State_Type,Xmom,1);
-
-    derive_lst.add("y_velocity",IndexType::TheCellType(),1,
-                   cns_dervel,the_same_box);
-    derive_lst.addComponent("y_velocity",desc_lst,State_Type,Density,1);
-    derive_lst.addComponent("y_velocity",desc_lst,State_Type,Ymom,1);
-
-    derive_lst.add("z_velocity",IndexType::TheCellType(),1,
-                   cns_dervel,the_same_box);
-    derive_lst.addComponent("z_velocity",desc_lst,State_Type,Density,1);
-    derive_lst.addComponent("z_velocity",desc_lst,State_Type,Zmom,1);
 }
 
 void

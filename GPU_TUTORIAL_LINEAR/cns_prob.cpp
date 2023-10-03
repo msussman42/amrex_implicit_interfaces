@@ -20,8 +20,7 @@ extern "C" {
 
         pp.get("num_state_variables", CNS::h_prob_parm->num_state_variables);
 	int local_nstate=CNS::h_prob_parm->num_state_variables;
-FIX ME need local_nstate = 1+3 = 4
-	BL_ASSERT(local_nstate==2);
+	AMREX_ALWAYS_ASSERT(local_nstate==4);
         pp.getarr("eigenvalues", CNS::h_prob_parm->eigenvalues,0,local_nstate);
 	 //A P^{-1} = P^{-1} \Lambda
 	 //A = P^{-1} \Lambda P
@@ -29,15 +28,12 @@ FIX ME need local_nstate = 1+3 = 4
 	 //left eigenvectors are rows of P
 	 //P A P^{-1} = P P^{-1} \Lambda = \Lambda
 	 //P A = \Lambda P
-        pp.query("Reigenvector1", CNS::h_prob_parm->Reigenvector1,
-	  0,local_nstate);
-        pp.query("Reigenvector2", CNS::h_prob_parm->Reigenvector2,
-	  0,local_nstate);
-        pp.query("Leigenvector1", CNS::h_prob_parm->Leigenvector1,
-	  0,local_nstate);
-        pp.query("Leigenvector2", CNS::h_prob_parm->Leigenvector2,
-	  0,local_nstate);
+        pp.query("Reigenvector1", CNS::h_prob_parm->Reigenvector1,0,2);
+        pp.query("Reigenvector2", CNS::h_prob_parm->Reigenvector2,0,2);
+        pp.query("Leigenvector1", CNS::h_prob_parm->Leigenvector1,0,2);
+        pp.query("Leigenvector2", CNS::h_prob_parm->Leigenvector2,0,2);
 
-        amrex::Gpu::htod_memcpy(CNS::d_prob_parm, CNS::h_prob_parm, sizeof(ProbParm));
+        amrex::Gpu::htod_memcpy(CNS::d_prob_parm, CNS::h_prob_parm, 
+		sizeof(ProbParm));
     }
 }
