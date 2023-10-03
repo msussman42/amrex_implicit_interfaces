@@ -18,11 +18,6 @@ BCRec     CNS::phys_bc;
 int       CNS::verbose = 0;
 IntVect   CNS::hydro_tile_size {AMREX_D_DECL(1024,16,16)};
 Real      CNS::cfl       = 0.3;
-int       CNS::do_reflux = 1;
-int       CNS::refine_max_dengrad_lev   = -1;
-Real      CNS::refine_dengrad           = 1.0e10;
-
-Real      CNS::gravity = 0.0;
 
 CNS::CNS ()
 {}
@@ -35,9 +30,6 @@ CNS::CNS (Amr&            papa,
           Real            time)
     : AmrLevel(papa,lev,level_geom,bl,dm,time)
 {
-    if (do_reflux && level > 0) {
-        flux_reg.reset(new FluxRegister(grids,dmap,crse_ratio,level,NUM_STATE));
-    }
 
     buildMetrics();
 }
@@ -227,12 +219,6 @@ CNS::post_timestep (int /*iteration*/)
 {
     BL_PROFILE("post_timestep");
 
-    if (do_reflux && level < parent->finestLevel()) {
-        MultiFab& S = get_new_data(State_Type);
-        CNS& fine_level = getLevel(level+1);
-        fine_level.flux_reg->Reflux(S, Real(1.0), 0, 0, NUM_STATE, geom);
-    }
-
     if (level < parent->finestLevel()) {
         avgDown();
     }
@@ -253,19 +239,18 @@ void
 CNS::printTotal () const
 {
     const MultiFab& S_new = get_new_data(State_Type);
-    std::array<Real,5> tot;
-    for (int comp = 0; comp < 5; ++comp) {
+    std::array<Real,4> tot;
+    for (int comp = 0; comp < 4; ++comp) {
         tot[comp] = S_new.sum(comp,true) * geom.ProbSize();
     }
 #ifdef BL_LAZY
     Lazy::QueueReduction( [=] () mutable {
 #endif
-            ParallelDescriptor::ReduceRealSum(tot.data(), 5, ParallelDescriptor::IOProcessorNumber());
-            amrex::Print().SetPrecision(17) << "\n[CNS] Total mass       is " << tot[0] << "\n"
-                                            <<   "      Total x-momentum is " << tot[1] << "\n"
-                                            <<   "      Total y-momentum is " << tot[2] << "\n"
-                                            <<   "      Total z-momentum is " << tot[3] << "\n"
-                                            <<   "      Total energy     is " << tot[4] << "\n";
+            ParallelDescriptor::ReduceRealSum(tot.data(), 4, ParallelDescriptor::IOProcessorNumber());
+            amrex::Print().SetPrecision(17) << "\n[CNS] Total p      is " << tot[0] << "\n"
+                                            <<   "      Total u      is " << tot[1] << "\n"
+                                            <<   "      Total v      is " << tot[2] << "\n"
+                                            <<   "      Total w       is " << tot[3] << "\n";
 #ifdef BL_LAZY
         });
 #endif
@@ -294,31 +279,29 @@ CNS::errorEst (TagBoxArray& tags, int, int, Real /*time*/, int, int)
 {
     BL_PROFILE("CNS::errorEst()");
 
-    if (level < refine_max_dengrad_lev)
-    {
-        const MultiFab& S_new = get_new_data(State_Type);
-        const Real cur_time = state[State_Type].curTime();
-        MultiFab rho(S_new.boxArray(), S_new.DistributionMap(), 1, 1);
-        FillPatch(*this, rho, rho.nGrow(), cur_time, State_Type, Density, 1, 0);
+    const MultiFab& S_new = get_new_data(State_Type);
+    const Real cur_time = state[State_Type].curTime();
+    MultiFab p(S_new.boxArray(), S_new.DistributionMap(), 1, 1);
+    FillPatch(*this, p, p.nGrow(), cur_time, State_Type, 0, 1, 0);
 
         const char   tagval = TagBox::SET;
 //        const char clearval = TagBox::CLEAR;
-        const Real dengrad_threshold = refine_dengrad;
+        const Real p_threshold = 1.0e+20;
 
 #ifdef AMREX_USE_OMP
 #pragma omp parallel if (Gpu::notInLaunchRegion())
 #endif
-        for (MFIter mfi(rho,TilingIfNotGPU()); mfi.isValid(); ++mfi)
+        for (MFIter mfi(p,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
             const Box& bx = mfi.tilebox();
 
-            const auto rhofab = rho.array(mfi);
+            const auto pfab = p.array(mfi);
             auto tag = tags.array(mfi);
 
             amrex::ParallelFor(bx,
             [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
             {
-                cns_tag_denerror(i, j, k, tag, rhofab, dengrad_threshold, tagval);
+                cns_tag_perror(i, j, k, tag, pfab, p_threshold, tagval);
             });
         }
     }
@@ -347,15 +330,6 @@ CNS::read_params ()
         phys_bc.setHi(i,hi_bc[i]);
     }
 
-    pp.query("do_reflux", do_reflux);
-
-    pp.query("refine_max_dengrad_lev", refine_max_dengrad_lev);
-    pp.query("refine_dengrad", refine_dengrad);
-
-    pp.query("gravity", gravity);
-
-    pp.query("eos_gamma", h_parm->eos_gamma);
-
     h_parm->Initialize();
     amrex::Gpu::htod_memcpy(d_parm, h_parm, sizeof(Parm));
 }
@@ -375,8 +349,6 @@ CNS::avgDown ()
     amrex::average_down(S_fine, S_crse, fine_lev.geom, geom,
                         0, S_fine.nComp(), parent->refRatio(level));
 
-    const int nghost = 0;
-    computeTemp(S_crse, nghost);
 }
 
 void
@@ -414,29 +386,5 @@ Real
 CNS::initialTimeStep ()
 {
     return estTimeStep();
-}
-
-void
-CNS::computeTemp (MultiFab& State, int ng)
-{
-    BL_PROFILE("CNS::computeTemp()");
-
-    Parm const* lparm = d_parm;
-
-    // This will reset Eint and compute Temperature
-#ifdef AMREX_USE_OMP
-#pragma omp parallel if (Gpu::notInLaunchRegion())
-#endif
-    for (MFIter mfi(State,TilingIfNotGPU()); mfi.isValid(); ++mfi)
-    {
-        const Box& bx = mfi.growntilebox(ng);
-        auto const& sfab = State.array(mfi);
-
-        amrex::ParallelFor(bx,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-        {
-            cns_compute_temperature(i,j,k,sfab,*lparm);
-        });
-    }
 }
 

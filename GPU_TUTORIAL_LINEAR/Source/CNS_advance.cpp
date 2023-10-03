@@ -15,6 +15,9 @@ CNS::advance (Real time, Real dt, int /*iteration*/, int /*ncycle*/)
         state[i].swapTimeLevels(dt);
     }
 
+    AMREX_ALWAYS_ASSERT(NUM_GROW==1);
+    AMREX_ALWAYS_ASSERT(NUM_STATE==4);
+
     MultiFab& S_new = get_new_data(State_Type);
     MultiFab& S_old = get_old_data(State_Type);
     MultiFab dSdt(grids,dmap,NUM_STATE,0,MFInfo(),Factory());
@@ -43,51 +46,30 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
     const int ncomp = NUM_STATE;
     const int nchar = NUM_STATE;
 
+      //AMReX_BLassert.H
+    AMREX_ALWAYS_ASSERT(NUM_STATE==4);
+    AMREX_ALWAYS_ASSERT(dSdt.nGrow()==0);
+    AMREX_ALWAYS_ASSERT(S.nGrow()==1);
+    AMREX_ALWAYS_ASSERT(dt>Real(0.0));
+
     Parm const* lparm = d_parm;
 
     for (MFIter mfi(S); mfi.isValid(); ++mfi)
     {
         const Box& bx = mfi.tilebox();
 
+	AMREX_ALWAYS_ASSERT(bx.ixType()==IndexType::TheNodeType);
+        AMREX_ALWAYS_ASSERT(dSdt[mfi].box().ixType()==IndexType::TheNodeType);
+
         auto const& sfab = S.array(mfi);
         auto const& dsdtfab = dSdt.array(mfi);
-
-        const Box& bxg1 = amrex::grow(bx,1);
-
-	FArrayBox wtmp,wnew;
-        wtmp.resize(bxg1, nchar);
-        wnew.resize(bx, nchar);
-
-	 // "Eli" = "Extend Life" 
-	 // (otherwise, host might delete the device data before the
-	 // device is finished)
-        Elixir weli = wtmp.elixir();
-        auto const& w = wtmp.array();
-
-        Elixir wneweli = wnew.elixir();
-        auto const& wnew_d = wnew.array();
-
-        amrex::ParallelFor(bxg1,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-        {
-            cns_ctochar(i, j, k, sfab, w, *lparm);
-        });
 
         amrex::ParallelFor(bx,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            cns_lax_wendroff(i, j, k, wnew_d, w, *lparm, dx);
+         cns_lax_wendroff(i, j, k, sfab,dsdtfab,dx[0],dx[1],dx[2],dt);
         });
 
-        amrex::ParallelFor(bx, 
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-        {
-            cns_chartoc(i, j, k, sfab, dsdtfab, wnew_d, dxinv);
-        });
-
-        // don't have to do this, but we could
-        weli.clear(); // don't need them anymore
-        wneweli.clear();
     }
 
 
