@@ -26,9 +26,9 @@ struct CnsFillExtDir
 	    int i=iv[0];
 	    int j=iv[1];
 	    int k=iv[2];
-	    x[0] = prob_lo[0] + i*dx[0];
-            x[1] = prob_lo[1] + j*dx[1];
-            x[2] = prob_lo[2] + k*dx[2];
+	    x[0] = prob_lo[0] + (i+Real(0.5))*dx[0];
+            x[1] = prob_lo[1] + (j+Real(0.5))*dx[1];
+            x[2] = prob_lo[2] + (k+Real(0.5))*dx[2];
 
 	    if (x[0]<prob_lo[0]) {
              for (int nc=scomp;nc<scomp+num_comp;nc++) {
