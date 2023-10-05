@@ -159,7 +159,8 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt,
         amrex::ParallelFor(bx, ncons,
         [=] AMREX_GPU_DEVICE (int i, int j, int k, int n) noexcept
         {
-            cns_flux_to_dudt(i, j, k, n, dsdtfab, AMREX_D_DECL(fxfab,fyfab,fzfab), dxinv);
+            cns_flux_to_dudt(i, j, k, n, dsdtfab, 
+	       AMREX_D_DECL(fxfab,fyfab,fzfab), dxinv);
         });
 
         if (gravity != Real(0.0)) {

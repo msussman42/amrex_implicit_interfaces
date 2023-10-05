@@ -70,7 +70,10 @@ CNS::initData ()
 {
     BL_PROFILE("CNS::initData()");
 
-    const auto geomdata = geom.data();
+    //const auto geomdata = geom.data();
+    const auto dx=geom.CellSizeArray();
+    const auto prob_lo=geom.ProbLoArray();
+
     MultiFab& S_new = get_new_data(State_Type);
 
     Parm const* lparm = d_parm;
@@ -87,7 +90,9 @@ CNS::initData ()
         amrex::ParallelFor(box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            cns_initdata(i, j, k, sfab, geomdata, *lparm, *lprobparm);
+            cns_initdata(i, j, k, sfab, 
+			 dx,prob_lo, 
+			 *lparm, *lprobparm);
         });
     }
 }
