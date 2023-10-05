@@ -8,7 +8,6 @@ using namespace amrex::literals;
 
 struct ProbParm
 {
-    int num_state_variables=0;
     amrex::Real sound_speed;
 };
 

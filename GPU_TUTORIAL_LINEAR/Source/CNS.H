@@ -132,17 +132,9 @@ protected:
     std::unique_ptr<amrex::FluxRegister> flux_reg;
 
     static constexpr int NUM_GROW = 2;
-    enum StateVariable {
-        Density = 0, Xmom, Ymom, Zmom, Eden, Eint, Temp,
-        NUM_STATE
-    };
-
-    enum StateDataType {
-        State_Type = 0,
-//        Cost_Type
-        NUM_STATE_DATA_TYPE
-    };
+    static constexpr int State_Type = 0;
     static int num_state_data_types;
+    static int NUM_STATE;
 
     static amrex::BCRec phys_bc;
 
@@ -151,12 +143,8 @@ protected:
     static amrex::IntVect hydro_tile_size;
     static amrex::Real cfl;
 
-    static int do_reflux;
-
-    static int refine_max_dengrad_lev;
-    static amrex::Real refine_dengrad;
-
-    static amrex::Real gravity;
+    static int refine_max_presgrad_lev;
+    static amrex::Real refine_presgrad;
 
 public:
     static Parm* h_parm;

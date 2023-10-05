@@ -14,7 +14,7 @@ CNS::advance (Real time, Real dt, int /*iteration*/, int /*ncycle*/)
         state[i].swapTimeLevels(dt);
     }
 
-    AMREX_ALWAYS_ASSERT(NUM_GROW==1);
+    AMREX_ALWAYS_ASSERT(NUM_GROW==2);
     AMREX_ALWAYS_ASSERT(NUM_STATE==4);
 
     MultiFab& S_new = get_new_data(State_Type);
@@ -48,67 +48,78 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
       //AMReX_BLassert.H
     AMREX_ALWAYS_ASSERT(NUM_STATE==4);
     AMREX_ALWAYS_ASSERT(dSdt.nGrow()==0);
-    AMREX_ALWAYS_ASSERT(S.nGrow()==1);
+    AMREX_ALWAYS_ASSERT(S.nGrow()==2);
     AMREX_ALWAYS_ASSERT(dt>Real(0.0));
 
     //Parm const* lparm = d_parm;
     ProbParm const* lprob_parm = d_prob_parm;
 
-    for (MFIter mfi(S); mfi.isValid(); ++mfi)
-    {
-        const Box& bx = mfi.tilebox();
+    for (MFIter mfi(S); mfi.isValid(); ++mfi) {
+     const Box& bx = mfi.tilebox();
 
-//	AMREX_ALWAYS_ASSERT(bx.ixType()==IndexType::TheNodeType);
-//      AMREX_ALWAYS_ASSERT(dSdt[mfi].box().ixType()==IndexType::TheNodeType);
+     AMREX_ALWAYS_ASSERT(bx.ixType()==IndexType::TheCellType());
+     AMREX_ALWAYS_ASSERT(dSdt[mfi].box().ixType()==IndexType::TheCellType());
 
-        auto const& sfab = S.array(mfi);
-        auto const& dsdtfab = dSdt.array(mfi);
+     auto const& sfab = S.array(mfi);
+     auto const& dsdtfab = dSdt.array(mfi);
 
-        amrex::ParallelFor(bx,
-        [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
-        {
-	 Real c=lprob_parm->sound_speed;
-         Real c2=c*c;
+     amrex::ParallelFor(bx,
+     [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+     {
+      Real c=lprob_parm->sound_speed;
+      Real c2=c*c;
 
-	 int comp=0;
-	 Real h=dx[0];
-	 Real h2=h*h;
-	 dsdtfab(i,j,k,comp)=
-	   -c2*(sfab(i+1,j,k,1)-sfab(i-1,j,k,1))/(Real(2.0)*h)+
-	   Real(0.5)*dt*(sfab(i+1,j,k,comp)-
-		Real(2.0)*sfab(i,j,k,comp)+
-		sfab(i-1,j,k,comp))/h2-
-	   c2*(sfab(i,j+1,k,2)-sfab(i,j-1,k,2))/(Real(2.0)*h)+
-	   Real(0.5)*dt*(sfab(i,j+1,k,comp)-
-		Real(2.0)*sfab(i,j,k,comp)+
-		sfab(i,j-1,k,comp))/h2-
-	   c2*(sfab(i,j,k+1,3)-sfab(i,j,k-1,3))/(Real(2.0)*h)+
-	   Real(0.5)*dt*(sfab(i,j,k+1,comp)-
-		Real(2.0)*sfab(i,j,k,comp)+
-		sfab(i,j,k-1,comp))/h2;
+      AMREX_ASSERT(c2>0.0);
+      AMREX_ASSERT(c>0.0);
 
-	 comp=1;
-	 dsdtfab(i,j,k,comp)=
-	   -(sfab(i+1,j,k,0)-sfab(i-1,j,k,0))/(Real(2.0)*h)+
-	   Real(0.5)*dt*(sfab(i+1,j,k,comp)-
-		Real(2.0)*sfab(i,j,k,comp)+
-		sfab(i-1,j,k,comp))/h2;
+      int comp=0;
 
-	 comp=2;
-	 dsdtfab(i,j,k,comp)=
-	   -(sfab(i,j+1,k,0)-sfab(i,j-1,k,0))/(Real(2.0)*h)+
-	   Real(0.5)*dt*(sfab(i,j+1,k,comp)-
-		Real(2.0)*sfab(i,j,k,comp)+
-		sfab(i,j-1,k,comp))/h2;
+      Real h=dx[0];
+      Real h2=h*h;
+      AMREX_ASSERT(h>0.0);
+      AMREX_ASSERT(h2>0.0);
 
-	 comp=3;
-	 dsdtfab(i,j,k,comp)=
-	   -(sfab(i,j,k+1,0)-sfab(i,j,k-1,0))/(Real(2.0)*h)+
-	   Real(0.5)*dt*(sfab(i,j,k+1,comp)-
-		Real(2.0)*sfab(i,j,k,comp)+
-		sfab(i,j,k-1,comp))/h2;
+      dsdtfab(i,j,k,comp)=
+       -c2*(sfab(i+1,j,k,1)-sfab(i-1,j,k,1))/(Real(2.0)*h)+
+       Real(0.5)*dt*(sfab(i+1,j,k,comp)-
+       Real(2.0)*sfab(i,j,k,comp)+
+       sfab(i-1,j,k,comp))/h2-
+       c2*(sfab(i,j+1,k,2)-sfab(i,j-1,k,2))/(Real(2.0)*h)+
+       Real(0.5)*dt*(sfab(i,j+1,k,comp)-
+       Real(2.0)*sfab(i,j,k,comp)+
+       sfab(i,j-1,k,comp))/h2-
+       c2*(sfab(i,j,k+1,3)-sfab(i,j,k-1,3))/(Real(2.0)*h)+
+       Real(0.5)*dt*(sfab(i,j,k+1,comp)-
+       Real(2.0)*sfab(i,j,k,comp)+
+       sfab(i,j,k-1,comp))/h2;
 
-        });
+      AMREX_ASSERT(dsdtfab(i,j,k,comp)==dsdtfab(i,j,k,comp));
+
+      comp=1;
+      dsdtfab(i,j,k,comp)=
+       -(sfab(i+1,j,k,0)-sfab(i-1,j,k,0))/(Real(2.0)*h)+
+       Real(0.5)*dt*(sfab(i+1,j,k,comp)-
+       Real(2.0)*sfab(i,j,k,comp)+
+       sfab(i-1,j,k,comp))/h2;
+
+      AMREX_ASSERT(dsdtfab(i,j,k,comp)==dsdtfab(i,j,k,comp));
+
+      comp=2;
+      dsdtfab(i,j,k,comp)=
+       -(sfab(i,j+1,k,0)-sfab(i,j-1,k,0))/(Real(2.0)*h)+
+       Real(0.5)*dt*(sfab(i,j+1,k,comp)-
+       Real(2.0)*sfab(i,j,k,comp)+
+       sfab(i,j-1,k,comp))/h2;
+
+      comp=3;
+      dsdtfab(i,j,k,comp)=
+       -(sfab(i,j,k+1,0)-sfab(i,j,k-1,0))/(Real(2.0)*h)+
+       Real(0.5)*dt*(sfab(i,j,k+1,comp)-
+       Real(2.0)*sfab(i,j,k,comp)+
+       sfab(i,j,k-1,comp))/h2;
+
+      AMREX_ASSERT(dsdtfab(i,j,k,comp)==dsdtfab(i,j,k,comp));
+     });
 
     }
 

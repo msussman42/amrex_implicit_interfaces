@@ -9,14 +9,17 @@
 AMREX_GPU_DEVICE
 inline
 void
-cns_initdata (int i, int j, int k, amrex::Array4<amrex::Real> const& state,
+cns_initdata (int i, int j, int k, 
+  amrex::Array4<amrex::Real> const& state,
+  amrex::GeometryData const& /*geomdata*/,
   amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dx,
   amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& prob_lo,
-  Parm const& /*parm*/, ProbParm const& prob_parm)
+  Parm const& /*parm*/, 
+  ProbParm const& /*prob_parm*/)
 {
     using amrex::Real;
 
-    AMREX_ASSERT(prob_parm.num_state_variables==4);
+    AMREX_ASSERT(state.nComp()==4);
     Real x[3];
     x[0] = prob_lo[0] + i*dx[0];
     x[1] = prob_lo[1] + j*dx[1];
