@@ -18,7 +18,7 @@ CNS::advance (Real time, Real dt, int /*iteration*/, int /*ncycle*/)
     AMREX_ALWAYS_ASSERT(NUM_STATE==4);
 
     MultiFab& S_new = get_new_data(State_Type);
-    MultiFab& S_old = get_old_data(State_Type);
+    //MultiFab& S_old = get_old_data(State_Type);
     MultiFab dSdt(grids,dmap,NUM_STATE,0,MFInfo(),Factory());
     MultiFab Sborder(grids,dmap,NUM_STATE,NUM_GROW,MFInfo(),Factory());
 
@@ -42,8 +42,8 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
     BL_PROFILE("CNS::compute_dSdt()");
 
     const auto dx = geom.CellSizeArray();
-    const int ncomp = NUM_STATE;
-    const int nchar = NUM_STATE;
+    //const int ncomp = NUM_STATE;
+    //const int nchar = NUM_STATE;
 
       //AMReX_BLassert.H
     AMREX_ALWAYS_ASSERT(NUM_STATE==4);
@@ -51,7 +51,7 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
     AMREX_ALWAYS_ASSERT(S.nGrow()==1);
     AMREX_ALWAYS_ASSERT(dt>Real(0.0));
 
-    Parm const* lparm = d_parm;
+    //Parm const* lparm = d_parm;
     ProbParm const* lprob_parm = d_prob_parm;
 
     for (MFIter mfi(S); mfi.isValid(); ++mfi)
@@ -74,37 +74,37 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
 	 Real h=dx[0];
 	 Real h2=h*h;
 	 dsdtfab(i,j,k,comp)=
-	   -c2*dt*(sfab(i+1,j,k,1)-sfab(i-1,j,k,1))/(Real(2.0)*h)+
-	   Real(0.5)*dt*dt*(sfab(i+1,j,k,comp)-
+	   -c2*(sfab(i+1,j,k,1)-sfab(i-1,j,k,1))/(Real(2.0)*h)+
+	   Real(0.5)*dt*(sfab(i+1,j,k,comp)-
 		Real(2.0)*sfab(i,j,k,comp)+
 		sfab(i-1,j,k,comp))/h2-
-	   c2*dt*(sfab(i,j+1,k,2)-sfab(i,j-1,k,2))/(Real(2.0)*h)+
-	   Real(0.5)*dt*dt*(sfab(i,j+1,k,comp)-
+	   c2*(sfab(i,j+1,k,2)-sfab(i,j-1,k,2))/(Real(2.0)*h)+
+	   Real(0.5)*dt*(sfab(i,j+1,k,comp)-
 		Real(2.0)*sfab(i,j,k,comp)+
 		sfab(i,j-1,k,comp))/h2-
-	   c2*dt*(sfab(i,j,k+1,3)-sfab(i,j,k-1,3))/(Real(2.0)*h)+
-	   Real(0.5)*dt*dt*(sfab(i,j,k+1,comp)-
+	   c2*(sfab(i,j,k+1,3)-sfab(i,j,k-1,3))/(Real(2.0)*h)+
+	   Real(0.5)*dt*(sfab(i,j,k+1,comp)-
 		Real(2.0)*sfab(i,j,k,comp)+
 		sfab(i,j,k-1,comp))/h2;
 
 	 comp=1;
 	 dsdtfab(i,j,k,comp)=
-	   -dt*(sfab(i+1,j,k,0)-sfab(i-1,j,k,0))/(Real(2.0)*h)+
-	   Real(0.5)*dt*dt*(sfab(i+1,j,k,comp)-
+	   -(sfab(i+1,j,k,0)-sfab(i-1,j,k,0))/(Real(2.0)*h)+
+	   Real(0.5)*dt*(sfab(i+1,j,k,comp)-
 		Real(2.0)*sfab(i,j,k,comp)+
 		sfab(i-1,j,k,comp))/h2;
 
 	 comp=2;
 	 dsdtfab(i,j,k,comp)=
-	   -dt*(sfab(i,j+1,k,0)-sfab(i,j-1,k,0))/(Real(2.0)*h)+
-	   Real(0.5)*dt*dt*(sfab(i,j+1,k,comp)-
+	   -(sfab(i,j+1,k,0)-sfab(i,j-1,k,0))/(Real(2.0)*h)+
+	   Real(0.5)*dt*(sfab(i,j+1,k,comp)-
 		Real(2.0)*sfab(i,j,k,comp)+
 		sfab(i,j-1,k,comp))/h2;
 
 	 comp=3;
 	 dsdtfab(i,j,k,comp)=
-	   -dt*(sfab(i,j,k+1,0)-sfab(i,j,k-1,0))/(Real(2.0)*h)+
-	   Real(0.5)*dt*dt*(sfab(i,j,k+1,comp)-
+	   -(sfab(i,j,k+1,0)-sfab(i,j,k-1,0))/(Real(2.0)*h)+
+	   Real(0.5)*dt*(sfab(i,j,k+1,comp)-
 		Real(2.0)*sfab(i,j,k,comp)+
 		sfab(i,j,k-1,comp))/h2;
 
@@ -114,5 +114,4 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
 
 
 }
-
 

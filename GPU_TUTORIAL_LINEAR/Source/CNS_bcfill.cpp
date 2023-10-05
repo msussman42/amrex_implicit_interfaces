@@ -5,6 +5,10 @@
 
 using namespace amrex;
 
+//GeometryData is declared in:
+//Src/Base/AMReX_Geometry.H
+//BCRec is declared in:
+//Src/Base/AMReX_BCRec.H
 struct CnsFillExtDir
 {
     AMREX_GPU_DEVICE
