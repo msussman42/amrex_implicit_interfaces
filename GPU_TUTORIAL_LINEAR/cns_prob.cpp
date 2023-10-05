@@ -18,9 +18,6 @@ extern "C" {
 
         amrex::ParmParse pp("prob");
 
-        pp.get("num_state_variables", CNS::h_prob_parm->num_state_variables);
-	int local_nstate=CNS::h_prob_parm->num_state_variables;
-	AMREX_ALWAYS_ASSERT(local_nstate==4);
         pp.get("sound_speed", CNS::h_prob_parm->sound_speed);
 	 //A P^{-1} = P^{-1} \Lambda
 	 //A = P^{-1} \Lambda P

@@ -12,6 +12,9 @@
 using namespace amrex;
 
 constexpr int CNS::NUM_GROW;
+constexpr int CNS::State_Type;
+
+int CNS::NUM_STATE=0;
 
 BCRec     CNS::phys_bc;
 
@@ -70,7 +73,7 @@ CNS::initData ()
 {
     BL_PROFILE("CNS::initData()");
 
-    //const auto geomdata = geom.data();
+    const auto geomdata = geom.data();
     const auto dx=geom.CellSizeArray();
     const auto prob_lo=geom.ProbLoArray();
 
@@ -90,9 +93,12 @@ CNS::initData ()
         amrex::ParallelFor(box,
         [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
         {
-            cns_initdata(i, j, k, sfab, 
+            cns_initdata(i, j, k, 
+			 sfab, 
+			 geomdata,
 			 dx,prob_lo, 
-			 *lparm, *lprobparm);
+			 *lparm, 
+			 *lprobparm);
         });
     }
 }
@@ -314,6 +320,8 @@ void
 CNS::read_params ()
 {
     ParmParse pp("cns");
+
+    pp.get("NUM_STATE",NUM_STATE);
 
     pp.query("v", verbose);
 

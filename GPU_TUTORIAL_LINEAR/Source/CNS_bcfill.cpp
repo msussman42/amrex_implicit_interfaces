@@ -34,9 +34,8 @@ struct CnsFillExtDir
              for (int nc=scomp;nc<scomp+num_comp;nc++) {
 	      const int* lo_bc=bcr[nc-scomp+bcomp].lo();
   	      if (lo_bc[0]==BCType::ext_dir) {
-		      if (nc==0) {
-			      dest(i,j,k,nc-scomp+dcomp)=Real(0.0);
-		      }
+		      AMREX_ASSERT(nc==0);
+		      dest(i,j,k,nc-scomp+dcomp)=Real(0.0);
 	      }
 	     }
 	    }
@@ -45,9 +44,8 @@ struct CnsFillExtDir
              for (int nc=scomp;nc<scomp+num_comp;nc++) {
   	      const int* hi_bc=bcr[nc-scomp+bcomp].hi();
   	      if (hi_bc[0]==BCType::ext_dir) {
-		      if (nc==0) {
-			      dest(i,j,k,nc-scomp+dcomp)=Real(1.0)+time;
-		      }
+		      AMREX_ASSERT(nc==0);
+		      dest(i,j,k,nc-scomp+dcomp)=Real(1.0)+time;
 	      }
 	     }
 	    }

@@ -9,18 +9,20 @@ Parm* CNS::d_parm = nullptr;
 ProbParm* CNS::h_prob_parm = nullptr;
 ProbParm* CNS::d_prob_parm = nullptr;
 
-static Box the_same_box (const Box& b) { return b; }
+//static Box the_same_box (const Box& b) { return b; }
 //static Box grow_box_by_one (const Box& b) { return amrex::grow(b,1); }
 
 //
 // Components are:
 //  Interior, Inflow, Outflow,  Symmetry,     SlipWall,     NoSlipWall
 //
+/*
 static int scalar_bc[] =
 {
   BCType::int_dir, BCType::ext_dir, BCType::foextrap, BCType::reflect_even, 
   BCType::reflect_even, BCType::reflect_even
 };
+*/
 
 static int pres_bc[] =
 {
@@ -39,6 +41,7 @@ static int tang_vel_bc[] =
     BCType::int_dir, BCType::ext_dir, BCType::foextrap, BCType::reflect_even, BCType::reflect_even, BCType::reflect_odd
 };
 
+/*
 static
 void
 set_scalar_bc (BCRec& bc, const BCRec& phys_bc)
@@ -51,7 +54,7 @@ set_scalar_bc (BCRec& bc, const BCRec& phys_bc)
         bc.setHi(i,scalar_bc[hi_bc[i]]);
     }
 }
-
+*/
 
 static
 void
@@ -131,9 +134,8 @@ CNS::variableSetUp ()
 
     read_params();
 
-    int NUM_STATE=h_prob_parm->num_state_variables;
     AMREX_ALWAYS_ASSERT(NUM_STATE==4);
-    AMREX_ALWAYS_ASSERT(NUM_GROW==1);
+    AMREX_ALWAYS_ASSERT(NUM_GROW==2);
    
     bool state_data_extrap = false;
     bool store_in_checkpoint = true;

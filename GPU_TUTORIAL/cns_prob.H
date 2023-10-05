@@ -10,9 +10,11 @@
 AMREX_GPU_DEVICE
 inline
 void
-cns_initdata (int i, int j, int k, amrex::Array4<amrex::Real> const& state,
-              amrex::GeometryData const& geomdata, 
-	      Parm const& parm, ProbParm const& prob_parm)
+cns_initdata (int i, int j, int k, 
+   amrex::Array4<amrex::Real> const& state,
+   amrex::GeometryData const& geomdata, 
+   Parm const& parm, 
+   ProbParm const& prob_parm)
 {
     using amrex::Real;
 

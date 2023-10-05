@@ -9,9 +9,9 @@ AMREX_GPU_HOST_DEVICE
 inline
 void
 cns_tag_perror (int i, int j, int k,
-                  amrex::Array4<char> const& tag,
-                  amrex::Array4<amrex::Real const> const& p,
-                  amrex::Real pgrad_threshold, char tagval) noexcept
+                amrex::Array4<char> const& tag,
+                amrex::Array4<amrex::Real const> const& p,
+                amrex::Real pgrad_threshold, char tagval) noexcept
 {
     amrex::Real ax = amrex::Math::abs(p(i+1,j,k) - p(i,j,k));
     amrex::Real ay = amrex::Math::abs(p(i,j+1,k) - p(i,j,k));

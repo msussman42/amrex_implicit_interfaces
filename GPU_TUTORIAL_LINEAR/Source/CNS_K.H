@@ -30,10 +30,18 @@ cns_estdt (amrex::Box const& bx,
     for         (int k = lo.z; k <= hi.z; ++k) {
         for     (int j = lo.y; j <= hi.y; ++j) {
             for (int i = lo.x; i <= hi.x; ++i) {
-                Real dtx = dx[0]/(amrex::Math::abs(prob_parm.sound_speed));
-                Real dty = dx[1]/(amrex::Math::abs(prob_parm.sound_speed));
-                Real dtz = dx[2]/(amrex::Math::abs(prob_parm.sound_speed));
-                dt = amrex::min(dt,amrex::min(dtx,amrex::min(dty,dtz)));
+
+              AMREX_ASSERT(dx[0]>0.0);
+              AMREX_ASSERT(dx[1]>0.0);
+              AMREX_ASSERT(dx[2]>0.0);
+              AMREX_ASSERT(prob_parm.sound_speed>0.0);
+
+              Real dtx = dx[0]/(amrex::Math::abs(prob_parm.sound_speed));
+              Real dty = dx[1]/(amrex::Math::abs(prob_parm.sound_speed));
+              Real dtz = dx[2]/(amrex::Math::abs(prob_parm.sound_speed));
+              dt = amrex::min(dt,amrex::min(dtx,amrex::min(dty,dtz)));
+
+	      AMREX_ASSERT(dt>0.0);
             }
         }
     }

@@ -12,7 +12,8 @@
 AMREX_GPU_HOST_DEVICE
 inline
 amrex::Real
-cns_estdt (amrex::Box const& bx, amrex::Array4<Real const> const& state,
+cns_estdt (amrex::Box const& bx, 
+	   amrex::Array4<Real const> const& state,
            amrex::GpuArray<amrex::Real,AMREX_SPACEDIM> const& dx,
            Parm const& parm) noexcept
 {
