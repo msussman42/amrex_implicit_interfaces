@@ -21,9 +21,9 @@ cns_initdata (int i, int j, int k,
 
     AMREX_ASSERT(state.nComp()==4);
     Real x[3];
-    x[0] = prob_lo[0] + i*dx[0];
-    x[1] = prob_lo[1] + j*dx[1];
-    x[2] = prob_lo[2] + k*dx[2];
+    x[0] = prob_lo[0] + (i+Real(0.5))*dx[0];
+    x[1] = prob_lo[1] + (j+Real(0.5))*dx[1];
+    x[2] = prob_lo[2] + (k+Real(0.5))*dx[2];
      //which is optimal on a GPU vs CPU? single or double precision?
      //AMD? INTEL? NVIDEA?
      //number of cores?
