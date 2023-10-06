@@ -1,0 +1,61 @@
+amrex.fpe_trap_invalid=1
+
+max_step  = 100000
+stop_time = 3.0
+
+geometry.is_periodic = 0 1 1
+geometry.coord_sys   = 0  # 0 => cart, 1 => RZ  2=>spherical
+geometry.prob_lo     =   0.0     0.0     0.0
+geometry.prob_hi     =   1.0     1.0     1.0
+amr.n_cell           =    64      64      64
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+cns.lo_bc       =  2   0   0
+cns.hi_bc       =  2   0   0
+
+cns.cfl = 0.3  # cfl number for hyperbolic system
+cns.NUM_STATE = 4
+
+cns.v = 2
+amr.v = 1
+
+# REFINEMENT / REGRIDDING 
+amr.max_level       = 0       # maximum level number allowed
+amr.ref_ratio       = 2 2 2 2 # refinement ratio
+amr.regrid_int      = 2 2 2 2 # how often to regrid
+amr.blocking_factor = 16
+amr.max_grid_size   = 512
+amr.n_error_buf     = 0 0 0 0 # number of buffer cells in error est
+amr.grid_eff        = 0.99     # what constitutes an efficient grid
+
+# CHECKPOINT FILES
+amr.checkpoint_files_output = 0
+amr.check_file              = chk    # root name of checkpoint file
+amr.check_int               = 100    # number of timesteps between checkpoints
+
+# PLOTFILES
+amr.plot_files_output = 0
+amr.plot_file         = plt     # root name of plotfile
+amr.plot_int          = 10      # number of timesteps between plotfiles
+
+# problem specific parameter
+# for wave equation:
+# p_t = -c^2 rho div u
+# u_t = -p_x/rho
+# v_t = -p_y/rho
+# w_t = -p_z/rho
+# u_t + A u_x + B u_y + C u_z=0
+# A=(0     c^2 rho  0 0
+#    1/rho   0      0 0
+#    0       0      0 0 
+#    0       0      0 0 ) 
+# assume rho=1
+# lambda1=c   r1=(1 1 0 0)
+# lambda2=-c  r2=(-1 1 0 0)
+# lambda3=0   r3=(0  0 1 0)
+# lambda4=0   r3=(0  0 0 1)
+prob.sound_speed = 1.0 
