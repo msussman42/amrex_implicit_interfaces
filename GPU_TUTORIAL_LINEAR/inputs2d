@@ -1,24 +1,24 @@
 amrex.fpe_trap_invalid=1
 
 max_step  = 100000
-stop_time = 3.0
+stop_time = 2.0
 
-geometry.is_periodic = 0 1 1
+geometry.is_periodic = 0 1 
 geometry.coord_sys   = 0  # 0 => cart, 1 => RZ  2=>spherical
-geometry.prob_lo     =   0.0     0.0     0.0
-geometry.prob_hi     =   1.0     1.0     0.015625
-amr.n_cell           =  256 256 4
+geometry.prob_lo     =   0.0     0.0 
+geometry.prob_hi     =   1.0     1.0
+amr.n_cell           =   256 256 
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
 # 1 = Inflow             4 = SlipWall
 # 2 = Outflow            5 = NoSlipWall
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
-cns.lo_bc       =  2   0   0
-cns.hi_bc       =  2   0   0
+cns.lo_bc       =  2   0  
+cns.hi_bc       =  2   0 
 
 cns.cfl = 0.3  # cfl number for hyperbolic system
-cns.NUM_STATE = 4
+cns.NUM_STATE = 3
 
 cns.v = 2
 amr.v = 1
@@ -27,8 +27,8 @@ amr.v = 1
 amr.max_level       = 0       # maximum level number allowed
 amr.ref_ratio       = 2 2 2 2 # refinement ratio
 amr.regrid_int      = 2 2 2 2 # how often to regrid
-amr.blocking_factor = 4
-amr.max_grid_size   = 512
+amr.blocking_factor = 16
+amr.max_grid_size   = 4096
 amr.n_error_buf     = 0 0 0 0 # number of buffer cells in error est
 amr.grid_eff        = 0.99     # what constitutes an efficient grid
 

@@ -22,15 +22,20 @@ struct CnsFillExtDir
 	    const Real* prob_lo=geom.ProbLo();
 	    const Real* prob_hi=geom.ProbHi();
 	    const Real* dx=geom.CellSize();
-	    Real x[3];
+	    Real x;
 	    int i=iv[0];
-	    int j=iv[1];
-	    int k=iv[2];
-	    x[0] = prob_lo[0] + (i+Real(0.5))*dx[0];
-            x[1] = prob_lo[1] + (j+Real(0.5))*dx[1];
-            x[2] = prob_lo[2] + (k+Real(0.5))*dx[2];
+	    int j=0;
+	    int k=0;
+#if (AMREX_SPACEDIM==2)||(AMREX_SPACEDIM==3)
+	    j=iv[1];
+#if (AMREX_SPACEDIM==3)
+	    k=iv[2];
+#endif
+#endif
 
-	    if (x[0]<prob_lo[0]) {
+	    x = prob_lo[0] + (i+Real(0.5))*dx[0];
+
+	    if (x<prob_lo[0]) {
              for (int nc=scomp;nc<scomp+num_comp;nc++) {
 	      const int* lo_bc=bcr[nc-scomp+bcomp].lo();
   	      if (lo_bc[0]==BCType::ext_dir) {
@@ -38,9 +43,7 @@ struct CnsFillExtDir
 		      dest(i,j,k,nc-scomp+dcomp)=Real(0.0);
 	      }
 	     }
-	    }
-
-	    if (x[0]>prob_hi[0]) {
+	    } else if (x>prob_hi[0]) {
              for (int nc=scomp;nc<scomp+num_comp;nc++) {
   	      const int* hi_bc=bcr[nc-scomp+bcomp].hi();
   	      if (hi_bc[0]==BCType::ext_dir) {

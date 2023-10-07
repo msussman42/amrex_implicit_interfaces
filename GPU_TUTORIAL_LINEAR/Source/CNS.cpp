@@ -236,39 +236,136 @@ CNS::post_timestep (int /*iteration*/)
 }
 
 void
-CNS::postCoarseTimeStep (Real /*time*/)
+CNS::postCoarseTimeStep (Real time)
 {
     BL_PROFILE("postCoarseTimeStep()");
 
     // This only computes sum on level 0
     if (verbose >= 2) {
-        printTotal();
+        printTotal(time);
     }
 }
 
+
 void
-CNS::printTotal () const
+CNS::compute_errors (MultiFab& Error_Analysis,const Real time) {
+ BL_PROFILE("CNS::compute_errors()");
+
+ const auto dx = geom.CellSizeArray();
+ const auto prob_lo=geom.ProbLoArray();
+
+   //AMReX_BLassert.H
+ AMREX_ALWAYS_ASSERT(NUM_STATE==AMREX_SPACEDIM+1);
+ AMREX_ALWAYS_ASSERT(Error_Analysis.nGrow()==0);
+
+ //Parm const* lparm = d_parm;
+ ProbParm const* lprob_parm = d_prob_parm;
+
+ const MultiFab& S_new = get_new_data(State_Type);
+
+ for (MFIter mfi(S_new); mfi.isValid(); ++mfi) {
+  const Box& bx = mfi.tilebox();
+
+  AMREX_ALWAYS_ASSERT(bx.ixType()==IndexType::TheCellType());
+  AMREX_ALWAYS_ASSERT(Error_Analysis[mfi].box().ixType()==IndexType::TheCellType());
+
+  auto const& snewfab = S_new.array(mfi);
+  auto const& errorfab = Error_Analysis.array(mfi);
+
+  amrex::ParallelFor(bx,
+  [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
+  {
+   Real volume=dx[0];
+#if (AMREX_SPACEDIM==2)
+   volume=volume*dx[1];
+#endif
+#if (AMREX_SPACEDIM==3)
+   volume=volume*dx[1]*dx[2];
+#endif
+   Real x = prob_lo[0] + (i+Real(0.5))*dx[0];
+
+   errorfab(i,j,k,0)=volume;
+
+   Real p_ref=Real(0.0);
+   if (time<Real(1.0)-x) {
+    p_ref=x;
+   } else if (time<Real(1.0)+x) {
+    p_ref=Real(2.0)*x+time-Real(1.0);
+   } else if (time<Real(3.0)-x) {
+    p_ref=Real(3.0)*x;
+   }
+
+   Real p_act=snewfab(i,j,k,0);
+   Real local_error=std::abs(p_ref-p_act)*volume;
+   errorfab(i,j,k,1)=local_error;
+
+  });
+
+ }
+
+
+}
+
+void
+CNS::printTotal (amrex::Real time) 
 {
     const MultiFab& S_new = get_new_data(State_Type);
-    std::array<Real,4> tot;
-    for (int comp = 0; comp < 4; ++comp) {
+    int ncomp=S_new.nComp();
+    AMREX_ALWAYS_ASSERT(ncomp==AMREX_SPACEDIM+1);
+
+    MultiFab Error_Analysis(grids,dmap,2,0,MFInfo(),Factory());
+    compute_errors(Error_Analysis,time);
+
+    std::array<Real,AMREX_SPACEDIM+1> tot;
+    std::array<Real,2> err_tot;
+
+    for (int comp = 0; comp < ncomp; ++comp) {
         tot[comp] = S_new.sum(comp,true) * geom.ProbSize();
     }
+    for (int comp = 0; comp < 2; ++comp) {
+        err_tot[comp] = Error_Analysis.sum(comp,true);
+    }
+
 #ifdef BL_LAZY
     Lazy::QueueReduction( [=] () mutable {
 #endif
-            ParallelDescriptor::ReduceRealSum(tot.data(), 4, ParallelDescriptor::IOProcessorNumber());
+            ParallelDescriptor::ReduceRealSum(tot.data(), ncomp, ParallelDescriptor::IOProcessorNumber());
+#if (AMREX_SPACEDIM==1)
+            amrex::Print().SetPrecision(17) << "\n[CNS] Total p      is " << tot[0] << "\n"
+                                            <<   "      Total u      is " << tot[1] << "\n";
+#endif
+#if (AMREX_SPACEDIM==2)
+            amrex::Print().SetPrecision(17) << "\n[CNS] Total p      is " << tot[0] << "\n"
+                                            <<   "      Total u      is " << tot[1] << "\n"
+                                            <<   "      Total v      is " << tot[2] << "\n";
+#endif
+#if (AMREX_SPACEDIM==3)
             amrex::Print().SetPrecision(17) << "\n[CNS] Total p      is " << tot[0] << "\n"
                                             <<   "      Total u      is " << tot[1] << "\n"
                                             <<   "      Total v      is " << tot[2] << "\n"
-                                            <<   "      Total w       is " << tot[3] << "\n";
+                                            <<   "      Total w      is " << tot[3] << "\n";
+#endif
 #ifdef BL_LAZY
         });
 #endif
+
+
+#ifdef BL_LAZY
+    Lazy::QueueReduction( [=] () mutable {
+#endif
+            ParallelDescriptor::ReduceRealSum(err_tot.data(), 2, ParallelDescriptor::IOProcessorNumber());
+            amrex::Print().SetPrecision(17) << "\n[CNS] Total vol    is " << err_tot[0] << "\n"
+                                            <<   "      Total err    is " << err_tot[1]/err_tot[0] << "\n";
+#ifdef BL_LAZY
+        });
+#endif
+
+
+
 }
 
 void
-CNS::post_init (Real)
+CNS::post_init (Real /*stop_time*/)
 {
     if (level > 0) return;
     for (int k = parent->finestLevel()-1; k >= 0; --k) {
@@ -276,7 +373,8 @@ CNS::post_init (Real)
     }
 
     if (verbose >= 2) {
-        printTotal();
+        amrex::Real time=0.0;
+        printTotal(time);
     }
 }
 
@@ -372,9 +470,16 @@ CNS::buildMetrics ()
 {
     // make sure dx == dy == dz
     const Real* dx = geom.CellSize();
+#if (AMREX_SPACEDIM==3)
     if (std::abs(dx[0]-dx[1]) > Real(1.e-12)*dx[0] || std::abs(dx[0]-dx[2]) > Real(1.e-12)*dx[0]) {
         amrex::Abort("CNS: must have dx == dy == dz\n");
     }
+#endif
+#if (AMREX_SPACEDIM==2)
+    if (std::abs(dx[0]-dx[1]) > Real(1.e-12)*dx[0]) {
+        amrex::Abort("CNS: must have dx == dy\n");
+    }
+#endif
 }
 
 Real

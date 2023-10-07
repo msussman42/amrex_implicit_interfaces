@@ -16,6 +16,8 @@ autodiff/examples/closest_point
 GPU_TUTORIAL/tmp_build_dir
 GPU_TUTORIAL/CNS3d*
 GPU_TUTORIAL_LINEAR/tmp_build_dir
+GPU_TUTORIAL_LINEAR/CNS1d*
+GPU_TUTORIAL_LINEAR/CNS2d*
 GPU_TUTORIAL_LINEAR/CNS3d*
 GPU_TUTORIAL_LINEAR/run*.out
 NS_fluids_lib/tmp_build_dir
