@@ -14,7 +14,7 @@ CNS::advance (Real time, Real dt, int /*iteration*/, int /*ncycle*/)
     }
 
     AMREX_ALWAYS_ASSERT(NUM_GROW==2);
-    AMREX_ALWAYS_ASSERT(NUM_STATE==4);
+    AMREX_ALWAYS_ASSERT(NUM_STATE==AMREX_SPACEDIM+1);
 
     MultiFab& S_new = get_new_data(State_Type);
     //MultiFab& S_old = get_old_data(State_Type);
@@ -45,7 +45,7 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
     //const int nchar = NUM_STATE;
 
       //AMReX_BLassert.H
-    AMREX_ALWAYS_ASSERT(NUM_STATE==4);
+    AMREX_ALWAYS_ASSERT(NUM_STATE==AMREX_SPACEDIM+1);
     AMREX_ALWAYS_ASSERT(dSdt.nGrow()==0);
     AMREX_ALWAYS_ASSERT(S.nGrow()==2);
     AMREX_ALWAYS_ASSERT(dt>Real(0.0));
@@ -71,26 +71,38 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
       AMREX_ASSERT(c2>0.0);
       AMREX_ASSERT(c>0.0);
 
-      int comp=0;
-
       Real h=dx[0];
       Real h2=h*h;
       AMREX_ASSERT(h>0.0);
       AMREX_ASSERT(h2>0.0);
 
-      dsdtfab(i,j,k,comp)=
+      int comp=0;
+      Real local_dsdt=Real(0.0);
+
+      local_dsdt=
        -c2*(sfab(i+1,j,k,1)-sfab(i-1,j,k,1))/(Real(2.0)*h)+
        Real(0.5)*dt*(sfab(i+1,j,k,comp)-
-       Real(2.0)*sfab(i,j,k,comp)+
-       sfab(i-1,j,k,comp))/h2-
-       c2*(sfab(i,j+1,k,2)-sfab(i,j-1,k,2))/(Real(2.0)*h)+
-       Real(0.5)*dt*(sfab(i,j+1,k,comp)-
-       Real(2.0)*sfab(i,j,k,comp)+
-       sfab(i,j-1,k,comp))/h2-
-       c2*(sfab(i,j,k+1,3)-sfab(i,j,k-1,3))/(Real(2.0)*h)+
-       Real(0.5)*dt*(sfab(i,j,k+1,comp)-
-       Real(2.0)*sfab(i,j,k,comp)+
-       sfab(i,j,k-1,comp))/h2;
+        Real(2.0)*sfab(i,j,k,comp)+
+        sfab(i-1,j,k,comp))/h2
+#if ((AMREX_SPACEDIM==2)||(AMREX_SPACEDIM==3))
+       local_dsdt=local_dsdt-
+        c2*(sfab(i,j+1,k,2)-sfab(i,j-1,k,2))/(Real(2.0)*h)+
+        Real(0.5)*dt*(sfab(i,j+1,k,comp)-
+         Real(2.0)*sfab(i,j,k,comp)+
+         sfab(i,j-1,k,comp))/h2
+#if (AMREX_SPACEDIM==3) 	
+       local_dsdt=local_dsdt-
+        c2*(sfab(i,j,k+1,3)-sfab(i,j,k-1,3))/(Real(2.0)*h)+
+         Real(0.5)*dt*(sfab(i,j,k+1,comp)-
+         Real(2.0)*sfab(i,j,k,comp)+
+         sfab(i,j,k-1,comp))/h2;
+#else
+      amrex::Error("AMREX_SPACEDIM invalid");
+#endif
+#else
+      amrex::Error("AMREX_SPACEDIM invalid");
+#endif
+      dsdtfab(i,j,k,comp)=local_dsdt;
 
       AMREX_ASSERT(dsdtfab(i,j,k,comp)==dsdtfab(i,j,k,comp));
 
@@ -98,26 +110,37 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt)
       dsdtfab(i,j,k,comp)=
        -(sfab(i+1,j,k,0)-sfab(i-1,j,k,0))/(Real(2.0)*h)+
        Real(0.5)*dt*(sfab(i+1,j,k,comp)-
-       Real(2.0)*sfab(i,j,k,comp)+
-       sfab(i-1,j,k,comp))/h2;
+        Real(2.0)*sfab(i,j,k,comp)+
+        sfab(i-1,j,k,comp))/h2;
 
       AMREX_ASSERT(dsdtfab(i,j,k,comp)==dsdtfab(i,j,k,comp));
 
+#if ((AMREX_SPACEDIM==2)||(AMREX_SPACEDIM==3))
       comp=2;
       dsdtfab(i,j,k,comp)=
        -(sfab(i,j+1,k,0)-sfab(i,j-1,k,0))/(Real(2.0)*h)+
        Real(0.5)*dt*(sfab(i,j+1,k,comp)-
-       Real(2.0)*sfab(i,j,k,comp)+
-       sfab(i,j-1,k,comp))/h2;
+        Real(2.0)*sfab(i,j,k,comp)+
+        sfab(i,j-1,k,comp))/h2;
+      AMREX_ASSERT(dsdtfab(i,j,k,comp)==dsdtfab(i,j,k,comp));
 
+#if (AMREX_SPACEDIM==3) 	
       comp=3;
       dsdtfab(i,j,k,comp)=
        -(sfab(i,j,k+1,0)-sfab(i,j,k-1,0))/(Real(2.0)*h)+
        Real(0.5)*dt*(sfab(i,j,k+1,comp)-
-       Real(2.0)*sfab(i,j,k,comp)+
-       sfab(i,j,k-1,comp))/h2;
+        Real(2.0)*sfab(i,j,k,comp)+
+        sfab(i,j,k-1,comp))/h2;
 
       AMREX_ASSERT(dsdtfab(i,j,k,comp)==dsdtfab(i,j,k,comp));
+#else
+      amrex::Error("AMREX_SPACEDIM invalid");
+#endif
+#else
+      amrex::Error("AMREX_SPACEDIM invalid");
+#endif
+
+
      });
 
     }
