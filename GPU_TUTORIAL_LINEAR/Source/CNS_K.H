@@ -27,24 +27,38 @@ cns_estdt (amrex::Box const& bx,
     Real dt = Real(1.e37);
 #endif
 
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     AMREX_ALWAYS_ASSERT(dx[dir]>0.0);
+    }
+    AMREX_ALWAYS_ASSERT(prob_parm.sound_speed>0.0);
+
     for         (int k = lo.z; k <= hi.z; ++k) {
         for     (int j = lo.y; j <= hi.y; ++j) {
             for (int i = lo.x; i <= hi.x; ++i) {
 
-              AMREX_ASSERT(dx[0]>0.0);
-              AMREX_ASSERT(dx[1]>0.0);
-              AMREX_ASSERT(dx[2]>0.0);
-              AMREX_ASSERT(prob_parm.sound_speed>0.0);
-
               Real dtx = dx[0]/(amrex::Math::abs(prob_parm.sound_speed));
+#if (AMREX_SPACEDIM==1)
+              dt = amrex::min(dt,dtx);
+#elif ((AMREX_SPACEDIM==2)||(AMREX_SPACEDIM==3))
               Real dty = dx[1]/(amrex::Math::abs(prob_parm.sound_speed));
-              Real dtz = dx[2]/(amrex::Math::abs(prob_parm.sound_speed));
+#if (AMREX_SPACEDIM==2)
+              dt = amrex::min(dt,amrex::min(dtx,dty));
+#elif (AMREX_SPACEDIM==3)
+              Real dtz = dx[AMREX_SPACEDIM-1]/
+		  (amrex::Math::abs(prob_parm.sound_speed));
               dt = amrex::min(dt,amrex::min(dtx,amrex::min(dty,dtz)));
+#else
+	      amrex::Error("AMREX_SPACEDIM problem");
+#endif
+#else
+	      amrex::Error("AMREX_SPACEDIM problem");
+#endif
 
-	      AMREX_ASSERT(dt>0.0);
+
             }
         }
     }
+    AMREX_ALWAYS_ASSERT(dt>0.0);
 
     return dt;
 }
