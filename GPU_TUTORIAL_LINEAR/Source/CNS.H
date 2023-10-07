@@ -126,8 +126,10 @@ protected:
     amrex::Real initialTimeStep ();
 
     void compute_dSdt (const amrex::MultiFab& S, amrex::MultiFab& dSdt, amrex::Real dt);
+    void compute_errors (amrex::MultiFab& Error_analysis,
+		         const amrex::Real time);
 
-    void printTotal () const;
+    void printTotal (amrex::Real time);
 
     std::unique_ptr<amrex::FluxRegister> flux_reg;
 

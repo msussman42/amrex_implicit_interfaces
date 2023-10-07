@@ -25,9 +25,7 @@ cns_initdata (int i, int j, int k,
 #if ((AMREX_SPACEDIM==2)||(AMREX_SPACEDIM==3))
     x[1] = prob_lo[1] + (j+Real(0.5))*dx[1];
 #if (AMREX_SPACEDIM==3)
-    x[AMREX_SPACEDIM-1] = 
-	prob_lo[AMREX_SPACEDIM-1] + 
-	(k+Real(0.5))*dx[AMREX_SPACEDIM-1];
+    x[2] = prob_lo[2] + (k+Real(0.5))*dx[2];
 #endif
 #endif
      //which is optimal on a GPU vs CPU? single or double precision?
@@ -40,7 +38,6 @@ cns_initdata (int i, int j, int k,
     state(i,j,k,0) = x[0];
     state(i,j,k,1) = Real(1.0);
     for (int dir=2;dir<=AMREX_SPACEDIM;dir++) {
-     state(i,j,k,dir) = Real(0.0);
      state(i,j,k,dir) = Real(0.0);
     }
 }

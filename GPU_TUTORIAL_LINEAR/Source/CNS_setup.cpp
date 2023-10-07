@@ -134,7 +134,7 @@ CNS::variableSetUp ()
 
     read_params();
 
-    AMREX_ALWAYS_ASSERT(NUM_STATE==4);
+    AMREX_ALWAYS_ASSERT(NUM_STATE==AMREX_SPACEDIM+1);
     AMREX_ALWAYS_ASSERT(NUM_GROW==2);
    
     bool state_data_extrap = false;
@@ -150,8 +150,13 @@ CNS::variableSetUp ()
     int cnt = 0;
     set_pres_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "P";
     cnt++; set_x_vel_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "U";
+#if ((AMREX_SPACEDIM==2)||(AMREX_SPACEDIM==3))
     cnt++; set_y_vel_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "V";
+#if (AMREX_SPACEDIM==3)
     cnt++; set_z_vel_bc(bc,phys_bc); bcs[cnt] = bc; name[cnt] = "W";
+#endif
+#endif
+
 
     StateDescriptor::BndryFunc bndryfunc(cns_bcfill);
     bndryfunc.setRunOnGPU(true);  // I promise the bc function will launch gpu kernels.

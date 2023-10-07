@@ -3,8 +3,6 @@ TOP := .
 
 EBASE := CNS
 
-DIM := 3
-
 LAZY := TRUE
 
 BL_NO_FORT = TRUE
