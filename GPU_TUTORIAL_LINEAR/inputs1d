@@ -7,7 +7,7 @@ geometry.is_periodic = 0 1
 geometry.coord_sys   = 0  # 0 => cart, 1 => RZ  2=>spherical
 geometry.prob_lo     =   0.0  
 geometry.prob_hi     =   1.0 
-amr.n_cell           =   256
+amr.n_cell           =   4096
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
@@ -28,7 +28,7 @@ amr.max_level       = 0       # maximum level number allowed
 amr.ref_ratio       = 2 2 2 2 # refinement ratio
 amr.regrid_int      = 2 2 2 2 # how often to regrid
 amr.blocking_factor = 16
-amr.max_grid_size   = 4096
+amr.max_grid_size   = 8192
 amr.n_error_buf     = 0 0 0 0 # number of buffer cells in error est
 amr.grid_eff        = 0.99     # what constitutes an efficient grid
 
