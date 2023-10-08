@@ -427,30 +427,29 @@ c do nothing
          if (dx_fiber.le.min_grid_x) then
 c do nothing
          else
+          print *,"WARNING"
           print *,"require dx_fiber<=min_grid_x" 
           print *,"dx_fiber=",dx_fiber
           print *,"min_grid_x=",min_grid_x
-          stop
          endif
 
          if (dx_fiber.le.min_grid_y) then
 c do nothing
          else
+          print *,"WARNING"
           print *,"require dx_fiber<=min_grid_y" 
           print *,"dx_fiber=",dx_fiber
           print *,"min_grid_y=",min_grid_y
-          stop
          endif
 
          if (dx_fiber.le.min_grid_z) then
 c do nothing
          else
+          print *,"WARNING"
           print *,"require dx_fiber<=min_grid_z" 
           print *,"dx_fiber=",dx_fiber
           print *,"min_grid_z=",min_grid_z
-          stop
          endif
-
 
          ns_ibm_r_fib(in_fib)= ns_ibm_r(i+1)
 
