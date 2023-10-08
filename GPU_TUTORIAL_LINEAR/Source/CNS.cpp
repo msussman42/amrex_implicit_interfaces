@@ -261,7 +261,7 @@ CNS::compute_errors (MultiFab& Error_Analysis,const Real time) {
  //Parm const* lparm = d_parm;
  ProbParm const* lprob_parm = d_prob_parm;
 
- const MultiFab& S_new = get_new_data(State_Type);
+ MultiFab& S_new = get_new_data(State_Type);
 
  for (MFIter mfi(S_new); mfi.isValid(); ++mfi) {
   const Box& bx = mfi.tilebox();
@@ -269,36 +269,17 @@ CNS::compute_errors (MultiFab& Error_Analysis,const Real time) {
   AMREX_ALWAYS_ASSERT(bx.ixType()==IndexType::TheCellType());
   AMREX_ALWAYS_ASSERT(Error_Analysis[mfi].box().ixType()==IndexType::TheCellType());
 
-  auto const& snewfab = S_new.array(mfi);
-  auto const& errorfab = Error_Analysis.array(mfi);
+  auto snewfab = S_new.array(mfi);
+  auto errorfab = Error_Analysis.array(mfi);
 
   amrex::ParallelFor(bx,
   [=] AMREX_GPU_DEVICE (int i, int j, int k) noexcept
   {
-   Real volume=dx[0];
-#if (AMREX_SPACEDIM==2)
-   volume=volume*dx[1];
-#endif
-#if (AMREX_SPACEDIM==3)
-   volume=volume*dx[1]*dx[2];
-#endif
-   Real x = prob_lo[0] + (i+Real(0.5))*dx[0];
-
-   errorfab(i,j,k,0)=volume;
-
-   Real p_ref=Real(0.0);
-   if (time<Real(1.0)-x) {
-    p_ref=x;
-   } else if (time<Real(1.0)+x) {
-    p_ref=Real(2.0)*x+time-Real(1.0);
-   } else if (time<Real(3.0)-x) {
-    p_ref=Real(3.0)*x;
-   }
-
-   Real p_act=snewfab(i,j,k,0);
-   Real local_error=std::abs(p_ref-p_act)*volume;
-   errorfab(i,j,k,1)=local_error;
-
+   cns_compute_errors(i,j,k,
+                      snewfab,
+                      errorfab,
+                      dx,prob_lo,
+                      time);
   });
 
  }
