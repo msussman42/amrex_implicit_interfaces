@@ -8,7 +8,7 @@ USE_MPI = FALSE
 USE_OMP = FALSE
 
 USE_CUDA = FALSE
-COMP = gcc
+COMP = gnu
 
 include ./Make.package
 include ./Make.CNS
