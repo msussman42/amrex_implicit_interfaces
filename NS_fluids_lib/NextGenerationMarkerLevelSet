@@ -1,0 +1,52 @@
+GPU capability, MPI capability, OpenMP
+AMR capability (adapt where the curvature large),
+Particle Container
+Multimaterial
+
+Each interface has an associated level set function and set of particles.
+
+e.g. 3 materials,
+12,13,23 (3 interfaces)
+
+e.g. N materials,
+
+N-1  + N-2  + N-3 + ... + 1
+
+sum i=1 to N-1  N-i = (N-1)N - ((N-1)^2+(N-1))/2=(N-1)(N-N/2)=(N-1)N/2
+
+0. define NPCELL = number of particles in a cell.
+1. initialize LS (locally distance functions)
+2. generate the AMR grid using curvature criteria
+3. a. for each cell, randomly generate the positions for 
+      NPCELL-NPCELL(actual) "seeds." 
+   b. x_p=x_random_p - LS grad LS/|grad LS|  p=1..NPCELL
+4. For each interface, construct a divergence free velocity UMAC
+5. LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
+6. advect the particles using UMAC
+7. Delete particles which satisfy:
+   (a) |(I LS)(x_p)| > alpha dx  (e.g. alpha=1/20) I=DBWENO or "cubic Hermite"
+   (b) if NPCELL_ACTUAL>NPCELL, then delete the particles with the largest
+       value for |(I LS)(x_p)|.
+8. Redistance the level set function(s) using dtau=dx/2 for example:
+    (a) LS0 is given
+    (b) for n=1,2,3,...
+          for each grid cell:
+          (i) find grad LS(n-1) using upwinded WENO
+          (ii) x_test=x-dtau sign(LS0) grad LS/|grad LS| 
+          (iii) if sign(I LS(x_test))=sign(LS0) then
+                 S \equiv sign(LS0)
+                else
+                 S \equiv sign(LS0) |LS(n-1)|/
+                   (|LS(n-1)|+|I LS(x_test)|)
+                endif
+                LS(n)=LS(n-1)+dtau S *(1-|grad LS|)
+                ( (LS(n)-LS(n-1))/dtau + S * n dot grad LS = +S
+          (iv) lambda=sum w(||x-xp||)(I LS(n)(xp))/sum w(||x-xp||
+
+               min w(||x-xp||)(I LS(xp)-lambda)^2
+               LScorrect(n)=LS(n)-lambda
+    (c) endfor
+9. go back to step 3.
+
+References:
+Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.

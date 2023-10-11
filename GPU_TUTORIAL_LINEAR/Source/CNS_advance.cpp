@@ -1,5 +1,6 @@
 #include "CNS.H"
 #include "CNS_K.H"
+#include "DSDT_F.H"
 
 using namespace amrex;
 
@@ -39,7 +40,6 @@ void
 CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt) {
  BL_PROFILE("CNS::compute_dSdt()");
 
- const auto dx = geom.CellSizeArray();
  //const int ncomp = NUM_STATE;
  //const int nchar = NUM_STATE;
 
@@ -58,6 +58,29 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt) {
   AMREX_ALWAYS_ASSERT(bx.ixType()==IndexType::TheCellType());
   AMREX_ALWAYS_ASSERT(dSdt[mfi].box().ixType()==IndexType::TheCellType());
 
+  if (1==0) {
+   const Real* dx=geom.CellSize();
+   Real c=lprob_parm->sound_speed;
+
+   const FArrayBox& sfab=S[mfi];
+   const FArrayBox& dsdtfab=dSdt[mfi];
+   const int* lo=bx.loVect();
+   const int* hi=bx.hiVect();
+   fort_dsdtfab(
+     dsdtfab.dataPtr(),
+     ARLIM(dsdtfab.loVect()),
+     ARLIM(dsdtfab.hiVect()),
+     sfab.dataPtr(),
+     ARLIM(sfab.loVect()),
+     ARLIM(sfab.hiVect()),
+     dx,
+     &dt,
+     &c,
+     lo,hi);
+
+  } else {
+
+  const auto dx = geom.CellSizeArray();
   auto const& sfab = S.array(mfi);
   auto const& dsdtfab = dSdt.array(mfi);
 
@@ -133,6 +156,8 @@ CNS::compute_dSdt (const MultiFab& S, MultiFab& dSdt, Real dt) {
 
 
   });
+
+  }
 
  }
 

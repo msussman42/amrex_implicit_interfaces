@@ -108,11 +108,7 @@ else ifneq ($(quadmath_libso),libquadmath.so)
   override XTRALIBS += -lquadmath
 endif
 
-FFLAGS   += $(GENERIC_GNU_FLAGS)
-F90FLAGS += $(GENERIC_GNU_FLAGS)
 endif
-
-USE_CUDA = TRUE
 
 ifeq ($(LINUX_DESKTOP),TRUE)
 
@@ -140,9 +136,6 @@ ifneq ($(quadmath_liba),libquadmath.a)
 else ifneq ($(quadmath_libso),libquadmath.so)
   override XTRALIBS += -lquadmath
 endif
-
-FFLAGS   += $(GENERIC_GNU_FLAGS)
-F90FLAGS += $(GENERIC_GNU_FLAGS)
 
 endif
 
@@ -206,6 +199,19 @@ USE_OMP = FALSE
 EBASE = amr
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
+
+ifeq ($(HPC_GNU),TRUE)
+FFLAGS   += $(GENERIC_GNU_FLAGS)
+F90FLAGS += $(GENERIC_GNU_FLAGS)
+endif
+ifeq ($(LINUX_DESKTOP),TRUE)
+FFLAGS   += $(GENERIC_GNU_FLAGS)
+F90FLAGS += $(GENERIC_GNU_FLAGS)
+endif
+ifeq ($(MAC_LAPTOP),TRUE)
+endif
+
+
 
 $(info MODDEP=$(MODDEP))
 
