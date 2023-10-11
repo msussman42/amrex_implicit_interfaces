@@ -19,10 +19,7 @@ struct CnsFillExtDir
                      const int scomp) const
         {
             // do something for external Dirichlet (BCType::ext_dir)
-	    const Real* prob_lo=geom.ProbLo();
-	    const Real* prob_hi=geom.ProbHi();
-	    const Real* dx=geom.CellSize();
-	    Real x;
+
 	    int i=iv[0];
 	    int j=0;
 	    int k=0;
@@ -33,25 +30,7 @@ struct CnsFillExtDir
 #endif
 #endif
 
-	    x = prob_lo[0] + (i+Real(0.5))*dx[0];
-
-	    if (x<prob_lo[0]) {
-             for (int nc=scomp;nc<scomp+num_comp;nc++) {
-	      const int* lo_bc=bcr[nc-scomp+bcomp].lo();
-  	      if (lo_bc[0]==BCType::ext_dir) {
-		      AMREX_ASSERT(nc==0);
-		      dest(i,j,k,nc-scomp+dcomp)=Real(0.0);
-	      }
-	     }
-	    } else if (x>prob_hi[0]) {
-             for (int nc=scomp;nc<scomp+num_comp;nc++) {
-  	      const int* hi_bc=bcr[nc-scomp+bcomp].hi();
-  	      if (hi_bc[0]==BCType::ext_dir) {
-		      AMREX_ASSERT(nc==0);
-		      dest(i,j,k,nc-scomp+dcomp)=Real(1.0)+time;
-	      }
-	     }
-	    }
+	    dest(i,j,k,dcomp)=((i<0) ? Real(0.0) : Real(1.0)+time);
 
         }
 };
