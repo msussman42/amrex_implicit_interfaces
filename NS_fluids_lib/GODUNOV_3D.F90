@@ -7964,9 +7964,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
        do dir_local=1,SDIM
@@ -8121,9 +8121,9 @@ stop
         call stress_index(dir_local,ii,jj)
         tensor(D_DECL(i,j,k),dir_local)=TQ(ii,jj)
        enddo
-      enddo
-      enddo
-      enddo
+      enddo!i
+      enddo!j
+      enddo!k
 
       return
       end subroutine fort_maketensor
@@ -8280,9 +8280,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0, &
          flux_grid_type) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,flux_grid_type)
        do dir_local=1,SDIM
@@ -8315,9 +8315,9 @@ stop
          tensorMAC(D_DECL(i,j,k),itensor)=cell_data_deriv(1)
        enddo ! itensor=1..ENUM_NUM_TENSOR_TYPE
 
-      enddo
-      enddo
-      enddo
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_maketensor_mac
@@ -8407,9 +8407,9 @@ stop
 
       ibase=partid*NCOMP_FSI
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        LS=fsi(D_DECL(i,j,k),ibase+FSI_LEVELSET+1)
        if (LS.ge.zero) then
@@ -8423,9 +8423,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_copy_vel_on_sign
@@ -8552,9 +8552,9 @@ stop
        stop
       endif
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
@@ -8708,9 +8708,9 @@ stop
         endif
        enddo ! partid=1..nparts
 
-      enddo
-      enddo
-      enddo
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_build_moment
@@ -8884,9 +8884,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        do dir_local=1,ENUM_NUM_TENSOR_TYPE
         point_told(dir_local)=told(D_DECL(i,j,k),dir_local)
@@ -8922,9 +8922,9 @@ stop
         tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)
        enddo
 
-      enddo
-      enddo
-      enddo
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_updatetensor
@@ -9032,9 +9032,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(x_sten,i,j,k,level,nhalf)
 
@@ -9116,9 +9116,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_extrapolate_tensor
@@ -9467,9 +9467,9 @@ stop
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        maskcell=NINT(maskfab(D_DECL(i,j,k)))
 
@@ -10224,9 +10224,9 @@ stop
         stop
        endif
 
-      enddo ! k=growlo(3),growhi(3)
-      enddo ! j=growlo(2),growhi(2)
       enddo ! i=growlo(1),growhi(1)
+      enddo ! j=growlo(2),growhi(2)
+      enddo ! k=growlo(3),growhi(3)
 
       return
       end subroutine fort_stefansolver

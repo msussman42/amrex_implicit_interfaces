@@ -855,7 +855,7 @@ INTEGER_T, INTENT(in) :: dir,side
 REAL_T, INTENT(in) :: dx(SDIM)
 INTEGER_T, INTENT(in) :: istate,im
 INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+INTEGER_T, PARAMETER :: local_bcflag=1
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -863,8 +863,6 @@ else
  print *,"nmat invalid"
  stop
 endif
-
-local_bcflag=1
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &

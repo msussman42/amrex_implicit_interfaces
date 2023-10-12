@@ -369,6 +369,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
  call ROTATING_ANNULUS_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ VEL=local_VEL(veldir)
 
 else
  print *,"dir,side, or veldir invalid"
