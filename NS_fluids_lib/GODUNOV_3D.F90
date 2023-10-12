@@ -1000,9 +1000,9 @@ stop
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
           growlo,growhi,0,dir-1)
 
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
 
@@ -1244,9 +1244,9 @@ stop
           xflux(D_DECL(i,j,k),velcomp)=diff_flux(velcomp)
          enddo  ! velcomp
 
-        enddo
-        enddo
-        enddo  ! i,j,k faces
+        enddo !i
+        enddo !j
+        enddo !k faces
 
        else if (spectral_loop.eq.1) then
         ! do nothing
@@ -1266,9 +1266,9 @@ stop
          if (bfact.ge.2) then
 
           call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-          do i=growlo(1),growhi(1)
-          do j=growlo(2),growhi(2)
           do k=growlo(3),growhi(3)
+          do j=growlo(2),growhi(2)
+          do i=growlo(1),growhi(1)
 
            if ((dir.ge.1).and.(dir.le.SDIM)) then
             ! do nothing
@@ -1751,9 +1751,9 @@ stop
             stop
            endif
 
-          enddo
-          enddo
-          enddo ! i,j,k
+          enddo !i
+          enddo !j
+          enddo !k
 
          else if (bfact.eq.1) then
           ! do nothing
@@ -1788,9 +1788,9 @@ stop
 
          ! u_x+v_y+w_z on flux face
          ! multiply by visc_constant
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
           ! dir=1..sdim
          call gridstenMAC_level(xstenMAC, &
@@ -2005,9 +2005,9 @@ stop
 
          enddo  ! velcomp
 
-        enddo
-        enddo
-        enddo  ! i,j,k add divterm to fluxes and multiply by visc_constant
+        enddo !i 
+        enddo !j
+        enddo !k add divterm to fluxes and multiply by visc_constant
 
        else if (spectral_loop.eq.1) then
         ! do nothing
@@ -2029,9 +2029,9 @@ stop
           print *,"dir invalid crossterm"
           stop
          endif
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           call strip_status(i,j,k,bfact,stripstat)
 
@@ -2242,9 +2242,9 @@ stop
            stop
           endif
 
-         enddo
-         enddo
-         enddo ! i,j,k
+         enddo !i
+         enddo !j
+         enddo !k
 
         else if (bfact.eq.1) then
          ! do nothing
@@ -2781,9 +2781,9 @@ stop
 ! u dt dx + udt r < dx r
 ! u dt (dx/r+1) < dx
 !
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        ivec(1)=i
        ivec(2)=j
@@ -3607,9 +3607,9 @@ stop
         stop
        endif 
 
-      enddo
-      enddo
-      enddo  ! i,j,k
+      enddo !i
+      enddo !j
+      enddo !k
 
       if (local_gravity_mag.gt.zero) then
 
@@ -3810,9 +3810,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
        do dir=1,SDIM
@@ -3932,9 +3932,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_derive_mom_den
@@ -4118,9 +4118,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,mac_grow,normdir)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
         if (normdir.eq.0) then
          idx=i
@@ -4236,9 +4236,9 @@ stop
          ! find displacements 
         umac_displace(D_DECL(i,j,k))=delta
 
-      enddo
-      enddo
-      enddo  ! i,j,k
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_velmac_override
@@ -4336,9 +4336,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrow)
 
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
       do k=igridlo(3),igridhi(3)
+      do j=igridlo(2),igridhi(2)
+      do i=igridlo(1),igridhi(1)
 
         ! KE=u dot u/2
        KE=zero
@@ -4465,9 +4465,9 @@ stop
 
        enddo ! im=1..num_materials
 
-      enddo         
-      enddo         
-      enddo ! i,j,k (cell center "conserved" variables) 
+      enddo !i 
+      enddo !j
+      enddo !k (cell center "conserved" variables) 
 
       return
       end subroutine fort_build_conserve
@@ -4631,9 +4631,9 @@ stop
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -4741,9 +4741,9 @@ stop
         stop
        endif
 
-      enddo ! k
-      enddo ! j
-      enddo ! i
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_initjumpterm
@@ -4952,9 +4952,9 @@ stop
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growloMAC,growhiMAC,0,dir) 
-       do i=growloMAC(1),growhiMAC(1)
-       do j=growloMAC(2),growhiMAC(2)
        do k=growloMAC(3),growhiMAC(3)
+       do j=growloMAC(2),growhiMAC(2)
+       do i=growloMAC(1),growhiMAC(1)
 
         local_mask_right=NINT(maskcov(D_DECL(i,j,k))) 
         local_mask_left=NINT(maskcov(D_DECL(i-ii,j-jj,k-kk))) 
@@ -5169,9 +5169,9 @@ stop
          stop
         endif
 
-       enddo ! k
-       enddo ! j
-       enddo ! i
+       enddo !i
+       enddo !j
+       enddo !k
       enddo ! dir=0..sdim-1
 
       return
@@ -5273,9 +5273,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         igridlo,igridhi,ngrowmac,veldir-1)
 
-      do i=igridlo(1),igridhi(1)
-      do j=igridlo(2),igridhi(2)
       do k=igridlo(3),igridhi(3)
+      do j=igridlo(2),igridhi(2)
+      do i=igridlo(1),igridhi(1)
 
         ! veldir=1..sdim
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1)
@@ -5347,9 +5347,9 @@ stop
         stop
        endif
 
-      enddo         
-      enddo         
-      enddo ! i,j,k (face center "conserved" variables) 
+      enddo !i 
+      enddo !j
+      enddo !k (face center "conserved" variables) 
 
       return
       end subroutine fort_build_macvof
@@ -5701,9 +5701,9 @@ stop
        k1high=0
       endif
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        ivec(1)=i
        ivec(2)=j
@@ -5913,9 +5913,9 @@ stop
         stop
        endif
 
-      enddo         
-      enddo         
-      enddo ! i,j,k (face center "conserved" variables) 
+      enddo !i 
+      enddo !j
+      enddo !k (face center "conserved" variables) 
 
       return
       end subroutine fort_extend_mac_vel
@@ -6042,9 +6042,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do veldir=1,3
@@ -6150,9 +6150,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo !i
+      enddo !j
+      enddo !k
  
       return
       end subroutine fort_tensorheat
@@ -6269,9 +6269,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        if (irz.eq.COORDSYS_CARTESIAN) then
@@ -6354,9 +6354,9 @@ stop
        vischeat(D_DECL(i,j,k))= &
         vischeat(D_DECL(i,j,k))+Tforce
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo !i
+      enddo !j
+      enddo !k
  
       return
       end subroutine fort_visctensorheat
@@ -6498,9 +6498,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -6538,9 +6538,9 @@ stop
          velnew(D_DECL(i,j,k),dirloc)+surface_tension_force(dirloc)
        enddo ! dirloc
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo!i
+      enddo!j
+      enddo!k
 
       return
       end subroutine fort_marangoniforce
@@ -6670,9 +6670,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do im=1,num_materials
@@ -6774,9 +6774,9 @@ stop
         Tnew(D_DECL(i,j,k),dencomp+1)=T_local(im)
        enddo ! im=1..num_materials
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo!i
+      enddo!j
+      enddo!k
  
       return
       end subroutine fort_heatsource
@@ -6871,9 +6871,9 @@ stop
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
        if ((local_maskSEM.ge.1).and. &
@@ -6911,9 +6911,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo!i
+      enddo!j
+      enddo!k
 
       return
       end subroutine fort_semdeltaforce
@@ -7002,9 +7002,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0,dir)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        maskleft=NINT(maskSEM(D_DECL(i-ii,j-jj,k-kk)))
        maskright=NINT(maskSEM(D_DECL(i,j,k)))
        if ((maskleft.lt.0).or.(maskleft.gt.num_materials)) then
@@ -7036,9 +7036,9 @@ stop
         print *,"maskleft or right invalid"
        endif
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo!i
+      enddo!j
+      enddo!k
 
       return
       end subroutine fort_semdeltaforce_face
@@ -7158,9 +7158,9 @@ stop
       call checkbound_array1(fablo,fabhi,maskSEM_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
        if ((local_maskSEM.ge.1).and. &
            (local_maskSEM.le.num_materials)) then
@@ -7253,9 +7253,9 @@ stop
         print *,"local_maskSEM invalid"
         stop
        endif
-      enddo
-      enddo
-      enddo
+      enddo!i
+      enddo!j
+      enddo!k
 
       return
       end subroutine fort_updatesemforce
@@ -7375,9 +7375,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0,dir)
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        maskleft=NINT(maskSEM(D_DECL(i-ii,j-jj,k-kk)))
        maskright=NINT(maskSEM(D_DECL(i,j,k)))
@@ -7439,9 +7439,9 @@ stop
         stop
        endif
 
-      enddo
-      enddo
-      enddo ! i,j,k
+      enddo!i
+      enddo!j
+      enddo!k
 
       return
       end subroutine fort_updatesemforce_face
@@ -7581,9 +7581,9 @@ stop
        endif
       enddo ! i1
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
 
@@ -7634,9 +7634,9 @@ stop
         stop
        endif
  
-      enddo
-      enddo
-      enddo
+      enddo!i
+      enddo!j
+      enddo!k
 
       return
       end subroutine fort_sdc_time_quad
@@ -7797,9 +7797,9 @@ stop
        endif
       enddo ! i1
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        maskleft=NINT(maskSEM(D_DECL(i-ii,j-jj,k-kk)))
        maskright=NINT(maskSEM(D_DECL(i,j,k)))
@@ -7836,9 +7836,9 @@ stop
 
        endif
  
-      enddo
-      enddo
-      enddo
+      enddo !i
+      enddo !j
+      enddo !k
 
       return
       end subroutine fort_sdc_time_quad_face
