@@ -23,6 +23,7 @@ stop
 #endif
 
 ! probtype==820
+! driven cavity problem
 module HOPF_BIFURCATION_module
 
 implicit none 
@@ -122,13 +123,10 @@ do dir=1,SDIM
  endif
 enddo
 
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- !do nothing
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
+if (levelrz.eq.COORDSYS_CARTESIAN) then
  !do nothing
 else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
+ print *,"expecting levelrz=COORDSYS_CARTESIAN "
  stop
 endif
 
@@ -136,10 +134,35 @@ do dir=1,SDIM
  VEL(dir)=zero
 enddo
 
-if (probtype.eq.82) then
- call HOPF_BIFURCATION_V0_Coriolis(x,dx,t,VEL)
+!u=(16 x^2 (1-x)^2 , 0) upper lid
+!u=(0,0) all other walls.
+!u=(0,0) t=0 interior of domain.
+if (probtype.eq.820) then
+ if ((problenx.eq.one).and. &
+     (probleny.eq.one).and. &
+     (problox.eq.zero).and. &
+     (probloy.eq.zero).and. &
+     (probhix.eq.one).and. &
+     (probhiy.eq.one)) then
+  if (x(1).le.zero) then
+   !do nothing
+  else if (x(1).ge.one) then
+   !do nothing
+  else if (x(2).lt.one) then
+   ! do nothing
+  else if (x(2).ge.one) then
+   !u=(16 x^2 (1-x)^2 , 0) upper lid
+   VEL(1)=16.0d0*(x(1)**2)*((one-x(1))**2)
+  else
+   print *,"x() is NaN"
+   stop
+  endif 
+ else
+  print *,"problen, etc invalid"
+  stop
+ endif
 else
- print *,"expecting probtype==82"
+ print *,"expecting probtype==820"
  stop
 endif
 
@@ -149,9 +172,6 @@ end subroutine HOPF_BIFURCATION_VEL
 
 ! this routine used as a default when
 ! pressure boundary conditions are prescribed.
-! For the case when only top wall is 
-! "outflow" (outflow in quotes since ice shrinks when
-! melting), and flow is incompressible, ok to make the top wall pressure zero.
 subroutine HOPF_BIFURCATION_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -168,10 +188,10 @@ else
  print *,"nmat invalid"
  stop
 endif
-if (probtype.eq.82) then
+if (probtype.eq.820) then
  ! do nothing
 else
- print *,"expecting probtype==82"
+ print *,"expecting probtype==820"
  stop
 endif
 PRES=zero
@@ -179,8 +199,6 @@ PRES=zero
 return 
 end subroutine HOPF_BIFURCATION_PRES
 
-! fort_tempconst(1) is the inner wall temperature
-! twall is the outer wall temperature
 subroutine HOPF_BIFURCATION_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 use global_utility_module
@@ -190,7 +208,6 @@ INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
 INTEGER_T, INTENT(in) :: nmat
 INTEGER_T, INTENT(in) :: nstate_mat
 REAL_T, INTENT(in) :: x(SDIM)
-INTEGER_T :: radial_dir
 REAL_T, INTENT(in) :: t
 REAL_T, INTENT(in) :: LS(nmat)
 REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
@@ -199,7 +216,6 @@ REAL_T dT_dr_local
 REAL_T T0
 REAL_T dx_local(SDIM)
 INTEGER_T local_dir
-INTEGER_T, PARAMETER :: im_liquid=1
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -222,48 +238,17 @@ else
  stop
 endif
 
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- radial_dir=1
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
- radial_dir=2
-else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
- stop
-endif
-
 if ((problenx.eq.problen_array(1)).and. &
     (probleny.eq.problen_array(2)).and. &
     (problenx.gt.zero).and. &
-    (probleny.gt.zero).and. &
-    (problo_array(radial_dir).gt.zero).and. &
-    (x(radial_dir).gt.zero)) then
+    (probleny.gt.zero)) then
  ! do nothing
 else
- print *,"problenx or problo_array or x(radial_dir) invalid"
+ print *,"problenx or probleny invalid"
  stop
 endif
 
-dT_dr_local=(twall-fort_tempconst(1))/problen_array(radial_dir)
-
-if (twall.ge.fort_tempconst(1)) then
- if (abs(dT_dr-dT_dr_local).le.VOFTOL) then
-  ! do nothig
- else
-  print *,"TA (fort_tempconst(1) or TB (twall) invalid"
-  print *,"(abs(dT_dr-dT_dr_local).le.VOFTOL) failed"
-  print *,"twall=",twall
-  print *,"fort_tempconst(1)=",fort_tempconst(1)
-  stop
- endif
-else
- print *,"TA (fort_tempconst(1) or TB (twall) invalid"
- print *,"twall=",twall
- print *,"fort_tempconst(1)=",fort_tempconst(1)
- stop
-endif
-
-if (probtype.eq.82) then
+if (probtype.eq.820) then
 
  do im=1,num_materials
   ibase=(im-1)*num_state_material
@@ -282,10 +267,6 @@ if (probtype.eq.82) then
    dx_local(local_dir)=one
   enddo
 
-  call HOPF_BIFURCATION_T0_Boussinesq(x,dx_local,t,im_liquid,T0)
-
-  STATE(ibase+ENUM_TEMPERATUREVAR+1)=T0
-
   do n=1,num_species_var
    STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
   enddo
@@ -293,7 +274,7 @@ if (probtype.eq.82) then
  enddo ! im=1..num_materials
 
 else
- print *,"num_materials,num_state_material, or probtype invalid"
+ print *,"probtype invalid"
  print *,"aborting HOPF_BIFURCATION_STATE"
  stop
 endif
@@ -359,18 +340,21 @@ else
  print *,"nmat invalid"
  stop
 endif
-if (probtype.eq.82) then
+if (probtype.eq.820) then
  ! do nothing
 else
- print *,"expecting probtype==82"
+ print *,"expecting probtype==820"
  stop
 endif
+
 velsolid_flag=0
+
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
  call HOPF_BIFURCATION_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ VEL=local_VEL(veldir)
 
 else
  print *,"dir,side, or veldir invalid"
@@ -403,10 +387,10 @@ else
  print *,"nmat invalid"
  stop
 endif
-if (probtype.eq.82) then
+if (probtype.eq.820) then
  ! do nothing
 else
- print *,"expecting probtype==82"
+ print *,"expecting probtype==820"
  stop
 endif
 
@@ -462,36 +446,11 @@ else
  stop
 endif
 
-do local_dir=1,SDIM
- xwall_vec(local_dir)=xghost(local_dir)
-enddo
-xwall_vec(dir)=xwall
-
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- radial_dir=1
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
- radial_dir=2
-else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
- stop
-endif
-
 if ((problenx.eq.problen_array(1)).and. &
-    (probleny.eq.problen_array(2)).and. &
-    (problenx.gt.zero).and. &
-    (probleny.gt.zero).and. &
-    (problo_array(radial_dir).gt.zero).and. &
-    (xghost(radial_dir).gt.zero)) then
+    (probleny.eq.problen_array(2))) then
  ! do nothing
 else
- print *,"problenx or problo_array or xghost(radial_dir) invalid"
- stop
-endif
-if (xwall_vec(radial_dir).gt.zero) then
- ! do nothing
-else
- print *,"xwall_vec(radial_dir) invalid"
+ print *,"problenx or probleny"
  stop
 endif
 if (dir.eq.1) then
@@ -512,10 +471,10 @@ else
  stop
 endif
 
-if (probtype.eq.82) then
+if (probtype.eq.820) then
  ! do nothing
 else
- print *,"expecting probtype.eq.82"
+ print *,"expecting probtype.eq.820"
  stop
 endif
 
@@ -526,9 +485,6 @@ else
  print *,"expecting im_crit=1"
  stop
 endif
-
-! fort_tempconst(1) is the inner wall temperature
-! twall is the outer wall temperature
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
@@ -542,23 +498,6 @@ if ((istate.ge.1).and. &
  ibase=(im_crit-1)*num_state_material
  STATE_merge=local_STATE(ibase+istate)
 
- if (istate.eq.1+ENUM_TEMPERATUREVAR) then
-  call HOPF_BIFURCATION_STATE(xwall_vec,t,LS,local_STATE,local_bcflag, &
-         nmat,num_state_material)
-  ibase=(im-1)*num_state_material
-  STATE=local_STATE(ibase+istate)
-  ibase=(im_crit-1)*num_state_material
-  STATE_merge=local_STATE(ibase+istate)
-
- else if (istate.eq.1+ENUM_DENVAR) then
-  ! do nothing
- else if (istate.gt.1+ENUM_TEMPERATUREVAR) then
-  ! do nothing
- else
-  print *,"istate invalid"
-  stop
- endif
-
 else
  print *,"istate invalid"
  stop
@@ -566,190 +505,5 @@ endif
 
 return
 end subroutine HOPF_BIFURCATION_STATE_BC
-
-! returns (1/w) where w>>1 in "trouble" regions
-subroutine HOPF_BIFURCATION_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
-use probcommon_module
-IMPLICIT NONE
-
-INTEGER_T, INTENT(in) :: dir !0,1,2
-REAL_T, INTENT(out) :: wt
-REAL_T, INTENT(in) :: phys_x
-REAL_T :: scaling
-REAL_T :: mid_x
-INTEGER_T :: radial_dir ! 1 or 2
-INTEGER_T :: azimuthal_dir ! 1 or 2
-
-if (SDIM.eq.3) then
- ! do nothing
-else
- print *,"expecting SDIM==3"
- stop
-endif
-
-if (levelrz.eq.COORDSYS_CYLINDRICAL) then
- radial_dir=1
- azimuthal_dir=2
-else if (levelrz.eq.COORDSYS_CARTESIAN) then
- radial_dir=2
- azimuthal_dir=1
-else
- print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
- print *,"levelrz=COORDSYS_CARTESIAN "
- stop
-endif
-
-if ((dir.ge.0).and.(dir.lt.SDIM)) then
- ! do nothing
-else
- print *,"dir invalid: ",dir
- stop
-endif
-
-if ((phys_x.ge.zero).or.(phys_x.le.zero)) then
- ! do nothing
-else
- print *,"phys_x is NaN: ",phys_x
- stop
-endif
-
-if (1.eq.1) then
- wt=one
-else if (1.eq.0) then
- if (dir+1.eq.radial_dir) then
-  scaling=problen_array(radial_dir)
-  mid_x=half*(problo_array(radial_dir)+probhi_array(radial_dir))
-
-  if (phys_x.le.mid_x) then
-   wt=one+(scaling/(problo_array(radial_dir)-phys_x))**2
-  else if (phys_x.ge.mid_x) then
-   wt=one+(scaling/(probhi_array(radial_dir)-phys_x))**2
-  else
-   print *,"phys_x bust"
-   stop
-  endif
- else if (dir+1.eq.azimuthal_dir) then
-  wt=one
- else if ((dir.eq.SDIM).and.(SDIM.eq.3)) then
-  scaling=(probhiz-probloz)
-  if (phys_x.le.half*(probloz+probhiz)) then
-   wt=one+(scaling/(probloz-phys_x))**2
-  else if (phys_x.ge.half*(probloz+probhiz)) then
-   wt=one+(scaling/(probhiz-phys_x))**2
-  else
-   print *,"phys_x bust"
-   stop
-  endif
- else 
-  print *,"dir invalid: ",dir
-  stop
- endif
-else
- print *,"incorrect option"
- stop
-endif
-
-wt=one/wt
-
-return
-end subroutine HOPF_BIFURCATION_MAPPING_WEIGHT_COEFF
-
-subroutine HOPF_BIFURCATION_T0_Boussinesq(x,dx,cur_time,im,T0)
-use probcommon_module
-use global_utility_module
-IMPLICIT NONE
-
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: cur_time
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(out) :: T0
-
- if (cur_time.ge.0.0d0) then
-  ! do nothing
- else
-  print *,"cur_time invalid: ",cur_time
-  stop
- endif
- if ((im.ge.1).and.(im.le.num_materials)) then
-  ! do nothing
- else
-  print *,"im invalid"
-  stop
- endif
- if (SDIM.eq.3) then
-  ! do nothing
- else
-  print *,"expecting sdim=3"
-  stop
- endif
-
- T0=fort_tempconst(im)
- if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  T0=T0+dT_dr*x(1)
- else if (levelrz.eq.COORDSYS_CARTESIAN) then
-  T0=T0+dT_dr*x(2)
- else
-  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
-  print *,"levelrz=COORDSYS_CARTESIAN "
-  stop
- endif
- T0=T0+dT_dz*x(SDIM)
-        
-end subroutine HOPF_BIFURCATION_T0_Boussinesq
-
-subroutine HOPF_BIFURCATION_V0_Coriolis(x,dx,cur_time,V0)
-use probcommon_module
-use global_utility_module
-IMPLICIT NONE
-
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: cur_time
-REAL_T, INTENT(out) :: V0(SDIM)
-
-INTEGER_T :: dir
-REAL_T :: dV_dz
-
- if (cur_time.ge.0.0d0) then
-  ! do nothing
- else
-  print *,"cur_time invalid: ",cur_time
-  stop
- endif
- if (SDIM.eq.3) then
-  ! do nothing
- else
-  print *,"expecting sdim=3"
-  stop
- endif
- if (fort_angular_velocity.gt.0.0d0) then
-  ! do nothing
- else
-  print *,"expecting fort_angular_velocity>0.0d0"
-  stop
- endif
-
- do dir=1,SDIM
-  V0(dir)=0.0d0
- enddo
-
-  ! rho=rho0*(1+fort_DrhoDT(im)*(T-T0))
- dV_dz=dT_dr*abs(gravity_vector(SDIM)*fort_DrhoDT(1))/ &
-             (two*fort_angular_velocity)
-
- if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-  V0(2)=dV_dz*x(SDIM)
- else if (levelrz.eq.COORDSYS_CARTESIAN) then
-  V0(1)=-dV_dz*x(SDIM)
- else
-  print *,"expecting levelrz=COORDSYS_CYLINDRICAL or "
-  print *,"levelrz=COORDSYS_CARTESIAN "
-  stop
- endif
-
-end subroutine HOPF_BIFURCATION_V0_Coriolis
-
-
 
 end module HOPF_BIFURCATION_module

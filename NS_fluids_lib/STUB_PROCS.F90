@@ -612,10 +612,10 @@ else
  print *,"nmat invalid"
  stop
 endif
-if (probtype.eq.55) then
+if (probtype.eq.-1) then
  ! do nothing
 else
- print *,"expecting probtype==55"
+ print *,"expecting probtype==-1"
  stop
 endif
 velsolid_flag=0
@@ -624,6 +624,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
  call STUB_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ VEL=local_VEL(veldir)
 
 else
  print *,"dir,side, or veldir invalid"
