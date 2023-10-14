@@ -6,29 +6,35 @@ Multimaterial
 Each material has an associated level set function and set of particles.
 Some particles are interface particles and the others are bulk particles.
 Each particle has a position, velocity, density, temperature, and material
-id.
+id (particles on the interface have a special interface id unique from the 
+material id).
 
 u_t = -u div u + I[ div(2 mu D) ] - I[ grad p/rho ] + F_Boussinesq.
-feedback to Eulerian grid proportional to "h"
-advect LS_material using UMAC_MAC
+Feedback to Eulerian grid proportional to "h."
+A temporary Material velocity UMAC_{m} is derived from UMAC.
 
 0. define NP_BULK = number of bulk particles in a cell and
     NP_INT = number of interface particles in a cell.
 
-1. initialize Levelsets, make them distance functions. 
+1. initialize Levelsets, make them locally distance functions. 
 2. generate the AMR grid using curvature criteria
 3. a. for each cell, randomly generate the positions for 
       NP_BULK-NP_BULK(actual) "seeds." (do not add if opposite sign)
    b. for each cell, randomly generate the positions for 
       NP_INT-NP_INT(actual) "seeds." 
       x_p=x_random_p - LS grad LS/|grad LS|  p=1..NP_INT
-4. For each material, construct a divergence free velocity UMAC
-5. LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
-6. advect the particles using UMAC
+4. For each material, construct a divergence free velocity UMAC_{m}
+5. (a) LS_{t} + div (UMAC_{m} LS) = 0 (using PPM or WENO or ...)
+   (b) project LS_{m} to be "vacuum free."
+6. advect the particles using UMAC_{m}
 7. Delete interface particles which satisfy:
    (a) |(I LS)(x_p)| > alpha dx  (e.g. alpha=1/20) I=DBWENO or "cubic Hermite"
    (b) if NP_INT_ACTUAL>NP_INT, then delete the particles with the largest
        value for |(I LS)(x_p)|.
+   (c) Delete bulk particles in which the material id is inconsistent with 
+       (I LS)(xp).
+   (d) if NP_BULK_ACTUAL>NP_BULK, then delete the particles that would
+       maximize the minimum spacing between the remaining bulk particles.
 8. Redistance the level set function(s) using dtau=dx/2 for example:
     (a) LS0 is given
     (b) for n=1,2,3,...
@@ -44,9 +50,16 @@ advect LS_material using UMAC_MAC
                 LS(n)=LS(n-1)+dtau S *(1-|grad LS|)
                 ( (LS(n)-LS(n-1))/dtau + S * n dot grad LS = +S
           (iv) lambda=sum w(||x-xp||)(I LS(n)(xp))/sum w(||x-xp||
-
                min w(||x-xp||)(I LS(xp)-lambda)^2
                LScorrect(n)=LS(n)-lambda
+          (v) for bulk particles in which (I LS(n))(xp) is inconsistent (i.e.
+              the bulk particles were consistent with (I LS0)(xp) but
+              not with I LS(n)) then make a similar correction:
+              mu=sum_{p_bulk_inconsistent}
+                w(||x-xp||)(I LS(n)(xp))/sum w(||x-xp||
+                min w(||x-xp||)(I LS(xp)-mu)^2
+               LScorrect(n)=LS(n)-mu
+
     (c) endfor
 9. go back to step 3.
 
