@@ -7,7 +7,7 @@ DIM=3
 USE_MPI = FALSE
 USE_OMP = FALSE
 
-USE_CUDA = TRUE
+USE_CUDA = FALSE
 COMP = gnu
 
 # ask gfortran the name of the library to link in.  First check for the
