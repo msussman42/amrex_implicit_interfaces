@@ -65,3 +65,13 @@ A temporary Material velocity UMAC_{m} is derived from UMAC.
 
 References:
 Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
+
+work plan:
+1. fix all the nested loops
+2. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
+default tolerances, etc)
+3. check freezing results, restart bubble jetting.
+3. resurrect the particle container
+4. Directionally split
+   Level set advection and bulk material advection done in c++.
+5. filpatch (1st and 2nd order) done in c++.
