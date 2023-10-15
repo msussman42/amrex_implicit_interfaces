@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
         
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -22,6 +21,11 @@ stop
 #endif
 
 #include "EXTRAP_COMP.H"
+
+      module override_module
+      use amrex_fort_module, only : amrex_real
+
+      contains
 
       subroutine fort_blb_init( &
        blb_matrix_in, &
@@ -46,23 +50,23 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: blb_matrix_in
-      INTEGER_T, INTENT(in) :: blb_rhs_in
-      INTEGER_T, INTENT(in) :: blb_vel_in
-      INTEGER_T, INTENT(in) :: blb_int_mom_in
-      INTEGER_T, INTENT(in) :: blb_energy_in
-      INTEGER_T, INTENT(in) :: blb_mass_vel_in
-      INTEGER_T, INTENT(in) :: blb_vol_in
-      INTEGER_T, INTENT(in) :: blb_cen_int_in
-      INTEGER_T, INTENT(in) :: blb_cen_act_in
-      INTEGER_T, INTENT(in) :: blb_perim_in
-      INTEGER_T, INTENT(in) :: blb_perim_mat_in
-      INTEGER_T, INTENT(in) :: blb_triple_perim_in
-      INTEGER_T, INTENT(in) :: blb_cell_cnt_in
-      INTEGER_T, INTENT(in) :: blb_cellvol_cnt_in
-      INTEGER_T, INTENT(in) :: blb_mass_in
-      INTEGER_T, INTENT(in) :: blb_pres_in
-      INTEGER_T, INTENT(in) :: num_elements_blobclass_in
+      integer, INTENT(in) :: blb_matrix_in
+      integer, INTENT(in) :: blb_rhs_in
+      integer, INTENT(in) :: blb_vel_in
+      integer, INTENT(in) :: blb_int_mom_in
+      integer, INTENT(in) :: blb_energy_in
+      integer, INTENT(in) :: blb_mass_vel_in
+      integer, INTENT(in) :: blb_vol_in
+      integer, INTENT(in) :: blb_cen_int_in
+      integer, INTENT(in) :: blb_cen_act_in
+      integer, INTENT(in) :: blb_perim_in
+      integer, INTENT(in) :: blb_perim_mat_in
+      integer, INTENT(in) :: blb_triple_perim_in
+      integer, INTENT(in) :: blb_cell_cnt_in
+      integer, INTENT(in) :: blb_cellvol_cnt_in
+      integer, INTENT(in) :: blb_mass_in
+      integer, INTENT(in) :: blb_pres_in
+      integer, INTENT(in) :: num_elements_blobclass_in
     
       BLB_MATRIX=blb_matrix_in
       BLB_RHS=blb_rhs_in
@@ -160,11 +164,11 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: mof_error_ordering_local
-      INTEGER_T, INTENT(in) :: FSI_flag_temp(num_materials)
-      INTEGER_T, INTENT(out) :: mof_ordering_local(num_materials)
-      INTEGER_T :: im
-      INTEGER_T :: local_FSI_flag
+      integer, INTENT(in) :: mof_error_ordering_local
+      integer, INTENT(in) :: FSI_flag_temp(num_materials)
+      integer, INTENT(out) :: mof_ordering_local(num_materials)
+      integer :: im
+      integer :: local_FSI_flag
 
       if ((num_materials.lt.1).or.(num_materials.gt.9999)) then
        print *,"num_materials invalid"
@@ -475,145 +479,145 @@ stop
       
       IMPLICIT NONE
       
-      INTEGER_T, INTENT(in) :: cc_int_size
-      INTEGER_T, INTENT(in) :: ccmax_level
-      INTEGER_T, INTENT(in) :: ccn_cell(SDIM)
-      INTEGER_T, INTENT(in) :: ccbfact_space_order(0:ccmax_level)
-      INTEGER_T, INTENT(in) :: ccbfact_time_order
-      INTEGER_T, INTENT(in) :: ccnum_materials
+      integer, INTENT(in) :: cc_int_size
+      integer, INTENT(in) :: ccmax_level
+      integer, INTENT(in) :: ccn_cell(SDIM)
+      integer, INTENT(in) :: ccbfact_space_order(0:ccmax_level)
+      integer, INTENT(in) :: ccbfact_time_order
+      integer, INTENT(in) :: ccnum_materials
       
-      INTEGER_T, INTENT(in) :: ccnten
-      REAL_T, INTENT(in) :: ccgravity_vector(SDIM)
-      INTEGER_T, INTENT(in) :: ccFSI_flag(ccnum_materials)
-      INTEGER_T, INTENT(in) :: ccnum_local_aux_grids
-      INTEGER_T, INTENT(in) :: ccZEYU_DCA_SELECT
-      INTEGER_T, INTENT(in) :: ccprescribe_temperature_outflow
-      INTEGER_T, INTENT(in) :: ccsolidheat_flag
-      INTEGER_T, INTENT(in) :: rz_flag
-      INTEGER_T, INTENT(in) :: ioproc
-      INTEGER_T, INTENT(in) :: ccprobtype,ccadv_dir,ccaxis_dir
+      integer, INTENT(in) :: ccnten
+      real(amrex_real), INTENT(in) :: ccgravity_vector(SDIM)
+      integer, INTENT(in) :: ccFSI_flag(ccnum_materials)
+      integer, INTENT(in) :: ccnum_local_aux_grids
+      integer, INTENT(in) :: ccZEYU_DCA_SELECT
+      integer, INTENT(in) :: ccprescribe_temperature_outflow
+      integer, INTENT(in) :: ccsolidheat_flag
+      integer, INTENT(in) :: rz_flag
+      integer, INTENT(in) :: ioproc
+      integer, INTENT(in) :: ccprobtype,ccadv_dir,ccaxis_dir
       
-      REAL_T, INTENT(in) :: ccdenfact,ccvelfact
-      REAL_T, INTENT(in) :: ccxblob,ccyblob,cczblob,ccradblob
-      REAL_T, INTENT(in) :: ccxblob2,ccyblob2,cczblob2,ccradblob2
-      REAL_T, INTENT(in) :: ccxblob3,ccyblob3,cczblob3,ccradblob3
-      REAL_T, INTENT(in) :: ccxblob4,ccyblob4,cczblob4,ccradblob4
-      REAL_T, INTENT(in) :: ccxblob5,ccyblob5,cczblob5,ccradblob5
-      REAL_T, INTENT(in) :: ccxblob6,ccyblob6,cczblob6,ccradblob6
-      REAL_T, INTENT(in) :: ccxblob7,ccyblob7,cczblob7,ccradblob7
-      REAL_T, INTENT(in) :: ccxblob8,ccyblob8,cczblob8,ccradblob8
-      REAL_T, INTENT(in) :: ccxblob9,ccyblob9,cczblob9,ccradblob9
-      REAL_T, INTENT(in) :: ccxblob10,ccyblob10,cczblob10,ccradblob10
-      REAL_T, INTENT(in) :: ccxactive,ccyactive,cczactive
-      REAL_T, INTENT(in) :: ccractivex,ccractivey,ccractivez
-      REAL_T, INTENT(in) :: ccadv_vel,ccrgasinlet
-      REAL_T, INTENT(in) :: ccvinletgas,cctwall
-      REAL_T, INTENT(in) :: ccadvbot
-      REAL_T, INTENT(in) :: ccinflow_pressure
-      REAL_T, INTENT(in) :: ccoutflow_pressure
-      REAL_T, INTENT(in) :: ccperiod_time
-      REAL_T, INTENT(in) :: ccproblox,ccprobloy,ccprobloz
-      REAL_T, INTENT(in) :: ccprobhix,ccprobhiy,ccprobhiz
-      REAL_T, INTENT(in) :: ccstop_time
+      real(amrex_real), INTENT(in) :: ccdenfact,ccvelfact
+      real(amrex_real), INTENT(in) :: ccxblob,ccyblob,cczblob,ccradblob
+      real(amrex_real), INTENT(in) :: ccxblob2,ccyblob2,cczblob2,ccradblob2
+      real(amrex_real), INTENT(in) :: ccxblob3,ccyblob3,cczblob3,ccradblob3
+      real(amrex_real), INTENT(in) :: ccxblob4,ccyblob4,cczblob4,ccradblob4
+      real(amrex_real), INTENT(in) :: ccxblob5,ccyblob5,cczblob5,ccradblob5
+      real(amrex_real), INTENT(in) :: ccxblob6,ccyblob6,cczblob6,ccradblob6
+      real(amrex_real), INTENT(in) :: ccxblob7,ccyblob7,cczblob7,ccradblob7
+      real(amrex_real), INTENT(in) :: ccxblob8,ccyblob8,cczblob8,ccradblob8
+      real(amrex_real), INTENT(in) :: ccxblob9,ccyblob9,cczblob9,ccradblob9
+      real(amrex_real), INTENT(in) :: ccxblob10,ccyblob10,cczblob10,ccradblob10
+      real(amrex_real), INTENT(in) :: ccxactive,ccyactive,cczactive
+      real(amrex_real), INTENT(in) :: ccractivex,ccractivey,ccractivez
+      real(amrex_real), INTENT(in) :: ccadv_vel,ccrgasinlet
+      real(amrex_real), INTENT(in) :: ccvinletgas,cctwall
+      real(amrex_real), INTENT(in) :: ccadvbot
+      real(amrex_real), INTENT(in) :: ccinflow_pressure
+      real(amrex_real), INTENT(in) :: ccoutflow_pressure
+      real(amrex_real), INTENT(in) :: ccperiod_time
+      real(amrex_real), INTENT(in) :: ccproblox,ccprobloy,ccprobloz
+      real(amrex_real), INTENT(in) :: ccprobhix,ccprobhiy,ccprobhiz
+      real(amrex_real), INTENT(in) :: ccstop_time
       
-      INTEGER_T, INTENT(in) :: ccnum_species_var
+      integer, INTENT(in) :: ccnum_species_var
       
-      INTEGER_T, INTENT(in) :: ccnum_materials_viscoelastic
-      INTEGER_T :: nelastic
+      integer, INTENT(in) :: ccnum_materials_viscoelastic
+      integer :: nelastic
       
-      INTEGER_T, INTENT(in) :: ccnum_state_material
-      INTEGER_T, INTENT(in) :: ccnum_state_base
-      INTEGER_T, INTENT(in) :: ccngeom_raw
-      INTEGER_T, INTENT(in) :: ccngeom_recon
+      integer, INTENT(in) :: ccnum_state_material
+      integer, INTENT(in) :: ccnum_state_base
+      integer, INTENT(in) :: ccngeom_raw
+      integer, INTENT(in) :: ccngeom_recon
       
-      INTEGER_T, INTENT(in) :: ccmaterial_type(ccnum_materials)
-      REAL_T, INTENT(in) :: ccDrhoDT(ccnum_materials)
-      REAL_T, INTENT(in) :: cctempconst(ccnum_materials)
-      REAL_T, INTENT(in) :: ccinitial_temperature(ccnum_materials)
-      REAL_T, INTENT(in) :: cctempcutoff(ccnum_materials)
-      REAL_T, INTENT(in) :: cctempcutoffmax(ccnum_materials)
-      REAL_T, INTENT(in) :: ccstiffPINF(ccnum_materials)
-      REAL_T, INTENT(in) :: ccR_Palmore_Desjardins
-      REAL_T, INTENT(in) :: ccstiffCP(ccnum_materials)
-      REAL_T, INTENT(in) :: ccstiffCV(ccnum_materials)
-      REAL_T, INTENT(in) :: ccstiffGAMMA(ccnum_materials)
-      REAL_T, INTENT(in) :: ccdenconst(ccnum_materials)
-      REAL_T, INTENT(in) :: ccden_floor(ccnum_materials)
-      REAL_T, INTENT(in) :: ccden_ceiling(ccnum_materials)
-      REAL_T, INTENT(in) :: cccavdenconst(ccnum_materials)
-      REAL_T, INTENT(in) :: ccviscconst(ccnum_materials)
+      integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
+      real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccinitial_temperature(ccnum_materials)
+      real(amrex_real), INTENT(in) :: cctempcutoff(ccnum_materials)
+      real(amrex_real), INTENT(in) :: cctempcutoffmax(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccstiffPINF(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccR_Palmore_Desjardins
+      real(amrex_real), INTENT(in) :: ccstiffCP(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccstiffCV(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccstiffGAMMA(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccdenconst(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccden_floor(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccden_ceiling(ccnum_materials)
+      real(amrex_real), INTENT(in) :: cccavdenconst(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccviscconst(ccnum_materials)
 
-      REAL_T, INTENT(in) :: ccviscconst_eddy_wall(ccnum_materials)
-      REAL_T, INTENT(in) :: ccviscconst_eddy_bulk(ccnum_materials)
-      REAL_T, INTENT(in) :: ccheatviscconst_eddy_wall(ccnum_materials)
-      REAL_T, INTENT(in) :: ccheatviscconst_eddy_bulk(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccviscconst_eddy_wall(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccviscconst_eddy_bulk(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccheatviscconst_eddy_wall(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccheatviscconst_eddy_bulk(ccnum_materials)
 
-      REAL_T, INTENT(in) :: ccthermal_microlayer_size(ccnum_materials)
-      REAL_T, INTENT(in) :: ccshear_microlayer_size(ccnum_materials)
-      REAL_T, INTENT(in) :: ccbuoyancy_microlayer_size(ccnum_materials)
-      REAL_T, INTENT(in) :: ccphasechange_microlayer_size(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccthermal_microlayer_size(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccshear_microlayer_size(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccbuoyancy_microlayer_size(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccphasechange_microlayer_size(ccnum_materials)
 
-      INTEGER_T, INTENT(in) :: ccviscosity_state_model(ccnum_materials)
-      REAL_T, INTENT(in) :: ccelastic_viscosity(ccnum_materials)
-      REAL_T, INTENT(in) :: ccelastic_time(ccnum_materials)
-      INTEGER_T, INTENT(in) :: ccviscoelastic_model(ccnum_materials)
-      INTEGER_T, INTENT(in) :: ccstore_elastic_data(ccnum_materials)
-      REAL_T, INTENT(in) :: ccheatflux_factor(ccnum_materials)
-      REAL_T, INTENT(in) :: ccheatviscconst(ccnum_materials)
-      REAL_T, INTENT(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
-      REAL_T, INTENT(in) :: ccprerecalesce_viscconst(ccnum_materials)
-      REAL_T, INTENT(in) :: ccprerecalesce_stiffCP(ccnum_materials)
-      REAL_T, INTENT(in) :: ccprerecalesce_stiffCV(ccnum_materials)
-      REAL_T, INTENT(in) :: &
+      integer, INTENT(in) :: ccviscosity_state_model(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccelastic_viscosity(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccelastic_time(ccnum_materials)
+      integer, INTENT(in) :: ccviscoelastic_model(ccnum_materials)
+      integer, INTENT(in) :: ccstore_elastic_data(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccheatflux_factor(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccheatviscconst(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccprerecalesce_viscconst(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccprerecalesce_stiffCP(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccprerecalesce_stiffCV(ccnum_materials)
+      real(amrex_real), INTENT(in) :: &
         ccspeciesconst((ccnum_species_var+1)*ccnum_materials)
-      REAL_T, INTENT(in) :: &
+      real(amrex_real), INTENT(in) :: &
         ccspeciesviscconst((ccnum_species_var+1)*ccnum_materials)
-      REAL_T, INTENT(in) :: cclatent_heat(2*ccnten)
-      REAL_T, INTENT(in) :: cclatent_heat_slope(2*ccnten)
-      REAL_T, INTENT(in) :: cclatent_heat_T0(2*ccnten)
-      REAL_T, INTENT(in) :: cclatent_heat_min(2*ccnten)
-      REAL_T, INTENT(in) :: ccsaturation_temp(2*ccnten)
-      REAL_T, INTENT(in) :: ccreference_pressure(2*ccnten)
-      REAL_T, INTENT(in) :: ccmolar_mass(ccnum_materials)
-      REAL_T, INTENT(in) :: ccspecies_molar_mass(ccnum_species_var+1)
-      REAL_T, INTENT(in) :: cctension(ccnten)
-      REAL_T, INTENT(in) :: cctension_init(ccnten)
-      REAL_T, INTENT(in) :: cctension_slope(ccnten)
-      REAL_T, INTENT(in) :: cctension_T0(ccnten)
-      REAL_T, INTENT(in) :: cctension_min(ccnten)
-      REAL_T, INTENT(in) :: ccprefreeze_tension(ccnten)
+      real(amrex_real), INTENT(in) :: cclatent_heat(2*ccnten)
+      real(amrex_real), INTENT(in) :: cclatent_heat_slope(2*ccnten)
+      real(amrex_real), INTENT(in) :: cclatent_heat_T0(2*ccnten)
+      real(amrex_real), INTENT(in) :: cclatent_heat_min(2*ccnten)
+      real(amrex_real), INTENT(in) :: ccsaturation_temp(2*ccnten)
+      real(amrex_real), INTENT(in) :: ccreference_pressure(2*ccnten)
+      real(amrex_real), INTENT(in) :: ccmolar_mass(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccspecies_molar_mass(ccnum_species_var+1)
+      real(amrex_real), INTENT(in) :: cctension(ccnten)
+      real(amrex_real), INTENT(in) :: cctension_init(ccnten)
+      real(amrex_real), INTENT(in) :: cctension_slope(ccnten)
+      real(amrex_real), INTENT(in) :: cctension_T0(ccnten)
+      real(amrex_real), INTENT(in) :: cctension_min(ccnten)
+      real(amrex_real), INTENT(in) :: ccprefreeze_tension(ccnten)
       
-      INTEGER_T, INTENT(in) :: ccn_sites
-      REAL_T, INTENT(in) :: ccnucleation_init_time
-      REAL_T, INTENT(in) :: ccpos_sites(5000)
+      integer, INTENT(in) :: ccn_sites
+      real(amrex_real), INTENT(in) :: ccnucleation_init_time
+      real(amrex_real), INTENT(in) :: ccpos_sites(5000)
      
-      REAL_T, INTENT(in) :: ccCarreau_alpha(ccnum_materials)
-      REAL_T, INTENT(in) :: ccCarreau_beta(ccnum_materials)
-      REAL_T, INTENT(in) :: ccCarreau_n(ccnum_materials)
-      REAL_T, INTENT(in) :: ccCarreau_mu_inf(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccCarreau_alpha(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccCarreau_beta(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccCarreau_n(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccCarreau_mu_inf(ccnum_materials)
 
-      INTEGER_T, INTENT(in) :: ccshear_thinning_fluid(ccnum_materials)
+      integer, INTENT(in) :: ccshear_thinning_fluid(ccnum_materials)
 
-      REAL_T, INTENT(in) :: ccpolymer_factor(ccnum_materials)
-      REAL_T, INTENT(in) :: ccconcentration(ccnum_materials)
-      REAL_T, INTENT(in) :: ccetaL(ccnum_materials)
-      REAL_T, INTENT(in) :: ccetaS(ccnum_materials)
-      REAL_T, INTENT(in) :: ccetaP(ccnum_materials)
-      REAL_T, INTENT(in) :: ccgrid_stretching_parameter(SDIM)
+      real(amrex_real), INTENT(in) :: ccpolymer_factor(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccconcentration(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccetaL(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccetaS(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccetaP(ccnum_materials)
+      real(amrex_real), INTENT(in) :: ccgrid_stretching_parameter(SDIM)
 
-      REAL_T, INTENT(in) :: ccvisc_coef
-      REAL_T, INTENT(in) :: ccangular_velocity
+      real(amrex_real), INTENT(in) :: ccvisc_coef
+      real(amrex_real), INTENT(in) :: ccangular_velocity
 
 
       character*12 namestr1
       character*13 namestr2
-      INTEGER_T i
-      INTEGER_T local_dir
+      integer i
+      integer local_dir
       
-      INTEGER_T im,iten
-      INTEGER_T level,bfactmax
-      REAL_T :: massfrac_parm(ccnum_species_var+1)
-      INTEGER_T :: fort_double_size,fort_int_size
+      integer im,iten
+      integer level,bfactmax
+      real(amrex_real) :: massfrac_parm(ccnum_species_var+1)
+      integer :: fort_double_size,fort_int_size
       
       probtype=ccprobtype
       num_materials=ccnum_materials
@@ -1887,10 +1891,10 @@ stop
        ! initialize grid mapping variables here.
        ! mapping_n_cell=n_cell * 2^max_level
        !  index,dir
-       ! REAL_T, allocatable, dimension(:,:) :: mapping_comp_to_phys
-       ! REAL_T, allocatable, dimension(:,:) :: mapping_phys_to_comp
-       ! INTEGER_T :: mapping_n_cell(0:2)
-       ! INTEGER_T :: mapping_allocated=0
+       ! real(amrex_real), allocatable, dimension(:,:) :: mapping_comp_to_phys
+       ! real(amrex_real), allocatable, dimension(:,:) :: mapping_phys_to_comp
+       ! integer :: mapping_n_cell(0:2)
+       ! integer :: mapping_allocated=0
 
       mapping_allocated=1
       mapping_n_cell_max=0
@@ -2044,20 +2048,20 @@ stop
       
       IMPLICIT NONE
       
-      INTEGER_T, INTENT(in) :: cc_int_size
-      INTEGER_T, INTENT(in) :: ccnum_materials
-      INTEGER_T, INTENT(in) :: ccnten
-      INTEGER_T, INTENT(in) :: ccnum_species_var
-      INTEGER_T, INTENT(in) :: ccnum_materials_viscoelastic
-      INTEGER_T, INTENT(in) :: ccnum_state_material
-      INTEGER_T, INTENT(in) :: ccnum_state_base
-      INTEGER_T, INTENT(in) :: ccngeom_raw
-      INTEGER_T, INTENT(in) :: ccngeom_recon
-      INTEGER_T, INTENT(in) :: ioproc
+      integer, INTENT(in) :: cc_int_size
+      integer, INTENT(in) :: ccnum_materials
+      integer, INTENT(in) :: ccnten
+      integer, INTENT(in) :: ccnum_species_var
+      integer, INTENT(in) :: ccnum_materials_viscoelastic
+      integer, INTENT(in) :: ccnum_state_material
+      integer, INTENT(in) :: ccnum_state_base
+      integer, INTENT(in) :: ccngeom_raw
+      integer, INTENT(in) :: ccngeom_recon
+      integer, INTENT(in) :: ioproc
 
-      INTEGER_T :: local_var_int
-      REAL_T :: local_var_double
-      INTEGER_T :: fort_double_size,fort_int_size
+      integer :: local_var_int
+      real(amrex_real) :: local_var_double
+      integer :: fort_double_size,fort_int_size
       
       num_materials=ccnum_materials
       if (num_materials.lt.MAX_NUM_MATERIALS) then
@@ -2162,3 +2166,5 @@ stop
       
       return
       end subroutine fort_override_MAIN_GLOBALS
+
+      end module override_module

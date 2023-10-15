@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,6 +23,7 @@ stop
 
 ! probtype==413 (see run2d/inputs.ZEYU_droplet_impact)
 module ZEYU_droplet_impact_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
@@ -40,10 +40,10 @@ end subroutine INIT_ZEYU_droplet_impact_MODULE
 subroutine ZEYU_substrateLS(x,Phi) 
 use probcommon_module
 implicit none
-REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
-REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
+real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
+real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 
-REAL_T substrate_height
+real(amrex_real) substrate_height
 
 if (abs(zblob2-yblob2).le.1.0D-14) then
  substrate_height=zblob2  ! substrate thickness
@@ -67,9 +67,9 @@ subroutine ZEYU_droplet_impact_LS(x,t,LS)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T x(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
+real(amrex_real) x(SDIM)
+real(amrex_real) t
+real(amrex_real) LS(num_materials)
 
 if ((num_materials.eq.3).and.(probtype.eq.413)) then
  ! liquid
@@ -96,13 +96,13 @@ subroutine ZEYU_droplet_impact_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -169,10 +169,10 @@ subroutine ZEYU_droplet_impact_PRES(x,t,LS,PRES)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T x(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T PRES
+real(amrex_real) x(SDIM)
+real(amrex_real) t
+real(amrex_real) LS(num_materials)
+real(amrex_real) PRES
 
 PRES=outflow_pressure
 
@@ -184,11 +184,11 @@ subroutine ZEYU_droplet_impact_STATE(x,t,LS,STATE)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T x(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T STATE(num_materials*num_state_material)
-INTEGER_T im,ibase,n
+real(amrex_real) x(SDIM)
+real(amrex_real) t
+real(amrex_real) LS(num_materials)
+real(amrex_real) STATE(num_materials*num_state_material)
+integer im,ibase,n
 
 if ((num_materials.eq.3).and. &
     (num_state_material.ge.2).and. &
@@ -222,13 +222,13 @@ subroutine ZEYU_droplet_impact_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T LS_in(num_materials)
-INTEGER_T dir,side
-REAL_T dx(SDIM)
+real(amrex_real) xwall
+real(amrex_real) xghost(SDIM)
+real(amrex_real) t
+real(amrex_real) LS(num_materials)
+real(amrex_real) LS_in(num_materials)
+integer dir,side
+real(amrex_real) dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -248,16 +248,16 @@ subroutine ZEYU_droplet_impact_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T, INTENT(out) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 velsolid_flag=0
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
@@ -281,14 +281,14 @@ subroutine ZEYU_droplet_impact_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T PRES
-REAL_T PRES_in
-INTEGER_T dir,side
-REAL_T dx(SDIM)
+real(amrex_real) xwall
+real(amrex_real) xghost(SDIM)
+real(amrex_real) t
+real(amrex_real) LS(num_materials)
+real(amrex_real) PRES
+real(amrex_real) PRES_in
+integer dir,side
+real(amrex_real) dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -310,18 +310,18 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T xwall
-REAL_T xghost(SDIM)
-REAL_T t
-REAL_T LS(num_materials)
-REAL_T local_STATE(num_materials*num_state_material)
-REAL_T STATE
-REAL_T STATE_merge
-REAL_T STATE_in
-INTEGER_T dir,side
-REAL_T dx(SDIM)
-INTEGER_T istate,im
-INTEGER_T ibase,im_crit
+real(amrex_real) xwall
+real(amrex_real) xghost(SDIM)
+real(amrex_real) t
+real(amrex_real) LS(num_materials)
+real(amrex_real) local_STATE(num_materials*num_state_material)
+real(amrex_real) STATE
+real(amrex_real) STATE_merge
+real(amrex_real) STATE_in
+integer dir,side
+real(amrex_real) dx(SDIM)
+integer istate,im
+integer ibase,im_crit
 
 if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
@@ -346,15 +346,15 @@ subroutine ZEYU_droplet_impact_HEATSOURCE(im,VFRAC,time,x,temp, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T im
-REAL_T VFRAC(num_materials)
-REAL_T time
-REAL_T x(SDIM)
-REAL_T temp(num_materials)
-REAL_T den(num_materials)
-REAL_T CV(num_materials)
-REAL_T dt
-REAL_T heat_source
+integer im
+real(amrex_real) VFRAC(num_materials)
+real(amrex_real) time
+real(amrex_real) x(SDIM)
+real(amrex_real) temp(num_materials)
+real(amrex_real) den(num_materials)
+real(amrex_real) CV(num_materials)
+real(amrex_real) dt
+real(amrex_real) heat_source
 
 if ((num_materials.eq.2).and.(probtype.eq.413)) then
  heat_source=zero

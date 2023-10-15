@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,10 +23,11 @@ stop
 
 ! probtype==2000 (see run2d/inputs.flexible_plate_impact)
 module flexible_plate_impact_module
+use amrex_fort_module, only : amrex_real
 
 implicit none 
 
-REAL_T :: DEF_VAPOR_GAMMA
+real(amrex_real) :: DEF_VAPOR_GAMMA
 
 contains
 
@@ -45,8 +45,8 @@ subroutine flexible_substrateLS(x,Phi)
 use probcommon_module
 use global_utility_module
 implicit none
-REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
-REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
+real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
+real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 
 !CTML takes care of this.
 Phi=-99999.0
@@ -59,10 +59,10 @@ subroutine flexible_plate_impact_LS(x,t,LS,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-  INTEGER_T, INTENT(in) :: nmat
-  REAL_T, INTENT(in) :: x(SDIM)
-  REAL_T, INTENT(in) :: t
-  REAL_T, INTENT(out) :: LS(nmat)
+  integer, INTENT(in) :: nmat
+  real(amrex_real), INTENT(in) :: x(SDIM)
+  real(amrex_real), INTENT(in) :: t
+  real(amrex_real), INTENT(out) :: LS(nmat)
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -98,10 +98,10 @@ subroutine flexible_plate_check_vel_rigid(x,t,vel,dir)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: vel
-INTEGER_T, INTENT(in) :: dir
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: vel
+integer, INTENT(in) :: dir
 
 if (t.ge.0.0d0) then
  ! do nothing
@@ -132,14 +132,14 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-  REAL_T, INTENT(in) :: x(SDIM)
-  REAL_T, INTENT(in) :: dx(SDIM)
-  REAL_T, INTENT(in) :: t
-  REAL_T, INTENT(out) :: LS
-  REAL_T, INTENT(out) :: vel(SDIM)
-  REAL_T, INTENT(out) :: temperature
-  INTEGER_T, INTENT(out) :: prescribed_flag
-  INTEGER_T :: dir
+  real(amrex_real), INTENT(in) :: x(SDIM)
+  real(amrex_real), INTENT(in) :: dx(SDIM)
+  real(amrex_real), INTENT(in) :: t
+  real(amrex_real), INTENT(out) :: LS
+  real(amrex_real), INTENT(out) :: vel(SDIM)
+  real(amrex_real), INTENT(out) :: temperature
+  integer, INTENT(out) :: prescribed_flag
+  integer :: dir
 
 
 if (probtype.eq.2000) then
@@ -165,14 +165,14 @@ subroutine flexible_plate_impact_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -236,10 +236,10 @@ end subroutine flexible_plate_impact_VEL
 subroutine EOS_flexible_plate_impact(rho,internal_energy,pressure, &
   imattype,im)
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: pressure
+ integer, INTENT(in) :: imattype,im
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: pressure
 
  if (imattype.eq.24) then
   pressure=rho*(DEF_VAPOR_GAMMA-1.0D0)*internal_energy
@@ -254,11 +254,11 @@ end subroutine EOS_flexible_plate_impact
 subroutine SOUNDSQR_flexible_plate_impact(rho,internal_energy,soundsqr, &
   imattype,im)
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: soundsqr
- REAL_T pressure
+ integer, INTENT(in) :: imattype,im
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: soundsqr
+ real(amrex_real) pressure
 
  if (imattype.eq.24) then
   call EOS_flexible_plate_impact(rho,internal_energy,pressure,imattype,im)
@@ -276,10 +276,10 @@ subroutine INTERNAL_flexible_plate_impact(rho,temperature, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: temperature 
- REAL_T, INTENT(out) :: local_internal_energy
+ integer, INTENT(in) :: imattype,im
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: temperature 
+ real(amrex_real), INTENT(out) :: local_internal_energy
 
  call INTERNAL_default(rho,temperature,local_internal_energy, &
         imattype,im)
@@ -291,10 +291,10 @@ subroutine TEMPERATURE_flexible_plate_impact(rho,temperature,internal_energy, &
   imattype,im)
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(out) :: temperature 
- REAL_T, INTENT(in) :: internal_energy
+ integer, INTENT(in) :: imattype,im
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(out) :: temperature 
+ real(amrex_real), INTENT(in) :: internal_energy
 
  call TEMPERATURE_default(rho,temperature,internal_energy, &
         imattype,im)
@@ -308,11 +308,11 @@ subroutine flexible_plate_impact_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -330,14 +330,14 @@ subroutine flexible_plate_impact_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase,n
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase,n
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -384,14 +384,14 @@ subroutine flexible_plate_impact_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -417,17 +417,17 @@ subroutine flexible_plate_impact_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -457,15 +457,15 @@ subroutine flexible_plate_impact_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -495,20 +495,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -550,18 +550,18 @@ subroutine flexible_plate_impact_HEATSOURCE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(in) :: VFRAC(nmat)
-REAL_T, INTENT(in) :: time
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: temp(nmat)
-REAL_T, INTENT(in) :: den(nmat)
-REAL_T, INTENT(in) :: CV(nmat)
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(out) :: heat_source
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(in) :: VFRAC(nmat)
+real(amrex_real), INTENT(in) :: time
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: temp(nmat)
+real(amrex_real), INTENT(in) :: den(nmat)
+real(amrex_real), INTENT(in) :: CV(nmat)
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -590,28 +590,28 @@ IMPLICIT NONE
 
 type(assimilate_parm_type), INTENT(in) :: assimilate_in
 type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
-INTEGER_T, INTENT(in) :: i,j,k,cell_flag
+integer, INTENT(in) :: i,j,k,cell_flag
 
-INTEGER_T :: nstate,nstate_test
-REAL_T :: xcrit(SDIM)
-INTEGER_T :: dir
-INTEGER_T :: im
-REAL_T ldata(D_DECL(3,3,3))
-INTEGER_T :: i1,j1,k1,k1lo,k1hi
-REAL_T :: xdata(SDIM)
-REAL_T :: volcell
-REAL_T :: cencell(SDIM)
-REAL_T :: LS_clamped
-REAL_T :: temperature_clamped
-REAL_T :: vel_clamped(SDIM)
-INTEGER_T :: prescribed_flag
-REAL_T :: LS_flexible(num_materials)
-REAL_T :: VFRAC_flexible(num_materials)
-REAL_T :: vfrac_override
-REAL_T :: vfrac_sum
-REAL_T :: centroid_override(SDIM)
-REAL_T :: facearea_temp
-INTEGER_T :: vfrac_comp
+integer :: nstate,nstate_test
+real(amrex_real) :: xcrit(SDIM)
+integer :: dir
+integer :: im
+real(amrex_real) ldata(D_DECL(3,3,3))
+integer :: i1,j1,k1,k1lo,k1hi
+real(amrex_real) :: xdata(SDIM)
+real(amrex_real) :: volcell
+real(amrex_real) :: cencell(SDIM)
+real(amrex_real) :: LS_clamped
+real(amrex_real) :: temperature_clamped
+real(amrex_real) :: vel_clamped(SDIM)
+integer :: prescribed_flag
+real(amrex_real) :: LS_flexible(num_materials)
+real(amrex_real) :: VFRAC_flexible(num_materials)
+real(amrex_real) :: vfrac_override
+real(amrex_real) :: vfrac_sum
+real(amrex_real) :: centroid_override(SDIM)
+real(amrex_real) :: facearea_temp
+integer :: vfrac_comp
 
 nstate=assimilate_in%nstate
 

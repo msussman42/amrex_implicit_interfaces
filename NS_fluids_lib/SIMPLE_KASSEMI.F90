@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,15 +23,16 @@ stop
 
 ! probtype==2003 (see run2d/inputs.SIMPLE_KASSEMI)
 module SIMPLE_KASSEMI_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
-REAL_T :: TANK_MK_GAS_GAMMA
-REAL_T :: TANK_MK_GAS_CP
-REAL_T :: TANK_MK_GAS_CV
+real(amrex_real) :: TANK_MK_GAS_GAMMA
+real(amrex_real) :: TANK_MK_GAS_CP
+real(amrex_real) :: TANK_MK_GAS_CV
 ! Universal gas constant [J/(mol K)]
-REAL_T :: TANK_MK_R_UNIV
-REAL_T :: l_verification
+real(amrex_real) :: TANK_MK_R_UNIV
+real(amrex_real) :: l_verification
 
 contains
 
@@ -40,10 +40,10 @@ contains
 subroutine INIT_SIMPLE_KASSEMI_MODULE()
 use probcommon_module
 IMPLICIT NONE
-REAL_T dummy_x,dummy_t,dummy_TorY,dummy_LS
-REAL_T t_physical_init
-INTEGER_T use_T
-REAL_T C_pG,k_G,den_G,lambda
+real(amrex_real) dummy_x,dummy_t,dummy_TorY,dummy_LS
+real(amrex_real) t_physical_init
+integer use_T
+real(amrex_real) C_pG,k_G,den_G,lambda
 
   TANK_MK_R_UNIV = 8.31446261815324D0
   if (TANK_MK_R_UNIV.eq.fort_R_Palmore_Desjardins) then
@@ -89,14 +89,14 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(nmat)
-REAL_T :: TEMPERATURE_analytical
-REAL_T :: LS_analytical
-REAL_T :: t_physical_init
-INTEGER_T :: use_T
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(nmat)
+real(amrex_real) :: TEMPERATURE_analytical
+real(amrex_real) :: LS_analytical
+real(amrex_real) :: t_physical_init
+integer :: use_T
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -128,14 +128,14 @@ subroutine SIMPLE_KASSEMI_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -194,12 +194,12 @@ subroutine EOS_KASSEMI_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: pressure
- INTEGER_T :: dummy_input
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: pressure
+ integer :: dummy_input
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -237,12 +237,12 @@ subroutine dVdT_KASSEMI_MK(dVdT,massfrac_var, &
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
-REAL_T, INTENT(in) :: pressure
-REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
-REAL_T, INTENT(in) :: temperature
-REAL_T, INTENT(out) :: dVdT
-INTEGER_T :: dummy_input
+integer, INTENT(in) :: imattype,im,num_species_var_in
+real(amrex_real), INTENT(in) :: pressure
+real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+real(amrex_real), INTENT(in) :: temperature
+real(amrex_real), INTENT(out) :: dVdT
+integer :: dummy_input
 
  if (pressure.gt.zero) then
   ! do nothing
@@ -297,12 +297,12 @@ subroutine SOUNDSQR_KASSEMI_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: soundsqr
- REAL_T pressure
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: soundsqr
+ real(amrex_real) pressure
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -340,11 +340,11 @@ subroutine INTERNAL_KASSEMI_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: temperature 
- REAL_T, INTENT(out) :: local_internal_energy
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: temperature 
+ real(amrex_real), INTENT(out) :: local_internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -375,11 +375,11 @@ subroutine TEMPERATURE_KASSEMI_MK(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(out) :: temperature 
- REAL_T, INTENT(in) :: internal_energy
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(out) :: temperature 
+ real(amrex_real), INTENT(in) :: internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -418,11 +418,11 @@ subroutine SIMPLE_KASSEMI_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -441,17 +441,17 @@ subroutine SIMPLE_KASSEMI_DiffusionLayer(l,f)
  use global_utility_module
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: l !diffusion layer value
- REAL_T, INTENT(out) :: f
+ real(amrex_real), INTENT(in) :: l !diffusion layer value
+ real(amrex_real), INTENT(out) :: f
  
- REAL_T :: T_inf, T_gamma, L_V, C_pG, erf_result, T_sat
- REAL_T :: k_G, den_G, D_G
- REAL_T :: Y_gamma,Y_G,WV,WA,R,X_gamma,Y_gamma_test,X_gamma_test
- REAL_T :: T_gamma_min
- REAL_T :: T_gamma_max
- REAL_T :: T_gamma_test
- REAL_T :: lambda
- INTEGER_T :: JINT
+ real(amrex_real) :: T_inf, T_gamma, L_V, C_pG, erf_result, T_sat
+ real(amrex_real) :: k_G, den_G, D_G
+ real(amrex_real) :: Y_gamma,Y_G,WV,WA,R,X_gamma,Y_gamma_test,X_gamma_test
+ real(amrex_real) :: T_gamma_min
+ real(amrex_real) :: T_gamma_max
+ real(amrex_real) :: T_gamma_test
+ real(amrex_real) :: lambda
+ integer :: JINT
  
  T_inf = fort_tempconst(2)
  T_gamma = fort_tempconst(1)
@@ -543,9 +543,9 @@ subroutine SIMPLE_KASSEMI_GetDiffusionLayer(l)
  !bisection method to find the diffusion layer value
  IMPLICIT NONE
  
- REAL_T, INTENT(out) :: l
- REAL_T :: a, b, c, fa, fb, fc
- INTEGER_T :: iter
+ real(amrex_real), INTENT(out) :: l
+ real(amrex_real) :: a, b, c, fa, fb, fc
+ integer :: iter
  
  !endpoints
  a = 0.0d0
@@ -591,29 +591,29 @@ subroutine SIMPLE_KASSEMI_TEMPorMASSFRAC( &
  ! for mass_frac: T_inf = Y_inf, T_gamma = Y_gamma, l_Y = l, lambda = D
  IMPLICIT NONE
  
- REAL_T, INTENT(in) :: x, t
- INTEGER_T, INTENT(in) :: use_T
- REAL_T :: T_inf, T_gamma, T_sat, lambda
- REAL_T :: k_G, den_G, D_G
- REAL_T :: L_V,C_pG
- REAL_T, INTENT(out) :: TorY,LS_exact
- REAL_T, INTENT(out) :: t_physical_init
- INTEGER_T :: JINT
- REAL_T erf_result_x 
- REAL_T erf_result_l 
- REAL_T arg_x
- REAL_T x_gamma_physical
- REAL_T x_gamma_domain
- REAL_T X_gamma_test
- REAL_T Y_gamma_test
- REAL_T X_gamma
- REAL_T Y_gamma
- REAL_T Y_inf
- REAL_T Y_inf_test
- REAL_T WV,WA,R
- REAL_T :: T_gamma_min
- REAL_T :: T_gamma_max
- REAL_T :: T_gamma_test
+ real(amrex_real), INTENT(in) :: x, t
+ integer, INTENT(in) :: use_T
+ real(amrex_real) :: T_inf, T_gamma, T_sat, lambda
+ real(amrex_real) :: k_G, den_G, D_G
+ real(amrex_real) :: L_V,C_pG
+ real(amrex_real), INTENT(out) :: TorY,LS_exact
+ real(amrex_real), INTENT(out) :: t_physical_init
+ integer :: JINT
+ real(amrex_real) erf_result_x 
+ real(amrex_real) erf_result_l 
+ real(amrex_real) arg_x
+ real(amrex_real) x_gamma_physical
+ real(amrex_real) x_gamma_domain
+ real(amrex_real) X_gamma_test
+ real(amrex_real) Y_gamma_test
+ real(amrex_real) X_gamma
+ real(amrex_real) Y_gamma
+ real(amrex_real) Y_inf
+ real(amrex_real) Y_inf_test
+ real(amrex_real) WV,WA,R
+ real(amrex_real) :: T_gamma_min
+ real(amrex_real) :: T_gamma_max
+ real(amrex_real) :: T_gamma_test
 
  T_inf = fort_tempconst(2)
  T_gamma = fort_tempconst(1)
@@ -775,16 +775,16 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase,use_T
-REAL_T LS_exact
-REAL_T t_physical_init
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase,use_T
+real(amrex_real) LS_exact
+real(amrex_real) t_physical_init
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -846,15 +846,15 @@ IMPLICIT NONE
 
 type(assimilate_parm_type), INTENT(in) :: assimilate_in
 type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
-INTEGER_T, INTENT(in) :: i,j,k,cell_flag
+integer, INTENT(in) :: i,j,k,cell_flag
 
-INTEGER_T :: nstate,nstate_test
-REAL_T :: x_exact,xcrit,tcrit
-INTEGER_T :: use_T
-INTEGER_T :: dir
-INTEGER_T :: im
-INTEGER_T :: ibase
-REAL_T local_temp,local_massfrac,LS_exact,t_physical_init
+integer :: nstate,nstate_test
+real(amrex_real) :: x_exact,xcrit,tcrit
+integer :: use_T
+integer :: dir
+integer :: im
+integer :: ibase
+real(amrex_real) local_temp,local_massfrac,LS_exact,t_physical_init
 
 nstate=assimilate_in%nstate
 
@@ -939,14 +939,14 @@ subroutine SIMPLE_KASSEMI_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) ::  dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) ::  dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -972,17 +972,17 @@ subroutine SIMPLE_KASSEMI_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1012,15 +1012,15 @@ subroutine SIMPLE_KASSEMI_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1048,20 +1048,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) :: local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1096,18 +1096,18 @@ subroutine SIMPLE_KASSEMI_HEATSOURCE(im,VFRAC,time,x, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(in) :: VFRAC(nmat)
-REAL_T, INTENT(in) :: time
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: temp(nmat)
-REAL_T, INTENT(in) :: den(nmat)
-REAL_T, INTENT(in) :: CV(nmat)
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(out) :: heat_source
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(in) :: VFRAC(nmat)
+real(amrex_real), INTENT(in) :: time
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: temp(nmat)
+real(amrex_real), INTENT(in) :: den(nmat)
+real(amrex_real), INTENT(in) :: CV(nmat)
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -1135,27 +1135,27 @@ subroutine SIMPLE_KASSEMI_SUMINT(GRID_DATA_IN,increment_out1, &
 use probcommon_module_types
 use probcommon_module
 
-INTEGER_T, INTENT(in) :: nsum1,nsum2,isweep
+integer, INTENT(in) :: nsum1,nsum2,isweep
 type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
-REAL_T, INTENT(inout) :: increment_out1(nsum1)
-REAL_T, INTENT(inout) :: increment_out2(nsum2)
-INTEGER_T :: i,j,k
-INTEGER_T :: dir
-INTEGER_T :: im_crit
-INTEGER_T :: tcomp
-INTEGER_T :: use_T
-REAL_T :: xlocal(SDIM)
-REAL_T :: VOF_analytical
-REAL_T :: VOF_compute
-REAL_T :: x_analytical,x_left,x_right
-REAL_T :: LS_analytical
-REAL_T :: LS_compute
-REAL_T :: TEMPERATURE_analytical
-REAL_T :: Y_analytical
-REAL_T :: TEMPERATURE_compute
-REAL_T :: Y_compute
-REAL_T :: interface_thick_rad
-REAL_T :: t_physical_init
+real(amrex_real), INTENT(inout) :: increment_out1(nsum1)
+real(amrex_real), INTENT(inout) :: increment_out2(nsum2)
+integer :: i,j,k
+integer :: dir
+integer :: im_crit
+integer :: tcomp
+integer :: use_T
+real(amrex_real) :: xlocal(SDIM)
+real(amrex_real) :: VOF_analytical
+real(amrex_real) :: VOF_compute
+real(amrex_real) :: x_analytical,x_left,x_right
+real(amrex_real) :: LS_analytical
+real(amrex_real) :: LS_compute
+real(amrex_real) :: TEMPERATURE_analytical
+real(amrex_real) :: Y_analytical
+real(amrex_real) :: TEMPERATURE_compute
+real(amrex_real) :: Y_compute
+real(amrex_real) :: interface_thick_rad
+real(amrex_real) :: t_physical_init
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid

@@ -6,7 +6,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include <AMReX_FORT_INTEGER.H>
 #include "AMReX_SPACE.H"
 #include <AMReX_REAL.H>
 #include <AMReX_CONSTANTS.H>
@@ -14,6 +13,7 @@
 #include "MG_F.H"
 
       module cpp_mg
+      use amrex_fort_module, only : amrex_real
 
       contains
 !-----------------------------------------------------------------------
@@ -31,20 +31,20 @@
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: iaverage,bfact_coarse,bfact_fine,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(c)
-      INTEGER_T, intent(in) :: DIMDEC(f)
-      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      REAL_T, intent(in), target :: f(DIMV(f))
-      REAL_T, intent(inout), target :: c(DIMV(c))
-      REAL_T, pointer :: c_ptr(D_DECL(:,:,:))
+      integer, intent(in) :: iaverage,bfact_coarse,bfact_fine,bfact_top
+      integer, intent(in) :: DIMDEC(c)
+      integer, intent(in) :: DIMDEC(f)
+      integer, intent(in) :: lo(AMREX_SPACEDIM)
+      integer, intent(in) :: hi(AMREX_SPACEDIM)
+      integer :: growlo(3),growhi(3)
+      real(amrex_real), intent(in), target :: f(DIMV(f))
+      real(amrex_real), intent(inout), target :: c(DIMV(c))
+      real(amrex_real), pointer :: c_ptr(D_DECL(:,:,:))
 !
-      INTEGER_T i, i2, i2p1
-      INTEGER_T j, j2, j2p1
-      INTEGER_T k, k2, k2p1
-      REAL_T denom
+      integer i, i2, i2p1
+      integer j, j2, j2p1
+      integer k, k2, k2p1
+      real(amrex_real) denom
 
       c_ptr=>c
 
@@ -125,20 +125,20 @@
 
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: DIMDEC(f)
-      INTEGER_T, intent(in) :: DIMDEC(c)
-      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3),growhi(3)
-      REAL_T, intent(inout), target :: f(DIMV(f))
-      REAL_T, pointer :: f_ptr(D_DECL(:,:,:))
-      REAL_T, intent(in), target :: c(DIMV(c))
-      REAL_T, pointer :: c_ptr(D_DECL(:,:,:))
-      INTEGER_T, intent(in) :: bfact,bfact_f,bfact_top
+      integer, intent(in) :: DIMDEC(f)
+      integer, intent(in) :: DIMDEC(c)
+      integer, intent(in) :: lo(AMREX_SPACEDIM)
+      integer, intent(in) :: hi(AMREX_SPACEDIM)
+      integer growlo(3),growhi(3)
+      real(amrex_real), intent(inout), target :: f(DIMV(f))
+      real(amrex_real), pointer :: f_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(in), target :: c(DIMV(c))
+      real(amrex_real), pointer :: c_ptr(D_DECL(:,:,:))
+      integer, intent(in) :: bfact,bfact_f,bfact_top
 !
-      INTEGER_T i, i2, i2p1
-      INTEGER_T j, j2, j2p1
-      INTEGER_T k, k2, k2p1
+      integer i, i2, i2p1
+      integer j, j2, j2p1
+      integer k, k2, k2p1
 
       f_ptr=>f
 

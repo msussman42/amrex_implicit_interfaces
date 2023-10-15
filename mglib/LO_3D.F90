@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include <AMReX_FORT_INTEGER.H>
 #include "AMReX_SPACE.H"
 #include <AMReX_REAL.H>
 #include <AMReX_CONSTANTS.H>
@@ -14,6 +13,7 @@
 
 
       module cpp_lo
+      use amrex_fort_module, only : amrex_real
 
       contains
 
@@ -44,55 +44,55 @@
 
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: veldir
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: isweep
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3)
-      INTEGER_T :: growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(solvemask)
-      INTEGER_T, intent(in) :: DIMDEC(a)
-      INTEGER_T, intent(in) :: DIMDEC(work)
-      INTEGER_T, intent(in) :: DIMDEC(mask)
-      INTEGER_T, intent(in) :: DIMDEC(bx)
-      INTEGER_T, intent(in) :: DIMDEC(by)
-      INTEGER_T, intent(in) :: DIMDEC(bz)
-      REAL_T, intent(inout), target :: bx(DIMV(bx))
-      REAL_T, pointer :: bx_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: by(DIMV(by))
-      REAL_T, pointer :: by_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: bz(DIMV(bz))
-      REAL_T, pointer :: bz_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: solvemask(DIMV(solvemask))
-      REAL_T, pointer :: solvemask_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: a(DIMV(a))
-      REAL_T, pointer :: a_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: diagfab(DIMV(work))
-      REAL_T, pointer :: diagfab_ptr(D_DECL(:,:,:))
-      REAL_T, intent(inout), target :: bxleft(DIMV(work))
-      REAL_T, intent(inout), target :: bxright(DIMV(work))
-      REAL_T, intent(inout), target :: byleft(DIMV(work))
-      REAL_T, intent(inout), target :: byright(DIMV(work))
-      REAL_T, intent(inout), target :: bzleft(DIMV(work))
-      REAL_T, intent(inout), target :: bzright(DIMV(work))
-      REAL_T, intent(inout), target :: icbx(DIMV(work))
-      REAL_T, intent(inout), target :: icby(DIMV(work))
-      REAL_T, intent(inout), target :: icbz(DIMV(work))
-      REAL_T, intent(inout), target :: icdiag(DIMV(work))
-      REAL_T, intent(out), target :: icdiagrb(DIMV(work))
-      REAL_T, intent(out), target :: mask(DIMV(mask))
-      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
+      integer, intent(in) :: level
+      integer, intent(in) :: veldir
+      integer, intent(in) :: nsolve
+      integer, intent(in) :: isweep
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3)
+      integer :: growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(solvemask)
+      integer, intent(in) :: DIMDEC(a)
+      integer, intent(in) :: DIMDEC(work)
+      integer, intent(in) :: DIMDEC(mask)
+      integer, intent(in) :: DIMDEC(bx)
+      integer, intent(in) :: DIMDEC(by)
+      integer, intent(in) :: DIMDEC(bz)
+      real(amrex_real), intent(inout), target :: bx(DIMV(bx))
+      real(amrex_real), pointer :: bx_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(inout), target :: by(DIMV(by))
+      real(amrex_real), pointer :: by_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(inout), target :: bz(DIMV(bz))
+      real(amrex_real), pointer :: bz_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(inout), target :: solvemask(DIMV(solvemask))
+      real(amrex_real), pointer :: solvemask_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(inout), target :: a(DIMV(a))
+      real(amrex_real), pointer :: a_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(inout), target :: diagfab(DIMV(work))
+      real(amrex_real), pointer :: diagfab_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(inout), target :: bxleft(DIMV(work))
+      real(amrex_real), intent(inout), target :: bxright(DIMV(work))
+      real(amrex_real), intent(inout), target :: byleft(DIMV(work))
+      real(amrex_real), intent(inout), target :: byright(DIMV(work))
+      real(amrex_real), intent(inout), target :: bzleft(DIMV(work))
+      real(amrex_real), intent(inout), target :: bzright(DIMV(work))
+      real(amrex_real), intent(inout), target :: icbx(DIMV(work))
+      real(amrex_real), intent(inout), target :: icby(DIMV(work))
+      real(amrex_real), intent(inout), target :: icbz(DIMV(work))
+      real(amrex_real), intent(inout), target :: icdiag(DIMV(work))
+      real(amrex_real), intent(out), target :: icdiagrb(DIMV(work))
+      real(amrex_real), intent(out), target :: mask(DIMV(mask))
+      real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
 
-      INTEGER_T i,j,k,ioff
-      REAL_T test_mask
-      REAL_T offdiagsum
-      REAL_T local_diag
-      REAL_T DD
+      integer i,j,k,ioff
+      real(amrex_real) test_mask
+      real(amrex_real) offdiagsum
+      real(amrex_real) local_diag
+      real(amrex_real) DD
 
       bx_ptr=>bx
       by_ptr=>by
@@ -421,28 +421,28 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: mg_coarsest_level
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3)
-      INTEGER_T :: growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(masksing)
-      REAL_T, intent(in), target :: masksing(DIMV(masksing))
-      INTEGER_T, intent(in) :: DIMDEC(phi)
-      REAL_T, intent(in), target :: phi(DIMV(phi),nsolve)
-      INTEGER_T, intent(in) :: DIMDEC(rhs)
-      REAL_T, intent(in), target :: rhs(DIMV(rhs),nsolve)
-      INTEGER_T, intent(in) :: DIMDEC(res)
-      REAL_T, intent(out), target :: res(DIMV(res),nsolve)
-      REAL_T, pointer :: res_ptr(D_DECL(:,:,:),:)
+      integer, intent(in) :: level
+      integer, intent(in) :: mg_coarsest_level
+      integer, intent(in) :: nsolve
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3)
+      integer :: growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(masksing)
+      real(amrex_real), intent(in), target :: masksing(DIMV(masksing))
+      integer, intent(in) :: DIMDEC(phi)
+      real(amrex_real), intent(in), target :: phi(DIMV(phi),nsolve)
+      integer, intent(in) :: DIMDEC(rhs)
+      real(amrex_real), intent(in), target :: rhs(DIMV(rhs),nsolve)
+      integer, intent(in) :: DIMDEC(res)
+      real(amrex_real), intent(out), target :: res(DIMV(res),nsolve)
+      real(amrex_real), pointer :: res_ptr(D_DECL(:,:,:),:)
 !
-      INTEGER_T i,j,k,veldir
-      REAL_T test_mask
+      integer i,j,k,veldir
+      real(amrex_real) test_mask
 
       res_ptr=>res
 
@@ -504,22 +504,22 @@
       use global_utility_module
       IMPLICIT NONE
 !
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine,bfact_top
-      INTEGER_T, intent(in) :: avg
-      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3)
-      INTEGER_T growhi(3)
-      INTEGER_T, intent(in) :: cdir
-      INTEGER_T, intent(in) :: DIMDEC(f)
-      REAL_T, intent(in), target :: f(DIMV(f),nsolve)
-      INTEGER_T, intent(in) :: DIMDEC(c)
-      REAL_T, intent(out), target :: c(DIMV(c),nsolve)
-      REAL_T, pointer :: c_ptr(D_DECL(:,:,:),:)
+      integer, intent(in) :: nsolve
+      integer, intent(in) :: bfact_coarse,bfact_fine,bfact_top
+      integer, intent(in) :: avg
+      integer, intent(in) :: lo(AMREX_SPACEDIM)
+      integer, intent(in) :: hi(AMREX_SPACEDIM)
+      integer growlo(3)
+      integer growhi(3)
+      integer, intent(in) :: cdir
+      integer, intent(in) :: DIMDEC(f)
+      real(amrex_real), intent(in), target :: f(DIMV(f),nsolve)
+      integer, intent(in) :: DIMDEC(c)
+      real(amrex_real), intent(out), target :: c(DIMV(c),nsolve)
+      real(amrex_real), pointer :: c_ptr(D_DECL(:,:,:),:)
 !     
-      INTEGER_T i,j,k,veldir
-      REAL_T denom
+      integer i,j,k,veldir
+      real(amrex_real) denom
 
       c_ptr=>c
 
@@ -649,24 +649,24 @@
       use global_utility_module 
       IMPLICIT NONE
 !
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T, intent(in) :: ncomp_expect
-      INTEGER_T, intent(in) :: ngrow
-      INTEGER_T, intent(in) :: bfact_coarse,bfact_fine,bfact_top
-      INTEGER_T, intent(in) :: avg
-      INTEGER_T, intent(in) :: DIMDEC(f)
-      INTEGER_T, intent(in) :: DIMDEC(c)
-      INTEGER_T, intent(in) :: lo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: hi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3)
-      INTEGER_T :: growhi(3)
-      REAL_T, intent(in), target :: f(DIMV(f),ncomp_expect)
-      REAL_T, intent(out), target :: c(DIMV(c),ncomp_expect)
-      REAL_T, pointer :: c_ptr(D_DECL(:,:,:),:)
+      integer, intent(in) :: nsolve
+      integer, intent(in) :: ncomp_expect
+      integer, intent(in) :: ngrow
+      integer, intent(in) :: bfact_coarse,bfact_fine,bfact_top
+      integer, intent(in) :: avg
+      integer, intent(in) :: DIMDEC(f)
+      integer, intent(in) :: DIMDEC(c)
+      integer, intent(in) :: lo(AMREX_SPACEDIM)
+      integer, intent(in) :: hi(AMREX_SPACEDIM)
+      integer :: growlo(3)
+      integer :: growhi(3)
+      real(amrex_real), intent(in), target :: f(DIMV(f),ncomp_expect)
+      real(amrex_real), intent(out), target :: c(DIMV(c),ncomp_expect)
+      real(amrex_real), pointer :: c_ptr(D_DECL(:,:,:),:)
 !
-      INTEGER_T i,j,k,veldir
-      REAL_T one_over_denom
-      INTEGER_T sum_mask,max_sum
+      integer i,j,k,veldir
+      real(amrex_real) one_over_denom
+      integer sum_mask,max_sum
 
       c_ptr=>c
       
@@ -831,31 +831,31 @@
 !
 !     mask=0 => fine/fine grid interface....
 !
-      INTEGER_T, intent(in) :: nsolve
-      INTEGER_T :: dir,side
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3)
-      INTEGER_T :: growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(phi)
-      INTEGER_T, intent(in) :: DIMDEC(bfab)
-      INTEGER_T, intent(in) :: DIMDEC(mfab)
-      INTEGER_T, intent(in) :: bcpres(AMREX_SPACEDIM,2,nsolve)
-      REAL_T, intent(inout), target :: phi(DIMV(phi),nsolve)
-      REAL_T, pointer :: phi_ptr(D_DECL(:,:,:),:)
+      integer, intent(in) :: nsolve
+      integer :: dir,side
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3)
+      integer :: growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(phi)
+      integer, intent(in) :: DIMDEC(bfab)
+      integer, intent(in) :: DIMDEC(mfab)
+      integer, intent(in) :: bcpres(AMREX_SPACEDIM,2,nsolve)
+      real(amrex_real), intent(inout), target :: phi(DIMV(phi),nsolve)
+      real(amrex_real), pointer :: phi_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, intent(in), target :: bfab(DIMV(bfab),nsolve)
-      REAL_T, intent(in), target :: mfab(DIMV(mfab))
+      real(amrex_real), intent(in), target :: bfab(DIMV(bfab),nsolve)
+      real(amrex_real), intent(in), target :: mfab(DIMV(mfab))
 !
-      INTEGER_T i,j,k
-      INTEGER_T ib,jb,kb
-      INTEGER_T iout,jout,kout
-      INTEGER_T ireflect,jreflect,kreflect
-      INTEGER_T ii,jj,kk
-      INTEGER_T bct,veldir,dir_bc
+      integer i,j,k
+      integer ib,jb,kb
+      integer iout,jout,kout
+      integer ireflect,jreflect,kreflect
+      integer ii,jj,kk
+      integer bct,veldir,dir_bc
  
       phi_ptr=>phi
 

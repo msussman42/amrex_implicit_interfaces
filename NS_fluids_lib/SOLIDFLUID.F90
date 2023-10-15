@@ -10,7 +10,6 @@
 #define SDIM 3
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -36,6 +35,7 @@
       end subroutine SOLIDFLUID_F90_KEYBOARD
 
       module solidfluid_module
+      use amrex_fort_module, only : amrex_real
 
       contains
 
@@ -46,11 +46,11 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(out) :: xmap3D(3)
-      REAL_T, INTENT(out) :: xslice3D(3)
-      REAL_T, INTENT(out) :: problo3D(3),probhi3D(3)
-      REAL_T, INTENT(in) :: dx_max_level(SDIM)
-      INTEGER_T dir
+      integer, INTENT(out) :: xmap3D(3)
+      real(amrex_real), INTENT(out) :: xslice3D(3)
+      real(amrex_real), INTENT(out) :: problo3D(3),probhi3D(3)
+      real(amrex_real), INTENT(in) :: dx_max_level(SDIM)
+      integer dir
 
       do dir=1,SDIM
        if (probhi_array(dir)-problo_array(dir).gt.zero) then
@@ -165,109 +165,109 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: processor_id
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: tilenum
-      INTEGER_T, INTENT(in) :: gridno
-      INTEGER_T, INTENT(in) :: nthread_parm
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: max_level
+      integer, INTENT(in) :: processor_id
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tilenum
+      integer, INTENT(in) :: gridno
+      integer, INTENT(in) :: nthread_parm
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: max_level
 
-      INTEGER_T, INTENT(in) :: flatten_size
-      INTEGER_T, INTENT(in) :: local_caller_id
-      REAL_T, INTENT(inout) :: FSI_input_flattened(flatten_size)
-      REAL_T, INTENT(inout) :: FSI_output_flattened(flatten_size)
+      integer, INTENT(in) :: flatten_size
+      integer, INTENT(in) :: local_caller_id
+      real(amrex_real), INTENT(inout) :: FSI_input_flattened(flatten_size)
+      real(amrex_real), INTENT(inout) :: FSI_output_flattened(flatten_size)
 
-      INTEGER_T, INTENT(in) :: FSI_operation
-      INTEGER_T, INTENT(in) :: FSI_sub_operation
-      INTEGER_T, INTENT(in) :: nFSI
-      INTEGER_T, INTENT(in) :: ngrow_make_distance_in
-      INTEGER_T, INTENT(in) :: nparts
-      INTEGER_T, INTENT(in) :: im_solid_map(nparts)
-      REAL_T, INTENT(in) :: h_small ! smallest mesh size from the max_level
-      REAL_T, INTENT(in) :: cur_time
-      REAL_T, INTENT(in) :: dt
-      INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
-      INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
-      INTEGER_T, INTENT(inout) :: touch_flag
-      INTEGER_T, INTENT(in) :: CTML_FSI_init
-      INTEGER_T, INTENT(in) :: iter
-      INTEGER_T, INTENT(in) :: current_step 
-      INTEGER_T, INTENT(in) :: plot_interval 
-      INTEGER_T, INTENT(in) :: ioproc
-      INTEGER_T isout
+      integer, INTENT(in) :: FSI_operation
+      integer, INTENT(in) :: FSI_sub_operation
+      integer, INTENT(in) :: nFSI
+      integer, INTENT(in) :: ngrow_make_distance_in
+      integer, INTENT(in) :: nparts
+      integer, INTENT(in) :: im_solid_map(nparts)
+      real(amrex_real), INTENT(in) :: h_small ! smallest mesh size from the max_level
+      real(amrex_real), INTENT(in) :: cur_time
+      real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: FSI_refine_factor(num_materials)
+      integer, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
+      integer, INTENT(inout) :: touch_flag
+      integer, INTENT(in) :: CTML_FSI_init
+      integer, INTENT(in) :: iter
+      integer, INTENT(in) :: current_step 
+      integer, INTENT(in) :: plot_interval 
+      integer, INTENT(in) :: ioproc
+      integer isout
 !drag if FSI_operation.eq.OP_FSI_LAG_STRESS
-      INTEGER_T, INTENT(in) :: DIMDEC(FSIdata) 
-      INTEGER_T, INTENT(in) :: DIMDEC(drag) 
-      INTEGER_T, INTENT(in) :: DIMDEC(masknbr) 
-      INTEGER_T, INTENT(in) :: DIMDEC(maskfiner) 
+      integer, INTENT(in) :: DIMDEC(FSIdata) 
+      integer, INTENT(in) :: DIMDEC(drag) 
+      integer, INTENT(in) :: DIMDEC(masknbr) 
+      integer, INTENT(in) :: DIMDEC(maskfiner) 
 !drag if FSI_operation.eq.OP_FSI_LAG_STRESS
-      REAL_T, INTENT(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
-      REAL_T, pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: drag(DIMV(drag),N_DRAG)
-      REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),2)
-      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: maskfiner(DIMV(maskfiner),4)
-      REAL_T, pointer :: maskfiner_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: FSIdata(DIMV(FSIdata),nFSI) 
+      real(amrex_real), pointer :: FSIdata_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: drag(DIMV(drag),N_DRAG)
+      real(amrex_real), pointer :: drag_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: masknbr(DIMV(masknbr),2)
+      real(amrex_real), pointer :: masknbr_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: maskfiner(DIMV(maskfiner),4)
+      real(amrex_real), pointer :: maskfiner_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T tilelo3D(3),tilehi3D(3)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T growlo3D(3),growhi3D(3)
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: dx_max_level(SDIM)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer tilelo3D(3),tilehi3D(3)
+      integer growlo(3),growhi(3)
+      integer growlo3D(3),growhi3D(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dx_max_level(SDIM)
 
-      REAL_T problo3D(3),probhi3D(3)
-      REAL_T dx3D(3)
-      REAL_T vel3D(3)
-      INTEGER_T, INTENT(in) :: velbc(SDIM,2)
-      INTEGER_T, INTENT(in) :: vofbc(SDIM,2)
-      INTEGER_T xmap3D(3)
-      REAL_T xslice3D(3)
-      INTEGER_T dir
-      INTEGER_T im_part
+      real(amrex_real) problo3D(3),probhi3D(3)
+      real(amrex_real) dx3D(3)
+      real(amrex_real) vel3D(3)
+      integer, INTENT(in) :: velbc(SDIM,2)
+      integer, INTENT(in) :: vofbc(SDIM,2)
+      integer xmap3D(3)
+      real(amrex_real) xslice3D(3)
+      integer dir
+      integer im_part
 
-      INTEGER_T i,j,k,nc
-      INTEGER_T i2d,j2d,k2d
+      integer i,j,k,nc
+      integer i2d,j2d,k2d
 
-      INTEGER_T idx(3)
-      INTEGER_T FSI_lo3D(3),FSI_hi3D(3)
-      INTEGER_T FSI_growlo3D(3),FSI_growhi3D(3)
-      INTEGER_T DIMDEC3D(FSIdata3D)
-      REAL_T, allocatable,target :: FSIdata3D(:,:,:,:)
-      REAL_T, pointer :: FSIdata3D_ptr(:,:,:,:)
+      integer idx(3)
+      integer FSI_lo3D(3),FSI_hi3D(3)
+      integer FSI_growlo3D(3),FSI_growhi3D(3)
+      integer DIMDEC3D(FSIdata3D)
+      real(amrex_real), allocatable,target :: FSIdata3D(:,:,:,:)
+      real(amrex_real), pointer :: FSIdata3D_ptr(:,:,:,:)
 
        ! i,j,k,6*num_materials
-      REAL_T, allocatable,target :: stressdata3D(:,:,:,:)
-      REAL_T, pointer :: stressdata3D_ptr(:,:,:,:)
+      real(amrex_real), allocatable,target :: stressdata3D(:,:,:,:)
+      real(amrex_real), pointer :: stressdata3D_ptr(:,:,:,:)
 
        ! i,j,k,num_materials
-      REAL_T, allocatable,target :: stressflag3D(:,:,:,:)
-      REAL_T, pointer :: stressflag3D_ptr(:,:,:,:)
+      real(amrex_real), allocatable,target :: stressflag3D(:,:,:,:)
+      real(amrex_real), pointer :: stressflag3D_ptr(:,:,:,:)
 
-      REAL_T, allocatable,target :: xdata3D(:,:,:,:)
-      REAL_T, pointer :: xdata3D_ptr(:,:,:,:)
-      REAL_T, allocatable,target :: masknbr3D(:,:,:,:)
-      REAL_T, pointer :: masknbr3D_ptr(:,:,:,:)
-      REAL_T, allocatable,target :: maskfiner3D(:,:,:,:)
-      REAL_T, pointer :: maskfiner3D_ptr(:,:,:,:)
-      INTEGER_T mask1,mask2
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T ibase
-      INTEGER_T partid
-      INTEGER_T lev77
-      INTEGER_T im_local
-      INTEGER_T istress,jstress
-      REAL_T stress_2d(3,3)
-      REAL_T stress_3d(3,3)
-      REAL_T xlo3D_tile(3)
-      REAL_T xhi3D_tile(3)
+      real(amrex_real), allocatable,target :: xdata3D(:,:,:,:)
+      real(amrex_real), pointer :: xdata3D_ptr(:,:,:,:)
+      real(amrex_real), allocatable,target :: masknbr3D(:,:,:,:)
+      real(amrex_real), pointer :: masknbr3D_ptr(:,:,:,:)
+      real(amrex_real), allocatable,target :: maskfiner3D(:,:,:,:)
+      real(amrex_real), pointer :: maskfiner3D_ptr(:,:,:,:)
+      integer mask1,mask2
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      integer ibase
+      integer partid
+      integer lev77
+      integer im_local
+      integer istress,jstress
+      real(amrex_real) stress_2d(3,3)
+      real(amrex_real) stress_3d(3,3)
+      real(amrex_real) xlo3D_tile(3)
+      real(amrex_real) xhi3D_tile(3)
  
       FSIdata_ptr=>FSIdata
 
@@ -1300,17 +1300,17 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: auxcomp
-      INTEGER_T plotlo(3),plothi(3) 
-      INTEGER_T lo(3),hi(3) 
+      integer, INTENT(in) :: auxcomp
+      integer plotlo(3),plothi(3) 
+      integer lo(3),hi(3) 
 
-      INTEGER_T ih
+      integer ih
 
       character*13 newfilename !auxdata ...
       character*2 auxstr
 
-      INTEGER_T i,j,k,dir2
-      INTEGER_T nwrite
+      integer i,j,k,dir2
+      integer nwrite
 
 ! Guibo
 
@@ -1318,7 +1318,7 @@
       REAL*4 ZONEMARKER,EOHMARKER
       integer*4 :: iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
-      INTEGER_T strandid
+      integer strandid
 
       ! define zone structure
       type zone_t
@@ -1505,18 +1505,18 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: auxcomp
-      INTEGER_T, INTENT(in) :: FSI_operation
-      INTEGER_T, INTENT(in) :: iter
-      INTEGER_T plotlo(3),plothi(3) 
-      INTEGER_T lo(3),hi(3) 
+      integer, INTENT(in) :: auxcomp
+      integer, INTENT(in) :: FSI_operation
+      integer, INTENT(in) :: iter
+      integer plotlo(3),plothi(3) 
+      integer lo(3),hi(3) 
 
-      INTEGER_T ih
+      integer ih
 
       character*11 newfilename !auxfull.plt
 
-      INTEGER_T i,j,k,dir2
-      INTEGER_T nwrite
+      integer i,j,k,dir2
+      integer nwrite
 
 ! Guibo
 
@@ -1524,14 +1524,14 @@
       REAL*4 ZONEMARKER,EOHMARKER
       integer*4 :: iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
-      INTEGER_T strandid
+      integer strandid
 
       ! define zone structure
       type zone_t
          real*8, pointer :: var(:,:,:,:)
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
-      INTEGER_T iread
+      integer iread
 
 ! Guibo
 
@@ -1752,15 +1752,15 @@
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: ioproc
-      INTEGER_T auxcomp
-      INTEGER_T FSI_operation
-      INTEGER_T FSI_touch_flag
-      INTEGER_T aux_isout
-      INTEGER_T iter
-      INTEGER_T dir
-      INTEGER_T i,j,k
-      INTEGER_T LSLO(3),LSHI(3)
+      integer, INTENT(in) :: ioproc
+      integer auxcomp
+      integer FSI_operation
+      integer FSI_touch_flag
+      integer aux_isout
+      integer iter
+      integer dir
+      integer i,j,k
+      integer LSLO(3),LSHI(3)
 
       if (aux_data_allocated.eq.0) then
 
@@ -1868,38 +1868,38 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: sci_max_level
-      INTEGER_T, INTENT(in) :: nparts
-      INTEGER_T, INTENT(in) :: im_solid_map(nparts)
-      INTEGER_T, INTENT(in) :: nthread_parm
-      INTEGER_T, INTENT(in) :: num_grids_on_level
-      INTEGER_T, INTENT(in) :: num_grids_on_level_proc
-      INTEGER_T, INTENT(in) :: max_num_tiles_on_thread_proc
-      INTEGER_T, INTENT(in) :: tile_dim
-      INTEGER_T, INTENT(in) :: tilelo_array(tile_dim*SDIM)
-      INTEGER_T, INTENT(in) :: tilehi_array(tile_dim*SDIM)
-      REAL_T, INTENT(in) :: cur_time,dt
-      REAL_T, INTENT(in) :: xlo_array(tile_dim*SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: dx_max_level(SDIM)
-      INTEGER_T, INTENT(in) :: gridno_array(tile_dim)
-      INTEGER_T, INTENT(in) :: num_tiles_on_thread_proc(nthread_parm)
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: sci_max_level
+      integer, INTENT(in) :: nparts
+      integer, INTENT(in) :: im_solid_map(nparts)
+      integer, INTENT(in) :: nthread_parm
+      integer, INTENT(in) :: num_grids_on_level
+      integer, INTENT(in) :: num_grids_on_level_proc
+      integer, INTENT(in) :: max_num_tiles_on_thread_proc
+      integer, INTENT(in) :: tile_dim
+      integer, INTENT(in) :: tilelo_array(tile_dim*SDIM)
+      integer, INTENT(in) :: tilehi_array(tile_dim*SDIM)
+      real(amrex_real), INTENT(in) :: cur_time,dt
+      real(amrex_real), INTENT(in) :: xlo_array(tile_dim*SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dx_max_level(SDIM)
+      integer, INTENT(in) :: gridno_array(tile_dim)
+      integer, INTENT(in) :: num_tiles_on_thread_proc(nthread_parm)
    
-      REAL_T problo3D(3),probhi3D(3)
-      REAL_T dx3D(3)
-      INTEGER_T xmap3D(3)
-      REAL_T xslice3D(3)
-      INTEGER_T dir
-      INTEGER_T ilev,tid,partid,tilenum
-      INTEGER_T icomp
-      INTEGER_T lo3D,hi3D
-      REAL_T xlo3D
-      INTEGER_T im_part
-      INTEGER_T lev77
-      INTEGER_T local_nelems
-      INTEGER_T local_nnodes
+      real(amrex_real) problo3D(3),probhi3D(3)
+      real(amrex_real) dx3D(3)
+      integer xmap3D(3)
+      real(amrex_real) xslice3D(3)
+      integer dir
+      integer ilev,tid,partid,tilenum
+      integer icomp
+      integer lo3D,hi3D
+      real(amrex_real) xlo3D
+      integer im_part
+      integer lev77
+      integer local_nelems
+      integer local_nnodes
 
       if (nthread_parm.ne.geom_nthreads) then
        print *,"nthread_parm invalid"

@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -42,22 +41,23 @@
  !    
 
  module snow_module
+ use amrex_fort_module, only : amrex_real
 
   implicit none                   
 
-  REAL_T :: Z_WATER      = 4.00   ! height of water (yblob)
-  REAL_T :: Z_ICE        = 6.00   ! center of snow sphere (yblob2)
-  REAL_T :: Z_AIR        = 6.00   ! center of air bubble (yblob3)
+  real(amrex_real) :: Z_WATER      = 4.00   ! height of water (yblob)
+  real(amrex_real) :: Z_ICE        = 6.00   ! center of snow sphere (yblob2)
+  real(amrex_real) :: Z_AIR        = 6.00   ! center of air bubble (yblob3)
 
-  REAL_T :: R_ICE        = 1.00   ! radius of ice sphere (radblob)
-  REAL_T :: R_AIR        = 0.50   ! radius of air bubble (radblob2)
+  real(amrex_real) :: R_ICE        = 1.00   ! radius of ice sphere (radblob)
+  real(amrex_real) :: R_AIR        = 0.50   ! radius of air bubble (radblob2)
 
-  REAL_T :: TEMP_WATER   = 277    ! initial water temperature 
-  REAL_T :: TEMP_ICE     = 273    ! initial ice temperature 
-  REAL_T :: TEMP_AIR     = 277    ! initial air temperature 
+  real(amrex_real) :: TEMP_WATER   = 277    ! initial water temperature 
+  real(amrex_real) :: TEMP_ICE     = 273    ! initial ice temperature 
+  real(amrex_real) :: TEMP_AIR     = 277    ! initial air temperature 
 
-  REAL_T :: VEL_SNOW     = 1.000  ! snow (ice and air inside) particle velocity (radblob3)
-  REAL_T :: PRESSURE_AIR = 101.325! air pressure 
+  real(amrex_real) :: VEL_SNOW     = 1.000  ! snow (ice and air inside) particle velocity (radblob3)
+  real(amrex_real) :: PRESSURE_AIR = 101.325! air pressure 
  contains
 
   subroutine INIT_SNOW_MODULE( &
@@ -73,16 +73,16 @@
    PRESSURE_AIR_IN)
 
    IMPLICIT NONE
-   REAL_T Z_WATER_IN
-   REAL_T Z_ICE_IN
-   REAL_T Z_AIR_IN
-   REAL_T R_ICE_IN
-   REAL_T R_AIR_IN
-   REAL_T TEMP_WATER_IN
-   REAL_T TEMP_ICE_IN
-   REAL_T TEMP_AIR_IN
-   REAL_T VEL_SNOW_IN
-   REAL_T PRESSURE_AIR_IN
+   real(amrex_real) Z_WATER_IN
+   real(amrex_real) Z_ICE_IN
+   real(amrex_real) Z_AIR_IN
+   real(amrex_real) R_ICE_IN
+   real(amrex_real) R_AIR_IN
+   real(amrex_real) TEMP_WATER_IN
+   real(amrex_real) TEMP_ICE_IN
+   real(amrex_real) TEMP_AIR_IN
+   real(amrex_real) VEL_SNOW_IN
+   real(amrex_real) PRESSURE_AIR_IN
 
    Z_WATER=Z_WATER_IN
    Z_ICE=Z_ICE_IN
@@ -102,9 +102,9 @@
   ! level set initial value for snow porblme
   subroutine INIT_LS_SNOW(x,y,z,t,LS_W,LS_I,LS_A)
    IMPLICIT NONE
-   REAL_T x,y,z,t
-   REAL_T LS_W,LS_I,LS_A
-   REAL_T temp_ls_ice, temp_ls_air
+   real(amrex_real) x,y,z,t
+   real(amrex_real) LS_W,LS_I,LS_A
+   real(amrex_real) temp_ls_ice, temp_ls_air
    if(z.le.Z_WATER) then
     ! inside water region
     LS_W = Z_WATER - z
@@ -138,9 +138,9 @@
   !****************************************************
   ! velocity initial value for snow porblme
   subroutine SNOW_INIT_VEL(x,y,z,velcell)
-   REAL_T x,y,z
-   REAL_T velcell(SDIM)
-   REAL_T ls_snow
+   real(amrex_real) x,y,z
+   real(amrex_real) velcell(SDIM)
+   real(amrex_real) ls_snow
 
    velcell(1)= zero
    velcell(2)= zero
@@ -165,8 +165,8 @@
   ! Output: circle_ls : levelset respect to circle circumfrance
   !                     (positive inside, negative outise)
 
-  REAL_T function CIRCLE_LS(circle_z,circle_rad,r,z) 
-   REAL_T circle_z,circle_rad,r,z
+  real(amrex_real) function CIRCLE_LS(circle_z,circle_rad,r,z) 
+   real(amrex_real) circle_z,circle_rad,r,z
    
    circle_ls = circle_rad - sqrt((circle_z-z)**2+r**2)
 
@@ -226,10 +226,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -277,10 +277,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -329,10 +329,10 @@
    x,y,z, &                 ! boundary point position
    dx)                      ! dx
 
-   INTEGER_T dir,side,veldir
-   REAL_T time,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,veldir
+   real(amrex_real) time,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -402,10 +402,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -453,10 +453,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -504,10 +504,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out(SDIM), q_in(SDIM)
-   REAL_T dx(SDIM)
+   integer dir,side,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out(SDIM), q_in(SDIM)
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -556,10 +556,10 @@
    x,y,z, &                 ! boundary point position
    dx)                      ! dx
 
-   INTEGER_T dir,side
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out, q_in
-   REAL_T dx(SDIM)
+   integer dir,side
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out, q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &

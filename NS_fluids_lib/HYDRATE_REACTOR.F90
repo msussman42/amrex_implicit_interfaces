@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -55,27 +54,28 @@ stop
 !      R = 3.81 , H = 3*R = 11.43
 
 module hydrateReactor_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
-REAL_T :: SIZE_H       = 11.43  ! Height of the reactor 
-REAL_T :: SIZE_R       = 3.81   ! Radius of the reactor
+real(amrex_real) :: SIZE_H       = 11.43  ! Height of the reactor 
+real(amrex_real) :: SIZE_R       = 3.81   ! Radius of the reactor
 
 
-REAL_T :: H_WATER      = 6.5780 ! initial water level [cm]
-REAL_T :: H_HYDRATE    = 7      ! initial hydrate level [cm]
+real(amrex_real) :: H_WATER      = 6.5780 ! initial water level [cm]
+real(amrex_real) :: H_HYDRATE    = 7      ! initial hydrate level [cm]
                                 ! (TEMPORARY!  THIS SHOULD BE PICKED
                                 ! BASED ON THE EXPERIMENT INITIAL
                                 ! RESULT)
 
-REAL_T :: TEMP_WATER   = 274    ! initial water temperature [K]
-REAL_T :: TEMP_HYDRATE = 274    ! initial hydrate temperature [K]
-REAL_T :: TEMP_GAS     = 274    ! initial methane temperature [K]
+real(amrex_real) :: TEMP_WATER   = 274    ! initial water temperature [K]
+real(amrex_real) :: TEMP_HYDRATE = 274    ! initial hydrate temperature [K]
+real(amrex_real) :: TEMP_GAS     = 274    ! initial methane temperature [K]
 
-REAL_T :: DENS_WATER   = 1      ! initial water density [g.cm^-3]
-REAL_T :: DENS_HYDRATE = 0.91   ! initial hydrate density [g.cm^-3]
+real(amrex_real) :: DENS_WATER   = 1      ! initial water density [g.cm^-3]
+real(amrex_real) :: DENS_HYDRATE = 0.91   ! initial hydrate density [g.cm^-3]
                                 ! (Source: SloanKoh2008 p. 269)
-REAL_T :: DENS_GAS     = 0.0352 ! initial gas density [g.cm^-3]
+real(amrex_real) :: DENS_GAS     = 0.0352 ! initial gas density [g.cm^-3]
 
 ! Evaluated by the ideal gas law based on the prescribed pressure and
 ! volume of the gas phase in the reactor: 
@@ -98,11 +98,11 @@ REAL_T :: DENS_GAS     = 0.0352 ! initial gas density [g.cm^-3]
 ! rho = m/V; % g cm^-3
 
 
-REAL_T :: PRESSURE_GAS = 5.0e7           ! gas pressure during the
+real(amrex_real) :: PRESSURE_GAS = 5.0e7           ! gas pressure during the
                                          ! experiment [Ba] (1Pa=10Ba)
 
-REAL_T :: MOLAR_MASS_GAS = 16.0425        ! gas molar mass [g.mol^-1]
-REAL_T :: MOLAR_MASS_HYDRATE = 119.630475 ! gas molar mass [g.mol^-1]
+real(amrex_real) :: MOLAR_MASS_GAS = 16.0425        ! gas molar mass [g.mol^-1]
+real(amrex_real) :: MOLAR_MASS_HYDRATE = 119.630475 ! gas molar mass [g.mol^-1]
 
 contains
 
@@ -112,11 +112,11 @@ contains
   H_WATER_IN,H_HYDRATE_IN)
  IMPLICIT NONE
 
- REAL_T TEMP_WATER_IN,TEMP_HYDRATE_IN,TEMP_GAS_IN
- REAL_T DENS_WATER_IN,DENS_HYDRATE_IN,DENS_GAS_IN
- REAL_T PRESSURE_GAS_IN
- REAL_T SIZE_H_IN,SIZE_R_IN
- REAL_T H_WATER_IN,H_HYDRATE_IN
+ real(amrex_real) TEMP_WATER_IN,TEMP_HYDRATE_IN,TEMP_GAS_IN
+ real(amrex_real) DENS_WATER_IN,DENS_HYDRATE_IN,DENS_GAS_IN
+ real(amrex_real) PRESSURE_GAS_IN
+ real(amrex_real) SIZE_H_IN,SIZE_R_IN
+ real(amrex_real) H_WATER_IN,H_HYDRATE_IN
 
  TEMP_WATER=TEMP_WATER_IN
  TEMP_HYDRATE=TEMP_HYDRATE_IN
@@ -138,7 +138,7 @@ contains
 ! level set initial value for water
   subroutine INIT_LS_WATER(x,y,z,t,LS)
     IMPLICIT NONE
-    REAL_T x,y,z,t,LS
+    real(amrex_real) x,y,z,t,LS
     
     LS = H_WATER - z
   end subroutine INIT_LS_WATER
@@ -147,8 +147,8 @@ contains
 ! level set initial value for hydrate
   subroutine INIT_LS_HYDRATE(x,y,z,t,LS)
     IMPLICIT NONE
-    REAL_T x,y,z,t,LS
-    REAL_T mid
+    real(amrex_real) x,y,z,t,LS
+    real(amrex_real) mid
 
     mid = (H_WATER + H_HYDRATE)/two
     if(z.le.mid) then
@@ -162,7 +162,7 @@ contains
 ! level set initial value for gas
   subroutine INIT_LS_GAS(x,y,z,t,LS)
     IMPLICIT NONE
-    REAL_T x,y,z,t,LS
+    real(amrex_real) x,y,z,t,LS
     
     LS = z - H_HYDRATE
   end subroutine INIT_LS_GAS
@@ -170,9 +170,9 @@ contains
 !****************************************************
 ! initial values for state variables for water phase
   subroutine INIT_STATE_WATER(x,y,z,t,vel,temp,dens,ccnt)
-    REAL_T x,y,z,t,temp,dens,ccnt
-    REAL_T vel(SDIM)
-    INTEGER_T dir
+    real(amrex_real) x,y,z,t,temp,dens,ccnt
+    real(amrex_real) vel(SDIM)
+    integer dir
 
     do dir=1,SDIM
      vel(dir)=zero
@@ -189,9 +189,9 @@ contains
 !****************************************************
 ! initial values for state variables for hydrate phase
   subroutine INIT_STATE_HYDRATE(x,y,z,t,vel,temp,dens,ccnt)
-    REAL_T x,y,z,t,temp,dens,ccnt
-    REAL_T vel(SDIM)
-    INTEGER_T dir
+    real(amrex_real) x,y,z,t,temp,dens,ccnt
+    real(amrex_real) vel(SDIM)
+    integer dir
 
     do dir=1,SDIM
      vel(dir)=zero
@@ -208,9 +208,9 @@ contains
 !****************************************************
 ! initial values for state variables for gas phase
   subroutine INIT_STATE_GAS(x,y,z,t,vel,temp,dens,ccnt)
-    REAL_T x,y,z,t,temp,dens,ccnt
-    REAL_T vel(SDIM)
-    INTEGER_T dir
+    real(amrex_real) x,y,z,t,temp,dens,ccnt
+    real(amrex_real) vel(SDIM)
+    integer dir
 
     do dir=1,SDIM
      vel(dir)=zero
@@ -226,12 +226,12 @@ contains
 ! as solvent 
 ! Input : Temperature [K]
 ! Output: HCP         [mol.cm^-3.Ba^-1]
-  REAL_T function HCP_GAS(T) 
-    REAL_T T ! Temperature in K
+  real(amrex_real) function HCP_GAS(T) 
+    real(amrex_real) T ! Temperature in K
     
 ! For methane gas
-    REAL_T :: HCP_0 = 1.4e-5   ! mol.m^-3.Pa^-1
-    REAL_T :: dd = 1600         ! K
+    real(amrex_real) :: HCP_0 = 1.4e-5   ! mol.m^-3.Pa^-1
+    real(amrex_real) :: dd = 1600         ! K
     
     HCP_GAS = HCP_0 * exp(dd *(1/T - 1/298.15)) !  mol.m^-3.Pa^-1
     HCP_GAS = HCP_GAS * 1e-7                    !  mol.cm^-3.Ba^-1
@@ -243,12 +243,12 @@ contains
 ! Source: http://webbook.nist.gov/cgi/cbook.cgi?ID=C74828&Mask=10#Solubility
 ! Input : Temperature [K]
 ! Output: HBP         [mol.g^-1.Ba^-1]
-  REAL_T function HBP_GAS(T) 
-    REAL_T T ! Temperature [K]
+  real(amrex_real) function HBP_GAS(T) 
+    real(amrex_real) T ! Temperature [K]
     
 ! For methane gas
-    REAL_T :: HBP_0 = 1.4e-3    ! [mol.kg^-1.bar^-1]
-    REAL_T :: dd = 1600         ! [K]
+    real(amrex_real) :: HBP_0 = 1.4e-3    ! [mol.kg^-1.bar^-1]
+    real(amrex_real) :: dd = 1600         ! [K]
     
     HBP_GAS = HBP_0 * exp(dd *(1/T - 1/298.15)) !  mol.kg^-1.bar^-1
     HBP_GAS = HBP_GAS * 1e-9                    !  mol.g^-1.Ba^-1
@@ -264,12 +264,12 @@ contains
 ! Input : Initial concentration of water [g.cm^-3]
 ! Input : Temperature [K]
 ! Output: Fugacity    [Ba]
-  REAL_T function CCNT_TO_FUG(C_i,C_w0,T) 
-    REAL_T C_i       ! concentration of gas in hydrate shell [g.cm^-3]
-    REAL_T C_w0      ! initial concentration of water [g.cm^-3]
-    REAL_T T         ! Temperature [K]
+  real(amrex_real) function CCNT_TO_FUG(C_i,C_w0,T) 
+    real(amrex_real) C_i       ! concentration of gas in hydrate shell [g.cm^-3]
+    real(amrex_real) C_w0      ! initial concentration of water [g.cm^-3]
+    real(amrex_real) T         ! Temperature [K]
 
-    REAL_T H
+    real(amrex_real) H
     
     H = 1 / (MOLAR_MASS_GAS * HBP_GAS(T)) ! [Ba]
 
@@ -289,14 +289,14 @@ contains
 ! K_f = 6.5e-8  Initrinsic rate constant [mol.cm^-2.Ba^-1.s^-1]
   subroutine HYDRATE_FORMATION_RATE(time,C_i,C_w0,T,p,V,HYD_SAT_TEMP, &
      K_f,verb)
-   REAL_T C_i,C_w0,T,p,time
-   REAL_T V
-   REAL_T HYD_SAT_TEMP
+   real(amrex_real) C_i,C_w0,T,p,time
+   real(amrex_real) V
+   real(amrex_real) HYD_SAT_TEMP
 
-   REAL_T H, p_eq, C_eq
-   REAL_T K_f
+   real(amrex_real) H, p_eq, C_eq
+   real(amrex_real) K_f
 
-   INTEGER_T verb
+   integer verb
 
    if (K_f.le.zero) then
     print *,"K_f invalid"
@@ -337,9 +337,9 @@ contains
 !**************************************************** 
 ! assume cell_volume=1
   subroutine Methane_usage(dF,dt,D,amount_used)
-    REAL_T df,dt,D,amount_used
+    real(amrex_real) df,dt,D,amount_used
 
-    REAL_T gen_hydrate,cell_volume
+    real(amrex_real) gen_hydrate,cell_volume
 
     cell_volume=one
 
@@ -365,11 +365,11 @@ contains
      ksource_physical, & ! fort_heatviscconst(im_source)
      ksource_model, & ! conductstate * fort_heatflux_factor(im_source)
      energy_source,LL)
-    REAL_T, INTENT(in) :: dF,dt
-    REAL_T, INTENT(in) :: ksource_physical
-    REAL_T, INTENT(in) :: ksource_model
-    REAL_T, INTENT(in) :: LL
-    REAL_T, INTENT(out) :: energy_source
+    real(amrex_real), INTENT(in) :: dF,dt
+    real(amrex_real), INTENT(in) :: ksource_physical
+    real(amrex_real), INTENT(in) :: ksource_model
+    real(amrex_real), INTENT(in) :: LL
+    real(amrex_real), INTENT(out) :: energy_source
 
     energy_source  = abs(LL) * dF ! [erg.g^-1]
   end subroutine Hydrate_energy_source_term
@@ -386,9 +386,9 @@ contains
 ! Input: Temperature [K]
 ! Output: Pressure [Ba]
 
-  REAL_T function P_EQU(T)
-    REAL_T T ! Temperature [K]
-    REAL_T y ! ln(P_e) where P_e [MPa]
+  real(amrex_real) function P_EQU(T)
+    real(amrex_real) T ! Temperature [K]
+    real(amrex_real) y ! ln(P_e) where P_e [MPa]
     
     if(T.le.273.2) then
        y =-1.94138504464560e+5 +3.31018213397926e+3 * T  &
@@ -450,10 +450,10 @@ contains
        dx, &                    ! dx
        im)                      ! material indicator
 
-    INTEGER_T dir,side,im
-    REAL_T time,x_wall,x,y,z
-    REAL_T q_out,q_in
-    REAL_T dx(SDIM)
+    integer dir,side,im
+    real(amrex_real) time,x_wall,x,y,z
+    real(amrex_real) q_out,q_in
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &
@@ -501,10 +501,10 @@ contains
        dx, &                    ! dx
        im)                      ! material indicator
 
-    INTEGER_T dir,side,im
-    REAL_T time,x_wall,x,y,z
-    REAL_T q_out,q_in
-    REAL_T dx(SDIM)
+    integer dir,side,im
+    real(amrex_real) time,x_wall,x,y,z
+    real(amrex_real) q_out,q_in
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &
@@ -551,10 +551,10 @@ contains
        x,y,z, &                 ! boundary point position
        dx)                      ! dx
 
-    INTEGER_T dir,side,veldir
-    REAL_T time,x,y,z
-    REAL_T q_out,q_in
-    REAL_T dx(SDIM)
+    integer dir,side,veldir
+    real(amrex_real) time,x,y,z
+    real(amrex_real) q_out,q_in
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &
@@ -624,10 +624,10 @@ contains
        dx, &                    ! dx
        im)                      ! material indicator
 
-    INTEGER_T dir,side,im
-    REAL_T time,x_wall,x,y,z
-    REAL_T q_out,q_in
-    REAL_T dx(SDIM)
+    integer dir,side,im
+    real(amrex_real) time,x_wall,x,y,z
+    real(amrex_real) q_out,q_in
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &
@@ -677,10 +677,10 @@ contains
        dx, &                    ! dx
        im)                      ! material indicator
 
-    INTEGER_T dir,side,im
-    REAL_T time,x_wall,x,y,z
-    REAL_T q_out,q_in
-    REAL_T dx(SDIM)
+    integer dir,side,im
+    real(amrex_real) time,x_wall,x,y,z
+    real(amrex_real) q_out,q_in
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &
@@ -729,10 +729,10 @@ contains
        dx, &                    ! dx
        im)                      ! material indicator
 
-    INTEGER_T dir,side,im
-    REAL_T time,x_wall,x,y,z
-    REAL_T q_out,q_in
-    REAL_T dx(SDIM)
+    integer dir,side,im
+    real(amrex_real) time,x_wall,x,y,z
+    real(amrex_real) q_out,q_in
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &
@@ -780,10 +780,10 @@ contains
        dx, &                    ! dx
        im)                      ! material indicator
 
-    INTEGER_T dir,side,im
-    REAL_T time,x_wall,x,y,z
-    REAL_T q_out(SDIM), q_in(SDIM)
-    REAL_T dx(SDIM)
+    integer dir,side,im
+    real(amrex_real) time,x_wall,x,y,z
+    real(amrex_real) q_out(SDIM), q_in(SDIM)
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &
@@ -832,10 +832,10 @@ contains
        x,y,z, &                 ! boundary point position
        dx)                      ! dx
 
-    INTEGER_T dir,side
-    REAL_T time,x_wall,x,y,z
-    REAL_T q_out, q_in
-    REAL_T dx(SDIM)
+    integer dir,side
+    real(amrex_real) time,x_wall,x,y,z
+    real(amrex_real) q_out, q_in
+    real(amrex_real) dx(SDIM)
 
     if (SDIM.ne.2) then
        print *,"invalid system dimension &

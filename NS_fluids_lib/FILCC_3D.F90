@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -20,6 +19,7 @@ stop
 #endif
 
       module filcc_module
+      use amrex_fort_module, only : amrex_real
       contains
 
       subroutine local_filcc(bfact, &
@@ -27,18 +27,18 @@ stop
        domlo,domhi,bc)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: domlo(SDIM), domhi(SDIM)
+      integer, INTENT(in) :: domlo(SDIM), domhi(SDIM)
        ! q inherits attributes from the target.
-      REAL_T, INTENT(in), pointer :: q(D_DECL(:,:,:))
-      INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      real(amrex_real), INTENT(in), pointer :: q(D_DECL(:,:,:))
+      integer, INTENT(in) :: bc(SDIM,2)
 
-      INTEGER_T, INTENT(in) :: bfact
+      integer, INTENT(in) :: bfact
 
-      INTEGER_T    nlft, nrgt, nbot, ntop, nup, ndwn
-      INTEGER_T    ilo, ihi, jlo, jhi
-      INTEGER_T    i, j
+      integer    nlft, nrgt, nbot, ntop, nup, ndwn
+      integer    ilo, ihi, jlo, jhi
+      integer    i, j
 #if (AMREX_SPACEDIM==3)
-      INTEGER_T    k,klo,khi
+      integer    k,klo,khi
 #endif
 
       if (bfact.lt.1) then
@@ -407,19 +407,19 @@ stop
        domlo,domhi,bc)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: scomp
-      INTEGER_T, INTENT(in) :: domlo(SDIM), domhi(SDIM)
+      integer, INTENT(in) :: scomp
+      integer, INTENT(in) :: domlo(SDIM), domhi(SDIM)
        ! q inherits attributes from the target.
-      REAL_T, INTENT(in), pointer :: q(D_DECL(:,:,:),:)
-      INTEGER_T, INTENT(in) :: bc(SDIM,2,scomp)
+      real(amrex_real), INTENT(in), pointer :: q(D_DECL(:,:,:),:)
+      integer, INTENT(in) :: bc(SDIM,2,scomp)
 
-      INTEGER_T, INTENT(in) :: bfact
+      integer, INTENT(in) :: bfact
 
-      INTEGER_T    nlft, nrgt, nbot, ntop, nup, ndwn
-      INTEGER_T    ilo, ihi, jlo, jhi
-      INTEGER_T    i, j
+      integer    nlft, nrgt, nbot, ntop, nup, ndwn
+      integer    ilo, ihi, jlo, jhi
+      integer    i, j
 #if (AMREX_SPACEDIM==3)
-      INTEGER_T    k,klo,khi
+      integer    k,klo,khi
 #endif
 
       if (bfact.lt.1) then
@@ -788,9 +788,9 @@ stop
       subroutine local_grid_type_to_box_type(grid_type,box_type)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: grid_type
-      INTEGER_T, INTENT(out) :: box_type(SDIM)
-      INTEGER_T dir
+      integer, INTENT(in) :: grid_type
+      integer, INTENT(out) :: box_type(SDIM)
+      integer dir
 
       do dir=1,SDIM
        box_type(dir)=0  ! default to CELL
@@ -820,10 +820,10 @@ stop
       subroutine check_arr_idx(i,j,k,fablo,fabhi)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: i,j,k
-      INTEGER_T, INTENT(in) :: fablo(3),fabhi(3)
-      INTEGER_T :: ii(3)
-      INTEGER_T :: dir
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: fablo(3),fabhi(3)
+      integer :: ii(3)
+      integer :: dir
      
       ii(1)=i 
       ii(2)=j 
@@ -847,31 +847,31 @@ stop
        domlo,domhi,bc,grid_type)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: domlo(SDIM), domhi(SDIM)
-      REAL_T, INTENT(in), pointer :: q(D_DECL(:,:,:))
-      INTEGER_T, INTENT(in) :: bc(SDIM,2)
+      integer, INTENT(in) :: domlo(SDIM), domhi(SDIM)
+      real(amrex_real), INTENT(in), pointer :: q(D_DECL(:,:,:))
+      integer, INTENT(in) :: bc(SDIM,2)
 
-      INTEGER_T, INTENT(in) :: grid_type
-      INTEGER_T, INTENT(in) :: bfact
+      integer, INTENT(in) :: grid_type
+      integer, INTENT(in) :: bfact
 
-      INTEGER_T :: box_type(SDIM)
-      INTEGER_T :: ntofill(3,2)
-      INTEGER_T :: fablo_declare(3)
-      INTEGER_T :: fabhi_declare(3)
-      INTEGER_T :: int_lo(3)
-      INTEGER_T :: int_hi(3)
-      INTEGER_T :: local_dir
-      INTEGER_T :: dir_side
-      INTEGER_T :: side
-      INTEGER_T :: sidelo(3),sidehi(3),side_inc(3)
-      INTEGER_T :: side_first(3)
-      INTEGER_T :: side_last(3)
-      INTEGER_T :: imult(3)
-      INTEGER_T :: idist(3)
+      integer :: box_type(SDIM)
+      integer :: ntofill(3,2)
+      integer :: fablo_declare(3)
+      integer :: fabhi_declare(3)
+      integer :: int_lo(3)
+      integer :: int_hi(3)
+      integer :: local_dir
+      integer :: dir_side
+      integer :: side
+      integer :: sidelo(3),sidehi(3),side_inc(3)
+      integer :: side_first(3)
+      integer :: side_last(3)
+      integer :: imult(3)
+      integer :: idist(3)
 
-      INTEGER_T :: i,j,k
-      INTEGER_T :: isrc,jsrc,ksrc
-      INTEGER_T :: idx_norm
+      integer :: i,j,k
+      integer :: isrc,jsrc,ksrc
+      integer :: idx_norm
 
 
       call local_grid_type_to_box_type(grid_type,box_type)

@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -20,16 +19,18 @@ stop
 #endif
 
       module stackvolume_module
+      use amrex_fort_module, only : amrex_real
       IMPLICIT NONE
 
       abstract interface
         subroutine sub_interface(xsten,nhalf,dx,bfact,dist,time)
-        INTEGER_T, INTENT(in) :: bfact
-        INTEGER_T, INTENT(in) :: nhalf
-        REAL_T, INTENT(in) :: dx(SDIM) 
-        REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-        REAL_T, INTENT(in) :: time
-        REAL_T, INTENT(out) :: dist(:)
+        use amrex_fort_module, only : amrex_real
+        integer, INTENT(in) :: bfact
+        integer, INTENT(in) :: nhalf
+        real(amrex_real), INTENT(in) :: dx(SDIM) 
+        real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+        real(amrex_real), INTENT(in) :: time
+        real(amrex_real), INTENT(out) :: dist(:)
         end subroutine
       end interface
 
@@ -43,13 +44,13 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: fluiddata(num_materials,2*SDIM+2)
-      REAL_T, INTENT(out) :: vofdark(num_materials),voflight(num_materials)
-      REAL_T, INTENT(out) :: cendark(num_materials,SDIM)
-      REAL_T, INTENT(out) :: cenlight(num_materials,SDIM)
-      REAL_T cenall(SDIM)
-      REAL_T volall
-      INTEGER_T dir,im
+      real(amrex_real), INTENT(in) :: fluiddata(num_materials,2*SDIM+2)
+      real(amrex_real), INTENT(out) :: vofdark(num_materials),voflight(num_materials)
+      real(amrex_real), INTENT(out) :: cendark(num_materials,SDIM)
+      real(amrex_real), INTENT(out) :: cenlight(num_materials,SDIM)
+      real(amrex_real) cenall(SDIM)
+      real(amrex_real) volall
+      integer dir,im
 
       do im=1,num_materials
        volall=fluiddata(im,2)
@@ -106,25 +107,25 @@ stop
 
       procedure(sub_interface) :: LS_sub
 
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: bfact,nhalf
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, INTENT(in) :: dxin(SDIM)
-      REAL_T, INTENT(out) :: voldata(num_materials,2*SDIM+2)
-      INTEGER_T imaterial
-      INTEGER_T, INTENT(out) :: cutflag
-      INTEGER_T i1,j1,k1,dir,minusflag,plusflag
-      REAL_T ltest(D_DECL(3,3,3),num_materials)
-      REAL_T lnode(4*(SDIM-1),num_materials)
-      REAL_T facearea(num_materials)
-      REAL_T tempvol(num_materials)
-      REAL_T tempcen(num_materials,SDIM)
-      REAL_T volall
-      REAL_T cenall(SDIM)
-      REAL_T xsten2(-1:1,SDIM)
-      INTEGER_T nhalf2
-      INTEGER_T k1lo,k1hi,isten
-      REAL_T, allocatable, dimension(:) :: distbatch
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: bfact,nhalf
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real), INTENT(in) :: dxin(SDIM)
+      real(amrex_real), INTENT(out) :: voldata(num_materials,2*SDIM+2)
+      integer imaterial
+      integer, INTENT(out) :: cutflag
+      integer i1,j1,k1,dir,minusflag,plusflag
+      real(amrex_real) ltest(D_DECL(3,3,3),num_materials)
+      real(amrex_real) lnode(4*(SDIM-1),num_materials)
+      real(amrex_real) facearea(num_materials)
+      real(amrex_real) tempvol(num_materials)
+      real(amrex_real) tempcen(num_materials,SDIM)
+      real(amrex_real) volall
+      real(amrex_real) cenall(SDIM)
+      real(amrex_real) xsten2(-1:1,SDIM)
+      integer nhalf2
+      integer k1lo,k1hi,isten
+      real(amrex_real), allocatable, dimension(:) :: distbatch
 
       nhalf2=1
 
@@ -246,21 +247,21 @@ stop
 
       procedure(sub_interface) :: LS_sub
 
-      INTEGER_T, INTENT(in) :: nhalf,bfact
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, INTENT(in) :: dxin(SDIM)
-      REAL_T, INTENT(inout) :: voldata(num_materials,2*SDIM+2)
-      INTEGER_T, INTENT(inout) :: stack_max_level
-      INTEGER_T, INTENT(in) :: level
-      REAL_T, INTENT(in) :: time
+      integer, INTENT(in) :: nhalf,bfact
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real), INTENT(in) :: dxin(SDIM)
+      real(amrex_real), INTENT(inout) :: voldata(num_materials,2*SDIM+2)
+      integer, INTENT(inout) :: stack_max_level
+      integer, INTENT(in) :: level
+      real(amrex_real), INTENT(in) :: time
 
-      INTEGER_T i1,j1,k1,k1lo,k1hi,dir,cutflag,im,isten
-      REAL_T dxsten_fine(SDIM)
-      REAL_T xsten_mid(SDIM)
+      integer i1,j1,k1,k1lo,k1hi,dir,cutflag,im,isten
+      real(amrex_real) dxsten_fine(SDIM)
+      real(amrex_real) xsten_mid(SDIM)
 
-      REAL_T, allocatable, dimension(:,:) :: localdata
-      REAL_T, allocatable, dimension(:) :: dxin_fine
-      REAL_T, allocatable, dimension(:,:) :: xsten_fine
+      real(amrex_real), allocatable, dimension(:,:) :: localdata
+      real(amrex_real), allocatable, dimension(:) :: dxin_fine
+      real(amrex_real), allocatable, dimension(:,:) :: xsten_fine
 
       allocate(localdata(num_materials,2*SDIM+2))
       allocate(dxin_fine(SDIM))

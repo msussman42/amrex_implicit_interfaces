@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -84,18 +83,19 @@
 
  ! probtype==222
  module CONE3D_module
+ use amrex_fort_module, only : amrex_real
 
   implicit none
-  REAL_T :: MEHDI_IN_VEL(SDIM) ! Inflow velocity  
-  REAL_T :: APEX(SDIM)   ! Apex of the cone
-  REAL_T :: BISECT(SDIM) ! Vector goes from apex toward base and 
+  real(amrex_real) :: MEHDI_IN_VEL(SDIM) ! Inflow velocity  
+  real(amrex_real) :: APEX(SDIM)   ! Apex of the cone
+  real(amrex_real) :: BISECT(SDIM) ! Vector goes from apex toward base and 
                          ! bisect the cone angle
-  REAL_T :: THETA_C      ! Half of the cone angle in radian 
+  real(amrex_real) :: THETA_C      ! Half of the cone angle in radian 
   ! Cylinder and sphere
-  REAL_T :: MEHDI_CENTER(SDIM)  ! A point on axis of cylinder
+  real(amrex_real) :: MEHDI_CENTER(SDIM)  ! A point on axis of cylinder
                                 ! or center of sphere 
-  REAL_T :: MEHDI_AXIS(SDIM)    ! Cylinder axis vector
-  REAL_T :: MEHDI_RADIUS        ! Cylinder or sphere radius
+  real(amrex_real) :: MEHDI_AXIS(SDIM)    ! Cylinder axis vector
+  real(amrex_real) :: MEHDI_RADIUS        ! Cylinder or sphere radius
 
  contains
 
@@ -104,8 +104,8 @@
    use probcommon_module
    IMPLICIT NONE
 
-   INTEGER_T :: MEHDI_DIR
-   REAL_T :: dotprod
+   integer :: MEHDI_DIR
+   real(amrex_real) :: dotprod
 
    MEHDI_IN_VEL(1) = xblob10
    MEHDI_IN_VEL(2) = yblob10
@@ -218,11 +218,11 @@
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, INTENT(in) :: nmat
-  REAL_T, INTENT(in) :: x(SDIM)
-  REAL_T, INTENT(in) :: t
-  REAL_T, INTENT(out) :: LS(nmat)
-  INTEGER_T im
+  integer, INTENT(in) :: nmat
+  real(amrex_real), INTENT(in) :: x(SDIM)
+  real(amrex_real), INTENT(in) :: t
+  real(amrex_real), INTENT(out) :: LS(nmat)
+  integer im
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -272,15 +272,15 @@
    ! Outside the cone < 0
    IMPLICIT NONE
 
-   REAL_T M(SDIM)
-   REAL_T P(SDIM)
-   REAL_T AP(SDIM)
-   REAL_T AM(SDIM)
-   REAL_T PM(SDIM)
-   REAL_T angle
-   REAL_T DIST_CONE
+   real(amrex_real) M(SDIM)
+   real(amrex_real) P(SDIM)
+   real(amrex_real) AP(SDIM)
+   real(amrex_real) AM(SDIM)
+   real(amrex_real) PM(SDIM)
+   real(amrex_real) angle
+   real(amrex_real) DIST_CONE
 
-   REAL_T :: PI=3.141592653589793
+   real(amrex_real) :: PI=3.141592653589793
 
    AP = P-APEX
 
@@ -322,13 +322,13 @@
    ! Outside the cylinder < 0
    IMPLICIT NONE
 
-   REAL_T P(SDIM)
-   REAL_T A(SDIM)
-   REAL_T AP(SDIM)
-   REAL_T CP(SDIM)
-   REAL_T DIST_CYLINDER_MEHDI
-   REAL_T local_dotprod
-   INTEGER_T dir
+   real(amrex_real) P(SDIM)
+   real(amrex_real) A(SDIM)
+   real(amrex_real) AP(SDIM)
+   real(amrex_real) CP(SDIM)
+   real(amrex_real) DIST_CYLINDER_MEHDI
+   real(amrex_real) local_dotprod
+   integer dir
 
    local_dotprod=zero
    do dir=1,SDIM
@@ -355,11 +355,11 @@
     ! Outside the cylinder < 0
     IMPLICIT NONE
  
-    REAL_T P(SDIM)
-    REAL_T CP(SDIM)
-    REAL_T DIST_SPHERE_MEHDI
-    REAL_T local_dotprod
-    INTEGER_T dir
+    real(amrex_real) P(SDIM)
+    real(amrex_real) CP(SDIM)
+    real(amrex_real) DIST_SPHERE_MEHDI
+    real(amrex_real) local_dotprod
+    integer dir
 
     local_dotprod=zero
     do dir=1,SDIM
@@ -379,16 +379,16 @@ subroutine CONE3D_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
-REAL_T local_PI
+real(amrex_real) local_PI
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -479,13 +479,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
-INTEGER_T gravity_dir
-REAL_T gravity_dz
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
+integer gravity_dir
+real(amrex_real) gravity_dz
 
 call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
@@ -510,14 +510,14 @@ subroutine CONE3D_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
    use probcommon_module
    IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -565,14 +565,14 @@ subroutine CONE3D_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -599,18 +599,18 @@ subroutine CONE3D_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -641,15 +641,15 @@ subroutine CONE3D_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -676,8 +676,8 @@ function is_CONE3D_overlay(nmat,im)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T is_CONE3D_overlay
-INTEGER_T, INTENT(in) :: nmat,im
+integer is_CONE3D_overlay
+integer, INTENT(in) :: nmat,im
 
 if (nmat.eq.num_materials) then
  if (num_materials.eq.2) then
@@ -712,20 +712,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit,im_loop
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit,im_loop
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing

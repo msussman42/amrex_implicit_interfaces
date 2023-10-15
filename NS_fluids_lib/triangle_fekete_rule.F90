@@ -3,12 +3,12 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 
 module triangle_fekete_module
+use amrex_fort_module, only : amrex_real
 
 contains
 
@@ -40,15 +40,15 @@ subroutine fekete_degree ( rule, degree )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Output, INTEGER_T DEGREE, the polynomial degree of exactness of
+!    Output, integer DEGREE, the polynomial degree of exactness of
 !    the rule.
 !
   implicit none
 
-  INTEGER_T degree
-  INTEGER_T rule
+  integer degree
+  integer rule
 
   if ( rule == 1 ) then
     degree = 3
@@ -104,17 +104,17 @@ subroutine fekete_order_num ( rule, order_num )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Output, INTEGER_T ORDER_NUM, the order (number of points)
+!    Output, integer ORDER_NUM, the order (number of points)
 !    of the rule.
 !
   implicit none
 
-  INTEGER_T order_num
-  INTEGER_T rule
-  INTEGER_T, allocatable, dimension ( : ) :: suborder
-  INTEGER_T suborder_num
+  integer order_num
+  integer rule
+  integer, allocatable, dimension ( : ) :: suborder
+  integer suborder_num
 
   call fekete_suborder_num ( rule, suborder_num )
 
@@ -156,29 +156,29 @@ subroutine fekete_rule ( rule, order_num, xy, w )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Input, INTEGER_T ORDER_NUM, the order (number of points)
+!    Input, integer ORDER_NUM, the order (number of points)
 !    of the rule.
 !
-!    Output, REAL_T XY(2,ORDER_NUM), the points of the rule.
+!    Output, real(amrex_real) XY(2,ORDER_NUM), the points of the rule.
 !
-!    Output, REAL_T W(ORDER_NUM), the weights of the rule.
+!    Output, real(amrex_real) W(ORDER_NUM), the weights of the rule.
 !
   implicit none
 
-  INTEGER_T order_num
+  integer order_num
 
-  INTEGER_T k
-  INTEGER_T o
-  INTEGER_T rule
-  INTEGER_T s
-  INTEGER_T, allocatable, dimension ( : ) :: suborder
-  INTEGER_T suborder_num
-  REAL_T, allocatable, dimension ( : ) :: suborder_w
-  REAL_T, allocatable, dimension ( :, : ) :: suborder_xyz
-  REAL_T w(order_num)
-  REAL_T xy(2,order_num)
+  integer k
+  integer o
+  integer rule
+  integer s
+  integer, allocatable, dimension ( : ) :: suborder
+  integer suborder_num
+  real(amrex_real), allocatable, dimension ( : ) :: suborder_w
+  real(amrex_real), allocatable, dimension ( :, : ) :: suborder_xyz
+  real(amrex_real) w(order_num)
+  real(amrex_real) xy(2,order_num)
 !
 !  Get the suborder information.
 !
@@ -274,11 +274,11 @@ subroutine fekete_rule_num ( rule_num )
 !
 !  Parameters:
 !
-!    Output, INTEGER_T RULE_NUM, the number of rules available.
+!    Output, integer RULE_NUM, the number of rules available.
 !
   implicit none
 
-  INTEGER_T rule_num
+  integer rule_num
 
   rule_num = 7
 
@@ -312,20 +312,20 @@ subroutine fekete_suborder ( rule, suborder_num, suborder )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Input, INTEGER_T SUBORDER_NUM, the number of suborders
+!    Input, integer SUBORDER_NUM, the number of suborders
 !    of the rule.
 !
-!    Output, INTEGER_T SUBORDER(SUBORDER_NUM), the suborders
+!    Output, integer SUBORDER(SUBORDER_NUM), the suborders
 !    of the rule.
 !
   implicit none
 
-  INTEGER_T suborder_num
+  integer suborder_num
 
-  INTEGER_T rule
-  INTEGER_T suborder(suborder_num)
+  integer rule
+  integer suborder(suborder_num)
 
   if ( rule == 1 ) then
     suborder(1:suborder_num) = (/ &
@@ -396,15 +396,15 @@ subroutine fekete_suborder_num ( rule, suborder_num )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Output, INTEGER_T SUBORDER_NUM, the number of suborders
+!    Output, integer SUBORDER_NUM, the number of suborders
 !    of the rule.
 !
   implicit none
 
-  INTEGER_T rule
-  INTEGER_T suborder_num
+  integer rule
+  integer suborder_num
 
   if ( rule == 1 ) then
     suborder_num = 3
@@ -466,25 +466,25 @@ subroutine fekete_subrule ( rule, suborder_num, suborder_xyz, suborder_w )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Input, INTEGER_T SUBORDER_NUM, the number of suborders
+!    Input, integer SUBORDER_NUM, the number of suborders
 !    of the rule.
 !
-!    Output, REAL_T SUBORDER_XYZ(3,SUBORDER_NUM),
+!    Output, real(amrex_real) SUBORDER_XYZ(3,SUBORDER_NUM),
 !    the barycentric coordinates of the abscissas.
 !
-!    Output, REAL_T SUBORDER_W(SUBORDER_NUM), the
+!    Output, real(amrex_real) SUBORDER_W(SUBORDER_NUM), the
 !    suborder weights.
 !
   implicit none
 
-  INTEGER_T suborder_num
+  integer suborder_num
 
-  INTEGER_T rule
-  INTEGER_T s
-  REAL_T suborder_w(suborder_num)
-  REAL_T suborder_xyz(3,suborder_num)
+  integer rule
+  integer s
+  real(amrex_real) suborder_w(suborder_num)
+  real(amrex_real) suborder_xyz(3,suborder_num)
 
   if ( rule == 1 ) then
 
@@ -857,11 +857,11 @@ subroutine file_name_inc ( file_name )
   implicit none
 
   character c
-  INTEGER_T change
-  INTEGER_T digit
+  integer change
+  integer digit
   character ( len = * ) file_name
-  INTEGER_T i
-  INTEGER_T lens
+  integer i
+  integer lens
 
   lens = len_trim ( file_name )
 
@@ -943,13 +943,13 @@ subroutine get_unit ( iunit )
 !
 !  Parameters:
 !
-!    Output, INTEGER_T IUNIT, the free unit number.
+!    Output, integer IUNIT, the free unit number.
 !
   implicit none
 
-  INTEGER_T i
-  INTEGER_T ios
-  INTEGER_T iunit
+  integer i
+  integer ios
+  integer iunit
   logical lopen
 
   iunit = 0
@@ -1020,19 +1020,19 @@ function i4_modp ( i, j )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T I, the number to be divided.
+!    Input, integer I, the number to be divided.
 !
-!    Input, INTEGER_T J, the number that divides I.
+!    Input, integer J, the number that divides I.
 !
-!    Output, INTEGER_T I4_MODP, the nonnegative remainder when I is
+!    Output, integer I4_MODP, the nonnegative remainder when I is
 !    divided by J.
 !
   implicit none
 
-  INTEGER_T i
-  INTEGER_T i4_modp
-  INTEGER_T j
-  INTEGER_T value
+  integer i
+  integer i4_modp
+  integer j
+  integer value
 
   if ( j == 0 ) then
     write ( *, '(a)' ) ' '
@@ -1096,22 +1096,22 @@ function i4_wrap ( ival, ilo, ihi )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T IVAL, an integer value.
+!    Input, integer IVAL, an integer value.
 !
-!    Input, INTEGER_T ILO, IHI, the desired bounds.
+!    Input, integer ILO, IHI, the desired bounds.
 !
-!    Output, INTEGER_T I4_WRAP, a "wrapped" version of IVAL.
+!    Output, integer I4_WRAP, a "wrapped" version of IVAL.
 !
   implicit none
 
-  INTEGER_T i4_wrap
-  INTEGER_T ihi
-  INTEGER_T ilo
-  INTEGER_T ival
-  INTEGER_T jhi
-  INTEGER_T jlo
-  INTEGER_T value
-  INTEGER_T wide
+  integer i4_wrap
+  integer ihi
+  integer ilo
+  integer ival
+  integer jhi
+  integer jlo
+  integer value
+  integer wide
 
   jlo = min ( ilo, ihi )
   jhi = max ( ilo, ihi )
@@ -1178,25 +1178,25 @@ subroutine reference_to_physical_t3 ( node_xy, n, ref, phy )
 !
 !  Parameters:
 !
-!    Input, REAL_T NODE_XY(2,3), the coordinates of the vertices.
+!    Input, real(amrex_real) NODE_XY(2,3), the coordinates of the vertices.
 !    The vertices are assumed to be the images of (0,0), (1,0) and
 !    (0,1) respectively.
 !
-!    Input, INTEGER_T N, the number of objects to transform.
+!    Input, integer N, the number of objects to transform.
 !
-!    Input, REAL_T REF(2,N), points in the reference triangle.
+!    Input, real(amrex_real) REF(2,N), points in the reference triangle.
 !
-!    Output, REAL_T PHY(2,N), corresponding points in the
+!    Output, real(amrex_real) PHY(2,N), corresponding points in the
 !    physical triangle.
 !
   implicit none
 
-  INTEGER_T n
+  integer n
 
-  INTEGER_T i
-  REAL_T node_xy(2,3)
-  REAL_T phy(2,n)
-  REAL_T ref(2,n)
+  integer i
+  real(amrex_real) node_xy(2,3)
+  real(amrex_real) phy(2,n)
+  real(amrex_real) ref(2,n)
 
   do i = 1, 2
     phy(i,1:n) = node_xy(i,1) * ( 1.0D+00 - ref(1,1:n) - ref(2,1:n) ) &
@@ -1236,18 +1236,18 @@ subroutine timestamp ( )
   implicit none
 
   character ( len = 8 ) ampm
-  INTEGER_T d
-  INTEGER_T h
-  INTEGER_T m
-  INTEGER_T mm
+  integer d
+  integer h
+  integer m
+  integer mm
   character ( len = 9 ), parameter, dimension(12) :: month = (/ &
     'January  ', 'February ', 'March    ', 'April    ', &
     'May      ', 'June     ', 'July     ', 'August   ', &
     'September', 'October  ', 'November ', 'December ' /)
-  INTEGER_T n
-  INTEGER_T s
-  INTEGER_T values(8)
-  INTEGER_T y
+  integer n
+  integer s
+  integer values(8)
+  integer y
 
   call date_and_time ( values = values )
 
@@ -1323,14 +1323,14 @@ subroutine triangle_area ( node_xy, area )
 !
 !  Parameters:
 !
-!    Input, REAL_T NODE_XY(2,3), the triangle vertices.
+!    Input, real(amrex_real) NODE_XY(2,3), the triangle vertices.
 !
-!    Output, REAL_T AREA, the area of the triangle.
+!    Output, real(amrex_real) AREA, the area of the triangle.
 !
   implicit none
 
-  REAL_T area
-  REAL_T node_xy(2,3)
+  real(amrex_real) area
+  real(amrex_real) node_xy(2,3)
 
   area = 0.5D+00 * ( &
       node_xy(1,1) * ( node_xy(2,2) - node_xy(2,3) ) &
@@ -1363,60 +1363,60 @@ subroutine triangle_points_plot ( file_name, node_xy, node_show, point_num, &
 !
 !    Input, character ( len = * ) FILE_NAME, the name of the output file.
 !
-!    Input, REAL_T NODE_XY(2,3), the coordinates of the nodes
+!    Input, real(amrex_real) NODE_XY(2,3), the coordinates of the nodes
 !    of the triangle.
 !
-!    Input, INTEGER_T NODE_SHOW,
+!    Input, integer NODE_SHOW,
 !   -1, do not show the triangle, or the nodes.
 !    0, show the triangle, do not show the nodes;
 !    1, show the triangle and the nodes;
 !    2, show the triangle, the nodes and number them.
 !
-!    Input, INTEGER_T POINT_NUM, the number of points.
+!    Input, integer POINT_NUM, the number of points.
 !
-!    Input, REAL_T POINT_XY(2,POINT_NUM), the coordinates of the
+!    Input, real(amrex_real) POINT_XY(2,POINT_NUM), the coordinates of the
 !    points.
 !
-!    Input, INTEGER_T POINT_SHOW,
+!    Input, integer POINT_SHOW,
 !    0, do not show the points;
 !    1, show the points;
 !    2, show the points and number them.
 !
   implicit none
 
-  INTEGER_T, parameter :: node_num = 3
-  INTEGER_T point_num
+  integer, parameter :: node_num = 3
+  integer point_num
 
-  INTEGER_T :: circle_size
-  INTEGER_T delta
-  INTEGER_T e
+  integer :: circle_size
+  integer delta
+  integer e
   character ( len = * ) file_name
-  INTEGER_T file_unit
-  INTEGER_T i
-  INTEGER_T ios
-  INTEGER_T node
-  INTEGER_T node_show
-  REAL_T node_xy(2,node_num)
-  INTEGER_T point
-  INTEGER_T point_show
-  REAL_T point_xy(2,point_num)
+  integer file_unit
+  integer i
+  integer ios
+  integer node
+  integer node_show
+  real(amrex_real) node_xy(2,node_num)
+  integer point
+  integer point_show
+  real(amrex_real) point_xy(2,point_num)
   character ( len = 40 ) string
-  REAL_T x_max
-  REAL_T x_min
-  INTEGER_T x_ps
-  INTEGER_T :: x_ps_max = 576
-  INTEGER_T :: x_ps_max_clip = 594
-  INTEGER_T :: x_ps_min = 36
-  INTEGER_T :: x_ps_min_clip = 18
-  REAL_T x_scale
-  REAL_T y_max
-  REAL_T y_min
-  INTEGER_T y_ps
-  INTEGER_T :: y_ps_max = 666
-  INTEGER_T :: y_ps_max_clip = 684
-  INTEGER_T :: y_ps_min = 126
-  INTEGER_T :: y_ps_min_clip = 108
-  REAL_T y_scale
+  real(amrex_real) x_max
+  real(amrex_real) x_min
+  integer x_ps
+  integer :: x_ps_max = 576
+  integer :: x_ps_max_clip = 594
+  integer :: x_ps_min = 36
+  integer :: x_ps_min_clip = 18
+  real(amrex_real) x_scale
+  real(amrex_real) y_max
+  real(amrex_real) y_min
+  integer y_ps
+  integer :: y_ps_max = 666
+  integer :: y_ps_max_clip = 684
+  integer :: y_ps_min = 126
+  integer :: y_ps_min_clip = 108
+  real(amrex_real) y_scale
 !
 !  We need to do some figuring here, so that we can determine
 !  the range of the data, and hence the height and width

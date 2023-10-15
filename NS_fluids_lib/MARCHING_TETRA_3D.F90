@@ -6,7 +6,6 @@
 ! get rid of autoindent   :setl noai nocin nosi inde=
 #define STANDALONE 0
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -27,7 +26,8 @@ stop
 #define AREAZERO (1.0D-12)
 
       module marching_tetra_module
-
+      use amrex_fort_module, only : amrex_real
+ 
       contains
 
       subroutine vinterp(valu,gridval,gridx,gridy,gridz, &
@@ -35,12 +35,12 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: valu
-      REAL_T, INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
-      INTEGER_T, INTENT(in) :: IV0,IV1
-      REAL_T, INTENT(out) :: XX(SDIM),YY(SDIM),ZZ(SDIM)
-      INTEGER_T, INTENT(in) :: icomp
-      REAL_T tt
+      real(amrex_real), INTENT(in) :: valu
+      real(amrex_real), INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
+      integer, INTENT(in) :: IV0,IV1
+      real(amrex_real), INTENT(out) :: XX(SDIM),YY(SDIM),ZZ(SDIM)
+      integer, INTENT(in) :: icomp
+      real(amrex_real) tt
 
       if (abs(gridval(IV0)-valu).le.1.0D-10) then
        XX(icomp)=gridx(IV0)
@@ -76,11 +76,11 @@ stop
       subroutine addtrianglelist(trianglelist,itri,imaxtri,XX,YY,ZZ,NORMAL)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(inout) :: itri
-      INTEGER_T, INTENT(in) :: imaxtri
-      REAL_T, INTENT(inout) :: trianglelist(SDIM,imaxtri)
-      REAL_T, INTENT(in) :: XX(SDIM),YY(SDIM),ZZ(SDIM),NORMAL(SDIM)
-      REAL_T CPROD(SDIM),VEC1(3),VEC2(3),DOTPROD
+      integer, INTENT(inout) :: itri
+      integer, INTENT(in) :: imaxtri
+      real(amrex_real), INTENT(inout) :: trianglelist(SDIM,imaxtri)
+      real(amrex_real), INTENT(in) :: XX(SDIM),YY(SDIM),ZZ(SDIM),NORMAL(SDIM)
+      real(amrex_real) CPROD(SDIM),VEC1(3),VEC2(3),DOTPROD
 
 #if (AMREX_SPACEDIM==3)
       VEC1(1)=XX(SDIM)-XX(1)
@@ -167,15 +167,15 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(inout) :: itri
-      INTEGER_T, INTENT(in) :: IV0,IV1,IV2,IV3
-      INTEGER_T, INTENT(in) :: imaxtri
-      REAL_T, INTENT(inout) :: trianglelist(SDIM,imaxtri)
-      REAL_T, INTENT(in) :: valu
-      REAL_T, INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
-      REAL_T AA(4,4),sourcex(4),bb(4),NORMAL(SDIM)
-      REAL_T XX(SDIM),YY(SDIM),ZZ(SDIM)
-      INTEGER_T istat,idxtri
+      integer, INTENT(inout) :: itri
+      integer, INTENT(in) :: IV0,IV1,IV2,IV3
+      integer, INTENT(in) :: imaxtri
+      real(amrex_real), INTENT(inout) :: trianglelist(SDIM,imaxtri)
+      real(amrex_real), INTENT(in) :: valu
+      real(amrex_real), INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
+      real(amrex_real) AA(4,4),sourcex(4),bb(4),NORMAL(SDIM)
+      real(amrex_real) XX(SDIM),YY(SDIM),ZZ(SDIM)
+      integer istat,idxtri
 
       idxtri=0
       if (gridval(IV0).lt.valu) then
@@ -250,15 +250,15 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(inout) :: itri
-      INTEGER_T, INTENT(in) :: IV0,IV1,IV2,IV3
-      INTEGER_T, INTENT(in) :: imaxtri
-      REAL_T, INTENT(inout) :: trianglelist(SDIM,imaxtri)
-      REAL_T, INTENT(in) :: valu
-      REAL_T, INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
-      REAL_T AA(4,4),sourcex(4),bb(4),NORMAL(SDIM)
-      REAL_T XX(SDIM),YY(SDIM),ZZ(SDIM)
-      INTEGER_T istat,idxtri
+      integer, INTENT(inout) :: itri
+      integer, INTENT(in) :: IV0,IV1,IV2,IV3
+      integer, INTENT(in) :: imaxtri
+      real(amrex_real), INTENT(inout) :: trianglelist(SDIM,imaxtri)
+      real(amrex_real), INTENT(in) :: valu
+      real(amrex_real), INTENT(in) :: gridx(8),gridy(8),gridz(8),gridval(8)
+      real(amrex_real) AA(4,4),sourcex(4),bb(4),NORMAL(SDIM)
+      real(amrex_real) XX(SDIM),YY(SDIM),ZZ(SDIM)
+      integer istat,idxtri
 
       idxtri=0
       if (gridval(IV0).lt.valu) then
@@ -391,13 +391,13 @@ stop
            levelset_node,gridval,ISUM,kkhi,nodehi,valu)
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: levelset_node(0:1,0:1,0:1)
-      REAL_T, INTENT(out) :: gridval(8)
-      INTEGER_T :: N8(8)
-      INTEGER_T, INTENT(out) :: ISUM
-      INTEGER_T, INTENT(in) :: kkhi,nodehi
-      REAL_T, INTENT(in) :: valu
-      INTEGER_T :: itemp
+      real(amrex_real), INTENT(in) :: levelset_node(0:1,0:1,0:1)
+      real(amrex_real), INTENT(out) :: gridval(8)
+      integer :: N8(8)
+      integer, INTENT(out) :: ISUM
+      integer, INTENT(in) :: kkhi,nodehi
+      real(amrex_real), INTENT(in) :: valu
+      integer :: itemp
 
       gridval(1)=levelset_node(0,0,0)
       gridval(2)=levelset_node(1,0,0)
@@ -425,18 +425,18 @@ stop
            itri,imaxtri,xnode,kkhi,nodehi)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: kkhi
-      INTEGER_T, INTENT(in) :: nodehi
-      REAL_T, INTENT(inout) :: gridval(8)
-      REAL_T, INTENT(inout) :: gridx(8)
-      REAL_T, INTENT(inout) :: gridy(8)
-      REAL_T, INTENT(inout) :: gridz(8)
-      REAL_T, INTENT(in) :: valu
-      REAL_T, INTENT(inout) :: trianglelist(SDIM,200)
-      REAL_T, INTENT(in) :: xnode(0:1,0:1,0:1,SDIM)
-      INTEGER_T, INTENT(inout) :: itri
-      INTEGER_T, INTENT(inout) :: imaxtri
-      INTEGER_T :: dir
+      integer, INTENT(in) :: kkhi
+      integer, INTENT(in) :: nodehi
+      real(amrex_real), INTENT(inout) :: gridval(8)
+      real(amrex_real), INTENT(inout) :: gridx(8)
+      real(amrex_real), INTENT(inout) :: gridy(8)
+      real(amrex_real), INTENT(inout) :: gridz(8)
+      real(amrex_real), INTENT(in) :: valu
+      real(amrex_real), INTENT(inout) :: trianglelist(SDIM,200)
+      real(amrex_real), INTENT(in) :: xnode(0:1,0:1,0:1,SDIM)
+      integer, INTENT(inout) :: itri
+      integer, INTENT(inout) :: imaxtri
+      integer :: dir
 
       if (SDIM.eq.2) then
        if (kkhi.eq.0) then
@@ -526,23 +526,23 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: visual_tessellate_vfrac
-      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: DIMDEC(recon)
-      INTEGER_T, INTENT(in) :: DIMDEC(mask)
-      INTEGER_T, INTENT(in) :: level,gridno
-      INTEGER_T :: im
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: visual_tessellate_vfrac
+      integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+      integer :: growlo(3), growhi(3)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: DIMDEC(recon)
+      integer, INTENT(in) :: DIMDEC(mask)
+      integer, INTENT(in) :: level,gridno
+      integer :: im
        ! vof,refcen,order,slope,int
-      REAL_T, INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon) 
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: mask(DIMV(mask))
-      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T valu
-      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      real(amrex_real), INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon) 
+      real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
+      real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
+      real(amrex_real) valu
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       character*2 matstr
 
@@ -559,41 +559,41 @@ stop
       integer(4) :: NumIntElems
       integer(4) :: CurNodes
       integer(4) :: CurIntElems
-      INTEGER_T imaxtri,itri,curtri,ipass
-      REAL_T trianglelist(SDIM,200)
-      REAL_T lnode(0:1,0:1,0:1)
-      REAL_T xnode(0:1,0:1,0:1,SDIM)
-      INTEGER_T i,j,k,ii,jj,kk,dir,ISUM,itemp,jtemp
-      REAL_T gridval(8)
-      REAL_T gridx(8)
-      REAL_T gridy(8)
-      REAL_T gridz(8)
+      integer imaxtri,itri,curtri,ipass
+      real(amrex_real) trianglelist(SDIM,200)
+      real(amrex_real) lnode(0:1,0:1,0:1)
+      real(amrex_real) xnode(0:1,0:1,0:1,SDIM)
+      integer i,j,k,ii,jj,kk,dir,ISUM,itemp,jtemp
+      real(amrex_real) gridval(8)
+      real(amrex_real) gridx(8)
+      real(amrex_real) gridy(8)
+      real(amrex_real) gridz(8)
 
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
+      real(amrex_real) xsten(-3:3,SDIM)
+      integer nhalf
 
-      REAL_T xtarget(SDIM)
-      REAL_T nn(SDIM)
-      REAL_T intercept
-      REAL_T xref(SDIM)
-      REAL_T xrefT(SDIM)
-      INTEGER_T nparticles
-      REAL_T vfrac,vfrac_side
-      INTEGER_T iside,jside,kside
-      REAL_T xoutput(SDIM)
-      REAL_T xoutputT(SDIM)
-      INTEGER_T kklo,kkhi,nodehi
-      INTEGER_T DIMDEC(plt)
+      real(amrex_real) xtarget(SDIM)
+      real(amrex_real) nn(SDIM)
+      real(amrex_real) intercept
+      real(amrex_real) xref(SDIM)
+      real(amrex_real) xrefT(SDIM)
+      integer nparticles
+      real(amrex_real) vfrac,vfrac_side
+      integer iside,jside,kside
+      real(amrex_real) xoutput(SDIM)
+      real(amrex_real) xoutputT(SDIM)
+      integer kklo,kkhi,nodehi
+      integer DIMDEC(plt)
 
-      REAL_T, dimension(D_DECL(:,:,:),:), target, allocatable :: reconlocal
-      REAL_T, pointer :: reconlocal_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), dimension(D_DECL(:,:,:),:), target, allocatable :: reconlocal
+      real(amrex_real), pointer :: reconlocal_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T nmax
-      INTEGER_T vofcomp
-      REAL_T vfrac_sum_solid
-      REAL_T mofdata(num_materials*ngeom_recon)
-      INTEGER_T mask_local
-      INTEGER_T vcdeb,imdeb
+      integer nmax
+      integer vofcomp
+      real(amrex_real) vfrac_sum_solid
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      integer mask_local
+      integer vcdeb,imdeb
 
       nhalf=3
       nmax=POLYGON_LIST_MAX ! in: fort_isogrid
@@ -1021,11 +1021,11 @@ stop
       IMPLICIT NONE
 
 
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: plotint
-      INTEGER_T :: strandid
-      INTEGER_T, INTENT(in) :: arrdim,finest_level,nsteps,im
-      INTEGER_T, INTENT(in) :: grids_per_level(arrdim)
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: plotint
+      integer :: strandid
+      integer, INTENT(in) :: arrdim,finest_level,nsteps,im
+      integer, INTENT(in) :: grids_per_level(arrdim)
 
       character*25 namestr25 !./temptecplot ...
       character*7 newnamestr7 ! mat??ls ...
@@ -1056,12 +1056,12 @@ stop
       integer(4) :: PartNumIntElems
       integer(4) :: CurNumNodes
       integer(4) :: CurNumIntElems
-      INTEGER_T i,dir
-      INTEGER_T ilev,igrid,ipass
-      REAL_T xref(SDIM)
-      INTEGER_T nparticles,Part_nparticles
-      INTEGER_T alloc_flag
-      INTEGER_T sysret
+      integer i,dir
+      integer ilev,igrid,ipass
+      real(amrex_real) xref(SDIM)
+      integer nparticles,Part_nparticles
+      integer alloc_flag
+      integer sysret
 
       alloc_flag=0
 
@@ -1392,18 +1392,18 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: lo(SDIM), hi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, INTENT(in) :: DIMDEC(levelset)
-      INTEGER_T, INTENT(in) :: DIMDEC(mask)
-      INTEGER_T, INTENT(in) :: level,gridno
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in), target :: levelset(DIMV(levelset))
-      REAL_T, pointer :: levelset_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: mask(DIMV(mask))
-      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T valu
+      integer, INTENT(in) :: lo(SDIM), hi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: DIMDEC(levelset)
+      integer, INTENT(in) :: DIMDEC(mask)
+      integer, INTENT(in) :: level,gridno
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in), target :: levelset(DIMV(levelset))
+      real(amrex_real), pointer :: levelset_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
+      real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+      real(amrex_real) valu
 
       character*3 levstr
       character*5 gridstr
@@ -1415,22 +1415,22 @@ stop
       integer(4) :: NumIntElems
       integer(4) :: CurNodes
       integer(4) :: CurIntElems
-      INTEGER_T imaxtri,itri,curtri,ipass
-      REAL_T trianglelist(SDIM,200)
-      REAL_T lnode(0:1,0:1,0:1)
-      REAL_T xnode(0:1,0:1,0:1,SDIM)
-      INTEGER_T i,j,k,ii,jj,kk,dir,ISUM,itemp,jtemp
-      REAL_T gridval(8)
-      REAL_T gridx(8)
-      REAL_T gridy(8)
-      REAL_T gridz(8)
+      integer imaxtri,itri,curtri,ipass
+      real(amrex_real) trianglelist(SDIM,200)
+      real(amrex_real) lnode(0:1,0:1,0:1)
+      real(amrex_real) xnode(0:1,0:1,0:1,SDIM)
+      integer i,j,k,ii,jj,kk,dir,ISUM,itemp,jtemp
+      real(amrex_real) gridval(8)
+      real(amrex_real) gridx(8)
+      real(amrex_real) gridy(8)
+      real(amrex_real) gridz(8)
 
-      REAL_T xtarget(SDIM)
-      REAL_T xoutput(SDIM)
-      REAL_T xoutputT(SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      INTEGER_T nhalf
-      INTEGER_T kklo,kkhi,nodehi
+      real(amrex_real) xtarget(SDIM)
+      real(amrex_real) xoutput(SDIM)
+      real(amrex_real) xoutputT(SDIM)
+      real(amrex_real) xsten(-3:3,SDIM)
+      integer nhalf
+      integer kklo,kkhi,nodehi
 
       nhalf=3
       if (bfact.lt.1) then
@@ -1672,80 +1672,80 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: sweep ! sweep=0 or 1
-      INTEGER_T, INTENT(in) :: ngrow
-      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: DIMDEC(ls_old) !ls_oldxlo,ls_oldxhi,...
-      INTEGER_T, INTENT(in) :: DIMDEC(ls_new)
-      INTEGER_T, INTENT(in) :: DIMDEC(ls_grad_new)
-      INTEGER_T, INTENT(in) :: DIMDEC(mask)
-      INTEGER_T, INTENT(in) :: level
-      REAL_T, INTENT(in), target :: ls_old(DIMV(ls_old))
-      REAL_T, INTENT(inout), target :: ls_new(DIMV(ls_new))
-      REAL_T, INTENT(inout), target ::  &
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: sweep ! sweep=0 or 1
+      integer, INTENT(in) :: ngrow
+      integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: DIMDEC(ls_old) !ls_oldxlo,ls_oldxhi,...
+      integer, INTENT(in) :: DIMDEC(ls_new)
+      integer, INTENT(in) :: DIMDEC(ls_grad_new)
+      integer, INTENT(in) :: DIMDEC(mask)
+      integer, INTENT(in) :: level
+      real(amrex_real), INTENT(in), target :: ls_old(DIMV(ls_old))
+      real(amrex_real), INTENT(inout), target :: ls_new(DIMV(ls_new))
+      real(amrex_real), INTENT(inout), target ::  &
         ls_grad_new(DIMV(ls_grad_new),SDIM)
-      REAL_T, pointer :: ls_old_ptr(D_DECL(:,:,:))
-      REAL_T, pointer :: ls_new_ptr(D_DECL(:,:,:))
-      REAL_T, pointer :: ls_grad_new_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: mask(DIMV(mask))
-      REAL_T, pointer :: mask_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
-      REAL_T, INTENT(inout) :: minLS
-      REAL_T, INTENT(inout) :: maxLS
+      real(amrex_real), pointer :: ls_old_ptr(D_DECL(:,:,:))
+      real(amrex_real), pointer :: ls_new_ptr(D_DECL(:,:,:))
+      real(amrex_real), pointer :: ls_grad_new_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
+      real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+      real(amrex_real), INTENT(inout) :: minLS
+      real(amrex_real), INTENT(inout) :: maxLS
 
-      REAL_T valu
+      real(amrex_real) valu
 
-      INTEGER_T imaxtri,itri
-      REAL_T trianglelist(SDIM,200)
-      REAL_T lnode(0:1,0:1,0:1)
-      REAL_T xnode(0:1,0:1,0:1,SDIM)
-      INTEGER_T i,j,k
-      INTEGER_T ilocal,jlocal,klocal
-      INTEGER_T ii,jj,kk,ISUM
-      INTEGER_T ibase
-      INTEGER_T local_dir
-      REAL_T gridval(8)
-      REAL_T gridx(8)
-      REAL_T gridy(8)
-      REAL_T gridz(8)
+      integer imaxtri,itri
+      real(amrex_real) trianglelist(SDIM,200)
+      real(amrex_real) lnode(0:1,0:1,0:1)
+      real(amrex_real) xnode(0:1,0:1,0:1,SDIM)
+      integer i,j,k
+      integer ilocal,jlocal,klocal
+      integer ii,jj,kk,ISUM
+      integer ibase
+      integer local_dir
+      real(amrex_real) gridval(8)
+      real(amrex_real) gridx(8)
+      real(amrex_real) gridy(8)
+      real(amrex_real) gridz(8)
 
-      REAL_T xtarget(SDIM)
-      REAL_T xsten(-3:3,SDIM)
-      REAL_T xsten_local(-3:3,SDIM)
-      INTEGER_T nhalf
-      INTEGER_T kklo,kkhi,nodehi
-      INTEGER_T klocal_lo,klocal_hi
-      REAL_T degenerate_face_tol
-      REAL_T check_tol
-      REAL_T dxmin
-      REAL_T xcc(3)
-      REAL_T save_LS
-      REAL_T initial_LS
-      INTEGER_T LS_mod_flag
-      REAL_T p_triangle(3,3) ! (ipoint,dir)
-      INTEGER_T in_plane
-      REAL_T xcp_0(3)
-      REAL_T xcp_0_project(3)
-      REAL_T dist_pij(3)
-      REAL_T tan_vec(2,3)
-      REAL_T tan1(3)
-      REAL_T tan2(3)
-      REAL_T n_triangle(3)
-      REAL_T normal_closest(3)
-      REAL_T n_magnitude
-      REAL_T phi_x
-      REAL_T save_x_cp(SDIM)
-      INTEGER_T ipoint
-      INTEGER_T ipoint_p1
-      REAL_T xnode_seg(2,3)
-      REAL_T nnode_seg(2,3)
-      REAL_T xnode_point(3)
-      REAL_T dist_point
-      REAL_T unsigned_mindist
+      real(amrex_real) xtarget(SDIM)
+      real(amrex_real) xsten(-3:3,SDIM)
+      real(amrex_real) xsten_local(-3:3,SDIM)
+      integer nhalf
+      integer kklo,kkhi,nodehi
+      integer klocal_lo,klocal_hi
+      real(amrex_real) degenerate_face_tol
+      real(amrex_real) check_tol
+      real(amrex_real) dxmin
+      real(amrex_real) xcc(3)
+      real(amrex_real) save_LS
+      real(amrex_real) initial_LS
+      integer LS_mod_flag
+      real(amrex_real) p_triangle(3,3) ! (ipoint,dir)
+      integer in_plane
+      real(amrex_real) xcp_0(3)
+      real(amrex_real) xcp_0_project(3)
+      real(amrex_real) dist_pij(3)
+      real(amrex_real) tan_vec(2,3)
+      real(amrex_real) tan1(3)
+      real(amrex_real) tan2(3)
+      real(amrex_real) n_triangle(3)
+      real(amrex_real) normal_closest(3)
+      real(amrex_real) n_magnitude
+      real(amrex_real) phi_x
+      real(amrex_real) save_x_cp(SDIM)
+      integer ipoint
+      integer ipoint_p1
+      real(amrex_real) xnode_seg(2,3)
+      real(amrex_real) nnode_seg(2,3)
+      real(amrex_real) xnode_point(3)
+      real(amrex_real) dist_point
+      real(amrex_real) unsigned_mindist
     
       if (tid.ge.0) then
        ! do nothing
@@ -1960,7 +1960,7 @@ stop
              itri,imaxtri,xnode,kkhi,nodehi)
            endif
 
-            ! REAL_T :: trianglelist(SDIM,200)
+            ! real(amrex_real) :: trianglelist(SDIM,200)
             ! in 2D:
             !  first segment:
             ! trianglelist(1,1)
@@ -2264,8 +2264,8 @@ stop
       bind(c,name='fort_combinetrianglessingle')
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: arrdim,finest_level,nsteps
-      INTEGER_T, INTENT(in) :: grids_per_level(arrdim)
+      integer, INTENT(in) :: arrdim,finest_level,nsteps
+      integer, INTENT(in) :: grids_per_level(arrdim)
 
       character*3 levstr
       character*5 gridstr
@@ -2284,9 +2284,9 @@ stop
       integer(4) :: PartNumIntElems
       integer(4) :: CurNumNodes
       integer(4) :: CurNumIntElems
-      INTEGER_T i,dir
-      INTEGER_T ilev,igrid,ipass
-      INTEGER_T sysret
+      integer i,dir
+      integer ilev,igrid,ipass
+      integer sysret
 
       NumNodes=0
       NumIntElems=0

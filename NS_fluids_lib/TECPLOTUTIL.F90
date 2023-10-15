@@ -5,7 +5,6 @@
 
 #define STANDALONE 0
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -27,6 +26,7 @@ stop
 #endif
 
       module tecplotutil_cpp_module
+      use amrex_fort_module, only : amrex_real
       contains
 
       subroutine fort_tecplotfab( &
@@ -43,29 +43,29 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: dir,ncomp,interior_only,nsteps,bfact
-      INTEGER_T, INTENT(in) :: growlo(SDIM),growhi(SDIM) 
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM) 
-      INTEGER_T plotlo(SDIM),plothi(SDIM) 
-      INTEGER_T lo(SDIM),hi(SDIM) 
-      INTEGER_T, INTENT(in) :: DIMDEC(fabdata)
-      REAL_T, INTENT(in) :: fabdata(DIMV(fabdata),ncomp)
-      REAL_T xlo(SDIM)
-      REAL_T xsten(-1:1,SDIM)
-      INTEGER_T nhalf
-      REAL_T dx(SDIM)
-      REAL_T time
-      INTEGER_T klo,khi
+      integer, INTENT(in) :: dir,ncomp,interior_only,nsteps,bfact
+      integer, INTENT(in) :: growlo(SDIM),growhi(SDIM) 
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM) 
+      integer plotlo(SDIM),plothi(SDIM) 
+      integer lo(SDIM),hi(SDIM) 
+      integer, INTENT(in) :: DIMDEC(fabdata)
+      real(amrex_real), INTENT(in) :: fabdata(DIMV(fabdata),ncomp)
+      real(amrex_real) xlo(SDIM)
+      real(amrex_real) xsten(-1:1,SDIM)
+      integer nhalf
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) time
+      integer klo,khi
     
 
-      INTEGER_T ih
+      integer ih
 
       character*17 newfilename !fabdata ...
       character*2 matstr
       character*6 stepstr
 
-      INTEGER_T i,j,k,im,dir2
-      INTEGER_T nwrite
+      integer i,j,k,im,dir2
+      integer nwrite
 
 ! Guibo
 
@@ -73,7 +73,7 @@ stop
       REAL*4 ZONEMARKER,EOHMARKER
       integer*4 :: iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
-      INTEGER_T strandid
+      integer strandid
 
       ! define zone structure
       type zone_t
@@ -359,54 +359,54 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: tower_mf_id
-      INTEGER_T, INTENT(in) :: data_dir
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: ncomp
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tower_mf_id
+      integer, INTENT(in) :: data_dir
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: ncomp
 
-      INTEGER_T, INTENT(in) :: rz_flag
-      INTEGER_T, INTENT(in) :: lo(SDIM), hi(SDIM)
-      INTEGER_T, INTENT(in) :: DIMDEC(datafab)
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: gridno
-      REAL_T, INTENT(in), target :: datafab(DIMV(datafab), &
+      integer, INTENT(in) :: rz_flag
+      integer, INTENT(in) :: lo(SDIM), hi(SDIM)
+      integer, INTENT(in) :: DIMDEC(datafab)
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: gridno
+      real(amrex_real), INTENT(in), target :: datafab(DIMV(datafab), &
         ncomp)
-      REAL_T, pointer :: datafab_ptr(D_DECL(:,:,:),:)
-      REAL_T xposnd(SDIM)
-      REAL_T xposndT(SDIM)
-      REAL_T datand(ncomp)
-      REAL_T writend(2*ncomp+2*SDIM)
-      INTEGER_T scomp,iw
+      real(amrex_real), pointer :: datafab_ptr(D_DECL(:,:,:),:)
+      real(amrex_real) xposnd(SDIM)
+      real(amrex_real) xposndT(SDIM)
+      real(amrex_real) datand(ncomp)
+      real(amrex_real) writend(2*ncomp+2*SDIM)
+      integer scomp,iw
 
-      REAL_T, INTENT(in) :: problo(SDIM)
-      REAL_T, INTENT(in) :: probhi(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: probhi(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
 
       character*3 levstr
       character*5 gridstr
       character*32 filename32 !./temptecplot/tempnddata ...
 
-      INTEGER_T i,j,k
-      INTEGER_T isub,jsub,ksub
-      INTEGER_T isub_nrm
-      INTEGER_T dir
-      INTEGER_T i1,j1,k1
-      INTEGER_T k1lo,k1hi
-      INTEGER_T ksubhi
-      INTEGER_T isubhi_local
-      INTEGER_T jsubhi_local
-      INTEGER_T ksubhi_local
-      INTEGER_T igridlo(3),igridhi(3)
-      INTEGER_T icell(3)
-      INTEGER_T iproblo(3)
-      INTEGER_T nhalf
-      REAL_T xstenND(-3:3,SDIM)
-      REAL_T dxleft,dxright
-      INTEGER_T local_nd
-      INTEGER_T box_type(SDIM)
-      INTEGER_T plot_sdim_macro
+      integer i,j,k
+      integer isub,jsub,ksub
+      integer isub_nrm
+      integer dir
+      integer i1,j1,k1
+      integer k1lo,k1hi
+      integer ksubhi
+      integer isubhi_local
+      integer jsubhi_local
+      integer ksubhi_local
+      integer igridlo(3),igridhi(3)
+      integer icell(3)
+      integer iproblo(3)
+      integer nhalf
+      real(amrex_real) xstenND(-3:3,SDIM)
+      real(amrex_real) dxleft,dxright
+      integer local_nd
+      integer box_type(SDIM)
+      integer plot_sdim_macro
 
       nhalf=3
 
@@ -758,28 +758,28 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: n_root
+      integer, INTENT(in) :: n_root
       character, dimension(n_root), INTENT(in) :: root_char_array
-      INTEGER_T, INTENT(in) :: data_dir
-      INTEGER_T, INTENT(in) :: ncomp
-      INTEGER_T, INTENT(in) :: total_number_grids
-      INTEGER_T, INTENT(in) :: num_levels
-      INTEGER_T, INTENT(in) :: grids_per_level_array(num_levels)
-      INTEGER_T, INTENT(in) :: levels_array(total_number_grids)
-      INTEGER_T, INTENT(in) :: bfact_array(total_number_grids)
-      INTEGER_T, INTENT(in) :: gridno_array(total_number_grids)
-      INTEGER_T, INTENT(in) :: gridlo_array(total_number_grids*SDIM)
-      INTEGER_T, INTENT(in) :: gridhi_array(total_number_grids*SDIM)
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: SDC_outer_sweeps
-      INTEGER_T, INTENT(in) :: slab_step
-      INTEGER_T, INTENT(in) :: tower_mf_id
-      INTEGER_T, INTENT(in) :: nsteps
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: visual_revolve
+      integer, INTENT(in) :: data_dir
+      integer, INTENT(in) :: ncomp
+      integer, INTENT(in) :: total_number_grids
+      integer, INTENT(in) :: num_levels
+      integer, INTENT(in) :: grids_per_level_array(num_levels)
+      integer, INTENT(in) :: levels_array(total_number_grids)
+      integer, INTENT(in) :: bfact_array(total_number_grids)
+      integer, INTENT(in) :: gridno_array(total_number_grids)
+      integer, INTENT(in) :: gridlo_array(total_number_grids*SDIM)
+      integer, INTENT(in) :: gridhi_array(total_number_grids*SDIM)
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: SDC_outer_sweeps
+      integer, INTENT(in) :: slab_step
+      integer, INTENT(in) :: tower_mf_id
+      integer, INTENT(in) :: nsteps
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: visual_revolve
 
-      INTEGER_T strandid
-      INTEGER_T nwrite
+      integer strandid
+      integer nwrite
 
 
       character*3 levstr
@@ -802,10 +802,10 @@ stop
       character(len=2) :: id_chars
       character(len=4) :: plt_chars
 
-      INTEGER_T i,j,k,dir
-      INTEGER_T ilev,igrid
-      INTEGER_T lo(SDIM),hi(SDIM)
-      INTEGER_T hi_index_shift(3)
+      integer i,j,k,dir
+      integer ilev,igrid
+      integer lo(SDIM),hi(SDIM)
+      integer hi_index_shift(3)
 
 ! Guibo
 
@@ -813,8 +813,8 @@ stop
       REAL*4 ZONEMARKER,EOHMARKER
       integer*4 :: nzones_gb,iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
-      INTEGER_T bfact,testlev,testgridno
-      INTEGER_T testlo(SDIM),testhi(SDIM)
+      integer bfact,testlev,testgridno
+      integer testlo(SDIM),testhi(SDIM)
 
       ! define zone structure
       type zone_t
@@ -822,13 +822,13 @@ stop
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
 
-      INTEGER_T plot_sdim
-      INTEGER_T plot_sdim_macro
-      INTEGER_T klo_plot,khi_plot
-      INTEGER_T add_sub_cells
+      integer plot_sdim
+      integer plot_sdim_macro
+      integer klo_plot,khi_plot
+      integer add_sub_cells
 
 ! Guibo
-      INTEGER_T sysret
+      integer sysret
 
 
       plot_sdim=SDIM
@@ -1427,36 +1427,36 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: n_root
+      integer, INTENT(in) :: n_root
       character, dimension(n_root), INTENT(in) :: root_char_array
-      INTEGER_T, INTENT(in) :: data_dir
-      INTEGER_T, INTENT(in) :: ncomp
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: SDC_outer_sweeps
-      INTEGER_T, INTENT(in) :: slab_step
-      INTEGER_T, INTENT(in) :: tower_mf_id
-      INTEGER_T, INTENT(in) :: nsteps
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: visual_revolve
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM) 
-      INTEGER_T, INTENT(in) :: DIMDEC(datafab)
-      REAL_T, INTENT(in) :: datafab(DIMV(datafab),ncomp)
-      REAL_T, INTENT(in) :: problo(SDIM)
-      REAL_T, INTENT(in) :: probhi(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      INTEGER_T :: tid_local
-      INTEGER_T :: gridno_local
-      INTEGER_T :: dir_local
-      INTEGER_T :: total_number_grids
-      INTEGER_T :: num_levels
-      INTEGER_T :: grids_per_level_array(1)
-      INTEGER_T :: levels_array(1)
-      INTEGER_T :: bfact_array(1)
-      INTEGER_T :: gridno_array(1)
-      INTEGER_T :: gridlo_array(SDIM)
-      INTEGER_T :: gridhi_array(SDIM)
+      integer, INTENT(in) :: data_dir
+      integer, INTENT(in) :: ncomp
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: SDC_outer_sweeps
+      integer, INTENT(in) :: slab_step
+      integer, INTENT(in) :: tower_mf_id
+      integer, INTENT(in) :: nsteps
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: visual_revolve
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM) 
+      integer, INTENT(in) :: DIMDEC(datafab)
+      real(amrex_real), INTENT(in) :: datafab(DIMV(datafab),ncomp)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: probhi(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      integer :: tid_local
+      integer :: gridno_local
+      integer :: dir_local
+      integer :: total_number_grids
+      integer :: num_levels
+      integer :: grids_per_level_array(1)
+      integer :: levels_array(1)
+      integer :: bfact_array(1)
+      integer :: gridno_array(1)
+      integer :: gridlo_array(SDIM)
+      integer :: gridhi_array(SDIM)
 
       tid_local=0
       gridno_local=0

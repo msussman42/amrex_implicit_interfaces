@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
  
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -22,16 +21,17 @@
 
 
  module unimaterialChannel_module
+ use amrex_fort_module, only : amrex_real
 
   implicit none                   
 
-  REAL_T :: SIZE_L        ! Length of the channel
-  REAL_T :: SIZE_H        ! Height of the channel
-  REAL_T :: DENS_MAT      ! density
-  REAL_T :: TEMP_MAT      ! temperature
-  REAL_T :: PRES_MAT      ! pressure
-  REAL_T :: VELO_AVG      ! average inflow velocity  
-  REAL_T :: RAMP_TIME
+  real(amrex_real) :: SIZE_L        ! Length of the channel
+  real(amrex_real) :: SIZE_H        ! Height of the channel
+  real(amrex_real) :: DENS_MAT      ! density
+  real(amrex_real) :: TEMP_MAT      ! temperature
+  real(amrex_real) :: PRES_MAT      ! pressure
+  real(amrex_real) :: VELO_AVG      ! average inflow velocity  
+  real(amrex_real) :: RAMP_TIME
 
  contains
 
@@ -46,12 +46,12 @@
    SIZE_H_IN)
    IMPLICIT NONE
 
-   REAL_T, INTENT(in) :: DENS_IN
-   REAL_T, INTENT(in) :: TEMP_IN
-   REAL_T, INTENT(in) :: PRES_IN
-   REAL_T, INTENT(in) :: VELO_IN
-   REAL_T, INTENT(in) :: RAMP_IN
-   REAL_T, INTENT(in) :: SIZE_L_IN,SIZE_H_IN
+   real(amrex_real), INTENT(in) :: DENS_IN
+   real(amrex_real), INTENT(in) :: TEMP_IN
+   real(amrex_real), INTENT(in) :: PRES_IN
+   real(amrex_real), INTENT(in) :: VELO_IN
+   real(amrex_real), INTENT(in) :: RAMP_IN
+   real(amrex_real), INTENT(in) :: SIZE_L_IN,SIZE_H_IN
 
    DENS_MAT=DENS_IN
    TEMP_MAT=TEMP_IN
@@ -68,7 +68,7 @@
   ! level set initial value for material
   subroutine UNIMAT_INIT_LS_MAT(dx,LS)
    IMPLICIT NONE
-   REAL_T dx,LS
+   real(amrex_real) dx,LS
 
    LS = 10.0 * dx
   end subroutine UNIMAT_INIT_LS_MAT
@@ -77,14 +77,14 @@
   ! level set initial value for ghost material
   subroutine UNIMAT_INIT_LS_GST(dx,LS)
    IMPLICIT NONE
-   REAL_T dx,LS
+   real(amrex_real) dx,LS
    LS = -10.0 * dx
   end subroutine UNIMAT_INIT_LS_GST
 
   !****************************************************
   subroutine UNIMAT_INIT_VEL(x,y,z,vel)
-   REAL_T, INTENT(in) :: x,y,z
-   REAL_T, INTENT(out) :: vel(SDIM)
+   real(amrex_real), INTENT(in) :: x,y,z
+   real(amrex_real), INTENT(out) :: vel(SDIM)
 
     if (RAMP_TIME.eq.zero) then
      vel(1)= VELO_AVG 
@@ -142,10 +142,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,istate,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,istate,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -190,10 +190,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -237,12 +237,12 @@
    x,y,z, &                 ! boundary point position
    dx)                      ! dx
 
-   INTEGER_T, INTENT(in) :: dir,side,veldir
-   REAL_T, INTENT(in) :: time,x,y,z
-   REAL_T, INTENT(out) :: q_out
-   REAL_T, INTENT(in) :: q_in
-   REAL_T, INTENT(in) :: dx(SDIM)
-   REAL_T rad,R
+   integer, INTENT(in) :: dir,side,veldir
+   real(amrex_real), INTENT(in) :: time,x,y,z
+   real(amrex_real), INTENT(out) :: q_out
+   real(amrex_real), INTENT(in) :: q_in
+   real(amrex_real), INTENT(in) :: dx(SDIM)
+   real(amrex_real) rad,R
 
 
    if (SDIM.ne.2) then
@@ -354,10 +354,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,istate,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,istate,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -386,10 +386,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,istate,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out,q_in
-   REAL_T dx(SDIM)
+   integer dir,side,istate,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out,q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -418,10 +418,10 @@
    dx, &                    ! dx
    im)                      ! material indicator
 
-   INTEGER_T dir,side,istate,im
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out(SDIM), q_in(SDIM)
-   REAL_T dx(SDIM)
+   integer dir,side,istate,im
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out(SDIM), q_in(SDIM)
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &
@@ -465,10 +465,10 @@
    x,y,z, &                 ! boundary point position
    dx)                      ! dx
 
-   INTEGER_T dir,side,istate
-   REAL_T time,x_wall,x,y,z
-   REAL_T q_out, q_in
-   REAL_T dx(SDIM)
+   integer dir,side,istate
+   real(amrex_real) time,x_wall,x,y,z
+   real(amrex_real) q_out, q_in
+   real(amrex_real) dx(SDIM)
 
    if (SDIM.ne.2) then
     print *,"invalid system dimension &

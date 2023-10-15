@@ -4356,10 +4356,6 @@ void NavierStokes::apply_pressure_grad(
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
     const Box& fabgrid = grids[gridno];
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
  
     const Real* xlo = grid_loc[gridno].lo();
 
@@ -4401,32 +4397,23 @@ void NavierStokes::apply_pressure_grad(
      &enable_spectral,
      &spectral_loop,
      &ncfluxreg,
-     semfluxfab.dataPtr(),
-     ARLIM(semfluxfab.loVect()),ARLIM(semfluxfab.hiVect()),
-     maskfab.dataPtr(), // 1=fine/fine  0=coarse/fine
-     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-     maskcoef_fab.dataPtr(), // maskcoef=tag if not cov by level+1 or outside.
-     ARLIM(maskcoef_fab.loVect()),ARLIM(maskcoef_fab.hiVect()),
-     faceLS.dataPtr(),
-     ARLIM(faceLS.loVect()),ARLIM(faceLS.hiVect()),
-     mask_tensor_data.dataPtr(),
-     ARLIM(mask_tensor_data.loVect()),ARLIM(mask_tensor_data.hiVect()),
-     tensor_data.dataPtr(),
-     ARLIM(tensor_data.loVect()),ARLIM(tensor_data.hiVect()),
-     cell_tensor_data.dataPtr(),
-     ARLIM(cell_tensor_data.loVect()),ARLIM(cell_tensor_data.hiVect()),
-     maskSEMfab.dataPtr(),
-     ARLIM(maskSEMfab.loVect()),ARLIM(maskSEMfab.hiVect()),
+     BL_TO_FORTRAN_ANYD(semfluxfab),
+     BL_TO_FORTRAN_ANYD(maskfab), // 1=fine/fine  0=coarse/fine
+     BL_TO_FORTRAN_ANYD(maskcoef_fab),//maskcoef=tag if not cov or outside.
+     BL_TO_FORTRAN_ANYD(faceLS),
+     BL_TO_FORTRAN_ANYD(mask_tensor_data),
+     BL_TO_FORTRAN_ANYD(tensor_data),
+     BL_TO_FORTRAN_ANYD(cell_tensor_data),
+     BL_TO_FORTRAN_ANYD(maskSEMfab),
      xlo,dx,
      &dt_pressure_grad,
      &cur_time_slab,
-     velfab.dataPtr(),ARLIM(velfab.loVect()),ARLIM(velfab.hiVect()),
-     levelpcfab.dataPtr(),
-     ARLIM(levelpcfab.loVect()),ARLIM(levelpcfab.hiVect()),
-     xflux.dataPtr(),ARLIM(xflux.loVect()),ARLIM(xflux.hiVect()),
-     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),//FACE_VAR_MF
-     tilelo,tilehi,
-     fablo,fabhi,
+     BL_TO_FORTRAN_ANYD(velfab),
+     BL_TO_FORTRAN_ANYD(levelpcfab),
+     BL_TO_FORTRAN_ANYD(xflux),
+     BL_TO_FORTRAN_ANYD(xface),
+     BL_TO_FORTRAN_BOX(tilegrid),
+     BL_TO_FORTRAN_BOX(fabgrid),
      &bfact,
      &level,
      &NS_geometry_coord,
@@ -4564,7 +4551,7 @@ void NavierStokes::apply_pressure_grad(
    //spectral_loop==1 (resolve flux differences at element boundaries)
   for (int spectral_loop=0;spectral_loop<end_spectral_loop();spectral_loop++) {
   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-	  //tileloop==0 low  tileloop==1 SEM
+   //tileloop==0 low  tileloop==1 SEM
   for (int tileloop=0;tileloop<=1;tileloop++) {
 
    if (thread_class::nthreads<1)
