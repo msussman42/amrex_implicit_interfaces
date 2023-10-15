@@ -1,7 +1,6 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -17,23 +16,24 @@ stop
 #endif
 
 module bubbleControl_module
+use amrex_fort_module, only : amrex_real
 
 implicit none
 
-      INTEGER_T, PARAMETER :: maxDrop_pack=400
-      REAL_T, PARAMETER :: period_pack=0.0004
-      REAL_T, PARAMETER :: rDrop_pack=0.1
-      REAL_T, PARAMETER :: uDrop_pack=-600.0
-      REAL_T xRange_pack,xShift_pack,xMax_pack,xMin_pack 
+      integer, PARAMETER :: maxDrop_pack=400
+      real(amrex_real), PARAMETER :: period_pack=0.0004
+      real(amrex_real), PARAMETER :: rDrop_pack=0.1
+      real(amrex_real), PARAMETER :: uDrop_pack=-600.0
+      real(amrex_real) xRange_pack,xShift_pack,xMax_pack,xMin_pack 
 
-      REAL_T xSphere(500)
-      REAL_T ySphere(500)
-      REAL_T zSphere(500)
-      REAL_T rSphere(500)
-      INTEGER_T nSphere
-      REAL_T startPosi_pack(maxDrop_pack)
-      REAL_T xrand_pack(maxDrop_pack)
-      REAL_T LSDrop_pack(maxDrop_pack)
+      real(amrex_real) xSphere(500)
+      real(amrex_real) ySphere(500)
+      real(amrex_real) zSphere(500)
+      real(amrex_real) rSphere(500)
+      integer nSphere
+      real(amrex_real) startPosi_pack(maxDrop_pack)
+      real(amrex_real) xrand_pack(maxDrop_pack)
+      real(amrex_real) LSDrop_pack(maxDrop_pack)
  
 contains
 
@@ -41,8 +41,8 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T dir,side,veldir,dir2
-      REAL_T velcell(SDIM)
+      integer dir,side,veldir,dir2
+      real(amrex_real) velcell(SDIM)
 
       do dir2=1,SDIM
        velcell(dir2)=zero
@@ -65,16 +65,16 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T dir
-      REAL_T x,y,z,time
-      INTEGER_T im
-      REAL_T dx(SDIM)
-      REAL_T vfrac(num_materials)
-      REAL_T cenbc(num_materials,SDIM)
+      integer dir
+      real(amrex_real) x,y,z,time
+      integer im
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) vfrac(num_materials)
+      real(amrex_real) cenbc(num_materials,SDIM)
 
-      REAL_T LS
-      REAL_T xp(5)
-      INTEGER_T iFound,ip
+      real(amrex_real) LS
+      real(amrex_real) xp(5)
+      integer iFound,ip
 
       if (dir.eq.2) then   ! y-direction
           !LS=0.05    ! liquid jet diameter   ysl is this correct?
@@ -112,14 +112,14 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T x,y,z,time
-      REAL_T VOF(num_materials)
-      REAL_T LS
+      real(amrex_real) x,y,z,time
+      real(amrex_real) VOF(num_materials)
+      real(amrex_real) LS
 
-      INTEGER_T nDrop,iLoc,nLoc,insiderDrop
-      REAL_T bigdist,LS0
-      REAL_T nowTime,rainDuTime
-      INTEGER_T im
+      integer nDrop,iLoc,nLoc,insiderDrop
+      real(amrex_real) bigdist,LS0
+      real(amrex_real) nowTime,rainDuTime
+      integer im
 
       rainDuTime=2.0*rDrop_pack/abs(adv_vel)
       nLoc=ceiling(rainDuTime/period_pack)
@@ -178,13 +178,13 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T x,y,z,time
-      REAL_T VOF(num_materials)
-      REAL_T LS
+      real(amrex_real) x,y,z,time
+      real(amrex_real) VOF(num_materials)
+      real(amrex_real) LS
 
-      REAL_T bigdist
-      REAL_T xp(5)
-      INTEGER_T im
+      real(amrex_real) bigdist
+      real(amrex_real) xp(5)
+      integer im
 
 
       !LS=0.3-sqrt(x*x)  ! 0.3 is the gas jet diameter

@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,6 +23,7 @@ stop
 
 ! probtype==401 (see run3d/inputs.HELIX)  3 materials
 module HELIX_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
@@ -42,10 +42,10 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- INTEGER_T im
- REAL_T LS(num_materials)
+ real(amrex_real) x(SDIM)
+ real(amrex_real) t
+ integer im
+ real(amrex_real) LS(num_materials)
 
   ! fluid materials tessellate the domain
  if ((num_materials.eq.3).and.(probtype.eq.401)) then
@@ -73,12 +73,12 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T VEL(SDIM)
- INTEGER_T dir
- INTEGER_T velsolid_flag
+ real(amrex_real) x(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) VEL(SDIM)
+ integer dir
+ integer velsolid_flag
 
  if ((velsolid_flag.eq.0).or. &
      (velsolid_flag.eq.1)) then
@@ -105,10 +105,10 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T PRES
+ real(amrex_real) x(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) PRES
 
  PRES=outflow_pressure
 
@@ -120,11 +120,11 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(num_materials)
- REAL_T, INTENT(out) :: STATE(num_materials*num_state_material)
- INTEGER_T im,ibase,n
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(num_materials)
+ real(amrex_real), INTENT(out) :: STATE(num_materials*num_state_material)
+ integer im,ibase,n
 
  if ((num_materials.eq.3).and. &
      (num_state_material.ge.2).and. &
@@ -162,13 +162,13 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T LS_in(num_materials)
- INTEGER_T dir,side
- REAL_T dx(SDIM)
+ real(amrex_real) xwall
+ real(amrex_real) xghost(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) LS_in(num_materials)
+ integer dir,side
+ real(amrex_real) dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -188,16 +188,16 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T VEL
- REAL_T VEL_in
- INTEGER_T veldir,dir,side
- REAL_T dx(SDIM)
- REAL_T local_VEL(SDIM)
- INTEGER_T velsolid_flag
+ real(amrex_real) xwall
+ real(amrex_real) xghost(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) VEL
+ real(amrex_real) VEL_in
+ integer veldir,dir,side
+ real(amrex_real) dx(SDIM)
+ real(amrex_real) local_VEL(SDIM)
+ integer velsolid_flag
 
  velsolid_flag=0
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
@@ -222,14 +222,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T PRES
- REAL_T PRES_in
- INTEGER_T dir,side
- REAL_T dx(SDIM)
+ real(amrex_real) xwall
+ real(amrex_real) xghost(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) PRES
+ real(amrex_real) PRES_in
+ integer dir,side
+ real(amrex_real) dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -248,8 +248,8 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T is_HELIX_overlay
- INTEGER_T nmat,im
+ integer is_HELIX_overlay
+ integer nmat,im
 
  if (nmat.eq.num_materials) then
   if (num_materials.eq.3) then
@@ -282,18 +282,18 @@ contains
  use global_utility_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T local_STATE(num_materials*num_state_material)
- REAL_T STATE
- REAL_T STATE_merge
- REAL_T STATE_in
- INTEGER_T dir,side
- REAL_T dx(SDIM)
- INTEGER_T istate,im
- INTEGER_T ibase,im_crit,im_loop
+ real(amrex_real) xwall
+ real(amrex_real) xghost(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) local_STATE(num_materials*num_state_material)
+ real(amrex_real) STATE
+ real(amrex_real) STATE_merge
+ real(amrex_real) STATE_in
+ integer dir,side
+ real(amrex_real) dx(SDIM)
+ integer istate,im
+ integer ibase,im_crit,im_loop
 
  if ((istate.ge.1).and. &
      (istate.le.num_state_material).and. &
@@ -337,15 +337,15 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T im
- REAL_T VFRAC(num_materials)
- REAL_T time
- REAL_T x(SDIM)
- REAL_T temp(num_materials)
- REAL_T den(num_materials)
- REAL_T CV(num_materials)
- REAL_T dt
- REAL_T heat_source
+ integer im
+ real(amrex_real) VFRAC(num_materials)
+ real(amrex_real) time
+ real(amrex_real) x(SDIM)
+ real(amrex_real) temp(num_materials)
+ real(amrex_real) den(num_materials)
+ real(amrex_real) CV(num_materials)
+ real(amrex_real) dt
+ real(amrex_real) heat_source
 
  if ((num_materials.eq.3).and.(probtype.eq.401)) then
   heat_source=zero

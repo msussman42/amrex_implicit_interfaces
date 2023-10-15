@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,40 +23,41 @@ stop
 
 ! probtype==421 (see run2d/inputs.CRYOGENIC_TANK1)
 module CRYOGENIC_TANK1_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 ! Tank outter radius
-REAL_T :: TANK1_RADIUS         
+real(amrex_real) :: TANK1_RADIUS         
 ! Tank outher height
-REAL_T :: TANK1_HEIGHT         
+real(amrex_real) :: TANK1_HEIGHT         
 ! Tank wall thickness
-REAL_T :: TANK1_THICKNESS      
+real(amrex_real) :: TANK1_THICKNESS      
 ! Location of liquid-gas interface in respect to z=0
-REAL_T :: TANK1_LIQUID_HEIGHT  
+real(amrex_real) :: TANK1_LIQUID_HEIGHT  
 
 ! Initial mixture pressure
-REAL_T :: TANK1_INITIAL_MIX_PRESSURE
+real(amrex_real) :: TANK1_INITIAL_MIX_PRESSURE
 ! Universal gas constant [J/(mol K)]
-REAL_T :: TANK1_R_UNIV
+real(amrex_real) :: TANK1_R_UNIV
 
-REAL_T :: TANK1_GAS_GAMMA
-REAL_T :: TANK1_GAS_CP
-REAL_T :: TANK1_GAS_CV
+real(amrex_real) :: TANK1_GAS_GAMMA
+real(amrex_real) :: TANK1_GAS_CP
+real(amrex_real) :: TANK1_GAS_CV
 
-REAL_T :: TANK1_VAPOR_GAMMA
-REAL_T :: TANK1_VAPOR_CP
-REAL_T :: TANK1_VAPOR_CV
+real(amrex_real) :: TANK1_VAPOR_GAMMA
+real(amrex_real) :: TANK1_VAPOR_CP
+real(amrex_real) :: TANK1_VAPOR_CV
 
-REAL_T :: TANK1_MIX_GAMMA
-REAL_T :: TANK1_MIX_CP
-REAL_T :: TANK1_MIX_CV
+real(amrex_real) :: TANK1_MIX_GAMMA
+real(amrex_real) :: TANK1_MIX_CP
+real(amrex_real) :: TANK1_MIX_CV
 
-REAL_T :: TANK1_HEATER_FLUX
+real(amrex_real) :: TANK1_HEATER_FLUX
 
 ! Heater location in dim=2 direction
-REAL_T :: TANK1_HEATER_LOW
-REAL_T :: TANK1_HEATER_HIGH
-REAL_T :: TANK1_HEATER_R
+real(amrex_real) :: TANK1_HEATER_LOW
+real(amrex_real) :: TANK1_HEATER_HIGH
+real(amrex_real) :: TANK1_HEATER_R
 
 contains
 
@@ -129,11 +129,11 @@ contains
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, INTENT(in) :: nmat
-  REAL_T, INTENT(in) :: x(SDIM)
-  REAL_T, INTENT(in) :: t
-  REAL_T, INTENT(out) :: LS(nmat)
-  REAL_T ls_o,ls_i
+  integer, INTENT(in) :: nmat
+  real(amrex_real), INTENT(in) :: x(SDIM)
+  real(amrex_real), INTENT(in) :: t
+  real(amrex_real), INTENT(out) :: LS(nmat)
+  real(amrex_real) ls_o,ls_i
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -199,14 +199,14 @@ contains
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, INTENT(in) :: nmat
-  REAL_T, INTENT(in) :: x(SDIM)
-  REAL_T, INTENT(in) :: t
-  REAL_T, INTENT(in) :: dx(SDIM)
-  REAL_T, INTENT(in) :: LS(nmat)
-  REAL_T, INTENT(out) :: VEL(SDIM)
-  INTEGER_T, INTENT(in) :: velsolid_flag
-  INTEGER_T dir
+  integer, INTENT(in) :: nmat
+  real(amrex_real), INTENT(in) :: x(SDIM)
+  real(amrex_real), INTENT(in) :: t
+  real(amrex_real), INTENT(in) :: dx(SDIM)
+  real(amrex_real), INTENT(in) :: LS(nmat)
+  real(amrex_real), INTENT(out) :: VEL(SDIM)
+  integer, INTENT(in) :: velsolid_flag
+  integer dir
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -234,7 +234,7 @@ contains
   return 
  end subroutine CRYOGENIC_TANK1_VEL
 
-REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
+real(amrex_real) function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
  ! Returns the signed distance function to the cylinder
  ! surfaces (including top and bottom)
  ! The axis of cylinder is along SDIM=2 direction
@@ -244,13 +244,13 @@ REAL_T function DIST_FINITE_CYLINDER(P,R_cyl,H_bot,H_top)
  ! Outside the cylinder > 0
  implicit none
 
- REAL_T, INTENT(in), dimension(SDIM) :: P
- REAL_T, INTENT(in) :: R_cyl
- REAL_T, INTENT(in) :: H_bot
- REAL_T, INTENT(in) :: H_top
+ real(amrex_real), INTENT(in), dimension(SDIM) :: P
+ real(amrex_real), INTENT(in) :: R_cyl
+ real(amrex_real), INTENT(in) :: H_bot
+ real(amrex_real), INTENT(in) :: H_top
  
- REAL_T x,y,z,r
- REAL_T dist_cyl, dist_end
+ real(amrex_real) x,y,z,r
+ real(amrex_real) dist_cyl, dist_end
  
  x=P(1)
  y=P(2)
@@ -352,11 +352,11 @@ subroutine EOS_CRYOGENIC_TANK1(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: pressure
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: pressure
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -387,12 +387,12 @@ subroutine dVdT_CRYOGENIC_TANK1(dVdT,massfrac_var, &
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
-REAL_T, INTENT(in) :: pressure
-REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
-REAL_T, INTENT(in) :: temperature
-REAL_T, INTENT(out) :: dVdT
-INTEGER_T :: dummy_input
+integer, INTENT(in) :: imattype,im,num_species_var_in
+real(amrex_real), INTENT(in) :: pressure
+real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+real(amrex_real), INTENT(in) :: temperature
+real(amrex_real), INTENT(out) :: dVdT
+integer :: dummy_input
 
  if (pressure.gt.zero) then
   ! do nothing
@@ -446,12 +446,12 @@ subroutine SOUNDSQR_CRYOGENIC_TANK1(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: soundsqr
- REAL_T pressure
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: soundsqr
+ real(amrex_real) pressure
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -489,11 +489,11 @@ subroutine INTERNAL_CRYOGENIC_TANK1(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: temperature 
- REAL_T, INTENT(out) :: local_internal_energy
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: temperature 
+ real(amrex_real), INTENT(out) :: local_internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -524,12 +524,12 @@ subroutine TEMPERATURE_CRYOGENIC_TANK1(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(out) :: temperature 
- REAL_T, INTENT(in) :: internal_energy
- REAL_T :: denom
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(out) :: temperature 
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real) :: denom
 
  if (num_species_var_in.eq.num_species_var) then
   if (im.eq.2) then
@@ -563,8 +563,8 @@ end subroutine TEMPERATURE_CRYOGENIC_TANK1
 subroutine MASS_FRAC_TO_MOL_FRAC(X_V,MF_V,MF_G)
  use probcommon_module
  IMPLICIT NONE
- REAL_T, INTENT(in) :: X_V
- REAL_T, INTENT(out) :: MF_V,MF_G
+ real(amrex_real), INTENT(in) :: X_V
+ real(amrex_real), INTENT(out) :: MF_V,MF_G
 
  ! MF_V = n_V / (n_V+n_G)
  !      = X_V/M_V / (X_V/M_V+ X_G/M_G)
@@ -583,18 +583,18 @@ subroutine MASS_FRAC_TO_MOL_FRAC(X_V,MF_V,MF_G)
  return
 end subroutine MASS_FRAC_TO_MOL_FRAC
 
-REAL_T function C_V_SPC_MIX(X_V)
+real(amrex_real) function C_V_SPC_MIX(X_V)
  IMPLICIT NONE
- REAL_T, INTENT(in) :: X_V
+ real(amrex_real), INTENT(in) :: X_V
 
  C_V_SPC_MIX = X_V * TANK1_VAPOR_CV + (one-X_V)*TANK1_GAS_CV
 
 end function C_V_SPC_MIX
 
-REAL_T function GAMMA_MIX(X_V)
+real(amrex_real) function GAMMA_MIX(X_V)
  IMPLICIT NONE
- REAL_T, INTENT(in) :: X_V
- REAL_T :: denom
+ real(amrex_real), INTENT(in) :: X_V
+ real(amrex_real) :: denom
  ! gamma_mix = C_{p,spc,mix}/C_{v,spc,mix}
  ! C_{spc,mix} = sum_i X_i*C_{spc,i}
 
@@ -618,12 +618,12 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
-INTEGER_T gravity_dir
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
+integer gravity_dir
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -655,14 +655,14 @@ subroutine CRYOGENIC_TANK1_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase,n
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase,n
 
  ! num_state_material=2 (default)  density and temperature
  ! num_state_material>2 if scalar (species) variables added.
@@ -730,14 +730,14 @@ subroutine CRYOGENIC_TANK1_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -764,17 +764,17 @@ subroutine CRYOGENIC_TANK1_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -805,15 +805,15 @@ subroutine CRYOGENIC_TANK1_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -842,20 +842,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T, PARAMETER :: local_bcflag=1
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer, PARAMETER :: local_bcflag=1
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -919,23 +919,23 @@ subroutine CRYOGENIC_TANK1_HEATSOURCE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(in) :: VFRAC(nmat)
-REAL_T, INTENT(in) :: time
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: temp(nmat)
-REAL_T, INTENT(in) :: den(nmat)
-REAL_T, INTENT(in) :: CV(nmat)
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(out) :: heat_source
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(in) :: VFRAC(nmat)
+real(amrex_real), INTENT(in) :: time
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: temp(nmat)
+real(amrex_real), INTENT(in) :: den(nmat)
+real(amrex_real), INTENT(in) :: CV(nmat)
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(out) :: heat_source
 
-INTEGER_T dir
-REAL_T local_dx(SDIM)
-REAL_T flux_magnitude
-REAL_T denom
+integer dir
+real(amrex_real) local_dx(SDIM)
+real(amrex_real) flux_magnitude
+real(amrex_real) denom
 
 if (nmat.eq.num_materials) then
  ! do nothing

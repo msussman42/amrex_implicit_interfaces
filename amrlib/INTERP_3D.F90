@@ -4,7 +4,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -26,6 +25,7 @@ stop
 #endif
 
       module interp_module
+      use amrex_fort_module, only : amrex_real
 
       contains
 
@@ -36,7 +36,7 @@ stop
 
       IMPLICIT NONE
       
-      INTEGER_T, INTENT(in) :: cc_finest_level
+      integer, INTENT(in) :: cc_finest_level
 
       if ((cc_finest_level.lt.0).or.(cc_finest_level.gt.1000)) then
        print *,"cc_finest_level invalid"
@@ -61,13 +61,13 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: slab_dt_type
-      INTEGER_T, INTENT(in) :: cc_time_order
-      INTEGER_T i1
-      REAL_T, INTENT(out) :: time_array(0:cc_time_order)
-      REAL_T, INTENT(in) :: slablow,slabhigh
-      REAL_T yGL(0:cc_time_order)
-      REAL_T slab_dt
+      integer, INTENT(in) :: slab_dt_type
+      integer, INTENT(in) :: cc_time_order
+      integer i1
+      real(amrex_real), INTENT(out) :: time_array(0:cc_time_order)
+      real(amrex_real), INTENT(in) :: slablow,slabhigh
+      real(amrex_real) yGL(0:cc_time_order)
+      real(amrex_real) slab_dt
 
       if (cc_time_order.ne.bfact_time_order) then
        print *,"cc_time_order invalid"
@@ -133,62 +133,62 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: ngeom_recon_test,ngeom_raw_test
-      INTEGER_T, INTENT(in) :: DIMDEC(dmof)
-      INTEGER_T, INTENT(in) :: DIMDEC(drecon)
-      INTEGER_T, INTENT(in) :: DIMDEC(fdmof)
-      INTEGER_T, INTENT(in) :: clo(SDIM),chi(SDIM)
-      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
-      INTEGER_T domlo(SDIM)
-      REAL_T, INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_raw)
-      REAL_T, INTENT(out) :: datarecon(DIMV(drecon),num_materials*ngeom_recon)
-      REAL_T, INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
-      REAL_T, INTENT(in) :: problo(SDIM)
-      REAL_T, INTENT(in) :: dxf(SDIM),dxc(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T wt(SDIM)
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: ngeom_recon_test,ngeom_raw_test
+      integer, INTENT(in) :: DIMDEC(dmof)
+      integer, INTENT(in) :: DIMDEC(drecon)
+      integer, INTENT(in) :: DIMDEC(fdmof)
+      integer, INTENT(in) :: clo(SDIM),chi(SDIM)
+      integer, INTENT(in) :: flo(SDIM),fhi(SDIM)
+      integer domlo(SDIM)
+      real(amrex_real), INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_raw)
+      real(amrex_real), INTENT(out) :: datarecon(DIMV(drecon),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM),dxc(SDIM)
+      integer growlo(3),growhi(3)
+      integer stenlo(3),stenhi(3)
+      real(amrex_real) wt(SDIM)
 
-      INTEGER_T :: grid_index(SDIM)
-      INTEGER_T, parameter :: grid_level=-1
+      integer :: grid_index(SDIM)
+      integer, parameter :: grid_level=-1
 
-      INTEGER_T i,j,k
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ic,jc,kc
-      REAL_T testwt
+      integer i,j,k
+      integer ifine,jfine,kfine
+      integer ic,jc,kc
+      real(amrex_real) testwt
 
-      INTEGER_T dir
-      INTEGER_T nmax,im,vofcomp_old,vofcomp_new
-      REAL_T mofdata(num_materials*ngeom_recon)
-      REAL_T mofdatafine(num_materials*ngeom_recon)
-      REAL_T multi_centroidA(num_materials,SDIM)
-      REAL_T volcell
-      REAL_T cencell(SDIM)
-      REAL_T volfine
-      REAL_T cenfine(SDIM)
-      REAL_T voltemp
-      REAL_T vof_super(num_materials)
-      REAL_T multi_volume(num_materials)
-      REAL_T multi_cen(SDIM,num_materials)
-      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, PARAMETER :: use_ls_data=0
-      INTEGER_T, PARAMETER ::  mof_verbose=0
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T, parameter :: nhalfgrid=1
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenfine(-nhalf:nhalf,SDIM)
-      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
-      INTEGER_T n_overlap
-      INTEGER_T tessellate
+      integer dir
+      integer nmax,im,vofcomp_old,vofcomp_new
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdatafine(num_materials*ngeom_recon)
+      real(amrex_real) multi_centroidA(num_materials,SDIM)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(SDIM)
+      real(amrex_real) volfine
+      real(amrex_real) cenfine(SDIM)
+      real(amrex_real) voltemp
+      real(amrex_real) vof_super(num_materials)
+      real(amrex_real) multi_volume(num_materials)
+      real(amrex_real) multi_cen(SDIM,num_materials)
+      integer, PARAMETER :: continuous_mof=STANDARD_MOF
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, PARAMETER :: use_ls_data=0
+      integer, PARAMETER ::  mof_verbose=0
+      real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      integer, parameter :: nhalf=3
+      integer, parameter :: nhalfgrid=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstengrid(-nhalfgrid:nhalfgrid,SDIM)
+      integer n_overlap
+      integer tessellate
 
-      INTEGER_T tid
+      integer tid
 #ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
+      integer omp_get_thread_num
 #endif
 
       tid=0       
@@ -504,47 +504,47 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, INTENT(in) :: ncomp
-      INTEGER_T, INTENT(in) :: DIMDEC(clsdata)
-      INTEGER_T, INTENT(in) :: DIMDEC(flsdata)
-      INTEGER_T, INTENT(in) :: clo(SDIM),chi(SDIM)
-      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
-      INTEGER_T domlo(SDIM)
-      REAL_T, INTENT(in) :: clsdata(DIMV(clsdata),ncomp)
-      REAL_T, INTENT(out) :: flsdata(DIMV(flsdata),ncomp)
-      REAL_T, INTENT(in) :: problo(SDIM)
-      REAL_T, INTENT(in) :: dxf(SDIM),dxc(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T wt(SDIM)
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      integer, INTENT(in) :: ncomp
+      integer, INTENT(in) :: DIMDEC(clsdata)
+      integer, INTENT(in) :: DIMDEC(flsdata)
+      integer, INTENT(in) :: clo(SDIM),chi(SDIM)
+      integer, INTENT(in) :: flo(SDIM),fhi(SDIM)
+      integer domlo(SDIM)
+      real(amrex_real), INTENT(in) :: clsdata(DIMV(clsdata),ncomp)
+      real(amrex_real), INTENT(out) :: flsdata(DIMV(flsdata),ncomp)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM),dxc(SDIM)
+      integer growlo(3),growhi(3)
+      integer stenlo(3),stenhi(3)
+      real(amrex_real) wt(SDIM)
 
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ic,jc,kc
-      REAL_T testwt
+      integer ifine,jfine,kfine
+      integer ic,jc,kc
+      real(amrex_real) testwt
 
-      INTEGER_T dir
-      REAL_T volcell
-      REAL_T cencell(SDIM)
-      REAL_T volfine
-      REAL_T cenfine(SDIM)
-      REAL_T volcoarse
-      REAL_T cencoarse(SDIM)
-      REAL_T voltemp
-      REAL_T centemp(SDIM)
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T, parameter :: nhalfgrid=1
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenfine(-nhalf:nhalf,SDIM)
-      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
-      INTEGER_T n_overlap
-      REAL_T LS_FINE(ncomp)
-      REAL_T LS_COARSE(ncomp)
+      integer dir
+      real(amrex_real) volcell
+      real(amrex_real) cencell(SDIM)
+      real(amrex_real) volfine
+      real(amrex_real) cenfine(SDIM)
+      real(amrex_real) volcoarse
+      real(amrex_real) cencoarse(SDIM)
+      real(amrex_real) voltemp
+      real(amrex_real) centemp(SDIM)
+      integer, parameter :: nhalf=3
+      integer, parameter :: nhalfgrid=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstengrid(-nhalfgrid:nhalfgrid,SDIM)
+      integer n_overlap
+      real(amrex_real) LS_FINE(ncomp)
+      real(amrex_real) LS_COARSE(ncomp)
 
-      INTEGER_T tid
+      integer tid
 #ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
+      integer omp_get_thread_num
 #endif
 
       tid=0       
@@ -752,58 +752,58 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: ngeom_recon_test,ngeom_raw_test
-      INTEGER_T, INTENT(in) :: DIMDEC(dmof)
-      INTEGER_T, INTENT(in) :: DIMDEC(fdmof)
-      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
-      INTEGER_T domlo(SDIM)
-      REAL_T, INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_recon)
-      REAL_T, INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_recon)
-      REAL_T, INTENT(in) :: problo(SDIM),dxf(SDIM),dxc(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T wt(SDIM)
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: ngeom_recon_test,ngeom_raw_test
+      integer, INTENT(in) :: DIMDEC(dmof)
+      integer, INTENT(in) :: DIMDEC(fdmof)
+      integer, INTENT(in) :: flo(SDIM),fhi(SDIM)
+      integer domlo(SDIM)
+      real(amrex_real), INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in) :: problo(SDIM),dxf(SDIM),dxc(SDIM)
+      integer growlo(3),growhi(3)
+      integer stenlo(3),stenhi(3)
+      real(amrex_real) wt(SDIM)
 
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ic,jc,kc
-      REAL_T testwt
+      integer ifine,jfine,kfine
+      integer ic,jc,kc
+      real(amrex_real) testwt
 
-      INTEGER_T :: grid_index(SDIM)
-      INTEGER_T, parameter :: grid_level=-1
+      integer :: grid_index(SDIM)
+      integer, parameter :: grid_level=-1
 
-      INTEGER_T dir
-      INTEGER_T nmax,im,vofcomp_old,vofcomp_new
-      REAL_T mofdata(num_materials*ngeom_recon)
-      REAL_T mofdatafine(num_materials*ngeom_recon)
-      REAL_T volcell
-      REAL_T cencell(SDIM)
-      REAL_T volfine
-      REAL_T cenfine(SDIM)
-      REAL_T voltemp
-      REAL_T vof_super(num_materials)
-      REAL_T multi_volume(num_materials)
-      REAL_T multi_cen(SDIM,num_materials)
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T, parameter :: nhalfgrid=1
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenfine(-nhalf:nhalf,SDIM)
-      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
-      INTEGER_T n_overlap
-      INTEGER_T tessellate
+      integer dir
+      integer nmax,im,vofcomp_old,vofcomp_new
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdatafine(num_materials*ngeom_recon)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(SDIM)
+      real(amrex_real) volfine
+      real(amrex_real) cenfine(SDIM)
+      real(amrex_real) voltemp
+      real(amrex_real) vof_super(num_materials)
+      real(amrex_real) multi_volume(num_materials)
+      real(amrex_real) multi_cen(SDIM,num_materials)
+      integer, parameter :: nhalf=3
+      integer, parameter :: nhalfgrid=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstengrid(-nhalfgrid:nhalfgrid,SDIM)
+      integer n_overlap
+      integer tessellate
 
-      INTEGER_T, PARAMETER :: use_ls_data=0
-      INTEGER_T, PARAMETER ::  mof_verbose=0
-      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T multi_centroidA(num_materials,SDIM)
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      integer, PARAMETER :: use_ls_data=0
+      integer, PARAMETER ::  mof_verbose=0
+      integer, PARAMETER :: continuous_mof=STANDARD_MOF
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) multi_centroidA(num_materials,SDIM)
+      real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      INTEGER_T tid
+      integer tid
 #ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
+      integer omp_get_thread_num
 #endif
 
       tid=0       
@@ -1114,48 +1114,48 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: velflag
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: nburning
-      INTEGER_T, INTENT(in) :: DIMDEC(cburn)
-      INTEGER_T, INTENT(in) :: DIMDEC(fburn)
-      INTEGER_T, INTENT(in) :: flo(SDIM),fhi(SDIM)
-      INTEGER_T domlo(SDIM)
-      REAL_T, INTENT(in) :: cburn(DIMV(cburn),nburning)
-      REAL_T, INTENT(out) :: fburn(DIMV(fburn),nburning)
-      REAL_T, INTENT(in) :: problo(SDIM)
-      REAL_T, INTENT(in) :: dxf(SDIM),dxc(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T wt(SDIM)
+      integer, INTENT(in) :: velflag
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: nburning
+      integer, INTENT(in) :: DIMDEC(cburn)
+      integer, INTENT(in) :: DIMDEC(fburn)
+      integer, INTENT(in) :: flo(SDIM),fhi(SDIM)
+      integer domlo(SDIM)
+      real(amrex_real), INTENT(in) :: cburn(DIMV(cburn),nburning)
+      real(amrex_real), INTENT(out) :: fburn(DIMV(fburn),nburning)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM),dxc(SDIM)
+      integer growlo(3),growhi(3)
+      integer stenlo(3),stenhi(3)
+      real(amrex_real) wt(SDIM)
 
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ic,jc,kc
-      REAL_T testwt
+      integer ifine,jfine,kfine
+      integer ic,jc,kc
+      real(amrex_real) testwt
 
-      INTEGER_T dir
-      INTEGER_T iten
-      INTEGER_T im
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T, parameter :: nhalfgrid=1
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenfine(-nhalf:nhalf,SDIM)
-      REAL_T xstengrid(-nhalfgrid:nhalfgrid,SDIM)
-      INTEGER_T n_overlap
+      integer dir
+      integer iten
+      integer im
+      integer, parameter :: nhalf=3
+      integer, parameter :: nhalfgrid=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenfine(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstengrid(-nhalfgrid:nhalfgrid,SDIM)
+      integer n_overlap
 
-      INTEGER_T iflag,iflag_sign,hitflag
-      REAL_T burn_fine(nburning,-2:2)
-      REAL_T burn_coarse(nburning)
-      INTEGER_T n_burn_interface(num_interfaces,-2:2)
-      INTEGER_T n_burn_material(num_materials,0:2)
-      INTEGER_T burnstat
-      INTEGER_T bcomp
-      REAL_T rburnstat
-      INTEGER_T ncomp_per
-      INTEGER_T ncomp_expect
-      INTEGER_T drag_type,drag_im
+      integer iflag,iflag_sign,hitflag
+      real(amrex_real) burn_fine(nburning,-2:2)
+      real(amrex_real) burn_coarse(nburning)
+      integer n_burn_interface(num_interfaces,-2:2)
+      integer n_burn_material(num_materials,0:2)
+      integer burnstat
+      integer bcomp
+      real(amrex_real) rburnstat
+      integer ncomp_per
+      integer ncomp_expect
+      integer drag_type,drag_im
 
       if (velflag.eq.0) then
        ncomp_per=EXTRAP_PER_TSAT ! interface temperature and mass fraction
@@ -1587,44 +1587,44 @@ stop
 
       implicit none
 
-      INTEGER_T, INTENT(in) :: grid_type  ! -1..5
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, INTENT(in) :: zapflag
-      INTEGER_T, INTENT(in) :: crse_bx_lo(SDIM)
-      INTEGER_T, INTENT(in) :: crse_bx_hi(SDIM)
-      INTEGER_T clo(SDIM),chi(SDIM)
-      INTEGER_T, INTENT(in) :: DIMDEC(crse_data)
-      INTEGER_T, INTENT(in) :: DIMDEC(fine_data)
-      INTEGER_T, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
-      INTEGER_T flo(SDIM),fhi(SDIM)
-      INTEGER_T, INTENT(in) :: nvar
-      REAL_T, INTENT(in) :: crse_data(DIMV(crse_data),nvar)
-      REAL_T, INTENT(out) :: fine_data(DIMV(fine_data),nvar)
-      REAL_T, INTENT(in) :: problo(SDIM)
-      REAL_T, INTENT(in) :: dxf(SDIM)
-      REAL_T, INTENT(in) :: dxc(SDIM)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T stenlen(3)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T :: box_type(SDIM)
+      integer, INTENT(in) :: grid_type  ! -1..5
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      integer, INTENT(in) :: zapflag
+      integer, INTENT(in) :: crse_bx_lo(SDIM)
+      integer, INTENT(in) :: crse_bx_hi(SDIM)
+      integer clo(SDIM),chi(SDIM)
+      integer, INTENT(in) :: DIMDEC(crse_data)
+      integer, INTENT(in) :: DIMDEC(fine_data)
+      integer, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
+      integer flo(SDIM),fhi(SDIM)
+      integer, INTENT(in) :: nvar
+      real(amrex_real), INTENT(in) :: crse_data(DIMV(crse_data),nvar)
+      real(amrex_real), INTENT(out) :: fine_data(DIMV(fine_data),nvar)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM)
+      real(amrex_real), INTENT(in) :: dxc(SDIM)
+      integer stenlo(3),stenhi(3)
+      integer stenlen(3)
+      integer growlo(3),growhi(3)
+      integer :: box_type(SDIM)
 
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ic,jc,kc
-      INTEGER_T dir2
-      INTEGER_T n
+      integer ifine,jfine,kfine
+      integer ic,jc,kc
+      integer dir2
+      integer n
 
-      REAL_T wt(SDIM)
+      real(amrex_real) wt(SDIM)
 
-      REAL_T voltotal,volall
-      REAL_T fine_value(nvar)
+      real(amrex_real) voltotal,volall
+      real(amrex_real) fine_value(nvar)
 
-      INTEGER_T, parameter :: nhalf=1
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenND(-nhalf:nhalf,SDIM)
-      REAL_T xfine(SDIM)
-      REAL_T INTERP_TOL
-      INTEGER_T chi_loc(SDIM)
+      integer, parameter :: nhalf=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
+      real(amrex_real) xfine(SDIM)
+      real(amrex_real) INTERP_TOL
+      integer chi_loc(SDIM)
 
       INTERP_TOL=1.0E-4
 
@@ -1823,39 +1823,39 @@ stop
 
       implicit none
 
-      INTEGER_T, INTENT(in) :: enable_spectral
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, INTENT(in) :: DIMDEC(crse)
-      INTEGER_T, INTENT(in) :: DIMDEC(fine)
-      INTEGER_T, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
-      INTEGER_T, INTENT(in) :: nvar
-      REAL_T, INTENT(in) :: dxc(SDIM)
-      REAL_T, INTENT(in) :: dxf(SDIM)
-      REAL_T, INTENT(in) :: crse(DIMV(crse), nvar)
-      REAL_T, INTENT(out) :: fine(DIMV(fine), nvar)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3),stenlen(3)
+      integer, INTENT(in) :: enable_spectral
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      integer, INTENT(in) :: DIMDEC(crse)
+      integer, INTENT(in) :: DIMDEC(fine)
+      integer, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
+      integer, INTENT(in) :: nvar
+      real(amrex_real), INTENT(in) :: dxc(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM)
+      real(amrex_real), INTENT(in) :: crse(DIMV(crse), nvar)
+      real(amrex_real), INTENT(out) :: fine(DIMV(fine), nvar)
+      integer growlo(3),growhi(3)
+      integer stenlo(3),stenhi(3),stenlen(3)
 
-      REAL_T wt(SDIM)
+      real(amrex_real) wt(SDIM)
 
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ilocal,jlocal,klocal
-      INTEGER_T n,dir
+      integer ic,jc,kc
+      integer ifine,jfine,kfine
+      integer ilocal,jlocal,klocal
+      integer n,dir
 
-      REAL_T fine_value(nvar)
-      REAL_T voltotal,volall
-      INTEGER_T grid_type
+      real(amrex_real) fine_value(nvar)
+      real(amrex_real) voltotal,volall
+      integer grid_type
 
-      INTEGER_T, parameter :: nhalf=1
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenND(-nhalf:nhalf,SDIM)
-      REAL_T xfine(SDIM)
-      REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
-      REAL_T INTERP_TOL
-      INTEGER_T chi_loc(SDIM)
-      INTEGER_T do_spectral_interp
+      integer, parameter :: nhalf=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
+      real(amrex_real) xfine(SDIM)
+      real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
+      real(amrex_real) INTERP_TOL
+      integer chi_loc(SDIM)
+      integer do_spectral_interp
 
       INTERP_TOL=1.0E-4
 
@@ -2032,25 +2032,25 @@ stop
 
       implicit none
 
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      INTEGER_T dir
-      INTEGER_T, INTENT(in) :: DIMDEC(crse)
-      INTEGER_T cdlo(SDIM), cdhi(SDIM)
-      INTEGER_T, INTENT(in) :: DIMDEC(fine)
-      INTEGER_T, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
-      INTEGER_T, INTENT(in) :: nvar
-      REAL_T, INTENT(in) :: crse(DIMV(crse), nvar)
-      REAL_T, INTENT(out) :: fine(DIMV(fine), nvar)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T growlo(3),growhi(3)
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      integer dir
+      integer, INTENT(in) :: DIMDEC(crse)
+      integer cdlo(SDIM), cdhi(SDIM)
+      integer, INTENT(in) :: DIMDEC(fine)
+      integer, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
+      integer, INTENT(in) :: nvar
+      real(amrex_real), INTENT(in) :: crse(DIMV(crse), nvar)
+      real(amrex_real), INTENT(out) :: fine(DIMV(fine), nvar)
+      integer stenlo(3),stenhi(3)
+      integer growlo(3),growhi(3)
 
-      INTEGER_T ifine,jfine,kfine,ic,jc,kc,n
-      REAL_T wt(SDIM)
+      integer ifine,jfine,kfine,ic,jc,kc,n
+      real(amrex_real) wt(SDIM)
 
-      REAL_T voltotal,volall
-      REAL_T fine_value
-      INTEGER_T first_hit,m1,m2
+      real(amrex_real) voltotal,volall
+      real(amrex_real) fine_value
+      integer first_hit,m1,m2
 
       if (bfact_coarse.lt.1) then
        print *,"bfact_coarse invalid"
@@ -2226,47 +2226,47 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: enable_spectral
-      INTEGER_T, INTENT(in) :: levelc,levelf
-      INTEGER_T, INTENT(in) :: bfact_coarse,bfact_fine
-      INTEGER_T, INTENT(in) :: nvar
-      INTEGER_T, INTENT(in) :: grid_type ! -1..5
-      INTEGER_T, INTENT(in) :: DIMDEC(cdata)
-      INTEGER_T, INTENT(in) :: DIMDEC(fdata)
-      INTEGER_T, INTENT(in) :: cloMAC(SDIM),chiMAC(SDIM)
-      INTEGER_T clo(SDIM),chi(SDIM)
-      INTEGER_T, INTENT(in) :: floMAC(SDIM),fhiMAC(SDIM)
-      INTEGER_T flo(SDIM),fhi(SDIM)
-      REAL_T, INTENT(in) :: cdata(DIMV(cdata),nvar)
-      REAL_T, INTENT(out) :: finedata(DIMV(fdata),nvar)
-      REAL_T, INTENT(in) :: problo(SDIM)
-      REAL_T, INTENT(in) :: dxf(SDIM)
-      REAL_T, INTENT(in) :: dxc(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      INTEGER_T stenlen(3)
-      INTEGER_T :: box_type(SDIM)
+      integer, INTENT(in) :: enable_spectral
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      integer, INTENT(in) :: nvar
+      integer, INTENT(in) :: grid_type ! -1..5
+      integer, INTENT(in) :: DIMDEC(cdata)
+      integer, INTENT(in) :: DIMDEC(fdata)
+      integer, INTENT(in) :: cloMAC(SDIM),chiMAC(SDIM)
+      integer clo(SDIM),chi(SDIM)
+      integer, INTENT(in) :: floMAC(SDIM),fhiMAC(SDIM)
+      integer flo(SDIM),fhi(SDIM)
+      real(amrex_real), INTENT(in) :: cdata(DIMV(cdata),nvar)
+      real(amrex_real), INTENT(out) :: finedata(DIMV(fdata),nvar)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM)
+      real(amrex_real), INTENT(in) :: dxc(SDIM)
+      integer growlo(3),growhi(3)
+      integer stenlo(3),stenhi(3)
+      integer stenlen(3)
+      integer :: box_type(SDIM)
 
-      REAL_T wt(SDIM)
+      real(amrex_real) wt(SDIM)
 
-      INTEGER_T dir2
-      INTEGER_T ic,jc,kc
-      INTEGER_T ifine,jfine,kfine
-      INTEGER_T ilocal,jlocal,klocal
-      INTEGER_T n
+      integer dir2
+      integer ic,jc,kc
+      integer ifine,jfine,kfine
+      integer ilocal,jlocal,klocal
+      integer n
 
-      REAL_T fine_value(nvar)
-      REAL_T voltotal,volall
+      real(amrex_real) fine_value(nvar)
+      real(amrex_real) voltotal,volall
 
-      INTEGER_T, parameter :: nhalf=1
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenND(-nhalf:nhalf,SDIM)
-      REAL_T xfine(SDIM)
-      REAL_T, dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
-      REAL_T INTERP_TOL
-      INTEGER_T chi_loc(SDIM)
-      INTEGER_T khi
-      INTEGER_T do_spectral_interp
+      integer, parameter :: nhalf=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
+      real(amrex_real) xfine(SDIM)
+      real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
+      real(amrex_real) INTERP_TOL
+      integer chi_loc(SDIM)
+      integer khi
+      integer do_spectral_interp
 
       INTERP_TOL=1.0E-4
 

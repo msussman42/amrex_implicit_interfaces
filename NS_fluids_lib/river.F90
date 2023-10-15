@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -21,6 +20,7 @@ stop
 #endif
 
 MODULE River
+use amrex_fort_module, only : amrex_real
 
 !Parameter functions for two phase incompressible
 implicit none
@@ -28,11 +28,11 @@ CONTAINS
 
 ! option=0,1,2, ...
 subroutine RiverVelocity(x,y,z,vel,option,probloz,probhiz)
-        REAL_T, INTENT(in) :: x,y,z,probloz,probhiz
-        INTEGER_T, INTENT(in) :: option
-        REAL_T,INTENT(out) :: vel(SDIM)
-        REAL_T h,theta,velfreestream
-        INTEGER_T dir
+        real(amrex_real), INTENT(in) :: x,y,z,probloz,probhiz
+        integer, INTENT(in) :: option
+        real(amrex_real),INTENT(out) :: vel(SDIM)
+        real(amrex_real) h,theta,velfreestream
+        integer dir
 
  call RiverHeight(x,y,h,option)
 
@@ -66,10 +66,10 @@ end subroutine RiverVelocity
 ! option is axis_dir in the inputs file.
 ! option=0,1,2,...
 SUBROUTINE RiverHeight(x,y,h,option)
-        INTEGER_T,INTENT(in) :: option
-        REAL_T,INTENT(in) :: x,y
-        REAL_T,INTENT(out) :: h
-        REAL_T :: a
+        integer,INTENT(in) :: option
+        real(amrex_real),INTENT(in) :: x,y
+        real(amrex_real),INTENT(out) :: h
+        real(amrex_real) :: a
 
         a = 0.05
 
@@ -93,11 +93,11 @@ END SUBROUTINE RiverHeight
 subroutine RiverPressure(x,y,z,t,p,denair,denwater,option)
 use probcommon_module
 use global_utility_module
-REAL_T, INTENT(in)  :: x,y,z,t,denair,denwater
-INTEGER_T, INTENT(in)  :: option
-REAL_T, INTENT(out) :: p
-REAL_T h
-INTEGER_T :: gravity_dir
+real(amrex_real), INTENT(in)  :: x,y,z,t,denair,denwater
+integer, INTENT(in)  :: option
+real(amrex_real), INTENT(out) :: p
+real(amrex_real) h
+integer :: gravity_dir
 
  call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 

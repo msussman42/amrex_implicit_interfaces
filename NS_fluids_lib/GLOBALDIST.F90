@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -27,6 +26,7 @@ stop
 #define maxnumline 10
 
 module global_distance_module
+use amrex_fort_module, only : amrex_real
 use probcommon_module
 
 implicit none
@@ -47,16 +47,16 @@ subroutine nozzle2d(x_cm,y_cm,Phi)
  !spatial coordinates, domain: x=[0:7000],y=[-300:2000] microns
  !  0<=x<=0.7cm
  ! -0.03 cm <= y <= 0.2 cm
- REAL_T, INTENT(in) :: x_cm, y_cm 
- REAL_T, INTENT(out) :: Phi !init to 0
+ real(amrex_real), INTENT(in) :: x_cm, y_cm 
+ real(amrex_real), INTENT(out) :: Phi !init to 0
  
- INTEGER :: nozzletype, insideflag
- REAL_T :: nl_width, nr_width, r, nl, nr !for nozzle entrance/exit
- REAL_T :: l1, l2, a, bottom !for rounded corner and tangent nozzle line
- REAL_T :: m, m2, phi1, phi2, vertDisplace !for inner slope of nozzle
- REAL_T :: round_l, round_r !for nozzle corners
- REAL_T :: x_um,y_um
- REAL_T :: scaling_factor
+ integer :: nozzletype, insideflag
+ real(amrex_real) :: nl_width, nr_width, r, nl, nr !for nozzle entrance/exit
+ real(amrex_real) :: l1, l2, a, bottom !for rounded corner and tangent nozzle line
+ real(amrex_real) :: m, m2, phi1, phi2, vertDisplace !for inner slope of nozzle
+ real(amrex_real) :: round_l, round_r !for nozzle corners
+ real(amrex_real) :: x_um,y_um
+ real(amrex_real) :: scaling_factor
 
  scaling_factor=radblob5
 
@@ -242,7 +242,7 @@ end subroutine nozzle2d
       subroutine spheredist(x,y,z,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,dist
+      real(amrex_real) x,y,z,dist
 
       if (SDIM.eq.2) then
        if (abs(y-z).gt.1.0E-8) then
@@ -265,9 +265,9 @@ end subroutine nozzle2d
        x,y,z,time,dist,rate)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist,rate
-      REAL_T IMPACT_DIST,IMPACT_RATE,IMPACT_TIME
-      REAL_T T_DELAY,TPART1,UPART1,UPART2,ycen
+      real(amrex_real) x,y,z,time,dist,rate
+      real(amrex_real) IMPACT_DIST,IMPACT_RATE,IMPACT_TIME
+      real(amrex_real) T_DELAY,TPART1,UPART1,UPART2,ycen
 
 
       IMPACT_DIST=yblob-radblob
@@ -329,13 +329,13 @@ end subroutine nozzle2d
 
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: x,y,z,time
-      INTEGER_T, INTENT(in) :: im
-      REAL_T, INTENT(out) :: dist
-      REAL_T tadv,xprime,yprime,zprime
-      REAL_T distz,disty,steel_rate
-      REAL_T xvec(SDIM)
-      REAL_T dist_array(num_materials)
+      real(amrex_real), INTENT(in) :: x,y,z,time
+      integer, INTENT(in) :: im
+      real(amrex_real), INTENT(out) :: dist
+      real(amrex_real) tadv,xprime,yprime,zprime
+      real(amrex_real) distz,disty,steel_rate
+      real(amrex_real) xvec(SDIM)
+      real(amrex_real) dist_array(num_materials)
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
        print *,"im invalid10"
@@ -524,10 +524,10 @@ end subroutine nozzle2d
       subroutine naca_velocity(x,y,z,time,vel)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time
-      REAL_T vel(SDIM)
-      INTEGER_T dir
-      REAL_T amp
+      real(amrex_real) x,y,z,time
+      real(amrex_real) vel(SDIM)
+      integer dir
+      real(amrex_real) amp
 
       if (probtype.eq.701) then
        amp=yblob
@@ -547,8 +547,8 @@ end subroutine nozzle2d
       subroutine naca_dist(x,y,z,time,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist
-      REAL_T xprime,yprime,thick,c,H,amp,offset
+      real(amrex_real) x,y,z,time,dist
+      real(amrex_real) xprime,yprime,thick,c,H,amp,offset
 
       if (probtype.eq.701) then
        amp=yblob
@@ -582,17 +582,17 @@ end subroutine nozzle2d
       subroutine crystal_distance(x,y,z,dist,dx,bfact,im_project)
       IMPLICIT NONE
    
-      INTEGER_T bfact
-      INTEGER_T nPoly
+      integer bfact
+      integer nPoly
       parameter(nPoly=4)
-      REAL_T xp(nPoly),yp(nPoly)
+      real(amrex_real) xp(nPoly),yp(nPoly)
 
-      REAL_T dx(SDIM)
-      REAL_T x,y,z,dist
-      REAL_T tmp,dist0,dist12,x1,x2,y1,y2,xproj,yproj
-      INTEGER_T i,j,isSolid,im_project
-      REAL_T xcen1,ycen1,zcen1
-      REAL_T xcen2,ycen2,zcen2
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) x,y,z,dist
+      real(amrex_real) tmp,dist0,dist12,x1,x2,y1,y2,xproj,yproj
+      integer i,j,isSolid,im_project
+      real(amrex_real) xcen1,ycen1,zcen1
+      real(amrex_real) xcen2,ycen2,zcen2
 
       print *,"crystal_distance needs to be updated"
       stop
@@ -728,12 +728,12 @@ end subroutine nozzle2d
       subroutine crystal_centroid(rigid_centroid,im_project)
       IMPLICIT NONE
 
-      INTEGER_T nPoly,im_project
+      integer nPoly,im_project
       parameter(nPoly=4)
 
-      REAL_T rigid_centroid(SDIM)
-      REAL_T xp(nPoly),yp(nPoly)
-      INTEGER_T i,dir
+      real(amrex_real) rigid_centroid(SDIM)
+      real(amrex_real) xp(nPoly),yp(nPoly)
+      integer i,dir
 
       print *,"crystal_centroid needs to be updated"
       stop
@@ -818,11 +818,11 @@ end subroutine nozzle2d
          r1,r2,r3,phi)
       IMPLICIT NONE
 
-      REAL_T x,y,z
-      REAL_T xcen1,ycen1,zcen1
-      REAL_T xcen2,ycen2,zcen2
-      REAL_T r,r1,r2,r3,phi
-      REAL_T phi1,phi2,phi3
+      real(amrex_real) x,y,z
+      real(amrex_real) xcen1,ycen1,zcen1
+      real(amrex_real) xcen2,ycen2,zcen2
+      real(amrex_real) r,r1,r2,r3,phi
+      real(amrex_real) phi1,phi2,phi3
 
       phi1=sqrt( (x-xcen1)**2+(y-ycen1)**2+(z-zcen1)**2 ) - r1
       phi2=sqrt( (x-xcen2)**2+(y-ycen2)**2+(z-zcen2)**2 ) - r2
@@ -861,9 +861,9 @@ end subroutine nozzle2d
       subroutine jetting_plate_dist(x,y,z,dist)
       use global_utility_module
       IMPLICIT NONE
-      REAL_T, INTENT(in) :: x,y,z
-      REAL_T, INTENT(out) :: dist
-      REAL_T :: aspect,offset,distplate,hugedist
+      real(amrex_real), INTENT(in) :: x,y,z
+      real(amrex_real), INTENT(out) :: dist
+      real(amrex_real) :: aspect,offset,distplate,hugedist
 
       hugedist=99999.0
 
@@ -897,12 +897,12 @@ end subroutine nozzle2d
       subroutine INIT_LS_SOLID_MELT(x,y,z,time,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist,dist2
-      INTEGER_T nSphere
-      REAL_T xSphere
-      REAL_T ySphere
-      REAL_T delta_sphere,hugedist
-      INTEGER_T i
+      real(amrex_real) x,y,z,time,dist,dist2
+      integer nSphere
+      real(amrex_real) xSphere
+      real(amrex_real) ySphere
+      real(amrex_real) delta_sphere,hugedist
+      integer i
  
       hugedist=1.0D+10
  
@@ -951,12 +951,12 @@ end subroutine nozzle2d
       subroutine INIT_LS_LIQUID_MELT(x,y,z,time,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist,dist2,dist3,dist4
-      INTEGER_T nSphere
-      REAL_T xSphere
-      REAL_T ySphere
-      REAL_T delta_sphere,hugedist
-      INTEGER_T i
+      real(amrex_real) x,y,z,time,dist,dist2,dist3,dist4
+      integer nSphere
+      real(amrex_real) xSphere
+      real(amrex_real) ySphere
+      real(amrex_real) delta_sphere,hugedist
+      integer i
  
       hugedist=1.0D+10
  
@@ -1024,12 +1024,12 @@ end subroutine nozzle2d
       subroutine INIT_LS_GAS_MELT(x,y,z,time,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist,dist2
-      INTEGER_T nSphere
-      REAL_T xSphere
-      REAL_T ySphere
-      REAL_T delta_sphere,hugedist
-      INTEGER_T i
+      real(amrex_real) x,y,z,time,dist,dist2
+      integer nSphere
+      real(amrex_real) xSphere
+      real(amrex_real) ySphere
+      real(amrex_real) delta_sphere,hugedist
+      integer i
  
       hugedist=1.0D+10
  
@@ -1079,12 +1079,12 @@ end subroutine nozzle2d
       subroutine INIT_LS_SOLID_AM(x,y,z,time,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist,dist2
-      INTEGER_T nSphere
-      REAL_T xSphere
-      REAL_T ySphere
-      REAL_T delta_sphere,hugedist
-      INTEGER_T i
+      real(amrex_real) x,y,z,time,dist,dist2
+      integer nSphere
+      real(amrex_real) xSphere
+      real(amrex_real) ySphere
+      real(amrex_real) delta_sphere,hugedist
+      integer i
  
       hugedist=1.0D+10
  
@@ -1133,9 +1133,9 @@ end subroutine nozzle2d
       subroutine INIT_LS_LIQUID_AM(x,y,z,time,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist
-      INTEGER_T nSphere
-      REAL_T delta_sphere,hugedist
+      real(amrex_real) x,y,z,time,dist
+      integer nSphere
+      real(amrex_real) delta_sphere,hugedist
  
       hugedist=1.0D+10
  
@@ -1177,12 +1177,12 @@ end subroutine nozzle2d
       subroutine INIT_LS_GAS_AM(x,y,z,time,dist)
       IMPLICIT NONE
 
-      REAL_T x,y,z,time,dist,dist2
-      INTEGER_T nSphere
-      REAL_T xSphere
-      REAL_T ySphere
-      REAL_T delta_sphere,hugedist
-      INTEGER_T i
+      real(amrex_real) x,y,z,time,dist,dist2
+      integer nSphere
+      real(amrex_real) xSphere
+      real(amrex_real) ySphere
+      real(amrex_real) delta_sphere,hugedist
+      integer i
  
       hugedist=1.0D+10
  
@@ -1236,22 +1236,22 @@ end subroutine nozzle2d
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: im
-      REAL_T, intent(in) :: x,y,z
-      REAL_T, intent(out) :: dist
-      REAL_T dist1,temprad
-      REAL_T rr,xx,yy,zz,aspect,offset
-      REAL_T xlarge
-      INTEGER_T igeom
-      REAL_T costheta,sintheta
-      REAL_T xprime,yprime
-      REAL_T zprime
-      REAL_T radcross,dist2,radpt
-      REAL_T hugedist,dist3,dist4
-      REAL_T radx,radshrink
-      REAL_T pipexlo,pipexhi
-      REAL_T zmin,zmax
-      INTEGER_T i,j,iSphere
+      integer, intent(in) :: im
+      real(amrex_real), intent(in) :: x,y,z
+      real(amrex_real), intent(out) :: dist
+      real(amrex_real) dist1,temprad
+      real(amrex_real) rr,xx,yy,zz,aspect,offset
+      real(amrex_real) xlarge
+      integer igeom
+      real(amrex_real) costheta,sintheta
+      real(amrex_real) xprime,yprime
+      real(amrex_real) zprime
+      real(amrex_real) radcross,dist2,radpt
+      real(amrex_real) hugedist,dist3,dist4
+      real(amrex_real) radx,radshrink
+      real(amrex_real) pipexlo,pipexhi
+      real(amrex_real) zmin,zmax
+      integer i,j,iSphere
 
       if (num_materials.lt.1) then
        print *,"num_materials invalid in soliddist"
@@ -1738,7 +1738,7 @@ end subroutine nozzle2d
       subroutine nozzlerad(zval,radcross,rounded)
       IMPLICIT NONE
 
-      REAL_T zval,radcross,rounded
+      real(amrex_real) zval,radcross,rounded
 
       if (zval.le.xblob10) then
        radcross=xblob10
@@ -1756,11 +1756,11 @@ end subroutine nozzle2d
 
       subroutine jetgeom(x,y,z,dist)
       IMPLICIT NONE
-      REAL_T x,y,z,dist
-      REAL_T NPT,HSB,NID,NOD,CHH,scaleCHH
-      REAL_T xx1(maxnumline),yy1(maxnumline)
-      REAL_T xx2(maxnumline),yy2(maxnumline)
-      INTEGER_T dd(maxnumline),lessflag(maxnumline),numline
+      real(amrex_real) x,y,z,dist
+      real(amrex_real) NPT,HSB,NID,NOD,CHH,scaleCHH
+      real(amrex_real) xx1(maxnumline),yy1(maxnumline)
+      real(amrex_real) xx2(maxnumline),yy2(maxnumline)
+      integer dd(maxnumline),lessflag(maxnumline),numline
 
 
       call initjetparms(HSB,NOD,NPT,NID,CHH,scaleCHH)
@@ -1829,7 +1829,7 @@ end subroutine nozzle2d
 
       subroutine initjetparms(HSB,NOD,NPT,NID,CHH,scaleCHH)
       IMPLICIT NONE
-      REAL_T NPT,HSB,NID,NOD,CHH,scaleCHH
+      real(amrex_real) NPT,HSB,NID,NOD,CHH,scaleCHH
 
 
 ! get rid of floating exceptions !
@@ -1902,9 +1902,9 @@ end subroutine nozzle2d
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T x,z,dist,y1,y2,xctr,yswap,xswap
-      INTEGER_T igeom
-      REAL_T x1,x2
+      real(amrex_real) x,z,dist,y1,y2,xctr,yswap,xswap
+      integer igeom
+      real(amrex_real) x1,x2
 
 
       if (axis_dir.eq.4) then ! water if x<xblob y<yblob
@@ -1992,7 +1992,7 @@ end subroutine nozzle2d
 
       subroutine getslopeparms(xstart,ystart,zstart,xend,yend,zend)
       IMPLICIT NONE
-      REAL_T xstart,xend,ystart,yend,zstart,zend
+      real(amrex_real) xstart,xend,ystart,yend,zstart,zend
 
       xstart=0.0
       xend=4.0
@@ -2009,9 +2009,9 @@ end subroutine nozzle2d
       subroutine tcylinderdist(x,y,z,xcen,ycen,rad,zmin,zmax,dist)
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: x,y,z,xcen,ycen,rad
-      REAL_T, INTENT(out) :: dist
-      REAL_T, INTENT(in) :: zmin,zmax
+      real(amrex_real), INTENT(in) :: x,y,z,xcen,ycen,rad
+      real(amrex_real), INTENT(out) :: dist
+      real(amrex_real), INTENT(in) :: zmin,zmax
 
       if (zmin.ge.zmax-1.0E-10) then
        print *,"invalid parameters ",zmin,zmax
@@ -2041,8 +2041,8 @@ end subroutine nozzle2d
 
       IMPLICIT NONE
 
-      REAL_T x,y,height,dist
-      REAL_T h,l
+      real(amrex_real) x,y,height,dist
+      real(amrex_real) h,l
 
 
       if (probtype.ne.110) then
@@ -2080,8 +2080,8 @@ end subroutine nozzle2d
       subroutine square_Tchannel_dist(x,y,z,dist)
       IMPLICIT NONE
  
-      REAL_T x,y,z,zmid,dist,distz
-      REAL_T radchannel,xcen1,xcen2,xcen3,ychannel,ycen
+      real(amrex_real) x,y,z,zmid,dist,distz
+      real(amrex_real) radchannel,xcen1,xcen2,xcen3,ychannel,ycen
 
 
       if ((probtype.eq.5700).and.(axis_dir.eq.4)) then
@@ -2249,11 +2249,11 @@ end subroutine nozzle2d
       use bubbleControl_module
 
       IMPLICIT NONE
-      REAL_T x,y,z,dist,dist1,dist2
-      REAL_T xstart,xend,ystart,yend,slope,intercept,xint,yint
-      REAL_T zstart,zend
-      REAL_T ylen,frontrad
-      INTEGER_T igeom,iSphere
+      real(amrex_real) x,y,z,dist,dist1,dist2
+      real(amrex_real) xstart,xend,ystart,yend,slope,intercept,xint,yint
+      real(amrex_real) zstart,zend
+      real(amrex_real) ylen,frontrad
+      integer igeom,iSphere
 
       if (SDIM.eq.2) then
        if (abs(y-z).gt.VOFTOL) then
@@ -2378,10 +2378,10 @@ end subroutine nozzle2d
 
       subroutine microfabgeom(rr,z,dist)
       IMPLICIT NONE
-      REAL_T x,y,z,rr,dist
+      real(amrex_real) x,y,z,rr,dist
 
 
-      REAL_T NOD,NID,NPT,CHH,CHW,JLEN,incline,dist1,xdiff,ydiff
+      real(amrex_real) NOD,NID,NPT,CHH,CHW,JLEN,incline,dist1,xdiff,ydiff
 
       call microfabparm(NOD,NID,NPT,CHH,CHW,JLEN)
 
@@ -2490,17 +2490,17 @@ end subroutine nozzle2d
 
       subroutine construct(x,y,xx1,yy1,xx2,yy2,dd,lessflag,numline,dist)
       IMPLICIT NONE
-      INTEGER_T numline
-      REAL_T x,y
-      REAL_T xx1(maxnumline),yy1(maxnumline)
-      REAL_T xx2(maxnumline),yy2(maxnumline)
-      INTEGER_T dd(maxnumline)
-      INTEGER_T lessflag(maxnumline)
-      REAL_T dist,slope,intercept,localdist,xc,yc
-      REAL_T xmin,xmax,ymin,ymax,xtemp,ytemp
-      REAL_T xdiff,ydiff,linenorm,xdiff2,ydiff2
+      integer numline
+      real(amrex_real) x,y
+      real(amrex_real) xx1(maxnumline),yy1(maxnumline)
+      real(amrex_real) xx2(maxnumline),yy2(maxnumline)
+      integer dd(maxnumline)
+      integer lessflag(maxnumline)
+      real(amrex_real) dist,slope,intercept,localdist,xc,yc
+      real(amrex_real) xmin,xmax,ymin,ymax,xtemp,ytemp
+      real(amrex_real) xdiff,ydiff,linenorm,xdiff2,ydiff2
 
-      INTEGER_T iline,hitflag
+      integer iline,hitflag
 
       dist=1.0D+10
       do iline=1,numline
@@ -2583,7 +2583,7 @@ end subroutine nozzle2d
 
       subroutine microfabparm(NOD,NID,NPT,CHH,CHW,JLEN)
       IMPLICIT NONE
-      REAL_T NOD,NID,NPT,CHH,CHW,JLEN
+      real(amrex_real) NOD,NID,NPT,CHH,CHW,JLEN
 
 
       NOD=32.0
@@ -2616,7 +2616,7 @@ end subroutine nozzle2d
       subroutine squeeze_channel_dist(x,y,z,dist)
       IMPLICIT NONE
  
-      REAL_T x,y,z,zmid,dist,distz
+      real(amrex_real) x,y,z,zmid,dist,distz
 
 
       if ((probtype.eq.5700).and.(axis_dir.eq.5)) then
@@ -2727,7 +2727,7 @@ end subroutine nozzle2d
 
       subroutine getminmax(x1,x2,x3,xmin,xmax)
       IMPLICIT NONE
-      REAL_T x1,x2,x3,xmin,xmax
+      real(amrex_real) x1,x2,x3,xmin,xmax
 
       if ((x1.ge.x2).and.(x1.ge.x3)) then
        xmax=x1

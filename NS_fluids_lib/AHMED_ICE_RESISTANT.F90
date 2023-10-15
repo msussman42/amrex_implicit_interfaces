@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -25,10 +24,11 @@ stop
 ! probtype==425 (see run2d/inputs.AHMED_ICE_RESISTANT or
 ! run3d/inputs.AHMED_ICE_RESISTANT3d)
 module AHMED_ICE_RESISTANT_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
-REAL_T :: DEF_VAPOR_GAMMA
+real(amrex_real) :: DEF_VAPOR_GAMMA
 
 contains
 
@@ -46,14 +46,14 @@ subroutine AHMED_substrateLS(x,Phi)
 use probcommon_module
 use global_utility_module
 implicit none
-REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
-REAL_T, INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
-REAL_T :: yhalf,xshift
-REAL_T :: local_time
-REAL_T :: ptb_dist_low
-REAL_T :: ptb_dist_high
-INTEGER_T :: im_substrate
-INTEGER_T :: expected_nmat
+real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
+real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
+real(amrex_real) :: yhalf,xshift
+real(amrex_real) :: local_time
+real(amrex_real) :: ptb_dist_low
+real(amrex_real) :: ptb_dist_high
+integer :: im_substrate
+integer :: expected_nmat
 
 !drop falling vertically with given velocity onto oil lubricated surface
 if (axis_dir.eq.0) then
@@ -129,11 +129,11 @@ subroutine AHMED_ICE_RESISTANT_check_vel_rigid(x,t,vel,dir)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: vel
-INTEGER_T, INTENT(in) :: dir
-INTEGER_T :: expected_nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: vel
+integer, INTENT(in) :: dir
+integer :: expected_nmat
 
 if (t.ge.0.0d0) then
  ! do nothing
@@ -186,13 +186,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(nmat)
-REAL_T :: ice_vertical
-REAL_T :: substrate_height
-INTEGER_T :: expected_nmat
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(nmat)
+real(amrex_real) :: ice_vertical
+real(amrex_real) :: substrate_height
+integer :: expected_nmat
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -263,16 +263,16 @@ subroutine AHMED_ICE_RESISTANT_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
-INTEGER_T :: expected_nmat
-INTEGER_T :: assert_oil_velocity
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
+integer :: expected_nmat
+integer :: assert_oil_velocity
 
  if (nmat.eq.num_materials) then
   ! do nothing
@@ -401,11 +401,11 @@ subroutine AHMED_ICE_RESISTANT_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -425,15 +425,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase,n
-INTEGER_T :: expected_nmat
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase,n
+integer :: expected_nmat
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -495,14 +495,14 @@ subroutine AHMED_ICE_RESISTANT_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) ::  dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) ::  dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -528,17 +528,17 @@ subroutine AHMED_ICE_RESISTANT_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -568,15 +568,15 @@ subroutine AHMED_ICE_RESISTANT_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -604,20 +604,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) :: local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -652,19 +652,19 @@ subroutine AHMED_ICE_RESISTANT_HEATSOURCE(im,VFRAC,time,x, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(in) :: VFRAC(nmat)
-REAL_T, INTENT(in) :: time
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: temp(nmat)
-REAL_T, INTENT(in) :: den(nmat)
-REAL_T, INTENT(in) :: CV(nmat)
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(out) :: heat_source
-INTEGER_T :: expected_nmat
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(in) :: VFRAC(nmat)
+real(amrex_real), INTENT(in) :: time
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: temp(nmat)
+real(amrex_real), INTENT(in) :: den(nmat)
+real(amrex_real), INTENT(in) :: CV(nmat)
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(out) :: heat_source
+integer :: expected_nmat
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -697,14 +697,14 @@ endif
 return
 end subroutine AHMED_ICE_RESISTANT_HEATSOURCE
 
-REAL_T function get_LS_seed(xpos,LS_normal)
+real(amrex_real) function get_LS_seed(xpos,LS_normal)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: xpos(SDIM)
-REAL_T, INTENT(out) :: LS_normal(SDIM)
-REAL_T :: mag
-INTEGER_T :: dir
+real(amrex_real), INTENT(in) :: xpos(SDIM)
+real(amrex_real), INTENT(out) :: LS_normal(SDIM)
+real(amrex_real) :: mag
+integer :: dir
 
 if (SDIM.eq.2) then
  mag=sqrt((xpos(1)-xblob4)**2+(xpos(2)-yblob4)**2)
@@ -745,28 +745,28 @@ IMPLICIT NONE
 
 type(assimilate_parm_type), INTENT(in) :: assimilate_in
 type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
-INTEGER_T, INTENT(in) :: i,j,k,cell_flag
+integer, INTENT(in) :: i,j,k,cell_flag
 
-INTEGER_T :: nstate,nstate_test
-REAL_T :: xcrit(SDIM)
-REAL_T :: LS_normal(SDIM)
-REAL_T :: LS_test
-REAL_T :: t_upper,t_lower
-REAL_T :: LS_seed,LS_seed_buffer
+integer :: nstate,nstate_test
+real(amrex_real) :: xcrit(SDIM)
+real(amrex_real) :: LS_normal(SDIM)
+real(amrex_real) :: LS_test
+real(amrex_real) :: t_upper,t_lower
+real(amrex_real) :: LS_seed,LS_seed_buffer
 
-INTEGER_T :: number_intervals
-INTEGER_T :: dir
-INTEGER_T :: im
-REAL_T VEL_DROP(SDIM)
-REAL_T ldata(D_DECL(3,3,3))
-INTEGER_T :: i1,j1,k1,k1lo,k1hi
-REAL_T :: xdata(SDIM)
-REAL_T :: LS_normal_data(SDIM)
-REAL_T :: vfrac_seed
-REAL_T :: volcell
-REAL_T :: facearea_seed
-REAL_T :: centroid_seed(SDIM)
-REAL_T :: cencell(SDIM)
+integer :: number_intervals
+integer :: dir
+integer :: im
+real(amrex_real) VEL_DROP(SDIM)
+real(amrex_real) ldata(D_DECL(3,3,3))
+integer :: i1,j1,k1,k1lo,k1hi
+real(amrex_real) :: xdata(SDIM)
+real(amrex_real) :: LS_normal_data(SDIM)
+real(amrex_real) :: vfrac_seed
+real(amrex_real) :: volcell
+real(amrex_real) :: facearea_seed
+real(amrex_real) :: centroid_seed(SDIM)
+real(amrex_real) :: cencell(SDIM)
 
 nstate=assimilate_in%nstate
 

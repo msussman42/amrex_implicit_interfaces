@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,6 +23,7 @@ stop
 #endif
 
       module plic_cpp_module
+      use amrex_fort_module, only : amrex_real
       contains
 
 ! mask=0 at coarse/fine border cells and physical boundaries.
@@ -74,119 +74,119 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: gridno
-      INTEGER_T, INTENT(in) :: level,finest_level,max_level
-      INTEGER_T, INTENT(in) :: nsteps
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: gridno
+      integer, INTENT(in) :: level,finest_level,max_level
+      integer, INTENT(in) :: nsteps
 
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: partial_cmof_stencil_at_walls
-      INTEGER_T, INTENT(in) :: update_flag
-      INTEGER_T, INTENT(out) :: number_centroid_per_core
-      REAL_T, INTENT(out) :: delta_centroid_per_core
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: vofbc(SDIM,2)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: ngrow
-      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
-      INTEGER_T, INTENT(in) :: DIMDEC(masknbr)
-      INTEGER_T, INTENT(in) :: DIMDEC(snew)
-      INTEGER_T, INTENT(in) :: DIMDEC(vof)
-      INTEGER_T, INTENT(in) :: DIMDEC(LS)
-      INTEGER_T, INTENT(in) :: DIMDEC(slopes)
-      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: partial_cmof_stencil_at_walls
+      integer, INTENT(in) :: update_flag
+      integer, INTENT(out) :: number_centroid_per_core
+      real(amrex_real), INTENT(out) :: delta_centroid_per_core
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: vofbc(SDIM,2)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: ngrow
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(masknbr)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(vof)
+      integer, INTENT(in) :: DIMDEC(LS)
+      integer, INTENT(in) :: DIMDEC(slopes)
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
     
-      REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
-      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: masknbr(DIMV(masknbr),4) 
-      REAL_T, pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
-      REAL_T, pointer :: vof_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: LS(DIMV(LS),num_materials) 
-      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out), target :: &
+      real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov)) 
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: masknbr(DIMV(masknbr),4) 
+      real(amrex_real), pointer :: masknbr_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
+      real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials) 
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out), target :: &
               slopes(DIMV(slopes),num_materials*ngeom_recon) 
-      REAL_T, pointer :: slopes_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(inout), target :: &
+      real(amrex_real), pointer :: slopes_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
               snew(DIMV(snew),num_materials*ngeom_raw+1) 
-      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       
-      INTEGER_T i,j,k,dir
-      INTEGER_T igridlo(3),igridhi(3)
+      integer i,j,k,dir
+      integer igridlo(3),igridhi(3)
 
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
-      INTEGER_T :: grid_index(SDIM)
-      INTEGER_T :: grid_level=-1
+      integer :: grid_index(SDIM)
+      integer :: grid_level=-1
 
-      INTEGER_T im
-      REAL_T mofdata(num_materials*ngeom_recon)
-      REAL_T mofdata_super(num_materials*ngeom_recon)
-      REAL_T mofdata_super_vfrac(num_materials*ngeom_recon)
-      REAL_T vof_super(num_materials)
-      REAL_T mofsten(num_materials*ngeom_recon)
-      REAL_T multi_centroidA(num_materials,SDIM)
+      integer im
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdata_super(num_materials*ngeom_recon)
+      real(amrex_real) mofdata_super_vfrac(num_materials*ngeom_recon)
+      real(amrex_real) vof_super(num_materials)
+      real(amrex_real) mofsten(num_materials*ngeom_recon)
+      real(amrex_real) multi_centroidA(num_materials,SDIM)
 
-      INTEGER_T vofcomprecon
-      INTEGER_T vofcompraw
+      integer vofcomprecon
+      integer vofcompraw
 
-      REAL_T err,errsave
-      INTEGER_T local_mask
+      real(amrex_real) err,errsave
+      integer local_mask
 
-      REAL_T orderflag
-      INTEGER_T total_calls(num_materials)
-      INTEGER_T total_iterations(num_materials)
-      REAL_T total_errors(num_materials)
-      INTEGER_T i1,j1,k1
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real) orderflag
+      integer total_calls(num_materials)
+      integer total_iterations(num_materials)
+      real(amrex_real) total_errors(num_materials)
+      integer i1,j1,k1
+      real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      INTEGER_T, PARAMETER :: nmax=POLYGON_LIST_MAX !in: fort_sloperecon
+      integer, PARAMETER :: nmax=POLYGON_LIST_MAX !in: fort_sloperecon
 
-      INTEGER_T continuous_mof_parm
-      INTEGER_T continuous_mof_parm_super
+      integer continuous_mof_parm
+      integer continuous_mof_parm_super
      
-      INTEGER_T klosten,khisten
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xstenbox(-1:1,SDIM)
-      INTEGER_T num_fluid_materials_in_cell
-      INTEGER_T num_fluid_materials_in_stencil
-      REAL_T volume_super
-      REAL_T volume_super_mofdata
-      REAL_T volsten
-      REAL_T volmat
-      REAL_T censten(SDIM)
-      REAL_T cen_super(SDIM)
-      REAL_T voflist_center(num_materials)
-      REAL_T voflist_stencil(num_materials)
-      REAL_T voflist_test
-      INTEGER_T mof_verbose
-      INTEGER_T use_ls_data
-      INTEGER_T, parameter :: nhalfbox_sten=1
-      REAL_T dxmaxLS
-      INTEGER_T debugslope
-      INTEGER_T, parameter :: tessellate=0
-      INTEGER_T, parameter :: shapeflag=0
-      INTEGER_T, parameter :: continuous_mof_standard=STANDARD_MOF
+      integer klosten,khisten
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenbox(-1:1,SDIM)
+      integer num_fluid_materials_in_cell
+      integer num_fluid_materials_in_stencil
+      real(amrex_real) volume_super
+      real(amrex_real) volume_super_mofdata
+      real(amrex_real) volsten
+      real(amrex_real) volmat
+      real(amrex_real) censten(SDIM)
+      real(amrex_real) cen_super(SDIM)
+      real(amrex_real) voflist_center(num_materials)
+      real(amrex_real) voflist_stencil(num_materials)
+      real(amrex_real) voflist_test
+      integer mof_verbose
+      integer use_ls_data
+      integer, parameter :: nhalfbox_sten=1
+      real(amrex_real) dxmaxLS
+      integer debugslope
+      integer, parameter :: tessellate=0
+      integer, parameter :: shapeflag=0
+      integer, parameter :: continuous_mof_standard=STANDARD_MOF
 
-      REAL_T vfrac_fluid_sum
-      REAL_T vfrac_solid_sum
-      REAL_T vfrac_solid_sum_center
-      REAL_T vfrac_raster_solid
-      REAL_T vfrac_local(num_materials)
-      INTEGER_T im_raster_solid
-      INTEGER_T mod_cmofsten
+      real(amrex_real) vfrac_fluid_sum
+      real(amrex_real) vfrac_solid_sum
+      real(amrex_real) vfrac_solid_sum_center
+      real(amrex_real) vfrac_raster_solid
+      real(amrex_real) vfrac_local(num_materials)
+      integer im_raster_solid
+      integer mod_cmofsten
 
-      REAL_T :: xtet(SDIM+1,SDIM)
-      REAL_T :: cmof_centroid
-      REAL_T :: delta_centroid
-      REAL_T :: multi_area(num_materials)
-      REAL_T :: multi_volume(num_materials)
-      REAL_T :: multi_cen(SDIM,num_materials)
+      real(amrex_real) :: xtet(SDIM+1,SDIM)
+      real(amrex_real) :: cmof_centroid
+      real(amrex_real) :: delta_centroid
+      real(amrex_real) :: multi_area(num_materials)
+      real(amrex_real) :: multi_volume(num_materials)
+      real(amrex_real) :: multi_cen(SDIM,num_materials)
 
-      INTEGER_T :: local_maskcov
+      integer :: local_maskcov
 
 #include "mofdata.H"
 
@@ -1263,59 +1263,59 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: num_samples
-      INTEGER_T, INTENT(in) :: op_training
-      INTEGER_T, INTENT(inout) :: cpp_training_lo(SDIM)
-      INTEGER_T, INTENT(inout) :: cpp_training_hi(SDIM)
-      INTEGER_T, INTENT(in) :: i,j,k
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: max_level
-      INTEGER_T, INTENT(in) :: continuous_mof !=STANDARD_MOF or CMOF_X
-      INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: dx(SDIM)
+      integer, INTENT(in) :: num_samples
+      integer, INTENT(in) :: op_training
+      integer, INTENT(inout) :: cpp_training_lo(SDIM)
+      integer, INTENT(inout) :: cpp_training_hi(SDIM)
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: max_level
+      integer, INTENT(in) :: continuous_mof !=STANDARD_MOF or CMOF_X
+      integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: dx(SDIM)
 
-      INTEGER_T :: nmax=POLYGON_LIST_MAX
+      integer :: nmax=POLYGON_LIST_MAX
 
-      REAL_T :: vof_training(num_samples)
-      REAL_T :: phi_training(num_samples)
-      REAL_T :: theta_training(num_samples)
+      real(amrex_real) :: vof_training(num_samples)
+      real(amrex_real) :: phi_training(num_samples)
+      real(amrex_real) :: theta_training(num_samples)
        ! centroid, VOF, angle_exact, angle_init
-      REAL_T :: data_training(NTRAINING,num_samples)
-      REAL_T :: xc0(SDIM)
+      real(amrex_real) :: data_training(NTRAINING,num_samples)
+      real(amrex_real) :: xc0(SDIM)
 
-      REAL_T :: angle_exact_db(SDIM-1)
-      REAL_T :: angle_init_db(SDIM-1)
-      REAL_T :: angle_and_vfrac(SDIM)
-      REAL_T :: refvfrac(1)
-      REAL_T :: vof_single 
-      REAL_T :: refcen(SDIM)
-      REAL_T :: nr_db(SDIM)
-      INTEGER_T :: try_new_vfrac
+      real(amrex_real) :: angle_exact_db(SDIM-1)
+      real(amrex_real) :: angle_init_db(SDIM-1)
+      real(amrex_real) :: angle_and_vfrac(SDIM)
+      real(amrex_real) :: refvfrac(1)
+      real(amrex_real) :: vof_single 
+      real(amrex_real) :: refcen(SDIM)
+      real(amrex_real) :: nr_db(SDIM)
+      integer :: try_new_vfrac
 
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
-      INTEGER_T dir
-      INTEGER_T i1,j1,k1
-      INTEGER_T i_training
+      integer dir
+      integer i1,j1,k1
+      integer i_training
 
-      INTEGER_T :: grid_index(SDIM)
-      INTEGER_T :: grid_level
-      REAL_T :: npredict(3,SDIM)
-      REAL_T :: vof_null
-      REAL_T :: centroid_null(SDIM)
-      REAL_T :: mag_centroid(3)
-      INTEGER_T :: critical_material
+      integer :: grid_index(SDIM)
+      integer :: grid_level
+      real(amrex_real) :: npredict(3,SDIM)
+      real(amrex_real) :: vof_null
+      real(amrex_real) :: centroid_null(SDIM)
+      real(amrex_real) :: mag_centroid(3)
+      integer :: critical_material
 
-      REAL_T :: DT_cost,NN_cost,RF_cost
-      REAL_T :: angle_exact_db_data(SDIM-1)
+      real(amrex_real) :: DT_cost,NN_cost,RF_cost
+      real(amrex_real) :: angle_exact_db_data(SDIM-1)
 
-      INTEGER_T sysret
-      INTEGER_T cmof_idx
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T klosten,khisten
-      INTEGER_T tid
+      integer sysret
+      integer cmof_idx
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer klosten,khisten
+      integer tid
   
       tid=0
 
@@ -1869,56 +1869,56 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: num_samples
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: max_level
-      INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: dx(SDIM)
+      integer, INTENT(in) :: num_samples
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: max_level
+      integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: dx(SDIM)
 
-      INTEGER_T :: i,j,k
-      INTEGER_T :: local_continuous_mof
-      INTEGER_T :: nmax=POLYGON_LIST_MAX
-      REAL_T :: vof_training(num_samples)
-      REAL_T :: phi_training(num_samples)
-      REAL_T :: theta_training(num_samples)
-      REAL_T :: data_decisions(num_samples,MOF_TRAINING_NDIM_DECISIONS)
-      REAL_T :: data_classify(num_samples,MOF_TRAINING_NDIM_CLASSIFY)
+      integer :: i,j,k
+      integer :: local_continuous_mof
+      integer :: nmax=POLYGON_LIST_MAX
+      real(amrex_real) :: vof_training(num_samples)
+      real(amrex_real) :: phi_training(num_samples)
+      real(amrex_real) :: theta_training(num_samples)
+      real(amrex_real) :: data_decisions(num_samples,MOF_TRAINING_NDIM_DECISIONS)
+      real(amrex_real) :: data_classify(num_samples,MOF_TRAINING_NDIM_CLASSIFY)
 
-      REAL_T :: angle_exact_db(SDIM-1)
-      REAL_T :: angle_init_db(SDIM-1)
-      REAL_T :: angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)
-      REAL_T :: refvfrac(1)
-      REAL_T :: vof_single 
-      REAL_T :: refcen(SDIM)
-      REAL_T :: nr_db(SDIM)
-      INTEGER_T :: try_new_vfrac
+      real(amrex_real) :: angle_exact_db(SDIM-1)
+      real(amrex_real) :: angle_init_db(SDIM-1)
+      real(amrex_real) :: angle_and_vfrac(MOF_TRAINING_NDIM_DECISIONS)
+      real(amrex_real) :: refvfrac(1)
+      real(amrex_real) :: vof_single 
+      real(amrex_real) :: refcen(SDIM)
+      real(amrex_real) :: nr_db(SDIM)
+      integer :: try_new_vfrac
 
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T xsten(-nhalf:nhalf,SDIM)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
-      INTEGER_T dir
-      INTEGER_T i1,j1,k1
-      INTEGER_T i_training
+      integer dir
+      integer i1,j1,k1
+      integer i_training
 
-      INTEGER_T :: loc_lo(SDIM)
-      INTEGER_T :: loc_hi(SDIM)
+      integer :: loc_lo(SDIM)
+      integer :: loc_hi(SDIM)
 
-      INTEGER_T :: grid_index(SDIM)
-      INTEGER_T :: grid_level
-      REAL_T :: npredict(3,SDIM)
-      REAL_T :: vof_null
-      REAL_T :: centroid_null(SDIM)
-      REAL_T :: mag_centroid(3)
-      INTEGER_T :: critical_material
+      integer :: grid_index(SDIM)
+      integer :: grid_level
+      real(amrex_real) :: npredict(3,SDIM)
+      real(amrex_real) :: vof_null
+      real(amrex_real) :: centroid_null(SDIM)
+      real(amrex_real) :: mag_centroid(3)
+      integer :: critical_material
 
-      REAL_T :: DT_cost
-      REAL_T :: angle_exact_db_data(SDIM-1)
+      real(amrex_real) :: DT_cost
+      real(amrex_real) :: angle_exact_db_data(SDIM-1)
 
-      INTEGER_T cmof_idx
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T klosten,khisten
-      INTEGER_T tid
+      integer cmof_idx
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer klosten,khisten
+      integer tid
    
       tid=0
 

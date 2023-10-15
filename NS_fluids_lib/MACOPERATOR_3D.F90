@@ -4,7 +4,6 @@
 #endif
 
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -26,6 +25,7 @@ stop
 #endif
 
       module macoperator_module
+      use amrex_fort_module, only : amrex_real
       use probf90_module
 
       contains
@@ -63,71 +63,71 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: nsolve
-      INTEGER_T, INTENT(in) :: project_option
-      INTEGER_T, INTENT(in) :: DIMDEC(masksolv) ! ONES_MF in c++
-      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
-      INTEGER_T, INTENT(in) :: DIMDEC(alpha)
-      INTEGER_T, INTENT(in) :: DIMDEC(offdiagcheck)
-      INTEGER_T, INTENT(in) :: DIMDEC(maskdivres)
-      INTEGER_T, INTENT(in) :: DIMDEC(maskres)
-      INTEGER_T, INTENT(in) :: DIMDEC(mdot)
-      INTEGER_T, INTENT(in) :: DIMDEC(bx)
-      INTEGER_T, INTENT(in) :: DIMDEC(by)
-      INTEGER_T, INTENT(in) :: DIMDEC(bz)
-      INTEGER_T, INTENT(in) :: DIMDEC(fwtx)
-      INTEGER_T, INTENT(in) :: DIMDEC(fwty)
-      INTEGER_T, INTENT(in) :: DIMDEC(fwtz)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T             :: growlo(3), growhi(3)
-      INTEGER_T, INTENT(in) :: bc(SDIM,2,nsolve)
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: nsolve
+      integer, INTENT(in) :: project_option
+      integer, INTENT(in) :: DIMDEC(masksolv) ! ONES_MF in c++
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(alpha)
+      integer, INTENT(in) :: DIMDEC(offdiagcheck)
+      integer, INTENT(in) :: DIMDEC(maskdivres)
+      integer, INTENT(in) :: DIMDEC(maskres)
+      integer, INTENT(in) :: DIMDEC(mdot)
+      integer, INTENT(in) :: DIMDEC(bx)
+      integer, INTENT(in) :: DIMDEC(by)
+      integer, INTENT(in) :: DIMDEC(bz)
+      integer, INTENT(in) :: DIMDEC(fwtx)
+      integer, INTENT(in) :: DIMDEC(fwty)
+      integer, INTENT(in) :: DIMDEC(fwtz)
+      integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      integer             :: growlo(3), growhi(3)
+      integer, INTENT(in) :: bc(SDIM,2,nsolve)
 
        ! ONES_MF in c++
-      REAL_T, INTENT(out), target :: masksolv(DIMV(masksolv))
-      REAL_T, pointer :: masksolv_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov))
-      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: alpha(DIMV(alpha),nsolve)
-      REAL_T, pointer :: alpha_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: offdiagcheck(DIMV(offdiagcheck),nsolve)
-      REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out), target :: maskdivres(DIMV(maskdivres))
-      REAL_T, pointer :: maskdivres_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(out), target :: maskres(DIMV(maskres))
-      REAL_T, pointer :: maskres_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: mdot(DIMV(mdot),nsolve)
-      REAL_T, pointer :: mdot_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out), target :: masksolv(DIMV(masksolv))
+      real(amrex_real), pointer :: masksolv_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: alpha(DIMV(alpha),nsolve)
+      real(amrex_real), pointer :: alpha_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: offdiagcheck(DIMV(offdiagcheck),nsolve)
+      real(amrex_real), pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out), target :: maskdivres(DIMV(maskdivres))
+      real(amrex_real), pointer :: maskdivres_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(out), target :: maskres(DIMV(maskres))
+      real(amrex_real), pointer :: maskres_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: mdot(DIMV(mdot),nsolve)
+      real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:),:)
        ! coeff * areafrac * areaface / (dxfrac*dx)
-      REAL_T, INTENT(in), target :: bx(DIMV(bx),nsolve) 
-      REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: by(DIMV(by),nsolve)
-      REAL_T, pointer :: by_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: bz(DIMV(bz),nsolve)
-      REAL_T, pointer :: bz_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: bx(DIMV(bx),nsolve) 
+      real(amrex_real), pointer :: bx_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: by(DIMV(by),nsolve)
+      real(amrex_real), pointer :: by_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: bz(DIMV(bz),nsolve)
+      real(amrex_real), pointer :: bz_ptr(D_DECL(:,:,:),:)
        ! coeff * areafrac / dxfrac
-      REAL_T, INTENT(in), target :: fwtx(DIMV(fwtx),nsolve)  
-      REAL_T, pointer :: fwtx_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: fwty(DIMV(fwty),nsolve)
-      REAL_T, pointer :: fwty_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(in), target :: fwtz(DIMV(fwtz),nsolve)
-      REAL_T, pointer :: fwtz_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: fwtx(DIMV(fwtx),nsolve)  
+      real(amrex_real), pointer :: fwtx_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: fwty(DIMV(fwty),nsolve)
+      real(amrex_real), pointer :: fwty_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: fwtz(DIMV(fwtz),nsolve)
+      real(amrex_real), pointer :: fwtz_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T i,j,k
-      INTEGER_T inormal
-      INTEGER_T ii,jj,kk
-      INTEGER_T iface,jface,kface
-      INTEGER_T icell,jcell,kcell
-      INTEGER_T dir,side
-      INTEGER_T veldir
-      REAL_T bface
-      REAL_T facewtsum,offdiagsum
-      REAL_T local_diag
-      REAL_T local_diag_check1
-      REAL_T local_diag_check2
+      integer i,j,k
+      integer inormal
+      integer ii,jj,kk
+      integer iface,jface,kface
+      integer icell,jcell,kcell
+      integer dir,side
+      integer veldir
+      real(amrex_real) bface
+      real(amrex_real) facewtsum,offdiagsum
+      real(amrex_real) local_diag
+      real(amrex_real) local_diag_check1
+      real(amrex_real) local_diag_check2
 
       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
        print *,"nsolve invalid24"
@@ -390,62 +390,62 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, INTENT(in) :: nsolve
-       INTEGER_T, INTENT(in) :: level
-       INTEGER_T, INTENT(in) :: finest_level
-       INTEGER_T, INTENT(in) :: solidheat_flag
-       REAL_T, INTENT(in) :: xlo(SDIM)
-       REAL_T, INTENT(in) :: dx(SDIM)
-       INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-       INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-       INTEGER_T, INTENT(in) :: bfact
-       INTEGER_T :: growlo(3), growhi(3)
-       INTEGER_T, INTENT(in) :: DIMDEC(offdiagcheck)
-       INTEGER_T, INTENT(in) :: DIMDEC(cterm)
-       INTEGER_T, INTENT(in) :: DIMDEC(c2)
-       INTEGER_T, INTENT(in) :: DIMDEC(DeDT)
-       INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
-       INTEGER_T, INTENT(in) :: DIMDEC(den)
-       INTEGER_T, INTENT(in) :: DIMDEC(mu)
-       REAL_T, INTENT(in) :: visc_coef
-       REAL_T, INTENT(in) :: dt
-       REAL_T, INTENT(in) :: cur_time
-       INTEGER_T, INTENT(in) :: project_option,rzflag
+       integer, INTENT(in) :: nsolve
+       integer, INTENT(in) :: level
+       integer, INTENT(in) :: finest_level
+       integer, INTENT(in) :: solidheat_flag
+       real(amrex_real), INTENT(in) :: xlo(SDIM)
+       real(amrex_real), INTENT(in) :: dx(SDIM)
+       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+       integer, INTENT(in) :: bfact
+       integer :: growlo(3), growhi(3)
+       integer, INTENT(in) :: DIMDEC(offdiagcheck)
+       integer, INTENT(in) :: DIMDEC(cterm)
+       integer, INTENT(in) :: DIMDEC(c2)
+       integer, INTENT(in) :: DIMDEC(DeDT)
+       integer, INTENT(in) :: DIMDEC(lsnew)
+       integer, INTENT(in) :: DIMDEC(den)
+       integer, INTENT(in) :: DIMDEC(mu)
+       real(amrex_real), INTENT(in) :: visc_coef
+       real(amrex_real), INTENT(in) :: dt
+       real(amrex_real), INTENT(in) :: cur_time
+       integer, INTENT(in) :: project_option,rzflag
 
-       REAL_T, INTENT(in),target :: mu(DIMV(mu))
-       REAL_T, pointer :: mu_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in),target :: den(DIMV(den))
-       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in),target :: offdiagcheck(DIMV(offdiagcheck),nsolve)
-       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(out),target :: cterm(DIMV(cterm),nsolve)
-       REAL_T, pointer :: cterm_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: c2(DIMV(c2),2)
-       REAL_T, pointer :: c2_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: DeDT(DIMV(DeDT))
-       REAL_T, pointer :: DeDT_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
-       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: mu(DIMV(mu))
+       real(amrex_real), pointer :: mu_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: den(DIMV(den))
+       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: offdiagcheck(DIMV(offdiagcheck),nsolve)
+       real(amrex_real), pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(out),target :: cterm(DIMV(cterm),nsolve)
+       real(amrex_real), pointer :: cterm_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: c2(DIMV(c2),2)
+       real(amrex_real), pointer :: c2_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: DeDT(DIMV(DeDT))
+       real(amrex_real), pointer :: DeDT_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
-       INTEGER_T i,j,k
-       INTEGER_T in_rigid
-       INTEGER_T veldir
-       INTEGER_T dir_local
-       REAL_T rigid_mask
-       REAL_T den_inverse,dedt_inverse
-       INTEGER_T, parameter :: nhalf=1
-       REAL_T xsten(-nhalf:nhalf,SDIM)
-       REAL_T local_cterm(nsolve)
-       INTEGER_T im
-       INTEGER_T velcomp
-       REAL_T LSTEST
-       REAL_T local_diag
-       REAL_T xclamped(SDIM)
-       REAL_T LS_clamped
-       REAL_T vel_clamped(SDIM)
-       REAL_T temperature_clamped
-       INTEGER_T prescribed_flag
-       INTEGER_T is_clamped_cell
+       integer i,j,k
+       integer in_rigid
+       integer veldir
+       integer dir_local
+       real(amrex_real) rigid_mask
+       real(amrex_real) den_inverse,dedt_inverse
+       integer, parameter :: nhalf=1
+       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+       real(amrex_real) local_cterm(nsolve)
+       integer im
+       integer velcomp
+       real(amrex_real) LSTEST
+       real(amrex_real) local_diag
+       real(amrex_real) xclamped(SDIM)
+       real(amrex_real) LS_clamped
+       real(amrex_real) vel_clamped(SDIM)
+       real(amrex_real) temperature_clamped
+       integer prescribed_flag
+       integer is_clamped_cell
 
        mu_ptr=>mu
        call checkbound_array1(fablo,fabhi,mu_ptr,1,-1)
@@ -834,26 +834,26 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, INTENT(in) :: level
-       INTEGER_T, INTENT(in) :: finest_level
-       INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-       INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-       INTEGER_T, INTENT(in) :: bfact
-       INTEGER_T :: growlo(3), growhi(3)
-       INTEGER_T, INTENT(in) :: DIMDEC(offdiagcheck)
-       INTEGER_T, INTENT(in) :: DIMDEC(savepres)
-       INTEGER_T, INTENT(in) :: DIMDEC(newpres)
+       integer, INTENT(in) :: level
+       integer, INTENT(in) :: finest_level
+       integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+       integer, INTENT(in) :: bfact
+       integer :: growlo(3), growhi(3)
+       integer, INTENT(in) :: DIMDEC(offdiagcheck)
+       integer, INTENT(in) :: DIMDEC(savepres)
+       integer, INTENT(in) :: DIMDEC(newpres)
 
-       REAL_T, INTENT(in),target :: offdiagcheck(DIMV(offdiagcheck))
-       REAL_T, pointer :: offdiagcheck_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: offdiagcheck(DIMV(offdiagcheck))
+       real(amrex_real), pointer :: offdiagcheck_ptr(D_DECL(:,:,:))
 
-       REAL_T, INTENT(in),target :: savepres(DIMV(savepres))
-       REAL_T, pointer :: savepres_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(out),target :: newpres(DIMV(newpres))
-       REAL_T, pointer :: newpres_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: savepres(DIMV(savepres))
+       real(amrex_real), pointer :: savepres_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(out),target :: newpres(DIMV(newpres))
+       real(amrex_real), pointer :: newpres_ptr(D_DECL(:,:,:))
 
-       INTEGER_T i,j,k
-       REAL_T local_diag
+       integer i,j,k
+       real(amrex_real) local_diag
 
        offdiagcheck_ptr=>offdiagcheck
        savepres_ptr=>savepres
@@ -911,21 +911,21 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, INTENT(in) :: nsolve
-       INTEGER_T, INTENT(in) :: dir,level
-       INTEGER_T, INTENT(in) :: DIMDEC(bx)
-       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, INTENT(in) :: bfact
-       REAL_T, INTENT(inout),target :: bx(DIMV(bx),nsolve)
-       REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+       integer, INTENT(in) :: nsolve
+       integer, INTENT(in) :: dir,level
+       integer, INTENT(in) :: DIMDEC(bx)
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer :: growlo(3),growhi(3)
+       integer, INTENT(in) :: bfact
+       real(amrex_real), INTENT(inout),target :: bx(DIMV(bx),nsolve)
+       real(amrex_real), pointer :: bx_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-       INTEGER_T i,j,k,n
-       INTEGER_T, parameter :: nhalf=1
-       REAL_T xsten(-nhalf:nhalf,SDIM)
-       REAL_T hx,RR
+       integer i,j,k,n
+       integer, parameter :: nhalf=1
+       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+       real(amrex_real) hx,RR
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -1001,28 +1001,28 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, INTENT(in) :: nsolve
-       INTEGER_T, INTENT(in) :: dir
-       INTEGER_T, INTENT(in) :: level
-       INTEGER_T, INTENT(in) :: DIMDEC(bx)
-       INTEGER_T, INTENT(in) :: DIMDEC(facewt)
-       INTEGER_T, INTENT(in) :: domlo(SDIM),domhi(SDIM)
-       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, INTENT(in) :: bfact
-       REAL_T, INTENT(in) :: min_interior_coeff
+       integer, INTENT(in) :: nsolve
+       integer, INTENT(in) :: dir
+       integer, INTENT(in) :: level
+       integer, INTENT(in) :: DIMDEC(bx)
+       integer, INTENT(in) :: DIMDEC(facewt)
+       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer :: growlo(3),growhi(3)
+       integer, INTENT(in) :: bfact
+       real(amrex_real), INTENT(in) :: min_interior_coeff
 
-       REAL_T, INTENT(inout),target :: bx(DIMV(bx),nsolve)
-       REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(inout),target :: facewt(DIMV(facewt),nsolve)
-       REAL_T, pointer :: facewt_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(inout),target :: bx(DIMV(bx),nsolve)
+       real(amrex_real), pointer :: bx_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(inout),target :: facewt(DIMV(facewt),nsolve)
+       real(amrex_real), pointer :: facewt_ptr(D_DECL(:,:,:),:)
 
-       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-       INTEGER_T i,j,k,n
-       INTEGER_T inorm
-       REAL_T local_bx
+       integer i,j,k,n
+       integer inorm
+       real(amrex_real) local_bx
 
        if (min_interior_coeff.gt.zero) then
         ! do nothing
@@ -1125,22 +1125,22 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
-       INTEGER_T, INTENT(in) :: nsolve
-       INTEGER_T, INTENT(in) :: dir
-       INTEGER_T, INTENT(in) :: level
-       INTEGER_T, INTENT(in) :: DIMDEC(bx)
-       INTEGER_T, INTENT(in) :: DIMDEC(facewt)
-       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, INTENT(in) :: bfact
-       REAL_T, INTENT(out),target :: bx(DIMV(bx),nsolve)
-       REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: facewt(DIMV(facewt),nsolve)
-       REAL_T, pointer :: facewt_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+       integer, INTENT(in) :: nsolve
+       integer, INTENT(in) :: dir
+       integer, INTENT(in) :: level
+       integer, INTENT(in) :: DIMDEC(bx)
+       integer, INTENT(in) :: DIMDEC(facewt)
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer :: growlo(3),growhi(3)
+       integer, INTENT(in) :: bfact
+       real(amrex_real), INTENT(out),target :: bx(DIMV(bx),nsolve)
+       real(amrex_real), pointer :: bx_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: facewt(DIMV(facewt),nsolve)
+       real(amrex_real), pointer :: facewt_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-       INTEGER_T i,j,k,n
+       integer i,j,k,n
 
        if (bfact.lt.1) then
         print *,"bfact too small"
@@ -1186,26 +1186,26 @@ stop
 
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: DIMDEC(fdata)
-      INTEGER_T, INTENT(in) :: DIMDEC(cdata)
-      INTEGER_T, INTENT(in) :: DIMDEC(cdiag)
-      INTEGER_T, INTENT(in) :: lo(AMREX_SPACEDIM)
-      INTEGER_T, INTENT(in) :: hi(AMREX_SPACEDIM)
-      INTEGER_T lof(SDIM),hif(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T stenlo(3),stenhi(3)
-      REAL_T, INTENT(inout),target :: fdata(DIMV(fdata))
-      REAL_T, pointer :: fdata_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in),target :: cdata(DIMV(cdata))
-      REAL_T, pointer :: cdata_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in),target :: cdiag(DIMV(cdiag))
-      REAL_T, pointer :: cdiag_ptr(D_DECL(:,:,:))
-      INTEGER_T, INTENT(in) :: bfact,bfact_f
+      integer, INTENT(in) :: DIMDEC(fdata)
+      integer, INTENT(in) :: DIMDEC(cdata)
+      integer, INTENT(in) :: DIMDEC(cdiag)
+      integer, INTENT(in) :: lo(AMREX_SPACEDIM)
+      integer, INTENT(in) :: hi(AMREX_SPACEDIM)
+      integer lof(SDIM),hif(SDIM)
+      integer growlo(3),growhi(3)
+      integer stenlo(3),stenhi(3)
+      real(amrex_real), INTENT(inout),target :: fdata(DIMV(fdata))
+      real(amrex_real), pointer :: fdata_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in),target :: cdata(DIMV(cdata))
+      real(amrex_real), pointer :: cdata_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in),target :: cdiag(DIMV(cdiag))
+      real(amrex_real), pointer :: cdiag_ptr(D_DECL(:,:,:))
+      integer, INTENT(in) :: bfact,bfact_f
 
-      INTEGER_T ic,jc,kc,ifine,jfine,kfine
-      INTEGER_T cvalid,dir
-      REAL_T fine_value,voltotal,volall
-      REAL_T wt(SDIM)
+      integer ic,jc,kc,ifine,jfine,kfine
+      integer cvalid,dir
+      real(amrex_real) fine_value,voltotal,volall
+      real(amrex_real) wt(SDIM)
  
 
       if (bfact.lt.1) then
@@ -1318,36 +1318,36 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: nsolve
-      INTEGER_T, INTENT(in) :: project_option
-      INTEGER_T, INTENT(in) :: DIMDEC(alpha)
-      INTEGER_T, INTENT(in) :: DIMDEC(diag_reg)
-      INTEGER_T, INTENT(in) :: DIMDEC(bx)
-      INTEGER_T, INTENT(in) :: DIMDEC(by)
-      INTEGER_T, INTENT(in) :: DIMDEC(bz)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T             :: growlo(3), growhi(3)
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: nsolve
+      integer, INTENT(in) :: project_option
+      integer, INTENT(in) :: DIMDEC(alpha)
+      integer, INTENT(in) :: DIMDEC(diag_reg)
+      integer, INTENT(in) :: DIMDEC(bx)
+      integer, INTENT(in) :: DIMDEC(by)
+      integer, INTENT(in) :: DIMDEC(bz)
+      integer, INTENT(in) :: tilelo(SDIM), tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM), fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      integer             :: growlo(3), growhi(3)
 
-      REAL_T, INTENT(in),target :: alpha(DIMV(alpha),nsolve)
-      REAL_T, pointer :: alpha_ptr(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out),target :: diag_reg(DIMV(diag_reg),nsolve)
-      REAL_T, pointer :: diag_reg_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in),target :: alpha(DIMV(alpha),nsolve)
+      real(amrex_real), pointer :: alpha_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out),target :: diag_reg(DIMV(diag_reg),nsolve)
+      real(amrex_real), pointer :: diag_reg_ptr(D_DECL(:,:,:),:)
       ! coeff * areafrac * areaface / (dxfrac*dx)  (if coeff>0.0)
-      REAL_T, INTENT(in),target :: bx(DIMV(bx),nsolve) 
-      REAL_T, INTENT(in),target :: by(DIMV(by),nsolve)
-      REAL_T, INTENT(in),target :: bz(DIMV(bz),nsolve)
-      REAL_T, pointer :: bx_ptr(D_DECL(:,:,:),:)
-      REAL_T, pointer :: by_ptr(D_DECL(:,:,:),:)
-      REAL_T, pointer :: bz_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in),target :: bx(DIMV(bx),nsolve) 
+      real(amrex_real), INTENT(in),target :: by(DIMV(by),nsolve)
+      real(amrex_real), INTENT(in),target :: bz(DIMV(bz),nsolve)
+      real(amrex_real), pointer :: bx_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: by_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: bz_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T i,j,k
-      INTEGER_T veldir
-      REAL_T offdiagsum
-      REAL_T local_diag
+      integer i,j,k
+      integer veldir
+      real(amrex_real) offdiagsum
+      real(amrex_real) local_diag
 
       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
        print *,"nsolve invalid24"

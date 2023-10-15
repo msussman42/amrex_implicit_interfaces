@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -23,10 +22,11 @@ stop
 #endif
 
 module STUB_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
-REAL_T :: DEF_VAPOR_GAMMA
+real(amrex_real) :: DEF_VAPOR_GAMMA
 
 contains
 
@@ -57,10 +57,10 @@ end subroutine DEALLOCATE_STUB_MODULE
 
 subroutine STUB_CFL_HELPER(time,dir,uu,dx)
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: dir
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(inout) :: uu
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: dir
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: uu
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if ((dir.lt.0).or.(dir.ge.SDIM)) then
  print *,"dir invalid"
@@ -85,11 +85,11 @@ subroutine STUB_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(inout) :: rflag
-INTEGER_T, INTENT(inout) :: tagflag
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: rflag
+integer, INTENT(inout) :: tagflag
 
  if (nhalf.lt.1) then
   print *,"nhalf invalid stub override tagflag"
@@ -104,17 +104,17 @@ subroutine STUB_OVERRIDE_FSI_SIGN_LS_VEL_TEMP( &
  xcell,time,LS,VEL,TEMP,MASK,lev77,im_part,part_id)
 use probcommon_module
 use global_utility_module
-REAL_T, INTENT(in) :: exterior_BB(3,2)
-REAL_T, INTENT(in) :: interior_BB(3,2)
-REAL_T, INTENT(in) :: xcell(3)
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(out) :: LS
-REAL_T, INTENT(out) :: VEL(3)
-REAL_T, INTENT(out) :: TEMP
-INTEGER_T, INTENT(out) :: MASK
-INTEGER_T, INTENT(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
-INTEGER_T, INTENT(in) :: im_part
-INTEGER_T, INTENT(in) :: part_id
+real(amrex_real), INTENT(in) :: exterior_BB(3,2)
+real(amrex_real), INTENT(in) :: interior_BB(3,2)
+real(amrex_real), INTENT(in) :: xcell(3)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(out) :: LS
+real(amrex_real), INTENT(out) :: VEL(3)
+real(amrex_real), INTENT(out) :: TEMP
+integer, INTENT(out) :: MASK
+integer, INTENT(in) :: lev77 !lev77=-1 for aux, >=0 otherwise.
+integer, INTENT(in) :: im_part
+integer, INTENT(in) :: part_id
 
  if ((lev77.eq.-1).or. &
      (lev77.ge.1)) then
@@ -133,14 +133,14 @@ subroutine STUB_GET_OUTSIDE_POINT( &
  xcell,time,x_outside,im_part,part_id)
 use probcommon_module
 use global_utility_module
-REAL_T, INTENT(in) :: exterior_BB(3,2)
-REAL_T, INTENT(in) :: xcell(3)
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(out) :: x_outside(3)
-INTEGER_T, INTENT(in) :: im_part
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T :: dir
-REAL_T :: BB_len
+real(amrex_real), INTENT(in) :: exterior_BB(3,2)
+real(amrex_real), INTENT(in) :: xcell(3)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(out) :: x_outside(3)
+integer, INTENT(in) :: im_part
+integer, INTENT(in) :: part_id
+integer :: dir
+real(amrex_real) :: BB_len
 
  do dir=1,3
   BB_len=exterior_BB(dir,2)-exterior_BB(dir,1)
@@ -158,9 +158,9 @@ subroutine STUB_AUX_DATA(auxcomp,x,LS)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: auxcomp
-REAL_T, INTENT(in) :: x(3)
-REAL_T, INTENT(out) :: LS
+integer, INTENT(in) :: auxcomp
+real(amrex_real), INTENT(in) :: x(3)
+real(amrex_real), INTENT(out) :: LS
 
  print *,"STUB_AUX_DATA should not be called"
  stop
@@ -172,11 +172,11 @@ subroutine STUB_BOUNDING_BOX_AUX(auxcomp, &
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: auxcomp
-REAL_T, INTENT(inout) :: minnode(3)
-REAL_T, INTENT(inout) :: maxnode(3)
-INTEGER_T, INTENT(out) :: LS_FROM_SUBROUTINE
-INTEGER_T, INTENT(out) :: aux_ncells_max_side
+integer, INTENT(in) :: auxcomp
+real(amrex_real), INTENT(inout) :: minnode(3)
+real(amrex_real), INTENT(inout) :: maxnode(3)
+integer, INTENT(out) :: LS_FROM_SUBROUTINE
+integer, INTENT(out) :: aux_ncells_max_side
 
  LS_FROM_SUBROUTINE=0
  aux_ncells_max_side=-1
@@ -196,10 +196,10 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(nmat)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(nmat)
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -218,10 +218,10 @@ subroutine STUB_check_vel_rigid(x,t,vel,dir)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: vel
-INTEGER_T, INTENT(in) :: dir
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: vel
+integer, INTENT(in) :: dir
 
  if (t.ge.0.0d0) then
   ! do nothing
@@ -255,14 +255,14 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS
-REAL_T, INTENT(out) :: vel(SDIM)
-REAL_T, INTENT(out) :: temperature
-INTEGER_T, INTENT(out) :: prescribed_flag
-INTEGER_T dir
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS
+real(amrex_real), INTENT(out) :: vel(SDIM)
+real(amrex_real), INTENT(out) :: temperature
+integer, INTENT(out) :: prescribed_flag
+integer dir
 
  LS=CLAMPED_NO_WHERE_LS
  do dir=1,SDIM
@@ -281,14 +281,14 @@ subroutine STUB_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -329,7 +329,7 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(out) :: internal_wave_exists
+integer, INTENT(out) :: internal_wave_exists
 
 internal_wave_exists=0
 
@@ -343,10 +343,10 @@ subroutine STUB_UNITLESS_EXPANSION_FACTOR( &
  use global_utility_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: im
- REAL_T, INTENT(in) :: temperature
- REAL_T, INTENT(in) :: temperature_base
- REAL_T, INTENT(out) :: expansion_factor
+ integer, INTENT(in) :: im
+ real(amrex_real), INTENT(in) :: temperature
+ real(amrex_real), INTENT(in) :: temperature_base
+ real(amrex_real), INTENT(out) :: expansion_factor
 
  if ((im.ge.1).and.(im.le.num_materials)) then
   if (temperature.gt.zero) then
@@ -380,11 +380,11 @@ subroutine EOS_STUB(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: pressure
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: pressure
 
  if (num_species_var_in.eq.num_species_var) then
   call EOS_material_CORE(rho,massfrac_var, &
@@ -404,10 +404,10 @@ subroutine dVdT_STUB(dVdT,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: pressure,temperature
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(out) :: dVdT
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: pressure,temperature
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(out) :: dVdT
 
  if (num_species_var_in.eq.num_species_var) then
   call dVdT_material_CORE(dVdT,massfrac_var, &
@@ -428,11 +428,11 @@ subroutine SOUNDSQR_STUB(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: internal_energy
- REAL_T, INTENT(out) :: soundsqr
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: internal_energy
+ real(amrex_real), INTENT(out) :: soundsqr
 
  if (num_species_var_in.eq.num_species_var) then
   call SOUNDSQR_material_CORE(rho,massfrac_var, &
@@ -454,11 +454,11 @@ subroutine INTERNAL_STUB(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(in) :: temperature 
- REAL_T, INTENT(out) :: local_internal_energy
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(in) :: temperature 
+ real(amrex_real), INTENT(out) :: local_internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   call INTERNAL_material_CORE(rho,massfrac_var, &
@@ -478,11 +478,11 @@ subroutine TEMPERATURE_STUB(rho,massfrac_var, &
  use probcommon_module
  use global_utility_module
  IMPLICIT NONE
- INTEGER_T, INTENT(in) :: imattype,im,num_species_var_in
- REAL_T, INTENT(in) :: rho
- REAL_T, INTENT(in) :: massfrac_var(num_species_var_in+1)
- REAL_T, INTENT(out) :: temperature 
- REAL_T, INTENT(in) :: internal_energy
+ integer, INTENT(in) :: imattype,im,num_species_var_in
+ real(amrex_real), INTENT(in) :: rho
+ real(amrex_real), INTENT(in) :: massfrac_var(num_species_var_in+1)
+ real(amrex_real), INTENT(out) :: temperature 
+ real(amrex_real), INTENT(in) :: internal_energy
 
  if (num_species_var_in.eq.num_species_var) then
   call TEMPERATURE_material_CORE(rho,massfrac_var, &
@@ -504,11 +504,11 @@ subroutine STUB_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -528,13 +528,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -561,14 +561,14 @@ subroutine STUB_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) ::  dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) ::  dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -594,17 +594,17 @@ subroutine STUB_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -640,15 +640,15 @@ subroutine STUB_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -676,20 +676,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) :: local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -740,18 +740,18 @@ subroutine STUB_HEATSOURCE(im,VFRAC,time,x, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(in) :: VFRAC(nmat)
-REAL_T, INTENT(in) :: time
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: temp(nmat)
-REAL_T, INTENT(in) :: den(nmat)
-REAL_T, INTENT(in) :: CV(nmat)
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(out) :: heat_source
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(in) :: VFRAC(nmat)
+real(amrex_real), INTENT(in) :: time
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: temp(nmat)
+real(amrex_real), INTENT(in) :: den(nmat)
+real(amrex_real), INTENT(in) :: CV(nmat)
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -777,13 +777,13 @@ subroutine STUB_EB_heat_source(time,dt,xsten,nhalf, &
       heat_flux,heat_dir,heat_side)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(out) :: heat_flux
-INTEGER_T, INTENT(out) :: heat_dir
-INTEGER_T, INTENT(out) :: heat_side
+integer, INTENT(in) :: nhalf
+real(amrex_real), dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(out) :: heat_flux
+integer, INTENT(out) :: heat_dir
+integer, INTENT(out) :: heat_side
 
 if (time.lt.zero) then
  print *,"time invalid"
@@ -804,9 +804,9 @@ end subroutine STUB_EB_heat_source
 subroutine STUB_microcell_heat_coeff(heatcoeff,dx,veldir)
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: veldir
-REAL_T, INTENT(inout) :: heatcoeff
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: veldir
+real(amrex_real), INTENT(inout) :: heatcoeff
 
 
 return
@@ -815,8 +815,8 @@ end subroutine STUB_microcell_heat_coeff
 subroutine STUB_velfreestream(problen,local_buffer)
 IMPLICIT NONE
 
-REAL_T, INTENT(inout) :: local_buffer(2*SDIM)
-REAL_T, INTENT(in)    :: problen(SDIM)
+real(amrex_real), INTENT(inout) :: local_buffer(2*SDIM)
+real(amrex_real), INTENT(in)    :: problen(SDIM)
 
 return
 end subroutine STUB_velfreestream
@@ -825,9 +825,9 @@ end subroutine STUB_velfreestream
 subroutine STUB_nucleation(nucleate_in,xsten,nhalf,make_seed)
 use probcommon_module_types
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
-INTEGER_T, INTENT(inout) :: make_seed
+integer, INTENT(in) :: nhalf
+real(amrex_real), dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+integer, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
 
 ! i=nucleate_in%i
@@ -847,8 +847,8 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: xtarget(SDIM)
-REAL_T, INTENT(out) :: dist
+real(amrex_real), INTENT(in) :: xtarget(SDIM)
+real(amrex_real), INTENT(out) :: dist
 
  dist=-9999.0d0
 
@@ -865,13 +865,13 @@ subroutine STUB_correct_pres_rho_hydrostatic( &
   state_ptr)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: i,j,k,level
-REAL_T, INTENT(in) :: angular_velocity
-REAL_T, INTENT(in) :: centrifugal_force_factor
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(inout) :: rho_hydrostatic
-REAL_T, INTENT(inout) :: pres_hydrostatic
-REAL_T, INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
+integer, INTENT(in) :: i,j,k,level
+real(amrex_real), INTENT(in) :: angular_velocity
+real(amrex_real), INTENT(in) :: centrifugal_force_factor
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(inout) :: rho_hydrostatic
+real(amrex_real), INTENT(inout) :: pres_hydrostatic
+real(amrex_real), INTENT(in),pointer :: state_ptr(D_DECL(:,:,:),:)
 
 
  if (dt.gt.zero) then
@@ -902,11 +902,11 @@ subroutine STUB_FSI_SLICE(xmap3D,xslice3D,problo3D,probhi3D,dx_slice)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-REAL_T, INTENT(in) :: dx_slice
-INTEGER_T, INTENT(inout) :: xmap3D(3)
-REAL_T, INTENT(inout) :: xslice3D(3)
-REAL_T, INTENT(out) :: problo3D(3)
-REAL_T, INTENT(out) :: probhi3D(3)
+real(amrex_real), INTENT(in) :: dx_slice
+integer, INTENT(inout) :: xmap3D(3)
+real(amrex_real), INTENT(inout) :: xslice3D(3)
+real(amrex_real), INTENT(out) :: problo3D(3)
+real(amrex_real), INTENT(out) :: probhi3D(3)
 
 
   !CTML_FSI_flagF() is declared in GLOBALUTIL.F90
@@ -1005,9 +1005,9 @@ end subroutine STUB_FSI_SLICE
 subroutine STUB_OPEN_CASFILE(part_id,unit_id,file_format)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: unit_id
-INTEGER_T, INTENT(out) :: file_format
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: unit_id
+integer, INTENT(out) :: file_format
 
  print *,"need to define a routine for SUB_OPEN_CASFILE"
  stop
@@ -1019,9 +1019,9 @@ end subroutine STUB_OPEN_CASFILE
 subroutine STUB_OPEN_AUXFILE(part_id,unit_id,file_format)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: unit_id
-INTEGER_T, INTENT(out) :: file_format
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: unit_id
+integer, INTENT(out) :: file_format
 
  print *,"need to define a routine for SUB_OPEN_AUXFILE"
  stop
@@ -1033,8 +1033,8 @@ end subroutine STUB_OPEN_AUXFILE
 subroutine STUB_ORDER_NODES(nodes,nodemap)
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: nodes(3,3) ! dir,nodenum
-INTEGER_T, INTENT(inout) :: nodemap(3)
+real(amrex_real), INTENT(in) :: nodes(3,3) ! dir,nodenum
+integer, INTENT(inout) :: nodemap(3)
 
  print *,"need to define a routine for SUB_ORDER_NODES"
  stop
@@ -1050,7 +1050,7 @@ IMPLICIT NONE
 
 type(assimilate_parm_type), INTENT(in) :: assimilate_in
 type(assimilate_out_parm_type), INTENT(inout) :: assimilate_out
-INTEGER_T, INTENT(in) :: i,j,k,cell_flag
+integer, INTENT(in) :: i,j,k,cell_flag
 
 return
 end subroutine STUB_ASSIMILATE
@@ -1062,11 +1062,11 @@ use probcommon_module_types
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nsum1,nsum2,isweep
+integer, INTENT(in) :: nsum1,nsum2,isweep
 type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
-REAL_T, INTENT(inout) :: increment_out1(nsum1)
-REAL_T, INTENT(inout) :: increment_out2(nsum2)
-INTEGER_T :: i,j,k
+real(amrex_real), INTENT(inout) :: increment_out1(nsum1)
+real(amrex_real), INTENT(inout) :: increment_out2(nsum2)
+integer :: i,j,k
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
@@ -1081,12 +1081,12 @@ use probcommon_module
 IMPLICIT NONE
 
 type(user_defined_force_parm_type_input), INTENT(in) :: force_input
-REAL_T, INTENT(in) :: xpoint(AMREX_SPACEDIM)
-REAL_T, INTENT(out) :: output_force(AMREX_SPACEDIM)
+real(amrex_real), INTENT(in) :: xpoint(AMREX_SPACEDIM)
+real(amrex_real), INTENT(out) :: output_force(AMREX_SPACEDIM)
 
-INTEGER_T :: dir
-INTEGER_T :: i,j,k
-REAL_T :: one_over_den
+integer :: dir
+integer :: i,j,k
+real(amrex_real) :: one_over_den
 
 i=force_input%i
 j=force_input%j
@@ -1131,26 +1131,26 @@ subroutine STUB_wallfunc( &
 use probcommon_module
 use global_utility_module
 implicit none
-INTEGER_T, INTENT(in) :: dir ! 1,2,3
-INTEGER_T, INTENT(in) :: data_dir ! 0,1,2
-REAL_T, INTENT(in) :: dxmin
-REAL_T, INTENT(in), pointer :: x_projection_raster(:)
-REAL_T, INTENT(in), pointer :: dx(:)
-REAL_T, INTENT(in), pointer :: n_raster(:) ! points to solid
-INTEGER_T, INTENT(in) :: im_fluid
-REAL_T, INTENT(in) :: u !uimage_raster_solid_frame(dir)
-REAL_T, INTENT(in) :: uimage_tngt_mag
-REAL_T, INTENT(in) :: wall_model_velocity
-REAL_T, INTENT(in) :: dist_probe
-REAL_T, INTENT(in) :: dist_fluid
-REAL_T, INTENT(in) :: temperature_image
-REAL_T, INTENT(in) :: temperature_wall
-REAL_T, INTENT(in) :: temperature_wall_max
-REAL_T, INTENT(in) :: viscosity_molecular
-REAL_T, INTENT(in) :: viscosity_eddy_wall
-REAL_T, INTENT(in) :: y !delta_r
-REAL_T, INTENT(in) :: critical_length
-REAL_T, INTENT(out) :: ughost_tngt  ! dir direction
+integer, INTENT(in) :: dir ! 1,2,3
+integer, INTENT(in) :: data_dir ! 0,1,2
+real(amrex_real), INTENT(in) :: dxmin
+real(amrex_real), INTENT(in), pointer :: x_projection_raster(:)
+real(amrex_real), INTENT(in), pointer :: dx(:)
+real(amrex_real), INTENT(in), pointer :: n_raster(:) ! points to solid
+integer, INTENT(in) :: im_fluid
+real(amrex_real), INTENT(in) :: u !uimage_raster_solid_frame(dir)
+real(amrex_real), INTENT(in) :: uimage_tngt_mag
+real(amrex_real), INTENT(in) :: wall_model_velocity
+real(amrex_real), INTENT(in) :: dist_probe
+real(amrex_real), INTENT(in) :: dist_fluid
+real(amrex_real), INTENT(in) :: temperature_image
+real(amrex_real), INTENT(in) :: temperature_wall
+real(amrex_real), INTENT(in) :: temperature_wall_max
+real(amrex_real), INTENT(in) :: viscosity_molecular
+real(amrex_real), INTENT(in) :: viscosity_eddy_wall
+real(amrex_real), INTENT(in) :: y !delta_r
+real(amrex_real), INTENT(in) :: critical_length
+real(amrex_real), INTENT(out) :: ughost_tngt  ! dir direction
 
  call wallfunc_newtonsmethod( &
   dir, & ! =1,2,3
@@ -1181,9 +1181,9 @@ subroutine STUB_MAPPING_WEIGHT_COEFF(dir,wt,phys_x)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: dir
-REAL_T, INTENT(out) :: wt
-REAL_T, INTENT(in) :: phys_x
+integer, INTENT(in) :: dir
+real(amrex_real), INTENT(out) :: wt
+real(amrex_real), INTENT(in) :: phys_x
 
 if ((dir.ge.0).and.(dir.lt.SDIM)) then
  ! do nothing
@@ -1210,10 +1210,10 @@ use probcommon_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: num_materials_in
-INTEGER_T, INTENT(in) :: num_threads_in
-INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials_in)
-INTEGER_T :: im
+integer, INTENT(in) :: num_materials_in
+integer, INTENT(in) :: num_threads_in
+integer, INTENT(in) :: constant_density_all_time(num_materials_in)
+integer :: im
 
  if (num_materials_in.eq.num_materials) then
   ! do nothing
@@ -1243,10 +1243,10 @@ subroutine STUB_CHARFN_REGION(region_id,x,cur_time,charfn_out)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: region_id
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: cur_time
-REAL_T, INTENT(out) :: charfn_out
+integer, INTENT(in) :: region_id
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(out) :: charfn_out
 
  ! 1<=region_id<=number_of_source_regions
 
@@ -1275,19 +1275,19 @@ subroutine STUB_THERMAL_K(x,dx,cur_time, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: im
-INTEGER_T, INTENT(in) :: im_solid
-INTEGER_T, INTENT(in) :: near_interface
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: cur_time
-REAL_T, INTENT(in) :: density
-REAL_T, INTENT(in) :: temperature
-REAL_T, INTENT(in) :: temperature_wall
-REAL_T, INTENT(in) :: temperature_wall_max
-REAL_T, INTENT(in) :: temperature_probe
-REAL_T, INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
-REAL_T, INTENT(inout) :: thermal_k
+integer, INTENT(in) :: im
+integer, INTENT(in) :: im_solid
+integer, INTENT(in) :: near_interface
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(in) :: density
+real(amrex_real), INTENT(in) :: temperature
+real(amrex_real), INTENT(in) :: temperature_wall
+real(amrex_real), INTENT(in) :: temperature_wall_max
+real(amrex_real), INTENT(in) :: temperature_probe
+real(amrex_real), INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
+real(amrex_real), INTENT(inout) :: thermal_k
 
 if ((im.ge.1).and.(im.le.num_materials)) then
  ! do nothing
@@ -1332,30 +1332,30 @@ subroutine STUB_INTERFACE_TEMPERATURE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: interface_mass_transfer_model
-INTEGER_T, INTENT(in) :: num_materials_in
-INTEGER_T, INTENT(in) :: num_species_var_in
-INTEGER_T, INTENT(in) :: probe_constrain
-INTEGER_T, INTENT(in) :: ireverse
-INTEGER_T, INTENT(in) :: iten
-REAL_T, INTENT(in) :: xI(SDIM)
-REAL_T, INTENT(in) :: cur_time
-REAL_T, INTENT(in) :: prev_time
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(inout) :: TI
-REAL_T, INTENT(inout) :: YI
-INTEGER_T, INTENT(inout) :: user_override_TI_YI
-REAL_T, INTENT(in) :: molar_mass(num_materials_in)
-REAL_T, INTENT(in) :: species_molar_mass(num_species_var_in)
-REAL_T, INTENT(in) :: ksrc_predict
-REAL_T, INTENT(in) :: kdst_predict
-REAL_T, INTENT(in) :: ksrc_physical
-REAL_T, INTENT(in) :: kdst_physical
-REAL_T, INTENT(in) :: T_probe_src
-REAL_T, INTENT(in) :: T_probe_dst
-REAL_T, INTENT(in) :: LL
-REAL_T, INTENT(in) :: dxprobe_src
-REAL_T, INTENT(in) :: dxprobe_dst
+integer, INTENT(in) :: interface_mass_transfer_model
+integer, INTENT(in) :: num_materials_in
+integer, INTENT(in) :: num_species_var_in
+integer, INTENT(in) :: probe_constrain
+integer, INTENT(in) :: ireverse
+integer, INTENT(in) :: iten
+real(amrex_real), INTENT(in) :: xI(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(in) :: prev_time
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(inout) :: TI
+real(amrex_real), INTENT(inout) :: YI
+integer, INTENT(inout) :: user_override_TI_YI
+real(amrex_real), INTENT(in) :: molar_mass(num_materials_in)
+real(amrex_real), INTENT(in) :: species_molar_mass(num_species_var_in)
+real(amrex_real), INTENT(in) :: ksrc_predict
+real(amrex_real), INTENT(in) :: kdst_predict
+real(amrex_real), INTENT(in) :: ksrc_physical
+real(amrex_real), INTENT(in) :: kdst_physical
+real(amrex_real), INTENT(in) :: T_probe_src
+real(amrex_real), INTENT(in) :: T_probe_dst
+real(amrex_real), INTENT(in) :: LL
+real(amrex_real), INTENT(in) :: dxprobe_src
+real(amrex_real), INTENT(in) :: dxprobe_dst
 
 end subroutine STUB_INTERFACE_TEMPERATURE
 
@@ -1384,28 +1384,28 @@ subroutine STUB_MDOT( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: interface_mass_transfer_model
-INTEGER_T, INTENT(in) :: num_materials_in
-INTEGER_T, INTENT(in) :: num_species_var_in
-INTEGER_T, INTENT(in) :: ispec
-INTEGER_T, INTENT(in) :: im_source
-INTEGER_T, INTENT(in) :: im_dest
-REAL_T, INTENT(in) :: xI(SDIM)
-REAL_T, INTENT(in) :: TI
-REAL_T, INTENT(in) :: molar_mass(num_materials_in)
-REAL_T, INTENT(in) :: species_molar_mass(num_species_var_in+1)
-REAL_T, INTENT(out) :: mdot
-INTEGER_T, INTENT(inout) :: mdot_override
-REAL_T, INTENT(in) :: ksrc_derived
-REAL_T, INTENT(in) :: kdst_derived
-REAL_T, INTENT(in) :: ksrc_physical
-REAL_T, INTENT(in) :: kdst_physical
-REAL_T, INTENT(in) :: T_probe_src
-REAL_T, INTENT(in) :: T_probe_dst
-REAL_T, INTENT(in) :: LL
-REAL_T, INTENT(in) :: dxprobe_src
-REAL_T, INTENT(in) :: dxprobe_dst
-REAL_T DTsrc,DTdst,mdotsrc,mdotdst,mdotsum
+integer, INTENT(in) :: interface_mass_transfer_model
+integer, INTENT(in) :: num_materials_in
+integer, INTENT(in) :: num_species_var_in
+integer, INTENT(in) :: ispec
+integer, INTENT(in) :: im_source
+integer, INTENT(in) :: im_dest
+real(amrex_real), INTENT(in) :: xI(SDIM)
+real(amrex_real), INTENT(in) :: TI
+real(amrex_real), INTENT(in) :: molar_mass(num_materials_in)
+real(amrex_real), INTENT(in) :: species_molar_mass(num_species_var_in+1)
+real(amrex_real), INTENT(out) :: mdot
+integer, INTENT(inout) :: mdot_override
+real(amrex_real), INTENT(in) :: ksrc_derived
+real(amrex_real), INTENT(in) :: kdst_derived
+real(amrex_real), INTENT(in) :: ksrc_physical
+real(amrex_real), INTENT(in) :: kdst_physical
+real(amrex_real), INTENT(in) :: T_probe_src
+real(amrex_real), INTENT(in) :: T_probe_dst
+real(amrex_real), INTENT(in) :: LL
+real(amrex_real), INTENT(in) :: dxprobe_src
+real(amrex_real), INTENT(in) :: dxprobe_dst
+real(amrex_real) DTsrc,DTdst,mdotsrc,mdotdst,mdotsum
 
 mdot_override=0
 
@@ -1456,21 +1456,21 @@ subroutine STUB_K_EFFECTIVE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: interface_mass_transfer_model
-INTEGER_T, INTENT(in) :: num_materials_in
-INTEGER_T, INTENT(in) :: num_species_var_in
-INTEGER_T, INTENT(in) :: ireverse
-INTEGER_T, INTENT(in) :: iten
-REAL_T, INTENT(in) :: molar_mass(num_materials_in)
-REAL_T, INTENT(in) :: species_molar_mass(num_species_var_in)
-REAL_T, INTENT(in) :: k_model_predict(2) ! src,dst
-REAL_T, INTENT(inout) :: k_model_correct(2) ! src,dst
-REAL_T, INTENT(in) :: k_physical_base(2) ! src, dst
-REAL_T, INTENT(in) :: T_probe_src
-REAL_T, INTENT(in) :: T_probe_dst
-REAL_T, INTENT(in) :: LL
-REAL_T, INTENT(in) :: dxprobe_src
-REAL_T, INTENT(in) :: dxprobe_dst
+integer, INTENT(in) :: interface_mass_transfer_model
+integer, INTENT(in) :: num_materials_in
+integer, INTENT(in) :: num_species_var_in
+integer, INTENT(in) :: ireverse
+integer, INTENT(in) :: iten
+real(amrex_real), INTENT(in) :: molar_mass(num_materials_in)
+real(amrex_real), INTENT(in) :: species_molar_mass(num_species_var_in)
+real(amrex_real), INTENT(in) :: k_model_predict(2) ! src,dst
+real(amrex_real), INTENT(inout) :: k_model_correct(2) ! src,dst
+real(amrex_real), INTENT(in) :: k_physical_base(2) ! src, dst
+real(amrex_real), INTENT(in) :: T_probe_src
+real(amrex_real), INTENT(in) :: T_probe_dst
+real(amrex_real), INTENT(in) :: LL
+real(amrex_real), INTENT(in) :: dxprobe_src
+real(amrex_real), INTENT(in) :: dxprobe_dst
 
 end subroutine STUB_K_EFFECTIVE
 
@@ -1478,10 +1478,10 @@ subroutine STUB_reference_wavelen(wavelen)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-REAL_T, INTENT(inout) :: wavelen
-REAL_T :: default_wavelen
-INTEGER_T :: dir_local
-INTEGER_T :: gravity_dir
+real(amrex_real), INTENT(inout) :: wavelen
+real(amrex_real) :: default_wavelen
+integer :: dir_local
+integer :: gravity_dir
 
  call fort_derive_gravity_dir(gravity_vector,gravity_dir)
  if ((gravity_dir.ge.1).and.(gravity_dir.le.SDIM)) then
@@ -1521,10 +1521,10 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: iten
-REAL_T, INTENT(in) :: time,temperature
-REAL_T, INTENT(in) :: xpos(SDIM)
-REAL_T, INTENT(inout) :: tension
+integer, INTENT(in) :: iten
+real(amrex_real), INTENT(in) :: time,temperature
+real(amrex_real), INTENT(in) :: xpos(SDIM)
+real(amrex_real), INTENT(inout) :: tension
 
  if ((iten.ge.1).and.(iten.le.num_interfaces)) then
   ! do nothing
@@ -1555,9 +1555,9 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: iten
-REAL_T, INTENT(in) :: temperature
-REAL_T, INTENT(inout) :: latent_heat ! always positive
+integer, INTENT(in) :: iten
+real(amrex_real), INTENT(in) :: temperature
+real(amrex_real), INTENT(inout) :: latent_heat ! always positive
 
  if ((iten.ge.1).and.(iten.le.2*num_interfaces)) then
   ! do nothing
@@ -1585,11 +1585,11 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: cur_time
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(out) :: T0
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(out) :: T0
 
  if (cur_time.ge.0.0d0) then
   ! do nothing
@@ -1613,12 +1613,12 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: cur_time
-REAL_T, INTENT(out) :: V0(SDIM)
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(out) :: V0(SDIM)
 
-INTEGER_T dir
+integer dir
 
  if (cur_time.ge.0.0d0) then
   ! do nothing

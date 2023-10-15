@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,6 +23,7 @@ stop
 
 ! probtype==411 (see run2d/inputs.CAVTEST2D or run3d/inputs.CAVTEST3D)
 module CAV3D_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
@@ -40,9 +40,9 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: part_id
- INTEGER_T, INTENT(in) :: unit_id
- INTEGER_T, INTENT(out) :: file_format
+ integer, INTENT(in) :: part_id
+ integer, INTENT(in) :: unit_id
+ integer, INTENT(out) :: file_format
  character(40) :: casname
 
  file_format=0
@@ -77,16 +77,16 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: nodes(3,3) ! dir,nodenum
- INTEGER_T, INTENT(inout) :: nodemap(3)
- REAL_T a(3),b(3),c(3)
- INTEGER_T inode
- INTEGER_T dir
- INTEGER_T dircrit
- REAL_T mag
- REAL_T xcrit
- REAL_T ncrit
- INTEGER_T swap
+ real(amrex_real), INTENT(in) :: nodes(3,3) ! dir,nodenum
+ integer, INTENT(inout) :: nodemap(3)
+ real(amrex_real) a(3),b(3),c(3)
+ integer inode
+ integer dir
+ integer dircrit
+ real(amrex_real) mag
+ real(amrex_real) xcrit
+ real(amrex_real) ncrit
+ integer swap
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
 
@@ -212,11 +212,11 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: dx_slice
- INTEGER_T, INTENT(inout) :: xmap3D(3)
- REAL_T, INTENT(inout) :: xslice3D(3)
- REAL_T, INTENT(out) :: problo3D(3)
- REAL_T, INTENT(out) :: probhi3D(3)
+ real(amrex_real), INTENT(in) :: dx_slice
+ integer, INTENT(inout) :: xmap3D(3)
+ real(amrex_real), INTENT(inout) :: xslice3D(3)
+ real(amrex_real), INTENT(out) :: problo3D(3)
+ real(amrex_real), INTENT(out) :: probhi3D(3)
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
 
@@ -246,11 +246,11 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: nmat
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(out) :: LS(nmat)
- INTEGER_T im
+ integer, INTENT(in) :: nmat
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(out) :: LS(nmat)
+ integer im
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
 
@@ -278,14 +278,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: nmat
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: dx(SDIM)
- REAL_T, INTENT(in) :: LS(nmat)
- REAL_T, INTENT(out) :: VEL(SDIM)
- INTEGER_T, INTENT(in) :: velsolid_flag
- INTEGER_T dir
+ integer, INTENT(in) :: nmat
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: dx(SDIM)
+ real(amrex_real), INTENT(in) :: LS(nmat)
+ real(amrex_real), INTENT(out) :: VEL(SDIM)
+ integer, INTENT(in) :: velsolid_flag
+ integer dir
 
  if ((velsolid_flag.eq.0).or. &
      (velsolid_flag.eq.1)) then
@@ -320,12 +320,12 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: nmat
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(nmat)
- REAL_T, INTENT(out) :: PRES
- REAL_T ymid
+ integer, INTENT(in) :: nmat
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(nmat)
+ real(amrex_real), INTENT(out) :: PRES
+ real(amrex_real) ymid
 
  ymid=half*(probloy+probhiy)
  if (x(2).le.ymid) then
@@ -345,14 +345,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: bcflag
- INTEGER_T, INTENT(in) :: nmat
- INTEGER_T, INTENT(in) :: nstate_mat
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(nmat)
- REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
- INTEGER_T im,ibase,n
+ integer, INTENT(in) :: bcflag
+ integer, INTENT(in) :: nmat
+ integer, INTENT(in) :: nstate_mat
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(nmat)
+ real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+ integer im,ibase,n
 
  if ((num_materials.eq.3).and. &
      (num_state_material.ge.2).and. &
@@ -386,14 +386,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: nmat
- REAL_T, INTENT(in) :: xwall
- REAL_T, INTENT(in) :: xghost(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(inout) :: LS(nmat)
- REAL_T, INTENT(in) :: LS_in(nmat)
- INTEGER_T, INTENT(in) :: dir,side
- REAL_T, INTENT(in) :: dx(SDIM)
+ integer, INTENT(in) :: nmat
+ real(amrex_real), INTENT(in) :: xwall
+ real(amrex_real), INTENT(in) :: xghost(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(inout) :: LS(nmat)
+ real(amrex_real), INTENT(in) :: LS_in(nmat)
+ integer, INTENT(in) :: dir,side
+ real(amrex_real), INTENT(in) :: dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -413,17 +413,17 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: nmat
- REAL_T, INTENT(in) :: xwall
- REAL_T, INTENT(in) :: xghost(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(nmat)
- REAL_T, INTENT(inout) :: VEL
- REAL_T, INTENT(in) :: VEL_in
- INTEGER_T, INTENT(in) :: veldir,dir,side
- REAL_T, INTENT(in) :: dx(SDIM)
- REAL_T local_VEL(SDIM)
- INTEGER_T velsolid_flag
+ integer, INTENT(in) :: nmat
+ real(amrex_real), INTENT(in) :: xwall
+ real(amrex_real), INTENT(in) :: xghost(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(nmat)
+ real(amrex_real), INTENT(inout) :: VEL
+ real(amrex_real), INTENT(in) :: VEL_in
+ integer, INTENT(in) :: veldir,dir,side
+ real(amrex_real), INTENT(in) :: dx(SDIM)
+ real(amrex_real) local_VEL(SDIM)
+ integer velsolid_flag
 
  velsolid_flag=0
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
@@ -448,15 +448,15 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: nmat
- REAL_T, INTENT(in) :: xwall
- REAL_T, INTENT(in) :: xghost(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(nmat)
- REAL_T, INTENT(inout) :: PRES
- REAL_T, INTENT(in) :: PRES_in
- INTEGER_T, INTENT(in) :: dir,side
- REAL_T, INTENT(in) :: dx(SDIM)
+ integer, INTENT(in) :: nmat
+ real(amrex_real), INTENT(in) :: xwall
+ real(amrex_real), INTENT(in) :: xghost(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(nmat)
+ real(amrex_real), INTENT(inout) :: PRES
+ real(amrex_real), INTENT(in) :: PRES_in
+ integer, INTENT(in) :: dir,side
+ real(amrex_real), INTENT(in) :: dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -478,21 +478,21 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) :: local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
 
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+integer ibase,im_crit
+integer local_bcflag
 
  if (nmat.eq.num_materials) then
   ! do nothing
@@ -532,18 +532,18 @@ INTEGER_T local_bcflag
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: nmat
- INTEGER_T, INTENT(in) :: im
- REAL_T, INTENT(in) :: VFRAC(nmat)
- REAL_T, INTENT(in) :: time
- INTEGER_T, INTENT(in) :: nhalf
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
- REAL_T, INTENT(in) :: temp(nmat)
- REAL_T, INTENT(in) :: den(nmat)
- REAL_T, INTENT(in) :: CV(nmat)
- REAL_T, INTENT(in) :: dt
- REAL_T, INTENT(out) :: heat_source
+ integer, INTENT(in) :: nmat
+ integer, INTENT(in) :: im
+ real(amrex_real), INTENT(in) :: VFRAC(nmat)
+ real(amrex_real), INTENT(in) :: time
+ integer, INTENT(in) :: nhalf
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+ real(amrex_real), INTENT(in) :: temp(nmat)
+ real(amrex_real), INTENT(in) :: den(nmat)
+ real(amrex_real), INTENT(in) :: CV(nmat)
+ real(amrex_real), INTENT(in) :: dt
+ real(amrex_real), INTENT(out) :: heat_source
 
  if ((num_materials.eq.3).and.(probtype.eq.411)) then
   heat_source=zero

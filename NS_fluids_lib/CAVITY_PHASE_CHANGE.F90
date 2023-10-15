@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,19 +23,20 @@ stop
 
 ! probtype==710
 module CAVITY_PHASE_CHANGE_module
+use amrex_fort_module, only : amrex_real
 implicit none                   
 
-REAL_T :: DEF_VAPOR_GAMMA
-INTEGER_T, parameter :: max_sitesnum=1000
-!REAL_T,parameter  :: tmax=116.0d0    ! end of the curve, currently should be 20 higher than tref 
-!REAL_T,parameter  :: tinit=109.0d0
-!REAL_T,parameter  :: tref=100.0d0  
+real(amrex_real) :: DEF_VAPOR_GAMMA
+integer, parameter :: max_sitesnum=1000
+!real(amrex_real),parameter  :: tmax=116.0d0    ! end of the curve, currently should be 20 higher than tref 
+!real(amrex_real),parameter  :: tinit=109.0d0
+!real(amrex_real),parameter  :: tref=100.0d0  
 
 
-INTEGER_T :: sitesnum,sitesnum2,sitesnum3
-REAL_T,allocatable :: sites(:,:),sites2(:,:),sites3(:,:)  ! nucleate sites list
-INTEGER_T,allocatable  :: active_flag(:),active_flag2(:),active_flag3(:)
-INTEGER_T,allocatable  :: flagrecord(:)
+integer :: sitesnum,sitesnum2,sitesnum3
+real(amrex_real),allocatable :: sites(:,:),sites2(:,:),sites3(:,:)  ! nucleate sites list
+integer,allocatable  :: active_flag(:),active_flag2(:),active_flag3(:)
+integer,allocatable  :: flagrecord(:)
 
 
 contains
@@ -44,12 +44,12 @@ contains
 subroutine findmax_dist(flagnum,flaglist,distin,iout)
 implicit none
 
-REAL_T,intent(in) :: distin(8)
-INTEGER_T,intent(in) :: flagnum
-INTEGER_T,intent(in) :: flaglist(1000)
-INTEGER_T            :: i,j
-INTEGER_T,intent(out):: iout
-REAL_T       :: tempdist
+real(amrex_real),intent(in) :: distin(8)
+integer,intent(in) :: flagnum
+integer,intent(in) :: flaglist(1000)
+integer            :: i,j
+integer,intent(out):: iout
+real(amrex_real)       :: tempdist
 
 tempdist=0.0d0
 
@@ -73,12 +73,12 @@ end subroutine findmax_dist
 subroutine distcal(samp,pp,dist,vflag)
 implicit none
 
-REAL_T,intent(in) :: samp(2,8)
-REAL_T,intent(in) :: pp(2)
-REAL_T            :: dist(8)
-INTEGER_T                 :: i
-INTEGER_T,intent(out)     :: vflag
-REAL_T,parameter  :: eps=0.01d0
+real(amrex_real),intent(in) :: samp(2,8)
+real(amrex_real),intent(in) :: pp(2)
+real(amrex_real)            :: dist(8)
+integer                 :: i
+integer,intent(out)     :: vflag
+real(amrex_real),parameter  :: eps=0.01d0
 
 vflag=0
 
@@ -98,19 +98,19 @@ end subroutine distcal
 subroutine INIT_CAVITY_PHASE_CHANGE_MODULE()
  use probcommon_module
 IMPLICIT NONE
-INTEGER_T :: i,j
-REAL_T    :: t
-REAL_T    :: r(2)
-INTEGER_T :: isite
-REAL_T    :: samp(2,8)
-INTEGER_T :: maxi,n
-REAL_T    :: a,b,fo
-REAL_T    :: totdist(8),tempdist(8)
-INTEGER_T :: vflag
-INTEGER_T :: flagnum
-REAL_T    :: tmax    ! end of the curve, currently should be 20 higher than tref 
-REAL_T    :: tinit
-REAL_T    :: tref  
+integer :: i,j
+real(amrex_real)    :: t
+real(amrex_real)    :: r(2)
+integer :: isite
+real(amrex_real)    :: samp(2,8)
+integer :: maxi,n
+real(amrex_real)    :: a,b,fo
+real(amrex_real)    :: totdist(8),tempdist(8)
+integer :: vflag
+integer :: flagnum
+real(amrex_real)    :: tmax    ! end of the curve, currently should be 20 higher than tref 
+real(amrex_real)    :: tinit
+real(amrex_real)    :: tref  
 
 
 DEF_VAPOR_GAMMA =  1.666666667D0
@@ -476,16 +476,16 @@ subroutine Satomodel_nucleation(nucleate_in,xsten,nhalf,make_seed)
 use probcommon_module_types
 use probcommon_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
-INTEGER_T, INTENT(inout) :: make_seed
+integer, INTENT(in) :: nhalf
+real(amrex_real), dimension(-nhalf:nhalf,SDIM), INTENT(in) :: xsten
+integer, INTENT(inout) :: make_seed
 type(nucleation_parm_type_input), INTENT(in) :: nucleate_in
-INTEGER_T    :: i,j,k,im_l,im_s
-INTEGER_T    :: temperature_component 
-INTEGER_T    :: ii
-REAL_T       :: tempt,vf_sol,ls_sol,ls_liq
-REAL_T       :: tempvec1(SDIM),tempvec2(SDIM)
-REAL_T       :: tempdist
+integer    :: i,j,k,im_l,im_s
+integer    :: temperature_component 
+integer    :: ii
+real(amrex_real)       :: tempt,vf_sol,ls_sol,ls_liq
+real(amrex_real)       :: tempvec1(SDIM),tempvec2(SDIM)
+real(amrex_real)       :: tempdist
 
 !  print *,"in Satomodel_nucleation"
  if(axis_dir.eq.8.or.axis_dir.eq.9)then
@@ -669,10 +669,10 @@ use probcommon_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: num_materials_in
-INTEGER_T, INTENT(in) :: num_threads_in
-INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials_in)
-INTEGER_T :: im,iregion,dir
+integer, INTENT(in) :: num_materials_in
+integer, INTENT(in) :: num_threads_in
+integer, INTENT(in) :: constant_density_all_time(num_materials_in)
+integer :: im,iregion,dir
 
  if (num_materials_in.eq.num_materials) then
   ! do nothing
@@ -755,12 +755,12 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: region_id
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: cur_time
-REAL_T, INTENT(out) :: charfn_out
+integer, INTENT(in) :: region_id
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(out) :: charfn_out
 
-REAL_T           :: rtemp
+real(amrex_real)           :: rtemp
 
   if(axis_dir.eq.8)then 
    if(x(SDIM).lt. xblob2.and.x(SDIM).gt.zblob2)then
@@ -832,21 +832,21 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: im
-INTEGER_T, INTENT(in) :: im_solid
-INTEGER_T, INTENT(in) :: near_interface
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: cur_time
-REAL_T, INTENT(in) :: density
-REAL_T, INTENT(in) :: temperature
-REAL_T, INTENT(in) :: temperature_wall
-REAL_T, INTENT(in) :: temperature_wall_max
-REAL_T, INTENT(in) :: temperature_probe
-REAL_T, INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
-REAL_T, INTENT(inout) :: thermal_k
-INTEGER_T :: local1
-REAL_T   :: rtemp
+integer, INTENT(in) :: im
+integer, INTENT(in) :: im_solid
+integer, INTENT(in) :: near_interface
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: cur_time
+real(amrex_real), INTENT(in) :: density
+real(amrex_real), INTENT(in) :: temperature
+real(amrex_real), INTENT(in) :: temperature_wall
+real(amrex_real), INTENT(in) :: temperature_wall_max
+real(amrex_real), INTENT(in) :: temperature_probe
+real(amrex_real), INTENT(in) :: nrm(SDIM) ! nrm points from solid to fluid
+real(amrex_real), INTENT(inout) :: thermal_k
+integer :: local1
+real(amrex_real)   :: rtemp
 
 if(axis_dir.eq.8)then
   if(x(SDIM).lt.zblob2)then
@@ -922,27 +922,27 @@ subroutine find_p_plane_dist_wb(flag,nv,vts,p,dist)
 ! if not, find the closest point of on the boundary 
 implicit none
 
-INTEGER_T,INTENT(in)  :: nv ! number of vertices 
-REAL_T,INTENT(in) :: vts(nv,SDIM)                          
+integer,INTENT(in)  :: nv ! number of vertices 
+real(amrex_real),INTENT(in) :: vts(nv,SDIM)                          
      !vertices corrd in clockwise or counterclockwise
-REAL_T,INTENT(in) :: p(SDIM)
-REAL_T        :: pp(SDIM)
-INTEGER_T             :: i,j
-INTEGER_T,INTENT(in)  :: flag
+real(amrex_real),INTENT(in) :: p(SDIM)
+real(amrex_real)        :: pp(SDIM)
+integer             :: i,j
+integer,INTENT(in)  :: flag
 ! if flag = +1, then counter clockwise
 ! if flag = -1, then clockwise
 ! the normal of the plane always point to positive material.
-REAL_T         :: sign1,sign2,sign3
-REAL_T         :: s1(SDIM),s2(SDIM)
-INTEGER_T              :: isd_flag
-REAL_T         :: dist
-REAL_T         :: dist1(nv)
-REAL_T         :: normal(SDIM)
-REAL_T         :: d
-REAL_T         :: x1temp(SDIM)
-REAL_T         :: x2temp(SDIM)
-REAL_T         :: x3temp(SDIM)
-INTEGER_T      :: dir
+real(amrex_real)         :: sign1,sign2,sign3
+real(amrex_real)         :: s1(SDIM),s2(SDIM)
+integer              :: isd_flag
+real(amrex_real)         :: dist
+real(amrex_real)         :: dist1(nv)
+real(amrex_real)         :: normal(SDIM)
+real(amrex_real)         :: d
+real(amrex_real)         :: x1temp(SDIM)
+real(amrex_real)         :: x2temp(SDIM)
+real(amrex_real)         :: x3temp(SDIM)
+integer      :: dir
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1044,11 +1044,11 @@ end subroutine find_p_plane_dist_wb
 subroutine find_p_plane_dist(p,normal,d,dist)
 implicit none
 
-REAL_T, INTENT(in) :: p(SDIM)
-REAL_T, INTENT(in) :: normal(SDIM)
-REAL_T, INTENT(in) :: d
-REAL_T,INTENT(out)  :: dist
-REAL_T             :: nn
+real(amrex_real), INTENT(in) :: p(SDIM)
+real(amrex_real), INTENT(in) :: normal(SDIM)
+real(amrex_real), INTENT(in) :: d
+real(amrex_real),INTENT(out)  :: dist
+real(amrex_real)             :: nn
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1073,11 +1073,11 @@ subroutine plane_distf(p,normal,d,val)
 implicit none
 
 ! plane level set function 
-REAL_T, INTENT(in) :: p(SDIM)
-REAL_T, INTENT(in) :: normal(SDIM)
-REAL_T, INTENT(in) :: d
+real(amrex_real), INTENT(in) :: p(SDIM)
+real(amrex_real), INTENT(in) :: normal(SDIM)
+real(amrex_real), INTENT(in) :: d
 
-REAL_T             :: val
+real(amrex_real)             :: val
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1092,12 +1092,12 @@ end subroutine plane_distf
 subroutine find_pp_plane(p,normal,d,pp)
 implicit none
 
-REAL_T,INTENT(in)   :: p(SDIM),normal(SDIM)
-REAL_T,INTENT(in)   :: d
-REAL_T              :: pp(SDIM)
+real(amrex_real),INTENT(in)   :: p(SDIM),normal(SDIM)
+real(amrex_real),INTENT(in)   :: d
+real(amrex_real)              :: pp(SDIM)
 
-INTEGER_T                   :: i
-REAL_T              :: s
+integer                   :: i
+real(amrex_real)              :: s
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1125,13 +1125,13 @@ implicit none
 ! for test point p
 ! if \phi(p) >= 0,  flag = 1
 ! if \phi(p) < 0,   flag = -1
-INTEGER_T    ,INTENT(in)   :: flag
-REAL_T, INTENT(in) :: p(SDIM)
-REAL_T             :: normal(SDIM)
-REAL_T             :: d
+integer    ,INTENT(in)   :: flag
+real(amrex_real), INTENT(in) :: p(SDIM)
+real(amrex_real)             :: normal(SDIM)
+real(amrex_real)             :: d
 
-INTEGER_T                  :: i
-REAL_T             :: val
+integer                  :: i
+real(amrex_real)             :: val
 
 if(SDIM .ne. 3)then
  print *,"invalid dimension"
@@ -1171,10 +1171,10 @@ subroutine make_3points_plane(p1,p2,p3,normal,d)
 implicit none
 ! find a plane (normal,d) with 3 points p1,p2,p3
 
-REAL_T, INTENT(in)     :: p1(SDIM),P2(SDIM),p3(SDIM)
+real(amrex_real), INTENT(in)     :: p1(SDIM),P2(SDIM),p3(SDIM)
 
-REAL_T                 :: normal(SDIM)
-REAL_T                 :: d
+real(amrex_real)                 :: normal(SDIM)
+real(amrex_real)                 :: d
 
 if(SDIM .ne. 3)then
  print *,"invalid call make_3points_plane"
@@ -1204,13 +1204,13 @@ implicit none
 ! otherwise
 ! --------> return the distance from x to the cloest point
 
-REAL_T,INTENT(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
-REAL_T                 ::  dist,dist1,dist2
+real(amrex_real),INTENT(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
+real(amrex_real)                 ::  dist,dist1,dist2
 
-REAL_T                 :: diff10,diff21
-REAL_T                 :: x10(SDIM), x21(SDIM)
-INTEGER_T              :: i
-REAL_T                 :: s
+real(amrex_real)                 :: diff10,diff21
+real(amrex_real)                 :: x10(SDIM), x21(SDIM)
+integer              :: i
+real(amrex_real)                 :: s
 
 
 dist = 0.0d0
@@ -1260,11 +1260,11 @@ end subroutine dist_point_to_line
 subroutine crossproduct(p1,p2,p3,oter)
 implicit none
 
-REAL_T,INTENT(in)       :: p1(SDIM),p2(SDIM),p3(SDIM)
-REAL_T,INTENT(out)      :: oter(SDIM)
+real(amrex_real),INTENT(in)       :: p1(SDIM),p2(SDIM),p3(SDIM)
+real(amrex_real),INTENT(out)      :: oter(SDIM)
 
-INTEGER_T                      :: i
-REAL_T                 :: p1p2(SDIM),p1p3(SDIM)
+integer                      :: i
+real(amrex_real)                 :: p1p2(SDIM),p1p3(SDIM)
 
 if(SDIM .ne. 3)then
  print *,"invalid call outerproduct"
@@ -1287,11 +1287,11 @@ end subroutine crossproduct
 subroutine l2norm(x1,x2, x1x2norm)
 implicit none
 
-REAL_T,INTENT(in)  :: x1(SDIM),x2(SDIM)
-REAL_T             :: x1x2norm
+real(amrex_real),INTENT(in)  :: x1(SDIM),x2(SDIM)
+real(amrex_real)             :: x1x2norm
 
-INTEGER_T                  :: i
-REAL_T,allocatable :: diff(:)
+integer                  :: i
+real(amrex_real),allocatable :: diff(:)
 
 x1x2norm = 0.0d0
 allocate(diff(SDIM))
@@ -1330,18 +1330,18 @@ subroutine melting_ls(x1,x2,y1,y2, x_in,dist)
 
 implicit none
 
-REAL_T,INTENT(in)  :: x1,x2,y1,y2
+real(amrex_real),INTENT(in)  :: x1,x2,y1,y2
 ! x1 x2 y1 y2 shape parameter
-REAL_T,INTENT(in)  ::  x_in(SDIM)
-REAL_T,INTENT(out) :: dist
+real(amrex_real),INTENT(in)  ::  x_in(SDIM)
+real(amrex_real),INTENT(out) :: dist
 
-REAL_T             :: x(SDIM)
-REAL_T             :: dist1,dist2,dist3
-REAL_T             :: dist4,dist5
-REAL_T             :: p1(SDIM),p2(SDIM),p3(SDIM)
-REAL_T             :: p4(SDIM),p5(SDIM),p6(SDIM)
-REAL_T             :: ss    ! sign
-INTEGER_T                  :: i
+real(amrex_real)             :: x(SDIM)
+real(amrex_real)             :: dist1,dist2,dist3
+real(amrex_real)             :: dist4,dist5
+real(amrex_real)             :: p1(SDIM),p2(SDIM),p3(SDIM)
+real(amrex_real)             :: p4(SDIM),p5(SDIM),p6(SDIM)
+real(amrex_real)             :: ss    ! sign
+integer                  :: i
 
 p1(1)=0.0d0
 p1(2)=y1
@@ -1399,14 +1399,14 @@ implicit none
 ! otherwise
 ! --------> return the distance from x to the cloest point
 
-REAL_T,INTENT(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
-REAL_T                 ::  dist
+real(amrex_real),INTENT(in)      ::  p1(SDIM),p2(SDIM),x(SDIM)
+real(amrex_real)                 ::  dist
 
 
-REAL_T                 :: diff10,diff21
-REAL_T,allocatable     :: x10(:), x21(:)
-INTEGER_T                      :: i
-REAL_T                 :: s
+real(amrex_real)                 :: diff10,diff21
+real(amrex_real),allocatable     :: x10(:), x21(:)
+integer                      :: i
+real(amrex_real)                 :: s
 
 
 dist = 0.0d0
@@ -1458,10 +1458,10 @@ subroutine dist_cuboid(dif1,dif2,dif3,dif4,dif5,dif6,dist)
 ! dif6=x(SDIM)-hiz
 implicit none
 
-REAL_T,intent(in) :: dif1,dif2,dif3,dif4,dif5,dif6
-REAL_T            :: dist1,dist2,dist3,dist4,dist5,dist6
-REAL_T            :: d1,d2,d3
-REAL_T,intent(out):: dist
+real(amrex_real),intent(in) :: dif1,dif2,dif3,dif4,dif5,dif6
+real(amrex_real)            :: dist1,dist2,dist3,dist4,dist5,dist6
+real(amrex_real)            :: d1,d2,d3
+real(amrex_real),intent(out):: dist
   dist1=dif1
   dist2=dif2
   dist3=dif3
@@ -1517,10 +1517,10 @@ subroutine dist_rectangular(dif1,dif2,dif3,dif4,dist)
 ! dif4=x(2)-hiy
 implicit none
 
-REAL_T,intent(in) :: dif1,dif2,dif3,dif4
-REAL_T            :: dist1,dist2,dist3,dist4
-REAL_T            :: d1,d2
-REAL_T,intent(out):: dist
+real(amrex_real),intent(in) :: dif1,dif2,dif3,dif4
+real(amrex_real)            :: dist1,dist2,dist3,dist4
+real(amrex_real)            :: d1,d2
+real(amrex_real),intent(out):: dist
 
   dist1=dif1
   dist2=dif2
@@ -1578,35 +1578,35 @@ implicit none
 
 ! liquid +  solid - 
 
-INTEGER_T,INTENT(in)      :: coord_type
-INTEGER_T, INTENT(in)     :: cavity_type
-REAL_T,INTENT(in) :: x_in(SDIM)
-REAL_T            :: x(SDIM)
+integer,INTENT(in)      :: coord_type
+integer, INTENT(in)     :: cavity_type
+real(amrex_real),INTENT(in) :: x_in(SDIM)
+real(amrex_real)            :: x(SDIM)
 
-INTEGER_T         :: dist_sign
-REAL_T, INTENT(out) :: dist
-REAL_T            :: dist1,dist2,dist3,dist4,dist5,dist6
-REAL_T            :: x1(SDIM),x2(SDIM),x3(SDIM)
-REAL_T            :: x4(SDIM),x5(SDIM)
-REAL_T            :: trap,vshape,radius,lcinter,radius3d,bb
-INTEGER_T i
+integer         :: dist_sign
+real(amrex_real), INTENT(out) :: dist
+real(amrex_real)            :: dist1,dist2,dist3,dist4,dist5,dist6
+real(amrex_real)            :: x1(SDIM),x2(SDIM),x3(SDIM)
+real(amrex_real)            :: x4(SDIM),x5(SDIM)
+real(amrex_real)            :: trap,vshape,radius,lcinter,radius3d,bb
+integer i
 
-REAL_T            :: pl1(SDIM),pl2(SDIM)
-REAL_T            :: d1,d2,d3
-REAL_T            :: val1,val2 
-REAL_T            :: tp(SDIM)
-REAL_T            :: v1(SDIM),v2(SDIM),v3(SDIM)
-REAL_T            :: plg1(4,SDIM),plg2(4,SDIM)
-REAL_T            :: plg3(3,SDIM),plg4(3,SDIM)
-REAL_T            :: x1temp(SDIM)
-REAL_T            :: x2temp(SDIM)
-REAL_T            :: x3temp(SDIM)
-REAL_T            :: ztest
+real(amrex_real)            :: pl1(SDIM),pl2(SDIM)
+real(amrex_real)            :: d1,d2,d3
+real(amrex_real)            :: val1,val2 
+real(amrex_real)            :: tp(SDIM)
+real(amrex_real)            :: v1(SDIM),v2(SDIM),v3(SDIM)
+real(amrex_real)            :: plg1(4,SDIM),plg2(4,SDIM)
+real(amrex_real)            :: plg3(3,SDIM),plg4(3,SDIM)
+real(amrex_real)            :: x1temp(SDIM)
+real(amrex_real)            :: x2temp(SDIM)
+real(amrex_real)            :: x3temp(SDIM)
+real(amrex_real)            :: ztest
 
-INTEGER_T dir
+integer dir
 
-INTEGER_T,parameter :: debugflag = 0
-REAL_T,   parameter :: scale_factor=1.0d0
+integer,parameter :: debugflag = 0
+real(amrex_real),   parameter :: scale_factor=1.0d0
 dist_sign = 1.0d0
 dist = 0.0d0
 dist1 = 0.0d0
@@ -2534,19 +2534,19 @@ subroutine cavity_distf_12(coord_type, x_in, dist)
 use probcommon_module
 implicit none
 
-INTEGER_T,INTENT(in) :: coord_type
-REAL_T,INTENT(in) :: x_in(SDIM)
-REAL_T            :: x(SDIM)
+integer,INTENT(in) :: coord_type
+real(amrex_real),INTENT(in) :: x_in(SDIM)
+real(amrex_real)            :: x(SDIM)
 
-REAL_T, intent(out) :: dist
-REAL_T            :: dist_temp
-REAL_T            :: dist1,dist2,dist3
-REAL_T            :: dist4,dist5,dist6,dist7
-REAL_T            :: d1,d2,d3
-REAL_T            :: center(SDIM)
-REAL_T            :: film_thickness     ! thickness of the film
-REAL_T, parameter :: scale_factor=1.0d0
-INTEGER_T i
+real(amrex_real), intent(out) :: dist
+real(amrex_real)            :: dist_temp
+real(amrex_real)            :: dist1,dist2,dist3
+real(amrex_real)            :: dist4,dist5,dist6,dist7
+real(amrex_real)            :: d1,d2,d3
+real(amrex_real)            :: center(SDIM)
+real(amrex_real)            :: film_thickness     ! thickness of the film
+real(amrex_real), parameter :: scale_factor=1.0d0
+integer i
 
 film_thickness=radblob4
 
@@ -2844,9 +2844,9 @@ subroutine CAVITY_soliddist(x,dist,im)
 use probcommon_module
 use global_utility_module
 implicit none
-REAL_T, INTENT(in), dimension(SDIM) :: x !spatial coordinates
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(out) :: dist
+real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(out) :: dist
 
 if (num_materials.eq.3) then
  ! do nothing
@@ -2886,12 +2886,12 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(nmat)
-INTEGER_T :: im
-INTEGER_T :: im_solid_materialdist
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(nmat)
+integer :: im
+integer :: im_solid_materialdist
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -2948,14 +2948,14 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -3005,13 +3005,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
-INTEGER_T :: gravity_dir
-REAL_T :: gravity_dz
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
+integer :: gravity_dir
+real(amrex_real) :: gravity_dz
 
 if (num_materials.eq.nmat) then
  ! do nothing
@@ -3043,15 +3043,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase,n
-REAL_T   :: rtemp
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase,n
+real(amrex_real)   :: rtemp
 if (nmat.eq.num_materials) then
  ! do nothing
 else
@@ -3204,14 +3204,14 @@ subroutine CAVITY_PHASE_CHANGE_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) ::  dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) ::  dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -3238,17 +3238,17 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -3286,15 +3286,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -3323,20 +3323,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T :: local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) :: local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -3370,11 +3370,11 @@ end subroutine CAVITY_PHASE_CHANGE_STATE_BC
 subroutine CAVITY_PHASE_CHANGE_velfreestream(problen,local_buffer)
 use probcommon_module
 IMPLICIT NONE
-REAL_T, INTENT(inout) :: local_buffer(2*SDIM)
-REAL_T, INTENT(in)    :: problen(SDIM)
-REAL_T :: buf
-INTEGER_T :: ibuf
-INTEGER_T :: dirbc,side
+real(amrex_real), INTENT(inout) :: local_buffer(2*SDIM)
+real(amrex_real), INTENT(in)    :: problen(SDIM)
+real(amrex_real) :: buf
+integer :: ibuf
+integer :: dirbc,side
 
 if (probtype.eq.710) then
  dirbc=SDIM

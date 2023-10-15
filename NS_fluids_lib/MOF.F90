@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -36,44 +35,45 @@
 !
 
 module geometry_intersect_module
+use amrex_fort_module, only : amrex_real
 
 implicit none
 
-INTEGER_T, PARAMETER :: INTERCEPT_MAXITER=100
-INTEGER_T, PARAMETER :: INTERCEPT_MAXITER_NEWTON=25
+integer, PARAMETER :: INTERCEPT_MAXITER=100
+integer, PARAMETER :: INTERCEPT_MAXITER_NEWTON=25
 
-INTEGER_T, PARAMETER :: maxfacelist=20
-INTEGER_T, PARAMETER :: maxnodelist=20,maxtetlist=15,maxcapfacelist=5
-INTEGER_T, PARAMETER :: maxmappednodes=8
-INTEGER_T, PARAMETER :: n_vol_listmax=400,n_area_listmax=200
+integer, PARAMETER :: maxfacelist=20
+integer, PARAMETER :: maxnodelist=20,maxtetlist=15,maxcapfacelist=5
+integer, PARAMETER :: maxmappednodes=8
+integer, PARAMETER :: n_vol_listmax=400,n_area_listmax=200
 
-INTEGER_T :: geom_nthreads
-INTEGER_T :: geom_nmax
+integer :: geom_nthreads
+integer :: geom_nmax
  ! 4,3,geom_nmax,geom_nthreads
-REAL_T, ALLOCATABLE :: geom_xtetlist_local(:,:,:,:)
-REAL_T, ALLOCATABLE :: geom_xtetlist(:,:,:,:)
-REAL_T, ALLOCATABLE :: geom_xtetlist_old(:,:,:,:)
-REAL_T, ALLOCATABLE :: geom_xtetlist_uncapt(:,:,:,:)
-INTEGER_T, ALLOCATABLE :: mof_calls(:,:)
-INTEGER_T, ALLOCATABLE :: mof_iterations(:,:)
-REAL_T, ALLOCATABLE :: mof_errors(:,:)
+real(amrex_real), ALLOCATABLE :: geom_xtetlist_local(:,:,:,:)
+real(amrex_real), ALLOCATABLE :: geom_xtetlist(:,:,:,:)
+real(amrex_real), ALLOCATABLE :: geom_xtetlist_old(:,:,:,:)
+real(amrex_real), ALLOCATABLE :: geom_xtetlist_uncapt(:,:,:,:)
+integer, ALLOCATABLE :: mof_calls(:,:)
+integer, ALLOCATABLE :: mof_iterations(:,:)
+real(amrex_real), ALLOCATABLE :: mof_errors(:,:)
 
-REAL_T, ALLOCATABLE :: intercept_error_history(:,:)
+real(amrex_real), ALLOCATABLE :: intercept_error_history(:,:)
 
 ! the 3rd component of a facelist is 0 in 2D
 type intersect_type
-  INTEGER_T :: n_nodes,n_tet,n_faces,n_capfaces
-  INTEGER_T :: n_pos_nodes
-  INTEGER_T :: nodelistmap(maxnodelist,3)  
-  INTEGER_T :: nodelist(maxnodelist)
-  INTEGER_T :: tetlist(maxtetlist,4)
-  INTEGER_T :: facelist(maxfacelist,3)
-  INTEGER_T :: aligned(maxfacelist)
-  INTEGER_T :: capfacelist(maxcapfacelist,3)
+  integer :: n_nodes,n_tet,n_faces,n_capfaces
+  integer :: n_pos_nodes
+  integer :: nodelistmap(maxnodelist,3)  
+  integer :: nodelist(maxnodelist)
+  integer :: tetlist(maxtetlist,4)
+  integer :: facelist(maxfacelist,3)
+  integer :: aligned(maxfacelist)
+  integer :: capfacelist(maxcapfacelist,3)
 end type intersect_type
 
 type mapping_type
-  INTEGER_T :: mapped_nodes(maxmappednodes)
+  integer :: mapped_nodes(maxmappednodes)
   type(intersect_type) :: intersect_geometry
 end type mapping_type
 
@@ -91,33 +91,33 @@ type(intersect_type), dimension(3) :: template_tri_plane
 
  !e.g. phi=z-eta(x,y)
 type levelset_parm_type
-INTEGER_T :: ROOT_SDIM ! 1,2,3,.... ROOT_SDIM>=LOCAL_SDIM
-INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
-INTEGER_T :: height_dir !=0,1,2,3,....  height_dir<ROOT_SDIM
-INTEGER_T, pointer :: frozen_parms_flag(:) ! 1...ROOT_SDIM
-REAL_T, pointer :: frozen_parms(:) ! 1...ROOT_SDIM
-INTEGER_T :: signLS
-INTEGER_T :: activeLS
-INTEGER_T :: order
+integer :: ROOT_SDIM ! 1,2,3,.... ROOT_SDIM>=LOCAL_SDIM
+integer :: LOCAL_SDIM ! 1,2,3,....
+integer :: height_dir !=0,1,2,3,....  height_dir<ROOT_SDIM
+integer, pointer :: frozen_parms_flag(:) ! 1...ROOT_SDIM
+real(amrex_real), pointer :: frozen_parms(:) ! 1...ROOT_SDIM
+integer :: signLS
+integer :: activeLS
+integer :: order
 !e.g. sum a_ij x^i y^j i,j=0..order
-REAL_T, pointer, dimension(:) :: LSCOEFF_FLATTEN 
+real(amrex_real), pointer, dimension(:) :: LSCOEFF_FLATTEN 
 end type levelset_parm_type
 
 type levelset_array_parm_type
-INTEGER_T :: nLS
-INTEGER_T :: xkL
-INTEGER_T :: xkU
-INTEGER_T :: k_reduce
-INTEGER_T :: S_quad_type
+integer :: nLS
+integer :: xkL
+integer :: xkU
+integer :: k_reduce
+integer :: S_quad_type
 type(levelset_parm_type), pointer, dimension(:) :: LS_array !1..nLS
 end type levelset_array_parm_type
 
 type function_parm_type
-INTEGER_T :: ROOT_SDIM ! 1,2,3,.... ROOT_SDIM>=LOCAL_SDIM
-INTEGER_T :: LOCAL_SDIM ! 1,2,3,....
-INTEGER_T :: order
+integer :: ROOT_SDIM ! 1,2,3,.... ROOT_SDIM>=LOCAL_SDIM
+integer :: LOCAL_SDIM ! 1,2,3,....
+integer :: order
 !e.g. sum a_{i,j,k} x^i y^j z^k i,j,k=0..order
-REAL_T, pointer, dimension(:) :: FNCOEFF_FLATTEN
+real(amrex_real), pointer, dimension(:) :: FNCOEFF_FLATTEN
 ! 1..ROOT_SDIM
 type(levelset_array_parm_type), pointer, dimension(:) :: LS_FN_array 
 end type function_parm_type
@@ -130,7 +130,7 @@ IMPLICIT NONE
 type(intersect_type), INTENT(in) :: source
 type(intersect_type), INTENT(out) :: dest
 
-INTEGER_T i,dir
+integer i,dir
 
  dest%n_nodes=source%n_nodes
  dest%n_tet=source%n_tet
@@ -192,8 +192,8 @@ IMPLICIT NONE
 
 type(intersect_type), INTENT(in) :: source
 type(intersect_type), INTENT(out) :: dest
-INTEGER_T, INTENT(in) :: sdim
-INTEGER_T :: i,dir
+integer, INTENT(in) :: sdim
+integer :: i,dir
 
  if ((sdim.ne.2).and.(sdim.ne.3)) then
   print *,"sdim invalid"
@@ -229,15 +229,15 @@ subroutine add_to_hex(gridmap,template_geom)
 IMPLICIT NONE
 
 type(intersect_type), INTENT(in) :: template_geom
-INTEGER_T, INTENT(in) :: gridmap(2,2,2)
-INTEGER_T :: mapped_nodes(maxmappednodes)
-INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: nn,n_nodes,inode,checksum
-INTEGER_T :: igrid_node
-INTEGER_T :: jgrid_node
-INTEGER_T :: kgrid_node
-INTEGER_T :: i_power
-INTEGER_T :: i_map
+integer, INTENT(in) :: gridmap(2,2,2)
+integer :: mapped_nodes(maxmappednodes)
+integer :: power2(maxmappednodes)
+integer :: nn,n_nodes,inode,checksum
+integer :: igrid_node
+integer :: jgrid_node
+integer :: kgrid_node
+integer :: i_power
+integer :: i_map
 
  power2(1)=1
  do i_power=2,maxmappednodes
@@ -295,12 +295,12 @@ subroutine add_to_tet(linemap,template_geom)
 IMPLICIT NONE
 
 type(intersect_type), INTENT(in) :: template_geom
-INTEGER_T, INTENT(in) :: linemap(4)
-INTEGER_T :: mapped_nodes(maxmappednodes)
-INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: nn,n_nodes,inode,checksum
-INTEGER_T :: i_power
-INTEGER_T :: i_map
+integer, INTENT(in) :: linemap(4)
+integer :: mapped_nodes(maxmappednodes)
+integer :: power2(maxmappednodes)
+integer :: nn,n_nodes,inode,checksum
+integer :: i_power
+integer :: i_map
 
  power2(1)=1
  do i_power=2,maxmappednodes
@@ -354,12 +354,12 @@ subroutine add_to_tri(linemap,template_geom)
 IMPLICIT NONE
 
 type(intersect_type), INTENT(in) :: template_geom
-INTEGER_T, INTENT(in) :: linemap(3)
-INTEGER_T :: mapped_nodes(maxmappednodes)
-INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: nn,n_nodes,inode,checksum
-INTEGER_T :: i_power
-INTEGER_T :: i_map
+integer, INTENT(in) :: linemap(3)
+integer :: mapped_nodes(maxmappednodes)
+integer :: power2(maxmappednodes)
+integer :: nn,n_nodes,inode,checksum
+integer :: i_power
+integer :: i_map
 
  power2(1)=1
  do i_power=2,maxmappednodes
@@ -414,14 +414,14 @@ subroutine add_to_rec(gridmap,template_geom)
 IMPLICIT NONE
 
 type(intersect_type), INTENT(in) :: template_geom
-INTEGER_T, INTENT(in) :: gridmap(2,2)
-INTEGER_T :: mapped_nodes(maxmappednodes)
-INTEGER_T :: power2(maxmappednodes)
-INTEGER_T :: nn,n_nodes,inode,checksum
-INTEGER_T :: igrid_node
-INTEGER_T :: jgrid_node
-INTEGER_T :: i_power
-INTEGER_T :: i_map
+integer, INTENT(in) :: gridmap(2,2)
+integer :: mapped_nodes(maxmappednodes)
+integer :: power2(maxmappednodes)
+integer :: nn,n_nodes,inode,checksum
+integer :: igrid_node
+integer :: jgrid_node
+integer :: i_power
+integer :: i_map
 
  if (maxmappednodes.lt.4) then
   print *,"maxmappednodes invalid"
@@ -492,13 +492,13 @@ subroutine init_intersect_type(template_geom,n_nodes,n_faces, &
   aligned_array,capface_array,sdim)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: n_nodes,n_faces,n_capfaces,n_pos_nodes,sdim
-INTEGER_T, INTENT(in) :: node_array(n_nodes)
-INTEGER_T, INTENT(in) :: face_array(3*n_faces)
-INTEGER_T, INTENT(in) :: aligned_array(n_faces)
-INTEGER_T, INTENT(in) :: capface_array(3*n_capfaces)
-INTEGER_T :: i,j,icomp,dir,firstnode,secondnode
-INTEGER_T :: rawnode,found,itet
+integer, INTENT(in) :: n_nodes,n_faces,n_capfaces,n_pos_nodes,sdim
+integer, INTENT(in) :: node_array(n_nodes)
+integer, INTENT(in) :: face_array(3*n_faces)
+integer, INTENT(in) :: aligned_array(n_faces)
+integer, INTENT(in) :: capface_array(3*n_capfaces)
+integer :: i,j,icomp,dir,firstnode,secondnode
+integer :: rawnode,found,itet
 
 type(intersect_type), INTENT(out) :: template_geom
 
@@ -653,49 +653,49 @@ end subroutine init_intersect_type
 subroutine init_geometry_tables()
 IMPLICIT NONE
 
-INTEGER_T i,j,k,n,sdim,n_nodes,n_faces,n_capfaces,n_pos_nodes
-INTEGER_T ii,jj,kk
-INTEGER_T node_array3(3)
-INTEGER_T node_array4(4)
-INTEGER_T node_array5(5)
-INTEGER_T node_array6(6)
-INTEGER_T node_array8(8)
-INTEGER_T node_array10(10)
-INTEGER_T node_array11(11)
-INTEGER_T face_array2(6)
-INTEGER_T face_array3(9)
-INTEGER_T face_array4(12)
-INTEGER_T face_array6(18)
-INTEGER_T face_array7(21)
-INTEGER_T face_array10(30)
-INTEGER_T face_array12(36)
-INTEGER_T face_array13(39)
-INTEGER_T face_array14(42)
-INTEGER_T face_array15(45)
-INTEGER_T capface_array1(3)
-INTEGER_T capface_array2(6)
-INTEGER_T capface_array3(9)
-INTEGER_T capface_array4(12)
-INTEGER_T aligned_array2(2)
-INTEGER_T aligned_array3(3)
-INTEGER_T aligned_array4(4)
-INTEGER_T aligned_array6(6)
-INTEGER_T aligned_array7(7)
-INTEGER_T aligned_array10(10)
-INTEGER_T aligned_array12(12)
-INTEGER_T aligned_array13(13)
-INTEGER_T aligned_array14(14)
-INTEGER_T aligned_array15(15)
+integer i,j,k,n,sdim,n_nodes,n_faces,n_capfaces,n_pos_nodes
+integer ii,jj,kk
+integer node_array3(3)
+integer node_array4(4)
+integer node_array5(5)
+integer node_array6(6)
+integer node_array8(8)
+integer node_array10(10)
+integer node_array11(11)
+integer face_array2(6)
+integer face_array3(9)
+integer face_array4(12)
+integer face_array6(18)
+integer face_array7(21)
+integer face_array10(30)
+integer face_array12(36)
+integer face_array13(39)
+integer face_array14(42)
+integer face_array15(45)
+integer capface_array1(3)
+integer capface_array2(6)
+integer capface_array3(9)
+integer capface_array4(12)
+integer aligned_array2(2)
+integer aligned_array3(3)
+integer aligned_array4(4)
+integer aligned_array6(6)
+integer aligned_array7(7)
+integer aligned_array10(10)
+integer aligned_array12(12)
+integer aligned_array13(13)
+integer aligned_array14(14)
+integer aligned_array15(15)
 
-INTEGER_T inode
-INTEGER_T basegridmap(2,2,2)
-INTEGER_T basegridmap2d(2,2)
-INTEGER_T baselinemap(4)
-INTEGER_T rotmap(2,2,2,0:3)
-INTEGER_T rotmap2d(2,2,0:3)
-INTEGER_T flipx,flipy,flipz
-INTEGER_T rotatex,rotatey,rotatez
-INTEGER_T i1,i2,i3,i4,npos,nrot
+integer inode
+integer basegridmap(2,2,2)
+integer basegridmap2d(2,2)
+integer baselinemap(4)
+integer rotmap(2,2,2,0:3)
+integer rotmap2d(2,2,0:3)
+integer flipx,flipy,flipz
+integer rotatex,rotatey,rotatez
+integer i1,i2,i3,i4,npos,nrot
 
  do i=1,256
  do j=1,8
@@ -1248,32 +1248,32 @@ subroutine create_xnodelist( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
+integer, INTENT(in) :: sdim
 
-INTEGER_T, INTENT(inout) :: n_vol
-INTEGER_T, INTENT(inout) :: n_area
-REAL_T, INTENT(inout) :: cum_volume
-REAL_T, INTENT(inout) :: cum_area
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
+integer, INTENT(inout) :: n_vol
+integer, INTENT(inout) :: n_area
+real(amrex_real), INTENT(inout) :: cum_volume
+real(amrex_real), INTENT(inout) :: cum_area
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
 
-INTEGER_T, INTENT(in) :: shapeflag
-INTEGER_T, INTENT(in) :: nodedomain
+integer, INTENT(in) :: shapeflag
+integer, INTENT(in) :: nodedomain
 
-INTEGER_T, INTENT(in) :: checksum,maxnode
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-REAL_T, INTENT(in) :: phinode(nodedomain)
-INTEGER_T mapped_nodes(nodedomain)
-INTEGER_T n_nodes,dir,index1,index2,n_tet,n_capfaces
-INTEGER_T i
-INTEGER_T j_tet_node
-REAL_T x1(sdim),x2(sdim)
-REAL_T phi1,phi2
-REAL_T xtet(sdim+1,sdim)
-REAL_T xtri(sdim,sdim)
-REAL_T local_volume,local_area
-REAL_T local_centroid(sdim)
-REAL_T xnodelist_array(maxnodelist,sdim)
-INTEGER_T local_mapped_node
+integer, INTENT(in) :: checksum,maxnode
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+integer mapped_nodes(nodedomain)
+integer n_nodes,dir,index1,index2,n_tet,n_capfaces
+integer i
+integer j_tet_node
+real(amrex_real) x1(sdim),x2(sdim)
+real(amrex_real) phi1,phi2
+real(amrex_real) xtet(sdim+1,sdim)
+real(amrex_real) xtri(sdim,sdim)
+real(amrex_real) local_volume,local_area
+real(amrex_real) local_centroid(sdim)
+real(amrex_real) xnodelist_array(maxnodelist,sdim)
+integer local_mapped_node
 type(intersect_type) :: template_geom
 
  if (sdim.eq.3) then
@@ -1487,25 +1487,25 @@ subroutine create_xnodelist_simple( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
+integer, INTENT(in) :: sdim
 
-INTEGER_T, INTENT(inout) :: n_vol
-REAL_T, INTENT(inout) :: cum_volume
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
+integer, INTENT(inout) :: n_vol
+real(amrex_real), INTENT(inout) :: cum_volume
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
 
-INTEGER_T, INTENT(in) :: checksum,maxnode,shapeflag,nodedomain
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-REAL_T, INTENT(in) :: phinode(nodedomain)
-INTEGER_T mapped_nodes(nodedomain)
-INTEGER_T n_nodes,dir,index1,index2,n_tet
-INTEGER_T i
-INTEGER_T j_tet_node
-REAL_T x1(sdim),x2(sdim)
-REAL_T phi1,phi2
-REAL_T xtet(sdim+1,sdim)
-REAL_T local_volume
-REAL_T local_centroid(sdim)
-REAL_T xnodelist_array(maxnodelist,sdim)
+integer, INTENT(in) :: checksum,maxnode,shapeflag,nodedomain
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+integer mapped_nodes(nodedomain)
+integer n_nodes,dir,index1,index2,n_tet
+integer i
+integer j_tet_node
+real(amrex_real) x1(sdim),x2(sdim)
+real(amrex_real) phi1,phi2
+real(amrex_real) xtet(sdim+1,sdim)
+real(amrex_real) local_volume
+real(amrex_real) local_centroid(sdim)
+real(amrex_real) xnodelist_array(maxnodelist,sdim)
 type(intersect_type) :: template_geom
 
  if (sdim.eq.3) then
@@ -1660,30 +1660,30 @@ subroutine create_xnodelist_and_map( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
-INTEGER_T, INTENT(in) :: normdir
-REAL_T, INTENT(in) :: coeff(2)
-INTEGER_T, INTENT(inout) :: n_vol
-REAL_T, INTENT(inout) :: cum_volume
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
-REAL_T, INTENT(inout) :: cum_volume_map
-REAL_T, INTENT(inout) :: cum_centroid_map(sdim)
+integer, INTENT(in) :: sdim
+integer, INTENT(in) :: normdir
+real(amrex_real), INTENT(in) :: coeff(2)
+integer, INTENT(inout) :: n_vol
+real(amrex_real), INTENT(inout) :: cum_volume
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
+real(amrex_real), INTENT(inout) :: cum_volume_map
+real(amrex_real), INTENT(inout) :: cum_centroid_map(sdim)
 
-INTEGER_T, INTENT(in) :: checksum,maxnode,shapeflag,nodedomain
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-REAL_T, INTENT(in) :: phinode(nodedomain)
-INTEGER_T mapped_nodes(nodedomain)
-INTEGER_T n_nodes,dir,index1,index2,n_tet
-INTEGER_T i
-INTEGER_T j_tet_node
-REAL_T x1(sdim),x2(sdim)
-REAL_T phi1,phi2
-REAL_T xtet(sdim+1,sdim)
-REAL_T local_volume
-REAL_T local_centroid(sdim)
-REAL_T local_volume_map
-REAL_T local_centroid_map(sdim)
-REAL_T xnodelist_array(maxnodelist,sdim)
+integer, INTENT(in) :: checksum,maxnode,shapeflag,nodedomain
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+integer mapped_nodes(nodedomain)
+integer n_nodes,dir,index1,index2,n_tet
+integer i
+integer j_tet_node
+real(amrex_real) x1(sdim),x2(sdim)
+real(amrex_real) phi1,phi2
+real(amrex_real) xtet(sdim+1,sdim)
+real(amrex_real) local_volume
+real(amrex_real) local_centroid(sdim)
+real(amrex_real) local_volume_map
+real(amrex_real) local_centroid_map(sdim)
+real(amrex_real) xnodelist_array(maxnodelist,sdim)
 type(intersect_type) :: template_geom
 
  if ((normdir.lt.0).or.(normdir.ge.sdim)) then
@@ -1849,19 +1849,19 @@ subroutine increment_volume( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
+integer, INTENT(in) :: sdim
 
-INTEGER_T, INTENT(inout) :: n_vol,n_area
-REAL_T, INTENT(inout) :: cum_volume,cum_area
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
+integer, INTENT(inout) :: n_vol,n_area
+real(amrex_real), INTENT(inout) :: cum_volume,cum_area
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
 
-INTEGER_T, INTENT(in) :: nodedomain
-REAL_T, INTENT(in) :: phinode(nodedomain)
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-INTEGER_T maxchecksum,checksum,power2,n
-REAL_T phimax
-INTEGER_T maxnode,n_nodes
-INTEGER_T, PARAMETER :: shapeflag=1  !tetrahedron
+integer, INTENT(in) :: nodedomain
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+integer maxchecksum,checksum,power2,n
+real(amrex_real) phimax
+integer maxnode,n_nodes
+integer, PARAMETER :: shapeflag=1  !tetrahedron
 
  if (nodedomain.ne.sdim+1) then
   print *,"nodedomain invalid"
@@ -1934,19 +1934,19 @@ subroutine increment_volume_simple( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
+integer, INTENT(in) :: sdim
 
-INTEGER_T, INTENT(inout) ::  n_vol
-REAL_T, INTENT(inout) :: cum_volume
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
+integer, INTENT(inout) ::  n_vol
+real(amrex_real), INTENT(inout) :: cum_volume
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
 
-INTEGER_T, INTENT(in) :: nodedomain
-REAL_T, INTENT(in) :: phinode(nodedomain)
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-INTEGER_T maxchecksum,checksum,power2,n
-REAL_T phimax
-INTEGER_T maxnode,n_nodes
-INTEGER_T, PARAMETER :: shapeflag=1 !tetrahedron
+integer, INTENT(in) :: nodedomain
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+integer maxchecksum,checksum,power2,n
+real(amrex_real) phimax
+integer maxnode,n_nodes
+integer, PARAMETER :: shapeflag=1 !tetrahedron
 
  if (nodedomain.ne.sdim+1) then
   print *,"nodedomain invalid"
@@ -2022,23 +2022,23 @@ subroutine increment_volume_and_map( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
-INTEGER_T, INTENT(in) :: normdir
-REAL_T, INTENT(in) :: coeff(2)
+integer, INTENT(in) :: sdim
+integer, INTENT(in) :: normdir
+real(amrex_real), INTENT(in) :: coeff(2)
 
-INTEGER_T, INTENT(inout) :: n_vol
-REAL_T, INTENT(inout) :: cum_volume
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
-REAL_T, INTENT(inout) :: cum_volume_map
-REAL_T, INTENT(inout) :: cum_centroid_map(sdim)
+integer, INTENT(inout) :: n_vol
+real(amrex_real), INTENT(inout) :: cum_volume
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
+real(amrex_real), INTENT(inout) :: cum_volume_map
+real(amrex_real), INTENT(inout) :: cum_centroid_map(sdim)
 
-INTEGER_T, INTENT(in) :: nodedomain
-REAL_T, INTENT(in) :: phinode(nodedomain)
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-INTEGER_T maxchecksum,checksum,power2,n
-REAL_T phimax
-INTEGER_T maxnode,n_nodes
-INTEGER_T, PARAMETER :: shapeflag=1 !tetrahedron
+integer, INTENT(in) :: nodedomain
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+integer maxchecksum,checksum,power2,n
+real(amrex_real) phimax
+integer maxnode,n_nodes
+integer, PARAMETER :: shapeflag=1 !tetrahedron
 
  if ((normdir.lt.0).or.(normdir.ge.sdim)) then
   print *,"normdir invalid"
@@ -2125,29 +2125,29 @@ subroutine intersection_volume( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
+integer, INTENT(in) :: sdim
 
-INTEGER_T :: n_vol,n_area
-REAL_T, INTENT(out) :: cum_volume,cum_area
-REAL_T, INTENT(out) :: cum_centroid(sdim)
+integer :: n_vol,n_area
+real(amrex_real), INTENT(out) :: cum_volume,cum_area
+real(amrex_real), INTENT(out) :: cum_centroid(sdim)
 
-INTEGER_T, INTENT(in) :: nodedomain
-INTEGER_T, INTENT(in) :: fullelementfast
-INTEGER_T, INTENT(in) :: linearcut
-INTEGER_T, PARAMETER :: bfact=1
-REAL_T, INTENT(in) :: phinode(nodedomain)
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-INTEGER_T maxchecksum,power2
-REAL_T xsten_grid(-3:3,sdim)
-REAL_T dxgrid(sdim)
-INTEGER_T shapeflag
-INTEGER_T, PARAMETER :: symmetry_flag=0
-INTEGER_T ntetbox,dir
-REAL_T phimax
-INTEGER_T checksum,maxnode,n,n_nodes,id,sub_nodedomain
-REAL_T xx(sdim+1,sdim)
-REAL_T ls(sdim+1)
-INTEGER_T, PARAMETER :: nhalf=3
+integer, INTENT(in) :: nodedomain
+integer, INTENT(in) :: fullelementfast
+integer, INTENT(in) :: linearcut
+integer, PARAMETER :: bfact=1
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+integer maxchecksum,power2
+real(amrex_real) xsten_grid(-3:3,sdim)
+real(amrex_real) dxgrid(sdim)
+integer shapeflag
+integer, PARAMETER :: symmetry_flag=0
+integer ntetbox,dir
+real(amrex_real) phimax
+integer checksum,maxnode,n,n_nodes,id,sub_nodedomain
+real(amrex_real) xx(sdim+1,sdim)
+real(amrex_real) ls(sdim+1)
+integer, PARAMETER :: nhalf=3
 
  call get_ntetbox(ntetbox,symmetry_flag,sdim)
 
@@ -2324,26 +2324,26 @@ subroutine intersection_volume_simple( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
+integer, INTENT(in) :: sdim
 
-INTEGER_T :: n_vol
-REAL_T, INTENT(inout) :: cum_volume
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
+integer :: n_vol
+real(amrex_real), INTENT(inout) :: cum_volume
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
 
-INTEGER_T, INTENT(in) :: nodedomain
-INTEGER_T :: bfact
-REAL_T, INTENT(in) :: phinode(nodedomain)
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-INTEGER_T maxchecksum,power2
-REAL_T xsten_grid(-3:3,sdim)
-REAL_T dxgrid(sdim)
-INTEGER_T symmetry_flag,ntetbox,dir
-REAL_T phimax
-INTEGER_T checksum,maxnode,n,n_nodes,id,sub_nodedomain
-REAL_T xx(sdim+1,sdim)
-REAL_T ls(sdim+1)
-INTEGER_T nhalf
-INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
+integer, INTENT(in) :: nodedomain
+integer :: bfact
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+integer maxchecksum,power2
+real(amrex_real) xsten_grid(-3:3,sdim)
+real(amrex_real) dxgrid(sdim)
+integer symmetry_flag,ntetbox,dir
+real(amrex_real) phimax
+integer checksum,maxnode,n,n_nodes,id,sub_nodedomain
+real(amrex_real) xx(sdim+1,sdim)
+real(amrex_real) ls(sdim+1)
+integer nhalf
+integer, PARAMETER :: shapeflag=0 !regular hexahedron
 
  nhalf=3
 
@@ -2484,29 +2484,29 @@ subroutine intersection_volume_and_map( &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: sdim
-INTEGER_T, INTENT(in) :: normdir
-REAL_T, INTENT(in) :: coeff(2)
-INTEGER_T :: n_vol
-REAL_T, INTENT(inout) :: cum_volume
-REAL_T, INTENT(inout) :: cum_centroid(sdim)
-REAL_T, INTENT(inout) :: cum_volume_map
-REAL_T, INTENT(inout) :: cum_centroid_map(sdim)
+integer, INTENT(in) :: sdim
+integer, INTENT(in) :: normdir
+real(amrex_real), INTENT(in) :: coeff(2)
+integer :: n_vol
+real(amrex_real), INTENT(inout) :: cum_volume
+real(amrex_real), INTENT(inout) :: cum_centroid(sdim)
+real(amrex_real), INTENT(inout) :: cum_volume_map
+real(amrex_real), INTENT(inout) :: cum_centroid_map(sdim)
 
-INTEGER_T, INTENT(in) :: nodedomain
-INTEGER_T :: bfact
-REAL_T, INTENT(in) :: phinode(nodedomain)
-REAL_T, INTENT(in) :: xnode(nodedomain,sdim)
-INTEGER_T maxchecksum,power2
-REAL_T xsten_grid(-3:3,sdim)
-REAL_T dxgrid(sdim)
-INTEGER_T symmetry_flag,ntetbox,dir
-REAL_T phimax
-INTEGER_T checksum,maxnode,n,n_nodes,id,sub_nodedomain
-REAL_T xx(sdim+1,sdim)
-REAL_T ls(sdim+1)
-INTEGER_T nhalf
-INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
+integer, INTENT(in) :: nodedomain
+integer :: bfact
+real(amrex_real), INTENT(in) :: phinode(nodedomain)
+real(amrex_real), INTENT(in) :: xnode(nodedomain,sdim)
+integer maxchecksum,power2
+real(amrex_real) xsten_grid(-3:3,sdim)
+real(amrex_real) dxgrid(sdim)
+integer symmetry_flag,ntetbox,dir
+real(amrex_real) phimax
+integer checksum,maxnode,n,n_nodes,id,sub_nodedomain
+real(amrex_real) xx(sdim+1,sdim)
+real(amrex_real) ls(sdim+1)
+integer nhalf
+integer, PARAMETER :: shapeflag=0 !regular hexahedron
 
  if ((normdir.lt.0).or.(normdir.ge.sdim)) then
   print *,"normdir invalid"
@@ -2662,9 +2662,9 @@ end subroutine intersection_volume_and_map
       subroutine angle_to_slope(angle,nslope,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(out) :: nslope(sdim)
-      REAL_T, INTENT(in) :: angle(sdim-1)
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(out) :: nslope(sdim)
+      real(amrex_real), INTENT(in) :: angle(sdim-1)
 
       if (sdim.eq.3) then
        nslope(sdim)=cos(angle(sdim-1))
@@ -2690,28 +2690,28 @@ end subroutine intersection_volume_and_map
         area,volall,cenall,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
+      integer, INTENT(in) :: bfact
 
-      INTEGER_T, INTENT(in) :: sdim,nhalf
-      REAL_T, INTENT(in) :: lnode(4*(sdim-1))
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T, INTENT(in) :: xgrid(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dxgrid(sdim)
-      REAL_T, INTENT(out) :: volumedark
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T, INTENT(out) :: volall,area
-      REAL_T, INTENT(out) :: cenall(sdim)
-      REAL_T centroididdark(sdim)
-      REAL_T xx(sdim+1,sdim)
-      REAL_T lsdark(sdim+1)
-      REAL_T volumeiddark
-      REAL_T areaiddark
-      INTEGER_T j_dir
-      INTEGER_T i_grid_node
-      INTEGER_T j_grid_node
-      INTEGER_T k_grid_node
-      INTEGER_T id,symmetry_flag,ntetbox
-      INTEGER_T power2,inode,nplus,nminus,ndark,sumdark
+      integer, INTENT(in) :: sdim,nhalf
+      real(amrex_real), INTENT(in) :: lnode(4*(sdim-1))
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real), INTENT(in) :: xgrid(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dxgrid(sdim)
+      real(amrex_real), INTENT(out) :: volumedark
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real), INTENT(out) :: volall,area
+      real(amrex_real), INTENT(out) :: cenall(sdim)
+      real(amrex_real) centroididdark(sdim)
+      real(amrex_real) xx(sdim+1,sdim)
+      real(amrex_real) lsdark(sdim+1)
+      real(amrex_real) volumeiddark
+      real(amrex_real) areaiddark
+      integer j_dir
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
+      integer id,symmetry_flag,ntetbox
+      integer power2,inode,nplus,nminus,ndark,sumdark
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid cell_intersection_grid"
@@ -2846,21 +2846,21 @@ end subroutine intersection_volume_and_map
        centroiddark,area,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
+      integer, INTENT(in) :: sdim
 
-      REAL_T xtrilist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T xint(sdim+1,sdim)
-      REAL_T, INTENT(out) :: volumedark,area
-      REAL_T volumelistdark,arealist
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T centroidlistdark(sdim)
+      real(amrex_real) xtrilist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real) xint(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: volumedark,area
+      real(amrex_real) volumelistdark,arealist
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real) centroidlistdark(sdim)
 
-      INTEGER_T i_tet_node
-      INTEGER_T n,nlist,narea
-      INTEGER_T j_dir
+      integer i_tet_node
+      integer n,nlist,narea
+      integer j_dir
 
       if (sdim.ne.2) then
        print *,"sdim invalid"
@@ -2922,21 +2922,21 @@ end subroutine intersection_volume_and_map
        centroiddark,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
+      integer, INTENT(in) :: sdim
 
-      REAL_T xtrilist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T xint(sdim+1,sdim)
-      REAL_T, INTENT(out) :: volumedark
-      REAL_T volumelistdark
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T centroidlistdark(sdim)
+      real(amrex_real) xtrilist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real) xint(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: volumedark
+      real(amrex_real) volumelistdark
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real) centroidlistdark(sdim)
 
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T n,nlist,narea
+      integer i_tet_node
+      integer j_dir
+      integer n,nlist,narea
 
       if (sdim.ne.2) then
        print *,"sdim invalid"
@@ -2990,27 +2990,27 @@ end subroutine intersection_volume_and_map
        sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: normdir
-      REAL_T, INTENT(in) :: coeff(2)
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: normdir
+      real(amrex_real), INTENT(in) :: coeff(2)
 
-      REAL_T xtrilist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T xint(sdim+1,sdim)
-      REAL_T, INTENT(out) :: volumedark
-      REAL_T volumelistdark
-      REAL_T, INTENT(out) :: volumedark_map
-      REAL_T volumelistdark_map
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T centroidlistdark(sdim)
-      REAL_T, INTENT(out) :: centroiddark_map(sdim)
-      REAL_T centroidlistdark_map(sdim)
+      real(amrex_real) xtrilist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real) xint(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: volumedark
+      real(amrex_real) volumelistdark
+      real(amrex_real), INTENT(out) :: volumedark_map
+      real(amrex_real) volumelistdark_map
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real) centroidlistdark(sdim)
+      real(amrex_real), INTENT(out) :: centroiddark_map(sdim)
+      real(amrex_real) centroidlistdark_map(sdim)
 
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T n,nlist,narea
+      integer i_tet_node
+      integer j_dir
+      integer n,nlist,narea
 
       if (sdim.ne.2) then
        print *,"sdim invalid"
@@ -3079,16 +3079,16 @@ end subroutine intersection_volume_and_map
                     nlist_alloc,nlist,xarealist,narea,sdim)
       IMPLICIT NONE 
   
-      INTEGER_T, INTENT(in) :: nlist_alloc 
-      INTEGER_T, INTENT(in) :: sdim 
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T, INTENT(out) :: xtrilist(sdim+1,sdim,nlist_alloc)
-      REAL_T, INTENT(out) :: xarealist(2,2,MAXAREA)
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T, INTENT(out) :: narea
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
+      integer, INTENT(in) :: nlist_alloc 
+      integer, INTENT(in) :: sdim 
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: xtrilist(sdim+1,sdim,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xarealist(2,2,MAXAREA)
+      integer, INTENT(out) :: nlist
+      integer, INTENT(out) :: narea
+      integer i_tet_node
+      integer j_dir
 
       if (sdim.ne.2) then
        print *,"sdim invalid list_tris"
@@ -3162,13 +3162,13 @@ end subroutine intersection_volume_and_map
       subroutine get_xbounds(x,xmin,xmax,dxmax,npoints,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: npoints,sdim
-      REAL_T, INTENT(in) :: x(npoints,sdim)
-      REAL_T, INTENT(out) :: xmin(sdim)
-      REAL_T, INTENT(out) :: xmax(sdim)
-      REAL_T, INTENT(out) :: dxmax
-      REAL_T :: dxtrial
-      INTEGER_T i,dir,dir2
+      integer, INTENT(in) :: npoints,sdim
+      real(amrex_real), INTENT(in) :: x(npoints,sdim)
+      real(amrex_real), INTENT(out) :: xmin(sdim)
+      real(amrex_real), INTENT(out) :: xmax(sdim)
+      real(amrex_real), INTENT(out) :: dxmax
+      real(amrex_real) :: dxtrial
+      integer i,dir,dir2
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -3226,11 +3226,11 @@ end subroutine intersection_volume_and_map
       subroutine areaXYorRZ(x,i1,i2,area)
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: x(3,2)
-      REAL_T xx(2,2)
-      REAL_T, INTENT(out) :: area
-      INTEGER_T, INTENT(in) :: i1,i2
-      INTEGER_T dir,sdim
+      real(amrex_real), INTENT(in) :: x(3,2)
+      real(amrex_real) xx(2,2)
+      real(amrex_real), INTENT(out) :: area
+      integer, INTENT(in) :: i1,i2
+      integer dir,sdim
 
       sdim=2
 
@@ -3268,19 +3268,19 @@ end subroutine intersection_volume_and_map
        id,symmetry_flag,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(out) :: xtet(sdim+1,sdim)
-      REAL_T, INTENT(out) :: datatet(sdim+1)
-      INTEGER_T, INTENT(in) :: id
-      INTEGER_T inode,jnode
-      INTEGER_T j_tet_node
-      INTEGER_T k_dir
-      INTEGER_T, INTENT(in) :: symmetry_flag
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(out) :: xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: datatet(sdim+1)
+      integer, INTENT(in) :: id
+      integer inode,jnode
+      integer j_tet_node
+      integer k_dir
+      integer, INTENT(in) :: symmetry_flag
 
-      REAL_T, INTENT(in) :: datanode(4*(sdim-1))
-      REAL_T, INTENT(in) :: xnode(4*(sdim-1),sdim)
-      INTEGER_T nodelist(sdim+1)
-      REAL_T xavg,davg
+      real(amrex_real), INTENT(in) :: datanode(4*(sdim-1))
+      real(amrex_real), INTENT(in) :: xnode(4*(sdim-1),sdim)
+      integer nodelist(sdim+1)
+      real(amrex_real) xavg,davg
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim bust extract tet"
@@ -3423,12 +3423,12 @@ end subroutine intersection_volume_and_map
       subroutine areaXYZ(x,i1,i2,i3,area)
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: x(4,3)
-      REAL_T xx(3,3)
-      REAL_T, INTENT(out) :: area
-      INTEGER_T, INTENT(in) :: i1,i2,i3 
-      INTEGER_T dir
-      INTEGER_T sdim
+      real(amrex_real), INTENT(in) :: x(4,3)
+      real(amrex_real) xx(3,3)
+      real(amrex_real), INTENT(out) :: area
+      integer, INTENT(in) :: i1,i2,i3 
+      integer dir
+      integer sdim
 
       sdim=3
 
@@ -3459,19 +3459,19 @@ end subroutine intersection_volume_and_map
                                          fekete_rule
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in) :: x(sdim,sdim)
-      REAL_T, INTENT(out) :: area
-      REAL_T xx(sdim-1,sdim)
-      INTEGER_T i,dir,dircrit,itan,jtan
-      REAL_T, dimension(:,:), allocatable :: xy
-      REAL_T, dimension(:), allocatable :: w
-      REAL_T y1_cross_y2(sdim)
-      REAL_T coeff(sdim)
-      REAL_T mag,DA
-      INTEGER_T rule,degree,order_num  ! rule=1 degree=3
-      REAL_T rho,jac
-      REAL_T dxpos(sdim)
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: x(sdim,sdim)
+      real(amrex_real), INTENT(out) :: area
+      real(amrex_real) xx(sdim-1,sdim)
+      integer i,dir,dircrit,itan,jtan
+      real(amrex_real), dimension(:,:), allocatable :: xy
+      real(amrex_real), dimension(:), allocatable :: w
+      real(amrex_real) y1_cross_y2(sdim)
+      real(amrex_real) coeff(sdim)
+      real(amrex_real) mag,DA
+      integer rule,degree,order_num  ! rule=1 degree=3
+      real(amrex_real) rho,jac
+      real(amrex_real) dxpos(sdim)
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim bust surface area"
@@ -3764,25 +3764,25 @@ end subroutine intersection_volume_and_map
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T centroid_def(sdim)
-      REAL_T xx(sdim,sdim)
-      INTEGER_T i_tet_node
-      INTEGER_T i_order
-      INTEGER_T j_dir,j_vec,dir
-      REAL_T, dimension(:,:), allocatable :: xyz
-      REAL_T, dimension(:), allocatable :: w
-      INTEGER_T rule,degree,order_num
-      REAL_T rho,volzero
-      REAL_T xmin(sdim)
-      REAL_T xmax(sdim)
-      REAL_T :: dxmax
-      REAL_T dxpos(sdim)
-      REAL_T total_weight
-      REAL_T centroid_eps
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) centroid_def(sdim)
+      real(amrex_real) xx(sdim,sdim)
+      integer i_tet_node
+      integer i_order
+      integer j_dir,j_vec,dir
+      real(amrex_real), dimension(:,:), allocatable :: xyz
+      real(amrex_real), dimension(:), allocatable :: w
+      integer rule,degree,order_num
+      real(amrex_real) rho,volzero
+      real(amrex_real) xmin(sdim)
+      real(amrex_real) xmax(sdim)
+      real(amrex_real) :: dxmax
+      real(amrex_real) dxpos(sdim)
+      real(amrex_real) total_weight
+      real(amrex_real) centroid_eps
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid"
@@ -4051,35 +4051,35 @@ end subroutine intersection_volume_and_map
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: normdir
-      REAL_T, INTENT(in) :: coeff(2)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: volume_map
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T, INTENT(out) :: centroid_map(sdim)
-      REAL_T centroid_def(sdim)
-      REAL_T centroid_def_map(sdim)
-      REAL_T xx(sdim,sdim)
-      INTEGER_T i_tet_node
-      INTEGER_T i_order
-      INTEGER_T j_dir,j_vec,dir
-      REAL_T, dimension(:,:), allocatable :: xyz
-      REAL_T, dimension(:), allocatable :: w
-      INTEGER_T rule,degree,order_num
-      REAL_T rho
-      REAL_T volzero
-      REAL_T volzero_map
-      REAL_T xmin(sdim)
-      REAL_T xmax(sdim)
-      REAL_T :: dxmax
-      REAL_T xmin_map(sdim)
-      REAL_T xmax_map(sdim)
-      REAL_T dxpos(sdim)
-      REAL_T total_weight
-      REAL_T xfactor
-      REAL_T centroid_eps
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: normdir
+      real(amrex_real), INTENT(in) :: coeff(2)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: volume_map
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real), INTENT(out) :: centroid_map(sdim)
+      real(amrex_real) centroid_def(sdim)
+      real(amrex_real) centroid_def_map(sdim)
+      real(amrex_real) xx(sdim,sdim)
+      integer i_tet_node
+      integer i_order
+      integer j_dir,j_vec,dir
+      real(amrex_real), dimension(:,:), allocatable :: xyz
+      real(amrex_real), dimension(:), allocatable :: w
+      integer rule,degree,order_num
+      real(amrex_real) rho
+      real(amrex_real) volzero
+      real(amrex_real) volzero_map
+      real(amrex_real) xmin(sdim)
+      real(amrex_real) xmax(sdim)
+      real(amrex_real) :: dxmax
+      real(amrex_real) xmin_map(sdim)
+      real(amrex_real) xmax_map(sdim)
+      real(amrex_real) dxpos(sdim)
+      real(amrex_real) total_weight
+      real(amrex_real) xfactor
+      real(amrex_real) centroid_eps
 
       if ((normdir.lt.0).or.(normdir.ge.sdim)) then
        print *,"normdir invalid"
@@ -4452,13 +4452,13 @@ end subroutine intersection_volume_and_map
       subroutine shrink2D(xint,x,phi,isrc,itarg,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(out) :: xint(sdim+1,sdim)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      INTEGER_T, INTENT(in) :: isrc,itarg
-      INTEGER_T j_tet_node
-      INTEGER_T j_dir
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(out) :: xint(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      integer, INTENT(in) :: isrc,itarg
+      integer j_tet_node
+      integer j_dir
 
       if (sdim.ne.2) then
        print *,"sdim bust shring 2d"
@@ -4495,13 +4495,13 @@ end subroutine intersection_volume_and_map
       subroutine shrink3D(xint,x,phi,isrc,itarg,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(out) :: xint(sdim+1,sdim)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      INTEGER_T, INTENT(in) :: isrc,itarg
-      INTEGER_T j_tet_node
-      INTEGER_T j_dir
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(out) :: xint(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      integer, INTENT(in) :: isrc,itarg
+      integer j_tet_node
+      integer j_dir
 
       if (sdim.ne.3) then
        print *,"sdim bust shrink 3d"
@@ -4542,17 +4542,17 @@ end subroutine intersection_volume_and_map
         nlist_alloc,nlist,xarealist,narea)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      REAL_T, INTENT(out) :: xtrilist(3,2,nlist_alloc)
-      REAL_T, INTENT(out) :: xarealist(2,2,MAXAREA)
-      INTEGER_T, INTENT(inout) :: nlist,narea
-      REAL_T, INTENT(in) :: phi(3)
-      REAL_T, INTENT(in) :: x(3,2)
-      REAL_T xint(3,2)
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T, INTENT(in) :: i1,i2,i3,complement
-      INTEGER_T sdim
+      integer, INTENT(in) :: nlist_alloc
+      real(amrex_real), INTENT(out) :: xtrilist(3,2,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xarealist(2,2,MAXAREA)
+      integer, INTENT(inout) :: nlist,narea
+      real(amrex_real), INTENT(in) :: phi(3)
+      real(amrex_real), INTENT(in) :: x(3,2)
+      real(amrex_real) xint(3,2)
+      integer i_tet_node
+      integer j_dir
+      integer, INTENT(in) :: i1,i2,i3,complement
+      integer sdim
 
       sdim=2
 
@@ -4648,17 +4648,17 @@ end subroutine intersection_volume_and_map
         xtetlist,nlist_alloc,nlist,xarealist,narea)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xarealist(3,3,MAXAREA)
-      INTEGER_T, INTENT(inout) :: nlist,narea
-      REAL_T, INTENT(in) :: phi(4)
-      REAL_T, INTENT(in) :: x(4,3)
-      REAL_T xint(4,3)
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T, INTENT(in) :: i1,i2,i3,i4,complement
-      INTEGER_T sdim
+      integer, INTENT(in) :: nlist_alloc
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xarealist(3,3,MAXAREA)
+      integer, INTENT(inout) :: nlist,narea
+      real(amrex_real), INTENT(in) :: phi(4)
+      real(amrex_real), INTENT(in) :: x(4,3)
+      real(amrex_real) xint(4,3)
+      integer i_tet_node
+      integer j_dir
+      integer, INTENT(in) :: i1,i2,i3,i4,complement
+      integer sdim
  
       sdim=3
     
@@ -4773,18 +4773,18 @@ end subroutine intersection_volume_and_map
         xtetlist,nlist_alloc,nlist,xarealist,narea)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xarealist(3,3,MAXAREA)
-      INTEGER_T, INTENT(inout) :: nlist,narea
-      REAL_T, INTENT(in) :: phi(4)
-      REAL_T, INTENT(in) :: x(4,3)
-      REAL_T xint(4,3)
-      INTEGER_T, INTENT(in) :: i1,i2,i3,i4
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
+      integer, INTENT(in) :: nlist_alloc
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xarealist(3,3,MAXAREA)
+      integer, INTENT(inout) :: nlist,narea
+      real(amrex_real), INTENT(in) :: phi(4)
+      real(amrex_real), INTENT(in) :: x(4,3)
+      real(amrex_real) xint(4,3)
+      integer, INTENT(in) :: i1,i2,i3,i4
+      integer i_tet_node
+      integer j_dir
 
-      INTEGER_T sdim
+      integer sdim
 
       sdim=3
 
@@ -4884,31 +4884,31 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T bfact
-REAL_T xsanity(3),dxgrid(3)
-REAL_T xsten0(-3:3,3)
-REAL_T hangle,hintercept,intercept
-REAL_T angle(2)
-REAL_T nslope(3)
-INTEGER_T Nangle,sdim,Nangle2,nodedomain
-INTEGER_T i_int,a1,a2,inode,dir
-INTEGER_T isten_loop
-INTEGER_T i_grid_node
-INTEGER_T j_grid_node
-INTEGER_T k_grid_node
-REAL_T volslow,areaslow,volall
-REAL_T cenall(3)
-REAL_T censlow(3)
-REAL_T xnode3d(8,3)
-REAL_T xnode2d(4,2)
-REAL_T phinode(8)
-REAL_T xtarget(3)
-INTEGER_T fullelementfast,linearcut,nhalf
-REAL_T t1,t2
+integer bfact
+real(amrex_real) xsanity(3),dxgrid(3)
+real(amrex_real) xsten0(-3:3,3)
+real(amrex_real) hangle,hintercept,intercept
+real(amrex_real) angle(2)
+real(amrex_real) nslope(3)
+integer Nangle,sdim,Nangle2,nodedomain
+integer i_int,a1,a2,inode,dir
+integer isten_loop
+integer i_grid_node
+integer j_grid_node
+integer k_grid_node
+real(amrex_real) volslow,areaslow,volall
+real(amrex_real) cenall(3)
+real(amrex_real) censlow(3)
+real(amrex_real) xnode3d(8,3)
+real(amrex_real) xnode2d(4,2)
+real(amrex_real) phinode(8)
+real(amrex_real) xtarget(3)
+integer fullelementfast,linearcut,nhalf
+real(amrex_real) t1,t2
 
-REAL_T cum_volume,cum_area
-REAL_T cum_centroid(3)
-REAL_T local_scale
+real(amrex_real) cum_volume,cum_area
+real(amrex_real) cum_centroid(3)
+real(amrex_real) local_scale
 
  nhalf=3
  bfact=2
@@ -5123,11 +5123,11 @@ end subroutine volume_sanity_check
       subroutine list_segment(phi,x,xsegmentlist,nseg,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(out) :: nseg
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in) :: phi(2)
-      REAL_T, INTENT(in) :: x(2)
-      REAL_T, INTENT(out) :: xsegmentlist(2)
+      integer, INTENT(out) :: nseg
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: phi(2)
+      real(amrex_real), INTENT(in) :: x(2)
+      real(amrex_real), INTENT(out) :: xsegmentlist(2)
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -5192,16 +5192,16 @@ end subroutine volume_sanity_check
                       nlist,xarealist,narea,sdim)
       IMPLICIT NONE 
    
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: sdim 
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T, INTENT(out) :: xtetlist(sdim+1,sdim,nlist_alloc)
-      REAL_T, INTENT(out) :: xarealist(3,3,MAXAREA)
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T, INTENT(out) :: narea
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: sdim 
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: xtetlist(sdim+1,sdim,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xarealist(3,3,MAXAREA)
+      integer, INTENT(out) :: nlist
+      integer i_tet_node
+      integer j_dir
+      integer, INTENT(out) :: narea
 
       if (sdim.ne.3) then
        print *,"sdim invalid list_tets"
@@ -5318,29 +5318,29 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T nlist_old
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T iplane,n,nsub,narea,n2
-      REAL_T, INTENT(in) :: x1(sdim+1,sdim)
-      REAL_T x1old(sdim+1,sdim)
-      REAL_T, INTENT(in) :: x2(sdim+1,sdim)
-      REAL_T, INTENT(out) :: xtetlist_old(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T xsublist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(2,2,MAXAREA)
-      REAL_T phi1(sdim+1)
-      REAL_T coeff(sdim)
-      REAL_T voltest
-      REAL_T centroidtest(sdim)
-      REAL_T xcandidate(sdim+1,sdim)
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: sdim
+      integer, INTENT(out) :: nlist
+      integer, INTENT(in) :: nmax
+      integer nlist_old
+      integer i_tet_node
+      integer j_dir
+      integer iplane,n,nsub,narea,n2
+      real(amrex_real), INTENT(in) :: x1(sdim+1,sdim)
+      real(amrex_real) x1old(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: x2(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: xtetlist_old(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) xsublist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(2,2,MAXAREA)
+      real(amrex_real) phi1(sdim+1)
+      real(amrex_real) coeff(sdim)
+      real(amrex_real) voltest
+      real(amrex_real) centroidtest(sdim)
+      real(amrex_real) xcandidate(sdim+1,sdim)
 
-      INTEGER_T itan(sdim)
-      REAL_T sign,mag,maxside,testside1,testside2
+      integer itan(sdim)
+      real(amrex_real) sign,mag,maxside,testside1,testside2
       
       if (sdim.ne.2) then
        print *,"sdim bust intersect tri"
@@ -5496,31 +5496,31 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
-      INTEGER_T i_tet_node
-      INTEGER_T i_tan_idx
-      INTEGER_T j_dir
-      REAL_T, INTENT(in) :: x1(sdim+1,sdim)
-      REAL_T x1old(sdim+1,sdim)
-      REAL_T, INTENT(in) :: x2(sdim+1,sdim)
-      REAL_T, INTENT(out) :: xtetlist_old(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T xsublist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(3,3,MAXAREA)
-      REAL_T phi1(sdim+1)
-      REAL_T coeff(sdim)
-      REAL_T voltest
-      REAL_T centroidtest(sdim)
-      REAL_T xcandidate(sdim+1,sdim)
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: sdim
+      integer, INTENT(out) :: nlist
+      integer, INTENT(in) :: nmax
+      integer nlist_old,iplane,n,nsub,narea,n2
+      integer i_tet_node
+      integer i_tan_idx
+      integer j_dir
+      real(amrex_real), INTENT(in) :: x1(sdim+1,sdim)
+      real(amrex_real) x1old(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: x2(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: xtetlist_old(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) xsublist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(3,3,MAXAREA)
+      real(amrex_real) phi1(sdim+1)
+      real(amrex_real) coeff(sdim)
+      real(amrex_real) voltest
+      real(amrex_real) centroidtest(sdim)
+      real(amrex_real) xcandidate(sdim+1,sdim)
 
-      INTEGER_T itan(sdim)
-      REAL_T sign,mag
-      REAL_T vec(2,sdim)
-      REAL_T maxside,testside1,testside2
+      integer itan(sdim)
+      real(amrex_real) sign,mag
+      real(amrex_real) vec(2,sdim)
+      real(amrex_real) maxside,testside1,testside2
 
       if (sdim.ne.3) then
        print *,"sdim bust intersect tet"
@@ -5701,26 +5701,26 @@ end subroutine volume_sanity_check
         nlist,nmax,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: sdim,nhalf
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      REAL_T, INTENT(in) :: x1(sdim+1,sdim)
-      REAL_T x1old(sdim+1,sdim)
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T x0(sdim)
-      REAL_T, INTENT(out) :: xtetlist_old(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T xsublist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T phi1(sdim+1)
-      REAL_T coeff(sdim)
-      REAL_T voltest
-      REAL_T centroidtest(sdim)
-      REAL_T xcandidate(sdim+1,sdim)
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: sdim,nhalf
+      integer, INTENT(out) :: nlist
+      integer, INTENT(in) :: nmax
+      integer nlist_old,iplane,n,nsub,narea,n2
+      integer i_tet_node
+      integer j_dir
+      real(amrex_real), INTENT(in) :: x1(sdim+1,sdim)
+      real(amrex_real) x1old(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real) x0(sdim)
+      real(amrex_real), INTENT(out) :: xtetlist_old(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) xsublist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real) phi1(sdim+1)
+      real(amrex_real) coeff(sdim)
+      real(amrex_real) voltest
+      real(amrex_real) centroidtest(sdim)
+      real(amrex_real) xcandidate(sdim+1,sdim)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid intersect cube"
@@ -5881,17 +5881,17 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nlist,nmax,sdim
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T n
-      REAL_T, INTENT(out) :: volcut
-      REAL_T, INTENT(out) :: cencut(sdim)
-      REAL_T, INTENT(in) :: xtetlist(4,3,nlist_alloc)
-      REAL_T volumelist
-      REAL_T centroidlist(sdim)
-      REAL_T xint(sdim+1,sdim)
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nlist,nmax,sdim
+      integer i_tet_node
+      integer j_dir
+      integer n
+      real(amrex_real), INTENT(out) :: volcut
+      real(amrex_real), INTENT(out) :: cencut(sdim)
+      real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) volumelist
+      real(amrex_real) centroidlist(sdim)
+      real(amrex_real) xint(sdim+1,sdim)
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid get_cut_geom3D"
@@ -5980,44 +5980,44 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: tessellate
-      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf0,nhalf_box
-      INTEGER_T symmetry_flag,ntetbox
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
-      INTEGER_T j_dir
-      INTEGER_T i_tet_node
-      INTEGER_T i_grid_node
-      INTEGER_T j_grid_node
-      INTEGER_T k_grid_node
-      INTEGER_T id,icrit,im,vofcomp,iorder
-      INTEGER_T dir
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T :: xsten0_LS(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: xsten_box(-nhalf_box:nhalf_box,sdim)
-      REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T xtetlist_old(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T xsublist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T phi1(sdim+1),dummyphi(sdim+1)
-      REAL_T voltest
-      REAL_T centroidtest(sdim)
-      REAL_T voltet
-      REAL_T centet(sdim)
-      REAL_T xcandidate(sdim+1,sdim)
-      REAL_T xx(sdim+1,sdim)
-      REAL_T x1old(sdim+1,sdim)
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T phinode(4*(sdim-1))
-      INTEGER_T inode
-      REAL_T nn(sdim)
-      REAL_T intercept
-      INTEGER_T is_rigid_local(num_materials)
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: tessellate
+      integer, INTENT(in) :: sdim,bfact,nhalf0,nhalf_box
+      integer symmetry_flag,ntetbox
+      integer, INTENT(out) :: nlist
+      integer, INTENT(in) :: nmax
+      integer nlist_old,iplane,n,nsub,narea,n2
+      integer j_dir
+      integer i_tet_node
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
+      integer id,icrit,im,vofcomp,iorder
+      integer dir
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real) :: xsten0_LS(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten_box(-nhalf_box:nhalf_box,sdim)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real) xtetlist_old(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) xsublist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real) phi1(sdim+1),dummyphi(sdim+1)
+      real(amrex_real) voltest
+      real(amrex_real) centroidtest(sdim)
+      real(amrex_real) voltet
+      real(amrex_real) centet(sdim)
+      real(amrex_real) xcandidate(sdim+1,sdim)
+      real(amrex_real) xx(sdim+1,sdim)
+      real(amrex_real) x1old(sdim+1,sdim)
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real) phinode(4*(sdim-1))
+      integer inode
+      real(amrex_real) nn(sdim)
+      real(amrex_real) intercept
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -6296,27 +6296,27 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: tessellate
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in) :: use_super_cell
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T isten
-      INTEGER_T, PARAMETER :: nhalf2=1
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T nlist_local,i1,j1,k1,itri
-      INTEGER_T nn
-      INTEGER_T dir
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T xsten2(-1:1,sdim)
-      REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      INTEGER_T ksten_low,ksten_high
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: tessellate
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in) :: use_super_cell
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer isten
+      integer, PARAMETER :: nhalf2=1
+      integer, INTENT(out) :: nlist
+      integer, INTENT(in) :: nmax
+      integer nlist_local,i1,j1,k1,itri
+      integer nn
+      integer dir
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real) xsten2(-1:1,sdim)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      integer ksten_low,ksten_high
 
       if ((nlist_alloc.ge.1).and.(nlist_alloc.le.nmax)) then
        ! do nothing
@@ -6469,33 +6469,33 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: tessellate
-      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf0
-      INTEGER_T, INTENT(out) :: nlist
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T nlist_old,iplane,n,nsub,narea,n2
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T icrit,im,vofcomp,iorder
-      INTEGER_T dir
-      REAL_T, INTENT(in) :: xtet(sdim+1,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T xtetlist_old(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T xsublist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T phi1(sdim+1)
-      REAL_T voltest
-      REAL_T centroidtest(sdim)
-      REAL_T xcandidate(sdim+1,sdim)
-      REAL_T x1old(sdim+1,sdim)
-      REAL_T nn(sdim)
-      REAL_T intercept
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: tessellate
+      integer, INTENT(in) :: sdim,bfact,nhalf0
+      integer, INTENT(out) :: nlist
+      integer, INTENT(in) :: nmax
+      integer nlist_old,iplane,n,nsub,narea,n2
+      integer i_tet_node
+      integer j_dir
+      integer icrit,im,vofcomp,iorder
+      integer dir
+      real(amrex_real), INTENT(in) :: xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real) xtetlist_old(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) xsublist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real) phi1(sdim+1)
+      real(amrex_real) voltest
+      real(amrex_real) centroidtest(sdim)
+      real(amrex_real) xcandidate(sdim+1,sdim)
+      real(amrex_real) x1old(sdim+1,sdim)
+      real(amrex_real) nn(sdim)
+      real(amrex_real) intercept
 
-      INTEGER_T is_rigid_local(num_materials)
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -6664,21 +6664,21 @@ end subroutine volume_sanity_check
        centroiddark,area,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T xtetlist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T xint(sdim+1,sdim)
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T centroidlistdark(sdim)
+      integer, INTENT(in) :: sdim
+      real(amrex_real) xtetlist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real) xint(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real) centroidlistdark(sdim)
 
-      REAL_T, INTENT(out) :: volumedark,area
-      REAL_T volumelistdark,arealist
+      real(amrex_real), INTENT(out) :: volumedark,area
+      real(amrex_real) volumelistdark,arealist
 
-      INTEGER_T n,nlist,narea
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
+      integer n,nlist,narea
+      integer i_tet_node
+      integer j_dir
 
       if (sdim.ne.3) then
        print *,"sdim invalid"
@@ -6739,21 +6739,21 @@ end subroutine volume_sanity_check
        centroiddark,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T xtetlist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T xint(sdim+1,sdim)
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T centroidlistdark(sdim)
+      integer, INTENT(in) :: sdim
+      real(amrex_real) xtetlist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real) xint(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real) centroidlistdark(sdim)
 
-      REAL_T, INTENT(out) :: volumedark
-      REAL_T volumelistdark
+      real(amrex_real), INTENT(out) :: volumedark
+      real(amrex_real) volumelistdark
 
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T n,nlist,narea
+      integer i_tet_node
+      integer j_dir
+      integer n,nlist,narea
 
       if (sdim.ne.3) then
        print *,"sdim invalid"
@@ -6807,28 +6807,28 @@ end subroutine volume_sanity_check
        sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: normdir
-      REAL_T, INTENT(in) :: coeff(2)
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: normdir
+      real(amrex_real), INTENT(in) :: coeff(2)
 
-      REAL_T xtetlist(sdim+1,sdim,MAXTET)
-      REAL_T xarealist(sdim,sdim,MAXAREA)
-      REAL_T, INTENT(in) :: phi(sdim+1)
-      REAL_T, INTENT(in) :: x(sdim+1,sdim)
-      REAL_T xint(sdim+1,sdim)
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T centroidlistdark(sdim)
-      REAL_T, INTENT(out) :: centroiddark_map(sdim)
-      REAL_T centroidlistdark_map(sdim)
+      real(amrex_real) xtetlist(sdim+1,sdim,MAXTET)
+      real(amrex_real) xarealist(sdim,sdim,MAXAREA)
+      real(amrex_real), INTENT(in) :: phi(sdim+1)
+      real(amrex_real), INTENT(in) :: x(sdim+1,sdim)
+      real(amrex_real) xint(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real) centroidlistdark(sdim)
+      real(amrex_real), INTENT(out) :: centroiddark_map(sdim)
+      real(amrex_real) centroidlistdark_map(sdim)
 
-      REAL_T, INTENT(out) :: volumedark
-      REAL_T volumelistdark
-      REAL_T, INTENT(out) :: volumedark_map
-      REAL_T volumelistdark_map
+      real(amrex_real), INTENT(out) :: volumedark
+      real(amrex_real) volumelistdark
+      real(amrex_real), INTENT(out) :: volumedark_map
+      real(amrex_real) volumelistdark_map
 
-      INTEGER_T n,nlist,narea
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
+      integer n,nlist,narea
+      integer i_tet_node
+      integer j_dir
 
       if (sdim.ne.3) then
        print *,"sdim invalid"
@@ -6904,21 +6904,21 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nhalf,im,im_opp
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: mofdata(num_materials*ngeom_recon)
-      REAL_T, INTENT(in) :: cencell(sdim)
-      REAL_T slope(sdim)
-      REAL_T xtarget(sdim)
-      REAL_T xclosest(sdim)
-      REAL_T xtargetXYZ(sdim)
-      REAL_T xclosestXYZ(sdim)
-      REAL_T, INTENT(in) :: dist_tol
-      REAL_T mag
-      REAL_T, INTENT(out) :: dist_to_line
-      INTEGER_T ibase,ibase_opp,dir
-      REAL_T intercept
+      integer, INTENT(in) :: nhalf,im,im_opp
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in) :: cencell(sdim)
+      real(amrex_real) slope(sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) xclosest(sdim)
+      real(amrex_real) xtargetXYZ(sdim)
+      real(amrex_real) xclosestXYZ(sdim)
+      real(amrex_real), INTENT(in) :: dist_tol
+      real(amrex_real) mag
+      real(amrex_real), INTENT(out) :: dist_to_line
+      integer ibase,ibase_opp,dir
+      real(amrex_real) intercept
      
 
       if (nhalf.lt.1) then
@@ -7009,15 +7009,15 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: bfact,level
-      INTEGER_T, INTENT(in) :: nhalf
-      REAL_T, INTENT(out) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xlo(sdim)
-      INTEGER_T, INTENT(in) :: i,j,k
-      REAL_T, INTENT(out) :: vol
-      REAL_T, INTENT(out) :: cen(sdim)
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: bfact,level
+      integer, INTENT(in) :: nhalf
+      real(amrex_real), INTENT(out) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xlo(sdim)
+      integer, INTENT(in) :: i,j,k
+      real(amrex_real), INTENT(out) :: vol
+      real(amrex_real), INTENT(out) :: cen(sdim)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid cisbox"
@@ -7047,15 +7047,15 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: bfact,iside,veldir,level
-      INTEGER_T, INTENT(in) :: nhalf
-      REAL_T, INTENT(out) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xlo(sdim)
-      INTEGER_T, INTENT(in) :: i,j,k
-      REAL_T, INTENT(out) :: vol
-      REAL_T, INTENT(out) :: cen(sdim)
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: bfact,iside,veldir,level
+      integer, INTENT(in) :: nhalf
+      real(amrex_real), INTENT(out) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xlo(sdim)
+      integer, INTENT(in) :: i,j,k
+      real(amrex_real), INTENT(out) :: vol
+      real(amrex_real), INTENT(out) :: cen(sdim)
 
       if ((iside.ne.-1).and.(iside.ne.1)) then
        print *,"iside invalid"
@@ -7106,13 +7106,13 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T dir
-      REAL_T rval,dr
+      integer, INTENT(in) :: sdim,bfact,nhalf
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      integer dir
+      real(amrex_real) rval,dr
     
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid Box_volumeFAST: ",sdim
@@ -7222,14 +7222,14 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T :: x(sdim+1,sdim)
-      INTEGER_T i
-      INTEGER_T dir
+      integer, INTENT(in) :: sdim,bfact,nhalf
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) :: x(sdim+1,sdim)
+      integer i
+      integer dir
     
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid Box_volumeTRI_TET: ",sdim
@@ -7264,17 +7264,17 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
-      INTEGER_T, INTENT(in) :: normdir
-      REAL_T, INTENT(in) :: coeff(2)
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: volume_map
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T, INTENT(out) :: centroid_map(sdim)
-      INTEGER_T dir
-      REAL_T rval,dr
+      integer, INTENT(in) :: sdim,bfact,nhalf
+      integer, INTENT(in) :: normdir
+      real(amrex_real), INTENT(in) :: coeff(2)
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: volume_map
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real), INTENT(out) :: centroid_map(sdim)
+      integer dir
+      real(amrex_real) rval,dr
     
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid Box_volumeFAST"
@@ -7460,18 +7460,18 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, PARAMETER :: nhalf2=1
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T xsten2(-1:1,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T ksten_low,ksten_high,i1,j1,k1,dir,isten
-      REAL_T volsten
-      REAL_T censten(sdim)
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, PARAMETER :: nhalf2=1
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real) xsten2(-1:1,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      integer ksten_low,ksten_high,i1,j1,k1,dir,isten
+      real(amrex_real) volsten
+      real(amrex_real) censten(sdim)
 
       if (bfact.lt.1) then
        print *,"bfact invalid129"
@@ -7566,8 +7566,8 @@ end subroutine volume_sanity_check
       subroutine get_ntetbox(ntetbox,symmetry_flag,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(out) :: ntetbox
-      INTEGER_T, INTENT(in) :: symmetry_flag,sdim
+      integer, INTENT(out) :: ntetbox
+      integer, INTENT(in) :: symmetry_flag,sdim
 
       if (sdim.eq.2) then
        if (symmetry_flag.eq.0) then
@@ -7605,17 +7605,17 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
-      REAL_T, INTENT(in) :: EBVOFTOL
-      REAL_T, INTENT(in) :: ldata(D_DECL(3,3,3))
-      REAL_T lnode(4*(sdim-1))
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dxgrid(sdim)
-      REAL_T, INTENT(out) :: volume,facearea
-      REAL_T volcell
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T cenall(sdim)
-      INTEGER_T dir
+      integer, INTENT(in) :: sdim,bfact,nhalf
+      real(amrex_real), INTENT(in) :: EBVOFTOL
+      real(amrex_real), INTENT(in) :: ldata(D_DECL(3,3,3))
+      real(amrex_real) lnode(4*(sdim-1))
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dxgrid(sdim)
+      real(amrex_real), INTENT(out) :: volume,facearea
+      real(amrex_real) volcell
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) cenall(sdim)
+      integer dir
 
       if (bfact.lt.1) then
        print *,"bfact invalid130"
@@ -7687,18 +7687,18 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim,bfact,nhalf
-      REAL_T, INTENT(in) :: EBVOFTOL
-      INTEGER_T im
-      REAL_T, INTENT(in) :: ldata(D_DECL(3,3,3),num_materials)
-      REAL_T lnode(4*(sdim-1),num_materials)
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dxgrid(sdim)
-      REAL_T, INTENT(out) :: volume(num_materials)
-      REAL_T, INTENT(out) :: facearea(num_materials)
-      REAL_T volcell
-      REAL_T, INTENT(out) :: centroid(num_materials,sdim)
-      REAL_T cenall(sdim)
+      integer, INTENT(in) :: sdim,bfact,nhalf
+      real(amrex_real), INTENT(in) :: EBVOFTOL
+      integer im
+      real(amrex_real), INTENT(in) :: ldata(D_DECL(3,3,3),num_materials)
+      real(amrex_real) lnode(4*(sdim-1),num_materials)
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dxgrid(sdim)
+      real(amrex_real), INTENT(out) :: volume(num_materials)
+      real(amrex_real), INTENT(out) :: facearea(num_materials)
+      real(amrex_real) volcell
+      real(amrex_real), INTENT(out) :: centroid(num_materials,sdim)
+      real(amrex_real) cenall(sdim)
 
       if (bfact.lt.1) then
        print *,"bfact invalid131"
@@ -7761,17 +7761,17 @@ end subroutine volume_sanity_check
       subroutine data_to_node(datasten,datanode,ncomp,xsten,nhalf,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: ncomp,nhalf
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: datasten(D_DECL(3,3,3),ncomp)
-      REAL_T, INTENT(out) :: datanode(4*(sdim-1),ncomp)
-      INTEGER_T i,j,k,i1,j1,k1,inode,im,klo,khi,dir
-      REAL_T xlonode(sdim)
-      REAL_T xhinode(sdim)
-      REAL_T xlocell(sdim)
-      REAL_T xhicell(sdim)
-      REAL_T xlo,xhi,wtprod,wtsum
+      integer, INTENT(in) :: ncomp,nhalf
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: datasten(D_DECL(3,3,3),ncomp)
+      real(amrex_real), INTENT(out) :: datanode(4*(sdim-1),ncomp)
+      integer i,j,k,i1,j1,k1,inode,im,klo,khi,dir
+      real(amrex_real) xlonode(sdim)
+      real(amrex_real) xhinode(sdim)
+      real(amrex_real) xlocell(sdim)
+      real(amrex_real) xhicell(sdim)
+      real(amrex_real) xlo,xhi,wtprod,wtsum
 
       if (nhalf.lt.3) then
        print *,"nhalf invalid data to node"
@@ -7876,31 +7876,31 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
+      integer, INTENT(in) :: sdim
 
-      REAL_T cum_volume,cum_area
-      REAL_T cum_centroid(sdim)
+      real(amrex_real) cum_volume,cum_area
+      real(amrex_real) cum_centroid(sdim)
 
-      INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalf_grid
+      integer, INTENT(in) :: bfact,nhalf0,nhalf_grid
 
-      INTEGER_T, INTENT(in) :: shapeflag
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
-      REAL_T, INTENT(in) :: xtet(sdim+1,sdim)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
+      integer, INTENT(in) :: shapeflag
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
+      real(amrex_real), INTENT(in) :: xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
 
-      REAL_T, INTENT(out) :: volume,area
-      REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T dir,inode
-      INTEGER_T j_dir
-      INTEGER_T i_grid_node
-      INTEGER_T j_grid_node
-      INTEGER_T k_grid_node
-      INTEGER_T i_tet_node
-      REAL_T xtarget(sdim)
-      REAL_T ls(sdim+1)
+      real(amrex_real), INTENT(out) :: volume,area
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      integer dir,inode
+      integer j_dir
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
+      integer i_tet_node
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) ls(sdim+1)
 
 !   3  4  
 !   1  2
@@ -7908,10 +7908,10 @@ end subroutine volume_sanity_check
 !   7 8
 !   5 6
 
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T phinode(4*(sdim-1))
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real) phinode(4*(sdim-1))
 
-      INTEGER_T linearcut,fullelementfast,nodedomain
+      integer linearcut,fullelementfast,nodedomain
 
       linearcut=1
       fullelementfast=1
@@ -8037,26 +8037,26 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
+      integer, INTENT(in) :: sdim
 
-      REAL_T cum_volume
-      REAL_T cum_centroid(sdim)
+      real(amrex_real) cum_volume
+      real(amrex_real) cum_centroid(sdim)
 
-      INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalf_grid
+      integer, INTENT(in) :: bfact,nhalf0,nhalf_grid
 
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
 
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T dir,inode
-      REAL_T xtarget(sdim)
-      INTEGER_T i_grid_node
-      INTEGER_T j_grid_node
-      INTEGER_T k_grid_node
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      integer dir,inode
+      real(amrex_real) xtarget(sdim)
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
 
 !   3  4  
 !   1  2
@@ -8064,10 +8064,10 @@ end subroutine volume_sanity_check
 !   7 8
 !   5 6
 
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T phinode(4*(sdim-1))
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real) phinode(4*(sdim-1))
 
-      INTEGER_T nodedomain
+      integer nodedomain
 
       if ((nhalf0.lt.1).or.(nhalf_grid.lt.1)) then
        print *,"nhalf invalid fast cut cell intersection"
@@ -8170,32 +8170,32 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
+      integer, INTENT(in) :: sdim
 
-      INTEGER_T, INTENT(in) :: normdir
-      REAL_T, INTENT(in) :: coeff(2)
-      REAL_T cum_volume
-      REAL_T cum_volume_map
-      REAL_T cum_centroid(sdim)
-      REAL_T cum_centroid_map(sdim)
+      integer, INTENT(in) :: normdir
+      real(amrex_real), INTENT(in) :: coeff(2)
+      real(amrex_real) cum_volume
+      real(amrex_real) cum_volume_map
+      real(amrex_real) cum_centroid(sdim)
+      real(amrex_real) cum_centroid_map(sdim)
 
-      INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalf_grid
+      integer, INTENT(in) :: bfact,nhalf0,nhalf_grid
 
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
 
-      REAL_T, INTENT(out) :: volume
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T, INTENT(out) :: volume_map
-      REAL_T, INTENT(out) :: centroid_map(sdim)
-      INTEGER_T dir,inode
-      REAL_T xtarget(sdim)
-      INTEGER_T i_grid_node
-      INTEGER_T j_grid_node
-      INTEGER_T k_grid_node
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real), INTENT(out) :: volume_map
+      real(amrex_real), INTENT(out) :: centroid_map(sdim)
+      integer dir,inode
+      real(amrex_real) xtarget(sdim)
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
 
 !   3  4  
 !   1  2
@@ -8203,10 +8203,10 @@ end subroutine volume_sanity_check
 !   7 8
 !   5 6
 
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T phinode(4*(sdim-1))
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real) phinode(4*(sdim-1))
 
-      INTEGER_T nodedomain
+      integer nodedomain
 
       if ((nhalf0.lt.1).or.(nhalf_grid.lt.1)) then
        print *,"nhalf invalid fast cut cell intersection_and_map"
@@ -8318,29 +8318,29 @@ end subroutine volume_sanity_check
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: nhalf0
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: nhalf0
 
-      REAL_T cum_volume,cum_area
-      REAL_T cum_centroid(sdim)
+      real(amrex_real) cum_volume,cum_area
+      real(amrex_real) cum_centroid(sdim)
 
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: lnodebatch(4*(sdim-1),num_materials)
-      REAL_T lnode(4*(sdim-1))
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dxgrid(sdim)
-      REAL_T, INTENT(out) :: volumedark(num_materials)
-      REAL_T, INTENT(out) :: centroiddark(num_materials,sdim)
-      REAL_T, INTENT(out) :: volall
-      REAL_T, INTENT(out) :: area(num_materials)
-      REAL_T, INTENT(out) :: cenall(sdim)
-      INTEGER_T j_dir
-      INTEGER_T i_grid_node
-      INTEGER_T j_grid_node
-      INTEGER_T k_grid_node
-      INTEGER_T inode,im
-      INTEGER_T linearcut,fullelementfast,nodedomain
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: lnodebatch(4*(sdim-1),num_materials)
+      real(amrex_real) lnode(4*(sdim-1))
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dxgrid(sdim)
+      real(amrex_real), INTENT(out) :: volumedark(num_materials)
+      real(amrex_real), INTENT(out) :: centroiddark(num_materials,sdim)
+      real(amrex_real), INTENT(out) :: volall
+      real(amrex_real), INTENT(out) :: area(num_materials)
+      real(amrex_real), INTENT(out) :: cenall(sdim)
+      integer j_dir
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
+      integer inode,im
+      integer linearcut,fullelementfast,nodedomain
 
       if (bfact.lt.1) then
        print *,"bfact invalid135"
@@ -8446,26 +8446,26 @@ end subroutine volume_sanity_check
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
+      integer, INTENT(in) :: sdim
 
-      REAL_T cum_volume,cum_area
-      REAL_T cum_centroid(sdim)
+      real(amrex_real) cum_volume,cum_area
+      real(amrex_real) cum_centroid(sdim)
 
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      REAL_T, INTENT(in) :: lnode(4*(sdim-1))
-      REAL_T xnode(4*(sdim-1),sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dxgrid(sdim)
-      REAL_T, INTENT(out) :: volumedark
-      REAL_T, INTENT(out) :: centroiddark(sdim)
-      REAL_T, INTENT(out) :: volall,area
-      REAL_T, INTENT(out) :: cenall(sdim)
-      INTEGER_T i_grid_node
-      INTEGER_T j_grid_node
-      INTEGER_T k_grid_node
-      INTEGER_T j_dir
-      INTEGER_T inode
-      INTEGER_T linearcut,fullelementfast,nodedomain
+      integer, INTENT(in) :: bfact,nhalf0
+      real(amrex_real), INTENT(in) :: lnode(4*(sdim-1))
+      real(amrex_real) xnode(4*(sdim-1),sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dxgrid(sdim)
+      real(amrex_real), INTENT(out) :: volumedark
+      real(amrex_real), INTENT(out) :: centroiddark(sdim)
+      real(amrex_real), INTENT(out) :: volall,area
+      real(amrex_real), INTENT(out) :: cenall(sdim)
+      integer i_grid_node
+      integer j_grid_node
+      integer k_grid_node
+      integer j_dir
+      integer inode
+      integer linearcut,fullelementfast,nodedomain
 
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -8550,12 +8550,13 @@ end module geometry_intersect_module
 
 
 module MOF_routines_module
+use amrex_fort_module, only : amrex_real
 
-      INTEGER_T :: MOF_DEBUG_RECON_COUNT
+      integer :: MOF_DEBUG_RECON_COUNT
        ! 1=>output errors when fastflag=0 or 1
        ! 2=>output errors when fastflag=0 
-      INTEGER_T :: MOF_DEBUG_RECON=0
-      INTEGER_T :: MOF_TURN_OFF_LS
+      integer :: MOF_DEBUG_RECON=0
+      integer :: MOF_TURN_OFF_LS
 
 contains
 
@@ -8565,8 +8566,8 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T im
-      INTEGER_T, INTENT(out) :: order_algorithm_out(num_materials)
+      integer im
+      integer, INTENT(out) :: order_algorithm_out(num_materials)
 
 #include "mofdata.H"
 
@@ -8586,8 +8587,8 @@ contains
       subroutine set_MOFITERMAX(MOFITERMAX_in,MOFITERMAX_AFTER_PREDICT_in)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: MOFITERMAX_in
-      INTEGER_T, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
+      integer, INTENT(in) :: MOFITERMAX_in
+      integer, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
 
 #include "mofdata.H"
 
@@ -8622,8 +8623,8 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: order_algorithm_in(num_materials)
-      INTEGER_T im
+      integer, INTENT(in) :: order_algorithm_in(num_materials)
+      integer im
 
 #include "mofdata.H"
 
@@ -8665,23 +8666,23 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nlist,nmax,sdim,bfact,nhalf
-      REAL_T, INTENT(in) :: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T :: xsten_local(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T xtarget(sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      INTEGER_T dir
-      INTEGER_T i_tet_node
-      INTEGER_T i_stencil_node
-      INTEGER_T n
-      REAL_T, INTENT(out) :: minphi,maxphi
-      REAL_T intercept,dist
-      REAL_T volcell
-      REAL_T cencell(sdim)
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nlist,nmax,sdim,bfact,nhalf
+      real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real) :: xsten_local(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      integer dir
+      integer i_tet_node
+      integer i_stencil_node
+      integer n
+      real(amrex_real), INTENT(out) :: minphi,maxphi
+      real(amrex_real) intercept,dist
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid multi phi bounds 3d"
@@ -8780,12 +8781,12 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(out) :: xint(sdim)
-      REAL_T, INTENT(in) :: x(sdim)
-      REAL_T, INTENT(in) :: nn(sdim)
-      REAL_T, INTENT(in) :: phi
-      INTEGER_T dir
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(out) :: xint(sdim)
+      real(amrex_real), INTENT(in) :: x(sdim)
+      real(amrex_real), INTENT(in) :: nn(sdim)
+      real(amrex_real), INTENT(in) :: phi
+      integer dir
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
@@ -8811,10 +8812,10 @@ contains
       subroutine dist2or3D(x1,x2,dist,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T dir
-      REAL_T, INTENT(in) :: x1(sdim),x2(sdim)
-      REAL_T, INTENT(out) :: dist
+      integer, INTENT(in) :: sdim
+      integer dir
+      real(amrex_real), INTENT(in) :: x1(sdim),x2(sdim)
+      real(amrex_real), INTENT(out) :: dist
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"dimension bust"
@@ -8848,26 +8849,26 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: bfact,nhalf
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: bfact,nhalf
 
-      INTEGER_T, INTENT(in) :: nlist,nmax,sdim
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
+      integer, INTENT(in) :: nlist,nmax,sdim
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
 
-      REAL_T, INTENT(out) :: volume,area
-      REAL_T volumelist,arealist
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T centroidlist(sdim)
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T n
-      REAL_T xx(sdim+1,sdim)
-      REAL_T xtarget(sdim)
-      REAL_T ls(sdim+1)
+      real(amrex_real), INTENT(out) :: volume,area
+      real(amrex_real) volumelist,arealist
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) centroidlist(sdim)
+      integer i_tet_node
+      integer j_dir
+      integer n
+      real(amrex_real) xx(sdim+1,sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) ls(sdim+1)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid multi cell intersection"
@@ -8949,26 +8950,26 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact,nhalf
+      integer, INTENT(in) :: bfact,nhalf
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nlist,nmax,sdim
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nlist,nmax,sdim
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
 
-      REAL_T, INTENT(out) :: volume
-      REAL_T volumelist
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T centroidlist(sdim)
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T n
-      REAL_T xx(sdim+1,sdim)
-      REAL_T xtarget(sdim)
-      REAL_T ls(sdim+1)
+      real(amrex_real), INTENT(out) :: volume
+      real(amrex_real) volumelist
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) centroidlist(sdim)
+      integer i_tet_node
+      integer j_dir
+      integer n
+      real(amrex_real) xx(sdim+1,sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) ls(sdim+1)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid multi cell intersection"
@@ -9053,32 +9054,32 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: normdir
-      REAL_T, INTENT(in) :: coeff(2)
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: normdir
+      real(amrex_real), INTENT(in) :: coeff(2)
 
-      INTEGER_T, INTENT(in) :: bfact,nhalf
+      integer, INTENT(in) :: bfact,nhalf
 
-      INTEGER_T, INTENT(in) :: nlist,nmax,sdim
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
+      integer, INTENT(in) :: nlist,nmax,sdim
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
 
-      REAL_T, INTENT(out) :: volume,volume_map
-      REAL_T volumelist
-      REAL_T volumelist_map
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T, INTENT(out) :: centroid_map(sdim)
-      REAL_T centroidlist(sdim)
-      REAL_T centroidlist_map(sdim)
-      INTEGER_T i_tet_node
-      INTEGER_T j_dir
-      INTEGER_T n
-      REAL_T xx(sdim+1,sdim)
-      REAL_T xtarget(sdim)
-      REAL_T ls(sdim+1)
+      real(amrex_real), INTENT(out) :: volume,volume_map
+      real(amrex_real) volumelist
+      real(amrex_real) volumelist_map
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real), INTENT(out) :: centroid_map(sdim)
+      real(amrex_real) centroidlist(sdim)
+      real(amrex_real) centroidlist_map(sdim)
+      integer i_tet_node
+      integer j_dir
+      integer n
+      real(amrex_real) xx(sdim+1,sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) ls(sdim+1)
 
       if (nhalf.lt.1) then
        print *,"nhalf invalid multi cell intersection"
@@ -9194,29 +9195,29 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in) :: nlist,nmax,fastflag
-      REAL_T, INTENT(in) :: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in) :: nlist,nmax,fastflag
+      real(amrex_real), INTENT(in) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
 
-      REAL_T, INTENT(out) :: ff
-      REAL_T voln
-      REAL_T, INTENT(out) :: arean
-      REAL_T, INTENT(in) :: vtarget
-      REAL_T volcell
-      REAL_T cencell(sdim)
-      REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
-      REAL_T xtet(sdim+1,sdim)
-      REAL_T xsten_local(-nhalf0:nhalf0,sdim)
-      INTEGER_T i,dir
+      real(amrex_real), INTENT(out) :: ff
+      real(amrex_real) voln
+      real(amrex_real), INTENT(out) :: arean
+      real(amrex_real), INTENT(in) :: vtarget
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      integer, PARAMETER :: shapeflag=0 !regular hexahedron
+      real(amrex_real) xtet(sdim+1,sdim)
+      real(amrex_real) xsten_local(-nhalf0:nhalf0,sdim)
+      integer i,dir
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid multi_ff"
@@ -9344,22 +9345,22 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(in) :: intercept
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(in) :: intercept
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
 
-      REAL_T, INTENT(out) :: ff
-      REAL_T voln
-      REAL_T, INTENT(out) :: arean
-      REAL_T, INTENT(in) :: vtarget
-      REAL_T volcell
-      REAL_T cencell(sdim)
-      REAL_T, INTENT(out) :: centroid(sdim)
-      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
-      REAL_T xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(out) :: ff
+      real(amrex_real) voln
+      real(amrex_real), INTENT(out) :: arean
+      real(amrex_real), INTENT(in) :: vtarget
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      integer, PARAMETER :: shapeflag=0 !regular hexahedron
+      real(amrex_real) xtet(sdim+1,sdim)
 
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid single_ff"
@@ -9416,50 +9417,50 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in):: nlist
-      INTEGER_T, INTENT(in):: nlist_alloc
-      INTEGER_T, INTENT(in) :: nmax,fastflag
-      REAL_T,INTENT(in):: xtetlist(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(inout) :: intercept
-      REAL_T, INTENT(in) :: vfrac
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
+      integer, INTENT(in) :: nMAT_OPT ! 1
+      integer, INTENT(in) :: nDOF ! sdim-1
+      integer, INTENT(in) :: nEQN ! sdim 
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in):: nlist
+      integer, INTENT(in):: nlist_alloc
+      integer, INTENT(in) :: nmax,fastflag
+      real(amrex_real),INTENT(in):: xtetlist(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(inout) :: intercept
+      real(amrex_real), INTENT(in) :: vfrac
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
 
-      INTEGER_T niter,maxiter
-      INTEGER_T i,j,k,dir
-      REAL_T minphi,maxphi
-      REAL_T volcell
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T cencell(sdim)
-      REAL_T arean
-      REAL_T err
-      REAL_T moftol
-      REAL_T min_err
-      REAL_T vtarget,fc
-      INTEGER_T debug_root
-      INTEGER_T, INTENT(in) :: use_initial_guess
-      REAL_T err_default,fc_default,arean_default,intercept_default
-      REAL_T volcut
-      REAL_T cencut(sdim)
-      REAL_T xtarget(sdim)
-      REAL_T vfrac_normalize
-      REAL_T null_intercept,dist
-      INTEGER_T klo_stencil,khi_stencil
-      INTEGER_T nn
-      REAL_T intercept_upper,intercept_lower
-      REAL_T intercept_test,aa,bb,fa,fb
-      INTEGER_T :: tid=0
+      integer niter,maxiter
+      integer i,j,k,dir
+      real(amrex_real) minphi,maxphi
+      real(amrex_real) volcell
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) cencell(sdim)
+      real(amrex_real) arean
+      real(amrex_real) err
+      real(amrex_real) moftol
+      real(amrex_real) min_err
+      real(amrex_real) vtarget,fc
+      integer debug_root
+      integer, INTENT(in) :: use_initial_guess
+      real(amrex_real) err_default,fc_default,arean_default,intercept_default
+      real(amrex_real) volcut
+      real(amrex_real) cencut(sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) vfrac_normalize
+      real(amrex_real) null_intercept,dist
+      integer klo_stencil,khi_stencil
+      integer nn
+      real(amrex_real) intercept_upper,intercept_lower
+      real(amrex_real) intercept_test,aa,bb,fa,fb
+      integer :: tid=0
 
 #ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
+      integer omp_get_thread_num
 #endif
 
 #ifdef _OPENMP
@@ -10060,36 +10061,36 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim 
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in) :: slope(sdim)
-      REAL_T, INTENT(inout) :: intercept
-      REAL_T, INTENT(in) :: vfrac
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
+      integer, INTENT(in) :: nMAT_OPT ! 1 
+      integer, INTENT(in) :: nDOF ! sdim-1
+      integer, INTENT(in) :: nEQN ! sdim 
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in) :: slope(sdim)
+      real(amrex_real), INTENT(inout) :: intercept
+      real(amrex_real), INTENT(in) :: vfrac
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
 
-      INTEGER_T niter,maxiter
-      INTEGER_T i,j,k,dir
-      REAL_T minphi,maxphi
-      REAL_T volcell
-      REAL_T, INTENT(out) :: centroid(sdim)
-      REAL_T cencell(sdim)
-      REAL_T arean
-      REAL_T err,moftol
-      REAL_T vtarget,fc
-      INTEGER_T debug_root
-      REAL_T err_default,fc_default,arean_default,intercept_default
-      REAL_T volcut
-      REAL_T cencut(sdim)
-      REAL_T xtarget(sdim)
-      REAL_T vfrac_normalize
-      REAL_T null_intercept,dist
-      INTEGER_T klo_stencil,khi_stencil
-      REAL_T intercept_upper,intercept_lower
-      REAL_T intercept_test,aa,bb,fa,fb
+      integer niter,maxiter
+      integer i,j,k,dir
+      real(amrex_real) minphi,maxphi
+      real(amrex_real) volcell
+      real(amrex_real), INTENT(out) :: centroid(sdim)
+      real(amrex_real) cencell(sdim)
+      real(amrex_real) arean
+      real(amrex_real) err,moftol
+      real(amrex_real) vtarget,fc
+      integer debug_root
+      real(amrex_real) err_default,fc_default,arean_default,intercept_default
+      real(amrex_real) volcut
+      real(amrex_real) cencut(sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) vfrac_normalize
+      real(amrex_real) null_intercept,dist
+      integer klo_stencil,khi_stencil
+      real(amrex_real) intercept_upper,intercept_lower
+      real(amrex_real) intercept_test,aa,bb,fa,fb
 
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -10403,79 +10404,79 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: nlist_alloc
 
-      REAL_T, INTENT(in) :: uncaptured_volume_vof
+      real(amrex_real), INTENT(in) :: uncaptured_volume_vof
 
-      REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
-      INTEGER_T, PARAMETER :: tessellate=0
+      integer, PARAMETER :: tessellate=0
 
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: use_MilcentLemoine
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: nhalf0
-      INTEGER_T,INTENT(in):: nlist_vof
-      INTEGER_T,INTENT(in):: nlist_cen
+      integer, INTENT(in) :: nMAT_OPT ! 1 
+      integer, INTENT(in) :: nDOF ! sdim-1
+      integer, INTENT(in) :: nEQN ! sdim 
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: use_MilcentLemoine
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: nhalf0
+      integer,INTENT(in):: nlist_vof
+      integer,INTENT(in):: nlist_cen
 
-      INTEGER_T, INTENT(in) :: nmax,fastflag
-      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
+      integer, INTENT(in) :: nmax,fastflag
+      real(amrex_real), INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
 
-      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
 
-      REAL_T, INTENT(in) :: refcentroid(nEQN)
-      REAL_T refcentroidT(nEQN)
-      REAL_T, INTENT(in) :: refvfrac(nMAT_OPT)
-      INTEGER_T, INTENT(in) :: use_initial_guess 
+      real(amrex_real), INTENT(in) :: refcentroid(nEQN)
+      real(amrex_real) refcentroidT(nEQN)
+      real(amrex_real), INTENT(in) :: refvfrac(nMAT_OPT)
+      integer, INTENT(in) :: use_initial_guess 
 
-      REAL_T, INTENT(out) :: testcen(nEQN)
-      REAL_T testcenT(nEQN)
-      REAL_T, INTENT(in) :: angle(nDOF)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T xsten_local(-nhalf0:nhalf0,sdim)
-      REAL_T xsten2(-1:1,sdim)
-      INTEGER_T isten
-      INTEGER_T, PARAMETER :: nhalf2=1
-      REAL_T, INTENT(out) :: ff(nEQN) 
-      REAL_T volume_cut,facearea
-      INTEGER_T dir
-      REAL_T :: nslope(nEQN)
-      REAL_T, INTENT(inout) :: intercept(nMAT_OPT)
+      real(amrex_real), INTENT(out) :: testcen(nEQN)
+      real(amrex_real) testcenT(nEQN)
+      real(amrex_real), INTENT(in) :: angle(nDOF)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real) xsten_local(-nhalf0:nhalf0,sdim)
+      real(amrex_real) xsten2(-1:1,sdim)
+      integer isten
+      integer, PARAMETER :: nhalf2=1
+      real(amrex_real), INTENT(out) :: ff(nEQN) 
+      real(amrex_real) volume_cut,facearea
+      integer dir
+      real(amrex_real) :: nslope(nEQN)
+      real(amrex_real), INTENT(inout) :: intercept(nMAT_OPT)
 
-      INTEGER_T i1,j1,k1
-      REAL_T volcell_vof
-      REAL_T volcell_cen
-      REAL_T cencell_vof(sdim)
-      REAL_T cencell_cen(sdim)
-      REAL_T xtet(sdim+1,sdim)
-      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
-      INTEGER_T ksten_low,ksten_high
-      REAL_T volsten
-      REAL_T areasten
-      REAL_T censten(sdim)
-      REAL_T local_angles(2)
-      REAL_T local_volume
-      REAL_T local_cell_size(3)
-      REAL_T local_nslope(3)
-      REAL_T local_ref_centroid(3)
-      REAL_T local_centroid(3)
-      REAL_T local_gradient(2)
-      REAL_T local_refvfrac
-      REAL_T p0(3)
-      REAL_T p1(3)
-      REAL_T p2(3)
-      REAL_T p3(3)
-      REAL_T objective
-      REAL_T gradient(2)
+      integer i1,j1,k1
+      real(amrex_real) volcell_vof
+      real(amrex_real) volcell_cen
+      real(amrex_real) cencell_vof(sdim)
+      real(amrex_real) cencell_cen(sdim)
+      real(amrex_real) xtet(sdim+1,sdim)
+      integer, PARAMETER :: shapeflag=0 !regular hexahedron
+      integer ksten_low,ksten_high
+      real(amrex_real) volsten
+      real(amrex_real) areasten
+      real(amrex_real) censten(sdim)
+      real(amrex_real) local_angles(2)
+      real(amrex_real) local_volume
+      real(amrex_real) local_cell_size(3)
+      real(amrex_real) local_nslope(3)
+      real(amrex_real) local_ref_centroid(3)
+      real(amrex_real) local_centroid(3)
+      real(amrex_real) local_gradient(2)
+      real(amrex_real) local_refvfrac
+      real(amrex_real) p0(3)
+      real(amrex_real) p1(3)
+      real(amrex_real) p2(3)
+      real(amrex_real) p3(3)
+      real(amrex_real) objective
+      real(amrex_real) gradient(2)
 
-      INTEGER_T, PARAMETER :: use_super_cell=1
+      integer, PARAMETER :: use_super_cell=1
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -11097,8 +11098,8 @@ contains
       subroutine advance_angle(angle,delangle)
       use global_utility_module
       IMPLICIT NONE
-      REAL_T, INTENT(inout) :: angle
-      REAL_T, INTENT(in) :: delangle
+      real(amrex_real), INTENT(inout) :: angle
+      real(amrex_real), INTENT(in) :: delangle
 
       if (MOF_PI.eq.zero) then
        MOF_PI=four*atan(one)
@@ -11126,13 +11127,13 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T dir
-      REAL_T, INTENT(in) :: nn(sdim)
-      REAL_T, INTENT(out) :: angle(sdim-1)
-      REAL_T local_nn(sdim)
-      REAL_T mag
-      REAL_T x,y,z
+      integer, INTENT(in) :: sdim
+      integer dir
+      real(amrex_real), INTENT(in) :: nn(sdim)
+      real(amrex_real), INTENT(out) :: angle(sdim-1)
+      real(amrex_real) local_nn(sdim)
+      real(amrex_real) mag
+      real(amrex_real) x,y,z
 
       if (MOF_PI.eq.zero) then
        MOF_PI=four*atan(one)
@@ -11228,52 +11229,52 @@ contains
 
 #include "mofdata.H"
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
-      INTEGER_T :: nDOF_standard
-      INTEGER_T :: nEQN_standard
+      integer, INTENT(in) :: sdim
+      integer, PARAMETER :: nMAT_OPT_standard=1
+      integer :: nDOF_standard
+      integer :: nEQN_standard
 
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nmax
-      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: refvfrac(nMAT_OPT_standard)
-      REAL_T, INTENT(in) :: angle_recon(sdim-1)
-      REAL_T, INTENT(out) :: refcen(sdim)
-      REAL_T, INTENT(out) :: angle_init(sdim-1)
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nmax
+      real(amrex_real), INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: refvfrac(nMAT_OPT_standard)
+      real(amrex_real), INTENT(in) :: angle_recon(sdim-1)
+      real(amrex_real), INTENT(out) :: refcen(sdim)
+      real(amrex_real), INTENT(out) :: angle_init(sdim-1)
 
-      INTEGER_T :: nlist_vof=0
-      INTEGER_T :: nlist_cen=0
-      INTEGER_T, PARAMETER :: fastflag=1
-      INTEGER_T, PARAMETER :: use_initial_guess=0
+      integer :: nlist_vof=0
+      integer :: nlist_cen=0
+      integer, PARAMETER :: fastflag=1
+      integer, PARAMETER :: use_initial_guess=0
 
-      REAL_T intercept_init(nMAT_OPT_standard)
-      INTEGER_T use_MilcentLemoine
-      INTEGER_T :: tid=0
-      REAL_T refcentroid(sdim)
-      INTEGER_T dir
-      REAL_T :: angle_init_local(sdim-1)
-      REAL_T :: f_placeholder(sdim)
-      REAL_T :: intercept_placeholder(nMAT_OPT_standard)
-      REAL_T :: cen_derive_placeholder(sdim)
-      REAL_T :: cen_free_placeholder(sdim)
-      REAL_T :: npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
-      REAL_T :: local_npredict(sdim)
-      REAL_T :: mag(3) 
-      INTEGER_T, PARAMETER :: im_primary_mat=0
-      INTEGER_T, PARAMETER :: im_secondary_mat=0
-      INTEGER_T, PARAMETER :: im_tertiary_mat=0
+      real(amrex_real) intercept_init(nMAT_OPT_standard)
+      integer use_MilcentLemoine
+      integer :: tid=0
+      real(amrex_real) refcentroid(sdim)
+      integer dir
+      real(amrex_real) :: angle_init_local(sdim-1)
+      real(amrex_real) :: f_placeholder(sdim)
+      real(amrex_real) :: intercept_placeholder(nMAT_OPT_standard)
+      real(amrex_real) :: cen_derive_placeholder(sdim)
+      real(amrex_real) :: cen_free_placeholder(sdim)
+      real(amrex_real) :: npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
+      real(amrex_real) :: local_npredict(sdim)
+      real(amrex_real) :: mag(3) 
+      integer, PARAMETER :: im_primary_mat=0
+      integer, PARAMETER :: im_secondary_mat=0
+      integer, PARAMETER :: im_tertiary_mat=0
 
-      REAL_T, PARAMETER :: uncaptured_volume_vof_placeholder=one
+      real(amrex_real), PARAMETER :: uncaptured_volume_vof_placeholder=one
 
-      REAL_T :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real) :: mofdata(num_materials*ngeom_recon)
 #ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
+      integer omp_get_thread_num
 #endif
 #ifdef _OPENMP
       tid=omp_get_thread_num()
@@ -11451,137 +11452,137 @@ contains
 
 #include "mofdata.H"
 
-      INTEGER_T, INTENT(in) :: tid
+      integer, INTENT(in) :: tid
 
-      INTEGER_T, INTENT(in) :: nMAT_OPT ! 1 
-      INTEGER_T, INTENT(in) :: nDOF ! sdim-1
-      INTEGER_T, INTENT(in) :: nEQN ! sdim 
+      integer, INTENT(in) :: nMAT_OPT ! 1 
+      integer, INTENT(in) :: nDOF ! sdim-1
+      integer, INTENT(in) :: nEQN ! sdim 
 
-      REAL_T, INTENT(in) :: uncaptured_volume_vof
-      REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in) :: uncaptured_volume_vof
+      real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: grid_index(sdim)
-      INTEGER_T, INTENT(in) :: grid_level
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nlist_vof
-      INTEGER_T, INTENT(in) :: nlist_cen
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: critical_material
-      INTEGER_T, INTENT(in) :: fastflag
-      REAL_T, INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: refcentroid(nEQN)
-      REAL_T, INTENT(in) :: refvfrac(nMAT_OPT)
-      INTEGER_T :: ipredict
-      REAL_T :: local_npredict(nEQN)
-      REAL_T, INTENT(in) :: npredict(MOF_INITIAL_GUESS_CENTROIDS,nEQN)
-      REAL_T, INTENT(out) :: intercept(nMAT_OPT)
-      REAL_T, INTENT(out) :: nslope(nEQN) 
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: grid_index(sdim)
+      integer, INTENT(in) :: grid_level
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nlist_vof
+      integer, INTENT(in) :: nlist_cen
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: critical_material
+      integer, INTENT(in) :: fastflag
+      real(amrex_real), INTENT(in) :: xtetlist_vof(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: xtetlist_cen(4,3,nlist_alloc)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: refcentroid(nEQN)
+      real(amrex_real), INTENT(in) :: refvfrac(nMAT_OPT)
+      integer :: ipredict
+      real(amrex_real) :: local_npredict(nEQN)
+      real(amrex_real), INTENT(in) :: npredict(MOF_INITIAL_GUESS_CENTROIDS,nEQN)
+      real(amrex_real), INTENT(out) :: intercept(nMAT_OPT)
+      real(amrex_real), INTENT(out) :: nslope(nEQN) 
 
-      REAL_T new_angle(nDOF)
-      REAL_T angle_opt(nDOF)
+      real(amrex_real) new_angle(nDOF)
+      real(amrex_real) angle_opt(nDOF)
 
-      REAL_T angle_base(nDOF)
-      REAL_T angle_plus(nDOF)
-      REAL_T angle_minus(nDOF)
-      REAL_T angle_plus_archive(nDOF,nDOF)
-      REAL_T angle_minus_archive(nDOF,nDOF)
-      REAL_T angle_gauss_newton(nDOF)
-      REAL_T angle_steepest(nDOF)
+      real(amrex_real) angle_base(nDOF)
+      real(amrex_real) angle_plus(nDOF)
+      real(amrex_real) angle_minus(nDOF)
+      real(amrex_real) angle_plus_archive(nDOF,nDOF)
+      real(amrex_real) angle_minus_archive(nDOF,nDOF)
+      real(amrex_real) angle_gauss_newton(nDOF)
+      real(amrex_real) angle_steepest(nDOF)
 
-      REAL_T angle_init(nDOF)
+      real(amrex_real) angle_init(nDOF)
 
-      REAL_T intercept_init(nMAT_OPT)
-      REAL_T cen_derive_init(nEQN)
+      real(amrex_real) intercept_init(nMAT_OPT)
+      real(amrex_real) cen_derive_init(nEQN)
 
-      REAL_T intercept_array(nMAT_OPT,MOFITERMAX+1)
-      REAL_T cen_array(nEQN,MOFITERMAX+1)
-      REAL_T angle_array(nDOF,MOFITERMAX+1)
-      REAL_T f_array(nEQN,MOFITERMAX+1)  
-      REAL_T err_array(MOFITERMAX+1)
-      REAL_T delangle_array(MOFITERMAX+1)
-      REAL_T delta_theta_local
+      real(amrex_real) intercept_array(nMAT_OPT,MOFITERMAX+1)
+      real(amrex_real) cen_array(nEQN,MOFITERMAX+1)
+      real(amrex_real) angle_array(nDOF,MOFITERMAX+1)
+      real(amrex_real) f_array(nEQN,MOFITERMAX+1)  
+      real(amrex_real) err_array(MOFITERMAX+1)
+      real(amrex_real) delangle_array(MOFITERMAX+1)
+      real(amrex_real) delta_theta_local
 
-      INTEGER_T dir,iter
-      REAL_T best_error
-      REAL_T finit(nEQN)
-      REAL_T fp(nEQN)
-      REAL_T fm(nEQN)
-      REAL_T fopt(nEQN)
-      REAL_T f_gauss_newton(nEQN)
-      REAL_T f_steepest(nEQN)
-      REAL_T fbase(nEQN)
-      REAL_T f_plus(nEQN,nDOF)
-      REAL_T f_minus(nEQN,nDOF)
+      integer dir,iter
+      real(amrex_real) best_error
+      real(amrex_real) finit(nEQN)
+      real(amrex_real) fp(nEQN)
+      real(amrex_real) fm(nEQN)
+      real(amrex_real) fopt(nEQN)
+      real(amrex_real) f_gauss_newton(nEQN)
+      real(amrex_real) f_steepest(nEQN)
+      real(amrex_real) fbase(nEQN)
+      real(amrex_real) f_plus(nEQN,nDOF)
+      real(amrex_real) f_minus(nEQN,nDOF)
 
-      REAL_T local_int(nMAT_OPT)
+      real(amrex_real) local_int(nMAT_OPT)
 
-      REAL_T intp(nMAT_OPT,nDOF)
-      REAL_T intm(nMAT_OPT,nDOF)
-      REAL_T int_gauss_newton(nMAT_OPT)
-      REAL_T int_steepest(nMAT_OPT)
-      REAL_T cen_gauss_newton(nEQN)
-      REAL_T cen_steepest(nEQN)
-      REAL_T intopt(nMAT_OPT)
-      REAL_T cenp(nEQN)
-      REAL_T cenm(nEQN)
-      REAL_T cenopt(nEQN)
-      REAL_T cen_plus(nEQN,nDOF)
-      REAL_T cen_minus(nEQN,nDOF)
+      real(amrex_real) intp(nMAT_OPT,nDOF)
+      real(amrex_real) intm(nMAT_OPT,nDOF)
+      real(amrex_real) int_gauss_newton(nMAT_OPT)
+      real(amrex_real) int_steepest(nMAT_OPT)
+      real(amrex_real) cen_gauss_newton(nEQN)
+      real(amrex_real) cen_steepest(nEQN)
+      real(amrex_real) intopt(nMAT_OPT)
+      real(amrex_real) cenp(nEQN)
+      real(amrex_real) cenm(nEQN)
+      real(amrex_real) cenopt(nEQN)
+      real(amrex_real) cen_plus(nEQN,nDOF)
+      real(amrex_real) cen_minus(nEQN,nDOF)
 
-      REAL_T delta_theta
-      REAL_T delta_theta_max
-      REAL_T err
-      REAL_T err_gauss_newton
-      REAL_T err_steepest
-      REAL_T fgrad(nEQN,nDOF)  
-      INTEGER_T ii,iicrit
-      INTEGER_T i_angle,j_angle
-      REAL_T delangle(nDOF)
-      REAL_T RHS(nDOF)
-      REAL_T JTJ(nDOF,nDOF)
-      REAL_T JTJINV(nDOF,nDOF)
-      REAL_T tol,local_tol,DET
-      REAL_T err_local_min
-      REAL_T errinit
+      real(amrex_real) delta_theta
+      real(amrex_real) delta_theta_max
+      real(amrex_real) err
+      real(amrex_real) err_gauss_newton
+      real(amrex_real) err_steepest
+      real(amrex_real) fgrad(nEQN,nDOF)  
+      integer ii,iicrit
+      integer i_angle,j_angle
+      real(amrex_real) delangle(nDOF)
+      real(amrex_real) RHS(nDOF)
+      real(amrex_real) JTJ(nDOF,nDOF)
+      real(amrex_real) JTJINV(nDOF,nDOF)
+      real(amrex_real) tol,local_tol,DET
+      real(amrex_real) err_local_min
+      real(amrex_real) errinit
 
-      REAL_T err_plus(nDOF)
-      REAL_T err_minus(nDOF)
+      real(amrex_real) err_plus(nDOF)
+      real(amrex_real) err_minus(nDOF)
 
-      REAL_T, INTENT(out) :: centroidA(nEQN)
-      INTEGER_T use_initial_guess
-      REAL_T dx_normalize
-      INTEGER_T nguess
-      REAL_T nLS(sdim)
+      real(amrex_real), INTENT(out) :: centroidA(nEQN)
+      integer use_initial_guess
+      real(amrex_real) dx_normalize
+      integer nguess
+      real(amrex_real) nLS(sdim)
 
-      INTEGER_T ksten_low,ksten_high
-      INTEGER_T i1,j1,k1
-      INTEGER_T mof_stencil_ok
-      INTEGER_T grid_index_ML(sdim)
-      INTEGER_T iML,jML,kML,cmofML
-      REAL_T angle_init_ML(MOF_TRAINING_NDIM_DECISIONS) !angle,vfrac
-      REAL_T angle_init_range(nDOF)
-      REAL_T angle_output(nDOF)
+      integer ksten_low,ksten_high
+      integer i1,j1,k1
+      integer mof_stencil_ok
+      integer grid_index_ML(sdim)
+      integer iML,jML,kML,cmofML
+      real(amrex_real) angle_init_ML(MOF_TRAINING_NDIM_DECISIONS) !angle,vfrac
+      real(amrex_real) angle_init_range(nDOF)
+      real(amrex_real) angle_output(nDOF)
 
-      REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
-      INTEGER_T, INTENT(in) :: lsnormal_valid(num_materials)
+      real(amrex_real), INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
+      integer, INTENT(in) :: lsnormal_valid(num_materials)
 
-      INTEGER_T training_nguess
-      INTEGER_T local_MOFITERMAX
+      integer training_nguess
+      integer local_MOFITERMAX
 
-      INTEGER_T use_MilcentLemoine
+      integer use_MilcentLemoine
 
-      INTEGER_T :: tid_check=0
+      integer :: tid_check=0
 
 #ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
+      integer omp_get_thread_num
 #endif
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -12554,7 +12555,7 @@ contains
          angle_gauss_newton, & !intent(in)
          f_gauss_newton, & !intent(out)
          int_gauss_newton, & !intent(inout)
-         cen_gauss_newton, & !REAL_T, INTENT(out) :: testcen(nEQN)
+         cen_gauss_newton, & !real(amrex_real), INTENT(out) :: testcen(nEQN)
          use_initial_guess, &
          fastflag,sdim)
 
@@ -12604,7 +12605,7 @@ contains
          angle_steepest, & !intent(in)
          f_steepest, & !intent(out)
          int_steepest, &  !intent(inout)
-         cen_steepest, & !REAL_T, INTENT(out) :: testcen(nEQN)
+         cen_steepest, & !real(amrex_real), INTENT(out) :: testcen(nEQN)
          use_initial_guess, &
          fastflag,sdim)
 
@@ -12860,28 +12861,28 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: nhalf
-      INTEGER_T :: dir
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: slope(3,sdim)
-      REAL_T local_slope(sdim)
-      REAL_T slopeRT(sdim)
-      REAL_T, INTENT(in) :: vof_free
-      REAL_T, INTENT(in) :: cen_free(sdim)
-      REAL_T, INTENT(in) :: vof_ref
-      REAL_T, INTENT(in) :: cen_ref(sdim)
-      REAL_T :: local_ref(sdim)
-      REAL_T :: local_free(sdim)
-      REAL_T :: dual_vof_ref
-      REAL_T :: dual_cen_ref(sdim)
-      REAL_T cen_freeXYZ(sdim)
-      REAL_T cen_refXYZ(sdim)
-      REAL_T, INTENT(out) :: mag(3)
-      REAL_T RR,theta,mag_temp
-      INTEGER_T ipredict
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: nhalf
+      integer :: dir
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(out) :: slope(3,sdim)
+      real(amrex_real) local_slope(sdim)
+      real(amrex_real) slopeRT(sdim)
+      real(amrex_real), INTENT(in) :: vof_free
+      real(amrex_real), INTENT(in) :: cen_free(sdim)
+      real(amrex_real), INTENT(in) :: vof_ref
+      real(amrex_real), INTENT(in) :: cen_ref(sdim)
+      real(amrex_real) :: local_ref(sdim)
+      real(amrex_real) :: local_free(sdim)
+      real(amrex_real) :: dual_vof_ref
+      real(amrex_real) :: dual_cen_ref(sdim)
+      real(amrex_real) cen_freeXYZ(sdim)
+      real(amrex_real) cen_refXYZ(sdim)
+      real(amrex_real), INTENT(out) :: mag(3)
+      real(amrex_real) RR,theta,mag_temp
+      integer ipredict
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -13018,70 +13019,70 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(IN) :: nlist_alloc 
-      INTEGER_T, INTENT(IN) :: tid
-      INTEGER_T, INTENT(in) :: sdim 
-      INTEGER_T, INTENT (IN) :: grid_index(sdim)
-      INTEGER_T, INTENT (IN) :: grid_level
-      INTEGER_T, INTENT (IN) :: nhalf0
-      INTEGER_T, INTENT (IN) :: bfact
-      REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
-      REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
-      REAL_T, DIMENSION(-nhalf0:nhalf0,sdim) :: xsten_local
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T dir
-      INTEGER_T i_stencil_node
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: order_algorithm_in(num_materials)
-      REAL_T, INTENT(inout) :: uncaptured_volume_vof 
-      REAL_T, INTENT(inout) :: uncaptured_volume_cen
-      REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
-      REAL_T centroidA(num_materials*sdim)
-      REAL_T, INTENT(out) :: multi_centroidA(num_materials,sdim)
-      INTEGER_T im,vofcomp
-      INTEGER_T, INTENT(in) :: imaterial_count
-      REAL_T distmax
-      INTEGER_T ordermax,order_min
-      INTEGER_T critical_material,override_selected
-      REAL_T volcut_vof,volcell_vof
-      REAL_T volcut_cen,volcell_cen
-      REAL_T mag(3)
-      REAL_T cencut_vof(sdim)
-      REAL_T cencell_vof(sdim)
-      REAL_T cencut_cen(sdim)
-      REAL_T cencell_cen(sdim)
-      REAL_T, INTENT(out) :: xtetlist_vof(4,3,nlist_alloc)
-      REAL_T, INTENT(out) :: xtetlist_cen(4,3,nlist_alloc)
-      INTEGER_T nlist_vof
-      INTEGER_T nlist_cen
-      INTEGER_T single_material_takes_all
-      INTEGER_T single_material_im
-      INTEGER_T test_order
-      REAL_T test_vfrac,max_vfrac
-      INTEGER_T use_initial_guess
-      INTEGER_T ipredict
-      REAL_T npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
-      REAL_T local_npredict(sdim)
-      REAL_T refcentroid(num_materials*sdim)
-      REAL_T centroid_ref(sdim)
-      REAL_T centroid_free(sdim)
-      REAL_T refvfrac(num_materials)
-      REAL_T single_volume
-      REAL_T nslope(num_materials*sdim)
-      REAL_T intercept(num_materials)
-      INTEGER_T mat_before,vofcomp_before
-      INTEGER_T fastflag,use_super_cell
-      REAL_T vofmain(num_materials)
+      integer, INTENT(IN) :: nlist_alloc 
+      integer, INTENT(IN) :: tid
+      integer, INTENT(in) :: sdim 
+      integer, INTENT (IN) :: grid_index(sdim)
+      integer, INTENT (IN) :: grid_level
+      integer, INTENT (IN) :: nhalf0
+      integer, INTENT (IN) :: bfact
+      real(amrex_real), INTENT (IN), DIMENSION(sdim) :: dx
+      real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
+      real(amrex_real), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten_local
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer dir
+      integer i_stencil_node
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: order_algorithm_in(num_materials)
+      real(amrex_real), INTENT(inout) :: uncaptured_volume_vof 
+      real(amrex_real), INTENT(inout) :: uncaptured_volume_cen
+      real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real) centroidA(num_materials*sdim)
+      real(amrex_real), INTENT(out) :: multi_centroidA(num_materials,sdim)
+      integer im,vofcomp
+      integer, INTENT(in) :: imaterial_count
+      real(amrex_real) distmax
+      integer ordermax,order_min
+      integer critical_material,override_selected
+      real(amrex_real) volcut_vof,volcell_vof
+      real(amrex_real) volcut_cen,volcell_cen
+      real(amrex_real) mag(3)
+      real(amrex_real) cencut_vof(sdim)
+      real(amrex_real) cencell_vof(sdim)
+      real(amrex_real) cencut_cen(sdim)
+      real(amrex_real) cencell_cen(sdim)
+      real(amrex_real), INTENT(out) :: xtetlist_vof(4,3,nlist_alloc)
+      real(amrex_real), INTENT(out) :: xtetlist_cen(4,3,nlist_alloc)
+      integer nlist_vof
+      integer nlist_cen
+      integer single_material_takes_all
+      integer single_material_im
+      integer test_order
+      real(amrex_real) test_vfrac,max_vfrac
+      integer use_initial_guess
+      integer ipredict
+      real(amrex_real) npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
+      real(amrex_real) local_npredict(sdim)
+      real(amrex_real) refcentroid(num_materials*sdim)
+      real(amrex_real) centroid_ref(sdim)
+      real(amrex_real) centroid_free(sdim)
+      real(amrex_real) refvfrac(num_materials)
+      real(amrex_real) single_volume
+      real(amrex_real) nslope(num_materials*sdim)
+      real(amrex_real) intercept(num_materials)
+      integer mat_before,vofcomp_before
+      integer fastflag,use_super_cell
+      real(amrex_real) vofmain(num_materials)
 
-      REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      REAL_T, INTENT(in) :: lsnormal(num_materials,sdim)
-      INTEGER_T, INTENT(in) :: lsnormal_valid(num_materials)
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
-      INTEGER_T :: nDOF_standard
-      INTEGER_T :: nEQN_standard
-      INTEGER_T is_rigid_local(num_materials)
+      real(amrex_real), INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
+      integer, INTENT(in) :: lsnormal_valid(num_materials)
+      integer, PARAMETER :: tessellate=0
+      integer, PARAMETER :: nMAT_OPT_standard=1
+      integer :: nDOF_standard
+      integer :: nEQN_standard
+      integer is_rigid_local(num_materials)
 
 #include "mofdata.H"
 
@@ -13959,45 +13960,45 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: vof_height_function
-      INTEGER_T, INTENT(out) :: crossing_status
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten0( &
+      integer, INTENT(in) :: vof_height_function
+      integer, INTENT(out) :: crossing_status
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten0( &
         -(2*ngrow_distance+1):(2*ngrow_distance+1), &
         sdim)
-      REAL_T, INTENT(in) :: dx_col(sdim)
-      REAL_T, INTENT(in) :: x_col(sdim)
-      REAL_T, INTENT(in) :: x_col_avg(sdim)
-      REAL_T, INTENT(in) :: lsdata( &
+      real(amrex_real), INTENT(in) :: dx_col(sdim)
+      real(amrex_real), INTENT(in) :: x_col(sdim)
+      real(amrex_real), INTENT(in) :: x_col_avg(sdim)
+      real(amrex_real), INTENT(in) :: lsdata( &
         -ngrow_distance:ngrow_distance)
-      REAL_T, INTENT(in) :: vofdata( &
+      real(amrex_real), INTENT(in) :: vofdata( &
         -ngrow_distance:ngrow_distance)
-      REAL_T, INTENT(out) :: ht_from_LS
-      REAL_T, INTENT(out) :: ht_from_VOF
-      REAL_T, INTENT(in) :: n1d
-      INTEGER_T, INTENT(in) :: dircrit
+      real(amrex_real), INTENT(out) :: ht_from_LS
+      real(amrex_real), INTENT(out) :: ht_from_VOF
+      real(amrex_real), INTENT(in) :: n1d
+      integer, INTENT(in) :: dircrit
 
-      INTEGER_T l
-      INTEGER_T l_vof
-      INTEGER_T lmin,lmax
-      INTEGER_T lvof_min,lvof_max
-      INTEGER_T lcrit
-      REAL_T xbottom_stencil
-      REAL_T xtop_stencil
-      REAL_T xbottom_adjusted
-      INTEGER_T vof_ratio_ht_power
-      REAL_T X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
+      integer l
+      integer l_vof
+      integer lmin,lmax
+      integer lvof_min,lvof_max
+      integer lcrit
+      real(amrex_real) xbottom_stencil
+      real(amrex_real) xtop_stencil
+      real(amrex_real) xbottom_adjusted
+      integer vof_ratio_ht_power
+      real(amrex_real) X_AT_ABS_LSMIN,ABS_LSMIN,LSTEST
 
-      REAL_T ls1,ls2,x1,x2,slope
-      REAL_T charfn(-ngrow_distance:ngrow_distance)
-      REAL_T LS
-      REAL_T vof_top_sum,vof_bot_sum
-      REAL_T dr,dz
-      REAL_T volcell
-      REAL_T vof_crit
-      REAL_T dx_norm,dx_tan1,dx_tan2
+      real(amrex_real) ls1,ls2,x1,x2,slope
+      real(amrex_real) charfn(-ngrow_distance:ngrow_distance)
+      real(amrex_real) LS
+      real(amrex_real) vof_top_sum,vof_bot_sum
+      real(amrex_real) dr,dz
+      real(amrex_real) volcell
+      real(amrex_real) vof_crit
+      real(amrex_real) dx_norm,dx_tan1,dx_tan2
 
       if (ngrow_distance.ne.4) then
        print *,"ngrow_distance invalid"
@@ -14589,47 +14590,47 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: continuous_mof
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: nhalf0
-      INTEGER_T, INTENT(in) :: im
-      INTEGER_T, INTENT(in) :: sdim
-      REAL_T, INTENT(in)    :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T :: xtet(sdim+1,sdim)
-      REAL_T, INTENT(in)    :: dx(sdim)
-      REAL_T, INTENT(in)    :: dxmaxLS_volume_constraint
-      REAL_T xpoint(sdim)
-      REAL_T cutoff,m1,m2
-      REAL_T nsimple(sdim)
-      REAL_T nn(sdim)
-      REAL_T distsimple,dist,LSWT
-      REAL_T w(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T aa(sdim+1,sdim+1)
-      REAL_T xx(sdim+1)
-      REAL_T bb(sdim+1)
-      REAL_T :: mapmat(sdim,sdim)
-      REAL_T :: mapmat_inv(sdim,sdim)
-      REAL_T :: mapmat_scratch(sdim,sdim)
-      INTEGER_T matstatus
-      REAL_T wx,wy,wz
-      INTEGER_T ii,jj,kk
-      INTEGER_T i,j,k
-      INTEGER_T i1,j1,k1
-      INTEGER_T itet
-      INTEGER_T klo,khi
-      INTEGER_T dir
+      integer, INTENT(in) :: continuous_mof
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: nhalf0
+      integer, INTENT(in) :: im
+      integer, INTENT(in) :: sdim
+      real(amrex_real), INTENT(in)    :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real) :: xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(in)    :: dx(sdim)
+      real(amrex_real), INTENT(in)    :: dxmaxLS_volume_constraint
+      real(amrex_real) xpoint(sdim)
+      real(amrex_real) cutoff,m1,m2
+      real(amrex_real) nsimple(sdim)
+      real(amrex_real) nn(sdim)
+      real(amrex_real) distsimple,dist,LSWT
+      real(amrex_real) w(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) aa(sdim+1,sdim+1)
+      real(amrex_real) xx(sdim+1)
+      real(amrex_real) bb(sdim+1)
+      real(amrex_real) :: mapmat(sdim,sdim)
+      real(amrex_real) :: mapmat_inv(sdim,sdim)
+      real(amrex_real) :: mapmat_scratch(sdim,sdim)
+      integer matstatus
+      real(amrex_real) wx,wy,wz
+      integer ii,jj,kk
+      integer i,j,k
+      integer i1,j1,k1
+      integer itet
+      integer klo,khi
+      integer dir
 
-      REAL_T, INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      REAL_T :: ls_mof_tet(sdim+1)
+      real(amrex_real), INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real) :: ls_mof_tet(sdim+1)
 
-      REAL_T, INTENT(out)    :: lsnormal(num_materials,sdim)
-      INTEGER_T, INTENT(out) :: lsnormal_valid(num_materials)
-      REAL_T, INTENT(out)    :: ls_intercept(num_materials)
-      REAL_T dxplus,dxminus
-      REAL_T LS_cen,LS_plus,LS_minus
-      REAL_T slope_plus,slope_minus
-      REAL_T theta_plus,theta_minus
-      INTEGER_T always_use_default
+      real(amrex_real), INTENT(out)    :: lsnormal(num_materials,sdim)
+      integer, INTENT(out) :: lsnormal_valid(num_materials)
+      real(amrex_real), INTENT(out)    :: ls_intercept(num_materials)
+      real(amrex_real) dxplus,dxminus
+      real(amrex_real) LS_cen,LS_plus,LS_minus
+      real(amrex_real) slope_plus,slope_minus
+      real(amrex_real) theta_plus,theta_minus
+      integer always_use_default
 
 #include "mofdata.H"
 
@@ -15078,9 +15079,9 @@ contains
       subroutine nfact(n,nf)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: n
-      INTEGER_T, INTENT(out) :: nf
-      INTEGER_T i
+      integer, INTENT(in) :: n
+      integer, INTENT(out) :: nf
+      integer i
 
       if (n.le.0) then
        print *,"n invalid"
@@ -15103,11 +15104,11 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(inout) :: order_stack_count
-      INTEGER_T, INTENT(in) :: n_orderings,n_ndef
-      INTEGER_T, INTENT(in) :: temp_order(num_materials)
-      INTEGER_T, INTENT(out) :: order_stack(n_orderings,n_ndef)
-      INTEGER_T i
+      integer, INTENT(inout) :: order_stack_count
+      integer, INTENT(in) :: n_orderings,n_ndef
+      integer, INTENT(in) :: temp_order(num_materials)
+      integer, INTENT(out) :: order_stack(n_orderings,n_ndef)
+      integer i
      
       if (order_stack_count.ge.n_orderings) then
        print *,"order_stack_count too big - push"
@@ -15128,11 +15129,11 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(inout) :: order_stack_count
-      INTEGER_T, INTENT(in) :: n_orderings,n_ndef
-      INTEGER_T, INTENT(out) :: temp_order(num_materials)
-      INTEGER_T, INTENT(in) :: order_stack(n_orderings,n_ndef)
-      INTEGER_T i
+      integer, INTENT(inout) :: order_stack_count
+      integer, INTENT(in) :: n_orderings,n_ndef
+      integer, INTENT(out) :: temp_order(num_materials)
+      integer, INTENT(in) :: order_stack(n_orderings,n_ndef)
+      integer i
      
       if (order_stack_count.gt.n_orderings) then
        print *,"order_stack_count too big - pop"
@@ -15228,114 +15229,114 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT (IN) :: bfact,nhalf0
-      INTEGER_T, INTENT (IN) :: use_ls_data
-      INTEGER_T, INTENT (IN) :: mof_verbose
-      INTEGER_T, INTENT (IN) :: sdim
-      INTEGER_T, INTENT (IN) :: nlist_alloc
-      INTEGER_T, INTENT (IN) :: nmax
-      INTEGER_T, INTENT (IN) :: continuous_mof
-      INTEGER_T, INTENT (IN) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT (IN) :: grid_index(sdim)
-      INTEGER_T, INTENT (IN) :: grid_level
+      integer, INTENT (IN) :: bfact,nhalf0
+      integer, INTENT (IN) :: use_ls_data
+      integer, INTENT (IN) :: mof_verbose
+      integer, INTENT (IN) :: sdim
+      integer, INTENT (IN) :: nlist_alloc
+      integer, INTENT (IN) :: nmax
+      integer, INTENT (IN) :: continuous_mof
+      integer, INTENT (IN) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT (IN) :: grid_index(sdim)
+      integer, INTENT (IN) :: grid_level
 
        ! D_DECL(i,j,k) = i,j  in 2D
        !               = i,j,k in 3D
-      REAL_T, INTENT (IN) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT (IN) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
-      REAL_T, INTENT (IN), DIMENSION(sdim) :: dx
+      real(amrex_real), INTENT (IN), DIMENSION(sdim) :: dx
 
-      REAL_T, INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_vof
-      REAL_T, INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_cen
-      REAL_T, INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
-      REAL_T, INTENT (INOUT), DIMENSION(num_materials*ngeom_recon) :: mofdata
-      REAL_T, INTENT (IN), DIMENSION(num_materials) :: vof_super
-      REAL_T, DIMENSION(num_materials*ngeom_recon) :: mofdata_in
-      REAL_T, INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
+      real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_vof
+      real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_cen
+      real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
+      real(amrex_real), INTENT (INOUT), DIMENSION(num_materials*ngeom_recon) :: mofdata
+      real(amrex_real), INTENT (IN), DIMENSION(num_materials) :: vof_super
+      real(amrex_real), DIMENSION(num_materials*ngeom_recon) :: mofdata_in
+      real(amrex_real), INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
 
-      INTEGER_T imaterial2
-      INTEGER_T imaterial
-      INTEGER_T vofcomp
-      INTEGER_T dir
-      INTEGER_T imaterial_count
+      integer imaterial2
+      integer imaterial
+      integer vofcomp
+      integer dir
+      integer imaterial_count
 
-      REAL_T uncaptured_volume_vof
-      REAL_T uncaptured_centroid_vof(sdim)
-      REAL_T uncaptured_volume_cen
-      REAL_T uncaptured_centroid_cen(sdim)
+      real(amrex_real) uncaptured_volume_vof
+      real(amrex_real) uncaptured_centroid_vof(sdim)
+      real(amrex_real) uncaptured_volume_cen
+      real(amrex_real) uncaptured_centroid_cen(sdim)
 
-      REAL_T xref_mat(sdim)
-      REAL_T xact_mat(sdim)
-      REAL_T xref_matT(sdim)
-      REAL_T xact_matT(sdim)
-      INTEGER_T single_material
-      REAL_T remaining_vfrac
-      REAL_T nrecon(sdim)
-      INTEGER_T order_algorithm_in(num_materials)
-      INTEGER_T num_materials_cell
-      INTEGER_T, dimension(:,:), allocatable :: order_array
-      INTEGER_T, dimension(:,:), allocatable :: order_stack
-      REAL_T, dimension(:,:), allocatable :: mofdata_array
-      REAL_T, dimension(:,:,:), allocatable :: centroidA_array
-      REAL_T, dimension(:), allocatable :: moferror_array
-      INTEGER_T order_count,order_stack_count
-      INTEGER_T irank
-      INTEGER_T iflex,jflex,kflex
-      INTEGER_T iflex2
-      INTEGER_T is_valid
+      real(amrex_real) xref_mat(sdim)
+      real(amrex_real) xact_mat(sdim)
+      real(amrex_real) xref_matT(sdim)
+      real(amrex_real) xact_matT(sdim)
+      integer single_material
+      real(amrex_real) remaining_vfrac
+      real(amrex_real) nrecon(sdim)
+      integer order_algorithm_in(num_materials)
+      integer num_materials_cell
+      integer, dimension(:,:), allocatable :: order_array
+      integer, dimension(:,:), allocatable :: order_stack
+      real(amrex_real), dimension(:,:), allocatable :: mofdata_array
+      real(amrex_real), dimension(:,:,:), allocatable :: centroidA_array
+      real(amrex_real), dimension(:), allocatable :: moferror_array
+      integer order_count,order_stack_count
+      integer irank
+      integer iflex,jflex,kflex
+      integer iflex2
+      integer is_valid
       ! n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
-      INTEGER_T n_ndef
-      INTEGER_T number_of_open_places
-      INTEGER_T n_orderings
+      integer n_ndef
+      integer number_of_open_places
+      integer n_orderings
       !0 if place open, 1 if place taken.
-      INTEGER_T placeholder(num_materials)
+      integer placeholder(num_materials)
       !list of available places 1...number_of_open_places
       !number_of_open_places >= n_ndef
-      INTEGER_T placelist(num_materials)
+      integer placelist(num_materials)
       !list of fluid materials that need an ordering
       !flexlist(1..n_ndef)
-      INTEGER_T flexlist(num_materials) 
-      INTEGER_T temp_order(num_materials)
-      INTEGER_T argmin_order
-      REAL_T min_error,mof_err
-      INTEGER_T alloc_flag
-      REAL_T voftest(num_materials)
-      INTEGER_T i1,j1,k1,k1lo,k1hi
-      REAL_T dxmaxLS
-      REAL_T dxmaxLS_volume_constraint
-      REAL_T null_intercept
-      REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: ls_mof
-      REAL_T, dimension(:,:), allocatable :: lsnormal
-      INTEGER_T, dimension(:), allocatable :: lsnormal_valid
-      REAL_T, dimension(:), allocatable :: ls_intercept
+      integer flexlist(num_materials) 
+      integer temp_order(num_materials)
+      integer argmin_order
+      real(amrex_real) min_error,mof_err
+      integer alloc_flag
+      real(amrex_real) voftest(num_materials)
+      integer i1,j1,k1,k1lo,k1hi
+      real(amrex_real) dxmaxLS
+      real(amrex_real) dxmaxLS_volume_constraint
+      real(amrex_real) null_intercept
+      real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: ls_mof
+      real(amrex_real), dimension(:,:), allocatable :: lsnormal
+      integer, dimension(:), allocatable :: lsnormal_valid
+      real(amrex_real), dimension(:), allocatable :: ls_intercept
 
-      INTEGER_T fastflag
-      REAL_T centroidA(sdim)
-      REAL_T centroid_free(sdim)
-      REAL_T centroid_ref(sdim)
-      REAL_T refcentroid(sdim)
-      REAL_T refvfrac(1)
-      REAL_T single_volume
-      REAL_T nslope(sdim)
-      REAL_T intercept(1)
-      INTEGER_T ipredict
-      REAL_T local_npredict(sdim)
-      REAL_T npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
-      REAL_T mag(3)
-      INTEGER_T continuous_mof_rigid
-      INTEGER_T nlist_vof,nlist_cen
+      integer fastflag
+      real(amrex_real) centroidA(sdim)
+      real(amrex_real) centroid_free(sdim)
+      real(amrex_real) centroid_ref(sdim)
+      real(amrex_real) refcentroid(sdim)
+      real(amrex_real) refvfrac(1)
+      real(amrex_real) single_volume
+      real(amrex_real) nslope(sdim)
+      real(amrex_real) intercept(1)
+      integer ipredict
+      real(amrex_real) local_npredict(sdim)
+      real(amrex_real) npredict(MOF_INITIAL_GUESS_CENTROIDS,sdim)
+      real(amrex_real) mag(3)
+      integer continuous_mof_rigid
+      integer nlist_vof,nlist_cen
 
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T, PARAMETER :: nMAT_OPT_standard=1
-      INTEGER_T, PARAMETER :: use_initial_guess=0
-      INTEGER_T :: nDOF_standard
-      INTEGER_T :: nEQN_standard
-      INTEGER_T is_rigid_local(num_materials)
+      integer, PARAMETER :: tessellate=0
+      integer, PARAMETER :: nMAT_OPT_standard=1
+      integer, PARAMETER :: use_initial_guess=0
+      integer :: nDOF_standard
+      integer :: nEQN_standard
+      integer is_rigid_local(num_materials)
 
-      INTEGER_T :: tid=0
+      integer :: tid=0
 
 #ifdef _OPENMP
-      INTEGER_T omp_get_thread_num
+      integer omp_get_thread_num
 #endif
 
 #include "mofdata.H"
@@ -16606,72 +16607,72 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nmax
+      integer, INTENT(in) :: nmax
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: nDOF_standard
+      integer, INTENT(in) :: sdim
+      integer :: nDOF_standard
 
-      REAL_T xtetlist(4,3,nmax)
-      REAL_T dx(sdim) 
+      real(amrex_real) xtetlist(4,3,nmax)
+      real(amrex_real) dx(sdim) 
 
-      REAL_T mofdata(num_materials*(2*sdim+3))
-      REAL_T vof_super(num_materials)
+      real(amrex_real) mofdata(num_materials*(2*sdim+3))
+      real(amrex_real) vof_super(num_materials)
 
-      REAL_T multi_centroidA(num_materials,sdim)
-      INTEGER_T :: continuous_mof
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T angle(sdim-1)
-      REAL_T xpoint(sdim)
-      REAL_T xpoint2(sdim)
-      REAL_T xpoint3(sdim)
-      REAL_T xpoint4(sdim)
-      INTEGER_T nrecon
-      INTEGER_T, parameter :: nsamples=10000 !10000 
-      INTEGER_T im,ntry,iangle,vofcomp
-      INTEGER_T inode
-      INTEGER_T dir,dir2
-      INTEGER_T seed
-      REAL_T max_mof_error,moferror
-      REAL_T nslope(sdim)
-      REAL_T nslope2(sdim)
-      REAL_T intercept,intercept2
-      INTEGER_T shapeflag
-      REAL_T volcut,volcut2,areacut,areacut2
-      REAL_T cencut(sdim)
-      REAL_T cencut2(sdim)
-      REAL_T xtet_domain(sdim+1,sdim)
-      REAL_T volcell_hex
-      REAL_T cencell_hex(sdim)
-      REAL_T xref_mat(sdim)
-      REAL_T xact_mat(sdim)
-      REAL_T xref_matT(sdim)
-      REAL_T xact_matT(sdim)
-      REAL_T avgiter
-      REAL_T avgerror
-      REAL_T total_calls(num_materials)
-      REAL_T total_iterations(num_materials)
-      REAL_T total_errors(num_materials)
-      INTEGER_T max_iterations(num_materials)
-      INTEGER_T, parameter :: mof_verbose=0
-      INTEGER_T, parameter :: use_ls_data=0
-      INTEGER_T isten
-      INTEGER_T grid_index(sdim)
-      INTEGER_T, parameter :: grid_level=-1
-      INTEGER_T, parameter :: bfact=1
-      REAL_T, dimension(D_DECL(:,:,:),:), allocatable :: LS_stencil
-      INTEGER_T i1,j1,k1,k1lo,k1hi
-      INTEGER_T, PARAMETER :: nhalf0=3
-      REAL_T, PARAMETER :: shrink_factor=0.333333333333d0
-      REAL_T xsten0_LS(-nhalf0:nhalf0,sdim) 
-      REAL_T xsten0_hex(-nhalf0:nhalf0,sdim) 
-      REAL_T xsten0_recon(-nhalf0:nhalf0,sdim) 
-      REAL_T xsten_tet(-nhalf0:nhalf0,sdim) 
-      REAL_T volcell_tet
-      REAL_T cencell_tet(sdim)
-      REAL_T volcell_recon
-      REAL_T cencell_recon(sdim)
-      REAL_T LS_local
-      REAL_T x_stencil(sdim)
+      real(amrex_real) multi_centroidA(num_materials,sdim)
+      integer :: continuous_mof
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) angle(sdim-1)
+      real(amrex_real) xpoint(sdim)
+      real(amrex_real) xpoint2(sdim)
+      real(amrex_real) xpoint3(sdim)
+      real(amrex_real) xpoint4(sdim)
+      integer nrecon
+      integer, parameter :: nsamples=10000 !10000 
+      integer im,ntry,iangle,vofcomp
+      integer inode
+      integer dir,dir2
+      integer seed
+      real(amrex_real) max_mof_error,moferror
+      real(amrex_real) nslope(sdim)
+      real(amrex_real) nslope2(sdim)
+      real(amrex_real) intercept,intercept2
+      integer shapeflag
+      real(amrex_real) volcut,volcut2,areacut,areacut2
+      real(amrex_real) cencut(sdim)
+      real(amrex_real) cencut2(sdim)
+      real(amrex_real) xtet_domain(sdim+1,sdim)
+      real(amrex_real) volcell_hex
+      real(amrex_real) cencell_hex(sdim)
+      real(amrex_real) xref_mat(sdim)
+      real(amrex_real) xact_mat(sdim)
+      real(amrex_real) xref_matT(sdim)
+      real(amrex_real) xact_matT(sdim)
+      real(amrex_real) avgiter
+      real(amrex_real) avgerror
+      real(amrex_real) total_calls(num_materials)
+      real(amrex_real) total_iterations(num_materials)
+      real(amrex_real) total_errors(num_materials)
+      integer max_iterations(num_materials)
+      integer, parameter :: mof_verbose=0
+      integer, parameter :: use_ls_data=0
+      integer isten
+      integer grid_index(sdim)
+      integer, parameter :: grid_level=-1
+      integer, parameter :: bfact=1
+      real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: LS_stencil
+      integer i1,j1,k1,k1lo,k1hi
+      integer, PARAMETER :: nhalf0=3
+      real(amrex_real), PARAMETER :: shrink_factor=0.333333333333d0
+      real(amrex_real) xsten0_LS(-nhalf0:nhalf0,sdim) 
+      real(amrex_real) xsten0_hex(-nhalf0:nhalf0,sdim) 
+      real(amrex_real) xsten0_recon(-nhalf0:nhalf0,sdim) 
+      real(amrex_real) xsten_tet(-nhalf0:nhalf0,sdim) 
+      real(amrex_real) volcell_tet
+      real(amrex_real) cencell_tet(sdim)
+      real(amrex_real) volcell_recon
+      real(amrex_real) cencell_recon(sdim)
+      real(amrex_real) LS_local
+      real(amrex_real) x_stencil(sdim)
 
 #include "mofdata.H"
 
@@ -17113,28 +17114,28 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: nhalf
-      INTEGER_T, INTENT(in) :: continuous_mof
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      INTEGER_T, INTENT(in) :: tessellate
-      REAL_T, INTENT(inout) :: mofdata(num_materials*ngeom_recon)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: nhalf
+      integer, INTENT(in) :: continuous_mof
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      integer, INTENT(in) :: tessellate
+      real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
 
-      INTEGER_T im
-      INTEGER_T i
-      INTEGER_T dir
-      INTEGER_T vofcomp
-      REAL_T voffluid,vofsolid,vofsolid_max
-      INTEGER_T im_solid_max
-      INTEGER_T is_rigid_local(num_materials)
-      REAL_T volcell
-      REAL_T cencell(sdim)
-      REAL_T xtet(sdim+1,sdim)
-      REAL_T xtarget(sdim)
-      REAL_T boxlo,boxhi
+      integer im
+      integer i
+      integer dir
+      integer vofcomp
+      real(amrex_real) voffluid,vofsolid,vofsolid_max
+      integer im_solid_max
+      integer is_rigid_local(num_materials)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
+      real(amrex_real) xtet(sdim+1,sdim)
+      real(amrex_real) xtarget(sdim)
+      real(amrex_real) boxlo,boxhi
 
       if (continuous_mof.eq.STANDARD_MOF) then
        if (nhalf.ge.1) then
@@ -17428,22 +17429,22 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: nhalf
-      INTEGER_T, INTENT(in) :: continuous_mof
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: nhalf
+      integer, INTENT(in) :: continuous_mof
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
 
-      INTEGER_T, INTENT(in) :: tessellate
-      REAL_T, INTENT(in) :: mofdata(num_materials*ngeom_recon)
-      REAL_T, INTENT(out) :: mofdatavalid(num_materials*ngeom_recon)
-      INTEGER_T im
-      INTEGER_T dir
-      INTEGER_T vofcomp
-      REAL_T voffluid,vofsolid,vof_test
-      INTEGER_T is_rigid_local(num_materials)
+      integer, INTENT(in) :: tessellate
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(out) :: mofdatavalid(num_materials*ngeom_recon)
+      integer im
+      integer dir
+      integer vofcomp
+      real(amrex_real) voffluid,vofsolid,vof_test
+      integer is_rigid_local(num_materials)
 
       if (continuous_mof.eq.STANDARD_MOF) then
        if (nhalf.ge.1) then
@@ -17588,19 +17589,19 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in)  :: sdim,dir_side,side
-      INTEGER_T, INTENT(in)  :: bfact,nhalf0
-      REAL_T, INTENT(in)     :: mofdata(num_materials*ngeom_recon)
-      REAL_T, INTENT(out)    :: mofdataproject(num_materials*ngeom_recon)
-      REAL_T, INTENT(in)     :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in)     :: dx(sdim)
-      INTEGER_T vofcomp,im
-      INTEGER_T dir_local
-      REAL_T x0_face(sdim)
-      REAL_T slope(sdim)
-      REAL_T slope_project(sdim)
-      REAL_T intercept_project
-      REAL_T mag
+      integer, INTENT(in)  :: sdim,dir_side,side
+      integer, INTENT(in)  :: bfact,nhalf0
+      real(amrex_real), INTENT(in)     :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(out)    :: mofdataproject(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in)     :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in)     :: dx(sdim)
+      integer vofcomp,im
+      integer dir_local
+      real(amrex_real) x0_face(sdim)
+      real(amrex_real) slope(sdim)
+      real(amrex_real) slope_project(sdim)
+      real(amrex_real) intercept_project
+      real(amrex_real) mag
 
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
@@ -17775,66 +17776,66 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: tessellate !=0,1,2,3
-      INTEGER_T, INTENT(in) :: shapeflag,bfact
-      INTEGER_T, INTENT(in) :: nhalf0,nhalf_grid
-      REAL_T, INTENT(in) :: xtet(sdim+1,sdim)
-      REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T mofdatalocal(num_materials*(2*sdim+3))
-      REAL_T mofdatasave(num_materials*(2*sdim+3))
-      REAL_T mofdatavalid(num_materials*(2*sdim+3))
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
-      REAL_T, INTENT(out) :: multi_volume(num_materials)
-      REAL_T, INTENT(out) :: multi_cen(sdim,num_materials)
-      REAL_T, INTENT(out) :: multi_area(num_materials)
-      INTEGER_T dir
-      INTEGER_T vofcomp
-      INTEGER_T im
-      REAL_T uncaptured_volume_START
-      REAL_T uncaptured_volume_fluid
-      REAL_T uncaptured_volume_solid
-      REAL_T uncaptured_centroid_fluid(sdim)
-      REAL_T uncaptured_centroid_solid(sdim)
-      REAL_T volcell
-      REAL_T cencell(sdim)
-      REAL_T volcut,cencut(sdim)
-      INTEGER_T testflag,testflag_save,nlist
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      INTEGER_T critical_material
-      REAL_T nrecon(sdim)
-      REAL_T intercept
-      REAL_T voltemp,centemp(sdim),areatemp
-      INTEGER_T single_material
-      REAL_T remaining_vfrac
-      REAL_T uncaptured_volume_fraction_fluid
-      REAL_T uncaptured_volume_fraction_solid
-      REAL_T uncaptured_volume_save
-      INTEGER_T material_used(num_materials)
-      INTEGER_T im_raster_solid
-      INTEGER_T return_raster_info
-      INTEGER_T im_test
-      INTEGER_T fastflag
+      integer, INTENT(in) :: sdim
+      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: tessellate !=0,1,2,3
+      integer, INTENT(in) :: shapeflag,bfact
+      integer, INTENT(in) :: nhalf0,nhalf_grid
+      real(amrex_real), INTENT(in) :: xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real) mofdatalocal(num_materials*(2*sdim+3))
+      real(amrex_real) mofdatasave(num_materials*(2*sdim+3))
+      real(amrex_real) mofdatavalid(num_materials*(2*sdim+3))
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
+      real(amrex_real), INTENT(out) :: multi_volume(num_materials)
+      real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
+      real(amrex_real), INTENT(out) :: multi_area(num_materials)
+      integer dir
+      integer vofcomp
+      integer im
+      real(amrex_real) uncaptured_volume_START
+      real(amrex_real) uncaptured_volume_fluid
+      real(amrex_real) uncaptured_volume_solid
+      real(amrex_real) uncaptured_centroid_fluid(sdim)
+      real(amrex_real) uncaptured_centroid_solid(sdim)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
+      real(amrex_real) volcut,cencut(sdim)
+      integer testflag,testflag_save,nlist
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      integer critical_material
+      real(amrex_real) nrecon(sdim)
+      real(amrex_real) intercept
+      real(amrex_real) voltemp,centemp(sdim),areatemp
+      integer single_material
+      real(amrex_real) remaining_vfrac
+      real(amrex_real) uncaptured_volume_fraction_fluid
+      real(amrex_real) uncaptured_volume_fraction_solid
+      real(amrex_real) uncaptured_volume_save
+      integer material_used(num_materials)
+      integer im_raster_solid
+      integer return_raster_info
+      integer im_test
+      integer fastflag
 
-      INTEGER_T num_materials_solid
-      INTEGER_T num_materials_fluid
-      REAL_T vfrac_fluid_sum
-      REAL_T vfrac_solid_sum
-      REAL_T vfrac_mult
-      INTEGER_T num_processed_solid
-      INTEGER_T num_processed_fluid
-      INTEGER_T num_processed_total
-      INTEGER_T loop_counter
-      INTEGER_T new_tessellate_local
-      INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
-      INTEGER_T local_tessellate
-      REAL_T vfrac_raster_solid
+      integer num_materials_solid
+      integer num_materials_fluid
+      real(amrex_real) vfrac_fluid_sum
+      real(amrex_real) vfrac_solid_sum
+      real(amrex_real) vfrac_mult
+      integer num_processed_solid
+      integer num_processed_fluid
+      integer num_processed_total
+      integer loop_counter
+      integer new_tessellate_local
+      integer is_rigid_local(num_materials)
+      integer, parameter :: continuous_mof=STANDARD_MOF
+      integer local_tessellate
+      real(amrex_real) vfrac_raster_solid
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -18826,30 +18827,30 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nlist_alloc_in
-      INTEGER_T, INTENT(in) :: nlist_in
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: tessellate
-      INTEGER_T, INTENT(in) :: sdim,bfact
-      INTEGER_T, INTENT(in) :: nhalf0
-      REAL_T, INTENT(in) :: xtetlist_in(4,3,nlist_alloc_in)
-      REAL_T :: xtet(sdim+1,sdim)
-      REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: multi_volume(num_materials)
-      REAL_T, INTENT(out) :: multi_cen(sdim,num_materials)
-      REAL_T, INTENT(out) :: multi_area(num_materials)
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      INTEGER_T dir_local
-      INTEGER_T im
-      INTEGER_T, PARAMETER :: shapeflag=1 !tetrahedron
-      REAL_T :: multi_volume_sub(num_materials)
-      REAL_T :: multi_cen_sub(sdim,num_materials)
-      REAL_T :: multi_area_sub(num_materials)
-      INTEGER_T i_list
-      INTEGER_T itet_node
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nlist_alloc_in
+      integer, INTENT(in) :: nlist_in
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: tessellate
+      integer, INTENT(in) :: sdim,bfact
+      integer, INTENT(in) :: nhalf0
+      real(amrex_real), INTENT(in) :: xtetlist_in(4,3,nlist_alloc_in)
+      real(amrex_real) :: xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(out) :: multi_volume(num_materials)
+      real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
+      real(amrex_real), INTENT(out) :: multi_area(num_materials)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      integer dir_local
+      integer im
+      integer, PARAMETER :: shapeflag=1 !tetrahedron
+      real(amrex_real) :: multi_volume_sub(num_materials)
+      real(amrex_real) :: multi_cen_sub(sdim,num_materials)
+      real(amrex_real) :: multi_area_sub(num_materials)
+      integer i_list
+      integer itet_node
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
@@ -18962,12 +18963,12 @@ contains
       subroutine project_centroid_box(cen_in,xsten,nhalf,sdim)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T, INTENT(in) :: nhalf
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,sdim)
-      REAL_T, INTENT(inout) :: cen_in(sdim)
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: nhalf
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(inout) :: cen_in(sdim)
 
-      INTEGER_T dir_local
+      integer dir_local
 
       do dir_local=1,sdim
        if (cen_in(dir_local).lt.xsten(-1,dir_local)) then
@@ -19038,88 +19039,88 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tessellate_in ! 0,1, or 3
-      INTEGER_T, INTENT(in) :: nlist_alloc_plus
-      INTEGER_T, INTENT(in) :: nlist_alloc_minus
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: nhalf0
-      INTEGER_T, INTENT(in) :: dir_plus
-      REAL_T, INTENT(in) :: mofdata_plus(num_materials*ngeom_recon)
-      REAL_T, INTENT(in) :: mofdata_minus(num_materials*ngeom_recon)
-      REAL_T, INTENT(in) :: xsten0_plus(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: xsten0_minus(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(out) :: xtetlist_plus(4,3,nlist_alloc_plus)
-      REAL_T, INTENT(out) :: xtetlist_minus(4,3,nlist_alloc_minus)
-      REAL_T, INTENT(out) :: multi_area_pair(num_materials,num_materials)
-      REAL_T :: mofdatavalid_plus(num_materials*ngeom_recon)
-      REAL_T :: mofdatavalid_minus(num_materials*ngeom_recon)
-      REAL_T :: mofdataproject_plus(num_materials*ngeom_recon)
-      REAL_T :: mofdataproject_minus(num_materials*ngeom_recon)
+      integer, INTENT(in) :: tessellate_in ! 0,1, or 3
+      integer, INTENT(in) :: nlist_alloc_plus
+      integer, INTENT(in) :: nlist_alloc_minus
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: sdim
+      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: nhalf0
+      integer, INTENT(in) :: dir_plus
+      real(amrex_real), INTENT(in) :: mofdata_plus(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in) :: mofdata_minus(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in) :: xsten0_plus(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten0_minus(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(out) :: xtetlist_plus(4,3,nlist_alloc_plus)
+      real(amrex_real), INTENT(out) :: xtetlist_minus(4,3,nlist_alloc_minus)
+      real(amrex_real), INTENT(out) :: multi_area_pair(num_materials,num_materials)
+      real(amrex_real) :: mofdatavalid_plus(num_materials*ngeom_recon)
+      real(amrex_real) :: mofdatavalid_minus(num_materials*ngeom_recon)
+      real(amrex_real) :: mofdataproject_plus(num_materials*ngeom_recon)
+      real(amrex_real) :: mofdataproject_minus(num_materials*ngeom_recon)
 
-      INTEGER_T im,im_opp,im_test
-      INTEGER_T side
-      INTEGER_T dir_local
-      INTEGER_T nhalf_thin
-      INTEGER_T isten 
-      REAL_T dxthin
-      REAL_T xsten_thin(-1:1,sdim)
-      REAL_T xtet(sdim+1,sdim)
-      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
+      integer im,im_opp,im_test
+      integer side
+      integer dir_local
+      integer nhalf_thin
+      integer isten 
+      real(amrex_real) dxthin
+      real(amrex_real) xsten_thin(-1:1,sdim)
+      real(amrex_real) xtet(sdim+1,sdim)
+      integer, PARAMETER :: shapeflag=0 !regular hexahedron
 
-      REAL_T multi_volume_plus_thin(num_materials)
-      REAL_T multi_area_plus_thin(num_materials)
-      REAL_T multi_cen_plus_thin(sdim,num_materials)
+      real(amrex_real) multi_volume_plus_thin(num_materials)
+      real(amrex_real) multi_area_plus_thin(num_materials)
+      real(amrex_real) multi_cen_plus_thin(sdim,num_materials)
 
-      REAL_T multi_volume_plus_thin_shrink(num_materials)
-      REAL_T multi_area_plus_thin_shrink(num_materials)
-      REAL_T multi_cen_plus_thin_shrink(sdim,num_materials)
+      real(amrex_real) multi_volume_plus_thin_shrink(num_materials)
+      real(amrex_real) multi_area_plus_thin_shrink(num_materials)
+      real(amrex_real) multi_cen_plus_thin_shrink(sdim,num_materials)
 
-      REAL_T multi_volume_pair(num_materials,num_materials)
-      REAL_T multi_volume_cen_pair(num_materials,num_materials,sdim)
+      real(amrex_real) multi_volume_pair(num_materials,num_materials)
+      real(amrex_real) multi_volume_cen_pair(num_materials,num_materials,sdim)
 
-      REAL_T uncaptured_volume_fraction_fluid
-      REAL_T uncaptured_volume_fluid
-      REAL_T uncaptured_volume_save
-      REAL_T uncaptured_volume_START
-      REAL_T uncaptured_centroid_START(sdim)
-      REAL_T uncaptured_area
+      real(amrex_real) uncaptured_volume_fraction_fluid
+      real(amrex_real) uncaptured_volume_fluid
+      real(amrex_real) uncaptured_volume_save
+      real(amrex_real) uncaptured_volume_START
+      real(amrex_real) uncaptured_centroid_START(sdim)
+      real(amrex_real) uncaptured_area
 
-      REAL_T volume_plus
-      REAL_T centroid_plus(sdim)
+      real(amrex_real) volume_plus
+      real(amrex_real) centroid_plus(sdim)
 
-      REAL_T voltemp
-      REAL_T areatemp
-      REAL_T centemp(sdim)
+      real(amrex_real) voltemp
+      real(amrex_real) areatemp
+      real(amrex_real) centemp(sdim)
 
-      INTEGER_T num_processed_fluid
-      INTEGER_T material_used(num_materials)
+      integer num_processed_fluid
+      integer material_used(num_materials)
 
-      INTEGER_T, PARAMETER :: normalize_tessellate=0
-      INTEGER_T local_tessellate_in  !=0 or 2
-      INTEGER_T is_rigid_local(num_materials)
+      integer, PARAMETER :: normalize_tessellate=0
+      integer local_tessellate_in  !=0 or 2
+      integer is_rigid_local(num_materials)
 
-      INTEGER_T nlist
-      INTEGER_T loop_counter 
-      INTEGER_T single_material 
-      INTEGER_T critical_material 
-      INTEGER_T fastflag
-      INTEGER_T vofcomp
-      INTEGER_T testflag
-      INTEGER_T testflag_save
-      REAL_T remaining_vfrac
-      REAL_T vfrac_fluid_sum
-      REAL_T volcut
-      REAL_T cencut(sdim)
-      REAL_T cen_diff(sdim)
-      REAL_T vol_old,vol_new,vol_diff
+      integer nlist
+      integer loop_counter 
+      integer single_material 
+      integer critical_material 
+      integer fastflag
+      integer vofcomp
+      integer testflag
+      integer testflag_save
+      real(amrex_real) remaining_vfrac
+      real(amrex_real) vfrac_fluid_sum
+      real(amrex_real) volcut
+      real(amrex_real) cencut(sdim)
+      real(amrex_real) cen_diff(sdim)
+      real(amrex_real) vol_old,vol_new,vol_diff
 
-      REAL_T nrecon(sdim)
-      REAL_T intercept
-      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
+      real(amrex_real) nrecon(sdim)
+      real(amrex_real) intercept
+      integer, parameter :: continuous_mof=STANDARD_MOF
 
       nhalf_thin=1
 
@@ -19952,64 +19953,64 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: tessellate ! =0,1,2,3
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalf_grid
-      REAL_T, INTENT(in) :: mofdata(num_materials*ngeom_recon)
-      REAL_T mofdatalocal(num_materials*ngeom_recon)
-      REAL_T mofdatasave(num_materials*ngeom_recon)
-      REAL_T mofdatavalid(num_materials*ngeom_recon)
-      REAL_T xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T dx(sdim)
-      REAL_T, INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
-      REAL_T, INTENT(out) :: multi_volume(num_materials)
-      REAL_T, INTENT(out) :: multi_cen(sdim,num_materials)
-      INTEGER_T dir
-      INTEGER_T vofcomp
-      INTEGER_T im
-      REAL_T uncaptured_volume_target
-      REAL_T uncaptured_volume_fluid
-      REAL_T uncaptured_volume_solid
-      REAL_T uncaptured_centroid_target(sdim)
-      REAL_T uncaptured_centroid_fluid(sdim)
-      REAL_T uncaptured_centroid_solid(sdim)
-      REAL_T volcell
-      REAL_T cencell(sdim)
-      REAL_T volcut,cencut(sdim)
-      INTEGER_T testflag,testflag_save,nlist
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      INTEGER_T critical_material
-      REAL_T nrecon(sdim)
-      REAL_T intercept
-      REAL_T voltemp,centemp(sdim)
-      INTEGER_T single_material
-      REAL_T remaining_vfrac
-      REAL_T uncaptured_volume_fraction_fluid
-      REAL_T uncaptured_volume_fraction_solid
-      REAL_T uncaptured_volume_save
-      INTEGER_T material_used(num_materials)
-      INTEGER_T im_test
-      INTEGER_T fastflag
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: tessellate ! =0,1,2,3
+      integer, INTENT(in) :: sdim
+      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact,nhalf0,nhalf_grid
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdatalocal(num_materials*ngeom_recon)
+      real(amrex_real) mofdatasave(num_materials*ngeom_recon)
+      real(amrex_real) mofdatavalid(num_materials*ngeom_recon)
+      real(amrex_real) xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real) dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
+      real(amrex_real), INTENT(out) :: multi_volume(num_materials)
+      real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
+      integer dir
+      integer vofcomp
+      integer im
+      real(amrex_real) uncaptured_volume_target
+      real(amrex_real) uncaptured_volume_fluid
+      real(amrex_real) uncaptured_volume_solid
+      real(amrex_real) uncaptured_centroid_target(sdim)
+      real(amrex_real) uncaptured_centroid_fluid(sdim)
+      real(amrex_real) uncaptured_centroid_solid(sdim)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
+      real(amrex_real) volcut,cencut(sdim)
+      integer testflag,testflag_save,nlist
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      integer critical_material
+      real(amrex_real) nrecon(sdim)
+      real(amrex_real) intercept
+      real(amrex_real) voltemp,centemp(sdim)
+      integer single_material
+      real(amrex_real) remaining_vfrac
+      real(amrex_real) uncaptured_volume_fraction_fluid
+      real(amrex_real) uncaptured_volume_fraction_solid
+      real(amrex_real) uncaptured_volume_save
+      integer material_used(num_materials)
+      integer im_test
+      integer fastflag
 
-      INTEGER_T num_materials_solid
-      INTEGER_T num_materials_fluid
-      REAL_T vfrac_fluid_sum
-      REAL_T vfrac_solid_sum
-      REAL_T vfrac_mult
-      INTEGER_T num_processed_solid
-      INTEGER_T num_processed_fluid
-      INTEGER_T num_processed_total
-      INTEGER_T loop_counter
-      INTEGER_T local_tessellate
-      INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
-      INTEGER_T im_raster_solid
-      INTEGER_T new_tessellate_local
-      INTEGER_T return_raster_info
-      REAL_T vfrac_raster_solid
+      integer num_materials_solid
+      integer num_materials_fluid
+      real(amrex_real) vfrac_fluid_sum
+      real(amrex_real) vfrac_solid_sum
+      real(amrex_real) vfrac_mult
+      integer num_processed_solid
+      integer num_processed_fluid
+      integer num_processed_total
+      integer loop_counter
+      integer local_tessellate
+      integer is_rigid_local(num_materials)
+      integer, parameter :: continuous_mof=STANDARD_MOF
+      integer im_raster_solid
+      integer new_tessellate_local
+      integer return_raster_info
+      real(amrex_real) vfrac_raster_solid
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -20966,68 +20967,68 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalf_grid
-      INTEGER_T, INTENT(in) :: normdir
-      REAL_T, INTENT(in) :: coeff(2)
-      REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T mofdatalocal(num_materials*(2*sdim+3))
-      REAL_T mofdatasave(num_materials*(2*sdim+3))
-      REAL_T mofdatavalid(num_materials*(2*sdim+3))
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
-      REAL_T, INTENT(out) :: multi_volume(num_materials)
-      REAL_T, INTENT(out) :: multi_cen(sdim,num_materials)
-      REAL_T, INTENT(out) :: multi_volume_map(num_materials)
-      REAL_T, INTENT(out) :: multi_cen_map(sdim,num_materials)
-      INTEGER_T dir
-      INTEGER_T vofcomp
-      INTEGER_T im
-      REAL_T uncaptured_volume_START
-      REAL_T uncaptured_volume_map_START
-      REAL_T uncaptured_volume_fluid
-      REAL_T uncaptured_volume_solid
-      REAL_T uncaptured_centroid_fluid(sdim)
-      REAL_T uncaptured_centroid_solid(sdim)
-      REAL_T uncaptured_volume_fluid_map
-      REAL_T uncaptured_volume_solid_map
-      REAL_T uncaptured_centroid_fluid_map(sdim)
-      REAL_T uncaptured_centroid_solid_map(sdim)
-      REAL_T volcell
-      REAL_T cencell(sdim)
-      REAL_T volcut,cencut(sdim)
-      INTEGER_T testflag,testflag_save,nlist
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      INTEGER_T critical_material
-      REAL_T nrecon(sdim)
-      REAL_T intercept
-      REAL_T voltemp,centemp(sdim)
-      REAL_T voltemp_map,centemp_map(sdim)
-      INTEGER_T single_material
-      REAL_T remaining_vfrac
-      REAL_T uncaptured_volume_fraction_fluid
-      REAL_T uncaptured_volume_fraction_solid
-      REAL_T uncaptured_volume_save
-      REAL_T uncaptured_volume_save_map
-      INTEGER_T material_used(num_materials)
-      INTEGER_T im_test
-      INTEGER_T fastflag
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: sdim
+      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: bfact,nhalf0,nhalf_grid
+      integer, INTENT(in) :: normdir
+      real(amrex_real), INTENT(in) :: coeff(2)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real) mofdatalocal(num_materials*(2*sdim+3))
+      real(amrex_real) mofdatasave(num_materials*(2*sdim+3))
+      real(amrex_real) mofdatavalid(num_materials*(2*sdim+3))
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xsten_grid(-nhalf_grid:nhalf_grid,sdim)
+      real(amrex_real), INTENT(out) :: multi_volume(num_materials)
+      real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
+      real(amrex_real), INTENT(out) :: multi_volume_map(num_materials)
+      real(amrex_real), INTENT(out) :: multi_cen_map(sdim,num_materials)
+      integer dir
+      integer vofcomp
+      integer im
+      real(amrex_real) uncaptured_volume_START
+      real(amrex_real) uncaptured_volume_map_START
+      real(amrex_real) uncaptured_volume_fluid
+      real(amrex_real) uncaptured_volume_solid
+      real(amrex_real) uncaptured_centroid_fluid(sdim)
+      real(amrex_real) uncaptured_centroid_solid(sdim)
+      real(amrex_real) uncaptured_volume_fluid_map
+      real(amrex_real) uncaptured_volume_solid_map
+      real(amrex_real) uncaptured_centroid_fluid_map(sdim)
+      real(amrex_real) uncaptured_centroid_solid_map(sdim)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
+      real(amrex_real) volcut,cencut(sdim)
+      integer testflag,testflag_save,nlist
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      integer critical_material
+      real(amrex_real) nrecon(sdim)
+      real(amrex_real) intercept
+      real(amrex_real) voltemp,centemp(sdim)
+      real(amrex_real) voltemp_map,centemp_map(sdim)
+      integer single_material
+      real(amrex_real) remaining_vfrac
+      real(amrex_real) uncaptured_volume_fraction_fluid
+      real(amrex_real) uncaptured_volume_fraction_solid
+      real(amrex_real) uncaptured_volume_save
+      real(amrex_real) uncaptured_volume_save_map
+      integer material_used(num_materials)
+      integer im_test
+      integer fastflag
 
-      INTEGER_T num_materials_solid
-      INTEGER_T num_materials_fluid
-      REAL_T vfrac_fluid_sum
-      REAL_T vfrac_solid_sum
-      INTEGER_T num_processed_solid
-      INTEGER_T num_processed_fluid
-      INTEGER_T num_processed_total
-      INTEGER_T loop_counter
-      INTEGER_T :: tessellate_local=0
-      INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
+      integer num_materials_solid
+      integer num_materials_fluid
+      real(amrex_real) vfrac_fluid_sum
+      real(amrex_real) vfrac_solid_sum
+      integer num_processed_solid
+      integer num_processed_fluid
+      integer num_processed_total
+      integer loop_counter
+      integer :: tessellate_local=0
+      integer is_rigid_local(num_materials)
+      integer, parameter :: continuous_mof=STANDARD_MOF
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -21854,11 +21855,11 @@ contains
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: LS(num_materials)
-      REAL_T, INTENT(out) :: LS_new(num_materials)
-      INTEGER_T im,im_opp,im_tessellate
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T is_rigid_local(num_materials)
+      real(amrex_real), INTENT(in) :: LS(num_materials)
+      real(amrex_real), INTENT(out) :: LS_new(num_materials)
+      integer im,im_opp,im_tessellate
+      integer, PARAMETER :: tessellate=0
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -21938,14 +21939,14 @@ contains
       use global_utility_module
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: LS(num_materials)
-      REAL_T, INTENT(out) :: LS_new(num_materials)
-      REAL_T :: LS_new_hold(num_materials)
-      REAL_T LS_primary
-      REAL_T LS_max_rest
-      INTEGER_T im,im_primary,im_rest
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T is_rigid_local(num_materials)
+      real(amrex_real), INTENT(in) :: LS(num_materials)
+      real(amrex_real), INTENT(out) :: LS_new(num_materials)
+      real(amrex_real) :: LS_new_hold(num_materials)
+      real(amrex_real) LS_primary
+      real(amrex_real) LS_max_rest
+      integer im,im_primary,im_rest
+      integer, PARAMETER :: tessellate=0
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -22046,41 +22047,41 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nlist_alloc
-      INTEGER_T, INTENT(in) :: nmax
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, PARAMETER :: shapeflag=0 !regular hexahedron
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      INTEGER_T, INTENT(in) :: tessellate_in  ! =1 or 3
-      REAL_T xtet(sdim+1,sdim)
-      REAL_T, INTENT(inout) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
+      integer, INTENT(in) :: nlist_alloc
+      integer, INTENT(in) :: nmax
+      integer, INTENT(in) :: sdim
+      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, PARAMETER :: shapeflag=0 !regular hexahedron
+      integer, INTENT(in) :: bfact,nhalf0
+      integer, INTENT(in) :: tessellate_in  ! =1 or 3
+      real(amrex_real) xtet(sdim+1,sdim)
+      real(amrex_real), INTENT(inout) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
 
-      INTEGER_T :: local_tessellate
-      INTEGER_T, PARAMETER :: renorm_tessellate=0
+      integer :: local_tessellate
+      integer, PARAMETER :: renorm_tessellate=0
 
-      REAL_T multi_volume(num_materials)
-      REAL_T multi_cen(sdim,num_materials)
-      REAL_T multi_area(num_materials)
-      REAL_T, INTENT(out) :: xtetlist(4,3,nlist_alloc)
-      REAL_T fluid_vfrac_sum
-      REAL_T solid_vfrac_sum
-      REAL_T multi_volume_sum
-      INTEGER_T im
-      INTEGER_T vofcomp
-      REAL_T volcell
-      REAL_T cencell(sdim)
-      INTEGER_T dir
-      REAL_T vfrac_save
-      REAL_T vfracsolid(num_materials)
-      INTEGER_T vofcomp_solid
-      INTEGER_T imcrit,im_solid
-      INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
-      INTEGER_T im_raster_solid
-      REAL_T vfrac_raster_solid
+      real(amrex_real) multi_volume(num_materials)
+      real(amrex_real) multi_cen(sdim,num_materials)
+      real(amrex_real) multi_area(num_materials)
+      real(amrex_real), INTENT(out) :: xtetlist(4,3,nlist_alloc)
+      real(amrex_real) fluid_vfrac_sum
+      real(amrex_real) solid_vfrac_sum
+      real(amrex_real) multi_volume_sum
+      integer im
+      integer vofcomp
+      real(amrex_real) volcell
+      real(amrex_real) cencell(sdim)
+      integer dir
+      real(amrex_real) vfrac_save
+      real(amrex_real) vfracsolid(num_materials)
+      integer vofcomp_solid
+      integer imcrit,im_solid
+      integer is_rigid_local(num_materials)
+      integer, parameter :: continuous_mof=STANDARD_MOF
+      integer im_raster_solid
+      real(amrex_real) vfrac_raster_solid
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -22389,12 +22390,12 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: im,sdim
-      REAL_T, INTENT(in) :: newLS(num_materials*(1+sdim)) 
-      INTEGER_T, INTENT(inout) :: touch_hold(num_materials)
-      REAL_T, INTENT(inout) :: minLS(num_materials)
-      REAL_T, INTENT(inout) :: maxLS(num_materials)
-      INTEGER_T ctouch
+      integer, INTENT(in) :: im,sdim
+      real(amrex_real), INTENT(in) :: newLS(num_materials*(1+sdim)) 
+      integer, INTENT(inout) :: touch_hold(num_materials)
+      real(amrex_real), INTENT(inout) :: minLS(num_materials)
+      real(amrex_real), INTENT(inout) :: maxLS(num_materials)
+      integer ctouch
 
       if ((sdim.ne.2).and.(sdim.ne.3)) then
        print *,"sdim invalid"
@@ -22440,26 +22441,26 @@ contains
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: n_im,bfact,nhalf0
-      INTEGER_T, INTENT(in) :: im_test(n_im)
-      INTEGER_T, INTENT(in) :: imslope,imcell
-      INTEGER_T, INTENT(in) :: sdim,center_stencil
-      INTEGER_T, INTENT(in) :: donateflag(num_materials+1)
-      REAL_T, INTENT(in) :: xaccept(sdim) 
-      REAL_T, INTENT(in) :: xdonate(sdim) 
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim) 
-      REAL_T, INTENT(in) :: dx(sdim) 
-      REAL_T, INTENT(in) :: slope(sdim) 
-      REAL_T, INTENT(inout) :: newLS(num_materials*(1+sdim)) 
-      INTEGER_T, INTENT(inout) :: touch_hold(num_materials)
-      REAL_T, INTENT(inout) :: minLS(num_materials)
-      REAL_T, INTENT(inout) :: maxLS(num_materials)
-      INTEGER_T distzero,im_here,im_opp_here
-      INTEGER_T im,im3,dir,nc
-      REAL_T disttest,dist_compare,LSSIGN
-      REAL_T slopetest(sdim)
-      INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T, PARAMETER :: tessellate=0
+      integer, INTENT(in) :: n_im,bfact,nhalf0
+      integer, INTENT(in) :: im_test(n_im)
+      integer, INTENT(in) :: imslope,imcell
+      integer, INTENT(in) :: sdim,center_stencil
+      integer, INTENT(in) :: donateflag(num_materials+1)
+      real(amrex_real), INTENT(in) :: xaccept(sdim) 
+      real(amrex_real), INTENT(in) :: xdonate(sdim) 
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim) 
+      real(amrex_real), INTENT(in) :: dx(sdim) 
+      real(amrex_real), INTENT(in) :: slope(sdim) 
+      real(amrex_real), INTENT(inout) :: newLS(num_materials*(1+sdim)) 
+      integer, INTENT(inout) :: touch_hold(num_materials)
+      real(amrex_real), INTENT(inout) :: minLS(num_materials)
+      real(amrex_real), INTENT(inout) :: maxLS(num_materials)
+      integer distzero,im_here,im_opp_here
+      integer im,im3,dir,nc
+      real(amrex_real) disttest,dist_compare,LSSIGN
+      real(amrex_real) slopetest(sdim)
+      integer is_rigid_local(num_materials)
+      integer, PARAMETER :: tessellate=0
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -22702,29 +22703,29 @@ contains
 
        IMPLICIT NONE
 
-       INTEGER_T, INTENT(in) :: sdim,nlist,bfact,nhalf0
-       REAL_T, INTENT(in) :: maxdx
-       REAL_T, INTENT(out) :: x_cp(sdim)
-       REAL_T, INTENT(out) :: xplus(sdim)
-       REAL_T, INTENT(out) :: xminus(sdim)
-       REAL_T, INTENT(out) :: xplus2(sdim)
-       REAL_T, INTENT(out) :: xminus2(sdim)
-       REAL_T, INTENT(in) :: x_a(sdim)
-       INTEGER_T, INTENT(in) :: ilist, jlist
-       REAL_T, INTENT(in) :: slope_list(num_materials,sdim)
-       REAL_T, INTENT(in) :: intercept_list(num_materials)
-       INTEGER_T, INTENT(in) :: im_list(num_materials)
-       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-       REAL_T, INTENT(in) :: dx(sdim)
-       INTEGER_T, INTENT(out) :: inboxflag
+       integer, INTENT(in) :: sdim,nlist,bfact,nhalf0
+       real(amrex_real), INTENT(in) :: maxdx
+       real(amrex_real), INTENT(out) :: x_cp(sdim)
+       real(amrex_real), INTENT(out) :: xplus(sdim)
+       real(amrex_real), INTENT(out) :: xminus(sdim)
+       real(amrex_real), INTENT(out) :: xplus2(sdim)
+       real(amrex_real), INTENT(out) :: xminus2(sdim)
+       real(amrex_real), INTENT(in) :: x_a(sdim)
+       integer, INTENT(in) :: ilist, jlist
+       real(amrex_real), INTENT(in) :: slope_list(num_materials,sdim)
+       real(amrex_real), INTENT(in) :: intercept_list(num_materials)
+       integer, INTENT(in) :: im_list(num_materials)
+       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+       real(amrex_real), INTENT(in) :: dx(sdim)
+       integer, INTENT(out) :: inboxflag
 
-       INTEGER_T dir,islope
-       REAL_T c_i,c_j,s_c
-       REAL_T n_i_d_n_j
-       REAL_T n_i_c_n_j(sdim)
-       REAL_T dtrmn,mag
-       REAL_T h(2)
-       INTEGER_T indexlist(2)
+       integer dir,islope
+       real(amrex_real) c_i,c_j,s_c
+       real(amrex_real) n_i_d_n_j
+       real(amrex_real) n_i_c_n_j(sdim)
+       real(amrex_real) dtrmn,mag
+       real(amrex_real) h(2)
+       integer indexlist(2)
 
        if (nhalf0.lt.1) then
         print *,"nhalf0 invalid"
@@ -22889,32 +22890,32 @@ contains
 
        IMPLICIT NONE
 
-       INTEGER_T, INTENT(in) :: sdim,nlist,bfact,nhalf0
-       REAL_T, INTENT(in) :: maxdx
-       REAL_T, INTENT(out) :: x_cp(sdim)
-       REAL_T, INTENT(out) :: xplus(sdim)
-       REAL_T, INTENT(out) :: xminus(sdim)
-       REAL_T, INTENT(out) :: xplus2(sdim)
-       REAL_T, INTENT(out) :: xminus2(sdim)
-       REAL_T, INTENT(in) :: x_a(sdim)
-       REAL_T, INTENT(in) :: gphi(sdim)
-       REAL_T, INTENT(in) :: x_0side(sdim)
-       INTEGER_T, INTENT(in) :: ilist, jlist
-       REAL_T, INTENT(in) :: slope_list(num_materials,sdim)
-       REAL_T, INTENT(in) :: intercept_list(num_materials)
-       INTEGER_T, INTENT(in) :: im_list(num_materials)
-       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-       REAL_T, INTENT(in) :: dx(sdim)
-       INTEGER_T, INTENT(out) :: inboxflag
+       integer, INTENT(in) :: sdim,nlist,bfact,nhalf0
+       real(amrex_real), INTENT(in) :: maxdx
+       real(amrex_real), INTENT(out) :: x_cp(sdim)
+       real(amrex_real), INTENT(out) :: xplus(sdim)
+       real(amrex_real), INTENT(out) :: xminus(sdim)
+       real(amrex_real), INTENT(out) :: xplus2(sdim)
+       real(amrex_real), INTENT(out) :: xminus2(sdim)
+       real(amrex_real), INTENT(in) :: x_a(sdim)
+       real(amrex_real), INTENT(in) :: gphi(sdim)
+       real(amrex_real), INTENT(in) :: x_0side(sdim)
+       integer, INTENT(in) :: ilist, jlist
+       real(amrex_real), INTENT(in) :: slope_list(num_materials,sdim)
+       real(amrex_real), INTENT(in) :: intercept_list(num_materials)
+       integer, INTENT(in) :: im_list(num_materials)
+       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+       real(amrex_real), INTENT(in) :: dx(sdim)
+       integer, INTENT(out) :: inboxflag
 
-       INTEGER_T dir,islope,dir_2
-       REAL_T c_i,c_j,c_k
-       REAL_T n_i_d_n_j
-       REAL_T n_i_c_n_j(sdim)
-       REAL_T dtrmn,mag
-       REAL_T h(2)
-       INTEGER_T cp_init
-       INTEGER_T indexlist(2)
+       integer dir,islope,dir_2
+       real(amrex_real) c_i,c_j,c_k
+       real(amrex_real) n_i_d_n_j
+       real(amrex_real) n_i_c_n_j(sdim)
+       real(amrex_real) dtrmn,mag
+       real(amrex_real) h(2)
+       integer cp_init
+       integer indexlist(2)
 
        if (bfact.lt.1) then
         print *,"bfact invalid135"
@@ -23082,22 +23083,22 @@ contains
        use global_utility_module
        IMPLICIT NONE
 
-       INTEGER_T, INTENT(in) :: sdim
-       INTEGER_T, INTENT(out) :: inboxflag
-       INTEGER_T, INTENT(in) :: bfact,nhalf0,nhalfbox
-       INTEGER_T dir
-       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-       REAL_T, INTENT(in) :: xstenbox(-nhalfbox:nhalfbox,sdim)
-       REAL_T, INTENT(in) :: dx(sdim)
-       REAL_T, INTENT(out) :: xcp(sdim)
-       REAL_T, INTENT(out) :: xcp_plus(sdim)
-       REAL_T, INTENT(out) :: xcp_minus(sdim)
-       REAL_T, INTENT(in) :: xaccept(sdim)
-       REAL_T, INTENT(in) :: maxdx
-       REAL_T, INTENT(in) :: slope_in(sdim)
-       REAL_T slope(sdim)
-       REAL_T, INTENT(in) :: intercept_in
-       REAL_T intercept,dist
+       integer, INTENT(in) :: sdim
+       integer, INTENT(out) :: inboxflag
+       integer, INTENT(in) :: bfact,nhalf0,nhalfbox
+       integer dir
+       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+       real(amrex_real), INTENT(in) :: xstenbox(-nhalfbox:nhalfbox,sdim)
+       real(amrex_real), INTENT(in) :: dx(sdim)
+       real(amrex_real), INTENT(out) :: xcp(sdim)
+       real(amrex_real), INTENT(out) :: xcp_plus(sdim)
+       real(amrex_real), INTENT(out) :: xcp_minus(sdim)
+       real(amrex_real), INTENT(in) :: xaccept(sdim)
+       real(amrex_real), INTENT(in) :: maxdx
+       real(amrex_real), INTENT(in) :: slope_in(sdim)
+       real(amrex_real) slope(sdim)
+       real(amrex_real), INTENT(in) :: intercept_in
+       real(amrex_real) intercept,dist
 
        if (nhalf0.lt.1) then
         print *,"nhalf0 invalid"
@@ -23158,24 +23159,24 @@ contains
        use global_utility_module
        IMPLICIT NONE
 
-       INTEGER_T, INTENT(in) :: sdim
-       INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-       INTEGER_T, INTENT(out) :: imslope
-       INTEGER_T, INTENT(in) :: bfact,nhalf0
-       REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-       REAL_T mofdatavalid(num_materials*(2*sdim+3))
-       REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-       REAL_T, INTENT(in) :: dx(sdim)
-       REAL_T, INTENT(out) :: slope(sdim)
-       REAL_T slope_test(sdim)
-       REAL_T intercept,intercept_min
-       REAL_T vfrac_data(num_materials)
-       INTEGER_T sorted_list(num_materials)
-       REAL_T uncaptured_volume
-       INTEGER_T im,vofcomp,FSI_exclude,irank,testflag,dir
-       INTEGER_T is_rigid_local(num_materials)
-       INTEGER_T, PARAMETER :: tessellate=0
-       INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
+       integer, INTENT(in) :: sdim
+       integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+       integer, INTENT(out) :: imslope
+       integer, INTENT(in) :: bfact,nhalf0
+       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+       real(amrex_real) mofdatavalid(num_materials*(2*sdim+3))
+       real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+       real(amrex_real), INTENT(in) :: dx(sdim)
+       real(amrex_real), INTENT(out) :: slope(sdim)
+       real(amrex_real) slope_test(sdim)
+       real(amrex_real) intercept,intercept_min
+       real(amrex_real) vfrac_data(num_materials)
+       integer sorted_list(num_materials)
+       real(amrex_real) uncaptured_volume
+       integer im,vofcomp,FSI_exclude,irank,testflag,dir
+       integer is_rigid_local(num_materials)
+       integer, PARAMETER :: tessellate=0
+       integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
        do im=1,num_materials
         is_rigid_local(im)=is_rigid(im)
@@ -23315,54 +23316,54 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nhalf_recon
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T dir,side,l
-      INTEGER_T, INTENT(in) :: center_stencil
-      INTEGER_T, INTENT(in) :: donateflag(num_materials+1)
-      REAL_T, INTENT(in) :: mofdata(num_materials*(2*sdim+3))
-      REAL_T mofdatavalid(num_materials*(2*sdim+3))
-      REAL_T, INTENT(in) :: xsten_recon(-nhalf_recon:nhalf_recon,sdim)
-      REAL_T xstenface_recon(-nhalf_recon:nhalf_recon,sdim)
-      REAL_T x0side(sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(inout) :: multi_distance(num_materials*(1+sdim))
-      INTEGER_T, INTENT(inout) :: touch_hold(num_materials)
-      REAL_T, INTENT(inout) :: minLS(num_materials)
-      REAL_T, INTENT(inout) :: maxLS(num_materials)
-      INTEGER_T irank,vofcomp,im,im_plus,im_minus,im0
-      INTEGER_T im_plus2,im_minus2
-      INTEGER_T FSI_exclude
-      REAL_T vfrac_data(num_materials)
-      INTEGER_T sorted_list(num_materials)
-      REAL_T uncaptured_volume
-      INTEGER_T testflag
-      REAL_T slopes(sdim)
-      REAL_T intercept,intercept_face
-      REAL_T maxdx,normgphi
-      INTEGER_T inboxflag
-      REAL_T xx(sdim)
-      REAL_T gphi(sdim)
-      REAL_T slope_list(num_materials,sdim)
-      REAL_T intercept_list(num_materials)
-      INTEGER_T im_list(num_materials)
-      INTEGER_T nlist
-      REAL_T x0(sdim)
-      INTEGER_T dir1,dir2,side1,ilist,jlist
-      INTEGER_T n_im
-      INTEGER_T im_test(6)
-      REAL_T x0face(sdim)
-      REAL_T, INTENT(in) :: xgrid(sdim)
-      REAL_T xgrid_cen(sdim)
-      REAL_T xgrid_plus(sdim)
-      REAL_T xgrid_minus(sdim)
-      REAL_T xgrid_plus2(sdim)
-      REAL_T xgrid_minus2(sdim)
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T, PARAMETER :: continuous_mof=STANDARD_MOF
+      integer, INTENT(in) :: nhalf_recon
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: sdim
+      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer dir,side,l
+      integer, INTENT(in) :: center_stencil
+      integer, INTENT(in) :: donateflag(num_materials+1)
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
+      real(amrex_real) mofdatavalid(num_materials*(2*sdim+3))
+      real(amrex_real), INTENT(in) :: xsten_recon(-nhalf_recon:nhalf_recon,sdim)
+      real(amrex_real) xstenface_recon(-nhalf_recon:nhalf_recon,sdim)
+      real(amrex_real) x0side(sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(inout) :: multi_distance(num_materials*(1+sdim))
+      integer, INTENT(inout) :: touch_hold(num_materials)
+      real(amrex_real), INTENT(inout) :: minLS(num_materials)
+      real(amrex_real), INTENT(inout) :: maxLS(num_materials)
+      integer irank,vofcomp,im,im_plus,im_minus,im0
+      integer im_plus2,im_minus2
+      integer FSI_exclude
+      real(amrex_real) vfrac_data(num_materials)
+      integer sorted_list(num_materials)
+      real(amrex_real) uncaptured_volume
+      integer testflag
+      real(amrex_real) slopes(sdim)
+      real(amrex_real) intercept,intercept_face
+      real(amrex_real) maxdx,normgphi
+      integer inboxflag
+      real(amrex_real) xx(sdim)
+      real(amrex_real) gphi(sdim)
+      real(amrex_real) slope_list(num_materials,sdim)
+      real(amrex_real) intercept_list(num_materials)
+      integer im_list(num_materials)
+      integer nlist
+      real(amrex_real) x0(sdim)
+      integer dir1,dir2,side1,ilist,jlist
+      integer n_im
+      integer im_test(6)
+      real(amrex_real) x0face(sdim)
+      real(amrex_real), INTENT(in) :: xgrid(sdim)
+      real(amrex_real) xgrid_cen(sdim)
+      real(amrex_real) xgrid_plus(sdim)
+      real(amrex_real) xgrid_minus(sdim)
+      real(amrex_real) xgrid_plus2(sdim)
+      real(amrex_real) xgrid_minus2(sdim)
+      integer, PARAMETER :: tessellate=0
+      integer is_rigid_local(num_materials)
+      integer, PARAMETER :: continuous_mof=STANDARD_MOF
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -23919,31 +23920,31 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim
-      INTEGER_T :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      INTEGER_T, INTENT(in) :: tessellate
-      INTEGER_T, INTENT(in) :: bfact,nhalf0
-      REAL_T, INTENT(in) :: mofdata(num_materials*ngeom_recon)
-      REAL_T mofdatavalid(num_materials*ngeom_recon)
-      REAL_T, INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
-      REAL_T, INTENT(in) :: dx(sdim)
-      REAL_T, INTENT(in) :: xgrid(sdim)
-      INTEGER_T, INTENT(out) :: im_crit
-      INTEGER_T irank,vofcomp,im
-      REAL_T uncaptured_volume_fraction
-      INTEGER_T testflag,dir
-      REAL_T slopes(sdim)
-      REAL_T intercept,ls,maxvof
-      REAL_T vfrac_data(num_materials)
-      INTEGER_T vfrac_checked(num_materials)
-      INTEGER_T is_rigid_local(num_materials)
-      INTEGER_T, parameter :: continuous_mof=STANDARD_MOF
-      INTEGER_T im_raster_solid
-      INTEGER_T return_raster_info
-      INTEGER_T local_tessellate
-      REAL_T vfrac_fluid_sum
-      REAL_T vfrac_solid_sum
-      REAL_T vfrac_raster_solid
+      integer, INTENT(in) :: sdim
+      integer :: cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, INTENT(in) :: tessellate
+      integer, INTENT(in) :: bfact,nhalf0
+      real(amrex_real), INTENT(in) :: mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdatavalid(num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xgrid(sdim)
+      integer, INTENT(out) :: im_crit
+      integer irank,vofcomp,im
+      real(amrex_real) uncaptured_volume_fraction
+      integer testflag,dir
+      real(amrex_real) slopes(sdim)
+      real(amrex_real) intercept,ls,maxvof
+      real(amrex_real) vfrac_data(num_materials)
+      integer vfrac_checked(num_materials)
+      integer is_rigid_local(num_materials)
+      integer, parameter :: continuous_mof=STANDARD_MOF
+      integer im_raster_solid
+      integer return_raster_info
+      integer local_tessellate
+      real(amrex_real) vfrac_fluid_sum
+      real(amrex_real) vfrac_solid_sum
+      real(amrex_real) vfrac_raster_solid
 
 
 #include "mofdata.H"
@@ -24298,13 +24299,13 @@ contains
  
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: VFRAC(num_materials)
-      INTEGER_T, INTENT(out) :: im_primary
-      INTEGER_T im
-      INTEGER_T im_crit_fluid,im_crit_solid
-      REAL_T sum_vfrac_fluid,sum_vfrac_solid,VOFSUM
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T is_rigid_local(num_materials)
+      real(amrex_real), INTENT(in) :: VFRAC(num_materials)
+      integer, INTENT(out) :: im_primary
+      integer im
+      integer im_crit_fluid,im_crit_solid
+      real(amrex_real) sum_vfrac_fluid,sum_vfrac_solid,VOFSUM
+      integer, PARAMETER :: tessellate=0
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -24408,14 +24409,14 @@ contains
  
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tessellate
-      REAL_T, INTENT(in) :: vfrac(num_materials)
-      INTEGER_T, INTENT(out) :: im_full
-      INTEGER_T im
-      INTEGER_T im_fluid_max,im_solid_max
-      REAL_T sum_solid_vfrac,sum_fluid_vfrac
-      REAL_T max_solid_vfrac,max_fluid_vfrac
-      INTEGER_T is_rigid_local(num_materials)
+      integer, INTENT(in) :: tessellate
+      real(amrex_real), INTENT(in) :: vfrac(num_materials)
+      integer, INTENT(out) :: im_full
+      integer im
+      integer im_fluid_max,im_solid_max
+      real(amrex_real) sum_solid_vfrac,sum_fluid_vfrac
+      real(amrex_real) max_solid_vfrac,max_fluid_vfrac
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -24525,10 +24526,10 @@ contains
  
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: LS(num_materials)
-      INTEGER_T, INTENT(in) :: im_primary
-      INTEGER_T, INTENT(out) :: im_secondary
-      INTEGER_T im
+      real(amrex_real), INTENT(in) :: LS(num_materials)
+      integer, INTENT(in) :: im_primary
+      integer, INTENT(out) :: im_secondary
+      integer im
 
       if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
        ! do nothing
@@ -24569,14 +24570,14 @@ contains
  
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: LS(num_materials)
-      INTEGER_T, INTENT(in) :: im_primary
-      INTEGER_T, INTENT(in) :: im_secondary
-      INTEGER_T, INTENT(out) :: im_tertiary
-      INTEGER_T im_3
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T im
-      INTEGER_T is_rigid_local(num_materials)
+      real(amrex_real), INTENT(in) :: LS(num_materials)
+      integer, INTENT(in) :: im_primary
+      integer, INTENT(in) :: im_secondary
+      integer, INTENT(out) :: im_tertiary
+      integer im_3
+      integer, PARAMETER :: tessellate=0
+      integer im
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -24661,12 +24662,12 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: FSI_exclude
-      REAL_T, INTENT(in) :: vfrac_data(num_materials)
-      INTEGER_T, INTENT(out) :: sorted_list(num_materials)
-      INTEGER_T im,changed,nsweeps,swap,do_swap
-      INTEGER_T, PARAMETER :: tessellate=0
-      INTEGER_T is_rigid_local(num_materials)
+      integer, INTENT(in) :: FSI_exclude
+      real(amrex_real), INTENT(in) :: vfrac_data(num_materials)
+      integer, INTENT(out) :: sorted_list(num_materials)
+      integer im,changed,nsweeps,swap,do_swap
+      integer, PARAMETER :: tessellate=0
+      integer is_rigid_local(num_materials)
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -24788,13 +24789,13 @@ contains
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: nmax_in,nthreads
-      INTEGER_T, INTENT(in) :: order_algorithm_in(num_materials)
-      INTEGER_T, INTENT(in) :: MOFITERMAX_in
-      INTEGER_T, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
-      INTEGER_T, INTENT(in) :: MOF_DEBUG_RECON_in
-      INTEGER_T, INTENT(in) :: MOF_TURN_OFF_LS_in
-      INTEGER_T sdim,nmax_test
+      integer, INTENT(in) :: nmax_in,nthreads
+      integer, INTENT(in) :: order_algorithm_in(num_materials)
+      integer, INTENT(in) :: MOFITERMAX_in
+      integer, INTENT(in) :: MOFITERMAX_AFTER_PREDICT_in
+      integer, INTENT(in) :: MOF_DEBUG_RECON_in
+      integer, INTENT(in) :: MOF_TURN_OFF_LS_in
+      integer sdim,nmax_test
 
 #include "mofdata.H"
 

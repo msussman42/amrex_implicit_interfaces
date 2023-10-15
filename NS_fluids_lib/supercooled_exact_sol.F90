@@ -67,7 +67,7 @@ contains
     REAL(kind=8):: y, inc, xtok, kf
     REAL(kind=8), parameter::em_const=0.5772156649015329D0
     REAL(kind=8), parameter::tol=1.0D-15
-    INTEGER:: k
+    integer:: k
 
 
     !! initiate result
@@ -140,13 +140,13 @@ contains
 
     REAL(kind=8), parameter:: dx = 1.0D-2     !! Marching step
     REAL(kind=8), parameter:: tol = 1.0D-14   !! tolerance of root finding 
-    INTEGER, parameter:: max_itr = 50           !! max iteration number
-    INTEGER, parameter:: max_bracketing= 1000  !! max iteration number
+    integer, parameter:: max_itr = 50           !! max iteration number
+    integer, parameter:: max_bracketing= 1000  !! max iteration number
     
     REAL(kind=8) :: a, b, fa, fb, p, fp
     
-    INTEGER :: k
-    INTEGER :: nbracket
+    integer :: k
+    integer :: nbracket
 
     !! initialize the search region
     a = 1.0D-10

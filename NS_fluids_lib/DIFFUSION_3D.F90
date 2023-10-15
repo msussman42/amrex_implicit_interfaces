@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -158,6 +157,11 @@ stop
 ! w_t=           - (p')_z/rho0 + |g beta| (T-Tbase)
 ! p'=0 T=Tbase u=ubase v=vbase w=0 is a solution.
 
+       module hoop_module
+       use amrex_fort_module, only : amrex_real
+
+       contains
+
        subroutine fort_hoopimplicit( &
          override_density, &
          constant_density_all_time, & ! 1..num_materials
@@ -197,95 +201,95 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, INTENT(in) :: override_density(num_materials)
-       INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
+       integer, INTENT(in) :: override_density(num_materials)
+       integer, INTENT(in) :: constant_density_all_time(num_materials)
  
-       INTEGER_T, INTENT(in) :: nparts
-       INTEGER_T, INTENT(in) :: nparts_def
-       INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
-       INTEGER_T, INTENT(in) :: level
-       INTEGER_T, INTENT(in) :: finest_level
-       INTEGER_T, INTENT(in) :: rzflag
-       REAL_T, INTENT(in) :: angular_velocity
-       REAL_T, INTENT(in) :: centrifugal_force_factor
-       REAL_T, INTENT(in) :: visc_coef
-       INTEGER_T, INTENT(in) :: uncoupled_viscosity
-       INTEGER_T, INTENT(in) :: update_state
-       REAL_T, INTENT(in) :: dt
-       REAL_T, INTENT(in) :: cur_time_slab
-       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, INTENT(in) :: bfact
+       integer, INTENT(in) :: nparts
+       integer, INTENT(in) :: nparts_def
+       integer, INTENT(in) :: im_solid_map(nparts_def)
+       integer, INTENT(in) :: level
+       integer, INTENT(in) :: finest_level
+       integer, INTENT(in) :: rzflag
+       real(amrex_real), INTENT(in) :: angular_velocity
+       real(amrex_real), INTENT(in) :: centrifugal_force_factor
+       real(amrex_real), INTENT(in) :: visc_coef
+       integer, INTENT(in) :: uncoupled_viscosity
+       integer, INTENT(in) :: update_state
+       real(amrex_real), INTENT(in) :: dt
+       real(amrex_real), INTENT(in) :: cur_time_slab
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer :: growlo(3),growhi(3)
+       integer, INTENT(in) :: bfact
     
-       INTEGER_T, INTENT(in) :: DIMDEC(force)
-       INTEGER_T, INTENT(in) :: DIMDEC(tensor)
-       INTEGER_T, INTENT(in) :: DIMDEC(thermal)
-       INTEGER_T, INTENT(in) :: DIMDEC(recon)
-       INTEGER_T, INTENT(in) :: DIMDEC(solxfab)
-       INTEGER_T, INTENT(in) :: DIMDEC(solyfab)
-       INTEGER_T, INTENT(in) :: DIMDEC(solzfab)
-       INTEGER_T, INTENT(in) :: DIMDEC(uold)
-       INTEGER_T, INTENT(in) :: DIMDEC(unew)
-       INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
-       INTEGER_T, INTENT(in) :: DIMDEC(den)
-       INTEGER_T, INTENT(in) :: DIMDEC(mu)
+       integer, INTENT(in) :: DIMDEC(force)
+       integer, INTENT(in) :: DIMDEC(tensor)
+       integer, INTENT(in) :: DIMDEC(thermal)
+       integer, INTENT(in) :: DIMDEC(recon)
+       integer, INTENT(in) :: DIMDEC(solxfab)
+       integer, INTENT(in) :: DIMDEC(solyfab)
+       integer, INTENT(in) :: DIMDEC(solzfab)
+       integer, INTENT(in) :: DIMDEC(uold)
+       integer, INTENT(in) :: DIMDEC(unew)
+       integer, INTENT(in) :: DIMDEC(lsnew)
+       integer, INTENT(in) :: DIMDEC(den)
+       integer, INTENT(in) :: DIMDEC(mu)
 
-       REAL_T, INTENT(out),target :: force(DIMV(force),AMREX_SPACEDIM)
-       REAL_T, pointer :: force_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
-       REAL_T, pointer :: tensor_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: thermal(DIMV(thermal))
-       REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in),target :: &
+       real(amrex_real), INTENT(out),target :: force(DIMV(force),AMREX_SPACEDIM)
+       real(amrex_real), pointer :: force_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
+       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: thermal(DIMV(thermal))
+       real(amrex_real), pointer :: thermal_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: &
                recon(DIMV(recon),num_materials*ngeom_recon)
-       REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
-       REAL_T, INTENT(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
-       REAL_T, INTENT(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
-       REAL_T, pointer :: solxfab_ptr(D_DECL(:,:,:),:)
-       REAL_T, pointer :: solyfab_ptr(D_DECL(:,:,:),:)
-       REAL_T, pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
-       REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(inout),target :: unew(DIMV(unew),STATE_NCOMP)
-       REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
-       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: den(DIMV(den))
-       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in),target :: mu(DIMV(mu))
-       REAL_T, pointer :: mu_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in) ::  xlo(SDIM)
-       INTEGER_T, PARAMETER :: nhalf=3
-       REAL_T :: xsten(-nhalf:nhalf,SDIM)
-       REAL_T :: xpoint(SDIM)
-       REAL_T, INTENT(in) ::  dx(SDIM)
+       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+       real(amrex_real), INTENT(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+       real(amrex_real), INTENT(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+       real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
+       real(amrex_real), pointer :: uold_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(inout),target :: unew(DIMV(unew),STATE_NCOMP)
+       real(amrex_real), pointer :: unew_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: den(DIMV(den))
+       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: mu(DIMV(mu))
+       real(amrex_real), pointer :: mu_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in) ::  xlo(SDIM)
+       integer, PARAMETER :: nhalf=3
+       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
+       real(amrex_real) :: xpoint(SDIM)
+       real(amrex_real), INTENT(in) ::  dx(SDIM)
 
-       INTEGER_T i,j,k
-       INTEGER_T dir
-       INTEGER_T im
-       REAL_T un(AMREX_SPACEDIM)
-       REAL_T unp1(AMREX_SPACEDIM)
-       REAL_T RCEN
-       REAL_T inverseden
-       REAL_T mu_cell
-       INTEGER_T vofcomp
-       INTEGER_T dencomp
-       REAL_T localF
-       REAL_T rho_base
-       REAL_T rho_factor
-       REAL_T local_temp
-       REAL_T DTEMP
-       REAL_T T_BASE
-       REAL_T V_BASE(SDIM)
-       REAL_T cell_density_denom
-       REAL_T Fsolid
-       REAL_T vt_over_r,ut_over_r
-       REAL_T param1,param2,hoop_force_coef
-       INTEGER_T ut_comp
-       INTEGER_T partid,im_solid,partid_crit
-       REAL_T LStest,LScrit
+       integer i,j,k
+       integer dir
+       integer im
+       real(amrex_real) un(AMREX_SPACEDIM)
+       real(amrex_real) unp1(AMREX_SPACEDIM)
+       real(amrex_real) RCEN
+       real(amrex_real) inverseden
+       real(amrex_real) mu_cell
+       integer vofcomp
+       integer dencomp
+       real(amrex_real) localF
+       real(amrex_real) rho_base
+       real(amrex_real) rho_factor
+       real(amrex_real) local_temp
+       real(amrex_real) DTEMP
+       real(amrex_real) T_BASE
+       real(amrex_real) V_BASE(SDIM)
+       real(amrex_real) cell_density_denom
+       real(amrex_real) Fsolid
+       real(amrex_real) vt_over_r,ut_over_r
+       real(amrex_real) param1,param2,hoop_force_coef
+       integer ut_comp
+       integer partid,im_solid,partid_crit
+       real(amrex_real) LStest,LScrit
 
        if (dt.gt.zero) then
         ! do nothing
@@ -905,45 +909,45 @@ stop
 
        IMPLICIT NONE
 
-       INTEGER_T, INTENT(in) :: nparts
-       INTEGER_T, INTENT(in) :: nparts_def
-       INTEGER_T, INTENT(in) :: im_solid_map(nparts_def)
-       INTEGER_T, INTENT(in) :: level
-       INTEGER_T, INTENT(in) :: finest_level
-       INTEGER_T, INTENT(in) :: rzflag
-       REAL_T, INTENT(in) :: dt
-       REAL_T, INTENT(in) :: cur_time_slab
-       INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-       INTEGER_T, target, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-       INTEGER_T :: growlo(3),growhi(3)
-       INTEGER_T, INTENT(in) :: bfact
+       integer, INTENT(in) :: nparts
+       integer, INTENT(in) :: nparts_def
+       integer, INTENT(in) :: im_solid_map(nparts_def)
+       integer, INTENT(in) :: level
+       integer, INTENT(in) :: finest_level
+       integer, INTENT(in) :: rzflag
+       real(amrex_real), INTENT(in) :: dt
+       real(amrex_real), INTENT(in) :: cur_time_slab
+       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+       integer, target, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+       integer :: growlo(3),growhi(3)
+       integer, INTENT(in) :: bfact
     
-       INTEGER_T, INTENT(in) :: DIMDEC(thermal)
-       INTEGER_T, INTENT(in) :: DIMDEC(uold)
-       INTEGER_T, INTENT(in) :: DIMDEC(unew)
-       INTEGER_T, INTENT(in) :: DIMDEC(lsnew)
-       INTEGER_T, INTENT(in) :: DIMDEC(den)
+       integer, INTENT(in) :: DIMDEC(thermal)
+       integer, INTENT(in) :: DIMDEC(uold)
+       integer, INTENT(in) :: DIMDEC(unew)
+       integer, INTENT(in) :: DIMDEC(lsnew)
+       integer, INTENT(in) :: DIMDEC(den)
 
-       REAL_T, INTENT(in),target :: thermal(DIMV(thermal))
-       REAL_T, pointer :: thermal_ptr(D_DECL(:,:,:))
-       REAL_T, INTENT(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
-       REAL_T, pointer :: uold_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(inout),target :: unew(DIMV(unew),STATE_NCOMP)
-       REAL_T, pointer :: unew_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
-       REAL_T, pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-       REAL_T, INTENT(in),target :: den(DIMV(den))
-       REAL_T, pointer :: den_ptr(D_DECL(:,:,:))
-       REAL_T, target, INTENT(in) ::  xlo(SDIM)
-       INTEGER_T, PARAMETER :: nhalf=3
-       REAL_T :: xsten(-nhalf:nhalf,SDIM)
-       REAL_T :: xpoint(SDIM)
-       REAL_T, target, INTENT(in) :: dx(SDIM)
+       real(amrex_real), INTENT(in),target :: thermal(DIMV(thermal))
+       real(amrex_real), pointer :: thermal_ptr(D_DECL(:,:,:))
+       real(amrex_real), INTENT(in),target :: uold(DIMV(uold),AMREX_SPACEDIM)
+       real(amrex_real), pointer :: uold_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(inout),target :: unew(DIMV(unew),STATE_NCOMP)
+       real(amrex_real), pointer :: unew_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+       real(amrex_real), INTENT(in),target :: den(DIMV(den))
+       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:))
+       real(amrex_real), target, INTENT(in) ::  xlo(SDIM)
+       integer, PARAMETER :: nhalf=3
+       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
+       real(amrex_real) :: xpoint(SDIM)
+       real(amrex_real), target, INTENT(in) :: dx(SDIM)
 
-       INTEGER_T :: i,j,k
-       INTEGER_T :: dir
-       REAL_T :: inverseden
-       REAL_T :: output_force(SDIM)
+       integer :: i,j,k
+       integer :: dir
+       real(amrex_real) :: inverseden
+       real(amrex_real) :: output_force(SDIM)
 
        type(user_defined_force_parm_type_input) :: force_input
 
@@ -1056,4 +1060,6 @@ stop
 
        return
        end subroutine fort_user_defined_momentum_force
+
+      end module hoop_module
 

@@ -3,12 +3,12 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
 
 module tetrahedron_keast_module
+use amrex_fort_module, only : amrex_real
 
 contains
 
@@ -103,29 +103,29 @@ subroutine comp_next ( n, k, a, more, h, t )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T N, the integer whose compositions are desired.
+!    Input, integer N, the integer whose compositions are desired.
 !
-!    Input, INTEGER_T K, the number of parts in the composition.
+!    Input, integer K, the number of parts in the composition.
 !
-!    Input/output, INTEGER_T A(K), the parts of the composition.
+!    Input/output, integer A(K), the parts of the composition.
 !
 !    Input/output, logical MORE, set by the user to start the computation,
 !    and by the routine to terminate it.
 !
-!    Input/output, INTEGER_T  H, T, two internal parameters needed 
+!    Input/output, integer  H, T, two internal parameters needed 
 !    for the computation.  The user should allocate space for these in the 
 !    calling program, include them in the calling sequence, but never 
 !    alter them!
 !
   implicit none
 
-  INTEGER_T k
+  integer k
 
-  INTEGER_T a(k)
-  INTEGER_T h
+  integer a(k)
+  integer h
   logical more
-  INTEGER_T n
-  INTEGER_T t
+  integer n
+  integer t
 !
 !  The first computation.
 !
@@ -194,13 +194,13 @@ subroutine get_unit ( iunit )
 !
 !  Parameters:
 !
-!    Output, INTEGER_T IUNIT, the free unit number.
+!    Output, integer IUNIT, the free unit number.
 !
   implicit none
 
-  INTEGER_T i
-  INTEGER_T ios
-  INTEGER_T iunit
+  integer i
+  integer ios
+  integer iunit
   logical ( kind = 4 ) lopen
 
   iunit = 0
@@ -271,19 +271,19 @@ function i4_modp ( i, j )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T I, the number to be divided.
+!    Input, integer I, the number to be divided.
 !
-!    Input, INTEGER_T J, the number that divides I.
+!    Input, integer J, the number that divides I.
 !
-!    Output, INTEGER_T I4_MODP, the nonnegative remainder when I is
+!    Output, integer I4_MODP, the nonnegative remainder when I is
 !    divided by J.
 !
   implicit none
 
-  INTEGER_T i
-  INTEGER_T i4_modp
-  INTEGER_T j
-  INTEGER_T value
+  integer i
+  integer i4_modp
+  integer j
+  integer value
 
   if ( j == 0 ) then
     write ( *, '(a)' ) ' '
@@ -347,22 +347,22 @@ function i4_wrap ( ival, ilo, ihi )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T IVAL, a value.
+!    Input, integer IVAL, a value.
 !
-!    Input, INTEGER_T ILO, IHI, the desired bounds for the value.
+!    Input, integer ILO, IHI, the desired bounds for the value.
 !
-!    Output, INTEGER_T I4_WRAP, a "wrapped" version of IVAL.
+!    Output, integer I4_WRAP, a "wrapped" version of IVAL.
 !
   implicit none
 
-  INTEGER_T i4_wrap
-  INTEGER_T ihi
-  INTEGER_T ilo
-  INTEGER_T ival
-  INTEGER_T jhi
-  INTEGER_T jlo
-  INTEGER_T value
-  INTEGER_T wide
+  integer i4_wrap
+  integer ihi
+  integer ilo
+  integer ival
+  integer jhi
+  integer jlo
+  integer value
+  integer wide
 
   jlo = min ( ilo, ihi )
   jhi = max ( ilo, ihi )
@@ -407,14 +407,14 @@ subroutine keast_degree ( rule, degree )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Output, INTEGER_T DEGREE, the degree of the rule.
+!    Output, integer DEGREE, the degree of the rule.
 !
   implicit none
 
-  INTEGER_T degree
-  INTEGER_T rule
+  integer degree
+  integer rule
 
   if ( rule == 1 ) then
     degree = 0
@@ -474,16 +474,16 @@ subroutine keast_order_num ( rule, order_num )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Output, INTEGER_T ORDER_NUM, the order of the rule.
+!    Output, integer ORDER_NUM, the order of the rule.
 !
   implicit none
 
-  INTEGER_T order_num
-  INTEGER_T rule
-  INTEGER_T, allocatable, dimension ( : ) :: suborder
-  INTEGER_T suborder_num
+  integer order_num
+  integer rule
+  integer, allocatable, dimension ( : ) :: suborder
+  integer suborder_num
 
   call keast_suborder_num ( rule, suborder_num )
 
@@ -525,28 +525,28 @@ subroutine keast_rule ( rule, order_num, xyz, w )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Input, INTEGER_T ORDER_NUM, the order of the rule.
+!    Input, integer ORDER_NUM, the order of the rule.
 !
-!    Output, REAL_T XYZ(3,ORDER_NUM), the points of the rule.
+!    Output, real(amrex_real) XYZ(3,ORDER_NUM), the points of the rule.
 !
-!    Output, REAL_T W(ORDER_NUM), the weights of the rule.
+!    Output, real(amrex_real) W(ORDER_NUM), the weights of the rule.
 !
   implicit none
 
-  INTEGER_T order_num
+  integer order_num
 
-  INTEGER_T k
-  INTEGER_T o
-  INTEGER_T rule
-  INTEGER_T s
-  INTEGER_T, allocatable, dimension ( : ) :: suborder
-  INTEGER_T suborder_num
-  REAL_T, allocatable, dimension ( : ) :: suborder_w
-  REAL_T, allocatable, dimension ( :, : ) :: suborder_xyzz
-  REAL_T w(order_num)
-  REAL_T xyz(3,order_num)
+  integer k
+  integer o
+  integer rule
+  integer s
+  integer, allocatable, dimension ( : ) :: suborder
+  integer suborder_num
+  real(amrex_real), allocatable, dimension ( : ) :: suborder_w
+  real(amrex_real), allocatable, dimension ( :, : ) :: suborder_xyzz
+  real(amrex_real) w(order_num)
+  real(amrex_real) xyz(3,order_num)
 !
 !  Get the suborder information.
 !
@@ -724,12 +724,12 @@ subroutine keast_rule_num ( rule_num )
 !
 !  Parameters:
 !
-!    Output, INTEGER_T RULE_NUM, the number of rules.
+!    Output, integer RULE_NUM, the number of rules.
 !
   implicit none
 
-  INTEGER_T rule
-  INTEGER_T rule_num
+  integer rule
+  integer rule_num
 
   rule_num = 10
 
@@ -763,18 +763,18 @@ subroutine keast_suborder ( rule, suborder_num, suborder )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Input, INTEGER_T SUBORDER_NUM, the number of suborders.
+!    Input, integer SUBORDER_NUM, the number of suborders.
 !
-!    Output, INTEGER_T SUBORDER(SUBORDER_NUM), the suborders.
+!    Output, integer SUBORDER(SUBORDER_NUM), the suborders.
 !
   implicit none
 
-  INTEGER_T suborder_num
+  integer suborder_num
 
-  INTEGER_T rule
-  INTEGER_T suborder(suborder_num)
+  integer rule
+  integer suborder(suborder_num)
 
   if ( rule == 1 ) then
     suborder(1:suborder_num) = (/ 1 /)
@@ -833,14 +833,14 @@ subroutine keast_suborder_num ( rule, suborder_num )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Output, INTEGER_T SUBORDER_NUM, the number of suborders.
+!    Output, integer SUBORDER_NUM, the number of suborders.
 !
   implicit none
 
-  INTEGER_T rule
-  INTEGER_T suborder_num
+  integer rule
+  integer suborder_num
 
   if ( rule == 1 ) then
     suborder_num = 1
@@ -899,24 +899,24 @@ subroutine keast_subrule ( rule, suborder_num, suborder_xyzz, suborder_w )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T RULE, the index of the rule.
+!    Input, integer RULE, the index of the rule.
 !
-!    Input, INTEGER_T SUBORDER_NUM, the number of suborders 
+!    Input, integer SUBORDER_NUM, the number of suborders 
 !    of the rule.
 !
-!    Output, REAL_T SUBORDER_XYZZ(4,SUBORDER_NUM),
+!    Output, real(amrex_real) SUBORDER_XYZZ(4,SUBORDER_NUM),
 !    the barycentric coordinates of the abscissas.
 !
-!    Output, REAL_T SUBORDER_W(SUBORDER_NUM), the
+!    Output, real(amrex_real) SUBORDER_W(SUBORDER_NUM), the
 !    suborder weights.
 !
   implicit none
 
-  INTEGER_T suborder_num
+  integer suborder_num
 
-  INTEGER_T rule
-  REAL_T suborder_w(suborder_num)
-  REAL_T suborder_xyzz(4,suborder_num)
+  integer rule
+  real(amrex_real) suborder_w(suborder_num)
+  real(amrex_real) suborder_xyzz(4,suborder_num)
 
   if ( rule == 1 ) then
 
@@ -1143,26 +1143,26 @@ subroutine monomial_value ( dim_num, point_num, x, expon, value )
 !
 !  Parameters:
 !
-!    Input, INTEGER_T DIM_NUM, the spatial dimension.
+!    Input, integer DIM_NUM, the spatial dimension.
 !
-!    Input, INTEGER_T POINT_NUM, the number of points at which the
+!    Input, integer POINT_NUM, the number of points at which the
 !    monomial is to be evaluated.
 !
-!    Input, REAL_T X(DIM_NUM,POINT_NUM), the point coordinates.
+!    Input, real(amrex_real) X(DIM_NUM,POINT_NUM), the point coordinates.
 !
-!    Input, INTEGER_T EXPON(DIM_NUM), the exponents.
+!    Input, integer EXPON(DIM_NUM), the exponents.
 !
-!    Output, REAL_T VALUE(POINT_NUM), the value of the monomial.
+!    Output, real(amrex_real) VALUE(POINT_NUM), the value of the monomial.
 !
   implicit none
 
-  INTEGER_T dim_num
-  INTEGER_T point_num
+  integer dim_num
+  integer point_num
 
-  INTEGER_T dim
-  INTEGER_T expon(dim_num)
-  REAL_T value(point_num)
-  REAL_T x(dim_num,point_num)
+  integer dim
+  integer expon(dim_num)
+  real(amrex_real) value(point_num)
+  real(amrex_real) x(dim_num,point_num)
 
   value(1:point_num) = 1.0D+00
 
@@ -1199,14 +1199,14 @@ function r8mat_det_4d ( a )
 !
 !  Parameters:
 !
-!    Input, REAL_T A(4,4), the matrix whose determinant is desired.
+!    Input, real(amrex_real) A(4,4), the matrix whose determinant is desired.
 !
-!    Output, REAL_T R8MAT_DET_4D, the determinant of the matrix.
+!    Output, real(amrex_real) R8MAT_DET_4D, the determinant of the matrix.
 !
   implicit none
 
-  REAL_T a(4,4)
-  REAL_T r8mat_det_4d
+  real(amrex_real) a(4,4)
+  real(amrex_real) r8mat_det_4d
 
   r8mat_det_4d = &
          a(1,1) * ( &
@@ -1262,25 +1262,25 @@ subroutine tetrahedron_reference_to_physical ( t, n, ref, phy )
 !
 !  Parameters:
 !
-!    Input, REAL_T T(3,4), the coordinates of the vertices.
+!    Input, real(amrex_real) T(3,4), the coordinates of the vertices.
 !    The vertices are assumed to be the images of (0,0,0), (1,0,0),
 !    (0,1,0) and (0,0,1) respectively.
 !
-!    Input, INTEGER_T N, the number of points to transform.
+!    Input, integer N, the number of points to transform.
 !
-!    Input, REAL_T REF(3,N), points in the reference tetrahedron.
+!    Input, real(amrex_real) REF(3,N), points in the reference tetrahedron.
 !
-!    Output, REAL_T PHY(3,N), corresponding points in the
+!    Output, real(amrex_real) PHY(3,N), corresponding points in the
 !    physical tetrahedron.
 !
   implicit none
 
-  INTEGER_T n
+  integer n
 
-  INTEGER_T i
-  REAL_T phy(3,n)
-  REAL_T ref(3,n)
-  REAL_T t(3,4)
+  integer i
+  real(amrex_real) phy(3,n)
+  real(amrex_real) ref(3,n)
+  real(amrex_real) t(3,4)
 
   do i = 1, 3
     phy(i,1:n) = t(i,1) * ( 1.0D+00 - ref(1,1:n) - ref(2,1:n) - ref(3,1:n) ) &
@@ -1312,17 +1312,17 @@ subroutine tetrahedron_volume ( tetra, volume )
 !
 !  Parameters:
 !
-!    Input, REAL_T TETRA(3,4), the vertices of the tetrahedron.
+!    Input, real(amrex_real) TETRA(3,4), the vertices of the tetrahedron.
 !
-!    Output, REAL_T VOLUME, the volume of the tetrahedron.
+!    Output, real(amrex_real) VOLUME, the volume of the tetrahedron.
 !
   implicit none
 
-  INTEGER_T, parameter :: dim_num = 3
+  integer, parameter :: dim_num = 3
 
-  REAL_T a(4,4)
-  REAL_T tetra(dim_num,4)
-  REAL_T volume
+  real(amrex_real) a(4,4)
+  real(amrex_real) tetra(dim_num,4)
+  real(amrex_real) volume
 
   a(1:dim_num,1:4) = tetra(1:dim_num,1:4)
   a(4,1:4) = 1.0D+00
@@ -1361,18 +1361,18 @@ subroutine timestamp ( )
   implicit none
 
   character ( len = 8 ) ampm
-  INTEGER_T d
-  INTEGER_T h
-  INTEGER_T m
-  INTEGER_T mm
+  integer d
+  integer h
+  integer m
+  integer mm
   character ( len = 9 ), parameter, dimension(12) :: month = (/ &
     'January  ', 'February ', 'March    ', 'April    ', &
     'May      ', 'June     ', 'July     ', 'August   ', &
     'September', 'October  ', 'November ', 'December ' /)
-  INTEGER_T n
-  INTEGER_T s
-  INTEGER_T values(8)
-  INTEGER_T y
+  integer n
+  integer s
+  integer values(8)
+  integer y
 
   call date_and_time ( values = values )
 

@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -25,6 +24,7 @@ stop
 ! probtype==415 (see run2d/inputs.shock_solid_sphere) 
 !  use probtype==401 (run3d/inputs.HELIX) as a guide.
 module MEHDI_SHOCK_SPHERE
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
@@ -42,9 +42,9 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(num_materials)
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(num_materials)
 
 if ((num_materials.eq.3).and.(probtype.eq.415)) then
 
@@ -74,13 +74,13 @@ subroutine MITSUHIRO_LS_VEL(x,t,LS,VEL,velsolid_flag,dx)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -113,10 +113,10 @@ subroutine MITSUHIRO_PRES(x,t,LS,PRES)
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T, INTENT(out) :: PRES
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: PRES
 
 PRES=zero
 
@@ -130,12 +130,12 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T, INTENT(out) :: STATE(num_materials*num_state_material)
-INTEGER_T im,ibase,n
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: STATE(num_materials*num_state_material)
+integer im,ibase,n
 
 if ((num_materials.eq.4).and. &
     (num_state_material.ge.3).and. & ! density, temperature, vapor spec
@@ -174,13 +174,13 @@ subroutine MITSUHIRO_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(num_materials)
-REAL_T, INTENT(in) :: LS_in(num_materials)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) ::  dx(SDIM)
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(num_materials)
+real(amrex_real), INTENT(in) :: LS_in(num_materials)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) ::  dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -200,16 +200,16 @@ subroutine MITSUHIRO_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T, INTENT(out) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 velsolid_flag=0
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
@@ -233,14 +233,14 @@ subroutine MITSUHIRO_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T, INTENT(out) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real), INTENT(out) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
@@ -262,19 +262,19 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(num_materials)
-REAL_T :: local_STATE(num_materials*num_state_material)
-REAL_T, INTENT(out) :: STATE
-REAL_T, INTENT(out) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(num_materials)
+real(amrex_real) :: local_STATE(num_materials*num_state_material)
+real(amrex_real), INTENT(out) :: STATE
+real(amrex_real), INTENT(out) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer istate,im
+integer ibase,im_crit
+integer local_bcflag
 
 local_bcflag=1
 
@@ -301,15 +301,15 @@ subroutine MITSUHIRO_HEATSOURCE(im,VFRAC,time,x,temp, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T im
-REAL_T VFRAC(num_materials)
-REAL_T time
-REAL_T x(SDIM)
-REAL_T temp(num_materials)
-REAL_T den(num_materials)
-REAL_T CV(num_materials)
-REAL_T dt
-REAL_T heat_source
+integer im
+real(amrex_real) VFRAC(num_materials)
+real(amrex_real) time
+real(amrex_real) x(SDIM)
+real(amrex_real) temp(num_materials)
+real(amrex_real) den(num_materials)
+real(amrex_real) CV(num_materials)
+real(amrex_real) dt
+real(amrex_real) heat_source
 
 if ((num_materials.eq.4).and.(probtype.eq.414)) then
  heat_source=zero

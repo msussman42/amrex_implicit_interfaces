@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
  
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -34,6 +33,7 @@
 !yblob7=pulling velocity
 !yblob5=R
 module WAVY_Channel_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
@@ -46,7 +46,7 @@ IMPLICIT NONE
 return
 end subroutine INIT_WAVY_MODULE
 
-REAL_T function DIST_FINITE_CYLHEAD(P,R_cyl,H_bot,H_top)
+real(amrex_real) function DIST_FINITE_CYLHEAD(P,R_cyl,H_bot,H_top)
  ! Returns the signed distance function to the cylinder
  ! surfaces (including top and bottom)
  ! The axis of cylinder is along SDIM=2 direction
@@ -56,13 +56,13 @@ REAL_T function DIST_FINITE_CYLHEAD(P,R_cyl,H_bot,H_top)
  ! Outside the cylinder > 0
  implicit none
 
- REAL_T, INTENT(in), dimension(SDIM) :: P
- REAL_T, INTENT(in) :: R_cyl
- REAL_T, INTENT(in) :: H_bot
- REAL_T, INTENT(in) :: H_top
+ real(amrex_real), INTENT(in), dimension(SDIM) :: P
+ real(amrex_real), INTENT(in) :: R_cyl
+ real(amrex_real), INTENT(in) :: H_bot
+ real(amrex_real), INTENT(in) :: H_top
  
- REAL_T x,y,z,r
- REAL_T dist_cyl, dist_end
+ real(amrex_real) x,y,z,r
+ real(amrex_real) dist_cyl, dist_end
  
  x=P(1)
  y=P(2)
@@ -126,14 +126,14 @@ subroutine WAVY_INIT_LS_core(x,t,LS,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(nmat)
-INTEGER_T im
-REAL_T tt,ss,wvel
-REAL_T thickness,Radius,LambdaWave,piin
-REAL_T HelixLength, scalelength, cylinderHeight,LStmp1,LStmp2,BodyStart
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(nmat)
+integer im
+real(amrex_real) tt,ss,wvel
+real(amrex_real) thickness,Radius,LambdaWave,piin
+real(amrex_real) HelixLength, scalelength, cylinderHeight,LStmp1,LStmp2,BodyStart
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -250,15 +250,15 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(out) :: LS(nmat)
-REAL_T :: x3D(3)
-REAL_T :: x3D_foot(3)
-INTEGER_T :: dir
-INTEGER_T im
-INTEGER_T auxcomp
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(nmat)
+real(amrex_real) :: x3D(3)
+real(amrex_real) :: x3D_foot(3)
+integer :: dir
+integer im
+integer auxcomp
 
 if (t.ge.0.0d0) then
  ! do nothing
@@ -322,11 +322,11 @@ subroutine WAVY_BOUNDING_BOX_AUX(auxcomp, &
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: auxcomp
-REAL_T, INTENT(inout) :: minnode(3)
-REAL_T, INTENT(inout) :: maxnode(3)
-INTEGER_T, INTENT(out) :: LS_FROM_SUBROUTINE
-INTEGER_T, INTENT(out) :: aux_ncells_max_side
+integer, INTENT(in) :: auxcomp
+real(amrex_real), INTENT(inout) :: minnode(3)
+real(amrex_real), INTENT(inout) :: maxnode(3)
+integer, INTENT(out) :: LS_FROM_SUBROUTINE
+integer, INTENT(out) :: aux_ncells_max_side
 
  if (auxcomp.eq.1) then
   if (axis_dir.eq.1) then
@@ -365,11 +365,11 @@ subroutine WAVY_AUX_DATA(auxcomp,x,LS)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: auxcomp
-REAL_T, INTENT(in) :: x(3)
-REAL_T, INTENT(out) :: LS
-REAL_T :: local_LS(num_materials)
-REAL_T :: local_time
+integer, INTENT(in) :: auxcomp
+real(amrex_real), INTENT(in) :: x(3)
+real(amrex_real), INTENT(out) :: LS
+real(amrex_real) :: local_LS(num_materials)
+real(amrex_real) :: local_time
 
  if (auxcomp.eq.1) then
   if (axis_dir.eq.1) then
@@ -402,16 +402,16 @@ subroutine WAVY_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(inout) :: rflag
-INTEGER_T, INTENT(inout) :: tagflag
-REAL_T, dimension(3) :: local_x
-REAL_T, dimension(SDIM) :: local_delta
-INTEGER_T :: dir
-INTEGER_T :: auxcomp
-REAL_T :: LS
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: rflag
+integer, INTENT(inout) :: tagflag
+real(amrex_real), dimension(3) :: local_x
+real(amrex_real), dimension(SDIM) :: local_delta
+integer :: dir
+integer :: auxcomp
+real(amrex_real) :: LS
 
 if (nhalf.lt.1) then
  print *,"nhalf invalid wavy override tagflag"
@@ -448,16 +448,16 @@ subroutine WAVY_INIT_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
-INTEGER_T im_solid_Tomas
-INTEGER_T im_solid_wavy
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
+integer im_solid_Tomas
+integer im_solid_wavy
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -547,13 +547,13 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
-REAL_T :: gravity_dz
-INTEGER_T :: gravity_dir
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
+real(amrex_real) :: gravity_dz
+integer :: gravity_dir
 
 call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
@@ -591,14 +591,14 @@ subroutine WAVY_INIT_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase,n
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase,n
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -676,14 +676,14 @@ subroutine WAVY_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -708,17 +708,17 @@ subroutine WAVY_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -748,15 +748,15 @@ subroutine WAVY_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -785,20 +785,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -841,18 +841,18 @@ subroutine WAVY_HEATSOURCE( &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: im
-REAL_T, INTENT(in) :: VFRAC(nmat)
-REAL_T, INTENT(in) :: time
-INTEGER_T, INTENT(in) :: nhalf
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-REAL_T, INTENT(in) :: temp(nmat)
-REAL_T, INTENT(in) :: den(nmat)
-REAL_T, INTENT(in) :: CV(nmat)
-REAL_T, INTENT(in) :: dt
-REAL_T, INTENT(out) :: heat_source
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: im
+real(amrex_real), INTENT(in) :: VFRAC(nmat)
+real(amrex_real), INTENT(in) :: time
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: temp(nmat)
+real(amrex_real), INTENT(in) :: den(nmat)
+real(amrex_real), INTENT(in) :: CV(nmat)
+real(amrex_real), INTENT(in) :: dt
+real(amrex_real), INTENT(out) :: heat_source
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -900,9 +900,9 @@ INTERFACE
   END Function F_Tomas
 END INTERFACE    
   
-  INTEGER:: errCode
-  INTEGER,PARAMETER:: MAXITER=25
-  INTEGER:: neval   ! not used
+  integer:: errCode
+  integer,PARAMETER:: MAXITER=25
+  integer:: neval   ! not used
   REAL(KIND=8):: xZero,fZero
   REAL(KIND=8),PARAMETER:: a = 0.0
 !   REAL(KIND=8),PARAMETER:: b = 10.0
@@ -941,9 +941,9 @@ SUBROUTINE BrentZeroDouble(x0,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radi
   ! REAL(KIND=8),INTENT(IN):: ax,bx   ! left and right enKIND=8oints of interval
   REAL(KIND=8), INTENT(IN) :: x0,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart !initial guess, point in question,time
   REAL(KIND=8),INTENT(IN):: tol     ! desired interval of uncertainity 
-  INTEGER,INTENT(IN):: maxIter   ! max number of iterations allowed. 25 is good
-  INTEGER,INTENT(OUT):: neval
-  INTEGER,INTENT(OUT):: errCode   ! =0 is OK; =1 too many iterations
+  integer,INTENT(IN):: maxIter   ! max number of iterations allowed. 25 is good
+  integer,INTENT(OUT):: neval
+  integer,INTENT(OUT):: errCode   ! =0 is OK; =1 too many iterations
                                   ! =2 if F(ax) and F(bx) have the same sign
   REAL(KIND=8),INTENT(OUT):: xZero,fZero ! the last and best value of the zero                                   
       
@@ -957,8 +957,8 @@ END INTERFACE
   
   REAL(KIND=8):: a,b,c,d,e,eps
   REAL(KIND=8):: fa,fb,fc,tol1
-  INTEGER:: kIter,i,i_min,itest,itestp,ntestpmax
-!  INTEGER:: method   ! =0 bisection; =1 linear; =2 inverse quadratic
+  integer:: kIter,i,i_min,itest,itestp,ntestpmax
+!  integer:: method   ! =0 bisection; =1 linear; =2 inverse quadratic
   REAL(KIND=8):: xm,p,q,r,s,dist,min_dist,Ltotal,s1start,s1end,s_start,s_end
   REAL(KIND=8),PARAMETER:: ZERO=0.0, ONE=1.0, TWO=2.0, THREE=3.0, HALF=0.5, twosqrt = sqrt(2.)
 !----------------------------------------------------------------------------

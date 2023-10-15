@@ -12,7 +12,6 @@ print *,"dimension bust"
 stop
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -23,6 +22,7 @@ stop
 #include "CTMLFSI_F.H"
 
       module CTML_module
+      use amrex_fort_module, only : amrex_real
       use probf90_module
 
       contains
@@ -36,26 +36,26 @@ stop
        CTML_max_num_elements_list)
 
       IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: nmat_in
-      INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
-      INTEGER_T, INTENT(inout) :: CTML_num_solids_out
-      INTEGER_T, INTENT(inout) :: CTML_num_scalars_out
-      INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list(3)
-      INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
-      INTEGER_T :: im
-      INTEGER_T :: Ns_IBM_fib_out
-      INTEGER_T :: Ns_IBM_fsh_out
-      INTEGER_T :: Nq_IBM_fsh_out
-      INTEGER_T :: Ns_IBM_esh_out
-      INTEGER_T :: Ns_IBM_fbc_out
+      integer, INTENT(in) :: nmat_in
+      integer, INTENT(in) :: FSI_flag_in(nmat_in)
+      integer, INTENT(inout) :: CTML_num_solids_out
+      integer, INTENT(inout) :: CTML_num_scalars_out
+      integer, INTENT(inout) :: CTML_max_num_nodes_list(3)
+      integer, INTENT(inout) :: CTML_max_num_elements_list
+      integer :: im
+      integer :: Ns_IBM_fib_out
+      integer :: Ns_IBM_fsh_out
+      integer :: Nq_IBM_fsh_out
+      integer :: Ns_IBM_esh_out
+      integer :: Ns_IBM_fbc_out
 
-      INTEGER_T :: Nr_IBM_fib_out
-      INTEGER_T :: Nr_IBM_fsh_out
-      INTEGER_T :: Nr_IBM_esh_out
-      INTEGER_T :: Nr_IBM_fbc_out
+      integer :: Nr_IBM_fib_out
+      integer :: Nr_IBM_fsh_out
+      integer :: Nr_IBM_esh_out
+      integer :: Nr_IBM_fbc_out
 
-      INTEGER_T :: CTML_num_solids_local
-      INTEGER_T :: dir
+      integer :: CTML_num_solids_local
+      integer :: dir
 
       CTML_num_solids_out=0
       CTML_num_scalars_out=0
@@ -195,13 +195,13 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat_in
-INTEGER_T, INTENT(in) :: FSI_flag_in(nmat_in)
-INTEGER_T, INTENT(inout) :: CTML_num_solids_out
-INTEGER_T, INTENT(inout) :: CTML_num_scalars_out
-INTEGER_T, INTENT(inout) :: CTML_max_num_nodes_list(3)
-INTEGER_T, INTENT(inout) :: CTML_max_num_elements_list
-INTEGER_T :: dir
+integer, INTENT(in) :: nmat_in
+integer, INTENT(in) :: FSI_flag_in(nmat_in)
+integer, INTENT(inout) :: CTML_num_solids_out
+integer, INTENT(inout) :: CTML_num_scalars_out
+integer, INTENT(inout) :: CTML_max_num_nodes_list(3)
+integer, INTENT(inout) :: CTML_max_num_elements_list
+integer :: dir
 
 CTML_num_solids_out=0
 CTML_num_scalars_out=0

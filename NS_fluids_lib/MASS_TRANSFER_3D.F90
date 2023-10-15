@@ -9,7 +9,6 @@
 #define DEBUG_J 13
 #define DEBUG_K 0
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -30,81 +29,82 @@ stop
 #endif
 
       module mass_transfer_module
+      use amrex_fort_module, only : amrex_real
       use probcommon_module
 
       ! if t1 is a c++ parameter and p1 is a "type" component:
-      ! REAL_T, pointer :: p1(DIMV(t1),ncomp)
-      ! REAL_T, target :: t1(DIMV(t1),ncomp)
+      ! real(amrex_real), pointer :: p1(DIMV(t1),ncomp)
+      ! real(amrex_real), target :: t1(DIMV(t1),ncomp)
       ! p1=>t1
       type probe_parm_type
-       INTEGER_T :: tid
-       INTEGER_T :: probe_constrain
-       REAL_T, pointer :: Y_TOLERANCE
-       INTEGER_T, pointer :: local_freezing_model
-       REAL_T, pointer :: LL
-       INTEGER_T, pointer :: debugrate
-       INTEGER_T, pointer :: i,j,k
-       REAL_T, pointer :: xsrc(:)
-       REAL_T, pointer :: xdst(:)
-       REAL_T, pointer :: xsrc_micro(:)
-       REAL_T, pointer :: xdst_micro(:)
-       INTEGER_T, pointer :: im_source
-       INTEGER_T, pointer :: im_dest
-       INTEGER_T, pointer :: tcomp_source
-       INTEGER_T, pointer :: Ycomp_source
-       INTEGER_T, pointer :: dencomp_source
-       REAL_T, pointer :: dxprobe_source
-       INTEGER_T, pointer :: tcomp_dest
-       INTEGER_T, pointer :: Ycomp_dest
-       INTEGER_T, pointer :: dencomp_dest
-       REAL_T, pointer :: dxprobe_dest
-       REAL_T, pointer, dimension(:) :: LSINT
-       REAL_T, pointer :: dxmaxLS
-       INTEGER_T, pointer :: bfact
-       INTEGER_T, pointer :: level
-       INTEGER_T, pointer :: finest_level
-       REAL_T, pointer :: dx(:)
-       REAL_T, pointer :: xlo(:)
-       REAL_T, pointer :: xI(:)
-       INTEGER_T, pointer :: fablo(:)
-       INTEGER_T, pointer :: fabhi(:)
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: EOS
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: recon
-       REAL_T, pointer, dimension(D_DECL(:,:,:),:) :: LS
-       REAL_T, pointer, dimension(D_DECL(:,:,:)) :: pres
+       integer :: tid
+       integer :: probe_constrain
+       real(amrex_real), pointer :: Y_TOLERANCE
+       integer, pointer :: local_freezing_model
+       real(amrex_real), pointer :: LL
+       integer, pointer :: debugrate
+       integer, pointer :: i,j,k
+       real(amrex_real), pointer :: xsrc(:)
+       real(amrex_real), pointer :: xdst(:)
+       real(amrex_real), pointer :: xsrc_micro(:)
+       real(amrex_real), pointer :: xdst_micro(:)
+       integer, pointer :: im_source
+       integer, pointer :: im_dest
+       integer, pointer :: tcomp_source
+       integer, pointer :: Ycomp_source
+       integer, pointer :: dencomp_source
+       real(amrex_real), pointer :: dxprobe_source
+       integer, pointer :: tcomp_dest
+       integer, pointer :: Ycomp_dest
+       integer, pointer :: dencomp_dest
+       real(amrex_real), pointer :: dxprobe_dest
+       real(amrex_real), pointer, dimension(:) :: LSINT
+       real(amrex_real), pointer :: dxmaxLS
+       integer, pointer :: bfact
+       integer, pointer :: level
+       integer, pointer :: finest_level
+       real(amrex_real), pointer :: dx(:)
+       real(amrex_real), pointer :: xlo(:)
+       real(amrex_real), pointer :: xI(:)
+       integer, pointer :: fablo(:)
+       integer, pointer :: fabhi(:)
+       real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: EOS
+       real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: recon
+       real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: LS
+       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: pres
       end type probe_parm_type
 
       type probe_out_type
-      REAL_T :: T_probe(2)
-      REAL_T :: T_probe_raw(2)
-      REAL_T :: Y_probe(2)
-      REAL_T :: den_I_interp(2)
-      REAL_T :: den_probe(2)
-      REAL_T :: T_I_interp(2)
-      REAL_T :: Y_I_interp(2)
-      REAL_T :: pres_I_interp(2)
-      REAL_T :: vfrac_I(2) !solids and fluids tessellate
-      REAL_T :: dxprobe_target(2)
-      INTEGER_T :: interp_valid_flag(2)
+      real(amrex_real) :: T_probe(2)
+      real(amrex_real) :: T_probe_raw(2)
+      real(amrex_real) :: Y_probe(2)
+      real(amrex_real) :: den_I_interp(2)
+      real(amrex_real) :: den_probe(2)
+      real(amrex_real) :: T_I_interp(2)
+      real(amrex_real) :: Y_I_interp(2)
+      real(amrex_real) :: pres_I_interp(2)
+      real(amrex_real) :: vfrac_I(2) !solids and fluids tessellate
+      real(amrex_real) :: dxprobe_target(2)
+      integer :: interp_valid_flag(2)
       end type probe_out_type
 
       type TSAT_MASS_FRAC_parm_type
        type(probe_parm_type), pointer :: PROBE_PARMS
-       INTEGER_T :: Tanasawa_or_Schrage_or_Kassemi
-       REAL_T :: accommodation_coefficient
-       REAL_T :: reference_pressure
-       REAL_T :: universal_gas_constant_R
-       REAL_T :: molar_mass_ambient   
-       REAL_T :: molar_mass_vapor
-       REAL_T :: TSAT_base
-       REAL_T :: YI_min
-       REAL_T :: TI_min
-       REAL_T :: TI_max
-       REAL_T :: D_MASS
-       REAL_T :: den_G
-       INTEGER_T :: iprobe_vapor
-       INTEGER_T, pointer :: material_type_evap(:)
-       REAL_T, pointer :: thermal_k(:)
+       integer :: Tanasawa_or_Schrage_or_Kassemi
+       real(amrex_real) :: accommodation_coefficient
+       real(amrex_real) :: reference_pressure
+       real(amrex_real) :: universal_gas_constant_R
+       real(amrex_real) :: molar_mass_ambient   
+       real(amrex_real) :: molar_mass_vapor
+       real(amrex_real) :: TSAT_base
+       real(amrex_real) :: YI_min
+       real(amrex_real) :: TI_min
+       real(amrex_real) :: TI_max
+       real(amrex_real) :: D_MASS
+       real(amrex_real) :: den_G
+       integer :: iprobe_vapor
+       integer, pointer :: material_type_evap(:)
+       real(amrex_real), pointer :: thermal_k(:)
       end type TSAT_MASS_FRAC_parm_type
 
       contains
@@ -129,28 +129,28 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: use_tsatfab
-      INTEGER_T, INTENT(in) :: i,j,k
-      INTEGER_T, INTENT(in) :: ireverse
-      INTEGER_T, INTENT(in) :: iten
-      INTEGER_T, INTENT(in) :: ntsat
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      REAL_T, pointer, INTENT(in) :: TSATFAB(D_DECL(:,:,:),:)
-      INTEGER_T, INTENT(in) :: latent_comp
-      REAL_T, INTENT(out) :: T_I
-      REAL_T, INTENT(in)  :: TSAT_array(2*num_interfaces)
-      INTEGER_T, INTENT(in)  :: TSAT_flag_array(2*num_interfaces)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: x_I(SDIM)
-      REAL_T, INTENT(in) :: time
-      INTEGER_T :: local_flag
-      INTEGER_T :: dir
-      INTEGER_T :: ncomp_per_tsat
-      INTEGER_T :: tsat_comp
+      integer, INTENT(in) :: use_tsatfab
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: ireverse
+      integer, INTENT(in) :: iten
+      integer, INTENT(in) :: ntsat
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      real(amrex_real), pointer, INTENT(in) :: TSATFAB(D_DECL(:,:,:),:)
+      integer, INTENT(in) :: latent_comp
+      real(amrex_real), INTENT(out) :: T_I
+      real(amrex_real), INTENT(in)  :: TSAT_array(2*num_interfaces)
+      integer, INTENT(in)  :: TSAT_flag_array(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: x_I(SDIM)
+      real(amrex_real), INTENT(in) :: time
+      integer :: local_flag
+      integer :: dir
+      integer :: ncomp_per_tsat
+      integer :: tsat_comp
 
       ncomp_per_tsat=EXTRAP_PER_TSAT
       tsat_comp=num_interfaces+(iten-1)*ncomp_per_tsat+1
@@ -232,8 +232,8 @@ stop
       subroutine adjust_du(du,normdir,rval,map_forward)
       IMPLICIT NONE
 
-      REAL_T du,rval,disc
-      INTEGER_T normdir,map_forward
+      real(amrex_real) du,rval,disc
+      integer normdir,map_forward
 
 
       if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
@@ -315,54 +315,54 @@ stop
       use global_utility_module
       implicit none
 
-      REAL_T, INTENT(in) :: DATA_FLOOR
-      INTEGER_T, INTENT(in) :: nsolve
-      INTEGER_T :: nc
-      INTEGER_T, INTENT(in) :: cc_flag
-      INTEGER_T, INTENT(in) :: tsat_flag
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: xI(SDIM)
-      INTEGER_T, INTENT(in) :: nhalf
-      REAL_T, INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      REAL_T, INTENT(in) :: TSAT
-      REAL_T, INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1),nsolve)
-      REAL_T, INTENT(in) :: XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      INTEGER_T, INTENT(in) :: im_critical
-      INTEGER_T :: im_primary
-      INTEGER_T, INTENT(in) :: im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T, INTENT(in) :: VF_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T, INTENT(in) :: LS_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T :: wt_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T, INTENT(out) :: T_out(nsolve)
+      real(amrex_real), INTENT(in) :: DATA_FLOOR
+      integer, INTENT(in) :: nsolve
+      integer :: nc
+      integer, INTENT(in) :: cc_flag
+      integer, INTENT(in) :: tsat_flag
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: xI(SDIM)
+      integer, INTENT(in) :: nhalf
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real), INTENT(in) :: TSAT
+      real(amrex_real), INTENT(inout) :: T_sten(D_DECL(-1:1,-1:1,-1:1),nsolve)
+      real(amrex_real), INTENT(in) :: XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      integer, INTENT(in) :: im_critical
+      integer :: im_primary
+      integer, INTENT(in) :: im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real), INTENT(in) :: VF_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real), INTENT(in) :: LS_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) :: wt_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real), INTENT(out) :: T_out(nsolve)
 
-      INTEGER_T i,j,k
-      INTEGER_T klosten,khisten
-      INTEGER_T i1,j1,k1
-      INTEGER_T dir
-      REAL_T dist
-      REAL_T, dimension(:,:), allocatable :: AA
-      REAL_T, dimension(:,:), allocatable :: AAcopy
-      REAL_T BB(SDIM+1)
-      REAL_T BBcopy(SDIM+1)
-      REAL_T xtemp(SDIM)
-      REAL_T, INTENT(in) :: xtarget(SDIM)
-      REAL_T xbase(SDIM)
-      REAL_T xlive(SDIM)
-      REAL_T delx(SDIM+1)
-      REAL_T GRADTEMP(SDIM+1)
+      integer i,j,k
+      integer klosten,khisten
+      integer i1,j1,k1
+      integer dir
+      real(amrex_real) dist
+      real(amrex_real), dimension(:,:), allocatable :: AA
+      real(amrex_real), dimension(:,:), allocatable :: AAcopy
+      real(amrex_real) BB(SDIM+1)
+      real(amrex_real) BBcopy(SDIM+1)
+      real(amrex_real) xtemp(SDIM)
+      real(amrex_real), INTENT(in) :: xtarget(SDIM)
+      real(amrex_real) xbase(SDIM)
+      real(amrex_real) xlive(SDIM)
+      real(amrex_real) delx(SDIM+1)
+      real(amrex_real) GRADTEMP(SDIM+1)
 
-      REAL_T TMIN,TMAX
-      INTEGER_T TBOUNDS_INIT
+      real(amrex_real) TMIN,TMAX
+      integer TBOUNDS_INIT
 
-      REAL_T T_test,T_avg,wt_sum,VF,LS
-      INTEGER_T mat_ncomp,matstatus
-      REAL_T T_hold
-      INTEGER_T own_flag
-      REAL_T wt_local
+      real(amrex_real) T_test,T_avg,wt_sum,VF,LS
+      integer mat_ncomp,matstatus
+      real(amrex_real) T_hold
+      integer own_flag
+      real(amrex_real) wt_local
 
       if ((nsolve.ne.1).and.(nsolve.ne.SDIM)) then
        print *,"nsolve invalid"
@@ -836,50 +836,50 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: x(SDIM)
-      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, INTENT(in) :: comp
-      INTEGER_T, INTENT(in) :: im
-      INTEGER_T :: im_local
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: x(SDIM)
+      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
+      integer, INTENT(in) :: comp
+      integer, INTENT(in) :: im
+      integer :: im_local
        ! datalox:datahix,dataloy:datahiy,dataloz:datahiz
-      REAL_T, pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
-      REAL_T, pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out) :: dest
+      real(amrex_real), pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
+      real(amrex_real), pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out) :: dest
 
-      REAL_T :: DATA_FLOOR
+      real(amrex_real) :: DATA_FLOOR
 
-      REAL_T :: T_out(1)
+      real(amrex_real) :: T_out(1)
 
-      INTEGER_T dir
-      INTEGER_T ic,jc,kc
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      INTEGER_T k1lo,k1hi
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T vofcomp
-      INTEGER_T cell_index(SDIM)
+      integer dir
+      integer ic,jc,kc
+      integer i1,j1,k1
+      integer isten,jsten,ksten
+      integer k1lo,k1hi
+      integer, parameter :: nhalf=3
+      integer vofcomp
+      integer cell_index(SDIM)
 
-      REAL_T :: local_VOF(num_materials)
+      real(amrex_real) :: local_VOF(num_materials)
 
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten_stencil(-nhalf:nhalf,SDIM)
-      REAL_T volcell
-      REAL_T cencell(SDIM)
-      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      INTEGER_T cc_flag
-      INTEGER_T tsat_flag
-      INTEGER_T nsolve
-      REAL_T Tsat
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
-      REAL_T local_data_out
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_stencil(-nhalf:nhalf,SDIM)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(SDIM)
+      integer im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) T_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) VF_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      integer cc_flag
+      integer tsat_flag
+      integer nsolve
+      real(amrex_real) Tsat
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
+      real(amrex_real) local_data_out
 
       DATA_FLOOR=zero
 
@@ -1002,31 +1002,31 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: x(SDIM)
-      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
-      REAL_T, pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out) :: dest(num_materials)
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: x(SDIM)
+      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
+      real(amrex_real), pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out) :: dest(num_materials)
 
-      INTEGER_T im
-      INTEGER_T ic,jc,kc
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T vofcomp
-      INTEGER_T cell_index(SDIM)
+      integer im
+      integer ic,jc,kc
+      integer, parameter :: nhalf=3
+      integer vofcomp
+      integer cell_index(SDIM)
 
-      REAL_T mofdata(num_materials*ngeom_recon)
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T volcell
-      REAL_T cencell(SDIM)
-      INTEGER_T nmax
-      INTEGER_T local_tessellate
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
-      REAL_T local_data_out
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(SDIM)
+      integer nmax
+      integer local_tessellate
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
+      real(amrex_real) local_data_out
 
       if (bfact.lt.1) then 
        print *,"bfact invalid113"
@@ -1078,17 +1078,17 @@ stop
       subroutine grad_probe_sanity(xI,xprobe,temp_probe,Tsat,LL)
       IMPLICIT NONE
 
-      REAL_T, INTENT(in) :: LL
-      REAL_T, INTENT(in) :: xI(SDIM)
-      REAL_T, INTENT(in) :: xprobe(SDIM)
-      REAL_T, INTENT(in) :: temp_probe
-      REAL_T, INTENT(in) :: Tsat
+      real(amrex_real), INTENT(in) :: LL
+      real(amrex_real), INTENT(in) :: xI(SDIM)
+      real(amrex_real), INTENT(in) :: xprobe(SDIM)
+      real(amrex_real), INTENT(in) :: temp_probe
+      real(amrex_real), INTENT(in) :: Tsat
 
-      REAL_T :: grad_probe_local
-      REAL_T :: mag
-      REAL_T :: nrm(SDIM)
+      real(amrex_real) :: grad_probe_local
+      real(amrex_real) :: mag
+      real(amrex_real) :: nrm(SDIM)
 
-      INTEGER_T dir
+      integer dir
 
        ! nrm points from xI to xprobe
 
@@ -1142,40 +1142,40 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xtarget(SDIM)
-      INTEGER_T, INTENT(in) :: lo(SDIM)
-      INTEGER_T, INTENT(in) :: hi(SDIM)
-      INTEGER_T, INTENT(in) :: comp
-      REAL_T, pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out) :: dest
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
-      REAL_T local_data_out
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xtarget(SDIM)
+      integer, INTENT(in) :: lo(SDIM)
+      integer, INTENT(in) :: hi(SDIM)
+      integer, INTENT(in) :: comp
+      real(amrex_real), pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out) :: dest
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
+      real(amrex_real) local_data_out
 
-      REAL_T :: DATA_FLOOR
+      real(amrex_real) :: DATA_FLOOR
 
-      REAL_T :: T_out(1)
+      real(amrex_real) :: T_out(1)
 
-      INTEGER_T ic,jc,kc
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      INTEGER_T k1lo,k1hi
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T cell_index(SDIM)
+      integer ic,jc,kc
+      integer i1,j1,k1
+      integer isten,jsten,ksten
+      integer k1lo,k1hi
+      integer, parameter :: nhalf=3
+      integer cell_index(SDIM)
 
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T, PARAMETER :: im_critical=-1
-      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      INTEGER_T cc_flag
-      INTEGER_T tsat_flag
-      INTEGER_T nsolve
-      REAL_T Tsat
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      integer, PARAMETER :: im_critical=-1
+      integer im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) T_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      integer cc_flag
+      integer tsat_flag
+      integer nsolve
+      real(amrex_real) Tsat
 
       DATA_FLOOR=zero
 
@@ -1265,39 +1265,39 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xtarget(SDIM)
-      INTEGER_T, INTENT(in) :: lo(SDIM)
-      INTEGER_T, INTENT(in) :: hi(SDIM)
-      REAL_T, pointer, INTENT(in) :: data(D_DECL(:,:,:))
-      REAL_T, INTENT(out) :: dest
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:))
-      REAL_T local_data_out
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xtarget(SDIM)
+      integer, INTENT(in) :: lo(SDIM)
+      integer, INTENT(in) :: hi(SDIM)
+      real(amrex_real), pointer, INTENT(in) :: data(D_DECL(:,:,:))
+      real(amrex_real), INTENT(out) :: dest
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:))
+      real(amrex_real) local_data_out
 
-      REAL_T :: DATA_FLOOR
+      real(amrex_real) :: DATA_FLOOR
 
-      REAL_T :: T_out(1)
+      real(amrex_real) :: T_out(1)
 
-      INTEGER_T ic,jc,kc
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      INTEGER_T k1lo,k1hi
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T cell_index(SDIM)
+      integer ic,jc,kc
+      integer i1,j1,k1
+      integer isten,jsten,ksten
+      integer k1lo,k1hi
+      integer, parameter :: nhalf=3
+      integer cell_index(SDIM)
 
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T, PARAMETER :: im_critical=-1
-      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      INTEGER_T cc_flag
-      INTEGER_T tsat_flag
-      INTEGER_T nsolve
-      REAL_T Tsat
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      integer, PARAMETER :: im_critical=-1
+      integer im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) T_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      integer cc_flag
+      integer tsat_flag
+      integer nsolve
+      real(amrex_real) Tsat
 
       DATA_FLOOR=zero
 
@@ -1391,37 +1391,37 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: i,j,k
-      INTEGER_T, INTENT(in) :: ireverse
-      INTEGER_T, INTENT(in) :: iten
-      INTEGER_T, INTENT(in) :: ntsat
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xtarget(SDIM)
-      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, INTENT(in) :: comp
-      REAL_T, pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out) :: TSAT
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: ireverse
+      integer, INTENT(in) :: iten
+      integer, INTENT(in) :: ntsat
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xtarget(SDIM)
+      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
+      integer, INTENT(in) :: comp
+      real(amrex_real), pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out) :: TSAT
 
-      INTEGER_T ncomp_per_tsat
-      INTEGER_T k1lo,k1hi
-      INTEGER_T cell_index(3)
-      INTEGER_T dir
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T TSAT_times_weight
-      REAL_T TSAT_weight
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      INTEGER_T TSAT_FLAG
-      REAL_T local_TSAT
-      REAL_T local_weight
-      REAL_T eps
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
-      REAL_T local_data_out
+      integer ncomp_per_tsat
+      integer k1lo,k1hi
+      integer cell_index(3)
+      integer dir
+      integer, parameter :: nhalf=3
+      real(amrex_real) TSAT_times_weight
+      real(amrex_real) TSAT_weight
+      integer i1,j1,k1
+      integer isten,jsten,ksten
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      integer TSAT_FLAG
+      real(amrex_real) local_TSAT
+      real(amrex_real) local_weight
+      real(amrex_real) eps
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
+      real(amrex_real) local_data_out
 
       ncomp_per_tsat=EXTRAP_PER_TSAT
       if (ntsat.eq.EXTRAP_NCOMP_TSAT) then
@@ -1561,35 +1561,35 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(out) :: interp_status
-      INTEGER_T, INTENT(in) :: curv_comp
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xtarget(SDIM)
-      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
+      integer, INTENT(out) :: interp_status
+      integer, INTENT(in) :: curv_comp
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xtarget(SDIM)
+      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
        ! first num_materials+num_interfaces components are curvatures
        ! second num_materials+num_interfaces components are status (0=bad 1=good)
-      REAL_T, pointer, INTENT(in) :: data_in(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out) :: CURV_OUT
+      real(amrex_real), pointer, INTENT(in) :: data_in(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out) :: CURV_OUT
 
-      INTEGER_T k1lo,k1hi
-      INTEGER_T cell_index(3)
-      INTEGER_T dir
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T CURV_FLAG
-      REAL_T CURV_times_weight
-      REAL_T CURV_weight
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T local_CURV
-      REAL_T local_weight
-      REAL_T eps
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
-      REAL_T local_data_out
+      integer k1lo,k1hi
+      integer cell_index(3)
+      integer dir
+      integer, parameter :: nhalf=3
+      integer CURV_FLAG
+      real(amrex_real) CURV_times_weight
+      real(amrex_real) CURV_weight
+      integer i1,j1,k1
+      integer isten,jsten,ksten
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) local_CURV
+      real(amrex_real) local_weight
+      real(amrex_real) eps
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
+      real(amrex_real) local_data_out
 
       if (SDIM.eq.2) then
        k1lo=0
@@ -1686,21 +1686,21 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: xtarget(SDIM)
-      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, INTENT(in) :: comp
-      REAL_T, pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out) :: dest
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: xtarget(SDIM)
+      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
+      integer, INTENT(in) :: comp
+      real(amrex_real), pointer, INTENT(in) :: data(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out) :: dest
 
-      INTEGER_T ic,jc,kc
-      INTEGER_T cell_index(SDIM)
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
-      REAL_T local_data_out
+      integer ic,jc,kc
+      integer cell_index(SDIM)
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
+      real(amrex_real) local_data_out
 
       if (bfact.lt.1) then 
        print *,"bfact invalid115"
@@ -1745,53 +1745,53 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: debugrate
-      INTEGER_T, INTENT(in) :: bfact
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: x(SDIM)
-      REAL_T, INTENT(in) :: xI(SDIM)
-      REAL_T, INTENT(in) :: Tsat
-      INTEGER_T, INTENT(in) :: lo(SDIM),hi(SDIM)
-      INTEGER_T, INTENT(in) :: comp
-      INTEGER_T, INTENT(in) :: im
-      INTEGER_T :: im_local
-      REAL_T, pointer, INTENT(in) :: tempfab(D_DECL(:,:,:),:)
-      REAL_T, pointer, INTENT(in) :: LS(D_DECL(:,:,:),:)
-      REAL_T, pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
-      REAL_T, INTENT(out) :: dest
-      REAL_T, pointer :: local_data_fab(D_DECL(:,:,:),:)
-      REAL_T local_data_out
+      integer, INTENT(in) :: debugrate
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: x(SDIM)
+      real(amrex_real), INTENT(in) :: xI(SDIM)
+      real(amrex_real), INTENT(in) :: Tsat
+      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
+      integer, INTENT(in) :: comp
+      integer, INTENT(in) :: im
+      integer :: im_local
+      real(amrex_real), pointer, INTENT(in) :: tempfab(D_DECL(:,:,:),:)
+      real(amrex_real), pointer, INTENT(in) :: LS(D_DECL(:,:,:),:)
+      real(amrex_real), pointer, INTENT(in) :: recon(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out) :: dest
+      real(amrex_real), pointer :: local_data_fab(D_DECL(:,:,:),:)
+      real(amrex_real) local_data_out
 
-      REAL_T :: DATA_FLOOR
+      real(amrex_real) :: DATA_FLOOR
 
-      REAL_T :: T_out(1)
+      real(amrex_real) :: T_out(1)
 
-      INTEGER_T dir
-      INTEGER_T ic,jc,kc
-      INTEGER_T i1,j1,k1
-      INTEGER_T isten,jsten,ksten
-      INTEGER_T k1lo,k1hi
-      INTEGER_T, parameter :: nhalf=3
-      INTEGER_T vofcomp
-      INTEGER_T cell_index(SDIM)
+      integer dir
+      integer ic,jc,kc
+      integer i1,j1,k1
+      integer isten,jsten,ksten
+      integer k1lo,k1hi
+      integer, parameter :: nhalf=3
+      integer vofcomp
+      integer cell_index(SDIM)
 
-      REAL_T :: local_VOF(num_materials)
+      real(amrex_real) :: local_VOF(num_materials)
 
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten_stencil(-nhalf:nhalf,SDIM)
-      REAL_T volcell
-      REAL_T cencell(SDIM)
-      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T T_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      INTEGER_T cc_flag
-      INTEGER_T tsat_flag
-      INTEGER_T nsolve
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_stencil(-nhalf:nhalf,SDIM)
+      real(amrex_real) volcell
+      real(amrex_real) cencell(SDIM)
+      integer im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) T_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) VF_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) LS_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      integer cc_flag
+      integer tsat_flag
+      integer nsolve
 
       DATA_FLOOR=zero
 
@@ -1922,24 +1922,24 @@ stop
       IMPLICIT NONE
  
       type(probe_parm_type), INTENT(in) :: PROBE_PARMS
-      REAL_T, INTENT(in) :: T_I
-      REAL_T, INTENT(in) :: Y_I
+      real(amrex_real), INTENT(in) :: T_I
+      real(amrex_real), INTENT(in) :: Y_I
       type(probe_out_type), INTENT(out) :: POUT
-      REAL_T :: T_probe_no_constrain
-      REAL_T :: Y_probe_no_constrain
-      INTEGER_T :: iprobe
-      REAL_T xtarget_probe(SDIM)
-      INTEGER_T im_target_probe(2) ! source,dest
-      INTEGER_T im_primary_probe(2)
-      INTEGER_T im_target_probe_opp(2)
-      INTEGER_T Ycomp_probe(2)
-      INTEGER_T tcomp_probe(2)
-      INTEGER_T dencomp_probe(2)
-      INTEGER_T imls
-      INTEGER_T dir
-      INTEGER_T mtype
-      REAL_T LSPROBE(num_materials)
-      REAL_T F_tess(num_materials)
+      real(amrex_real) :: T_probe_no_constrain
+      real(amrex_real) :: Y_probe_no_constrain
+      integer :: iprobe
+      real(amrex_real) xtarget_probe(SDIM)
+      integer im_target_probe(2) ! source,dest
+      integer im_primary_probe(2)
+      integer im_target_probe_opp(2)
+      integer Ycomp_probe(2)
+      integer tcomp_probe(2)
+      integer dencomp_probe(2)
+      integer imls
+      integer dir
+      integer mtype
+      real(amrex_real) LSPROBE(num_materials)
+      real(amrex_real) F_tess(num_materials)
 
       if ((Y_I.ge.zero).and.(Y_I.le.one)) then
        ! do nothing
@@ -2366,13 +2366,13 @@ stop
 
       IMPLICIT NONE
 
-      REAL_T, INTENT(inout) :: TI_min,TI_max 
+      real(amrex_real), INTENT(inout) :: TI_min,TI_max 
       type(probe_parm_type), INTENT(in) :: PROBE_PARMS
-      REAL_T, INTENT(inout) :: T_I
-      REAL_T, INTENT(inout) :: Y_I
+      real(amrex_real), INTENT(inout) :: T_I
+      real(amrex_real), INTENT(inout) :: Y_I
       type(probe_out_type), INTENT(in) :: POUT
-      REAL_T :: local_TI_min,local_TI_max 
-      INTEGER_T :: iprobe
+      real(amrex_real) :: local_TI_min,local_TI_max 
+      integer :: iprobe
 
       if ((Y_I.ge.zero).and.(Y_I.le.one)) then
        ! do nothing
@@ -2443,27 +2443,27 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: probe_ok
+      integer, INTENT(in) :: probe_ok
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       type(probe_out_type), INTENT(inout) :: POUT
-      REAL_T, INTENT(in) :: Y_gamma
-      REAL_T, INTENT(in) :: T_gamma
-      REAL_T, INTENT(out) :: mdotY_top,mdotY_bot,mdotY
-      REAL_T D_MASS
-      REAL_T LL
-      INTEGER_T iprobe_vapor
-      REAL_T den_G
-      REAL_T YI_min
-      INTEGER_T Kassemi_flag
-      REAL_T Pgamma
-      REAL_T density_probe
-      REAL_T Tvapor_probe
-      REAL_T Pvapor_probe
-      REAL_T internal_energy
-      INTEGER_T im_probe
-      INTEGER_T imattype
-      REAL_T massfrac_parm(num_species_var+1)
-      INTEGER_T ispec
+      real(amrex_real), INTENT(in) :: Y_gamma
+      real(amrex_real), INTENT(in) :: T_gamma
+      real(amrex_real), INTENT(out) :: mdotY_top,mdotY_bot,mdotY
+      real(amrex_real) D_MASS
+      real(amrex_real) LL
+      integer iprobe_vapor
+      real(amrex_real) den_G
+      real(amrex_real) YI_min
+      integer Kassemi_flag
+      real(amrex_real) Pgamma
+      real(amrex_real) density_probe
+      real(amrex_real) Tvapor_probe
+      real(amrex_real) Pvapor_probe
+      real(amrex_real) internal_energy
+      integer im_probe
+      integer imattype
+      real(amrex_real) massfrac_parm(num_species_var+1)
+      integer ispec
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -2616,23 +2616,23 @@ stop
        TEMP_PROBE_dest)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: probe_ok
+      integer, INTENT(in) :: probe_ok
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       type(probe_out_type), INTENT(inout) :: POUT
-      REAL_T, INTENT(in) :: T_gamma
-      REAL_T, INTENT(in) :: Y_gamma
-      REAL_T, INTENT(out) :: mdotT
-      REAL_T, INTENT(out) :: TEMP_PROBE_source
-      REAL_T, INTENT(out) :: TEMP_PROBE_dest
-      REAL_T D_MASS
-      INTEGER_T Kassemi_flag
-      REAL_T LL
-      INTEGER_T iprobe_vapor
-      REAL_T den_G
-      REAL_T YI_min
-      REAL_T wt(2)
-      REAL_T probediff(2)
-      INTEGER_T iprobe
+      real(amrex_real), INTENT(in) :: T_gamma
+      real(amrex_real), INTENT(in) :: Y_gamma
+      real(amrex_real), INTENT(out) :: mdotT
+      real(amrex_real), INTENT(out) :: TEMP_PROBE_source
+      real(amrex_real), INTENT(out) :: TEMP_PROBE_dest
+      real(amrex_real) D_MASS
+      integer Kassemi_flag
+      real(amrex_real) LL
+      integer iprobe_vapor
+      real(amrex_real) den_G
+      real(amrex_real) YI_min
+      real(amrex_real) wt(2)
+      real(amrex_real) probediff(2)
+      integer iprobe
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -2750,17 +2750,17 @@ stop
        mdot_diff)
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: probe_ok
+      integer, INTENT(in) :: probe_ok
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       type(probe_out_type), INTENT(inout) :: POUT
-      REAL_T, INTENT(in) :: T_gamma
-      REAL_T, INTENT(in) :: Y_gamma
-      REAL_T, INTENT(out) :: mdot_diff
-      REAL_T mdotT
-      REAL_T mdotY_top,mdotY_bot,mdotY
-      INTEGER_T Kassemi_flag
-      REAL_T TEMP_PROBE_source
-      REAL_T TEMP_PROBE_dest
+      real(amrex_real), INTENT(in) :: T_gamma
+      real(amrex_real), INTENT(in) :: Y_gamma
+      real(amrex_real), INTENT(out) :: mdot_diff
+      real(amrex_real) mdotT
+      real(amrex_real) mdotY_top,mdotY_bot,mdotY
+      integer Kassemi_flag
+      real(amrex_real) TEMP_PROBE_source
+      real(amrex_real) TEMP_PROBE_dest
 
       Kassemi_flag=TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
       if (Kassemi_flag.eq.0) then
@@ -2826,10 +2826,10 @@ stop
       IMPLICIT NONE
 
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
-      REAL_T, INTENT(out) :: Y_I_MIN
-      REAL_T :: X_I_MIN
-      REAL_T :: LL,R,TSAT_base,T_I_MAX,WA,WV
-      REAL_T YI_min_old
+      real(amrex_real), INTENT(out) :: Y_I_MIN
+      real(amrex_real) :: X_I_MIN
+      real(amrex_real) :: LL,R,TSAT_base,T_I_MAX,WA,WV
+      real(amrex_real) YI_min_old
 
       YI_min_old=TSAT_Y_PARMS%YI_min
 
@@ -2903,10 +2903,11 @@ stop
       end module mass_transfer_module
 
       module mass_transfer_cpp_module
+      use amrex_fort_module, only : amrex_real
       implicit none
 
-      INTEGER_T, PARAMETER :: MAX_TI_YI_logfile=100
-      INTEGER_T, PARAMETER :: MAX_TI_YI_trials=20
+      integer, PARAMETER :: MAX_TI_YI_logfile=100
+      integer, PARAMETER :: MAX_TI_YI_trials=20
 
       contains
 
@@ -2933,46 +2934,46 @@ stop
 
       IMPLICIT NONE
        
-      INTEGER_T, INTENT(in) :: level,finest_level
-      INTEGER_T, INTENT(in) :: nburning
-      INTEGER_T ncomp_per_burning
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T growlo(3),growhi(3)
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: dt
+      integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: nburning
+      integer ncomp_per_burning
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: dt
 
-      INTEGER_T, INTENT(in) :: DIMDEC(unode)
-      INTEGER_T, INTENT(in) :: DIMDEC(ucell)
-      INTEGER_T, INTENT(in) :: DIMDEC(oldLS)
+      integer, INTENT(in) :: DIMDEC(unode)
+      integer, INTENT(in) :: DIMDEC(ucell)
+      integer, INTENT(in) :: DIMDEC(oldLS)
      
-      REAL_T, target, INTENT(out) ::  unode(DIMV(unode),2*num_interfaces*SDIM) 
-      REAL_T, pointer :: unode_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(out) ::  unode(DIMV(unode),2*num_interfaces*SDIM) 
+      real(amrex_real), pointer :: unode_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(in) ::  ucell(DIMV(ucell),nburning) 
-      REAL_T, pointer :: ucell_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, INTENT(in) :: oldLS(DIMV(oldLS),num_materials*(1+SDIM))
-      REAL_T, pointer :: oldLS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) ::  ucell(DIMV(ucell),nburning) 
+      real(amrex_real), pointer :: ucell_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: oldLS(DIMV(oldLS),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: oldLS_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T, INTENT(in) :: velbc(SDIM,2,SDIM)
+      integer, INTENT(in) :: velbc(SDIM,2,SDIM)
 
-      REAL_T, INTENT(in) :: xlo(SDIM),dx(SDIM)
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-      INTEGER_T, parameter :: nhalf=3
+      integer, parameter :: nhalf=3
 
-      REAL_T xstenND(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
      
-      INTEGER_T i,j,k,klosten,khisten,i1,j1,k1
-      INTEGER_T dir,itencrit
+      integer i,j,k,klosten,khisten,i1,j1,k1
+      integer dir,itencrit
 
-      REAL_T delta,velnd,totalwt
-      INTEGER_T scomp,tag_local
-      INTEGER_T ireverse
-      INTEGER_T sign_reverse
-      INTEGER_T rigid_in_stencil
-      INTEGER_T im
-      INTEGER_T im_primary
-      REAL_T LS_local(num_materials)
+      real(amrex_real) delta,velnd,totalwt
+      integer scomp,tag_local
+      integer ireverse
+      integer sign_reverse
+      integer rigid_in_stencil
+      integer im
+      integer im_primary
+      real(amrex_real) LS_local(num_materials)
 
       unode_ptr=>unode
       ucell_ptr=>ucell
@@ -3198,52 +3199,52 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: nstate
-      REAL_T, INTENT(in) :: speciesreactionrate(num_species_var*num_materials)
-      INTEGER_T, INTENT(in) :: rigid_fraction_id(num_materials)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in),target :: xlo(SDIM)
-      REAL_T, INTENT(in),target :: dx(SDIM)
-      INTEGER_T, INTENT(in) :: initialize_flag
-      REAL_T, INTENT(in) :: dt
-      REAL_T, INTENT(in) :: time
-      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
-      INTEGER_T, INTENT(in) :: DIMDEC(LSnew)
-      INTEGER_T, INTENT(in) :: DIMDEC(snew)
-      REAL_T, target, INTENT(in) :: maskcov(DIMV(maskcov))
-      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
-      REAL_T, target, INTENT(out) :: LSnew(DIMV(LSnew),num_materials)
-      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, INTENT(out) :: snew(DIMV(snew),nstate)
-      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
-      INTEGER_T i,j,k
-      INTEGER_T im,im_inner,im_melt,im_opp,im_primary,ispec
-      INTEGER_T ireverse,iten
-      REAL_T LL
-      REAL_T LSMELT
-      INTEGER_T local_mask
-      REAL_T local_LS(num_materials)
-      REAL_T local_VOF(num_materials)
-      REAL_T local_DEN(num_materials)
-      REAL_T local_MASS(num_materials)
-      REAL_T species_vfrac_sum
-      REAL_T species_mass_sum
-      REAL_T species_avg
-      REAL_T species_base
-      REAL_T local_rate
-      INTEGER_T vofcomp
-      INTEGER_T spec_comp
-      INTEGER_T dencomp
-      REAL_T spec_old,spec_new
-      REAL_T, PARAMETER :: species_max=1.0d0
-      REAL_T, PARAMETER :: SPECIES_TOL=1.0D-3
-      REAL_T, PARAMETER :: MUSHY_THICK=2.0d0
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: nstate
+      real(amrex_real), INTENT(in) :: speciesreactionrate(num_species_var*num_materials)
+      integer, INTENT(in) :: rigid_fraction_id(num_materials)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in),target :: xlo(SDIM)
+      real(amrex_real), INTENT(in),target :: dx(SDIM)
+      integer, INTENT(in) :: initialize_flag
+      real(amrex_real), INTENT(in) :: dt
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(LSnew)
+      integer, INTENT(in) :: DIMDEC(snew)
+      real(amrex_real), target, INTENT(in) :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), target, INTENT(out) :: LSnew(DIMV(LSnew),num_materials)
+      real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
+      integer i,j,k
+      integer im,im_inner,im_melt,im_opp,im_primary,ispec
+      integer ireverse,iten
+      real(amrex_real) LL
+      real(amrex_real) LSMELT
+      integer local_mask
+      real(amrex_real) local_LS(num_materials)
+      real(amrex_real) local_VOF(num_materials)
+      real(amrex_real) local_DEN(num_materials)
+      real(amrex_real) local_MASS(num_materials)
+      real(amrex_real) species_vfrac_sum
+      real(amrex_real) species_mass_sum
+      real(amrex_real) species_avg
+      real(amrex_real) species_base
+      real(amrex_real) local_rate
+      integer vofcomp
+      integer spec_comp
+      integer dencomp
+      real(amrex_real) spec_old,spec_new
+      real(amrex_real), PARAMETER :: species_max=1.0d0
+      real(amrex_real), PARAMETER :: SPECIES_TOL=1.0D-3
+      real(amrex_real), PARAMETER :: MUSHY_THICK=2.0d0
 
       LSnew_ptr=>LSnew
       snew_ptr=>snew
@@ -3698,275 +3699,275 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: im_outer
-      INTEGER_T, INTENT(in) :: im_opp_outer
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level
-      INTEGER_T, INTENT(in) :: nden
-      INTEGER_T, INTENT(in) :: nstate
-      INTEGER_T, INTENT(in) :: ntsat
-      REAL_T, INTENT(in) :: saturation_temp(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: freezing_model(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: mass_fraction_id(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: distribute_from_target(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, INTENT(in) :: bfact
-      REAL_T, INTENT(in) :: min_stefan_velocity_for_dt
-      INTEGER_T, INTENT(in) :: vofbc(SDIM,2)
-      REAL_T, INTENT(in),target :: xlo(SDIM)
-      REAL_T, INTENT(in),target :: dx(SDIM)
-      REAL_T, INTENT(in) :: dt
-      REAL_T, INTENT(inout) :: delta_mass(2*num_materials)
-      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
-      INTEGER_T, INTENT(in) :: DIMDEC(conductstate)
-      INTEGER_T, INTENT(in) :: DIMDEC(nodevel)
-      INTEGER_T, INTENT(in) :: DIMDEC(JUMPFAB)
-      INTEGER_T, INTENT(in) :: DIMDEC(TgammaFAB)
-      INTEGER_T, INTENT(in) :: DIMDEC(LSold)
-      INTEGER_T, INTENT(in) :: DIMDEC(LSnew)
-      INTEGER_T, INTENT(in) :: DIMDEC(recon)
-      INTEGER_T, INTENT(in) :: DIMDEC(snew)
-      INTEGER_T, INTENT(in) :: DIMDEC(EOS)
-      INTEGER_T, INTENT(in) :: DIMDEC(swept)
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: im_outer
+      integer, INTENT(in) :: im_opp_outer
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      integer, INTENT(in) :: nden
+      integer, INTENT(in) :: nstate
+      integer, INTENT(in) :: ntsat
+      real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
+      integer, INTENT(in) :: freezing_model(2*num_interfaces)
+      integer, INTENT(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
+      integer, INTENT(in) :: mass_fraction_id(2*num_interfaces)
+      integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
+      integer, INTENT(in) :: constant_density_all_time(num_materials)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: min_stefan_velocity_for_dt
+      integer, INTENT(in) :: vofbc(SDIM,2)
+      real(amrex_real), INTENT(in),target :: xlo(SDIM)
+      real(amrex_real), INTENT(in),target :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: dt
+      real(amrex_real), INTENT(inout) :: delta_mass(2*num_materials)
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(conductstate)
+      integer, INTENT(in) :: DIMDEC(nodevel)
+      integer, INTENT(in) :: DIMDEC(JUMPFAB)
+      integer, INTENT(in) :: DIMDEC(TgammaFAB)
+      integer, INTENT(in) :: DIMDEC(LSold)
+      integer, INTENT(in) :: DIMDEC(LSnew)
+      integer, INTENT(in) :: DIMDEC(recon)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(EOS)
+      integer, INTENT(in) :: DIMDEC(swept)
 
-      REAL_T, target, INTENT(in) :: maskcov(DIMV(maskcov))
-      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), target, INTENT(in) :: maskcov(DIMV(maskcov))
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
 
-      REAL_T, target, INTENT(in) :: &
+      real(amrex_real), target, INTENT(in) :: &
           conductstate(DIMV(conductstate),num_materials)
-      REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(in) :: nodevel(DIMV(nodevel),2*num_interfaces*SDIM)
-      REAL_T, pointer :: nodevel_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: nodevel(DIMV(nodevel),2*num_interfaces*SDIM)
+      real(amrex_real), pointer :: nodevel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(out) :: JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
-      REAL_T, target, INTENT(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
-      REAL_T, pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
-      REAL_T, pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(out) :: JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
+      real(amrex_real), target, INTENT(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
+      real(amrex_real), pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, INTENT(in), target :: LSold(DIMV(LSold),num_materials*(1+SDIM))
-      REAL_T, pointer :: LSold_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: LSold(DIMV(LSold),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: LSold_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(out) :: LSnew(DIMV(LSnew),num_materials)
-      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(out) :: LSnew(DIMV(LSnew),num_materials)
+      real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(in) :: recon(DIMV(recon),num_materials*ngeom_recon)
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: recon(DIMV(recon),num_materials*ngeom_recon)
+      real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(out) :: snew(DIMV(snew),nstate)
-      REAL_T, pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(in) :: EOS(DIMV(EOS),nden)
-      REAL_T, pointer :: EOS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: EOS(DIMV(EOS),nden)
+      real(amrex_real), pointer :: EOS_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(out) :: swept(DIMV(swept),num_materials)
-      REAL_T, pointer :: swept_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(out) :: swept(DIMV(swept),num_materials)
+      real(amrex_real), pointer :: swept_ptr(D_DECL(:,:,:),:)
 
-      REAL_T :: denratio_factor
+      real(amrex_real) :: denratio_factor
 
-      INTEGER_T i,j,k,dir
-      INTEGER_T i1,j1,k1
-      INTEGER_T im,im_opp
-      INTEGER_T ireverse
-      INTEGER_T iten
-      INTEGER_T im_source
-      INTEGER_T im_dest
-      INTEGER_T im_dest_crit
-      INTEGER_T im_source_crit
-      INTEGER_T im_primary
-      INTEGER_T iten_crit
-      INTEGER_T iten_outer
-      INTEGER_T ireverse_crit
-      REAL_T max_velnode
-      REAL_T velnode_test
-      INTEGER_T vcompsrc_snew,vcompdst_snew
+      integer i,j,k,dir
+      integer i1,j1,k1
+      integer im,im_opp
+      integer ireverse
+      integer iten
+      integer im_source
+      integer im_dest
+      integer im_dest_crit
+      integer im_source_crit
+      integer im_primary
+      integer iten_crit
+      integer iten_outer
+      integer ireverse_crit
+      real(amrex_real) max_velnode
+      real(amrex_real) velnode_test
+      integer vcompsrc_snew,vcompdst_snew
 
-      REAL_T local_VOF(num_materials)
+      real(amrex_real) local_VOF(num_materials)
 
-      REAL_T oldvfrac(num_materials)
-      REAL_T newvfrac(num_materials)
-      REAL_T vof_super(num_materials)
-      REAL_T dF,dFdst,dFsrc
-      REAL_T den_dF(2)
-      REAL_T jump_strength
+      real(amrex_real) oldvfrac(num_materials)
+      real(amrex_real) newvfrac(num_materials)
+      real(amrex_real) vof_super(num_materials)
+      real(amrex_real) dF,dFdst,dFsrc
+      real(amrex_real) den_dF(2)
+      real(amrex_real) jump_strength
 
-      REAL_T volgrid
-      REAL_T cengrid(SDIM)
-      REAL_T new_centroid(num_materials,SDIM)
-      REAL_T old_centroid(num_materials,SDIM)
-      REAL_T EBVOFTOL
-      REAL_T SWEPTFACTOR
-      REAL_T SWEPTFACTOR_GFM
-      INTEGER_T SWEPTFACTOR_centroid
-      REAL_T LL
-      REAL_T Tgamma_default
-      REAL_T Ygamma_default
-      INTEGER_T Tsat_flag
-      REAL_T energy_source
-      INTEGER_T ccomp
-      REAL_T amount_used,methaneC_old,methaneC_new
-      REAL_T cvtotal,wttotal,Ftemp
-      INTEGER_T im_weight
-      INTEGER_T tcomp_wt
-      INTEGER_T vofcomp_raw
-      INTEGER_T vofcomp_recon
-      INTEGER_T vofcomp_raw_dest
-      INTEGER_T vofcomp_recon_source
-      INTEGER_T local_freezing_model
-      INTEGER_T mass_frac_id
-      INTEGER_T distribute_from_targ
-      INTEGER_T debugrate
-      REAL_T F_STEN(num_materials)
-      REAL_T F_STEN_CENTER(num_materials)
-      REAL_T unsplit_snew(num_materials*ngeom_raw)
-      REAL_T unsplit_lsnew(num_materials)
-      REAL_T oldLS_point(num_materials*(1+SDIM))
-      REAL_T dxmax,dxmaxLS
-      INTEGER_T recon_ncomp
-      INTEGER_T scomp
+      real(amrex_real) volgrid
+      real(amrex_real) cengrid(SDIM)
+      real(amrex_real) new_centroid(num_materials,SDIM)
+      real(amrex_real) old_centroid(num_materials,SDIM)
+      real(amrex_real) EBVOFTOL
+      real(amrex_real) SWEPTFACTOR
+      real(amrex_real) SWEPTFACTOR_GFM
+      integer SWEPTFACTOR_centroid
+      real(amrex_real) LL
+      real(amrex_real) Tgamma_default
+      real(amrex_real) Ygamma_default
+      integer Tsat_flag
+      real(amrex_real) energy_source
+      integer ccomp
+      real(amrex_real) amount_used,methaneC_old,methaneC_new
+      real(amrex_real) cvtotal,wttotal,Ftemp
+      integer im_weight
+      integer tcomp_wt
+      integer vofcomp_raw
+      integer vofcomp_recon
+      integer vofcomp_raw_dest
+      integer vofcomp_recon_source
+      integer local_freezing_model
+      integer mass_frac_id
+      integer distribute_from_targ
+      integer debugrate
+      real(amrex_real) F_STEN(num_materials)
+      real(amrex_real) F_STEN_CENTER(num_materials)
+      real(amrex_real) unsplit_snew(num_materials*ngeom_raw)
+      real(amrex_real) unsplit_lsnew(num_materials)
+      real(amrex_real) oldLS_point(num_materials*(1+SDIM))
+      real(amrex_real) dxmax,dxmaxLS
+      integer recon_ncomp
+      integer scomp
  
-      REAL_T mofdata(num_materials*ngeom_recon)
-      REAL_T mofdata_new(num_materials*ngeom_recon)
-      REAL_T multi_centroidA(num_materials,SDIM)
-      REAL_T volmat(num_materials)
-      REAL_T lsmat(num_materials)
-      REAL_T lsdata(num_materials)
-      REAL_T centroid_mat(SDIM,num_materials)
-      REAL_T multi_volume(num_materials)
-      REAL_T multi_area(num_materials)
-      REAL_T multi_cen(SDIM,num_materials)
+      real(amrex_real) mofdata(num_materials*ngeom_recon)
+      real(amrex_real) mofdata_new(num_materials*ngeom_recon)
+      real(amrex_real) multi_centroidA(num_materials,SDIM)
+      real(amrex_real) volmat(num_materials)
+      real(amrex_real) lsmat(num_materials)
+      real(amrex_real) lsdata(num_materials)
+      real(amrex_real) centroid_mat(SDIM,num_materials)
+      real(amrex_real) multi_volume(num_materials)
+      real(amrex_real) multi_area(num_materials)
+      real(amrex_real) multi_cen(SDIM,num_materials)
 
-      REAL_T thermal_k_model_predict(2)  ! source,dest
-      REAL_T thermal_k_physical_base(2)  ! source,dest
+      real(amrex_real) thermal_k_model_predict(2)  ! source,dest
+      real(amrex_real) thermal_k_physical_base(2)  ! source,dest
 
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T xsten_ofs(-nhalf:nhalf,SDIM)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xsten_ofs(-nhalf:nhalf,SDIM)
 
-      INTEGER_T nmax,nhalf0
-      INTEGER_T klosten,khisten
-      INTEGER_T symmetry_flag,ntetbox
-      REAL_T u_xsten_grid(-nhalf:nhalf,SDIM)
-      REAL_T dxgrid(SDIM)
-      REAL_T u_xsten_updatecell(-nhalf:nhalf,SDIM)
-      REAL_T u_xsten_departmap(-1:1,SDIM)
-      REAL_T absolute_voltotal
-      REAL_T voltotal
-      REAL_T multi_volume_total
-      INTEGER_T igrid,jgrid,kgrid
-      INTEGER_T imac,jmac,kmac
-      INTEGER_T inode1,jnode1,knode1,u_imaterial,u_im,itri
-      INTEGER_T udir,udir2,inode,id,nlist
-      INTEGER_T matrix_status
-      REAL_T velnode
-      REAL_T xdepartnode(4*(SDIM-1),SDIM)
-      REAL_T xtargetnode(4*(SDIM-1),SDIM)
-      REAL_T tempdatanode(4*(SDIM-1))
-      REAL_T xinttri(SDIM+1,SDIM)
-      REAL_T xtri(SDIM+1,SDIM)
-      REAL_T xmaptri(SDIM+1,SDIM)
-      REAL_T xtargettri(SDIM+1,SDIM)
-      REAL_T datatri(SDIM+1)
-      REAL_T AA(SDIM+1,SDIM+1)
-      REAL_T AS(SDIM,SDIM)
-      REAL_T ASINV(SDIM,SDIM)
-      REAL_T bb(SDIM+1)
-      REAL_T AAINV(SDIM+1,SDIM+1)
-      REAL_T bbINV(SDIM+1)
-      REAL_T xx(SDIM+1)
-      REAL_T coeff(SDIM,SDIM+1)
-      REAL_T coeffINV(SDIM,SDIM+1)
-      INTEGER_T n,ivert
-      REAL_T nn(SDIM)
-      REAL_T nnmap(SDIM)
-      REAL_T uncaptured_volume
-      REAL_T uncaptured_centroid(SDIM)
-      INTEGER_T shapeflag
-      INTEGER_T tessellate
-      REAL_T volcell
-      REAL_T volcell_ofs
-      REAL_T tempvfrac
-      REAL_T cencell(SDIM)
-      REAL_T cencell_ofs(SDIM)
-      REAL_T tempcen(SDIM)
-      INTEGER_T do_unsplit_advection
-      INTEGER_T interface_near(2*num_interfaces)
-      INTEGER_T local_mask
-      INTEGER_T im_primary_new
-      INTEGER_T im_primary_old
-      INTEGER_T im_primary_local
-      INTEGER_T away_from_interface
-      REAL_T solid_vof_new,solid_vof_old
-      INTEGER_T mtype
-      REAL_T vapor_den
-      REAL_T condensed_den
-      REAL_T local_cv_or_cp
-      INTEGER_T speccomp_mod
-      INTEGER_T default_comp
-      INTEGER_T ncomp_per_tsat
-      INTEGER_T iprobe
-      INTEGER_T iprobe_vapor
-      INTEGER_T iprobe_condensed
-      INTEGER_T im_probe
-      INTEGER_T im_vapor
-      INTEGER_T im_condensed
-      INTEGER_T dencomp_probe
-      INTEGER_T tcomp_probe
-      INTEGER_T mfrac_comp_probe
-      INTEGER_T ispec_probe
-      REAL_T temp_mix_new(2)
-      REAL_T mass_frac_new(2)
-      REAL_T density_old(2)
-      REAL_T temperature_old(2)
-      REAL_T species_old(2)
-      REAL_T delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
-      REAL_T :: xPOINT_supermesh(SDIM)
-      REAL_T :: xPOINT_GFM(SDIM)
-      INTEGER_T im_old_crit
-      INTEGER_T im_new_crit
-      REAL_T DATA_FLOOR
-      INTEGER_T combine_flag
-      INTEGER_T nsolve_interp
-      REAL_T xtarget_interp(SDIM)
-      REAL_T old_xI(SDIM)
-      REAL_T old_nrm(SDIM)
-      INTEGER_T interp_to_new_supermesh
+      integer nmax,nhalf0
+      integer klosten,khisten
+      integer symmetry_flag,ntetbox
+      real(amrex_real) u_xsten_grid(-nhalf:nhalf,SDIM)
+      real(amrex_real) dxgrid(SDIM)
+      real(amrex_real) u_xsten_updatecell(-nhalf:nhalf,SDIM)
+      real(amrex_real) u_xsten_departmap(-1:1,SDIM)
+      real(amrex_real) absolute_voltotal
+      real(amrex_real) voltotal
+      real(amrex_real) multi_volume_total
+      integer igrid,jgrid,kgrid
+      integer imac,jmac,kmac
+      integer inode1,jnode1,knode1,u_imaterial,u_im,itri
+      integer udir,udir2,inode,id,nlist
+      integer matrix_status
+      real(amrex_real) velnode
+      real(amrex_real) xdepartnode(4*(SDIM-1),SDIM)
+      real(amrex_real) xtargetnode(4*(SDIM-1),SDIM)
+      real(amrex_real) tempdatanode(4*(SDIM-1))
+      real(amrex_real) xinttri(SDIM+1,SDIM)
+      real(amrex_real) xtri(SDIM+1,SDIM)
+      real(amrex_real) xmaptri(SDIM+1,SDIM)
+      real(amrex_real) xtargettri(SDIM+1,SDIM)
+      real(amrex_real) datatri(SDIM+1)
+      real(amrex_real) AA(SDIM+1,SDIM+1)
+      real(amrex_real) AS(SDIM,SDIM)
+      real(amrex_real) ASINV(SDIM,SDIM)
+      real(amrex_real) bb(SDIM+1)
+      real(amrex_real) AAINV(SDIM+1,SDIM+1)
+      real(amrex_real) bbINV(SDIM+1)
+      real(amrex_real) xx(SDIM+1)
+      real(amrex_real) coeff(SDIM,SDIM+1)
+      real(amrex_real) coeffINV(SDIM,SDIM+1)
+      integer n,ivert
+      real(amrex_real) nn(SDIM)
+      real(amrex_real) nnmap(SDIM)
+      real(amrex_real) uncaptured_volume
+      real(amrex_real) uncaptured_centroid(SDIM)
+      integer shapeflag
+      integer tessellate
+      real(amrex_real) volcell
+      real(amrex_real) volcell_ofs
+      real(amrex_real) tempvfrac
+      real(amrex_real) cencell(SDIM)
+      real(amrex_real) cencell_ofs(SDIM)
+      real(amrex_real) tempcen(SDIM)
+      integer do_unsplit_advection
+      integer interface_near(2*num_interfaces)
+      integer local_mask
+      integer im_primary_new
+      integer im_primary_old
+      integer im_primary_local
+      integer away_from_interface
+      real(amrex_real) solid_vof_new,solid_vof_old
+      integer mtype
+      real(amrex_real) vapor_den
+      real(amrex_real) condensed_den
+      real(amrex_real) local_cv_or_cp
+      integer speccomp_mod
+      integer default_comp
+      integer ncomp_per_tsat
+      integer iprobe
+      integer iprobe_vapor
+      integer iprobe_condensed
+      integer im_probe
+      integer im_vapor
+      integer im_condensed
+      integer dencomp_probe
+      integer tcomp_probe
+      integer mfrac_comp_probe
+      integer ispec_probe
+      real(amrex_real) temp_mix_new(2)
+      real(amrex_real) mass_frac_new(2)
+      real(amrex_real) density_old(2)
+      real(amrex_real) temperature_old(2)
+      real(amrex_real) species_old(2)
+      real(amrex_real) delta_mass_local(2) ! iprobe==1: source   iprobe==2: dest
+      real(amrex_real) :: xPOINT_supermesh(SDIM)
+      real(amrex_real) :: xPOINT_GFM(SDIM)
+      integer im_old_crit
+      integer im_new_crit
+      real(amrex_real) DATA_FLOOR
+      integer combine_flag
+      integer nsolve_interp
+      real(amrex_real) xtarget_interp(SDIM)
+      real(amrex_real) old_xI(SDIM)
+      real(amrex_real) old_nrm(SDIM)
+      integer interp_to_new_supermesh
 
-      INTEGER_T im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      REAL_T VF_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T LS_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T temperature_sten(D_DECL(-1:1,-1:1,-1:1))
-      REAL_T massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
+      integer im_primary_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) XC_sten(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      real(amrex_real) VF_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) LS_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) temperature_sten(D_DECL(-1:1,-1:1,-1:1))
+      real(amrex_real) massfrac_sten(D_DECL(-1:1,-1:1,-1:1))
 
-      INTEGER_T, parameter :: continuous_mof_parm=STANDARD_MOF
-      INTEGER_T cmofsten(D_DECL(-1:1,-1:1,-1:1))
+      integer, parameter :: continuous_mof_parm=STANDARD_MOF
+      integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
-      INTEGER_T :: grid_index(SDIM)
-      INTEGER_T, parameter :: grid_level=-1
+      integer :: grid_index(SDIM)
+      integer, parameter :: grid_level=-1
 
-      INTEGER_T, parameter :: use_ls_data=0
-      INTEGER_T, parameter :: mof_verbose=0
-      REAL_T LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
-      INTEGER_T order_probe(2)
-      REAL_T nslope_probe(SDIM,2)
-      REAL_T intercept_probe(2)
-      REAL_T nslope_dest(SDIM)
-      REAL_T intercept_dest
-      REAL_T LS_dest_old,LS_dest_new
-      REAL_T mass_frac_limit
-      INTEGER_T vofcomp_local
-      INTEGER_T im_local
-      INTEGER_T im_trust
-      INTEGER_T im_distrust
-      REAL_T fixed_vfrac_sum
-      REAL_T fixed_centroid_sum(SDIM)
-      REAL_T avail_vfrac
+      integer, parameter :: use_ls_data=0
+      integer, parameter :: mof_verbose=0
+      real(amrex_real) LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      integer order_probe(2)
+      real(amrex_real) nslope_probe(SDIM,2)
+      real(amrex_real) intercept_probe(2)
+      real(amrex_real) nslope_dest(SDIM)
+      real(amrex_real) intercept_dest
+      real(amrex_real) LS_dest_old,LS_dest_new
+      real(amrex_real) mass_frac_limit
+      integer vofcomp_local
+      integer im_local
+      integer im_trust
+      integer im_distrust
+      real(amrex_real) fixed_vfrac_sum
+      real(amrex_real) fixed_centroid_sum(SDIM)
+      real(amrex_real) avail_vfrac
 
       JUMPFAB_ptr=>JUMPFAB
       TgammaFAB_ptr=>TgammaFAB
@@ -6475,53 +6476,53 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: velflag
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level 
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      INTEGER_T, INTENT(in) :: nburning
-      INTEGER_T, INTENT(in) :: ngrow
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, INTENT(in) :: bfact
+      integer, INTENT(in) :: velflag
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level 
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      integer, INTENT(in) :: nburning
+      integer, INTENT(in) :: ngrow
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
 
-      INTEGER_T, INTENT(in) :: DIMDEC(vel)
-      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      integer, INTENT(in) :: DIMDEC(vel)
+      integer, INTENT(in) :: DIMDEC(LS)
 
       ! first num_interfaces components are the status.
-      REAL_T, target, INTENT(inout) :: vel(DIMV(vel),nburning)
-      REAL_T, pointer :: vel_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(inout) :: vel(DIMV(vel),nburning)
+      real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
-      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T im,im_opp
-      INTEGER_T iten,ireverse,sign_local
-      INTEGER_T im_dest,im_source
-      INTEGER_T i,j,k,dir
-      INTEGER_T i_sp,j_sp,k_sp
-      INTEGER_T sten_lo(3)
-      INTEGER_T sten_hi(3)
-      INTEGER_T indexcp(SDIM)
-      INTEGER_T tag_local
-      REAL_T rtag_local
+      integer im,im_opp
+      integer iten,ireverse,sign_local
+      integer im_dest,im_source
+      integer i,j,k,dir
+      integer i_sp,j_sp,k_sp
+      integer sten_lo(3)
+      integer sten_hi(3)
+      integer indexcp(SDIM)
+      integer tag_local
+      real(amrex_real) rtag_local
 
-      INTEGER_T, parameter :: nhalf=3
+      integer, parameter :: nhalf=3
 
-      REAL_T xijk(-nhalf:nhalf,SDIM)
-      REAL_T xcp(SDIM)
-      REAL_T xsp(-nhalf:nhalf,SDIM)
-      REAL_T nrm(SDIM)
-      REAL_T weight,total_weight
-      REAL_T vel_sum(SDIM)
-      REAL_T vel_local
-      REAL_T dxmax,dxmaxLS,eps,extensionwidth,LL
-      REAL_T ls_local(num_materials)
-      INTEGER_T im_local
-      INTEGER_T scomp
-      INTEGER_T ncomp_per
+      real(amrex_real) xijk(-nhalf:nhalf,SDIM)
+      real(amrex_real) xcp(SDIM)
+      real(amrex_real) xsp(-nhalf:nhalf,SDIM)
+      real(amrex_real) nrm(SDIM)
+      real(amrex_real) weight,total_weight
+      real(amrex_real) vel_sum(SDIM)
+      real(amrex_real) vel_local
+      real(amrex_real) dxmax,dxmaxLS,eps,extensionwidth,LL
+      real(amrex_real) ls_local(num_materials)
+      integer im_local
+      integer scomp
+      integer ncomp_per
 
       vel_ptr=>vel
       LS_ptr=>LS
@@ -6798,49 +6799,49 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: level
-      INTEGER_T, INTENT(in) :: finest_level 
-      REAL_T, INTENT(in) :: xlo(SDIM)
-      REAL_T, INTENT(in) :: dx(SDIM)
-      INTEGER_T, INTENT(in) :: ncomp
-      INTEGER_T, INTENT(in) :: ngrow
-      INTEGER_T, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, INTENT(in) :: bfact
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level 
+      real(amrex_real), INTENT(in) :: xlo(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      integer, INTENT(in) :: ncomp
+      integer, INTENT(in) :: ngrow
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
 
-      INTEGER_T, INTENT(in) :: DIMDEC(drag)
-      INTEGER_T, INTENT(in) :: DIMDEC(LS)
+      integer, INTENT(in) :: DIMDEC(drag)
+      integer, INTENT(in) :: DIMDEC(LS)
 
-      REAL_T, target, INTENT(inout) :: drag(DIMV(drag),ncomp)
-      REAL_T, pointer :: drag_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(inout) :: drag(DIMV(drag),ncomp)
+      real(amrex_real), pointer :: drag_ptr(D_DECL(:,:,:),:)
 
-      REAL_T, target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
-      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1))
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T im
-      INTEGER_T im_local
-      INTEGER_T i,j,k,dir
-      INTEGER_T drag_comp
-      INTEGER_T drag_im
-      INTEGER_T drag_type
-      INTEGER_T i_sp,j_sp,k_sp
-      INTEGER_T sten_lo(3)
-      INTEGER_T sten_hi(3)
-      INTEGER_T indexcp(SDIM)
-      INTEGER_T tag_local
-      REAL_T rtag_local
+      integer im
+      integer im_local
+      integer i,j,k,dir
+      integer drag_comp
+      integer drag_im
+      integer drag_type
+      integer i_sp,j_sp,k_sp
+      integer sten_lo(3)
+      integer sten_hi(3)
+      integer indexcp(SDIM)
+      integer tag_local
+      real(amrex_real) rtag_local
 
-      INTEGER_T, parameter :: nhalf=3
-      REAL_T xijk(-nhalf:nhalf,SDIM)
-      REAL_T xcp(SDIM)
-      REAL_T xsp(-nhalf:nhalf,SDIM)
-      REAL_T nrm(SDIM)
-      REAL_T weight,total_weight
-      REAL_T drag_sum(ncomp)
-      REAL_T drag_local(ncomp)
-      REAL_T dxmax,dxmaxLS,eps,extensionwidth
-      REAL_T ls_local(num_materials)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xijk(-nhalf:nhalf,SDIM)
+      real(amrex_real) xcp(SDIM)
+      real(amrex_real) xsp(-nhalf:nhalf,SDIM)
+      real(amrex_real) nrm(SDIM)
+      real(amrex_real) weight,total_weight
+      real(amrex_real) drag_sum(ncomp)
+      real(amrex_real) drag_local(ncomp)
+      real(amrex_real) dxmax,dxmaxLS,eps,extensionwidth
+      real(amrex_real) ls_local(num_materials)
 
       drag_ptr=>drag
       LS_ptr=>LS
@@ -7052,13 +7053,13 @@ stop
         TI_YI_counter, &
         TI_YI_best_guess_index)
       IMPLICIT NONE
-      REAL_T, INTENT(in), pointer :: TI_YI_ptr(:,:)
-      INTEGER_T, INTENT(inout) :: TI_YI_counter
-      INTEGER_T, INTENT(inout) :: TI_YI_best_guess_index
-      REAL_T, INTENT(in) :: T_history
-      REAL_T, INTENT(in) :: Y_history
-      REAL_T, INTENT(in) :: VEL_history
-      REAL_T, INTENT(in) :: mdot_diff_history
+      real(amrex_real), INTENT(in), pointer :: TI_YI_ptr(:,:)
+      integer, INTENT(inout) :: TI_YI_counter
+      integer, INTENT(inout) :: TI_YI_best_guess_index
+      real(amrex_real), INTENT(in) :: T_history
+      real(amrex_real), INTENT(in) :: Y_history
+      real(amrex_real), INTENT(in) :: VEL_history
+      real(amrex_real), INTENT(in) :: mdot_diff_history
      
       if (TI_YI_counter.ge.MAX_TI_YI_logfile) then
        print *,"TI_YI_counter too large"
@@ -7123,30 +7124,30 @@ stop
       use mass_transfer_module
       IMPLICIT NONE
 
-      REAL_T, INTENT(inout) :: X_gamma_a,X_gamma_b,X_gamma_c
-      REAL_T, INTENT(inout) :: Y_gamma_a,Y_gamma_b,Y_gamma_c
-      REAL_T, INTENT(inout) :: T_gamma_a,T_gamma_b,T_gamma_c
-      REAL_T, INTENT(in) :: TI_min,TI_max
-      REAL_T, INTENT(in), pointer :: TI_YI_ptr(:,:)
-      INTEGER_T, INTENT(inout) :: TI_YI_counter
-      INTEGER_T, INTENT(inout) :: TI_YI_best_guess_index
-      REAL_T, INTENT(in) :: LL,RR,WA,WV
-      REAL_T, INTENT(in) :: TSAT_base
-      REAL_T, INTENT(inout) :: TSAT_predict
-      REAL_T, INTENT(inout) :: TSAT_correct
-      REAL_T, INTENT(inout) :: Y_predict
-      REAL_T, INTENT(in) :: VEL_correct
-      INTEGER_T, INTENT(in) :: TSAT_iter
-      INTEGER_T, INTENT(in) :: probe_ok
-      INTEGER_T, INTENT(in) :: trial_and_error
-      INTEGER_T, INTENT(in) :: fully_saturated
+      real(amrex_real), INTENT(inout) :: X_gamma_a,X_gamma_b,X_gamma_c
+      real(amrex_real), INTENT(inout) :: Y_gamma_a,Y_gamma_b,Y_gamma_c
+      real(amrex_real), INTENT(inout) :: T_gamma_a,T_gamma_b,T_gamma_c
+      real(amrex_real), INTENT(in) :: TI_min,TI_max
+      real(amrex_real), INTENT(in), pointer :: TI_YI_ptr(:,:)
+      integer, INTENT(inout) :: TI_YI_counter
+      integer, INTENT(inout) :: TI_YI_best_guess_index
+      real(amrex_real), INTENT(in) :: LL,RR,WA,WV
+      real(amrex_real), INTENT(in) :: TSAT_base
+      real(amrex_real), INTENT(inout) :: TSAT_predict
+      real(amrex_real), INTENT(inout) :: TSAT_correct
+      real(amrex_real), INTENT(inout) :: Y_predict
+      real(amrex_real), INTENT(in) :: VEL_correct
+      integer, INTENT(in) :: TSAT_iter
+      integer, INTENT(in) :: probe_ok
+      integer, INTENT(in) :: trial_and_error
+      integer, INTENT(in) :: fully_saturated
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       type(probe_out_type), INTENT(inout) :: POUT
-      REAL_T X_history
-      REAL_T T_history,Y_history,mdot_diff_history
-      REAL_T mdot_diff_a
-      REAL_T mdot_diff_b
-      REAL_T mdot_diff_c
+      real(amrex_real) X_history
+      real(amrex_real) T_history,Y_history,mdot_diff_history
+      real(amrex_real) mdot_diff_a
+      real(amrex_real) mdot_diff_b
+      real(amrex_real) mdot_diff_c
 
       if (trial_and_error.eq.0) then
        T_gamma_c=half*(T_gamma_a+T_gamma_b)
@@ -7363,253 +7364,253 @@ stop
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: nucleation_flag
-      INTEGER_T, target, INTENT(in) :: level
-      INTEGER_T, target, INTENT(in) :: finest_level
-      INTEGER_T :: local_probe_constrain
-      INTEGER_T :: user_override_TI_YI
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: nucleation_flag
+      integer, target, INTENT(in) :: level
+      integer, target, INTENT(in) :: finest_level
+      integer :: local_probe_constrain
+      integer :: user_override_TI_YI
 
-      REAL_T, target :: TI_YI(MAX_TI_YI_logfile+1,4) !T,Y,VEL,mdot_diff
-      REAL_T, pointer :: TI_YI_ptr(:,:)
-      INTEGER_T :: TI_YI_counter
-      INTEGER_T :: TI_YI_best_guess_index
-      INTEGER_T :: trial_and_error
-      INTEGER_T :: TI_YI_loop
+      real(amrex_real), target :: TI_YI(MAX_TI_YI_logfile+1,4) !T,Y,VEL,mdot_diff
+      real(amrex_real), pointer :: TI_YI_ptr(:,:)
+      integer :: TI_YI_counter
+      integer :: TI_YI_best_guess_index
+      integer :: trial_and_error
+      integer :: TI_YI_loop
 
-      INTEGER_T :: probe_ok
-      REAL_T :: microscale_probe_size
-      INTEGER_T, INTENT(in) :: ngrow_distance_in
-      INTEGER_T, INTENT(in) :: nstate
-      INTEGER_T, INTENT(in) :: nburning
-      INTEGER_T, INTENT(in) :: ntsat
-      INTEGER_T, INTENT(in) :: nden
-      INTEGER_T, INTENT(in) :: custom_nucleation_model
-      INTEGER_T, INTENT(in) :: do_the_nucleate
-      INTEGER_T, INTENT(in) :: nucleate_pos_size
-      REAL_T, target, INTENT(in) :: nucleate_pos(nucleate_pos_size)
-      REAL_T, target, INTENT(in) :: nucleation_temp(2*num_interfaces)
-      REAL_T, target, INTENT(in) :: nucleation_pressure(2*num_interfaces)
-      REAL_T, target, INTENT(in) :: nucleation_pmg(2*num_interfaces)
-      REAL_T, target, INTENT(in) :: nucleation_mach(2*num_interfaces)
-      REAL_T, target, INTENT(in) :: cavitation_pressure(num_materials)
-      REAL_T, target, INTENT(in) :: cavitation_vapor_density(num_materials)
-      REAL_T, target, INTENT(in) :: cavitation_tension(num_materials)
-      INTEGER_T, INTENT(in) ::  microlayer_substrate(num_materials)
-      REAL_T, INTENT(in) :: microlayer_angle(num_materials)
-      REAL_T, INTENT(in) :: microlayer_size(num_materials)
-      REAL_T, INTENT(in) :: macrolayer_size(num_materials)
-      REAL_T, INTENT(in) :: max_contact_line_size(num_materials)
-      REAL_T, INTENT(in) :: R_Palmore_Desjardins
-      INTEGER_T, INTENT(in) :: use_exact_temperature(2*num_interfaces)
-      REAL_T, INTENT(in) :: reaction_rate(2*num_interfaces)
-      REAL_T :: K_f(0:1)
-      REAL_T, INTENT(in) :: hardwire_Y_gamma(2*num_interfaces)
-      REAL_T, INTENT(in) :: hardwire_T_gamma(2*num_interfaces)
-      REAL_T, INTENT(in) :: accommodation_coefficient(2*num_interfaces)
-      REAL_T, INTENT(in) :: reference_pressure(2*num_interfaces)
-      REAL_T, INTENT(in) :: saturation_temp(2*num_interfaces)
-      REAL_T, INTENT(in) :: saturation_temp_curv(2*num_interfaces)
-      REAL_T, INTENT(in) :: saturation_temp_vel(2*num_interfaces)
-      REAL_T, INTENT(in) :: saturation_temp_min(2*num_interfaces)
-      REAL_T, INTENT(in) :: saturation_temp_max(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: freezing_model(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: interface_mass_transfer_model(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: distribute_from_target(2*num_interfaces)
-      INTEGER_T, INTENT(in) :: mass_fraction_id(2*num_interfaces)
-      INTEGER_T, INTENT(in), target :: material_type_evap(num_materials)
-      REAL_T, INTENT(in) :: molar_mass(num_materials)
-      REAL_T, INTENT(in) :: species_molar_mass(num_species_var+1)
-      INTEGER_T, INTENT(in) :: constant_density_all_time(num_materials)
-      INTEGER_T, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      INTEGER_T, target, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      INTEGER_T :: growlo(3),growhi(3)
-      INTEGER_T, target, INTENT(in) :: bfact
-      REAL_T, target, INTENT(in) :: xlo(SDIM)
-      REAL_T, target, INTENT(in) :: dx(SDIM)
-      REAL_T, INTENT(in) :: prev_time
-      REAL_T :: cur_time
-      REAL_T, INTENT(in) :: dt
-      INTEGER_T, INTENT(in) :: arraysize
-      REAL_T, INTENT(in) :: blob_array(arraysize)
-      INTEGER_T, INTENT(in) :: color_count
-      INTEGER_T, INTENT(in) :: DIMDEC(colorfab)
-      INTEGER_T, INTENT(in) :: DIMDEC(typefab)
-      INTEGER_T, INTENT(in) :: DIMDEC(maskcov)
-      INTEGER_T, INTENT(in) :: DIMDEC(conductstate)
-      INTEGER_T, INTENT(in) :: DIMDEC(burnvel)
-      INTEGER_T, INTENT(in) :: DIMDEC(Tsatfab)
-      INTEGER_T, INTENT(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
-      INTEGER_T, INTENT(in) :: DIMDEC(LSnew)
-      INTEGER_T, INTENT(in) :: DIMDEC(Snew)
-      INTEGER_T, INTENT(in) :: DIMDEC(EOS)
-      INTEGER_T, INTENT(in) :: DIMDEC(recon)
-      INTEGER_T, INTENT(in) :: DIMDEC(pres)
-      INTEGER_T, INTENT(in) :: DIMDEC(pres_eos)
-      INTEGER_T, INTENT(in) :: DIMDEC(curvfab)
+      integer :: probe_ok
+      real(amrex_real) :: microscale_probe_size
+      integer, INTENT(in) :: ngrow_distance_in
+      integer, INTENT(in) :: nstate
+      integer, INTENT(in) :: nburning
+      integer, INTENT(in) :: ntsat
+      integer, INTENT(in) :: nden
+      integer, INTENT(in) :: custom_nucleation_model
+      integer, INTENT(in) :: do_the_nucleate
+      integer, INTENT(in) :: nucleate_pos_size
+      real(amrex_real), target, INTENT(in) :: nucleate_pos(nucleate_pos_size)
+      real(amrex_real), target, INTENT(in) :: nucleation_temp(2*num_interfaces)
+      real(amrex_real), target, INTENT(in) :: nucleation_pressure(2*num_interfaces)
+      real(amrex_real), target, INTENT(in) :: nucleation_pmg(2*num_interfaces)
+      real(amrex_real), target, INTENT(in) :: nucleation_mach(2*num_interfaces)
+      real(amrex_real), target, INTENT(in) :: cavitation_pressure(num_materials)
+      real(amrex_real), target, INTENT(in) :: cavitation_vapor_density(num_materials)
+      real(amrex_real), target, INTENT(in) :: cavitation_tension(num_materials)
+      integer, INTENT(in) ::  microlayer_substrate(num_materials)
+      real(amrex_real), INTENT(in) :: microlayer_angle(num_materials)
+      real(amrex_real), INTENT(in) :: microlayer_size(num_materials)
+      real(amrex_real), INTENT(in) :: macrolayer_size(num_materials)
+      real(amrex_real), INTENT(in) :: max_contact_line_size(num_materials)
+      real(amrex_real), INTENT(in) :: R_Palmore_Desjardins
+      integer, INTENT(in) :: use_exact_temperature(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: reaction_rate(2*num_interfaces)
+      real(amrex_real) :: K_f(0:1)
+      real(amrex_real), INTENT(in) :: hardwire_Y_gamma(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: hardwire_T_gamma(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: accommodation_coefficient(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: reference_pressure(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: saturation_temp_curv(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: saturation_temp_vel(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: saturation_temp_min(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: saturation_temp_max(2*num_interfaces)
+      integer, INTENT(in) :: freezing_model(2*num_interfaces)
+      integer, INTENT(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
+      integer, INTENT(in) :: interface_mass_transfer_model(2*num_interfaces)
+      integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
+      integer, INTENT(in) :: mass_fraction_id(2*num_interfaces)
+      integer, INTENT(in), target :: material_type_evap(num_materials)
+      real(amrex_real), INTENT(in) :: molar_mass(num_materials)
+      real(amrex_real), INTENT(in) :: species_molar_mass(num_species_var+1)
+      integer, INTENT(in) :: constant_density_all_time(num_materials)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, target, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer :: growlo(3),growhi(3)
+      integer, target, INTENT(in) :: bfact
+      real(amrex_real), target, INTENT(in) :: xlo(SDIM)
+      real(amrex_real), target, INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(in) :: prev_time
+      real(amrex_real) :: cur_time
+      real(amrex_real), INTENT(in) :: dt
+      integer, INTENT(in) :: arraysize
+      real(amrex_real), INTENT(in) :: blob_array(arraysize)
+      integer, INTENT(in) :: color_count
+      integer, INTENT(in) :: DIMDEC(colorfab)
+      integer, INTENT(in) :: DIMDEC(typefab)
+      integer, INTENT(in) :: DIMDEC(maskcov)
+      integer, INTENT(in) :: DIMDEC(conductstate)
+      integer, INTENT(in) :: DIMDEC(burnvel)
+      integer, INTENT(in) :: DIMDEC(Tsatfab)
+      integer, INTENT(in) :: DIMDEC(LS) ! declare the x,y,z dimensions of LS
+      integer, INTENT(in) :: DIMDEC(LSnew)
+      integer, INTENT(in) :: DIMDEC(Snew)
+      integer, INTENT(in) :: DIMDEC(EOS)
+      integer, INTENT(in) :: DIMDEC(recon)
+      integer, INTENT(in) :: DIMDEC(pres)
+      integer, INTENT(in) :: DIMDEC(pres_eos)
+      integer, INTENT(in) :: DIMDEC(curvfab)
 
-      REAL_T, INTENT(in), target :: typefab(DIMV(typefab))
-      REAL_T, pointer :: typefab_ptr(D_DECL(:,:,:))
-      REAL_T, INTENT(in), target :: colorfab(DIMV(colorfab))
-      REAL_T, pointer :: colorfab_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: typefab(DIMV(typefab))
+      real(amrex_real), pointer :: typefab_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: colorfab(DIMV(colorfab))
+      real(amrex_real), pointer :: colorfab_ptr(D_DECL(:,:,:))
 
-      REAL_T, INTENT(in), target :: maskcov(DIMV(maskcov)) 
-      REAL_T, pointer :: maskcov_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov)) 
+      real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
 
-      REAL_T, INTENT(in), target :: &
+      real(amrex_real), INTENT(in), target :: &
         conductstate(DIMV(conductstate),num_materials)
-      REAL_T, pointer :: conductstate_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
         ! destination vel: first num_interfaces components are the status.
-      REAL_T, INTENT(out), target :: burnvel(DIMV(burnvel),nburning)
-      REAL_T, pointer :: burnvel_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out), target :: burnvel(DIMV(burnvel),nburning)
+      real(amrex_real), pointer :: burnvel_ptr(D_DECL(:,:,:),:)
 
         ! TSAT : first num_interfaces components are the status.
-      REAL_T, INTENT(out), target :: Tsatfab(DIMV(Tsatfab),ntsat)
-      REAL_T, pointer :: Tsatfab_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(out), target :: Tsatfab(DIMV(Tsatfab),ntsat)
+      real(amrex_real), pointer :: Tsatfab_ptr(D_DECL(:,:,:),:)
 
         ! LS1,LS2,..,LSn,normal1,normal2,...normal_n 
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  
-      REAL_T, target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1)) 
-      REAL_T, pointer :: LS_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, INTENT(inout) :: LSnew(DIMV(LSnew),num_materials*(SDIM+1))
-      REAL_T, pointer :: LSnew_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, INTENT(inout) :: Snew(DIMV(Snew),nstate)
-      REAL_T, pointer :: Snew_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, INTENT(in) :: EOS(DIMV(EOS),nden)
-      REAL_T, pointer :: EOS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: LS(DIMV(LS),num_materials*(SDIM+1)) 
+      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(inout) :: LSnew(DIMV(LSnew),num_materials*(SDIM+1))
+      real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(inout) :: Snew(DIMV(Snew),nstate)
+      real(amrex_real), pointer :: Snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: EOS(DIMV(EOS),nden)
+      real(amrex_real), pointer :: EOS_ptr(D_DECL(:,:,:),:)
        ! F,X,order,SL,I x num_materials
-      REAL_T, target, INTENT(in) :: recon(DIMV(recon),num_materials*ngeom_recon) 
-      REAL_T, pointer :: recon_ptr(D_DECL(:,:,:),:)
-      REAL_T, target, INTENT(in) :: pres(DIMV(pres)) 
-      REAL_T, pointer :: pres_ptr(D_DECL(:,:,:))
-      REAL_T, target, INTENT(in) :: pres_eos(DIMV(pres_eos)) 
-      REAL_T, pointer :: pres_eos_ptr(D_DECL(:,:,:))
-      REAL_T, target, INTENT(in) :: &
+      real(amrex_real), target, INTENT(in) :: recon(DIMV(recon),num_materials*ngeom_recon) 
+      real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), target, INTENT(in) :: pres(DIMV(pres)) 
+      real(amrex_real), pointer :: pres_ptr(D_DECL(:,:,:))
+      real(amrex_real), target, INTENT(in) :: pres_eos(DIMV(pres_eos)) 
+      real(amrex_real), pointer :: pres_eos_ptr(D_DECL(:,:,:))
+      real(amrex_real), target, INTENT(in) :: &
           curvfab(DIMV(curvfab),2*(num_materials+num_interfaces)) 
-      REAL_T, pointer :: curvfab_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: curvfab_ptr(D_DECL(:,:,:),:)
 
-      INTEGER_T, parameter :: nhalf=3
+      integer, parameter :: nhalf=3
 
-      INTEGER_T, target :: i,j,k
-      INTEGER_T dir,dir2
-      INTEGER_T im,im_opp,ireverse,iten
-      INTEGER_T imls
-      INTEGER_T im_ambient
-      INTEGER_T im_primary
-      INTEGER_T :: imls_I
-      INTEGER_T :: imls_I2
-      INTEGER_T im_substrate_source
-      INTEGER_T im_substrate_dest
-      INTEGER_T, target :: im_source,im_dest
-      INTEGER_T, target :: tcomp_source
-      INTEGER_T, target :: tcomp_dest
-      INTEGER_T, target :: Ycomp_source
-      INTEGER_T, target :: Ycomp_dest
-      REAL_T velmag_sum,local_velmag
-      INTEGER_T burnflag
-      REAL_T dxmin,dxmax
-      REAL_T, target :: dxmaxLS
-      REAL_T xsten(-nhalf:nhalf,SDIM)
-      REAL_T, target :: xI(SDIM)
-      REAL_T, target :: xsrc(SDIM)
-      REAL_T, target :: xdst(SDIM)
-      REAL_T, target :: xsrc_micro(SDIM)
-      REAL_T, target :: xdst_micro(SDIM)
-      REAL_T nrmCP(SDIM)  ! closest point normal
-      REAL_T theta_nrmCP(SDIM)
-      REAL_T, target :: LSINT(num_materials*(SDIM+1))
-      REAL_T LShere(num_materials)
+      integer, target :: i,j,k
+      integer dir,dir2
+      integer im,im_opp,ireverse,iten
+      integer imls
+      integer im_ambient
+      integer im_primary
+      integer :: imls_I
+      integer :: imls_I2
+      integer im_substrate_source
+      integer im_substrate_dest
+      integer, target :: im_source,im_dest
+      integer, target :: tcomp_source
+      integer, target :: tcomp_dest
+      integer, target :: Ycomp_source
+      integer, target :: Ycomp_dest
+      real(amrex_real) velmag_sum,local_velmag
+      integer burnflag
+      real(amrex_real) dxmin,dxmax
+      real(amrex_real), target :: dxmaxLS
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real), target :: xI(SDIM)
+      real(amrex_real), target :: xsrc(SDIM)
+      real(amrex_real), target :: xdst(SDIM)
+      real(amrex_real), target :: xsrc_micro(SDIM)
+      real(amrex_real), target :: xdst_micro(SDIM)
+      real(amrex_real) nrmCP(SDIM)  ! closest point normal
+      real(amrex_real) theta_nrmCP(SDIM)
+      real(amrex_real), target :: LSINT(num_materials*(SDIM+1))
+      real(amrex_real) LShere(num_materials)
       type(probe_out_type) :: POUT
-      REAL_T den_I_interp_SAT(2)
-      REAL_T local_hardwire_T(0:1)
-      REAL_T local_hardwire_Y(0:1)
-      INTEGER_T hardwire_flag(0:1)  ! =0 do not hardwire  =1 hardwire
-      REAL_T local_Tsat(0:1)
-      REAL_T delta_Tsat
-      REAL_T local_Tsat_base(0:1)
-      REAL_T vel_phasechange(0:1)
-      REAL_T, target :: LL(0:1)
-      REAL_T :: latent_heat_temperature
-      REAL_T, target :: dxprobe_source
-      REAL_T, target :: dxprobe_dest
-      REAL_T, target :: thermal_k_model_predict(2) ! source,dest
-      REAL_T, target :: thermal_k_model_correct(2) ! source,dest
-      REAL_T, target :: thermal_k_physical_base(2) ! source,dest
-      REAL_T LS_pos
-      REAL_T C_w0
-      INTEGER_T, target :: local_freezing_model
-      INTEGER_T local_Tanasawa_or_Schrage_or_Kassemi
-      INTEGER_T distribute_from_targ
-      INTEGER_T vofcomp_source,vofcomp_dest
-      REAL_T Fsource,Fdest ! used for the hydrate model
-      REAL_T LSSIGN,SIGNVEL
-      INTEGER_T found_path
-      INTEGER_T, target :: debugrate
-      REAL_T RR,mag
-      INTEGER_T for_estdt
-      INTEGER_T local_mask
-      INTEGER_T microlayer_substrate_source
-      INTEGER_T microlayer_substrate_dest
-      REAL_T gradphi_substrate(SDIM)
-      REAL_T newphi_substrate
-      INTEGER_T, target :: dencomp_source,dencomp_dest
-      INTEGER_T ispec
-      REAL_T vapor_den
-      REAL_T source_perim_factor,dest_perim_factor
-      REAL_T contact_line_perim
-      INTEGER_T icolor,base_type,ic,im1,im2
-      REAL_T normal_probe_factor
-      INTEGER_T iprobe_vapor
-      INTEGER_T im_vapor
-      REAL_T, target :: Y_TOLERANCE
+      real(amrex_real) den_I_interp_SAT(2)
+      real(amrex_real) local_hardwire_T(0:1)
+      real(amrex_real) local_hardwire_Y(0:1)
+      integer hardwire_flag(0:1)  ! =0 do not hardwire  =1 hardwire
+      real(amrex_real) local_Tsat(0:1)
+      real(amrex_real) delta_Tsat
+      real(amrex_real) local_Tsat_base(0:1)
+      real(amrex_real) vel_phasechange(0:1)
+      real(amrex_real), target :: LL(0:1)
+      real(amrex_real) :: latent_heat_temperature
+      real(amrex_real), target :: dxprobe_source
+      real(amrex_real), target :: dxprobe_dest
+      real(amrex_real), target :: thermal_k_model_predict(2) ! source,dest
+      real(amrex_real), target :: thermal_k_model_correct(2) ! source,dest
+      real(amrex_real), target :: thermal_k_physical_base(2) ! source,dest
+      real(amrex_real) LS_pos
+      real(amrex_real) C_w0
+      integer, target :: local_freezing_model
+      integer local_Tanasawa_or_Schrage_or_Kassemi
+      integer distribute_from_targ
+      integer vofcomp_source,vofcomp_dest
+      real(amrex_real) Fsource,Fdest ! used for the hydrate model
+      real(amrex_real) LSSIGN,SIGNVEL
+      integer found_path
+      integer, target :: debugrate
+      real(amrex_real) RR,mag
+      integer for_estdt
+      integer local_mask
+      integer microlayer_substrate_source
+      integer microlayer_substrate_dest
+      real(amrex_real) gradphi_substrate(SDIM)
+      real(amrex_real) newphi_substrate
+      integer, target :: dencomp_source,dencomp_dest
+      integer ispec
+      real(amrex_real) vapor_den
+      real(amrex_real) source_perim_factor,dest_perim_factor
+      real(amrex_real) contact_line_perim
+      integer icolor,base_type,ic,im1,im2
+      real(amrex_real) normal_probe_factor
+      integer iprobe_vapor
+      integer im_vapor
+      real(amrex_real), target :: Y_TOLERANCE
        ! iten=1..num_interfaces  ireverse=0..1
-      REAL_T temp_target_probe_history(2*num_interfaces,2)
-      REAL_T dxprobe_target_history(2*num_interfaces,2)
+      real(amrex_real) temp_target_probe_history(2*num_interfaces,2)
+      real(amrex_real) dxprobe_target_history(2*num_interfaces,2)
 
-      INTEGER_T use_tsatfab
-      INTEGER_T ncomp_per_burning
-      INTEGER_T ncomp_per_tsat
+      integer use_tsatfab
+      integer ncomp_per_burning
+      integer ncomp_per_tsat
 
-      REAL_T CURV_OUT_I
+      real(amrex_real) CURV_OUT_I
 
-      REAL_T VEL_predict,VEL_correct
-      REAL_T X_predict
-      REAL_T Y_predict
-      REAL_T Y_predict_hold(0:1)
-      REAL_T TSAT_predict,TSAT_correct
-      REAL_T TSAT_ERR,TSAT_INIT_ERR
-      INTEGER_T TSAT_iter,TSAT_converge
-      REAL_T :: Y_interface_min
-      REAL_T :: TI_min
-      REAL_T :: TI_max
-      REAL_T FicksLawD(2)  ! iprobe=1 source iprobe=2 dest 
-      REAL_T molar_mass_ambient
-      REAL_T molar_mass_vapor
-      INTEGER_T interp_valid_flag_initial(2) ! iprobe=1 source iprobe=2 dest
-      INTEGER_T interface_resolved
-      INTEGER_T interp_status
+      real(amrex_real) VEL_predict,VEL_correct
+      real(amrex_real) X_predict
+      real(amrex_real) Y_predict
+      real(amrex_real) Y_predict_hold(0:1)
+      real(amrex_real) TSAT_predict,TSAT_correct
+      real(amrex_real) TSAT_ERR,TSAT_INIT_ERR
+      integer TSAT_iter,TSAT_converge
+      real(amrex_real) :: Y_interface_min
+      real(amrex_real) :: TI_min
+      real(amrex_real) :: TI_max
+      real(amrex_real) FicksLawD(2)  ! iprobe=1 source iprobe=2 dest 
+      real(amrex_real) molar_mass_ambient
+      real(amrex_real) molar_mass_vapor
+      integer interp_valid_flag_initial(2) ! iprobe=1 source iprobe=2 dest
+      integer interface_resolved
+      integer interp_status
       type(probe_parm_type), target :: PROBE_PARMS
       type(TSAT_MASS_FRAC_parm_type) :: TSAT_Y_PARMS
       type(nucleation_parm_type_input) :: create_in
       type(nucleation_parm_type_inout) :: create_inout
-      INTEGER_T iprobe
-      INTEGER_T im_probe
-      INTEGER_T microlayer_substrate_probe
-      REAL_T x_gamma_a,x_gamma_b,x_gamma_c
-      REAL_T Y_gamma_a,Y_gamma_b,Y_gamma_c
-      REAL_T T_gamma_a,T_gamma_b,T_gamma_c
-      REAL_T T_gamma_a_init,T_gamma_b_init
-      REAL_T Y_gamma_a_init,Y_gamma_b_init
-      INTEGER_T fully_saturated
-      REAL_T mdotT_debug
-      REAL_T mdotY_top_debug,mdotY_bot_debug,mdotY_debug
-      REAL_T TEMP_PROBE_source
-      REAL_T TEMP_PROBE_dest
+      integer iprobe
+      integer im_probe
+      integer microlayer_substrate_probe
+      real(amrex_real) x_gamma_a,x_gamma_b,x_gamma_c
+      real(amrex_real) Y_gamma_a,Y_gamma_b,Y_gamma_c
+      real(amrex_real) T_gamma_a,T_gamma_b,T_gamma_c
+      real(amrex_real) T_gamma_a_init,T_gamma_b_init
+      real(amrex_real) Y_gamma_a_init,Y_gamma_b_init
+      integer fully_saturated
+      real(amrex_real) mdotT_debug
+      real(amrex_real) mdotY_top_debug,mdotY_bot_debug,mdotY_debug
+      real(amrex_real) TEMP_PROBE_source
+      real(amrex_real) TEMP_PROBE_dest
 
-      INTEGER_T debug_limiter
+      integer debug_limiter
 
       TI_YI_ptr=>TI_YI
 

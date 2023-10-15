@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include <AMReX_FORT_INTEGER.H>
 #include "AMReX_SPACE.H"
 #include <AMReX_REAL.H>
 #include <AMReX_CONSTANTS.H>
@@ -11,6 +10,7 @@
 #include "CG_F.H"
 
       module cpp_cg
+      use amrex_fort_module, only : amrex_real
 
       contains
 
@@ -36,24 +36,24 @@
       use global_utility_module
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3)
-      INTEGER_T :: growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(pp)
-      REAL_T, intent(in), target :: pp(DIMV(pp))
-      INTEGER_T, intent(in) :: DIMDEC(phi)
-      REAL_T, intent(out), target :: phi(DIMV(phi))
-      REAL_T, pointer :: phi_ptr(D_DECL(:,:,:))
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3)
+      integer :: growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(pp)
+      real(amrex_real), intent(in), target :: pp(DIMV(pp))
+      integer, intent(in) :: DIMDEC(phi)
+      real(amrex_real), intent(out), target :: phi(DIMV(phi))
+      real(amrex_real), pointer :: phi_ptr(D_DECL(:,:,:))
 
-      INTEGER_T, intent(in) :: DIMDEC(yy)
-      REAL_T, intent(in), target :: yy(DIMV(yy))
-      REAL_T, intent(in) :: a
+      integer, intent(in) :: DIMDEC(yy)
+      real(amrex_real), intent(in), target :: yy(DIMV(yy))
+      real(amrex_real), intent(in) :: a
 
-      INTEGER_T i,j,k
+      integer i,j,k
 
       phi_ptr=>phi
 
@@ -107,24 +107,24 @@
       use global_utility_module
       IMPLICIT NONE
 !
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3)
-      INTEGER_T :: growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(rr)
-      REAL_T, intent(in), target :: rr(DIMV(rr))
-      INTEGER_T, intent(in) :: DIMDEC(pp)
-      REAL_T, intent(out), target :: pp(DIMV(pp))
-      REAL_T, pointer :: pp_ptr(D_DECL(:,:,:))
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3)
+      integer :: growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(rr)
+      real(amrex_real), intent(in), target :: rr(DIMV(rr))
+      integer, intent(in) :: DIMDEC(pp)
+      real(amrex_real), intent(out), target :: pp(DIMV(pp))
+      real(amrex_real), pointer :: pp_ptr(D_DECL(:,:,:))
 
-      INTEGER_T, intent(in) :: DIMDEC(yy)
-      REAL_T, intent(in), target :: yy(DIMV(yy))
-      REAL_T, intent(in) :: b
+      integer, intent(in) :: DIMDEC(yy)
+      real(amrex_real), intent(in), target :: yy(DIMV(yy))
+      real(amrex_real), intent(in) :: b
 
-      INTEGER_T i,j,k
+      integer i,j,k
 
       pp_ptr=>pp
 
@@ -177,21 +177,21 @@
 
       use global_utility_module
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: ncomp
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3)
-      INTEGER_T :: growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(ww)
-      REAL_T, intent(in), target :: ww(DIMV(ww),ncomp)
-      INTEGER_T, intent(in) :: DIMDEC(pp)
-      REAL_T, intent(in), target :: pp(DIMV(pp),ncomp)
-      REAL_T, intent(out) :: pw
+      integer, intent(in) :: ncomp
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3)
+      integer :: growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(ww)
+      real(amrex_real), intent(in), target :: ww(DIMV(ww),ncomp)
+      integer, intent(in) :: DIMDEC(pp)
+      real(amrex_real), intent(in), target :: pp(DIMV(pp),ncomp)
+      real(amrex_real), intent(out) :: pw
 !
-      INTEGER_T i, j, k,veldir
+      integer i, j, k,veldir
 !
       if (bfact.ge.1) then
        ! do nothing

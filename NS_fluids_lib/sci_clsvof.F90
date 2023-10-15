@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_BC_TYPES.H"
@@ -36,127 +35,128 @@
 #define BoundingBoxRadCell 3
 
 module CLSVOFCouplerIO
+use amrex_fort_module, only : amrex_real
 use probcommon_module
 
 implicit none
 
-INTEGER_T, PARAMETER :: sci_sdim=3
+integer, PARAMETER :: sci_sdim=3
 
 type FSI_container_type
- INTEGER_T CTML_num_solids
- INTEGER_T FSI_num_scalars
- INTEGER_T max_num_nodes(3)
- INTEGER_T max_num_elements
- INTEGER_T structured_flag
- INTEGER_T structure_dim
- INTEGER_T structure_topology
- INTEGER_T ngrow_node
+ integer CTML_num_solids
+ integer FSI_num_scalars
+ integer max_num_nodes(3)
+ integer max_num_elements
+ integer structured_flag
+ integer structure_dim
+ integer structure_topology
+ integer ngrow_node
 
- REAL_T, pointer :: node_list(:,:,:,:,:)
- REAL_T, pointer :: prev_node_list(:,:,:,:,:)
- REAL_T, pointer :: velocity_list(:,:,:,:,:)
- REAL_T, pointer :: prev_velocity_list(:,:,:,:,:)
- INTEGER_T, pointer :: element_list(:,:,:)
- REAL_T, pointer :: init_node_list(:,:,:,:,:)
- REAL_T, pointer :: mass_list(:,:,:,:)
- REAL_T, pointer :: temp_list(:,:,:,:)
- REAL_T, pointer :: scalar_list(:,:,:,:,:)
- REAL_T, pointer :: prev_scalar_list(:,:,:,:,:)
+ real(amrex_real), pointer :: node_list(:,:,:,:,:)
+ real(amrex_real), pointer :: prev_node_list(:,:,:,:,:)
+ real(amrex_real), pointer :: velocity_list(:,:,:,:,:)
+ real(amrex_real), pointer :: prev_velocity_list(:,:,:,:,:)
+ integer, pointer :: element_list(:,:,:)
+ real(amrex_real), pointer :: init_node_list(:,:,:,:,:)
+ real(amrex_real), pointer :: mass_list(:,:,:,:)
+ real(amrex_real), pointer :: temp_list(:,:,:,:)
+ real(amrex_real), pointer :: scalar_list(:,:,:,:,:)
+ real(amrex_real), pointer :: prev_scalar_list(:,:,:,:,:)
 end type FSI_container_type
 
 type lag_type
- INTEGER_T :: n_nodes,n_elems
- REAL_T, pointer :: nd(:,:)    ! nd(dir,node_id) dir=1..3
- REAL_T, pointer :: ndvel(:,:) ! ndvel(dir,node_id) dir=1..3
- REAL_T, pointer :: ndforce(:,:)!ndforce(dir,node_id) dir=1..NCOMP_FORCE_STRESS
- REAL_T, pointer :: ndtemp(:)  ! ndtemp(node_id)
+ integer :: n_nodes,n_elems
+ real(amrex_real), pointer :: nd(:,:)    ! nd(dir,node_id) dir=1..3
+ real(amrex_real), pointer :: ndvel(:,:) ! ndvel(dir,node_id) dir=1..3
+ real(amrex_real), pointer :: ndforce(:,:)!ndforce(dir,node_id) dir=1..NCOMP_FORCE_STRESS
+ real(amrex_real), pointer :: ndtemp(:)  ! ndtemp(node_id)
   ! number of nodes in element=elemdt(1,elemid)
   ! part number=elemdt(2,elemid)
   ! doubly wetted=elemdt(DOUBLYCOMP,elemid)
- INTEGER_T, pointer :: elemdt(:,:) 
+ integer, pointer :: elemdt(:,:) 
   ! node_id=intelemdt(1..3,elemid)
   ! root (parent) element id = intelemdt(4,elemid)
- INTEGER_T, pointer :: intelemdt(:,:) 
+ integer, pointer :: intelemdt(:,:) 
 end type lag_type
 
 type mesh_type
- INTEGER_T :: part_id
- INTEGER_T :: flag_2D_to_3D
- INTEGER_T :: LS_FROM_SUBROUTINE
- INTEGER_T :: CTML_flag
- INTEGER_T :: refine_factor
- INTEGER_T :: bounding_box_ngrow
- REAL_T :: max_side_len
- REAL_T :: min_side_len
- REAL_T :: max_side_len_refined
- REAL_T :: min_side_len_refined
- INTEGER_T :: IntElemDim ! number of nodes (or edges) per element
- INTEGER_T :: IntElemDimPaddle
- INTEGER_T :: IntElemDimPool
- INTEGER_T :: NumNodes,NumNodesPaddle,NumNodesPool
- INTEGER_T :: NumIntElems,NumIntElemsPaddle,NumIntElemsPool
- INTEGER_T, pointer :: ElemData(:,:) !(nflags,nelements)
- INTEGER_T, pointer :: IntElem(:,:) !(nodes_per_elem,nelements)
+ integer :: part_id
+ integer :: flag_2D_to_3D
+ integer :: LS_FROM_SUBROUTINE
+ integer :: CTML_flag
+ integer :: refine_factor
+ integer :: bounding_box_ngrow
+ real(amrex_real) :: max_side_len
+ real(amrex_real) :: min_side_len
+ real(amrex_real) :: max_side_len_refined
+ real(amrex_real) :: min_side_len_refined
+ integer :: IntElemDim ! number of nodes (or edges) per element
+ integer :: IntElemDimPaddle
+ integer :: IntElemDimPool
+ integer :: NumNodes,NumNodesPaddle,NumNodesPool
+ integer :: NumIntElems,NumIntElemsPaddle,NumIntElemsPool
+ integer, pointer :: ElemData(:,:) !(nflags,nelements)
+ integer, pointer :: IntElem(:,:) !(nodes_per_elem,nelements)
  !average of adjoining element normals.
- REAL_T, pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements) 
- INTEGER_T, pointer :: EdgeElemId(:,:) !(nodes_per_elem,nelements)
- INTEGER_T, pointer :: EdgeElemIdNode(:,:) !(nodes_per_elem,nelements)
- INTEGER_T :: NumNodesFINE
- INTEGER_T :: NumIntElemsFINE
- INTEGER_T, pointer :: ElemNodeCountFINE(:)
- INTEGER_T, pointer :: ElemNodeCountEdgeFINE(:)
- REAL_T, pointer :: NodeFINE(:,:)  ! (3,node_id)
- REAL_T, pointer :: NodeVelFINE(:,:)
- REAL_T, pointer :: NodeForceFINE(:,:)  ! (NCOMP_FORCE_STRESS,node_id)
- REAL_T, pointer :: NodeTempFINE(:)  
- REAL_T, pointer :: NodeNormalFINE(:,:)
- REAL_T, pointer :: NodeNormalEdgeFINE(:,:) ! sanity check purposes
- REAL_T, pointer :: ElemDataXnotFINE(:,:)
- INTEGER_T, pointer :: ElemDataFINE(:,:)
+ real(amrex_real), pointer :: EdgeNormal(:,:) !(3*nodes_per_elem,nelements) 
+ integer, pointer :: EdgeElemId(:,:) !(nodes_per_elem,nelements)
+ integer, pointer :: EdgeElemIdNode(:,:) !(nodes_per_elem,nelements)
+ integer :: NumNodesFINE
+ integer :: NumIntElemsFINE
+ integer, pointer :: ElemNodeCountFINE(:)
+ integer, pointer :: ElemNodeCountEdgeFINE(:)
+ real(amrex_real), pointer :: NodeFINE(:,:)  ! (3,node_id)
+ real(amrex_real), pointer :: NodeVelFINE(:,:)
+ real(amrex_real), pointer :: NodeForceFINE(:,:)  ! (NCOMP_FORCE_STRESS,node_id)
+ real(amrex_real), pointer :: NodeTempFINE(:)  
+ real(amrex_real), pointer :: NodeNormalFINE(:,:)
+ real(amrex_real), pointer :: NodeNormalEdgeFINE(:,:) ! sanity check purposes
+ real(amrex_real), pointer :: ElemDataXnotFINE(:,:)
+ integer, pointer :: ElemDataFINE(:,:)
   ! root (parent) element id = IntElemFINE(4,elemid)
- INTEGER_T, pointer :: IntElemFINE(:,:) ! IntElemFINE(inode,ielem)
+ integer, pointer :: IntElemFINE(:,:) ! IntElemFINE(inode,ielem)
  !average of adjoining element normals.
- REAL_T, pointer :: EdgeNormalFINE(:,:) ! EdgeNormalFINE(3*(inode-1)+dir,ielem)
- INTEGER_T, pointer :: EdgeElemIdFINE(:,:)!EdgeElemIdFINE(inode,ielem)
- INTEGER_T, pointer :: EdgeElemIdNodeFINE(:,:)!EdgeElemIdNodeFINE(inode,ielem)
- REAL_T, pointer :: Node(:,:)  ! Node(dir,inode)
- REAL_T, pointer :: Node_old(:,:)
- REAL_T, pointer :: Node_new(:,:)
- REAL_T, pointer :: Node_current(:,:)
- REAL_T, pointer :: NodeVel(:,:)
- INTEGER_T, pointer :: ElemNodeCount(:)
- INTEGER_T, pointer :: ElemNodeCountEdge(:)
- REAL_T, pointer :: NodeNormal(:,:) !NodeNormal(dir,inode)
- REAL_T, pointer :: NodeNormalEdge(:,:) !sanity check purposes
- REAL_T, pointer :: NodeVel_old(:,:)
- REAL_T, pointer :: NodeVel_new(:,:)
- REAL_T, pointer :: NodeForce(:,:) ! NCOMP_FORCE_STRESS, NumNodes
- REAL_T, pointer :: NodeForce_old(:,:) ! NCOMP_FORCE_STRESS, NumNodes
- REAL_T, pointer :: NodeForce_new(:,:) ! NCOMP_FORCE_STRESS, NumNodes
- REAL_T, pointer :: NodeRollCall(:)
- REAL_T, pointer :: NodeTemp(:)
- REAL_T, pointer :: NodeTemp_old(:)
- REAL_T, pointer :: NodeTemp_new(:)
- REAL_T, pointer :: edge_endpoints(:,:)
- INTEGER_T, pointer :: edge_ielem(:)
- REAL_T soliddrop_displacement
- REAL_T soliddrop_speed
- REAL_T solid_displ(3)
- REAL_T solid_speed(3)
- REAL_T exterior_BB(3,2)
- REAL_T interior_BB(3,2)
- REAL_T center_BB(3)
- INTEGER_T deforming_part
- INTEGER_T normal_invert
- INTEGER_T exclusive_doubly_wetted
+ real(amrex_real), pointer :: EdgeNormalFINE(:,:) ! EdgeNormalFINE(3*(inode-1)+dir,ielem)
+ integer, pointer :: EdgeElemIdFINE(:,:)!EdgeElemIdFINE(inode,ielem)
+ integer, pointer :: EdgeElemIdNodeFINE(:,:)!EdgeElemIdNodeFINE(inode,ielem)
+ real(amrex_real), pointer :: Node(:,:)  ! Node(dir,inode)
+ real(amrex_real), pointer :: Node_old(:,:)
+ real(amrex_real), pointer :: Node_new(:,:)
+ real(amrex_real), pointer :: Node_current(:,:)
+ real(amrex_real), pointer :: NodeVel(:,:)
+ integer, pointer :: ElemNodeCount(:)
+ integer, pointer :: ElemNodeCountEdge(:)
+ real(amrex_real), pointer :: NodeNormal(:,:) !NodeNormal(dir,inode)
+ real(amrex_real), pointer :: NodeNormalEdge(:,:) !sanity check purposes
+ real(amrex_real), pointer :: NodeVel_old(:,:)
+ real(amrex_real), pointer :: NodeVel_new(:,:)
+ real(amrex_real), pointer :: NodeForce(:,:) ! NCOMP_FORCE_STRESS, NumNodes
+ real(amrex_real), pointer :: NodeForce_old(:,:) ! NCOMP_FORCE_STRESS, NumNodes
+ real(amrex_real), pointer :: NodeForce_new(:,:) ! NCOMP_FORCE_STRESS, NumNodes
+ real(amrex_real), pointer :: NodeRollCall(:)
+ real(amrex_real), pointer :: NodeTemp(:)
+ real(amrex_real), pointer :: NodeTemp_old(:)
+ real(amrex_real), pointer :: NodeTemp_new(:)
+ real(amrex_real), pointer :: edge_endpoints(:,:)
+ integer, pointer :: edge_ielem(:)
+ real(amrex_real) soliddrop_displacement
+ real(amrex_real) soliddrop_speed
+ real(amrex_real) solid_displ(3)
+ real(amrex_real) solid_speed(3)
+ real(amrex_real) exterior_BB(3,2)
+ real(amrex_real) interior_BB(3,2)
+ real(amrex_real) center_BB(3)
+ integer deforming_part
+ integer normal_invert
+ integer exclusive_doubly_wetted
 end type mesh_type
 
 
-INTEGER_T :: use_temp
-INTEGER_T :: istepB,sci_istop,sci_istep
-REAL_T :: sci_curtime,sci_dt
-REAL_T :: timeB,tstart,tfinish
-REAL_T :: dtB
+integer :: use_temp
+integer :: istepB,sci_istop,sci_istep
+real(amrex_real) :: sci_curtime,sci_dt
+real(amrex_real) :: timeB,tstart,tfinish
+real(amrex_real) :: dtB
 
 type(lag_type), dimension(:), allocatable :: multi_lag
 type(mesh_type), dimension(MAX_PARTS) :: FSI
@@ -164,68 +164,68 @@ type(mesh_type), dimension(MAX_PARTS) :: FSI
 type(lag_type), dimension(:), allocatable :: aux_multi_lag
 type(mesh_type), dimension(:), allocatable :: aux_FSI
 
-REAL_T :: radradblob,denpaddle,dampingpaddle,TorquePos,TorqueVel,radradblobwall
-REAL_T :: raddust,dendust,adheredust,floordust,tempdust
-REAL_T, dimension(3) :: torquePosDust,torqueVelDust, &
+real(amrex_real) :: radradblob,denpaddle,dampingpaddle,TorquePos,TorqueVel,radradblobwall
+real(amrex_real) :: raddust,dendust,adheredust,floordust,tempdust
+real(amrex_real), dimension(3) :: torquePosDust,torqueVelDust, &
  centerDust,centerVelDust,centerStartDust
-REAL_T, dimension(3) :: xxblob,newxxblob,xxblobwall,newxxblobwall
+real(amrex_real), dimension(3) :: xxblob,newxxblob,xxblobwall,newxxblobwall
 character(35) :: whalein,whaleout
-INTEGER_T :: whale_nodes
-REAL_T, dimension(:), allocatable :: RR,SS,TT,UU,VV,WW,XX,YY,ZZ 
-REAL_T, dimension(:), allocatable :: whale_spring
-REAL_T, dimension(:), allocatable :: whale_X_init,whale_Y_init,whale_Z_init
+integer :: whale_nodes
+real(amrex_real), dimension(:), allocatable :: RR,SS,TT,UU,VV,WW,XX,YY,ZZ 
+real(amrex_real), dimension(:), allocatable :: whale_spring
+real(amrex_real), dimension(:), allocatable :: whale_X_init,whale_Y_init,whale_Z_init
 ! Nodes,20
-INTEGER_T, DIMENSION(:,:), allocatable :: whale_list
-REAL_T, Dimension(22) :: whale_angle, whale_timestep
-INTEGER_T whale_cells,whale_counter
-REAL_T whale_counter_real
-REAL_T CLSVOF_whale_time
+integer, DIMENSION(:,:), allocatable :: whale_list
+real(amrex_real), Dimension(22) :: whale_angle, whale_timestep
+integer whale_cells,whale_counter
+real(amrex_real) whale_counter_real
+real(amrex_real) CLSVOF_whale_time
 
-REAL_T problo_ref(AMREX_SPACEDIM)
-REAL_T probhi_ref(AMREX_SPACEDIM)
-REAL_T problen_ref(AMREX_SPACEDIM)
+real(amrex_real) problo_ref(AMREX_SPACEDIM)
+real(amrex_real) probhi_ref(AMREX_SPACEDIM)
+real(amrex_real) problen_ref(AMREX_SPACEDIM)
 
-REAL_T problo_act(3)
-REAL_T probhi_act(3)
-REAL_T problen_act(3)
+real(amrex_real) problo_act(3)
+real(amrex_real) probhi_act(3)
+real(amrex_real) problen_act(3)
 
-INTEGER_T FSI_NPARTS
-INTEGER_T CTML_NPARTS
-INTEGER_T TOTAL_NPARTS
-INTEGER_T im_solid_mapF(MAX_PARTS) ! type: 0..num_materials-1
-INTEGER_T ctml_part_id_map(MAX_PARTS)
-INTEGER_T fsi_part_id_map(MAX_PARTS)
+integer FSI_NPARTS
+integer CTML_NPARTS
+integer TOTAL_NPARTS
+integer im_solid_mapF(MAX_PARTS) ! type: 0..num_materials-1
+integer ctml_part_id_map(MAX_PARTS)
+integer fsi_part_id_map(MAX_PARTS)
 
-INTEGER_T node_list_size
-INTEGER_T element_list_size
-INTEGER_T mass_list_size
-INTEGER_T scalar_list_size
+integer node_list_size
+integer element_list_size
+integer mass_list_size
+integer scalar_list_size
 
-INTEGER_T ctml_n_bodies
-INTEGER_T ctml_max_n_nodes(3)
-INTEGER_T ctml_max_n_elements
-INTEGER_T ctml_flatten_size
-INTEGER_T ctml_fsi_num_scalars
+integer ctml_n_bodies
+integer ctml_max_n_nodes(3)
+integer ctml_max_n_elements
+integer ctml_flatten_size
+integer ctml_fsi_num_scalars
 
-REAL_T, dimension(:), allocatable :: ctml_gx
-REAL_T, dimension(:), allocatable :: ctml_gy
-REAL_T, dimension(:), allocatable :: ctml_gz
-INTEGER_T, dimension(3) :: ctml_ngrid_nodes
-REAL_T, dimension(3) :: ctml_min_grid_dx
+real(amrex_real), dimension(:), allocatable :: ctml_gx
+real(amrex_real), dimension(:), allocatable :: ctml_gy
+real(amrex_real), dimension(:), allocatable :: ctml_gz
+integer, dimension(3) :: ctml_ngrid_nodes
+real(amrex_real), dimension(3) :: ctml_min_grid_dx
 
-INTEGER_T, dimension(:,:), allocatable :: ctml_n_active_nodes
-INTEGER_T, dimension(:), allocatable :: ilo_active,ihi_active
-INTEGER_T, dimension(:), allocatable :: jlo_active,jhi_active
-INTEGER_T, dimension(:), allocatable :: klo_active,khi_active
-INTEGER_T, dimension(:), allocatable :: ilo_elem,ihi_elem
-INTEGER_T, dimension(:), allocatable :: jlo_elem,jhi_elem
-INTEGER_T, dimension(:), allocatable :: klo_elem,khi_elem
-INTEGER_T :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
+integer, dimension(:,:), allocatable :: ctml_n_active_nodes
+integer, dimension(:), allocatable :: ilo_active,ihi_active
+integer, dimension(:), allocatable :: jlo_active,jhi_active
+integer, dimension(:), allocatable :: klo_active,khi_active
+integer, dimension(:), allocatable :: ilo_elem,ihi_elem
+integer, dimension(:), allocatable :: jlo_elem,jhi_elem
+integer, dimension(:), allocatable :: klo_elem,khi_elem
+integer :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
 type(FSI_container_type) :: ctml_FSI_container
 ! nsolid,i,j,k,dir
-REAL_T, dimension(:,:,:,:,:), allocatable :: ctml_frc
-REAL_T, dimension(:,:,:,:,:), allocatable :: ctml_frc_smooth
+real(amrex_real), dimension(:,:,:,:,:), allocatable :: ctml_frc
+real(amrex_real), dimension(:,:,:,:,:), allocatable :: ctml_frc_smooth
 
 contains
 
@@ -238,13 +238,13 @@ subroutine initData_FSI( &
 IMPLICIT NONE
 
 type(FSI_container_type), INTENT(inout) :: dest_FSI
-INTEGER_T, INTENT(in) :: CTML_num_solids_init
-INTEGER_T, INTENT(in) :: max_num_nodes_init(3)
-INTEGER_T, INTENT(in) :: max_num_elements_init
-INTEGER_T, INTENT(in) :: FSI_num_scalars_init
-INTEGER_T :: dir
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: i,ii,jj,kk
+integer, INTENT(in) :: CTML_num_solids_init
+integer, INTENT(in) :: max_num_nodes_init(3)
+integer, INTENT(in) :: max_num_elements_init
+integer, INTENT(in) :: FSI_num_scalars_init
+integer :: dir
+integer :: ilo,ihi,jlo,jhi,klo,khi
+integer :: i,ii,jj,kk
 
 if (max_num_nodes_init(1).gt.0) then
  ! do nothing
@@ -378,23 +378,23 @@ subroutine FSI_flatten( &
   source_FSI)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: ncomp_flatten
-REAL_T, INTENT(out) :: dest_FSI_flatten(ncomp_flatten)
+integer, INTENT(in) :: ncomp_flatten
+real(amrex_real), INTENT(out) :: dest_FSI_flatten(ncomp_flatten)
 type(FSI_container_type), INTENT(in) :: source_FSI
-INTEGER_T :: local_num_solids
-INTEGER_T :: local_num_scalars
-INTEGER_T :: local_num_nodes(3)
-INTEGER_T :: local_num_elements
+integer :: local_num_solids
+integer :: local_num_scalars
+integer :: local_num_nodes(3)
+integer :: local_num_elements
 
-INTEGER_T :: local_structured_flag
-INTEGER_T :: local_structure_dim
-INTEGER_T :: local_structure_topology
-INTEGER_T :: local_ngrow_node
+integer :: local_structured_flag
+integer :: local_structure_dim
+integer :: local_structure_topology
+integer :: local_ngrow_node
 
-INTEGER_T :: local_num_nodes_total_grow
-INTEGER_T :: i,i_flat,dir
-INTEGER_T :: ii,jj,kk
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+integer :: local_num_nodes_total_grow
+integer :: i,i_flat,dir
+integer :: ii,jj,kk
+integer :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=source_FSI%CTML_num_solids
 local_num_scalars=source_FSI%FSI_num_scalars
@@ -591,23 +591,23 @@ subroutine FSI_unflatten( &
   dest_FSI)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: ncomp_flatten
-REAL_T, INTENT(in) :: source_FSI_flatten(ncomp_flatten)
+integer, INTENT(in) :: ncomp_flatten
+real(amrex_real), INTENT(in) :: source_FSI_flatten(ncomp_flatten)
 type(FSI_container_type), INTENT(out) :: dest_FSI
-INTEGER_T :: local_num_solids
-INTEGER_T :: local_num_scalars
-INTEGER_T :: local_num_nodes(3)
-INTEGER_T :: local_num_nodes_total_grow
-INTEGER_T :: local_num_elements
+integer :: local_num_solids
+integer :: local_num_scalars
+integer :: local_num_nodes(3)
+integer :: local_num_nodes_total_grow
+integer :: local_num_elements
 
-INTEGER_T :: local_structured_flag
-INTEGER_T :: local_structure_dim
-INTEGER_T :: local_structure_topology
-INTEGER_T :: local_ngrow_node
+integer :: local_structured_flag
+integer :: local_structure_dim
+integer :: local_structure_topology
+integer :: local_ngrow_node
 
-INTEGER_T :: i,i_flat,dir
-INTEGER_T :: ii,jj,kk
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+integer :: i,i_flat,dir
+integer :: ii,jj,kk
+integer :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=NINT(source_FSI_flatten(FSIcontain_num_solids+1))
 local_num_scalars=NINT(source_FSI_flatten(FSIcontain_num_scalars+1))
@@ -814,20 +814,20 @@ IMPLICIT NONE
 type(FSI_container_type), INTENT(out) :: dest_FSI
 type(FSI_container_type), INTENT(in) :: source_FSI
 
-INTEGER_T :: local_num_solids
-INTEGER_T :: local_num_scalars
-INTEGER_T :: local_num_nodes(3)
-INTEGER_T :: local_num_nodes_total_grow
-INTEGER_T :: local_num_elements
+integer :: local_num_solids
+integer :: local_num_scalars
+integer :: local_num_nodes(3)
+integer :: local_num_nodes_total_grow
+integer :: local_num_elements
 
-INTEGER_T :: local_structured_flag
-INTEGER_T :: local_structure_dim
-INTEGER_T :: local_structure_topology
-INTEGER_T :: local_ngrow_node
+integer :: local_structured_flag
+integer :: local_structure_dim
+integer :: local_structure_topology
+integer :: local_ngrow_node
 
-INTEGER_T :: i,dir
-INTEGER_T :: ii,jj,kk
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+integer :: i,dir
+integer :: ii,jj,kk
+integer :: ilo,ihi,jlo,jhi,klo,khi
 
 local_num_solids=source_FSI%CTML_num_solids
 dest_FSI%CTML_num_solids=local_num_solids
@@ -1012,7 +1012,7 @@ end subroutine deleteData_FSI
 subroutine init2_FSI(part_id)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
+integer, INTENT(in) :: part_id
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -1032,16 +1032,16 @@ end subroutine init2_FSI
 subroutine init3_FSI(part_id,ifirst,do_2nd_part,ioproc,isout)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: ifirst
-INTEGER_T, INTENT(in) :: do_2nd_part
-INTEGER_T, INTENT(in) :: ioproc
-INTEGER_T, INTENT(in) :: isout
-INTEGER_T inode,dir,it
-REAL_T x,y,z,z0,z90,t,dt,t1,t2,inflowvel
-REAL_T YK,ZK,lift0,lift90
-REAL_T, dimension(3) :: displ1,displ2
-REAL_T dilated_time
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: ifirst
+integer, INTENT(in) :: do_2nd_part
+integer, INTENT(in) :: ioproc
+integer, INTENT(in) :: isout
+integer inode,dir,it
+real(amrex_real) x,y,z,z0,z90,t,dt,t1,t2,inflowvel
+real(amrex_real) YK,ZK,lift0,lift90
+real(amrex_real), dimension(3) :: displ1,displ2
+real(amrex_real) dilated_time
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -1276,9 +1276,9 @@ end subroutine init3_FSI
 
 subroutine init3_FSI_mesh_type(FSI_mesh_type,ifirst)
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: ifirst
-INTEGER_T :: inode
-INTEGER_T :: dir
+integer, INTENT(in) :: ifirst
+integer :: inode
+integer :: dir
 
  if (ifirst.eq.1) then
   allocate(FSI_mesh_type%Node(3,FSI_mesh_type%NumNodes))
@@ -1321,8 +1321,8 @@ end subroutine init3_FSI_mesh_type
 
 subroutine init2_FSI_mesh_type(FSI_mesh_type)
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
-INTEGER_T :: inode
-INTEGER_T :: dir
+integer :: inode
+integer :: dir
 
  do inode=1,FSI_mesh_type%NumNodes
   do dir=1,3
@@ -1346,9 +1346,9 @@ end subroutine init2_FSI_mesh_type
 
 subroutine init_FSI_mesh_type(FSI_mesh_type,allocate_intelem)
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: allocate_intelem
-INTEGER_T :: inode
-INTEGER_T :: dir
+integer, INTENT(in) :: allocate_intelem
+integer :: inode
+integer :: dir
 
  !(1,iface)=nodes per element (2,iface)=part num 
  !(DOUBLYCOMP,iface)=doubly wet flag
@@ -1415,8 +1415,8 @@ end subroutine init_FSI_mesh_type
 subroutine init_FSI(part_id,allocate_intelem)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: allocate_intelem
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: allocate_intelem
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -1438,13 +1438,13 @@ subroutine xdist_project(x1,x2, &
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
-REAL_T, dimension(3),INTENT(in) :: x1,x2
-REAL_T, INTENT(out) :: dist_project
-REAL_T, INTENT(out) :: dist_actual
-INTEGER_T sdim_local
-INTEGER_T dir
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
+real(amrex_real), dimension(3),INTENT(in) :: x1,x2
+real(amrex_real), INTENT(out) :: dist_project
+real(amrex_real), INTENT(out) :: dist_actual
+integer sdim_local
+integer dir
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid in xdist_project"
@@ -1488,10 +1488,10 @@ end subroutine xdist_project
 subroutine xdistmin(x1,x2,dist)
 IMPLICIT NONE
 
-REAL_T, dimension(3),INTENT(in) :: x1,x2
-REAL_T, INTENT(out) :: dist
-REAL_T, dimension(3) :: diff
-INTEGER_T :: dir
+real(amrex_real), dimension(3),INTENT(in) :: x1,x2
+real(amrex_real), INTENT(out) :: dist
+real(amrex_real), dimension(3) :: diff
+integer :: dir
 
  do dir=1,3
   diff(dir)=abs(x2(dir)-x1(dir))
@@ -1509,13 +1509,13 @@ end subroutine xdistmin
 
 subroutine compare_core(nodej,nodejp1,coord_scale,compare_flag,ncore)
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: ncore
-INTEGER_T, INTENT(out) :: compare_flag
-REAL_T, INTENT(in) :: coord_scale
-REAL_T, INTENT(in) :: nodej(ncore)
-REAL_T, INTENT(in) :: nodejp1(ncore)
-REAL_T :: mag
-INTEGER_T :: dir
+integer, INTENT(in) :: ncore
+integer, INTENT(out) :: compare_flag
+real(amrex_real), INTENT(in) :: coord_scale
+real(amrex_real), INTENT(in) :: nodej(ncore)
+real(amrex_real), INTENT(in) :: nodejp1(ncore)
+real(amrex_real) :: mag
+integer :: dir
 
  if (coord_scale.gt.zero) then
   ! do nothing
@@ -1566,33 +1566,33 @@ end subroutine compare_core
 subroutine compare_edge(edgej,edgejp1,coord_scale,compare_flag,overlap_size)
 use global_utility_module
 IMPLICIT NONE
-INTEGER_T, INTENT(out) :: compare_flag
-REAL_T, INTENT(out) :: overlap_size
-REAL_T, INTENT(in) :: coord_scale
-REAL_T, INTENT(in) :: edgej(6)
-REAL_T, INTENT(in) :: edgejp1(6)
-REAL_T :: overlap_start,overlap_end
-REAL_T :: mag
-REAL_T :: map_mag
-REAL_T :: mag_offline
-REAL_T :: edgej_mag
-REAL_T :: edgejp1_mag
-REAL_T :: edgej_center(3)
-REAL_T :: edgejp1_center(3)
-INTEGER_T :: mincomp
-INTEGER_T :: maxcomp
-INTEGER_T :: dir
-INTEGER_T :: imat,jmat
-REAL_T :: mapx1(3)
-REAL_T :: vec1(3)
-REAL_T :: vec2(3)
-REAL_T :: vec3(3)
-REAL_T :: x1test(3)
-REAL_T :: x2test(3)
-REAL_T :: x1test_map(3)
-REAL_T :: x2test_map(3)
-REAL_T :: A(3,3)
-REAL_T :: AINV(3,3)
+integer, INTENT(out) :: compare_flag
+real(amrex_real), INTENT(out) :: overlap_size
+real(amrex_real), INTENT(in) :: coord_scale
+real(amrex_real), INTENT(in) :: edgej(6)
+real(amrex_real), INTENT(in) :: edgejp1(6)
+real(amrex_real) :: overlap_start,overlap_end
+real(amrex_real) :: mag
+real(amrex_real) :: map_mag
+real(amrex_real) :: mag_offline
+real(amrex_real) :: edgej_mag
+real(amrex_real) :: edgejp1_mag
+real(amrex_real) :: edgej_center(3)
+real(amrex_real) :: edgejp1_center(3)
+integer :: mincomp
+integer :: maxcomp
+integer :: dir
+integer :: imat,jmat
+real(amrex_real) :: mapx1(3)
+real(amrex_real) :: vec1(3)
+real(amrex_real) :: vec2(3)
+real(amrex_real) :: vec3(3)
+real(amrex_real) :: x1test(3)
+real(amrex_real) :: x2test(3)
+real(amrex_real) :: x1test_map(3)
+real(amrex_real) :: x2test_map(3)
+real(amrex_real) :: A(3,3)
+real(amrex_real) :: AINV(3,3)
 
  if (coord_scale.gt.zero) then
   ! do nothing
@@ -1807,14 +1807,14 @@ subroutine compare_nodes(FSI_mesh_type, &
                 coord_scale,compare_flag)
 IMPLICIT NONE
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, allocatable, INTENT(in) :: sorted_node_list(:)
-REAL_T, INTENT(in) :: coord_scale
-INTEGER_T, INTENT(in) :: jnode
-INTEGER_T, INTENT(in) :: jnodep1
-INTEGER_T, INTENT(out) :: compare_flag
-REAL_T :: nodej(3)
-REAL_T :: nodejp1(3)
-INTEGER_T :: dir
+integer, allocatable, INTENT(in) :: sorted_node_list(:)
+real(amrex_real), INTENT(in) :: coord_scale
+integer, INTENT(in) :: jnode
+integer, INTENT(in) :: jnodep1
+integer, INTENT(out) :: compare_flag
+real(amrex_real) :: nodej(3)
+real(amrex_real) :: nodejp1(3)
+integer :: dir
 
  if (coord_scale.gt.zero) then
   ! do nothing
@@ -1833,21 +1833,21 @@ end subroutine compare_nodes
 
 subroutine tecplot_normals(FSI_mesh_type,part_id,max_part_id,view_refined)
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
-INTEGER_T, INTENT(in) :: view_refined
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
+integer, INTENT(in) :: view_refined
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
 
 character*2 partstr
 character*21 auxfilename21
-INTEGER_T :: stat
-INTEGER_T :: nodes,cells
-INTEGER_T :: dir
-INTEGER_T :: i
-INTEGER_T :: node_select
-REAL_T :: xnode(3)
-REAL_T :: nnode(3)
-INTEGER_T :: inode(3)
+integer :: stat
+integer :: nodes,cells
+integer :: dir
+integer :: i
+integer :: node_select
+real(amrex_real) :: xnode(3)
+real(amrex_real) :: nnode(3)
+integer :: inode(3)
 
  if (tecplot_post_process.eq.1) then
   write(partstr,'(I2)') part_id
@@ -1971,11 +1971,11 @@ subroutine TopDownMergeSort(FSI_mesh_type,coord_scale,A,B,n, &
       sort_nodes_flag)
 IMPLICIT NONE
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-REAL_T, INTENT(in) :: coord_scale
-INTEGER_T, INTENT(in) :: sort_nodes_flag
-INTEGER_T, INTENT(in) :: n
-INTEGER_T, allocatable, INTENT(inout) :: A(:)
-INTEGER_T, allocatable, INTENT(inout) :: B(:)
+real(amrex_real), INTENT(in) :: coord_scale
+integer, INTENT(in) :: sort_nodes_flag
+integer, INTENT(in) :: n
+integer, allocatable, INTENT(inout) :: A(:)
+integer, allocatable, INTENT(inout) :: B(:)
 
  print *,"in TopDownMergeSort: n,sort_nodes_flag=",n,sort_nodes_flag
 
@@ -1989,13 +1989,13 @@ recursive subroutine TopDownSplitMerge(FSI_mesh_type,coord_scale, &
  B,iBegin,iEnd,A,sort_nodes_flag)
 IMPLICIT NONE
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-REAL_T, INTENT(in) :: coord_scale
-INTEGER_T, INTENT(in) :: sort_nodes_flag
-INTEGER_T, INTENT(in) :: iBegin
-INTEGER_T, INTENT(in) :: iEnd
-INTEGER_T, allocatable, INTENT(inout) :: A(:)
-INTEGER_T, allocatable, INTENT(inout) :: B(:)
-INTEGER_T :: iMiddle
+real(amrex_real), INTENT(in) :: coord_scale
+integer, INTENT(in) :: sort_nodes_flag
+integer, INTENT(in) :: iBegin
+integer, INTENT(in) :: iEnd
+integer, allocatable, INTENT(inout) :: A(:)
+integer, allocatable, INTENT(inout) :: B(:)
+integer :: iMiddle
 
  if (iEnd-iBegin.le.1) then
   ! do nothing
@@ -2016,20 +2016,20 @@ subroutine TopDownMerge(FSI_mesh_type,coord_scale, &
  A,iBegin,iMiddle,iEnd,B,sort_nodes_flag)
 IMPLICIT NONE
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-REAL_T, INTENT(in) :: coord_scale
-INTEGER_T, INTENT(in) :: sort_nodes_flag
-INTEGER_T, INTENT(in) :: iBegin
-INTEGER_T, INTENT(in) :: iMiddle
-INTEGER_T, INTENT(in) :: iEnd
-INTEGER_T, allocatable, INTENT(inout) :: A(:)
-INTEGER_T, allocatable, INTENT(inout) :: B(:)
-INTEGER_T :: i,j,k
-INTEGER_T :: compare_flag
-INTEGER_T :: dir
-REAL_T :: edgej(6)
-REAL_T :: edgejp1(6)
-REAL_T :: overlap_size
-INTEGER_T :: ielem,ielem_opp
+real(amrex_real), INTENT(in) :: coord_scale
+integer, INTENT(in) :: sort_nodes_flag
+integer, INTENT(in) :: iBegin
+integer, INTENT(in) :: iMiddle
+integer, INTENT(in) :: iEnd
+integer, allocatable, INTENT(inout) :: A(:)
+integer, allocatable, INTENT(inout) :: B(:)
+integer :: i,j,k
+integer :: compare_flag
+integer :: dir
+real(amrex_real) :: edgej(6)
+real(amrex_real) :: edgejp1(6)
+real(amrex_real) :: overlap_size
+integer :: ielem,ielem_opp
 
  i=iBegin
  j=iMiddle
@@ -2100,12 +2100,12 @@ subroutine CopyArray(FSI_mesh_type,coord_scale, &
  A,iBegin,iEnd,B)
 IMPLICIT NONE
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-REAL_T, INTENT(in) :: coord_scale
-INTEGER_T, INTENT(in) :: iBegin
-INTEGER_T, INTENT(in) :: iEnd
-INTEGER_T, allocatable, INTENT(inout) :: A(:)
-INTEGER_T, allocatable, INTENT(inout) :: B(:)
-INTEGER_T :: k
+real(amrex_real), INTENT(in) :: coord_scale
+integer, INTENT(in) :: iBegin
+integer, INTENT(in) :: iEnd
+integer, allocatable, INTENT(inout) :: A(:)
+integer, allocatable, INTENT(inout) :: B(:)
+integer :: k
 
  do k=iBegin,iEnd-1
   B(k+1)=A(k+1)
@@ -2115,30 +2115,30 @@ end subroutine CopyArray
 
 subroutine remove_duplicate_nodes(FSI_mesh_type,part_id,max_part_id)
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
-INTEGER_T, allocatable :: sorted_node_list(:)
-INTEGER_T, allocatable :: B_list(:)
-INTEGER_T, allocatable :: alternate_node_list(:)
-INTEGER_T, allocatable :: new_node_list(:)
-INTEGER_T, allocatable :: old_node_list(:)
-REAL_T, allocatable :: NodeFINE_local(:,:)
-REAL_T, allocatable :: NodeVelFINE_local(:,:)
-REAL_T, allocatable :: NodeForceFINE_local(:,:)
-REAL_T, allocatable :: NodeTempFINE_local(:)
-INTEGER_T :: inode,jnode,knode
-INTEGER_T :: ilocal
-INTEGER_T :: ielem
-INTEGER_T :: nodes_per_elem
-INTEGER_T :: compare_flag
-INTEGER_T :: sort_nodes_flag
-REAL_T :: min_coord
-REAL_T :: max_coord
-REAL_T :: coord_scale
-REAL_T :: test_coord
-INTEGER_T :: dir
-INTEGER_T :: num_nodes_local 
+integer, allocatable :: sorted_node_list(:)
+integer, allocatable :: B_list(:)
+integer, allocatable :: alternate_node_list(:)
+integer, allocatable :: new_node_list(:)
+integer, allocatable :: old_node_list(:)
+real(amrex_real), allocatable :: NodeFINE_local(:,:)
+real(amrex_real), allocatable :: NodeVelFINE_local(:,:)
+real(amrex_real), allocatable :: NodeForceFINE_local(:,:)
+real(amrex_real), allocatable :: NodeTempFINE_local(:)
+integer :: inode,jnode,knode
+integer :: ilocal
+integer :: ielem
+integer :: nodes_per_elem
+integer :: compare_flag
+integer :: sort_nodes_flag
+real(amrex_real) :: min_coord
+real(amrex_real) :: max_coord
+real(amrex_real) :: coord_scale
+real(amrex_real) :: test_coord
+integer :: dir
+integer :: num_nodes_local 
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -2351,16 +2351,16 @@ end subroutine remove_duplicate_nodes
 subroutine print_edge( &
  FSI_mesh_type,edit_refined_data,ielem,inode,edge_data)
 IMPLICIT NONE
-INTEGER_T, INTENT(in) :: edit_refined_data
+integer, INTENT(in) :: edit_refined_data
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: ielem
-INTEGER_T, INTENT(in) :: inode
-REAL_T, INTENT(out) :: edge_data(6)
-INTEGER_T :: inodep1
-INTEGER_T :: local_nodes_per_elem
-INTEGER_T :: dir
-REAL_T :: x1(3)
-REAL_T :: x2(3)
+integer, INTENT(in) :: ielem
+integer, INTENT(in) :: inode
+real(amrex_real), INTENT(out) :: edge_data(6)
+integer :: inodep1
+integer :: local_nodes_per_elem
+integer :: dir
+real(amrex_real) :: x1(3)
+real(amrex_real) :: x2(3)
 
  inodep1=inode+1
  if (edit_refined_data.eq.0) then
@@ -2404,50 +2404,50 @@ subroutine init_EdgeNormal( &
    edit_refined_data, &
    generate_time)
 IMPLICIT NONE
-REAL_T, INTENT(in) :: generate_time
-INTEGER_T, INTENT(in) :: edit_refined_data
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
+real(amrex_real), INTENT(in) :: generate_time
+integer, INTENT(in) :: edit_refined_data
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: ioproc,isout
-INTEGER_T, allocatable :: sorted_edge_list(:)
-INTEGER_T, allocatable :: B_list(:)
-INTEGER_T, allocatable :: edge_inode(:)
-INTEGER_T :: sort_nodes_flag
-INTEGER_T :: compare_flag
-REAL_T :: min_coord
-REAL_T :: max_coord
-REAL_T :: coord_scale
-REAL_T :: test_coord
-REAL_T, allocatable :: xnode(:,:)
-REAL_T :: normal(3)
-REAL_T :: normal_opp(3)
-REAL_T :: local_normal(3)
-REAL_T :: mag
-REAL_T :: overlap_size
-INTEGER_T :: dir
-INTEGER_T :: doubly_flag
-INTEGER_T :: edge_id
-INTEGER_T :: old_edge_id
-INTEGER_T :: old_edge_id_opp
-INTEGER_T :: old_edge_id_node
-INTEGER_T :: old_edge_id_node_opp
-INTEGER_T :: iedge
-INTEGER_T :: jedge
-INTEGER_T :: ielem
-INTEGER_T :: ielem_opp
-INTEGER_T :: inode
-INTEGER_T :: inode_opp
-INTEGER_T :: inodep1
-INTEGER_T :: local_nodes_per_elem
-INTEGER_T :: nodes_per_elem
-INTEGER_T :: nelems
-INTEGER_T :: num_equal
-REAL_T :: edgej(6)
-REAL_T :: edgejp1(6)
-REAL_T :: old_edge_data(6)
-REAL_T :: cur_edge_data(6)
-REAL_T :: opp_edge_data(6)
+integer, INTENT(in) :: ioproc,isout
+integer, allocatable :: sorted_edge_list(:)
+integer, allocatable :: B_list(:)
+integer, allocatable :: edge_inode(:)
+integer :: sort_nodes_flag
+integer :: compare_flag
+real(amrex_real) :: min_coord
+real(amrex_real) :: max_coord
+real(amrex_real) :: coord_scale
+real(amrex_real) :: test_coord
+real(amrex_real), allocatable :: xnode(:,:)
+real(amrex_real) :: normal(3)
+real(amrex_real) :: normal_opp(3)
+real(amrex_real) :: local_normal(3)
+real(amrex_real) :: mag
+real(amrex_real) :: overlap_size
+integer :: dir
+integer :: doubly_flag
+integer :: edge_id
+integer :: old_edge_id
+integer :: old_edge_id_opp
+integer :: old_edge_id_node
+integer :: old_edge_id_node_opp
+integer :: iedge
+integer :: jedge
+integer :: ielem
+integer :: ielem_opp
+integer :: inode
+integer :: inode_opp
+integer :: inodep1
+integer :: local_nodes_per_elem
+integer :: nodes_per_elem
+integer :: nelems
+integer :: num_equal
+real(amrex_real) :: edgej(6)
+real(amrex_real) :: edgejp1(6)
+real(amrex_real) :: old_edge_data(6)
+real(amrex_real) :: cur_edge_data(6)
+real(amrex_real) :: opp_edge_data(6)
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -2966,47 +2966,47 @@ subroutine post_process_nodes_elements(initflag, &
   ioproc,isout,h_small)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
 type(mesh_type), INTENT(inout) :: FSI_mesh_type
 
-REAL_T, INTENT(in) :: problo(3),probhi(3)
-INTEGER_T, INTENT(in) :: initflag
-INTEGER_T, INTENT(in) :: ioproc,isout
-REAL_T, INTENT(in) :: h_small
-INTEGER_T :: edit_refined_data
-INTEGER_T :: ielem,nodes_per_elem,dir
-INTEGER_T :: ilev_lag
-INTEGER_T :: inode_list
-INTEGER_T :: inode_elem
-INTEGER_T :: inode_elem_p1
-INTEGER_T :: new_NumIntElems
-REAL_T :: generate_time
-REAL_T, dimension(3) :: x1,x2,x3
-REAL_T, dimension(3) :: vel1,vel2,vel3
-REAL_T, dimension(NCOMP_FORCE_STRESS) :: force1,force2,force3,forcesplit
-REAL_T, dimension(3) :: xsplit
-REAL_T, dimension(3) :: velsplit
-REAL_T :: biggest_h
-REAL_T :: smallest_h
-INTEGER_T :: first_measure
-REAL_T :: temp_h
-REAL_T :: d12_2D,d23_2D,d13_2D
-REAL_T :: d12_3D,d23_3D,d13_3D
-REAL_T :: temp1,temp2,temp3
-REAL_T :: tempsplit
-INTEGER_T :: iter
-REAL_T, dimension(3) :: normal
-INTEGER_T :: ilevel
-INTEGER_T :: ilevel_current
-INTEGER_T :: nsplit,esplit,isub,normal_cnt,base_ielem
-INTEGER_T :: node1,node2,node3
-INTEGER_T :: n_lag_levels
-INTEGER_T :: save_n_elems,save_n_nodes
-INTEGER_T :: local_refine_factor
-REAL_T    :: mag
-INTEGER_T :: view_refined
-INTEGER_T, allocatable :: DoublyWettedNode(:)
+real(amrex_real), INTENT(in) :: problo(3),probhi(3)
+integer, INTENT(in) :: initflag
+integer, INTENT(in) :: ioproc,isout
+real(amrex_real), INTENT(in) :: h_small
+integer :: edit_refined_data
+integer :: ielem,nodes_per_elem,dir
+integer :: ilev_lag
+integer :: inode_list
+integer :: inode_elem
+integer :: inode_elem_p1
+integer :: new_NumIntElems
+real(amrex_real) :: generate_time
+real(amrex_real), dimension(3) :: x1,x2,x3
+real(amrex_real), dimension(3) :: vel1,vel2,vel3
+real(amrex_real), dimension(NCOMP_FORCE_STRESS) :: force1,force2,force3,forcesplit
+real(amrex_real), dimension(3) :: xsplit
+real(amrex_real), dimension(3) :: velsplit
+real(amrex_real) :: biggest_h
+real(amrex_real) :: smallest_h
+integer :: first_measure
+real(amrex_real) :: temp_h
+real(amrex_real) :: d12_2D,d23_2D,d13_2D
+real(amrex_real) :: d12_3D,d23_3D,d13_3D
+real(amrex_real) :: temp1,temp2,temp3
+real(amrex_real) :: tempsplit
+integer :: iter
+real(amrex_real), dimension(3) :: normal
+integer :: ilevel
+integer :: ilevel_current
+integer :: nsplit,esplit,isub,normal_cnt,base_ielem
+integer :: node1,node2,node3
+integer :: n_lag_levels
+integer :: save_n_elems,save_n_nodes
+integer :: local_refine_factor
+real(amrex_real)    :: mag
+integer :: view_refined
+integer, allocatable :: DoublyWettedNode(:)
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -4133,7 +4133,7 @@ end subroutine post_process_nodes_elements
 subroutine scihandoffset(ofs,time)
 IMPLICIT NONE
 
-REAL_T :: ofs,time
+real(amrex_real) :: ofs,time
 
  ofs=0.0
  if (time.le.0.4) then
@@ -4157,25 +4157,25 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: isout
-INTEGER_T :: inode
-INTEGER_T, INTENT(in) :: ioproc
-REAL_T, dimension(3) :: maxnode,minnode
-REAL_T, dimension(3) :: xval,xval1,xval2
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-INTEGER_T :: dir
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: isout
+integer :: inode
+integer, INTENT(in) :: ioproc
+real(amrex_real), dimension(3) :: maxnode,minnode
+real(amrex_real), dimension(3) :: xval,xval1,xval2
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+integer :: dir
 
-REAL_T, dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
-REAL_T, dimension(3) :: vel_local
-REAL_T, dimension(NCOMP_FORCE_STRESS) :: force_local
-REAL_T :: mass_local
-REAL_T :: radradblob1,radradblob2
-INTEGER_T :: stand_alone_flag
-INTEGER_T :: orig_nodes
-INTEGER_T :: ctml_part_id
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: ii,jj,kk
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
+real(amrex_real), dimension(3) :: vel_local
+real(amrex_real), dimension(NCOMP_FORCE_STRESS) :: force_local
+real(amrex_real) :: mass_local
+real(amrex_real) :: radradblob1,radradblob2
+integer :: stand_alone_flag
+integer :: orig_nodes
+integer :: ctml_part_id
+integer :: ilo,ihi,jlo,jhi,klo,khi
+integer :: ii,jj,kk
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
@@ -4445,24 +4445,24 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: sdim
-INTEGER_T, INTENT(in) :: ifirst
-INTEGER_T, INTENT(in) :: isout
-INTEGER_T :: iface
-INTEGER_T, INTENT(in) :: ioproc
-REAL_T, INTENT(in) :: curtime,dt
-INTEGER_T :: dir
-INTEGER_T, INTENT(in) :: istep
-INTEGER_T, INTENT(in) :: istop
-INTEGER_T :: ctml_part_id
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: ii,jj,kk
-INTEGER_T :: orig_nodes
-INTEGER_T :: orig_elements
-INTEGER_T :: local_nodes
-INTEGER_T :: local_elements
-REAL_T :: test_mass
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: sdim
+integer, INTENT(in) :: ifirst
+integer, INTENT(in) :: isout
+integer :: iface
+integer, INTENT(in) :: ioproc
+real(amrex_real), INTENT(in) :: curtime,dt
+integer :: dir
+integer, INTENT(in) :: istep
+integer, INTENT(in) :: istop
+integer :: ctml_part_id
+integer :: ilo,ihi,jlo,jhi,klo,khi
+integer :: ii,jj,kk
+integer :: orig_nodes
+integer :: orig_elements
+integer :: local_nodes
+integer :: local_elements
+real(amrex_real) :: test_mass
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id out of range, part_id, TOTAL_NPARTS:",part_id,TOTAL_NPARTS
@@ -4699,17 +4699,17 @@ subroutine initinjector(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: sdim,ifirst,isout
-INTEGER_T :: inode,iface,ioproc
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1,xval2
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-INTEGER_T :: dir,istep,istop
+integer :: part_id
+integer :: sdim,ifirst,isout
+integer :: inode,iface,ioproc
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xval1,xval2
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+integer :: dir,istep,istop
 character(40) :: dwave
 
-REAL_T, dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
-REAL_T :: radradblob1,radradblob2
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
+real(amrex_real) :: radradblob1,radradblob2
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -4992,24 +4992,24 @@ subroutine initflapping(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
   part_id,isout)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T :: j1,sdim,ifirst,isout
-INTEGER_T :: inode,iface,ioproc
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
-REAL_T, dimension(3) :: xvalbefore
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-INTEGER_T :: dir,istep,istop
+integer :: part_id
+integer :: j1,sdim,ifirst,isout
+integer :: inode,iface,ioproc
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xval1
+real(amrex_real), dimension(3) :: xvalbefore
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+integer :: dir,istep,istop
 character(40) :: dwave
 
-REAL_T, dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
-REAL_T :: radradblob1,radradblob2
-INTEGER_T tempelem1
-INTEGER_T tempelem2
-INTEGER_T tempelem3
-INTEGER_T tempelem4
-INTEGER_T numquads,quad_counter
-INTEGER_T localElem(4)
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1,xxblob2,newxxblob2
+real(amrex_real) :: radradblob1,radradblob2
+integer tempelem1
+integer tempelem2
+integer tempelem3
+integer tempelem4
+integer numquads,quad_counter
+integer localElem(4)
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -5234,30 +5234,30 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: sdim,ifirst,isout
-INTEGER_T, INTENT(in) :: ioproc
-REAL_T, INTENT(in) :: curtime,dt
-INTEGER_T, INTENT(in) :: istep,istop
-INTEGER_T :: inode,iface
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-INTEGER_T :: dir
-INTEGER_T :: file_format
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: sdim,ifirst,isout
+integer, INTENT(in) :: ioproc
+real(amrex_real), INTENT(in) :: curtime,dt
+integer, INTENT(in) :: istep,istop
+integer :: inode,iface
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xval1
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+integer :: dir
+integer :: file_format
 
-REAL_T, dimension(3) :: xxblob1,newxxblob1
-REAL_T :: radradblob1
-INTEGER_T localElem(3)
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1
+real(amrex_real) :: radradblob1
+integer localElem(3)
 
 character(80) :: discard
 character(80) :: points_line
-INTEGER_T :: ivtk,dummy_num_nodes_per_elem
+integer :: ivtk,dummy_num_nodes_per_elem
 
-REAL_T :: local_nodes(3,3)  ! dir,node num
-INTEGER_T :: raw_num_nodes
-INTEGER_T :: raw_num_elements
-REAL_T, allocatable :: raw_nodes(:,:)
-INTEGER_T, allocatable :: raw_elements(:,:)
+real(amrex_real) :: local_nodes(3,3)  ! dir,node num
+integer :: raw_num_nodes
+integer :: raw_num_elements
+real(amrex_real), allocatable :: raw_nodes(:,:)
+integer, allocatable :: raw_elements(:,:)
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -5471,10 +5471,10 @@ end subroutine init_from_cas
 subroutine convert_2D_to_3D_nodes_FSI(part_id,inode,stand_alone_flag)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: stand_alone_flag
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: inode
-INTEGER_T local_nodes,orig_nodes,dir
+integer, INTENT(in) :: stand_alone_flag
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: inode
+integer local_nodes,orig_nodes,dir
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -5569,11 +5569,11 @@ end subroutine convert_2D_to_3D_nodes_FSI
 subroutine convert_2D_to_3D_elements_FSI(part_id,iface)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: iface
-INTEGER_T local_nodes,orig_nodes
-INTEGER_T iflag
-INTEGER_T local_elements,orig_elements
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: iface
+integer local_nodes,orig_nodes
+integer iflag
+integer local_elements,orig_elements
 
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
@@ -5629,21 +5629,21 @@ subroutine init_gingerbread2D(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T :: sdim,ifirst,isout
-INTEGER_T :: inode,iface,ioproc
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-INTEGER_T :: dir,istep,istop
+integer, INTENT(in) :: part_id
+integer :: sdim,ifirst,isout
+integer :: inode,iface,ioproc
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xval1
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+integer :: dir,istep,istop
 
-REAL_T, dimension(3) :: xxblob1,newxxblob1
-REAL_T :: radradblob1
-INTEGER_T localElem(3)
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1
+real(amrex_real) :: radradblob1
+integer localElem(3)
 character(40) :: dwave
-INTEGER_T :: orig_nodes,local_nodes
-INTEGER_T :: orig_elements,local_elements
-INTEGER_T :: stand_alone_flag
+integer :: orig_nodes,local_nodes
+integer :: orig_elements,local_elements
+integer :: stand_alone_flag
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -5865,23 +5865,23 @@ subroutine init_helix(curtime,dt,ifirst,sdim,istop,istep,ioproc, &
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T :: sdim,ifirst,isout
-INTEGER_T :: inode,iface
-INTEGER_T :: inode_read
-INTEGER_T :: iface_read
-INTEGER_T :: ioproc
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-INTEGER_T :: dir,istep,istop
+integer, INTENT(in) :: part_id
+integer :: sdim,ifirst,isout
+integer :: inode,iface
+integer :: inode_read
+integer :: iface_read
+integer :: ioproc
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xval1
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+integer :: dir,istep,istop
 
-REAL_T, dimension(3) :: xxblob1,newxxblob1
-REAL_T :: radradblob1
-INTEGER_T localElem(3)
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1
+real(amrex_real) :: radradblob1
+integer localElem(3)
 character(40) :: dwave
-INTEGER_T :: orig_nodes,local_nodes
-INTEGER_T :: orig_elements,local_elements
+integer :: orig_nodes,local_nodes
+integer :: orig_elements,local_elements
 
   if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
    print *,"part_id invalid"
@@ -6069,20 +6069,20 @@ end subroutine init_helix
 subroutine initchannel(curtime,dt,ifirst,sdim,istop,istep)
 IMPLICIT NONE
 
-INTEGER_T :: j1,sdim,ifirst
-INTEGER_T :: inode,iface
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore,xvalbefore
-INTEGER_T :: dir,istep,istop
-INTEGER_T :: numquads,quad_counter
-INTEGER_T :: tempelem1,tempelem2,tempelem3,tempelem4
-INTEGER_T, dimension(4) :: localElem
+integer :: j1,sdim,ifirst
+integer :: inode,iface
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xval1
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore,xvalbefore
+integer :: dir,istep,istop
+integer :: numquads,quad_counter
+integer :: tempelem1,tempelem2,tempelem3,tempelem4
+integer, dimension(4) :: localElem
 character(40) :: dwave
 
-REAL_T, dimension(3) :: xxblob1,newxxblob1
-REAL_T :: radradblob1
-INTEGER_T :: local_part_id
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1
+real(amrex_real) :: radradblob1
+integer :: local_part_id
 
   local_part_id=1
 
@@ -6300,29 +6300,29 @@ end subroutine initchannel
 subroutine geominit(curtime,dt,ifirst,sdim,istop,istep)
 IMPLICIT NONE
 
-INTEGER_T :: i,j,k,i1,j1,m1,tempelem,itimecount
-INTEGER_T :: ifirst ! parameter
-INTEGER_T :: iread  ! local variable
-INTEGER_T :: sdim
-INTEGER_T :: numquads,quad_counter
-INTEGER_T, dimension(4) :: localElem
-REAL_T :: curtime,dt
-INTEGER_T, dimension(0:1000) :: itimearr
-REAL_T, dimension(0:1000) :: timearr
-REAL_T, dimension(3) :: maxnode,minnode,xval,xtemp
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-REAL_T, dimension(3) :: xvalbefore
-REAL_T, dimension(3) :: invertfactor
-REAL_T :: tper,tcrit,theta,radradblobpool
-INTEGER_T :: iper,icrit,ewave,fwave,dir,istep,istop
-INTEGER_T :: gwave
-INTEGER_T :: shift_from_zero_node
-INTEGER_T :: shift_from_zero_face
-INTEGER_T :: override_IntElemDim
+integer :: i,j,k,i1,j1,m1,tempelem,itimecount
+integer :: ifirst ! parameter
+integer :: iread  ! local variable
+integer :: sdim
+integer :: numquads,quad_counter
+integer, dimension(4) :: localElem
+real(amrex_real) :: curtime,dt
+integer, dimension(0:1000) :: itimearr
+real(amrex_real), dimension(0:1000) :: timearr
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xtemp
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+real(amrex_real), dimension(3) :: xvalbefore
+real(amrex_real), dimension(3) :: invertfactor
+real(amrex_real) :: tper,tcrit,theta,radradblobpool
+integer :: iper,icrit,ewave,fwave,dir,istep,istop
+integer :: gwave
+integer :: shift_from_zero_node
+integer :: shift_from_zero_face
+integer :: override_IntElemDim
 character(100) :: dwave,poolname
-REAL_T :: ofs
-REAL_T :: plungerfreq,plungeramp
-INTEGER_T :: local_part_id
+real(amrex_real) :: ofs
+real(amrex_real) :: plungerfreq,plungeramp
+integer :: local_part_id
 
   local_part_id=1
 
@@ -7194,23 +7194,23 @@ end subroutine geominit
 subroutine viorel_sphere_geominit(curtime,dt,ifirst,sdim,istop,istep)
 IMPLICIT NONE
 
-INTEGER_T :: ifirst
-INTEGER_T :: i,j,k,i1,j1,m1,tempelem,sdim
-INTEGER_T :: numquads,quad_counter
-INTEGER_T, dimension(4) :: localElem
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-REAL_T, dimension(3) :: xvalbefore
-REAL_T, dimension(3) :: invertfactor
+integer :: ifirst
+integer :: i,j,k,i1,j1,m1,tempelem,sdim
+integer :: numquads,quad_counter
+integer, dimension(4) :: localElem
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+real(amrex_real), dimension(3) :: xvalbefore
+real(amrex_real), dimension(3) :: invertfactor
 
-INTEGER_T :: dir,istep,istop
+integer :: dir,istep,istop
 
-INTEGER_T :: shift_from_zero_node
-INTEGER_T :: shift_from_zero_face
-INTEGER_T :: override_IntElemDim
+integer :: shift_from_zero_node
+integer :: shift_from_zero_face
+integer :: override_IntElemDim
 character(100) :: dwave
-INTEGER_T :: local_part_id
+integer :: local_part_id
 
   local_part_id=1
 
@@ -7469,22 +7469,22 @@ end subroutine viorel_sphere_geominit
 subroutine internal_inflow_geominit(curtime,dt,ifirst,sdim,istop,istep)
 IMPLICIT NONE
 
-INTEGER_T :: i,j,k,i1,j1,m1,tempelem,ifirst,sdim
-INTEGER_T :: numquads,quad_counter
-INTEGER_T, dimension(4) :: localElem
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-REAL_T, dimension(3) :: xvalbefore
-REAL_T, dimension(3) :: invertfactor
+integer :: i,j,k,i1,j1,m1,tempelem,ifirst,sdim
+integer :: numquads,quad_counter
+integer, dimension(4) :: localElem
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+real(amrex_real), dimension(3) :: xvalbefore
+real(amrex_real), dimension(3) :: invertfactor
 
-INTEGER_T :: dir,istep,istop
+integer :: dir,istep,istop
 
-INTEGER_T :: shift_from_zero_node
-INTEGER_T :: shift_from_zero_face
-INTEGER_T :: override_IntElemDim
+integer :: shift_from_zero_node
+integer :: shift_from_zero_face
+integer :: override_IntElemDim
 character(100) :: dwave
-INTEGER_T :: local_part_id
+integer :: local_part_id
 
   local_part_id=1
 
@@ -7744,17 +7744,17 @@ end subroutine internal_inflow_geominit
 subroutine gearinit(curtime,dt,ifirst,sdim,istop,istep)
 IMPLICIT NONE
 
-INTEGER_T :: i,ifirst,sdim
-INTEGER_T :: numquads
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-REAL_T, dimension(3) :: xvalbefore
-REAL_T, dimension(3) :: invertfactor
-INTEGER_T :: dir,istep,istop
+integer :: i,ifirst,sdim
+integer :: numquads
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+real(amrex_real), dimension(3) :: xvalbefore
+real(amrex_real), dimension(3) :: invertfactor
+integer :: dir,istep,istop
 character(100) :: dwave
-INTEGER_T local_ifirst
-INTEGER_T local_part_id
+integer local_ifirst
+integer local_part_id
 
   local_part_id=1
   local_ifirst=1
@@ -7873,9 +7873,9 @@ end subroutine gearinit
 subroutine timefluct(cur_time,value)
 IMPLICIT NONE
 
-  REAL_T, INTENT(in) :: cur_time
-  REAL_T, INTENT(out) :: value
-  REAL_T inittime, medtime, endtime, cur_timeW
+  real(amrex_real), INTENT(in) :: cur_time
+  real(amrex_real), INTENT(out) :: value
+  real(amrex_real) inittime, medtime, endtime, cur_timeW
 
   inittime = 0.0
   medtime = 0.2
@@ -7905,20 +7905,20 @@ subroutine whale_geominit(curtime,dt,ifirst,sdim,istop,istep, &
   CLSVOF_curtime,CLSVOF_dt)
 IMPLICIT NONE
 
-INTEGER_T :: i,ifirst,sdim
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xtemp,vtemp
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-REAL_T, dimension(3) :: xvalbefore
-REAL_T, dimension(3) :: invertfactor
-INTEGER_T :: dir,istep,istop
-INTEGER_T :: shift_from_zero_node
-INTEGER_T :: shift_from_zero_face
-INTEGER_T :: override_IntElemDim,whale_type
-REAL_T :: CLSVOF_curtime,CLSVOF_dt
-REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF
-REAL_T :: LL_DUFFY,TT_DUFFY,UU_DUFFY
-INTEGER_T :: local_part_id
+integer :: i,ifirst,sdim
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xtemp,vtemp
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+real(amrex_real), dimension(3) :: xvalbefore
+real(amrex_real), dimension(3) :: invertfactor
+integer :: dir,istep,istop
+integer :: shift_from_zero_node
+integer :: shift_from_zero_face
+integer :: override_IntElemDim,whale_type
+real(amrex_real) :: CLSVOF_curtime,CLSVOF_dt
+real(amrex_real) :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF
+real(amrex_real) :: LL_DUFFY,TT_DUFFY,UU_DUFFY
+integer :: local_part_id
 
   local_part_id=1
 
@@ -8155,16 +8155,16 @@ subroutine initpaddle(curtime,dt,sdim,istop,istep, &
   paddle_pos,paddle_vel)
 IMPLICIT NONE
 
-INTEGER_T :: i,j,k,j1,sdim
-INTEGER_T :: inode,iface
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xtemp
-INTEGER_T :: dir,istep,istop
+integer :: i,j,k,j1,sdim
+integer :: inode,iface
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xtemp
+integer :: dir,istep,istop
 character(20) :: dwave,dwave2
-REAL_T :: xx,zz
-REAL_T, INTENT(in) :: paddle_pos,paddle_vel
-INTEGER_T :: local_ifirst
-INTEGER_T :: local_part_id
+real(amrex_real) :: xx,zz
+real(amrex_real), INTENT(in) :: paddle_pos,paddle_vel
+integer :: local_ifirst
+integer :: local_part_id
 
   local_part_id=1
   local_ifirst=1
@@ -8364,16 +8364,16 @@ subroutine initship(curtime,dt,sdim,istop,istep, &
   paddle_pos,paddle_vel)
 IMPLICIT NONE
 
-INTEGER_T :: i,sdim
-INTEGER_T :: inode,iface
-REAL_T :: curtime,dt
-REAL_T, dimension(3) :: maxnode,minnode,xval,xtemp
-INTEGER_T :: dir,istep,istop
-INTEGER_T :: filler
+integer :: i,sdim
+integer :: inode,iface
+real(amrex_real) :: curtime,dt
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xtemp
+integer :: dir,istep,istop
+integer :: filler
 character(40) :: dwave
-REAL_T, INTENT(in) :: paddle_pos,paddle_vel
-INTEGER_T :: local_ifirst
-INTEGER_T :: local_part_id
+real(amrex_real), INTENT(in) :: paddle_pos,paddle_vel
+integer :: local_ifirst
+integer :: local_part_id
 
   local_part_id=1
   local_ifirst=1
@@ -8497,12 +8497,12 @@ subroutine overall_solid_advance(CLSVOF_curtime,CLSVOF_dt, &
   part_id,ioproc,isout)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: ioproc
-INTEGER_T, INTENT(in) :: isout
-REAL_T, INTENT(in) :: CLSVOF_curtime,CLSVOF_dt
-INTEGER_T :: ifirst
-REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: ioproc
+integer, INTENT(in) :: isout
+real(amrex_real), INTENT(in) :: CLSVOF_curtime,CLSVOF_dt
+integer :: ifirst
+real(amrex_real) :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -8602,15 +8602,15 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: ioproc
-INTEGER_T, INTENT(in) :: isout
-REAL_T, INTENT(in) :: CLSVOFtime
-INTEGER_T :: ifirst
-REAL_T :: paddle_pos,paddle_vel,CLSVOF_dt
-REAL_T :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
-INTEGER_T :: ctml_part_id
-INTEGER_T :: fsi_part_id
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: ioproc
+integer, INTENT(in) :: isout
+real(amrex_real), INTENT(in) :: CLSVOFtime
+integer :: ifirst
+real(amrex_real) :: paddle_pos,paddle_vel,CLSVOF_dt
+real(amrex_real) :: STEPSPERIOD,LL_CLSVOF,UU_CLSVOF,TT_CLSVOF,whale_dt
+integer :: ctml_part_id
+integer :: fsi_part_id
 
  if ((ioproc.ne.1).and.(ioproc.ne.0)) then
   print *,"ioproc invalid"
@@ -8800,11 +8800,11 @@ end subroutine overall_solid_init
 subroutine advance_solid(sdim,curtime,dt,istop,istep,part_id)
 IMPLICIT NONE
 
-INTEGER_T :: sdim
-INTEGER_T :: part_id
-REAL_T :: curtime,dt
-INTEGER_T :: istop
-INTEGER_T :: i,dir,istep
+integer :: sdim
+integer :: part_id
+real(amrex_real) :: curtime,dt
+integer :: istop
+integer :: i,dir,istep
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -8911,25 +8911,25 @@ use global_utility_module
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
-INTEGER_T, INTENT(in) :: inode,elemnum
-INTEGER_T, INTENT(inout) :: inplane
-REAL_T, INTENT(in) :: time 
-REAL_T, dimension(3), INTENT(inout) :: xclosest
-REAL_T, dimension(3), INTENT(inout) :: normal_closest
-REAL_T, dimension(3), INTENT(in) :: dx
-REAL_T, dimension(3), INTENT(in) :: xc
-REAL_T, INTENT(inout) :: unsigned_mindist
-REAL_T :: curdist,mag
-INTEGER_T :: dir
-INTEGER_T :: nodes_per_elem
-REAL_T, dimension(3) :: xfoot
-REAL_T, dimension(3) :: xfoot_pert
-REAL_T, dimension(3) :: xtarget
-REAL_T, dimension(3) :: xtarget_pert
-REAL_T, dimension(3) :: ntarget
-REAL_T, dimension(3) :: velparm
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
+integer, INTENT(in) :: inode,elemnum
+integer, INTENT(inout) :: inplane
+real(amrex_real), INTENT(in) :: time 
+real(amrex_real), dimension(3), INTENT(inout) :: xclosest
+real(amrex_real), dimension(3), INTENT(inout) :: normal_closest
+real(amrex_real), dimension(3), INTENT(in) :: dx
+real(amrex_real), dimension(3), INTENT(in) :: xc
+real(amrex_real), INTENT(inout) :: unsigned_mindist
+real(amrex_real) :: curdist,mag
+integer :: dir
+integer :: nodes_per_elem
+real(amrex_real), dimension(3) :: xfoot
+real(amrex_real), dimension(3) :: xfoot_pert
+real(amrex_real), dimension(3) :: xtarget
+real(amrex_real), dimension(3) :: xtarget_pert
+real(amrex_real), dimension(3) :: ntarget
+real(amrex_real), dimension(3) :: velparm
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -9037,31 +9037,31 @@ use global_utility_module
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-REAL_T, INTENT(in) :: eul_over_lag_scale
-REAL_T :: adjusted_tol
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
-INTEGER_T, INTENT(in) :: inode
-INTEGER_T, INTENT(in) :: elemnum
-INTEGER_T, INTENT(inout) :: inplane
-REAL_T, INTENT(in) :: time 
-REAL_T, dimension(3), INTENT(inout) :: xclosest
-REAL_T, dimension(3), INTENT(inout) :: normal_closest
-REAL_T, dimension(3), INTENT(in) :: dx
-REAL_T, dimension(3), INTENT(in) :: xc
-INTEGER_T :: inodep1
-REAL_T :: local_normal
-REAL_T, dimension(2,3) :: xnode,nnode
-REAL_T, INTENT(inout) :: unsigned_mindist
-REAL_T :: mag
-INTEGER_T :: dir
-INTEGER_T :: nodes_per_elem
-REAL_T, dimension(3) :: xfoot
-REAL_T, dimension(3) :: xfoot_pert
-REAL_T, dimension(3) :: xtarget
-REAL_T, dimension(3) :: xtarget_pert
-REAL_T, dimension(3) :: ntarget
-REAL_T, dimension(3) :: velparm
+real(amrex_real), INTENT(in) :: eul_over_lag_scale
+real(amrex_real) :: adjusted_tol
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
+integer, INTENT(in) :: inode
+integer, INTENT(in) :: elemnum
+integer, INTENT(inout) :: inplane
+real(amrex_real), INTENT(in) :: time 
+real(amrex_real), dimension(3), INTENT(inout) :: xclosest
+real(amrex_real), dimension(3), INTENT(inout) :: normal_closest
+real(amrex_real), dimension(3), INTENT(in) :: dx
+real(amrex_real), dimension(3), INTENT(in) :: xc
+integer :: inodep1
+real(amrex_real) :: local_normal
+real(amrex_real), dimension(2,3) :: xnode,nnode
+real(amrex_real), INTENT(inout) :: unsigned_mindist
+real(amrex_real) :: mag
+integer :: dir
+integer :: nodes_per_elem
+real(amrex_real), dimension(3) :: xfoot
+real(amrex_real), dimension(3) :: xfoot_pert
+real(amrex_real), dimension(3) :: xtarget
+real(amrex_real), dimension(3) :: xtarget_pert
+real(amrex_real), dimension(3) :: ntarget
+real(amrex_real), dimension(3) :: velparm
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -9259,24 +9259,24 @@ use global_utility_module
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-REAL_T, INTENT(in) :: eul_over_lag_scale
-REAL_T :: adjusted_tol
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
-INTEGER_T, INTENT(in) :: elemnum
-REAL_T, INTENT(in) :: time
-REAL_T, dimension(3), INTENT(in) :: xc
-REAL_T, dimension(3), INTENT(in) :: xclosest
-REAL_T, dimension(3), INTENT(out) :: xclosest_project
-REAL_T, dimension(3), INTENT(in) :: normal
-REAL_T, dimension(3), INTENT(out) :: normal_project
-INTEGER_T, INTENT(out) :: inplane
-INTEGER_T :: dir,i
-INTEGER_T :: nodes_per_elem
-REAL_T, dimension(3) :: xfoot
-REAL_T, dimension(3) :: xtarget
-REAL_T, dimension(3) :: velparm
-REAL_T, dimension(3,3) :: xnode ! (ipoint,dir)
+real(amrex_real), INTENT(in) :: eul_over_lag_scale
+real(amrex_real) :: adjusted_tol
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
+integer, INTENT(in) :: elemnum
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), dimension(3), INTENT(in) :: xc
+real(amrex_real), dimension(3), INTENT(in) :: xclosest
+real(amrex_real), dimension(3), INTENT(out) :: xclosest_project
+real(amrex_real), dimension(3), INTENT(in) :: normal
+real(amrex_real), dimension(3), INTENT(out) :: normal_project
+integer, INTENT(out) :: inplane
+integer :: dir,i
+integer :: nodes_per_elem
+real(amrex_real), dimension(3) :: xfoot
+real(amrex_real), dimension(3) :: xtarget
+real(amrex_real), dimension(3) :: velparm
+real(amrex_real), dimension(3,3) :: xnode ! (ipoint,dir)
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -9373,22 +9373,22 @@ subroutine scinormalFINE( &
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
-INTEGER_T, INTENT(in) :: elemnum
-REAL_T, dimension(3), INTENT(out) :: normal
-REAL_T, INTENT(in) :: time
-INTEGER_T :: nodes_per_elem
-REAL_T, dimension(3,3) :: nodesave
-REAL_T, dimension(3) :: nodeavg
-REAL_T, dimension(3) :: xfoot
-REAL_T, dimension(3) :: xtarget
-REAL_T, dimension(3) :: velparm
-REAL_T, dimension(2,3) :: vec
-REAL_T :: dist
-INTEGER_T :: i
-INTEGER_T :: dir
-INTEGER_T :: local_normal_invert
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
+integer, INTENT(in) :: elemnum
+real(amrex_real), dimension(3), INTENT(out) :: normal
+real(amrex_real), INTENT(in) :: time
+integer :: nodes_per_elem
+real(amrex_real), dimension(3,3) :: nodesave
+real(amrex_real), dimension(3) :: nodeavg
+real(amrex_real), dimension(3) :: xfoot
+real(amrex_real), dimension(3) :: xtarget
+real(amrex_real), dimension(3) :: velparm
+real(amrex_real), dimension(2,3) :: vec
+real(amrex_real) :: dist
+integer :: i
+integer :: dir
+integer :: local_normal_invert
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -9527,23 +9527,23 @@ subroutine scinormal(elemnum,normal, &
     time)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: elemnum
-REAL_T, dimension(3), INTENT(out) :: normal
-REAL_T, INTENT(in) :: time
-INTEGER_T :: nodes_per_elem
-REAL_T, dimension(3,3) :: nodesave
-REAL_T, dimension(3) :: nodeavg
-REAL_T, dimension(3) :: xfoot
-REAL_T, dimension(3) :: xtarget
-REAL_T, dimension(3) :: velparm
-REAL_T, dimension(2,3) :: vec
-REAL_T :: dist
-INTEGER_T :: i
-INTEGER_T :: dir
-INTEGER_T :: local_normal_invert
+integer, INTENT(in) :: elemnum
+real(amrex_real), dimension(3), INTENT(out) :: normal
+real(amrex_real), INTENT(in) :: time
+integer :: nodes_per_elem
+real(amrex_real), dimension(3,3) :: nodesave
+real(amrex_real), dimension(3) :: nodeavg
+real(amrex_real), dimension(3) :: xfoot
+real(amrex_real), dimension(3) :: xtarget
+real(amrex_real), dimension(3) :: velparm
+real(amrex_real), dimension(2,3) :: vec
+real(amrex_real) :: dist
+integer :: i
+integer :: dir
+integer :: local_normal_invert
 
  if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
   print *,"part_id invalid"
@@ -9634,13 +9634,13 @@ end subroutine scinormal
 subroutine sciarea(elemnum,area,part_id)
 IMPLICIT NONE
 
-INTEGER_T :: part_id
-INTEGER_T, INTENT(in) :: elemnum
-REAL_T, INTENT(out) :: area
-INTEGER_T :: nodes_per_elem
-REAL_T, dimension(3,3) :: nodesave
-INTEGER_T :: i,j
-REAL_T :: aa,bb,cc
+integer :: part_id
+integer, INTENT(in) :: elemnum
+real(amrex_real), INTENT(out) :: area
+integer :: nodes_per_elem
+real(amrex_real), dimension(3,3) :: nodesave
+integer :: i,j
+real(amrex_real) :: aa,bb,cc
 
  if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
   print *,"part_id invalid"
@@ -9695,15 +9695,15 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: ioproc,isout
-INTEGER_T :: part_id
-INTEGER_T :: ctml_part_id
-INTEGER_T :: fsi_part_id
-INTEGER_T :: dir
-INTEGER_T :: num_nodes
-INTEGER_T :: inode
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: ii,jj,kk
+integer, INTENT(in) :: ioproc,isout
+integer :: part_id
+integer :: ctml_part_id
+integer :: fsi_part_id
+integer :: dir
+integer :: num_nodes
+integer :: inode
+integer :: ilo,ihi,jlo,jhi,klo,khi
+integer :: ii,jj,kk
 
  if (TOTAL_NPARTS.ge.1) then
 
@@ -9831,18 +9831,18 @@ real(kind=c_double)                    :: sync_data(n)
 end subroutine cpp_reduce_real_sum
 end interface
 
-INTEGER_T, INTENT(in) :: ioproc,isout
+integer, INTENT(in) :: ioproc,isout
 real(kind=c_double), dimension(:), allocatable :: sync_force
 real(kind=c_double), dimension(:), allocatable :: sync_RollCall
 integer(kind=c_int) :: n_sync
 
-INTEGER_T part_id
-INTEGER_T ctml_part_id
-INTEGER_T fsi_part_id
-INTEGER_T num_nodes,inode
-INTEGER_T :: dir
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: ii,jj,kk
+integer part_id
+integer ctml_part_id
+integer fsi_part_id
+integer num_nodes,inode
+integer :: dir
+integer :: ilo,ihi,jlo,jhi,klo,khi
+integer :: ii,jj,kk
 
  if (TOTAL_NPARTS.ge.1) then
 
@@ -10006,30 +10006,30 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: FSI_operation
-INTEGER_T, INTENT(in) :: iter
-INTEGER_T, INTENT(in) :: auxcomp
-INTEGER_T, INTENT(in) :: ioproc
-INTEGER_T, INTENT(in) :: aux_isout
-INTEGER_T, INTENT(inout) :: FSI_touch_flag
-INTEGER_T :: lev77_local
-INTEGER_T :: tid_local
-INTEGER_T :: tilenum_local
-INTEGER_T :: ngrow_local
-INTEGER_T :: nFSI_local
-REAL_T :: time_local
-REAL_T :: dt_local
-INTEGER_T :: xmap3D_local(3)
-REAL_T :: dx3D_local(3)
-INTEGER_T :: sdim_AMR_local
-INTEGER_T :: dir
-INTEGER_T :: LSLO(3),LSHI(3)
-INTEGER_T :: i,j,k
-REAL_T :: aux_xpos(3)
+integer, INTENT(in) :: FSI_operation
+integer, INTENT(in) :: iter
+integer, INTENT(in) :: auxcomp
+integer, INTENT(in) :: ioproc
+integer, INTENT(in) :: aux_isout
+integer, INTENT(inout) :: FSI_touch_flag
+integer :: lev77_local
+integer :: tid_local
+integer :: tilenum_local
+integer :: ngrow_local
+integer :: nFSI_local
+real(amrex_real) :: time_local
+real(amrex_real) :: dt_local
+integer :: xmap3D_local(3)
+real(amrex_real) :: dx3D_local(3)
+integer :: sdim_AMR_local
+integer :: dir
+integer :: LSLO(3),LSHI(3)
+integer :: i,j,k
+real(amrex_real) :: aux_xpos(3)
 
-REAL_T, dimension(:,:,:,:), pointer :: aux_xdata3D_ptr
-REAL_T, dimension(:,:,:,:), pointer :: aux_FSIdata3D_ptr
-REAL_T, dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
+real(amrex_real), dimension(:,:,:,:), pointer :: aux_xdata3D_ptr
+real(amrex_real), dimension(:,:,:,:), pointer :: aux_FSIdata3D_ptr
+real(amrex_real), dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
 
  aux_xdata3D_ptr=>aux_xdata3D
  aux_FSIdata3D_ptr=>aux_FSIdata3D
@@ -10123,40 +10123,40 @@ use global_utility_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: auxcomp
-INTEGER_T, INTENT(in) :: ioproc
-INTEGER_T, INTENT(in) :: aux_isout
+integer, INTENT(in) :: auxcomp
+integer, INTENT(in) :: ioproc
+integer, INTENT(in) :: aux_isout
 
-INTEGER_T :: dir
-INTEGER_T :: inode
-INTEGER_T :: iface
-INTEGER_T :: ifirst
-REAL_T, dimension(3) :: maxnode,minnode,xval,xval1
-REAL_T, dimension(3) :: maxnodebefore,minnodebefore
-REAL_T, dimension(3) :: xxblob1,newxxblob1
-REAL_T, dimension(3) :: side_len
-REAL_T :: max_side_len
-INTEGER_T :: dir_max_side
-REAL_T :: radradblob1
-INTEGER_T localElem(3)
-INTEGER_T aux_ncells
-REAL_T :: local_midpoint
-REAL_T :: local_sidelen
-INTEGER_T :: local_ncells
-INTEGER_T :: LSLO(3)
-INTEGER_T :: LSHI(3)
-INTEGER_T :: initflag
-INTEGER_T :: file_format
-INTEGER_T :: i,j,k
-INTEGER_T, dimension(3) :: idx
+integer :: dir
+integer :: inode
+integer :: iface
+integer :: ifirst
+real(amrex_real), dimension(3) :: maxnode,minnode,xval,xval1
+real(amrex_real), dimension(3) :: maxnodebefore,minnodebefore
+real(amrex_real), dimension(3) :: xxblob1,newxxblob1
+real(amrex_real), dimension(3) :: side_len
+real(amrex_real) :: max_side_len
+integer :: dir_max_side
+real(amrex_real) :: radradblob1
+integer localElem(3)
+integer aux_ncells
+real(amrex_real) :: local_midpoint
+real(amrex_real) :: local_sidelen
+integer :: local_ncells
+integer :: LSLO(3)
+integer :: LSHI(3)
+integer :: initflag
+integer :: file_format
+integer :: i,j,k
+integer, dimension(3) :: idx
 character(80) :: discard
 character(80) :: points_line
-INTEGER_T :: ivtk,dummy_num_nodes_per_elem
-INTEGER_T :: raw_num_nodes
-INTEGER_T :: raw_num_elements
-REAL_T, allocatable :: raw_nodes(:,:)
-INTEGER_T, allocatable :: raw_elements(:,:)
-INTEGER_T, PARAMETER :: aux_unit_id=14
+integer :: ivtk,dummy_num_nodes_per_elem
+integer :: raw_num_nodes
+integer :: raw_num_elements
+real(amrex_real), allocatable :: raw_nodes(:,:)
+integer, allocatable :: raw_elements(:,:)
+integer, PARAMETER :: aux_unit_id=14
 
  initflag=1
 
@@ -10568,58 +10568,58 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: flatten_size
-INTEGER_T, INTENT(in) :: local_caller_id
-REAL_T, INTENT(inout) :: FSI_input_flattened(flatten_size)
-REAL_T, INTENT(inout) :: FSI_output_flattened(flatten_size)
+integer, INTENT(in) :: flatten_size
+integer, INTENT(in) :: local_caller_id
+real(amrex_real), INTENT(inout) :: FSI_input_flattened(flatten_size)
+real(amrex_real), INTENT(inout) :: FSI_output_flattened(flatten_size)
 
-INTEGER_T, INTENT(in) :: nparts_in
-INTEGER_T, INTENT(in) :: im_solid_map_in(nparts_in)
-INTEGER_T :: initflag
-INTEGER_T, INTENT(in) :: ioproc,isout
-INTEGER_T, INTENT(in) :: CTML_FSI_INIT
-REAL_T, INTENT(in) :: dx_max_level(AMREX_SPACEDIM)
-REAL_T, INTENT(in) :: h_small
-REAL_T, INTENT(in) :: CLSVOFtime
-REAL_T, INTENT(in) :: problo(3),probhi(3)
-INTEGER_T :: test_NPARTS
-INTEGER_T :: part_id
-INTEGER_T :: dir
-INTEGER_T :: im_part
-INTEGER_T :: ctml_part_id,fsi_part_id
-INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
-INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
-INTEGER_T im_sanity_check
+integer, INTENT(in) :: nparts_in
+integer, INTENT(in) :: im_solid_map_in(nparts_in)
+integer :: initflag
+integer, INTENT(in) :: ioproc,isout
+integer, INTENT(in) :: CTML_FSI_INIT
+real(amrex_real), INTENT(in) :: dx_max_level(AMREX_SPACEDIM)
+real(amrex_real), INTENT(in) :: h_small
+real(amrex_real), INTENT(in) :: CLSVOFtime
+real(amrex_real), INTENT(in) :: problo(3),probhi(3)
+integer :: test_NPARTS
+integer :: part_id
+integer :: dir
+integer :: im_part
+integer :: ctml_part_id,fsi_part_id
+integer, INTENT(in) :: FSI_refine_factor(num_materials)
+integer, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
+integer im_sanity_check
 
-INTEGER_T, dimension(:), allocatable :: nIBM_rq
-INTEGER_T, dimension(:), allocatable :: nIBM_rq_fsh
-INTEGER_T, dimension(:), allocatable :: nIBM_r_fib
-INTEGER_T, dimension(:), allocatable :: nIBM_r_fsh
-INTEGER_T, dimension(:), allocatable :: nIBM_r_esh
-INTEGER_T, dimension(:), allocatable :: nIBM_r_fbc
-INTEGER_T, dimension(:), allocatable :: nIBM_r
+integer, dimension(:), allocatable :: nIBM_rq
+integer, dimension(:), allocatable :: nIBM_rq_fsh
+integer, dimension(:), allocatable :: nIBM_r_fib
+integer, dimension(:), allocatable :: nIBM_r_fsh
+integer, dimension(:), allocatable :: nIBM_r_esh
+integer, dimension(:), allocatable :: nIBM_r_fbc
+integer, dimension(:), allocatable :: nIBM_r
 
-INTEGER_T :: CTML_num_solids_local
+integer :: CTML_num_solids_local
 
-REAL_T :: dtypeDelta(3)
-INTEGER_T :: idimin
-INTEGER_T :: n_Read_in
+real(amrex_real) :: dtypeDelta(3)
+integer :: idimin
+integer :: n_Read_in
 logical :: theboss
 
-INTEGER_T :: i
-INTEGER_T :: i_elem
-INTEGER_T :: inode(4)
-INTEGER_T :: ii,jj,kk
-INTEGER_T :: local_max_num_nodes(3)
+integer :: i
+integer :: i_elem
+integer :: inode(4)
+integer :: ii,jj,kk
+integer :: local_max_num_nodes(3)
 
-INTEGER_T :: local_structured_flag
-INTEGER_T :: local_structure_dim
-INTEGER_T :: local_structure_topology
-INTEGER_T :: local_ngrow_node
-INTEGER_T :: local_num_nodes_total_grow
-INTEGER_T :: local_num_scalars
-INTEGER_T :: local_num_elements
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
+integer :: local_structured_flag
+integer :: local_structure_dim
+integer :: local_structure_topology
+integer :: local_ngrow_node
+integer :: local_num_nodes_total_grow
+integer :: local_num_scalars
+integer :: local_num_elements
+integer :: ilo,ihi,jlo,jhi,klo,khi
 
   if ((local_caller_id.eq.caller_initData).or. &
       (local_caller_id.eq.caller_post_restart)) then
@@ -11381,10 +11381,10 @@ INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
 return
 end subroutine CLSVOF_ReadHeader
 
-INTEGER_T function sign_valid(mask)
+integer function sign_valid(mask)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: mask
+integer, INTENT(in) :: mask
 
 if ((mask.eq.FSI_FINE_SIGN_VEL_VALID).or. &  
     (mask.eq.FSI_DOUBLY_WETTED_SIGN_VEL_VALID).or. &  
@@ -11403,10 +11403,10 @@ endif
 end function sign_valid
 
 
-INTEGER_T function vel_valid(mask)
+integer function vel_valid(mask)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: mask
+integer, INTENT(in) :: mask
 
 if ((mask.eq.FSI_FINE_VEL_VALID).or. &  
     (mask.eq.FSI_FINE_SIGN_VEL_VALID).or. & 
@@ -11433,27 +11433,27 @@ subroutine check_overlap( &
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: tid,tilenum
-INTEGER_T, INTENT(in) :: ielem
-INTEGER_T, INTENT(in) :: lev77
-INTEGER_T, INTENT(out) :: interior_flag
-INTEGER_T, INTENT(out) :: overlap
-INTEGER_T, INTENT(in) :: isweep
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(in) :: dx3D(3)
-REAL_T, INTENT(in) :: minnode(3)
-REAL_T, INTENT(in) :: maxnode(3)
-INTEGER_T, INTENT(in) :: xmap3D(3)
-INTEGER_T local_nelems
-INTEGER_T dir
-INTEGER_T tilelo,tilehi
-REAL_T xlo,xhi
-INTEGER_T local_iband
-REAL_T local_max_side
-REAL_T local_buffer(3)
-REAL_T local_minnode,local_maxnode,local_avgnode,swap_node
-INTEGER_T, PARAMETER :: debug_overlap_element=0
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: tid,tilenum
+integer, INTENT(in) :: ielem
+integer, INTENT(in) :: lev77
+integer, INTENT(out) :: interior_flag
+integer, INTENT(out) :: overlap
+integer, INTENT(in) :: isweep
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(in) :: dx3D(3)
+real(amrex_real), INTENT(in) :: minnode(3)
+real(amrex_real), INTENT(in) :: maxnode(3)
+integer, INTENT(in) :: xmap3D(3)
+integer local_nelems
+integer dir
+integer tilelo,tilehi
+real(amrex_real) xlo,xhi
+integer local_iband
+real(amrex_real) local_max_side
+real(amrex_real) local_buffer(3)
+real(amrex_real) local_minnode,local_maxnode,local_avgnode,swap_node
+integer, PARAMETER :: debug_overlap_element=0
 
  do dir=1,3
   if ((xmap3D(dir).ge.0).and. &
@@ -11655,21 +11655,21 @@ subroutine check_overlap_nodeCRSE( &
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: tid,tilenum
-INTEGER_T, INTENT(in) :: inode
-INTEGER_T, INTENT(in) :: lev77
-INTEGER_T, INTENT(out) :: overlap
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(in) :: dx3D(3)
-REAL_T, INTENT(in) :: minnode(3)
-INTEGER_T, INTENT(in) :: xmap3D(3)
-INTEGER_T local_nnodes
-INTEGER_T dir
-INTEGER_T tilelo,tilehi
-REAL_T xlo,xhi
-REAL_T local_minnode
-INTEGER_T, PARAMETER :: debug_overlap_node=0
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: tid,tilenum
+integer, INTENT(in) :: inode
+integer, INTENT(in) :: lev77
+integer, INTENT(out) :: overlap
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(in) :: dx3D(3)
+real(amrex_real), INTENT(in) :: minnode(3)
+integer, INTENT(in) :: xmap3D(3)
+integer local_nnodes
+integer dir
+integer tilelo,tilehi
+real(amrex_real) xlo,xhi
+real(amrex_real) local_minnode
+integer, PARAMETER :: debug_overlap_node=0
 
 
  do dir=1,3
@@ -11831,17 +11831,17 @@ subroutine get_minmax_nodeFINE( &
 IMPLICIT NONE
 
 type(mesh_type), INTENT(in) :: FSI_mesh_type
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: max_part_id
-INTEGER_T, INTENT(in) :: ielem
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(out) :: minnode(3)
-REAL_T, INTENT(out) :: maxnode(3)
-INTEGER_T inode,dir,node_id
-REAL_T nodetest
-REAL_T xtarget(3)
-REAL_T xfoot(3)
-REAL_T velparm(3)
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: max_part_id
+integer, INTENT(in) :: ielem
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(out) :: minnode(3)
+real(amrex_real), INTENT(out) :: maxnode(3)
+integer inode,dir,node_id
+real(amrex_real) nodetest
+real(amrex_real) xtarget(3)
+real(amrex_real) xfoot(3)
+real(amrex_real) velparm(3)
 
  if ((ielem.ge.1).and. &
      (ielem.le.FSI_mesh_type%NumIntElemsFINE)) then
@@ -11903,14 +11903,14 @@ end subroutine get_minmax_nodeFINE
 subroutine get_contained_nodeCRSE(part_id,inode,time,minnode)
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: part_id
-INTEGER_T, INTENT(in) :: inode
-REAL_T, INTENT(in) :: time
-REAL_T, INTENT(out) :: minnode(3)
-INTEGER_T dir
-REAL_T xtarget(3)
-REAL_T xfoot(3)
-REAL_T velparm(3)
+integer, INTENT(in) :: part_id
+integer, INTENT(in) :: inode
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(out) :: minnode(3)
+integer dir
+real(amrex_real) xtarget(3)
+real(amrex_real) xfoot(3)
+real(amrex_real) velparm(3)
 
 
  if ((inode.ge.1).and. &
@@ -11953,43 +11953,43 @@ use global_utility_module
 
 IMPLICIT NONE
 
- INTEGER_T, INTENT(in) :: lev77
- INTEGER_T, INTENT(in) :: sci_max_level
- INTEGER_T, INTENT(in) :: nthread_parm
- REAL_T, INTENT(in) :: dx3D(3)
- INTEGER_T, INTENT(in) :: part_id
- INTEGER_T, INTENT(in) :: im_part
- REAL_T, INTENT(in) :: cur_time
- REAL_T, INTENT(in) :: dt
- INTEGER_T, INTENT(in) :: xmap3D(3)
+ integer, INTENT(in) :: lev77
+ integer, INTENT(in) :: sci_max_level
+ integer, INTENT(in) :: nthread_parm
+ real(amrex_real), INTENT(in) :: dx3D(3)
+ integer, INTENT(in) :: part_id
+ integer, INTENT(in) :: im_part
+ real(amrex_real), INTENT(in) :: cur_time
+ real(amrex_real), INTENT(in) :: dt
+ integer, INTENT(in) :: xmap3D(3)
 
- INTEGER_T interior_flag
- INTEGER_T overlap
- INTEGER_T cache_saved
+ integer interior_flag
+ integer overlap
+ integer cache_saved
 
- INTEGER_T ielem,inode,isweep
- INTEGER_T local_nelems,local_nnodes
- INTEGER_T num_elements,num_nodes
- INTEGER_T total_num_elements
- INTEGER_T total_num_nodes
- INTEGER_T total_num_elements_check,total_num_nodes_check
+ integer ielem,inode,isweep
+ integer local_nelems,local_nnodes
+ integer num_elements,num_nodes
+ integer total_num_elements
+ integer total_num_nodes
+ integer total_num_elements_check,total_num_nodes_check
 
- INTEGER_T tid,tid_loop,tilenum,tilenum_loop
- INTEGER_T tid_predict,tilenum_predict
+ integer tid,tid_loop,tilenum,tilenum_loop
+ integer tid_predict,tilenum_predict
 
- REAL_T maxnode(3),minnode(3)
+ real(amrex_real) maxnode(3),minnode(3)
 
- INTEGER_T, dimension(:), allocatable :: tid_elem
- INTEGER_T, dimension(:), allocatable :: tilenum_elem
- INTEGER_T, dimension(:), allocatable :: interior_elem
+ integer, dimension(:), allocatable :: tid_elem
+ integer, dimension(:), allocatable :: tilenum_elem
+ integer, dimension(:), allocatable :: interior_elem
 
- INTEGER_T, dimension(:), allocatable :: tid_node
- INTEGER_T, dimension(:), allocatable :: tilenum_node
+ integer, dimension(:), allocatable :: tid_node
+ integer, dimension(:), allocatable :: tilenum_node
 
- INTEGER_T :: dir
+ integer :: dir
 
- INTEGER_T ctml_part_id
- INTEGER_T fsi_part_id
+ integer ctml_part_id
+ integer fsi_part_id
 
  if ((lev77.lt.1).or.(lev77.gt.sci_max_level+1)) then
   print *,"lev77 invalid"
@@ -12500,11 +12500,11 @@ IMPLICIT NONE
 return
 end subroutine CLSVOF_FILLCONTAINER
 
-INTEGER_T function is_less_than_list(t1,s1,t2,s2)
+integer function is_less_than_list(t1,s1,t2,s2)
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: t1,t2
-INTEGER_T, INTENT(in) :: s1,s2
+real(amrex_real), INTENT(in) :: t1,t2
+integer, INTENT(in) :: s1,s2
 
  is_less_than_list=0
 
@@ -12539,11 +12539,11 @@ INTEGER_T, INTENT(in) :: s1,s2
 end function is_less_than_list
 
 
-INTEGER_T function is_equal_list(t1,s1,t2,s2)
+integer function is_equal_list(t1,s1,t2,s2)
 IMPLICIT NONE
 
-REAL_T, INTENT(in) :: t1,t2
-INTEGER_T, INTENT(in) :: s1,s2
+real(amrex_real), INTENT(in) :: t1,t2
+integer, INTENT(in) :: s1,s2
 
  is_equal_list=0
 
@@ -12623,147 +12623,147 @@ use CTML_module
 
 IMPLICIT NONE
 
-  INTEGER_T, INTENT(in) :: iter
-  INTEGER_T, INTENT(in) :: sdim_AMR ! not used
-  INTEGER_T, INTENT(in) :: lev77
-  INTEGER_T, INTENT(in) :: tid
-  INTEGER_T, INTENT(in) :: tilenum
-  INTEGER_T, INTENT(in) :: im_part
-  INTEGER_T, INTENT(in) :: nparts
-  INTEGER_T, INTENT(in) :: part_id
-  INTEGER_T, INTENT(in) :: ngrow_make_distance_in
-  INTEGER_T, INTENT(in) :: nFSI
-  INTEGER_T, INTENT(in) :: FSI_operation
-  INTEGER_T, INTENT(inout) :: touch_flag
-  INTEGER_T :: numtouch
-  REAL_T, INTENT(in) :: time,dt
-  REAL_T, INTENT(in) :: problo3D(3)
-  REAL_T, INTENT(in) :: probhi3D(3)
-  INTEGER_T, INTENT(in) :: xmap3D(3)
-  REAL_T, INTENT(in) :: dx3D(3)
-  REAL_T, INTENT(in) :: xlo3D_tile(3)
-  REAL_T, INTENT(in) :: xhi3D_tile(3)
-  INTEGER_T, INTENT(in) :: FSI_lo3D(3),FSI_hi3D(3)
-  INTEGER_T, INTENT(in) :: FSI_growlo3D(3),FSI_growhi3D(3)
-  INTEGER_T, INTENT(in) :: growlo3D(3),growhi3D(3)
-  REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
-  REAL_T, INTENT(in), pointer :: FSIdata3D(:,:,:,:)
-  REAL_T, INTENT(in), pointer :: masknbr3D(:,:,:,:)
-  REAL_T, allocatable, target :: old_FSIdata(:,:,:,:)
-  REAL_T, pointer :: old_FSIdata_ptr(:,:,:,:)
+  integer, INTENT(in) :: iter
+  integer, INTENT(in) :: sdim_AMR ! not used
+  integer, INTENT(in) :: lev77
+  integer, INTENT(in) :: tid
+  integer, INTENT(in) :: tilenum
+  integer, INTENT(in) :: im_part
+  integer, INTENT(in) :: nparts
+  integer, INTENT(in) :: part_id
+  integer, INTENT(in) :: ngrow_make_distance_in
+  integer, INTENT(in) :: nFSI
+  integer, INTENT(in) :: FSI_operation
+  integer, INTENT(inout) :: touch_flag
+  integer :: numtouch
+  real(amrex_real), INTENT(in) :: time,dt
+  real(amrex_real), INTENT(in) :: problo3D(3)
+  real(amrex_real), INTENT(in) :: probhi3D(3)
+  integer, INTENT(in) :: xmap3D(3)
+  real(amrex_real), INTENT(in) :: dx3D(3)
+  real(amrex_real), INTENT(in) :: xlo3D_tile(3)
+  real(amrex_real), INTENT(in) :: xhi3D_tile(3)
+  integer, INTENT(in) :: FSI_lo3D(3),FSI_hi3D(3)
+  integer, INTENT(in) :: FSI_growlo3D(3),FSI_growhi3D(3)
+  integer, INTENT(in) :: growlo3D(3),growhi3D(3)
+  real(amrex_real), INTENT(in), pointer :: xdata3D(:,:,:,:)
+  real(amrex_real), INTENT(in), pointer :: FSIdata3D(:,:,:,:)
+  real(amrex_real), INTENT(in), pointer :: masknbr3D(:,:,:,:)
+  real(amrex_real), allocatable, target :: old_FSIdata(:,:,:,:)
+  real(amrex_real), pointer :: old_FSIdata_ptr(:,:,:,:)
 
-  INTEGER_T, INTENT(in) :: ioproc,isout
+  integer, INTENT(in) :: ioproc,isout
 
-  REAL_T override_LS
-  REAL_T override_VEL(3)
-  REAL_T override_TEMP
-  INTEGER_T override_MASK
+  real(amrex_real) override_LS
+  real(amrex_real) override_VEL(3)
+  real(amrex_real) override_TEMP
+  integer override_MASK
 
-  REAL_T dxBB(3) ! set in find_grid_bounding_box
-  REAL_T dxBB_min
-  REAL_T FSI_delta_cutoff
+  real(amrex_real) dxBB(3) ! set in find_grid_bounding_box
+  real(amrex_real) dxBB_min
+  real(amrex_real) FSI_delta_cutoff
 
-  INTEGER_T :: ielem
-  INTEGER_T :: ielem_container
-  INTEGER_T :: nodes_per_elem,inode,nodeptr
-  REAL_T, dimension(3) :: xc
-  REAL_T, dimension(3) :: xclosest
-  REAL_T, dimension(3) :: element_xclosest
-  REAL_T, dimension(3) :: xclosest_project
-  REAL_T, dimension(3) :: element_normal
-  REAL_T, dimension(3) :: normal
-  REAL_T, dimension(3) :: normal_closest
-  REAL_T, dimension(3) :: ncrit
-  REAL_T, dimension(3) :: ncrit_closest
-  REAL_T, dimension(3) :: xnot
-  REAL_T, dimension(3) :: xfoot
-  REAL_T, dimension(3) :: xelem
-  REAL_T, dimension(3) :: xtarget
-  INTEGER_T, dimension(3) :: gridloBB,gridhiBB,gridlenBB
-  INTEGER_T :: i,j,k
-  INTEGER_T :: element_inplane
-  INTEGER_T :: element_node_edge_inplane
-  REAL_T, dimension(3) :: velparm
-  INTEGER_T :: dir
-  REAL_T :: dotprod
-  REAL_T :: vel_dot_n
-  REAL_T :: unsigned_mindist  ! unsigned
-  REAL_T :: element_unsigned_mindist  ! unsigned
-  REAL_T :: weighttotal,distwt,weight
-  REAL_T, dimension(NCOMP_FSI) :: weight_top 
-  REAL_T :: weight_bot
-  REAL_T, dimension(3) :: minnode,maxnode
-  REAL_T, dimension(3) :: xx
-  REAL_T, dimension(3) :: x_outside
-  REAL_T, dimension(3) :: xcen
-  REAL_T, dimension(3) :: xleft
-  REAL_T, dimension(3) :: xright
-  REAL_T, dimension(3) :: xside
-  REAL_T, dimension(3) :: xcrit
-  REAL_T, dimension(3) :: xcrit_project
-  INTEGER_T :: ii,jj,kk
-  INTEGER_T :: hitflag
-  REAL_T :: phiside
-  REAL_T :: phicen
-  REAL_T :: testdist
-  REAL_T :: hitsign
-  REAL_T :: totaldist
+  integer :: ielem
+  integer :: ielem_container
+  integer :: nodes_per_elem,inode,nodeptr
+  real(amrex_real), dimension(3) :: xc
+  real(amrex_real), dimension(3) :: xclosest
+  real(amrex_real), dimension(3) :: element_xclosest
+  real(amrex_real), dimension(3) :: xclosest_project
+  real(amrex_real), dimension(3) :: element_normal
+  real(amrex_real), dimension(3) :: normal
+  real(amrex_real), dimension(3) :: normal_closest
+  real(amrex_real), dimension(3) :: ncrit
+  real(amrex_real), dimension(3) :: ncrit_closest
+  real(amrex_real), dimension(3) :: xnot
+  real(amrex_real), dimension(3) :: xfoot
+  real(amrex_real), dimension(3) :: xelem
+  real(amrex_real), dimension(3) :: xtarget
+  integer, dimension(3) :: gridloBB,gridhiBB,gridlenBB
+  integer :: i,j,k
+  integer :: element_inplane
+  integer :: element_node_edge_inplane
+  real(amrex_real), dimension(3) :: velparm
+  integer :: dir
+  real(amrex_real) :: dotprod
+  real(amrex_real) :: vel_dot_n
+  real(amrex_real) :: unsigned_mindist  ! unsigned
+  real(amrex_real) :: element_unsigned_mindist  ! unsigned
+  real(amrex_real) :: weighttotal,distwt,weight
+  real(amrex_real), dimension(NCOMP_FSI) :: weight_top 
+  real(amrex_real) :: weight_bot
+  real(amrex_real), dimension(3) :: minnode,maxnode
+  real(amrex_real), dimension(3) :: xx
+  real(amrex_real), dimension(3) :: x_outside
+  real(amrex_real), dimension(3) :: xcen
+  real(amrex_real), dimension(3) :: xleft
+  real(amrex_real), dimension(3) :: xright
+  real(amrex_real), dimension(3) :: xside
+  real(amrex_real), dimension(3) :: xcrit
+  real(amrex_real), dimension(3) :: xcrit_project
+  integer :: ii,jj,kk
+  integer :: hitflag
+  real(amrex_real) :: phiside
+  real(amrex_real) :: phicen
+  real(amrex_real) :: testdist
+  real(amrex_real) :: hitsign
+  real(amrex_real) :: totaldist
 
-  REAL_T mag_n,mag_n_test
-  REAL_T n_dot_x
-  REAL_T mag_ncrit
-  REAL_T mag_x
-  REAL_T sign_conflict
-  REAL_T sign_conflict_local
-  INTEGER_T ibase
-  REAL_T ls_local
-  INTEGER_T mask_local,mask_node
-  INTEGER_T new_mask_local
-  REAL_T, dimension(3) :: vel_local
-  REAL_T, dimension(NCOMP_FORCE_STRESS) :: force_local
-  REAL_T temp_local
-  INTEGER_T nc
-  INTEGER_T ii_current
+  real(amrex_real) mag_n,mag_n_test
+  real(amrex_real) n_dot_x
+  real(amrex_real) mag_ncrit
+  real(amrex_real) mag_x
+  real(amrex_real) sign_conflict
+  real(amrex_real) sign_conflict_local
+  integer ibase
+  real(amrex_real) ls_local
+  integer mask_local,mask_node
+  integer new_mask_local
+  real(amrex_real), dimension(3) :: vel_local
+  real(amrex_real), dimension(NCOMP_FORCE_STRESS) :: force_local
+  real(amrex_real) temp_local
+  integer nc
+  integer ii_current
 
-  REAL_T inner_band_size
-  REAL_T LS_sum,LS_SIDE,dx_SIDE
-  REAL_T total_variation_sum_plus
-  REAL_T total_variation_sum_minus
-  INTEGER_T weight_total_variation
+  real(amrex_real) inner_band_size
+  real(amrex_real) LS_sum,LS_SIDE,dx_SIDE
+  real(amrex_real) total_variation_sum_plus
+  real(amrex_real) total_variation_sum_minus
+  integer weight_total_variation
 
-  INTEGER_T num_plane_intersects
-  INTEGER_T num_plane_intersects_new
-  INTEGER_T cur_ptr
-  INTEGER_T cur_sign
-  REAL_T t_top,t_bottom,t_crit,swap_data
-  INTEGER_T swap_sign
-  INTEGER_T num_sign_changes,local_corner_count,local_smooth_count
-  REAL_T far_field_sign
-  REAL_T near_field_sign
-  INTEGER_T less_than_flag,equal_flag
-  REAL_T plane_diff
+  integer num_plane_intersects
+  integer num_plane_intersects_new
+  integer cur_ptr
+  integer cur_sign
+  real(amrex_real) t_top,t_bottom,t_crit,swap_data
+  integer swap_sign
+  integer num_sign_changes,local_corner_count,local_smooth_count
+  real(amrex_real) far_field_sign
+  real(amrex_real) near_field_sign
+  integer less_than_flag,equal_flag
+  real(amrex_real) plane_diff
 
-  REAL_T plane_intersect_list(max_plane_intersects)
+  real(amrex_real) plane_intersect_list(max_plane_intersects)
   ! sign on the far field side
   ! sign=-n dot (xfar-x0)
-  INTEGER_T plane_intersect_list_sign(max_plane_intersects)
+  integer plane_intersect_list_sign(max_plane_intersects)
 
-  INTEGER_T sign_status_changed
-  INTEGER_T num_elements
-  INTEGER_T num_elements_container
+  integer sign_status_changed
+  integer num_elements
+  integer num_elements_container
 
-  REAL_T element_scale
-  REAL_T test_scale
-  REAL_T test_scale_max
-  REAL_T eul_over_lag_scale
+  real(amrex_real) element_scale
+  real(amrex_real) test_scale
+  real(amrex_real) test_scale_max
+  real(amrex_real) eul_over_lag_scale
 
-  INTEGER_T, PARAMETER :: debug_all=0
-  INTEGER_T mask1,mask2
-  INTEGER_T null_intersection
-  INTEGER_T ctml_part_id
-  INTEGER_T fsi_part_id
-  INTEGER_T local_iband
-  INTEGER_T CTML_DEBUG_Mass
+  integer, PARAMETER :: debug_all=0
+  integer mask1,mask2
+  integer null_intersection
+  integer ctml_part_id
+  integer fsi_part_id
+  integer local_iband
+  integer CTML_DEBUG_Mass
   type(mesh_type) :: FSI_mesh_type
 
   call FLUSH(6)  ! 6=screen
@@ -14898,75 +14898,75 @@ end subroutine CLSVOF_InitBox
 
        IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: sdim_AMR
-      INTEGER_T, INTENT(in) :: lev77
-      INTEGER_T, INTENT(in) :: processor_id
-      INTEGER_T, INTENT(in) :: tid
-      INTEGER_T, INTENT(in) :: tilenum
-      INTEGER_T, INTENT(in) :: im_part ! 1..num_materials
-      INTEGER_T, INTENT(in) :: nparts
-      INTEGER_T, INTENT(in) :: part_id
-      INTEGER_T, INTENT(in) :: ngrow_make_distance_in
-      INTEGER_T, INTENT(in) :: nFSI
-      INTEGER_T, INTENT(in) :: FSI_operation
-      REAL_T, INTENT(in) :: time
-      REAL_T, INTENT(in) :: problo3D(3)
-      REAL_T, INTENT(in) :: probhi3D(3)
-      INTEGER_T, INTENT(in) :: xmap3D(3)
-      REAL_T, INTENT(in) :: dx3D(3)
-      REAL_T, INTENT(in) :: xlo3D_tile(3)
-      REAL_T, INTENT(in) :: xhi3D_tile(3)
-      INTEGER_T, INTENT(in) :: FSI_lo(3),FSI_hi(3)
-      INTEGER_T, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
-      INTEGER_T, INTENT(in) :: growlo3D(3),growhi3D(3)
-      REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
-      REAL_T, INTENT(in), pointer :: stressdata3D(:,:,:,:)
-      REAL_T, INTENT(in), pointer :: stressflag3D(:,:,:,:)
-      REAL_T, INTENT(in), pointer :: masknbr3D(:,:,:,:)
-      REAL_T, INTENT(in), pointer :: maskfiner3D(:,:,:,:)
+      integer, INTENT(in) :: sdim_AMR
+      integer, INTENT(in) :: lev77
+      integer, INTENT(in) :: processor_id
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: tilenum
+      integer, INTENT(in) :: im_part ! 1..num_materials
+      integer, INTENT(in) :: nparts
+      integer, INTENT(in) :: part_id
+      integer, INTENT(in) :: ngrow_make_distance_in
+      integer, INTENT(in) :: nFSI
+      integer, INTENT(in) :: FSI_operation
+      real(amrex_real), INTENT(in) :: time
+      real(amrex_real), INTENT(in) :: problo3D(3)
+      real(amrex_real), INTENT(in) :: probhi3D(3)
+      integer, INTENT(in) :: xmap3D(3)
+      real(amrex_real), INTENT(in) :: dx3D(3)
+      real(amrex_real), INTENT(in) :: xlo3D_tile(3)
+      real(amrex_real), INTENT(in) :: xhi3D_tile(3)
+      integer, INTENT(in) :: FSI_lo(3),FSI_hi(3)
+      integer, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
+      integer, INTENT(in) :: growlo3D(3),growhi3D(3)
+      real(amrex_real), INTENT(in), pointer :: xdata3D(:,:,:,:)
+      real(amrex_real), INTENT(in), pointer :: stressdata3D(:,:,:,:)
+      real(amrex_real), INTENT(in), pointer :: stressflag3D(:,:,:,:)
+      real(amrex_real), INTENT(in), pointer :: masknbr3D(:,:,:,:)
+      real(amrex_real), INTENT(in), pointer :: maskfiner3D(:,:,:,:)
 
-      INTEGER_T, INTENT(in) :: ioproc,isout
+      integer, INTENT(in) :: ioproc,isout
 
-      REAL_T dxBB(3) ! set in find_grid_bounding_box_node
-      REAL_T dxBB_probe(3) ! set in find_grid_bounding_box_node
+      real(amrex_real) dxBB(3) ! set in find_grid_bounding_box_node
+      real(amrex_real) dxBB_probe(3) ! set in find_grid_bounding_box_node
 
-      INTEGER_T :: inode
-      INTEGER_T :: inode_container
-      REAL_T, dimension(3) :: xnot
-      REAL_T, dimension(3) :: local_xnot
-      REAL_T, dimension(3) :: xprobe
-      REAL_T, dimension(3) :: xnode
-      INTEGER_T, dimension(3) :: gridloBB,gridhiBB
-      INTEGER_T, dimension(3) :: gridloBB_probe,gridhiBB_probe
-      INTEGER_T :: i,j,k
-      INTEGER_T, dimension(3) :: idx
-      REAL_T, dimension(3) :: velparm
-      INTEGER_T :: dir
-      INTEGER_T :: reflect_dir
-      REAL_T :: total_weight
-      REAL_T :: wt
-      REAL_T :: wt_flag
-      REAL_T :: dist_scale,df,support_size
+      integer :: inode
+      integer :: inode_container
+      real(amrex_real), dimension(3) :: xnot
+      real(amrex_real), dimension(3) :: local_xnot
+      real(amrex_real), dimension(3) :: xprobe
+      real(amrex_real), dimension(3) :: xnode
+      integer, dimension(3) :: gridloBB,gridhiBB
+      integer, dimension(3) :: gridloBB_probe,gridhiBB_probe
+      integer :: i,j,k
+      integer, dimension(3) :: idx
+      real(amrex_real), dimension(3) :: velparm
+      integer :: dir
+      integer :: reflect_dir
+      real(amrex_real) :: total_weight
+      real(amrex_real) :: wt
+      real(amrex_real) :: wt_flag
+      real(amrex_real) :: dist_scale,df,support_size
 
-      INTEGER_T local_mask
-      INTEGER_T num_nodes
-      INTEGER_T num_nodes_container
-      INTEGER_T, PARAMETER :: debug_all=0
-      INTEGER_T ctml_part_id
-      INTEGER_T fsi_part_id
-      INTEGER_T inside_interior_box
-      REAL_T dx3D_min
-      REAL_T probe_size
-      REAL_T null_probe_size
-      REAL_T sign_normal
-      REAL_T data_out
-      REAL_T total_stress(6)
-      REAL_T NodeStress(6)
-      REAL_T local_node_normal(3)
-      INTEGER_T idoubly
-      INTEGER_T istress,jstress
-      REAL_T stress_3d(3,3)
-      REAL_T local_force(NCOMP_FORCE_STRESS)
+      integer local_mask
+      integer num_nodes
+      integer num_nodes_container
+      integer, PARAMETER :: debug_all=0
+      integer ctml_part_id
+      integer fsi_part_id
+      integer inside_interior_box
+      real(amrex_real) dx3D_min
+      real(amrex_real) probe_size
+      real(amrex_real) null_probe_size
+      real(amrex_real) sign_normal
+      real(amrex_real) data_out
+      real(amrex_real) total_stress(6)
+      real(amrex_real) NodeStress(6)
+      real(amrex_real) local_node_normal(3)
+      integer idoubly
+      integer istress,jstress
+      real(amrex_real) stress_3d(3,3)
+      real(amrex_real) local_force(NCOMP_FORCE_STRESS)
 
       if ((part_id.lt.1).or.(part_id.gt.nparts)) then
        print *,"part_id invalid"
@@ -15539,18 +15539,18 @@ end subroutine CLSVOF_InitBox
 
       subroutine flappingKinematics(numMotion,motionPara,r,t)
       IMPLICIT NONE
-      INTEGER_T, INTENT(in) :: numMotion
-      REAL_T, INTENT(in) :: motionPara(11,numMotion)
-      REAL_T, INTENT(out) :: r(3,4)
-      REAL_T, INTENT(in) :: t
-      REAL_T xPoint(3,numMotion),vTan(3,numMotion)
-      REAL_T x0(3),v(3)
-      REAL_T vNorm,theta,thetaMag,fTheta,phiTheta,theta0
-      REAL_T hMag,fH,phiH,h0,ct,st
-      REAL_T r1(3,4),r2(3,4)
-      INTEGER_T motionType
-      INTEGER_T rotateAlongALine,translateAlongALine
-      INTEGER_T i,j,k,iMotion
+      integer, INTENT(in) :: numMotion
+      real(amrex_real), INTENT(in) :: motionPara(11,numMotion)
+      real(amrex_real), INTENT(out) :: r(3,4)
+      real(amrex_real), INTENT(in) :: t
+      real(amrex_real) xPoint(3,numMotion),vTan(3,numMotion)
+      real(amrex_real) x0(3),v(3)
+      real(amrex_real) vNorm,theta,thetaMag,fTheta,phiTheta,theta0
+      real(amrex_real) hMag,fH,phiH,h0,ct,st
+      real(amrex_real) r1(3,4),r2(3,4)
+      integer motionType
+      integer rotateAlongALine,translateAlongALine
+      integer i,j,k,iMotion
 
 !     pitching motion theta(t)=theta_mag*cos(2*pi*f_theta*t+phi_theta)+theta_0
 !     plunging motion h(t)    =h_mag    *cos(2*pi*f_h    *t+phi_h    )+h_0
@@ -15702,25 +15702,25 @@ end subroutine CLSVOF_InitBox
 
       IMPLICIT NONE
 
-      INTEGER_T part_id
-      REAL_T velparm(3)
-      REAL_T time
-      INTEGER_T dir
-      REAL_T xtarget(3)
-      REAL_T xfoot(3)
-      REAL_T xtargetsave(3)
-      REAL_T xfootsave(3)
-      REAL_T RPM,alpha,RR,radgear,theta
+      integer part_id
+      real(amrex_real) velparm(3)
+      real(amrex_real) time
+      integer dir
+      real(amrex_real) xtarget(3)
+      real(amrex_real) xfoot(3)
+      real(amrex_real) xtargetsave(3)
+      real(amrex_real) xfootsave(3)
+      real(amrex_real) RPM,alpha,RR,radgear,theta
 
-      INTEGER_T numMotion
-      REAL_T r(3,4)
-      REAL_T rinv(3,4)
-      REAL_T rplus(3,4)
-      REAL_T det
-      REAL_T motionPara(11,2)
-      REAL_T flapping_time
-      REAL_T dt_flapping
-      REAL_T flapping_time_plus
+      integer numMotion
+      real(amrex_real) r(3,4)
+      real(amrex_real) rinv(3,4)
+      real(amrex_real) rplus(3,4)
+      real(amrex_real) det
+      real(amrex_real) motionPara(11,2)
+      real(amrex_real) flapping_time
+      real(amrex_real) dt_flapping
+      real(amrex_real) flapping_time_plus
 
 
       if ((part_id.lt.1).or.(part_id.gt.TOTAL_NPARTS)) then
@@ -16048,27 +16048,27 @@ end subroutine CLSVOF_InitBox
 
       IMPLICIT NONE
 
-      INTEGER_T, INTENT(in) :: part_id
-      INTEGER_T, INTENT(in) :: max_part_id
+      integer, INTENT(in) :: part_id
+      integer, INTENT(in) :: max_part_id
       type(mesh_type), INTENT(in) :: FSI_mesh_type
-      REAL_T, INTENT(out) :: velparm(3)
-      REAL_T, INTENT(in) :: time
-      REAL_T, INTENT(out) :: xtarget(3)
-      REAL_T, INTENT(inout) :: xfoot(3)
-      INTEGER_T dir
-      REAL_T xtargetsave(3)
-      REAL_T xfootsave(3)
-      REAL_T RPM,alpha,RR,radgear,theta
+      real(amrex_real), INTENT(out) :: velparm(3)
+      real(amrex_real), INTENT(in) :: time
+      real(amrex_real), INTENT(out) :: xtarget(3)
+      real(amrex_real), INTENT(inout) :: xfoot(3)
+      integer dir
+      real(amrex_real) xtargetsave(3)
+      real(amrex_real) xfootsave(3)
+      real(amrex_real) RPM,alpha,RR,radgear,theta
 
-      INTEGER_T numMotion
-      REAL_T r(3,4)
-      REAL_T rinv(3,4)
-      REAL_T rplus(3,4)
-      REAL_T det
-      REAL_T motionPara(11,2)
-      REAL_T flapping_time
-      REAL_T dt_flapping
-      REAL_T flapping_time_plus
+      integer numMotion
+      real(amrex_real) r(3,4)
+      real(amrex_real) rinv(3,4)
+      real(amrex_real) rplus(3,4)
+      real(amrex_real) det
+      real(amrex_real) motionPara(11,2)
+      real(amrex_real) flapping_time
+      real(amrex_real) dt_flapping
+      real(amrex_real) flapping_time_plus
 
 
       if ((part_id.lt.1).or.(part_id.gt.max_part_id)) then
@@ -16403,24 +16403,24 @@ use global_utility_module
 IMPLICIT NONE
 
  type(mesh_type), INTENT(in) :: FSI_mesh_type
- INTEGER_T, INTENT(in) :: part_id
- INTEGER_T, INTENT(in) :: max_part_id
- INTEGER_T, INTENT(out) :: null_intersection
- REAL_T, INTENT(in) :: minnode(3),maxnode(3)
- INTEGER_T, INTENT(in) :: FSI_lo(3),FSI_hi(3)
- INTEGER_T, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
- INTEGER_T, INTENT(in) :: growlo3D(3),growhi3D(3)
- REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
- INTEGER_T, INTENT(out) :: gridloBB(3),gridhiBB(3)
- REAL_T, INTENT(out) :: dxBB(3)
- INTEGER_T, INTENT(in) :: xmap3D(3)
- INTEGER_T dir
- INTEGER_T ii,jj,kk
- INTEGER_T i,j,k,incr,iter
- REAL_T xcontrol,xcost
- REAL_T xlo(3),xhi(3)
- INTEGER_T ngrow,ngrowtest
- INTEGER_T local_iband
+ integer, INTENT(in) :: part_id
+ integer, INTENT(in) :: max_part_id
+ integer, INTENT(out) :: null_intersection
+ real(amrex_real), INTENT(in) :: minnode(3),maxnode(3)
+ integer, INTENT(in) :: FSI_lo(3),FSI_hi(3)
+ integer, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
+ integer, INTENT(in) :: growlo3D(3),growhi3D(3)
+ real(amrex_real), INTENT(in), pointer :: xdata3D(:,:,:,:)
+ integer, INTENT(out) :: gridloBB(3),gridhiBB(3)
+ real(amrex_real), INTENT(out) :: dxBB(3)
+ integer, INTENT(in) :: xmap3D(3)
+ integer dir
+ integer ii,jj,kk
+ integer i,j,k,incr,iter
+ real(amrex_real) xcontrol,xcost
+ real(amrex_real) xlo(3),xhi(3)
+ integer ngrow,ngrowtest
+ integer local_iband
 
  do dir=1,3
   if ((xmap3D(dir).ge.0).and. &
@@ -16634,23 +16634,23 @@ use global_utility_module
 IMPLICIT NONE
 
  type(mesh_type), INTENT(in) :: FSI_mesh_type
- INTEGER_T, INTENT(in) :: ngrow_make_distance_in
- REAL_T, INTENT(in) :: probe_size
- REAL_T, INTENT(in) :: xnot(3)
- INTEGER_T, INTENT(in) :: FSI_lo(3),FSI_hi(3)
- INTEGER_T, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
- REAL_T, INTENT(in), pointer :: xdata3D(:,:,:,:)
- INTEGER_T, INTENT(out) :: gridloBB(3),gridhiBB(3)
- REAL_T, INTENT(out) :: dxBB(3)
- INTEGER_T, INTENT(in) :: xmap3D(3)
- INTEGER_T dir,dirloc
- INTEGER_T idx(3),idxL(3),idxR(3)
- INTEGER_T iter,change
- REAL_T dist,distL,distR
- REAL_T xlo(3),xhi(3)
- INTEGER_T ngrowtest
- INTEGER_T interp_support
- INTEGER_T i_probe_size
+ integer, INTENT(in) :: ngrow_make_distance_in
+ real(amrex_real), INTENT(in) :: probe_size
+ real(amrex_real), INTENT(in) :: xnot(3)
+ integer, INTENT(in) :: FSI_lo(3),FSI_hi(3)
+ integer, INTENT(in) :: FSI_growlo(3),FSI_growhi(3)
+ real(amrex_real), INTENT(in), pointer :: xdata3D(:,:,:,:)
+ integer, INTENT(out) :: gridloBB(3),gridhiBB(3)
+ real(amrex_real), INTENT(out) :: dxBB(3)
+ integer, INTENT(in) :: xmap3D(3)
+ integer dir,dirloc
+ integer idx(3),idxL(3),idxR(3)
+ integer iter,change
+ real(amrex_real) dist,distL,distR
+ real(amrex_real) xlo(3),xhi(3)
+ integer ngrowtest
+ integer interp_support
+ integer i_probe_size
 
  do dir=1,3
   if ((xmap3D(dir).ge.0).and. &
@@ -16876,50 +16876,50 @@ use CTML_module
 
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: xmap3D(3)
-INTEGER_T, INTENT(in) :: flatten_size
-INTEGER_T, INTENT(in) :: local_caller_id
-REAL_T, INTENT(inout) :: FSI_input_flattened(flatten_size)
-REAL_T, INTENT(inout) :: FSI_output_flattened(flatten_size)
+integer, INTENT(in) :: xmap3D(3)
+integer, INTENT(in) :: flatten_size
+integer, INTENT(in) :: local_caller_id
+real(amrex_real), INTENT(inout) :: FSI_input_flattened(flatten_size)
+real(amrex_real), INTENT(inout) :: FSI_output_flattened(flatten_size)
 
-INTEGER_T, INTENT(in) :: current_step,plot_interval
-INTEGER_T :: initflag
-INTEGER_T, INTENT(in) :: ioproc,isout
-INTEGER_T :: part_id
-REAL_T, INTENT(in) :: CLSVOF_curtime
-REAL_T, INTENT(in) :: CLSVOF_dt
-REAL_T, INTENT(in) :: h_small
-REAL_T, INTENT(in) :: problo(3),probhi(3)
-INTEGER_T ctml_part_id 
-INTEGER_T fsi_part_id 
-INTEGER_T, INTENT(in) :: FSI_refine_factor(num_materials)
-INTEGER_T, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
-INTEGER_T im_sanity_check
-INTEGER_T :: im_part
+integer, INTENT(in) :: current_step,plot_interval
+integer :: initflag
+integer, INTENT(in) :: ioproc,isout
+integer :: part_id
+real(amrex_real), INTENT(in) :: CLSVOF_curtime
+real(amrex_real), INTENT(in) :: CLSVOF_dt
+real(amrex_real), INTENT(in) :: h_small
+real(amrex_real), INTENT(in) :: problo(3),probhi(3)
+integer ctml_part_id 
+integer fsi_part_id 
+integer, INTENT(in) :: FSI_refine_factor(num_materials)
+integer, INTENT(in) :: FSI_bounding_box_ngrow(num_materials)
+integer im_sanity_check
+integer :: im_part
 type(FSI_container_type) :: FSI_input_container
 type(FSI_container_type) :: FSI_output_container
-INTEGER_T :: dir
-INTEGER_T :: local_max_num_nodes(3)
+integer :: dir
+integer :: local_max_num_nodes(3)
 
-INTEGER_T :: local_num_solids
-INTEGER_T :: local_structured_flag
-INTEGER_T :: local_structure_dim
-INTEGER_T :: local_structure_topology
-INTEGER_T :: local_ngrow_node
-INTEGER_T :: local_num_nodes_total_grow
-INTEGER_T :: local_num_scalars
-INTEGER_T :: local_num_elements
+integer :: local_num_solids
+integer :: local_structured_flag
+integer :: local_structure_dim
+integer :: local_structure_topology
+integer :: local_ngrow_node
+integer :: local_num_nodes_total_grow
+integer :: local_num_scalars
+integer :: local_num_elements
 
-INTEGER_T :: ilo,ihi,jlo,jhi,klo,khi
-INTEGER_T :: ii,jj,kk
-INTEGER_T :: imid,inull,ii_opp
-REAL_T :: rval
+integer :: ilo,ihi,jlo,jhi,klo,khi
+integer :: ii,jj,kk
+integer :: imid,inull,ii_opp
+real(amrex_real) :: rval
 
-REAL_T :: dx_left,dx_right,dx_cen,dtau
-REAL_T :: flux_left(3)
-REAL_T :: flux_right(3)
-INTEGER_T :: ismooth
-INTEGER_T, PARAMETER :: nsmooth=128
+real(amrex_real) :: dx_left,dx_right,dx_cen,dtau
+real(amrex_real) :: flux_left(3)
+real(amrex_real) :: flux_right(3)
+integer :: ismooth
+integer, PARAMETER :: nsmooth=128
 
 logical :: monitorON
 logical :: theboss
@@ -17890,7 +17890,7 @@ end subroutine CLSVOF_ReadNodes
       IMPLICIT NONE 
       
       Character (len=*) whalein, whaleout
-      INTEGER_T Nodes
+      integer Nodes
       
       whaleout=whalein
       
@@ -17927,16 +17927,16 @@ end subroutine CLSVOF_ReadNodes
       IMPLICIT NONE
 
       CHARACTER*35 whaleout
-      INTEGER Nodes, Cells, Shape
-      INTEGER_T, DIMENSION(Nodes,20) :: List
-      INTEGER i,  k, n1, n2, n3, garbage, counter
-      REAL_T, Dimension(Nodes) ::  X, Y, Z, R, S, T, X_init, Y_init
-      REAL_T, Dimension(Nodes) ::  spring, Z_init
-      REAL_T, Dimension(Nodes) ::  U, V, W
-      REAL_T, Dimension(22) :: angle, timestep
-      REAL_T  a, b, c, value,temp
-      REAL_T  counter_real, tailpos, L1,L2,L4,L5
-      REAL_T  xtailpos
+      integer Nodes, Cells, Shape
+      integer, DIMENSION(Nodes,20) :: List
+      integer i,  k, n1, n2, n3, garbage, counter
+      real(amrex_real), Dimension(Nodes) ::  X, Y, Z, R, S, T, X_init, Y_init
+      real(amrex_real), Dimension(Nodes) ::  spring, Z_init
+      real(amrex_real), Dimension(Nodes) ::  U, V, W
+      real(amrex_real), Dimension(22) :: angle, timestep
+      real(amrex_real)  a, b, c, value,temp
+      real(amrex_real)  counter_real, tailpos, L1,L2,L4,L5
+      real(amrex_real)  xtailpos
 
       tailpos=7.77
       xtailpos=0.5d0
@@ -18097,16 +18097,16 @@ end subroutine CLSVOF_ReadNodes
 
       IMPLICIT NONE
 
-      INTEGER Nodes, Cells
-      INTEGER_T, DIMENSION(Nodes,20) :: List
-      INTEGER i, j, p, counter
-      INTEGER_T count1, count2, count3,count4
-      REAL_T, Dimension(Nodes) ::  X, Y, Z, R, S, T, X_init, Y_init
-      REAL_T, Dimension(Nodes) ::  spring, Z_init
-      REAL_T, Dimension(Nodes) ::  U, V, W
-      REAL_T, Dimension(22) :: angle, timestep
-      REAL_T  sum_x, sum_y, sum_z, mu, nu, value,temp
-      REAL_T  counter_real, tailpos, mag, mag_init,L1,L2,L4,L5
+      integer Nodes, Cells
+      integer, DIMENSION(Nodes,20) :: List
+      integer i, j, p, counter
+      integer count1, count2, count3,count4
+      real(amrex_real), Dimension(Nodes) ::  X, Y, Z, R, S, T, X_init, Y_init
+      real(amrex_real), Dimension(Nodes) ::  spring, Z_init
+      real(amrex_real), Dimension(Nodes) ::  U, V, W
+      real(amrex_real), Dimension(22) :: angle, timestep
+      real(amrex_real)  sum_x, sum_y, sum_z, mu, nu, value,temp
+      real(amrex_real)  counter_real, tailpos, mag, mag_init,L1,L2,L4,L5
 
       tailpos=7.77
 
@@ -18254,13 +18254,13 @@ end subroutine CLSVOF_ReadNodes
       IMPLICIT NONE
 
       CHARACTER*35 whaleout
-      INTEGER Nodes, Ext
-      INTEGER garbage, kk
-      INTEGER N, Cells, Shape, i, j, k, n1, n2, n3
+      integer Nodes, Ext
+      integer garbage, kk
+      integer N, Cells, Shape, i, j, k, n1, n2, n3
       REAL x, y, z
 
-      INTEGER, DIMENSION(Nodes,Ext) :: List
-      INTEGER, DIMENSION(Nodes) :: Counter
+      integer, DIMENSION(Nodes,Ext) :: List
+      integer, DIMENSION(Nodes) :: Counter
 
       open(unit=12, file=whaleout)
 
@@ -18360,9 +18360,9 @@ end subroutine CLSVOF_ReadNodes
 
       IMPLICIT NONE
 
-      INTEGER_T k, n
-      REAL_T, Dimension(n) :: xvect, yvect
-      REAL_T x, value
+      integer k, n
+      real(amrex_real), Dimension(n) :: xvect, yvect
+      real(amrex_real) x, value
 
       
       DO k=1,n-1
@@ -18391,9 +18391,9 @@ end subroutine CLSVOF_ReadNodes
 
       IMPLICIT NONE
 
-      INTEGER_T Nodes, i
-      REAL_T tailpos
-      REAL_T, Dimension(Nodes) :: R,S,T,U,V,W,X,Y,Z
+      integer Nodes, i
+      real(amrex_real) tailpos
+      real(amrex_real), Dimension(Nodes) :: R,S,T,U,V,W,X,Y,Z
 
       
       DO i=1,Nodes
@@ -18432,9 +18432,9 @@ end subroutine CLSVOF_ReadNodes
 
       IMPLICIT NONE
 
-      INTEGER_T Nodes, i
-      REAL_T tailpos
-      REAL_T, Dimension(Nodes) :: R,S,T,U,V,W,X,Y,Z
+      integer Nodes, i
+      real(amrex_real) tailpos
+      real(amrex_real), Dimension(Nodes) :: R,S,T,U,V,W,X,Y,Z
 
       
       DO i=1,Nodes
@@ -18466,10 +18466,10 @@ end subroutine CLSVOF_ReadNodes
       subroutine springs(Z, spring, Nodes,tailpos)
       IMPLICIT NONE
 
-      INTEGER_T Nodes, i
-      REAL_T tailpos
-      REAL_T, Dimension(Nodes) :: spring, Z
-      REAL_T springcons
+      integer Nodes, i
+      real(amrex_real) tailpos
+      real(amrex_real), Dimension(Nodes) :: spring, Z
+      real(amrex_real) springcons
 
 
       springcons=0.5d0

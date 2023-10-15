@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -24,13 +23,14 @@
 
  ! probtype==2011
  module YAOHONG_INKJET_module
+ use amrex_fort_module, only : amrex_real
 
  implicit none
 
 ! time vs. pressure, time unit(ms), pressure unit (kPa)
- INTEGER_T, parameter :: N_pressure=500
- REAL_T :: t_pressure(N_pressure)
- REAL_T :: press_nozzle(N_pressure)
+ integer, parameter :: N_pressure=500
+ real(amrex_real) :: t_pressure(N_pressure)
+ real(amrex_real) :: press_nozzle(N_pressure)
 
  contains
 
@@ -47,7 +47,7 @@ implicit none
 
 ! time vs. pressure, time unit(ms), pressure unit (kPa)
 
-INTEGER_T  :: i
+integer  :: i
 
 print *,"opening press_YAOHONG.in"
 
@@ -72,12 +72,12 @@ end subroutine pressure_input
 
 subroutine press_interp(t_input,t, press, N, p_output)                        
 implicit none
-INTEGER_T, INTENT(in) :: N
-REAL_T, INTENT(in) :: t(N), press(N)
-REAL_T, INTENT(in) :: t_input
-REAL_T, INTENT(out) :: p_output
-INTEGER_T           :: m  
-REAL_T :: t_ms
+integer, INTENT(in) :: N
+real(amrex_real), INTENT(in) :: t(N), press(N)
+real(amrex_real), INTENT(in) :: t_input
+real(amrex_real), INTENT(out) :: p_output
+integer           :: m  
+real(amrex_real) :: t_ms
 
 ! change the unit to ms
 ! delta t=1/5 ms
@@ -114,12 +114,12 @@ implicit none
 ! 11.5x1.5 (mm) domain
 ! ls for nozzel geometry
 
-REAL_T, INTENT(in) :: x_i,y_i
-REAL_T, INTENT(out) :: ls
-REAL_T   :: x, y
-REAL_T   :: d1,d2
-REAL_T   :: w1=0.3d0, w2=1.0d0, w=1.5d0 
-REAL_T   :: l1=4.0d0,  l2 =2.5d0, l3=4.5d0, l4=0.5d0
+real(amrex_real), INTENT(in) :: x_i,y_i
+real(amrex_real), INTENT(out) :: ls
+real(amrex_real)   :: x, y
+real(amrex_real)   :: d1,d2
+real(amrex_real)   :: w1=0.3d0, w2=1.0d0, w=1.5d0 
+real(amrex_real)   :: l1=4.0d0,  l2 =2.5d0, l3=4.5d0, l4=0.5d0
 
 x=x_i*1000.0d0  ! convert from MKS to mm
 y=y_i*1000.0d0  ! convert from MKS to mm
@@ -181,12 +181,12 @@ end subroutine LS_geometry
 ! ls>0 in the water, ls<0 in the air
 subroutine LS_air_water(x_i,y_i,ls)
 implicit none
-REAL_T, INTENT(in) :: x_i,y_i
-REAL_T, INTENT(out) :: ls
-REAL_T :: x, y
-REAL_T :: e2
-REAL_T :: w1=0.3d0
-REAL_T :: l1=4.0d0
+real(amrex_real), INTENT(in) :: x_i,y_i
+real(amrex_real), INTENT(out) :: ls
+real(amrex_real) :: x, y
+real(amrex_real) :: e2
+real(amrex_real) :: w1=0.3d0
+real(amrex_real) :: l1=4.0d0
 
 x=x_i*1000.0d0
 y=y_i*1000.0d0
@@ -219,11 +219,11 @@ end subroutine LS_air_water
   use probcommon_module
   IMPLICIT NONE
 
-  INTEGER_T, INTENT(in) :: nmat
-  REAL_T, INTENT(in) :: x(SDIM)
-  REAL_T, INTENT(in) :: t
-  REAL_T, INTENT(out) :: LS(nmat)
-  INTEGER_T im
+  integer, INTENT(in) :: nmat
+  real(amrex_real), INTENT(in) :: x(SDIM)
+  real(amrex_real), INTENT(in) :: t
+  real(amrex_real), INTENT(out) :: LS(nmat)
+  integer im
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -261,16 +261,16 @@ subroutine YAOHONG_INKJET_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: dx(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: VEL(SDIM)
-INTEGER_T dir
-INTEGER_T, INTENT(in) :: velsolid_flag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: VEL(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
 
-REAL_T local_PI
+real(amrex_real) local_PI
 
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
@@ -326,12 +326,12 @@ subroutine YAOHONG_INKJET_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: PRES
-REAL_T :: zhi
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: PRES
+real(amrex_real) :: zhi
 
 if (t.ge.zero) then
  ! do nothing
@@ -367,14 +367,14 @@ subroutine YAOHONG_INKJET_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
    use probcommon_module
    IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
-INTEGER_T, INTENT(in) :: nmat
-INTEGER_T, INTENT(in) :: nstate_mat
-REAL_T, INTENT(in) :: x(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(out) :: STATE(nmat*nstate_mat)
-INTEGER_T im,ibase
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -422,14 +422,14 @@ subroutine YAOHONG_INKJET_LS_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(inout) :: LS(nmat)
-REAL_T, INTENT(in) :: LS_in(nmat)
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -456,18 +456,18 @@ subroutine YAOHONG_INKJET_VEL_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: VEL
-REAL_T, INTENT(in) :: VEL_in
-INTEGER_T, INTENT(in) :: veldir,dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
-REAL_T local_VEL(SDIM)
-INTEGER_T velsolid_flag
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -498,15 +498,15 @@ subroutine YAOHONG_INKJET_PRES_BC(xwall,xghost,t,LS, &
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T, INTENT(inout) :: PRES
-REAL_T, INTENT(in) :: PRES_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -540,8 +540,8 @@ function is_YAOHONG_INKJET_overlay(nmat,im)
 use probcommon_module
 IMPLICIT NONE
 
-INTEGER_T is_YAOHONG_INKJET_overlay
-INTEGER_T, INTENT(in) :: nmat,im
+integer is_YAOHONG_INKJET_overlay
+integer, INTENT(in) :: nmat,im
 
 if (nmat.eq.num_materials) then
  if (num_materials.eq.3) then
@@ -576,20 +576,20 @@ use probcommon_module
 use global_utility_module
 IMPLICIT NONE
 
-INTEGER_T, INTENT(in) :: nmat
-REAL_T, INTENT(in) :: xwall
-REAL_T, INTENT(in) :: xghost(SDIM)
-REAL_T, INTENT(in) :: t
-REAL_T, INTENT(in) :: LS(nmat)
-REAL_T local_STATE(nmat*num_state_material)
-REAL_T, INTENT(inout) :: STATE
-REAL_T, INTENT(inout) :: STATE_merge
-REAL_T, INTENT(in) :: STATE_in
-INTEGER_T, INTENT(in) :: dir,side
-REAL_T, INTENT(in) :: dx(SDIM)
-INTEGER_T, INTENT(in) :: istate,im
-INTEGER_T ibase,im_crit,im_loop
-INTEGER_T local_bcflag
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit,im_loop
+integer local_bcflag
 
 if (nmat.eq.num_materials) then
  ! do nothing

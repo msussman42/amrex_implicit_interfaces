@@ -1,7 +1,6 @@
 #undef BL_LANG_CC
 #define BL_LANG_FORT
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -17,18 +16,19 @@ stop
 #endif
 
 module rainControl_module
+use amrex_fort_module, only : amrex_real
 
 implicit none
 
-      INTEGER_T, PARAMETER :: maxDrop=0  ! was 400
-      INTEGER_T, PARAMETER :: maxDrop_alloc=400 
-      REAL_T, PARAMETER :: period=0.0004
-      REAL_T, PARAMETER :: rDrop=0.1
-      REAL_T, PARAMETER :: uDrop=-600.0
-      REAL_T xRange,xShift,xMax,xMin 
-      REAL_T startPosi(maxDrop_alloc)
-      REAL_T xrand(maxDrop_alloc)
-      REAL_T LSDrop(maxDrop_alloc)
+      integer, PARAMETER :: maxDrop=0  ! was 400
+      integer, PARAMETER :: maxDrop_alloc=400 
+      real(amrex_real), PARAMETER :: period=0.0004
+      real(amrex_real), PARAMETER :: rDrop=0.1
+      real(amrex_real), PARAMETER :: uDrop=-600.0
+      real(amrex_real) xRange,xShift,xMax,xMin 
+      real(amrex_real) startPosi(maxDrop_alloc)
+      real(amrex_real) xrand(maxDrop_alloc)
+      real(amrex_real) LSDrop(maxDrop_alloc)
 
 contains
 
@@ -37,20 +37,20 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      INTEGER_T dir
-      REAL_T x,y,z,time
-      INTEGER_T im
-      REAL_T dx(SDIM)
-      REAL_T vfrac(num_materials)
-      REAL_T cenbc(num_materials,SDIM)
+      integer dir
+      real(amrex_real) x,y,z,time
+      integer im
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) vfrac(num_materials)
+      real(amrex_real) cenbc(num_materials,SDIM)
 
-      INTEGER_T nDrop
-      REAL_T LS
-      REAL_T startPosi(maxDrop_alloc)
-      REAL_T xrand(maxDrop_alloc)
-      REAL_T nowTime,rainDuTime
-      INTEGER_T iLoc,nLoc,iFound
-      INTEGER_T maxDrop_for_mod
+      integer nDrop
+      real(amrex_real) LS
+      real(amrex_real) startPosi(maxDrop_alloc)
+      real(amrex_real) xrand(maxDrop_alloc)
+      real(amrex_real) nowTime,rainDuTime
+      integer iLoc,nLoc,iFound
+      integer maxDrop_for_mod
 
 
       if (maxDrop.gt.0) then
@@ -151,13 +151,13 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T x,y,z,time
-      REAL_T dx(SDIM)
-      REAL_T vel,vel_rain
+      real(amrex_real) x,y,z,time
+      real(amrex_real) dx(SDIM)
+      real(amrex_real) vel,vel_rain
 
-      INTEGER_T dir
-      REAL_T VOF(num_materials)
-      REAL_T cenbc(num_materials,SDIM)
+      integer dir
+      real(amrex_real) VOF(num_materials)
+      real(amrex_real) cenbc(num_materials,SDIM)
 
       call get_rain_vfrac(x,y,z,dx,VOF,cenbc,time,dir) 
 
@@ -179,15 +179,15 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T x,y,z,time
-      REAL_T LSparm(num_materials)
-      REAL_T LS
+      real(amrex_real) x,y,z,time
+      real(amrex_real) LSparm(num_materials)
+      real(amrex_real) LS
 
-      INTEGER_T nDrop,iLoc,nLoc,insiderDrop
-      REAL_T bigdist,LS0
-      REAL_T nowTime,rainDuTime
-      INTEGER_T im
-      INTEGER_T maxDrop_for_mod
+      integer nDrop,iLoc,nLoc,insiderDrop
+      real(amrex_real) bigdist,LS0
+      real(amrex_real) nowTime,rainDuTime
+      integer im
+      integer maxDrop_for_mod
 
       if (maxDrop.gt.0) then
 
@@ -255,15 +255,15 @@ contains
       use probcommon_module
       IMPLICIT NONE
 
-      REAL_T x,y,z,time
-      REAL_T LSparm(num_materials)
-      REAL_T LS
+      real(amrex_real) x,y,z,time
+      real(amrex_real) LSparm(num_materials)
+      real(amrex_real) LS
 
-      INTEGER_T nDrop,iLoc,nLoc,insiderDrop
-      REAL_T bigdist,LS0
-      REAL_T nowTime,rainDuTime
-      INTEGER_T im
-      INTEGER_T maxDrop_for_mod
+      integer nDrop,iLoc,nLoc,insiderDrop
+      real(amrex_real) bigdist,LS0
+      real(amrex_real) nowTime,rainDuTime
+      integer im
+      integer maxDrop_for_mod
 
       if (maxDrop.gt.0) then
 

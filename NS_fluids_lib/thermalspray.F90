@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -28,13 +27,14 @@ stop
 ! material 3 = solidified melt
 ! material 4 = substrate
 module TSPRAY_module
+use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
 
- REAL_T, allocatable, dimension(:,:) :: drop_data
- REAL_T, dimension(3) :: TDOMAIN
- INTEGER_T :: T_num_drops
+ real(amrex_real), allocatable, dimension(:,:) :: drop_data
+ real(amrex_real), dimension(3) :: TDOMAIN
+ integer :: T_num_drops
 
 contains
 
@@ -43,7 +43,7 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T nd
+ integer nd
 
  if ((num_materials.eq.4).and. &
      (probtype.eq.402)) then
@@ -118,12 +118,12 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- INTEGER_T nd
- REAL_T LS(num_materials)
- INTEGER_T in_droplet
- REAL_T minLS,tempLS
+ real(amrex_real) x(SDIM)
+ real(amrex_real) t
+ integer nd
+ real(amrex_real) LS(num_materials)
+ integer in_droplet
+ real(amrex_real) minLS,tempLS
 
   ! fluids tessellate the domain, solids are immersed. 
  if ((num_materials.eq.4).and. &
@@ -212,14 +212,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(num_materials)
- REAL_T, INTENT(out) :: VEL(SDIM)
- INTEGER_T dir
- INTEGER_T, INTENT(in) :: velsolid_flag
- REAL_T max_drop_rad,local_rad
- INTEGER_T nd
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(num_materials)
+ real(amrex_real), INTENT(out) :: VEL(SDIM)
+ integer dir
+ integer, INTENT(in) :: velsolid_flag
+ real(amrex_real) max_drop_rad,local_rad
+ integer nd
 
  if ((velsolid_flag.eq.0).or. &
      (velsolid_flag.eq.1)) then
@@ -282,10 +282,10 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T x(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T PRES
+ real(amrex_real) x(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) PRES
 
  PRES=zero
 
@@ -297,11 +297,11 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: x(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(num_materials)
- REAL_T, INTENT(out) :: STATE(num_materials*num_state_material)
- INTEGER_T im,ibase,n
+ real(amrex_real), INTENT(in) :: x(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(num_materials)
+ real(amrex_real), INTENT(out) :: STATE(num_materials*num_state_material)
+ integer im,ibase,n
 
  if ((num_materials.eq.4).and. &
      (num_state_material.eq.2).and. &
@@ -339,13 +339,13 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T LS_in(num_materials)
- INTEGER_T dir,side
- REAL_T dx(SDIM)
+ real(amrex_real) xwall
+ real(amrex_real) xghost(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) LS_in(num_materials)
+ integer dir,side
+ real(amrex_real) dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -365,16 +365,16 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T VEL
- REAL_T VEL_in
- INTEGER_T veldir,dir,side
- REAL_T dx(SDIM)
- REAL_T local_VEL(SDIM)
- INTEGER_T velsolid_flag
+ real(amrex_real) xwall
+ real(amrex_real) xghost(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) VEL
+ real(amrex_real) VEL_in
+ integer veldir,dir,side
+ real(amrex_real) dx(SDIM)
+ real(amrex_real) local_VEL(SDIM)
+ integer velsolid_flag
 
  velsolid_flag=0
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
@@ -399,14 +399,14 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- REAL_T xwall
- REAL_T xghost(SDIM)
- REAL_T t
- REAL_T LS(num_materials)
- REAL_T PRES
- REAL_T PRES_in
- INTEGER_T dir,side
- REAL_T dx(SDIM)
+ real(amrex_real) xwall
+ real(amrex_real) xghost(SDIM)
+ real(amrex_real) t
+ real(amrex_real) LS(num_materials)
+ real(amrex_real) PRES
+ real(amrex_real) PRES_in
+ integer dir,side
+ real(amrex_real) dx(SDIM)
 
  if ((dir.ge.1).and.(dir.le.SDIM).and. &
      (side.ge.1).and.(side.le.2)) then
@@ -425,8 +425,8 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T is_TSPRAY_overlay
- INTEGER_T nmat,im
+ integer is_TSPRAY_overlay
+ integer nmat,im
 
  if (nmat.eq.num_materials) then
   if (num_materials.eq.4) then
@@ -459,18 +459,18 @@ contains
  use global_utility_module
  IMPLICIT NONE
 
- REAL_T, INTENT(in) :: xwall
- REAL_T, INTENT(in) :: xghost(SDIM)
- REAL_T, INTENT(in) :: t
- REAL_T, INTENT(in) :: LS(num_materials)
- REAL_T local_STATE(num_materials*num_state_material)
- REAL_T, INTENT(out) :: STATE
- REAL_T, INTENT(out) :: STATE_merge
- REAL_T, INTENT(in) :: STATE_in
- INTEGER_T, INTENT(in) :: dir,side
- REAL_T, INTENT(in) :: dx(SDIM)
- INTEGER_T, INTENT(in) :: istate,im
- INTEGER_T ibase,im_crit,im_loop
+ real(amrex_real), INTENT(in) :: xwall
+ real(amrex_real), INTENT(in) :: xghost(SDIM)
+ real(amrex_real), INTENT(in) :: t
+ real(amrex_real), INTENT(in) :: LS(num_materials)
+ real(amrex_real) local_STATE(num_materials*num_state_material)
+ real(amrex_real), INTENT(out) :: STATE
+ real(amrex_real), INTENT(out) :: STATE_merge
+ real(amrex_real), INTENT(in) :: STATE_in
+ integer, INTENT(in) :: dir,side
+ real(amrex_real), INTENT(in) :: dx(SDIM)
+ integer, INTENT(in) :: istate,im
+ integer ibase,im_crit,im_loop
 
  if ((istate.ge.1).and. &
      (istate.le.num_state_material).and. &
@@ -514,15 +514,15 @@ contains
  use probcommon_module
  IMPLICIT NONE
 
- INTEGER_T im
- REAL_T VFRAC(num_materials)
- REAL_T time
- REAL_T x(SDIM)
- REAL_T temp(num_materials)
- REAL_T den(num_materials)
- REAL_T CV(num_materials)
- REAL_T dt
- REAL_T heat_source
+ integer im
+ real(amrex_real) VFRAC(num_materials)
+ real(amrex_real) time
+ real(amrex_real) x(SDIM)
+ real(amrex_real) temp(num_materials)
+ real(amrex_real) den(num_materials)
+ real(amrex_real) CV(num_materials)
+ real(amrex_real) dt
+ real(amrex_real) heat_source
 
  if ((num_materials.eq.4).and. &
      (num_state_material.eq.2).and. &

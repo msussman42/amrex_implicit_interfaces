@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -20,22 +19,23 @@ stop
 #endif
 
 MODULE shockdrop
+use amrex_fort_module, only : amrex_real
 
-       REAL_T shockdrop_P
-       REAL_T shockdrop_T
-       REAL_T shockdrop_DEN
-       REAL_T shockdrop_M
-       REAL_T shockdrop_VEL
-       REAL_T shockdrop_C
+       real(amrex_real) shockdrop_P
+       real(amrex_real) shockdrop_T
+       real(amrex_real) shockdrop_DEN
+       real(amrex_real) shockdrop_M
+       real(amrex_real) shockdrop_VEL
+       real(amrex_real) shockdrop_C
 
-       REAL_T shockdrop_P1
-       REAL_T shockdrop_T1
-       REAL_T shockdrop_DEN1
-       REAL_T shockdrop_M1
-       REAL_T shockdrop_VEL1
-       REAL_T shockdrop_C1
+       real(amrex_real) shockdrop_P1
+       real(amrex_real) shockdrop_T1
+       real(amrex_real) shockdrop_DEN1
+       real(amrex_real) shockdrop_M1
+       real(amrex_real) shockdrop_VEL1
+       real(amrex_real) shockdrop_C1
 
-       REAL_T shockdrop_gamma
+       real(amrex_real) shockdrop_gamma
 
 CONTAINS
 
@@ -88,9 +88,9 @@ CONTAINS
        subroutine shockdrop_velocity(x,y,z,vel, &
          xblob,yblob,zblob,radblob,zblob2,axis_dir)
        IMPLICIT NONE
-       INTEGER_T axis_dir,dir
-       REAL_T x,y,z,xblob,yblob,zblob,radblob,zblob2,LS
-       REAL_T vel(SDIM)
+       integer axis_dir,dir
+       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2,LS
+       real(amrex_real) vel(SDIM)
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then
@@ -120,8 +120,8 @@ CONTAINS
 
        subroutine shockdrop_maxvelocity(vel,axis_dir)
        IMPLICIT NONE
-       INTEGER_T axis_dir
-       REAL_T vel
+       integer axis_dir
+       real(amrex_real) vel
 
        vel=max(abs(shockdrop_VEL),abs(shockdrop_VEL1))
 
@@ -133,9 +133,9 @@ CONTAINS
        subroutine shockdrop_pressure(x,y,z,pres, &
          xblob,yblob,zblob,radblob,zblob2,axis_dir)
        IMPLICIT NONE
-       INTEGER_T axis_dir
-       REAL_T x,y,z,xblob,yblob,zblob,radblob,zblob2
-       REAL_T pres,LS
+       integer axis_dir
+       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2
+       real(amrex_real) pres,LS
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then
@@ -163,9 +163,9 @@ CONTAINS
        subroutine shockdrop_gas_density(x,y,z,den, &
          xblob,yblob,zblob,radblob,zblob2,axis_dir)
        IMPLICIT NONE
-       INTEGER_T axis_dir
-       REAL_T x,y,z,xblob,yblob,zblob,radblob,zblob2
-       REAL_T den,LS
+       integer axis_dir
+       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2
+       real(amrex_real) den,LS
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then
@@ -193,9 +193,9 @@ CONTAINS
        subroutine shockdrop_gas_temperature(x,y,z,temp, &
          xblob,yblob,zblob,radblob,zblob2,axis_dir)
        IMPLICIT NONE
-       INTEGER_T axis_dir
-       REAL_T x,y,z,xblob,yblob,zblob,radblob,zblob2
-       REAL_T temp,LS
+       integer axis_dir
+       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2
+       real(amrex_real) temp,LS
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then
@@ -227,9 +227,9 @@ CONTAINS
        ! LS<0 downstream of the shock z<zblob2
        SUBROUTINE shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
        IMPLICIT NONE
-       INTEGER_T,INTENT(in) :: axis_dir
-       REAL_T,INTENT(in) :: x,y,z,zblob2
-       REAL_T,INTENT(out) :: LS
+       integer,INTENT(in) :: axis_dir
+       real(amrex_real),INTENT(in) :: x,y,z,zblob2
+       real(amrex_real),INTENT(out) :: LS
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then
@@ -255,8 +255,8 @@ CONTAINS
        subroutine shockdrop_dropLS(x,y,z,LS, &
          xblob,yblob,zblob,radblob,axis_dir)
        IMPLICIT NONE
-       INTEGER_T axis_dir
-       REAL_T x,y,z,LS,xblob,yblob,zblob,radblob,mag
+       integer axis_dir
+       real(amrex_real) x,y,z,LS,xblob,yblob,zblob,radblob,mag
 
        if (SDIM.eq.2) then
         if (abs(z-y).gt.1.0E-8) then

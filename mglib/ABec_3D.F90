@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include <AMReX_FORT_INTEGER.H>
 #include <AMReX_REAL.H>
 
 #include "AMReX_SPACE.H"
@@ -13,7 +12,8 @@
 #include "ABec_F.H"
 
       module cpp_abec
-
+      use amrex_fort_module, only : amrex_real
+      
       contains
 
       subroutine fort_gsrb( &
@@ -42,51 +42,51 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: mg_coarsest_level
-      INTEGER_T, intent(in) :: isweep
-      INTEGER_T, intent(in) :: num_sweeps
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(masksing)
-      INTEGER_T, intent(in) :: DIMDEC(phi)
-      INTEGER_T, intent(in) :: DIMDEC(rhs)
-      INTEGER_T, intent(in) :: DIMDEC(diagfab)
+      integer, intent(in) :: level
+      integer, intent(in) :: mg_coarsest_level
+      integer, intent(in) :: isweep
+      integer, intent(in) :: num_sweeps
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3), growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(masksing)
+      integer, intent(in) :: DIMDEC(phi)
+      integer, intent(in) :: DIMDEC(rhs)
+      integer, intent(in) :: DIMDEC(diagfab)
 
-      REAL_T, intent(in), target :: masksing(DIMV(masksing))
+      real(amrex_real), intent(in), target :: masksing(DIMV(masksing))
 
-      REAL_T, intent(inout), target :: phi(DIMV(phi))
-      REAL_T, pointer :: phi_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(inout), target :: phi(DIMV(phi))
+      real(amrex_real), pointer :: phi_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: rhs(DIMV(rhs))
-      REAL_T, intent(in), target :: diagfab(DIMV(diagfab))
-      REAL_T, intent(in), target :: bxleft(DIMV(diagfab))
-      REAL_T, intent(in), target :: bxright(DIMV(diagfab))
-      REAL_T, intent(in), target :: byleft(DIMV(diagfab))
-      REAL_T, intent(in), target :: byright(DIMV(diagfab))
-      REAL_T, intent(in), target :: bzleft(DIMV(diagfab))
-      REAL_T, intent(in), target :: bzright(DIMV(diagfab))
-      REAL_T, intent(in), target :: icbx(DIMV(diagfab))
-      REAL_T, intent(in), target :: icby(DIMV(diagfab))
-      REAL_T, intent(in), target :: icbz(DIMV(diagfab))
-      REAL_T, intent(in), target :: icdiag(DIMV(diagfab))
-      REAL_T, intent(in), target :: icdiagrb(DIMV(diagfab))
-      REAL_T, intent(in), target :: mask(DIMV(diagfab))
-      REAL_T, intent(out), target :: ax(DIMV(diagfab))
-      REAL_T, intent(inout), target :: solnsave(DIMV(diagfab))
-      REAL_T, intent(inout), target :: rhssave(DIMV(diagfab))
-      REAL_T, intent(inout), target :: redsoln(DIMV(diagfab))
-      REAL_T, intent(inout), target :: blacksoln(DIMV(diagfab))
-      INTEGER_T, intent(in) :: smooth_type
+      real(amrex_real), intent(in), target :: rhs(DIMV(rhs))
+      real(amrex_real), intent(in), target :: diagfab(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bxleft(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bxright(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: byleft(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: byright(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bzleft(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bzright(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: icbx(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: icby(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: icbz(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: icdiag(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: icdiagrb(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: mask(DIMV(diagfab))
+      real(amrex_real), intent(out), target :: ax(DIMV(diagfab))
+      real(amrex_real), intent(inout), target :: solnsave(DIMV(diagfab))
+      real(amrex_real), intent(inout), target :: rhssave(DIMV(diagfab))
+      real(amrex_real), intent(inout), target :: redsoln(DIMV(diagfab))
+      real(amrex_real), intent(inout), target :: blacksoln(DIMV(diagfab))
+      integer, intent(in) :: smooth_type
 
-      INTEGER_T i,j,k
-      REAL_T XX,YY
-      REAL_T local_diag
-      REAL_T test_mask
+      integer i,j,k
+      real(amrex_real) XX,YY
+      real(amrex_real) local_diag
+      real(amrex_real) test_mask
 
       phi_ptr=>phi
 
@@ -602,34 +602,34 @@
 
       IMPLICIT NONE
 
-      INTEGER_T, intent(in) :: level
-      INTEGER_T, intent(in) :: mg_coarsest_level
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T :: growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(masksing)
-      INTEGER_T, intent(in) :: DIMDEC(y)
-      INTEGER_T, intent(in) :: DIMDEC(x)
-      INTEGER_T, intent(in) :: DIMDEC(diagfab)
+      integer, intent(in) :: level
+      integer, intent(in) :: mg_coarsest_level
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer :: growlo(3), growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(masksing)
+      integer, intent(in) :: DIMDEC(y)
+      integer, intent(in) :: DIMDEC(x)
+      integer, intent(in) :: DIMDEC(diagfab)
 
-      REAL_T, intent(in), target :: masksing(DIMV(masksing))
-      REAL_T, intent(out), target :: y(DIMV(y))
-      REAL_T, pointer :: y_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(in), target :: masksing(DIMV(masksing))
+      real(amrex_real), intent(out), target :: y(DIMV(y))
+      real(amrex_real), pointer :: y_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: x(DIMV(x))
-      REAL_T, intent(in), target :: diagfab(DIMV(diagfab))
-      REAL_T, intent(in), target :: bxleft(DIMV(diagfab))
-      REAL_T, intent(in), target :: bxright(DIMV(diagfab))
-      REAL_T, intent(in), target :: byleft(DIMV(diagfab))
-      REAL_T, intent(in), target :: byright(DIMV(diagfab))
-      REAL_T, intent(in), target :: bzleft(DIMV(diagfab))
-      REAL_T, intent(in), target :: bzright(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: x(DIMV(x))
+      real(amrex_real), intent(in), target :: diagfab(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bxleft(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bxright(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: byleft(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: byright(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bzleft(DIMV(diagfab))
+      real(amrex_real), intent(in), target :: bzright(DIMV(diagfab))
 
-      INTEGER_T i,j,k
-      REAL_T test_mask
+      integer i,j,k
+      real(amrex_real) test_mask
 
       y_ptr=>y
 
@@ -702,27 +702,27 @@
       use global_utility_module
 
       IMPLICIT NONE
-      INTEGER_T, intent(in) :: tilelo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: tilehi(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fablo(AMREX_SPACEDIM)
-      INTEGER_T, intent(in) :: fabhi(AMREX_SPACEDIM)
-      INTEGER_T growlo(3), growhi(3)
-      INTEGER_T, intent(in) :: bfact,bfact_top
-      INTEGER_T, intent(in) :: DIMDEC(y)
-      INTEGER_T, intent(in) :: DIMDEC(bX)
-      INTEGER_T, intent(in) :: DIMDEC(bY)
-      INTEGER_T, intent(in) :: DIMDEC(bZ)
+      integer, intent(in) :: tilelo(AMREX_SPACEDIM)
+      integer, intent(in) :: tilehi(AMREX_SPACEDIM)
+      integer, intent(in) :: fablo(AMREX_SPACEDIM)
+      integer, intent(in) :: fabhi(AMREX_SPACEDIM)
+      integer growlo(3), growhi(3)
+      integer, intent(in) :: bfact,bfact_top
+      integer, intent(in) :: DIMDEC(y)
+      integer, intent(in) :: DIMDEC(bX)
+      integer, intent(in) :: DIMDEC(bY)
+      integer, intent(in) :: DIMDEC(bZ)
 
-      REAL_T, intent(out), target ::  y(DIMV(y))
-      REAL_T, pointer :: y_ptr(D_DECL(:,:,:))
+      real(amrex_real), intent(out), target ::  y(DIMV(y))
+      real(amrex_real), pointer :: y_ptr(D_DECL(:,:,:))
 
-      REAL_T, intent(in), target :: bX(DIMV(bX))
-      REAL_T, intent(in), target :: bY(DIMV(bY))
-      REAL_T, intent(in), target :: bZ(DIMV(bZ))
+      real(amrex_real), intent(in), target :: bX(DIMV(bX))
+      real(amrex_real), intent(in), target :: bY(DIMV(bY))
+      real(amrex_real), intent(in), target :: bZ(DIMV(bZ))
 
-      INTEGER_T i,j,k
-      REAL_T bxleft,bxright,byleft,byright,bzleft,bzright
-      REAL_T offdiagsum
+      integer i,j,k
+      real(amrex_real) bxleft,bxright,byleft,byright,bzleft,bzright
+      real(amrex_real) offdiagsum
 
       y_ptr=>y
 

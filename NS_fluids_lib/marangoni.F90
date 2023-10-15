@@ -3,7 +3,6 @@
 #define BL_LANG_FORT
 #endif
 
-#include "AMReX_FORT_INTEGER.H"
 #include "AMReX_REAL.H"
 #include "AMReX_CONSTANTS.H"
 #include "AMReX_SPACE.H"
@@ -21,6 +20,7 @@ stop
 #endif
 
 MODULE marangoni
+use amrex_fort_module, only : amrex_real
 
 
 CONTAINS
@@ -48,19 +48,19 @@ subroutine position_Temp(flag,delta,delta2,x,y,z,Tout)
 implicit none
 
 integer               :: flag
-REAL_T                :: delta
-REAL_T                :: delta2
-REAL_T,INTENT(in)     :: x,y,z
-REAL_T,parameter      :: p1 = -0.94381
-REAL_T,parameter      :: p2 = 10.921
-REAL_T,parameter      :: p3 = -43.593
-REAL_T,parameter      :: p4 = 51.946
-REAL_T,parameter      :: p5 = 73.773
-REAL_T,parameter      :: p6 = -216.18
-REAL_T,parameter      :: p7 = 465.15
-REAL_T,parameter      :: TLO = 317.8415
-REAL_T,parameter      :: THI = 465.15
-REAL_T                :: Tout,T_expand
+real(amrex_real)                :: delta
+real(amrex_real)                :: delta2
+real(amrex_real),INTENT(in)     :: x,y,z
+real(amrex_real),parameter      :: p1 = -0.94381
+real(amrex_real),parameter      :: p2 = 10.921
+real(amrex_real),parameter      :: p3 = -43.593
+real(amrex_real),parameter      :: p4 = 51.946
+real(amrex_real),parameter      :: p5 = 73.773
+real(amrex_real),parameter      :: p6 = -216.18
+real(amrex_real),parameter      :: p7 = 465.15
+real(amrex_real),parameter      :: TLO = 317.8415
+real(amrex_real),parameter      :: THI = 465.15
+real(amrex_real)                :: Tout,T_expand
 
 if (SDIM.eq.2) then
  if (abs(y-z).ge.1.0E-8) then
@@ -112,8 +112,8 @@ subroutine Temp_ST(T,r)
 
 implicit none
 
-REAL_T ,INTENT(in)   :: T
-REAL_T               :: r
+real(amrex_real) ,INTENT(in)   :: T
+real(amrex_real)               :: r
 
 
 r =  (7.0d0-3.135d0)/(-40.0d0)*(T-383.0d0) + 7.0d0
@@ -140,14 +140,14 @@ subroutine dist_long_bubble(delta,delta2,x,y,z,dist)
 
 implicit none
 
-REAL_T,INTENT(in)        :: x,y,z
-REAL_T                   :: delta   ! liquid film thickness
-REAL_T                   :: delta2  ! init dist from top
-REAL_T                   :: dist
-REAL_T,dimension(SDIM)   :: c1,c2
-REAL_T                   :: r       ! radius of the semicircle
-REAL_T                   :: dist1
-REAL_T,dimension(SDIM)   :: xvec
+real(amrex_real),INTENT(in)        :: x,y,z
+real(amrex_real)                   :: delta   ! liquid film thickness
+real(amrex_real)                   :: delta2  ! init dist from top
+real(amrex_real)                   :: dist
+real(amrex_real),dimension(SDIM)   :: c1,c2
+real(amrex_real)                   :: r       ! radius of the semicircle
+real(amrex_real)                   :: dist1
+real(amrex_real),dimension(SDIM)   :: xvec
 
  if (SDIM.eq.2) then
   if (abs(y-z).ge.1.0E-8) then
@@ -189,8 +189,8 @@ subroutine cal_dist(x,y,dist)
 
 implicit none
 
-REAL_T,INTENT(in)    :: x(SDIM),y(SDIM)
-REAL_T,INTENT(out)   :: dist
+real(amrex_real),INTENT(in)    :: x(SDIM),y(SDIM)
+real(amrex_real),INTENT(out)   :: dist
 
 dist = sqrt((x(1)-y(1))**2.0d0 + (x(2)-y(2))**2.0d0) 
 

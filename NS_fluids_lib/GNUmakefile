@@ -23,6 +23,7 @@ MOF_HOME = ..
 #
 
 USE_CUDA = FALSE
+USE_ACC = FALSE
 #PRECISION = FLOAT
 PRECISION = DOUBLE
 DEBUG	  = TRUE
@@ -32,7 +33,7 @@ PROFILE = FALSE
 MEM_PROFILE = FALSE
 DIM       = 2
 
-BL_NO_FORT = TRUE
+BL_NO_FORT = FALSE
 
 MEHDI_VAHAB_FSI = TRUE
 CTML_FIB = TRUE
@@ -87,57 +88,11 @@ ifeq ($(HPC_GNU),TRUE)
 
  COMP = gnu
 
-# ask gfortran the name of the library to link in.  First check for the
-# static version.  If it returns only the name w/o a path, then it
-# was not found.  In that case, ask for the shared-object version.
-gfortran_liba  = $(shell $(F90) -print-file-name=libgfortran.a)
-gfortran_libso = $(shell $(F90) -print-file-name=libgfortran.so)
-
-ifneq ($(gfortran_liba),libgfortran.a)  # if found the full path is printed, thus `neq`.
-  LIBRARY_LOCATIONS += $(dir $(gfortran_liba))
-else
-  LIBRARY_LOCATIONS += $(dir $(gfortran_libso))
-endif
-
-override XTRALIBS += -lgfortran
-
-quadmath_liba  = $(shell $(F90) -print-file-name=libquadmath.a)
-quadmath_libso = $(shell $(F90) -print-file-name=libquadmath.so)
-
-ifneq ($(quadmath_liba),libquadmath.a)
-  override XTRALIBS += -lquadmath
-else ifneq ($(quadmath_libso),libquadmath.so)
-  override XTRALIBS += -lquadmath
-endif
-
 endif
 
 ifeq ($(LINUX_DESKTOP),TRUE)
 
  COMP = gnu
-
-# ask gfortran the name of the library to link in.  First check for the
-# static version.  If it returns only the name w/o a path, then it
-# was not found.  In that case, ask for the shared-object version.
-gfortran_liba  = $(shell $(F90) -print-file-name=libgfortran.a)
-gfortran_libso = $(shell $(F90) -print-file-name=libgfortran.so)
-
-ifneq ($(gfortran_liba),libgfortran.a)  # if found the full path is printed, thus `neq`.
-  LIBRARY_LOCATIONS += $(dir $(gfortran_liba))
-else
-  LIBRARY_LOCATIONS += $(dir $(gfortran_libso))
-endif
-
-override XTRALIBS += -lgfortran
-
-quadmath_liba  = $(shell $(F90) -print-file-name=libquadmath.a)
-quadmath_libso = $(shell $(F90) -print-file-name=libquadmath.so)
-
-ifneq ($(quadmath_liba),libquadmath.a)
-  override XTRALIBS += -lquadmath
-else ifneq ($(quadmath_libso),libquadmath.so)
-  override XTRALIBS += -lquadmath
-endif
 
 endif
 
@@ -201,19 +156,6 @@ USE_OMP = FALSE
 EBASE = amr
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
-
-ifeq ($(HPC_GNU),TRUE)
-FFLAGS   += $(GENERIC_GNU_FLAGS)
-F90FLAGS += $(GENERIC_GNU_FLAGS)
-endif
-ifeq ($(LINUX_DESKTOP),TRUE)
-FFLAGS   += $(GENERIC_GNU_FLAGS)
-F90FLAGS += $(GENERIC_GNU_FLAGS)
-endif
-ifeq ($(MAC_LAPTOP),TRUE)
-endif
-
-
 
 $(info MODDEP=$(MODDEP))
 
