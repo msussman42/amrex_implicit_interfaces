@@ -19711,8 +19711,20 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  FArrayBox visual_fab_output(visual_node_box,visual_ncomp);
  FArrayBox visual_fab_input(visual_node_box,visual_ncomp); 
 
- visual_fab_output.setVal(-1.0e+20);
- visual_fab_input.setVal(-1.0e+20);
+ Array4<Real> const& visual_output_array=visual_fab_output.array();
+ Array4<Real> const& visual_input_array=visual_fab_input.array();
+ const Dim3 lo3=amrex::lbound(visual_node_box);
+ const Dim3 hi3=amrex::ubound(visual_node_box);
+ for (int n=0;n<visual_ncomp;++n) {
+ for (int z=lo3.z;z<=hi3.z;++z) {
+ for (int y=lo3.y;y<=hi3.y;++y) {
+ for (int x=lo3.x;x<=hi3.x;++x) {
+  visual_output_array(x,y,z,n)=-1.0e+20;
+  visual_input_array(x,y,z,n)=-1.0e+20;
+ }
+ }
+ }
+ }
 
  Vector<int> gridlo(3);
  Vector<int> gridhi(3);
@@ -19753,31 +19765,19 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
    // communicate visual_fab_input from the IO proc to all of the
    // other processors.
+  for (int n=0;n<visual_ncomp;n++) {
+  for (int k=gridlo[2];k<=gridhi[2];k++) {
+  for (int j=gridlo[1];j<=gridhi[1];j++) {
   for (int i=gridlo[0];i<=gridhi[0];i++) {
-   for (int j=gridlo[1];j<=gridhi[1];j++) {
-    for (int k=gridlo[2];k<=gridhi[2];k++) {
-     for (int n=0;n<visual_ncomp;n++) {
-      Vector<int> arr_index(AMREX_SPACEDIM);
-      arr_index[0]=i;
-      arr_index[1]=j;
-      if (AMREX_SPACEDIM==3) {
-       arr_index[AMREX_SPACEDIM-1]=k;
-      }
-      IntVect p(arr_index);
-      Real local_data=visual_fab_input(p,n); 
-      ParallelDescriptor::ReduceRealMax(local_data);
-      ParallelDescriptor::Barrier();
-      if (1==0) {
-       Box pbox(p,p);
-       visual_fab_input.setVal(local_data,pbox,n);
-      } else {
-       visual_fab_input(p,n)=local_data;
-      }
-      ParallelDescriptor::Barrier();
-     } // n
-    } // k
-   } // j
-  } // i 
+   Real local_data=visual_input_array(i,j,k,n);
+   ParallelDescriptor::ReduceRealMax(local_data);
+   ParallelDescriptor::Barrier();
+   visual_input_array(i,j,k,n)=local_data;
+   ParallelDescriptor::Barrier();
+  } // i
+  } // j
+  } // k
+  } // n 
 
  } else if (visual_compare==0) {
   // do nothing
@@ -19886,31 +19886,19 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  ParallelDescriptor::Barrier();
 
+ for (int n=0;n<visual_ncomp;n++) {
+ for (int k=gridlo[2];k<=gridhi[2];k++) {
+ for (int j=gridlo[1];j<=gridhi[1];j++) {
  for (int i=gridlo[0];i<=gridhi[0];i++) {
-  for (int j=gridlo[1];j<=gridhi[1];j++) {
-   for (int k=gridlo[2];k<=gridhi[2];k++) {
-    for (int n=0;n<visual_ncomp;n++) {
-     Vector<int> arr_index(AMREX_SPACEDIM);
-     arr_index[0]=i;
-     arr_index[1]=j;
-     if (AMREX_SPACEDIM==3) {
-      arr_index[AMREX_SPACEDIM-1]=k;
-     }
-     IntVect p(arr_index);
-     Real local_data=visual_fab_output(p,n); 
-     ParallelDescriptor::ReduceRealMax(local_data);
-     ParallelDescriptor::Barrier();
-     if (1==0) {
-      Box pbox(p,p);
-      visual_fab_output.setVal(local_data,pbox,n);
-     } else {
-      visual_fab_output(p,n)=local_data;
-     }
-     ParallelDescriptor::Barrier();
-    } // n
-   } // k
-  } // j
- } // i 
+   Real local_data=visual_output_array(i,j,k,n);
+   ParallelDescriptor::ReduceRealMax(local_data);
+   ParallelDescriptor::Barrier();
+   visual_output_array(i,j,k,n)=local_data;
+   ParallelDescriptor::Barrier();
+ } // i
+ } // j
+ } // k
+ } // n 
 
  int total_number_grids=0;
  for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
