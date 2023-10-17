@@ -3995,11 +3995,44 @@ void NavierStokes::FillBoundaryTENSOR(
   localbox.growLo(dir,-1);
   FArrayBox localfab;
   localfab.resize(localbox,1);
-  localfab.copy(cellfab,localbox,sc,localbox,0,1);
+
+  Array4<Real> const& cellfab_array=cellfab.array();
+  Array4<Real> const& macfab_array=macfab.array();
+  Array4<Real> const& localfab_array=localfab.array();
+
+  const Dim3 lo3=amrex::lbound(localbox);
+  const Dim3 hi3=amrex::ubound(localbox);
+  for (int z=lo3.z;z<=hi3.z;++z) {
+  for (int y=lo3.y;y<=hi3.y;++y) {
+  for (int x=lo3.x;x<=hi3.x;++x) {
+   localfab_array(x,y,z,0)=cellfab_array(x,y,z,sc);
+  }
+  }
+  }
+
   localfab.SetBoxType(mactyp);
 
-  macfab.setVal(0.0);
-  macfab.copy(localfab,localfab.box(),0,localfab.box(),0,1);
+  Box macbox(macfab.box());
+  const Dim3 lo3b=amrex::lbound(macbox);
+  const Dim3 hi3b=amrex::ubound(macbox);
+  for (int z=lo3b.z;z<=hi3b.z;++z) {
+  for (int y=lo3b.y;y<=hi3b.y;++y) {
+  for (int x=lo3b.x;x<=hi3b.x;++x) {
+   macfab_array(x,y,z,0)=0.0;
+  }
+  }
+  }
+
+  const Dim3 lo3c=amrex::lbound(localfab.box());
+  const Dim3 hi3c=amrex::ubound(localfab.box());
+  for (int z=lo3c.z;z<=hi3c.z;++z) {
+  for (int y=lo3c.y;y<=hi3c.y;++y) {
+  for (int x=lo3c.x;x<=hi3c.x;++x) {
+   macfab_array(x,y,z,0)=localfab_array(x,y,z,0);
+  }
+  }
+  }
+
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_FILL_BOUNDARY_TENSOR,"FillBoundaryTENSOR");
@@ -4030,11 +4063,37 @@ void NavierStokes::FillBoundaryTENSOR(
   localbox.growLo(dir,-1);
   FArrayBox localfab;
   localfab.resize(localbox,1);
+
+  Array4<Real> const& cellfab_array=cellfab.array();
+  Array4<Real> const& macfab_array=macfab.array();
+  Array4<Real> const& localfab_array=localfab.array();
+
   localfab.SetBoxType(mactyp);
-  localfab.copy(macfab,localfab.box(),0,localfab.box(),0,1);
+
+  const Dim3 lo3=amrex::lbound(localfab.box());
+  const Dim3 hi3=amrex::ubound(localfab.box());
+
+  for (int z=lo3.z;z<=hi3.z;++z) {
+  for (int y=lo3.y;y<=hi3.y;++y) {
+  for (int x=lo3.x;x<=hi3.x;++x) {
+   localfab_array(x,y,z,0)=macfab_array(x,y,z,0);
+  }
+  }
+  }
+
   localfab.SetBoxType(IndexType::TheCellType());
 
-  cellfab.copy(localfab,localfab.box(),0,localfab.box(),sc,1);
+  const Dim3 lo3b=amrex::lbound(localfab.box());
+  const Dim3 hi3b=amrex::ubound(localfab.box());
+
+  for (int z=lo3b.z;z<=hi3b.z;++z) {
+  for (int y=lo3b.y;y<=hi3b.y;++y) {
+  for (int x=lo3b.x;x<=hi3b.x;++x) {
+   cellfab_array(x,y,z,sc)=localfab_array(x,y,z,0);
+  }
+  } 
+  }
+
  } // mfi
 } // omp
  ns_reconcile_d_num(LOOP_OVERRIDDE_FAB_TYPE,"FillBoundaryTENSOR");
@@ -6955,8 +7014,21 @@ bool NavierStokes::contains_nanTENSOR(MultiFab* mf,
     tilegrid,fabgrid);
 
   FArrayBox& fab_mf=(*mf)[mfi];
-  if (fab_mf.contains_nan(bx,scomp,1))
-   r = true;
+  Array4<Real> const& fab_mf_array=fab_mf.array();
+  const Dim3 lo3=amrex::lbound(bx);
+  const Dim3 hi3=amrex::ubound(bx);
+  for (int z=lo3.z;z<=hi3.z;++z) {
+  for (int y=lo3.y;y<=hi3.y;++y) {
+  for (int x=lo3.x;x<=hi3.x;++x) {
+   Real test_value=fab_mf_array(x,y,z,scomp);
+   if (test_value==test_value) {
+    //do nothing
+   } else {
+    r=true;
+   }
+  }
+  }
+  }
  } // mfi
 
  ParallelDescriptor::ReduceBoolOr(r);
@@ -6964,38 +7036,6 @@ bool NavierStokes::contains_nanTENSOR(MultiFab* mf,
  return r;
 } // subroutine contains_nanTENSOR
 
-bool NavierStokes::contains_infTENSOR(MultiFab* mf,
-   int datatype,int scomp,int dir) {
-
- if ((scomp<0)||(scomp>=mf->nComp()))
-  amrex::Error("scomp invalid");
- if ((dir<0)||(dir>=BL_SPACEDIM))
-  amrex::Error("dir invalid");
-
- bool r = false;
-
-#ifdef _OPENMP
-#pragma omp parallel reduction(|:r)
-#endif
- for (MFIter mfi(*mf,true); mfi.isValid(); ++mfi) {
-  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-  const int gridno = mfi.index();
-  const Box& tilegrid = mfi.tilebox();
-  const Box& fabgrid = grids[gridno];
-  int ng=0;
-
-  const Box& bx = growntileboxTENSOR(mf,datatype,ng,dir,
-    tilegrid,fabgrid);
-
-  FArrayBox& fab_mf=(*mf)[mfi];
-  if (fab_mf.contains_inf(bx,scomp,1))
-   r = true;
- } // mfi
-
- ParallelDescriptor::ReduceBoolOr(r);
-
- return r;
-} // subroutine contains_infTENSOR
 
 // datatype=0 normal
 // datatype=1 tensor face
@@ -7026,18 +7066,6 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
   std::cout << "ngrid= " << ngrid << '\n';
   std::cout << "mfBA= " << mfBA << '\n';
   amrex::Error("mf contains nan ::check_for_NAN_TENSOR_base");
- }
- if (contains_infTENSOR(mf,datatype,sc,dir)==true) {
-  std::cout << "sc= " << sc << '\n';
-  std::cout << "dir= " << dir << '\n';
-  std::cout << "ncomp= " << ncomp << '\n';
-  std::cout << "ngrow= " << ngrow << '\n';
-  std::cout << "level= " << level << '\n';
-  std::cout << "finest_level= " << finest_level << '\n';
-  std::cout << "domain= " << domain << '\n';
-  std::cout << "ngrid= " << ngrid << '\n';
-  std::cout << "mfBA= " << mfBA << '\n';
-  amrex::Error("mf contains inf ::check_for_NAN_TENSOR_base");
  }
  int force_check=1;
  int ncomp_tensor=1;

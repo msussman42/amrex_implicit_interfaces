@@ -738,7 +738,6 @@ protected:
 
     void show_norm2(MultiFab* mf,int scomp,int ncomp,int id);
     void show_norm2_id(int mf_id,int id);
-     // mf_check_inf_bounds must be 1.
     void check_value_max(int id,int mf_id,int scomp, 
 		int ncomp,int ngrow,Real max_value);
     void check_value_max_level(int id,MultiFab* mf,
@@ -759,8 +758,6 @@ protected:
      MultiFab* mf,int datatype,int ng,int dir,
      const Box& tilebox_box,const Box& vbx_box);
     bool contains_nanTENSOR(MultiFab* mf,
-      int datatype,int scomp,int dir);
-    bool contains_infTENSOR(MultiFab* mf,
       int datatype,int scomp,int dir);
 
     void check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
