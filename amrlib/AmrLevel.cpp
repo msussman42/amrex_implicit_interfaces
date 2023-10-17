@@ -1761,7 +1761,19 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
     std::cout << "ncomp_range= " << ncomp_range << '\n';
     std::cout << "mfi.index()= " << mfi.index() << '\n';
    }
-   mf[mfi].setVal(1.0e+20,grow_bx,DComp,ncomp_range);
+
+   Array4<Real> const& mf_array=mf[mfi].array();
+   const Dim3 lo3=amrex::lbound(grow_bx);
+   const Dim3 hi3=amrex::ubound(grow_bx);
+   for (int n=0;n<ncomp_range;++n) {
+   for (int z=lo3.z;z<=hi3.z;++z) {
+   for (int y=lo3.y;y<=hi3.y;++y) {
+   for (int x=lo3.x;x<=hi3.x;++x) {
+    mf_array(x,y,z,n+DComp)=1.0e+20;
+   }
+   }
+   }
+   }
 
    mapper->interp(nudge_time,
                   crseMF[mfi],
@@ -1777,12 +1789,20 @@ AmrLevel::FillCoarsePatch (MultiFab& mf,
 		  bfact_coarse,bfact_fine,
                   desc_grid_type);
 
-    //p=0 (infinity norm)
-   Real test_norm=mf[mfi].norm(grow_bx,0,DComp,ncomp_range);
-   if (test_norm<1.0e+19) {
-    //do nothing
-   } else {
-    amrex::Error("test_norm<1.0e+19 failed");
+
+   for (int n=0;n<ncomp_range;++n) {
+   for (int z=lo3.z;z<=hi3.z;++z) {
+   for (int y=lo3.y;y<=hi3.y;++y) {
+   for (int x=lo3.x;x<=hi3.x;++x) {
+    Real test_norm=mf_array(x,y,z,n+DComp);
+    if (test_norm<1.0e+19) {
+     //do nothing
+    } else {
+     amrex::Error("test_norm<1.0e+19 failed");
+   }
+   }
+   }
+   }
    }
 
   }  // mfi
