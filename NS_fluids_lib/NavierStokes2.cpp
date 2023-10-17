@@ -577,21 +577,43 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
   FArrayBox& fab = (*mask)[mfi];
+  Array4<Real> const& fab_array=fab.array();
+
+  Box d_box_interior=fab.box(); //tag (done second)
+  Box d_box_exterior=fab.box(); //1.0-tag (done first)
+
   if (clear_phys_boundary==0) {
-   fab.setVal(tag);
+   d_box_interior=fab.box(); //tag
   } else if (clear_phys_boundary==1) {
-   fab.setVal(1.0-tag);
-   Box d_box=geom.Domain();
-   d_box &= fab.box();
-   fab.setVal(tag,d_box,0);     // fab=1-tag outside domain
+   d_box_interior=geom.Domain();
+   d_box_interior &= fab.box();
   } else if ((clear_phys_boundary==2)||
              (clear_phys_boundary==3)) {
-   fab.setVal(1.0-tag);
-   Box d_box=geom.Domain();
-   d_box &= grids[mfi.index()];
-   fab.setVal(tag,d_box,0); // fab=1-tag outside domain and coarse/fine border
+   d_box_interior=geom.Domain();
+   d_box_interior &= grids[mfi.index()];
   } else
    amrex::Error("clear_phys_boundary invalid");
+
+  const Dim3 lo3=amrex::lbound(d_box_exterior);
+  const Dim3 hi3=amrex::ubound(d_box_exterior);
+  for (int z=lo3.z;z<=hi3.z;++z) {
+  for (int y=lo3.y;y<=hi3.y;++y) {
+  for (int x=lo3.x;x<=hi3.x;++x) {
+   fab_array(x,y,z,0)=1.0-tag;
+  }
+  }
+  }
+
+  const Dim3 lo3b=amrex::lbound(d_box_interior);
+  const Dim3 hi3b=amrex::ubound(d_box_interior);
+  for (int z=lo3b.z;z<=hi3b.z;++z) {
+  for (int y=lo3b.y;y<=hi3b.y;++y) {
+  for (int x=lo3b.x;x<=hi3b.x;++x) {
+   fab_array(x,y,z,0)=tag;
+  }
+  }
+  }
+
  } // mfi
 } //omp
  ns_reconcile_d_num(LOOP_MASKFINER,"maskfiner");
@@ -625,8 +647,19 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
     for (int j = 0; j < f_box.size(); j++) {
      Box c_box = amrex::coarsen(f_box[j],2);
      c_box &= grids[mfi.index()];
-     if (c_box.ok())
-      fab.setVal(1.0-tag,c_box,0);
+     if (c_box.ok()) {
+      Array4<Real> const& fab_array=fab.array();
+      const Dim3 lo3=amrex::lbound(c_box);
+      const Dim3 hi3=amrex::ubound(c_box);
+      for (int z=lo3.z;z<=hi3.z;++z) {
+      for (int y=lo3.y;y<=hi3.y;++y) {
+      for (int x=lo3.x;x<=hi3.x;++x) {
+       fab_array(x,y,z,0)=1.0-tag;
+      }
+      }
+      }
+     }
+
     } // j
    } // mfi
 } //omp
