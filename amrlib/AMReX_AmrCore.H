@@ -17,6 +17,10 @@
 
 namespace amrex {
 
+#ifdef AMREX_PARTICLES
+class AmrParGDB;
+#endif
+
 class AmrLevel;
 class LevelBld;
 class BoxDomain;
@@ -117,6 +121,15 @@ public:
     int global_AMR_num_materials; //init in InitAmr
     int global_AMR_num_materials_viscoelastic; //init in InitAmr
     int global_AMR_num_species_var; //init in InitAmr
+
+#ifdef AMREX_PARTICLES
+    [[nodiscard]] AmrParGDB* GetParGDB () const noexcept { return m_gdb.get(); }
+#endif
+
+#ifdef AMREX_PARTICLES
+//! Redistribute particles
+    void RedistributeParticles ();
+#endif
 
 protected:
     //
@@ -242,6 +255,11 @@ protected:
     Vector<std::unique_ptr<std::fstream> > datalog;
     std::string      restart_file;
     LevelBld*        levelbld;
+
+#ifdef AMREX_PARTICLES
+    std::unique_ptr<AmrParGDB> m_gdb;
+#endif
+
 
 private:
     //

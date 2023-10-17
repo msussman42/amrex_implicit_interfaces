@@ -1,9 +1,0 @@
-#
-# Generic setup mainly for MPI stuff
-#
-
-  CXX := icpc
-  CC  := icc
-  FC  := ifort
-  F90 := ifort
-

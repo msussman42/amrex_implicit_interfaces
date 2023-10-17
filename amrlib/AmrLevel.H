@@ -330,7 +330,11 @@ public:
      // new_data_FSI[0..level_MAX_NUM_SLAB-1]
     Vector< FSI_container_class > new_data_FSI;
 
-    //
+#ifdef AMREX_PARTICLES
+    //! This function can be called from the parent
+    virtual void particle_redistribute (int /*lbase*/ = 0, bool /*a_init*/ = false) {;}
+#endif
+
 protected:
     //
     // The constructors -- for derived classes.

@@ -45,6 +45,10 @@
 #include <DatasetClient.H>
 #endif
 
+#ifdef AMREX_PARTICLES
+#include <AMReX_AmrParGDB.H>
+#endif
+
 namespace amrex {
 
 //
@@ -192,6 +196,10 @@ AmrCore::getAmrLevels () noexcept
 //  a. levelbld = getLevelBld();
 AmrCore::AmrCore () 
   : AmrMesh() {
+
+#ifdef AMREX_PARTICLES
+    m_gdb = std::make_unique<AmrParGDB>(this);
+#endif
 
      // init default values for some parameters.
     Initialize();
@@ -2159,6 +2167,13 @@ AmrCore::bldFineLevels (Real strt_time)
 
 
 }  // subroutine bldFineLevels
+
+#ifdef AMREX_PARTICLES
+void
+AmrCore::RedistributeParticles () {
+ amr_level[0]->particle_redistribute(0,true);
+}   
+#endif
 
 } // namespace amrex
 
