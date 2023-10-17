@@ -1261,7 +1261,26 @@ StateDataPhysBCFunct::FillBoundary (
        lo_slab.shift(dir,-domain.length(dir));
        FArrayBox tmp;
        tmp.resize(lo_slab,ncomp);
-       tmp.copy(dest,dcomp,0,ncomp);
+
+       Array4<Real> const& dest_array=dest.array();
+       Array4<Real> const& tmp_array=tmp.array();
+
+       Box dest_box=dest.box();
+       Box tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3a=amrex::lbound(dest_box);
+       const Dim3 hi3a=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3a.z;z<=hi3a.z;++z) {
+       for (int y=lo3a.y;y<=hi3a.y;++y) {
+       for (int x=lo3a.x;x<=hi3a.x;++x) {
+        tmp_array(x,y,z,n)=dest_array(x,y,z,n+dcomp);
+       }
+       }
+       }
+       }
+
        tmp.shift(dir,domain.length(dir));
 
        int dcomp_tmp=0;
@@ -1278,13 +1297,48 @@ StateDataPhysBCFunct::FillBoundary (
         bfact);
         		    
        tmp.shift(dir,-domain.length(dir));
-       dest.copy(tmp,0,dcomp,ncomp);
+
+       dest_box=dest.box();
+       tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3b=amrex::lbound(dest_box);
+       const Dim3 hi3b=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3b.z;z<=hi3b.z;++z) {
+       for (int y=lo3b.y;y<=hi3b.y;++y) {
+       for (int x=lo3b.x;x<=hi3b.x;++x) {
+        dest_array(x,y,z,n+dcomp)=tmp_array(x,y,z,n);
+       }
+       }
+       }
+       }
+
       } // lo_slab
       if (hi_slab.ok()) {
        hi_slab.shift(dir,domain.length(dir));
        FArrayBox tmp;
        tmp.resize(hi_slab,ncomp);
-       tmp.copy(dest,dcomp,0,ncomp);
+
+       Array4<Real> const& dest_array=dest.array();
+       Array4<Real> const& tmp_array=tmp.array();
+
+       Box dest_box=dest.box();
+       Box tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3a=amrex::lbound(dest_box);
+       const Dim3 hi3a=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3a.z;z<=hi3a.z;++z) {
+       for (int y=lo3a.y;y<=hi3a.y;++y) {
+       for (int x=lo3a.x;x<=hi3a.x;++x) {
+        tmp_array(x,y,z,n)=dest_array(x,y,z,n+dcomp);
+       }
+       }
+       }
+       }
+
        tmp.shift(dir,-domain.length(dir));
 
        int dcomp_tmp=0;
@@ -1301,7 +1355,23 @@ StateDataPhysBCFunct::FillBoundary (
         bfact);
         		    
        tmp.shift(dir,domain.length(dir));
-       dest.copy(tmp,0,dcomp,ncomp);
+
+       dest_box=dest.box();
+       tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3b=amrex::lbound(dest_box);
+       const Dim3 hi3b=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3b.z;z<=hi3b.z;++z) {
+       for (int y=lo3b.y;y<=hi3b.y;++y) {
+       for (int x=lo3b.x;x<=hi3b.x;++x) {
+        dest_array(x,y,z,n+dcomp)=tmp_array(x,y,z,n);
+       }
+       }
+       }
+       }
+
       } // hi_slab
      } // dir
     } // periodic?
@@ -1417,7 +1487,26 @@ StateDataPhysBCFunctGHOST::FillBoundary (
        lo_slab.shift(dir,-domain.length(dir));
        FArrayBox tmp;
        tmp.resize(lo_slab,ncomp);
-       tmp.copy(dest,dcomp,0,ncomp);
+
+       Array4<Real> const& dest_array=dest.array();
+       Array4<Real> const& tmp_array=tmp.array();
+
+       Box dest_box=dest.box();
+       Box tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3a=amrex::lbound(dest_box);
+       const Dim3 hi3a=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3a.z;z<=hi3a.z;++z) {
+       for (int y=lo3a.y;y<=hi3a.y;++y) {
+       for (int x=lo3a.x;x<=hi3a.x;++x) {
+        tmp_array(x,y,z,n)=dest_array(x,y,z,n+dcomp);
+       }
+       }
+       }
+       }
+
         // tmp.Box() is outside the Growndomain.
        tmp.shift(dir,domain.length(dir));
 
@@ -1444,13 +1533,50 @@ StateDataPhysBCFunctGHOST::FillBoundary (
         		   
         // tmp.Box() is inside the Growndomain 
        tmp.shift(dir,-domain.length(dir));
-       dest.copy(tmp,0,dcomp,ncomp);
+
+       dest_box=dest.box();
+       tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3b=amrex::lbound(dest_box);
+       const Dim3 hi3b=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3b.z;z<=hi3b.z;++z) {
+       for (int y=lo3b.y;y<=hi3b.y;++y) {
+       for (int x=lo3b.x;x<=hi3b.x;++x) {
+        dest_array(x,y,z,n+dcomp)=tmp_array(x,y,z,n);
+       }
+       }
+       }
+       }
+
       } // lo_slab
+
       if (hi_slab.ok()) {
        hi_slab.shift(dir,domain.length(dir));
+
        FArrayBox tmp;
        tmp.resize(hi_slab,ncomp);
-       tmp.copy(dest,dcomp,0,ncomp);
+
+       Array4<Real> const& dest_array=dest.array();
+       Array4<Real> const& tmp_array=tmp.array();
+
+       Box dest_box=dest.box();
+       Box tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3a=amrex::lbound(dest_box);
+       const Dim3 hi3a=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3a.z;z<=hi3a.z;++z) {
+       for (int y=lo3a.y;y<=hi3a.y;++y) {
+       for (int x=lo3a.x;x<=hi3a.x;++x) {
+        tmp_array(x,y,z,n)=dest_array(x,y,z,n+dcomp);
+       }
+       }
+       }
+       }
+
        tmp.shift(dir,-domain.length(dir));
 
        int dcomp_tmp=0;
@@ -1467,7 +1593,23 @@ StateDataPhysBCFunctGHOST::FillBoundary (
         bfact);
         		    
        tmp.shift(dir,domain.length(dir));
-       dest.copy(tmp,0,dcomp,ncomp);
+
+       dest_box=dest.box();
+       tmp_box=tmp.box();
+       dest_box &= tmp_box;
+
+       const Dim3 lo3b=amrex::lbound(dest_box);
+       const Dim3 hi3b=amrex::ubound(dest_box);
+       for (int n=0;n<ncomp;++n) {
+       for (int z=lo3b.z;z<=hi3b.z;++z) {
+       for (int y=lo3b.y;y<=hi3b.y;++y) {
+       for (int x=lo3b.x;x<=hi3b.x;++x) {
+        dest_array(x,y,z,n+dcomp)=tmp_array(x,y,z,n);
+       }
+       }
+       }
+       }
+
       } // hi_slab
      } // dir
     } // periodic?

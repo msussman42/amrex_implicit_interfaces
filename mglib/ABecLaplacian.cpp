@@ -322,7 +322,20 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
      // mask off the residual if the off diagonal entries sum to 0.
    FArrayBox& diagfab=(*MG_CG_diagsumL[level])[mfi];
    FArrayBox& residfab=residL[mfi];
-   residfab.mult(diagfab,tilegrid,0,0,nsolve_ABec); 
+
+   Array4<Real> const& resid_array=residfab.array();
+   Array4<Real> const& diag_array=diagfab.array();
+   const Dim3 lo3=amrex::lbound(tilegrid);
+   const Dim3 hi3=amrex::ubound(tilegrid);
+   for (int n=0;n<nsolve_ABec;++nsolve_ABec) {
+   for (int z=lo3.z;z<=hi3.z;++z) {
+   for (int y=lo3.y;y<=hi3.y;++y) {
+   for (int x=lo3.x;x<=hi3.x;++x) {
+    resid_array(x,y,z,n)*=diag_array(x,y,z,n);
+   }
+   }
+   }
+   }
 
 #if (profile_solver==1)
    bprof.stop();

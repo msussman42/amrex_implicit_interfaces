@@ -22,8 +22,8 @@ MOF_HOME = ..
 # endif
 #
 
-USE_CUDA = TRUE
-USE_ACC = TRUE
+USE_CUDA = FALSE
+USE_ACC = FALSE
 USE_PARTICLES = FALSE
 #PRECISION = FLOAT
 PRECISION = DOUBLE
@@ -157,6 +157,11 @@ USE_OMP = FALSE
 EBASE = amr
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
+
+#FFLAGS += -fopenacc
+#F90FLAGS += -fopenacc
+#CXXFLAGS += -fopenacc
+NVCC_FLAGS += -fopenacc
 
 $(info MODDEP=$(MODDEP))
 
