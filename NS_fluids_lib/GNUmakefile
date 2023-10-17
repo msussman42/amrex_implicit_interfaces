@@ -24,6 +24,7 @@ MOF_HOME = ..
 
 USE_CUDA = TRUE
 USE_ACC = TRUE
+USE_PARTICLES = FALSE
 #PRECISION = FLOAT
 PRECISION = DOUBLE
 DEBUG	  = TRUE
@@ -193,6 +194,10 @@ include $(MOF_HOME)/StructureCodeShoele/Make.package
 endif
 
 include $(AMREX_HOME)/Src/Base/Make.package
+
+ifeq ($(USE_PARTICLES),TRUE)
+include $(AMREX_HOME)/Src/Particle/Make.package
+endif
 
 include ./Make.package
 include $(MOF_HOME)/amrlib/Make.package
