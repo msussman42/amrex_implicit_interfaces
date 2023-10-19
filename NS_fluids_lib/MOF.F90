@@ -6386,9 +6386,9 @@ end subroutine volume_sanity_check
 
        nlist=0
 
-       do i1=-1,1
-       do j1=-1,1
        do k1=ksten_low,ksten_high
+       do j1=-1,1
+       do i1=-1,1
 
         if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
 
@@ -7498,9 +7498,9 @@ end subroutine volume_sanity_check
         stop
       endif
 
-      do i1=-1,1
-      do j1=-1,1
       do k1=ksten_low,ksten_high
+      do j1=-1,1
+      do i1=-1,1
  
        if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
 
@@ -7814,9 +7814,9 @@ end subroutine volume_sanity_check
         datanode(inode,im)=zero
        enddo
        wtsum=zero
-       do i1=-1,1
-       do j1=-1,1
        do k1=klo,khi
+       do j1=-1,1
+       do i1=-1,1
         dir=1
         xlocell(dir)=xsten(2*i1-1,dir)
         xhicell(dir)=xsten(2*i1+1,dir)
@@ -10805,9 +10805,9 @@ contains
           stop
          endif
 
-         do i1=-1,1
-         do j1=-1,1
          do k1=ksten_low,ksten_high
+         do j1=-1,1
+         do i1=-1,1
 
           if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
 
@@ -11946,9 +11946,9 @@ contains
             stop
            endif
 
-           do i1=-1,1
-           do j1=-1,1
            do k1=ksten_low,ksten_high
+           do j1=-1,1
+           do i1=-1,1
             if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
              ! do nothing
             else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
@@ -12056,9 +12056,9 @@ contains
             stop
            endif
 
-           do i1=-1,1
-           do j1=-1,1
            do k1=ksten_low,ksten_high
+           do j1=-1,1
+           do i1=-1,1
             if (cmofsten(D_DECL(i1,j1,k1)).eq.1) then
              ! do nothing
             else if (cmofsten(D_DECL(i1,j1,k1)).eq.0) then
@@ -14819,9 +14819,9 @@ contains
            enddo
           else if (always_use_default.eq.0) then
 
-           do i=-1,1
-           do j=-1,1
            do k=klo,khi
+           do j=-1,1
+           do i=-1,1
             wx=twelve
             wy=twelve
             wz=twelve
@@ -14859,9 +14859,9 @@ contains
              bb(i)=zero
             enddo
 
-            do i1=-1,1
-            do j1=-1,1
             do k1=klo,khi
+            do j1=-1,1
+            do i1=-1,1
              xpoint(1)=xsten0(2*i1,1)-xsten0(0,1)
              xpoint(2)=xsten0(2*j1,2)-xsten0(0,2)
              if (sdim.eq.3) then
@@ -15552,9 +15552,9 @@ contains
 
         ! i1=-1,1  j1=-1  corresponds to first 3 corners if MOF_TRI_TET
         ! i1=-1    j1=0   corresponds to last corner if MOF_TRI_TET
-       do i1=-1,1
-       do j1=-1,1
        do k1=k1lo,k1hi
+       do j1=-1,1
+       do i1=-1,1
        do imaterial=1,num_materials
         ls_mof(D_DECL(i1,j1,k1),imaterial)= &
          LS_stencil(D_DECL(i1,j1,k1),imaterial) 
@@ -16697,9 +16697,9 @@ contains
        print *,"dimension bust"
        stop
       endif
-      do i1=-1,1
-      do j1=-1,1
       do k1=k1lo,k1hi
+      do j1=-1,1
+      do i1=-1,1
       do im=1,num_materials
        LS_stencil(D_DECL(i1,j1,k1),im)=zero
       enddo
@@ -16966,9 +16966,9 @@ contains
           grid_index(dir)=0
          enddo
 
-         do i1=-1,1
-         do j1=-1,1
          do k1=k1lo,k1hi
+         do j1=-1,1
+         do i1=-1,1
           dir=1
           x_stencil(dir)=xsten0_recon(i1,dir)
           dir=2

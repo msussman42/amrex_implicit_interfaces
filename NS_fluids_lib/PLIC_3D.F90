@@ -312,9 +312,9 @@ stop
       call growntilebox(tilelo,tilehi, &
         fablo,fabhi,igridlo,igridhi,0)
 
-      do i = igridlo(1),igridhi(1)
-      do j = igridlo(2),igridhi(2)
       do k = igridlo(3),igridhi(3)
+      do j = igridlo(2),igridhi(2)
+      do i = igridlo(1),igridhi(1)
 
        local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
        if ((local_maskcov.eq.1).or. &
@@ -348,9 +348,9 @@ stop
 
        use_ls_data=1
 
-       do i1=-1,1
-       do j1=-1,1
        do k1=klosten,khisten
+       do j1=-1,1
+       do i1=-1,1
         cmofsten(D_DECL(i1,j1,k1))=1
        enddo
        enddo
@@ -458,9 +458,9 @@ stop
        if ((level.ge.0).and. &
            (level.le.finest_level)) then
 
-        do i1=-1,1
-        do j1=-1,1
         do k1=klosten,khisten
+        do j1=-1,1
+        do i1=-1,1
          do im=1,num_materials
           LS_stencil(D_DECL(i1,j1,k1),im)= &
             LS(D_DECL(i+i1,j+j1,k+k1),im)
@@ -584,9 +584,9 @@ stop
 
          enddo ! im=1..num_materials
 
-         do i1=-1,1
-         do j1=-1,1
          do k1=klosten,khisten
+         do j1=-1,1
+         do i1=-1,1
 
           call CISBOX(xstenbox, &
             nhalfbox_sten, & ! =1
@@ -1184,9 +1184,9 @@ stop
 
         if ((level.ge.0).and.(level.le.finest_level)) then
 
-         do i1=-1,1
-         do j1=-1,1
          do k1=klosten,khisten
+         do j1=-1,1
+         do i1=-1,1
           local_mask=NINT(masknbr(D_DECL(i+i1,j+j1,k+k1),1))
           if (local_mask.eq.1) then ! fine-fine ghost in domain or interior.
            ! do nothing
@@ -1343,9 +1343,9 @@ stop
        print *,"dimension bust"
        stop
       endif
-      do i1=-1,1
-      do j1=-1,1
       do k1=klosten,khisten
+      do j1=-1,1
+      do i1=-1,1
        cmofsten(D_DECL(i1,j1,k1))=1
       enddo
       enddo
@@ -1948,9 +1948,9 @@ stop
         print *,"dimension bust"
         stop
        endif
-       do i1=-1,1
-       do j1=-1,1
        do k1=klosten,khisten
+       do j1=-1,1
+       do i1=-1,1
         cmofsten(D_DECL(i1,j1,k1))=1
        enddo
        enddo
@@ -2034,9 +2034,9 @@ stop
         D_DECL(loc_lo(1):loc_hi(1),loc_lo(2):loc_hi(2),loc_lo(SDIM):loc_hi(SDIM) ), &
         0:1))
 
-       do i=decision_tree_lo(1),decision_tree_hi(1)
-       do j=decision_tree_lo(2),decision_tree_hi(2)
        do k=decision_tree_lo(3),decision_tree_hi(3)
+       do j=decision_tree_lo(2),decision_tree_hi(2)
+       do i=decision_tree_lo(1),decision_tree_hi(1)
        do cmof_idx=0,1
 
         local_continuous_mof=cmof_idx
@@ -2245,9 +2245,9 @@ stop
         endif
 
        enddo !local_continuous_mof=STANDARD_MOF,CMOF_X
-       enddo !k
-       enddo !j
        enddo !i
+       enddo !j
+       enddo !k
 
       else
        print *,"num_samples invalid"
