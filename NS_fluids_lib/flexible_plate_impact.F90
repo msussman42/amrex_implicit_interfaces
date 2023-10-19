@@ -678,9 +678,9 @@ if ((num_materials.eq.3).and. &
 
    do im=1,num_materials
 
-    do i1=-1,1
-    do j1=-1,1
     do k1=k1lo,k1hi
+    do j1=-1,1
+    do i1=-1,1
      xdata(1)=assimilate_in%xsten(2*i1,1)
      xdata(2)=assimilate_in%xsten(2*j1,2)
      if (SDIM.eq.3) then
