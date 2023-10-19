@@ -631,9 +631,9 @@
        allocate(masknbr3D(DIMV3D(FSIdata3D),2))
        masknbr3D_ptr=>masknbr3D
 
-       do i=FSI_growlo3D(1),FSI_growhi3D(1)
-       do j=FSI_growlo3D(2),FSI_growhi3D(2)
        do k=FSI_growlo3D(3),FSI_growhi3D(3)
+       do j=FSI_growlo3D(2),FSI_growhi3D(2)
+       do i=FSI_growlo3D(1),FSI_growhi3D(1)
 
         idx(1)=i
         idx(2)=j
@@ -852,9 +852,9 @@
         ! with another tile.
         ! PCINTERP_fill_borders interpolates from coarser levels so
         ! that we only have to traverse interior values here.
-       do i=tilelo3D(1),tilehi3D(1)
-       do j=tilelo3D(2),tilehi3D(2)
        do k=tilelo3D(3),tilehi3D(3)
+       do j=tilelo3D(2),tilehi3D(2)
+       do i=tilelo3D(1),tilehi3D(1)
 
         mask1=NINT(masknbr(D_DECL(i,j,k),1))
         mask2=NINT(masknbr(D_DECL(i,j,k),2))
@@ -1009,9 +1009,9 @@
          ! FSI_lo3D,FSI_hi3D = tilelo,tilehi
          ! FSI_growlo3D,FSI_growhi3D = 
          !   grow(FSI_lo3D,FSI_hi3D,ngrow_make_distance)
-        do i=FSI_growlo3D(1),FSI_growhi3D(1)
-        do j=FSI_growlo3D(2),FSI_growhi3D(2)
         do k=FSI_growlo3D(3),FSI_growhi3D(3)
+        do j=FSI_growlo3D(2),FSI_growhi3D(2)
+        do i=FSI_growlo3D(1),FSI_growhi3D(1)
          idx(1)=i
          idx(2)=j
          idx(3)=k
@@ -1800,9 +1800,9 @@
          LSLO(dir)=contain_aux(auxcomp)%lo3D(dir)-ngrow_make_distance
          LSHI(dir)=contain_aux(auxcomp)%hi3D(dir)+ngrow_make_distance
         enddo
-        do i=LSLO(1),LSHI(1)
-        do j=LSLO(2),LSHI(2)
         do k=LSLO(3),LSHI(3)
+        do j=LSLO(2),LSHI(2)
+        do i=LSLO(1),LSHI(1)
          contain_aux(auxcomp)%LS3D(i,j,k,1)= &
             aux_FSIdata3D(i,j,k,FSI_LEVELSET+1)
         enddo

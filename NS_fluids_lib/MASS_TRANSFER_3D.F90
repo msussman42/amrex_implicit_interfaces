@@ -452,9 +452,9 @@ stop
        T_avg=zero
        wt_sum=zero
        
-       do i=-1,1
-       do j=-1,1
        do k=klosten,khisten
+       do j=-1,1
+       do i=-1,1
 
         xtemp(1)=xsten(2*i,1)
         xtemp(2)=xsten(2*j,2)
@@ -635,9 +635,9 @@ stop
         stop
        endif
 
-       do i=-1,1
-       do j=-1,1
        do k=klosten,khisten
+       do j=-1,1
+       do i=-1,1
         wt_sten(D_DECL(i,j,k))=wt_sten(D_DECL(i,j,k))/wt_sum
        enddo
        enddo
@@ -3045,17 +3045,17 @@ stop
       call growntileboxNODE(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridstenND_level(xstenND,i,j,k,level,nhalf)
 
        rigid_in_stencil=0
 
-       do i1=0,1
-       do j1=0,1
        do k1=klosten,khisten
+       do j1=0,1
+       do i1=0,1
         do im=1,num_materials
          LS_local(im)=oldLS(D_DECL(i-i1,j-j1,k-k1),im)
         enddo
@@ -3087,9 +3087,9 @@ stop
         do dir=1,ncomp_per_burning
          velnd=zero
          totalwt=zero
-         do i1=0,1
-         do j1=0,1
          do k1=klosten,khisten
+         do j1=0,1
+         do i1=0,1
 
           tag_local=NINT(ucell(D_DECL(i-i1,j-j1,k-k1),itencrit))
           if (tag_local.eq.0) then
@@ -3320,9 +3320,9 @@ stop
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        if (initialize_flag.eq.1) then
         local_mask=1
@@ -4163,9 +4163,9 @@ stop
        stop
       endif
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -4211,9 +4211,9 @@ stop
           F_STEN(im)=zero
           F_STEN_CENTER(im)=recon(D_DECL(i,j,k),vofcomp_recon)
 
-          do i1=-1,1
-          do j1=-1,1
           do k1=klosten,khisten
+          do j1=-1,1
+          do i1=-1,1
            F_STEN(im)=F_STEN(im)+recon(D_DECL(i+i1,j+j1,k+k1),vofcomp_recon)
           enddo
           enddo
@@ -4443,9 +4443,9 @@ stop
             ! backwards tracing of characteristics:
             ! add up contributions from neighboring cells.
             ! (i,j,k) is the cell to be updated.
-           do igrid=-1,1
-           do jgrid=-1,1
            do kgrid=klosten,khisten
+           do jgrid=-1,1
+           do igrid=-1,1
 
             call gridsten_level(u_xsten_grid, &
               i+igrid,j+jgrid,k+kgrid,level,nhalf)
@@ -5564,9 +5564,9 @@ stop
               ! sure to take into account Tgamma_default and Ygamma_default
               if (interp_to_new_supermesh.eq.1) then
 
-               do i1=-1,1
-               do j1=-1,1
                do k1=klosten,khisten
+               do j1=-1,1
+               do i1=-1,1
                 call gridsten_level(xsten_ofs,i+i1,j+j1,k+k1,level,nhalf)
                 call Box_volumeFAST(bfact,dx,xsten_ofs,nhalf, &
                  volcell_ofs,cencell_ofs,SDIM)
@@ -6602,9 +6602,9 @@ stop
          if (LL.ne.zero) then
   
           ! iterate over domain and check tag
-          do i=growlo(1),growhi(1)
-          do j=growlo(2),growhi(2)
           do k=growlo(3),growhi(3)
+          do j=growlo(2),growhi(2)
+          do i=growlo(1),growhi(1)
            do im_local=1,num_materials
             ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
            enddo
@@ -6685,9 +6685,9 @@ stop
                total_weight = zero
 
                ! gather support point/weights
-               do i_sp = sten_lo(1),sten_hi(1)
-               do j_sp = sten_lo(2),sten_hi(2)
                do k_sp = sten_lo(3),sten_hi(3)
+               do j_sp = sten_lo(2),sten_hi(2)
+               do i_sp = sten_lo(1),sten_hi(1)
                 call safe_data(i_sp,j_sp,k_sp,iten,vel_ptr,rtag_local)
                 tag_local=NINT(rtag_local) 
 
@@ -6890,9 +6890,9 @@ stop
       do im=1,num_materials
   
        ! iterate over domain and check tag
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         do im_local=1,num_materials
          ls_local(im_local)=LS(D_DECL(i,j,k),im_local)
         enddo
@@ -6925,9 +6925,9 @@ stop
           total_weight = zero
 
           ! gather support point/weights
-          do i_sp = sten_lo(1),sten_hi(1)
-          do j_sp = sten_lo(2),sten_hi(2)
           do k_sp = sten_lo(3),sten_hi(3)
+          do j_sp = sten_lo(2),sten_hi(2)
+          do i_sp = sten_lo(1),sten_hi(1)
            do drag_comp=1,ncomp
             call safe_data(i_sp,j_sp,k_sp,drag_comp,drag_ptr, &
               drag_local(drag_comp))
@@ -7868,9 +7868,9 @@ stop
       PROBE_PARMS%fablo=>fablo
       PROBE_PARMS%fabhi=>fabhi
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        create_in%i=i
        create_in%j=j

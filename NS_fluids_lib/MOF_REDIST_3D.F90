@@ -160,9 +160,9 @@ stop
       endif
 
       call gridsten_level(xsten_vert,idon,jdon,kdon,level,nhalf)
-      do i2=-1,1
-      do j2=-1,1
       do k2=klosten,khisten
+      do j2=-1,1
+      do i2=-1,1
         dir=1
         xdonate_vert(dir)=xsten_vert(i2,dir)
         dir=2
@@ -376,15 +376,15 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
-       do i1=-1,1
-       do j1=-1,1
        do k1=k1lo,k1hi
+       do j1=-1,1
+       do i1=-1,1
        do im=1,num_materials
         ls_stencil(D_DECL(i1,j1,k1),im)= &
                 LS_new(D_DECL(i+i1,j+j1,k+k1),im)
@@ -608,9 +608,9 @@ stop
       call growntileboxNODE(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_make_distance)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridstenND_level(xsten_nd,i,j,k,level,nhalf)
 
@@ -621,9 +621,9 @@ stop
         local_mag=zero
 
         do dir=1,SDIM
-         do i1=0,1
-         do j1=0,1
          do k1=0,k1hi
+         do j1=0,1
+         do i1=0,1
           if ((im.ge.1).and.(im.le.num_materials)) then
            local_LS=LS_new(D_DECL(i+i1-1,j+j1-1,k+k1-1),im) 
           else if ((im.ge.num_materials+1).and. &
@@ -734,9 +734,9 @@ stop
       num_sign_changes_plus=0
       num_sign_changes_minus=0
       localsum=zero
-      do i1=stenlo(1),stenhi(1)
-      do j1=stenlo(2),stenhi(2)
       do k1=stenlo(3),stenhi(3)
+      do j1=stenlo(2),stenhi(2)
+      do i1=stenlo(1),stenhi(1)
        ibase(1)=i1
        ibase(2)=j1
        ibase(3)=k1
@@ -1047,9 +1047,9 @@ stop
       F_tess_ptr=>F_tess
       call checkbound_array(tilelo,tilehi,F_tess_ptr,ngrow_distance,-1)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do im=1,num_materials*ngeom_recon
@@ -1087,9 +1087,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_make_distance)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        ! first num_materials+num_interfaces components are curvature
        ! second num_materials+num_interfaces components are 
        !   status (0=bad 1=good)
@@ -1103,9 +1103,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_null)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        ! first num_materials+num_interfaces components are curvature
        ! second num_materials+num_interfaces components are 
        !   status (0=bad 1=good)
@@ -1202,9 +1202,9 @@ stop
           ibase=(im-1)*(SDIM+1)
 
           do dir=1,SDIM
-           do i1=0,1
-           do j1=0,1
            do k1=0,k1hi
+           do j1=0,1
+           do i1=0,1
             local_normal(dir)=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+dir)
             local_mag=FD_NRM_ND_fab(D_DECL(i+i1,j+j1,k+k1),ibase+SDIM+1)
             if (local_mag.gt.zero) then
@@ -1335,9 +1335,9 @@ stop
           enddo
 
           ! i1,j1,k1=-ngrow_distance ... ngrow_distance
-          do i1=LSstenlo(1),LSstenhi(1)
-          do j1=LSstenlo(2),LSstenhi(2)
           do k1=LSstenlo(3),LSstenhi(3)
+          do j1=LSstenlo(2),LSstenhi(2)
+          do i1=LSstenlo(1),LSstenhi(1)
            do im_local=1,num_materials
             vofcomp=(im_local-1)*ngeom_recon+1
              ! we do not look at the tessellating volume fractions since
@@ -1465,9 +1465,9 @@ stop
             total_num_sign_changes_plus=0
             total_num_sign_changes_minus=0
 
-            do i1=LSstenlo(1),LSstenhi(1)
-            do j1=LSstenlo(2),LSstenhi(2)
             do k1=LSstenlo(3),LSstenhi(3)
+            do j1=LSstenlo(2),LSstenhi(2)
+            do i1=LSstenlo(1),LSstenhi(1)
              HTstenlo(1)=i1
              HTstenhi(1)=i1
              HTstenlo(2)=j1
@@ -2066,9 +2066,9 @@ stop
        ! initialize LS
        ! if is_rigid==0, then use coarse data or init to + or - bigdist
        ! if is_rigid==1, then use existing solid dist funct.
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten_donate,i,j,k,level,nhalf)
 
@@ -2188,9 +2188,9 @@ stop
       call growntilebox_TILE(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_make_distance)
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        on_border=1-NINT(maskfab(D_DECL(i,j,k),3))
 
@@ -2312,9 +2312,9 @@ stop
          ! stencil_test and rigid_in_stencil
          ! stencil_test(im)=1 if the interpolated volume fraction
          ! on one of the 27 cell boundary points exceeds a threshold.
-        do i1=1,3
-        do j1=1,3
         do k1=klosten+2,khisten+2
+        do j1=1,3
+        do i1=1,3
          isten=i+i1-2
          jsten=j+j1-2
          ksten=k+k1-2
@@ -2454,9 +2454,9 @@ stop
          ! line connecting cells (i,j,k) and (i+i3,j+j3,k+k3) with the
          ! boundary of cell (i,j,k). 
          ! 
-        do i3=-1,1
-        do j3=-1,1
         do k3=klosten,khisten
+        do j3=-1,1
+        do i3=-1,1
          istar_array(1)=i3
          istar_array(2)=j3
          istar_array(3)=k3
@@ -2480,9 +2480,9 @@ stop
           FSUM(im)=zero
          enddo
          ! (i4,j4,k4)=(0,0,0) if (i3,j3,k3)=(0,0,0)
-         do i4=i4low(1),i4high(1)
-         do j4=i4low(2),i4high(2)
          do k4=i4low(3),i4high(3)
+         do j4=i4low(2),i4high(2)
+         do i4=i4low(1),i4high(1)
           isten=i4+i
           jsten=j4+j
           ksten=k4+k
@@ -2651,9 +2651,9 @@ stop
            print *,"side invalid"
            stop
           endif
-          do i3=-1,1
-          do j3=-1,1
           do k3=klosten,khisten
+          do j3=-1,1
+          do i3=-1,1
       
            f_index(1)=i3 
            f_index(2)=j3 
@@ -2737,9 +2737,9 @@ stop
         enddo ! dir=1..sdim
         
          ! full_neighbor
-        do i3=-1,1
-        do j3=-1,1
         do k3=klosten,khisten
+        do j3=-1,1
+        do i3=-1,1
          if ((i3.eq.0).and.(j3.eq.0).and.(k3.eq.0)) then
           ! do nothing
          else if ((abs(i3).eq.1).or.(abs(j3).eq.1).or.(abs(k3).eq.1)) then
@@ -2855,9 +2855,9 @@ stop
 
          if (legitimate_material.eq.1) then
 
-          do i3=-1,1
-          do j3=-1,1
           do k3=klosten,khisten
+          do j3=-1,1
+          do i3=-1,1
            istar_array(1)=i3
            istar_array(2)=j3
            istar_array(3)=k3
@@ -2953,9 +2953,9 @@ stop
          endif
         enddo ! dir=1..sdim
 
-        do i1=ilocut(1),ihicut(1)
-        do j1=ilocut(2),ihicut(2)
         do k1=ilocut(3),ihicut(3)
+        do j1=ilocut(2),ihicut(2)
+        do i1=ilocut(1),ihicut(1)
 
          call gridsten_level(xsten_accept,i+i1,j+j1,k+k1,level,nhalf)
 
@@ -3072,9 +3072,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        do im=1,num_materials
 
@@ -3275,9 +3275,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_distance) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        ! mask1=1 at interior cells or fine/fine ghost cells
        ! mask1=0 at coarse/fine ghost cells or outside domain.
@@ -3313,9 +3313,9 @@ stop
 
         else if (im_crit.eq.0) then
 
-         do i3=-1,1
-         do j3=-1,1
          do k3=klosten,khisten
+         do j3=-1,1
+         do i3=-1,1
 
           dir=1
           xcorner(dir)=xsten(i3,dir)
@@ -3533,9 +3533,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
         ! mask1=1 at interior cells or fine/fine ghost cells
         ! mask2=1 at interior cells
@@ -3922,9 +3922,9 @@ stop
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
          growlo,growhi,ngrow-1,dir-1) 
 
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
 
@@ -4236,9 +4236,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow_dest,dir) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalfMAC,dir)
 

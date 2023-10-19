@@ -343,9 +343,9 @@ allocate(dest_FSI%prev_scalar_list(CTML_num_solids_init, &
 allocate(dest_FSI%element_list(CTML_num_solids_init,max_num_elements_init,4))
 
 do i=1,CTML_num_solids_init
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   do dir=1,3
    dest_FSI%prev_node_list(i,ii,jj,kk,dir)=0.0d0
    dest_FSI%node_list(i,ii,jj,kk,dir)=0.0d0
@@ -517,9 +517,9 @@ dest_FSI_flatten(FSIcontain_ngrow_node+1)=local_ngrow_node
 
 i_flat=1
 do i=1,local_num_solids
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   do dir=1,3
    dest_FSI_flatten(FSIcontain_prev_node_list+i_flat)= &
      source_FSI%prev_node_list(i,ii,jj,kk,dir)
@@ -540,9 +540,9 @@ enddo ! i
 
 i_flat=1
 do i=1,local_num_solids
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   dest_FSI_flatten(FSIcontain_mass_list+i_flat)= &
     source_FSI%mass_list(i,ii,jj,kk)
   dest_FSI_flatten(FSIcontain_temp_list+i_flat)= &
@@ -555,9 +555,9 @@ enddo ! i
 
 i_flat=1
 do i=1,local_num_solids
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   do dir=1,local_num_scalars
    dest_FSI_flatten(FSIcontain_scalar_list+i_flat)= &
     source_FSI%scalar_list(i,ii,jj,kk,dir)
@@ -736,9 +736,9 @@ dest_FSI%ngrow_node=local_ngrow_node
 
 i_flat=1
 do i=1,local_num_solids
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   do dir=1,3
    dest_FSI%prev_node_list(i,ii,jj,kk,dir)= &
     source_FSI_flatten(FSIcontain_prev_node_list+i_flat)
@@ -761,9 +761,9 @@ enddo ! i
 
 i_flat=1
 do i=1,local_num_solids
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   dest_FSI%mass_list(i,ii,jj,kk)= &
    source_FSI_flatten(FSIcontain_mass_list+i_flat)
   dest_FSI%temp_list(i,ii,jj,kk)= &
@@ -776,9 +776,9 @@ enddo ! i
 
 i_flat=1
 do i=1,local_num_solids
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   do dir=1,local_num_scalars
    dest_FSI%scalar_list(i,ii,jj,kk,dir)= &
     source_FSI_flatten(FSIcontain_scalar_list+i_flat)
@@ -939,9 +939,9 @@ endif
 
 do i=1,local_num_solids
 
- do ii=ilo,ihi
- do jj=jlo,jhi
  do kk=klo,khi
+ do jj=jlo,jhi
+ do ii=ilo,ihi
   do dir=1,3
    dest_FSI%prev_node_list(i,ii,jj,kk,dir)= &
      source_FSI%prev_node_list(i,ii,jj,kk,dir)
@@ -4259,9 +4259,9 @@ integer :: ii,jj,kk
    khi=khi_active(ctml_part_id)
 
    inode=0
-   do ii=ilo,ihi
-   do jj=jlo,jhi
    do kk=klo,khi
+   do jj=jlo,jhi
+   do ii=ilo,ihi
     inode=inode+1
 
     if ((inode.ge.1).and. &
@@ -4494,9 +4494,9 @@ real(amrex_real) :: test_mass
 
 #ifdef MVAHABFSI 
 
-   do ii=ilo,ihi
-   do jj=jlo,jhi
    do kk=klo,khi
+   do jj=jlo,jhi
+   do ii=ilo,ihi
     test_mass=ctml_FSI_container%mass_list(ctml_part_id,ii,jj,kk)
     if (test_mass.gt.zero) then
      ! do nothing
@@ -4601,9 +4601,9 @@ real(amrex_real) :: test_mass
 
    iface=0
 
-   do ii=ilo_elem(ctml_part_id),ihi_elem(ctml_part_id)
-   do jj=jlo_elem(ctml_part_id),jhi_elem(ctml_part_id)
    do kk=klo_elem(ctml_part_id),khi_elem(ctml_part_id)
+   do jj=jlo_elem(ctml_part_id),jhi_elem(ctml_part_id)
+   do ii=ilo_elem(ctml_part_id),ihi_elem(ctml_part_id)
 
     iface=iface+1
 
@@ -9729,9 +9729,9 @@ integer :: ii,jj,kk
    endif
 
    do ctml_part_id=1,ctml_n_bodies
-    do ii=ilo,ihi
-    do jj=jlo,jhi
     do kk=klo,khi
+    do jj=jlo,jhi
+    do ii=ilo,ihi
      do dir=1,3
       ctml_frc(ctml_part_id,ii,jj,kk,dir)=zero
       ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)=zero
@@ -9958,9 +9958,9 @@ integer :: ii,jj,kk
      klo=klo_active(ctml_part_id)
      khi=khi_active(ctml_part_id)
      inode=0
-     do ii=ilo,ihi
-     do jj=jlo,jhi
      do kk=klo,khi
+     do jj=jlo,jhi
+     do ii=ilo,ihi
       inode=inode+1
       do dir=1,AMREX_SPACEDIM
        if (abs(FSI(part_id)%NodeForce(dir,inode)).le.1.0D+20) then
@@ -10100,9 +10100,9 @@ real(amrex_real), dimension(:,:,:,:), pointer :: aux_masknbr3D_ptr
  else if (aux_FSI(auxcomp)%LS_FROM_SUBROUTINE.eq.1) then
 
   FSI_touch_flag=0
-  do i=LSLO(1),LSHI(1)
-  do j=LSLO(2),LSHI(2)
   do k=LSLO(3),LSHI(3)
+  do j=LSLO(2),LSHI(2)
+  do i=LSLO(1),LSHI(1)
    do dir=1,3
     aux_xpos(dir)=aux_xdata3D(i,j,k,dir)
    enddo
@@ -10451,9 +10451,9 @@ integer, PARAMETER :: aux_unit_id=14
    stop
   endif
 
-  do i=LSLO(1),LSHI(1)
-  do j=LSLO(2),LSHI(2)
   do k=LSLO(3),LSHI(3)
+  do j=LSLO(2),LSHI(2)
+  do i=LSLO(1),LSHI(1)
    idx(1)=i
    idx(2)=j
    idx(3)=k
@@ -10479,9 +10479,9 @@ integer, PARAMETER :: aux_unit_id=14
   enddo
   enddo
   enddo
-  do i=contain_aux(auxcomp)%lo3D(1),contain_aux(auxcomp)%hi3D(1)
-  do j=contain_aux(auxcomp)%lo3D(2),contain_aux(auxcomp)%hi3D(2)
   do k=contain_aux(auxcomp)%lo3D(3),contain_aux(auxcomp)%hi3D(3)
+  do j=contain_aux(auxcomp)%lo3D(2),contain_aux(auxcomp)%hi3D(2)
+  do i=contain_aux(auxcomp)%lo3D(1),contain_aux(auxcomp)%hi3D(1)
    aux_masknbr3D(i,j,k,1)=1
    aux_masknbr3D(i,j,k,2)=1
   enddo
@@ -11098,9 +11098,9 @@ integer :: ilo,ihi,jlo,jhi,klo,khi
      endif
 
      do i=1,ctml_n_bodies
-      do ii=ilo,ihi
-      do jj=jlo,jhi
       do kk=klo,khi
+      do jj=jlo,jhi
+      do ii=ilo,ihi
        do dir=1,3
         ctml_FSI_container%prev_node_list(i,ii,jj,kk,dir)= &
            ctml_FSI_container%node_list(i,ii,jj,kk,dir)
@@ -11116,9 +11116,9 @@ integer :: ilo,ihi,jlo,jhi,klo,khi
      enddo !i
 
      do i=1,ctml_n_bodies
-      do ii=ilo,ihi
-      do jj=jlo,jhi
       do kk=klo,khi
+      do jj=jlo,jhi
+      do ii=ilo,ihi
        do dir=1,ctml_fsi_num_scalars
         ctml_FSI_container%prev_scalar_list(i,ii,jj,kk,dir)= &
            ctml_FSI_container%scalar_list(i,ii,jj,kk,dir)
@@ -11130,9 +11130,9 @@ integer :: ilo,ihi,jlo,jhi,klo,khi
 
      do i=1,ctml_n_bodies
       i_elem=0
-      do ii=ilo_elem(i),ihi_elem(i)
-      do jj=jlo_elem(i),jhi_elem(i)
       do kk=klo_elem(i),khi_elem(i)
+      do jj=jlo_elem(i),jhi_elem(i)
+      do ii=ilo_elem(i),ihi_elem(i)
        i_elem=i_elem+1
        do dir=1,4
         inode(dir)=0
@@ -13232,9 +13232,9 @@ IMPLICIT NONE
         ! LOOP through bounding box of the element.
         ! this code is thread safe
         ! gridloBB,gridhiBB restricted to growlo3D and growhi3D 
-       do i=gridloBB(1),gridhiBB(1)
-       do j=gridloBB(2),gridhiBB(2)
        do k=gridloBB(3),gridhiBB(3)
+       do j=gridloBB(2),gridhiBB(2)
+       do i=gridloBB(1),gridhiBB(1)
 
         if ((i.ge.FSI_lo3D(1)).and.(i.le.FSI_hi3D(1)).and. &
             (j.ge.FSI_lo3D(2)).and.(j.le.FSI_hi3D(2)).and. &
@@ -13478,9 +13478,9 @@ IMPLICIT NONE
 
 ! check crossing between cells
 
-         do ii=-1,1
-         do jj=-1,1
          do kk=-1,1
+         do jj=-1,1
+         do ii=-1,1
           if (abs(ii)+abs(jj)+abs(kk).gt.0) then
 
            do dir=1,3
@@ -14033,9 +14033,9 @@ IMPLICIT NONE
      endif
     enddo ! dir=1..3
 
-    do i=FSI_lo3D(1),FSI_hi3D(1)
-    do j=FSI_lo3D(2),FSI_hi3D(2)
     do k=FSI_lo3D(3),FSI_hi3D(3)
+    do j=FSI_lo3D(2),FSI_hi3D(2)
+    do i=FSI_lo3D(1),FSI_hi3D(1)
 
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
@@ -14125,9 +14125,9 @@ IMPLICIT NONE
     enddo   
     enddo   
 
-    do i=FSI_lo3D(1),FSI_hi3D(1)
-    do j=FSI_lo3D(2),FSI_hi3D(2)
     do k=FSI_lo3D(3),FSI_hi3D(3)
+    do j=FSI_lo3D(2),FSI_hi3D(2)
+    do i=FSI_lo3D(1),FSI_hi3D(1)
 
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
@@ -14196,9 +14196,9 @@ IMPLICIT NONE
      old_FSIdata_ptr, &
      ngrow_make_distance_in,-1)
 
-    do i=FSI_growlo3D(1),FSI_growhi3D(1)
-    do j=FSI_growlo3D(2),FSI_growhi3D(2)
     do k=FSI_growlo3D(3),FSI_growhi3D(3)
+    do j=FSI_growlo3D(2),FSI_growhi3D(2)
+    do i=FSI_growlo3D(1),FSI_growhi3D(1)
      do nc=1,nFSI
       old_FSIdata(i,j,k,nc)=FSIdata3D(i,j,k,nc)
      enddo
@@ -14220,9 +14220,9 @@ IMPLICIT NONE
      stop
     endif
 
-    do i=growlo3D(1),growhi3D(1)
-    do j=growlo3D(2),growhi3D(2)
     do k=growlo3D(3),growhi3D(3)
+    do j=growlo3D(2),growhi3D(2)
+    do i=growlo3D(1),growhi3D(1)
 
      mask1=NINT(masknbr3D(i,j,k,1))
      mask2=NINT(masknbr3D(i,j,k,2))
@@ -14627,9 +14627,9 @@ IMPLICIT NONE
           weight_bot=zero
           weight_total_variation=0
       
-          do ii=-1,1
-          do jj=-1,1
           do kk=-1,1
+          do jj=-1,1
+          do ii=-1,1
            if ((i+ii.ge.FSI_growlo3D(1)).and.(i+ii.le.FSI_growhi3D(1)).and. &
                (j+jj.ge.FSI_growlo3D(2)).and.(j+jj.le.FSI_growhi3D(2)).and. &
                (k+kk.ge.FSI_growlo3D(3)).and.(k+kk.le.FSI_growhi3D(3))) then
@@ -15389,9 +15389,9 @@ end subroutine CLSVOF_InitBox
            do dir=1,6
             total_stress(dir)=zero
            enddo
-           do i=gridloBB_probe(1),gridhiBB_probe(1)
-           do j=gridloBB_probe(2),gridhiBB_probe(2)
            do k=gridloBB_probe(3),gridhiBB_probe(3)
+           do j=gridloBB_probe(2),gridhiBB_probe(2)
+           do i=gridloBB_probe(1),gridhiBB_probe(1)
             wt=one
             wt_flag=one
             do dir=1,3
@@ -17189,9 +17189,9 @@ logical :: theboss
      if ((ctml_part_id.ge.1).and. &
          (ctml_part_id.le.CTML_NPARTS)) then
 
-      do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
-      do jj=jlo_active(ctml_part_id),jhi_active(ctml_part_id)
       do kk=klo_active(ctml_part_id),khi_active(ctml_part_id)
+      do jj=jlo_active(ctml_part_id),jhi_active(ctml_part_id)
+      do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
        if (FSI_input_container% &
            mass_list(ctml_part_id,ii,jj,kk).gt.zero) then
         ! do nothing
@@ -17303,9 +17303,9 @@ logical :: theboss
           else
            inull=ilo_active(ctml_part_id)-1
           endif
-          do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
-          do jj=jlo,jhi
           do kk=klo,khi
+          do jj=jlo,jhi
+          do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
 
            rval=FSI_input_container%node_list(ctml_part_id,ii,jj,kk,1)
            ii_opp=ihi_active(ctml_part_id)-ii+ilo_active(ctml_part_id)
@@ -17381,9 +17381,9 @@ logical :: theboss
             ismooth,part_id,ctml_part_id
          endif
 
-         do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
-         do jj=jlo,jhi
          do kk=klo,khi
+         do jj=jlo,jhi
+         do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
           if (ii.eq.ilo_active(ctml_part_id)) then
            dx_left=zero
            do dir=1,3
@@ -17466,9 +17466,9 @@ logical :: theboss
          enddo !jj
          enddo !ii
 
-         do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
-         do jj=jlo,jhi
          do kk=klo,khi
+         do jj=jlo,jhi
+         do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
           do dir=1,3
            ctml_frc(ctml_part_id,ii,jj,kk,dir)= &
             ctml_frc_smooth(ctml_part_id,ii,jj,kk,dir)
@@ -17541,9 +17541,9 @@ logical :: theboss
           else
            inull=ilo_active(ctml_part_id)-1
           endif
-          do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
-          do jj=jlo,jhi
           do kk=klo,khi
+          do jj=jlo,jhi
+          do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
 
            rval=FSI_output_container%node_list(ctml_part_id,ii,jj,kk,1)
            ii_opp=ihi_active(ctml_part_id)-ii+ilo_active(ctml_part_id)
@@ -17667,9 +17667,9 @@ logical :: theboss
     endif
 
     do dir=1,3
-     do ii=ilo,ihi
-     do jj=jlo,jhi
      do kk=klo,khi
+     do jj=jlo,jhi
+     do ii=ilo,ihi
       do ctml_part_id=1,ctml_n_bodies
        FSI_output_container%prev_node_list(ctml_part_id,ii,jj,kk,dir)= &
          FSI_input_container%node_list(ctml_part_id,ii,jj,kk,dir)
@@ -17684,9 +17684,9 @@ logical :: theboss
     enddo !dir
 
     do dir=1,local_num_scalars
-     do ii=ilo,ihi
-     do jj=jlo,jhi
      do kk=klo,khi
+     do jj=jlo,jhi
+     do ii=ilo,ihi
       do ctml_part_id=1,ctml_n_bodies
        FSI_output_container%prev_scalar_list(ctml_part_id,ii,jj,kk,dir)= &
          FSI_input_container%scalar_list(ctml_part_id,ii,jj,kk,dir)
@@ -17696,9 +17696,9 @@ logical :: theboss
      enddo !ii
     enddo !dir=1..local_num_scalars
 
-    do ii=ilo,ihi
-    do jj=jlo,jhi
     do kk=klo,khi
+    do jj=jlo,jhi
+    do ii=ilo,ihi
      do ctml_part_id=1,ctml_n_bodies
       FSI_output_container%temp_list(ctml_part_id,ii,jj,kk)= &
         FSI_input_container%temp_list(ctml_part_id,ii,jj,kk)
@@ -17715,9 +17715,9 @@ logical :: theboss
     do ctml_part_id=1,ctml_n_bodies
      if ((ctml_part_id.ge.1).and. &
          (ctml_part_id.le.CTML_NPARTS)) then
-      do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
-      do jj=jlo_active(ctml_part_id),jhi_active(ctml_part_id)
       do kk=klo_active(ctml_part_id),khi_active(ctml_part_id)
+      do jj=jlo_active(ctml_part_id),jhi_active(ctml_part_id)
+      do ii=ilo_active(ctml_part_id),ihi_active(ctml_part_id)
        if (FSI_output_container% &
            mass_list(ctml_part_id,ii,jj,kk).gt.zero) then
         ! do nothing
