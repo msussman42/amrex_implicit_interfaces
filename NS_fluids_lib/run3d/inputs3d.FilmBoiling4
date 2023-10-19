@@ -109,8 +109,6 @@ cg.maxiter = 400
 # mg.bot_atol = 1.0e-12 MAY 8, 2021
 mg.bot_atol = 1.0e-11
 Lp.bottom_bottom_tol_factor=0.001 # MAY 8,2021
-Lp.smooth_type=0 # GSRB MAY 8, 2021
-Lp.bottom_smooth_type=2 # ILU MAY 8, 2021
 
 mg.rtol_b = -0.01
 Lp.v = 0

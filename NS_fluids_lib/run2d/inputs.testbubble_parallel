@@ -17,8 +17,6 @@ ns.redist_on_init=1
 ns.implicit_surface_tension=0
 ns.cwater=1.0E+8
 ns.cvapor=1.0E+8
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # multigrid class
 #mg.verbose = 1

@@ -55,8 +55,6 @@ ns.initial_project_cycles=3  # number of initial jacobi iterations
 ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                          # decent sized residual.
 # 0=GSRB 1=ICRB 2=ILU
-# Lp.smooth_type=2
-# Lp.bottom_smooth_type=2
 #
 
 #May 17: n_cell and max_level changed

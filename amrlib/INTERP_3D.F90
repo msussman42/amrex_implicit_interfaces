@@ -248,9 +248,9 @@ stop
 
       call growntilebox(clo,chi,clo,chi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        do im=1,num_materials
         vofcomp_old=(im-1)*ngeom_raw+1
@@ -316,9 +316,9 @@ stop
 
       call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        call gridsten(xstenfine,problo,ifine,jfine,kfine, &
          domlo,bfact_fine,dxf,nhalf)
@@ -587,9 +587,9 @@ stop
 
       call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        call gridsten(xstenfine,problo,ifine,jfine,kfine, &
          domlo,bfact_fine,dxf,nhalf)
@@ -863,9 +863,9 @@ stop
 
       call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        call gridsten(xstenfine,problo,ifine,jfine,kfine, &
          domlo,bfact_fine,dxf,nhalf)
@@ -1205,9 +1205,9 @@ stop
 
       call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        do dir=1,nburning
         do iflag=-2,2
@@ -1681,9 +1681,9 @@ stop
       
       call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type) 
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        call coarse_subelement_stencilMAC(ifine,jfine,kfine,stenlo,stenhi, &
          bfact_coarse,bfact_fine,grid_type)
@@ -1893,9 +1893,9 @@ stop
  
       call growntilebox(fblo,fbhi,fblo,fbhi,growlo,growhi,0) 
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        call coarse_subelement_stencil(ifine,jfine,kfine,stenlo,stenhi, &
         bfact_coarse,bfact_fine)
@@ -1940,9 +1940,9 @@ stop
 
        if (do_spectral_interp.eq.1) then
 
-        do ic=stenlo(1),stenhi(1)
-        do jc=stenlo(2),stenhi(2)
         do kc=stenlo(3),stenhi(3)
+        do jc=stenlo(2),stenhi(2)
+        do ic=stenlo(1),stenhi(1)
          ilocal=ic-stenlo(1)
          jlocal=jc-stenlo(2)
          klocal=kc-stenlo(3)
@@ -2090,9 +2090,9 @@ stop
       endif
       n=1
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        fine_value=zero
        first_hit=0
@@ -2326,9 +2326,9 @@ stop
       
       call growntileboxMAC(flo,fhi,flo,fhi,growlo,growhi,0,grid_type) 
 
-      do ifine=growlo(1),growhi(1)
-      do jfine=growlo(2),growhi(2)
       do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
 
        call coarse_subelement_stencilMAC(ifine,jfine,kfine,stenlo,stenhi, &
          bfact_coarse,bfact_fine,grid_type)
@@ -2391,9 +2391,9 @@ stop
          print *,"dimension bust"
          stop
         endif
-        do ilocal=0,chi_loc(1)
-        do jlocal=0,chi_loc(2)
         do klocal=0,khi
+        do jlocal=0,chi_loc(2)
+        do ilocal=0,chi_loc(1)
          do n=1,nvar
           fcoarse(D_DECL(ilocal,jlocal,klocal),n)=zero
          enddo
@@ -2401,9 +2401,9 @@ stop
         enddo
         enddo
 
-        do ic=stenlo(1),stenhi(1)
-        do jc=stenlo(2),stenhi(2)
         do kc=stenlo(3),stenhi(3)
+        do jc=stenlo(2),stenhi(2)
+        do ic=stenlo(1),stenhi(1)
          ilocal=ic-stenlo(1)
          jlocal=jc-stenlo(2)
          klocal=kc-stenlo(3)

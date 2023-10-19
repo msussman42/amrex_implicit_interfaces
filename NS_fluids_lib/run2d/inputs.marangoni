@@ -61,8 +61,6 @@ ns.freezing_model=6 6
 # 0=use LS  1=use VOF
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # multigrid class
 #mg.verbose = 1

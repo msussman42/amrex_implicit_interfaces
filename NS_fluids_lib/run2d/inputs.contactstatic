@@ -42,7 +42,6 @@ ns.visual_lo = -1 -1
 ns.visual_hi = 512 512
 
 ns.mapspread=1.0e+10
-Lp.smooth_type=2
 amr.n_cell    = 128 128  # coarsest 64x64
 amr.max_level = 0
 # 0- 1 level 1- 2 levels  2- 3 levels

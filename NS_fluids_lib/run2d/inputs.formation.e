@@ -28,8 +28,6 @@ ns.FD_curv_interp=1
 
 # 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # multigrid class
 #mg.verbose = 2

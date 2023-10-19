@@ -57,8 +57,6 @@ ns.initial_cg_cycles=3
 ns.initial_project_cycles=3
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 ns.visual_ncell=48 24  # ascii tecplot files "uniform<stuff>.tec"
                         # uniform data.

@@ -63,8 +63,6 @@ ns.MOFITERMAX=15
 ns.continuous_mof=0
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # multigrid class
 #mg.verbose = 1

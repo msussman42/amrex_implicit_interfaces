@@ -29,8 +29,6 @@ ns.MOFITERMAX=15
 #JAN18
 
 # 0=GSRB 1=ICRB 2=ILU
-# Lp.smooth_type=2
-# Lp.bottom_smooth_type=2
 
 # multigrid class
 mg.verbose = 0

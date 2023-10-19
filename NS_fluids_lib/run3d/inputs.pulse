@@ -32,7 +32,6 @@ ns.densolid=-1.0
 ns.mapspreadx=1.0  
 ns.mapspready=1.0
 ns.mapspreadz=1.0
-Lp.smooth_type=2  # 0 GSRB 1 line 2 ILU
 amr.n_cell    = 256 4 32
 amr.max_level = 1   # 2 or more on SUPERCOMPUTER
 ns.conservative_advection=1

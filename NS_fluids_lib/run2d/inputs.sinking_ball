@@ -68,8 +68,6 @@ ns.MOFITERMAX=15
 ns.continuous_mof=0
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 Lp.use_mg_precond_in_mglib=1 # def=1
 mg.presmooth=2  # def=2
 mg.postsmooth=2  # def=2

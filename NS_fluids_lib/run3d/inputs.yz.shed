@@ -22,8 +22,6 @@ ns.min_visc_theta=0.1  # 0.1
 ns.sweeps_to_predict_velocity=0
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=0
 ns.project_solver_type=0

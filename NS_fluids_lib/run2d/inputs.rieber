@@ -40,8 +40,6 @@ ns.initial_viscosity_cycles=1
 ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 ns.shock_timestep=2 2 2
 

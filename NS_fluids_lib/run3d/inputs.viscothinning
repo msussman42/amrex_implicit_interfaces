@@ -17,8 +17,6 @@ geometry.prob_hi   =  3.0 3.0 6.0    # D* 4 4 20
 
 # 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 ns.num_materials=2
 ns.num_species_var=0
 ns.minimum_relative_error=1.0e-18

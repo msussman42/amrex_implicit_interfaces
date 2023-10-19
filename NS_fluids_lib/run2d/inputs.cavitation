@@ -45,8 +45,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 #   B(1- w rho/(R2 rho0))e^(-R2 rho0/rho) + w rho e
 # hydrostatic pressure=1.013x10^6
 # 0=GSRB 1=ICRB 2=ILU
-# Lp.smooth_type=2
-# Lp.bottom_smooth_type=2
 #
 
 amr.n_cell    = 96 128

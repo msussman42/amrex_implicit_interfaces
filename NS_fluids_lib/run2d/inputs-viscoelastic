@@ -22,8 +22,6 @@ mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 #Lp.v = 1
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 ns.num_materials=2
 ns.num_species_var=0
