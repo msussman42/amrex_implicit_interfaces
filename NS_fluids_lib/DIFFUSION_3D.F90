@@ -404,9 +404,9 @@ stop
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -1027,9 +1027,9 @@ stop
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
 

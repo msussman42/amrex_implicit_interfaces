@@ -173,9 +173,9 @@ stop
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        do veldir=1,nsolve
 
@@ -498,9 +498,9 @@ stop
        endif
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         call gridsten_level(xsten,i,j,k,level,nhalf)
         do dir_local=1,SDIM
          xclamped(dir_local)=xsten(0,dir_local)
@@ -872,9 +872,9 @@ stop
        endif
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
          local_diag=offdiagcheck(D_DECL(i,j,k))
 
@@ -944,9 +944,9 @@ stop
        call checkbound_array(fablo,fabhi,bx_ptr,0,dir)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
         RR=one
         if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -1052,9 +1052,9 @@ stop
        call checkbound_array(fablo,fabhi,facewt_ptr,0,dir)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
        
         if (dir.eq.0) then
          inorm=i
@@ -1161,9 +1161,9 @@ stop
        call checkbound_array(fablo,fabhi,facewt_ptr,0,dir)
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         
         do n=1,nsolve
          bx(D_DECL(i,j,k),n)=bx(D_DECL(i,j,k),n)*facewt(D_DECL(i,j,k),n)
@@ -1376,9 +1376,9 @@ stop
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        do veldir=1,nsolve
 

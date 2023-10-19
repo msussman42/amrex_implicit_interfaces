@@ -1759,9 +1759,9 @@ contains
 
       call gridsten_level(xsten_center,isten,jsten,ksten,LOW%level,nhalf)
 
-      do isten=istenlo(1),istenhi(1)
-      do jsten=istenlo(2),istenhi(2)
       do ksten=istenlo(3),istenhi(3)
+      do jsten=istenlo(2),istenhi(2)
+      do isten=istenlo(1),istenhi(1)
 
        call gridsten_level(xsten,isten,jsten,ksten,LOW%level,nhalf)
        stencil_offset(1)=isten-cell_index(1)
@@ -8126,9 +8126,9 @@ end subroutine print_visual_descriptor
 
       mindata=data(D_DECL(2,2,2))
       maxdata=data(D_DECL(2,2,2))
-      do i1=1,3
-      do j1=1,3
       do k1=k1lo,k1hi
+      do j1=1,3
+      do i1=1,3
        if (data(D_DECL(i1,j1,k1)).lt.mindata) then
         mindata=data(D_DECL(i1,j1,k1))
        endif
@@ -12314,9 +12314,9 @@ end subroutine print_visual_descriptor
 
        data_out%data_interp(nc)=zero
 
-       do isten=ilo(1),ihi(1),istep(1)
-       do jsten=ilo(2),ihi(2),istep(2)
        do ksten=klosten,khisten,kstep
+       do jsten=ilo(2),ihi(2),istep(2)
+       do isten=ilo(1),ihi(1),istep(1)
         ii(1)=isten
         ii(2)=jsten
         ii(3)=ksten
@@ -12647,9 +12647,9 @@ end subroutine print_visual_descriptor
 
       data_out%data_interp(1)=zero
 
-      do isten=ilo(1),ihi(1),istep(1)
-      do jsten=ilo(2),ihi(2),istep(2)
       do ksten=klosten,khisten,kstep
+      do jsten=ilo(2),ihi(2),istep(2)
+      do isten=ilo(1),ihi(1),istep(1)
         ii(1)=isten
         ii(2)=jsten
         ii(3)=ksten
@@ -12905,9 +12905,9 @@ end subroutine print_visual_descriptor
 
       call gridsten_level(xsten_center,isten,jsten,ksten,data_in%level,nhalf)
 
-      do isten=istenlo(1),istenhi(1)
-      do jsten=istenlo(2),istenhi(2)
       do ksten=istenlo(3),istenhi(3)
+      do jsten=istenlo(2),istenhi(2)
+      do isten=istenlo(1),istenhi(1)
 
        call gridsten_level(xsten,isten,jsten,ksten,data_in%level,nhalf)
        stencil_offset(1)=isten-cell_index(1)
@@ -13031,9 +13031,9 @@ end subroutine print_visual_descriptor
 
       call gridsten_level(xsten_center,isten,jsten,ksten,data_in%level,nhalf)
 
-      do isten=istenlo(1),istenhi(1)
-      do jsten=istenlo(2),istenhi(2)
       do ksten=istenlo(3),istenhi(3)
+      do jsten=istenlo(2),istenhi(2)
+      do isten=istenlo(1),istenhi(1)
 
        call gridsten_level(xsten,isten,jsten,ksten,data_in%level,nhalf)
        stencil_offset(1)=isten-cell_index(1)
@@ -13155,9 +13155,9 @@ end subroutine print_visual_descriptor
           stop
          endif
         enddo ! dir=1..3
-        do i1=0,1
-        do j1=0,1
         do k1=0,1
+        do j1=0,1
+        do i1=0,1
          dir=1
          i=cell_lo(dir)+i1
          dir=2
@@ -13167,7 +13167,7 @@ end subroutine print_visual_descriptor
          call safe_data3D(i,j,k,nc, &
            contain_aux(auxcomp)%LS3D, &
            data_stencil(i1+1,j1+1,k1+1,nc))
-        enddo  ! k1
+        enddo  ! i1
         enddo  ! j1
         enddo  ! k1
         call bilinear_interp_stencil3D(data_stencil,wt_dist,nc, &
@@ -13356,9 +13356,9 @@ end subroutine print_visual_descriptor
       if (interface_found.eq.0) then
        curv=zero
       else if (interface_found.eq.1) then
-       do inode=0,1
-       do jnode=0,1
        do knode=knlo,knhi
+       do jnode=0,1
+       do inode=0,1
         do dir=1,SDIM
          if (dir.eq.1) then
           nrm(dir)= &
@@ -13729,9 +13729,9 @@ end subroutine print_visual_descriptor
         max_corner=zero
         max_singlelayer=zero
 
-        do i=growlotest(1),growhitest(1)
-        do j=growlotest(2),growhitest(2)
         do k=growlotest(3),growhitest(3)
+        do j=growlotest(2),growhitest(2)
+        do i=growlotest(1),growhitest(1)
          noutside=0
          noutside_single=0
          if ((i.lt.fablo(1)).or.(i.gt.fabhi(1)+box_type(1))) then

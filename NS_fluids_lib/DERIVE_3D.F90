@@ -181,9 +181,9 @@ stop
        ! density
       flagcomp=(im-1)*num_state_material+1+ENUM_DENVAR
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -365,9 +365,9 @@ stop
          stop
         endif
         near_solid=0
-        do i1=-1,1
-        do j1=-1,1
         do k1=k1lo,k1hi
+        do j1=-1,1
+        do i1=-1,1
          do im_local=1,num_materials
           vofcomp=(im_local-1)*ngeom_recon+1
           VFRAC(im_local)=vof(D_DECL(i+i1,j+j1,k+k1),vofcomp)
@@ -498,9 +498,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -915,9 +915,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
       if (is_rigid(im_parm).eq.1) then
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         visc(D_DECL(i,j,k),im_parm)=viscosity_coefficient 
        enddo
        enddo
@@ -927,9 +927,9 @@ stop
        vel_ptr=>vel
        call checkbound_array(fablo,fabhi,vel_ptr,ngrow+1,-1)
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
          ! den,T
         if (viscosity_state_model.ge.1) then
@@ -1330,9 +1330,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
        do dir=1,SDIM
@@ -1708,9 +1708,9 @@ stop
        ! visc=sqrt(2*(a11**2+a22**2+a33**2+2*a12**2+2*a13**2+2*a23**2))
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
    
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
  
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -2276,9 +2276,9 @@ stop
        stop
       endif
 
-      do icell=growlo(1),growhi(1)
-      do jcell=growlo(2),growhi(2)
       do kcell=growlo(3),growhi(3)
+      do jcell=growlo(2),growhi(2)
+      do icell=growlo(1),growhi(1)
 
        do dir=1,num_materials*ngeom_recon
         mofdata(dir)=slrecon(D_DECL(icell,jcell,kcell),dir)
@@ -2996,9 +2996,9 @@ stop
       call checkbound_array1(fablo,fabhi,velz_ptr,0,SDIM-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
     
        if (mask(D_DECL(i,j,k)).eq.one) then
 

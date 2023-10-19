@@ -963,9 +963,9 @@ stop
            
          imult(local_dir)=-side_inc(local_dir)  
 
-         do i=side_first(1),side_last(1),side_inc(1) 
-         do j=side_first(2),side_last(2),side_inc(2) 
          do k=side_first(3),side_last(3),side_inc(3) 
+         do j=side_first(2),side_last(2),side_inc(2) 
+         do i=side_first(1),side_last(1),side_inc(1) 
           if (local_dir.eq.1) then
            idx_norm=i
           else if (local_dir.eq.2) then

@@ -621,9 +621,9 @@ stop
       call checkbound_array(fablo,fabhi,recon_ptr,1,-1)
       call checkbound_array1(fablo,fabhi,mask_ptr,0,-1)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
        do dir=1,num_materials*ngeom_recon
         mofdata(dir)=recon(D_DECL(i,j,k),dir)
@@ -777,9 +777,9 @@ stop
 
         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
  
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
          mask_local=NINT(mask(D_DECL(i,j,k)))
 
@@ -812,9 +812,9 @@ stop
           endif
 
           itri=0
-          do ii=0,1
-          do jj=0,1
           do kk=kklo,kkhi
+          do jj=0,1
+          do ii=0,1
 
            do dir=1,SDIM
             xtarget(dir)=xsten(-1,dir)
@@ -1497,17 +1497,17 @@ stop
        endif
 
        call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         if (mask(D_DECL(i,j,k)).eq.one) then
 
          call gridsten(xsten,xlo,i,j,k,lo,bfact,dx,nhalf)
 
          itri=0
-         do ii=0,1
-         do jj=0,1
          do kk=kklo,kkhi
+         do jj=0,1
+         do ii=0,1
 
           do dir=1,SDIM
            xtarget(dir)=xsten(-1,dir)
@@ -1786,9 +1786,9 @@ stop
         ! find closest point on the interface for each interior
         ! point x_{i,j,k}
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
          ! xcc is the coordinate at which a corresponding closest point
@@ -1868,9 +1868,9 @@ stop
            stop
           endif
 
-          do ilocal=i-ngrow,i+ngrow-1
-          do jlocal=j-ngrow,j+ngrow-1
           do klocal=klocal_lo,klocal_hi
+          do jlocal=j-ngrow,j+ngrow-1
+          do ilocal=i-ngrow,i+ngrow-1
 
             ! klocal=0 in 2D
            if (SDIM.eq.2) then
@@ -1893,9 +1893,9 @@ stop
              fablo,bfact,dx,nhalf)
 
            itri=0
-           do ii=0,1
-           do jj=0,1
            do kk=kklo,kkhi
+           do jj=0,1
+           do ii=0,1
 
             if (SDIM.eq.2) then
              if (kk.eq.0) then
@@ -2185,9 +2185,9 @@ stop
              stop
             endif
            enddo ! while (ibase.lt.itri)
-          enddo !enddo klocal
-          enddo !enddo jlocal
           enddo !enddo ilocal
+          enddo !enddo jlocal
+          enddo !enddo klocal
 
           if (LS_mod_flag.eq.1) then
 
