@@ -71,8 +71,6 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 #  R=residual 
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # ZEYU
 ns.shock_timestep=2 2 2

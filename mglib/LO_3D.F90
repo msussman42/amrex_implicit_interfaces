@@ -280,9 +280,9 @@
        end do
       else if (isweep.eq.3) then
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         test_mask=solvemask(D_DECL(i,j,k))
         local_diag=diagfab(D_DECL(i,j,k))
         if (test_mask.eq.one) then
@@ -470,9 +470,9 @@
       call checkbound_array(fablo,fabhi,phi,0,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        test_mask=masksing(D_DECL(i,j,k))
        do veldir=1,nsolve
         if (test_mask.eq.one) then
@@ -559,9 +559,9 @@
 
       if ( cdir .eq. 0 ) then
        call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         do veldir=1,nsolve
          if (AMREX_SPACEDIM.eq.3) then
           c(D_DECL(i,j,k),veldir) = denom*( &
@@ -583,9 +583,9 @@
        enddo
       else if (cdir .eq. 1 ) then
        call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         do veldir=1,nsolve
          if (AMREX_SPACEDIM.eq.3) then
           c(D_DECL(i,j,k),veldir) = denom*( &
@@ -607,9 +607,9 @@
        enddo
       else if ((cdir .eq. 2 ).and.(AMREX_SPACEDIM.eq.3)) then
        call growntileboxMAC(lo,hi,lo,hi,growlo,growhi,0,cdir) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         do veldir=1,nsolve
          if (AMREX_SPACEDIM.eq.3) then
           c(D_DECL(i,j,k),veldir) = denom*( &
@@ -747,9 +747,9 @@
       endif
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        do veldir=1,ncomp_expect
 
@@ -920,9 +920,9 @@
           endif
          enddo
 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           if (side.eq.1) then
            ib=i-ii

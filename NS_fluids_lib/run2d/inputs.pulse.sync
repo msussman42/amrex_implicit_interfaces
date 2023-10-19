@@ -30,7 +30,6 @@ mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
 Lp.v = 1
 
-Lp.smooth_type=2  # 0 GSRB 1 line 2 ILU
 amr.n_cell    = 32 4  # finest resolution: 1024x128
 amr.max_level = 5
 FRGtest=1

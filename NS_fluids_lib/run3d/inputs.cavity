@@ -32,7 +32,6 @@ ns.densolid=-1.0 # 1.0e+8 PRESSURE
 ns.mapspreadx=0.5  
 ns.mapspready=0.25
 ns.mapspreadz=0.25
-Lp.smooth_type=2  # 0 GSRB 1 line 2 ILU
 amr.n_cell    = 256 64 64
 amr.max_level = 0   # 2 or more on SUPERCOMPUTER
 ns.conservative_advection=1

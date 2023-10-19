@@ -84,7 +84,6 @@
       integer, intent(in) :: smooth_type
 
       integer i,j,k
-      real(amrex_real) XX,YY
       real(amrex_real) local_diag
       real(amrex_real) test_mask
 
@@ -117,9 +116,10 @@
 
       if (isweep.eq.0) then
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
+         !rhssave=b-Ax^{k}=b-(D-L-U)x^{k}
         if (diagfab(D_DECL(i,j,k)).gt.zero) then
          rhssave(D_DECL(i,j,k))=rhs(D_DECL(i,j,k))+ &
           bxleft(D_DECL(i,j,k))*phi(D_DECL(i-1,j,k))+ &
@@ -140,23 +140,25 @@
        enddo
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         solnsave(D_DECL(i,j,k))=0.0
        enddo
        enddo
        enddo
       else if ((isweep.ge.1).and.(isweep.lt.num_sweeps-1)) then
 
-        ! GSRB
+        ! GSRB (Gauss Seidel Red Black)
        if (smooth_type.eq.0) then
 
+         !rhssave=b-Ax^{k} in the bulk after isweep.eq.0
+         !solnsave=0 in the bulk after isweep.eq.0
         if (isweep.eq.1) then
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
           if (diagfab(D_DECL(i,j,k)).gt.zero) then
            ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
@@ -176,18 +178,18 @@
          enddo
          enddo
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
           redsoln(D_DECL(i,j,k))=zero
           blacksoln(D_DECL(i,j,k))=zero
          enddo
          enddo
          enddo
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           local_diag=diagfab(D_DECL(i,j,k))
           if (local_diag.gt.zero) then
@@ -203,9 +205,9 @@
          enddo
         else if (isweep.eq.2) then
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           local_diag=diagfab(D_DECL(i,j,k))
           if (local_diag.gt.zero) then
@@ -230,9 +232,9 @@
          enddo
         else if (isweep.eq.3) then
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           local_diag=diagfab(D_DECL(i,j,k))
 
@@ -256,9 +258,9 @@
          enddo
         else if (isweep.eq.4) then
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
           solnsave(D_DECL(i,j,k))=solnsave(D_DECL(i,j,k))+ &
            mask(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k))+ &
            (one-mask(D_DECL(i,j,k)))*blacksoln(D_DECL(i,j,k))
@@ -270,16 +272,30 @@
          stop
         endif
 
-         ! Jacobi
-       else if (smooth_type.eq.3) then
+         ! Weighted Jacobi
+       else if (smooth_type.eq.1) then
 
-        ! AX=B-AX=B-(D-L-U)X=B+(L+U)X-DX
+        !rhssave=b-Ax^{k} in the bulk after isweep.eq.0
+        !solnsave=0 in the bulk after isweep.eq.0
+        ! 0=B-AX=B-(D-L-U)X=B+(L+U)X-DX
+        ! X^predict=D^{-1}(B+(L+U)X^{k})=
+        ! D^{-1}(B+(D-D+L+U)X^{k})=
+        ! D^{-1}(B-AX+DX)=D^{-1}R+X^{k}
+        ! weighted Jacobi: X^new=(X^predict+X^{k})/2
+        ! R = residual = B - AX
+        ! Jacobi method: X^{k+1}=X^{k}+D^{-1}(B-A X^{k})=X^{k}+D^{-1}R^{k}
+        ! Weighted Jacobi: 
+        !  X^{k+1}=X^{k}+D^{-1}R^{k}/2
         if (isweep.eq.1) then
+           ! zero grow cells prescribed, so growlo=tilelo,
+           ! growhi=tilehi  an instructive diagram is found here:
+           ! https://amrex-codes.github.io/amrex/docs_html/GPU ....
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
           if (diagfab(D_DECL(i,j,k)).gt.zero) then
+             !ax=B-(D-L-U)x^k
            ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
             bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
             bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
@@ -297,25 +313,25 @@
          enddo
          enddo
          enddo
+          ! set redsoln=0 in the interior + 1 ghost level
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
           redsoln(D_DECL(i,j,k))=0.0
          enddo
          enddo
          enddo
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
-          ! R=AX/D=(B+(L+U)X)/D-X
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           local_diag=diagfab(D_DECL(i,j,k))
           if (local_diag.gt.zero) then
            ! do nothing
           else
-           print *,"local_diag invalid"
+           print *,"local_diag invalid: ",local_diag
            stop
           endif
 
@@ -324,13 +340,12 @@
          enddo
          enddo
         else if (isweep.eq.2) then
-         ! X=X+(B+(L+U)X)/D-X=(B+(L+U)X)/D  (A=D-L-U)
          call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
           solnsave(D_DECL(i,j,k))=solnsave(D_DECL(i,j,k))+ &
-           redsoln(D_DECL(i,j,k))
+           half*redsoln(D_DECL(i,j,k))
          enddo
          enddo
          enddo
@@ -339,221 +354,6 @@
          stop
         endif
 
-         ! ILU
-       else if (smooth_type.eq.2) then
-
-        if (isweep.eq.1) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-          if (diagfab(D_DECL(i,j,k)).gt.zero) then
-           ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
-            bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
-            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
-            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
-            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
-#if (AMREX_SPACEDIM==3)
-           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
-            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
-#endif
-           -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
-          else
-           print *,"diagfab invalid"
-           stop
-          endif
-         enddo
-         enddo
-         enddo
-        else if (isweep.eq.2) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do k=growlo(3),growhi(3)
-         do j=growlo(2),growhi(2)
-         do i=growlo(1),growhi(1)
-          YY=ax(D_DECL(i,j,k))
-          if (i.gt.tilelo(1)) then
-           YY=YY-icbx(D_DECL(i,j,k))*redsoln(D_DECL(i-1,j,k))
-          endif
-          if (j.gt.tilelo(2)) then
-           YY=YY-icby(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))
-          endif
-#if (AMREX_SPACEDIM==3)
-          if (k.gt.tilelo(AMREX_SPACEDIM)) then
-           YY=YY-icbz(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))
-          endif
-#endif
-          redsoln(D_DECL(i,j,k))=YY
-         enddo
-         enddo
-         enddo
-        else if (isweep.eq.3) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do k=growlo(3),growhi(3)
-         do j=growlo(2),growhi(2)
-         do i=growlo(1),growhi(1)
-          local_diag=icdiag(D_DECL(i,j,k))
-          if (local_diag.ne.zero) then
-           blacksoln(D_DECL(i,j,k))= &
-            redsoln(D_DECL(i,j,k))/local_diag
-          else
-           print *,"local_diag invalid 5"
-           stop
-          endif
-         enddo 
-         enddo 
-         enddo 
-        else if (isweep.eq.4) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do k=growhi(3),growlo(3),-1
-         do j=growhi(2),growlo(2),-1
-         do i=growhi(1),growlo(1),-1
-          XX=blacksoln(D_DECL(i,j,k))
-          if (i.lt.tilehi(1)) then
-           XX=XX-icbx(D_DECL(i+1,j,k))*redsoln(D_DECL(i+1,j,k))
-          endif
-          if (j.lt.tilehi(2)) then
-           XX=XX-icby(D_DECL(i,j+1,k))*redsoln(D_DECL(i,j+1,k))
-          endif
-#if (AMREX_SPACEDIM==3)
-          if (k.lt.tilehi(AMREX_SPACEDIM)) then
-           XX=XX-icbz(D_DECL(i,j,k+1))*redsoln(D_DECL(i,j,k+1))
-          endif
-#endif
-          redsoln(D_DECL(i,j,k))=XX
-         enddo
-         enddo
-         enddo
-        else if (isweep.eq.5) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-          solnsave(D_DECL(i,j,k))= &
-           solnsave(D_DECL(i,j,k))+redsoln(D_DECL(i,j,k))
-         enddo
-         enddo
-         enddo
-        else 
-         print *,"isweep invalid"
-         stop
-        endif
-
-         ! ICRB
-       else if (smooth_type.eq.1) then
-
-        if (isweep.eq.1) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-          if (diagfab(D_DECL(i,j,k)).gt.zero) then
-           ax(D_DECL(i,j,k))=rhssave(D_DECL(i,j,k))+ &
-            bxleft(D_DECL(i,j,k))*solnsave(D_DECL(i-1,j,k))+ &
-            bxright(D_DECL(i,j,k))*solnsave(D_DECL(i+1,j,k))+ &
-            byleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j-1,k))+ &
-            byright(D_DECL(i,j,k))*solnsave(D_DECL(i,j+1,k)) &
-#if (AMREX_SPACEDIM==3)
-           +bzleft(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k-1))+ &
-            bzright(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k+1)) &
-#endif
-           -diagfab(D_DECL(i,j,k))*solnsave(D_DECL(i,j,k))
-          else
-           print *,"diagfab invalid"
-           stop
-          endif
-         enddo
-         enddo
-         enddo
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-          redsoln(D_DECL(i,j,k))=zero
-          blacksoln(D_DECL(i,j,k))=zero
-         enddo
-         enddo
-         enddo
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-
-          local_diag=diagfab(D_DECL(i,j,k))
-
-          if (local_diag.gt.zero) then
-           redsoln(D_DECL(i,j,k))=ax(D_DECL(i,j,k))/local_diag
-          else
-           print *,"local_diag invalid 6"
-           stop
-          endif
-         enddo
-         enddo
-         enddo
-        else if (isweep.eq.2) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-          local_diag=icdiagrb(D_DECL(i,j,k))
-          if (local_diag.ne.zero) then
-           blacksoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
-            bxleft(D_DECL(i,j,k))*redsoln(D_DECL(i-1,j,k))+ &
-            bxright(D_DECL(i,j,k))*redsoln(D_DECL(i+1,j,k))+ &
-            byleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j-1,k))+ &
-            byright(D_DECL(i,j,k))*redsoln(D_DECL(i,j+1,k)) &
-#if (AMREX_SPACEDIM==3)
-            +bzleft(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k-1))+ &
-            bzright(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k+1)) &
-#endif
-           )/local_diag
-          else
-           print *,"local_diag invalid 7"
-           stop
-          endif
-         enddo
-         enddo
-         enddo
-        else if (isweep.eq.3) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-
-          local_diag=diagfab(D_DECL(i,j,k))
-
-          if (local_diag.gt.zero) then
-           redsoln(D_DECL(i,j,k))=(ax(D_DECL(i,j,k))+ &
-            bxleft(D_DECL(i,j,k))*blacksoln(D_DECL(i-1,j,k))+ &
-            bxright(D_DECL(i,j,k))*blacksoln(D_DECL(i+1,j,k))+ &
-            byleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j-1,k))+ &
-            byright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j+1,k)) &
-#if (AMREX_SPACEDIM==3)
-            +bzleft(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k-1))+ &
-             bzright(D_DECL(i,j,k))*blacksoln(D_DECL(i,j,k+1)) &
-#endif
-           )/local_diag
-          else
-           print *,"local_diag invalid 8"
-           stop
-          endif
-         enddo
-         enddo
-         enddo
-        else if (isweep.eq.4) then
-         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
-         do k=growlo(3),growhi(3)
-          solnsave(D_DECL(i,j,k))=solnsave(D_DECL(i,j,k))+ &
-           mask(D_DECL(i,j,k))*redsoln(D_DECL(i,j,k))+ &
-           (one-mask(D_DECL(i,j,k)))*blacksoln(D_DECL(i,j,k))
-         enddo
-         enddo
-         enddo
-        else
-         print *,"isweep invalid"
-         stop
-        endif
        else 
         print *,"smooth_type invalid"
         stop
@@ -561,9 +361,9 @@
 
       else if (isweep.eq.num_sweeps-1) then
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         test_mask=masksing(D_DECL(i,j,k))
         if (test_mask.eq.one) then
          phi(D_DECL(i,j,k))=phi(D_DECL(i,j,k))+solnsave(D_DECL(i,j,k))
@@ -654,9 +454,9 @@
       call checkbound_array1(fablo,fabhi,x,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        test_mask=masksing(D_DECL(i,j,k))
        if (test_mask.eq.one) then
@@ -740,9 +540,9 @@
       call checkbound_array1(fablo,fabhi,bZ,0,AMREX_SPACEDIM-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        bxleft=bX(D_DECL(i,j,k))
        bxright=bX(D_DECL(i+1,j,k))

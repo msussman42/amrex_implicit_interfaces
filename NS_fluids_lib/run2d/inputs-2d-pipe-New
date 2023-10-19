@@ -34,8 +34,6 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 #     close to O(1).
 #
 #
-Lp.smooth_type=2  # 0=GSRB 1=ICRB 2=ILU 3=Jacobi
-Lp.bottom_smooth_type=2 # 0=GSRB 1=ICRB 2=ILU 3=Jacobi
 mg.presmooth=2
 mg.postsmooth=2
 ns.project_solver_type=0 # 0 - MGPCG  1 - PCG     

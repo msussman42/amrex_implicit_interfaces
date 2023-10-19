@@ -14,8 +14,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  2.56 0.64
 geometry.is_periodic=0 0
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # multigrid class
 #mg.verbose = 1

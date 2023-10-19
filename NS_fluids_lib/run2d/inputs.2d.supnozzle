@@ -22,7 +22,6 @@ cg.maxiter = 1000
 ns.minimum_relative_error=1.0e-18
 mg.bot_atol = 1.0e-10
 mg.rtol_b = -0.01
-Lp.smooth_type=2
 Lp.v = 0
 
 ns.num_materials=3

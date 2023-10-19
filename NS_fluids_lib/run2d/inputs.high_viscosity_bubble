@@ -14,8 +14,6 @@ ns.MOFITERMAX=15
 ns.EILE_flag=-1  # weymouth and yue method.
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # multigrid class
 #mg.verbose = 1

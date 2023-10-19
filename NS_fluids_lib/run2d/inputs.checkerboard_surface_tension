@@ -22,8 +22,6 @@ ns.MOFITERMAX_AFTER_PREDICT=15
 ns.mof_decision_tree_learning=100
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 
 # multigrid class
 #mg.verbose = 1

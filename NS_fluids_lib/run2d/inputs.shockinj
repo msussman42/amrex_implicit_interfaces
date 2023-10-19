@@ -34,7 +34,6 @@ mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
 cg.maxiter = 9000
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
-Lp.smooth_type=2
 Lp.v = 0
 ns.minimum_relative_error=1.0e-18
 #ns.initial_project_cycles=10

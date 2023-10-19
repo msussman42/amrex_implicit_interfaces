@@ -34,7 +34,6 @@ cg.maxiter = 1000
 mg.bot_atol = 1.0e-10   # the coarsest coarsening of level 0 in old version;  
                       # level 0 in the new version.
 mg.rtol_b = -0.01
-Lp.smooth_type=2
 Lp.v = 0
 
 

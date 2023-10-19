@@ -35,8 +35,6 @@ Lp.v = 1
 
 # 0MGPCG 1PCG 2 MINV=I
 ns.project_solver_type=0
-Lp.smooth_type=2  # 0 GSRB 1 ICRB 2 ILU
-Lp.bottom_smooth_type=2
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=10  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get

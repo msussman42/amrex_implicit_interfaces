@@ -11,8 +11,6 @@ geometry.is_periodic=0 0
 ns.num_materials=2
 ns.num_species_var=0
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 ns.initial_project_cycles=5
 ns.initial_cg_cycles=5
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I

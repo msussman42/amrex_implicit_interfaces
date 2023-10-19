@@ -165,9 +165,9 @@ stop
        print *,"dimension bust"
        stop
       endif
-      do i1=-1,1
-      do j1=-1,1
       do k1=k1lo,k1hi
+      do j1=-1,1
+      do i1=-1,1
        do isten=-1,1
         dir=1
         xsten2(isten,dir)=xsten(isten+2*i1,dir)
@@ -195,9 +195,9 @@ stop
        plusflag=0
 
        k1=0
-       do i1=-1,1
-       do j1=-1,1
        do k1=k1lo,k1hi
+       do j1=-1,1
+       do i1=-1,1
         if (ltest(D_DECL(i1+2,j1+2,k1+2),imaterial).le.zero) then
          minusflag=1
         endif
@@ -334,9 +334,9 @@ stop
         stop
        endif
 
-       do i1=-1,1,2
-       do j1=-1,1,2
        do k1=k1lo,k1hi,2
+       do j1=-1,1,2
+       do i1=-1,1,2
         do isten=-3,3
          dir=1
          xsten_fine(isten,dir)=xsten_mid(dir)+(isten+i1)*dxsten_fine(dir)

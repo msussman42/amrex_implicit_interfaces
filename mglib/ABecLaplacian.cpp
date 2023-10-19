@@ -1456,12 +1456,8 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  int num_sweeps=0;
  if (smooth_type==0) // GSRB
   num_sweeps=6;
- else if (smooth_type==3) // Jacobi
+ else if (smooth_type==1) // Jacobi
   num_sweeps=4;
- else if (smooth_type==2) // ILU
-  num_sweeps=7;
- else if (smooth_type==1) // ICRB
-  num_sweeps=6;
  else
   amrex::Error("smooth_type invalid");
 

@@ -14,8 +14,6 @@ geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  2.5 5.0
 
 # 0=GSRB 1=ICRB 2=ILU
-Lp.smooth_type=2
-Lp.bottom_smooth_type=2
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 amr.plotfile_on_restart=1
 
