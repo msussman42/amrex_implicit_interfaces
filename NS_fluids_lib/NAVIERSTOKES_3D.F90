@@ -1382,9 +1382,9 @@ END SUBROUTINE SIMP
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
        ! csound (cell_sound) initialized.
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_volume=vol(D_DECL(i,j,k))
        if (local_volume.gt.zero) then
@@ -1797,9 +1797,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_volume=vol(D_DECL(i,j,k))
        if (local_volume.gt.zero) then
@@ -2550,9 +2550,9 @@ END SUBROUTINE SIMP
         icell(2)=j
         icell(3)=k
 
-        do i1=i1lo,i1hi
-        do j1=j1lo,j1hi
         do k1=k1lo,k1hi
+        do j1=j1lo,j1hi
+        do i1=i1lo,i1hi
 
          dir=1
          if ((i-i1.ge.lo(dir)).and. &
@@ -2913,9 +2913,9 @@ END SUBROUTINE SIMP
            allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
                            VISUALCOMP_NCOMP_INTERP))
 
-           do iSEM=stenlo(1),stenhi(1)
-           do jSEM=stenlo(2),stenhi(2)
            do kSEM=stenlo(3),stenhi(3)
+           do jSEM=stenlo(2),stenhi(2)
+           do iSEM=stenlo(1),stenhi(1)
             ilocal=iSEM-stenlo(1)
             jlocal=jSEM-stenlo(2)
             klocal=kSEM-stenlo(3)
@@ -3333,9 +3333,9 @@ END SUBROUTINE SIMP
           igridhi(dir)=hi(dir)+1
          enddo
 
-         do i=igridlo(1),igridhi(1) 
-         do j=igridlo(2),igridhi(2) 
          do k=igridlo(3),igridhi(3) 
+         do j=igridlo(2),igridhi(2) 
+         do i=igridlo(1),igridhi(1) 
             ! iproblo=0
           call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
           do dir=1,SDIM
@@ -3565,9 +3565,9 @@ END SUBROUTINE SIMP
         endif
        enddo ! dir=1..sdim
 
-       do i=igridlo(1),igridhi(1) 
-       do j=igridlo(2),igridhi(2) 
        do k=igridlo(3),igridhi(3) 
+       do j=igridlo(2),igridhi(2) 
+       do i=igridlo(1),igridhi(1) 
          ! iproblo=0
         call gridsten(xsten,problo,i,j,k,iproblo,bfact,dx,nhalf)
         icritlo(3)=0
@@ -3588,9 +3588,9 @@ END SUBROUTINE SIMP
           xcrit(dir)=xcrit(dir)+visual_dx(dir)
          enddo
         enddo ! dir=1..sdim
-        do ic=icritlo(1),icrithi(1)
-        do jc=icritlo(2),icrithi(2)
         do kc=icritlo(3),icrithi(3)
+        do jc=icritlo(2),icrithi(2)
+        do ic=icritlo(1),icrithi(1)
          dir=1
          xcrit(dir)=problo(dir)+ic*visual_dx(dir) 
          dir=2
@@ -3635,9 +3635,9 @@ END SUBROUTINE SIMP
           enddo
 
           sumweight=zero
-          do iBL=icell_lo(1),icell_hi(1)
-          do jBL=icell_lo(2),icell_hi(2)
           do kBL=icell_lo(3),icell_hi(3)
+          do jBL=icell_lo(2),icell_hi(2)
+          do iBL=icell_lo(1),icell_hi(1)
            localwt=one
            do dir=1,SDIM
             if (xstenhi(dir)-xstenlo(dir).gt.zero) then
@@ -3788,9 +3788,9 @@ END SUBROUTINE SIMP
            allocate(SEMloc(D_DECL(0:SEMhi(1),0:SEMhi(2),0:SEMhi(SDIM)), &
                            VISUALCOMP_NCOMP_INTERP))
 
-           do iSEM=stenlo(1),stenhi(1)
-           do jSEM=stenlo(2),stenhi(2)
            do kSEM=stenlo(3),stenhi(3)
+           do jSEM=stenlo(2),stenhi(2)
+           do iSEM=stenlo(1),stenhi(1)
             ilocal=iSEM-stenlo(1)
             jlocal=jSEM-stenlo(2)
             klocal=kSEM-stenlo(3)
@@ -4826,9 +4826,9 @@ END SUBROUTINE SIMP
         stop
        endif
  
-       do ic=growlo(1),growhi(1)
-       do jc=growlo(2),growhi(2)
        do kc=growlo(3),growhi(3)
+       do jc=growlo(2),growhi(2)
+       do ic=growlo(1),growhi(1)
 
         call gridsten_level(xsten,ic,jc,kc,level_c,nhalf)
 
@@ -4962,9 +4962,9 @@ END SUBROUTINE SIMP
         do im=1,num_materials
          mat_freq(im)=0
         enddo
-        do ifine=mstenlo(1),mstenhi(1) 
-        do jfine=mstenlo(2),mstenhi(2) 
         do kfine=mstenlo(3),mstenhi(3) 
+        do jfine=mstenlo(2),mstenhi(2) 
+        do ifine=mstenlo(1),mstenhi(1) 
          do im=1,num_materials
           LS_local(im)=fine_LS(D_DECL(ifine,jfine,kfine),im)
          enddo
@@ -5003,9 +5003,9 @@ END SUBROUTINE SIMP
         jfine=mstenlo(2) 
         kfine=mstenlo(SDIM) 
         testmask=NINT(mask(D_DECL(ifine,jfine,kfine)))
-        do ifine=mstenlo(1),mstenhi(1) 
-        do jfine=mstenlo(2),mstenhi(2) 
         do kfine=mstenlo(3),mstenhi(3) 
+        do jfine=mstenlo(2),mstenhi(2) 
+        do ifine=mstenlo(1),mstenhi(1) 
          testmask2=NINT(mask(D_DECL(ifine,jfine,kfine)))
          if (testmask2.ne.testmask) then
           testmask=0
@@ -5026,9 +5026,9 @@ END SUBROUTINE SIMP
              (testmask.ge.1).and. &
              (testmask.le.num_materials)) then
 
-          do ifine=stenlo(1),stenhi(1)
-          do jfine=stenlo(2),stenhi(2)
           do kfine=stenlo(3),stenhi(3)
+          do jfine=stenlo(2),stenhi(2)
+          do ifine=stenlo(1),stenhi(1)
            ilocal=ifine-stenlo(1)
            jlocal=jfine-stenlo(2)
            klocal=kfine-stenlo(3)
@@ -5590,9 +5590,9 @@ END SUBROUTINE SIMP
 
        if (velbc(dir+1,side,dir+1).eq.INT_DIR) then
  
-        do ifine=growlo(1),growhi(1)
-        do jfine=growlo(2),growhi(2)
         do kfine=growlo(3),growhi(3)
+        do jfine=growlo(2),growhi(2)
+        do ifine=growlo(1),growhi(1)
 
          local_masknbr=NINT(masknbr(D_DECL(ifine,jfine,kfine)))
 
@@ -5728,9 +5728,9 @@ END SUBROUTINE SIMP
            mat_freq(im)=0
           enddo
            ! mstenlo,mstenhi is a thin coarse level stencil
-          do ilocal=mstenlo(1),mstenhi(1) 
-          do jlocal=mstenlo(2),mstenhi(2) 
           do klocal=mstenlo(3),mstenhi(3) 
+          do jlocal=mstenlo(2),mstenhi(2) 
+          do ilocal=mstenlo(1),mstenhi(1) 
            do im=1,num_materials
             coarseLS_local(im)=coarseLS(D_DECL(ilocal,jlocal,klocal),im)
            enddo
@@ -5770,9 +5770,9 @@ END SUBROUTINE SIMP
           jlocal=mstenlo(2) 
           klocal=mstenlo(SDIM) 
           testmask=NINT(cmasksem(D_DECL(ilocal,jlocal,klocal)))
-          do ilocal=mstenlo(1),mstenhi(1) 
-          do jlocal=mstenlo(2),mstenhi(2) 
           do klocal=mstenlo(3),mstenhi(3) 
+          do jlocal=mstenlo(2),mstenhi(2) 
+          do ilocal=mstenlo(1),mstenhi(1) 
            testmask2=NINT(cmasksem(D_DECL(ilocal,jlocal,klocal)))
            if (testmask2.ne.testmask) then
             testmask=0
@@ -5793,9 +5793,9 @@ END SUBROUTINE SIMP
                (testmask.ge.1).and. &
                (testmask.le.num_materials)) then
 
-            do icoarse=stenlo(1),stenhi(1)
-            do jcoarse=stenlo(2),stenhi(2)
             do kcoarse=stenlo(3),stenhi(3)
+            do jcoarse=stenlo(2),stenhi(2)
+            do icoarse=stenlo(1),stenhi(1)
              ilocal=icoarse-stenlo(1)
              jlocal=jcoarse-stenlo(2)
              klocal=kcoarse-stenlo(3)
@@ -6297,9 +6297,9 @@ END SUBROUTINE SIMP
 
        if (velbc(dir+1,side,dir+1).eq.INT_DIR) then
  
-        do ifine=growlo(1),growhi(1)
-        do jfine=growlo(2),growhi(2)
         do kfine=growlo(3),growhi(3)
+        do jfine=growlo(2),growhi(2)
+        do ifine=growlo(1),growhi(1)
 
          local_masknbr=NINT(masknbr(D_DECL(ifine,jfine,kfine)))
 
@@ -6434,9 +6434,9 @@ END SUBROUTINE SIMP
           jlocal=mstenlo(2) 
           klocal=mstenlo(SDIM) 
           testmask=NINT(cmasksem(D_DECL(ilocal,jlocal,klocal)))
-          do ilocal=mstenlo(1),mstenhi(1) 
-          do jlocal=mstenlo(2),mstenhi(2) 
           do klocal=mstenlo(3),mstenhi(3) 
+          do jlocal=mstenlo(2),mstenhi(2) 
+          do ilocal=mstenlo(1),mstenhi(1) 
            testmask2=NINT(cmasksem(D_DECL(ilocal,jlocal,klocal)))
            if (testmask2.ne.testmask) then
             testmask=0
@@ -6455,9 +6455,9 @@ END SUBROUTINE SIMP
               (testmask.ge.1).and. &
               (testmask.le.num_materials)) then
 
-            do icoarse=stenlo(1),stenhi(1)
-            do jcoarse=stenlo(2),stenhi(2)
             do kcoarse=stenlo(3),stenhi(3)
+            do jcoarse=stenlo(2),stenhi(2)
+            do icoarse=stenlo(1),stenhi(1)
              ilocal=icoarse-stenlo(1)
              jlocal=jcoarse-stenlo(2)
              klocal=kcoarse-stenlo(3)
@@ -6768,9 +6768,9 @@ END SUBROUTINE SIMP
         endif
        enddo ! dirloc=1..sdim
 
-       do i=gridlo(1),gridhi(1)
-       do j=gridlo(2),gridhi(2)
        do k=gridlo(3),gridhi(3)
+       do j=gridlo(2),gridhi(2)
+       do i=gridlo(1),gridhi(1)
 
         if (side.eq.0) then
          iface=i
@@ -7169,9 +7169,9 @@ END SUBROUTINE SIMP
       GRID_DATA_PARM%vel=>vel
       GRID_DATA_PARM%visco=>visco
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        if (mask(D_DECL(i,j,k)).gt.zero) then
 
         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
@@ -7316,9 +7316,9 @@ END SUBROUTINE SIMP
 
          LS_LOCAL(im)=lsfab(D_DECL(i,j,k),im)
 
-         do i1=-1,1
-         do j1=-1,1
          do k1=k1lo,k1hi
+         do j1=-1,1
+         do i1=-1,1
           ldata(D_DECL(i1+2,j1+2,k1+2))= &
            lsfab(D_DECL(i+i1,j+j1,k+k1),im)
          enddo
@@ -8344,9 +8344,9 @@ END SUBROUTINE SIMP
       enddo
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        local_mask=NINT(mask(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
 
@@ -8804,9 +8804,9 @@ END SUBROUTINE SIMP
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir-1) 
 
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
          local_mask=NINT(mask(D_DECL(i,j,k)))
          local_mask_L=NINT(mask(D_DECL(i-ii,j-jj,k-kk)))
@@ -9034,9 +9034,9 @@ END SUBROUTINE SIMP
 
        do nc=1,nsolve
 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           local_mask=NINT(mask(D_DECL(i,j,k)))
 
@@ -9122,9 +9122,9 @@ END SUBROUTINE SIMP
 
        do nc=1,nsolve
 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           local_mask=NINT(mask(D_DECL(i,j,k)))
 
@@ -9277,9 +9277,9 @@ END SUBROUTINE SIMP
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         local_mask=NINT(mask_fab(D_DECL(i,j,k)))
 
@@ -9521,9 +9521,9 @@ END SUBROUTINE SIMP
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         local_mask=NINT(mask_fab(D_DECL(i,j,k)))
 
@@ -9778,9 +9778,9 @@ END SUBROUTINE SIMP
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         local_mask=NINT(mask_fab(D_DECL(i,j,k)))
 
@@ -10030,9 +10030,9 @@ END SUBROUTINE SIMP
       if (isweep.eq.0) then
  
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
          ! e.g. for gravity force:
          ! grad p/rho = \vec{g}
@@ -10097,9 +10097,9 @@ END SUBROUTINE SIMP
 
         if (exteriorbc.eq.1) then
 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           if (local_bctype.eq.bctypepres) then
 
@@ -10297,9 +10297,9 @@ END SUBROUTINE SIMP
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
 
@@ -10422,9 +10422,9 @@ END SUBROUTINE SIMP
       call checkbound_array(fablo,fabhi,den_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        do im=1,num_materials
         LS(im)=levelpc(D_DECL(i,j,k),im)
@@ -10772,9 +10772,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        do n=1,ncomp
         crse_value(n)=zero
@@ -11025,9 +11025,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        do n=1,ncomp
         crse_value(n)=zero
@@ -11459,9 +11459,9 @@ END SUBROUTINE SIMP
 
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
          maskleft=maskcov(D_DECL(i-ii,j-jj,k-kk))
          maskright=maskcov(D_DECL(i,j,k))
@@ -11702,9 +11702,9 @@ END SUBROUTINE SIMP
        call checkbound_array1(fablo,fabhi,resid_ptr,0,-1) 
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         ! mask=tag if not covered by level+1 or outside the domain.
         if (mask(D_DECL(i,j,k)).eq.one) then
@@ -12333,9 +12333,9 @@ END SUBROUTINE SIMP
       u_ptr=>u
       call checkbound_array(fablo,fabhi,u_ptr,1,-1) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        do dir=1,SDIM
@@ -12561,9 +12561,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        call gridsten_level(xsten,ic,jc,kc,level_c,nhalf)
 
@@ -12628,9 +12628,9 @@ END SUBROUTINE SIMP
        jfine=mstenlo(2) 
        kfine=mstenlo(SDIM) 
        testmask=NINT(mask(D_DECL(ifine,jfine,kfine)))
-       do ifine=mstenlo(1),mstenhi(1) 
-       do jfine=mstenlo(2),mstenhi(2) 
        do kfine=mstenlo(3),mstenhi(3) 
+       do jfine=mstenlo(2),mstenhi(2) 
+       do ifine=mstenlo(1),mstenhi(1) 
         testmask2=NINT(mask(D_DECL(ifine,jfine,kfine)))
         if (testmask2.ne.testmask) then
          testmask=0
@@ -12650,9 +12650,9 @@ END SUBROUTINE SIMP
            (testmask.le.num_materials).and. &
            (spectral_override.eq.SPECTRAL_ORDER_AVGDOWN)) then
 
-        do ifine=stenlo(1),stenhi(1)
-        do jfine=stenlo(2),stenhi(2)
         do kfine=stenlo(3),stenhi(3)
+        do jfine=stenlo(2),stenhi(2)
+        do ifine=stenlo(1),stenhi(1)
          ilocal=ifine-stenlo(1)
          jlocal=jfine-stenlo(2)
          klocal=kfine-stenlo(3)
@@ -12806,9 +12806,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        do n=1,ncomp
         crse_value(n)=zero
@@ -12945,9 +12945,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        do n=1,ncomp
         crse_value(n)=zero
@@ -13120,9 +13120,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        do n=1,ncomp_curv_total
         crse_value(n)=zero
@@ -13383,9 +13383,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        grid_index(1)=ic
        grid_index(2)=jc
@@ -13714,9 +13714,9 @@ END SUBROUTINE SIMP
 
       call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        crse(D_DECL(ic,jc,kc)) = zero
 
@@ -13894,9 +13894,9 @@ END SUBROUTINE SIMP
       endif
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        ! maskcov=tag if not covered by level+1 or outside the domain.
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
@@ -13923,9 +13923,9 @@ END SUBROUTINE SIMP
            stop
           endif
 
-          do i2=-1,1
-          do j2=-1,1
           do k2=kstencil_lo,kstencil_hi
+          do j2=-1,1
+          do i2=-1,1
            pres_array(D_DECL(i2+2,j2+2,k2+2))= &
              pres(D_DECL(i+i2,j+j2,k+k2))
            temp_array(D_DECL(i2+2,j2+2,k2+2))= &
@@ -14132,9 +14132,9 @@ END SUBROUTINE SIMP
 
       call growntileboxMAC(loc,hic,loc,hic,growlo,growhi,0,grid_type)
 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
 
        call gridstenMAC_level(xsten,ic,jc,kc,level_c,nhalf,grid_type)
 
@@ -14219,9 +14219,9 @@ END SUBROUTINE SIMP
        jfine=mstenlo(2) 
        kfine=mstenlo(SDIM) 
        testmask=NINT(mask(D_DECL(ifine,jfine,kfine)))
-       do ifine=mstenlo(1),mstenhi(1) 
-       do jfine=mstenlo(2),mstenhi(2) 
        do kfine=mstenlo(3),mstenhi(3) 
+       do jfine=mstenlo(2),mstenhi(2) 
+       do ifine=mstenlo(1),mstenhi(1) 
         testmask2=NINT(mask(D_DECL(ifine,jfine,kfine)))
         if (testmask2.ne.testmask) then
          testmask=0
@@ -14230,9 +14230,9 @@ END SUBROUTINE SIMP
        enddo 
        enddo 
 
-       do ilocal=0,flochi(1)
-       do jlocal=0,flochi(2)
        do klocal=0,khi
+       do jlocal=0,flochi(2)
+       do ilocal=0,flochi(1)
         do n=1,ncomp
          ffine(D_DECL(ilocal,jlocal,klocal),n)=zero
         enddo
@@ -14258,9 +14258,9 @@ END SUBROUTINE SIMP
          stop
         endif
 
-        do ifine=stenlo(1),stenhi(1)
-        do jfine=stenlo(2),stenhi(2)
         do kfine=stenlo(3),stenhi(3)
+        do jfine=stenlo(2),stenhi(2)
+        do ifine=stenlo(1),stenhi(1)
          ilocal=ifine-stenlo(1)
          jlocal=jfine-stenlo(2)
          klocal=kfine-stenlo(3)
@@ -14524,9 +14524,9 @@ END SUBROUTINE SIMP
       call checkbound_array1(fablo,fabhi,areaz_ptr,ngrow,SDIM-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
        call gridvol(xsten,nhalf,rzflag,vol(D_DECL(i,j,k)))
       enddo
@@ -14535,9 +14535,9 @@ END SUBROUTINE SIMP
      
       do dir=0,SDIM-1
        call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow,dir)
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         call gridsten_level(xsten,i,j,k,level,nhalf)
         side=0
         call gridarea(xsten,nhalf,rzflag,dir,side,local_area)

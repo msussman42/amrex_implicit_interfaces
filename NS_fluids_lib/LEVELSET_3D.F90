@@ -198,9 +198,9 @@ stop
         local_data_fab=>CP%LS
 
          ! stencil radius is 1.
-        do i2=LSstenlo(1),LSstenhi(1)
-        do j2=LSstenlo(2),LSstenhi(2)
         do k2=LSstenlo(3),LSstenhi(3)
+        do j2=LSstenlo(2),LSstenhi(2)
+        do i2=LSstenlo(1),LSstenhi(1)
 
           ! local_index is the containing cell for xCP
          isten=local_index(1)+i2
@@ -777,9 +777,9 @@ stop
        mgoni_force(dir2)=zero
       enddo
 
-      do i=-1,1
-      do j=-1,1
       do k=klo_sten_short,khi_sten_short
+      do j=-1,1
+      do i=-1,1
        do imhold=1,num_materials
         LSTEST(imhold)=lssten(i,j,k,imhold)
        enddo
@@ -818,9 +818,9 @@ stop
        ! (grad sigma - (grad sigma dot n)n ) delta
       if (fort_tension_slope(iten).lt.zero) then
 
-        do iofs=-1,1
-        do jofs=-1,1
         do kofs=-1,1
+        do jofs=-1,1
+        do iofs=-1,1
          local_index(1)=iofs
          local_index(2)=jofs
          local_index(3)=kofs
@@ -932,9 +932,9 @@ stop
 
       im3=0
       LSMAX=-1.0D+10
-      do i=-ngrow_distance,ngrow_distance
-      do j=-ngrow_distance,ngrow_distance
       do k=klo_sten_ht,khi_sten_ht
+      do j=-ngrow_distance,ngrow_distance
+      do i=-ngrow_distance,ngrow_distance
 
        do imhold=1,num_materials
         LSTEST(imhold)=lssten(i,j,k,imhold)
@@ -1333,9 +1333,9 @@ stop
        stop
       endif
 
-      do i=-1,1
-      do j=-1,1
       do k=klo_sten_short,khi_sten_short 
+      do j=-1,1
+      do i=-1,1
 
        do im_sort=1,num_materials
         LSTEST(im_sort)=lssten(i,j,k,im_sort) 
@@ -1492,9 +1492,9 @@ stop
            totaludotn=zero
            totalwt=zero
 
-           do i2=-1,1
-           do j2=-1,1
            do k2=klo_sten_short,khi_sten_short
+           do j2=-1,1
+           do i2=-1,1
 
             ! positive in the solid/ice
             LSTEST_EXTEND=lssten(i2,j2,k2,im3)
@@ -1742,9 +1742,9 @@ stop
        stop
       endif
 
-      do i=-1,1
-      do j=-1,1
       do k=klo_sten_short,khi_sten_short
+      do j=-1,1
+      do i=-1,1
 
        do imhold=1,num_materials
         LSTEST(imhold)=lssten(i,j,k,imhold)
@@ -1830,9 +1830,9 @@ stop
        dnrm(dir2)=zero
       enddo
 
-      do i=-1,1
-      do j=-1,1
       do k=klo_sten_short,khi_sten_short
+      do j=-1,1
+      do i=-1,1
 
        imhold=im_primary_sten(i,j,k)
 
@@ -1875,9 +1875,9 @@ stop
 
       totalwt=zero
 
-      do inode=-1,1,2
-      do jnode=-1,1,2
       do knode=klo_sten_short,khi_sten_short,2
+      do jnode=-1,1,2
+      do inode=-1,1,2
 
        node_index(1)=inode 
        node_index(2)=jnode 
@@ -1910,9 +1910,9 @@ stop
 
        wtnode=zero
 
-       do i=cell_lo(1),cell_hi(1)
-       do j=cell_lo(2),cell_hi(2)
        do k=cell_lo(3),cell_hi(3)
+       do j=cell_lo(2),cell_hi(2)
+       do i=cell_lo(1),cell_hi(1)
 
         wtnode=wtnode+one
 
@@ -2406,9 +2406,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        mask1=NINT(maskfab(D_DECL(i,j,k),1))
        mask2=NINT(maskfab(D_DECL(i,j,k),2))
@@ -3465,9 +3465,9 @@ stop
        ! curvature stencil is 9x9x9
        ! loop through all cells
        !
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -4030,9 +4030,9 @@ stop
              endif
 
              ! i1,j1,k1=-ngrow_distance ... ngrow_distance
-             do i1=LSstenlo(1),LSstenhi(1)
-             do j1=LSstenlo(2),LSstenhi(2)
              do k1=LSstenlo(3),LSstenhi(3)
+             do j1=LSstenlo(2),LSstenhi(2)
+             do i1=LSstenlo(1),LSstenhi(1)
 
               do inormal=1,SDIM*num_materials
                call safe_data(i+i1,j+j1,k+k1,num_materials+inormal, &
@@ -4104,9 +4104,9 @@ stop
              enddo ! i1,j1,k1=LSstenlo,LSstenhi(init nrmsten,lssten,vofsten)
  
              ! i1,j1,k1=-1..1
-             do i1=istenlo(1),istenhi(1)
-             do j1=istenlo(2),istenhi(2)
              do k1=istenlo(3),istenhi(3)
+             do j1=istenlo(2),istenhi(2)
+             do i1=istenlo(1),istenhi(1)
 
               do dirloc=1,SDIM
                velsten(i1,j1,k1,dirloc)= &
@@ -4333,9 +4333,9 @@ stop
       call checkbound_array1(fablo,fabhi,typefab_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,1) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        if (zero_diag_flag.eq.0) then
 
@@ -4802,9 +4802,9 @@ stop
 
 ! color>0 if mask=1 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        local_mask=NINT(mask(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
 
@@ -4921,9 +4921,9 @@ stop
         enddo
         solid_fraction=zero
 
-        do i1=-1,1
-        do j1=-1,1
         do k1=k1lo,k1hi
+        do j1=-1,1
+        do i1=-1,1
 
          call gridsten_level(xsten_stencil,i+i1,j+j1,k+k1,level,nhalf)
 
@@ -6389,9 +6389,9 @@ stop
 
 ! color>0 if mask=1 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_mask=NINT(mask(D_DECL(i,j,k)))
 
@@ -6708,9 +6708,9 @@ stop
       endif
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
  
        icolor=NINT(color(D_DECL(i,j,k)))
        if (icolor.ne.0) then
@@ -6816,9 +6816,9 @@ stop
 
 ! recursive stuff begins here ...
 
-         do i1=-1,1
-         do j1=-1,1
          do k1=k1lo,k1hi
+         do j1=-1,1
+         do i1=-1,1
           if ((i+i1.ge.growlo(1)).and.(i+i1.le.growhi(1)).and. &
               (j+j1.ge.growlo(2)).and.(j+j1.le.growhi(2)).and. &
               (k+k1.ge.growlo(3)).and.(k+k1.le.growhi(3))) then
@@ -6899,9 +6899,9 @@ stop
               (color(D_DECL(iprime,jprime,kprime)).eq.zero)) then
            color(D_DECL(iprime,jprime,kprime))=color(D_DECL(i,j,k))
    
-           do i1=-1,1
-           do j1=-1,1
            do k1=k1lo,k1hi
+           do j1=-1,1
+           do i1=-1,1
             if ((iprime+i1.ge.growlo(1)).and.(iprime+i1.le.growhi(1)).and. &
                 (jprime+j1.ge.growlo(2)).and.(jprime+j1.le.growhi(2)).and. &
                 (kprime+k1.ge.growlo(3)).and.(kprime+k1.le.growhi(3))) then
@@ -7142,9 +7142,9 @@ stop
           print *,"mask invalid"
           stop
          endif
-         do ii=-1,1
-         do jj=-1,1
          do kk=k1lo,k1hi
+         do jj=-1,1
+         do ii=-1,1
 
           if ((check_corners.eq.1).or. &
               (abs(ii)+abs(jj)+abs(kk).le.1)) then
@@ -7255,9 +7255,9 @@ stop
       call checkbound_array1(clo,chi,typec_ptr,0,-1)
  
       call growntilebox(clo,chi,clo,chi,growlo,growhi,0) 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
        crse(D_DECL(ic,jc,kc))=zero
        coarse_type=NINT(typec(D_DECL(ic,jc,kc)))
        call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi,bfact,bfact_f)
@@ -7373,9 +7373,9 @@ stop
       call checkbound_array1(flo,fhi,maskf_ptr,0,-1)
  
       call growntilebox(clo,chi,clo,chi,growlo,growhi,0) 
-      do ic=growlo(1),growhi(1)
-      do jc=growlo(2),growhi(2)
       do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
        do n=1,6
         crse(D_DECL(ic,jc,kc),n)=zero
        enddo
@@ -8162,9 +8162,9 @@ stop
 
           ! first init xface,yface,zface 
           ! then follow with the rest...
-        do i=igridlo(1),igridhi(1)
-        do j=igridlo(2),igridhi(2)
         do k=igridlo(3),igridhi(3)
+        do j=igridlo(2),igridhi(2)
+        do i=igridlo(1),igridhi(1)
 
          local_maskL=NINT(maskcov(D_DECL(i-ii,j-jj,k-kk)))
          local_maskR=NINT(maskcov(D_DECL(i,j,k)))
@@ -9929,9 +9929,9 @@ stop
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi,1) 
 
-       do i=igridlo(1),igridhi(1)
-       do j=igridlo(2),igridhi(2)
        do k=igridlo(3),igridhi(3)
+       do j=igridlo(2),igridhi(2)
+       do i=igridlo(1),igridhi(1)
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
         do dir2=1,SDIM
@@ -10442,9 +10442,9 @@ stop
 
       do veldir=0,SDIM-1
 
-        do i=igridlo(1),igridhi(1)
-        do j=igridlo(2),igridhi(2)
         do k=igridlo(3),igridhi(3)
+        do j=igridlo(2),igridhi(2)
+        do i=igridlo(1),igridhi(1)
 
          call CISBOX(xsten_recon,1, &
           xlo,dx,i,j,k, &
@@ -11348,9 +11348,9 @@ stop
       cutoff=DXMAXLS
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -12404,9 +12404,9 @@ stop
 
         call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
          local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
 
@@ -12420,9 +12420,9 @@ stop
            do dir=0,SDIM-1
 
             call elementbox(i,j,k,bfact,dir,elemlo,elemhi)
-            do ielem=elemlo(1),elemhi(1)
-            do jelem=elemlo(2),elemhi(2)
             do kelem=elemlo(3),elemhi(3)
+            do jelem=elemlo(2),elemhi(2)
+            do ielem=elemlo(1),elemhi(1)
           
              if (operation_flag.eq.OP_RHS_CELL) then ! RHS for solver
               scomp=1
@@ -13408,9 +13408,9 @@ stop
        if (spectral_loop.eq.0) then
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
           ! dir=0..sdim-1
          call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
@@ -15154,9 +15154,9 @@ stop
           endif
 
           call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
-          do i=growlo(1),growhi(1)
-          do j=growlo(2),growhi(2)
           do k=growlo(3),growhi(3)
+          do j=growlo(2),growhi(2)
+          do i=growlo(1),growhi(1)
 
            call strip_status(i,j,k,bfact,stripstat)
 
@@ -15183,9 +15183,9 @@ stop
              endif
 
              call elementbox(i,j,k,bfact,dir,elemlo,elemhi)
-             do ielem=elemlo(1),elemhi(1)
-             do jelem=elemlo(2),elemhi(2)
              do kelem=elemlo(3),elemhi(3)
+             do jelem=elemlo(2),elemhi(2)
+             do ielem=elemlo(1),elemhi(1)
 
               if (operation_flag.eq.OP_PRESGRAD_MAC) then  ! pressure gradient
                scomp=1
@@ -15539,9 +15539,9 @@ stop
       endif 
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        ! dir=0..sdim-1
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
@@ -15815,9 +15815,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        ! dir=0..sdim-1
        call gridsten_level(xstenMAC,i,j,k,level,nhalf)
@@ -16156,9 +16156,9 @@ stop
   
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
 
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
   
           ! projection: dedge is 1/rho  (FACECOMP_FACEDEN component c++) 
           ! viscosity: dedge is FACECOMP_FACEVISC component c++ ( mu )
@@ -16345,9 +16345,9 @@ stop
       else if (facewt_iter.eq.1) then
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         do veldir=1,nsolve
 
@@ -16846,9 +16846,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -16996,9 +16996,9 @@ stop
             F_stencil_sum=zero
             density_stencil_sum=zero
    
-            do i1=istenlo(1),istenhi(1)
-            do j1=istenlo(2),istenhi(2)
             do k1=istenlo(3),istenhi(3)
+            do j1=istenlo(2),istenhi(2)
+            do i1=istenlo(1),istenhi(1)
 
              F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
 
@@ -17440,9 +17440,9 @@ stop
             ! inner loop is needed since the volume fraction
             ! at (i,j,k) depends on the levelset function values
             ! in the (i+i1,j+j1,k+k1) node stencil.
-           do i1=LSstenlo(1),LSstenhi(1)
-           do j1=LSstenlo(2),LSstenhi(2)
            do k1=LSstenlo(3),LSstenhi(3)
+           do j1=LSstenlo(2),LSstenhi(2)
+           do i1=LSstenlo(1),LSstenhi(1)
 
             cell_CP_parm%i=i+i1
             cell_CP_parm%j=j+j1
@@ -17578,9 +17578,9 @@ stop
               print *,"im,is_rigid(im),ls_hold(im) ", &
                       im,is_rigid(im),ls_hold(im)
              enddo
-             do i1=LSstenlo(1),LSstenhi(1)
-             do j1=LSstenlo(2),LSstenhi(2)
              do k1=LSstenlo(3),LSstenhi(3)
+             do j1=LSstenlo(2),LSstenhi(2)
+             do i1=LSstenlo(1),LSstenhi(1)
               call gridsten_level(xsten_debug,i+i1,j+j1,k+k1,level,nhalf)
               print *,"i1,j1,k1,x,y,z ",i1,j1,k1, &
                  xsten_debug(0,1),xsten_debug(0,2),xsten_debug(0,SDIM)
@@ -17662,9 +17662,9 @@ stop
 
             ! default radius: extrap_radius=1 cell
             ! make the extension fluid level set tessellating
-           do i1=istenlo(1),istenhi(1)
-           do j1=istenlo(2),istenhi(2)
            do k1=istenlo(3),istenhi(3)
+           do j1=istenlo(2),istenhi(2)
+           do i1=istenlo(1),istenhi(1)
 
             do im=1,num_materials
              LS_virtual(im)=LS_extend(D_DECL(i1,j1,k1),im)
@@ -17913,9 +17913,9 @@ stop
              ! do nothing
             else if (is_rigid(im).eq.0) then
 
-             do i1=istenlo(1),istenhi(1)
-             do j1=istenlo(2),istenhi(2)
              do k1=istenlo(3),istenhi(3)
+             do j1=istenlo(2),istenhi(2)
+             do i1=istenlo(1),istenhi(1)
               LS_temp(D_DECL(i1,j1,k1))=LS_extend(D_DECL(i1,j1,k1),im)
              enddo 
              enddo 
@@ -18163,9 +18163,9 @@ stop
       call get_dxmaxLS(dx,bfact,dxmaxLS)
       LSbandsize=truncate_thickness*dxmaxLS
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        mask_test=NINT(maskcov(D_DECL(i,j,k)))
 
        if (mask_test.eq.1) then

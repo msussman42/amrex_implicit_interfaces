@@ -1789,9 +1789,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 !          sign and close to substrate)
     if (i_method .eq. 1) then
        closest_distance = 1.d10
-       do i = -n_rad,n_rad
-       do j = -n_rad,n_rad
        do k = -n_rad,n_rad
+       do j = -n_rad,n_rad
+       do i = -n_rad,n_rad
         if ((LS_stencil(i,j,k,im_primary)*LS_xp(im_primary).le.0.d0).and. &
             (abs(LS_stencil(i,j,k,im_solid)).lt.eps)) then
          find_cl = 1
@@ -1930,9 +1930,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        enddo
 !find icl, jcl, kcl
        phimin = 1.d10
-       do i = -n_rad,n_rad
-       do j = -n_rad,n_rad
        do k = -n_rad,n_rad
+       do j = -n_rad,n_rad
+       do i = -n_rad,n_rad
         do d = 1, 2
          tmp(d) = x_stencil(i,j,k,d) - x_proj(d)
         enddo
@@ -3454,9 +3454,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do i1=-1,1
-      do j1=-1,1
       do k1=k1lo,k1hi
+      do j1=-1,1
+      do i1=-1,1
        do isten=-1,1
         dir2=1
         xsten2(isten,dir2)=xsten(isten+2*i1,dir2)
@@ -3597,9 +3597,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
 
-       do inode=-1,1,2
-       do jnode=-1,1,2
        do knode=knodelo,knodehi,2
+       do jnode=-1,1,2
+       do inode=-1,1,2
 
         idx_array(1)=inode
         idx_array(2)=jnode
@@ -5843,9 +5843,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         endif
        enddo ! im=1..num_materials
 
-       do i1=-1,1
-       do j1=-1,1
        do k1=k1lo,k1hi
+       do j1=-1,1
+       do i1=-1,1
         do im=1,num_materials 
          LS_temp(im)=LS_stencil(D_DECL(i1,j1,k1),im)
         enddo
@@ -6215,9 +6215,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         plusflag(ii)=0
        enddo
 
-       do i1=-1,1
-       do j1=-1,1
        do k1=k1lo,k1hi
+       do j1=-1,1
+       do i1=-1,1
         do isten=-1,1
          dir=1
          xsten_test(isten,dir)=xsten(2*i1+isten,dir)
@@ -6507,9 +6507,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         endif
        enddo
-       do i1=0,1
-       do j1=0,1
        do k1=k1lo,k1hi
+       do j1=0,1
+       do i1=0,1
         do isten=-nhalf,nhalf
          dir=1
          xstensub(isten,dir)=xmid(dir)+(i1-half)*dxsub(dir)+ &
@@ -7235,9 +7235,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else
 
-       do i1=-1,1
-       do j1=-1,1
        do k1=k1lo,k1hi
+       do j1=-1,1
+       do i1=-1,1
         do isten=-1,1
          dir2=1
          xsten2(isten,dir2)=xsten(isten+2*i1,dir2)
@@ -8358,9 +8358,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do i1=-1,1
-      do j1=-1,1
       do k1=k1lo,k1hi
+      do j1=-1,1
+      do i1=-1,1
        do isten=-1,1
         dir2=1
         xsten2(isten,dir2)=xsten(isten+2*i1,dir2)
@@ -8439,9 +8439,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do i1=-1,1
-      do j1=-1,1
       do k1=k1lo,k1hi
+      do j1=-1,1
+      do i1=-1,1
        do isten=-1,1
         dir2=1
         xsten2(isten,dir2)=xsten(isten+2*i1,dir2)
@@ -10330,9 +10330,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      do i1=-1,1
-      do j1=-1,1
       do k1=k1lo,k1hi
+      do j1=-1,1
+      do i1=-1,1
        do isten=-1,1
         dir2=1
         xsten2(isten,dir2)=xsten(isten+2*i1,dir2)
@@ -22763,9 +22763,9 @@ end subroutine initialize2d
       call checkbound_array1(fablo,fabhi,errfab_ptr,0,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
        x=xsten(0,1)
        y=xsten(0,2)
@@ -23091,9 +23091,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
          IWALL(1)=i
@@ -23283,9 +23283,9 @@ end subroutine initialize2d
        endif  
     
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
  
          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,grid_type)
 
@@ -23543,9 +23543,9 @@ end subroutine initialize2d
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
@@ -23681,9 +23681,9 @@ end subroutine initialize2d
       endif
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
        distsolid=-99999.0
@@ -23987,9 +23987,9 @@ end subroutine initialize2d
            stop
           endif
 
-          do i=growloMAC(1),growhiMAC(1)
-          do j=growloMAC(2),growhiMAC(2)
           do k=growloMAC(3),growhiMAC(3)
+          do j=growloMAC(2),growhiMAC(2)
+          do i=growloMAC(1),growhiMAC(1)
            ! dir=0..sdim-1
            call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir)
 
@@ -24075,9 +24075,9 @@ end subroutine initialize2d
 
         growhi_strip(dir+1)=growlo_strip(dir+1)
 
-        do i=growlo_strip(1),growhi_strip(1) 
-        do j=growlo_strip(2),growhi_strip(2) 
         do k=growlo_strip(3),growhi_strip(3) 
+        do j=growlo_strip(2),growhi_strip(2) 
+        do i=growlo_strip(1),growhi_strip(1) 
 
          ! do nothing - no problems yet with a prescribed heat flux at
          ! the bottom
@@ -24098,9 +24098,9 @@ end subroutine initialize2d
 
         growlo_strip(dir+1)=growhi_strip(dir+1)
 
-        do i=growlo_strip(1),growhi_strip(1) 
-        do j=growlo_strip(2),growhi_strip(2) 
         do k=growlo_strip(3),growhi_strip(3) 
+        do j=growlo_strip(2),growhi_strip(2) 
+        do i=growlo_strip(1),growhi_strip(1) 
 
          ! dir=0..sdim-1
          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir)
@@ -24816,9 +24816,9 @@ end subroutine initialize2d
         stop
        endif
 
-       do ic=growlo(1),growhi(1)
-       do jc=growlo(2),growhi(2)
        do kc=growlo(3),growhi(3)
+       do jc=growlo(2),growhi(2)
+       do ic=growlo(1),growhi(1)
         
         do n=1,nc
          scalc(n)=zero
@@ -25975,9 +25975,9 @@ end subroutine initialize2d
          scalc(vofcomp_raw)=vofdark(im)
         endif
 
-        do i1=-1,1
-        do j1=-1,1
         do k1=k1lo,k1hi
+        do j1=-1,1
+        do i1=-1,1
 
          do isten=-nhalf2,nhalf2
           dir=1
@@ -26291,9 +26291,9 @@ end subroutine initialize2d
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        sinprod=one
@@ -26313,9 +26313,9 @@ end subroutine initialize2d
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
         ! dir=0..sdim-1
        call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir)
 
@@ -26879,9 +26879,9 @@ end subroutine initialize2d
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
         x_vel=xx_vel
         y_vel=yy_vel
@@ -27927,9 +27927,9 @@ end subroutine initialize2d
       call checkbound_array1(fablo,fabhi,velmac_ptr,0,dir)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
        do dirloc=1,SDIM
         xsten_cell(dirloc)=xsten(0,dirloc)
@@ -27950,9 +27950,9 @@ end subroutine initialize2d
 
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
          growlo,growhi,0,dir) 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,dir)
        do dirloc=1,SDIM
         xsten_cell(dirloc)=xsten(0,dirloc)
@@ -28114,9 +28114,9 @@ end subroutine initialize2d
          print *,"Marco Arienti's code needs to be migrated"
          stop
         endif
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
@@ -28279,9 +28279,9 @@ end subroutine initialize2d
          print *,"Marco Arienti's code needs to be migrated"
          stop
         endif
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
@@ -28464,9 +28464,9 @@ end subroutine initialize2d
          print *,"Marco Arienti's code needs to be migrated"
          stop
         endif
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
@@ -28646,9 +28646,9 @@ end subroutine initialize2d
          print *,"Marco Arienti's code needs to be migrated"
          stop
         endif
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
@@ -28842,9 +28842,9 @@ end subroutine initialize2d
          print *,"Marco Arienti's code needs to be migrated"
          stop
         endif
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
  
           ! velcomp=1..sdim
          call gridstenMAC(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf,velcomp-1)
@@ -29055,9 +29055,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
@@ -29307,9 +29307,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          grid_index(1)=i
          grid_index(2)=j
@@ -29605,9 +29605,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
          IWALL(1)=i
@@ -29677,9 +29677,9 @@ end subroutine initialize2d
         endif  
 
         if (ext_dir_flag.eq.1) then
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
          do k=borderlo(3),borderhi(3)
+         do j=borderlo(2),borderhi(2)
+         do i=borderlo(1),borderhi(1)
 
           call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
           IWALL(1)=i
@@ -29841,9 +29841,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
          IWALL(1)=i
@@ -30027,9 +30027,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
          IWALL(1)=i
@@ -30209,9 +30209,9 @@ end subroutine initialize2d
          print *,"expecting all BCs to be reflect even or odd"
          stop
 
-         do i=borderlo(1),borderhi(1)
-         do j=borderlo(2),borderhi(2)
          do k=borderlo(3),borderhi(3)
+         do j=borderlo(2),borderhi(2)
+         do i=borderlo(1),borderhi(1)
 
           call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
           IWALL(1)=i
@@ -30364,9 +30364,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
          IWALL(1)=i
@@ -30527,9 +30527,9 @@ end subroutine initialize2d
        endif  
 
        if (ext_dir_flag.eq.1) then
-        do i=borderlo(1),borderhi(1)
-        do j=borderlo(2),borderhi(2)
         do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
 
          call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
          IWALL(1)=i
@@ -30743,9 +30743,9 @@ end subroutine initialize2d
 
            stop
 
-           do i=borderlo(1),borderhi(1)
-           do j=borderlo(2),borderhi(2)
            do k=borderlo(3),borderhi(3)
+           do j=borderlo(2),borderhi(2)
+           do i=borderlo(1),borderhi(1)
   
             call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
             IWALL(1)=i
