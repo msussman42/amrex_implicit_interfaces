@@ -329,9 +329,9 @@ stop
           weight_total=zero
           sumslope=zero
 
-          do i1=is,ie 
-          do j1=js,je 
           do k1=ks,ke 
+          do j1=js,je 
+          do i1=is,ie 
 
             !im_face=0 if, wrt i1,j1,k1, imL_1<>imR_1 or 
             !coarse/fine or exterior BC or is_clamped_face>=1
@@ -1324,9 +1324,9 @@ stop
 
               ! elemhi(dir)=elemlo(dir)
              call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
-             do ielem=elemlo(1),elemhi(1)
-             do jelem=elemlo(2),elemhi(2)
              do kelem=elemlo(3),elemhi(3)
+             do jelem=elemlo(2),elemhi(2)
+             do ielem=elemlo(1),elemhi(1)
 
               if (dir.eq.1) then ! x-fluxes
                inorm_elem=ielem
@@ -2068,9 +2068,9 @@ stop
                (maskcov.eq.1)) then
 
             call elementbox(i,j,k,bfact,dir-1,elemlo,elemhi)
-            do ielem=elemlo(1),elemhi(1)
-            do jelem=elemlo(2),elemhi(2)
             do kelem=elemlo(3),elemhi(3)
+            do jelem=elemlo(2),elemhi(2)
+            do ielem=elemlo(1),elemhi(1)
 
              if (dir.eq.1) then ! x-fluxes
               inorm_elem=ielem
@@ -3597,9 +3597,9 @@ stop
          enddo !dir2=1..sdim
 
          triple_flag=0
-         do ialt=istenlo(1),istenhi(1)
-         do jalt=istenlo(2),istenhi(2)
          do kalt=istenlo(3),istenhi(3)
+         do jalt=istenlo(2),istenhi(2)
+         do ialt=istenlo(1),istenhi(1)
           do im_sub=1,num_materials
            LSsub(im_sub)=dist(D_DECL(ialt,jalt,kalt),im_sub)
           enddo
@@ -5875,9 +5875,9 @@ stop
              normdir,mac_cell_index_RIGHT)
 
             mindist=-one
-            do i1=-1,1
-            do j1=-1,1
             do k1=k1low,k1high
+            do j1=-1,1
+            do i1=-1,1
              call check_for_closest_UMAC( &
                xtarget, &
                fablo,fabhi, &
@@ -8618,9 +8618,9 @@ stop
          if (ok_to_modify_EUL.eq.1) then
 
           ibase=(partid-1)*NCOMP_FSI
-          do i1=-1,1
-          do j1=-1,1
           do k1=k1lo,k1hi
+          do j1=-1,1
+          do i1=-1,1
            ldata(D_DECL(i1+2,j1+2,k1+2))= &
              fsi(D_DECL(i+i1,j+j1,k+k1),ibase+FSI_LEVELSET+1)
           enddo 
@@ -9079,9 +9079,9 @@ stop
          enddo
          wtsum=zero
 
-         do i1=-2,2
-         do j1=-2,2
          do k1=k1low,k1high
+         do j1=-2,2
+         do i1=-2,2
           do im=1,num_materials
            LS_sten(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
           enddo
@@ -9532,9 +9532,9 @@ stop
           TorY_STATUS(im)=0
          enddo ! im=1..num_materials
 
-         do i1=-1,1 
-         do j1=-1,1 
          do k1=k1lo,k1hi
+         do j1=-1,1 
+         do i1=-1,1 
           do im=1,num_materials
            LS_no_tess(im)=LS(D_DECL(i+i1,j+j1,k+k1),im)
           enddo
@@ -10408,9 +10408,9 @@ stop
  
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
        call gridsten_level(xsten,i,j,k,level,nhalf)
 
        ! MEHDI VAHAB HEAT SOURCE
@@ -10868,9 +10868,9 @@ stop
        ! i.e. a single FAB can contain multiple tiles.
        ! BOXLIB stores the FAB.   FAB's store data on a rectangular grid
        ! traverse faces of a given tile.
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        if (nparts.eq.0) then
          ! no solids, as placeholder put fictitious fluid velocity
@@ -11343,9 +11343,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi, &
               0,data_dir) 
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        if (nparts.eq.0) then
          ! no solids, as placeholder put fictitious fluid velocity
@@ -11626,9 +11626,9 @@ stop
       endif
 
       ! Iterate over the box
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -12099,9 +12099,9 @@ stop
        call checkbound_array1(fablo,fabhi,weightfab_ptr,ngrow_distance,-1)
        call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         expan_new(D_DECL(i,j,k),1)=zero
         expan_new(D_DECL(i,j,k),2)=zero
        enddo
@@ -12109,9 +12109,9 @@ stop
        enddo
 
        ! Iterate over the box
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -12136,9 +12136,9 @@ stop
            xmain(dir)=xsten(0,dir)
           enddo
             
-          do i_n=stenlo(1),stenhi(1)
-          do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
+          do j_n=stenlo(2),stenhi(2)
+          do i_n=stenlo(1),stenhi(1)
 
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
            if ((TAGSIDE.eq.one).or. & ! doner
@@ -12205,9 +12205,9 @@ stop
            xmain(dir)=xsten(0,dir)
           enddo
             
-          do i_n=stenlo(1),stenhi(1)
-          do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
+          do j_n=stenlo(2),stenhi(2)
+          do i_n=stenlo(1),stenhi(1)
 
            TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
            if ((TAGSIDE.eq.one).or. & ! doner
@@ -12265,9 +12265,9 @@ stop
        end do ! j
        end do ! i
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
         local_mask=NINT(maskcov(D_DECL(i,j,k)))
         if (local_mask.eq.1) then
          local_expan_new=expan_new(D_DECL(i,j,k),1)
@@ -12437,9 +12437,9 @@ stop
        call checkbound_array1(fablo,fabhi,weight_comp_ptr,ngrow_distance,-1)
 
        ! Iterate over the box
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         local_mask=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -12465,9 +12465,9 @@ stop
           enddo
             
           total_weight=zero
-          do i_n=stenlo(1),stenhi(1)
-          do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
+          do j_n=stenlo(2),stenhi(2)
+          do i_n=stenlo(1),stenhi(1)
 
            ! if there is receiver neighbor cell
            TAGSIDE=tag(D_DECL(i_n,j_n,k_n))
@@ -12531,9 +12531,9 @@ stop
           enddo
             
           total_weight=zero
-          do i_n=stenlo(1),stenhi(1)
-          do j_n=stenlo(2),stenhi(2)
           do k_n=stenlo(3),stenhi(3)
+          do j_n=stenlo(2),stenhi(2)
+          do i_n=stenlo(1),stenhi(1)
 
            ! if there is receiver neighbor cell
            TAGSIDE=tag_comp(D_DECL(i_n,j_n,k_n))
@@ -13460,9 +13460,9 @@ stop
          ! directionally_split_module vars:
          ! icrse,jcrse,kcrse,iside is a MAC index.
          ! ipart,jpart,kpart,iside_part is a CELL index.
-        do icrse=growlo(1),growhi(1)
-        do jcrse=growlo(2),growhi(2)
         do kcrse=growlo(3),growhi(3)
+        do jcrse=growlo(2),growhi(2)
+        do icrse=growlo(1),growhi(1)
          nprocessed=nprocessed+1
 
          maskleft=NINT(mask(D_DECL(icrse-iii,jcrse-jjj,kcrse-kkk)))
@@ -13947,9 +13947,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0)
 
-      do icrse=growlo(1),growhi(1)
-      do jcrse=growlo(2),growhi(2)
       do kcrse=growlo(3),growhi(3)
+      do jcrse=growlo(2),growhi(2)
+      do icrse=growlo(1),growhi(1)
        nprocessed=nprocessed+1
 
        maskcell=NINT(mask(D_DECL(icrse,jcrse,kcrse)))
@@ -15073,9 +15073,9 @@ stop
          stop
         endif
 
-        do icrse=growlo(1),growhi(1)
-        do jcrse=growlo(2),growhi(2)
         do kcrse=growlo(3),growhi(3)
+        do jcrse=growlo(2),growhi(2)
+        do icrse=growlo(1),growhi(1)
 
           ! veldir=1..sdim
          call gridstenMAC_level(xsten_MAC, &
@@ -15696,9 +15696,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        mask_test=NINT(maskcov(D_DECL(i,j,k)))
 
@@ -16210,9 +16210,9 @@ stop
              stop
             endif
 
-            do i1=-1,1
-            do j1=-1,1
             do k1=k1lo,k1hi
+            do j1=-1,1
+            do i1=-1,1
              call gridsten_level(xsten_ofs,i+i1,j+j1,k+k1,level,nhalf)
              call Box_volumeFAST(bfact,dx,xsten_ofs,nhalf, &
               volcell,cencell,SDIM)
@@ -16526,9 +16526,9 @@ stop
 
              ! combine_flag==0 (FVM->GFM) or
              ! combine_flag==1 (GFM->FVM) 
-            do i1=-1,1
-            do j1=-1,1
             do k1=k1lo,k1hi
+            do j1=-1,1
+            do i1=-1,1
              test_temp=cellfab(D_DECL(i+i1,j+j1,k+k1),scomp(im)+1)
 
              if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal combine
@@ -17067,9 +17067,9 @@ stop
       call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
        growlo,growhi,0,dir)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
        do dir_local=1,SDIM
@@ -17935,9 +17935,9 @@ stop
          call growntileboxTENSOR(tilelo,tilehi,fablo,fabhi, &
            growlo,growhi,dir-1)
 
-         do i=growlo(1),growhi(1)
-         do j=growlo(2),growhi(2)
          do k=growlo(3),growhi(3)
+         do j=growlo(2),growhi(2)
+         do i=growlo(1),growhi(1)
 
           !dir=1..sdim
           call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
@@ -18493,9 +18493,9 @@ stop
         call growntileboxTENSOR_SEM( &
          tilelo,tilehi,fablo,fabhi,growlo,growhi,dir-1) 
 
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
          call gridsten_level(xsten,i,j,k,level,nhalfcell)
          do dir2=1,SDIM
           xclamped_cen(dir2)=xsten(0,dir2)
@@ -18622,9 +18622,9 @@ stop
           call growntileboxTENSOR_SEM(tilelo,tilehi,fablo,fabhi, &
            growlo,growhi,dir-1)
 
-          do i=growlo(1),growhi(1)
-          do j=growlo(2),growhi(2)
           do k=growlo(3),growhi(3)
+          do j=growlo(2),growhi(2)
+          do i=growlo(1),growhi(1)
            local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
            maskcov=NINT(mask0(D_DECL(i,j,k)))
 
@@ -18743,9 +18743,9 @@ stop
           call growntileboxTENSOR_SEM(tilelo,tilehi,fablo,fabhi, &
            growlo,growhi,dir-1)
 
-          do i=growlo(1),growhi(1)
-          do j=growlo(2),growhi(2)
           do k=growlo(3),growhi(3)
+          do j=growlo(2),growhi(2)
+          do i=growlo(1),growhi(1)
 
            local_maskSEM=NINT(maskSEM(D_DECL(i,j,k)))
            maskcov=NINT(mask0(D_DECL(i,j,k)))
@@ -19130,9 +19130,9 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
        ! traverse the cell centered grid.
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xstenCELL,i,j,k,level,nhalf)
 
@@ -19841,9 +19841,9 @@ stop
 
       if (isweep.eq.0) then
 
-       do i=growlo(1),growhi(1)
-       do j=growlo(2),growhi(2)
        do k=growlo(3),growhi(3)
+       do j=growlo(2),growhi(2)
+       do i=growlo(1),growhi(1)
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -20007,9 +20007,9 @@ stop
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
              growlo,growhi,0,cell_flag) 
 
-        do i=growlo(1),growhi(1)
-        do j=growlo(2),growhi(2)
         do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
 
           !cell_flag=0..sdim-1
          call gridstenMAC_level(xsten,i,j,k,level,nhalf,cell_flag)
@@ -20348,9 +20348,9 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call strip_status(i,j,k,bfact,stripstat)
 
@@ -20378,9 +20378,9 @@ stop
 
         clamped_cell_in_element=0
 
-        do iofs=0,bfact-1
-        do jofs=0,bfact-1
         do kofs=0,kofs_hi
+        do jofs=0,bfact-1
+        do iofs=0,bfact-1
 
          call gridsten_level(xsten,i+iofs,j+jofs,k+kofs,level,nhalf)
          do dir=1,SDIM
@@ -20626,9 +20626,9 @@ stop
            stop
           endif
 
-          do iofs=-1,bfact
-          do jofs=-1,bfact
           do kofs=-1,kofs_hi
+          do jofs=-1,bfact
+          do iofs=-1,bfact
            test_maskSEM=NINT(oldmask(D_DECL(i+iofs,j+jofs,k+kofs))) 
            if (test_maskSEM.ne.local_maskSEM) then
             local_maskSEM=0
@@ -20659,9 +20659,9 @@ stop
          stop
         endif
 
-        do iofs=0,bfact-1
-        do jofs=0,bfact-1
         do kofs=0,kofs_hi
+        do jofs=0,bfact-1
+        do iofs=0,bfact-1
 
          mask(D_DECL(i+iofs,j+jofs,k+kofs))=local_maskSEM
 
@@ -20856,9 +20856,9 @@ stop
      
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
-      do i=growlo(1),growhi(1)
-      do j=growlo(2),growhi(2)
       do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
        do dir=1,SDIM
