@@ -1454,12 +1454,13 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  int bfact_top=bfact_array[0];
 
  int num_sweeps=0;
- if (smooth_type==0) // GSRB
+ if (smooth_type==0) { // GSRB
   num_sweeps=6;
- else if (smooth_type==1) // Jacobi
+ } else if (smooth_type==1) { // weighted Jacobi
   num_sweeps=4;
- else
-  amrex::Error("smooth_type invalid");
+ } else {
+  amrex::Error("only two options for smooth_type now: 0=GSRB 1=Wtd Jacobi");
+ }
 
 
  for (int isweep=0;isweep<num_sweeps;isweep++) {
