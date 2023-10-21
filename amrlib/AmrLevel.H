@@ -18,6 +18,12 @@
 #include <StateDescriptor.H>
 #include <StateData.H>
 
+#ifdef AMREX_PARTICLES
+#include <AMReX_Particles.H>
+#include <AMReX_AmrParticles.H>
+#include <AMReX_NeighborParticles.H>
+#endif
+
 #include <N_EXTRA_REAL.H>
 
 #include <memory>
@@ -332,7 +338,25 @@ public:
 
 #ifdef AMREX_PARTICLES
     //! This function can be called from the parent
-    virtual void particle_redistribute (int /*lbase*/ = 0, bool /*a_init*/ = false) {;}
+    virtual void particle_redistribute(int /*lbase*/ = 0, bool /*a_init*/ = false) {;}
+
+    void CopyNewToOldPC(int lev_max);
+    void CopyOldToNewPC(int lev_max);
+
+    AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& 
+       newDataPC (int slab_index);
+
+    const AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>&
+       newDataPC (int slab_index) const;
+
+     // 
+     // ARRAY OF STRUCTURES: x,y,z, particle id, cpu are base 
+     // STRUCTURE OF ARRAYS: no base
+     //
+    using PLS_ParticleContainerType=
+        AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+
+    Vector<PLS_ParticleContainerType*> AmrLevel0_new_dataPC;
 #endif
 
 protected:
