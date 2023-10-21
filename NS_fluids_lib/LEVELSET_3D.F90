@@ -18324,3 +18324,1752 @@ stop
       end module levelset_module
 
 
+      module FSI_PC_LS_module
+
+       use local_amrex_fort_module, only : amrex_real,amrex_particle_real
+       use iso_c_binding, only: c_int
+
+       implicit none
+
+       type, bind(C) :: particle_t
+         real(amrex_particle_real) :: pos(SDIM)
+         ! (insert time) is extra. 
+         real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
+         integer(c_int) :: id
+         integer(c_int) :: cpu
+         ! (material_id) is extra.
+         integer(c_int) :: extra_int(N_EXTRA_INT)
+       end type particle_t
+
+       type accum_parm_type_count
+        integer :: fablo(SDIM)
+        integer :: fabhi(SDIM)
+        integer :: tilelo(SDIM)
+        integer :: tilehi(SDIM)
+        integer :: append_flag
+        integer :: bfact
+        integer :: level
+        integer :: finest_level
+        real(amrex_real) :: dx(SDIM)
+        real(amrex_real) :: xlo(SDIM)
+        integer :: Npart
+!        type(particle_t), pointer, dimension(:) :: particlesptr
+        integer :: N_real_comp
+!        real(amrex_real), pointer, dimension(:) :: real_compALLptr
+        integer :: nsubdivide
+!        real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: TENSORptr
+!        real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: LEVELSETptr
+        !cell_particle_count(i,j,k,1)=number particles in the cell.
+        !cell_particle_count(i,j,k,2)=particle id of first particle in list
+!        integer, pointer, dimension(D_DECL(:,:,:),:) :: &
+!           cell_particle_count
+       end type accum_parm_type_count
+
+       type grid_parm_type
+        integer :: fablo(SDIM)
+        integer :: fabhi(SDIM)
+        integer :: tilelo(SDIM)
+        integer :: tilehi(SDIM)
+        integer :: bfact
+        integer :: level
+        integer :: finest_level
+        real(amrex_real) :: dx(SDIM)
+        real(amrex_real) :: xlo(SDIM)
+!        real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: umacptr
+!        real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: vmacptr
+!        real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: wmacptr
+        integer, dimension(SDIM,2,SDIM) :: velbc
+        integer, dimension(SDIM,2) :: dombc
+        integer :: domlo(SDIM)
+        integer :: domhi(SDIM)
+        real(amrex_real) :: problo(SDIM)
+        real(amrex_real) :: probhi(SDIM)
+       end type grid_parm_type
+
+      contains
+
+      subroutine count_particles( &
+       accum_PARM, &
+       particlesptr, &
+       cell_particle_count, &
+       particle_link_data, &
+       Np)
+
+      use global_utility_module
+      use mass_transfer_module
+
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
+      integer, value, INTENT(in) :: Np 
+       ! child link 1 (particle index), parent link 1 (i,j,k index),
+       ! child link 2 (particle index), parent link 2 (i,j,k index), ...
+      integer, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
+      integer, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+           cell_particle_count
+
+      integer :: interior_ID
+      integer :: dir
+      real(amrex_real), target :: xpart(SDIM)
+      integer cell_index(SDIM)
+      integer interior_ok
+      integer i,j,k
+      integer :: local_ngrow
+      integer :: ok_to_add_link
+      integer :: previous_link
+      integer :: ibase
+      integer :: ibase_new
+      integer :: i_parent,j_parent,k_parent
+
+      local_ngrow=1
+
+      do interior_ID=1,accum_PARM%Npart
+
+       do dir=1,SDIM
+        xpart(dir)=particlesptr(interior_ID)%pos(dir)
+       enddo
+       call containing_cell(accum_PARM%bfact, &
+         accum_PARM%dx, &
+         accum_PARM%xlo, &
+         accum_PARM%fablo, &
+         xpart, &
+         cell_index)
+
+       interior_ok=1
+       do dir=1,SDIM
+        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
+            (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+         interior_ok=0
+        endif
+       enddo
+       if (interior_ok.eq.1) then
+
+        i=cell_index(1)
+        j=cell_index(2)
+        k=cell_index(SDIM)
+
+        ok_to_add_link=1
+
+        previous_link=cell_particle_count(D_DECL(i,j,k),2)
+        if (previous_link.eq.0) then
+         ! do nothing; no particles attached to cell (i,j,k)
+        else if ((previous_link.ge.1).and. &
+                 (previous_link.le.Np)) then
+         ibase=(previous_link-1)*(SDIM+1)
+         i_parent=particle_link_data(ibase+2) 
+         j_parent=particle_link_data(ibase+3) 
+         k_parent=particle_link_data(ibase+1+SDIM) 
+         if ((i.eq.i_parent).and. &
+             (j.eq.j_parent)) then
+          ! do nothing
+         else
+          ok_to_add_link=0
+         endif
+         if (SDIM.eq.3) then
+          if (k.eq.k_parent) then
+           ! do nothing
+          else
+           ok_to_add_link=0
+          endif
+         endif
+        else
+         print *,"previous_link invalid"
+         stop
+        endif
+
+        if (ok_to_add_link.eq.1) then
+
+         if (previous_link.eq.interior_ID) then
+          print *,"links should be unique"
+          stop
+         endif
+
+         cell_particle_count(D_DECL(i,j,k),1)= &
+           cell_particle_count(D_DECL(i,j,k),1)+1
+
+         cell_particle_count(D_DECL(i,j,k),2)=interior_ID
+
+         ibase_new=(interior_ID-1)*(SDIM+1)
+         particle_link_data(ibase_new+1)=previous_link
+         particle_link_data(ibase_new+2)=i 
+         particle_link_data(ibase_new+3)=j
+         if (SDIM.eq.3) then 
+          particle_link_data(ibase_new+SDIM+1)=k
+         endif
+
+        else if (ok_to_add_link.eq.0) then
+         print *,"ok_to_add_link==0"
+         print *,"the parent of a particle added to (i,j,k) should"
+         print *,"always be (i,j,k)"
+         print *,"i,j,k ",i,j,k
+         print *,"i_parent,j_parent,k_parent ", &
+           i_parent,j_parent,k_parent
+         print *,"previous_link,interior_ID ", &
+            previous_link,interior_ID 
+         stop
+        else
+         print *,"ok_to_add_link invalid"
+         stop
+        endif
+
+       else if (interior_ok.eq.0) then
+        ! do nothing
+       else
+        print *,"interior_ok invalid"
+        stop
+       endif
+
+      enddo ! do interior_ID=1,accum_PARM%Npart
+
+      return
+      end subroutine count_particles
+
+
+      subroutine containing_sub_box( &
+         accum_PARM, &
+         xpart, &
+         i,j,k, &
+         isub,jsub,ksub, &
+         sub_found)
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      real(amrex_real), INTENT(in) :: xpart(SDIM)
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(out) :: isub,jsub,ksub
+      integer, INTENT(out) :: sub_found
+      integer, parameter :: nhalf=3
+      integer :: dir
+      real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
+      integer :: isub_local(3)
+      real(amrex_real) :: dx_sub
+
+      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+      sub_found=1
+      isub_local(3)=0
+       ! x=xlo + (isub+1/2)*dx
+       ! isub=(x-xlo)/dx -1/2
+      do dir=1,SDIM
+       dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
+       if (dx_sub.gt.zero) then
+        if (abs(xpart(dir)-xsten(-1,dir)).le.1.0D-8*dx_sub) then
+         isub_local(dir)=0
+        else if (abs(xpart(dir)-xsten(1,dir)).le.1.0D-8*dx_sub) then
+         isub_local(dir)=accum_PARM%nsubdivide-1
+        else if ((xpart(dir).ge.xsten(-1,dir)).and. &
+                 (xpart(dir).le.xsten(1,dir))) then
+         isub_local(dir)=NINT((xpart(dir)-xsten(-1,dir))/dx_sub-half)
+        else
+         isub_local(dir)=0
+         sub_found=0
+        endif
+       else
+        print *,"dx_sub invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      isub=isub_local(1)
+      jsub=isub_local(2)
+      ksub=isub_local(3)
+
+      end subroutine containing_sub_box
+
+      subroutine sub_box_cell_center( &
+         accum_PARM, &
+         i,j,k, &
+         isub,jsub,ksub, &
+         xsub)
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      real(amrex_real), INTENT(out) :: xsub(SDIM)
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: isub,jsub,ksub
+      integer, parameter :: nhalf=3
+      integer :: dir
+      real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) :: dx_sub
+      integer isub_local(3)
+
+      isub_local(1)=isub
+      isub_local(2)=jsub
+      isub_local(3)=ksub
+
+      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+       ! x=xlo + (isub+1/2)*dx
+      do dir=1,SDIM
+       dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
+       if (dx_sub.gt.zero) then
+        xsub(dir)=xsten(-1,dir)+(isub_local(dir)+half)*dx_sub
+       else
+        print *,"dx_sub invalid"
+        stop
+       endif
+      enddo ! dir=1..sdim
+
+      end subroutine sub_box_cell_center
+
+       ! partition of unity interpolation:
+       ! Q(xtarget)=( sum_{particles} Q_{p} w(xtarget,xp) +
+       !              sum_{grid} Q_{grid} w(xtarget,xgrid) ) /
+       !            ( sum_{particles} w(xtarget,xp) +
+       !              sum_{grid} w(xtarget,xgrid) )
+      subroutine interp_eul_lag_dist( &
+         accum_PARM, &
+         particlesptr, &
+         real_compALLptr, &
+         SPECIESptr, &
+         LEVELSETptr, &
+         cell_particle_count, &
+         i,j,k, &
+         xtarget, &  ! where to add the new particle
+         particle_link_data, &
+         Np, &
+         SPEC_interp, &
+         LS_interp, &
+         X0_interp)
+      use probcommon_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
+      real(amrex_real), INTENT(in), pointer, dimension(:) :: real_compALLptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: SPECIESptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: LEVELSETptr
+      integer, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+         cell_particle_count
+      integer, INTENT(in) :: i,j,k
+      real(amrex_real), target, INTENT(in) :: xtarget(SDIM)
+      integer, value, INTENT(in) :: Np
+      integer, INTENT(in) :: particle_link_data(Np*(1+SDIM))
+      real(amrex_real), INTENT(out) :: SPEC_interp(num_species_var)
+      real(amrex_real), INTENT(out) :: LS_interp(num_materials)
+      real(amrex_real), INTENT(out) :: X0_interp(SDIM)
+
+      integer, parameter :: nhalf=3
+      integer :: dir
+      real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) A_VEL,b_VEL(num_species_var)
+      real(amrex_real) A_X0,b_X0(SDIM)
+      integer :: current_link
+      real(amrex_real), target :: xpart(SDIM)
+      real(amrex_real) :: SPECpart(num_species_var)
+      real(amrex_real) :: X0part(SDIM)
+      real(amrex_real) :: LS_interp_local(num_materials)
+      integer :: ibase
+
+      real(amrex_real) w_p
+
+      real(amrex_real) :: LSlocal(num_materials)
+      integer :: im
+      integer :: im_primary
+      integer :: im_primary_part
+      integer :: im_particle_direct
+      integer :: im_primary_sub
+      integer :: ipart
+      integer :: im_map
+      integer :: dir_tensor
+
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out
+      type(interp_from_grid_out_parm_type) :: data_out_LS
+
+      real(amrex_real), target, dimension(num_species_var) :: data_interp_local
+      real(amrex_real), target, dimension(num_materials) :: data_interp_local_LS
+
+      integer :: test_count,test_cell_particle_count
+
+      integer :: SoA_comp
+
+      if (1.eq.0) then
+       print *,"i,j,k ",i,j,k
+       print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
+       print *,"Np= ",Np
+       print *,"num_materials=",num_materials
+       print *,"accum_PARM%fablo(1) ",accum_PARM%fablo(1)
+       print *,"accum_PARM%fablo(2) ",accum_PARM%fablo(2)
+       print *,"accum_PARM%fablo(SDIM) ",accum_PARM%fablo(SDIM)
+       print *,"accum_PARM%tilelo(1) ",accum_PARM%tilelo(1)
+       print *,"accum_PARM%tilelo(2) ",accum_PARM%tilelo(2)
+       print *,"accum_PARM%tilelo(SDIM) ",accum_PARM%tilelo(SDIM)
+       print *,"accum_PARM%Npart ",accum_PARM%Npart
+       print *,"accum_PARM%N_real_comp ",accum_PARM%N_real_comp
+       print *,"accum_PARM%nsubdivide ",accum_PARM%nsubdivide
+       print *,"LBOUND(SPECIESptr) ",LBOUND(SPECIESptr)
+       print *,"UBOUND(SPECIESptr) ",UBOUND(SPECIESptr)
+       print *,"LBOUND(LEVELSETptr) ",LBOUND(LEVELSETptr)
+       print *,"UBOUND(LEVELSETptr) ",UBOUND(LEVELSETptr)
+      endif
+
+      call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
+
+      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
+         SPECIESptr,1,-1)
+      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
+         LEVELSETptr,1,-1)
+      call checkbound_array_INTEGER(accum_PARM%tilelo,accum_PARM%tilehi, &
+         cell_particle_count,0,-1)
+
+      do im=1,num_materials
+       LSlocal(im)=LEVELSETptr(D_DECL(i,j,k),im)
+      enddo
+      call get_primary_material(LSlocal,im_primary)
+
+      data_out%data_interp=>data_interp_local
+      data_out_LS%data_interp=>data_interp_local_LS
+
+      data_in%scomp=1 
+      data_in%ncomp=num_species_var
+      data_in%level=accum_PARM%level
+      data_in%finest_level=accum_PARM%finest_level
+      data_in%bfact=accum_PARM%bfact
+
+      do dir=1,SDIM
+       data_in%dx(dir)=accum_PARM%dx(dir)
+       data_in%xlo(dir)=accum_PARM%xlo(dir)
+       data_in%fablo(dir)=accum_PARM%fablo(dir)
+       data_in%fabhi(dir)=accum_PARM%fabhi(dir)
+      enddo
+
+      A_VEL=zero
+      A_X0=zero
+      do dir=1,num_species_var
+       b_VEL(dir)=zero
+      enddo
+      do dir=1,SDIM
+       b_X0(dir)=zero
+      enddo
+
+      test_cell_particle_count=cell_particle_count(D_DECL(i,j,k),1)
+
+      test_count=0
+
+      current_link=cell_particle_count(D_DECL(i,j,k),2)
+
+      do while ((current_link.ge.1).and.(current_link.le.Np))
+
+       do dir=1,SDIM
+        xpart(dir)=particlesptr(current_link)%pos(dir)
+       enddo 
+
+       do dir=1,num_species_var
+        SoA_comp=(dir-1)*Np+current_link
+        if ((SoA_comp.ge.1).and. &
+            (SoA_comp.le.accum_PARM%N_real_comp)) then
+         SPECpart(dir)=real_compALLptr(SoA_comp)
+        else
+         print *,"SoA_comp invalid"
+         stop
+        endif
+       enddo !dir=1,num_species_var
+
+       do dir=1,SDIM
+        X0part(dir)= &
+           particlesptr(current_link)%extra_state(N_EXTRA_REAL_X0+dir)
+       enddo !dir=1,SDIM
+
+       im_particle_direct= &
+         particlesptr(current_link)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+
+       if ((im_particle_direct.ge.1).and. &
+           (im_particle_direct.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_particle_direct invalid"
+        stop
+       endif
+
+       call partition_unity_weight(xpart,xtarget,accum_PARM%dx,w_p)
+
+       data_in%xtarget=xpart
+
+       if (num_materials.gt.0) then
+        data_in%scomp=1 
+        data_in%ncomp=num_materials
+        call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
+        do dir=1,num_materials
+         LS_interp_local(dir)=data_out_LS%data_interp(dir)
+        enddo
+        call get_primary_material(LS_interp_local,im_primary_part)
+       else
+        print *,"num_materials invalid"
+        stop
+       endif
+
+       if (accum_PARM%append_flag.eq.0) then
+        print *,"there should not be any particles if append_flag==0"
+        stop
+       else if (accum_PARM%append_flag.eq.1) then
+        ! do nothing
+       else 
+        print *,"accum_PARM%append_flag invalid" 
+        stop
+       endif
+
+       if (w_p.gt.zero) then
+
+        A_X0=A_X0+w_p
+        do dir=1,SDIM
+         b_X0(dir)=b_X0(dir)+w_p*X0part(dir)
+        enddo
+
+        if (im_primary_part.eq.im_primary) then
+         if (im_primary_part.eq.im_particle_direct) then
+          A_VEL=A_VEL+w_p
+          do dir=1,num_species_var
+           b_VEL(dir)=b_VEL(dir)+w_p*SPECpart(dir)
+          enddo
+         else if (im_primary_part.ne.im_particle_direct) then
+          ! do nothing
+         else
+          print *,"im_primary_part or im_particle_direct bust"
+          stop
+         endif
+        else if (im_primary_part.ne.im_primary) then
+         ! do nothing
+        else
+         print *,"im_primary_part or im_primary bust"
+         stop
+        endif
+       else
+        print *,"w_p invalid"
+        stop
+       endif
+
+       ibase=(current_link-1)*(1+SDIM)
+       current_link=particle_link_data(ibase+1)
+
+       test_count=test_count+1
+      enddo ! while (current_link.ge.1).and.(current_link<=Np)
+
+      if (current_link.eq.0) then
+       ! do nothing
+      else
+       print *,"current_link invalid"
+       stop
+      endif
+      if (test_count.eq.test_cell_particle_count) then
+       ! do nothing
+      else
+       print *,"test_cell_particle_count invalid"
+       stop
+      endif
+
+       ! xtarget might not coincide with an Eulerian grid cell.
+      data_in%xtarget=xtarget
+
+       ! bilinear interpolation
+      if (num_species_var.gt.0) then
+       data_in%scomp=1 
+       data_in%ncomp=num_species_var
+       call interp_from_grid_util(data_in,SPECIESptr,data_out)
+       do dir=1,num_species_var
+        SPEC_interp(dir)=data_out%data_interp(dir)
+       enddo
+      else if (num_species_var.eq.0) then
+       ! do nothing
+      else
+       print *,"num_species_var invalid"
+       stop
+      endif
+
+      if (num_materials.gt.0) then
+       data_in%scomp=1 
+       data_in%ncomp=num_materials
+       call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
+       do dir=1,num_materials
+        LS_interp(dir)=data_out_LS%data_interp(dir)
+       enddo
+       call get_primary_material(LS_interp,im_primary_sub)
+      else
+       print *,"num_materials invalid"
+       stop
+      endif
+
+      if (accum_PARM%append_flag.eq.0) then
+       if (A_VEL.eq.zero) then
+        ! do nothing
+       else
+        print *,"expecting A_VEL==0 if append_flag==0"
+        stop
+       endif
+       if (A_X0.eq.zero) then
+        ! do nothing
+       else
+        print *,"expecting A_X0==0 if append_flag==0"
+        stop
+       endif
+      else if (accum_PARM%append_flag.eq.1) then
+
+       if (A_VEL.gt.zero) then
+        call partition_unity_weight(xtarget,xtarget,accum_PARM%dx,w_p)
+
+        do ipart=1,num_species_var
+         SPEC_interp(ipart)= &
+           (b_VEL(ipart)+w_p*SPEC_interp(ipart))/ &
+                  (A_VEL+w_p)
+        enddo
+
+       else if (A_VEL.eq.zero) then
+        ! do nothing
+       else
+        print *,"A_VEL invalid"
+        stop
+       endif
+
+       if (A_X0.gt.zero) then
+
+        do dir=1,SDIM
+         X0_interp(dir)=b_X0(dir)/A_X0
+        enddo
+
+       else if (A_X0.eq.zero) then
+
+        do dir=1,SDIM
+         X0_interp(dir)=xtarget(dir)
+        enddo
+
+       else
+        print *,"A_X0 invalid"
+        stop
+       endif
+
+      else 
+       print *,"accum_PARM%append_flag invalid" 
+       stop
+      endif
+
+      return
+      end subroutine interp_eul_lag_dist
+
+       ! called from NavierStokes.cpp:
+       !  NavierStokes::init_particle_container
+      subroutine fort_init_particle_container( &
+        tid, &
+        single_particle_size, &
+        isweep, &
+        append_flag, &
+        particle_nsubdivide, &
+        particle_max_per_nsubdivide, &
+        particle_min_per_nsubdivide, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        level, &
+        finest_level, &
+        cur_time_slab, &
+        xlo,dx, &
+        particles, & ! a list of particles in the elastic structure
+        Np, & !  Np = number of particles
+        real_compALL, &
+        N_real_comp, & ! pass by value
+        new_particles, & ! size is "new_Pdata_size"
+        new_Pdata_size, &
+        Np_append, & ! number of particles to add
+        particle_link_data, &
+        particle_delete_flag, & ! 1=> delete
+        cell_particle_count, &
+        DIMS(cell_particle_count), &
+        SPECIESfab,DIMS(SPECIESfab), &
+        lsfab,DIMS(lsfab), &
+        mfiner,DIMS(mfiner)) &
+      bind(c,name='fort_init_particle_container')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: single_particle_size
+      integer, INTENT(in) :: isweep
+      integer, INTENT(in) :: append_flag
+      integer, INTENT(in) :: level,finest_level
+
+      integer, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: particle_nsubdivide
+      integer, INTENT(in) :: particle_max_per_nsubdivide
+      integer, INTENT(in) :: particle_min_per_nsubdivide
+      real(amrex_real), INTENT(in)    :: cur_time_slab
+      real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
+      integer, value, INTENT(in) :: Np ! pass by value
+      type(particle_t), INTENT(in), target :: particles(Np)
+      type(particle_t), pointer :: particlesptr(:)
+      integer, value, INTENT(in) :: N_real_comp ! pass by value
+      real(amrex_real), INTENT(in), target :: real_compALL(N_real_comp)
+      real(amrex_real), pointer :: real_compALLptr(:)
+      integer, INTENT(inout) :: new_Pdata_size
+      real(amrex_real), INTENT(out) :: new_particles(new_Pdata_size)
+      integer, INTENT(inout) :: Np_append
+
+       ! child link 1, parent link 1,
+       ! child link 2, parent link 2, ...
+      integer, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
+      integer, INTENT(inout) :: particle_delete_flag(Np) ! 1=>delete
+
+      integer, INTENT(in) :: DIMDEC(cell_particle_count)
+      integer, INTENT(in) :: DIMDEC(speciesfab)
+      integer, INTENT(in) :: DIMDEC(lsfab)
+      integer, INTENT(in) :: DIMDEC(mfiner)
+   
+       ! first component: number of particles in the cell
+       ! second component: link to the local particle container: 1..Np 
+      integer, INTENT(inout), target :: cell_particle_count( &
+              DIMV(cell_particle_count), &
+              2) 
+      integer, pointer, &
+        dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
+
+      real(amrex_real), INTENT(in), target :: &
+         speciesfab(DIMV(speciesfab),num_species_var) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: speciesfab_ptr
+      real(amrex_real), INTENT(in), target :: lsfab(DIMV(lsfab),num_materials) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: lsfab_ptr
+      real(amrex_real), INTENT(in), target :: mfiner(DIMV(mfiner)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: mfiner_ptr
+
+      type(accum_parm_type_count) :: accum_PARM
+   
+      integer :: i,j,k
+      integer :: isub,jsub,ksub
+      integer :: dir
+      integer :: ibase
+      integer growlo(3) 
+      integer growhi(3) 
+      integer sublo(3) 
+      integer subhi(3) 
+      integer, allocatable :: sub_counter(:,:,:)
+      integer cell_count_check
+      integer cell_count_hold
+      integer current_link
+      integer local_count
+      integer sub_found
+      integer Np_append_test
+      real(amrex_real), target :: xpart(SDIM)
+      real(amrex_real) :: xsub(SDIM)
+      real(amrex_real) :: species_sub(num_species_var)
+      real(amrex_real) :: X0_sub(SDIM)
+      real(amrex_real) :: LS_sub(num_materials)
+      integer :: im_primary_sub
+      integer :: im_particle
+      integer, allocatable, dimension(:,:) :: sub_particle_data
+      integer, allocatable, dimension(:) :: sort_data_id
+      real(amrex_real), allocatable, dimension(:) :: sort_data_time
+      integer sub_iter
+      integer cell_iter
+      integer isub_test
+      integer jsub_test
+      integer ksub_test
+      integer bubble_change
+      integer bubble_iter
+      integer ibubble
+      integer temp_id
+      integer local_mask
+      real(amrex_real) temp_time
+
+      integer ipart
+      integer im_map
+      integer ii,jj
+      real(amrex_real) Q(3,3)
+
+      type(interp_from_grid_parm_type) :: data_in 
+      type(interp_from_grid_out_parm_type) :: data_out_LS
+      real(amrex_real), target, dimension(num_materials) :: data_interp_local_LS
+      real(amrex_real) time_in_future
+
+      cell_particle_count_ptr=>cell_particle_count
+      mfiner_ptr=>mfiner
+      tensorfab_ptr=>tensorfab
+      lsfab_ptr=>lsfab
+
+      call checkbound_array(fablo,fabhi,speciesfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
+
+      call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1)
+
+      call checkbound_array_INTEGER(tilelo,tilehi, &
+              cell_particle_count_ptr,0,-1)
+
+      if (cur_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"cur_time_slab invalid"
+       stop
+      endif
+      time_in_future=cur_time_slab+max(cur_time_slab,1.0D+3)
+
+      if (Np*num_species_var.eq.N_real_comp) then
+       ! do nothing
+      else
+       print *,"N_real_comp invalid"
+       stop
+      endif
+
+      if (N_EXTRA_REAL.eq.8) then
+       ! do nothing
+      else
+       print *,"N_EXTRA_REAL invalid"
+       stop
+      endif
+      if (N_EXTRA_INT.ge.1) then
+       ! do nothing
+      else
+       print *,"N_EXTRA_INT invalid"
+       stop
+      endif
+
+      if (single_particle_size.eq. &
+          SDIM+N_EXTRA_REAL+N_EXTRA_INT+num_species_var) then
+       ! do nothing
+      else
+       print *,"single_particle_size invalid"
+       stop
+      endif
+
+      if ((new_Pdata_size/single_particle_size)* &
+          single_particle_size.eq.new_Pdata_size) then
+       ! do nothing
+      else
+       print *,"new_Pdata_size invalid"
+       stop
+      endif
+
+      accum_PARM%append_flag=append_flag
+
+      do dir=1,SDIM
+       accum_PARM%fablo(dir)=fablo(dir)
+       accum_PARM%fabhi(dir)=fabhi(dir)
+       accum_PARM%tilelo(dir)=tilelo(dir)
+       accum_PARM%tilehi(dir)=tilehi(dir)
+       accum_PARM%dx(dir)=dx(dir)
+       accum_PARM%xlo(dir)=xlo(dir)
+      enddo
+      accum_PARM%bfact=bfact
+      accum_PARM%level=level
+      accum_PARM%finest_level=finest_level
+
+      accum_PARM%nsubdivide=particle_nsubdivide
+
+      particlesptr=>particles
+
+      accum_PARM%Npart=Np
+
+      real_compALLptr=>real_compALL
+
+      accum_PARM%N_real_comp=N_real_comp
+
+      if (isweep.eq.0) then
+       if (append_flag.eq.1) then
+        call count_particles( &
+         accum_PARM, &
+         particlesptr, &
+         cell_particle_count_ptr, &
+         particle_link_data, &
+         Np)
+       else if (append_flag.eq.0) then
+        ! do nothing
+       else
+        print *,"append_flag invalid"
+        stop
+       endif
+      else if (isweep.eq.1) then
+       ! do nothing
+      else
+       print *,"isweep invalid"
+       stop
+      endif
+       ! 1. traverse by cell
+       ! 2. within each cell, initialize counts for each subdivision.
+       ! 3. add particles within the subdivided cell using LS and
+       !    xfoot from previous particle (Lagrangian) data in the 
+       !    cell and previous Eulerian data.
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,0)
+
+      sublo(3)=0
+      subhi(3)=0
+      do dir=1,SDIM
+       sublo(dir)=0
+       subhi(dir)=particle_nsubdivide-1
+      enddo
+      allocate(sub_counter(sublo(1):subhi(1), &
+              sublo(2):subhi(2), &
+              sublo(3):subhi(3)))
+
+      if (isweep.eq.0) then
+       Np_append=0
+      else if (isweep.eq.1) then
+       ! do nothing
+      else
+       print *,"isweep invalid"
+       stop
+      endif
+      Np_append_test=0
+
+      data_out_LS%data_interp=>data_interp_local_LS
+
+      data_in%scomp=1 
+      data_in%ncomp=num_materials
+      data_in%level=level
+      data_in%finest_level=finest_level
+      data_in%bfact=bfact
+      data_in%dx=dx
+      data_in%xlo=xlo
+      data_in%fablo=fablo
+      data_in%fabhi=fabhi
+
+      do i=growlo(1),growhi(1)
+      do j=growlo(2),growhi(2)
+      do k=growlo(3),growhi(3)
+
+       local_mask=NINT(mfiner(D_DECL(i,j,k)))
+       if (local_mask.eq.1) then
+
+        do isub=sublo(1),subhi(1)
+        do jsub=sublo(2),subhi(2)
+        do ksub=sublo(3),subhi(3)
+         sub_counter(isub,jsub,ksub)=0
+        enddo
+        enddo
+        enddo
+        cell_count_check=0
+        cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
+
+         ! isub,jsub,ksub,link
+        allocate(sub_particle_data(cell_count_hold,SDIM+1))
+
+        current_link=cell_particle_count(D_DECL(i,j,k),2)
+        do while (current_link.ge.1)
+         do dir=1,SDIM
+          xpart(dir)=particles(current_link)%pos(dir)
+         enddo 
+         call containing_sub_box( &
+           accum_PARM, &
+           xpart, &
+           i,j,k, &
+           isub,jsub,ksub, &
+           sub_found)
+         if (sub_found.eq.1) then
+          sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
+          cell_count_check=cell_count_check+1
+          sub_particle_data(cell_count_check,1)=isub
+          sub_particle_data(cell_count_check,2)=jsub
+          if (SDIM.eq.3) then
+           sub_particle_data(cell_count_check,SDIM)=ksub
+          endif
+          sub_particle_data(cell_count_check,SDIM+1)=current_link
+         else
+          print *,"sub_box not found"
+          stop
+         endif
+         ibase=(current_link-1)*(1+SDIM)
+         current_link=particle_link_data(ibase+1)
+        enddo ! while (current_link.ge.1)
+
+        if (cell_count_check.eq.cell_count_hold) then
+
+         cell_count_check=0
+
+         do isub=sublo(1),subhi(1)
+         do jsub=sublo(2),subhi(2)
+         do ksub=sublo(3),subhi(3)
+          ! increment Np_append if isweep == 0
+          ! always increment Np_append_test
+          local_count=sub_counter(isub,jsub,ksub)
+
+          cell_count_check=cell_count_check+local_count
+
+            ! check if particles need to be deleted
+          if (local_count.ge.1) then
+
+           allocate(sort_data_time(local_count))
+           allocate(sort_data_id(local_count))
+           sub_iter=0
+           do cell_iter=1,cell_count_hold
+            isub_test=sub_particle_data(cell_iter,1)
+            jsub_test=sub_particle_data(cell_iter,2)
+            ksub_test=sub_particle_data(cell_iter,SDIM)
+            current_link=sub_particle_data(cell_iter,SDIM+1)
+            if ((isub_test.eq.isub).and. &
+                (jsub_test.eq.jsub)) then
+             if ((SDIM.eq.2).or. &
+                 ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
+              sub_iter=sub_iter+1
+              sort_data_id(sub_iter)=current_link                     
+              sort_data_time(sub_iter)= &
+                particles(current_link)% &
+                extra_state(N_EXTRA_REAL_INSERT_TIME+1) 
+              do dir=1,SDIM
+               xpart(dir)=particles(current_link)%pos(dir)
+              enddo 
+
+              data_in%xtarget=xpart
+              call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
+              do dir=1,num_materials
+               LS_sub(dir)=data_out_LS%data_interp(dir)
+              enddo
+              call get_primary_material(LS_sub,im_primary_sub)
+              if ((im_primary_sub.ge.1).and. &
+                  (im_primary_sub.le.num_materials)) then
+               im_particle=particles(current_link)% &
+                 extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+               if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then
+                if (im_particle.eq.im_primary_sub) then
+                 ! do nothing
+                else if (im_particle.ne.im_primary_sub) then
+                 sort_data_time(sub_iter)=time_in_future
+                else
+                 print *,"im_particle or im_primary_sub invalid"
+                 stop
+                endif
+               else
+                print *,"im_particle invalid"
+                stop
+               endif
+              else
+               print *,"im_primary_sub invalid"
+               stop
+              endif
+
+             else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
+              ! do nothing
+             else
+              print *,"dimension or ksub bust"
+              stop
+             endif
+            endif
+           enddo ! cell_iter=1..cell_count_hold
+
+           if (sub_iter.eq.local_count) then
+            bubble_change=1
+            bubble_iter=0
+             ! sort from oldest particle to youngest.
+             ! i.e. particle with smallest "add time" is at the top of
+             ! the list.
+            do while ((bubble_change.eq.1).and. &
+                      (bubble_iter.lt.local_count))
+             do ibubble=1,local_count-bubble_iter-1
+              if (sort_data_time(ibubble).gt. &
+                  sort_data_time(ibubble+1)) then
+               temp_id=sort_data_id(ibubble)
+               sort_data_id(ibubble)=sort_data_id(ibubble+1)
+               sort_data_id(ibubble+1)=temp_id
+               temp_time=sort_data_time(ibubble)
+               sort_data_time(ibubble)=sort_data_time(ibubble+1)
+               sort_data_time(ibubble+1)=temp_time
+               bubble_change=1
+              endif
+             enddo ! ibubble=1..local_count-bubble_iter-1
+             bubble_iter=bubble_iter+1
+            enddo ! bubble_change==1 and bubble_iter<local_count
+
+            do bubble_iter=1,local_count
+               ! never delete particles that were present from the
+               ! very beginning of the simulation.
+             if (sort_data_time(bubble_iter).eq.zero) then
+              ! do nothing
+             else if (sort_data_time(bubble_iter).gt.zero) then
+              if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
+                  (sort_data_time(bubble_iter).ge.time_in_future-one)) then
+               particle_delete_flag(sort_data_id(bubble_iter))=1
+              else if ((bubble_iter.le.particle_max_per_nsubdivide).and. &
+                   (sort_data_time(bubble_iter).lt.time_in_future-one)) then
+               ! do nothing
+              else
+               print *,"bubble_iter or sort_data_time bust"
+               stop
+              endif
+             else
+              print *,"sort_data_time(bubble_iter) invalid"
+              stop
+             endif
+            enddo ! bubble_iter
+           else
+            print *,"sub_iter invalid"
+            stop
+           endif    
+           deallocate(sort_data_time)
+           deallocate(sort_data_id)
+          else if (local_count.eq.0) then
+           ! do nothing
+          else
+           print *,"local_count bust"
+           stop
+          endif 
+
+           ! insufficient particles in the subbox or adding the
+           ! particles for the very first time.
+          if ((local_count.lt.particle_min_per_nsubdivide).or. &
+              (append_flag.eq.0)) then 
+
+           call sub_box_cell_center( &
+             accum_PARM, &
+             i,j,k, &
+             isub,jsub,ksub, &
+             xsub)
+
+             ! add bulk particles
+           call interp_eul_lag_dist( &
+             im_elastic_map, &
+             accum_PARM, &
+             particlesptr, &
+             real_compALLptr, &
+             speciesfab_ptr, &
+             lsfab_ptr, &
+             cell_particle_count_ptr, &
+             i,j,k, &
+             xsub, &
+             particle_link_data, &
+             Np, &
+             species_sub, &
+             LS_sub, &
+             X0_sub)
+
+     FIX ME
+
+           Np_append_test=Np_append_test+1
+
+           if (isweep.eq.0) then
+            ! do nothing
+           else if (isweep.eq.1) then
+            ibase=(Np_append_test-1)*single_particle_size
+            do dir=1,SDIM
+             new_particles(ibase+dir)=xsub(dir)
+            enddo
+            do dir=1,NUM_CELL_ELASTIC
+             new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT+dir)= &
+               tensor_sub(dir)
+            enddo
+            new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
+            do dir=1,SDIM
+             new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=X0_sub(dir)
+            enddo
+            call get_primary_material(LS_sub,im_primary_sub)
+            if ((im_primary_sub.ge.1).and. &
+                (im_primary_sub.le.num_materials)) then
+             new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
+              im_primary_sub
+            else
+             print *,"im_primary_sub invalid"
+             stop
+            endif
+           else
+            print *,"isweep invalid"
+            stop
+           endif
+
+          else if ((local_count.ge.particle_min_per_nsubdivide).and. &
+                   (append_flag.eq.1)) then
+           ! do nothing
+          else
+           print *,"local_count invalid"
+           stop
+          endif
+
+         enddo ! ksub
+         enddo ! jsub
+         enddo ! isub
+
+         if (cell_count_check.eq.cell_count_hold) then
+          ! do nothing
+         else
+          print *,"cell_count_check invalid"
+          stop
+         endif
+
+        else
+         print *,"cell_count_check invalid"
+         stop
+        endif
+
+        deallocate(sub_particle_data)
+
+       else if (local_mask.eq.0) then
+        ! do nothing
+       else
+        print *,"local_mask invalid"
+        stop
+       endif
+
+      enddo 
+      enddo 
+      enddo  ! i,j,k
+
+      if (isweep.eq.0) then
+       Np_append=Np_append_test
+      else if (isweep.eq.1) then
+       if ((Np_append.eq.Np_append_test).and. &
+           (new_Pdata_size.eq. &
+            Np_append*single_particle_size)) then
+        ! do nothing
+       else
+        print *,"Np_append or new_Pdata_size invalid"
+        stop
+       endif
+      else
+       print *,"isweep invalid"
+       stop
+      endif
+
+      deallocate(sub_counter)
+
+      return
+      end subroutine fort_init_particle_container
+
+      subroutine interp_mac_velocity( &
+        grid_PARM, &
+        umacptr, &
+        vmacptr, &
+        wmacptr, &
+        xpart, &
+        vel_time_slab,u)
+      use global_utility_module
+      use probcommon_module
+      use probf90_module
+
+      implicit none
+
+      type(grid_parm_type), INTENT(in) :: grid_PARM
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: umacptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: vmacptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: wmacptr
+      real(amrex_real), INTENT(in) :: xpart(SDIM)
+      real(amrex_real), INTENT(in) :: vel_time_slab
+      real(amrex_real), INTENT(out) :: u(SDIM)
+
+      integer i,j,k
+      integer ii,jj,kk
+      integer imac,jmac,kmac
+      integer isten,jsten,ksten
+      integer dir,dir_inner
+      integer imaclo(3)
+      integer imachi(3)
+      integer cell_index(SDIM)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenMAC_lo(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenMAC_hi(-nhalf:nhalf,SDIM)
+      real(amrex_real) dx_inner
+      real(amrex_real) wt_dist(SDIM)
+      real(amrex_real) local_data
+      real(amrex_real), dimension(D_DECL(2,2,2),1) :: data_stencil
+      integer ncomp_interp
+      real(amrex_real) LS_clamped
+      real(amrex_real) vel_clamped(SDIM)
+      real(amrex_real) temperature_clamped
+      integer prescribed_flag
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: local_data_fab
+
+      if (vel_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"vel_time_slab invalid"
+       stop
+      endif
+
+      call SUB_clamped_LS(xpart,vel_time_slab,LS_clamped, &
+       vel_clamped,temperature_clamped,prescribed_flag,grid_PARM%dx)
+
+      if (LS_clamped.ge.zero) then
+
+       do dir=1,SDIM
+        u(dir)=vel_clamped(dir)
+       enddo
+
+      else if (LS_clamped.lt.zero) then
+
+       call containing_cell(grid_PARM%bfact, &
+          grid_PARM%dx, &
+          grid_PARM%xlo, &
+          grid_PARM%fablo, &
+          xpart, &
+          cell_index)
+
+       i=cell_index(1)
+       j=cell_index(2)
+       k=cell_index(SDIM)
+
+       call gridsten_level(xsten,i,j,k,grid_PARM%level,nhalf)
+
+       do dir=1,SDIM
+
+        ii=0
+        jj=0
+        kk=0
+        if (dir.eq.1) then
+         ii=1
+        else if (dir.eq.2) then
+         jj=1
+        else if ((dir.eq.3).and.(SDIM.eq.3)) then
+         kk=1
+        else
+         print *,"dir invalid"
+         stop
+        endif
+
+        imaclo(3)=0
+        imachi(3)=0
+        do dir_inner=1,SDIM
+         if (dir_inner.eq.dir) then
+          imaclo(dir_inner)=cell_index(dir_inner)
+          imachi(dir_inner)=cell_index(dir_inner)+1
+         else if (dir_inner.ne.dir) then
+          if (xpart(dir_inner).le.xsten(0,dir_inner)) then
+           imaclo(dir_inner)=cell_index(dir_inner)-1
+           imachi(dir_inner)=cell_index(dir_inner)
+          else if (xpart(dir_inner).ge.xsten(0,dir_inner)) then
+           imaclo(dir_inner)=cell_index(dir_inner)
+           imachi(dir_inner)=cell_index(dir_inner)+1
+          else
+           print *,"xpart or xsten invalid"
+           stop
+          endif
+         else
+          print *,"dir_inner or dir invalid"
+          stop
+         endif
+        enddo ! dir_inner=1..sdim
+
+         ! dir=1..sdim
+        call gridstenMAC_level(xstenMAC_lo, &
+         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
+        call gridstenMAC_level(xstenMAC_hi, &
+         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
+
+        do dir_inner=1,SDIM
+         dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)
+         if (dx_inner.gt.zero) then
+          wt_dist(dir_inner)=(xpart(dir_inner)-xstenMAC_lo(0,dir_inner))/ &
+            dx_inner
+         else
+          print *,"dx_inner invalid"
+          stop
+         endif
+        enddo  ! dir_inner=1..sdim
+
+        do imac=imaclo(1),imachi(1)
+        do jmac=imaclo(2),imachi(2)
+        do kmac=imaclo(3),imachi(3)
+
+         isten=imac-imaclo(1)+1
+         jsten=jmac-imaclo(2)+1
+         ksten=kmac-imaclo(3)+1
+         if (dir.eq.1) then
+          local_data_fab=>umacptr
+         else if (dir.eq.2) then
+          local_data_fab=>vmacptr
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          local_data_fab=>wmacptr
+         else
+          print *,"dir invalid"
+          stop
+         endif
+         call safe_data_single(imac,jmac,kmac,local_data_fab,local_data)
+
+         data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
+        enddo ! kmac
+        enddo ! jmac
+        enddo ! imac
+     
+        ncomp_interp=1
+        call bilinear_interp_stencil(data_stencil, &
+          wt_dist,ncomp_interp,u(dir)) 
+
+       enddo ! dir=1..sdim
+
+      else
+       print *,"LS_clamped invalid"
+       stop
+      endif
+
+      end subroutine interp_mac_velocity
+
+
+      subroutine check_cfl_BC(grid_PARM, xpart1, xpart2)
+      use global_utility_module
+
+      implicit none
+
+      type(grid_parm_type), INTENT(in) :: grid_PARM
+      real(amrex_real), INTENT(in) :: xpart1(SDIM)
+      real(amrex_real), INTENT(inout) :: xpart2(SDIM)
+      integer bc_local
+      integer dir
+      integer dir_inner
+      real(amrex_real) factor
+      real(amrex_real) mag
+      real(amrex_real) max_travel
+
+      max_travel=grid_PARM%dx(1)
+
+      do dir=1,SDIM
+       if (xpart2(dir).lt.grid_PARM%problo(dir)) then
+        bc_local=grid_PARM%velbc(dir,1,dir)
+        if (bc_local.eq.REFLECT_ODD) then
+         if (xpart1(dir).ge.grid_PARM%problo(dir)) then
+          factor=(xpart1(dir)-grid_PARM%problo(dir))/ &
+                 (xpart1(dir)-xpart2(dir))
+          if ((factor.ge.zero).and. &
+              (factor.le.one)) then
+           do dir_inner=1,SDIM
+            xpart2(dir_inner)=xpart1(dir_inner)+ &
+             factor*(xpart2(dir_inner)-xpart1(dir_inner))
+           enddo
+          else
+           print *,"factor invalid"
+           stop
+          endif
+         else
+          print *,"xpart1(dir) invalid"
+          stop
+         endif
+        else if ((bc_local.eq.INT_DIR).or. &
+                 (bc_local.eq.EXT_DIR).or. &
+                 (bc_local.eq.REFLECT_EVEN).or. &
+                 (bc_local.eq.FOEXTRAP)) then
+         ! do nothing
+        else
+         print *,"bc_local invalid"
+         stop
+        endif
+       endif
+
+       if (xpart2(dir).gt.grid_PARM%probhi(dir)) then
+        bc_local=grid_PARM%velbc(dir,2,dir)
+        if (bc_local.eq.REFLECT_ODD) then
+         if (xpart1(dir).le.grid_PARM%probhi(dir)) then
+          factor=(xpart1(dir)-grid_PARM%probhi(dir))/ &
+                 (xpart1(dir)-xpart2(dir))
+          if ((factor.ge.zero).and. &
+              (factor.le.one)) then
+           do dir_inner=1,SDIM
+            xpart2(dir_inner)=xpart1(dir_inner)+ &
+             factor*(xpart2(dir_inner)-xpart1(dir_inner))
+           enddo
+          else
+           print *,"factor invalid"
+           stop
+          endif
+         else
+          print *,"xpart1(dir) invalid"
+          stop
+         endif
+        else if ((bc_local.eq.INT_DIR).or. &
+                 (bc_local.eq.EXT_DIR).or. &
+                 (bc_local.eq.REFLECT_EVEN).or. &
+                 (bc_local.eq.FOEXTRAP)) then
+         ! do nothing
+        else
+         print *,"bc_local invalid"
+         stop
+        endif
+       endif
+      enddo !dir=1..sdim
+
+      mag=zero
+      do dir=1,SDIM
+       mag=mag+(xpart1(dir)-xpart2(dir))**2
+      enddo
+      mag=sqrt(mag)
+      if (mag.gt.max_travel) then
+       factor=max_travel/mag
+       if ((factor.ge.zero).and.(factor.le.one)) then
+        do dir=1,SDIM
+         xpart2(dir)=xpart1(dir)+ &
+             factor*(xpart2(dir)-xpart1(dir))
+        enddo
+       else
+        print *,"factor invalid"
+        stop
+       endif
+      else if (mag.le.max_travel) then
+       ! do nothing
+      else
+       print *,"mag invalid check_cfl_BC"
+       stop
+      endif
+
+      end subroutine check_cfl_BC
+
+       ! called from NavierStokes2.cpp
+      subroutine fort_move_particle_container( &
+        tid, &
+        tilelo,tilehi, &
+        fablo,fabhi, &
+        bfact, &
+        level, &
+        finest_level, &
+        xlo,dx, &
+        particles, & ! a list of particles in the elastic structure
+        Np, & !  Np = number of particles
+        dt, &
+        vel_time_slab, &
+        umac,DIMS(umac), &
+        vmac,DIMS(vmac), &
+        wmac,DIMS(wmac), &
+        velbc_in, &
+        denbc_in, &
+        dombc, &
+        domlo, &
+        domhi) &
+      bind(c,name='fort_move_particle_container')
+
+      use probf90_module
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: tid
+      integer, INTENT(in) :: level,finest_level
+
+      real(amrex_real), INTENT(in) :: dt
+      real(amrex_real), INTENT(in) :: vel_time_slab
+
+      integer, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
+      integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
+      integer, value, INTENT(in) :: Np ! pass by value
+      type(particle_t), INTENT(inout), target :: particles(Np)
+
+      integer, INTENT(in) :: DIMDEC(umac)
+      integer, INTENT(in) :: DIMDEC(vmac)
+      integer, INTENT(in) :: DIMDEC(wmac)
+
+      real(amrex_real), INTENT(in), target :: umac(DIMV(umac)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: umac_ptr
+      real(amrex_real), INTENT(in), target :: vmac(DIMV(vmac)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: vmac_ptr
+      real(amrex_real), INTENT(in), target :: wmac(DIMV(wmac)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: wmac_ptr
+
+      integer, INTENT(in), target :: velbc_in(SDIM,2,SDIM)
+      integer, INTENT(in) :: denbc_in(SDIM,2)
+      integer, INTENT(in), target :: dombc(SDIM,2)
+      integer, INTENT(in), target :: domlo(SDIM)
+      integer, INTENT(in), target :: domhi(SDIM)
+
+      real(amrex_real), target :: problo_arr(3)
+      real(amrex_real), target :: probhi_arr(3)
+
+      integer interior_ID
+      integer dir,side,veldir
+      real(amrex_real) xpart1(SDIM)
+      real(amrex_real) xpart2(SDIM)
+      real(amrex_real) xpart3(SDIM)
+      real(amrex_real) xpart4(SDIM)
+      real(amrex_real) xpart_last(SDIM)
+      real(amrex_real) u1(SDIM), u2(SDIM), u3(SDIM), u4(SDIM)
+      type(grid_parm_type) grid_PARM
+      integer num_RK_stages
+
+      real(amrex_real) wrap_pos
+
+      umac_ptr=>umac
+      vmac_ptr=>vmac
+      wmac_ptr=>wmac
+
+      if (dt.gt.zero) then
+       ! do nothing
+      else
+       print *,"dt invalid"
+       stop
+      endif
+
+      problo_arr(1)=problox
+      problo_arr(2)=probloy
+      problo_arr(3)=probloz
+
+      probhi_arr(1)=probhix
+      probhi_arr(2)=probhiy
+      probhi_arr(3)=probhiz
+
+      do dir=1,SDIM
+       grid_PARM%fablo(dir)=fablo(dir)
+       grid_PARM%fabhi(dir)=fabhi(dir)
+       grid_PARM%tilelo(dir)=tilelo(dir)
+       grid_PARM%tilehi(dir)=tilehi(dir)
+       grid_PARM%dx(dir)=dx(dir)
+       grid_PARM%xlo(dir)=xlo(dir)
+       do side=1,2
+        grid_PARM%dombc(dir,side)=dombc(dir,side)
+       enddo
+       grid_PARM%domlo(dir)=domlo(dir)
+       grid_PARM%domhi(dir)=domhi(dir)
+       grid_PARM%problo(dir)=problo_arr(dir)
+       grid_PARM%probhi(dir)=probhi_arr(dir)
+       do veldir=1,SDIM
+        do side=1,2
+         grid_PARM%velbc(dir,side,veldir)=velbc_in(dir,side,veldir)
+        enddo
+       enddo
+      enddo ! dir=1,sdim
+      grid_PARM%bfact=bfact
+      grid_PARM%level=level
+      grid_PARM%finest_level=finest_level
+
+      call checkbound_array1(fablo,fabhi,umac_ptr,1,0)
+      call checkbound_array1(fablo,fabhi,vmac_ptr,1,1)
+      call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1)
+
+      num_RK_stages=2
+      
+      do interior_ID=1,Np
+
+       !4th-RK
+       do dir=1,SDIM
+        xpart1(dir)=particles(interior_ID)%pos(dir)
+       enddo
+       call interp_mac_velocity( &
+        grid_PARM, &
+        umac_ptr, &
+        vmac_ptr, &
+        wmac_ptr, &
+        xpart1, &
+        vel_time_slab,u1)
+
+       if (num_RK_stages.eq.4) then
+
+        do dir=1,SDIM
+         xpart2(dir)=xpart1(dir)+0.5d0*dt*u1(dir)
+        enddo
+        call check_cfl_BC(grid_PARM,xpart1,xpart2)
+
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart2, &
+         vel_time_slab,u2)
+
+        do dir=1,SDIM
+         xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
+        enddo
+
+        call check_cfl_BC(grid_PARM,xpart1,xpart3)
+
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart3, &
+         vel_time_slab,u3)
+
+        do dir=1,SDIM
+         xpart4(dir)=xpart1(dir)+dt*u3(dir)
+        enddo
+
+        call check_cfl_BC(grid_PARM,xpart1,xpart4)
+
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart4, &
+         vel_time_slab,u4)
+
+        do dir=1,SDIM
+         xpart_last(dir)=xpart1(dir)+(1.0d0/6.d0)*dt &
+          *(u1(dir)+2.d0*u2(dir)+2.d0*u3(dir)+u4(dir))
+        enddo
+       else if (num_RK_stages.eq.2) then
+        do dir=1,SDIM
+         xpart2(dir)=xpart1(dir)+dt*u1(dir)
+        enddo
+        call check_cfl_BC(grid_PARM,xpart1,xpart2)
+
+        call interp_mac_velocity( &
+         grid_PARM, &
+         umac_ptr, &
+         vmac_ptr, &
+         wmac_ptr, &
+         xpart2, &
+         vel_time_slab,u2)
+
+        do dir=1,SDIM
+         xpart_last(dir)=xpart1(dir)+0.5d0*dt &
+          *(u1(dir)+u2(dir))
+        enddo
+       else
+        print *,"num_RK_stages invalid"
+        stop
+       endif
+
+       call check_cfl_BC(grid_PARM,xpart1,xpart_last)
+
+       do dir=1,SDIM
+        particles(interior_ID)%pos(dir)=xpart_last(dir)
+       enddo
+
+       do dir=1,SDIM
+        wrap_pos=particles(interior_ID)%pos(dir)
+        if (wrap_pos.lt.problo_arr(dir)) then
+         if (dombc(dir,1).eq.INT_DIR) then
+          if (dombc(dir,2).eq.INT_DIR) then
+           particles(interior_ID)%pos(dir)= &
+             wrap_pos+ &
+             (probhi_arr(dir)-problo_arr(dir))
+          else
+           print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"
+           stop
+          endif
+         else if ((dombc(dir,1).eq.EXT_DIR).or. &
+                  (dombc(dir,1).eq.REFLECT_EVEN).or. &
+                  (dombc(dir,1).eq.FOEXTRAP)) then
+          ! do nothing
+         else
+          print *,"dombc(dir,1) invalid in fort_move_particle_container"
+          stop
+         endif
+        else if (wrap_pos.gt.probhi_arr(dir)) then
+         if (dombc(dir,2).eq.INT_DIR) then
+          if (dombc(dir,1).eq.INT_DIR) then
+           particles(interior_ID)%pos(dir)= &
+             wrap_pos- &
+             (probhi_arr(dir)-problo_arr(dir))
+          else
+           print *,"expecting both dombc_lo and dombc_hi to be INT_DIR"
+           stop
+          endif
+         else if ((dombc(dir,2).eq.EXT_DIR).or. &
+                  (dombc(dir,2).eq.REFLECT_EVEN).or. &
+                  (dombc(dir,2).eq.FOEXTRAP)) then
+          ! do nothing
+         else
+          print *,"dombc(dir,2) invalid in fort_move_particle_container"
+          stop
+         endif
+
+        else if ((wrap_pos.ge.problo_arr(dir)).and. &
+                 (wrap_pos.le.probhi_arr(dir))) then
+         ! do nothing
+        else
+         print *,"wrap_pos probably is NaN: ",wrap_pos
+         stop
+        endif
+       enddo ! dir=1..sdim
+
+      enddo!do interior_ID=1,Np
+
+      return
+      end subroutine fort_move_particle_container
+
+
+      end module FSI_PC_LS_module
+
+

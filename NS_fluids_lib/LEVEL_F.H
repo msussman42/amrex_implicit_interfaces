@@ -580,18 +580,12 @@ namespace amrex{
 	int* cell_particle_count,
 	AMREX_ARLIM_P(cell_particle_countlo),
 	AMREX_ARLIM_P(cell_particle_counthi),
-        Real* tensorfab,
-	AMREX_ARLIM_P(tensorfablo),
-	AMREX_ARLIM_P(tensorfabhi),
         Real* lsfab,
 	AMREX_ARLIM_P(lsfablo),
 	AMREX_ARLIM_P(lsfabhi),
         Real* mfiner,
 	AMREX_ARLIM_P(mfinerlo),
-	AMREX_ARLIM_P(mfinerhi),
-        int* viscoelastic_model, 
-        int* im_elastic_map,
-        Real* polymer_factor);
+	AMREX_ARLIM_P(mfinerhi));
 
      void fort_move_particle_container(
         int* tid,

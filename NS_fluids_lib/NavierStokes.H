@@ -997,6 +997,12 @@ protected:
       const std::string& caller_string);
 
     void prescribe_solid_geometry(Real time,int renormalize_only);
+#ifdef AMREX_PARTICLES
+    void init_particle_container(int append_flag);
+    void move_particles(
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
+           const std::string& caller_string);
+#endif
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
 
@@ -1563,6 +1569,10 @@ protected:
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
+
+    static int particle_nsubdivide;  
+    static int particle_max_per_nsubdivide;  
+    static int particle_min_per_nsubdivide;  
 
     static Real truncate_thickness;  // default is 2.0
 

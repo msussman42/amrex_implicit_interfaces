@@ -6511,6 +6511,135 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 
 } // end subroutine prescribe_solid_geometryALL
 
+#ifdef AMREX_PARTICLES
+
+void NavierStokes::move_particles(
+  AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
+  const std::string& caller_string) {
+
+ std::string local_caller_string="move_particles";
+ local_caller_string=caller_string+local_caller_string;
+
+ if (pattern_test(local_caller_string,"do_the_advance")==1) {
+  //do nothing
+ } else
+  amrex::Error("caller is invalid in move_particles");
+
+ bool use_tiling=ns_tiling;
+ int max_level = parent->maxLevel();
+ int finest_level=parent->finestLevel();
+
+ if ((level>=0)&&(level<=finest_level)) {
+  // do nothing
+ } else 
+  amrex::Error("level invalid");
+
+ if ((level>=0)&&(level<=max_level)) {
+  // do nothing
+ } else 
+  amrex::Error("level invalid");
+
+ if ((level>=0)&&(level<=max_level_for_use)) {
+  // do nothing
+ } else 
+  amrex::Error("level invalid");
+
+ if (num_state_base!=2)
+  amrex::Error("num_state_base invalid");
+ 
+ MultiFab& S_new = get_new_data(State_Type,slab_step+1);
+
+ const Real* dx = geom.CellSize();
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
+ Vector<int> dombc(2*AMREX_SPACEDIM);
+ const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_MOF);
+ const int* b_rec=descbc.vect();
+ for (int m=0;m<2*AMREX_SPACEDIM;m++)
+  dombc[m]=b_rec[m];
+
+ MultiFab* mac_velocity[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  mac_velocity[dir]=getStateMAC(1,dir,vel_time_slab);
+ }
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_new.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_new,use_tiling); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+
+  FArrayBox& xvelfab=(*mac_velocity[0])[mfi];
+  FArrayBox& yvelfab=(*mac_velocity[1])[mfi];
+  FArrayBox& zvelfab=(*mac_velocity[AMREX_SPACEDIM-1])[mfi];
+
+  const Real* xlo = grid_loc[gridno].lo();
+
+  auto& particles = localPC.GetParticles(level)
+   [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& particles_AoS = particles.GetArrayOfStructs();
+  int Np=particles_AoS.size();
+
+  Vector<int> denbc=getBCArray(State_Type,gridno,STATECOMP_STATES,
+    num_materials*num_state_material);
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+    STATECOMP_VEL,STATE_NCOMP_VEL);
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   // declared in: LEVELSET_3D.F90
+  fort_move_particle_container( 
+   &tid_current,
+   tilelo,tilehi,
+   fablo,fabhi,
+   &bfact,
+   &level,
+   &finest_level,
+   xlo,dx,
+   particles_AoS.data(),
+   Np,  // pass by value
+   &advection_dt_slab, //move_particle_container
+   &vel_time_slab,
+   xvelfab.dataPtr(),
+   ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
+   yvelfab.dataPtr(),
+   ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
+   zvelfab.dataPtr(),
+   ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
+   velbc.dataPtr(),
+   denbc.dataPtr(),
+   dombc.dataPtr(),
+   domlo,domhi);
+
+ }  // mfi
+} // omp
+ ns_reconcile_d_num(LOOP_MOVE_PARTICLE_CONTAINER,"move_particles");
+
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  delete mac_velocity[dir];
+ }
+
+} // end subroutine move_particles
+
+#endif
 
 // 1. renormalize variables
 // 2. extend from F>0 fluid regions into F=0 regions
@@ -6883,38 +7012,121 @@ void NavierStokes::output_triangles() {
 // still need tiling==true if configured as such so that OPENMP
 // will be possible in the future.
  for (MFIter mfi(*localMF[SLOPE_RECON_MF],use_tiling); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
 
-   const Real* xlo = grid_loc[gridno].lo();
+  const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& maskfab=(*maskplot)[mfi];
-   FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
+  FArrayBox& maskfab=(*maskplot)[mfi];
+  FArrayBox& reconfab=(*localMF[SLOPE_RECON_MF])[mfi];
 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: MARCHING_TETRA_3D.F90
-   fort_isogrid(
-    &tid_current,
-    &visual_tessellate_vfrac,  // =0,1, or 3
-    reconfab.dataPtr(),
-    ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
-    xlo,dx,
-    maskfab.dataPtr(),
-    ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    tilelo,tilehi,
-    fablo,fabhi,&bfact,
-    &level,&gridno);
+   // in: MARCHING_TETRA_3D.F90
+  fort_isogrid(
+   &tid_current,
+   &visual_tessellate_vfrac,  // =0,1, or 3
+   reconfab.dataPtr(),
+   ARLIM(reconfab.loVect()),ARLIM(reconfab.hiVect()),
+   xlo,dx,
+   maskfab.dataPtr(),
+   ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
+   tilelo,tilehi,
+   fablo,fabhi,&bfact,
+   &level,&gridno);
+
+#ifdef AMREX_PARTICLES
+
+  using My_ParticleContainer =
+   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+
+  NavierStokes& ns_level0=getLevel(0);
+  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
+
+  auto& particles_grid_tile = localPC.GetParticles(level)
+   [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
+  unsigned int Np=particles_AoS.size();
+
+  auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
+  int N_arrays=localPC.NumRealComps();
+  unsigned int Np_SoA=particles_SoA.size();
+
+  unsigned int Np_SoA_expect=Np;
+  if (num_species_var==0)
+   Np_SoA_expect=0;
+
+  if (Np_SoA_expect==Np_SoA) {
+   // do nothing
+  } else {
+   std::cout << "N_arrays=" << N_arrays << '\n';
+   std::cout << "num_species_var=" << num_species_var << '\n';
+   std::cout << "Np=" << Np << '\n';
+   std::cout << "Np_SoA=" << Np_SoA << '\n';
+   std::cout << "Np_SoA_expect=" << Np_SoA_expect << '\n';
+   amrex::Error("expecting Np_SoA_expect==Np_SoA");
+  }
+
+  if (N_arrays==num_species_vars) {
+   //do nothing
+  } else
+   amrex::Error("N_arrays invalid");
+
+  unsigned int k=0;
+  unsigned int N_real_comp=num_species_var*Np;
+
+  Vector<Real> real_compALL(N_real_comp);
+  for (int dir=0;dir<num_species_var;dir++) {
+   My_ParticleContainer::RealVector& 
+      real_comp=particles_SoA.GetRealData(dir);
+
+   if (real_comp.size()==Np) {
+    //do nothing
+   } else
+    amrex::Error("real_comp.size()!=Np");
+
+   for (unsigned int j=0;j<Np;j++) {
+    real_compALL[k]=real_comp[j]; 
+    k++;
+
+    if (k==dir*Np+j+1) {
+     //do nothing
+    } else
+     amrex::Error("k invalid");
+
+   }
+  } // for (int i=0;i<num_species_var;i++) 
+
+  if (k==N_real_comp) {
+   // do nothing
+  } else 
+   amrex::Error("k invalid");
+
+  // declared in: NAVIERSTOKES_3D.F90
+  fort_particle_grid(
+   &tid_current,
+   xlo,dx,
+   particles_AoS.data(),
+   Np,       //pass by value
+   real_compALL.dataPtr(),
+   N_real_comp,  //pass by value
+   tilelo,tilehi,
+   fablo,fabhi,
+   &bfact,
+   &level,
+   &gridno);
+
+#endif
 
  }  // mfi
  ns_reconcile_d_num(LOOP_ISOGRID,"output_triangles");
