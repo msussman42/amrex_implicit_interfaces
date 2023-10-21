@@ -406,6 +406,48 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  } else
   amrex::Error("enable_spectral invalid");
 
+#ifdef AMREX_PARTICLES
+
+ using My_ParticleContainer =
+     AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+
+ NavierStokes& ns_level0=getLevel(0);
+ My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
+
+  // first add particles if needed
+ if (slab_step==ns_time_order-1) {
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   int append_flag=1;
+   ns_level.init_particle_container(append_flag);
+  }
+ } else if ((slab_step>=0)&&(slab_step<ns_time_order-1)) {
+  //do nothing
+ } else
+  amrex::Error("slab_step invalid");
+
+ int lev_min=0;
+ int lev_max=-1;
+ int nGrow_Redistribute=0;
+ int local_Redistribute=0; 
+ localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+   //move_particles() declared in NavierStokes2.cpp
+  ns_level.move_particles(localPC,local_caller_string);
+ }
+
+ lev_min=0;
+ lev_max=-1;
+ nGrow_Redistribute=0;
+ local_Redistribute=0; 
+ localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+#endif
+
  int update_flag=RECON_UPDATE_NULL;
 
  //output:SLOPE_RECON_MF
@@ -1078,6 +1120,23 @@ Real NavierStokes::advance(Real time,Real dt) {
     std::fflush(NULL);
     ParallelDescriptor::Barrier();
    }
+
+#ifdef AMREX_PARTICLES
+
+   int lev_min=0;
+   int lev_max=-1;
+   int nGrow_Redistribute=0;
+   int local_Redistribute=0;
+
+   using My_ParticleContainer =
+     AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+
+   NavierStokes& ns_level0=getLevel(0);
+   My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
+   old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_Redistribute);
+
+#endif
 
    //copy bfact_time_order component to the
    //components: 0..bfact_time_order-1
