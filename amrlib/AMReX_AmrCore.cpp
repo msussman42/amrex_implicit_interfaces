@@ -197,6 +197,9 @@ AmrCore::getAmrLevels () noexcept
 AmrCore::AmrCore () 
   : AmrMesh() {
 
+    // "max_level," needed by 
+    // explicit AmrParGDB (AmrCore* amr) noexcept
+    // is already defined in "AmrMesh()"
 #ifdef AMREX_PARTICLES
     m_gdb = std::make_unique<AmrParGDB>(this);
 #endif
@@ -2171,6 +2174,8 @@ AmrCore::bldFineLevels (Real strt_time)
 #ifdef AMREX_PARTICLES
 void
 AmrCore::RedistributeParticles () {
+  //lbase=0  a_init=true
+  //"particle_redistribute" is just a stub right now.(October 22, 2023)
  amr_level[0]->particle_redistribute(0,true);
 }   
 #endif

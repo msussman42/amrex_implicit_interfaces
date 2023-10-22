@@ -6,7 +6,7 @@ CEXE_sources += PhysBCFunctSUSSMAN.cpp \
                 Interpolater.cpp StateData.cpp \
                 StateDescriptor.cpp AMReX_TagBox.cpp FillPatchUtil.cpp
 
-CEXE_headers += AMReX_ArrayLim_SUSSMAN.H \
+CEXE_headers += AMReX_ArrayLim_AUGMENTED.H \
                 PhysBCFunctSUSSMAN.H \
                 AMReX_AmrCore.H AmrLevel.H \
                 AMReX_AmrMesh.H \
