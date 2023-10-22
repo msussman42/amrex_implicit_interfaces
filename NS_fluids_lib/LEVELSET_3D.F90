@@ -18976,8 +18976,9 @@ stop
         particle_delete_flag, & ! 1=> delete
         cell_particle_count, &
         DIMS(cell_particle_count), &
-        SPECIESfab,DIMS(SPECIESfab), &
         lsfab,DIMS(lsfab), &
+        denfab,DIMS(denfab), &
+        velfab,DIMS(velfab), &
         mfiner,DIMS(mfiner)) &
       bind(c,name='fort_init_particle_container')
 
@@ -19018,8 +19019,9 @@ stop
       integer, INTENT(inout) :: particle_delete_flag(Np) ! 1=>delete
 
       integer, INTENT(in) :: DIMDEC(cell_particle_count)
-      integer, INTENT(in) :: DIMDEC(speciesfab)
       integer, INTENT(in) :: DIMDEC(lsfab)
+      integer, INTENT(in) :: DIMDEC(denfab)
+      integer, INTENT(in) :: DIMDEC(velfab)
       integer, INTENT(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
@@ -19031,10 +19033,16 @@ stop
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
       real(amrex_real), INTENT(in), target :: &
-         speciesfab(DIMV(speciesfab),num_species_var) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: speciesfab_ptr
+         denfab(DIMV(denfab),num_materials*num_state_material) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: denfab_ptr
+
+      real(amrex_real), INTENT(in), target :: &
+         velfab(DIMV(velfab),AMREX_SPACEDIM) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: velfab_ptr
+
       real(amrex_real), INTENT(in), target :: lsfab(DIMV(lsfab),num_materials) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: lsfab_ptr
+
       real(amrex_real), INTENT(in), target :: mfiner(DIMV(mfiner)) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: mfiner_ptr
 
@@ -19044,27 +19052,33 @@ stop
       integer :: isub,jsub,ksub
       integer :: dir
       integer :: ibase
+      integer :: ibase_nbr
       integer growlo(3) 
       integer growhi(3) 
       integer sublo(3) 
       integer subhi(3) 
       integer, allocatable :: sub_counter(:,:,:)
       integer cell_count_check
+      integer cell_count_nbr
       integer cell_count_hold
       integer current_link
+      integer current_link_nbr
       integer local_count
       integer sub_found
       integer Np_append_test
       real(amrex_real), target :: xpart(SDIM)
+      real(amrex_real), target :: xpart_nbr(SDIM)
       real(amrex_real) :: xsub(SDIM)
-      real(amrex_real) :: species_sub(num_species_var)
+      real(amrex_real) :: den_sub(num_materials*num_state_material)
+      real(amrex_real) :: vel_sub(AMREX_SPACEDIM)
       real(amrex_real) :: X0_sub(SDIM)
       real(amrex_real) :: LS_sub(num_materials)
       integer :: im_primary_sub
       integer :: im_particle
       integer, allocatable, dimension(:,:) :: sub_particle_data
       integer, allocatable, dimension(:) :: sort_data_id
-      real(amrex_real), allocatable, dimension(:) :: sort_data_time
+      real(amrex_real), allocatable, dimension(:) :: sort_data_mindist
+      real(amrex_real) :: temp_mindist
       integer sub_iter
       integer cell_iter
       integer isub_test
@@ -19075,24 +19089,20 @@ stop
       integer ibubble
       integer temp_id
       integer local_mask
-      real(amrex_real) temp_time
-
-      integer ipart
-      integer im_map
-      integer ii,jj
-      real(amrex_real) Q(3,3)
+      real(amrex_real) dist_nbr
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out_LS
       real(amrex_real), target, dimension(num_materials) :: data_interp_local_LS
-      real(amrex_real) time_in_future
 
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
-      tensorfab_ptr=>tensorfab
+      denfab_ptr=>denfab
+      velfab_ptr=>velfab
       lsfab_ptr=>lsfab
 
-      call checkbound_array(fablo,fabhi,speciesfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,denfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,velfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1)
@@ -19106,7 +19116,6 @@ stop
        print *,"cur_time_slab invalid"
        stop
       endif
-      time_in_future=cur_time_slab+max(cur_time_slab,1.0D+3)
 
       if (Np*num_species_var.eq.N_real_comp) then
        ! do nothing
@@ -19121,7 +19130,7 @@ stop
        print *,"N_EXTRA_REAL invalid"
        stop
       endif
-      if (N_EXTRA_INT.ge.1) then
+      if (N_EXTRA_INT.eq.1) then
        ! do nothing
       else
        print *,"N_EXTRA_INT invalid"
@@ -19245,9 +19254,41 @@ stop
         cell_count_check=0
         cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
 
-         ! isub,jsub,ksub,link
-        allocate(sub_particle_data(cell_count_hold,SDIM+1))
+         ! isub,jsub,ksub,link,mindist
+        allocate(sub_particle_data(cell_count_hold,SDIM+2))
 
+        current_link=cell_particle_count(D_DECL(i,j,k),2)
+        do while (current_link.ge.1)
+         do dir=1,SDIM
+          xpart(dir)=particles(current_link)%pos(dir)
+         enddo 
+         cell_count_check=cell_count_check+1
+         sub_particle_data(cell_count_check,SDIM+2)=1.0D+20
+         cell_count_nbr=0
+         current_link_nbr=cell_particle_count(D_DECL(i,j,k),2)
+         do while (current_link_nbr.ge.1)
+          cell_count_nbr=cell_count_nbr+1
+          if (cell_count_nbr.ne.cell_count_check) then
+           do dir=1,SDIM
+            xpart_nbr(dir)=particles(current_link_nbr)%pos(dir)
+           enddo 
+           dist_nbr=zero
+           do dir=1,SDIM
+            dist_nbr=dist_nbr+(xpart_nbr(dir)-xpart(dir))**2
+           enddo
+           dist_nbr=sqrt(dist_nbr)
+           if (dist_nbr.lt.sub_particle_data(cell_count_check,SDIM+2)) then
+            sub_particle_data(cell_count_check,SDIM+2)=dist_nbr
+           endif
+          endif
+          ibase_nbr=(current_link_nbr-1)*(1+SDIM)
+          current_link_nbr=particle_link_data(ibase_nbr+1)
+         enddo
+         ibase=(current_link-1)*(1+SDIM)
+         current_link=particle_link_data(ibase+1)
+        enddo
+
+        cell_count_check=0
         current_link=cell_particle_count(D_DECL(i,j,k),2)
         do while (current_link.ge.1)
          do dir=1,SDIM
@@ -19292,7 +19333,7 @@ stop
             ! check if particles need to be deleted
           if (local_count.ge.1) then
 
-           allocate(sort_data_time(local_count))
+           allocate(sort_data_mindist(local_count))
            allocate(sort_data_id(local_count))
            sub_iter=0
            do cell_iter=1,cell_count_hold
@@ -19306,9 +19347,7 @@ stop
                  ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
               sub_iter=sub_iter+1
               sort_data_id(sub_iter)=current_link                     
-              sort_data_time(sub_iter)= &
-                particles(current_link)% &
-                extra_state(N_EXTRA_REAL_INSERT_TIME+1) 
+              sort_data_mindist(sub_iter)=sub_particle_data(cell_iter,SDIM+2)
               do dir=1,SDIM
                xpart(dir)=particles(current_link)%pos(dir)
               enddo 
@@ -19327,7 +19366,7 @@ stop
                 if (im_particle.eq.im_primary_sub) then
                  ! do nothing
                 else if (im_particle.ne.im_primary_sub) then
-                 sort_data_time(sub_iter)=time_in_future
+                 sort_data_mindist(sub_iter)=zero
                 else
                  print *,"im_particle or im_primary_sub invalid"
                  stop
@@ -19359,14 +19398,14 @@ stop
             do while ((bubble_change.eq.1).and. &
                       (bubble_iter.lt.local_count))
              do ibubble=1,local_count-bubble_iter-1
-              if (sort_data_time(ibubble).gt. &
-                  sort_data_time(ibubble+1)) then
+              if (sort_data_mindist(ibubble).lt. &
+                  sort_data_mindist(ibubble+1)) then
                temp_id=sort_data_id(ibubble)
                sort_data_id(ibubble)=sort_data_id(ibubble+1)
                sort_data_id(ibubble+1)=temp_id
-               temp_time=sort_data_time(ibubble)
-               sort_data_time(ibubble)=sort_data_time(ibubble+1)
-               sort_data_time(ibubble+1)=temp_time
+               temp_mindist=sort_data_mindist(ibubble)
+               sort_data_mindist(ibubble)=sort_data_mindist(ibubble+1)
+               sort_data_mindist(ibubble+1)=temp_mindist
                bubble_change=1
               endif
              enddo ! ibubble=1..local_count-bubble_iter-1
@@ -19374,23 +19413,14 @@ stop
             enddo ! bubble_change==1 and bubble_iter<local_count
 
             do bubble_iter=1,local_count
-               ! never delete particles that were present from the
-               ! very beginning of the simulation.
-             if (sort_data_time(bubble_iter).eq.zero) then
+             if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
+                 (sort_data_mindist(bubble_iter).eq.zero)) then
+              particle_delete_flag(sort_data_id(bubble_iter))=1
+             else if ((bubble_iter.le.particle_max_per_nsubdivide).and. &
+                      (sort_data_mindist(bubble_iter).gt.zero)) then
               ! do nothing
-             else if (sort_data_time(bubble_iter).gt.zero) then
-              if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
-                  (sort_data_time(bubble_iter).ge.time_in_future-one)) then
-               particle_delete_flag(sort_data_id(bubble_iter))=1
-              else if ((bubble_iter.le.particle_max_per_nsubdivide).and. &
-                   (sort_data_time(bubble_iter).lt.time_in_future-one)) then
-               ! do nothing
-              else
-               print *,"bubble_iter or sort_data_time bust"
-               stop
-              endif
              else
-              print *,"sort_data_time(bubble_iter) invalid"
+              print *,"bubble_iter or sort_data_mindist bust"
               stop
              endif
             enddo ! bubble_iter
@@ -19398,7 +19428,7 @@ stop
             print *,"sub_iter invalid"
             stop
            endif    
-           deallocate(sort_data_time)
+           deallocate(sort_data_mindist)
            deallocate(sort_data_id)
           else if (local_count.eq.0) then
            ! do nothing

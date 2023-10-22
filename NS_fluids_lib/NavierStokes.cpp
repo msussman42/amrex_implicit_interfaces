@@ -5182,6 +5182,12 @@ NavierStokes::read_params ()
      std::cout << "initial_temperature_diffuse_duration=" << 
       initial_temperature_diffuse_duration << '\n';
 
+     std::cout << "particle_nsubdivide = " << particle_nsubdivide << '\n';
+     std::cout << "particle_max_per_nsubdivide= " <<
+        particle_max_per_nsubdivide << '\n';
+     std::cout << "particle_min_per_nsubdivide= " << 
+        particle_min_per_nsubdivide << '\n';
+
      for (int i=0;i<num_materials;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
@@ -9683,7 +9689,7 @@ NavierStokes::initData () {
      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
  int nGrow_Redistribute=0;
- int local_Redistribute=0;
+ int local_Redistribute=0; //redistribute "from scratch"
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_Redistribute);
  ns_level0.CopyNewToOldPC(lev_max); //copy and redistribute up to lev_max
@@ -22317,6 +22323,8 @@ NavierStokes::init_particle_container(int append_flag) {
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
+ MultiFab* den=getStateDen(1,cur_time_slab);
+ MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
 
  using My_ParticleContainer =
    AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
@@ -22348,13 +22356,20 @@ NavierStokes::init_particle_container(int append_flag) {
   FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
 
   FArrayBox& lsfab=(*lsmf)[mfi];
+  FArrayBox& denfab=(*den)[mfi];
+  FArrayBox& velfab=(*velmf)[mfi];
 
    // component 1: number of particles linked to the cell.
    // component 2: the link to the list of particles.
   BaseFab<int> cell_particle_count(tilegrid,2);
   cell_particle_count.setVal(0);
 
-  if (N_EXTRA_INT>0) {
+  if (N_EXTRA_REAL==8) {
+   // do nothing
+  } else 
+   amrex::Error("N_EXTRA_REAL invalid");
+
+  if (N_EXTRA_INT==1) {
    // do nothing
   } else 
    amrex::Error("N_EXTRA_INT invalid");
@@ -22485,6 +22500,12 @@ NavierStokes::init_particle_container(int append_flag) {
      lsfab.dataPtr(),
      ARLIM(lsfab.loVect()),
      ARLIM(lsfab.hiVect()),
+     denfab.dataPtr(),
+     ARLIM(denfab.loVect()),
+     ARLIM(denfab.hiVect()),
+     velfab.dataPtr(),
+     ARLIM(velfab.loVect()),
+     ARLIM(velfab.hiVect()),
      mfinerfab.dataPtr(),
      ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()));
     
@@ -22512,7 +22533,7 @@ NavierStokes::init_particle_container(int append_flag) {
   unsigned int Np_mirror_AoS=Np-Np_delete+Np_append;
   mirrorPC_AoS.resize(Np_mirror_AoS);
 
-  int N_real_comp_mirror=NUM_CELL_ELASTIC*Np_mirror_AoS;
+  int N_real_comp_mirror=num_species_var*Np_mirror_AoS;
   Vector<Real> mirror_real_compALL(N_real_comp_mirror);
 
    //save the existing particle data to:
@@ -22524,7 +22545,7 @@ NavierStokes::init_particle_container(int append_flag) {
     // do nothing
    } else if (particle_delete_flag[i_delete]==0) {
     mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
-    for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+    for (int dir=0;dir<num_species_var;dir++) {
      int k_dest=dir*Np_mirror_AoS+i_mirror;
      int k_source=dir*Np+i_delete;
      mirror_real_compALL[k_dest]=real_compALL[k_source];
@@ -22571,7 +22592,7 @@ NavierStokes::init_particle_container(int append_flag) {
 
    particles_grid_tile.resize(0);
 
-   for (int dir=0;dir<NUM_CELL_ELASTIC;dir++) {
+   for (int dir=0;dir<num_species_var;dir++) {
     My_ParticleContainer::RealVector& 
             real_comp=particles_SoA.GetRealData(dir);
     real_comp.resize(0);
@@ -22579,7 +22600,7 @@ NavierStokes::init_particle_container(int append_flag) {
      int k_source=dir*Np_mirror_AoS+i_mirror;
      real_comp.push_back(mirror_real_compALL[k_source]);
     } //i_mirror=0...Np_mirror_AoS-1
-   } //dir=0..NUM_CELL_ELASTIC-1
+   } //dir=0..num_species_var-1
 
    for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
     particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);
@@ -22593,6 +22614,8 @@ NavierStokes::init_particle_container(int append_flag) {
  ns_reconcile_d_num(LOOP_INIT_PARTICLE_CONTAINER,"init_particle_container");
 
  delete lsmf;
+ delete den;
+ delete velmf;
 
 }  // end subroutine init_particle_container()
 
