@@ -570,7 +570,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
         //add Structure of Array component(s)
         //amrex-master/Src/Particle/AMReX_Particles.H
         //void AddRealComp (T communicate=true)
-      for (int ns=0;ns<local_num_species;ns++)
+      for (int ns=0;ns<local_num_species;ns++) {
        AmrLevel0_new_dataPC[i]->AddRealComp(true);
       } 
 #endif
@@ -860,9 +860,10 @@ AmrLevel::checkPoint (const std::string& dir,
         
     }
 
+    int time_order=parent->Time_blockingFactor();
+
     if (level==0) {
 
-     int time_order=parent->Time_blockingFactor();
 
      for (int i=0;i<=time_order;i++) {
 
@@ -905,7 +906,6 @@ AmrLevel::checkPoint (const std::string& dir,
 
       if (ctml_count>0) {
 
-       int time_order=parent->Time_blockingFactor();
        new_data_FSI[0].open_checkpoint(FullPath);
        for (int i=0;i<=time_order;i++) {
         new_data_FSI[i].checkpoint(i);

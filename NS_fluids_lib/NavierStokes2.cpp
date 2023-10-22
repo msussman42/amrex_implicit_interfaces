@@ -7077,7 +7077,7 @@ void NavierStokes::output_triangles() {
    amrex::Error("expecting Np_SoA_expect==Np_SoA");
   }
 
-  if (N_arrays==num_species_vars) {
+  if (N_arrays==num_species_var) {
    //do nothing
   } else
    amrex::Error("N_arrays invalid");
