@@ -18622,15 +18622,17 @@ stop
          accum_PARM, &
          particlesptr, &
          real_compALLptr, &
-         SPECIESptr, &
          LEVELSETptr, &
+         DENptr, &
+         VELptr, &
          cell_particle_count, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
          particle_link_data, &
          Np, &
-         SPEC_interp, &
          LS_interp, &
+         DEN_interp, &
+         VEL_interp, &
          X0_interp)
       use probcommon_module
       use global_utility_module
@@ -18640,26 +18642,31 @@ stop
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
       type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
       real(amrex_real), INTENT(in), pointer, dimension(:) :: real_compALLptr
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: SPECIESptr
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: LEVELSETptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+              DENptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+              VELptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
+              LEVELSETptr
       integer, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
          cell_particle_count
       integer, INTENT(in) :: i,j,k
       real(amrex_real), target, INTENT(in) :: xtarget(SDIM)
       integer, value, INTENT(in) :: Np
       integer, INTENT(in) :: particle_link_data(Np*(1+SDIM))
-      real(amrex_real), INTENT(out) :: SPEC_interp(num_species_var)
+      real(amrex_real), INTENT(out) :: DEN_interp(num_state_material)
+      real(amrex_real), INTENT(out) :: VEL_interp(AMREX_SPACEDIM)
       real(amrex_real), INTENT(out) :: LS_interp(num_materials)
       real(amrex_real), INTENT(out) :: X0_interp(SDIM)
 
       integer, parameter :: nhalf=3
       integer :: dir
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) A_VEL,b_VEL(num_species_var)
+      real(amrex_real) A_VEL,b_VEL(SDIM+num_state_material)
       real(amrex_real) A_X0,b_X0(SDIM)
       integer :: current_link
       real(amrex_real), target :: xpart(SDIM)
-      real(amrex_real) :: SPECpart(num_species_var)
+      real(amrex_real) :: data_part(SDIM+num_state_material)
       real(amrex_real) :: X0part(SDIM)
       real(amrex_real) :: LS_interp_local(num_materials)
       integer :: ibase
@@ -18680,8 +18687,11 @@ stop
       type(interp_from_grid_out_parm_type) :: data_out
       type(interp_from_grid_out_parm_type) :: data_out_LS
 
-      real(amrex_real), target, dimension(num_species_var) :: data_interp_local
-      real(amrex_real), target, dimension(num_materials) :: data_interp_local_LS
+      real(amrex_real), target, &
+         dimension(num_materials*num_state_material+SDIM) :: &
+         data_interp_local
+      real(amrex_real), target, dimension(num_materials) :: &
+         data_interp_local_LS
 
       integer :: test_count,test_cell_particle_count
 
@@ -18701,8 +18711,6 @@ stop
        print *,"accum_PARM%Npart ",accum_PARM%Npart
        print *,"accum_PARM%N_real_comp ",accum_PARM%N_real_comp
        print *,"accum_PARM%nsubdivide ",accum_PARM%nsubdivide
-       print *,"LBOUND(SPECIESptr) ",LBOUND(SPECIESptr)
-       print *,"UBOUND(SPECIESptr) ",UBOUND(SPECIESptr)
        print *,"LBOUND(LEVELSETptr) ",LBOUND(LEVELSETptr)
        print *,"UBOUND(LEVELSETptr) ",UBOUND(LEVELSETptr)
       endif
@@ -18710,7 +18718,9 @@ stop
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
 
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
-         SPECIESptr,1,-1)
+         VELptr,1,-1)
+      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
+         DENptr,1,-1)
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          LEVELSETptr,1,-1)
       call checkbound_array_INTEGER(accum_PARM%tilelo,accum_PARM%tilehi, &
@@ -18739,7 +18749,7 @@ stop
 
       A_VEL=zero
       A_X0=zero
-      do dir=1,num_species_var
+      do dir=1,SDIM+num_state_material
        b_VEL(dir)=zero
       enddo
       do dir=1,SDIM
@@ -18762,7 +18772,7 @@ stop
         SoA_comp=(dir-1)*Np+current_link
         if ((SoA_comp.ge.1).and. &
             (SoA_comp.le.accum_PARM%N_real_comp)) then
-         SPECpart(dir)=real_compALLptr(SoA_comp)
+         data_part(SDIM+num_state_base+dir)=real_compALLptr(SoA_comp)
         else
          print *,"SoA_comp invalid"
          stop
@@ -18772,7 +18782,13 @@ stop
        do dir=1,SDIM
         X0part(dir)= &
            particlesptr(current_link)%extra_state(N_EXTRA_REAL_X0+dir)
+        data_part(dir)= &
+           particlesptr(current_link)%extra_state(N_EXTRA_REAL_u+dir)
        enddo !dir=1,SDIM
+       do dir=1,num_state_base
+        data_part(dir+SDIM)= &
+           particlesptr(current_link)%extra_state(N_EXTRA_REAL_den+dir)
+       enddo
 
        im_particle_direct= &
          particlesptr(current_link)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -18819,22 +18835,15 @@ stop
          b_X0(dir)=b_X0(dir)+w_p*X0part(dir)
         enddo
 
-        if (im_primary_part.eq.im_primary) then
-         if (im_primary_part.eq.im_particle_direct) then
-          A_VEL=A_VEL+w_p
-          do dir=1,num_species_var
-           b_VEL(dir)=b_VEL(dir)+w_p*SPECpart(dir)
-          enddo
-         else if (im_primary_part.ne.im_particle_direct) then
-          ! do nothing
-         else
-          print *,"im_primary_part or im_particle_direct bust"
-          stop
-         endif
-        else if (im_primary_part.ne.im_primary) then
+        if (im_primary_part.eq.im_particle_direct) then
+         A_VEL=A_VEL+w_p
+         do dir=1,SDIM+num_state_material
+          b_VEL(dir)=b_VEL(dir)+w_p*data_part(dir)
+         enddo
+        else if (im_primary_part.ne.im_particle_direct) then
          ! do nothing
         else
-         print *,"im_primary_part or im_primary bust"
+         print *,"im_primary_part or im_particle_direct bust"
          stop
         endif
        else
@@ -18865,19 +18874,19 @@ stop
       data_in%xtarget=xtarget
 
        ! bilinear interpolation
-      if (num_species_var.gt.0) then
-       data_in%scomp=1 
-       data_in%ncomp=num_species_var
-       call interp_from_grid_util(data_in,SPECIESptr,data_out)
-       do dir=1,num_species_var
-        SPEC_interp(dir)=data_out%data_interp(dir)
-       enddo
-      else if (num_species_var.eq.0) then
-       ! do nothing
-      else
-       print *,"num_species_var invalid"
-       stop
-      endif
+      data_in%scomp=1 
+      data_in%ncomp=num_state_material*num_materials
+      call interp_from_grid_util(data_in,DENptr,data_out)
+      do dir=1,num_state_material
+       DEN_interp(dir)= &
+        data_out%data_interp(num_state_material*(im_primary_part-1)+dir)
+      enddo
+      data_in%scomp=1 
+      data_in%ncomp=SDIM
+      call interp_from_grid_util(data_in,VELptr,data_out)
+      do dir=1,SDIM
+       VEL_interp(dir)=data_out%data_interp(dir)
+      enddo
 
       if (num_materials.gt.0) then
        data_in%scomp=1 
@@ -18910,10 +18919,16 @@ stop
        if (A_VEL.gt.zero) then
         call partition_unity_weight(xtarget,xtarget,accum_PARM%dx,w_p)
 
-        do ipart=1,num_species_var
-         SPEC_interp(ipart)= &
-           (b_VEL(ipart)+w_p*SPEC_interp(ipart))/ &
-                  (A_VEL+w_p)
+        do ipart=1,num_state_material
+         DEN_interp(ipart)= &
+           (b_VEL(SDIM+ipart)+w_p*DEN_interp(ipart))/ &
+           (A_VEL+w_p)
+        enddo
+
+        do ipart=1,SDIM
+         VEL_interp(ipart)= &
+           (b_VEL(ipart)+w_p*VEL_interp(ipart))/ &
+           (A_VEL+w_p)
         enddo
 
        else if (A_VEL.eq.zero) then
@@ -19069,7 +19084,7 @@ stop
       real(amrex_real), target :: xpart(SDIM)
       real(amrex_real), target :: xpart_nbr(SDIM)
       real(amrex_real) :: xsub(SDIM)
-      real(amrex_real) :: den_sub(num_materials*num_state_material)
+      real(amrex_real) :: den_sub(num_state_material)
       real(amrex_real) :: vel_sub(AMREX_SPACEDIM)
       real(amrex_real) :: X0_sub(SDIM)
       real(amrex_real) :: LS_sub(num_materials)
@@ -19450,22 +19465,21 @@ stop
 
              ! add bulk particles
            call interp_eul_lag_dist( &
-             im_elastic_map, &
              accum_PARM, &
              particlesptr, &
              real_compALLptr, &
-             speciesfab_ptr, &
              lsfab_ptr, &
+             denfab_ptr, &
+             velfab_ptr, &
              cell_particle_count_ptr, &
              i,j,k, &
              xsub, &
              particle_link_data, &
              Np, &
-             species_sub, &
              LS_sub, &
+             den_sub, &
+             vel_sub, &
              X0_sub)
-
-     FIX ME
 
            Np_append_test=Np_append_test+1
 
@@ -19476,14 +19490,7 @@ stop
             do dir=1,SDIM
              new_particles(ibase+dir)=xsub(dir)
             enddo
-            do dir=1,NUM_CELL_ELASTIC
-             new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT+dir)= &
-               tensor_sub(dir)
-            enddo
-            new_particles(ibase+SDIM+N_EXTRA_REAL_INSERT_TIME+1)=cur_time_slab
-            do dir=1,SDIM
-             new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=X0_sub(dir)
-            enddo
+
             call get_primary_material(LS_sub,im_primary_sub)
             if ((im_primary_sub.ge.1).and. &
                 (im_primary_sub.le.num_materials)) then
@@ -19493,6 +19500,28 @@ stop
              print *,"im_primary_sub invalid"
              stop
             endif
+
+            new_particles(ibase+SDIM+N_EXTRA_REAL_den+1)= &
+                    den_sub(ENUM_DENVAR+1)
+            new_particles(ibase+SDIM+N_EXTRA_REAL_T+1)= &
+                    den_sub(ENUM_TEMPERATUREVAR+1)
+            new_particles(ibase+SDIM+N_EXTRA_REAL_w+1)=zero
+            do dir=1,SDIM
+             new_particles(ibase+SDIM+N_EXTRA_REAL_u+dir)=vel_sub(dir)
+            enddo
+
+            new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT+dir)= &
+              den_sub(num_state_base+dir)
+            
+            do dir=1,num_species_var
+             new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT+dir)= &
+               den_sub(num_state_base+dir)
+            enddo
+            new_particles(ibase+SDIM+N_EXTRA_REAL_Z0+1)=zero
+            do dir=1,SDIM
+             new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=X0_sub(dir)
+            enddo
+
            else
             print *,"isweep invalid"
             stop
