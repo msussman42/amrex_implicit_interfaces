@@ -1,5 +1,5 @@
-#ifndef AMREX_ARRAYLIM_SUSSMAN_H_
-#define AMREX_ARRAYLIM_SUSSMAN_H_
+#ifndef AMREX_ARRAYLIM_AUGMENTED_H_
+#define AMREX_ARRAYLIM_AUGMENTED_H_
 
 #include <AMReX_REAL.H>
 
@@ -80,4 +80,4 @@
 
 #endif /*else of __cplusplus*/
 
-#endif /*AMREX_ARRAYLIM_SUSSMAN_H_*/
+#endif /*AMREX_ARRAYLIM_AUGMENTED_H_*/
