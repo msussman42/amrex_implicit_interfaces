@@ -18326,7 +18326,7 @@ stop
 
       module FSI_PC_LS_module
 
-       use local_amrex_fort_module, only : amrex_real,amrex_particle_real
+       use amrex_fort_module, only : amrex_real,amrex_particle_real
        use iso_c_binding, only: c_int
 
        implicit none
@@ -18680,8 +18680,6 @@ stop
       integer :: im_particle_direct
       integer :: im_primary_sub
       integer :: ipart
-      integer :: im_map
-      integer :: dir_tensor
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out

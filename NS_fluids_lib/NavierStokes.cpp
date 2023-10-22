@@ -9929,6 +9929,7 @@ NavierStokes::init(
  }
 
 #ifdef AMREX_PARTICLES
+ NavierStokes& ns_level0=getLevel(0);
  int lev_min=0;
  int lev_max=level;
  int nGrow_Redistribute=0;
@@ -19486,12 +19487,13 @@ void NavierStokes::writeInterfaceReconstruction() {
    // NavierStokes2.cpp: num_materials materials at once
   ns_level.output_triangles();  
  }
+ int nsteps=parent->levelSteps(0);
+ int arrdim=finest_level+1;
+ int plotint=parent->plotInt();
+
  ParallelDescriptor::Barrier();
  if (ParallelDescriptor::IOProcessor()) {
-  int nsteps=parent->levelSteps(0);
-  int arrdim=finest_level+1;
 
-  int plotint=parent->plotInt();
   for (int im=1;im<=num_materials;im++) {
     // in: MARCHING_TETRA_3D.F90
    fort_combinetriangles(grids_per_level.dataPtr(),
@@ -19503,21 +19505,19 @@ void NavierStokes::writeInterfaceReconstruction() {
     &plotint);
   } // im=1..num_materials
 
- }
-
 #ifdef AMREX_PARTICLES
 
- // fort_combine_particles is declared in: NAVIERSTOKES_3D.F90
- fort_combine_particles(
-  grids_per_level.dataPtr(),
-  &finest_level,
-  &nsteps,
-  &arrdim,
-  &cur_time_slab,
-  &plotint);
+  // fort_combine_particles is declared in: NAVIERSTOKES_3D.F90
+  fort_combine_particles(
+   grids_per_level.dataPtr(),
+   &finest_level,
+   &nsteps,
+   &arrdim,
+   &cur_time_slab,
+   &plotint);
 
 #endif
-
+ }
  ParallelDescriptor::Barrier();
 
  std::string path2="./temptecplot";
@@ -21310,6 +21310,8 @@ void NavierStokes::post_regrid (int lbase,
   } else
    amrex::Error("initialInit_flag invalid");
 
+  NavierStokes& ns_level0=getLevel(0);
+
 #ifdef AMREX_PARTICLES
 
   int lev_min=0;
@@ -21319,7 +21321,6 @@ void NavierStokes::post_regrid (int lbase,
 
   using My_ParticleContainer =
      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-  NavierStokes& ns_level0=getLevel(0);
   My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
@@ -21332,7 +21333,6 @@ void NavierStokes::post_regrid (int lbase,
    state[k].setTimeLevel(time,dt_amr);
   }
 #ifdef AMREX_PARTICLES
-  NavierStokes& ns_level0=getLevel(0);
   ns_level0.CopyNewToOldPC(lev_max);
 #endif
 

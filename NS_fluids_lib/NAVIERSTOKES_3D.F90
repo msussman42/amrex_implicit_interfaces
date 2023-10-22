@@ -14600,7 +14600,7 @@ END SUBROUTINE SIMP
       module OUTPUT_PC_module
 
        use iso_c_binding
-       use local_amrex_fort_module, only : amrex_real,amrex_particle_real
+       use amrex_fort_module, only : amrex_real,amrex_particle_real
 
        implicit none
 
@@ -14797,7 +14797,6 @@ END SUBROUTINE SIMP
       integer alloc_flag
       integer istruct
       integer ipart
-      integer tensorcomp
 
       alloc_flag=0
 
@@ -14869,11 +14868,11 @@ END SUBROUTINE SIMP
            ipartstr(i:i)='0'
           endif
          enddo
-         write(varstrname19,'(A4,A2)') 'spec',ipartstr
+         write(varstrname6,'(A4,A2)') 'spec',ipartstr
          if (ipart.eq.num_species_var) then
           write(12,*) ',"',varstrname6,'"'
          else if (ipart.lt.num_species_var) then
-          write(12,'(A2,A19,A1)',ADVANCE="NO") ',"',varstrname6,'"'
+          write(12,'(A2,A6,A1)',ADVANCE="NO") ',"',varstrname6,'"'
          else
           print *,"ipart invalid"
           stop
