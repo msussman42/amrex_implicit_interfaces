@@ -542,6 +542,8 @@ AmrLevel::AmrLevel (AmrCore&        papa,
      amrex::Error("level_slab_dt_type invalid");
 
     int time_order=parent->Time_blockingFactor();
+     
+     //initialized in: void AmrCore::InitAmr ()
     int local_nmat=parent->global_AMR_num_materials;
     int local_num_species=parent->global_AMR_num_species_var;
     if (local_num_species>=0) {
@@ -1006,13 +1008,8 @@ AmrLevel::CopyNewToOldPC(int lev_max) {
  AMREX_ALWAYS_ASSERT(level==0);
 
  int time_order=parent->Time_blockingFactor();
- int local_nmat=parent->global_AMR_num_materials;
 
  for (int i=0;i<time_order;i++) {
-
-  for (int j=0;j<local_nmat;j++) {
-   new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[time_order][j]);
-  }
 
   //amrex-master/Src/Particle/AMReX_Particles.H
   //void copyParticles (const ParticleContainerType& other,bool local=false);
@@ -1041,13 +1038,8 @@ AmrLevel::CopyOldToNewPC(int lev_max) {
  AMREX_ALWAYS_ASSERT(level==0);
 
  int time_order=parent->Time_blockingFactor();
- int local_nmat=parent->global_AMR_num_materials;
 
  for (int i=1;i<=time_order;i++) {
-
-  for (int j=0;j<local_nmat;j++) {
-   new_data_FSI[i][j].copyFrom_FSI(new_data_FSI[0][j]);
-  }
 
   //amrex-master/Src/Particle/AMReX_Particles.H
   //void copyParticles (const ParticleContainerType& other,bool local=false);

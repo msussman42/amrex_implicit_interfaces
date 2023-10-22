@@ -583,6 +583,12 @@ namespace amrex{
         Real* lsfab,
 	AMREX_ARLIM_P(lsfablo),
 	AMREX_ARLIM_P(lsfabhi),
+        Real* denfab,
+	AMREX_ARLIM_P(denfablo),
+	AMREX_ARLIM_P(denfabhi),
+        Real* velfab,
+	AMREX_ARLIM_P(velfablo),
+	AMREX_ARLIM_P(velfabhi),
         Real* mfiner,
 	AMREX_ARLIM_P(mfinerlo),
 	AMREX_ARLIM_P(mfinerhi));
