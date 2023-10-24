@@ -356,7 +356,8 @@ public:
     using PLS_ParticleContainerType=
         AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
-    Vector<PLS_ParticleContainerType*> AmrLevel0_new_dataPC;
+//  Vector<PLS_ParticleContainerType*> AmrLevel0_new_dataPC;
+    Vector<std::unique_ptr<PLS_ParticleContainerType> > AmrLevel0_new_dataPC;
 #endif
 
 protected:

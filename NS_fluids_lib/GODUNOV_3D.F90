@@ -12837,9 +12837,11 @@ stop
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: den(DIMV(den),den_recon_ncomp)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: mom_den(DIMV(mom_den),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              mom_den(DIMV(mom_den),num_materials)
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: tensor(DIMV(tensor),NUM_CELL_ELASTIC)
+      real(amrex_real), INTENT(in), target :: &
+              tensor(DIMV(tensor),NUM_CELL_ELASTIC)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: & !VELADVECT_MF
            velfab(DIMV(velfab),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
@@ -12850,9 +12852,11 @@ stop
        ! new data
       real(amrex_real), INTENT(inout), target :: snew(DIMV(snew),ncomp_state)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: tennew(DIMV(tennew),NUM_CELL_ELASTIC)
+      real(amrex_real), INTENT(inout), target :: &
+              tennew(DIMV(tennew),NUM_CELL_ELASTIC)
       real(amrex_real), pointer :: tennew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: LSnew(DIMV(LSnew),num_materials)
+      real(amrex_real), INTENT(inout), target :: &
+              LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
        ! other vars
       real(amrex_real), INTENT(in), target :: vof0(DIMV(vof0),num_materials)
@@ -13219,6 +13223,12 @@ stop
        print *,"NUM_CELL_ELASTIC invalid"
        stop
       endif
+      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_TENSOR_TYPE invalid"
+       stop
+      endif 
 
       if ((num_materials_viscoelastic.ge.0).and. &
           (num_materials_viscoelastic.le.num_materials)) then
@@ -13359,20 +13369,6 @@ stop
       call checkbound_array1(fablo,fabhi,xmac_old_ptr,0,0)
       call checkbound_array1(fablo,fabhi,ymac_old_ptr,0,1)
       call checkbound_array1(fablo,fabhi,zmac_old_ptr,0,SDIM-1)
-
-      if (NUM_CELL_ELASTIC.eq. &
-          ENUM_NUM_TENSOR_TYPE*num_materials_viscoelastic) then
-       ! do nothing
-      else
-       print *,"NUM_CELL_ELASTIC invalid"
-       stop
-      endif 
-      if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
-       ! do nothing
-      else
-       print *,"ENUM_NUM_TENSOR_TYPE invalid"
-       stop
-      endif 
 
       if (nc_conserve.ne.CISLCOMP_CONS_NCOMP) then
        print *,"nc_conserve invalid"
