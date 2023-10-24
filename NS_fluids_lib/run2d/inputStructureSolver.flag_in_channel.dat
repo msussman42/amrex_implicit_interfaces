@@ -1,9 +1,9 @@
 1.0 0 0.8 0.0 0.0 -1 0.05  0.05       /K_LINK,  SimulationType(0:fiber or shell/~0:shell+fiber), impactPenalty(initial penalty; increased penalty; size of dx for initially closed body to the planes),contactmethod(-1:original mode,1:deltafunction,2:high order,3:fast) contactdelta(use large number to force to be equal to dx, dy,dz), contactdx (for scaling); this file read from create_grid2.F
 0.7 5.0 4.9  3.5  0.45 0.25 100 1.0d-9 1.5 0.20   /Contact Paramters 0:9
--5.0 -5.0 -5.0                         /bucket start (x,y,z)
-35.0 35.0 35.0                         /bucket end (x,y,z)   
-150.5 150.5 150.5                      /bucket dx (dx,dy,dz)
-100.0                                  /bucketdeltat (Bucketinterval) 
+-1000.0 -1000.0 -1000.0                /bucket start (x,y,z)
+1000.0 1000.0 1000.0                   /bucket end (x,y,z)   
+4000.0 4000.0 4000                     /bucket dx (dx,dy,dz)
+1000.0                                 /bucketdeltat (Bucketinterval) 
 2           2           2              /Delta_typeX, Delta_typeY, Delta_typeZ
 1           1          1        0.5    /SAVE_FORCE_INT,Del_FORCE,CHECK_INT,g(fr)
 90.0       0.0                         /phi_grav,the_grav
