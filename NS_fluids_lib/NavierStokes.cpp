@@ -22362,7 +22362,18 @@ NavierStokes::init_particle_container(int append_flag) {
    // component 1: number of particles linked to the cell.
    // component 2: the link to the list of particles.
   BaseFab<int> cell_particle_count(tilegrid,2);
-  cell_particle_count.setVal(0);
+  Array4<int> const& cell_particle_count_array=cell_particle_count.array();
+  const Dim3 lo3=amrex::lbound(tilegrid);
+  const Dim3 hi3=amrex::ubound(tilegrid);
+  for (int n=0;n<2;++n) {
+  for (int z=lo3.z;z<=hi3.z;++z) {
+  for (int y=lo3.y;y<=hi3.y;++y) {
+  for (int x=lo3.x;x<=hi3.x;++x) {
+   cell_particle_count_array(x,y,z,n)=0;
+  }
+  }
+  }
+  }
 
   if (N_EXTRA_REAL==8) {
    // do nothing
