@@ -18654,7 +18654,8 @@ stop
       real(amrex_real), target, INTENT(in) :: xtarget(SDIM)
       integer, value, INTENT(in) :: Np
       integer, INTENT(in) :: particle_link_data(Np*(1+SDIM))
-      real(amrex_real), INTENT(out) :: DEN_interp(num_state_material)
+      real(amrex_real), INTENT(out) :: &
+             DEN_interp(num_state_material*num_materials)
       real(amrex_real), INTENT(out) :: VEL_interp(AMREX_SPACEDIM)
       real(amrex_real), INTENT(out) :: LS_interp(num_materials)
       real(amrex_real), INTENT(out) :: X0_interp(SDIM)
@@ -18662,7 +18663,8 @@ stop
       integer, parameter :: nhalf=3
       integer :: dir
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) A_VEL,b_VEL(SDIM+num_state_material)
+      real(amrex_real) A_VEL(num_materials)
+      real(amrex_real) b_VEL(num_materials,SDIM+num_state_material)
       real(amrex_real) A_X0,b_X0(SDIM)
       integer :: current_link
       real(amrex_real), target :: xpart(SDIM)
@@ -18677,8 +18679,8 @@ stop
       integer :: im
       integer :: im_primary
       integer :: im_primary_part
-      integer :: im_particle_direct
       integer :: im_primary_sub
+      integer :: im_particle_direct
       integer :: ipart
 
       type(interp_from_grid_parm_type) :: data_in 
@@ -18745,13 +18747,16 @@ stop
        data_in%fabhi(dir)=accum_PARM%fabhi(dir)
       enddo
 
-      A_VEL=zero
       A_X0=zero
-      do dir=1,SDIM+num_state_material
-       b_VEL(dir)=zero
-      enddo
       do dir=1,SDIM
        b_X0(dir)=zero
+      enddo
+
+      do im=1,num_materials
+       A_VEL(im)=zero
+       do dir=1,SDIM+num_state_material
+        b_VEL(im,dir)=zero
+       enddo
       enddo
 
       test_cell_particle_count=cell_particle_count(D_DECL(i,j,k),1)
@@ -18765,6 +18770,41 @@ stop
        do dir=1,SDIM
         xpart(dir)=particlesptr(current_link)%pos(dir)
        enddo 
+
+       call partition_unity_weight(xpart,xtarget,accum_PARM%dx,w_p)
+
+       data_in%xtarget=xpart
+
+       if (num_materials.gt.0) then
+        data_in%scomp=1 
+        data_in%ncomp=num_materials
+        call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
+        do dir=1,num_materials
+         LS_interp_local(dir)=data_out_LS%data_interp(dir)
+        enddo
+        call get_primary_material(LS_interp_local,im_primary_part)
+        if ((im_primary_part.ge.1).and. &
+            (im_primary_part.le.num_materials)) then
+         ! do nothing
+        else
+         print *,"im_primary_part invalid"
+         stop
+        endif
+       else
+        print *,"num_materials invalid"
+        stop
+       endif
+
+       im_particle_direct= &
+         particlesptr(current_link)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+
+       if ((im_particle_direct.ge.1).and. &
+           (im_particle_direct.le.num_materials)) then
+        ! do nothing
+       else
+        print *,"im_particle_direct invalid"
+        stop
+       endif
 
        do dir=1,num_species_var
         SoA_comp=(dir-1)*Np+current_link
@@ -18788,34 +18828,6 @@ stop
            particlesptr(current_link)%extra_state(N_EXTRA_REAL_den+dir)
        enddo
 
-       im_particle_direct= &
-         particlesptr(current_link)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-
-       if ((im_particle_direct.ge.1).and. &
-           (im_particle_direct.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_particle_direct invalid"
-        stop
-       endif
-
-       call partition_unity_weight(xpart,xtarget,accum_PARM%dx,w_p)
-
-       data_in%xtarget=xpart
-
-       if (num_materials.gt.0) then
-        data_in%scomp=1 
-        data_in%ncomp=num_materials
-        call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
-        do dir=1,num_materials
-         LS_interp_local(dir)=data_out_LS%data_interp(dir)
-        enddo
-        call get_primary_material(LS_interp_local,im_primary_part)
-       else
-        print *,"num_materials invalid"
-        stop
-       endif
-
        if (accum_PARM%append_flag.eq.0) then
         print *,"there should not be any particles if append_flag==0"
         stop
@@ -18834,9 +18846,10 @@ stop
         enddo
 
         if (im_primary_part.eq.im_particle_direct) then
-         A_VEL=A_VEL+w_p
+         A_VEL(im_primary_part)=A_VEL(im_primary_part)+w_p
          do dir=1,SDIM+num_state_material
-          b_VEL(dir)=b_VEL(dir)+w_p*data_part(dir)
+          b_VEL(im_primary_part,dir)=b_VEL(im_primary_part,dir)+ &
+                w_p*data_part(dir)
          enddo
         else if (im_primary_part.ne.im_particle_direct) then
          ! do nothing
@@ -18845,7 +18858,7 @@ stop
          stop
         endif
        else
-        print *,"w_p invalid"
+        print *,"w_p invalid: ",w_p
         stop
        endif
 
@@ -18871,21 +18884,6 @@ stop
        ! xtarget might not coincide with an Eulerian grid cell.
       data_in%xtarget=xtarget
 
-       ! bilinear interpolation
-      data_in%scomp=1 
-      data_in%ncomp=num_state_material*num_materials
-      call interp_from_grid_util(data_in,DENptr,data_out)
-      do dir=1,num_state_material
-       DEN_interp(dir)= &
-        data_out%data_interp(num_state_material*(im_primary_part-1)+dir)
-      enddo
-      data_in%scomp=1 
-      data_in%ncomp=SDIM
-      call interp_from_grid_util(data_in,VELptr,data_out)
-      do dir=1,SDIM
-       VEL_interp(dir)=data_out%data_interp(dir)
-      enddo
-
       if (num_materials.gt.0) then
        data_in%scomp=1 
        data_in%ncomp=num_materials
@@ -18899,53 +18897,96 @@ stop
        stop
       endif
 
+       ! bilinear interpolation
+      data_in%scomp=1 
+      data_in%ncomp=num_state_material*num_materials
+      call interp_from_grid_util(data_in,DENptr,data_out)
+      do dir=1,num_state_material*num_materials
+       DEN_interp(dir)=data_out%data_interp(dir)
+      enddo
+
+      data_in%scomp=1 
+      data_in%ncomp=SDIM
+      call interp_from_grid_util(data_in,VELptr,data_out)
+      do dir=1,SDIM
+       VEL_interp(dir)=data_out%data_interp(dir)
+      enddo
+
       if (accum_PARM%append_flag.eq.0) then
-       if (A_VEL.eq.zero) then
-        ! do nothing
-       else
-        print *,"expecting A_VEL==0 if append_flag==0"
-        stop
-       endif
+
+       do im=1,num_materials
+        if (A_VEL(im).eq.zero) then
+         ! do nothing
+        else
+         print *,"expecting A_VEL(im)==0 if append_flag==0"
+         stop
+        endif
+       enddo
+
        if (A_X0.eq.zero) then
         ! do nothing
        else
         print *,"expecting A_X0==0 if append_flag==0"
         stop
        endif
+
+       do dir=1,SDIM
+        if (xtarget(dir).eq.xtarget(dir)) then
+         X0_interp(dir)=xtarget(dir)
+        else
+         print *,"xtarget(dir) is NaN"
+         stop
+        endif
+       enddo
+
       else if (accum_PARM%append_flag.eq.1) then
 
-       if (A_VEL.gt.zero) then
-        call partition_unity_weight(xtarget,xtarget,accum_PARM%dx,w_p)
+       do im=1,num_materials
 
-        do ipart=1,num_state_material
-         DEN_interp(ipart)= &
-           (b_VEL(SDIM+ipart)+w_p*DEN_interp(ipart))/ &
-           (A_VEL+w_p)
-        enddo
+        if (A_VEL(im).gt.zero) then
+         call partition_unity_weight(xtarget,xtarget,accum_PARM%dx,w_p)
 
-        do ipart=1,SDIM
-         VEL_interp(ipart)= &
-           (b_VEL(ipart)+w_p*VEL_interp(ipart))/ &
-           (A_VEL+w_p)
-        enddo
+         do ipart=1,num_state_material
+          DEN_interp((im-1)*num_state_material+ipart)= &
+           (b_VEL(im,SDIM+ipart)+ &
+            w_p*DEN_interp((im-1)*num_state_material+ipart))/ &
+           (A_VEL(im)+w_p)
+         enddo
 
-       else if (A_VEL.eq.zero) then
-        ! do nothing
-       else
-        print *,"A_VEL invalid"
-        stop
-       endif
+         do ipart=1,SDIM
+          VEL_interp(ipart)= &
+           (b_VEL(im,ipart)+w_p*VEL_interp(ipart))/ &
+           (A_VEL(im)+w_p)
+         enddo
+
+        else if (A_VEL(im).eq.zero) then
+         ! do nothing
+        else
+         print *,"A_VEL(im) invalid"
+         stop
+        endif
+       enddo !im=1..num_materials
 
        if (A_X0.gt.zero) then
 
         do dir=1,SDIM
-         X0_interp(dir)=b_X0(dir)/A_X0
+         if (b_X0(dir).eq.b_X0(dir)) then
+          X0_interp(dir)=b_X0(dir)/A_X0
+         else
+          print *,"b_X0(dir) is NaN"
+          stop
+         endif
         enddo
 
        else if (A_X0.eq.zero) then
 
         do dir=1,SDIM
-         X0_interp(dir)=xtarget(dir)
+         if (xtarget(dir).eq.xtarget(dir)) then
+          X0_interp(dir)=xtarget(dir)
+         else
+          print *,"xtarget(dir) is NaN"
+          stop
+         endif
         enddo
 
        else
@@ -19082,7 +19123,7 @@ stop
       real(amrex_real), target :: xpart(SDIM)
       real(amrex_real), target :: xpart_nbr(SDIM)
       real(amrex_real) :: xsub(SDIM)
-      real(amrex_real) :: den_sub(num_state_material)
+      real(amrex_real) :: den_sub(num_materials*num_state_material)
       real(amrex_real) :: vel_sub(AMREX_SPACEDIM)
       real(amrex_real) :: X0_sub(SDIM)
       real(amrex_real) :: LS_sub(num_materials)
@@ -19495,29 +19536,31 @@ stop
              new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT_MATERIAL_ID+1)= &
               im_primary_sub
             else
-             print *,"im_primary_sub invalid"
+             print *,"im_primary_sub invalid: ",im_primary_sub
              stop
             endif
 
             new_particles(ibase+SDIM+N_EXTRA_REAL_den+1)= &
-                    den_sub(ENUM_DENVAR+1)
+             den_sub((im_primary_sub-1)*num_state_material+ENUM_DENVAR+1)
             new_particles(ibase+SDIM+N_EXTRA_REAL_T+1)= &
-                    den_sub(ENUM_TEMPERATUREVAR+1)
+             den_sub((im_primary_sub-1)*num_state_material+ENUM_TEMPERATUREVAR+1)
             new_particles(ibase+SDIM+N_EXTRA_REAL_w+1)=zero
             do dir=1,SDIM
              new_particles(ibase+SDIM+N_EXTRA_REAL_u+dir)=vel_sub(dir)
             enddo
 
-            new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT+dir)= &
-              den_sub(num_state_base+dir)
-            
             do dir=1,num_species_var
              new_particles(ibase+SDIM+N_EXTRA_REAL+N_EXTRA_INT+dir)= &
-               den_sub(num_state_base+dir)
+              den_sub((im_primary_sub-1)*num_state_material+num_state_base+dir)
             enddo
             new_particles(ibase+SDIM+N_EXTRA_REAL_Z0+1)=zero
             do dir=1,SDIM
-             new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=X0_sub(dir)
+             if (X0_sub(dir).eq.X0_sub(dir)) then
+              new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir)=X0_sub(dir)
+             else
+              print *,"X0_sub(dir) is NaN"
+              stop
+             endif
             enddo
 
            else

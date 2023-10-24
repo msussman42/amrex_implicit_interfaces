@@ -9284,9 +9284,7 @@ void NavierStokes::post_restart() {
 
    using My_ParticleContainer =
      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
-   My_ParticleContainer* localPC_ptr=new My_ParticleContainer(parent);
-   AmrLevel0_new_dataPC[i].reset(localPC_ptr);
+   AmrLevel0_new_dataPC[i] = std::make_unique<My_ParticleContainer>(parent);
     
    for (int ns=0;ns<num_species_var;ns++)
     AmrLevel0_new_dataPC[i]->AddRealComp(true);

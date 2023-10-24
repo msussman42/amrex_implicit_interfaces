@@ -567,8 +567,7 @@ AmrLevel::AmrLevel (AmrCore&        papa,
 #ifdef AMREX_PARTICLES
       using My_ParticleContainer =
         AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-      My_ParticleContainer* localPC_ptr=new My_ParticleContainer(parent);
-      AmrLevel0_new_dataPC[i].reset(localPC_ptr);
+      AmrLevel0_new_dataPC[i] = std::make_unique<My_ParticleContainer>(parent);
 
         //add Structure of Array component(s)
         //amrex-master/Src/Particle/AMReX_Particles.H

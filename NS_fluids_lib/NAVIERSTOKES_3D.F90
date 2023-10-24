@@ -14850,35 +14850,46 @@ END SUBROUTINE SIMP
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A75)',ADVANCE="NO") &
-           'VARIABLES = "X", "Y", "Z","X0","Y0","Z0","U","V","W","DEN","T","material id"'
+         write(12,'(A74)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","Z","X0","Y0","Z0","U","V","W","DEN","T","material id"'
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A71)',ADVANCE="NO") &
-           'VARIABLES = "X", "Y", "X0","Y0","Z0","U","V","W","DEN","T","material id"'
+         write(12,'(A70)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","X0","Y0","Z0","U","V","W","DEN","T","material id"'
         else
          print *,"dimension bust"
          stop
         endif
-        do ipart=1,num_species_var
+        if (num_species_var.eq.0) then
 
-         write(ipartstr,'(I2)') ipart
-         do i=1,2
-          if (ipartstr(i:i).eq.' ') then
-           ipartstr(i:i)='0'
+         write(12,*) ','
+
+        else if (num_species_var.ge.1) then
+
+         do ipart=1,num_species_var
+
+          write(ipartstr,'(I2)') ipart
+          do i=1,2
+           if (ipartstr(i:i).eq.' ') then
+            ipartstr(i:i)='0'
+           endif
+          enddo
+          write(varstrname6,'(A4,A2)') 'spec',ipartstr
+          if (ipart.eq.num_species_var) then
+           write(12,*) ',"',varstrname6,'"'
+          else if (ipart.lt.num_species_var) then
+           write(12,'(A2,A6,A1)',ADVANCE="NO") ',"',varstrname6,'"'
+          else
+           print *,"ipart invalid"
+           stop
           endif
-         enddo
-         write(varstrname6,'(A4,A2)') 'spec',ipartstr
-         if (ipart.eq.num_species_var) then
-          write(12,*) ',"',varstrname6,'"'
-         else if (ipart.lt.num_species_var) then
-          write(12,'(A2,A6,A1)',ADVANCE="NO") ',"',varstrname6,'"'
-         else
-          print *,"ipart invalid"
-          stop
-         endif
 
-        enddo ! ipart=1,num_materials_viscoelastic
+         enddo ! ipart=1,num_species_var
+         
+        else
+         print *,"num_species_var invalid"
+         stop
+        endif
 
         if (plotint.le.0) then
          strandid=1

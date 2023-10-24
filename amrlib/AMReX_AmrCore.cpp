@@ -200,6 +200,8 @@ AmrCore::AmrCore ()
     // "max_level," needed by 
     // explicit AmrParGDB (AmrCore* amr) noexcept
     // is already defined in "AmrMesh()"
+    // similar, but not the same as,
+    // m_gdb=new AmrParGDB(this).
 #ifdef AMREX_PARTICLES
     m_gdb = std::make_unique<AmrParGDB>(this);
 #endif
