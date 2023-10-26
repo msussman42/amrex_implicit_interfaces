@@ -1092,10 +1092,13 @@ NavierStokes::variableSetUp ()
     desc_lst.addDescriptor(LS_Type,IndexType::TheCellType(),
      1,ncomp_ls,&pc_interp,state_holds_data);
 
-     // components 0..num_materials * AMREX_SPACEDIM-1 are for interface normal vectors.
-     // components num_materials * AMREX_SPACEDIM .. num_materials * AMREX_SPACEDIM + 
-     //   num_materials * (AMREX_SPACEDIM+1) are the same (except for the string name)
-     //   as for dest_lst.
+     // components 0..num_materials * AMREX_SPACEDIM-1 are for boundary
+     // conditions for extrapolated interface normal vectors.
+     // components num_materials * AMREX_SPACEDIM ...
+     //            num_materials * AMREX_SPACEDIM + 
+     //            num_materials * (AMREX_SPACEDIM+1)-1
+     //  are the same (except for the string name) as 
+     //  0...num_materials * (AMREX_SPACEDIM+1)-1 for dest_lst.
     int ncomp_LS_ghost=(2*AMREX_SPACEDIM+1)*num_materials;
 
     desc_lstGHOST.addDescriptor(LS_Type,IndexType::TheCellType(),
@@ -1193,8 +1196,9 @@ NavierStokes::variableSetUp ()
     if (dcomp+num_materials!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
-     // GROUP_LS_FILL: grouplsBC for components 1..num_materials
-     //                extrapBC for components num_materials+1..num_materials * (sdim+1)
+     // fort_group_ls_fill: 
+     //   grouplsBC for components 1..num_materials
+     //   extrapBC for components num_materials+1..num_materials * (sdim+1)
     StateDescriptor::BndryFunc LS_fill_class(fort_ls_fill,
        fort_group_ls_fill);
 
@@ -1253,8 +1257,9 @@ NavierStokes::variableSetUp ()
     if (dcomp+num_materials!=ncomp_ls)
      amrex::Error("dcomp invalid");
 
-     // GROUP_LS_FILL: grouplsBC for components 1..num_materials
-     //                extrapBC for components num_materials+1..num_materials * (sdim+1)
+     // fort_group_ls_fill: 
+     //   grouplsBC for components 1..num_materials
+     //   extrapBC for components num_materials+1..num_materials * (sdim+1)
     StateDescriptor::BndryFunc LS_main_fill_class(fort_ls_fill,
        fort_group_ls_fill);
 
