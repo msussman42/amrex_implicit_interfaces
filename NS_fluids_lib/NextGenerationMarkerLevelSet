@@ -4,16 +4,15 @@ Particle Container
 Multimaterial
 
 Each material has an associated level set function which is initialized
-as a distance function.
+as a distance function locally to the interface.
 
 Each particle has an associated material id which is assigned only when the
 particle is added.
 
-more (narrow band) 
-particles are added where min|phi_{m}|<alpha h than in the bulk.
-even more particles yet are added where |curvature| > 1/(alpha dx).
-Narrow band particles are randomly chosen to have its' initial position
-close to the zero LS: x^init = x^subcell - phi n
+There 3 kinds of particles:
+a) bulk particles
+b) narrow band particles (min |phi_{m}| < alpha h)
+c) close-in narrow band particles x^init-=phi_{m} n_{m}
 
 Each particle has a position, displacement, velocity, density, temperature, 
 material id, and species.
@@ -22,27 +21,16 @@ u_t = -u div u + I[ div(2 mu D) ] - I[ grad p/rho ] + F_Boussinesq.
 Feedback to Eulerian grid proportional to "h."
 A temporary Material velocity UMAC_{m} is derived from UMAC.
 
-0. define NP_BULK = number of bulk particles in a cell and
-    NP_NARROW = number of narrow band particles in a cell.
-
 1. initialize Levelsets, make them locally distance functions. 
 2. generate the AMR grid near zero level set(s).
-3. for each cell, generate enough particles to equal NP_BULK+NP_NARROW_BAND.
-   Some of the NARROW BAND particles are randomly chosen such that
-   x^init = x^subcell - phi n
+3. a) delete particles if (i) imat_id((I_LS)(xpart))!=imat_id(particle) and
+      (ii) |I_LS(xpart)_imat_id| > alpha h
+   b) add bulk, narrow band, and close-in narrow band particles.
 4. For each material, the advective velocity is UMAC
 5. (a) LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
    (b) project LS_{m} to be "vacuum free."
 6. advect the particles using UMAC
-7. Delete particles ....
-   (a) |(I LS)(x_p)| > alpha dx  (e.g. alpha=1/20) I=DBWENO or "cubic Hermite"
-   (b) if NP_INT_ACTUAL>NP_INT, then delete the particles with the largest
-       value for |(I LS)(x_p)|.
-   (c) Delete bulk particles in which the material id is inconsistent with 
-       (I LS)(xp).
-   (d) if NP_BULK_ACTUAL>NP_BULK, then delete the particles that would
-       maximize the minimum spacing between the remaining bulk particles.
-8. Redistance the level set function(s) using dtau=dx/2 for example:
+7. Redistance the level set function(s) using dtau=dx/2 for example:
     (a) LS0 is given
     (b) for n=1,2,3,...
           for each grid cell:
@@ -59,16 +47,16 @@ A temporary Material velocity UMAC_{m} is derived from UMAC.
           (iv) lambda=sum w(||x-xp||)(I LS(n)(xp))/sum w(||x-xp||
                min w(||x-xp||)(I LS(xp)-lambda)^2
                LScorrect(n)=LS(n)-lambda
-          (v) for bulk particles in which (I LS(n))(xp) is inconsistent (i.e.
-              the bulk particles were consistent with (I LS0)(xp) but
-              not with I LS(n)) then make a similar correction:
-              mu=sum_{p_bulk_inconsistent}
+          (v) for bulk particles in which imat((I LS(n))(xp)) is 
+              inconsistent with imat(particle), make the following 
+              correction:
+              mu=sum_{particle_inconsistent}
                 w(||x-xp||)(I LS(n)(xp))/sum w(||x-xp||
                 min w(||x-xp||)(I LS(xp)-mu)^2
                LScorrect(n)=LS(n)-mu
 
     (c) endfor
-9. go back to step 3.
+8. go back to step 2.
 
 References:
 Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
@@ -78,7 +66,5 @@ work plan:
 2. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
 default tolerances, etc)
 3. check freezing results, restart bubble jetting.
-3. resurrect the particle container
 4. Directionally split
    Level set advection and bulk material advection done in c++.
-5. filpatch (1st and 2nd order) done in c++.

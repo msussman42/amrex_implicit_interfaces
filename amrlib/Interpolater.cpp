@@ -126,7 +126,7 @@ multiMOFInterp::interp (Real time,
   const Box&        fine_region,
   const Geometry&   crse_geom,
   const Geometry&   fine_geom,
-  Vector<BCRec>&     bcr,
+  Vector<BCRec>& /* bcr */,
   int levelc,int levelf,
   int bfactc,int bfactf,
   int grid_type)
@@ -240,7 +240,7 @@ multiEXTMOFInterp::interp (Real time,
   const Box&        fine_region,
   const Geometry&   crse_geom,
   const Geometry&   fine_geom,
-  Vector<BCRec>&     bcr,
+  Vector<BCRec>& /* bcr */,
   int levelc,int levelf,
   int bfactc,int bfactf,
   int grid_type)
@@ -347,7 +347,7 @@ BurnVelInterp::interp (Real time,
   const Box&        fine_region,
   const Geometry&   crse_geom,
   const Geometry&   fine_geom,
-  Vector<BCRec>&     bcr,
+  Vector<BCRec>& /* bcr */,
   int levelc,int levelf,
   int bfactc,int bfactf,
   int grid_type)
@@ -407,9 +407,11 @@ BurnVelInterp::interp (Real time,
 
  int velflag=0;
 
- if (burnvel_ncomp_per==EXTRAP_PER_TSAT) {//interface temperature,mass fraction
+  //interface temperature,mass fraction
+ if (burnvel_ncomp_per==EXTRAP_PER_TSAT) {
   velflag=0;
- } else if (burnvel_ncomp_per==EXTRAP_PER_BURNING) {
+ } else if ((burnvel_ncomp_per==EXTRAP_PER_BURNING)&&
+            (EXTRAP_PER_TSAT!=EXTRAP_PER_BURNING)) {
   velflag=1;
  } else if (burnvel_ncomp_per==0) {
   velflag=2;
@@ -704,7 +706,7 @@ LSInterp::interp (
  const Box&       fine_region,
  const Geometry&  crse_geom,
  const Geometry&  fine_geom,
- Vector<BCRec>&     bcr,
+ Vector<BCRec>& /*bcr */,
  int levelc,int levelf,
  int bfactc,int bfactf,
  int grid_type)
@@ -804,7 +806,7 @@ SEMInterp::interp (
  const Box&       fine_region,
  const Geometry&  crse_geom,
  const Geometry&  fine_geom,
- Vector<BCRec>&     bcr,
+ Vector<BCRec>& /* bcr */,
  int levelc,int levelf,
  int bfactc,int bfactf,
  int grid_type)
@@ -890,9 +892,9 @@ maskSEMInterp::interp (
  int              fine_comp,
  int              ncomp,
  const Box&       fine_region,
- const Geometry&  crse_geom,
- const Geometry&  fine_geom,
- Vector<BCRec>&     bcr,
+ const Geometry&  /*crse_geom*/,
+ const Geometry&  /*fine_geom*/,
+ Vector<BCRec>& /* bcr */,
  int levelc,int levelf,
  int bfactc,int bfactf,
  int grid_type)
