@@ -60,7 +60,6 @@ ns.freezing_model=6 6
 # 1=> non-conservative advection of temperature
 # 0=use LS  1=use VOF
 
-# 0=GSRB 1=ICRB 2=ILU
 
 # multigrid class
 #mg.verbose = 1

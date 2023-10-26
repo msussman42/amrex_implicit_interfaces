@@ -51,7 +51,6 @@ ns.initial_thermal_cycles=2
 ns.mglib_max_ratio=1.0e+5
 ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
                         # decent sized residual.
-# 0=GSRB 1=ICRB 2=ILU
 #
 
 amr.n_cell    = 400 4

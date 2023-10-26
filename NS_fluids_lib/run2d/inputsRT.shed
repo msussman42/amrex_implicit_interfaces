@@ -18,7 +18,6 @@ geometry.prob_hi   =  32.0 6.283185306
 geometry.is_periodic= 0 1 
 ns.use_colonius=1
 
-# 0=GSRB 1=ICRB 2=ILU
 ns.minimum_relative_error=1.0e-18
 ns.initial_project_cycles=0
 ns.project_solver_type=0
