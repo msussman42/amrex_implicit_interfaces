@@ -746,6 +746,9 @@ LSInterp::interp (
   amrex::Error("must interpolate all ls data at once");
  }
 
+ AMREX_ALWAYS_ASSERT(crse.nComp()>=ncomp);
+ AMREX_ALWAYS_ASSERT(fine.nComp()>=ncomp);
+
  fort_lsinterp (
   cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
   clo,chi,

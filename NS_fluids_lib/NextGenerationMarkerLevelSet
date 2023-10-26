@@ -1,33 +1,40 @@
 GPU capability, MPI capability, OpenMP
-AMR capability (adapt where the curvature large),
+AMR capability,
 Particle Container
 Multimaterial
 
-Each material has an associated level set function and set of particles.
-Some particles are interface particles and the others are bulk particles.
-Each particle has a position, velocity, density, temperature, and material
-id (particles on the interface have a special interface id unique from the 
-material id).
+Each material has an associated level set function which is initialized
+as a distance function.
+
+Each particle has an associated material id which is assigned only when the
+particle is added.
+
+more (narrow band) 
+particles are added where min|phi_{m}|<alpha h than in the bulk.
+even more particles yet are added where |curvature| > 1/(alpha dx).
+Narrow band particles are randomly chosen to have its' initial position
+close to the zero LS: x^init = x^subcell - phi n
+
+Each particle has a position, displacement, velocity, density, temperature, 
+material id, and species.
 
 u_t = -u div u + I[ div(2 mu D) ] - I[ grad p/rho ] + F_Boussinesq.
 Feedback to Eulerian grid proportional to "h."
 A temporary Material velocity UMAC_{m} is derived from UMAC.
 
 0. define NP_BULK = number of bulk particles in a cell and
-    NP_INT = number of interface particles in a cell.
+    NP_NARROW = number of narrow band particles in a cell.
 
 1. initialize Levelsets, make them locally distance functions. 
-2. generate the AMR grid using curvature criteria
-3. a. for each cell, randomly generate the positions for 
-      NP_BULK-NP_BULK(actual) "seeds." (do not add if opposite sign)
-   b. for each cell, randomly generate the positions for 
-      NP_INT-NP_INT(actual) "seeds." 
-      x_p=x_random_p - LS grad LS/|grad LS|  p=1..NP_INT
+2. generate the AMR grid near zero level set(s).
+3. for each cell, generate enough particles to equal NP_BULK+NP_NARROW_BAND.
+   Some of the NARROW BAND particles are randomly chosen such that
+   x^init = x^subcell - phi n
 4. For each material, the advective velocity is UMAC
 5. (a) LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
    (b) project LS_{m} to be "vacuum free."
 6. advect the particles using UMAC
-7. Delete interface particles which satisfy:
+7. Delete particles ....
    (a) |(I LS)(x_p)| > alpha dx  (e.g. alpha=1/20) I=DBWENO or "cubic Hermite"
    (b) if NP_INT_ACTUAL>NP_INT, then delete the particles with the largest
        value for |(I LS)(x_p)|.
