@@ -10,7 +10,6 @@ ns.projection_pressure_scale=100.0
 ns.initial_project_cycles=10  # number of initial jacobi iterations
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
-# 0=GSRB 1=ICRB 2=ILU
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 
 # ------------------  INPUTS TO CLASS AMR ---------------------

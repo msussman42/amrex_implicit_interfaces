@@ -28,7 +28,6 @@ ns.MOFITERMAX=15
 # (2014) and Sussman, Smith, Hussaini, Ohta, Zhi-Wei (2007)
 #JAN18
 
-# 0=GSRB 1=ICRB 2=ILU
 
 # multigrid class
 mg.verbose = 0

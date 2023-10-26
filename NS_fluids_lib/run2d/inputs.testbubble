@@ -19,7 +19,6 @@ ns.MOFITERMAX=15
 ns.continuous_mof=1 #CMOF(1)
 #ns.continuous_mof=10
 
-# 0=GSRB 1=ICRB 2=ILU
 
 # multigrid class
 mg.verbose = 0

@@ -19,7 +19,6 @@ ns.EILE_flag=-1
 ns.continuous_mof=1
 ns.MOFITERMAX=15
 
-# 0=GSRB 1=ICRB 2=ILU
 
 # multigrid class
 #mg.verbose = 1

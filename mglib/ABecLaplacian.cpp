@@ -1460,7 +1460,7 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
  } else if (smooth_type==2) { // ILU
   num_sweeps=7;
  } else {
-  amrex::Error("only two options for smooth_type now: 0=GSRB 1=Wtd Jacobi");
+  amrex::Error("three options for smooth_type now: 0=GSRB 1=Wtd Jacobi 2=ILU");
  }
 
 

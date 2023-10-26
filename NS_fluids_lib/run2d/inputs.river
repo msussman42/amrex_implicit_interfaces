@@ -14,7 +14,6 @@ ns.xslice=2.0 0.0
 geometry.is_periodic=0 0
 ns.MOFITERMAX=15
 
-# 0=GSRB 1=ICRB 2=ILU
 
 # multigrid class
 #mg.verbose = 1

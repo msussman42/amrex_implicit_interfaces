@@ -70,7 +70,6 @@ ns.initial_thermal_cycles=1   # number of initial jacobi iterations for
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.  The iterative algorithm
                          # is restarted after "initial_cg_cycles" steps.
-# 0=GSRB 1=ICRB 2=ILU
 #
 
 amr.n_cell    = 128 128  # in paper, convergence study using base=128^2
