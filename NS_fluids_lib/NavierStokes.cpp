@@ -884,8 +884,8 @@ int  NavierStokes::initial_thermal_cycles=3;
 int  NavierStokes::initial_cg_cycles=5;
 int  NavierStokes::debug_dot_product=0;
 
-int NavierStokes::smooth_type = 0; // 0=GSRB 1=weighted Jacobi
-int NavierStokes::bottom_smooth_type = 0; // 0=GSRB 1=weighted Jacobi
+int NavierStokes::smooth_type = 2; // 0=GSRB 1=weighted Jacobi 2=ILU
+int NavierStokes::bottom_smooth_type = 2; // 0=GSRB 1=weighted Jacobi 2=ILU
 int NavierStokes::global_presmooth = 2;
 int NavierStokes::global_postsmooth = 2;
 int NavierStokes::use_mg_precond_in_mglib=1;
@@ -3256,7 +3256,7 @@ NavierStokes::read_params ()
 
     } // i=0..num_materials-1
 
-     //smooth_type: 0=GSRB 1=weighted Jacobi
+     //smooth_type: 0=GSRB 1=weighted Jacobi 2=ILU
     ParmParse pplp("Lp");
     pplp.queryAdd("smooth_type",smooth_type);
     pplp.queryAdd("bottom_smooth_type",bottom_smooth_type);

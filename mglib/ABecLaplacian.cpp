@@ -327,7 +327,7 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
    Array4<Real> const& diag_array=diagfab.array();
    const Dim3 lo3=amrex::lbound(tilegrid);
    const Dim3 hi3=amrex::ubound(tilegrid);
-   for (int n=0;n<nsolve_ABec;++nsolve_ABec) {
+   for (int n=0;n<nsolve_ABec;++n) {
    for (int z=lo3.z;z<=hi3.z;++z) {
    for (int y=lo3.y;y<=hi3.y;++y) {
    for (int x=lo3.x;x<=hi3.x;++x) {
@@ -336,7 +336,6 @@ ABecLaplacian::residual (MultiFab& residL,MultiFab& rhsL,
    }
    }
    }
-
 #if (profile_solver==1)
    bprof.stop();
 #endif
@@ -1458,6 +1457,8 @@ ABecLaplacian::Fsmooth (MultiFab& solnL,
   num_sweeps=6;
  } else if (smooth_type==1) { // weighted Jacobi
   num_sweeps=4;
+ } else if (smooth_type==2) { // ILU
+  num_sweeps=7;
  } else {
   amrex::Error("only two options for smooth_type now: 0=GSRB 1=Wtd Jacobi");
  }
