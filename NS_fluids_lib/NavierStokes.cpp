@@ -946,8 +946,6 @@ int NavierStokes::CTML_FSI_init = 0;
 // 2=never take into account sound speed
 Vector<int> NavierStokes::shock_timestep; 
 
-int NavierStokes::MAC_grid_compressible=0;
-
 Real NavierStokes::visc_coef=0.0;
 
 int NavierStokes::include_viscous_heating=0;
@@ -4368,8 +4366,6 @@ NavierStokes::read_params ()
       amrex::Error("shock_timestep invalid");
     }
 
-    pp.queryAdd("MAC_grid_compressible",MAC_grid_compressible);
-
     projection_pressure_scale=1.0;
 
     if (some_materials_compressible()==1) {
@@ -5264,8 +5260,6 @@ NavierStokes::read_params ()
       std::cout << "prerecalesce_stiffCV i=" << i << "  " << 
          prerecalesce_stiffCV[i] << '\n';
      }  // i=0,..,num_materials
-
-     std::cout << "MAC_grid_compressible= " << MAC_grid_compressible << '\n';
 
      for (int i=0;i<num_species_var*num_materials;i++) {
       std::cout << "speciesviscconst i=" << i << "  " << 
@@ -16166,10 +16160,9 @@ NavierStokes::allocate_flux_register(int operation_flag) {
  int ncfluxreg=0;
 
   // unew^{f} = 
-  //   (i) unew^{f} in incompressible non-solid regions
+  //   (i) unew^{f} in stiff_material non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
-  //   (iii) (unew^{c})^{c->f}  (MAC_grid_compressible=0) compressible regions.
-  //   (iii) unew^{f}  (MAC_grid_compressible=1) compressible regions.
+  //   (iii) (unew^{c})^{c->f}  (stiff_material=0) compressible regions.
   //   (iv) usolid in solid regions
  if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
   ncfluxreg=AMREX_SPACEDIM;
@@ -16570,8 +16563,7 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
       blob_array.dataPtr(),
       &blob_array_size,
       &num_colors,
-      &project_option_visc,
-      &MAC_grid_compressible);
+      &project_option_visc);
     }   // mfi
 } // omp
     ns_reconcile_d_num(LOOP_CELL_TO_MAC_ISCHEME_MAC,"SEM_scalar_advection");

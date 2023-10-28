@@ -54,7 +54,6 @@ Lp.v = 0
 ns.num_materials=3
 ns.num_species_var=0
 ns.num_divu_outer_sweeps=2
-ns.MAC_grid_compressible=1
 
 ns.MOFITERMAX=15
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I

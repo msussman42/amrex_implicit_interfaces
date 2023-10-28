@@ -84,7 +84,7 @@ mac.mac_abs_tol    = 1.0e-10
 # for cfl=3, 6 * 8.56E-5 = 0.0005
 # This is same as cfl=0.02  and min dx/u used (at t=0).
 ns.shock_timestep=1 1
-ns.MAC_grid_compressible=0
+ns.stiff_material=0 0
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
 ns.init_shrink    = 0.1      # scale back initial timestep

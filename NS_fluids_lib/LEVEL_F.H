@@ -286,8 +286,7 @@ namespace amrex{
         Real* blob_array,
         int* blob_array_size,
         int* num_colors,
-        int* project_option, 
-	int* MAC_grid_compressible);
+        int* project_option);
 
       void fort_project_to_rigid_velocity(
         int* dir, //dir=0,1,2

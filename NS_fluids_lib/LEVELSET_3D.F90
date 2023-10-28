@@ -10799,9 +10799,11 @@ stop
       real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: rhs(DIMV(rhs),nsolve)
       real(amrex_real), pointer :: rhs_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: veldest(DIMV(veldest),ncomp_veldest)
+      real(amrex_real), INTENT(inout), target :: &
+              veldest(DIMV(veldest),ncomp_veldest)
       real(amrex_real), pointer :: veldest_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: dendest(DIMV(dendest),ncomp_dendest)
+      real(amrex_real), INTENT(inout), target :: &
+              dendest(DIMV(dendest),ncomp_dendest)
       real(amrex_real), pointer :: dendest_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
       real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
@@ -10900,6 +10902,9 @@ stop
       integer prescribed_flag
 
       real(amrex_real) local_div_val
+
+      real(amrex_real) velocity_conservative(AMREX_SPACEDIM)
+      integer use_conservation_form_velocity
 
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer ispec
@@ -11950,7 +11955,7 @@ stop
         else if (LS_clamped.lt.zero) then
          ! do nothing
         else
-         print *,"LS_clamped invalid"
+         print *,"LS_clamped invalid: ",LS_clamped
          stop
         endif
 
@@ -11961,9 +11966,24 @@ stop
          ! (2) rho_t + u dot grad rho=0 instead of
          !     rho_t + div(rho u)=0
          ! 
-        is_rigid_near=0
         do im=1,num_materials
          LStest(im)=levelPC(D_DECL(i,j,k),im)
+        enddo
+        call get_primary_material(LStest,im)
+
+        if ((fort_stiff_material(im).eq.1).or. &
+            (LStest(im).le.DXMAXLS)) then
+         use_conservation_form_velocity=0
+        else if ((fort_stiff_material(im).eq.0).and. &
+                 (LStest(im).ge.DXMAXLS)) then
+         use_conservation_form_velocity=1
+        else
+         print *,"fort_stiff_material invalid"
+         stop
+        endif
+
+        is_rigid_near=0
+        do im=1,num_materials
          if (is_rigid(im).eq.1) then
           if (LStest(im).ge.-DXMAXLS) then
            is_rigid_near=1
@@ -12025,7 +12045,8 @@ stop
 
          hx=xsten(1,dir+1)-xsten(-1,dir+1)
          RR=one
-         if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_RZ)) then
+         if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+             (levelrz.eq.COORDSYS_RZ)) then
           RR=one
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           if (dir.eq.1) then ! theta direction
@@ -12033,7 +12054,7 @@ stop
           else if ((dir.eq.0).or.(dir.eq.SDIM-1)) then
            RR=one
           else
-           print *,"dir invalid mac to cell"
+           print *,"dir invalid fort_mac_to_cell: ",dir
            stop
           endif
          else
@@ -12161,6 +12182,9 @@ stop
                 AFACE(1)*uface(1)*pres_face(1))/ &
             (dencell*VOLTERM)
 
+          velocity_conservative(dir+1)=u_advect(D_DECL(i,j,k),dir+1)- &
+                  dt*(pres_face(2)-pres_face(1))/(dencell*hx)
+
          else
           print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL"
           stop
@@ -12199,6 +12223,17 @@ stop
            ! 4. e^proj+rho UCELL^2^proj/2=E^proj=E^advect-div(up)
            ! 5. e^proj=e^advect+rho UCELL^2^advect/2-rho UCELL^2^proj/2-div(up)
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
+
+           if (use_conservation_form_velocity.eq.1) then
+            do dir=1,SDIM
+             veldest(D_DECL(i,j,k),dir)=velocity_conservative(dir)
+            enddo
+           else if (use_conservation_form_velocity.eq.0) then
+            ! do nothing
+           else
+            print *,"use_conservation_form_velocity invalid"
+            stop
+           endif
 
            do im=1,num_materials
 
@@ -12682,10 +12717,9 @@ stop
 ! operation_flag=8  reserved for coupling terms in fort_crossterm
 ! OP_U_COMP_CELL_MAC_TO_MAC (11)
 ! operation_flag=11 
-!   (i) unew^{f} in incompressible non-solid regions
+!   (i) unew^{f} in stiff_material non-solid regions
 !   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
-!   (iii) (unew^{c})^{c->f} (MAC_grid_compressible=0) compressible regions.
-!   (iii) unew^{f} (MAC_grid_compressible=1) compressible regions.
+!   (iii) (unew^{c})^{c->f} (stiff_material=0) compressible regions.
 !   (iv) usolid in solid regions
 
       subroutine fort_cell_to_mac( &
@@ -12747,8 +12781,7 @@ stop
        blob_array, &
        blob_array_size, &
        num_colors, &
-       project_option, &
-       MAC_grid_compressible) &
+       project_option) &
       bind(c,name='fort_cell_to_mac')
 
       use global_utility_module
@@ -12815,7 +12848,6 @@ stop
       integer, INTENT(in) :: rz_flag
       integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
       integer, INTENT(in) :: project_option
-      integer, INTENT(in) :: MAC_grid_compressible
 
       real(amrex_real), INTENT(in), target :: mask(DIMV(mask))
       real(amrex_real), pointer :: mask_ptr(D_DECL(:,:,:))
@@ -12973,6 +13005,7 @@ stop
       real(amrex_real) temperature_clamped
       integer is_clamped_face
       integer local_compressible
+      integer local_stiff
 
       real(amrex_real) test_current_icefacecut
       real(amrex_real) test_current_icemask
@@ -13421,6 +13454,7 @@ stop
          is_clamped_face=-1
 
          local_compressible=0
+         local_stiff=1
          im_left=0
          im_right=0
 
@@ -13540,6 +13574,16 @@ stop
           if ((is_compressible_mat(im_left).eq.1).and. &
               (is_compressible_mat(im_right).eq.1)) then
            local_compressible=1
+           if ((fort_stiff_material(im_left).eq.0).and. &
+               (fort_stiff_material(im_right).eq.0)) then
+            local_stiff=0
+           else if ((fort_stiff_material(im_left).eq.1).or. &
+                    (fort_stiff_material(im_right).eq.1)) then
+            ! do nothing
+           else
+            print *,"fort_stiff_material invalid"
+            stop
+           endif
           else if ((is_compressible_mat(im_left).eq.0).or. &
                    (is_compressible_mat(im_right).eq.0)) then
            local_compressible=0
@@ -13968,18 +14012,18 @@ stop
                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
 
-                 if (MAC_grid_compressible.eq.1) then
+                 if (local_stiff.eq.1) then
 
                   velcomp=1
                    !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
                   primary_velmaterial=local_vel_MAC
 
-                 else if (MAC_grid_compressible.eq.0) then
+                 else if (local_stiff.eq.0) then
 
                   if (local_compressible.eq.0) then
-                   velcomp=1
-                    !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
-                   primary_velmaterial=local_vel_MAC
+                   print *,"local_compressible invalid: ",local_compressible
+                   print *,"local_stiff=",local_stiff
+                   stop
                   else if (local_compressible.eq.1) then
                    ! UMAC^{ADVECT}= 
                    !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
@@ -13992,7 +14036,7 @@ stop
                   endif
 
                  else
-                  print *,"MAC_grid_compressible invalid"
+                  print *,"local_stiff invalid"
                   stop
                  endif
 
@@ -15091,7 +15135,7 @@ stop
        else if (spectral_loop.eq.1) then
         ! do nothing
        else
-        print *,"spectral_loop invalid"
+        print *,"spectral_loop invalid: ",spectral_loop
         stop
        endif
 
