@@ -2,6 +2,7 @@ GPU capability, MPI capability, OpenMP
 AMR capability,
 Particle Container
 Multimaterial
+Sharp interface, supermesh
 
 Each material has an associated level set function which is initialized
 as a distance function locally to the interface.
@@ -17,36 +18,31 @@ a) bulk particles (min |phi_{m}|>=alpha h)
 b) (i) narrow band particles (min |phi_{m}| < alpha h)
    (ii) close-in narrow band particles x^init-=phi_{m} n_{m}
 
-   particle_nsubdivide_narrow_band
-   particle_nsubdivide_high_curvature
+   particle_nsubdivide_narrow
+   particle_nsubdivide_curvature
 
 Each particle has a position, displacement, velocity, density, temperature, 
 material id, and species.
 
-particle density update:
+1st pass: particle density, velocity, and temperature update:
 rho=I(rho^{n+1})
-particle velocity update:
 Du/Dt = I[ u^{viscosity} - u^{advect} - F_Boussinesq(T(xgrid)) ] + 
         F_Boussinesq(T(xpart)).
-particle temperature update:
 DT/Dt = I[ T^{diffusion} - T^{advect} ]
 
-Feedback to Eulerian grid proportional to "h":
-eulerian velocity correction:
+Eulerian velocity and temperature update (alpha1,alpha2 proportional to h)
 u^{viscosity}+=alpha1 * (u^{particle} - u^{viscosity})
-eulerian temperature correction:
 T^{diffusion}+=alpha2 * (T^{particle} - T^{diffusion})
 
-particle velocity update:
+2nd pass: particle velocity, and temperature update:
 Du/Dt = I[ u^{n+1} - u^{viscosity ]
-particle temperature update:
 DT/Dt = I[ T^{n+1} - T^{diffusion} ]
 
 1. initialize Levelsets, make them locally distance functions. 
 2. generate the AMR grid near zero level set(s).
 3. a) delete particles if 
       (i) imat_id((I_LS)(xpart))!=imat_id(particle) and
-      (ii) I(LS_imat_id) < -alpha h
+      (ii) (I_LS_imat_id)(xpart) < -alpha h
    b) add bulk, narrow band, and close-in narrow band particles.
 4. For each material, the advective velocity is UMAC
 5. (a) advect the particles using UMAC
@@ -87,5 +83,5 @@ work plan:
 1. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
 default tolerances, etc)
 2. check freezing results, restart bubble jetting.
-3. solve temperature always on the supermesh.  
+3. solve temperature and velocity always on the supermesh.  
 4. conservation form in the bulk gas regions.
