@@ -858,6 +858,7 @@ Vector<Real> NavierStokes::species_molar_mass; // def=1
 // 0=diffuse in solid 1=dirichlet 2=neumann
 int NavierStokes::solidheat_flag=0; 
 
+Vector<int> NavierStokes::stiff_material; //def=1
 Vector<int> NavierStokes::material_type;
 //0 incomp; material_type_evap needed for the Kassemi model.
 Vector<int> NavierStokes::material_type_evap;
@@ -1441,6 +1442,7 @@ void fortran_parameters() {
  Vector<Real> speciesconst_temp((NavierStokes::num_species_var+1)*NavierStokes::num_materials);
  Vector<Real> speciesviscconst_temp((NavierStokes::num_species_var+1)*NavierStokes::num_materials);
 
+ NavierStokes::stiff_material.resize(NavierStokes::num_materials);
  NavierStokes::material_type.resize(NavierStokes::num_materials);
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
@@ -1474,6 +1476,12 @@ void fortran_parameters() {
  pp.queryAdd("angular_velocity",angular_velocity_temp);
 
  pp.getarr("material_type",NavierStokes::material_type,0,
+    NavierStokes::num_materials);
+
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  NavierStokes::stiff_material[im]=1;
+ }
+ pp.queryarr("stiff_material",NavierStokes::stiff_material,0,
     NavierStokes::num_materials);
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
@@ -1977,6 +1985,7 @@ void fortran_parameters() {
   &NavierStokes::ngeom_raw,
   &NavierStokes::ngeom_recon,
   &NavierStokes::num_materials,
+  NavierStokes::stiff_material.dataPtr(),
   NavierStokes::material_type.dataPtr(),
   &NavierStokes::num_interfaces,
   DrhoDTtemp.dataPtr(),
@@ -3050,6 +3059,12 @@ NavierStokes::read_params ()
     FSI_flag.resize(num_materials);
     FSI_refine_factor.resize(num_materials);
     FSI_bounding_box_ngrow.resize(num_materials);
+
+    stiff_material.resize(num_materials);
+    for (int i=0;i<num_materials;i++) {
+     stiff_material[i]=1;
+    }
+    pp.queryarr("stiff_material",stiff_material,0,num_materials);
 
     material_type.resize(num_materials);
     pp.getarr("material_type",material_type,0,num_materials);
@@ -5194,6 +5209,7 @@ NavierStokes::read_params ()
         les_model[i] << '\n';
       std::cout << "shock_timestep i=" << i << " " << 
           shock_timestep[i] << '\n';
+      std::cout << "stiff_material i="<< i << " " << stiff_material[i] << '\n';
       std::cout << "material_type i=" << i << " " << material_type[i] << '\n';
       std::cout << "material_type_evap i=" << i << " " << 
 	      material_type_evap[i] << '\n';
@@ -6370,9 +6386,19 @@ int NavierStokes::some_materials_compressible() {
  for (int im=0;im<num_materials;im++) {
   int imat_type=material_type[im];
   if (imat_type==999) {
-    // do nothing
+
+   if (stiff_material[im]==1) {
+    //do nothing
+   } else
+    amrex::Error("require stiff_material=1 for solids");
+
   } else if (imat_type==0) {
-    // do nothing
+
+   if (stiff_material[im]==1) {
+    //do nothing
+   } else
+    amrex::Error("require stiff_material=1 for incomp. fluids");
+
   } else if ((imat_type>=1)&&(imat_type<999)) {
    comp_flag=1;
   } else

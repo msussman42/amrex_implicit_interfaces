@@ -373,6 +373,7 @@ stop
         ccngeom_raw, &
         ccngeom_recon, &
         ccnum_materials, &
+        ccstiff_material, &
         ccmaterial_type, &
         ccnten, &
         ccDrhoDT, &
@@ -530,6 +531,7 @@ stop
       integer, INTENT(in) :: ccngeom_raw
       integer, INTENT(in) :: ccngeom_recon
       
+      integer, INTENT(in) :: ccstiff_material(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
@@ -1353,6 +1355,7 @@ stop
       do im=1,num_materials
       
        fort_material_type(im)=ccmaterial_type(im)
+       fort_stiff_material(im)=ccstiff_material(im)
 
        FSI_flag(im)=ccFSI_flag(im)
 
@@ -1641,6 +1644,7 @@ stop
          fort_R_Palmore_Desjardins
 
        do im=1,num_materials
+        print *,"im,stiff mat ",im,fort_stiff_material(im)
         print *,"im,mat type ",im,fort_material_type(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
         print *,"im,DrhoDT ",im,fort_DrhoDT(im)

@@ -408,6 +408,7 @@ public:
     static int CTML_max_num_elements_list; 
     static int CTML_FSI_num_scalars;
 
+    static Vector<int> stiff_material; // default=1   
     static Vector<int> material_type; // 0 incomp   
 
     static int num_species_var; 
