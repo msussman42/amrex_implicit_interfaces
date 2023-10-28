@@ -909,7 +909,8 @@ NavierStokes::deallocate_maccoef(int project_option) {
 void
 NavierStokes::AllinterpScalarMAC(
   MultiFab* coarsedata,MultiFab* finedata,
-  BoxArray& cgridscen,BoxArray& fgridscen,
+  BoxArray& /*cgridscen*/,
+  BoxArray& fgridscen,
   DistributionMapping& fdmap,
   MultiFab* cdiagsing,
   int nsolve,int project_option) {
@@ -1025,8 +1026,10 @@ NavierStokes::interpScalarMAC(MultiFab* coarsedata,MultiFab* finedata,
 
 void
 NavierStokes::Allaverage(
-  MultiFab* coarsedata,MultiFab* finedata,
-  BoxArray& cgridscen,BoxArray& fgridscen,
+  MultiFab* coarsedata,
+  MultiFab* finedata,
+  BoxArray& /*cgridscen*/,
+  BoxArray& fgridscen,
   DistributionMapping& fdmap,
   int iaverage,
   int scomp,int dcomp) {

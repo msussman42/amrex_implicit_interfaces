@@ -5348,7 +5348,7 @@ NavierStokes::LowMachDIVUALL(
  int& color_count,
  int idx_type,
  int idx_color,
- Vector<int>& type_flag, 
+ Vector<int>& /* type_flag */, 
  Vector<blobclass> blobdata) {
 
  std::string local_caller_string="LowMachDIVUALL";

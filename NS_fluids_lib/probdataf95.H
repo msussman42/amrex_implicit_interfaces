@@ -144,6 +144,7 @@
       integer prescribe_temperature_outflow
       integer fort_solidheat_flag
       integer FSI_flag(MAX_NUM_MATERIALS)
+      integer fort_stiff_material(MAX_NUM_MATERIALS)
       integer fort_material_type(MAX_NUM_MATERIALS)
       integer fort_ZEYU_DCA_SELECT
       integer pres_homflag
