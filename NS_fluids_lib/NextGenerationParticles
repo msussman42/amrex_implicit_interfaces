@@ -9,28 +9,50 @@ as a distance function locally to the interface.
 Each particle has an associated material id which is assigned only when the
 particle is added.
 
-There 3 kinds of particles:
-a) bulk particles
-b) narrow band particles (min |phi_{m}| < alpha h)
-c) close-in narrow band particles x^init-=phi_{m} n_{m}
+There are 3 kinds of particles:
+a) bulk particles (min |phi_{m}|>=alpha h)
+
+   particle_nsubdivide_bulk
+
+b) (i) narrow band particles (min |phi_{m}| < alpha h)
+   (ii) close-in narrow band particles x^init-=phi_{m} n_{m}
+
+   particle_nsubdivide_narrow_band
+   particle_nsubdivide_high_curvature
 
 Each particle has a position, displacement, velocity, density, temperature, 
 material id, and species.
 
-u_t = -u div u + I[ div(2 mu D) ] - I[ grad p/rho ] + F_Boussinesq.
-Feedback to Eulerian grid proportional to "h."
-A temporary Material velocity UMAC_{m} is derived from UMAC.
+particle density update:
+rho=I(rho^{n+1})
+particle velocity update:
+Du/Dt = I[ u^{viscosity} - u^{advect} - F_Boussinesq(T(xgrid)) ] + 
+        F_Boussinesq(T(xpart)).
+particle temperature update:
+DT/Dt = I[ T^{diffusion} - T^{advect} ]
+
+Feedback to Eulerian grid proportional to "h":
+eulerian velocity correction:
+u^{viscosity}+=alpha1 * (u^{particle} - u^{viscosity})
+eulerian temperature correction:
+T^{diffusion}+=alpha2 * (T^{particle} - T^{diffusion})
+
+particle velocity update:
+Du/Dt = I[ u^{n+1} - u^{viscosity ]
+particle temperature update:
+DT/Dt = I[ T^{n+1} - T^{diffusion} ]
 
 1. initialize Levelsets, make them locally distance functions. 
 2. generate the AMR grid near zero level set(s).
-3. a) delete particles if (i) imat_id((I_LS)(xpart))!=imat_id(particle) and
-      (ii) |I_LS(xpart)_imat_id| > alpha h
+3. a) delete particles if 
+      (i) imat_id((I_LS)(xpart))!=imat_id(particle) and
+      (ii) I(LS_imat_id) < -alpha h
    b) add bulk, narrow band, and close-in narrow band particles.
 4. For each material, the advective velocity is UMAC
-5. (a) LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
+5. (a) advect the particles using UMAC
+   (a) LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
    (b) project LS_{m} to be "vacuum free."
-6. advect the particles using UMAC
-7. Redistance the level set function(s) using dtau=dx/2 for example:
+6. Redistance the level set function(s) using dtau=dx/2 for example:
     (a) LS0 is given
     (b) for n=1,2,3,...
           for each grid cell:
@@ -56,15 +78,14 @@ A temporary Material velocity UMAC_{m} is derived from UMAC.
                LScorrect(n)=LS(n)-mu
 
     (c) endfor
-8. go back to step 2.
+7. go back to step 2.
 
 References:
 Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
 
 work plan:
-1. fix all the nested loops
-2. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
+1. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
 default tolerances, etc)
-3. check freezing results, restart bubble jetting.
-4. Directionally split
-   Level set advection and bulk material advection done in c++.
+2. check freezing results, restart bubble jetting.
+3. solve temperature always on the supermesh.  
+4. conservation form in the bulk gas regions.
