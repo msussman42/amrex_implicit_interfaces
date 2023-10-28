@@ -1599,13 +1599,12 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  Real beta=0.0;
 
  // unew^{f}=
- // (i) unew^{f} in incompressible non-solid regions
+ // (i) unew^{f} in stiff_material non-solid regions
  // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
  //      regions 
  //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
  //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
- // (iii) (unew^{c})^{c->f} (MAC_grid_compressible=0) compressible regions.
- // (iii) unew^{f} (MAC_grid_compressible=1) compressible regions.
+ // (iii) (unew^{c})^{c->f} (stiff_material=0) compressible regions.
  // (iv) usolid in solid regions
  int operation_flag=OP_U_COMP_CELL_MAC_TO_MAC;  
 
@@ -2534,13 +2533,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
     if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
       //  unew^{f}=
-      // (i) unew^{f} in incompressible non-solid regions
+      // (i) unew^{f} in stiff_material non-solid regions
       // (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral 
       //      regions.
       //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
       //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
-      // (iii)(unew^{c})^{c->f} (MAC_grid_compressible=0) compressible regions.
-      // (iii)unew^{f} (MAC_grid_compressible=1) compressible regions.
+      // (iii)(unew^{c})^{c->f} (stiff_material=0) compressible regions.
       // (iv) usolid in solid regions
       if (is_zalesak()) {
        advance_MAC_velocity(SOLVETYPE_INITPROJ);

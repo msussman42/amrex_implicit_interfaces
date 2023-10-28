@@ -87,7 +87,6 @@ mac.mac_abs_tol    = 1.0e-10
 
 ns.cfl            = 0.5      #  was 0.15
 ns.shock_timestep = 1 1       # was 0
-ns.MAC_grid_compressible=0
 ns.init_shrink    = 0.1       # scale back initial timestep
 ns.change_max=1.01
 ns.visc_coef      = 0.0    # coef of viscosity

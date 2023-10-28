@@ -1650,8 +1650,6 @@ protected:
 
     static Vector<int>  shock_timestep;
 
-    static int MAC_grid_compressible;
-
      // vel, pres, num_state_material x num_materials, 
      // ngeom_raw x num_materials, error ind
     static int State_Type; 
