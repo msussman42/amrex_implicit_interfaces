@@ -193,9 +193,10 @@ int  NavierStokes::enable_spectral=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
-int NavierStokes::particle_nsubdivide=1; 
+int NavierStokes::particle_nsubdivide_bulk=1; 
+int NavierStokes::particle_nsubdivide_narrow=1; 
+int NavierStokes::particle_nsubdivide_curvature=1; 
 int NavierStokes::particle_max_per_nsubdivide=3; 
-int NavierStokes::particle_min_per_nsubdivide=1; 
 
 Real NavierStokes::truncate_thickness=2.0;  
 
@@ -4908,23 +4909,12 @@ NavierStokes::read_params ()
     }  // i=0..num_materials-1
 
      //default=1
-    pp.queryAdd("particle_nsubdivide",particle_nsubdivide);
+    pp.queryAdd("particle_nsubdivide_bulk",particle_nsubdivide_bulk);
+    pp.queryAdd("particle_nsubdivide_narrow",particle_nsubdivide_narrow);
+    pp.queryAdd("particle_nsubdivide_curvature",particle_nsubdivide_curvature);
      //default=3
     pp.queryAdd("particle_max_per_nsubdivide",
 	    particle_max_per_nsubdivide);
-     //default=1
-    pp.queryAdd("particle_min_per_nsubdivide",
-	    particle_min_per_nsubdivide);
-
-    if ((particle_nsubdivide<1)||
-        (particle_nsubdivide>6))
-     amrex::Error("particle_nsubdivide invalid");
-    if ((particle_max_per_nsubdivide<2)||
-        (particle_max_per_nsubdivide>100))
-     amrex::Error("particle_max_per_nsubdivide invalid");
-    if ((particle_min_per_nsubdivide<0)||
-        (particle_min_per_nsubdivide>100))
-     amrex::Error("particle_min_per_nsubdivide invalid");
 
     pp.queryAdd("truncate_volume_fractions",truncate_volume_fractions,
 		num_materials);
@@ -5182,11 +5172,12 @@ NavierStokes::read_params ()
      std::cout << "initial_temperature_diffuse_duration=" << 
       initial_temperature_diffuse_duration << '\n';
 
-     std::cout << "particle_nsubdivide = " << particle_nsubdivide << '\n';
+     std::cout<<"particle_nsubdivide_bulk="<<particle_nsubdivide_bulk<<'\n';
+     std::cout<<"particle_nsubdivide_narrow="<<particle_nsubdivide_narrow<<'\n';
+     std::cout<<"particle_nsubdivide_curvature="
+	     <<particle_nsubdivide_curvature<<'\n';
      std::cout << "particle_max_per_nsubdivide= " <<
         particle_max_per_nsubdivide << '\n';
-     std::cout << "particle_min_per_nsubdivide= " << 
-        particle_min_per_nsubdivide << '\n';
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
@@ -22477,18 +22468,20 @@ NavierStokes::init_particle_container(int append_flag) {
    int new_Pdata_size=new_particle_data.size();
 
    // declared in: LEVELSET_3D.F90
-   // 1. subdivide each cell with "particle_nsubdivide" divisions.
-   //    e.g. if particle_nsubdivide=2 => 4 pieces in 2D.
-   //                 "         "   =4 => 64 pieces in 2D.
+   // 1. subdivide each cell with 
+   //    "particle_nsubdivide[bulk|narrow|curvature]" divisions.
+   //    e.g. if particle_nsubdivide_bulk=2 => 4 pieces in 2D.
+   //                 "         "        =4 => 64 pieces in 2D.
    // 2. for each small sub-box, add a particle at the sub-box center.
    fort_init_particle_container( 
      &tid_current,
      &single_particle_size,
      &isweep,
      &append_flag,
-     &particle_nsubdivide,
+     &particle_nsubdivide_bulk,
+     &particle_nsubdivide_narrow,
+     &particle_nsubdivide_curvature,
      &particle_max_per_nsubdivide,
-     &particle_min_per_nsubdivide,
      tilelo,tilehi,
      fablo,fabhi,
      &bfact,

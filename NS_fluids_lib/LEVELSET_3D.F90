@@ -19009,9 +19009,10 @@ stop
         single_particle_size, &
         isweep, &
         append_flag, &
-        particle_nsubdivide, &
+        particle_nsubdivide_bulk, &
+        particle_nsubdivide_narrow, &
+        particle_nsubdivide_curvature, &
         particle_max_per_nsubdivide, &
-        particle_min_per_nsubdivide, &
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -19052,9 +19053,10 @@ stop
       integer, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: particle_nsubdivide
+      integer, INTENT(in) :: particle_nsubdivide_bulk
+      integer, INTENT(in) :: particle_nsubdivide_narrow
+      integer, INTENT(in) :: particle_nsubdivide_curvature
       integer, INTENT(in) :: particle_max_per_nsubdivide
-      integer, INTENT(in) :: particle_min_per_nsubdivide
       real(amrex_real), INTENT(in)    :: cur_time_slab
       real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
       integer, value, INTENT(in) :: Np ! pass by value
@@ -19221,7 +19223,7 @@ stop
       accum_PARM%level=level
       accum_PARM%finest_level=finest_level
 
-      accum_PARM%nsubdivide=particle_nsubdivide
+      accum_PARM%nsubdivide=particle_nsubdivide_bulk
 
       particlesptr=>particles
 
@@ -19263,7 +19265,7 @@ stop
       subhi(3)=0
       do dir=1,SDIM
        sublo(dir)=0
-       subhi(dir)=particle_nsubdivide-1
+       subhi(dir)=particle_nsubdivide_bulk-1
       enddo
       allocate(sub_counter(sublo(1):subhi(1), &
               sublo(2):subhi(2), &
@@ -19493,7 +19495,7 @@ stop
 
            ! insufficient particles in the subbox or adding the
            ! particles for the very first time.
-          if ((local_count.lt.particle_min_per_nsubdivide).or. &
+          if ((local_count.eq.0).or. &
               (append_flag.eq.0)) then 
 
            call sub_box_cell_center( &
@@ -19568,7 +19570,7 @@ stop
             stop
            endif
 
-          else if ((local_count.ge.particle_min_per_nsubdivide).and. &
+          else if ((local_count.gt.0).and. &
                    (append_flag.eq.1)) then
            ! do nothing
           else
