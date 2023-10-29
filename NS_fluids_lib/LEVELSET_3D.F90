@@ -11972,10 +11972,12 @@ stop
         call get_primary_material(LStest,im)
 
         if ((fort_stiff_material(im).eq.1).or. &
-            (LStest(im).le.DXMAXLS)) then
+            (LStest(im).le.DXMAXLS).or. &
+            (level.lt.finest_level)) then
          use_conservation_form_velocity=0
         else if ((fort_stiff_material(im).eq.0).and. &
-                 (LStest(im).ge.DXMAXLS)) then
+                 (LStest(im).ge.DXMAXLS).and. &
+                 (level.eq.finest_level)) then
          use_conservation_form_velocity=1
         else
          print *,"fort_stiff_material invalid"
@@ -13574,10 +13576,18 @@ stop
           if ((is_compressible_mat(im_left).eq.1).and. &
               (is_compressible_mat(im_right).eq.1)) then
            local_compressible=1
-           if ((fort_stiff_material(im_left).eq.0).and. &
+           if ((level.eq.finest_level).and. &
+               (LSleft(im_left).gt.DXMAXLS).and. &
+               (LSright(im_right).gt.DXMAXLS).and. &
+               (im_left.eq.im_right).and. &
+               (fort_stiff_material(im_left).eq.0).and. &
                (fort_stiff_material(im_right).eq.0)) then
             local_stiff=0
-           else if ((fort_stiff_material(im_left).eq.1).or. &
+           else if ((level.lt.finest_level).or. &
+                    (LSleft(im_left).le.DXMAXLS).or. &
+                    (LSright(im_right).le.DXMAXLS).or. &
+                    (im_left.ne.im_right).or. &
+                    (fort_stiff_material(im_left).eq.1).or. &
                     (fort_stiff_material(im_right).eq.1)) then
             ! do nothing
            else

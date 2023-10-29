@@ -24,19 +24,30 @@ b) (i) narrow band particles (min |phi_{m}| < alpha h)
 Each particle has a position, displacement, velocity, density, temperature, 
 material id, and species.
 
-1st pass: particle density, velocity, and temperature update:
-rho=I(rho^{n+1})
-Du/Dt = I[ u^{viscosity} - u^{advect} - F_Boussinesq(T(xgrid)) ] + 
+1st pass: particle density, velocity, and temperature update (phase change):
+
+ If after phase change,
+ imat_id((I_LS)(xpart))!=imat_id(particle) 
+ then delete the particle.  
+
+ DT/Dt = I[ T^{phase_change} - T^{advect} ]
+
+2nd pass: particle density, velocity, and temperature update (diffusion):
+
+ rho=I(rho^{n+1})
+ Du/Dt = I[ u^{viscosity} - u^{phase change} - F_Boussinesq(T(xgrid)) ] + 
         F_Boussinesq(T(xpart)).
-DT/Dt = I[ T^{diffusion} - T^{advect} ]
+ DT/Dt = I[ T^{diffusion} - T^{phase change} ]
 
-Eulerian velocity and temperature update (alpha1,alpha2 proportional to h)
-u^{viscosity}+=alpha1 * (u^{particle} - u^{viscosity})
-T^{diffusion}+=alpha2 * (T^{particle} - T^{diffusion})
+Eulerian velocity and temperature update (alpha1,alpha2 proportional to h):
 
-2nd pass: particle velocity, and temperature update:
-Du/Dt = I[ u^{n+1} - u^{viscosity ]
-DT/Dt = I[ T^{n+1} - T^{diffusion} ]
+ u^{viscosity}+=alpha1 * (u^{particle} - u^{viscosity})
+ T^{diffusion}+=alpha2 * (T^{particle} - T^{diffusion})
+
+3rd pass: particle velocity, and temperature update (pressure update):
+
+ Du/Dt = I[ u^{n+1} - u^{viscosity ]
+ DT/Dt = I[ T^{n+1} - T^{diffusion} ]
 
 1. initialize Levelsets, make them locally distance functions. 
 2. generate the AMR grid near zero level set(s).
@@ -47,6 +58,7 @@ DT/Dt = I[ T^{n+1} - T^{diffusion} ]
 4. For each material, the advective velocity is UMAC
 5. (a) advect the particles using UMAC
    (a) LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
+       (conservation form important in order to insure proper expansion)
    (b) project LS_{m} to be "vacuum free."
 6. Redistance the level set function(s) using dtau=dx/2 for example:
     (a) LS0 is given
@@ -74,14 +86,32 @@ DT/Dt = I[ T^{n+1} - T^{diffusion} ]
                LScorrect(n)=LS(n)-mu
 
     (c) endfor
-7. go back to step 2.
+7. repeat steps 5 and 6 using the phase change velocity and 
+   non-conservation form advection of the level set function.
+8. go back to step 2.
 
 References:
 Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
 
-work plan:
+work plan for an algorithm that efficiently captures filaments, cusps, and
+pinnacles in the phase change process or otherwise complex topology 
+multiphase flows:
 1. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
 default tolerances, etc)
 2. check freezing results, restart bubble jetting.
 3. solve temperature and velocity always on the supermesh.  
-4. conservation form in the bulk gas regions.
+4. The advective velocity for each material is unique in order to sharply
+   simulate expansion and slip in the immediate vicinity of the interface:
+   Given the face centered projection velocity for each material, the face
+   velocity is either copied or extrapolated from the internal face(s) in 
+   such a way so that the new face velocities on the bounding rectangle/cube
+   has the same divergence and the internal face velocity is extrapolated
+   "symmetrically" with respect to the adjoing materials.  Then directionally
+   split advection can be implemented as before.
+4. conservation form in the bulk gas regions for consistent shock capturing.
+
+Remark:
+"Simple supermesh method" probably good enough (in order to use PCG methods)
+since it is flux over finite sized intervals that is important? Not pointwise
+flux?  At any rate, "simple method" will be compared to "least squares 
+supermesh."
