@@ -10814,9 +10814,12 @@ stop
       real(amrex_real), INTENT(in), target :: &
         levelPC(DIMV(levelPC),num_materials*(SDIM+1))
       real(amrex_real), pointer :: levelPC_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
-      real(amrex_real), INTENT(in), target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
-      real(amrex_real), INTENT(in), target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
+      real(amrex_real), INTENT(in), target :: &
+        solxfab(DIMV(solxfab),SDIM*nparts_def)
+      real(amrex_real), INTENT(in), target :: &
+        solyfab(DIMV(solyfab),SDIM*nparts_def)
+      real(amrex_real), INTENT(in), target :: &
+        solzfab(DIMV(solzfab),SDIM*nparts_def)
       real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
@@ -10905,6 +10908,10 @@ stop
 
       real(amrex_real) velocity_conservative(AMREX_SPACEDIM)
       integer use_conservation_form_velocity
+      integer near_wall
+      integer mask_coarsefine
+      integer bctest
+      integer ivect(3)
 
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer ispec
@@ -11357,7 +11364,68 @@ stop
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
 
+       ivect(1)=i
+       ivect(2)=j
+       ivect(3)=k
+
        call gridsten_level(xsten,i,j,k,level,nhalf)
+
+       near_wall=0
+       do dir=1,SDIM
+        if (ivect(dir).eq.growlo(dir)) then
+         bctest=velbc_in(dir,1,dir)
+         if (bctest.eq.INT_DIR) then
+          ivect(dir)=ivect(dir)-1
+          mask_coarsefine=NINT(mask(D_DECL(ivect(1),ivect(2),ivect(3))))
+          ivect(dir)=ivect(dir)+1
+          if (mask_coarsefine.eq.1) then !fine-fine
+           ! do nothing
+          else if (mask_coarsefine.eq.0) then
+           near_wall=1
+          else
+           print *,"mask_coarsefine invalid"
+           stop
+          endif
+         else if ((bctest.eq.EXT_DIR).or. &
+                  (bctest.eq.REFLECT_EVEN).or. & 
+                  (bctest.eq.REFLECT_ODD).or. & 
+                  (bctest.eq.FOEXTRAP)) then
+          near_wall=1
+         else
+          print *,"bctest invalid"
+          stop
+         endif
+        else if (ivect(dir).eq.growhi(dir)) then
+         bctest=velbc_in(dir,2,dir)
+         if (bctest.eq.INT_DIR) then
+          ivect(dir)=ivect(dir)+1
+          mask_coarsefine=NINT(mask(D_DECL(ivect(1),ivect(2),ivect(3))))
+          ivect(dir)=ivect(dir)-1
+          if (mask_coarsefine.eq.1) then !fine-fine
+           ! do nothing
+          else if (mask_coarsefine.eq.0) then
+           near_wall=1
+          else
+           print *,"mask_coarsefine invalid"
+           stop
+          endif
+         else if ((bctest.eq.EXT_DIR).or. &
+                  (bctest.eq.REFLECT_EVEN).or. & 
+                  (bctest.eq.REFLECT_ODD).or. & 
+                  (bctest.eq.FOEXTRAP)) then
+          near_wall=1
+         else
+          print *,"bctest invalid"
+          stop
+         endif
+        else if ((ivect(dir).lt.growhi(dir)).and. &
+                 (ivect(dir).gt.growlo(dir))) then
+         ! do nothing
+        else
+         print *,"ivect(dir) invalid"
+         stop
+        endif
+       enddo !do dir=1,SDIM
 
        do dir=1,SDIM
         xclamped(dir)=xsten(0,dir)
@@ -11972,10 +12040,12 @@ stop
         call get_primary_material(LStest,im)
 
         if ((fort_stiff_material(im).eq.1).or. &
+            (near_wall.eq.1).or. &
             (LStest(im).le.DXMAXLS).or. &
             (level.lt.finest_level)) then
          use_conservation_form_velocity=0
         else if ((fort_stiff_material(im).eq.0).and. &
+                 (near_wall.eq.0).and. &
                  (LStest(im).ge.DXMAXLS).and. &
                  (level.eq.finest_level)) then
          use_conservation_form_velocity=1
@@ -12926,7 +12996,11 @@ stop
       integer im_left_tension,im_right_tension
       integer im_left_gravity,im_right_gravity
       integer dir2,side
-      integer velcomp,iboundary
+      integer velcomp
+      integer iboundary
+      integer side_boundary
+      integer velbc_boundary
+      integer presbc_boundary
       real(amrex_real) cutedge,RR
       integer, parameter :: nhalf=3
       real(amrex_real) xstenMAC(-nhalf:nhalf,SDIM)
@@ -12937,7 +13011,7 @@ stop
       real(amrex_real) uedge
       real(amrex_real) uedge_rigid
       real(amrex_real) local_face(ncphys)
-      integer idx
+      integer ivect(3)
       integer is_solid_face
       integer at_RZ_face
       integer ic,jc,kc
@@ -13008,6 +13082,7 @@ stop
       integer is_clamped_face
       integer local_compressible
       integer local_stiff
+      integer in_the_bulk
 
       real(amrex_real) test_current_icefacecut
       real(amrex_real) test_current_icemask
@@ -13453,10 +13528,36 @@ stop
           xstenMAC_center(dir2)=xstenMAC(0,dir2)
          enddo
 
+         ivect(1)=i
+         ivect(2)=j
+         ivect(3)=k
+
+         iboundary=0
+         side_boundary=0
+
+         if (ivect(dir+1).eq.fablo(dir+1)) then
+          iboundary=1
+          side_boundary=1
+          velbc_boundary=velbc_in(dir+1,side_boundary,dir+1)
+          presbc_boundary=presbc_in(dir+1,side_boundary,1)
+         else if (ivect(dir+1).eq.fabhi(dir+1)+1) then
+          iboundary=1
+          side_boundary=2
+          velbc_boundary=velbc_in(dir+1,side_boundary,dir+1)
+          presbc_boundary=presbc_in(dir+1,side_boundary,1)
+         else if ((ivect(dir+1).gt.fablo(dir+1)).and. &
+                  (ivect(dir+1).lt.fabhi(dir+1)+1)) then
+          ! do nothing
+         else
+          print *,"ivect invalid"
+          stop
+         endif
+
          is_clamped_face=-1
 
          local_compressible=0
          local_stiff=1
+         in_the_bulk=1
          im_left=0
          im_right=0
 
@@ -13490,16 +13591,10 @@ stop
          jm1=j-jj
          km1=k-kk
 
-         if (dir.eq.0) then
-          idx=i
-         else if (dir.eq.1) then
-          idx=j
-         else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          idx=k
-         else
-          print *,"dir invalid fort_cell_to_mac, dir=",dir
-          stop
-         endif
+          ! mask=0 coarse/fine
+          ! mask=1 fine/fine
+         mask_coarsefine(1)=NINT(mask(D_DECL(im1,jm1,km1)))
+         mask_coarsefine(2)=NINT(mask(D_DECL(i,j,k)))
 
          if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
 
@@ -13564,6 +13659,35 @@ stop
              (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. & 
              (operation_flag.eq.OP_PRES_CELL_TO_MAC)) then  ! p^CELL->MAC
 
+          if (side_boundary.eq.0) then
+           ! do nothing
+          else if ((side_boundary.eq.1).or. &
+                   (side_boundary.eq.2)) then
+           if (velbc_boundary.eq.INT_DIR) then
+             ! mask=0 coarse/fine
+            if (mask_coarsefine(side_boundary).eq.0) then
+             in_the_bulk=0
+             ! mask=1 fine/fine
+            else if (mask_coarsefine(side_boundary).eq.1) then
+             ! do nothing
+            else
+             print *,"mask_coarsefine invalid"
+             stop
+            endif
+           else if ((velbc_boundary.eq.EXT_DIR).or. &
+                    (velbc_boundary.eq.REFLECT_EVEN).or. &
+                    (velbc_boundary.eq.REFLECT_ODD).or. &
+                    (velbc_boundary.eq.FOEXTRAP)) then
+            in_the_bulk=0
+           else
+            print *,"velbc_boundary invalid"
+            stop
+           endif
+          else
+           print *,"side_boundary invalid"
+           stop
+          endif
+
           ! levelPC() has piecewise constant BC at coarse/fine borders.
           do im=1,num_materials
            LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
@@ -13577,6 +13701,7 @@ stop
               (is_compressible_mat(im_right).eq.1)) then
            local_compressible=1
            if ((level.eq.finest_level).and. &
+               (in_the_bulk.eq.1).and. &
                (LSleft(im_left).gt.DXMAXLS).and. &
                (LSright(im_right).gt.DXMAXLS).and. &
                (im_left.eq.im_right).and. &
@@ -13584,6 +13709,7 @@ stop
                (fort_stiff_material(im_right).eq.0)) then
             local_stiff=0
            else if ((level.lt.finest_level).or. &
+                    (in_the_bulk.eq.0).or. &
                     (LSleft(im_left).le.DXMAXLS).or. &
                     (LSright(im_right).le.DXMAXLS).or. &
                     (im_left.ne.im_right).or. &
@@ -14233,30 +14359,18 @@ stop
             stop
            endif  
 
-           iboundary=0
-           side=0
-           if (idx.eq.fablo(dir+1)) then
-            iboundary=1
-            side=1
-           else if (idx.eq.fabhi(dir+1)+1) then
-            iboundary=1
-            side=2
-           else if ((idx.gt.fablo(dir+1)).and. &
-                    (idx.lt.fabhi(dir+1)+1)) then
-            ! do nothing
-           else
-            print *,"idx invalid"
-            stop 
-           endif
            if (iboundary.eq.1) then
 
-            if ((side.eq.1).or.(side.eq.2)) then
-             if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
+            if ((side_boundary.eq.1).or. &
+                (side_boundary.eq.2)) then
+             if (velbc_boundary.eq.REFLECT_ODD) then
               face_velocity_override=1
               uedge=zero
-             else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
+             else if (velbc_boundary.eq.EXT_DIR) then
               face_velocity_override=1
-              call velbc_override(time,dir+1,side,dir+1, &
+              call velbc_override( &
+               time, &
+               dir+1,side_boundary,dir+1, &
                uedge, &
                xstenMAC,nhalf,dx,bfact)
 
@@ -14271,13 +14385,13 @@ stop
 
              endif
             else
-             print *,"side invalid"
+             print *,"side_boundary invalid"
              stop
             endif
 
            else if (iboundary.eq.0) then
 
-            if (side.eq.0) then
+            if (side_boundary.eq.0) then
              if ((is_clamped_face.eq.1).or. &
                  (is_clamped_face.eq.2).or. &
                  (is_clamped_face.eq.3)) then
@@ -14290,7 +14404,7 @@ stop
               stop
              endif
             else
-             print *,"side invalid"
+             print *,"side_boundary invalid"
              stop
             endif
            else 
@@ -14326,11 +14440,6 @@ stop
           mask_covered(1)=NINT(maskcoef(D_DECL(im1,jm1,km1)))
           mask_covered(2)=NINT(maskcoef(D_DECL(i,j,k)))
 
-            ! mask=0 coarse/fine
-            ! mask=1 fine/fine
-          mask_coarsefine(1)=NINT(mask(D_DECL(im1,jm1,km1)))
-          mask_coarsefine(2)=NINT(mask(D_DECL(i,j,k)))
-
           at_reflect_wall=0
           at_wall=0
           at_ext_wall=0
@@ -14343,42 +14452,45 @@ stop
 
           face_velocity_override=0
 
-          do side=1,2
+          if (side_boundary.eq.0) then
+           ! do nothing
+          else if ((side_boundary.eq.1).or. &
+                   (side_boundary.eq.2)) then
 
-           if (((side.eq.1).and.(idx.eq.fablo(dir+1))).or. &
-               ((side.eq.2).and.(idx.eq.fabhi(dir+1)+1))) then
+           if ((presbc_boundary.eq.REFLECT_EVEN).or. &
+               (presbc_boundary.eq.FOEXTRAP)) then
+            at_wall=1
+           else if ((presbc_boundary.eq.INT_DIR).or. &
+                    (presbc_boundary.eq.EXT_DIR)) then
+            ! do nothing
+           else
+            print *,"presbc_boundary invalid"
+            stop
+           endif
 
-            if ((presbc_in(dir+1,side,1).eq.REFLECT_EVEN).or. &
-                (presbc_in(dir+1,side,1).eq.FOEXTRAP)) then
-             at_wall=1
-            else if ((presbc_in(dir+1,side,1).eq.INT_DIR).or. &
-                     (presbc_in(dir+1,side,1).eq.EXT_DIR)) then
+           if (velbc_boundary.eq.REFLECT_ODD) then
+            at_reflect_wall=side_boundary
+            face_velocity_override=1
+            solid_velocity=zero
+           else if (velbc_boundary.eq.EXT_DIR) then
+            face_velocity_override=1
+            at_ext_wall=side_boundary
+           else if (velbc_boundary.eq.INT_DIR) then
+             ! mask=0 coarse/fine
+            if (mask_coarsefine(side_boundary).eq.0) then  
+             at_coarse_fine_wallF=side_boundary
+             ! mask=1 fine/fine
+            else if (mask_coarsefine(side_boundary).eq.1) then
              ! do nothing
             else
-             print *,"presbc_in invalid"
+             print *,"mask_coarsefine invalid"
              stop
             endif
-
-            if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
-             at_reflect_wall=side
-             face_velocity_override=1
-             solid_velocity=zero
-            else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
-             face_velocity_override=1
-             at_ext_wall=side
-            else if (velbc_in(dir+1,side,dir+1).eq.INT_DIR) then
-             if (mask_coarsefine(side).eq.0) then  
-              at_coarse_fine_wallF=side
-             else if (mask_coarsefine(side).eq.1) then
-              ! do nothing
-             else
-              print *,"mask_coarsefine invalid"
-              stop
-             endif
-            endif ! int_dir case
-           endif ! idx=fablo or idx=fabhi+1
-
-          enddo ! side=1..2
+           endif ! int_dir case
+          else
+           print *,"side_boundary invalid"
+           stop
+          endif
 
            ! sanity check
           if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -14625,32 +14737,33 @@ stop
           at_reflect_wall=0
           at_wall=0
 
-          do side=1,2
+          if (side_boundary.eq.0) then
+           ! do nothing
+          else if ((side_boundary.eq.1).or. &
+                   (side_boundary.eq.2)) then
 
-           if (((side.eq.1).and.(idx.eq.fablo(dir+1))).or. &
-               ((side.eq.2).and.(idx.eq.fabhi(dir+1)+1))) then
+           if ((presbc_boundary.eq.REFLECT_EVEN).or. &
+               (presbc_boundary.eq.FOEXTRAP)) then
+            at_wall=1
+           else if ((presbc_boundary.eq.INT_DIR).or. &
+                    (presbc_boundary.eq.EXT_DIR)) then
+            ! do nothing
+           else
+            print *,"presbc_boundary invalid"
+            stop
+           endif
 
-            if ((presbc_in(dir+1,side,1).eq.REFLECT_EVEN).or. &
-                (presbc_in(dir+1,side,1).eq.FOEXTRAP)) then
-             at_wall=1
-            else if ((presbc_in(dir+1,side,1).eq.INT_DIR).or. &
-                     (presbc_in(dir+1,side,1).eq.EXT_DIR)) then
-             ! do nothing
-            else
-             print *,"presbc_in invalid"
-             stop
-            endif
-
-            if (velbc_in(dir+1,side,dir+1).eq.REFLECT_ODD) then
-             at_reflect_wall=side
-            else if (velbc_in(dir+1,side,dir+1).eq.EXT_DIR) then
-             ! do nothing
-            else if (velbc_in(dir+1,side,dir+1).eq.INT_DIR) then
-             ! do nothing
-            endif ! int_dir case
-           endif ! idx=fablo or idx=fabhi+1
-
-          enddo ! side=1,2
+           if (velbc_boundary.eq.REFLECT_ODD) then
+            at_reflect_wall=side_boundary
+           else if (velbc_boundary.eq.EXT_DIR) then
+            ! do nothing
+           else if (velbc_boundary.eq.INT_DIR) then
+            ! do nothing
+           endif ! int_dir case
+          else
+           print *,"side_boundary invalid"
+           stop
+          endif
 
            ! sanity check
           if (levelrz.eq.COORDSYS_CARTESIAN) then
