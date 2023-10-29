@@ -1,3 +1,4 @@
+# Shu Osher test problem (shock turbulence interaction)
 max_step  =  99999    # maximum timestep
 #max_step  =  2    # maximum timestep
 stop_time =  1.8  # maximum problem time
@@ -83,6 +84,10 @@ mac.mac_abs_tol    = 1.0e-10
 # for cfl=3, 6 * 8.56E-5 = 0.0005
 # This is same as cfl=0.02  and min dx/u used (at t=0).
 ns.shock_timestep=1 1
+ns.particle_nsubdivide_bulk=1
+ns.particle_nsubdivide_narrow=1
+ns.particle_nsubdivide_curvature=1
+ns.particle_max_per_nsubdivide=1
 ns.stiff_material= 0 0
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
