@@ -2163,9 +2163,9 @@ void NavierStokes::init_divup_cell_vel_cell(
    FArrayBox& az = (*localMF[AREA_MF+AMREX_SPACEDIM-1])[mfi];
    FArrayBox& vol=(*localMF[VOLUME_MF])[mfi];
 
-   FArrayBox* solxfab;
-   FArrayBox* solyfab;
-   FArrayBox* solzfab;
+   FArrayBox* solxfab=nullptr;
+   FArrayBox* solyfab=nullptr;
+   FArrayBox* solzfab=nullptr;
 
    if ((project_option==SOLVETYPE_PRES)||
        (project_option==SOLVETYPE_PRESGRAVITY)||
@@ -8553,8 +8553,8 @@ void NavierStokes::Copy_array(int mfab_dest,int mfab_source,
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  MultiFab* mfab_dest_ptr;
-  MultiFab* mfab_source_ptr;
+  MultiFab* mfab_dest_ptr=nullptr;
+  MultiFab* mfab_source_ptr=nullptr;
 
   if (get_new_data_Type(mfab_dest)>=0) {
    mfab_dest_ptr=
@@ -8588,7 +8588,7 @@ void NavierStokes::setVal_array(int ngrow,int scomp,int ncomp,Real dataval,
 
    for (int i=finest_level;i>=level;i--) {
     NavierStokes& ns_level=getLevel(i);
-    MultiFab* mfab_dest_ptr;
+    MultiFab* mfab_dest_ptr=nullptr;
 
     if (get_new_data_Type(idx_localMF)>=0) {
      mfab_dest_ptr=
@@ -8634,8 +8634,8 @@ void NavierStokes::minusALL(int ngrow,int scomp,int ncomp,
  for (int i=finest_level;i>=level;i--) {
   NavierStokes& ns_level=getLevel(i);
 
-  MultiFab* mfab_dest_ptr;
-  MultiFab* mfab_source_ptr;
+  MultiFab* mfab_dest_ptr=nullptr;
+  MultiFab* mfab_source_ptr=nullptr;
 
   if (get_new_data_Type(idx_dest)>=0) {
    mfab_dest_ptr=
@@ -8671,8 +8671,8 @@ void NavierStokes::plusALL(int ngrow,int scomp,int ncomp,
  for (int i=finest_level;i>=level;i--) {
   NavierStokes& ns_level=getLevel(i);
 
-  MultiFab* mfab_dest_ptr;
-  MultiFab* mfab_source_ptr;
+  MultiFab* mfab_dest_ptr=nullptr;
+  MultiFab* mfab_source_ptr=nullptr;
 
   if (get_new_data_Type(idx_dest)>=0) {
    mfab_dest_ptr=

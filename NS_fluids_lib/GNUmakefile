@@ -27,7 +27,7 @@ USE_ACC = FALSE
 USE_PARTICLES = TRUE
 #PRECISION = FLOAT
 PRECISION = DOUBLE
-DEBUG	  = FALSE
+DEBUG	  = TRUE
 USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE
@@ -81,8 +81,8 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = FALSE
-LINUX_DESKTOP = TRUE
+MAC_LAPTOP = TRUE
+LINUX_DESKTOP = FALSE
 HPC_GNU = FALSE
 
 ifeq ($(HPC_GNU),TRUE)
@@ -98,14 +98,17 @@ ifeq ($(LINUX_DESKTOP),TRUE)
 endif
 
 ifeq ($(MAC_LAPTOP),TRUE)
- COMP = g++-8
- FCOMP = gfortran-8
- AMREX_CCOMP=g++-8
- AMREX_FCOMP=gfortran-8
- CXX = g++-8
- CC = g++-8
- FC = gfortran-8
- F90 = gfortran-8
+
+ COMP = gnu
+
+# COMP = g++-8
+# FCOMP = gfortran-8
+# AMREX_CCOMP=g++-8
+# AMREX_FCOMP=gfortran-8
+# CXX = g++-8
+# CC = g++-8
+# FC = gfortran-8
+# F90 = gfortran-8
 endif
 
 # total view:
@@ -149,7 +152,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = TRUE
+USE_MPI = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
