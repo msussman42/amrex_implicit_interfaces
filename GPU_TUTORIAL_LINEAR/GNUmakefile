@@ -2,12 +2,13 @@ TINY_PROFILE = TRUE
 
 PRECISION=FLOAT
 
-DEBUG = FALSE
+DEBUG = TRUE
 DIM=3
 USE_MPI = FALSE
 USE_OMP = FALSE
 
 USE_CUDA = FALSE
+USE_PARTICLES = FALSE
 COMP = gnu
 
 # ask gfortran the name of the library to link in.  First check for the
