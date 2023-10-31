@@ -11852,7 +11852,7 @@ stop
          else if (partid.eq.-1) then
           ! do nothing
          else
-          print *,"partid invalid"
+          print *,"partid invalid: ",partid
           stop
          endif
 
@@ -11991,7 +11991,8 @@ stop
              (mass_side(1)*uface(1)+ &
               mass_side(2)*uface(2))/masscell
           else
-           print *,"cell_velocity_override invalid"
+           print *,"cell_velocity_override invalid: ", &
+            cell_velocity_override
            stop
           endif
 
@@ -12043,12 +12044,13 @@ stop
             (near_wall.eq.1).or. &
             (LStest(im).le.DXMAXLS).or. &
             (level.lt.finest_level)) then
-         use_conservation_form_velocity=0
+         use_conservation_form_velocity=0 !nonconservative, staggared grid.
         else if ((fort_stiff_material(im).eq.0).and. &
                  (near_wall.eq.0).and. &
                  (LStest(im).ge.DXMAXLS).and. &
                  (level.eq.finest_level)) then
-         use_conservation_form_velocity=1
+!        use_conservation_form_velocity=1
+         use_conservation_form_velocity=0 !conservative and diffusive!
         else
          print *,"fort_stiff_material invalid"
          stop
