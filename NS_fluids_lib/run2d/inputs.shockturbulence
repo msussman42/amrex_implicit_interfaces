@@ -7,7 +7,7 @@ stop_time =  1.8  # maximum problem time
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  10.0 0.05
+geometry.prob_hi   =  10.0 0.4
 ns.slice_dir=0
 ns.xslice=0.0 0.0
 
@@ -25,7 +25,7 @@ cg.restart_period=25
 cg.maxiter = 200
 #ns.projection_pressure_scale=1.0e+6
 ns.projection_pressure_scale=1.0
-mg.bot_atol = 1.0e-12
+mg.bot_atol = 1.0e-13
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -52,9 +52,8 @@ ns.initial_thermal_cycles=2
 ns.mglib_max_ratio=1.0e+5
 ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
                          # decent sized residual.
-#
-
-amr.n_cell    = 1600 8
+# 1600/64=25
+amr.n_cell    = 1600 64
 amr.max_level =  0
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
@@ -74,7 +73,7 @@ amr.max_grid_size   = 1024
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-10
+mac.mac_abs_tol    = 1.0e-11
 
 # 1=always take sound speed into account
 # 2=never take sound speed into account
