@@ -2540,10 +2540,9 @@ void NavierStokes::increment_face_velocityALL(
 // OP_UMAC_PLUS_VISC_CELL_TO_MAC 
 //   unew^{f} = unew^{f} + beta * diffuse_register^{c->f}
 // OP_U_COMP_CELL_MAC_TO_MAC unew^{f} = 
-//   (i) unew^{f} in stiff_material non-solid regions
+//   (i) unew^{f} in non-solid regions
 //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
-//   (iii) (unew^{c})^{c->f} (stiff_material=0) compressible regions.
-//   (iv) usolid in solid regions
+//   (iii) usolid in solid regions
 // called from: post_init_state, do_the_advance, multiphase_project
 // (when project_option==SOLVETYPE_PRES,SOLVETYPE_INITPROJ,
 //  SOLVETYPE_PRESGRAVITY), 

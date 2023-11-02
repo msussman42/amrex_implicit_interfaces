@@ -125,7 +125,6 @@ ns.adv_dir=2
 # e=cv T   T=e/cv=4.2945E+10/4.1855E+7=1026.0423
 ns.tempconst=293.0 1026.0423 293.0
 ns.pressure_error_cutoff=10.0 10.0 0.0
-ns.stiff_material=1 0 1
 ns.material_type=1 3 999      # 2 = adiabatic JWL 3=non-adiabatic JWL
 ns.heatviscconst=0.0 0.0 0.0
 ns.viscconst=0.0 0.0 1.0 

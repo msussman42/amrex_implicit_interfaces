@@ -87,7 +87,6 @@ ns.particle_nsubdivide_bulk=1
 ns.particle_nsubdivide_narrow=1
 ns.particle_nsubdivide_curvature=1
 ns.particle_max_per_nsubdivide=1
-ns.stiff_material= 1 1
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 #ns.fixed_dt	  = 0.0005   # 0.0005 is dt when cfl=3 dx/(u+c) 80 pts
 ns.init_shrink    = 0.1      # scale back initial timestep
