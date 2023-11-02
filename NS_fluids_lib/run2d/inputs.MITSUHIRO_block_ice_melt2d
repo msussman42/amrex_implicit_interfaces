@@ -69,9 +69,11 @@ ns.projection_pressure_scale=1.0e+6
 # 5. mass_fraction_id liquid,air set accordingly 1<=id<=num_species_var
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
 # EVAPORATION or NO EVAPORATION
-ns.num_species_var=1 
+ns.num_species_var=2
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
+ns.MOFITERMAX_AFTER_PREDICT=15
+ns.mof_decision_tree_learning=100 #default 40000
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
@@ -85,7 +87,10 @@ cg.verbose = 0 # 1=check initial residual  2=check all the residuals
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 400
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 0
@@ -127,19 +132,25 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
 ns.gravity        = -980.0   # cgs
-ns.incremental_gravity_flag=1
-ns.segregated_gravity_flag=1
-ns.denconst_interface_added=1.0e+4 1.0e+4 1.0e+4 1.0e+4 1.0e+4 1.0e+4
+#ns.incremental_gravity_flag=1
+#ns.segregated_gravity_flag=1
+ns.denconst_interface_added=0.0 0.0 0.0 0.0 0.0 0.0
+ns.material_thickness=0.0 0.0 0.0 0.0
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
 # 12,13,14   23,24  3,4 
 # XYZ
-#surface tension algorithm treats liquid and ice as just one liquid:
+#surface tension algorithm treats melt and ice as just one liquid if
+#tension_melt_ice=0.0:
 #Lyu, S., Wang, K., Zhang, Z., Pedrono, A., Sun, C., & 
 #Legendre, D. (2021). A hybrid VOF-IBM method for the simulation of 
 #freezing liquid films and freezing drops. Journal of Computational 
 #Physics, 432, 110160.
-ns.tension=72.8 0.0 72.8 0.0 119.6 72.8   
+#ns.tension=72.8 0.0 72.8 0.0 119.6 72.8   
+#make tension_air_ice=tension_melt_ice for "default" angle at melt, air,
+#ice junction.
+#melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
+ns.tension=72.8 72.8 72.8 72.8 72.8 72.8   
 # sin(theta_water)/sigma_ice_air = sin(theta_air)/sigma_water_ice = 
 # sin(theta_ice)/sigma_water_air
 # sin(theta_water)/26400=sin(theta_air)/6800=sin(theta_ice)/20000
@@ -234,6 +245,7 @@ ns.sum_interval   = 1        # timesteps between computing mass
 
 # initial ice block on heated substrate.
 # probtype=414
+# MITSUHIRO_MELTING.F90
 ns.axis_dir=0   
 ns.vorterr=0.0 0.0 0.0 0.0
 ns.rgasinlet=1.57
@@ -276,36 +288,34 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 # D units: cm^2/s
 # EVAPORATION or NO EVAPORATION
 # liquid, gas, ice, substrate
-ns.speciesviscconst=0.282 0.282 0.0 0.0
+ns.speciesviscconst=0.282 0.282 0.0 0.0 0.0 0.0 0.0 0.0
 #4.24 percent when dew point is 30 degrees celcius
 #https://www.tis-gdv.de/tis_e/misc/klima-htm/
 #https://www.ready.noaa.gov/READYmoistcal.php 
 #initial vapor mass fraction.
 #EVAPORATION or NO EVAPORATION
-ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 # species 1: 1..num_materials
+ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 1.0 1.0 1.0 1.0
+ns.speciesreactionrate=0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.rigid_fraction_id=0 0 2 0
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
-ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
+ns.species_molar_mass=18.02 18.02 # this is vapor molar mass=liquid molar mass
 # order to have a reduction factor per step
 # of about 50 percent in the difference
 # between the ice velocity at the triple point and the associated ice
 # rigid body motion
 # ice is a very viscous fluid 
-ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
+ns.viscconst=1.0 1.0 10.0 100.0 # extra viscous: remove parasitic currents
+#ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
 # ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
+ns.uncoupled_viscosity=1 # div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.elastic_time=0.0 0.0 0.0 0.0
 ns.denconst=1.0 0.001 0.934 8.96
-# 0 fluid, tessellating (default)
-# 1 prescribed rigid solid, non-tessellating (PROB.F90)
-# 2 prescribed rigid solid, non-tessellating (sci_clsvof.F90)
-# 3 FSI ice,tessellating
-# 4 FSI, non-tessellating link w/Kourosh Shoele
-# 5 FSI rigid solid, tessellating (PROB.F90)
-# 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
-# 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
-ns.FSI_flag=0 0 3 1  # ice is a very viscous fluid
+#FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
+#FSI_ICE_PROBF90=3
+ns.FSI_flag=0 0 3 1 
 ns.recalesce_flag=0 0 0 0
 # remember saturation temp is 273 and we scale
 # by Delta T=T_m - T_c
@@ -350,6 +360,7 @@ ns.radblob=0.6 #side length of ice block
 
 ns.denfact=1.0
 ns.velfact=0.0
+# MITSUHIRO_MELTING.F90
 ns.probtype=414
 
 #ns.mem_debug = 1
@@ -374,6 +385,10 @@ ns.lo_bc          = 3 5  # RZ
 ns.hi_bc          = 3 2  # RZ
 ns.species_lo_bc  = 3 5  # RZ
 ns.species_hi_bc  = 3 2  # RZ
+ns.viscosity_lo_bc = 3 5
+ns.viscosity_hi_bc = 5 5
+ns.temperature_lo_bc=3 5
+ns.temperature_hi_bc=3 2
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
