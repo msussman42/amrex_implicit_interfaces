@@ -337,8 +337,6 @@ implicit none
 !   fort_growth_angle_primary_mat
 ! added July 7,
 !   fort_angular_velocity
-! added October 28,
-!   fort_stiff_material
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1

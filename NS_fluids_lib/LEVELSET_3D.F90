@@ -12040,21 +12040,7 @@ stop
         enddo
         call get_primary_material(LStest,im)
 
-        if ((fort_stiff_material(im).eq.1).or. &
-            (near_wall.eq.1).or. &
-            (LStest(im).le.DXMAXLS).or. &
-            (level.lt.finest_level)) then
-         use_conservation_form_velocity=0 !nonconservative, staggared grid.
-        else if ((fort_stiff_material(im).eq.0).and. &
-                 (near_wall.eq.0).and. &
-                 (LStest(im).ge.DXMAXLS).and. &
-                 (level.eq.finest_level)) then
-!        use_conservation_form_velocity=1
-         use_conservation_form_velocity=0 !conservative and diffusive!
-        else
-         print *,"fort_stiff_material invalid"
-         stop
-        endif
+        use_conservation_form_velocity=0 !nonconservative, staggared grid.
 
         is_rigid_near=0
         do im=1,num_materials
@@ -12791,10 +12777,9 @@ stop
 ! operation_flag=8  reserved for coupling terms in fort_crossterm
 ! OP_U_COMP_CELL_MAC_TO_MAC (11)
 ! operation_flag=11 
-!   (i) unew^{f} in stiff_material non-solid regions
+!   (i) unew^{f} in non-solid regions
 !   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
-!   (iii) (unew^{c})^{c->f} (stiff_material=0) compressible regions.
-!   (iv) usolid in solid regions
+!   (iii) usolid in solid regions
 
       subroutine fort_cell_to_mac( &
        ncomp_mgoni, &
@@ -13083,7 +13068,6 @@ stop
       real(amrex_real) temperature_clamped
       integer is_clamped_face
       integer local_compressible
-      integer local_stiff
       integer in_the_bulk
 
       real(amrex_real) test_current_icefacecut
@@ -13558,7 +13542,6 @@ stop
          is_clamped_face=-1
 
          local_compressible=0
-         local_stiff=1
          in_the_bulk=1
          im_left=0
          im_right=0
@@ -13702,26 +13685,6 @@ stop
           if ((is_compressible_mat(im_left).eq.1).and. &
               (is_compressible_mat(im_right).eq.1)) then
            local_compressible=1
-           if ((level.eq.finest_level).and. &
-               (in_the_bulk.eq.1).and. &
-               (LSleft(im_left).gt.DXMAXLS).and. &
-               (LSright(im_right).gt.DXMAXLS).and. &
-               (im_left.eq.im_right).and. &
-               (fort_stiff_material(im_left).eq.0).and. &
-               (fort_stiff_material(im_right).eq.0)) then
-            local_stiff=0
-           else if ((level.lt.finest_level).or. &
-                    (in_the_bulk.eq.0).or. &
-                    (LSleft(im_left).le.DXMAXLS).or. &
-                    (LSright(im_right).le.DXMAXLS).or. &
-                    (im_left.ne.im_right).or. &
-                    (fort_stiff_material(im_left).eq.1).or. &
-                    (fort_stiff_material(im_right).eq.1)) then
-            ! do nothing
-           else
-            print *,"fort_stiff_material invalid"
-            stop
-           endif
           else if ((is_compressible_mat(im_left).eq.0).or. &
                    (is_compressible_mat(im_right).eq.0)) then
            local_compressible=0
@@ -14150,33 +14113,9 @@ stop
                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
                 else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
 
-                 if (local_stiff.eq.1) then
-
-                  velcomp=1
-                   !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
-                  primary_velmaterial=local_vel_MAC
-
-                 else if (local_stiff.eq.0) then
-
-                  if (local_compressible.eq.0) then
-                   print *,"local_compressible invalid: ",local_compressible
-                   print *,"local_stiff=",local_stiff
-                   stop
-                  else if (local_compressible.eq.1) then
-                   ! UMAC^{ADVECT}= 
-                   !   I_{CELL}^{MAC} (U_CELL^{ADVECT})
-                   velcomp=dir+1
-                   !"mgoni"=secondary_vel_data=CURRENT_CELL_VEL_MF; 
-                   primary_velmaterial=mgoni(D_DECL(ic,jc,kc),velcomp) 
-                  else
-                   print *,"local_compressible invalid:",local_compressible
-                   stop
-                  endif
-
-                 else
-                  print *,"local_stiff invalid"
-                  stop
-                 endif
+                 velcomp=1
+                  !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
+                 primary_velmaterial=local_vel_MAC
 
                 else
                  print *,"operation_flag invalid16"
