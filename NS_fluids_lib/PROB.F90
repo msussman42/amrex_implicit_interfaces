@@ -5168,7 +5168,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             call get_user_tension( &
              xpos,time,fort_tension,user_tension,def_thermal)
 
-              !The merge_levelset is for the algorithm described by:
+              ! "merge_levelset" is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
               ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
             if (user_tension(iten).eq.zero) then
@@ -5323,7 +5323,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             call get_user_tension( &
               xpos,time,fort_tension,user_tension,def_thermal)
 
-              !The merge_normal is for the algorithm described by:
+              ! "merge_normal" is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
               ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
             if (user_tension(iten).eq.zero) then
@@ -5483,7 +5483,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             call get_user_tension( &
               xpos,time,fort_tension,user_tension,def_thermal)
 
-              !The merge_vof code is for the algorithm described by:
+              ! "merge_vof" code is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
               ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
             if (user_tension(iten).eq.zero) then
