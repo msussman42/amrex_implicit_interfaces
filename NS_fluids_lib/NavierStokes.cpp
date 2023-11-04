@@ -22318,6 +22318,28 @@ NavierStokes::init_particle_container(int append_flag) {
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
+ if (level==0) {
+  if (append_flag==OP_PARTICLE_ASSIMILATE) {
+    //m_num_neighbor_cells=nneighbor=ncells=1
+   NBR_Particle_Container=new My_NBR_ParticleContainer(parent->GetParGDB(),1);
+   for (int ns=0;ns<num_species_var;ns++)
+    NBR_Particle_Container->AddRealComp(true);
+
+   int lev_min=0;
+   int lev_max=finest_level;
+   int nGrow_Redistribute=0;
+   bool local_copy=true; //do not redistribute inside of copyParticles
+   int local_redistribute=0;
+
+   NBR_Particle_Container->clearParticles();
+   NBR_Particle_Container->Redistribute();
+   NBR_Particle_Container->copyParticles(localPC,local_copy);
+   NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+     local_redistribute);
+   NBR_Particle_Container->fillNeighbors();
+  }
+ }
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(lsmf->boxArray().d_numPts());
@@ -22329,7 +22351,10 @@ NavierStokes::init_particle_container(int append_flag) {
  for (MFIter mfi(*lsmf,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
+
   const Box& tilegrid = mfi.tilebox();
+  Box tilegrid_grow(grow(tilegrid,1));
+
   const Box& fabgrid = grids[gridno];
   const int* tilelo=tilegrid.loVect();
   const int* tilehi=tilegrid.hiVect();
@@ -22347,10 +22372,10 @@ NavierStokes::init_particle_container(int append_flag) {
 
    // component 1: number of particles linked to the cell.
    // component 2: the link to the list of particles.
-  BaseFab<int> cell_particle_count(tilegrid,2);
+  BaseFab<int> cell_particle_count(tilegrid_grow,2);
   Array4<int> const& cell_particle_count_array=cell_particle_count.array();
-  const Dim3 lo3=amrex::lbound(tilegrid);
-  const Dim3 hi3=amrex::ubound(tilegrid);
+  const Dim3 lo3=amrex::lbound(tilegrid_grow);
+  const Dim3 hi3=amrex::ubound(tilegrid_grow);
   for (int n=0;n<2;++n) {
   for (int z=lo3.z;z<=hi3.z;++z) {
   for (int y=lo3.y;y<=hi3.y;++y) {
@@ -22615,6 +22640,13 @@ NavierStokes::init_particle_container(int append_flag) {
  delete lsmf;
  delete den;
  delete velmf;
+
+ if (level==finest_level) {
+  if (append_flag==OP_PARTICLE_ASSIMILATE) {
+   ns_level0.NBR_Particle_Container->clearNeighbors();
+   delete ns_level0.NBR_Particle_Container;
+  }
+ }
 
 }  // end subroutine init_particle_container()
 

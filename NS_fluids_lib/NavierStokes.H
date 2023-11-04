@@ -1537,6 +1537,11 @@ protected:
     Array<int,MAX_NUM_LOCAL_MF> localMF_grow;
     Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
+    using My_NBR_ParticleContainer =
+      NeighborParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+
+    My_NBR_ParticleContainer* NBR_Particle_Container;
+
      // value_color = sum_{i in omega_color} 1
     static Vector<Real> ones_sum_global;
      // for each given color, singular_patch_flag=
