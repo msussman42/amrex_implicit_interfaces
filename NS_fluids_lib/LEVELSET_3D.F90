@@ -19254,6 +19254,7 @@ stop
       integer temp_id
       integer local_mask
       real(amrex_real) dist_nbr
+      real(amrex_real) DXMAXLS
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out_LS
@@ -19317,6 +19318,8 @@ stop
        stop
       endif
 
+      call get_dxmaxLS(dx,bfact,DXMAXLS)
+
       accum_PARM%append_flag=append_flag
 
       do dir=1,SDIM
@@ -19331,6 +19334,7 @@ stop
       accum_PARM%level=level
       accum_PARM%finest_level=finest_level
 
+       ! nsubdivide will be modified on a cell-by-cell basis.
       accum_PARM%nsubdivide=particle_nsubdivide_bulk
 
       particlesptr=>particles
@@ -19342,6 +19346,7 @@ stop
       accum_PARM%N_real_comp=N_real_comp
 
       if (isweep.eq.0) then
+        ! particles exist
        if (append_flag.eq.1) then
         call count_particles( &
          accum_PARM, &
@@ -19349,6 +19354,7 @@ stop
          cell_particle_count_ptr, &
          particle_link_data, &
          Np)
+        ! initialize particles for the first time.
        else if (append_flag.eq.0) then
         ! do nothing
        else
@@ -19368,16 +19374,6 @@ stop
        !    cell and previous Eulerian data.
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
-
-      sublo(3)=0
-      subhi(3)=0
-      do dir=1,SDIM
-       sublo(dir)=0
-       subhi(dir)=particle_nsubdivide_bulk-1
-      enddo
-      allocate(sub_counter(sublo(1):subhi(1), &
-              sublo(2):subhi(2), &
-              sublo(3):subhi(3)))
 
       if (isweep.eq.0) then
        Np_append=0
@@ -19407,6 +19403,36 @@ stop
 
        local_mask=NINT(mfiner(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
+
+        do dir=1,num_materials
+         LS_sub(dir)=lsfab_ptr(D_DECL(i,j,k),dir)
+        enddo
+        call get_primary_material(LS_sub,im_primary_sub)
+        if ((im_primary_sub.ge.1).and. &
+            (im_primary_sub.le.num_materials)) then
+         if (abs(LS_sub(im_primary_sub)).le.DXMAXLS) then
+          accum_PARM%nsubdivide=particle_nsubdivide_narrow
+         else if (abs(LS_sub(im_primary_sub)).gt.DXMAXLS) then
+          accum_PARM%nsubdivide=particle_nsubdivide_bulk
+         else
+          print *,"LS_sub is NaN"
+          stop
+         endif
+        else
+         print *,"im_primary_sub invalid"
+         stop
+        endif
+
+        sublo(3)=0
+        subhi(3)=0
+        do dir=1,SDIM
+         sublo(dir)=0
+         subhi(dir)=accum_PARM%nsubdivide-1
+        enddo
+        allocate(sub_counter( &
+           sublo(1):subhi(1), &
+           sublo(2):subhi(2), &
+           sublo(3):subhi(3)))
 
         do isub=sublo(1),subhi(1)
         do jsub=sublo(2),subhi(2)
@@ -19703,6 +19729,8 @@ stop
         endif
 
         deallocate(sub_particle_data)
+
+        deallocate(sub_counter)
 
        else if (local_mask.eq.0) then
         ! do nothing
