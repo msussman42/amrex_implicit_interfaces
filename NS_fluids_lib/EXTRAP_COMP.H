@@ -340,6 +340,13 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 #define OP_FSI_MAKE_SIGN 3
 #define OP_FSI_LAG_STRESS 4
 
+#define OP_PARTICLE_INIT 0
+#define OP_PARTICLE_ADD 1
+#define OP_PARTICLE_UPDATE_BUOYANCY 2
+#define OP_PARTICLE_UPDATE 3
+#define OP_PARTICLE_UPDATE_LAST 3
+#define OP_PARTICLE_ASSIMILATE 4
+
 #define FSIcontain_num_solids 0
 #define FSIcontain_num_scalars 1
 #define FSIcontain_max_num_nodes 2
