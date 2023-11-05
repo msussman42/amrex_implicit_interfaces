@@ -7027,9 +7027,6 @@ void NavierStokes::output_triangles() {
 
 #ifdef AMREX_PARTICLES
 
-  using My_ParticleContainer =
-   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
   NavierStokes& ns_level0=getLevel(0);
   My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
