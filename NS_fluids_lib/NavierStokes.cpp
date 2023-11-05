@@ -9271,8 +9271,6 @@ void NavierStokes::post_restart() {
 
 #ifdef AMREX_PARTICLES
 
-   using My_ParticleContainer =
-     AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
    AmrLevel0_new_dataPC[i] = std::make_unique<My_ParticleContainer>(parent);
     
    for (int ns=0;ns<num_species_var;ns++)
@@ -9674,8 +9672,6 @@ NavierStokes::initData () {
  int lev_min=0;
  int lev_max=level;
 
- using My_ParticleContainer =
-     AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
  int nGrow_Redistribute=0;
  int local_Redistribute=0; //redistribute "from scratch"
@@ -9925,9 +9921,6 @@ NavierStokes::init(
  bool local_copy=true; //do not redistribute inside of copyParticles
  int local_redistribute=0;
 
- using My_ParticleContainer =
-    AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
   // if level==0, we must copy from the old Amr_level (level==0) to the
   // new Amr_level prior to deleting the old level==0 structure.
  if (level==0) {
@@ -10100,9 +10093,6 @@ NavierStokes::init(
  } else
   amrex::Error("level invalid");
    
- using My_ParticleContainer =
-    AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
 
@@ -21305,8 +21295,6 @@ void NavierStokes::post_regrid (int lbase,
   int nGrow_Redistribute=0;
   int local_Redistribute=0;
 
-  using My_ParticleContainer =
-     AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
   My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
@@ -22277,6 +22265,129 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 // 1. post_init_state() and
 // 2. nonlinear_advection()
 void
+NavierStokes::init_particle_containerALL(int append_flag) {
+
+ int max_level = parent->maxLevel();
+ int finest_level=parent->finestLevel();
+
+ if (finest_level<=max_level) {
+  // do nothing
+ } else
+  amrex::Error("max_level invalid");
+
+ if (slab_step==ns_time_order-1) {
+  // do nothing
+ } else
+  amrex::Error("expecting slab_step==ns_time_order-1");
+
+ if (level==0) {
+  // do nothing
+ } else 
+  amrex::Error("expecting level==0 init_particle_containerALL");
+
+ int num_neighbors=1;
+ if (append_flag==OP_PARTICLE_INIT) {
+  num_neighbors=0;
+ } else if (append_flag==OP_PARTICLE_ADD) {
+  num_neighbors=0;
+ } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
+  num_neighbors=0;
+ } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
+  num_neighbors=0;
+ } else if (append_flag==OP_PARTICLE_UPDATE) {
+  num_neighbors=0;
+ } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
+  num_neighbors=0;
+ } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
+  num_neighbors=1;
+ } else
+  amrex::Error("append_flag invalid");
+
+ My_ParticleContainer& localPC=newDataPC(slab_step+1);
+
+  //m_num_neighbor_cells=nneighbor=ncells=num_neighbors
+ NBR_Particle_Container=
+  new My_NBR_ParticleContainer(parent->GetParGDB(),num_neighbors);
+ for (int ns=0;ns<num_species_var;ns++)
+  NBR_Particle_Container->AddRealComp(true);
+
+ int lev_min=0;
+ int lev_max=finest_level;
+ int nGrow_Redistribute=0;
+ bool local_copy=true; //do not redistribute inside of copyParticles
+ int local_redistribute=0;
+
+ NBR_Particle_Container->clearParticles();
+ NBR_Particle_Container->Redistribute();
+ NBR_Particle_Container->copyParticles(localPC,local_copy);
+ NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_redistribute);
+ NBR_Particle_Container->fillNeighbors();
+
+ local_particle_container=new My_ParticleContainer(parent);
+ for (int ns=0;ns<num_species_var;ns++)
+  local_particle_container->AddRealComp(true);
+
+ local_particle_container->clearParticles();
+ local_particle_container->Redistribute();
+ local_particle_container->copyParticles(localPC,local_copy);
+ local_particle_container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_redistribute);
+
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.init_particle_container(append_flag);
+ }
+
+ if (append_flag==OP_PARTICLE_INIT) {
+  //do nothing
+ } else if (append_flag==OP_PARTICLE_ADD) {
+  //do nothing
+ } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
+  //do nothing
+ } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
+  save_particle_container=new My_ParticleContainer(parent);
+  for (int ns=0;ns<num_species_var;ns++)
+   save_particle_container->AddRealComp(true);
+  save_particle_container->clearParticles();
+  save_particle_container->Redistribute();
+  save_particle_container->copyParticles(*local_particle_container,local_copy);
+  save_particle_container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_redistribute);
+ } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
+  save_particle_container->copyParticles(*local_particle_container,local_copy);
+ } else if (append_flag==OP_PARTICLE_UPDATE) {
+  save_particle_container->copyParticles(*local_particle_container,local_copy);
+ } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
+  delete save_particle_container;
+ } else {
+  amrex::Error("append_flag invalid");
+ }
+
+ NBR_Particle_Container->clearNeighbors();
+ delete NBR_Particle_Container;
+ delete local_particle_container;
+
+ if (append_flag==OP_PARTICLE_ASSIMILATE) {
+  // velocity
+  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,SPECTRAL_ORDER_AVGDOWN);
+  // "state" (all materials)
+  avgDownALL(State_Type,STATECOMP_STATES,num_state_material*num_materials,
+     SPECTRAL_ORDER_AVGDOWN);
+  for (int ilev=finest_level-1;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.avgDownMacState(LOW_ORDER_AVGDOWN);
+  }
+ } else if ((append_flag>=OP_PARTICLE_INIT)&&
+	    (append_flag<=OP_PARTICLE_UPDATE_LAST)) {
+  //do nothing
+ } else {
+  amrex::Error("append_flag invalid");
+ }
+
+} // end subroutine init_particle_containerALL
+ 
+void
 NavierStokes::init_particle_container(int append_flag) {
 
  std::string local_caller_string="init_particle_container";
@@ -22311,34 +22422,43 @@ NavierStokes::init_particle_container(int append_flag) {
  MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
  MultiFab* den=getStateDen(1,cur_time_slab);
  MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
+ MultiFab* velmac[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   //Umac_Type
+  velmac[dir]=getStateMAC(0,dir,cur_time_slab);
+ }
 
- using My_ParticleContainer =
-   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+ MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+ int ncomp_state=S_new.nComp();
+ if (ncomp_state!=STATECOMP_STATES+
+     num_materials*(num_state_material+ngeom_raw)+1)
+  amrex::Error("ncomp_state invalid");
+
+ MultiFab* umac_new[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  umac_new[dir]=&get_new_data(Umac_Type+dir,slab_step+1);
+ }
 
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
- if (level==0) {
-  if (append_flag==OP_PARTICLE_ASSIMILATE) {
-    //m_num_neighbor_cells=nneighbor=ncells=1
-   NBR_Particle_Container=new My_NBR_ParticleContainer(parent->GetParGDB(),1);
-   for (int ns=0;ns<num_species_var;ns++)
-    NBR_Particle_Container->AddRealComp(true);
-
-   int lev_min=0;
-   int lev_max=finest_level;
-   int nGrow_Redistribute=0;
-   bool local_copy=true; //do not redistribute inside of copyParticles
-   int local_redistribute=0;
-
-   NBR_Particle_Container->clearParticles();
-   NBR_Particle_Container->Redistribute();
-   NBR_Particle_Container->copyParticles(localPC,local_copy);
-   NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_redistribute);
-   NBR_Particle_Container->fillNeighbors();
-  }
- }
+ My_ParticleContainer* save_container=nullptr;
+ if (append_flag==OP_PARTICLE_INIT) {
+  save_container=local_particle_container;
+ } else if (append_flag==OP_PARTICLE_ADD) {
+  save_container=local_particle_container;
+ } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
+  save_container=save_particle_container;
+ } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
+  save_container=local_particle_container;
+ } else if (append_flag==OP_PARTICLE_UPDATE) {
+  save_container=save_particle_container;
+ } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
+  save_container=save_particle_container;
+ } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
+  save_container=local_particle_container;
+ } else
+  amrex::Error("append_flag invalid");
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -22369,6 +22489,14 @@ NavierStokes::init_particle_container(int append_flag) {
   FArrayBox& lsfab=(*lsmf)[mfi];
   FArrayBox& denfab=(*den)[mfi];
   FArrayBox& velfab=(*velmf)[mfi];
+  FArrayBox& xvelfab=(*velmac[0])[mfi];
+  FArrayBox& yvelfab=(*velmac[1])[mfi];
+  FArrayBox& zvelfab=(*velmac[AMREX_SPACEDIM-1])[mfi];
+
+  FArrayBox& snewfab=S_new[mfi];
+  FArrayBox& xnewfab=(*umac_new[0])[mfi];
+  FArrayBox& ynewfab=(*umac_new[1])[mfi];
+  FArrayBox& znewfab=(*umac_new[AMREX_SPACEDIM-1])[mfi];
 
    // component 1: number of particles linked to the cell.
    // component 2: the link to the list of particles.
@@ -22459,13 +22587,30 @@ NavierStokes::init_particle_container(int append_flag) {
   } else 
    amrex::Error("k invalid");
 
+  auto& NBR_particles_grid_tile = NBR_Particle_Container->GetParticles(level)
+    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& NBR_particles_AoS = NBR_particles_grid_tile.GetArrayOfStructs();
+  unsigned int NBR_Np=NBR_particles_AoS.size();
+
+  AMREX_ALWAYS_ASSERT(Np<=NBR_Np);
+
+  auto& save_particles_grid_tile = save_particle_container->GetParticles(level)
+    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& save_particles_AoS = save_particles_grid_tile.GetArrayOfStructs();
+  AMREX_ALWAYS_ASSERT(Np==save_particles_AoS.size());
+
+  auto& local_particles_grid_tile=local_particle_container->GetParticles(level)
+    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+  auto& local_particles_AoS = local_particles_grid_tile.GetArrayOfStructs();
+  AMREX_ALWAYS_ASSERT(Np==local_particles_AoS.size());
+
    // The link index will start at 1.
   Vector< int > particle_link_data;
    // i_particle_link_1,i1,j1,k1,   (child link, parent link)
    // i_particle_link_2,i2,j2,k2,  ...
-  particle_link_data.resize(Np*(1+AMREX_SPACEDIM));
+  particle_link_data.resize(NBR_Np*(1+AMREX_SPACEDIM));
 
-  for (unsigned int i_link=0;i_link<Np*(1+AMREX_SPACEDIM);i_link++) {
+  for (unsigned int i_link=0;i_link<NBR_Np*(1+AMREX_SPACEDIM);i_link++) {
    particle_link_data[i_link]=0;
   }
 
@@ -22509,8 +22654,13 @@ NavierStokes::init_particle_container(int append_flag) {
      &finest_level,
      &cur_time_slab,
      xlo,dx,
+     &ncomp_state,
      particles_AoS.data(), // existing particles
+     NBR_particles_AoS.data(), 
+     save_particles_AoS.data(), 
+     local_particles_AoS.data(), 
      Np,  // pass by value
+     NBR_Np,  // pass by value
      real_compALL.dataPtr(),
      N_real_comp,  //pass by value
      new_particle_data.dataPtr(), // size is "new_Pdata_size"
@@ -22530,6 +22680,13 @@ NavierStokes::init_particle_container(int append_flag) {
      velfab.dataPtr(),
      ARLIM(velfab.loVect()),
      ARLIM(velfab.hiVect()),
+     xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
+     yvelfab.dataPtr(),ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
+     zvelfab.dataPtr(),ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
+     snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
+     xnewfab.dataPtr(),ARLIM(xnewfab.loVect()),ARLIM(xnewfab.hiVect()),
+     ynewfab.dataPtr(),ARLIM(ynewfab.loVect()),ARLIM(ynewfab.hiVect()),
+     znewfab.dataPtr(),ARLIM(znewfab.loVect()),ARLIM(znewfab.hiVect()),
      mfinerfab.dataPtr(),
      ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()));
     
@@ -22548,77 +22705,73 @@ NavierStokes::init_particle_container(int append_flag) {
     amrex::Error("particle_delete_flag[i_delete] invalid");
   }
 
-  if (Np_delete<=Np) {
-   // do nothing
-  } else
-   amrex::Error("Np_delete invalid");
+  AMREX_ALWAYS_ASSERT(Np_delete<=Np);
 
-  Vector< My_ParticleContainer::ParticleType > mirrorPC_AoS;
-  unsigned int Np_mirror_AoS=Np-Np_delete+Np_append;
-  mirrorPC_AoS.resize(Np_mirror_AoS);
+  if ((append_flag==OP_PARTICLE_INIT)||
+      (append_flag==OP_PARTICLE_ADD)) {
 
-  int N_real_comp_mirror=num_species_var*Np_mirror_AoS;
-  Vector<Real> mirror_real_compALL(N_real_comp_mirror);
+   Vector< My_ParticleContainer::ParticleType > mirrorPC_AoS;
+   unsigned int Np_mirror_AoS=Np-Np_delete+Np_append;
+   mirrorPC_AoS.resize(Np_mirror_AoS);
+
+   int N_real_comp_mirror=num_species_var*Np_mirror_AoS;
+   Vector<Real> mirror_real_compALL(N_real_comp_mirror);
 
    //save the existing particle data to:
    //1. mirrorPC_AoS
    //2. mirror_real_compALL
-  unsigned int i_mirror=0;
-  for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
-   if (particle_delete_flag[i_delete]==1) {
-    // do nothing
-   } else if (particle_delete_flag[i_delete]==0) {
-    mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
+   unsigned int i_mirror=0;
+   for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
+    if (particle_delete_flag[i_delete]==1) {
+     // do nothing
+    } else if (particle_delete_flag[i_delete]==0) {
+     mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
+     for (int dir=0;dir<num_species_var;dir++) {
+      int k_dest=dir*Np_mirror_AoS+i_mirror;
+      int k_source=dir*Np+i_delete;
+      mirror_real_compALL[k_dest]=real_compALL[k_source];
+     }
+     i_mirror++;
+    } else
+     amrex::Error("particle_delete_flag[i_delete] invalid");
+   } // for (unsigned int i_delete=0;i_delete<Np;i_delete++) 
+
+   AMREX_ALWAYS_ASSERT(i_mirror==Np-Np_delete);
+
+   for (int i_append=0;i_append<Np_append;i_append++) {
+
+    My_ParticleContainer::ParticleType p;
+    p.id() = My_ParticleContainer::ParticleType::NextID();
+ 
+    p.cpu() = ParallelDescriptor::MyProc();
+
+    int ibase=i_append*single_particle_size;
+    //pos(AMREX_SPACEDIM)
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     p.pos(dir) = new_particle_data[ibase+dir];
+    }
+    for (int dir=0;dir<N_EXTRA_REAL;dir++) {
+     p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
+    }
+    for (int dir=0;dir<N_EXTRA_INT;dir++) {
+     p.idata(dir) = 
+      (int) new_particle_data[ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir];
+    }
     for (int dir=0;dir<num_species_var;dir++) {
      int k_dest=dir*Np_mirror_AoS+i_mirror;
-     int k_source=dir*Np+i_delete;
-     mirror_real_compALL[k_dest]=real_compALL[k_source];
+     int k_source=ibase+AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+dir;
+     mirror_real_compALL[k_dest]=new_particle_data[k_source];
     }
+    mirrorPC_AoS[i_mirror]=p;
     i_mirror++;
-   } else
-    amrex::Error("particle_delete_flag[i_delete] invalid");
-  }
+   } // i_append=0..Np_append-1
 
-  if (i_mirror==Np-Np_delete) {
-   //do nothing
-  } else
-   amrex::Error("i_mirror invalid");
-
-  for (int i_append=0;i_append<Np_append;i_append++) {
-
-   My_ParticleContainer::ParticleType p;
-   p.id() = My_ParticleContainer::ParticleType::NextID();
-
-   p.cpu() = ParallelDescriptor::MyProc();
-
-   int ibase=i_append*single_particle_size;
-    //pos(AMREX_SPACEDIM)
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    p.pos(dir) = new_particle_data[ibase+dir];
-   }
-   for (int dir=0;dir<N_EXTRA_REAL;dir++) {
-    p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
-   }
-   for (int dir=0;dir<N_EXTRA_INT;dir++) {
-    p.idata(dir) = 
-     (int) new_particle_data[ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir];
-   }
-   for (int dir=0;dir<num_species_var;dir++) {
-    int k_dest=dir*Np_mirror_AoS+i_mirror;
-    int k_source=ibase+AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+dir;
-    mirror_real_compALL[k_dest]=new_particle_data[k_source];
-   }
-   mirrorPC_AoS[i_mirror]=p;
-   i_mirror++;
-  } // i_append=0..Np_append-1
-
-  if (i_mirror==Np_mirror_AoS) {
+   AMREX_ALWAYS_ASSERT(i_mirror==Np_mirror_AoS);
 
    particles_grid_tile.resize(0);
 
    for (int dir=0;dir<num_species_var;dir++) {
-    My_ParticleContainer::RealVector& 
-            real_comp=particles_SoA.GetRealData(dir);
+    My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
     real_comp.resize(0);
     for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
      int k_source=dir*Np_mirror_AoS+i_mirror;
@@ -22630,8 +22783,11 @@ NavierStokes::init_particle_container(int append_flag) {
     particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);
    }
 
+  } else if ((append_flag>=OP_PARTICLE_BOUSSINESQ)&&
+             (append_flag<=OP_PARTICLE_ASSIMILATE)) {
+   //do nothing
   } else
-   amrex::Error("i_mirror <> Np_mirror_AoS");
+   amrex::Error("append_flag invalid");
 
  } // mfi
 } // omp
@@ -22640,12 +22796,8 @@ NavierStokes::init_particle_container(int append_flag) {
  delete lsmf;
  delete den;
  delete velmf;
-
- if (level==finest_level) {
-  if (append_flag==OP_PARTICLE_ASSIMILATE) {
-   ns_level0.NBR_Particle_Container->clearNeighbors();
-   delete ns_level0.NBR_Particle_Container;
-  }
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  delete velmac[dir];
  }
 
 }  // end subroutine init_particle_container()
@@ -22698,13 +22850,7 @@ NavierStokes::post_init_state () {
 
 #ifdef AMREX_PARTICLES
 
- int append_flag=0;
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-  ns_level.init_particle_container(append_flag);
- }
- using My_ParticleContainer =
-   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+ init_particle_containerALL(OP_PARTICLE_INIT);
 
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);

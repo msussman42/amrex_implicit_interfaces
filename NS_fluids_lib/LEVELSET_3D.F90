@@ -18528,7 +18528,20 @@ stop
       integer :: ibase_new
       integer :: i_parent,j_parent,k_parent
 
-      local_ngrow=1
+      local_ngrow=0
+      if ((accum_PARM%append_flag.eq.OP_PARTICLE_INIT).or. &
+          (accum_PARM%append_flag.eq.OP_PARTICLE_ADD).or. &
+          (accum_PARM%append_flag.eq.OP_PARTICLE_BOUSSINESQ).or. &
+          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE).or. &
+          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
+          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+       !do nothing
+      else if (accum_PARM%append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+       local_ngrow=1
+      else
+       print *,"accum_PARM%append_flag invalid"
+       stop
+      endif
 
       do interior_ID=1,accum_PARM%Npart
 
@@ -18544,11 +18557,11 @@ stop
 
        interior_ok=1
        do dir=1,SDIM
-        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)).or. &
-            (cell_index(dir).gt.accum_PARM%tilehi(dir))) then
+        if ((cell_index(dir).lt.accum_PARM%tilelo(dir)-local_ngrow).or. &
+            (cell_index(dir).gt.accum_PARM%tilehi(dir)+local_ngrow)) then
          interior_ok=0
         endif
-       enddo
+       enddo !dir=1..sdim
        if (interior_ok.eq.1) then
 
         i=cell_index(1)
@@ -19128,8 +19141,13 @@ stop
         finest_level, &
         cur_time_slab, &
         xlo,dx, &
-        particles, & ! a list of particles in the elastic structure
+        ncomp_state, &
+        particles, & ! a list of particles 
+        NBR_particles, & ! a list of particles 
+        save_particles, & ! a list of particles 
+        local_particles, & ! a list of particles 
         Np, & !  Np = number of particles
+        NBR_Np, & 
         real_compALL, &
         N_real_comp, & ! pass by value
         new_particles, & ! size is "new_Pdata_size"
@@ -19142,6 +19160,13 @@ stop
         lsfab,DIMS(lsfab), &
         denfab,DIMS(denfab), &
         velfab,DIMS(velfab), &
+        xvelfab,DIMS(xvelfab), &
+        yvelfab,DIMS(yvelfab), &
+        zvelfab,DIMS(zvelfab), &
+        snewfab,DIMS(snewfab), &
+        xnewfab,DIMS(xnewfab), &
+        ynewfab,DIMS(ynewfab), &
+        znewfab,DIMS(znewfab), &
         mfiner,DIMS(mfiner)) &
       bind(c,name='fort_init_particle_container')
 
@@ -19167,9 +19192,15 @@ stop
       integer, INTENT(in) :: particle_max_per_nsubdivide
       real(amrex_real), INTENT(in)    :: cur_time_slab
       real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
+      integer, INTENT(in) :: ncomp_state
       integer, value, INTENT(in) :: Np ! pass by value
-      type(particle_t), INTENT(in), target :: particles(Np)
+      integer, value, INTENT(in) :: NBR_Np ! pass by value
+      type(particle_t), INTENT(inout), target :: particles(Np)
       type(particle_t), pointer :: particlesptr(:)
+      type(particle_t), INTENT(in), target :: NBR_particles(NBR_Np)
+      type(particle_t), pointer :: NBR_particlesptr(:)
+      type(particle_t), INTENT(in) :: save_particles(Np)
+      type(particle_t), INTENT(inout) :: local_particles(Np)
       integer, value, INTENT(in) :: N_real_comp ! pass by value
       real(amrex_real), INTENT(in), target :: real_compALL(N_real_comp)
       real(amrex_real), pointer :: real_compALLptr(:)
@@ -19179,13 +19210,20 @@ stop
 
        ! child link 1, parent link 1,
        ! child link 2, parent link 2, ...
-      integer, INTENT(inout) :: particle_link_data(Np*(1+SDIM))
+      integer, INTENT(inout) :: particle_link_data(NBR_Np*(1+SDIM))
       integer, INTENT(inout) :: particle_delete_flag(Np) ! 1=>delete
 
       integer, INTENT(in) :: DIMDEC(cell_particle_count)
       integer, INTENT(in) :: DIMDEC(lsfab)
       integer, INTENT(in) :: DIMDEC(denfab)
       integer, INTENT(in) :: DIMDEC(velfab)
+      integer, INTENT(in) :: DIMDEC(xvelfab)
+      integer, INTENT(in) :: DIMDEC(yvelfab)
+      integer, INTENT(in) :: DIMDEC(zvelfab)
+      integer, INTENT(in) :: DIMDEC(snewfab)
+      integer, INTENT(in) :: DIMDEC(xnewfab)
+      integer, INTENT(in) :: DIMDEC(ynewfab)
+      integer, INTENT(in) :: DIMDEC(znewfab)
       integer, INTENT(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
@@ -19209,6 +19247,28 @@ stop
 
       real(amrex_real), INTENT(in), target :: mfiner(DIMV(mfiner)) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: mfiner_ptr
+
+      real(amrex_real), INTENT(in), target :: xvelfab(DIMV(xvelfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: xvelfab_ptr
+
+      real(amrex_real), INTENT(in), target :: yvelfab(DIMV(yvelfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: yvelfab_ptr
+
+      real(amrex_real), INTENT(in), target :: zvelfab(DIMV(zvelfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: zvelfab_ptr
+
+      real(amrex_real), INTENT(out), target :: &
+          snewfab(DIMV(snewfab),ncomp_state) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: snewfab_ptr
+
+      real(amrex_real), INTENT(out), target :: xnewfab(DIMV(xnewfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: xnewfab_ptr
+
+      real(amrex_real), INTENT(out), target :: ynewfab(DIMV(ynewfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: ynewfab_ptr
+
+      real(amrex_real), INTENT(out), target :: znewfab(DIMV(znewfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: znewfab_ptr
 
       type(accum_parm_type_count) :: accum_PARM
    
@@ -19260,20 +19320,48 @@ stop
       type(interp_from_grid_out_parm_type) :: data_out_LS
       real(amrex_real), target, dimension(num_materials) :: data_interp_local_LS
 
+      if (ncomp_state.eq.STATE_NCOMP) then
+       !do nothing
+      else
+       print *,"ncomp_state invalid"
+       stop
+      endif
+
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
       denfab_ptr=>denfab
       velfab_ptr=>velfab
       lsfab_ptr=>lsfab
+      xvelfab_ptr=>xvelfab
+      yvelfab_ptr=>yvelfab
+      zvelfab_ptr=>zvelfab
+
+      snewfab_ptr=>snewfab
+      xnewfab_ptr=>xnewfab
+      ynewfab_ptr=>ynewfab
+      znewfab_ptr=>znewfab
 
       call checkbound_array(fablo,fabhi,denfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,velfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,snewfab_ptr,1,-1)
+
+      call checkbound_array1(fablo,fabhi,xvelfab_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,yvelfab_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,zvelfab_ptr,0,SDIM-1)
+
+      call checkbound_array1(fablo,fabhi,xnewfab_ptr,0,0)
+      call checkbound_array1(fablo,fabhi,ynewfab_ptr,0,1)
+      call checkbound_array1(fablo,fabhi,znewfab_ptr,0,SDIM-1)
 
       call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1)
 
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,0,-1)
+      if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+       call checkbound_array_INTEGER(tilelo,tilehi, &
+              cell_particle_count_ptr,1,-1)
+      endif
 
       if (cur_time_slab.ge.zero) then
        ! do nothing
@@ -19338,6 +19426,14 @@ stop
       accum_PARM%nsubdivide=particle_nsubdivide_bulk
 
       particlesptr=>particles
+      NBR_particlesptr=>NBR_particles
+
+      if (NBR_Np.ge.Np) then
+       !do nothing
+      else
+       print *,"NBR_Np invalid"
+       stop
+      endif
 
       accum_PARM%Npart=Np
 
@@ -19347,15 +19443,28 @@ stop
 
       if (isweep.eq.0) then
         ! particles exist
-       if (append_flag.eq.1) then
+       if ((append_flag.eq.OP_PARTICLE_ADD).or. &
+           (append_flag.eq.OP_PARTICLE_BOUSSINESQ).or. &
+           (append_flag.eq.OP_PARTICLE_UPDATE).or. &
+           (append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
+           (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
         call count_particles( &
          accum_PARM, &
          particlesptr, &
          cell_particle_count_ptr, &
          particle_link_data, &
          Np)
+       else if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+        accum_PARM%Npart=NBR_Np
+        call count_particles( &
+         accum_PARM, &
+         NBR_particlesptr, &
+         cell_particle_count_ptr, &
+         particle_link_data, &
+         NBR_Np)
+
         ! initialize particles for the first time.
-       else if (append_flag.eq.0) then
+       else if (append_flag.eq.OP_PARTICLE_INIT) then
         ! do nothing
        else
         print *,"append_flag invalid"

@@ -408,19 +408,12 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
 #ifdef AMREX_PARTICLES
 
- using My_ParticleContainer =
-     AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
   // first add particles if needed
  if (slab_step==ns_time_order-1) {
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   int append_flag=1;
-   ns_level.init_particle_container(append_flag);
-  }
+  init_particle_containerALL(OP_PARTICLE_ADD);
  } else if ((slab_step>=0)&&(slab_step<ns_time_order-1)) {
   //do nothing
  } else
@@ -505,7 +498,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
       local_truncate,local_caller_string);
 
      // velocity and pressure
-     // spectral_override==1 => order derived from "enable_spectral"
     avgDownALL(State_Type,STATECOMP_VEL,
        STATE_NCOMP_VEL+STATE_NCOMP_PRES,SPECTRAL_ORDER_AVGDOWN);
      // "state" (all materials)
@@ -521,7 +513,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
     for (int ilev=finest_level-1;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
-     // spectral_override==0 => always low order.
      ns_level.avgDownMacState(LOW_ORDER_AVGDOWN);
     }
 
@@ -1127,9 +1118,6 @@ Real NavierStokes::advance(Real time,Real dt) {
    int lev_max=-1;
    int nGrow_Redistribute=0;
    int local_Redistribute=0;
-
-   using My_ParticleContainer =
-     AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);

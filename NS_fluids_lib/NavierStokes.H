@@ -998,10 +998,12 @@ protected:
 
     void prescribe_solid_geometry(Real time,int renormalize_only);
 #ifdef AMREX_PARTICLES
+    using My_ParticleContainer =
+      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
+    void init_particle_containerALL(int append_flag);
     void init_particle_container(int append_flag);
-    void move_particles(
-      AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
-           const std::string& caller_string);
+    void move_particles(My_ParticleContainer& localPC,
+       const std::string& caller_string);
 #endif
 
     void truncate_VOF(Vector<Real>& delta_mass_all);
@@ -1537,10 +1539,17 @@ protected:
     Array<int,MAX_NUM_LOCAL_MF> localMF_grow;
     Array<MultiFab*,MAX_NUM_LOCAL_MF> localMF;
 
+#ifdef AMREX_PARTICLES
+
     using My_NBR_ParticleContainer =
       NeighborParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
 
     My_NBR_ParticleContainer* NBR_Particle_Container;
+
+    My_ParticleContainer* save_particle_container;
+    My_ParticleContainer* local_particle_container;
+
+#endif
 
      // value_color = sum_{i in omega_color} 1
     static Vector<Real> ones_sum_global;
