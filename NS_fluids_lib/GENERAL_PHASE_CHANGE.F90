@@ -220,6 +220,7 @@ if (probtype.eq.55) then
 
     ! dist>0 in the substrate
     ! ice_substrate_distance is declared in: GLOBALUTIL.F90
+    ! uses radblob2 (x direction tilt)  and if 3d, radblob3 (y direction tilt)
    call ice_substrate_distance(x(1),x(2),x(SDIM),dist)
     ! now make dist<0 in the substrate.
    dist=-dist
@@ -282,7 +283,7 @@ end subroutine GENERAL_PHASE_CHANGE_check_vel_rigid
 
 
 ! ice + water thickness = radblob
-! water thickness = radblob3  usually radblob3 << radlob (initial water
+! water thickness = radblob3 (2D) usually radblob3 << radlob (initial water
 ! is "seed" for starting the melting process)
 !   ---------
 !   | water |
@@ -306,6 +307,7 @@ real(amrex_real) :: ht_ice_lo,ht_ice_hi,ht_water_hi
 integer :: im
 integer :: im_solid_materialdist
 real(amrex_real) :: initial_time
+real(amrex_real) :: seed_thickness
 integer :: gravity_dir
 
   call fort_derive_gravity_dir(gravity_vector,gravity_dir)
@@ -460,16 +462,25 @@ integer :: gravity_dir
 
     if (radblob3.gt.zero) then
       ! negative on the inside of the square
-     call squaredist(x(1),x(2),xblob-radblob,xblob+radblob,yblob, &
-      yblob+radblob3,dist_liquid)
-     dist_liquid=-dist_liquid
+     if (SDIM.eq.2) then
+      call squaredist(x(1),x(2),xblob-radblob,xblob+radblob,yblob, &
+       yblob+radblob3,dist_liquid)
+      dist_liquid=-dist_liquid
+     else
+      print *,"expecting 2d"
+      stop
+     endif
     else if (radblob3.eq.zero) then
      if (SDIM.eq.2) then
       dist_liquid=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
-     else
+     else if (SDIM.eq.3) then
       dist_liquid=radblob- &
           sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
+     else
+      print *,"dimension bust"
+      stop
      endif
+
      if (radblob5.gt.zero) then
       if (SDIM.eq.2) then
        dist_liq2=radblob5-sqrt((x(1)-xblob5)**2+(x(2)-yblob5)**2)
@@ -593,14 +604,25 @@ integer :: gravity_dir
     ! material 1: water
     ! "drop_slope_dist" declared in GLOBALUTIL.F90
     ! in: materialdist_batch (initial angle=static angle)
-    ! radblob3 is the thickness of the underside of the droplet that
+    ! radblob3 (2D) is the thickness of the underside of the droplet that
     ! is already frozen
+    ! radblob4 (3D) is the thickness of the underside of the droplet that
+    ! is already frozen
+    if (SDIM.eq.2) then
+     seed_thickness=radblob3
+    else if (SDIM.eq.3) then
+     seed_thickness=radblob4
+    else
+     print *,"dimension bust"
+     stop
+    endif
+
     if (fort_tension_init(1).gt.zero) then
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
-      radblob3,dist_ice,dist_liquid)
+       seed_thickness,dist_ice,dist_liquid)
     else if (fort_tension_init(1).eq.zero) then
      ht_ice_lo=yblob
-     ht_ice_hi=yblob+radblob3
+     ht_ice_hi=yblob+seed_thickness
      ht_water_hi=radblob
      if (x(SDIM).lt.half*(ht_ice_lo+ht_ice_hi)) then
       dist_ice=x(SDIM)-ht_ice_lo
@@ -725,6 +747,14 @@ if (probtype.eq.55) then
   ! axis_dir=6,7 is boiling (e.g. Sato and Niceno)
  else if ((axis_dir.eq.6).or. & ! incompressible
           (axis_dir.eq.7)) then ! compressible
+
+  if (SDIM.eq.2) then
+   !do nothing
+  else
+   print *,"only 2D supported for now"
+   stop
+  endif
+ 
   if (yblob10.gt.zero) then
    if((x(2).ge.yblob2).and.(x(2).le.yblob10)) then
     ! Distance from substrate
