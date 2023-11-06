@@ -24,15 +24,15 @@ MOF_HOME = ..
 
 USE_CUDA = FALSE
 USE_ACC = FALSE
-USE_PARTICLES = TRUE
+USE_PARTICLES = FALSE
 #PRECISION = FLOAT
 PRECISION = DOUBLE
-DEBUG	  = TRUE
+DEBUG	  = FALSE
 USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 2
+DIM       = 3
 
 BL_NO_FORT = FALSE
 
@@ -81,8 +81,8 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = TRUE
-LINUX_DESKTOP = FALSE
+MAC_LAPTOP = FALSE
+LINUX_DESKTOP = TRUE
 HPC_GNU = FALSE
 
 ifeq ($(HPC_GNU),TRUE)
@@ -152,7 +152,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = FALSE
+USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE

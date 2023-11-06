@@ -9,13 +9,13 @@ stop_time = 4.0 # tau=1.2 tau_c=1.4  time=1.2 x 1.4 = 1.7 seconds
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
-geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
-geometry.prob_lo   =  0.0 0.0
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0 0.0
 # R=1 => corresponds to drop base radius at initial time.
 # R_dimensional=(1)(9.5D-3 meters)=9.5 mm=0.95 cm
-geometry.prob_hi=2.0 2.0  # centimeters
+geometry.prob_hi=2.0 2.0 2.0 # centimeters
 ns.slice_dir=1
-ns.xslice=0.0 0.0
+ns.xslice=0.0 0.0 0.0
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
 ns.truncate_volume_fractions=0 0 0 0
@@ -68,8 +68,8 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-amr.n_cell=128 128
-amr.max_level = 0
+amr.n_cell=32 32 32
+amr.max_level = 2
 # water, gas, ice, substrate
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
@@ -223,13 +223,15 @@ ns.xblob3=1683.4 #force ambient temperature condition on all walls except the
 ns.xblob=0.0  # center of water drop
 ns.yblob=0.125 # 4 * dxcoarse = 4 * 2 /64=1/8
 ns.zblob=0.0
-ns.xblob2=0.0 # center of surface of cold plate (xblob2,yblob2) (inclined)  
-ns.yblob2=0.125
-ns.zblob2=0.0
-ns.radblob2=0.0 # zero degrees incline (radians)
+ns.xblob2=0.0 #center: surface of cold plate (xblob2,yblob2,zblob2)(inclined)  
+ns.yblob2=0.0
+ns.zblob2=0.125
+ns.radblob2=0.0 # zero degrees incline (x-radians)
+ns.radblob3=0.0 # zero degrees incline (y-radians)
 # thickness of underside of droplet that is already frozen
+# (use ns.radblob3 in 2D)
 # 0.0625 = 0.125/2
-ns.radblob3=0.0625 #dimensionless 2*dxcoarse=4/64=1/16
+ns.radblob4=0.0625 #dimensionless 2*dxcoarse=4/64=1/16
 # volume of initial water+ice drop: volume=(1/2)  (4/3)pi r^3=
 # (1/2) (4/3)pi(6x10^{-1})^3=4 x 36 x pi x 10^{-3} = 0.452cm^3
 #ns.zblob4=0.25
@@ -257,17 +259,17 @@ ns.output_drop_distribution=1
 # 2=dirichlet at inflow and walls.
 # 3=dirichlet at inflow, outflow, and walls.
 ns.prescribe_temperature_outflow=0
-ns.lo_bc          = 3 2
-ns.hi_bc          = 3 2
+ns.lo_bc          = 3 3 2
+ns.hi_bc          = 3 3 2
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE SIDE EFFECTS OF PARASITIC CURRENTS:
 #Set the viscosity force boundary conditions to be no-slip at the outflow
 #walls (remark: normal velocity boundary condition for pressure gradient
 #force must still be "outflow" in order to allow for expansion of the
 #liquid during the freezing process)
-ns.viscosity_lo_bc = 3 5
-ns.viscosity_hi_bc = 5 5
-ns.temperature_lo_bc=3 1
-ns.temperature_hi_bc=1 1
+ns.viscosity_lo_bc = 3 3 5
+ns.viscosity_hi_bc = 5 5 5
+ns.temperature_lo_bc=3 3 1
+ns.temperature_hi_bc=1 1 1
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry

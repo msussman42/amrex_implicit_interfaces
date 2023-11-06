@@ -3819,6 +3819,7 @@ end subroutine dynamic_contact_angle
       real(amrex_real) ice_vertical
       integer im_solid_temperature
       real(amrex_real) z_shift
+      real(amrex_real) seed_thickness
 
       if ((time.ge.zero).and.(time.le.1.0D+20)) then
        ! do nothing
@@ -3874,7 +3875,10 @@ end subroutine dynamic_contact_angle
          print *,"init bot of water+ice block should coincide with substrate"
          stop
         endif
-        if (radblob3.ge.radblob) then
+        if ((radblob3.lt.radblob).and. &
+            (radblob3.ge.zero)) then
+         !do nothing
+        else
          print *,"already melted portion exceeds original ice dimensions"
          stop
         endif
@@ -3896,15 +3900,15 @@ end subroutine dynamic_contact_angle
           endif
            
            ! block of ice melting on substrate
-          if (z_shift.ge.yblob2) then ! above the substrate
+          if (z_shift.ge.substrate_height) then ! above the substrate
            temperature=get_user_temperature(time,bcflag,3) ! ice
           else if ((z_shift.ge.zero).and. &
-                   (z_shift.le.yblob2)) then
+                   (z_shift.le.substrate_height)) then
            temperature= &
             get_user_temperature(time,bcflag,im_solid_temperature)+ &
             (get_user_temperature(time,bcflag,3)- &
              get_user_temperature(time,bcflag,im_solid_temperature))* &
-            z_shift/yblob2 
+            z_shift/substrate_height 
           else if (z_shift.le.zero) then
            temperature= &
             get_user_temperature(time,bcflag,im_solid_temperature) !substrate
@@ -3921,18 +3925,19 @@ end subroutine dynamic_contact_angle
           print *,"im_solid_temperature invalid"
           stop
          endif
-          ! radblob3=thickness of underside of block already melted.
-         if (z_shift.ge.yblob2+radblob3) then
+          ! radblob3=thickness of underside of block already melted (2D).
+          ! 3d too?
+         if (z_shift.ge.substrate_height+radblob3) then
           temperature=get_user_temperature(time,bcflag,3) ! ice region
-         else if (z_shift.ge.yblob2) then
+         else if (z_shift.ge.substrate_height) then
           temperature=get_user_temperature(time,bcflag,3) ! water region
          else if ((z_shift.ge.zero).and. &
-                  (z_shift.le.yblob2)) then
+                  (z_shift.le.substrate_height)) then
           temperature= &
            get_user_temperature(time,bcflag,im_solid_temperature)+ &
            (get_user_temperature(time,bcflag,3)- &
             get_user_temperature(time,bcflag,im_solid_temperature))* &
-            z_shift/yblob2
+            z_shift/substrate_height
          else if (z_shift.le.zero) then
           ! substrate
           temperature=get_user_temperature(time,bcflag,im_solid_temperature) 
@@ -3944,16 +3949,35 @@ end subroutine dynamic_contact_angle
          print *,"bcflag invalid"
          stop
         endif
-       endif ! yblob2>0
+       endif ! substrate_height>0
 
        ! in: outside_temperature
       else if (probtype.eq.55) then
 
-       if (axis_dir.eq.5) then ! freezing: solid, ice, water, air
-         ! substrate: 0<y<yblob2
-        if (yblob2.gt.zero) then  
+       if (SDIM.eq.2) then
+        substrate_height=yblob2
+       else if (SDIM.eq.3) then 
+        substrate_height=zblob2
+       else
+        print *,"dimension bust"
+        stop
+       endif
 
-         if (zblob4.eq.yblob2) then !transition thermal layer
+       if (axis_dir.eq.5) then ! freezing: solid, ice, water, air
+
+        if (SDIM.eq.2) then
+         seed_thickness=radblob3
+        else if (SDIM.eq.3) then
+         seed_thickness=radblob4
+        else
+         print *,"dimension bust"
+         stop
+        endif
+
+         ! substrate: 0<y<substrate_height
+        if (substrate_height.gt.zero) then  
+
+         if (zblob4.eq.substrate_height) then !transition thermal layer
           ! do nothing
          else if (zblob4.eq.zero) then ! no transition, T=T_substrate
           ! do nothing
@@ -3977,19 +4001,19 @@ end subroutine dynamic_contact_angle
             print *,"num_materials invalid"
             stop
            endif
-           if (z_shift.ge.yblob2) then
+           if (z_shift.ge.substrate_height) then
             temperature=get_user_temperature(time,bcflag,3) ! ice
            else if ((z_shift.ge.zero).and. &
-                    (z_shift.le.yblob2)) then
+                    (z_shift.le.substrate_height)) then
 
             if (zblob4.eq.zero) then
              temperature=get_user_temperature(time,bcflag,im_solid_temperature)
-            else if (zblob4.eq.yblob2) then
+            else if (zblob4.eq.substrate_height) then
              temperature= &
               get_user_temperature(time,bcflag,im_solid_temperature)+ &
               (get_user_temperature(time,bcflag,3)- &
                get_user_temperature(time,bcflag,im_solid_temperature))* &
-              z_shift/yblob2 
+              z_shift/substrate_height 
             else
              print *,"zblob4 invalid"
              stop
@@ -4014,22 +4038,22 @@ end subroutine dynamic_contact_angle
            stop
           endif
            ! radblob3=thickness of underside of drop that is already
-           ! frozen.
-          if (z_shift.ge.yblob2+radblob3) then
+           ! frozen (2D).
+          if (z_shift.ge.substrate_height+seed_thickness) then
            temperature=get_user_temperature(time,bcflag,1) ! water
-          else if (z_shift.ge.yblob2) then
+          else if (z_shift.ge.substrate_height) then
            temperature=get_user_temperature(time,bcflag,3) ! ice
           else if ((z_shift.ge.zero).and. &
-                   (z_shift.le.yblob2)) then
+                   (z_shift.le.substrate_height)) then
 
            if (zblob4.eq.zero) then
             temperature=get_user_temperature(time,bcflag,im_solid_temperature)
-           else if (zblob4.eq.yblob2) then
+           else if (zblob4.eq.substrate_height) then
             temperature= &
              get_user_temperature(time,bcflag,im_solid_temperature)+ &
              (get_user_temperature(time,bcflag,3)- &
               get_user_temperature(time,bcflag,im_solid_temperature))* &
-             z_shift/yblob2
+             z_shift/substrate_height
            else
             print *,"zblob4 invalid"
             stop
@@ -4046,18 +4070,18 @@ end subroutine dynamic_contact_angle
           print *,"bcflag invalid"
           stop
          endif
-         ! substrate: 0<y<yblob2
-        else if (yblob2.eq.zero) then
+         ! substrate: 0<y<substrate_height
+        else if (substrate_height.eq.zero) then
          ! do nothing
         else
-         print *,"not expecting yblob2<0"
+         print *,"not expecting substrate_height<0"
          print *,"probtype,axis_dir,bcflag ",probtype,axis_dir,bcflag
          print *,"im=",im
          print *,"time=",time
          print *,"z_shift=",z_shift
-         print *,"yblob2=",yblob2
+         print *,"substrate_height=",substrate_height
          stop
-        endif ! yblob2>0
+        endif ! substrate_height>0
 
         ! boiling sites problem
         ! For Sato and Niceno problem:
@@ -4104,8 +4128,10 @@ end subroutine dynamic_contact_angle
           if (SDIM.eq.2) then
            z_shift=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
           else if (SDIM.eq.3) then
-           if (radblob3.ne.zero) then
-            print *,"radblob3.ne.zero is not supported"
+           if (radblob3.eq.zero) then
+            !do nothing
+           else
+            print *,"radblob3 tilt (3D) is not supported"
             stop
            endif
            z_shift=zblob2+(z-zblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
@@ -23590,7 +23616,9 @@ if (probtype.eq.55) then
     if (((SDIM.eq.3).and.(levelrz.eq.COORDSYS_CARTESIAN)).or. &
         ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_RZ))) then
      term1=two/three-cos_angle+(cos_angle**3)/three
-     if (term1.le.zero) then
+     if (term1.gt.zero) then
+      ! do nothing
+     else
       print *,"term1 invalid"
       stop
      endif
