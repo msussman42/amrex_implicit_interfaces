@@ -3837,7 +3837,7 @@ end subroutine dynamic_contact_angle
 
       if (SDIM.eq.2) then
        if (abs(z-y).gt.VOFTOL) then
-        print *,"expecting z=y in 2d routine outside_temperature"
+        print *,"expecting z=y in 2d routine outside_temperature: ",y,z
         stop
        endif
       endif
@@ -4115,16 +4115,11 @@ end subroutine dynamic_contact_angle
            print *,"parameters not supported"
            stop
           endif
-          z_shift=yblob2+(z-yblob2)*cos(radblob2)-x*sin(radblob2)
+          z_shift=substrate_height+ &
+                  (z-substrate_height)*cos(radblob2)-x*sin(radblob2)
          else if (levelrz.eq.COORDSYS_CARTESIAN) then
-          if (SDIM.eq.2) then
-           z_shift=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
-          else if (SDIM.eq.3) then
-           z_shift=zblob2+(z-zblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
-          else
-           print *,"dimension bust"
-           stop
-          endif
+          z_shift=substrate_height+ &
+                  (z-substrate_height)*cos(radblob2)-(x-xblob2)*sin(radblob2)
          else
           print *,"levelrz not supported"
           stop

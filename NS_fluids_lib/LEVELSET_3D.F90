@@ -19538,6 +19538,7 @@ stop
          sublo(dir)=0
          subhi(dir)=accum_PARM%nsubdivide-1
         enddo
+
         allocate(sub_counter( &
            sublo(1):subhi(1), &
            sublo(2):subhi(2), &
@@ -19867,8 +19868,6 @@ stop
        print *,"isweep invalid"
        stop
       endif
-
-      deallocate(sub_counter)
 
       return
       end subroutine fort_init_particle_container
