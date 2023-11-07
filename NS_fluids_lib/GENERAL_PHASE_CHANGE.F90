@@ -345,9 +345,11 @@ integer :: gravity_dir
    if (axis_dir.eq.3) then
 
     if (SDIM.eq.2) then
-     LS(1)=x(SDIM)-(zblob+radblob*cos(two*Pi*x(1)/xblob))
+     LS(1)=x(SDIM)- &
+           (zblob+radblob*cos(two*Pi*x(1)/xblob))
     else if (SDIM.eq.3) then
-     LS(1)=x(SDIM)-(zblob+radblob*cos(two*Pi*x(1)/xblob)*cos(two*Pi*x(2)/yblob))
+     LS(1)=x(SDIM)- &
+           (zblob+radblob*cos(two*Pi*x(1)/xblob)*cos(two*Pi*x(2)/yblob))
     else
      print *,"dimension bust"
      stop
@@ -478,7 +480,8 @@ integer :: gravity_dir
      endif
     else if (radblob3.eq.zero) then
      if (SDIM.eq.2) then
-      dist_liquid=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
+      dist_liquid=radblob- &
+          sqrt((x(1)-xblob)**2+(x(2)-yblob)**2)
      else if (SDIM.eq.3) then
       dist_liquid=radblob- &
           sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
@@ -489,7 +492,8 @@ integer :: gravity_dir
 
      if (radblob5.gt.zero) then
       if (SDIM.eq.2) then
-       dist_liq2=radblob5-sqrt((x(1)-xblob5)**2+(x(2)-yblob5)**2)
+       dist_liq2=radblob5- &
+         sqrt((x(1)-xblob5)**2+(x(2)-yblob5)**2)
       else
        dist_liq2=radblob5- &
          sqrt((x(1)-xblob5)**2+(x(2)-yblob5)**2+(x(SDIM)-zblob5)**2)
@@ -522,7 +526,8 @@ integer :: gravity_dir
 
     if (radblob6.gt.zero) then
      if (SDIM.eq.2) then
-      dist_liq2=radblob6-sqrt((x(1)-xblob6)**2+(x(2)-yblob6)**2)
+      dist_liq2=radblob6- &
+           sqrt((x(1)-xblob6)**2+(x(2)-yblob6)**2)
      else if (SDIM.eq.3) then
       dist_liq2=radblob6- &
            sqrt((x(1)-xblob6)**2+(x(2)-yblob6)**2+(x(SDIM)-zblob6)**2)
@@ -552,7 +557,13 @@ integer :: gravity_dir
       stop
      endif
 
-     LS(3)=radblob7-sqrt( (x(1)-xblob7)**2+(x(2)-yblob7)**2 )  ! pos. in drop
+     if (SDIM.eq.2) then
+      LS(3)=radblob7- &
+        sqrt( (x(1)-xblob7)**2+(x(2)-yblob7)**2 )  ! pos. in drop
+     else if (SDIM.eq.3) then
+      LS(3)=radblob7- &
+        sqrt( (x(1)-xblob7)**2+(x(2)-yblob7)**2+(x(SDIM)-zblob7)**2 ) 
+     endif
      dist_gas=-dist_liquid
      if (dist_gas.gt.-LS(3)) then
       dist_gas=-LS(3)
@@ -620,8 +631,17 @@ integer :: gravity_dir
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
        seed_thickness,dist_ice,dist_liquid)
     else if (fort_tension_init(1).eq.zero) then
-     ht_ice_lo=yblob
-     ht_ice_hi=yblob+seed_thickness
+
+     if (SDIM.eq.2) then
+      ht_ice_lo=yblob
+     else if (SDIM.eq.3) then
+      ht_ice_lo=zblob
+     else
+      print *,"dimension bust"
+      stop
+     endif
+
+     ht_ice_hi=ht_ice_lo+seed_thickness
      ht_water_hi=radblob
      if (x(SDIM).lt.half*(ht_ice_lo+ht_ice_hi)) then
       dist_ice=x(SDIM)-ht_ice_lo
