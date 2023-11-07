@@ -24,15 +24,15 @@ MOF_HOME = ..
 
 USE_CUDA = FALSE
 USE_ACC = FALSE
-USE_PARTICLES = FALSE
+USE_PARTICLES = TRUE
 #PRECISION = FLOAT
 PRECISION = DOUBLE
-DEBUG	  = FALSE
+DEBUG	  = TRUE
 USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 3
+DIM       = 2
 
 BL_NO_FORT = FALSE
 
@@ -81,35 +81,7 @@ CTML_FBC = FALSE
 #    Disable range checking on results of simplification of constant
 #    expressions during compilation.
 
-MAC_LAPTOP = FALSE
-LINUX_DESKTOP = TRUE
-HPC_GNU = FALSE
-
-ifeq ($(HPC_GNU),TRUE)
-
- COMP = gnu
-
-endif
-
-ifeq ($(LINUX_DESKTOP),TRUE)
-
- COMP = gnu
-
-endif
-
-ifeq ($(MAC_LAPTOP),TRUE)
-
- COMP = gnu
-
-# COMP = g++-8
-# FCOMP = gfortran-8
-# AMREX_CCOMP=g++-8
-# AMREX_FCOMP=gfortran-8
-# CXX = g++-8
-# CC = g++-8
-# FC = gfortran-8
-# F90 = gfortran-8
-endif
+COMP = gnu
 
 # total view:
 #  1. ssh -YX sussman@hpc-login.rcc.fsu.edu (same password as FSUID)
@@ -152,7 +124,7 @@ endif
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = TRUE
+USE_MPI = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE

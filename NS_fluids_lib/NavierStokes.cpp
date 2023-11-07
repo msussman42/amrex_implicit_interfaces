@@ -19484,6 +19484,7 @@ void NavierStokes::writeInterfaceReconstruction() {
 #ifdef AMREX_PARTICLES
 
   // fort_combine_particles is declared in: NAVIERSTOKES_3D.F90
+  // output to: ./PARCON_pos<nsteps>.tec
   fort_combine_particles(
    grids_per_level.dataPtr(),
    &finest_level,
@@ -22444,19 +22445,19 @@ NavierStokes::init_particle_container(int append_flag) {
 
  My_ParticleContainer* save_container=nullptr;
  if (append_flag==OP_PARTICLE_INIT) {
-  save_container=local_particle_container;
+  save_container=ns_level0.local_particle_container;
  } else if (append_flag==OP_PARTICLE_ADD) {
-  save_container=local_particle_container;
+  save_container=ns_level0.local_particle_container;
  } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
-  save_container=save_particle_container;
+  save_container=ns_level0.save_particle_container;
  } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
-  save_container=local_particle_container;
+  save_container=ns_level0.local_particle_container;
  } else if (append_flag==OP_PARTICLE_UPDATE) {
-  save_container=save_particle_container;
+  save_container=ns_level0.save_particle_container;
  } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
-  save_container=save_particle_container;
+  save_container=ns_level0.save_particle_container;
  } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
-  save_container=local_particle_container;
+  save_container=ns_level0.local_particle_container;
  } else
   amrex::Error("append_flag invalid");
 
@@ -22587,19 +22588,22 @@ NavierStokes::init_particle_container(int append_flag) {
   } else 
    amrex::Error("k invalid");
 
-  auto& NBR_particles_grid_tile = NBR_Particle_Container->GetParticles(level)
+  auto& NBR_particles_grid_tile = 
+   ns_level0.NBR_Particle_Container->GetParticles(level)
     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
   auto& NBR_particles_AoS = NBR_particles_grid_tile.GetArrayOfStructs();
   unsigned int NBR_Np=NBR_particles_AoS.size();
 
   AMREX_ALWAYS_ASSERT(Np<=NBR_Np);
 
-  auto& save_particles_grid_tile = save_particle_container->GetParticles(level)
+  auto& save_particles_grid_tile = 
+   save_container->GetParticles(level)
     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
   auto& save_particles_AoS = save_particles_grid_tile.GetArrayOfStructs();
   AMREX_ALWAYS_ASSERT(Np==save_particles_AoS.size());
 
-  auto& local_particles_grid_tile=local_particle_container->GetParticles(level)
+  auto& local_particles_grid_tile=
+   ns_level0.local_particle_container->GetParticles(level)
     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
   auto& local_particles_AoS = local_particles_grid_tile.GetArrayOfStructs();
   AMREX_ALWAYS_ASSERT(Np==local_particles_AoS.size());

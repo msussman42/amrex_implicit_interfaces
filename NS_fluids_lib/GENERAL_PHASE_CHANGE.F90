@@ -1180,17 +1180,16 @@ if ((istate.ge.1).and. &
   STATE=STATE_in
   STATE_merge=STATE
 
-   ! xlo or xhi
-  if (dir.eq.1) then
+   ! xlo or xhi  (or ylo or yhi in 3D)
+  if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
    if (istate.eq.1) then ! density
     ! do nothing 
    else if (istate.eq.2) then ! temperature
     ! bcflag=1 (calling from denBC - boundary conditions
     ! for density, temperature and species variables)
     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-    if ((dir.eq.1).and.(side.eq.2)) then !xhi, 2D or 3D
+    if (side.eq.2) then !xhi, 2D or 3D, yhi (3D)
      if (axis_dir.eq.5) then
-             FIX ME
       if (xblob3.gt.zero) then
        STATE=xblob3
       endif
@@ -1202,8 +1201,9 @@ if ((istate.ge.1).and. &
     stop
    endif
 
-   ! ylo
-  else if ((dir.eq.2).and.(side.eq.1).and.(SDIM.eq.2)) then
+   ! ylo in 2D and zlo in 3D
+  else if (((dir.eq.SDIM).and.(side.eq.1).and.(SDIM.eq.2)).or. &
+           ((dir.eq.SDIM).and.(side.eq.1).and.(SDIM.eq.3))) then
 
    ! prescribe_temperature_outflow=3 =>
    !  Dirichlet for inflow, outflow, wall; ylo states
@@ -1215,7 +1215,7 @@ if ((istate.ge.1).and. &
      stop
     endif
    
-     ! ylo
+     ! ylo (2D) or zlo (3D)
     if (istate.eq.1) then
      ! do nothing (density)
     else if (istate.eq.2) then
@@ -1245,8 +1245,9 @@ if ((istate.ge.1).and. &
 
    endif
 
-   ! yhi 2D
-  else if ((dir.eq.2).and.(side.eq.2).and.(SDIM.eq.2)) then
+   ! yhi 2D or zhi 3D
+  else if (((dir.eq.SDIM).and.(side.eq.2).and.(SDIM.eq.2)).or. &
+           ((dir.eq.SDIM).and.(side.eq.2).and.(SDIM.eq.3))) then
 
    if (istate.eq.1) then ! density
     ! do nothing
@@ -1263,45 +1264,9 @@ if ((istate.ge.1).and. &
     print *,"istate invalid"
     stop
    endif
-
-   ! zlo
-  else if ((dir.eq.3).and.(side.eq.1).and.(SDIM.eq.3)) then
-
-   if ((prescribe_temperature_outflow.eq.3).and. &
-       (axis_dir.eq.1)) then
-     
-    if (num_materials.lt.3) then
-     print *,"num_materials invalid probtype=55"
-     stop
-    endif
-  
-    if (istate.eq.1) then ! density
-     ! do nothing 
-    else if (istate.eq.2) then ! temperature
-     STATE=fort_tempconst(3)  ! ice temperature at zlo
-     STATE_merge=STATE
-    else
-     print *,"istate invalid"
-     stop
-    endif
-
-    ! freezing singularity or nucleate boiling problem: zlo
-   else if ((prescribe_temperature_outflow.eq.3).and. &
-            ((axis_dir.eq.5).or. &  ! freezing drop on substrate
-             (axis_dir.eq.6).or. &
-             (axis_dir.eq.7))) then ! compressible boiling
-
-    if (istate.eq.1) then ! density
-     ! do nothing 
-    else if (istate.eq.2) then ! temperature
-      ! bcflag=1 (calling from denBC)
-     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-     STATE_merge=STATE
-    else
-     print *,"istate invalid"
-     stop
-    endif
-   endif
+  else
+   print *,"dir or side invalid"
+   stop
   endif
  else
   print *,"expecting probtype ==55"

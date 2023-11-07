@@ -7090,6 +7090,8 @@ void NavierStokes::output_triangles() {
    amrex::Error("k invalid");
 
   // declared in: NAVIERSTOKES_3D.F90
+  // output to:
+  // ./temptecplot/tempPARCON_pos<level><gridno>
   fort_particle_grid(
    &tid_current,
    xlo,dx,
