@@ -7086,7 +7086,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         if (advbot.ne.zero) then
          vel(adv_dir)=advbot
-        else if ((xblob4.ne.zero).and.(xblob3.ne.zero)) then
+        else if ((xblob4.ne.zero).and. &
+                 (xblob3.ne.zero)) then
          tadv=time
          vel(adv_dir)= &
            two*Pi*xblob3*sin(two*Pi*tadv/xblob4)/xblob4
@@ -7130,7 +7131,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (probtype.eq.32) then  ! flow past moving cylinder
         if (advbot.ne.zero) then
          vel(adv_dir)=advbot
-        else if ((xblob4.ne.zero).and.(xblob3.ne.zero)) then
+        else if ((xblob4.ne.zero).and. &
+                 (xblob3.ne.zero)) then
          tadv=time
          vel(adv_dir)= &
            two*Pi*xblob3*sin(two*Pi*tadv/xblob4)/xblob4
@@ -7445,7 +7447,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         else if (axis_dir.eq.5) then ! squeeze geom, ylo
          veldir=2
-         if ((x.ge.xblob2).and.(x.le.xblob3)) then
+         if ((x.ge.xblob2).and. &
+             (x.le.xblob3)) then
           vel(veldir)=abs(vinletgas)  ! plug flow
          else
           vel(veldir)=zero
@@ -8303,7 +8306,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if ((xblob3.lt.radblob).or.(xblob3.ge.xblob2)) then
+      if ((xblob3.ge.radblob).and. &
+          (xblob3.le.xblob2)) then
+       !do nothing
+      else
        print *,"xblob3 out of range"
        stop
       endif 
