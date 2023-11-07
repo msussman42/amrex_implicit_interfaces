@@ -202,10 +202,13 @@ if (probtype.eq.55) then
    if (SDIM.eq.2) then
     dist=sqrt((x(1)-xblob2)*(x(1)-xblob2)/(radblob3**2)+ &
         (x(2)-yblob2)*(x(2)-yblob2)/(radblob4**2))-radblob5
-   else
+   else if (SDIM.eq.3) then
     dist=sqrt((x(1)-xblob2)*(x(1)-xblob2)/(radblob3**2)+ &
         (x(2)-yblob2)*(x(2)-yblob2)/(radblob4**2)+ &
         (x(SDIM)-zblob2)*(x(SDIM)-zblob2)/(radblob9**2))-radblob5
+   else
+    print *,"dimension bust"
+    stop
    endif
 
   else if ((axis_dir.eq.1).and.(nmat.eq.3)) then
@@ -497,7 +500,7 @@ integer :: gravity_dir
       endif
      endif 
     else
-     print *,"radblob3 invalid"
+     print *,"radblob3 invalid: ",radblob3
      stop
     endif
 
@@ -744,19 +747,23 @@ if (probtype.eq.55) then
  else if ((axis_dir.eq.6).or. & ! incompressible
           (axis_dir.eq.7)) then ! compressible
 
-  if (SDIM.eq.2) then
-   !do nothing
-  else
-   print *,"only 2D supported for now"
-   stop
-  endif
- 
   if (yblob10.gt.zero) then
-   if((x(2).ge.yblob2).and.(x(2).le.yblob10)) then
-    ! Distance from substrate
-    temp = x(2)-yblob2
-    VEL(1)=VEL(1)*(1.5d0*temp/yblob10 -0.5*(temp/yblob10)**3)
-   end if
+   if (SDIM.eq.2) then
+    if((x(SDIM).ge.yblob2).and.(x(SDIM).le.yblob10)) then
+     ! Distance from substrate
+     temp = x(SDIM)-yblob2
+     VEL(1)=VEL(1)*(1.5d0*temp/yblob10-half*(temp/yblob10)**3)
+    end if
+   else if (SDIM.eq.3) then
+    if((x(SDIM).ge.zblob2).and.(x(SDIM).le.yblob10)) then
+     ! Distance from substrate
+     temp = x(SDIM)-zblob2
+     VEL(1)=VEL(1)*(1.5d0*temp/yblob10-half*(temp/yblob10)**3)
+    endif
+   else
+    print *,"dimension bust"
+    stop
+   endif
   else if (yblob10.eq.zero) then
    VEL(1)=zero
   else
@@ -1047,8 +1054,15 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
 
  if ((veldir.eq.1).and.(dir.eq.1).and.(SDIM.eq.2)) then
   if ((yblob10.gt.zero).and.(axis_dir.eq.6)) then
-   if((xghost(2).ge.yblob2).and.(xghost(2).le.yblob10)) then
-    temp = xghost(2)-yblob2
+   if((xghost(SDIM).ge.yblob2).and.(xghost(SDIM).le.yblob10)) then
+    temp = xghost(SDIM)-yblob2
+    local_VEL(1)=local_VEL(1)*(1.5d0*temp/yblob10 - half*(temp/yblob10)**3)
+   end if
+  end if
+ else if ((veldir.eq.1).and.(dir.eq.1).and.(SDIM.eq.3)) then
+  if ((yblob10.gt.zero).and.(axis_dir.eq.6)) then
+   if((xghost(SDIM).ge.zblob2).and.(xghost(SDIM).le.yblob10)) then
+    temp = xghost(SDIM)-zblob2
     local_VEL(1)=local_VEL(1)*(1.5d0*temp/yblob10 - half*(temp/yblob10)**3)
    end if
   end if

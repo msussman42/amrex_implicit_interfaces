@@ -221,8 +221,8 @@ ns.initial_temperature=1683.4 1683.4 1453.0 1453.0
 ns.xblob3=1683.4 #force ambient temperature condition on all walls except the
                 #bottom wall (axis_dir=5)
 ns.xblob=0.0  # center of water drop
-ns.yblob=0.125 # 4 * dxcoarse = 4 * 2 /64=1/8
-ns.zblob=0.0
+ns.yblob=0.0
+ns.zblob=0.125 # 4 * dxcoarse = 4 * 2 /64=1/8
 ns.xblob2=0.0 #center: surface of cold plate (xblob2,yblob2,zblob2)(inclined)  
 ns.yblob2=0.0
 ns.zblob2=0.125
