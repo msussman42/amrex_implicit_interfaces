@@ -141,7 +141,6 @@ ns.xblob2=0.0 # center of surface of HOT plate (xblob2,yblob2) (inclined)
 ns.yblob2=0.1
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
-ns.radblob3=0.0
 ns.radblob=0.04 # radius of nucleated seed 
 ns.denfact=1.0
 ns.velfact=0.0

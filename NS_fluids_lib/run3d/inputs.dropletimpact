@@ -140,7 +140,6 @@ ns.xblob2=0.0
 ns.yblob2=0.0
 ns.zblob2=0.0123027  # thickness of substrate=1 coarse cell
 ns.radblob2=0.0  # 18 degrees in x direction
-ns.radblob3=0.0  # 0 degrees in y direction
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55

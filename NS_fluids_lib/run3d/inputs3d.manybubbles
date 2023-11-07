@@ -160,7 +160,6 @@ ns.xblob2=5.625e-3
 ns.yblob2=5.625e-3 
 ns.zblob2=2.34375e-4 # 2 * dxfine=2 * 1.5e-2/128=2 * 1.171875e-4 = 2.34375e-4
 ns.radblob2=0.0 # zero degrees incline (radians)
-ns.radblob3=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55

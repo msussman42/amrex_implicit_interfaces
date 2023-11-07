@@ -480,7 +480,6 @@ ns.yblob2=1.5625e-4 # 4 * dxcoarsest=4 * 5.0e-3/128
 
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
-ns.radblob3=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 # see subroutine GENERAL_PHASE_CHANGE_SUMINT in GENERAL_PHASE_CHANGE.F90

@@ -160,6 +160,7 @@ implicit none
 real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
 integer, INTENT(in) :: im
 real(amrex_real), INTENT(out) :: dist
+real(amrex_real) :: angle_x,angle_y
 integer :: nmat
 
 nmat=num_materials
@@ -220,8 +221,9 @@ if (probtype.eq.55) then
 
     ! dist>0 in the substrate
     ! ice_substrate_distance is declared in: GLOBALUTIL.F90
-    ! uses radblob2 (x direction tilt)  and if 3d, radblob3 (y direction tilt)
-   call ice_substrate_distance(x(1),x(2),x(SDIM),dist)
+   angle_x=radblob2
+   angle_y=zero
+   call ice_substrate_distance(x(1),x(2),x(SDIM),angle_x,angle_y,dist)
     ! now make dist<0 in the substrate.
    dist=-dist
 
@@ -308,6 +310,7 @@ integer :: im
 integer :: im_solid_materialdist
 real(amrex_real) :: initial_time
 real(amrex_real) :: seed_thickness
+real(amrex_real) :: angle_x,angle_y
 integer :: gravity_dir
 
   call fort_derive_gravity_dir(gravity_vector,gravity_dir)
@@ -564,7 +567,9 @@ integer :: gravity_dir
  
     ! positive in the "ice" or "substrate"
     ! materialdistbatch
-    call ice_substrate_distance(x(1),x(2),x(SDIM),distsolid)
+    angle_x=radblob2
+    angle_y=zero
+    call ice_substrate_distance(x(1),x(2),x(SDIM),angle_x,angle_y,distsolid)
 
     if (nmat.eq.4) then
      if (im_solid_materialdist.ne.nmat) then
@@ -604,18 +609,9 @@ integer :: gravity_dir
     ! material 1: water
     ! "drop_slope_dist" declared in GLOBALUTIL.F90
     ! in: materialdist_batch (initial angle=static angle)
-    ! radblob3 (2D) is the thickness of the underside of the droplet that
-    ! is already frozen
-    ! radblob4 (3D) is the thickness of the underside of the droplet that
-    ! is already frozen
-    if (SDIM.eq.2) then
-     seed_thickness=radblob3
-    else if (SDIM.eq.3) then
-     seed_thickness=radblob4
-    else
-     print *,"dimension bust"
-     stop
-    endif
+    ! radblob3 is the thickness of the underside of the droplet that
+    ! is already frozen.
+    seed_thickness=radblob3
 
     if (fort_tension_init(1).gt.zero) then
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
@@ -1571,11 +1567,14 @@ IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: xtarget(SDIM)
 real(amrex_real), INTENT(out) :: dist
+real(amrex_real) :: angle_x,angle_y
 
  if (probtype.eq.55) then
   ! dist > 0 in the substrate
+  angle_x=radblob2
+  angle_y=zero
   call ice_substrate_distance( &
-    xtarget(1),xtarget(2),xtarget(SDIM),dist)
+    xtarget(1),xtarget(2),xtarget(SDIM),angle_x,angle_y,dist)
  else
   print *,"expecting probtype.eq.55"
   stop

@@ -266,7 +266,6 @@ ns.yblob2=2.5e-2 # 2 * dxcoarsest=2 * 0.4/32=2.5e-2
 ns.zblob4=2.5e-2
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
-ns.radblob3=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 #probtype=42 is bubble jetting case - good example to follow for some things.

@@ -3925,8 +3925,7 @@ end subroutine dynamic_contact_angle
           print *,"im_solid_temperature invalid"
           stop
          endif
-          ! radblob3=thickness of underside of block already melted (2D).
-          ! 3d too?
+          ! radblob3=thickness of underside of block already melted.
          if (z_shift.ge.substrate_height+radblob3) then
           temperature=get_user_temperature(time,bcflag,3) ! ice region
          else if (z_shift.ge.substrate_height) then
@@ -3965,14 +3964,7 @@ end subroutine dynamic_contact_angle
 
        if (axis_dir.eq.5) then ! freezing: solid, ice, water, air
 
-        if (SDIM.eq.2) then
-         seed_thickness=radblob3
-        else if (SDIM.eq.3) then
-         seed_thickness=radblob4
-        else
-         print *,"dimension bust"
-         stop
-        endif
+        seed_thickness=radblob3
 
          ! substrate: 0<y<substrate_height
         if (substrate_height.gt.zero) then  
@@ -4038,7 +4030,7 @@ end subroutine dynamic_contact_angle
            stop
           endif
            ! radblob3=thickness of underside of drop that is already
-           ! frozen (2D).
+           ! frozen.
           if (z_shift.ge.substrate_height+seed_thickness) then
            temperature=get_user_temperature(time,bcflag,1) ! water
           else if (z_shift.ge.substrate_height) then
@@ -4128,12 +4120,6 @@ end subroutine dynamic_contact_angle
           if (SDIM.eq.2) then
            z_shift=yblob2+(z-yblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
           else if (SDIM.eq.3) then
-           if (radblob3.eq.zero) then
-            !do nothing
-           else
-            print *,"radblob3 tilt (3D) is not supported"
-            stop
-           endif
            z_shift=zblob2+(z-zblob2)*cos(radblob2)-(x-xblob2)*sin(radblob2)
           else
            print *,"dimension bust"
@@ -18511,11 +18497,11 @@ end subroutine print_visual_descriptor
 
 
         ! ice behaves like rigid solid where dist>0
-      subroutine ice_substrate_distance(x,y,z,dist)
+      subroutine ice_substrate_distance(x,y,z,angle_x,angle_y,dist)
       use probcommon_module
       IMPLICIT NONE
       
-      real(amrex_real), INTENT(in) :: x,y,z
+      real(amrex_real), INTENT(in) :: x,y,z,angle_x,angle_y
       real(amrex_real), INTENT(out) :: dist
       real(amrex_real) aspect,yprime,zprime,aspect2
 
@@ -18526,12 +18512,12 @@ end subroutine print_visual_descriptor
        endif
       endif
 
-      aspect=tan(radblob2)
+      aspect=tan(angle_x)
       if (SDIM.eq.2) then
         yprime=aspect*(x-xblob2)+yblob2
         dist=y-yprime  ! vertical distance
       else if (SDIM.eq.3) then
-        aspect2=tan(radblob3)
+        aspect2=tan(angle_y)
         zprime=aspect*(x-xblob2)+aspect2*(y-yblob2)+zblob2
         dist=z-zprime  ! vertical distance
       else
@@ -23744,7 +23730,6 @@ if (probtype.eq.55) then
     print *,"probtype=",probtype
     print *,"radblob=",radblob
     print *,"radblob2=",radblob2
-    print *,"radblob4=",radblob4
     print *,"radblob5=",radblob5
     print *,"radblob6=",radblob6
     print *,"radblob7=",radblob7
@@ -23757,7 +23742,6 @@ if (probtype.eq.55) then
    print *,"xblob,yblob,zblob = ",xblob,yblob,zblob
    print *,"xblob2,yblob2,zblob2 = ",xblob2,yblob2,zblob2
    print *,"radblob ",radblob
-   print *,"radblob3 ",radblob3
    stop
   endif
 

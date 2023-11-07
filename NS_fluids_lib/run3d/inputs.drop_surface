@@ -85,8 +85,7 @@ ns.radblob=0.005
 ns.xblob2=0.064  # "center" of inclined plane
 ns.yblob2=0.064
 ns.zblob2=0.005
-ns.radblob2=0.349 # 20 degrees  z=tan(radblob2)*(x-xblob2)
-                  #              +tan(radblob3)*(y-yblob2)+zblob2
+ns.radblob2=0.349 # 20 degrees  z=tan(radblob2)*(x-xblob2)+zblob2
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55

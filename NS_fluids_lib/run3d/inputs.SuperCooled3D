@@ -137,7 +137,6 @@ ns.subscale_len=0.04
 # 0.3/2.5=tan(radblob2)
 # radblob2=arctan(0.3/2.5)=0.119
 ns.radblob2=0.119 # aspect=tan(radblob2) 
-ns.radblob3=0.0 # always 0 if axis_dir=1
 ns.xblob5=0.0 # center of second drop
 ns.yblob5=0.0 
 ns.radblob=1.0
