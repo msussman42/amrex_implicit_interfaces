@@ -195,8 +195,6 @@ ns.xblob2=0.0
 ns.yblob2=0.0
 ns.zblob2=0.0
 
-ns.radblob3=0.0
-ns.radblob4=0.0 # film thickness  (0.01 value that Yang used)
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=710

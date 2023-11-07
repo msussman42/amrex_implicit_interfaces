@@ -122,7 +122,6 @@ ns.xblob2=0.0  # center of ice surface
 ns.yblob2=0.15  
 ns.zblob2=0.15  
 ns.radblob2=0.0 # aspect=tan(radblob2)
-ns.radblob3=0.0 # always 0 if axis_dir=1
 ns.xblob5=0.0 # center of second drop
 ns.yblob5=0.0 
 ns.radblob=1.0

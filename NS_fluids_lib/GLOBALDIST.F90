@@ -1251,6 +1251,7 @@ end subroutine nozzle2d
       real(amrex_real) radx,radshrink
       real(amrex_real) pipexlo,pipexhi
       real(amrex_real) zmin,zmax
+      real(amrex_real) angle_x,angle_y
       integer i,j,iSphere
 
       if (num_materials.lt.1) then
@@ -1652,7 +1653,9 @@ end subroutine nozzle2d
       else if (probtype.eq.59) then  ! inputs.block_ice_melt
 
        ! dist>0 in the substrate
-       call ice_substrate_distance(x,y,z,dist)
+       angle_x=radblob2
+       angle_y=zero
+       call ice_substrate_distance(x,y,z,angle_x,angle_y,dist)
        ! now make dist<0 in the substrate.
        dist=-dist
 

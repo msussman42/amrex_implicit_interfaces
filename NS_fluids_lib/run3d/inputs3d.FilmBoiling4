@@ -468,7 +468,6 @@ ns.yblob2=1.2e-3
 
 ns.zblob2=1.5e-4 # 2 * dxcoarsest=2 * 5.0e-3/32=3.125e-4
 ns.radblob2=0.0 # zero degrees incline (radians)
-ns.radblob3=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55

@@ -211,7 +211,6 @@ ns.zblob5=2.3   # superheated cndition
 ns.xblob6= 8.4375e-8   # volume flux
 ns.yblob6= 87.25    # temp
 
-ns.radblob4=0.0
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=710

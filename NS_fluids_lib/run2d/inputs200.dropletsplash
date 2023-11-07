@@ -91,7 +91,6 @@ ns.xblob2=0.0  # "center" of inclined plane  0.8 in 3D
 ns.yblob2=0.0  # 0.8 in 3D
 ns.zblob2=0.0
 ns.radblob2=0.0  # 18 degrees in x direction
-ns.radblob3=0.0  # 0 degrees in y direction
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=55
