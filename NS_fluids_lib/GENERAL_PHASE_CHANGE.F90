@@ -1181,15 +1181,16 @@ if ((istate.ge.1).and. &
   STATE_merge=STATE
 
    ! xlo or xhi
-  if ((dir.eq.1).and.(SDIM.eq.2)) then
+  if (dir.eq.1) then
    if (istate.eq.1) then ! density
     ! do nothing 
    else if (istate.eq.2) then ! temperature
     ! bcflag=1 (calling from denBC - boundary conditions
     ! for density, temperature and species variables)
     call outside_temperature(t,xghost(1),xghost(2),xghost(SDIM),STATE,im,1) 
-    if ((dir.eq.1).and.(side.eq.2)) then !xhi, 2D
+    if ((dir.eq.1).and.(side.eq.2)) then !xhi, 2D or 3D
      if (axis_dir.eq.5) then
+             FIX ME
       if (xblob3.gt.zero) then
        STATE=xblob3
       endif
