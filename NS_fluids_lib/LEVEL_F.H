@@ -556,6 +556,7 @@ namespace amrex{
         int* tid,
         int* single_particle_size,
         int* isweep,
+        int* number_sweeps,
         int* append_flag,
         int* particle_nsubdivide_bulk,
         int* particle_nsubdivide_narrow,
