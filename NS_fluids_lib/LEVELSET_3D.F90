@@ -19129,6 +19129,7 @@ stop
         tid, &
         single_particle_size, &
         isweep, &
+        number_sweeps, &
         append_flag, &
         particle_nsubdivide_bulk, &
         particle_nsubdivide_narrow, &
@@ -19180,6 +19181,7 @@ stop
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: single_particle_size
       integer, INTENT(in) :: isweep
+      integer, INTENT(in) :: number_sweeps
       integer, INTENT(in) :: append_flag
       integer, INTENT(in) :: level,finest_level
 
@@ -19470,7 +19472,7 @@ stop
         print *,"append_flag invalid"
         stop
        endif
-      else if (isweep.eq.1) then
+      else if (isweep.eq.number_sweeps-1) then
        ! do nothing
       else
        print *,"isweep invalid"
@@ -19486,7 +19488,7 @@ stop
 
       if (isweep.eq.0) then
        Np_append=0
-      else if (isweep.eq.1) then
+      else if (isweep.eq.number_sweeps-1) then
        ! do nothing
       else
        print *,"isweep invalid"
@@ -19519,12 +19521,19 @@ stop
         call get_primary_material(LS_sub,im_primary_sub)
         if ((im_primary_sub.ge.1).and. &
             (im_primary_sub.le.num_materials)) then
-         if (abs(LS_sub(im_primary_sub)).le.DXMAXLS) then
-          accum_PARM%nsubdivide=particle_nsubdivide_narrow
-         else if (abs(LS_sub(im_primary_sub)).gt.DXMAXLS) then
-          accum_PARM%nsubdivide=particle_nsubdivide_bulk
+         if (number_sweeps.eq.1) then
+          accum_PARM%nsubdivide=1
+         else if (number_sweeps.eq.2) then
+          if (abs(LS_sub(im_primary_sub)).le.DXMAXLS) then
+           accum_PARM%nsubdivide=particle_nsubdivide_narrow
+          else if (abs(LS_sub(im_primary_sub)).gt.DXMAXLS) then
+           accum_PARM%nsubdivide=particle_nsubdivide_bulk
+          else
+           print *,"LS_sub is NaN"
+           stop
+          endif
          else
-          print *,"LS_sub is NaN"
+          print *,"number_sweeps invalid: ",number_sweeps
           stop
          endif
         else

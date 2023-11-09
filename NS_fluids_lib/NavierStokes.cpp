@@ -22443,21 +22443,30 @@ NavierStokes::init_particle_container(int append_flag) {
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
+ int number_sweeps=1;
+
  My_ParticleContainer* save_container=nullptr;
  if (append_flag==OP_PARTICLE_INIT) {
   save_container=ns_level0.local_particle_container;
+  number_sweeps=2;
  } else if (append_flag==OP_PARTICLE_ADD) {
   save_container=ns_level0.local_particle_container;
+  number_sweeps=2;
  } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
   save_container=ns_level0.save_particle_container;
+  number_sweeps=1;
  } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
   save_container=ns_level0.local_particle_container;
+  number_sweeps=1;
  } else if (append_flag==OP_PARTICLE_UPDATE) {
   save_container=ns_level0.save_particle_container;
+  number_sweeps=1;
  } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
   save_container=ns_level0.save_particle_container;
+  number_sweeps=1;
  } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
   save_container=ns_level0.local_particle_container;
+  number_sweeps=1;
  } else
   amrex::Error("append_flag invalid");
 
@@ -22632,7 +22641,7 @@ NavierStokes::init_particle_container(int append_flag) {
    amrex::Error("tid_current invalid");
   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-  for (int isweep=0;isweep<2;isweep++) {
+  for (int isweep=0;isweep<number_sweeps;isweep++) {
 
    int new_Pdata_size=new_particle_data.size();
 
@@ -22646,6 +22655,7 @@ NavierStokes::init_particle_container(int append_flag) {
      &tid_current,
      &single_particle_size,
      &isweep,
+     &number_sweeps,
      &append_flag,
      &particle_nsubdivide_bulk,
      &particle_nsubdivide_narrow,
