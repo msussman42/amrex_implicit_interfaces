@@ -19811,7 +19811,9 @@ stop
             stop
            endif
 
-          else if (append_flag.eq.OP_PARTICLE_UPDATE_INIT) then
+          else if ((append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
+                   (append_flag.eq.OP_PARTICLE_BOUSSINESQ)) then
+
            local_count=sub_counter(isub,jsub,ksub)
            if ((isub.eq.0).and. &
                (jsub.eq.0).and. &
@@ -19827,10 +19829,12 @@ stop
 
             cell_count_check=0
             current_link=cell_particle_count(D_DECL(i,j,k),2)
+
             do while (current_link.ge.1)
              do dir=1,SDIM
               xpart(dir)=particles(current_link)%pos(dir)
              enddo 
+             cell_count_check=cell_count_check+1
 
              weight_particles=zero
 
@@ -19864,6 +19868,7 @@ stop
 
              ibase=(current_link-1)*(1+SDIM)
              current_link=particle_link_data(ibase+1)
+
             enddo !do while (current_link.ge.1)
 
             if (cell_count_check.eq.cell_count_hold) then
@@ -19919,6 +19924,15 @@ stop
       enddo  ! i,j,k
 
       if (number_sweeps.eq.2) then
+
+       if ((append_flag.eq.OP_PARTICLE_INIT).or. &
+           (append_flag.eq.OP_PARTICLE_ADD)) then
+        ! do nothing
+       else
+        print *,"append_flag invalid ",append_flag
+        stop
+       endif
+
        if (isweep.eq.0) then
         Np_append=Np_append_test
        else if (isweep.eq.1) then
@@ -19936,6 +19950,7 @@ stop
         print *,"isweep invalid: ",isweep
         stop
        endif
+
       else if (number_sweeps.eq.1) then
        ! do nothing
       else
