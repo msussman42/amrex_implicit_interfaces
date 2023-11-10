@@ -14606,11 +14606,9 @@ END SUBROUTINE SIMP
 
        type, bind(C) :: particle_t
          real(amrex_particle_real) :: pos(SDIM)
-         ! (insert time) is extra. 
          real(amrex_particle_real) :: extra_state(N_EXTRA_REAL)
          integer(c_int) :: id
          integer(c_int) :: cpu
-         ! (material_id) is extra.
          integer(c_int) :: extra_int(N_EXTRA_INT)
        end type particle_t
 
@@ -14653,8 +14651,7 @@ END SUBROUTINE SIMP
       real(amrex_real) xref(SDIM)
       real(amrex_real) xrefT(SDIM)
       integer ipart_counter
-      integer i,k,dir
-      real(amrex_real) Q_hold
+      integer i,dir
       real(amrex_real) int_to_real_var
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
@@ -14771,16 +14768,12 @@ END SUBROUTINE SIMP
 
       character*20 newcenfilename20
 
-      character*2 ipartstr
-      character*6 varstrname6
-
       integer i
       integer ilev,igrid,ipass
       real(amrex_real) xref(SDIM+N_EXTRA_REAL+N_EXTRA_INT)
       integer nparticles,Part_nparticles
       integer alloc_flag
       integer istruct
-      integer ipart
 
       alloc_flag=0
 
@@ -14840,12 +14833,12 @@ END SUBROUTINE SIMP
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A74)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","Z","X0","Y0","Z0","U","V","W","DEN","T","material id"'
+         write(12,'(A68)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","Z","X0","Y0","Z0","U","V","W","T","material id"'
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A70)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","X0","Y0","Z0","U","V","W","DEN","T","material id"'
+         write(12,'(A64)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","X0","Y0","Z0","U","V","W","T","material id"'
         else
          print *,"dimension bust"
          stop
