@@ -14621,8 +14621,6 @@ END SUBROUTINE SIMP
         xlo,dx, &
         particles, & ! a list of particles in the elastic structure
         Np, & !  Np = number of particles, pass by value
-        real_compALL, &
-        N_real_comp, & ! pass by value
         tilelo,tilehi, &
         fablo,fabhi, &
         bfact, &
@@ -14645,9 +14643,7 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: level,gridno
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
       integer, value, INTENT(in) :: Np ! pass by value
-      integer, value, INTENT(in) :: N_real_comp ! pass by value
       type(particle_t), INTENT(in) :: particles(Np)
-      real(amrex_real), INTENT(in) :: real_compALL(N_real_comp)
 
       character*28 cennamestr28
       character*3 levstr
@@ -14667,12 +14663,6 @@ END SUBROUTINE SIMP
       endif
       if (bfact.lt.1) then
        print *,"bfact invalid151"
-       stop
-      endif
-      if (Np*num_species_var.eq.N_real_comp) then
-       ! do nothing
-      else
-       print *,"N_real_comp invalid"
        stop
       endif
 
@@ -14695,7 +14685,13 @@ END SUBROUTINE SIMP
       write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
       print *,"cenfilename36 ",cenfilename36
 
-      if (N_EXTRA_REAL.eq.8) then
+      if (N_EXTRA_REAL.eq.7) then
+       ! do nothing
+      else
+       print *,"N_EXTRA_REAL unexpected value"
+       stop
+      endif
+      if (N_EXTRA_REAL.eq.N_EXTRA_REAL_T+1) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL unexpected value"
@@ -14730,27 +14726,15 @@ END SUBROUTINE SIMP
 
        do dir=1,N_EXTRA_INT
         int_to_real_var=particles(ipart_counter)%extra_int(dir)
-        if ((dir.lt.N_EXTRA_INT).or. &
-            (num_species_var.gt.0)) then
+        if (dir.lt.N_EXTRA_INT) then
          write(12,'(E25.16)',ADVANCE="NO") int_to_real_var
-        else if ((dir.eq.N_EXTRA_INT).and. &
-                 (num_species_var.eq.0)) then
+        else if (dir.eq.N_EXTRA_INT) then
          write(12,'(E25.16)') int_to_real_var
         else
-         print *,"dir or num_species_var invalid"
+         print *,"dir invalid"
          stop
         endif
        enddo ! dir=1..N_EXTRA_INT
-
-       do dir=1,num_species_var
-        k=(dir-1)*Np+ipart_counter
-        Q_hold=real_compALL(k)
-        if (dir.lt.num_species_var) then
-         write(12,'(E25.16)',ADVANCE="NO") Q_hold
-        else
-         write(12,'(E25.16)') Q_hold
-        endif
-       enddo ! dir=1..num_species_var
 
       enddo ! ipart_counter=1,Np
 
@@ -14792,7 +14776,7 @@ END SUBROUTINE SIMP
 
       integer i
       integer ilev,igrid,ipass
-      real(amrex_real) xref(SDIM+N_EXTRA_REAL+N_EXTRA_INT+num_species_var)
+      real(amrex_real) xref(SDIM+N_EXTRA_REAL+N_EXTRA_INT)
       integer nparticles,Part_nparticles
       integer alloc_flag
       integer istruct
@@ -14835,7 +14819,13 @@ END SUBROUTINE SIMP
         print *,"newcenfilename20 ",newcenfilename20
         open(unit=12,file=newcenfilename20)
 
-        if (N_EXTRA_REAL.eq.8) then
+        if (N_EXTRA_REAL.eq.7) then
+         ! do nothing
+        else
+         print *,"N_EXTRA_REAL invalid"
+         stop
+        endif
+        if (N_EXTRA_REAL.eq.N_EXTRA_REAL_T+1) then
          ! do nothing
         else
          print *,"N_EXTRA_REAL invalid"
@@ -14860,36 +14850,8 @@ END SUBROUTINE SIMP
          print *,"dimension bust"
          stop
         endif
-        if (num_species_var.eq.0) then
 
-         write(12,*) ','
-
-        else if (num_species_var.ge.1) then
-
-         do ipart=1,num_species_var
-
-          write(ipartstr,'(I2)') ipart
-          do i=1,2
-           if (ipartstr(i:i).eq.' ') then
-            ipartstr(i:i)='0'
-           endif
-          enddo
-          write(varstrname6,'(A4,A2)') 'spec',ipartstr
-          if (ipart.eq.num_species_var) then
-           write(12,*) ',"',varstrname6,'"'
-          else if (ipart.lt.num_species_var) then
-           write(12,'(A2,A6,A1)',ADVANCE="NO") ',"',varstrname6,'"'
-          else
-           print *,"ipart invalid"
-           stop
-          endif
-
-         enddo ! ipart=1,num_species_var
-         
-        else
-         print *,"num_species_var invalid"
-         stop
-        endif
+        write(12,*) ','
 
         if (plotint.le.0) then
          strandid=1
@@ -14932,10 +14894,10 @@ END SUBROUTINE SIMP
           do i=1,Part_nparticles
            read(5,*) &
              (xref(istruct),istruct=1, &
-              SDIM+N_EXTRA_REAL+N_EXTRA_INT+num_species_var)
+              SDIM+N_EXTRA_REAL+N_EXTRA_INT)
            write(12,*) &
              (xref(istruct),istruct=1, &
-              SDIM+N_EXTRA_REAL+N_EXTRA_INT+num_species_var)
+              SDIM+N_EXTRA_REAL+N_EXTRA_INT)
           enddo
 
          else

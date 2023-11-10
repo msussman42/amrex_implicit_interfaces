@@ -127,7 +127,6 @@ public:
 #endif
 
 #ifdef AMREX_PARTICLES
-//! Redistribute particles
     void RedistributeParticles ();
 #endif
 
