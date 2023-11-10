@@ -670,8 +670,6 @@ extern "C" {
        const Real* xlo,const Real* dx,
        const void* particles,
        int Np, 
-       Real* real_compALL,
-       int N_real_comp, //pass by value just in case "long" on the c++ side.
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,
        int* bfact,

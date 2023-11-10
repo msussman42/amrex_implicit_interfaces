@@ -9273,9 +9273,6 @@ void NavierStokes::post_restart() {
 
    AmrLevel0_new_dataPC[i] = std::make_unique<My_ParticleContainer>(parent);
     
-   for (int ns=0;ns<num_species_var;ns++)
-    AmrLevel0_new_dataPC[i]->AddRealComp(true);
-     
    std::string Part_name="FusionPart";
    std::stringstream i_string_stream(std::stringstream::in |
       std::stringstream::out);
@@ -22309,8 +22306,6 @@ NavierStokes::init_particle_containerALL(int append_flag) {
   //m_num_neighbor_cells=nneighbor=ncells=num_neighbors
  NBR_Particle_Container=
   new My_NBR_ParticleContainer(parent->GetParGDB(),num_neighbors);
- for (int ns=0;ns<num_species_var;ns++)
-  NBR_Particle_Container->AddRealComp(true);
 
  int lev_min=0;
  int lev_max=finest_level;
@@ -22326,8 +22321,6 @@ NavierStokes::init_particle_containerALL(int append_flag) {
  NBR_Particle_Container->fillNeighbors();
 
  local_particle_container=new My_ParticleContainer(parent);
- for (int ns=0;ns<num_species_var;ns++)
-  local_particle_container->AddRealComp(true);
 
  local_particle_container->clearParticles();
  local_particle_container->Redistribute();
@@ -22348,8 +22341,6 @@ NavierStokes::init_particle_containerALL(int append_flag) {
   //do nothing
  } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
   save_particle_container=new My_ParticleContainer(parent);
-  for (int ns=0;ns<num_species_var;ns++)
-   save_particle_container->AddRealComp(true);
   save_particle_container->clearParticles();
   save_particle_container->Redistribute();
   save_particle_container->copyParticles(*local_particle_container,local_copy);
@@ -22524,7 +22515,11 @@ NavierStokes::init_particle_container(int append_flag) {
   }
   }
 
-  if (N_EXTRA_REAL==8) {
+  if (N_EXTRA_REAL==7) {
+   // do nothing
+  } else 
+   amrex::Error("N_EXTRA_REAL invalid");
+  if (N_EXTRA_REAL==N_EXTRA_REAL_T+1) {
    // do nothing
   } else 
    amrex::Error("N_EXTRA_REAL invalid");
@@ -22535,67 +22530,16 @@ NavierStokes::init_particle_container(int append_flag) {
    amrex::Error("N_EXTRA_INT invalid");
 
   // allocate for just one particle for now.
-  int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+
-    num_species_var;
+  int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT;
   Vector< Real > new_particle_data;
   new_particle_data.resize(single_particle_size);
 
-    // this is an object with a pointer to both AoS and
-    // SoA data.
+    // this is an object with a pointer to AoS data
   auto& particles_grid_tile = localPC.GetParticles(level)
     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
  
   auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
   unsigned int Np=particles_AoS.size();
-
-  auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-  int N_arrays=localPC.NumRealComps();
-  unsigned int Np_SoA=particles_SoA.size();
-
-  unsigned int Np_SoA_expect=Np;
-  if (num_species_var==0)
-   Np_SoA_expect=0;
-
-  if (Np_SoA_expect==Np_SoA) {
-   // do nothing
-  } else
-   amrex::Error("expecting Np_SoA_expect==Np_SoA");
-
-  if (N_arrays==num_species_var) {
-   //do nothing
-  } else {
-   std::cout << "N_arrays= " << N_arrays << '\n';
-   amrex::Error("N_arrays invalid");
-  }
-
-  unsigned int k=0;
-  unsigned int N_real_comp=num_species_var*Np;
-
-  Vector<Real> real_compALL(N_real_comp);
-  for (int dir=0;dir<num_species_var;dir++) {
-   My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
-
-   if (real_comp.size()==Np) {
-    //do nothing
-   } else
-    amrex::Error("real_comp.size()!=Np");
-
-   for (unsigned int j=0;j<Np;j++) {
-    real_compALL[k]=real_comp[j]; 
-    k++;
-
-    if (k==dir*Np+j+1) {
-     //do nothing
-    } else
-     amrex::Error("k invalid");
-
-   }
-  } // for (int dir=0;dir<num_species_var;dir++) 
-
-  if (k==N_real_comp) {
-   // do nothing
-  } else 
-   amrex::Error("k invalid");
 
   auto& NBR_particles_grid_tile = 
    ns_level0.NBR_Particle_Container->GetParticles(level)
@@ -22675,8 +22619,6 @@ NavierStokes::init_particle_container(int append_flag) {
      local_particles_AoS.data(), 
      Np,  // pass by value
      NBR_Np,  // pass by value
-     real_compALL.dataPtr(),
-     N_real_comp,  //pass by value
      new_particle_data.dataPtr(), // size is "new_Pdata_size"
      &new_Pdata_size,
      &Np_append,  // Np_append number of new particles to add.
@@ -22728,23 +22670,14 @@ NavierStokes::init_particle_container(int append_flag) {
    unsigned int Np_mirror_AoS=Np-Np_delete+Np_append;
    mirrorPC_AoS.resize(Np_mirror_AoS);
 
-   int N_real_comp_mirror=num_species_var*Np_mirror_AoS;
-   Vector<Real> mirror_real_compALL(N_real_comp_mirror);
-
    //save the existing particle data to:
-   //1. mirrorPC_AoS
-   //2. mirror_real_compALL
+   // mirrorPC_AoS
    unsigned int i_mirror=0;
    for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
     if (particle_delete_flag[i_delete]==1) {
      // do nothing
     } else if (particle_delete_flag[i_delete]==0) {
      mirrorPC_AoS[i_mirror]=particles_AoS[i_delete];
-     for (int dir=0;dir<num_species_var;dir++) {
-      int k_dest=dir*Np_mirror_AoS+i_mirror;
-      int k_source=dir*Np+i_delete;
-      mirror_real_compALL[k_dest]=real_compALL[k_source];
-     }
      i_mirror++;
     } else
      amrex::Error("particle_delete_flag[i_delete] invalid");
@@ -22771,11 +22704,6 @@ NavierStokes::init_particle_container(int append_flag) {
      p.idata(dir) = 
       (int) new_particle_data[ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir];
     }
-    for (int dir=0;dir<num_species_var;dir++) {
-     int k_dest=dir*Np_mirror_AoS+i_mirror;
-     int k_source=ibase+AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT+dir;
-     mirror_real_compALL[k_dest]=new_particle_data[k_source];
-    }
     mirrorPC_AoS[i_mirror]=p;
     i_mirror++;
    } // i_append=0..Np_append-1
@@ -22783,15 +22711,6 @@ NavierStokes::init_particle_container(int append_flag) {
    AMREX_ALWAYS_ASSERT(i_mirror==Np_mirror_AoS);
 
    particles_grid_tile.resize(0);
-
-   for (int dir=0;dir<num_species_var;dir++) {
-    My_ParticleContainer::RealVector& real_comp=particles_SoA.GetRealData(dir);
-    real_comp.resize(0);
-    for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
-     int k_source=dir*Np_mirror_AoS+i_mirror;
-     real_comp.push_back(mirror_real_compALL[k_source]);
-    } //i_mirror=0...Np_mirror_AoS-1
-   } //dir=0..num_species_var-1
 
    for (i_mirror=0;i_mirror<Np_mirror_AoS;i_mirror++) {
     particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);

@@ -568,13 +568,6 @@ AmrLevel::AmrLevel (AmrCore&        papa,
       using My_ParticleContainer =
         AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
       AmrLevel0_new_dataPC[i] = std::make_unique<My_ParticleContainer>(parent);
-
-        //add Structure of Array component(s)
-        //amrex-master/Src/Particle/AMReX_Particles.H
-        //void AddRealComp (T communicate=true)
-      for (int ns=0;ns<local_num_species;ns++) {
-       AmrLevel0_new_dataPC[i]->AddRealComp(true);
-      } 
 #endif
 
      }// for (int i=0;i<=time_order;i++) 

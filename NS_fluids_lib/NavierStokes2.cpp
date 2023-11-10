@@ -7035,60 +7035,6 @@ void NavierStokes::output_triangles() {
   auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
   unsigned int Np=particles_AoS.size();
 
-  auto& particles_SoA = particles_grid_tile.GetStructOfArrays();
-  int N_arrays=localPC.NumRealComps();
-  unsigned int Np_SoA=particles_SoA.size();
-
-  unsigned int Np_SoA_expect=Np;
-  if (num_species_var==0)
-   Np_SoA_expect=0;
-
-  if (Np_SoA_expect==Np_SoA) {
-   // do nothing
-  } else {
-   std::cout << "N_arrays=" << N_arrays << '\n';
-   std::cout << "num_species_var=" << num_species_var << '\n';
-   std::cout << "Np=" << Np << '\n';
-   std::cout << "Np_SoA=" << Np_SoA << '\n';
-   std::cout << "Np_SoA_expect=" << Np_SoA_expect << '\n';
-   amrex::Error("expecting Np_SoA_expect==Np_SoA");
-  }
-
-  if (N_arrays==num_species_var) {
-   //do nothing
-  } else
-   amrex::Error("N_arrays invalid");
-
-  unsigned int k=0;
-  unsigned int N_real_comp=num_species_var*Np;
-
-  Vector<Real> real_compALL(N_real_comp);
-  for (int dir=0;dir<num_species_var;dir++) {
-   My_ParticleContainer::RealVector& 
-      real_comp=particles_SoA.GetRealData(dir);
-
-   if (real_comp.size()==Np) {
-    //do nothing
-   } else
-    amrex::Error("real_comp.size()!=Np");
-
-   for (unsigned int j=0;j<Np;j++) {
-    real_compALL[k]=real_comp[j]; 
-    k++;
-
-    if (k==dir*Np+j+1) {
-     //do nothing
-    } else
-     amrex::Error("k invalid");
-
-   }
-  } // for (int i=0;i<num_species_var;i++) 
-
-  if (k==N_real_comp) {
-   // do nothing
-  } else 
-   amrex::Error("k invalid");
-
   // declared in: NAVIERSTOKES_3D.F90
   // output to:
   // ./temptecplot/tempPARCON_pos<level><gridno>
@@ -7097,8 +7043,6 @@ void NavierStokes::output_triangles() {
    xlo,dx,
    particles_AoS.data(),
    Np,       //pass by value
-   real_compALL.dataPtr(),
-   N_real_comp,  //pass by value
    tilelo,tilehi,
    fablo,fabhi,
    &bfact,

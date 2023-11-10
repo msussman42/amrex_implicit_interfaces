@@ -576,8 +576,6 @@ namespace amrex{
         const void* local_particles,
         int Np, 
         int NBR_Np, 
-        Real* real_compALL,
-        int N_real_comp, //pass by value just in case "long" on the c++ side.
         Real* new_particles, // size is "new_Pdata_size"
         int* new_Pdata_size, 
         int* Np_append, 

@@ -22891,11 +22891,15 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(inout) :: pressure
       real(amrex_real) :: T
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"e invalid"
        stop
       endif

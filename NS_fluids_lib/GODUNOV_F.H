@@ -352,40 +352,6 @@ extern "C"
     const int* fablo,const int* fabhi,
     int* bfact);
 
-   void fort_update_particle_tensor(
-    int* tid,
-    Real* cur_time_slab,
-    const void* particles,
-    int Np, //pass by value just in case "long" on the c++ side.
-    Real* real_compALL,
-    int N_real_comp, //pass by value just in case "long" on the c++ side.
-    int* level,
-    int* finest_level,
-    int* im,
-    int* partid,
-    int* scomp_tensor,
-    int* ncomp_visc,
-    Real* visc,AMREX_ARLIM_P(visclo),AMREX_ARLIM_P(vischi),
-    Real* one_over_den,
-    AMREX_ARLIM_P(one_over_denlo),
-    AMREX_ARLIM_P(one_over_denhi),
-    Real* tendata,AMREX_ARLIM_P(tendatalo),AMREX_ARLIM_P(tendatahi),
-    const Real* dx,const Real* xlo,
-    Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    Real* dt,
-    Real* elastic_time,
-    int* viscoelastic_model,
-    Real* polymer_factor,
-    Real* elastic_viscosity,
-    int* irz,
-    const int* bcrec,
-    int* transposegradu);
-
-
-
    void fort_estdt(
       int* interface_mass_transfer_model,
       int* tid,
@@ -1097,37 +1063,6 @@ extern "C"
      int* divu_outer_sweeps,
      int* num_divu_outer_sweeps);
 
-
-   void fort_assimilate_Q_from_particles(
-     Real* dt_slab,
-     int* tid,
-     const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,
-     int* bfact,
-     int* level,
-     int* finest_level,
-     const Real* xlo,
-     const Real* dx,
-     const void* particles,
-     int Np, //pass by value just in case "long" on the c++ side.
-     Real* real_compALL,
-     int N_real_comp, //pass by value just in case "long" on the c++ side.
-     int* ncomp_accumulate,
-     Real* LSfab,
-     AMREX_ARLIM_P(LSfablo),
-     AMREX_ARLIM_P(LSfabhi),
-     Real* TNEWfab,
-     AMREX_ARLIM_P(TNEWfablo),
-     AMREX_ARLIM_P(TNEWfabhi),
-     Real* tensor_fab,
-     AMREX_ARLIM_P(tensor_fablo),
-     AMREX_ARLIM_P(tensor_fabhi),
-     Real* matrixfab,
-     AMREX_ARLIM_P(matrixfablo),
-     AMREX_ARLIM_P(matrixfabhi),
-     int* viscoelastic_model, 
-     int* im_elastic_map,
-     Real* polymer_factor);
 
 }
 
