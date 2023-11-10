@@ -19059,7 +19059,6 @@ stop
           (weight_particles*b_VEL(im,SDIM+1)+ &
            w_p*DEN_interp((im-1)*num_state_material+ENUM_TEMPERATUREVAR+1))/ &
           (weight_particles*A_VEL(im)+w_p)
-         enddo
 
           !after interpolation VEL_interp lives at "xtarget"
          do ipart=1,SDIM
