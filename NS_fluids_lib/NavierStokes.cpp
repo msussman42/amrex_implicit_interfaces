@@ -22530,6 +22530,8 @@ NavierStokes::init_particle_container(int append_flag) {
    amrex::Error("N_EXTRA_INT invalid");
 
   // allocate for just one particle for now.
+  // after the first sweep, this command is given:
+  // new_particle_data.resize(Np_append*single_particle_size);
   int single_particle_size=AMREX_SPACEDIM+N_EXTRA_REAL+N_EXTRA_INT;
   Vector< Real > new_particle_data;
   new_particle_data.resize(single_particle_size);
@@ -22649,7 +22651,7 @@ NavierStokes::init_particle_container(int append_flag) {
    if (isweep==0) {
     new_particle_data.resize(Np_append*single_particle_size);
    }
-  } // isweep=0...1
+  } // isweep=0,...,number_sweeps-1
 
   unsigned int Np_delete=0;
   for (unsigned int i_delete=0;i_delete<Np;i_delete++) {
@@ -22697,9 +22699,11 @@ NavierStokes::init_particle_container(int append_flag) {
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      p.pos(dir) = new_particle_data[ibase+dir];
     }
+    //X0,Y0,Z0,U,V,W,T
     for (int dir=0;dir<N_EXTRA_REAL;dir++) {
      p.rdata(dir) = new_particle_data[ibase+AMREX_SPACEDIM+dir];
     }
+    //material id.
     for (int dir=0;dir<N_EXTRA_INT;dir++) {
      p.idata(dir) = 
       (int) new_particle_data[ibase+AMREX_SPACEDIM+N_EXTRA_REAL+dir];
