@@ -1584,9 +1584,9 @@ protected:
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
 
+    static Vector<Real> particle_weight;  
     static int particle_nsubdivide_bulk;  
     static int particle_nsubdivide_narrow;  
-    static int particle_nsubdivide_curvature;  
     static int particle_max_per_nsubdivide;  
 
     static Real truncate_thickness;  // default is 2.0
