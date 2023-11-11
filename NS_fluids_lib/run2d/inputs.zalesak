@@ -33,7 +33,6 @@ amr.n_cell    = 24 24
 amr.max_level = 2
 ns.particle_nsubdivide_bulk=1
 ns.particle_nsubdivide_narrow=2
-ns.particle_max_per_nsubdivide=2
 
 ns.profile_debug=0
 ns.ns_tiling=false

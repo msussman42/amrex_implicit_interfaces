@@ -193,10 +193,10 @@ int  NavierStokes::enable_spectral=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
+Vector<Real> NavierStokes::particle_weight; 
 int NavierStokes::particle_nsubdivide_bulk=1; 
 int NavierStokes::particle_nsubdivide_narrow=1; 
-int NavierStokes::particle_nsubdivide_curvature=1; 
-int NavierStokes::particle_max_per_nsubdivide=3; 
+int NavierStokes::particle_max_per_nsubdivide=4; 
 
 Real NavierStokes::truncate_thickness=2.0;  
 
@@ -4904,13 +4904,18 @@ NavierStokes::read_params ()
       amrex::Error("FSI_flag invalid");
     }  // i=0..num_materials-1
 
+    particle_weight.resize(num_materials);
+    for (int i=0;i<num_materials;i++) {
+     particle_weight[i]=0.0;
+    }
+
+    pp.queryAdd("particle_weight",particle_weight,num_materials);
+
      //default=1
     pp.queryAdd("particle_nsubdivide_bulk",particle_nsubdivide_bulk);
     pp.queryAdd("particle_nsubdivide_narrow",particle_nsubdivide_narrow);
-    pp.queryAdd("particle_nsubdivide_curvature",particle_nsubdivide_curvature);
-     //default=3
-    pp.queryAdd("particle_max_per_nsubdivide",
-	    particle_max_per_nsubdivide);
+     //default=4
+    pp.queryAdd("particle_max_per_nsubdivide",particle_max_per_nsubdivide);
 
     pp.queryAdd("truncate_volume_fractions",truncate_volume_fractions,
 		num_materials);
@@ -5168,10 +5173,12 @@ NavierStokes::read_params ()
      std::cout << "initial_temperature_diffuse_duration=" << 
       initial_temperature_diffuse_duration << '\n';
 
+     for (int i=0;i<num_materials;i++) {
+      std::cout << "particle_weight i= " << i << ' ' <<
+        particle_weight[i] << '\n';
+     }
      std::cout<<"particle_nsubdivide_bulk="<<particle_nsubdivide_bulk<<'\n';
      std::cout<<"particle_nsubdivide_narrow="<<particle_nsubdivide_narrow<<'\n';
-     std::cout<<"particle_nsubdivide_curvature="
-	     <<particle_nsubdivide_curvature<<'\n';
      std::cout << "particle_max_per_nsubdivide= " <<
         particle_max_per_nsubdivide << '\n';
 
@@ -22288,8 +22295,6 @@ NavierStokes::init_particle_containerALL(int append_flag) {
   num_neighbors=0;
  } else if (append_flag==OP_PARTICLE_ADD) {
   num_neighbors=0;
- } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
-  num_neighbors=0;
  } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
   num_neighbors=0;
  } else if (append_flag==OP_PARTICLE_UPDATE) {
@@ -22346,8 +22351,6 @@ NavierStokes::init_particle_containerALL(int append_flag) {
   save_particle_container->copyParticles(*local_particle_container,local_copy);
   save_particle_container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_redistribute);
- } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
-  save_particle_container->copyParticles(*local_particle_container,local_copy);
  } else if (append_flag==OP_PARTICLE_UPDATE) {
   save_particle_container->copyParticles(*local_particle_container,local_copy);
  } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
@@ -22360,7 +22363,11 @@ NavierStokes::init_particle_containerALL(int append_flag) {
  delete NBR_Particle_Container;
  delete local_particle_container;
 
- if (append_flag==OP_PARTICLE_ASSIMILATE) {
+ if ((append_flag==OP_PARTICLE_INIT)||
+     (append_flag==OP_PARTICLE_ADD)) {
+  localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_redistribute);
+ } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
   // velocity
   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL,SPECTRAL_ORDER_AVGDOWN);
   // "state" (all materials)
@@ -22370,7 +22377,7 @@ NavierStokes::init_particle_containerALL(int append_flag) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.avgDownMacState(LOW_ORDER_AVGDOWN);
   }
- } else if ((append_flag>=OP_PARTICLE_INIT)&&
+ } else if ((append_flag>=OP_PARTICLE_UPDATE)&&
 	    (append_flag<=OP_PARTICLE_UPDATE_LAST)) {
   //do nothing
  } else {
@@ -22412,7 +22419,18 @@ NavierStokes::init_particle_container(int append_flag) {
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
  MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
+
+ if (lsmf->nComp()==num_materials*(AMREX_SPACEDIM+1)) {
+  //do nothing
+ } else
+  amrex::Error("lsmf->nComp() invalid");
+
  MultiFab* den=getStateDen(1,cur_time_slab);
+ if (den->nComp()==num_materials*num_state_material) {
+  //do nothing
+ } else
+  amrex::Error("den->nComp() invalid");
+
  MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -22443,9 +22461,6 @@ NavierStokes::init_particle_container(int append_flag) {
  } else if (append_flag==OP_PARTICLE_ADD) {
   save_container=ns_level0.local_particle_container;
   number_sweeps=2;
- } else if (append_flag==OP_PARTICLE_BOUSSINESQ) {
-  save_container=ns_level0.save_particle_container;
-  number_sweeps=1;
  } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
   save_container=ns_level0.local_particle_container;
   number_sweeps=1;
@@ -22603,9 +22618,9 @@ NavierStokes::init_particle_container(int append_flag) {
      &isweep,
      &number_sweeps,
      &append_flag,
+     particle_weight.dataPtr(),
      &particle_nsubdivide_bulk,
      &particle_nsubdivide_narrow,
-     &particle_nsubdivide_curvature,
      &particle_max_per_nsubdivide,
      tilelo,tilehi,
      fablo,fabhi,
@@ -22720,7 +22735,7 @@ NavierStokes::init_particle_container(int append_flag) {
     particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);
    }
 
-  } else if ((append_flag>=OP_PARTICLE_BOUSSINESQ)&&
+  } else if ((append_flag>=OP_PARTICLE_UPDATE)&&
              (append_flag<=OP_PARTICLE_ASSIMILATE)) {
    //do nothing
   } else

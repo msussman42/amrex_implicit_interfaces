@@ -5,12 +5,13 @@ Multimaterial
 Sharp interface, supermesh
 
 Each material has an associated level set function which is initialized
-as a distance function locally to the interface.
+as a distance function locally to the interface.  Derived quantities are
+initialized: level set normals, volume fractions, and centroids.
 
 Each particle has an associated material id which is assigned only when the
 particle is added.
 
-There are 3 kinds of particles:
+There are 2 kinds of particles:
 a) bulk particles (min |phi_{m}|>=alpha h)
 
    particle_nsubdivide_bulk
@@ -19,48 +20,31 @@ b) (i) narrow band particles (min |phi_{m}| < alpha h)
    (ii) close-in narrow band particles x^init-=phi_{m} n_{m}
 
    particle_nsubdivide_narrow
-   particle_nsubdivide_curvature
 
-Each particle has a position, displacement, velocity, density, temperature, 
-material id, and species.
+Each particle has a position, displacement, velocity, temperature, 
+and material id.
 
-1st pass: particle density, velocity, and temperature update (phase change):
 
- If after phase change,
- imat_id((I_LS)(xpart))!=imat_id(particle) 
- then delete the particle.  
-
- DT/Dt = I[ T^{phase_change} - T^{advect} ]
-
-2nd pass: particle density, velocity, and temperature update (diffusion):
-
- rho=I(rho^{n+1})
- Du/Dt = I[ u^{viscosity} - u^{phase change} - F_Boussinesq(T(xgrid)) ] + 
-        F_Boussinesq(T(xpart)).
- DT/Dt = I[ T^{diffusion} - T^{phase change} ]
-
-Eulerian velocity and temperature update (alpha1,alpha2 proportional to h):
-
- u^{viscosity}+=alpha1 * (u^{particle} - u^{viscosity})
- T^{diffusion}+=alpha2 * (T^{particle} - T^{diffusion})
-
-3rd pass: particle velocity, and temperature update (pressure update):
-
- Du/Dt = I[ u^{n+1} - u^{viscosity ]
- DT/Dt = I[ T^{n+1} - T^{diffusion} ]
-
-1. initialize Levelsets, make them locally distance functions. 
+1. initialize Levelsets, make them locally distance functions.  Initialize
+   volume fractions, centroids, and slopes.
 2. generate the AMR grid near zero level set(s).
-3. a) delete particles if 
-      (i) imat_id((I_LS)(xpart))!=imat_id(particle) and
-      (ii) (I_LS_imat_id)(xpart) < -alpha h
-   b) add bulk, narrow band, and close-in narrow band particles.
-4. For each material, the advective velocity is UMAC
-5. (a) advect the particles using UMAC
-   (a) LS_{t} + div (UMAC LS) = 0 (using PPM or WENO or ...)
-       (conservation form important in order to insure proper expansion)
-   (b) project LS_{m} to be "vacuum free."
-6. Redistance the level set function(s) using dtau=dx/2 for example:
+
+3. add and delete particles; particles deleted if particle density exceeds
+a threshold or if the particle attribute becomes inconsistent with the
+level set function.
+
+4. advect the level set using directionally split  EI-LE method.  advect
+the particles.
+
+5. for phase change, limit the normal velocity so that the source/target
+always have the dominant level set function values.
+
+6. reinitialization corrects the level set function so that the particle
+attribute is as consistent as possible with the interpolated levelset 
+attribute.
+
+reinitialization notes:
+
     (a) LS0 is given
     (b) for n=1,2,3,...
           for each grid cell:
@@ -86,32 +70,10 @@ Eulerian velocity and temperature update (alpha1,alpha2 proportional to h):
                LScorrect(n)=LS(n)-mu
 
     (c) endfor
-7. repeat steps 5 and 6 using the phase change velocity and 
-   non-conservation form advection of the level set function.
-8. go back to step 2.
 
 References:
 Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
 
-work plan for an algorithm that efficiently captures filaments, cusps, and
-pinnacles in the phase change process or otherwise complex topology 
-multiphase flows:
 1. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
 default tolerances, etc)
 2. check freezing results, restart bubble jetting.
-3. solve temperature and velocity always on the supermesh.  
-4. The advective velocity for each material is unique in order to sharply
-   simulate expansion and slip in the immediate vicinity of the interface:
-   Given the face centered projection velocity for each material, the face
-   velocity is either copied or extrapolated from the internal face(s) in 
-   such a way so that the new face velocities on the bounding rectangle/cube
-   has the same divergence and the internal face velocity is extrapolated
-   "symmetrically" with respect to the adjoing materials.  Then directionally
-   split advection can be implemented as before.
-4. conservation form in the bulk gas regions for consistent shock capturing.
-
-Remark:
-"Simple supermesh method" probably good enough (in order to use PCG methods)
-since it is flux over finite sized intervals that is important? Not pointwise
-flux?  At any rate, "simple method" will be compared to "least squares 
-supermesh."
