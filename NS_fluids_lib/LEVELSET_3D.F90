@@ -19516,8 +19516,8 @@ stop
        local_mask=NINT(mfiner(D_DECL(i,j,k)))
        if (local_mask.eq.1) then
 
-        do dir=1,num_materials
-         LS_sub(dir)=lsfab_ptr(D_DECL(i,j,k),dir)
+        do im_loop=1,num_materials
+         LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
         enddo
         call get_primary_material(LS_sub,im_primary_sub)
 
@@ -19697,8 +19697,8 @@ stop
 
                data_in%xtarget=xpart
                call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
-               do dir=1,num_materials
-                LS_sub(dir)=data_out_LS%data_interp(dir)
+               do im_loop=1,num_materials
+                LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
                enddo
                call get_primary_material(LS_sub,im_primary_sub)
                if ((im_primary_sub.ge.1).and. &
@@ -19812,8 +19812,8 @@ stop
                local_mag=zero
                data_in%xtarget=xsub
                call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
-               do dir=1,num_materials*(1+AMREX_SPACEDIM)
-                LS_sub(dir)=data_out_LS%data_interp(dir)
+               do dir=im_loop,num_materials*(1+AMREX_SPACEDIM)
+                LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
                enddo
                call get_primary_material(LS_sub,im_primary_sub)
                if ((im_primary_sub.ge.1).and. &
@@ -20172,6 +20172,175 @@ stop
       enddo 
       enddo 
       enddo  ! i,j,k
+
+      if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+ 
+       do dir=1,SDIM
+        ii=0
+        jj=0
+        kk=0
+        if (dir.eq.1) then
+         ii=1
+        else if (dir.eq.2) then
+         jj=1
+        else if ((dir.eq.3).and.(SDIM.eq.3)) then
+         kk=1
+        else
+         print *,"dir invalid"
+         stop
+        endif
+
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+          growlo,growhi,0,dir-1)
+
+        do k=growlo(3),growhi(3)
+        do j=growlo(2),growhi(2)
+        do i=growlo(1),growhi(1)
+         call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir-1)
+         local_mask=NINT(mfiner(D_DECL(i,j,k)))
+         if (local_mask.eq.1) then
+          local_mask=NINT(mfiner(D_DECL(i-ii,j-jj,k-kk)))
+          if (local_mask.eq.1) then
+           do im_loop=1,num_materials
+            LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
+           enddo
+           call get_primary_material(LS_sub,im_primary_sub)
+           do im_loop=1,num_materials
+            LS_sub(im_loop)=lsfab_ptr(D_DECL(i-ii,j-jj,k-kk),im_loop)
+           enddo
+           call get_primary_material(LS_sub,im_primary_sub_left)
+           if (im_primary_sub.eq.im_primary_sub_left) then
+            if ((im_primary_sub.ge.1).and. &
+                (im_primary_sub.le.num_materials)) then
+             do dir_local=1,SDIM
+              xsub(dir_local)=xsten(0,dir_local)
+              xpart(dir_local)=xsub(dir_local)
+             enddo
+             call partition_unity_weight(xpart,xsub,dx,local_weight)
+             weight_sum(im_primary_sub)=local_weight
+             if (dir.eq.1) then
+              macvel=xvelfab(D_DECL(i,j,k))
+             else if (dir.eq.2) then
+              macvel=yvelfab(D_DECL(i,j,k))
+             else if ((dir.eq.3).and.(SDIM.eq.3)) then
+              macvel=zvelfab(D_DECL(i,j,k))
+             else
+              print *,"dir invalid"
+              stop
+             endif
+             velocity_sum(im_primary_sub,dir)=local_weight*macvel
+             do side=1,2
+              if (side.eq.1) then
+               iside=i-ii
+               jside=j-jj
+               kside=k-kk
+              else if (side.eq.2) then
+               iside=i
+               jside=j
+               kside=k
+              else
+               print *,"side invalid"
+               stop
+              endif
+
+              cell_count_check=0
+              cell_count_hold=cell_particle_count(D_DECL(iside,jside,kside),1)
+              current_link=cell_particle_count(D_DECL(iside,jside,kside),2)
+              do while (current_link.ge.1)
+               do dir_local=1,SDIM
+                xpart(dir_local)=NBR_particles(current_link)%pos(dir_local)
+               enddo 
+               cell_count_check=cell_count_check+1
+               call partition_unity_weight(xpart,xsub,dx,local_weight)
+               im_particle=NBR_particles(current_link)% &
+                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+               if (im_particle.eq.im_primary_sub) then
+                weight_sum(im_particle)=weight_sum(im_particle)+local_weight
+                velocity_sum(im_particle,dir)=velocity_sum(im_particle,dir)+ &
+                  local_weight*NBR_particles(current_link)% &
+                         extra_state(N_EXTRA_REAL_u+dir)
+               else if ((im_particle.ge.1).and. &
+                        (im_particle.le.num_materials)) then
+                !do nothing
+               else
+                print *,"im_particle invalid"
+                stop
+               endif
+
+               ibase=(current_link-1)*(1+SDIM)
+               current_link=particle_link_data(ibase+1)
+              enddo !do while (current_link.ge.1)
+
+              if (cell_count_check.eq.cell_count_hold) then
+               ! do nothing
+              else
+               print *,"cell_count_check invalid"
+               print *,"cell_count_hold: ",cell_count_hold
+               stop
+              endif
+             enddo !side=1,2
+
+             local_weight=weight_sum(im_primary_sub)
+             local_weight_particles=particle_weight(im_primary_sub)
+             if ((local_weight_particles.ge.zero).and. &
+                 (local_weight_particles.le.one)) then
+              if (local_weight.gt.zero) then
+               macvel= &
+                (one-local_weight_particles)*macvel+ &
+                local_weight_particles* &
+                velocity_sum(im_primary_sub,dir)/local_weight 
+              else
+               print *,"local_weight invalid"
+               stop
+              endif
+             else
+              print *,"local_weight_particles invalid"
+              stop
+             endif
+
+            else
+             print *,"im_primary_sub invalid"
+             stop
+            endif
+
+           else if ((im_primary_sub.ge.1).and. &
+                    (im_primary_sub_left.ge.1).and. &
+                    (im_primary_sub.le.num_materials).and. &
+                    (im_primary_sub_left.le.num_materials)) then
+            ! do nothing
+           else
+            print *,"im_primary_sub or im_primary_sub_left bad"
+            stop
+           endif
+          else if (local_mask.eq.0) then
+           !do nothing
+          else
+           print *,"local_mask invalid"
+           stop
+          endif
+         else if (local_mask.eq.0) then
+          !do nothing
+         else
+          print *,"local_mask invalid"
+          stop
+         endif
+
+        enddo
+        enddo
+        enddo
+       enddo !dir=1,SDIM
+
+      else if ((append_flag.eq.OP_PARTICLE_ADD).or. &
+               (append_flag.eq.OP_PARTICLE_INIT).or. &
+               (append_flag.eq.OP_PARTICLE_UPDATE).or. &
+               (append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
+               (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+       ! do nothing
+      else
+       print *,"append_flag invalid"
+       stop
+      endif
+
 
       if (number_sweeps.eq.2) then
 
