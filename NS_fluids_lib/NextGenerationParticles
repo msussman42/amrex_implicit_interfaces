@@ -36,8 +36,8 @@ level set function.
 4. advect the level set using directionally split  EI-LE method.  advect
 the particles.
 
-5. for phase change, limit the normal velocity so that the source/target
-always have the dominant level set function values.
+5. for phase change, limit the normal velocity so that 
+V(phi_source_old)-V(phi_source_new)=V(phi_target_new)-V(phi_target_old)
 
 6. reinitialization corrects the level set function so that the particle
 attribute is as consistent as possible with the interpolated levelset 

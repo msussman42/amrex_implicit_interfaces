@@ -19572,6 +19572,8 @@ stop
         cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
 
          ! isub,jsub,ksub,link,mindist
+         ! 1<=link<=total number particles
+         ! 1<=cell_count_hold<=number particles in cell (i,j,k)
         allocate(sub_particle_data(cell_count_hold,SDIM+2))
 
         current_link=cell_particle_count(D_DECL(i,j,k),2)
@@ -19583,6 +19585,7 @@ stop
          sub_particle_data(cell_count_check,SDIM+2)=1.0D+20
          cell_count_nbr=0
          current_link_nbr=cell_particle_count(D_DECL(i,j,k),2)
+         ! 1<=current_link_nbr<=total number particles
          do while (current_link_nbr.ge.1)
           cell_count_nbr=cell_count_nbr+1
           if (cell_count_nbr.ne.cell_count_check) then
@@ -19602,10 +19605,12 @@ stop
           current_link_nbr=particle_link_data(ibase_nbr+1)
          enddo !do while (current_link_nbr.ge.1)
          ibase=(current_link-1)*(1+SDIM)
+         ! 0<=current_link<=total number particles
          current_link=particle_link_data(ibase+1)
         enddo !do while (current_link.ge.1)
 
         cell_count_check=0
+         ! 0<=current_link<=total number particles
         current_link=cell_particle_count(D_DECL(i,j,k),2)
         do while (current_link.ge.1)
          do dir=1,SDIM
@@ -19631,6 +19636,7 @@ stop
           stop
          endif
          ibase=(current_link-1)*(1+SDIM)
+         ! 0<=current_link<=total number particles
          current_link=particle_link_data(ibase+1)
         enddo !do while (current_link.ge.1)
 
@@ -19650,6 +19656,9 @@ stop
             ! check if particles need to be deleted
           if (local_count.ge.1) then
 
+            ! sort from largest separation to smallest.
+            ! delete the cases with the smallest separation.
+            ! Always delete particles with inconsistent material id.
            allocate(sort_data_mindist(local_count))
            allocate(sort_data_id(local_count))
            sub_iter=0
@@ -19657,13 +19666,16 @@ stop
             isub_test=sub_particle_data(cell_iter,1)
             jsub_test=sub_particle_data(cell_iter,2)
             ksub_test=sub_particle_data(cell_iter,SDIM)
+             ! 1<=current_link<=total number particles
             current_link=sub_particle_data(cell_iter,SDIM+1)
             if ((isub_test.eq.isub).and. &
                 (jsub_test.eq.jsub)) then
              if ((SDIM.eq.2).or. &
                  ((SDIM.eq.3).and.(ksub_test.eq.ksub))) then
               sub_iter=sub_iter+1
-              sort_data_id(sub_iter)=current_link                     
+              sort_data_id(sub_iter)=current_link 
+               ! 1<=cell_iter<=number particles in cell i,j,k.
+               ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
               sort_data_mindist(sub_iter)=sub_particle_data(cell_iter,SDIM+2)
               do dir=1,SDIM
                xpart(dir)=particles(current_link)%pos(dir)
@@ -19683,6 +19695,7 @@ stop
                 if (im_particle.eq.im_primary_sub) then
                  ! do nothing
                 else if (im_particle.ne.im_primary_sub) then
+                  ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
                  sort_data_mindist(sub_iter)=zero
                 else
                  print *,"im_particle or im_primary_sub invalid"
@@ -19706,6 +19719,7 @@ stop
             endif
            enddo ! cell_iter=1..cell_count_hold
 
+            ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
            if (sub_iter.eq.local_count) then
             bubble_change=1
             bubble_iter=0
