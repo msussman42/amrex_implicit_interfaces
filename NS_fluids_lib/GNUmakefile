@@ -22,6 +22,11 @@ MOF_HOME = ..
 # endif
 #
 
+USE_HDF5 = FALSE
+#HDF5_HOME=/path/to/hdf5/install/dir
+#module load hdf5
+#module load cray-hdf5-parallel
+
 USE_CUDA = FALSE
 USE_ACC = FALSE
 USE_PARTICLES = TRUE
