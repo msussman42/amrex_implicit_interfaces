@@ -15,7 +15,11 @@
 #include <AMReX_ArrayLim.H>
 #include <AMReX_Utility.H>
 #include <AMReX_TagBox.H>
+
 #include <AMReX_PlotFileUtil.H>
+#ifdef AMREX_USE_HDF5
+#include <AMReX_PlotFileUtilHDF5.H>
+#endif
 
 #include <NavierStokes.H>
 #include <INTEGRATED_QUANTITY.H>
@@ -19774,21 +19778,21 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
  if (localMF[MACDIV_MF]->nGrow()!=1)
   amrex::Error("localMF[MACDIV_MF]->nGrow() invalid");
 
-   // if FENE-CR+Carreau,
-   // liquid viscosity=etaS+etaP ( 1+ (beta gamma_dot)^alpha )^((n-1)/alpha)
-   //
-   // for each material, there are 5 components:
-   // 1. \dot{gamma}=std::sqrt(2 * D:D)  D=(grad U + grad U^T)/2 (plot label: DT)
-   // 2. Tr(A) if viscoelastic (plot label: TR)
-   //    \dot{gamma} o.t.
-   // 3. Tr(A) (liquid viscosity - etaS)/etaP  if FENE-CR+Carreau
-   //    Tr(A) if FENE-CR
-   //    \dot{gamma} o.t.
-   // 4. (3) * f(A)  if viscoelastic
-   //    \dot{gamma} o.t.
-   // 5. vorticity magnitude.
+ // if FENE-CR+Carreau,
+ // liquid viscosity=etaS+etaP ( 1+ (beta gamma_dot)^alpha )^((n-1)/alpha)
+ //
+ // for each material, there are 5 components:
+ // 1. \dot{gamma}=std::sqrt(2 * D:D)  D=(grad U + grad U^T)/2 (plot label: DT)
+ // 2. Tr(A) if viscoelastic (plot label: TR)
+ //    \dot{gamma} o.t.
+ // 3. Tr(A) (liquid viscosity - etaS)/etaP  if FENE-CR+Carreau
+ //    Tr(A) if FENE-CR
+ //    \dot{gamma} o.t.
+ // 4. (3) * f(A)  if viscoelastic
+ //    \dot{gamma} o.t.
+ // 5. vorticity magnitude.
 
-   // calls fort_getshear and DERMAGTRACE
+ // calls fort_getshear and DERMAGTRACE
  int ntrace=5*num_materials;
  getState_tracemag_ALL(MAGTRACE_MF); //ngrow==1
  if (localMF[MAGTRACE_MF]->nComp()!=ntrace)
@@ -20132,6 +20136,101 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    std::fflush(NULL);
    ParallelDescriptor::Barrier();
 
+   int ncomp_plot_MOF=num_materials*ngeom_recon;
+   debug_ngrow(SLOPE_RECON_MF,1,local_caller_string);
+   if (localMF[SLOPE_RECON_MF]->nComp()!=ncomp_plot_MOF)
+    amrex::Error("localMF[SLOPE_RECON_MF]->nComp() invalid");
+
+   Vector<const MultiFab*> mf_tower_MOF;
+   mf_tower_MOF.resize(tecplot_finest_level+1);
+   Vector<std::string> varnames_MOF;
+   varnames_MOF.resize(ncomp_plot_MOF);
+
+   const Vector<Geometry>& ns_geom=parent->Geom();
+   Vector<IntVect> ref_ratio;
+   ref_ratio.resize(tecplot_finest_level+1);
+   Vector<int> level_steps;
+   level_steps.resize(tecplot_finest_level+1);
+
+   for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+    NavierStokes& ns_level=getLevel(ilev);
+    mf_tower_MOF[ilev]=ns_level.localMF[SLOPE_RECON_MF];
+   }
+
+   for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     ref_ratio[ilev][dir]=2;
+    }
+    level_steps[ilev]=nsteps;
+   } 
+
+   std::stringstream steps_string_stream(std::stringstream::in |
+     std::stringstream::out);
+   steps_string_stream << std::setw(8) << std::setfill('0') << nsteps;
+   std::string steps_string=steps_string_stream.str();
+
+   std::string plotfilename_MOF="MOF_PLT"; 
+   plotfilename_MOF+=steps_string;
+
+   int icomp_MOF=0;
+
+    // vfrac,centroid,order,slope,intercept x num_materials
+   for (int im=0;im<num_materials;im++) {
+    std::stringstream im_string_stream(std::stringstream::in |
+     std::stringstream::out);
+    im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+    std::string im_string=im_string_stream.str();
+    varnames_MOF[icomp_MOF]="F"+im_string;
+    icomp_MOF++;
+    varnames_MOF[icomp_MOF]="XCEN"+im_string;
+    icomp_MOF++;
+    varnames_MOF[icomp_MOF]="YCEN"+im_string;
+    icomp_MOF++;
+    if (AMREX_SPACEDIM==3) {
+     varnames_MOF[icomp_MOF]="ZCEN"+im_string;
+     icomp_MOF++;
+    }
+    varnames_MOF[icomp_MOF]="Order"+im_string;
+    icomp_MOF++;
+    varnames_MOF[icomp_MOF]="XSLOPE"+im_string;
+    icomp_MOF++;
+    varnames_MOF[icomp_MOF]="YSLOPE"+im_string;
+    icomp_MOF++;
+    if (AMREX_SPACEDIM==3) {
+     varnames_MOF[icomp_MOF]="ZSLOPE"+im_string;
+     icomp_MOF++;
+    }
+    varnames_MOF[icomp_MOF]="INTERCEPT"+im_string;
+    icomp_MOF++;
+   }
+
+   if (icomp_MOF==ncomp_plot_MOF) {
+    // do nothing
+   } else
+    amrex::Error("icomp_MOF!=ncomp_plot_MOF");
+
+#ifdef AMREX_USE_HDF5
+   WriteMultiLevelPlotfileHDF5(plotfilename_MOF,
+     tecplot_finest_level+1, //nlevels
+     mf_tower_MOF,
+     varnames_MOF,
+     ns_geom,   
+     cur_time_slab,
+     level_steps,
+     ref_ratio);
+#else
+   WriteMultiLevelPlotfile(plotfilename_MOF,
+     tecplot_finest_level+1, //nlevels
+     mf_tower_MOF,
+     varnames_MOF,
+     ns_geom,   
+     cur_time_slab,
+     level_steps,
+     ref_ratio);
+#endif
+
+   ParallelDescriptor::Barrier();
+
    int ncomp_plot=PLOTCOMP_NCOMP;
    if (localMF[MULTIFAB_TOWER_PLT_MF]->nComp()==ncomp_plot) {
     // do nothing
@@ -20142,24 +20241,11 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    mf_tower.resize(tecplot_finest_level+1);
    Vector<std::string> varnames;
    varnames.resize(ncomp_plot);
-   const Vector<Geometry>& ns_geom=parent->Geom();
-   Vector<IntVect> ref_ratio;
-   ref_ratio.resize(tecplot_finest_level+1);
-   Vector<int> level_steps;
-   level_steps.resize(tecplot_finest_level+1);
 
    for (int ilev=0;ilev<=tecplot_finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
     mf_tower[ilev]=ns_level.localMF[MULTIFAB_TOWER_PLT_MF];
-    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-     ref_ratio[ilev][dir]=2;
-    }
-    level_steps[ilev]=nsteps;
-   } 
-   std::stringstream steps_string_stream(std::stringstream::in |
-     std::stringstream::out);
-   steps_string_stream << std::setw(8) << std::setfill('0') << nsteps;
-   std::string steps_string=steps_string_stream.str();
+   }
 
    std::string plotfilename="nddataPLT"; 
    plotfilename+=steps_string;
@@ -20375,6 +20461,16 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    } else
     amrex::Error("icomp+1!=PLOTCOMP_NCOMP");
 
+#ifdef AMREX_USE_HDF5
+   WriteMultiLevelPlotfileHDF5(plotfilename,
+     tecplot_finest_level+1, //nlevels
+     mf_tower,
+     varnames,
+     ns_geom,   
+     cur_time_slab,
+     level_steps,
+     ref_ratio);
+#else
    WriteMultiLevelPlotfile(plotfilename,
      tecplot_finest_level+1, //nlevels
      mf_tower,
@@ -20383,6 +20479,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
      cur_time_slab,
      level_steps,
      ref_ratio);
+#endif
 
    ParallelDescriptor::Barrier();
 
