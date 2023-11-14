@@ -19809,12 +19809,12 @@ stop
 
               local_mag=one
 
-              if (add_iter.eq.1) then
+              if (add_iter.eq.1) then !xparticle=xsub
                local_mag=one
                do dir_local=1,SDIM
                 xtarget(dir_local)=xsub(dir_local)
                enddo
-              else if (add_iter.eq.2) then
+              else if (add_iter.eq.2) then !xparticle=xsub-LS n
                local_mag=zero
                data_in%xtarget=xsub
                call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
@@ -20015,7 +20015,8 @@ stop
                        ENUM_TEMPERATUREVAR+1)
               local_weight=particle_weight(im_particle)
 
-              if ((local_weight.ge.zero).and.(local_weight.le.one)) then
+              if ((local_weight.ge.zero).and. &
+                  (local_weight.le.one)) then
                do dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
 
                 particle_data=particles(current_link)%extra_state(dir_local+1)
@@ -20039,7 +20040,7 @@ stop
                enddo !dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
 
               else
-               print *,"local_weight invalid"
+               print *,"local_weight invalid: ",local_weight
                stop
               endif
 
@@ -20162,7 +20163,7 @@ stop
               local_weight_particles* &
               temperature_sum(im_primary_sub)/local_weight 
           else
-           print *,"local_weight invalid"
+           print *,"local_weight invalid: ",local_weight
            stop
           endif
 
@@ -20200,7 +20201,7 @@ stop
         else if ((dir.eq.3).and.(SDIM.eq.3)) then
          kk=1
         else
-         print *,"dir invalid"
+         print *,"dir invalid: ",dir
          stop
         endif
 
@@ -20319,12 +20320,12 @@ stop
                stop
               endif
              else
-              print *,"local_weight_particles invalid"
+              print *,"local_weight_particles invalid:",local_weight_particles
               stop
              endif
 
             else
-             print *,"im_primary_sub invalid"
+             print *,"im_primary_sub invalid: ",im_primary_sub
              stop
             endif
 
@@ -20340,13 +20341,13 @@ stop
           else if (local_mask.eq.0) then
            !do nothing
           else
-           print *,"local_mask invalid"
+           print *,"local_mask invalid (i-ii,j-jj,k-kk): ",local_mask
            stop
           endif
          else if (local_mask.eq.0) then
           !do nothing
          else
-          print *,"local_mask invalid"
+          print *,"local_mask invalid (i,j,k):",local_mask
           stop
          endif
 
