@@ -197,6 +197,7 @@ int  NavierStokes::enable_spectral=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
+// default: particle_weight=0.0
 Vector<Real> NavierStokes::particle_weight; 
 int NavierStokes::particle_nsubdivide_bulk=1; 
 int NavierStokes::particle_nsubdivide_narrow=1; 
@@ -22377,10 +22378,10 @@ NavierStokes::init_particle_containerALL(int append_flag) {
  } else
   amrex::Error("max_level invalid");
 
- if (slab_step==ns_time_order-1) {
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
   // do nothing
  } else
-  amrex::Error("expecting slab_step==ns_time_order-1");
+  amrex::Error("expecting 0<=slab_step<ns_time_order");
 
  if (level==0) {
   // do nothing
@@ -22390,6 +22391,12 @@ NavierStokes::init_particle_containerALL(int append_flag) {
  int num_neighbors=1;
  if (append_flag==OP_PARTICLE_INIT) {
   num_neighbors=0;
+
+  if (slab_step==ns_time_order-1) {
+   // do nothing
+  } else
+   amrex::Error("expecting slab_step==ns_time_order-1");
+
  } else if (append_flag==OP_PARTICLE_ADD) {
   num_neighbors=0;
  } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
@@ -22497,10 +22504,10 @@ NavierStokes::init_particle_container(int append_flag) {
  } else
   amrex::Error("max_level invalid");
 
- if (slab_step==ns_time_order-1) {
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
   // do nothing
  } else
-  amrex::Error("expecting slab_step==ns_time_order-1");
+  amrex::Error("expecting 0<=slab_step<ns_time_order");
 
  if ((level>=0)&&(level<=finest_level)) {
   // do nothing
@@ -22555,6 +22562,12 @@ NavierStokes::init_particle_container(int append_flag) {
  if (append_flag==OP_PARTICLE_INIT) {
   save_container=ns_level0.local_particle_container;
   number_sweeps=2;
+
+  if (slab_step==ns_time_order-1) {
+   // do nothing
+  } else
+   amrex::Error("expecting slab_step==ns_time_order-1");
+
  } else if (append_flag==OP_PARTICLE_ADD) {
   save_container=ns_level0.local_particle_container;
   number_sweeps=2;

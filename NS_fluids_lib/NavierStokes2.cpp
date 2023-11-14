@@ -6497,6 +6497,11 @@ void NavierStokes::move_particles(
   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
   const std::string& caller_string) {
 
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  //do nothing
+ } else
+  amrex::Error("slab_step invalid");
+
  std::string local_caller_string="move_particles";
  local_caller_string=caller_string+local_caller_string;
 

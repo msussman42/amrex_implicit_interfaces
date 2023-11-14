@@ -411,11 +411,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
 
-  // first add particles if needed
- if (slab_step==ns_time_order-1) {
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
   init_particle_containerALL(OP_PARTICLE_ADD);
- } else if ((slab_step>=0)&&(slab_step<ns_time_order-1)) {
-  //do nothing
  } else
   amrex::Error("slab_step invalid");
 
@@ -1840,6 +1837,25 @@ void NavierStokes::phase_change_code_segment(
  delete_array(DEN_RECON_MF);
  delete_array(nodevel_MF);
 
+
+#ifdef AMREX_PARTICLES
+
+ My_ParticleContainer& localPC=newDataPC(slab_step+1);
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  init_particle_containerALL(OP_PARTICLE_ADD);
+ } else
+  amrex::Error("slab_step invalid");
+
+ int lev_min=0;
+ int lev_max=-1;
+ int nGrow_Redistribute=0;
+ int local_Redistribute=0; 
+ localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+#endif
+
  int update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID; 
  int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
@@ -1950,6 +1966,25 @@ void NavierStokes::nucleation_code_segment(
    }
   }
  } 
+
+
+#ifdef AMREX_PARTICLES
+
+ My_ParticleContainer& localPC=newDataPC(slab_step+1);
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  init_particle_containerALL(OP_PARTICLE_ADD);
+ } else
+  amrex::Error("slab_step invalid");
+
+ int lev_min=0;
+ int lev_max=-1;
+ int nGrow_Redistribute=0;
+ int local_Redistribute=0; 
+ localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+#endif
 
  // generates SLOPE_RECON_MF
  int update_flag=RECON_UPDATE_STATE_CENTROID; 
@@ -2374,6 +2409,25 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       } else if (mass_transfer_active==0) {
 
+#ifdef AMREX_PARTICLES
+
+       My_ParticleContainer& localPC=newDataPC(slab_step+1);
+
+       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+        init_particle_containerALL(OP_PARTICLE_ADD);
+       } else
+        amrex::Error("slab_step invalid");
+
+       int lev_min=0;
+       int lev_max=-1;
+       int nGrow_Redistribute=0;
+       int local_Redistribute=0; 
+       localPC.Redistribute(lev_min,lev_max,
+          nGrow_Redistribute,local_Redistribute);
+
+#endif
+
+
        update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID; 
        int init_vof_prev_time=0;
        //output:SLOPE_RECON_MF
@@ -2626,6 +2680,17 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // second half of D^{upside down triangle}/Dt
       tensor_advection_updateALL();
 
+#ifdef AMREX_PARTICLES
+
+      if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+       init_particle_containerALL(OP_PARTICLE_ASSIMILATE);
+       init_particle_containerALL(OP_PARTICLE_UPDATE_INIT);
+       init_particle_containerALL(OP_PARTICLE_UPDATE);
+      } else
+       amrex::Error("slab_step invalid");
+
+#endif
+
       if (is_zalesak()==1) {
 
        for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -2677,6 +2742,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // T_advect_MF=new temperature
        int alloc_flag=1;
        alloc_DTDtALL(alloc_flag);
+
+
+
 
        project_to_rigid_velocityALL();
 
@@ -2963,6 +3031,15 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       } else
        amrex::Error("is_zalesak invalid");
+
+#ifdef AMREX_PARTICLES
+
+      if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+       init_particle_containerALL(OP_PARTICLE_UPDATE_LAST);
+      } else
+       amrex::Error("slab_step invalid");
+
+#endif
 
       if (mass_transfer_active==1) {
        delete_array(SATURATION_TEMP_MF);
