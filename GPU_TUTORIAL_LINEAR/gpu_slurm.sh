@@ -41,6 +41,7 @@
 #   $ rcctool my:partitions
 
 # More resourecs at: https://rcc.fsu.edu/doc/ [rcc.fsu.edu]
-module load cuda
+# module load cuda
+module load cuda-12.2
 srun ~/CNSWAVE/CNSWAVE inputs
 
