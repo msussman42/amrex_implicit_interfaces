@@ -22,10 +22,11 @@ MOF_HOME = ..
 # endif
 #
 
-USE_HDF5 = FALSE
-#HDF5_HOME=/path/to/hdf5/install/dir
+USE_HDF5 = TRUE
+HDF5_HOME=/home/sussman/Downloads/hdf/HDF5-1.14.3-Linux/HDF_Group/HDF5/1.14.3
 #module load hdf5
 #module load cray-hdf5-parallel
+#https://www.hdfgroup.org/solutions/hdf5
 
 USE_CUDA = FALSE
 USE_ACC = FALSE
@@ -182,6 +183,9 @@ include $(AMREX_HOME)/Src/Base/Make.package
 
 ifeq ($(USE_PARTICLES),TRUE)
 include $(AMREX_HOME)/Src/Particle/Make.package
+endif
+ifeq ($(USE_HDF5),TRUE)
+include $(AMREX_HOME)/Src/Extern/HDF5/Make.package
 endif
 
 include ./Make.package

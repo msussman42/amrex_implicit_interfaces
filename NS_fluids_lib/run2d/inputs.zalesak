@@ -47,6 +47,8 @@ amr.space_blocking_factor = 1 1 1 1
 amr.check_int       = 160     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 20       # 157 for convergence check
+# 0=tecplot nodes 1=plt file cells (or HDF5) 2=tecplot cells
+# ns.visual_nddata_format=1
 ns.visual_ncell     = 96 96  # effective fine grid resolution 24x24 + 2 levels
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
