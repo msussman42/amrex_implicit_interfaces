@@ -4,13 +4,13 @@
 #SBATCH --partition=genacc_q
 #SBATCH --mail-type="ALL"
 #SBATCH --mail-user=msussman@fsu.edu
-#SBATCH -t 00:10:00
+#SBATCH -t 00:04:00
 #SBATCH --output=run.out
 #SBATCH --error=run.err
 #SBATCH --gres=gpu:1
 
 # other partitions:
-# backfill, backfill2, genacc_q
+# backfill, backfill2, genacc_q, quicktest
 # mecfd18_q
 # engineering_q
 # engineering_long
@@ -42,6 +42,17 @@
 
 # More resourecs at: https://rcc.fsu.edu/doc/ [rcc.fsu.edu]
 # module load cuda
+echo module load cuda-12.2
 module load cuda-12.2
+module list 
+echo nvcc --version
+nvcc --version
+echo /usr/bin/nvidia-smi -L
+/usr/bin/nvidia-smi -L
+echo /usr/bin/nvidia-smi --query-gpu=gpu_name,gpu_bus_id,vbios_version --format=csv
+/usr/bin/nvidia-smi --query-gpu=gpu_name,gpu_bus_id,vbios_version --format=csv
+echo /usr/bin/nvidia-smi --query-gpu=timestamp,name,pci.bus_id,driver_version --format=csv
+/usr/bin/nvidia-smi --query-gpu=timestamp,name,pci.bus_id,driver_version --format=csv
+gcc --version 
 srun ~/CNSWAVE/CNSWAVE inputs
 
