@@ -19547,7 +19547,8 @@ stop
            else if (abs(LS_sub(im_primary_sub)).gt.DXMAXLS) then
             accum_PARM%nsubdivide=particle_nsubdivide_bulk
            else
-            print *,"LS_sub is NaN"
+            print *,"im_primary_sub: ",im_primary_sub
+            print *,"LS_sub is NaN: ",LS_sub(im_primary_sub)
             stop
            endif
           else
@@ -19776,7 +19777,8 @@ stop
               endif
              enddo ! bubble_iter
             else
-             print *,"sub_iter invalid"
+             print *,"sub_iter invalid; sub_iter, local_count: ", &
+               sub_iter,local_count
              stop
             endif    
             deallocate(sort_data_mindist)
@@ -19840,7 +19842,7 @@ stop
                  else if (local_mag.eq.zero) then
                   !do nothing
                  else
-                  print *,"local_mag invalid"
+                  print *,"local_mag invalid: ",local_mag
                   stop
                  endif
                  do dir_local=1,SDIM
@@ -19856,7 +19858,8 @@ stop
                             probhi_array(dir_local))) then
                    ! do nothing
                   else
-                   print *,"xtarget(dir_local) invalid"
+                   print *,"xtarget(dir_local) invalid;dir_local,xtarget:", &
+                     dir_local,xtarget(dir_local)
                    stop
                   endif
                  enddo ! do dir_local=1,SDIM
@@ -19864,15 +19867,16 @@ stop
                          (LS_sub(im_primary_sub).gt.DXMAXLS)) then
                  ! do nothing
                 else
-                 print *,"LS(im_primary_sub) invalid"
+                 print *,"LS(im_primary_sub) invalid: ", &
+                     LS_sub(im_primary_sub)
                  stop
                 endif
                else
-                print *,"im_primary_sub invalid"
+                print *,"im_primary_sub invalid: ",im_primary_sub
                 stop
                endif
               else
-               print *,"add_iter invalid"
+               print *,"add_iter invalid: ",add_iter
                stop
               endif
                  
@@ -19931,6 +19935,8 @@ stop
                         X0_sub(dir_local)
                  else
                   print *,"X0_sub(dir_local) is NaN"
+                  print *,"dir_local=",dir_local
+                  print *,"X0_sub(dir_local)= ",X0_sub(dir_local)
                   stop
                  endif
                 enddo
@@ -19970,6 +19976,9 @@ stop
              !do nothing
             else
              print *,"[ijk]sub, cell_count_hold invalid"
+             print *,"isub,jsub,ksub ",isub,jsub,ksub
+             print *,"cell_count_hold ",cell_count_hold
+             print *,"local_count ",local_count
              stop
             endif
 
@@ -20053,6 +20062,7 @@ stop
               ! do nothing
              else
               print *,"cell_count_check invalid"
+              print *,"cell_count_check: ",cell_count_check
               print *,"cell_count_hold: ",cell_count_hold
               stop
              endif
@@ -20108,7 +20118,7 @@ stop
           enddo 
           tcomp=(im_loop-1)*num_state_material+ENUM_TEMPERATUREVAR+1
           temperature_sum(im_loop)=local_weight*denfab(D_DECL(i,j,k),tcomp)
-         enddo !im_loop
+         enddo !im_loop=1..num_materials
          cell_count_check=0
          cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
          current_link=cell_particle_count(D_DECL(i,j,k),2)
@@ -20117,7 +20127,9 @@ stop
            xpart(dir_local)=NBR_particles(current_link)%pos(dir_local)
           enddo 
           cell_count_check=cell_count_check+1
+
           call partition_unity_weight(xpart,xsub,dx,local_weight)
+
           im_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
           weight_sum(im_particle)=weight_sum(im_particle)+local_weight
@@ -20168,7 +20180,7 @@ stop
           endif
 
          else
-          print *,"local_weight_particles invalid"
+          print *,"local_weight_particles invalid: ",local_weight_particles
           stop
          endif
 
@@ -20240,7 +20252,7 @@ stop
              else if ((dir.eq.3).and.(SDIM.eq.3)) then
               macvel=zvelfab(D_DECL(i,j,k))
              else
-              print *,"dir invalid"
+              print *,"dir invalid: ",dir
               stop
              endif
              velocity_sum(im_primary_sub,dir)=local_weight*macvel
@@ -20254,7 +20266,7 @@ stop
                jside=j
                kside=k
               else
-               print *,"side invalid"
+               print *,"side invalid: ",side
                stop
               endif
 
@@ -20266,7 +20278,9 @@ stop
                 xpart(dir_local)=NBR_particles(current_link)%pos(dir_local)
                enddo 
                cell_count_check=cell_count_check+1
+
                call partition_unity_weight(xpart,xsub,dx,local_weight)
+
                im_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
                if (im_particle.eq.im_primary_sub) then
@@ -20278,7 +20292,7 @@ stop
                         (im_particle.le.num_materials)) then
                 !do nothing
                else
-                print *,"im_particle invalid"
+                print *,"im_particle invalid: ",im_particle
                 stop
                endif
 
@@ -20316,7 +20330,7 @@ stop
                 stop
                endif
               else
-               print *,"local_weight invalid"
+               print *,"local_weight invalid: ",local_weight
                stop
               endif
              else
@@ -20332,22 +20346,26 @@ stop
            else if ((im_primary_sub.ge.1).and. &
                     (im_primary_sub_left.ge.1).and. &
                     (im_primary_sub.le.num_materials).and. &
-                    (im_primary_sub_left.le.num_materials)) then
+                    (im_primary_sub_left.le.num_materials).and. &
+                    (im_primary_sub.ne.im_primary_sub_left)) then
             ! do nothing
            else
             print *,"im_primary_sub or im_primary_sub_left bad"
+            print *,"im_primary_sub: ",im_primary_sub
+            print *,"im_primary_sub_left: ",im_primary_sub_left
             stop
            endif
           else if (local_mask.eq.0) then
            !do nothing
           else
-           print *,"local_mask invalid (i-ii,j-jj,k-kk): ",local_mask
+           print *,"local_mask invalid (i-ii,j-jj,k-kk): ", &
+               i-ii,j-jj,k-kk,local_mask
            stop
           endif
          else if (local_mask.eq.0) then
           !do nothing
          else
-          print *,"local_mask invalid (i,j,k):",local_mask
+          print *,"local_mask invalid (i,j,k):",i,j,k,local_mask
           stop
          endif
 
@@ -20363,7 +20381,7 @@ stop
                (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
        ! do nothing
       else
-       print *,"append_flag invalid"
+       print *,"append_flag invalid: ",append_flag
        stop
       endif
 

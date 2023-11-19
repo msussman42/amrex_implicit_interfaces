@@ -22,7 +22,9 @@ MOF_HOME = ..
 # endif
 #
 
-USE_HDF5 = TRUE
+EBASE = amr
+
+USE_HDF5 = FALSE
 HDF5_HOME=/home/sussman/Downloads/hdf/HDF5-1.14.3-Linux/HDF_Group/HDF5/1.14.3
 #module load hdf5
 #module load cray-hdf5-parallel
@@ -134,8 +136,13 @@ USE_MPI = FALSE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
-#EBASE = amr
-EBASE = amr
+
+ifeq ($(USE_HDF5),TRUE)
+ USERSuffix+=.HDF5
+endif
+ifeq ($(USE_PARTICLES),TRUE)
+ USERSuffix+=.PARTICLES
+endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs 
 
