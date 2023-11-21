@@ -22368,7 +22368,8 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 // 1. post_init_state() and
 // 2. nonlinear_advection()
 void
-NavierStokes::init_particle_containerALL(int append_flag) {
+NavierStokes::init_particle_containerALL(int append_flag,
+	const std::string& caller_string) {
 
  int max_level = parent->maxLevel();
  int finest_level=parent->finestLevel();
@@ -22387,6 +22388,9 @@ NavierStokes::init_particle_containerALL(int append_flag) {
   // do nothing
  } else 
   amrex::Error("expecting level==0 init_particle_containerALL");
+
+ std::string local_caller_string="init_particle_containerALL";
+ local_caller_string=caller_string+local_caller_string;
 
  int num_neighbors=1;
  if (append_flag==OP_PARTICLE_INIT) {
@@ -22439,7 +22443,7 @@ NavierStokes::init_particle_containerALL(int append_flag) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.init_particle_container(append_flag);
+  ns_level.init_particle_container(append_flag,local_caller_string);
  }
 
  if (append_flag==OP_PARTICLE_INIT) {
@@ -22491,9 +22495,11 @@ NavierStokes::init_particle_containerALL(int append_flag) {
 } // end subroutine init_particle_containerALL
  
 void
-NavierStokes::init_particle_container(int append_flag) {
+NavierStokes::init_particle_container(int append_flag,
+   const std::string& caller_string) {
 
  std::string local_caller_string="init_particle_container";
+ local_caller_string=caller_string+local_caller_string;
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
@@ -22723,6 +22729,8 @@ NavierStokes::init_particle_container(int append_flag) {
    //                 "         "        =4 => 64 pieces in 2D.
    // 2. for each small sub-box, add a particle at the sub-box center.
    fort_init_particle_container( 
+     local_caller_string.c_str(),
+     local_caller_string.size(),
      &tid_current,
      &single_particle_size,
      &isweep,
@@ -22912,7 +22920,7 @@ NavierStokes::post_init_state () {
 
 #ifdef AMREX_PARTICLES
 
- init_particle_containerALL(OP_PARTICLE_INIT);
+ init_particle_containerALL(OP_PARTICLE_INIT,local_caller_string);
 
  NavierStokes& ns_level0=getLevel(0);
  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);

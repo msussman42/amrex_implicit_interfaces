@@ -18435,7 +18435,7 @@ stop
       module FSI_PC_LS_module
 
        use amrex_fort_module, only : amrex_real,amrex_particle_real
-       use iso_c_binding, only: c_int
+       use iso_c_binding, only: c_char,c_int
 
        implicit none
 
@@ -19120,6 +19120,8 @@ stop
        ! called from NavierStokes.cpp:
        !  NavierStokes::init_particle_container
       subroutine fort_init_particle_container( &
+        caller_string, &
+        caller_string_len, &
         tid, &
         single_particle_size, &
         isweep, &
@@ -19170,6 +19172,10 @@ stop
 
       IMPLICIT NONE
 
+      CHARACTER(KIND=C_CHAR), INTENT(in) :: caller_string(*)
+      integer(C_INT), INTENT(in), VALUE :: caller_string_len
+      CHARACTER(:), ALLOCATABLE :: fort_caller_string
+      integer :: fort_caller_string_len
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: single_particle_size
       integer, INTENT(in) :: isweep
@@ -19335,11 +19341,25 @@ stop
       real(amrex_real),target,dimension(num_materials*(1+AMREX_SPACEDIM))::&
            data_interp_local_LS
 
+      allocate(CHARACTER(caller_string_len) :: fort_caller_string)
+      do i=1,caller_string_len
+       fort_caller_string(i:i)=caller_string(i)
+      enddo
+      fort_caller_string_len=caller_string_len
+
       if (ncomp_state.eq.STATE_NCOMP) then
        !do nothing
       else
        print *,"ncomp_state invalid"
        stop
+      endif
+
+      if (1.eq.1) then
+       print *,"fort_caller_string: ",fort_caller_string
+       print *,"append_flag ",append_flag
+       print *,"fablo,fabhi ",fablo,fabhi
+       print *,"level, finest_level,time ",level,finest_level,cur_time_slab
+       print *,"xlo,dx ",xlo,dx
       endif
 
       cell_particle_count_ptr=>cell_particle_count
@@ -19767,6 +19787,17 @@ stop
              do bubble_iter=1,local_count
               if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
                   (sort_data_mindist(bubble_iter).eq.zero)) then
+               if (1.eq.1) then
+                print *,"-----------------------------"
+                print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
+                temp_id=sort_data_id(bubble_iter)
+                print *,"bubble_iter,sort_data_mindist,temp_id ", &
+                      bubble_iter,sort_data_mindist(bubble_iter),temp_id
+                im_particle=particles(temp_id)% &
+                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+                print *,im_particle
+                print *,"-----------------------------"
+               endif
                particle_delete_flag(sort_data_id(bubble_iter))=1
               else if ((bubble_iter.le.particle_max_per_nsubdivide).and. &
                        (sort_data_mindist(bubble_iter).gt.zero)) then
@@ -20420,6 +20451,8 @@ stop
        print *,"number_sweeps invalid: ",number_sweeps
        stop
       endif
+
+      deallocate(fort_caller_string)
 
       return
       end subroutine fort_init_particle_container

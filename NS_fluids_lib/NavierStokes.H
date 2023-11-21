@@ -1000,8 +1000,10 @@ protected:
 #ifdef AMREX_PARTICLES
     using My_ParticleContainer =
       AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>;
-    void init_particle_containerALL(int append_flag);
-    void init_particle_container(int append_flag);
+    void init_particle_containerALL(int append_flag,
+      const std::string& caller_string);
+    void init_particle_container(int append_flag,
+      const std::string& caller_string);
     void move_particles(My_ParticleContainer& localPC,
        const std::string& caller_string);
 #endif
