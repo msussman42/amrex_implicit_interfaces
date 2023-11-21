@@ -19307,7 +19307,10 @@ stop
       integer :: im_primary_sub_left
       integer :: im_particle
       integer :: im_loop
+
       integer, allocatable, dimension(:,:) :: sub_particle_data
+      real(amrex_real), allocatable, dimension(:) :: sub_particle_data_dist
+
       integer, allocatable, dimension(:) :: sort_data_id
       real(amrex_real), allocatable, dimension(:) :: sort_data_mindist
       real(amrex_real) :: temp_mindist
@@ -19354,7 +19357,7 @@ stop
        stop
       endif
 
-      if (1.eq.1) then
+      if (1.eq.0) then
        print *,"fort_caller_string: ",fort_caller_string
        print *,"append_flag ",append_flag
        print *,"fablo,fabhi ",fablo,fabhi
@@ -19612,10 +19615,11 @@ stop
          cell_count_check=0
          cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
 
-          ! isub,jsub,ksub,link,mindist
+          ! isub,jsub,ksub,link
           ! 1<=link<=total number particles
           ! 1<=cell_count_hold<=number particles in cell (i,j,k)
-         allocate(sub_particle_data(cell_count_hold,SDIM+2))
+         allocate(sub_particle_data(cell_count_hold,SDIM+1))
+         allocate(sub_particle_data_dist(cell_count_hold))
 
          current_link=cell_particle_count(D_DECL(i,j,k),2)
          do while (current_link.ge.1)
@@ -19623,13 +19627,21 @@ stop
            xpart(dir_local)=particles(current_link)%pos(dir_local)
           enddo 
           cell_count_check=cell_count_check+1
-          sub_particle_data(cell_count_check,SDIM+2)=1.0D+20
+          sub_particle_data_dist(cell_count_check)=1.0D+20
           cell_count_nbr=0
           current_link_nbr=cell_particle_count(D_DECL(i,j,k),2)
           ! 1<=current_link_nbr<=total number particles
           do while (current_link_nbr.ge.1)
            cell_count_nbr=cell_count_nbr+1
            if (cell_count_nbr.ne.cell_count_check) then
+
+            if (current_link_nbr.ne.current_link) then
+             !do nothing
+            else
+             print *,"expecting current_link_nbr<>current_link"
+             stop
+            endif
+
             do dir_local=1,SDIM
              xpart_nbr(dir_local)=particles(current_link_nbr)%pos(dir_local)
             enddo 
@@ -19638,9 +19650,22 @@ stop
              dist_nbr=dist_nbr+(xpart_nbr(dir_local)-xpart(dir_local))**2
             enddo
             dist_nbr=sqrt(dist_nbr)
-            if (dist_nbr.lt.sub_particle_data(cell_count_check,SDIM+2)) then
-             sub_particle_data(cell_count_check,SDIM+2)=dist_nbr
+            if (dist_nbr.lt.sub_particle_data_dist(cell_count_check)) then
+             sub_particle_data_dist(cell_count_check)=dist_nbr
             endif
+
+           else if (cell_count_nbr.eq.cell_count_check) then
+
+            if (current_link_nbr.eq.current_link) then
+             !do nothing
+            else
+             print *,"expecting current_link_nbr==current_link"
+             stop
+            endif
+
+           else
+            print *,"cell_count_nbr or cell_count_check bust"
+            stop
            endif
            ibase_nbr=(current_link_nbr-1)*(1+SDIM)
            current_link_nbr=particle_link_data(ibase_nbr+1)
@@ -19717,10 +19742,19 @@ stop
                sort_data_id(sub_iter)=current_link 
                 ! 1<=cell_iter<=number particles in cell i,j,k.
                 ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
-               sort_data_mindist(sub_iter)=sub_particle_data(cell_iter,SDIM+2)
+               sort_data_mindist(sub_iter)=sub_particle_data_dist(cell_iter)
                do dir_local=1,SDIM
                 xpart(dir_local)=particles(current_link)%pos(dir_local)
                enddo 
+
+               if (1.eq.0) then
+                print *,"--------------------"
+                print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
+                print *,"xpart ",xpart
+                print *,"sub_iter,sort_data_mindist ", &
+                    sub_iter,sort_data_mindist(sub_iter)
+                print *,"--------------------"
+               endif
 
                data_in%xtarget=xpart
                call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
@@ -19738,16 +19772,28 @@ stop
                  else if (im_particle.ne.im_primary_sub) then
                    ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
                   sort_data_mindist(sub_iter)=zero
+                  if (1.eq.0) then
+                   print *,"--------------------"
+                   print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
+                   print *,"xpart ",xpart
+                   print *,"im_particle,im_primary_sub ", &
+                           im_particle,im_primary_sub
+                   do im_loop=1,num_materials
+                    print *,"im_loop, LS ",im_loop,LS_sub(im_loop)
+                   enddo
+                   print *,"--------------------"
+                  endif
                  else
-                  print *,"im_particle or im_primary_sub invalid"
+                  print *,"im_particle or im_primary_sub invalid: ", &
+                     im_particle,im_primary_sub
                   stop
                  endif
                 else
-                 print *,"im_particle invalid"
+                 print *,"im_particle invalid: ",im_particle
                  stop
                 endif
                else
-                print *,"im_primary_sub invalid"
+                print *,"im_primary_sub invalid: ",im_primary_sub
                 stop
                endif
 
@@ -19787,7 +19833,7 @@ stop
              do bubble_iter=1,local_count
               if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
                   (sort_data_mindist(bubble_iter).eq.zero)) then
-               if (1.eq.1) then
+               if (1.eq.0) then
                 print *,"-----------------------------"
                 print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
                 temp_id=sort_data_id(bubble_iter)
@@ -19795,7 +19841,7 @@ stop
                       bubble_iter,sort_data_mindist(bubble_iter),temp_id
                 im_particle=particles(temp_id)% &
                    extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-                print *,im_particle
+                print *,"im_particle=",im_particle
                 print *,"-----------------------------"
                endif
                particle_delete_flag(sort_data_id(bubble_iter))=1
@@ -20128,6 +20174,7 @@ stop
          endif
 
          deallocate(sub_particle_data)
+         deallocate(sub_particle_data_dist)
 
          deallocate(sub_counter)
 
