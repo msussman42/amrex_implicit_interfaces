@@ -19503,7 +19503,7 @@ stop
        else if (append_flag.eq.OP_PARTICLE_INIT) then
         ! do nothing
        else
-        print *,"append_flag invalid"
+        print *,"append_flag invalid: ",append_flag
         stop
        endif
       else if (isweep.eq.number_sweeps-1) then
@@ -19525,7 +19525,8 @@ stop
       else if (isweep.eq.number_sweeps-1) then
        ! do nothing
       else
-       print *,"isweep invalid"
+       print *,"isweep invalid: ",isweep
+       print *,"number_sweeps=",number_sweeps
        stop
       endif
       Np_append_test=0
@@ -19723,7 +19724,8 @@ stop
 
            cell_count_check=cell_count_check+local_count
 
-             ! check if particles need to be deleted
+             ! check if particles need to be deleted or
+             ! have their material id (and associated data) updated.
            if (local_count.ge.1) then
 
              ! sort from largest separation to smallest.
@@ -19747,6 +19749,7 @@ stop
                 ! 1<=cell_iter<=number particles in cell i,j,k.
                 ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
                sort_data_mindist(sub_iter)=sub_particle_data_dist(cell_iter)
+
                do dir_local=1,SDIM
                 xpart(dir_local)=particles(current_link)%pos(dir_local)
                enddo 
@@ -19770,12 +19773,58 @@ stop
                    (im_primary_sub.le.num_materials)) then
                 im_particle=particles(current_link)% &
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-                if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then
+                if ((im_particle.ge.1).and. &
+                    (im_particle.le.num_materials)) then
                  if (im_particle.eq.im_primary_sub) then
-                  ! do nothing
+                  if (LS_sub(im_particle).le. &
+                      DXMAXLS/particle_nsubdivide_narrow) then
+                   sort_data_mindist(sub_iter)=1.0D+20
+                  else if (LS_sub(im_particle).gt. &
+                      DXMAXLS/particle_nsubdivide_narrow) then
+                   !do nothing
+                  else
+                   print *,"LS_sub(im_particle) bad: ",LS_sub(im_particle)
+                   stop
+                  endif
+
                  else if (im_particle.ne.im_primary_sub) then
+
+                  im_particle=im_primary_sub
+
+                  particles(current_link)% &
+                     extra_int(N_EXTRA_INT_MATERIAL_ID+1)=im_particle
+
+                  local_weight_particles=zero
+
+                  call interp_eul_lag_dist( &
+                   local_weight_particles, &
+                   accum_PARM, &
+                   particlesptr, &
+                   lsfab_ptr, &
+                   denfab_ptr, &
+                   velfab_ptr, &
+                   cell_particle_count_ptr, &
+                   i,j,k, &
+                   xpart, &
+                   particle_link_data, &
+                   Np, &
+                   LS_sub, &
+                   den_sub, &
+                   vel_sub, &
+                   X0_sub)
+
+                  do dir_local=1,SDIM
+                   particles(current_link)% &
+                     extra_state(N_EXTRA_REAL_u+dir_local)=vel_sub(dir_local)
+                  enddo
+                  particles(current_link)% &
+                    extra_state(N_EXTRA_REAL_T+1)= &
+                     den_sub((im_particle-1)*num_state_material+ &
+                       ENUM_TEMPERATUREVAR+1)
+
                    ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
-                  sort_data_mindist(sub_iter)=zero
+                  sort_data_mindist(sub_iter)=1.0D+20
+
                   if (1.eq.0) then
                    print *,"--------------------"
                    print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
@@ -19835,8 +19884,7 @@ stop
              enddo ! bubble_change==1 and bubble_iter<local_count
 
              do bubble_iter=1,local_count
-              if ((bubble_iter.gt.particle_max_per_nsubdivide).or. &
-                  (sort_data_mindist(bubble_iter).eq.zero)) then
+              if (bubble_iter.gt.particle_max_per_nsubdivide) then
                if (1.eq.0) then
                 print *,"-----------------------------"
                 print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
@@ -19849,11 +19897,10 @@ stop
                 print *,"-----------------------------"
                endif
                particle_delete_flag(sort_data_id(bubble_iter))=1
-              else if ((bubble_iter.le.particle_max_per_nsubdivide).and. &
-                       (sort_data_mindist(bubble_iter).gt.zero)) then
+              else if (bubble_iter.le.particle_max_per_nsubdivide) then
                ! do nothing
               else
-               print *,"bubble_iter or sort_data_mindist bust"
+               print *,"bubble_iter bust: ",bubble_iter
                stop
               endif
              enddo ! bubble_iter
