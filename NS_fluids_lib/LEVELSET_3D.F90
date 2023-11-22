@@ -18584,8 +18584,12 @@ stop
 
         if (ok_to_add_link.eq.1) then
 
-         if (previous_link.eq.interior_ID) then
-          print *,"links should be unique"
+         if (previous_link.ne.interior_ID) then
+          !do nothing
+         else
+          print *,"previous_link==interior_ID => corruption"
+          print *,"previous_link=",previous_link
+          print *,"interior_ID=",interior_ID
           stop
          endif
 
@@ -18613,14 +18617,14 @@ stop
             previous_link,interior_ID 
          stop
         else
-         print *,"ok_to_add_link invalid"
+         print *,"ok_to_add_link invalid: ",ok_to_add_link
          stop
         endif
 
        else if (interior_ok.eq.0) then
         ! do nothing
        else
-        print *,"interior_ok invalid"
+        print *,"interior_ok invalid: ",interior_ok
         stop
        endif
 

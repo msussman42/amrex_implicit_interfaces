@@ -22630,8 +22630,10 @@ NavierStokes::init_particle_container(int append_flag,
   FArrayBox& ynewfab=(*umac_new[1])[mfi];
   FArrayBox& znewfab=(*umac_new[AMREX_SPACEDIM-1])[mfi];
 
-   // component 1: number of particles linked to the cell.
-   // component 2: the link to the list of particles.
+   // component 1: number of cell (i,j,k) particles.
+   // component 2: link to the first particle in the list of (i,j,k) particles.
+   //  cell_particle_count(i,j,k,2)=0 => no particles
+   //  1<=cell_particle_count(i,j,k,2)<=Number particles
   BaseFab<int> cell_particle_count(tilegrid_grow,2);
   Array4<int> const& cell_particle_count_array=cell_particle_count.array();
   const Dim3 lo3=amrex::lbound(tilegrid_grow);
@@ -22698,6 +22700,9 @@ NavierStokes::init_particle_container(int append_flag,
   Vector< int > particle_link_data;
    // i_particle_link_1,i1,j1,k1,   (child link, parent link)
    // i_particle_link_2,i2,j2,k2,  ...
+   // if (i,j,k) has particles then:
+   // 1. 1<=cell_particle_count(i,j,k,2)<=num particles is link to top of list
+   // 2. particle_link_data( (pt_top-1)(1+sdim)+1 )=link to 2nd in list if <>0
   particle_link_data.resize(NBR_Np*(1+AMREX_SPACEDIM));
 
   for (unsigned int i_link=0;i_link<NBR_Np*(1+AMREX_SPACEDIM);i_link++) {
