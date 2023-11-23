@@ -20896,6 +20896,8 @@ stop
 
        ! called from NavierStokes2.cpp
       subroutine fort_move_particle_container( &
+        phase_change_displacement, &
+        burning_velocity_ncomp, &
         tid, &
         tilelo,tilehi, &
         fablo,fabhi, &
@@ -20910,6 +20912,8 @@ stop
         umac,DIMS(umac), &
         vmac,DIMS(vmac), &
         wmac,DIMS(wmac), &
+        burning,DIMS(burning), &
+        lsfab,DIMS(lsfab), &
         velbc_in, &
         denbc_in, &
         dombc, &
@@ -20924,6 +20928,9 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: phase_change_displacement
+      integer, INTENT(in) :: burning_velocity_ncomp
+      integer :: ncomp_per_burning
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: level,finest_level
 
@@ -20940,6 +20947,8 @@ stop
       integer, INTENT(in) :: DIMDEC(umac)
       integer, INTENT(in) :: DIMDEC(vmac)
       integer, INTENT(in) :: DIMDEC(wmac)
+      integer, INTENT(in) :: DIMDEC(burning)
+      integer, INTENT(in) :: DIMDEC(lsfab)
 
       real(amrex_real), INTENT(in), target :: umac(DIMV(umac)) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: umac_ptr
@@ -20947,6 +20956,14 @@ stop
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: vmac_ptr
       real(amrex_real), INTENT(in), target :: wmac(DIMV(wmac)) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: wmac_ptr
+
+      real(amrex_real), INTENT(in), target :: burning(DIMV(burning), &
+              burning_velocity_ncomp) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: burning_ptr
+
+      real(amrex_real), INTENT(in), target :: lsfab(DIMV(lsfab), &
+              num_materials) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: lsfab_ptr
 
       integer, INTENT(in), target :: velbc_in(SDIM,2,SDIM)
       integer, INTENT(in) :: denbc_in(SDIM,2)
@@ -20973,6 +20990,8 @@ stop
       umac_ptr=>umac
       vmac_ptr=>vmac
       wmac_ptr=>wmac
+      burning_ptr=>burning
+      lsfab_ptr=>lsfab
 
       if (dt.gt.zero) then
        ! do nothing
@@ -21013,93 +21032,118 @@ stop
       grid_PARM%level=level
       grid_PARM%finest_level=finest_level
 
-      call checkbound_array1(fablo,fabhi,umac_ptr,1,0)
-      call checkbound_array1(fablo,fabhi,vmac_ptr,1,1)
-      call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1)
+      if (phase_change_displacement.eq.0) then
+       call checkbound_array1(fablo,fabhi,umac_ptr,1,0)
+       call checkbound_array1(fablo,fabhi,vmac_ptr,1,1)
+       call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1)
+      else if (phase_change_displacement.eq.1) then
+       call checkbound_array(fablo,fabhi,burning_ptr,1,-1)
+       ncomp_per_burning=EXTRAP_PER_BURNING
+       if (burning_velocity_ncomp.eq.EXTRAP_NCOMP_BURNING) then
+        ! do nothing
+       else
+        print *,"burning_velocity_ncomp invalid"
+        stop
+       endif
+      else
+       print *,"phase_change_displacement invalid"
+       stop
+      endif
+
+      call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
       num_RK_stages=2
       
       do interior_ID=1,Np
 
-       !4th-RK
        do dir=1,SDIM
         xpart1(dir)=particles(interior_ID)%pos(dir)
        enddo
-       call interp_mac_velocity( &
-        grid_PARM, &
-        umac_ptr, &
-        vmac_ptr, &
-        wmac_ptr, &
-        xpart1, &
-        vel_time_slab,u1)
 
-       if (num_RK_stages.eq.4) then
-
-        do dir=1,SDIM
-         xpart2(dir)=xpart1(dir)+0.5d0*dt*u1(dir)
-        enddo
-        call check_cfl_BC(grid_PARM,xpart1,xpart2)
+       if (phase_change_displacement.eq.0) then
 
         call interp_mac_velocity( &
          grid_PARM, &
          umac_ptr, &
          vmac_ptr, &
          wmac_ptr, &
-         xpart2, &
-         vel_time_slab,u2)
+         xpart1, &
+         vel_time_slab,u1)
 
-        do dir=1,SDIM
-         xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
-        enddo
+        if (num_RK_stages.eq.4) then
 
-        call check_cfl_BC(grid_PARM,xpart1,xpart3)
+         do dir=1,SDIM
+          xpart2(dir)=xpart1(dir)+0.5d0*dt*u1(dir)
+         enddo
+         call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
-        call interp_mac_velocity( &
-         grid_PARM, &
-         umac_ptr, &
-         vmac_ptr, &
-         wmac_ptr, &
-         xpart3, &
-         vel_time_slab,u3)
+         call interp_mac_velocity( &
+          grid_PARM, &
+          umac_ptr, &
+          vmac_ptr, &
+          wmac_ptr, &
+          xpart2, &
+          vel_time_slab,u2)
 
-        do dir=1,SDIM
-         xpart4(dir)=xpart1(dir)+dt*u3(dir)
-        enddo
+         do dir=1,SDIM
+          xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
+         enddo
 
-        call check_cfl_BC(grid_PARM,xpart1,xpart4)
+         call check_cfl_BC(grid_PARM,xpart1,xpart3)
 
-        call interp_mac_velocity( &
-         grid_PARM, &
-         umac_ptr, &
-         vmac_ptr, &
-         wmac_ptr, &
-         xpart4, &
-         vel_time_slab,u4)
+         call interp_mac_velocity( &
+          grid_PARM, &
+          umac_ptr, &
+          vmac_ptr, &
+          wmac_ptr, &
+          xpart3, &
+          vel_time_slab,u3)
 
-        do dir=1,SDIM
-         xpart_last(dir)=xpart1(dir)+(1.0d0/6.d0)*dt &
-          *(u1(dir)+2.d0*u2(dir)+2.d0*u3(dir)+u4(dir))
-        enddo
-       else if (num_RK_stages.eq.2) then
-        do dir=1,SDIM
-         xpart2(dir)=xpart1(dir)+dt*u1(dir)
-        enddo
-        call check_cfl_BC(grid_PARM,xpart1,xpart2)
+         do dir=1,SDIM
+          xpart4(dir)=xpart1(dir)+dt*u3(dir)
+         enddo
 
-        call interp_mac_velocity( &
-         grid_PARM, &
-         umac_ptr, &
-         vmac_ptr, &
-         wmac_ptr, &
-         xpart2, &
-         vel_time_slab,u2)
+         call check_cfl_BC(grid_PARM,xpart1,xpart4)
 
-        do dir=1,SDIM
-         xpart_last(dir)=xpart1(dir)+0.5d0*dt &
-          *(u1(dir)+u2(dir))
-        enddo
+         call interp_mac_velocity( &
+          grid_PARM, &
+          umac_ptr, &
+          vmac_ptr, &
+          wmac_ptr, &
+          xpart4, &
+          vel_time_slab,u4)
+
+         do dir=1,SDIM
+          xpart_last(dir)=xpart1(dir)+(1.0d0/6.d0)*dt &
+           *(u1(dir)+2.d0*u2(dir)+2.d0*u3(dir)+u4(dir))
+         enddo
+        else if (num_RK_stages.eq.2) then
+         do dir=1,SDIM
+          xpart2(dir)=xpart1(dir)+dt*u1(dir)
+         enddo
+         call check_cfl_BC(grid_PARM,xpart1,xpart2)
+
+         call interp_mac_velocity( &
+          grid_PARM, &
+          umac_ptr, &
+          vmac_ptr, &
+          wmac_ptr, &
+          xpart2, &
+          vel_time_slab,u2)
+
+         do dir=1,SDIM
+          xpart_last(dir)=xpart1(dir)+0.5d0*dt &
+           *(u1(dir)+u2(dir))
+         enddo
+        else
+         print *,"num_RK_stages invalid"
+         stop
+        endif
+
+       else if (phase_change_displacement.eq.1) then
+
        else
-        print *,"num_RK_stages invalid"
+        print *,"phase_change_displacement invalid"
         stop
        endif
 

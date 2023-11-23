@@ -14039,6 +14039,7 @@ NavierStokes::level_phase_change_convert(
 
       // burnvelfab=BURNING_VELOCITY_MF is cell centered (interior: lo to hi)
       // nodevelfab=nodevel is at the nodes. (interior: lo to hi+1)
+      // fort_nodedisplace is declared in: MASS_TRANSFER_3D.F90
     fort_nodedisplace(
      &nburning,
      tilelo,tilehi,

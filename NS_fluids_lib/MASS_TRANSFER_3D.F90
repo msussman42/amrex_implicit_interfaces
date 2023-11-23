@@ -2947,12 +2947,14 @@ stop
       integer, INTENT(in) :: DIMDEC(ucell)
       integer, INTENT(in) :: DIMDEC(oldLS)
      
-      real(amrex_real), target, INTENT(out) ::  unode(DIMV(unode),2*num_interfaces*SDIM) 
+      real(amrex_real), target, INTENT(out) :: &
+              unode(DIMV(unode),2*num_interfaces*SDIM) 
       real(amrex_real), pointer :: unode_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), target, INTENT(in) ::  ucell(DIMV(ucell),nburning) 
       real(amrex_real), pointer :: ucell_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), target, INTENT(in) :: oldLS(DIMV(oldLS),num_materials*(1+SDIM))
+      real(amrex_real), target, INTENT(in) :: &
+              oldLS(DIMV(oldLS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: oldLS_ptr(D_DECL(:,:,:),:)
 
       integer, INTENT(in) :: velbc(SDIM,2,SDIM)

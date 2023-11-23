@@ -407,29 +407,30 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
 #ifdef AMREX_PARTICLES
 
- NavierStokes& ns_level0=getLevel(0);
- My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
-
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  NavierStokes& ns_level0=getLevel(0);
+  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
+
   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+
+  int lev_min=0;
+  int lev_max=-1;
+  int nGrow_Redistribute=0;
+  int local_Redistribute=0; 
+  localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+    //move_particles() declared in NavierStokes2.cpp
+   ns_level.move_particles(localPC,local_caller_string);
+  }
+
+  localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
  } else
   amrex::Error("slab_step invalid");
-
- int lev_min=0;
- int lev_max=-1;
- int nGrow_Redistribute=0;
- int local_Redistribute=0; 
- localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
-
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-   //move_particles() declared in NavierStokes2.cpp
-  ns_level.move_particles(localPC,local_caller_string);
- }
-
- localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
 
 #endif
 
@@ -1833,28 +1834,30 @@ void NavierStokes::phase_change_code_segment(
 
 #ifdef AMREX_PARTICLES
 
- My_ParticleContainer& localPC=newDataPC(slab_step+1);
-
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+
+  My_ParticleContainer& localPC=newDataPC(slab_step+1);
+
+  int lev_min=0;
+  int lev_max=-1;
+  int nGrow_Redistribute=0;
+  int local_Redistribute=0; 
+  localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+    //move_particles() declared in NavierStokes2.cpp
+   ns_level.move_particles(localPC,local_caller_string);
+  }
+
+  localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+
  } else
   amrex::Error("slab_step invalid");
-
- int lev_min=0;
- int lev_max=-1;
- int nGrow_Redistribute=0;
- int local_Redistribute=0; 
- localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
-
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
-   //move_particles() declared in NavierStokes2.cpp
-  ns_level.move_particles(localPC,local_caller_string);
- }
-
- localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
 
 #endif
 

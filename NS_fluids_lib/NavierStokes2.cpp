@@ -6558,17 +6558,32 @@ void NavierStokes::move_particles(
  for (int m=0;m<2*AMREX_SPACEDIM;m++)
   dombc[m]=b_rec[m];
 
+ MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
+
  MultiFab* mac_velocity[AMREX_SPACEDIM];
+ MultiFab* burning_velocity;
+
+ int burning_velocity_ncomp=1;
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   if (phase_change_displacement==0) {
    mac_velocity[dir]=getStateMAC(1,dir,vel_time_slab);
+   burning_velocity=lsmf;
+   burning_velocity_ncomp=1;
   } else if (phase_change_displacement==1) {
-   mac_velocity[dir]=nodevel_MF;
+   mac_velocity[dir]=lsmf;
+   burning_velocity=localMF[BURNING_VELOCITY_MF];
+   burning_velocity_ncomp=EXTRAP_NCOMP_BURNING;
+
+   if (localMF[BURNING_VELOCITY_MF]->nComp()!=EXTRAP_NCOMP_BURNING)
+    amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ncomp");
+   if (localMF[BURNING_VELOCITY_MF]->nGrow()!=ngrow_distance)
+    amrex::Error("localMF[BURNING_VELOCITY_MF] incorrect ngrow");
+   debug_ixType(BURNING_VELOCITY_MF,-1,local_caller_string);
+
   } else
    amrex::Error("phase_change_displacement invalid");
  }
-
- MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -6595,6 +6610,8 @@ void NavierStokes::move_particles(
 
   FArrayBox& lsfab=(*lsmf)[mfi];
 
+  FArrayBox& burningfab=(*burning_velocity)[mfi];
+
   const Real* xlo = grid_loc[gridno].lo();
 
   auto& particles = localPC.GetParticles(level)
@@ -6615,6 +6632,7 @@ void NavierStokes::move_particles(
    // declared in: LEVELSET_3D.F90
   fort_move_particle_container( 
    &phase_change_displacement,
+   &burning_velocity_ncomp,
    &tid_current,
    tilelo,tilehi,
    fablo,fabhi,
@@ -6632,6 +6650,9 @@ void NavierStokes::move_particles(
    ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
    zvelfab.dataPtr(),
    ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
+   burningfab.dataPtr(),
+   ARLIM(burningfab.loVect()),
+   ARLIM(burningfab.hiVect()),
    lsfab.dataPtr(),
    ARLIM(lsfab.loVect()),
    ARLIM(lsfab.hiVect()),

@@ -621,6 +621,8 @@ namespace amrex{
 	AMREX_ARLIM_P(mfinerhi));
 
      void fort_move_particle_container(
+        int* phase_change_displacement,
+        int* burning_velocity_ncomp,
         int* tid,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,
@@ -635,6 +637,10 @@ namespace amrex{
         Real* umac,AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
         Real* vmac,AMREX_ARLIM_P(vmaclo),AMREX_ARLIM_P(vmachi),
         Real* wmac,AMREX_ARLIM_P(wmaclo),AMREX_ARLIM_P(wmachi),
+        Real* burningfab,
+	AMREX_ARLIM_P(burningfablo),AMREX_ARLIM_P(burningfabhi),
+        Real* lsfab,
+	AMREX_ARLIM_P(lsfablo),AMREX_ARLIM_P(lsfabhi),
 	int* velbc,
 	int* denbc,
 	int* dombc,
