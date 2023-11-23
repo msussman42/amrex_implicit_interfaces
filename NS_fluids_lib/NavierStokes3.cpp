@@ -2360,7 +2360,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      if (is_zalesak()) {
       mass_transfer_active=0;
      } else if (!is_zalesak()) {
-      if (is_phasechange==1) {
+      if (is_phasechange==1) { //get_user_latent_heat!=0.0?
        mass_transfer_active=1;
       } else if (is_phasechange==0) {
        mass_transfer_active=0;
@@ -7280,7 +7280,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
     // heat_source_term_flux_source calls GODUNOV_3D::fort_heatsource_face
   heat_source_term_flux_source();
 
-  if (is_phasechange==1) {
+  if (is_phasechange==1) { //get_user_latent_heat!=0.0?
     // both S_new and outer_iter_pressure are adjusted.
     // vol*(T-T^n)*(rho cv)/dt-vol*grad dot k grad T = -1/dt vol*div u+
     //   diffusionRHS
@@ -7319,7 +7319,7 @@ void NavierStokes::allocate_project_variables(int nsolve,int project_option) {
  if ((project_option>=SOLVETYPE_SPEC)&&
      (project_option<SOLVETYPE_SPEC+num_species_var)) {
 
-  if (is_phasechange==1) {
+  if (is_phasechange==1) { //get_user_latent_heat!=0.0?
 
    for (int im=0;im<2*num_interfaces;im++) {
     Real LL=get_user_latent_heat(im+1,293.0,1);

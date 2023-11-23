@@ -19309,8 +19309,11 @@ stop
       real(amrex_real) :: local_normal(AMREX_SPACEDIM)
       integer :: im_primary_sub
       integer :: im_primary_sub_left
+      integer :: im_secondary
       integer :: im_particle
       integer :: im_loop
+      integer :: iten
+      real(amrex_real) :: LL
 
       integer, allocatable, dimension(:,:) :: sub_particle_data
       real(amrex_real), allocatable, dimension(:) :: sub_particle_data_dist
@@ -19775,7 +19778,9 @@ stop
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
                 if ((im_particle.ge.1).and. &
                     (im_particle.le.num_materials)) then
+
                  if (im_particle.eq.im_primary_sub) then
+
                   if (LS_sub(im_particle).le. &
                       DXMAXLS/particle_nsubdivide_narrow) then
                    sort_data_mindist(sub_iter)=1.0D+20
@@ -19784,6 +19789,65 @@ stop
                    !do nothing
                   else
                    print *,"LS_sub(im_particle) bad: ",LS_sub(im_particle)
+                   stop
+                  endif
+
+                  call get_secondary_material(LS_sub, &
+                         im_primary_sub,im_secondary)
+                  if ((im_secondary.ge.1).and. &
+                      (im_secondary.le.num_materials).and. &
+                      (im_secondary.ne.im_primary_sub)) then
+
+                   if ((abs(LS_sub(im_primary_sub)).le.two*DXMAXLS).and. &
+                       (abs(LS_sub(im_secondary)).le.two*DXMAXLS)) then
+                    call get_iten(im_primary_sub,im_secondary,iten)
+                    LL=get_user_latent_heat(iten,293.0d0,1)
+                    if (LL.ne.zero) then
+
+                     local_weight_particles=zero
+
+                     call interp_eul_lag_dist( &
+                      local_weight_particles, &
+                      accum_PARM, &
+                      particlesptr, &
+                      lsfab_ptr, &
+                      denfab_ptr, &
+                      velfab_ptr, &
+                      cell_particle_count_ptr, &
+                      i,j,k, &
+                      xpart, &
+                      particle_link_data, &
+                      Np, &
+                      LS_sub, &
+                      den_sub, &
+                      vel_sub, &
+                      X0_sub)
+
+                     do dir_local=1,SDIM
+                      particles(current_link)% &
+                       extra_state(N_EXTRA_REAL_u+dir_local)=vel_sub(dir_local)
+                     enddo
+                     particles(current_link)% &
+                      extra_state(N_EXTRA_REAL_T+1)= &
+                       den_sub((im_particle-1)*num_state_material+ &
+                         ENUM_TEMPERATUREVAR+1)
+
+                    else if (LL.eq.zero) then
+                     ! do nothing
+                    else
+                     print *,"LL invalid: ",LL
+                     stop
+                    endif
+                   else if ((abs(LS_sub(im_primary_sub)).gt.two*DXMAXLS).or. &
+                            (abs(LS_sub(im_secondary)).gt.two*DXMAXLS)) then
+                    ! do nothing
+                   else
+                    print *,"LS_sub invalid"
+                    stop
+                   endif
+
+                  else
+                   print *,"im_secondary invalid: ",im_secondary
                    stop
                   endif
 

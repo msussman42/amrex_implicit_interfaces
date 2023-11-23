@@ -18242,7 +18242,8 @@ end subroutine print_visual_descriptor
        ! 1<=iten<=2 * num_interfaces
        ! default_flag=1 => only the sign is needed
        ! default_flag=0 => the value is important too.
-      real(amrex_real) function get_user_latent_heat(iten,temperature,default_flag) &
+      real(amrex_real) function get_user_latent_heat(iten,temperature, &
+                default_flag) &
       bind(c,name='get_user_latent_heat')
 
       use probcommon_module
