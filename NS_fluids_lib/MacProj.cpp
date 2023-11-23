@@ -1334,7 +1334,7 @@ void NavierStokes::applyALL(
    GRADPEDGE_MF,
    idx_phi,
    project_option,nsolve,
-   solver_dt_slab); //applyALL
+   dt_slab); //applyALL
 
   if (ilev<finest_level) {
    int ncomp_edge=-1;
@@ -1361,7 +1361,7 @@ void NavierStokes::applyALL(
    mdot_local,
    GRADPEDGE_MF,
    nsolve,
-   solver_dt_slab); //calling from applyALL
+   dt_slab); //calling from applyALL
  } // ilev=finest_level ... level
 
  project_right_hand_side(idx_Aphi,project_option,change_flag);
@@ -1563,7 +1563,7 @@ void NavierStokes::applyGradALL(
    GRADPEDGE_MF,
    idx_phi,
    project_option,nsolve,
-   solver_dt_slab); //applyGradALL
+   dt_slab); //applyGradALL
 
   if (ilev<finest_level) {
    int ncomp_edge=-1;
@@ -2672,7 +2672,7 @@ void NavierStokes::mac_project_rhs(int project_option,
    localMF[DIFFUSIONRHS_MF],
    UMAC_MF,
    nsolve,
-   solver_dt_slab); //mac_project_rhs
+   dt_slab); //mac_project_rhs
 
 }  // end subroutine mac_project_rhs
 

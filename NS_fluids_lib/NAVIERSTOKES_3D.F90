@@ -9970,7 +9970,7 @@ END SUBROUTINE SIMP
        dombcpres, &
        domlo,domhi, &
        xlo,dx, &
-       dt, & ! solver_dt_slab
+       dt, & ! dt_slab
        angular_velocity, & !intent(in) fort_init_potential
        centrifugal_force_factor, & !intent(in) fort_init_potential
        isweep) &
@@ -9983,7 +9983,7 @@ END SUBROUTINE SIMP
 
       integer, INTENT(in) :: level
       integer, INTENT(in) :: isweep
-      real(amrex_real), INTENT(in) :: dt  ! solver_dt_slab
+      real(amrex_real), INTENT(in) :: dt  ! dt_slab
       real(amrex_real), INTENT(in) :: angular_velocity
       real(amrex_real), INTENT(in) :: centrifugal_force_factor
       integer, INTENT(in) :: DIMDEC(presden)
@@ -11300,7 +11300,7 @@ END SUBROUTINE SIMP
        zdest,DIMS(zdest), &
        xlo, &
        dx, &
-       solver_dt_slab, &
+       dt_slab, &
        cur_time) &
       bind(c,name='fort_fluidsolidcor')
 
@@ -11367,7 +11367,7 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: zdest_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
-      real(amrex_real), INTENT(in) :: solver_dt_slab
+      real(amrex_real), INTENT(in) :: dt_slab
       real(amrex_real), INTENT(in) :: cur_time
  
       integer i,j,k
@@ -11405,7 +11405,7 @@ END SUBROUTINE SIMP
        stop
       endif
 
-      if (solver_dt_slab.gt.zero) then
+      if (dt_slab.gt.zero) then
        ! do nothing
       else
        print *,"solve_dt_slab invalid"

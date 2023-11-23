@@ -3750,10 +3750,12 @@ stop
       real(amrex_real), pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: LSold(DIMV(LSold),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+            LSold(DIMV(LSold),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LSold_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), target, INTENT(out) :: LSnew(DIMV(LSnew),num_materials)
+      real(amrex_real), target, INTENT(out) :: &
+            LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), target, INTENT(in) :: recon(DIMV(recon),num_materials*ngeom_recon)
@@ -4911,6 +4913,7 @@ stop
                (solid_vof_old.ge.half)) then
             away_from_interface=1
            endif
+
            if (((abs(unsplit_lsnew(im_source)).gt.dxmaxLS).or. &
                 (abs(unsplit_lsnew(im_dest)).gt.dxmaxLS)).and. &
                ((abs(oldLS_point(im_dest)).gt.dxmaxLS).or. &
@@ -4926,19 +4929,22 @@ stop
            endif
 
            if (away_from_interface.eq.1) then
+
             newvfrac(im_source)=oldvfrac(im_source)
             newvfrac(im_dest)=oldvfrac(im_dest)
             do udir=1,SDIM 
              new_centroid(im_source,udir)=old_centroid(im_source,udir)
              new_centroid(im_dest,udir)=old_centroid(im_dest,udir)
             enddo
+
            else if (away_from_interface.eq.0) then
 
             if ((im_primary_old.ne.im_source).and. &
                 (im_primary_old.ne.im_dest)) then
+
              if (im_primary_old.ne.im_primary_new) then
-              ! revert to oldLS in this case.
-              ! do nothing
+              ! do not touch LSnew if im_primary_old<>
+              ! im_source,im_dest,im_primary_new
              else if (im_primary_old.eq.im_primary_new) then
               LSnew(D_DECL(i,j,k),im_source)=unsplit_lsnew(im_source)
               LSnew(D_DECL(i,j,k),im_dest)=unsplit_lsnew(im_dest)
@@ -4946,8 +4952,10 @@ stop
               print *,"im_primary_new or im_primary_old invalid"
               stop
              endif
+
             else if ((im_primary_old.eq.im_source).or. &
                      (im_primary_old.eq.im_dest)) then
+
              if ((im_primary_new.ne.im_source).and. &
                  (im_primary_new.ne.im_dest)) then
               ! do nothing

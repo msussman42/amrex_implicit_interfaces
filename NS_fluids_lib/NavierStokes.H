@@ -1466,8 +1466,6 @@ protected:
     static Real advect_time_slab;
     static Real prescribed_vel_time_slab;
     static Real dt_slab;
-    static Real solver_dt_slab;
-    static Real advection_dt_slab;
     static int advect_iter;
     static int hydrate_flag;
 

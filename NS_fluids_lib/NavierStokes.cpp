@@ -87,8 +87,6 @@ Real NavierStokes::lower_slab_time=0.0;
 Real NavierStokes::delta_slab_time=0.0;
 Real NavierStokes::prescribed_vel_time_slab=0.0;
 Real NavierStokes::dt_slab=1.0;
-Real NavierStokes::solver_dt_slab=1.0;
-Real NavierStokes::advection_dt_slab=1.0;
 int NavierStokes::advect_iter=0;
 
 int  NavierStokes::show_mem = 0;
@@ -12573,13 +12571,13 @@ NavierStokes::prepare_displacement() {
 
    // MAC_VELOCITY_MF deleted towards the end of 
    //   NavierStokes::nonlinear_advection
-   // velocity * advection_dt_slab
+   // velocity * dt_slab
   new_localMF(MAC_VELOCITY_MF+normdir,1,mac_grow,normdir);
 
   const Real* dx = geom.CellSize();
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 
-  // 1. multiply velocity by advection_dt_slab.  
+  // 1. multiply velocity by dt_slab.  
   // 2. adjust velocity if RZ.  
   // 3. override velocity if it is a passive advection problem.
   // 4. copy into mac_velocity
@@ -12624,7 +12622,7 @@ NavierStokes::prepare_displacement() {
      fablo,fabhi,
      &bfact,
      velbc.dataPtr(),
-     &advection_dt_slab,//fort_velmac_override
+     &dt_slab,//fort_velmac_override
      &prev_time_slab,
      &prescribed_vel_time_slab,
      &vel_time_slab,
@@ -17270,7 +17268,7 @@ NavierStokes::split_scalar_advection() {
    fablo,fabhi,
    &bfact,
    &bfact_f,
-   &advection_dt_slab, // fort_vfrac_split
+   &dt_slab, // fort_vfrac_split
    &prev_time_slab,
    &cur_time_slab,
    &prescribed_vel_time_slab,
