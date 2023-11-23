@@ -2060,7 +2060,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     presbc.dataPtr(),
     velbc.dataPtr(),
     &slab_step,
-    &solver_dt_slab,
+    &dt_slab,
     &cur_time_slab,
     xlo,dx,
     &spectral_loop,
@@ -2257,7 +2257,7 @@ void NavierStokes::init_divup_cell_vel_cell(
     presbc.dataPtr(), 
     &cur_time_slab, 
     &slab_step,
-    &solver_dt_slab,
+    &dt_slab,
     xlo,dx,
     tilelo,tilehi,
     fablo,fabhi,
@@ -5682,7 +5682,7 @@ void NavierStokes::increment_potential_force() {
     // (gravity and surface tension)
     // u+=facegrav 
    fort_addgravity(
-     &solver_dt_slab,
+     &dt_slab,
      &cur_time_slab,
      &level,
      &finest_level,
@@ -5881,7 +5881,7 @@ void NavierStokes::init_gravity_potential() {
      dombcpres.dataPtr(),
      domlo,domhi,
      xlo,dx,
-     &solver_dt_slab, //fort_init_potential
+     &dt_slab, //fort_init_potential
      &angular_velocity, //fort_init_potential
      &centrifugal_force_factor, //fort_init_potential
      &isweep);
@@ -6130,7 +6130,7 @@ void NavierStokes::process_potential_force_face(
     presbc.dataPtr(),
     velbc.dataPtr(),
     &slab_step,
-    &solver_dt_slab, // fort_cell_to_mac,process_potential_force_face
+    &dt_slab, // fort_cell_to_mac,process_potential_force_face
     &cur_time_slab,
     xlo,dx,
     &spectral_loop,
@@ -6507,8 +6507,21 @@ void NavierStokes::move_particles(
 
  if (pattern_test(local_caller_string,"do_the_advance")==1) {
   //do nothing
- } else
+ } else {
+  std::cout << local_caller_string << '\n';
   amrex::Error("caller is invalid in move_particles");
+ }
+
+ int phase_change_displacement=0;
+
+ if (pattern_test(local_caller_string,"nonlinear_advection")==1) {
+  //do nothing
+ } else if (pattern_test(local_caller_string,"phase_change_code_segment")==1) {
+  phase_change_displacement=1;
+ } else {
+  std::cout << local_caller_string << '\n';
+  amrex::Error("caller is invalid in move_particles");
+ }
 
  bool use_tiling=ns_tiling;
  int max_level = parent->maxLevel();
@@ -6547,8 +6560,15 @@ void NavierStokes::move_particles(
 
  MultiFab* mac_velocity[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  mac_velocity[dir]=getStateMAC(1,dir,vel_time_slab);
+  if (phase_change_displacement==0) {
+   mac_velocity[dir]=getStateMAC(1,dir,vel_time_slab);
+  } else if (phase_change_displacement==1) {
+   mac_velocity[dir]=nodevel_MF;
+  } else
+   amrex::Error("phase_change_displacement invalid");
  }
+
+ MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -6573,6 +6593,8 @@ void NavierStokes::move_particles(
   FArrayBox& yvelfab=(*mac_velocity[1])[mfi];
   FArrayBox& zvelfab=(*mac_velocity[AMREX_SPACEDIM-1])[mfi];
 
+  FArrayBox& lsfab=(*lsmf)[mfi];
+
   const Real* xlo = grid_loc[gridno].lo();
 
   auto& particles = localPC.GetParticles(level)
@@ -6592,6 +6614,7 @@ void NavierStokes::move_particles(
 
    // declared in: LEVELSET_3D.F90
   fort_move_particle_container( 
+   &phase_change_displacement,
    &tid_current,
    tilelo,tilehi,
    fablo,fabhi,
@@ -6601,7 +6624,7 @@ void NavierStokes::move_particles(
    xlo,dx,
    particles_AoS.data(),
    Np,  // pass by value
-   &advection_dt_slab, //move_particle_container
+   &dt_slab, //move_particle_container
    &vel_time_slab,
    xvelfab.dataPtr(),
    ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
@@ -6609,6 +6632,9 @@ void NavierStokes::move_particles(
    ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
    zvelfab.dataPtr(),
    ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
+   lsfab.dataPtr(),
+   ARLIM(lsfab.loVect()),
+   ARLIM(lsfab.hiVect()),
    velbc.dataPtr(),
    denbc.dataPtr(),
    dombc.dataPtr(),
@@ -6618,8 +6644,15 @@ void NavierStokes::move_particles(
 } // omp
  ns_reconcile_d_num(LOOP_MOVE_PARTICLE_CONTAINER,"move_particles");
 
+ delete lsmf;
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete mac_velocity[dir];
+  if (phase_change_displacement==0) {
+   delete mac_velocity[dir];
+  } else if (phase_change_displacement==1) {
+   //do nothing
+  } else
+   amrex::Error("phase_change_displacement invalid");
  }
 
 } // end subroutine move_particles
@@ -9921,7 +9954,7 @@ void NavierStokes::init_advective_pressure(int project_option) {
    &level,
    &finest_level,
    xlo,dx,
-   &solver_dt_slab, //fort_advective_pressure
+   &dt_slab, //fort_advective_pressure
    maskcov.dataPtr(),
    ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
    volumefab.dataPtr(),
@@ -9991,7 +10024,6 @@ void NavierStokes::scale_variablesALL() {
    &projection_velocity_scale);
 
  dt_slab*=projection_velocity_scale;
- solver_dt_slab*=projection_velocity_scale;
 
  int scale_flag=0;
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -10012,7 +10044,6 @@ void NavierStokes::unscale_variablesALL() {
  fort_setfortscales(&dummy_scale,&dummy_scale);
 
  dt_slab/=projection_velocity_scale;
- solver_dt_slab/=projection_velocity_scale;
 
  int scale_flag=1;
  for (int ilev=finest_level;ilev>=level;ilev--) {

@@ -270,7 +270,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  local_caller_string=caller_string+local_caller_string;
 
  if (pattern_test(local_caller_string,"do_the_advance")==1) {
-  advection_dt_slab=dt_slab;
   advect_time_slab=prev_time_slab;
 
   if (divu_outer_sweeps==0) 
@@ -429,10 +428,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   ns_level.move_particles(localPC,local_caller_string);
  }
 
- lev_min=0;
- lev_max=-1;
- nGrow_Redistribute=0;
- local_Redistribute=0; 
  localPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_Redistribute);
 
@@ -1820,7 +1815,6 @@ void NavierStokes::phase_change_code_segment(
  // 3.update volume fractions, jump strength, temperature
  level_phase_change_convertALL();
 
- delete_array(BURNING_VELOCITY_MF);
  delete_array(FD_NRM_ND_MF);
  delete_array(FD_CURV_CELL_MF);
 
@@ -1835,7 +1829,6 @@ void NavierStokes::phase_change_code_segment(
 
   // in: phase_change_code_segment
  delete_array(DEN_RECON_MF);
- delete_array(nodevel_MF);
 
 
 #ifdef AMREX_PARTICLES
@@ -1854,7 +1847,19 @@ void NavierStokes::phase_change_code_segment(
  localPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_Redistribute);
 
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+   //move_particles() declared in NavierStokes2.cpp
+  ns_level.move_particles(localPC,local_caller_string);
+ }
+
+ localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
 #endif
+
+ delete_array(BURNING_VELOCITY_MF);
+ delete_array(nodevel_MF);
 
  int update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID; 
  int init_vof_prev_time=0;
@@ -7678,7 +7683,7 @@ void NavierStokes::correct_velocity(
     zdest.dataPtr(velcomp),ARLIM(zdest.loVect()),ARLIM(zdest.hiVect()),
     xlo,
     dx,
-    &solver_dt_slab,
+    &dt_slab,
     &cur_time_slab);
   } // velcomp=0..nsolve-1
  } // mfi
@@ -7732,7 +7737,7 @@ void NavierStokes::residual_correction_form(
    GRADPEDGE_MF,
    STATE_FOR_RESID_MF,
    project_option,nsolve,
-   solver_dt_slab); //calling from residual_correction_form
+   dt_slab); //calling from residual_correction_form
 
    // UMAC_MF-=GRADPEDGE_MF
   correct_velocity(project_option,
@@ -7874,7 +7879,7 @@ void NavierStokes::relaxLEVEL(
   localMF[idx_rhs],
   UMACSTAR_MF,
   nsolve,
-  solver_dt_slab); //calling from: relaxLEVEL
+  dt_slab); //calling from: relaxLEVEL
 
   // sets pbdry
   // going down the V-cycle: pdry=localMF[idx_phi]=0.0
@@ -7941,7 +7946,7 @@ void NavierStokes::relaxLEVEL(
    GRADPEDGE_MF,
    idx_phi,
    project_option,nsolve,
-   solver_dt_slab); //calling from relaxLEVEL
+   dt_slab); //calling from relaxLEVEL
 
     // residmf=rhsmf-( (alpha+da) * phi - vol div grad phi )
   int apply_lev_resid=0;
@@ -7962,7 +7967,7 @@ void NavierStokes::relaxLEVEL(
    rhsmf,    // called "diffusionRHScell" in apply_div
    GRADPEDGE_MF,
    nsolve,
-   solver_dt_slab); //calling from relaxLEVEL
+   dt_slab); //calling from relaxLEVEL
 
    // UMACSTAR=UMACSTAR+GRADPEDGE
   correct_velocity(project_option,
@@ -8315,10 +8320,10 @@ void NavierStokes::updatevelALL(
 void NavierStokes::Prepare_UMAC_for_solver(int project_option,
   int nsolve) {
 
- if (solver_dt_slab>0.0) {
+ if (dt_slab>0.0) {
   // do nothing
  } else
-  amrex::Error("solver_dt_slab invalid:Prepare_UMAC_for_solver");
+  amrex::Error("dt_slab invalid:Prepare_UMAC_for_solver");
 
  if ((nsolve!=1)&&(nsolve!=AMREX_SPACEDIM))
   amrex::Error("nsolve invalid");
@@ -8745,23 +8750,15 @@ void NavierStokes::multiphase_project(int project_option) {
 
   override_enable_spectral(0); // always low order
 
-  solver_dt_slab=dt_slab;
-
  } else if (project_option_projection(project_option)==1) {
-
-  solver_dt_slab=dt_slab;
-
+  //do nothing
  } else if (project_option==SOLVETYPE_PRESEXTRAP) {
   override_enable_spectral(0); // always low order
-  solver_dt_slab=dt_slab;
  } else if (project_option==SOLVETYPE_HEAT) { 
-  solver_dt_slab=dt_slab;
  } else if (project_option==SOLVETYPE_VISC) {
-  solver_dt_slab=dt_slab;
  } else if ((project_option>=SOLVETYPE_SPEC)&&
 	    (project_option<SOLVETYPE_SPEC+num_species_var)) { 
   override_enable_spectral(0); // always low order
-  solver_dt_slab=dt_slab;
  } else
   amrex::Error("project_option invalid43");
 
@@ -8879,7 +8876,6 @@ void NavierStokes::multiphase_project(int project_option) {
    std::cout << " SDC_outer_sweeps= " << SDC_outer_sweeps << '\n';
    std::cout << " ns_time_order= " << ns_time_order << '\n';
    std::cout << " slab_step= " << slab_step << '\n';
-   std::cout << " solver_dt_slab= " << solver_dt_slab << '\n';
    std::cout << " dt_slab= " << dt_slab << '\n';
    std::cout << " lower_slab_time= " << lower_slab_time << '\n';
    std::cout << " upper_slab_time= " << upper_slab_time << '\n';
@@ -9103,7 +9099,6 @@ void NavierStokes::multiphase_project(int project_option) {
 
    // fortran pressure and velocity scales
    // dt_slab
-   // solver_dt_slab
    // s_new velocity
    // s_new pressure
    // div_new 
@@ -9375,7 +9370,7 @@ void NavierStokes::multiphase_project(int project_option) {
  // Regularizes FACE_WEIGHT_MF if necessary.
  // create_hierarchy=-1,0,1
  int create_hierarchy=0;
- allocate_maccoefALL(project_option,nsolve,create_hierarchy,solver_dt_slab);
+ allocate_maccoefALL(project_option,nsolve,create_hierarchy,dt_slab);
 
  if (create_hierarchy==0) {
 
@@ -9519,7 +9514,7 @@ void NavierStokes::multiphase_project(int project_option) {
   // ONES_MF,ONES_GROW_MF
   // create_hierarchy=-1,0,1
  create_hierarchy=1;
- allocate_maccoefALL(project_option,nsolve,create_hierarchy,solver_dt_slab);
+ allocate_maccoefALL(project_option,nsolve,create_hierarchy,dt_slab);
 
    // this must be done after allocate_maccoef (stefan_solver_init relies on
    // inhomogeneous BCs)
@@ -10545,7 +10540,7 @@ void NavierStokes::multiphase_project(int project_option) {
       GRADPEDGE_MF,
       PRESPC_MF,
       project_option,nsolve,
-      solver_dt_slab); //calling from multiphase_project
+      dt_slab); //calling from multiphase_project
 
      if (ilev<finest_level) {
       int ncomp_edge=-1;
