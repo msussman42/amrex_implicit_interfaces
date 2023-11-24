@@ -32,20 +32,45 @@ and material id.
 3. add and delete particles; particles deleted if particle density exceeds
 a threshold.
 
-4. advect the level set using unsplit, non conservative semi-lagrangian 
-"data bounded WENO" advection.  (advect the velocity, temperature, and
-temperature using unsplit data bounded WENO too)
-advect the particles.
-
-5. for phase change, limit the normal velocity so that 
+4. advection (use UMAC): 
+  (a) particles (advective velocity material id=particle material id), RK2
+  (b) level set functions, velocity(s), temperature(s),density(s), species
+      unsplit: RK2, WENO3
+  (c) PDE extension of levelsets into solids, velocity, temperature, density,
+      species into other materials.
+  (d) PDE reinitialize the level set function(s), use particles to correct.
+5. (a) phase change, limit the normal velocity so that 
 V(phi_source_old)-V(phi_source_new)=V(phi_target_new)-V(phi_target_old)
+   (b) reinitialize the level set function(s), use particles to correct.
 
-6. semi-lagranian reinitialization corrects the level set 
-function so that the particle attribute is as consistent 
-as possible with the interpolated levelset attribute.
+6. combine the cell centered advected velocities and advected temperatures and
+  species.
 
+7. viscosity, heat conduction, species diffusion
+
+8. extend velocity, temperature, species
+
+9. interpolate cell velocity to MAC velocity (each material)
+
+10. combine MAC velocity and project.
+
+11. extend MAC velocity and make sure each MAC_{material} velocity is 
+divergence free.
+
+
+Note: for compressible flows, add enough artificial diffusion so that there 
+are 2 points in the transition region.
+
+Use viscous Burgers' equation as a guide:
+u_t + (u^2/2)_x = nu u_xx
+
+u=1-tanh((x-t)/(2 nu))
 
 References:
+Jawad, Petkovi, Biswas (2010), Soliton solutions of Burgers 
+equations and perturbed Burgers equation, 
+Applied Mathematics and Computation.
+
 Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
 
 1. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver

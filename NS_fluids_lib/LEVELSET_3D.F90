@@ -19802,6 +19802,16 @@ stop
                        (abs(LS_sub(im_secondary)).le.two*DXMAXLS)) then
                     call get_iten(im_primary_sub,im_secondary,iten)
                     LL=get_user_latent_heat(iten,293.0d0,1)
+
+                    if (LL.eq.zero) then
+                     LL=get_user_latent_heat(iten+num_interfaces,293.0d0,1)
+                    else if (LL.ne.zero) then
+                     ! do nothing
+                    else
+                     print *,"LL invalid"
+                     stop
+                    endif
+
                     if (LL.ne.zero) then
 
                      local_weight_particles=zero
@@ -20987,6 +20997,14 @@ stop
 
       real(amrex_real) wrap_pos
 
+      integer cell_index(SDIM)
+      integer i,j,k
+      integer im_loop,im_primary,im_secondary
+      integer iten,ireverse,sign_reverse,tag_local,scomp
+      real(amrex_real) LS(num_materials)
+      real(amrex_real) DXMAXLS
+      real(amrex_real) LL
+
       umac_ptr=>umac
       vmac_ptr=>vmac
       wmac_ptr=>wmac
@@ -20997,6 +21015,14 @@ stop
        ! do nothing
       else
        print *,"dt invalid"
+       stop
+      endif
+
+      call get_dxmaxLS(dx,bfact,DXMAXLS)
+      if (DXMAXLS.gt.zero) then
+       ! do nothing
+      else
+       print *,"DXMAXLS invalid"
        stop
       endif
 
@@ -21032,17 +21058,38 @@ stop
       grid_PARM%level=level
       grid_PARM%finest_level=finest_level
 
+      if (ngrow_distance.eq.4) then
+       !do nothing
+      else
+       print *,"ngrow_distance invalid"
+       stop
+      endif
+
       if (phase_change_displacement.eq.0) then
        call checkbound_array1(fablo,fabhi,umac_ptr,1,0)
        call checkbound_array1(fablo,fabhi,vmac_ptr,1,1)
        call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1)
       else if (phase_change_displacement.eq.1) then
-       call checkbound_array(fablo,fabhi,burning_ptr,1,-1)
+       call checkbound_array(fablo,fabhi,burning_ptr,ngrow_distance,-1)
+
        ncomp_per_burning=EXTRAP_PER_BURNING
+       if (ncomp_per_burning.eq.AMREX_SPACEDIM) then
+        ! do nothing
+       else
+        print *,"expecting ncomp_per_burning.eq.sdim"
+        stop
+       endif
+
        if (burning_velocity_ncomp.eq.EXTRAP_NCOMP_BURNING) then
         ! do nothing
        else
         print *,"burning_velocity_ncomp invalid"
+        stop
+       endif
+       if (burning_velocity_ncomp.eq.num_interfaces*(1+AMREX_SPACEDIM)) then
+        ! do nothing
+       else
+        print *,"expecting burning_velocity_ncomp=num_interfaces*(sdim+1)"
         stop
        endif
       else
@@ -21141,6 +21188,75 @@ stop
         endif
 
        else if (phase_change_displacement.eq.1) then
+
+        do dir=1,SDIM
+         xpart_last(dir)=xpart1(dir)
+        enddo
+
+        call containing_cell(bfact, &
+         dx, &
+         xlo, &
+         fablo, &
+         xpart1, &
+         cell_index)
+
+        i=cell_index(1)
+        j=cell_index(2)
+        k=cell_index(SDIM)
+
+        do im_loop=1,num_materials
+         LS(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
+        enddo
+        call get_primary_material(LS,im_primary)
+        call get_secondary_material(LS,im_primary,im_secondary)
+        if ((abs(LS(im_primary)).le.DXMAXLS).and. &
+            (abs(LS(im_secondary)).le.DXMAXLS)) then
+         call get_iten(im_primary,im_secondary,iten)
+
+         do ireverse=0,1
+          LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+          if (LL.ne.zero) then
+           if (ireverse.eq.0) then
+            sign_reverse=1
+           else if (ireverse.eq.1) then
+            sign_reverse=-1
+           else
+            print *,"ireverse invalid"
+            stop
+           endif
+           tag_local=NINT(burning(D_DECL(i,j,k),iten))
+
+           do dir=1,SDIM
+            if (tag_local.eq.0) then
+             ! do nothing
+            else if ((sign_reverse*tag_local.eq.1).or. &
+                     (sign_reverse*tag_local.eq.2)) then
+             scomp=num_interfaces+(iten-1)*ncomp_per_burning+dir
+             u1(dir)=burning(D_DECL(i,j,k),scomp)
+             xpart_last(dir)=xpart1(dir)+dt*u1(dir)
+            else if ((-sign_reverse*tag_local.eq.1).or. &
+                     (-sign_reverse*tag_local.eq.2)) then
+             ! do nothing
+            else
+             print *,"tag_local invalid:",tag_local
+             stop
+            endif
+           enddo ! do dir=1,SDIM
+          else if (LL.eq.zero) then
+           !do nothing
+          else
+           print *,"LL invalid: ",LL
+           stop
+          endif
+         enddo ! do ireverse=0,1
+
+        else if ((abs(LS(im_primary)).gt.DXMAXLS).or. &
+                 (abs(LS(im_secondary)).gt.DXMAXLS)) then
+         ! do nothing
+        else
+         print *,"LS invalid"
+         stop
+        endif
 
        else
         print *,"phase_change_displacement invalid"
