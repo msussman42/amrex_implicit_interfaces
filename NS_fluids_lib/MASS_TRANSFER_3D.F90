@@ -2985,11 +2985,26 @@ stop
        print *,"bfact invalid117"
        stop
       endif
+
       ncomp_per_burning=EXTRAP_PER_BURNING
+      if (ncomp_per_burning.eq.AMREX_SPACEDIM) then
+       ! do nothing
+      else
+       print *,"expecting ncomp_per_burning==sdim"
+       stop
+      endif
+
       if (nburning.eq.EXTRAP_NCOMP_BURNING) then
        ! do nothing
       else
        print *,"nburning invalid"
+       stop
+      endif
+
+      if (nburning.eq.(1+AMREX_SPACEDIM)*num_interfaces) then
+       ! do nothing
+      else
+       print *,"expecting nburning=(1+sdim)*num_interfaces"
        stop
       endif
 
