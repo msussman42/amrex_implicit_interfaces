@@ -2,14 +2,15 @@ GPU capability, MPI capability, OpenMP
 AMR capability,
 Particle Container
 Multimaterial
-Sharp interface, supermesh
+Sharp interface
 
 Each material has an associated level set function which is initialized
-as a distance function locally to the interface.  Derived quantities are
-initialized: level set normals, volume fractions, and centroids.
+as a distance function locally to the interface.  each material has an
+associated MAC velocity, cell velocity, density, temperature and species.
+GFM used at material boundaries.
 
-Each particle has an associated material id which is assigned only when the
-particle is added.
+Each particle has an associated material id which is assigned when the
+particle is added and modified prior to redistancing.
 
 There are 2 kinds of particles:
 a) bulk particles (min |phi_{m}|>=alpha h)
@@ -25,51 +26,24 @@ Each particle has a position, displacement, velocity, temperature,
 and material id.
 
 
-1. initialize Levelsets, make them locally distance functions.  Initialize
-   volume fractions, centroids, and slopes.
+1. initialize Levelsets, make them locally distance functions.  
 2. generate the AMR grid near zero level set(s).
 
 3. add and delete particles; particles deleted if particle density exceeds
-a threshold or if the particle attribute becomes inconsistent with the
-level set function.
+a threshold.
 
-4. advect the level set using directionally split  EI-LE method.  advect
-the particles.
+4. advect the level set using unsplit, non conservative semi-lagrangian 
+"data bounded WENO" advection.  (advect the velocity, temperature, and
+temperature using unsplit data bounded WENO too)
+advect the particles.
 
 5. for phase change, limit the normal velocity so that 
 V(phi_source_old)-V(phi_source_new)=V(phi_target_new)-V(phi_target_old)
 
-6. reinitialization corrects the level set function so that the particle
-attribute is as consistent as possible with the interpolated levelset 
-attribute.
+6. semi-lagranian reinitialization corrects the level set 
+function so that the particle attribute is as consistent 
+as possible with the interpolated levelset attribute.
 
-reinitialization notes:
-
-    (a) LS0 is given
-    (b) for n=1,2,3,...
-          for each grid cell:
-          (i) find grad LS(n-1) using upwinded WENO
-          (ii) x_test=x-dtau sign(LS0) grad LS/|grad LS| 
-          (iii) if sign(I LS(x_test))=sign(LS0) then
-                 S \equiv sign(LS0)
-                else
-                 S \equiv sign(LS0) |LS(n-1)|/
-                   (|LS(n-1)|+|I LS(x_test)|)
-                endif
-                LS(n)=LS(n-1)+dtau S *(1-|grad LS|)
-                ( (LS(n)-LS(n-1))/dtau + S * n dot grad LS = +S
-          (iv) lambda=sum w(||x-xp||)(I LS(n)(xp))/sum w(||x-xp||
-               min w(||x-xp||)(I LS(xp)-lambda)^2
-               LScorrect(n)=LS(n)-lambda
-          (v) for bulk particles in which imat((I LS(n))(xp)) is 
-              inconsistent with imat(particle), make the following 
-              correction:
-              mu=sum_{particle_inconsistent}
-                w(||x-xp||)(I LS(n)(xp))/sum w(||x-xp||
-                min w(||x-xp||)(I LS(xp)-mu)^2
-               LScorrect(n)=LS(n)-mu
-
-    (c) endfor
 
 References:
 Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
