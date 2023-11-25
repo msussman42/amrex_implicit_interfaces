@@ -4,7 +4,8 @@ Particle Container
 Multimaterial
 Sharp interface
 
-Each material has an associated level set function which is initialized
+Each fluid interface and each material has an associated level set function 
+which is initialized
 as a distance function locally to the interface.  each material has an
 associated MAC velocity, cell velocity, density, temperature and species.
 GFM used at material boundaries.
@@ -36,8 +37,8 @@ a threshold.
   (a) particles (advective velocity material id=particle material id), RK2
   (b) level set functions, velocity(s), temperature(s),density(s), species
       unsplit: RK2, WENO3
-  (c) PDE extension of levelsets into solids, velocity, temperature, density,
-      species into other materials.
+  (c) PDE extension of levelsets into solids, 3rd materials(s), PDE extension 
+      of velocity, temperature, density, species into other materials.
   (d) PDE reinitialize the level set function(s), use particles to correct.
 5. (a) phase change, limit the normal velocity so that 
 V(phi_source_old)-V(phi_source_new)=V(phi_target_new)-V(phi_target_old)
