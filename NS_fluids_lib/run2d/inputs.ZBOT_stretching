@@ -335,10 +335,6 @@ ns.tempconst=295.41 295.41 295.41
 # Surface tension [N/m]
 #90 degree contact angle
 ns.tension=1.2E-02 1.2E-02 1.2E-02 
-ns.visual_quasi_static_plot_int=0
-#ns.static_surface_tension_max_iter=50
-#ns.static_surface_tension_duration=8000.0
-#ns.static_tension = 1.2e-2 1.2e-2 1.2e-2 
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------

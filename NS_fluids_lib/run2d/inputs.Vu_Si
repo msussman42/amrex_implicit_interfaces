@@ -72,7 +72,7 @@ amr.plotfile_on_restart=1
 amr.n_cell=64 64
 amr.max_level = 0
 ns.particle_nsubdivide_bulk=1
-ns.particle_nsubdivide_narrow=1
+ns.particle_nsubdivide_narrow=2
 ns.particle_max_per_nsubdivide=10
 ns.particle_weight=1.0 0.0 0.0 0.0
 # water, gas, ice, substrate

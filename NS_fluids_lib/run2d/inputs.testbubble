@@ -105,12 +105,8 @@ ns.visual_compare=0  # if 1, then compare to COARSEDATA.tec
 #1=plt file cells
 #2=tecplot cells (piecewise constant reconstruction).
 ns.visual_nddata_format=0
-ns.visual_quasi_static_plot_int=0
-ns.static_surface_tension_duration=0.8
-ns.static_surface_tension_max_iter=50
-ns.static_tension = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 # U^2=50/(1 L 0.0025)
-ns.tension        = 0.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
+ns.tension        = 50.0 0.0 0.0  # 0.0025=sigma/(rho U^2 L)
 
 ns.cfl            = 0.5    
 ns.init_shrink    = 0.1  

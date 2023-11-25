@@ -119,6 +119,11 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 amr.n_cell          = 64 256  
 amr.max_level       = 0
 
+ns.particle_nsubdivide_bulk=1
+ns.particle_nsubdivide_narrow=2
+ns.particle_max_per_nsubdivide=10
+ns.particle_weight=1.0 1.0 0.0 0.0
+
 amr.regrid_int      = 1     # How often to regrid
 #speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
 #amr.max_grid_size   = 128    # 128 is optimal for MPI in 2D
@@ -304,39 +309,9 @@ ns.interface_mass_transfer_model=0 0 0 0 0 0
 # Initial temeparture [K]
 ns.tempconst=295.41 295.41 295.41
 
-#In the future: resurrect the Sussman and Ohta algorithm with accelerated
-#"coloring" update scheme:
-#(the savings is much more significant now since there is additional savings
-#in not having to calculate motion due to phase change during the motion
-#by mean curvature iteration!)
-#
-#for tau=0...dt
-# multimaterial volume preserving motion by mean curvature v=sigma kappa:
-#   a) marching tetrahedra redistancing
-#   b) height function level set
-#   c) extension of level set function into solid.
-#endfor
-#kappa=(LS(dt)-LS(0)
-#Also in the future: (for gravity)
-# for free surface problem:
-#   ppot=rho dot zvec g   zvec=(0 0 z)
-#   p=p' + ppot
-#   u_t = -grad(p'+ppot)/rho + g zhat   p'=-ppot on free surface
-#   u_t = -grad p'/rho - grad ppot/rho + g zhat = -grad p'/rho 
-#   or, as a two phase problem:
-#   u_t = -grad p'/rho - g zvec dot grad rho/rho =  
-#       = -grad p'/rho - g zvec dot n [rho] delta/rho
-#   Algorithm to overcome the gravity time step:
-#   for tau=0..dt
-#    multimaterial volume preserving motion by "normal": 
-#      v=g (zvec dot n)n [rho]/rho 
 # Surface tension [N/m]
 #90 degree contact angle
 ns.tension=1.2E-02 1.2E-02 1.2E-02 
-ns.visual_quasi_static_plot_int=0
-#ns.static_surface_tension_max_iter=50
-#ns.static_surface_tension_duration=8000.0
-#ns.static_tension = 1.2e-2 1.2e-2 1.2e-2 
 
 # ----------------------------------------------------------
 # -------- Phase change model ------------------------------
@@ -429,7 +404,6 @@ ns.xblob3 = 2.0 # Watts=J/s
 # ----------------------------------------------------------
 ns.continuous_mof = 1 # 0=MOF 1=CMOF
 ns.vof_height_function = 0
-ns.update_centroid_after_recon = 0
 ns.mof_decision_tree_learning=100
 ns.mof_machine_learning=0
 
