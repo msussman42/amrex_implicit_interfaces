@@ -9464,10 +9464,10 @@ end subroutine print_visual_descriptor
       return
       end subroutine growntilebox_TILE
 
-      subroutine partition_unity_weight(x1,x2,dx,wt)
+      subroutine particle_grid_weight(x1,x2,dx_offset,wt)
       real(amrex_real), intent(in) :: x1(SDIM)
       real(amrex_real), intent(in) :: x2(SDIM)
-      real(amrex_real), intent(in) :: dx(SDIM)
+      real(amrex_real), intent(in) :: dx_offset
       real(amrex_real), intent(out) :: wt
 
       real(amrex_real) mag
@@ -9478,22 +9478,22 @@ end subroutine print_visual_descriptor
        mag=mag+(x1(dir)-x2(dir))**2
       enddo
 
-      if (dx(1).gt.zero) then
+      if (dx_offset.gt.zero) then
 
        if (mag.ge.zero) then
-        wt=one/(mag+dx(1)**2)
+        wt=one/(mag+dx_offset**2)
        else
-        print *,"mag invalid"
+        print *,"mag invalid: ",mag
         stop
        endif
 
       else
-       print *,"dx(1) invalid"
+       print *,"dx_offset invalid: ",dx_offset
        stop
       endif
 
       return
-      end subroutine partition_unity_weight
+      end subroutine particle_grid_weight
 
       subroutine intersect_weight_avg(ic,i,bfact_c,bfact_f,wt)
       use probcommon_module

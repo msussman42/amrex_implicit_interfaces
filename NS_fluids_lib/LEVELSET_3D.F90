@@ -18517,9 +18517,7 @@ stop
       local_ngrow=0
       if ((accum_PARM%append_flag.eq.OP_PARTICLE_INIT).or. &
           (accum_PARM%append_flag.eq.OP_PARTICLE_ADD).or. &
-          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE).or. &
-          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
-          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE)) then
        !do nothing
       else if (accum_PARM%append_flag.eq.OP_PARTICLE_ASSIMILATE) then
        local_ngrow=1
@@ -18723,7 +18721,7 @@ stop
 
       end subroutine sub_box_cell_center
 
-       ! partition of unity interpolation:
+       ! particle/grid interpolation:
        ! Q(xtarget)=( sum_{particles} Q_{p} w(xtarget,xp) +
        !              sum_{grid} Q_{grid} w(xtarget,xgrid) ) /
        !            ( sum_{particles} w(xtarget,xp) +
@@ -18878,7 +18876,7 @@ stop
         xpart(dir)=particlesptr(current_link)%pos(dir)
        enddo 
 
-       call partition_unity_weight(xpart,xtarget,accum_PARM%dx,w_p)
+       call particle_grid_weight(xpart,xtarget,accum_PARM%dx(1),w_p)
 
        data_in%xtarget=xpart
 
@@ -18941,11 +18939,7 @@ stop
         stop
        else if (accum_PARM%append_flag.eq.OP_PARTICLE_ADD) then
         ! do nothing
-       else if (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_INIT) then
-        ! do nothing
        else if (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE) then
-        ! do nothing
-       else if (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_LAST) then
         ! do nothing
        else 
         print *,"accum_PARM%append_flag invalid" 
@@ -19056,15 +19050,13 @@ stop
        enddo
 
       else if ((accum_PARM%append_flag.eq.OP_PARTICLE_ADD).or. &
-               (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE).or. &
-               (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_LAST).or. &
-               (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE_INIT)) then
+               (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE)) then
 
        do im=1,num_materials
 
         if (A_VEL(im).gt.zero) then
           !after interpolation DEN_interp lives at "xtarget"
-         call partition_unity_weight(xtarget,xtarget,accum_PARM%dx,w_p)
+         call particle_grid_weight(xtarget,xtarget,accum_PARM%dx(1),w_p)
 
          DEN_interp((im-1)*num_state_material+ENUM_TEMPERATUREVAR+1)= &
           (weight_particles*b_VEL(im,SDIM+1)+ &
@@ -19145,8 +19137,6 @@ stop
         ncomp_state, &
         particles, & ! a list of particles 
         NBR_particles, & ! a list of particles 
-        save_particles, & ! a list of particles 
-        local_particles, & ! a list of particles 
         Np, & !  Np = number of particles
         NBR_Np, & 
         new_particles, & ! size is "new_Pdata_size"
@@ -19203,8 +19193,6 @@ stop
       type(particle_t), pointer :: particlesptr(:)
       type(particle_t), INTENT(in), target :: NBR_particles(NBR_Np)
       type(particle_t), pointer :: NBR_particlesptr(:)
-      type(particle_t), INTENT(in) :: save_particles(Np)
-      type(particle_t), INTENT(inout) :: local_particles(Np)
       integer, INTENT(inout) :: new_Pdata_size
       real(amrex_real), INTENT(out) :: new_particles(new_Pdata_size)
       integer, INTENT(inout) :: Np_append
@@ -19337,12 +19325,12 @@ stop
       real(amrex_real) local_weight
       real(amrex_real) particle_data
       real(amrex_real) current_data
-      real(amrex_real) previous_data
       real(amrex_real) weight_sum(num_materials)
       real(amrex_real) velocity_sum(num_materials,SDIM)
       real(amrex_real) temperature_sum(num_materials)
       real(amrex_real) macvel
       integer :: tcomp
+      integer :: velcomp
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
 
@@ -19438,7 +19426,7 @@ stop
           SDIM+N_EXTRA_REAL+N_EXTRA_INT) then
        ! do nothing
       else
-       print *,"single_particle_size invalid"
+       print *,"single_particle_size invalid: ",single_particle_size
        stop
       endif
 
@@ -19484,9 +19472,7 @@ stop
       if (isweep.eq.0) then
         ! particles exist
        if ((append_flag.eq.OP_PARTICLE_ADD).or. &
-           (append_flag.eq.OP_PARTICLE_UPDATE).or. &
-           (append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
-           (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+           (append_flag.eq.OP_PARTICLE_UPDATE)) then
         call count_particles( &
          accum_PARM, &
          particlesptr, &
@@ -19562,9 +19548,7 @@ stop
             (im_primary_sub.le.num_materials)) then
          if (number_sweeps.eq.1) then
           if ((append_flag.eq.OP_PARTICLE_ASSIMILATE).or. &
-              (append_flag.eq.OP_PARTICLE_UPDATE).or. &
-              (append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
-              (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+              (append_flag.eq.OP_PARTICLE_UPDATE)) then
            accum_PARM%nsubdivide=1
           else
            print *,"append_flag invalid: ",append_flag
@@ -19597,9 +19581,7 @@ stop
 
         if ((append_flag.eq.OP_PARTICLE_ADD).or. &
             (append_flag.eq.OP_PARTICLE_INIT).or. &
-            (append_flag.eq.OP_PARTICLE_UPDATE).or. &
-            (append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
-            (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+            (append_flag.eq.OP_PARTICLE_UPDATE)) then
 
          sublo(3)=0
          subhi(3)=0
@@ -20166,9 +20148,7 @@ stop
              stop
             endif
 
-           else if ((append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
-                    (append_flag.eq.OP_PARTICLE_UPDATE).or. &
-                    (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+           else if (append_flag.eq.OP_PARTICLE_UPDATE) then
 
             local_count=sub_counter(isub,jsub,ksub)
             if ((isub.eq.0).and. &
@@ -20190,6 +20170,7 @@ stop
              current_link=cell_particle_count(D_DECL(i,j,k),2)
 
              do while (current_link.ge.1)
+
               do dir_local=1,SDIM
                xpart(dir_local)=particles(current_link)%pos(dir_local)
               enddo 
@@ -20216,44 +20197,28 @@ stop
 
               im_particle=particles(current_link)% &
                 extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-              do dir_local=1,SDIM
-               local_particles(current_link)% &
-                extra_state(N_EXTRA_REAL_u+dir_local)=vel_sub(dir_local)
-              enddo
-              local_particles(current_link)% &
-               extra_state(N_EXTRA_REAL_T+1)= &
-                 den_sub((im_particle-1)*num_state_material+ &
-                       ENUM_TEMPERATUREVAR+1)
-              local_weight=particle_weight(im_particle)
 
-              if ((local_weight.ge.zero).and. &
-                  (local_weight.le.one)) then
-               do dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
+              do dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
 
-                particle_data=particles(current_link)%extra_state(dir_local+1)
-                current_data= &
-                   local_particles(current_link)%extra_state(dir_local+1)
+               particle_data=particles(current_link)%extra_state(dir_local+1)
+               velcomp=dir_local-N_EXTRA_REAL_u+1
+               if ((velcomp.ge.1).and.(velcomp.le.SDIM)) then
+                current_data=vel_sub(velcomp)
+               else if (dir_local.eq.N_EXTRA_REAL_T) then
+                current_data=den_sub((im_particle-1)*num_state_material+ &
+                        ENUM_TEMPERATUREVAR+1)
+               else if ((dir_local.eq.N_EXTRA_REAL_w).and. &
+                        (SDIM.eq.2)) then
+                current_data=zero
+               else
+                print *,"dir_local invalid: ",dir_local
+                stop
+               endif
 
-                if (append_flag.eq.OP_PARTICLE_UPDATE_INIT) then
-                 !do nothing
-                else if ((append_flag.eq.OP_PARTICLE_UPDATE).or. &
-                         (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
-                 previous_data= &
-                   save_particles(current_link)%extra_state(dir_local+1)
-                 particle_data=particle_data+(current_data-previous_data)
-                else
-                 print *,"append_flag invalid"
-                 stop
-                endif
-                particle_data=local_weight*particle_data+ &
-                    (one-local_weight)*current_data
-                particles(current_link)%extra_state(dir_local+1)=particle_data
-               enddo !dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
+               particle_data=current_data
+               particles(current_link)%extra_state(dir_local+1)=particle_data
 
-              else
-               print *,"local_weight invalid: ",local_weight
-               stop
-              endif
+              enddo !dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
 
               ibase=(current_link-1)*(1+SDIM)
               current_link=particle_link_data(ibase+1)
@@ -20275,6 +20240,7 @@ stop
              print *,"local_count invalid: ",local_count
              stop
             endif
+
            else
             print *,"append_flag invalid: ",append_flag
             stop
@@ -20312,7 +20278,8 @@ stop
           xpart(dir_local)=xsub(dir_local)
          enddo
 
-         call partition_unity_weight(xpart,xsub,dx,local_weight)
+          ! very little weight for the grid based data.
+         call particle_grid_weight(xpart,xsub,(1.0D+3)*dx(1),local_weight)
          do im_loop=1,num_materials
           weight_sum(im_loop)=local_weight
           do dir_local=1,SDIM
@@ -20331,7 +20298,7 @@ stop
           enddo 
           cell_count_check=cell_count_check+1
 
-          call partition_unity_weight(xpart,xsub,dx,local_weight)
+          call particle_grid_weight(xpart,xsub,dx(1),local_weight)
 
           im_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -20446,7 +20413,9 @@ stop
               xsub(dir_local)=xsten(0,dir_local)
               xpart(dir_local)=xsub(dir_local)
              enddo
-             call partition_unity_weight(xpart,xsub,dx,local_weight)
+
+              ! very little weight for the grid based data.
+             call particle_grid_weight(xpart,xsub,(1.0D+3)*dx(1),local_weight)
              weight_sum(im_primary_sub)=local_weight
              if (dir.eq.1) then
               macvel=xvelfab(D_DECL(i,j,k))
@@ -20482,7 +20451,7 @@ stop
                enddo 
                cell_count_check=cell_count_check+1
 
-               call partition_unity_weight(xpart,xsub,dx,local_weight)
+               call particle_grid_weight(xpart,xsub,dx(1),local_weight)
 
                im_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -20579,9 +20548,7 @@ stop
 
       else if ((append_flag.eq.OP_PARTICLE_ADD).or. &
                (append_flag.eq.OP_PARTICLE_INIT).or. &
-               (append_flag.eq.OP_PARTICLE_UPDATE).or. &
-               (append_flag.eq.OP_PARTICLE_UPDATE_INIT).or. &
-               (append_flag.eq.OP_PARTICLE_UPDATE_LAST)) then
+               (append_flag.eq.OP_PARTICLE_UPDATE)) then
        ! do nothing
       else
        print *,"append_flag invalid: ",append_flag
@@ -20873,7 +20840,7 @@ stop
                  (bc_local.eq.FOEXTRAP)) then
          ! do nothing
         else
-         print *,"bc_local invalid"
+         print *,"bc_local invalid: ",bc_local
          stop
         endif
        endif
@@ -21099,7 +21066,7 @@ stop
 
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
-      num_RK_stages=2
+      num_RK_stages=1
       
       do interior_ID=1,Np
 
@@ -21109,13 +21076,27 @@ stop
 
        if (phase_change_displacement.eq.0) then
 
-        call interp_mac_velocity( &
-         grid_PARM, &
-         umac_ptr, &
-         vmac_ptr, &
-         wmac_ptr, &
-         xpart1, &
-         vel_time_slab,u1)
+        if (num_RK_stages.eq.1) then
+
+         do dir=1,SDIM
+          u1(dir)=particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)
+         enddo
+
+        else if ((num_RK_stages.eq.2).or. &
+                 (num_RK_stages.eq.4)) then
+
+         call interp_mac_velocity( &
+          grid_PARM, &
+          umac_ptr, &
+          vmac_ptr, &
+          wmac_ptr, &
+          xpart1, &
+          vel_time_slab,u1)
+
+        else
+         print *,"num_RK_stages invalid: ",num_RK_stages
+         stop
+        endif
 
         if (num_RK_stages.eq.4) then
 
@@ -21164,7 +21145,9 @@ stop
           xpart_last(dir)=xpart1(dir)+(1.0d0/6.d0)*dt &
            *(u1(dir)+2.d0*u2(dir)+2.d0*u3(dir)+u4(dir))
          enddo
+
         else if (num_RK_stages.eq.2) then
+
          do dir=1,SDIM
           xpart2(dir)=xpart1(dir)+dt*u1(dir)
          enddo
@@ -21182,8 +21165,15 @@ stop
           xpart_last(dir)=xpart1(dir)+0.5d0*dt &
            *(u1(dir)+u2(dir))
          enddo
+
+        else if (num_RK_stages.eq.1) then
+
+         do dir=1,SDIM
+          xpart_last(dir)=xpart1(dir)+dt*u1(dir)
+         enddo
+
         else
-         print *,"num_RK_stages invalid"
+         print *,"num_RK_stages invalid: ",num_RK_stages
          stop
         endif
 
@@ -21259,7 +21249,8 @@ stop
         endif
 
        else
-        print *,"phase_change_displacement invalid"
+        print *,"phase_change_displacement invalid: ", &
+           phase_change_displacement
         stop
        endif
 

@@ -1546,9 +1546,6 @@ protected:
 
     My_NBR_ParticleContainer* NBR_Particle_Container;
 
-    My_ParticleContainer* save_particle_container;
-    My_ParticleContainer* local_particle_container;
-
 #endif
 
      // value_color = sum_{i in omega_color} 1

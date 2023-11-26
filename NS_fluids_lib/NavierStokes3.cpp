@@ -2692,8 +2692,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
        init_particle_containerALL(OP_PARTICLE_ASSIMILATE,local_caller_string);
-       init_particle_containerALL(OP_PARTICLE_UPDATE_INIT,local_caller_string);
-       init_particle_containerALL(OP_PARTICLE_UPDATE,local_caller_string);
       } else
        amrex::Error("slab_step invalid");
 
@@ -3043,7 +3041,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 #ifdef AMREX_PARTICLES
 
       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-       init_particle_containerALL(OP_PARTICLE_UPDATE_LAST,local_caller_string);
+       init_particle_containerALL(OP_PARTICLE_UPDATE,local_caller_string);
       } else
        amrex::Error("slab_step invalid");
 
