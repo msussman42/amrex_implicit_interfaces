@@ -119,10 +119,10 @@ ns.heatviscconst_eddy_bulk=0.0 0.0 0.0
 amr.n_cell          = 64 256  
 amr.max_level       = 0
 
-ns.particle_nsubdivide_bulk=1
-ns.particle_nsubdivide_narrow=2
+ns.particle_nsubdivide_bulk=4
+ns.particle_nsubdivide_narrow=4
 ns.particle_max_per_nsubdivide=10
-ns.particle_weight=1.0 1.0 0.0 0.0
+ns.particle_weight=1.0 1.0 0.0 
 
 amr.regrid_int      = 1     # How often to regrid
 #speed up analysis? 128 = 2procs, 64= 4procs, 32=16procs
