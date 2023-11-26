@@ -22402,11 +22402,7 @@ NavierStokes::init_particle_containerALL(int append_flag,
 
  } else if (append_flag==OP_PARTICLE_ADD) {
   num_neighbors=0;
- } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
-  num_neighbors=0;
  } else if (append_flag==OP_PARTICLE_UPDATE) {
-  num_neighbors=0;
- } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
   num_neighbors=0;
  } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
   num_neighbors=1;
@@ -22432,43 +22428,13 @@ NavierStokes::init_particle_containerALL(int append_flag,
     local_redistribute);
  NBR_Particle_Container->fillNeighbors();
 
- local_particle_container=new My_ParticleContainer(parent);
-
- local_particle_container->clearParticles();
- local_particle_container->Redistribute();
- local_particle_container->copyParticles(localPC,local_copy);
- local_particle_container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_redistribute);
-
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.init_particle_container(append_flag,local_caller_string);
  }
 
- if (append_flag==OP_PARTICLE_INIT) {
-  //do nothing
- } else if (append_flag==OP_PARTICLE_ADD) {
-  //do nothing
- } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
-  //do nothing
- } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
-  save_particle_container=new My_ParticleContainer(parent);
-  save_particle_container->clearParticles();
-  save_particle_container->Redistribute();
-  save_particle_container->copyParticles(*local_particle_container,local_copy);
-  save_particle_container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_redistribute);
- } else if (append_flag==OP_PARTICLE_UPDATE) {
-  save_particle_container->copyParticles(*local_particle_container,local_copy);
- } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
-  delete save_particle_container;
- } else {
-  amrex::Error("append_flag invalid");
- }
-
  NBR_Particle_Container->clearNeighbors();
  delete NBR_Particle_Container;
- delete local_particle_container;
 
  if ((append_flag==OP_PARTICLE_INIT)||
      (append_flag==OP_PARTICLE_ADD)) {
@@ -22484,8 +22450,7 @@ NavierStokes::init_particle_containerALL(int append_flag,
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.avgDownMacState(LOW_ORDER_AVGDOWN);
   }
- } else if ((append_flag>=OP_PARTICLE_UPDATE)&&
-	    (append_flag<=OP_PARTICLE_UPDATE_LAST)) {
+ } else if (append_flag<=OP_PARTICLE_UPDATE) {
   //do nothing
  } else {
   amrex::Error("append_flag invalid");
@@ -22563,9 +22528,7 @@ NavierStokes::init_particle_container(int append_flag,
 
  int number_sweeps=1;
 
- My_ParticleContainer* save_container=nullptr;
  if (append_flag==OP_PARTICLE_INIT) {
-  save_container=ns_level0.local_particle_container;
   number_sweeps=2;
 
   if (slab_step==ns_time_order-1) {
@@ -22574,19 +22537,10 @@ NavierStokes::init_particle_container(int append_flag,
    amrex::Error("expecting slab_step==ns_time_order-1");
 
  } else if (append_flag==OP_PARTICLE_ADD) {
-  save_container=ns_level0.local_particle_container;
   number_sweeps=2;
- } else if (append_flag==OP_PARTICLE_UPDATE_INIT) {
-  save_container=ns_level0.local_particle_container;
-  number_sweeps=1;
  } else if (append_flag==OP_PARTICLE_UPDATE) {
-  save_container=ns_level0.save_particle_container;
-  number_sweeps=1;
- } else if (append_flag==OP_PARTICLE_UPDATE_LAST) {
-  save_container=ns_level0.save_particle_container;
   number_sweeps=1;
  } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
-  save_container=ns_level0.local_particle_container;
   number_sweeps=1;
  } else
   amrex::Error("append_flag invalid");
@@ -22683,18 +22637,6 @@ NavierStokes::init_particle_container(int append_flag,
 
   AMREX_ALWAYS_ASSERT(Np<=NBR_Np);
 
-  auto& save_particles_grid_tile = 
-   save_container->GetParticles(level)
-    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-  auto& save_particles_AoS = save_particles_grid_tile.GetArrayOfStructs();
-  AMREX_ALWAYS_ASSERT(Np==save_particles_AoS.size());
-
-  auto& local_particles_grid_tile=
-   ns_level0.local_particle_container->GetParticles(level)
-    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
-  auto& local_particles_AoS = local_particles_grid_tile.GetArrayOfStructs();
-  AMREX_ALWAYS_ASSERT(Np==local_particles_AoS.size());
-
    // The link index will start at 1.
   Vector< int > particle_link_data;
    // i_particle_link_1,i1,j1,k1,   (child link, parent link)
@@ -22754,8 +22696,6 @@ NavierStokes::init_particle_container(int append_flag,
      &ncomp_state,
      particles_AoS.data(), // existing particles
      NBR_particles_AoS.data(), 
-     save_particles_AoS.data(), 
-     local_particles_AoS.data(), 
      Np,  // pass by value
      NBR_Np,  // pass by value
      new_particle_data.dataPtr(), // size is "new_Pdata_size"
@@ -22857,8 +22797,8 @@ NavierStokes::init_particle_container(int append_flag,
     particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);
    }
 
-  } else if ((append_flag>=OP_PARTICLE_UPDATE)&&
-             (append_flag<=OP_PARTICLE_ASSIMILATE)) {
+  } else if ((append_flag==OP_PARTICLE_UPDATE)||
+             (append_flag==OP_PARTICLE_ASSIMILATE)) {
    //do nothing
   } else
    amrex::Error("append_flag invalid");

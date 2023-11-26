@@ -574,8 +574,6 @@ namespace amrex{
 	int* ncomp_state,
         const void* particles,
         const void* NBR_particles,
-        const void* save_particles,
-        const void* local_particles,
         int Np, 
         int NBR_Np, 
         Real* new_particles, // size is "new_Pdata_size"
