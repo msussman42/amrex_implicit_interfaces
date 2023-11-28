@@ -21066,7 +21066,7 @@ stop
 
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
-      num_RK_stages=1
+      num_RK_stages=2
       
       do interior_ID=1,Np
 

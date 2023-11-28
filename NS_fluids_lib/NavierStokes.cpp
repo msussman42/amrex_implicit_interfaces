@@ -10143,6 +10143,19 @@ void NavierStokes::CopyNewToOldALL() {
   new_data_FSI[i].copyFrom_FSI(new_data_FSI[ns_time_order]); 
  }
 
+#ifdef AMREX_PARTICLES
+ NavierStokes& ns_level0=getLevel(0);
+ int lev_min=0;
+ int lev_max=finest_level;
+
+ My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
+ int nGrow_Redistribute=0;
+ int local_Redistribute=0; //redistribute "from scratch"
+ current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_Redistribute);
+ ns_level0.CopyNewToOldPC(lev_max); 
+#endif
+
 }  // subroutine CopyNewToOldALL
 
 
@@ -10173,6 +10186,19 @@ void NavierStokes::CopyOldToNewALL() {
  for (int i=1;i<=ns_time_order;i++) {
   new_data_FSI[i].copyFrom_FSI(new_data_FSI[0]); 
  }
+
+#ifdef AMREX_PARTICLES
+ NavierStokes& ns_level0=getLevel(0);
+ int lev_min=0;
+ int lev_max=finest_level;
+
+ My_ParticleContainer& current_PC=ns_level0.newDataPC(0);
+ int nGrow_Redistribute=0;
+ int local_Redistribute=0; //redistribute "from scratch"
+ current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+    local_Redistribute);
+ ns_level0.CopyOldToNewPC(lev_max);
+#endif
 
 } // subroutine CopyOldToNewALL
 
@@ -22366,6 +22392,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 // This routine called from:
 // 1. post_init_state() and
 // 2. nonlinear_advection()
+// 3. phase_change_code_segment()
+// 4. nucleation_code_segment()
+// 5. do_the_advance()
 void
 NavierStokes::init_particle_containerALL(int append_flag,
 	const std::string& caller_string) {
@@ -22508,8 +22537,8 @@ NavierStokes::init_particle_container(int append_flag,
  MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
  MultiFab* velmac[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   //Umac_Type
-  velmac[dir]=getStateMAC(0,dir,cur_time_slab);
+   //Umac_Type+dir
+  velmac[dir]=getStateMAC(1,dir,cur_time_slab);
  }
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
