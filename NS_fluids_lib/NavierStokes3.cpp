@@ -409,14 +409,26 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
   NavierStokes& ns_level0=getLevel(0);
-  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
-
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
 
   int lev_min=0;
   int lev_max=-1;
   int nGrow_Redistribute=0;
   int local_Redistribute=0; 
+  bool local_copy=true; //do not redistribute inside of copyParticles
+
+  My_ParticleContainer& prevPC=ns_level0.newDataPC(slab_step);
+
+  prevPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
+
+  localPC.clearParticles();
+  localPC.Redistribute();
+  localPC.copyParticles(prevPC,local_copy);
+
+  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+
   localPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_Redistribute);
 
