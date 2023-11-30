@@ -18721,6 +18721,177 @@ stop
 
       end subroutine sub_box_cell_center
 
+
+      subroutine interp_mac_velocity( &
+        grid_PARM, &
+        umacptr, &
+        vmacptr, &
+        wmacptr, &
+        xpart, &
+        vel_time_slab, &
+        u) !intent(out)
+      use global_utility_module
+      use probcommon_module
+      use probf90_module
+
+      implicit none
+
+      type(grid_parm_type), INTENT(in) :: grid_PARM
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: umacptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: vmacptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: wmacptr
+      real(amrex_real), INTENT(in) :: xpart(SDIM)
+      real(amrex_real), INTENT(in) :: vel_time_slab
+      real(amrex_real), INTENT(out) :: u(SDIM)
+
+      integer i,j,k
+      integer ii,jj,kk
+      integer imac,jmac,kmac
+      integer isten,jsten,ksten
+      integer dir,dir_inner
+      integer imaclo(3)
+      integer imachi(3)
+      integer cell_index(SDIM)
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenMAC_lo(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenMAC_hi(-nhalf:nhalf,SDIM)
+      real(amrex_real) dx_inner
+      real(amrex_real) wt_dist(SDIM)
+      real(amrex_real) local_data
+      real(amrex_real), dimension(D_DECL(2,2,2),1) :: data_stencil
+      integer ncomp_interp
+      real(amrex_real) LS_clamped
+      real(amrex_real) vel_clamped(SDIM)
+      real(amrex_real) temperature_clamped
+      integer prescribed_flag
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: local_data_fab
+
+      if (vel_time_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"vel_time_slab invalid"
+       stop
+      endif
+
+      call SUB_clamped_LS(xpart,vel_time_slab,LS_clamped, &
+       vel_clamped,temperature_clamped,prescribed_flag,grid_PARM%dx)
+
+      if (LS_clamped.ge.zero) then
+
+       do dir=1,SDIM
+        u(dir)=vel_clamped(dir)
+       enddo
+
+      else if (LS_clamped.lt.zero) then
+
+       call containing_cell(grid_PARM%bfact, &
+          grid_PARM%dx, &
+          grid_PARM%xlo, &
+          grid_PARM%fablo, &
+          xpart, &
+          cell_index)
+
+       i=cell_index(1)
+       j=cell_index(2)
+       k=cell_index(SDIM)
+
+       call gridsten_level(xsten,i,j,k,grid_PARM%level,nhalf)
+
+       do dir=1,SDIM
+
+        ii=0
+        jj=0
+        kk=0
+        if (dir.eq.1) then
+         ii=1
+        else if (dir.eq.2) then
+         jj=1
+        else if ((dir.eq.3).and.(SDIM.eq.3)) then
+         kk=1
+        else
+         print *,"dir invalid"
+         stop
+        endif
+
+        imaclo(3)=0
+        imachi(3)=0
+        do dir_inner=1,SDIM
+         if (dir_inner.eq.dir) then
+          imaclo(dir_inner)=cell_index(dir_inner)
+          imachi(dir_inner)=cell_index(dir_inner)+1
+         else if (dir_inner.ne.dir) then
+          if (xpart(dir_inner).le.xsten(0,dir_inner)) then
+           imaclo(dir_inner)=cell_index(dir_inner)-1
+           imachi(dir_inner)=cell_index(dir_inner)
+          else if (xpart(dir_inner).ge.xsten(0,dir_inner)) then
+           imaclo(dir_inner)=cell_index(dir_inner)
+           imachi(dir_inner)=cell_index(dir_inner)+1
+          else
+           print *,"xpart or xsten invalid"
+           stop
+          endif
+         else
+          print *,"dir_inner or dir invalid"
+          stop
+         endif
+        enddo ! dir_inner=1..sdim
+
+         ! dir=1..sdim
+        call gridstenMAC_level(xstenMAC_lo, &
+         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
+        call gridstenMAC_level(xstenMAC_hi, &
+         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
+
+        do dir_inner=1,SDIM
+         dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)
+         if (dx_inner.gt.zero) then
+          wt_dist(dir_inner)=(xpart(dir_inner)-xstenMAC_lo(0,dir_inner))/ &
+            dx_inner
+         else
+          print *,"dx_inner invalid"
+          stop
+         endif
+        enddo  ! dir_inner=1..sdim
+
+        do imac=imaclo(1),imachi(1)
+        do jmac=imaclo(2),imachi(2)
+        do kmac=imaclo(3),imachi(3)
+
+         isten=imac-imaclo(1)+1
+         jsten=jmac-imaclo(2)+1
+         ksten=kmac-imaclo(3)+1
+         if (dir.eq.1) then
+          local_data_fab=>umacptr
+         else if (dir.eq.2) then
+          local_data_fab=>vmacptr
+         else if ((dir.eq.3).and.(SDIM.eq.3)) then
+          local_data_fab=>wmacptr
+         else
+          print *,"dir invalid"
+          stop
+         endif
+         call safe_data_single(imac,jmac,kmac,local_data_fab,local_data)
+
+         data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
+        enddo ! kmac
+        enddo ! jmac
+        enddo ! imac
+     
+        ncomp_interp=1
+        call bilinear_interp_stencil(data_stencil, &
+          wt_dist,ncomp_interp,u(dir)) 
+
+       enddo ! dir=1..sdim
+
+      else
+       print *,"LS_clamped invalid"
+       stop
+      endif
+
+      end subroutine interp_mac_velocity
+
+
        ! particle/grid interpolation:
        ! Q(xtarget)=( sum_{particles} Q_{p} w(xtarget,xp) +
        !              sum_{grid} Q_{grid} w(xtarget,xgrid) ) /
@@ -18733,6 +18904,9 @@ stop
          LEVELSETptr, &
          DENptr, &
          VELptr, &
+         umacptr, &
+         vmacptr, &
+         wmacptr, &
          cell_particle_count, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
@@ -18752,8 +18926,13 @@ stop
       type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
       real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
               DENptr
+
       real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
               VELptr
+      real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::umacptr
+      real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::vmacptr
+      real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::wmacptr
+
       real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
               LEVELSETptr
       integer, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
@@ -18824,6 +19003,14 @@ stop
 
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          VELptr,1,-1)
+
+      call checkbound_array1(accum_PARM%fablo,accum_PARM%fabhi, &
+         umacptr,1,0)
+      call checkbound_array1(accum_PARM%fablo,accum_PARM%fabhi, &
+         vmacptr,1,1)
+      call checkbound_array1(accum_PARM%fablo,accum_PARM%fabhi, &
+         wmacptr,1,SDIM-1)
+
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          DENptr,1,-1)
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
@@ -19379,9 +19566,9 @@ stop
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,snewfab_ptr,1,-1)
 
-      call checkbound_array1(fablo,fabhi,xvelfab_ptr,0,0)
-      call checkbound_array1(fablo,fabhi,yvelfab_ptr,0,1)
-      call checkbound_array1(fablo,fabhi,zvelfab_ptr,0,SDIM-1)
+      call checkbound_array1(fablo,fabhi,xvelfab_ptr,1,0)
+      call checkbound_array1(fablo,fabhi,yvelfab_ptr,1,1)
+      call checkbound_array1(fablo,fabhi,zvelfab_ptr,1,SDIM-1)
 
       call checkbound_array1(fablo,fabhi,xnewfab_ptr,0,0)
       call checkbound_array1(fablo,fabhi,ynewfab_ptr,0,1)
@@ -19805,6 +19992,9 @@ stop
                       lsfab_ptr, &
                       denfab_ptr, &
                       velfab_ptr, &
+                      xvelfab_ptr, &
+                      yvelfab_ptr, &
+                      zvelfab_ptr, &
                       cell_particle_count_ptr, &
                       i,j,k, &
                       xpart, &
@@ -19859,6 +20049,9 @@ stop
                    lsfab_ptr, &
                    denfab_ptr, &
                    velfab_ptr, &
+                   xvelfab_ptr, &
+                   yvelfab_ptr, &
+                   zvelfab_ptr, &
                    cell_particle_count_ptr, &
                    i,j,k, &
                    xpart, &
@@ -19989,7 +20182,7 @@ stop
               isub,jsub,ksub, &
               xsub)
 
-             local_weight_particles=one
+             local_weight_particles=zero
 
              do add_iter=1,2
 
@@ -20073,6 +20266,9 @@ stop
                 lsfab_ptr, &
                 denfab_ptr, &
                 velfab_ptr, &
+                xvelfab_ptr, &
+                yvelfab_ptr, &
+                zvelfab_ptr, &
                 cell_particle_count_ptr, &
                 i,j,k, &
                 xtarget, &
@@ -20185,6 +20381,9 @@ stop
                lsfab_ptr, &
                denfab_ptr, &
                velfab_ptr, &
+               xvelfab_ptr, &
+               yvelfab_ptr, &
+               zvelfab_ptr, &
                cell_particle_count_ptr, &
                i,j,k, &
                xpart, &
@@ -20596,174 +20795,6 @@ stop
       return
       end subroutine fort_init_particle_container
 
-      subroutine interp_mac_velocity( &
-        grid_PARM, &
-        umacptr, &
-        vmacptr, &
-        wmacptr, &
-        xpart, &
-        vel_time_slab,u)
-      use global_utility_module
-      use probcommon_module
-      use probf90_module
-
-      implicit none
-
-      type(grid_parm_type), INTENT(in) :: grid_PARM
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: umacptr
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: vmacptr
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: wmacptr
-      real(amrex_real), INTENT(in) :: xpart(SDIM)
-      real(amrex_real), INTENT(in) :: vel_time_slab
-      real(amrex_real), INTENT(out) :: u(SDIM)
-
-      integer i,j,k
-      integer ii,jj,kk
-      integer imac,jmac,kmac
-      integer isten,jsten,ksten
-      integer dir,dir_inner
-      integer imaclo(3)
-      integer imachi(3)
-      integer cell_index(SDIM)
-      integer, parameter :: nhalf=3
-      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) xstenMAC_lo(-nhalf:nhalf,SDIM)
-      real(amrex_real) xstenMAC_hi(-nhalf:nhalf,SDIM)
-      real(amrex_real) dx_inner
-      real(amrex_real) wt_dist(SDIM)
-      real(amrex_real) local_data
-      real(amrex_real), dimension(D_DECL(2,2,2),1) :: data_stencil
-      integer ncomp_interp
-      real(amrex_real) LS_clamped
-      real(amrex_real) vel_clamped(SDIM)
-      real(amrex_real) temperature_clamped
-      integer prescribed_flag
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: local_data_fab
-
-      if (vel_time_slab.ge.zero) then
-       ! do nothing
-      else
-       print *,"vel_time_slab invalid"
-       stop
-      endif
-
-      call SUB_clamped_LS(xpart,vel_time_slab,LS_clamped, &
-       vel_clamped,temperature_clamped,prescribed_flag,grid_PARM%dx)
-
-      if (LS_clamped.ge.zero) then
-
-       do dir=1,SDIM
-        u(dir)=vel_clamped(dir)
-       enddo
-
-      else if (LS_clamped.lt.zero) then
-
-       call containing_cell(grid_PARM%bfact, &
-          grid_PARM%dx, &
-          grid_PARM%xlo, &
-          grid_PARM%fablo, &
-          xpart, &
-          cell_index)
-
-       i=cell_index(1)
-       j=cell_index(2)
-       k=cell_index(SDIM)
-
-       call gridsten_level(xsten,i,j,k,grid_PARM%level,nhalf)
-
-       do dir=1,SDIM
-
-        ii=0
-        jj=0
-        kk=0
-        if (dir.eq.1) then
-         ii=1
-        else if (dir.eq.2) then
-         jj=1
-        else if ((dir.eq.3).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid"
-         stop
-        endif
-
-        imaclo(3)=0
-        imachi(3)=0
-        do dir_inner=1,SDIM
-         if (dir_inner.eq.dir) then
-          imaclo(dir_inner)=cell_index(dir_inner)
-          imachi(dir_inner)=cell_index(dir_inner)+1
-         else if (dir_inner.ne.dir) then
-          if (xpart(dir_inner).le.xsten(0,dir_inner)) then
-           imaclo(dir_inner)=cell_index(dir_inner)-1
-           imachi(dir_inner)=cell_index(dir_inner)
-          else if (xpart(dir_inner).ge.xsten(0,dir_inner)) then
-           imaclo(dir_inner)=cell_index(dir_inner)
-           imachi(dir_inner)=cell_index(dir_inner)+1
-          else
-           print *,"xpart or xsten invalid"
-           stop
-          endif
-         else
-          print *,"dir_inner or dir invalid"
-          stop
-         endif
-        enddo ! dir_inner=1..sdim
-
-         ! dir=1..sdim
-        call gridstenMAC_level(xstenMAC_lo, &
-         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
-        call gridstenMAC_level(xstenMAC_hi, &
-         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
-
-        do dir_inner=1,SDIM
-         dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)
-         if (dx_inner.gt.zero) then
-          wt_dist(dir_inner)=(xpart(dir_inner)-xstenMAC_lo(0,dir_inner))/ &
-            dx_inner
-         else
-          print *,"dx_inner invalid"
-          stop
-         endif
-        enddo  ! dir_inner=1..sdim
-
-        do imac=imaclo(1),imachi(1)
-        do jmac=imaclo(2),imachi(2)
-        do kmac=imaclo(3),imachi(3)
-
-         isten=imac-imaclo(1)+1
-         jsten=jmac-imaclo(2)+1
-         ksten=kmac-imaclo(3)+1
-         if (dir.eq.1) then
-          local_data_fab=>umacptr
-         else if (dir.eq.2) then
-          local_data_fab=>vmacptr
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          local_data_fab=>wmacptr
-         else
-          print *,"dir invalid"
-          stop
-         endif
-         call safe_data_single(imac,jmac,kmac,local_data_fab,local_data)
-
-         data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
-        enddo ! kmac
-        enddo ! jmac
-        enddo ! imac
-     
-        ncomp_interp=1
-        call bilinear_interp_stencil(data_stencil, &
-          wt_dist,ncomp_interp,u(dir)) 
-
-       enddo ! dir=1..sdim
-
-      else
-       print *,"LS_clamped invalid"
-       stop
-      endif
-
-      end subroutine interp_mac_velocity
-
 
       subroutine check_cfl_BC(grid_PARM, xpart1, xpart2)
       use global_utility_module
@@ -21066,7 +21097,7 @@ stop
 
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
-      num_RK_stages=2
+      num_RK_stages=1
       
       do interior_ID=1,Np
 
