@@ -22574,6 +22574,16 @@ NavierStokes::init_particle_container(int append_flag,
  } else
   amrex::Error("append_flag invalid");
 
+ Vector<int> dombc(2*AMREX_SPACEDIM);
+ const BCRec& descbc = get_desc_lst()[State_Type].getBC(STATECOMP_MOF);
+ const int* b_rec=descbc.vect();
+ for (int m=0;m<2*AMREX_SPACEDIM;m++)
+  dombc[m]=b_rec[m];
+
+ const Box& domain = geom.Domain();
+ const int* domlo = domain.loVect();
+ const int* domhi = domain.hiVect();
+
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(lsmf->boxArray().d_numPts());
@@ -22688,6 +22698,9 @@ NavierStokes::init_particle_container(int append_flag,
 
   int Np_append=0;  // number of particles to append
 
+  Vector<int> velbc=getBCArray(State_Type,gridno,
+    STATECOMP_VEL,STATE_NCOMP_VEL);
+
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
    amrex::Error("tid_current invalid");
@@ -22707,6 +22720,9 @@ NavierStokes::init_particle_container(int append_flag,
      local_caller_string.c_str(),
      local_caller_string.size(),
      &tid_current,
+     velbc.dataPtr(),
+     dombc.dataPtr(),
+     domlo,domhi,
      &single_particle_size,
      &isweep,
      &number_sweeps,

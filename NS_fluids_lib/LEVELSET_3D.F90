@@ -18907,6 +18907,8 @@ stop
          umacptr, &
          vmacptr, &
          wmacptr, &
+         cur_time_slab, &
+         grid_PARM, &
          cell_particle_count, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
@@ -18923,6 +18925,7 @@ stop
 
       real(amrex_real), INTENT(in) :: weight_particles
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
+      type(grid_parm_type), INTENT(in) :: grid_PARM
       type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
       real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
               DENptr
@@ -18932,6 +18935,8 @@ stop
       real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::umacptr
       real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::vmacptr
       real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::wmacptr
+
+      real(amrex_real), INTENT(in) :: cur_time_slab
 
       real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
               LEVELSETptr
@@ -18981,6 +18986,7 @@ stop
          data_interp_local_LS
 
       integer :: test_count,test_cell_particle_count
+      integer, PARAMETER :: interpolate_MAC_velocity=1
 
       if (1.eq.0) then
        print *,"i,j,k ",i,j,k
@@ -18997,6 +19003,13 @@ stop
        print *,"accum_PARM%nsubdivide ",accum_PARM%nsubdivide
        print *,"LBOUND(LEVELSETptr) ",LBOUND(LEVELSETptr)
        print *,"UBOUND(LEVELSETptr) ",UBOUND(LEVELSETptr)
+      endif
+
+      if (cur_time_slab.ge.zero) then
+       !do nothing
+      else
+       print *,"cur_time_slab invalid: ",cur_time_slab
+       stop
       endif
 
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
@@ -19028,8 +19041,10 @@ stop
 
       data_in%scomp=1 
       data_in%ncomp=0 !placeholder
+
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
+
       data_in%bfact=accum_PARM%bfact
 
       do dir=1,SDIM
@@ -19037,7 +19052,7 @@ stop
        data_in%xlo(dir)=accum_PARM%xlo(dir)
        data_in%fablo(dir)=accum_PARM%fablo(dir)
        data_in%fabhi(dir)=accum_PARM%fabhi(dir)
-      enddo
+      enddo !dir=1..sdim
 
       A_X0=zero
       do dir=1,SDIM
@@ -19063,7 +19078,8 @@ stop
         xpart(dir)=particlesptr(current_link)%pos(dir)
        enddo 
 
-       call particle_grid_weight(xpart,xtarget,accum_PARM%dx(1),w_p)
+       call particle_grid_weight(xpart,xtarget, &
+         (1.0D-3)*accum_PARM%dx(1),w_p)
 
        data_in%xtarget=xpart
 
@@ -19204,10 +19220,25 @@ stop
 
       data_in%scomp=1 
       data_in%ncomp=SDIM
-      call interp_from_grid_util(data_in,VELptr,data_out)
-      do dir=1,SDIM
-       VEL_interp(dir)=data_out%data_interp(dir)
-      enddo
+
+      if (interpolate_MAC_velocity.eq.0) then
+       call interp_from_grid_util(data_in,VELptr,data_out)
+       do dir=1,SDIM
+        VEL_interp(dir)=data_out%data_interp(dir)
+       enddo
+      else if (interpolate_MAC_velocity.eq.1) then
+       call interp_mac_velocity( &
+         grid_PARM, &
+         umacptr, &
+         vmacptr, &
+         wmacptr, &
+         xtarget, &
+         cur_time_slab, &
+         VEL_interp)
+      else
+       print *,"interpolate_MAC_velocity invalid"
+       stop
+      endif
 
       if (accum_PARM%append_flag.eq.OP_PARTICLE_INIT) then
 
@@ -19306,6 +19337,10 @@ stop
         caller_string, &
         caller_string_len, &
         tid, &
+        velbc_in, &
+        dombc, &
+        domlo, &
+        domhi, &
         single_particle_size, &
         isweep, &
         number_sweeps, &
@@ -19389,6 +19424,13 @@ stop
       integer, INTENT(inout) :: particle_link_data(NBR_Np*(1+SDIM))
       integer, INTENT(inout) :: particle_delete_flag(Np) ! 1=>delete
 
+      integer, INTENT(in), target :: velbc_in(SDIM,2,SDIM)
+      integer, INTENT(in), target :: dombc(SDIM,2)
+      integer, INTENT(in), target :: domlo(SDIM)
+      integer, INTENT(in), target :: domhi(SDIM)
+      real(amrex_real), target :: problo_arr(3)
+      real(amrex_real), target :: probhi_arr(3)
+
       integer, INTENT(in) :: DIMDEC(cell_particle_count)
       integer, INTENT(in) :: DIMDEC(lsfab)
       integer, INTENT(in) :: DIMDEC(denfab)
@@ -19448,6 +19490,7 @@ stop
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: znewfab_ptr
 
       type(accum_parm_type_count) :: accum_PARM
+      type(grid_parm_type) :: grid_PARM
    
       integer :: add_iter
       integer :: i,j,k
@@ -19546,6 +19589,38 @@ stop
        print *,"level, finest_level,time ",level,finest_level,cur_time_slab
        print *,"xlo,dx ",xlo,dx
       endif
+
+      problo_arr(1)=problox
+      problo_arr(2)=probloy
+      problo_arr(3)=probloz
+
+      probhi_arr(1)=probhix
+      probhi_arr(2)=probhiy
+      probhi_arr(3)=probhiz
+
+      do dir=1,SDIM
+       grid_PARM%fablo(dir)=fablo(dir)
+       grid_PARM%fabhi(dir)=fabhi(dir)
+       grid_PARM%tilelo(dir)=tilelo(dir)
+       grid_PARM%tilehi(dir)=tilehi(dir)
+       grid_PARM%dx(dir)=dx(dir)
+       grid_PARM%xlo(dir)=xlo(dir)
+       do side=1,2
+        grid_PARM%dombc(dir,side)=dombc(dir,side)
+       enddo
+       grid_PARM%domlo(dir)=domlo(dir)
+       grid_PARM%domhi(dir)=domhi(dir)
+       grid_PARM%problo(dir)=problo_arr(dir)
+       grid_PARM%probhi(dir)=probhi_arr(dir)
+       do dir_local=1,SDIM
+        do side=1,2
+         grid_PARM%velbc(dir,side,dir_local)=velbc_in(dir,side,dir_local)
+        enddo
+       enddo ! dir_local=1,sdim
+      enddo ! dir=1,sdim
+      grid_PARM%bfact=bfact
+      grid_PARM%level=level
+      grid_PARM%finest_level=finest_level
 
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
@@ -19995,6 +20070,8 @@ stop
                       xvelfab_ptr, &
                       yvelfab_ptr, &
                       zvelfab_ptr, &
+                      cur_time_slab, &
+                      grid_PARM, &
                       cell_particle_count_ptr, &
                       i,j,k, &
                       xpart, &
@@ -20052,6 +20129,8 @@ stop
                    xvelfab_ptr, &
                    yvelfab_ptr, &
                    zvelfab_ptr, &
+                   cur_time_slab, &
+                   grid_PARM, &
                    cell_particle_count_ptr, &
                    i,j,k, &
                    xpart, &
@@ -20269,6 +20348,8 @@ stop
                 xvelfab_ptr, &
                 yvelfab_ptr, &
                 zvelfab_ptr, &
+                cur_time_slab, &
+                grid_PARM, &
                 cell_particle_count_ptr, &
                 i,j,k, &
                 xtarget, &
@@ -20384,6 +20465,8 @@ stop
                xvelfab_ptr, &
                yvelfab_ptr, &
                zvelfab_ptr, &
+               cur_time_slab, &
+               grid_PARM, &
                cell_particle_count_ptr, &
                i,j,k, &
                xpart, &
@@ -20477,7 +20560,7 @@ stop
           xpart(dir_local)=xsub(dir_local)
          enddo
 
-          ! very little weight for the grid based data.
+         !very little weight for the grid based data(OP_PARTICLE_ASSIMILATE)
          call particle_grid_weight(xpart,xsub,(1.0D+3)*dx(1),local_weight)
          do im_loop=1,num_materials
           weight_sum(im_loop)=local_weight
@@ -20497,7 +20580,7 @@ stop
           enddo 
           cell_count_check=cell_count_check+1
 
-          call particle_grid_weight(xpart,xsub,dx(1),local_weight)
+          call particle_grid_weight(xpart,xsub,(1.0D-3)*dx(1),local_weight)
 
           im_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -20614,6 +20697,7 @@ stop
              enddo
 
               ! very little weight for the grid based data.
+              ! (OP_PARTICLE_ASSIMILATE)
              call particle_grid_weight(xpart,xsub,(1.0D+3)*dx(1),local_weight)
              weight_sum(im_primary_sub)=local_weight
              if (dir.eq.1) then
@@ -20650,7 +20734,8 @@ stop
                enddo 
                cell_count_check=cell_count_check+1
 
-               call particle_grid_weight(xpart,xsub,dx(1),local_weight)
+               call particle_grid_weight(xpart,xsub,(1.0D-3)*dx(1), &
+                 local_weight)
 
                im_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -20990,7 +21075,7 @@ stop
       real(amrex_real) xpart4(SDIM)
       real(amrex_real) xpart_last(SDIM)
       real(amrex_real) u1(SDIM), u2(SDIM), u3(SDIM), u4(SDIM)
-      type(grid_parm_type) grid_PARM
+      type(grid_parm_type) :: grid_PARM
       integer num_RK_stages
 
       real(amrex_real) wrap_pos
