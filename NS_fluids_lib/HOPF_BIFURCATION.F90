@@ -37,6 +37,10 @@ IMPLICIT NONE
 return
 end subroutine INIT_HOPF_BIFURCATION_MODULE
 
+! inputs.hopf_bifurcation
+! [0,1]x[0,1]
+! u=16 x^2 (1-x)^2 (upper lid)
+! (u,v)=0 otherwise
 ! referring to:
 ! Hopf Bifurcation of the
 ! Unsteady Regularized Driven Cavity Flow
