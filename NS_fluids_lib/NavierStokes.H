@@ -1581,6 +1581,7 @@ protected:
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
 
+    static Real particle_incremental_velocity; //default=0.0
     static Vector<Real> particle_weight;  
     static int particle_nsubdivide_bulk;  
     static int particle_nsubdivide_narrow;  

@@ -18737,9 +18737,9 @@ stop
       implicit none
 
       type(grid_parm_type), INTENT(in) :: grid_PARM
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: umacptr
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: vmacptr
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: wmacptr
+      real(amrex_real), INTENT(in),pointer,dimension(D_DECL(:,:,:)) :: umacptr
+      real(amrex_real), INTENT(in),pointer,dimension(D_DECL(:,:,:)) :: vmacptr
+      real(amrex_real), INTENT(in),pointer,dimension(D_DECL(:,:,:)) :: wmacptr
       real(amrex_real), INTENT(in) :: xpart(SDIM)
       real(amrex_real), INTENT(in) :: vel_time_slab
       real(amrex_real), INTENT(out) :: u(SDIM)
@@ -18849,7 +18849,7 @@ stop
           wt_dist(dir_inner)=(xpart(dir_inner)-xstenMAC_lo(0,dir_inner))/ &
             dx_inner
          else
-          print *,"dx_inner invalid"
+          print *,"dx_inner invalid: ",dx_inner
           stop
          endif
         enddo  ! dir_inner=1..sdim
@@ -18903,7 +18903,6 @@ stop
          particlesptr, &
          LEVELSETptr, &
          DENptr, &
-         VELptr, &
          umacptr, &
          vmacptr, &
          wmacptr, &
@@ -18930,8 +18929,6 @@ stop
       real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
               DENptr
 
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
-              VELptr
       real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::umacptr
       real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::vmacptr
       real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::wmacptr
@@ -18986,7 +18983,6 @@ stop
          data_interp_local_LS
 
       integer :: test_count,test_cell_particle_count
-      integer, PARAMETER :: interpolate_MAC_velocity=1
 
       if (1.eq.0) then
        print *,"i,j,k ",i,j,k
@@ -19013,9 +19009,6 @@ stop
       endif
 
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
-
-      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
-         VELptr,1,-1)
 
       call checkbound_array1(accum_PARM%fablo,accum_PARM%fabhi, &
          umacptr,1,0)
@@ -19218,16 +19211,7 @@ stop
        DEN_interp(dir)=data_out%data_interp(dir)
       enddo
 
-      data_in%scomp=1 
-      data_in%ncomp=SDIM
-
-      if (interpolate_MAC_velocity.eq.0) then
-       call interp_from_grid_util(data_in,VELptr,data_out)
-       do dir=1,SDIM
-        VEL_interp(dir)=data_out%data_interp(dir)
-       enddo
-      else if (interpolate_MAC_velocity.eq.1) then
-       call interp_mac_velocity( &
+      call interp_mac_velocity( &
          grid_PARM, &
          umacptr, &
          vmacptr, &
@@ -19235,10 +19219,6 @@ stop
          xtarget, &
          cur_time_slab, &
          VEL_interp)
-      else
-       print *,"interpolate_MAC_velocity invalid"
-       stop
-      endif
 
       if (accum_PARM%append_flag.eq.OP_PARTICLE_INIT) then
 
@@ -19345,6 +19325,7 @@ stop
         isweep, &
         number_sweeps, &
         append_flag, &
+        particle_incremental_velocity, &
         particle_weight, &
         particle_nsubdivide_bulk, &
         particle_nsubdivide_narrow, &
@@ -19374,6 +19355,9 @@ stop
         xvelfab,DIMS(xvelfab), &
         yvelfab,DIMS(yvelfab), &
         zvelfab,DIMS(zvelfab), &
+        xvelINCfab,DIMS(xvelINCfab), &
+        yvelINCfab,DIMS(yvelINCfab), &
+        zvelINCfab,DIMS(zvelINCfab), &
         snewfab,DIMS(snewfab), &
         xnewfab,DIMS(xnewfab), &
         ynewfab,DIMS(ynewfab), &
@@ -19402,6 +19386,7 @@ stop
       integer, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
+      real(amrex_real), INTENT(in) :: particle_incremental_velocity
       real(amrex_real), INTENT(in) :: particle_weight(num_materials)
       integer, INTENT(in) :: particle_nsubdivide_bulk
       integer, INTENT(in) :: particle_nsubdivide_narrow
@@ -19438,6 +19423,9 @@ stop
       integer, INTENT(in) :: DIMDEC(xvelfab)
       integer, INTENT(in) :: DIMDEC(yvelfab)
       integer, INTENT(in) :: DIMDEC(zvelfab)
+      integer, INTENT(in) :: DIMDEC(xvelINCfab)
+      integer, INTENT(in) :: DIMDEC(yvelINCfab)
+      integer, INTENT(in) :: DIMDEC(zvelINCfab)
       integer, INTENT(in) :: DIMDEC(snewfab)
       integer, INTENT(in) :: DIMDEC(xnewfab)
       integer, INTENT(in) :: DIMDEC(ynewfab)
@@ -19475,6 +19463,15 @@ stop
 
       real(amrex_real), INTENT(in), target :: zvelfab(DIMV(zvelfab)) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: zvelfab_ptr
+
+      real(amrex_real), INTENT(in), target :: xvelINCfab(DIMV(xvelINCfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: xvelINCfab_ptr
+
+      real(amrex_real), INTENT(in), target :: yvelINCfab(DIMV(yvelINCfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: yvelINCfab_ptr
+
+      real(amrex_real), INTENT(in), target :: zvelINCfab(DIMV(zvelINCfab)) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: zvelINCfab_ptr
 
       real(amrex_real), INTENT(out), target :: &
           snewfab(DIMV(snewfab),ncomp_state) 
@@ -19521,6 +19518,7 @@ stop
       real(amrex_real) :: xtarget(SDIM)
       real(amrex_real) :: den_sub(num_materials*num_state_material)
       real(amrex_real) :: vel_sub(AMREX_SPACEDIM)
+      real(amrex_real) :: velINC_sub(AMREX_SPACEDIM)
       real(amrex_real) :: X0_sub(SDIM)
       real(amrex_real) :: LS_sub(num_materials*(1+AMREX_SPACEDIM))
       real(amrex_real) :: local_mag
@@ -19627,9 +19625,14 @@ stop
       denfab_ptr=>denfab
       velfab_ptr=>velfab
       lsfab_ptr=>lsfab
+
       xvelfab_ptr=>xvelfab
       yvelfab_ptr=>yvelfab
       zvelfab_ptr=>zvelfab
+
+      xvelINCfab_ptr=>xvelINCfab
+      yvelINCfab_ptr=>yvelINCfab
+      zvelINCfab_ptr=>zvelINCfab
 
       snewfab_ptr=>snewfab
       xnewfab_ptr=>xnewfab
@@ -19644,6 +19647,10 @@ stop
       call checkbound_array1(fablo,fabhi,xvelfab_ptr,1,0)
       call checkbound_array1(fablo,fabhi,yvelfab_ptr,1,1)
       call checkbound_array1(fablo,fabhi,zvelfab_ptr,1,SDIM-1)
+
+      call checkbound_array1(fablo,fabhi,xvelINCfab_ptr,1,0)
+      call checkbound_array1(fablo,fabhi,yvelINCfab_ptr,1,1)
+      call checkbound_array1(fablo,fabhi,zvelINCfab_ptr,1,SDIM-1)
 
       call checkbound_array1(fablo,fabhi,xnewfab_ptr,0,0)
       call checkbound_array1(fablo,fabhi,ynewfab_ptr,0,1)
@@ -20058,6 +20065,7 @@ stop
 
                     if (LL.ne.zero) then
 
+                      !interface changing phase, use grid based data only.
                      local_weight_particles=zero
 
                      call interp_eul_lag_dist( &
@@ -20066,7 +20074,6 @@ stop
                       particlesptr, &
                       lsfab_ptr, &
                       denfab_ptr, &
-                      velfab_ptr, &
                       xvelfab_ptr, &
                       yvelfab_ptr, &
                       zvelfab_ptr, &
@@ -20117,6 +20124,7 @@ stop
                   particles(current_link)% &
                      extra_int(N_EXTRA_INT_MATERIAL_ID+1)=im_particle
 
+                  !particle attribute changed, use grid based data only.
                   local_weight_particles=zero
 
                   call interp_eul_lag_dist( &
@@ -20125,7 +20133,6 @@ stop
                    particlesptr, &
                    lsfab_ptr, &
                    denfab_ptr, &
-                   velfab_ptr, &
                    xvelfab_ptr, &
                    yvelfab_ptr, &
                    zvelfab_ptr, &
@@ -20261,7 +20268,8 @@ stop
               isub,jsub,ksub, &
               xsub)
 
-             local_weight_particles=zero
+             !adding particles, use particle data where available.
+             local_weight_particles=one
 
              do add_iter=1,2
 
@@ -20344,7 +20352,6 @@ stop
                 particlesptr, &
                 lsfab_ptr, &
                 denfab_ptr, &
-                velfab_ptr, &
                 xvelfab_ptr, &
                 yvelfab_ptr, &
                 zvelfab_ptr, &
@@ -20461,7 +20468,6 @@ stop
                particlesptr, &
                lsfab_ptr, &
                denfab_ptr, &
-               velfab_ptr, &
                xvelfab_ptr, &
                yvelfab_ptr, &
                zvelfab_ptr, &
@@ -20477,27 +20483,64 @@ stop
                vel_sub, &
                X0_sub)
 
+              call interp_eul_lag_dist( &
+               local_weight_particles, &
+               accum_PARM, &
+               particlesptr, &
+               lsfab_ptr, &
+               denfab_ptr, &
+               xvelINCfab_ptr, &
+               yvelINCfab_ptr, &
+               zvelINCfab_ptr, &
+               cur_time_slab, &
+               grid_PARM, &
+               cell_particle_count_ptr, &
+               i,j,k, &
+               xpart, &
+               particle_link_data, &
+               Np, &
+               LS_sub, &
+               den_sub, &
+               velINC_sub, &
+               X0_sub)
+
               im_particle=particles(current_link)% &
                 extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
               do dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
 
                particle_data=particles(current_link)%extra_state(dir_local+1)
+
                velcomp=dir_local-N_EXTRA_REAL_u+1
                if ((velcomp.ge.1).and.(velcomp.le.SDIM)) then
                 current_data=vel_sub(velcomp)
+                particle_data=particle_data+velINC_sub(velcomp)
+                if (particle_incremental_velocity.eq.zero) then
+                 particle_data=current_data
+                else if (particle_incremental_velocity.eq.one) then
+                 !do nothing
+                else if ((particle_incremental_velocity.gt.zero).and. &
+                         (particle_incremental_velocity.lt.one)) then
+                 particle_data= &
+                  (one-particle_incremental_velocity)*current_data+ &
+                  (particle_incremental_velocity)*particle_data
+                else
+                 print *,"particle_incremental_velocity invalid"
+                 stop
+                endif
                else if (dir_local.eq.N_EXTRA_REAL_T) then
                 current_data=den_sub((im_particle-1)*num_state_material+ &
                         ENUM_TEMPERATUREVAR+1)
+                particle_data=current_data
                else if ((dir_local.eq.N_EXTRA_REAL_w).and. &
                         (SDIM.eq.2)) then
                 current_data=zero
+                particle_data=current_data
                else
                 print *,"dir_local invalid: ",dir_local
                 stop
                endif
 
-               particle_data=current_data
                particles(current_link)%extra_state(dir_local+1)=particle_data
 
               enddo !dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
@@ -21182,7 +21225,7 @@ stop
 
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
-      num_RK_stages=1
+      num_RK_stages=2
       
       do interior_ID=1,Np
 
