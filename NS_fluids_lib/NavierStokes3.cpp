@@ -389,21 +389,13 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  if ((normdir_here<0)||(normdir_here>=AMREX_SPACEDIM))
   amrex::Error("normdir_here invalid (prior to loop)");
 
- if (enable_spectral==0) {
-  //do nothing
- } else if (enable_spectral==1) {
-
-  // delete_advect_vars() called in NavierStokes::do_the_advance
-  // right after increment_face_velocityALL. 
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-    // initialize ADVECT_REGISTER_FACE_MF and
-    //            ADVECT_REGISTER_MF
-   ns_level.prepare_advect_vars(prev_time_slab);
-  }
-
- } else
-  amrex::Error("enable_spectral invalid");
+ // delete_advect_vars() called in NavierStokes::do_the_advance
+ // right after increment_face_velocityALL. 
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+  ns_level.prepare_advect_vars(prev_time_slab);
+ }
 
 #ifdef AMREX_PARTICLES
 
@@ -2606,18 +2598,16 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        advance_MAC_velocity(SOLVETYPE_PRES);
       }
 
-      if (enable_spectral==0) {
-       //do nothing
-      } else if (enable_spectral==1) {
+      for (int ilev=finest_level;ilev>=level;ilev--) {
+       NavierStokes& ns_level=getLevel(ilev);
+       // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+       ns_level.delete_advect_vars();
+       // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+       // delete_advect_vars() called in NavierStokes::do_the_advance
+       // after OP_PARTICLE_UPDATE.
+       ns_level.prepare_advect_vars(cur_time_slab);
+      } // ilev=finest_level ... level
 
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
-        ns_level.delete_advect_vars();
-       } // ilev=finest_level ... level
-
-      } else
-       amrex::Error("enable_spectral invalid");
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);
@@ -2760,8 +2750,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         // T_advect_MF=new temperature
        int alloc_flag=1;
        alloc_DTDtALL(alloc_flag);
-
-
 
 
        project_to_rigid_velocityALL();
@@ -3058,6 +3046,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        amrex::Error("slab_step invalid");
 
 #endif
+
+      for (int ilev=finest_level;ilev>=level;ilev--) {
+       NavierStokes& ns_level=getLevel(ilev);
+       // delete ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
+       ns_level.delete_advect_vars();
+      }
 
       if (mass_transfer_active==1) {
        delete_array(SATURATION_TEMP_MF);
@@ -12085,15 +12079,8 @@ void NavierStokes::GetStateFromLocal(int idx_MF,int ngrow,
 
 void NavierStokes::delete_advect_vars() {
 
- if (enable_spectral==0) {
-  //do nothing
- } else if (enable_spectral==1) {
- 
-  delete_localMF(ADVECT_REGISTER_FACE_MF,AMREX_SPACEDIM);
-  delete_localMF(ADVECT_REGISTER_MF,1);
-
- } else
-  amrex::Error("enable_spectral invalid");
+ delete_localMF(ADVECT_REGISTER_FACE_MF,AMREX_SPACEDIM);
+ delete_localMF(ADVECT_REGISTER_MF,1);
 
 } // subroutine delete_advect_vars()
 
@@ -12363,21 +12350,25 @@ void NavierStokes::prepare_advect_vars(Real time) {
  } else
   amrex::Error("time invalid");
 
- if (enable_spectral==0) {
+ new_localMF(ADVECT_REGISTER_MF,AMREX_SPACEDIM,1,-1);
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  //ngrow=1
+  //Umac_Type
+  getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,1,dir,time);
+ } // dir
+
+ // advect_register has 1 ghost initialized.
+ push_back_state_register(ADVECT_REGISTER_MF,time);
+
+ if (localMF[ADVECT_REGISTER_MF]->nGrow()>=1) {
   //do nothing
- } else if (enable_spectral==1) {
-
-  new_localMF(ADVECT_REGISTER_MF,AMREX_SPACEDIM,1,-1);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   //ngrow=0
-   //Umac_Type
-   getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,0,dir,time);
-  } // dir
-  // advect_register has 1 ghost initialized.
-  push_back_state_register(ADVECT_REGISTER_MF,time);
-
  } else
-  amrex::Error("enable_spectral invalid");
+  amrex::Error("localMF[ADVECT_REGISTER_MF]->nGrow()<1");
+
+ if (localMF[ADVECT_REGISTER_MF]->nComp()==AMREX_SPACEDIM) {
+  //do nothing
+ } else
+  amrex::Error("localMF[ADVECT_REGISTER_MF]->nComp()!=sdim");
 
 } // end subroutine prepare_advect_vars(Real time)
 

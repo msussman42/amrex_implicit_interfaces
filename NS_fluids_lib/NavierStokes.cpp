@@ -197,6 +197,7 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 
 // default: particle_weight=0.0
 Vector<Real> NavierStokes::particle_weight; 
+Real NavierStokes::particle_incremental_velocity=0.0;
 int NavierStokes::particle_nsubdivide_bulk=1; 
 int NavierStokes::particle_nsubdivide_narrow=1; 
 int NavierStokes::particle_max_per_nsubdivide=4; 
@@ -4907,6 +4908,9 @@ NavierStokes::read_params ()
       amrex::Error("FSI_flag invalid");
     }  // i=0..num_materials-1
 
+     //default=0.0
+    pp.queryAdd("particle_incremental_velocity",particle_incremental_velocity);
+
     particle_weight.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
      particle_weight[i]=0.0;
@@ -5175,6 +5179,9 @@ NavierStokes::read_params ()
 
      std::cout << "initial_temperature_diffuse_duration=" << 
       initial_temperature_diffuse_duration << '\n';
+
+     std::cout<<"particle_incremental_velocity="<<
+	    particle_incremental_velocity <<'\n';
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "particle_weight i= " << i << ' ' <<
@@ -22535,10 +22542,13 @@ NavierStokes::init_particle_container(int append_flag,
   amrex::Error("den->nComp() invalid");
 
  MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
+
  MultiFab* velmac[AMREX_SPACEDIM];
+ MultiFab* velmac_increment[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
    //Umac_Type+dir
   velmac[dir]=getStateMAC(1,dir,cur_time_slab);
+  velmac_increment[dir]=getStateMAC(1,dir,cur_time_slab);
  }
 
  MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -22569,6 +22579,10 @@ NavierStokes::init_particle_container(int append_flag,
   number_sweeps=2;
  } else if (append_flag==OP_PARTICLE_UPDATE) {
   number_sweeps=1;
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   velmac_increment[dir]->
+    minus(*localMF[ADVECT_REGISTER_FACE_MF+dir],0,1,1);
+  } //dir=0..sdim-1
  } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
   number_sweeps=1;
  } else
@@ -22613,9 +22627,14 @@ NavierStokes::init_particle_container(int append_flag,
   FArrayBox& lsfab=(*lsmf)[mfi];
   FArrayBox& denfab=(*den)[mfi];
   FArrayBox& velfab=(*velmf)[mfi];
+
   FArrayBox& xvelfab=(*velmac[0])[mfi];
   FArrayBox& yvelfab=(*velmac[1])[mfi];
   FArrayBox& zvelfab=(*velmac[AMREX_SPACEDIM-1])[mfi];
+
+  FArrayBox& xvelINCfab=(*velmac_increment[0])[mfi];
+  FArrayBox& yvelINCfab=(*velmac_increment[1])[mfi];
+  FArrayBox& zvelINCfab=(*velmac_increment[AMREX_SPACEDIM-1])[mfi];
 
   FArrayBox& snewfab=S_new[mfi];
   FArrayBox& xnewfab=(*umac_new[0])[mfi];
@@ -22727,6 +22746,7 @@ NavierStokes::init_particle_container(int append_flag,
      &isweep,
      &number_sweeps,
      &append_flag,
+     &particle_incremental_velocity,
      particle_weight.dataPtr(),
      &particle_nsubdivide_bulk,
      &particle_nsubdivide_narrow,
@@ -22763,6 +22783,12 @@ NavierStokes::init_particle_container(int append_flag,
      xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
      yvelfab.dataPtr(),ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
      zvelfab.dataPtr(),ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
+     xvelINCfab.dataPtr(),
+     ARLIM(xvelINCfab.loVect()),ARLIM(xvelINCfab.hiVect()),
+     yvelINCfab.dataPtr(),
+     ARLIM(yvelINCfab.loVect()),ARLIM(yvelINCfab.hiVect()),
+     zvelINCfab.dataPtr(),
+     ARLIM(zvelINCfab.loVect()),ARLIM(zvelINCfab.hiVect()),
      snewfab.dataPtr(),ARLIM(snewfab.loVect()),ARLIM(snewfab.hiVect()),
      xnewfab.dataPtr(),ARLIM(xnewfab.loVect()),ARLIM(xnewfab.hiVect()),
      ynewfab.dataPtr(),ARLIM(ynewfab.loVect()),ARLIM(ynewfab.hiVect()),
@@ -22857,6 +22883,7 @@ NavierStokes::init_particle_container(int append_flag,
  delete velmf;
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   delete velmac[dir];
+  delete velmac_increment[dir];
  }
 
 }  // end subroutine init_particle_container()

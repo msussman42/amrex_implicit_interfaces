@@ -2670,7 +2670,7 @@ void NavierStokes::increment_face_velocity(
 
    debug_ngrow(ADVECT_REGISTER_MF,1,local_caller_string);
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-    debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,0,local_caller_string);
+    debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,1,local_caller_string);
 
   } else
    amrex::Error("enable_spectral invalid");
