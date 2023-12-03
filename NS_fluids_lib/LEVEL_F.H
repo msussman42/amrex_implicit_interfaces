@@ -566,6 +566,7 @@ namespace amrex{
         int* append_flag,
 	Real* particle_incremental_velocity,
 	Real* particle_weight,
+	Real* grid_weight,
         int* particle_nsubdivide_bulk,
         int* particle_nsubdivide_narrow,
         int* particle_max_per_nsubdivide,
@@ -575,6 +576,7 @@ namespace amrex{
         int* level,
         int* finest_level,
 	Real* cur_time_slab,
+	Real* dt_slab,
         const Real* xlo,const Real* dx,
 	int* ncomp_state,
         const void* particles,
@@ -633,6 +635,7 @@ namespace amrex{
 	AMREX_ARLIM_P(mfinerhi));
 
      void fort_move_particle_container(
+	Real* grid_weight,
         int* phase_change_displacement,
         int* burning_velocity_ncomp,
         int* tid,
