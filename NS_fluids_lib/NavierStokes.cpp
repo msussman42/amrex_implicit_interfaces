@@ -22539,9 +22539,13 @@ NavierStokes::init_particle_container(int append_flag,
  if (den->nComp()==num_materials*num_state_material) {
   //do nothing
  } else
-  amrex::Error("den->nComp() invalid");
+  amrex::Error("den->nComp()!=num_materials*num_state_material");
 
  MultiFab* velmf=getState(1,STATECOMP_VEL,STATE_NCOMP_VEL,cur_time_slab);
+ if (velmf->nComp()==AMREX_SPACEDIM) {
+  //do nothing
+ } else
+  amrex::Error("velmf->nComp()!=sdim");
 
  MultiFab* velmac[AMREX_SPACEDIM];
  MultiFab* velmac_increment[AMREX_SPACEDIM];
