@@ -235,18 +235,23 @@ stop
        integer, INTENT(in) :: DIMDEC(den)
        integer, INTENT(in) :: DIMDEC(mu)
 
-       real(amrex_real), INTENT(out),target :: force(DIMV(force),AMREX_SPACEDIM)
+       real(amrex_real), INTENT(out),target :: &
+               force(DIMV(force),AMREX_SPACEDIM)
        real(amrex_real), pointer :: force_ptr(D_DECL(:,:,:),:)
-       real(amrex_real), INTENT(in),target :: tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
+       real(amrex_real), INTENT(in),target :: &
+               tensor(DIMV(tensor),AMREX_SPACEDIM_SQR)
        real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
        real(amrex_real), INTENT(in),target :: thermal(DIMV(thermal))
        real(amrex_real), pointer :: thermal_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(in),target :: &
                recon(DIMV(recon),num_materials*ngeom_recon)
        real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
-       real(amrex_real), INTENT(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
-       real(amrex_real), INTENT(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
-       real(amrex_real), INTENT(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+       real(amrex_real), INTENT(in),target :: &
+               solxfab(DIMV(solxfab),nparts_def*SDIM)
+       real(amrex_real), INTENT(in),target :: &
+               solyfab(DIMV(solyfab),nparts_def*SDIM)
+       real(amrex_real), INTENT(in),target :: &
+               solzfab(DIMV(solzfab),nparts_def*SDIM)
        real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
        real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
        real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
@@ -254,7 +259,8 @@ stop
        real(amrex_real), pointer :: uold_ptr(D_DECL(:,:,:),:)
        real(amrex_real), INTENT(inout),target :: unew(DIMV(unew),STATE_NCOMP)
        real(amrex_real), pointer :: unew_ptr(D_DECL(:,:,:),:)
-       real(amrex_real), INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+       real(amrex_real), INTENT(in),target :: &
+               lsnew(DIMV(lsnew),num_materials*(SDIM+1))
        real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
        real(amrex_real), INTENT(in),target :: den(DIMV(den))
        real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:))
@@ -597,6 +603,7 @@ stop
              stop
             endif
 
+             !STUB_PROCS.F90: T_BASE=fort_tempconst(im)
             call SUB_T0_Boussinesq(xpoint,dx,cur_time_slab,im,T_BASE)
 
             ! units of DrhoDT are 1/(degrees Kelvin)

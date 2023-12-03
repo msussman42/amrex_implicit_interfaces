@@ -19327,6 +19327,7 @@ stop
         append_flag, &
         particle_incremental_velocity, &
         particle_weight, &
+        grid_weight, &
         particle_nsubdivide_bulk, &
         particle_nsubdivide_narrow, &
         particle_max_per_nsubdivide, &
@@ -19336,6 +19337,7 @@ stop
         level, &
         finest_level, &
         cur_time_slab, &
+        dt_slab, &
         xlo,dx, &
         ncomp_state, &
         particles, & ! a list of particles 
@@ -19388,10 +19390,12 @@ stop
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: particle_incremental_velocity
       real(amrex_real), INTENT(in) :: particle_weight(num_materials)
+      real(amrex_real), INTENT(in) :: grid_weight(num_materials)
       integer, INTENT(in) :: particle_nsubdivide_bulk
       integer, INTENT(in) :: particle_nsubdivide_narrow
       integer, INTENT(in) :: particle_max_per_nsubdivide
       real(amrex_real), INTENT(in)    :: cur_time_slab
+      real(amrex_real), INTENT(in)    :: dt_slab
       real(amrex_real), INTENT(in), target :: xlo(SDIM),dx(SDIM)
       integer, INTENT(in) :: ncomp_state
       integer, value, INTENT(in) :: Np ! pass by value
@@ -19549,7 +19553,9 @@ stop
       integer local_mask
       real(amrex_real) dist_nbr
       real(amrex_real) DXMAXLS
-      real(amrex_real) local_weight_particles
+      real(amrex_real) :: local_weight_particles
+      real(amrex_real), PARAMETER :: particle_weight_temperature=0.0d0
+      real(amrex_real), PARAMETER :: grid_weight_temperature=1.0d0
       real(amrex_real) local_weight
       real(amrex_real) particle_data
       real(amrex_real) current_data
@@ -19557,6 +19563,7 @@ stop
       real(amrex_real) velocity_sum(num_materials,SDIM)
       real(amrex_real) temperature_sum(num_materials)
       real(amrex_real) macvel
+      real(amrex_real) T_BASE,local_temp,rho_factor
       integer :: tcomp
       integer :: velcomp
       integer, PARAMETER :: nhalf=3
@@ -19669,6 +19676,12 @@ stop
        ! do nothing
       else
        print *,"cur_time_slab invalid"
+       stop
+      endif
+      if (dt_slab.ge.zero) then
+       ! do nothing
+      else
+       print *,"dt_slab invalid"
        stop
       endif
 
@@ -20507,31 +20520,102 @@ stop
               im_particle=particles(current_link)% &
                 extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
+              if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then
+               !do nothing
+              else
+               print *,"im_particle invalid"
+               stop
+              endif
+
               do dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
 
                particle_data=particles(current_link)%extra_state(dir_local+1)
 
                velcomp=dir_local-N_EXTRA_REAL_u+1
                if ((velcomp.ge.1).and.(velcomp.le.SDIM)) then
+
                 current_data=vel_sub(velcomp)
-                particle_data=particle_data+velINC_sub(velcomp)
-                if (particle_incremental_velocity.eq.zero) then
-                 particle_data=current_data
-                else if (particle_incremental_velocity.eq.one) then
-                 !do nothing
-                else if ((particle_incremental_velocity.gt.zero).and. &
-                         (particle_incremental_velocity.lt.one)) then
-                 particle_data= &
-                  (one-particle_incremental_velocity)*current_data+ &
-                  (particle_incremental_velocity)*particle_data
+
+                if (grid_weight(im_particle).eq.one) then
+
+                 particle_data=particle_data+velINC_sub(velcomp)
+                 if (particle_incremental_velocity.eq.zero) then
+                  particle_data=current_data
+                 else if (particle_incremental_velocity.eq.one) then
+                  !do nothing
+                 else if ((particle_incremental_velocity.gt.zero).and. &
+                          (particle_incremental_velocity.lt.one)) then
+                  particle_data= &
+                   (one-particle_incremental_velocity)*current_data+ &
+                   (particle_incremental_velocity)*particle_data
+                 else
+                  print *,"particle_incremental_velocity invalid"
+                  stop
+                 endif
+
+                else if ((grid_weight(im_particle).lt.one).and. &
+                         (grid_weight(im_particle).ge.zero)) then
+
+                 local_temp=particles(current_link)% &
+                         extra_state(N_EXTRA_REAL_T+1)
+
+                 if (local_temp.gt.zero) then
+                  ! do nothing
+                 else
+                  print *,"local_temp <= 0; fort_init_particle_container"
+                  stop
+                 endif
+
+                 if (fort_DrhoDT(im_particle).le.zero) then
+                  ! do nothing
+                 else
+                  print *,"fort_DrhoDT: invalid sign: fort_init_particle_cont"
+                  print *,"im_particle=",im_particle
+                  print *,"fort_DrhoDT(im_particle)=",fort_DrhoDT(im_particle)
+                  stop
+                 endif
+
+                 !STUB_PROCS.F90: T_BASE=fort_tempconst(im)
+                 call SUB_T0_Boussinesq(xpart,dx,cur_time_slab, &
+                         im_particle,T_BASE)
+
+                 ! units of DrhoDT are 1/(degrees Kelvin)
+                 ! DTEMP will have no units after dividing by total density.
+                 ! fort_tempconst is the temperature of the inner boundary
+                 ! for the differentially heated rotating annulus problem.
+                 ! example (default): rho_factor=fort_DrhoDT(im)*(T-Tbase)
+                 call SUB_UNITLESS_EXPANSION_FACTOR( &
+                   im_particle, & !intent(in)
+                   local_temp, & !intent(in)
+                   T_BASE, & !intent(in)
+                   rho_factor) !intent(out) (unitless)
+
+                  !units of gravity: m/s^2
+                  !rho_factor has no units
+                  !rho_factor=beta(T-T0) (beta<0)
+                  !usually gravity_vector(sdim)<0
+                 if (abs(rho_factor).ge.zero) then
+                  particle_data=particle_data+ &
+                       dt_slab*gravity_vector(velcomp)*rho_factor
+                 else
+                  print *,"rho_factor is NaN: ",rho_factor
+                  stop
+                 endif
+
+                 particle_data=grid_weight(im_particle)*current_data+ &
+                      (one-grid_weight(im_particle))*particle_data
+
                 else
-                 print *,"particle_incremental_velocity invalid"
-                 stop
+                 print *,"grid_weight(im_particle) invalid"
+                 print *,"im_particle: ",im_particle
+                 print *,"grid_weight ",grid_weight(im_particle)
                 endif
+
                else if (dir_local.eq.N_EXTRA_REAL_T) then
                 current_data=den_sub((im_particle-1)*num_state_material+ &
                         ENUM_TEMPERATUREVAR+1)
-                particle_data=current_data
+                particle_data=grid_weight_temperature*current_data+ &
+                      (one-grid_weight_temperature)*particle_data
                else if ((dir_local.eq.N_EXTRA_REAL_w).and. &
                         (SDIM.eq.2)) then
                 current_data=zero
@@ -20665,9 +20749,9 @@ stop
            tcomp=STATECOMP_STATES+ &
             (im_primary_sub-1)*num_state_material+ENUM_TEMPERATUREVAR+1
            snewfab(D_DECL(i,j,k),tcomp)= &
-              (one-local_weight_particles)* &
+              (one-particle_weight_temperature)* &
               snewfab(D_DECL(i,j,k),tcomp)+ &
-              local_weight_particles* &
+              particle_weight_temperature* &
               temperature_sum(im_primary_sub)/local_weight 
           else
            print *,"local_weight invalid: ",local_weight
@@ -21032,6 +21116,7 @@ stop
 
        ! called from NavierStokes2.cpp
       subroutine fort_move_particle_container( &
+        grid_weight, &
         phase_change_displacement, &
         burning_velocity_ncomp, &
         tid, &
@@ -21064,6 +21149,7 @@ stop
 
       IMPLICIT NONE
 
+      real(amrex_real), INTENT(in) :: grid_weight(num_materials)
       integer, INTENT(in) :: phase_change_displacement
       integer, INTENT(in) :: burning_velocity_ncomp
       integer :: ncomp_per_burning
@@ -21126,6 +21212,7 @@ stop
       integer cell_index(SDIM)
       integer i,j,k
       integer im_loop,im_primary,im_secondary
+      integer im_particle
       integer iten,ireverse,sign_reverse,tag_local,scomp
       real(amrex_real) LS(num_materials)
       real(amrex_real) DXMAXLS
@@ -21225,9 +21312,28 @@ stop
 
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
 
-      num_RK_stages=2
-      
       do interior_ID=1,Np
+
+       im_particle=particles(interior_ID)% &
+          extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+
+       if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then
+        !do nothing
+       else
+        print *,"im_particle invalid"
+        stop
+       endif
+
+       if (grid_weight(im_particle).eq.one) then
+        num_RK_stages=2
+       else if ((grid_weight(im_particle).lt.one).and. &
+                (grid_weight(im_particle).ge.zero)) then
+        num_RK_stages=1
+       else
+        print *,"grid_weight(im_particle) invalid"
+        print *,"im_particle: ",im_particle
+        print *,"grid_weight ",grid_weight(im_particle)
+       endif
 
        do dir=1,SDIM
         xpart1(dir)=particles(interior_ID)%pos(dir)

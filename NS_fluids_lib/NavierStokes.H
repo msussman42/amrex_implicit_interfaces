@@ -1582,7 +1582,8 @@ protected:
     static Vector<int> truncate_volume_fractions;  
 
     static Real particle_incremental_velocity; //default=0.0
-    static Vector<Real> particle_weight;  
+    static Vector<Real> particle_weight;  //default=0.0
+    static Vector<Real> grid_weight;  //default=1.0
     static int particle_nsubdivide_bulk;  
     static int particle_nsubdivide_narrow;  
     static int particle_max_per_nsubdivide;  

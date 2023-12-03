@@ -195,6 +195,8 @@ int  NavierStokes::enable_spectral=0;
 //          non-tessellating or tessellating solid => default==0
 Vector<int> NavierStokes::truncate_volume_fractions; 
 
+// default: grid_weight=1.0
+Vector<Real> NavierStokes::grid_weight; 
 // default: particle_weight=0.0
 Vector<Real> NavierStokes::particle_weight; 
 Real NavierStokes::particle_incremental_velocity=0.0;
@@ -4915,8 +4917,13 @@ NavierStokes::read_params ()
     for (int i=0;i<num_materials;i++) {
      particle_weight[i]=0.0;
     }
-
     pp.queryAdd("particle_weight",particle_weight,num_materials);
+
+    grid_weight.resize(num_materials);
+    for (int i=0;i<num_materials;i++) {
+     grid_weight[i]=1.0;
+    }
+    pp.queryAdd("grid_weight",grid_weight,num_materials);
 
      //default=1
     pp.queryAdd("particle_nsubdivide_bulk",particle_nsubdivide_bulk);
@@ -5186,6 +5193,8 @@ NavierStokes::read_params ()
      for (int i=0;i<num_materials;i++) {
       std::cout << "particle_weight i= " << i << ' ' <<
         particle_weight[i] << '\n';
+      std::cout << "grid_weight i= " << i << ' ' <<
+        grid_weight[i] << '\n';
      }
      std::cout<<"particle_nsubdivide_bulk="<<particle_nsubdivide_bulk<<'\n';
      std::cout<<"particle_nsubdivide_narrow="<<particle_nsubdivide_narrow<<'\n';
@@ -22752,6 +22761,7 @@ NavierStokes::init_particle_container(int append_flag,
      &append_flag,
      &particle_incremental_velocity,
      particle_weight.dataPtr(),
+     grid_weight.dataPtr(),
      &particle_nsubdivide_bulk,
      &particle_nsubdivide_narrow,
      &particle_max_per_nsubdivide,
@@ -22761,6 +22771,7 @@ NavierStokes::init_particle_container(int append_flag,
      &level,
      &finest_level,
      &cur_time_slab,
+     &dt_slab, //init_particle_container
      xlo,dx,
      &ncomp_state,
      particles_AoS.data(), // existing particles
