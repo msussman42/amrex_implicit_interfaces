@@ -5,10 +5,13 @@ Multimaterial
 Sharp interface
 
 Each fluid interface and each material has an associated level set function 
-which is initialized
-as a distance function locally to the interface.  each material has an
-associated MAC velocity, cell velocity, density, temperature and species.
-GFM used at material boundaries.
+which are initialized
+as distance functions locally to the interface.  
+
+A provisional advection velocity with incompressible
+extension is created for each material.  The MAC velocity in which
+the relevant neighbor cell centered level set function changes sign is 
+clamped.
 
 Each particle has an associated material id which is assigned when the
 particle is added and modified prior to redistancing.
@@ -33,30 +36,23 @@ and material id.
 3. add and delete particles; particles deleted if particle density exceeds
 a threshold.
 
-4. advection (use UMAC): 
-  (a) particles (advective velocity material id=particle material id), RK2
-  (b) level set functions, velocity(s), temperature(s),density(s), species
-      unsplit: RK2, WENO3
-  (c) PDE extension of levelsets into solids, 3rd materials(s), PDE extension 
-      of velocity, temperature, density, species into other materials.
-  (d) PDE reinitialize the level set function(s), use particles to correct.
-5. (a) phase change, limit the normal velocity so that 
+4. make provisional "UMAC" material velocities.  Incompressible extension.
+   Clamp velocity where relevant level set changes sign.
+
+5. advection (use UMAC): 
+  (a) particles (advective velocity material id=particle material id), RK2,
+      directionally split.
+  (b) level set functions, velocity, temperature(s),density(s), species
+      directionally split.
+6. (a) phase change, limit the normal velocity so that 
 V(phi_source_old)-V(phi_source_new)=V(phi_target_new)-V(phi_target_old)
    (b) reinitialize the level set function(s), use particles to correct.
 
-6. combine the cell centered advected velocities and advected temperatures and
-  species.
+7. viscosity, heat conduction, species diffusion 
 
-7. viscosity, heat conduction, species diffusion
+8. interpolate cell velocity to MAC velocity 
 
-8. extend velocity, temperature, species
-
-9. interpolate cell velocity to MAC velocity (each material)
-
-10. combine MAC velocity and project.
-
-11. extend MAC velocity and make sure each MAC_{material} velocity is 
-divergence free.
+9. project.
 
 
 Note: for compressible flows, add enough artificial diffusion so that there 

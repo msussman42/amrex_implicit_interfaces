@@ -12353,7 +12353,9 @@ void NavierStokes::prepare_advect_vars(Real time) {
  new_localMF(ADVECT_REGISTER_MF,AMREX_SPACEDIM,1,-1);
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   //ngrow=1
-  //Umac_Type
+  //Umac_Type+dir
+  //getStateMAC_localMF is declared in NavierStokes2.cpp
+  //localMF[ADVECT_REGISTER_FACE_MF+dir allocated in getStateMAC_localMF.
   getStateMAC_localMF(ADVECT_REGISTER_FACE_MF+dir,1,dir,time);
  } // dir
 
