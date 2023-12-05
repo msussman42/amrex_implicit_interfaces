@@ -571,7 +571,8 @@ AmrLevel::AmrLevel (AmrCore&        papa,
 #endif
 
      }// for (int i=0;i<=time_order;i++) 
-    } else if (level>0) {
+
+    } else if ((level>0)&&(level<=max_level)) {
      // do nothing
     } else
      amrex::Error("level invalid");
@@ -707,7 +708,7 @@ AmrLevel::restart (AmrCore&      papa,
   } else
    amrex::Error("query_status invalid");
 
- } else if (level>0) {
+ } else if ((level>0)&&(level<=max_level)) {
   // do nothing
  } else
   amrex::Error("level invalid");
@@ -918,7 +919,14 @@ AmrLevel::checkPoint (const std::string& dir,
       amrex::Error("query_status invalid");
 
      ParallelDescriptor::Barrier("AmrLevel::checkPoint");
-    }
+
+    } else if ((level>=1)&&(level<=max_level)) {
+
+     //do nothing
+     
+    } else
+     amrex::Error("level invalid");
+
 } // end subroutine AmrLevel::checkPoint
 
 AmrLevel::~AmrLevel ()
