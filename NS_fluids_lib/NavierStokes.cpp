@@ -9313,6 +9313,13 @@ void NavierStokes::post_restart() {
    }
 
    AmrLevel0_new_dataPC[i]->Restart(FullPathName,Part_name);
+
+   Long num_particles=AmrLevel0_new_dataPC[i]->TotalNumberOfParticles();
+
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "TotalNumberOfParticles for slab i= " <<
+      i << " is equal to " << num_particles << '\n';
+   }
 #endif
 
   }//for (int i=0;i<=time_order;i++) 
@@ -9815,6 +9822,8 @@ NavierStokes::init(
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
  
+ const int max_level = parent->maxLevel();
+
  NavierStokes* oldns     = (NavierStokes*) &old;
 
  SDC_setup();
@@ -9937,7 +9946,7 @@ NavierStokes::init(
  }
 
 #ifdef AMREX_PARTICLES
- NavierStokes& ns_level0=getLevel(0);
+
  int lev_min=0;
  int lev_max=level;
  int nGrow_Redistribute=0;
@@ -9947,24 +9956,41 @@ NavierStokes::init(
   // if level==0, we must copy from the old Amr_level (level==0) to the
   // new Amr_level prior to deleting the old level==0 structure.
  if (level==0) {
-  My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
+
+  My_ParticleContainer& new_PC=newDataPC(ns_time_order);
   My_ParticleContainer& old_PC=oldns->newDataPC(ns_time_order);
+
+  Long old_num_particles=old_PC.TotalNumberOfParticles();
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "OLD: TotalNumberOfParticles for slab ns_time_order= " <<
+     ns_time_order << " is equal to " << old_num_particles << '\n';
+  }
 
   new_PC.clearParticles();
   //make sure hierarchy is initialized.
   new_PC.Redistribute();
 
   new_PC.copyParticles(old_PC,local_copy);
- } else if (level>0) {
-  // do nothing
+
+  Long new_num_particles=new_PC.TotalNumberOfParticles();
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "NEW: TotalNumberOfParticles for slab ns_time_order= " <<
+     ns_time_order << " is equal to " << new_num_particles << '\n';
+  }
+
+  new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+   local_redistribute);
+
+ } else if ((level>0)&&(level<=max_level)) {
+
+  NavierStokes& ns_level0=getLevel(0);
+  My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
+  new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
+   local_redistribute);
+ 
  } else
   amrex::Error("level invalid");
    
- My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
-
- new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-   local_redistribute);
-
 #endif
 
  old_intersect_new = amrex::intersect(grids,oldns->boxArray());
@@ -10170,6 +10196,13 @@ void NavierStokes::CopyNewToOldALL() {
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_Redistribute);
  ns_level0.CopyNewToOldPC(lev_max); 
+
+ Long num_particles=current_PC.TotalNumberOfParticles();
+
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout<<"COPYNEWOLD: TotalNumberOfParticles for slab ns_time_order= "<<
+   ns_time_order << " is equal to " << num_particles << '\n';
+ }
 #endif
 
 }  // subroutine CopyNewToOldALL
@@ -10214,6 +10247,14 @@ void NavierStokes::CopyOldToNewALL() {
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_Redistribute);
  ns_level0.CopyOldToNewPC(lev_max);
+
+ Long num_particles=current_PC.TotalNumberOfParticles();
+
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "OLD: TotalNumberOfParticles for slab zero= " <<
+      " is equal to " << num_particles << '\n';
+ }
+
 #endif
 
 } // subroutine CopyOldToNewALL
@@ -21443,6 +21484,13 @@ void NavierStokes::post_regrid (int lbase,
   current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
      local_Redistribute);
 
+  Long num_particles=current_PC.TotalNumberOfParticles();
+
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "TotalNumberOfParticles for slab ns_time_order= " <<
+     ns_time_order << " is equal to " << num_particles << '\n';
+  }
+
 #endif
 
    // olddata=newdata  
@@ -21453,8 +21501,6 @@ void NavierStokes::post_regrid (int lbase,
 #ifdef AMREX_PARTICLES
   ns_level0.CopyNewToOldPC(lev_max);
 #endif
-
-
 
 } // end subroutine post_regrid
 
@@ -22454,6 +22500,13 @@ NavierStokes::init_particle_containerALL(int append_flag,
   amrex::Error("append_flag invalid");
 
  My_ParticleContainer& localPC=newDataPC(slab_step+1);
+ Long num_particles=localPC.TotalNumberOfParticles();
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << local_caller_string << '\n';
+  std::cout << "append_flag= " << append_flag << '\n';
+  std::cout << "TotalNumberOfParticles for slab_step+1 = " <<
+     slab_step+1 << " is equal to " << num_particles << '\n';
+ }
 
   //m_num_neighbor_cells=nneighbor=ncells=num_neighbors
  NBR_Particle_Container=
