@@ -9325,7 +9325,7 @@ void NavierStokes::post_restart() {
    sum_integrated_quantities(local_caller_string,local_stop_time);
   }
 
- } else if (level>0) {
+ } else if ((level>0)&&(level<=max_level)) {
   // do nothing
  } else {
   amrex::Error("level invalid20");
@@ -22404,7 +22404,6 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
 #ifdef AMREX_PARTICLES
 
-// DO NOT FORGET TO HAVE CHECKPOINT/RESTART CAPABILITY FOR PARTICLES.
 // This routine called from:
 // 1. post_init_state() and
 // 2. nonlinear_advection()
