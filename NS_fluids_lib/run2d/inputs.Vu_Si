@@ -73,8 +73,9 @@ amr.n_cell=64 64
 amr.max_level = 0
 ns.particle_nsubdivide_bulk=4
 ns.particle_nsubdivide_narrow=4
-ns.particle_max_per_nsubdivide=10
+ns.particle_max_per_nsubdivide=4
 ns.particle_weight=1.0 1.0 0.0 0.0
+ns.grid_weight=1.0 1.0 1.0 1.0
 ns.particle_incremental_velocity=0.0
 # water, gas, ice, substrate
 amr.regrid_int      = 1       # how often to regrid

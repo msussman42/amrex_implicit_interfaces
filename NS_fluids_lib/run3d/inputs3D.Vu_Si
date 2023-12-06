@@ -70,6 +70,12 @@ amr.plotfile_on_restart=1
 
 amr.n_cell=64 64 64
 amr.max_level = 0
+ns.particle_nsubdivide_bulk=1
+ns.particle_nsubdivide_narrow=1
+ns.particle_max_per_nsubdivide=1
+ns.particle_weight=0.0 0.0 0.0 0.0
+ns.grid_weight=1.0 1.0 1.0 1.0
+ns.particle_incremental_velocity=0.0
 # water, gas, ice, substrate
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
@@ -79,11 +85,11 @@ amr.blocking_factor = 8 8 8 8  # block factor in grid generation
 amr.check_int       = 200
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 200 # 200
+amr.plot_int        = 50 # 200
 #amr.plot_int        = 500 # static freezing test 10
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 64
+amr.max_grid_size   = 32
 amr.file_name_digits=7
 #amr.restart         = chk0027800
 #amr.trace   =1
