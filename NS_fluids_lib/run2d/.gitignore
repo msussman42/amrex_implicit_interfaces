@@ -91,4 +91,5 @@ tank1d/
 FABRIC_DROP/
 translate/
 checkerboard/
+hopf_bifurcation/
 *.mod
