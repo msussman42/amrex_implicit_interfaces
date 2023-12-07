@@ -1,0 +1,159 @@
+#
+# inputs.hopf_bifurcation
+# [0,1]x[0,1]
+# u=16 x^2 (1-x)^2 (upper lid)
+# (u,v)=0 otherwise
+# referring to:
+# Hopf Bifurcation of the
+# Unsteady Regularized Driven Cavity Flow
+#  JIE SHEN
+# Density is 1 everywhere, and there are no Boussinesq type approximations,
+# so we set internal_wave_exists=0
+#
+max_step  =  9999999    # maximum timestep
+#max_step  =  2    # maximum timestep
+stop_time =  3000.0  
+
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ, 3=>RTHETA
+geometry.coord_sys_override = 0    # 0 => cart, 1 => RZ, 3=>RTHETA
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  1.0 1.0
+
+ns.min_velocity_for_dt = 1.0 
+
+ns.centrifugal_force_factor=0.0
+ns.angular_velocity=0.0
+
+geometry.is_periodic = 0 0 
+
+ns.MOFITERMAX=15
+ns.continuous_mof=0
+
+
+# multigrid class
+#mg.verbose = 1
+#cg.verbose = 1
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
+
+mg.bot_atol = 1.0e-13
+mg.visc_bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+
+ns.num_materials=2
+
+# num_species_var=3 for diagnostics
+ns.num_species_var=0
+ns.EILE_flag=-1 # Weymouth and Yue
+amr.n_cell    = 32 32 
+amr.max_level = 0
+
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 2 2 2 2 2 2  
+amr.grid_eff        = 0.75 
+
+ns.ns_tiling=false
+amr.blocking_factor = 4 4 4
+amr.space_blocking_factor=1 1 1
+#amr.space_blocking_factor=4 4 4
+amr.time_blocking_factor=1
+#amr.time_blocking_factor=4
+ns.enable_spectral=0
+#ns.enable_spectral=1
+
+amr.plotfile_on_restart=1
+ns.perturbation_on_restart=0
+# sin(2 pi k x/L)
+#ns.perturbation_mode=12
+# a fraction of delta T or the radial velocity rmax omega.
+#ns.perturbation_eps_temp=0.1
+#ns.perturbation_eps_vel=0.1
+#amr.restart=chk01660
+amr.check_int       = 200     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 200
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+# change this if tiling vs. no tiling.
+amr.max_grid_size   = 2048
+ns.dt_cutoff      = 0.0000001 # level 0 timestep below which we halt
+mac.mac_abs_tol    = 1.0e-11
+ns.minimum_relative_error=1.0e-22
+ns.initial_project_cycles=2
+ns.initial_cg_cycles=2
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+#ns.projection_pressure_scale=1000.0
+
+
+ns.cfl            = 0.5      # cfl number for hyperbolic system 0.5
+ns.init_shrink    = 0.5      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-10
+
+ns.gravity        = 0.0 # g/cm^2
+ns.tension        = 0.0 0.0 
+#ns.fixed_dt	  = 0.0025     # hardwire dt
+ns.sum_interval   = 1        # timesteps between computing mass 
+
+
+ns.axis_dir=0
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.0  
+ns.advbot=0.0
+ns.adv_vel=0.0
+ns.adv_dir=1 #adv_dir=1,2,3
+ns.uncoupled_viscosity=1
+# Re=rho U L/mu 
+ns.viscconst= 0.01 0.01 
+ns.denconst=1.0 1.0
+ns.DrhoDT=0.0 0.0 
+ns.speciesconst=0.0 0.0 0.0
+ns.speciesviscconst=0.0 0.0 0.0
+ns.heatviscconst= 0.0 0.0
+ns.stiffCP=1.0 1.0
+ns.pressure_error_cutoff=0.0 0.0
+ns.tempconst=20.0 20.0
+ns.material_type=0 0  
+
+ns.override_density=0 0  # Boussenesq approx for temperature part of the
+                         # centrifugal and gravity force.
+
+ns.xblob=0.0
+ns.yblob=0.0
+ns.zblob=0.0
+ns.radblob=0.0
+ns.denfact=0.0
+ns.velfact=0.0
+ns.probtype=820
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+ns.lo_bc          = 5 5 
+ns.hi_bc          = 5 1 
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
+
