@@ -1,75 +1,18 @@
-GPU capability, MPI capability, OpenMP
-AMR capability,
-Particle Container
-Multimaterial
-Sharp interface
-
-Each fluid interface and each material has an associated level set function 
-which are initialized
-as distance functions locally to the interface.  
-
-A provisional advection velocity with incompressible
-extension is created for each material.  The MAC velocity in which
-the relevant neighbor cell centered level set function changes sign is 
-clamped.
-
-Each particle has an associated material id which is assigned when the
-particle is added and modified prior to redistancing.
-
-There are 2 kinds of particles:
-a) bulk particles (min |phi_{m}|>=alpha h)
-
-   particle_nsubdivide_bulk
-
-b) (i) narrow band particles (min |phi_{m}| < alpha h)
-   (ii) close-in narrow band particles x^init-=phi_{m} n_{m}
-
-   particle_nsubdivide_narrow
-
-Each particle has a position, displacement, velocity, temperature, 
-and material id.
-
-
-1. initialize Levelsets, make them locally distance functions.  
-2. generate the AMR grid near zero level set(s).
-
-3. add and delete particles; particles deleted if particle density exceeds
-a threshold.
-
-4. make provisional "UMAC" material velocities.  Incompressible extension.
-   Clamp velocity where relevant level set changes sign.
-
-5. advection (use UMAC): 
-  (a) particles (advective velocity material id=particle material id), RK2,
-      directionally split.
-  (b) level set functions, velocity, temperature(s),density(s), species
-      directionally split.
-6. (a) phase change, limit the normal velocity so that 
-V(phi_source_old)-V(phi_source_new)=V(phi_target_new)-V(phi_target_old)
-   (b) reinitialize the level set function(s), use particles to correct.
-
-7. viscosity, heat conduction, species diffusion 
-
-8. interpolate cell velocity to MAC velocity 
-
-9. project.
-
-
-Note: for compressible flows, add enough artificial diffusion so that there 
-are 2 points in the transition region.
-
-Use viscous Burgers' equation as a guide:
-u_t + (u^2/2)_x = nu u_xx
-
-u=1-tanh((x-t)/(2 nu))
-
-References:
-Jawad, Petkovi, Biswas (2010), Soliton solutions of Burgers 
-equations and perturbed Burgers equation, 
-Applied Mathematics and Computation.
-
-Peng, D., Merriman, B., Osher, S., Zhao, H., & Kang, M. (1999). A PDE-based fast local level set method. Journal of computational physics, 155(2), 410-438.
-
-1. make sure code works for single precision (VOFTOL, INTERCEPT_TOL, solver
-default tolerances, etc)
-2. check freezing results, restart bubble jetting.
+1. use "ngrow_vector"
+2. single precision
+3. GPU
+4. profile the advection step
+5. introduce particles only on the interface.  Attribute "iten" in 
+   [1..num_interfaces]. subdivide=4
+6. delete particles in which |LS_{m}(xp)|>alpha dx  m=m1 or m2
+   (use linear interpolation? data bounded weno?)
+7. if too many particles, then delete those with the largest values for
+   |LS_{m}(xp)|.
+8. use MOF/CMOF reconstruction either when:
+   (i) near triple point
+   (ii) interface changing phase??
+   (iii) prescribed solids
+   (iv) too few particles in the cell
+   otherwise, slope and intercept minimize |phi_recon(xp)| and the volume
+   fractions and centroids are updated.
+9. directionally split advection for the particles.

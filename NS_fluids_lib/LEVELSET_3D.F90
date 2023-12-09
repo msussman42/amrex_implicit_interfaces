@@ -18516,8 +18516,7 @@ stop
 
       local_ngrow=0
       if ((accum_PARM%append_flag.eq.OP_PARTICLE_INIT).or. &
-          (accum_PARM%append_flag.eq.OP_PARTICLE_ADD).or. &
-          (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE)) then
+          (accum_PARM%append_flag.eq.OP_PARTICLE_ADD)) then
        !do nothing
       else if (accum_PARM%append_flag.eq.OP_PARTICLE_ASSIMILATE) then
        local_ngrow=1
@@ -18892,85 +18891,33 @@ stop
       end subroutine interp_mac_velocity
 
 
-       ! particle/grid interpolation:
-       ! Q(xtarget)=( sum_{particles} Q_{p} w(xtarget,xp) +
-       !              sum_{grid} Q_{grid} w(xtarget,xgrid) ) /
-       !            ( sum_{particles} w(xtarget,xp) +
-       !              sum_{grid} w(xtarget,xgrid) )
       subroutine interp_eul_lag_dist( &
-         weight_particles, &
          accum_PARM, &
-         particlesptr, &
          LEVELSETptr, &
-         DENptr, &
-         umacptr, &
-         vmacptr, &
-         wmacptr, &
          cur_time_slab, &
          grid_PARM, &
-         cell_particle_count, &
          i,j,k, &
          xtarget, &  ! where to add the new particle
-         particle_link_data, &
-         Np, &
-         LS_interp, &
-         DEN_interp, &
-         VEL_interp, &
-         X0_interp)
+         LS_interp)
       use probcommon_module
       use global_utility_module
 
       IMPLICIT NONE
 
-      real(amrex_real), INTENT(in) :: weight_particles
       type(accum_parm_type_count), INTENT(in) :: accum_PARM
       type(grid_parm_type), INTENT(in) :: grid_PARM
-      type(particle_t), INTENT(in), pointer, dimension(:) :: particlesptr
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
-              DENptr
-
-      real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::umacptr
-      real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::vmacptr
-      real(amrex_real),INTENT(in), pointer, dimension(D_DECL(:,:,:)) ::wmacptr
 
       real(amrex_real), INTENT(in) :: cur_time_slab
 
       real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
               LEVELSETptr
-      integer, INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: &
-         cell_particle_count
       integer, INTENT(in) :: i,j,k
       real(amrex_real), target, INTENT(in) :: xtarget(SDIM)
-      integer, value, INTENT(in) :: Np
-      integer, INTENT(in) :: particle_link_data(Np*(1+SDIM))
-      real(amrex_real), INTENT(out) :: &
-             DEN_interp(num_state_material*num_materials)
-      real(amrex_real), INTENT(out) :: VEL_interp(AMREX_SPACEDIM)
       real(amrex_real), INTENT(out) :: LS_interp(num_materials)
-      real(amrex_real), INTENT(out) :: X0_interp(SDIM)
 
       integer, parameter :: nhalf=3
       integer :: dir
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real) A_VEL(num_materials)
-      real(amrex_real) b_VEL(num_materials,SDIM+1)
-      real(amrex_real) A_X0,b_X0(SDIM)
-      integer :: current_link
-      real(amrex_real), target :: xpart(SDIM)
-      real(amrex_real) :: data_part(SDIM+1)
-      real(amrex_real) :: X0part(SDIM)
-      real(amrex_real) :: LS_interp_local(num_materials)
-      integer :: ibase
-
-      real(amrex_real) w_p
-
-      real(amrex_real) :: LSlocal(num_materials)
-      integer :: im
-      integer :: im_primary
-      integer :: im_primary_part
-      integer :: im_primary_sub
-      integer :: im_particle_direct
-      integer :: ipart
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out
@@ -18982,12 +18929,9 @@ stop
       real(amrex_real), target, dimension(num_materials) :: &
          data_interp_local_LS
 
-      integer :: test_count,test_cell_particle_count
-
       if (1.eq.0) then
        print *,"i,j,k ",i,j,k
        print *,"xtarget ",xtarget(1),xtarget(2),xtarget(SDIM)
-       print *,"Np= ",Np
        print *,"num_materials=",num_materials
        print *,"accum_PARM%fablo(1) ",accum_PARM%fablo(1)
        print *,"accum_PARM%fablo(2) ",accum_PARM%fablo(2)
@@ -19010,30 +18954,14 @@ stop
 
       call gridsten_level(xsten,i,j,k,accum_PARM%level,nhalf)
 
-      call checkbound_array1(accum_PARM%fablo,accum_PARM%fabhi, &
-         umacptr,1,0)
-      call checkbound_array1(accum_PARM%fablo,accum_PARM%fabhi, &
-         vmacptr,1,1)
-      call checkbound_array1(accum_PARM%fablo,accum_PARM%fabhi, &
-         wmacptr,1,SDIM-1)
-
-      call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
-         DENptr,1,-1)
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          LEVELSETptr,1,-1)
-      call checkbound_array_INTEGER(accum_PARM%tilelo,accum_PARM%tilehi, &
-         cell_particle_count,0,-1)
-
-      do im=1,num_materials
-       LSlocal(im)=LEVELSETptr(D_DECL(i,j,k),im)
-      enddo
-      call get_primary_material(LSlocal,im_primary)
 
       data_out%data_interp=>data_interp_local
       data_out_LS%data_interp=>data_interp_local_LS
 
       data_in%scomp=1 
-      data_in%ncomp=0 !placeholder
+      data_in%ncomp=num_materials
 
       data_in%level=accum_PARM%level
       data_in%finest_level=accum_PARM%finest_level
@@ -19047,264 +18975,15 @@ stop
        data_in%fabhi(dir)=accum_PARM%fabhi(dir)
       enddo !dir=1..sdim
 
-      A_X0=zero
-      do dir=1,SDIM
-       b_X0(dir)=zero
-      enddo
-
-      do im=1,num_materials
-       A_VEL(im)=zero
-       do dir=1,SDIM+1
-        b_VEL(im,dir)=zero
-       enddo
-      enddo
-
-      test_cell_particle_count=cell_particle_count(D_DECL(i,j,k),1)
-
-      test_count=0
-
-      current_link=cell_particle_count(D_DECL(i,j,k),2)
-
-      do while ((current_link.ge.1).and.(current_link.le.Np))
-
-       do dir=1,SDIM
-        xpart(dir)=particlesptr(current_link)%pos(dir)
-       enddo 
-
-       call particle_grid_weight(xpart,xtarget, &
-         (1.0D-3)*accum_PARM%dx(1),w_p)
-
-       data_in%xtarget=xpart
-
-       if (num_materials.gt.0) then
-        data_in%scomp=1 
-        data_in%ncomp=num_materials
-        call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
-        do dir=1,num_materials
-         LS_interp_local(dir)=data_out_LS%data_interp(dir)
-        enddo
-        call get_primary_material(LS_interp_local,im_primary_part)
-        if ((im_primary_part.ge.1).and. &
-            (im_primary_part.le.num_materials)) then
-         ! do nothing
-        else
-         print *,"im_primary_part invalid"
-         stop
-        endif
-       else
-        print *,"num_materials invalid"
-        stop
-       endif
-
-       im_particle_direct= &
-         particlesptr(current_link)%extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-
-       if ((im_particle_direct.ge.1).and. &
-           (im_particle_direct.le.num_materials)) then
-        ! do nothing
-       else
-        print *,"im_particle_direct invalid"
-        stop
-       endif
-
-       do dir=1,SDIM
-        X0part(dir)= &
-          particlesptr(current_link)%extra_state(N_EXTRA_REAL_X0+dir)
-        data_part(dir)= &
-          particlesptr(current_link)%extra_state(N_EXTRA_REAL_u+dir)
-       enddo !dir=1,SDIM
-
-       if (N_EXTRA_REAL_T+1.eq.N_EXTRA_REAL) then
-        !do nothing
-       else
-        print *,"N_EXTRA_REAL_T invalid"
-        stop
-       endif
-       if (N_EXTRA_REAL.eq.7) then
-        !do nothing
-       else
-        print *,"N_EXTRA_REAL invalid"
-        stop
-       endif
-
-       data_part(1+SDIM)= &
-         particlesptr(current_link)%extra_state(N_EXTRA_REAL_T+1)
-
-       if (accum_PARM%append_flag.eq.OP_PARTICLE_INIT) then
-        print *,"#particles=0 if append_flag==OP_PARTICLE_INIT"
-        stop
-       else if (accum_PARM%append_flag.eq.OP_PARTICLE_ADD) then
-        ! do nothing
-       else if (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE) then
-        ! do nothing
-       else 
-        print *,"accum_PARM%append_flag invalid" 
-        stop
-       endif
-
-       if (w_p.gt.zero) then
-
-        A_X0=A_X0+w_p
-        do dir=1,SDIM
-         b_X0(dir)=b_X0(dir)+w_p*X0part(dir)
-        enddo
-
-        if (im_primary_part.eq.im_particle_direct) then
-         A_VEL(im_primary_part)=A_VEL(im_primary_part)+w_p
-         do dir=1,SDIM+1
-          b_VEL(im_primary_part,dir)=b_VEL(im_primary_part,dir)+ &
-                w_p*data_part(dir)
-         enddo
-        else if (im_primary_part.ne.im_particle_direct) then
-         ! do nothing
-        else
-         print *,"im_primary_part or im_particle_direct bust"
-         stop
-        endif
-       else
-        print *,"w_p invalid: ",w_p
-        stop
-       endif
-
-       ibase=(current_link-1)*(1+SDIM)
-       current_link=particle_link_data(ibase+1)
-
-       test_count=test_count+1
-      enddo ! while (current_link.ge.1).and.(current_link<=Np)
-
-      if (current_link.eq.0) then
-       ! do nothing
-      else
-       print *,"current_link invalid"
-       stop
-      endif
-      if (test_count.eq.test_cell_particle_count) then
-       ! do nothing
-      else
-       print *,"test_cell_particle_count invalid"
-       stop
-      endif
-
-       ! xtarget might not coincide with an Eulerian grid cell.
-       ! for case when xtarget=xsub-LS(xsub)*gradLS(xsub), it could
-       ! be that xtarget is not in cell i,j,k either.
       data_in%xtarget=xtarget
 
       if (num_materials.gt.0) then
-       data_in%scomp=1 
-       data_in%ncomp=num_materials
        call interp_from_grid_util(data_in,LEVELSETptr,data_out_LS)
        do dir=1,num_materials
         LS_interp(dir)=data_out_LS%data_interp(dir)
        enddo
-       call get_primary_material(LS_interp,im_primary_sub)
       else
        print *,"num_materials invalid"
-       stop
-      endif
-
-       ! bilinear interpolation
-      data_in%scomp=1 
-      data_in%ncomp=num_state_material*num_materials
-      call interp_from_grid_util(data_in,DENptr,data_out)
-      do dir=1,num_state_material*num_materials
-       DEN_interp(dir)=data_out%data_interp(dir)
-      enddo
-
-      call interp_mac_velocity( &
-         grid_PARM, &
-         umacptr, &
-         vmacptr, &
-         wmacptr, &
-         xtarget, &
-         cur_time_slab, &
-         VEL_interp)
-
-      if (accum_PARM%append_flag.eq.OP_PARTICLE_INIT) then
-
-       do im=1,num_materials
-        if (A_VEL(im).eq.zero) then
-         ! do nothing
-        else
-         print *,"expecting A_VEL(im)==0 if append_flag==0"
-         stop
-        endif
-       enddo
-
-       if (A_X0.eq.zero) then
-        ! do nothing
-       else
-        print *,"expecting A_X0==0 if append_flag==0"
-        stop
-       endif
-
-       do dir=1,SDIM
-        if (xtarget(dir).eq.xtarget(dir)) then
-         X0_interp(dir)=xtarget(dir)
-        else
-         print *,"xtarget(dir) is NaN"
-         stop
-        endif
-       enddo
-
-      else if ((accum_PARM%append_flag.eq.OP_PARTICLE_ADD).or. &
-               (accum_PARM%append_flag.eq.OP_PARTICLE_UPDATE)) then
-
-       do im=1,num_materials
-
-        if (A_VEL(im).gt.zero) then
-          !after interpolation DEN_interp lives at "xtarget"
-         call particle_grid_weight(xtarget,xtarget,accum_PARM%dx(1),w_p)
-
-         DEN_interp((im-1)*num_state_material+ENUM_TEMPERATUREVAR+1)= &
-          (weight_particles*b_VEL(im,SDIM+1)+ &
-           w_p*DEN_interp((im-1)*num_state_material+ENUM_TEMPERATUREVAR+1))/ &
-          (weight_particles*A_VEL(im)+w_p)
-
-          !after interpolation VEL_interp lives at "xtarget"
-         do ipart=1,SDIM
-          VEL_interp(ipart)= &
-           (weight_particles*b_VEL(im,ipart)+w_p*VEL_interp(ipart))/ &
-           (weight_particles*A_VEL(im)+w_p)
-         enddo
-
-        else if (A_VEL(im).eq.zero) then
-         ! do nothing
-        else
-         print *,"A_VEL(im) invalid: ",A_VEL(im)
-         stop
-        endif
-       enddo !im=1..num_materials
-
-       if (A_X0.gt.zero) then
-
-        do dir=1,SDIM
-         if (b_X0(dir).eq.b_X0(dir)) then
-          X0_interp(dir)=b_X0(dir)/A_X0
-         else
-          print *,"b_X0(dir) is NaN"
-          stop
-         endif
-        enddo
-
-       else if (A_X0.eq.zero) then
-
-        do dir=1,SDIM
-         if (xtarget(dir).eq.xtarget(dir)) then
-          X0_interp(dir)=xtarget(dir)
-         else
-          print *,"xtarget(dir) is NaN"
-          stop
-         endif
-        enddo
-
-       else
-        print *,"A_X0 invalid"
-        stop
-       endif
-
-      else 
-       print *,"accum_PARM%append_flag invalid" 
        stop
       endif
 
@@ -19325,11 +19004,7 @@ stop
         isweep, &
         number_sweeps, &
         append_flag, &
-        particle_incremental_velocity, &
-        particle_weight, &
-        grid_weight, &
-        particle_nsubdivide_bulk, &
-        particle_nsubdivide_narrow, &
+        particle_nsubdivide, &
         particle_max_per_nsubdivide, &
         tilelo,tilehi, &
         fablo,fabhi, &
@@ -19352,18 +19027,7 @@ stop
         cell_particle_count, &
         DIMS(cell_particle_count), &
         lsfab,DIMS(lsfab), &
-        denfab,DIMS(denfab), &
-        velfab,DIMS(velfab), &
-        xvelfab,DIMS(xvelfab), &
-        yvelfab,DIMS(yvelfab), &
-        zvelfab,DIMS(zvelfab), &
-        xvelINCfab,DIMS(xvelINCfab), &
-        yvelINCfab,DIMS(yvelINCfab), &
-        zvelINCfab,DIMS(zvelINCfab), &
-        snewfab,DIMS(snewfab), &
-        xnewfab,DIMS(xnewfab), &
-        ynewfab,DIMS(ynewfab), &
-        znewfab,DIMS(znewfab), &
+        lsnewfab,DIMS(lsnewfab), &
         mfiner,DIMS(mfiner)) &
       bind(c,name='fort_init_particle_container')
 
@@ -19388,11 +19052,7 @@ stop
       integer, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
-      real(amrex_real), INTENT(in) :: particle_incremental_velocity
-      real(amrex_real), INTENT(in) :: particle_weight(num_materials)
-      real(amrex_real), INTENT(in) :: grid_weight(num_materials)
-      integer, INTENT(in) :: particle_nsubdivide_bulk
-      integer, INTENT(in) :: particle_nsubdivide_narrow
+      integer, INTENT(in) :: particle_nsubdivide
       integer, INTENT(in) :: particle_max_per_nsubdivide
       real(amrex_real), INTENT(in)    :: cur_time_slab
       real(amrex_real), INTENT(in)    :: dt_slab
@@ -19422,18 +19082,7 @@ stop
 
       integer, INTENT(in) :: DIMDEC(cell_particle_count)
       integer, INTENT(in) :: DIMDEC(lsfab)
-      integer, INTENT(in) :: DIMDEC(denfab)
-      integer, INTENT(in) :: DIMDEC(velfab)
-      integer, INTENT(in) :: DIMDEC(xvelfab)
-      integer, INTENT(in) :: DIMDEC(yvelfab)
-      integer, INTENT(in) :: DIMDEC(zvelfab)
-      integer, INTENT(in) :: DIMDEC(xvelINCfab)
-      integer, INTENT(in) :: DIMDEC(yvelINCfab)
-      integer, INTENT(in) :: DIMDEC(zvelINCfab)
-      integer, INTENT(in) :: DIMDEC(snewfab)
-      integer, INTENT(in) :: DIMDEC(xnewfab)
-      integer, INTENT(in) :: DIMDEC(ynewfab)
-      integer, INTENT(in) :: DIMDEC(znewfab)
+      integer, INTENT(in) :: DIMDEC(lsnewfab)
       integer, INTENT(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
@@ -19445,59 +19094,21 @@ stop
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
       real(amrex_real), INTENT(in), target :: &
-         denfab(DIMV(denfab),num_materials*num_state_material) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: denfab_ptr
-
-      real(amrex_real), INTENT(in), target :: &
-         velfab(DIMV(velfab),AMREX_SPACEDIM) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: velfab_ptr
-
-      real(amrex_real), INTENT(in), target :: &
          lsfab(DIMV(lsfab),num_materials*(1+AMREX_SPACEDIM)) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: lsfab_ptr
 
       real(amrex_real), INTENT(in), target :: mfiner(DIMV(mfiner)) 
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: mfiner_ptr
 
-      real(amrex_real), INTENT(in), target :: xvelfab(DIMV(xvelfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: xvelfab_ptr
-
-      real(amrex_real), INTENT(in), target :: yvelfab(DIMV(yvelfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: yvelfab_ptr
-
-      real(amrex_real), INTENT(in), target :: zvelfab(DIMV(zvelfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: zvelfab_ptr
-
-      real(amrex_real), INTENT(in), target :: xvelINCfab(DIMV(xvelINCfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: xvelINCfab_ptr
-
-      real(amrex_real), INTENT(in), target :: yvelINCfab(DIMV(yvelINCfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: yvelINCfab_ptr
-
-      real(amrex_real), INTENT(in), target :: zvelINCfab(DIMV(zvelINCfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: zvelINCfab_ptr
-
       real(amrex_real), INTENT(out), target :: &
-          snewfab(DIMV(snewfab),ncomp_state) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: snewfab_ptr
-
-      real(amrex_real), INTENT(out), target :: xnewfab(DIMV(xnewfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: xnewfab_ptr
-
-      real(amrex_real), INTENT(out), target :: ynewfab(DIMV(ynewfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: ynewfab_ptr
-
-      real(amrex_real), INTENT(out), target :: znewfab(DIMV(znewfab)) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: znewfab_ptr
+          lsnewfab(DIMV(lsnewfab),ncomp_state) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: lsnewfab_ptr
 
       type(accum_parm_type_count) :: accum_PARM
       type(grid_parm_type) :: grid_PARM
    
-      integer :: add_iter
       integer :: i,j,k
-      integer :: ii,jj,kk
       integer :: isub,jsub,ksub
-      integer :: iside,jside,kside
       integer :: dir
       integer :: dir_local
       integer :: side
@@ -19520,20 +19131,14 @@ stop
       real(amrex_real), target :: xpart_nbr(SDIM)
       real(amrex_real) :: xsub(SDIM)
       real(amrex_real) :: xtarget(SDIM)
-      real(amrex_real) :: den_sub(num_materials*num_state_material)
-      real(amrex_real) :: vel_sub(AMREX_SPACEDIM)
-      real(amrex_real) :: velINC_sub(AMREX_SPACEDIM)
-      real(amrex_real) :: X0_sub(SDIM)
       real(amrex_real) :: LS_sub(num_materials*(1+AMREX_SPACEDIM))
       real(amrex_real) :: local_mag
       real(amrex_real) :: local_normal(AMREX_SPACEDIM)
+      integer :: iten_interp
+      integer :: iten_particle
       integer :: im_primary_sub
-      integer :: im_primary_sub_left
       integer :: im_secondary
-      integer :: im_particle
       integer :: im_loop
-      integer :: iten
-      real(amrex_real) :: LL
 
       integer, allocatable, dimension(:,:) :: sub_particle_data
       real(amrex_real), allocatable, dimension(:) :: sub_particle_data_dist
@@ -19553,19 +19158,10 @@ stop
       integer local_mask
       real(amrex_real) dist_nbr
       real(amrex_real) DXMAXLS
-      real(amrex_real) :: local_weight_particles
-      real(amrex_real), PARAMETER :: particle_weight_temperature=0.0d0
-      real(amrex_real), PARAMETER :: grid_weight_temperature=1.0d0
       real(amrex_real) local_weight
-      real(amrex_real) particle_data
-      real(amrex_real) current_data
-      real(amrex_real) weight_sum(num_materials)
-      real(amrex_real) velocity_sum(num_materials,SDIM)
-      real(amrex_real) temperature_sum(num_materials)
-      real(amrex_real) macvel
-      real(amrex_real) T_BASE,local_temp,rho_factor
-      integer :: tcomp
-      integer :: velcomp
+      real(amrex_real) weight_sum
+      real(amrex_real) LS_sum
+      real(amrex_real), PARAMETER :: part_tol=0.1d0
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
 
@@ -19580,10 +19176,10 @@ stop
       enddo
       fort_caller_string_len=caller_string_len
 
-      if (ncomp_state.eq.STATE_NCOMP) then
+      if (ncomp_state.eq.num_materials*(1+AMREX_SPACEDIM)) then
        !do nothing
       else
-       print *,"ncomp_state invalid"
+       print *,"expecting ncomp_state=",num_materials*(1+AMREX_SPACEDIM)
        stop
       endif
 
@@ -19629,39 +19225,12 @@ stop
 
       cell_particle_count_ptr=>cell_particle_count
       mfiner_ptr=>mfiner
-      denfab_ptr=>denfab
-      velfab_ptr=>velfab
       lsfab_ptr=>lsfab
 
-      xvelfab_ptr=>xvelfab
-      yvelfab_ptr=>yvelfab
-      zvelfab_ptr=>zvelfab
+      lsnewfab_ptr=>lsnewfab
 
-      xvelINCfab_ptr=>xvelINCfab
-      yvelINCfab_ptr=>yvelINCfab
-      zvelINCfab_ptr=>zvelINCfab
-
-      snewfab_ptr=>snewfab
-      xnewfab_ptr=>xnewfab
-      ynewfab_ptr=>ynewfab
-      znewfab_ptr=>znewfab
-
-      call checkbound_array(fablo,fabhi,denfab_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,velfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,snewfab_ptr,1,-1)
-
-      call checkbound_array1(fablo,fabhi,xvelfab_ptr,1,0)
-      call checkbound_array1(fablo,fabhi,yvelfab_ptr,1,1)
-      call checkbound_array1(fablo,fabhi,zvelfab_ptr,1,SDIM-1)
-
-      call checkbound_array1(fablo,fabhi,xvelINCfab_ptr,1,0)
-      call checkbound_array1(fablo,fabhi,yvelINCfab_ptr,1,1)
-      call checkbound_array1(fablo,fabhi,zvelINCfab_ptr,1,SDIM-1)
-
-      call checkbound_array1(fablo,fabhi,xnewfab_ptr,0,0)
-      call checkbound_array1(fablo,fabhi,ynewfab_ptr,0,1)
-      call checkbound_array1(fablo,fabhi,znewfab_ptr,0,SDIM-1)
+      call checkbound_array(fablo,fabhi,lsnewfab_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1)
 
@@ -19685,13 +19254,7 @@ stop
        stop
       endif
 
-      if (N_EXTRA_REAL.eq.7) then
-       ! do nothing
-      else
-       print *,"N_EXTRA_REAL invalid"
-       stop
-      endif
-      if (N_EXTRA_REAL.eq.N_EXTRA_REAL_T+1) then
+      if (N_EXTRA_REAL.eq.0) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL invalid"
@@ -19736,8 +19299,7 @@ stop
       accum_PARM%level=level
       accum_PARM%finest_level=finest_level
 
-       ! nsubdivide will be modified on a cell-by-cell basis.
-      accum_PARM%nsubdivide=particle_nsubdivide_bulk
+      accum_PARM%nsubdivide=particle_nsubdivide
 
       particlesptr=>particles
       NBR_particlesptr=>NBR_particles
@@ -19753,8 +19315,7 @@ stop
 
       if (isweep.eq.0) then
         ! particles exist
-       if ((append_flag.eq.OP_PARTICLE_ADD).or. &
-           (append_flag.eq.OP_PARTICLE_UPDATE)) then
+       if (append_flag.eq.OP_PARTICLE_ADD) then
         call count_particles( &
          accum_PARM, &
          particlesptr, &
@@ -19825,12 +19386,15 @@ stop
          LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
         enddo
         call get_primary_material(LS_sub,im_primary_sub)
+        call get_secondary_material(LS_sub, &
+          im_primary_sub,im_secondary)
 
         if ((im_primary_sub.ge.1).and. &
-            (im_primary_sub.le.num_materials)) then
+            (im_primary_sub.le.num_materials).and. &
+            (im_secondary.ge.1).and. &
+            (im_secondary.le.num_materials)) then
          if (number_sweeps.eq.1) then
-          if ((append_flag.eq.OP_PARTICLE_ASSIMILATE).or. &
-              (append_flag.eq.OP_PARTICLE_UPDATE)) then
+          if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
            accum_PARM%nsubdivide=1
           else
            print *,"append_flag invalid: ",append_flag
@@ -19839,13 +19403,17 @@ stop
          else if (number_sweeps.eq.2) then
           if ((append_flag.eq.OP_PARTICLE_INIT).or. &
               (append_flag.eq.OP_PARTICLE_ADD)) then
-           if (abs(LS_sub(im_primary_sub)).le.DXMAXLS) then
-            accum_PARM%nsubdivide=particle_nsubdivide_narrow
-           else if (abs(LS_sub(im_primary_sub)).gt.DXMAXLS) then
-            accum_PARM%nsubdivide=particle_nsubdivide_bulk
+           if ((abs(LS_sub(im_primary_sub)).le.DXMAXLS).and. &
+               (abs(LS_sub(im_secondary)).le.DXMAXLS)) then
+            accum_PARM%nsubdivide=particle_nsubdivide
+           else if ((abs(LS_sub(im_primary_sub)).gt.DXMAXLS).or. &
+                    (abs(LS_sub(im_secondary)).gt.DXMAXLS)) then
+            accum_PARM%nsubdivide=1
            else
             print *,"im_primary_sub: ",im_primary_sub
+            print *,"im_secondary: ",im_secondary
             print *,"LS_sub is NaN: ",LS_sub(im_primary_sub)
+            print *,"LS_sub is NaN: ",LS_sub(im_secondary)
             stop
            endif
           else
@@ -19857,13 +19425,13 @@ stop
           stop
          endif
         else
-         print *,"im_primary_sub invalid: ",im_primary_sub
+         print *,"im_primary_sub or im_secondary invalid: ", &
+               im_primary_sub,im_secondary
          stop
         endif
 
         if ((append_flag.eq.OP_PARTICLE_ADD).or. &
-            (append_flag.eq.OP_PARTICLE_INIT).or. &
-            (append_flag.eq.OP_PARTICLE_UPDATE)) then
+            (append_flag.eq.OP_PARTICLE_INIT)) then
 
          sublo(3)=0
          subhi(3)=0
@@ -19985,6 +19553,7 @@ stop
           do isub=sublo(1),subhi(1)
           do jsub=sublo(2),subhi(2)
           do ksub=sublo(3),subhi(3)
+
            ! increment Np_append if isweep == 0
            ! always increment Np_append_test
            local_count=sub_counter(isub,jsub,ksub)
@@ -20036,165 +19605,77 @@ stop
                 LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
                enddo
                call get_primary_material(LS_sub,im_primary_sub)
+               call get_secondary_material(LS_sub, &
+                 im_primary_sub,im_secondary)
+               call get_iten(im_primary_sub,im_secondary,iten_interp)
+
                if ((im_primary_sub.ge.1).and. &
-                   (im_primary_sub.le.num_materials)) then
-                im_particle=particles(current_link)% &
-                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-                if ((im_particle.ge.1).and. &
-                    (im_particle.le.num_materials)) then
+                   (im_primary_sub.le.num_materials).and. &
+                   (im_secondary.ge.1).and. &
+                   (im_secondary.le.num_materials).and. &
+                   (iten_interp.ge.1).and. &
+                   (iten_interp.le.num_interfaces)) then
+                iten_particle=particles(current_link)% &
+                  extra_int(N_EXTRA_INT_INTERFACE_ID+1)
+                if ((iten_particle.ge.1).and. &
+                    (iten_particle.le.num_interfaces)) then
 
-                 if (im_particle.eq.im_primary_sub) then
+                 if (iten_particle.eq.iten_interp) then
 
-                  if (LS_sub(im_particle).le. &
-                      DXMAXLS/particle_nsubdivide_narrow) then
-                   sort_data_mindist(sub_iter)=1.0D+20
-                  else if (LS_sub(im_particle).gt. &
-                      DXMAXLS/particle_nsubdivide_narrow) then
+                  if ((abs(LS_sub(im_primary_sub)).le.part_tol*DXMAXLS).and. &
+                      (abs(LS_sub(im_secondary)).le.part_tol*DXMAXLS)) then
                    !do nothing
-                  else
-                   print *,"LS_sub(im_particle) bad: ",LS_sub(im_particle)
-                   stop
-                  endif
-
-                  call get_secondary_material(LS_sub, &
-                         im_primary_sub,im_secondary)
-                  if ((im_secondary.ge.1).and. &
-                      (im_secondary.le.num_materials).and. &
-                      (im_secondary.ne.im_primary_sub)) then
-
-                   if ((abs(LS_sub(im_primary_sub)).le.two*DXMAXLS).and. &
-                       (abs(LS_sub(im_secondary)).le.two*DXMAXLS)) then
-                    call get_iten(im_primary_sub,im_secondary,iten)
-                    LL=get_user_latent_heat(iten,293.0d0,1)
-
-                    if (LL.eq.zero) then
-                     LL=get_user_latent_heat(iten+num_interfaces,293.0d0,1)
-                    else if (LL.ne.zero) then
-                     ! do nothing
-                    else
-                     print *,"LL invalid"
-                     stop
-                    endif
-
-                    if (LL.ne.zero) then
-
-                      !interface changing phase, use grid based data only.
-                     local_weight_particles=zero
-
-                     call interp_eul_lag_dist( &
-                      local_weight_particles, &
-                      accum_PARM, &
-                      particlesptr, &
-                      lsfab_ptr, &
-                      denfab_ptr, &
-                      xvelfab_ptr, &
-                      yvelfab_ptr, &
-                      zvelfab_ptr, &
-                      cur_time_slab, &
-                      grid_PARM, &
-                      cell_particle_count_ptr, &
-                      i,j,k, &
-                      xpart, &
-                      particle_link_data, &
-                      Np, &
-                      LS_sub, &
-                      den_sub, &
-                      vel_sub, &
-                      X0_sub)
-
-                     do dir_local=1,SDIM
-                      particles(current_link)% &
-                       extra_state(N_EXTRA_REAL_u+dir_local)=vel_sub(dir_local)
-                     enddo
-                     particles(current_link)% &
-                      extra_state(N_EXTRA_REAL_T+1)= &
-                       den_sub((im_particle-1)*num_state_material+ &
-                         ENUM_TEMPERATUREVAR+1)
-
-                    else if (LL.eq.zero) then
-                     ! do nothing
-                    else
-                     print *,"LL invalid: ",LL
-                     stop
-                    endif
-                   else if ((abs(LS_sub(im_primary_sub)).gt.two*DXMAXLS).or. &
-                            (abs(LS_sub(im_secondary)).gt.two*DXMAXLS)) then
-                    ! do nothing
-                   else
-                    print *,"LS_sub invalid"
-                    stop
-                   endif
-
-                  else
-                   print *,"im_secondary invalid: ",im_secondary
-                   stop
-                  endif
-
-                 else if (im_particle.ne.im_primary_sub) then
-
-                  im_particle=im_primary_sub
-
-                  particles(current_link)% &
-                     extra_int(N_EXTRA_INT_MATERIAL_ID+1)=im_particle
-
-                  !particle attribute changed, use grid based data only.
-                  local_weight_particles=zero
-
-                  call interp_eul_lag_dist( &
-                   local_weight_particles, &
-                   accum_PARM, &
-                   particlesptr, &
-                   lsfab_ptr, &
-                   denfab_ptr, &
-                   xvelfab_ptr, &
-                   yvelfab_ptr, &
-                   zvelfab_ptr, &
-                   cur_time_slab, &
-                   grid_PARM, &
-                   cell_particle_count_ptr, &
-                   i,j,k, &
-                   xpart, &
-                   particle_link_data, &
-                   Np, &
-                   LS_sub, &
-                   den_sub, &
-                   vel_sub, &
-                   X0_sub)
-
-                  do dir_local=1,SDIM
+                  else if ((abs(LS_sub(im_primary_sub)).gt. &
+                            part_tol*DXMAXLS).or. &
+                           (abs(LS_sub(im_secondary)).gt.part_tol*DXMAXLS)) then
+                   sort_data_mindist(sub_iter)=zero
                    particles(current_link)% &
-                     extra_state(N_EXTRA_REAL_u+dir_local)=vel_sub(dir_local)
-                  enddo
+                     extra_int(N_EXTRA_INT_INTERFACE_ID+1)=-1
+                  else
+                   print *,"LS_sub corrupt: "
+                   print *,"im_primary_sub,LS=",im_primary_sub, &
+                           LS_sub(im_primary_sub)
+                   print *,"im_secondary,LS=",im_secondary, &
+                           LS_sub(im_secondary)
+                   stop
+                  endif
+
+                 else if (iten_particle.ne.iten_interp) then
+
                   particles(current_link)% &
-                    extra_state(N_EXTRA_REAL_T+1)= &
-                     den_sub((im_particle-1)*num_state_material+ &
-                       ENUM_TEMPERATUREVAR+1)
+                     extra_int(N_EXTRA_INT_INTERFACE_ID+1)=-1
 
                    ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
-                  sort_data_mindist(sub_iter)=1.0D+20
+                  sort_data_mindist(sub_iter)=zero
 
                   if (1.eq.0) then
                    print *,"--------------------"
                    print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
                    print *,"xpart ",xpart
-                   print *,"im_particle,im_primary_sub ", &
-                           im_particle,im_primary_sub
+                   print *,"iten_particle,iten_interp ", &
+                           iten_particle,iten_interp
                    do im_loop=1,num_materials
                     print *,"im_loop, LS ",im_loop,LS_sub(im_loop)
                    enddo
                    print *,"--------------------"
                   endif
+
                  else
-                  print *,"im_particle or im_primary_sub invalid: ", &
-                     im_particle,im_primary_sub
+                  print *,"iten_particle or iten_interp invalid: ", &
+                     iten_particle,iten_interp
                   stop
                  endif
+
                 else
-                 print *,"im_particle invalid: ",im_particle
+                 print *,"iten_particle invalid: ",iten_particle
                  stop
                 endif
+
                else
-                print *,"im_primary_sub invalid: ",im_primary_sub
+                print *,"corruption:"
+                print *,"im_primary_sub: ",im_primary_sub
+                print *,"im_secondary: ",im_secondary
+                print *,"iten_interp: ",iten_interp
                 stop
                endif
 
@@ -20232,26 +19713,38 @@ stop
              enddo ! bubble_change==1 and bubble_iter<local_count
 
              do bubble_iter=1,local_count
-              if (bubble_iter.gt.particle_max_per_nsubdivide) then
-               if (1.eq.0) then
-                print *,"-----------------------------"
-                print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
-                temp_id=sort_data_id(bubble_iter)
-                print *,"bubble_iter,sort_data_mindist,temp_id ", &
+
+              temp_id=sort_data_id(bubble_iter)
+              iten_particle=particles(temp_id)% &
+                extra_int(N_EXTRA_INT_INTERFACE_ID+1)
+
+              if (iten_particle.eq.-1) then
+               particle_delete_flag(temp_id)=1
+              else if ((iten_particle.ge.1).and. &
+                       (iten_particle.le.num_interfaces)) then
+
+               if (bubble_iter.gt.particle_max_per_nsubdivide) then
+                if (1.eq.0) then
+                 print *,"-----------------------------"
+                 print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
+                 print *,"bubble_iter,sort_data_mindist,temp_id ", &
                       bubble_iter,sort_data_mindist(bubble_iter),temp_id
-                im_particle=particles(temp_id)% &
-                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-                print *,"im_particle=",im_particle
-                print *,"-----------------------------"
+                 print *,"iten_particle=",iten_particle
+                 print *,"-----------------------------"
+                endif
+                particle_delete_flag(sort_data_id(bubble_iter))=1
+               else if (bubble_iter.le.particle_max_per_nsubdivide) then
+                ! do nothing
+               else
+                print *,"bubble_iter bust: ",bubble_iter
+                stop
                endif
-               particle_delete_flag(sort_data_id(bubble_iter))=1
-              else if (bubble_iter.le.particle_max_per_nsubdivide) then
-               ! do nothing
               else
-               print *,"bubble_iter bust: ",bubble_iter
+               print *,"iten_particle invalid:",iten_particle
                stop
               endif
-             enddo ! bubble_iter
+             enddo ! bubble_iter=1,local_count
+
             else
              print *,"sub_iter invalid; sub_iter, local_count: ", &
                sub_iter,local_count
@@ -20281,160 +19774,122 @@ stop
               isub,jsub,ksub, &
               xsub)
 
-             !adding particles, use particle data where available.
-             local_weight_particles=one
+             local_mag=zero
+             data_in%xtarget=xsub
+             call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
+             do im_loop=1,num_materials*(1+AMREX_SPACEDIM)
+              LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
+             enddo
 
-             do add_iter=1,2
-
-              local_mag=one
-
-              if (add_iter.eq.1) then !xparticle=xsub
-               local_mag=one
+             call get_primary_material(LS_sub,im_primary_sub)
+             if ((im_primary_sub.ge.1).and. &
+                 (im_primary_sub.le.num_materials)) then
+              local_mag=zero
+              if ((LS_sub(im_primary_sub).gt.zero).and. &
+                  (LS_sub(im_primary_sub).le.DXMAXLS)) then
                do dir_local=1,SDIM
-                xtarget(dir_local)=xsub(dir_local)
+                local_normal(dir_local)=LS_sub(num_materials+ &
+                  (im_primary_sub-1)*AMREX_SPACEDIM+dir_local)
+                local_mag=local_mag+local_normal(dir_local)**2
                enddo
-              else if (add_iter.eq.2) then !xparticle=xsub-LS n
-               local_mag=zero
-               data_in%xtarget=xsub
-               call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
-               do im_loop=1,num_materials*(1+AMREX_SPACEDIM)
-                LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
-               enddo
-               call get_primary_material(LS_sub,im_primary_sub)
-               if ((im_primary_sub.ge.1).and. &
-                   (im_primary_sub.le.num_materials)) then
-                local_mag=zero
-                if ((LS_sub(im_primary_sub).gt.zero).and. &
-                    (LS_sub(im_primary_sub).le.DXMAXLS)) then
-                 do dir_local=1,SDIM
-                  local_normal(dir_local)=LS_sub(num_materials+ &
-                    (im_primary_sub-1)*AMREX_SPACEDIM+dir_local)
-                  local_mag=local_mag+local_normal(dir_local)**2
-                 enddo
-                 local_mag=sqrt(local_mag)
-                 if (local_mag.gt.zero) then
-                  do dir_local=1,SDIM
-                   local_normal(dir_local)=local_normal(dir_local)/local_mag
-                  enddo
-                 else if (local_mag.eq.zero) then
-                  !do nothing
-                 else
-                  print *,"local_mag invalid: ",local_mag
-                  stop
-                 endif
-                 do dir_local=1,SDIM
-                  xtarget(dir_local)=xsub(dir_local)- &
-                     LS_sub(im_primary_sub)*local_normal(dir_local)
-                  if (xtarget(dir_local).lt.problo_array(dir_local)) then
-                   xtarget(dir_local)=problo_array(dir_local)
-                  else if (xtarget(dir_local).gt.probhi_array(dir_local)) then
-                   xtarget(dir_local)=probhi_array(dir_local)
-                  else if ((xtarget(dir_local).ge. &
-                            problo_array(dir_local)).and. &
-                           (xtarget(dir_local).le. &
-                            probhi_array(dir_local))) then
-                   ! do nothing
-                  else
-                   print *,"xtarget(dir_local) invalid;dir_local,xtarget:", &
-                     dir_local,xtarget(dir_local)
-                   stop
-                  endif
-                 enddo ! do dir_local=1,SDIM
-                else if ((LS_sub(im_primary_sub).le.zero).or. &
-                         (LS_sub(im_primary_sub).gt.DXMAXLS)) then
+               local_mag=sqrt(local_mag)
+               if (local_mag.gt.zero) then
+                do dir_local=1,SDIM
+                 local_normal(dir_local)=local_normal(dir_local)/local_mag
+                enddo
+               else if (local_mag.eq.zero) then
+                !do nothing
+               else
+                print *,"local_mag invalid: ",local_mag
+                stop
+               endif
+               do dir_local=1,SDIM
+                xtarget(dir_local)=xsub(dir_local)- &
+                   LS_sub(im_primary_sub)*local_normal(dir_local)
+                if (xtarget(dir_local).lt.problo_array(dir_local)) then
+                 xtarget(dir_local)=problo_array(dir_local)
+                else if (xtarget(dir_local).gt.probhi_array(dir_local)) then
+                 xtarget(dir_local)=probhi_array(dir_local)
+                else if ((xtarget(dir_local).ge. &
+                          problo_array(dir_local)).and. &
+                         (xtarget(dir_local).le. &
+                          probhi_array(dir_local))) then
                  ! do nothing
                 else
-                 print *,"LS(im_primary_sub) invalid: ", &
-                     LS_sub(im_primary_sub)
+                 print *,"xtarget(dir_local) invalid;dir_local,xtarget:", &
+                   dir_local,xtarget(dir_local)
                  stop
                 endif
-               else
-                print *,"im_primary_sub invalid: ",im_primary_sub
-                stop
-               endif
-              else
-               print *,"add_iter invalid: ",add_iter
-               stop
-              endif
-                 
-              if (local_mag.gt.zero) then
-
-               call interp_eul_lag_dist( &
-                local_weight_particles, &
-                accum_PARM, &
-                particlesptr, &
-                lsfab_ptr, &
-                denfab_ptr, &
-                xvelfab_ptr, &
-                yvelfab_ptr, &
-                zvelfab_ptr, &
-                cur_time_slab, &
-                grid_PARM, &
-                cell_particle_count_ptr, &
-                i,j,k, &
-                xtarget, &
-                particle_link_data, &
-                Np, &
-                LS_sub, &
-                den_sub, &
-                vel_sub, &
-                X0_sub)
-
-               Np_append_test=Np_append_test+1
-
-               if (isweep.eq.0) then
-                ! do nothing
-               else if (isweep.eq.1) then
-                ibase=(Np_append_test-1)*single_particle_size
-                do dir_local=1,SDIM
-                 new_particles(ibase+dir_local)=xtarget(dir_local)
-                enddo
-
-                call get_primary_material(LS_sub,im_primary_sub)
-                if ((im_primary_sub.ge.1).and. &
-                    (im_primary_sub.le.num_materials)) then
-                 new_particles(ibase+SDIM+N_EXTRA_REAL+ &
-                               N_EXTRA_INT_MATERIAL_ID+1)=im_primary_sub
-                else
-                 print *,"im_primary_sub invalid: ",im_primary_sub
-                 stop
-                endif
-
-                new_particles(ibase+SDIM+N_EXTRA_REAL_T+1)= &
-                 den_sub((im_primary_sub-1)*num_state_material+ &
-                         ENUM_TEMPERATUREVAR+1)
-                new_particles(ibase+SDIM+N_EXTRA_REAL_w+1)=zero
-                do dir_local=1,SDIM
-                 new_particles(ibase+SDIM+N_EXTRA_REAL_u+dir_local)= &
-                        vel_sub(dir_local)
-                enddo
-
-                new_particles(ibase+SDIM+N_EXTRA_REAL_Z0+1)=zero
-                do dir_local=1,SDIM
-                 if (X0_sub(dir_local).eq.X0_sub(dir_local)) then
-                  new_particles(ibase+SDIM+N_EXTRA_REAL_X0+dir_local)= &
-                        X0_sub(dir_local)
-                 else
-                  print *,"X0_sub(dir_local) is NaN"
-                  print *,"dir_local=",dir_local
-                  print *,"X0_sub(dir_local)= ",X0_sub(dir_local)
-                  stop
-                 endif
-                enddo
-
-               else
-                print *,"isweep invalid: ",isweep
-                stop
-               endif
-
-              else if (local_mag.eq.zero) then
+               enddo ! do dir_local=1,SDIM
+              else if ((LS_sub(im_primary_sub).le.zero).or. &
+                       (LS_sub(im_primary_sub).gt.DXMAXLS)) then
                ! do nothing
               else
-               print *,"local_mag invalid"
+               print *,"LS(im_primary_sub) invalid: ", &
+                   LS_sub(im_primary_sub)
+               stop
+              endif
+             else
+              print *,"im_primary_sub invalid: ",im_primary_sub
+              stop
+             endif
+                 
+             if (local_mag.gt.zero) then
+
+              call interp_eul_lag_dist( &
+                accum_PARM, &
+                lsfab_ptr, &
+                cur_time_slab, &
+                grid_PARM, &
+                i,j,k, &
+                xtarget, &
+                LS_sub)
+
+              Np_append_test=Np_append_test+1
+
+              if (isweep.eq.0) then
+               ! do nothing
+              else if (isweep.eq.1) then
+               ibase=(Np_append_test-1)*single_particle_size
+               do dir_local=1,SDIM
+                new_particles(ibase+dir_local)=xtarget(dir_local)
+               enddo
+
+               call get_primary_material(LS_sub,im_primary_sub)
+               call get_secondary_material(LS_sub, &
+                 im_primary_sub,im_secondary)
+               call get_iten(im_primary_sub,im_secondary,iten_interp)
+
+               if ((im_primary_sub.ge.1).and. &
+                   (im_primary_sub.le.num_materials).and. &
+                   (im_secondary.ge.1).and. &
+                   (im_secondary.le.num_materials).and. &
+                   (iten_interp.ge.1).and. &
+                   (iten_interp.le.num_interfaces)) then
+
+                new_particles(ibase+SDIM+N_EXTRA_REAL+ &
+                         N_EXTRA_INT_INTERFACE_ID+1)=iten_interp
+                 !CHECK THE MAGNITUDE OF LS_sub (primary,secondary)
+                 ! if too large, then set mag=0 and do not add.
+               else
+                print *,"corruption:"
+                print *,"im_primary_sub: ",im_primary_sub
+                print *,"im_secondary: ",im_secondary
+                print *,"iten_interp: ",iten_interp
+                stop
+               endif
+
+              else
+               print *,"isweep invalid: ",isweep
                stop
               endif
 
-             enddo !add_iter=1,2
+             else if (local_mag.eq.zero) then
+              ! do nothing
+             else
+              print *,"local_mag invalid"
+              stop
+             endif
 
             else if ((local_count.gt.0).and. &
                      (append_flag.eq.OP_PARTICLE_ADD)) then
@@ -20442,211 +19897,6 @@ stop
             else
              print *,"local_count invalid: ",local_count
              print *,"append_flag: ",append_flag
-             stop
-            endif
-
-           else if (append_flag.eq.OP_PARTICLE_UPDATE) then
-
-            local_count=sub_counter(isub,jsub,ksub)
-            if ((isub.eq.0).and. &
-                (jsub.eq.0).and. &
-                (ksub.eq.0).and. &
-                (cell_count_hold.eq.local_count)) then
-             !do nothing
-            else
-             print *,"[ijk]sub, cell_count_hold invalid"
-             print *,"isub,jsub,ksub ",isub,jsub,ksub
-             print *,"cell_count_hold ",cell_count_hold
-             print *,"local_count ",local_count
-             stop
-            endif
-
-            if (local_count.ge.1) then
-
-             cell_count_check=0
-             current_link=cell_particle_count(D_DECL(i,j,k),2)
-
-             do while (current_link.ge.1)
-
-              do dir_local=1,SDIM
-               xpart(dir_local)=particles(current_link)%pos(dir_local)
-              enddo 
-              cell_count_check=cell_count_check+1
-
-              local_weight_particles=zero
-
-              call interp_eul_lag_dist( &
-               local_weight_particles, &
-               accum_PARM, &
-               particlesptr, &
-               lsfab_ptr, &
-               denfab_ptr, &
-               xvelfab_ptr, &
-               yvelfab_ptr, &
-               zvelfab_ptr, &
-               cur_time_slab, &
-               grid_PARM, &
-               cell_particle_count_ptr, &
-               i,j,k, &
-               xpart, &
-               particle_link_data, &
-               Np, &
-               LS_sub, &
-               den_sub, &
-               vel_sub, &
-               X0_sub)
-
-              call interp_eul_lag_dist( &
-               local_weight_particles, &
-               accum_PARM, &
-               particlesptr, &
-               lsfab_ptr, &
-               denfab_ptr, &
-               xvelINCfab_ptr, &
-               yvelINCfab_ptr, &
-               zvelINCfab_ptr, &
-               cur_time_slab, &
-               grid_PARM, &
-               cell_particle_count_ptr, &
-               i,j,k, &
-               xpart, &
-               particle_link_data, &
-               Np, &
-               LS_sub, &
-               den_sub, &
-               velINC_sub, &
-               X0_sub)
-
-              im_particle=particles(current_link)% &
-                extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-
-              if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then
-               !do nothing
-              else
-               print *,"im_particle invalid"
-               stop
-              endif
-
-              do dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
-
-               particle_data=particles(current_link)%extra_state(dir_local+1)
-
-               velcomp=dir_local-N_EXTRA_REAL_u+1
-               if ((velcomp.ge.1).and.(velcomp.le.SDIM)) then
-
-                current_data=vel_sub(velcomp)
-
-                if (grid_weight(im_particle).eq.one) then
-
-                 particle_data=particle_data+velINC_sub(velcomp)
-                 if (particle_incremental_velocity.eq.zero) then
-                  particle_data=current_data
-                 else if (particle_incremental_velocity.eq.one) then
-                  !do nothing
-                 else if ((particle_incremental_velocity.gt.zero).and. &
-                          (particle_incremental_velocity.lt.one)) then
-                  particle_data= &
-                   (one-particle_incremental_velocity)*current_data+ &
-                   (particle_incremental_velocity)*particle_data
-                 else
-                  print *,"particle_incremental_velocity invalid"
-                  stop
-                 endif
-
-                else if ((grid_weight(im_particle).lt.one).and. &
-                         (grid_weight(im_particle).ge.zero)) then
-
-                 local_temp=particles(current_link)% &
-                         extra_state(N_EXTRA_REAL_T+1)
-
-                 if (local_temp.gt.zero) then
-                  ! do nothing
-                 else
-                  print *,"local_temp <= 0; fort_init_particle_container"
-                  stop
-                 endif
-
-                 if (fort_DrhoDT(im_particle).le.zero) then
-                  ! do nothing
-                 else
-                  print *,"fort_DrhoDT: invalid sign: fort_init_particle_cont"
-                  print *,"im_particle=",im_particle
-                  print *,"fort_DrhoDT(im_particle)=",fort_DrhoDT(im_particle)
-                  stop
-                 endif
-
-                 !STUB_PROCS.F90: T_BASE=fort_tempconst(im)
-                 call SUB_T0_Boussinesq(xpart,dx,cur_time_slab, &
-                         im_particle,T_BASE)
-
-                 ! units of DrhoDT are 1/(degrees Kelvin)
-                 ! DTEMP will have no units after dividing by total density.
-                 ! fort_tempconst is the temperature of the inner boundary
-                 ! for the differentially heated rotating annulus problem.
-                 ! example (default): rho_factor=fort_DrhoDT(im)*(T-Tbase)
-                 call SUB_UNITLESS_EXPANSION_FACTOR( &
-                   im_particle, & !intent(in)
-                   local_temp, & !intent(in)
-                   T_BASE, & !intent(in)
-                   rho_factor) !intent(out) (unitless)
-
-                  !units of gravity: m/s^2
-                  !rho_factor has no units
-                  !rho_factor=beta(T-T0) (beta<0)
-                  !usually gravity_vector(sdim)<0
-                 if (abs(rho_factor).ge.zero) then
-                  particle_data=particle_data+ &
-                       dt_slab*gravity_vector(velcomp)*rho_factor
-                 else
-                  print *,"rho_factor is NaN: ",rho_factor
-                  stop
-                 endif
-
-                 particle_data=grid_weight(im_particle)*current_data+ &
-                      (one-grid_weight(im_particle))*particle_data
-
-                else
-                 print *,"grid_weight(im_particle) invalid"
-                 print *,"im_particle: ",im_particle
-                 print *,"grid_weight ",grid_weight(im_particle)
-                endif
-
-               else if (dir_local.eq.N_EXTRA_REAL_T) then
-                current_data=den_sub((im_particle-1)*num_state_material+ &
-                        ENUM_TEMPERATUREVAR+1)
-                particle_data=grid_weight_temperature*current_data+ &
-                      (one-grid_weight_temperature)*particle_data
-               else if ((dir_local.eq.N_EXTRA_REAL_w).and. &
-                        (SDIM.eq.2)) then
-                current_data=zero
-                particle_data=current_data
-               else
-                print *,"dir_local invalid: ",dir_local
-                stop
-               endif
-
-               particles(current_link)%extra_state(dir_local+1)=particle_data
-
-              enddo !dir_local=N_EXTRA_REAL_u,N_EXTRA_REAL_T
-
-              ibase=(current_link-1)*(1+SDIM)
-              current_link=particle_link_data(ibase+1)
-
-             enddo !do while (current_link.ge.1)
-
-             if (cell_count_check.eq.cell_count_hold) then
-              ! do nothing
-             else
-              print *,"cell_count_check invalid"
-              print *,"cell_count_check: ",cell_count_check
-              print *,"cell_count_hold: ",cell_count_hold
-              stop
-             endif
-
-            else if (local_count.eq.0) then
-             ! do nothing
-            else
-             print *,"local_count invalid: ",local_count
              stop
             endif
 
@@ -20689,77 +19939,73 @@ stop
 
          !very little weight for the grid based data(OP_PARTICLE_ASSIMILATE)
          call particle_grid_weight(xpart,xsub,(1.0D+3)*dx(1),local_weight)
+
          do im_loop=1,num_materials
-          weight_sum(im_loop)=local_weight
-          do dir_local=1,SDIM
-           velocity_sum(im_loop,dir_local)= &
-               local_weight*velfab(D_DECL(i,j,k),dir_local)
-          enddo 
-          tcomp=(im_loop-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-          temperature_sum(im_loop)=local_weight*denfab(D_DECL(i,j,k),tcomp)
-         enddo !im_loop=1..num_materials
-         cell_count_check=0
-         cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
-         current_link=cell_particle_count(D_DECL(i,j,k),2)
-         do while (current_link.ge.1)
-          do dir_local=1,SDIM
-           xpart(dir_local)=NBR_particles(current_link)%pos(dir_local)
-          enddo 
-          cell_count_check=cell_count_check+1
+          LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
+         enddo
+         call get_primary_material(LS_sub,im_primary_sub)
+         call get_secondary_material(LS_sub, &
+           im_primary_sub,im_secondary)
 
-          call particle_grid_weight(xpart,xsub,(1.0D-3)*dx(1),local_weight)
+         if ((im_primary_sub.ge.1).and. &
+             (im_primary_sub.le.num_materials).and. &
+             (im_secondary.ge.1).and. &
+             (im_secondary.le.num_materials)) then
 
-          im_particle=NBR_particles(current_link)% &
-                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-          weight_sum(im_particle)=weight_sum(im_particle)+local_weight
-          do dir_local=1,SDIM
-           velocity_sum(im_particle,dir_local)= &
-              velocity_sum(im_particle,dir_local)+ &
-              local_weight*NBR_particles(current_link)% &
-                             extra_state(N_EXTRA_REAL_u+dir_local)
-          enddo 
-          temperature_sum(im_particle)=temperature_sum(im_particle)+ &
-              local_weight*NBR_particles(current_link)% &
-                             extra_state(N_EXTRA_REAL_T+1)
+          call get_iten(im_primary_sub,im_secondary,iten_interp)
 
-          ibase=(current_link-1)*(1+SDIM)
-          current_link=particle_link_data(ibase+1)
-         enddo !do while (current_link.ge.1)
+          weight_sum=local_weight
+          LS_sum=local_weight*lsfab(D_DECL(i,j,k),im_primary_sub)
 
-         if (cell_count_check.eq.cell_count_hold) then
-          ! do nothing
-         else
-          print *,"cell_count_check invalid"
-          print *,"cell_count_hold: ",cell_count_hold
-          stop
-         endif
-
-         local_weight=weight_sum(im_primary_sub)
-         local_weight_particles=particle_weight(im_primary_sub)
-         if ((local_weight_particles.ge.zero).and. &
-             (local_weight_particles.le.one)) then
-          if (local_weight.gt.zero) then
+          cell_count_check=0
+          cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
+          current_link=cell_particle_count(D_DECL(i,j,k),2)
+          do while (current_link.ge.1)
            do dir_local=1,SDIM
-            snewfab(D_DECL(i,j,k),dir_local)= &
-              (one-local_weight_particles)* &
-              snewfab(D_DECL(i,j,k),dir_local)+ &
-              local_weight_particles* &
-              velocity_sum(im_primary_sub,dir_local)/local_weight 
-           enddo
-           tcomp=STATECOMP_STATES+ &
-            (im_primary_sub-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-           snewfab(D_DECL(i,j,k),tcomp)= &
-              (one-particle_weight_temperature)* &
-              snewfab(D_DECL(i,j,k),tcomp)+ &
-              particle_weight_temperature* &
-              temperature_sum(im_primary_sub)/local_weight 
+            xpart(dir_local)=NBR_particles(current_link)%pos(dir_local)
+           enddo 
+           cell_count_check=cell_count_check+1
+
+           call particle_grid_weight(xpart,xsub,(1.0D-3)*dx(1),local_weight)
+
+           iten_particle=NBR_particles(current_link)% &
+                  extra_int(N_EXTRA_INT_INTERFACE_ID+1)
+           if (iten_particle.eq.iten_interp) then
+            weight_sum=weight_sum+local_weight
+              ! sum up other least squares coefficients here
+           else if ((iten_particle.ge.1).and. &
+                    (iten_particle.le.num_interfaces)) then
+            !do nothing
+           else
+            print *,"iten_particle invalid"
+            stop
+           endif
+
+           ibase=(current_link-1)*(1+SDIM)
+           current_link=particle_link_data(ibase+1)
+          enddo !do while (current_link.ge.1)
+
+          if (cell_count_check.eq.cell_count_hold) then
+           ! do nothing
+          else
+           print *,"cell_count_check invalid"
+           print *,"cell_count_hold: ",cell_count_hold
+           stop
+          endif
+
+          local_weight=weight_sum
+
+          if (local_weight.gt.zero) then
+! im_secondary, gradient
+!          lsnewfab(D_DECL(i,j,k),im_primary_sub)= &
           else
            print *,"local_weight invalid: ",local_weight
            stop
           endif
 
          else
-          print *,"local_weight_particles invalid: ",local_weight_particles
+          print *,"im_primary_sub or im_secondary invalid: ", &
+              im_primary_sub,im_secondary
           stop
          endif
 
@@ -20778,229 +20024,6 @@ stop
       enddo 
       enddo 
       enddo  ! i,j,k
-
-      if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
- 
-       do dir=1,SDIM
-        ii=0
-        jj=0
-        kk=0
-        if (dir.eq.1) then
-         ii=1
-        else if (dir.eq.2) then
-         jj=1
-        else if ((dir.eq.3).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid: ",dir
-         stop
-        endif
-
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-          growlo,growhi,0,dir-1)
-
-        do k=growlo(3),growhi(3)
-        do j=growlo(2),growhi(2)
-        do i=growlo(1),growhi(1)
-         call gridstenMAC_level(xsten,i,j,k,level,nhalf,dir-1)
-         local_mask=NINT(mfiner(D_DECL(i,j,k)))
-         if (local_mask.eq.1) then
-          local_mask=NINT(mfiner(D_DECL(i-ii,j-jj,k-kk)))
-          if (local_mask.eq.1) then
-           do im_loop=1,num_materials
-            LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
-           enddo
-           call get_primary_material(LS_sub,im_primary_sub)
-           do im_loop=1,num_materials
-            LS_sub(im_loop)=lsfab_ptr(D_DECL(i-ii,j-jj,k-kk),im_loop)
-           enddo
-           call get_primary_material(LS_sub,im_primary_sub_left)
-           if (im_primary_sub.eq.im_primary_sub_left) then
-            if ((im_primary_sub.ge.1).and. &
-                (im_primary_sub.le.num_materials)) then
-             do dir_local=1,SDIM
-              xsub(dir_local)=xsten(0,dir_local)
-              xpart(dir_local)=xsub(dir_local)
-             enddo
-
-              ! very little weight for the grid based data.
-              ! (OP_PARTICLE_ASSIMILATE)
-             call particle_grid_weight(xpart,xsub,(1.0D+3)*dx(1),local_weight)
-             weight_sum(im_primary_sub)=local_weight
-             if (dir.eq.1) then
-              macvel=xvelfab(D_DECL(i,j,k))
-             else if (dir.eq.2) then
-              macvel=yvelfab(D_DECL(i,j,k))
-             else if ((dir.eq.3).and.(SDIM.eq.3)) then
-              macvel=zvelfab(D_DECL(i,j,k))
-             else
-              print *,"dir invalid: ",dir
-              stop
-             endif
-             velocity_sum(im_primary_sub,dir)=local_weight*macvel
-             do side=1,2
-              if (side.eq.1) then
-               iside=i-ii
-               jside=j-jj
-               kside=k-kk
-              else if (side.eq.2) then
-               iside=i
-               jside=j
-               kside=k
-              else
-               print *,"side invalid: ",side
-               stop
-              endif
-
-              cell_count_check=0
-              cell_count_hold=cell_particle_count(D_DECL(iside,jside,kside),1)
-              current_link=cell_particle_count(D_DECL(iside,jside,kside),2)
-              do while (current_link.ge.1)
-               do dir_local=1,SDIM
-                xpart(dir_local)=NBR_particles(current_link)%pos(dir_local)
-               enddo 
-               cell_count_check=cell_count_check+1
-
-               call particle_grid_weight(xpart,xsub,(1.0D-3)*dx(1), &
-                 local_weight)
-
-               im_particle=NBR_particles(current_link)% &
-                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
-               if (im_particle.eq.im_primary_sub) then
-                weight_sum(im_particle)=weight_sum(im_particle)+local_weight
-                velocity_sum(im_particle,dir)=velocity_sum(im_particle,dir)+ &
-                  local_weight*NBR_particles(current_link)% &
-                         extra_state(N_EXTRA_REAL_u+dir)
-               else if ((im_particle.ge.1).and. &
-                        (im_particle.le.num_materials)) then
-                !do nothing
-               else
-                print *,"im_particle invalid: ",im_particle
-                stop
-               endif
-
-               ibase=(current_link-1)*(1+SDIM)
-               current_link=particle_link_data(ibase+1)
-              enddo !do while (current_link.ge.1)
-
-              if (cell_count_check.eq.cell_count_hold) then
-               ! do nothing
-              else
-               print *,"cell_count_check invalid"
-               print *,"cell_count_hold: ",cell_count_hold
-               stop
-              endif
-             enddo !side=1,2
-
-             local_weight=weight_sum(im_primary_sub)
-             local_weight_particles=particle_weight(im_primary_sub)
-             if ((local_weight_particles.ge.zero).and. &
-                 (local_weight_particles.le.one)) then
-              if (local_weight.gt.zero) then
-               macvel= &
-                (one-local_weight_particles)*macvel+ &
-                local_weight_particles* &
-                velocity_sum(im_primary_sub,dir)/local_weight 
-
-               if (dir.eq.1) then
-                xnewfab(D_DECL(i,j,k))=macvel
-               else if (dir.eq.2) then
-                ynewfab(D_DECL(i,j,k))=macvel
-               else if ((dir.eq.3).and.(SDIM.eq.3)) then
-                znewfab(D_DECL(i,j,k))=macvel
-               else
-                print *,"dir invalid"
-                stop
-               endif
-              else
-               print *,"local_weight invalid: ",local_weight
-               stop
-              endif
-             else
-              print *,"local_weight_particles invalid:",local_weight_particles
-              stop
-             endif
-
-            else
-             print *,"im_primary_sub invalid: ",im_primary_sub
-             stop
-            endif
-
-           else if ((im_primary_sub.ge.1).and. &
-                    (im_primary_sub_left.ge.1).and. &
-                    (im_primary_sub.le.num_materials).and. &
-                    (im_primary_sub_left.le.num_materials).and. &
-                    (im_primary_sub.ne.im_primary_sub_left)) then
-            ! do nothing
-           else
-            print *,"im_primary_sub or im_primary_sub_left bad"
-            print *,"im_primary_sub: ",im_primary_sub
-            print *,"im_primary_sub_left: ",im_primary_sub_left
-            stop
-           endif
-          else if (local_mask.eq.0) then
-           !do nothing
-          else
-           print *,"local_mask invalid (i-ii,j-jj,k-kk): ", &
-               i-ii,j-jj,k-kk,local_mask
-           stop
-          endif
-         else if (local_mask.eq.0) then
-          !do nothing
-         else
-          print *,"local_mask invalid (i,j,k):",i,j,k,local_mask
-          stop
-         endif
-
-        enddo
-        enddo
-        enddo
-       enddo !dir=1,SDIM
-
-      else if ((append_flag.eq.OP_PARTICLE_ADD).or. &
-               (append_flag.eq.OP_PARTICLE_INIT).or. &
-               (append_flag.eq.OP_PARTICLE_UPDATE)) then
-       ! do nothing
-      else
-       print *,"append_flag invalid: ",append_flag
-       stop
-      endif
-
-
-      if (number_sweeps.eq.2) then
-
-       if ((append_flag.eq.OP_PARTICLE_INIT).or. &
-           (append_flag.eq.OP_PARTICLE_ADD)) then
-        ! do nothing
-       else
-        print *,"append_flag invalid ",append_flag
-        stop
-       endif
-
-       if (isweep.eq.0) then
-        Np_append=Np_append_test
-       else if (isweep.eq.1) then
-        if ((Np_append.eq.Np_append_test).and. &
-            (new_Pdata_size.eq. &
-             Np_append*single_particle_size)) then
-         ! do nothing
-        else
-         print *,"Np_append or new_Pdata_size invalid"
-         print *,"Np_append: ",Np_append
-         print *,"new_Pdata_size: ",new_Pdata_size
-         stop
-        endif
-       else
-        print *,"isweep invalid: ",isweep
-        stop
-       endif
-
-      else if (number_sweeps.eq.1) then
-       ! do nothing
-      else
-       print *,"number_sweeps invalid: ",number_sweeps
-       stop
-      endif
 
       deallocate(fort_caller_string)
 
@@ -21116,7 +20139,6 @@ stop
 
        ! called from NavierStokes2.cpp
       subroutine fort_move_particle_container( &
-        grid_weight, &
         phase_change_displacement, &
         burning_velocity_ncomp, &
         tid, &
@@ -21149,7 +20171,6 @@ stop
 
       IMPLICIT NONE
 
-      real(amrex_real), INTENT(in) :: grid_weight(num_materials)
       integer, INTENT(in) :: phase_change_displacement
       integer, INTENT(in) :: burning_velocity_ncomp
       integer :: ncomp_per_burning
@@ -21212,7 +20233,7 @@ stop
       integer cell_index(SDIM)
       integer i,j,k
       integer im_loop,im_primary,im_secondary
-      integer im_particle
+      integer iten_particle
       integer iten,ireverse,sign_reverse,tag_local,scomp
       real(amrex_real) LS(num_materials)
       real(amrex_real) DXMAXLS
@@ -21314,26 +20335,18 @@ stop
 
       do interior_ID=1,Np
 
-       im_particle=particles(interior_ID)% &
-          extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+       iten_particle=particles(interior_ID)% &
+          extra_int(N_EXTRA_INT_INTERFACE_ID+1)
 
-       if ((im_particle.ge.1).and.(im_particle.le.num_materials)) then
+       if ((iten_particle.ge.1).and. &
+           (iten_particle.le.num_interfaces)) then
         !do nothing
        else
-        print *,"im_particle invalid"
+        print *,"iten_particle invalid"
         stop
        endif
 
-       if (grid_weight(im_particle).eq.one) then
-        num_RK_stages=2
-       else if ((grid_weight(im_particle).lt.one).and. &
-                (grid_weight(im_particle).ge.zero)) then
-        num_RK_stages=1
-       else
-        print *,"grid_weight(im_particle) invalid"
-        print *,"im_particle: ",im_particle
-        print *,"grid_weight ",grid_weight(im_particle)
-       endif
+       num_RK_stages=2
 
        do dir=1,SDIM
         xpart1(dir)=particles(interior_ID)%pos(dir)
@@ -21341,14 +20354,8 @@ stop
 
        if (phase_change_displacement.eq.0) then
 
-        if (num_RK_stages.eq.1) then
-
-         do dir=1,SDIM
-          u1(dir)=particles(interior_ID)%extra_state(N_EXTRA_REAL_u+dir)
-         enddo
-
-        else if ((num_RK_stages.eq.2).or. &
-                 (num_RK_stages.eq.4)) then
+        if ((num_RK_stages.eq.2).or. &
+            (num_RK_stages.eq.4)) then
 
          call interp_mac_velocity( &
           grid_PARM, &
@@ -21429,12 +20436,6 @@ stop
          do dir=1,SDIM
           xpart_last(dir)=xpart1(dir)+0.5d0*dt &
            *(u1(dir)+u2(dir))
-         enddo
-
-        else if (num_RK_stages.eq.1) then
-
-         do dir=1,SDIM
-          xpart_last(dir)=xpart1(dir)+dt*u1(dir)
          enddo
 
         else

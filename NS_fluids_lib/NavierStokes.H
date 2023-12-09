@@ -1581,11 +1581,7 @@ protected:
 //          non-tesselating or tesselating solid => default==0
     static Vector<int> truncate_volume_fractions;  
 
-    static Real particle_incremental_velocity; //default=0.0
-    static Vector<Real> particle_weight;  //default=0.0
-    static Vector<Real> grid_weight;  //default=1.0
-    static int particle_nsubdivide_bulk;  
-    static int particle_nsubdivide_narrow;  
+    static int particle_nsubdivide;  
     static int particle_max_per_nsubdivide;  
 
     static Real truncate_thickness;  // default is 2.0
@@ -2158,6 +2154,8 @@ protected:
     static Vector<Real> speciesviscconst_interface;
       // num_species
     static Vector<Real> species_molar_mass;  // def=1
+
+    static Vector<int> material_type_interface; 
 
      //0 incomp; material_type_evap needed for the Kassemi model.
     static Vector<int> material_type_evap; 

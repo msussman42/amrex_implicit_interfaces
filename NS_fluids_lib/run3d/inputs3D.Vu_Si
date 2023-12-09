@@ -70,12 +70,6 @@ amr.plotfile_on_restart=1
 
 amr.n_cell=64 64 64
 amr.max_level = 0
-ns.particle_nsubdivide_bulk=1
-ns.particle_nsubdivide_narrow=1
-ns.particle_max_per_nsubdivide=1
-ns.particle_weight=0.0 0.0 0.0 0.0
-ns.grid_weight=1.0 1.0 1.0 1.0
-ns.particle_incremental_velocity=0.0
 # water, gas, ice, substrate
 amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est

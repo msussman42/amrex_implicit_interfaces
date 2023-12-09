@@ -342,8 +342,7 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 
 #define OP_PARTICLE_INIT 0
 #define OP_PARTICLE_ADD 1
-#define OP_PARTICLE_UPDATE 2
-#define OP_PARTICLE_ASSIMILATE 3
+#define OP_PARTICLE_ASSIMILATE 2
 
 #define FSIcontain_num_solids 0
 #define FSIcontain_num_scalars 1
