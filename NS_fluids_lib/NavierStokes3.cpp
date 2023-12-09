@@ -2604,7 +2604,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        ns_level.delete_advect_vars();
        // initialize ADVECT_REGISTER_FACE_MF and ADVECT_REGISTER_MF
        // delete_advect_vars() called in NavierStokes::do_the_advance
-       // after OP_PARTICLE_UPDATE.
        ns_level.prepare_advect_vars(cur_time_slab);
       } // ilev=finest_level ... level
 
@@ -3037,15 +3036,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       } else
        amrex::Error("is_zalesak invalid");
-
-#ifdef AMREX_PARTICLES
-
-      if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-       init_particle_containerALL(OP_PARTICLE_UPDATE,local_caller_string);
-      } else
-       amrex::Error("slab_step invalid");
-
-#endif
 
       for (int ilev=finest_level;ilev>=level;ilev--) {
        NavierStokes& ns_level=getLevel(ilev);

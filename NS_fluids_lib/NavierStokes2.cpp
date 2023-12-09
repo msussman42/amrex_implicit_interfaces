@@ -6631,7 +6631,6 @@ void NavierStokes::move_particles(
 
    // declared in: LEVELSET_3D.F90
   fort_move_particle_container( 
-   grid_weight.dataPtr(),
    &phase_change_displacement,
    &burning_velocity_ncomp,
    &tid_current,

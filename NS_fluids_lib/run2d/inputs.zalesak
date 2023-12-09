@@ -31,8 +31,6 @@ ns.num_species_var=0
 # effective fine grid resolution: 96x96
 amr.n_cell    = 24 24
 amr.max_level = 2
-ns.particle_nsubdivide_bulk=1
-ns.particle_nsubdivide_narrow=2
 
 ns.profile_debug=0
 ns.ns_tiling=false
