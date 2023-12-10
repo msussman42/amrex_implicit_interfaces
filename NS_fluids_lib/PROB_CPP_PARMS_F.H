@@ -105,6 +105,7 @@ namespace amrex{
        int* ngeom_recon,
        int* cpp_num_materials,
        int* material_type,
+       int* material_type_interface,
        int* cpp_num_interfaces,
        Real* DrhoDT,
        Real* tempconst,

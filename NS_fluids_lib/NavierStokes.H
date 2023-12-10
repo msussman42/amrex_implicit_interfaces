@@ -353,6 +353,9 @@ public:
 
     void explicit_fluxes(int state_idx,int scomp,int iupdate,MultiFab* Un);
 
+     // iten>=1  im1,im2>=1
+    static void get_iten_cpp(int im1,int im2,int& iten);
+
     static int CTML_FSI_numsolids;
 
     static Real inflow_pressure;
@@ -409,6 +412,7 @@ public:
     static int CTML_FSI_num_scalars;
 
     static Vector<int> material_type; // 0 incomp   
+    static Vector<int> material_type_interface; 
 
     static int num_species_var; 
     static int num_materials;
@@ -1217,7 +1221,6 @@ void apply_pressure_grad(
 
     static void grid_type_to_box_type_cpp(int grid_type,int* box_type);
 
-    static void get_iten_cpp(int im1,int im2,int& iten);
      // iten>=1  im1,im2>=1
     static void get_inverse_iten_cpp(int& im1,int& im2,int iten);
 
@@ -2154,8 +2157,6 @@ protected:
     static Vector<Real> speciesviscconst_interface;
       // num_species
     static Vector<Real> species_molar_mass;  // def=1
-
-    static Vector<int> material_type_interface; 
 
      //0 incomp; material_type_evap needed for the Kassemi model.
     static Vector<int> material_type_evap; 

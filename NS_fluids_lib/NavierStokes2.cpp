@@ -2368,6 +2368,9 @@ void NavierStokes::grid_type_to_box_type_cpp(int grid_type,
 
 } // end subroutine grid_type_to_box_type_cpp
 
+// im1=1,...,num_materials
+// im2=1,...,num_materials
+// iten=1,...,num_interfaces
 void NavierStokes::get_iten_cpp(int im1,int im2,int& iten) {
 
  int im=-1;
