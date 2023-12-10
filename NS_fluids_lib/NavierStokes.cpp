@@ -1306,7 +1306,11 @@ void fortran_parameters() {
  if ((NavierStokes::num_materials<2)||(NavierStokes::num_materials>999))
   amrex::Error("num materials invalid");
 
- NavierStokes::num_interfaces=( (NavierStokes::num_materials-1)*(NavierStokes::num_materials-1)+NavierStokes::num_materials-1 )/2;
+ NavierStokes::num_interfaces=
+  ( (NavierStokes::num_materials-1)*
+    (NavierStokes::num_materials-1)+
+    NavierStokes::num_materials-1 )/2;
+
  if ((NavierStokes::num_interfaces<1)||(NavierStokes::num_interfaces>999))
   amrex::Error("num interfaces invalid");
 
@@ -1442,6 +1446,8 @@ void fortran_parameters() {
  Vector<Real> speciesviscconst_temp((NavierStokes::num_species_var+1)*NavierStokes::num_materials);
 
  NavierStokes::material_type.resize(NavierStokes::num_materials);
+
+ NavierStokes::material_type_interface.resize(NavierStokes::num_interfaces);
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
@@ -1736,6 +1742,60 @@ void fortran_parameters() {
  pp.queryAdd("prefreeze_tension",prefreeze_tensiontemp,
 	NavierStokes::num_interfaces);
 
+ Vector<int> preset_flag;
+ preset_flag.resize(NavierStokes::num_interfaces);
+
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  for (int im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++) {
+   int iten=0;
+   NavierStokes::get_iten_cpp(im+1,im_opp+1,iten);
+   if ((iten<1)||(iten>NavierStokes::num_interfaces))
+    amrex::Error("iten invalid");
+   preset_flag[iten-1]=-1;
+   if ((NavierStokes::material_type[im]==999)||
+       (NavierStokes::material_type[im_opp]==999)) {
+    NavierStokes::material_type_interface[iten-1]=999;
+    preset_flag[iten-1]=999;
+   } else if ((NavierStokes::material_type[im]==0)||
+              (NavierStokes::material_type[im_opp]==0)) {
+    NavierStokes::material_type_interface[iten-1]=0;
+    preset_flag[iten-1]=0;
+   } else if ((latent_heat_temp[iten-1]!=0.0)||
+  	      (latent_heat_temp[iten-1+NavierStokes::num_interfaces]!=0.0)) {
+    NavierStokes::material_type_interface[iten-1]=0;
+    preset_flag[iten-1]=0;
+   } else {
+    NavierStokes::material_type_interface[iten-1]= 
+      NavierStokes::material_type[im];
+   }
+  } // im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++
+ } // im=0;im<NavierStokes::num_materials;im++
+
+ pp.queryAdd("material_type_interface",
+   NavierStokes::material_type_interface,NavierStokes::num_interfaces);
+
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  for (int im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++) {
+   int iten=0;
+   NavierStokes::get_iten_cpp(im+1,im_opp+1,iten);
+   if ((iten<1)||(iten>NavierStokes::num_interfaces))
+    amrex::Error("iten invalid");
+   if (preset_flag[iten-1]==-1) {
+    if ((NavierStokes::material_type_interface[iten-1]>=0)&&
+        (NavierStokes::material_type_interface[iten-1]<=999)) {
+     //do nothing
+    } else
+     amrex::Error("NavierStokes::material_type_interface invalid");
+   } else if (preset_flag[iten-1]>=0) {
+    if (NavierStokes::material_type_interface[iten-1]==preset_flag[iten-1]) {
+     //do nothing
+    } else
+     amrex::Error("NavierStokes::material_type_interface invalid");
+   } else
+    amrex::Error("preset flag invalid");
+  } // im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++
+ } // im=0;im<NavierStokes::num_materials;im++
+
  int ioproc=0;
  if (ParallelDescriptor::IOProcessor())
   ioproc=1;
@@ -1978,6 +2038,7 @@ void fortran_parameters() {
   &NavierStokes::ngeom_recon,
   &NavierStokes::num_materials,
   NavierStokes::material_type.dataPtr(),
+  NavierStokes::material_type_interface.dataPtr(),
   &NavierStokes::num_interfaces,
   DrhoDTtemp.dataPtr(),
   tempconst_temp.dataPtr(),
@@ -3052,6 +3113,8 @@ NavierStokes::read_params ()
     FSI_bounding_box_ngrow.resize(num_materials);
 
     material_type.resize(num_materials);
+    material_type_interface.resize(num_interfaces);
+
     pp.getarr("material_type",material_type,0,num_materials);
     material_type_evap.resize(num_materials);
     material_type_lowmach.resize(num_materials);
@@ -3692,7 +3755,8 @@ NavierStokes::read_params ()
     pp.getarr("vorterr",vorterr,0,num_materials);
     pp.queryAdd("pressure_error_flag",pressure_error_flag);
     pp.getarr("pressure_error_cutoff",pressure_error_cutoff,0,num_materials);
-    pp.queryAdd("temperature_error_cutoff",temperature_error_cutoff,num_materials);
+    pp.queryAdd("temperature_error_cutoff",
+	temperature_error_cutoff,num_materials);
 
     pp.queryAdd("temperature_source",temperature_source);
     pp.queryAdd("temperature_source_cen",temperature_source_cen,AMREX_SPACEDIM);
@@ -3726,8 +3790,10 @@ NavierStokes::read_params ()
     }
     pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall,num_materials);
     pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk,num_materials);
-    pp.queryAdd("heatviscconst_eddy_wall",heatviscconst_eddy_wall,num_materials);
-    pp.queryAdd("heatviscconst_eddy_bulk",heatviscconst_eddy_bulk,num_materials);
+    pp.queryAdd("heatviscconst_eddy_wall",
+	heatviscconst_eddy_wall,num_materials);
+    pp.queryAdd("heatviscconst_eddy_bulk",
+	heatviscconst_eddy_bulk,num_materials);
 
     for (int i=0;i<num_materials;i++)
      viscosity_state_model[i]=0;
@@ -4128,6 +4194,60 @@ NavierStokes::read_params ()
      } // ireverse
     } // iten
 
+    Vector<int> preset_flag;
+    preset_flag.resize(num_interfaces);
+
+    for (int im=0;im<num_materials;im++) {
+     for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
+      int iten=0;
+      get_iten_cpp(im+1,im_opp+1,iten);
+      if ((iten<1)||(iten>num_interfaces))
+       amrex::Error("iten invalid");
+      preset_flag[iten-1]=-1;
+      if ((material_type[im]==999)||
+          (material_type[im_opp]==999)) {
+       material_type_interface[iten-1]=999;
+       preset_flag[iten-1]=999;
+      } else if ((material_type[im]==0)||
+                 (material_type[im_opp]==0)) {
+       material_type_interface[iten-1]=0;
+       preset_flag[iten-1]=0;
+      } else if ((latent_heat[iten-1]!=0.0)||
+    	         (latent_heat[iten-1+num_interfaces]!=0.0)) {
+       material_type_interface[iten-1]=0;
+       preset_flag[iten-1]=0;
+      } else {
+       material_type_interface[iten-1]=material_type[im];
+      }
+     } // im_opp=im+1;im_opp<navierStokes::num_materials;im_opp++
+    } // im=0;im<navierstokes::num_materials;im++
+
+    pp.queryAdd("material_type_interface",
+      material_type_interface,num_interfaces);
+
+    for (int im=0;im<num_materials;im++) {
+     for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
+      int iten=0;
+      get_iten_cpp(im+1,im_opp+1,iten);
+      if ((iten<1)||(iten>NavierStokes::num_interfaces))
+       amrex::Error("iten invalid");
+      if (preset_flag[iten-1]==-1) {
+       if ((material_type_interface[iten-1]>=0)&&
+           (material_type_interface[iten-1]<=999)) {
+        //do nothing
+       } else
+        amrex::Error("material_type_interface invalid");
+      } else if (preset_flag[iten-1]>=0) {
+       if (material_type_interface[iten-1]==preset_flag[iten-1]) {
+        //do nothing
+       } else
+        amrex::Error("material_type_interface invalid");
+      } else
+       amrex::Error("preset flag invalid");
+     } // im_opp=im+1;im_opp<num_materials;im_opp++
+    } // im=0;im<num_materials;im++
+
+
     for (int im=0;im<num_materials;im++) {
 
      if (is_ice_matC(im)==1) {
@@ -4153,7 +4273,7 @@ NavierStokes::read_params ()
        if (im!=im_opp) {
         if (ns_is_rigid(im_opp)==0) {
          int iten;
-         get_iten_cpp(im+1,im_opp+1,iten);
+         get_iten_cpp(im+1,im_opp+1,iten); //declared in NavierStokes2.cpp
          if ((iten<1)||(iten>num_interfaces))
           amrex::Error("iten invalid");
          Real LL1=get_user_latent_heat(iten,293.0,1);
@@ -4931,7 +5051,7 @@ NavierStokes::read_params ()
        if ((im>num_materials)||(im_opp>num_materials))
         amrex::Error("im or im_opp bust 200cpp");
        int iten;
-       get_iten_cpp(im,im_opp,iten);
+       get_iten_cpp(im,im_opp,iten); //declared in NavierStokes2.cpp
        if ((iten<1)||(iten>num_interfaces))
         amrex::Error("iten invalid");
        int im_source=im;
@@ -5381,6 +5501,9 @@ NavierStokes::read_params ()
 	     i+num_interfaces << "  " << 
        nucleation_mach[i+num_interfaces] << '\n';
 
+      std::cout << "material_type_interface i=" << i << "  " << 
+       material_type_interface[i] << '\n';
+
       std::cout << "latent_heat i=" << i << "  " << 
        latent_heat[i] << '\n';
       std::cout << "latent_heat i+num_interfaces=" << 
@@ -5388,6 +5511,7 @@ NavierStokes::read_params ()
 
       std::cout << "latent_heat_slope i=" << i << "  " << 
        latent_heat_slope[i] << '\n';
+
       std::cout << "latent_heat_slope i+num_interfaces=" << 
        i+num_interfaces << "  " << 
        latent_heat_slope[i+num_interfaces] << '\n';
@@ -13778,7 +13902,7 @@ NavierStokes::level_phase_change_convertALL() {
  int n_phase_change=0;
  for (im=1;im<=num_materials-1;im++) {
   for (im_opp=im+1;im_opp<=num_materials;im_opp++) {
-   get_iten_cpp(im,im_opp,iten);
+   get_iten_cpp(im,im_opp,iten); //declared in NavierStokes2.cpp
    if ((iten<1)||(iten>num_interfaces))
     amrex::Error("iten invalid");
    Real LL0=get_user_latent_heat(iten,293.0,1);
@@ -13805,7 +13929,7 @@ NavierStokes::level_phase_change_convertALL() {
 
   for (im=1;im<=num_materials-1;im++) {
    for (im_opp=im+1;im_opp<=num_materials;im_opp++) {
-    get_iten_cpp(im,im_opp,iten);
+    get_iten_cpp(im,im_opp,iten); //declared in NavierStokes2.cpp
     if ((iten<1)||(iten>num_interfaces))
      amrex::Error("iten invalid");
     Real LL0=get_user_latent_heat(iten,293.0,1);
@@ -13938,7 +14062,7 @@ NavierStokes::level_phase_change_convert(
   amrex::Error("expecting ngrow_distance==4");
 
  int iten;
- get_iten_cpp(im_outer,im_opp_outer,iten);
+ get_iten_cpp(im_outer,im_opp_outer,iten); //declared in NavierStokes2.cpp
 
  if ((im_outer>=1)&&(im_outer<=num_materials)&&
      (im_opp_outer>=1)&&(im_opp_outer<=num_materials)&&
@@ -14476,7 +14600,7 @@ NavierStokes::phase_change_redistributeALL() {
     if ((im>num_materials)||(im_opp>num_materials))
      amrex::Error("im or im_opp bust 200cpp");
     int iten;
-    get_iten_cpp(im,im_opp,iten);
+    get_iten_cpp(im,im_opp,iten); //declared in NavierStokes2.cpp
     if ((iten<1)||(iten>num_interfaces))
      amrex::Error("iten invalid");
 

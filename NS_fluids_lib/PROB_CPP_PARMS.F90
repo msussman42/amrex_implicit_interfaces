@@ -374,6 +374,7 @@ stop
         ccngeom_recon, &
         ccnum_materials, &
         ccmaterial_type, &
+        ccmaterial_type_interface, &
         ccnten, &
         ccDrhoDT, &
         cctempconst, &
@@ -531,6 +532,7 @@ stop
       integer, INTENT(in) :: ccngeom_recon
       
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
+      integer, INTENT(in) :: ccmaterial_type_interface(ccnten)
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccinitial_temperature(ccnum_materials)
@@ -1577,6 +1579,9 @@ stop
       endif
 
       do iten=1,num_interfaces
+
+       fort_material_type_interface(iten)=ccmaterial_type_interface(iten)
+
        fort_latent_heat(iten)=cclatent_heat(iten)
        fort_latent_heat(num_interfaces+iten)=cclatent_heat(num_interfaces+iten)
        fort_latent_heat_slope(iten)=cclatent_heat_slope(iten)
@@ -1641,7 +1646,7 @@ stop
          fort_R_Palmore_Desjardins
 
        do im=1,num_materials
-        print *,"im,mat type ",im,fort_material_type(im)
+        print *,"im,material_type ",im,fort_material_type(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
         print *,"im,DrhoDT ",im,fort_DrhoDT(im)
         print *,"im,temp ",im,fort_tempconst(im)
@@ -1728,6 +1733,10 @@ stop
        print *,"fort_angular_velocity= ",fort_angular_velocity
 
        do iten=1,num_interfaces
+
+        print *,"iten,fort_material_type_interface ",iten, &
+                fort_material_type_interface(iten)
+
         print *,"iten,tension ",iten,fort_tension(iten)
         print *,"iten,tension_init ",iten,fort_tension_init(iten)
         print *,"iten,tension_slope ",iten,fort_tension_slope(iten)
