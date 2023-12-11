@@ -8593,7 +8593,7 @@ subroutine rkbesl ( x, alpha, nb, ize, bk, ncalc )
   real ( kind = 8 ) a
   real ( kind = 8 ) alpha
   real ( kind = 8 ) blpha
-  real ( kind = 8 ) bk(1)
+  real ( kind = 8 ) bk(2)
   real ( kind = 8 ) bk1
   real ( kind = 8 ) bk2
   real ( kind = 8 ) c
