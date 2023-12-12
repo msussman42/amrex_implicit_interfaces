@@ -190,8 +190,6 @@ integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS(nmat)
-real(amrex_real) :: ice_vertical
-real(amrex_real) :: substrate_height
 integer :: expected_nmat
 
   if (nmat.eq.num_materials) then
