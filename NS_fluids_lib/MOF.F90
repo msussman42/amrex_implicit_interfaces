@@ -11388,9 +11388,9 @@ contains
       call find_predict_slope( &
         npredict, & !intent(out)
         mag, & !intent(out)
-        uncaptured_volume_vof_placeholder, &
+        uncaptured_volume_vof_placeholder, &  !=1.0
         cen_free_placeholder, & !centroid of uncaptured region
-        refvfrac(1), &
+        refvfrac(1), & ! 0<=refvfrac(1)<=1
         cen_derive_placeholder, &!relative to supermesh centroid(CMOF case)
         bfact,dx, &
         xsten0,nhalf0,sdim)
@@ -12904,7 +12904,9 @@ contains
           (vof_free.ge.zero)) then
        !do nothing
       else
-       print *,"vof_ref or vof_free invalid"
+       print *,"vof_ref or vof_free less than zero"
+       print *,"vof_ref: ",vof_ref
+       print *,"vof_free: ",vof_free
        stop
       endif
 
@@ -12915,8 +12917,13 @@ contains
          (vof_free*cen_free(dir)-vof_ref*cen_ref(dir))/dual_vof_ref
        else if (dual_vof_ref.eq.zero) then
         dual_cen_ref(dir)=zero
+       else if ((dual_vof_ref.lt.zero).and. &
+                (dual_vof_ref.ge.-VOFTOL*(vof_free+vof_ref))) then
+        dual_cen_ref(dir)=zero
        else
         print *,"dual_vof_ref invalid: ",dual_vof_ref
+        print *,"vof_free=",vof_free
+        print *,"vof_ref=",vof_ref
         stop
        endif
       enddo !dir=1,sdim
@@ -13609,6 +13616,8 @@ contains
            ! do nothing
           else
            print *,"order or single_volume invalid"
+           print *,"single_volume=",single_volume
+           print *,"order=",NINT(mofdata(vofcomp+sdim+1))
            stop
           endif 
          else
