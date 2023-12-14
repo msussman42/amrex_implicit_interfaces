@@ -77,6 +77,10 @@ ns.perturbation_on_restart=0
 #amr.restart=chk01660
 amr.check_int       = 200     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
+#if visual_nddata_format=1 and USE_HDF5=TRUE (GNUmakefie), then
+#HDF5 format is output.
+ns.visual_nddata_format=1 #0=tecplot nodes 1=plt file cells
+ns.visual_ncell=4 4
 amr.plot_int        = 200
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
