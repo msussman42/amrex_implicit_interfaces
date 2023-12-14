@@ -216,8 +216,6 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: LS(nmat)
 real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
 integer im,ibase,n
-real(amrex_real) dT_dr_local
-real(amrex_real) T0
 real(amrex_real) dx_local(SDIM)
 integer local_dir
 
@@ -358,6 +356,14 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
  call HOPF_BIFURCATION_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ if (1.eq.1) then
+  if ((dir.eq.2).and.(side.eq.2).and.(veldir.eq.1)) then
+   if (xghost(2).ge.one) then
+    print *,"xghost,VEL ",xghost,local_VEL(veldir)
+   endif
+  endif
+ endif
+
  VEL=local_VEL(veldir)
 
 else
@@ -421,9 +427,6 @@ IMPLICIT NONE
 integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: xwall
 real(amrex_real), INTENT(in) :: xghost(SDIM)
-real(amrex_real) :: xwall_vec(SDIM)
-integer :: radial_dir ! 1 or 2
-integer :: local_dir
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: LS(nmat)
 real(amrex_real) :: local_STATE(nmat*num_state_material)
