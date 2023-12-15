@@ -356,7 +356,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
  call HOPF_BIFURCATION_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
- if (1.eq.1) then
+ if (1.eq.0) then
   if ((dir.eq.2).and.(side.eq.2).and.(veldir.eq.1)) then
    if (xghost(2).ge.one) then
     print *,"xghost,VEL ",xghost,local_VEL(veldir)
