@@ -460,6 +460,7 @@ stop
       use STUB_module
       use GENERAL_PHASE_CHANGE_module
       use ROTATING_ANNULUS_module
+      use HOPF_BIFURCATION_module
       use CAVITY_PHASE_CHANGE_module
       use ICE_ON_SUBSTRATE_module
       use SIMPLE_PALMORE_DESJARDINS_module
@@ -557,7 +558,8 @@ stop
       real(amrex_real), INTENT(in) :: ccthermal_microlayer_size(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccshear_microlayer_size(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccbuoyancy_microlayer_size(ccnum_materials)
-      real(amrex_real), INTENT(in) :: ccphasechange_microlayer_size(ccnum_materials)
+      real(amrex_real), INTENT(in) :: &
+            ccphasechange_microlayer_size(ccnum_materials)
 
       integer, INTENT(in) :: ccviscosity_state_model(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccelastic_viscosity(ccnum_materials)
@@ -566,7 +568,8 @@ stop
       integer, INTENT(in) :: ccstore_elastic_data(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccheatflux_factor(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccheatviscconst(ccnum_materials)
-      real(amrex_real), INTENT(in) :: ccprerecalesce_heatviscconst(ccnum_materials)
+      real(amrex_real), INTENT(in) :: &
+              ccprerecalesce_heatviscconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccprerecalesce_viscconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccprerecalesce_stiffCP(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccprerecalesce_stiffCV(ccnum_materials)
@@ -649,7 +652,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=21
+      probtype_list_size=22
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -672,6 +675,7 @@ stop
       used_probtypes(20)=710 ! CAVITY_PHASE_CHANGE
       used_probtypes(21)=82  ! Differentially Heated Rotating Annulus: 
                              ! ROTATING_ANNULUS
+      used_probtypes(22)=820 ! Driven cavity: HOPF_BIFURCATION
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_DEALLOCATE_MODULE=>DEALLOCATE_STUB_MODULE
@@ -1037,6 +1041,18 @@ stop
        SUB_MAPPING_WEIGHT_COEFF=>ROTATING_ANNULUS_MAPPING_WEIGHT_COEFF
        SUB_T0_Boussinesq=>ROTATING_ANNULUS_T0_Boussinesq
        SUB_V0_Coriolis=>ROTATING_ANNULUS_V0_Coriolis
+      else if (probtype.eq.820) then
+       SUB_INIT_MODULE=>INIT_HOPF_BIFURCATION_MODULE
+       SUB_LS=>HOPF_BIFURCATION_LS
+       SUB_VEL=>HOPF_BIFURCATION_VEL
+       SUB_PRES=>HOPF_BIFURCATION_PRES
+       SUB_STATE=>HOPF_BIFURCATION_STATE
+       SUB_LS_BC=>HOPF_BIFURCATION_LS_BC
+       SUB_VEL_BC=>HOPF_BIFURCATION_VEL_BC
+       SUB_PRES_BC=>HOPF_BIFURCATION_PRES_BC
+       SUB_STATE_BC=>HOPF_BIFURCATION_STATE_BC
+       SUB_INTERNAL_GRAVITY_WAVE_FLAG=> &
+         HOPF_BIFURCATION_INTERNAL_GRAVITY_WAVE_FLAG
       else
        ! assign null routines here that would cause the program to abort
        ! if called.  In otherwords, these are routines, that if called,
