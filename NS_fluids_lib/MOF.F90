@@ -12918,7 +12918,7 @@ contains
        else if (dual_vof_ref.eq.zero) then
         dual_cen_ref(dir)=zero
        else if ((dual_vof_ref.lt.zero).and. &
-                (dual_vof_ref.ge.-VOFTOL*(vof_free+vof_ref))) then
+                (dual_vof_ref.ge.-0.01d0*vof_free)) then
         dual_cen_ref(dir)=zero
        else
         print *,"dual_vof_ref invalid: ",dual_vof_ref

@@ -1,0 +1,59 @@
+CEXE_headers += AmrPicture.H AmrvisConstants.H		\
+                Dataset.H				\
+		GlobalUtilities.H GraphicsAttributes.H			\
+                GridPicture.H MessageArea.H				\
+                Palette.H PltApp.H Output.H Quaternion.H Point.H \
+                Trackball.H AMReX_XYPlotDataList.H XYPlotDefaults.H \
+		XYPlotWin.H XYPlotParam.H PltAppState.H AVPApp.H
+
+CEXE_sources += AmrPicture.cpp AmrVisTool.cpp		\
+                Dataset.cpp				\
+		GraphicsAttributes.cpp GridPicture.cpp			\
+                MessageArea.cpp PltApp.cpp                              \
+                GlobalUtilities.cpp Palette.cpp PltAppOutput.cpp	\
+		Output.cpp Quaternion.cpp Point.cpp Trackball.cpp       \
+		AMReX_XYPlotDataList.cpp XYPlotParam.cpp XYPlotWin.cpp        \
+		PltAppState.cpp AVPApp.cpp
+
+ifeq ($(DIM),3)
+  ifeq ($(USE_VOLRENDER), TRUE)
+    CEXE_headers += VolRender.H
+    CEXE_sources += VolRender.cpp
+  endif
+endif
+
+ifeq ($(DIM),3)
+  ifeq ($(USE_PARALLELVOLRENDER), TRUE)
+    CEXE_headers += PVolRender.H
+    CEXE_sources += PVolRender.cpp
+    cEXE_sources += matrix.c twopass.c shearwarp.c sw.c window.c
+  endif
+endif
+
+
+ifeq ($(DIM),3)
+  CEXE_sources += ProjectionPicture.cpp ViewTransform.cpp PltApp3D.cpp
+endif
+
+ifeq ($(USE_ARRAYVIEW),TRUE)
+  CEXE_sources += DatasetClient.cpp
+endif
+
+ifeq ($(USE_PROFPARSER), TRUE)
+  CEXE_headers += ProfApp.H RegionPicture.H
+  CEXE_sources += ProfApp.cpp RegionPicture.cpp
+
+  CEXE_headers += BLProfParser.tab.H BLProfStats.H
+  CEXE_headers += DataServices.H
+
+  CEXE_sources += BLProfParser.lex.yy.cpp
+  CEXE_sources += BLProfParser.tab.cpp
+  CEXE_sources += AMReX_BLProfStats.cpp
+  CEXE_sources += AMReX_CommProfStats.cpp
+  CEXE_sources += AMReX_RegionsProfStats.cpp
+  CEXE_sources += AMReX_BLWritePlotFile.cpp
+  FEXE_sources += AMReX_AVGDOWN_$(DIM)D.F
+  CEXE_sources += AMReX_BLProfUtilities.cpp
+  CEXE_sources += AMReX_DataServices.cpp
+endif
+
