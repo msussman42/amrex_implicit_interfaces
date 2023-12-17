@@ -56,8 +56,13 @@ amr.grid_eff        = 0.85   # what constitutes an efficient grid
 amr.blocking_factor = 4       # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
+#if visual_nddata_format=1 and USE_HDF5=TRUE (GNUmakefie), then
+#HDF5 format is output.
+ns.visual_nddata_format=1 #0=tecplot nodes 1=plt file cells
+ns.visual_ncell=4 4 4
+
 # JULY 30 - made this smaller to speed up testing
-amr.plot_int        = 1000      # 1000
+amr.plot_int        = 1000    # 1000
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 # M.OHTA 32 is more optimal than 16 I think.
