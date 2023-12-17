@@ -1,0 +1,149 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+###############################################################################
+
+Project: "classifyvolume"=.\classifyvolume.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name volpack
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "examples"=.\examples.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name classifyvolume
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name glr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name makeoctree
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name makevolume
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name rendervolume
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name scalevolume
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "glr"=.\glr.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name volpack
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "makeoctree"=.\makeoctree.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name volpack
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "makevolume"=.\makevolume.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name volpack
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "rendervolume"=.\rendervolume.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name volpack
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "scalevolume"=.\scalevolume.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name volpack
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "volpack"=.\volpack.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

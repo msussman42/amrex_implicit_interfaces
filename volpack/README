@@ -1,0 +1,184 @@
+                       VolPack version 1.0beta3
+                       ------------------------
+
+Phil Lacroute
+volpack@graphics.stanford.edu
+16 December 1994
+
+1. Introduction
+---------------
+
+VolPack is a portable library of fast volume rendering algorithms
+that produce high-quality images.
+
+2. Installation
+---------------
+
+To build the library, do the following:
+
+  A. Type "./configure" in this directory.  This will run a shell
+     script that determines the features of your operating system
+     and then automatically chooses compiler flags and configuration
+     constants for VolPack.
+
+     Configure takes a number of options, but only the commonly-used
+     ones are described here.  You can specify the top-level
+     installation directory with the "--prefix=<directory>"
+     option, and the top-level installation directory for
+     architecture-dependent binaries with "--exec_prefix=<directory>".
+     Both options default to /usr/local.
+
+     If you want, you can look at the Makefile configure builds and
+     override some of the options.
+
+  B. Type "make".  This creates a library archive call "libvolpack.a".
+
+  C. To compile the example programs type "make examples", or move
+     to the examples directory and type "make".
+
+  D. Type "make install" to install the library, include files, and
+     manual entries.
+
+  E. Look at the User's Guide in the "doc" directory for a tutorial
+     introduction, and look at the examples programs in the "examples"
+     directory (see examples/README).
+
+If you have a version of "m4" that does not understand the -D option
+then the compilation will fail (usually "make" will appear to hang
+after the first call to m4).  Some systems have two versions of m4;
+you can choose the correct one by editting the "M4" macro in
+Makefile.in or by setting the M4 environment variable to the correct
+path before running configure.  You can also install GNU m4.
+
+If your optimizer has trouble or takes a long time on some of the
+files you may want to use a lower optimization level for them.  All of the
+files with names like vp_comp*.c are special-case versions of the
+rendering routine and you may choose to optimize only the ones you
+plan to use frequently.
+
+An important note for HP-UX users:
+The math library rint() function is broken in HP-UX 9.01 (and maybe
+other releases), causing the VolPack test programs to generate blank
+images.  This is fixed by HP patch "PHSS_3597", which HP-UX users can
+get from HP support.
+
+3. Documentation
+----------------
+
+The doc directory contains a user's guide to VolPack in HTML format
+(volpack.html) which you can read using Mosaic or any other Web
+browser.  A PostScript version is also available.
+
+The man directory contains manual pages for each routine in the
+library.
+
+4. Support
+----------
+
+If you have problems, bug reports or bug fixes, please send mail to:
+
+    volpack@graphics.stanford.edu
+
+The author makes no commitment to fix bugs or provide support.
+However, future releases with fixes and enhancements are planned.
+If you like the library then drop us a note describing what you use it
+for!
+
+If you decide to use the software then please add yourself to our
+mailing list so we can tell you about bug fixes and new versions of
+the software.  Just send a message to
+
+    majordomo@lists.stanford.edu
+
+with the message body:
+
+    subscribe volpack-announce
+
+5. Data Sets and Other Goodies
+------------------------------
+
+One sample data set is provided in the examples directory.  Some
+larger data sets and a more complete demonstration application,
+vprender, are available from the Stanford Computer Graphics
+Laboratory's ftp site:
+    graphics.stanford.edu:pub/volpack
+or
+    http://www-graphics.stanford.edu/
+
+6. Changes
+----------
+
+Release 1.0beta3 includes the following additions to release 1.0beta2:
+
+    - a new shader for rendering shadows (see vpSetShadowLookupShader)
+    - filtering routines for resampling volumes to different resolutions
+    - the capability to produce images with different pixel formats,
+      including formats with alpha channels
+    - several important bug fixes, including a problem with depth
+      cueing that caused "flashing" artifacts in rotation sequences
+    - upgraded configuration script to autoconf 2.0 for even easier
+      installation
+
+See the "changes" file for a complete list.  There are minor
+incompatible changes to the functions vpSetImage and vpGetImage.
+
+7. Copyright
+------------
+
+VolPack is covered by the following copyright notice:
+
+    Copyright (c) 1994 The Board of Trustees of The Leland Stanford
+    Junior University.  All rights reserved.
+  
+    Permission to use, copy, modify and distribute this software and its
+    documentation for any purpose is hereby granted without fee, provided
+    that the above copyright notice and this permission notice appear in
+    all copies of this software and that you do not sell the software.
+    Commercial licensing is available by contacting the author.
+   
+    THE SOFTWARE IS PROVIDED "AS IS" AND WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
+    WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
+
+    This version of the VolPack library is a modified version of the
+    original available from Stanford University.  Modifications were
+    made by the Center for Computational Sciences and Engineering,
+    Lawrence Berkeley National Laboratory.  Modifications to VolPack
+    (c) 2000 The Regents of the University of California (through
+    E.O. Lawrence Berkeley National Laboratory), subject to approval by
+    the U.S. Department of Energy.  Your use of this software is under
+    license from Stanford University with respect to the underlying
+    original VolPack code (see copyright notice and permission above)
+    and The Regents of the University of California with respect to
+    modifications thereto (see AmrVis license.txt file for applicable
+    license terms).  Contact Berkeley Lab's Center for Computational
+    Sciences and Engineering at webmaster@mothra.lbl.gov or Berkeley
+    Lab's Technology Transfer Department at TTD@lbl.gov for questions
+    or to receive more information.
+ 
+
+8. Credits
+----------
+
+VolPack was written by Phil Lacroute at the Computer Graphics
+Laboratory, Stanford University.  The algorithms are based on Phil's
+Ph.D. thesis research and are described in the following paper:
+Philippe Lacroute and Marc Levoy, Fast Volume Rendering Using a
+Shear-Warp Factorization of the Viewing Transformation, Proc. SIGGRAPH
+'94 (Orlando, Florida, July 24-29, 1994).  In Computer Graphics
+Proceedings, Annual Conference Series, 1994, ACM SIGGRAPH, pp. 451-458.
+
+If you publish a rendering made using VolPack and you would like to
+make an attribution, the following form is suggested:
+
+    Image generated using the Stanford VolPack volume renderer.
+
+An appropriate longer attribution could omit the word Stanford but would
+include a citation of the SIGGRAPH '94 paper:
+
+    Image generated using the VolPack volume renderer [#].
+
+    [#]  Philippe Lacroute and Marc Levoy, Fast Volume Rendering Using a
+    Shear-Warp Factorization of the Viewing Transformation, Proc. SIGGRAPH
+    '94 (Orlando, Florida, July 24-29, 1994).  In Computer Graphics
+    Proceedings, Annual Conference Series, 1994, ACM SIGGRAPH, pp. 451-458.

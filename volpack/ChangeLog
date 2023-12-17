@@ -1,0 +1,110 @@
+--------------- Released version 1.0 beta1 ---------------
+
+1. Bug Fix: vpCreateMinMaxOctree caused a segmentation fault for
+   volume sizes that were not a power of two.
+
+2. Debug Feature: Added debugging code for compositing calculation.
+
+3. Debug Feature: Added intermediate image coordinates to vpTracePixel
+   output.
+
+4. Bug Fix: Added a check in vpRamp for non-increasing x coordinates
+   to prevent a divide-by-zero error.
+
+5. Bug Fix: Added a version of the compositing routine (vp_compAn.m4)
+   that does not have unrolled loops, since some compilers have
+   trouble with the unrolled version (too many basic blocks to run the
+   optimizer in a reasonable amount of time).  The unrolled version is
+   now in vp_compAu.m4 instead of vp_compA.m4.  The Makefile can be
+   modified to choose one or the other version.
+
+6. Feature: Added complete man pages for all library routines.
+
+7. Bug Fix: In vpSetCallback, revert to default behavior if the function
+   argument is NULL (instead of causing a NULL dereference later on).
+
+8. Feature: Added vpStoreContext and vpLoadContext to save and restore
+   rendering contexts (and to make it easier to reproduce bugs).
+
+9. Feature: Changed vpLoadRawVolume to memory-map the file if
+   requested
+
+10. Bug Fix: Fixed missing and incorrect function prototypes.
+
+11. Feature: Changed makefile and headers to use GNU autoconf.
+
+--------------- Released version 1.0 beta2 ---------------
+
+12. Bug Fix: Fixed minus-sign error in formula for depth cueing factor.
+    This eliminates the brightness changes that occurred when rotating
+    a volume past a 45 degree point with depth cueing enabled.
+
+13. Debug Feature: Added code to collect rendering statistics for
+    performance analysis.
+
+14. Debug Feature: Allow negative opacity threshold (to experiment with
+    disabling the benefit of spatial data structures).
+
+15. Bug Fix: Fixed the result of vpGeti with the VP_VIEW_Y_SIZE
+    or VP_VIEW_Z_SIZE options.
+
+16. Reorganization and renaming of compositing functions to make it
+    easier to conditionally compile in just some of the special-case
+    versions.  Also merged code for unrolled loops with code for
+    non-unrolled loops into one M4 source file.
+
+17. Feature: Added experimental "index volume" code for faster
+    early-ray termination.
+
+18. Debug Feature: Added define flags to conditionally remove early-ray
+    termination and resampling loops for performance analysis runs.
+
+19. Feature: Added experimental brute-force raycaster for performance
+    comparisons.
+
+20. Feature: Implemented shadows.
+
+21. Bug Fix: Added missing return value in vpDestroyClassifiedVolume.
+
+22. Feature: Implemented resampling filters for scaling volume data
+    (vpSetFilter(), vpResample(), vpBoxFilter(), vpLinearFilter(),
+    vpBicubicFilter(), vpGaussianFilter()).
+
+23. Feature: Added capability to produce images with a variety of
+    pixel formats, including an optional alpha channel.
+    *** INCOMPATIBLE CHANGE TO vpSetImage ***
+
+24. Feature: Changed vpGetImage to produce images with the same
+    pixel formats supported by vpSetImage, and to allow reading back
+    the shadow buffer.
+    *** INCOMPATIBLE CHANGE TO vpGetImage ***
+
+25. Reorganized macros in vp_compA.m4 and vp_warpA.m4.
+
+26. Bug Fix: Refactor view if shadows are turned on.
+
+27. Feature: The callback functions for VP_LOG_ALLOC_FUNC,
+    VP_LOG_FREE_FUNC and VP_STATUS_FUNC now get one additional
+    argument, the client_data pointer associated with the context.
+
+28. Bug Fix: Check if intermediate image buffer must be resized
+    even if view has not changed (since number of color channels
+    may be different).
+
+29. Feature: Allow clamping to be disabled when computing shading
+    lookup table (vpShadeTable).
+
+30. Debug Feature: Added options to override default compositing direction
+    and to retrieve compositing order.
+
+31. Bug Fix: Check for invalid voxel field sizes when using lookup
+    table shading.
+
+32. Bug Fix: Don't destroy classified volume when raw voxel array
+    is set to NULL pointer.
+
+33. Bug Fix: Fixed error in vpNormalIndex (also affecting
+    vpScanlineNormals and vpVolumeNormals) that resulted in incorrect
+    calculation of isolated surface normals due to a roundoff error.
+    This sometimes also resulted in index values greater than the
+    maximum permissible value.
