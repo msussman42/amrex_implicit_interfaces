@@ -24,7 +24,7 @@ MOF_HOME = ..
 
 EBASE = amr
 
-USE_HDF5 = TRUE
+USE_HDF5 = FALSE
 HDF5_HOME=/home/mark/Downloads/hdf/HDF5-1.14.3-Linux/HDF_Group/HDF5/1.14.3
 #module load hdf5
 #module load cray-hdf5-parallel
