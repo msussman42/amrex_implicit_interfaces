@@ -24,11 +24,12 @@ MOF_HOME = ..
 
 EBASE = amr
 
-USE_HDF5 = FALSE
-HDF5_HOME=/home/sussman/Downloads/hdf/HDF5-1.14.3-Linux/HDF_Group/HDF5/1.14.3
+USE_HDF5 = TRUE
+HDF5_HOME=/home/mark/Downloads/hdf/HDF5-1.14.3-Linux/HDF_Group/HDF5/1.14.3
 #module load hdf5
 #module load cray-hdf5-parallel
 #https://www.hdfgroup.org/solutions/hdf5
+#https://www.hdfgroup.org/downloads/hdfview/
 
 USE_CUDA = FALSE
 USE_ACC = FALSE
@@ -40,7 +41,7 @@ USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 3
+DIM       = 2
 
 BL_NO_FORT = FALSE
 
