@@ -112,13 +112,13 @@ vp_compA%.c: $(comp_input)
 	@$(RM) $@
 	@echo "$(M4) $(M4FLAGS) -DSourceFile=$@ $(comp_input) > $@"
 	@$(M4) $(M4FLAGS) -DSourceFile=$@ $(comp_input) > $@
-	@chmod -w $@
+#	@chmod -w $@
 
 vp_warpA%.c: $(warp_input)
 	@$(RM) $@
 	@echo "$(M4) $(M4FLAGS) -DSourceFile=$@ $(warp_input) > $@"
 	@$(M4) $(M4FLAGS) -DSourceFile=$@ $(warp_input) > $@
-	@chmod -w $@
+#	@chmod -w $@
 
 examples: libvolpack.a
 	make -C examples COMP=$(COMP) MPI=$(MPI) DEBUG=$(DEBUG) PROFILE=$(PROFILE)
