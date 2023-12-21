@@ -1,8 +1,10 @@
 # Notes for ubuntu linux:
 # 1. git clone https://github.com/AMReX-Codes/Amrvis
 # 2. git clone https://ccse.lbl.gov/pub/Downloads/volpack.git
+#    (a) in the volpack directory, comment out the "chmod" lines in
+#        Makefile.
 # 3. sudo apt-get install libmotif-dev
-# 4. comment out "-lXpm"
+# 4. comment out "-lXpm" and "-lXext"
 # 5. sudo apt-get install m4
 # 6. https://amrex-codes.github.io/amrex/docs_html/Visualization.html
 ### ------------------------------------------------------
