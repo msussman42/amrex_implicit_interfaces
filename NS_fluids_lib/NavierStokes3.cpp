@@ -322,6 +322,10 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   if (ParallelDescriptor::IOProcessor())
    std::cout << "nonlinear advect \n";
 
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
+
  NavierStokes& ns_fine=getLevel(finest_level);
  int basestep=ns_fine.nStep();
 
@@ -672,6 +676,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    -1, // data_dir==-1
    parent->levelSteps(0)); 
  }
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
 
 }  // end subroutine nonlinear_advection
 
