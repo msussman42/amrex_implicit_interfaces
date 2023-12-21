@@ -1,6 +1,8 @@
 #ifndef _NavierStokes_H_
 #define _NavierStokes_H_
 
+#define NS_profile_solver 0
+
 #include <local_thread_class.H>
 #include <AMReX_Geometry.H>
 #include <AmrLevel.H>
