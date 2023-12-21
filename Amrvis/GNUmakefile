@@ -21,7 +21,7 @@ COMP      = intel
 COMP      = gnu
 
 DEBUG     = FALSE
-#DEBUG     = TRUE
+DEBUG     = TRUE
 
 DIM       = 1
 DIM       = 3
@@ -83,7 +83,8 @@ ifneq ($(which_site), unknown)
   INCLUDE_LOCATIONS += /usr/include/Xm
   INCLUDE_LOCATIONS += /usr/include/
 
-  LIBRARIES += -lXm -lXt -lXext -lSM -lICE -lX11
+  LIBRARIES += -lXm -lXt -lSM -lICE -lX11
+#  LIBRARIES += -lXm -lXt -lXext -lSM -lICE -lX11
 #  LIBRARIES += -lXm -lXt -lXext -lSM -lICE -lXpm -lX11
 
   ifeq ($(which_computer), edison)
@@ -141,7 +142,8 @@ ifeq ($(which_site), unknown)
   endif
 
 #  LIBRARIES += -lXm -lXt -lXext -lSM -lICE -lXpm -lX11
-  LIBRARIES += -lXm -lXt -lXext -lSM -lICE -lX11
+#  LIBRARIES += -lXm -lXt -lXext -lSM -lICE -lX11
+   LIBRARIES += -lXm -lXt -lSM -lICE -lX11
 endif
 
 
