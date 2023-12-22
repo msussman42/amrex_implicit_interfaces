@@ -1,7 +1,7 @@
 #ifndef _NavierStokes_H_
 #define _NavierStokes_H_
 
-#define NS_profile_solver 0
+#define NS_profile_solver 1
 
 #include <local_thread_class.H>
 #include <AMReX_Geometry.H>
@@ -839,6 +839,12 @@ protected:
     void nonlinear_advection(const std::string& caller_string);
 
     void advance_MAC_velocity(int project_option);
+
+    void pressure_gradient_code_segment(
+      const std::string& caller_string);
+
+    void no_mass_transfer_code_segment(
+      const std::string& caller_string);
 
     void phase_change_code_segment(
       const std::string& caller_string,
