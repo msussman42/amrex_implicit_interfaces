@@ -14016,10 +14016,12 @@ NavierStokes::level_phase_change_convertALL() {
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
          0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
 
-      int update_flag=RECON_UPDATE_STATE_CENTROID;
       int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay; output:SLOPE_RECON_MF
-      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
+      VOF_Recon_ALL(1,cur_time_slab,
+	 RECON_UPDATE_STATE_CENTROID,
+	 init_vof_prev_time);
+
      } else if (i_phase_change+1==n_phase_change) {
       // do nothing
      } else {
@@ -21994,10 +21996,9 @@ NavierStokes::volWgtSumALL(
   amrex::Error("fast_mode invalid");
 
     // vof,ref cen, order,slope,int
- int update_flag=RECON_UPDATE_NULL;
  int init_vof_prev_time=0;
   //output: SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,update_flag,
+ VOF_Recon_ALL(1,cur_time_slab,RECON_UPDATE_NULL,
    init_vof_prev_time); 
 
   // need to initialize viscosity and density temporary 

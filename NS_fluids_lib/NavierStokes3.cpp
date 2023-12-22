@@ -442,10 +442,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
 #endif
 
- int update_flag=RECON_UPDATE_NULL;
-
  //output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,advect_time_slab,update_flag,
+ VOF_Recon_ALL(1,advect_time_slab,RECON_UPDATE_NULL,
   init_vof_prev_time);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -472,10 +470,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
     advect_time_slab=cur_time_slab;
 
-    update_flag=RECON_UPDATE_STATE_CENTROID;
-
      //output::SLOPE_RECON_MF
-    VOF_Recon_ALL(1,advect_time_slab,update_flag,
+    VOF_Recon_ALL(1,advect_time_slab,RECON_UPDATE_STATE_CENTROID,
      init_vof_prev_time);
 
    } else
@@ -1607,6 +1603,56 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
 
 } // end subroutine advance_MAC_velocity()
 
+void NavierStokes::pressure_gradient_code_segment(
+  const std::string& caller_string) {
+
+ std::string local_caller_string="pressure_gradient_code_segment";
+ local_caller_string=caller_string+local_caller_string;
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
+
+ if (segregated_gravity_flag==1) {
+  multiphase_project(SOLVETYPE_PRESGRAVITY);
+ } else if (segregated_gravity_flag==0) {
+  //do nothing
+ } else
+  amrex::Error("segregated_gravity_flag invalid");
+
+  // MDOT term included
+ multiphase_project(SOLVETYPE_PRES);
+
+ int singular_parts_exist=0;
+ for (int im=0;im<num_materials;im++) {
+  if (is_singular_coeff(im)==0) {
+   // do nothing
+  } else if (is_singular_coeff(im)==1) {
+   singular_parts_exist=1;
+  } else
+   amrex::Error("is_singular_coeff invalid");
+ } // im=0..num_materials-1
+
+ if (singular_parts_exist==1) {
+
+  if (extend_pressure_into_solid==1) {
+   multiphase_project(SOLVETYPE_PRESEXTRAP);
+  } else if (extend_pressure_into_solid==0) {
+   // do nothing
+  } else
+   amrex::Error("extend_pressure_into_solid invalid");
+
+ } else if (singular_parts_exist==0) {
+  // do nothing
+ } else
+  amrex::Error("singular_parts_exist invalid");
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
+
+} // end subroutine pressure_gradient_code_segment
+
 void NavierStokes::phase_change_code_segment(
   const std::string& caller_string,
   int& color_count,
@@ -1620,6 +1666,10 @@ void NavierStokes::phase_change_code_segment(
 
  std::string local_caller_string="phase_change_code_segment";
  local_caller_string=caller_string+local_caller_string;
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
 
  if (ngrow_make_distance!=3)
   amrex::Error("ngrow_make_distance!=3");
@@ -1875,10 +1925,11 @@ void NavierStokes::phase_change_code_segment(
  delete_array(BURNING_VELOCITY_MF);
  delete_array(nodevel_MF);
 
- int update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID; 
  int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
+ VOF_Recon_ALL(1,cur_time_slab,
+    RECON_UPDATE_STATE_ERR_AND_CENTROID,
+    init_vof_prev_time);
 
   // in: phase_change_code_segment
   // 1. prescribe solid temperature, velocity, and geometry where
@@ -1893,7 +1944,60 @@ void NavierStokes::phase_change_code_segment(
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
 
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
+
 } //end subroutine phase_change_code_segment
+
+void NavierStokes::no_mass_transfer_code_segment(
+  const std::string& caller_string) {
+
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid no_mass_transfer_code_segment");
+
+ std::string local_caller_string="no_mass_transfer_code_segment";
+ local_caller_string=caller_string+local_caller_string;
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
+
+#ifdef AMREX_PARTICLES
+
+ My_ParticleContainer& localPC=newDataPC(slab_step+1);
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+ } else
+  amrex::Error("slab_step invalid");
+
+ int lev_min=0;
+ int lev_max=-1;
+ int nGrow_Redistribute=0;
+ int local_Redistribute=0; 
+ localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute);
+
+#endif
+
+ int init_vof_prev_time=0;
+ //output:SLOPE_RECON_MF
+ VOF_Recon_ALL(1,cur_time_slab,
+   RECON_UPDATE_STATE_ERR_AND_CENTROID,
+   init_vof_prev_time);
+
+ int keep_all_interfaces=0;
+ int ngrow_make_distance_accept=ngrow_make_distance;
+ makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
+
+} // end subroutine no_mass_transfer_code_segment
 
 void NavierStokes::nucleation_code_segment(
   const std::string& caller_string,
@@ -1913,6 +2017,10 @@ void NavierStokes::nucleation_code_segment(
 
  std::string local_caller_string="nucleation_code_segment";
  local_caller_string=caller_string+local_caller_string;
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
 
  if (1==0) {
   int basestep_debug=nStep();
@@ -2006,11 +2114,10 @@ void NavierStokes::nucleation_code_segment(
 #endif
 
  // generates SLOPE_RECON_MF
- int update_flag=RECON_UPDATE_STATE_CENTROID; 
  int init_vof_prev_time=0;
   // Fluids tessellate; solids overlay.
   // output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
+ VOF_Recon_ALL(1,cur_time_slab,RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
  int keep_all_interfaces=1;
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
@@ -2030,6 +2137,10 @@ void NavierStokes::nucleation_code_segment(
   int n_input;
   std::cin >> n_input;
  }
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
+
 } //end subroutine nucleation_code_segment()
 
 // called from: NavierStokes::advance
@@ -2368,8 +2479,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
      amrex::Error("ns_time_order, enable_spectral invalid do the advance");
 
       // in: NavierStokes::do_the_advance
-      // 0=do not update the error 1=update the error
-    int update_flag=0; 
 
     debug_memory();
 
@@ -2428,33 +2537,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       } else if (mass_transfer_active==0) {
 
-#ifdef AMREX_PARTICLES
-
-       My_ParticleContainer& localPC=newDataPC(slab_step+1);
-
-       if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-        init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
-       } else
-        amrex::Error("slab_step invalid");
-
-       int lev_min=0;
-       int lev_max=-1;
-       int nGrow_Redistribute=0;
-       int local_Redistribute=0; 
-       localPC.Redistribute(lev_min,lev_max,
-          nGrow_Redistribute,local_Redistribute);
-
-#endif
-
-
-       update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID; 
-       int init_vof_prev_time=0;
-       //output:SLOPE_RECON_MF
-       VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
-       int keep_all_interfaces=0;
-       int ngrow_make_distance_accept=ngrow_make_distance;
-       makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
-
+       no_mass_transfer_code_segment(local_caller_string);
+	
       } else
        amrex::Error("mass_transfer_active invalid");
 
@@ -2489,10 +2573,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
     } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
 
-      update_flag=RECON_UPDATE_NULL; 
       int init_vof_prev_time=0;
        //output:SLOPE_RECON_MF
-      VOF_Recon_ALL(1,cur_time_slab,update_flag,init_vof_prev_time);
+      VOF_Recon_ALL(1,cur_time_slab,RECON_UPDATE_NULL,init_vof_prev_time);
 
     } else
       amrex::Error("slab_step invalid");
@@ -2956,39 +3039,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         //    c. pressure gradient
        if (disable_pressure_solve==0) {
 
-        if (segregated_gravity_flag==1) {
-         multiphase_project(SOLVETYPE_PRESGRAVITY);
-	} else if (segregated_gravity_flag==0) {
- 	 //do nothing
-	} else
-	 amrex::Error("segregated_gravity_flag invalid");
-
-         // MDOT term included
-        multiphase_project(SOLVETYPE_PRES);
-
-        int singular_parts_exist=0;
-        for (int im=0;im<num_materials;im++) {
-         if (is_singular_coeff(im)==0) {
-          // do nothing
-         } else if (is_singular_coeff(im)==1) {
-          singular_parts_exist=1;
-         } else
-          amrex::Error("is_singular_coeff invalid");
-        } // im=0..num_materials-1
- 
-        if (singular_parts_exist==1) {
- 
-         if (extend_pressure_into_solid==1) {
-          multiphase_project(SOLVETYPE_PRESEXTRAP);
-         } else if (extend_pressure_into_solid==0) {
-          // do nothing
-         } else
-          amrex::Error("extend_pressure_into_solid invalid");
- 
-        } else if (singular_parts_exist==0) {
-         // do nothing
-        } else
-         amrex::Error("singular_parts_exist invalid");
+        pressure_gradient_code_segment(local_caller_string);
 
        } else if (disable_pressure_solve==1) {
         // do nothing
@@ -11340,6 +11391,10 @@ void NavierStokes::veldiffuseALL() {
 
  std::string local_caller_string="veldiffuseALL";
 
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
+
  // AmrLevel.H, protected:
  // static DescriptorList desc_lst
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -11931,6 +11986,10 @@ void NavierStokes::veldiffuseALL() {
 
   desc_lst.reset_bcrecs(State_Type,STATECOMP_VEL+dir,simulation_bc);
  } //dir=0 .. sdim-1
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
 
 
 }   // end subroutine veldiffuseALL
