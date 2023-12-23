@@ -443,7 +443,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 #endif
 
  //output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,advect_time_slab,RECON_UPDATE_NULL,
+ VOF_Recon_ALL( 
+  local_caller_string, //nonlinear_advection
+  1,advect_time_slab,RECON_UPDATE_NULL,
   init_vof_prev_time);
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -471,7 +473,9 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     advect_time_slab=cur_time_slab;
 
      //output::SLOPE_RECON_MF
-    VOF_Recon_ALL(1,advect_time_slab,RECON_UPDATE_STATE_CENTROID,
+    VOF_Recon_ALL(
+      local_caller_string, //nonlinear_advection
+      1,advect_time_slab,RECON_UPDATE_STATE_CENTROID,
      init_vof_prev_time);
 
    } else
@@ -1922,7 +1926,9 @@ void NavierStokes::phase_change_code_segment(
 
  int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,
+ VOF_Recon_ALL(
+    local_caller_string, //phase_change_code_segment
+    1,cur_time_slab,
     RECON_UPDATE_STATE_ERR_AND_CENTROID,
     init_vof_prev_time);
 
@@ -1980,7 +1986,9 @@ void NavierStokes::no_mass_transfer_code_segment(
 
  int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,
+ VOF_Recon_ALL(
+   local_caller_string, //no_mass_transfer_code_segment
+   1,cur_time_slab,
    RECON_UPDATE_STATE_ERR_AND_CENTROID,
    init_vof_prev_time);
 
@@ -2112,7 +2120,11 @@ void NavierStokes::nucleation_code_segment(
  int init_vof_prev_time=0;
   // Fluids tessellate; solids overlay.
   // output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
+ VOF_Recon_ALL(
+   local_caller_string,  //nucleation_code_segment
+   1,cur_time_slab,
+   RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
+
  int keep_all_interfaces=1;
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
@@ -2570,7 +2582,10 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
       int init_vof_prev_time=0;
        //output:SLOPE_RECON_MF
-      VOF_Recon_ALL(1,cur_time_slab,RECON_UPDATE_NULL,init_vof_prev_time);
+      VOF_Recon_ALL(
+	 local_caller_string, //do_the_advance
+         1,cur_time_slab,
+         RECON_UPDATE_NULL,init_vof_prev_time);
 
     } else
       amrex::Error("slab_step invalid");

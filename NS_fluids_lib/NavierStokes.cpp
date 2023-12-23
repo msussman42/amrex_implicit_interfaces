@@ -14022,7 +14022,9 @@ NavierStokes::level_phase_change_convertALL() {
 
       int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay; output:SLOPE_RECON_MF
-      VOF_Recon_ALL(1,cur_time_slab,
+      VOF_Recon_ALL(
+         local_caller_string, //level_phase_change_convertALL
+         1,cur_time_slab,
 	 RECON_UPDATE_STATE_CENTROID,
 	 init_vof_prev_time);
 
@@ -22035,7 +22037,9 @@ NavierStokes::volWgtSumALL(
     // vof,ref cen, order,slope,int
  int init_vof_prev_time=0;
   //output: SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,RECON_UPDATE_NULL,
+ VOF_Recon_ALL(
+   local_caller_string, //volWgtSumALL
+   1,cur_time_slab,RECON_UPDATE_NULL,
    init_vof_prev_time); 
 
   // need to initialize viscosity and density temporary 
@@ -22544,7 +22548,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   amrex::Error("local_caller_string invalid 22091");
 	
   //output:SLOPE_RECON_MF
- VOF_Recon_ALL(1,cur_time_slab,error_update_flag,
+ VOF_Recon_ALL(
+  local_caller_string, //prepare_post_process
+  1,cur_time_slab,error_update_flag,
   init_vof_prev_time);
 
  if (pattern_test(local_caller_string,"post_init_state")==1) {
