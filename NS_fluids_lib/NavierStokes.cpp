@@ -13892,7 +13892,11 @@ NavierStokes::level_phase_change_convertALL() {
  if (level==0) {
   // do nothing
  } else
-  amrex::Error("level must be 0");
+  amrex::Error("level must be 0 in level_phase_change_convertALL");
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
 
  int nden=num_materials*num_state_material;
 
@@ -14040,6 +14044,10 @@ NavierStokes::level_phase_change_convertALL() {
   // do nothing
  } else
   amrex::Error("i_phase_change invalid");
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
 
 } // end subroutine level_phase_change_convertALL
 
@@ -16968,6 +16976,35 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
 } // subroutine SEM_scalar_advection
 
+void 
+NavierStokes::split_scalar_advectionALL() { 
+
+ std::string local_caller_string="split_scalar_advectionALL";
+
+ int finest_level=parent->finestLevel();
+ if (level==0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid split_scalar_advectionALL");
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
+
+  // order_direct_split=base_step mod 2=0 or 1
+  // must go from finest level to coarsest.
+ for (int ilev=finest_level;ilev>=level;ilev--) {
+  NavierStokes& ns_level=getLevel(ilev);
+  ns_level.split_scalar_advection();
+ } // ilev
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
+
+} //end subroutine split_scalar_advectionALL
+ 
+
 // Lagrangian solid info lives at t=t^n 
 // order_direct_split=base_step mod 2
 // must go from finest level to coarsest.
@@ -17587,7 +17624,7 @@ NavierStokes::split_scalar_advection() {
  } else
   amrex::Error("level invalid23");
 
-}  // subroutine split_scalar_advection
+}  // end subroutine split_scalar_advection
 
 void
 NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
@@ -24340,10 +24377,16 @@ void
 NavierStokes::makeStateDistALL(int keep_all_interfaces,
    int ngrow_make_distance_accept) {
 
+ std::string local_caller_string="makeStateDistALL";
+
  if (level!=0)
   amrex::Error("level invalid in makeStateDistALL");
 
  int finest_level=parent->finestLevel();
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
 
  Real problo[AMREX_SPACEDIM];
  Real probhi[AMREX_SPACEDIM];
@@ -24404,15 +24447,21 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,
  }
 
 
- if (verbose>0)
-  if (ParallelDescriptor::IOProcessor())
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
    for (int im=0;im<num_materials;im++) {
     std::cout << "im= " << im << '\n';
     std::cout << "minLS = " << minLS[0][im] << '\n';
     std::cout << "maxLS = " << maxLS[0][im] << '\n';
    }
+  }
+ }
 
-} // subroutine makeStateDistALL()
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
+
+} // end subroutine makeStateDistALL()
 
 // called from: NavierStokes::do_the_advance 
 // (prior to level_phase_change_rate) and
