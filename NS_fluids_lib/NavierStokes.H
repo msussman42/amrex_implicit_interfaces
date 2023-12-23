@@ -825,7 +825,9 @@ protected:
       int init_vof_prev_time,
       Real& delta_centroid_level,
       int& number_centroid_level); //output: SLOPE_RECON_MF
-    void VOF_Recon_ALL(int ngrow,Real time,int update_flag,
+    void VOF_Recon_ALL(
+      const std::string& caller_string,
+      int ngrow,Real time,int update_flag,
       int init_vof_prev_time); //output: SLOPE_RECON_MF
     void VOF_Recon_resize(int ngrow); //output: SLOPE_RECON_MF
 

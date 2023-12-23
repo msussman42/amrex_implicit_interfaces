@@ -8725,10 +8725,14 @@ void NavierStokes::delete_array(int idx_localMF) {
 
 // update_flag=
 //  RECON_UPDATE_(NULL|STATE_ERR|STATE_CENTROID|STATE_ERR_AND_CENTROID)
-void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
-  int update_flag,int init_vof_prev_time) {
+void NavierStokes::VOF_Recon_ALL(
+  const std::string& caller_string,
+  int ngrow,Real time,
+  int update_flag,
+  int init_vof_prev_time) {
 
  std::string local_caller_string="VOF_Recon_ALL";
+ local_caller_string=caller_string+local_caller_string;
 
  int local_update_flag=update_flag;
 
