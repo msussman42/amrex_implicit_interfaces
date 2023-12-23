@@ -477,12 +477,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    } else
     amrex::Error("dir_absolute_direct_split invalid");
 
-    // order_direct_split=base_step mod 2=0 or 1
-    // must go from finest level to coarsest.
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    ns_level.split_scalar_advection();
-   } // ilev
+   split_scalar_advectionALL();
 
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {

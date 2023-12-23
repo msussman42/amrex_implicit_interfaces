@@ -772,6 +772,8 @@ protected:
     void check_for_NAN(MultiFab* mf);
 
     void split_scalar_advection(); 
+    void split_scalar_advectionALL();
+ 
     void SEM_scalar_advection (int init_fluxes,int source_term,
      int spectral_loop,int tileloop);
     void synchronize_flux_register(int operation_flag,int spectral_loop);

@@ -8728,6 +8728,8 @@ void NavierStokes::delete_array(int idx_localMF) {
 void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
   int update_flag,int init_vof_prev_time) {
 
+ std::string local_caller_string="VOF_Recon_ALL";
+
  int local_update_flag=update_flag;
 
  if (update_centroid_after_recon==1) {
@@ -8750,16 +8752,22 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
 
  if (level!=0)
   amrex::Error("level must be 0 ");
- if (verbose>0)
-  if (ParallelDescriptor::IOProcessor()) 
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Start: VOF_Recon_ALL: time= " <<
     time << " local_update_flag= " << local_update_flag << 
     " init_vof_prev_time= " << init_vof_prev_time << '\n';
+  }
+ }
 
  if ((ngrow<1)||(ngrow>ngrow_distance))
   amrex::Error("ngrow invalid");
 
  int finest_level=parent->finestLevel();
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
 
  int recon_iter=0;
  int recon_error_met=0;
@@ -8851,6 +8859,10 @@ void NavierStokes::VOF_Recon_ALL(int ngrow,Real time,
    amrex::Error("verbose invalid");
 
  } //while (recon_error_met==0) 
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
 
 } // end subroutine VOF_Recon_ALL
 
