@@ -24,8 +24,6 @@ print *,"dimension bust"
 stop
 #endif
 
-#define AREAZERO (1.0D-12)
-
       module navierstokesf90_module
       use amrex_fort_module, only : amrex_real
       use probf90_module
@@ -44,13 +42,13 @@ stop
       integer icomp
       real(amrex_real) tt
 
-      if (abs(gridval(IV0)-valu).le.1.0D-10) then
+      if (abs(gridval(IV0)-valu).le.EPS10) then
        XX(icomp)=gridx(IV0)
        YY(icomp)=gridy(IV0)
 #if (AMREX_SPACEDIM==3)
        ZZ(icomp)=gridz(IV0)
 #endif
-      else if (abs(gridval(IV1)-valu).le.1.0D-10) then
+      else if (abs(gridval(IV1)-valu).le.EPS10) then
        XX(icomp)=gridx(IV1)
        YY(icomp)=gridy(IV1)
 #if (AMREX_SPACEDIM==3)
@@ -10585,7 +10583,7 @@ END SUBROUTINE SIMP
 
        if (SDIM.eq.2) then
         major=yblob
-        if (abs(major-coflow_Z(num_cells)).le.1.0D-10) then
+        if (abs(major-coflow_Z(num_cells)).le.EPS10) then
          call FINDAMPLITUDE_2D(num_cells,coflow_Z,coflow_R_of_Z,major,minor)
          call FINDMINRAD(num_cells,coflow_Z,coflow_R_of_Z,minrad)
          wavelength=major
@@ -14548,7 +14546,7 @@ END SUBROUTINE SIMP
          if (dir.eq.1) then
           ! do nothing
          else if (dir.eq.0) then
-          if (abs(xsten(-1,1)).le.1.0D-10*dx(dir+1)) then
+          if (abs(xsten(-1,1)).le.EPS10*dx(dir+1)) then
            at_z_axis=1
           endif
          else
@@ -14559,7 +14557,7 @@ END SUBROUTINE SIMP
          if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
           ! do nothing
          else if (dir.eq.0) then
-          if (abs(xsten(-1,1)).le.1.0D-10*dx(dir+1)) then
+          if (abs(xsten(-1,1)).le.EPS10*dx(dir+1)) then
            at_z_axis=1
           endif
          else

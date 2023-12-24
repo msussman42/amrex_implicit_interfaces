@@ -159,7 +159,8 @@ module probcommon_module_types
       end type assimilate_parm_type
 
       type assimilate_out_parm_type
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: state ! nstate comp.
+!nstate components
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: state
       real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: LS_state
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: macx
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: macy
@@ -201,7 +202,6 @@ module probcommon_module_types
       real(amrex_real) :: xlo(SDIM)
       integer :: fablo(SDIM)
       integer :: fabhi(SDIM)
-!      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: disp_dataptr
       end type single_deriv_from_grid_parm_type
 
        ! used by interp_from_grid_util
@@ -216,7 +216,6 @@ module probcommon_module_types
       real(amrex_real) :: xlo(SDIM)
       integer :: fablo(SDIM)
       integer :: fabhi(SDIM)
-!      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:),:) :: stateptr 
       end type interp_from_grid_parm_type
 
 
@@ -230,7 +229,6 @@ module probcommon_module_types
       real(amrex_real) :: xlo(SDIM)
       integer :: fablo(SDIM)
       integer :: fabhi(SDIM)
-!      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: stateptr 
       end type single_interp_from_grid_parm_type
 
 
@@ -408,7 +406,6 @@ implicit none
 
       integer, PARAMETER :: DEBUG_EVAPORATION=0
       integer, PARAMETER :: EVAPORATION_iter_max=50
-      real(amrex_real), PARAMETER :: EVAPORATION_TOL=1.0D-10
 
       integer, PARAMETER :: OLD_DODECANE=1
 
@@ -459,43 +456,112 @@ implicit none
       real(amrex_real), PARAMETER :: alpha_tillotson=10.0 
       real(amrex_real), PARAMETER :: beta_tillotson=5.0 
 
-      real(amrex_real), PARAMETER :: TEMPERATURE_FLOOR=1.0D-20  ! default: 1.0D-20
       integer, PARAMETER :: visual_RT_transform=1
-
       integer, PARAMETER :: bubbleInPackedColumn=1001
-      real(amrex_real), PARAMETER :: MASK_FINEST_TOL=1.0D-3
 
-      real(amrex_real), PARAMETER :: OVERFLOW_CUTOFF=1.0D+20
+#ifdef BL_USE_FLOAT
 
-      ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
-      real(amrex_real), PARAMETER :: FACETOL_DVOL=1.0D-3
-
-      real(amrex_real), PARAMETER :: VOFTOL_REDIST=1.0D-3
-
-      real(amrex_real), PARAMETER :: FACETOL_REDIST=1.0D-2
-      real(amrex_real), PARAMETER :: FACETOL_SANITY=1.0D-3
-       ! Default: LS_CURV_TOL=1.0D-2 
-       ! For inputs.curvature_converge with axis_dir=210 (sanity check),1.0D-12
-      real(amrex_real), PARAMETER :: LS_CURV_TOL=1.0D-2
-      real(amrex_real), PARAMETER :: LSTOL=1.0D-2
-      real(amrex_real), PARAMETER :: VOFTOL_SLOPES=1.0D-2
-
-      real(amrex_real), PARAMETER :: VOFTOL=1.0D-8
-
-      real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=1.0D-1
-       ! Default: VOFTOL_MULTI_VOLUME=1.0D-12
-      real(amrex_real), PARAMETER :: VOFTOL_MULTI_VOLUME=1.0D-12
-      real(amrex_real), PARAMETER :: VOFTOL_MULTI_VOLUME_SANITY=1.0D-8
+      real(amrex_real), PARAMETER :: EVAPORATION_TOL=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER :: TEMPERATURE_FLOOR=BL_REAL_E(1.0,-20)
+      real(amrex_real), PARAMETER :: MASK_FINEST_TOL=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: OVERFLOW_CUTOFF=BL_REAL_E(1.0,+20)
+      !inputs.curvature_converge with axis_dir=210 (sanity check),
+      !BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: FACETOL_DVOL=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: VOFTOL_REDIST=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: FACETOL_REDIST=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: FACETOL_SANITY=BL_REAL_E(1.0,-3)
+      ! Default: LS_CURV_TOL=BL_REAL_E(1.0,-2 
+      !inputs.curvature_converge with axis_dir=210 (sanity check),
+      !BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: LS_CURV_TOL=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: LSTOL=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: VOFTOL_SLOPES=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=BL_REAL_E(1.0,-1)
+       ! Default: VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME_SANITY=BL_REAL_E(1.0,-6)
        ! used for checking for 0 magnitude
-      real(amrex_real), PARAMETER :: MLSVOFTOL=1.0D-14
+      real(amrex_real), PARAMETER::MLSVOFTOL=BL_REAL_E(1.0,-7)
        ! used for checking if centroid in box.
-      real(amrex_real), PARAMETER :: CENTOL=1.0D-13
-      real(amrex_real), PARAMETER :: EVAP_BISECTION_TOL=1.0D-12
-       ! Default: INTERCEPT_TOL=1.0D-12
-      real(amrex_real), PARAMETER :: INTERCEPT_TOL=1.0D-12
-      real(amrex_real), PARAMETER :: FRAC_PAIR_TOL=1.0D-12
+      real(amrex_real), PARAMETER :: CENTOL=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER :: EVAP_BISECTION_TOL=BL_REAL_E(1.0,-6)
+       ! Default: INTERCEPT_TOL=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: INTERCEPT_TOL=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER :: FRAC_PAIR_TOL=BL_REAL_E(1.0,-6)
 
-      real(amrex_real), PARAMETER :: TANGENT_EPS=1.0D-2
+      real(amrex_real), PARAMETER :: TANGENT_EPS=BL_REAL_E(1.0,-2)
+
+      real(amrex_real), PARAMETER :: EPS30=BL_REAL_E(1.0,-30)
+      real(amrex_real), PARAMETER :: EPS20=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS15=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS14=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS13=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS12=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS11=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS10=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS9=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS8=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS7=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS6=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER :: EPS5=BL_REAL_E(1.0,-5)
+      real(amrex_real), PARAMETER :: EPS4=BL_REAL_E(1.0,-4)
+      real(amrex_real), PARAMETER :: EPS3=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: EPS2=BL_REAL_E(1.0,-2)
+
+#else
+
+      real(amrex_real), PARAMETER :: EVAPORATION_TOL=BL_REAL_E(1.0,-10)
+      real(amrex_real), PARAMETER :: TEMPERATURE_FLOOR=BL_REAL_E(1.0,-20)
+      real(amrex_real), PARAMETER :: MASK_FINEST_TOL=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: OVERFLOW_CUTOFF=BL_REAL_E(1.0,+20)
+      !inputs.curvature_converge with axis_dir=210 (sanity check),
+      !BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: FACETOL_DVOL=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: VOFTOL_REDIST=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: FACETOL_REDIST=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: FACETOL_SANITY=BL_REAL_E(1.0,-3)
+      !Default: LS_CURV_TOL=BL_REAL_E(1.0,-2) 
+      !inputs.curvature_converge with axis_dir=210 (sanity check),
+      !BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: LS_CURV_TOL=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: LSTOL=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: VOFTOL_SLOPES=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-8)
+      real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=BL_REAL_E(1.0,-1)
+       ! Default: VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME_SANITY=BL_REAL_E(1.0,-8)
+       ! used for checking for 0 magnitude
+      real(amrex_real), PARAMETER :: MLSVOFTOL=BL_REAL_E(1.0,-14)
+       ! used for checking if centroid in box.
+      real(amrex_real), PARAMETER :: CENTOL=BL_REAL_E(1.0,-13)
+      real(amrex_real), PARAMETER :: EVAP_BISECTION_TOL=BL_REAL_E(1.0,-12)
+       ! Default: INTERCEPT_TOL=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: INTERCEPT_TOL=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: FRAC_PAIR_TOL=BL_REAL_E(1.0,-12)
+
+      real(amrex_real), PARAMETER :: TANGENT_EPS=BL_REAL_E(1.0,-2)
+
+      real(amrex_real), PARAMETER :: EPS30=BL_REAL_E(1.0,-30)
+      real(amrex_real), PARAMETER :: EPS20=BL_REAL_E(1.0,-14)
+      real(amrex_real), PARAMETER :: EPS15=BL_REAL_E(1.0,-14)
+      real(amrex_real), PARAMETER :: EPS14=BL_REAL_E(1.0,-14)
+      real(amrex_real), PARAMETER :: EPS13=BL_REAL_E(1.0,-13)
+      real(amrex_real), PARAMETER :: EPS12=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: EPS11=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS10=BL_REAL_E(1.0,-10)
+      real(amrex_real), PARAMETER :: EPS9=BL_REAL_E(1.0,-9)
+      real(amrex_real), PARAMETER :: EPS8=BL_REAL_E(1.0,-8)
+      real(amrex_real), PARAMETER :: EPS7=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS6=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER :: EPS5=BL_REAL_E(1.0,-5)
+      real(amrex_real), PARAMETER :: EPS4=BL_REAL_E(1.0,-4)
+      real(amrex_real), PARAMETER :: EPS3=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: EPS2=BL_REAL_E(1.0,-2)
+
+#endif
 
       real(amrex_real), PARAMETER :: FSI_PRESSURE_FORCE_ONLY=1
 

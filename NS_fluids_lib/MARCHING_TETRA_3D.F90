@@ -23,8 +23,6 @@ print *,"dimension bust"
 stop
 #endif
 
-#define AREAZERO (1.0D-12)
-
       module marching_tetra_module
       use amrex_fort_module, only : amrex_real
  
@@ -33,6 +31,7 @@ stop
       subroutine vinterp(valu,gridval,gridx,gridy,gridz, &
         IV0,IV1,XX,YY,ZZ,icomp)
 
+      use probcommon_module
       IMPLICIT NONE
 
       real(amrex_real), INTENT(in) :: valu
@@ -42,13 +41,13 @@ stop
       integer, INTENT(in) :: icomp
       real(amrex_real) tt
 
-      if (abs(gridval(IV0)-valu).le.1.0D-10) then
+      if (abs(gridval(IV0)-valu).le.EPS10) then
        XX(icomp)=gridx(IV0)
        YY(icomp)=gridy(IV0)
 #if (AMREX_SPACEDIM==3)
        ZZ(icomp)=gridz(IV0)
 #endif
-      else if (abs(gridval(IV1)-valu).le.1.0D-10) then
+      else if (abs(gridval(IV1)-valu).le.EPS10) then
        XX(icomp)=gridx(IV1)
        YY(icomp)=gridy(IV1)
 #if (AMREX_SPACEDIM==3)
@@ -1759,7 +1758,7 @@ stop
       endif
 
       call get_dxmin(dx,bfact,dxmin)
-      degenerate_face_tol=1.0D-8*dxmin
+      degenerate_face_tol=EPS8*dxmin
  
       nhalf=3
 

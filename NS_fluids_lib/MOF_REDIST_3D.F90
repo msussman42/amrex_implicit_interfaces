@@ -16,8 +16,6 @@
 
 #define nsum 64
 #define nsum2 32
-#define VISCINVTOL (1.0D-8)
-#define CURVWT (1.0D-3)
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3

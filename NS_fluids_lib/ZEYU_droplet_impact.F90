@@ -45,7 +45,7 @@ real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
 
 real(amrex_real) substrate_height
 
-if (abs(zblob2-yblob2).le.1.0D-14) then
+if (abs(zblob2-yblob2).le.EPS14) then
  substrate_height=zblob2  ! substrate thickness
 else
  print *,"zblob2 or yblob2 invalid"
