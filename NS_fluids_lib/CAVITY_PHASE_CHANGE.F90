@@ -2291,7 +2291,11 @@ else if (cavity_type.eq.7) then
   dist=zblob-x(SDIM)  ! dist<0 in the solid (which is on top for this case)
  elseif(coord_type.eq.1)then   ! 3-D cartesian
   dist1=tan(radblob2)*x(1)+zblob-x(SDIM)
-  dist=dsign(dist1*cos(radblob2),dist1)
+  if (dist1.ge.zero) then
+   dist=abs(dist1*cos(radblob2))
+  else
+   dist=-abs(dist1*cos(radblob2))
+  endif
  else
   print *,"coord_type error"        
   stop
@@ -2305,7 +2309,11 @@ else if (cavity_type.eq.8) then
   dist=x(SDIM)-zblob  ! dist<0 in the solid (which is on bot for this case)
  elseif(coord_type.eq.1)then   ! 3-D cartesian
   dist1=x(SDIM)-(tan(radblob2)*x(1)+zblob)
-  dist=dsign(dist1*cos(radblob2),dist1)
+  if (dist1.ge.zero) then
+   dist=abs(dist1*cos(radblob2))
+  else
+   dist=-abs(dist1*cos(radblob2))
+  endif
  else
   print *,"coord_type error"        
   stop

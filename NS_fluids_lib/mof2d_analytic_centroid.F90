@@ -36,12 +36,13 @@
 #define DEBUG_ANALYTICAL_GRAD 0
 
 module mod_mof2d_analytic_centroid
+use amrex_fort_module, only : amrex_real
    implicit none
 
    private
 
-   double precision, parameter :: PI_2 = 2d0*atan(1.0d0)
-   double precision, parameter :: PI = 4d0*atan(1.0d0)
+   real(amrex_real), parameter :: PI_2 = 2d0*atan(1.0d0)
+   real(amrex_real), parameter :: PI = 4d0*atan(1.0d0)
 
    public :: mof2d_compute_analytic_gradient
 
@@ -58,17 +59,17 @@ contains
    !! @ingroup moment_of_fluid
       subroutine mof2d_compute_analytic_gradient(angles, &
         volume, c, centroid)
-      double precision, dimension(1), INTENT(in) :: angles
-      double precision, INTENT(in) :: volume
-      double precision, dimension(2), INTENT(in) :: c
-      double precision, dimension(2), INTENT(out) :: centroid
+      real(amrex_real), dimension(1), INTENT(in) :: angles
+      real(amrex_real), INTENT(in) :: volume
+      real(amrex_real), dimension(2), INTENT(in) :: c
+      real(amrex_real), dimension(2), INTENT(out) :: centroid
 
-      double precision :: n1,n2
+      real(amrex_real) :: n1,n2
       integer :: trap_flag,tri_flag
       integer :: swap_x,swap_y
-      double precision :: volcell,volfrac
-      double precision :: vol_rect,vol_tri,volume_test
-      double precision :: a,b,d
+      real(amrex_real) :: volcell,volfrac
+      real(amrex_real) :: vol_rect,vol_tri,volume_test
+      real(amrex_real) :: a,b,d
 
 #if (DEBUG_ANALYTICAL_GRAD==1)
       print *,"angles ",angles(1)
@@ -112,7 +113,7 @@ contains
          vol_rect=b*c(2)
          vol_tri=0.5d0*(a-b)*c(2)
          volume_test=vol_rect+vol_tri
-         if (abs(volume_test-volume).le.1.0D-10*volcell) then
+         if (abs(volume_test-volume).le.1.0D-7*volcell) then
           centroid(1)=(vol_rect*0.5d0*b+ &
                        vol_tri*(2.0d0*b+a)/3.0d0)/volume
           centroid(2)=(vol_rect*0.5d0*c(2)+ &
@@ -150,7 +151,7 @@ contains
           vol_rect=a*c(1)
           vol_tri=0.5d0*(b-a)*c(1)
           volume_test=vol_rect+vol_tri
-          if (abs(volume_test-volume).le.1.0D-10*volcell) then
+          if (abs(volume_test-volume).le.1.0D-7*volcell) then
            centroid(2)=(vol_rect*0.5d0*a+ &
                         vol_tri*(2.0d0*a+b)/3.0d0)/volume
            centroid(1)=(vol_rect*0.5d0*c(1)+ &
@@ -188,7 +189,7 @@ contains
            tri_flag=1
            vol_tri=0.5d0*a*b
            volume_test=vol_tri
-           if (abs(volume_test-volume).le.1.0D-10*volcell) then
+           if (abs(volume_test-volume).le.1.0D-7*volcell) then
             centroid(1)=a/3.0d0
             centroid(2)=b/3.0d0
            else

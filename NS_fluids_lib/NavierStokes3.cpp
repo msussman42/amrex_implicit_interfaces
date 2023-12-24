@@ -311,7 +311,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  int finest_level=parent->finestLevel();
 
- if (std::abs(cur_time_slab-prev_time_slab-dt_slab)>1.0E-5) {
+ if (std::abs(cur_time_slab-prev_time_slab-dt_slab)>CPP_EPS5) {
   std::cout << "cur_time_slab " << cur_time_slab << '\n';
   std::cout << "prev_time_slab " << prev_time_slab << '\n';
   std::cout << "dt_slab " << dt_slab << '\n';
@@ -1007,13 +1007,13 @@ Real NavierStokes::advance(Real time,Real dt) {
    SDC_setup_step(); 
 
    if ((time>=0.0)&&(time<=1.0)) {
-    if (std::abs(upper_slab_time-time)<=1.0e-12) {
+    if (std::abs(upper_slab_time-time)<=CPP_EPS12) {
      // do nothing
     } else {
      amrex::Error("upper_slab_time-time>tol (a)");
     }
    } else if (time>1.0) {
-    if (std::abs(upper_slab_time-time)<=1.0e-12*time) {
+    if (std::abs(upper_slab_time-time)<=CPP_EPS12*time) {
      // do nothing
     } else {
      amrex::Error("upper_slab_time-time>tol(time) (b)");
@@ -1140,7 +1140,7 @@ Real NavierStokes::advance(Real time,Real dt) {
    Real time_scale=1.0;
    if (upper_slab_time>time_scale)
     time_scale=upper_slab_time;
-   time_scale*=1.0E-10;
+   time_scale*=CPP_EPS10;
 
    if (std::abs(upper_slab_time-lower_slab_time-dt_new)<=time_scale) {
     // do nothing
@@ -1465,11 +1465,11 @@ void NavierStokes::SEM_advectALL(int source_term) {
       AMREX_SPACEDIM,advect_time_slab); 
      for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
       ns_level.new_localMF(AMRSYNC_PRES_MF+dir,NFLUXSEM,0,dir);
-      ns_level.setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+40,0,NFLUXSEM,0);
+      ns_level.setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+30,0,NFLUXSEM,0);
       ns_level.new_localMF(CONSERVE_FLUXES_MF+dir,NFLUXSEM,0,dir);
-      ns_level.setVal_localMF(CONSERVE_FLUXES_MF+dir,1.0e+40,0,NFLUXSEM,0);
+      ns_level.setVal_localMF(CONSERVE_FLUXES_MF+dir,1.0e+30,0,NFLUXSEM,0);
       ns_level.new_localMF(COARSE_FINE_FLUX_MF+dir,NFLUXSEM,0,dir);
-      ns_level.setVal_localMF(COARSE_FINE_FLUX_MF+dir,1.0e+40,0,NFLUXSEM,0);
+      ns_level.setVal_localMF(COARSE_FINE_FLUX_MF+dir,1.0e+30,0,NFLUXSEM,0);
      } // dir=0..sdim-1
      ns_level.resize_levelset(2,LEVELPC_MF);
      ns_level.VOF_Recon_resize(1); //output:SLOPE_RECON_MF
@@ -3143,9 +3143,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if ((dt_error>=0.0)&&
            (dt_predict_min>0.0)&&
            (dt_predict_max>0.0)) {
-	Real dt_tol=dt_predict_max*1.0e-13;
+	Real dt_tol=dt_predict_max*CPP_EPS13;
         if (dt_predict_min<1.0)
-         dt_tol=1.0e-13;
+         dt_tol=CPP_EPS13;
 	if (dt_error<=dt_tol) {
  	 // do nothing
 	} else 
@@ -7525,7 +7525,7 @@ void NavierStokes::allocate_pressure_work_vars(int nsolve,int project_option) {
   new_localMF(PEDGE_MF+dir,NCOMP_PEDGE,0,dir);
 
   new_localMF(AMRSYNC_PRES_MF+dir,nsolve,0,dir);
-  setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+40,0,nsolve,0);
+  setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+30,0,nsolve,0);
  } // dir=0..sdim-1
 
 } // subroutine allocate_pressure_work_vars
@@ -8633,7 +8633,7 @@ void NavierStokes::multiphase_preconditioner(
 
 void NavierStokes::set_local_tolerances(int project_option) {
 
- save_atol_b=1.0e-14;
+ save_atol_b=CPP_EPS14;
  save_mac_abs_tol=mac_abs_tol;
  save_min_rel_error=minimum_relative_error;
  ParmParse pp("mg");

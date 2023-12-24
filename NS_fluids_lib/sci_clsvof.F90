@@ -13617,7 +13617,7 @@ IMPLICIT NONE
               print *,"totaldist invalid"
               print *,"totaldist= ",totaldist
               stop
-             else if (totaldist.lt.testdist-1.0E-10) then
+             else if (totaldist.lt.testdist-EPS10) then
               print *,"cannot have totaldist<testdist"
               print *,"totaldist= ",totaldist
               print *,"testdist= ",testdist

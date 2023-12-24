@@ -1439,7 +1439,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
-        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).le.1.0E-4) then
+        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).le.EPS4) then
          ! do nothing
         else
          print *,"vfrac_solid_sum+vfrac_fluid_sum invalid"
@@ -2076,7 +2076,6 @@ END SUBROUTINE SIMP
       real(amrex_real) mofdata_raster(num_materials*ngeom_recon)
       integer, PARAMETER :: nmax=POLYGON_LIST_MAX ! in: fort_cellgrid
       integer, PARAMETER :: bfact_finest=2
-      real(amrex_real), PARAMETER :: INTERP_TOL=1.0D-4
       integer, PARAMETER :: tessellate_raster=3
 
       integer visual_ncell(SDIM)
@@ -2875,8 +2874,8 @@ END SUBROUTINE SIMP
             if (abs(xsten_corner(0,dir2)).le.1.0D+20) then
              xcrit(dir2)=xcrit(dir2)-xsten_corner(0,dir2)
 
-             if ((xcrit(dir2).ge.-INTERP_TOL*dx(dir2)).and. &
-                 (xcrit(dir2).lt.(INTERP_TOL+bfact)*dx(dir2))) then
+             if ((xcrit(dir2).ge.-EPS4*dx(dir2)).and. &
+                 (xcrit(dir2).lt.(EPS4+bfact)*dx(dir2))) then
               ! do nothing
              else
               print *,"xcrit out of bounds fort_cellgrid"
@@ -3767,8 +3766,8 @@ END SUBROUTINE SIMP
 
             xcrit(dir2)=xcrit(dir2)-xstenND(0,dir2)
 
-            if ((xcrit(dir2).lt.-INTERP_TOL*dx(dir2)).or. &
-                (xcrit(dir2).gt.(INTERP_TOL+bfact)*dx(dir2))) then
+            if ((xcrit(dir2).lt.-EPS4*dx(dir2)).or. &
+                (xcrit(dir2).gt.(EPS4+bfact)*dx(dir2))) then
              print *,"xcrit out of bounds fort_cellgrid"
              stop
             endif
@@ -4630,7 +4629,6 @@ END SUBROUTINE SIMP
       real(amrex_real) xcoarse(SDIM)
       integer finelo_index
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: ffine
-      real(amrex_real) INTERP_TOL
       integer testmask,testmask2
       integer elem_test
       integer im,imcrit
@@ -4639,7 +4637,6 @@ END SUBROUTINE SIMP
       real(amrex_real) LS_local(num_materials)
       integer mat_freq(num_materials)
 
-      INTERP_TOL=1.0E-4
 
       if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
        if (ncomp_vel.ne.STATE_NCOMP_VEL) then
@@ -4916,7 +4913,7 @@ END SUBROUTINE SIMP
 
          if (stenhi(dir2).gt.stenlo(dir2)) then
           if (bfact_f.gt.1) then
-           if (abs(xcoarse(dir2)).lt.INTERP_TOL*dxf(dir2)) then
+           if (abs(xcoarse(dir2)).lt.EPS4*dxf(dir2)) then
             if (dir2.ne.dir+1) then
              mstenlo(dir2)=stenlo(dir2)-1
             else
@@ -4925,7 +4922,7 @@ END SUBROUTINE SIMP
             endif
            endif
            if (abs(xcoarse(dir2)-bfact_f*dxf(dir2)).lt. &
-              INTERP_TOL*dxf(dir2)) then
+              EPS4*dxf(dir2)) then
             if (dir2.ne.dir+1) then
              mstenhi(dir2)=stenhi(dir2)+1
             else
@@ -4949,8 +4946,8 @@ END SUBROUTINE SIMP
           stop
          endif 
 
-         if ((xcoarse(dir2).lt.-INTERP_TOL*dxf(dir2)).or. &
-             (xcoarse(dir2).gt.(INTERP_TOL+bfact_f)*dxf(dir2))) then
+         if ((xcoarse(dir2).lt.-EPS4*dxf(dir2)).or. &
+             (xcoarse(dir2).gt.(EPS4+bfact_f)*dxf(dir2))) then
           print *,"xcoarse out of bounds avgdown_copy"
           stop
          endif
@@ -5390,7 +5387,6 @@ END SUBROUTINE SIMP
       real(amrex_real) xfine(SDIM)
       integer coarselo_index
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: ccrse
-      real(amrex_real) INTERP_TOL
       integer testmask,testmask2
       integer elem_test
       integer im,imcrit
@@ -5399,8 +5395,6 @@ END SUBROUTINE SIMP
       real(amrex_real) crse_data
       integer dencomp
       integer local_masknbr
-
-      INTERP_TOL=1.0E-4
 
 
       if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! viscosity
@@ -5714,8 +5708,8 @@ END SUBROUTINE SIMP
 
            xfine(dir2)=xfine(dir2)-xstenND(0,dir2)
 
-           if ((xfine(dir2).lt.-INTERP_TOL*dxc(dir2)).or. &
-               (xfine(dir2).gt.(INTERP_TOL+bfact_c)*dxc(dir2))) then
+           if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
+               (xfine(dir2).gt.(EPS4+bfact_c)*dxc(dir2))) then
             print *,"fine out of bounds interp_copy"
             stop
            endif
@@ -6160,13 +6154,11 @@ END SUBROUTINE SIMP
       real(amrex_real) xfine(SDIM)
       integer coarselo_index
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: ccrse
-      real(amrex_real) INTERP_TOL
       integer testmask,testmask2
       integer elem_test
       real(amrex_real) crse_data
       integer local_masknbr
 
-      INTERP_TOL=1.0E-4
 
       if (ncomp_flux.ne.NFLUXSEM) then
        print *,"ncomp_flux invalid"
@@ -6420,8 +6412,8 @@ END SUBROUTINE SIMP
 
            xfine(dir2)=xfine(dir2)-xstenND(0,dir2)
 
-           if ((xfine(dir2).lt.-INTERP_TOL*dxc(dir2)).or. &
-               (xfine(dir2).gt.(INTERP_TOL+bfact_c)*dxc(dir2))) then
+           if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
+               (xfine(dir2).gt.(EPS4+bfact_c)*dxc(dir2))) then
             print *,"fine out of bounds interp_copy"
             stop
            endif
@@ -12439,12 +12431,10 @@ END SUBROUTINE SIMP
       real(amrex_real) xcoarse(SDIM)
       integer finelo_index
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: ffine
-      real(amrex_real) INTERP_TOL
       integer testmask,testmask2
       integer local_enable_spectral
       integer elem_test
 
-      INTERP_TOL=1.0E-4
 
       local_enable_spectral=enable_spectral
 
@@ -12605,17 +12595,17 @@ END SUBROUTINE SIMP
         xcoarse(dir2)=xcoarse(dir2)-xstenND(0,dir2)
 
         if (stenhi(dir2).ne.stenlo(dir2)) then
-         if (abs(xcoarse(dir2)).lt.INTERP_TOL*dxf(dir2)) then
+         if (abs(xcoarse(dir2)).lt.EPS4*dxf(dir2)) then
           mstenlo(dir2)=stenlo(dir2)-1
          endif
          if (abs(xcoarse(dir2)-bfact_f*dxf(dir2)).lt. &
-             INTERP_TOL*dxf(dir2)) then
+             EPS4*dxf(dir2)) then
           mstenhi(dir2)=stenhi(dir2)+1
          endif
         endif ! stenhi<>stenlo
 
-        if ((xcoarse(dir2).lt.-INTERP_TOL*dxf(dir2)).or. &
-            (xcoarse(dir2).gt.(INTERP_TOL+bfact_f)*dxf(dir2))) then
+        if ((xcoarse(dir2).lt.-EPS4*dxf(dir2)).or. &
+            (xcoarse(dir2).gt.(EPS4+bfact_f)*dxf(dir2))) then
          print *,"xcoarse out of bounds avgdown"
          stop
         endif
@@ -14052,14 +14042,11 @@ END SUBROUTINE SIMP
       real(amrex_real) xcoarse(SDIM)
       integer finelo_index
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: ffine
-      real(amrex_real) INTERP_TOL
       real(amrex_real) icemask
       integer khi
       integer testmask,testmask2
       integer local_enable_spectral
       integer box_type(SDIM)
-
-      INTERP_TOL=1.0E-4
 
       local_enable_spectral=enable_spectral
 
@@ -14196,17 +14183,17 @@ END SUBROUTINE SIMP
         xcoarse(dir2)=xcoarse(dir2)-xstenND(0,dir2)
 
         if (stenhi(dir2).ne.stenlo(dir2)) then
-         if (abs(xcoarse(dir2)).lt.INTERP_TOL*dxf(dir2)) then
+         if (abs(xcoarse(dir2)).lt.EPS4*dxf(dir2)) then
           mstenlo(dir2)=stenlo(dir2)-1
          endif
          if (abs(xcoarse(dir2)-bfact_f*dxf(dir2)).lt. &
-             INTERP_TOL*dxf(dir2)) then
+             EPS4*dxf(dir2)) then
           mstenhi(dir2)=stenhi(dir2)+1
          endif
         endif ! stenhi<>stenlo
 
-        if ((xcoarse(dir2).lt.-INTERP_TOL*dxf(dir2)).or. &
-            (xcoarse(dir2).gt.(INTERP_TOL+bfact_f)*dxf(dir2))) then
+        if ((xcoarse(dir2).lt.-EPS4*dxf(dir2)).or. &
+            (xcoarse(dir2).gt.(EPS4+bfact_f)*dxf(dir2))) then
          print *,"xcoarse out of bounds edge avgdown"
          stop
         endif

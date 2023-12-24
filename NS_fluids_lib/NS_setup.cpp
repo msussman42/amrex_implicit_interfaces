@@ -1985,7 +1985,7 @@ NavierStokes::sum_integrated_quantities (
    amrex::Error("local_caller_string invalid in sum_integrated_quantities");
 
   if ( (visual_drag_plot_int_trigger==1)||
-       (stop_time-upper_slab_time<1.0E-8) ) {
+       (stop_time-upper_slab_time<CPP_EPS8) ) {
 
     //DRAG<stuff>.plt (visit can open binary tecplot files)
    writeSanityCheckData(

@@ -17,6 +17,7 @@
 #include <CG_F.H>
 #include <MG_F.H>
 #include <INDEX_TYPE_MACROS.H>
+#include <CPP_EPS.H>
 #include <EXTRAP_COMP.H>
 
 #define SCALAR_WORK_NCOMP 9
@@ -2407,8 +2408,8 @@ ABecLaplacian::CG_check_for_convergence(
   amrex::Error("coarsefine invalid");
 
  int critical_nit=presmooth+postsmooth;
- Real critical_abs_tol=1.0e-14;
- Real critical_rel_tol=1.0e-14;
+ Real critical_abs_tol=CPP_EPS14;
+ Real critical_rel_tol=CPP_EPS14;
  if (critical_abs_tol>eps_abs)
   critical_abs_tol=eps_abs;
  if (critical_rel_tol>relative_error)
@@ -2612,7 +2613,7 @@ ABecLaplacian::CG_solve(
  } else
   amrex::Error("bdry.boxArray() != LPboxArray(level)");
 
- Real relative_error=1.0e-12;
+ Real relative_error=CPP_EPS12;
 
  int ncomp = sol.nComp();
  if (ncomp!=nsolve_ABec)

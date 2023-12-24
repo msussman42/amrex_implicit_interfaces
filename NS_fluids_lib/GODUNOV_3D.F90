@@ -7803,7 +7803,7 @@ stop
         enddo ! iquad
         sanity_sum=sanity_sum+GQwsQUAD(jstencil,kinterval)
        enddo  ! jstencil
-       if (abs(sanity_sum-two)>1.0E-12) then
+       if (abs(sanity_sum-two)>EPS12) then
         print *,"SDC sanity check failed"
         stop
        endif
@@ -12631,8 +12631,8 @@ stop
 
       mf_ptr=>mf
 
-      critical_cutoff_low=-1.0D+99
-      critical_cutoff_high=1.0D+99
+      critical_cutoff_low=-1.0D+30
+      critical_cutoff_high=1.0D+30
 
       if (bfact.lt.1) then
        print *,"bfact invalid69"
@@ -13074,8 +13074,8 @@ stop
       ymac_old_ptr=>ymac_old
       zmac_old_ptr=>zmac_old
 
-      critical_cutoff_low=-1.0D+99
-      critical_cutoff_high=1.0D+99
+      critical_cutoff_low=-1.0D+30
+      critical_cutoff_high=1.0D+30
 
       if ((tid.lt.0).or. &
           (tid.ge.geom_nthreads)) then
@@ -15787,8 +15787,8 @@ stop
         partid_vel=0
         im_solid_vel_plus=0
         im_solid_vel=0
-        LSCRIT_solid_plus=-1.0D+99 !only investigate LSNEW(solid)>=0
-        LSCRIT_solid=-1.0D+99      !investigate LSNEW>=0 and LSNEW<0
+        LSCRIT_solid_plus=-1.0D+30 !only investigate LSNEW(solid)>=0
+        LSCRIT_solid=-1.0D+30      !investigate LSNEW>=0 and LSNEW<0
         
         do im=1,num_materials
          if (is_lag_part(im).eq.1) then

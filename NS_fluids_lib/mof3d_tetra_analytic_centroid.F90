@@ -35,13 +35,14 @@
 !knowledge of the CeCILL license and that you accept its terms.
 
 module mod_mof3d_tetra_analytic_centroid
+use amrex_fort_module, only : amrex_real
    implicit none
 
    private
 
-   double precision, parameter :: PI_2 = acos(0d0)
-   double precision, parameter :: PI = 2d0*acos(0d0)
-   double precision, parameter :: TAU = 4d0*acos(0d0)
+   real(amrex_real), parameter :: PI_2 = acos(0d0)
+   real(amrex_real), parameter :: PI = 2d0*acos(0d0)
+   real(amrex_real), parameter :: TAU = 4d0*acos(0d0)
 
    integer, parameter :: C_THETA = 1
    integer, parameter :: S_THETA = 2
@@ -77,19 +78,19 @@ contains
       &            )
       use mod_cg3_points, only: cg3_cross_product
       logical, parameter :: mof_use_symmetric_reconstruction=.false.
-      double precision, dimension(3), intent(in) :: p0, p1, p2, p3
-      double precision, dimension(2), intent(in) :: angles
-      double precision, dimension(3), intent(in) :: ref_centroid1, ref_centroid2
-      double precision, intent(in) :: ref_volume
-      double precision, intent(out) :: objective
-      double precision, dimension(3), intent(out) :: t_centroid
-      double precision, dimension(2), intent(out) :: gradient
+      real(amrex_real), dimension(3), intent(in) :: p0, p1, p2, p3
+      real(amrex_real), dimension(2), intent(in) :: angles
+      real(amrex_real), dimension(3), intent(in) :: ref_centroid1, ref_centroid2
+      real(amrex_real), intent(in) :: ref_volume
+      real(amrex_real), intent(out) :: objective
+      real(amrex_real), dimension(3), intent(out) :: t_centroid
+      real(amrex_real), dimension(2), intent(out) :: gradient
 
-      double precision, dimension(3,2) :: partial_derivative
-      double precision, dimension(3)   :: centroid, diff1, diff2, sum_diff, special_centroid
-      double precision, dimension(3,3) :: transformation
-      double precision, dimension(2) :: t_angles
-      double precision :: cell_volume, volume, determinant, dual_coef
+      real(amrex_real), dimension(3,2) :: partial_derivative
+      real(amrex_real), dimension(3)   :: centroid, diff1, diff2, sum_diff, special_centroid
+      real(amrex_real), dimension(3,3) :: transformation
+      real(amrex_real), dimension(2) :: t_angles
+      real(amrex_real) :: cell_volume, volume, determinant, dual_coef
 
       determinant = dot_product(cg3_cross_product(p1 - p0, p2 - p0), p3 - p0)
 
@@ -175,18 +176,18 @@ contains
       &            )
       use mod_cg3_points, only: cg3_cross_product
       logical, parameter :: mof_use_symmetric_reconstruction=.false.
-      double precision, dimension(3), intent(in) :: p0, p1, p2, p3
-      double precision, dimension(2), intent(in) :: angles
-      double precision, dimension(3), intent(in) :: ref_centroid1, ref_centroid2
-      double precision, intent(in) :: ref_volume
-      double precision, dimension(:), intent(out) :: residual
-      double precision, dimension(:,:), intent(out) :: jacobian
+      real(amrex_real), dimension(3), intent(in) :: p0, p1, p2, p3
+      real(amrex_real), dimension(2), intent(in) :: angles
+      real(amrex_real), dimension(3), intent(in) :: ref_centroid1, ref_centroid2
+      real(amrex_real), intent(in) :: ref_volume
+      real(amrex_real), dimension(:), intent(out) :: residual
+      real(amrex_real), dimension(:,:), intent(out) :: jacobian
 
-      double precision, dimension(3,2) :: partial_derivative
-      double precision, dimension(3)   :: centroid, dual_centroid
-      double precision, dimension(3,3) :: transformation
-      double precision, dimension(2) :: t_angles
-      double precision :: cell_volume, volume, determinant
+      real(amrex_real), dimension(3,2) :: partial_derivative
+      real(amrex_real), dimension(3)   :: centroid, dual_centroid
+      real(amrex_real), dimension(3,3) :: transformation
+      real(amrex_real), dimension(2) :: t_angles
+      real(amrex_real) :: cell_volume, volume, determinant
 
       determinant = dot_product(cg3_cross_product(p1 - p0, p2 - p0), p3 - p0)
 
@@ -255,8 +256,8 @@ contains
       use mod_cg3_polyhedron, only: t_polyhedron, cg3_create_tetrahedron
       type(t_polyhedron), intent(in) :: tetra
       type(t_polyhedron), intent(out) :: best_tetra
-      double precision, dimension(3), intent(in) :: cell_centroid
-      double precision, dimension(3), intent(in) :: ref_centroid
+      real(amrex_real), dimension(3), intent(in) :: cell_centroid
+      real(amrex_real), dimension(3), intent(in) :: ref_centroid
 
       ! p1 and p2 as a function of p0 and p3.
       integer, dimension(2,4,4), parameter :: T = &
@@ -282,9 +283,9 @@ contains
          &    [2, 4, 4] &
          & )
 
-      double precision, dimension(3,6) :: edge
-      double precision, dimension(3) :: direction
-      double precision :: angle, norm, max_val, min_val
+      real(amrex_real), dimension(3,6) :: edge
+      real(amrex_real), dimension(3) :: direction
+      real(amrex_real) :: angle, norm, max_val, min_val
       integer :: i, max_edge, min_edge
 
       direction = cell_centroid - ref_centroid
@@ -340,10 +341,10 @@ contains
    !! @ingroup moment_of_fluid
    pure subroutine mof3d_tetra_compute_transformation(p0, p1, p2, p3, transformation)
       use mod_cg3_points, only: cg3_cross_product
-      double precision, dimension(3), intent(in) :: p0, p1, p2, p3
-      double precision, dimension(3,3), intent(out) :: transformation
+      real(amrex_real), dimension(3), intent(in) :: p0, p1, p2, p3
+      real(amrex_real), dimension(3,3), intent(out) :: transformation
 
-      double precision :: determinant
+      real(amrex_real) :: determinant
 
       determinant = dot_product(cg3_cross_product(p1 - p0, p2 - p0), p3 - p0)
 
@@ -366,11 +367,11 @@ contains
    !! @ingroup moment_of_fluid
    pure subroutine mof3d_tetra_transform_angles_to_reference(transformation, orig_angles, ref_angles)
       use mod_cg3_points, only: cg3_direction_to_spherical_angles, cg3_spherical_angles_to_direction
-      double precision, dimension(3,3), intent(in) :: transformation
-      double precision, dimension(2), intent(in) :: orig_angles
-      double precision, dimension(2), intent(out) :: ref_angles
+      real(amrex_real), dimension(3,3), intent(in) :: transformation
+      real(amrex_real), dimension(2), intent(in) :: orig_angles
+      real(amrex_real), dimension(2), intent(out) :: ref_angles
 
-      double precision, dimension(3) :: direction
+      real(amrex_real), dimension(3) :: direction
 
       call cg3_spherical_angles_to_direction(orig_angles, direction)
 
@@ -388,12 +389,12 @@ contains
    !! @ingroup moment_of_fluid
    pure subroutine mof3d_tetra_transform_angles_to_original(transformation, ref_angles, orig_angles)
       use mod_cg3_points, only: cg3_direction_to_spherical_angles, cg3_spherical_angles_to_direction
-      double precision, dimension(3,3), intent(in) :: transformation
-      double precision, dimension(2), intent(in) :: ref_angles
-      double precision, dimension(2), intent(out) :: orig_angles
+      real(amrex_real), dimension(3,3), intent(in) :: transformation
+      real(amrex_real), dimension(2), intent(in) :: ref_angles
+      real(amrex_real), dimension(2), intent(out) :: orig_angles
 
-      double precision, dimension(3) :: direction
-      double precision, dimension(3,3) :: cotransformation
+      real(amrex_real), dimension(3) :: direction
+      real(amrex_real), dimension(3,3) :: cotransformation
 
       call cg3_spherical_angles_to_direction(ref_angles, direction)
 
@@ -419,14 +420,14 @@ contains
    !! @param[out] gradient:       Gradient of the objective function.
    !! @ingroup moment_of_fluid
    pure subroutine mof3d_tetra_compute_analytic_gradient_reference(angles, ref_centroid, volume, objective, gradient)
-      double precision, dimension(2), intent(in) :: angles
-      double precision, dimension(3), intent(in) :: ref_centroid
-      double precision, intent(in) :: volume
-      double precision, intent(out) :: objective
-      double precision, dimension(2), intent(out) :: gradient
+      real(amrex_real), dimension(2), intent(in) :: angles
+      real(amrex_real), dimension(3), intent(in) :: ref_centroid
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), intent(out) :: objective
+      real(amrex_real), dimension(2), intent(out) :: gradient
 
-      double precision, dimension(3,2) :: partial_derivative
-      double precision, dimension(3) :: centroid, diff
+      real(amrex_real), dimension(3,2) :: partial_derivative
+      real(amrex_real), dimension(3) :: centroid, diff
 
       call compute_derivatives(angles, volume, centroid, partial_derivative)
 
@@ -439,22 +440,22 @@ contains
    end subroutine mof3d_tetra_compute_analytic_gradient_reference
 
    pure subroutine compute_derivatives(angles, volume, centroid, derivative)
-      double precision, dimension(2), intent(in) :: angles
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: centroid
-      double precision, dimension(3,2), intent(out) :: derivative
+      real(amrex_real), dimension(2), intent(in) :: angles
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: centroid
+      real(amrex_real), dimension(3,2), intent(out) :: derivative
 
-      double precision, dimension(4) :: trigo
-      double precision :: theta, phi, dual_volume, atan_1m6v, atan6v
-      double precision :: tan_theta, cos_theta, sin_theta, cot_theta
-      double precision :: lim1_t1, lim2_t1, lim3_t1
-      double precision :: lim1_t2, lim2_t2, lim3_t2
-      double precision :: lim1_t3, lim2_t3, lim3_t3
-      double precision :: lim1_t4, lim2_t4, lim3_t4
-      double precision :: lim1_t1dual, lim2_t1dual, lim3_t1dual
-      double precision :: lim1_t2dual, lim2_t2dual, lim3_t2dual
-      double precision :: lim1_t3dual, lim2_t3dual, lim3_t3dual
-      double precision :: lim1_t4dual, lim2_t4dual, lim3_t4dual
+      real(amrex_real), dimension(4) :: trigo
+      real(amrex_real) :: theta, phi, dual_volume, atan_1m6v, atan6v
+      real(amrex_real) :: tan_theta, cos_theta, sin_theta, cot_theta
+      real(amrex_real) :: lim1_t1, lim2_t1, lim3_t1
+      real(amrex_real) :: lim1_t2, lim2_t2, lim3_t2
+      real(amrex_real) :: lim1_t3, lim2_t3, lim3_t3
+      real(amrex_real) :: lim1_t4, lim2_t4, lim3_t4
+      real(amrex_real) :: lim1_t1dual, lim2_t1dual, lim3_t1dual
+      real(amrex_real) :: lim1_t2dual, lim2_t2dual, lim3_t2dual
+      real(amrex_real) :: lim1_t3dual, lim2_t3dual, lim3_t3dual
+      real(amrex_real) :: lim1_t4dual, lim2_t4dual, lim3_t4dual
 
       ! Aliases for θ and φ.
       theta = angles(1)
@@ -879,12 +880,12 @@ contains
    end subroutine compute_derivatives
 
    pure subroutine derivatives_triangle1(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma, t2l, t3l, t2sq, coef
-      double precision :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
+      real(amrex_real) :: alpha, beta, gamma, t2l, t3l, t2sq, coef
+      real(amrex_real) :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       cos_theta = trigo(C_THETA)
@@ -909,12 +910,12 @@ contains
    end subroutine derivatives_triangle1
 
    pure subroutine derivatives_triangle1dual(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma, dual_volume, t2l, t3l, t2sq, coef
-      double precision :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
+      real(amrex_real) :: alpha, beta, gamma, dual_volume, t2l, t3l, t2sq, coef
+      real(amrex_real) :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       sec_theta = 1d0/trigo(C_THETA)
@@ -942,14 +943,14 @@ contains
    end subroutine derivatives_triangle1dual
 
    pure subroutine derivatives_triangle2(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma, t2l, t3l, coef, t23l
-      double precision :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
-      double precision :: dthetat2l, dthetat3l
-      double precision :: dtheta_alpha, dtheta_beta, dtheta_gamma
+      real(amrex_real) :: alpha, beta, gamma, t2l, t3l, coef, t23l
+      real(amrex_real) :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
+      real(amrex_real) :: dthetat2l, dthetat3l
+      real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       sec_theta = 1d0/trigo(C_THETA)
@@ -981,13 +982,13 @@ contains
    end subroutine derivatives_triangle2
 
    pure subroutine derivatives_triangle2dual(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma, dual_volume, t2l, t3l, t23l, coef, dthetat2l, dthetat3l
-      double precision :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
-      double precision :: dtheta_alpha, dtheta_beta, dtheta_gamma
+      real(amrex_real) :: alpha, beta, gamma, dual_volume, t2l, t3l, t23l, coef, dthetat2l, dthetat3l
+      real(amrex_real) :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
+      real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       sec_theta = 1d0/trigo(C_THETA)
@@ -1020,13 +1021,13 @@ contains
    end subroutine derivatives_triangle2dual
 
    pure subroutine derivatives_triangle3(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma
-      double precision :: tan_theta, sec_theta, cot_phi, cos_theta, sin_theta, csc_theta, cot_theta, csc_phi
-      double precision :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
+      real(amrex_real) :: alpha, beta, gamma
+      real(amrex_real) :: tan_theta, sec_theta, cot_phi, cos_theta, sin_theta, csc_theta, cot_theta, csc_phi
+      real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       cot_theta = trigo(C_THETA)/trigo(S_THETA)
@@ -1059,13 +1060,13 @@ contains
    end subroutine derivatives_triangle3
 
    pure subroutine derivatives_triangle3dual(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma, dual_volume, coef
-      double precision :: tan_theta, sec_theta, cot_phi, cos_theta, sin_theta, csc_theta, cot_theta, csc_phi
-      double precision :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
+      real(amrex_real) :: alpha, beta, gamma, dual_volume, coef
+      real(amrex_real) :: tan_theta, sec_theta, cot_phi, cos_theta, sin_theta, csc_theta, cot_theta, csc_phi
+      real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       cot_theta = trigo(C_THETA)/trigo(S_THETA)
@@ -1102,13 +1103,13 @@ contains
    end subroutine derivatives_triangle3dual
 
    pure subroutine derivatives_triangle4(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma, tc2, cst, isct, isst, ct, st, coef
-      double precision :: cos_theta, sin_theta, tan_phi, sec_phi
-      double precision :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
+      real(amrex_real) :: alpha, beta, gamma, tc2, cst, isct, isst, ct, st, coef
+      real(amrex_real) :: cos_theta, sin_theta, tan_phi, sec_phi
+      real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
 
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
@@ -1145,13 +1146,13 @@ contains
    end subroutine derivatives_triangle4
 
    pure subroutine derivatives_triangle4dual(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, beta, gamma, dual_volume, tc2, cst, isct, isst, ct, st, coef
-      double precision :: cos_theta, sin_theta, tan_phi, sec_phi
-      double precision :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
+      real(amrex_real) :: alpha, beta, gamma, dual_volume, tc2, cst, isct, isst, ct, st, coef
+      real(amrex_real) :: cos_theta, sin_theta, tan_phi, sec_phi
+      real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma, dphi_alpha, dphi_beta, dphi_gamma
 
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
@@ -1189,13 +1190,13 @@ contains
    end subroutine derivatives_triangle4dual
 
    pure subroutine derivatives_quad_edge1(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, alphacos, cossin, beta, gamma, delta
-      double precision :: sin_theta, cos_theta, cot_phi
-      double precision :: sqrt_t23, xqe, t232t
+      real(amrex_real) :: alpha, alphacos, cossin, beta, gamma, delta
+      real(amrex_real) :: sin_theta, cos_theta, cot_phi
+      real(amrex_real) :: sqrt_t23, xqe, t232t
 
       sin_theta = trigo(S_THETA)
       cos_theta = trigo(C_THETA)
@@ -1237,13 +1238,13 @@ contains
    end subroutine derivatives_quad_edge1
 
    pure subroutine derivatives_quad_edge1dual(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, alphacos, cossin, beta, gamma, delta, dual_volume
-      double precision :: cos_theta, sin_theta, cot_phi
-      double precision :: sqrt_t23, xqe, t232t
+      real(amrex_real) :: alpha, alphacos, cossin, beta, gamma, delta, dual_volume
+      real(amrex_real) :: cos_theta, sin_theta, cot_phi
+      real(amrex_real) :: sqrt_t23, xqe, t232t
 
       sin_theta = trigo(S_THETA)
       cos_theta = trigo(C_THETA)
@@ -1287,13 +1288,13 @@ contains
    end subroutine derivatives_quad_edge1dual
 
    pure subroutine derivatives_quad_edge2(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, alphasin, sincot, beta, gamma, delta
-      double precision :: cot_phi, cos_theta, sin_theta
-      double precision :: sqrt_t23, xqe, t232t
+      real(amrex_real) :: alpha, alphasin, sincot, beta, gamma, delta
+      real(amrex_real) :: cot_phi, cos_theta, sin_theta
+      real(amrex_real) :: sqrt_t23, xqe, t232t
 
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
@@ -1336,13 +1337,13 @@ contains
    end subroutine derivatives_quad_edge2
 
    pure subroutine derivatives_quad_edge2dual(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, alphasin, sincot, beta, gamma, delta, dual_volume
-      double precision :: cos_theta, sin_theta, cot_phi
-      double precision :: sqrt_t23, xqe, t232t
+      real(amrex_real) :: alpha, alphasin, sincot, beta, gamma, delta, dual_volume
+      real(amrex_real) :: cos_theta, sin_theta, cot_phi
+      real(amrex_real) :: sqrt_t23, xqe, t232t
 
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
@@ -1388,13 +1389,13 @@ contains
    end subroutine derivatives_quad_edge2dual
 
    pure subroutine derivatives_quad_edge3(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, alphacot, coscot, beta, gamma, delta
-      double precision :: cos_theta, sin_theta, cot_phi
-      double precision :: sqrt_t23, xqe, t232t
+      real(amrex_real) :: alpha, alphacot, coscot, beta, gamma, delta
+      real(amrex_real) :: cos_theta, sin_theta, cot_phi
+      real(amrex_real) :: sqrt_t23, xqe, t232t
 
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
@@ -1437,13 +1438,13 @@ contains
    end subroutine derivatives_quad_edge3
 
    pure subroutine derivatives_quad_edge3dual(trigo, volume, derivative_theta, derivative_phi, centroid)
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi, centroid
 
-      double precision :: alpha, coscot, alphacot, beta, gamma, delta, dual_volume
-      double precision :: cos_theta, sin_theta, cot_phi
-      double precision :: xqe, sqrt_t23, t232t
+      real(amrex_real) :: alpha, coscot, alphacot, beta, gamma, delta, dual_volume
+      real(amrex_real) :: cos_theta, sin_theta, cot_phi
+      real(amrex_real) :: xqe, sqrt_t23, t232t
 
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
@@ -1487,82 +1488,82 @@ contains
          & )
    end subroutine derivatives_quad_edge3dual
 
-   double precision pure function g0(x, y, z)
-      double precision, intent(in) :: x, y, z
+   real(amrex_real) pure function g0(x, y, z)
+      real(amrex_real), intent(in) :: x, y, z
       g0 = (2d0*x + y + z)**2 - z*(4d0*y + 9d0*x)
    end function g0
 
-   double precision pure function g1(x, y, z)
-      double precision, intent(in) :: x, y, z
+   real(amrex_real) pure function g1(x, y, z)
+      real(amrex_real), intent(in) :: x, y, z
       g1 = 12d0*x*(x + 2d0*y - z)
    end function g1
 
-   double precision pure function f0qex(x, y, z, v)
-      double precision, intent(in) :: x, y, z, v
-      double precision :: x1, y1, z0
+   real(amrex_real) pure function f0qex(x, y, z, v)
+      real(amrex_real), intent(in) :: x, y, z, v
+      real(amrex_real) :: x1, y1, z0
       x1 = x*(x-y)
       y1 = z*(z-y)
       z0 = (z+x-y)**2
       f0qex = g0(x1,y1,z0) + 24d0*v*x1*z0
    end function f0qex
 
-   double precision pure function f0qez(x, y, z, v)
-      double precision, intent(in) :: x, y, z, v
-      double precision :: x2, y2, z0
+   real(amrex_real) pure function f0qez(x, y, z, v)
+      real(amrex_real), intent(in) :: x, y, z, v
+      real(amrex_real) :: x2, y2, z0
       x2 = x*z
       y2 = (x-y)*(z-y)
       z0 = (z+x-y)**2
       f0qez = -g0(x2,y2,z0) + z0*(z0 - 4d0*x2) + 24d0*v*x2*z0
    end function f0qez
 
-   double precision pure function f1qex(x, y, z, v)
-      double precision, intent(in) :: x, y, z, v
-      double precision :: x1, y1, z0
+   real(amrex_real) pure function f1qex(x, y, z, v)
+      real(amrex_real), intent(in) :: x, y, z, v
+      real(amrex_real) :: x1, y1, z0
       x1 = x*(x-y)
       y1 = z*(z-y)
       z0 = (z+x-y)**2
       f1qex = -2d0*sqrt(x1*y1)/y1*(g0(y1,x1,z0) + 9d0*x1*y1 + 6d0*v*z0*(x1 - z0))
    end function f1qex
 
-   double precision pure function f1qez(x, y, z, v)
-      double precision, intent(in) :: x, y, z, v
-      double precision :: x2, y2, z0
+   real(amrex_real) pure function f1qez(x, y, z, v)
+      real(amrex_real), intent(in) :: x, y, z, v
+      real(amrex_real) :: x2, y2, z0
       x2 = x*z
       y2 = (x-y)*(z-y)
       z0 = (z+x-y)**2
       f1qez = -2d0*sqrt(x2*y2)/y2*(g0(y2,x2,z0) + 9d0*x2*y2 + (1d0 - 6d0*v)*z0*(x2 - z0))
    end function f1qez
 
-   double precision pure function f1qexbis(x, y, z, v, sqrt_t23)
-      double precision, intent(in) :: x, y, z, v, sqrt_t23
-      double precision :: x1, y1, z0
+   real(amrex_real) pure function f1qexbis(x, y, z, v, sqrt_t23)
+      real(amrex_real), intent(in) :: x, y, z, v, sqrt_t23
+      real(amrex_real) :: x1, y1, z0
       x1 = x*(x-y)
       y1 = z*(z-y)
       z0 = (z+x-y)**2
       f1qexbis = -2d0*sqrt_t23/y1*( g0(y1,x1,z0) + 9d0*x1*y1 + 6d0*v*z0*(x1 - z0))
    end function f1qexbis
 
-   double precision pure function f1qezbis(x, y, z, v, sqrt_t23)
-      double precision, intent(in) :: x, y, z, v, sqrt_t23
-      double precision :: x2, y2, z0
+   real(amrex_real) pure function f1qezbis(x, y, z, v, sqrt_t23)
+      real(amrex_real), intent(in) :: x, y, z, v, sqrt_t23
+      real(amrex_real) :: x2, y2, z0
       x2 = x*z
       y2 = (x-y)*(z-y)
       z0 = (z+x-y)**2
       f1qezbis = -2d0*sqrt_t23/y2*(g0(y2,x2,z0) + 9d0*x2*y2 + (1d0 - 6d0*v)*z0*(x2 - z0))
    end function f1qezbis
 
-   double precision pure function f2qex(x, y, z)
-      double precision, intent(in) :: x, y, z
-      double precision :: x1, y1, z0
+   real(amrex_real) pure function f2qex(x, y, z)
+      real(amrex_real), intent(in) :: x, y, z
+      real(amrex_real) :: x1, y1, z0
       x1 = x*(x-y)
       y1 = z*(z-y)
       z0 = (z+x-y)**2
       f2qex = g1(x1,y1,z0)
    end function f2qex
 
-   double precision pure function f2qez(x, y, z)
-      double precision, intent(in) :: x, y, z
-      double precision :: x2, y2, z0
+   real(amrex_real) pure function f2qez(x, y, z)
+      real(amrex_real), intent(in) :: x, y, z
+      real(amrex_real) :: x2, y2, z0
       x2 = x*z
       y2 = (x-y)*(z-y)
       z0 = (z+x-y)**2
@@ -1571,16 +1572,16 @@ contains
 
    pure subroutine quadedge_analytic_derivatives(trigo, a, b, c, d, volume, derivative_theta, derivative_phi)
       use mod_cg3_points, only: cg3_cross_product
-      double precision, dimension(4), intent(in) :: trigo
-      double precision, dimension(3), intent(in) :: a,b, c, d
-      double precision, intent(in) :: volume
-      double precision, dimension(3), intent(out) :: derivative_theta, derivative_phi
+      real(amrex_real), dimension(4), intent(in) :: trigo
+      real(amrex_real), dimension(3), intent(in) :: a,b, c, d
+      real(amrex_real), intent(in) :: volume
+      real(amrex_real), dimension(3), intent(out) :: derivative_theta, derivative_phi
 
-      double precision, dimension(3) ::  p1, p2, p3, p4, p5, xg, dtheta_n, dphi_n
-      double precision, dimension(2) :: p1t, p2t, p3t, p4t, p5t, xgt
-      double precision :: cos_theta, sin_theta, cos_phi, sin_phi
-      double precision :: integralt_xy, integralt_xx, integralt_yy
-      double precision ::  s1, s2, s, i11t, i12t, i22t
+      real(amrex_real), dimension(3) ::  p1, p2, p3, p4, p5, xg, dtheta_n, dphi_n
+      real(amrex_real), dimension(2) :: p1t, p2t, p3t, p4t, p5t, xgt
+      real(amrex_real) :: cos_theta, sin_theta, cos_phi, sin_phi
+      real(amrex_real) :: integralt_xy, integralt_xx, integralt_yy
+      real(amrex_real) ::  s1, s2, s, i11t, i12t, i22t
 
       s1 = norm2(cg3_cross_product(b - a, d - a))/2d0
       s2 = norm2(cg3_cross_product(d - a, c - a))/2d0
@@ -1623,8 +1624,8 @@ contains
    end subroutine quadedge_analytic_derivatives
 
    ! map x in [0, 2π[
-   double precision pure function modulo_tau(x) result(r)
-      double precision, intent(in) :: x
+   real(amrex_real) pure function modulo_tau(x) result(r)
+      real(amrex_real), intent(in) :: x
 
       ! 10 is an arbitrary value
       if (x < 10d0*TAU .or. x > 10d0*TAU) then

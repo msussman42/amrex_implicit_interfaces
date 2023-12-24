@@ -64,16 +64,16 @@ contains
   print *,"TDOMAIN= ",TDOMAIN(1),TDOMAIN(2),TDOMAIN(3)
 
   if (SDIM.eq.3) then
-   if ((abs(TDOMAIN(1)-probhix).le.1.0E-10).and. &
-       (abs(TDOMAIN(2)-probhiy).le.1.0E-10).and. &
-       (abs(TDOMAIN(3)-probhiz).le.1.0E-10)) then
+   if ((abs(TDOMAIN(1)-probhix).le.EPS10).and. &
+       (abs(TDOMAIN(2)-probhiy).le.EPS10).and. &
+       (abs(TDOMAIN(3)-probhiz).le.EPS10)) then
     ! do nothing
    else
     print *,"TDOMAIN invalid"
     stop
    endif
   else if (SDIM.eq.2) then
-   if (abs(TDOMAIN(3)-probhiy).le.1.0E-10) then
+   if (abs(TDOMAIN(3)-probhiy).le.EPS10) then
     ! do nothing
    else
     print *,"TDOMAIN invalid"

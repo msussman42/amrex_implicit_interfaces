@@ -37,7 +37,7 @@ subroutine RiverVelocity(x,y,z,vel,option,probloz,probhiz)
  call RiverHeight(x,y,h,option)
 
  if (SDIM.eq.2) then
-  if (abs(z-y).gt.1.0E-8) then
+  if (abs(z-y).gt.1.0E-7) then
    print *,"expecting z=y"
    stop
   endif
@@ -102,7 +102,7 @@ integer :: gravity_dir
  call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
  if (SDIM.eq.2) then
-  if (abs(z-y).gt.1.0E-8) then
+  if (abs(z-y).gt.1.0E-7) then
    print *,"expecting z=y"
    stop
   endif

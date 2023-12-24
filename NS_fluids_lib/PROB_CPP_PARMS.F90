@@ -1486,7 +1486,7 @@ stop
        fort_tempconst(im)=cctempconst(im)
        fort_initial_temperature(im)=ccinitial_temperature(im)
        fort_tempcutoff(im)=cctempcutoff(im) ! default 1.0E-8
-       fort_tempcutoffmax(im)=cctempcutoffmax(im) ! default 1.0D+99
+       fort_tempcutoffmax(im)=cctempcutoffmax(im) ! default 1.0D+30
        fort_stiffPINF(im)=ccstiffPINF(im)
        fort_stiffCP(im)=ccstiffCP(im)
        fort_stiffCV(im)=ccstiffCV(im)
@@ -2086,6 +2086,13 @@ stop
 
       integer :: local_var_int
       real(amrex_real) :: local_var_double
+
+#ifdef BL_USE_FLOAT
+      integer, PARAMETER :: expect_double_size=4
+#else
+      integer, PARAMETER :: expect_double_size=8
+#endif
+
       integer :: fort_double_size,fort_int_size
       
       num_materials=ccnum_materials
@@ -2107,7 +2114,7 @@ stop
       fort_double_size=SIZEOF(local_var_double)
       fort_int_size=SIZEOF(local_var_int)
      
-      if ((fort_double_size.eq.8).and. &
+      if ((fort_double_size.eq.expect_double_size).and. &
           (fort_int_size.eq.cc_int_size)) then
        print *,"fort_override_MAIN_GLOBALS"
        print *,"fort_double_size=",fort_double_size     
@@ -2119,6 +2126,7 @@ stop
        print *,"fort_double_size=",fort_double_size     
        print *,"fort_int_size=",fort_int_size     
        print *,"cc_int_size=",cc_int_size     
+       print *,"expect_double_size=",expect_double_size     
        stop
       endif
 

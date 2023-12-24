@@ -37,6 +37,7 @@
 
 #include <INTERP_F.H>
 
+#include <CPP_EPS.H>
 #include <DRAG_COMP.H>
 #include <EXTRAP_COMP.H>
 #include <GLOBALUTIL_F.H>
@@ -1363,7 +1364,7 @@ AmrCore::timeStep (Real time,
                Real stop_time)
 {
 
- if (std::abs(time-cumtime)>1.0e-13)
+ if (std::abs(time-cumtime)>CPP_EPS13)
   amrex::Error("time<>cumtime");
 
  if (max_level==0) {
@@ -1734,7 +1735,7 @@ AmrCore::regrid (int  lbase,
 
  BL_PROFILE("AmrCore::regrid()");
 
- if (std::abs(time-cumtime)>1.0e-13)
+ if (std::abs(time-cumtime)>CPP_EPS13)
   amrex::Error("time<>cumtime in regrid");
 
  if (verbose > 0 && ParallelDescriptor::IOProcessor())

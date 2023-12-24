@@ -32,10 +32,9 @@
 #include <INDEX_TYPE_MACROS.H>
 
 #define GEOM_GROW   1
-#define bogus_value 1.e20
+#define bogus_value 1.0e+20
 
 #define BOGUS (1.0E+6)
-#define VOFTOL (1.0E-8)
 
 namespace amrex{
 
@@ -917,7 +916,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
    DistributionMapping crse_dmap=fdmap;
    MultiFab crse_S_fine_MAC(crse_S_fine_BA_MAC,crse_dmap,ncomp_flux,0,
      MFInfo().SetTag("crse_S_fine_MAC"),FArrayBoxFactory());
-   crse_S_fine_MAC.setVal(1.0e+40);
+   crse_S_fine_MAC.setVal(1.0e+30);
 
    ParallelDescriptor::Barrier();
 
@@ -1935,8 +1934,8 @@ void NavierStokes::init_divup_cell_vel_cell(
    // 0=use_face_pres=VALID_PEDGE
    // 1=face pressure=PRESSURE_PEDGE
    //scomp,ncomp,ngrow
-   //pface=1.0e+40 initially.
-  setVal_localMF(PEDGE_MF+dir,1.0e+40,PRESSURE_PEDGE,1,0);
+   //pface=1.0e+30 initially.
+  setVal_localMF(PEDGE_MF+dir,1.0e+30,PRESSURE_PEDGE,1,0);
  } // dir=0..sdim-1
 
  for (int data_dir=0;data_dir<AMREX_SPACEDIM;data_dir++) {
@@ -2762,12 +2761,12 @@ void NavierStokes::increment_face_velocity(
  if (levelcolor->nGrow()<1)
   amrex::Error("levelcolor->nGrow()<1");
  if (leveltype->nGrow()<1)
-  amrex::Error("leveltyoe->nGrow()<1");
+  amrex::Error("leveltype->nGrow()<1");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(AMRSYNC_VEL_MF+dir,NCOMP_AMRSYNC_VEL_MF,0,dir);
    //val,scomp,ncomp,ngrow
-  setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+40,0,NCOMP_AMRSYNC_VEL_MF,0);
+  setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+30,0,NCOMP_AMRSYNC_VEL_MF,0);
   if (localMF[AREA_MF+dir]->boxArray()!=
       localMF[AMRSYNC_VEL_MF+dir]->boxArray())
    amrex::Error("AMRSYNC_VEL boxarray does not match");
@@ -4876,8 +4875,8 @@ void NavierStokes::make_physics_varsALL(int project_option,
  curv_max.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  curv_min[tid]=1.0e+99;
-  curv_max[tid]=-1.0e+99;
+  curv_min[tid]=1.0e+30;
+  curv_max[tid]=-1.0e+30;
  } // tid
 
  allocate_array(1,nhistory,-1,HISTORY_MF);
@@ -5174,7 +5173,7 @@ void NavierStokes::make_physics_vars(int project_option,
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(AMRSYNC_VEL_MF+dir,1,0,dir);
-  setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+40,0,1,0);
+  setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+30,0,1,0);
  }
 
  Real problo[AMREX_SPACEDIM];
@@ -5275,8 +5274,8 @@ void NavierStokes::make_physics_vars(int project_option,
  local_curv_min.resize(thread_class::nthreads);
  local_curv_max.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  local_curv_min[tid]=1.0e+99;
-  local_curv_max[tid]=-1.0e+99;
+  local_curv_min[tid]=1.0e+30;
+  local_curv_max[tid]=-1.0e+30;
  } // tid
 
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
@@ -5756,7 +5755,7 @@ void NavierStokes::process_potential_forceALL(
      // deallocated in deallocate_potential_forceALL
      // HYDROSTATIC_PRESSURE and HYDROSTATIC_DENSITY
     ns_level.new_localMF(AMRSYNC_PRES_MF+dir,2,0,dir);
-    ns_level.setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+40,0,2,0);
+    ns_level.setVal_localMF(AMRSYNC_PRES_MF+dir,1.0e+30,0,2,0);
     if (ns_level.localMF[AREA_MF+dir]->boxArray()!=
         ns_level.localMF[AMRSYNC_PRES_MF+dir]->boxArray())
      amrex::Error("AMRSYNC_PRES boxarray does not match");
@@ -6472,7 +6471,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   amrex::Error("local_truncate invalid");
 
  if (renormalize_only==0) {
-  if (std::abs(time-cur_time_slab)>1.0e-8)
+  if (std::abs(time-cur_time_slab)>CPP_EPS8)
    amrex::Error("prescribe solid at the new time");
 
    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
@@ -7300,7 +7299,7 @@ void NavierStokes::check_for_NAN_TENSOR_base(int datatype,MultiFab* mf,
  int force_check=1;
  int ncomp_tensor=1;
  int ngrow_tensor=0;
- Real warning_cutoff=1.0e+99;
+ Real warning_cutoff=1.0e+30;
  aggressive_debug(
   datatype,
   force_check,
@@ -7404,7 +7403,7 @@ void NavierStokes::check_for_NAN(MultiFab* mf) {
  int datatype=0;
  int force_check=1;
  int dir=-1;
- Real warning_cutoff=1.0e+99;
+ Real warning_cutoff=1.0e+30;
  aggressive_debug(
   datatype,
   force_check,
@@ -8826,7 +8825,7 @@ void NavierStokes::VOF_Recon_ALL(
     }
    } // ilev=finest_level ... level
 
-   if ((single_centroid_diff<=1.0e-8)||
+   if ((single_centroid_diff<=CPP_EPS8)||
        (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 
@@ -8842,7 +8841,7 @@ void NavierStokes::VOF_Recon_ALL(
     }
    } // ilev=finest_level ... level
 
-   if ((single_centroid_diff<=1.0e-8)||
+   if ((single_centroid_diff<=CPP_EPS8)||
        (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 

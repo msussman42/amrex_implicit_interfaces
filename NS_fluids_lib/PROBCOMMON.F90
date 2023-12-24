@@ -471,7 +471,7 @@ implicit none
       real(amrex_real), PARAMETER :: VOFTOL_REDIST=BL_REAL_E(1.0,-3)
       real(amrex_real), PARAMETER :: FACETOL_REDIST=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: FACETOL_SANITY=BL_REAL_E(1.0,-3)
-      ! Default: LS_CURV_TOL=BL_REAL_E(1.0,-2 
+      ! Default: LS_CURV_TOL=BL_REAL_E(1.0,-2)
       !inputs.curvature_converge with axis_dir=210 (sanity check),
       !BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: LS_CURV_TOL=BL_REAL_E(1.0,-2)
@@ -608,11 +608,11 @@ implicit none
       real(amrex_real) zstatic(0:300),rstatic(0:300) 
 
        ! variables from "pressure_bcs"
-      real*8  dt_pressure_bcs
-      real*8  time_pressure_bcs(0:100) ,  pressbc_pressure_bcs(0:100,1:3)
+      real(amrex_real)  dt_pressure_bcs
+      real(amrex_real)  time_pressure_bcs(0:100) ,  pressbc_pressure_bcs(0:100,1:3)
       integer selectpress
        ! variables from "vel_bcs"
-      real*8  timehist_velbc(0:100), &
+      real(amrex_real)  timehist_velbc(0:100), &
         zpos_velbc(1:50),velbc_velbc(0:100,1:50), &
         period_velbc,rigidwall_velbc
       integer itime_velbc,ipos_velbc

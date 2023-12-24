@@ -4,6 +4,8 @@
 
 CEXE_sources += main.cpp local_thread_class.cpp NS_setup.cpp NSBld.cpp 
 
+FEXE_headers += CPP_EPS.H 
+FEXE_headers += EXTRAP_COMP.H 
 FEXE_headers += DRAG_COMP.H 
 FEXE_headers += MACOPERATOR_F.H probdata.H probdataf95.H PROB_F.H 
 FEXE_headers += PROB_CPP_PARMS_F.H 
@@ -19,6 +21,8 @@ CEXE_sources += \
 CEXE_headers += local_thread_class.H 
 CEXE_headers += INDEX_TYPE_MACROS.H 
 
+CEXE_headers += CPP_EPS.H 
+CEXE_headers += EXTRAP_COMP.H 
 CEXE_headers += DRAG_COMP.H 
 CEXE_headers += NavierStokes.H 
 

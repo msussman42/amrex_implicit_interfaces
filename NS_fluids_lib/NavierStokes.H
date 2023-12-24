@@ -9,6 +9,7 @@
 #include <LevelBld.H>
 #include <ABecLaplacian.H>
 
+#include <CPP_EPS.H>
 #include <EXTRAP_COMP.H>
 #include <TOWER_MF_CODES.H>
 
