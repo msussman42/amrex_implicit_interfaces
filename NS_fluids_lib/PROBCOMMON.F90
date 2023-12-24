@@ -550,7 +550,7 @@ implicit none
       real(amrex_real), PARAMETER :: EPS14=BL_REAL_E(1.0,-14)
       real(amrex_real), PARAMETER :: EPS13=BL_REAL_E(1.0,-13)
       real(amrex_real), PARAMETER :: EPS12=BL_REAL_E(1.0,-12)
-      real(amrex_real), PARAMETER :: EPS11=BL_REAL_E(1.0,-7)
+      real(amrex_real), PARAMETER :: EPS11=BL_REAL_E(1.0,-11)
       real(amrex_real), PARAMETER :: EPS10=BL_REAL_E(1.0,-10)
       real(amrex_real), PARAMETER :: EPS9=BL_REAL_E(1.0,-9)
       real(amrex_real), PARAMETER :: EPS8=BL_REAL_E(1.0,-8)
