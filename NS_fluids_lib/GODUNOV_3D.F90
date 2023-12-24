@@ -2662,9 +2662,9 @@ stop
           den1=denconst(im)
           den2=denconst(im_opp)
           mu=get_user_viscconst(im,den1,fort_tempconst(im))
-          visc1=visc_coef*mu+1.0D-10
+          visc1=visc_coef*mu+EPS10
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
-          visc2=visc_coef*mu+1.0D-10
+          visc2=visc_coef*mu+EPS10
 
           if (denconst_interface_added(iten).eq.zero) then
            ! do nothing
@@ -7587,7 +7587,7 @@ stop
         enddo ! iquad
         sanity_sum=sanity_sum+GQwsQUAD(jstencil,kinterval)
        enddo  ! jstencil
-       if (abs(sanity_sum-two).gt.1.0D-12) then
+       if (abs(sanity_sum-two).gt.EPS12) then
         print *,"SDC sanity check failed"
         stop
        endif

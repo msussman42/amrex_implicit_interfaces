@@ -17,7 +17,6 @@
 
 #define nsum 64
 #define nsum2 32
-#define CURVWT (1.0D-3)
 
 #define DEBUG_THERMAL_COEFF 0
 #define DEBUG_CURVATURE 0
@@ -1502,7 +1501,7 @@ stop
             if (LSTEST_EXTEND.lt.zero) then
              wt=one
             else if (LSTEST_EXTEND.ge.zero) then
-             wt=CURVWT
+             wt=EPS3
             else
              print *,"LSTEST_EXTEND is NaN"
              stop
@@ -1571,7 +1570,7 @@ stop
            ZEYU_ifgnbc=0
            ZEYU_lambda=8.0D-7
            ZEYU_l_macro=dxmin
-           ZEYU_l_micro=1.0D-9
+           ZEYU_l_micro=EPS9
            ZEYU_dgrid=dxmin
            dist_to_CL=zero
            ZEYU_d_closest=abs(dist_to_CL)
@@ -7800,8 +7799,6 @@ stop
       real(amrex_real) local_cenvisc
       real(amrex_real) local_cenden
 
-      real(amrex_real), PARAMETER :: VISCINVTOL=1.0D-8
-
       real(amrex_real) denconst_interface_added_max
       real(amrex_real) rad_added_mass
       integer :: test_for_make_physics_vars
@@ -10112,7 +10109,7 @@ stop
           stop
          endif
 
-         one_over_mu=one/(localvisc(im)+VISCINVTOL)
+         one_over_mu=one/(localvisc(im)+EPS8)
          visc_total=visc_total+one_over_mu*volmat(im)
 
          imattype=fort_material_type(im)
@@ -10181,7 +10178,7 @@ stop
         enddo
 
         local_cenden=voltotal/mass_total
-        local_cenvisc=one/((visc_total/voltotal)+VISCINVTOL)  
+        local_cenvisc=one/((visc_total/voltotal)+EPS8)  
 
         if (local_cenden.gt.zero) then
          !do nothing
@@ -12355,8 +12352,7 @@ stop
                call TEMPERATURE_material(rho,massfrac_parm, &
                 NEW_TEMPERATURE, &
                 internal_e,imattype,im)
-               if (abs(TEMPERATURE-NEW_TEMPERATURE).le. &
-                   1.0D-3*TEMPERATURE) then
+               if (abs(TEMPERATURE-NEW_TEMPERATURE).le.EPS3*TEMPERATURE) then
                 ! do nothing 
                else
                 print *,"T(rho,e) and e(rho,T) are not inverses"
@@ -18637,6 +18633,7 @@ stop
          i,j,k, &
          isub,jsub,ksub, &
          sub_found)
+      use probcommon_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -18660,9 +18657,9 @@ stop
       do dir=1,SDIM
        dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
        if (dx_sub.gt.zero) then
-        if (abs(xpart(dir)-xsten(-1,dir)).le.1.0D-8*dx_sub) then
+        if (abs(xpart(dir)-xsten(-1,dir)).le.EPS8*dx_sub) then
          isub_local(dir)=0
-        else if (abs(xpart(dir)-xsten(1,dir)).le.1.0D-8*dx_sub) then
+        else if (abs(xpart(dir)-xsten(1,dir)).le.EPS8*dx_sub) then
          isub_local(dir)=accum_PARM%nsubdivide-1
         else if ((xpart(dir).ge.xsten(-1,dir)).and. &
                  (xpart(dir).le.xsten(1,dir))) then
@@ -19966,7 +19963,7 @@ stop
            enddo 
            cell_count_check=cell_count_check+1
 
-           call particle_grid_weight(xpart,xsub,(1.0D-3)*dx(1),local_weight)
+           call particle_grid_weight(xpart,xsub,EPS3*dx(1),local_weight)
 
            iten_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_INTERFACE_ID+1)

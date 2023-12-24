@@ -63,27 +63,5 @@ else
   $(error Unknown compiler $(COMP) in $(MOF_HOME)/StructureCodeShoele/Make.package. Tested compilers are gnu, intel)
 endif
 
-# for intel compiler set
-# LDFLAGS	+= -mkl
-# FFLAGS	+= -zero -r8
-# F90FLAGS 	+= -zero -r8
-
-#####################################
-# for gnu compiler set
-#FFLAGS 	+= -zero -fdefault-double-8 -fdefault-real-8 -m64
-#F90FLAGS 	+= -zero -fdefault-double-8 -fdefault-real-8 -m64
-
-# for using MKL while compiling with gnu compiler set
-#INCLUDE_LOCATIONS +=/gpfs/home/mvahab/local/mkl_int_lapack/include/intel64/ilp64
-#INCLUDE_LOCATIONS +=/gpfs/research/software/intel-2016-2/mkl/include
-
-#LDFLAGS += -Wl,--start-group /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_gf_lp64.a /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_sequential.a /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_core.a /gpfs/research/software/intel-2016-2/mkl/lib/intel64/libmkl_blacs_openmpi_lp64.a -Wl,--end-group -lpthread -lm -ldl
-#LDFLAGS += -Wl,--no-as-needed -lmkl_blacs_openmpi_lp64 -lpthread -lm -ldl
-#LDFLAGS += -L /gpfs/research/software/intel-2016-2/mkl/lib/intel64/  -Wl,--no-as-needed -lmkl_rt -lpthread -lm -ldl -llapack
-
-# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/gpfs/research/software/intel-2016-2/mkl/lib/intel64/
-
-#######################################
-
 VPATH_LOCATIONS += $(MOF_HOME)/StructureCodeShoele
 INCLUDE_LOCATIONS += $(MOF_HOME)/StructureCodeShoele

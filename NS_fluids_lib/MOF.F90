@@ -17,15 +17,7 @@
 #define MAXAREA (5)
 ! INTERCEPT_TOL is declared in PROBCOMMON.F90
 ! this should be larger than INTERCEPT_TOL
-#define GAUSSNEWTONTOL (1.0D-10)
 #define RADIUS_CUTOFF (6.0)
-! used for sanity checks:
-#define UNCAPT_TOL (2.0D-2)
-#define SANITY_TOL (1.0D-3)
-! used for redistancing:
-#define LSTHICK (1.0D-4) 
-! used for redistancing:
-#define GPHI_TOL (1.0D-12)
 #define USERAND (1)
 
 ! Author: Mark Sussman sussman@math.fsu.edu
@@ -11788,8 +11780,8 @@ contains
        stop
       endif
   
-      tol=dx(1)*GAUSSNEWTONTOL
-      local_tol=dx(1)*tol*1.0E-2
+      tol=dx(1)*EPS10
+      local_tol=dx(1)*tol*EPS2
 
       nguess=0
 
@@ -16547,7 +16539,7 @@ contains
       do imaterial=1,num_materials
        vofcomp=(imaterial-1)*ngeom_recon+1
 
-       if (abs(voftest(imaterial)-mofdata(vofcomp)).ge.SANITY_TOL) then
+       if (abs(voftest(imaterial)-mofdata(vofcomp)).ge.EPS3) then
         print *,"volume fraction changed"
         print *,"put breakpoint here to see the caller"
         print *,"imaterial,vofbefore,vofafter ",imaterial, &
@@ -16558,7 +16550,7 @@ contains
           voftest(imaterial2),mofdata(vofcomp)
         enddo
         stop
-       else if (abs(voftest(imaterial)-mofdata(vofcomp)).lt.SANITY_TOL) then
+       else if (abs(voftest(imaterial)-mofdata(vofcomp)).lt.EPS3) then
         ! do nothing
        else
         print *,"voftest or mofdata is NaN: ", &
@@ -18792,12 +18784,12 @@ contains
                ! uncaptured_volume_fraction_fluid>0 and 
                ! uncaptured_volume_fluid>0
 
-        if (uncaptured_volume_fluid.gt.UNCAPT_TOL*volcell) then
+        if (uncaptured_volume_fluid.gt.two*EPS2*volcell) then
           print *,"not all volume accounted for multi get volume"
           print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
           print *,"volcell ",volcell
           print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-          print *,"tolerance: ",UNCAPT_TOL
+          print *,"tolerance: ",two*EPS2
           stop
         endif
 
@@ -19901,7 +19893,7 @@ contains
        dxthin=half*(xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
 
        if (abs(voltemp-uncaptured_volume_START).le. &
-           UNCAPT_TOL*volume_plus) then
+           two*eps2*volume_plus) then
         ! do nothing
        else
         print *,"voltemp or uncaptured_volume_START invalid"
@@ -19909,13 +19901,13 @@ contains
        endif
 
        if (uncaptured_volume_fluid.gt. &
-           UNCAPT_TOL*volume_plus) then
+           two*eps2*volume_plus) then
         print *,"not all volume accounted for multi get area pairs"
         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
         print *,"uncaptured_volume_START ",uncaptured_volume_START
         print *,"fraction of uncapt volume ", &
             uncaptured_volume_fluid/uncaptured_volume_START
-        print *,"tolerance: ",UNCAPT_TOL
+        print *,"tolerance: ",two*EPS2
         stop
        endif
 
@@ -20930,12 +20922,12 @@ contains
                ! uncaptured_volume_fraction_fluid>0 and 
                ! uncaptured_volume_fluid>0
 
-        if (uncaptured_volume_fluid.gt.UNCAPT_TOL*volcell) then
+        if (uncaptured_volume_fluid.gt.two*EPS2*volcell) then
           print *,"not all volume accounted for multi get volume"
           print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
           print *,"volcell ",volcell
           print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-          print *,"tolerance: ",UNCAPT_TOL
+          print *,"tolerance: ",two*EPS2
           stop
         endif
 
@@ -21840,12 +21832,12 @@ contains
               ! uncaptured_volume_fraction_fluid>0 and 
               ! uncaptured_volume_fluid>0
 
-       if (uncaptured_volume_fluid.gt.UNCAPT_TOL*volcell) then
+       if (uncaptured_volume_fluid.gt.two*EPS2*volcell) then
          print *,"not all volume accounted for multi get volume"
          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
          print *,"volcell ",volcell
          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-         print *,"tolerance: ",UNCAPT_TOL
+         print *,"tolerance: ",two*EPS2
          stop
        endif
 
@@ -22869,13 +22861,13 @@ contains
         ! do nothing
        else if (inboxflag.eq.1) then
         do dir=1,sdim
-         xplus(dir)=x_cp(dir)-maxdx*LSTHICK*half* &
+         xplus(dir)=x_cp(dir)-maxdx*EPS4*half* &
            (slope_list(ilist,dir)+slope_list(jlist,dir)) 
-         xminus(dir)=x_cp(dir)+maxdx*LSTHICK*half* &
+         xminus(dir)=x_cp(dir)+maxdx*EPS4*half* &
            (slope_list(ilist,dir)+slope_list(jlist,dir)) 
-         xplus2(dir)=x_cp(dir)-maxdx*LSTHICK*half* &
+         xplus2(dir)=x_cp(dir)-maxdx*EPS4*half* &
            (slope_list(ilist,dir)-slope_list(jlist,dir)) 
-         xminus2(dir)=x_cp(dir)+maxdx*LSTHICK*half* &
+         xminus2(dir)=x_cp(dir)+maxdx*EPS4*half* &
            (slope_list(ilist,dir)-slope_list(jlist,dir)) 
         enddo
        else
@@ -23058,13 +23050,13 @@ contains
         ! do nothing
        else if (inboxflag.eq.1) then
         do dir=1,sdim
-         xplus(dir)=x_cp(dir)-maxdx*LSTHICK*half* &
+         xplus(dir)=x_cp(dir)-maxdx*EPS4*half* &
            (slope_list(ilist,dir)+slope_list(jlist,dir)) 
-         xminus(dir)=x_cp(dir)+maxdx*LSTHICK*half* &
+         xminus(dir)=x_cp(dir)+maxdx*EPS4*half* &
            (slope_list(ilist,dir)+slope_list(jlist,dir)) 
-         xplus2(dir)=x_cp(dir)-maxdx*LSTHICK*half* &
+         xplus2(dir)=x_cp(dir)-maxdx*EPS4*half* &
            (slope_list(ilist,dir)-slope_list(jlist,dir)) 
-         xminus2(dir)=x_cp(dir)+maxdx*LSTHICK*half* &
+         xminus2(dir)=x_cp(dir)+maxdx*EPS4*half* &
            (slope_list(ilist,dir)-slope_list(jlist,dir)) 
         enddo
        else
@@ -23089,6 +23081,7 @@ contains
          xcp,xcp_plus,xcp_minus,xaccept, &
          maxdx,slope_in,intercept_in, &
          xstenbox,nhalfbox,sdim,inboxflag)
+       use probcommon_module
        use global_utility_module
        IMPLICIT NONE
 
@@ -23145,8 +23138,8 @@ contains
         enddo
         do dir=1,sdim
          xcp(dir)=xaccept(dir)-dist*slope(dir)
-         xcp_plus(dir)=xcp(dir)-maxdx*LSTHICK*slope(dir)
-         xcp_minus(dir)=xcp(dir)+maxdx*LSTHICK*slope(dir)
+         xcp_plus(dir)=xcp(dir)-maxdx*EPS4*slope(dir)
+         xcp_minus(dir)=xcp(dir)+maxdx*EPS4*slope(dir)
         enddo
          ! in: closestPLANE
         call check_inbox(xcp,xstenbox,nhalfbox,inboxflag)
@@ -23568,7 +23561,7 @@ contains
              enddo 
              normgphi=sqrt(normgphi)
   
-             if (normgphi.ge.GPHI_TOL) then 
+             if (normgphi.ge.EPS12) then 
               !  n dot (x-x0)+intercept=0
               !  n dot (x-x0+x0face-x0face)+intercept=0
               !  n dot (x-x0face) + n dot (x0face-x0)+intercept=0
@@ -23653,7 +23646,7 @@ contains
                  enddo 
                  normgphi=sqrt(normgphi)
    
-                 if (normgphi.ge.GPHI_TOL) then
+                 if (normgphi.ge.EPS12) then
                   intercept_face=intercept
                   do dir2=1,sdim
                    intercept_face=intercept_face+ &
@@ -24381,7 +24374,7 @@ contains
        VOFSUM=VOFSUM+VFRAC(im)
       enddo ! im=1..num_materials
 
-      if (abs(sum_vfrac_fluid-one).gt.SANITY_TOL) then
+      if (abs(sum_vfrac_fluid-one).gt.EPS3) then
        print *,"sum_vfrac_fluid invalid"
        print *,"put breakpoint here to see caller"
        print *,"sum_vfrac_fluid=",sum_vfrac_fluid
@@ -24390,7 +24383,7 @@ contains
        print *,"im_crit_solid=",im_crit_solid
        stop
       endif
-      if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid).gt.SANITY_TOL) then
+      if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid).gt.EPS3) then
        print *,"VOFSUM invalid"
        stop
       endif

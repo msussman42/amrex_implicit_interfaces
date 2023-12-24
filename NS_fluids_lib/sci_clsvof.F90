@@ -10,6 +10,8 @@
 #include "AMReX_ArrayLim_AUGMENTED.H"
 #include "EXTRAP_COMP.H"
 
+#define FSI_real (8)
+
 #define element_buffer_tol (0.0d0)
 #define angle_tol (5.0d0)
 #define max_plane_intersects 100
@@ -52,16 +54,16 @@ type FSI_container_type
  integer structure_topology
  integer ngrow_node
 
- real(amrex_real), pointer :: node_list(:,:,:,:,:)
- real(amrex_real), pointer :: prev_node_list(:,:,:,:,:)
- real(amrex_real), pointer :: velocity_list(:,:,:,:,:)
- real(amrex_real), pointer :: prev_velocity_list(:,:,:,:,:)
+ real(FSI_real), pointer :: node_list(:,:,:,:,:)
+ real(FSI_real), pointer :: prev_node_list(:,:,:,:,:)
+ real(FSI_real), pointer :: velocity_list(:,:,:,:,:)
+ real(FSI_real), pointer :: prev_velocity_list(:,:,:,:,:)
  integer, pointer :: element_list(:,:,:)
- real(amrex_real), pointer :: init_node_list(:,:,:,:,:)
- real(amrex_real), pointer :: mass_list(:,:,:,:)
- real(amrex_real), pointer :: temp_list(:,:,:,:)
- real(amrex_real), pointer :: scalar_list(:,:,:,:,:)
- real(amrex_real), pointer :: prev_scalar_list(:,:,:,:,:)
+ real(FSI_real), pointer :: init_node_list(:,:,:,:,:)
+ real(FSI_real), pointer :: mass_list(:,:,:,:)
+ real(FSI_real), pointer :: temp_list(:,:,:,:)
+ real(FSI_real), pointer :: scalar_list(:,:,:,:,:)
+ real(FSI_real), pointer :: prev_scalar_list(:,:,:,:,:)
 end type FSI_container_type
 
 type lag_type
@@ -207,11 +209,11 @@ integer ctml_max_n_elements
 integer ctml_flatten_size
 integer ctml_fsi_num_scalars
 
-real(amrex_real), dimension(:), allocatable :: ctml_gx
-real(amrex_real), dimension(:), allocatable :: ctml_gy
-real(amrex_real), dimension(:), allocatable :: ctml_gz
+real(FSI_real), dimension(:), allocatable :: ctml_gx
+real(FSI_real), dimension(:), allocatable :: ctml_gy
+real(FSI_real), dimension(:), allocatable :: ctml_gz
 integer, dimension(3) :: ctml_ngrid_nodes
-real(amrex_real), dimension(3) :: ctml_min_grid_dx
+real(FSI_real), dimension(3) :: ctml_min_grid_dx
 
 integer, dimension(:,:), allocatable :: ctml_n_active_nodes
 integer, dimension(:), allocatable :: ilo_active,ihi_active
@@ -224,8 +226,8 @@ integer :: ilo_dom,ihi_dom,jlo_dom,jhi_dom,klo_dom,khi_dom
 
 type(FSI_container_type) :: ctml_FSI_container
 ! nsolid,i,j,k,dir
-real(amrex_real), dimension(:,:,:,:,:), allocatable :: ctml_frc
-real(amrex_real), dimension(:,:,:,:,:), allocatable :: ctml_frc_smooth
+real(FSI_real), dimension(:,:,:,:,:), allocatable :: ctml_frc
+real(FSI_real), dimension(:,:,:,:,:), allocatable :: ctml_frc_smooth
 
 contains
 
@@ -10601,7 +10603,7 @@ integer, dimension(:), allocatable :: nIBM_r
 
 integer :: CTML_num_solids_local
 
-real(amrex_real) :: dtypeDelta(3)
+real(FSI_real) :: dtypeDelta(3)
 integer :: idimin
 integer :: n_Read_in
 logical :: theboss

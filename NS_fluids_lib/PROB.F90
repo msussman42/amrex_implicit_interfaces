@@ -4271,7 +4271,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         PTERM=zero
        endif
 
-       realtime=time*1.0D-6
+       realtime=time*EPS6
        call pressure_bc(realpress,realtime,error)
        PTERM=realpress/1.00D+06 - one 
       endif
@@ -6590,8 +6590,8 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dist1=rcoeff*rval+zcoeff*zval+ccoeff
        rint=rval-dist1*rcoeff
        zint=zval-dist1*zcoeff
-       if ((zint.lt.z1-1.0D-10).or.(zint.gt.z2+1.0D-10).or. &
-           (rint.lt.rmin-1.0D-10).or.(rint.gt.rmax+1.0D-10)) then
+       if ((zint.lt.z1-EPS10).or.(zint.gt.z2+EPS10).or. &
+           (rint.lt.rmin-EPS10).or.(rint.gt.rmax+EPS10)) then
         dist2=sqrt( (rval-r1)**2 + (zval-z1)**2 )
         dist3=sqrt( (rval-r2)**2 + (zval-z2)**2 )
         if (dist2.le.dist3) then
@@ -9269,7 +9269,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         else
          wave_number=xblob
         endif
-        if ((xblob.ge.1.0D+10).and.(radblob.le.(1.0D-10))) then
+        if ((xblob.ge.1.0D+10).and.(radblob.le.(EPS10))) then
          dist=y-(yblob+half*(1.0d0/16.0d0))
         else 
          dist=y-(yblob+ &
@@ -9416,7 +9416,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         dist = sqrt((x-xblob)**2 + (y-yblob)**2)-radblob
        else if (probtype.eq.16) then
          if (x.le.xblob+radblob) then
-          dist=yblob-y-1.0D-3
+          dist=yblob-y-EPS3
          else
           dist=sqrt((x-xblob-radblob)*(x-xblob-radblob)+ &
                     (yblob-y)*(yblob-y))
@@ -10185,7 +10185,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) cos2theta,sin2theta
 
       mag=sqrt((x-xblob)**2+(y-yblob)**2)
-      if (mag.lt.1.0D-5) then
+      if (mag.lt.EPS5) then
        dist=radblob+zblob
       else
        costheta=(y-yblob)/mag
@@ -19056,7 +19056,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if (probtype.eq.102) then
        if (dir.eq.1) then
-        if ((xface(2).le.1.0D-10).and.(xface(1).ge.radblob5).and. &
+        if ((xface(2).le.EPS10).and.(xface(1).ge.radblob5).and. &
             (xface(1).le.radblob3)) then
          facecut=zero  ! override gas inflow
         endif
@@ -19207,7 +19207,7 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        if (abs(local_wave_speed).le.wave_speed_target) then
 
-        if (abs(local_wave_speed).ge.wave_speed_target*(1.0D-6)) then
+        if (abs(local_wave_speed).ge.wave_speed_target*EPS6) then
 
          if (omega_imag.lt.zero) then
 
@@ -19220,9 +19220,9 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (omega_before_real*omega_real.lt.zero) then
 
              err=(omega_before_imag-omega_imag)/omega_imag
-             if (abs(err).lt.1.0D-3) then
+             if (abs(err).lt.EPS3) then
               err=(omega_before_real+omega_real)/omega_real
-              if (abs(err).lt.1.0D-3) then
+              if (abs(err).lt.EPS3) then
                if (abs(local_wave_speed).gt.wave_speed) then
                 wave_speed=abs(local_wave_speed)
                endif
@@ -21084,8 +21084,8 @@ k=0
 do j=1,M
   kr=real(omega1(j))
   ki=aimag(omega1(j))
-!  if ((abs(kr).lt.1.0D-8).and.(ki.gt.1.D-2).and.(ki.lt.1.E0)) then
-  if ((abs(kr).lt.2.0).and.(ki.gt.0.0).and.(ki.lt.1.E0)) then
+!  if ((abs(kr).lt.EPS8).and.(ki.gt.EPS2).and.(ki.lt.one)) then
+  if ((abs(kr).lt.2.0).and.(ki.gt.zero).and.(ki.lt.one)) then
    k=k+1
    omega_real=kr
    omega_imag=ki
@@ -21256,7 +21256,7 @@ do i=1,M
 enddo
 do i=1,M
   temp=sqrt(aimag(beta1(i))**2+real(beta1(i))**2)
-  if(temp<=(1.0D-10)*maxbeta) then
+  if(temp<=(EPS10)*maxbeta) then
      omega(i)=1.0D+30
   else
      omega(i)=alpha1(i)/beta1(i)
@@ -22028,7 +22028,7 @@ do i=1,M
 enddo
 do i=1,M
   temp=sqrt(aimag(beta1(i))**2+real(beta1(i))**2)
-  if(temp<=(1.0D-10)*maxbeta) then
+  if(temp<=(EPS10)*maxbeta) then
      omega(i)=1.0D+30
   else
      omega(i)=alpha1(i)/beta1(i)
@@ -23337,7 +23337,7 @@ end subroutine initialize2d
         stop
        endif
 
-       if (abs(one-pressure_scale/velocity_scale**2).gt.1.0D-5) then
+       if (abs(one-pressure_scale/velocity_scale**2).gt.EPS5) then
         print *,"scales invalid in set fort scales "
         print *,"pressure scale = ",pressure_scale
         print *,"velocity scale = ",velocity_scale
@@ -25848,7 +25848,7 @@ end subroutine initialize2d
           ! in subroutine vapordist: dist=y-(yblob+(1/16)/2)
           ! material 1 is on top (dist>0)
           ! material 2 is on bottom (dist<0)
-         if ((xblob.ge.1.0D+10).and.(radblob.le.1.0D-10)) then
+         if ((xblob.ge.1.0D+10).and.(radblob.le.EPS10)) then
           if (num_materials.ne.2) then
            print *,"num_materials invalid"
            stop
@@ -25862,13 +25862,13 @@ end subroutine initialize2d
            enddo
           endif
 
-          if (abs(1.0d0/16.0d0-dx(2)).le.1.0D-14) then
+          if (abs(1.0d0/16.0d0-dx(2)).le.EPS14) then
            ! do nothing
           else
            print *,"checkerboard test distance function assumes dy=1/16"
            stop
           endif
-          if (abs(1.0d0/16.0d0-dx(1)).le.1.0D-14) then
+          if (abs(1.0d0/16.0d0-dx(1)).le.EPS14) then
            ! do nothing
           else
            print *,"checkerboard test distance function assumes dx=1/16"

@@ -1143,6 +1143,7 @@ CONTAINS
       end subroutine init_cache
  
       subroutine sanity_check(rend)
+      use probcommon_module
       IMPLICIT NONE
  
       integer typ,order_r,i,p,rstart,rend
@@ -1193,7 +1194,7 @@ CONTAINS
          else
           exact=zero
          endif
-         if (abs(sum-exact).gt.1.0D-13) then
+         if (abs(sum-exact).gt.EPS13) then
           print *,"sanity check failed integral"
           print *,"typ,order_r,p,exact,sum ",typ,order_r,p,exact,sum
           stop
@@ -1210,7 +1211,7 @@ CONTAINS
           call polyinterp_weights(order_r,y,w,xtarget)
           call do_polyinterp(order_r,w,data,sum)
           exact=xtarget**p
-          if (abs(sum-exact).gt.1.0D-13) then
+          if (abs(sum-exact).gt.EPS13) then
            print *,"sanity check failed polyinterp"
            print *,"r,p ",order_r,p
            stop
@@ -1227,7 +1228,7 @@ CONTAINS
           else
            exact=p*(xtarget**(p-1))
           endif
-          if (abs(sum-exact).gt.1.0D-10) then
+          if (abs(sum-exact).gt.EPS10) then
            print *,"sanity check failed polyinterp_Dmatrix"
            print *,"r,p,typ ",order_r,p,typ
            print *,"sum-exact= ",sum-exact
@@ -1908,13 +1909,14 @@ contains
 !
 ! called from GLOBALUTIL.F90 and LEVELSET_3D.F90
 subroutine dynamic_contact_angle(mu_l, mu_g, sigma, &
-                thet_s, &
-                imodel, ifgnbc, lambda, &
-                l_macro, l_micro, &
-                dgrid, d_closest, thet_d_apparent, &
-                u_cl, &
-                u_slip, &
-                thet_d)
+   thet_s, &
+   imodel, ifgnbc, lambda, &
+   l_macro, l_micro, &
+   dgrid, d_closest, thet_d_apparent, &
+   u_cl, &
+   u_slip, &
+   thet_d)
+use probcommon_module
 implicit none
 
 integer imodel, ifgnbc
@@ -1970,7 +1972,7 @@ select case (imodel)
         if (diag_output.eq.1) then
          print *, "Implement model 1 ..."
         endif
-       if (abs(l_macro) < 1.0D-9) then
+       if (abs(l_macro) < EPS9) then
            l_macro = dgrid
        end if
 
@@ -2000,15 +2002,15 @@ select case (imodel)
                 b2 = Ja21 * thet_d_micro_old + Ja22 * Ca_old - f2
                 u11 = Ja11
                 u12 = Ja12
-                l21 = Ja21 / (u11 + 1.0D-20)
+                l21 = Ja21 / (u11 + EPS20)
                 u22 = Ja22 - l21 * u12
                 y1 = b1
                 y2 = b2 - l21 * y1
-                Ca = y2 / (u22 + 1.0D-20)
-                thet_d_micro = (y1 - u12 * Ca) / (u11 + 1.0D-20)
+                Ca = y2 / (u22 + EPS20)
+                thet_d_micro = (y1 - u12 * Ca) / (u11 + EPS20)
                 if (abs((thet_d_micro - thet_d_micro_old)/ &
-                        (thet_d_micro_old+1.0D-20)) < 1.0D-4 &
-                   .AND. abs((Ca - Ca_old)/(Ca_old+1.0D-20)) < 1.0D-4) then
+                        (thet_d_micro_old+EPS20)) < EPS4 &
+                   .AND. abs((Ca - Ca_old)/(Ca_old+EPS20)) < EPS4) then
                     exit
                 end if
                 thet_d_micro_old = thet_d_micro
@@ -2018,7 +2020,7 @@ select case (imodel)
             print *, "number of iteration is: ", iter
              ! beta = mu_l / lambda  e.g. lambda=8.0D-7
              ! integral_{-2 dx}^{2 dx} u_slip = u_CL_JIANG * 4 dx ?
-            u_slip = 1.0d0 / (beta * dgrid + 1.0D-20) *  &
+            u_slip = 1.0d0 / (beta * dgrid + EPS20) *  &
                   ZEYU_delta(d_closest/dgrid) * sigma *  &
                   (cos(thet_s) - cos(thet_d_micro))
             thet_d = thet_d_apparent
@@ -3124,7 +3126,7 @@ end subroutine dynamic_contact_angle
           ZEYU_lambda=8.0D-7  ! slip length
           ZEYU_lambda=LOW%dxmin  ! slip length
           ZEYU_l_macro=LOW%dxmin
-          ZEYU_l_micro=1.0D-9
+          ZEYU_l_micro=EPS9
           ZEYU_dgrid=LOW%dxmin 
           ZEYU_d_closest=abs(dist_to_CL)
 
@@ -3294,6 +3296,7 @@ end subroutine dynamic_contact_angle
 ! nperp points into the solid tangent to the contours of the extrapolated
 !  level set functions.
       subroutine ghostnormal(nfree,nsolid,cos_angle,nghost,nperp)
+      use probcommon_module
       IMPLICIT NONE
 
       real(amrex_real), INTENT(in) :: nfree(SDIM)
@@ -3346,7 +3349,7 @@ end subroutine dynamic_contact_angle
       stop
 #endif
 
-      dist=sqrt( e2(1)**2+e2(2)**2+e2(3)**2+1.0D-14 )
+      dist=sqrt( e2(1)**2+e2(2)**2+e2(3)**2+EPS14 )
       do i=1,3
        e2(i)=e2(i)/dist
       enddo
@@ -3369,7 +3372,7 @@ end subroutine dynamic_contact_angle
       endif
       call crossprod(ntemp,e2,e3)
 
-      dist=sqrt( e3(1)**2+e3(2)**2+e3(3)**2+1.0D-14 )
+      dist=sqrt( e3(1)**2+e3(2)**2+e3(3)**2+EPS14 )
       do i=1,3
        e3(i)=e3(i)/dist
       enddo
@@ -3432,9 +3435,9 @@ end subroutine dynamic_contact_angle
       enddo 
 
       if (SDIM.eq.3) then
-       dist=sqrt( nghost(1)**2+nghost(2)**2+nghost(SDIM)**2+1.0D-14 )
+       dist=sqrt( nghost(1)**2+nghost(2)**2+nghost(SDIM)**2+EPS14 )
       else if (SDIM.eq.2) then
-       dist=sqrt( nghost(1)**2+nghost(2)**2+1.0D-14 )
+       dist=sqrt( nghost(1)**2+nghost(2)**2+EPS14 )
       else
        print *,"dimension bust"
        stop
@@ -3444,9 +3447,9 @@ end subroutine dynamic_contact_angle
       enddo
 
       if (SDIM.eq.3) then
-       dist=sqrt( nperp(1)**2+nperp(2)**2+nperp(SDIM)**2+1.0D-14 )
+       dist=sqrt( nperp(1)**2+nperp(2)**2+nperp(SDIM)**2+EPS14 )
       else if (SDIM.eq.2) then
-       dist=sqrt( nperp(1)**2+nperp(2)**2+1.0D-14 )
+       dist=sqrt( nperp(1)**2+nperp(2)**2+EPS14 )
       else
        print *,"dimension bust"
        stop
@@ -5080,6 +5083,7 @@ end subroutine EVAL_rotate
  !columns of "evecs" are the eigenvectors.
  !This routine will modify S, but then restore S at the end.
 subroutine fort_jacobi_eigenvalue(S,evals,evecs,n)
+use probcommon_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: n
@@ -5145,7 +5149,7 @@ do k=1,n
  changed(k)=1
 enddo
 
-if ((sum_off_diag.le.1.0D-13*max_S).and. &
+if ((sum_off_diag.le.EPS13*max_S).and. &
     (sum_off_diag.ge.zero)) then
  state=0
  sanity_err=zero
@@ -5260,9 +5264,9 @@ do while (state.ne.0)
   endif
  enddo
  enddo
- if (sanity_err.ge.1.0D-12*max_S) then
+ if (sanity_err.ge.EPS12*max_S) then
   ! do nothing
- else if (sanity_err.le.1.0D-12*max_S) then
+ else if (sanity_err.le.EPS12*max_S) then
   state=0
  else
   print *,"sanity_err became corrupt"
@@ -5271,10 +5275,10 @@ do while (state.ne.0)
 
 enddo !do while (state.ne.0)
 
-if (sanity_err.ge.1.0D-11*max_S) then
+if (sanity_err.ge.EPS11*max_S) then
  print *,"sanity_err too large(1)"
  stop
-else if (sanity_err.le.1.0D-11*max_S) then
+else if (sanity_err.le.EPS11*max_S) then
  ! do nothing
 else
  print *,"sanity_err is NaN"
@@ -5289,7 +5293,7 @@ do k=1,n-1
 enddo
 do i=1,n
 do j=1,n
- if (abs(S(i,j)-S_SAVE(i,j)).le.1.0D-12*max_S) then
+ if (abs(S(i,j)-S_SAVE(i,j)).le.EPS12*max_S) then
   ! do nothing
  else
   print *,"S not properly restored"
@@ -5350,10 +5354,10 @@ do j=1,n
 enddo
 enddo
 
-if (sanity_err.ge.1.0D-11*max_S) then
+if (sanity_err.ge.EPS11*max_S) then
  print *,"sanity_err too large(2)"
  stop
-else if (sanity_err.le.1.0D-11*max_S) then
+else if (sanity_err.le.EPS11*max_S) then
  ! do nothing
 else
  print *,"sanity_err became corrupt"
@@ -5368,6 +5372,7 @@ return
 end subroutine fort_jacobi_eigenvalue
 
 subroutine abs_value_determinant(S,n,determinant_out)
+use probcommon_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: n
@@ -5438,7 +5443,7 @@ endif
 
 max_eval_sqr=max(max_eval_sqr,one)
 do i=1,n
- if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS12*max_eval_sqr).or. &
      (1.eq.1)) then
   ! do nothing
  else
@@ -5460,6 +5465,7 @@ determinant_out=abs(determinant_out)
 end subroutine abs_value_determinant
 
 subroutine project_to_traceless(S,n)
+use probcommon_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: n
@@ -5532,7 +5538,7 @@ endif
 
 max_eval_sqr=max(max_eval_sqr,one)
 do i=1,n
- if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS12*max_eval_sqr).or. &
      (1.eq.1)) then
   ! do nothing
  else
@@ -5574,6 +5580,7 @@ end subroutine project_to_traceless
 
 
 subroutine project_to_positive_definite(S,n,min_eval)
+use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(in)    :: min_eval
@@ -5653,7 +5660,7 @@ endif
 
 max_eval_sqr=max(max_eval_sqr,one)
 do i=1,n
- if ((abs(evals_S(i)**2-evals_STS(i)).le.1.0D-12*max_eval_sqr).or. &
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS12*max_eval_sqr).or. &
      (1.eq.1)) then
   ! do nothing
  else
@@ -5821,6 +5828,7 @@ return
 end subroutine project_A_to_positive_definite_or_traceless
 
 subroutine matrix_solve(AA,xx,bb,matstatus,numelem)
+use probcommon_module
 IMPLICIT NONE
 integer numelem
 real(amrex_real) AA(numelem,numelem)
@@ -5881,7 +5889,7 @@ if (matstatus.eq.1) then
    holdvalue=bb(i)
    bb(i)=bb(holdj)
    bb(holdj)=holdvalue
-   if (abs(AA(i,i)).lt.1.0D-10) then
+   if (abs(AA(i,i)).lt.EPS10) then
     matstatus=0
    else
     do j=i+1,numelem
@@ -5901,7 +5909,7 @@ if (matstatus.eq.1) then
     do j=i+1,numelem
      holdvalue=holdvalue-AA(i,j)*xx(j)
     enddo
-    if (abs(AA(i,i)).lt.1.0D-10) then
+    if (abs(AA(i,i)).lt.EPS10) then
      matstatus=0
     else
      xx(i)=holdvalue/AA(i,i)
@@ -5940,6 +5948,7 @@ return
 end subroutine print_matrix
 
 subroutine matrix_inverse(AA,xx,matstatus,numelem)
+use probcommon_module
 IMPLICIT NONE
 integer, INTENT(in) :: numelem
 real(amrex_real), INTENT(inout) :: AA(numelem,numelem)
@@ -5980,7 +5989,7 @@ do i=1,numelem-1
     bb(i,k)=bb(holdj,k)
     bb(holdj,k)=holdvalue
    enddo
-   if (abs(AA(i,i)).lt.1.0D-32) then
+   if (abs(AA(i,i)).lt.EPS30) then
     matstatus=0
    else
     do j=i+1,numelem
@@ -6002,7 +6011,7 @@ do i=numelem,1,-1
      do j=i+1,numelem
       holdvalue=holdvalue-AA(i,j)*xx(j,k)
      enddo
-     if (abs(AA(i,i)).lt.1.0D-32) then
+     if (abs(AA(i,i)).lt.EPS30) then
       matstatus=0
      else
       xx(i,k)=holdvalue/AA(i,i)
@@ -6019,7 +6028,7 @@ if (1.eq.1) then
     holdvalue=holdvalue+AAhold(i,k)*xx(k,j)
    enddo 
    if (i.ne.j) then
-    if (abs(holdvalue).gt.1.0D-12) then
+    if (abs(holdvalue).gt.EPS12) then
      print *,"inverse failed1"
      print *,"AAhold="
      call print_matrix(AAhold,numelem)
@@ -6028,7 +6037,7 @@ if (1.eq.1) then
      stop
     endif
    else if (i.eq.j) then
-    if (abs(holdvalue-one).gt.1.0D-12) then
+    if (abs(holdvalue-one).gt.EPS12) then
      print *,"inverse failed2"
      print *,"AAhold="
      call print_matrix(AAhold,numelem)
@@ -8487,19 +8496,18 @@ end subroutine print_visual_descriptor
       end function slopewt
 
       real(amrex_real) function hs(phi,cutoff)
+      use probcommon_module
       IMPLICIT NONE
       real(amrex_real), INTENT(in) :: phi
       real(amrex_real), INTENT(in) :: cutoff
-      real(amrex_real) EPS
 
-      EPS=1.0D-6
       if (phi.ge.cutoff) then
         hs=one
       else if (phi.le.-cutoff) then
         hs=zero
       else
         hs=phi/(two*cutoff)+sin(Pi*phi/cutoff)/(two*Pi)+half
-        if ((hs.lt.-EPS).or.(hs.gt.one+EPS)) then
+        if ((hs.lt.-EPS6).or.(hs.gt.one+EPS6)) then
          print *,"hs sanity check failed"
          stop
         else if (hs.lt.zero) then
@@ -8518,10 +8526,10 @@ end subroutine print_visual_descriptor
       end function hs
 
       real(amrex_real) function hs_scale(phi,cutoff)
+      use probcommon_module
       IMPLICIT NONE
-      real(amrex_real) phi,cutoff,EPS
+      real(amrex_real) phi,cutoff
 
-      EPS=1.0D-6
       if (phi.ge.cutoff) then
         hs_scale=one
       else if (phi.le.-cutoff) then
@@ -8531,7 +8539,7 @@ end subroutine print_visual_descriptor
          (cos(two*Pi*phi/cutoff)-one)/(four*Pi*Pi)+ &
          (phi+cutoff)*sin(Pi*phi/cutoff)/(cutoff*Pi))
 
-        if ((hs_scale.lt.-EPS).or.(hs_scale.gt.one+EPS)) then
+        if ((hs_scale.lt.-EPS6).or.(hs_scale.gt.one+EPS6)) then
          print *,"hs_scale sanity check failed"
          stop
         else if (hs_scale.lt.zero) then
@@ -8544,19 +8552,20 @@ end subroutine print_visual_descriptor
       return
       end function hs_scale
 
-        real(amrex_real) function approximate(start_x,end_x,start_y,end_y,my_x)
-        IMPLICIT NONE
+      real(amrex_real) function approximate(start_x,end_x,start_y,end_y,my_x)
+      use probcommon_module
+      IMPLICIT NONE
 
-        real(amrex_real) start_x,end_x,start_y,end_y,my_x
+      real(amrex_real) start_x,end_x,start_y,end_y,my_x
 
-        if (abs(start_x-end_x).lt.1.0D-15) then
-         approximate=(end_y+start_y)/2.0
-        else
-         approximate=start_y+(end_y-start_y)*(my_x-start_x)/ &
-           (end_x-start_x)
-        endif
-        return
-        end function approximate
+      if (abs(start_x-end_x).lt.EPS15) then
+       approximate=(end_y+start_y)/2.0
+      else
+       approximate=start_y+(end_y-start_y)*(my_x-start_x)/ &
+         (end_x-start_x)
+      endif
+      return
+      end function approximate
 
 
       subroutine consistent_materials(vfrac,cen)
@@ -11028,6 +11037,7 @@ end subroutine print_visual_descriptor
       subroutine SEM_INTERP_ELEMENT( &
        nvar,bfact,grid_type, &
        stenhi,dx,xfine,fcoarse,fxfine)
+      use probcommon_module
       use LagrangeInterpolationPolynomial
       use LegendreNodes
 
@@ -11055,12 +11065,9 @@ end subroutine print_visual_descriptor
       real(amrex_real), dimension(:),allocatable :: ypoints,bwG
       real(amrex_real), dimension(:),allocatable :: ypointsGL,bwGL
       real(amrex_real), dimension(:,:),allocatable :: lg
-      real(amrex_real) INTERP_TOL
       real(amrex_real) wtsum
       real(amrex_real) local_data
       integer :: box_type(SDIM)
-
-      INTERP_TOL=1.0D-10
 
       call grid_type_to_box_type(grid_type,box_type)
 
@@ -11235,7 +11242,7 @@ end subroutine print_visual_descriptor
       enddo
       enddo
       enddo
-      if (abs(wtsum-one).gt.INTERP_TOL) then
+      if (abs(wtsum-one).gt.EPS10) then
        print *,"wtsum invalid"
        print *,"wtsum=",wtsum
        print *,"nvar=",nvar
@@ -12316,8 +12323,8 @@ end subroutine print_visual_descriptor
 
       do nc=1,data_in%ncomp
 
-       local_data_max(nc)=-1.0D-20
-       local_data_min(nc)=1.0D-20
+       local_data_max(nc)=-1.0D+20
+       local_data_min(nc)=1.0D+20
 
        data_out%data_interp(nc)=zero
 
@@ -12449,7 +12456,7 @@ end subroutine print_visual_descriptor
          endif
 
          if (abs(data_out%data_interp(nc)- &
-                 data_out2%data_interp(nc)).le.1.0D-12*scaling) then
+                 data_out2%data_interp(nc)).le.EPS12*scaling) then
           ! do nothing
          else
           print *,"data_out%data_interp(nc) invalid"
@@ -12511,7 +12518,8 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       type(single_deriv_from_grid_parm_type), INTENT(in) :: data_in 
-      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: disp_dataptr
+      real(amrex_real), INTENT(in), pointer, dimension(D_DECL(:,:,:)) :: &
+        disp_dataptr
       type(interp_from_grid_out_parm_type), INTENT(out) :: data_out
 
       integer dir_local
@@ -12649,8 +12657,8 @@ end subroutine print_visual_descriptor
        stop
       endif
       
-      local_data_max=-1.0D-20
-      local_data_min=1.0D-20
+      local_data_max=-1.0D+20
+      local_data_min=1.0D+20
 
       data_out%data_interp(1)=zero
 
@@ -12774,7 +12782,7 @@ end subroutine print_visual_descriptor
         endif
 
         if (abs(data_out%data_interp(1)- &
-                data_out2%data_interp(1)).le.1.0D-12*scaling) then
+                data_out2%data_interp(1)).le.EPS12*scaling) then
          ! do nothing
         else
          print *,"data_in%grid_type_data=",data_in%grid_type_data
@@ -15815,7 +15823,6 @@ end subroutine print_visual_descriptor
       real(amrex_real) :: xlo,xhi,comp_dx
       real(amrex_real) :: xcell_lo,xcell_hi
       real(amrex_real) :: xphys_lo,xphys_hi
-      real(amrex_real), PARAMETER :: conv_TOL=1.0D-12
  
       nelement=mapping_n_cell(dir)
       if (nelement.ge.1) then
@@ -15862,9 +15869,9 @@ end subroutine print_visual_descriptor
          stop
         endif
 
-        if (abs(xcomp-xcell_lo).le.comp_dx*conv_TOL) then
+        if (abs(xcomp-xcell_lo).le.comp_dx*EPS12) then
          xphys_of_xcomp=xphys_lo
-        else if (abs(xcomp-xcell_hi).le.comp_dx*conv_TOL) then
+        else if (abs(xcomp-xcell_hi).le.comp_dx*EPS12) then
          xphys_of_xcomp=xphys_hi
         else if ((xcomp.gt.xcell_lo).and. &
                  (xcomp.lt.xcell_hi)) then
@@ -15900,7 +15907,6 @@ end subroutine print_visual_descriptor
       real(amrex_real) :: xlo,xhi,comp_dx
       real(amrex_real) :: xcell_lo,xcell_hi
       real(amrex_real) :: xcomp_lo,xcomp_hi
-      real(amrex_real), PARAMETER :: conv_TOL=1.0D-12
  
       nelement=mapping_n_cell(dir)
       if (nelement.ge.1) then
@@ -15947,9 +15953,9 @@ end subroutine print_visual_descriptor
          stop
         endif
 
-        if (abs(xphys-xcell_lo).le.conv_TOL*comp_dx) then
+        if (abs(xphys-xcell_lo).le.EPS12*comp_dx) then
          xcomp_of_xphys=xcomp_lo
-        else if (abs(xphys-xcell_hi).le.conv_TOL*comp_dx) then
+        else if (abs(xphys-xcell_hi).le.EPS12*comp_dx) then
          xcomp_of_xphys=xcomp_hi
         else if ((xphys.gt.xcell_lo).and. &
                  (xphys.lt.xcell_hi)) then
@@ -15985,7 +15991,6 @@ end subroutine print_visual_descriptor
       real(amrex_real), INTENT(inout) :: comp_coord 
       integer :: nelement
       integer, INTENT(in) :: dir
-      real(amrex_real), PARAMETER :: conv_TOL=1.0D-12
       real(amrex_real) :: conv_err
       integer :: conv_iter
       integer, PARAMETER :: conv_iter_max=100
@@ -16016,10 +16021,10 @@ end subroutine print_visual_descriptor
        print *,"nelement invalid inverse_mapping nelement=",nelement
        stop
       endif
-      conv_err=conv_TOL*1.0D+10
+      conv_err=EPS12*1.0D+10
       conv_iter=0
        ! solve x(X)-xstar=0 for Xstar using Newton's method.
-      do while (conv_err.gt.conv_TOL)
+      do while (conv_err.gt.EPS12)
        comp_hi=comp_coord+comp_dx*half
        comp_lo=comp_coord-comp_dx*half
        fprime=(xphys_of_xcomp(dir,comp_hi)- &
@@ -16045,7 +16050,7 @@ end subroutine print_visual_descriptor
         stop
        endif
 
-      enddo ! while (conv_err.gt.conv_TOL)
+      enddo ! while (conv_err.gt.EPS12)
 
       end subroutine inverse_mapping
 
@@ -16069,7 +16074,6 @@ end subroutine print_visual_descriptor
       real(amrex_real), dimension(:), allocatable :: tri_f
       real(amrex_real), dimension(:), allocatable :: tri_soln
 
-      real(amrex_real), PARAMETER :: conv_TOL=1.0D-12
       real(amrex_real) :: conv_err
       integer :: conv_iter
       integer, PARAMETER :: conv_iter_max=100
@@ -16123,13 +16127,13 @@ end subroutine print_visual_descriptor
        ! get rid of floating point round-off err
       mapping_comp_to_phys(nelement,dir)=xhi 
 
-      conv_err=conv_TOL*1.0D+10
+      conv_err=EPS12*1.0D+10
       conv_iter=0
 
        ! x(X) maps computational grid to physical grid.
        ! solve: div_X (1/w(x)) grad_X x=0  x(Xlo)=Xlo   x(Xhi)=Xhi
        !
-      do while (conv_err.gt.conv_TOL)
+      do while (conv_err.gt.EPS12)
 
        do i=0,nelement-1 
         local_phys=half*(mapping_comp_to_phys(i,dir)+ &
@@ -16189,7 +16193,7 @@ end subroutine print_visual_descriptor
         stop
        endif
        
-      enddo ! do while (conv_err.gt.conv_TOL)
+      enddo ! do while (conv_err.gt.EPS12)
 
       deallocate(tri_l)
       deallocate(tri_u)
@@ -16456,6 +16460,7 @@ end subroutine print_visual_descriptor
 
        ! negative on the inside of the square
       subroutine squaredist(x,y,xlo,xhi,ylo,yhi,dist)
+      use probcommon_module
       IMPLICIT NONE
 
       real(amrex_real), INTENT(in) :: x,y,xlo,xhi,ylo,yhi
@@ -16463,7 +16468,7 @@ end subroutine print_visual_descriptor
       real(amrex_real) dist1
       real(amrex_real) xmid,ymid
  
-      if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
+      if ((xlo.ge.xhi-EPS10).or.(ylo.ge.yhi-EPS10)) then 
        print *,"invalid parameters squaredist",xlo,xhi,ylo,yhi
        stop
       endif
@@ -18972,16 +18977,15 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       real(amrex_real) rho,internal_energy,soundsqr,pressure
-      real(amrex_real) eps,drho,de,rho_plus,rho_minus,p_plus,p_minus
+      real(amrex_real) drho,de,rho_plus,rho_minus,p_plus,p_minus
       real(amrex_real) e_plus,e_minus,dp_drho,dp_de
 
       if ((rho.gt.zero).and. &
           (internal_energy.gt.zero)) then
 
        call EOS_peng_robinson(rho,internal_energy,pressure)
-       eps=1.0D-6
-       drho=eps*rho
-       de=eps*internal_energy
+       drho=EPS6*rho
+       de=EPS6*internal_energy
        rho_plus=rho+half*drho
        rho_minus=rho-half*drho
        call EOS_peng_robinson(rho_plus,internal_energy,p_plus)
@@ -19141,7 +19145,7 @@ end subroutine print_visual_descriptor
       IMPLICIT NONE
 
       real(amrex_real) rho,internal_energy,soundsqr,pressure
-      real(amrex_real) rho0,eps,drho,de,rho_plus,rho_minus,p_plus,p_minus
+      real(amrex_real) rho0,drho,de,rho_plus,rho_minus,p_plus,p_minus
       real(amrex_real) e_plus,e_minus,dp_drho,dp_de
 
       rho0=fort_denconst(1)
@@ -19154,9 +19158,8 @@ end subroutine print_visual_descriptor
           (E_CV_tillotson.gt.E_IV_tillotson)) then
 
        call EOS_tillotson(rho,internal_energy,pressure)
-       eps=1.0D-6
-       drho=eps*rho
-       de=eps*internal_energy
+       drho=EPS6*rho
+       de=EPS6*internal_energy
        rho_plus=rho+half*drho
        rho_minus=rho-half*drho
        call EOS_tillotson(rho_plus,internal_energy,p_plus)
@@ -23577,9 +23580,9 @@ if (probtype.eq.55) then
 
   if ((num_materials.ge.3).and. &
       (im_solid_substrate.ge.3).and. &
-      (abs(xcheck).lt.1.0D-7).and. &
-      (abs(ycheck).lt.1.0D-7).and. &
-      (abs(zcheck).lt.1.0D-7)) then
+      (abs(xcheck).lt.EPS7).and. &
+      (abs(ycheck).lt.EPS7).and. &
+      (abs(zcheck).lt.EPS7)) then
    im=1 ! liquid
    im_opp=2 ! gas
    im_3=im_solid_substrate
@@ -23597,7 +23600,7 @@ if (probtype.eq.55) then
 
     ! angles other than 0 or pi are supported:
     ! 0 < angle < pi
-   if (abs(cos_angle).lt.one-1.0D-2) then 
+   if (abs(cos_angle).lt.one-EPS2) then 
 
     if (((SDIM.eq.3).and.(levelrz.eq.COORDSYS_CARTESIAN)).or. &
         ((SDIM.eq.2).and.(levelrz.eq.COORDSYS_RZ))) then
@@ -24238,7 +24241,7 @@ else if ((imattype.eq.999).or. &
          ((imattype.ge.1).and.(imattype.le.MAX_NUM_EOS))) then
  call INTERNAL_material(rho,massfrac_parm, &
    temperature,e1,imattype,im)
- DT=temperature*1.0D-6
+ DT=temperature*EPS6
  T2=temperature+DT
  call INTERNAL_material(rho,massfrac_parm, &
    T2,e2,imattype,im)
@@ -24476,7 +24479,7 @@ else if (fort_material_type(1).eq.13) then
  c=half*(surface_den+depth_den)
  call EOS_tait_ADIABATIC_rhohydro(c,depth_pressure)
  pgrad=abs(depth_pressure-surface_pressure)/(depth*surface_den)
- tol=abs(gravity)*1.0D-3
+ tol=abs(gravity)*EPS3
  do while (abs(pgrad-abs(gravity)).gt.tol)
   if (1.eq.0) then
    print *,"a,b,c ",a,b,c
@@ -24880,6 +24883,7 @@ end subroutine local_shallow_water_velocity
 
 ! negative on the inside of the triangle!
 subroutine triangledist(x,y,xlo,xhi,ylo,yhi,dist)
+use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: x,y,xlo,xhi,ylo,yhi
@@ -24887,7 +24891,7 @@ real(amrex_real), INTENT(out) :: dist
 real(amrex_real) dist1,dist2,dist3
 real(amrex_real) m,b
 
-if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
+if ((xlo.ge.xhi-EPS10).or.(ylo.ge.yhi-EPS10)) then 
  print *,"invalid parameters triangle dist",xlo,xhi,ylo,yhi
  stop
 endif
@@ -24909,6 +24913,7 @@ end subroutine triangledist
 
 ! negative on the inside of the polygon!
 subroutine polygondist(x,y,xlo,xhi,ylo,yhi,xwid,ywid,dist)
+use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: x,y,xlo,xhi,ylo,yhi,xwid,ywid
@@ -24917,7 +24922,7 @@ real(amrex_real) :: dist1,dist2,dist3
 real(amrex_real) dist4,dist5
 real(amrex_real) m,b
 
-if ((xlo.ge.xhi-1.0D-10).or.(ylo.ge.yhi-1.0D-10)) then 
+if ((xlo.ge.xhi-EPS10).or.(ylo.ge.yhi-EPS10)) then 
  print *,"invalid parameters triangle dist",xlo,xhi,ylo,yhi
  stop
 endif
@@ -25018,6 +25023,7 @@ return
 end subroutine zalesakdist
 
 SUBROUTINE Adist(xx, yy, dist)
+use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT (IN) :: xx
@@ -25035,10 +25041,8 @@ real(amrex_real) :: vx, vy
 real(amrex_real) :: phi_i, maxval
 real(amrex_real) :: mhat
 real(amrex_real) :: dist1, dist2, dist3
-real(amrex_real) :: eps
 integer :: i
 
-eps = 0.01
 dist = -999.9e9
 dist1 = -999.9e9
 dist2 = -999.9e9
@@ -25098,13 +25102,13 @@ dist1 = maxval
 
 ! Trapezoid !
 xvec(1) = 4.0/9.0
-xvec(2) = (2.0 + eps)/3.0
-xvec(3) = -(2.0 + eps)/3.0
+xvec(2) = (2.0 + EPS2)/3.0
+xvec(3) = -(2.0 + EPS2)/3.0
 xvec(4) = -4.0/9.0
 
 yvec(1) = 2.0/3.0
-yvec(2) = -eps
-yvec(3) = -eps
+yvec(2) = -EPS2
+yvec(3) = -EPS2
 yvec(4) = 2.0/3.0
 
 nx(1) = -3.0/sqrt(10.0)
@@ -26486,7 +26490,7 @@ do i=-1,ncell
  SS(i)=start_elevation-DD(i)
 enddo
 
-do while (time.le.tstop-1.0D-10) 
+do while (time.le.tstop-EPS10) 
 
  call get_right_elevationIOWA(time,elevation_right)
  call get_left_elevationIOWA(time,elevation_left)

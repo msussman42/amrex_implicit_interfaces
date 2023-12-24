@@ -3260,7 +3260,6 @@ stop
       integer dencomp
       real(amrex_real) spec_old,spec_new
       real(amrex_real), PARAMETER :: species_max=1.0d0
-      real(amrex_real), PARAMETER :: SPECIES_TOL=1.0D-3
       real(amrex_real), PARAMETER :: MUSHY_THICK=2.0d0
 
       LSnew_ptr=>LSnew
@@ -3424,9 +3423,9 @@ stop
            ! Ynew=Yold+dt * r * (species_max-Ynew)
            ! Ynew=(Yold+species_max*r*dt)/(1+r*dt)
            spec_old=snew(D_DECL(i,j,k),spec_comp)
-           if (abs(spec_old).le.SPECIES_TOL) then
+           if (abs(spec_old).le.EPS3) then
             spec_old=zero
-           else if (abs(spec_old-species_max).le.SPECIES_TOL) then
+           else if (abs(spec_old-species_max).le.EPS3) then
             spec_old=species_max
            else if ((spec_old.ge.zero).and. &
                     (spec_old.le.species_max)) then
@@ -3437,9 +3436,9 @@ stop
            endif
            spec_new=(spec_old+species_max*local_rate*dt)/(one+local_rate*dt)
 
-           if (abs(spec_new).le.SPECIES_TOL) then
+           if (abs(spec_new).le.EPS3) then
             spec_new=zero
-           else if (abs(spec_new-species_max).le.SPECIES_TOL) then
+           else if (abs(spec_new-species_max).le.EPS3) then
             spec_new=species_max
            else if ((spec_new.ge.zero).and. &
                     (spec_new.le.species_max)) then
@@ -3474,9 +3473,9 @@ stop
           stop
          endif
          if ((species_avg.ge.zero).and. &
-             (species_avg.le.SPECIES_TOL)) then
+             (species_avg.le.EPS3)) then
           species_avg=zero
-         else if (abs(species_avg-species_max).le.SPECIES_TOL) then
+         else if (abs(species_avg-species_max).le.EPS3) then
           species_avg=species_max
          else if ((species_avg.gt.zero).and. &
                   (species_avg.lt.species_max))  then
@@ -7694,7 +7693,7 @@ stop
        stop
       endif
 
-      microscale_probe_size=1.0D-2
+      microscale_probe_size=EPS2
 
       if (nucleate_pos_size.lt.4) then
        print *,"nucleate_pos_size invalid: ",nucleate_pos_size

@@ -2514,7 +2514,7 @@ end subroutine nozzle2d
        ydiff=yy2(iline)-yy1(iline)
        xdiff=xx2(iline)-xx1(iline)
        linenorm=sqrt(xdiff**2 + ydiff**2)
-       if (linenorm.gt.1.0D-10) then
+       if (linenorm.gt.EPS10) then
 
        if (dd(iline).eq.0) then
         slope=ydiff/xdiff

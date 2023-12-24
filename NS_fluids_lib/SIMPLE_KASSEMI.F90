@@ -468,7 +468,7 @@ subroutine SIMPLE_KASSEMI_DiffusionLayer(l,f)
  R=fort_R_Palmore_Desjardins
  call volfrac_from_massfrac(X_gamma,Y_gamma,WA,WV)
  call massfrac_from_volfrac(X_gamma,Y_gamma_test,WA,WV)
- if (abs(Y_gamma-Y_gamma_test).le.1.0D-8) then
+ if (abs(Y_gamma-Y_gamma_test).le.EPS8) then
   ! do nothing
  else
   print *,"Y_gamma_test invalid"
@@ -480,7 +480,7 @@ subroutine SIMPLE_KASSEMI_DiffusionLayer(l,f)
 
  call Tgamma_from_TSAT_and_X(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
    T_gamma_min,T_gamma_max)
- if (abs(T_gamma-T_gamma_test).le.1.0D-8) then
+ if (abs(T_gamma-T_gamma_test).le.EPS8) then
   ! do nothing
  else
   print *,"T_gamma_test invalid1"
@@ -497,7 +497,7 @@ subroutine SIMPLE_KASSEMI_DiffusionLayer(l,f)
  endif
 
  call X_from_Tgamma(X_gamma_test,T_gamma,T_sat,L_V,R,WV) 
- if (abs(X_gamma-X_gamma_test).le.1.0D-10) then
+ if (abs(X_gamma-X_gamma_test).le.EPS10) then
   ! do nothing
  else
   print *,"X_gamma_test invalid 2"
@@ -519,7 +519,7 @@ subroutine SIMPLE_KASSEMI_DiffusionLayer(l,f)
      (l.ge.zero).and. &
      (Y_G.ge.zero).and. &
      (Y_G.le.one).and. &
-     (abs(lambda-D_G).lt.1.0D-8)) then
+     (abs(lambda-D_G).lt.EPS8)) then
   ! do nothing
  else
   print *,"T_inf, T_gamma, T_sat, l, or D_G invalid"
@@ -631,7 +631,7 @@ subroutine SIMPLE_KASSEMI_TEMPorMASSFRAC( &
  R=fort_R_Palmore_Desjardins
  call volfrac_from_massfrac(X_gamma,Y_gamma,WA,WV)
  call massfrac_from_volfrac(X_gamma,Y_gamma_test,WA,WV)
- if (abs(Y_gamma-Y_gamma_test).le.1.0D-8) then
+ if (abs(Y_gamma-Y_gamma_test).le.EPS8) then
   ! do nothing
  else
   print *,"Y_gamma_test invalid"
@@ -643,7 +643,7 @@ subroutine SIMPLE_KASSEMI_TEMPorMASSFRAC( &
 
  call Tgamma_from_TSAT_and_X(T_gamma_test,T_sat,X_gamma,L_V,R,WV, &
    T_gamma_min,T_gamma_max)
- if (abs(T_gamma-T_gamma_test).le.1.0D-8) then
+ if (abs(T_gamma-T_gamma_test).le.EPS8) then
   ! do nothing
  else
   print *,"T_gamma_test invalid2"
@@ -653,7 +653,7 @@ subroutine SIMPLE_KASSEMI_TEMPorMASSFRAC( &
  endif
 
  call X_from_Tgamma(X_gamma_test,T_gamma,T_sat,L_V,R,WV) 
- if (abs(X_gamma-X_gamma_test).le.1.0D-10) then
+ if (abs(X_gamma-X_gamma_test).le.EPS10) then
   ! do nothing
  else
   print *,"X_gamma_test invalid 1"
@@ -701,9 +701,9 @@ subroutine SIMPLE_KASSEMI_TEMPorMASSFRAC( &
      (Y_gamma.ge.Y_inf).and. &
      (T_gamma.le.T_sat).and. &
      (l_verification.ge.zero).and. &
-     (abs(lambda-D_G).lt.1.0D-8).and. &
-     (abs(T_gamma_test-T_gamma).lt.1.0D-8).and. &
-     (abs(Y_inf_test-Y_inf).lt.1.0D-8)) then
+     (abs(lambda-D_G).lt.EPS8).and. &
+     (abs(T_gamma_test-T_gamma).lt.EPS8).and. &
+     (abs(Y_inf_test-Y_inf).lt.EPS8)) then
   ! do nothing
  else
   print *,"T_inf, Y_inf, T_sat, T_gamma, l, D_G, or TY_eqn invalid"
@@ -732,7 +732,7 @@ subroutine SIMPLE_KASSEMI_TEMPorMASSFRAC( &
 
  LS_exact=x-x_gamma_domain
 
- if (x_gamma_physical.gt.xblob+xblob2-1.0D-8) then
+ if (x_gamma_physical.gt.xblob+xblob2-EPS8) then
   ! do nothing
  else
   print *,"x_gamma_physical invalid"
