@@ -1714,21 +1714,21 @@ implicit none
 
 integer, INTENT(in) :: n_rad, prob_dim
 integer, INTENT(in) :: im_primary,im_secondary,im_solid
-double precision, INTENT(in) :: &
+real(amrex_real), INTENT(in) :: &
    LS_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,num_materials)
-double precision, INTENT(in) :: &
+real(amrex_real), INTENT(in) :: &
    x_stencil(-n_rad:n_rad,-n_rad:n_rad,-n_rad:n_rad,prob_dim)
-double precision, INTENT(in) :: x_proj(prob_dim)
-double precision, INTENT(in) :: LS_xp(num_materials)
+real(amrex_real), INTENT(in) :: x_proj(prob_dim)
+real(amrex_real), INTENT(in) :: LS_xp(num_materials)
 
-double precision, INTENT(out) :: actual_angle, closest_distance
+real(amrex_real), INTENT(out) :: actual_angle, closest_distance
 
-double precision :: dx
+real(amrex_real) :: dx
 
 integer dir
 integer i, j, k, d, i_method, icl, jcl, kcl
 integer find_cl ! estimate if contact line exits
-double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
+real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                  nphi(3), npsi(3), nphi_xp(3), tpsi(3), nalpha(3), &
                  x_inf_proj(prob_dim), x_inf_proj_alpha(prob_dim), &
                  x_psi_proj(prob_dim), x_contact_point(prob_dim)
@@ -4358,13 +4358,13 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       integer   error  
       
-      real*8    press       , t
+      real(amrex_real)    press       , t
       
 !     * The array pressbc(i,j).  The first array contains the time t, the
 !     * second contains the value of the pressure on the inflow boundary at
 !     * time t.
 
-      real*8  sigma    
+      real(amrex_real)  sigma    
 
 !     integer  1234567890, 1234567890, 1234567890, 1234567890, 1234567890
 
@@ -4567,10 +4567,10 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       integer   error  
       
-      real*8    velocity, t, yval,zval
+      real(amrex_real)    velocity, t, yval,zval
       
       integer  i,j,istar,jstar 
-      real*8 zdiff,tdiff,tlocal
+      real(amrex_real) zdiff,tdiff,tlocal
       
       real(amrex_real) NOD,NID,NPT,CHH,CHW,JLEN
 
@@ -19142,21 +19142,21 @@ double precision costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) dxmin
       real(amrex_real) Re,We,RGASRWATER
       integer N1parm,N2parm
-      real*8 :: alpha_real  ! set to 2 pi/dxmin
-      real*8 :: alpha_imag  ! set to 0.0
-      real*8 :: PI_LSA
+      real(amrex_real) :: alpha_real  ! set to 2 pi/dxmin
+      real(amrex_real) :: alpha_imag  ! set to 0.0
+      real(amrex_real) :: PI_LSA
 
       integer :: M, j, k
       complex*16 :: alpha
       complex*16, dimension(:,:), allocatable :: eigenv
       complex*16, dimension(:), allocatable :: omega1
 
-      real*8, dimension(:), allocatable :: r1
-      real*8, dimension(:), allocatable :: r2
+      real(amrex_real), dimension(:), allocatable :: r1
+      real(amrex_real), dimension(:), allocatable :: r2
 
-      real*8  :: omega_real,omega_imag,ki,kr
-      real*8  :: omega_before_real,omega_before_imag
-      real*8  :: err
+      real(amrex_real)  :: omega_real,omega_imag,ki,kr
+      real(amrex_real)  :: omega_before_real,omega_before_imag
+      real(amrex_real)  :: err
 
       PI_LSA=4.0*ATAN(1.0)
       N1parm=64
@@ -21043,8 +21043,8 @@ real(amrex_real) Re,We,RGASRWATER
 integer, INTENT(in)          :: N1parm
 integer, INTENT(in)          :: N2parm
 integer, parameter          :: nn=0
-real*8 :: alpha_real  ! xblob9
-real*8 :: alpha_imag  ! yblob9
+real(amrex_real) :: alpha_real  ! xblob9
+real(amrex_real) :: alpha_imag  ! yblob9
 
 integer                     :: M, j, k, ii,jj
 complex*16                  :: alpha
@@ -21056,12 +21056,12 @@ complex*16, dimension(0:N1parm) :: vel_lz
 complex*16, dimension(0:N2parm) :: vel_gr
 complex*16, dimension(0:N2parm) :: vel_gz
 
-real*8, dimension(0:N1parm) :: r1
-real*8, dimension(0:N2parm) :: r2
-real*8 :: fr,fi,f
-real*8  :: omega_real,omega_imag,ki,kr
-real*8, dimension(0:N1parm)          :: W1bar
-real*8, dimension(0:N2parm)          :: W2bar
+real(amrex_real), dimension(0:N1parm) :: r1
+real(amrex_real), dimension(0:N2parm) :: r2
+real(amrex_real) :: fr,fi,f
+real(amrex_real)  :: omega_real,omega_imag,ki,kr
+real(amrex_real), dimension(0:N1parm)          :: W1bar
+real(amrex_real), dimension(0:N2parm)          :: W2bar
 
 
 alpha_real=xblob9
@@ -21145,7 +21145,7 @@ implicit none
 
 integer M,argi,argj,i,j
 complex*16 A(M,M)
-real*8 magmax,minreal,maxreal,mincomplex,maxcomplex,tr,ti,magtemp
+real(amrex_real) magmax,minreal,maxreal,mincomplex,maxcomplex,tr,ti,magtemp
 
  magmax=0.0
  minreal=1.0D+20
@@ -21212,11 +21212,11 @@ complex*16, dimension(M,M)         :: vr
 complex*16, dimension(M,M)         :: A
 complex*16, dimension(M,M)         :: B
 complex*16, dimension(:),allocatable      :: WORK
-double precision,dimension(:),allocatable      :: RWORK
+real(amrex_real),dimension(:),allocatable      :: RWORK
 
-real*8                   :: temp,maxbeta
-real*8, dimension(0:N1parm)          :: W1bar
-real*8, dimension(0:N2parm)          :: W2bar
+real(amrex_real)                   :: temp,maxbeta
+real(amrex_real), dimension(0:N1parm)          :: W1bar
+real(amrex_real), dimension(0:N2parm)          :: W2bar
 
 LWORK=20*M
 LDA=M
@@ -21280,44 +21280,44 @@ complex*16, INTENT(in)             :: alpha
 complex*16, dimension(0:M-1,0:M-1) :: A
 complex*16, dimension(0:M-1,0:M-1) :: B
 
-real*8, parameter :: PI_lsa = 3.1415926535898d0
+real(amrex_real), parameter :: PI_lsa = 3.1415926535898d0
 !lsaproblem_type=0 Rayleigh capillary test
 !lsaproblem_type=1 Co-flowing jet test with Lin's basic flow
 integer :: lsaproblem_type
 
-real*8  ::  N, Q, l, Re, We, Fr
+real(amrex_real)  ::  N, Q, l, Re, We, Fr
 
 integer                            :: i, j, k
-real*8                             :: alphai,alphar,alphai2,alphar2,alphari
-real*8, dimension(0:N1parm)         :: C1
-real*8, dimension(0:N1parm,0:N1parm)    :: E1
-real*8, dimension(0:N1parm,0:N1parm)    :: ER1
-real*8, dimension(0:N1parm,0:N1parm)    :: F1
-real*8, dimension(0:N1parm,0:N1parm)    :: ERE1
-real*8, dimension(0:N1parm,0:N1parm)    :: E1alt
-real*8, dimension(0:N1parm,0:N1parm)    :: F1alt
-real*8, dimension(0:N1parm,0:N1parm)    :: ERE1alt
-real*8, dimension(0:N2parm)         :: C2
-real*8, dimension(0:N2parm,0:N2parm)    :: E2
-real*8, dimension(0:N2parm,0:N2parm)    :: ER2
-real*8, dimension(0:N2parm,0:N2parm)    :: F2
-real*8, dimension(0:N2parm,0:N2parm)    :: ERE2
-real*8, dimension(0:M-1,0:M-1)  :: Ar
-real*8, dimension(0:M-1,0:M-1)  :: Ai
-real*8, dimension(0:M-1,0:M-1)  :: Br
-real*8, dimension(0:M-1,0:M-1)  :: Bi
+real(amrex_real)                             :: alphai,alphar,alphai2,alphar2,alphari
+real(amrex_real), dimension(0:N1parm)         :: C1
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: E1
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: ER1
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: F1
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: ERE1
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: E1alt
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: F1alt
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: ERE1alt
+real(amrex_real), dimension(0:N2parm)         :: C2
+real(amrex_real), dimension(0:N2parm,0:N2parm)    :: E2
+real(amrex_real), dimension(0:N2parm,0:N2parm)    :: ER2
+real(amrex_real), dimension(0:N2parm,0:N2parm)    :: F2
+real(amrex_real), dimension(0:N2parm,0:N2parm)    :: ERE2
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Ar
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Ai
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Br
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Bi
  
-real*8          :: NQ,Q1,NQ2,Q2
-real*8, dimension(0:N1parm)          :: eta
-real*8, dimension(0:N2parm)          :: xi
-real*8, dimension(0:N1parm)          :: r1
-real*8, dimension(0:N2parm)          :: r2
-real*8, dimension(0:N1parm)          :: W1bar,DW1bar
-real*8, dimension(0:N1parm)          :: DDW1bar
-real*8, dimension(0:N2parm)          :: W2bar,DW2bar
-real*8, dimension(0:N2parm)          :: DDW2bar
+real(amrex_real)          :: NQ,Q1,NQ2,Q2
+real(amrex_real), dimension(0:N1parm)          :: eta
+real(amrex_real), dimension(0:N2parm)          :: xi
+real(amrex_real), dimension(0:N1parm)          :: r1
+real(amrex_real), dimension(0:N2parm)          :: r2
+real(amrex_real), dimension(0:N1parm)          :: W1bar,DW1bar
+real(amrex_real), dimension(0:N1parm)          :: DDW1bar
+real(amrex_real), dimension(0:N2parm)          :: W2bar,DW2bar
+real(amrex_real), dimension(0:N2parm)          :: DDW2bar
 
-real*8 :: rj2,rj
+real(amrex_real) :: rj2,rj
   
 integer IU,IV,IW,IP
 integer IU2,IV2,IW2,IP2
@@ -21327,7 +21327,7 @@ integer ICONT2,IUMOM2,IVMOM2,IWMOM2
 integer IUNOSLIP,IVNOSLIP,IWNOSLIP
 integer IUJUMP,IVJUMP,IWJUMP,IPJUMP,IFEQN,ITAN1parmEQN,ITAN2parmEQN
 integer IEXTRAEQN
-real*8 :: coeff,coeff2,coeff3,coeff4,coeff5,coeff6,coeff7,RR
+real(amrex_real) :: coeff,coeff2,coeff3,coeff4,coeff5,coeff6,coeff7,RR
 
 
 lsaproblem_type=NINT(radblob9)
@@ -21981,9 +21981,9 @@ complex*16, dimension(M,M)         :: vr
 complex*16, dimension(M,M)         :: A
 complex*16, dimension(M,M)         :: B
 complex*16, dimension(:),allocatable      :: WORK
-double precision,dimension(:),allocatable      :: RWORK
+real(amrex_real),dimension(:),allocatable      :: RWORK
 
-real*8                   :: temp,maxbeta
+real(amrex_real)                   :: temp,maxbeta
 
 LWORK=20*M
 LDA=M
@@ -22052,28 +22052,28 @@ complex*16, INTENT(in)             :: alpha
 complex*16, dimension(0:M-1,0:M-1) :: A
 complex*16, dimension(0:M-1,0:M-1) :: B
 
-real*8, parameter :: PI_lsa = 3.1415926535898d0
+real(amrex_real), parameter :: PI_lsa = 3.1415926535898d0
 
-real*8  ::  N, Q, l, Re, We
+real(amrex_real)  ::  N, Q, l, Re, We
 
 integer :: i, j, k
-real*8  :: alphai,alphar,alphai2,alphar2,alphari
-real*8, dimension(0:N1parm)         :: C1
-real*8, dimension(0:N1parm,0:N1parm)    :: E1
-real*8, dimension(0:N1parm,0:N1parm)    :: F1
-real*8, dimension(0:N2parm)         :: C2
-real*8, dimension(0:N2parm,0:N2parm)    :: E2
-real*8, dimension(0:N2parm,0:N2parm)    :: F2
-real*8, dimension(0:M-1,0:M-1)  :: Ar
-real*8, dimension(0:M-1,0:M-1)  :: Ai
-real*8, dimension(0:M-1,0:M-1)  :: Br
-real*8, dimension(0:M-1,0:M-1)  :: Bi
+real(amrex_real)  :: alphai,alphar,alphai2,alphar2,alphari
+real(amrex_real), dimension(0:N1parm)         :: C1
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: E1
+real(amrex_real), dimension(0:N1parm,0:N1parm)    :: F1
+real(amrex_real), dimension(0:N2parm)         :: C2
+real(amrex_real), dimension(0:N2parm,0:N2parm)    :: E2
+real(amrex_real), dimension(0:N2parm,0:N2parm)    :: F2
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Ar
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Ai
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Br
+real(amrex_real), dimension(0:M-1,0:M-1)  :: Bi
  
-real*8          :: NQ,Q1,NQ2,Q2
-real*8, dimension(0:N1parm)          :: eta
-real*8, dimension(0:N2parm)          :: xi
-real*8, dimension(0:N1parm)          :: r1
-real*8, dimension(0:N2parm)          :: r2
+real(amrex_real)          :: NQ,Q1,NQ2,Q2
+real(amrex_real), dimension(0:N1parm)          :: eta
+real(amrex_real), dimension(0:N2parm)          :: xi
+real(amrex_real), dimension(0:N1parm)          :: r1
+real(amrex_real), dimension(0:N2parm)          :: r2
 
 ! no more IV and IV2 
 integer IU,IW,IP
@@ -22443,19 +22443,19 @@ end subroutine initialize2d
          vel_lz,vel_gr, vel_gz, x, y, dist, x_vel, y_vel,W1bar,W2bar)
        implicit none
        integer :: N1parm, N2parm
-       real*8, dimension(0:N1parm) :: r1
-       real*8, dimension(0:N2parm) :: r2
-       real*8, dimension(0:N1parm) :: W1bar
-       real*8, dimension(0:N2parm) :: W2bar
+       real(amrex_real), dimension(0:N1parm) :: r1
+       real(amrex_real), dimension(0:N2parm) :: r2
+       real(amrex_real), dimension(0:N1parm) :: W1bar
+       real(amrex_real), dimension(0:N2parm) :: W2bar
 
        complex*16, dimension(0:N1parm) :: vel_lr, vel_lz
        complex*16, dimension(0:N2parm) :: vel_gr, vel_gz
-       real*8 :: x, y, dist
-       real*8 :: x_vel, y_vel,W
+       real(amrex_real) :: x, y, dist
+       real(amrex_real) :: x_vel, y_vel,W
 
-       real*8    :: Pi_lsa
-       real*8    :: lint,xr, xi, yr, yi
-       real*8    :: txr, txi, tyr, tyi, kr,ki, theta
+       real(amrex_real)    :: Pi_lsa
+       real(amrex_real)    :: lint,xr, xi, yr, yi
+       real(amrex_real)    :: txr, txi, tyr, tyi, kr,ki, theta
        integer :: i, j
 
 
@@ -24172,7 +24172,7 @@ end subroutine initialize2d
        integer, INTENT(in) :: freezing_model(2*num_interfaces)
        integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
        real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
-       real(amrex_real) lmSt
+       real(amrex_real) :: lmSt
 
        integer ireverse,im,im_opp,iten,local_freezing_model
        integer im_source,im_dest
@@ -24336,9 +24336,11 @@ end subroutine initialize2d
          endif
 
          ! (J/(kg Kelvin)) Kelvin/(J/kg)=1
-         fort_stefan_number(iten+ireverse*num_interfaces)=cp_source*TDIFF/abs(LL)
+         fort_stefan_number(iten+ireverse*num_interfaces)= &
+                 cp_source*TDIFF/abs(LL)
         
-         fort_jacob_number(iten+ireverse*num_interfaces)=(rho_source/rho_dest)* &
+         fort_jacob_number(iten+ireverse*num_interfaces)= &
+            (rho_source/rho_dest)* &
             fort_stefan_number(iten+ireverse*num_interfaces)
 
          ! solidification

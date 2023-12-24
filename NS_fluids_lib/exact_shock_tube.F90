@@ -15,16 +15,16 @@
         snd_0,w_0,signif_0,wave_type_0,IsVacuum)
       IMPLICIT NONE
 
-      real*8 x,t,problo,probhi,probcen
-      real*8 rhol,vell,prel
-      real*8 rhor,velr,prer
-      real*8 rhoexact,velexact,preexact
-      real*8 soundl,soundr,soundexact
-      real*8 rho_0(N_STATES),vel_0(N_STATES),pre_0(N_STATES)
-      real*8 snd_0(N_STATES)
-      real*8 w_0(N_EDGES)
-      real*8 xfront(N_EDGES)
-      real*8 wexpand,xmid
+      real(amrex_real) x,t,problo,probhi,probcen
+      real(amrex_real) rhol,vell,prel
+      real(amrex_real) rhor,velr,prer
+      real(amrex_real) rhoexact,velexact,preexact
+      real(amrex_real) soundl,soundr,soundexact
+      real(amrex_real) rho_0(N_STATES),vel_0(N_STATES),pre_0(N_STATES)
+      real(amrex_real) snd_0(N_STATES)
+      real(amrex_real) w_0(N_EDGES)
+      real(amrex_real) xfront(N_EDGES)
+      real(amrex_real) wexpand,xmid
       integer signif_0(N_WAVES),wave_type_0(N_WAVES)
       integer nfronts
       logical IsVacuum
@@ -91,8 +91,8 @@
       IMPLICIT NONE
 
       integer lo,hi
-      real*8 xlo,dx           
-      real*8 den(lo-1:hi+1,3)
+      real(amrex_real) xlo,dx           
+      real(amrex_real) den(lo-1:hi+1,3)
       integer i,j
 
       i=lo-1
@@ -111,15 +111,15 @@
       IMPLICIT NONE
 
       integer lo,hi,nframe
-      real*8 xlo,dx
-      real*8 state(lo-1:hi+1,3)
-      real*8 denfab(lo-1:hi+1,3)
+      real(amrex_real) xlo,dx
+      real(amrex_real) state(lo-1:hi+1,3)
+      real(amrex_real) denfab(lo-1:hi+1,3)
       integer i,j
-      real*8 x_output
+      real(amrex_real) x_output
       character*3 namestr
       character*5 framestr
       character*8 filename
-      real*8 den,vel,pres,mom,energy,internal_energy,KE
+      real(amrex_real) den,vel,pres,mom,energy,internal_energy,KE
 
       namestr='EXA'
       write(framestr,300) nframe
@@ -159,19 +159,19 @@
 
       program main
       IMPLICIT NONE
-      real*8 dx,xlo,xhi
+      real(amrex_real) dx,xlo,xhi
       integer lo,hi
-      real*8 den(-1:NCELL,3)
-      real*8 time,x
+      real(amrex_real) den(-1:NCELL,3)
+      real(amrex_real) time,x
       integer i,j,nstep
-      real*8 denl,vell,presl,denr,velr,presr
-      real*8 soundl,soundr
-      real*8 problo,probhi,probcen
-      real*8 den_exact,vel_exact,p_exact
+      real(amrex_real) denl,vell,presl,denr,velr,presr
+      real(amrex_real) soundl,soundr
+      real(amrex_real) problo,probhi,probcen
+      real(amrex_real) den_exact,vel_exact,p_exact
 
-      real*8 rho_0(N_STATES),vel_0(N_STATES),pre_0(N_STATES)
-      real*8 snd_0(N_STATES)
-      real*8 w_0(N_EDGES)
+      real(amrex_real) rho_0(N_STATES),vel_0(N_STATES),pre_0(N_STATES)
+      real(amrex_real) snd_0(N_STATES)
+      real(amrex_real) w_0(N_EDGES)
       integer signif_0(N_WAVES),wave_type_0(N_WAVES)
       logical IsVacuum
 

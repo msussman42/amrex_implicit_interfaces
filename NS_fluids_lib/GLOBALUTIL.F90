@@ -332,6 +332,7 @@ CONTAINS
       integer                     :: j,k
       real(amrex_real)               :: P1,delta
       real(amrex_real)               :: dP1,localPI
+      real(amrex_real), PARAMETER :: stub_zero=zero
 
         localPI=four*atan(one)
 
@@ -362,7 +363,7 @@ CONTAINS
         end if
 
         if (mod(n,2).eq.0) then
-            call LegendrePolyAndDeri(n+1,zero,P1,dP1)
+            call LegendrePolyAndDeri(n+1,stub_zero,P1,dP1)
             y(n/2)=zero
             weight(n/2)=two/(dP1**2)
         end if
@@ -496,6 +497,7 @@ CONTAINS
       real(amrex_real), DIMENSION(0:n), INTENT(OUT)  :: y,weight
       integer                     :: j,k
       real(amrex_real)               :: q,dq,ln,delta,localPI
+      real(amrex_real), PARAMETER :: stub_zero=zero
 
         localPI=four*atan(one)
         if (n.eq.1) then
@@ -529,7 +531,7 @@ CONTAINS
         end if
 
         if (mod(n,2).eq.zero) then
-           call qAndLEvaluation(n,zero,q,dq,ln) 
+           call qAndLEvaluation(n,stub_zero,q,dq,ln) 
            k=int(n/two)
            y(k)=zero
            weight(k)=two/(n*(n+1)*ln**2)
@@ -1505,7 +1507,7 @@ contains
         f = wallfunc(x_n,u_abs,y,K,B,rho_w,mu_w)
         fprime = wallfuncderiv(x_n,u_abs,y,K,B,rho_w,mu_w)
    
-        if (abs(fprime).le.1.0e-15) then 
+        if (abs(fprime).le.EPS15) then 
          print *, "divide by zero error: wallfunc_newtonsmethod" !avoid /0
          stop
         else
@@ -1852,9 +1854,9 @@ contains
       use probcommon_module
       implicit none
 
-      double precision ZEYU_delta
-      double precision, INTENT(in) :: s
-      double precision :: r
+      real(amrex_real) ZEYU_delta
+      real(amrex_real), INTENT(in) :: s
+      real(amrex_real) :: r
       
       ! integral_r=0 to r=2 d(r)dr =1 
       ! s=alpha (r/2)
@@ -1920,20 +1922,20 @@ use probcommon_module
 implicit none
 
 integer imodel, ifgnbc
-double precision mu_l, mu_g, sigma, thet_s, dgrid, d_closest
-double precision thet_d_apparent, u_cl, u_slip, thet_d
-double precision lambda, l_macro, l_micro !parameter of gnbc
+real(amrex_real) mu_l, mu_g, sigma, thet_s, dgrid, d_closest
+real(amrex_real) thet_d_apparent, u_cl, u_slip, thet_d
+real(amrex_real) lambda, l_macro, l_micro !parameter of gnbc
 integer iter
-double precision Ca
-double precision sign_Ca
-double precision thet_d_micro, beta, chi !parameters of model1
-double precision thet_d_micro_old, Ca_old, a, b, c
-double precision f1, f2, Ja11, Ja12, Ja21, Ja22
-double precision b1, b2, u11, u12, u22, l21, y1, y2
-double precision a1, a2, a3, a4, u, u0, thet_d_old !parameters of model3
-double precision temp,temp2
-double precision fHI, fHI_old !parameters of model5
-double precision sigma_0, v_0 !parameters of model7
+real(amrex_real) Ca
+real(amrex_real) sign_Ca
+real(amrex_real) thet_d_micro, beta, chi !parameters of model1
+real(amrex_real) thet_d_micro_old, Ca_old, a, b, c
+real(amrex_real) f1, f2, Ja11, Ja12, Ja21, Ja22
+real(amrex_real) b1, b2, u11, u12, u22, l21, y1, y2
+real(amrex_real) a1, a2, a3, a4, u, u0, thet_d_old !parameters of model3
+real(amrex_real) temp,temp2
+real(amrex_real) fHI, fHI_old !parameters of model5
+real(amrex_real) sigma_0, v_0 !parameters of model7
 integer diag_output
 
 diag_output=1
@@ -13570,8 +13572,8 @@ end subroutine print_visual_descriptor
        force_check, &
        gridno,ngrid,level,finest_level, &
        mf, &
-       critical_cutoff_low, & ! e.g. -1.0D+99
-       critical_cutoff_high)  ! e.g. 1.0D+99
+       critical_cutoff_low, & ! e.g. -1.0D+30
+       critical_cutoff_high)  ! e.g. 1.0D+30
 
       IMPLICIT NONE
 
@@ -16429,13 +16431,14 @@ end subroutine print_visual_descriptor
 
 ! dist>0 outside of cylinder
       subroutine cylinderdist(x,y,z,xcen,ycen,rad,zmin,zmax,dist)
+      use probcommon_module
       IMPLICIT NONE
     
       real(amrex_real), INTENT(in) :: x,y,z,xcen,ycen,rad
       real(amrex_real), INTENT(out) :: dist
       real(amrex_real), INTENT(in) :: zmin,zmax
 
-      if (zmin.ge.zmax-1.0E-10) then 
+      if (zmin.ge.zmax-EPS10) then 
        print *,"invalid parameters ",zmin,zmax
        stop
       endif
@@ -17346,12 +17349,12 @@ end subroutine print_visual_descriptor
 
       ! define zone structure
       type zone3d_t
-         real*8, pointer :: var(:,:,:,:)
+         real(amrex_real), pointer :: var(:,:,:,:)
       end type zone3d_t
       type(zone3d_t), dimension(:), allocatable :: zone3d_gb
 
       type zone2d_t
-         real*8, pointer :: var(:,:,:)
+         real(amrex_real), pointer :: var(:,:,:)
       end type zone2d_t
       type(zone2d_t), dimension(:), allocatable :: zone2d_gb
 
@@ -19737,6 +19740,7 @@ end subroutine print_visual_descriptor
       real(amrex_real) rho_in
       real(amrex_real) rho,T,internal_energy,cv
       real(amrex_real) T0,T1,Tc,ie1,ie0,dT,dedT,rmin,rmax
+      real(amrex_real), PARAMETER :: stub_ten=ten
       integer iter
 
       rho=rho_in
@@ -19777,7 +19781,7 @@ end subroutine print_visual_descriptor
 
        dedT = 0.5*(ie1-ie0) ! T1-T0 = 2K
        dT = (ie0-internal_energy)/dedT
-       dT = sign(min(abs(dT),10.),dT)
+       dT = sign(min(abs(dT),stub_ten),dT)
        T0 = T0-dT
        call INTERNAL_dodecane(rho,T0,ie0)
 
@@ -24689,8 +24693,8 @@ subroutine get_bottom_elevation(x,elevation)
 use probcommon_module
 IMPLICIT NONE
 
-real*8 x,elevation
-real*8 h,l
+real(amrex_real) x,elevation
+real(amrex_real) h,l
 
  ! inlet x/H=-52 outlet x/H=44
  ! inlet x=-52H=594.36 cm  outlet x=44H=502.92 cm
@@ -26447,24 +26451,24 @@ subroutine doit(problo,probhi,ncell,dx,tstop)
 use probcommon_module
 IMPLICIT NONE
 
-real*8 problo,probhi,dx,tstop
+real(amrex_real) problo,probhi,dx,tstop
 integer ncell
-real*8 SSold(-1:ncell)
-real*8 SS(-1:ncell)
-real*8 QQold(-1:ncell)
-real*8 QQ(-1:ncell)
-real*8 DD(-1:ncell)  ! bottom topography
-real*8 xx(-1:ncell)
-real*8 SSflux(0:ncell)
-real*8 QQflux(0:ncell)
-real*8 start_elevation
+real(amrex_real) SSold(-1:ncell)
+real(amrex_real) SS(-1:ncell)
+real(amrex_real) QQold(-1:ncell)
+real(amrex_real) QQ(-1:ncell)
+real(amrex_real) DD(-1:ncell)  ! bottom topography
+real(amrex_real) xx(-1:ncell)
+real(amrex_real) SSflux(0:ncell)
+real(amrex_real) QQflux(0:ncell)
+real(amrex_real) start_elevation
 integer skip,nstep,i
-real*8 local_gravity
-real*8 time
-real*8 elevation_right,elevation_left,u_right,u_left
-real*8 maxu,maxc,den,mom,uu,cc,dt,lambda
-real*8 denleft,denright,momleft,momright,pleft,pright
-real*8 minz
+real(amrex_real) local_gravity
+real(amrex_real) time
+real(amrex_real) elevation_right,elevation_left,u_right,u_left
+real(amrex_real) maxu,maxc,den,mom,uu,cc,dt,lambda
+real(amrex_real) denleft,denright,momleft,momright,pleft,pright
+real(amrex_real) minz
 integer icrit
 
 integer igrid,jgrid  ! t index x index
@@ -26635,7 +26639,7 @@ subroutine shallow_water_solve()
 use probcommon_module
 IMPLICIT NONE
 
-real*8 problo,probhi,tstop,dx
+real(amrex_real) problo,probhi,tstop,dx
 integer ncell
 
 problo=-594.36
@@ -26669,6 +26673,7 @@ real(amrex_real),INTENT(out) :: Tout
 integer          :: i
 real(amrex_real)  :: H_local
 real(amrex_real)  :: phi_shift
+real(amrex_real)  :: half_delta
 
 phi=zero
 do i=1,SDIM
@@ -26679,8 +26684,11 @@ phi=sqrt(phi)-r
 ! phi=0,  T=Tsat
 ! phi=delta,  T=Tinf
 
-phi_shift=phi-half*delta
-H_local=hs(phi_shift,half*delta)
+half_delta=half*delta
+
+phi_shift=phi-half_delta
+
+H_local=hs(phi_shift,half_delta)
 
 Tout=Tinf*H_local+Tsat*(one-H_local)
 

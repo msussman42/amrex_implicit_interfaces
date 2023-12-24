@@ -38,6 +38,7 @@
 !! @ingroup computational_geometry_3d
 
 module mod_cg3_polyhedron
+use amrex_fort_module, only : amrex_real
    use mod_cg3_points
    implicit none
 
@@ -54,7 +55,7 @@ module mod_cg3_polyhedron
    !! @ingroup polyhedron_group
    type t_polyhedron
       !> Coordinates of the polyhedron vertices
-      double precision, dimension(:,:), allocatable :: point
+      real(amrex_real), dimension(:,:), allocatable :: point
       !> List of the edges defined by the indices of their two nodes (such that edge(1,i) < edge(2,i))
       integer, dimension(:,:), allocatable :: edge
       !> List of the faces defined by the indices of their points defined in counterclockwise order
@@ -68,9 +69,9 @@ module mod_cg3_polyhedron
       type(t_incidence_matrix), dimension(:), allocatable :: point_to_edge
 
       !> List of edge tangents
-      double precision, dimension(:,:), allocatable :: tangent
+      real(amrex_real), dimension(:,:), allocatable :: tangent
       !> List of face normals
-      double precision, dimension(:,:), allocatable :: normal
+      real(amrex_real), dimension(:,:), allocatable :: normal
 
       !> Number of points
       integer :: nb_points = 0
@@ -241,10 +242,10 @@ contains
    !! @ingroup polyhedron_group
    pure subroutine cg3_polyhedron_compute_volume(polyhedron, volume)
       type(t_polyhedron), intent(in) :: polyhedron
-      double precision, intent(out) :: volume
+      real(amrex_real), intent(out) :: volume
 
       integer :: i, j
-      double precision, dimension(3) :: area, origin
+      real(amrex_real), dimension(3) :: area, origin
 
       volume = 0d0
 
@@ -270,11 +271,11 @@ contains
    !! @ingroup polyhedron_group
    pure subroutine cg3_polyhedron_compute_centroid(polyhedron, volume, centroid)
       type(t_polyhedron), intent(in) :: polyhedron
-      double precision, intent(out) :: volume
-      double precision, dimension(3), intent(out) :: centroid
+      real(amrex_real), intent(out) :: volume
+      real(amrex_real), dimension(3), intent(out) :: centroid
 
       integer :: i, j
-      double precision, dimension(3) :: local_area, area, origin, left, right, a, b, c
+      real(amrex_real), dimension(3) :: local_area, area, origin, left, right, a, b, c
 
       volume = 0d0
       centroid = 0d0
@@ -309,8 +310,8 @@ contains
       integer, intent(out) :: zero_area_face
 
       integer :: i, j
-      double precision, dimension(3) :: center
-      double precision :: norm
+      real(amrex_real), dimension(3) :: center
+      real(amrex_real) :: norm
 
       zero_area_face = 0
 
@@ -362,7 +363,7 @@ contains
       integer, intent(out) :: zero_length_edge
 
       integer :: i
-      double precision :: norm
+      real(amrex_real) :: norm
 
       zero_length_edge = 0
 
@@ -391,7 +392,7 @@ contains
    end subroutine cg3_polyhedron_compute_tangents
 
    pure subroutine cg3_create_tetrahedron(p1, p2, p3, p4, tetra)
-      double precision, dimension(3), intent(in) :: p1, p2, p3, p4
+      real(amrex_real), dimension(3), intent(in) :: p1, p2, p3, p4
       type(t_polyhedron), intent(out) :: tetra
 
       integer :: dum
@@ -476,7 +477,7 @@ contains
 
    ! Create a cuboid from cell dimensions
    subroutine cg3_create_cuboid(c, cuboid)
-      double precision, dimension(3), intent(in) :: c
+      real(amrex_real), dimension(3), intent(in) :: c
       type(t_polyhedron), intent(out) :: cuboid
 
       cuboid%nb_points = 8
@@ -485,7 +486,7 @@ contains
 
       ! Generate the points
       allocate(cuboid%point(3, cuboid%nb_points))
-
+FIX ME
       cuboid%point(:,1) = [0d0 , 0d0 , 0d0 ]
       cuboid%point(:,2) = [0d0 , 0d0 , c(3)]
       cuboid%point(:,3) = [0d0 , c(2), 0d0 ]

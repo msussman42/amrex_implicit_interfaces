@@ -39,20 +39,21 @@
 !!$ [3]. http://en.wikipedia.org/wiki/Exponential_integral
  
 module supercooled_exact_sol
+use amrex_fort_module, only : amrex_real
   IMPLICIT NONE
 
-  REAL(kind=8) :: supercooled_lm
-  REAL(kind=8) :: supercooled_temp_infinity
-  REAL(kind=8) :: supercooled_L
-  REAL(kind=8) :: supercooled_specific_heat
-  REAL(kind=8) :: supercooled_stefan_number
-  REAL(kind=8) :: supercooled_thermal_diff
+  REAL(amrex_real) :: supercooled_lm
+  REAL(amrex_real) :: supercooled_temp_infinity
+  REAL(amrex_real) :: supercooled_L
+  REAL(amrex_real) :: supercooled_specific_heat
+  REAL(amrex_real) :: supercooled_stefan_number
+  REAL(amrex_real) :: supercooled_thermal_diff
 
 contains
 
 !!$****************************************************
 
-  REAL(kind=8) function Ei(x)
+  REAL(amrex_real) function Ei(x)
 !!$    Evaluate and returns the exponantial integral function 
 !!$    using the a series sum [3]:
 !!$
@@ -63,10 +64,10 @@ contains
 !!$    output(s):
 !!$    y     :    Ei(x), real number
 
-    REAL(kind=8),INTENT(in):: x
-    REAL(kind=8):: y, inc, xtok, kf
-    REAL(kind=8), parameter::em_const=0.5772156649015329D0
-    REAL(kind=8), parameter::tol=1.0D-15
+    REAL(amrex_real),INTENT(in):: x
+    REAL(amrex_real):: y, inc, xtok, kf
+    REAL(amrex_real), parameter::em_const=0.5772156649015329D0
+    REAL(amrex_real), parameter::tol=1.0D-7
     integer:: k
 
 
@@ -112,7 +113,7 @@ contains
   end function Ei
 
 !!$****************************************************
-  REAL(kind=8) function f_lambda(lm,St)
+  REAL(amrex_real) function f_lambda(lm,St)
 !!$    Evaluates the function in Eq.(2)
 !!$    input(s):
 !!$    lm       :  \lambda, function argument, real number
@@ -120,8 +121,8 @@ contains
 !!$    output(s):
 !!$    f_lambda :  f(\lambda,St), function value, real number
 
-    REAL(kind=8),INTENT(in):: lm
-    REAL(kind=8),INTENT(in):: St
+    REAL(amrex_real),INTENT(in):: lm
+    REAL(amrex_real),INTENT(in):: St
     
     f_lambda = lm**2 * exp(lm**2) * Ei(-lm**2) + St
 
@@ -135,21 +136,21 @@ contains
 !!$    lm       :  \lambda, smallet positive root, real number
 
 
-    REAL(kind=8),INTENT(in):: St
-    REAL(kind=8),INTENT(out):: lambda
+    REAL(amrex_real),INTENT(in):: St
+    REAL(amrex_real),INTENT(out):: lambda
 
-    REAL(kind=8), parameter:: dx = 1.0D-2     !! Marching step
-    REAL(kind=8), parameter:: tol = 1.0D-14   !! tolerance of root finding 
+    REAL(amrex_real), parameter:: dx = 1.0D-2     !! Marching step
+    REAL(amrex_real), parameter:: tol = 1.0D-7   !! tolerance of root finding 
     integer, parameter:: max_itr = 50           !! max iteration number
     integer, parameter:: max_bracketing= 1000  !! max iteration number
     
-    REAL(kind=8) :: a, b, fa, fb, p, fp
+    REAL(amrex_real) :: a, b, fa, fb, p, fp
     
     integer :: k
     integer :: nbracket
 
     !! initialize the search region
-    a = 1.0D-10
+    a = 1.0D-7
     fa = f_lambda(a,St)
     b = a
     !! march forward to have a zero crossing in the search domain
@@ -215,8 +216,8 @@ subroutine solidification_front_speed_driver(t, speed)
 !!$    t        :  time, real number
 !!$    output(s):
 !!$    R        :  radius of solidification front, real number
-  REAL(kind=8),INTENT(in):: t
-  REAL(kind=8),INTENT(out):: speed
+  REAL(amrex_real),INTENT(in):: t
+  REAL(amrex_real),INTENT(out):: speed
 
   if (supercooled_lm.ge.0.0d0) then
 
@@ -245,8 +246,8 @@ subroutine solidification_front_radius_driver(t, R)
 !!$    t        :  time, real number
 !!$    output(s):
 !!$    R        :  radius of solidification front, real number
-  REAL(kind=8),INTENT(in):: t
-  REAL(kind=8),INTENT(out):: R
+  REAL(amrex_real),INTENT(in):: t
+  REAL(amrex_real),INTENT(out):: R
 
   if (supercooled_lm.ge.0.0d0) then
 
@@ -280,8 +281,8 @@ subroutine solidification_front_radius(lm, k2, t, R)
 !!$    output(s):
 !!$    R        :  radius of solidification front, real number
 
-  REAL(kind=8),INTENT(in):: lm, k2, t
-  REAL(kind=8),INTENT(out):: R
+  REAL(amrex_real),INTENT(in):: lm, k2, t
+  REAL(amrex_real),INTENT(out):: R
 
   supercooled_lm=lm
   supercooled_thermal_diff=k2
@@ -292,8 +293,8 @@ end subroutine solidification_front_radius
 
 subroutine solidification_front_time_driver(t, R)
 
-  REAL(kind=8),INTENT(in):: R
-  REAL(kind=8),INTENT(out):: t
+  REAL(amrex_real),INTENT(in):: R
+  REAL(amrex_real),INTENT(out):: t
 
   if (supercooled_lm.gt.0.0d0) then
    if (supercooled_thermal_diff.gt.0.0d0) then
@@ -314,9 +315,9 @@ end subroutine solidification_front_time_driver
 
 subroutine solidification_front_time(lm, k2, t, R)
 
-  REAL(kind=8),INTENT(in):: lm, k2
-  REAL(kind=8),INTENT(in):: R
-  REAL(kind=8),INTENT(out):: t
+  REAL(amrex_real),INTENT(in):: lm, k2
+  REAL(amrex_real),INTENT(in):: R
+  REAL(amrex_real),INTENT(out):: t
 
   supercooled_lm=lm
   supercooled_thermal_diff=k2
@@ -333,8 +334,8 @@ subroutine liquid_temperature_driver(rd, t, v2)
 !!$    v2       :  temperature of liquid phase, real number
 !!$
 
-  REAL(kind=8),INTENT(in):: rd, t
-  REAL(kind=8),INTENT(out):: v2
+  REAL(amrex_real),INTENT(in):: rd, t
+  REAL(amrex_real),INTENT(out):: v2
 
   if (supercooled_L.ge.0.0d0) then
 
@@ -422,8 +423,8 @@ subroutine liquid_temperature(lm, V, L, c2, St, rd, t, k2, v2)
 !!$          R is the position of the solidification front!
 
 
-  REAL(kind=8),INTENT(in):: lm, V, L, c2, St, rd, t, k2
-  REAL(kind=8),INTENT(out):: v2
+  REAL(amrex_real),INTENT(in):: lm, V, L, c2, St, rd, t, k2
+  REAL(amrex_real),INTENT(out):: v2
 
   supercooled_lm=lm
   supercooled_temp_infinity=V

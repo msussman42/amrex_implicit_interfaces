@@ -217,8 +217,8 @@ Vector<int> NavierStokes::NS_sumdata_sweep;
 
 Real NavierStokes::fixed_dt     = 0.0;
 Real NavierStokes::fixed_dt_init = 0.0;
-Real NavierStokes::min_velocity_for_dt = 1.0e-12;
-Real NavierStokes::min_stefan_velocity_for_dt = 1.0e-12;
+Real NavierStokes::min_velocity_for_dt = CPP_EPS12;
+Real NavierStokes::min_stefan_velocity_for_dt = CPP_EPS12;
 Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::gravity      = 0.0;
@@ -958,16 +958,16 @@ int NavierStokes::multilevel_restart_period=20000;
 // mg.bot_atol
 // mg.visc_bot_atol
 // mg.thermal_bot_atol
-Real NavierStokes::minimum_relative_error = 1.0e-11;
-Real NavierStokes::diffusion_minimum_relative_error = 1.0e-11;
+Real NavierStokes::minimum_relative_error = CPP_EPS11;
+Real NavierStokes::diffusion_minimum_relative_error = CPP_EPS11;
 
-Real NavierStokes::save_atol_b=1.0e-14;
-Real NavierStokes::save_mac_abs_tol=1.0e-10;
-Real NavierStokes::save_min_rel_error=1.0e-11;
+Real NavierStokes::save_atol_b=CPP_EPS14;
+Real NavierStokes::save_mac_abs_tol=CPP_EPS10;
+Real NavierStokes::save_min_rel_error=CPP_EPS11;
 
-Real NavierStokes::mac_abs_tol = 1.0e-10;
-Real NavierStokes::visc_abs_tol = 1.0e-10;
-Real NavierStokes::thermal_abs_tol = 1.0e-10;
+Real NavierStokes::mac_abs_tol = CPP_EPS10;
+Real NavierStokes::visc_abs_tol = CPP_EPS10;
+Real NavierStokes::thermal_abs_tol = CPP_EPS10;
 Real NavierStokes::total_advance_time=0.0;
 
 void extra_circle_parameters(
@@ -1491,8 +1491,8 @@ void fortran_parameters() {
   stiffGAMMAtemp[im]=1.4;
 
   DrhoDTtemp[im]=0.0;
-  tempcutofftemp[im]=1.0e-8;
-  tempcutoffmaxtemp[im]=1.0e+99;
+  tempcutofftemp[im]=CPP_EPS8;
+  tempcutoffmaxtemp[im]=1.0e+30;
   NavierStokes::FSI_flag[im]=FSI_FLUID;
 
   Carreau_alpha_temp[im]=1.0;
@@ -3724,8 +3724,8 @@ NavierStokes::read_params ()
      stiffCV[i]=4.1855e+7;
      stiffGAMMA[i]=1.4;
 
-     tempcutoff[i]=1.0e-8;
-     tempcutoffmax[i]=1.0e+99;
+     tempcutoff[i]=CPP_EPS8;
+     tempcutoffmax[i]=1.0e+30;
      DrhoDT[i]=0.0;
      override_density[i]=0;
      temperature_error_cutoff[i]=0.0;
@@ -13061,7 +13061,7 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
        Vector<Real> xnucleate(AMREX_SPACEDIM);
        for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
-        xnucleate[dir]=-1.0e+99;
+        xnucleate[dir]=-1.0e+30;
 
        if (ParallelDescriptor::IOProcessor()) {
         for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -16403,7 +16403,7 @@ NavierStokes::end_spectral_loop() {
 // 
 //  AMRSYNC_PRES_MF+dir, 
 //  CONSERVE_FLUXES_MF+dir, 
-//  COARSE_FINE_FLUX_MF+dir init to 1.0E+40
+//  COARSE_FINE_FLUX_MF+dir init to 1.0E+30
 //
 //  for spectral_loop=0 ... 1
 //  for tileloop=0..1
@@ -21837,7 +21837,7 @@ NavierStokes::post_timestep (Real stop_time) {
 
    if ( (sum_interval_trigger==1)||
         (visual_drag_plot_int_trigger==1)||
-        (stop_time-upper_slab_time<1.0E-8) ) {
+        (stop_time-upper_slab_time<CPP_EPS8) ) {
     sum_integrated_quantities(local_caller_string,stop_time);
    }
   } else if (((sum_interval==0)||
@@ -21973,7 +21973,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
   holdvalue=bb[i-1];
   bb[i-1]=bb[holdj-1];
   bb[holdj-1]=holdvalue;
-  if (std::abs(AA[i-1][i-1])<1.0E-32) 
+  if (std::abs(AA[i-1][i-1])<CPP_EPS30) 
    status=0;
   else {
    for (j=i+1;j<=numelem;j++) {
@@ -21990,7 +21990,7 @@ void matrix_solveCPP(Real** AA,Real* xx,Real* bb,
    holdvalue=bb[i-1];
    for (j=i+1;j<=numelem;j++)
     holdvalue=holdvalue-AA[i-1][j-1]*xx[j-1];
-   if (std::abs(AA[i-1][i-1])<1.0E-32) 
+   if (std::abs(AA[i-1][i-1])<CPP_EPS30) 
     status=0;
    else
     xx[i-1]=holdvalue/AA[i-1][i-1];
@@ -22315,8 +22315,8 @@ NavierStokes::MaxPressureVelocityALL(
  Real local_maxpres;
  Real local_maxvel;
  Real local_maxvel_collide;
- maxpres=-1.0e+99;
- minpres=1.0e+99;
+ maxpres=-1.0e+30;
+ minpres=1.0e+30;
  maxvel=0.0;
  maxvel_collide=0.0;
  for (int k = 0; k <= finest_level; k++) {
@@ -22358,8 +22358,8 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
  MultiFab* mask=maskfiner(ngrowmask,tag,clear_phys_boundary);
 
  const Real* dx = geom.CellSize();
- maxpres=-1.0e+99;
- minpres=1.0e+99;
+ maxpres=-1.0e+30;
+ minpres=1.0e+30;
  maxvel=0.0;
  maxvel_collide=0.0;
 
@@ -22372,8 +22372,8 @@ NavierStokes::MaxPressureVelocity(Real& minpres,Real& maxpres,
  maxvelA.resize(thread_class::nthreads);
  maxvel_collideA.resize(thread_class::nthreads);
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  minpresA[tid]=1.0e+99;
-  maxpresA[tid]=-1.0e+99;
+  minpresA[tid]=1.0e+30;
+  maxpresA[tid]=-1.0e+30;
   maxvelA[tid]=0.0;
   maxvel_collideA[tid]=0.0;
  }
@@ -25399,8 +25399,8 @@ NavierStokes::makeStateCurv(int project_option,
  curv_max_local.resize(thread_class::nthreads);
 
  for (int tid=0;tid<thread_class::nthreads;tid++) {
-  curv_min_local[tid]=1.0e+99;
-  curv_max_local[tid]=-1.0e+99;
+  curv_min_local[tid]=1.0e+30;
+  curv_max_local[tid]=-1.0e+30;
  } // tid
 
  int num_curv=num_interfaces*CURVCOMP_NCOMP;

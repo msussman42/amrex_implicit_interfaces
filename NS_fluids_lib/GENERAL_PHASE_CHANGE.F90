@@ -315,6 +315,7 @@ real(amrex_real) :: initial_time
 real(amrex_real) :: seed_thickness
 real(amrex_real) :: angle_x,angle_y
 integer :: gravity_dir
+real(amrex_real) :: diameter_blob
 
   call fort_derive_gravity_dir(gravity_vector,gravity_dir)
 
@@ -367,8 +368,9 @@ integer :: gravity_dir
     if (fort_tension_init(1).gt.zero) then
        ! uses fort_tension_init(1), fort_tension_init(2), and
        ! fort_tension_init( im_solid_primary() )
+     diameter_blob=two*radblob
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
-      two*radblob,dist_ice,dist_liquid)
+      diameter_blob,dist_ice,dist_liquid)
     else if (fort_tension_init(1).eq.zero) then
      dist_liquid=radblob-x(SDIM)
     else 
@@ -517,8 +519,9 @@ integer :: gravity_dir
       stop
      endif
      ! in: materialdistbatch (initial angle=static angle)
+     diameter_blob=two*radblob
      call drop_slope_dist(x(1),x(2),x(SDIM),initial_time, &
-      two*radblob,dist_ice,dist_liquid)
+      diameter_blob,dist_ice,dist_liquid)
     else
      print *,"radblob4 invalid radblob4=",radblob4
      stop

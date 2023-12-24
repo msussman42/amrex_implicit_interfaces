@@ -613,7 +613,7 @@ stop
          stop
         endif
 
-        if (abs(T_test).lt.1.0D+50) then
+        if (abs(T_test).lt.1.0D+30) then
          ! do nothing
         else
          print *,"T_test bust"
@@ -1807,7 +1807,7 @@ stop
        print *,"im invalid21"
        stop
       endif
-      if ((Tsat.ge.zero).and.(Tsat.le.1.0D+99)) then
+      if ((Tsat.ge.zero).and.(Tsat.le.1.0D+30)) then
        ! do nothing
       else
        print *,"Tsat out of range 1"
@@ -1948,7 +1948,7 @@ stop
        print *,"Y_I= ",Y_I
        stop
       endif
-      if ((T_I.ge.zero).and.(T_I.le.1.0D+99)) then
+      if ((T_I.ge.zero).and.(T_I.le.1.0D+30)) then
        ! do nothing
       else
        print *,"T_I out of range in probe_interpolation"
@@ -2381,7 +2381,7 @@ stop
        print *,"Y_I= ",Y_I
        stop
       endif
-      if ((T_I.ge.zero).and.(T_I.le.1.0D+99)) then
+      if ((T_I.ge.zero).and.(T_I.le.1.0D+30)) then
        ! do nothing
       else
        print *,"T_I out of range in apply_TI_limiter"
@@ -6591,7 +6591,7 @@ stop
       call get_dxmaxLS(dx,bfact,dxmaxLS)
  
        ! Guard against division zero in the weight calculation
-      eps=dxmaxLS*1.0E-4
+      eps=dxmaxLS*EPS4
 
       extensionwidth=dxmaxLS*ngrow_make_distance 
 

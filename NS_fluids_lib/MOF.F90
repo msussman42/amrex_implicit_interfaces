@@ -15488,7 +15488,7 @@ contains
 
        if (is_rigid(imaterial).eq.1) then
 
-        if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
+        if (abs(voftest(imaterial)-vof_super(imaterial)).le.EPS12) then
          !do nothing
         else
          print *,"vof_super mismatch with voftest"
@@ -15503,7 +15503,7 @@ contains
         if ((continuous_mof.eq.STANDARD_MOF).or. &
             (continuous_mof.eq.MOF_TRI_TET).or. & 
             (continuous_mof.eq.CMOF_F_AND_X)) then 
-         if (abs(voftest(imaterial)-vof_super(imaterial)).le.1.0d-12) then
+         if (abs(voftest(imaterial)-vof_super(imaterial)).le.EPS12) then
           !do nothing
          else
           print *,"vof_super mismatch with voftest(2)"
@@ -15735,7 +15735,7 @@ contains
 
         refvfrac(1)=mofdata(vofcomp)
 
-        if (abs(refvfrac(1)-vof_super(imaterial)).le.1.0d-12) then
+        if (abs(refvfrac(1)-vof_super(imaterial)).le.EPS12) then
          !do nothing
         else
          print *,"vof_super mismatch with refvfrac(1)"
@@ -16739,15 +16739,15 @@ contains
       ! tetrahedra "origin node" mapped to (-1/2,-1/2,-1/2)
       do inode=1,sdim+1
       do dir=1,sdim
-       xtet_domain(inode,dir)=0.0d0
+       xtet_domain(inode,dir)=zero
       enddo
       enddo
       do dir=1,sdim
-       xtet_domain(dir+1,dir)=1.0d0
+       xtet_domain(dir+1,dir)=one
       enddo
       do inode=1,sdim+1
       do dir=1,sdim
-       xtet_domain(inode,dir)=xtet_domain(inode,dir)-0.5d0
+       xtet_domain(inode,dir)=xtet_domain(inode,dir)-half
        xsten_tet(-nhalf0+inode-1,dir)=xtet_domain(inode,dir)
       enddo
       enddo

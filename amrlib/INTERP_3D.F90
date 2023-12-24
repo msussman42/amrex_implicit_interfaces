@@ -1623,10 +1623,7 @@ stop
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
       real(amrex_real) xfine(SDIM)
-      real(amrex_real) INTERP_TOL
       integer chi_loc(SDIM)
-
-      INTERP_TOL=1.0E-4
 
       if (bfact_coarse.lt.1) then
        print *,"bfact_coarse invalid"
@@ -1714,8 +1711,8 @@ stop
        call gridstenND_level(xstenND,ic,jc,kc,levelc,nhalf)
        do dir2=1,SDIM
         xfine(dir2)=xsten(0,dir2)-xstenND(0,dir2)
-        if ((xfine(dir2).lt.-INTERP_TOL*dxc(dir2)).or. &
-            (xfine(dir2).gt.(INTERP_TOL+bfact_coarse)*dxc(dir2))) then
+        if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
+            (xfine(dir2).gt.(EPS4+bfact_coarse)*dxc(dir2))) then
          print *,"xfine out of bounds"
          stop
         endif
@@ -1853,11 +1850,8 @@ stop
       real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
       real(amrex_real) xfine(SDIM)
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
-      real(amrex_real) INTERP_TOL
       integer chi_loc(SDIM)
       integer do_spectral_interp
-
-      INTERP_TOL=1.0E-4
 
       if (bfact_coarse.lt.1) then
        print *,"bfact_coarse invalid"
@@ -1916,8 +1910,8 @@ stop
 
        do dir=1,SDIM
         xfine(dir)=xsten(0,dir)-xstenND(0,dir)
-        if ((xfine(dir).lt.-INTERP_TOL*dxc(dir)).or. &
-            (xfine(dir).gt.(INTERP_TOL+bfact_coarse)*dxc(dir))) then
+        if ((xfine(dir).lt.-EPS4*dxc(dir)).or. &
+            (xfine(dir).gt.(EPS4+bfact_coarse)*dxc(dir))) then
          print *,"xfine out of bounds"
          stop
         endif
@@ -2263,12 +2257,9 @@ stop
       real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
       real(amrex_real) xfine(SDIM)
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: fcoarse
-      real(amrex_real) INTERP_TOL
       integer chi_loc(SDIM)
       integer khi
       integer do_spectral_interp
-
-      INTERP_TOL=1.0E-4
 
       if (bfact_coarse.lt.1) then
        print *,"bfact_coarse invalid"
@@ -2359,8 +2350,8 @@ stop
        call gridstenND_level(xstenND,ic,jc,kc,levelc,nhalf)
        do dir2=1,SDIM
         xfine(dir2)=xsten(0,dir2)-xstenND(0,dir2)
-        if ((xfine(dir2).lt.-INTERP_TOL*dxc(dir2)).or. &
-            (xfine(dir2).gt.(INTERP_TOL+bfact_coarse)*dxc(dir2))) then
+        if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
+            (xfine(dir2).gt.(EPS4+bfact_coarse)*dxc(dir2))) then
          print *,"xfine out of bounds"
          stop
         endif

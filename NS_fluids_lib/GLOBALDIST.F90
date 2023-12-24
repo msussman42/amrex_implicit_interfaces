@@ -245,7 +245,7 @@ end subroutine nozzle2d
       real(amrex_real) x,y,z,dist
 
       if (SDIM.eq.2) then
-       if (abs(y-z).gt.1.0E-8) then
+       if (abs(y-z).gt.EPS8) then
         print *,"expecting y=z"
         stop
        endif
@@ -607,7 +607,7 @@ end subroutine nozzle2d
       endif
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.1.0E-8) then
+       if (abs(z-y).gt.EPS8) then
         print *,"expecting z=y if 2d"
         stop
        endif
@@ -1252,6 +1252,14 @@ end subroutine nozzle2d
       real(amrex_real) pipexlo,pipexhi
       real(amrex_real) zmin,zmax
       real(amrex_real) angle_x,angle_y
+      real(amrex_real), PARAMETER :: stub_zero=zero
+      real(amrex_real), PARAMETER :: stub_five=five
+      real(amrex_real), PARAMETER :: stub_one=one
+      real(amrex_real), PARAMETER :: stub_eleven=11.0d0
+      real(amrex_real) half_yblob
+      real(amrex_real) half_zblob2
+      real(amrex_real) factor_zblob
+      real(amrex_real) diamblob
       integer i,j,iSphere
 
       if (num_materials.lt.1) then
@@ -1375,7 +1383,7 @@ end subroutine nozzle2d
        print *,"the airgun problem needs to be redefined"
        stop
       else if ((probtype.eq.63).and.(SDIM.eq.3)) then
-       call nozzlerad(z,radcross,zero)
+       call nozzlerad(z,radcross,stub_zero)
        radpt=sqrt(x**two+y**two)
        if (z.le.(two*xblob10)) then
         dist=radcross-radpt
@@ -1386,7 +1394,7 @@ end subroutine nozzle2d
        endif
 
       else if ((probtype.eq.63).and.(SDIM.eq.2)) then
-        call nozzlerad(z,radcross,zero)
+        call nozzlerad(z,radcross,stub_zero)
   
         if (z.LE.2*xblob10) THEN
          dist=radcross-x
@@ -1409,7 +1417,8 @@ end subroutine nozzle2d
        endif
 
       else if ((probtype.eq.43).and.(zblob.gt.zero)) then ! soliddist
-       call squaredist(x,y,-xblob,xblob,yblob/two,yblob/two+zblob,dist) 
+       half_yblob=half*yblob
+       call squaredist(x,y,-xblob,xblob,half_yblob,half_yblob+zblob,dist) 
       else if ((probtype.eq.43).and.(radblob.gt.zero)) then
        offset=yblob/two+xblob/two
 !      offset=1.1*yblob/two
@@ -1425,16 +1434,18 @@ end subroutine nozzle2d
        endif
        aspect=radblob+radblob2
         ! dist<0 in solid
-       call squaredist(x,y,radblob,aspect,-1000.0*zblob,zblob,dist)
+        factor_zblob=-1000.0*zblob
+       call squaredist(x,y,radblob,aspect,factor_zblob,zblob,dist)
       else if (probtype.eq.62) then
        costheta=cos(xblob2)
        sintheta=sin(xblob2)
        xprime=costheta*(x-xblob)-sintheta*(y-yblob)
        yprime=sintheta*(x-xblob)+costheta*(y-yblob)
+       half_zblob2=half*zblob2
        call squaredist(xprime,yprime,radblob,radblob2, &
-         -half*zblob2,half*zblob2,dist) 
+         -half_zblob2,half_zblob2,dist) 
        call squaredist(xprime,yprime,-radblob2,-radblob, &
-         -half*zblob2,half*zblob2,dist1) 
+         -half_zblob2,half_zblob2,dist1) 
        if (dist1.lt.dist) then
         dist=dist1
        endif
@@ -1528,7 +1539,8 @@ end subroutine nozzle2d
 
 ! dist>0 outside square
         call squaredist(x,y,xblob-radblob,xblob+radblob,zmin,zmax,dist)
-        call squaredist(x,y,xblob-two*radblob,xblob+two*radblob, &
+        diamblob=two*radblob
+        call squaredist(x,y,xblob-diamblob,xblob+diamblob, &
          zmin,zmax,dist1)
         if (dist.le.zero) then
          dist=-dist
@@ -1546,7 +1558,8 @@ end subroutine nozzle2d
 
 ! dist>0 outside cylinder
         call cylinderdist(x,y,z,xblob,yblob,radblob,zmin,zmax,dist)
-        call cylinderdist(x,y,z,xblob,yblob,two*radblob,zmin,zmax,dist1)
+        diamblob=two*radblob
+        call cylinderdist(x,y,z,xblob,yblob,diamblob,zmin,zmax,dist1)
         if (dist.le.zero) then
          dist=-dist
         else if (dist1.ge.zero) then
@@ -1671,10 +1684,11 @@ end subroutine nozzle2d
        xprime=costheta*(x-xblob)-sintheta*(z-zblob)
        yprime=y-yblob
        zprime=sintheta*(x-xblob)+costheta*(z-zblob)
-       call tcylinderdist(xprime,yprime,zprime,zero,zero,radblob, &
-        -half*zblob2,half*zblob2,dist)
-       call tcylinderdist(xprime,yprime,zprime,zero,zero,radblob2, &
-        -half*zblob2,half*zblob2,dist1)
+       half_zblob2=half*zblob2
+       call tcylinderdist(xprime,yprime,zprime,stub_zero,stub_zero,radblob, &
+        -half_zblob2,half_zblob2,dist)
+       call tcylinderdist(xprime,yprime,zprime,stub_zero,stub_zero,radblob2, &
+        -half_zblob2,half_zblob2,dist1)
        if (dist1.ge.zero) then
         dist=dist1
        else if ((dist.ge.zero).and.(dist1.le.zero)) then
@@ -1687,7 +1701,8 @@ end subroutine nozzle2d
          dist=-dist
        endif
 !       lower cylinder first, center at (5,5,5)
-       call cylinderdist(x,y,z,five,five,radblob4,-one,ten+one,dist1)
+       call cylinderdist(x,y,z,stub_five,stub_five,radblob4, &
+               -stub_one,stub_eleven,dist1)
        dist1 = -dist1
        if (dist.gt.dist1) then
         dist = dist1
@@ -1699,10 +1714,11 @@ end subroutine nozzle2d
        xprime=costheta*(x-xblob)-sintheta*(z-zblob)
        yprime=y-yblob
        zprime=sintheta*(x-xblob)+costheta*(z-zblob)
-       call cylinderdist(xprime,yprime,zprime,zero,zero,radblob, &
-        -half*zblob2,half*zblob2,dist)
-       call cylinderdist(xprime,yprime,zprime,zero,zero,radblob2, &
-        -half*zblob2,half*zblob2,dist1)
+       half_zblob2=half*zblob2
+       call cylinderdist(xprime,yprime,zprime,stub_zero,stub_zero,radblob, &
+        -half_zblob2,half_zblob2,dist)
+       call cylinderdist(xprime,yprime,zprime,stub_zero,stub_zero,radblob2, &
+        -half_zblob2,half_zblob2,dist1)
        if (dist1.ge.zero) then
         dist=dist1
        else if ((dist.ge.zero).and.(dist1.le.zero)) then
@@ -2016,7 +2032,7 @@ end subroutine nozzle2d
       real(amrex_real), INTENT(out) :: dist
       real(amrex_real), INTENT(in) :: zmin,zmax
 
-      if (zmin.ge.zmax-1.0E-10) then
+      if (zmin.ge.zmax-EPS10) then
        print *,"invalid parameters ",zmin,zmax
        stop
       endif
