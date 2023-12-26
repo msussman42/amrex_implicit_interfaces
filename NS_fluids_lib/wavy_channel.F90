@@ -133,7 +133,9 @@ real(amrex_real), INTENT(out) :: LS(nmat)
 integer im
 real(amrex_real) tt,ss,wvel
 real(amrex_real) thickness,Radius,LambdaWave,piin
-real(amrex_real) HelixLength, scalelength, cylinderHeight,LStmp1,LStmp2,BodyStart
+real(amrex_real) :: HelixLength, scalelength
+real(amrex_real) :: cylinderHeight,LStmp1,LStmp2,BodyStart
+real(amrex_real) :: radius_offset
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -206,9 +208,10 @@ else if (axis_dir.eq.1) then
     elseif(im.eq.2) then
      LS(im)=1000.0
     elseif (im.eq.3) then ! solid helix
+     radius_offset=Radius-thickness/two
      call GET_ROOT(x(1),x(2),x(SDIM), &
       tt,ss,wvel,yblob5,yblob3,yblob4, &
-      Radius-thickness/2.0d0, &
+      radius_offset, &
       LambdaWave,helixlength,scalelength,BodyStart)
      LS(im)=-(sqrt((x(2)-yblob7)**2+(x(SDIM)-yblob8)**2)-radblob7) !circle or cylinder
 !    LS(im) = 0.5- sqrt( (cos(tt+t)-x(1))**2 + (sin(tt+t)-x(2))**2 + (tt-x(3))**2 )  !without z velocity
@@ -889,25 +892,27 @@ end module WAVY_Channel_module
 !call GET_ROOT(x(1),x(2),x(3),tt,ss,wvel,yblob5,yblob3,yblob4)
 
 SUBROUTINE GET_ROOT(px,py,pz,z,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart)
+use amrex_fort_module, only : amrex_real
   
-  REAL(KIND=8):: z,ss,wvel,yblob5,yblob3,yblob4
-  REAL(KIND=8) :: Radius,LambdaWave,helixlength,scalelength,BodyStart
+  real(amrex_real):: z,ss,wvel,yblob5,yblob3,yblob4
+  real(amrex_real) :: Radius,LambdaWave,helixlength,scalelength,BodyStart
 INTERFACE
   FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength) RESULT(g)
+  use amrex_fort_module, only : amrex_real
     IMPLICIT NONE
-    REAL(KIND=8),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
-    REAL(KIND=8):: g
+    real(amrex_real),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
+    real(amrex_real):: g
   END Function F_Tomas
 END INTERFACE    
   
   integer:: errCode
   integer,PARAMETER:: MAXITER=25
   integer:: neval   ! not used
-  REAL(KIND=8):: xZero,fZero
-  REAL(KIND=8),PARAMETER:: a = 0.0
-!   REAL(KIND=8),PARAMETER:: b = 10.0
-  REAL(KIND=8),PARAMETER:: TOL = 1E-10
-  REAL(KIND=8), INTENT(IN) :: px,py,pz
+  real(amrex_real):: xZero,fZero
+  real(amrex_real),PARAMETER:: a = 0.0
+!   real(amrex_real),PARAMETER:: b = 10.0
+  real(amrex_real),PARAMETER:: TOL = 1E-10
+  real(amrex_real), INTENT(IN) :: px,py,pz
   
 !   CALL BrentZeroDouble(a,b,F,px,py,pz,tol,MAXITER,neval,errCode,xZero,fZero)
   CALL BrentZeroDouble(a,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart,tol,MAXITER,neval,errCode,xZero,fZero)
@@ -922,9 +927,10 @@ END SUBROUTINE GET_ROOT
 
 !======================================================================================!
 FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength) RESULT (FReturn)        !Function of which to find zero
+use amrex_fort_module, only : amrex_real
 
-  REAL(KIND=8), INTENT(IN) :: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
-  REAL(KIND=8) :: FReturn
+  real(amrex_real), INTENT(IN) :: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
+  real(amrex_real) :: FReturn
 
 !  FReturn=2*px*sin(x+ss)-2*py*cos(x+ss)+2*x-2*pz
   FReturn=2*Radius*px*sin(x+yblob4*ss)-2*Radius*py*cos(x+yblob4*ss)+2**LambdaWave**2*x+2*LambdaWave*wvel*ss - 2*LambdaWave*pz
@@ -936,31 +942,33 @@ END Function F_Tomas
 ! SUBROUTINE
 ! BrentZeroDouble(ax,bx,F,px,py,pz,tol,maxIter,neval,errCode,xZero,fZero)
 SUBROUTINE BrentZeroDouble(x0,F_Tomas,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart,tol,maxIter,neval,errCode,xZero,fZero)
+use amrex_fort_module, only : amrex_real
 ! PURPOSE - Compute a zero of F in the interval (ax,bx)
 
-  ! REAL(KIND=8),INTENT(IN):: ax,bx   ! left and right enKIND=8oints of interval
-  REAL(KIND=8), INTENT(IN) :: x0,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart !initial guess, point in question,time
-  REAL(KIND=8),INTENT(IN):: tol     ! desired interval of uncertainity 
+  ! real(amrex_real),INTENT(IN):: ax,bx   ! left and right endoints of interval
+  real(amrex_real), INTENT(IN) :: x0,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength,BodyStart !initial guess, point in question,time
+  real(amrex_real),INTENT(IN):: tol     ! desired interval of uncertainity 
   integer,INTENT(IN):: maxIter   ! max number of iterations allowed. 25 is good
   integer,INTENT(OUT):: neval
   integer,INTENT(OUT):: errCode   ! =0 is OK; =1 too many iterations
                                   ! =2 if F(ax) and F(bx) have the same sign
-  REAL(KIND=8),INTENT(OUT):: xZero,fZero ! the last and best value of the zero                                   
+  real(amrex_real),INTENT(OUT):: xZero,fZero ! the last and best value of the zero                                   
       
 INTERFACE
   FUNCTION F_Tomas(x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength) RESULT(g)
+  use amrex_fort_module, only : amrex_real
     IMPLICIT NONE
-    REAL(KIND=8),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
-    REAL(KIND=8):: g
+    real(amrex_real),INTENT(IN):: x,px,py,pz,ss,wvel,yblob5,yblob3,yblob4,Radius,LambdaWave,helixlength,scalelength
+    real(amrex_real):: g
   END Function F_Tomas
 END INTERFACE    
   
-  REAL(KIND=8):: a,b,c,d,e,eps
-  REAL(KIND=8):: fa,fb,fc,tol1
+  real(amrex_real):: a,b,c,d,e,eps
+  real(amrex_real):: fa,fb,fc,tol1
   integer:: kIter,i,i_min,itest,itestp,ntestpmax
 !  integer:: method   ! =0 bisection; =1 linear; =2 inverse quadratic
-  REAL(KIND=8):: xm,p,q,r,s,dist,min_dist,Ltotal,s1start,s1end,s_start,s_end
-  REAL(KIND=8),PARAMETER:: ZERO=0.0, ONE=1.0, TWO=2.0, THREE=3.0, HALF=0.5, twosqrt = sqrt(2.)
+  real(amrex_real):: xm,p,q,r,s,dist,min_dist,Ltotal,s1start,s1end,s_start,s_end
+  real(amrex_real),PARAMETER:: ZERO=0.0, ONE=1.0, TWO=2.0, THREE=3.0, HALF=0.5, twosqrt = sqrt(2.)
 !----------------------------------------------------------------------------
   eps=EPSILON(x0)
   tol1=ONE+eps 

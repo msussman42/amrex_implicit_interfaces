@@ -40,9 +40,17 @@ use amrex_fort_module, only : amrex_real
 
    private
 
-   real(amrex_real), parameter :: PI_2 = acos(0d0)
-   real(amrex_real), parameter :: PI = 2d0*acos(0d0)
-   real(amrex_real), parameter :: TAU = 4d0*acos(0d0)
+   real(amrex_real), PARAMETER :: stub_zero=0.0d0
+   real(amrex_real), PARAMETER :: stub_one=1.0d0
+   real(amrex_real), PARAMETER :: stub_two=2.0d0
+   real(amrex_real), PARAMETER :: stub_three=3.0d0
+   real(amrex_real), PARAMETER :: stub_four=4.0d0
+   real(amrex_real), PARAMETER :: stub_six=6.0d0
+   real(amrex_real), PARAMETER :: stub_12=12.0d0
+   real(amrex_real), PARAMETER :: stub_24=24.0d0
+   real(amrex_real), parameter :: PI_2 = acos(stub_zero)
+   real(amrex_real), parameter :: PI = stub_two*acos(stub_zero)
+   real(amrex_real), parameter :: TAU = stub_four*acos(stub_zero)
 
    integer, parameter :: C_THETA = 1
    integer, parameter :: S_THETA = 2
@@ -96,7 +104,7 @@ contains
 
       ! Ensure that the transformation preserves the orientation of the tetrahedron.
       transformation(:,1) = p1 - p0
-      if (determinant < 0d0) then
+      if (determinant < stub_zero) then
          transformation(:,2) = p3 - p0
          transformation(:,3) = p2 - p0
       else
@@ -113,7 +121,7 @@ contains
 
       t_angles = angles
 
-      if (t_angles(2) < 0d0 .or. t_angles(2) > PI) then
+      if (t_angles(2) < stub_zero .or. t_angles(2) > PI) then
          ! First, ensure that φ belongs to [0,2π[.
          t_angles(2) = modulo_tau(t_angles(2))
 
@@ -138,8 +146,8 @@ contains
       diff1 = t_centroid - ref_centroid1
 
       if (mof_use_symmetric_reconstruction) then
-         cell_volume = abs(determinant)/6d0
-         special_centroid = (cell_volume*(p0 + p1 + p2 + p3)/4d0 - (cell_volume - ref_volume)*ref_centroid2)/ref_volume
+         cell_volume = abs(determinant)/stub_six
+         special_centroid = (cell_volume*(p0 + p1 + p2 + p3)/stub_four - (cell_volume - ref_volume)*ref_centroid2)/ref_volume
          diff2 = t_centroid - special_centroid
          dual_coef = (ref_volume/(cell_volume - ref_volume))**2
          sum_diff = diff1 + dual_coef*diff2
@@ -151,8 +159,8 @@ contains
          objective = dot_product(diff1, diff1)
       end if
 
-      gradient = [2d0*dot_product(sum_diff, matmul(transformation, partial_derivative(:,1))), &
-         &        2d0*dot_product(sum_diff, matmul(transformation, partial_derivative(:,2)))]
+      gradient = [stub_two*dot_product(sum_diff, matmul(transformation, partial_derivative(:,1))), &
+         &        stub_two*dot_product(sum_diff, matmul(transformation, partial_derivative(:,2)))]
    end subroutine mof3d_tetra_compute_analytic_gradient
 
    !> Compute the centroid and the derivatives in a tetrahedral cell.
@@ -193,7 +201,7 @@ contains
 
       ! Ensure that the transformation preserves the orientation of the tetrahedron.
       transformation(:,1) = p1 - p0
-      if (determinant < 0d0) then
+      if (determinant < stub_zero) then
          transformation(:,2) = p3 - p0
          transformation(:,3) = p2 - p0
       else
@@ -210,7 +218,7 @@ contains
 
       t_angles = angles
 
-      if (t_angles(2) < 0d0 .or. t_angles(2) > PI) then
+      if (t_angles(2) < stub_zero .or. t_angles(2) > PI) then
          ! First, ensure that φ belongs to [0,2π[.
          t_angles(2) = modulo_tau(t_angles(2))
 
@@ -242,9 +250,9 @@ contains
       ! Symmetric contribution.
       if (mof_use_symmetric_reconstruction) then
          ! Compute the volume of the tetrahedron.
-         cell_volume = abs(determinant)/6d0
+         cell_volume = abs(determinant)/stub_six
          ! Compute the dual centroid.
-         dual_centroid = (cell_volume*(p0 + p1 + p2 + p3)/4d0 - ref_volume*centroid)/(cell_volume - ref_volume)
+         dual_centroid = (cell_volume*(p0 + p1 + p2 + p3)/stub_four - ref_volume*centroid)/(cell_volume - ref_volume)
          ! Compute the residual.
          residual(4:6) = dual_centroid - ref_centroid2
          ! Compute the jacobian.
@@ -304,7 +312,7 @@ contains
       edge(:,4) = tetra%point(:,4) - cell_centroid
 
       min_val = huge(min_val)
-      max_val = 0d0
+      max_val = stub_zero
       min_edge = 1
       max_edge = 2
       do i = 1, 4
@@ -350,7 +358,7 @@ contains
 
       ! Ensure that the transformation preserves the orientation of the tetrahedron.
       transformation(:,1) = p1 - p0
-      if (determinant > 0d0) then
+      if (determinant > stub_zero) then
          transformation(:,2) = p2 - p0
          transformation(:,3) = p3 - p0
       else
@@ -435,8 +443,8 @@ contains
       diff = centroid - ref_centroid
       objective = dot_product(diff, diff)
 
-      gradient = [2d0*dot_product(diff, partial_derivative(:,1)), &
-         &        2d0*dot_product(diff, partial_derivative(:,2))]
+      gradient = [stub_two*dot_product(diff, partial_derivative(:,1)), &
+         &        stub_two*dot_product(diff, partial_derivative(:,2))]
    end subroutine mof3d_tetra_compute_analytic_gradient_reference
 
    pure subroutine compute_derivatives(angles, volume, centroid, derivative)
@@ -472,26 +480,26 @@ contains
       sin_theta = trigo(S_THETA)
       tan_theta = sin_theta/cos_theta
       cot_theta = cos_theta/sin_theta
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
 
-      if (theta <= 0d0) then ! θ < θ6
-         atan_1m6v = atan(1d0 - 6d0*volume)
+      if (theta <= stub_zero) then ! θ < θ6
+         atan_1m6v = atan(stub_one - stub_six*volume)
          if (theta < -atan_1m6v - PI_2) then ! θ < θ3
             if (theta < atan_1m6v - PI) then ! θ0 < θ < θ1
-               lim3_t2 = PI_2 - atan((1d0 - sqrt(6d0*volume*(1d0 - tan_theta)))*cos_theta)
+               lim3_t2 = PI_2 - atan((stub_one - sqrt(stub_six*volume*(stub_one - tan_theta)))*cos_theta)
 
                if (phi <= lim3_t2) then ! φ < φlim3_t2
                   lim1_t4dual = PI_2                                               &
-                     &        - atan((-3d0*dual_volume*(sin_theta + cos_theta)     &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2 &
-                     &        + (2d0 - 6d0*dual_volume)*sin_theta*cos_theta        &
-                     &        + 3d0*dual_volume*sin_theta**2)))                    &
-                     &        / (1d0 - 6d0*dual_volume))
+                     &        - atan((-stub_three*dual_volume*(sin_theta + cos_theta)     &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2 &
+                     &        + (stub_two - stub_six*dual_volume)*sin_theta*cos_theta        &
+                     &        + stub_three*dual_volume*sin_theta**2)))                    &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim1_t4dual) then ! 0 < φ < φlim1_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim1_t2 = PI_2 - atan((1d0 - (1d0 - tan_theta)**2/(6d0*volume))*cos_theta)
+                     lim1_t2 = PI_2 - atan((stub_one - (stub_one - tan_theta)**2/(stub_six*volume))*cos_theta)
 
                      if (phi < lim1_t2) then ! φlim1_t4* < φ < φlim1_t2
                         call derivatives_quad_edge1dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -501,9 +509,9 @@ contains
                   end if
 
                else ! φ > φlim3_t2
-                  lim3_t4 = PI_2 - atan((-3d0*volume*sin_theta + cos_theta                                           &
-                     &    - sqrt(3d0*volume*(2d0*cos_theta**2 - 2d0*sin_theta*cos_theta + 3d0*volume*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim3_t4 = PI_2 - atan((-stub_three*volume*sin_theta + cos_theta                                           &
+                     &    - sqrt(stub_three*volume*(stub_two*cos_theta**2 - stub_two*sin_theta*cos_theta + stub_three*volume*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim3_t4) then ! φlim3_t2 < φ < φlim3_t4
                      call derivatives_quad_edge3dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -512,18 +520,18 @@ contains
                   end if
                end if
             else if (theta <= -0.75d0*PI) then ! θ1 < θ < θ2
-               lim3_t1dual = PI_2 - atan(tan_theta**2/(6d0*dual_volume)*cos_theta)
+               lim3_t1dual = PI_2 - atan(tan_theta**2/(stub_six*dual_volume)*cos_theta)
 
                if (phi <= lim3_t1dual) then ! φ < φlim3_t1*
-                  lim1_t4dual = PI_2 - atan((-3d0*dual_volume*(sin_theta + cos_theta)                         &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2                            &
-                     &        + (2d0 - 6d0*dual_volume)*sin_theta*cos_theta + 3d0*dual_volume*sin_theta**2))) &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim1_t4dual = PI_2 - atan((-stub_three*dual_volume*(sin_theta + cos_theta)                         &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2                            &
+                     &        + (stub_two - stub_six*dual_volume)*sin_theta*cos_theta + stub_three*dual_volume*sin_theta**2))) &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim1_t4dual) then ! 0 < φ < φlim1_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim2_t1dual = PI_2 - atan(sqrt(6d0*dual_volume*tan_theta)*cos_theta)
+                     lim2_t1dual = PI_2 - atan(sqrt(stub_six*dual_volume*tan_theta)*cos_theta)
 
                      if (phi < lim2_t1dual) then ! φlim1_t4* < φ < φlim2_t1*
                         call derivatives_quad_edge1dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -533,9 +541,9 @@ contains
                   end if
 
                else ! φ > φlim3_t1*
-                  lim3_t4 = PI_2 - atan((-3d0*volume*sin_theta + cos_theta                                           &
-                     &    - sqrt(3d0*volume*(2d0*cos_theta**2 - 2d0*sin_theta*cos_theta + 3d0*volume*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim3_t4 = PI_2 - atan((-stub_three*volume*sin_theta + cos_theta                                           &
+                     &    - sqrt(stub_three*volume*(stub_two*cos_theta**2 - stub_two*sin_theta*cos_theta + stub_three*volume*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim3_t4) then ! φlim3_t1* < φ < φlim3_t4
                      call derivatives_quad_edge3dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -544,18 +552,18 @@ contains
                   end if
                end if
             else ! θ2 < θ < θ3
-               lim1_t1dual = PI_2 - atan(1d0/(6d0*dual_volume*tan_theta)*cos_theta)
+               lim1_t1dual = PI_2 - atan(stub_one/(stub_six*dual_volume*tan_theta)*cos_theta)
 
                if (phi <= lim1_t1dual) then ! φ < φlim1_t1*
-                  lim1_t4dual = PI_2 - atan((-3d0*dual_volume*(sin_theta + cos_theta)                         &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2                            &
-                     &        + (2d0 - 6d0*dual_volume)*sin_theta*cos_theta + 3d0*dual_volume*sin_theta**2))) &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim1_t4dual = PI_2 - atan((-stub_three*dual_volume*(sin_theta + cos_theta)                         &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2                            &
+                     &        + (stub_two - stub_six*dual_volume)*sin_theta*cos_theta + stub_three*dual_volume*sin_theta**2))) &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim1_t4dual) then ! 0 < φ < φlim1_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim2_t1dual = PI_2 - atan(sqrt(6d0*dual_volume*tan_theta)*cos_theta)
+                     lim2_t1dual = PI_2 - atan(sqrt(stub_six*dual_volume*tan_theta)*cos_theta)
 
                      if (phi < lim2_t1dual) then ! φlim1_t4* < φ < φlim2_t1*
                         call derivatives_quad_edge1dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -564,9 +572,9 @@ contains
                      end if
                   end if
                else ! φ > φlim1_t1*
-                  lim2_t4 = PI_2 - atan((sin_theta - 3d0*volume*cos_theta                                            &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2 - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim2_t4 = PI_2 - atan((sin_theta - stub_three*volume*cos_theta                                            &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2 - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim2_t4) then ! φlim1_t1* < φ < φlim2_t4
                      call derivatives_quad_edge2dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -577,19 +585,19 @@ contains
             end if
          else ! θ > θ3
             if (theta < -PI_2) then ! θ3 < θ < θ4
-               lim1_t3 = PI_2 - atan((1d0 - sqrt(6d0*volume*(1d0 - cot_theta)))*sin_theta)
+               lim1_t3 = PI_2 - atan((stub_one - sqrt(stub_six*volume*(stub_one - cot_theta)))*sin_theta)
 
                if (phi <= lim1_t3) then ! φ < φlim1_t3
-                  lim1_t4dual = PI_2 - atan((-3d0*dual_volume*(sin_theta + cos_theta) &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2    &
-                     &        + (2d0 - 6d0*dual_volume)*sin_theta*cos_theta           &
-                     &        + 3d0*dual_volume*sin_theta**2)))                       &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim1_t4dual = PI_2 - atan((-stub_three*dual_volume*(sin_theta + cos_theta) &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2    &
+                     &        + (stub_two - stub_six*dual_volume)*sin_theta*cos_theta           &
+                     &        + stub_three*dual_volume*sin_theta**2)))                       &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim1_t4dual) then ! 0 < φ < φlim1_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim2_t3 = PI_2 - atan((1d0 - (1d0 - cot_theta)**2/(6d0*volume))*sin_theta)
+                     lim2_t3 = PI_2 - atan((stub_one - (stub_one - cot_theta)**2/(stub_six*volume))*sin_theta)
 
                      if (phi < lim2_t3) then ! φlim1_t4* < φ < φlim2_t3
                         call derivatives_quad_edge1dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -598,9 +606,9 @@ contains
                      end if
                   end if
                else ! φ > φlim1_t3
-                  lim2_t4 = PI_2 - atan((sin_theta - 3d0*volume*cos_theta                                            &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2 - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim2_t4 = PI_2 - atan((sin_theta - stub_three*volume*cos_theta                                            &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2 - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim2_t4) then ! φlim1_t3 < φ < φlim2_t4
                      call derivatives_quad_edge2dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -608,20 +616,20 @@ contains
                      call derivatives_triangle4(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   end if
                end if
-            else if (theta < -atan(1d0-1d0/(6d0*volume)) - PI_2) then ! θ4 < θ < θ5
-               lim1_t3 = PI_2 - atan((1d0 - sqrt(6d0*volume*(1d0 - cot_theta)))*sin_theta)
+            else if (theta < -atan(stub_one-stub_one/(stub_six*volume)) - PI_2) then ! θ4 < θ < θ5
+               lim1_t3 = PI_2 - atan((stub_one - sqrt(stub_six*volume*(stub_one - cot_theta)))*sin_theta)
 
                if (phi <= lim1_t3) then ! φ < φlim1_t3
-                  lim3_t4dual = PI_2 - atan((cos_theta - 3d0*dual_volume*sin_theta &
-                     &        + sqrt(3d0*dual_volume*(2d0*cos_theta**2             &
-                     &        - 2d0*sin_theta*cos_theta                            &
-                     &        + 3d0*dual_volume*sin_theta**2)))                    &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim3_t4dual = PI_2 - atan((cos_theta - stub_three*dual_volume*sin_theta &
+                     &        + sqrt(stub_three*dual_volume*(stub_two*cos_theta**2             &
+                     &        - stub_two*sin_theta*cos_theta                            &
+                     &        + stub_three*dual_volume*sin_theta**2)))                    &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim3_t4dual) then ! 0 < φ < φlim3_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim3_t3 = PI_2 - atan((1d0 - 1d0/(6d0*volume*(1d0 - cot_theta)))*sin_theta)
+                     lim3_t3 = PI_2 - atan((stub_one - stub_one/(stub_six*volume*(stub_one - cot_theta)))*sin_theta)
 
                      if (phi < lim3_t3) then ! φlim3_t4* < φ < φlim3_t3
                         call derivatives_quad_edge3(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -630,10 +638,10 @@ contains
                      end if
                   end if
                else ! φ > φlim1_t3
-                  lim2_t4 = PI_2 - atan((sin_theta - 3d0*volume*cos_theta &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2      &
-                     &    - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim2_t4 = PI_2 - atan((sin_theta - stub_three*volume*cos_theta &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2      &
+                     &    - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim2_t4) then ! φlim1_t3 < φ < φlim2_t4
                      call derivatives_quad_edge2dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -642,18 +650,18 @@ contains
                   end if
                end if
             else ! θ5 < θ < θ6
-               lim2_t2dual = PI_2 - atan((1d0 - 1d0/(6d0*dual_volume*(1d0 - tan_theta)))*cos_theta)
+               lim2_t2dual = PI_2 - atan((stub_one - stub_one/(stub_six*dual_volume*(stub_one - tan_theta)))*cos_theta)
 
                if (phi <= lim2_t2dual) then ! φ < φlim2_t2*
-                  lim3_t4dual = PI_2 - atan((cos_theta - 3d0*dual_volume*sin_theta        &
-                     &        + sqrt(3d0*dual_volume*(2d0*cos_theta**2                    &
-                     &        - 2d0*sin_theta*cos_theta + 3d0*dual_volume*sin_theta**2))) &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim3_t4dual = PI_2 - atan((cos_theta - stub_three*dual_volume*sin_theta        &
+                     &        + sqrt(stub_three*dual_volume*(stub_two*cos_theta**2                    &
+                     &        - stub_two*sin_theta*cos_theta + stub_three*dual_volume*sin_theta**2))) &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim3_t4dual) then ! 0 < φ < φlim3_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim3_t2dual = PI_2 - atan((1d0 - sqrt(6d0*dual_volume*(1d0 - tan_theta)))*cos_theta)
+                     lim3_t2dual = PI_2 - atan((stub_one - sqrt(stub_six*dual_volume*(stub_one - tan_theta)))*cos_theta)
 
                      if (phi < lim3_t2dual) then ! φlim3_t4* < φ < φlim3_t2*
                         call derivatives_quad_edge3(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -662,10 +670,10 @@ contains
                      end if
                   end if
                else ! φ > φlim2_t2*
-                  lim2_t4 = PI_2 - atan((sin_theta - 3d0*volume*cos_theta &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2      &
-                     &    - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim2_t4 = PI_2 - atan((sin_theta - stub_three*volume*cos_theta &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2      &
+                     &    - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim2_t4) then ! φlim2_t2* < φ < φlim2_t4
                      call derivatives_quad_edge2dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -676,22 +684,22 @@ contains
             end if
          end if
       else ! θ > θ6
-         atan6v = atan(6d0*volume)
+         atan6v = atan(stub_six*volume)
 
          if (theta <= -atan6v + PI_2) then ! θ < θ9
             if (theta <= atan6v) then ! θ6 < θ < θ7
-               lim1_t2dual = PI_2 - atan((1d0 - (1d0 - tan_theta)**2/(6d0*dual_volume))*cos_theta)
+               lim1_t2dual = PI_2 - atan((stub_one - (stub_one - tan_theta)**2/(stub_six*dual_volume))*cos_theta)
 
                if (phi <= lim1_t2dual) then ! φ < φlim1_t2*
-                  lim3_t4dual = PI_2 - atan((cos_theta - 3d0*dual_volume*sin_theta        &
-                     &        + sqrt(3d0*dual_volume*(2d0*cos_theta**2                    &
-                     &        - 2d0*sin_theta*cos_theta + 3d0*dual_volume*sin_theta**2))) &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim3_t4dual = PI_2 - atan((cos_theta - stub_three*dual_volume*sin_theta        &
+                     &        + sqrt(stub_three*dual_volume*(stub_two*cos_theta**2                    &
+                     &        - stub_two*sin_theta*cos_theta + stub_three*dual_volume*sin_theta**2))) &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim3_t4dual) then ! 0 < φ < φlim3_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim3_t2dual = PI_2 - atan((1d0 - sqrt(6d0*dual_volume*(1d0 - tan_theta)))*cos_theta)
+                     lim3_t2dual = PI_2 - atan((stub_one - sqrt(stub_six*dual_volume*(stub_one - tan_theta)))*cos_theta)
 
                      if (phi < lim3_t2dual) then ! φlim3_t4* < φ < φlim3_t2*
                         call derivatives_quad_edge3(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -700,10 +708,10 @@ contains
                      end if
                   end if
                else ! φ > φlim1_t2*
-                  lim1_t4 = PI_2 - atan((-3d0*volume*(sin_theta + cos_theta)                    &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2                            &
-                     &    + (2d0 - 6d0*volume)*cos_theta*sin_theta + 3d0*volume*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim1_t4 = PI_2 - atan((-stub_three*volume*(sin_theta + cos_theta)                    &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2                            &
+                     &    + (stub_two - stub_six*volume)*cos_theta*sin_theta + stub_three*volume*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim1_t4) then ! φlim1_t2* < φ < φlim1_t4
                      call derivatives_quad_edge1(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -712,18 +720,18 @@ contains
                   end if
                end if
             else if (theta <= 0.25d0*PI) then ! θ7 < θ < θ8
-               lim2_t1 = PI_2 - atan(sqrt(6d0*volume*tan_theta)*cos_theta)
+               lim2_t1 = PI_2 - atan(sqrt(stub_six*volume*tan_theta)*cos_theta)
 
                if (phi <= lim2_t1) then ! φ < φlim2_t1
-                  lim3_t4dual = PI_2 - atan((cos_theta - 3d0*dual_volume*sin_theta        &
-                     &        + sqrt(3d0*dual_volume*(2d0*cos_theta**2                    &
-                     &        - 2d0*sin_theta*cos_theta + 3d0*dual_volume*sin_theta**2))) &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim3_t4dual = PI_2 - atan((cos_theta - stub_three*dual_volume*sin_theta        &
+                     &        + sqrt(stub_three*dual_volume*(stub_two*cos_theta**2                    &
+                     &        - stub_two*sin_theta*cos_theta + stub_three*dual_volume*sin_theta**2))) &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim3_t4dual) then ! 0 < φ < φlim3_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim3_t1 = PI_2 - atan(tan_theta**2/(6d0*volume)*cos_theta)
+                     lim3_t1 = PI_2 - atan(tan_theta**2/(stub_six*volume)*cos_theta)
 
                      if (phi < lim3_t1) then ! φlim3_t4* < φ < φlim3_t1
                         call derivatives_quad_edge3(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -732,10 +740,10 @@ contains
                      end if
                   end if
                else ! φ > φlim2_t1
-                  lim1_t4 = PI_2 - atan((-3d0*volume*(sin_theta + cos_theta)                    &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2                            &
-                     &    + (2d0 - 6d0*volume)*cos_theta*sin_theta + 3d0*volume*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim1_t4 = PI_2 - atan((-stub_three*volume*(sin_theta + cos_theta)                    &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2                            &
+                     &    + (stub_two - stub_six*volume)*cos_theta*sin_theta + stub_three*volume*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim1_t4) then ! φlim2_t1 < φ < φlim1_t4
                      call derivatives_quad_edge1(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -744,18 +752,18 @@ contains
                   end if
                end if
             else ! θ8 < θ < θ9
-               lim2_t1 = PI_2 - atan(sqrt(6d0*volume*tan_theta)*cos_theta)
+               lim2_t1 = PI_2 - atan(sqrt(stub_six*volume*tan_theta)*cos_theta)
 
                if (phi <= lim2_t1) then ! φ < φlim2_t1
-                  lim2_t4dual = PI_2 - atan((sin_theta - 3d0*dual_volume*cos_theta &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2 &
-                     &        - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2)))      &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim2_t4dual = PI_2 - atan((sin_theta - stub_three*dual_volume*cos_theta &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2 &
+                     &        - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2)))      &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim2_t4dual) then ! 0 < φ < φlim2_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim1_t1 = PI_2 - atan(1d0/(6d0*volume*tan_theta)*cos_theta)
+                     lim1_t1 = PI_2 - atan(stub_one/(stub_six*volume*tan_theta)*cos_theta)
 
                      if (phi < lim1_t1) then ! φlim2_t4* < φ < φlim1_t1
                         call derivatives_quad_edge2(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -764,10 +772,10 @@ contains
                      end if
                   end if
                else ! φ > φlim2_t1
-                  lim1_t4 = PI_2 - atan((-3d0*volume*(sin_theta + cos_theta)                    &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2                            &
-                     &    + (2d0 - 6d0*volume)*cos_theta*sin_theta + 3d0*volume*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim1_t4 = PI_2 - atan((-stub_three*volume*(sin_theta + cos_theta)                    &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2                            &
+                     &    + (stub_two - stub_six*volume)*cos_theta*sin_theta + stub_three*volume*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim1_t4) then ! φlim2_t1 < φ < φlim1_t4
                      call derivatives_quad_edge1(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -778,18 +786,18 @@ contains
             end if
          else ! θ > θ9
             if (theta <= PI_2) then ! θ9 < θ < θ10
-               lim2_t3dual = PI_2 - atan((1d0 - (1d0 - cot_theta)**2/(6d0*dual_volume))*sin_theta)
+               lim2_t3dual = PI_2 - atan((stub_one - (stub_one - cot_theta)**2/(stub_six*dual_volume))*sin_theta)
 
                if (phi <= lim2_t3dual) then ! φ < φlim2_t3*
-                  lim2_t4dual = PI_2 - atan((sin_theta - 3d0*dual_volume*cos_theta &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2 &
-                     &        - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2)))      &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim2_t4dual = PI_2 - atan((sin_theta - stub_three*dual_volume*cos_theta &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2 &
+                     &        - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2)))      &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim2_t4dual) then ! 0 < φ < φlim2_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim1_t3dual = PI_2 - atan((1d0 - sqrt(6d0*dual_volume*(1d0 - cot_theta)))*sin_theta)
+                     lim1_t3dual = PI_2 - atan((stub_one - sqrt(stub_six*dual_volume*(stub_one - cot_theta)))*sin_theta)
 
                      if (phi < lim1_t3dual) then ! φlim2_t4* < φ < φlim1_t3*
                         call derivatives_quad_edge2(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -798,11 +806,11 @@ contains
                      end if
                   end if
                else ! φ > φlim2_t3*
-                  lim1_t4 = PI_2 - atan((-3d0*volume*(sin_theta + cos_theta) &
-                     &    - sqrt(3d0*volume*(3d0*volume*cos_theta**2         &
-                     &    + (2d0 - 6d0*volume)*cos_theta*sin_theta           &
-                     &    + 3d0*volume*sin_theta**2)))                       &
-                     &    / (1d0 - 6d0*volume))
+                  lim1_t4 = PI_2 - atan((-stub_three*volume*(sin_theta + cos_theta) &
+                     &    - sqrt(stub_three*volume*(stub_three*volume*cos_theta**2         &
+                     &    + (stub_two - stub_six*volume)*cos_theta*sin_theta           &
+                     &    + stub_three*volume*sin_theta**2)))                       &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim1_t4) then ! φlim2_t3* < φ < φlim1_t4
                      call derivatives_quad_edge1(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -810,19 +818,19 @@ contains
                      call derivatives_triangle4(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   end if
                end if
-            else if (theta <= atan(1d0-1d0/(6d0*volume)) + PI) then ! θ10 < θ < θ11
-               lim3_t3dual = PI_2 - atan((1d0 - 1d0/(6d0*dual_volume*(1d0 - cot_theta)))*sin_theta)
+            else if (theta <= atan(stub_one-stub_one/(stub_six*volume)) + PI) then ! θ10 < θ < θ11
+               lim3_t3dual = PI_2 - atan((stub_one - stub_one/(stub_six*dual_volume*(stub_one - cot_theta)))*sin_theta)
 
                if (phi <= lim3_t3dual) then ! φ < φlim3_t3*
-                  lim2_t4dual = PI_2 - atan((sin_theta - 3d0*dual_volume*cos_theta &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2 &
-                     &        - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2)))      &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim2_t4dual = PI_2 - atan((sin_theta - stub_three*dual_volume*cos_theta &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2 &
+                     &        - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2)))      &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim2_t4dual) then ! 0 < φ < φlim2_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim1_t3dual = PI_2 - atan((1d0 - sqrt(6d0*dual_volume*(1d0 - cot_theta)))*sin_theta)
+                     lim1_t3dual = PI_2 - atan((stub_one - sqrt(stub_six*dual_volume*(stub_one - cot_theta)))*sin_theta)
 
                      if (phi < lim1_t3dual) then ! φlim2_t4* < φ < φlim1_t3*
                         call derivatives_quad_edge2(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -831,10 +839,10 @@ contains
                      end if
                   end if
                else ! φ > φlim3_t3*
-                  lim3_t4 = PI_2 - atan((-3d0*volume*sin_theta + cos_theta              &
-                     &    - sqrt(3d0*volume*(2d0*cos_theta**2 - 2d0*sin_theta*cos_theta &
-                     &    + 3d0*volume*sin_theta**2)))                                  &
-                     &    / (1d0 - 6d0*volume))
+                  lim3_t4 = PI_2 - atan((-stub_three*volume*sin_theta + cos_theta              &
+                     &    - sqrt(stub_three*volume*(stub_two*cos_theta**2 - stub_two*sin_theta*cos_theta &
+                     &    + stub_three*volume*sin_theta**2)))                                  &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim3_t4) then ! φlim3_t3* < φ < φlim3_t4
                      call derivatives_quad_edge3dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -843,18 +851,18 @@ contains
                   end if
                end if
             else ! θ11 < θ < θ12
-               lim3_t2 = PI_2 - atan((1d0 - sqrt(6d0*volume*(1d0 - tan_theta)))*cos_theta)
+               lim3_t2 = PI_2 - atan((stub_one - sqrt(stub_six*volume*(stub_one - tan_theta)))*cos_theta)
 
                if (phi <= lim3_t2) then ! φ < φlim3_t2
-                  lim2_t4dual = PI_2 - atan((sin_theta - 3d0*dual_volume*cos_theta &
-                     &        + sqrt(3d0*dual_volume*(3d0*dual_volume*cos_theta**2 &
-                     &        - 2d0*sin_theta*cos_theta + 2d0*sin_theta**2)))      &
-                     &        / (1d0 - 6d0*dual_volume))
+                  lim2_t4dual = PI_2 - atan((sin_theta - stub_three*dual_volume*cos_theta &
+                     &        + sqrt(stub_three*dual_volume*(stub_three*dual_volume*cos_theta**2 &
+                     &        - stub_two*sin_theta*cos_theta + stub_two*sin_theta**2)))      &
+                     &        / (stub_one - stub_six*dual_volume))
 
                   if (phi <= lim2_t4dual) then ! 0 < φ < φlim2_t4*
                      call derivatives_triangle4dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
                   else
-                     lim2_t2 = PI_2 - atan((1d0 - 1d0/(6d0*volume*(1d0 - tan_theta)))*cos_theta)
+                     lim2_t2 = PI_2 - atan((stub_one - stub_one/(stub_six*volume*(stub_one - tan_theta)))*cos_theta)
 
                      if (phi < lim2_t2) then ! φlim2_t4* < φ < φlim2_t2
                         call derivatives_quad_edge2(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -863,10 +871,10 @@ contains
                      end if
                   end if
                else ! φ > φlim3_t2
-                  lim3_t4 = PI_2 - atan((-3d0*volume*sin_theta + cos_theta       &
-                     &    - sqrt(3d0*volume*(2d0*cos_theta**2                    &
-                     &    - 2d0*sin_theta*cos_theta + 3d0*volume*sin_theta**2))) &
-                     &    / (1d0 - 6d0*volume))
+                  lim3_t4 = PI_2 - atan((-stub_three*volume*sin_theta + cos_theta       &
+                     &    - sqrt(stub_three*volume*(stub_two*cos_theta**2                    &
+                     &    - stub_two*sin_theta*cos_theta + stub_three*volume*sin_theta**2))) &
+                     &    / (stub_one - stub_six*volume))
 
                   if (phi < lim3_t4) then ! φlim3_t2 < φ < φlim3_t4
                      call derivatives_quad_edge3dual(trigo, volume, derivative(:,1), derivative(:,2), centroid)
@@ -890,23 +898,23 @@ contains
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
-      sec_theta = 1d0/trigo(C_THETA)
+      sec_theta = stub_one/trigo(C_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
-      csc_phi = 1d0/trigo(S_PHI)
+      csc_phi = stub_one/trigo(S_PHI)
 
       t2l = tan_theta
       t3l = cot_phi*sec_theta
 
-      alpha = (6d0*volume*sin_theta*cot_phi/cos_theta**2)**(1d0/3d0)
+      alpha = (stub_six*volume*sin_theta*cot_phi/cos_theta**2)**(stub_one/stub_three)
       beta = alpha*cos_theta/sin_theta
       gamma = alpha*cos_theta/cot_phi
       ! Centroid
-      centroid = [alpha, beta, gamma]/4d0
+      centroid = [alpha, beta, gamma]/stub_four
 
       t2sq = t2l**2
-      coef = volume/2d0/(alpha**2)
-      derivative_theta = coef*[t3l*(1d0 + 2d0*t2sq), -t3l/t2l*(2d0 + t2sq), 1d0 - t2sq]
-      derivative_phi = coef*csc_phi**2*sec_theta*[-t2l, -1d0, 2d0*t2l/t3l]
+      coef = volume/stub_two/(alpha**2)
+      derivative_theta = coef*[t3l*(stub_one + stub_two*t2sq), -t3l/t2l*(stub_two + t2sq), stub_one - t2sq]
+      derivative_phi = coef*csc_phi**2*sec_theta*[-t2l, -stub_one, stub_two*t2l/t3l]
    end subroutine derivatives_triangle1
 
    pure subroutine derivatives_triangle1dual(trigo, volume, derivative_theta, derivative_phi, centroid)
@@ -918,28 +926,28 @@ contains
       real(amrex_real) :: tan_theta, sec_theta, cot_phi, csc_phi, cos_theta, sin_theta
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
-      sec_theta = 1d0/trigo(C_THETA)
+      sec_theta = stub_one/trigo(C_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
-      csc_phi = 1d0/trigo(S_PHI)
+      csc_phi = stub_one/trigo(S_PHI)
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
 
       t2l = tan_theta
       t3l = cot_phi*sec_theta
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
 
-      alpha = (6d0*dual_volume*sin_theta*cot_phi/cos_theta**2)**(1d0/3d0)
+      alpha = (stub_six*dual_volume*sin_theta*cot_phi/cos_theta**2)**(stub_one/stub_three)
       beta = alpha*cos_theta/sin_theta
       gamma = alpha*cos_theta/cot_phi
 
       ! Centroid
-      centroid = ([1d0, 1d0, 1d0]/6d0 - dual_volume*[alpha, beta, gamma])/(4d0*volume)
+      centroid = ([stub_one, stub_one, stub_one]/stub_six - dual_volume*[alpha, beta, gamma])/(stub_four*volume)
 
       t2sq = t2l**2
-      coef = -dual_volume/volume*dual_volume/2d0/(alpha**2)
+      coef = -dual_volume/volume*dual_volume/stub_two/(alpha**2)
 
-      derivative_theta = coef*[t3l*(1d0 + 2d0*t2sq), -t3l/t2l*(2d0 + t2sq), 1d0 - t2sq]
-      derivative_phi = coef*csc_phi**2*sec_theta*[-t2l, -1d0, 2d0*t2l/t3l]
+      derivative_theta = coef*[t3l*(stub_one + stub_two*t2sq), -t3l/t2l*(stub_two + t2sq), stub_one - t2sq]
+      derivative_phi = coef*csc_phi**2*sec_theta*[-t2l, -stub_one, stub_two*t2l/t3l]
    end subroutine derivatives_triangle1dual
 
    pure subroutine derivatives_triangle2(trigo, volume, derivative_theta, derivative_phi, centroid)
@@ -953,32 +961,32 @@ contains
       real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
-      sec_theta = 1d0/trigo(C_THETA)
+      sec_theta = stub_one/trigo(C_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
-      csc_phi = 1d0/trigo(S_PHI)
+      csc_phi = stub_one/trigo(S_PHI)
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
 
       t2l = tan_theta
       t3l = cot_phi*sec_theta
 
-      alpha = (6d0*volume*(cos_theta - sin_theta)*(cos_theta - cot_phi)/cos_theta**2)**(1d0/3d0)
+      alpha = (stub_six*volume*(cos_theta - sin_theta)*(cos_theta - cot_phi)/cos_theta**2)**(stub_one/stub_three)
       beta = alpha*cos_theta/(cos_theta - cot_phi)
       gamma = alpha*cos_theta/(cos_theta - sin_theta)
 
       ! Centroid
-      centroid = [4d0 - alpha - beta - gamma, gamma, beta]/4d0
+      centroid = [stub_four - alpha - beta - gamma, gamma, beta]/stub_four
 
-      dthetat2l = 1d0 + t2l**2
+      dthetat2l = stub_one + t2l**2
       dthetat3l = t2l*t3l
-      t23l = (1d0 - t2l)/(1d0 - t3l)
-      coef = -volume/(2d0*alpha**2)
-      dtheta_alpha = (dthetat3l - 2d0/t23l*dthetat2l)
-      dtheta_beta = (dthetat2l - 2d0*t23l*dthetat3l)
-      dtheta_gamma = (1d0 - t3l)*dthetat2l + (1d0 - t2l)*dthetat3l
+      t23l = (stub_one - t2l)/(stub_one - t3l)
+      coef = -volume/(stub_two*alpha**2)
+      dtheta_alpha = (dthetat3l - stub_two/t23l*dthetat2l)
+      dtheta_beta = (dthetat2l - stub_two*t23l*dthetat3l)
+      dtheta_gamma = (stub_one - t3l)*dthetat2l + (stub_one - t2l)*dthetat3l
 
       derivative_theta = coef*[-dtheta_alpha - dtheta_beta - dtheta_gamma, dtheta_alpha, dtheta_beta]
-      derivative_phi = -coef*csc_phi**2*sec_theta*[-1d0 + 2d0*t23l - (1d0 - t2l), 1d0, -2d0*t23l]
+      derivative_phi = -coef*csc_phi**2*sec_theta*[-stub_one + stub_two*t23l - (stub_one - t2l), stub_one, -stub_two*t23l]
    end subroutine derivatives_triangle2
 
    pure subroutine derivatives_triangle2dual(trigo, volume, derivative_theta, derivative_phi, centroid)
@@ -991,33 +999,33 @@ contains
       real(amrex_real) :: dtheta_alpha, dtheta_beta, dtheta_gamma
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
-      sec_theta = 1d0/trigo(C_THETA)
+      sec_theta = stub_one/trigo(C_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
-      csc_phi = 1d0/trigo(S_PHI)
+      csc_phi = stub_one/trigo(S_PHI)
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
 
       t2l = tan_theta
       t3l = cot_phi*sec_theta
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
 
-      alpha = (6d0*dual_volume*(cos_theta - sin_theta)*(cos_theta - cot_phi)/cos_theta**2)**(1d0/3d0)
+      alpha = (stub_six*dual_volume*(cos_theta - sin_theta)*(cos_theta - cot_phi)/cos_theta**2)**(stub_one/stub_three)
       beta = alpha*cos_theta/(cos_theta - cot_phi)
       gamma = alpha*cos_theta/(cos_theta - sin_theta)
 
       ! Centroid
-      centroid = ([1d0, 1d0, 1d0]/6d0 - dual_volume*[4d0 - alpha - beta - gamma, gamma, beta])/(4d0*volume)
+      centroid = ([stub_one, stub_one, stub_one]/stub_six - dual_volume*[stub_four - alpha - beta - gamma, gamma, beta])/(stub_four*volume)
 
-      dthetat2l = 1d0 + t2l**2
+      dthetat2l = stub_one + t2l**2
       dthetat3l = t2l*t3l
-      t23l = (1d0 - t2l)/(1d0 - t3l)
-      coef = dual_volume/volume*dual_volume/(2d0*alpha**2)
-      dtheta_alpha = (dthetat3l - 2d0/t23l*dthetat2l)
-      dtheta_beta = (dthetat2l - 2d0*t23l*dthetat3l)
-      dtheta_gamma = ((1d0 - t3l)*dthetat2l + (1d0 - t2l)*dthetat3l)
+      t23l = (stub_one - t2l)/(stub_one - t3l)
+      coef = dual_volume/volume*dual_volume/(stub_two*alpha**2)
+      dtheta_alpha = (dthetat3l - stub_two/t23l*dthetat2l)
+      dtheta_beta = (dthetat2l - stub_two*t23l*dthetat3l)
+      dtheta_gamma = ((stub_one - t3l)*dthetat2l + (stub_one - t2l)*dthetat3l)
 
       derivative_theta = coef*[-dtheta_alpha - dtheta_beta - dtheta_gamma, dtheta_alpha, dtheta_beta]
-      derivative_phi = -coef*csc_phi**2*sec_theta*[-1d0 + 2d0*t23l - (1d0 - t2l), 1d0, - 2d0*t23l]
+      derivative_phi = -coef*csc_phi**2*sec_theta*[-stub_one + stub_two*t23l - (stub_one - t2l), stub_one, - stub_two*t23l]
    end subroutine derivatives_triangle2dual
 
    pure subroutine derivatives_triangle3(trigo, volume, derivative_theta, derivative_phi, centroid)
@@ -1031,32 +1039,32 @@ contains
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       cot_theta = trigo(C_THETA)/trigo(S_THETA)
-      sec_theta = 1d0/trigo(C_THETA)
-      csc_theta = 1d0/trigo(S_THETA)
+      sec_theta = stub_one/trigo(C_THETA)
+      csc_theta = stub_one/trigo(S_THETA)
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
-      csc_phi = 1d0/trigo(S_PHI)
+      csc_phi = stub_one/trigo(S_PHI)
 
-      alpha = (6d0*volume*(sin_theta - cos_theta)*sin_theta/(sin_theta - cot_phi)**2)**(1d0/3d0)
+      alpha = (stub_six*volume*(sin_theta - cos_theta)*sin_theta/(sin_theta - cot_phi)**2)**(stub_one/stub_three)
       beta = alpha*(sin_theta - cot_phi)/sin_theta
       gamma = alpha*(sin_theta - cot_phi)/(sin_theta - cos_theta)
 
       ! Centroid
-      centroid = [gamma, 4d0 - alpha - beta - gamma, alpha]/4d0
+      centroid = [gamma, stub_four - alpha - beta - gamma, alpha]/stub_four
 
-      dtheta_alpha = (-1d0 + cot_phi*(2d0*cos_theta + 2d0*sin_theta - csc_theta)) &
-         &         / (3d0*(cot_phi - sin_theta)*(-cos_theta + sin_theta))
-      dtheta_beta = (csc_theta + cot_phi*(1d0 + cot_theta - 2d0*csc_theta**2))/(3d0*(-cos_theta + sin_theta))
-      dtheta_gamma = (-2d0 + cot_phi*(cos_theta + csc_theta + sin_theta))/(3d0*(-cos_theta + sin_theta)**2)
+      dtheta_alpha = (-stub_one + cot_phi*(stub_two*cos_theta + stub_two*sin_theta - csc_theta)) &
+         &         / (stub_three*(cot_phi - sin_theta)*(-cos_theta + sin_theta))
+      dtheta_beta = (csc_theta + cot_phi*(stub_one + cot_theta - stub_two*csc_theta**2))/(stub_three*(-cos_theta + sin_theta))
+      dtheta_gamma = (-stub_two + cot_phi*(cos_theta + csc_theta + sin_theta))/(stub_three*(-cos_theta + sin_theta)**2)
 
-      derivative_theta = alpha/4d0*[dtheta_gamma, - dtheta_alpha - dtheta_beta - dtheta_gamma, dtheta_alpha]
+      derivative_theta = alpha/stub_four*[dtheta_gamma, - dtheta_alpha - dtheta_beta - dtheta_gamma, dtheta_alpha]
 
-      dphi_alpha = 2d0/(3d0*(cot_phi - sin_theta))
-      dphi_beta = csc_theta/3d0
-      dphi_gamma = 1d0/(3d0*(-cos_theta + sin_theta))
+      dphi_alpha = stub_two/(stub_three*(cot_phi - sin_theta))
+      dphi_beta = csc_theta/stub_three
+      dphi_gamma = stub_one/(stub_three*(-cos_theta + sin_theta))
 
-      derivative_phi = alpha/4d0*csc_phi**2*[dphi_gamma, - dphi_alpha - dphi_beta - dphi_gamma, dphi_alpha]
+      derivative_phi = alpha/stub_four*csc_phi**2*[dphi_gamma, - dphi_alpha - dphi_beta - dphi_gamma, dphi_alpha]
    end subroutine derivatives_triangle3
 
    pure subroutine derivatives_triangle3dual(trigo, volume, derivative_theta, derivative_phi, centroid)
@@ -1070,34 +1078,34 @@ contains
 
       tan_theta = trigo(S_THETA)/trigo(C_THETA)
       cot_theta = trigo(C_THETA)/trigo(S_THETA)
-      sec_theta = 1d0/trigo(C_THETA)
-      csc_theta = 1d0/trigo(S_THETA)
+      sec_theta = stub_one/trigo(C_THETA)
+      csc_theta = stub_one/trigo(S_THETA)
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
-      csc_phi = 1d0/trigo(S_PHI)
+      csc_phi = stub_one/trigo(S_PHI)
 
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
 
-      alpha = (6d0*dual_volume*(sin_theta - cos_theta)*sin_theta/(sin_theta - cot_phi)**2)**(1d0/3d0)
+      alpha = (stub_six*dual_volume*(sin_theta - cos_theta)*sin_theta/(sin_theta - cot_phi)**2)**(stub_one/stub_three)
       beta = alpha*(sin_theta - cot_phi)/sin_theta
       gamma = alpha*(sin_theta - cot_phi)/(sin_theta - cos_theta)
 
       ! Centroid
-      centroid = ([1d0, 1d0, 1d0]/6d0 - dual_volume*[gamma, 4d0 - alpha - beta - gamma, alpha])/(4d0*volume)
+      centroid = ([stub_one, stub_one, stub_one]/stub_six - dual_volume*[gamma, stub_four - alpha - beta - gamma, alpha])/(stub_four*volume)
 
-      coef = -dual_volume/volume/4d0*alpha
+      coef = -dual_volume/volume/stub_four*alpha
 
-      dtheta_alpha = (-1d0 + cot_phi*(2d0*cos_theta + 2d0*sin_theta - csc_theta)) &
-         &         / (3d0*(cot_phi - sin_theta)*(-cos_theta + sin_theta))
-      dtheta_beta = (csc_theta + cot_phi*(1d0 + cot_theta - 2d0*csc_theta**2))/(3d0*(-cos_theta + sin_theta))
-      dtheta_gamma = (-2d0 + cot_phi*(cos_theta + csc_theta + sin_theta))/(3d0*(-cos_theta + sin_theta)**2)
+      dtheta_alpha = (-stub_one + cot_phi*(stub_two*cos_theta + stub_two*sin_theta - csc_theta)) &
+         &         / (stub_three*(cot_phi - sin_theta)*(-cos_theta + sin_theta))
+      dtheta_beta = (csc_theta + cot_phi*(stub_one + cot_theta - stub_two*csc_theta**2))/(stub_three*(-cos_theta + sin_theta))
+      dtheta_gamma = (-stub_two + cot_phi*(cos_theta + csc_theta + sin_theta))/(stub_three*(-cos_theta + sin_theta)**2)
 
       derivative_theta = coef*[dtheta_gamma, - dtheta_alpha - dtheta_beta - dtheta_gamma, dtheta_alpha]
 
-      dphi_alpha = 2d0/(3d0*(cot_phi - sin_theta))
-      dphi_beta = csc_theta/3d0
-      dphi_gamma = 1d0/(3d0*(-cos_theta + sin_theta))
+      dphi_alpha = stub_two/(stub_three*(cot_phi - sin_theta))
+      dphi_beta = csc_theta/stub_three
+      dphi_gamma = stub_one/(stub_three*(-cos_theta + sin_theta))
 
       derivative_phi = coef*csc_phi**2*[dphi_gamma, - dphi_alpha - dphi_beta - dphi_gamma, dphi_alpha]
    end subroutine derivatives_triangle3dual
@@ -1114,33 +1122,33 @@ contains
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
       tan_phi = trigo(S_PHI)/trigo(C_PHI)
-      sec_phi = 1d0/trigo(C_PHI)
+      sec_phi = stub_one/trigo(C_PHI)
 
       ct = cos_theta*tan_phi
       st = sin_theta*tan_phi
 
-      alpha = (6d0*volume*(1d0 - ct)/(1d0 - st)**2)**(1d0/3d0)
+      alpha = (stub_six*volume*(stub_one - ct)/(stub_one - st)**2)**(stub_one/stub_three)
       beta = alpha*(1 - st)/(1 - ct)
       gamma = alpha*(1 - st)
-      isst = 1d0/(1d0 - st)
+      isst = stub_one/(stub_one - st)
 
       ! Centroid
-      centroid = [beta, alpha, 4d0 - alpha - beta - gamma]/4d0
+      centroid = [beta, alpha, stub_four - alpha - beta - gamma]/stub_four
 
-      isct = 1d0/(ct - 1d0)
+      isct = stub_one/(ct - stub_one)
       tc2 = ct*cos_theta
-      coef = volume/(alpha*(1d0 - st))**2/2d0
+      coef = volume/(alpha*(stub_one - st))**2/stub_two
 
-      dtheta_alpha = sin_theta - cos_theta + 2d0*tc2 - tan_phi
-      dtheta_beta =  (cos_theta + 2d0*sin_theta -2d0*tan_phi + tc2)*isct
-      dtheta_gamma = (sin_theta + 2d0*cos_theta -    tan_phi - tc2)*isst
+      dtheta_alpha = sin_theta - cos_theta + stub_two*tc2 - tan_phi
+      dtheta_beta =  (cos_theta + stub_two*sin_theta -stub_two*tan_phi + tc2)*isct
+      dtheta_gamma = (sin_theta + stub_two*cos_theta -    tan_phi - tc2)*isst
 
       derivative_theta = coef*tan_phi*[dtheta_beta, dtheta_gamma, - dtheta_alpha - dtheta_beta - dtheta_gamma]
 
       cst = ct*sin_theta
-      dphi_alpha = 2d0*cst - cos_theta - sin_theta
-      dphi_beta = (cst + sin_theta - 2d0*cos_theta)*isct
-      dphi_gamma = -(cst + cos_theta - 2d0*sin_theta)*isst
+      dphi_alpha = stub_two*cst - cos_theta - sin_theta
+      dphi_beta = (cst + sin_theta - stub_two*cos_theta)*isct
+      dphi_gamma = -(cst + cos_theta - stub_two*sin_theta)*isst
 
       derivative_phi = coef*sec_phi**2*[dphi_beta, dphi_gamma, - dphi_alpha - dphi_beta - dphi_gamma]
    end subroutine derivatives_triangle4
@@ -1157,34 +1165,34 @@ contains
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
       tan_phi = trigo(S_PHI)/trigo(C_PHI)
-      sec_phi = 1d0/trigo(C_PHI)
+      sec_phi = stub_one/trigo(C_PHI)
 
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
       ct = cos_theta*tan_phi
       st = sin_theta*tan_phi
 
-      alpha = (6d0*dual_volume*(1d0 - ct)/(1d0 - st)**2)**(1d0/3d0)
+      alpha = (stub_six*dual_volume*(stub_one - ct)/(stub_one - st)**2)**(stub_one/stub_three)
       beta = alpha*(1 - st)/(1 - ct)
       gamma = alpha*(1 - st)
-      isst = 1d0/(1d0 - st)
+      isst = stub_one/(stub_one - st)
 
       ! Centroid
-      centroid = ([1d0, 1d0, 1d0]/6d0 - dual_volume*[beta, alpha, 4d0 - alpha - beta - gamma])/(4d0*volume)
+      centroid = ([stub_one, stub_one, stub_one]/stub_six - dual_volume*[beta, alpha, stub_four - alpha - beta - gamma])/(stub_four*volume)
 
-      isct = 1d0/(ct - 1d0)
+      isct = stub_one/(ct - stub_one)
       tc2 = ct*cos_theta
-      coef = -dual_volume/(2d0*volume)*dual_volume/(alpha*(1d0 - st))**2
+      coef = -dual_volume/(stub_two*volume)*dual_volume/(alpha*(stub_one - st))**2
 
-      dtheta_alpha = sin_theta - cos_theta + 2d0*tc2 - tan_phi
-      dtheta_beta =  (cos_theta + 2d0*sin_theta - 2d0*tan_phi + tc2)*isct
-      dtheta_gamma = (sin_theta + 2d0*cos_theta -     tan_phi - tc2)*isst
+      dtheta_alpha = sin_theta - cos_theta + stub_two*tc2 - tan_phi
+      dtheta_beta =  (cos_theta + stub_two*sin_theta - stub_two*tan_phi + tc2)*isct
+      dtheta_gamma = (sin_theta + stub_two*cos_theta -     tan_phi - tc2)*isst
 
       derivative_theta = coef*tan_phi*[dtheta_beta, dtheta_gamma, - dtheta_alpha - dtheta_beta - dtheta_gamma]
 
       cst = ct*sin_theta
-      dphi_alpha = 2d0*cst - cos_theta - sin_theta
-      dphi_beta = (cst + sin_theta - 2d0*cos_theta)*isct
-      dphi_gamma = -(cst + cos_theta - 2d0*sin_theta)*isst
+      dphi_alpha = stub_two*cst - cos_theta - sin_theta
+      dphi_beta = (cst + sin_theta - stub_two*cos_theta)*isct
+      dphi_gamma = -(cst + cos_theta - stub_two*sin_theta)*isst
 
       derivative_phi = coef*sec_phi**2*[dphi_beta, dphi_gamma, - dphi_alpha - dphi_beta - dphi_gamma]
    end subroutine derivatives_triangle4dual
@@ -1205,9 +1213,9 @@ contains
       t232t = (cos_theta + sin_theta - cot_phi)**2
       cossin = cos_theta*sin_theta
       sqrt_t23 = sqrt(cossin*(sin_theta - cot_phi)*(cos_theta- cot_phi))
-      xqe = cos((acos(1d0/(2d0*sqrt_t23)*(2d0*cossin - cot_phi*(cos_theta + sin_theta - cot_phi) - 6d0*volume*t232t)) + 4d0*PI)/3d0)
+      xqe = cos((acos(stub_one/(stub_two*sqrt_t23)*(stub_two*cossin - cot_phi*(cos_theta + sin_theta - cot_phi) - stub_six*volume*t232t)) + stub_four*PI)/stub_three)
 
-      alpha = (2d0*sqrt_t23*xqe/cos_theta + sin_theta)/(cos_theta + sin_theta - cot_phi)
+      alpha = (stub_two*sqrt_t23*xqe/cos_theta + sin_theta)/(cos_theta + sin_theta - cot_phi)
       alphacos = alpha*cos_theta
       beta = alphacos/sin_theta
       gamma = (cot_phi - alphacos)/(cot_phi - cos_theta)
@@ -1223,14 +1231,14 @@ contains
          &        + xqe*(f1qezbis(sin_theta, cot_phi, cos_theta, volume, sqrt_t23) &
          &        + xqe*f2qez(sin_theta, cot_phi, cos_theta))
 
-      centroid = centroid/(24d0*volume*t232t**2)
+      centroid = centroid/(stub_24*volume*t232t**2)
 
       call quadedge_analytic_derivatives( &
          &    trigo,                      &
-         &    [alpha, 0d0, 0d0],          &
-         &    [0d0, beta, 0d0],           &
-         &    [gamma, 0d0, 1d0 -  gamma], &
-         &    [0d0, 1d0 - delta, delta],  &
+         &    [alpha, stub_zero, stub_zero],          &
+         &    [stub_zero, beta, stub_zero],           &
+         &    [gamma, stub_zero, stub_one -  gamma], &
+         &    [stub_zero, stub_one - delta, delta],  &
          &    volume,                     &
          &    derivative_theta,           &
          &    derivative_phi              &
@@ -1250,13 +1258,13 @@ contains
       cos_theta = trigo(C_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
 
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
       t232t = (cos_theta + sin_theta - cot_phi)**2
       cossin = cos_theta*sin_theta
       sqrt_t23 = sqrt(cossin*(sin_theta - cot_phi)*(cos_theta - cot_phi))
-      xqe = cos((acos((2d0*cossin - cot_phi*(cos_theta + sin_theta - cot_phi) - 6d0*dual_volume*t232t)/2d0/sqrt_t23) + 4d0*PI)/3d0)
+      xqe = cos((acos((stub_two*cossin - cot_phi*(cos_theta + sin_theta - cot_phi) - stub_six*dual_volume*t232t)/stub_two/sqrt_t23) + stub_four*PI)/stub_three)
 
-      alpha = (2d0*sqrt_t23*xqe/cos_theta + sin_theta)/(cos_theta + sin_theta - cot_phi)
+      alpha = (stub_two*sqrt_t23*xqe/cos_theta + sin_theta)/(cos_theta + sin_theta - cot_phi)
       alphacos = alpha*cos_theta
       beta = alphacos/sin_theta
       gamma = (cot_phi - alphacos)/(cot_phi - cos_theta)
@@ -1272,15 +1280,15 @@ contains
          &        + xqe*(f1qezbis(sin_theta, cot_phi, cos_theta, dual_volume, sqrt_t23) &
          &        + xqe*f2qez(sin_theta, cot_phi, cos_theta))
 
-      centroid = centroid/(24d0*dual_volume*t232t**2)
-      centroid = ([1d0,1d0,1d0]/24d0 - dual_volume*centroid)/volume
+      centroid = centroid/(stub_24*dual_volume*t232t**2)
+      centroid = ([stub_one,stub_one,stub_one]/stub_24 - dual_volume*centroid)/volume
 
       call quadedge_analytic_derivatives( &
          &    trigo,                      &
-         &    [alpha, 0d0, 0d0],          &
-         &    [0d0, beta, 0d0],           &
-         &    [gamma, 0d0, 1d0 - gamma],  &
-         &    [0d0, 1d0 - delta, delta],  &
+         &    [alpha, stub_zero, stub_zero],          &
+         &    [stub_zero, beta, stub_zero],           &
+         &    [gamma, stub_zero, stub_one - gamma],  &
+         &    [stub_zero, stub_one - delta, delta],  &
          &    volume,                     &
          &    derivative_theta,           &
          &    derivative_phi              &
@@ -1303,10 +1311,10 @@ contains
       t232t = (cos_theta - sin_theta - cot_phi)**2
       sincot = sin_theta*cot_phi
       sqrt_t23 = sqrt(sincot*(cos_theta-sin_theta)*(cos_theta-cot_phi))
-      xqe = cos((acos(1d0/(2d0*sqrt_t23)*(2d0*sincot + cos_theta*(cos_theta - sin_theta - cot_phi) &
-         &- 6d0*volume*t232t)) + 4d0*PI)/3d0)
+      xqe = cos((acos(stub_one/(stub_two*sqrt_t23)*(stub_two*sincot + cos_theta*(cos_theta - sin_theta - cot_phi) &
+         &- stub_six*volume*t232t)) + stub_four*PI)/stub_three)
 
-      alpha = (2d0*sqrt_t23*xqe/sin_theta + cot_phi)/(cot_phi - cos_theta + sin_theta)
+      alpha = (stub_two*sqrt_t23*xqe/sin_theta + cot_phi)/(cot_phi - cos_theta + sin_theta)
       alphasin = sin_theta*alpha
       beta = alphasin/cot_phi
       gamma = (cos_theta - alphasin)/(cos_theta - sin_theta)
@@ -1322,14 +1330,14 @@ contains
          &        + xqe*(f1qexbis(sin_theta, cos_theta, cot_phi, volume, sqrt_t23) &
          &        + xqe*f2qex(sin_theta, cos_theta, cot_phi))
 
-      centroid = centroid/(24d0*volume*t232t**2)
+      centroid = centroid/(stub_24*volume*t232t**2)
 
       call quadedge_analytic_derivatives( &
          &    trigo,                      &
-         &    [0d0, alpha, 0d0],          &
-         &    [0d0, 0d0, beta],           &
-         &    [1d0-gamma, gamma, 0d0],    &
-         &    [delta, 0d0, 1d0 - delta],  &
+         &    [stub_zero, alpha, stub_zero],          &
+         &    [stub_zero, stub_zero, beta],           &
+         &    [stub_one-gamma, gamma, stub_zero],    &
+         &    [delta, stub_zero, stub_one - delta],  &
          &    volume,                     &
          &    derivative_theta,           &
          &    derivative_phi              &
@@ -1349,14 +1357,14 @@ contains
       sin_theta = trigo(S_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
 
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
       t232t = (cos_theta - sin_theta - cot_phi)**2
       sincot = sin_theta*cot_phi
       sqrt_t23 = sqrt(sincot*(cos_theta-sin_theta)*(cos_theta-cot_phi))
-      xqe = cos((acos(1d0/(2d0*sqrt_t23)*(2d0*sincot + cos_theta*(cos_theta - sin_theta - cot_phi) &
-         &- 6d0*dual_volume*t232t)) + 4d0*PI)/3d0)
+      xqe = cos((acos(stub_one/(stub_two*sqrt_t23)*(stub_two*sincot + cos_theta*(cos_theta - sin_theta - cot_phi) &
+         &- stub_six*dual_volume*t232t)) + stub_four*PI)/stub_three)
 
-      alpha = (2d0*sqrt_t23*xqe/sin_theta + cot_phi)/(cot_phi - cos_theta + sin_theta)
+      alpha = (stub_two*sqrt_t23*xqe/sin_theta + cot_phi)/(cot_phi - cos_theta + sin_theta)
       alphasin = sin_theta*alpha
       beta = alphasin/cot_phi
       gamma = (cos_theta - alphasin)/(cos_theta - sin_theta)
@@ -1372,16 +1380,16 @@ contains
          &        + xqe*(f1qexbis(sin_theta, cos_theta, cot_phi, dual_volume, sqrt_t23) &
          &        + xqe*f2qex(sin_theta, cos_theta, cot_phi))
 
-      centroid = centroid/(24d0*dual_volume*t232t**2)
+      centroid = centroid/(stub_24*dual_volume*t232t**2)
 
-      centroid = ([1d0,1d0,1d0]/24d0 - dual_volume*centroid)/volume
+      centroid = ([stub_one,stub_one,stub_one]/stub_24 - dual_volume*centroid)/volume
 
       call quadedge_analytic_derivatives( &
          &    trigo,                      &
-         &    [0d0, alpha, 0d0],          &
-         &    [0d0, 0d0, beta],           &
-         &    [1d0 - gamma, gamma, 0d0],  &
-         &    [delta, 0d0, 1d0 - delta],  &
+         &    [stub_zero, alpha, stub_zero],          &
+         &    [stub_zero, stub_zero, beta],           &
+         &    [stub_one - gamma, gamma, stub_zero],  &
+         &    [delta, stub_zero, stub_one - delta],  &
          &    volume,                     &
          &    derivative_theta,           &
          &    derivative_phi              &
@@ -1404,10 +1412,10 @@ contains
       t232t = (cos_theta - sin_theta + cot_phi)**2
       coscot = cos_theta*cot_phi
       sqrt_t23 = sqrt(coscot*(cos_theta-sin_theta)*(cot_phi-sin_theta))
-      xqe = cos((acos(1d0/(2d0*sqrt_t23)*(2d0*coscot - sin_theta*(cos_theta - sin_theta + cot_phi) &
-         &- 6d0*volume*t232t)) + 4d0*PI)/3d0)
+      xqe = cos((acos(stub_one/(stub_two*sqrt_t23)*(stub_two*coscot - sin_theta*(cos_theta - sin_theta + cot_phi) &
+         &- stub_six*volume*t232t)) + stub_four*PI)/stub_three)
 
-      alpha = (2d0*sqrt_t23*xqe/cot_phi + cos_theta)/(cos_theta - sin_theta + cot_phi)
+      alpha = (stub_two*sqrt_t23*xqe/cot_phi + cos_theta)/(cos_theta - sin_theta + cot_phi)
       alphacot = cot_phi*alpha
       beta = alphacot/cos_theta
       gamma = (sin_theta - alphacot)/(sin_theta - cot_phi)
@@ -1423,14 +1431,14 @@ contains
          &        + xqe*(f1qexbis(cos_theta, sin_theta, cot_phi, volume, sqrt_t23) &
          &        + xqe*f2qex(cos_theta, sin_theta, cot_phi))
 
-      centroid = centroid/(24d0*volume*t232t**2)
+      centroid = centroid/(stub_24*volume*t232t**2)
 
       call quadedge_analytic_derivatives( &
          &    trigo,                      &
-         &    [0d0, 0d0, alpha],          &
-         &    [beta, 0d0, 0d0],           &
-         &    [0d0, 1d0 - gamma, gamma],  &
-         &    [1d0 - delta, delta, 0d0],  &
+         &    [stub_zero, stub_zero, alpha],          &
+         &    [beta, stub_zero, stub_zero],           &
+         &    [stub_zero, stub_one - gamma, gamma],  &
+         &    [stub_one - delta, delta, stub_zero],  &
          &    volume,                     &
          &    derivative_theta,           &
          &    derivative_phi              &
@@ -1445,19 +1453,21 @@ contains
       real(amrex_real) :: alpha, coscot, alphacot, beta, gamma, delta, dual_volume
       real(amrex_real) :: cos_theta, sin_theta, cot_phi
       real(amrex_real) :: xqe, sqrt_t23, t232t
+      real(amrex_real), PARAMETER :: stub_zero=0.0d0
+      real(amrex_real), PARAMETER :: stub_one=1.0d0
 
       cos_theta = trigo(C_THETA)
       sin_theta = trigo(S_THETA)
       cot_phi = trigo(C_PHI)/trigo(S_PHI)
 
-      dual_volume = 1d0/6d0 - volume
+      dual_volume = stub_one/stub_six - volume
       t232t = (cos_theta - sin_theta + cot_phi)**2
       coscot = cos_theta*cot_phi
       sqrt_t23 = sqrt(coscot*(cos_theta - sin_theta)*(cot_phi - sin_theta))
-      xqe = cos((acos(1d0/(2d0*sqrt_t23)*(2d0*coscot - sin_theta*(cos_theta - sin_theta + cot_phi) &
-         &- 6d0*dual_volume*t232t)) + 4d0*PI)/3d0)
+      xqe = cos((acos(stub_one/(stub_two*sqrt_t23)*(stub_two*coscot - sin_theta*(cos_theta - sin_theta + cot_phi) &
+         &- stub_six*dual_volume*t232t)) + stub_four*PI)/stub_three)
 
-      alpha = (2d0*sqrt_t23*xqe/cot_phi + cos_theta)/(cos_theta - sin_theta + cot_phi)
+      alpha = (stub_two*sqrt_t23*xqe/cot_phi + cos_theta)/(cos_theta - sin_theta + cot_phi)
       alphacot = cot_phi*alpha
       beta = alphacot/cos_theta
       gamma = (sin_theta - alphacot)/(sin_theta - cot_phi)
@@ -1473,15 +1483,15 @@ contains
          &        + xqe*(f1qexbis(cos_theta, sin_theta, cot_phi, dual_volume, sqrt_t23) &
          &        + xqe*f2qex(cos_theta, sin_theta, cot_phi))
 
-      centroid = centroid/(24d0*dual_volume*t232t**2)
-      centroid = ([1d0,1d0,1d0]/24d0 - dual_volume*centroid)/volume
+      centroid = centroid/(stub_24*dual_volume*t232t**2)
+      centroid = ([stub_one,stub_one,stub_one]/stub_24 - dual_volume*centroid)/volume
 
       call quadedge_analytic_derivatives( &
          &    trigo,                      &
-         &    [0d0, 0d0, alpha],          &
-         &    [beta, 0d0, 0d0],           &
-         &    [0d0, 1d0 - gamma, gamma],  &
-         &    [1d0 - delta, delta, 0d0],  &
+         &    [stub_zero, stub_zero, alpha],          &
+         &    [beta, stub_zero, stub_zero],           &
+         &    [stub_zero, stub_one - gamma, gamma],  &
+         &    [stub_one - delta, delta, stub_zero],  &
          &    volume,                     &
          &    derivative_theta,           &
          &    derivative_phi              &
@@ -1490,12 +1500,12 @@ contains
 
    real(amrex_real) pure function g0(x, y, z)
       real(amrex_real), intent(in) :: x, y, z
-      g0 = (2d0*x + y + z)**2 - z*(4d0*y + 9d0*x)
+      g0 = (stub_two*x + y + z)**2 - z*(stub_four*y + 9d0*x)
    end function g0
 
    real(amrex_real) pure function g1(x, y, z)
       real(amrex_real), intent(in) :: x, y, z
-      g1 = 12d0*x*(x + 2d0*y - z)
+      g1 = stub_12*x*(x + stub_two*y - z)
    end function g1
 
    real(amrex_real) pure function f0qex(x, y, z, v)
@@ -1504,7 +1514,7 @@ contains
       x1 = x*(x-y)
       y1 = z*(z-y)
       z0 = (z+x-y)**2
-      f0qex = g0(x1,y1,z0) + 24d0*v*x1*z0
+      f0qex = g0(x1,y1,z0) + stub_24*v*x1*z0
    end function f0qex
 
    real(amrex_real) pure function f0qez(x, y, z, v)
@@ -1513,7 +1523,7 @@ contains
       x2 = x*z
       y2 = (x-y)*(z-y)
       z0 = (z+x-y)**2
-      f0qez = -g0(x2,y2,z0) + z0*(z0 - 4d0*x2) + 24d0*v*x2*z0
+      f0qez = -g0(x2,y2,z0) + z0*(z0 - stub_four*x2) + stub_24*v*x2*z0
    end function f0qez
 
    real(amrex_real) pure function f1qex(x, y, z, v)
@@ -1522,7 +1532,7 @@ contains
       x1 = x*(x-y)
       y1 = z*(z-y)
       z0 = (z+x-y)**2
-      f1qex = -2d0*sqrt(x1*y1)/y1*(g0(y1,x1,z0) + 9d0*x1*y1 + 6d0*v*z0*(x1 - z0))
+      f1qex = -stub_two*sqrt(x1*y1)/y1*(g0(y1,x1,z0) + 9d0*x1*y1 + stub_six*v*z0*(x1 - z0))
    end function f1qex
 
    real(amrex_real) pure function f1qez(x, y, z, v)
@@ -1531,7 +1541,7 @@ contains
       x2 = x*z
       y2 = (x-y)*(z-y)
       z0 = (z+x-y)**2
-      f1qez = -2d0*sqrt(x2*y2)/y2*(g0(y2,x2,z0) + 9d0*x2*y2 + (1d0 - 6d0*v)*z0*(x2 - z0))
+      f1qez = -stub_two*sqrt(x2*y2)/y2*(g0(y2,x2,z0) + 9d0*x2*y2 + (stub_one - stub_six*v)*z0*(x2 - z0))
    end function f1qez
 
    real(amrex_real) pure function f1qexbis(x, y, z, v, sqrt_t23)
@@ -1540,7 +1550,7 @@ contains
       x1 = x*(x-y)
       y1 = z*(z-y)
       z0 = (z+x-y)**2
-      f1qexbis = -2d0*sqrt_t23/y1*( g0(y1,x1,z0) + 9d0*x1*y1 + 6d0*v*z0*(x1 - z0))
+      f1qexbis = -stub_two*sqrt_t23/y1*( g0(y1,x1,z0) + 9d0*x1*y1 + stub_six*v*z0*(x1 - z0))
    end function f1qexbis
 
    real(amrex_real) pure function f1qezbis(x, y, z, v, sqrt_t23)
@@ -1549,7 +1559,7 @@ contains
       x2 = x*z
       y2 = (x-y)*(z-y)
       z0 = (z+x-y)**2
-      f1qezbis = -2d0*sqrt_t23/y2*(g0(y2,x2,z0) + 9d0*x2*y2 + (1d0 - 6d0*v)*z0*(x2 - z0))
+      f1qezbis = -stub_two*sqrt_t23/y2*(g0(y2,x2,z0) + 9d0*x2*y2 + (stub_one - stub_six*v)*z0*(x2 - z0))
    end function f1qezbis
 
    real(amrex_real) pure function f2qex(x, y, z)
@@ -1582,26 +1592,27 @@ contains
       real(amrex_real) :: cos_theta, sin_theta, cos_phi, sin_phi
       real(amrex_real) :: integralt_xy, integralt_xx, integralt_yy
       real(amrex_real) ::  s1, s2, s, i11t, i12t, i22t
+      real(amrex_real), PARAMETER :: stub_zero=0.0d0
 
-      s1 = norm2(cg3_cross_product(b - a, d - a))/2d0
-      s2 = norm2(cg3_cross_product(d - a, c - a))/2d0
+      s1 = norm2(cg3_cross_product(b - a, d - a))/stub_two
+      s2 = norm2(cg3_cross_product(d - a, c - a))/stub_two
       s = s1 + s2
 
-      xg = (a + d + (s1*b + s2*c)/s)/3d0
+      xg = (a + d + (s1*b + s2*c)/s)/stub_three
 
       cos_theta = trigo(c_theta)
       sin_theta = trigo(s_theta)
       cos_phi = trigo(c_phi)
       sin_phi = trigo(s_phi)
 
-      dtheta_n = [-sin_theta, cos_theta, 0d0]
+      dtheta_n = [-sin_theta, cos_theta, stub_zero]
       dphi_n = [cos_theta*cos_phi, sin_theta*cos_phi, -sin_phi]
 
-      p1 = (a + b)/2d0
-      p2 = (b + d)/2d0
-      p3 = (d + a)/2d0
-      p4 = (d + c)/2d0
-      p5 = (c + a)/2d0
+      p1 = (a + b)/stub_two
+      p2 = (b + d)/stub_two
+      p3 = (d + a)/stub_two
+      p4 = (d + c)/stub_two
+      p5 = (c + a)/stub_two
 
       xgt = [dot_product(xg, dtheta_n), dot_product(xg, dphi_n)]
 
@@ -1611,9 +1622,9 @@ contains
       p4t = [dot_product(p4, dtheta_n), dot_product(p4, dphi_n)]
       p5t = [dot_product(p5, dtheta_n), dot_product(p5, dphi_n)]
 
-      integralt_xx = (s1*(p1t(1)**2 + p2t(1)**2) + s*p3t(1)**2 + s2*(p4t(1)**2 + p5t(1)**2))/3d0
-      integralt_yy = (s1*(p1t(2)**2 + p2t(2)**2) + s*p3t(2)**2 + s2*(p4t(2)**2 + p5t(2)**2))/3d0
-      integralt_xy = (s1*(p1t(1)*p1t(2) + p2t(1)*p2t(2)) + s*p3t(1)*p3t(2) + s2*(p4t(1)*p4t(2) + p5t(1)*p5t(2)))/3d0
+      integralt_xx = (s1*(p1t(1)**2 + p2t(1)**2) + s*p3t(1)**2 + s2*(p4t(1)**2 + p5t(1)**2))/stub_three
+      integralt_yy = (s1*(p1t(2)**2 + p2t(2)**2) + s*p3t(2)**2 + s2*(p4t(2)**2 + p5t(2)**2))/stub_three
+      integralt_xy = (s1*(p1t(1)*p1t(2) + p2t(1)*p2t(2)) + s*p3t(1)*p3t(2) + s2*(p4t(1)*p4t(2) + p5t(1)*p5t(2)))/stub_three
 
       i11t = s*xgt(1)*xgt(1) - integralt_xx
       i12t = s*xgt(1)*xgt(2) - integralt_xy

@@ -70,10 +70,10 @@ contains
          angles = [atan2(direction(2), direction(1)), acos(direction(3))]
       else
          if (direction(3) > 0d0) then
-                 angles(1)=0.0
-                 angles(2)=0.0
+                 angles(1)=0.0d0
+                 angles(2)=0.0d0
          else
-                 angles(1)=0.0
+                 angles(1)=0.0d0
                  angles(2)=PI
          end if
       end if

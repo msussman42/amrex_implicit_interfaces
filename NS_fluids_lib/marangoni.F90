@@ -28,6 +28,7 @@ CONTAINS
  ! >>>>>>>>>>>>>>>>>>position .vs. temperature
  ! heat pipe
 subroutine position_Temp(flag,delta,delta2,x,y,z,Tout)  
+use probcommon_module
 !  See Kundan et al 2015 Langmuir  Figure 2.
 !  For the heating side input 2.4W,  with temperature 450K
 !  If flag = 0 ,     _ _ _ _ _ _ _ _ _
@@ -91,7 +92,7 @@ elseif(flag .eq. 1) then
     (x.lt.(-0.15d0+delta2))) then
   Tout=T_expand
  else 
-  Tout = 293.0d0  
+  Tout = room_temperature ! 293.0d0 if double precision  
  endif  
 else
  write(*,*) "Flag is not 0 or 1"

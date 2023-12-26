@@ -2493,6 +2493,7 @@ stop
       real(amrex_real) local_elastic_time
       real(amrex_real) ugrav
       real(amrex_real) local_gravity_mag
+      real(amrex_real) local_temperature
 
       integer istenlo(3),istenhi(3)
       integer ivec(3)
@@ -3052,8 +3053,10 @@ stop
          Tsrc=den(D_DECL(i-ii,j-jj,k-kk),tcompsrc)
          Tdst=den(D_DECL(i,j,k),tcompdst)
 
+         local_temperature=half*(Tsrc+Tdst)
+
          LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
-                 half*(Tsrc+Tdst),0)
+                 local_temperature,0)
 
          K_f=reaction_rate(iten+ireverse*num_interfaces)
          local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
@@ -4673,7 +4676,7 @@ stop
            call get_iten(im,im_opp,iten)
            iten_shift=iten+ireverse*num_interfaces
 
-           LL=get_user_latent_heat(iten_shift,293.0d0,1)
+           LL=get_user_latent_heat(iten_shift,room_temperature,1)
 
            jump_strength=JUMPFAB(D_DECL(i,j,k),iten_shift)
   
@@ -9626,7 +9629,8 @@ stop
             endif
 
             call get_iten(im,im_opp,iten)
-            LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                    room_temperature,1)
 
             Tgamma_STATUS=NINT(TgammaFAB(D_DECL(i,j,k),iten))
 
@@ -9953,7 +9957,8 @@ stop
           im_dest=im_dest_crit
           im_dest_substrate=im_dest_substrate_crit
 
-          LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+          LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                  room_temperature,1)
           local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
           distribute_from_targ= &
                 distribute_from_target(iten+ireverse*num_interfaces)
@@ -11580,7 +11585,7 @@ stop
        print *,"distribute_from_target invalid"
        stop
       endif
-      LL=get_user_latent_heat(indexEXP+1,293.0d0,1)
+      LL=get_user_latent_heat(indexEXP+1,room_temperature,1)
       if (LL.eq.zero) then
        ! check nothing
       else if (LL.ne.zero) then
@@ -16295,7 +16300,8 @@ stop
               if (im_opp.ne.im) then
 
                call get_iten(im,im_opp,iten)
-               LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+               LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                       room_temperature,1)
 
                if (interface_cond_avail.eq.1) then
 

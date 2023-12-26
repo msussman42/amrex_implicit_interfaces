@@ -1434,7 +1434,7 @@ end subroutine nozzle2d
        endif
        aspect=radblob+radblob2
         ! dist<0 in solid
-        factor_zblob=-1000.0*zblob
+       factor_zblob=-1000.0d0*zblob
        call squaredist(x,y,radblob,aspect,factor_zblob,zblob,dist)
       else if (probtype.eq.62) then
        costheta=cos(xblob2)

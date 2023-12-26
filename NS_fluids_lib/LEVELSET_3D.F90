@@ -5820,7 +5820,7 @@ stop
                 endif
                 call get_iten(im_mdot,im_opp_mdot,iten)
                 iten_shift=ireverse*num_interfaces+iten
-                LL=get_user_latent_heat(iten_shift,293.0d0,1)
+                LL=get_user_latent_heat(iten_shift,room_temperature,1)
                 if (LL.eq.zero) then
                  ! do nothing
                 else if (LL.ne.zero) then
@@ -8064,7 +8064,7 @@ stop
 
            do ireverse=0,1
             local_iten=iten_main+ireverse*num_interfaces
-            if (get_user_latent_heat(local_iten,293.0d0,1).ne.zero) then
+            if (get_user_latent_heat(local_iten,room_temperature,1).ne.zero) then
              if (freezing_model(local_iten).eq.0) then
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
@@ -8104,7 +8104,7 @@ stop
                stop
               endif 
              endif
-            else if (get_user_latent_heat(local_iten,293.0d0,1).eq.zero) then
+            else if (get_user_latent_heat(local_iten,room_temperature,1).eq.zero) then
              ! do nothing
             else
              print *,"get_user_latent_heat invalid"
@@ -8877,13 +8877,13 @@ stop
 
              do ireverse=0,1
               local_iten=iten_majority+ireverse*num_interfaces
-              if (get_user_latent_heat(local_iten,293.0d0,1).ne.zero) then
+              if (get_user_latent_heat(local_iten,room_temperature,1).ne.zero) then
                if ((freezing_model(local_iten).eq.0).or. &
                    (freezing_model(local_iten).eq.5)) then
                 print *,"heatvisc_interface invalid"
                 stop
                endif 
-              else if (get_user_latent_heat(local_iten,293.0d0,1).eq.zero) then
+              else if (get_user_latent_heat(local_iten,room_temperature,1).eq.zero) then
                !do nothing
               else
                print *,"get_user_latent_heat invalid"
@@ -9066,7 +9066,7 @@ stop
             ! do nothing
            else if (heatvisc_interface(iten_main).gt.zero) then
 
-            if (get_user_latent_heat(iten_main,293.0d0,1).ne.zero) then
+            if (get_user_latent_heat(iten_main,room_temperature,1).ne.zero) then
              if ((freezing_model(iten_main).eq.0).or. &
                  (freezing_model(iten_main).eq.5)) then
               print *,"heatvisc_interface invalid"
@@ -9074,7 +9074,7 @@ stop
              endif 
             endif 
             if (get_user_latent_heat( &
-                 iten_main+num_interfaces,293.0d0,1).ne.zero) then
+                 iten_main+num_interfaces,room_temperature,1).ne.zero) then
              if ((freezing_model(iten_main+num_interfaces).eq.0).or. &
                  (freezing_model(iten_main+num_interfaces).eq.5)) then
               print *,"heatvisc_interface invalid"
@@ -19158,6 +19158,7 @@ stop
       real(amrex_real) local_weight
       real(amrex_real) weight_sum
       real(amrex_real) LS_sum
+      real(amrex_real) local_dx_offset
       real(amrex_real), PARAMETER :: part_tol=0.1d0
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
@@ -19935,7 +19936,8 @@ stop
          enddo
 
          !very little weight for the grid based data(OP_PARTICLE_ASSIMILATE)
-         call particle_grid_weight(xpart,xsub,(1.0D+3)*dx(1),local_weight)
+         local_dx_offset=(1.0D+3)*dx(1)
+         call particle_grid_weight(xpart,xsub,local_dx_offset,local_weight)
 
          do im_loop=1,num_materials
           LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
@@ -20467,7 +20469,7 @@ stop
          call get_iten(im_primary,im_secondary,iten)
 
          do ireverse=0,1
-          LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+          LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
           if (LL.ne.zero) then
            if (ireverse.eq.0) then
             sign_reverse=1

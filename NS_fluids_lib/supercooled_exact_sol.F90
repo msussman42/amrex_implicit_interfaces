@@ -336,6 +336,7 @@ subroutine liquid_temperature_driver(rd, t, v2)
 
   REAL(amrex_real),INTENT(in):: rd, t
   REAL(amrex_real),INTENT(out):: v2
+  REAL(amrex_real) :: Ei_parm
 
   if (supercooled_L.ge.0.0d0) then
 
@@ -350,10 +351,12 @@ subroutine liquid_temperature_driver(rd, t, v2)
        if (supercooled_thermal_diff.gt.0.0d0) then
 
         if (supercooled_lm.ge.0.0d0) then  
+         Ei_parm=-rd*rd/(4.0d0*supercooled_thermal_diff*t)
+
          v2 = supercooled_temp_infinity +  &
           (supercooled_L * supercooled_stefan_number / &
            supercooled_specific_heat)* &
-           Ei(-rd*rd/(4.0d0*supercooled_thermal_diff*t)) / &
+           Ei(Ei_parm) / &
            Ei(-(supercooled_lm**2))
 
          if (v2.le.0.0d0) then
@@ -364,8 +367,9 @@ subroutine liquid_temperature_driver(rd, t, v2)
           print *,"supercooled_thermal_diff ",supercooled_thermal_diff
           print *,"rd ",rd
           print *,"t ",t
+          Ei_parm=-rd*rd/(4.0d0*supercooled_thermal_diff*t)
           print *,"Ei numerator ", &
-            Ei(-rd*rd/(4.0d0*supercooled_thermal_diff*t))
+            Ei(Ei_parm)
           print *,"Ei denominator ", &
             Ei(-(supercooled_lm**2))
           stop

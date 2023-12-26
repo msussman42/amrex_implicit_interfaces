@@ -260,7 +260,7 @@ stop
       endif
 
       do im_local=1,num_materials
-       def_thermal(im_local)=293.0d0
+       def_thermal(im_local)=room_temperature
       enddo
 
       if ((complement_flag.eq.0).or. &
@@ -335,7 +335,7 @@ stop
 
       do ireverse=0,1
        LL(ireverse)= &
-        get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+        get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
       enddo
 
       if ((is_ice(im).eq.0).and. &
@@ -423,7 +423,7 @@ stop
              call get_iten(im,im_opp,iten)
              do ireverse=0,1
               LL(ireverse)= &
-               get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+               get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
              enddo
             else if (is_ice(im_tertiary).eq.1) then
              ! do nothing
@@ -5148,7 +5148,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: def_thermal(num_materials)
 
       do im=1,num_materials
-       def_thermal(im)=293.0d0
+       def_thermal(im)=room_temperature
        LS_merge(im)=LS(im)
       enddo
       do im=1,num_materials
@@ -5174,10 +5174,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (user_tension(iten).eq.zero) then
 
              default_flag=1
-             LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+             LH1=get_user_latent_heat(iten,room_temperature,default_flag)
 
              LH2= &
-               get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+               get_user_latent_heat(iten+num_interfaces,room_temperature,default_flag)
 
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               call get_primary_material(LS,im_primary)
@@ -5307,7 +5307,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: def_thermal(num_materials)
 
       do im=1,num_materials
-       def_thermal(im)=293.0d0
+       def_thermal(im)=room_temperature
       enddo
       do im=1,num_materials*SDIM
        nrm_merge(im)=nrm(im)
@@ -5329,10 +5329,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (user_tension(iten).eq.zero) then
 
              default_flag=1
-             LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+             LH1=get_user_latent_heat(iten,room_temperature,default_flag)
 
              LH2= &
-               get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+               get_user_latent_heat(iten+num_interfaces,room_temperature,default_flag)
 
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               call get_primary_material(LS,im_primary)
@@ -5469,7 +5469,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) :: def_thermal(num_materials)
 
       do im=1,num_materials
-       def_thermal(im)=293.0d0
+       def_thermal(im)=room_temperature
        vof_merge(im)=vof(im)
       enddo
       do im=1,num_materials
@@ -5489,10 +5489,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             if (user_tension(iten).eq.zero) then
 
              default_flag=1
-             LH1=get_user_latent_heat(iten,293.0d0,default_flag)
+             LH1=get_user_latent_heat(iten,room_temperature,default_flag)
 
              LH2= &
-               get_user_latent_heat(iten+num_interfaces,293.0d0,default_flag)
+               get_user_latent_heat(iten+num_interfaces,room_temperature,default_flag)
 
              if ((LH1.ne.zero).or.(LH2.ne.zero)) then
               vof_merge(im)=zero
@@ -5956,6 +5956,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        real(amrex_real) distsolid,distgas,dist_liquid,dist_ice
        integer im_solid_exactdist
        real(amrex_real) LS(num_materials)
+       real(amrex_real) diamblob
 
        im_solid_exactdist=im_solid_primary()
 
@@ -6011,8 +6012,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! distsolid>0 in solid
            call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
+           diamblob=two*radblob
            call drop_slope_dist(xstar,ystar,zstar, &
-            time,two*radblob,dist_ice,dist_liquid)
+            time,diamblob,dist_ice,dist_liquid)
            distgas=-dist_liquid
 
            if (imaterial.eq.1) then
@@ -6051,8 +6053,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            ! distsolid>0 in solid
            call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
            ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
+           diamblob=two*radblob
            call drop_slope_dist(xstar,ystar,zstar, &
-            time,two*radblob,dist_ice,dist_liquid)
+            time,diamblob,dist_ice,dist_liquid)
            distgas=-dist_liquid
 
            if (imaterial.eq.1) then
@@ -7714,6 +7717,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer dir
       real(amrex_real) x_in(SDIM)
       real(amrex_real) maxdx
+      real(amrex_real) :: box_xlo,box_xhi
+      real(amrex_real) :: box_ylo,box_yhi
 
 
       im_solid_materialdist=im_solid_primary()
@@ -7859,17 +7864,25 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
         !dist<0 inside the square
         !water below the ice
-        call squaredist(x,y,xblob-half*radblob,xblob+half*radblob, &
-         -yblob2-radblob3,yblob2+radblob3,dist(1))
+        box_xlo=xblob-half*radblob
+        box_xhi=xblob+half*radblob
+        box_ylo=-yblob2-radblob3
+        box_yhi=yblob2+radblob3
+        call squaredist(x,y,box_xlo,box_xhi, &
+         box_ylo,box_yhi,dist(1))
         dist(1)=-dist(1)
         !ice
-        call squaredist(x,y,xblob-half*radblob,xblob+half*radblob, &
-         yblob2+radblob3,yblob2+radblob,dist(3))
+        box_ylo=yblob2+radblob3
+        box_yhi=yblob2+radblob
+        call squaredist(x,y,box_xlo,box_xhi, &
+         box_ylo,box_yhi,dist(3))
         dist(3)=-dist(3)
 
         !air; dist<0 inside the square
-        call squaredist(x,y,xblob-half*radblob,xblob+half*radblob, &
-         -yblob2-radblob,yblob2+radblob,dist(2))
+        box_ylo=-yblob2-radblob
+        box_yhi=yblob2+radblob
+        call squaredist(x,y,box_xlo,box_xhi, &
+         box_ylo,box_yhi,dist(2))
 
        else if (SDIM.eq.3) then
         print *,"3D case not implemented yet"
@@ -9148,8 +9161,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) initial_time
       real(amrex_real) ypretend
       real(amrex_real) wave_number
+      real(amrex_real) box_ylo
+      real(amrex_real) cylinder_zlo
       real(amrex_real) ktermx,velperturbx
       real(amrex_real) drat,veltop,velbot,ytop,ybot,y2d
+      real(amrex_real), parameter :: stub_zero=zero
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -9461,7 +9477,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          stop
         else  
           ! dist<0 in the square.
-         call squaredist(x,y,-radblob,radblob,-1000.0*zblob,zblob,dist)
+         box_ylo=-1000.0d0*zblob
+         call squaredist(x,y,-radblob,radblob,box_ylo,zblob,dist)
         endif
        else if (probtype.eq.51) then  ! vapordist oscillating column
         dist=radblob-abs(x-xblob) 
@@ -9655,8 +9672,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         yprime=sintheta*(x-xblob)+costheta*(y-yblob)
         delta=half*(radblob2-radblob)
         temprad=1.0D+10
+        box_ylo=-half*zblob2-delta
         call squaredist(xprime,yprime,-radblob-delta,radblob+delta, &
-          -half*zblob2-delta,temprad,dist1)
+          box_ylo,temprad,dist1)
         if (dist1.lt.dist) then
          dist=dist1
         endif 
@@ -9691,7 +9709,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (probtype.eq.56) then
         dist=zblob2-y
        else if (probtype.eq.66) then
-        call pulseheight(x,zero,dist)
+        call pulseheight(x,stub_zero,dist)
         dist=dist-y
        else if (probtype.eq.38) then
         dist=yblob+radblob*cos(two*Pi*x/xblob)-y
@@ -9993,8 +10011,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         zprime=sintheta*(x-xblob)+costheta*(z-zblob)
         delta=half*(radblob2-radblob)
         temprad=1.0D+10
-        call cylinderdist(xprime,yprime,zprime,zero,zero,radblob+delta, &
-          -half*zblob2-delta,temprad,dist1) 
+        cylinder_zlo=-half*zblob2-delta
+        call cylinderdist(xprime,yprime,zprime, &
+          stub_zero,stub_zero,radblob+delta, &
+          cylinder_zlo,temprad,dist1) 
         if (dist1.lt.dist) then
          dist=dist1
         endif 
@@ -10015,8 +10035,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         zprime=sintheta*(x-xblob)+costheta*(z-zblob)
         delta=half*(radblob2-radblob)
         temprad=1.0D+10
-        call tcylinderdist(xprime,yprime,zprime,zero,zero,radblob+delta, &
-          -half*zblob2-delta,temprad,dist1) 
+        cylinder_zlo=-half*zblob2-delta
+        call tcylinderdist(xprime,yprime,zprime, &
+          stub_zero,stub_zero,radblob+delta, &
+          cylinder_zlo,temprad,dist1) 
         dist1 = -dist1
         if ((dist1.gt.dist).and.(z > zblob3)) then
          dist=dist1
@@ -15893,6 +15915,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer local_dir
       real(amrex_real) xwall
       real(amrex_real) local_LS(num_materials)
+      real(amrex_real), parameter :: stub_zero=zero
       
       velx_rain=adv_vel
       vely_rain=uDrop
@@ -16476,7 +16499,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              ! vel=solidvel in solid
              call mask_velocity(xsten,nhalf,dx,bfact,velcell,time)
             else if ((probtype.eq.22).and.(axis_dir.eq.13)) then
-             call vbc(velcell(veldir),time,y,zero,error)
+             call vbc(velcell(veldir),time,y,stub_zero,error)
             else if (probtype.eq.32) then
              if (levelrz.ne.COORDSYS_CARTESIAN) then
               print *,"levelrz invalid for probtype=32"
@@ -21196,8 +21219,8 @@ integer, INTENT(in)                      :: M,N1parm,N2parm,nn
 complex*16, INTENT(in)                   :: alpha
 complex*16, dimension(1:M)               :: omega
 complex*16, dimension(1:M,1:M)           :: eigenv
-REAL*8, dimension(0:N1parm)              :: r1
-REAL*8, dimension(0:N2parm)              :: r2
+real(amrex_real), dimension(0:N1parm)              :: r1
+real(amrex_real), dimension(0:N2parm)              :: r2
 
 
 integer                            :: i, j
@@ -21965,8 +21988,8 @@ integer, INTENT(in)                      :: M,N1parm,N2parm
 complex*16, INTENT(in)                   :: alpha
 complex*16, dimension(1:M)               :: omega
 complex*16, dimension(1:M,1:M)           :: eigenv
-REAL*8, dimension(0:N1parm)              :: r1
-REAL*8, dimension(0:N2parm)              :: r2
+real(amrex_real), dimension(0:N1parm)              :: r1
+real(amrex_real), dimension(0:N2parm)              :: r2
 
 
 integer                            :: i, j
@@ -23927,7 +23950,7 @@ end subroutine initialize2d
           do im1=1,num_materials-1
           do im2=im1+1,num_materials
            call get_iten(im1,im2,iten)
-           LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+           LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
            local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
            TSAT=saturation_temp(iten+ireverse*num_interfaces)
 
@@ -24229,7 +24252,7 @@ end subroutine initialize2d
         endif
          ! 1<=iten<=num_interfaces
         call get_iten(im,im_opp,iten)
-        LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+        LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
         local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
         TSAT=saturation_temp(iten+ireverse*num_interfaces)
         if (is_hydrate_freezing_modelF(local_freezing_model).eq.1) then 
@@ -25691,7 +25714,7 @@ end subroutine initialize2d
            ireverse=0
            call get_iten(im_source,im_dest,iten)
            L_ice_melt= &
-            abs(get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1))
+            abs(get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1))
            TSAT=saturation_temp(iten+ireverse*num_interfaces)
            T_EXTREME=fort_initial_temperature(im_source)
            cp_melt=get_user_stiffCP(im_source) ! J/Kelvin
@@ -26593,6 +26616,7 @@ end subroutine initialize2d
       real(amrex_real) xvec(SDIM)
       integer dir
       real(amrex_real) jumpval,alpha
+      real(amrex_real), parameter :: stub_zero=zero
 
       real(amrex_real), allocatable, dimension(:) :: distbatch
       integer velsolid_flag
@@ -27232,13 +27256,13 @@ end subroutine initialize2d
               (axis_dir.eq.1).or. &
               (axis_dir.eq.2).or. &
               (axis_dir.eq.3)) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)
            x_vel=velcell(1)
            y_vel=velcell(2)
 
            ! in: fort_initvelocity (2D)
           else if (axis_dir.eq.5) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)
            x_vel=velcell(1)
            y_vel=velcell(2)
 !          z_vel=zero
@@ -27256,7 +27280,7 @@ end subroutine initialize2d
             dist=distbatch(1)
            endif
   
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)  ! time=0
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)!time=0
            y_vel=velcell(2)
            x_vel=zero
           else
@@ -27446,7 +27470,7 @@ end subroutine initialize2d
           endif
 ! nozzle
          else if ((probtype.eq.63).or.(probtype.eq.64)) then
-          call nozzlerad(z,radcross,zero)
+          call nozzlerad(z,radcross,stub_zero)
           if (x.gt.radcross) then
            y_vel=zero
           else
@@ -27508,7 +27532,7 @@ end subroutine initialize2d
 ! in: fort_initvelocity, 3D
          else if (probtype.eq.41) then
           if (axis_dir.eq.5) then
-           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,zero)
+           call get_pipe_velocity(xsten,nhalf,dx,bfact,velcell,stub_zero)
            x_vel=velcell(1)
            y_vel=velcell(2)
            z_vel=velcell(SDIM)
@@ -27797,7 +27821,7 @@ end subroutine initialize2d
           endif
 ! nozzle
          else if (probtype.eq.63) then
-          call nozzlerad(z,radcross,zero)
+          call nozzlerad(z,radcross,stub_zero)
           rtest=sqrt(x**2+y**2)
           if (rtest.gt.radcross) then
            z_vel=zero

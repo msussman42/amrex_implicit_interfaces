@@ -837,6 +837,8 @@ contains
       real(amrex_real), dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
 
       real(amrex_real) :: coef, t1, t2, tan_theta, sec_theta, csc_phi, cot_phi, dthetat1, dthetat2, dphit1, dphit2
+      real(amrex_real) :: centroid_factor
+      real(amrex_real) :: derivative_factor
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -846,26 +848,31 @@ contains
       t1 = tan_theta
       t2 = cot_phi*sec_theta
 
-      coef = (6d0*volume*t1*t2)**(1d0/3d0)
+      coef = (6.0d0*volume*t1*t2)**(1.0d0/3.0d0)
 
       ! Centroid
-      centroid = 0.25d0*coef*[1d0, 1d0/t1, 1d0/t2]
+      centroid_factor=0.25d0*coef
+      centroid(1)=centroid_factor
+      centroid(2)=centroid_factor/t1
+      centroid(3)=centroid_factor/t2
 
       ! d/dθ
       dthetat1 = 1d0 + t1*t1
       dthetat2 = t1*t2
 
-      derivative_theta = 0.5d0*volume/(coef**2)*[t2*dthetat1 + t1*dthetat2         , &
-         &                                       (t1*dthetat2 - 2d0*t2*dthetat1)/t1, &
-         &                                       (t2*dthetat1 - 2d0*t1*dthetat2)/t2]
+      derivative_factor=0.5d0*volume/(coef**2)
+      derivative_theta(1)=derivative_factor*(t2*dthetat1 + t1*dthetat2)
+      derivative_theta(2)=derivative_factor*((t1*dthetat2 - 2d0*t2*dthetat1)/t1)
+      derivative_theta(3)=derivative_factor*((t2*dthetat1 - 2d0*t1*dthetat2)/t2)
 
       ! d/dφ
       dphit1 = 0d0
       dphit2 = -csc_phi**2*sec_theta
 
-      derivative_phi = 0.5d0*volume/(coef**2)*[t2*dphit1 + t1*dphit2         , &
-         &                                     (t1*dphit2 - 2d0*t2*dphit1)/t1, &
-         &                                     (t2*dphit1 - 2d0*t1*dphit2)/t2]
+      derivative_phi(1)=derivative_factor*(t2*dphit1 + t1*dphit2)
+      derivative_phi(2)=derivative_factor*((t1*dphit2 - 2d0*t2*dphit1)/t1)
+      derivative_phi(3)=derivative_factor*((t2*dphit1 - 2d0*t1*dphit2)/t2)
+
    end subroutine mof3d_derivatives_triangle
 
    pure subroutine mof3d_derivatives_quad_face(angles, volume, c, derivative_theta, derivative_phi, centroid)
@@ -909,7 +916,10 @@ contains
       real(amrex_real), dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
 
       real(amrex_real) :: cot_phi, csc_phi, tan_theta, sec_theta
-      real(amrex_real) :: qe1, qe2, qe3, xqe, dtqe1, dtqe2, dtxqe, dfqe1, dfqe2, dfxqe
+      real(amrex_real) :: qe1, qe2, qe3
+      real(amrex_real) :: centroid_factor
+      real(amrex_real) :: derivative_factor
+      real(amrex_real) :: xqe, dtqe1, dtqe2, dtxqe, dfqe1, dfqe2, dfxqe
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -922,30 +932,39 @@ contains
       xqe = sqrt(72d0*volume*qe1 - 3d0*qe2**2)
 
       ! Centroid
-      centroid = 1d0/(216d0*volume*qe1)                     &
-         &     * [xqe*qe3                                 , &
-         &        xqe/(c(3)*qe1)*qe3                      , &
-         &        3d0*c(3)*(36d0*volume*qe1 - qe2*xqe)]
+      centroid_factor=1.0d0/(216.0d0*volume*qe1)
+      centroid(1)=centroid_factor*xqe*qe3
+      centroid(2)=centroid_factor*xqe*qe3/(c(3)*qe1)
+      centroid(3)=centroid_factor*3.0d0*c(3)*(36.0d0*volume*qe1-qe2*xqe)
 
       ! d/dθ
       dtqe1 = (1d0 + (c(3)*qe1)**2)/c(3)
       dtqe2 = c(3)*qe1*qe2
       dtxqe = (36d0*volume*dtqe1 - 3d0*qe2*dtqe2)/xqe
 
-      derivative_theta = 1d0/(216d0*volume*qe1**2)                                                                  &
-         &             * [(2d0*qe1*dtqe2 - qe2*dtqe1)*qe2*xqe + qe3*qe1*dtxqe                                     , &
-         &                (2d0*(qe1*qe2*dtqe2 - (qe2**2 + 6d0*volume*qe1)*dtqe1)*xqe + qe3*qe1*dtxqe)/(c(3)*qe1)  , &
-         &                3d0*c(3)*((qe2*dtqe1 - qe1*dtqe2)*xqe - qe1*qe2*dtxqe)                                  ]
+      derivative_factor = 1.0d0/(216.0d0*volume*qe1**2) 
+
+      derivative_theta(1)=derivative_factor* &
+         ((2.0d0*qe1*dtqe2 - qe2*dtqe1)*qe2*xqe + qe3*qe1*dtxqe)
+      derivative_theta(2)=derivative_factor* &
+         ((2.0d0*(qe1*qe2*dtqe2 - (qe2**2 + 6.0d0*volume*qe1)*dtqe1)*xqe + &
+          qe3*qe1*dtxqe)/(c(3)*qe1))
+      derivative_theta(3)=derivative_factor* &
+         (3d0*c(3)*((qe2*dtqe1 - qe1*dtqe2)*xqe - qe1*qe2*dtxqe))
 
       ! d/dφ
       dfqe1 = 0d0
       dfqe2 = -c(3)*csc_phi**2*sec_theta
       dfxqe = (36d0*volume*dfqe1 - 3d0*qe2*dfqe2)/xqe
+      
+      derivative_phi(1)=derivative_factor* &
+         ((2.0d0*qe1*dfqe2 - qe2*dfqe1)*qe2*xqe + qe3*qe1*dfxqe)
+      derivative_phi(2)=derivative_factor* &
+         ((2.0d0*(qe1*qe2*dfqe2 - (qe2**2 + 6.0d0*volume*qe1)*dfqe1)*xqe + &
+          qe3*qe1*dfxqe)/(c(3)*qe1))
+      derivative_phi(3)=derivative_factor* &
+         (3d0*c(3)*((qe2*dfqe1 - qe1*dfqe2)*xqe - qe1*qe2*dfxqe))
 
-      derivative_phi = 1d0/(216d0*volume*qe1**2)                                                                  &
-         &           * [(2d0*qe1*dfqe2 - qe2*dfqe1)*qe2*xqe + qe3*qe1*dfxqe                                     , &
-         &              (2d0*(qe1*qe2*dfqe2 - (qe2**2 + 6d0*volume*qe1)*dfqe1)*xqe + qe3*qe1*dfxqe)/(c(3)*qe1)  , &
-         &              3d0*c(3)*((qe2*dfqe1 - qe1*dfqe2)*xqe - qe1*qe2*dfxqe)                                  ]
    end subroutine mof3d_derivatives_quad_edge
 
    pure subroutine mof3d_derivatives_penta(angles, volume, c, derivative_theta, derivative_phi, centroid)
@@ -957,6 +976,7 @@ contains
       real(amrex_real) :: p1, p2, sqrt2p1p2, xp, cv, tan_theta, sec_theta, csc_phi, cot_phi
       real(amrex_real) :: dtp1, dtp2, dtxp, dtf0, dtf1, dtf21, dtf22, dtf31, dtf32
       real(amrex_real) :: dpp1, dpp2, dpxp, dpf0, dpf1, dpf21, dpf22, dpf31, dpf32
+      real(amrex_real) :: centroid_factor
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -971,9 +991,10 @@ contains
       xp = cos((acos(3d0*(p1 + p2 - cv)/(4d0*sqrt2p1p2)) + 4d0*PI)/3d0)
 
       ! Centroid
-      centroid = 1d0/(6d0*cv)*[f0(p1,p2) + xp*(f1(p1,p2) + 24d0*p1*p2*xp)    , &
-         &                     c(2)*(f2(p1,p2) + xp*(f3(p1,p2) - 24d0*p2*xp)), &
-         &                     c(3)*(f2(p2,p1) + xp*(f3(p2,p1) - 24d0*p1*xp))]
+      centroid_factor=1.0d0/(6.0d0*cv)
+      centroid(1)=centroid_factor*(f0(p1,p2) + xp*(f1(p1,p2) + 24d0*p1*p2*xp))
+      centroid(2)=centroid_factor*(c(2)*(f2(p1,p2) + xp*(f3(p1,p2) - 24d0*p2*xp)))
+      centroid(3)=centroid_factor*(c(3)*(f2(p2,p1) + xp*(f3(p2,p1) - 24d0*p1*xp)))
 
       ! d/dθ
       dtp1  = c(2)*(1d0 + tan_theta**2)
@@ -986,9 +1007,12 @@ contains
       dtf31 = dxf3(p1,p2)*dtp1 + dyf3(p1,p2)*dtp2
       dtf32 = dxf3(p2,p1)*dtp2 + dyf3(p2,p1)*dtp1
 
-      derivative_theta = 1d0/(6d0*cv)*[dtf0 + dtf1*xp + f1(p1,p2)*dtxp + 24d0*xp*((p1*dtp2 + p2*dtp1)*xp + 2d0*p1*p2*dtxp), &
-         &                             c(2)*(dtf21 + dtf31*xp + f3(p1,p2)*dtxp - 24d0*xp*(dtp2*xp + 2d0*p2*dtxp))         , &
-         &                             c(3)*(dtf22 + dtf32*xp + f3(p2,p1)*dtxp - 24d0*xp*(dtp1*xp + 2d0*p1*dtxp))         ]
+      derivative_theta(1)=centroid_factor* &
+       (dtf0 + dtf1*xp + f1(p1,p2)*dtxp + 24d0*xp*((p1*dtp2 + p2*dtp1)*xp + 2d0*p1*p2*dtxp))
+      derivative_theta(2)=centroid_factor* &
+       (c(2)*(dtf21 + dtf31*xp + f3(p1,p2)*dtxp - 24d0*xp*(dtp2*xp + 2d0*p2*dtxp)))
+      derivative_theta(3)=centroid_factor* &
+       (c(3)*(dtf22 + dtf32*xp + f3(p2,p1)*dtxp - 24d0*xp*(dtp1*xp + 2d0*p1*dtxp)))
 
       ! d/dφ
       dpp1  = 0d0
@@ -1001,9 +1025,12 @@ contains
       dpf31 = dxf3(p1,p2)*dpp1 + dyf3(p1,p2)*dpp2
       dpf32 = dxf3(p2,p1)*dpp2 + dyf3(p2,p1)*dpp1
 
-      derivative_phi = 1d0/(6d0*cv)*[dpf0 + dpf1*xp + f1(p1,p2)*dpxp + 24d0*xp*((p1*dpp2 + p2*dpp1)*xp + 2d0*p1*p2*dpxp), &
-         &                           c(2)*(dpf21 + dpf31*xp + f3(p1,p2)*dpxp - 24d0*xp*(dpp2*xp + 2d0*p2*dpxp))         , &
-         &                           c(3)*(dpf22 + dpf32*xp + f3(p2,p1)*dpxp - 24d0*xp*(dpp1*xp + 2d0*p1*dpxp))         ]
+      derivative_phi(1)=centroid_factor* &
+       (dpf0 + dpf1*xp + f1(p1,p2)*dpxp + 24d0*xp*((p1*dpp2 + p2*dpp1)*xp + 2d0*p1*p2*dpxp))
+      derivative_phi(2)=centroid_factor* &
+       (c(2)*(dpf21 + dpf31*xp + f3(p1,p2)*dpxp - 24d0*xp*(dpp2*xp + 2d0*p2*dpxp)))
+      derivative_phi(3)=centroid_factor* &
+       (c(3)*(dpf22 + dpf32*xp + f3(p2,p1)*dpxp - 24d0*xp*(dpp1*xp + 2d0*p1*dpxp)))
 
    contains
 
