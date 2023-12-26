@@ -674,7 +674,107 @@ MultiFab* NavierStokes::maskfiner(int ngrow,Real tag,int clear_phys_boundary) {
 // and covered by a finer cell.
  mask->FillBoundary(geom.periodicity());  
  return mask;
-}
+} // end subroutine maskfiner
+
+MultiFab* NavierStokes::maskfiner_noghosts(Real tag) {
+
+ int ngrow=0;
+
+ int finest_level = parent->finestLevel();
+ MultiFab* mask=new MultiFab(grids,dmap,1,ngrow,
+  MFInfo().SetTag("mask"),FArrayBoxFactory());
+
+  // sanity check for mpi and open mp
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(mask->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(*mask,false); mfi.isValid(); ++mfi) {
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+   // sanity check
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  FArrayBox& fab = (*mask)[mfi];
+  Array4<Real> const& fab_array=fab.array();
+
+  Box d_box_interior=fab.box(); 
+
+  const Dim3 lo3b=amrex::lbound(d_box_interior);
+  const Dim3 hi3b=amrex::ubound(d_box_interior);
+  for (int z=lo3b.z;z<=hi3b.z;++z) {
+  for (int y=lo3b.y;y<=hi3b.y;++y) {
+  for (int x=lo3b.x;x<=hi3b.x;++x) {
+   fab_array(x,y,z,0)=tag;
+  }
+  }
+  }
+
+ } // mfi
+} //omp
+
+  //sanity check
+ ns_reconcile_d_num(LOOP_MASKFINER,"maskfiner");
+
+ if (level<finest_level) {
+
+  NavierStokes& ns_fine=getLevel(level+1);
+  const BoxArray& f_box=ns_fine.grids;
+
+   //sanity check
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(mask->boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+  for (MFIter mfi(*mask,false); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const Box& tilegrid = mfi.tilebox();
+
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+   FArrayBox& fab = (*mask)[mfi];
+   for (int j = 0; j < f_box.size(); j++) {
+    Box c_box = amrex::coarsen(f_box[j],2);
+    c_box &= grids[mfi.index()];
+    if (c_box.ok()) {
+     Array4<Real> const& fab_array=fab.array();
+     const Dim3 lo3=amrex::lbound(c_box);
+     const Dim3 hi3=amrex::ubound(c_box);
+     for (int z=lo3.z;z<=hi3.z;++z) {
+     for (int y=lo3.y;y<=hi3.y;++y) {
+     for (int x=lo3.x;x<=hi3.x;++x) {
+      fab_array(x,y,z,0)=1.0-tag;
+     }
+     }
+     }
+    }
+
+   } // j
+  } // mfi
+} //omp
+   //sanity check
+  ns_reconcile_d_num(LOOP_MASKFINER_UNTAG,"maskfiner");
+ } // level<finest_level
+
+ return mask;
+} // end subroutine maskfiner_noghosts
+
+
 
 // if spectral_override==0, then always low order average down.
 void NavierStokes::avgDown_localMF(int idxMF,int scomp,int ncomp,

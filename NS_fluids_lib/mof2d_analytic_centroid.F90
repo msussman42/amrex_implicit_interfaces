@@ -158,6 +158,9 @@ contains
                         vol_tri*c(1)/3.0d0)/volume
           else
            print *,"volume_test invalid"
+           print *,"volume_test=",volume_test
+           print *,"volume=",volume
+           print *,"volcell=",volcell
            stop
           endif
          else if ((a.ge.c(2)).or. &
@@ -194,6 +197,9 @@ contains
             centroid(2)=b/3.0d0
            else
             print *,"volume_test invalid"
+            print *,"volume_test=",volume_test
+            print *,"volume=",volume
+            print *,"volcell=",volcell
             stop
            endif
           else

@@ -16762,7 +16762,7 @@ contains
       if (volcell_tet.ge.zero) then
        !do nothing
       else
-       print *,"volcell_tet invalid"
+       print *,"volcell_tet invalid: ",volcell_tet
        stop
       endif
 
@@ -19893,7 +19893,7 @@ contains
        dxthin=half*(xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
 
        if (abs(voltemp-uncaptured_volume_START).le. &
-           two*eps2*volume_plus) then
+           two*EPS2*volume_plus) then
         ! do nothing
        else
         print *,"voltemp or uncaptured_volume_START invalid"
@@ -19901,7 +19901,7 @@ contains
        endif
 
        if (uncaptured_volume_fluid.gt. &
-           two*eps2*volume_plus) then
+           two*EPS2*volume_plus) then
         print *,"not all volume accounted for multi get area pairs"
         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
         print *,"uncaptured_volume_START ",uncaptured_volume_START

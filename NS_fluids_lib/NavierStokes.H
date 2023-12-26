@@ -1397,6 +1397,7 @@ void apply_pressure_grad(
     void metrics_data_min_max_ALL(const std::string& caller_string);
 
     MultiFab* maskfiner(int ngrow,Real tag,int clear_phys_boundary);
+    MultiFab* maskfiner_noghosts(Real tag);
 
     NavierStokes& getLevel (int lev)
     {
