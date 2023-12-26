@@ -117,7 +117,7 @@ lambda=k_G/(den_G*C_pG)
 T_gamma_liquid=fort_tempconst(1)
 T_inf = fort_tempconst(2)
 T_sat = fort_saturation_temp(1)
-L_V = get_user_latent_heat(1,293.0d0,1)
+L_V = get_user_latent_heat(1,room_temperature,1)
 D_G = fort_speciesviscconst(2)
 Y_inf=fort_speciesconst(2)
 if (Y_inf.eq.1.0d0) then

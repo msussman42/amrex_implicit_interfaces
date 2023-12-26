@@ -106,6 +106,7 @@ contains
   real(amrex_real), INTENT(in) :: t
   real(amrex_real), INTENT(out) :: LS(nmat)
   real(amrex_real) ls_o,ls_i
+  real(amrex_real), PARAMETER :: stub_zero=zero
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -138,7 +139,7 @@ contains
    LS(2)=-LS(1)
 
    ! Solid
-   ls_o = DIST_FINITE_CYLINDER(x,TANK2_RADIUS,zero,TANK2_HEIGHT)
+   ls_o = DIST_FINITE_CYLINDER(x,TANK2_RADIUS,stub_zero,TANK2_HEIGHT)
    ls_i = DIST_FINITE_CYLINDER(x,TANK2_RADIUS-TANK2_THICKNESS,&
     TANK2_THICKNESS,TANK2_HEIGHT-TANK2_THICKNESS)
    if((ls_o.ge.zero).and.(ls_i.ge.zero)) then

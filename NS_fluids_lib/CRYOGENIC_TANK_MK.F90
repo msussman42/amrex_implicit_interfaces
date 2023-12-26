@@ -210,7 +210,7 @@ integer :: dir
  do dir=1,3
   VEL(dir)=0.0d0
  enddo
- TEMP=293.0d0  ! room temperature (default)
+ TEMP=room_temperature  ! 293.0d0 (if double precision)
 
   ! the buffer size for the auxiliary mesh is 0.2*max_side_len on each
   ! side.
@@ -1860,7 +1860,7 @@ if ((num_materials.eq.3).and. &
      print *,"fort_R_Palmore_Desjardins=",fort_R_Palmore_Desjardins
      stop
     endif
-    LL=get_user_latent_heat(1,293.0d0,1)
+    LL=get_user_latent_heat(1,room_temperature,1)
     call Pgamma_Clausius_Clapyron(Pgamma, &
             fort_reference_pressure(1), &
             temperature, &

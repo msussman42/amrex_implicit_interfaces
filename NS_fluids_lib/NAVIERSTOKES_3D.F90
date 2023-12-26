@@ -442,7 +442,7 @@ stop
 ! Guibo
 
       character*80 Title,Zonename
-      REAL*4 ZONEMARKER,EOHMARKER
+      real(tecplot_real_short) :: ZONEMARKER,EOHMARKER
       integer*4 :: nzones_gb,iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
       integer bfact,testlev,testgridno
@@ -450,12 +450,12 @@ stop
 
       ! define zone structure
       type zone3d_t
-         real*8, pointer :: var(:,:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:,:)
       end type zone3d_t
       type(zone3d_t), dimension(:), allocatable :: zone3d_gb
 
       type zone2d_t
-         real*8, pointer :: var(:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:)
       end type zone2d_t
       type(zone2d_t), dimension(:), allocatable :: zone2d_gb
 
@@ -4045,7 +4045,7 @@ END SUBROUTINE SIMP
 ! Guibo
 
       character*80 Title,Zonename
-      REAL*4 ZONEMARKER,EOHMARKER
+      real(tecplot_real_short) ZONEMARKER,EOHMARKER
       integer*4 :: nzones_gb,iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
       integer bfact,testlev,testgridno
@@ -4053,7 +4053,7 @@ END SUBROUTINE SIMP
 
       ! define zone structure
       type zone_t
-         real*8, pointer :: var(:,:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:,:)
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
 
@@ -4080,7 +4080,8 @@ END SUBROUTINE SIMP
       plot_sdim=SDIM
       plot_sdim_macro=SDIM
 
-      if ((levelrz.eq.COORDSYS_CARTESIAN).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (visual_revolve.ne.0) then
         print *,"visual_revolve= ",visual_revolve
         print *,"visual_revolve invalid combine zones"

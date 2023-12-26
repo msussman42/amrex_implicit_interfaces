@@ -479,6 +479,7 @@ contains
    subroutine cg3_create_cuboid(c, cuboid)
       real(amrex_real), dimension(3), intent(in) :: c
       type(t_polyhedron), intent(out) :: cuboid
+      integer :: i,j
 
       cuboid%nb_points = 8
       cuboid%nb_edges = 12
@@ -486,16 +487,28 @@ contains
 
       ! Generate the points
       allocate(cuboid%point(3, cuboid%nb_points))
-FIX ME
-      cuboid%point(:,1) = [0d0 , 0d0 , 0d0 ]
-      cuboid%point(:,2) = [0d0 , 0d0 , c(3)]
-      cuboid%point(:,3) = [0d0 , c(2), 0d0 ]
-      cuboid%point(:,4) = [0d0 , c(2), c(3)]
-      cuboid%point(:,5) = [c(1), 0d0 , 0d0 ]
-      cuboid%point(:,6) = [c(1), 0d0 , c(3)]
-      cuboid%point(:,7) = [c(1), c(2), 0d0 ]
-      cuboid%point(:,8) = [c(1), c(2), c(3)]
 
+      do i=1,3
+      do j=1,8 
+       cuboid%point(i,j) = 0.0d0
+      enddo
+      enddo
+      i=3
+      do j=2,8,2
+       cuboid%point(i,j) = c(i)
+      enddo
+      i=1
+      do j=5,8
+       cuboid%point(i,j) = c(i)
+      enddo
+      i=2
+      do j=3,4
+       cuboid%point(i,j) = c(i)
+      enddo
+      do j=7,8
+       cuboid%point(i,j) = c(i)
+      enddo
+       
       ! Generate the faces
       allocate(cuboid%face(cuboid%nb_faces))
 
@@ -603,28 +616,69 @@ FIX ME
       ! Tangents
       allocate(cuboid%tangent(3,cuboid%nb_edges))
 
-      cuboid%tangent(:, 1) = [0d0, 0d0, 1d0]
-      cuboid%tangent(:, 2) = [0d0, 1d0, 0d0]
-      cuboid%tangent(:, 3) = [1d0, 0d0, 0d0]
-      cuboid%tangent(:, 4) = [0d0, 1d0, 0d0]
-      cuboid%tangent(:, 5) = [1d0, 0d0, 0d0]
-      cuboid%tangent(:, 6) = [0d0, 0d0, 1d0]
-      cuboid%tangent(:, 7) = [1d0, 0d0, 0d0]
-      cuboid%tangent(:, 8) = [1d0, 0d0, 0d0]
-      cuboid%tangent(:, 9) = [0d0, 0d0, 1d0]
-      cuboid%tangent(:,10) = [0d0, 1d0, 0d0]
-      cuboid%tangent(:,11) = [0d0, 1d0, 0d0]
-      cuboid%tangent(:,12) = [0d0, 0d0, 1d0]
+      do i=1,3
+      do j=1,12
+       cuboid%tangent(i,j) = 0.0d0
+      enddo
+      enddo
+
+      i=1
+      j=3
+      cuboid%tangent(i,j) = 1.0d0
+      j=5
+      cuboid%tangent(i,j) = 1.0d0
+      j=7
+      cuboid%tangent(i,j) = 1.0d0
+      j=8
+      cuboid%tangent(i,j) = 1.0d0
+
+      i=2
+      j=2
+      cuboid%tangent(i,j) = 1.0d0
+      j=4
+      cuboid%tangent(i,j) = 1.0d0
+      j=10
+      cuboid%tangent(i,j) = 1.0d0
+      j=11
+      cuboid%tangent(i,j) = 1.0d0
+
+      i=3
+      j=1
+      cuboid%tangent(i,j) = 1.0d0
+      j=6
+      cuboid%tangent(i,j) = 1.0d0
+      j=9
+      cuboid%tangent(i,j) = 1.0d0
+      j=12
+      cuboid%tangent(i,j) = 1.0d0
 
       ! Normals
       allocate(cuboid%normal(3,cuboid%nb_faces))
 
-      cuboid%normal(:, 1) = [ 0d0, 0d0, 1d0]
-      cuboid%normal(:, 2) = [ 1d0, 0d0, 0d0]
-      cuboid%normal(:, 3) = [ 0d0, 1d0, 0d0]
-      cuboid%normal(:, 4) = [-1d0, 0d0, 0d0]
-      cuboid%normal(:, 5) = [ 0d0, 0d0,-1d0]
-      cuboid%normal(:, 6) = [ 0d0,-1d0, 0d0]
+      do i=1,3
+      do j=1,6
+       cuboid%normal(i,j) = 0.0d0
+      enddo
+      enddo
+
+      i=1
+      j=2
+      cuboid%normal(i,j) = 1.0d0
+      j=4
+      cuboid%normal(i,j) = -1.0d0
+
+      i=2
+      j=3
+      cuboid%normal(i,j) = 1.0d0
+      j=6
+      cuboid%normal(i,j) = -1.0d0
+
+      i=3
+      j=1
+      cuboid%normal(i,j) = 1.0d0
+      j=5
+      cuboid%normal(i,j) = -1.0d0
+
    end subroutine cg3_create_cuboid
 
 end module mod_cg3_polyhedron

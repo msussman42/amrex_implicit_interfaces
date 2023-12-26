@@ -39,6 +39,7 @@ stop
        dir,ncomp,interior_only,nsteps) &
       bind(c,name='fort_tecplotfab')
 
+      use probcommon_module
       use global_utility_module
 
       IMPLICIT NONE
@@ -70,14 +71,14 @@ stop
 ! Guibo
 
       character*80 Title,Varname,Zonename
-      REAL*4 ZONEMARKER,EOHMARKER
+      real(tecplot_real_short) :: ZONEMARKER,EOHMARKER
       integer*4 :: iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
       integer strandid
 
       ! define zone structure
       type zone_t
-         real*8, pointer :: var(:,:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:,:)
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
 
@@ -810,7 +811,7 @@ stop
 ! Guibo
 
       character*80 Title,Zonename
-      REAL*4 ZONEMARKER,EOHMARKER
+      real(tecplot_real_short) :: ZONEMARKER,EOHMARKER
       integer*4 :: nzones_gb,iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
       integer bfact,testlev,testgridno
@@ -818,7 +819,7 @@ stop
 
       ! define zone structure
       type zone_t
-         real*8, pointer :: var(:,:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:,:)
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
 

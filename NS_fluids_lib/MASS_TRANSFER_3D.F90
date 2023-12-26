@@ -960,7 +960,7 @@ stop
       cc_flag=0  ! centroid -> target
       tsat_flag=0 ! do not use TSAT
       nsolve=1
-      Tsat=293.0 ! representative value for sanity check
+      Tsat=room_temperature ! 293.0d0 if double prec.
       call center_centroid_interchange( &
        DATA_FLOOR, &
        nsolve, &
@@ -1225,7 +1225,9 @@ stop
       cc_flag=1  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
       nsolve=1
-      Tsat=293.0 !unused if tsat_flag==-1 (but set to 293.0 for sanity check)
+      !unused if tsat_flag==-1 
+      !(but set to room_temperature=293.0d0 for sanity check)
+      Tsat=room_temperature 
       call center_centroid_interchange( &
        DATA_FLOOR, &
        nsolve, &
@@ -1344,7 +1346,9 @@ stop
       cc_flag=1  ! center -> target
       tsat_flag=-1  ! use all cells in the stencil
       nsolve=1
-      Tsat=293.0 !unused if tsat_flag==-1 (but set to 293.0 for sanity check)
+      !unused if tsat_flag==-1 
+      !(but set to room_temperature=293.0d0 for sanity check)
+      Tsat=room_temperature 
       call center_centroid_interchange( &
        DATA_FLOOR, &
        nsolve, &
@@ -3259,6 +3263,7 @@ stop
       integer spec_comp
       integer dencomp
       real(amrex_real) spec_old,spec_new
+      real(amrex_real) local_cutoff
       real(amrex_real), PARAMETER :: species_max=1.0d0
       real(amrex_real), PARAMETER :: MUSHY_THICK=2.0d0
 
@@ -3539,7 +3544,7 @@ stop
              if (im_opp.ne.im) then
               do ireverse=0,1
                call get_iten(im,im_opp,iten)
-               LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+               LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
                if (LL.eq.zero) then
                 ! do nothing
                else if (LL.ne.zero) then
@@ -3583,9 +3588,10 @@ stop
                  spec_new=species_base
                 else if ((local_LS(im_melt).ge.-MUSHY_THICK*dx(1)).and. &
                          (local_LS(im_melt).le.zero)) then
-                 LSMELT=abs(local_LS(im_melt))-half*MUSHY_THICK*dx(1)
+                 local_cutoff=half*MUSHY_THICK*dx(1)
+                 LSMELT=abs(local_LS(im_melt))-local_cutoff
                  spec_new=species_base+ &
-                    (one-species_base)*hs(LSMELT,half*MUSHY_THICK*dx(1))
+                    (one-species_base)*hs(LSMELT,local_cutoff)
                 else
                  print *,"local_LS(im_melt) invalid: ",local_LS(im_melt)
                  stop
@@ -4120,7 +4126,7 @@ stop
          local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
          distribute_from_targ= &
             distribute_from_target(iten+ireverse*num_interfaces)
-         LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+         LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
          mass_frac_id=0
 
          if (is_multi_component_evapF(local_freezing_model, &
@@ -4249,7 +4255,7 @@ stop
              stop
             endif
 
-            LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
 
             if ((is_rigid(im).eq.1).or. &
                 (is_rigid(im_opp).eq.1)) then
@@ -4797,7 +4803,7 @@ stop
              stop
            endif
 
-           LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+           LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
            local_freezing_model=freezing_model(iten+ireverse*num_interfaces)
            distribute_from_targ= &
              distribute_from_target(iten+ireverse*num_interfaces)
@@ -6320,7 +6326,7 @@ stop
              stop
             endif
 
-            LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+            LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
 
             if ((is_rigid(im).eq.1).or. &
                 (is_rigid(im_opp).eq.1)) then
@@ -6621,7 +6627,7 @@ stop
          endif
   
          call get_iten(im,im_opp,iten)
-         LL=get_user_latent_heat(iten+ireverse*num_interfaces,293.0d0,1)
+         LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
 
          if (LL.ne.zero) then
   

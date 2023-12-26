@@ -17340,7 +17340,7 @@ end subroutine print_visual_descriptor
 ! Guibo
 
       character*80 Title,Zonename
-      REAL*4 ZONEMARKER,EOHMARKER
+      real(tecplot_real_short) :: ZONEMARKER,EOHMARKER
       integer*4 :: nzones_gb,iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
       integer bfact,testlev,testgridno
@@ -17349,12 +17349,12 @@ end subroutine print_visual_descriptor
 
       ! define zone structure
       type zone3d_t
-         real(amrex_real), pointer :: var(:,:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:,:)
       end type zone3d_t
       type(zone3d_t), dimension(:), allocatable :: zone3d_gb
 
       type zone2d_t
-         real(amrex_real), pointer :: var(:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:)
       end type zone2d_t
       type(zone2d_t), dimension(:), allocatable :: zone2d_gb
 
@@ -23592,7 +23592,7 @@ if (probtype.eq.55) then
    im_3=im_solid_substrate
    call get_iten(im,im_opp,iten)
    do imloop=1,num_materials
-    marangoni_temp(imloop)=293.0
+    marangoni_temp(imloop)=room_temperature ! 293.0d0 if double precision
    enddo
    call get_user_tension(xvec,time, &
      fort_tension_init,user_tension,marangoni_temp)

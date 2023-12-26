@@ -1,4 +1,5 @@
 Module NeuralNetwork
+use amrex_fort_module, only : amrex_real
 
   Implicit None
   Private
@@ -6,11 +7,11 @@ Module NeuralNetwork
 
   !↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓Neural Networks variables↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
   Type Ragged_Vector
-    real(8), Allocatable :: Vec(:)
+    real(amrex_real), Allocatable :: Vec(:)
   End Type Ragged_vector
 
   Type Ragged_Matrix
-    real(8), Allocatable :: Mat(:,:)
+    real(amrex_real), Allocatable :: Mat(:,:)
   End Type Ragged_Matrix
 
   Type :: NN_activation
@@ -20,9 +21,10 @@ Module NeuralNetwork
   ! interface for choose activation type
   Interface
     Function Sub_Interface(n, X)
+      use amrex_fort_module, only : amrex_real
       Integer,  Intent(in) :: n
-      real(8), Intent(in), Dimension(n) :: X
-      real(8), Dimension(n) :: Sub_Interface
+      real(amrex_real), Intent(in), Dimension(n) :: X
+      real(amrex_real), Dimension(n) :: Sub_Interface
     End Function Sub_Interface
   End Interface
 
@@ -30,8 +32,8 @@ Module NeuralNetwork
   Type :: Neural_Network
     Integer :: n_inputs
     Integer :: n_outputs
-    real(8), Allocatable :: Inputs(:)
-    real(8), Allocatable :: Outputs(:)
+    real(amrex_real), Allocatable :: Inputs(:)
+    real(amrex_real), Allocatable :: Outputs(:)
     Integer :: layers
     Integer, Allocatable :: Layer_Size(:)
     Type(Ragged_Vector), Allocatable :: Activations(:)
@@ -55,7 +57,7 @@ Module NeuralNetwork
     Class(Neural_Network) :: self
     Character(100) :: tmp
     Character(100) :: string
-    real(8),allocatable :: line(:)
+    real(amrex_real),allocatable :: line(:)
     Integer :: error
     Integer :: i,j
 
@@ -140,8 +142,8 @@ Module NeuralNetwork
   function Predict(self, input)
     Implicit None
     Class(Neural_Network) :: self
-    real(8) :: input(self%n_inputs)
-    real(8) :: Predict(self%n_outputs)
+    real(amrex_real) :: input(self%n_inputs)
+    real(amrex_real) :: Predict(self%n_outputs)
     integer :: i
 
     self%activations(1)%vec = input
@@ -209,41 +211,41 @@ Module NeuralNetwork
   function Activation_logistic(n,X)
     Implicit None
     integer, Intent(in) :: n
-    real(8), Intent(in), dimension(n) :: X
-    real(8), dimension(n) :: Activation_logistic
+    real(amrex_real), Intent(in), dimension(n) :: X
+    real(amrex_real), dimension(n) :: Activation_logistic
     Activation_logistic = 1.0 / (1.0+exp(-X))
   End function Activation_logistic
 
   function Activation_tanh(n,X)
     Implicit None
     integer, Intent(in) :: n
-    real(8), Intent(in), dimension(n) :: X
-    real(8), dimension(n) :: Activation_tanh
+    real(amrex_real), Intent(in), dimension(n) :: X
+    real(amrex_real), dimension(n) :: Activation_tanh
     Activation_tanh = tanh(X)
   End function Activation_tanh
 
   function Activation_ReLU(n,X)
     Implicit None
     integer, Intent(in) :: n
-    real(8), Intent(in), dimension(n) :: X
-    real(8), dimension(n) :: Activation_ReLU
+    real(amrex_real), Intent(in), dimension(n) :: X
+    real(amrex_real), dimension(n) :: Activation_ReLU
       Activation_ReLU = max(X,0.d0)
     End function Activation_ReLU
 
   function Activation_identity(n,X)
     Implicit None
     integer, Intent(in) :: n
-    real(8), Intent(in), dimension(n) :: X
-    real(8), dimension(n) :: Activation_identity
+    real(amrex_real), Intent(in), dimension(n) :: X
+    real(amrex_real), dimension(n) :: Activation_identity
     Activation_identity = X
   End function Activation_identity
 
   function Activation_softmax(n,X)
     Implicit None
     Integer, Intent(in) :: n
-    real(8), Intent(in), dimension(n) :: X
-    real(8), dimension(n) :: tmp
-    real(8), dimension(n) :: Activation_softmax
+    real(amrex_real), Intent(in), dimension(n) :: X
+    real(amrex_real), dimension(n) :: tmp
+    real(amrex_real), dimension(n) :: Activation_softmax
     tmp = exp(X - maxval(X))/sum(tmp)
     Activation_softmax = 1.0 / (1.0+exp(-X))
   End function Activation_softmax
@@ -252,6 +254,7 @@ Module NeuralNetwork
 End Module NeuralNetwork
 
 Module DecisionTree
+use amrex_fort_module, only : amrex_real
 
   Implicit None
   Private
@@ -262,8 +265,8 @@ Module DecisionTree
     Integer  :: children_left
     Integer  :: children_right
     Integer  :: feature
-    real(8) :: threshold
-    real(8), Allocatable :: Values(:)
+    real(amrex_real) :: threshold
+    real(amrex_real), Allocatable :: Values(:)
     ! Contains
   End Type Nodes
 
@@ -276,8 +279,8 @@ Module DecisionTree
   Type :: Decision_Tree
     Integer :: n_inputs
     Integer :: n_outputs
-    real(8), Allocatable :: Inputs(:)
-    real(8), Allocatable :: Outputs(:)
+    real(amrex_real), Allocatable :: Inputs(:)
+    real(amrex_real), Allocatable :: Outputs(:)
     Type(Trees) :: Tree
   Contains
     Procedure :: Initialization
@@ -327,8 +330,8 @@ Module DecisionTree
   function Predict(self, input)
     Implicit None
     Class(Decision_Tree) :: self
-    real(8) :: input(self%n_inputs)
-    real(8) :: Predict(self%n_outputs)
+    real(amrex_real) :: input(self%n_inputs)
+    real(amrex_real) :: Predict(self%n_outputs)
 
     integer :: i,n
 
@@ -351,6 +354,7 @@ End Module DecisionTree
 
 
 Module RandomForest
+use amrex_fort_module, only : amrex_real
 
   Implicit None
   Private
@@ -362,8 +366,8 @@ Module RandomForest
     Integer  :: children_left
     Integer  :: children_right
     Integer  :: feature
-    real(8) :: threshold
-    real(8), Allocatable :: Values(:)
+    real(amrex_real) :: threshold
+    real(amrex_real), Allocatable :: Values(:)
     ! Contains
   End Type Nodes
 
@@ -377,8 +381,8 @@ Module RandomForest
     Integer :: n_inputs
     Integer :: n_outputs
     Integer :: tree_count
-    real(8), Allocatable :: Inputs(:)
-    real(8), Allocatable :: Outputs(:)
+    real(amrex_real), Allocatable :: Inputs(:)
+    real(amrex_real), Allocatable :: Outputs(:)
     Type(Trees), Allocatable :: Tree(:)
   Contains
     Procedure :: Initialization
@@ -435,8 +439,8 @@ Module RandomForest
   function Predict(self, input)
     Implicit None
     Class(Random_Forest) :: self
-    real(8) :: input(self%n_inputs)
-    real(8) :: Predict(self%n_outputs)
+    real(amrex_real) :: input(self%n_inputs)
+    real(amrex_real) :: Predict(self%n_outputs)
 
     integer :: i, j, n
 

@@ -26,7 +26,7 @@ CEXE_headers += EXTRAP_COMP.H
 CEXE_headers += DRAG_COMP.H 
 CEXE_headers += NavierStokes.H 
 
-F90EXE_headers += ml_double.F90
+F90EXE_headers += ml_amrex_real.F90
 
 F90EXE_headers += \
   special_functions_alternative.F90 \
@@ -72,7 +72,7 @@ F90EXE_headers += \
   GLOBALDIST.F90 \
   supercooled_exact_sol.F90 
  
-F90EXE_sources += ml_double.F90
+F90EXE_sources += ml_amrex_real.F90
 
 F90EXE_sources += \
   FILCC_3D.F90 \

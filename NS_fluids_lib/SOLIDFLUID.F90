@@ -1315,14 +1315,14 @@
 ! Guibo
 
       character*80 Title,Varname,Zonename
-      REAL*4 ZONEMARKER,EOHMARKER
+      real(tecplot_real_short) :: ZONEMARKER,EOHMARKER
       integer*4 :: iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
       integer strandid
 
       ! define zone structure
       type zone_t
-         real*8, pointer :: var(:,:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:,:)
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
 
@@ -1521,14 +1521,14 @@
 ! Guibo
 
       character*80 Title,Varname,Zonename
-      REAL*4 ZONEMARKER,EOHMARKER
+      real(tecplot_real_short) :: ZONEMARKER,EOHMARKER
       integer*4 :: iz_gb,ivar_gb
       integer*4, dimension(:,:), allocatable :: lo_gb,hi_gb
       integer strandid
 
       ! define zone structure
       type zone_t
-         real*8, pointer :: var(:,:,:,:)
+         real(tecplot_real), pointer :: var(:,:,:,:)
       end type zone_t
       type(zone_t), dimension(:), allocatable :: zone_gb
       integer iread

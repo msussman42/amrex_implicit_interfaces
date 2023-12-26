@@ -268,7 +268,7 @@ integer dir
  do dir=1,SDIM
   vel(dir)=zero
  enddo
- temperature=293.0d0
+ temperature=room_temperature
  prescribed_flag=0
 
 return

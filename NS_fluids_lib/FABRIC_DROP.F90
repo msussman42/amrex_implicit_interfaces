@@ -27,14 +27,14 @@ stop
 module FABRIC_DROP_MODULE
 use amrex_fort_module, only : amrex_real
 implicit none 
-REAL(KIND=8),PARAMETER        :: pi=4.0d0*atan(1.0d0)
-REAL(KIND=8),PARAMETER        :: a_wavy=0.4d0
-REAL(KIND=8),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
-REAL(KIND=8),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
+real(amrex_real),PARAMETER        :: pi=4.0d0*atan(1.0d0)
+real(amrex_real),PARAMETER        :: a_wavy=0.4d0
+real(amrex_real),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
+real(amrex_real),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
 integer,PARAMETER             :: N1=4   ! wavy threads
 integer,PARAMETER             :: N2=4   ! Straight threads
 integer,parameter             :: P=96  ! number of partition points
-REAL(KIND=8),PARAMETER        :: omega=pi/(3.0d0/4.0d0)
+real(amrex_real),PARAMETER        :: omega=pi/(3.0d0/4.0d0)
 
 real(amrex_real), allocatable, dimension(:,:,:) :: internal_thread_ls
 real(amrex_real) internal_dx(3)
@@ -45,11 +45,11 @@ subroutine l2normd(s,x1,x2, x1x2norm)
 implicit none
 
 integer,INTENT(in)       :: s
-real(kind=8),INTENT(in)  :: x1(s),x2(s)
-real(kind=8)             :: x1x2norm
+real(amrex_real),INTENT(in)  :: x1(s),x2(s)
+real(amrex_real)             :: x1x2norm
 
 integer                  :: i
-real(kind=8),allocatable :: diff(:)
+real(amrex_real),allocatable :: diff(:)
 
 x1x2norm = 0.0d0
 allocate(diff(s))
@@ -80,14 +80,14 @@ implicit none
 ! --------> return the distance from x to the cloest point
 
 integer,INTENT(in)           :: sd
-real(kind=8),INTENT(in)      ::  p1(sd),p2(sd),x(sd)
-real(kind=8),INTENT(out)     ::  dist
-real(kind=8),INTENT(out)     ::  pout(sd)
+real(amrex_real),INTENT(in)      ::  p1(sd),p2(sd),x(sd)
+real(amrex_real),INTENT(out)     ::  dist
+real(amrex_real),INTENT(out)     ::  pout(sd)
 
-real(kind=8)                 :: diff10,diff21,diffx
-real(kind=8),allocatable     :: x10(:), x21(:)
+real(amrex_real)                 :: diff10,diff21,diffx
+real(amrex_real),allocatable     :: x10(:), x21(:)
 integer                      :: i
-real(kind=8)                 :: s
+real(amrex_real)                 :: s
 
 
 dist = 0.0d0
@@ -146,14 +146,14 @@ subroutine find_xc(la,lb,flag,xz,xc)
 ! flag =1 sinecurve   =2 cosinecurve
 implicit none
 
-real(kind=8),INTENT(in) :: la,lb
+real(amrex_real),INTENT(in) :: la,lb
 integer,INTENT(in)      :: flag
-real(kind=8),INTENT(in) :: xz(2)
+real(amrex_real),INTENT(in) :: xz(2)
 integer                 :: k
-real(kind=8),allocatable         :: spl(:,:)
-real(kind=8)            :: dist,dtemp
-real(kind=8),INTENT(out):: xc(3)
-real(kind=8)            :: spltemp(2),pout(2)
+real(amrex_real),allocatable         :: spl(:,:)
+real(amrex_real)            :: dist,dtemp
+real(amrex_real),INTENT(out):: xc(3)
+real(amrex_real)            :: spltemp(2),pout(2)
 
 
 allocate(spl(2,P+1))
@@ -204,6 +204,7 @@ real(amrex_real) internal_x(3)
 integer ithread
 integer i,j,k
 integer N, N_max
+real(8) :: xblob5_dbl,yblob5_dbl,zblob5_dbl
 
 
 #ifdef DEBUG_FABRIC_DROP
@@ -218,7 +219,10 @@ if ((probtype.ne.FABRIC_DROP_PROB_TYPE).or.(SDIM.ne.3)) then
 endif
 
 ! Evaluate level set function on internal fine mesh
-allocate(internal_thread_ls(IDNINT(xblob5),IDNINT(yblob5),IDNINT(zblob5)))
+xblob5_dbl=xblob5
+yblob5_dbl=yblob5
+zblob5_dbl=zblob5
+allocate(internal_thread_ls(IDNINT(xblob5_dbl),IDNINT(yblob5_dbl),IDNINT(zblob5_dbl)))
 
 internal_dx(1)=(xblob4-xblob3)/xblob5
 internal_dx(2)=(yblob4-yblob3)/yblob5
@@ -227,12 +231,12 @@ internal_dx(3)=(zblob4-zblob3)/zblob5
 print *,"Internal dx for thread LS calculation:", internal_dx
 print *,"Calculating thread level set on internal mesh..."
 
-do k=1,IDNINT(zblob5)
+do k=1,IDNINT(zblob5_dbl)
 #ifdef DEBUG_FABRIC_DROP
  print *,"k=", k
 #endif
- do j=1,IDNINT(yblob5)
-  do i=1,IDNINT(xblob5)
+ do j=1,IDNINT(yblob5_dbl)
+  do i=1,IDNINT(xblob5_dbl)
    internal_x(1)=xblob3+(i-half)*internal_dx(1)
    internal_x(2)=yblob3+(j-half)*internal_dx(2)
    internal_x(3)=zblob3+(k-half)*internal_dx(3)
@@ -265,6 +269,7 @@ integer ind(3)
 real(amrex_real) c_000, c_001, c_010, c_011, c_100, c_101, c_110, c_111
 real(amrex_real) c_00, c_01, c_10, c_11
 real(amrex_real) c_0, c_1, c
+real(8) :: input_to_IDINT
 integer dir
 
 if (nmat.eq.num_materials) then
@@ -294,10 +299,13 @@ else
   x_p(SDIM)=x(SDIM)
  endif
 
- ind(1)=IDINT((x_p(1)-xblob3)/internal_dx(1))
- ind(2)=IDINT((x_p(2)-yblob3)/internal_dx(2))
+ input_to_IDINT=(x_p(1)-xblob3)/internal_dx(1)
+ ind(1)=IDINT(input_to_IDINT)
+ input_to_IDINT=(x_p(2)-yblob3)/internal_dx(2)
+ ind(2)=IDINT(input_to_IDINT)
  if (SDIM.eq.3) then
-  ind(SDIM)=IDINT((x_p(SDIM)-zblob3)/internal_dx(SDIM))
+  input_to_IDINT=(x_p(SDIM)-zblob3)/internal_dx(SDIM)
+  ind(SDIM)=IDINT(input_to_IDINT)
  endif
  do dir=1,SDIM
   if (ind(dir).lt.1) then
@@ -361,15 +369,15 @@ IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(out) :: LS
-real(kind=8)         :: xlo,xhi,ylo,yhi,zlo,zhi
-real(kind=8)         :: hN1,hN2,xctemp
-real(kind=8)         :: xy(3),xc(3),xz(2),xh(3)
+real(amrex_real)         :: xlo,xhi,ylo,yhi,zlo,zhi
+real(amrex_real)         :: hN1,hN2,xctemp
+real(amrex_real)         :: xy(3),xc(3),xz(2),xh(3)
 integer              :: i,j,k,l,ky,kx
-real(kind=8)         :: lstemp1,lstemp2
-real(kind=8)         :: a,b
-real(kind=8)         :: dtemp,dist
-real(kind=8),allocatable :: ynf(:)  ! wavy thread
-real(kind=8),allocatable :: xnf(:)  ! straight thread
+real(amrex_real)         :: lstemp1,lstemp2
+real(amrex_real)         :: a,b
+real(amrex_real)         :: dtemp,dist
+real(amrex_real),allocatable :: ynf(:)  ! wavy thread
+real(amrex_real),allocatable :: xnf(:)  ! straight thread
 integer              :: fnflag
 
 

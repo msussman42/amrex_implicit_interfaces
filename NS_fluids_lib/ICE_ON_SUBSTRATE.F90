@@ -87,6 +87,7 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS(nmat)
 real(amrex_real) :: ice_vertical
 real(amrex_real) :: substrate_height
+real(amrex_real) :: box_xlo,box_xhi,box_ylo,box_yhi,box_zlo,box_zhi
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -127,32 +128,45 @@ if ((num_materials.eq.4).and.(probtype.eq.2001)) then
   ! water thickness=radblob3
   !dist<0 inside the square
   !water above the ice
+ box_xlo=xblob-half*radblob
+ box_xhi=xblob+half*radblob
  if (SDIM.eq.2) then
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-     substrate_height+radblob-radblob3,substrate_height+radblob,LS(1))
+  box_ylo=substrate_height+radblob-radblob3
+  box_yhi=substrate_height+radblob
+  call squaredist(x(1),x(2),box_xlo,box_xhi, &
+     box_ylo,box_yhi,LS(1))
   LS(1)=-LS(1) ! water
   !ice (is below water)
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-    -substrate_height-radblob,substrate_height+radblob-radblob3,LS(3))
+  box_ylo=-substrate_height-radblob
+  box_yhi=substrate_height+radblob-radblob3
+  call squaredist(x(1),x(2),box_xlo,box_xhi, &
+    box_ylo,box_yhi,LS(3))
   LS(3)=-LS(3)
 
   !air; dist<0 inside the square
-  call squaredist(x(1),x(2),xblob-half*radblob,xblob+half*radblob, &
-    -substrate_height-radblob,substrate_height+radblob,LS(2))
+  box_yhi=substrate_height+radblob
+  call squaredist(x(1),x(2),box_xlo,box_xhi, &
+    box_ylo,box_yhi,LS(2))
 
  else if (SDIM.eq.3) then
 
   !dist<0 inside the square
   !water above the ice
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     substrate_height+radblob-radblob3,substrate_height+radblob, &
+  box_ylo=yblob-half*radblob
+  box_yhi=yblob+half*radblob
+  box_zlo=substrate_height+radblob-radblob3
+  box_zhi=substrate_height+radblob
+  call cubedist(box_xlo,box_xhi, &
+     box_ylo,box_yhi, &
+     box_zlo,box_zhi, &
      x(1),x(2),x(SDIM),LS(1))
   LS(1)=-LS(1)
   !ice
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     -substrate_height-radblob,substrate_height+radblob-radblob3, &
+  box_zlo=-substrate_height-radblob
+  box_zhi=substrate_height+radblob-radblob3
+  call cubedist(box_xlo,box_xhi, &
+     box_ylo,box_yhi, &
+     box_zlo,box_zhi, &
      x(1),x(2),x(SDIM),LS(3))
   LS(3)=-LS(3)
 
@@ -160,9 +174,10 @@ if ((num_materials.eq.4).and.(probtype.eq.2001)) then
   !air everywhere not ice or water.
   ! important: fluids tessellate domain, solids (i.e. substrate)
   ! are embedded.
-  call cubedist(xblob-half*radblob,xblob+half*radblob, &
-     yblob-half*radblob,yblob+half*radblob, &
-     -substrate_height-radblob,substrate_height+radblob, &
+  box_zhi=substrate_height+radblob
+  call cubedist(box_xlo,box_xhi, &
+     box_ylo,box_yhi, &
+     box_zlo,box_zhi, &
      x(1),x(2),x(SDIM),LS(2))  ! air
 
  else

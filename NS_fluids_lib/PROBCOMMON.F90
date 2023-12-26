@@ -416,7 +416,7 @@ implicit none
       integer, PARAMETER :: ngrow_make_distance=3
       integer, PARAMETER :: ngrow_distance=4
 
-      real(amrex_real), PARAMETER :: GAMMA_SIMPLE_PARMS=1.4
+      real(amrex_real), PARAMETER :: GAMMA_SIMPLE_PARMS=1.4d0
 
          ! R=CP-CV
          ! CP=1.007D+7 Specific heat at constant pressure cgs ergs/(Kelvin g)
@@ -431,9 +431,9 @@ implicit none
       real(amrex_real), PARAMETER :: GAMMA_TAIT=7.15D0
 
       real(amrex_real), PARAMETER :: P0_tillotson=1.0D+6 ! dyne/cm^2
-      real(amrex_real), PARAMETER :: a_hydro_tillotson=0.7  ! dimensionless
-      real(amrex_real), PARAMETER :: b_hydro_tillotson=0.15 ! dimensionless
-      real(amrex_real), PARAMETER :: rho_IV_tillotson=0.958 ! g/cm^3
+      real(amrex_real), PARAMETER :: a_hydro_tillotson=0.7d0  ! dimensionless
+      real(amrex_real), PARAMETER :: b_hydro_tillotson=0.15d0 ! dimensionless
+      real(amrex_real), PARAMETER :: rho_IV_tillotson=0.958d0 ! g/cm^3
        ! 1 joule = 1 kg (m/s)^2=1 kg m^2/s^2
        ! 1 erg=1 g (cm/s)^2=1 g cm^2/s^2
        ! 
@@ -450,14 +450,17 @@ implicit none
       real(amrex_real), PARAMETER :: E0_tillotson=0.07D+12 ! erg/g
       real(amrex_real), PARAMETER :: E_IV_tillotson=0.00419D+12 ! erg/g
       real(amrex_real), PARAMETER :: E_CV_tillotson=0.025D+12   ! erg/g
-      real(amrex_real), PARAMETER :: rho_cav_tillotson=0.995 ! g/cm^3
+      real(amrex_real), PARAMETER :: rho_cav_tillotson=0.995d0 ! g/cm^3
       real(amrex_real), PARAMETER :: P_cav_tillotson=5.0D+4 ! dyne/cm^2
-      real(amrex_real), PARAMETER :: T_cav_tillotson=305.9 ! degrees Kelvin
-      real(amrex_real), PARAMETER :: alpha_tillotson=10.0 
-      real(amrex_real), PARAMETER :: beta_tillotson=5.0 
+      real(amrex_real), PARAMETER :: T_cav_tillotson=305.9d0 ! degrees Kelvin
+      real(amrex_real), PARAMETER :: alpha_tillotson=10.0d0 
+      real(amrex_real), PARAMETER :: beta_tillotson=5.0d0 
 
       integer, PARAMETER :: visual_RT_transform=1
       integer, PARAMETER :: bubbleInPackedColumn=1001
+
+      real(amrex_real), PARAMETER :: room_temperature=293.0d0
+
 
 #ifdef BL_USE_FLOAT
 
@@ -562,6 +565,9 @@ implicit none
       real(amrex_real), PARAMETER :: EPS2=BL_REAL_E(1.0,-2)
 
 #endif
+
+      integer, PARAMETER :: tecplot_real=8
+      integer, PARAMETER :: tecplot_real_short=4
 
       real(amrex_real), PARAMETER :: FSI_PRESSURE_FORCE_ONLY=1
 
