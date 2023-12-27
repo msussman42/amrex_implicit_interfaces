@@ -506,15 +506,10 @@ StateData::setTimeLevel (Real time,Real& dt)
  } else
   amrex::Error("time or dt bust");
 
- if (dt<CPP_EPS12) {
+ if (dt<CPP_EPS_12_6) {
   std::cout << "dt= " << dt << '\n';
-  std::cout << "CPP_EPS12= " << CPP_EPS12 << '\n';
-  amrex::Error("dt<CPP_EPS12 in setTimeLevel StateData");
- }
- if (dt<CPP_EPS99) {
-  std::cout << "dt= " << dt << '\n';
-  std::cout << "CPP_EPS99= " << CPP_EPS99 << '\n';
-  amrex::Error("dt<CPP_EPS99 in setTimeLevel StateData");
+  std::cout << "CPP_EPS_12_6= " << CPP_EPS_12_6 << '\n';
+  amrex::Error("dt<CPP_EPS_12_6 in setTimeLevel StateData");
  }
  if (time<0.0)
   amrex::Error("time<0 in setTimeLevel StateData");
@@ -550,14 +545,14 @@ StateData::setTimeLevel (Real time,Real& dt)
  }
 
  if (do_scale_time==1) {
-  if (std::abs(time_array[0]/dt-slablow)>CPP_EPS10)
+  if (std::abs(time_array[0]/dt-slablow)>CPP_EPS_10_5)
    amrex::Error("time_array[0] inv in setTimeLevel StateData");
-  if (std::abs(time_array[bfact_time_order]/dt-slabhigh)>CPP_EPS10)
+  if (std::abs(time_array[bfact_time_order]/dt-slabhigh)>CPP_EPS_10_5)
    amrex::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
  } else if (do_scale_time==0) {
-  if (std::abs(time_array[0]-slablow)>CPP_EPS10*dt)
+  if (std::abs(time_array[0]-slablow)>CPP_EPS_10_5*dt)
    amrex::Error("time_array[0] inv in setTimeLevel StateData");
-  if (std::abs(time_array[bfact_time_order]-slabhigh)>CPP_EPS10*dt)
+  if (std::abs(time_array[bfact_time_order]-slabhigh)>CPP_EPS_10_5*dt)
    amrex::Error("time_array[bfact_time_order] inv setTimeLevel StateData");
  } else {
   amrex::Error("dt invalid");
@@ -885,7 +880,7 @@ StateData::get_time_index(Real time,Real &nudge_time,int& best_index) {
   Real time_scale_begin=time_array[0]/time_array[bfact_time_order];
   Real time_scale=time_scale_begin;
 
-  Real eps=(1.0-time_scale_begin)*CPP_EPS10;
+  Real eps=(1.0-time_scale_begin)*CPP_EPS_10_5;
   if (eps<=0.0) {
    std::cout << "time_scale_begin= " << time_scale_begin << '\n';
    std::cout << "time_array(0)= " << time_array[0] << '\n';
@@ -949,7 +944,7 @@ StateData::get_time_bounding_box(Real time,Real &nudge_time,
   Real time_scale_begin=time_array[0]/time_array[bfact_time_order];
   Real time_scale=time_scale_begin;
 
-  Real eps=(1.0-time_scale_begin)*CPP_EPS10;
+  Real eps=(1.0-time_scale_begin)*CPP_EPS_10_5;
   if (eps<=0.0) {
    std::cout << "time_scale_begin= " << time_scale_begin << '\n';
    std::cout << "time_array(0)= " << time_array[0] << '\n';

@@ -2408,8 +2408,8 @@ ABecLaplacian::CG_check_for_convergence(
   amrex::Error("coarsefine invalid");
 
  int critical_nit=presmooth+postsmooth;
- Real critical_abs_tol=CPP_EPS14;
- Real critical_rel_tol=CPP_EPS14;
+ Real critical_abs_tol=CPP_EPS_14_6;
+ Real critical_rel_tol=CPP_EPS_14_6;
  if (critical_abs_tol>eps_abs)
   critical_abs_tol=eps_abs;
  if (critical_rel_tol>relative_error)
@@ -2613,7 +2613,7 @@ ABecLaplacian::CG_solve(
  } else
   amrex::Error("bdry.boxArray() != LPboxArray(level)");
 
- Real relative_error=CPP_EPS12;
+ Real relative_error=CPP_EPS_12_5;
 
  int ncomp = sol.nComp();
  if (ncomp!=nsolve_ABec)

@@ -1364,7 +1364,7 @@ AmrCore::timeStep (Real time,
                Real stop_time)
 {
 
- if (std::abs(time-cumtime)>CPP_EPS13)
+ if (std::abs(time-cumtime)>CPP_EPS_13_6)
   amrex::Error("time<>cumtime");
 
  if (max_level==0) {
@@ -1735,7 +1735,7 @@ AmrCore::regrid (int  lbase,
 
  BL_PROFILE("AmrCore::regrid()");
 
- if (std::abs(time-cumtime)>CPP_EPS13)
+ if (std::abs(time-cumtime)>CPP_EPS_13_6)
   amrex::Error("time<>cumtime in regrid");
 
  if (verbose > 0 && ParallelDescriptor::IOProcessor())

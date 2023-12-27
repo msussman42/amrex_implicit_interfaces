@@ -15,6 +15,16 @@
 #define CPP_EPS5 (1.0e-5)
 #define CPP_EPS4 (1.0e-4)
 
+#define CPP_EPS_14_6 (1.0e-6)
+#define CPP_EPS_13_6 (1.0e-6)
+#define CPP_EPS_10_5 (1.0e-5)
+#define CPP_EPS_12_5 (1.0e-5)
+#define CPP_EPS_12_6 (1.0e-6)
+#define CPP_EPS_11_5 (1.0e-5)
+#define CPP_EPS_8_6 (1.0e-6)
+#define CPP_EPS_8_5 (1.0e-5)
+#define CPP_EPS_5_3 (1.0e-3)
+
 #else
 
 #define CPP_EPS99 (1.0e-30)
@@ -31,5 +41,15 @@
 #define CPP_EPS6 (1.0e-6)
 #define CPP_EPS5 (1.0e-5)
 #define CPP_EPS4 (1.0e-4)
+
+#define CPP_EPS_14_6 (1.0e-14)
+#define CPP_EPS_12_5 (1.0e-12)
+#define CPP_EPS_12_6 (1.0e-12)
+#define CPP_EPS_11_5 (1.0e-11)
+#define CPP_EPS_13_6 (1.0e-13)
+#define CPP_EPS_10_5 (1.0e-10)
+#define CPP_EPS_8_6 (1.0e-8)
+#define CPP_EPS_8_5 (1.0e-8)
+#define CPP_EPS_5_3 (1.0e-5)
 
 #endif
