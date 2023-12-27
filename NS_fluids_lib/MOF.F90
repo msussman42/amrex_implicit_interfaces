@@ -11250,7 +11250,7 @@ contains
       integer, PARAMETER :: use_initial_guess=0
 
       real(amrex_real) intercept_init(nMAT_OPT_standard)
-      integer use_MilcentLemoine
+      integer :: use_MilcentLemoine
       integer :: tid=0
       real(amrex_real) refcentroid(sdim)
       integer dir
@@ -11291,10 +11291,10 @@ contains
       if (continuous_mof.eq.STANDARD_MOF) then 
 
        if (levelrz.eq.COORDSYS_CARTESIAN) then
-        use_MilcentLemoine=1
+        use_MilcentLemoine=1 ! "1" option available here.
        else if ((levelrz.eq.COORDSYS_RZ).or. &
                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-        use_MilcentLemoine=0
+        use_MilcentLemoine=0 ! "0" only allowed here.
        else
         print *,"levelrz invalid"
         stop
@@ -11302,7 +11302,7 @@ contains
 
       else if (continuous_mof.ge.CMOF_X) then !CMOF X
 
-       use_MilcentLemoine=0
+       use_MilcentLemoine=0 ! "0" only allowed here.
 
       else
        print *,"continuous_mof invalid, angle_init_from_angle_recon_and_F"
@@ -11566,14 +11566,15 @@ contains
       real(amrex_real) angle_init_range(nDOF)
       real(amrex_real) angle_output(nDOF)
 
-      real(amrex_real), INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT(in) ::  &
+         ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
       integer, INTENT(in) :: lsnormal_valid(num_materials)
 
       integer training_nguess
       integer local_MOFITERMAX
 
-      integer use_MilcentLemoine
+      integer :: use_MilcentLemoine
 
       integer :: tid_check=0
 
@@ -11702,11 +11703,11 @@ contains
 
        if ((fastflag.eq.1).and. &
            (levelrz.eq.COORDSYS_CARTESIAN)) then
-        use_MilcentLemoine=1
+        use_MilcentLemoine=1 ! "1" option available here.
        else if ((fastflag.eq.0).or. &
                 (levelrz.eq.COORDSYS_RZ).or. &
                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-        use_MilcentLemoine=0
+        use_MilcentLemoine=0 ! "0" only allowed here.
        else
         print *,"parameters invalid"
         print *,"continuous_mof ",continuous_mof
@@ -11734,14 +11735,14 @@ contains
            (sdim.eq.3).and. &
            (nlist_vof.eq.1)) then !just one tetrahedra=uncaptured space.
 
-        use_MilcentLemoine=1
+        use_MilcentLemoine=1 ! "1" option available here.
 
        else if ((levelrz.eq.COORDSYS_CYLINDRICAL).or. &
                 (levelrz.eq.COORDSYS_RZ).or. &
                 (nlist_vof.gt.1).or. &
                 (sdim.eq.2)) then
 
-        use_MilcentLemoine=0
+        use_MilcentLemoine=0 ! "0" only allowed here.
         
        else
  
@@ -11759,7 +11760,7 @@ contains
       else if ((continuous_mof.ge.CMOF_X).or. &
                (continuous_mof.eq.CMOF_F_AND_X)) then
 
-       use_MilcentLemoine=0
+       use_MilcentLemoine=0 ! "0" only allowed here.
 
       else
        print *,"continuous_mof invalid"
@@ -16680,6 +16681,8 @@ contains
 
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon invalid"
+       print *,"sdim (parameter) = ",sdim
+       print *,"ngeom_recon (global) = ",ngeom_recon
        stop
       endif
       nrecon=num_materials*ngeom_recon
