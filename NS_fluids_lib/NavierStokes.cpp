@@ -79,6 +79,10 @@ int  NavierStokes::SDC_outer_sweeps=0;
 int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;
 int  NavierStokes::num_divu_outer_sweeps=1;
+
+Real NavierStokes::divu_outer_sweeps_preconditioner=0.0;
+Real NavierStokes::activated_divu_preconditioner=0.0;
+
 Real NavierStokes::prev_time_slab=0.0;
 Real NavierStokes::cur_time_slab=0.0;
 Real NavierStokes::vel_time_slab=0.0;
@@ -4522,6 +4526,14 @@ NavierStokes::read_params ()
     } else
      amrex::Error("FSI_material_exists_CTML() invalid");
      
+    pp.queryAdd("divu_outer_sweeps_preconditioner",
+        divu_outer_sweeps_preconditioner);
+
+    if (divu_outer_sweeps_preconditioner>=0.0) {
+     //do nothing
+    } else
+     amrex::Error("divu_outer_sweeps_preconditioner invalid");
+
     pp.queryAdd("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
      amrex::Error("post_init_pressure_solve out of range");
@@ -12198,9 +12210,8 @@ void NavierStokes::tensor_advection_update() {
        //     e.g. viscoelastic_coef=elastic_viscosity/(modtime+dt)
        //  3. CELL_VISC_MATERIAL(2*num_materials+im)=modtime
        //getStateVISC_ALL is called from:
-       //  NavierStokes::make_physics_varsALL
        //  NavierStokes::writeTECPLOT_File
-       //NavierStokes::init_gradu_tensor_and_material_visc_ALL
+       //  NavierStokes::init_gradu_tensor_and_material_visc_ALL
       int ncomp_visc=localMF[CELL_VISC_MATERIAL_MF]->nComp();
       if (ncomp_visc!=3*num_materials) {
        std::cout << "ncomp= " <<
@@ -19976,7 +19987,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   amrex::Error("localMF[FACETENSOR_MF]->nComp() invalid");
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
- getStateVISC_ALL(); //we are in writeTECPLOT_file
+ getStateVISC_ALL(local_caller_string); //we are in writeTECPLOT_file
  debug_ngrow(CELL_VISC_MATERIAL_MF,1,local_caller_string);
  if (localMF[CELL_VISC_MATERIAL_MF]->nComp()!=3*num_materials)
   amrex::Error("viscmf invalid ncomp");

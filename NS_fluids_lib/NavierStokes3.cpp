@@ -7141,6 +7141,9 @@ void NavierStokes::allocate_FACE_WEIGHT(
    } else
     amrex::Error("presbc.size() invalid");
 
+   int local_uncoupled_viscosity=
+     ( (activated_divu_preconditioner>0.0) ? 1 : uncoupled_viscosity);
+
    int tid_current=ns_thread();
    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
     amrex::Error("tid_current invalid");
@@ -7175,7 +7178,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
     max_face_wt[tid_current].dataPtr(),
     presbc.dataPtr(),
     &visc_coef,
-    &uncoupled_viscosity,
+    &local_uncoupled_viscosity,
     &project_option);
 
   }  // mfi
@@ -9894,12 +9897,15 @@ void NavierStokes::multiphase_project(int project_option) {
 
       if (project_option==SOLVETYPE_VISC) { 
 
-       if (uncoupled_viscosity==1) {
+       int local_uncoupled_viscosity=
+         ( (activated_divu_preconditioner>0.0) ? 1 : uncoupled_viscosity);
+
+       if (local_uncoupled_viscosity==1) {
         BICGSTAB_ACTIVE=0;
-       } else if (uncoupled_viscosity==0) {
+       } else if (local_uncoupled_viscosity==0) {
         BICGSTAB_ACTIVE=1;
        } else
-        amrex::Error("uncoupled_viscosity invalid");
+        amrex::Error("local_uncoupled_viscosity invalid");
 
       } else if (project_option_is_valid(project_option)==1) {
 
