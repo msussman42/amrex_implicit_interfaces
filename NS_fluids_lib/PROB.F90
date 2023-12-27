@@ -6005,8 +6005,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              (radblob5.eq.zero).and. &
              (radblob6.eq.zero).and. &
              (radblob7.eq.zero).and. &
-             (abs(xblob-xblob2).lt.1.0E-7).and. &
-             (abs(yblob-yblob2).lt.1.0E-7)) then
+             (abs(xblob-xblob2).lt.1.0E-6).and. &
+             (abs(yblob-yblob2).lt.1.0E-6)) then
 
           if ((imaterial.eq.1).or.(imaterial.eq.2)) then
            ! distsolid>0 in solid
@@ -6045,9 +6045,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              (radblob5.eq.zero).and. &
              (radblob6.eq.zero).and. &
              (radblob7.eq.zero).and. &
-             (abs(xblob-xblob2).lt.1.0E-7).and. &
-             (abs(yblob-yblob2).lt.1.0E-7).and. &
-             (abs(zblob-zblob2).lt.1.0E-7)) then
+             (abs(xblob-xblob2).lt.1.0E-6).and. &
+             (abs(yblob-yblob2).lt.1.0E-6).and. &
+             (abs(zblob-zblob2).lt.1.0E-6)) then
 
           if ((imaterial.eq.1).or.(imaterial.eq.2)) then
            ! distsolid>0 in solid

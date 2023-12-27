@@ -240,7 +240,7 @@ main (int   argc,
      if (amrex::ParallelDescriptor::MyProc()==pid) {
       std::fflush(NULL);
       std::cout << 
-	"Multimaterial SUPERMESH/SPECTRAL, 12/25/23, 20:00pm on proc " << 
+	"Multimaterial SUPERMESH/SPECTRAL, 12/26/23, 19:00pm on proc " << 
         amrex::ParallelDescriptor::MyProc() << "\n";
       std::cout << "NProcs()= " << 
         amrex::ParallelDescriptor::NProcs() << '\n';
@@ -256,11 +256,13 @@ main (int   argc,
     if (amrex::ParallelDescriptor::IOProcessor()) {
      std::cout << "after the barrier on IO processor " << 
 	    amrex::ParallelDescriptor::MyProc() << "\n";
-     int double_size=sizeof(double);
-     if (sizeof(amrex::Real)!=double_size) 
-      amrex::Error("expecting amrex::Real and double_size to be equal");
-     if (double_size!=8)
-      amrex::Error("expecting double_size == 8 ");
+
+     if ((sizeof(amrex::Real)==sizeof(double))||
+         (sizeof(amrex::Real)==sizeof(float))) {
+      //do nothing
+     } else {
+      amrex::Error("amrex::Real invalid size");
+     }
      int int_size=sizeof(int);
      if ((int_size==4)||(int_size==8)) {
       // do nothing
@@ -268,8 +270,8 @@ main (int   argc,
       std::cout << "int_size= " << int_size << '\n';
       amrex::Error("expecting int_size == 4 or 8");
      }
-     std::cout << "double_size= " << double_size << '\n';
-     std::cout << "int_size= " << int_size << '\n';
+     std::cout << "real size= " << sizeof(amrex::Real) << '\n';
+     std::cout << "int size= " << int_size << '\n';
     } //IOProcessor==TRUE
 
     int fork_id=0;

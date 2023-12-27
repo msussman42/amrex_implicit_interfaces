@@ -113,7 +113,7 @@ contains
          vol_rect=b*c(2)
          vol_tri=0.5d0*(a-b)*c(2)
          volume_test=vol_rect+vol_tri
-         if (abs(volume_test-volume).le.1.0D-7*volcell) then
+         if (abs(volume_test-volume).le.1.0D-6*volcell) then
           centroid(1)=(vol_rect*0.5d0*b+ &
                        vol_tri*(2.0d0*b+a)/3.0d0)/volume
           centroid(2)=(vol_rect*0.5d0*c(2)+ &
@@ -151,7 +151,7 @@ contains
           vol_rect=a*c(1)
           vol_tri=0.5d0*(b-a)*c(1)
           volume_test=vol_rect+vol_tri
-          if (abs(volume_test-volume).le.1.0D-7*volcell) then
+          if (abs(volume_test-volume).le.1.0D-6*volcell) then
            centroid(2)=(vol_rect*0.5d0*a+ &
                         vol_tri*(2.0d0*a+b)/3.0d0)/volume
            centroid(1)=(vol_rect*0.5d0*c(1)+ &
@@ -192,7 +192,7 @@ contains
            tri_flag=1
            vol_tri=0.5d0*a*b
            volume_test=vol_tri
-           if (abs(volume_test-volume).le.1.0D-7*volcell) then
+           if (abs(volume_test-volume).le.1.0D-6*volcell) then
             centroid(1)=a/3.0d0
             centroid(2)=b/3.0d0
            else
