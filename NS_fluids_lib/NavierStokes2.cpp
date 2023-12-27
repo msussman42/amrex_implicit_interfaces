@@ -6571,7 +6571,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   amrex::Error("local_truncate invalid");
 
  if (renormalize_only==0) {
-  if (std::abs(time-cur_time_slab)>CPP_EPS8)
+  if (std::abs(time-cur_time_slab)>CPP_EPS_8_5)
    amrex::Error("prescribe solid at the new time");
 
    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
@@ -8925,7 +8925,7 @@ void NavierStokes::VOF_Recon_ALL(
     }
    } // ilev=finest_level ... level
 
-   if ((single_centroid_diff<=CPP_EPS8)||
+   if ((single_centroid_diff<=CPP_EPS_8_5)||
        (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 
@@ -8941,7 +8941,7 @@ void NavierStokes::VOF_Recon_ALL(
     }
    } // ilev=finest_level ... level
 
-   if ((single_centroid_diff<=CPP_EPS8)||
+   if ((single_centroid_diff<=CPP_EPS_8_5)||
        (recon_iter>=continuous_mof)) {
     recon_error_met=1;
    } 

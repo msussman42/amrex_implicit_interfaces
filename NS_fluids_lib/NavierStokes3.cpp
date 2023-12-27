@@ -311,7 +311,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  int finest_level=parent->finestLevel();
 
- if (std::abs(cur_time_slab-prev_time_slab-dt_slab)>CPP_EPS5) {
+ if (std::abs(cur_time_slab-prev_time_slab-dt_slab)>CPP_EPS_5_3) {
   std::cout << "cur_time_slab " << cur_time_slab << '\n';
   std::cout << "prev_time_slab " << prev_time_slab << '\n';
   std::cout << "dt_slab " << dt_slab << '\n';
@@ -1007,13 +1007,13 @@ Real NavierStokes::advance(Real time,Real dt) {
    SDC_setup_step(); 
 
    if ((time>=0.0)&&(time<=1.0)) {
-    if (std::abs(upper_slab_time-time)<=CPP_EPS12) {
+    if (std::abs(upper_slab_time-time)<=CPP_EPS_12_5) {
      // do nothing
     } else {
      amrex::Error("upper_slab_time-time>tol (a)");
     }
    } else if (time>1.0) {
-    if (std::abs(upper_slab_time-time)<=CPP_EPS12*time) {
+    if (std::abs(upper_slab_time-time)<=CPP_EPS_12_5*time) {
      // do nothing
     } else {
      amrex::Error("upper_slab_time-time>tol(time) (b)");
@@ -1140,7 +1140,7 @@ Real NavierStokes::advance(Real time,Real dt) {
    Real time_scale=1.0;
    if (upper_slab_time>time_scale)
     time_scale=upper_slab_time;
-   time_scale*=CPP_EPS10;
+   time_scale*=CPP_EPS_10_5;
 
    if (std::abs(upper_slab_time-lower_slab_time-dt_new)<=time_scale) {
     // do nothing
@@ -3143,9 +3143,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        if ((dt_error>=0.0)&&
            (dt_predict_min>0.0)&&
            (dt_predict_max>0.0)) {
-	Real dt_tol=dt_predict_max*CPP_EPS13;
+	Real dt_tol=dt_predict_max*CPP_EPS_13_6;
         if (dt_predict_min<1.0)
-         dt_tol=CPP_EPS13;
+         dt_tol=CPP_EPS_13_6;
 	if (dt_error<=dt_tol) {
  	 // do nothing
 	} else 
@@ -8633,7 +8633,7 @@ void NavierStokes::multiphase_preconditioner(
 
 void NavierStokes::set_local_tolerances(int project_option) {
 
- save_atol_b=CPP_EPS14;
+ save_atol_b=CPP_EPS_14_6;
  save_mac_abs_tol=mac_abs_tol;
  save_min_rel_error=minimum_relative_error;
  ParmParse pp("mg");

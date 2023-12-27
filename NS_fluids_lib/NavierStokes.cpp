@@ -217,8 +217,8 @@ Vector<int> NavierStokes::NS_sumdata_sweep;
 
 Real NavierStokes::fixed_dt     = 0.0;
 Real NavierStokes::fixed_dt_init = 0.0;
-Real NavierStokes::min_velocity_for_dt = CPP_EPS12;
-Real NavierStokes::min_stefan_velocity_for_dt = CPP_EPS12;
+Real NavierStokes::min_velocity_for_dt = CPP_EPS_12_6;
+Real NavierStokes::min_stefan_velocity_for_dt = CPP_EPS_12_6;
 Real NavierStokes::fixed_dt_velocity = 0.0;
 Real NavierStokes::dt_max       = 1.0e+10;
 Real NavierStokes::gravity      = 0.0;
@@ -958,16 +958,16 @@ int NavierStokes::multilevel_restart_period=20000;
 // mg.bot_atol
 // mg.visc_bot_atol
 // mg.thermal_bot_atol
-Real NavierStokes::minimum_relative_error = CPP_EPS11;
-Real NavierStokes::diffusion_minimum_relative_error = CPP_EPS11;
+Real NavierStokes::minimum_relative_error = CPP_EPS_11_5;
+Real NavierStokes::diffusion_minimum_relative_error = CPP_EPS_11_5;
 
-Real NavierStokes::save_atol_b=CPP_EPS14;
-Real NavierStokes::save_mac_abs_tol=CPP_EPS10;
-Real NavierStokes::save_min_rel_error=CPP_EPS11;
+Real NavierStokes::save_atol_b=CPP_EPS_14_6;
+Real NavierStokes::save_mac_abs_tol=CPP_EPS_10_5;
+Real NavierStokes::save_min_rel_error=CPP_EPS_11_5;
 
-Real NavierStokes::mac_abs_tol = CPP_EPS10;
-Real NavierStokes::visc_abs_tol = CPP_EPS10;
-Real NavierStokes::thermal_abs_tol = CPP_EPS10;
+Real NavierStokes::mac_abs_tol = CPP_EPS_10_5;
+Real NavierStokes::visc_abs_tol = CPP_EPS_10_5;
+Real NavierStokes::thermal_abs_tol = CPP_EPS_10_5;
 Real NavierStokes::total_advance_time=0.0;
 
 void extra_circle_parameters(
@@ -1491,7 +1491,7 @@ void fortran_parameters() {
   stiffGAMMAtemp[im]=1.4;
 
   DrhoDTtemp[im]=0.0;
-  tempcutofftemp[im]=CPP_EPS8;
+  tempcutofftemp[im]=CPP_EPS_8_6;
   tempcutoffmaxtemp[im]=1.0e+30;
   NavierStokes::FSI_flag[im]=FSI_FLUID;
 
@@ -3724,7 +3724,7 @@ NavierStokes::read_params ()
      stiffCV[i]=4.1855e+7;
      stiffGAMMA[i]=1.4;
 
-     tempcutoff[i]=CPP_EPS8;
+     tempcutoff[i]=CPP_EPS_8_6;
      tempcutoffmax[i]=1.0e+30;
      DrhoDT[i]=0.0;
      override_density[i]=0;
@@ -21837,7 +21837,7 @@ NavierStokes::post_timestep (Real stop_time) {
 
    if ( (sum_interval_trigger==1)||
         (visual_drag_plot_int_trigger==1)||
-        (stop_time-upper_slab_time<CPP_EPS8) ) {
+        (stop_time-upper_slab_time<CPP_EPS_8_6) ) {
     sum_integrated_quantities(local_caller_string,stop_time);
    }
   } else if (((sum_interval==0)||
