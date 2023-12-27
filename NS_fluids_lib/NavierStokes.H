@@ -548,8 +548,8 @@ protected:
     void avgDownError_ALL();
     void avgDownError();
 
-    void getStateVISC();
-    void getStateVISC_ALL();
+    void getStateVISC(const std::string& caller_string);
+    void getStateVISC_ALL(const std::string& caller_string);
 
     void getStateCONDUCTIVITY();
     void getStateCONDUCTIVITY_ALL();
@@ -2202,6 +2202,10 @@ protected:
     static int  project_solver_type;
     static int  initial_cg_cycles;
     static int  num_divu_outer_sweeps;
+
+    static Real divu_outer_sweeps_preconditioner;
+    static Real activated_divu_preconditioner;
+
     static int  debug_dot_product;
 
     static Vector<Real> NS_coflow_Z;

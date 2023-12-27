@@ -458,18 +458,58 @@ void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
 }  // end subroutine maskfiner_localMF
 
 //called from:
-//NavierStokes::make_physics_varsALL
 //NavierStokes::writeTECPLOT_File
 //NavierStokes::init_gradu_tensor_and_material_visc_ALL
-void NavierStokes::getStateVISC_ALL() {
+void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
 
  if (level!=0)
   amrex::Error("level invalid getStateVISC_ALL");
 
+ std::string local_caller_string="getStateVISC_ALL";
+ local_caller_string=caller_string+local_caller_string;
+
+ activated_divu_preconditioner=0.0;
+
+ if (divu_outer_sweeps_preconditioner==0.0) {
+  //do nothing
+ } else if (divu_outer_sweeps_preconditioner>0.0) {
+
+  if (divu_outer_sweeps+1==num_divu_outer_sweeps) {
+   //do nothing
+  } else if (divu_outer_sweeps+1<num_divu_outer_sweeps) {
+
+   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+
+    if (pattern_test(local_caller_string,"writeTECPLOT_File")==1) {
+     //do nothing
+    } else if (pattern_test(local_caller_string,"volWgtSumALL")==1) {
+     //do nothing
+    } else if (pattern_test(local_caller_string,"prepare_post_process")==1) {
+     //do nothing
+    } else if (pattern_test(local_caller_string,"nucleation_code_segment")==1) {
+     //do nothing
+    } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
+     activated_divu_preconditioner=
+	 divu_outer_sweeps_preconditioner;
+    } else
+     amrex::Error("local_caller_string invalid");
+
+   } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
+    //do nothing
+   } else
+    amrex::Error("slab_step invalid");
+
+  } else
+   amrex::Error("divu_outer_sweeps invalid");
+
+ } else {
+  amrex::Error("divu_outer_sweeps_precond invalid");
+ }
+
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.getStateVISC();
+  ns_level.getStateVISC(local_caller_string);
   int scomp=0;
   int ncomp=ns_level.localMF[CELL_VISC_MATERIAL_MF]->nComp();
   ns_level.avgDown_localMF(CELL_VISC_MATERIAL_MF,scomp,ncomp,0);
@@ -4558,6 +4598,9 @@ void NavierStokes::apply_pressure_grad(
     FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
     int ncfluxreg=semfluxfab.nComp();
 
+    int local_uncoupled_viscosity=
+      ( (activated_divu_preconditioner>0.0) ? 1 : uncoupled_viscosity);
+
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -4596,7 +4639,7 @@ void NavierStokes::apply_pressure_grad(
      velbc.dataPtr(),
      &visc_coef,
      &nden,
-     &uncoupled_viscosity,
+     &local_uncoupled_viscosity,
      &homflag);
    } // mfi
 } // omp
@@ -4925,7 +4968,8 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL(
 
   //localMF[CELL_VISC_MATERIAL_MF] is deleted in ::Geometry_cleanup()
   //ngrow=1
- getStateVISC_ALL(); //we are in:init_gradu_tensor_and_material_visc_ALL
+  //we are in:init_gradu_tensor_and_material_visc_ALL
+ getStateVISC_ALL(local_caller_string); 
 
 } // end subroutine init_gradu_tensor_and_material_visc_ALL
 
@@ -4933,6 +4977,7 @@ void NavierStokes::init_gradu_tensor_and_material_visc_ALL(
 //  NavierStokes::volWgtSumALL
 //  NavierStokes::prepare_post_process
 //  NavierStokes::do_the_advance
+//  NavierStokes::nucleation_code_segment
 //
 void NavierStokes::make_physics_varsALL(int project_option,
         const std::string& caller_string) {
@@ -10290,9 +10335,11 @@ void NavierStokes::scale_variables(int scale_flag) {
 // 3. relaxation time - 1..num_materials
 // the viscous and viscoelastic forces should both be multiplied by
 // visc_coef.  
-void NavierStokes::getStateVISC() {
+// "getStateVISC" is called by "getStateVISC_ALL"
+void NavierStokes::getStateVISC(const std::string& caller_string) {
 
  std::string local_caller_string="getStateVISC";
+ local_caller_string=caller_string+local_caller_string;
 
  int ngrow=1;
 

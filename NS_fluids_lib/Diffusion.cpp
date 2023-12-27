@@ -238,6 +238,9 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
   FArrayBox& forcefab=(*localMF[idx_force])[mfi];
   FArrayBox& tensorfab=(*localMF[CELLTENSOR_MF])[mfi];
 
+  int local_uncoupled_viscosity=
+    ( (activated_divu_preconditioner>0.0) ? 1 : uncoupled_viscosity);
+
   int tid_current=0;
 #ifdef _OPENMP
   tid_current = omp_get_thread_num();
@@ -281,7 +284,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
    &local_visc_coef,
    &angular_velocity, //fort_hoopimplicit
    &centrifugal_force_factor, //fort_hoopimplicit
-   &uncoupled_viscosity,
+   &local_uncoupled_viscosity,
    &update_state,
    &dt_slab,
    &cur_time_slab,
