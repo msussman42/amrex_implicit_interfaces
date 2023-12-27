@@ -623,6 +623,11 @@ stop
       integer level,bfactmax
       real(amrex_real) :: massfrac_parm(ccnum_species_var+1)
       integer :: fort_double_size,fort_int_size
+#ifdef BL_USE_FLOAT
+      integer, PARAMETER :: expect_double_size=4
+#else
+      integer, PARAMETER :: expect_double_size=8
+#endif
       
       probtype=ccprobtype
       num_materials=ccnum_materials
@@ -1086,7 +1091,7 @@ stop
       fort_double_size=SIZEOF(global_pressure_scale)
       fort_int_size=SIZEOF(local_dir)
      
-      if ((fort_double_size.eq.8).and. &
+      if ((fort_double_size.eq.expect_double_size).and. &
           (fort_int_size.eq.cc_int_size)) then
        print *,"fort_double_size=",fort_double_size     
        print *,"fort_int_size=",fort_int_size     

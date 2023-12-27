@@ -234,7 +234,7 @@ contains
     real(amrex_real) :: dd = 1600         ! K
     
     HCP_GAS = HCP_0 * exp(dd *(1/T - 1/298.15)) !  mol.m^-3.Pa^-1
-    HCP_GAS = HCP_GAS * 1e-7                    !  mol.cm^-3.Ba^-1
+    HCP_GAS = HCP_GAS * 1.0e-7                  !  mol.cm^-3.Ba^-1
 
     return
   end function HCP_GAS

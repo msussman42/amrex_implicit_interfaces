@@ -549,7 +549,7 @@ stop
               dxright=xstenND(1,dir)-xstenND(0,dir)
 
               if (bfact.eq.1) then
-               if (abs(dxleft-dxright).le.VOFTOL*dx(dir)) then
+               if (abs(dxleft-dxright).le.EPS10*1.0D+2*dx(dir)) then
                 ! do nothing 
                else
                 print *,"xstenND invalid"
@@ -559,7 +559,7 @@ stop
                if ((dxleft.gt.zero).and.(dxright.gt.zero)) then
                 ! do nothing
                else
-                print *,"xstenND invalid"
+                print *,"xstenND invalid: ",dxleft,dxright
                 stop
                endif
               else

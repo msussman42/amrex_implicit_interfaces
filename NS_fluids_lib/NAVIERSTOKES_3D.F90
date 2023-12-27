@@ -2460,7 +2460,7 @@ END SUBROUTINE SIMP
          dxright=xstenND(1,dir)-xstenND(0,dir)
 
          if (bfact.eq.1) then
-          if (abs(dxleft-dxright).le.VOFTOL*dx(dir)) then
+          if (abs(dxleft-dxright).le.EPS10*1.0D+2*dx(dir)) then
            ! do nothing 
           else
            print *,"xstenND invalid"
@@ -2589,13 +2589,17 @@ END SUBROUTINE SIMP
            dxright=xsten(1,dir)-xsten(0,dir)
           
            if (bfact.eq.1) then
-            if (abs(dxleft-dxright).gt.VOFTOL*dx(dir)) then
-             print *,"xsten invalid"
+            if (abs(dxleft-dxright).le.EPS10*1.0D+2*dx(dir)) then
+             ! do nothing
+            else
+             print *,"xsten invalid: ",dxleft,dxright
              stop
             endif
            else if (bfact.gt.1) then
-            if ((dxleft.le.zero).or.(dxright.le.zero)) then
-             print *,"xsten invalid"
+            if ((dxleft.gt.zero).and.(dxright.gt.zero)) then
+             ! do nothing
+            else
+             print *,"dxleft or dxright <=0.0:",dxleft,dxright
              stop
             endif
            else

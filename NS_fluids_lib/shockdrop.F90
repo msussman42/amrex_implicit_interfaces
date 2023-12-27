@@ -93,7 +93,7 @@ CONTAINS
        real(amrex_real) vel(SDIM)
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-7) then
+        if (abs(z-y).gt.1.0E-6) then
          print *,"expecting z=y"
          stop
         endif
@@ -138,7 +138,7 @@ CONTAINS
        real(amrex_real) pres,LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-7) then
+        if (abs(z-y).gt.1.0E-6) then
          print *,"expecting z=y"
          stop
         endif
@@ -168,7 +168,7 @@ CONTAINS
        real(amrex_real) den,LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-7) then
+        if (abs(z-y).gt.1.0E-6) then
          print *,"expecting z=y"
          stop
         endif
@@ -198,7 +198,7 @@ CONTAINS
        real(amrex_real) temp,LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-7) then
+        if (abs(z-y).gt.1.0E-6) then
          print *,"expecting z=y"
          stop
         endif
@@ -232,7 +232,7 @@ CONTAINS
        real(amrex_real),INTENT(out) :: LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-7) then
+        if (abs(z-y).gt.1.0E-6) then
          print *,"z<>y error"
          stop
         endif
@@ -259,7 +259,7 @@ CONTAINS
        real(amrex_real) x,y,z,LS,xblob,yblob,zblob,radblob,mag
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-7) then
+        if (abs(z-y).gt.1.0E-6) then
          print *,"z<>y error"
          stop
         endif

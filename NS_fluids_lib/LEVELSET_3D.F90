@@ -11902,7 +11902,7 @@ stop
               if (xsten(0,1).gt.zero) then
                ! do nothing
               else
-               print *,"xsten invalid"
+               print *,"expecting xsten(0,1)>0: ",xsten(0,1)
                stop
               endif 
              else
@@ -11913,7 +11913,7 @@ stop
              if (xsten(0,1).gt.zero) then
               ! do nothing
              else
-              print *,"xsten invalid"
+              print *,"expecting xsten(0,1)>0: ",xsten(0,1)
               stop
              endif 
             else

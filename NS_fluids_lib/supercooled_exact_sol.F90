@@ -67,7 +67,7 @@ contains
     REAL(amrex_real),INTENT(in):: x
     REAL(amrex_real):: y, inc, xtok, kf
     REAL(amrex_real), parameter::em_const=0.5772156649015329D0
-    REAL(amrex_real), parameter::tol=1.0D-7
+    REAL(amrex_real), parameter::tol=1.0D-6
     integer:: k
 
 
@@ -140,7 +140,7 @@ contains
     REAL(amrex_real),INTENT(out):: lambda
 
     REAL(amrex_real), parameter:: dx = 1.0D-2     !! Marching step
-    REAL(amrex_real), parameter:: tol = 1.0D-7   !! tolerance of root finding 
+    REAL(amrex_real), parameter:: tol = 1.0D-6   !! tolerance of root finding 
     integer, parameter:: max_itr = 50           !! max iteration number
     integer, parameter:: max_bracketing= 1000  !! max iteration number
     
@@ -150,7 +150,7 @@ contains
     integer :: nbracket
 
     !! initialize the search region
-    a = 1.0D-7
+    a = 1.0D-6
     fa = f_lambda(a,St)
     b = a
     !! march forward to have a zero crossing in the search domain

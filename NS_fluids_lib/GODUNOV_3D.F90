@@ -2841,13 +2841,13 @@ stop
        hx=hx*RR
        hxmac=hx
 
-       if (hx.gt.(one-VOFTOL)*dxmin) then
+       if (hx.gt.(one-EPS10*1.0D+2)*dxmin) then
         ! do nothing
        else
-        print *,"expecting hx>(1-VOFTOL)*dxmin"
+        print *,"expecting hx>(1-EPS10*1.0D+2)*dxmin"
         print *,"xstenMAC invalid estdt"
         print *,"hx= ",hx
-        print *,"hx= ",dxmin
+        print *,"dxmin= ",dxmin
         print *,"i,j,k ",i,j,k
         print *,"dirnormal=",dirnormal
         print *,"xright ",xstenMAC(1,dirnormal+1)
