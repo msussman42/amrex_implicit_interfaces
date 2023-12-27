@@ -2841,10 +2841,10 @@ stop
        hx=hx*RR
        hxmac=hx
 
-       if (hx.gt.(one-EPS10*1.0D+2)*dxmin) then
+       if (hx.gt.(one-EPS_8_4)*dxmin) then
         ! do nothing
        else
-        print *,"expecting hx>(1-EPS10*1.0D+2)*dxmin"
+        print *,"expecting hx>(1-EPS_8_4)*dxmin"
         print *,"xstenMAC invalid estdt"
         print *,"hx= ",hx
         print *,"dxmin= ",dxmin

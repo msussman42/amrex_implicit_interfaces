@@ -1230,7 +1230,7 @@ CONTAINS
           else
            exact=p*(xtarget**(p-1))
           endif
-          if (abs(sum-exact).gt.EPS13*1.0D+3) then
+          if (abs(sum-exact).gt.EPS_10_3) then
            print *,"sanity check failed polyinterp_Dmatrix"
            print *,"r,p,typ ",order_r,p,typ
            print *,"sum-exact= ",sum-exact
@@ -9542,11 +9542,11 @@ end subroutine print_visual_descriptor
       call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
       if (bfact_f.eq.1) then
-       if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS10*1.0D+2) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_4) then
         print *,"xf invalid 1"
         stop
        endif
-       if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS10*1.0D+2) then
+       if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_4) then
         print *,"xf invalid 2"
         stop
        endif
@@ -9562,11 +9562,11 @@ end subroutine print_visual_descriptor
       endif
 
       if (bfact_c.eq.1) then
-       if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS10*1.0D+2) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_4) then
         print *,"xc invalid"
         stop
        endif
-       if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS10*1.0D+2) then
+       if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_4) then
         print *,"xc invalid"
         stop
        endif
@@ -9675,11 +9675,11 @@ end subroutine print_visual_descriptor
       call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
       if (bfact_f.eq.1) then
-       if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS10*1.0D+2) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_4) then
         print *,"xf invalid 1"
         stop
        endif
-       if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS10*1.0D+2) then
+       if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_4) then
         print *,"xf invalid 2"
         stop
        endif
@@ -9695,11 +9695,11 @@ end subroutine print_visual_descriptor
       endif
 
       if (bfact_c.eq.1) then
-       if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS10*1.0D+2) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_4) then
         print *,"xc invalid"
         stop
        endif
-       if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS10*1.0D+2) then
+       if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_4) then
         print *,"xc invalid"
         stop
        endif
@@ -9730,8 +9730,8 @@ end subroutine print_visual_descriptor
         print *,"coarse cell should completely cover fine cell"
         stop
        endif 
-       if ((abs(intlo-xf(-1)).lt.EPS10*1.0D+2*dxf(1)).or. &
-           (abs(inthi-xf(1)).lt.EPS10*1.0D+2*dxf(1))) then
+       if ((abs(intlo-xf(-1)).lt.EPS_8_4*dxf(1)).or. &
+           (abs(inthi-xf(1)).lt.EPS_8_4*dxf(1))) then
         ! do nothing
        else
         print *,"coarse cell cannot be contained within fine cell"
@@ -9850,11 +9850,11 @@ end subroutine print_visual_descriptor
         call gridsten1DMAC(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
         if (bfact_f.eq.1) then
-         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS10*1.0D+2) then
+         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_4) then
           print *,"xf invalid 1"
           stop
          endif
-         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS10*1.0D+2) then
+         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_4) then
           print *,"xf invalid 2"
           stop
          endif
@@ -9870,11 +9870,11 @@ end subroutine print_visual_descriptor
         endif
 
         if (bfact_c.eq.1) then
-         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS10*1.0D+2) then
+         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_4) then
           print *,"xc invalid"
           stop
          endif
-         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS10*1.0D+2) then
+         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_4) then
           print *,"xc invalid"
           stop
          endif
@@ -9901,8 +9901,8 @@ end subroutine print_visual_descriptor
         else if (abs(wt-one).le.VOFTOL) then
          wt=one
         else if ((wt.gt.zero).and.(wt.lt.one)) then
-         if ((abs(intlo-xf(-1)).lt.EPS10*1.0D+2*dxf(1)).or. &
-             (abs(inthi-xf(1)).lt.EPS10*1.0D+2*dxf(1))) then
+         if ((abs(intlo-xf(-1)).lt.EPS_8_4*dxf(1)).or. &
+             (abs(inthi-xf(1)).lt.EPS_8_4*dxf(1))) then
           ! do nothing
          else
           print *,"coarse cell cannot be contained within fine cell"
@@ -10258,11 +10258,11 @@ end subroutine print_visual_descriptor
         call gridsten1DMAC(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
         if (bfact_f.eq.1) then
-         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS10*1.0D+2) then
+         if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_4) then
           print *,"xf invalid 1"
           stop
          endif
-         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS10*1.0D+2) then
+         if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_4) then
           print *,"xf invalid 2"
           stop
          endif
@@ -10278,11 +10278,11 @@ end subroutine print_visual_descriptor
         endif
 
         if (bfact_c.eq.1) then
-         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS10*1.0D+2) then
+         if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_4) then
           print *,"xc invalid"
           stop
          endif
-         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS10*1.0D+2) then
+         if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_4) then
           print *,"xc invalid"
           stop
          endif
@@ -15871,9 +15871,9 @@ end subroutine print_visual_descriptor
          stop
         endif
 
-        if (abs(xcomp-xcell_lo).le.comp_dx*EPS14*1.0D+2) then
+        if (abs(xcomp-xcell_lo).le.comp_dx*EPS_12_4) then
          xphys_of_xcomp=xphys_lo
-        else if (abs(xcomp-xcell_hi).le.comp_dx*EPS14*1.0D+2) then
+        else if (abs(xcomp-xcell_hi).le.comp_dx*EPS_12_4) then
          xphys_of_xcomp=xphys_hi
         else if ((xcomp.gt.xcell_lo).and. &
                  (xcomp.lt.xcell_hi)) then
