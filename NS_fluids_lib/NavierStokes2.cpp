@@ -512,7 +512,8 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
   ns_level.getStateVISC(local_caller_string);
   int scomp=0;
   int ncomp=ns_level.localMF[CELL_VISC_MATERIAL_MF]->nComp();
-  ns_level.avgDown_localMF(CELL_VISC_MATERIAL_MF,scomp,ncomp,0);
+  ns_level.avgDown_localMF(CELL_VISC_MATERIAL_MF,scomp,ncomp,
+    LOW_ORDER_AVGDOWN);
  }
 
 } // end subroutine getStateVISC_ALL 
@@ -10650,7 +10651,18 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
    amrex::Error("les_model,viscconst_eddy_wall, or bulk invalid");
 
   delete gammadot_mf;
+
  } // im=0..num_materials-1
+
+ if (activated_divu_preconditioner==0.0) {
+  // do nothing
+ } else if (activated_divu_preconditioner>0.0) {
+
+  Plus_localMF(CELL_VISC_MATERIAL_MF,
+    activated_divu_preconditioner,0,num_materials,ngrow);
+
+ } else
+  amrex::Error("activated_divu_preconditioner invalid");
 
  delete vel;
  delete EOSdata;
@@ -10659,7 +10671,7 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
      (num_materials_viscoelastic<=num_materials)) {
   delete tensor;
  } else if (num_materials_viscoelastic==0) {
-	 // do nothing
+  // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
 
