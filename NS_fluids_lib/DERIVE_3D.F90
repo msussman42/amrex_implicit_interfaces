@@ -87,13 +87,15 @@ stop
       real(amrex_real), INTENT(in), target :: &
               denstate(DIMV(denstate),num_materials*num_state_material)
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in), target :: &
+        vof(DIMV(vof),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: visc(DIMV(visc),ncompvisc)
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(in), target :: &
+       cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: cellten_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real) g(3,3),s(3,3),sd(3,3),g2(3),g2tr,ss,sdsd
@@ -122,7 +124,8 @@ stop
        stop
       endif
 
-      if ((ncompvisc.ne.num_materials).and.(ncompvisc.ne.3*num_materials)) then
+      if ((ncompvisc.ne.num_materials).and. &
+          (ncompvisc.ne.3*num_materials)) then
        print *,"ncompvisc invalid"
        stop
       endif
@@ -883,7 +886,7 @@ stop
        print *,"viscosity_coefficient invalid"
        stop
       endif
-      if (abs(viscosity_coefficient-fort_viscconst(im_parm)).le.1.0E-14) then
+      if (abs(viscosity_coefficient-fort_viscconst(im_parm)).le.EPS13) then
        ! do nothing
       else
        print *,"viscosity_coefficient invalid"
@@ -915,13 +918,15 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow) 
 
       if (is_rigid(im_parm).eq.1) then
+
        do k=growlo(3),growhi(3)
        do j=growlo(2),growhi(2)
        do i=growlo(1),growhi(1)
-        visc(D_DECL(i,j,k),im_parm)=viscosity_coefficient 
+        visc(D_DECL(i,j,k),im_parm)=viscosity_coefficient
        enddo
        enddo
        enddo
+
       else if (is_rigid(im_parm).eq.0) then
 
        vel_ptr=>vel
