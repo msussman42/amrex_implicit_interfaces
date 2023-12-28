@@ -42,8 +42,8 @@ ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=100 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=15
+ns.mof_decision_tree_learning=125000 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=2
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 ns.mof_error_ordering=0
@@ -200,15 +200,12 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 76.2e+5
 #the gas/liquid viscosity ratio.
 #
 ns.uncoupled_viscosity=1 # div(mu grad u)
-#ns.viscconst=21.8e-3 1.08e-3 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
-ns.viscconst=10.0 10.0 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
+ns.viscconst=21.8e-3 1.08e-3 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
+ns.viscconst_artificial=10.0 10.0 10.0 10.0 # derive CGS:  CGS= Pa s x 10
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 #SUSSMAN JAN20 2023
 ns.denconst=2.583 0.129 2.350 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 
-#added mass 
-ns.denconst_interface_added=0.0 0.0 0.0 0.0 0.0 0.0
-ns.material_thickness=0.0 0.0 0.0 0.0
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 

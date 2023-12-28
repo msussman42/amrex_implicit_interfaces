@@ -2470,22 +2470,22 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine get_vort_vel_error
 
        ! called by fort_estdt: determine maximum force due to buoyancy. 
-       ! if denconst_interface_added==0.0 (default), then
+       ! if denconst_interface==0.0 (default), then
        !  denjump_scale=(rhoA - rhoB)/max(rhoA,rhoB)
       subroutine get_max_denjump_scale( &
               denjump_scale, &
-              denconst_interface_added)
+              denconst_interface)
       use global_utility_module
 
       IMPLICIT NONE
 
       integer im,im_opp
       integer iten
-      real(amrex_real), INTENT(in) :: denconst_interface_added(num_interfaces)
+      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       real(amrex_real), INTENT(out) :: denjump_scale
       real(amrex_real) denjump_scale_temp
       real(amrex_real) max_den_interface
-      real(amrex_real) den_added
+      real(amrex_real) den_interface
       integer internal_wave_exists
 
       denjump_scale=zero
@@ -2504,18 +2504,18 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           max_den_interface=max(fort_denconst(im),fort_denconst(im_opp))
           if (max_den_interface.gt.zero) then
       
-           den_added=denconst_interface_added(iten)
-           if (den_added.eq.zero) then
+           den_interface=denconst_interface(iten)
+           if (den_interface.eq.zero) then
             ! do nothing
-           else if (den_added.gt.zero) then 
-            if (den_added.gt.max_den_interface) then
-             max_den_interface=den_added
+           else if (den_interface.gt.zero) then 
+            if (den_interface.gt.max_den_interface) then
+             max_den_interface=den_interface
             else
-             print *,"need den_added.gt.max_den_interface"
+             print *,"need den_interface.gt.max_den_interface"
              stop
             endif
            else
-            print *,"den_added invalid"
+            print *,"den_interface invalid"
             stop
            endif
 

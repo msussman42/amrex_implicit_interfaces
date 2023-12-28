@@ -12005,7 +12005,7 @@ contains
            else if (fastflag.eq.0) then
             ! do nothing
            else
-            print *,"fastflag invalid"
+            print *,"fastflag invalid: ",fastflag
             stop
            endif
 

@@ -80,9 +80,6 @@ int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;
 int  NavierStokes::num_divu_outer_sweeps=1;
 
-Real NavierStokes::divu_outer_sweeps_preconditioner=0.0;
-Real NavierStokes::activated_divu_preconditioner=0.0;
-
 Real NavierStokes::prev_time_slab=0.0;
 Real NavierStokes::cur_time_slab=0.0;
 Real NavierStokes::vel_time_slab=0.0;
@@ -813,7 +810,7 @@ Vector<Real> NavierStokes::density_floor;  // def=0.0
 Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
 Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
-Vector<Real> NavierStokes::denconst_interface_added;
+Vector<Real> NavierStokes::denconst_interface;
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
@@ -841,6 +838,7 @@ Vector<Real> NavierStokes::DrhoDT;  // def=0.0
 Vector<int> NavierStokes::override_density; // def=0
 Vector<Real> NavierStokes::prerecalesce_viscconst;
 Vector<Real> NavierStokes::viscconst;
+Vector<Real> NavierStokes::viscconst_artificial; //default=0
 Real NavierStokes::viscconst_max=0.0;
 Real NavierStokes::viscconst_min=0.0;
 Vector<Real> NavierStokes::viscconst_eddy_wall; //default = 0
@@ -3452,6 +3450,7 @@ NavierStokes::read_params ()
     tempcutoff.resize(num_materials);
     tempcutoffmax.resize(num_materials);
     viscconst.resize(num_materials);
+    viscconst_artificial.resize(num_materials);
     viscconst_eddy_wall.resize(num_materials);
     viscconst_eddy_bulk.resize(num_materials);
     heatviscconst_eddy_wall.resize(num_materials);
@@ -3704,13 +3703,13 @@ NavierStokes::read_params ()
 
     pp.queryAdd("molar_mass",molar_mass,num_materials);
 
-    denconst_interface_added.resize(num_interfaces);
+    denconst_interface.resize(num_interfaces);
 
     for (int iten=0;iten<num_interfaces;iten++) 
-     denconst_interface_added[iten]=0.0;
+     denconst_interface[iten]=0.0;
 
-    pp.queryAdd("denconst_interface_added",
-      denconst_interface_added,num_interfaces);
+    pp.queryAdd("denconst_interface",
+      denconst_interface,num_interfaces);
 
     pp.queryAdd("stokes_flow",stokes_flow);
     pp.queryAdd("cancel_advection",cancel_advection);
@@ -3788,11 +3787,13 @@ NavierStokes::read_params ()
      if (viscconst[i]>viscconst_max)
       viscconst_max=viscconst[i];
 
+     viscconst_artificial[i]=0.0;
      viscconst_eddy_wall[i]=0.0;
      viscconst_eddy_bulk[i]=0.0;
      heatviscconst_eddy_wall[i]=0.0;
      heatviscconst_eddy_bulk[i]=0.0;
     }
+    pp.queryAdd("viscconst_artificial",viscconst_artificial,num_materials);
     pp.queryAdd("viscconst_eddy_wall",viscconst_eddy_wall,num_materials);
     pp.queryAdd("viscconst_eddy_bulk",viscconst_eddy_bulk,num_materials);
     pp.queryAdd("heatviscconst_eddy_wall",
@@ -4526,14 +4527,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("FSI_material_exists_CTML() invalid");
      
-    pp.queryAdd("divu_outer_sweeps_preconditioner",
-        divu_outer_sweeps_preconditioner);
-
-    if (divu_outer_sweeps_preconditioner>=0.0) {
-     //do nothing
-    } else
-     amrex::Error("divu_outer_sweeps_preconditioner invalid");
-
     pp.queryAdd("post_init_pressure_solve",post_init_pressure_solve);
     if ((post_init_pressure_solve<0)||(post_init_pressure_solve>1))
      amrex::Error("post_init_pressure_solve out of range");
@@ -5238,8 +5231,8 @@ NavierStokes::read_params ()
      }
 
      for (int i=0;i<num_interfaces;i++) {
-      std::cout << "i= " << i << " denconst_interface_added "  << 
-        denconst_interface_added[i] << '\n';
+      std::cout << "i= " << i << " denconst_interface "  << 
+        denconst_interface[i] << '\n';
       std::cout << "i= " << i << " viscconst_interface "  << 
         viscconst_interface[i] << '\n';
       std::cout << "i= " << i << " heatviscconst_interface "  << 
@@ -5351,6 +5344,8 @@ NavierStokes::read_params ()
          override_density[i] << '\n';
       std::cout << "viscconst i=" << i << "  " << viscconst[i] << '\n';
 
+      std::cout << "viscconst_artificial i=" <<i<<"  "<<
+	      viscconst_artificial[i]<<'\n';
       std::cout << "viscconst_eddy_wall i=" <<i<<"  "<<
 	      viscconst_eddy_wall[i]<<'\n';
       std::cout << "viscconst_eddy_bulk i=" <<i<<"  "<<
@@ -17553,7 +17548,7 @@ NavierStokes::split_scalar_advection() {
    ymac_old.dataPtr(),ARLIM(ymac_old.loVect()),ARLIM(ymac_old.hiVect()),
    zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
    &stokes_flow,
-   denconst_interface_added.dataPtr(), //unused in fort_vfrac_split
+   denconst_interface.dataPtr(), //unused in fort_vfrac_split
    &ngrow_mass, //=2
    &ngrow_mac_old,
    &nc_conserve,
@@ -21396,7 +21391,7 @@ void NavierStokes::MaxAdvectSpeed(
     mass_fraction_id.dataPtr(),
     molar_mass.dataPtr(),
     species_molar_mass.dataPtr(),
-    denconst_interface_added.dataPtr(),
+    denconst_interface.dataPtr(),
     Umac.dataPtr(),ARLIM(Umac.loVect()),ARLIM(Umac.hiVect()),
     Ucell.dataPtr(),ARLIM(Ucell.loVect()),ARLIM(Ucell.hiVect()),
     solidfab.dataPtr(),ARLIM(solidfab.loVect()),ARLIM(solidfab.hiVect()),

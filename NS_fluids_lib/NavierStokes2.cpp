@@ -468,43 +468,32 @@ void NavierStokes::getStateVISC_ALL(const std::string& caller_string) {
  std::string local_caller_string="getStateVISC_ALL";
  local_caller_string=caller_string+local_caller_string;
 
- activated_divu_preconditioner=0.0;
-
- if (divu_outer_sweeps_preconditioner==0.0) {
+ if (divu_outer_sweeps+1==num_divu_outer_sweeps) {
   //do nothing
- } else if (divu_outer_sweeps_preconditioner>0.0) {
+ } else if (divu_outer_sweeps+1<num_divu_outer_sweeps) {
 
-  if (divu_outer_sweeps+1==num_divu_outer_sweeps) {
-   //do nothing
-  } else if (divu_outer_sweeps+1<num_divu_outer_sweeps) {
+  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
 
-   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-
-    if (pattern_test(local_caller_string,"writeTECPLOT_File")==1) {
-     //do nothing
-    } else if (pattern_test(local_caller_string,"volWgtSumALL")==1) {
-     //do nothing
-    } else if (pattern_test(local_caller_string,"prepare_post_process")==1) {
-     //do nothing
-    } else if (pattern_test(local_caller_string,"nucleation_code_segment")==1) {
-     //do nothing
-    } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
-     activated_divu_preconditioner=
-	 divu_outer_sweeps_preconditioner;
-    } else
-     amrex::Error("local_caller_string invalid");
-
-   } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
+   if (pattern_test(local_caller_string,"writeTECPLOT_File")==1) {
+    //do nothing
+   } else if (pattern_test(local_caller_string,"volWgtSumALL")==1) {
+    //do nothing
+   } else if (pattern_test(local_caller_string,"prepare_post_process")==1) {
+    //do nothing
+   } else if (pattern_test(local_caller_string,"nucleation_code_segment")==1) {
+    //do nothing
+   } else if (pattern_test(local_caller_string,"do_the_advance")==1) {
     //do nothing
    } else
-    amrex::Error("slab_step invalid");
+    amrex::Error("local_caller_string invalid");
 
+  } else if ((slab_step==-1)||(slab_step==ns_time_order)) {
+   //do nothing
   } else
-   amrex::Error("divu_outer_sweeps invalid");
+   amrex::Error("slab_step invalid");
 
- } else {
-  amrex::Error("divu_outer_sweeps_precond invalid");
- }
+ } else
+  amrex::Error("divu_outer_sweeps invalid");
 
  int finest_level=parent->finestLevel();
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -4599,9 +4588,6 @@ void NavierStokes::apply_pressure_grad(
     FArrayBox& semfluxfab=(*localMF[SEM_FLUXREG_MF])[mfi];
     int ncfluxreg=semfluxfab.nComp();
 
-    int local_uncoupled_viscosity=
-      ( (activated_divu_preconditioner>0.0) ? 1 : uncoupled_viscosity);
-
     int tid_current=ns_thread();
     if ((tid_current<0)||(tid_current>=thread_class::nthreads))
      amrex::Error("tid_current invalid");
@@ -4640,7 +4626,7 @@ void NavierStokes::apply_pressure_grad(
      velbc.dataPtr(),
      &visc_coef,
      &nden,
-     &local_uncoupled_viscosity,
+     &uncoupled_viscosity,
      &homflag);
    } // mfi
 } // omp
@@ -5527,7 +5513,7 @@ void NavierStokes::make_physics_vars(int project_option,
     &local_curv_max[tid_current],
     &isweep,
     &nrefine_vof,
-    denconst_interface_added.dataPtr(),
+    denconst_interface.dataPtr(),
     viscconst_interface.dataPtr(),
     heatviscconst_interface.dataPtr(),
     speciesviscconst_interface.dataPtr(),
@@ -10652,17 +10638,9 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
 
   delete gammadot_mf;
 
- } // im=0..num_materials-1
-
- if (activated_divu_preconditioner==0.0) {
-  // do nothing
- } else if (activated_divu_preconditioner>0.0) {
-
   Plus_localMF(CELL_VISC_MATERIAL_MF,
-    activated_divu_preconditioner,0,num_materials,ngrow);
-
- } else
-  amrex::Error("activated_divu_preconditioner invalid");
+    viscconst_artificial[im],im,1,ngrow);
+ } // im=0..num_materials-1
 
  delete vel;
  delete EOSdata;
