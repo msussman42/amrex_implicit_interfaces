@@ -7470,7 +7470,7 @@ stop
        curv_max, &
        isweep, &
        nrefine_vof, &
-       denconst_interface_added, &
+       denconst_interface, &
        visc_interface, &
        heatvisc_interface, &
        speciesvisc_interface, &
@@ -7654,7 +7654,7 @@ stop
 
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
-      real(amrex_real), INTENT(in) :: denconst_interface_added(num_interfaces)
+      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       real(amrex_real), INTENT(in) :: visc_interface(num_interfaces)
       real(amrex_real), INTENT(in) :: heatvisc_interface(num_interfaces)
       real(amrex_real), INTENT(in) :: &
@@ -7763,12 +7763,16 @@ stop
       real(amrex_real) local_minus
       real(amrex_real) xclamped_minus(SDIM)
       real(amrex_real) xclamped_plus(SDIM)
+      real(amrex_real) xclamped_center(SDIM)
       real(amrex_real) LS_clamped_minus
       real(amrex_real) LS_clamped_plus
+      real(amrex_real) LS_clamped_center
       real(amrex_real) vel_clamped_minus(SDIM)
       real(amrex_real) vel_clamped_plus(SDIM)
+      real(amrex_real) vel_clamped_center(SDIM)
       real(amrex_real) temperature_clamped_minus
       real(amrex_real) temperature_clamped_plus
+      real(amrex_real) temperature_clamped_center
       integer prescribed_flag
       integer rigid_exists_flag
       integer is_clamped_face
@@ -7799,8 +7803,6 @@ stop
       real(amrex_real) local_cenvisc
       real(amrex_real) local_cenden
 
-      real(amrex_real) denconst_interface_added_max
-      real(amrex_real) rad_added_mass
       integer :: test_for_make_physics_vars
 
 ! fort_init_physics_vars code starts here:
@@ -7960,8 +7962,6 @@ stop
        stop
       endif
 
-      rad_added_mass=1.5d0*DXMAXLS
-
       do im=1,2*num_interfaces
 
        if (is_valid_freezing_modelF(freezing_model(im)).eq.1) then
@@ -7981,7 +7981,7 @@ stop
 
       do im=1,num_interfaces
 
-       if ((denconst_interface_added(im).ge.zero).and. &
+       if ((denconst_interface(im).ge.zero).and. &
            (visc_interface(im).ge.zero).and. &
            (heatvisc_interface(im).ge.zero)) then
         ! do nothing
@@ -9519,13 +9519,13 @@ stop
            if (((FFACE(im).gt.VOFTOL).and. &
                 (FFACE(im_opp).gt.VOFTOL)).or. &
                (iten_main.eq.iten_FFACE)) then
-            if (denconst_interface_added(iten_FFACE).eq.zero) then
+            if (denconst_interface(iten_FFACE).eq.zero) then
              ! do nothing
-            else if (denconst_interface_added(iten_FFACE).gt.zero) then
+            else if (denconst_interface(iten_FFACE).gt.zero) then
              if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
 
               local_face(FACECOMP_FACEDEN+1)=one/ &
-                 denconst_interface_added(iten_FFACE)
+                 denconst_interface(iten_FFACE)
 
               if (local_face(FACECOMP_FACEDEN_BASE+1).gt. &
                   local_face(FACECOMP_FACEDEN+1)) then
@@ -9540,7 +9540,7 @@ stop
               stop
              endif
             else
-             print *,"denconst_interface_added invalid"
+             print *,"denconst_interface invalid"
              stop
             endif
            else if (iten_main.ne.iten_FFACE) then
@@ -9932,8 +9932,7 @@ stop
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
         do dir2=1,SDIM
-         xclamped_minus(dir2)=xsten(0,dir2)
-         xclamped_plus(dir2)=xsten(0,dir2)
+         xclamped_center(dir2)=xsten(0,dir2)
         enddo
 
         do im=1,num_materials*ngeom_recon
@@ -9961,12 +9960,12 @@ stop
         enddo ! im=1..num_materials
 
         if (abs(voltotal-one).gt.LSTOL) then
-         print *,"voltotal invalid"
+         print *,"voltotal invalid: ",voltotal
          stop
         else if (abs(voltotal-one).le.LSTOL) then
          ! do nothing
         else
-         print *,"voltotal invalid"
+         print *,"voltotal invalid: ",voltotal
          stop
         endif
 
@@ -9990,12 +9989,12 @@ stop
         call get_secondary_material(LSIDE_MAT,implus_majority,im_secondary)
 
          ! LS>0 if clamped
-        call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
-          vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
+        call SUB_clamped_LS(xclamped_center,time,LS_clamped_center, &
+          vel_clamped_center,temperature_clamped_center,prescribed_flag,dx)
 
-        if (LS_clamped_minus.ge.zero) then
+        if (LS_clamped_center.ge.zero) then
          null_viscosity=1
-        else if (LS_clamped_minus.lt.zero) then
+        else if (LS_clamped_center.lt.zero) then
 
          if (is_rigid(implus_majority).eq.1) then
           null_viscosity=1
@@ -10025,37 +10024,9 @@ stop
          endif
 
         else
-         print *,"LS_clamped_minus invalid: fort_init_physics_vars"
+         print *,"LS_clamped_center invalid: fort_init_physics_vars"
          stop
         endif
-
-        denconst_interface_added_max=zero
-
-        if ((abs(LSIDE_MAT(implus_majority)).le.rad_added_mass).and. &
-            (abs(LSIDE_MAT(im_secondary)).le.rad_added_mass)) then
-         call get_iten(implus_majority,im_secondary,iten_main)
-         if (denconst_interface_added(iten_main).eq.zero) then
-          ! do nothing
-         else if (denconst_interface_added(iten_main).gt.zero) then
-          if (max(fort_denconst(implus_majority),fort_denconst(im_secondary)) &
-              .le.denconst_interface_added(iten_main)) then
-           denconst_interface_added_max= &
-             denconst_interface_added(iten_main)
-          else
-           print *,"denconst_interface_added(iten_main) invalid"
-           stop
-          endif
-         else 
-          print *,"denconst_interface_added(iten_main) invalid"
-          stop
-         endif 
-        else if ((abs(LSIDE_MAT(implus_majority)).ge.rad_added_mass).or.  &
-                 (abs(LSIDE_MAT(im_secondary)).ge.rad_added_mass)) then
-         ! do nothing
-        else
-         print *,"LSIDE_MAT invalid: fort_init_physics_vars"
-         stop
-        endif  
 
         do im=1,num_materials
 
@@ -10184,24 +10155,6 @@ stop
          !do nothing
         else
          print *,"local_cenden invalid fort_init_physics_vars"
-         stop
-        endif
-
-        if (denconst_interface_added_max.eq.zero) then
-         ! do nothing
-        else if (denconst_interface_added_max.gt.zero) then
-         if ((local_cenden.gt.zero).and. &
-             (denconst_interface_added_max.gt.one/local_cenden)) then
-          !local_cenden=voltotal/mass_total
-          local_cenden=one/denconst_interface_added_max
-         else
-          print *,"local_cenden or denconst_interface_added_max invalid"
-          print *,"local_cenden=",local_cenden
-          print *,"denconst_interface_added_max=",denconst_interface_added_max
-          stop
-         endif
-        else
-         print *,"denconst_interface_added_max invalid"
          stop
         endif
 

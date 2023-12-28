@@ -142,7 +142,6 @@ ns.heatviscconst=58000.0 2400.0 0.0 0.0
 ns.viscconst=12.25 2.0E-4 0.0 0.0
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.denconst=1.0 0.001221 1.0 1.0
-#ns.denconst_interface_added=1.0e+4
 ns.tempconst=293.0 292.0 293.0 293.0
 ns.include_viscous_heating=0
 # shock_timestep=2 2 option => never consider sound speed.

@@ -2314,7 +2314,7 @@ stop
         mass_fraction_id, &
         molar_mass, &
         species_molar_mass, &
-        denconst_interface_added, &
+        denconst_interface, &
         velmac,DIMS(velmac), &
         velcell,DIMS(velcell), &
         solidfab,DIMS(solidfab), &
@@ -2379,7 +2379,7 @@ stop
       integer, INTENT(in) :: mass_fraction_id(2*num_interfaces)
       real(amrex_real), INTENT(in) :: molar_mass(num_materials)
       real(amrex_real), INTENT(in) :: species_molar_mass(num_species_var+1)
-      real(amrex_real), INTENT(in) :: denconst_interface_added(num_interfaces)
+      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real) uu_estdt
@@ -2667,13 +2667,13 @@ stop
           mu=get_user_viscconst(im_opp,den2,fort_tempconst(im_opp))
           visc2=visc_coef*mu+EPS10
 
-          if (denconst_interface_added(iten).eq.zero) then
+          if (denconst_interface(iten).eq.zero) then
            ! do nothing
-          else if (denconst_interface_added(iten).gt.zero) then
-           den1=denconst_interface_added(iten)
+          else if (denconst_interface(iten).gt.zero) then
+           den1=denconst_interface(iten)
            den2=den1
           else
-           print *,"denconst_interface_added invalid fort_estdt"
+           print *,"denconst_interface invalid fort_estdt"
            stop
           endif
 
@@ -2766,7 +2766,7 @@ stop
        ! denjump_scale=max_{im,im_opp (fluids)} 
        !   |den(im)-den(im_opp)|/max(den(im),den(im_opp),den_added)
        ! denjump_scale in [0,1]
-      call get_max_denjump_scale(denjump_scale,denconst_interface_added)
+      call get_max_denjump_scale(denjump_scale,denconst_interface)
 
       if ((denjump_scale.ge.zero).and.(denjump_scale.le.one)) then
        ! do nothing
@@ -12736,7 +12736,7 @@ stop
        ymac_old,DIMS(ymac_old), &
        zmac_old,DIMS(zmac_old), &
        stokes_flow, &
-       denconst_interface_added, &
+       denconst_interface, &
        ngrow_mass, &
        ngrow_mac_old, &
        nc_conserve, &
@@ -12767,7 +12767,7 @@ stop
       integer, INTENT(in) :: nc_conserve
       integer, INTENT(in) :: ngrow_mass
       integer, INTENT(in) :: stokes_flow
-      real(amrex_real), INTENT(in) :: denconst_interface_added(num_interfaces)
+      real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
       integer, PARAMETER :: ngrow_scalar=1
       integer, PARAMETER :: ngrow_mac_displace=2
       integer, INTENT(in) :: ngrow_mac_old
@@ -13167,13 +13167,13 @@ stop
       endif
 
       do im=1,num_interfaces
-       if (denconst_interface_added(im).gt.zero) then
+       if (denconst_interface(im).gt.zero) then
         ! do nothing
-       else if (denconst_interface_added(im).eq.zero) then
+       else if (denconst_interface(im).eq.zero) then
         ! do nothing
        else
-        print *,"denconst_interface_added invalid fort_vfrac_split"
-        print *,"index,value ",im,denconst_interface_added(im)
+        print *,"denconst_interface invalid fort_vfrac_split"
+        print *,"index,value ",im,denconst_interface(im)
         stop
        endif
       enddo !im=1,num_interfaces

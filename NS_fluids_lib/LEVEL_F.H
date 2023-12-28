@@ -388,7 +388,7 @@ namespace amrex{
        Real* curv_max,
        int* isweep,
        int* nrefine_vof,
-       Real* denconst_interface_added,
+       Real* denconst_interface,
        Real* visc_interface,
        Real* heatvisc_interface,
        Real* speciesvisc_interface,

@@ -2128,7 +2128,7 @@ protected:
      // if cancel_advection==1, do not include u dot grad S terms for any
      // S corresponding to velocity, interface, or state variables.
     static int cancel_advection;  // def=0
-    static Vector<Real> denconst_interface_added;
+    static Vector<Real> denconst_interface;
 
     static Vector<Real> stiffPINF;
     static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7
@@ -2149,6 +2149,7 @@ protected:
      //2=>Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0) 
     static Vector<int> override_density; // default 0 
     static Vector<Real> viscconst;
+    static Vector<Real> viscconst_artificial;
     static Vector<Real> viscconst_eddy_wall;
     static Vector<Real> viscconst_eddy_bulk;
     static Vector<Real> heatviscconst_eddy_wall;
@@ -2202,9 +2203,6 @@ protected:
     static int  project_solver_type;
     static int  initial_cg_cycles;
     static int  num_divu_outer_sweeps;
-
-    static Real divu_outer_sweeps_preconditioner;
-    static Real activated_divu_preconditioner;
 
     static int  debug_dot_product;
 
