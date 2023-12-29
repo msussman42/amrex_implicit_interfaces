@@ -172,7 +172,7 @@ ns.damping_coefficient=0.0 0.0 0.0 0.0
 # 1 Pa = 10 CGS
 ns.uncoupled_viscosity=1
 ns.viscconst=1.7e-2 1.7e-4 10.0 1000.0 # derive CGS:  CGS= Pa s x 10
-ns.viscconst_artificial=10.0 10.0 10.0 10.0 # derive CGS:  CGS= Pa s x 10
+ns.viscconst_artificial=100.0 100.0 100.0 100.0 
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 ns.denconst=1.0 0.00129 0.917 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 

@@ -72,8 +72,8 @@ ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate
 ns.num_species_var=2
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
-ns.MOFITERMAX_AFTER_PREDICT=15
-ns.mof_decision_tree_learning=100 #default 40000
+ns.MOFITERMAX_AFTER_PREDICT=2
+ns.mof_decision_tree_learning=10000 #default 40000
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1 # 0=MOF 1=CMOF 
@@ -108,11 +108,11 @@ amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.8   # what constitutes an efficient grid
 ns.ns_tiling=false
 amr.blocking_factor = 8 8 8 8   # block factor in grid generation
-amr.check_int       = 100 # 100 (check_int=10 for testing)
+amr.check_int       = 500 # 500 (check_int=10 for testing)
 #amr.check_int       = 10000  # static freezing test 10 
 amr.check_file      = chk     # root name of checkpoint file
 # blow up: ~ 84000 steps
-amr.plot_int        = 100 # 100  (plot_int=10 for testing)
+amr.plot_int        = 500 # 500  (plot_int=10 for testing)
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 64
@@ -303,9 +303,8 @@ ns.species_molar_mass=18.02 18.02 # this is vapor molar mass=liquid molar mass
 # between the ice velocity at the triple point and the associated ice
 # rigid body motion
 # ice is a very viscous fluid 
-ns.viscconst=1.0 1.0 10.0 100.0 # extra viscous: remove parasitic currents
-#ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
-# ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
+ns.viscconst_artificial=100.0 100.0 100.0 100.0
+ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
 ns.uncoupled_viscosity=1 # div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
