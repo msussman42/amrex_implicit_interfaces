@@ -19841,8 +19841,8 @@ end subroutine print_visual_descriptor
       rho0 = 0.9291654-0.5174730e-3*T-3.338672e-7*T*T
       B=(345.1-1.1458*T+0.9837e-3*T*T)*1e7
       pressure=-B+(B+P0)*exp((1.0-rho0/rho)/A)
-      pressure=max(pressure,0.00001*P0)
-      pressure=min(pressure,1.8e9)  ! VIP limiter
+      pressure=max(pressure,1.0D-5*P0)
+      pressure=min(pressure,1.8D+9)  ! VIP limiter
 
       if (OLD_DODECANE.eq.1) then
        pcav=PCAV_TAIT
@@ -27388,6 +27388,7 @@ real(amrex_real) :: mean(ndim_classify)
 real(amrex_real) :: mean_child1(ndim_classify)
 real(amrex_real) :: mean_child2(ndim_classify)
 real(amrex_real) :: variance
+real(amrex_real) :: variance_scale
 real(amrex_real) :: variance_child1
 real(amrex_real) :: variance_child2
 
@@ -27474,10 +27475,18 @@ real(amrex_real) :: variance_child2
  endif
 
  variance_reduction=variance-(variance_child1+variance_child2)
+ variance_scale=max(variance,one)
+
  if (variance_reduction.ge.zero) then
-  ! do nothing
+  !do nothing
+ else if (variance_reduction.ge.-EPS_8_4*variance_scale) then
+  variance_reduction=zero
  else
-  print *,"variance_reduction invalid"
+  print *,"variance_reduction invalid: ",variance_reduction
+  print *,"variance: ",variance
+  print *,"variance_scale: ",variance_scale
+  print *,"variance_child1: ",variance_child1
+  print *,"variance_child2: ",variance_child2
   stop
  endif
 
@@ -28025,7 +28034,10 @@ integer :: ibranch
       total_variance_reduction=total_variance_reduction+ &
        local_variance_reduction(ibranch)
      else
-      print *,"local_variation_reduction is NaN"
+      print *,"local_variance_reduction is NaN"
+      print *,"ibranch,local_nbranches: ",ibranch,local_nbranches
+      print *,"local_variance_reduction(ibranch): ", &
+         local_variance_reduction(ibranch)
       stop
      endif
     enddo
@@ -28033,7 +28045,7 @@ integer :: ibranch
     if (total_variance_reduction.ge.zero) then
      ! do nothing
     else
-     print *,"total_variation_reduction is NaN"
+     print *,"total_variance_reduction is NaN: ",total_variance_reduction
      stop
     endif
 

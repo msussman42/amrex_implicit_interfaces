@@ -61,7 +61,7 @@ ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
 cg.restart_period=25
 cg.maxiter = 200
-mg.bot_atol = 1.0e-14
+mg.bot_atol = 1.0e-6 #1.0e-14 double, 1.0e-6 float
 mg.rtol_b = -0.01
 Lp.v = 0
 
@@ -91,13 +91,13 @@ amr.file_name_digits=7
 # ------------------  INPUTS TO PHYSICS CLASS -------------------
 ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
 
-mac.mac_abs_tol    = 1.0e-13
+mac.mac_abs_tol    = 1.0e-5 #1.0e-13 double, 1.0e-5 float
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
-mac.visc_abs_tol  = 1.0e-10
+mac.visc_abs_tol  = 1.0e-5 #1.0e-10 double, 1.0e-5 float
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
 #gravity and surface tension forces are both reduced by the same orders of
 #magnitude.  A factor of 10 reduction is ok for the Silicone freezing
