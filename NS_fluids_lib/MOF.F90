@@ -13041,7 +13041,9 @@ contains
       real(amrex_real), INTENT(inout) :: mofdata(num_materials*ngeom_recon)
       real(amrex_real) centroidA(num_materials*sdim)
       real(amrex_real), INTENT(out) :: multi_centroidA(num_materials,sdim)
-      integer im,vofcomp
+      integer im
+      integer vofcomp
+      integer vofcomp_single
       integer, INTENT(in) :: imaterial_count
       real(amrex_real) distmax
       integer ordermax,order_min
@@ -13507,20 +13509,31 @@ contains
          if (mofdata(vofcomp+sdim+1).eq.zero) then
           single_volume=mofdata(vofcomp)*volcell_vof
           if (single_volume.ge.(one-EPS_8_4)*uncaptured_volume_vof) then
-           if ((single_material_takes_all.ne.0).or. &
-               (single_material_im.ne.0)) then
-            print *,"cannot have two materials at once"
-            print *,"single_material_takes_all ",single_material_takes_all
-            print *,"im ",im
-            print *,"single vol ",single_volume
-            print *,"uncapt vol ",uncaptured_volume_vof
-            print *,"uncapt volfrac ",uncaptured_volume_vof/volcell_vof
+
+           if (single_material_im.eq.0) then
+            single_material_im=im
+            single_material_takes_all=1
+            critical_material=im
+            distmax=-one  ! tells code below not to search for a slope
+           else if ((single_material_im.ge.1).and. &
+                    (single_material_im.le.num_materials)) then
+            vofcomp_single=(single_material_im-1)*ngeom_recon+1
+            if (mofdata(vofcomp_single).lt. &
+                mofdata(vofcomp)) then
+             single_material_im=im
+             critical_material=im
+            else if (mofdata(vofcomp_single).ge. &
+                     mofdata(vofcomp)) then
+             !do nothing
+            else
+             print *,"mofdata invalid"
+             stop
+            endif
+           else
+            print *,"single_material_im invalid"
             stop
            endif
-           single_material_takes_all=1
-           single_material_im=im
-           critical_material=im
-           distmax=-one  ! tells code below not to search for a slope
+
           endif
          endif  ! material not already processed.
         else
@@ -15264,6 +15277,7 @@ contains
       integer imaterial2
       integer imaterial
       integer vofcomp
+      integer vofcomp_single
       integer dir
       integer imaterial_count
 
@@ -15912,14 +15926,27 @@ contains
        else if (is_rigid_local(imaterial).eq.0) then
 
         if (mofdata(vofcomp).gt.one-EPS_8_4) then
-         if (single_material.ne.0) then
-          print *,"cannot have two materials at once"
-          print *,"single_material ",single_material
-          print *,"imaterial ",imaterial
-          print *,"mofdata ",mofdata(vofcomp)
+
+         if (single_material.eq.0) then
+          single_material=imaterial
+         else if ((single_material.ge.1).and. &
+                  (single_material.le.num_materials)) then
+          vofcomp_single=(single_material-1)*ngeom_recon+1
+          if (mofdata(vofcomp_single).lt. &
+              mofdata(vofcomp)) then
+           single_material=imaterial
+          else if (mofdata(vofcomp_single).ge. &
+                   mofdata(vofcomp)) then
+           !do nothing
+          else
+           print *,"mofdata invalid"
+           stop
+          endif
+         else
+          print *,"single_material invalid"
           stop
          endif
-         single_material=imaterial
+
         else
          remaining_vfrac=remaining_vfrac+mofdata(vofcomp)
         endif
@@ -17806,7 +17833,7 @@ contains
       real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
       real(amrex_real), INTENT(out) :: multi_area(num_materials)
       integer dir
-      integer vofcomp
+      integer vofcomp,vofcomp_single
       integer im
       real(amrex_real) uncaptured_volume_START
       real(amrex_real) uncaptured_volume_fluid
@@ -18466,16 +18493,26 @@ contains
            if (mofdatasave(vofcomp).gt. &
                uncaptured_volume_fraction_fluid-EPS_8_4) then
 
-            if (single_material.ne.0) then
-             print *,"cannot have two materials at once"
-             print *,"single_material ",single_material
-             print *,"im_test ",im_test
-             print *,"mofdatavalid ",mofdatavalid(vofcomp)
-             print *,"uncaptured_volume_fraction_fluid ", &
-              uncaptured_volume_fraction_fluid
+            if (single_material.eq.0) then
+             single_material=im_test
+            else if ((single_material.ge.1).and. &
+                     (single_material.le.num_materials)) then
+             vofcomp_single=(single_material-1)*ngeom_recon+1
+             if (mofdatasave(vofcomp_single).lt. &
+                 mofdatasave(vofcomp)) then
+              single_material=im_test
+             else if (mofdatasave(vofcomp_single).ge. &
+                      mofdatasave(vofcomp)) then
+              !do nothing
+             else
+              print *,"mofdatasave invalid"
+              stop
+             endif
+            else
+             print *,"single_material invalid"
              stop
             endif
-            single_material=im_test
+              
            else
             remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
            endif
@@ -19066,7 +19103,8 @@ contains
       real(amrex_real), INTENT(in) :: dx(sdim)
       real(amrex_real), INTENT(out) :: xtetlist_plus(4,3,nlist_alloc_plus)
       real(amrex_real), INTENT(out) :: xtetlist_minus(4,3,nlist_alloc_minus)
-      real(amrex_real), INTENT(out) :: multi_area_pair(num_materials,num_materials)
+      real(amrex_real), INTENT(out) :: &
+        multi_area_pair(num_materials,num_materials)
       real(amrex_real) :: mofdatavalid_plus(num_materials*ngeom_recon)
       real(amrex_real) :: mofdatavalid_minus(num_materials*ngeom_recon)
       real(amrex_real) :: mofdataproject_plus(num_materials*ngeom_recon)
@@ -19120,6 +19158,7 @@ contains
       integer critical_material 
       integer fastflag
       integer vofcomp
+      integer vofcomp_single
       integer testflag
       integer testflag_save
       real(amrex_real) remaining_vfrac
@@ -19425,16 +19464,26 @@ contains
            if (mofdataproject_minus(vofcomp).gt. &
                uncaptured_volume_fraction_fluid-EPS_8_4) then
 
-            if (single_material.ne.0) then
-             print *,"cannot have two materials at once"
-             print *,"single_material ",single_material
-             print *,"im_test ",im_test
-             print *,"mofdatavalid ",mofdataproject_minus(vofcomp)
-             print *,"uncaptured_volume_fraction_fluid ", &
-              uncaptured_volume_fraction_fluid
+            if (single_material.eq.0) then
+             single_material=im_test
+            else if ((single_material.ge.1).and. &
+                     (single_material.le.num_materials)) then
+             vofcomp_single=(single_material-1)*ngeom_recon+1
+             if (mofdataproject_minus(vofcomp_single).lt. &
+                 mofdataproject_minus(vofcomp)) then
+              single_material=im_test
+             else if (mofdataproject_minus(vofcomp_single).ge. &
+                      mofdataproject_minus(vofcomp)) then
+              !do nothing
+             else
+              print *,"mofdataproject_minus invalid"
+              stop
+             endif
+            else
+             print *,"single_material invalid"
              stop
             endif
-            single_material=im_test
+
            else
             remaining_vfrac=remaining_vfrac+mofdataproject_minus(vofcomp)
            endif
@@ -19981,6 +20030,7 @@ contains
       real(amrex_real), INTENT(out) :: multi_cen(sdim,num_materials)
       integer dir
       integer vofcomp
+      integer vofcomp_single
       integer im
       real(amrex_real) uncaptured_volume_target
       real(amrex_real) uncaptured_volume_fluid
@@ -20624,16 +20674,26 @@ contains
            if (mofdatasave(vofcomp).gt. &
                uncaptured_volume_fraction_fluid-EPS_8_4) then
 
-            if (single_material.ne.0) then
-             print *,"cannot have two materials at once"
-             print *,"single_material ",single_material
-             print *,"im_test ",im_test
-             print *,"mofdatavalid ",mofdatavalid(vofcomp)
-             print *,"uncaptured_volume_fraction_fluid ", &
-              uncaptured_volume_fraction_fluid
+            if (single_material.eq.0) then
+             single_material=im_test
+            else if ((single_material.ge.1).and. &
+                     (single_material.le.num_materials)) then
+             vofcomp_single=(single_material-1)*ngeom_recon+1
+             if (mofdatasave(vofcomp_single).lt. &
+                 mofdatasave(vofcomp)) then
+              single_material=im_test
+             else if (mofdatasave(vofcomp_single).ge. &
+                      mofdatasave(vofcomp)) then
+              !do nothing
+             else
+              print *,"mofdatasave invalid"
+              stop
+             endif
+            else
+             print *,"single_material invalid"
              stop
             endif
-            single_material=im_test
+
            else
             remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
            endif
@@ -20998,6 +21058,7 @@ contains
       real(amrex_real), INTENT(out) :: multi_cen_map(sdim,num_materials)
       integer dir
       integer vofcomp
+      integer vofcomp_single
       integer im
       real(amrex_real) uncaptured_volume_START
       real(amrex_real) uncaptured_volume_map_START
@@ -21567,16 +21628,26 @@ contains
           if (mofdatasave(vofcomp).gt. &
               uncaptured_volume_fraction_fluid-EPS_8_4) then
 
-           if (single_material.ne.0) then
-            print *,"cannot have two materials at once"
-            print *,"single_material ",single_material
-            print *,"im_test ",im_test
-            print *,"mofdatavalid ",mofdatavalid(vofcomp)
-            print *,"uncaptured_volume_fraction_fluid ", &
-             uncaptured_volume_fraction_fluid
+           if (single_material.eq.0) then
+            single_material=im_test
+           else if ((single_material.ge.1).and. &
+                    (single_material.le.num_materials)) then
+            vofcomp_single=(single_material-1)*ngeom_recon+1
+            if (mofdatasave(vofcomp_single).lt. &
+                mofdatasave(vofcomp)) then
+             single_material=im_test
+            else if (mofdatasave(vofcomp_single).ge. &
+                     mofdatasave(vofcomp)) then
+             !do nothing
+            else
+             print *,"mofdatasave invalid"
+             stop
+            endif
+           else
+            print *,"single_material invalid"
             stop
            endif
-           single_material=im_test
+
           else
            remaining_vfrac=remaining_vfrac+mofdatasave(vofcomp)
           endif
