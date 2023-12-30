@@ -11385,6 +11385,7 @@ contains
         npredict, & !intent(out)
         mag, & !intent(out)
         uncaptured_volume_vof_placeholder, &  !=1.0
+        uncaptured_volume_vof_placeholder, &  !=1.0
         cen_free_placeholder, & !centroid of uncaptured region
         refvfrac(1), & ! 0<=refvfrac(1)<=1
         cen_derive_placeholder, &!relative to supermesh centroid(CMOF case)
@@ -12838,6 +12839,7 @@ contains
       subroutine find_predict_slope( &
        slope, &
        mag, &
+       vof_scale, &
        vof_free, &
        cen_free, &
        vof_ref, &
@@ -12858,6 +12860,7 @@ contains
       real(amrex_real), INTENT(out) :: slope(3,sdim)
       real(amrex_real) local_slope(sdim)
       real(amrex_real) slopeRT(sdim)
+      real(amrex_real), INTENT(in) :: vof_scale
       real(amrex_real), INTENT(in) :: vof_free
       real(amrex_real), INTENT(in) :: cen_free(sdim)
       real(amrex_real), INTENT(in) :: vof_ref
@@ -12889,11 +12892,13 @@ contains
        stop
       endif
       if ((vof_ref.ge.zero).and. &
+          (vof_scale.ge.zero).and. &
           (vof_free.ge.zero)) then
        !do nothing
       else
-       print *,"vof_ref or vof_free less than zero"
+       print *,"vof_ref, vof_free, or vof_scale less than zero"
        print *,"vof_ref: ",vof_ref
+       print *,"vof_scale: ",vof_scale
        print *,"vof_free: ",vof_free
        stop
       endif
@@ -12906,10 +12911,11 @@ contains
        else if (dual_vof_ref.eq.zero) then
         dual_cen_ref(dir)=zero
        else if ((dual_vof_ref.lt.zero).and. &
-                (dual_vof_ref.ge.-0.01d0*vof_free)) then
+                (dual_vof_ref.ge.-0.01d0*vof_scale)) then
         dual_cen_ref(dir)=zero
        else
         print *,"dual_vof_ref invalid: ",dual_vof_ref
+        print *,"vof_scale=",vof_scale
         print *,"vof_free=",vof_free
         print *,"vof_ref=",vof_ref
         stop
@@ -13566,6 +13572,7 @@ contains
            call find_predict_slope( &
              npredict, & !intent(out)
              mag, & !intent(out)
+             volcell_vof, &
              volcut_vof, &
              centroid_free, & !centroid of uncaptured region
              single_volume, &
@@ -13659,6 +13666,7 @@ contains
          call find_predict_slope( &
            npredict, & !intent(out)
            mag, & !intent(out)
+           volcell_vof, &
            volcut_vof, &
            centroid_free, & !centroid of uncaptured region
            single_volume, &
@@ -13827,6 +13835,7 @@ contains
            call find_predict_slope( &
             npredict, &
             mag, &
+            volcell_vof, &
             volcell_vof, &
             centroid_free, &
             volcut_vof, &
@@ -15560,6 +15569,7 @@ contains
        enddo
        enddo
        enddo
+
        do imaterial=1,num_materials
         if (voftest(imaterial).le.VOFTOL) then
 
@@ -15759,6 +15769,7 @@ contains
          call find_predict_slope( &
            npredict, &
            mag, &
+           uncaptured_volume_vof, &
            uncaptured_volume_vof, &
            centroid_free, &
            single_volume, &
