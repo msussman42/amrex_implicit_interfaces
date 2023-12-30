@@ -1576,6 +1576,7 @@ stop
            npredict, & ! INTENT(out)
            mag_centroid, & ! INTENT(out)
            vof_null, &
+           vof_null, &
            centroid_null, & ! centroid of uncaptured region
            refvfrac(1), &
             ! relative to cell centroid of the super cell; INTENT(in)
@@ -2159,6 +2160,7 @@ stop
            call find_predict_slope( &
             npredict, & ! INTENT(out)
             mag_centroid, & ! INTENT(out)
+            vof_null, &
             vof_null, &
             centroid_null, & ! centroid of uncaptured region
             refvfrac(1), &
