@@ -534,13 +534,13 @@ stop
           print *,"tsat_flag invalid:",tsat_flag
           stop
          endif
-         wt_local=VOFTOL
+         wt_local=EPS_8_4
         else if (own_flag.eq.1) then
           ! if normal probe is target: xtarget = xprobe
           ! if new supermesh centroid is target: xtarget = x_new_centroid
           ! if centroid to center: xtarget = xcenter
           ! if center to centroid: xtarget = xcentroid
-         dist=VOFTOL
+         dist=EPS_8_4
          do dir=1,SDIM
           dist=dist+(xlive(dir)-xtarget(dir))**2/(dx(1)**2)
          enddo ! dir
@@ -2144,14 +2144,14 @@ stop
          POUT%Y_probe(iprobe), &
          PROBE_PARMS%debugrate)
 
-        if ((POUT%Y_probe(iprobe).ge.-VOFTOL).and. &
+        if ((POUT%Y_probe(iprobe).ge.-EPS_8_4).and. &
             (POUT%Y_probe(iprobe).le.zero)) then
          POUT%Y_probe(iprobe)=zero
         else if ((POUT%Y_probe(iprobe).ge.zero).and. &
                  (POUT%Y_probe(iprobe).le.one)) then
          ! do nothing
         else if ((POUT%Y_probe(iprobe).ge.one).and. &
-                 (POUT%Y_probe(iprobe).le.one+VOFTOL)) then
+                 (POUT%Y_probe(iprobe).le.one+EPS_8_4)) then
          POUT%Y_probe(iprobe)=one
         else
          print *,"Y_probe out of bounds probe_interpolation"
@@ -2174,14 +2174,14 @@ stop
          PROBE_PARMS%recon, &
          Y_probe_no_constrain)
 
-        if ((Y_probe_no_constrain.ge.-VOFTOL).and. &
+        if ((Y_probe_no_constrain.ge.-EPS_8_4).and. &
             (Y_probe_no_constrain.le.zero)) then
          Y_probe_no_constrain=zero
         else if ((Y_probe_no_constrain.ge.zero).and. &
                  (Y_probe_no_constrain.le.one)) then
          ! do nothing
         else if ((Y_probe_no_constrain.ge.one).and. &
-                 (Y_probe_no_constrain.le.one+VOFTOL)) then
+                 (Y_probe_no_constrain.le.one+EPS_8_4)) then
          Y_probe_no_constrain=one
         else
          print *,"Y_probe_no_constrain out of bounds probe_interpolation"
@@ -3156,7 +3156,7 @@ stop
          else if ((levelrz.eq.COORDSYS_RZ).or. &
                   (levelrz.eq.COORDSYS_CYLINDRICAL)) then
           if (dir.eq.1) then
-           if (abs(xstenND(0,dir)).le.VOFTOL*dx(dir)) then
+           if (abs(xstenND(0,dir)).le.EPS_8_4*dx(dir)) then
             delta=zero
            else
             call adjust_du(delta,dir-1,xstenND(0,dir),0)  ! map_forward=0
@@ -3400,7 +3400,7 @@ stop
 
         call get_primary_material(local_LS,im_primary)
 
-        if (abs(species_vfrac_sum-one).le.VOFTOL_REDIST) then
+        if (abs(species_vfrac_sum-one).le.EPS3) then
          ! do nothing
         else
          print *,"species_vfrac_sum invalid: ",species_vfrac_sum
@@ -3528,15 +3528,21 @@ stop
 
           species_base=fort_speciesconst((ispec-1)*num_materials+im)
 
-          if ((species_base.gt.zero).and.(species_base.le.one)) then
+          if ((species_base.gt.zero).and. &
+              (species_base.le.one)) then
 
            spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
                ENUM_SPECIESVAR+ispec
 
            spec_old=snew(D_DECL(i,j,k),spec_comp)
            spec_new=spec_old
-           if ((spec_old.ge.species_base-VOFTOL).and. &
-               (spec_old.le.species_max)) then
+
+           if ((spec_old.ge.zero).and. &
+               (spec_old.lt.species_base)) then
+            spec_old=species_base
+            spec_new=spec_old
+           else if ((spec_old.ge.species_base).and. &
+                    (spec_old.le.species_max)) then
 
             im_melt=0
 
@@ -3544,7 +3550,8 @@ stop
              if (im_opp.ne.im) then
               do ireverse=0,1
                call get_iten(im,im_opp,iten)
-               LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+               LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
+                                       room_temperature,1)
                if (LL.eq.zero) then
                 ! do nothing
                else if (LL.ne.zero) then
@@ -3610,7 +3617,7 @@ stop
               stop
              endif
 
-             if ((spec_new.ge.species_base-VOFTOL).and. &
+             if ((spec_new.ge.(one-EPS_8_4)*species_base).and. &
                  (spec_new.le.species_max)) then
               ! do nothing
              else
@@ -3633,6 +3640,8 @@ stop
 
            else
             print *,"spec_old invalid(1): ",spec_old
+            print *,"species_base: ",species_base
+            print *,"species_max: ",species_max
             stop
            endif
 
@@ -5907,7 +5916,7 @@ stop
              stop
             endif
 
-            if (abs(denratio_factor).le.VOFTOL) then
+            if (abs(denratio_factor).le.EPS_8_4) then
              denratio_factor=zero
             endif
 
@@ -6066,7 +6075,8 @@ stop
                stop
               endif
 
-              if ((dF.gt.zero).and.(dF.le.one+VOFTOL)) then
+              if ((dF.gt.zero).and. &
+                  (dF.le.one+VOFTOL)) then
                ! do nothing
               else
                print *,"dF invalid"
@@ -6291,7 +6301,8 @@ stop
              stop
             endif
 
-           else if ((dF.ge.zero).and.(dF.le.EBVOFTOL)) then
+           else if ((dF.ge.zero).and. &
+                    (dF.le.EBVOFTOL)) then
             ! do nothing
            else
             print *,"dF became corrupt2 dF=",dF
@@ -6427,14 +6438,14 @@ stop
                   (im_probe-1)*num_state_material+num_state_base+ &
                   mass_frac_id
                  mass_frac_limit=snew(D_DECL(i,j,k),speccomp_mod)
-                 if ((mass_frac_limit.ge.-VOFTOL).and. &
+                 if ((mass_frac_limit.ge.-EPS_8_4).and. &
                      (mass_frac_limit.le.zero)) then
                   mass_frac_limit=zero
                  else if ((mass_frac_limit.ge.zero).and. &
                           (mass_frac_limit.le.one)) then
                   ! do nothing
                  else if ((mass_frac_limit.ge.one).and. &
-                          (mass_frac_limit.le.one+VOFTOL)) then
+                          (mass_frac_limit.le.one+EPS_8_4)) then
                   mass_frac_limit=one
                  else
                   print *,"mass_frac_limit invalid: ",mass_frac_limit
@@ -8329,7 +8340,7 @@ stop
                     do dir=1,SDIM
                      mag=mag+theta_nrmCP(dir)*nrmCP(dir)
                     enddo
-                    if (abs(mag).gt.one+VOFTOL) then
+                    if (abs(mag).gt.one+EPS_8_4) then
                      print *,"dot product bust"
                      stop
                     endif
@@ -9794,7 +9805,7 @@ stop
            ! LATTICE BOLTZMANN TREATMENT:
            ! max velocity cannot exceed dxmin/(2 dt)
            ! (see above, search for "Li-Shi Luo")
-          if ((two*velmag_sum*dt.le.(one+VOFTOL)*dxmin).and. &
+          if ((two*velmag_sum*dt.le.(one+EPS_8_4)*dxmin).and. &
               (velmag_sum.ge.zero)) then
            ! do nothing
           else if (two*velmag_sum*dt.gt.dxmin) then

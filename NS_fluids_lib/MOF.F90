@@ -18188,7 +18188,7 @@ contains
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
-               uncaptured_volume_fraction_solid-EPS_8_4) then
+               (one-EPS_8_4)*uncaptured_volume_fraction_solid) then
             if (single_material.ne.0) then
              print *,"cannot have two rigid materials at once"
              print *,"single_material ",single_material
@@ -18491,7 +18491,7 @@ contains
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.0)) then
            if (mofdatasave(vofcomp).gt. &
-               uncaptured_volume_fraction_fluid-EPS_8_4) then
+               (one-EPS_8_4)*uncaptured_volume_fraction_fluid) then
 
             if (single_material.eq.0) then
              single_material=im_test
@@ -19462,7 +19462,7 @@ contains
           if (material_used(im_test).eq.0) then
 
            if (mofdataproject_minus(vofcomp).gt. &
-               uncaptured_volume_fraction_fluid-EPS_8_4) then
+               (one-EPS_8_4)*uncaptured_volume_fraction_fluid) then
 
             if (single_material.eq.0) then
              single_material=im_test
@@ -20392,7 +20392,7 @@ contains
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
-               uncaptured_volume_fraction_solid-EPS_8_4) then
+               (one-EPS_8_4)*uncaptured_volume_fraction_solid) then
             if (single_material.ne.0) then
              print *,"cannot have two rigid materials at once"
              print *,"single_material ",single_material
@@ -20672,7 +20672,7 @@ contains
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.0)) then
            if (mofdatasave(vofcomp).gt. &
-               uncaptured_volume_fraction_fluid-EPS_8_4) then
+               (one-EPS_8_4)*uncaptured_volume_fraction_fluid) then
 
             if (single_material.eq.0) then
              single_material=im_test
@@ -21334,7 +21334,7 @@ contains
          if ((material_used(im_test).eq.0).and. &
              (is_rigid_local(im_test).eq.1)) then
           if (mofdatasave(vofcomp).gt. &
-              uncaptured_volume_fraction_solid-EPS_8_4) then
+              (one-EPS_8_4)*uncaptured_volume_fraction_solid) then
            if (single_material.ne.0) then
             print *,"cannot have two rigid materials at once"
             print *,"single_material ",single_material
@@ -21626,7 +21626,7 @@ contains
          if ((material_used(im_test).eq.0).and. &
              (is_rigid_local(im_test).eq.0)) then
           if (mofdatasave(vofcomp).gt. &
-              uncaptured_volume_fraction_fluid-EPS_8_4) then
+              (one-EPS_8_4)*uncaptured_volume_fraction_fluid) then
 
            if (single_material.eq.0) then
             single_material=im_test
@@ -24289,7 +24289,7 @@ contains
 
              if ((ls.ge.zero).or. &
                  (mofdatavalid(vofcomp).ge. &
-                  uncaptured_volume_fraction-EPS_8_4)) then
+                  (one-EPS_8_4)*uncaptured_volume_fraction)) then
               im_crit=im
               uncaptured_volume_fraction=zero
              else 
