@@ -24038,12 +24038,12 @@ contains
         is_rigid_local(im)=0
         print *,"expecting tessellate=0 or 3"
         stop
-       else if (tessellate.eq.0) then
+       else if (tessellate.eq.0) then !consider only fluids
         ! do nothing
        else if (tessellate.eq.1) then
         print *,"expecting tessellate=0 or 3"
         stop
-       else if (tessellate.eq.3) then
+       else if (tessellate.eq.3) then !same as tessellate=0 if fluids dominate
         ! do nothing
        else
         print *,"tessellate invalid34"
@@ -24079,12 +24079,13 @@ contains
        print *,"sdim invalid multi_get_volumePOINT"
        stop
       endif
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid multi get volume point"
        stop
       endif
 
-       ! sum voffluid=1 ,  sum vofsolid <= 1
+       ! sum voffluid=1 , sum vofsolid <= 1
       call make_vfrac_sum_ok_copy( &
         cmofsten, &
         xsten0,nhalf0, &
@@ -24130,7 +24131,7 @@ contains
            vfrac_raster_solid=mofdatavalid(vofcomp)
           endif
          else
-          print *,"im_raster_solid invalid"
+          print *,"im_raster_solid invalid: ",im_raster_solid
           stop
          endif
       
@@ -24144,14 +24145,15 @@ contains
        if (abs(one-vfrac_fluid_sum).le.EPS_8_4) then
         ! do nothing
        else
-        print *,"vfrac_fluid_sum invalid"
+        print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
         stop
        endif
+
        if ((vfrac_solid_sum.le.one+EPS_8_4).and. &
            (vfrac_solid_sum.ge.zero)) then
         ! do nothing
        else
-        print *,"vfrac_solid_sum invalid"
+        print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
         stop
        endif
 
@@ -24165,7 +24167,7 @@ contains
              (im_raster_solid.le.num_materials)) then
           im_crit=im_raster_solid
          else
-          print *,"im_raster_solid invalid"
+          print *,"im_raster_solid invalid: ",im_raster_solid
           stop
          endif
 
@@ -24186,6 +24188,8 @@ contains
          enddo ! im=1..num_materials
         else
          print *,"vfrac_solid_sum or vfrac_fluid_sum invalid"
+         print *,"vfrac_solid_sum: ",vfrac_solid_sum
+         print *,"vfrac_fluid_sum: ",vfrac_fluid_sum
          stop
         endif
        else if (tessellate.eq.0) then
@@ -24202,63 +24206,23 @@ contains
        endif
       
        if (return_raster_info.eq.1) then
-        ! do nothing
+
+        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
+         !do nothing
+        else
+         print *,"im_crit invalid 24213: ",im_crit
+         stop
+        endif
+
        else if (return_raster_info.eq.0) then
 
         if (local_tessellate.eq.1) then
          print *,"expecting local_tessellate=0"
          stop
-
-         do im=1,num_materials
-          if (is_rigid_local(im).eq.1) then
-           if ((vfrac_data(im).ge.EPS_8_4).and. &
-               (vfrac_data(im).lt.one)) then
-            vofcomp=(im-1)*ngeom_recon+1
-            testflag=NINT(mofdatavalid(vofcomp+sdim+1))
-            if (testflag.eq.1) then
-             do dir=1,sdim
-              slopes(dir)=mofdatavalid(vofcomp+sdim+1+dir)
-             enddo
-             intercept=mofdatavalid(vofcomp+2*sdim+2)
-             ! in: GLOBALUTIL.F90  dist=intercept+n dot (xgrid-xsten0(0))
-             call distfunc(bfact,dx,xsten0,nhalf0, &
-              intercept,slopes,xgrid,ls,sdim)
-             if (ls.ge.zero) then
-              if (im_crit.eq.0) then
-               im_crit=im
-              else if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
-               if (vfrac_data(im).gt.vfrac_data(im_crit)) then
-                im_crit=im
-               endif
-              else
-               print *,"im_crit invalid"
-               stop
-              endif
-             endif
-            else if (testflag.eq.0) then
-             ! do nothing
-            else
-             print *,"testflag invalid"
-             stop
-            endif
-           else if (abs(vfrac_data(im)).le.EPS_8_4) then
-            ! do nothing
-           else
-            print *,"vfrac_data invalid"
-            stop
-           endif
-          else if (is_rigid_local(im).eq.0) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid MOF.F90"
-           stop
-          endif
-         enddo !im=1..num_materials
-
         else if (local_tessellate.eq.0) then
          ! do nothing
         else
-         print *,"local_tessellate invalid37"
+         print *,"local_tessellate invalid37: ",local_tessellate
          stop
         endif
 
@@ -24308,10 +24272,18 @@ contains
           irank=irank+1
          enddo  ! while irank<=num_materials and uncaptured_volume_fraction>0 
 
-         if (uncaptured_volume_fraction.eq.zero) then
-          ! do nothing (im_crit is set)
-         else if (uncaptured_volume_fraction.gt.zero) then
-          im_crit=0
+         if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
+
+          if (uncaptured_volume_fraction.eq.zero) then
+           !do nothing
+          else
+           print *,"uncaptured_volume_fraction invalid: ", &
+             uncaptured_volume_fraction
+           stop
+          endif
+
+         else if (im_crit.eq.0) then
+
           maxvof=zero
           do im=1,num_materials
            if (is_rigid_local(im).eq.0) then
@@ -24334,38 +24306,64 @@ contains
            endif
           enddo ! im=1..num_materials
 
-          if (maxvof.le.zero) then
-           print *,"failed to find material that covers point"
-           do im=1,num_materials
-            vofcomp=(im-1)*ngeom_recon+1
-            print *,"im,vof,flag,int ",im,mofdatavalid(vofcomp), &
-             NINT(mofdatavalid(vofcomp+sdim+1)), &
-             mofdatavalid(vofcomp+2*sdim+2)
-           enddo ! im=1..num_materials
-           print *,"xgrid,xsten0 ",xgrid(1),xgrid(2),xsten0(0,1),xsten0(0,2)
-           stop
-          else
-           uncaptured_volume_fraction=zero
-          endif 
+          if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
+           ! do nothing
+          else if (im_crit.eq.0) then
 
-         else 
-          print *,"uncaptured_volume_fraction invalid"
+           maxvof=zero
+           do im=1,num_materials
+            if (is_rigid_local(im).eq.0) then
+             if (vfrac_data(im).gt.maxvof) then
+              maxvof=vfrac_data(im)
+              im_crit=im
+             endif
+            else if (is_rigid_local(im).eq.1) then
+             ! do nothing
+            else
+             print *,"is_rigid invalid MOF.F90"
+             stop
+            endif
+           enddo ! im=1..num_materials
+
+           if (maxvof.gt.zero) then
+            ! do nothing
+           else if (maxvof.le.zero) then
+            print *,"failed to find material that covers point"
+            do im=1,num_materials
+             vofcomp=(im-1)*ngeom_recon+1
+             print *,"im,vof,flag,int ",im,mofdatavalid(vofcomp), &
+              NINT(mofdatavalid(vofcomp+sdim+1)), &
+              mofdatavalid(vofcomp+2*sdim+2)
+            enddo ! im=1..num_materials
+            print *,"xgrid,xsten0 ",xgrid(1),xgrid(2),xsten0(0,1),xsten0(0,2)
+            stop
+           else
+            print *,"maxvof invalid: ",maxvof
+            stop
+           endif 
+
+          else 
+           print *,"im_crit invalid 24338: ",im_crit
+           stop
+          endif
+
+         else
+          print *,"im_crit invalid 24343"
           stop
          endif
 
-        else if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
-         ! do nothing
         else
-         print *,"im_crit invalid"
+         print *,"im_crit invalid 24348: ",im_crit
          stop
         endif
+
        else
-        print *,"return_raster_info invalid"
+        print *,"return_raster_info invalid: ",return_raster_info
         stop
        endif
 
       else
-       print *,"im_crit invalid"
+       print *,"im_crit invalid 24358: ",im_crit
        stop
       endif
 

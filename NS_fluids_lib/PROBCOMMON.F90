@@ -480,11 +480,11 @@ implicit none
       real(amrex_real), PARAMETER :: LS_CURV_TOL=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: LSTOL=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: VOFTOL_SLOPES=BL_REAL_E(1.0,-2)
-      real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-5)
+      real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=BL_REAL_E(1.0,-1)
        ! Default: VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-5)
-      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME_SANITY=BL_REAL_E(1.0,-5)
+      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME_SANITY=BL_REAL_E(1.0,-4)
        ! used for checking for 0 magnitude
       real(amrex_real), PARAMETER::MLSVOFTOL=BL_REAL_E(1.0,-5)
        ! used for checking if centroid in box.
