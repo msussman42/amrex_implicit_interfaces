@@ -68,6 +68,7 @@ deallocate(diff)
 end subroutine l2normd
 
 subroutine dist_point_to_lined(sd,p1,p2,x,pout,dist)
+use probcommon_module
 implicit none
 ! represent the line in parametric form,(v = f(s))
 ! v^x = x1 + (x2-x1)s
@@ -98,7 +99,7 @@ do i = 1,sd
  x21(i) = p2(i) - p1(i)
 enddo
 
-if (maxval(abs(x21)) .lt. 10d-8)then
+if (maxval(abs(x21)) .lt. EPS_8_4)then
  print *,"p1 and p2 are coincide with each other",p1,p2
  stop
 endif
@@ -128,7 +129,7 @@ else
 !        (dot_product(x10,x21))**2.0d0) .lt. 1.0e-10)then
 !   dist= 0.0d0
 ! else
-  dist = sqrt(((diff10**2.0d0 )*(diff21**2.0d0) - & 
+  dist = sqrt(((diff10**2.0d0 )*(diff21**2.0d0) - &
         (dot_product(x10,x21))**2.0d0)/ &
         (diff21**2.0d0))
   do i=1,sd
@@ -137,7 +138,7 @@ else
 ! endif
 endif
 
-deallocate(x10,x21) 
+deallocate(x10,x21)
 
 end subroutine dist_point_to_lined
 
@@ -206,17 +207,12 @@ integer i,j,k
 integer N, N_max
 real(8) :: xblob5_dbl,yblob5_dbl,zblob5_dbl
 
-
-#ifdef DEBUG_FABRIC_DROP
-integer inode
-#endif
-
-
-
 if ((probtype.ne.FABRIC_DROP_PROB_TYPE).or.(SDIM.ne.3)) then
  print *,"probtype or SDIM invalid!"
  stop
 endif
+
+if (axis_dir.eq.0) then
 
 ! Evaluate level set function on internal fine mesh
 xblob5_dbl=xblob5
@@ -232,25 +228,25 @@ print *,"Internal dx for thread LS calculation:", internal_dx
 print *,"Calculating thread level set on internal mesh..."
 
 do k=1,IDNINT(zblob5_dbl)
-#ifdef DEBUG_FABRIC_DROP
- print *,"k=", k
-#endif
- do j=1,IDNINT(yblob5_dbl)
-  do i=1,IDNINT(xblob5_dbl)
-   internal_x(1)=xblob3+(i-half)*internal_dx(1)
-   internal_x(2)=yblob3+(j-half)*internal_dx(2)
-   internal_x(3)=zblob3+(k-half)*internal_dx(3)
+do j=1,IDNINT(yblob5_dbl)
+do i=1,IDNINT(xblob5_dbl)
+ internal_x(1)=xblob3+(i-half)*internal_dx(1)
+ internal_x(2)=yblob3+(j-half)*internal_dx(2)
+ internal_x(3)=zblob3+(k-half)*internal_dx(3)
 
-!   internal_thread_ls(i,j,k) = DIST_THREADS(internal_x)
-   call FABRIC_LS(internal_x,internal_thread_ls(i,j,k))
-   enddo
- enddo
+ call FABRIC_LS(internal_x,internal_thread_ls(i,j,k))
+enddo
+enddo
 enddo
 
-
-
-print *,"... done!"
-
+else if (axis_dir.eq.1) then !mesh
+ !do nothing
+else if (axis_dir.eq.2) then !cylinder
+ !do nothing
+else
+ print *,"axis_dir invalid"
+ stop
+endif
 
 return
 end subroutine INIT_FABRIC_DROP_MODULE
@@ -283,9 +279,10 @@ endif
 LS(1)=radblob-sqrt((x(1)-xblob)**2+(x(2)-yblob)**2+(x(SDIM)-zblob)**2)
 LS(2)=-LS(1)
 
+if (axis_dir.eq.0) then !woven fabric
+
 ! Direct thread level set calculation 
 ! LS(3)= DIST_THREADS(x)
-
 ! Approximate level set calcualtion from internal fine mesh
 if ((x(SDIM).lt.(zblob3+internal_dx(SDIM))).or. &
     (x(SDIM).gt.(zblob4-internal_dx(SDIM)))) then
@@ -350,16 +347,25 @@ else
  endif
 
  LS(3)=c
-
 endif
 
+else if (axis_dir.eq.1) then !mesh
+
+ if(abs(x(SDIM)).ge.yblob6*2.0d0)then
+  LS(3)=-yblob6*2.0d0
+ else
+  call MESH_LS(x,LS(3))
+ endif
+elseif(axis_dir.eq.2)then  ! single cylinder
+ call CYL_LS(x,LS(3))   
+else
+ print *,"axis_dir invalid"
+ stop
+endif
 ! print *,"X, LS", x, LS
 
 return
 end subroutine FABRIC_DROP_LS
-
-
-
 
 
 subroutine FABRIC_LS(x,LS)
@@ -471,6 +477,114 @@ deallocate(xnf,ynf)
 
 return
 end subroutine FABRIC_LS
+
+subroutine MESH_LS(x_in,LS)
+use probcommon_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x_in(SDIM)
+real(amrex_real), INTENT(out) :: LS
+real(amrex_real)         :: lstemp1,lstemp2
+
+real(amrex_real)         :: tempsx,tempsy
+real(amrex_real)         :: centerx,centery,centerz
+integer        :: TN1,TN2,i,j
+real(amrex_real)         :: tx(3),ty(3)
+real(amrex_real)         :: x(SDIM)
+
+if(axis_dir.ne.1)then
+ print *,"set aixs_dir=1 for this validation test"
+ stop
+endif
+
+do i=1,SDIM
+ x(i)=x_in(i)
+enddo
+
+! center of the mesh, center of the very middle hole
+centerx=0.0d0
+centery=0.0d0
+centerz=0.0d0
+! xblob6=2b length of one side of the hole  
+! yblob6=d thread diameter  
+tempsx=xblob6+yblob6
+tempsy=xblob6+yblob6
+!print *,"tempsx",tempsx,"tempsy",tempsy
+
+TN1 =floor((x(1)-centerx)/tempsx)
+tx(1)=(real(TN1,8)+0.5d0)*tempsx
+tx(2)=x(2)
+tx(SDIM)=centerz
+lstemp1=0.5d0*yblob6-NORM2(tx-x)
+!lstemp1=0.5d0*yblob6-sqrt((tx(1)-x(1))**2.0d0+(tx(3)-x(3))**2.0d0)
+LS=lstemp1
+
+if(1.eq.1)then
+TN2 =floor((x(2)-centery)/tempsy)
+ty(2)=(real(TN2,8)+0.5d0)*tempsy
+ty(1)=x(1)
+ty(SDIM)=centerz
+lstemp2=0.5d0*yblob6-NORM2(ty-x)
+
+
+LS=0.0d0
+if(lstemp1.lt.0.0d0.and.lstemp2.lt.0.0d0)then
+ ls=max(lstemp1,lstemp2)
+elseif(lstemp1.ge.0.0d0.and.lstemp2.lt.0.0d0)then
+ ls=lstemp1
+elseif(lstemp2.ge.0.0d0.and.lstemp1.lt.0.0d0)then
+ ls=lstemp2
+elseif(lstemp1.ge.0.0d0.and.lstemp2.ge.0.0d0)then
+ ls=min(lstemp1,lstemp2)
+else
+ print *,"check thread ls setup" 
+ print *,"lstemp1=",lstemp1
+ print *,"lstemp2=",lstemp2
+ stop
+endif
+endif
+
+return
+end subroutine MESH_LS
+
+subroutine CYL_LS(x_in,LS)
+use probcommon_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x_in(SDIM)
+real(amrex_real), INTENT(out) :: LS
+real(amrex_real)         :: lstemp1,lstemp2
+
+real(amrex_real)         :: tempsx,tempsy
+real(amrex_real)         :: centerx,centery,centerz
+integer        :: TN1,TN2,i,j
+real(amrex_real)         :: tx(3),ty(3)
+real(amrex_real)         :: x(SDIM)
+
+if(axis_dir.ne.2)then
+ print *,"set aixs_dir=1 for this single CYL test"
+ stop
+endif
+
+do i=1,SDIM
+ x(i)=x_in(i)
+enddo
+
+! center of the mesh, center of the very middle hole
+centerx=0.0d0
+centery=0.0d0
+centerz=0.0d0
+! xblob6=2b length of one side of the hole  
+! yblob6=d thread diameter  
+
+! simple cylinder validation test
+tx(1)=x(1)
+tx(2)=centery
+tx(SDIM)=centerz
+LS=0.5d0*yblob6-NORM2(tx-x)
+
+return
+end subroutine CYL_LS
 
 
 

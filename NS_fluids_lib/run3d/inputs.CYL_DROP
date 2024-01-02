@@ -1,7 +1,9 @@
 # -----------------------------------------
 # General problem settings
 # -----------------------------------------
-ns.axis_dir=0
+
+
+
 ns.probtype=7001
 ns.material_type=0 0 999
 ns.num_materials=3
@@ -15,8 +17,12 @@ max_step  = 100000    # maximum number of timesteps
 stop_time = 1000.0    # maximum time value
 
 geometry.coord_sys   = 0              # 0 => cart, 1 => RZ
-geometry.prob_lo     =-1.5 -1.5 -1.4 
-geometry.prob_hi     = 1.5  1.5  1.6  
+#geometry.prob_lo     =-1.5 -1.5 -1.4 
+#geometry.prob_hi     = 1.5  1.5  1.6  
+geometry.prob_lo     =-6.0 -6.0 -6.0 
+geometry.prob_hi     = 6.0  6.0  6.0  
+#geometry.prob_lo     =-3.0 -3.0 -6.0 
+#geometry.prob_hi     = 3.0  3.0  6.0  
 geometry.is_periodic = 1 1 0
 
 
@@ -25,10 +31,10 @@ geometry.is_periodic = 1 1 0
 # -----------------------------------------
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 20      # number of timesteps between plots
+amr.plot_int        = 10      # number of timesteps between plots
 amr.plot_file       = plt     # root name of VisIr plot file
 amr.grid_log        = grdlog  # name of grid logging file
-amr.restart        = chk0000200
+#amr.restart        = chk0000200
 #amr.trace          = 1
 amr.file_name_digits= 7
 ns.sum_interval     = 100     # timesteps between computing statistics
@@ -41,7 +47,10 @@ cg.verbose = 0
 # Space and time discretization and AMR
 # -----------------------------------------
 # number of grid points on level=0
+#amr.n_cell          = 256 256 384
+#amr.n_cell          = 256 256 320
 amr.n_cell          = 128 128 128
+#amr.n_cell          = 128 128 256
 amr.max_level       = 0
 #ns.fixed_dt        = 5.0e-5   # hardwire dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
@@ -54,9 +63,9 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 ns.shock_timestep   = 2 2 2
 
 amr.regrid_int      = 1        # how often to regrid
-amr.n_error_buf     = 1 1    # number of buffer cells in error est
+amr.n_error_buf     = 4 4 4   # number of buffer cells in error est
 amr.grid_eff        = 0.9      # what constitutes an efficient grid (smaller=> less boxes)
-amr.blocking_factor = 8 4    # block factor in grid generation
+amr.blocking_factor = 8 8 4    # block factor in grid generation
 
 amr.max_grid_size   = 32
 
@@ -70,8 +79,9 @@ ns.gravity          = 9.8E-03
 ns.gravity_dir      = 3
 ns.invert_gravity   = 0
 
-ns.advbot  =-20.0 # drop velocity
+ns.advbot  =-1.0 # drop velocity
 ns.adv_dir = 3   # Direction of the drop       
+ns.output_drop_distribution=1
 
 ns.denconst      = 1.0000E+03 1.1270E+00 1.0000E+03
 ns.viscconst     = 6.5000E-01 1.9180E-02 6.5000E-01
@@ -91,17 +101,23 @@ ns.heatviscconst = 0.0 0.0 0.0
 #  if cos(theta_1)>0 => set sigma_23=sigma_12
 
 # set theta=150  cos(theta)=-0.866
-#                       12       23        13
-ns.tension       = 2.2000E+01 0.2948 2.2000E+01
+#                       12       13        23
+ns.tension       = 7.2000E+01 7.2000E+01  9.648
+#ns.tension       = 2.2000E+01 0.2948 2.2000E+01
 #ns.tension       = 2.2000E+01 7.5700E+01 9.7000E+01
 ns.stiffCP       = 4.1785E+03 1.0070E+03 4.1785E+03
 ns.tempconst     = 293.0 293.0 293.0
 
+# parameter for validation
+# 0=default,  1=mesh validation
+ns.axis_dir=2
+ns.xblob6=0.0       # 2b length of one side of the hole
+ns.yblob6=1.62       # d  thread diameter
 # Droplet 
 ns.xblob=0.0 
 ns.yblob=0.0
-ns.zblob=1.05
-ns.radblob=0.5
+ns.zblob=2.1
+ns.radblob=1.27
 # Number of threads (and corresponding files)
 ns.xblob2=12.0
 
@@ -159,7 +175,7 @@ ns.multilevel_restart_period=25
 cg.restart_period=25
 cg.maxiter = 200
 
-mg.bot_atol = 1.0e-5 # 1.0e-8 double 1.0e-5 single
+mg.bot_atol = 1.0e-5 #1.0e-8 double 1.0e-5 single
 mg.rtol_b = -0.01
 Lp.v = 1
 
@@ -181,7 +197,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 mac.mac_tol=1.0e-4 # 1.0e-8 double 1.0e-4 single
-mac.mac_abs_tol = 1.0e-4 #1.0e-8 double 1.0e-4 single
+mac.mac_abs_tol = 1.0e-4 # 1.0e-8 double 1.0e-4 single
 
 
 # select single or double precision of FAB output data
