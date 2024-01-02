@@ -1204,6 +1204,7 @@ NavierStokes::variableSetUp ()
 
     ls_interp.LSInterp_nmat=num_materials;
 
+     //ls_interp is low order
     desc_lstGHOST.setComponent(LS_Type,
       AMREX_SPACEDIM*num_materials,LS_names,
       LS_bcs,LS_fill_class,&ls_interp);
@@ -1265,6 +1266,7 @@ NavierStokes::variableSetUp ()
 
     ls_interp.LSInterp_nmat=num_materials;
 
+     //ls_interp is low order
     desc_lst.setComponent(LS_Type,0,LS_main_names,
       LS_main_bcs,LS_main_fill_class,&ls_interp);
 
