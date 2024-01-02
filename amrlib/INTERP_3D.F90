@@ -447,8 +447,10 @@ stop
         endif
        endif
 
-       if (volcell.le.zero) then
-        print *,"volcell must be positive"
+       if (volcell.gt.zero) then
+        !do nothing
+       else
+        print *,"volcell must be positive: ",volcell
         stop
        endif
        do dir=1,SDIM
@@ -704,8 +706,10 @@ stop
         endif
        endif
 
-       if (volcell.le.zero) then
-        print *,"volcell must be positive"
+       if (volcell.gt.zero) then
+        !do nothing
+       else
+        print *,"volcell must be positive: ",volcell
         stop
        endif
        do dir=1,SDIM
@@ -992,8 +996,10 @@ stop
         endif
        endif
 
-       if (volcell.le.zero) then
-        print *,"volcell must be positive"
+       if (volcell.gt.zero) then
+        !do nothing
+       else
+        print *,"volcell must be positive: ",volcell
         stop
        endif
        do dir=1,SDIM

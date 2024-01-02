@@ -482,16 +482,11 @@ implicit none
       real(amrex_real), PARAMETER :: VOFTOL_SLOPES=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=BL_REAL_E(1.0,-1)
-       ! Default: VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-12)
-      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-5)
-      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME_SANITY=BL_REAL_E(1.0,-4)
-       ! used for checking for 0 magnitude
-      real(amrex_real), PARAMETER::MLSVOFTOL=BL_REAL_E(1.0,-5)
        ! used for checking if centroid in box.
       real(amrex_real), PARAMETER :: CENTOL=BL_REAL_E(1.0,-5)
       real(amrex_real), PARAMETER :: EVAP_BISECTION_TOL=BL_REAL_E(1.0,-5)
        ! Default: INTERCEPT_TOL=BL_REAL_E(1.0,-12)
-      real(amrex_real), PARAMETER :: INTERCEPT_TOL=BL_REAL_E(1.0,-5)
+      real(amrex_real), PARAMETER :: INTERCEPT_TOL=BL_REAL_E(1.0,-6)
       real(amrex_real), PARAMETER :: FRAC_PAIR_TOL=BL_REAL_E(1.0,-5)
 
       real(amrex_real), PARAMETER :: TANGENT_EPS=BL_REAL_E(1.0,-2)
@@ -515,7 +510,10 @@ implicit none
 
       real(amrex_real), PARAMETER :: EPS_8_4=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: EPS_10_3=BL_REAL_E(1.0,-3)
+      real(amrex_real), PARAMETER :: EPS_10_5=BL_REAL_E(1.0,-5)
       real(amrex_real), PARAMETER :: EPS_12_4=BL_REAL_E(1.0,-4)
+      real(amrex_real), PARAMETER :: EPS_12_6=BL_REAL_E(1.0,-6)
+      real(amrex_real), PARAMETER :: EPS_14_7=BL_REAL_E(1.0,-7)
 #else
 
       real(amrex_real), PARAMETER :: EVAPORATION_TOL=BL_REAL_E(1.0,-10)
@@ -536,11 +534,6 @@ implicit none
       real(amrex_real), PARAMETER :: VOFTOL_SLOPES=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-8)
       real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=BL_REAL_E(1.0,-1)
-       ! Default: VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-12)
-      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME=BL_REAL_E(1.0,-12)
-      real(amrex_real), PARAMETER::VOFTOL_MULTI_VOLUME_SANITY=BL_REAL_E(1.0,-8)
-       ! used for checking for 0 magnitude
-      real(amrex_real), PARAMETER :: MLSVOFTOL=BL_REAL_E(1.0,-14)
        ! used for checking if centroid in box.
       real(amrex_real), PARAMETER :: CENTOL=BL_REAL_E(1.0,-13)
       real(amrex_real), PARAMETER :: EVAP_BISECTION_TOL=BL_REAL_E(1.0,-12)
@@ -569,7 +562,10 @@ implicit none
 
       real(amrex_real), PARAMETER :: EPS_8_4=BL_REAL_E(1.0,-8)
       real(amrex_real), PARAMETER :: EPS_10_3=BL_REAL_E(1.0,-10)
+      real(amrex_real), PARAMETER :: EPS_10_5=BL_REAL_E(1.0,-10)
       real(amrex_real), PARAMETER :: EPS_12_4=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: EPS_12_6=BL_REAL_E(1.0,-12)
+      real(amrex_real), PARAMETER :: EPS_14_7=BL_REAL_E(1.0,-14)
 #endif
 
       integer, PARAMETER :: tecplot_real=8

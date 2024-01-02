@@ -15,9 +15,6 @@
 
 #define MAXTET (5)
 #define MAXAREA (5)
-! INTERCEPT_TOL is declared in PROBCOMMON.F90
-! this should be larger than INTERCEPT_TOL
-#define RADIUS_CUTOFF (6.0)
 #define USERAND (1)
 
 ! Author: Mark Sussman sussman@math.fsu.edu
@@ -5406,7 +5403,7 @@ end subroutine volume_sanity_check
 
        mag=sqrt(coeff(1)**2+coeff(2)**2)
 
-       if (mag.gt.MLSVOFTOL*maxside) then
+       if (mag.gt.EPS_14_7*maxside) then
         do j_dir=1,sdim
          coeff(j_dir)=coeff(j_dir)/mag
         enddo
@@ -5415,7 +5412,7 @@ end subroutine volume_sanity_check
          sign=sign+coeff(j_dir)*(x2(iplane,j_dir)-x2(itan(1),j_dir))
         enddo
        
-        if (abs(sign).gt.MLSVOFTOL*maxside) then
+        if (abs(sign).gt.EPS_14_7*maxside) then
 
          do n=1,nlist_old
 
@@ -5473,7 +5470,7 @@ end subroutine volume_sanity_check
          stop
         endif 
        else
-        print *,"mag=0 in intersect_tri"
+        print *,"mag=0 in intersect_tri: ",mag
         stop
        endif
       enddo  ! iplane
@@ -5607,7 +5604,7 @@ end subroutine volume_sanity_check
        coeff(3)=vec(1,1)*vec(2,2)-vec(2,1)*vec(1,2)
        mag=sqrt(coeff(1)**2+coeff(2)**2+coeff(3)**2)
 
-       if (mag.gt.MLSVOFTOL*maxside) then
+       if (mag.gt.EPS_14_7*maxside) then
         do j_dir=1,sdim
          coeff(j_dir)=coeff(j_dir)/mag
         enddo
@@ -5616,7 +5613,7 @@ end subroutine volume_sanity_check
          sign=sign+coeff(j_dir)*(x2(iplane,j_dir)-x2(itan(1),j_dir))
         enddo
        
-        if (abs(sign).gt.MLSVOFTOL*maxside) then
+        if (abs(sign).gt.EPS_14_7*maxside) then
 
          do n=1,nlist_old
 
@@ -5674,7 +5671,7 @@ end subroutine volume_sanity_check
          stop
         endif 
        else
-        print *,"mag=0 in intersect_tet"
+        print *,"mag=0 in intersect_tet: ",mag
         stop
        endif
       enddo  ! iplane
@@ -9370,8 +9367,10 @@ contains
       call Box_volumeFAST(bfact,dx,xsten0,nhalf0,volcell, &
        cencell,sdim)
 
-      if (volcell.le.zero) then
-       print *,"volcell bust"
+      if (volcell.gt.zero) then
+       !do nothing
+      else
+       print *,"volcell bust: ",volcell
        stop
       endif
 
@@ -9677,22 +9676,22 @@ contains
       intercept_upper=-minphi
 
        ! volcut is the uncaptured volume of the cell.
-      if ((volcut.le.zero).and.(vfrac.gt.MLSVOFTOL)) then
+      if ((volcut.le.zero).and.(vfrac.gt.EPS_14_7)) then
        print *,"ERROR: volcut<=0 and vfrac>mslvoftol"
        stop
-      else if ((volcut.gt.zero).or.(vfrac.le.MLSVOFTOL)) then
+      else if ((volcut.gt.zero).or.(vfrac.le.EPS_14_7)) then
        ! do nothing
       else
-       print *,"volcut or vfrac is NaN"
+       print *,"volcut or vfrac is NaN: ",volcut,vfrac
        stop
       endif
 
-      if (vfrac.le.MLSVOFTOL) then
+      if (vfrac.le.EPS_14_7) then
        intercept=intercept_lower
-      else if (vfrac.ge.volcut/volcell-MLSVOFTOL) then
+      else if (vfrac.ge.volcut/volcell-EPS_14_7) then
        intercept=intercept_upper
-      else if ((vfrac.ge.MLSVOFTOL).and. &
-               (vfrac.le.volcut/volcell-MLSVOFTOL)) then
+      else if ((vfrac.ge.EPS_14_7).and. &
+               (vfrac.le.volcut/volcell-EPS_14_7)) then
 
        vtarget=volcell*vfrac
 
@@ -10187,22 +10186,22 @@ contains
       intercept_upper=-minphi
 
        ! volcut is the uncaptured volume of the cell.
-      if ((volcut.le.zero).and.(vfrac.gt.MLSVOFTOL)) then
+      if ((volcut.le.zero).and.(vfrac.gt.EPS_14_7)) then
        print *,"ERROR: volcut<=0 and vfrac>mslvoftol"
        stop
-      else if ((volcut.gt.zero).or.(vfrac.le.MLSVOFTOL)) then
+      else if ((volcut.gt.zero).or.(vfrac.le.EPS_14_7)) then
        !do nothing
       else
-       print *,"volcut or vfrac corrupt"
+       print *,"volcut or vfrac corrupt: ",volcut,vfrac
        stop
       endif
 
-      if (vfrac.le.MLSVOFTOL) then
+      if (vfrac.le.EPS_14_7) then
        intercept=intercept_lower
-      else if (vfrac.ge.volcut/volcell-MLSVOFTOL) then
+      else if (vfrac.ge.volcut/volcell-EPS_14_7) then
        intercept=intercept_upper
-      else if ((vfrac.gt.MLSVOFTOL).and. &
-               (vfrac.lt.volcut/volcell-MLSVOFTOL)) then
+      else if ((vfrac.gt.EPS_14_7).and. &
+               (vfrac.lt.volcut/volcell-EPS_14_7)) then
        vtarget=volcell*vfrac
 
 ! solve f(xx)=0 where f(xx)=(V(n dot (x-x0)+intercept-xx)-Vtarget)/volcell
@@ -10353,7 +10352,7 @@ contains
         endif
        endif ! err> moftol
       else
-       print *,"vfrac is corrupt"
+       print *,"vfrac is corrupt: ",vfrac
        stop
       endif  
 
@@ -11140,7 +11139,9 @@ contains
        mag=mag+nn(dir)**2
       enddo
       mag=sqrt(mag)
-      if (mag.le.MLSVOFTOL) then
+      if (mag.gt.EPS_14_7) then
+       !do nothing
+      else
        print *,"slope_to_angle: invalid slope mag=",mag
        stop
       endif
@@ -11786,7 +11787,7 @@ contains
        stop
       endif
   
-      tol=dx(1)*EPS10
+      tol=dx(1)*EPS_10_5
       local_tol=dx(1)*tol*EPS2
 
       nguess=0
@@ -13687,7 +13688,7 @@ contains
            bfact,dx, &
            xsten_local,nhalf0,sdim)
 
-         if (mag(1).ge.MLSVOFTOL*dx(1)) then
+         if (mag(1).ge.EPS_14_7*dx(1)) then
           !do nothing
          else
           print *,"mag(1) underflow: ",mag(1)
@@ -17897,7 +17898,7 @@ contains
                (tessellate.eq.2)) then
        local_tessellate=tessellate
       else
-       print *,"tessellate invalid11"
+       print *,"tessellate invalid11: ",tessellate
        stop
       endif
 
@@ -17922,7 +17923,8 @@ contains
        print *,"sdim invalid multi_get_volume_grid"
        stop
       endif
-      if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
+      if ((num_materials.lt.1).or. &
+          (num_materials.gt.MAX_NUM_MATERIALS)) then
        print *,"num_materials invalid multi get volume grid"
        stop
       endif
@@ -17983,16 +17985,22 @@ contains
        uncaptured_centroid_solid(dir)=uncaptured_centroid_fluid(dir)
       enddo
 
-      if (volcell.le.zero) then
-       print *,"volcell invalid multigetvolume grid"
+      if (volcell.gt.zero) then
+       !do nothing
+      else
+       print *,"volcell invalid multigetvolume grid: ",volcell
        stop
       endif
-      if (uncaptured_volume_fluid.lt.zero) then
-       print *,"uncaptured_volume_fluid invalid"
+      if (uncaptured_volume_fluid.ge.zero) then
+       !do nothing
+      else
+       print *,"uncaptured_volume_fluid invalid: ",uncaptured_volume_fluid
        stop
       endif
-      if (uncaptured_volume_solid.lt.zero) then
-       print *,"uncaptured_volume_solid invalid"
+      if (uncaptured_volume_solid.ge.zero) then
+       !do nothing
+      else
+       print *,"uncaptured_volume_solid invalid: ",uncaptured_volume_solid
        stop
       endif
 
@@ -18038,8 +18046,10 @@ contains
        stop
       endif
 
-      if (abs(one-vfrac_fluid_sum).gt.EPS_8_4) then
-       print *,"vfrac_fluid_sum invalid"
+      if (abs(one-vfrac_fluid_sum).le.EPS_8_4) then
+       ! do nothing
+      else
+       print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
        stop
       endif
       if ((vfrac_solid_sum.gt.one+EPS_8_4).or. &
@@ -18056,7 +18066,7 @@ contains
 
       return_raster_info=0
 
-      if (tessellate.eq.3) then
+      if (tessellate.eq.3) then ! if majority=solid => all solid.
        if (vfrac_solid_sum.ge.half) then
         return_raster_info=1
 
@@ -18128,8 +18138,10 @@ contains
  
        fastflag=1
 
-       if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
-           (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
+        ! intersection of departure region with grid cell is 
+        ! very small.
+       if ((uncaptured_volume_fluid.le.EPS_12_6*volcell).and. &
+           (uncaptured_volume_solid.le.EPS_12_6*volcell)) then
 
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
@@ -18149,8 +18161,8 @@ contains
          enddo
         enddo ! im=1..num_materials
 
-       else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
-                (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
+       else if ((uncaptured_volume_fluid.ge.EPS_12_6*volcell).or. &
+                (uncaptured_volume_solid.ge.EPS_12_6*volcell)) then
 
          ! if local_tessellate==0, then the uncaptured region will be
          ! reset after the first sweep through the is_rigid==1 
@@ -18305,16 +18317,15 @@ contains
                volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
-               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+               EPS_8_4*volcell) then
             print *,"volcut invalid multi volume get volume grid 1"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_solid=",uncaptured_volume_solid
             print *,"volcell= ",volcell
             print *,"VOFTOL= ",VOFTOL
-            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"EPS_12_6= ",EPS_12_6
+            print *,"EPS_8_4= ",EPS_8_4
             print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
             print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
               xsten_grid(0,sdim)
@@ -18425,7 +18436,8 @@ contains
                voltemp*centemp(dir))/uncaptured_volume_solid
             endif
            enddo ! dir=1..sdim
-   
+  
+            !uncaptured_volume_fraction_solid=1.0 initially. 
            uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
             mofdatalocal(vofcomp)
            if (uncaptured_volume_fraction_solid.lt. &
@@ -18666,7 +18678,7 @@ contains
               volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
-               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+               EPS_8_4*volcell) then
             print *,"volcut invalid multi volume get volume grid 2 "
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -18676,9 +18688,8 @@ contains
                abs(volcut-uncaptured_volume_fluid)/volcell
             endif
             print *,"VOFTOL= ",VOFTOL
-            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"EPS_12_6= ",EPS_12_6
+            print *,"EPS_8_4= ",EPS_8_4
             print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
             print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
              xsten_grid(0,sdim)
@@ -19560,7 +19571,7 @@ contains
             volcut,cencut,sdim)
 
          if (abs(volcut-uncaptured_volume_fluid).gt. &
-             VOFTOL_MULTI_VOLUME_SANITY*volume_plus) then
+             EPS_8_4*volume_plus) then
            print *,"volcut invalid multi get area pairs 2 "
            print *,"volcut= ",volcut
            print *,"volume_plus=",volume_plus
@@ -19571,9 +19582,8 @@ contains
               abs(volcut-uncaptured_volume_fluid)/uncaptured_volume_START
            endif
            print *,"VOFTOL= ",VOFTOL
-           print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-           print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                   VOFTOL_MULTI_VOLUME_SANITY
+           print *,"EPS_12_6= ",EPS_12_6
+           print *,"EPS_8_4= ",EPS_8_4
            print *,"xsten0_minus ", &
               xsten0_minus(0,1),xsten0_minus(0,2),xsten0_minus(0,sdim)
            stop
@@ -19956,6 +19966,8 @@ contains
         ! do nothing
        else
         print *,"voltemp or uncaptured_volume_START invalid"
+        print *,"voltemp: ",voltemp
+        print *,"uncaptured_volume_START: ",uncaptured_volume_START
         stop
        endif
 
@@ -20254,7 +20266,7 @@ contains
           (vfrac_solid_sum.ge.zero)) then
        ! do nothing
       else
-       print *,"vfrac_solid_sum invalid"
+       print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
        stop
       endif
 
@@ -20332,8 +20344,8 @@ contains
   
        fastflag=1
 
-       if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
-           (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
+       if ((uncaptured_volume_fluid.le.EPS_12_6*volcell).and. &
+           (uncaptured_volume_solid.le.EPS_12_6*volcell)) then
 
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
@@ -20353,8 +20365,8 @@ contains
          enddo
         enddo ! im=1..num_materials
 
-       else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
-                (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
+       else if ((uncaptured_volume_fluid.ge.EPS_12_6*volcell).or. &
+                (uncaptured_volume_solid.ge.EPS_12_6*volcell)) then
 
          ! if local_tessellate==0, then the uncaptured region will be
          ! reset after the first sweep through the is_rigid==1 
@@ -20487,16 +20499,15 @@ contains
                volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
-               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+               EPS_8_4*volcell) then
             print *,"volcut invalid multi volume get volume grid 3"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_solid=",uncaptured_volume_solid
             print *,"volcell= ",volcell
             print *,"VOFTOL= ",VOFTOL
-            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"EPS_12_6= ",EPS_12_6
+            print *,"EPS_8_4= ",EPS_8_4
             print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
             print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
               xsten_grid(0,sdim)
@@ -20828,7 +20839,7 @@ contains
               volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
-               VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+               EPS_8_4*volcell) then
             print *,"volcut invalid multi volume get volume grid 4"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -20838,9 +20849,8 @@ contains
              print *,"abs(volcut-uncapt_vol)/volcell=", &
                abs(volcut-uncaptured_volume_fluid)/volcell
             endif
-            print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-            print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                    VOFTOL_MULTI_VOLUME_SANITY
+            print *,"EPS_12_6= ",EPS_12_6
+            print *,"EPS_8_4= ",EPS_8_4
             print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
             print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
              xsten_grid(0,sdim)
@@ -21262,7 +21272,7 @@ contains
           (vfrac_solid_sum.ge.zero)) then
        ! do nothing
       else
-       print *,"vfrac_solid_sum invalid"
+       print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
        stop
       endif
 
@@ -21283,8 +21293,8 @@ contains
        ! This "if" clause takes care of the scenario when the
        ! intersection of the departure region with the grid cell
        ! is very small.
-      if ((uncaptured_volume_fluid.le.VOFTOL_MULTI_VOLUME*volcell).and. &
-          (uncaptured_volume_solid.le.VOFTOL_MULTI_VOLUME*volcell)) then
+      if ((uncaptured_volume_fluid.le.EPS_12_6*volcell).and. &
+          (uncaptured_volume_solid.le.EPS_12_6*volcell)) then
 
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
@@ -21310,8 +21320,8 @@ contains
         enddo
        enddo ! im=1..num_materials
 
-      else if ((uncaptured_volume_fluid.ge.VOFTOL_MULTI_VOLUME*volcell).or. &
-               (uncaptured_volume_solid.ge.VOFTOL_MULTI_VOLUME*volcell)) then
+      else if ((uncaptured_volume_fluid.ge.EPS_12_6*volcell).or. &
+               (uncaptured_volume_solid.ge.EPS_12_6*volcell)) then
 
         ! first sweep: find volumes for non-tessellating is_rigid==1 
         ! materials.
@@ -21434,16 +21444,15 @@ contains
               volcut,cencut,sdim)
 
           if (abs(volcut-uncaptured_volume_solid).gt. &
-              VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+              EPS_8_4*volcell) then
            print *,"volcut invalid multi volume get volume grid 5"
            print *,"CHECK IF RIGID BODIES INTERSECT"
            print *,"volcut= ",volcut
            print *,"uncaptured_volume_solid=",uncaptured_volume_solid
            print *,"volcell= ",volcell
            print *,"VOFTOL= ",VOFTOL
-           print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-           print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                   VOFTOL_MULTI_VOLUME_SANITY
+           print *,"EPS_12_6= ",EPS_12_6
+           print *,"EPS_8_4= ",EPS_8_4
            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
              xsten_grid(0,sdim)
@@ -21739,7 +21748,7 @@ contains
              volcut,cencut,sdim)
 
           if (abs(volcut-uncaptured_volume_fluid).gt. &
-              VOFTOL_MULTI_VOLUME_SANITY*volcell) then
+              EPS_8_4*volcell) then
            print *,"volcut invalid multi volume get volume grid 6"
            print *,"volcut= ",volcut
            print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -21749,9 +21758,8 @@ contains
               abs(volcut-uncaptured_volume_fluid)/volcell
            endif
            print *,"VOFTOL= ",VOFTOL
-           print *,"VOFTOL_MULTI_VOLUME= ",VOFTOL_MULTI_VOLUME
-           print *,"VOFTOL_MULTI_VOLUME_SANITY= ", &
-                   VOFTOL_MULTI_VOLUME_SANITY
+           print *,"EPS_12_6= ",EPS_12_6
+           print *,"EPS_8_4= ",EPS_8_4
            print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
            print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
             xsten_grid(0,sdim)
@@ -24534,7 +24542,7 @@ contains
            (vfrac(im).le.one+EPS_8_4)) then
         ! do nothing
        else
-        print *,"vfrac out of range"
+        print *,"vfrac out of range im,vfrac(im): ",im,vfrac(im)
         stop
        endif
       enddo ! im=1..num_materials
