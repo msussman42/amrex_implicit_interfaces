@@ -47,7 +47,8 @@ stop
         ngrow, &
         vofbc, &
         tilelo,tilehi, &
-        fablo,fabhi,bfact, &
+        fablo,fabhi, &
+        bfact, &
         xlo,dx, &
         maskcov,DIMS(maskcov), &
         masknbr,DIMS(masknbr), &
@@ -102,7 +103,8 @@ stop
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: masknbr(DIMV(masknbr),4) 
       real(amrex_real), pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_raw) 
+      real(amrex_real), INTENT(in), target :: &
+        vof(DIMV(vof),num_materials*ngeom_raw) 
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials) 
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
@@ -113,12 +115,17 @@ stop
               snew(DIMV(snew),num_materials*ngeom_raw+1) 
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       
-      integer i,j,k,dir
-      integer igridlo(3),igridhi(3)
+      integer :: i,j,k
+      integer :: iside,jside,kside
+      integer :: dir,side
+      integer :: dir_local
+      integer :: imask
+      integer :: igridlo(3),igridhi(3)
 
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
 
       integer :: grid_index(SDIM)
+      integer :: grid_side(SDIM)
       integer :: grid_level=-1
 
       integer im
@@ -163,7 +170,7 @@ stop
       real(amrex_real) voflist_stencil(num_materials)
       real(amrex_real) voflist_test
       integer mof_verbose
-      integer use_ls_data
+      integer, parameter :: use_ls_data=1
       integer, parameter :: nhalfbox_sten=1
       real(amrex_real) dxmaxLS
       integer debugslope
@@ -178,6 +185,7 @@ stop
       real(amrex_real) vfrac_local(num_materials)
       integer im_raster_solid
       integer mod_cmofsten
+      integer :: interior_flag,outside_fab
 
       real(amrex_real) :: xtet(SDIM+1,SDIM)
       real(amrex_real) :: cmof_centroid
@@ -331,6 +339,67 @@ stop
         grid_index(SDIM)=k
        endif
 
+       interior_flag=1
+
+       do dir=1,SDIM
+        do side=1,2
+         do dir_local=1,SDIM
+          grid_side(dir_local)=grid_index(dir_local)
+         enddo
+
+         outside_fab=0
+      
+         if (side.eq.1) then
+          grid_side(dir)=grid_side(dir)-1
+          if (grid_side(dir).lt.fablo(dir)) then
+           outside_fab=1
+          endif
+         else if (side.eq.2) then
+          grid_side(dir)=grid_side(dir)+1
+          if (grid_side(dir).gt.fabhi(dir)) then
+           outside_fab=1
+          endif
+         else
+          print *,"side invalid: ",side
+          stop
+         endif
+
+         if (outside_fab.eq.1) then
+      
+          if (vofbc(dir,side).eq.REFLECT_EVEN) then
+           interior_flag=0
+          else if (vofbc(dir,side).eq.FOEXTRAP) then
+           interior_flag=0
+          else if (vofbc(dir,side).eq.EXT_DIR) then
+           interior_flag=0
+          else if (vofbc(dir,side).eq.INT_DIR) then
+           iside=grid_side(1)
+           jside=grid_side(2)
+           kside=grid_side(SDIM)
+           imask=NINT(masknbr(D_DECL(iside,jside,kside),1))
+           if (imask.eq.1) then
+            ! do nothing
+           else if (imask.eq.0) then
+            interior_flag=0
+           else
+            print *,"imask invalid: ",imask
+            stop
+           endif
+          else
+           print *,"vofbc invalid; dir,side,vofbc: ", &
+            dir,side,vofbc(dir,side)
+           stop
+          endif
+
+         else if (outside_fab.eq.0) then
+          !do nothing
+         else
+          print *,"outside_fab invalid"
+          stop
+         endif
+        enddo !side=1,2
+       enddo !dir=1,SDIM
+
        if ((update_flag.eq.RECON_UPDATE_NULL).or. &
            (update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
            (update_flag.eq.RECON_UPDATE_STATE_CENTROID).or. &
@@ -345,8 +414,6 @@ stop
        endif
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
-
-       use_ls_data=1
 
        do k1=klosten,khisten
        do j1=-1,1
@@ -808,29 +875,38 @@ stop
 
         grid_level=-1
 
-        if ((level.eq.training_max_level).or. &
-            (level.eq.decision_tree_max_level))  then
-         if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
-             (levelrz.eq.COORDSYS_RZ)) then
-          grid_level=level
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          grid_level=level
+        if (interior_flag.eq.1) then
+
+         if ((level.eq.training_max_level).or. &
+             (level.eq.decision_tree_max_level))  then
+          if ((levelrz.eq.COORDSYS_CARTESIAN).or. &
+              (levelrz.eq.COORDSYS_RZ)) then
+           grid_level=level
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           grid_level=level
+          else
+           print *,"levelrz invalid: ",levelrz
+           stop
+          endif
+         else if ((level.ge.0).and. &
+                  (level.le.finest_level)) then
+          ! do nothing
          else
-          print *,"levelrz invalid: ",levelrz
+          print *,"level invalid: ",level
+          print *,"finest_level: ",finest_level
+          print *,"max_level: ",max_level
+          print *,"training_max_level: ",training_max_level
+          print *,"decision_tree_max_level: ",decision_tree_max_level
           stop
          endif
-        else if ((level.ge.0).and. &
-                 (level.le.finest_level)) then
+
+        else if (interior_flag.eq.0) then
          ! do nothing
         else
-         print *,"level invalid: ",level
-         print *,"finest_level: ",finest_level
-         print *,"max_level: ",max_level
-         print *,"training_max_level: ",training_max_level
-         print *,"decision_tree_max_level: ",decision_tree_max_level
+         print *,"interior_flag invalid: ",interior_flag
          stop
         endif
-
+ 
         if ((continuous_mof_parm.eq.STANDARD_MOF).or. &
             (num_fluid_materials_in_stencil.eq.1).or. &
             (num_fluid_materials_in_stencil.eq.2).or. &
@@ -843,7 +919,7 @@ stop
           xsten, &
           nhalf, &
           mof_verbose, &
-          use_ls_data, &
+          use_ls_data, & ! use_ls_data=1
           LS_stencil, &
           geom_xtetlist(1,1,1,tid+1), &
           geom_xtetlist_old(1,1,1,tid+1), &
@@ -921,7 +997,7 @@ stop
           xsten, &
           nhalf, &
           mof_verbose, &
-          use_ls_data, &
+          use_ls_data, & ! use_ls_data=1
           LS_stencil, &
           geom_xtetlist(1,1,1,tid+1), &
           geom_xtetlist_old(1,1,1,tid+1), &
@@ -1052,7 +1128,7 @@ stop
           xsten, &
           nhalf, &
           mof_verbose, &
-          use_ls_data, &
+          use_ls_data, & ! use_ls_data=1
           LS_stencil, &
           geom_xtetlist(1,1,1,tid+1), &
           geom_xtetlist_old(1,1,1,tid+1), &
@@ -1177,11 +1253,6 @@ stop
        if ((update_flag.eq.RECON_UPDATE_STATE_ERR).or. &
            (update_flag.eq.RECON_UPDATE_STATE_ERR_AND_CENTROID)) then
 
-        if (use_ls_data.ne.1) then
-         print *,"use_ls_data invalid"
-         stop
-        endif
-
         if ((level.ge.0).and.(level.le.finest_level)) then
 
          do k1=klosten,khisten
@@ -1300,8 +1371,6 @@ stop
       integer i1,j1,k1
       integer i_training
 
-      integer :: grid_index(SDIM)
-      integer :: grid_level
       real(amrex_real) :: npredict(3,SDIM)
       real(amrex_real) :: vof_null
       real(amrex_real) :: centroid_null(SDIM)
@@ -1565,12 +1634,10 @@ stop
           endif
 
           do dir=1,SDIM
-           grid_index(dir)=0
            centroid_null(dir)=zero
           enddo
           vof_null=one
 
-          grid_level=-1
           critical_material=1
           call find_predict_slope( &
            npredict, & ! INTENT(out)
@@ -1883,7 +1950,8 @@ stop
       real(amrex_real) :: vof_training(num_samples)
       real(amrex_real) :: phi_training(num_samples)
       real(amrex_real) :: theta_training(num_samples)
-      real(amrex_real) :: data_decisions(num_samples,MOF_TRAINING_NDIM_DECISIONS)
+      real(amrex_real) :: &
+        data_decisions(num_samples,MOF_TRAINING_NDIM_DECISIONS)
       real(amrex_real) :: data_classify(num_samples,MOF_TRAINING_NDIM_CLASSIFY)
 
       real(amrex_real) :: angle_exact_db(SDIM-1)
@@ -1905,8 +1973,6 @@ stop
       integer :: loc_lo(SDIM)
       integer :: loc_hi(SDIM)
 
-      integer :: grid_index(SDIM)
-      integer :: grid_level
       real(amrex_real) :: npredict(3,SDIM)
       real(amrex_real) :: vof_null
       real(amrex_real) :: centroid_null(SDIM)
@@ -2150,12 +2216,10 @@ stop
            endif
 
            do dir=1,SDIM
-            grid_index(dir)=0
             centroid_null(dir)=zero
            enddo
            vof_null=one
 
-           grid_level=-1
            critical_material=1
            call find_predict_slope( &
             npredict, & ! INTENT(out)

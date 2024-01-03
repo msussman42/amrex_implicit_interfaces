@@ -13079,7 +13079,8 @@ contains
       integer fastflag,use_super_cell
       real(amrex_real) vofmain(num_materials)
 
-      real(amrex_real), INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT(in) :: &
+        ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
       integer, INTENT(in) :: lsnormal_valid(num_materials)
       integer, PARAMETER :: tessellate=0

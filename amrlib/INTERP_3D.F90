@@ -291,7 +291,7 @@ stop
        call multimaterial_MOF( &
          bfact_coarse,dxc,xsten,nhalf, &
          mof_verbose, &
-         use_ls_data, &
+         use_ls_data, & ! use_ls_data=0
          LS_stencil, &
          geom_xtetlist(1,1,1,tid+1), &
          geom_xtetlist(1,1,1,tid+1), &
@@ -303,7 +303,7 @@ stop
          continuous_mof, & ! continuous_mof=STANDARD_MOF
          cmofsten, &
          grid_index, &
-         grid_level, &
+         grid_level, & !grid_level=-1
          SDIM)
 
        do dir=1,num_materials*ngeom_recon
@@ -1087,7 +1087,7 @@ stop
          continuous_mof, & ! continuous_mof=STANDARD_MOF
          cmofsten, &
          grid_index, &
-         grid_level, &
+         grid_level, & !grid_level=-1
          SDIM)
 
        do dir=1,num_materials*ngeom_recon
