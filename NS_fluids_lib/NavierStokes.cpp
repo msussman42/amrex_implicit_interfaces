@@ -17639,9 +17639,15 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  Real time,int n_error_buf,int ngrow)
 {
  
+ std::string local_caller_string="errorEst";
+
  const int max_level = parent->maxLevel();
  if (level>=max_level)
   amrex::Error("level too big in errorEst");
+ if (level<0)
+  amrex::Error("level too small in errorEst");
+ if (ngrow!=0)
+  amrex::Error("expecting ngrow==0 in errorEst");
 
  int bfact=parent->Space_blockingFactor(level);
 
@@ -17666,21 +17672,25 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
  }
 
  int local_time_order=parent->Time_blockingFactor();
+ slab_step=local_time_order-1;
+
  Real nudge_time=state[State_Type].slabTime(local_time_order);
 
- MultiFab& S_new=get_new_data(State_Type,slab_step+1);
- if (STATECOMP_ERR+1==S_new.nComp()) {
+ MultiFab* snew_mf=getState(1,0,STATE_NCOMP,nudge_time);
+ if (STATECOMP_ERR+1==STATE_NCOMP) {
   // do nothing
  } else
-  amrex::Error("S_new.nComp() invalid");
+  amrex::Error("STATECOMP_ERR invalid");
+ if (snew_mf->nComp()!=STATE_NCOMP)
+  amrex::Error("snew_mf invalid ncomp");
 
- MultiFab* err_mf = getState(0,STATECOMP_ERR,1,nudge_time); 
- if (err_mf->nComp()==1) {
-  // do nothing
- } else
-  amrex::Error("err_mf->nComp()=!1");
+ MultiFab* lsnew_mf = getStateDist(1,nudge_time,local_caller_string);
+ if (lsnew_mf->nComp()!=num_materials*(AMREX_SPACEDIM+1))
+  amrex::Error("lsnew_mf invalid ncomp");
 
- Real err_norm1=err_mf->norm1();
+ int ngrow_norm=0;
+ bool local=false;
+ Real err_norm1=snew_mf->norm1(STATECOMP_ERR,ngrow_norm,local);
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
@@ -17697,13 +17707,9 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
 
  bool use_tiling=ns_tiling;
 
- if (1==1) {
-  use_tiling=false;
- }
-
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
- thread_class::init_d_numPts(err_mf->boxArray().d_numPts());
+ thread_class::init_d_numPts(snew_mf->boxArray().d_numPts());
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -17714,17 +17720,12 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   // then itags = older tag values.
  Vector<int>  itags;
 
- for (MFIter mfi(*err_mf,use_tiling); mfi.isValid(); ++mfi) {
+ for (MFIter mfi(*snew_mf,use_tiling); mfi.isValid(); ++mfi) {
   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
   const int gridno = mfi.index();
 
   const Box& tilegrid = mfi.tilebox();
   const Box& fabgrid = grids[gridno];
-
-  if (tilegrid==fabgrid) {
-   // do nothing
-  } else
-   amrex::Error("FIX errorEST for tiling");
 
   const int* tilelo=tilegrid.loVect(); 
   const int* tilehi=tilegrid.hiVect();
@@ -17742,16 +17743,8 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   const int*  tlo   = tilegrid.loVect();
   const int*  thi   = tilegrid.hiVect();
 
-  FArrayBox& errfab=(*err_mf)[mfi];
-  const Box& errfab_box = errfab.box();
-  if (errfab_box==tilegrid) {
-   // do nothing
-  } else
-   amrex::Error("FIX errorEST for tiling");
-
-  Real*       errfab_dat = errfab.dataPtr();
-  const int*  errlo   = errfab_box.loVect();
-  const int*  errhi   = errfab_box.hiVect();
+  FArrayBox& ls_newfab=(*lsnew_mf)[mfi];
+  FArrayBox& s_newfab=(*snew_mf)[mfi];
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
@@ -17765,10 +17758,15 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
     tptr, 
     ARLIM(tlo), ARLIM(thi), 
     &tagval, &clearval, 
-    errfab_dat, 
-    ARLIM(errlo), ARLIM(errhi),
+    s_newfab.dataPtr(STATECOMP_ERR),
+    ARLIM(s_newfab.loVect()),ARLIM(s_newfab.hiVect()),
+    s_newfab.dataPtr(),
+    ARLIM(s_newfab.loVect()),ARLIM(s_newfab.hiVect()),
+    ls_newfab.dataPtr(),
+    ARLIM(ls_newfab.loVect()),ARLIM(ls_newfab.hiVect()),
     tilelo,tilehi,
-    fablo,fabhi,&bfact,
+    fablo,fabhi,
+    &bfact,
     domain_lo, domain_hi,
     dx, xlo, prob_lo, 
     &upper_slab_time, 
@@ -17784,6 +17782,8 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
     rxcoarseblocks.dataPtr(),rycoarseblocks.dataPtr(),
     rzcoarseblocks.dataPtr());
 
+   //itags: integer array
+   //tagfab: BaseFab<char>
   tagfab.tags_and_untags(itags,tilegrid);
  } // mfi
 } // omp
@@ -17801,7 +17801,8 @@ NavierStokes::errorEst (TagBoxArray& tags,int clearval,int tagval,
   }
  }
 
- delete err_mf;
+ delete snew_mf;
+ delete lsnew_mf;
 
 } // end subroutine errorEst
 

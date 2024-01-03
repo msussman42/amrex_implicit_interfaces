@@ -5651,7 +5651,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine adapt_at_nozzle
 
 
-       ! called from SLOPERECON and INITDATA
+       ! called from fort_sloperecon and fort_initdata
        ! (note see NavierStokes::init_pressure_error_indicator() too,
        !  which calls fort_pressure_indicator, which calls
        !  EOS_error_ind; init_pressure_error_indicator() is called from 
@@ -5679,7 +5679,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real), INTENT(in) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT(in) :: &
+            LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real), INTENT(in) :: voflist(num_materials)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(out) :: err
@@ -5930,158 +5931,158 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine calc_error_indicator
 
 
-        ! called from get_symmetric_error
-       subroutine exactdist( &
-         xsten, &
-         nhalf, &
-         bfact, &
-         dx, &
-         dist, &
-         imaterial, &
-         time)
-       use global_utility_module
+       ! called from get_symmetric_error
+      subroutine exactdist( &
+        xsten, &
+        nhalf, &
+        bfact, &
+        dx, &
+        dist, &
+        imaterial, &
+        time)
+      use global_utility_module
 
-       IMPLICIT NONE
+      IMPLICIT NONE
 
-       integer, INTENT(in) :: nhalf,bfact
-       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-       real(amrex_real), INTENT(in) :: dx(SDIM)
-       real(amrex_real), INTENT(out) :: dist
-       integer, INTENT(in) :: imaterial
-       real(amrex_real), INTENT(in) :: time
-       integer dir
-       real(amrex_real) x,y,z
-       real(amrex_real) xstar,ystar,zstar
-       real(amrex_real) xvec(SDIM)
-       real(amrex_real) distsolid,distgas,dist_liquid,dist_ice
-       integer im_solid_exactdist
-       real(amrex_real) LS(num_materials)
-       real(amrex_real) diamblob
+      integer, INTENT(in) :: nhalf,bfact
+      real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM)
+      real(amrex_real), INTENT(out) :: dist
+      integer, INTENT(in) :: imaterial
+      real(amrex_real), INTENT(in) :: time
+      integer dir
+      real(amrex_real) x,y,z
+      real(amrex_real) xstar,ystar,zstar
+      real(amrex_real) xvec(SDIM)
+      real(amrex_real) distsolid,distgas,dist_liquid,dist_ice
+      integer im_solid_exactdist
+      real(amrex_real) LS(num_materials)
+      real(amrex_real) diamblob
 
-       im_solid_exactdist=im_solid_primary()
+      im_solid_exactdist=im_solid_primary()
 
-       if (bfact.lt.1) then
-        print *,"bfact invalid200"
-        stop
-       endif
-       if (nhalf.lt.1) then
-        print *,"nhalf invalid exact dist"
-        stop
-       endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid200"
+       stop
+      endif
+      if (nhalf.lt.1) then
+       print *,"nhalf invalid exact dist"
+       stop
+      endif
  
-       x=xsten(0,1)
-       y=xsten(0,2)
-       z=xsten(0,SDIM)
+      x=xsten(0,1)
+      y=xsten(0,2)
+      z=xsten(0,SDIM)
 
-       do dir=1,SDIM
-        xvec(dir)=xsten(0,dir)
-       enddo
+      do dir=1,SDIM
+       xvec(dir)=xsten(0,dir)
+      enddo
 
-       if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-8) then
-         print *,"expecting z=y"
-         stop
-        endif
+      if (SDIM.eq.2) then
+       if (abs(z-y).gt.1.0E-8) then
+        print *,"expecting z=y"
+        stop
        endif
+      endif
 
-       xstar=x
-       ystar=y
-       zstar=z
+      xstar=x
+      ystar=y
+      zstar=z
 
-       if (fort_is_passive_advect_test().eq.1) then
+      if (fort_is_passive_advect_test().eq.1) then
 
-        call SUB_LS(xvec,time,LS,num_materials)
-        dist=LS(1)
+       call SUB_LS(xvec,time,LS,num_materials)
+       dist=LS(1)
 
-        ! drop on slope (exactdist)
-       else if (probtype.eq.55) then
+       ! drop on slope (exactdist)
+      else if (probtype.eq.55) then
      
-        if (SDIM.eq.2) then
+       if (SDIM.eq.2) then
 
-         if ((num_materials.eq.3).and. &
-             (im_solid_exactdist.eq.3).and. &
-             (axis_dir.eq.0).and. &
-             (radblob3.eq.zero).and. &
-             (radblob5.eq.zero).and. &
-             (radblob6.eq.zero).and. &
-             (radblob7.eq.zero).and. &
-             (abs(xblob-xblob2).lt.1.0E-6).and. &
-             (abs(yblob-yblob2).lt.1.0E-6)) then
+        if ((num_materials.eq.3).and. &
+            (im_solid_exactdist.eq.3).and. &
+            (axis_dir.eq.0).and. &
+            (radblob3.eq.zero).and. &
+            (radblob5.eq.zero).and. &
+            (radblob6.eq.zero).and. &
+            (radblob7.eq.zero).and. &
+            (abs(xblob-xblob2).lt.1.0E-6).and. &
+            (abs(yblob-yblob2).lt.1.0E-6)) then
 
-          if ((imaterial.eq.1).or.(imaterial.eq.2)) then
-           ! distsolid>0 in solid
-           call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
-           ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
-           diamblob=two*radblob
-           call drop_slope_dist(xstar,ystar,zstar, &
-            time,diamblob,dist_ice,dist_liquid)
-           distgas=-dist_liquid
+         if ((imaterial.eq.1).or.(imaterial.eq.2)) then
+          ! distsolid>0 in solid
+          call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
+          ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
+          diamblob=two*radblob
+          call drop_slope_dist(xstar,ystar,zstar, &
+           time,diamblob,dist_ice,dist_liquid)
+          distgas=-dist_liquid
 
-           if (imaterial.eq.1) then
-            dist=dist_liquid
-           else if (imaterial.eq.2) then
-            dist=distgas
-           else
-            print *,"imaterial invalid in exactdist"
-            print *,"imaterial= ",imaterial
-            stop
-           endif
-          endif  ! imaterial=1,2
+          if (imaterial.eq.1) then
+           dist=dist_liquid
+          else if (imaterial.eq.2) then
+           dist=distgas
+          else
+           print *,"imaterial invalid in exactdist"
+           print *,"imaterial= ",imaterial
+           stop
+          endif
+         endif  ! imaterial=1,2
 
-          ! drop falling on ice (exactdist)
-         else if ((num_materials.eq.3).and.(axis_dir.eq.1)) then
-          dist=-9999.0d0
-         else if ((num_materials.eq.4).and.(axis_dir.eq.1)) then
-          dist=-9999.0d0
-         else
-          dist=-9999.0d0
-         endif  ! drop on slope problem
-
-        else if (SDIM.eq.3) then
-
-         if ((num_materials.eq.3).and. &
-             (im_solid_exactdist.eq.3).and. &
-             (axis_dir.eq.0).and. &
-             (radblob5.eq.zero).and. &
-             (radblob6.eq.zero).and. &
-             (radblob7.eq.zero).and. &
-             (abs(xblob-xblob2).lt.1.0E-6).and. &
-             (abs(yblob-yblob2).lt.1.0E-6).and. &
-             (abs(zblob-zblob2).lt.1.0E-6)) then
-
-          if ((imaterial.eq.1).or.(imaterial.eq.2)) then
-           ! distsolid>0 in solid
-           call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
-           ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
-           diamblob=two*radblob
-           call drop_slope_dist(xstar,ystar,zstar, &
-            time,diamblob,dist_ice,dist_liquid)
-           distgas=-dist_liquid
-
-           if (imaterial.eq.1) then
-            dist=dist_liquid
-           else if (imaterial.eq.2) then
-            dist=distgas
-           else
-            print *,"imaterial invalid"
-            stop
-           endif
-          endif  ! imaterial=1,2
-         else
-          dist=-9999.0d0
-         endif  ! drop on slope problem
-
+         ! drop falling on ice (exactdist)
+        else if ((num_materials.eq.3).and.(axis_dir.eq.1)) then
+         dist=-9999.0d0
+        else if ((num_materials.eq.4).and.(axis_dir.eq.1)) then
+         dist=-9999.0d0
         else
-         print *,"dimension bust for probtype==55 case"
-         stop
-        endif
+         dist=-9999.0d0
+        endif  ! drop on slope problem
 
-       else 
-        call materialdist(xsten,nhalf,dx,bfact,dist,imaterial,time)
+       else if (SDIM.eq.3) then
+
+        if ((num_materials.eq.3).and. &
+            (im_solid_exactdist.eq.3).and. &
+            (axis_dir.eq.0).and. &
+            (radblob5.eq.zero).and. &
+            (radblob6.eq.zero).and. &
+            (radblob7.eq.zero).and. &
+            (abs(xblob-xblob2).lt.1.0E-6).and. &
+            (abs(yblob-yblob2).lt.1.0E-6).and. &
+            (abs(zblob-zblob2).lt.1.0E-6)) then
+
+         if ((imaterial.eq.1).or.(imaterial.eq.2)) then
+          ! distsolid>0 in solid
+          call materialdist(xsten,nhalf,dx,bfact,distsolid,3,time)
+          ! in: exactdist (maxtall=2 * radblob => dist_ice=dist_liquid)
+          diamblob=two*radblob
+          call drop_slope_dist(xstar,ystar,zstar, &
+           time,diamblob,dist_ice,dist_liquid)
+          distgas=-dist_liquid
+
+          if (imaterial.eq.1) then
+           dist=dist_liquid
+          else if (imaterial.eq.2) then
+           dist=distgas
+          else
+           print *,"imaterial invalid"
+           stop
+          endif
+         endif  ! imaterial=1,2
+        else
+         dist=-9999.0d0
+        endif  ! drop on slope problem
+
+       else
+        print *,"dimension bust for probtype==55 case"
+        stop
        endif
 
-       return
-       end subroutine exactdist
+      else 
+       call materialdist(xsten,nhalf,dx,bfact,dist,imaterial,time)
+      endif
+
+      return
+      end subroutine exactdist
         
         ! xsten0,nhalf0 corresponds to top level cell
         ! xsten,nhalf center of cell in question
@@ -22690,8 +22691,13 @@ end subroutine initialize2d
        set,clear, &
        errfab, &
        DIMS(errfab), &
+       snew, &
+       DIMS(snew), &
+       lsnew, &
+       DIMS(lsnew), &
        tilelo,tilehi, &
-       fablo,fabhi,bfact, &
+       fablo,fabhi, &
+       bfact, &
        domlo,domhi, &
        dx,xlo, &
        problo, &
@@ -22728,6 +22734,8 @@ end subroutine initialize2d
 
       integer, INTENT(in) :: DIMDEC(tag)
       integer, INTENT(in) :: DIMDEC(errfab)
+      integer, INTENT(in) :: DIMDEC(snew)
+      integer, INTENT(in) :: DIMDEC(lsnew)
       integer, INTENT(in) :: set, clear
       integer, INTENT(in) :: level
       integer, INTENT(in) :: max_level
@@ -22742,6 +22750,11 @@ end subroutine initialize2d
       integer, pointer :: tag_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: errfab(DIMV(errfab))
       real(amrex_real), pointer :: errfab_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(in), target :: &
+           lsnew(DIMV(lsnew),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: snew(DIMV(snew),STATE_NCOMP)
+      real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       real(amrex_real)    x, y, z, rflag
       integer i,j,k
       integer np
@@ -22780,16 +22793,21 @@ end subroutine initialize2d
        print *,"nblocks or ncoarseblocks out of range"
        stop
       endif
-      if ((tid_current.lt.0).or.(tid_current.ge.geom_nthreads)) then
+      if ((tid_current.lt.0).or. &
+          (tid_current.ge.geom_nthreads)) then
        print *,"tid_current invalid"
        stop
       endif
 
       tag_ptr=>tag
       errfab_ptr=>errfab
+      lsnew_ptr=>lsnew
+      snew_ptr=>snew
 
-      call checkbound_int_array1(fablo,fabhi,tag_ptr,0,-1)
-      call checkbound_array1(fablo,fabhi,errfab_ptr,0,-1)
+      call checkbound_int_array1(tilelo,tilehi,tag_ptr,0,-1)
+      call checkbound_array1(fablo,fabhi,errfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
       do k=growlo(3),growhi(3)
@@ -23512,7 +23530,8 @@ end subroutine initialize2d
 
       real(amrex_real), INTENT(out), target :: solid(DIMV(solid),nparts*SDIM)
       real(amrex_real), pointer :: solid_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(out), target :: LS(DIMV(LS),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(out), target :: &
+           LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out), target :: SNEW(DIMV(SNEW),STATE_NCOMP)
       real(amrex_real), pointer :: SNEW_ptr(D_DECL(:,:,:),:)
