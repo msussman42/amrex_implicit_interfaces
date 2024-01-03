@@ -324,6 +324,8 @@ stop
       do j = igridlo(2),igridhi(2)
       do i = igridlo(1),igridhi(1)
 
+        ! we must visit all of the covered cells too since
+        ! the AMR error indicator is needed on the coarse levels.
        local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
        if ((local_maskcov.eq.1).or. &
            (local_maskcov.eq.0)) then
@@ -343,6 +345,7 @@ stop
 
        do dir=1,SDIM
         do side=1,2
+
          do dir_local=1,SDIM
           grid_side(dir_local)=grid_index(dir_local)
          enddo
@@ -353,30 +356,60 @@ stop
           grid_side(dir)=grid_side(dir)-1
           if (grid_side(dir).lt.fablo(dir)) then
            outside_fab=1
+          else if (grid_side(dir).lt.fabhi(dir)) then
+           !do nothing
+          else
+           print *,"grid_side(dir) invalid"
+           stop
           endif
          else if (side.eq.2) then
           grid_side(dir)=grid_side(dir)+1
           if (grid_side(dir).gt.fabhi(dir)) then
            outside_fab=1
+          else if (grid_side(dir).gt.fablo(dir)) then
+           !do nothing
+          else
+           print *,"grid_side(dir) invalid"
+           stop
           endif
          else
           print *,"side invalid: ",side
           stop
          endif
 
+         iside=grid_side(1)
+         jside=grid_side(2)
+         kside=grid_side(SDIM)
+         imask=NINT(masknbr(D_DECL(iside,jside,kside),1))
+
          if (outside_fab.eq.1) then
-      
+
           if (vofbc(dir,side).eq.REFLECT_EVEN) then
            interior_flag=0
+           if (imask.eq.0) then
+            ! do nothing
+           else
+            print *,"expecting imask=0"
+            stop
+           endif
           else if (vofbc(dir,side).eq.FOEXTRAP) then
            interior_flag=0
+           if (imask.eq.0) then
+            ! do nothing
+           else
+            print *,"expecting imask=0"
+            stop
+           endif
           else if (vofbc(dir,side).eq.EXT_DIR) then
            interior_flag=0
+           if (imask.eq.0) then
+            ! do nothing
+           else
+            print *,"expecting imask=0"
+            stop
+           endif
           else if (vofbc(dir,side).eq.INT_DIR) then
-           iside=grid_side(1)
-           jside=grid_side(2)
-           kside=grid_side(SDIM)
-           imask=NINT(masknbr(D_DECL(iside,jside,kside),1))
+
            if (imask.eq.1) then
             ! do nothing
            else if (imask.eq.0) then
@@ -385,6 +418,7 @@ stop
             print *,"imask invalid: ",imask
             stop
            endif
+
           else
            print *,"vofbc invalid; dir,side,vofbc: ", &
             dir,side,vofbc(dir,side)
@@ -392,7 +426,12 @@ stop
           endif
 
          else if (outside_fab.eq.0) then
-          !do nothing
+          if (imask.eq.1) then
+           ! do nothing
+          else
+           print *,"expecting imask=1"
+           stop
+          endif
          else
           print *,"outside_fab invalid"
           stop
@@ -1271,6 +1310,7 @@ stop
          enddo 
          enddo 
 
+          !calc_error_indicator is declared in PROB.F90
          call calc_error_indicator( &
           level,max_level, &
           xsten,nhalf,dx,bfact, &
@@ -1281,7 +1321,10 @@ stop
          if (errsave.lt.err) then
           snew(D_DECL(i,j,k),num_materials*ngeom_raw+1)=err
          endif
-         if ((errsave.lt.zero).or.(err.lt.zero)) then
+         if ((errsave.ge.zero).and. &
+             (err.ge.zero)) then 
+          !do nothing
+         else
           print *,"err bust"
           stop
          endif

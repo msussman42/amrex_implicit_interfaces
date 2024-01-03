@@ -10892,15 +10892,18 @@ END SUBROUTINE SIMP
            endif
            crse(D_DECL(ic,jc,kc),iten)=zero
            do dir2=1,ncomp_per_interface
-            crse(D_DECL(ic,jc,kc),num_interfaces+(iten-1)*ncomp_per_interface+dir2)=zero
+            crse(D_DECL(ic,jc,kc),num_interfaces+ &
+                 (iten-1)*ncomp_per_interface+dir2)=zero
            enddo
           else if ((coarse_test.eq.1).or. &
                    (coarse_test.eq.-1)) then
            if (velwt(iten).gt.zero) then
             crse(D_DECL(ic,jc,kc),iten)=coarse_test
             do dir2=1,ncomp_per_interface
-             crse(D_DECL(ic,jc,kc),num_interfaces+(iten-1)*ncomp_per_interface+dir2)= &
-              crse_value(num_interfaces+(iten-1)*ncomp_per_interface+dir2)/velwt(iten)
+             crse(D_DECL(ic,jc,kc),num_interfaces+ &
+                  (iten-1)*ncomp_per_interface+dir2)= &
+              crse_value(num_interfaces+ &
+                         (iten-1)*ncomp_per_interface+dir2)/velwt(iten)
             enddo
            else
             print *,"velwt invalid"
