@@ -13063,10 +13063,11 @@ stop
        print *,"nparts_def invalid fort_cell_to_mac"
        stop
       endif
-      if ((simple_AMR_BC_flag.eq.0).or.(simple_AMR_BC_flag.eq.1)) then
+      if ((simple_AMR_BC_flag.eq.0).or. &
+          (simple_AMR_BC_flag.eq.1)) then
        ! do nothing
       else
-       print *,"simple_AMR_BC_flag invalid"
+       print *,"simple_AMR_BC_flag invalid: ",simple_AMR_BC_flag
        stop
       endif
 
@@ -13517,7 +13518,7 @@ stop
          if (hx.gt.zero) then
           ! do nothing
          else
-          print *,"hx invalid"
+          print *,"hx invalid: ",hx
           stop
          endif
 
