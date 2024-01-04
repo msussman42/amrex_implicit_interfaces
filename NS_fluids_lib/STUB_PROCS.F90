@@ -81,18 +81,36 @@ endif
 return
 end subroutine STUB_CFL_HELPER
 
-subroutine STUB_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
+subroutine STUB_OVERRIDE_TAGFLAG( &
+  i,j,k, &
+  level,max_level, &
+  snew_ptr,lsnew_ptr, &
+  xsten,nhalf,time, &
+  rflag,tagflag)
+use amrex_fort_module, only : amrex_real
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
+integer, INTENT(in) :: i,j,k
+integer, INTENT(in) :: level,max_level
 integer, INTENT(in) :: nhalf
 real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
 real(amrex_real), INTENT(in) :: time
 real(amrex_real), INTENT(inout) :: rflag
 integer, INTENT(inout) :: tagflag
+real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
- if (nhalf.lt.1) then
+ if (nhalf.lt.3) then
   print *,"nhalf invalid stub override tagflag"
+  stop
+ endif
+ if ((level.ge.0).and.(level.lt.max_level)) then
+  ! do nothing
+ else
+  print *,"level and/or max_level invalid"
+  print *,"level=",level
+  print *,"max_level=",max_level
   stop
  endif
 

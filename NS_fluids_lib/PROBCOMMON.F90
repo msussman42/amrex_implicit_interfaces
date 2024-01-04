@@ -1040,13 +1040,22 @@ implicit none
       real(amrex_real), INTENT(out) :: LS(nmat)
       end subroutine TEMPLATE_LS
 
-      subroutine TEMPLATE_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
+      subroutine TEMPLATE_OVERRIDE_TAGFLAG( &
+        i,j,k, &
+        level,max_level, &
+        snew_ptr,lsnew_ptr, &
+        xsten,nhalf,time, &
+        rflag,tagflag)
       use amrex_fort_module, only : amrex_real
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: level,max_level
       integer, INTENT(in) :: nhalf
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(inout) :: rflag
       integer, INTENT(inout) :: tagflag
+      real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       end subroutine TEMPLATE_OVERRIDE_TAGFLAG
 
       subroutine TEMPLATE_AUX_DATA(auxcomp,x,LS)
