@@ -515,7 +515,7 @@ TN1 =floor((x(1)-centerx)/tempsx)
 tx(1)=(real(TN1,8)+0.5d0)*tempsx
 tx(2)=x(2)
 tx(SDIM)=centerz
-lstemp1=0.5d0*yblob6-NORM2(tx-x)
+lstemp1=0.5d0*yblob6-sqrt((tx(1)-x(1))**2+(tx(SDIM)-x(SDIM))**2)
 !lstemp1=0.5d0*yblob6-sqrt((tx(1)-x(1))**2.0d0+(tx(3)-x(3))**2.0d0)
 LS=lstemp1
 
@@ -524,7 +524,7 @@ TN2 =floor((x(2)-centery)/tempsy)
 ty(2)=(real(TN2,8)+0.5d0)*tempsy
 ty(1)=x(1)
 ty(SDIM)=centerz
-lstemp2=0.5d0*yblob6-NORM2(ty-x)
+lstemp2=0.5d0*yblob6-sqrt((ty(2)-x(2))**2+(ty(SDIM)-x(SDIM))**2)
 
 
 LS=0.0d0
@@ -581,7 +581,7 @@ centerz=0.0d0
 tx(1)=x(1)
 tx(2)=centery
 tx(SDIM)=centerz
-LS=0.5d0*yblob6-NORM2(tx-x)
+lstemp1=0.5d0*yblob6-sqrt((tx(2)-x(2))**2+(tx(SDIM)-x(SDIM))**2)
 
 return
 end subroutine CYL_LS
