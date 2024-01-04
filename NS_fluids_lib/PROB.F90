@@ -13342,13 +13342,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               local_bcval(side)=zero 
              else if (presbc_in(dir,side,ibase+ENUM_TEMPERATUREVAR+1).eq. &
                       EXT_DIR) then
-              if (udotn_boundary.lt.zero) then
+              if (udotn_boundary.lt.zero) then !INFLOW BOUNDARY CONDITION
                templocal=den(D_DECL(i_out,j_out,k_out), &
                  ibase+ENUM_TEMPERATUREVAR+1)
                local_bctype(side)=SEM_DIRICHLET
                local_bcval(side)=templocal
               else if (udotn_boundary.ge.zero) then
-               local_bctype(side)=SEM_NEUMANN
+               local_bctype(side)=SEM_NEUMANN !NUMERICAL BOUNDARY CONDITION
                local_bcval(side)=zero
               else
                print *,"udotn_boundary invalid"

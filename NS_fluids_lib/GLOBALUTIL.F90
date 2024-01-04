@@ -11562,6 +11562,8 @@ end subroutine print_visual_descriptor
 
       else if (SEM_IMAGE_BC_ALG.eq.0) then
        ! do nothing
+       ! i.e. do not replace SEM_NEUMANN and SEM_DIRICHLET with
+       ! SEM_INTERIOR with reflection ghost value.
       else
        print *,"SEM_IMAGE_BC_ALG invalid: ",SEM_IMAGE_BC_ALG
        stop
