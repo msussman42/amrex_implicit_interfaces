@@ -13440,8 +13440,10 @@ end subroutine print_visual_descriptor
          rc=one
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          rc=xsten(0,1)
-         if (rc.le.zero) then
-          print *,"rc invalid"
+         if (rc.gt.zero) then
+          !do nothing
+         else
+          print *,"rc invalid: ",rc
           stop
          endif 
         else
@@ -13461,7 +13463,9 @@ end subroutine print_visual_descriptor
 
          ! delx=(x(2)+x(0))/2 - (x(0)+x(-2))/2
         delx=half*(xsten(2,dir)-xsten(-2,dir))
-        if (delx.le.zero) then
+        if (delx.gt.zero) then
+         !do nothing
+        else
          print *,"delx invalid"
          stop
         endif
@@ -13476,8 +13480,10 @@ end subroutine print_visual_descriptor
           rm=half*(xsten(-2,1)+xsten(0,1))
           rc=half*(rp+rm)
           if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           if (rc.le.zero) then
-            print *,"rc invalid"
+           if (rc.gt.zero) then
+            !do nothing
+           else
+            print *,"rc invalid: ",rc
             stop
            endif
           endif
@@ -13505,8 +13511,10 @@ end subroutine print_visual_descriptor
           rp=half*(xsten(2,1)+xsten(0,1))
           rm=half*(xsten(-2,1)+xsten(0,1))
           rc=half*(rp+rm)
-          if (rc.le.zero) then
-           print *,"rc invalid"
+          if (rc.gt.zero) then
+           !do nothing
+          else
+           print *,"rc invalid: ",rc
            stop
           endif
          else
@@ -27040,14 +27048,15 @@ end function is_valid_freezing_modelF
 ! this has to do base 10 rounding in such a way 
 ! so that the ascii output matches the floating point
 ! output.
-real(amrex_real) function round_time(time)
+real(tecplot_real) function round_time(time)
+use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: time
 integer :: int_time
 integer :: power
 integer :: i
-real(amrex_real) :: local_time
+real(tecplot_real) :: local_time
 
 round_time=time
 if (time.lt.zero) then

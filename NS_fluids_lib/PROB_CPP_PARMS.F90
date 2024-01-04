@@ -845,6 +845,7 @@ stop
        SUB_PRES_BC=>passive_advect_PRES_BC
        SUB_STATE_BC=>passive_advect_STATE_BC
        SUB_clamped_LS_no_scale=>passive_advect_clamped_LS
+       SUB_OVERRIDE_TAGFLAG=>passive_advect_OVERRIDE_TAGFLAG
        SUB_CFL_HELPER=>passive_advect_CFL_HELPER
 
       else if (probtype.eq.414) then

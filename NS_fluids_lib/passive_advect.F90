@@ -262,6 +262,99 @@ real(amrex_real) :: distline
 return
 end subroutine passive_advect_LS
 
+subroutine passive_advect_OVERRIDE_TAGFLAG( &
+  i,j,k, &
+  level,max_level, &
+  snew_ptr,lsnew_ptr, &
+  xsten,nhalf,time, &
+  rflag,tagflag)
+use amrex_fort_module, only : amrex_real
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+integer, INTENT(in) :: i,j,k
+integer, INTENT(in) :: level,max_level
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: rflag
+integer, INTENT(inout) :: tagflag
+real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), dimension(3) :: local_x
+real(amrex_real), dimension(SDIM) :: local_delta
+real(amrex_real) :: LS(D_DECL(-1:1,-1:1,-1:1))
+integer :: dir
+integer :: i1,j1,k1
+real(amrex_real) :: curv
+real(amrex_real) :: curv_cutoff
+
+if (nhalf.lt.3) then
+ print *,"nhalf invalid passive advect override tagflag"
+ stop
+endif
+if ((level.ge.0).and.(level.lt.max_level)) then
+ ! do nothing
+else
+ print *,"level and/or max_level invalid"
+ print *,"level=",level
+ print *,"max_level=",max_level
+ stop
+endif
+do dir=1,SDIM
+ local_x(dir)=xsten(0,dir)
+enddo
+local_x(3)=xsten(0,SDIM)
+do dir=1,SDIM
+ local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
+ if (local_delta(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"local_delta invalid passive_advect_override_tagflag"
+  stop
+ endif
+enddo !dir=1..sdim
+
+if ((probtype.eq.28).and. & ! zalesak
+    (axis_dir.eq.0)) then
+
+ if (level.lt.max_level-1) then
+  !do nothing
+ else if (level.eq.max_level-1) then
+  rflag=0.0d0
+  tagflag=0
+  if (abs(lsnew_ptr(D_DECL(i,j,k),1)).le.local_delta(1)) then
+   do i1=-1,1
+   do j1=-1,1
+   do k1=-1,1
+    LS(D_DECL(i1,j1,k1))=lsnew_ptr(D_DECL(i+i1,j+j1,k+k1),1)
+   enddo
+   enddo
+   enddo
+   curv_cutoff=one/(four*local_delta(1))
+   call curverr(curv,LS,xsten,nhalf)
+   if (abs(curv).lt.curv_cutoff) then
+    !do nothing
+   else if (abs(curv).ge.curv_cutoff) then
+    rflag=1.0d0
+    tagflag=1
+   else
+    print *,"curv=",curv
+    print *,"curv_cutoff ",curv_cutoff
+    stop
+   endif
+ 
+  endif
+ else
+  print *,"level invalid"
+  stop
+ endif
+
+endif
+
+end subroutine passive_advect_OVERRIDE_TAGFLAG
+
+
 ! initial velocity is some kind of shear flow
 subroutine passive_advect_VEL(xvec,time,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
