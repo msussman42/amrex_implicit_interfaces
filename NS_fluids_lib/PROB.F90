@@ -6825,26 +6825,45 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine dumbbelldist
 
-      subroutine override_tagflag(xsten,nhalf,time,rflag,tagflag)
+      subroutine override_tagflag( &
+        i,j,k, &
+        level,max_level, &
+        snew_ptr,lsnew_ptr, &
+        xsten,nhalf,time, &
+        rflag,tagflag)
       use probcommon_module
       use global_utility_module
       use global_distance_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: level,max_level
       integer, INTENT(in) :: nhalf
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(inout) :: rflag
       integer, INTENT(inout) :: tagflag
+      real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real) radx,radshrink,dist
       real(amrex_real) x,y,z
       real(amrex_real) local_delta(SDIM)
       integer dir
 
-      if (nhalf.lt.1) then
-       print *,"nhalf invalid override tagflag"
+      if (nhalf.lt.3) then
+       print *,"nhalf invalid override_tagflag"
        stop
       endif
+
+      if ((level.ge.0).and.(level.lt.max_level)) then
+       ! do nothing
+      else
+       print *,"level and/or max_level invalid"
+       print *,"level=",level
+       print *,"max_level=",max_level
+       stop
+      endif
+
       x=xsten(0,1)
       y=xsten(0,2)
       z=xsten(0,SDIM)
@@ -6860,7 +6879,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       if (is_in_probtype_list().eq.1) then
 
-       call SUB_OVERRIDE_TAGFLAG(xsten,nhalf,time,rflag,tagflag)
+       call SUB_OVERRIDE_TAGFLAG( &
+         i,j,k, &
+         level,max_level, &
+         snew_ptr,lsnew_ptr, &
+         xsten,nhalf,time, &
+         rflag,tagflag)
 
        ! bubble formation
       else if (probtype.eq.25) then
@@ -6954,7 +6978,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! do nothing
 
       else
-       print *,"probtype invalid, taxes due April15"
+       print *,"expecting probtype>=0"
        stop
       endif 
 
@@ -22755,7 +22779,8 @@ end subroutine initialize2d
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: snew(DIMV(snew),STATE_NCOMP)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real)    x, y, z, rflag
+      real(amrex_real) :: x, y, z
+      real(amrex_real) :: rflag
       integer i,j,k
       integer np
       integer iregions
@@ -22766,7 +22791,7 @@ end subroutine initialize2d
       real(amrex_real) temperature_clamped
       integer prescribed_flag
       integer tagflag
-      integer, parameter :: nhalf=1
+      integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       integer coarseblocks_available
 
@@ -22843,7 +22868,12 @@ end subroutine initialize2d
        if (level.lt.max_level_for_use) then
 
          ! updates "tagflag" and/or "rflag"
-        call override_tagflag(xsten,nhalf,time,rflag,tagflag)
+        call override_tagflag( &
+         i,j,k, &
+         level,max_level, &
+         snew_ptr,lsnew_ptr, &
+         xsten,nhalf,time, &
+         rflag,tagflag)
 
         call SUB_clamped_LS(x_local,time,LS_clamped,vel_clamped, &
           temperature_clamped,prescribed_flag,dx)
@@ -22860,7 +22890,7 @@ end subroutine initialize2d
         else if (LS_clamped.lt.zero) then
          ! do nothing
         else
-         print *,"LS_clamped invalid"
+         print *,"LS_clamped invalid: ",LS_clamped
          stop
         endif
         do iregions=1,number_of_source_regions
