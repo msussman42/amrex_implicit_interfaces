@@ -567,6 +567,7 @@ int NavierStokes::BLB_CELL_CNT=-32767;
 int NavierStokes::BLB_CELLVOL_CNT=-32767;
 int NavierStokes::BLB_MASS=-32767;
 int NavierStokes::BLB_PRES=-32767;
+int NavierStokes::BLB_SECONDMOMENT=-32767;
 
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..num_materials-1
 // 0<=im_elastic_map<num_materials
@@ -2400,8 +2401,10 @@ NavierStokes::read_params ()
     BLB_CELLVOL_CNT=BLB_CELL_CNT+1; //F_m>=1/2
     BLB_MASS=BLB_CELLVOL_CNT+1;
     BLB_PRES=BLB_MASS+1; //F_m>=1/2
-    num_elements_blobclass=BLB_PRES+1;
+    BLB_SECONDMOMENT=BLB_PRES+1;
+    num_elements_blobclass=BLB_SECONDMOMENT+6;
 
+     //fort_blb_init is declared in PROB_CPP_PARMS.F90
     fort_blb_init(
      &BLB_MATRIX,
      &BLB_RHS,
@@ -2419,6 +2422,7 @@ NavierStokes::read_params ()
      &BLB_CELLVOL_CNT,
      &BLB_MASS,
      &BLB_PRES,
+     &BLB_SECONDMOMENT,
      &num_elements_blobclass);
 
     int ns_max_level;

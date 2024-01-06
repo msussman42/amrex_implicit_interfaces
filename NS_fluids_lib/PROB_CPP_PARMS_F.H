@@ -28,6 +28,7 @@ namespace amrex{
       int* blb_cellvol_cnt_in,
       int* blb_mass_in,
       int* blb_pres_in,
+      int* blb_secondmoment_in,
       int* num_elements_blobclass_in);
 
       // called from NavierStokes.cpp: void fortran_deallocate_parameters()
