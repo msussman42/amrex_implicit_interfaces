@@ -600,6 +600,7 @@ implicit none
       integer :: BLB_CELLVOL_CNT=-32767
       integer :: BLB_MASS=-32767
       integer :: BLB_PRES=-32767
+      integer :: BLB_SECONDMOMENT=-32767
       integer :: num_elements_blobclass=-32767
 
       real(amrex_real) shallow_water_data(0:SHALLOW_M,0:SHALLOW_N,2)

@@ -44,6 +44,7 @@ stop
        blb_cellvol_cnt_in, &
        blb_mass_in, &
        blb_pres_in, &
+       blb_secondmoment_in, &
        num_elements_blobclass_in) &
       bind(c,name='fort_blb_init')
 
@@ -66,6 +67,7 @@ stop
       integer, INTENT(in) :: blb_cellvol_cnt_in
       integer, INTENT(in) :: blb_mass_in
       integer, INTENT(in) :: blb_pres_in
+      integer, INTENT(in) :: blb_secondmoment_in
       integer, INTENT(in) :: num_elements_blobclass_in
     
       BLB_MATRIX=blb_matrix_in
@@ -84,6 +86,7 @@ stop
       BLB_CELLVOL_CNT=blb_cellvol_cnt_in
       BLB_MASS=blb_mass_in
       BLB_PRES=blb_pres_in
+      BLB_SECONDMOMENT=blb_secondmoment_in
       num_elements_blobclass=num_elements_blobclass_in
 
       if ((BLB_MATRIX.eq.0).and. &
@@ -103,7 +106,8 @@ stop
           (BLB_CELLVOL_CNT.eq.BLB_CELL_CNT+1).and. &
           (BLB_MASS.eq.BLB_CELLVOL_CNT+1).and. &
           (BLB_PRES.eq.BLB_MASS+1).and. &
-          (num_elements_blobclass.eq.BLB_PRES+1)) then
+          (BLB_SECONDMOMENT.eq.BLB_PRES+1).and. &
+          (num_elements_blobclass.eq.BLB_SECONDMOMENT+6)) then
           ! do nothing
       else
        print *,"BLB parameters invalid"
@@ -123,6 +127,7 @@ stop
        print *,"BLB_CELLVOL_CNT ",BLB_CELLVOL_CNT
        print *,"BLB_MASS ",BLB_MASS
        print *,"BLB_PRES ",BLB_PRES
+       print *,"BLB_SECONDMOMENT ",BLB_SECONDMOMENT
        print *,"num_elements_blobclass ",num_elements_blobclass
        print *,"num_materials=",num_materials
        print *,"AMREX_SPACEDIM=",AMREX_SPACEDIM

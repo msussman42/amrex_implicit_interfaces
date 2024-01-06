@@ -102,6 +102,7 @@ public:
   Real blob_cellvol_count;
   Real blob_mass;
   Real blob_pressure;
+  Real blob_second_moment[6];
   Real blob_center_integral[AMREX_SPACEDIM];
   Real blob_center_actual[AMREX_SPACEDIM];
   Real blob_perim;  // surface area of the blob
@@ -1866,8 +1867,9 @@ protected:
     static int BLB_CELLVOL_CNT;
     static int BLB_MASS;
     static int BLB_PRES;
+    static int BLB_SECONDMOMENT;  //6 components, uses BLB_CEN_ACT and BLB_VOL
 
-    static Vector<int> im_solid_map; //nparts components, in range 0..num_materials-1
+    static Vector<int> im_solid_map;//nparts components, 0..num_materials-1
     static Vector<int> im_elastic_map;
 
      // 0=volume fraction  1=mass fraction 2=impedance fraction
