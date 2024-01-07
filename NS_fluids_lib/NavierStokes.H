@@ -54,6 +54,26 @@ class NSBld
                                   Real            time) override;
 };
 
+class snapshot_blobclass
+{
+public:
+ 
+ Real blob_volume;
+ Real blob_center[AMREX_SPACEDIM];
+ Real blob_axis_len[AMREX_SPACEDIM];
+ Real blob_axis_evec[AMREX_SPACEDIM][AMREX_SPACEDIM];
+ Real blob_time;
+};
+
+class dynamic_blobclass
+{
+public:
+
+ int im;
+ Vector<snapshot_blobclass> snapshots;
+
+};
+
 class blobclass
 {
 public:
@@ -314,6 +334,8 @@ public:
     virtual void post_init (Real stop_time);
     void prepare_post_process(const std::string& caller_string);
 
+    void append_blob_history(blobclass blobdata,Real time);
+
     //
     // Advance grids at this level in time.
     //
@@ -361,6 +383,8 @@ public:
     static void get_iten_cpp(int im1,int im2,int& iten);
 
     static int CTML_FSI_numsolids;
+
+    static Vector<dynamic_blobclass> blob_history;
 
     static Real inflow_pressure;
     static Real outflow_pressure;

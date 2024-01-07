@@ -234,6 +234,8 @@ int NavierStokes::segregated_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
 
+Vector<dynamic_blobclass> NavierStokes::blob_history;
+
 int  NavierStokes::sum_interval = -1;
 int  NavierStokes::NUM_SCALARS  = 0;
 
@@ -2825,6 +2827,8 @@ NavierStokes::read_params ()
     for (int tid=0;tid<thread_class::nthreads;tid++) {
      FSI_touch_flag[tid]=0;
     }
+
+    blob_history.resize(0);
 
     gravity_vector.resize(AMREX_SPACEDIM);
 

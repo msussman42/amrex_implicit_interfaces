@@ -1836,6 +1836,16 @@ NavierStokes::variableSetUp ()
 
 }  // end subroutine variableSetUp
 
+void 
+NavierStokes::append_blob_history(blobclass blobdata,Real time) {
+
+ int match_found=0;
+ for (int i=0;((i<blob_history.size())&&(match_found==0));i++) {
+
+ }
+
+} //end subroutine append_blob_history
+  
 void
 NavierStokes::sum_integrated_quantities (
 	const std::string& caller_string,
@@ -1853,7 +1863,10 @@ NavierStokes::sum_integrated_quantities (
 
  if ((adv_dir<1)||(adv_dir>2*AMREX_SPACEDIM+1))
   amrex::Error("adv_dir invalid");
- if (upper_slab_time<0.0)
+
+ if (upper_slab_time>=0.0) {
+  //do nothing
+ } else
   amrex::Error("times should be positive");
 
  std::fflush(NULL);
@@ -2031,6 +2044,7 @@ NavierStokes::sum_integrated_quantities (
  Vector<int> type_flag;
 
  if (output_drop_distribution==1) {
+
   int color_count=0;
   int coarsest_level=0;
   int tessellate=1;
@@ -2059,6 +2073,11 @@ NavierStokes::sum_integrated_quantities (
    amrex::Error("color_count!=blobdata.size()");
   delete_array(TYPE_MF);
   delete_array(COLOR_MF);
+
+  for (int iblob=0;iblob<blobdata.size();iblob++) {
+   append_blob_history(blobdata[iblob],upper_slab_time);
+  }
+
  } else if (output_drop_distribution==0) {
   // do nothing
  } else

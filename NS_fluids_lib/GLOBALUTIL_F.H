@@ -71,6 +71,8 @@ extern "C"
 
    void fort_derive_gravity_dir(Real* gravity_vector_in,int* gravity_dir);
 
+   void fort_jacobi_eigenvalue(Real* S,Real* evals,Real* evecs,int* n);
+
 }
 
 }/* namespace amrex */
