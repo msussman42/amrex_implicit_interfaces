@@ -6024,22 +6024,26 @@ NavierStokes::ColorSumALL(
   problo_array[dir]=geom.ProbLo(dir);
  }
 
- int disallow_rotation=1;
+ int force_symmetry[AMREX_SPACEDIM];
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  force_symmetry[dir]=0;
+ }
 
- for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
-  if (phys_bc.lo(dir)!=Symmetry)
-   disallow_rotation=0;
-  if (problo_array[dir]!=0.0)
-   disallow_rotation=0;
- } // dir=0..sdim-2
+ if (AMREX_SPACEDIM==2) {
+  for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
+   if ((phys_bc.lo(dir)==Symmetry)&&(problo_array[dir]==0.0)) {
+    force_symmetry[dir]=1;
+   }
+  } // dir=0..sdim-2
+ }
 
  if (geom.IsRZ()) {
-  if (disallow_rotation==1) {
+  if (force_symmetry[0]==1) {
    // do nothing
-  } else if (disallow_rotation==0) {
-   amrex::Error("it is required that disallow_rotation==1 if geom.IsRZ()");
+  } else if (force_symmetry[0]==0) {
+   amrex::Error("it is required that force_symmetry[0]==1 if geom.IsRZ()");
   } else
-   amrex::Error("disallow_rotation out of range");
+   amrex::Error("force_symmetry[0] out of range");
  }  // IsRZ?
 
  if (color_count==0)
@@ -6311,14 +6315,15 @@ NavierStokes::ColorSumALL(
        blobdata[i].blob_center_actual[dir]= 
         blobdata[i].blob_center_integral[dir]/blobvol;
       }
-      if (disallow_rotation==1) {
-       for (int dir=0;dir<AMREX_SPACEDIM-1;dir++)
+      for (int dir=0;dir<AMREX_SPACEDIM-1;dir++) {
+       if (force_symmetry[dir]==1) {
         blobdata[i].blob_center_actual[dir]=0.0;
-      } else if (disallow_rotation==0) {
-       // do nothing
-      } else {
-       amrex::Error("disallow_rotation out of range");
-      }
+       } else if (force_symmetry[dir]==0) {
+        // do nothing
+       } else {
+        amrex::Error("force_symmetry[dir] out of range");
+       }
+      } //dir=0..sdim-2
      } else if (blobvol==0.0) {
       // do nothing
      } else
@@ -6377,12 +6382,12 @@ NavierStokes::ColorSumALL(
         XX3D[irow]=0.0;
 	 //rotational motions 
         if ((irow>=AMREX_SPACEDIM)&&(irow<=2*AMREX_SPACEDIM-1)) {
-	 if (disallow_rotation==1) {
+	 if (force_symmetry[0]==1) {
 	  BB3D[irow]=0.0;
-	 } else if (disallow_rotation==0) {
+	 } else if (force_symmetry[0]==0) {
 	  // do nothing
 	 } else {
-          amrex::Error("disallow_rotation out of range");
+          amrex::Error("force_symmetry[0] out of range");
 	 }
 
          if (veltype==1)
@@ -6403,12 +6408,12 @@ NavierStokes::ColorSumALL(
 	  //rotational motions 
          if ((irow>=AMREX_SPACEDIM)&&(irow<=2*AMREX_SPACEDIM-1)) {
 
-	  if (disallow_rotation==1) {
+	  if (force_symmetry[0]==1) {
            BB2D[irow]=0.0;
-          } else if (disallow_rotation==0) {
+          } else if (force_symmetry[0]==0) {
            // do nothing
           } else
-           amrex::Error("disallow_rotation invalid");
+           amrex::Error("force_symmetry[0] invalid");
 
           if (veltype==1)
   	   BB2D[irow]=0.0;
@@ -6441,25 +6446,25 @@ NavierStokes::ColorSumALL(
          for (int dir=0;dir<2*AMREX_SPACEDIM;dir++) {
           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX3D[dir];
          }
-         if (disallow_rotation==1) {
+	 if (force_symmetry[0]==1) {
           for (int dir=AMREX_SPACEDIM;dir<2*AMREX_SPACEDIM;dir++)
            blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-         } else if (disallow_rotation==0) {
+         } else if (force_symmetry[0]==0) {
           // do nothing
          } else {
-          amrex::Error("disallow_rotation invalid");
+          amrex::Error("force_symmetry[0] invalid");
          }
         } else if (AMREX_SPACEDIM==2) {
          for (int dir=0;dir<AMREX_SPACEDIM+1;dir++) {
           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=XX2D[dir];
          }
-	 if (disallow_rotation==1) {
+	 if (force_symmetry[0]==1) {
           int dir=AMREX_SPACEDIM;
           blobdata[i].blob_velocity[2*AMREX_SPACEDIM*veltype+dir]=0.0;
-         } else if (disallow_rotation==0) {
+         } else if (force_symmetry[0]==0) {
           // do nothing
          } else {
-          amrex::Error("disallow_rotation invalid");
+          amrex::Error("force_symmetry[0] invalid");
 	 }
 
          if (geom.IsRZ()) {
@@ -6600,7 +6605,7 @@ NavierStokes::ColorSumALL(
   if (ParallelDescriptor::IOProcessor()) {
 
    std::cout << "in color sum color_count = " << color_count << '\n';
-   std::cout << "disallow_rotation= " << disallow_rotation << '\n';
+   std::cout << "force_symmetry[0]= " << force_symmetry[0]  << '\n';
 
    for (int i=0;i<color_count;i++) {
 

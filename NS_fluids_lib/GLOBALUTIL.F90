@@ -5083,16 +5083,16 @@ return
 end subroutine EVAL_rotate
 
  !columns of "evecs" are the eigenvectors.
- !This routine will modify S, but then restore S at the end.
-subroutine fort_jacobi_eigenvalue(S,evals,evecs,n)
+subroutine fort_jacobi_eigenvalue(S,evals,evecs,n) &
+bind(c,name='fort_jacobi_eigenvalue')
 use probcommon_module
 IMPLICIT NONE
 
 integer, INTENT(in) :: n
-real(amrex_real), INTENT(inout) :: S(n,n)
+real(amrex_real), INTENT(in) :: S(n,n)
 real(amrex_real), INTENT(out) :: evals(n)
 real(amrex_real), INTENT(out) :: evecs(n,n)
-real(amrex_real) :: S_SAVE(n,n)
+real(amrex_real) :: S_MOD(n,n)
 integer :: i,j,k,k_in,l,m,state
 real(amrex_real) :: sinrot,cosrot,t,p,y,d,r
 integer :: ind(n)
@@ -5129,15 +5129,15 @@ do j=1,n
   print *,"i or j corrupt"
   stop
  endif
- S_SAVE(i,j)=S(i,j)
+ S_MOD(i,j)=S(i,j)
 enddo
 enddo
 
 max_S=zero
 do i=1,n
 do j=1,n  
- if (abs(S_SAVE(i,j)).gt.max_S) then
-  max_S=abs(S_SAVE(i,j))
+ if (abs(S_MOD(i,j)).gt.max_S) then
+  max_S=abs(S_MOD(i,j))
  endif
 enddo
 enddo
@@ -5168,7 +5168,7 @@ do while (state.ne.0)
   if ((ind(k).ge.1).and.(ind(m).ge.1).and. &
       (ind(k).le.n).and.(ind(m).le.n).and. &
       (k.ge.1).and.(k.le.n).and.(m.ge.1).and.(m.le.n)) then
-   if (abs(S(k,ind(k))).gt.abs(S(m,ind(m)))) then
+   if (abs(S_MOD(k,ind(k))).gt.abs(S_MOD(m,ind(m)))) then
     m=k
    endif
   else
@@ -5186,7 +5186,7 @@ do while (state.ne.0)
   stop
  endif
 
- p=S(k,l)
+ p=S_MOD(k,l)
  y=(evals(l)-evals(k))/two
  d=abs(y)+sqrt(p**2+y**2)
  r=sqrt(p**2+d**2)
@@ -5199,7 +5199,7 @@ do while (state.ne.0)
   print *,"max_S=",max_S
   do i=1,n
   do j=1,n
-   print *,"i,j,S_SAVE(i,j) ",i,j,S_SAVE(i,j)
+   print *,"i,j,S(i,j) ",i,j,S(i,j)
   enddo
   enddo
   stop
@@ -5220,17 +5220,17 @@ do while (state.ne.0)
   print *,"y invalid"
   stop
  endif
- S(k,l)=zero
+ S_MOD(k,l)=zero
  call EVAL_update(k,-t,y,changed,evals,state,n)       
  call EVAL_update(l,t,y,changed,evals,state,n)       
  do i=1,k-1
-  call EVAL_rotate(i,k,i,l,S,n,sinrot,cosrot)
+  call EVAL_rotate(i,k,i,l,S_MOD,n,sinrot,cosrot)
  enddo
  do i=k+1,l-1
-  call EVAL_rotate(k,i,i,l,S,n,sinrot,cosrot)
+  call EVAL_rotate(k,i,i,l,S_MOD,n,sinrot,cosrot)
  enddo
  do i=l+1,n
-  call EVAL_rotate(k,i,l,i,S,n,sinrot,cosrot)
+  call EVAL_rotate(k,i,l,i,S_MOD,n,sinrot,cosrot)
  enddo
  do i=1,n
   eik=evecs(i,k)
@@ -5238,8 +5238,8 @@ do while (state.ne.0)
   evecs(i,k)=cosrot*eik-sinrot*eil
   evecs(i,l)=sinrot*eik+cosrot*eil
  enddo
- call maxind(k,S,n,ind(k))
- call maxind(l,S,n,ind(l))
+ call maxind(k,S_MOD,n,ind(k))
+ call maxind(l,S_MOD,n,ind(l))
 
   ! AX=X Lambda
   ! A=X Lambda X^{-1}=X Lambda X^T
@@ -5261,8 +5261,8 @@ do while (state.ne.0)
  sanity_err=zero
  do i=1,n
  do j=1,n  
-  if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
-   sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
+  if (abs(XLXT(i,j)-S(i,j)).gt.sanity_err) then
+   sanity_err=abs(XLXT(i,j)-S(i,j))
   endif
  enddo
  enddo
@@ -5287,20 +5287,20 @@ else
  stop
 endif
 
- ! restore S
+ ! restore S_MOD
 do k=1,n-1
  do l=k+1,n
-  S(k,l)=S(l,k)
+  S_MOD(k,l)=S_MOD(l,k)
  enddo
 enddo
 do i=1,n
 do j=1,n
- if (abs(S(i,j)-S_SAVE(i,j)).le.EPS12*max_S) then
+ if (abs(S_MOD(i,j)-S(i,j)).le.EPS12*max_S) then
   ! do nothing
  else
-  print *,"S not properly restored"
-  print *,"i,j,n,S(i,j),S_SAVE(i,j),abs(S-S_SAVE): ", &
-    i,j,n,S(i,j),S_SAVE(i,j),abs(S(i,j)-S_SAVE(i,j))
+  print *,"S_MOD not properly restored"
+  print *,"i,j,n,S_MOD(i,j),S(i,j),abs(S_MOD-S): ", &
+    i,j,n,S_MOD(i,j),S(i,j),abs(S_MOD(i,j)-S(i,j))
   stop
  endif
 enddo
@@ -5350,8 +5350,8 @@ enddo
 sanity_err=zero
 do i=1,n
 do j=1,n  
- if (abs(XLXT(i,j)-S_SAVE(i,j)).gt.sanity_err) then
-  sanity_err=abs(XLXT(i,j)-S_SAVE(i,j))
+ if (abs(XLXT(i,j)-S(i,j)).gt.sanity_err) then
+  sanity_err=abs(XLXT(i,j)-S(i,j))
  endif
 enddo
 enddo
