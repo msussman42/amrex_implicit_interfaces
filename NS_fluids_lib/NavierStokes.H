@@ -1621,7 +1621,9 @@ protected:
 
 // default: tessellating fluid => default==1
 //          non-tesselating or tesselating solid => default==0
-    static Vector<int> truncate_volume_fractions;  
+    static Vector<int> truncate_volume_fractions;
+
+    static Vector<int> force_blob_symmetry;
 
     static int particle_nsubdivide;  
     static int particle_max_per_nsubdivide;  
