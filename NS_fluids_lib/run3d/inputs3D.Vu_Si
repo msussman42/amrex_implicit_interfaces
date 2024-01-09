@@ -14,6 +14,7 @@ geometry.prob_lo   =  0.0 0.0 0.0
 # R=1 => corresponds to drop base radius at initial time.
 # R_dimensional=(1)(9.5D-3 meters)=9.5 mm=0.95 cm
 geometry.prob_hi=2.0 2.0 2.0 # centimeters
+ns.force_blob_symmetry=1 1 0
 ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
 ns.EILE_flag=-1

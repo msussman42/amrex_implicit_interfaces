@@ -195,7 +195,9 @@ int  NavierStokes::partial_cmof_stencil_at_walls=1;
 int  NavierStokes::enable_spectral=0;
 // default: tessellating fluid => default==1
 //          non-tessellating or tessellating solid => default==0
-Vector<int> NavierStokes::truncate_volume_fractions; 
+Vector<int> NavierStokes::truncate_volume_fractions;
+
+Vector<int> NavierStokes::force_blob_symmetry;
 
 int NavierStokes::particle_nsubdivide=4; 
 int NavierStokes::particle_max_per_nsubdivide=10; 
@@ -2173,7 +2175,7 @@ NavierStokes::variableCleanUp ()
 {
     desc_lst.clear();
     desc_lstGHOST.clear();
-}
+} // end subroutine variableCleanUp ()
 
 void
 NavierStokes::read_geometry ()
@@ -5018,6 +5020,14 @@ NavierStokes::read_params ()
      } else
       amrex::Error("latent_heat (LL) is NaN");
     } // i
+    force_blob_symmetry.resize(AMREX_SPACEDIM);
+    for (int i=0;i<AMREX_SPACEDIM;i++) {
+     force_blob_symmetry[i]=0;
+    }
+    if (NS_geometry_coord==COORDSYS_RZ) {
+     force_blob_symmetry[0]=1;
+    }
+    pp.queryAdd("force_blob_symmetry",force_blob_symmetry,AMREX_SPACEDIM);
 
     truncate_volume_fractions.resize(num_materials);
 
@@ -5304,6 +5314,11 @@ NavierStokes::read_params ()
      std::cout<<"particle_nsubdivide="<<particle_nsubdivide<<'\n';
      std::cout << "particle_max_per_nsubdivide= " <<
         particle_max_per_nsubdivide << '\n';
+
+     for (int i=0;i<AMREX_SPACEDIM;i++) {
+      std::cout << "force_blob_symmetry i= " << i << ' ' <<
+        force_blob_symmetry[i] << '\n';
+     }
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "mof_ordering i= " << i << ' ' <<
