@@ -80,7 +80,6 @@ static std::ofstream CTML_checkpoint_file;
 void open_checkpoint(const std::string& FullPath);
 void close_checkpoint();
 void checkpoint(int check_id);
-
 void restart(int check_id,std::istream& is);
 
 void initData_FSI(
@@ -144,6 +143,11 @@ class dynamic_blobclass_array
 public:
 
  static std::ofstream blob_checkpoint_file;
+
+ void open_checkpoint(const std::string& FullPath);
+ void close_checkpoint();
+ void checkpoint(int check_id);
+ void restart(int check_id,std::istream& is);
 
  Vector<dynamic_blobclass> blob_history;
 

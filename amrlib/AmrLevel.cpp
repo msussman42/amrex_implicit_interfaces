@@ -29,7 +29,7 @@ void dynamic_blobclass_array::open_checkpoint(const std::string& FullPath) {
 // use std::ios::in for restarting  (std::ofstream::in ok too?)
  if (ParallelDescriptor::IOProcessor()) {
   std::string blob_FullPathName  = FullPath+"/blob";
-  blob_checkpoint_file.open(CTML_FullPathName.c_str(),
+  blob_checkpoint_file.open(blob_FullPathName.c_str(),
     std::ios::out|std::ios::trunc|std::ios::binary);
   if (!blob_checkpoint_file.good())
    amrex::FileOpenFailed(blob_FullPathName);
@@ -81,12 +81,10 @@ void dynamic_blobclass_array::checkpoint(int check_id) {
 
  }
 
-} //end subroutine checkpoint
+} //end subroutine dynamic_blobclass_array::checkpoint
 
+void dynamic_blobclass_array::restart(int check_id,std::istream& is) {
 
-void FSI_container_class::restart(int check_id,std::istream& is) {
-
-	FIX ME
  int local_check_id;
  is >> local_check_id;
  if (local_check_id==check_id) {
@@ -94,74 +92,38 @@ void FSI_container_class::restart(int check_id,std::istream& is) {
  } else
   amrex::Error("local_check_id invalid");
 
- int local_node_list_size;
- int local_element_list_size;
- int local_mass_list_size;
- int local_scalar_list_size;
+ int local_blob_history_size;
 
- is >> CTML_num_solids;
- is >> FSI_num_scalars;
- for (int dir=0;dir<3;dir++) {
-  is >> max_num_nodes[dir];
- }
- is >> max_num_elements;
- is >> structured_flag;
- is >> structure_dim;
- is >> structure_topology;
- is >> ngrow_node;
+ is >> local_blob_history_size;
 
- is >> local_node_list_size;
+ blob_history.resize(local_blob_history_size);
 
- node_list.resize(local_node_list_size);
- init_node_list.resize(local_node_list_size);
- prev_node_list.resize(local_node_list_size);
- velocity_list.resize(local_node_list_size);
- prev_velocity_list.resize(local_node_list_size);
+ for (int i=0;i<blob_history.size();i++) {
+  is >> blob_history[i].im;
+  is >> blob_history[i].start_time;
+  is >> blob_history[i].end_time;
+  is >> blob_history[i].start_step;
+  is >> blob_history[i].end_step;
 
- for (int i=0;i<node_list.size();i++) {
-  is >> node_list[i];
-  is >> prev_node_list[i];
-  is >> velocity_list[i];
-  is >> prev_velocity_list[i];
-  is >> init_node_list[i];
- }
+  int local_snapshots_size;
+  is >> local_snapshots_size;
+  blob_history[i].snapshots.resize(local_snapshots_size);
+  for (int j=0;j<blob_history[i].snapshots.size();j++) {
+   is >> blob_history[i].snapshots[j].blob_volume;
+   is >> blob_history[i].snapshots[j].blob_time;
+   is >> blob_history[i].snapshots[j].blob_step;
 
- is >> local_element_list_size;
+   for (int k=0;k<AMREX_SPACEDIM;k++) {
+    is >> blob_history[i].snapshots[j].blob_center[k];
+    is >> blob_history[i].snapshots[j].blob_axis_len[k];
+    for (int l=0;l<AMREX_SPACEDIM;l++) {
+     is >> blob_history[i].snapshots[j].blob_axis_evec[k][l];
+    } //l=0..sdim-1
+   } //k=0..sdim-1
+  } // j=0;j<snapshots.size()
+ } // i=0;i<blob_history_size
 
- element_list.resize(local_element_list_size);
- for (int i=0;i<element_list.size();i++) {
-  is >> element_list[i];
- }
-
- is >> local_mass_list_size;
-
- mass_list.resize(local_mass_list_size);
- temp_list.resize(local_mass_list_size);
-
- for (int i=0;i<mass_list.size();i++) {
-  is >> mass_list[i];
-  is >> temp_list[i];
- }
-
- is >> local_scalar_list_size;
- scalar_list.resize(local_scalar_list_size);
- prev_scalar_list.resize(local_scalar_list_size);
- for (int i=0;i<scalar_list.size();i++) {
-  is >> scalar_list[i];
-  is >> prev_scalar_list[i];
- }
-
-} //end subroutine restart
-
-
-
-
-
-
-
-
-
-
+} //end subroutine dynamic_blobclass_array::restart
 
 
 void FSI_container_class::open_checkpoint(const std::string& FullPath) {
@@ -852,6 +814,16 @@ AmrLevel::restart (AmrCore&      papa,
   } else
    amrex::Error("query_status invalid");
 
+  std::string blob_FullPathName  = FullPath+"/blob";
+
+  Vector<char> blob_fileCharPtr;
+  //we assume that all of the blob history data fits on each "core"
+  ParallelDescriptor::ReadAndBcastFile(blob_FullPathName, blob_fileCharPtr);
+  std::string blob_fileCharPtrString(blob_fileCharPtr.dataPtr());
+  std::istringstream blob_is(blob_fileCharPtrString, std::istringstream::in);
+
+  blob_history_class.restart(0,blob_is);
+
  } else if ((level>0)&&(level<=max_level)) {
   // do nothing
  } else
@@ -1004,7 +976,6 @@ AmrLevel::checkPoint (const std::string& dir,
 
     if (level==0) {
 
-
      for (int i=0;i<=time_order;i++) {
 
 #ifdef AMREX_PARTICLES
@@ -1062,7 +1033,13 @@ AmrLevel::checkPoint (const std::string& dir,
      } else
       amrex::Error("query_status invalid");
 
-     ParallelDescriptor::Barrier("AmrLevel::checkPoint");
+     ParallelDescriptor::Barrier("AmrLevel::checkPoint(ctml)");
+
+     blob_history_class.open_checkpoint(FullPath);
+     blob_history_class.checkpoint(0);
+     blob_history_class.close_checkpoint();
+
+     ParallelDescriptor::Barrier("AmrLevel::checkPoint(blob)");
 
     } else if ((level>=1)&&(level<=max_level)) {
 
