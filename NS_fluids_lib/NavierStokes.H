@@ -54,85 +54,6 @@ class NSBld
                                   Real            time) override;
 };
 
-class snapshot_blobclass
-{
-public:
- 
- Real blob_volume;
- Real blob_center[AMREX_SPACEDIM];
- Real blob_axis_len[AMREX_SPACEDIM];
- Real blob_axis_evec[AMREX_SPACEDIM][AMREX_SPACEDIM];
- Real blob_time;
-};
-
-class dynamic_blobclass
-{
-public:
-
- int im;
- Vector<snapshot_blobclass> snapshots;
-
-};
-
-class blobclass
-{
-public:
-   // X=(x,y,z)  U=(u,v,w)
-   // velocity=sum alpha_i phi_i(X)  i=1..6 in 3D (i=1..4 in 2D)
-   // E=sum || u_k - sum alpha_i phi_i(X_k) ||^2 w_k
-   // least squares matrix 
-   // Aij=sum phi_i(X_k) dot phi_j(X_k) w_k
-   // Bi=sum phi_i(X_k) dot u_k w_k
-   // ux,uy,uz fluid_interior,fluid,solid
-  Real blob_matrix[3*(2*AMREX_SPACEDIM)*(2*AMREX_SPACEDIM)]; 
-  Real blob_RHS[3*(2*AMREX_SPACEDIM)]; 
-   // alphax,alphay,alphaz,alphaxy alphaxz alphayz  
-   //  fluid interior,fluid,solid
-   // u=alphaxy(y-y0)+alphaxz(z-z0)+alphax  
-   // v=-alphaxy(x-x0)+alphayz(z-z0)+alphay
-   // w=-alphayz(y-y0)-alphaxz(x-x0)+alphaz
-   // phix=(1 0 0) phiy=(0 1 0) phiz=(0 0 1)
-   // phixy=( (y-y0)  -(x-x0)   0   )
-   // phixz=( (z-z0)     0  -(x-x0) )
-   // phiyz=(   0    (z-z0) -(y-y0) )
-  Real blob_velocity[3*(2*AMREX_SPACEDIM)]; 
-   // translational momentum integral rho u dv
-   // angular momentum integral (x-x0) cross rho u dv
-   // | i    j    k  |
-   // |x-x0 y-y0 z-z0|
-   // | u    v    w  |  = ((y-y0)w-(z-z0)v)ihat+((z-z0)u-(x-x0)w))jhat+
-   //                     ((x-x0)v-(y-y0)u)khat
-   // first group: sum phi_i(x_k) dot u_k wmom_k
-   // second group: sum phi_i(x_k) dot phi_i(x_k) wmom_k
-   // note:
-   // momentum_x=alphax sum_k w_k=alphax sum phi_1 dot phi_1 wmom_k
-   // momentum_y and momentum_z are analogous.
-   // momentum_khat=-alphaxy sum ((xk-x0)^2 wk + (yk-y0)^2) wmomk=
-   //               -alphaxy sum phixy dot phixy wmomk
-   // momentum_jhat=alphaxz sum (zk-z0)^2 + (xk-x0)^2 wmomk=
-   //               alphaxz sum phixz dot phixz wmomk
-   // momentum_ihat=-alphayz sum (zk-z0)^2 + (yk-y0)^2 wmomk=
-   //               -alphayz sum phiyz dot phiyz wmomk
-  Real blob_integral_momentum[2*(2*AMREX_SPACEDIM)];
-  Real blob_energy;
-   // fluid_interior,fluid,solid
-  Real blob_mass_for_velocity[3];
-  Real blob_volume;
-  Real blob_cell_count;
-  Real blob_cellvol_count;
-  Real blob_mass;
-  Real blob_pressure;
-  Real blob_second_moment[6];
-  Real blob_center_integral[AMREX_SPACEDIM];
-  Real blob_center_actual[AMREX_SPACEDIM];
-  Real blob_perim;  // surface area of the blob
-   // surface area of region separating the blob from a given material im.
-  Vector<Real> blob_perim_mat;  
-   // perimeter of contact line between im, im1, im2
-  Vector< Vector<Real> > blob_triple_perim;
-  int im;  // 1<=im<=num_materials
-};
-
 class NavierStokes
     :
     public AmrLevel 
@@ -383,8 +304,6 @@ public:
     static void get_iten_cpp(int im1,int im2,int& iten);
 
     static int CTML_FSI_numsolids;
-
-    static Vector<dynamic_blobclass> blob_history;
 
     static Real inflow_pressure;
     static Real outflow_pressure;

@@ -236,8 +236,6 @@ int NavierStokes::segregated_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
 
-Vector<dynamic_blobclass> NavierStokes::blob_history;
-
 int  NavierStokes::sum_interval = -1;
 int  NavierStokes::NUM_SCALARS  = 0;
 
@@ -2294,8 +2292,13 @@ NavierStokes::setup_integrated_quantities() {
 
 } // end subroutine setup_integrated_quantities
 
-// read_params is called from:
-// NavierStokes::variableSetUp
+//read_params is called from:
+//NavierStokes::variableSetUp
+//levelbld->variableSetUp is called from InitAmr
+//NavierStokes::variableSetUp() is called from NSBld::variableSetUp
+//(see NSBld.cpp)
+//InitAmr() is called from AmrCore::AmrCore()
+//AmrCore::AmrCore() is called from main.cpp
 void
 NavierStokes::read_params ()
 {
@@ -2830,7 +2833,7 @@ NavierStokes::read_params ()
      FSI_touch_flag[tid]=0;
     }
 
-    blob_history.resize(0);
+    blob_history_class.blob_history.resize(0);
 
     gravity_vector.resize(AMREX_SPACEDIM);
 

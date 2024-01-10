@@ -1839,8 +1839,10 @@ NavierStokes::variableSetUp ()
 void 
 NavierStokes::append_blob_history(blobclass blobdata,Real time) {
 
+ int history_size=blob_history_class.blob_history.size();
+
  int match_found=0;
- for (int i=0;((i<blob_history.size())&&(match_found==0));i++) {
+ for (int i=0;((i<history_size)&&(match_found==0));i++) {
 
  }
 

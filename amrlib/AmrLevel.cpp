@@ -18,7 +18,151 @@ namespace amrex {
 DescriptorList AmrLevel::desc_lst;
 DescriptorList AmrLevel::desc_lstGHOST;
 
+dynamic_blobclass_array AmrLevel::blob_history_class;
+
 std::ofstream FSI_container_class::CTML_checkpoint_file;
+
+std::ofstream dynamic_blobclass_array::blob_checkpoint_file;
+
+void dynamic_blobclass_array::open_checkpoint(const std::string& FullPath) {
+
+// use std::ios::in for restarting  (std::ofstream::in ok too?)
+ if (ParallelDescriptor::IOProcessor()) {
+  std::string blob_FullPathName  = FullPath+"/blob";
+  blob_checkpoint_file.open(CTML_FullPathName.c_str(),
+    std::ios::out|std::ios::trunc|std::ios::binary);
+  if (!blob_checkpoint_file.good())
+   amrex::FileOpenFailed(blob_FullPathName);
+  int old_prec=blob_checkpoint_file.precision(15);
+ }
+
+} //end subroutine open_checkpoint
+
+void dynamic_blobclass_array::close_checkpoint() {
+
+ if (ParallelDescriptor::IOProcessor()) {
+  blob_checkpoint_file.close();
+ }
+
+}
+
+void dynamic_blobclass_array::checkpoint(int check_id) {
+
+ if (ParallelDescriptor::IOProcessor()) {
+  blob_checkpoint_file << check_id << '\n';
+
+  blob_checkpoint_file << blob_history.size() << '\n';
+
+  for (int i=0;i<blob_history.size();i++) {
+
+   blob_checkpoint_file << blob_history[i].im << '\n';
+   blob_checkpoint_file << blob_history[i].start_time << '\n';
+   blob_checkpoint_file << blob_history[i].end_time << '\n';
+   blob_checkpoint_file << blob_history[i].start_step << '\n';
+   blob_checkpoint_file << blob_history[i].end_step << '\n';
+
+   blob_checkpoint_file << blob_history[i].snapshots.size() << '\n';
+   for (int j=0;j<blob_history[i].snapshots.size();j++) {
+    blob_checkpoint_file << blob_history[i].snapshots[j].blob_volume << '\n';
+    blob_checkpoint_file << blob_history[i].snapshots[j].blob_time << '\n';
+    blob_checkpoint_file << blob_history[i].snapshots[j].blob_step << '\n';
+    for (int k=0;k<AMREX_SPACEDIM;k++) {
+     blob_checkpoint_file << 
+	 blob_history[i].snapshots[j].blob_center[k] << '\n';
+     blob_checkpoint_file << 
+	 blob_history[i].snapshots[j].blob_axis_len[k] << '\n';
+     for (int l=0;l<AMREX_SPACEDIM;l++) {
+      blob_checkpoint_file << 
+	 blob_history[i].snapshots[j].blob_axis_evec[k][l] << '\n';
+     } //l=0..sdim-1
+    } //k=0..sdim-1
+   } // j=0;j<snapshots.size()
+  } // i=0;i<blob_history_size
+
+ }
+
+} //end subroutine checkpoint
+
+
+void FSI_container_class::restart(int check_id,std::istream& is) {
+
+	FIX ME
+ int local_check_id;
+ is >> local_check_id;
+ if (local_check_id==check_id) {
+  //do nothing
+ } else
+  amrex::Error("local_check_id invalid");
+
+ int local_node_list_size;
+ int local_element_list_size;
+ int local_mass_list_size;
+ int local_scalar_list_size;
+
+ is >> CTML_num_solids;
+ is >> FSI_num_scalars;
+ for (int dir=0;dir<3;dir++) {
+  is >> max_num_nodes[dir];
+ }
+ is >> max_num_elements;
+ is >> structured_flag;
+ is >> structure_dim;
+ is >> structure_topology;
+ is >> ngrow_node;
+
+ is >> local_node_list_size;
+
+ node_list.resize(local_node_list_size);
+ init_node_list.resize(local_node_list_size);
+ prev_node_list.resize(local_node_list_size);
+ velocity_list.resize(local_node_list_size);
+ prev_velocity_list.resize(local_node_list_size);
+
+ for (int i=0;i<node_list.size();i++) {
+  is >> node_list[i];
+  is >> prev_node_list[i];
+  is >> velocity_list[i];
+  is >> prev_velocity_list[i];
+  is >> init_node_list[i];
+ }
+
+ is >> local_element_list_size;
+
+ element_list.resize(local_element_list_size);
+ for (int i=0;i<element_list.size();i++) {
+  is >> element_list[i];
+ }
+
+ is >> local_mass_list_size;
+
+ mass_list.resize(local_mass_list_size);
+ temp_list.resize(local_mass_list_size);
+
+ for (int i=0;i<mass_list.size();i++) {
+  is >> mass_list[i];
+  is >> temp_list[i];
+ }
+
+ is >> local_scalar_list_size;
+ scalar_list.resize(local_scalar_list_size);
+ prev_scalar_list.resize(local_scalar_list_size);
+ for (int i=0;i<scalar_list.size();i++) {
+  is >> scalar_list[i];
+  is >> prev_scalar_list[i];
+ }
+
+} //end subroutine restart
+
+
+
+
+
+
+
+
+
+
+
 
 void FSI_container_class::open_checkpoint(const std::string& FullPath) {
 
