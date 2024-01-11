@@ -1881,12 +1881,65 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
     S[2]=blobdata.blob_second_moment[1]; //xy
     S[3]=blobdata.blob_second_moment[3]; //yy
     fort_jacobi_eigenvalue(S,evals,evecs,&nsolve);
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     local_blob.blob_axis_len[dir]=std::sqrt(4.0*evals[dir]);
+    }
+    for (int dir=0;dir<AMREX_SPACEDIM*AMREX_SPACEDIM;dir++) {
+     local_blob.blob_axis_evec[dir]=evecs[dir];
+    }
    } else
     amrex::Error("force_blob_symmetry invalid");
 
   } else
    amrex::Error("NS_geometry_coord invalid");
+
  } else if (AMREX_SPACEDIM==3) {
+
+  if ((force_blob_symmetry[0]==1)&&
+      (force_blob_symmetry[1]==1)) {
+
+   local_blob.blob_axis_len[0]=
+     std::sqrt(blobdata.blob_second_moment[0]*5.0*4.0);
+   local_blob.blob_axis_evec[0]=1.0;
+   local_blob.blob_axis_evec[1]=0.0;
+   local_blob.blob_axis_evec[2]=0.0;
+
+   local_blob.blob_axis_len[1]=
+     std::sqrt(blobdata.blob_second_moment[3]*5.0*4.0);
+   local_blob.blob_axis_evec[3]=0.0;
+   local_blob.blob_axis_evec[4]=1.0;
+   local_blob.blob_axis_evec[5]=0.0;
+
+   local_blob.blob_axis_len[2]=
+     std::sqrt(blobdata.blob_second_moment[5]*5.0*4.0);
+   local_blob.blob_axis_evec[6]=0.0;
+   local_blob.blob_axis_evec[7]=0.0;
+   local_blob.blob_axis_evec[8]=1.0;
+
+  } else if ((force_blob_symmetry[0]==0)&&
+             (force_blob_symmetry[1]==0)) {
+   Real S[AMREX_SPACEDIM*AMREX_SPACEDIM];
+   Real evecs[AMREX_SPACEDIM*AMREX_SPACEDIM];
+   Real evals[AMREX_SPACEDIM];
+   S[0]=blobdata.blob_second_moment[0]; //xx
+   S[1]=blobdata.blob_second_moment[1]; //xy
+   S[2]=blobdata.blob_second_moment[2]; //xz
+   S[3]=blobdata.blob_second_moment[1]; //yx
+   S[4]=blobdata.blob_second_moment[3]; //yy
+   S[5]=blobdata.blob_second_moment[4]; //yz
+   S[6]=blobdata.blob_second_moment[2]; //zx
+   S[7]=blobdata.blob_second_moment[4]; //zy
+   S[8]=blobdata.blob_second_moment[5]; //zz
+
+   fort_jacobi_eigenvalue(S,evals,evecs,&nsolve);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    local_blob.blob_axis_len[dir]=std::sqrt(5.0*evals[dir]);
+   }
+   for (int dir=0;dir<AMREX_SPACEDIM*AMREX_SPACEDIM;dir++) {
+    local_blob.blob_axis_evec[dir]=evecs[dir];
+   }
+  } else
+   amrex::Error("force_blob_symmetry invalid");
 
  } else
   amrex::Error("AMREX_SPACEDIM invalid");
@@ -1895,9 +1948,60 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
 
  int history_size=blob_history_class.blob_history.size();
 
- int match_found=0;
- for (int i=0;((i<history_size)&&(match_found==0));i++) {
-
+ int i_closest=-1;
+ Real dist_closest=-1.0;
+ for (int i=0;i<history_size;i++) {
+  if (blob_history_class.blob_history[i].im==blobdata.im) {
+   if (blob_history_class.blob_history[i].end_step==local_blob.blob_step-1) {
+    Real mag=0.0;
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     int j=blob_history_class.blob_history[i].snapshots.size()-1;
+     Real x1=blob_history_class.blob_history[i].snapshots[j].blob_center[dir];
+     Real x2=local_blob.blob_center[dir];
+     mag=mag+(x1-x2)*(x1-x2);
+    }
+    mag=std::sqrt(mag);
+    if (i_closest==-1) {
+     dist_closest=mag;
+     i_closest=i;
+    } else {
+     if (mag<dist_closest) {
+      dist_closest=mag;
+      i_closest=i;
+     }
+    }
+   } //end_step ok?
+  } //im match?
+ } //i
+	    
+ if (i_closest>=0) {
+  int j=blob_history_class.blob_history[i_closest].snapshots.size()-1;
+  Real vol1=blob_history_class.blob_history[i_closest].snapshots[j].blob_volume;
+  Real vol2=local_blob.blob_volume;
+  Real vol_max=((vol1>vol2) ? vol1 : vol2);
+  if ((vol1==0.0)||(vol2==0.0)) {
+   i_closest=-1;
+  } else {
+   Real relative_vol_error=std::abs(vol1-vol2)/vol_max;
+   if (relative_vol_error>0.1) {
+    i_closest=-1;
+   }	 
+  }
+ }
+ if (i_closest>=0) {
+  blob_history_class.blob_history[i_closest].snapshots.push_back(local_blob);
+  blob_history_class.blob_history[i_closest].end_time=time;
+  blob_history_class.blob_history[i_closest].end_step=local_blob.blob_step;
+ } else {
+  dynamic_blobclass new_trajectory;
+  new_trajectory.im=blobdata.im;
+  new_trajectory.start_time=time;
+  new_trajectory.end_time=time;
+  new_trajectory.start_step=local_blob.blob_step;
+  new_trajectory.end_step=local_blob.blob_step;
+  new_trajectory.snapshots.resize(0);
+  new_trajectory.snapshots.push_back(local_blob);
+  blob_history_class.blob_history.push_back(new_trajectory);
  }
 
 } //end subroutine append_blob_history
