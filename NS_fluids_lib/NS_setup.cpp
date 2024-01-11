@@ -1839,6 +1839,60 @@ NavierStokes::variableSetUp ()
 void 
 NavierStokes::append_blob_history(blobclass blobdata,Real time) {
 
+ snapshot_blobclass local_blob;
+ local_blob.blob_volume=blobdata.blob_volume;
+ for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+  local_blob.blob_center[dir]=blobdata.blob_center_actual[dir];
+ }
+ local_blob.blob_time=time;
+ local_blob.blob_step=parent->levelSteps(0); //0<=step
+
+ int nsolve=AMREX_SPACEDIM;
+
+ if (AMREX_SPACEDIM==2) {
+  if (NS_geometry_coord==COORDSYS_RZ) {
+   local_blob.blob_axis_len[0]=
+     std::sqrt(blobdata.blob_second_moment[0]*5.0);
+   local_blob.blob_axis_evec[0]=1.0;
+   local_blob.blob_axis_evec[1]=0.0;
+
+   local_blob.blob_axis_len[1]=
+     std::sqrt(blobdata.blob_second_moment[3]*5.0);
+   local_blob.blob_axis_evec[2]=0.0;
+   local_blob.blob_axis_evec[3]=1.0;
+  } else if ((NS_geometry_coord==COORDSYS_CYLINDRICAL)||
+             (NS_geometry_coord==COORDSYS_CARTESIAN)) {
+   if (force_blob_symmetry[0]==1) {
+    local_blob.blob_axis_len[0]=
+      std::sqrt(blobdata.blob_second_moment[0]*4.0*2.0);
+    local_blob.blob_axis_evec[0]=1.0;
+    local_blob.blob_axis_evec[1]=0.0;
+
+    local_blob.blob_axis_len[1]=
+      std::sqrt(blobdata.blob_second_moment[3]*4.0*2.0);
+    local_blob.blob_axis_evec[2]=0.0;
+    local_blob.blob_axis_evec[3]=1.0;
+   } else if (force_blob_symmetry[0]==0) {
+    Real S[AMREX_SPACEDIM*AMREX_SPACEDIM];
+    Real evecs[AMREX_SPACEDIM*AMREX_SPACEDIM];
+    Real evals[AMREX_SPACEDIM];
+    S[0]=blobdata.blob_second_moment[0]; //xx
+    S[1]=blobdata.blob_second_moment[1]; //xy
+    S[2]=blobdata.blob_second_moment[1]; //xy
+    S[3]=blobdata.blob_second_moment[3]; //yy
+    fort_jacobi_eigenvalue(S,evals,evecs,&nsolve);
+   } else
+    amrex::Error("force_blob_symmetry invalid");
+
+  } else
+   amrex::Error("NS_geometry_coord invalid");
+ } else if (AMREX_SPACEDIM==3) {
+
+ } else
+  amrex::Error("AMREX_SPACEDIM invalid");
+
+ local_blob.sort_axis();
+
  int history_size=blob_history_class.blob_history.size();
 
  int match_found=0;
