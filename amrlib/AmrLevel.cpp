@@ -24,6 +24,26 @@ std::ofstream FSI_container_class::CTML_checkpoint_file;
 
 std::ofstream dynamic_blobclass_array::blob_checkpoint_file;
 
+void snapshot_blobclass::sort_axis() {
+
+ for (int outer=0;outer<AMREX_SPACEDIM-1;outer++) {
+  for (int inner=AMREX_SPACEDIM-outer-1;inner>=1;inner--) {
+   if (blob_axis_len[inner]>blob_axis_len[inner-1]) {
+    Real data_save=blob_axis_len[inner-1];
+    blob_axis_len[inner-1]=blob_axis_len[inner];
+    blob_axis_len[inner]=data_save;
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     int s1=AMREX_SPACEDIM*(inner-1)+dir;
+     data_save=blob_axis_evec[s1];
+     int s2=AMREX_SPACEDIM*(inner)+dir;
+     blob_axis_evec[s1]=blob_axis_evec[s2];  
+     blob_axis_evec[s2]=data_save; 
+    } //dir=0..sdim-1 
+   } //if (blob_axis_len[inner]>blob_axis_len[inner-1]) 
+  } //inner
+ } //outer=0..sdim-2
+} // snapshot_blobclass::sort_axis()
+
 void dynamic_blobclass_array::open_checkpoint(const std::string& FullPath) {
 
 // use std::ios::in for restarting  (std::ofstream::in ok too?)
@@ -71,11 +91,11 @@ void dynamic_blobclass_array::checkpoint(int check_id) {
 	 blob_history[i].snapshots[j].blob_center[k] << '\n';
      blob_checkpoint_file << 
 	 blob_history[i].snapshots[j].blob_axis_len[k] << '\n';
-     for (int l=0;l<AMREX_SPACEDIM;l++) {
-      blob_checkpoint_file << 
-	 blob_history[i].snapshots[j].blob_axis_evec[k][l] << '\n';
-     } //l=0..sdim-1
     } //k=0..sdim-1
+    for (int k=0;k<AMREX_SPACEDIM*AMREX_SPACEDIM;k++) {
+     blob_checkpoint_file << 
+       blob_history[i].snapshots[j].blob_axis_evec[k] << '\n';
+    }
    } // j=0;j<snapshots.size()
   } // i=0;i<blob_history_size
 
@@ -116,10 +136,10 @@ void dynamic_blobclass_array::restart(int check_id,std::istream& is) {
    for (int k=0;k<AMREX_SPACEDIM;k++) {
     is >> blob_history[i].snapshots[j].blob_center[k];
     is >> blob_history[i].snapshots[j].blob_axis_len[k];
-    for (int l=0;l<AMREX_SPACEDIM;l++) {
-     is >> blob_history[i].snapshots[j].blob_axis_evec[k][l];
-    } //l=0..sdim-1
    } //k=0..sdim-1
+   for (int k=0;k<AMREX_SPACEDIM*AMREX_SPACEDIM;k++) {
+    is >> blob_history[i].snapshots[j].blob_axis_evec[k];
+   }
   } // j=0;j<snapshots.size()
  } // i=0;i<blob_history_size
 

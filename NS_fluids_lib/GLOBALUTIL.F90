@@ -5082,7 +5082,8 @@ S(i,j)=sinrot*skl+cosrot*sij
 return
 end subroutine EVAL_rotate
 
- !columns of "evecs" are the eigenvectors.
+!columns of "evecs" are the eigenvectors.
+!evecs(i,j) flattened index is s=n*(j-1)+i
 subroutine fort_jacobi_eigenvalue(S,evals,evecs,n) &
 bind(c,name='fort_jacobi_eigenvalue')
 use probcommon_module

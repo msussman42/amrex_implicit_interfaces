@@ -120,9 +120,14 @@ public:
  Real blob_volume;
  Real blob_center[AMREX_SPACEDIM];
  Real blob_axis_len[AMREX_SPACEDIM];
- Real blob_axis_evec[AMREX_SPACEDIM][AMREX_SPACEDIM];
+ //columns of "evecs" are the eigenvectors.
+ //evecs(i,j) flattened index is s=n*(j-1)+i
+ Real blob_axis_evec[AMREX_SPACEDIM*AMREX_SPACEDIM];
  Real blob_time;
  int blob_step;
+
+ void sort_axis();
+
 };
 
 class dynamic_blobclass
@@ -201,7 +206,7 @@ public:
   Real blob_cellvol_count;
   Real blob_mass;
   Real blob_pressure;
-  Real blob_second_moment[6];
+  Real blob_second_moment[6]; //xx,xy,x(y|z),yy,y(y|z),(yy|zz)
   Real blob_center_integral[AMREX_SPACEDIM];
   Real blob_center_actual[AMREX_SPACEDIM];
   Real blob_perim;  // surface area of the blob
