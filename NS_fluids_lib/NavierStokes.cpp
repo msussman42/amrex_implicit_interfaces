@@ -2215,6 +2215,12 @@ NavierStokes::read_geometry ()
 
 } // end subroutine read_geometry
 
+//called from:
+//read_params()
+//init_FSI_GHOST_MAC_MF_ALL_predict()
+//init_FSI_GHOST_MAC_MF_ALL()
+//nonlinear_advection()
+//sum_integrated_quantities()
 void
 NavierStokes::setup_integrated_quantities() {
 
@@ -7153,7 +7159,7 @@ int NavierStokes::pattern_test(const std::string& source,
  std::size_t local_found=source.find(pattern);
  int return_val=((local_found<std::string::npos) ? 1 : 0);
  return return_val;
-}
+} // end subroutine pattern_test
 
 void NavierStokes::init_FSI_GHOST_MAC_MF_ALL(
   int renormalize_only,
@@ -19277,7 +19283,7 @@ void NavierStokes::levelCombine(
 } // omp
  ns_reconcile_d_num(LOOP_FABCOM,"levelCombine");
 
-} // subroutine levelCombine
+} // end subroutine levelCombine
 
 void NavierStokes::volWgtSum(int isweep,int fast_mode) {
  

@@ -6878,8 +6878,8 @@ END SUBROUTINE SIMP
         fablo,fabhi, &
         bfact, &
         time, &
-        local_result, &
-        resultALL, &
+        local_result, & !running total
+        resultALL, &    !data from previous sweep
         sumdata_type, &
         sumdata_sweep, &
         resultsize, &
@@ -6937,7 +6937,8 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: sumdata_type(resultsize)
       integer, INTENT(in) :: sumdata_sweep(resultsize)
       real(amrex_real), INTENT(in) ::  time
-      real(amrex_real), INTENT(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)  
+      real(amrex_real), INTENT(in), target :: &
+              cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)  
       real(amrex_real), pointer :: cellten_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: lsfab(DIMV(lsfab),num_materials)  
       real(amrex_real), pointer :: lsfab_ptr(D_DECL(:,:,:),:)
