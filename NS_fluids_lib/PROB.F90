@@ -12398,6 +12398,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 !    operation_flag==OP_UGRAD_COUPLING_MAC)
 ! OP_U_COMP_CELL_MAC_TO_MAC (11)
 ! operation_flag=11 unew^MAC=uold^MAC +(unew^cell-uold^cell)^{cell->MAC}
+! SEM="spectral element method"
+! CELL=Gauss-Legendre,Gauss-Legendre,Gauss-Legendre input data
+! MAC=Gauss Lobatto Legendre,Gauss-Legendre, Gauss-Legendre
+!  or
+! MAC=Gauss-Legendre,Gauss Lobatto Legendre,Gauss-Legendre
+!  or
+! MAC=Gauss-Legendre,Gauss-Legendre,Gauss Lobatto Legendre
       subroutine SEM_CELL_TO_MAC( &
        ncomp_xp, & !number of amrsync components if op=0,3,5,6,7,9,10,11
        simple_AMR_BC_flag_in, &
@@ -13831,6 +13838,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           ! lineGRAD.
           ! u u_x + v u_y + w u_z = (u umac)_x + (u vmac)_y + (u wmac)_z -
           !                         u umac_x - u vmac_y - u wmac_z
+          ! calling from SEM_CELL_TO_MAC
+          ! SEM_IMAGE_BC_ALG.eq.0 => spectral accuracy
+          ! SEM_IMAGE_BC_ALG.eq.1 => 2nd order reflection
           call lineGRAD( &
            levelrz, &
            dir, &
@@ -13855,6 +13865,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              local_bctype_den(side)=SEM_EXTRAP
             endif
            enddo
+           ! calling from SEM_CELL_TO_MAC
+           ! SEM_IMAGE_BC_ALG.eq.0 => spectral accuracy
+           ! SEM_IMAGE_BC_ALG.eq.1 => 2nd order reflection
            call lineGRAD( &
             levelrz, &
             dir, &

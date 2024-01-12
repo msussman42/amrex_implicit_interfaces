@@ -1019,4 +1019,161 @@ endif
 return
 end subroutine FABRIC_DROP_HEATSOURCE
 
+
+subroutine FABRIC_DROP_SUMINT(GRID_DATA_IN,increment_out1, &
+       increment_out2,nsum1,nsum2,isweep)
+use probcommon_module_types
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nsum1,nsum2,isweep
+type(user_defined_sum_int_type), INTENT(in) :: GRID_DATA_IN
+real(amrex_real), INTENT(inout) :: increment_out1(nsum1)
+real(amrex_real), INTENT(inout) :: increment_out2(nsum2)
+
+real(amrex_real) massfrac_parm(num_species_var+1)
+real(amrex_real) T1_probe(SDIM)  !ZBOT
+real(amrex_real) T4_probe(SDIM)  !TPCE
+integer im
+integer dir
+integer dencomp,local_ispec
+real(amrex_real) den,temperature,internal_energy,pressure
+real(amrex_real) support_r
+real(amrex_real) dx_coarsest
+real(amrex_real) charfn
+real(amrex_real) volgrid
+real(amrex_real) denom
+
+integer :: level,finest_level
+
+integer :: i,j,k
+integer :: ilev
+
+i=GRID_DATA_IN%igrid
+j=GRID_DATA_IN%jgrid
+k=GRID_DATA_IN%kgrid
+level=GRID_DATA_IN%level
+finest_level=GRID_DATA_IN%finest_level
+
+if ((level.le.finest_level).and.(level.ge.0)) then
+ ! do nothing
+else
+ print *,"level invalid"
+ stop
+endif
+
+if ((num_materials.eq.3).and. &
+    (probtype.eq.FABRIC_DROP_PROB_TYPE)) then
+
+  ! zero moment + first moments = 4 integrations (3D)
+  ! r^2 moment (1 integration)
+ if ((nsum1.eq.4).and.(nsum2.eq.1)) then
+  FABRIC_DROP_LOW=zblob3
+  FABRID_DROP_HIGH=zblob4
+
+  if (axis_dir.eq.2) then ! TPCE aux files
+   if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID) then
+    T1_probe(1)=xblob2
+    T1_probe(2)=zblob2
+    T4_probe(1)=xblob2
+    T4_probe(2)=zblob2
+   endif
+  endif
+
+  if (SDIM.eq.2) then
+   ! do nothing
+  else if (SDIM.eq.3) then
+   T4_probe(SDIM)=T4_probe(2)
+   T4_probe(2)=T4_probe(1)
+
+   T1_probe(SDIM)=T1_probe(2)
+   T1_probe(2)=T1_probe(1)
+  else
+   print *,"dimension bust"
+   stop
+  endif
+
+  im=2 ! vapor
+  dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+  den=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp)
+  temperature=GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1)
+  call init_massfrac_parm(den,massfrac_parm,im)
+  do local_ispec=1,num_species_var
+   massfrac_parm(local_ispec)= &
+       GRID_DATA_IN%den(D_DECL(i,j,k),dencomp+1+local_ispec)
+  enddo
+  call INTERNAL_CRYOGENIC_TANK_MK(den,massfrac_parm, &
+    temperature,internal_energy,TANK_MK_MATERIAL_TYPE,im,num_species_var)
+  call EOS_CRYOGENIC_TANK_MK(den,massfrac_parm, &
+     internal_energy,pressure,TANK_MK_MATERIAL_TYPE,im,num_species_var)
+  support_r=0.0d0
+  do dir=1,SDIM
+   if (axis_dir.eq.0) then
+    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T1_probe(dir))**2
+   else if (axis_dir.eq.1) then
+    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
+   else if (axis_dir.eq.2) then
+    support_r=support_r+(GRID_DATA_IN%xsten(0,dir)-T4_probe(dir))**2
+   else
+    print *,"axis_dir invalid"
+    stop
+   endif
+  enddo
+  support_r=sqrt(support_r) 
+  dx_coarsest=GRID_DATA_IN%dx(SDIM)
+  do ilev=0,level-1
+   dx_coarsest=2.0d0*dx_coarsest
+  enddo
+
+  if (support_r.le.2.0d0*dx_coarsest) then
+   charfn=one
+  else if (support_r.gt.2.0d0*dx_coarsest) then
+   charfn=0.0d0
+  else
+   print *,"support_r invalid"
+   stop
+  endif
+  volgrid=GRID_DATA_IN%volgrid
+  if (isweep.eq.0) then
+   increment_out1(1)=charfn*volgrid
+   if (1.eq.0) then
+    print *,"nsum1,nsum2 ",nsum1,nsum2
+    print *,"charfn,volgrid,pressure,temperature ", &
+       charfn,volgrid,pressure,temperature
+    print *,"i,j,k ",i,j,k
+   endif
+
+  else if (isweep.eq.1) then
+   denom=increment_out1(1)
+   if (denom.gt.0.0d0) then
+    increment_out2(1)=charfn*volgrid*pressure/denom
+    increment_out2(2)=charfn*volgrid*temperature/denom
+   else
+    print *,"expecting denom>0.0:",denom
+    print *,"nsum1,nsum2 ",nsum1,nsum2
+    print *,"charfn,volgrid,pressure,temperature ", &
+       charfn,volgrid,pressure,temperature
+    print *,"i,j,k ",i,j,k
+    stop
+   endif
+  else
+   print *,"isweep invalid"
+   stop
+  endif
+ else
+  print *,"nsum1 or nsum2 invalid"
+  stop
+ endif
+
+else
+ print *,"num_materials ", num_materials
+ print *,"probtype ", probtype
+ print *,"num_materials or probtype invalid"
+ stop
+endif
+
+end subroutine FABRIC_DROP_SUMINT
+
+
 end module FABRIC_DROP_MODULE
