@@ -1061,26 +1061,17 @@ endif
 if ((num_materials.eq.3).and. &
     (probtype.eq.FABRIC_DROP_PROB_TYPE)) then
 
-  ! zero moment + first moments = 4 integrations (3D)
+  ! zero moment + r moment = 2 integrations (3D)
   ! r^2 moment (1 integration)
- if ((nsum1.eq.4).and.(nsum2.eq.1)) then
+ if ((nsum1.eq.2).and.(nsum2.eq.1)) then
   FABRIC_DROP_LOW=zblob3
-  FABRID_DROP_HIGH=zblob4
+  FABRIC_DROP_HIGH=zblob4
 
-
-
-  do ilev=0,level-1
-   dx_coarsest=2.0d0*dx_coarsest
-  enddo
-
-  if (support_r.le.2.0d0*dx_coarsest) then
-   charfn=one
-  else if (support_r.gt.2.0d0*dx_coarsest) then
-   charfn=0.0d0
-  else
-   print *,"support_r invalid"
-   stop
-  endif
+  zval=GRID_DATA_IN%xsten(0,SDIM)
+  if ((zval.ge.FABRIC_DROP_LOW).and. &
+      (zval.le.FABRIC_DROP_HIGH)) then 
+   LS_SOLID=GRID_DATA_IN%lsfab(D_DECL(i,j,k),3)
+   
   volgrid=GRID_DATA_IN%volgrid
   if (isweep.eq.0) then
    increment_out1(1)=charfn*volgrid
