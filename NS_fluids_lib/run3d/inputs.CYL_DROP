@@ -153,7 +153,9 @@ ns.vinletgas=0.0
 # Boundary conditions
 # -----------------------------------------
 ns.lo_bc          = 0 0 2
-ns.hi_bc          = 0 0 2
+ns.hi_bc          = 0 0 5
+ns.viscosity_lo_bc = 0 0 2
+ns.viscosity_hi_bc = 0 0 5
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry

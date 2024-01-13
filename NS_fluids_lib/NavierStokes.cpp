@@ -21135,7 +21135,34 @@ NavierStokes::writePlotFile (
   // output tecplot zonal files  x,y,z,u,v,w,phi,psi
 
  if (level==0) {
+
   writeTECPLOT_File(do_plot,do_slice);
+
+  int nsteps=parent->levelSteps(0); //0<=step
+				    //
+  ParallelDescriptor::Barrier();
+  std::fflush(NULL);
+   // call FLUSH(6)
+  fort_flush_fortran();
+  ParallelDescriptor::Barrier();
+  std::cout.precision(20);
+
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "BLOB HISTORY STEP= " << nsteps << '\n';
+   int history_size=blob_history_class.blob_history.size();
+   for (int i=0;i<history_size;i++) {
+    int snapshot_size=blob_history_class.blob_history[i].snapshots.size();
+    for (int j=0;j<snapshot_size;j++) {
+     std::cout << "BLOB HISTORY REC im,i,time,cen,rad(s) " <<
+      blob_history_class.blob_history[i].im << ' ' <<
+      i << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_time << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_center << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_axis_len << '\n';
+    }
+   }
+  }
+
  }
 
  std::string path2="./temptecplot";

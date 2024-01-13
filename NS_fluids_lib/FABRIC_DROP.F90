@@ -85,7 +85,7 @@ real(amrex_real),INTENT(in)      ::  p1(sd),p2(sd),x(sd)
 real(amrex_real),INTENT(out)     ::  dist
 real(amrex_real),INTENT(out)     ::  pout(sd)
 
-real(amrex_real)                 :: diff10,diff21,diffx
+real(amrex_real)                 :: diff10,diff21
 real(amrex_real),allocatable     :: x10(:), x21(:)
 integer                      :: i
 real(amrex_real)                 :: s
@@ -154,7 +154,7 @@ integer                 :: k
 real(amrex_real),allocatable         :: spl(:,:)
 real(amrex_real)            :: dist,dtemp
 real(amrex_real),INTENT(out):: xc(3)
-real(amrex_real)            :: spltemp(2),pout(2)
+real(amrex_real)            :: pout(2)
 
 
 allocate(spl(2,P+1))
@@ -200,11 +200,8 @@ end subroutine find_xc
 subroutine INIT_FABRIC_DROP_MODULE()
 use probcommon_module
 IMPLICIT NONE
-real(amrex_real) R
 real(amrex_real) internal_x(3)
-integer ithread
 integer i,j,k
-integer N, N_max
 real(8) :: xblob5_dbl,yblob5_dbl,zblob5_dbl
 
 if ((probtype.ne.FABRIC_DROP_PROB_TYPE).or.(SDIM.ne.3)) then
@@ -378,10 +375,9 @@ real(amrex_real), INTENT(out) :: LS
 real(amrex_real)         :: xlo,xhi,ylo,yhi,zlo,zhi
 real(amrex_real)         :: hN1,hN2,xctemp
 real(amrex_real)         :: xy(3),xc(3),xz(2),xh(3)
-integer              :: i,j,k,l,ky,kx
+integer              :: i,ky,kx
 real(amrex_real)         :: lstemp1,lstemp2
 real(amrex_real)         :: a,b
-real(amrex_real)         :: dtemp,dist
 real(amrex_real),allocatable :: ynf(:)  ! wavy thread
 real(amrex_real),allocatable :: xnf(:)  ! straight thread
 integer              :: fnflag
@@ -442,7 +438,7 @@ LS=0.0d0
     fnflag=mod(ky,2)
     exit
    endif
-  enddo
+  enddo ! do ky=1,N1+2
  
   call find_xc(a,b,fnflag,xz,xc)
   xc(2)=xctemp
@@ -488,12 +484,12 @@ real(amrex_real)         :: lstemp1,lstemp2
 
 real(amrex_real)         :: tempsx,tempsy
 real(amrex_real)         :: centerx,centery,centerz
-integer        :: TN1,TN2,i,j
-real(amrex_real)         :: tx(3),ty(3)
+integer        :: TN1,TN2,i
+real(amrex_real)         :: tx(SDIM),ty(SDIM)
 real(amrex_real)         :: x(SDIM)
 
 if(axis_dir.ne.1)then
- print *,"set aixs_dir=1 for this validation test"
+ print *,"set axis_dir=1 for this validation test"
  stop
 endif
 
@@ -553,12 +549,11 @@ IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: x_in(SDIM)
 real(amrex_real), INTENT(out) :: LS
-real(amrex_real)         :: lstemp1,lstemp2
+real(amrex_real)         :: lstemp1
 
-real(amrex_real)         :: tempsx,tempsy
 real(amrex_real)         :: centerx,centery,centerz
-integer        :: TN1,TN2,i,j
-real(amrex_real)         :: tx(3),ty(3)
+integer        :: i
+real(amrex_real)         :: tx(SDIM)
 real(amrex_real)         :: x(SDIM)
 
 if(axis_dir.ne.2)then
@@ -611,14 +606,14 @@ if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
  ! do nothing
 else 
- print *,"velsolid_flag invalid"
+ print *,"velsolid_flag invalid: ",velsolid_flag
  stop
 endif
 do dir=1,SDIM
  if (dx(dir).gt.zero) then
   ! do nothing
  else
-  print *,"dx invalid"
+  print *,"dx invalid: ",dx(dir)
   stop
  endif
 enddo
@@ -626,7 +621,8 @@ enddo
 if (adv_dir.eq.SDIM) then
   ! material 3 is the fabric
   ! velsolid_flag==1 if initializing the solid velocity.
- if ((LS(3).ge.zero).or.(velsolid_flag.eq.1)) then
+ if ((LS(3).ge.zero).or. &
+     (velsolid_flag.eq.1)) then
   ! in solid
   do dir=1,SDIM
    VEL(dir)=zero
@@ -647,11 +643,11 @@ if (adv_dir.eq.SDIM) then
     VEL(dir)=zero
    enddo
   else
-   print *,"LS bust"
+   print *,"LS bust: ",LS(1),LS(2)
    stop
   endif
  else
-  print *,"LS(3) or velsolid bust"
+  print *,"LS(3) or velsolid_flag bust: ",LS(3),velsolid_flag
   stop
  endif
 
@@ -1035,8 +1031,10 @@ real(amrex_real), INTENT(inout) :: increment_out2(nsum2)
 integer :: level,finest_level
 
 integer :: i,j,k
-integer :: ilev
 real(amrex_real) :: FABRIC_DROP_LOW,FABRIC_DROP_HIGH
+real(amrex_real) :: xval,yval,zval
+real(amrex_real) :: LS_SOLID,F_LIQUID,volgrid,denom
+real(amrex_real) :: xcentroid,ycentroid
 
 i=GRID_DATA_IN%igrid
 j=GRID_DATA_IN%jgrid
@@ -1047,7 +1045,7 @@ finest_level=GRID_DATA_IN%finest_level
 if ((level.le.finest_level).and.(level.ge.0)) then
  ! do nothing
 else
- print *,"level invalid"
+ print *,"level invalid: ",level
  stop
 endif
 
@@ -1061,46 +1059,85 @@ endif
 if ((num_materials.eq.3).and. &
     (probtype.eq.FABRIC_DROP_PROB_TYPE)) then
 
-  ! zero moment + r moment = 2 integrations (3D)
+  ! zero moment + x,y moment = 3 integrations (3D)
   ! r^2 moment (1 integration)
- if ((nsum1.eq.2).and.(nsum2.eq.1)) then
-  FABRIC_DROP_LOW=zblob3
-  FABRIC_DROP_HIGH=zblob4
+ if ((nsum1.eq.3).and.(nsum2.eq.1)) then
 
+  if (axis_dir.eq.0) then
+   FABRIC_DROP_LOW=-a_wavy
+   FABRIC_DROP_HIGH=a_wavy
+  else if ((axis_dir.eq.1).or. &
+           (axis_dir.eq.2)) then
+   FABRIC_DROP_LOW=-half*yblob6
+   FABRIC_DROP_HIGH=half*yblob6
+  else
+   print *,"axis_dir invalid"
+   stop
+  endif
+
+  if (isweep.eq.0) then
+   increment_out1(1)=zero
+   increment_out1(2)=zero
+   increment_out1(3)=zero
+  else if (isweep.eq.1) then
+   increment_out2(1)=zero
+  else
+   print *,"isweep invalid: ",isweep
+   stop
+  endif
+
+  xval=GRID_DATA_IN%xsten(0,1)
+  yval=GRID_DATA_IN%xsten(0,2)
   zval=GRID_DATA_IN%xsten(0,SDIM)
+
   if ((zval.ge.FABRIC_DROP_LOW).and. &
       (zval.le.FABRIC_DROP_HIGH)) then 
    LS_SOLID=GRID_DATA_IN%lsfab(D_DECL(i,j,k),3)
-   
-  volgrid=GRID_DATA_IN%volgrid
-  if (isweep.eq.0) then
-   increment_out1(1)=charfn*volgrid
-   if (1.eq.0) then
-    print *,"nsum1,nsum2 ",nsum1,nsum2
-    print *,"charfn,volgrid,pressure,temperature ", &
-       charfn,volgrid,pressure,temperature
-    print *,"i,j,k ",i,j,k
-   endif
+   F_LIQUID=GRID_DATA_IN%slopes(D_DECL(i,j,k),1)
+   volgrid=GRID_DATA_IN%volgrid
 
-  else if (isweep.eq.1) then
-   denom=increment_out1(1)
-   if (denom.gt.0.0d0) then
-    increment_out2(1)=charfn*volgrid*pressure/denom
-    increment_out2(2)=charfn*volgrid*temperature/denom
+   if (LS_SOLID.ge.zero) then
+    !do nothing
+   else if (LS_SOLID.lt.zero) then
+
+    if (isweep.eq.0) then
+     increment_out1(1)=F_LIQUID*volgrid
+     increment_out1(2)=xval*F_LIQUID*volgrid
+     increment_out1(3)=yval*F_LIQUID*volgrid
+    else if (isweep.eq.1) then
+     denom=increment_out1(1)
+     xcentroid=zero
+     ycentroid=zero
+     if (denom.gt.0.0d0) then
+      xcentroid=increment_out1(2)/denom
+      ycentroid=increment_out1(3)/denom
+      increment_out2(1)= &
+         ((xval-xcentroid)**2+(yval-ycentroid)**2)*volgrid*F_LIQUID
+     else if (denom.eq.0.0d0) then
+      ! do nothing
+     else
+      print *,"denom invalid: ",denom
+      stop
+     endif
+    else
+     print *,"isweep invalid: ",isweep
+     stop
+    endif
    else
-    print *,"expecting denom>0.0:",denom
-    print *,"nsum1,nsum2 ",nsum1,nsum2
-    print *,"charfn,volgrid,pressure,temperature ", &
-       charfn,volgrid,pressure,temperature
-    print *,"i,j,k ",i,j,k
+    print *,"LS_SOLID invalid: ",LS_SOLID
     stop
    endif
+  else if (zval.lt.FABRIC_DROP_LOW) then
+   ! do nothing
+  else if (zval.gt.FABRIC_DROP_HIGH) then
+   ! do nothing
   else
-   print *,"isweep invalid"
+   print *,"zval or fabric_drop parms invalid: ",zval
    stop
   endif
+
  else
-  print *,"nsum1 or nsum2 invalid"
+  print *,"nsum1 or nsum2 invalid: ",nsum1,nsum2
   stop
  endif
 
@@ -1113,5 +1150,93 @@ endif
 
 end subroutine FABRIC_DROP_SUMINT
 
+subroutine FABRIC_DROP_OVERRIDE_TAGFLAG( &
+  i,j,k, &
+  level,max_level, &
+  snew_ptr,lsnew_ptr, &
+  xsten,nhalf,time, &
+  rflag,tagflag)
+use amrex_fort_module, only : amrex_real
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+integer, INTENT(in) :: i,j,k
+integer, INTENT(in) :: level,max_level
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: rflag
+integer, INTENT(inout) :: tagflag
+real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), dimension(3) :: local_x
+real(amrex_real), dimension(SDIM) :: local_delta
+real(amrex_real) :: F_LIQUID,LS_LIQUID
+integer :: dir
+
+if (nhalf.lt.3) then
+ print *,"nhalf invalid fabric drop override tagflag"
+ stop
+endif
+if ((level.ge.0).and.(level.lt.max_level)) then
+ ! do nothing
+else
+ print *,"level and/or max_level invalid"
+ print *,"level=",level
+ print *,"max_level=",max_level
+ stop
+endif
+do dir=1,SDIM
+ local_x(dir)=xsten(0,dir)
+enddo
+local_x(3)=xsten(0,SDIM)
+do dir=1,SDIM
+ local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
+ if (local_delta(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"local_delta invalid fabric_drop_override_tagflag"
+  stop
+ endif
+enddo !dir=1..sdim
+
+if ((num_materials.eq.3).and. &
+    (probtype.eq.FABRIC_DROP_PROB_TYPE)) then
+
+ if ((axis_dir.ge.0).and.(axis_dir.le.2)) then
+
+  rflag=0.0d0
+  tagflag=0
+  LS_LIQUID=lsnew_ptr(D_DECL(i,j,k),1)
+  if (LS_LIQUID.ge.zero) then
+   rflag=1.0d0
+   tagflag=1
+  else if (LS_LIQUID.lt.zero) then
+   F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
+   if (F_LIQUID.ge.0.1d0) then
+    rflag=1.0d0
+    tagflag=1
+   else if (F_LIQUID.lt.0.1d0) then
+    ! do nothing
+   else
+    print *,"F_LIQUID invalid: ",F_LIQUID
+    stop
+   endif
+  else
+   print *,"LS_LIQUID invalid: ",LS_LIQUID
+   stop
+  endif
+ else
+  print *,"axis_dir invalid: ",axis_dir
+  stop
+ endif
+else
+ print *,"num_materials or probtype invalid"
+ print *,"num_materials: ",num_materials
+ print *,"probtype: ",probtype
+ stop
+endif
+
+end subroutine FABRIC_DROP_OVERRIDE_TAGFLAG
 
 end module FABRIC_DROP_MODULE
