@@ -1881,6 +1881,14 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
     S[2]=blobdata.blob_second_moment[1]; //xy
     S[3]=blobdata.blob_second_moment[3]; //yy
     fort_jacobi_eigenvalue(S,evals,evecs,&nsolve);
+
+    if ((evals[0]>=0.0)&&
+        (evals[1]>=0.0)&&
+        (evals[AMREX_SPACEDIM-1]>=0.0)) {
+     //do nothing
+    } else
+     amrex::Error("evals must be non negative");
+
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      local_blob.blob_axis_len[dir]=std::sqrt(4.0*evals[dir]);
     }
@@ -1897,6 +1905,13 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
 
   if ((force_blob_symmetry[0]==1)&&
       (force_blob_symmetry[1]==1)) {
+
+   if ((blobdata.blob_second_moment[0]>=0.0)&&
+       (blobdata.blob_second_moment[3]>=0.0)&&
+       (blobdata.blob_second_moment[5]>=0.0)) {
+    //do nothing
+   } else
+    amrex::Error("2nd mom diag < 0");
 
    local_blob.blob_axis_len[0]=
      std::sqrt(blobdata.blob_second_moment[0]*5.0*4.0);
@@ -1918,6 +1933,14 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
 
   } else if ((force_blob_symmetry[0]==0)&&
              (force_blob_symmetry[1]==0)) {
+
+   if ((blobdata.blob_second_moment[0]>=0.0)&&
+       (blobdata.blob_second_moment[3]>=0.0)&&
+       (blobdata.blob_second_moment[5]>=0.0)) {
+    //do nothing
+   } else
+    amrex::Error("3D: 2nd mom diag < 0");
+
    Real S[AMREX_SPACEDIM*AMREX_SPACEDIM];
    Real evecs[AMREX_SPACEDIM*AMREX_SPACEDIM];
    Real evals[AMREX_SPACEDIM];
@@ -1932,6 +1955,14 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
    S[8]=blobdata.blob_second_moment[5]; //zz
 
    fort_jacobi_eigenvalue(S,evals,evecs,&nsolve);
+
+   if ((evals[0]>=0.0)&&
+       (evals[1]>=0.0)&&
+       (evals[AMREX_SPACEDIM-1]>=0.0)) {
+    //do nothing
+   } else
+    amrex::Error("evals must be non negative");
+
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     local_blob.blob_axis_len[dir]=std::sqrt(5.0*evals[dir]);
    }
@@ -2038,6 +2069,8 @@ NavierStokes::sum_integrated_quantities (
   // call FLUSH(6)
  fort_flush_fortran();
 
+ std::cout.precision(20);
+
  if (ParallelDescriptor::IOProcessor()) {
    std::cout << "Starting: sum_integrated_quantities\n";
    std::cout << "This routine takes a while.\n";
@@ -2054,6 +2087,8 @@ NavierStokes::sum_integrated_quantities (
  std::fflush(NULL);
   // call FLUSH(6)
  fort_flush_fortran();
+
+ std::cout.precision(20);
 
  if (level!=0)
   amrex::Error("level invalid in sum_integrated_quantities");
@@ -2128,6 +2163,8 @@ NavierStokes::sum_integrated_quantities (
   // call FLUSH(6)
  fort_flush_fortran();
 
+ std::cout.precision(20);
+
  if (IQ_TOTAL_SUM_COMP!=NS_sumdata.size())
   amrex::Error("(IQ_TOTAL_SUM_COMP!=NS_sumdata.size())");
  if (IQ_TOTAL_SUM_COMP!=NS_sumdata_type.size())
@@ -2196,6 +2233,8 @@ NavierStokes::sum_integrated_quantities (
   // call FLUSH(6)
  fort_flush_fortran();
 
+ std::cout.precision(20);
+
  Vector<blobclass> blobdata;
  Vector< Vector<Real> > mdot_data;
  Vector< Vector<Real> > mdot_comp_data;
@@ -2248,6 +2287,8 @@ NavierStokes::sum_integrated_quantities (
   // call FLUSH(6)
  fort_flush_fortran();
  ParallelDescriptor::Barrier();
+
+ std::cout.precision(20);
 
  if (ParallelDescriptor::IOProcessor()) {
 
@@ -3011,6 +3052,8 @@ NavierStokes::sum_integrated_quantities (
   // call FLUSH(6)
  fort_flush_fortran();
  ParallelDescriptor::Barrier();
+
+ std::cout.precision(20);
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {
