@@ -21159,9 +21159,10 @@ NavierStokes::writePlotFile (
       blob_history_class.blob_history[i].snapshots[j].blob_time << ' ' <<
       blob_history_class.blob_history[i].snapshots[j].blob_center << ' ' <<
       blob_history_class.blob_history[i].snapshots[j].blob_axis_len << '\n';
-    }
-   }
-  }
+    } //j
+   } //i
+   std::cout << "END BLOB HISTORY STEP= " << nsteps << '\n';
+  } //ParallelDescriptor::IOProcessor
 
  }
 
