@@ -1171,7 +1171,7 @@ real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
 real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 real(amrex_real), dimension(3) :: local_x
 real(amrex_real), dimension(SDIM) :: local_delta
-real(amrex_real) :: F_LIQUID,LS_LIQUID
+real(amrex_real) :: F_LIQUID,LS_LIQUID,LS_FABRIC
 integer :: dir
 
 if (nhalf.lt.3) then
@@ -1208,22 +1208,30 @@ if ((num_materials.eq.3).and. &
   rflag=0.0d0
   tagflag=0
   LS_LIQUID=lsnew_ptr(D_DECL(i,j,k),1)
-  if (LS_LIQUID.ge.zero) then
-   rflag=1.0d0
-   tagflag=1
-  else if (LS_LIQUID.lt.zero) then
-   F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
-   if (F_LIQUID.ge.0.1d0) then
+  LS_FABRIC=lsnew_ptr(D_DECL(i,j,k),3)
+  if (LS_FABRIC.ge.zero) then
+   !do nothing
+  else if (LS_FABRIC.lt.zero) then
+   if (LS_LIQUID.ge.zero) then
     rflag=1.0d0
     tagflag=1
-   else if (F_LIQUID.lt.0.1d0) then
-    ! do nothing
+   else if (LS_LIQUID.lt.zero) then
+    F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
+    if (F_LIQUID.ge.0.1d0) then
+     rflag=1.0d0
+     tagflag=1
+    else if (F_LIQUID.lt.0.1d0) then
+     ! do nothing
+    else
+     print *,"F_LIQUID invalid: ",F_LIQUID
+     stop
+    endif
    else
-    print *,"F_LIQUID invalid: ",F_LIQUID
+    print *,"LS_LIQUID invalid: ",LS_LIQUID
     stop
    endif
   else
-   print *,"LS_LIQUID invalid: ",LS_LIQUID
+   print *,"LS_FABRIC invalid: ",LS_FABRIC
    stop
   endif
  else
