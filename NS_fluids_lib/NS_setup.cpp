@@ -1983,7 +1983,7 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
  Real dist_closest=-1.0;
  for (int i=0;i<history_size;i++) {
   if (blob_history_class.blob_history[i].im==blobdata.im) {
-   if (blob_history_class.blob_history[i].end_step==local_blob.blob_step-1) {
+   if (blob_history_class.blob_history[i].end_step==blob_history_class.end_step) {
     Real mag=0.0;
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      int j=blob_history_class.blob_history[i].snapshots.size()-1;
@@ -2275,6 +2275,15 @@ NavierStokes::sum_integrated_quantities (
 
   for (int iblob=0;iblob<blobdata.size();iblob++) {
    append_blob_history(blobdata[iblob],upper_slab_time);
+  }
+  if (blob_history_class.start_step==-1) {
+   blob_history_class.start_step=parent->levelSteps(0);
+   blob_history_class.end_step=parent->levelSteps(0);
+   blob_history_class.start_time=upper_slab_time;
+   blob_history_class.end_time=upper_slab_time;
+  } else {
+   blob_history_class.end_step=parent->levelSteps(0);
+   blob_history_class.end_time=upper_slab_time;
   }
 
  } else if (output_drop_distribution==0) {
