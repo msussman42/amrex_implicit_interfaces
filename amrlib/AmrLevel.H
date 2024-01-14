@@ -154,6 +154,11 @@ public:
  void checkpoint(int check_id);
  void restart(int check_id,std::istream& is);
 
+ Real start_time;
+ Real end_time;
+ int start_step;
+ int end_step;
+
  Vector<dynamic_blobclass> blob_history;
 
 };

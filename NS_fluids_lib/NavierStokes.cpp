@@ -2840,6 +2840,10 @@ NavierStokes::read_params ()
     }
 
     blob_history_class.blob_history.resize(0);
+    blob_history_class.start_time=-1.0;
+    blob_history_class.end_time=-1.0;
+    blob_history_class.start_step=-1;
+    blob_history_class.end_step=-1;
 
     gravity_vector.resize(AMREX_SPACEDIM);
 
@@ -21149,16 +21153,27 @@ NavierStokes::writePlotFile (
 
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "BLOB HISTORY STEP= " << nsteps << '\n';
+   std::cout << "BLOB HISTORY START_TIME= " << blob_history_class.start_time << '\n';
+   std::cout << "BLOB HISTORY END_TIME= " << blob_history_class.end_time << '\n';
+   std::cout << "BLOB HISTORY START_STEP= " << blob_history_class.start_step << '\n';
+   std::cout << "BLOB HISTORY END_STEP= " << blob_history_class.end_step << '\n';
+
    int history_size=blob_history_class.blob_history.size();
    for (int i=0;i<history_size;i++) {
     int snapshot_size=blob_history_class.blob_history[i].snapshots.size();
     for (int j=0;j<snapshot_size;j++) {
-     std::cout << "BLOB HISTORY REC im,i,time,cen,rad(s) " <<
+     std::cout << "BLOB HISTORY REC im,i,j,time,cen,rad,vol " <<
       blob_history_class.blob_history[i].im << ' ' <<
       i << ' ' <<
+      j << ' ' <<
       blob_history_class.blob_history[i].snapshots[j].blob_time << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_center << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_axis_len << '\n';
+      blob_history_class.blob_history[i].snapshots[j].blob_center[0] << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_center[1] << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_center[AMREX_SPACEDIM-1] << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_axis_len[0] << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_axis_len[1] << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_axis_len[AMREX_SPACEDIM-1] << ' ' <<
+      blob_history_class.blob_history[i].snapshots[j].blob_volume << '\n';
     } //j
    } //i
    std::cout << "END BLOB HISTORY STEP= " << nsteps << '\n';

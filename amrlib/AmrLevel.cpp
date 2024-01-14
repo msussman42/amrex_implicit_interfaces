@@ -73,6 +73,11 @@ void dynamic_blobclass_array::checkpoint(int check_id) {
 
   blob_checkpoint_file << blob_history.size() << '\n';
 
+  blob_checkpoint_file << start_time << '\n';
+  blob_checkpoint_file << end_time << '\n';
+  blob_checkpoint_file << start_step << '\n';
+  blob_checkpoint_file << end_step << '\n';
+
   for (int i=0;i<blob_history.size();i++) {
 
    blob_checkpoint_file << blob_history[i].im << '\n';
@@ -117,6 +122,11 @@ void dynamic_blobclass_array::restart(int check_id,std::istream& is) {
  is >> local_blob_history_size;
 
  blob_history.resize(local_blob_history_size);
+
+ is >> start_time;
+ is >> end_time;
+ is >> start_step;
+ is >> end_step;
 
  for (int i=0;i<blob_history.size();i++) {
   is >> blob_history[i].im;
