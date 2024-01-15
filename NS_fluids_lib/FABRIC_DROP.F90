@@ -28,13 +28,21 @@ module FABRIC_DROP_MODULE
 use amrex_fort_module, only : amrex_real
 implicit none 
 real(amrex_real),PARAMETER        :: pi=4.0d0*atan(1.0d0)
-real(amrex_real),PARAMETER        :: a_wavy=0.4d0
-real(amrex_real),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
-real(amrex_real),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
+real(amrex_real),PARAMETER        :: a_wavy=0.28d0
+REAL(KIND=8),PARAMETER            :: r_1=0.10d0  ! radius of wavy thread
+REAL(KIND=8),PARAMETER            :: r_2=0.10d0  ! radius of flat thread
+!real(amrex_real),PARAMETER        :: a_wavy=0.4d0
+!real(amrex_real),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
+!real(amrex_real),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
 integer,PARAMETER             :: N1=4   ! wavy threads
 integer,PARAMETER             :: N2=4   ! Straight threads
+real(amrex_real),PARAMETER    :: omega=pi/(3.0d0/4.0d0) ! 2 pi / 1.5
+
+!integer,PARAMETER             :: N1=6   ! wavy threads
+!integer,PARAMETER             :: N2=6   ! Straight threads
+!real(amrex_real),PARAMETER    :: omega=2.0d0*pi !3 pi / 1.5
+
 integer,parameter             :: P=96  ! number of partition points
-real(amrex_real),PARAMETER        :: omega=pi/(3.0d0/4.0d0)
 
 real(amrex_real), allocatable, dimension(:,:,:) :: internal_thread_ls
 real(amrex_real) internal_dx(3)
@@ -1065,8 +1073,8 @@ if ((num_materials.eq.3).and. &
  if ((nsum1.eq.9).and.(nsum2.eq.3)) then
 
   if (axis_dir.eq.0) then
-   FABRIC_DROP_LOW=-a_wavy
-   FABRIC_DROP_HIGH=a_wavy
+   FABRIC_DROP_LOW=-(a_wavy+r_1-0.005d0)
+   FABRIC_DROP_HIGH=(a_wavy+r_1-0.005d0)
   else if ((axis_dir.eq.1).or. &
            (axis_dir.eq.2)) then
    FABRIC_DROP_LOW=-half*yblob6
