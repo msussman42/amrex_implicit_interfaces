@@ -4389,11 +4389,13 @@ stop
         mom_dencore(im)=mom_den(D_DECL(i,j,k),im)
           ! sanity check
         if (constant_density_all_time(im).eq.1) then
-         if (abs(dencore(im)-fort_denconst(im)).le.VOFTOL) then
+         if (abs(dencore(im)-fort_denconst(im)).le. &
+             fort_denconst(im)*EPS_8_4) then
           ! do nothing
          else
           print *,"dencore(im) invalid"
           print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
+          print *,"fort_denconst(im) ",fort_denconst(im)
           print *,"dencomp=",dencomp
           print *,"normdir=",normdir
           stop
