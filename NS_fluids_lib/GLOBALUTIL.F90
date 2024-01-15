@@ -15940,7 +15940,7 @@ end subroutine print_visual_descriptor
       if (comp_dx.gt.zero) then
        ! do nothing
       else
-       print *,"comp_dx invalid"
+       print *,"comp_dx invalid: ",comp_dx
        stop
       endif
 
@@ -15962,13 +15962,13 @@ end subroutine print_visual_descriptor
         if (xcomp_hi.gt.xcomp_lo) then
          ! do nothing
         else
-         print *,"xcomp_hi-xcomp_lo invalid"
+         print *,"xcomp_hi-xcomp_lo invalid: ",xcomp_lo,xcomp_hi
          stop
         endif
 
-        if (abs(xphys-xcell_lo).le.EPS12*comp_dx) then
+        if (abs(xphys-xcell_lo).le.EPS_12_4*comp_dx) then
          xcomp_of_xphys=xcomp_lo
-        else if (abs(xphys-xcell_hi).le.EPS12*comp_dx) then
+        else if (abs(xphys-xcell_hi).le.EPS_12_4*comp_dx) then
          xcomp_of_xphys=xcomp_hi
         else if ((xphys.gt.xcell_lo).and. &
                  (xphys.lt.xcell_hi)) then
@@ -15976,7 +15976,11 @@ end subroutine print_visual_descriptor
             (xcomp_hi-xcomp_lo)* &
             (xphys-xcell_lo)/(xcell_hi-xcell_lo)
         else
-         print *,"xphys invalid"
+         print *,"xphys invalid: ",xphys
+         print *,"xcell_lo=",xcell_lo
+         print *,"xcell_hi=",xcell_hi
+         print *,"xcomp_lo=",xcomp_lo
+         print *,"xcomp_hi=",xcomp_hi
          stop
         endif
        else if (icrit.lt.0) then
