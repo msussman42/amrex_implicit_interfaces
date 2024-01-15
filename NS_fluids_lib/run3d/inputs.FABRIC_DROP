@@ -8,6 +8,8 @@ ns.material_type=0 0 999
 ns.num_materials=3
 ns.num_species_var=0
 ns.FSI_flag=0 0 1
+ns.ncomp_sum_int_user1=9 
+ns.ncomp_sum_int_user2=3 
 
 # -----------------------------------------
 # Space and time domain
@@ -29,7 +31,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 20      # number of timesteps between plots
 amr.plot_file       = plt     # root name of VisIr plot file
 amr.grid_log        = grdlog  # name of grid logging file
-amr.restart        = chk0000200
+#amr.restart        = chk0000200
 #amr.trace          = 1
 amr.file_name_digits= 7
 ns.sum_interval     = 100     # timesteps between computing statistics

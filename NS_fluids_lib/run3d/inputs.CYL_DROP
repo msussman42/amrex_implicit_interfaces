@@ -9,6 +9,8 @@ ns.material_type=0 0 999
 ns.num_materials=3
 ns.num_species_var=0
 ns.FSI_flag=0 0 1
+ns.ncomp_sum_int_user1=9 
+ns.ncomp_sum_int_user2=3 
 
 # -----------------------------------------
 # Space and time domain
@@ -103,6 +105,7 @@ ns.heatviscconst = 0.0 0.0 0.0
 # set theta=150  cos(theta)=-0.866
 #                       12       13        23
 ns.tension       = 7.2000E+01 7.2000E+01  9.648
+#ns.tension       = 2.2000E+01 2.2000e+1  0.2948E+1 
 #ns.tension       = 2.2000E+01 0.2948 2.2000E+01
 #ns.tension       = 2.2000E+01 7.5700E+01 9.7000E+01
 ns.stiffCP       = 4.1785E+03 1.0070E+03 4.1785E+03
