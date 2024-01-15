@@ -1030,7 +1030,7 @@ real(amrex_real), INTENT(inout) :: increment_out2(nsum2)
 
 integer :: level,finest_level
 
-integer :: i,j,k
+integer :: i,j,k,dir
 real(amrex_real) :: FABRIC_DROP_LOW,FABRIC_DROP_HIGH
 real(amrex_real) :: xval,yval,zval
 real(amrex_real) :: LS_SOLID,F_LIQUID,volgrid,denom
@@ -1060,8 +1060,9 @@ if ((num_materials.eq.3).and. &
     (probtype.eq.FABRIC_DROP_PROB_TYPE)) then
 
   ! zero moment + x,y moment = 3 integrations (3D)
-  ! r^2 moment (1 integration)
- if ((nsum1.eq.3).and.(nsum2.eq.1)) then
+  ! above, in, and below the fabric: 9 integrations
+  ! r^2 moment (3 integrations)
+ if ((nsum1.eq.9).and.(nsum2.eq.3)) then
 
   if (axis_dir.eq.0) then
    FABRIC_DROP_LOW=-a_wavy
@@ -1076,11 +1077,13 @@ if ((num_materials.eq.3).and. &
   endif
 
   if (isweep.eq.0) then
-   increment_out1(1)=zero
-   increment_out1(2)=zero
-   increment_out1(3)=zero
+   do dir=1,9
+    increment_out1(dir)=zero
+   enddo
   else if (isweep.eq.1) then
-   increment_out2(1)=zero
+   do dir=1,3
+    increment_out2(dir)=zero
+   enddo
   else
    print *,"isweep invalid: ",isweep
    stop
@@ -1090,49 +1093,50 @@ if ((num_materials.eq.3).and. &
   yval=GRID_DATA_IN%xsten(0,2)
   zval=GRID_DATA_IN%xsten(0,SDIM)
 
-  if ((zval.ge.FABRIC_DROP_LOW).and. &
-      (zval.le.FABRIC_DROP_HIGH)) then 
-   LS_SOLID=GRID_DATA_IN%lsfab(D_DECL(i,j,k),3)
-   F_LIQUID=GRID_DATA_IN%slopes(D_DECL(i,j,k),1)
-   volgrid=GRID_DATA_IN%volgrid
+  LS_SOLID=GRID_DATA_IN%lsfab(D_DECL(i,j,k),3)
+  F_LIQUID=GRID_DATA_IN%slopes(D_DECL(i,j,k),1)
+  volgrid=GRID_DATA_IN%volgrid
 
-   if (LS_SOLID.ge.zero) then
-    !do nothing
-   else if (LS_SOLID.lt.zero) then
+  if (LS_SOLID.ge.zero) then
+   !do nothing
+  else if (LS_SOLID.lt.zero) then
 
-    if (isweep.eq.0) then
-     increment_out1(1)=F_LIQUID*volgrid
-     increment_out1(2)=xval*F_LIQUID*volgrid
-     increment_out1(3)=yval*F_LIQUID*volgrid
-    else if (isweep.eq.1) then
-     denom=increment_out1(1)
-     xcentroid=zero
-     ycentroid=zero
-     if (denom.gt.0.0d0) then
-      xcentroid=increment_out1(2)/denom
-      ycentroid=increment_out1(3)/denom
-      increment_out2(1)= &
-         ((xval-xcentroid)**2+(yval-ycentroid)**2)*volgrid*F_LIQUID
-     else if (denom.eq.0.0d0) then
-      ! do nothing
-     else
-      print *,"denom invalid: ",denom
-      stop
-     endif
+   if (zval.gt.FABRIC_DROP_HIGH) then
+    dir=0
+   else if (zval.ge.FABRIC_DROP_LOW) then
+    dir=1
+   else if (zval.lt.FABRIC_DROP_LOW) then
+    dir=2
+   else
+    print *,"zval invalid: ",zval
+    stop
+   endif
+
+   if (isweep.eq.0) then
+    increment_out1(3*dir+1)=F_LIQUID*volgrid
+    increment_out1(3*dir+2)=xval*F_LIQUID*volgrid
+    increment_out1(3*dir+3)=yval*F_LIQUID*volgrid
+   else if (isweep.eq.1) then
+    denom=increment_out1(3*dir+1)
+    xcentroid=zero
+    ycentroid=zero
+    if (denom.gt.0.0d0) then
+     xcentroid=increment_out1(3*dir+2)/denom
+     ycentroid=increment_out1(3*dir+3)/denom
+     increment_out2(dir+1)= &
+       ((xval-xcentroid)**2+(yval-ycentroid)**2)*volgrid*F_LIQUID
+    else if (denom.eq.0.0d0) then
+     ! do nothing
     else
-     print *,"isweep invalid: ",isweep
+     print *,"denom invalid: ",denom
      stop
     endif
    else
-    print *,"LS_SOLID invalid: ",LS_SOLID
+    print *,"isweep invalid: ",isweep
     stop
    endif
-  else if (zval.lt.FABRIC_DROP_LOW) then
-   ! do nothing
-  else if (zval.gt.FABRIC_DROP_HIGH) then
-   ! do nothing
   else
-   print *,"zval or fabric_drop parms invalid: ",zval
+   print *,"LS_SOLID invalid: ",LS_SOLID
    stop
   endif
 
