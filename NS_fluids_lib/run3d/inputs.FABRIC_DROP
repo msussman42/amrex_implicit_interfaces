@@ -1,6 +1,7 @@
 # -----------------------------------------
 # General problem settings
 # -----------------------------------------
+# We=rho u^2 D/sigma=1000 * 20^2 * 1E-3/.022=18.2E+3
 ns.axis_dir=0
 ns.probtype=7001
 ns.material_type=0 0 999
@@ -77,9 +78,10 @@ ns.denconst      = 1.0000E+03 1.1270E+00 1.0000E+03
 ns.viscconst     = 6.5000E-01 1.9180E-02 6.5000E-01
 ns.heatviscconst = 0.0 0.0 0.0
 # sigma_12 = 22.0  (gas/liquid)
-# sigma_13 = 97.0  (liquid/solid)
-# sigma_23 = 75.7  (gas/solid)
-# theta=86.61 degree
+# sigma_13 = 75.7  (liquid/solid)
+# sigma_23 = 97.0  (gas/solid)
+# sigma_12 * cos(theta) + sigma_13 = sigma_23
+# cos(theta)=(97.0-75.7)/22.0 theta=14.5 degrees???
 # theta_1 (the angle between the gamma_12 and gamma_13 interfaces):
 #  Young's condition:
 #  sigma_12 * cos(theta_1)+sigma_13 = sigma_23
@@ -91,9 +93,9 @@ ns.heatviscconst = 0.0 0.0 0.0
 #  if cos(theta_1)>0 => set sigma_23=sigma_12
 
 # set theta=150  cos(theta)=-0.866
-#                       12       23        13
-ns.tension       = 2.2000E+01 0.2948 2.2000E+01
-#ns.tension       = 2.2000E+01 7.5700E+01 9.7000E+01
+#                       12       13        23
+ns.tension       = 2.2000E+01 2.2000e+1  0.2948E+1 
+#ns.tension       = 2.2000E+01 7.5700E+01 9.7000E+01 
 ns.stiffCP       = 4.1785E+03 1.0070E+03 4.1785E+03
 ns.tempconst     = 293.0 293.0 293.0
 
