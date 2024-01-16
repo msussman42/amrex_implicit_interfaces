@@ -1,7 +1,5 @@
-# -----------------------------------------
-# General problem settings
-# -----------------------------------------
 # We=rho u^2 D/sigma=1000 * 20^2 * 1E-3/.022=18.2E+3
+# zblob=1.05 radblob=0.5 advbot=20 20(stop_time)=4 stop_time=.2 ms=200microsec
 ns.axis_dir=0
 ns.probtype=7001
 ns.material_type=0 0 999
@@ -14,8 +12,8 @@ ns.ncomp_sum_int_user2=3
 # -----------------------------------------
 # Space and time domain
 # -----------------------------------------
-max_step  = 100000    # maximum number of timesteps
-stop_time = 1000.0    # maximum time value
+max_step  = 100000 # maximum number of timesteps
+stop_time = 0.2    # maximum time value
 
 geometry.coord_sys   = 0              # 0 => cart, 1 => RZ
 geometry.prob_lo     =-1.5 -1.5 -1.4 
@@ -34,7 +32,7 @@ amr.grid_log        = grdlog  # name of grid logging file
 #amr.restart        = chk0000200
 #amr.trace          = 1
 amr.file_name_digits= 7
-ns.sum_interval     = 100     # timesteps between computing statistics
+ns.sum_interval     = 5     # timesteps between computing statistics
 ns.v=0
 mg.verbose = 0
 cg.verbose = 0
@@ -75,6 +73,7 @@ ns.invert_gravity   = 0
 
 ns.advbot  =-20.0 # drop velocity
 ns.adv_dir = 3   # Direction of the drop       
+ns.output_drop_distribution=1
 
 ns.denconst      = 1.0000E+03 1.1270E+00 1.0000E+03
 ns.viscconst     = 6.5000E-01 1.9180E-02 6.5000E-01
