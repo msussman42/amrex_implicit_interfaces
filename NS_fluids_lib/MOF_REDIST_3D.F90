@@ -3642,7 +3642,7 @@ stop
            enddo
           enddo ! isten
 
-          dxthin=FACETOL_DVOL*(xsten(1,dir)-xsten(-1,dir))
+          dxthin=EPS_3_2*(xsten(1,dir)-xsten(-1,dir))
           if (side.eq.1) then
            xsten_thin(1,dir)=xsten(-1,dir)+dxthin
           else if (side.eq.2) then
@@ -4413,14 +4413,14 @@ stop
            print *,"frac_left or frac_right out of range"
            stop
           endif
-          if (frac_left(im).le.FACETOL_DVOL) then
+          if (frac_left(im).le.EPS_3_2) then
            frac_left(im) = zero
-          else if (frac_left(im).ge.one-FACETOL_DVOL) then
+          else if (frac_left(im).ge.one-EPS_3_2) then
            frac_left(im) = one
           endif
-          if (frac_right(im).lt.FACETOL_DVOL) then
+          if (frac_right(im).lt.EPS_3_2) then
            frac_right(im) = zero
-          else if (frac_right(im).gt.one-FACETOL_DVOL)then
+          else if (frac_right(im).gt.one-EPS_3_2)then
            frac_right(im) = one
           endif
 
@@ -4571,7 +4571,7 @@ stop
              stop
             endif
   
-            if (frac_pair(ml,mr).lt.FACETOL_DVOL) then
+            if (frac_pair(ml,mr).lt.EPS_3_2) then
              frac_pair(ml,mr)=zero
              dist_pair(ml,mr)=delta
             else
