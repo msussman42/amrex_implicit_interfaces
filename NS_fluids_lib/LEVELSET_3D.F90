@@ -2400,7 +2400,7 @@ stop
       endif
 
       call get_dxmax(dx,bfact,dxmax)
-      dist_tol=FACETOL_DVOL*dxmax
+      dist_tol=EPS_3_2*dxmax
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,ngrow) 
@@ -2557,14 +2557,14 @@ stop
   
               uncaptured_volume_fraction= &
                 uncaptured_volume_fraction-mofdatavalid(vofcomp)
-              if (uncaptured_volume_fraction.lt.FACETOL_DVOL) then
+              if (uncaptured_volume_fraction.lt.EPS_3_2) then
                uncaptured_volume_fraction=zero
               endif
               if (uncaptured_volume_fraction.gt.zero) then ! valid interface.
 
                ! dist=intercept+slopes dot (x-x0)
                ! perturb interface into the other materials
-               mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*FACETOL_DVOL*dx(1)
+               mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*EPS_3_2*dx(1)
        
                 ! solid case
                 ! in: FORT_CELLFACEINIT
@@ -2715,7 +2715,7 @@ stop
                 print *,"num_processed_fluid ",num_processed_fluid
                 print *,"uncaptured_volume_fraction ", &
                    uncaptured_volume_fraction
-                print *,"FACETOL_DVOL ",FACETOL_DVOL
+                print *,"EPS_3_2 ",EPS_3_2
                 print *,"bfact,level ",bfact,level
                 print *,"dx(1) ",dx(1)
                 print *,"i,j,k,xlo,volcell,xsten(cen) ", &
@@ -2788,14 +2788,14 @@ stop
  
              uncaptured_volume_fraction= &
                uncaptured_volume_fraction-mofdatavalid(vofcomp)
-             if (uncaptured_volume_fraction.lt.FACETOL_DVOL) then
+             if (uncaptured_volume_fraction.lt.EPS_3_2) then
               uncaptured_volume_fraction=zero
              endif
              if (uncaptured_volume_fraction.gt.zero) then ! valid interface.
 
               ! dist=intercept+slopes dot (x-x0)
               ! perturb interface into the other materials
-              mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*FACETOL_DVOL*dx(1)
+              mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*EPS_3_2*dx(1)
 
                ! fluid case
                ! in: FORT_CELLFACEINIT
@@ -2978,9 +2978,9 @@ stop
                endif
 
               else if (multi_volume(im).eq.zero) then
-               if ((vcenter(im).gt.FACETOL_DVOL).and. &
+               if ((vcenter(im).gt.EPS_3_2).and. &
                    (vfrac_solid_sum.eq.zero)) then
-                print *,"multi_volume(im) should not be zero"
+                print *,"multi_volume(im) shouldnt be zero: ",multi_volume(im)
                 stop
                endif
               else

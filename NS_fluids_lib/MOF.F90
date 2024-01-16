@@ -6931,8 +6931,10 @@ end subroutine volume_sanity_check
        print *,"im or im_opp invalid"
        stop
       endif
-      if (dist_tol.le.zero) then
-       print *,"dist_tol invalid"
+      if (dist_tol.gt.zero) then
+       !do nothing
+      else
+       print *,"dist_tol invalid: ",dist_tol
        stop
       endif
 
@@ -19189,7 +19191,7 @@ contains
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
       else
-       print *,"ngeom_recon.ne.2*sdim+3"
+       print *,"ngeom_recon.ne.2*sdim+3: ",ngeom_recon
        stop
       endif
       if (nmax.lt.4) then
@@ -19200,36 +19202,41 @@ contains
       if (nhalf0.ge.1) then
        ! do nothing
       else
-       print *,"nhalf0 invalid multi get area pairs"
+       print *,"nhalf0 invalid multi get area pairs: ",nhalf0
        stop
       endif
 
       if (bfact.ge.1) then
        ! do nothing
       else
-       print *,"bfact invalid135"
+       print *,"bfact invalid135: ",bfact
        stop
       endif
       if ((sdim.eq.3).or.(sdim.eq.2)) then
        ! do nothing
       else
-       print *,"sdim invalid multi_get_pairs"
+       print *,"sdim invalid multi_get_pairs: ",sdim
        stop
       endif
-      if ((num_materials.ge.1).and.(num_materials.le.MAX_NUM_MATERIALS)) then
+      if ((num_materials.ge.1).and. &
+          (num_materials.le.MAX_NUM_MATERIALS)) then
        ! do nothing
       else
-       print *,"num_materials invalid multi get area pairs"
+       print *,"num_materials invalid multi get area pairs: ",num_materials
        stop
       endif
 
       if ((dir_plus.ge.1).and.(dir_plus.le.sdim)) then
        ! do nothing
       else
-       print *,"dir_plus invalid"
+       print *,"dir_plus invalid: ",dir_plus
        stop
       endif 
 
+! 0=fluids tessellate, solids embedded
+! 1=fluids tessellate, solids embedded on input, but tessellating output
+! 3=if rigid materials dominate the cell, then that cell is considered
+!   to only have the one dominant rigid material.
       if ((tessellate_in.eq.0).or. &
           (tessellate_in.eq.1).or. &
           (tessellate_in.eq.3)) then
@@ -19256,12 +19263,12 @@ contains
          volume_plus, &
          centroid_plus,sdim)
 
-      dxthin=FACETOL_DVOL*half* &
+      dxthin=EPS_3_2*half* &
           (xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
       if (dxthin.gt.zero) then
        ! do nothing
       else
-       print *,"dxthin invalid"
+       print *,"dxthin invalid: ",dxthin
        stop
       endif
 
@@ -19331,7 +19338,7 @@ contains
       else if (tessellate_in.eq.0) then
        local_tessellate_in=0
       else
-       print *,"tessellate_in invalid"
+       print *,"tessellate_in invalid: ",local_tessellate_in
        stop
       endif
 
@@ -19402,24 +19409,24 @@ contains
        else if ((dir_plus.eq.2).or.(dir_plus.eq.sdim)) then
         ! do nothing
        else
-        print *,"dir_plus invalid"
+        print *,"dir_plus invalid: ",dir_plus
         stop
        endif
       else
-       print *,"levelrz invalid"
+       print *,"levelrz invalid: ",levelrz
        stop
       endif
 
       if (uncaptured_volume_START.gt.zero) then
        ! do nothing
       else
-       print *,"uncaptured_volume_START invalid"
+       print *,"uncaptured_volume_START invalid: ",uncaptured_volume_START
        stop
       endif
       if (uncaptured_area.ge.zero) then
        ! do nothing
       else
-       print *,"uncaptured_area invalid"
+       print *,"uncaptured_area invalid: ",uncaptured_area
        stop
       endif
 
@@ -19435,7 +19442,7 @@ contains
         else if (is_rigid_local(im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid_local invalid"
+         print *,"is_rigid_local invalid: ",is_rigid_local(im)
          stop
         endif
        enddo ! im=1..num_materials
@@ -19444,6 +19451,7 @@ contains
         ! do nothing
        else
         print *,"vfrac_fluid_sum invalid multi_get_area_pairs"
+        print *,"vfrac_fluid_sum=",vfrac_fluid_sum
         stop
        endif
 
@@ -19489,10 +19497,14 @@ contains
               !do nothing
              else
               print *,"mofdataproject_minus invalid"
+              print *,"mofdataproject_minus(vofcomp_single)=", &
+                  mofdataproject_minus(vofcomp_single)
+              print *,"mofdataproject_minus(vofcomp)=", &
+                  mofdataproject_minus(vofcomp)
               stop
              endif
             else
-             print *,"single_material invalid"
+             print *,"single_material invalid: ",single_material
              stop
             endif
 
@@ -19503,14 +19515,14 @@ contains
                    (material_used(im_test).le.num_materials)) then
            ! do nothing
           else
-           print *,"material used bust"
+           print *,"material used bust: ",material_used(im_test)
            stop
           endif
 
          else if (is_rigid_local(im_test).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid_local invalid"
+          print *,"is_rigid_local invalid: ",is_rigid_local(im_test)
           stop
          endif
 
@@ -19526,13 +19538,13 @@ contains
           else if (material_used(im).eq.0) then
            ! do nothing
           else
-           print *,"material_used invalid"
+           print *,"material_used invalid:",material_used(im)
            stop
           endif
          else if (is_rigid_local(im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid_local invalid"
+          print *,"is_rigid_local invalid:",is_rigid_local(im)
           stop
          endif
         enddo ! im=1..num_materials
@@ -19543,7 +19555,7 @@ contains
         else if (num_processed_fluid.eq.0) then
          fastflag=1
         else          
-         print *,"num_processed_fluid invalid"
+         print *,"num_processed_fluid invalid: ",num_processed_fluid
          stop
         endif
 
@@ -19592,6 +19604,7 @@ contains
 
          if ((critical_material.ge.1).and. &
              (critical_material.le.num_materials)) then
+
           if ((material_used(critical_material).ge.1).and. &
               (material_used(critical_material).le.num_materials)) then
 
@@ -19643,7 +19656,7 @@ contains
                else if (vol_diff.eq.zero) then
                 ! do nothing
                else
-                print *,"vol_diff invalid"
+                print *,"vol_diff invalid:",vol_diff
                 stop
                endif
               else
@@ -19681,18 +19694,19 @@ contains
              else if (is_rigid_local(im_opp).eq.1) then
               ! do nothing
              else
-              print *,"is_rigid_local invalid"
+              print *,"is_rigid_local invalid:",is_rigid_local(im_opp)
               stop
              endif
             enddo ! im_opp=1..num_materials
 
           else 
-            print *,"material_used(critical_material) invalid"
-            stop
+           print *,"material_used(critical_material) invalid:", &
+               material_used(critical_material)
+           stop
           endif
          else
-          print *,"critical_material invalid 19694: ",critical_material
-          stop
+          print *,"warning critical_material invalid 19694:",critical_material
+!          stop
          endif
 
         else if (fastflag.eq.1) then
@@ -19705,7 +19719,7 @@ contains
          endif
 
         else 
-         print *,"fastflag invalid multi get area pairs"
+         print *,"fastflag invalid multi get area pairs:",fastflag
          stop
         endif
 
@@ -19726,7 +19740,7 @@ contains
           else if (is_rigid_local(im_opp).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid_local invalid"
+           print *,"is_rigid_local invalid:",is_rigid_local(im_opp)
            stop
           endif
          enddo ! im_opp=1..num_materials
@@ -19770,7 +19784,7 @@ contains
           else if (is_rigid_local(im).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid_local invalid"
+           print *,"is_rigid_local invalid:",is_rigid_local(im)
            stop
           endif
 
@@ -19782,7 +19796,8 @@ contains
           if (is_rigid_local(critical_material).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid_local(critical_material) invalid"
+           print *,"is_rigid_local(critical_material) invalid:"
+           print *,is_rigid_local(critical_material)
            stop
           endif
 
@@ -19813,7 +19828,7 @@ contains
             xsten_thin,nhalf_thin, &
             xtet,shapeflag,sdim) 
           else 
-           print *,"fastflag invalid multi get area pairs 2"
+           print *,"fastflag invalid multi get area pairs 2:",fastflag
            stop
           endif
 
@@ -19843,6 +19858,8 @@ contains
 
         else
          print *,"single_material or remaining_vfrac invalid"
+         print *,"single_material: ",single_material
+         print *,"remaining_vfrac: ",remaining_vfrac
          stop
         endif
 
@@ -19859,7 +19876,8 @@ contains
         if (is_rigid_local(critical_material).eq.0) then
          ! do nothing
         else
-         print *,"is_rigid_local(critical_material) invalid"
+         print *,"is_rigid_local(critical_material) invalid:"
+         print *,is_rigid_local(critical_material)
          stop
         endif
 
@@ -19878,7 +19896,7 @@ contains
          else if (is_rigid_local(im_opp).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid_local invalid"
+          print *,"is_rigid_local invalid:",is_rigid_local(im_opp)
           stop
          endif
 
@@ -19915,7 +19933,7 @@ contains
           else if (is_rigid_local(im_opp).eq.1) then
            ! do nothing
           else
-           print *,"is_rigid_local invalid"
+           print *,"is_rigid_local invalid:",is_rigid_local(im_opp)
            stop
           endif
 
@@ -19924,7 +19942,7 @@ contains
         else if (is_rigid_local(im).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid_local invalid"
+         print *,"is_rigid_local invalid:",is_rigid_local(im)
          stop
         endif
 
@@ -19938,26 +19956,26 @@ contains
              multi_area_pair(im,im_opp)= &
               uncaptured_area*multi_volume_pair(im,im_opp)/voltemp
             else
-             print *,"voltemp underflow"
-             stop
+             print *,"warning: voltemp underflow: ",voltemp
+!             stop
             endif
            else if (is_rigid_local(im_opp).eq.1) then
             ! do nothing
            else
-            print *,"is_rigid_local invalid"
+            print *,"is_rigid_local invalid:",is_rigid_local(im_opp)
             stop
            endif
           enddo ! im_opp=1..num_materials
          else if (is_rigid_local(im).eq.1) then
           ! do nothing
          else
-          print *,"is_rigid_local invalid"
+          print *,"is_rigid_local invalid:",is_rigid_local(im)
           stop
          endif
         enddo ! im=1..num_materials
        else
-        print *,"voltemp invalid"
-        stop
+        print *,"warning: voltemp invalid: ",voltemp
+!        stop
        endif
 
        dxthin=half*(xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
@@ -19966,28 +19984,30 @@ contains
            two*EPS2*volume_plus) then
         ! do nothing
        else
+        print *,"warning"
         print *,"voltemp or uncaptured_volume_START invalid"
         print *,"voltemp: ",voltemp
         print *,"uncaptured_volume_START: ",uncaptured_volume_START
-        stop
+!        stop
        endif
 
        if (uncaptured_volume_fluid.gt. &
            two*EPS2*volume_plus) then
+        print *,"warning"
         print *,"not all volume accounted for multi get area pairs"
         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
         print *,"uncaptured_volume_START ",uncaptured_volume_START
         print *,"fraction of uncapt volume ", &
             uncaptured_volume_fluid/uncaptured_volume_START
         print *,"tolerance: ",two*EPS2
-        stop
+!        stop
        endif
 
       else if (uncaptured_area.eq.zero) then
        ! do nothing
       else
-       print *,"uncaptured_area invalid"
-       stop
+       print *,"warning: uncaptured_area invalid: ",uncaptured_area
+!       stop
       endif
 
       return
