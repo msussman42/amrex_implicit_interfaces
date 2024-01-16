@@ -1636,71 +1636,120 @@ stop
            nmax, &
            SDIM)
 
+          try_new_vfrac=0
+
           do dir=1,SDIM-1
-           if ((angle_init_db(dir).ge.-Pi).and. &
-               (angle_init_db(dir).le.Pi)) then
+
+           if ((angle_init_db(dir).lt.-Pi).and. &
+               (angle_init_db(dir).ge.-Pi-EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_init_db(dir).gt.Pi).and. &
+                    (angle_init_db(dir).le.Pi+EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_init_db(dir).ge.-Pi).and. &
+                    (angle_init_db(dir).le.Pi)) then
             ! do nothing
            else
             print *,"angle_init_db invalid"
+            print *,"dir=",dir
+            print *,"angle_init_db(dir)=",angle_init_db(dir)
             stop
            endif
-           if ((angle_exact_db(dir).ge.-Pi).and. &
-               (angle_exact_db(dir).le.Pi)) then
+
+           if ((angle_exact_db(dir).lt.-Pi).and. &
+               (angle_exact_db(dir).ge.-Pi-EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_exact_db(dir).gt.Pi).and. &
+                    (angle_exact_db(dir).le.Pi+EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_exact_db(dir).ge.-Pi).and. &
+                    (angle_exact_db(dir).le.Pi)) then
             ! do nothing
            else
             print *,"angle_exact_db invalid"
+            print *,"dir=",dir
+            print *,"angle_exact_db(dir)=",angle_exact_db(dir)
             stop
            endif
+
           enddo !dir=1,sdim-1
 
           if (SDIM.eq.2) then
            ! do nothing
           else if (SDIM.eq.3) then
            dir=SDIM-1
-           if ((angle_init_db(dir).ge.zero).and. &
-               (angle_init_db(dir).le.Pi)) then
+
+           if ((angle_init_db(dir).lt.zero).and. &
+               (angle_init_db(dir).ge.-EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_init_db(dir).gt.Pi).and. &
+                    (angle_init_db(dir).le.Pi+EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_init_db(dir).ge.zero).and. &
+                    (angle_init_db(dir).le.Pi)) then
             ! do nothing
            else
             print *,"angle_init_db invalid"
+            print *,"dir=",dir
+            print *,"angle_init_db(dir)=",angle_init_db(dir)
             stop
            endif
-           if ((angle_exact_db(dir).ge.zero).and. &
-               (angle_exact_db(dir).le.Pi)) then
+
+           if ((angle_exact_db(dir).lt.zero).and. &
+               (angle_exact_db(dir).ge.-EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_exact_db(dir).gt.Pi).and. &
+                    (angle_exact_db(dir).le.Pi+EPS_8_4)) then
+            try_new_vfrac=1
+           else if ((angle_exact_db(dir).ge.zero).and. &
+                    (angle_exact_db(dir).le.Pi)) then
             ! do nothing
            else
             print *,"angle_exact_db invalid"
+            print *,"dir=",dir
+            print *,"angle_exact_db(dir)=",angle_exact_db(dir)
             stop
            endif
+
           else
            print *,"dimension bust"
            stop
           endif
 
-          do dir=1,SDIM
-           centroid_null(dir)=zero
-          enddo
-          vof_null=one
+          if (try_new_vfrac.eq.0) then
 
-          critical_material=1
-          call find_predict_slope( &
-           npredict, & ! INTENT(out)
-           mag_centroid, & ! INTENT(out)
-           vof_null, &
-           vof_null, &
-           centroid_null, & ! centroid of uncaptured region
-           refvfrac(1), &
-            ! relative to cell centroid of the super cell; INTENT(in)
-           refcen, & 
-           bfact,dx,xsten,nhalf,SDIM)
+           do dir=1,SDIM
+            centroid_null(dir)=zero
+           enddo
+           vof_null=one
 
-          try_new_vfrac=0
+           critical_material=1
+           call find_predict_slope( &
+            npredict, & ! INTENT(out)
+            mag_centroid, & ! INTENT(out)
+            vof_null, &
+            vof_null, &
+            centroid_null, & ! centroid of uncaptured region
+            refvfrac(1), &
+             ! relative to cell centroid of the super cell; INTENT(in)
+            refcen, & 
+            bfact,dx,xsten,nhalf,SDIM)
 
-          if (mag_centroid(1).gt.VOFTOL*dx(1)) then
-           ! do nothing
-          else if (mag_centroid(1).le.VOFTOL*dx(1)) then
-           try_new_vfrac=1
+           try_new_vfrac=0
+
+           if (mag_centroid(1).gt.VOFTOL*dx(1)) then
+            ! do nothing
+           else if (mag_centroid(1).le.VOFTOL*dx(1)) then
+            try_new_vfrac=1
+           else
+            print *,"mag_centroid bust: ",mag_centroid(1)
+            stop
+           endif
+
+          else if (try_new_vfrac.eq.1) then
+           !do nothing
           else
-           print *,"mag_centroid bust: ",mag_centroid(1)
+           print *,"try_new_vfrac invalid"
            stop
           endif
 
@@ -2218,76 +2267,125 @@ stop
             nmax, &
             SDIM)
 
+           try_new_vfrac=0
+
            do dir=1,SDIM-1
-            if ((angle_init_db(dir).ge.-Pi).and. &
-                (angle_init_db(dir).le.Pi)) then
+
+            if ((angle_init_db(dir).lt.-Pi).and. &
+                (angle_init_db(dir).ge.-Pi-EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_init_db(dir).gt.Pi).and. &
+                     (angle_init_db(dir).le.Pi+EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_init_db(dir).ge.-Pi).and. &
+                     (angle_init_db(dir).le.Pi)) then
              ! do nothing
             else
              print *,"angle_init_db invalid"
+             print *,"dir=",dir
+             print *,"angle_init_db(dir)=",angle_init_db(dir)
              stop
             endif
-            if ((angle_exact_db(dir).ge.-Pi).and. &
-                (angle_exact_db(dir).le.Pi)) then
+
+            if ((angle_exact_db(dir).lt.-Pi).and. &
+                (angle_exact_db(dir).ge.-Pi-EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_exact_db(dir).gt.Pi).and. &
+                     (angle_exact_db(dir).le.Pi+EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_exact_db(dir).ge.-Pi).and. &
+                     (angle_exact_db(dir).le.Pi)) then
              ! do nothing
             else
              print *,"angle_exact_db invalid"
+             print *,"dir=",dir
+             print *,"angle_exact_db(dir)=",angle_exact_db(dir)
              stop
             endif
+
            enddo !dir=1,sdim-1
 
            if (SDIM.eq.2) then
             ! do nothing
            else if (SDIM.eq.3) then
             dir=SDIM-1
-            if ((angle_init_db(dir).ge.zero).and. &
-                (angle_init_db(dir).le.Pi)) then
+ 
+            if ((angle_init_db(dir).lt.zero).and. &
+                (angle_init_db(dir).ge.-EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_init_db(dir).gt.Pi).and. &
+                     (angle_init_db(dir).le.Pi+EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_init_db(dir).ge.zero).and. &
+                     (angle_init_db(dir).le.Pi)) then
              ! do nothing
             else
              print *,"angle_init_db invalid"
+             print *,"dir=",dir
+             print *,"angle_init_db(dir)=",angle_init_db(dir)
              stop
             endif
-            if ((angle_exact_db(dir).ge.zero).and. &
-                (angle_exact_db(dir).le.Pi)) then
+
+            if ((angle_exact_db(dir).lt.zero).and. &
+                (angle_exact_db(dir).ge.-EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_exact_db(dir).gt.Pi).and. &
+                     (angle_exact_db(dir).le.Pi+EPS_8_4)) then
+             try_new_vfrac=1
+            else if ((angle_exact_db(dir).ge.zero).and. &
+                     (angle_exact_db(dir).le.Pi)) then
              ! do nothing
             else
              print *,"angle_exact_db invalid"
+             print *,"dir=",dir
+             print *,"angle_exact_db(dir)=",angle_exact_db(dir)
              stop
             endif
+
            else
             print *,"dimension bust"
             stop
            endif
 
-           do dir=1,SDIM
-            centroid_null(dir)=zero
-           enddo
-           vof_null=one
+           if (try_new_vfrac.eq.0) then
 
-           critical_material=1
-           call find_predict_slope( &
-            npredict, & ! INTENT(out)
-            mag_centroid, & ! INTENT(out)
-            vof_null, &
-            vof_null, &
-            centroid_null, & ! centroid of uncaptured region
-            refvfrac(1), &
-             ! relative to cell centroid of the super cell; INTENT(in)
-            refcen, & 
-            bfact,dx,xsten,nhalf,SDIM)
+            do dir=1,SDIM
+             centroid_null(dir)=zero
+            enddo
+            vof_null=one
 
-           try_new_vfrac=0
+            critical_material=1
+            call find_predict_slope( &
+             npredict, & ! INTENT(out)
+             mag_centroid, & ! INTENT(out)
+             vof_null, &
+             vof_null, &
+             centroid_null, & ! centroid of uncaptured region
+             refvfrac(1), &
+              ! relative to cell centroid of the super cell; INTENT(in)
+             refcen, & 
+             bfact,dx,xsten,nhalf,SDIM)
 
-           if (mag_centroid(1).gt.VOFTOL*dx(1)) then
-            ! do nothing
-           else if (mag_centroid(1).le.VOFTOL*dx(1)) then
-            try_new_vfrac=1
+            try_new_vfrac=0
+
+            if (mag_centroid(1).gt.VOFTOL*dx(1)) then
+             ! do nothing
+            else if (mag_centroid(1).le.VOFTOL*dx(1)) then
+             try_new_vfrac=1
+            else
+             print *,"mag_centroid bust"
+             stop
+            endif
+
+           else if (try_new_vfrac.eq.1) then
+            !do nothing
            else
-            print *,"mag_centroid bust"
+            print *,"try_new_vfrac invalid"
             stop
            endif
 
           else 
-           print *,"refvfrac(1) out of range"
+           print *,"refvfrac(1) out of range: ",refvfrac(1)
            stop
           endif
 
