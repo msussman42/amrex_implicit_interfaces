@@ -11650,7 +11650,7 @@ contains
       endif
       if ((critical_material.lt.1).or. &
           (critical_material.gt.num_materials)) then
-       print *,"critical_material invalid"
+       print *,"critical_material invalid 11653: ",critical_material
        stop
       endif
       if (continuous_mof.eq.STANDARD_MOF) then 
@@ -18452,7 +18452,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material invalid"
+           print *,"critical_material invalid 18455: ",critical_material
            stop
           endif
   
@@ -18827,7 +18827,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material invalid"
+           print *,"critical_material invalid 18830: ",critical_material
            stop
           endif 
 
@@ -19691,7 +19691,7 @@ contains
             stop
           endif
          else
-          print *,"critical_material invalid"
+          print *,"critical_material invalid 19694: ",critical_material
           stop
          endif
 
@@ -19700,7 +19700,7 @@ contains
          if (critical_material.eq.0) then
           ! do nothing
          else
-          print *,"critical_material invalid"
+          print *,"critical_material invalid 19703: ",critical_material
           stop
          endif
 
@@ -19837,7 +19837,7 @@ contains
          else if (critical_material.eq.0) then
           ! do nothing
          else
-          print *,"critical_material invalid"
+          print *,"critical_material invalid 19840: ",critical_material
           stop
          endif 
 
@@ -19887,7 +19887,7 @@ contains
        else if (critical_material.eq.0) then
         ! do nothing
        else
-        print *,"critical_material invalid"
+        print *,"critical_material invalid 19890: ",critical_material
         stop
        endif
 
@@ -20632,7 +20632,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material invalid"
+           print *,"critical_material invalid 20635: ",critical_material
            stop
           endif
   
@@ -20987,7 +20987,7 @@ contains
           else if (critical_material.eq.0) then
            ! do nothing
           else
-           print *,"critical_material invalid"
+           print *,"critical_material invalid 20990: ",critical_material
            stop
           endif 
 
@@ -21596,7 +21596,7 @@ contains
          else if (critical_material.eq.0) then
           ! do nothing
          else
-          print *,"critical_material invalid"
+          print *,"critical_material invalid 21599: ",critical_material
           stop
          endif
  
@@ -21906,7 +21906,7 @@ contains
          else if (critical_material.eq.0) then
           ! do nothing
          else
-          print *,"critical_material invalid"
+          print *,"critical_material invalid 21909: ",critical_material
           stop
          endif 
 
