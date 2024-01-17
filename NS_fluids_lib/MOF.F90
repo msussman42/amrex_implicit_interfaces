@@ -19849,24 +19849,25 @@ contains
           endif
          else
           print *,"warning critical_material invalid 19694:",critical_material
-          do imtest=1,num_materials
-           print *,"imtest,is_rigid_local ",imtest,is_rigid_local(im_test)
+          do im_test=1,num_materials
+           print *,"im_test,is_rigid_local ",im_test,is_rigid_local(im_test)
           enddo
-          do imtest=1,num_materials
-           print *,"imtest,material_used ",imtest,material_used(im_test)
+          do im_test=1,num_materials
+           print *,"im_test,material_used ",im_test,material_used(im_test)
           enddo
           print *,"local_tessellate_in=",local_tessellate_in
-          do imtest=1,num_materials*ngeom_recon
-           print *,"i,mofdatavalid_plus ",imtest,mofdatavalid_plus(imtest)
+          do im_test=1,num_materials*ngeom_recon
+           print *,"i,mofdatavalid_plus ",im_test,mofdatavalid_plus(im_test)
           enddo
-          do imtest=1,num_materials*ngeom_recon
-           print *,"i,mofdatavalid_minus ",imtest,mofdatavalid_minus(imtest)
+          do im_test=1,num_materials*ngeom_recon
+           print *,"i,mofdatavalid_minus ",im_test,mofdatavalid_minus(im_test)
           enddo
-          do imtest=1,num_materials*ngeom_recon
-           print *,"i,mofdataproject_plus ",imtest,mofdataproject_plus(imtest)
+          do im_test=1,num_materials*ngeom_recon
+           print *,"i,mofdataproject_plus ",im_test,mofdataproject_plus(im_test)
           enddo
-          do imtest=1,num_materials*ngeom_recon
-           print *,"i,mofdataproject_minus ",imtest,mofdataproject_minus(imtest)
+          do im_test=1,num_materials*ngeom_recon
+           print *,"i,mofdataproject_minus ", &
+             im_test,mofdataproject_minus(im_test)
           enddo
           print *,"uncaptured_volume_fluid: ",uncaptured_volume_fluid
           print *,"uncaptured_volume_fraction_fluid: ", &
