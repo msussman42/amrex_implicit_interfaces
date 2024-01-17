@@ -9509,8 +9509,9 @@ contains
        print *,"continuous_mof invalid"
        stop
       endif
+
       if (bfact.lt.1) then
-       print *,"bfact invalid135"
+       print *,"bfact invalid 9514 ",bfact
        stop
       endif
 
@@ -9679,7 +9680,7 @@ contains
 
        ! volcut is the uncaptured volume of the cell.
       if ((volcut.le.zero).and.(vfrac.gt.EPS_14_7)) then
-       print *,"ERROR: volcut<=0 and vfrac>mslvoftol"
+       print *,"ERROR: volcut<=0 and vfrac>EPS_14_7"
        stop
       else if ((volcut.gt.zero).or.(vfrac.le.EPS_14_7)) then
        ! do nothing
@@ -9710,7 +9711,7 @@ contains
                 (vfrac_normalize.lt.one)) then
         !do nothing
        else
-        print *,"vfrac_normalize invalid: ",vfrac_normalize
+        print *,"vfrac_normalize invalid 9714: ",vfrac_normalize
         stop
        endif
 
@@ -9908,7 +9909,8 @@ contains
 
             niter=niter+1
             if (debug_root.eq.1) then
-             print *,"bisection: niter,intercept,fc ",niter,intercept,fc
+             print *,"bisection: niter,intercept,fc ", &
+                niter,intercept,fc
             endif  
            enddo ! bisection while
 
@@ -9928,6 +9930,7 @@ contains
             print *,"niter invalid"
             stop
            endif
+
           else if ((intercept_test.ge.intercept_lower).and. &
                    (intercept_test.le.intercept_upper).and. &
                    (niter.lt.INTERCEPT_MAXITER_NEWTON)) then
@@ -9951,7 +9954,8 @@ contains
           else
            print *,"intercept_test or intercept_lower(upper) invalid"
            print *,"intercept_test=",intercept_test
-           print *,"intercept_lower=",intercept_upper
+           print *,"intercept_lower=",intercept_lower
+           print *,"intercept_upper=",intercept_upper
            print *,"niter ",niter
            print *,"INTERCEPT_MAXITER_NEWTON ",INTERCEPT_MAXITER_NEWTON
            stop
@@ -9998,11 +10002,11 @@ contains
 
          ! outer while statement: Newton's method:
          ! do while((niter.lt.maxiter).and.(err.gt.moftol))
+
         enddo 
 
         if ((niter.ge.maxiter).and.(err.gt.moftol)) then
          print *,"vof recon failed in multi_find_intercept"
-         print *,"switch to a smaller length scale (e.g. cm instead of m)"
          print *,"niter,maxiter ",niter,maxiter
          print *,"bfact ",bfact
          print *,"vfrac ",vfrac
@@ -10076,7 +10080,9 @@ contains
       real(amrex_real), INTENT(out) :: centroid(sdim)
       real(amrex_real) cencell(sdim)
       real(amrex_real) arean
-      real(amrex_real) err,moftol
+      real(amrex_real) err
+      real(amrex_real) moftol
+      real(amrex_real) min_err
       real(amrex_real) vtarget,fc
       integer debug_root
       real(amrex_real) err_default,fc_default,arean_default,intercept_default
@@ -10086,8 +10092,22 @@ contains
       real(amrex_real) vfrac_normalize
       real(amrex_real) null_intercept,dist
       integer klo_stencil,khi_stencil
+      integer nn
       real(amrex_real) intercept_upper,intercept_lower
       real(amrex_real) intercept_test,aa,bb,fa,fb
+      integer :: tid=0
+
+#ifdef _OPENMP
+      integer omp_get_thread_num
+#endif
+
+#ifdef _OPENMP
+      tid=omp_get_thread_num()
+#endif
+      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
+       print *,"tid invalid"
+       stop
+      endif 
 
       if (nhalf0.lt.1) then
        print *,"nhalf0 invalid"
@@ -10110,23 +10130,35 @@ contains
       endif
 
       if (bfact.lt.1) then
-       print *,"bfact invalid135"
+       print *,"bfact invalid10116 ",bfact
        stop
       endif
 
       debug_root=0
 
-      maxiter=100
+      if (INTERCEPT_MAXITER_NEWTON.lt.INTERCEPT_MAXITER) then
+       ! do nothing
+      else
+       print *,"INTERCEPT_MAXITER_NEWTON invalid"
+       stop
+      endif
+
+      maxiter=INTERCEPT_MAXITER
        ! INTERCEPT_TOL is declared in PROBCOMMON.F90
       moftol=INTERCEPT_TOL
+      min_err=-one
 
 ! phi=n dot (x-x0)+int
 ! find max,min n dot (x-x0)
 ! if fastflag=0, 
 !  search the vertices of all triangles that make up the "cut" domain.
 
-      call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
-       volcell,cencell,sdim)
+      call Box_volumeFAST( &
+       bfact,dx, &
+       xsten0,nhalf0, &
+       volcell, &
+       cencell, &
+       sdim)
 
        ! at each node x_i one solves:
        !  n dot (x_i-x0) + b_i = 0
@@ -10155,7 +10187,8 @@ contains
         xtarget(dir)=xsten0(k,dir)
        endif
 
-       call distfunc(bfact,dx,xsten0,nhalf0, &
+       call distfunc(bfact,dx, &
+        xsten0,nhalf0, &
         null_intercept,slope, &
         xtarget,dist,sdim)
 
@@ -10170,13 +10203,21 @@ contains
       enddo
       enddo  ! i,j,k
 
-      if (((minphi.eq.zero).and.(maxphi.eq.zero)).or. &
+      if (((minphi.eq.zero).and. &
+           (maxphi.eq.zero)).or. &
           (minphi.ge.maxphi)) then
        print *,"cannot have zero slope"
        print *,"minphi=",minphi
        print *,"maxphi=",maxphi
        print *,"slopexyz=",slope(1),slope(2),slope(sdim)
        print *,"xsten(0) xyz=",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
+       stop
+      else if (((minphi.ne.zero).or. &
+                (maxphi.ne.zero)).and. &
+               (minphi.lt.maxphi)) then
+       ! do nothing
+      else
+       print *,"minphi or maxphi is NaN"
        stop
       endif
 
@@ -10189,7 +10230,7 @@ contains
 
        ! volcut is the uncaptured volume of the cell.
       if ((volcut.le.zero).and.(vfrac.gt.EPS_14_7)) then
-       print *,"ERROR: volcut<=0 and vfrac>mslvoftol"
+       print *,"ERROR: volcut<=0 and vfrac>EPS_14_7"
        stop
       else if ((volcut.gt.zero).or.(vfrac.le.EPS_14_7)) then
        !do nothing
@@ -10202,8 +10243,9 @@ contains
        intercept=intercept_lower
       else if (vfrac.ge.volcut/volcell-EPS_14_7) then
        intercept=intercept_upper
-      else if ((vfrac.gt.EPS_14_7).and. &
-               (vfrac.lt.volcut/volcell-EPS_14_7)) then
+      else if ((vfrac.ge.EPS_14_7).and. &
+               (vfrac.le.volcut/volcell-EPS_14_7)) then
+
        vtarget=volcell*vfrac
 
 ! solve f(xx)=0 where f(xx)=(V(n dot (x-x0)+intercept-xx)-Vtarget)/volcell
@@ -10211,14 +10253,15 @@ contains
 ! minphi -> (minphi-maxphi)(1-vfrac)
 
        vfrac_normalize=vfrac*volcell/volcut
-       if ((vfrac_normalize.le.zero).or.(vfrac_normalize.ge.one)) then
+       if ((vfrac_normalize.le.zero).or. &
+           (vfrac_normalize.ge.one)) then
         print *,"ERROR: vfrac_normalize out of range"
         stop
        else if ((vfrac_normalize.gt.zero).and. &
                 (vfrac_normalize.lt.one)) then
         ! do nothing
        else
-        print *,"vfrac_normalize is NaN"
+        print *,"vfrac_normalize is invalid 10247: ",vfrac_normalize
         stop
        endif
 
@@ -10226,8 +10269,11 @@ contains
            intercept_upper*vfrac_normalize
 
          ! fc_default=(voln-vtarget)/volcell
-       call single_ff(bfact,dx,xsten0,nhalf0, &
-        fc_default,slope,intercept_default, &
+       call single_ff( &
+        bfact,dx, &
+        xsten0,nhalf0, &
+        fc_default,slope, &
+        intercept_default, &
         arean_default,vtarget, &
         centroid, &
         sdim)
@@ -10243,25 +10289,47 @@ contains
 
         niter=0
         do while ((niter.lt.maxiter).and.(err.gt.moftol)) 
+
+         if (min_err.eq.-one) then
+          min_err=err
+         else if (min_err.gt.err) then
+          min_err=err
+         else if ((min_err.le.err).and. &
+                  (min_err.ge.zero)) then
+          ! do nothing
+         else
+          print *,"min_err invalid"
+          stop
+         endif
+         intercept_error_history(niter+1,tid+1)=err
+
          if (arean.gt.zero) then
 
           intercept_test=intercept-fc*volcell/arean
+
           if ((intercept_test.le.intercept_lower).or. &
               (intercept_test.ge.intercept_upper).or. &
-              (niter.ge.maxiter-1)) then
+              (niter.ge.INTERCEPT_MAXITER_NEWTON)) then
            aa=intercept_lower
            bb=intercept_upper
            niter=0
            do while ((niter.lt.maxiter).and.(err.gt.moftol))
 
             if (niter.eq.0) then
-             call single_ff(bfact,dx,xsten0,nhalf0, &
-              fa,slope,aa, &
-              arean,vtarget,centroid, &
+             call single_ff( &
+              bfact,dx, &
+              xsten0,nhalf0, &
+              fa,slope, &
+              aa, &
+              arean,vtarget, &
+              centroid, &
               sdim)
-             call single_ff(bfact,dx,xsten0,nhalf0, &
-              fb,slope,bb, &
-              arean,vtarget,centroid, &
+             call single_ff( &
+              bfact,dx,xsten0,nhalf0, &
+              fb,slope, &
+              bb, &
+              arean,vtarget, &
+              centroid, &
               sdim)
             else if (niter.gt.0) then
              ! do nothing
@@ -10270,6 +10338,7 @@ contains
              stop
             endif
 
+             !fa=(voln-vtarget)/volcell
             if (abs(fa).le.moftol) then
              intercept=aa
              err=zero
@@ -10278,19 +10347,26 @@ contains
              err=zero
             else if (fa*fb.lt.zero) then
              intercept=half*(aa+bb)
-             call single_ff(bfact,dx,xsten0,nhalf0, &
-              fc,slope,intercept, &
-              arean,vtarget,centroid, &
+             call single_ff( &
+              bfact,dx, &
+              xsten0,nhalf0, &
+              fc,slope, &
+              intercept, &
+              arean,vtarget, &
+              centroid, &
               sdim)
              err=abs(fc)
              if (fa*fc.lt.zero) then
               bb=intercept
               fb=fc
-             else if (fa*fc.ge.zero) then
+             else if (fb*fc.lt.zero) then
               aa=intercept
               fa=fc
              else
-              print *,"fa or fc corrupt"
+              print *,"fa,fb, or fc bust"
+              print *,"fa=",fa
+              print *,"fb=",fb
+              print *,"fc=",fc
               stop
              endif
             else
@@ -10307,17 +10383,45 @@ contains
                 niter,intercept,fc
             endif  
            enddo ! bisection while
-          else if ((intercept_test.gt.intercept_lower).and. &
-                   (intercept_test.lt.intercept_upper).and. &
-                   (niter.lt.maxiter-1)) then
+
+           if ((niter.ge.1).and.(niter.lt.maxiter)) then
+            if (err.le.moftol) then
+             ! do nothing
+            else
+             print *,"err invalid err,moftol=",err,moftol
+             stop
+            endif
+           else if (niter.eq.maxiter) then
+            ! 10^15 < 2^x   x=15 log 10/log 2=50
+            if (niter.gt.50) then
+             err=zero
+            endif
+           else
+            print *,"niter invalid"
+            stop
+           endif
+
+          else if ((intercept_test.ge.intercept_lower).and. &
+                   (intercept_test.le.intercept_upper).and. &
+                   (niter.lt.INTERCEPT_MAXITER_NEWTON)) then
+            !intercept_test=intercept-fc*volcell/arean
            intercept=intercept_test
-           call single_ff(bfact,dx,xsten0,nhalf0, &
-            fc,slope,intercept, &
-            arean,vtarget,centroid, &
+           call single_ff( &
+            bfact,dx, &
+            xsten0,nhalf0, &
+            fc,slope, &
+            intercept, &
+            arean,vtarget, &
+            centroid, &
             sdim)
            err=abs(fc)
           else
-           print *,"intercept_test invalid"
+           print *,"intercept_test or intercept_lower(upper) invalid"
+           print *,"intercept_test=",intercept_test
+           print *,"intercept_lower=",intercept_lower
+           print *,"intercept_upper=",intercept_upper
+           print *,"niter ",niter
+           print *,"INTERCEPT_MAXITER_NEWTON ",INTERCEPT_MAXITER_NEWTON
            stop
           endif
 
@@ -10337,9 +10441,32 @@ contains
           print *,"intercept_default ",intercept_default
           stop
          endif
+
+         if (niter.gt.maxiter-2) then
+          if (abs(min_err-err).le.moftol) then
+           if ((abs(err-intercept_error_history(niter,tid+1)).le.moftol).and. &
+               (abs(err-intercept_error_history(niter-1,tid+1)).le.moftol)) then
+            err=zero
+           endif
+          else if (abs(min_err-err).gt.moftol) then
+           ! do nothing
+          else
+           print *,"min_err or err invalid"
+           stop
+          endif
+         else if ((niter.ge.1).and.(niter.le.maxiter-2)) then
+          ! do nothing
+         else
+          print *,"niter invalid in the newtons method"
+          stop
+         endif
+
+         ! outer while statement: Newton's method:
+         ! do while((niter.lt.maxiter).and.(err.gt.moftol))
+
         enddo ! outer while statement: Newton's method
 
-        if (niter.ge.maxiter) then
+        if ((niter.ge.maxiter).and.(err.gt.moftol)) then
          print *,"vof recon failed in single_find_intercept"
          print *,"niter,maxiter ",niter,maxiter
          print *,"bfact ",bfact
@@ -10350,11 +10477,27 @@ contains
          do dir=1,sdim
           print *,"dir,slope ",dir,slope(dir)
          enddo
+         print *,"moftol ",moftol
+         print *,"error history: "
+         do nn=1,maxiter
+          print *,"nn,tid,error ",nn,tid, &
+             intercept_error_history(nn,tid+1)
+         enddo
+         stop
+        else if ((niter.lt.maxiter).or.(err.le.moftol)) then
+         ! do nothing
+        else
+         print *,"niter or err invalid"
          stop
         endif
-       endif ! err> moftol
+       else if ((err.le.moftol).and.(err.ge.zero)) then
+        ! do nothing
+       else
+        print *,"err invalid"
+        stop       
+       endif 
       else
-       print *,"vfrac is corrupt: ",vfrac
+       print *,"vfrac invalid vfrac= ",vfrac
        stop
       endif  
 
@@ -19706,6 +19849,30 @@ contains
           endif
          else
           print *,"warning critical_material invalid 19694:",critical_material
+          do imtest=1,num_materials
+           print *,"imtest,is_rigid_local ",imtest,is_rigid_local(im_test)
+          enddo
+          do imtest=1,num_materials
+           print *,"imtest,material_used ",imtest,material_used(im_test)
+          enddo
+          print *,"local_tessellate_in=",local_tessellate_in
+          do imtest=1,num_materials*ngeom_recon
+           print *,"i,mofdatavalid_plus ",imtest,mofdatavalid_plus(imtest)
+          enddo
+          do imtest=1,num_materials*ngeom_recon
+           print *,"i,mofdatavalid_minus ",imtest,mofdatavalid_minus(imtest)
+          enddo
+          do imtest=1,num_materials*ngeom_recon
+           print *,"i,mofdataproject_plus ",imtest,mofdataproject_plus(imtest)
+          enddo
+          do imtest=1,num_materials*ngeom_recon
+           print *,"i,mofdataproject_minus ",imtest,mofdataproject_minus(imtest)
+          enddo
+          print *,"uncaptured_volume_fluid: ",uncaptured_volume_fluid
+          print *,"uncaptured_volume_fraction_fluid: ", &
+                  uncaptured_volume_fraction_fluid
+          print *,"loop_counter: ",loop_counter
+          print *,"num_processed_fluid: ",num_processed_fluid
 !          stop
          endif
 
