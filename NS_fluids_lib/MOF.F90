@@ -16298,7 +16298,7 @@ contains
       endif
 
       if ((single_material.gt.0).and. &
-          (remaining_vfrac.lt.EPS_8_4)) then
+          (remaining_vfrac.le.EPS_8_4)) then
 
        if (is_rigid_local(single_material).ne.0) then
         print *,"is_rigid_local(single_material) invalid"
@@ -18373,7 +18373,7 @@ contains
          enddo  ! im_test=1..num_materials
 
          if ((single_material.gt.0).and. &
-             (remaining_vfrac.lt.EPS_SINGLE)) then
+             (remaining_vfrac.le.EPS_SINGLE)) then
 
           vofcomp=(single_material-1)*ngeom_recon+1
           multi_volume(single_material)=uncaptured_volume_solid
@@ -18688,7 +18688,7 @@ contains
          enddo  ! im_test=1..num_materials
 
          if ((single_material.gt.0).and. &
-             (remaining_vfrac.lt.EPS_SINGLE)) then
+             (remaining_vfrac.le.EPS_SINGLE)) then
 
           vofcomp=(single_material-1)*ngeom_recon+1
           multi_volume(single_material)=uncaptured_volume_fluid
@@ -19908,7 +19908,7 @@ contains
         critical_material=0
 
         if ((single_material.gt.0).and. &
-            (remaining_vfrac.lt.EPS2)) then
+            (remaining_vfrac.le.EPS2)) then
 
          vofcomp=(single_material-1)*ngeom_recon+1
          do im_opp=1,num_materials
@@ -20460,13 +20460,13 @@ contains
        stop
       endif
 
-      if (abs(one-vfrac_fluid_sum).le.EPS_8_4) then
+      if (abs(one-vfrac_fluid_sum).le.EPS2) then
        ! do nothing
       else
        print *,"vfrac_fluid_sum invalid"
        stop
       endif
-      if ((vfrac_solid_sum.le.one+EPS_8_4).and. &
+      if ((vfrac_solid_sum.le.one+EPS2).and. &
           (vfrac_solid_sum.ge.zero)) then
        ! do nothing
       else
@@ -20608,7 +20608,7 @@ contains
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.1)) then
            if (mofdatasave(vofcomp).gt. &
-               (one-EPS_8_4)*uncaptured_volume_fraction_solid) then
+               (one-EPS2)*uncaptured_volume_fraction_solid) then
             if (single_material.ne.0) then
              print *,"cannot have two rigid materials at once"
              print *,"single_material ",single_material
@@ -20633,7 +20633,7 @@ contains
          enddo  ! im_test=1..num_materials
 
          if ((single_material.gt.0).and. &
-             (remaining_vfrac.lt.EPS_8_4)) then
+             (remaining_vfrac.le.EPS2)) then
 
           vofcomp=(single_material-1)*ngeom_recon+1
           multi_volume(single_material)=uncaptured_volume_solid
@@ -20648,7 +20648,7 @@ contains
           material_used(single_material)=num_processed_solid
 
          else if ((single_material.eq.0).or. &
-                  (remaining_vfrac.ge.EPS_8_4)) then
+                  (remaining_vfrac.ge.EPS2)) then
 
           do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
@@ -20703,7 +20703,7 @@ contains
                volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
-               EPS_8_4*volcell) then
+               EPS2*volcell) then
             print *,"volcut invalid multi volume get volume grid 3"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
@@ -20712,6 +20712,7 @@ contains
             print *,"VOFTOL= ",VOFTOL
             print *,"EPS_12_6= ",EPS_12_6
             print *,"EPS_8_4= ",EPS_8_4
+            print *,"EPS2= ",EPS2
             print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
             print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
               xsten_grid(0,sdim)
@@ -20805,7 +20806,7 @@ contains
            uncaptured_volume_save=uncaptured_volume_solid
            uncaptured_volume_solid=uncaptured_volume_solid-voltemp
            if (uncaptured_volume_solid.lt. &
-               EPS_8_4*uncaptured_volume_target) then
+               EPS2*uncaptured_volume_target) then
             uncaptured_volume_solid=zero
            endif
 
@@ -20825,7 +20826,7 @@ contains
            uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
             mofdatalocal(vofcomp)
            if (uncaptured_volume_fraction_solid.lt. &
-               one-vfrac_solid_sum+EPS_8_4) then
+               one-vfrac_solid_sum+EPS2) then
             uncaptured_volume_fraction_solid=one-vfrac_solid_sum
            endif
 
@@ -20887,7 +20888,7 @@ contains
           if ((material_used(im_test).eq.0).and. &
               (is_rigid_local(im_test).eq.0)) then
            if (mofdatasave(vofcomp).gt. &
-               (one-EPS_8_4)*uncaptured_volume_fraction_fluid) then
+               (one-EPS2)*uncaptured_volume_fraction_fluid) then
 
             if (single_material.eq.0) then
              single_material=im_test
@@ -20923,7 +20924,7 @@ contains
          enddo  ! im_test=1..num_materials
 
          if ((single_material.gt.0).and. &
-             (remaining_vfrac.lt.EPS_8_4)) then
+             (remaining_vfrac.le.EPS2)) then
 
           vofcomp=(single_material-1)*ngeom_recon+1
           multi_volume(single_material)=uncaptured_volume_fluid
@@ -20950,7 +20951,7 @@ contains
           material_used(single_material)=num_processed_total
 
          else if ((single_material.eq.0).or. &
-                  (remaining_vfrac.ge.EPS_8_4)) then
+                  (remaining_vfrac.ge.EPS2)) then
 
           do im=1,num_materials
            vofcomp=(im-1)*ngeom_recon+1
@@ -21043,7 +21044,7 @@ contains
               volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
-               EPS_8_4*volcell) then
+               EPS2*volcell) then
             print *,"volcut invalid multi volume get volume grid 4"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -21055,6 +21056,7 @@ contains
             endif
             print *,"EPS_12_6= ",EPS_12_6
             print *,"EPS_8_4= ",EPS_8_4
+            print *,"EPS2= ",EPS2
             print *,"xsten0 ",xsten0(0,1),xsten0(0,2),xsten0(0,sdim)
             print *,"xsten_grid ",xsten_grid(0,1),xsten_grid(0,2), &
              xsten_grid(0,sdim)
@@ -21149,7 +21151,7 @@ contains
            uncaptured_volume_save=uncaptured_volume_fluid
            uncaptured_volume_fluid=uncaptured_volume_fluid-voltemp
            if (uncaptured_volume_fluid.lt. &
-               EPS_8_4*uncaptured_volume_target) then
+               EPS2*uncaptured_volume_target) then
             uncaptured_volume_fluid=zero
            endif
 
@@ -21168,7 +21170,7 @@ contains
    
            uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_fluid- &
             mofdatalocal(vofcomp)
-           if (uncaptured_volume_fraction_fluid.lt.EPS_8_4) then
+           if (uncaptured_volume_fraction_fluid.lt.EPS2) then
             uncaptured_volume_fraction_fluid=zero
            endif
 
@@ -21339,7 +21341,7 @@ contains
       endif
 
       if (nmax.lt.4) then
-       print *,"nmax invalid multi_get_volume_grid nmax=",nmax
+       print *,"nmax invalid multi_get_volume_grid_and_map nmax=",nmax
        stop
       endif
 
@@ -21359,7 +21361,7 @@ contains
        stop
       endif
       if ((sdim.ne.3).and.(sdim.ne.2)) then
-       print *,"sdim invalid multi_get_volume_grid"
+       print *,"sdim invalid multi_get_volume_grid_and_map"
        stop
       endif
       if ((num_materials.lt.1).or.(num_materials.gt.MAX_NUM_MATERIALS)) then
@@ -21573,7 +21575,7 @@ contains
         enddo  ! im_test=1..num_materials
 
         if ((single_material.gt.0).and. &
-            (remaining_vfrac.lt.EPS_8_4)) then
+            (remaining_vfrac.le.EPS_8_4)) then
 
          vofcomp=(single_material-1)*ngeom_recon+1
          multi_volume(single_material)=uncaptured_volume_solid
@@ -21875,7 +21877,7 @@ contains
         enddo  ! im_test=1..num_materials
 
         if ((single_material.gt.0).and. &
-            (remaining_vfrac.lt.EPS_8_4)) then
+            (remaining_vfrac.le.EPS_8_4)) then
 
          vofcomp=(single_material-1)*ngeom_recon+1
          multi_volume(single_material)=uncaptured_volume_fluid
@@ -24475,7 +24477,7 @@ contains
 
              if ((ls.ge.zero).or. &
                  (mofdatavalid(vofcomp).ge. &
-                  (one-EPS_8_4)*uncaptured_volume_fraction)) then
+                  (one-EPS2)*uncaptured_volume_fraction)) then
               im_crit=im
               uncaptured_volume_fraction=zero
              else 

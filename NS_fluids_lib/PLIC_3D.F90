@@ -1080,6 +1080,7 @@ stop
           volume_super,cen_super,SDIM)
 
          call multi_get_volume_grid( &
+          EPS_8_4, &
           tessellate, & ! =0
           bfact,dx, &
           xsten,nhalf, & ! phi = n dot (x-x0) + intercept
@@ -1213,6 +1214,7 @@ stop
           volume_super,cen_super,SDIM)
 
         call multi_get_volume_grid( &
+         EPS_8_4, &
          tessellate, & ! =0
          bfact,dx, &
          xsten,nhalf, & ! phi = n dot (x-x0) + intercept

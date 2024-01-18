@@ -13743,6 +13743,7 @@ stop
                   print *,"nmax bust 3"
                   stop
                  endif
+                  !EPS2 tolerance ok for momentum.
                  call multi_get_volume_grid_simple( &
                    tessellate, &  !=0
                    bfact,dx, &
@@ -15721,6 +15722,7 @@ stop
         !  if fluid material(s) dominate the cell, then F_solid=0,
         !  sum F_fluid=1
         local_tessellate=3
+         !EPS2 tolerance
         call multi_get_volume_tessellate( &
          local_tessellate, &  ! =3
          bfact, &
@@ -17172,6 +17174,7 @@ stop
           mofdata(im)=vof(D_DECL(icell,jcell,kcell),im)
          enddo
          local_tessellate=3
+          !EPS2 tolerance
          call multi_get_volume_tessellate( &
           local_tessellate, & !  =3
           bfact, &

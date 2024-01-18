@@ -2475,6 +2475,7 @@ stop
           ! base case
           ! in: FORT_CELLFACEINIT
          call multi_get_volume_grid( &
+          EPS2, &
           tessellate, &  ! =0,1, or 3
           bfact,dx, &
           xsten,nhalf, &
@@ -2570,6 +2571,7 @@ stop
                 ! in: FORT_CELLFACEINIT
                 ! no need to compute multi_area here.
                 ! also, target volume is a cube, not a tet.
+                ! EPS2 
                call multi_get_volume_grid_simple( &
                 tessellate, &  ! =1
                 bfact,dx,xsten,nhalf, &
@@ -2799,6 +2801,7 @@ stop
 
                ! fluid case
                ! in: FORT_CELLFACEINIT
+               ! EPS2
               call multi_get_volume_grid_simple( &
                tessellate, &  !=0,1, or 3
                bfact,dx,xsten,nhalf, &
@@ -4840,6 +4843,7 @@ stop
          !   b) else, only consider fluids.
         if ((tessellate.eq.1).or. &
             (tessellate.eq.3)) then
+          !EPS2
          call multi_get_volume_tessellate( &
           tessellate, & ! =1 or 3
           bfact, &
@@ -10057,6 +10061,7 @@ stop
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
         local_tessellate=3
+         !EPS2
         call multi_get_volume_tessellate( &
          local_tessellate, & ! =3
          bfact, &
@@ -10559,6 +10564,7 @@ stop
             mofdata(dir2)=slope(D_DECL(i,j,k),dir2)
            enddo 
            ! multi_cen is "absolute" (not relative to cell centroid)
+           ! EPS2
            call multi_get_volume_grid_simple( &
              tessellate, &  !=0,1, or 3
              bfact,dx,xsten_recon,1, &
@@ -18043,6 +18049,7 @@ stop
              SDIM)
      
             tessellate_transfer=1 
+             !EPS2
             call multi_get_volume_tessellate( &
              tessellate_transfer, &
              bfact, &

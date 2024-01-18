@@ -6375,6 +6375,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         stop
        endif
         ! in: get_symmetric_error
+        ! EPS2
        call multi_get_volume_grid_simple( &
         tessellate, &  ! =1
         bfact,dx,xsten0,nhalf0, &
@@ -20098,6 +20099,7 @@ end subroutine RatePhaseChange
          !  if fluid material(s) dominate the cell, then F_solid=0,
          !  sum F_fluid=1
         local_tessellate=3
+         !EPS2
         call multi_get_volume_tessellate( &
          local_tessellate, & ! =3
          nucleate_in%bfact, &

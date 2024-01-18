@@ -1063,6 +1063,7 @@ stop
        !  sum F_fluid=1
        tessellate=3
 
+        !EPS2
        call multi_get_volume_tessellate( &
          tessellate, & ! =1 or 3
          bfact, &
@@ -3565,6 +3566,7 @@ stop
 
          local_tessellate=2
 
+          !EPS2
          call multi_get_volume_tessellate( &
           tessellate, &  ! =3
           bfact,dx, &
@@ -3667,6 +3669,7 @@ stop
            ! centroid)
            ! in: fort_faceinit
           call multi_get_volume_grid( &
+            EPS2, &
             local_tessellate, &  ! 0,1, or 2
             bfact,dx,xsten,nhalf, &
             mofdataproject, &
