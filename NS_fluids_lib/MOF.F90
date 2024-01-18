@@ -19855,6 +19855,7 @@ contains
           do im_test=1,num_materials
            print *,"im_test,material_used ",im_test,material_used(im_test)
           enddo
+          print *,"tessellate_in=",tessellate_in
           print *,"local_tessellate_in=",local_tessellate_in
           do im_test=1,num_materials*ngeom_recon
            print *,"i,mofdatavalid_plus ",im_test,mofdatavalid_plus(im_test)
@@ -19874,6 +19875,7 @@ contains
                   uncaptured_volume_fraction_fluid
           print *,"loop_counter: ",loop_counter
           print *,"num_processed_fluid: ",num_processed_fluid
+          print *,"dir_plus=",dir_plus
 !          stop
          endif
 

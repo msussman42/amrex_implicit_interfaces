@@ -999,6 +999,11 @@ Real NavierStokes::advance(Real time,Real dt) {
 
  if (level==0) {
 
+  int nsteps=parent->levelSteps(0); 
+  ULong cpu_seed=(ULong) nsteps;
+  cpu_seed+=ParallelDescriptor::MyProc()+1; 
+  amrex::InitRandom(cpu_seed,ParallelDescriptor::NProcs());
+
    //do {...} while (advance_status==0);
   do {
 
