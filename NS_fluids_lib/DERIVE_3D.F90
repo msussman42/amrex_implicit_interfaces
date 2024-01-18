@@ -2300,6 +2300,7 @@ stop
 
         ! before (mofdata): fluids tessellate
         ! after  (mofdata): fluids and solids tessellate
+        ! "single material" tolerance is EPS2.
        local_tessellate=1
        call multi_get_volume_tessellate( &
          local_tessellate, &

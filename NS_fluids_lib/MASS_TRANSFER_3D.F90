@@ -1055,6 +1055,7 @@ stop
       enddo
 
       local_tessellate=3
+       !EPS2
       call multi_get_volume_tessellate( &
         local_tessellate, & ! =3
         bfact, &
@@ -4721,6 +4722,7 @@ stop
                shapeflag=1  
                tessellate=0
                call multi_get_volume_grid( &
+                 EPS_8_4, &
                  tessellate, & ! =0
                  bfact,dx, &
                  u_xsten_departmap,nhalf0, & ! nhalf0=1
