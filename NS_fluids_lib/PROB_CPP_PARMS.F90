@@ -623,6 +623,9 @@ stop
       character*13 namestr2
       integer i
       integer local_dir
+
+      integer :: n_seed
+      integer, allocatable :: seed(:)
       
       integer im,iten
       integer level,bfactmax
@@ -650,6 +653,14 @@ stop
        print *,"num_interfaces<>ccnten"
        stop
       endif
+
+     call random_seed(size=n_seed)
+     allocate(seed(n_seed))
+     do i=1,n_seed
+      seed(i)=i
+     enddo
+     call random_seed(put=seed)
+     deallocate(seed)
 
       ! USER DEFINED (used by "is_in_probtype_list")
       ! IN ORDER TO ADD A NEW TEST PROBLEM:

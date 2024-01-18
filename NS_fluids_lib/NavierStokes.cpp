@@ -13107,6 +13107,10 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
        if (ParallelDescriptor::IOProcessor()) {
         for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+          //AMReX_Random.H
+          //amrex::InitRandom(ULong cpu_seed,
+          //                  int nprocs=ParallelDescriptor::NProcs())
+          //InitRandom called from AMReX.cpp and NavierStokes3.cpp
          Real save_random=amrex::Random();
          if ((save_random<0.0)||(save_random>1.0)) {
           std::cout << "save_random invalid save_random= " << 

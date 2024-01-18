@@ -103,7 +103,11 @@ real(amrex_real)    :: t
 real(amrex_real)    :: r(2)
 integer :: isite
 real(amrex_real)    :: samp(2,8)
-integer :: maxi,n
+integer :: maxi
+
+integer :: n_seed
+integer, allocatable :: seed(:)
+
 real(amrex_real)    :: a,b,fo
 real(amrex_real)    :: totdist(8),tempdist(8)
 integer :: vflag
@@ -131,12 +135,18 @@ allocate(sites3(3,max_sitesnum)) !x,y,temperature
 allocate(active_flag3(max_sitesnum))
 
 fo=5.0d0       ! function order
-a=201.0/(zblob4**fo-(tinit-tref)**fo)   ! 20 superheat condition with 202 sites
-b=1.0-a*((tinit-tref)**fo)            ! tinit-tref superheat condition for the first site
+a=201.0/(zblob4**fo-(tinit-tref)**fo) ! 20 superheat condition with 202 sites
+b=1.0-a*((tinit-tref)**fo) ! tinit-tref superheat condition for the first site
 !print *,"a=",a,"b=",b
 
-n=50
-call random_seed(size=n)
+call random_seed(size=n_seed)
+allocate(seed(n_seed))
+do i=1,n_seed
+ seed(i)=i
+enddo
+call random_seed(put=seed)
+deallocate(seed)
+
 isite=0
 sites=0.0d0
 t=0.0d0
@@ -250,8 +260,14 @@ enddo
 active_flag=0
 
 ! second group
-n=50
-call random_seed(size=n)
+call random_seed(size=n_seed)
+allocate(seed(n_seed))
+do i=1,n_seed
+ seed(i)=i+10
+enddo
+call random_seed(put=seed)
+deallocate(seed)
+
 isite=0
 sites2=0.0d0
 t=0.0d0
@@ -359,8 +375,14 @@ enddo
 active_flag2=0
 
 ! thrid group
-n=50
-call random_seed(size=n)
+call random_seed(size=n_seed)
+allocate(seed(n_seed))
+do i=1,n_seed
+ seed(i)=i+100
+enddo
+call random_seed(put=seed)
+deallocate(seed)
+
 isite=0
 sites3=0.0d0
 t=0.0d0
