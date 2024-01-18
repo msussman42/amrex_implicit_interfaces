@@ -17970,6 +17970,7 @@ contains
       integer, INTENT(in) :: tessellate !=0,1,2,3
       integer, INTENT(in) :: shapeflag,bfact
       integer, INTENT(in) :: nhalf0,nhalf_grid
+      real(amrex_real), INTENT(in) :: EPS_SINGLE
       real(amrex_real), INTENT(in) :: xtet(sdim+1,sdim)
       real(amrex_real), INTENT(in) :: mofdata(num_materials*(2*sdim+3))
       real(amrex_real) mofdatalocal(num_materials*(2*sdim+3))
@@ -18023,6 +18024,14 @@ contains
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer local_tessellate
       real(amrex_real) vfrac_raster_solid
+
+      if ((EPS_SINGLE.gt.zero).and. &
+          (EPS_SINGLE.lt.half)) then
+       !do nothing
+      else
+       print *,"EPS_SINGLE invalid"
+       stop
+      endif
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
@@ -19063,6 +19072,13 @@ contains
       integer i_list
       integer itet_node
 
+      if ((EPS_SINGLE.gt.zero).and. &
+          (EPS_SINGLE.lt.half)) then
+       !do nothing
+      else
+       print *,"EPS_SINGLE invalid"
+       stop
+      endif
       if (ngeom_recon.ne.2*sdim+3) then
        print *,"ngeom_recon.ne.2*sdim+3"
        stop
