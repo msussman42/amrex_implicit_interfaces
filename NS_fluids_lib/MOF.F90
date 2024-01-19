@@ -11322,7 +11322,7 @@ contains
        mag=mag+nn(dir)**2
       enddo
       mag=sqrt(mag)
-      if (mag.gt.EPS_14_7) then
+      if (mag.gt.zero) then
        !do nothing
       else
        print *,"slope_to_angle: invalid slope mag=",mag
@@ -13147,6 +13147,19 @@ contains
         enddo
         ! mag=|slope|
         call prepare_normal(local_slope,RR,mag(ipredict),sdim)
+
+        if (mag(ipredict).gt.zero) then
+         !do nothing
+        else if (mag(ipredict).eq.zero) then
+         do dir=1,sdim
+          local_slope(dir)=zero
+         enddo
+         local_slope(1)=one
+        else
+         print *,"mag(ipredict) invalid 13159: ",mag(ipredict)
+         stop
+        endif
+
         do dir=1,sdim
          slope(ipredict,dir)=local_slope(dir)
         enddo
@@ -13158,6 +13171,19 @@ contains
         enddo
         RR=one
         call prepare_normal(local_slope,RR,mag(ipredict),sdim)
+
+        if (mag(ipredict).gt.zero) then
+         !do nothing
+        else if (mag(ipredict).eq.zero) then
+         do dir=1,sdim
+          local_slope(dir)=zero
+         enddo
+         local_slope(1)=one
+        else
+         print *,"mag(ipredict) invalid 13183: ",mag(ipredict)
+         stop
+        endif
+
         theta=xsten(0,2)
         slopeRT(1)=cos(theta)*local_slope(1)+sin(theta)*local_slope(2)
         slopeRT(2)=-sin(theta)*local_slope(1)+cos(theta)*local_slope(2)
@@ -13793,7 +13819,7 @@ contains
              bfact,dx, &
              xsten_local,nhalf0,sdim)
           
-           if (mag(1).gt.EPS_8_4*dx(1)) then
+           if (mag(1).gt.zero) then
 
              ! order_min initialized to be 9999.
             if (order_algorithm_in(im).le.0) then
@@ -13812,7 +13838,7 @@ contains
              endif
             endif
 
-           else if (mag(1).ge.zero) then
+           else if (mag(1).eq.zero) then
             ! do nothing
            else
             print *,"mag(1) invalid: ",mag(1)
@@ -13887,7 +13913,7 @@ contains
            bfact,dx, &
            xsten_local,nhalf0,sdim)
 
-         if (mag(1).ge.EPS_14_7*dx(1)) then
+         if (mag(1).gt.zero) then
           !do nothing
          else
           print *,"mag(1) underflow: ",mag(1)
@@ -14056,9 +14082,9 @@ contains
             bfact,dx, &
             xsten_local,nhalf0,sdim)
 
-           if (mag(1).gt.EPS_8_4*dx(1)) then
+           if (mag(1).gt.zero) then
             ! do nothing
-           else if (mag(1).ge.zero) then
+           else if (mag(1).eq.zero) then
             do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
              do dir=1,sdim
               npredict(ipredict,dir)=zero
@@ -15991,7 +16017,7 @@ contains
            bfact,dx, &
            xsten0,nhalf0,sdim)
 
-         if (mag(1).gt.VOFTOL*dx(1)) then
+         if (mag(1).gt.zero) then
 
           do dir=1,sdim
            refcentroid(dir)=mofdata(vofcomp+dir)
@@ -16041,8 +16067,7 @@ contains
            multi_centroidA(imaterial,dir)=centroidA(dir)
           enddo 
 
-         else if ((mag(1).ge.zero).and. &
-                  (mag(1).le.EPS_8_4*dx(1))) then
+         else if (mag(1).eq.zero) then
 
           do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
            do dir=1,sdim
