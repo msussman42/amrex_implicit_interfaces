@@ -2649,19 +2649,56 @@ end subroutine intersection_volume_and_map
 
 
       subroutine angle_to_slope(angle,nslope,sdim)
+      use global_utility_module
       IMPLICIT NONE
 
       integer, INTENT(in) :: sdim
       real(amrex_real), INTENT(out) :: nslope(sdim)
       real(amrex_real), INTENT(in) :: angle(sdim-1)
+      integer :: dir
+
+      if (MOF_PI.eq.zero) then
+       MOF_PI=four*atan(one)
+      endif
+
+      do dir=1,sdim-1
+       if ((angle(dir).ge.-four*MOF_PI).and. &
+           (angle(dir).le.four*MOF_PI)) then
+        !do nothing
+       else
+        print *,"angle(dir) invalid: ",dir,angle(dir)
+        stop
+       endif
+      enddo !dir=1..sdim-1
 
       if (sdim.eq.3) then
        nslope(sdim)=cos(angle(sdim-1))
        nslope(1)=sin(angle(sdim-1))*cos(angle(1))
        nslope(2)=sin(angle(sdim-1))*sin(angle(1))
+       if (abs(one- &
+               sqrt(nslope(1)**2+nslope(2)**2+nslope(sdim)**2)).le.EPS2) then
+        !do nothing
+       else
+        print *,"nslope not unit mag"
+        do dir=1,sdim
+         print *,"dir,nslope ",dir,nslope(dir)
+        enddo
+        stop
+       endif
+
       else if (sdim.eq.2) then
        nslope(1)=cos(angle(1))
        nslope(2)=sin(angle(1))
+       if (abs(one- &
+               sqrt(nslope(1)**2+nslope(2)**2)).le.EPS2) then
+        !do nothing
+       else
+        print *,"nslope not unit mag"
+        do dir=1,sdim
+         print *,"dir,nslope ",dir,nslope(dir)
+        enddo
+        stop
+       endif
       else
        print *,"sdim invalid in angle_to_slope"
        stop
@@ -11025,6 +11062,7 @@ contains
 
         ! MilcentLemoine slope points away from the material,
         ! so we have to reverse the normal and angles
+        ! nslope comes from "angle_to_slope"
        do dir=1,sdim
         local_nslope(dir)=-nslope(dir)
        enddo
@@ -11288,6 +11326,9 @@ contains
        !do nothing
       else
        print *,"slope_to_angle: invalid slope mag=",mag
+       do dir=1,sdim
+        print *,"dir,nn(dir) ",dir,nn(dir)
+       enddo
        stop
       endif
       do dir=1,sdim
@@ -11703,6 +11744,7 @@ contains
       real(amrex_real) dx_normalize
       integer nguess
       real(amrex_real) nLS(sdim)
+      real(amrex_real) magLS
 
       integer ksten_low,ksten_high
       integer i1,j1,k1
@@ -11942,11 +11984,22 @@ contains
        if (MOF_TURN_OFF_LS.eq.0) then
 
         if (lsnormal_valid(critical_material).eq.1) then
+         magLS=zero
          do dir=1,sdim
           nLS(dir)=lsnormal(critical_material,dir)
+          magLS=magLS+nLS(dir)**2
          enddo
+         magLS=sqrt(magLS)
           ! -pi < angle < pi
-         call slope_to_angle(nLS,angle_init,sdim)
+         if (magLS.gt.zero) then
+          call slope_to_angle(nLS,angle_init,sdim)
+         else
+          print *,"magLS invalid: ",magLS
+          do dir=1,sdim
+           print *,"dir,nLS ",dir,nLS(dir)
+          enddo
+          stop
+         endif
          nguess=nguess+1 
          do dir=1,sdim-1
           angle_array(dir,nguess)=angle_init(dir)
@@ -13093,7 +13146,7 @@ contains
          local_slope(dir)=local_ref(dir)-local_free(dir)
         enddo
         ! mag=|slope|
-        call prepare_normal(local_slope,RR,mag(ipredict))
+        call prepare_normal(local_slope,RR,mag(ipredict),sdim)
         do dir=1,sdim
          slope(ipredict,dir)=local_slope(dir)
         enddo
@@ -13104,7 +13157,7 @@ contains
          local_slope(dir)=cen_refXYZ(dir)-cen_freeXYZ(dir)
         enddo
         RR=one
-        call prepare_normal(local_slope,RR,mag(ipredict))
+        call prepare_normal(local_slope,RR,mag(ipredict),sdim)
         theta=xsten(0,2)
         slopeRT(1)=cos(theta)*local_slope(1)+sin(theta)*local_slope(2)
         slopeRT(2)=-sin(theta)*local_slope(1)+cos(theta)*local_slope(2)
@@ -13113,7 +13166,7 @@ contains
         endif
         if (xsten(0,1).gt.zero) then
          RR=one/xsten(0,1)
-         call prepare_normal(slopeRT,RR,mag_temp)
+         call prepare_normal(slopeRT,RR,mag_temp,sdim)
          do dir=1,sdim
           slope(ipredict,dir)=slopeRT(dir)
          enddo
