@@ -1406,7 +1406,6 @@ stop
       real(amrex_real) :: refvfrac(1)
       real(amrex_real) :: vof_single 
       real(amrex_real) :: refcen(SDIM)
-      real(amrex_real) :: nr_db(SDIM)
       integer :: try_new_vfrac
 
       integer, parameter :: nhalf=3
@@ -1604,8 +1603,6 @@ stop
          print *,"dimension bust"
          stop
         endif
-
-        call angle_to_slope(angle_exact_db,nr_db,SDIM)
 
         try_new_vfrac=1
 
@@ -2054,7 +2051,6 @@ stop
       real(amrex_real) :: refvfrac(1)
       real(amrex_real) :: vof_single 
       real(amrex_real) :: refcen(SDIM)
-      real(amrex_real) :: nr_db(SDIM)
       integer :: try_new_vfrac
 
       integer, parameter :: nhalf=3
@@ -2236,8 +2232,6 @@ stop
           print *,"dimension bust"
           stop
          endif
-
-         call angle_to_slope(angle_exact_db,nr_db,SDIM)
 
          try_new_vfrac=1
 
