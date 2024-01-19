@@ -2649,6 +2649,7 @@ end subroutine intersection_volume_and_map
 
 
       subroutine angle_to_slope(angle,nslope,sdim)
+      use probcommon_module
       use global_utility_module
       IMPLICIT NONE
 
