@@ -804,7 +804,7 @@ stop
        ! declared in GLOBALUTIL.F90
       call get_LSNRM_extend(LS_CENTER,nrmcenter,iten,nfluid)
       RR=one
-      call prepare_normal(nfluid,RR,mag)
+      call prepare_normal(nfluid,RR,mag,SDIM)
       if (mag.gt.zero) then
        ! do nothing
       else
@@ -1041,7 +1041,7 @@ stop
        endif
       enddo ! dir2
       RR=one
-      call prepare_normal(nfluid,RR,mag)
+      call prepare_normal(nfluid,RR,mag,SDIM)
       if (mag.le.zero) then
        print *,"nfluid mag became corrupt"
        stop
@@ -1313,10 +1313,10 @@ stop
       enddo ! dir2=1..sdim
 
       RR=one
-      call prepare_normal(nfluid_cen,RR,mag) ! im or im_opp fluid
-      call prepare_normal(nfluid_def1,RR,mag1) ! im fluid
-      call prepare_normal(nfluid_def2,RR,mag2) ! im_opp fluid
-      call prepare_normal(nfluid_def3,RR,mag3) ! im3 material
+      call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
+      call prepare_normal(nfluid_def1,RR,mag1,SDIM) ! im fluid
+      call prepare_normal(nfluid_def2,RR,mag2,SDIM) ! im_opp fluid
+      call prepare_normal(nfluid_def3,RR,mag3,SDIM) ! im3 material
 
       if ((mag1.gt.zero).and. &
           (mag2.gt.zero).and. &
@@ -1353,7 +1353,7 @@ stop
        call get_LSNRM_extend(LSTEST,nrmtest,iten,nfluid)
 
        RR=one
-       call prepare_normal(nfluid,RR,mag)
+       call prepare_normal(nfluid,RR,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          nfluid(dir2)=nfluid_cen(dir2)
@@ -1383,7 +1383,7 @@ stop
           nsolid(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
          enddo
          RR=one
-         call prepare_normal(nsolid,RR,mag)
+         call prepare_normal(nsolid,RR,mag,SDIM)
          if (mag.le.zero) then
           do dir2=1,SDIM
            nsolid(dir2)=nfluid_def3(dir2)
@@ -1417,7 +1417,7 @@ stop
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im-1)+dir2)
        enddo
        RR=one
-       call prepare_normal(nfluid,RR,mag)
+       call prepare_normal(nfluid,RR,mag,SDIM)
        if (mag.gt.zero) then
         ! do nothing
        else if (mag.eq.zero) then
@@ -1436,7 +1436,7 @@ stop
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im_opp-1)+dir2)
        enddo
        RR=one
-       call prepare_normal(nfluid,RR,mag)
+       call prepare_normal(nfluid,RR,mag,SDIM)
        if (mag.gt.zero) then
         ! do nothing
        else if (mag.eq.zero) then
@@ -1484,7 +1484,7 @@ stop
            nproject(dir2)=nfluid(dir2)-dotprod*nsolid(dir2)
           enddo
           RR=one
-          call prepare_normal(nproject,RR,mag)
+          call prepare_normal(nproject,RR,mag,SDIM)
 
           if (mag.gt.zero) then
            ! find u dot nproject
@@ -2007,7 +2007,7 @@ stop
        enddo ! dir2
 
        RR=one
-       call prepare_normal(n_node1LS,RR,mag)
+       call prepare_normal(n_node1LS,RR,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          n_node1LS(dir2)=n_node1(dir2)
@@ -2018,7 +2018,7 @@ stop
         print *,"mag invalid LEVELSET_3D.F90 2108"
         stop
        endif
-       call prepare_normal(n_node2LS,RR,mag)
+       call prepare_normal(n_node2LS,RR,mag,SDIM)
        if (mag.eq.zero) then
         do dir2=1,SDIM
          n_node2LS(dir2)=n_node2(dir2)
@@ -2046,8 +2046,8 @@ stop
        enddo ! dir2
 
        RR=one
-       call prepare_normal(n_node1,RR,mag)
-       call prepare_normal(n_node2,RR,mag)
+       call prepare_normal(n_node1,RR,mag,SDIM)
+       call prepare_normal(n_node2,RR,mag,SDIM)
 
        do dir2=1,SDIM
         n1=n_node1(dir2)
@@ -3628,7 +3628,7 @@ stop
 
             ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
             RR=xcenter(1)
-            call prepare_normal(nrm_center,RR,mag)
+            call prepare_normal(nrm_center,RR,mag,SDIM)
 
             dircrossing=0
             ! 1D normal pointing towards the center cell.
@@ -3900,7 +3900,7 @@ stop
                nrm_test(dirloc)=nrmFD(inormal)
               enddo ! dirloc=1..sdim
               RR=one
-              call prepare_normal(nrm_test,RR,mag)
+              call prepare_normal(nrm_test,RR,mag,SDIM)
 
               ! fix probe normal if it is inconsistent.
               ! iten: im_main,im_main_opp; normal points towards im_main
@@ -3983,7 +3983,7 @@ stop
                ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
               RR=xcenter(1) 
                ! declared in GLOBALUTIL.F90
-              call prepare_normal(nrm_mat,RR,mag)
+              call prepare_normal(nrm_mat,RR,mag,SDIM)
 
               if (mag.eq.zero) then
                if (is_rigid(im_curv).eq.0) then
@@ -3996,7 +3996,7 @@ stop
                  ! if R-Theta, then N(2) -> N(2)/RR + renormalize.
                 RR=xcenter(1) 
                  ! declared in GLOBALUTIL.F90
-                call prepare_normal(nrm_mat,RR,mag)
+                call prepare_normal(nrm_mat,RR,mag,SDIM)
                 if (mag.eq.zero) then
                  ! do nothing
                 else if (mag.gt.zero) then
@@ -4085,7 +4085,7 @@ stop
                  print *,"transformed normal: levelrz invalid"
                  stop
                 endif
-                call prepare_normal(nrm_mat,RR,mag)
+                call prepare_normal(nrm_mat,RR,mag,SDIM)
                 do dirloc=1,SDIM
                  inormal=(im_curv-1)*SDIM+dirloc
                  nrmsten(i1,j1,k1,inormal)=nrm_mat(dirloc)
@@ -20546,7 +20546,8 @@ stop
          call get_iten(im_primary,im_secondary,iten)
 
          do ireverse=0,1
-          LL=get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+          LL= &
+           get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
           if (LL.ne.zero) then
            if (ireverse.eq.0) then
             sign_reverse=1

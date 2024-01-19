@@ -4444,12 +4444,13 @@ end subroutine dynamic_contact_angle
       end subroutine get_physical_dist
 
        ! mag=|grad phi|
-      subroutine prepare_normal(gradphi,rval,mag)
+      subroutine prepare_normal(gradphi,rval,mag,sdim_in)
       use probcommon_module
 
       IMPLICIT NONE
 
-      real(amrex_real), intent(inout) :: gradphi(SDIM)
+      integer, intent(in) :: sdim_in
+      real(amrex_real), intent(inout) :: gradphi(sdim_in)
       real(amrex_real), intent(in)    :: rval
       real(amrex_real), intent(out)   :: mag
       integer dir
@@ -4457,7 +4458,7 @@ end subroutine dynamic_contact_angle
       if (levelrz.eq.COORDSYS_CARTESIAN) then
        ! do nothing
       else if (levelrz.eq.COORDSYS_RZ) then
-       if (SDIM.ne.2) then
+       if (sdim_in.ne.2) then
         print *,"dimension bust"
         stop
        endif
@@ -4474,12 +4475,12 @@ end subroutine dynamic_contact_angle
       endif
 
       mag=zero
-      do dir=1,SDIM
+      do dir=1,sdim_in
        mag=mag+gradphi(dir)**2
       enddo
       mag=sqrt(mag)
       if (mag.gt.zero) then
-       do dir=1,SDIM
+       do dir=1,sdim_in
         gradphi(dir)=gradphi(dir)/mag
        enddo
       else if (mag.eq.zero) then
@@ -6394,13 +6395,13 @@ end subroutine print_visual_descriptor
        endif
 
        RR=one
-       call prepare_normal(n,RR,mag)
+       call prepare_normal(n,RR,mag,SDIM)
        if (mag.gt.zero) then
         RR=xsten(0,1)
         do dir=1,SDIM
          nsave(dir)=n(dir)
         enddo
-        call prepare_normal(nsave,RR,mag)
+        call prepare_normal(nsave,RR,mag,SDIM)
         if (mag.gt.zero) then
          mag=zero
          do dir=1,SDIM
@@ -13453,7 +13454,7 @@ end subroutine print_visual_descriptor
          print *,"levelrz invalid"
          stop
         endif 
-        call prepare_normal(nrm,rc,mag)
+        call prepare_normal(nrm,rc,mag,SDIM)
         do dir=1,SDIM
          nn(D_DECL(inode,jnode,knode),dir)=nrm(dir)
         enddo
