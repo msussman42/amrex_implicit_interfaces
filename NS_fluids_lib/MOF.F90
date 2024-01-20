@@ -9334,7 +9334,8 @@ contains
          slope, &
          intercept, &
          voln, &
-         centroid,arean, &
+         centroid, &
+         arean, &
          xtetlist, & !intent(in)
          nlist_alloc, &
          nlist, &
@@ -9348,7 +9349,8 @@ contains
         call fast_cut_cell_intersection( &
          bfact,dx,xsten0,nhalf0, &
          slope,intercept, &
-         voln,centroid,arean, &
+         voln,centroid, &
+         arean, &
          xsten0,nhalf0,xtet,shapeflag,sdim) 
        else
         print *,"continuous_mof invalid: ",continuous_mof
@@ -9417,7 +9419,8 @@ contains
       call fast_cut_cell_intersection( &
        bfact,dx,xsten0,nhalf0, &
        slope,intercept, &
-       voln,centroid,arean, &
+       voln,centroid, &
+       arean, &
        xsten0,nhalf0,xtet,shapeflag,sdim) 
 
       ff=(voln-vtarget)/volcell
@@ -9850,9 +9853,16 @@ contains
          endif
          intercept_error_history(niter+1,tid+1)=err
 
-         if (arean.gt.zero) then
+         if (arean.ge.zero) then
 
-          intercept_test=intercept-fc*volcell/arean
+          if (arean.gt.zero) then
+           intercept_test=intercept-fc*volcell/arean
+          else if (arean.eq.zero) then
+           intercept_test=intercept_upper+1.0D+20
+          else
+           print *,"arean should not be negative: ",arean
+           stop
+          endif
 
           if ((intercept_test.le.intercept_lower).or. &
               (intercept_test.ge.intercept_upper).or. &
@@ -10005,7 +10015,7 @@ contains
           endif  
          else
           print *,"multi_find_intercept: "
-          print *,"arean should not be zero"
+          print *,"arean should not be negative"
           print *,"fastflag=",fastflag
           print *,"continuous_mof=",continuous_mof
           print *,"use_initial_guess=",use_initial_guess
@@ -10341,9 +10351,16 @@ contains
          endif
          intercept_error_history(niter+1,tid+1)=err
 
-         if (arean.gt.zero) then
+         if (arean.ge.zero) then
 
-          intercept_test=intercept-fc*volcell/arean
+          if (arean.gt.zero) then
+           intercept_test=intercept-fc*volcell/arean
+          else if (arean.eq.zero) then
+           intercept_test=intercept_upper+1.0D+20
+          else
+           print *,"arean should not be negative: ",arean
+           stop
+          endif
 
           if ((intercept_test.le.intercept_lower).or. &
               (intercept_test.ge.intercept_upper).or. &
@@ -10469,7 +10486,7 @@ contains
           endif  
          else
           print *,"single_find_intercept: "
-          print *,"arean should not be zero"
+          print *,"arean should not be negative"
           print *,"niter,vfrac,arean,volcut,fc ",niter,vfrac,arean, &
            volcut,fc
           print *,"volcell ",volcell
@@ -10625,6 +10642,7 @@ contains
       real(amrex_real), INTENT(out) :: ff(nEQN) 
       real(amrex_real) volume_cut,facearea
       integer dir
+      integer dir_local
       real(amrex_real) :: nslope(nEQN)
       real(amrex_real), INTENT(inout) :: intercept(nMAT_OPT)
 
@@ -10754,6 +10772,22 @@ contains
        print *,"uncaptured_volume_vof invalid"
        stop
       endif
+
+      if (refvfrac(1)**2.ge.zero) then
+       !do nothing
+      else
+       print *,"corrupt: refvfrac(1) ",refvfrac(1)
+       stop
+      endif
+
+      do dir=1,sdim
+       if (refcentroid(dir)**2.ge.zero) then
+        !do nothing
+       else
+        print *,"corrupt: dir,refcentroid(dir) ",dir,refcentroid(dir)
+        stop
+       endif
+      enddo
 
       do dir=1,nEQN
        ff(dir)=zero
@@ -11079,11 +11113,23 @@ contains
         if ((refvfrac(1).ge.half).and. &
             (refvfrac(1).lt.one)) then
          local_refvfrac=one-refvfrac(1)
-         do dir=1,sdim
-          local_ref_centroid(dir)= &
-            -refvfrac(1)*refcentroid(dir)/local_refvfrac
-          local_nslope(dir)=-local_nslope(dir)
-         enddo
+
+         if (local_refvfrac.gt.zero) then
+          do dir=1,sdim
+           local_ref_centroid(dir)= &
+             -refvfrac(1)*refcentroid(dir)/local_refvfrac
+           local_nslope(dir)=-local_nslope(dir)
+          enddo
+         else if (local_refvfrac.eq.zero) then
+          do dir=1,sdim
+           local_ref_centroid(dir)=zero
+           local_nslope(dir)=-local_nslope(dir)
+          enddo
+         else
+          print *,"local_refvfrac corrupt: ",local_refvfrac
+          stop
+         endif
+
          call slope_to_angle(local_nslope,local_angles,sdim)
         else if ((refvfrac(1).gt.zero).and. &
                  (refvfrac(1).le.half)) then
@@ -11152,13 +11198,15 @@ contains
          call mof3d_compute_analytic_gradient( &
           local_angles, & !intent(in)
           local_ref_centroid, & !intent(in)
-          local_volume,local_cell_size, &
+          local_volume, & !intent(in)
+          local_cell_size, & !intent(in)
           local_centroid, & !intent(out)
-          local_gradient)
+          local_gradient) !intent(out)
         else if (sdim.eq.2) then
          call mof2d_compute_analytic_gradient( &
           local_angles, & !intent(in)
-          local_volume,local_cell_size, &
+          local_volume, &
+          local_cell_size, &
           local_centroid)  !intent(out)
         else
          print *,"sdim invalid"
@@ -11167,10 +11215,21 @@ contains
 
         do dir=1,sdim
          local_centroid(dir)=local_centroid(dir)-half*local_cell_size(dir)
-        enddo
-
-        do dir=1,sdim
          testcen(dir)=local_centroid(dir)
+         if (testcen(dir)**2.ge.zero) then
+          !do nothing
+         else
+          print *,"testcen(dir) corrupt: ",dir,testcen(dir)
+          print *,"local_angles: ",local_angles(1),local_angles(2)
+          print *,"local_volume: ",local_volume
+          do dir_local=1,sdim
+           print *,"dir_local,local_ref_centroid ", &
+             dir_local,local_ref_centroid(dir_local)
+           print *,"dir_local,local_cell_size ", &
+             dir_local,local_cell_size(dir_local)
+          enddo
+          stop
+         endif
         enddo
 
         if ((refvfrac(1).ge.half).and. &
@@ -11182,7 +11241,7 @@ contains
                  (refvfrac(1).le.half)) then
          ! do nothing
         else
-         print *,"refvfrac(1) invalid"
+         print *,"refvfrac(1) invalid: ",refvfrac(1)
          stop
         endif
 
@@ -11266,6 +11325,12 @@ contains
         ! do nothing
        else
         print *,"ff(dir) bust"
+        print *,"continuous_mof=",continuous_mof
+        print *,"use_MilcentLemoine=",use_MilcentLemoine
+        print *,"dir,ff(dir) ",dir,ff(dir)
+        do dir_local=1,nEQN
+         print *,"dir_local,refcentroidT,testcenT ", &
+            refcentroidT(dir_local),testcenT(dir_local)
         stop
        endif
       enddo
