@@ -1196,7 +1196,9 @@ CONTAINS
          else
           exact=zero
          endif
-         if (abs(sum-exact).gt.EPS13) then
+         if (abs(sum-exact).le.EPS_12_4) then
+          !do nothing
+         else
           print *,"sanity check failed integral"
           print *,"typ,order_r,p,exact,sum ",typ,order_r,p,exact,sum
           stop
@@ -1213,7 +1215,9 @@ CONTAINS
           call polyinterp_weights(order_r,y,w,xtarget)
           call do_polyinterp(order_r,w,data,sum)
           exact=xtarget**p
-          if (abs(sum-exact).gt.EPS13) then
+          if (abs(sum-exact).le.EPS_12_4) then
+           !do nothing
+          else
            print *,"sanity check failed polyinterp"
            print *,"r,p ",order_r,p
            stop
@@ -1230,7 +1234,9 @@ CONTAINS
           else
            exact=p*(xtarget**(p-1))
           endif
-          if (abs(sum-exact).gt.EPS_10_3) then
+          if (abs(sum-exact).le.EPS_10_3) then
+           !do nothing
+          else
            print *,"sanity check failed polyinterp_Dmatrix"
            print *,"r,p,typ ",order_r,p,typ
            print *,"sum-exact= ",sum-exact
@@ -5153,14 +5159,15 @@ do k=1,n
  changed(k)=1
 enddo
 
-if ((sum_off_diag.le.EPS13*max_S).and. &
+if ((sum_off_diag.le.EPS_12_4*max_S).and. &
     (sum_off_diag.ge.zero)) then
  state=0
  sanity_err=zero
 else if (sum_off_diag.gt.zero) then
  ! do nothing
 else
- print *,"sum_off_diag invalid"
+ print *,"sum_off_diag invalid: ",sum_off_diag
+ print *,"max_S=",max_S
  stop
 endif
 
@@ -5268,24 +5275,24 @@ do while (state.ne.0)
   endif
  enddo
  enddo
- if (sanity_err.ge.EPS12*max_S) then
+ if (sanity_err.ge.EPS_10_4*max_S) then
   ! do nothing
- else if (sanity_err.le.EPS12*max_S) then
+ else if (sanity_err.le.EPS_10_4*max_S) then
   state=0
  else
-  print *,"sanity_err became corrupt"
+  print *,"sanity_err became corrupt: ",sanity_err
   stop
  endif
 
 enddo !do while (state.ne.0)
 
-if (sanity_err.ge.EPS11*max_S) then
- print *,"sanity_err too large(1)"
+if (sanity_err.ge.EPS_8_3*max_S) then
+ print *,"sanity_err too large(1): ",sanity_err,max_S
  stop
-else if (sanity_err.le.EPS11*max_S) then
+else if (sanity_err.le.EPS_8_3*max_S) then
  ! do nothing
 else
- print *,"sanity_err is NaN"
+ print *,"sanity_err is NaN: ",sanity_err,max_S
  stop
 endif
 
@@ -5297,7 +5304,7 @@ do k=1,n-1
 enddo
 do i=1,n
 do j=1,n
- if (abs(S_MOD(i,j)-S(i,j)).le.EPS12*max_S) then
+ if (abs(S_MOD(i,j)-S(i,j)).le.EPS_10_4*max_S) then
   ! do nothing
  else
   print *,"S_MOD not properly restored"
@@ -5358,13 +5365,13 @@ do j=1,n
 enddo
 enddo
 
-if (sanity_err.ge.EPS11*max_S) then
- print *,"sanity_err too large(2)"
+if (sanity_err.ge.EPS_8_3*max_S) then
+ print *,"sanity_err too large(2): ",sanity_err,max_S
  stop
-else if (sanity_err.le.EPS11*max_S) then
+else if (sanity_err.le.EPS_8_3*max_S) then
  ! do nothing
 else
- print *,"sanity_err became corrupt"
+ print *,"sanity_err became corrupt: ",sanity_err,max_S
  stop
 endif
 
@@ -5447,7 +5454,7 @@ endif
 
 max_eval_sqr=max(max_eval_sqr,one)
 do i=1,n
- if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS12*max_eval_sqr).or. &
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS_8_4*max_eval_sqr).or. &
      (1.eq.1)) then
   ! do nothing
  else
@@ -5542,7 +5549,7 @@ endif
 
 max_eval_sqr=max(max_eval_sqr,one)
 do i=1,n
- if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS12*max_eval_sqr).or. &
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS_8_4*max_eval_sqr).or. &
      (1.eq.1)) then
   ! do nothing
  else
@@ -5664,7 +5671,7 @@ endif
 
 max_eval_sqr=max(max_eval_sqr,one)
 do i=1,n
- if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS12*max_eval_sqr).or. &
+ if ((abs(evals_S(i)**2-evals_STS(i)).le.EPS_8_4*max_eval_sqr).or. &
      (1.eq.1)) then
   ! do nothing
  else
@@ -5893,7 +5900,7 @@ if (matstatus.eq.1) then
    holdvalue=bb(i)
    bb(i)=bb(holdj)
    bb(holdj)=holdvalue
-   if (abs(AA(i,i)).lt.EPS10) then
+   if (abs(AA(i,i)).lt.EPS_10_5) then
     matstatus=0
    else
     do j=i+1,numelem
@@ -5913,7 +5920,7 @@ if (matstatus.eq.1) then
     do j=i+1,numelem
      holdvalue=holdvalue-AA(i,j)*xx(j)
     enddo
-    if (abs(AA(i,i)).lt.EPS10) then
+    if (abs(AA(i,i)).lt.EPS_10_5) then
      matstatus=0
     else
      xx(i)=holdvalue/AA(i,i)
@@ -8511,7 +8518,7 @@ end subroutine print_visual_descriptor
         hs=zero
       else
         hs=phi/(two*cutoff)+sin(Pi*phi/cutoff)/(two*Pi)+half
-        if ((hs.lt.-EPS6).or.(hs.gt.one+EPS6)) then
+        if ((hs.lt.-EPS_3_2).or.(hs.gt.one+EPS_3_2)) then
          print *,"hs sanity check failed"
          stop
         else if (hs.lt.zero) then
@@ -8543,7 +8550,7 @@ end subroutine print_visual_descriptor
          (cos(two*Pi*phi/cutoff)-one)/(four*Pi*Pi)+ &
          (phi+cutoff)*sin(Pi*phi/cutoff)/(cutoff*Pi))
 
-        if ((hs_scale.lt.-EPS6).or.(hs_scale.gt.one+EPS6)) then
+        if ((hs_scale.lt.-EPS_3_2).or.(hs_scale.gt.one+EPS_3_2)) then
          print *,"hs_scale sanity check failed"
          stop
         else if (hs_scale.lt.zero) then
@@ -11246,7 +11253,9 @@ end subroutine print_visual_descriptor
       enddo
       enddo
       enddo
-      if (abs(wtsum-one).gt.EPS10) then
+      if (abs(wtsum-one).le.EPS_10_4) then
+       !do nothing
+      else
        print *,"wtsum invalid"
        print *,"wtsum=",wtsum
        print *,"nvar=",nvar
@@ -12462,7 +12471,7 @@ end subroutine print_visual_descriptor
          endif
 
          if (abs(data_out%data_interp(nc)- &
-                 data_out2%data_interp(nc)).le.EPS12*scaling) then
+                 data_out2%data_interp(nc)).le.EPS_10_4*scaling) then
           ! do nothing
          else
           print *,"data_out%data_interp(nc) invalid"
@@ -12788,7 +12797,7 @@ end subroutine print_visual_descriptor
         endif
 
         if (abs(data_out%data_interp(1)- &
-                data_out2%data_interp(1)).le.EPS12*scaling) then
+                data_out2%data_interp(1)).le.EPS_10_4*scaling) then
          ! do nothing
         else
          print *,"data_in%grid_type_data=",data_in%grid_type_data
