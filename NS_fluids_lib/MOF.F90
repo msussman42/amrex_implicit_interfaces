@@ -11331,9 +11331,10 @@ contains
         do dir_local=1,nEQN
          print *,"dir_local,refcentroidT,testcenT ", &
             refcentroidT(dir_local),testcenT(dir_local)
+        enddo
         stop
        endif
-      enddo
+      enddo ! do dir=1,nEQN
 
       return
       end subroutine multi_rotatefunc
