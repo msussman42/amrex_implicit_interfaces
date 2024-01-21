@@ -388,6 +388,7 @@ stop
               enddo ! dir
 
               call multi_get_volume_grid_simple( &
+               EPS3, &
                tessellate, &  !=0
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
@@ -456,7 +457,9 @@ stop
        do dir=1,SDIM
         cencell(dir)=cencell(dir)/volcell
        enddo
-       if (abs(volcell-volfine).gt.FACETOL_SANITY*volfine) then
+       if (abs(volcell-volfine).le.EPS2*volfine) then
+        ! do nothing
+       else
         print *,"volcell, volfine bad (multimofinterp):",volcell,volfine
         stop
        endif
@@ -715,7 +718,9 @@ stop
        do dir=1,SDIM
         cencell(dir)=cencell(dir)/volcell
        enddo 
-       if (abs(volcell-volfine).gt.FACETOL_SANITY*volfine) then
+       if (abs(volcell-volfine).le.EPS2*volfine) then
+        !do nothing
+       else
         print *,"volcell, volfine bad (lshointerp):",volcell,volfine
         stop
        endif
@@ -937,6 +942,7 @@ stop
               enddo ! dir
 
               call multi_get_volume_grid_simple( &
+               EPS3, &
                tessellate, &  !=0
                bfact_coarse,dxc,xsten,nhalf, &
                mofdata, &
@@ -1005,7 +1011,9 @@ stop
        do dir=1,SDIM
         cencell(dir)=cencell(dir)/volcell
        enddo
-       if (abs(volcell-volfine).gt.FACETOL_SANITY*volfine) then
+       if (abs(volcell-volfine).le.EPS2*volfine) then
+        !do nothing
+       else
         print *,"volcell, volfine bad (multiextmofinterp):",volcell,volfine
         stop
        endif
@@ -1717,8 +1725,10 @@ stop
        call gridstenND_level(xstenND,ic,jc,kc,levelc,nhalf)
        do dir2=1,SDIM
         xfine(dir2)=xsten(0,dir2)-xstenND(0,dir2)
-        if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
-            (xfine(dir2).gt.(EPS4+bfact_coarse)*dxc(dir2))) then
+        if ((xfine(dir2).ge.-EPS3*dxc(dir2)).and. &
+            (xfine(dir2).le.(EPS3+bfact_coarse)*dxc(dir2))) then
+         !do nothing
+        else
          print *,"xfine out of bounds"
          stop
         endif
@@ -1916,8 +1926,10 @@ stop
 
        do dir=1,SDIM
         xfine(dir)=xsten(0,dir)-xstenND(0,dir)
-        if ((xfine(dir).lt.-EPS4*dxc(dir)).or. &
-            (xfine(dir).gt.(EPS4+bfact_coarse)*dxc(dir))) then
+        if ((xfine(dir).ge.-EPS3*dxc(dir)).and. &
+            (xfine(dir).le.(EPS3+bfact_coarse)*dxc(dir))) then
+         ! do nothing
+        else
          print *,"xfine out of bounds"
          stop
         endif
@@ -2356,8 +2368,10 @@ stop
        call gridstenND_level(xstenND,ic,jc,kc,levelc,nhalf)
        do dir2=1,SDIM
         xfine(dir2)=xsten(0,dir2)-xstenND(0,dir2)
-        if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
-            (xfine(dir2).gt.(EPS4+bfact_coarse)*dxc(dir2))) then
+        if ((xfine(dir2).ge.-EPS3*dxc(dir2)).and. &
+            (xfine(dir2).le.(EPS3+bfact_coarse)*dxc(dir2))) then
+         !do nothing
+        else
          print *,"xfine out of bounds"
          stop
         endif

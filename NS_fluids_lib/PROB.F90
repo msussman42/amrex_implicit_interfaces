@@ -6377,6 +6377,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! in: get_symmetric_error
         ! EPS2
        call multi_get_volume_grid_simple( &
+        EPS2, &
         tessellate, &  ! =1
         bfact,dx,xsten0,nhalf0, &
         mofdata, &
