@@ -31,7 +31,6 @@ cavity_surface/
 CRYOGENIC_TANK_TPCE/
 FilmBoiling/
 FABRIC_DROP/*
-!FABRIC_DROP/threads
 ZBOT3D/
 translate/
 freezing_singularity/
