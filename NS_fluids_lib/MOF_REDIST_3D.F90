@@ -4409,9 +4409,9 @@ stop
              (tessellate.eq.3).or. &
              (is_rigid(im).eq.0)) then
 
-          if ((frac_left(im).gt.one+FACETOL_SANITY).or. &
+          if ((frac_left(im).gt.one+EPS3).or. &
               (frac_left(im).lt.zero).or. &
-              (frac_right(im).gt.one+FACETOL_SANITY).or. &
+              (frac_right(im).gt.one+EPS3).or. &
               (frac_right(im).lt.zero)) then
            print *,"frac_left or frac_right out of range"
            stop
@@ -4568,8 +4568,8 @@ stop
                (tessellate.eq.3).or. &
                (is_rigid(mr).eq.0)) then
 
-            if ((frac_pair(ml,mr).lt.-FACETOL_SANITY).or. &
-                (frac_pair(ml,mr).gt.one+FACETOL_SANITY)) then
+            if ((frac_pair(ml,mr).lt.-EPS3).or. &
+                (frac_pair(ml,mr).gt.one+EPS3)) then
              print *,"frac_pair invalid"
              stop
             endif

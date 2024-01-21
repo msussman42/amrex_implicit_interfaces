@@ -472,7 +472,6 @@ implicit none
       !BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: VOFTOL_REDIST=BL_REAL_E(1.0,-3)
       real(amrex_real), PARAMETER :: FACETOL_REDIST=BL_REAL_E(1.0,-2)
-      real(amrex_real), PARAMETER :: FACETOL_SANITY=BL_REAL_E(1.0,-3)
       ! Default: LS_CURV_TOL=BL_REAL_E(1.0,-2)
       !inputs.curvature_converge with axis_dir=210 (sanity check),
       !BL_REAL_E(1.0,-12)
@@ -524,7 +523,6 @@ implicit none
       !BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: VOFTOL_REDIST=BL_REAL_E(1.0,-3)
       real(amrex_real), PARAMETER :: FACETOL_REDIST=BL_REAL_E(1.0,-2)
-      real(amrex_real), PARAMETER :: FACETOL_SANITY=BL_REAL_E(1.0,-3)
       !Default: LS_CURV_TOL=BL_REAL_E(1.0,-2) 
       !inputs.curvature_converge with axis_dir=210 (sanity check),
       !BL_REAL_E(1.0,-12)

@@ -2573,6 +2573,7 @@ stop
                 ! also, target volume is a cube, not a tet.
                 ! EPS2 
                call multi_get_volume_grid_simple( &
+                EPS2, &
                 tessellate, &  ! =1
                 bfact,dx,xsten,nhalf, &
                 mofdatavalid, &
@@ -2803,6 +2804,7 @@ stop
                ! in: FORT_CELLFACEINIT
                ! EPS2
               call multi_get_volume_grid_simple( &
+               EPS2, &
                tessellate, &  !=0,1, or 3
                bfact,dx,xsten,nhalf, &
                mofdatavalid, &
@@ -10566,6 +10568,7 @@ stop
            ! multi_cen is "absolute" (not relative to cell centroid)
            ! EPS2
            call multi_get_volume_grid_simple( &
+             EPS2, &
              tessellate, &  !=0,1, or 3
              bfact,dx,xsten_recon,1, &
              mofdata, &
