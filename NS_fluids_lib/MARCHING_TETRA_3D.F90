@@ -647,7 +647,7 @@ stop
         enddo ! im=1..num_materials
 
         if ((vfrac_sum_solid.gt.VOFTOL).and. &
-            (vfrac_sum_solid.le.1.1)) then
+            (vfrac_sum_solid.le.one+EPS1)) then
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
          ! EPS2
@@ -661,11 +661,11 @@ stop
           nmax, &
           SDIM)
 
-        else if ((vfrac_sum_solid.ge.-VOFTOL).and. &
+        else if ((vfrac_sum_solid.ge.-EPS1).and. &
                  (vfrac_sum_solid.le.VOFTOL)) then
          ! do nothing
         else
-         print *,"vfrac_sum_solid invalid"
+         print *,"vfrac_sum_solid invalid:",vfrac_sum_solid
          stop
         endif
         

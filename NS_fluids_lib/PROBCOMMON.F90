@@ -502,6 +502,7 @@ implicit none
       real(amrex_real), PARAMETER :: EPS4=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: EPS3=BL_REAL_E(1.0,-3)
       real(amrex_real), PARAMETER :: EPS2=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: EPS1=BL_REAL_E(1.0,-1)
 
       real(amrex_real), PARAMETER :: EPS_3_2=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: EPS_8_3=BL_REAL_E(1.0,-3)
@@ -553,6 +554,7 @@ implicit none
       real(amrex_real), PARAMETER :: EPS4=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: EPS3=BL_REAL_E(1.0,-3)
       real(amrex_real), PARAMETER :: EPS2=BL_REAL_E(1.0,-2)
+      real(amrex_real), PARAMETER :: EPS1=BL_REAL_E(1.0,-1)
 
       real(amrex_real), PARAMETER :: EPS_3_2=BL_REAL_E(1.0,-3)
       real(amrex_real), PARAMETER :: EPS_8_3=BL_REAL_E(1.0,-8)

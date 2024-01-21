@@ -107,7 +107,7 @@ stop
       if ((levelrz.eq.COORDSYS_RZ).or. &
           (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (normdir.eq.0) then
-        if (x0(normdir+1).le.VOFTOL*dx(normdir+1)) then
+        if (x0(normdir+1).le.EPS2*dx(normdir+1)) then
          delta=zero
         else
          call adjust_du(delta,normdir,x0(normdir+1),map_forward)
@@ -2542,7 +2542,7 @@ stop
       if (dxmin.gt.zero) then
        ! do nothing
       else
-       print *,"dxmin must be positive"
+       print *,"dxmin must be positive: ",dxmin
        stop
       endif
 
@@ -2841,10 +2841,10 @@ stop
        hx=hx*RR
        hxmac=hx
 
-       if (hx.gt.(one-EPS_8_4)*dxmin) then
+       if (hx.gt.(one-EPS2)*dxmin) then
         ! do nothing
        else
-        print *,"expecting hx>(1-EPS_8_4)*dxmin"
+        print *,"expecting hx>(1-EPS2)*dxmin"
         print *,"xstenMAC invalid estdt"
         print *,"hx= ",hx
         print *,"dxmin= ",dxmin
@@ -2941,7 +2941,7 @@ stop
        else if ((levelrz.eq.COORDSYS_RZ).or. &
                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         if ((dirnormal.eq.0).and. &
-            (xstenMAC(0,1).gt.VOFTOL*dx(1))) then
+            (xstenMAC(0,1).gt.EPS2*dx(1))) then
          if (xstenMAC(0,1).ge.hxmac) then
           uulocal=uulocal/( one-three*hxmac/(four*xstenMAC(0,1)) )  
          else if ((xstenMAC(0,1).gt.zero).and. &
@@ -2955,6 +2955,12 @@ stop
           print *,"xstenMAC(0,1)= ",xstenMAC(0,1)
           stop
          endif
+        else if ((dirnormal.gt.0).or. &
+                 (xstenMAC(0,1).le.EPS2*dx(1))) then
+         !do nothing
+        else
+         print *,"dirnormal or xstenMAC invalid"
+         stop
         endif
        else
         print *,"levelrz invalid estdt"
@@ -3876,7 +3882,7 @@ stop
          if (abs(local_vfrac).le.VOFTOL) then
           momden(D_DECL(i,j,k),im_parm)=rho_base
          else if ((local_vfrac.ge.VOFTOL).and. &
-                  (local_vfrac.le.one+VOFTOL)) then
+                  (local_vfrac.le.one+EPS1)) then
 
            ! den,T
           temperature=eosdata(D_DECL(i,j,k),dencomp+1)
@@ -4741,7 +4747,7 @@ stop
                stop
               endif
              else if ((F_solid_sum.ge.half).and. &
-                      (F_solid_sum.le.one+VOFTOL)) then
+                      (F_solid_sum.le.one+EPS1)) then
               ! do nothing
              else
               print *,"F_solid_sum invalid"
@@ -5318,11 +5324,11 @@ stop
           print *,"dimension bust"
           stop
          endif
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
+         if (xsten(0,1).le.EPS2*dx(1)) then
           velmac=zero
          endif
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
+         if (xsten(0,1).le.EPS2*dx(1)) then
            velmac=zero
          endif
         else
@@ -5337,11 +5343,11 @@ stop
           print *,"dimension bust"
           stop
          endif
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
+         if (xsten(0,1).le.EPS2*dx(1)) then
            velmac=zero
          endif
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
+         if (xsten(0,1).le.EPS2*dx(1)) then
            velmac=zero
          endif
         else
@@ -5355,7 +5361,7 @@ stop
          print *,"dimension bust"
          stop
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten(0,1).le.VOFTOL*dx(1)) then
+         if (xsten(0,1).le.EPS2*dx(1)) then
            velmac=zero
          endif
         else
@@ -6710,8 +6716,8 @@ stop
         dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
         den_local(im)=Tnew(D_DECL(i,j,k),dencomp)
         T_local(im)=Tnew(D_DECL(i,j,k),dencomp+1)
-        if ((VFRAC(im).ge.-VOFTOL).and. &
-            (VFRAC(im).le.one+VOFTOL)) then
+        if ((VFRAC(im).ge.-EPS1).and. &
+            (VFRAC(im).le.one+EPS1)) then
          ! do nothing
         else
          print *,"VFRAC invalid"
@@ -10094,7 +10100,7 @@ stop
                 print *,"LS1 or LS2 invalid"
                 stop
                endif
-               if ((theta.ge.zero).and.(theta.le.one+VOFTOL)) then
+               if ((theta.ge.zero).and.(theta.le.one+EPS2)) then
                 ! do nothing
                else
                 print *,"theta invalid"
@@ -13486,12 +13492,12 @@ stop
             print *,"dimension bust"
             stop
            endif
-           if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+           if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
                (veldir.eq.1)) then
             check_accept=0
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+           if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
                (veldir.eq.1)) then
             check_accept=0
            endif
@@ -13558,7 +13564,7 @@ stop
               ! do nothing
              else if ((levelrz.eq.COORDSYS_RZ).or. &
                       (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-              if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+              if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
                   (normdir.eq.0)) then
                usten_accept(-1)=zero
               endif
@@ -13655,11 +13661,11 @@ stop
                  print *,"dimension bust"
                  stop
                 endif
-                if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
+                if (xsten_recon(0,1).le.EPS2*dx(1)) then
                  check_intersection=0
                 endif
                else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-                if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
+                if (xsten_recon(0,1).le.EPS2*dx(1)) then
                  check_intersection=0
                 endif
                else
@@ -13679,7 +13685,7 @@ stop
                  ! do nothing
                 else if ((levelrz.eq.COORDSYS_RZ).or. &
                          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-                 if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+                 if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
                      (normdir.eq.0)) then
                   usten_donate(-1)=zero
                  endif
@@ -13971,13 +13977,13 @@ stop
           print *,"dimension bust"
           stop
          endif
-         if (xsten_crse(0,1).le.VOFTOL*dx(1)) then
+         if (xsten_crse(0,1).le.EPS2*dx(1)) then
           check_accept=0
           print *,"icrse invalid"
           stop
          endif
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten_crse(0,1).le.VOFTOL*dx(1)) then
+         if (xsten_crse(0,1).le.EPS2*dx(1)) then
           check_accept=0
           print *,"icrse invalid"
           stop
@@ -14022,7 +14028,7 @@ stop
           ! do nothing
          else if ((levelrz.eq.COORDSYS_RZ).or. &
                   (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-          if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+          if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
               (normdir.eq.0)) then
            usten_accept(-1)=zero
           endif
@@ -14106,13 +14112,13 @@ stop
             print *,"dimension bust"
             stop
            endif
-           if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
+           if (xsten_recon(0,1).le.EPS2*dx(1)) then
             check_intersection=0
             print *,"idonate invalid"
             stop
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-           if (xsten_recon(0,1).le.VOFTOL*dx(1)) then
+           if (xsten_recon(0,1).le.EPS2*dx(1)) then
             check_intersection=0
             print *,"idonate invalid"
             stop
@@ -14134,7 +14140,7 @@ stop
            else if ((levelrz.eq.COORDSYS_RZ).or. &
                     (levelrz.eq.COORDSYS_CYLINDRICAL)) then
 
-            if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+            if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
                 (normdir.eq.0)) then
              usten_donate(-1)=zero
             endif
@@ -15099,12 +15105,12 @@ stop
            print *,"dimension bust"
            stop
           endif
-          if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+          if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
               (veldir.eq.1)) then
            zapvel=1
           endif
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          if ((xsten_MAC(0,1).le.VOFTOL*dx(1)).and. &
+          if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
               (veldir.eq.1)) then
            zapvel=1
           endif
@@ -15743,8 +15749,8 @@ stop
          vofcomp=(im-1)*ngeom_recon+1
          local_volume=mofdata(vofcomp)
          
-         if ((local_volume.ge.-VOFTOL).and. &
-             (local_volume.le.one+VOFTOL)) then
+         if ((local_volume.ge.-EPS1).and. &
+             (local_volume.le.one+EPS1)) then
           if (local_volume.lt.zero) then
            local_volume=zero
           endif
@@ -17135,7 +17141,7 @@ stop
        else if ((levelrz.eq.COORDSYS_RZ).or. &
                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         if ((dir.eq.0).and. &
-            (xstenMAC(0,1).le.VOFTOL*dx(1))) then
+            (xstenMAC(0,1).le.EPS2*dx(1))) then
          at_RZ_face=1
         endif
        else
@@ -17192,8 +17198,8 @@ stop
           vofcomp=(im-1)*ngeom_recon+1
           local_volume=mofdata(vofcomp)
 
-          if ((local_volume.ge.-VOFTOL).and. &
-              (local_volume.le.one+VOFTOL)) then
+          if ((local_volume.ge.-EPS1).and. &
+              (local_volume.le.one+EPS1)) then
            if (local_volume.lt.zero) then
             local_volume=zero
            endif
@@ -17246,7 +17252,7 @@ stop
 
         fluid_vfrac_face=fluid_vfrac_face/total_vol_face
         if ((fluid_vfrac_face.ge.zero).and. &
-            (fluid_vfrac_face.le.one+VOFTOL)) then
+            (fluid_vfrac_face.le.one+EPS1)) then
          ! do nothing
         else
          print *,"fluid_vfrac_face invalid"
@@ -17352,7 +17358,7 @@ stop
         if (fluid_vfrac_face.le.VOFTOL_AREAFRAC) then
          is_solid_face=2
         else if ((fluid_vfrac_face.ge.VOFTOL_AREAFRAC).and. &
-                 (fluid_vfrac_face.le.one+VOFTOL)) then
+                 (fluid_vfrac_face.le.one+EPS1)) then
          xface_local=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
          if ((xface_local.ge.zero).and.(xface_local.le.half)) then
           xface_local=zero
@@ -20458,12 +20464,13 @@ stop
           endif
          enddo ! im=1..num_materials
 
-         if ((vfrac_sum_solid.lt.-VOFTOL).or. &
-             (vfrac_sum_solid.gt.one+VOFTOL)) then
+         if ((vfrac_sum_solid.lt.-EPS1).or. &
+             (vfrac_sum_solid.gt.one+EPS1)) then
           print *,"vfrac_sum_solid out of range"
+          print *,"vfrac_sum_solid=",vfrac_sum_solid
           stop
-         else if ((vfrac_sum_solid.ge.-VOFTOL).and. &
-                  (vfrac_sum_solid.le.one+VOFTOL)) then
+         else if ((vfrac_sum_solid.ge.-EPS1).and. &
+                  (vfrac_sum_solid.le.one+EPS1)) then
           ! do nothing
          else
           print *,"vfrac_sum_solid is NaN"

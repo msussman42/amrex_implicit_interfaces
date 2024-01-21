@@ -1518,7 +1518,7 @@ integer :: gravity_dir
  default_wavelen=sqrt(default_wavelen)
 
  if ((wavelen.gt.zero).and. &
-     (wavelen.le.default_wavelen*(one+VOFTOL))) then
+     (wavelen.le.default_wavelen*(one+EPS2))) then
   ! do nothing
  else
   print *,"input wavelen out of range"

@@ -793,7 +793,7 @@ if ((num_materials.ge.3).and. &
  t_upper=assimilate_in%cur_time  ! cur_time_slab
  t_lower=t_upper-assimilate_in%dt
  if (t_lower.lt.t_upper) then
-  if (t_lower.ge.-VOFTOL) then
+  if (t_lower.ge.-EPS2) then
    ! do nothing
   else
    print *,"t_lower invalid"

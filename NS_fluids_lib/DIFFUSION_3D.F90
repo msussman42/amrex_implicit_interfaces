@@ -310,7 +310,7 @@ stop
         stop
        endif
 
-       if (abs(angular_velocity-fort_angular_velocity).le.VOFTOL) then
+       if (abs(angular_velocity-fort_angular_velocity).le.EPS2) then
         ! do nothing
        else
         print *,"angular_velocity or fort_angular_velocity invalid"
@@ -639,7 +639,7 @@ stop
           stop
          endif
 
-         if ((Fsolid.ge.zero).and.(Fsolid.le.one+VOFTOL)) then
+         if ((Fsolid.ge.zero).and.(Fsolid.le.one+EPS1)) then
           ! do nothing
          else
           print *,"Fsolid invalid: fort_hoopimplicit: ",Fsolid

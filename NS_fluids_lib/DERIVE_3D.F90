@@ -316,7 +316,7 @@ stop
          if (im_primary.eq.im) then
           if (VFRAC(im).ge.one-VOFTOL) then
            visc(D_DECL(i,j,k),im)=visc(D_DECL(i,j,k),im)+turb_visc*density
-          else if ((VFRAC(im).ge.-VOFTOL).and. &
+          else if ((VFRAC(im).ge.-EPS1).and. &
                    (VFRAC(im).le.one-VOFTOL)) then
            ! do nothing
           else

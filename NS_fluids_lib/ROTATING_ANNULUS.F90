@@ -245,11 +245,11 @@ endif
 dT_dr_local=(twall-fort_tempconst(1))/problen_array(radial_dir)
 
 if (twall.ge.fort_tempconst(1)) then
- if (abs(dT_dr-dT_dr_local).le.VOFTOL) then
+ if (abs(dT_dr-dT_dr_local).le.EPS2) then
   ! do nothig
  else
   print *,"TA (fort_tempconst(1) or TB (twall) invalid"
-  print *,"(abs(dT_dr-dT_dr_local).le.VOFTOL) failed"
+  print *,"(abs(dT_dr-dT_dr_local).le.EPS2) failed"
   print *,"twall=",twall
   print *,"fort_tempconst(1)=",fort_tempconst(1)
   stop

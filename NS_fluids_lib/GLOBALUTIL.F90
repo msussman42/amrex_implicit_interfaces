@@ -3847,7 +3847,9 @@ end subroutine dynamic_contact_angle
       im_solid_temperature=im_solid_primary()
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
         print *,"expecting z=y in 2d routine outside_temperature: ",y,z
         stop
        endif
@@ -3882,7 +3884,9 @@ end subroutine dynamic_contact_angle
 
        if (substrate_height.gt.zero) then 
 
-        if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
+        if (abs(substrate_height-(ice_vertical-half*radblob)).le.EPS2) then
+         !do nothing
+        else
          print *,"init bot of water+ice block should coincide with substrate"
          stop
         endif
@@ -6414,7 +6418,9 @@ end subroutine print_visual_descriptor
          do dir=1,SDIM
           mag=mag+n(dir)*nsave(dir)
          enddo
-         if (abs(mag).gt.one+VOFTOL) then
+         if (abs(mag).le.one+EPS2) then
+          !do nothing
+         else
           print *,"mag invalid in derive_dist"
           stop
          endif
@@ -7642,8 +7648,10 @@ end subroutine print_visual_descriptor
       endif
 
       atan_verify=atan(x)
-      if ((atan_verify.le.-half*MOF_PI-VOFTOL).or. &
-          (atan_verify.ge.half*MOF_PI+VOFTOL)) then
+      if ((atan_verify.ge.-half*MOF_PI-EPS2).and. &
+          (atan_verify.le.half*MOF_PI+EPS2)) then
+       !do nothing
+      else
        print *,"atan out of range"
        stop
       endif
@@ -7665,23 +7673,23 @@ end subroutine print_visual_descriptor
       enddo
 
       if (sdim.eq.2) then
-       if ((angle_init(1).ge.-Pi-VOFTOL).and. &
-           (angle_init(1).le.Pi+VOFTOL)) then
+       if ((angle_init(1).ge.-Pi-EPS2).and. &
+           (angle_init(1).le.Pi+EPS2)) then
         ! do nothing
        else
         print *,"angle_init(1) out of range"
         stop
        endif
       else if (sdim.eq.3) then
-       if ((angle_init(1).ge.-Pi-VOFTOL).and. &
-           (angle_init(1).le.Pi+VOFTOL)) then
+       if ((angle_init(1).ge.-Pi-EPS2).and. &
+           (angle_init(1).le.Pi+EPS2)) then
         ! do nothing
        else
         print *,"angle_init(1) out of range"
         stop
        endif
-       if ((angle_init(sdim-1).ge.-Pi-VOFTOL).and. &
-           (angle_init(sdim-1).le.Pi+VOFTOL)) then
+       if ((angle_init(sdim-1).ge.-Pi-EPS2).and. &
+           (angle_init(sdim-1).le.Pi+EPS2)) then
         if (angle_init(sdim-1).ge.zero) then
          ! do nothing
         else if (angle_init(sdim-1).le.zero) then
@@ -8616,7 +8624,9 @@ end subroutine print_visual_descriptor
        endif
       enddo ! imaterial
 
-      if (voftotal.le.zero) then
+      if (voftotal.gt.zero) then
+       !do nothing
+      else
        print *,"vacuum bust in consistent materials"
        print *,"voftotal= ",voftotal
        stop
@@ -15465,10 +15475,10 @@ end subroutine print_visual_descriptor
        print *,"im or im_opp invalid"
        stop
       endif
-      if ((VOF(im).ge.-VOFTOL).and. &
-          (VOF(im).le.one+VOFTOL).and. &
-          (VOF(im_opp).ge.-VOFTOL).and. &
-          (VOF(im_opp).le.one+VOFTOL)) then 
+      if ((VOF(im).ge.-EPS1).and. &
+          (VOF(im).le.one+EPS1).and. &
+          (VOF(im_opp).ge.-EPS1).and. &
+          (VOF(im_opp).le.one+EPS1)) then 
 
        if (VOF(im).gt.VOF(im_opp)) then
         VOF_extend=one-VOF(im_opp)
@@ -18533,7 +18543,9 @@ end subroutine print_visual_descriptor
       real(amrex_real) aspect,yprime,zprime,aspect2
 
       if (SDIM.eq.2) then
-       if (abs(y-z).gt.VOFTOL) then
+       if (abs(y-z).le.EPS2) then
+        ! do nothing
+       else
         print *,"y=z in 2d expected"
         stop
        endif
@@ -23581,7 +23593,9 @@ if (probtype.eq.55) then
  allocate(user_tension(num_interfaces))
 
  if (SDIM.eq.2) then
-  if (abs(y-z).gt.VOFTOL) then
+  if (abs(y-z).le.EPS2) then
+   !do nothing
+  else
    print *,"y=z in 2d expected: drop_slope_dist"
    print *,"x,y,z= ",x,y,z
    stop
@@ -25495,9 +25509,13 @@ if (probtype.ne.28) then
  print *,"probtype invalid"
  stop
 endif
-if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
- print *,"abs(z-y) bust"
- stop
+if (SDIM.eq.2) then
+ if (abs(z-y).le.EPS2) then
+  !do nothing
+ else
+  print *,"abs(z-y) bust"
+  stop
+ endif 
 endif 
 
 if (adv_vel.eq.zero) then
@@ -25534,9 +25552,13 @@ if (probtype.ne.28) then
  print *,"probtype invalid"
  stop
 endif
-if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
- print *,"abs(z-y) bust"
- stop
+if (SDIM.eq.2) then
+ if (abs(z-y).le.EPS2) then
+  !do nothing
+ else
+  print *,"abs(z-y) bust"
+  stop
+ endif 
 endif 
 
 if (adv_vel.eq.zero) then
@@ -25578,9 +25600,13 @@ if (levelrz.ne.COORDSYS_CARTESIAN) then
  print *,"levelrz invalid zalesakvv"
  stop
 endif
-if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
- print *,"abs(z-y) bust"
- stop
+if (SDIM.eq.2) then
+ if (abs(z-y).le.EPS2) then
+  !do nothing
+ else
+  print *,"abs(z-y) bust"
+  stop
+ endif 
 endif 
 
 if (adv_vel.eq.zero) then

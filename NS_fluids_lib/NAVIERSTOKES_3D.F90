@@ -1403,10 +1403,10 @@ END SUBROUTINE SIMP
 
         do im=1,num_materials
          vfrac(im)=cvof(D_DECL(i,j,k),im)
-         if ((vfrac(im).ge.-VOFTOL).and.(vfrac(im).le.one+VOFTOL)) then
+         if ((vfrac(im).ge.-EPS1).and.(vfrac(im).le.one+EPS1)) then
           ! do nothing
          else
-          print *,"vfrac invalid"
+          print *,"vfrac invalid: ",vfrac(im)
           stop
          endif
          if (vfrac(im).lt.VOFTOL) then
@@ -1565,7 +1565,7 @@ END SUBROUTINE SIMP
              ! do nothing
             else if (is_rigid(im).eq.0) then
              if ((vfrac(im).gt.zero).and. &
-                 (vfrac(im).le.one+VOFTOL)) then
+                 (vfrac(im).le.one+EPS1)) then
               if (pressure_select_criterion.eq.0) then ! vol. frac.
                ! do nothing (vfrac_weight=vfrac)
               else if (pressure_select_criterion.eq.1) then ! mass frac. 
@@ -3646,8 +3646,8 @@ END SUBROUTINE SIMP
             if (xstenhi(dir)-xstenlo(dir).gt.zero) then
              theta(dir)=(xcrit(dir)-xstenlo(dir))/ &
               (xstenhi(dir)-xstenlo(dir))
-             if ((theta(dir).ge.-VOFTOL).and. &
-                 (theta(dir).le.one+VOFTOL)) then
+             if ((theta(dir).ge.-EPS1).and. &
+                 (theta(dir).le.one+EPS1)) then
               if (theta(dir).lt.zero) then
                theta(dir)=zero
               endif
@@ -8548,7 +8548,7 @@ END SUBROUTINE SIMP
                    if (vfrac.eq.zero) then
                     ! do nothing
                    else if ((vfrac.gt.zero).and. &
-                            (vfrac.le.one+VOFTOL)) then
+                            (vfrac.le.one+EPS1)) then
                     snew(D_DECL(i,j,k), &
                      STATECOMP_STATES+temperature_comp)=temperature_prescribe
                    else
@@ -10329,7 +10329,7 @@ END SUBROUTINE SIMP
          stop
         endif
         if ((dir.eq.0).and. &
-            (xsten(0,1).le.VOFTOL*dx(1))) then
+            (xsten(0,1).le.EPS2*dx(1))) then
          local_macnew=zero
         endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
@@ -13634,8 +13634,8 @@ END SUBROUTINE SIMP
 
         temp_vfrac=mofdatacoarse(vofcomp_recon)/volcoarse
         if ((temp_vfrac.lt.zero).or. &
-            (temp_vfrac.gt.one+VOFTOL)) then
-         print *,"temp_vfrac invalid"
+            (temp_vfrac.gt.one+EPS1)) then
+         print *,"temp_vfrac invalid: ",temp_vfrac
          stop
         endif
         if (temp_vfrac.le.VOFTOL) then
@@ -14420,7 +14420,7 @@ END SUBROUTINE SIMP
           print *,"dimension bust"
           stop
          endif
-         if ((xsten(0,1).le.VOFTOL*dx(1)).and. &
+         if ((xsten(0,1).le.EPS2*dx(1)).and. &
              (box_type(1).eq.1)) then
           crse(D_DECL(ic,jc,kc),n) = zero
          endif

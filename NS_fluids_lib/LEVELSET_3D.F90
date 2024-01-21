@@ -119,7 +119,7 @@ stop
            mag=mag+nslope_cell(dir)**2
           enddo
           mag=sqrt(mag)
-          if (abs(mag-one).lt.VOFTOL) then
+          if (abs(mag-one).lt.EPS2) then
            ! do nothing
           else
            print *,"nslope_cell (mag) invalid"
@@ -2519,13 +2519,17 @@ stop
           endif
          enddo ! im=1..num_materials
 
-         if (abs(one-vfrac_fluid_sum).gt.VOFTOL) then
-          print *,"vfrac_fluid_sum invalid"
+         if (abs(one-vfrac_fluid_sum).le.EPS1) then
+          ! do nothing
+         else
+          print *,"vfrac_fluid_sum invalid",vfrac_fluid_sum
           stop
          endif
-         if ((vfrac_solid_sum.gt.one+VOFTOL).or. &
-             (vfrac_solid_sum.lt.zero)) then
-          print *,"vfrac_solid_sum invalid"
+         if ((vfrac_solid_sum.le.one+EPS1).and. &
+             (vfrac_solid_sum.ge.zero)) then
+          !do nothing
+         else
+          print *,"vfrac_solid_sum invalid:",vfrac_solid_sum
           stop
          endif
 
@@ -3519,7 +3523,7 @@ stop
 
           ! do nothing, all interface forces are 0
   
-         else if ((xcenter(1).le.VOFTOL*dx(1)).and. &
+         else if ((xcenter(1).le.EPS2*dx(1)).and. &
                   (levelrz.eq.COORDSYS_RZ)) then
          
           ! do nothing, all interface forces are 0
@@ -3698,7 +3702,7 @@ stop
 
                at_RZ_axis=0
                if ((levelrz.eq.COORDSYS_RZ).and. &
-                   (xsten0(-1,1).le.VOFTOL*dx(1)).and. &
+                   (xsten0(-1,1).le.EPS2*dx(1)).and. &
                    (dirstar.eq.1).and. &
                    (sidestar.eq.-1)) then
                 at_RZ_axis=1
@@ -5124,8 +5128,8 @@ stop
         do im=1,num_materials
          vofcomp=(im-1)*ngeom_recon+1
          vfrac=mofdata(vofcomp)
-         if (vfrac.ge.-VOFTOL) then
-          if (vfrac.le.one+VOFTOL) then
+         if (vfrac.ge.-EPS1) then
+          if (vfrac.le.one+EPS1) then
            if (vfrac.lt.zero) then
             vfrac=zero
            endif
@@ -6565,7 +6569,7 @@ stop
                (vfrac.le.one-VOFTOL)) then
             ! do nothing
            else if ((vfrac.ge.one-VOFTOL).and. &
-                    (vfrac.le.one+VOFTOL)) then
+                    (vfrac.le.one+EPS1)) then
 
             if (im_primary.eq.base_type) then
 
@@ -8389,7 +8393,7 @@ stop
            print *,"dimension bust"
            stop
           endif
-          if (xstenMAC(-1,1).le.VOFTOL*dx(1)) then
+          if (xstenMAC(-1,1).le.EPS2*dx(1)) then
            im1=i
           else
            im1=i-ii
@@ -9327,8 +9331,8 @@ stop
               stop
              endif
 
-            else if ((FFACE(im).gt.-VOFTOL).and. &
-                     (FFACE(im_opp).gt.-VOFTOL)) then
+            else if ((FFACE(im).gt.-EPS1).and. &
+                     (FFACE(im_opp).gt.-EPS1)) then
              ! do nothing
             else
              print *,"FFACE invalid"
@@ -9440,16 +9444,16 @@ stop
                    (levelrz.eq.COORDSYS_CYLINDRICAL)) then
            if (veldir.eq.0) then
             if (iside.eq.0) then
-             if (abs(xstenMAC_center(1)).le.VOFTOL*dx(1)) then
+             if (abs(xstenMAC_center(1)).le.EPS2*dx(1)) then
               wall_flag_face=num_materials+1 !Neumann BC, RZ axis of symmetry
-             else if (xstenMAC_center(1).gt.VOFTOL*dx(1)) then
+             else if (xstenMAC_center(1).gt.EPS2*dx(1)) then
               ! do nothing
              else
               print *,"xstenMAC invalid"
               stop
              endif
             else if (iside.eq.1) then
-             if (xstenMAC_center(1).gt.-VOFTOL*dx(1)) then
+             if (xstenMAC_center(1).gt.-EPS2*dx(1)) then
               ! do nothing
              else
               print *,"xstenMAC invalid"
@@ -9491,8 +9495,8 @@ stop
 
           else if (is_clamped_face.eq.0) then
 
-           if ((voltotal_solid.ge.one-0.01D0).and. &
-               (voltotal_solid.le.one+VOFTOL)) then
+           if ((voltotal_solid.ge.one-EPS2).and. &
+               (voltotal_solid.le.one+EPS1)) then
             if ((local_im_solid_primary.ge.1).and. &
                 (local_im_solid_primary.le.num_materials)) then
              if (wall_flag_face.eq.0) then
@@ -9517,8 +9521,8 @@ stop
              print *,"local_im_solid_primary invalid: ",local_im_solid_primary
              stop
             endif
-           else if ((voltotal_solid.le.one-0.01D0).and. &
-                    (voltotal_solid.ge.-VOFTOL)) then
+           else if ((voltotal_solid.le.one-EPS2).and. &
+                    (voltotal_solid.ge.-EPS1)) then
             ! do nothing
            else
             print *,"voltotal_solid invalid: ",voltotal_solid
@@ -9667,8 +9671,8 @@ stop
             endif
            else if (iten_main.ne.iten_FFACE) then
             ! do nothing
-           else if ((FFACE(im).gt.-VOFTOL).and. &
-                    (FFACE(im_opp).gt.-VOFTOL)) then
+           else if ((FFACE(im).gt.-EPS1).and. &
+                    (FFACE(im_opp).gt.-EPS1)) then
             ! do nothing
            else
             print *,"FFACE invalid"
@@ -9726,9 +9730,9 @@ stop
          else if (levelrz.eq.COORDSYS_RZ) then
           if (SDIM.eq.2) then
            if (veldir.eq.0) then
-            if (abs(xstenMAC_center(1)).le.VOFTOL*dx(1)) then ! at r=0 face
+            if (abs(xstenMAC_center(1)).le.EPS2*dx(1)) then ! at r=0 face
              zeroradius_flag=1
-            else if (xstenMAC_center(1).ge.-VOFTOL*dx(1)) then
+            else if (xstenMAC_center(1).ge.-EPS2*dx(1)) then
              ! do nothing
             else
              print *,"xstenMAC invalid"
@@ -10532,7 +10536,7 @@ stop
            ! do nothing
           else if ((levelrz.eq.COORDSYS_RZ).or. &
                    (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-           if (xsten_recon(0,1).lt.VOFTOL*dx(1)) then
+           if (xsten_recon(0,1).lt.EPS2*dx(1)) then
             check_donate=0
            endif
           else
@@ -13865,12 +13869,12 @@ stop
             stop
            endif
            if ((dir.eq.0).and. &
-               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.EPS2*dx(1))) then
             at_RZ_face=1
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if ((dir.eq.0).and. &
-               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.EPS2*dx(1))) then
             at_RZ_face=1
            endif
           else
@@ -13918,7 +13922,7 @@ stop
            endif
            if (constant_density_all_time(im).eq.1) then
             if (abs(denlocal-fort_denconst(im)).le. &
-                VOFTOL*fort_denconst(im)) then
+                EPS2*fort_denconst(im)) then
              ! do nothing
             else
              print *,"expecting denlocal=fort_denconst(im)"
@@ -13975,12 +13979,12 @@ stop
             stop
            endif
            if ((dir.eq.0).and. &
-               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.EPS2*dx(1))) then
             at_RZ_face=1
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if ((dir.eq.0).and. &
-               (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+               (xstenMAC_center(1).le.EPS2*dx(1))) then
             at_RZ_face=1
            endif
           else
@@ -14516,7 +14520,7 @@ stop
             print *,"dimension bust"
             stop
            endif
-           if ((xstenMAC_center(1).le.VOFTOL*dx(1)).and. &
+           if ((xstenMAC_center(1).le.EPS2*dx(1)).and. &
                (dir.eq.0)) then
             if (at_reflect_wall.ne.1) then
              print *,"at_reflect_wall fails sanity check"
@@ -14789,7 +14793,7 @@ stop
             print *,"dimension bust"
             stop
            endif
-           if ((xstenMAC_center(1).le.VOFTOL*dx(1)).and. &
+           if ((xstenMAC_center(1).le.EPS2*dx(1)).and. &
                (dir.eq.0)) then
             if (at_reflect_wall.ne.1) then
              print *,"at_reflect_wall fails sanity check"
@@ -15823,12 +15827,12 @@ stop
          stop
         endif
         if ((dir.eq.0).and. &
-            (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+            (xstenMAC_center(1).le.EPS2*dx(1))) then
          at_RZ_face=1
         endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if ((dir.eq.0).and. &
-            (xstenMAC_center(1).le.VOFTOL*dx(1))) then
+            (xstenMAC_center(1).le.EPS2*dx(1))) then
          at_RZ_face=1
         endif
        else
@@ -17173,7 +17177,7 @@ stop
            if ((F_stencil.gt.VOFTOL).and. &
                (F_stencil.le.one+VOFTOL)) then
             ! do nothing
-           else if (abs(F_stencil).le.VOFTOL) then
+           else if (abs(F_stencil).le.EPS1) then
             ! extrapolate into the empty cell.
 
             F_stencil_sum=zero
@@ -18150,7 +18154,7 @@ stop
                mofnew(vofcomp)=VOFTOL_SLOPES
               endif
              else if ((mofnew(vofcomp).gt.zero).and. &
-                      (mofnew(vofcomp).le.one+VOFTOL)) then
+                      (mofnew(vofcomp).le.one+EPS1)) then
               ! do nothing
              else
               print *,"mofnew(vofcomp) invalid"
