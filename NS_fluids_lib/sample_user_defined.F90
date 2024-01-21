@@ -305,7 +305,7 @@ contains
   userdef_im=4
   userdef_temperature=fort_tempconst(userdef_im)
   if ((VFRAC(userdef_im).gt.VOFTOL).and. &
-      (VFRAC(userdef_im).le.one+VOFTOL)) then
+      (VFRAC(userdef_im).le.one+EPS1)) then
    if (temp(im).lt.userdef_temperature) then
     heat_source=(userdef_temperature-temp(im))* &
              den(im)*CV(im)/dt 

@@ -503,7 +503,7 @@ stop
         else if (cc_flag.eq.0) then ! centroid->center
          if (abs(VF).le.VOFTOL) then
           own_flag=0
-         else if ((VF.ge.VOFTOL).and.(VF.le.one+VOFTOL)) then
+         else if ((VF.ge.VOFTOL).and.(VF.le.one+EPS1)) then
           own_flag=1
          else
           print *,"VF invalid"
@@ -3384,7 +3384,7 @@ stop
                   (local_VOF(im).le.one)) then
           ! do nothing
          else
-          print *,"local_VOF invalid"
+          print *,"local_VOF invalid:",im,local_VOF(im)
           stop
          endif
          if (is_rigid(im).eq.0) then
@@ -4852,7 +4852,7 @@ stop
             vofcomp_raw=(u_imaterial-1)*ngeom_raw+1
 
             tempvfrac=volmat(u_imaterial)/voltotal
-            if ((tempvfrac.ge.EBVOFTOL).and.(tempvfrac.le.1.1d0)) then
+            if ((tempvfrac.ge.EBVOFTOL).and.(tempvfrac.le.one+EPS1)) then
              if (tempvfrac.gt.one) then
               tempvfrac=one
              endif
@@ -5057,16 +5057,16 @@ stop
            enddo ! im_local=1..num_materials
 
            if ((fixed_vfrac_sum.ge.one-VOFTOL).and. &
-               (fixed_vfrac_sum.le.one+VOFTOL)) then
+               (fixed_vfrac_sum.le.one+EPS1)) then
             avail_vfrac=zero
-           else if ((fixed_vfrac_sum.ge.-VOFTOL).and. &
+           else if ((fixed_vfrac_sum.ge.-EPS1).and. &
                     (fixed_vfrac_sum.le.zero)) then
             avail_vfrac=one
            else if ((fixed_vfrac_sum.gt.zero).and. &
                     (fixed_vfrac_sum.le.one-VOFTOL)) then
             avail_vfrac=one-fixed_vfrac_sum
            else
-            print *,"fixed_vfrac_sum invalid"
+            print *,"fixed_vfrac_sum invalid:",fixed_vfrac_sum
             stop
            endif
 
@@ -5282,11 +5282,11 @@ stop
                stop
               endif
              else if ((oldvfrac(im_probe).le.EBVOFTOL).and. &
-                      (oldvfrac(im_probe).ge.-EBVOFTOL)) then
+                      (oldvfrac(im_probe).ge.-EPS1)) then
               temperature_old(iprobe)=Tgamma_default
               species_old(iprobe)=Ygamma_default
              else
-              print *,"oldvfrac invalid"
+              print *,"oldvfrac invalid: ",oldvfrac(im_probe)
               stop
              endif
 
@@ -5463,7 +5463,7 @@ stop
              ! we initialize the temperature to be the interface temperature.
             SWEPTFACTOR_centroid=0
             if ((newvfrac(im_dest).gt.zero).and. &
-                (newvfrac(im_dest).le.one+EBVOFTOL)) then
+                (newvfrac(im_dest).le.one+EPS1)) then
 
              tessellate=3
              call multi_get_volumePOINT( &
@@ -5643,11 +5643,11 @@ stop
                enddo ! i1,j1,k1
 
                if ((oldvfrac(im_probe).le.VOFTOL).and. &
-                   (oldvfrac(im_probe).ge.-VOFTOL)) then
+                   (oldvfrac(im_probe).ge.-EPS1)) then
                 temp_mix_new(iprobe)=Tgamma_default
                 mass_frac_new(iprobe)=Ygamma_default
                else if ((oldvfrac(im_probe).ge.VOFTOL).and. &
-                        (oldvfrac(im_probe).le.one+VOFTOL)) then
+                        (oldvfrac(im_probe).le.one+EPS1)) then
 
                 DATA_FLOOR=zero
                 combine_flag=0
@@ -5708,7 +5708,7 @@ stop
                  mass_frac_new(iprobe))
 
                else
-                print *,"oldvfrac(im_probe) invalid"
+                print *,"oldvfrac(im_probe) invalid: ",oldvfrac(im_probe)
                 stop
                endif
 
@@ -5798,12 +5798,12 @@ stop
               ! (rho F)^new - (rho F)^old
              den_dF(iprobe)=delta_mass_local(iprobe)
 
-             if (newvfrac(im_probe).gt.one+VOFTOL) then
+             if (newvfrac(im_probe).gt.one+EPS1) then
               print *,"newvfrac(im_probe) overflow"
               stop
              else if (newvfrac(im_probe).gt.one) then
               newvfrac(im_probe)=one
-             else if (newvfrac(im_probe).lt.-VOFTOL) then
+             else if (newvfrac(im_probe).lt.-EPS1) then
               print *,"newvfrac(im_probe) underflow"
               stop
              else if (newvfrac(im_probe).lt.zero) then
@@ -5812,7 +5812,7 @@ stop
                       (newvfrac(im_probe).le.one)) then
               ! do nothing
              else
-              print *,"newvfrac(im_probe) invalid"
+              print *,"newvfrac(im_probe) invalid: ",newvfrac(im_probe)
               stop
              endif
 
@@ -6001,7 +6001,7 @@ stop
                 im_new_crit,SDIM)
 
               if ((newvfrac(im_dest).gt.zero).and. &
-                  (newvfrac(im_dest).le.one+EBVOFTOL)) then
+                  (newvfrac(im_dest).le.one+EPS1)) then
 
                 ! im_new_crit "owns" xPOINT_GFM
                if ((im_new_crit.eq.im_dest).or. &
@@ -6078,10 +6078,10 @@ stop
               endif
 
               if ((dF.gt.zero).and. &
-                  (dF.le.one+VOFTOL)) then
+                  (dF.le.one+EPS1)) then
                ! do nothing
               else
-               print *,"dF invalid"
+               print *,"dF invalid: ",dF
                stop
               endif
 

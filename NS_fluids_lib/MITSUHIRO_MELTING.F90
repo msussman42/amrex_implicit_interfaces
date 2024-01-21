@@ -128,7 +128,7 @@ if ((num_materials.eq.4).and.(probtype.eq.414)) then
   print *,"dimension bust"
   stop
  endif
- if (abs(substrate_height-(ice_vertical-half*radblob)).gt.VOFTOL) then
+ if (abs(substrate_height-(ice_vertical-half*radblob)).gt.EPS2) then
   print *,"bottom of original water+ice block must coincide w/substrate"
   print *,"probtype=",probtype
   print *,"sdim= ",SDIM

@@ -17582,13 +17582,13 @@ contains
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
 
-       if ((mofdata(vofcomp).ge.-0.1d0).and. &
+       if ((mofdata(vofcomp).ge.-EPS1).and. &
            (mofdata(vofcomp).le.VOFTOL)) then
         mofdata(vofcomp)=zero
         do dir=1,sdim
          mofdata(vofcomp+dir)=zero
         enddo
-       else if ((mofdata(vofcomp).le.1.1d0).and. &
+       else if ((mofdata(vofcomp).le.one+EPS1).and. &
                 (mofdata(vofcomp).ge.one-VOFTOL)) then
         mofdata(vofcomp)=one
         do dir=1,sdim
@@ -17859,10 +17859,10 @@ contains
       do im=1,num_materials
        vofcomp=(im-1)*ngeom_recon+1
        vof_test=mofdata(vofcomp)
-       if ((vof_test.ge.-0.1).and. &
+       if ((vof_test.ge.-EPS1).and. &
            (vof_test.le.VOFTOL)) then
         vof_test=zero
-       else if ((vof_test.le.1.1).and. &
+       else if ((vof_test.le.one+EPS1).and. &
                 (vof_test.ge.one-VOFTOL)) then
         vof_test=one
        else if ((vof_test.gt.zero).and. &
@@ -22551,7 +22551,7 @@ contains
       real(amrex_real) volcell
       real(amrex_real) cencell(sdim)
       integer dir
-      real(amrex_real) vfrac_save
+      real(amrex_real) vfrac_save(num_materials)
       real(amrex_real) vfracsolid(num_materials)
       real(amrex_real) vfraclocal(num_materials)
       integer vofcomp_solid
@@ -22659,7 +22659,7 @@ contains
        endif
       enddo ! im=1,num_materials
 
-      if (abs(fluid_vfrac_sum-one).le.EPS_8_4) then
+      if (abs(fluid_vfrac_sum-one).le.EPS2) then
        ! do nothing
       else
        print *,"fluid_vfrac_sum invalid: ",fluid_vfrac_sum
@@ -22703,11 +22703,13 @@ contains
       else if ((solid_vfrac_sum.ge.EPS2).and. &
                (solid_vfrac_sum.le.one-EPS2)) then
      
-       if (tessellate_in.eq.1) then
+       !old: fluids tessellate new: both tessellate
+       if (tessellate_in.eq.1) then 
 
         local_tessellate=1
 
-       else if (tessellate_in.eq.3) then
+       !old: fluids tessellate new: solids "rasterize"
+       else if (tessellate_in.eq.3) then 
 
         local_tessellate=2
 
@@ -22739,14 +22741,16 @@ contains
            stop
           endif
          enddo ! im=1..num_materials
+
         else
          print *,"solid_vfrac_sum or fluid_vfrac_sum bust"
          print *,"solid_vfrac_sum: ",solid_vfrac_sum
          print *,"fluid_vfrac_sum: ",fluid_vfrac_sum
          stop
         endif
+
        else
-        print *,"tessellate_in invalid"
+        print *,"tessellate_in invalid: ",tessellate_in
         stop
        endif
 
@@ -22776,39 +22780,49 @@ contains
        if (multi_volume_sum.gt.zero) then
         !do nothing
        else
-        print *,"multi_volume_sum invalid"
+        print *,"multi_volume_sum invalid: ",multi_volume_sum
         stop
        endif
+
        do im=1,num_materials
         vofcomp=(im-1)*ngeom_recon+1
-
-        vfrac_save=mofdata(vofcomp)
-
+        vfrac_save(im)=mofdata(vofcomp)
         mofdata(vofcomp)=multi_volume(im)/multi_volume_sum
-       
+        vfraclocal(im)=mofdata(vofcomp)
+       enddo
+
+       do im=1,num_materials
+
+        vofcomp=(im-1)*ngeom_recon+1
+
         if (abs(mofdata(vofcomp)).le.EPS2) then
+
          mofdata(vofcomp)=zero
          do dir=1,sdim
           mofdata(vofcomp+dir)=zero
          enddo
+
         else if (abs(mofdata(vofcomp)-one).le.EPS2) then
+
          mofdata(vofcomp)=one
          do dir=1,sdim
           mofdata(vofcomp+dir)=zero
          enddo
+
         else if ((mofdata(vofcomp).ge.EPS2).and. &
                  (mofdata(vofcomp).le.one-EPS2)) then
+
          do dir=1,sdim
           mofdata(vofcomp+dir)=multi_cen(dir,im)-cencell(dir)
          enddo
 
          if (is_rigid_local(im).eq.0) then
-          if ((vfrac_save.le.one+EPS2).and. &
-              (vfrac_save.gt.one-EPS2)) then
-           do im_local=1,num_materials
-            vofcomp_local=(im_local-1)*ngeom_recon+1
-            vfraclocal(im_local)=mofdata(vofcomp_local)
-           enddo
+
+           ! before: cell either all fluid "im" or all fluid "im" with
+           ! an embedded solid (extrapolated region all fluid "im")
+          if ((vfrac_save(im).le.one+EPS1).and. &
+              (vfrac_save(im).ge.one-EPS2)) then
+
            imcrit=0
            do im_local=1,num_materials
             if (is_rigid_local(im_local).eq.1) then
@@ -22825,9 +22839,30 @@ contains
              stop
             endif
            enddo ! im_local=1..num_materials
+
            if ((imcrit.ge.1).and.(imcrit.le.num_materials)) then
-            if ((vfraclocal(imcrit).ge.EPS2).and. &
-                (vfraclocal(imcrit).le.one-EPS2)) then
+
+            if ((vfraclocal(imcrit).ge.zero).and. &
+                (vfraclocal(imcrit).le.EPS2)) then
+
+             mofdata(vofcomp)=one
+             do dir=1,sdim
+              mofdata(vofcomp+dir)=zero
+             enddo
+             mofdata(vofcomp+sdim+1)=1 ! order
+
+            else if ((vfraclocal(imcrit).ge.one-EPS2).and. &
+                     (vfraclocal(imcrit).le.one+EPS2)) then
+
+             mofdata(vofcomp)=zero
+             do dir=1,sdim
+              mofdata(vofcomp+dir)=zero
+             enddo
+             mofdata(vofcomp+sdim+1)=num_materials+1 ! order
+
+            else if ((vfraclocal(imcrit).ge.EPS2).and. &
+                     (vfraclocal(imcrit).le.one-EPS2)) then
+
              vofcomp_solid=(imcrit-1)*ngeom_recon+1
              mofdata(vofcomp+sdim+1)=num_materials ! order
              do dir=1,sdim
@@ -22836,37 +22871,45 @@ contains
              enddo 
              mofdata(vofcomp+2*sdim+2)= &
                 -mofdata(vofcomp_solid+2*sdim+2) ! intercept
+
             else
-             print *,"vfracsolid(imcrit) invalid"
+             print *,"vfraclocal(imcrit) invalid: ",vfraclocal(imcrit)
              stop
             endif
+
            else
-            print *,"imcrit invalid"
+            print *,"imcrit invalid: ",imcrit
             stop
            endif
-          else if ((vfrac_save.ge.-EPS2).and. &
-                   (vfrac_save.le.one-EPS2)) then
+
+          else if ((vfrac_save(im).ge.-EPS2).and. &
+                   (vfrac_save(im).le.one-EPS2)) then
+
            ! do nothing
+
           else
-           print *,"vfrac_save invalid: ",vfrac_save
+           print *,"vfrac_save invalid: ",vfrac_save(im)
            stop
           endif
+
          else if (is_rigid_local(im).eq.1) then
           ! do nothing
          else
           print *,"is_rigid_local(im) invalid"
           stop
          endif
+
         else
          print *,"mofdata(vofcomp) invalid 3"
          print *,"mofdata(vofcomp)=",mofdata(vofcomp)
          print *,"im,vofcomp=",im,vofcomp
          stop
         endif
+
        enddo ! im=1..num_materials
 
       else
-       print *,"solid_vfrac_sum invalid"
+       print *,"solid_vfrac_sum invalid: ",solid_vfrac_sum
        stop
       endif
 

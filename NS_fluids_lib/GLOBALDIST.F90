@@ -912,7 +912,9 @@ end subroutine nozzle2d
       endif
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y required in INIT_LS_SOLID_MELT"
         print *,"x,y,z = ",x,y,z
         print *,"probtype,axis_dir ",probtype,axis_dir
@@ -969,7 +971,9 @@ end subroutine nozzle2d
        stop
       endif
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y required in INIT_LS_LIQUID_MELT"
         print *,"x,y,z = ",x,y,z
         print *,"probtype,axis_dir ",probtype,axis_dir
@@ -1039,7 +1043,9 @@ end subroutine nozzle2d
       endif
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y required in INIT_LS_GAS_MELT"
         print *,"x,y,z = ",x,y,z
         print *,"probtype,axis_dir ",probtype,axis_dir
@@ -1094,7 +1100,9 @@ end subroutine nozzle2d
       endif
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y required in INIT_LS_SOLID_AM"
         print *,"x,y,z = ",x,y,z
         print *,"probtype,axis_dir ",probtype,axis_dir
@@ -1144,7 +1152,9 @@ end subroutine nozzle2d
        stop
       endif
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y required in INIT_LS_LIQUID_AM"
         print *,"x,y,z = ",x,y,z
         print *,"probtype,axis_dir ",probtype,axis_dir
@@ -1192,7 +1202,9 @@ end subroutine nozzle2d
       endif
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y required in INIT_LS_GAS_AM"
         print *,"x,y,z = ",x,y,z
         print *,"probtype,axis_dir ",probtype,axis_dir
@@ -1281,7 +1293,9 @@ end subroutine nozzle2d
       endif
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
         print *,"z=y required in soliddist"
         print *,"x,y,z = ",x,y,z
         print *,"probtype,axis_dir ",probtype,axis_dir
@@ -2275,7 +2289,9 @@ end subroutine nozzle2d
       integer igeom,iSphere
 
       if (SDIM.eq.2) then
-       if (abs(y-z).gt.VOFTOL) then
+       if (abs(y-z).le.EPS2) then
+        !do nothing
+       else
         print *,"y=z expected in 2D"
         stop
        endif

@@ -554,7 +554,7 @@ stop
 
        vfrac_solid_sum_center=vfrac_solid_sum
 
-       if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
+       if (abs(vfrac_fluid_sum-one).le.EPS1) then
         ! do nothing
        else
         print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
@@ -763,10 +763,10 @@ stop
            endif
           enddo ! im=1..num_materials
 
-          if (abs(vfrac_fluid_sum-one).le.VOFTOL) then
+          if (abs(vfrac_fluid_sum-one).le.EPS1) then
            ! do nothing
           else
-           print *,"vfrac_fluid_sum invalid"
+           print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
            stop
           endif
 

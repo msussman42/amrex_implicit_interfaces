@@ -1852,7 +1852,7 @@ if ((num_materials.eq.3).and. &
     call EOS_CRYOGENIC_TANK_MK(den,massfrac_parm, &
      internal_energy,pressure,TANK_MK_MATERIAL_TYPE,im,num_species_var)
     if (abs(TANK_MK_R_UNIV-fort_R_Palmore_Desjardins).le. &
-            VOFTOL*TANK_MK_R_UNIV) then
+            EPS2*TANK_MK_R_UNIV) then
      ! do nothing
     else
      print *,"mismatch between TANK_MK_R_UNIV and fort_R_Palmore_Desjardins"
@@ -1867,7 +1867,7 @@ if ((num_materials.eq.3).and. &
             fort_saturation_temp(1), &
             LL, &
             TANK_MK_R_UNIV,fort_molar_mass(2))
-    if (abs(Pgamma-pressure).le.VOFTOL*pressure) then
+    if (abs(Pgamma-pressure).le.EPS2*pressure) then
      ! do nothing
     else
      print *,"mismatch between Pgamma and Pgas"

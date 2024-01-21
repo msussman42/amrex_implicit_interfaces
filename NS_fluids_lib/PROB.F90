@@ -868,11 +868,11 @@ stop
        stop
       endif
       do im=1,num_materials
-       if ((VFRAC(im).ge.-VOFTOL).and. &
-           (VFRAC(im).le.one+VOFTOL)) then
+       if ((VFRAC(im).ge.-EPS1).and. &
+           (VFRAC(im).le.one+EPS1)) then
         ! do nothing
        else
-        print *,"VFRAC invalid"
+        print *,"VFRAC invalid: ",VFRAC(im)
         stop
        endif 
        if (DENSITY(im).gt.zero) then
@@ -3932,10 +3932,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) ht,rr,initial_time
       integer im_solid_pipe
 
-
-      if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
-       print *,"z<>y in inletpipedist"
-       stop
+      if (SDIM.eq.2) then
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y in inletpipedist"
+        stop
+       endif
       endif
 
       im_solid_pipe=im_solid_primary()
@@ -4064,8 +4067,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       z=xsten(0,SDIM)
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
-        print *,"expecting z=y in 2d 6"
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y line 4073"
         stop
        endif
       endif
@@ -5812,7 +5817,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo ! im=1..num_materials
 
       if ((vfrac_rigid_sum.ge.one-VOFTOL).and. &
-          (vfrac_rigid_sum.le.one+VOFTOL)) then
+          (vfrac_rigid_sum.le.one+EPS1)) then
        vfrac_rigid_sum=one
       else if (abs(vfrac_rigid_sum).le.VOFTOL) then
        vfrac_rigid_sum=zero
@@ -5820,7 +5825,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                (vfrac_rigid_sum.lt.one)) then
        ! do nothing
       else
-       print *,"vfrac_rigid_sum invalid"
+       print *,"vfrac_rigid_sum invalid: ",vfrac_rigid_sum
        stop
       endif
 
@@ -5834,7 +5839,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        do im=1,num_materials 
         if ((voflist(im).ge.VOFTOL).and. &
-            (voflist(im).le.one+VOFTOL)) then
+            (voflist(im).le.one+EPS1)) then
          material_present_flag(im)=1
         else if (abs(voflist(im)).le.VOFTOL) then
          ! do nothing
@@ -5979,8 +5984,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.1.0E-8) then
-        print *,"expecting z=y"
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
+        print *,"expecting z=y 5990"
         stop
        endif
       endif
@@ -7341,11 +7348,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
  
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
-        print *,"expecting z=y in 2d 7"
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y 7352"
         stop
        endif
-      endif 
+      endif
       if (probtype.eq.5700) then  ! microfluidic_velbc
 
        iplug=0
@@ -7669,8 +7678,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       z=xsten(0,SDIM)
 
       if (SDIM.eq.2) then
-       if (abs(z-y).ge.1.0E-8) then
-        print *,"expecting z=y"
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
+        print *,"expecting z=y 7684"
         stop
        endif
       endif
@@ -7779,8 +7790,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
 
       if (SDIM.eq.2) then
-       if (abs(y-z).gt.VOFTOL) then
-        print *,"y=z in 2d expected"
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y  7792"
         stop
        endif
       endif
@@ -8528,10 +8541,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          vfrac(im)=VOFTOL_SLOPES
         endif
        else if ((vfrac(im).gt.zero).and. &
-                (vfrac(im).le.one+VOFTOL)) then
+                (vfrac(im).le.one+EPS1)) then
         ! do nothing
        else
-        print *,"vfrac invalid in get_initial_vfrac 2"
+        print *,"vfrac invalid in get_initial_vfrac 2: ",vfrac(im)
         stop
        endif
 
@@ -8795,8 +8808,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       im_solid_jet=im_solid_primary()
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
-        print *,"expecting z=y in 2d 8"
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y 8810"
         stop
        endif
       endif
@@ -9126,7 +9141,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real) xx(SDIM)
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y expected if 2D (in blob_array_dist)"
         stop
        endif
@@ -9203,7 +9220,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       z=xsten(0,SDIM)
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
+       if (abs(z-y).le.EPS2) then
+        !do nothing
+       else
         print *,"z=y expected if 2D (in vapordist)"
         stop
        endif
@@ -10315,9 +10334,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"probtype invalid"
        stop
       endif
-      if ((SDIM.eq.2).and.(abs(z-y).gt.VOFTOL)) then
-       print *,"z <> y in get_bump_dist"
-       stop
+      if (SDIM.eq.2) then
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y in get_bump_dist"
+        stop
+       endif
       endif
 
       xleft=-594.36
@@ -11418,8 +11441,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
-        print *,"y=z expected in 2D 3"
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y in 11443"
         stop
        endif
       endif
@@ -15978,8 +16003,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       xwall=xvec(dir)
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
-        print *,"z=y expected in 2D 2"
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y in 30916"
         stop
        endif
       endif
@@ -17190,8 +17217,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       endif
 
       if (SDIM.eq.2) then
-       if (abs(z-y).gt.VOFTOL) then
-        print *,"expect z=y in 2D 4"
+       if (abs(z-y).le.EPS2) then
+        ! do nothing
+       else
+        print *,"z<>y in 17219"
         stop
        endif
       endif
@@ -20372,13 +20401,13 @@ end subroutine RatePhaseChange
        stop
       endif
 
-      if ((VOFsrc.ge.-VOFTOL).and. &
-          (VOFdst.ge.-VOFTOL).and. &
-          (VOFsrc.le.one+VOFTOL).and. &
-          (VOFdst.le.one+VOFTOL)) then
+      if ((VOFsrc.ge.-EPS1).and. &
+          (VOFdst.ge.-EPS1).and. &
+          (VOFsrc.le.one+EPS1).and. &
+          (VOFdst.le.one+EPS1)) then
        ! do nothing
       else
-       print *,"VOFsrc or VOFdst invalid"
+       print *,"VOFsrc or VOFdst invalid: ",VOFsrc,VOFdst
        stop
       endif
 

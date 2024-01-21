@@ -13109,7 +13109,7 @@ IMPLICIT NONE
 
      test_scale=sqrt(normal(1)**2+normal(2)**2+normal(3)**2)
 
-     if (abs(test_scale-one).le.VOFTOL) then
+     if (abs(test_scale-one).le.EPS2) then
 
       do dir=1,3
        element_normal(dir)=normal(dir)
@@ -13202,10 +13202,10 @@ IMPLICIT NONE
       endif
 
       do dir=1,3
-       if (abs(dxBB(dir)-dx3D(dir)).le.VOFTOL*dxBB(dir)) then
+       if (abs(dxBB(dir)-dx3D(dir)).le.EPS2*dxBB(dir)) then
         ! do nothing
        else
-        print *,"abs(dxBB(dir)-dx3D(dir)).gt.VOFTOL*dxBB(dir)"
+        print *,"abs(dxBB(dir)-dx3D(dir)).gt.EPS2*dxBB(dir)"
         stop
        endif
       enddo ! dir=1..3
@@ -15241,10 +15241,10 @@ end subroutine CLSVOF_InitBox
          xmap3D) 
 
         do dir=1,3
-         if (abs(dxBB(dir)-dx3D(dir)).le.VOFTOL*dxBB(dir)) then
+         if (abs(dxBB(dir)-dx3D(dir)).le.EPS2*dxBB(dir)) then
           ! do nothing
          else
-          print *,"abs(dxBB(dir)-dx3D(dir)).gt.VOFTOL*dxBB(dir)"
+          print *,"abs(dxBB(dir)-dx3D(dir)).gt.EPS2*dxBB(dir)"
           stop
          endif
         enddo ! dir=1..3

@@ -3938,13 +3938,13 @@ stop
            stop
           endif
           if (dir.eq.1) then
-           if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+           if (abs(xstenMAC(0,1)).le.EPS2*dx(1)) then
             at_RZ_face=1
            endif
           endif
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           if (dir.eq.1) then
-           if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+           if (abs(xstenMAC(0,1)).le.EPS2*dx(1)) then
             at_RZ_face=1
            endif
           endif
@@ -4283,7 +4283,7 @@ stop
          stop
         endif
         if (dir.eq.0) then
-         if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+         if (abs(xstenMAC(0,1)).le.EPS2*dx(1)) then
           at_RZ_face=1
          endif
          if (inormal.eq.i) then
@@ -4297,7 +4297,7 @@ stop
         endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if (dir.eq.0) then
-         if (abs(xstenMAC(0,1)).le.VOFTOL*dx(1)) then
+         if (abs(xstenMAC(0,1)).le.EPS2*dx(1)) then
           at_RZ_face=1
          endif
          if (inormal.eq.i) then
