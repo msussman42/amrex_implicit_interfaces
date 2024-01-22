@@ -5819,7 +5819,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if ((vfrac_rigid_sum.ge.one-VOFTOL).and. &
           (vfrac_rigid_sum.le.one+EPS1)) then
        vfrac_rigid_sum=one
-      else if (abs(vfrac_rigid_sum).le.VOFTOL) then
+      else if ((vfrac_rigid_sum.ge.-EPS1).and. &
+               (vfrac_rigid_sum.le.VOFTOL)) then
        vfrac_rigid_sum=zero
       else if ((vfrac_rigid_sum.gt.zero).and. &
                (vfrac_rigid_sum.lt.one)) then
@@ -5841,10 +5842,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         if ((voflist(im).ge.VOFTOL).and. &
             (voflist(im).le.one+EPS1)) then
          material_present_flag(im)=1
-        else if (abs(voflist(im)).le.VOFTOL) then
+        else if ((voflist(im).ge.-EPS1).and. &
+                 (voflist(im).le.VOFTOL)) then
          ! do nothing
         else
-         print *,"voflist invalid"
+         print *,"voflist invalid: ",voflist(im)
          stop
         endif
        enddo ! im=1..num_materials
@@ -7893,7 +7895,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       else if (probtype.eq.59) then
 
        if (SDIM.eq.2) then
-        if (abs(yblob2-(yblob-half*radblob)).gt.VOFTOL) then
+        if (abs(yblob2-(yblob-half*radblob)).gt.EPS2) then
          print *,"bottom of original ice block must coincide w/substrate"
          print *,"probtype=",probtype
          print *,"substrate_height (yblob2) =",yblob2

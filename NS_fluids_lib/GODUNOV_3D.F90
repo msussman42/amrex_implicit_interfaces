@@ -3879,7 +3879,8 @@ stop
 
          local_vfrac=recon(D_DECL(i,j,k),vofcomp)
 
-         if (abs(local_vfrac).le.VOFTOL) then
+         if ((local_vfrac.ge.-EPS1).and. &
+             (local_vfrac.le.VOFTOL)) then
           momden(D_DECL(i,j,k),im_parm)=rho_base
          else if ((local_vfrac.ge.VOFTOL).and. &
                   (local_vfrac.le.one+EPS1)) then
@@ -3947,7 +3948,7 @@ stop
           momden(D_DECL(i,j,k),im_parm)=density_of_TZ
 
          else
-          print *,"local_vfrac invalid"
+          print *,"local_vfrac invalid: ",local_vfrac
           stop
          endif
 
@@ -8717,7 +8718,7 @@ stop
                    (volume_frac.le.one-VOFTOL)) then
            ! do nothing
           else
-           print *,"volume_frac invalid"
+           print *,"volume_frac invalid: ",volume_frac
            stop
           endif
   
@@ -9920,9 +9921,11 @@ stop
                   (im_dest_crit.le.num_materials)) then
 
           SWEPTFACTOR=swept(D_DECL(i,j,k),im_dest_crit) !default:SWEPTFACTOR==1
-          if ((SWEPTFACTOR.lt.LSTOL).or. &
-              (SWEPTFACTOR.gt.one)) then
-           print *,"SWEPTFACTOR INVALID"
+          if ((SWEPTFACTOR.ge.EPS2).and. &
+              (SWEPTFACTOR.le.one)) then
+           !do nothing
+          else
+           print *,"SWEPTFACTOR INVALID: ",SWEPTFACTOR
            stop
           endif
           over_den=den(D_DECL(i,j,k))  ! 1/(rho)
@@ -16201,7 +16204,7 @@ stop
          do im=1,num_materials
 
           if ((cell_vfrac(im).le.one-VOFTOL).and. &
-              (cell_vfrac(im).ge.-VOFTOL)) then
+              (cell_vfrac(im).ge.-EPS1)) then
 
            vofcomp=(im-1)*ngeom_recon+1
           
@@ -16498,6 +16501,9 @@ stop
                     else if ((abs(cell_vfrac(im)).le.VOFTOL).or. &
                              (abs(cell_vfrac(im_opp)).le.VOFTOL)) then
                      ! do nothing
+                    else if ((abs(cell_vfrac(im)).le.EPS1).or. &
+                             (abs(cell_vfrac(im_opp)).le.EPS1)) then
+                     ! do nothing
                     else
                      print *,"cell_vfrac invalid"
                      stop
@@ -16793,7 +16799,7 @@ stop
              endif
  
             else if ((cell_vfrac(im).ge.VOFTOL).and. &
-                     (cell_vfrac(im).le.one+VOFTOL).and. &
+                     (cell_vfrac(im).le.one+EPS1).and. &
                      (combine_flag.eq.2)) then !combine if vfrac<VOFTOL
              ! do nothing
             else

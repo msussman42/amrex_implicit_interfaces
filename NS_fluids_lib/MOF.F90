@@ -14597,15 +14597,17 @@ contains
            stop
           endif
 
-          if (abs(vof_crit).le.VOFTOL) then
+          if ((vof_crit.ge.-EPS1).and. &
+              (vof_crit.le.VOFTOL)) then
            vof_crit=zero
-          else if (abs(vof_crit-one).le.VOFTOL) then
+          else if ((vof_crit.ge.one-VOFTOL).and. &
+                   (vof_crit.le.one+EPS1)) then
            vof_crit=one
           else if ((vof_crit.gt.zero).and. &
                    (vof_crit.lt.one)) then
            ! do nothing
           else
-           print *,"vof_crit invalid"
+           print *,"vof_crit invalid: ",vof_crit
            stop
           endif
 
@@ -17869,7 +17871,7 @@ contains
                 (vof_test.lt.one)) then
         ! do nothing
        else
-        print *,"vof_test invalid"
+        print *,"vof_test invalid: ",vof_test
         stop
        endif
        if (is_rigid_local(im).eq.0) then

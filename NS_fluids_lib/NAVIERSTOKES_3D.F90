@@ -5274,7 +5274,7 @@ END SUBROUTINE SIMP
            crse(D_DECL(iface,jface,kface),n)=crse_value(n)/voltotal
           enddo
          else
-          print *,"voltotal invalid"
+          print *,"voltotal invalid: ",voltotal
           stop
          endif
 
@@ -6036,7 +6036,7 @@ END SUBROUTINE SIMP
              fine(D_DECL(iface,jface,kface),n)=fine_value(n)/voltotal
             enddo
            else
-            print *,"voltotal invalid"
+            print *,"voltotal invalid: ",voltotal
             stop
            endif
 
@@ -6600,7 +6600,7 @@ END SUBROUTINE SIMP
             fine(D_DECL(iface,jface,kface),n)=fine_value(n)/voltotal
            enddo
           else
-           print *,"voltotal invalid"
+           print *,"voltotal invalid: ",voltotal
            stop
           endif
 
@@ -7647,7 +7647,7 @@ END SUBROUTINE SIMP
            endif
 
            if ((ls_below*ls_above.le.zero).and. &
-               (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
+               (abs(ls_below)+abs(ls_above).ge.EPS2*dx(1))) then
  
             if (ls_below.eq.zero) then
              xcrit=xbottom
@@ -7806,7 +7806,7 @@ END SUBROUTINE SIMP
             coflow_Z(j_external)=j_external*dz_external
 
             if ((ls_below*ls_above.le.zero).and. &
-                (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
+                (abs(ls_below)+abs(ls_above).ge.EPS2*dx(1))) then
 
              if (ls_below.eq.zero) then
               xcrit=xbottom
@@ -7902,7 +7902,7 @@ END SUBROUTINE SIMP
              if (use_vof_height.eq.0) then
 
               if ((ls_below*ls_above.le.zero).and. &
-                  (abs(ls_below)+abs(ls_above).ge.LSTOL*dx(1))) then
+                  (abs(ls_below)+abs(ls_above).ge.EPS2*dx(1))) then
 
                if (ls_below.eq.zero) then
                 xcrit=xbottom
@@ -11165,7 +11165,7 @@ END SUBROUTINE SIMP
         if (voltotal.gt.zero) then
          ! do nothing
         else
-         print *,"voltotal invalid"
+         print *,"voltotal invalid: ",voltotal
          stop
         endif
 
@@ -12715,8 +12715,10 @@ END SUBROUTINE SIMP
         stop
        endif
 
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
+       if (voltotal.gt.zero) then
+        !do nothing
+       else
+        print *,"voltotal invalid: ",voltotal
         stop
        endif
 
@@ -12850,8 +12852,10 @@ END SUBROUTINE SIMP
         endif
        enddo ! ifine
 
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
+       if (voltotal.gt.zero) then
+        !do nothing
+       else
+        print *,"voltotal invalid: ",voltotal
         stop
        endif
 
@@ -13021,8 +13025,10 @@ END SUBROUTINE SIMP
         endif
        enddo ! ifine
 
-       if (voltotal.le.zero) then
-        print *,"voltotal invalid"
+       if (voltotal.gt.zero) then
+        !do nothing
+       else
+        print *,"voltotal invalid: ",voltotal
         stop
        endif
 
@@ -13206,7 +13212,7 @@ END SUBROUTINE SIMP
        if (voltotal.gt.zero) then
         ! do nothing
        else
-        print *,"voltotal invalid"
+        print *,"voltotal invalid: ",voltotal
         stop
        endif
 
