@@ -36,13 +36,12 @@
 #define DEBUG_ANALYTICAL_GRAD 0
 
 module mod_mof3d_analytic_centroid
-use amrex_fort_module, only : amrex_real
    implicit none
 
    private
 
-   real(amrex_real), parameter :: PI_2 = acos(0d0)
-   real(amrex_real), parameter :: PI = 2d0*acos(0d0)
+   double precision, parameter :: PI_2 = acos(0d0)
+   double precision, parameter :: PI = 2d0*acos(0d0)
 
    public :: mof3d_compute_analytic_gradient, mof3d_compute_analytic_gradient_symmetric
 
@@ -77,16 +76,16 @@ contains
 #endif
       subroutine mof3d_compute_analytic_gradient(angles,ref_centroid, &
         volume, c, centroid, gradient)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), dimension(3), INTENT(in) :: ref_centroid
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), dimension(3), INTENT(out) :: centroid
-      real(amrex_real), dimension(2), INTENT(out) :: gradient
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, dimension(3), INTENT(in) :: ref_centroid
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, dimension(3), INTENT(out) :: centroid
+      double precision, dimension(2), INTENT(out) :: gradient
 
-      real(amrex_real), dimension(3,2) :: t_partial_derivative
-      real(amrex_real), dimension(3) :: t_c, t_centroid, t_ref_centroid
-      real(amrex_real), dimension(2) :: t_angles, t_gradient
+      double precision, dimension(3,2) :: t_partial_derivative
+      double precision, dimension(3) :: t_c, t_centroid, t_ref_centroid
+      double precision, dimension(2) :: t_angles, t_gradient
       integer, dimension(3) :: permutation, sign_permutation, inverse_permutation, sign_inverse_permutation
 
 #if (DEBUG_ANALYTICAL_GRAD==1)
@@ -152,18 +151,18 @@ contains
    !! @param[out] gradient:      Gradient of the objective function.
    !! @ingroup moment_of_fluid
    pure subroutine mof3d_compute_analytic_gradient_symmetric(angles, ref_centroid1, ref_centroid2, volume, c, centroid, gradient)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), dimension(3), INTENT(in) :: ref_centroid1, ref_centroid2
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), dimension(3), INTENT(out) :: centroid
-      real(amrex_real), dimension(2), INTENT(out) :: gradient
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, dimension(3), INTENT(in) :: ref_centroid1, ref_centroid2
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, dimension(3), INTENT(out) :: centroid
+      double precision, dimension(2), INTENT(out) :: gradient
 
-      real(amrex_real), dimension(3,2) :: t_partial_derivative
-      real(amrex_real), dimension(3) :: t_c, t_centroid, t_ref_centroid, h_ref_centroid
-      real(amrex_real), dimension(2) :: t_angles, t_gradient, gradient1, gradient2
+      double precision, dimension(3,2) :: t_partial_derivative
+      double precision, dimension(3) :: t_c, t_centroid, t_ref_centroid, h_ref_centroid
+      double precision, dimension(2) :: t_angles, t_gradient, gradient1, gradient2
       integer, dimension(3) :: permutation, sign_permutation, inverse_permutation, sign_inverse_permutation
-      real(amrex_real) :: cell_volume
+      double precision :: cell_volume
 
       ! Compute the volume of the cell
       cell_volume = c(1)*c(2)*c(3)
@@ -217,15 +216,15 @@ contains
    end subroutine mof3d_compute_analytic_gradient_symmetric
 
    pure subroutine mof3d_transform_gradient_to_global(angles, permutation, sign_permutation, t_gradient, gradient)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
+      double precision, dimension(2), INTENT(in) :: angles
       integer, dimension(3), INTENT(in) :: permutation
       integer, dimension(3), INTENT(in) :: sign_permutation
-      real(amrex_real), dimension(2), INTENT(in) :: t_gradient
-      real(amrex_real), dimension(2), INTENT(out) :: gradient
+      double precision, dimension(2), INTENT(in) :: t_gradient
+      double precision, dimension(2), INTENT(out) :: gradient
 
-      real(amrex_real) :: sin_theta, cos_theta, tan_theta, sin_phi, cos_phi, tan_phi
-      real(amrex_real) :: qsqrt
-      real(amrex_real), dimension(2,2) :: matrix
+      double precision :: sin_theta, cos_theta, tan_theta, sin_phi, cos_phi, tan_phi
+      double precision :: qsqrt
+      double precision, dimension(2,2) :: matrix
 
       ! Transform the gradient back to the original domain
       select case (permutation(1))
@@ -313,15 +312,15 @@ contains
    end subroutine mof3d_transform_gradient_to_global
 
    pure subroutine mof3d_transform_to_reference_map(angles, c, volume, t_angles, permutation, sign_permutation)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(2), INTENT(out) :: t_angles
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, INTENT(in) :: volume
+      double precision, dimension(2), INTENT(out) :: t_angles
       integer, dimension(3), INTENT(out) :: permutation, sign_permutation
 
-      real(amrex_real), dimension(3) :: t_c
-      real(amrex_real) :: theta_limit, phi_limit, sin_theta, cos_theta, cot_theta
-      real(amrex_real) :: q, l13, t1, sqrtp3
+      double precision, dimension(3) :: t_c
+      double precision :: theta_limit, phi_limit, sin_theta, cos_theta, cot_theta
+      double precision :: q, l13, t1, sqrtp3
       logical :: rotate_yzx
 
       ! Initialize to identity
@@ -537,14 +536,14 @@ contains
    ! Hyp: φ in 0, π
    ! Hyp: volume fraction <= 0.5
    logical pure function mof3d_is_point_inside_map(angles, volume, c) result(is_inside)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
 
-      real(amrex_real) :: l13, l23, t1, t2
-      real(amrex_real) :: l_theta2, l_theta3, l_theta4, l_theta5
-      real(amrex_real) :: limit, limit_b, sin_theta, cos_theta, tan_theta
-      real(amrex_real) :: q, sqrtp3, c123
+      double precision :: l13, l23, t1, t2
+      double precision :: l_theta2, l_theta3, l_theta4, l_theta5
+      double precision :: limit, limit_b, sin_theta, cos_theta, tan_theta
+      double precision :: q, sqrtp3, c123
 
       is_inside = .false.
 
@@ -672,15 +671,15 @@ contains
    end function mof3d_is_point_inside_map
 
    pure subroutine mof3d_compute_analytic_derivatives_reference(angles, volume, c, centroid, partial_derivative)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), dimension(3), INTENT(out) :: centroid
-      real(amrex_real), dimension(3,2), INTENT(out) :: partial_derivative
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, dimension(3), INTENT(out) :: centroid
+      double precision, dimension(3,2), INTENT(out) :: partial_derivative
 
-      real(amrex_real) :: l13, l23, t1, t2, q, sqrtp3, c123
-      real(amrex_real) :: l_theta1, l_theta2, l_theta3, l_theta4
-      real(amrex_real) :: limit, tan_theta, cos_theta
+      double precision :: l13, l23, t1, t2, q, sqrtp3, c123
+      double precision :: l_theta1, l_theta2, l_theta3, l_theta4
+      double precision :: limit, tan_theta, cos_theta
 
       c123 = c(1)*c(2)*c(3)
 
@@ -832,13 +831,11 @@ contains
    end subroutine mof3d_compute_analytic_derivatives_reference
 
    pure subroutine mof3d_derivatives_triangle(angles, volume, derivative_theta, derivative_phi, centroid)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
 
-      real(amrex_real) :: coef, t1, t2, tan_theta, sec_theta, csc_phi, cot_phi, dthetat1, dthetat2, dphit1, dphit2
-      real(amrex_real) :: centroid_factor
-      real(amrex_real) :: derivative_factor
+      double precision :: coef, t1, t2, tan_theta, sec_theta, csc_phi, cot_phi, dthetat1, dthetat2, dphit1, dphit2
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -848,40 +845,35 @@ contains
       t1 = tan_theta
       t2 = cot_phi*sec_theta
 
-      coef = (6.0d0*volume*t1*t2)**(1.0d0/3.0d0)
+      coef = (6d0*volume*t1*t2)**(1d0/3d0)
 
       ! Centroid
-      centroid_factor=0.25d0*coef
-      centroid(1)=centroid_factor
-      centroid(2)=centroid_factor/t1
-      centroid(3)=centroid_factor/t2
+      centroid = 0.25d0*coef*[1d0, 1d0/t1, 1d0/t2]
 
       ! d/dθ
       dthetat1 = 1d0 + t1*t1
       dthetat2 = t1*t2
 
-      derivative_factor=0.5d0*volume/(coef**2)
-      derivative_theta(1)=derivative_factor*(t2*dthetat1 + t1*dthetat2)
-      derivative_theta(2)=derivative_factor*((t1*dthetat2 - 2d0*t2*dthetat1)/t1)
-      derivative_theta(3)=derivative_factor*((t2*dthetat1 - 2d0*t1*dthetat2)/t2)
+      derivative_theta = 0.5d0*volume/(coef**2)*[t2*dthetat1 + t1*dthetat2         , &
+         &                                       (t1*dthetat2 - 2d0*t2*dthetat1)/t1, &
+         &                                       (t2*dthetat1 - 2d0*t1*dthetat2)/t2]
 
       ! d/dφ
       dphit1 = 0d0
       dphit2 = -csc_phi**2*sec_theta
 
-      derivative_phi(1)=derivative_factor*(t2*dphit1 + t1*dphit2)
-      derivative_phi(2)=derivative_factor*((t1*dphit2 - 2d0*t2*dphit1)/t1)
-      derivative_phi(3)=derivative_factor*((t2*dphit1 - 2d0*t1*dphit2)/t2)
-
+      derivative_phi = 0.5d0*volume/(coef**2)*[t2*dphit1 + t1*dphit2         , &
+         &                                     (t1*dphit2 - 2d0*t2*dphit1)/t1, &
+         &                                     (t2*dphit1 - 2d0*t1*dphit2)/t2]
    end subroutine mof3d_derivatives_triangle
 
    pure subroutine mof3d_derivatives_quad_face(angles, volume, c, derivative_theta, derivative_phi, centroid)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
 
-      real(amrex_real) :: qf1, qf2, cv, tan_theta, sec_theta, csc_phi, cot_phi, dthetaqf1, dthetaqf2, dphiqf1, dphiqf2
+      double precision :: qf1, qf2, cv, tan_theta, sec_theta, csc_phi, cot_phi, dthetaqf1, dthetaqf2, dphiqf1, dphiqf2
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -910,16 +902,13 @@ contains
    end subroutine mof3d_derivatives_quad_face
 
    pure subroutine mof3d_derivatives_quad_edge(angles, volume, c, derivative_theta, derivative_phi, centroid)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
 
-      real(amrex_real) :: cot_phi, csc_phi, tan_theta, sec_theta
-      real(amrex_real) :: qe1, qe2, qe3
-      real(amrex_real) :: centroid_factor
-      real(amrex_real) :: derivative_factor
-      real(amrex_real) :: xqe, dtqe1, dtqe2, dtxqe, dfqe1, dfqe2, dfxqe
+      double precision :: cot_phi, csc_phi, tan_theta, sec_theta
+      double precision :: qe1, qe2, qe3, xqe, dtqe1, dtqe2, dtxqe, dfqe1, dfqe2, dfxqe
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -932,51 +921,41 @@ contains
       xqe = sqrt(72d0*volume*qe1 - 3d0*qe2**2)
 
       ! Centroid
-      centroid_factor=1.0d0/(216.0d0*volume*qe1)
-      centroid(1)=centroid_factor*xqe*qe3
-      centroid(2)=centroid_factor*xqe*qe3/(c(3)*qe1)
-      centroid(3)=centroid_factor*3.0d0*c(3)*(36.0d0*volume*qe1-qe2*xqe)
+      centroid = 1d0/(216d0*volume*qe1)                     &
+         &     * [xqe*qe3                                 , &
+         &        xqe/(c(3)*qe1)*qe3                      , &
+         &        3d0*c(3)*(36d0*volume*qe1 - qe2*xqe)]
 
       ! d/dθ
       dtqe1 = (1d0 + (c(3)*qe1)**2)/c(3)
       dtqe2 = c(3)*qe1*qe2
       dtxqe = (36d0*volume*dtqe1 - 3d0*qe2*dtqe2)/xqe
 
-      derivative_factor = 1.0d0/(216.0d0*volume*qe1**2) 
-
-      derivative_theta(1)=derivative_factor* &
-         ((2.0d0*qe1*dtqe2 - qe2*dtqe1)*qe2*xqe + qe3*qe1*dtxqe)
-      derivative_theta(2)=derivative_factor* &
-         ((2.0d0*(qe1*qe2*dtqe2 - (qe2**2 + 6.0d0*volume*qe1)*dtqe1)*xqe + &
-          qe3*qe1*dtxqe)/(c(3)*qe1))
-      derivative_theta(3)=derivative_factor* &
-         (3d0*c(3)*((qe2*dtqe1 - qe1*dtqe2)*xqe - qe1*qe2*dtxqe))
+      derivative_theta = 1d0/(216d0*volume*qe1**2)                                                                  &
+         &             * [(2d0*qe1*dtqe2 - qe2*dtqe1)*qe2*xqe + qe3*qe1*dtxqe                                     , &
+         &                (2d0*(qe1*qe2*dtqe2 - (qe2**2 + 6d0*volume*qe1)*dtqe1)*xqe + qe3*qe1*dtxqe)/(c(3)*qe1)  , &
+         &                3d0*c(3)*((qe2*dtqe1 - qe1*dtqe2)*xqe - qe1*qe2*dtxqe)                                  ]
 
       ! d/dφ
       dfqe1 = 0d0
       dfqe2 = -c(3)*csc_phi**2*sec_theta
       dfxqe = (36d0*volume*dfqe1 - 3d0*qe2*dfqe2)/xqe
-      
-      derivative_phi(1)=derivative_factor* &
-         ((2.0d0*qe1*dfqe2 - qe2*dfqe1)*qe2*xqe + qe3*qe1*dfxqe)
-      derivative_phi(2)=derivative_factor* &
-         ((2.0d0*(qe1*qe2*dfqe2 - (qe2**2 + 6.0d0*volume*qe1)*dfqe1)*xqe + &
-          qe3*qe1*dfxqe)/(c(3)*qe1))
-      derivative_phi(3)=derivative_factor* &
-         (3d0*c(3)*((qe2*dfqe1 - qe1*dfqe2)*xqe - qe1*qe2*dfxqe))
 
+      derivative_phi = 1d0/(216d0*volume*qe1**2)                                                                  &
+         &           * [(2d0*qe1*dfqe2 - qe2*dfqe1)*qe2*xqe + qe3*qe1*dfxqe                                     , &
+         &              (2d0*(qe1*qe2*dfqe2 - (qe2**2 + 6d0*volume*qe1)*dfqe1)*xqe + qe3*qe1*dfxqe)/(c(3)*qe1)  , &
+         &              3d0*c(3)*((qe2*dfqe1 - qe1*dfqe2)*xqe - qe1*qe2*dfxqe)                                  ]
    end subroutine mof3d_derivatives_quad_edge
 
    pure subroutine mof3d_derivatives_penta(angles, volume, c, derivative_theta, derivative_phi, centroid)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
 
-      real(amrex_real) :: p1, p2, sqrt2p1p2, xp, cv, tan_theta, sec_theta, csc_phi, cot_phi
-      real(amrex_real) :: dtp1, dtp2, dtxp, dtf0, dtf1, dtf21, dtf22, dtf31, dtf32
-      real(amrex_real) :: dpp1, dpp2, dpxp, dpf0, dpf1, dpf21, dpf22, dpf31, dpf32
-      real(amrex_real) :: centroid_factor
+      double precision :: p1, p2, sqrt2p1p2, xp, cv, tan_theta, sec_theta, csc_phi, cot_phi
+      double precision :: dtp1, dtp2, dtxp, dtf0, dtf1, dtf21, dtf22, dtf31, dtf32
+      double precision :: dpp1, dpp2, dpxp, dpf0, dpf1, dpf21, dpf22, dpf31, dpf32
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -991,10 +970,9 @@ contains
       xp = cos((acos(3d0*(p1 + p2 - cv)/(4d0*sqrt2p1p2)) + 4d0*PI)/3d0)
 
       ! Centroid
-      centroid_factor=1.0d0/(6.0d0*cv)
-      centroid(1)=centroid_factor*(f0(p1,p2) + xp*(f1(p1,p2) + 24d0*p1*p2*xp))
-      centroid(2)=centroid_factor*(c(2)*(f2(p1,p2) + xp*(f3(p1,p2) - 24d0*p2*xp)))
-      centroid(3)=centroid_factor*(c(3)*(f2(p2,p1) + xp*(f3(p2,p1) - 24d0*p1*xp)))
+      centroid = 1d0/(6d0*cv)*[f0(p1,p2) + xp*(f1(p1,p2) + 24d0*p1*p2*xp)    , &
+         &                     c(2)*(f2(p1,p2) + xp*(f3(p1,p2) - 24d0*p2*xp)), &
+         &                     c(3)*(f2(p2,p1) + xp*(f3(p2,p1) - 24d0*p1*xp))]
 
       ! d/dθ
       dtp1  = c(2)*(1d0 + tan_theta**2)
@@ -1007,12 +985,9 @@ contains
       dtf31 = dxf3(p1,p2)*dtp1 + dyf3(p1,p2)*dtp2
       dtf32 = dxf3(p2,p1)*dtp2 + dyf3(p2,p1)*dtp1
 
-      derivative_theta(1)=centroid_factor* &
-       (dtf0 + dtf1*xp + f1(p1,p2)*dtxp + 24d0*xp*((p1*dtp2 + p2*dtp1)*xp + 2d0*p1*p2*dtxp))
-      derivative_theta(2)=centroid_factor* &
-       (c(2)*(dtf21 + dtf31*xp + f3(p1,p2)*dtxp - 24d0*xp*(dtp2*xp + 2d0*p2*dtxp)))
-      derivative_theta(3)=centroid_factor* &
-       (c(3)*(dtf22 + dtf32*xp + f3(p2,p1)*dtxp - 24d0*xp*(dtp1*xp + 2d0*p1*dtxp)))
+      derivative_theta = 1d0/(6d0*cv)*[dtf0 + dtf1*xp + f1(p1,p2)*dtxp + 24d0*xp*((p1*dtp2 + p2*dtp1)*xp + 2d0*p1*p2*dtxp), &
+         &                             c(2)*(dtf21 + dtf31*xp + f3(p1,p2)*dtxp - 24d0*xp*(dtp2*xp + 2d0*p2*dtxp))         , &
+         &                             c(3)*(dtf22 + dtf32*xp + f3(p2,p1)*dtxp - 24d0*xp*(dtp1*xp + 2d0*p1*dtxp))         ]
 
       ! d/dφ
       dpp1  = 0d0
@@ -1025,69 +1000,66 @@ contains
       dpf31 = dxf3(p1,p2)*dpp1 + dyf3(p1,p2)*dpp2
       dpf32 = dxf3(p2,p1)*dpp2 + dyf3(p2,p1)*dpp1
 
-      derivative_phi(1)=centroid_factor* &
-       (dpf0 + dpf1*xp + f1(p1,p2)*dpxp + 24d0*xp*((p1*dpp2 + p2*dpp1)*xp + 2d0*p1*p2*dpxp))
-      derivative_phi(2)=centroid_factor* &
-       (c(2)*(dpf21 + dpf31*xp + f3(p1,p2)*dpxp - 24d0*xp*(dpp2*xp + 2d0*p2*dpxp)))
-      derivative_phi(3)=centroid_factor* &
-       (c(3)*(dpf22 + dpf32*xp + f3(p2,p1)*dpxp - 24d0*xp*(dpp1*xp + 2d0*p1*dpxp)))
+      derivative_phi = 1d0/(6d0*cv)*[dpf0 + dpf1*xp + f1(p1,p2)*dpxp + 24d0*xp*((p1*dpp2 + p2*dpp1)*xp + 2d0*p1*p2*dpxp), &
+         &                           c(2)*(dpf21 + dpf31*xp + f3(p1,p2)*dpxp - 24d0*xp*(dpp2*xp + 2d0*p2*dpxp))         , &
+         &                           c(3)*(dpf22 + dpf32*xp + f3(p2,p1)*dpxp - 24d0*xp*(dpp1*xp + 2d0*p1*dpxp))         ]
 
    contains
 
-      real(amrex_real) pure function f0(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function f0(x, y)
+         double precision, INTENT(in) :: x, y
          f0 = 2d0*(x + y)**2 - x*y
       end function f0
 
-      real(amrex_real) pure function f1(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function f1(x, y)
+         double precision, INTENT(in) :: x, y
          f1 = 3d0*sqrt2p1p2*(3d0*(x + y) + cv)
       end function f1
 
-      real(amrex_real) pure function f2(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function f2(x, y)
+         double precision, INTENT(in) :: x, y
          f2 = 6d0*cv - 4d0*x - 3d0*y
       end function f2
 
-      real(amrex_real) pure function f3(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function f3(x, y)
+         double precision, INTENT(in) :: x, y
          f3 = 6d0*y/sqrt2p1p2*(cv - 5d0*x - y)
       end function f3
 
-      real(amrex_real) pure function df0(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function df0(x, y)
+         double precision, INTENT(in) :: x, y
          df0 = 4d0*x + 3d0*y
       end function df0
 
-      real(amrex_real) pure function df1(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function df1(x, y)
+         double precision, INTENT(in) :: x, y
          df1 = 3d0*y/sqrt2p1p2*(cv + 9d0*x + 3d0*y)
       end function df1
 
-      real(amrex_real) pure function dxf3(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function dxf3(x, y)
+         double precision, INTENT(in) :: x, y
          dxf3 = 3d0*y/(x*sqrt2p1p2)*(y - 5d0*x - cv)
       end function dxf3
 
-      real(amrex_real) pure function dyf3(x, y)
-         real(amrex_real), INTENT(in) :: x, y
+      double precision pure function dyf3(x, y)
+         double precision, INTENT(in) :: x, y
          dyf3 = 3d0/sqrt2p1p2*(cv - 5d0*x - 3d0*y)
       end function dyf3
 
    end subroutine mof3d_derivatives_penta
 
    pure subroutine mof3d_derivatives_hexa(angles, volume, c, derivative_theta, derivative_phi, centroid)
-      real(amrex_real), dimension(2), INTENT(in) :: angles
-      real(amrex_real), INTENT(in) :: volume
-      real(amrex_real), dimension(3), INTENT(in) :: c
-      real(amrex_real), dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
+      double precision, dimension(2), INTENT(in) :: angles
+      double precision, INTENT(in) :: volume
+      double precision, dimension(3), INTENT(in) :: c
+      double precision, dimension(3), INTENT(out) :: derivative_theta, derivative_phi, centroid
 
-      real(amrex_real) :: h1, h2, h3, sqh3, xh, cv, tan_theta, sec_theta, csc_phi, cot_phi
-      real(amrex_real) :: g01, g02, g03, g11, g12, g13
-      real(amrex_real) :: dxg02, dxg03, dyg01, dzg01, dzg02, dzg03
-      real(amrex_real) :: dxg12, dxg13, dyg11, dzg11, dzg12, dzg13, dtg11, dtg12, dtg13
-      real(amrex_real) :: dth1, dth2, dth3, dtxh, dtsqh3xh, dtsqh3xh1, dtsqh3xh2, dtg01q, dtg02q, dtg03q, dtg11q, dtg12q, dtg13q
-      real(amrex_real) :: dfh1, dfh2, dfh3, dfxh, dfsqh3xh, dfsqh3xh1, dfsqh3xh2, dfg01q, dfg02q, dfg03q, dfg11q, dfg12q, dfg13q
+      double precision :: h1, h2, h3, sqh3, xh, cv, tan_theta, sec_theta, csc_phi, cot_phi
+      double precision :: g01, g02, g03, g11, g12, g13
+      double precision :: dxg02, dxg03, dyg01, dzg01, dzg02, dzg03
+      double precision :: dxg12, dxg13, dyg11, dzg11, dzg12, dzg13, dtg11, dtg12, dtg13
+      double precision :: dth1, dth2, dth3, dtxh, dtsqh3xh, dtsqh3xh1, dtsqh3xh2, dtg01q, dtg02q, dtg03q, dtg11q, dtg12q, dtg13q
+      double precision :: dfh1, dfh2, dfh3, dfxh, dfsqh3xh, dfsqh3xh1, dfsqh3xh2, dfg01q, dfg02q, dfg03q, dfg11q, dfg12q, dfg13q
 
       tan_theta = tan(angles(1))
       sec_theta = 1d0/cos(angles(1))
@@ -1174,57 +1146,57 @@ contains
 
    contains
 
-      real(amrex_real) pure function g0(x, y, z)
-         real(amrex_real), INTENT(in) :: x, y, z
+      double precision pure function g0(x, y, z)
+         double precision, INTENT(in) :: x, y, z
          g0 = ((3d0*x - 8d0*(y + z))*x + 6d0*(8d0*y*z + (y - z)**2))*x*x - (y - z)**4
       end function g0
 
-      real(amrex_real) pure function g1(x, y, z, t)
-         real(amrex_real), INTENT(in) :: x, y, z, t
+      double precision pure function g1(x, y, z, t)
+         double precision, INTENT(in) :: x, y, z, t
          g1 = (2d0*(x*x - (y - z)**2) - t)*t
       end function g1
 
-      real(amrex_real) pure function dxg0(x, y, z)
-         real(amrex_real), INTENT(in) :: x, y, z
+      double precision pure function dxg0(x, y, z)
+         double precision, INTENT(in) :: x, y, z
          dxg0 = ((12d0*x - 24d0*(y + z))*x + 12d0*(8d0*y*z + (y - z)**2))*x
       end function dxg0
 
-      real(amrex_real) pure function dyg0(x, y, z)
-         real(amrex_real), INTENT(in) :: x, y, z
+      double precision pure function dyg0(x, y, z)
+         double precision, INTENT(in) :: x, y, z
          dyg0 = (36d0*z + 12d0*y - 8d0*x)*x*x - 4d0*(y - z)**3
       end function dyg0
 
-      real(amrex_real) pure function dzg0(x, y, z)
-         real(amrex_real), INTENT(in) :: x, y, z
+      double precision pure function dzg0(x, y, z)
+         double precision, INTENT(in) :: x, y, z
          dzg0 = (36d0*y + 12d0*z - 8d0*x)*x*x + 4d0*(y - z)**3
       end function dzg0
 
-      real(amrex_real) pure function dxg1(x, t)
-         real(amrex_real), INTENT(in) :: x, t
+      double precision pure function dxg1(x, t)
+         double precision, INTENT(in) :: x, t
          dxg1 = 4d0*t*x
       end function dxg1
 
-      real(amrex_real) pure function dyg1(y, z, t)
-         real(amrex_real), INTENT(in) :: y, z, t
+      double precision pure function dyg1(y, z, t)
+         double precision, INTENT(in) :: y, z, t
          dyg1 = 4d0*t*(z - y)
       end function dyg1
 
-      real(amrex_real) pure function dzg1(y, z, t)
-         real(amrex_real), INTENT(in) :: y, z, t
+      double precision pure function dzg1(y, z, t)
+         double precision, INTENT(in) :: y, z, t
          dzg1 = 4d0*t*(y - z)
       end function dzg1
 
-      real(amrex_real) pure function dtg1(x, y, z, t)
-         real(amrex_real), INTENT(in) :: x, y, z, t
+      double precision pure function dtg1(x, y, z, t)
+         double precision, INTENT(in) :: x, y, z, t
          dtg1 = 2d0*(x*x - (y - z)**2 - t)
       end function dtg1
    end subroutine mof3d_derivatives_hexa
 
    ! map x in [0, 2π[
-   real(amrex_real) pure function modulo_tau(x) result(r)
-      real(amrex_real), INTENT(in) :: x
+   double precision pure function modulo_tau(x) result(r)
+      double precision, INTENT(in) :: x
 
-      real(amrex_real), parameter :: TAU = 4d0*acos(0d0)
+      double precision, parameter :: TAU = 4d0*acos(0d0)
 
       ! 10 is an arbitrary value
       if (x < 10d0*TAU .or. x > 10d0*TAU) then
