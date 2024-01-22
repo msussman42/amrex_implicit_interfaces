@@ -1284,7 +1284,7 @@ stop
        else if (voltotal.eq.zero) then
         ! do nothing
        else
-        print *,"voltotal invalid" 
+        print *,"voltotal invalid: ",voltotal 
         stop
        endif
 

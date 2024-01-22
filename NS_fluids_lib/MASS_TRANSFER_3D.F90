@@ -501,7 +501,8 @@ stop
         if (tsat_flag.eq.-1) then
          own_flag=1
         else if (cc_flag.eq.0) then ! centroid->center
-         if (abs(VF).le.VOFTOL) then
+         if ((VF.ge.-EPS1).and. &
+             (VF.le.VOFTOL)) then
           own_flag=0
          else if ((VF.ge.VOFTOL).and.(VF.le.one+EPS1)) then
           own_flag=1
@@ -3376,9 +3377,11 @@ stop
           stop
          endif
 
-         if (abs(local_VOF(im)).le.VOFTOL) then
+         if ((local_VOF(im).ge.-EPS1).and. &
+             (local_VOF(im).le.VOFTOL)) then
           local_VOF(im)=zero
-         else if (abs(local_VOF(im)-one).le.VOFTOL) then
+         else if ((local_VOF(im).ge.one-VOFTOL).and. &
+                  (local_VOF(im).le.one+EPS1)) then
           local_VOF(im)=one
          else if ((local_VOF(im).ge.zero).and. &
                   (local_VOF(im).le.one)) then
@@ -5170,17 +5173,19 @@ stop
                   (cengrid(udir)- &
                    (new_centroid(im_trust,udir)*newvfrac(im_trust)+ &
                     fixed_centroid_sum(udir)))/newvfrac(im_distrust)
-                else if (abs(newvfrac(im_distrust)).le.VOFTOL) then
+                else if ((newvfrac(im_distrust).ge.-EPS1).and. &
+                         (newvfrac(im_distrust).le.VOFTOL)) then
                  new_centroid(im_distrust,udir)=cengrid(udir)
                 else
                  print *,"newvfrac(im_distrust) invalid"
                  stop
                 endif
                enddo ! udir=1..sdim
-              else if (abs(fixed_vfrac_sum).le.VOFTOL) then
+              else if ((fixed_vfrac_sum.ge.-EPS1).and. &
+                       (fixed_vfrac_sum.le.VOFTOL)) then
                ! do nothing
               else
-               print *,"fixed_vfrac_sum invalid"
+               print *,"fixed_vfrac_sum invalid: ",fixed_vfrac_sum
                stop
               endif
                  
@@ -6098,7 +6103,7 @@ stop
                 !(1) order in slope recon of im_source
                 !(2) order in slope recon of im_dest
                else if (oldvfrac(im_source).ge.one-VOFTOL) then
-                SWEPTFACTOR=LSTOL
+                SWEPTFACTOR=EPS1
                else if ((order_probe(1).eq.0).and. &
                         (order_probe(2).eq.0)) then 
                 SWEPTFACTOR=one ! default
@@ -6108,7 +6113,7 @@ stop
                 if ((LS_dest_old.eq.zero).and.(LS_dest_new.gt.zero)) then
                  SWEPTFACTOR=one
                 else if ((LS_dest_old.lt.zero).and.(LS_dest_new.eq.zero)) then
-                 SWEPTFACTOR=LSTOL
+                 SWEPTFACTOR=EPS1
                 else if ((LS_dest_old.ge.zero).or. &
                          (LS_dest_new.le.zero)) then
                  SWEPTFACTOR=one
@@ -6123,8 +6128,8 @@ stop
                  print *,"LS_dest_old ",LS_dest_old
                  stop
                 endif
-                if (SWEPTFACTOR.le.LSTOL) then
-                 SWEPTFACTOR=LSTOL
+                if (SWEPTFACTOR.le.EPS1) then
+                 SWEPTFACTOR=EPS1
                 endif
 
                else
@@ -6132,7 +6137,8 @@ stop
                 stop
                endif
 
-               if ((SWEPTFACTOR.ge.LSTOL).and.(SWEPTFACTOR.le.one)) then
+               if ((SWEPTFACTOR.ge.EPS2).and. &
+                   (SWEPTFACTOR.le.one)) then
                 ! do nothing
                else
                 print *,"SWEPTFACTOR invalid: ",SWEPTFACTOR
@@ -6140,7 +6146,7 @@ stop
                 print *,"im_dest=",im_dest
                 print *,"newvfrac(im_dest) ",newvfrac(im_dest)
                 print *,"oldvfrac(im_dest) ",oldvfrac(im_dest)
-                print *,"LSTOL ",LSTOL
+                print *,"EPS2 ",EPS2
                 stop
                endif
                swept(D_DECL(i,j,k),im_dest)=SWEPTFACTOR

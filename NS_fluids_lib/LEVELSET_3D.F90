@@ -10086,13 +10086,13 @@ stop
          voltotal=voltotal+volmat(im)
         enddo ! im=1..num_materials
 
-        if (abs(voltotal-one).gt.LSTOL) then
+        if (abs(voltotal-one).ge.EPS1) then
          print *,"voltotal invalid: ",voltotal
          stop
-        else if (abs(voltotal-one).le.LSTOL) then
+        else if (abs(voltotal-one).le.EPS1) then
          ! do nothing
         else
-         print *,"voltotal invalid: ",voltotal
+         print *,"voltotal invalid (bust): ",voltotal
          stop
         endif
 
@@ -17064,9 +17064,11 @@ stop
           dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
 
           local_VOF(im)=state_mof(D_DECL(i,j,k),vofcompraw)
-          if (abs(local_VOF(im)).le.VOFTOL) then
+          if ((local_VOF(im).ge.-EPS1).and. &
+              (lovsl_VOF(im).le.VOFTOL)) then
            local_VOF(im)=zero
-          else if (abs(local_VOF(im)-one).le.VOFTOL) then
+          else if ((local_VOF(im).ge.one-VOFTOL).and. &
+                   (local_VOF(im).le.one+EPS1)) then
            local_VOF(im)=one
           else if ((local_VOF(im).gt.zero).and. &
                    (local_VOF(im).lt.one)) then
@@ -17175,7 +17177,7 @@ stop
           else if (is_rigid(im).eq.0) then
 
            if ((F_stencil.gt.VOFTOL).and. &
-               (F_stencil.le.one+VOFTOL)) then
+               (F_stencil.le.one+EPS1)) then
             ! do nothing
            else if (abs(F_stencil).le.EPS1) then
             ! extrapolate into the empty cell.
@@ -17189,9 +17191,11 @@ stop
 
              F_stencil=state_mof(D_DECL(i+i1,j+j1,k+k1),vofcompraw)
 
-             if (abs(F_stencil).le.VOFTOL) then
+             if ((F_stencil.ge.-EPS1).and. &
+                 (F_stencil.le.VOFTOL)) then
               F_stencil=zero
-             else if (abs(F_stencil-one).le.VOFTOL) then
+             else if ((F_stencil.ge.one-VOFTOL).and. &
+                      (F_stencil.le.one+EPS1)) then
               F_stencil=one
              else if ((F_stencil.gt.zero).and. &
                       (F_stencil.lt.one)) then
@@ -17424,7 +17428,7 @@ stop
                      (vfrac_solid_new(im).le.one-VOFTOL)) then
              ! do nothing
             else
-             print *,"vfrac_solid_new bust"
+             print *,"vfrac_solid_new bust: ",vfrac_solid_new(im)
              stop
             endif  
             

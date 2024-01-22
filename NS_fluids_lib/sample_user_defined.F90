@@ -315,10 +315,11 @@ contains
     print *,"temp(im) or userdef_temp invalid"
     stop
    endif 
-  else if (abs(VFRAC(userdef_im)).le.VOFTOL) then
+  else if ((VFRAC(userdef_im).ge.-EPS1).and. &
+           (VFRAC(userdef_im).le.VOFTOL)) then
    heat_source=zero
   else
-   print *,"VFRAC invalid"
+   print *,"VFRAC invalid: ",VFRAC(userdef_im)
    stop
   endif
  else

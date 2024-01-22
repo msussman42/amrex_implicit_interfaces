@@ -2688,7 +2688,7 @@ stop
            do im=1,num_materials
             if (is_rigid(im).eq.0) then
              if ((frac_pair(im,im).ge.VOFTOL_REDIST).and. &
-                 (frac_pair(im,im).le.one+VOFTOL_REDIST)) then 
+                 (frac_pair(im,im).le.one+EPS1)) then 
               if ((i3.eq.0).and. &
                   (j3.eq.0).and. &
                   (k3.eq.0).and. &
@@ -2707,7 +2707,7 @@ stop
                       (frac_pair(im,im).le.VOFTOL_REDIST)) then
               ! do nothing
              else
-              print *,"frac_pair invalid"
+              print *,"frac_pair invalid: ",frac_pair(im,im)
               stop
              endif
             else if (is_rigid(im).eq.1) then

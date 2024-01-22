@@ -1806,7 +1806,7 @@ stop
          fine_data(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
         enddo
        else
-        print *,"voltotal invalid" 
+        print *,"voltotal invalid: ",voltotal
         stop
        endif
 
@@ -2018,7 +2018,7 @@ stop
          fine(D_DECL(ifine,jfine,kfine),n)=fine_value(n)
         enddo
        else
-        print *,"voltotal invalid"
+        print *,"voltotal invalid: ",voltotal
         stop
        endif
 
@@ -2201,7 +2201,7 @@ stop
          stop
         endif
        else
-        print *,"voltotal invalid" 
+        print *,"voltotal invalid: ",voltotal 
         stop
        endif
 
@@ -2502,7 +2502,7 @@ stop
          finedata(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
         enddo
        else
-        print *,"voltotal invalid" 
+        print *,"voltotal invalid: ",voltotal
         stop
        endif
 
