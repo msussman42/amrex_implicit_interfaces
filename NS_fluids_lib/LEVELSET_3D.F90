@@ -17065,7 +17065,7 @@ stop
 
           local_VOF(im)=state_mof(D_DECL(i,j,k),vofcompraw)
           if ((local_VOF(im).ge.-EPS1).and. &
-              (lovsl_VOF(im).le.VOFTOL)) then
+              (local_VOF(im).le.VOFTOL)) then
            local_VOF(im)=zero
           else if ((local_VOF(im).ge.one-VOFTOL).and. &
                    (local_VOF(im).le.one+EPS1)) then
