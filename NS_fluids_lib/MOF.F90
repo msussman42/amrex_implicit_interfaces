@@ -19653,13 +19653,13 @@ contains
       else if (tessellate_in.eq.0) then
        local_tessellate_in=0
       else
-       print *,"tessellate_in invalid: ",local_tessellate_in
+       print *,"tessellate_in invalid: ",tessellate_in
        stop
       endif
 
       do im=1,num_materials
        is_rigid_local(im)=is_rigid(im)
-       if (local_tessellate_in.eq.2) then
+       if (local_tessellate_in.eq.2) then !tessellate_in=1 or 3
         is_rigid_local(im)=0
        else if (local_tessellate_in.eq.0) then
         ! do nothing
@@ -20304,6 +20304,8 @@ contains
              multi_area_pair(im,im_opp)= &
               uncaptured_area*multi_volume_pair(im,im_opp)/voltemp
             else
+             print *,"im,im_opp,multi_volume_pair: ", &
+               im,im_opp,multi_volume_pair(im,im_opp)
              print *,"warning: voltemp underflow: ",voltemp
 !             stop
             endif
@@ -20323,6 +20325,24 @@ contains
         enddo ! im=1..num_materials
        else
         print *,"warning: voltemp invalid: ",voltemp
+        print *,"tessellate_in=",tessellate_in
+        print *,"local_tessellate_in=",local_tessellate_in
+        do im_test=1,num_materials
+         print *,"im_test,is_rigid_local ",im_test,is_rigid_local(im_test)
+        enddo
+        do im_test=1,num_materials*ngeom_recon
+         print *,"i,mofdatavalid_plus ",im_test,mofdatavalid_plus(im_test)
+        enddo
+        do im_test=1,num_materials*ngeom_recon
+         print *,"i,mofdatavalid_minus ",im_test,mofdatavalid_minus(im_test)
+        enddo
+        do im_test=1,num_materials*ngeom_recon
+         print *,"i,mofdataproject_plus ",im_test,mofdataproject_plus(im_test)
+        enddo
+        do im_test=1,num_materials*ngeom_recon
+         print *,"i,mofdataproject_minus ", &
+          im_test,mofdataproject_minus(im_test)
+        enddo
 !        stop
        endif
 

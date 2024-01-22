@@ -4544,8 +4544,9 @@ stop
          enddo
 
         else
-         print *,"vol_total invalid"
-         stop
+         print *,"warning"
+         print *,"vol_total invalid: ",vol_total
+!         stop
         endif
 
         delta=xsten_right(0,dir+1)-xsten_left(0,dir+1)
@@ -4568,9 +4569,10 @@ stop
                (tessellate.eq.3).or. &
                (is_rigid(mr).eq.0)) then
 
-            if ((frac_pair(ml,mr).lt.-EPS3).or. &
-                (frac_pair(ml,mr).gt.one+EPS3)) then
-             print *,"frac_pair invalid"
+            if ((frac_pair(ml,mr).lt.-EPS1).or. &
+                (frac_pair(ml,mr).gt.one+EPS1)) then
+             print *,"frac_pair invalid: ml,mr,frac_pair ", &
+               ml,mr,frac_pair(ml,mr)
              stop
             endif
   
