@@ -19364,35 +19364,33 @@ contains
       return
       end subroutine project_centroid_box
 
-
-
-        ! for finding pair area fractions and centroids,
-        !  input: mofdata_plus
-        !         mofdata_minus
-        !         num_materials
-        !         xsten0_plus,
-        !         xsten0_minus,
-        !         nhalf0,
-        !         dir_plus=1..sdim
-        !
-        ! (i)  call project_slopes_to_face for all interfaces.
-        ! (ii) create thin box centered about the face.
-        ! (iii) find volumes and centroids in the thin box for
-        !       both mofdata_plus and mofdata_minus
-        ! (iv) Let Omega_aux=thin box.
-        ! (v)  For im_plus=1..num_materials (WLOG assume order number same as material
-        !                           id)
-        !       (a) Omega_aux=Omega_aux-Omega_im_plus
-        !       (b) find volumes and centroids of mofdata_minus in
-        !           Omega_aux.  (pairs im_plus,im_minus are the leftovers)
-        !
-        ! (vi) (a) project the centroid pairs to the face.
-        !      (b) A_pair=(V_pair/V_thinbox) * A_face 
-        !
-        ! output: multi_area_pair
-        ! 
-        ! tessellate_in=0,1, or 3
-        ! calls multi_get_volume_tessellate if tessellate_in=1 or 3.
+! for finding pair area fractions and centroids,
+!  input: mofdata_plus
+!         mofdata_minus
+!         num_materials
+!         xsten0_plus,
+!         xsten0_minus,
+!         nhalf0,
+!         dir_plus=1..sdim
+!
+! (i)  call project_slopes_to_face for all interfaces.
+! (ii) create thin box centered about the face.
+! (iii) find volumes and centroids in the thin box for
+!       mofdataproject_plus
+! (iv) Let Omega_aux=thin box.
+! (v)  For im_plus=1..num_materials 
+!       (WLOG assume order number same as material id)
+!       (a) Omega_aux=Omega_aux-Omega_im_plus
+!       (b) find volumes and centroids of mofdata_minus in
+!           Omega_aux.  (pairs im_plus,im_minus are the leftovers)
+!
+! (vi) (a) project the centroid pairs to the face.
+!      (b) A_pair=(V_pair/V_thinbox) * A_face 
+!
+! output: multi_area_pair
+! 
+! tessellate_in=0,1, or 3
+! calls multi_get_volume_tessellate if tessellate_in=1 or 3.
       subroutine multi_get_area_pairs( &
        tessellate_in, &
        bfact,dx, &
@@ -19442,10 +19440,10 @@ contains
       integer im,im_opp,im_test
       integer side
       integer dir_local
-      integer nhalf_thin
+      integer, PARAMETER :: nhalf_thin=1
       integer isten 
       real(amrex_real) dxthin
-      real(amrex_real) xsten_thin(-1:1,sdim)
+      real(amrex_real) xsten_thin(-nhalf_thin:nhalf_thin,sdim)
       real(amrex_real) xtet(sdim+1,sdim)
       integer, PARAMETER :: shapeflag=0 !regular hexahedron
 
@@ -19500,8 +19498,6 @@ contains
       real(amrex_real) nrecon(sdim)
       real(amrex_real) intercept
       integer, parameter :: continuous_mof=STANDARD_MOF
-
-      nhalf_thin=1
 
       if (ngeom_recon.eq.2*sdim+3) then
        ! do nothing
@@ -19763,7 +19759,7 @@ contains
         endif
        enddo ! im=1..num_materials
 
-       if (abs(one-vfrac_fluid_sum).le.EPS2) then
+       if (abs(one-vfrac_fluid_sum).le.EPS1) then
         ! do nothing
        else
         print *,"vfrac_fluid_sum invalid multi_get_area_pairs"
