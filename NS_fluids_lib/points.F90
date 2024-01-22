@@ -38,7 +38,6 @@
 !! @ingroup computational_geometry_3d
 
 module mod_cg3_points
-use amrex_fort_module, only : amrex_real
    implicit none
 
 contains
@@ -48,8 +47,8 @@ contains
    !! @param[in] p1, p2: coordinates of two points of the space
    !! @ingroup point_3d
    pure function cg3_cross_product(p1, p2) result(r)
-      real(amrex_real), dimension(3), intent(in) :: p1, p2
-      real(amrex_real), dimension(3) :: r
+      double precision, dimension(3), intent(in) :: p1, p2
+      double precision, dimension(3) :: r
 
       r(1) = p1(2)*p2(3) - p1(3)*p2(2)
       r(2) = p1(3)*p2(1) - p1(1)*p2(3)
@@ -61,20 +60,18 @@ contains
    !! @param[in]  direction: unit vector
    !! @param[out] angles: spherical angles (θ,φ)
    pure subroutine cg3_direction_to_spherical_angles(direction, angles)
-      real(amrex_real), dimension(3), intent(in) :: direction
-      real(amrex_real), dimension(2), intent(out) :: angles
+      double precision, dimension(3), intent(in) :: direction
+      double precision, dimension(2), intent(out) :: angles
 
-      real(amrex_real), parameter :: PI = 2d0*acos(0d0)
+      double precision, parameter :: PI = 2d0*acos(0d0)
 
       if ((abs(direction(3)) - 1d0) < epsilon(1d0)) then
          angles = [atan2(direction(2), direction(1)), acos(direction(3))]
       else
          if (direction(3) > 0d0) then
-                 angles(1)=0.0d0
-                 angles(2)=0.0d0
+            angles = [0d0, 0d0]
          else
-                 angles(1)=0.0d0
-                 angles(2)=PI
+            angles = [0d0, PI]
          end if
       end if
    end subroutine cg3_direction_to_spherical_angles
@@ -84,8 +81,8 @@ contains
    !! @param[in]   angles: spherical angles (θ,φ)
    !! @param[out]  direction: resulting unit vector
    pure subroutine cg3_spherical_angles_to_direction(angles, direction)
-      real(amrex_real), dimension(2), intent(in) :: angles
-      real(amrex_real), dimension(3), intent(out) :: direction
+      double precision, dimension(2), intent(in) :: angles
+      double precision, dimension(3), intent(out) :: direction
 
       direction =                            &
          & [                                 &

@@ -9,6 +9,8 @@
 
 #include "EXTRAP_COMP.H"
 
+#define NOTUS_REAL (8)
+
 #define MOF_INITIAL_GUESS_CENTROIDS (3)
 
 #define MOFDEB (0)
@@ -2707,6 +2709,7 @@ end subroutine intersection_volume_and_map
 
       return
       end subroutine angle_to_slope
+
 
         ! returns centroid in absolute coordinate system
 
@@ -10559,6 +10562,74 @@ contains
       return
       end subroutine single_find_intercept
 
+      real(NOTUS_REAL) function atan_verify_NOTUS(x)
+      IMPLICIT NONE
+      real(NOTUS_REAL), INTENT(in) :: x
+      real(NOTUS_REAL) NOTUS_PI
+
+      NOTUS_PI=4.0d0*atan(1.0d0)
+
+      atan_verify_NOTUS=atan(x)
+      if ((atan_verify_NOTUS.ge.-0.5d0*NOTUS_PI-0.01d0).and. &
+          (atan_verify_NOTUS.le.0.5d0*NOTUS_PI+0.01d0)) then
+       !do nothing
+      else
+       print *,"atan out of range NOTUS"
+       stop
+      endif
+ 
+      return
+      end function atan_verify_NOTUS
+
+      subroutine arctan2_NOTUS(y,x,angle)
+      IMPLICIT NONE
+
+      real(NOTUS_REAL), INTENT(in) :: y,x
+      real(NOTUS_REAL), INTENT(out) :: angle
+      real(NOTUS_REAL) NOTUS_PI
+
+      NOTUS_PI=4.0d0*atan(1.0d0)
+
+      if ((y.gt.0.0d0).and.(x.eq.0.0d0)) then
+       angle=0.5d0*NOTUS_PI
+      else if ((y.lt.0.0d0).and.(x.eq.0.0d0)) then
+       angle=-0.5d0*NOTUS_PI
+        ! pi/4 <angle<pi/2 (first quadrant)
+      else if ((y.gt.0.0d0).and.(x.gt.0.0d0).and.(y.ge.x)) then
+       angle=atan_verify_NOTUS(y/x)
+        ! pi/2 < angle < 3pi/4 (second quadrant)
+      else if ((y.gt.0.0d0).and.(x.lt.0.0d0).and.(y.ge.abs(x))) then
+       angle=atan_verify_NOTUS(y/x)+NOTUS_PI
+        ! -pi/2<angle<-pi/4 (fourth quadrant)
+      else if ((y.lt.0.0d0).and.(x.gt.0.0d0).and.(abs(y).ge.x)) then
+       angle=atan_verify_NOTUS(y/x)
+        ! -3pi/4 < angle < -pi/2  (3rd quadrant)
+      else if ((y.lt.0.0d0).and.(x.lt.0.0d0).and.(abs(y).ge.abs(x))) then
+       angle=atan_verify_NOTUS(y/x)-NOTUS_PI
+      else if ((y.eq.0.0d0).and.(x.gt.0.0d0)) then
+       angle=0.0d0
+      else if ((y.eq.0.0d0).and.(x.lt.0.0d0)) then
+       angle=NOTUS_PI
+       ! 0<angle<pi/4 (1st quadrant)
+      else if ((x.gt.0.0d0).and.(y.gt.0.0d0).and.(y.le.x)) then
+       angle=atan_verify_NOTUS(y/x)
+       ! -pi/4<angle<0 (4th quadrant)
+      else if ((x.gt.0.0d0).and.(y.lt.0.0d0).and.(abs(y).le.x)) then
+       angle=atan_verify_NOTUS(y/x)
+       ! 3pi/4<angle<pi (second quadrant)
+      else if ((x.lt.0.0d0).and.(y.gt.0.0d0).and.(y.le.abs(y))) then
+       angle=atan_verify_NOTUS(y/x)+NOTUS_PI
+       ! -pi<angle<-3pi/4 (3rd quadrant)
+      else if ((x.lt.0.0d0).and.(y.lt.0.0d0).and.(abs(y).le.abs(x))) then
+       angle=atan_verify_NOTUS(y/x)-NOTUS_PI
+      else
+       angle=0.0d0
+      endif
+
+      return
+      end subroutine arctan2_NOTUS
+
+
         ! "Find the actual centroid given the angle" 
         ! xcell is center of cell, not the cell centroid
         ! refcentroid is passed into this routine.
@@ -10657,22 +10728,24 @@ contains
       real(amrex_real) volsten
       real(amrex_real) areasten
       real(amrex_real) censten(sdim)
-      real(amrex_real) local_angles(2)
-      real(amrex_real) local_volume
-      real(amrex_real) local_cell_size(3)
-      real(amrex_real) local_nslope(3)
-      real(amrex_real) local_ref_centroid(3)
-      real(amrex_real) local_centroid(3)
-      real(amrex_real) local_gradient(2)
-      real(amrex_real) local_refvfrac
-      real(amrex_real) p0(3)
-      real(amrex_real) p1(3)
-      real(amrex_real) p2(3)
-      real(amrex_real) p3(3)
-      real(amrex_real) objective
-      real(amrex_real) gradient(2)
+      real(NOTUS_REAL) local_angles_NOTUS(2)
+      real(NOTUS_REAL) local_volume_NOTUS
+      real(NOTUS_REAL) local_cell_size_NOTUS(3)
+      real(NOTUS_REAL) local_nslope_NOTUS(3)
+      real(NOTUS_REAL) local_ref_centroid_NOTUS(3)
+      real(NOTUS_REAL) local_centroid_NOTUS(3)
+      real(NOTUS_REAL) local_gradient_NOTUS(2)
+      real(NOTUS_REAL) local_refvfrac_NOTUS
+      real(NOTUS_REAL) p0(3)
+      real(NOTUS_REAL) p1(3)
+      real(NOTUS_REAL) p2(3)
+      real(NOTUS_REAL) p3(3)
+      real(NOTUS_REAL) objective_NOTUS
+      real(NOTUS_REAL) NOTUS_PI
 
       integer, PARAMETER :: use_super_cell=1
+
+      NOTUS_PI=4.0d0*atan(1.0d0)
 
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -11099,61 +11172,64 @@ contains
         ! so we have to reverse the normal and angles
         ! nslope comes from "angle_to_slope"
        do dir=1,sdim
-        local_nslope(dir)=-nslope(dir)
+        local_nslope_NOTUS(dir)=-nslope(dir)
        enddo
-       call slope_to_angle(local_nslope,local_angles,sdim)
+       call slope_to_angle_NOTUS(local_nslope_NOTUS,local_angles_NOTUS,sdim)
 
-       local_refvfrac=refvfrac(1)
+       local_refvfrac_NOTUS=refvfrac(1)
        do dir=1,sdim
-        local_ref_centroid(dir)=refcentroid(dir)
+        local_ref_centroid_NOTUS(dir)=refcentroid(dir)
        enddo
 
        if (continuous_mof.eq.STANDARD_MOF) then 
 
-        if ((refvfrac(1).ge.half).and. &
-            (refvfrac(1).lt.one)) then
-         local_refvfrac=one-refvfrac(1)
+        if ((local_refvfrac_NOTUS.ge.0.5d0).and. &
+            (local_refvfrac_NOTUS.lt.1.0d0)) then
+         local_refvfrac_NOTUS=1.0d0-local_refvfrac_NOTUS
 
-         if (local_refvfrac.gt.zero) then
+         if (local_refvfrac_NOTUS.gt.0.0d0) then
           do dir=1,sdim
-           local_ref_centroid(dir)= &
-             -refvfrac(1)*refcentroid(dir)/local_refvfrac
-           local_nslope(dir)=-local_nslope(dir)
+           local_ref_centroid_NOTUS(dir)= &
+             -refvfrac(1)*refcentroid(dir)/local_refvfrac_NOTUS
+           local_nslope_NOTUS(dir)=-local_nslope_NOTUS(dir)
           enddo
-         else if (local_refvfrac.eq.zero) then
+         else if (local_refvfrac_NOTUS.eq.0.0d0) then
           do dir=1,sdim
-           local_ref_centroid(dir)=zero
-           local_nslope(dir)=-local_nslope(dir)
+           local_ref_centroid_NOTUS(dir)=0.0d0
+           local_nslope_NOTUS(dir)=-local_nslope_NOTUS(dir)
           enddo
          else
-          print *,"local_refvfrac corrupt: ",local_refvfrac
+          print *,"local_refvfrac_NOTUS corrupt: ",local_refvfrac_NOTUS
           stop
          endif
 
-         call slope_to_angle(local_nslope,local_angles,sdim)
-        else if ((refvfrac(1).gt.zero).and. &
-                 (refvfrac(1).le.half)) then
+         call slope_to_angle_NOTUS(local_nslope_NOTUS, &
+                 local_angles_NOTUS,sdim)
+        else if ((local_refvfrac_NOTUS.gt.0.0d0).and. &
+                 (local_refvfrac_NOTUS.le.0.5d0)) then
          ! do nothing
         else
-         print *,"refvfrac(1) invalid: ",refvfrac(1)
+         print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
          stop
         endif
 
-        local_volume=local_refvfrac*volcell_vof
+        local_volume_NOTUS=local_refvfrac_NOTUS*volcell_vof
 
         do dir=1,sdim
-         local_cell_size(dir)=xsten0(1,dir)-xsten0(-1,dir)
-         if (local_cell_size(dir).gt.zero) then
-          if ((local_refvfrac.gt.zero).and. &
-              (local_refvfrac.le.half)) then
-           local_ref_centroid(dir)=local_ref_centroid(dir)+ &
-                half*local_cell_size(dir)
+         local_cell_size_NOTUS(dir)=xsten0(1,dir)-xsten0(-1,dir)
+         if (local_cell_size_NOTUS(dir).gt.0.0d0) then
+          if ((local_refvfrac_NOTUS.gt.0.0d0).and. &
+              (local_refvfrac_NOTUS.le.0.5d0)) then
+           local_ref_centroid_NOTUS(dir)= &
+                local_ref_centroid_NOTUS(dir)+ &
+                0.5d0*local_cell_size_NOTUS(dir)
           else
-           print *,"local_refvfrac invalid: ",local_refvfrac
+           print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
            stop
           endif
          else
-          print *,"local_cell_size(dir) invalid: ",dir,local_cell_size(dir)
+          print *,"local_cell_size_NOTUS(dir) invalid: ", &
+                  dir,local_cell_size_NOTUS(dir)
           stop
          endif 
         enddo ! dir=1..sdim
@@ -11161,96 +11237,67 @@ contains
         if (sdim.eq.3) then
          ! do nothing
         else if (sdim.eq.2) then
-         local_angles(2)=half*Pi
-         local_nslope(3)=zero
-         local_cell_size(3)=one
-         local_ref_centroid(3)=half
+         local_angles_NOTUS(2)=0.5d0*NOTUS_PI
+         local_nslope_NOTUS(3)=0.0d0
+         local_cell_size_NOTUS(3)=0.0d0
+         local_ref_centroid_NOTUS(3)=0.5d0
         else
          print *,"sdim invalid"
          stop
         endif
 
-        if (1.eq.0) then
-         print *,"BEFORE"
-         print *,"refvfrac ",refvfrac(1)
-         print *,"refvfrac(opp) ",one-refvfrac(1)
-         print *,"nslope ",nslope(1), &
-            nslope(2),nslope(sdim)
-         print *,"local_nslope ",local_nslope(1), &
-            local_nslope(2),local_nslope(sdim)
-         print *,"refcentroid ",refcentroid(1), &
-            refcentroid(2),refcentroid(sdim)
-         print *,"refcentroid(opp) ", &
-            -refvfrac(1)*refcentroid(1)/(one-refvfrac(1)), &
-            -refvfrac(1)*refcentroid(2)/(one-refvfrac(1)), &
-            -refvfrac(1)*refcentroid(sdim)/(one-refvfrac(1))
-         print *,"local_refvfrac ",local_refvfrac
-         print *,"local_volume ",local_volume
-         print *,"angle ",angle(1),angle(sdim-1)
-         print *,"local_angles ",local_angles(1),local_angles(2)
-         print *,"local_ref_centroid ",local_ref_centroid(1), &
-            local_ref_centroid(2),local_ref_centroid(sdim)
-         print *,"local_cell_size ",local_cell_size(1), &
-            local_cell_size(2),local_cell_size(sdim)
-        endif
-
         if (sdim.eq.3) then
          call mof3d_compute_analytic_gradient( &
-          local_angles, & !intent(in)
-          local_ref_centroid, & !intent(in)
-          local_volume, & !intent(in)
-          local_cell_size, & !intent(in)
-          local_centroid, & !intent(out)
-          local_gradient) !intent(out)
+          local_angles_NOTUS, & !intent(in)
+          local_ref_centroid_NOTUS, & !intent(in)
+          local_volume_NOTUS, & !intent(in)
+          local_cell_size_NOTUS, & !intent(in)
+          local_centroid_NOTUS, & !intent(out)
+          local_gradient_NOTUS) !intent(out)
         else if (sdim.eq.2) then
          call mof2d_compute_analytic_gradient( &
-          local_angles, & !intent(in)
-          local_volume, &
-          local_cell_size, &
-          local_centroid)  !intent(out)
+          local_angles_NOTUS, & !intent(in)
+          local_volume_NOTUS, &
+          local_cell_size_NOTUS, &
+          local_centroid_NOTUS)  !intent(out)
         else
          print *,"sdim invalid"
          stop
         endif
 
         do dir=1,sdim
-         local_centroid(dir)=local_centroid(dir)-half*local_cell_size(dir)
-         testcen(dir)=local_centroid(dir)
+         local_centroid_NOTUS(dir)= &
+                 local_centroid_NOTUS(dir)- &
+                 0.5d0*local_cell_size_NOTUS(dir)
+         testcen(dir)=local_centroid_NOTUS(dir)
          if (testcen(dir)**2.ge.zero) then
           !do nothing
          else
           print *,"testcen(dir) corrupt: ",dir,testcen(dir)
-          print *,"local_angles: ",local_angles(1),local_angles(2)
-          print *,"local_volume: ",local_volume
+          print *,"local_angles_NOTUS: ", &
+            local_angles_NOTUS(1),local_angles_NOTUS(2)
+          print *,"local_volume_NOTUS: ",local_volume_NOTUS
           do dir_local=1,sdim
-           print *,"dir_local,local_ref_centroid ", &
-             dir_local,local_ref_centroid(dir_local)
-           print *,"dir_local,local_cell_size ", &
-             dir_local,local_cell_size(dir_local)
+           print *,"dir_local,local_ref_centroid_NOTUS ", &
+             dir_local,local_ref_centroid_NOTUS(dir_local)
+           print *,"dir_local,local_cell_size_NOTUS ", &
+             dir_local,local_cell_size_NOTUS(dir_local)
           enddo
           stop
          endif
-        enddo
+        enddo !dir=1,sdim
 
-        if ((refvfrac(1).ge.half).and. &
-            (refvfrac(1).lt.one)) then
+        if ((refvfrac(1).ge.0.5d0).and. &
+            (refvfrac(1).lt.1.0d0)) then
          do dir=1,sdim
-          testcen(dir)=-local_refvfrac*testcen(dir)/refvfrac(1)
+          testcen(dir)=-local_refvfrac_NOTUS*testcen(dir)/refvfrac(1)
          enddo
-        else if ((refvfrac(1).gt.zero).and. &
-                 (refvfrac(1).le.half)) then
+        else if ((refvfrac(1).gt.0.0d0).and. &
+                 (refvfrac(1).le.0.5d0)) then
          ! do nothing
         else
          print *,"refvfrac(1) invalid: ",refvfrac(1)
          stop
-        endif
-
-        if (1.eq.0) then
-         print *,"AFTER"
-         print *,"testcen ",testcen(1),testcen(2),testcen(sdim)
-         print *,"local_centroid ",local_centroid(1), &
-            local_centroid(2),local_centroid(sdim)
-         print *,"local_gradient ",local_gradient(1),local_gradient(2)
         endif
 
        else if (continuous_mof.eq.MOF_TRI_TET) then 
@@ -11264,10 +11311,11 @@ contains
           stop
          endif
 
-         local_volume=local_refvfrac*volcell_vof
+         local_volume_NOTUS=local_refvfrac_NOTUS*volcell_vof
 
          do dir=1,sdim
-          local_ref_centroid(dir)=local_ref_centroid(dir)+cencell_vof(dir)
+          local_ref_centroid_NOTUS(dir)= &
+               local_ref_centroid_NOTUS(dir)+cencell_vof(dir)
           p0(dir)=xtetlist_vof(1,dir,1)
           p1(dir)=xtetlist_vof(2,dir,1)
           p2(dir)=xtetlist_vof(3,dir,1)
@@ -11276,20 +11324,21 @@ contains
 
          call mof3d_tetra_compute_analytic_gradient( &
           p0,p1,p2,p3, &
-          local_angles, & !dimension(2)
-          local_ref_centroid, &
-          local_ref_centroid, &
-          local_volume, &  !Not a volume FRACTION
-          objective, &
-          gradient, & !dimension(2)
-          local_centroid)
+          local_angles_NOTUS, & !dimension(2)
+          local_ref_centroid_NOTUS, &
+          local_ref_centroid_NOTUS, &
+          local_volume_NOTUS, &  !Not a volume FRACTION
+          objective_NOTUS, &
+          local_gradient_NOTUS, & !dimension(2)
+          local_centroid_NOTUS)
 
          do dir=1,sdim
-          local_centroid(dir)=local_centroid(dir)-cencell_vof(dir)
+          local_centroid_NOTUS(dir)= &
+               local_centroid_NOTUS(dir)-cencell_vof(dir)
          enddo
 
          do dir=1,sdim
-          testcen(dir)=local_centroid(dir)
+          testcen(dir)=local_centroid_NOTUS(dir)
          enddo
 
         else
@@ -11360,7 +11409,87 @@ contains
 
       return
       end subroutine advance_angle
+
+
+      subroutine slope_to_angle_NOTUS(nn,angle,sdim)
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: sdim
+      integer dir
+      real(NOTUS_REAL), INTENT(in) :: nn(sdim)
+      real(NOTUS_REAL), INTENT(out) :: angle(sdim-1)
+      real(NOTUS_REAL) local_nn(sdim)
+      real(NOTUS_REAL) NOTUS_PI
+      real(NOTUS_REAL) mag
+      real(NOTUS_REAL) x,y,z
+
+      NOTUS_PI=4.0d0*atan(1.0d0)
+
+      mag=0.0d0
+      do dir=1,sdim
+       mag=mag+nn(dir)**2
+      enddo
+      mag=sqrt(mag)
+      if (mag.gt.0.0d0) then
+       !do nothing
+      else
+       print *,"slope_to_angle_NOTUS: invalid slope mag=",mag
+       do dir=1,sdim
+        print *,"dir,nn(dir) ",dir,nn(dir)
+       enddo
+       stop
+      endif
+      do dir=1,sdim
+       local_nn(dir)=nn(dir)/mag
+      enddo
+      x=local_nn(1)
+      y=local_nn(2)
+      z=local_nn(sdim)
+
+      if (sdim.eq.3) then
+
+        ! tan(phi)=y/x   sin(phi)/cos(phi)=y/x
+       call arctan2_NOTUS(y,x,angle(1))
+       if ((y.eq.0.0d0).and.(x.eq.0.0d0)) then
+        if (z.eq.0.0d0) then
+         print *,"z cannot be 0.0d0"
+         stop
+        else if (z.gt.0.0d0) then
+         angle(sdim-1)=0.0d0
+        else if (z.lt.0.0d0) then
+         angle(sdim-1)=NOTUS_PI
+        else
+         print *,"bust slope_to_angle_NOTUS"
+         print *,"x,y,z ",x,y,z
+         print *,"sdim=",sdim
+         stop
+        endif
+       else if (abs(x).ge.abs(y)) then
+        ! tan(theta)=x/(z cos(phi))
+        ! sin(theta)/cos(theta)=x/(z cos(phi))
+        ! z=cos(theta)  x=sin(theta)cos(phi) y=x tan(phi)=sin(theta)sin(phi)
+        call arctan2_NOTUS(x/cos(angle(1)),z,angle(sdim-1))
+       else
+        ! tan(theta)=y/(z sin(phi)
+        ! sin(theta)/cos(theta)=y/(z sin(phi))
+        ! z=cos(theta) y=sin(theta)sin(phi)  x=y/tan(phi)=cos(phi)sin(theta)
+        call arctan2_NOTUS(y/sin(angle(1)),z,angle(sdim-1))
+       endif 
+
+      else if (sdim.eq.2) then
+        ! tan(phi)=y/x   sin(phi)/cos(phi)=y/x
+       call arctan2_NOTUS(y,x,angle(1))
  
+      else
+       print *,"slope_to_angle_NOTUS: sdim invalid"
+       stop
+      endif
+
+      return
+      end subroutine slope_to_angle_NOTUS
+
+
+
 ! angle=(phi,theta)
 ! 3D: x=cos(phi)sin(theta)  y=sin(phi)sin(theta)  z=cos(theta)
 ! 2D: (cos(phi),sin(phi)) 
@@ -22570,10 +22699,8 @@ contains
       real(amrex_real) cencell(sdim)
       integer dir
       real(amrex_real) vfrac_save(num_materials)
-      real(amrex_real) vfracsolid(num_materials)
       real(amrex_real) vfraclocal(num_materials)
       integer vofcomp_solid
-      integer vofcomp_local
       integer imcrit
       integer im_local
       integer is_rigid_local(num_materials)

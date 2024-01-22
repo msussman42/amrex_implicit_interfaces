@@ -7641,7 +7641,7 @@ end subroutine print_visual_descriptor
       real(amrex_real) function atan_verify(x)
       use probcommon_module
       IMPLICIT NONE
-      real(amrex_real) x
+      real(amrex_real), INTENT(in) :: x
 
       if (MOF_PI.eq.zero) then
        MOF_PI=four*atan(one)
