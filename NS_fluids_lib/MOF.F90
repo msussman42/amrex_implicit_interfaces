@@ -11471,11 +11471,14 @@ contains
         ! sin(theta)/cos(theta)=x/(z cos(phi))
         ! z=cos(theta)  x=sin(theta)cos(phi) y=x tan(phi)=sin(theta)sin(phi)
         call arctan2_NOTUS(x/cos(angle(1)),z,angle(sdim-1))
-       else
+       else if (abs(x).le.abs(y)) then
         ! tan(theta)=y/(z sin(phi)
         ! sin(theta)/cos(theta)=y/(z sin(phi))
         ! z=cos(theta) y=sin(theta)sin(phi)  x=y/tan(phi)=cos(phi)sin(theta)
         call arctan2_NOTUS(y/sin(angle(1)),z,angle(sdim-1))
+       else
+        print *,"x or y bust: ",x,y
+        stop
        endif 
 
       else if (sdim.eq.2) then
@@ -11559,11 +11562,14 @@ contains
         ! sin(theta)/cos(theta)=x/(z cos(phi))
         ! z=cos(theta)  x=sin(theta)cos(phi) y=x tan(phi)=sin(theta)sin(phi)
         call arctan2(x/cos(angle(1)),z,angle(sdim-1))
-       else
+       else if (abs(x).le.abs(y)) then
         ! tan(theta)=y/(z sin(phi)
         ! sin(theta)/cos(theta)=y/(z sin(phi))
         ! z=cos(theta) y=sin(theta)sin(phi)  x=y/tan(phi)=cos(phi)sin(theta)
         call arctan2(y/sin(angle(1)),z,angle(sdim-1))
+       else
+        print *,"x or y bust: ",x,y
+        stop
        endif 
 
       else if (sdim.eq.2) then
@@ -19509,10 +19515,10 @@ contains
 ! (iii) find volumes and centroids in the thin box for
 !       mofdataproject_plus
 ! (iv) Let Omega_aux=thin box.
-! (v)  For im_plus=1..num_materials 
+! (v)  For im_minus=1..num_materials 
 !       (WLOG assume order number same as material id)
-!       (a) Omega_aux=Omega_aux-Omega_im_plus
-!       (b) find volumes and centroids of mofdata_minus in
+!       (a) Omega_aux=Omega_aux-Omega_im_minus
+!       (b) find volumes and centroids of mofdata_plus in
 !           Omega_aux.  (pairs im_plus,im_minus are the leftovers)
 !
 ! (vi) (a) project the centroid pairs to the face.
@@ -19714,7 +19720,7 @@ contains
        stop
       endif
 
-      do isten=-1,1
+      do isten=-nhalf_thin,nhalf_thin
        do dir_local=1,sdim
         xsten_thin(isten,dir_local)=xsten0_plus(isten,dir_local)
        enddo
@@ -19791,7 +19797,7 @@ contains
        else if (local_tessellate_in.eq.0) then
         ! do nothing
        else
-        print *,"local_tessellate_in invalid10"
+        print *,"local_tessellate_in invalid10: ",local_tessellate_in
         stop
        endif
       enddo ! im=1..num_materials
@@ -19902,7 +19908,7 @@ contains
        num_processed_fluid=0
 
        do im=1,num_materials
-        material_used(im)=0
+        material_used(im)=0 !i.e. "material_subtracted"
        enddo ! im=1..num_materials
 
        fastflag=1
@@ -19922,7 +19928,7 @@ contains
 
          if (is_rigid_local(im_test).eq.0) then
 
-          if (material_used(im_test).eq.0) then
+          if (material_used(im_test).eq.0) then !i.e. "material subtracted"
 
            if (mofdataproject_minus(vofcomp).gt. &
                (one-EPS2)*uncaptured_volume_fraction_fluid) then
@@ -19992,6 +19998,8 @@ contains
          endif
         enddo ! im=1..num_materials
 
+         ! num_processed_fluid=number of materials subtracted from the
+         ! "minus" side.
         if ((num_processed_fluid.gt.0).and. &
             (num_processed_fluid.lt.num_materials)) then
          fastflag=0
@@ -20004,10 +20012,10 @@ contains
 
         if (fastflag.eq.0) then ! num_processed_fluid>=1
 
-         ! only xsten0(0,dir) dir=1..sdim used
-         ! intersects xsten_thin with the compliments of already
-         ! initialized materials. (i.e. materials with 
-         ! 1<=material_used(im)<=num_materials)
+         ! Only xsten0(0,dir) dir=1..sdim used.
+         ! tets_box_planes intersects xsten_thin with the compliments 
+         ! of already initialized (subtracted) materials. 
+         ! (i.e. materials with 1<=material_used(im)<=num_materials)
 
          call tets_box_planes( &
            continuous_mof, &
@@ -20045,6 +20053,8 @@ contains
            stop
          endif
 
+          !"critical_material" is the most recent material to be 
+          !subtracted from the minus side.
          if ((critical_material.ge.1).and. &
              (critical_material.le.num_materials)) then
 
@@ -20078,7 +20088,8 @@ contains
                else if (vol_old-vol_new.ge.zero) then
                 vol_diff=vol_old-vol_new
                else
-                print *,"vol_diff bust"
+                print *,"vol_diff bust: ",vol_diff
+                print *,"vol_old, vol_new ",vol_old,vol_new
                 stop
                endif
                multi_volume_pair(critical_material,im_opp)=vol_diff
@@ -20197,11 +20208,15 @@ contains
          stop
         endif
 
+         !determine the next ("minus") material to be subtracted.
         critical_material=0
 
         if ((single_material.gt.0).and. &
             (remaining_vfrac.le.EPS2)) then
 
+          !we leave critical_material==0 since the "pair" variables
+          !are updated right here and only "single_material" is
+          !subtracted.
          vofcomp=(single_material-1)*ngeom_recon+1
          do im_opp=1,num_materials
           if (is_rigid_local(im_opp).eq.0) then
@@ -20234,6 +20249,9 @@ contains
 
           if (is_rigid_local(im).eq.0) then
 
+             !"orders" for mofdataproject_minus are initialized to zero.
+             !Then, one by one, the "orders" of mofdataproject_minus
+             !are replaced with "material_used." (see above)
            testflag=NINT(mofdataproject_minus(vofcomp+sdim+1))
            testflag_save=NINT(mofdatavalid_minus(vofcomp+sdim+1))
            if ((testflag_save.eq.num_processed_fluid+1).and. &
@@ -20264,6 +20282,8 @@ contains
 
          enddo ! im=1..num_materials
 
+          !"critical_material" is the next material to be subtracted
+          !from the "minus" side.
          if ((critical_material.ge.1).and. &
              (critical_material.le.num_materials)) then        
 
@@ -20378,7 +20398,7 @@ contains
         enddo ! im_opp=1..num_materials
 
        else if (critical_material.eq.0) then
-        ! do nothing
+        ! do nothing (pair variables already updated)
        else
         print *,"critical_material invalid 19890: ",critical_material
         stop
@@ -20422,6 +20442,7 @@ contains
         endif
 
        enddo ! im=1..num_materials
+
        if (voltemp.gt.zero) then
         do im=1,num_materials
          if (is_rigid_local(im).eq.0) then
@@ -20503,8 +20524,8 @@ contains
       else if (uncaptured_area.eq.zero) then
        ! do nothing
       else
-       print *,"warning: uncaptured_area invalid: ",uncaptured_area
-!       stop
+       print *,"uncaptured_area invalid: ",uncaptured_area
+       stop
       endif
 
       return
