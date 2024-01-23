@@ -25522,7 +25522,7 @@ contains
       if (1.eq.0) then
        call volume_sanity_check()
       endif
-      if (1.eq.1) then
+      if (1.eq.0) then
        sdim=3
        nmax_test=POLYGON_LIST_MAX
        call diagnostic_MOF(sdim,nmax_test)
