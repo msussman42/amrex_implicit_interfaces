@@ -11183,8 +11183,8 @@ contains
 
        if (continuous_mof.eq.STANDARD_MOF) then 
 
-        if ((local_refvfrac_NOTUS.ge.0.5d0).and. &
-            (local_refvfrac_NOTUS.lt.1.0d0)) then
+        if ((refvfrac(1).ge.0.5d0).and. &
+            (refvfrac(1).lt.1.0d0)) then
          local_refvfrac_NOTUS=1.0d0-local_refvfrac_NOTUS
 
          if (local_refvfrac_NOTUS.gt.0.0d0) then
@@ -11205,11 +11205,13 @@ contains
 
          call slope_to_angle_NOTUS(local_nslope_NOTUS, &
                  local_angles_NOTUS,sdim)
-        else if ((local_refvfrac_NOTUS.gt.0.0d0).and. &
-                 (local_refvfrac_NOTUS.le.0.5d0)) then
+
+        else if ((refvfrac(1).gt.0.0d0).and. &
+                 (refvfrac(1).le.0.5d0)) then
          ! do nothing
         else
          print *,"local_refvfrac_NOTUS invalid: ",local_refvfrac_NOTUS
+         print *,"refvfrac(1) Invalid: ",refvfrac(1)
          stop
         endif
 
@@ -25520,7 +25522,7 @@ contains
       if (1.eq.0) then
        call volume_sanity_check()
       endif
-      if (1.eq.0) then
+      if (1.eq.1) then
        sdim=3
        nmax_test=POLYGON_LIST_MAX
        call diagnostic_MOF(sdim,nmax_test)
