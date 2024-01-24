@@ -36,11 +36,11 @@ REAL(KIND=8),PARAMETER            :: r_2=0.10d0  ! radius of flat thread
 !real(amrex_real),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
 integer,PARAMETER             :: N1=4   ! wavy threads
 integer,PARAMETER             :: N2=4   ! Straight threads
-real(amrex_real),PARAMETER    :: omega=pi/(3.0d0/4.0d0) ! 2 pi / 1.5
+real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
 
 !integer,PARAMETER             :: N1=6   ! wavy threads
 !integer,PARAMETER             :: N2=6   ! Straight threads
-!real(amrex_real),PARAMETER    :: omega=2.0d0*pi !3 pi / 1.5
+!real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.0d0 !2 pi / 1.0
 
 integer,parameter             :: P=96  ! number of partition points
 
@@ -224,6 +224,39 @@ xblob5_dbl=xblob5
 yblob5_dbl=yblob5
 zblob5_dbl=zblob5
 allocate(internal_thread_ls(IDNINT(xblob5_dbl),IDNINT(yblob5_dbl),IDNINT(zblob5_dbl)))
+
+if ((xblob4.eq.1.5d0).and.(yblob4.eq.1.5d0)) then
+ if (abs(omega-2.0d0*pi/xblob4).le.1.0D-2) then
+  !do nothing
+ else
+  print *,"expecting omega= 2 pi/xblob4 ",omega
+  print *,"xblob4 ",xblob4
+  stop
+ endif
+ if ((N1.eq.4).and.(N2.eq.4)) then
+  !do nothing
+ else
+  print *,"expecting N1=N2=4: ",N1,N2
+  stop
+ endif
+else if ((xblob4.eq.1.0d0).and.(yblob4.eq.1.0d0)) then
+ if (abs(omega-2.0d0*pi/xblob4).le.1.0D-2) then
+  !do nothing
+ else
+  print *,"expecting omega= 2 pi/xblob4 ",omega
+  print *,"xblob4 ",xblob4
+  stop
+ endif
+ if ((N1.eq.6).and.(N2.eq.6)) then
+  !do nothing
+ else
+  print *,"expecting N1=N2=6: ",N1,N2
+  stop
+ endif
+else
+ print *,"expecting xblob4=yblob4=1.5 or 1.0:",xblob4,yblob4
+ stop
+endif
 
 internal_dx(1)=(xblob4-xblob3)/xblob5
 internal_dx(2)=(yblob4-yblob3)/yblob5
