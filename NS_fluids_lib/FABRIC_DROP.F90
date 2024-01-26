@@ -38,6 +38,10 @@ integer,PARAMETER             :: N1=4   ! wavy threads
 integer,PARAMETER             :: N2=4   ! Straight threads
 real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
 
+!integer,PARAMETER             :: N1=8   ! wavy threads
+!integer,PARAMETER             :: N2=8   ! Straight threads
+!real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
+
 !integer,PARAMETER             :: N1=6   ! wavy threads
 !integer,PARAMETER             :: N2=6   ! Straight threads
 !real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.0d0 !2 pi / 1.0
@@ -225,6 +229,33 @@ yblob5_dbl=yblob5
 zblob5_dbl=zblob5
 allocate(internal_thread_ls(IDNINT(xblob5_dbl),IDNINT(yblob5_dbl),IDNINT(zblob5_dbl)))
 
+if ((xblob3.eq.0.0d0).and.(yblob3.eq.0.0d0)) then
+ !do nothing
+else
+ print *,"expecting xblob3 and yblob3 = 0.0d0 "
+ stop
+endif
+
+if (N1.eq.N2) then
+ !do nothing
+else
+ print *,"expecting N1==N2"
+ stop
+endif
+
+if (abs(N1*xblob4*0.5d0-(probhix-problox)).le.EPS2) then
+ !do nothing
+else
+ print *,"N1 or xblob4 invalid"
+ stop
+endif
+if (abs(N2*yblob4*0.5d0-(probhiy-probloy)).le.EPS2) then
+ !do nothing
+else
+ print *,"N2 or yblob4 invalid"
+ stop
+endif
+
 if ((xblob4.eq.1.5d0).and.(yblob4.eq.1.5d0)) then
  if (abs(omega-2.0d0*pi/xblob4).le.1.0D-2) then
   !do nothing
@@ -233,24 +264,12 @@ if ((xblob4.eq.1.5d0).and.(yblob4.eq.1.5d0)) then
   print *,"xblob4 ",xblob4
   stop
  endif
- if ((N1.eq.4).and.(N2.eq.4)) then
-  !do nothing
- else
-  print *,"expecting N1=N2=4: ",N1,N2
-  stop
- endif
 else if ((xblob4.eq.1.0d0).and.(yblob4.eq.1.0d0)) then
  if (abs(omega-2.0d0*pi/xblob4).le.1.0D-2) then
   !do nothing
  else
   print *,"expecting omega= 2 pi/xblob4 ",omega
   print *,"xblob4 ",xblob4
-  stop
- endif
- if ((N1.eq.6).and.(N2.eq.6)) then
-  !do nothing
- else
-  print *,"expecting N1=N2=6: ",N1,N2
   stop
  endif
 else
