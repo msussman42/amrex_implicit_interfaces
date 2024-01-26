@@ -2462,17 +2462,17 @@ END SUBROUTINE SIMP
          dxright=xstenND(1,dir)-xstenND(0,dir)
 
          if (bfact.eq.1) then
-          if (abs(dxleft-dxright).le.EPS10*1.0D+2*dx(dir)) then
+          if (abs(dxleft-dxright).le.EPS2*dx(dir)) then
            ! do nothing 
           else
-           print *,"xstenND invalid"
+           print *,"xstenND invalid (2468) ",dxleft,dxright
            stop
           endif
          else if (bfact.gt.1) then
           if ((dxleft.gt.zero).and.(dxright.gt.zero)) then
            ! do nothing
           else
-           print *,"xstenND invalid"
+           print *,"xstenND invalid (2475) ",dxleft,dxright
            stop
           endif
            ! the target interpolating box should be centered
@@ -2591,17 +2591,17 @@ END SUBROUTINE SIMP
            dxright=xsten(1,dir)-xsten(0,dir)
           
            if (bfact.eq.1) then
-            if (abs(dxleft-dxright).le.EPS10*1.0D+2*dx(dir)) then
+            if (abs(dxleft-dxright).le.EPS2*dx(dir)) then
              ! do nothing
             else
-             print *,"xsten invalid: ",dxleft,dxright
+             print *,"xsten invalid (2597) : ",dxleft,dxright
              stop
             endif
            else if (bfact.gt.1) then
             if ((dxleft.gt.zero).and.(dxright.gt.zero)) then
              ! do nothing
             else
-             print *,"dxleft or dxright <=0.0:",dxleft,dxright
+             print *,"dxleft or dxright <=0.0 (2604) :",dxleft,dxright
              stop
             endif
            else
@@ -14558,7 +14558,7 @@ END SUBROUTINE SIMP
          if (dir.eq.1) then
           ! do nothing
          else if (dir.eq.0) then
-          if (abs(xsten(-1,1)).le.EPS10*dx(dir+1)) then
+          if (abs(xsten(-1,1)).le.EPS2*dx(dir+1)) then
            at_z_axis=1
           endif
          else
@@ -14569,7 +14569,7 @@ END SUBROUTINE SIMP
          if ((dir.eq.1).or.(dir.eq.SDIM-1)) then
           ! do nothing
          else if (dir.eq.0) then
-          if (abs(xsten(-1,1)).le.EPS10*dx(dir+1)) then
+          if (abs(xsten(-1,1)).le.EPS2*dx(dir+1)) then
            at_z_axis=1
           endif
          else
