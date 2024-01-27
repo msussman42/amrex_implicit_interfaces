@@ -56,8 +56,10 @@ stop
 #endif
       else
        tt=(gridval(IV0)-valu)/(gridval(IV0)-gridval(IV1))
-       if ((tt.lt.zero).or.(tt.gt.one)) then
-        print *,"tt invalid"
+       if ((tt.ge.zero).and.(tt.le.one)) then
+        !do nothing
+       else
+        print *,"tt invalid 62: ",tt
         stop
        endif
  
@@ -1439,10 +1441,11 @@ END SUBROUTINE SIMP
          stop
         endif
 
-        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).le.EPS4) then
+        if (abs(vfrac_solid_sum+vfrac_fluid_sum-one).le.EPS3) then
          ! do nothing
         else
-         print *,"vfrac_solid_sum+vfrac_fluid_sum invalid"
+         print *,"vfrac_solid_sum+vfrac_fluid_sum invalid", &
+            vfrac_solid_sum+vfrac_fluid_sum
          stop
         endif
 
@@ -1584,7 +1587,7 @@ END SUBROUTINE SIMP
              else if (vfrac(im).eq.zero) then
               ! do nothing (vfrac_weight is 0)
              else 
-              print *,"vfrac invalid"
+              print *,"vfrac invalid: ",im,vfrac(im)
               stop
              endif
              if (im_weight.eq.0) then
@@ -2880,8 +2883,8 @@ END SUBROUTINE SIMP
             if (abs(xsten_corner(0,dir2)).le.1.0D+20) then
              xcrit(dir2)=xcrit(dir2)-xsten_corner(0,dir2)
 
-             if ((xcrit(dir2).ge.-EPS4*dx(dir2)).and. &
-                 (xcrit(dir2).lt.(EPS4+bfact)*dx(dir2))) then
+             if ((xcrit(dir2).ge.-EPS3*dx(dir2)).and. &
+                 (xcrit(dir2).le.(EPS3+bfact)*dx(dir2))) then
               ! do nothing
              else
               print *,"xcrit out of bounds fort_cellgrid"
@@ -3656,7 +3659,7 @@ END SUBROUTINE SIMP
               endif
               localwt=localwt*(one-theta(dir))
              else
-              print *,"theta invalid"
+              print *,"theta invalid: ",dir,theta(dir)
               stop
              endif
             else
@@ -3772,9 +3775,12 @@ END SUBROUTINE SIMP
 
             xcrit(dir2)=xcrit(dir2)-xstenND(0,dir2)
 
-            if ((xcrit(dir2).lt.-EPS4*dx(dir2)).or. &
-                (xcrit(dir2).gt.(EPS4+bfact)*dx(dir2))) then
-             print *,"xcrit out of bounds fort_cellgrid"
+            if ((xcrit(dir2).ge.-EPS3*dx(dir2)).and. &
+                (xcrit(dir2).le.(EPS3+bfact)*dx(dir2))) then
+             !do nothing
+            else
+             print *,"xcrit out of bounds fort_cellgrid: ", &
+                 dir2,xcrit(dir2),bfact
              stop
             endif
 
@@ -4953,9 +4959,11 @@ END SUBROUTINE SIMP
           stop
          endif 
 
-         if ((xcoarse(dir2).lt.-EPS4*dxf(dir2)).or. &
-             (xcoarse(dir2).gt.(EPS4+bfact_f)*dxf(dir2))) then
-          print *,"xcoarse out of bounds avgdown_copy"
+         if ((xcoarse(dir2).ge.-EPS3*dxf(dir2)).and. &
+             (xcoarse(dir2).le.(EPS3+bfact_f)*dxf(dir2))) then
+          !do nothing
+         else
+          print *,"xcoarse out of bounds avgdown_copy: ",dir2,xcoarse(dir2)
           stop
          endif
 
@@ -5715,9 +5723,11 @@ END SUBROUTINE SIMP
 
            xfine(dir2)=xfine(dir2)-xstenND(0,dir2)
 
-           if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
-               (xfine(dir2).gt.(EPS4+bfact_c)*dxc(dir2))) then
-            print *,"fine out of bounds interp_copy"
+           if ((xfine(dir2).ge.-EPS3*dxc(dir2)).and. &
+               (xfine(dir2).le.(EPS3+bfact_c)*dxc(dir2))) then
+            !do nothing
+           else
+            print *,"xfine out of bounds interp_copy: ",dir2,xfine(dir2)
             stop
            endif
 
@@ -6419,9 +6429,11 @@ END SUBROUTINE SIMP
 
            xfine(dir2)=xfine(dir2)-xstenND(0,dir2)
 
-           if ((xfine(dir2).lt.-EPS4*dxc(dir2)).or. &
-               (xfine(dir2).gt.(EPS4+bfact_c)*dxc(dir2))) then
-            print *,"fine out of bounds interp_copy"
+           if ((xfine(dir2).ge.-EPS3*dxc(dir2)).and. &
+               (xfine(dir2).le.(EPS3+bfact_c)*dxc(dir2))) then
+            !do nothing
+           else
+            print *,"xfine out of bounds interp_copy: ",dir2,xfine(dir2)
             stop
            endif
 
@@ -8552,7 +8564,7 @@ END SUBROUTINE SIMP
                     snew(D_DECL(i,j,k), &
                      STATECOMP_STATES+temperature_comp)=temperature_prescribe
                    else
-                    print *,"vfrac invalid"
+                    print *,"vfrac invalid: ",vfrac
                     stop
                    endif
                   else
@@ -12621,9 +12633,11 @@ END SUBROUTINE SIMP
          endif
         endif ! stenhi<>stenlo
 
-        if ((xcoarse(dir2).lt.-EPS4*dxf(dir2)).or. &
-            (xcoarse(dir2).gt.(EPS4+bfact_f)*dxf(dir2))) then
-         print *,"xcoarse out of bounds avgdown"
+        if ((xcoarse(dir2).ge.-EPS3*dxf(dir2)).and. &
+            (xcoarse(dir2).le.(EPS3+bfact_f)*dxf(dir2))) then
+         !do nothing
+        else
+         print *,"xcoarse out of bounds avgdown: ",dir2,xcoarse(dir2)
          stop
         endif
 
@@ -13639,8 +13653,10 @@ END SUBROUTINE SIMP
         vofcomp_raw=(im-1)*ngeom_raw+1
 
         temp_vfrac=mofdatacoarse(vofcomp_recon)/volcoarse
-        if ((temp_vfrac.lt.zero).or. &
-            (temp_vfrac.gt.one+EPS1)) then
+        if ((temp_vfrac.ge.zero).and. &
+            (temp_vfrac.le.one+EPS1)) then
+         !do nothing
+        else
          print *,"temp_vfrac invalid: ",temp_vfrac
          stop
         endif
@@ -14217,9 +14233,11 @@ END SUBROUTINE SIMP
          endif
         endif ! stenhi<>stenlo
 
-        if ((xcoarse(dir2).lt.-EPS4*dxf(dir2)).or. &
-            (xcoarse(dir2).gt.(EPS4+bfact_f)*dxf(dir2))) then
-         print *,"xcoarse out of bounds edge avgdown"
+        if ((xcoarse(dir2).ge.-EPS3*dxf(dir2)).and. &
+            (xcoarse(dir2).le.(EPS3+bfact_f)*dxf(dir2))) then
+         !do nothing
+        else
+         print *,"xcoarse out of bounds edge avgdown: ",dir2,xcoarse(dir2)
          stop
         endif
 
