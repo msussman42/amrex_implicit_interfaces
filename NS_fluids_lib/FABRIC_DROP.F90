@@ -34,13 +34,14 @@ REAL(KIND=8),PARAMETER            :: r_2=0.10d0  ! radius of flat thread
 !real(amrex_real),PARAMETER        :: a_wavy=0.4d0
 !real(amrex_real),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
 !real(amrex_real),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
-integer,PARAMETER             :: N1=4   ! wavy threads
-integer,PARAMETER             :: N2=4   ! Straight threads
-real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
 
-!integer,PARAMETER             :: N1=8   ! wavy threads
-!integer,PARAMETER             :: N2=8   ! Straight threads
+!integer,PARAMETER             :: N1=4   ! wavy threads
+!integer,PARAMETER             :: N2=4   ! Straight threads
 !real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
+
+integer,PARAMETER             :: N1=8   ! wavy threads
+integer,PARAMETER             :: N2=8   ! Straight threads
+real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
 
 !integer,PARAMETER             :: N1=6   ! wavy threads
 !integer,PARAMETER             :: N2=6   ! Straight threads
@@ -246,13 +247,13 @@ endif
 if (abs(N1*xblob4*0.5d0-(probhix-problox)).le.EPS2) then
  !do nothing
 else
- print *,"N1 or xblob4 invalid"
+ print *,"N1 or xblob4 invalid: ",N1,xblob4
  stop
 endif
 if (abs(N2*yblob4*0.5d0-(probhiy-probloy)).le.EPS2) then
  !do nothing
 else
- print *,"N2 or yblob4 invalid"
+ print *,"N2 or yblob4 invalid: ",N2,yblob4
  stop
 endif
 
