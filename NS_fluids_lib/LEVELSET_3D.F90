@@ -4547,7 +4547,8 @@ stop
 
       real(amrex_real), INTENT(in), target :: typefab(DIMV(typefab))
       real(amrex_real), pointer :: typefab_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+              LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
            VEL(DIMV(VEL),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
@@ -4688,13 +4689,13 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid: fort_getcolorsum"
+       print *,"dt invalid: fort_getcolorsum: ",dt
        stop
       endif
       if (cur_time_slab.ge.zero) then
        ! do nothing
       else
-       print *,"cur_time_slab invalid"
+       print *,"cur_time_slab invalid: ",cur_time_slab
        stop
       endif
 
@@ -5267,6 +5268,7 @@ stop
          endif
 
          do im=1,num_materials
+
           if ((opposite_color(im).ge.1).and. &
               (opposite_color(im).le.num_colors)) then
 
@@ -5586,14 +5588,14 @@ stop
                 if (den_mat.gt.zero) then
                  ! do nothing
                 else
-                 print *,"den_mat has gone nonpos"
+                 print *,"den_mat has gone nonpos: ",den_mat
                  stop
                 endif
                 TEMP_mat=DEN(D_DECL(i,j,k),dencomp+1)
                 if (TEMP_mat.gt.zero) then
                  ! do nothing
                 else
-                 print *,"TEMP_mat has gone nonpos"
+                 print *,"TEMP_mat has gone nonpos: ",TEMP_mat
                  stop
                 endif
                 call init_massfrac_parm(den_mat,massfrac_parm,im)
@@ -5965,6 +5967,18 @@ stop
                  else if ((distribute_mdot_evenly(iten_shift).eq.1).or. &
                           (distribute_mdot_evenly(iten_shift).eq.2)) then
 
+                  if ((fort_material_type(im_mdot).eq.0).and. &
+                      (fort_material_type(im_opp_mdot).eq.0)) then
+                   !do nothing
+                  else
+                   print *,"expecting distribute_mdot_evenly==0"
+                   print *,"im_mdot,fort_material_type ",
+                     im_mdot,fort_material_type(im_mdot)
+                   print *,"im_opp_mdot,fort_material_type ", &
+                     im_opp_mdot,fort_material_type(im_opp_mdot)
+                   stop
+                  endif
+
                   if (vfrac.ge.half) then
 
                    if (distribute_from_target(iten_shift).eq.0) then
@@ -6016,10 +6030,14 @@ stop
                        mdot(D_DECL(i,j,k),iten_shift)=mdot_part
                       else if ((fort_material_type(im).gt.0).and. &
                                (fort_material_type(im).le.MAX_NUM_EOS)) then
-                       print *,"phase change only for incompressible materials"
+                       print *,"im,fort_material_type ", &
+                            im,fort_material_type(im)
+                       print *,"expecting distribute_mdot_evenly = 0: ", &
+                         iten_shift,distribute_mdot_evenly(iten_shift)
                        stop
                       else 
-                       print *,"fort_material_type(im) invalid"
+                       print *,"fort_material_type(im) invalid: ", &
+                         im,fort_material_type(im)
                        stop
                       endif
                      else
@@ -6041,7 +6059,7 @@ stop
                   else if (vfrac.lt.half) then
                    ! do nothing
                   else
-                   print *,"vfrac invalid"
+                   print *,"vfrac invalid: ",vfrac
                    stop
                   endif
 
@@ -6064,6 +6082,19 @@ stop
                    print *,"distribute_from_target(iten_shift) invalid"
                    stop
                   endif
+
+                  if ((fort_material_type(im_mdot).eq.0).and. &
+                      (fort_material_type(im_opp_mdot).eq.0)) then
+                   !do nothing
+                  else
+                   print *,"expecting constant_volume_mdot==0"
+                   print *,"im_mdot,fort_material_type ",
+                     im_mdot,fort_material_type(im_mdot)
+                   print *,"im_opp_mdot,fort_material_type ", &
+                     im_opp_mdot,fort_material_type(im_opp_mdot)
+                   stop
+                  endif
+
                  else if (constant_volume_mdot(iten_shift).eq.-1) then
                   ! distribute -sum mdot to the dest:
                   im_negate=im_dest
@@ -6075,6 +6106,19 @@ stop
                    print *,"distribute_from_target(iten_shift) invalid"
                    stop
                   endif
+
+                  if ((fort_material_type(im_mdot).eq.0).and. &
+                      (fort_material_type(im_opp_mdot).eq.0)) then
+                   !do nothing
+                  else
+                   print *,"expecting constant_volume_mdot==0"
+                   print *,"im_mdot,fort_material_type ",
+                     im_mdot,fort_material_type(im_mdot)
+                   print *,"im_opp_mdot,fort_material_type ", &
+                     im_opp_mdot,fort_material_type(im_opp_mdot)
+                   stop
+                  endif
+
                  else
                   print *,"constant_volume_mdot(iten_shift) invalid"
                   stop
@@ -6181,7 +6225,7 @@ stop
                     else if (vfrac.lt.half) then
                      ! do nothing
                     else
-                     print *,"vfrac invalid"
+                     print *,"vfrac invalid: ",vfrac
                      stop
                     endif
 
@@ -6268,12 +6312,12 @@ stop
                  else if (im.ne.im_negate) then
                   ! do nothing
                  else
-                  print *,"im or im_negate bust"
+                  print *,"im or im_negate bust: ",im,im_negate
                   stop
                  endif
 
                 else
-                 print *,"latent_heat(iten_shift) invalid"
+                 print *,"latent_heat(iten_shift) invalid: ",LL
                  stop
                 endif
                enddo ! ireverse=0...1
@@ -6401,14 +6445,17 @@ stop
       real(amrex_real), pointer :: mdot_global_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: typefab(DIMV(typefab))
       real(amrex_real), pointer :: typefab_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+              LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: DEN(DIMV(DEN),num_materials*num_state_material)
+      real(amrex_real), INTENT(in), target :: &
+              DEN(DIMV(DEN),num_materials*num_state_material)
       real(amrex_real), pointer :: DEN_ptr(D_DECL(:,:,:),:)
        ! T_after_diffusion-T_adv
       real(amrex_real), INTENT(in), target :: DTDt(DIMV(DTDt),num_materials) 
       real(amrex_real), pointer :: DTDt_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: VOF(DIMV(VOF),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in), target :: &
+              VOF(DIMV(VOF),num_materials*ngeom_recon)
       real(amrex_real), pointer :: VOF_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: color(DIMV(color))
       real(amrex_real), pointer :: color_ptr(D_DECL(:,:,:))
@@ -6455,7 +6502,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid (fort_get_lowmach...): ",dt
        stop
       endif
 
@@ -6551,7 +6598,7 @@ stop
         if (volcell.gt.zero) then
          ! do nothing
         else
-         print *,"volcell invalid"
+         print *,"volcell invalid: ",volcell
          stop
         endif
 
@@ -6595,7 +6642,7 @@ stop
              if (den_mat.gt.zero) then
               ! do nothing
              else
-              print *,"den_mat out of range"
+              print *,"den_mat out of range: ",den_mat
               stop
              endif
 
@@ -6760,7 +6807,8 @@ stop
                    (fort_material_type(im_primary).le.MAX_NUM_EOS)) then
            ! do nothing
           else
-           print *,"fort_material_type(im_primary) invalid"
+           print *,"fort_material_type(im_primary) invalid: ", &
+                im_primary,fort_material_type(im_primary)
            stop
           endif
          else if (is_rigid(im_primary).eq.1) then
