@@ -5264,15 +5264,16 @@ stop
               if (density_old(iprobe).gt.zero) then
                ! do nothing
               else
-               print *,"density_old(iprobe) invalid"
+               print *,"density_old(iprobe) invalid: ",density_old(iprobe)
                stop
               endif
 
              else if ((mtype.ge.1).and.(mtype.le.MAX_NUM_EOS)) then
-              print *,"only spatially uniform density phase change allowed"
-              stop
+
+              density_old(iprobe)=fort_denconst(im_probe)
+
              else
-              print *,"mtype invalid"
+              print *,"mtype invalid: ",mtype
               stop
              endif
 

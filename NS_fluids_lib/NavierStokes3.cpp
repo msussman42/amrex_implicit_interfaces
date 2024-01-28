@@ -5080,7 +5080,7 @@ NavierStokes::ColorSum(
  } else
   amrex::Error("sweep_num or operation_flag invalid");
 
-}  // subroutine ColorSum
+}  // end subroutine ColorSum
 
 void
 NavierStokes::SumRegions(

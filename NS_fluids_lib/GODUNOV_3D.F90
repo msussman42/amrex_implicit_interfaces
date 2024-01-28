@@ -4569,7 +4569,8 @@ stop
       integer, INTENT(in) :: DIMDEC(recon)
       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
+      real(amrex_real), INTENT(in), target :: &
+              JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
       real(amrex_real), pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: mdot(DIMV(mdot))
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
@@ -4643,9 +4644,35 @@ stop
          if (constant_volume_mdot(iten_shift).eq.0) then 
           ! do nothing
          else if (constant_volume_mdot(iten_shift).eq.1) then
+
           ! distribute -sum mdot to the source:
+
+          if ((fort_material_type(im).eq.0).and. &
+              (fort_material_type(im_opp).eq.0)) then
+           !do nothing
+          else
+           print *,"expecting constant_volume_mdot==0"
+           print *,"im,fort_material_type ",im,fort_material_type(im)
+           print *,"im_opp,fort_material_type ", &
+                   im_opp,fort_material_type(im_opp)
+           stop
+          endif
+
          else if (constant_volume_mdot(iten_shift).eq.-1) then
+
           ! distribute -sum mdot to the dest:
+
+          if ((fort_material_type(im).eq.0).and. &
+              (fort_material_type(im_opp).eq.0)) then
+           !do nothing
+          else
+           print *,"expecting constant_volume_mdot==0"
+           print *,"im,fort_material_type ",im,fort_material_type(im)
+           print *,"im_opp,fort_material_type ", &
+                   im_opp,fort_material_type(im_opp)
+           stop
+          endif
+
          else
           print *,"constant_volume_mdot(iten_shift) invalid"
           stop
