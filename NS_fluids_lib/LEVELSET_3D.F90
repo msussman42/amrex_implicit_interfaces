@@ -5972,7 +5972,7 @@ stop
                    !do nothing
                   else
                    print *,"expecting distribute_mdot_evenly==0"
-                   print *,"im_mdot,fort_material_type ",
+                   print *,"im_mdot,fort_material_type ", &
                      im_mdot,fort_material_type(im_mdot)
                    print *,"im_opp_mdot,fort_material_type ", &
                      im_opp_mdot,fort_material_type(im_opp_mdot)
@@ -6088,7 +6088,7 @@ stop
                    !do nothing
                   else
                    print *,"expecting constant_volume_mdot==0"
-                   print *,"im_mdot,fort_material_type ",
+                   print *,"im_mdot,fort_material_type ", &
                      im_mdot,fort_material_type(im_mdot)
                    print *,"im_opp_mdot,fort_material_type ", &
                      im_opp_mdot,fort_material_type(im_opp_mdot)
@@ -6112,7 +6112,7 @@ stop
                    !do nothing
                   else
                    print *,"expecting constant_volume_mdot==0"
-                   print *,"im_mdot,fort_material_type ",
+                   print *,"im_mdot,fort_material_type ", &
                      im_mdot,fort_material_type(im_mdot)
                    print *,"im_opp_mdot,fort_material_type ", &
                      im_opp_mdot,fort_material_type(im_opp_mdot)
