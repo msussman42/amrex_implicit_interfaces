@@ -13259,7 +13259,7 @@ stop
            (density_ceiling(im).ge.fort_denconst(im))) then
         !do nothing
        else
-        print *,"density_ceiling invalid: ",im,density_ceilling(im)
+        print *,"density_ceiling invalid: ",im,density_ceiling(im)
         stop
        endif
 
@@ -14929,9 +14929,9 @@ stop
                ! integral_omega_depart rho F_m
                ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
 
-               if (conserve_total_energy.eq.0) then
+               if (fort_conserve_total_energy.eq.0) then
                 !do nothing
-               else if (conserve_total_energy.eq.1) then
+               else if (fort_conserve_total_energy.eq.1) then
 
                 local_internal=ETcore-KE
                 if (local_internal.gt.zero) then
@@ -14955,11 +14955,11 @@ stop
                 else if (local_internal.le.zero) then
                  ETcore=fort_tempcutoff(im)
                 else
-                 print *,"local_internal invalid:",local_internal
+                 print *,"local_internal invalid:",im,local_internal
                  stop
                 endif
                else 
-                print *,"conserve_total_energy invalid"
+                print *,"fort_conserve_total_energy invalid"
                 stop
                endif
               else
