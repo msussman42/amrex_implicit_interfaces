@@ -10969,6 +10969,9 @@ stop
 
       real(amrex_real) DXMAXLS,cutoff
       real(amrex_real) Eforce_conservative
+      real(amrex_real) Eforce_non_conservative
+      real(amrex_real) averaged_pressure
+
       real(amrex_real) KE_diff
 
       integer i,j,k
@@ -12214,6 +12217,8 @@ stop
         endif 
 
         Eforce_conservative=zero
+        Eforce_non_conservative=zero
+        averaged_pressure=zero
 
         do dir=0,SDIM-1 
          ii=0
@@ -12252,7 +12257,7 @@ stop
          if (hx.gt.zero) then
           ! do nothing
          else
-          print *,"hx invalid"
+          print *,"hx invalid: ",hx
           stop
          endif
 
@@ -12337,7 +12342,7 @@ stop
          if (dencell.gt.zero) then
           ! do nothing
          else
-          print *,"dencell invalid"
+          print *,"dencell invalid: ",dencell
           stop
          endif
 
@@ -12369,6 +12374,13 @@ stop
                 AFACE(1)*uface(1)*pres_face(1))/ &
             (dencell*VOLTERM)
 
+          Eforce_non_conservative=Eforce_non_conservative- &
+            dt*(AFACE(2)*uface(2)- &
+                AFACE(1)*uface(1))/ &
+            (dencell*VOLTERM)
+          averaged_pressure=averaged_pressure+ &
+              half*(pres_face(1)+pres_face(2))
+
           velocity_conservative(dir+1)=u_advect(D_DECL(i,j,k),dir+1)- &
                   dt*(pres_face(2)-pres_face(1))/(dencell*hx)
 
@@ -12378,6 +12390,9 @@ stop
          endif
 
         enddo ! dir=0..sdim-1 (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) div(up)
+
+        Eforce_non_conservative= &
+            Eforce_non_conservative*averaged_pressure/AMREX_SPACEDIM
 
         if ((use_face_pres_cen.eq.0).or. &
             (use_face_pres_cen.eq.1)) then 
@@ -12395,15 +12410,24 @@ stop
          if (use_face_pres_cen.eq.0) then
 
           Eforce_conservative=zero
+          Eforce_non_conservative=zero
           rhs(D_DECL(i,j,k),1)=zero
 
          else if (use_face_pres_cen.eq.1) then
 
-              ! -dt div(up)/rho
-          rhs(D_DECL(i,j,k),1)=Eforce_conservative
+          if (conserve_total_energy.eq.0) then
+           ! -dt div(u)p/rho
+           rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
+          else if (conserve_total_energy.eq.1) then
+           ! -dt div(up)/rho
+           rhs(D_DECL(i,j,k),1)=Eforce_conservative
+          else
+           print *,"conserve_total_energy invalid"
+           stop
+          endif
 
            ! update the temperature
-           ! summary:
+           ! summary (if conserve_total_energy==1):
            ! 1. cell centered advection to get E^advect, UCELL^advect
            ! 2. e^advect + rho UCELL^2^advect/2 = E^advect
            ! 3. E^proj=E^advect-div(up)=e^advect+rho UCELL^2^advect/2-div(up)
@@ -12425,11 +12449,21 @@ stop
            do im=1,num_materials
 
             KE_diff=zero
-            do velcomp=1,SDIM
-             KE_diff=KE_diff+ &
-              half*u_advect(D_DECL(i,j,k),velcomp)**2- &
-              half*veldest(D_DECL(i,j,k),velcomp)**2
-            enddo ! velcomp=1..sdim
+
+            if (conserve_total_energy.eq.0) then
+             !do nothing
+            else if (conserve_total_energy.eq.1) then
+
+             do velcomp=1,SDIM
+              KE_diff=KE_diff+ &
+               half*u_advect(D_DECL(i,j,k),velcomp)**2- &
+               half*veldest(D_DECL(i,j,k),velcomp)**2
+             enddo ! velcomp=1..sdim
+
+            else
+             print *,"conserve_total_energy invalid"
+             stop
+            endif
 
             if (LStest(im).ge.-DXMAXLS) then
 
@@ -12464,7 +12498,7 @@ stop
                if (massfrac_parm(ispec).ge.zero) then
                 ! do nothing
                else
-                print *,"massfrac_parm invalid"
+                print *,"massfrac_parm invalid: ",ispec,massfrac_parm(ispec)
                 stop
                endif
               enddo ! ispec=1..num_species_var
@@ -12493,8 +12527,18 @@ stop
                stop
               endif
 
-              ! e^proj=e^*+(rho U^2^advect/2-rho U^2^proj/2)-dt div(up)
-              internal_e=internal_e+KE_diff+Eforce_conservative
+              ! if (conserve_total_energy==1):
+              !   e^proj=e^*+(rho U^2^advect/2-rho U^2^proj/2)-dt div(up)
+              ! if (conserve_total_energy==0):
+              !   e^proj=e^*-dt div(u)p
+              if (conserve_total_energy.eq.0) then
+               internal_e=internal_e+Eforce_non_conservative
+              else if (conserve_total_energy.eq.1) then
+               internal_e=internal_e+KE_diff+Eforce_conservative
+              else
+               print *,"conserve_total_energy invalid"
+               stop
+              endif
 
               if (internal_e.le.zero) then
                NEW_TEMPERATURE=TEMPERATURE
@@ -12503,7 +12547,7 @@ stop
                 NEW_TEMPERATURE, &
                 internal_e,imattype,im)
               else
-               print *,"internal_e bust"
+               print *,"internal_e bust: ",im,internal_e
                stop
               endif
 
@@ -12511,7 +12555,8 @@ stop
                dendest(D_DECL(i,j,k),ibase+ENUM_TEMPERATUREVAR+1)= &
                        NEW_TEMPERATURE
               else
-               print *,"NEW_TEMPERATURE must be positive"
+               print *,"NEW_TEMPERATURE must be positive: ", &
+                im,NEW_TEMPERATURE
                stop
               endif
 
@@ -12524,7 +12569,7 @@ stop
             else if (LStest(im).le.-DXMAXLS) then
              ! do nothing
             else
-             print *,"LStest(im) is NaN"
+             print *,"LStest(im) is NaN: ",im,LStest(im)
              stop
             endif 
            enddo ! im=1..num_materials

@@ -867,6 +867,8 @@ int NavierStokes::solidheat_flag=0;
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_type_interface;
 
+int NavierStokes::conserve_total_energy=0; 
+
 //0 incomp; material_type_evap needed for the Kassemi model.
 Vector<int> NavierStokes::material_type_evap;
 Vector<int> NavierStokes::material_type_lowmach;
@@ -1454,6 +1456,8 @@ void fortran_parameters() {
  NavierStokes::material_type.resize(NavierStokes::num_materials);
 
  NavierStokes::material_type_interface.resize(NavierStokes::num_interfaces);
+
+ NavierStokes::conserve_total_energy=0;
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
@@ -2045,6 +2049,7 @@ void fortran_parameters() {
   &NavierStokes::num_materials,
   NavierStokes::material_type.dataPtr(),
   NavierStokes::material_type_interface.dataPtr(),
+  &NavierStokes::conserve_total_energy,
   &NavierStokes::num_interfaces,
   DrhoDTtemp.dataPtr(),
   tempconst_temp.dataPtr(),
@@ -3140,6 +3145,8 @@ NavierStokes::read_params ()
 
     material_type.resize(num_materials);
     material_type_interface.resize(num_interfaces);
+
+    conserve_total_energy=0;
 
     pp.getarr("material_type",material_type,0,num_materials);
     material_type_evap.resize(num_materials);
@@ -5480,6 +5487,8 @@ NavierStokes::read_params ()
 
      std::cout << "unscaled_min_curvature_radius=" << 
 	      unscaled_min_curvature_radius << '\n';
+
+     std::cout << "conserve_total_energy=" << conserve_total_energy << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "hardwire_T_gamma i=" << i << "  " << 

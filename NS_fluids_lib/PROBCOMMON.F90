@@ -337,6 +337,8 @@ implicit none
 !   fort_angular_velocity
 ! added December 10,
 !   fort_material_type_interface
+! added January 30,
+!   fort_conserve_total_energy
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1

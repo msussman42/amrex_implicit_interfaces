@@ -4314,7 +4314,8 @@ stop
       real(amrex_real), pointer :: conserve_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: den(DIMV(den),nc_den)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: mom_den(DIMV(mom_den),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              mom_den(DIMV(mom_den),num_materials)
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
@@ -4453,23 +4454,38 @@ stop
             dencore(im)*local_temperature
           else if (is_compressible_mat(im).eq.1) then
 
-           call init_massfrac_parm(dencore(im),massfrac_parm,im)
-           do ispecies=1,num_species_var
-            massfrac_parm(ispecies)=den(D_DECL(i,j,k),tempcomp+ispecies)
-            if (massfrac_parm(ispecies).ge.zero) then
-             ! do nothing
-            else
-             print *,"massfrac_parm(ispecies) invalid"
-             stop
-            endif
-           enddo
+           if (fort_conserve_total_energy.eq.0) then
+
+            ! den * T
+            conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
+             dencore(im)*local_temperature
+
+           else if (fort_conserve_total_energy.eq.1) then
+
+            call init_massfrac_parm(dencore(im),massfrac_parm,im)
+            do ispecies=1,num_species_var
+             massfrac_parm(ispecies)=den(D_DECL(i,j,k),tempcomp+ispecies)
+             if (massfrac_parm(ispecies).ge.zero) then
+              ! do nothing
+             else
+              print *,"massfrac_parm(ispecies) invalid: ", &
+                 ispecies,massfrac_parm(ispecies)
+              stop
+             endif
+            enddo
 
             ! den * (u dot u/2 + cv T)
-           call INTERNAL_material(dencore(im),massfrac_parm, &
-            local_temperature,local_internal, &
-            fort_material_type(im),im)
-           conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
+            call INTERNAL_material(dencore(im),massfrac_parm, &
+             local_temperature,local_internal, &
+             fort_material_type(im),im)
+            conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
              dencore(im)*(KE+local_internal) 
+
+           else 
+            print *,"fort_conserve_total_energy invalid"
+            stop
+           endif
+
           else
            print *,"is_compressible_mat invalid"
            stop
@@ -13232,14 +13248,18 @@ stop
         stop
        endif
 
-       if ((density_floor(im).lt.zero).or. &
-           (density_floor(im).ge.fort_denconst(im))) then
-        print *,"density_floor invalid"
+       if ((density_floor(im).ge.zero).and. &
+           (density_floor(im).lt.fort_denconst(im))) then
+        !do nothing
+       else
+        print *,"density_floor invalid: ",im,density_floor(im);
         stop
        endif
-       if ((density_ceiling(im).le.zero).or. &
-           (density_ceiling(im).lt.fort_denconst(im))) then
-        print *,"density_ceiling invalid"
+       if ((density_ceiling(im).gt.zero).and. &
+           (density_ceiling(im).ge.fort_denconst(im))) then
+        !do nothing
+       else
+        print *,"density_ceiling invalid: ",im,density_ceilling(im)
         stop
        endif
 
@@ -13249,7 +13269,7 @@ stop
           (all_incomp.eq.1)) then
        ! do nothing
       else
-       print *,"all_incomp invalid"
+       print *,"all_incomp invalid: ",all_incomp
        stop
       endif
 
@@ -14897,7 +14917,7 @@ stop
               if (massdepart.gt.zero) then
                ! do nothing
               else
-               print *,"massdepart invalid"
+               print *,"massdepart invalid: ",massdepart
                stop
               endif 
               ! integral_omega_depart rho T F_m /
@@ -14908,27 +14928,39 @@ stop
                ! integral_omega_depart rho (u dot u/2 + c_v T) F_m /
                ! integral_omega_depart rho F_m
                ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
-               local_internal=ETcore-KE
-               if (local_internal.gt.zero) then
 
-                call init_massfrac_parm(dencore(im),massfrac_parm,im)
-                do ispecies=1,num_species_var
-                 speccomp_data=(im-1)*num_state_material+num_state_base+ &
+               if (conserve_total_energy.eq.0) then
+                !do nothing
+               else if (conserve_total_energy.eq.1) then
+
+                local_internal=ETcore-KE
+                if (local_internal.gt.zero) then
+
+                 call init_massfrac_parm(dencore(im),massfrac_parm,im)
+                 do ispecies=1,num_species_var
+                  speccomp_data=(im-1)*num_state_material+num_state_base+ &
                     ispecies
-                 massfrac_parm(ispecies)= &
+                  massfrac_parm(ispecies)= &
                     snew_hold(STATECOMP_STATES+speccomp_data)
-                 if (massfrac_parm(ispecies).ge.zero) then
-                  ! do nothing
-                 else
-                  print *,"massfrac_parm(ispecies) invalid"
-                  stop
-                 endif
-                enddo ! ispecies=1..num_species_var
+                  if (massfrac_parm(ispecies).ge.zero) then
+                   ! do nothing
+                  else
+                   print *,"massfrac_parm(ispecies) invalid"
+                   stop
+                  endif
+                 enddo ! ispecies=1..num_species_var
 
-                call TEMPERATURE_material(dencore(im),massfrac_parm, &
-                 ETcore,local_internal,fort_material_type(im),im) 
-               else
-                ETcore=fort_tempcutoff(im)
+                 call TEMPERATURE_material(dencore(im),massfrac_parm, &
+                  ETcore,local_internal,fort_material_type(im),im) 
+                else if (local_internal.le.zero) then
+                 ETcore=fort_tempcutoff(im)
+                else
+                 print *,"local_internal invalid:",local_internal
+                 stop
+                endif
+               else 
+                print *,"conserve_total_energy invalid"
+                stop
                endif
               else
                print *,"is_compressible_mat invalid"

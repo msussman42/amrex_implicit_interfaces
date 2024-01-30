@@ -361,6 +361,8 @@ public:
     static Vector<int> material_type; // 0 incomp   
     static Vector<int> material_type_interface; 
 
+    static int conserve_total_energy; //default=0
+
     static int num_species_var; 
     static int num_materials;
     static int num_interfaces;

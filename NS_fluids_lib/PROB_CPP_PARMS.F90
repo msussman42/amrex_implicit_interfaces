@@ -380,6 +380,7 @@ stop
         ccnum_materials, &
         ccmaterial_type, &
         ccmaterial_type_interface, &
+        ccconserve_total_energy, &
         ccnten, &
         ccDrhoDT, &
         cctempconst, &
@@ -539,6 +540,7 @@ stop
       
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type_interface(ccnten)
+      integer, INTENT(in) :: ccconserve_total_energy
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccinitial_temperature(ccnum_materials)
@@ -1618,6 +1620,8 @@ stop
        stop
       endif
 
+      fort_conserve_total_energy=ccconserve_total_energy
+
       do iten=1,num_interfaces
 
        fort_material_type_interface(iten)=ccmaterial_type_interface(iten)
@@ -1771,6 +1775,8 @@ stop
        print *,"fort_visc_coef= ",fort_visc_coef
 
        print *,"fort_angular_velocity= ",fort_angular_velocity
+
+       print *,"fort_conserve_total_energy= ",fort_conserve_total_energy
 
        do iten=1,num_interfaces
 
