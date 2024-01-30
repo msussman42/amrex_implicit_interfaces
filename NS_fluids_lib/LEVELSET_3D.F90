@@ -12415,19 +12415,19 @@ stop
 
          else if (use_face_pres_cen.eq.1) then
 
-          if (conserve_total_energy.eq.0) then
+          if (fort_conserve_total_energy.eq.0) then
            ! -dt div(u)p/rho
            rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
-          else if (conserve_total_energy.eq.1) then
+          else if (fort_conserve_total_energy.eq.1) then
            ! -dt div(up)/rho
            rhs(D_DECL(i,j,k),1)=Eforce_conservative
           else
-           print *,"conserve_total_energy invalid"
+           print *,"fort_conserve_total_energy invalid"
            stop
           endif
 
            ! update the temperature
-           ! summary (if conserve_total_energy==1):
+           ! summary (if fort_conserve_total_energy==1):
            ! 1. cell centered advection to get E^advect, UCELL^advect
            ! 2. e^advect + rho UCELL^2^advect/2 = E^advect
            ! 3. E^proj=E^advect-div(up)=e^advect+rho UCELL^2^advect/2-div(up)
@@ -12450,9 +12450,9 @@ stop
 
             KE_diff=zero
 
-            if (conserve_total_energy.eq.0) then
+            if (fort_conserve_total_energy.eq.0) then
              !do nothing
-            else if (conserve_total_energy.eq.1) then
+            else if (fort_conserve_total_energy.eq.1) then
 
              do velcomp=1,SDIM
               KE_diff=KE_diff+ &
@@ -12461,7 +12461,7 @@ stop
              enddo ! velcomp=1..sdim
 
             else
-             print *,"conserve_total_energy invalid"
+             print *,"fort_conserve_total_energy invalid"
              stop
             endif
 
@@ -12527,16 +12527,16 @@ stop
                stop
               endif
 
-              ! if (conserve_total_energy==1):
+              ! if (fort_conserve_total_energy==1):
               !   e^proj=e^*+(rho U^2^advect/2-rho U^2^proj/2)-dt div(up)
-              ! if (conserve_total_energy==0):
+              ! if (fort_conserve_total_energy==0):
               !   e^proj=e^*-dt div(u)p
-              if (conserve_total_energy.eq.0) then
+              if (fort_conserve_total_energy.eq.0) then
                internal_e=internal_e+Eforce_non_conservative
-              else if (conserve_total_energy.eq.1) then
+              else if (fort_conserve_total_energy.eq.1) then
                internal_e=internal_e+KE_diff+Eforce_conservative
               else
-               print *,"conserve_total_energy invalid"
+               print *,"fort_conserve_total_energy invalid"
                stop
               endif
 
