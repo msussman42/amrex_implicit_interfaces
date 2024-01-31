@@ -1274,27 +1274,26 @@ if ((num_materials.eq.3).and. &
   tagflag=0
   LS_LIQUID=lsnew_ptr(D_DECL(i,j,k),1)
   LS_FABRIC=lsnew_ptr(D_DECL(i,j,k),3)
+  F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
+
   if (LS_FABRIC.ge.zero) then
+
    !do nothing
+
   else if (LS_FABRIC.lt.zero) then
-   if (LS_LIQUID.ge.zero) then
+
+   if ((F_LIQUID.ge.0.1d0).and.(F_LIQUID.le.0.9d0)) then
     rflag=1.0d0
     tagflag=1
-   else if (LS_LIQUID.lt.zero) then
-    F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
-    if (F_LIQUID.ge.0.1d0) then
-     rflag=1.0d0
-     tagflag=1
-    else if (F_LIQUID.lt.0.1d0) then
-     ! do nothing
-    else
-     print *,"F_LIQUID invalid: ",F_LIQUID
-     stop
-    endif
+   else if ((F_LIQUID.ge.-EPS1).and.(F_LIQUID.le.0.1d0)) then
+    ! do nothing
+   else if ((F_LIQUID.ge.0.9d0).and.(F_LIQUID.le.1.0d0+EPS1)) then
+    ! do nothing
    else
-    print *,"LS_LIQUID invalid: ",LS_LIQUID
+    print *,"F_LIQUID invalid: ",F_LIQUID
     stop
    endif
+           
   else
    print *,"LS_FABRIC invalid: ",LS_FABRIC
    stop
