@@ -1282,6 +1282,17 @@ if ((num_materials.eq.3).and. &
 
   else if (LS_FABRIC.lt.zero) then
 
+   if (abs(LS_LIQUID).le.local_delta(1)) then
+    rflag=1.0d0
+    tagflag=1
+   else if (abs(LS_LIQUID).ge.local_delta(1)) then
+    !do nothing
+   else
+    print *,"LS_LIQUID invalid: ",LS_LIQUID
+    print *,"local_delta(1) :",local_delta(1)
+    stop
+   endif
+ 
    if ((F_LIQUID.ge.0.1d0).and.(F_LIQUID.le.0.9d0)) then
     rflag=1.0d0
     tagflag=1
