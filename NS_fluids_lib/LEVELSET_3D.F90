@@ -2685,8 +2685,11 @@ stop
                   enddo ! im_opp=1..num_materials
 
                   total_facearea_mat(im)=multi_area(im)
+                 else if (total_facearea.eq.zero) then
+                  print *,"warning:total_facearea(2689)=",total_facearea
                  else
-                  print *,"opposite material bad:total_facearea=",total_facearea
+                  print *,"opposite material bad:total_facearea(2691)=", &
+                    total_facearea
                   stop
                  endif
                 else
@@ -2942,8 +2945,11 @@ stop
                   enddo ! im_opp
 
                   total_facearea_mat(im)=multi_area(im)
+                 else if (total_facearea.eq.zero) then
+                  print *,"warning:total_facearea (2948)=",total_facearea
                  else
-                  print *,"opposite material bad:total_facearea=",total_facearea
+                  print *,"opposite material bad:total_facearea(2951)=", &
+                    total_facearea
                   stop
                  endif
                 else
@@ -2993,7 +2999,7 @@ stop
                 stop
                endif
               else
-               print *,"multi_volume(im) invalid"
+               print *,"multi_volume(im) invalid: ",im,multi_volume(im)
                stop
               endif
  
@@ -3032,8 +3038,10 @@ stop
             ! do nothing
            else if ((areafrac.gt.zero).and. &
                     (areafrac.le.one)) then
-            if (total_facearea_mat(im).le.zero) then
-             print *,"total_facearea_mat(im) invalid"
+            if (total_facearea_mat(im).gt.zero) then 
+             !do nothing
+            else
+             print *,"total_facearea_mat(im) invalid: ",total_facearea_mat(im)
              stop
             endif
             local_facearea_dimensional(im,im_opp)= &
