@@ -8904,96 +8904,73 @@ void NavierStokes::VOF_Recon_ALL(
  BLProfiler bprof(local_caller_string);
 #endif
 
- int recon_iter=0;
- int recon_error_met=0;
  int number_centroid=0;
  Real delta_centroid=0.0;
 
- while (recon_error_met==0) {
+ // go from coarsest to finest so that SLOPE_RECON_MF
+ // can have proper BC.
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  int number_centroid_level=0;
+  Real delta_centroid_level=0.0;
+  ns_level.VOF_Recon(ngrow,time,
+   local_update_flag,
+   init_vof_prev_time,
+   delta_centroid_level,
+   number_centroid_level);
+  delta_centroid+=delta_centroid_level;
+  number_centroid+=number_centroid_level;
+ } // for (int ilev=level;ilev<=finest_level;ilev++) 
 
-  number_centroid=0;
-  delta_centroid=0.0;
+ Real single_centroid_diff=0.0;
+ if (number_centroid==0) {
+  //do nothing
+ } else if (number_centroid>0) {
+  single_centroid_diff=delta_centroid/number_centroid;
+ } else
+  amrex::Error("number_centroid invalid");
 
-  // go from coarsest to finest so that SLOPE_RECON_MF
-  // can have proper BC.
-  for (int ilev=level;ilev<=finest_level;ilev++) {
+ if (local_update_flag==RECON_UPDATE_NULL) {
+
+  //do nothing
+
+ } else if (local_update_flag==RECON_UPDATE_STATE_ERR) {
+
+  avgDownError_ALL(); //updates the new data.
+
+ } else if (local_update_flag==RECON_UPDATE_STATE_CENTROID) {
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
-   int number_centroid_level=0;
-   Real delta_centroid_level=0.0;
-   ns_level.VOF_Recon(ngrow,time,
-    local_update_flag,
-    init_vof_prev_time,
-    delta_centroid_level,
-    number_centroid_level);
-   delta_centroid+=delta_centroid_level;
-   number_centroid+=number_centroid_level;
-  } // for (int ilev=level;ilev<=finest_level;ilev++) 
+   if (ilev<finest_level) {
+    ns_level.MOFavgDown();
+   }
+  } // ilev=finest_level ... level
 
-  recon_iter++;
+ } else if (local_update_flag==RECON_UPDATE_STATE_ERR_AND_CENTROID) {
 
-  Real single_centroid_diff=0.0;
-  if (number_centroid==0) {
-   //do nothing
-  } else if (number_centroid>0) {
-   single_centroid_diff=delta_centroid/number_centroid;
-  } else
-   amrex::Error("number_centroid invalid");
-
-  if (local_update_flag==RECON_UPDATE_NULL) {
-
-   recon_error_met=1;
-
-  } else if (local_update_flag==RECON_UPDATE_STATE_ERR) {
-
-   recon_error_met=1;
-   avgDownError_ALL(); //updates the new data.
-
-  } else if (local_update_flag==RECON_UPDATE_STATE_CENTROID) {
-
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    if (ilev<finest_level) {
-     ns_level.MOFavgDown();
-    }
-   } // ilev=finest_level ... level
-
-   if ((single_centroid_diff<=CPP_EPS_8_5)||
-       (recon_iter>=continuous_mof)) {
-    recon_error_met=1;
-   } 
-
-  } else if (local_update_flag==RECON_UPDATE_STATE_ERR_AND_CENTROID) {
-
-   avgDownError_ALL(); //updates the new data.
+  avgDownError_ALL(); //updates the new data.
 		      
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    NavierStokes& ns_level=getLevel(ilev);
-    if (ilev<finest_level) {
-     ns_level.MOFavgDown();
-    }
-   } // ilev=finest_level ... level
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
+   if (ilev<finest_level) {
+    ns_level.MOFavgDown();
+   }
+  } // ilev=finest_level ... level
 
-   if ((single_centroid_diff<=CPP_EPS_8_5)||
-       (recon_iter>=continuous_mof)) {
-    recon_error_met=1;
-   } 
+ } else
+  amrex::Error("local_update_flag invalid");
 
-  } else
-   amrex::Error("local_update_flag invalid");
-
-  if (verbose>0) {
-   if (ParallelDescriptor::IOProcessor()) {
-    std::cout << "recon_iter= " << recon_iter << '\n';
-    std::cout << "continuous_mof= " << continuous_mof << '\n';
-    std::cout << "number_centroid= " << number_centroid << '\n';
-    std::cout << "single_centroid_diff= " << single_centroid_diff << '\n';
-   } //IOProc?
-  } else if (verbose==0) {
-   //do nothing
-  } else
-   amrex::Error("verbose invalid");
-
- } //while (recon_error_met==0) 
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "continuous_mof= " << continuous_mof << '\n';
+   std::cout << "number_centroid= " << number_centroid << '\n';
+   std::cout << "single_centroid_diff= " << single_centroid_diff << '\n';
+  } //IOProc?
+ } else if (verbose==0) {
+  //do nothing
+ } else
+  amrex::Error("verbose invalid");
 
 #if (NS_profile_solver==1)
  bprof.stop();
