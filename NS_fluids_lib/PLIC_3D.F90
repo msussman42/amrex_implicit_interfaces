@@ -252,9 +252,8 @@ stop
        print *,"ngrow invalid in fort_sloperecon"
        stop
       endif
-      if ((continuous_mof.eq.STANDARD_MOF).or. & ! MOF
-          ((continuous_mof.ge.CMOF_X).and. &
-           (continuous_mof.le.CMOF_MAXITER))) then ! CMOF
+      if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
+          (continuous_mof.eq.CMOF_X)) then !CMOF
        ! do nothing
       else
        print *,"continuous_mof invalid (fort_sloperecon): ",continuous_mof
@@ -663,8 +662,7 @@ stop
 
          ! supercell for centroid cost function.
          ! center cell for volume constraint.
-        if ((continuous_mof_parm.ge.CMOF_X).and. &
-            (continuous_mof_parm.le.CMOF_MAXITER)) then
+        if (continuous_mof_parm.eq.CMOF_X) then
   
          volume_super=zero ! volume of the extended region
          volume_super_mofdata=zero !same as volume_super, except by im_fluid.
@@ -973,8 +971,7 @@ stop
           grid_level, &
           SDIM)
 
-         if ((continuous_mof_parm.ge.CMOF_X).and. &
-             (continuous_mof_parm.le.CMOF_MAXITER)) then
+         if (continuous_mof_parm.eq.CMOF_X) then
            ! center cell centroids.
           do im=1,num_materials
            vofcomprecon=(im-1)*ngeom_recon+1
@@ -1012,8 +1009,7 @@ stop
          !  the CMOF stencil, just do one step:
          ! 1. find CMOF reconstruction using CMOF centroids and MOF 
          !    (cell center) volumes.
-        else if ((continuous_mof_parm.ge.CMOF_X).and. &
-                 (continuous_mof_parm.le.CMOF_MAXITER).and. &
+        else if ((continuous_mof_parm.eq.CMOF_X).and. &
                  (num_fluid_materials_in_stencil.ge.3).and. &
                  (num_fluid_materials_in_stencil.gt. &
                   num_fluid_materials_in_cell)) then
@@ -1887,10 +1883,10 @@ stop
        if (1.eq.0) then
         if (continuous_mof.eq.STANDARD_MOF) then
          cmof_idx=STANDARD_MOF
-        else if (continuous_mof.ge.CMOF_X) then
+        else if (continuous_mof.eq.CMOF_X) then
          cmof_idx=CMOF_X
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof invalid: ",continuous_mof
          stop
         endif
         call training_array(D_DECL(i,j,k),cmof_idx)% &
@@ -1987,10 +1983,10 @@ stop
 
        if (continuous_mof.eq.STANDARD_MOF) then
         cmof_idx=STANDARD_MOF
-       else if (continuous_mof.ge.CMOF_X) then
+       else if (continuous_mof.eq.CMOF_X) then
         cmof_idx=CMOF_X
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop
        endif
        call training_array(D_DECL(i,j,k),cmof_idx)% &

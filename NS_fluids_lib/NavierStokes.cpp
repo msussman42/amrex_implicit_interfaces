@@ -2749,15 +2749,16 @@ NavierStokes::read_params ()
     pp.queryAdd("continuous_mof",continuous_mof);
     if (continuous_mof==2) {
      amrex::Error("continuous_mof==2 is an anachronism, set to 1");
-    } else if (continuous_mof>=STANDARD_MOF) {
+    } else if (continuous_mof==STANDARD_MOF) {
+     //do nothing
+    } else if (continuous_mof==CMOF_X) {
      //do nothing
     } else
      amrex::Error("continuous_mof invalid");
 
     pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
     if (update_centroid_after_recon==0) {
-     if (continuous_mof>CMOF_X)
-      amrex::Error("expecting update_centroid_after_recon=1");
+     //do nothing
     } else if (update_centroid_after_recon==1) {
      if (continuous_mof==STANDARD_MOF)
       amrex::Error("expecting update_centroid_after_recon=0");
