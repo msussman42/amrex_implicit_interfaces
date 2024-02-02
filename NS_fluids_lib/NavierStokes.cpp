@@ -14011,6 +14011,8 @@ NavierStokes::level_phase_change_convertALL() {
       ns_level.level_phase_change_convert(im,im_opp,
        i_phase_change,n_phase_change);
 
+      interface_touch_flag=1; //level_phase_change_convertALL
+
        // spectral_override==0 => always low order.
       ns_level.avgDown(LS_Type,0,num_materials,LOW_ORDER_AVGDOWN);
       ns_level.MOFavgDown();
@@ -14075,6 +14077,8 @@ NavierStokes::level_phase_change_convertALL() {
        //scomp=0
       GetStateFromLocalALL(HOLD_LS_DATA_MF,ngrow_distance,
          0,num_materials*(AMREX_SPACEDIM+1),LS_Type,scompBC_map_LS);
+
+      interface_touch_flag=1; //level_phase_change_convertALL
 
       int init_vof_prev_time=0;
         // Fluids tessellate; solids overlay; output:SLOPE_RECON_MF
@@ -17036,6 +17040,8 @@ NavierStokes::SEM_scalar_advection(int init_fluxes,int source_term,
 
 void 
 NavierStokes::split_scalar_advectionALL() { 
+
+ interface_touch_flag=1; //split_scalar_advectionALL
 
  std::string local_caller_string="split_scalar_advectionALL";
 
@@ -22642,7 +22648,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
   error_update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID;  
  } else
   amrex::Error("local_caller_string invalid 22091");
-	
+
+ interface_touch_flag=1; //prepare_post_process
+
   //output:SLOPE_RECON_MF
  VOF_Recon_ALL(
   local_caller_string, //prepare_post_process
@@ -24478,6 +24486,8 @@ void NavierStokes::putStateDIV_DATA(
 void
 NavierStokes::makeStateDistALL(int keep_all_interfaces,
    int ngrow_make_distance_accept) {
+
+ interface_touch_flag=1; //makeStateDistALL
 
  std::string local_caller_string="makeStateDistALL";
 
