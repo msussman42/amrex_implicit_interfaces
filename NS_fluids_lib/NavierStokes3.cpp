@@ -444,7 +444,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
 #endif
 
- interface_touch_flag=1;
+ interface_touch_flag=1; //nonlinear_advection
 
  //output:SLOPE_RECON_MF
  VOF_Recon_ALL( 
@@ -477,7 +477,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
     advect_time_slab=cur_time_slab;
 
-    interface_touch_flag=1;
+    interface_touch_flag=1; //nonlinear_advection
 
      //output::SLOPE_RECON_MF
     VOF_Recon_ALL(
@@ -501,7 +501,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
       local_truncate,local_caller_string);
 
-    interface_touch_flag=1;
+    interface_touch_flag=1; //nonlinear_advection
 
      // velocity and pressure
     avgDownALL(State_Type,STATECOMP_VEL,
@@ -620,7 +620,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
      ns_level.FSI_make_distance(cur_time_slab,dt_slab);
     } // ilev
 
-    interface_touch_flag=1;
+    interface_touch_flag=1; //nonlinear_advection
 
     for (int ilev=level;ilev<=finest_level;ilev++) {
      NavierStokes& ns_level=getLevel(ilev);
@@ -637,7 +637,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  regenerate_from_eulerian(cur_time_slab);
 
- interface_touch_flag=1;
+ interface_touch_flag=1; //nonlinear_advection
 
  if (1==0) {
    // S_new is level 0 data
@@ -666,7 +666,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
    local_truncate,local_caller_string);
 
- interface_touch_flag=1;
+ interface_touch_flag=1; //nonlinear_advection
 
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
@@ -1023,6 +1023,8 @@ Real NavierStokes::advance(Real time,Real dt) {
    //do {...} while (advance_status==0);
   do {
 
+   interface_touch_flag=1; //advance
+
    SDC_outer_sweeps=0;
    slab_step=ns_time_order-1;
    SDC_setup_step(); 
@@ -1150,6 +1152,8 @@ Real NavierStokes::advance(Real time,Real dt) {
    //components: 0..bfact_time_order-1
    CopyNewToOldALL();
 
+   interface_touch_flag=1; //advance
+
    // new_time=time+dt_new  old_time=time
    for (int ilev=level;ilev<=finest_level;ilev++) {
     NavierStokes& ns_level=getLevel(ilev);
@@ -1181,6 +1185,9 @@ Real NavierStokes::advance(Real time,Real dt) {
     dt_new=0.5*dt_new;
      //copy component "0" to components 1..bfact_time_order.
     CopyOldToNewALL();
+
+    interface_touch_flag=1; //advance
+
     for (int ilev=level;ilev<=finest_level;ilev++) {
      NavierStokes& ns_level=getLevel(ilev);
       // new_time=lower_slab_time  old_time=lower_slab_time-dt_new
@@ -1945,7 +1952,7 @@ void NavierStokes::phase_change_code_segment(
  delete_array(BURNING_VELOCITY_MF);
  delete_array(nodevel_MF);
 
- interface_touch_flag=1;
+ interface_touch_flag=1; //phase_change_code_segment
 
  int init_vof_prev_time=0;
  //output:SLOPE_RECON_MF
@@ -2276,7 +2283,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
   slab_step=0;
   SDC_setup_step();
-  interface_touch_flag=1;
+  interface_touch_flag=1; //do_the_advance
 
   if ((SDC_outer_sweeps>=0)&&(SDC_outer_sweeps<ns_time_order)) {
    // do nothing
@@ -2319,7 +2326,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        ((slab_step<=slab_step_end)&&(advance_status==1));
        slab_step++) {
 
-   interface_touch_flag=1;
+   interface_touch_flag=1; //do_the_advance
 
    SDC_setup_step();
 
