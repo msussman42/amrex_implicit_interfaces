@@ -80,6 +80,8 @@ int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;
 int  NavierStokes::num_divu_outer_sweeps=1;
 
+int NavierStokes::interface_touch_flag=1;
+
 Real NavierStokes::prev_time_slab=0.0;
 Real NavierStokes::cur_time_slab=0.0;
 Real NavierStokes::vel_time_slab=0.0;
@@ -9496,6 +9498,8 @@ void NavierStokes::post_restart() {
 void
 NavierStokes::initData () {
 
+ interface_touch_flag=1; //initData()
+
  std::string local_caller_string="initData";
 
  int bfact_space=parent->Space_blockingFactor(level);
@@ -9969,6 +9973,8 @@ NavierStokes::init(
   AmrLevel & old,
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
+
+ interface_touch_flag=1; //init(old,ba_in,dmap_in)
  
  const int max_level = parent->maxLevel();
 
@@ -10156,6 +10162,8 @@ void
 NavierStokes::init(
   const BoxArray& ba_in,  // BoxArray of "this" (new amr_level)
   const DistributionMapping& dmap_in) { // dmap of "this" (new amr_level)
+
+ interface_touch_flag=1; //init(ba_in,dmap_in)
 
  if (level==0)
   amrex::Error("this init only called for level>0");
