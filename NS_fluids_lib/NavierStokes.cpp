@@ -7492,9 +7492,9 @@ void NavierStokes::init_FSI_GHOST_MAC_MF(int dealloc_history) {
      ARLIM(fluidvelfab.loVect()),ARLIM(fluidvelfab.hiVect()),
      solidvelfab.dataPtr(),
      ARLIM(solidvelfab.loVect()),ARLIM(solidvelfab.hiVect()),
-     ghostsolidvelfab.dataPtr(),
+     ghostsolidvelfab.dataPtr(), //intent(out)
      ARLIM(ghostsolidvelfab.loVect()),ARLIM(ghostsolidvelfab.hiVect()),
-     histfab.dataPtr(),
+     histfab.dataPtr(), //intent(out)
      ARLIM(histfab.loVect()),ARLIM(histfab.hiVect()),
      &nhistory_local,
      &visc_coef);

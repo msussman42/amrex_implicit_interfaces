@@ -491,6 +491,8 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
    split_scalar_advectionALL();
 
+   interface_touch_flag=1; //nonlinear_advection
+
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
      // in: nonlinear_advection
@@ -500,8 +502,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     int local_truncate=0;
     prescribe_solid_geometryALL(prev_time_slab,renormalize_only,
       local_truncate,local_caller_string);
-
-    interface_touch_flag=1; //nonlinear_advection
 
      // velocity and pressure
     avgDownALL(State_Type,STATECOMP_VEL,
