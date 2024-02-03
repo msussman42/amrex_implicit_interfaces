@@ -6568,10 +6568,9 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   int renormalize_only,int local_truncate,
   const std::string& caller_string) {
 
- interface_touch_flag=1; //prescribe_solid_geometryALL
-
  if (level!=0)
   amrex::Error("level should be 0 in prescribe_solid_geometryALL");
+
  int finest_level=parent->finestLevel();
 
  std::string local_caller_string="prescribe_solid_geometryALL";
@@ -6605,12 +6604,15 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
   amrex::Error("local_truncate invalid");
 
  if (renormalize_only==0) {
+
   if (std::abs(time-cur_time_slab)>CPP_EPS_8_5)
    amrex::Error("prescribe solid at the new time");
 
    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
   init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
  
+  interface_touch_flag=1; //prescribe_solid_geometryALL
+			  
  } else if (renormalize_only==1) {
   // do nothing
  } else

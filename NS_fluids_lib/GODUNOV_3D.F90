@@ -10680,11 +10680,13 @@ stop
         ! normal points from negative to positive
         !DIMV(LS)=x,y,z  
       !CP=Closest Point
-      real(amrex_real), INTENT(in), target :: LSCP(DIMV(LSCP),num_materials*(SDIM+1)) 
+      real(amrex_real), INTENT(in), target :: &
+             LSCP(DIMV(LSCP),num_materials*(SDIM+1)) 
       real(amrex_real), pointer :: LSCP_ptr(D_DECL(:,:,:),:)
 
       ! FD=Finite Difference
-      real(amrex_real), INTENT(in), target :: LSFD(DIMV(LSFD),num_materials*SDIM)  
+      real(amrex_real), INTENT(in), target :: &
+              LSFD(DIMV(LSFD),num_materials*SDIM)  
       real(amrex_real), pointer :: LSFD_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: state(DIMV(state),nden)
@@ -10694,14 +10696,17 @@ stop
           ufluid(DIMV(ufluid),STATE_NCOMP_VEL+STATE_NCOMP_PRES) ! u,v,w,p
       real(amrex_real), pointer :: ufluid_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: usolid(DIMV(usolid),nparts_ghost*SDIM) 
+      real(amrex_real), INTENT(in), target :: &
+              usolid(DIMV(usolid),nparts_ghost*SDIM) 
       real(amrex_real), pointer :: usolid_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(out),target :: ughost(DIMV(ughost),nparts_ghost*SDIM) 
+      real(amrex_real), INTENT(out),target :: &
+              ughost(DIMV(ughost),nparts_ghost*SDIM) 
       real(amrex_real), pointer :: ughost_ptr(D_DECL(:,:,:),:)
 
        ! nhistory=nparts_ghost * (usolid_law_of_wall,uimage,usolid,angle)
-      real(amrex_real), INTENT(out),target :: history_dat(DIMV(history_dat),nhistory) 
+      real(amrex_real), INTENT(out),target :: &
+              history_dat(DIMV(history_dat),nhistory) 
       real(amrex_real), pointer :: history_dat_ptr(D_DECL(:,:,:),:)
 
       integer i,j,k

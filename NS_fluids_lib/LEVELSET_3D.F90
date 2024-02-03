@@ -1226,16 +1226,24 @@ stop
         stop
        endif
 
-       if ((col_ht_LS.ge.xbottom).and.(col_ht_LS.le.xtop)) then
+       if ((col_ht_LS.ge.xbottom-EPS3*dx(dircrit)).and. &
+           (col_ht_LS.le.xtop+EPS3*dx(dircrit))) then
         ! do nothing
        else
         print *,"col_ht_LS out of bounds"
+        print *,"col_ht_VOF=",col_ht_LS
+        print *,"xtop=",xtop
+        print *,"xbottom=",xbottom
         stop
        endif
-       if ((col_ht_VOF.ge.xbottom).and.(col_ht_VOF.le.xtop)) then
+       if ((col_ht_VOF.ge.xbottom-EPS3*dx(dircrit)).and. &
+           (col_ht_VOF.le.xtop+EPS3*dx(dircrit))) then
         ! do nothing
        else
         print *,"col_ht_VOF out of bounds"
+        print *,"col_ht_VOF=",col_ht_VOF
+        print *,"xtop=",xtop
+        print *,"xbottom=",xbottom
         stop
        endif
 
@@ -16792,13 +16800,17 @@ stop
       real(amrex_real), INTENT(inout),target :: &
               dennew(DIMV(dennew),num_materials*num_state_material)
       real(amrex_real), pointer :: dennew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout),target :: lsnew(DIMV(lsnew),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(inout),target :: &
+              lsnew(DIMV(lsnew),num_materials*(1+SDIM))
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solxfab(DIMV(solxfab),SDIM*nparts_def)
+      real(amrex_real), INTENT(in),target :: &
+              solxfab(DIMV(solxfab),SDIM*nparts_def)
       real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solyfab(DIMV(solyfab),SDIM*nparts_def)
+      real(amrex_real), INTENT(in),target :: &
+              solyfab(DIMV(solyfab),SDIM*nparts_def)
       real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solzfab(DIMV(solzfab),SDIM*nparts_def)
+      real(amrex_real), INTENT(in),target :: &
+              solzfab(DIMV(solzfab),SDIM*nparts_def)
       real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))

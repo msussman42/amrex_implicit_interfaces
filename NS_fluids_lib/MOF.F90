@@ -14465,7 +14465,18 @@ contains
       endif
 
       if (levelrz.eq.COORDSYS_CARTESIAN) then
-       ! do nothing
+       if (abs(x_col(1)).ge.zero) then
+        !do nothing
+       else
+        print *,"x_col(1) undef ",x_col(1)
+        stop
+       endif
+       if (abs(x_col_avg(1)).ge.zero) then
+        !do nothing
+       else
+        print *,"x_col_avg(1) undef ",x_col_avg(1)
+        stop
+       endif
       else if (levelrz.eq.COORDSYS_RZ) then
        if (sdim.ne.2) then
         print *,"sdim invalid"
@@ -14566,7 +14577,7 @@ contains
        else if (LS.le.zero) then
         charfn(l)=-one
        else
-        print *,"LS is NaN"
+        print *,"LS is NaN: ",l,LS
         stop
        endif
         
@@ -14761,7 +14772,7 @@ contains
              volcell=Pi*(xsten0(2*l_vof-1,dircrit)+ &
                          xsten0(2*l_vof+1,dircrit))*dz*dr
             else
-             print *,"dz or dr invalid"
+             print *,"dz or dr invalid: ",dz,dr
              stop
             endif
              
@@ -14772,12 +14783,12 @@ contains
             if ((dz.gt.zero).and.(dr.gt.zero)) then
              volcell=Pi*two*x_col_avg(1)*dz*dr
             else
-             print *,"dz or dr invalid"
+             print *,"dz or dr invalid: ",dz,dr
              stop
             endif
 
            else
-            print *,"dircrit invalid"
+            print *,"dircrit invalid: ",dircrit
             stop
            endif
 
@@ -14791,7 +14802,7 @@ contains
              if ((dz.gt.zero).and.(dr.gt.zero)) then
               volcell=dz*dr
              else
-              print *,"dz or dr invalid"
+              print *,"dz or dr invalid: ",dz,dr
               stop
              endif
             else if (dircrit.eq.2) then ! vertical column
@@ -14801,11 +14812,11 @@ contains
              if ((dz.gt.zero).and.(dr.gt.zero)) then
               volcell=dz*dr
              else
-              print *,"dz or dr invalid"
+              print *,"dz or dr invalid: ",dz,dr
               stop
              endif
             else
-             print *,"dircrit invalid"
+             print *,"dircrit invalid: ",dircrit
              stop
             endif
 
@@ -14823,17 +14834,17 @@ contains
               dx_tan1=dx_col(1)
               dx_tan2=dx_col(2)
              else
-              print *,"dircrit invalid"
+              print *,"dircrit invalid: ",dircrit
               stop
              endif
              if ((dx_tan1.gt.zero).and.(dx_tan2.gt.zero)) then
               volcell=dx_norm*dx_tan1*dx_tan2
              else
-              print *,"dx_tan1 or dx_tan2 invalid"
+              print *,"dx_tan1 or dx_tan2 invalid: ",dx_tan1,dx_tan2
               stop
              endif
             else
-             print *,"dx_norm invalid"
+             print *,"dx_norm invalid: ",dx_norm
              stop
             endif
 
@@ -14842,7 +14853,7 @@ contains
             stop
            endif
           else
-           print *,"levelrz invalid"
+           print *,"levelrz invalid: ",levelrz
            stop
           endif
 
@@ -14869,11 +14880,11 @@ contains
              volcell=Pi*(xsten0(2*lmin-1,dircrit)+ &
                          xbottom_adjusted)*dr*dz
             else
-             print *,"dz or dr invalid"
+             print *,"dz or dr invalid: ",dz,dr
              stop
             endif
            else
-            print *,"expecting  problox>=0"
+            print *,"expecting  problox>=0: ",problox
             stop
            endif  
 
@@ -14884,12 +14895,12 @@ contains
            if ((dz.ge.zero).and.(dr.gt.zero)) then
             volcell=two*Pi*x_col_avg(1)*dz*dr
            else
-            print *,"dz or dr invalid"
+            print *,"dz or dr invalid: ",dz,dr
             stop
            endif
 
           else
-           print *,"dircrit invalid"
+           print *,"dircrit invalid: ",dircrit
            stop
           endif
 
@@ -14903,7 +14914,7 @@ contains
             if ((dz.gt.zero).and.(dr.ge.zero)) then
              volcell=dr*dz
             else
-             print *,"dz or dr invalid"
+             print *,"dz or dr invalid: ",dz,dr
              stop
             endif
            else if (dircrit.eq.2) then ! vertical column
@@ -14912,11 +14923,11 @@ contains
             if ((dz.ge.zero).and.(dr.gt.zero)) then
              volcell=dz*dr
             else
-             print *,"dz or dr invalid"
+             print *,"dz or dr invalid: ",dz,dr
              stop
             endif
            else
-            print *,"dircrit invalid"
+            print *,"dircrit invalid: ",dircrit
             stop
            endif
 
@@ -14934,17 +14945,17 @@ contains
              dx_tan1=dx_col(1)
              dx_tan2=dx_col(2)
             else
-             print *,"dircrit invalid"
+             print *,"dircrit invalid: ",dircrit
              stop
             endif
             if ((dx_tan1.gt.zero).and.(dx_tan2.gt.zero)) then
              volcell=dx_norm*dx_tan1*dx_tan2
             else
-             print *,"dx_tan1 or dx_tan2 invalid"
+             print *,"dx_tan1 or dx_tan2 invalid: ",dx_tan1,dx_tan2
              stop
             endif
            else
-            print *,"dx_norm invalid"
+            print *,"dx_norm invalid: ",dx_norm
             stop
            endif
 
@@ -14953,7 +14964,7 @@ contains
            stop
           endif
          else
-          print *,"levelrz invalid"
+          print *,"levelrz invalid: ",levelrz
           stop
          endif
 
@@ -14962,9 +14973,44 @@ contains
 
          if (vof_bot_sum.gt.zero) then
           if (vof_ratio_ht_power.eq.1) then
-           ht_from_VOF= &
-             vof_top_sum*(xtop_stencil-xbottom_adjusted)/vof_bot_sum+ &
-               xbottom_adjusted
+           if (abs(xbottom_adjusted-xbottom_stencil).le. &
+               EPS_8_4*dx(dircrit)) then
+            if (vof_top_sum.le.vof_bot_sum) then
+             if (xtop_stencil.gt.xbottom_stencil) then
+              ht_from_VOF= &
+               vof_top_sum*(xtop_stencil-xbottom_adjusted)/vof_bot_sum+ &
+                 xbottom_adjusted
+              if (abs(ht_from_VOF-xbottom_stencil).le. &
+                  EPS_8_4*dx(dircrit)) then
+               ht_from_VOF=xbottom_stencil
+              else if (abs(ht_from_VOF-xtop_stencil).le. &
+                       EPS_8_4*dx(dircrit)) then
+               ht_from_VOF=xtop_stencil
+              else if ((ht_from_VOF.ge.xbottom_stencil).and. &
+                       (ht_from_VOF.le.xtop_stencil)) then
+               ! do nothing
+              else
+               print*,"ht_from_VOF invalid(1): ",ht_from_VOF
+               stop
+              endif
+             else
+              print *,"xtop_stencil or xbottom_stencil bad"
+              print *,"xtop_stencil ",xtop_stencil
+              print *,"xbottom_stencil ",xbottom_stencil
+              stop
+             endif
+            else
+             print *,"vof_top_sum or vof_bot_sum bad"
+             print *,"vof_top_sum : ",vof_top_sum
+             print *,"vof_bot_sum : ",vof_bot_sum
+             stop
+            endif
+           else
+            print *,"expecting xbottom_adjusted=xbottom_stencil"
+            print *,"xbottom_adjusted ",xbottom_adjusted
+            print *,"xbottom_stencil ",xbottom_stencil
+            stop
+           endif
           else if (vof_ratio_ht_power.eq.2) then
            dr=dx_col(1)
            ht_from_VOF=(xtop_stencil**2)*vof_top_sum/vof_bot_sum
@@ -14978,26 +15024,27 @@ contains
                      (ht_from_VOF.le.xtop_stencil)) then
              ! do nothing
             else
-             print*,"ht_from_VOF invalid"
+             print*,"ht_from_VOF invalid: ",ht_from_VOF
              stop
             endif
                     
            else
-            print *,"ht_from_VOF invalid"
+            print *,"ht_from_VOF invalid: ",ht_from_VOF
             stop
            endif
 
           else 
-           print *,"vof_ratio_ht_power invalid"
+           print *,"vof_ratio_ht_power invalid: ",vof_ratio_ht_power
            stop
           endif
          else
-          print *,"vof_bot_sum invalid"
+          print *,"vof_bot_sum invalid: ",vof_bot_sum
           stop
          endif
 
         else
-         print *,"lcrit,lvof_min, or lvof_max invalid"
+         print *,"lcrit,lvof_min, or lvof_max invalid: ", &
+          lcrit,lvof_min,lvof_max
          stop
         endif
                 ! do nothing
