@@ -553,6 +553,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  if (read_from_CAD()==1) {
 
+    //init_FSI_GHOST_MAC_MF_ALL is declared in NavierStokes.cpp
    renormalize_only=1;
    init_FSI_GHOST_MAC_MF_ALL(renormalize_only,local_caller_string);
 
