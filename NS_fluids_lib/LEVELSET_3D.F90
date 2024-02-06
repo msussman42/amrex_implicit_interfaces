@@ -10994,6 +10994,8 @@ stop
       integer dir,side
       integer veldir
       integer im
+      integer im_opp
+      integer iten
       integer sidecomp,ibase
       integer ii,jj,kk
       integer iface,jface,kface
@@ -12212,6 +12214,7 @@ stop
         else if (is_rigid_near.eq.0) then
          do im=1,num_materials
           if (LStest(im).ge.-DXMAXLS) then
+
            if (is_compressible_mat(im).eq.0) then
             use_face_pres_cen=0
            else if (is_compressible_mat(im).eq.1) then
@@ -12220,6 +12223,31 @@ stop
             print *,"is_compressible_mat invalid"
             stop
            endif
+
+           do im_opp=im+1,num_materials
+            if (LStest(im_opp).ge.-DXMAXLS) then
+             call get_iten(im,im_opp,iten)
+             if (fort_material_type_interface(iten).eq.0) then
+              use_face_pres_cen=0
+             else if (fort_material_type_interface(iten).eq.999) then
+              use_face_pres_cen=0
+             else if ((fort_material_type_interface(iten).ge.1).and. &
+                      (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then 
+              !do nothing
+             else
+              print *,"fort_materal_type_interface invalid: ", &
+                iten,fort_material_type_interface(iten)
+              stop
+             endif
+
+            else if (LStest(im_opp).le.-DXMAXLS) then
+             !do nothing
+            else
+             print *,"LStest(im_opp) is NaN: ",im_opp,LStest(im_opp)
+             stop
+            endif 
+           enddo !im_opp=im+1 ... num_materials
+
           else if (LStest(im).le.-DXMAXLS) then
            ! do nothing
           else
@@ -12377,6 +12405,8 @@ stop
           use_face_pres_cen=0
          else
           print *,"use_face_pres invalid"
+          print *,"use_face_pres(1)= ",use_face_pres(1)
+          print *,"use_face_pres(2)= ",use_face_pres(2)
           stop
          endif
         

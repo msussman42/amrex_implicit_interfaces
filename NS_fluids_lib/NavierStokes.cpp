@@ -9855,6 +9855,13 @@ NavierStokes::initData () {
  int lev_max=level;
 
  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
+ Long num_particles=current_PC.TotalNumberOfParticles();
+ if (ParallelDescriptor::IOProcessor()) {
+  std::cout << "initData: level= " << level <<
+    " TotalNumberOfParticles for slab ns_time_order= " <<
+    ns_time_order << " is equal to " << num_particles << '\n';
+ }
+
  int nGrow_Redistribute=0;
  int local_Redistribute=0; //redistribute "from scratch"
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
