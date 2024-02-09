@@ -3520,46 +3520,219 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 }  // end subroutine do_the_advance
 
 
-void push_stack(Vector<int>& stackdata,
-  Long& stackptr,int& data) {
+void NavierStokes::push_stack(Long_2d_array& stackdata,
+  unsigned long long& stackptr_i,
+  unsigned long long& stackptr_j,
+  unsigned long long& data) {
 
- if (stackptr==stackdata.size()-1) {
-  std::cout << "stackptr, stackdata_size " << stackptr << ' ' <<
-   stackdata.size() << '\n';
+ unsigned long long i_size=stackdata.size();
+ unsigned long long j_size=0;
+
+ if (i_size>0) {
+  j_size=stackdata[i_size-1].size();
+  if (j_size>0) {
+   //do nothing
+  } else
+   amrex::Error("j_size invalid");
+ } else
+  amrex::Error("i_size invalid");
+
+ if ((stackptr_i>i_size-1)||
+     (stackptr_j>j_size-1))
+  amrex::Error("stackptr_i|j invalid");
+
+ if ((stackptr_i==i_size-1)&&
+     (stackptr_j==j_size-1)) {
+  std::cout << "stackptr, stackdata_size " << 
+   stackptr_i << ' ' <<
+   stackptr_j << ' ' <<
+   i_size << ' ' << 
+   j_size << '\n';
   amrex::Error("stack overflow");
  }
- stackptr++;
- stackdata[stackptr]=data;
-
+ stackptr_j++;
+ if (stackptr_j>=j_size) {
+  stackptr_i++;
+  stackptr_j=0;
+ }
+ stackdata[stackptr_i][stackptr_j]=data;
 }
 
-void pop_stack(Vector<int>& stackdata,
-  Long& stackptr,int& data) {
+void NavierStokes::pop_stack(Long_2d_array& stackdata,
+  unsigned long long& stackptr_i,
+  unsigned long long& stackptr_j,
+  unsigned long long& data) {
 
- if (stackptr<0)
+ unsigned long long i_size=stackdata.size();
+ unsigned long long j_size=0;
+
+ if (i_size>0) {
+  j_size=stackdata[i_size-1].size();
+  if (j_size>0) {
+   //do nothing
+  } else
+   amrex::Error("j_size invalid");
+ } else
+  amrex::Error("i_size invalid");
+
+ if ((stackptr_i>i_size-1)||
+     (stackptr_j>j_size-1))
+  amrex::Error("stackptr_i|j invalid");
+
+ if ((stackptr_i==0)&&(stackptr_j==0))
   amrex::Error("stack is empty");
- data=stackdata[stackptr];
- stackptr--;
 
-}
+ data=stackdata[stackptr_i][stackptr_j];
 
-void cross_check(Vector<int>& levelcolormap,
-  Vector<int>& stackdata,
-  std::vector<bool>& grid_color,int i) {
-
- if (grid_color.size()>stackdata.size())
-  amrex::Error("stackdata too small");
- Long stackptr=-1;
- 
- for (int j=0;j<levelcolormap.size();j++) {
-  Long k=i*levelcolormap.size()+j;
-  if (grid_color[k]==true) 
-   push_stack(stackdata,stackptr,j);
+ if (stackptr_j>=1) { 
+  stackptr_j--;
+ } else if (stackptr_j==0) {
+  if (stackptr_i==0) {
+   amrex::Error("stackptr i|j underflow");
+  } else if (stackptr_i>0) {
+   stackptr_i--;
+   stackptr_j=j_size-1;
+  } else
+   amrex::Error("stackptr_i invalid");
+ } else {
+  amrex::Error("stackptr_j invalid");
  }
 
- while (stackptr>=0) {
+}
+
+void NavierStokes::cross_check(
+  Vector<int>& levelcolormap,
+  Long_2d_array& stackdata,
+  bool_2d_array& grid_color,
+  unsigned long long i) {
+
+ if (grid_color.size()==stackdata.size()) {
+  for (unsigned long long k=0;k<grid_color.size();k++) {
+   if (grid_color[k].size()==stackdata[k].size()) {
+    //do nothing
+   } else
+    amrex::Error("grid_color[k].size invalid");
+  }
+ } else
+  amrex::Error("stackdata.size() invalid");
+
+ unsigned long long stackptr_i=0;
+ unsigned long long stackptr_j=0;
+
+ if (levelcolormap.size()==grid_color.size()) {
+  //do nothing
+ } else
+  amrex::Error("levelcolormap.size() invalid"); 
+
+ for (unsigned long long j=0;j<levelcolormap.size();j++) {
+  if (grid_color[i][j]==true) 
+   push_stack(stackdata,stackptr_i,stackptr_j,j);
+ }
+
+ while ((stackptr_i>0)||
+        ((stackptr_i==0)&&(stackptr_j>0))) {
+  unsigned long long j;
+  pop_stack(stackdata,stackptr_i,stackptr_j,j); 
+
+  if (levelcolormap[j]==0) {
+   levelcolormap[j]=levelcolormap[i];
+   if (levelcolormap[j]<1)
+    amrex::Error("levelcolormap invalid");
+
+   for (unsigned long long jj=0;jj<levelcolormap.size();jj++) {
+    if (grid_color[j][jj]==true) 
+     push_stack(stackdata,stackptr_i,stackptr_j,jj);
+   }
+
+  } else if (levelcolormap[j]!=levelcolormap[i])
+   amrex::Error("something wrong in cross_check");
+ }  // while stackptr_j>0
+
+} // subroutine cross_check
+
+
+void NavierStokes::push_stack1D(
+  Vector<int>& stackdata,
+  unsigned long long& stackptr_i,
+  int& data) {
+
+ unsigned long long i_size=stackdata.size();
+
+ if (i_size>0) {
+  //do nothing
+ } else
+  amrex::Error("i_size invalid");
+
+ if (stackptr_i>i_size-1)
+  amrex::Error("stackptr_i invalid");
+
+ if (stackptr_i==i_size-1) {
+  std::cout << "stackptr, stackdata_size " << 
+   stackptr_i << ' ' <<
+   i_size << '\n';
+  amrex::Error("stack overflow");
+ }
+ stackptr_i++;
+ stackdata[stackptr_i]=data;
+}
+
+void NavierStokes::pop_stack1D(
+  Vector<int>& stackdata,
+  unsigned long long& stackptr_i,
+  int& data) {
+
+ unsigned long long i_size=stackdata.size();
+
+ if (i_size>0) {
+  //do nothing
+ } else
+  amrex::Error("i_size 1D invalid");
+
+ if (stackptr_i>i_size-1) 
+  amrex::Error("stackptr_i 1D invalid");
+
+ if (stackptr_i==0)
+  amrex::Error("stack1D is empty");
+
+ data=stackdata[stackptr_i];
+
+ if (stackptr_i>=1) {
+  stackptr_i--;
+ } else if (stackptr_i==0) {
+  amrex::Error("stackptr i underflow 1D");
+ } else {
+  amrex::Error("stackptr_i invalid");
+ }
+
+}
+
+void NavierStokes::cross_check1D(
+  Vector<int>& levelcolormap,
+  Vector<int>& stackdata,
+  std::vector<bool>& grid_color,
+  unsigned long long i) {
+
+ if (grid_color.size()==stackdata.size()) {
+  //do nothing
+ } else
+  amrex::Error("stackdata.size() invalid");
+
+ unsigned long long stackptr_i=0;
+
+ if (levelcolormap.size()*levelcolormap.size()==grid_color.size()) {
+  //do nothing
+ } else
+  amrex::Error("levelcolormap.size() invalid"); 
+
+ for (int j=0;j<levelcolormap.size();j++) {
+  unsigned long long i2d=i*levelcolormap.size()+j;
+  if (grid_color[i2d]==true) 
+   push_stack1D(stackdata,stackptr_i,j);
+ }
+
+ while (stackptr_i>0) {
   int j;
-  pop_stack(stackdata,stackptr,j); 
+  pop_stack1D(stackdata,stackptr_i,j); 
 
   if (levelcolormap[j]==0) {
    levelcolormap[j]=levelcolormap[i];
@@ -3567,16 +3740,16 @@ void cross_check(Vector<int>& levelcolormap,
     amrex::Error("levelcolormap invalid");
 
    for (int jj=0;jj<levelcolormap.size();jj++) {
-    Long k=j*levelcolormap.size()+jj;
-    if (grid_color[k]==true) 
-     push_stack(stackdata,stackptr,jj);
+    unsigned long long i2d=j*levelcolormap.size()+jj;
+    if (grid_color[i2d]==true) 
+     push_stack1D(stackdata,stackptr_i,jj);
    }
 
   } else if (levelcolormap[j]!=levelcolormap[i])
    amrex::Error("something wrong in cross_check");
- }  // stackptr>=0
+ }  // while stackptr_i>0
 
-} // subroutine cross_check
+} // subroutine cross_check1D
 
 
 
@@ -4059,7 +4232,8 @@ void NavierStokes::sync_colors(
     max_colors_grid << '\n';
   }
 
- int Nside=number_grids*max_colors_grid;
+ unsigned long long Nside=number_grids*max_colors_grid;
+
  if (Nside<=0) {
   std::cout << "cannot have the coarse level completely covered by a finer\n";
   std::cout << "level for the sync_colors routine\n";
@@ -4068,8 +4242,7 @@ void NavierStokes::sync_colors(
   amrex::Error("cannot have Nside 0");
  }
 
- Long Nside2=Nside*Nside;
- Vector< std::vector<bool> > grid_color_array;
+ Vector< bool_2d_array > grid_color_array;
  grid_color_array.resize(thread_class::nthreads);
 
 // COLORING LOOP
@@ -4079,16 +4252,19 @@ void NavierStokes::sync_colors(
 {
  int tid=ns_thread();
 
- grid_color_array[tid].resize(Nside2);
- for (Long i=0;i<Nside2;i++)
-  grid_color_array[tid][i]=false;
+ grid_color_array[tid].resize(Nside);
+ for (unsigned long long i=0;i<Nside;i++) {
+  grid_color_array[tid][i].resize(Nside);
+  for (unsigned long long j=0;j<Nside;j++) {
+   grid_color_array[tid][i][j]=false;
+  }
+ }
   
    // set the diagonal of grid_color_array
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   Long i=max_colors_grid*igrid+icolor-1;
-   Long k=Nside*i+i;
-   grid_color_array[tid][k]=true;
+   unsigned long long i=max_colors_grid*igrid+icolor-1;
+   grid_color_array[tid][i][i]=true;
   } // icolor
  } // igrid
 } // omp
@@ -4097,8 +4273,9 @@ void NavierStokes::sync_colors(
   amrex::Error("thread_class::nthreads invalid");
  thread_class::init_d_numPts(typemf->boxArray().d_numPts());
 
-   // grid_color_array[tid][i][j]=1 if color i neighbors color j
-   // and they are both not covered by a finer level.
+// grid_color_array[tid][i][j]=1 if color i neighbors color j
+// and they are both not covered by a finer level.
+//
 // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
@@ -4133,7 +4310,7 @@ void NavierStokes::sync_colors(
     IntVect p(D_DECL(i,j,k));
 
     if (maskfab(p)==1.0) {
-     int icolor=(int) (colorfab(p)+0.5);
+     unsigned long long icolor=(int) (colorfab(p)+0.5);
      int primary_type=(int) (typefab(p)+0.5);
      if (icolor>0) {
 #if (AMREX_SPACEDIM==3)
@@ -4151,10 +4328,11 @@ void NavierStokes::sync_colors(
 #endif
        if ((check_corners==1)||(idist<=1)) {
 
-        int jcolor=(int) (colorfab(pofs)+0.5);
+        unsigned long long jcolor=(int) (colorfab(pofs)+0.5);
         Real mask2=maskfab(pofs); 
         int secondary_type=(int) (typefab(pofs)+0.5);
         if (mask2==1.0) {
+
          if (jcolor<=0) {
           std::cout << "level= " << level << '\n';
           std::cout << "ii,jj= " << ii << ' ' << jj << '\n';
@@ -4168,13 +4346,12 @@ void NavierStokes::sync_colors(
           std::cout << "jcolor = " << jcolor << '\n';
           amrex::Error("jcolor invalid"); 
          } // jcolor<=0
+	   
          if (secondary_type==primary_type) {
           if ((icolor>Nside)||(jcolor>Nside))
            amrex::Error("icolor or jcolor invalid"); 
-          Long igrid=Nside*(icolor-1)+jcolor-1;
-          grid_color_array[tid_current][igrid]=true;
-          igrid=Nside*(jcolor-1)+icolor-1;
-          grid_color_array[tid_current][igrid]=true;
+          grid_color_array[tid_current][icolor-1][jcolor-1]=true;
+          grid_color_array[tid_current][jcolor-1][icolor-1]=true;
          } // primary_type==secondary_type
         } else if (mask2!=0.0)
          amrex::Error("mask2 invalid");
@@ -4199,21 +4376,19 @@ void NavierStokes::sync_colors(
   // first reduce grid_color_array from the different threads
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   Long i_index=max_colors_grid*igrid+icolor-1;
+   unsigned long long i_index=max_colors_grid*igrid+icolor-1;
 
    for (int jgrid=0;jgrid<number_grids;jgrid++) {
     for (int jcolor=1;jcolor<=color_per_grid[jgrid];jcolor++) {
 
-     Long j_index=max_colors_grid*jgrid+jcolor-1;
+     unsigned long long j_index=max_colors_grid*jgrid+jcolor-1;
 
-     Long i=Nside*i_index+j_index;  
-   
      for (int tid=0;tid<thread_class::nthreads;tid++) {
-      int tempbit=grid_color_array[tid][i];
+      int tempbit=grid_color_array[tid][i_index][j_index];
       if ((tempbit!=0)&&(tempbit!=1))
        amrex::Error("bits can only be 0 or 1");
       if (tempbit==1)
-       grid_color_array[0][i]=true;
+       grid_color_array[0][i_index][j_index]=true;
      }  // tid
     }  // jcolor
    } // jgrid
@@ -4224,23 +4399,21 @@ void NavierStokes::sync_colors(
 
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   Long i_index=max_colors_grid*igrid+icolor-1;
+   unsigned long long i_index=max_colors_grid*igrid+icolor-1;
 
    for (int jgrid=0;jgrid<number_grids;jgrid++) {
     for (int jcolor=1;jcolor<=color_per_grid[jgrid];jcolor++) {
 
-     Long j_index=max_colors_grid*jgrid+jcolor-1;
+     unsigned long long j_index=max_colors_grid*jgrid+jcolor-1;
 
-     Long i=Nside*i_index+j_index;  
-   
-     int tempbit=grid_color_array[0][i];
+     int tempbit=grid_color_array[0][i_index][j_index];
      if ((tempbit!=0)&&(tempbit!=1))
       amrex::Error("bits can only be 0 or 1");
      ParallelDescriptor::ReduceIntMax(tempbit);
      if (tempbit==0)
-      grid_color_array[0][i]=false;
+      grid_color_array[0][i_index][j_index]=false;
      else if (tempbit==1)
-      grid_color_array[0][i]=true;
+      grid_color_array[0][i_index][j_index]=true;
      else
       amrex::Error("tempbit invalid");
     }  // jcolor
@@ -4258,8 +4431,8 @@ void NavierStokes::sync_colors(
    // new absolute coloring scheme on the level.
  Vector<int> levelcolormap;
  levelcolormap.resize(Nside);
- for (int i=0;i<Nside;i++) 
-   levelcolormap[i]=0;
+ for (unsigned long long i=0;i<Nside;i++) 
+  levelcolormap[i]=0;
 
  if (verbose>0)
   if (ParallelDescriptor::IOProcessor()) {
@@ -4267,15 +4440,17 @@ void NavierStokes::sync_colors(
   }
 
  if (ParallelDescriptor::IOProcessor()) {
-  Vector<int> stackdata;
-  stackdata.resize(Nside2);
+  Long_2d_array stackdata;
+  stackdata.resize(Nside);
+  for (unsigned long long i=0;i<Nside;i++) {
+   stackdata[i].resize(Nside);
+  }
 
   for (int igrid=0;igrid<number_grids;igrid++) {
    for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-    int i_index=max_colors_grid*igrid+icolor-1;
+    unsigned long long i_index=max_colors_grid*igrid+icolor-1;
     if (levelcolormap[i_index]==0) {
-     Long k=i_index*Nside+i_index;
-     if (grid_color_array[0][k]==true) {
+     if (grid_color_array[0][i_index][i_index]==true) {
       total_colors++;
       levelcolormap[i_index]=total_colors;
       if (levelcolormap[i_index]<1)
@@ -4306,7 +4481,7 @@ void NavierStokes::sync_colors(
 
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   Long i_index=max_colors_grid*igrid+icolor-1;
+   unsigned long long i_index=max_colors_grid*igrid+icolor-1;
    ParallelDescriptor::ReduceIntMax(levelcolormap[i_index]);
   }
  }
@@ -4379,7 +4554,7 @@ void NavierStokes::sync_colors(
    if (colormax[level]>max_colors_level)
     max_colors_level=colormax[level];
    int arrsize=2*max_colors_level;
-   Long arrsize2=arrsize*arrsize;
+   unsigned long long arrsize2=arrsize*arrsize;
 
    Vector< Vector<int> > level_color_array;
    level_color_array.resize(thread_class::nthreads);
@@ -4391,14 +4566,14 @@ void NavierStokes::sync_colors(
 {
    int tid=ns_thread();
    level_color_array[tid].resize(arrsize2);
-   for (Long i=0;i<arrsize2;i++)
+   for (unsigned long long i=0;i<arrsize2;i++)
     level_color_array[tid][i]=0;  // false
 
      // set the diagonal of level_color
    for (int ilevel=0;ilevel<=1;ilevel++) {
     for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
-     Long i=max_colors_level*ilevel+icolor-1;
-     Long k=2*max_colors_level*i+i;
+     unsigned long long i=max_colors_level*ilevel+icolor-1;
+     unsigned long long k=2*max_colors_level*i+i;
      level_color_array[tid][k]=1;  // true
     }
    } // ilevel
@@ -4451,7 +4626,7 @@ void NavierStokes::sync_colors(
    delete fine_coarse_color;
 
    for (int tid=1;tid<thread_class::nthreads;tid++) {
-    for (Long i=0;i<arrsize2;i++) {
+    for (unsigned long long i=0;i<arrsize2;i++) {
      if (level_color_array[tid][i]>level_color_array[0][i])
       level_color_array[0][i]=level_color_array[tid][i];
     } // i
@@ -4459,20 +4634,20 @@ void NavierStokes::sync_colors(
 
    ParallelDescriptor::Barrier();
 
-   for (Long i=0;i<arrsize2;i++)
+   for (unsigned long long i=0;i<arrsize2;i++)
     ParallelDescriptor::ReduceIntMax(level_color_array[0][i]);
 
    Vector<int> domaincolormap;
    domaincolormap.resize(2*max_colors_level);
-   Vector<int> stackdata;
-   stackdata.resize(arrsize2);
-   for (int i=0;i<domaincolormap.size();i++)
+   Vector<int> stackdata1D;
+   stackdata1D.resize(arrsize2);
+   for (unsigned long long i=0;i<domaincolormap.size();i++)
     domaincolormap[i]=0;
    total_colors=0;
 
    std::vector<bool> level_color_bool;
    level_color_bool.resize(arrsize2);
-   for (unsigned long k=0;k<level_color_bool.size();k++) {
+   for (unsigned long long k=0;k<level_color_bool.size();k++) {
     if (level_color_array[0][k]==0)
      level_color_bool[k]=false;
     else if (level_color_array[0][k]==1)
@@ -4481,13 +4656,13 @@ void NavierStokes::sync_colors(
      amrex::Error("level_color_array invalid value");
    }
 
-   for (int i=0;i<domaincolormap.size();i++) {
+   for (unsigned long long i=0;i<domaincolormap.size();i++) {
     if (domaincolormap[i]==0) {
-     Long k=i*domaincolormap.size()+i;
+     unsigned long long k=i*domaincolormap.size()+i;
      if (level_color_bool[k]==true) {
       total_colors++;
       domaincolormap[i]=total_colors;
-      cross_check(domaincolormap,stackdata,level_color_bool,i);
+      cross_check1D(domaincolormap,stackdata1D,level_color_bool,i);
      }
     }
    }
