@@ -1036,16 +1036,16 @@ protected:
        unsigned long long i);
 
     void push_stack1D(
-	Vector<int>& stackdata,
+	Vector<int>& stackdata1D,
         unsigned long long& stackptr_i,
         int& data);
     void pop_stack1D(
-        Vector<int>& stackdata,
+        Vector<int>& stackdata1D,
         unsigned long long& stackptr_i,
         int& data);
     void cross_check1D(
        Vector<int>& levelcolormap,
-       Vector<int>& stackdata,
+       Vector<int>& stackdata1D,
        std::vector<bool>& grid_color,
        unsigned long long i);
 

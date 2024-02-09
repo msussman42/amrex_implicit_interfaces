@@ -3526,11 +3526,16 @@ void NavierStokes::push_stack(Long_2d_array& stackdata,
   unsigned long long& data) {
 
  unsigned long long i_size=stackdata.size();
- unsigned long long j_size=0;
-
  if (i_size>0) {
+  //do nothing
+ } else
+  amrex::Error("i_size invalid");
+
+ unsigned long long j_size=stackdata[0].size();
+
+ if ((i_size>0)&&(i_size==j_size)) {
   j_size=stackdata[i_size-1].size();
-  if (j_size>0) {
+  if (i_size==j_size) {
    //do nothing
   } else
    amrex::Error("j_size invalid");
@@ -3564,11 +3569,16 @@ void NavierStokes::pop_stack(Long_2d_array& stackdata,
   unsigned long long& data) {
 
  unsigned long long i_size=stackdata.size();
- unsigned long long j_size=0;
-
  if (i_size>0) {
+  //do nothing
+ } else
+  amrex::Error("i_size invalid");
+
+ unsigned long long j_size=stackdata[0].size();
+
+ if ((i_size>0)&&(i_size==j_size)) {
   j_size=stackdata[i_size-1].size();
-  if (j_size>0) {
+  if (i_size==j_size) {
    //do nothing
   } else
    amrex::Error("j_size invalid");
@@ -3652,49 +3662,50 @@ void NavierStokes::cross_check(
 
 
 void NavierStokes::push_stack1D(
-  Vector<int>& stackdata,
+  Vector<int>& stackdata1D,
   unsigned long long& stackptr_i,
   int& data) {
 
- unsigned long long i_size=stackdata.size();
+ unsigned long long i_size=stackdata1D.size();
 
  if (i_size>0) {
   //do nothing
  } else
-  amrex::Error("i_size invalid");
+  amrex::Error("i_size invalid push_stack1D");
 
  if (stackptr_i>i_size-1)
-  amrex::Error("stackptr_i invalid");
+  amrex::Error("stackptr_i invalid push_stack1D");
 
  if (stackptr_i==i_size-1) {
-  std::cout << "stackptr, stackdata_size " << 
+  std::cout << "stackptr, stackdata1D_size " << 
    stackptr_i << ' ' <<
    i_size << '\n';
   amrex::Error("stack overflow");
  }
  stackptr_i++;
- stackdata[stackptr_i]=data;
-}
+ stackdata1D[stackptr_i]=data;
+
+} //end subroutine push_stack1D
 
 void NavierStokes::pop_stack1D(
-  Vector<int>& stackdata,
+  Vector<int>& stackdata1D,
   unsigned long long& stackptr_i,
   int& data) {
 
- unsigned long long i_size=stackdata.size();
+ unsigned long long i_size=stackdata1D.size();
 
  if (i_size>0) {
   //do nothing
  } else
-  amrex::Error("i_size 1D invalid");
+  amrex::Error("i_size 1D invalid pop_stack1D");
 
  if (stackptr_i>i_size-1) 
-  amrex::Error("stackptr_i 1D invalid");
+  amrex::Error("stackptr_i 1D invalid pop_stack1D");
 
  if (stackptr_i==0)
-  amrex::Error("stack1D is empty");
+  amrex::Error("stack1D is empty pop_stack1D");
 
- data=stackdata[stackptr_i];
+ data=stackdata1D[stackptr_i];
 
  if (stackptr_i>=1) {
   stackptr_i--;
@@ -3704,18 +3715,18 @@ void NavierStokes::pop_stack1D(
   amrex::Error("stackptr_i invalid");
  }
 
-}
+} //end subroutine pop_stack1D
 
 void NavierStokes::cross_check1D(
   Vector<int>& levelcolormap,
-  Vector<int>& stackdata,
+  Vector<int>& stackdata1D,
   std::vector<bool>& grid_color,
   unsigned long long i) {
 
- if (grid_color.size()==stackdata.size()) {
+ if (grid_color.size()==stackdata1D.size()) {
   //do nothing
  } else
-  amrex::Error("stackdata.size() invalid");
+  amrex::Error("stackdata1D.size() invalid");
 
  unsigned long long stackptr_i=0;
 
@@ -3727,12 +3738,12 @@ void NavierStokes::cross_check1D(
  for (int j=0;j<levelcolormap.size();j++) {
   unsigned long long i2d=i*levelcolormap.size()+j;
   if (grid_color[i2d]==true) 
-   push_stack1D(stackdata,stackptr_i,j);
+   push_stack1D(stackdata1D,stackptr_i,j);
  }
 
  while (stackptr_i>0) {
   int j;
-  pop_stack1D(stackdata,stackptr_i,j); 
+  pop_stack1D(stackdata1D,stackptr_i,j); 
 
   if (levelcolormap[j]==0) {
    levelcolormap[j]=levelcolormap[i];
@@ -3742,11 +3753,11 @@ void NavierStokes::cross_check1D(
    for (int jj=0;jj<levelcolormap.size();jj++) {
     unsigned long long i2d=j*levelcolormap.size()+jj;
     if (grid_color[i2d]==true) 
-     push_stack1D(stackdata,stackptr_i,jj);
+     push_stack1D(stackdata1D,stackptr_i,jj);
    }
 
   } else if (levelcolormap[j]!=levelcolormap[i])
-   amrex::Error("something wrong in cross_check");
+   amrex::Error("something wrong in cross_check1D");
  }  // while stackptr_i>0
 
 } // subroutine cross_check1D
@@ -4461,7 +4472,7 @@ void NavierStokes::sync_colors(
    } // icolor
   } // igrid
 
-  stackdata.resize(1);
+  stackdata.resize(0);
  }  // IOProcessor
 
  if (verbose>0)
