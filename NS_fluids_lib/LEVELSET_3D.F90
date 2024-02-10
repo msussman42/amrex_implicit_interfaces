@@ -11055,7 +11055,6 @@ stop
       real(amrex_real) local_div_val
 
       real(amrex_real) velocity_conservative(AMREX_SPACEDIM)
-      integer use_conservation_form_velocity
       integer near_wall
       integer mask_coarsefine
       integer bctest
@@ -12177,7 +12176,8 @@ stop
         endif
 
          ! note, in fort_build_conserve, if 
-         ! is_compressible_mat==0,
+         ! is_compressible_mat==0 or
+         ! fort_conserve_total_energy==0,
          ! then 
          ! (1) (rho T) is advected instead of (rho cv T + rho u dot u/2)
          ! (2) rho_t + u dot grad rho=0 instead of
@@ -12188,23 +12188,21 @@ stop
         enddo
         call get_primary_material(LStest,im)
 
-        use_conservation_form_velocity=0 !nonconservative, staggared grid.
-
         is_rigid_near=0
         do im=1,num_materials
          if (is_rigid(im).eq.1) then
-          if (LStest(im).ge.-DXMAXLS) then
+          if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
            is_rigid_near=1
-          else if (LStest(im).le.-DXMAXLS) then
+          else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
            ! do nothing
           else
-           print *,"LStest(im) is NaN"
+           print *,"LStest(im) is corrupt: ",im,LStest(im)
            stop
           endif 
          else if (is_rigid(im).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid(im) invalid"
+          print *,"is_rigid(im) invalid: ",is_rigid(im)
           stop
          endif
         enddo ! im=1..num_materials
@@ -12213,24 +12211,39 @@ stop
          use_face_pres_cen=0
         else if (is_rigid_near.eq.0) then
          do im=1,num_materials
-          if (LStest(im).ge.-DXMAXLS) then
+          if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
 
            if (is_compressible_mat(im).eq.0) then
-            use_face_pres_cen=0
+            if (fort_conserve_total_energy.eq.0) then
+             use_face_pres_cen=0
+            else
+             print *,"expecting fort_conserve_total_energy==0"
+             stop
+            endif
            else if (is_compressible_mat(im).eq.1) then
             ! do nothing
            else
-            print *,"is_compressible_mat invalid"
+            print *,"is_compressible_mat invalid: ",im,is_compressible_mat(im)
             stop
            endif
 
            do im_opp=im+1,num_materials
-            if (LStest(im_opp).ge.-DXMAXLS) then
+            if (LStest(im_opp).ge.-incomp_thickness*DXMAXLS) then
              call get_iten(im,im_opp,iten)
              if (fort_material_type_interface(iten).eq.0) then
-              use_face_pres_cen=0
+              if (fort_conserve_total_energy.eq.0) then
+               use_face_pres_cen=0
+              else
+               print *,"expecting fort_conserve_total_energy==0"
+               stop
+              endif
              else if (fort_material_type_interface(iten).eq.999) then
-              use_face_pres_cen=0
+              if (fort_conserve_total_energy.eq.0) then
+               use_face_pres_cen=0
+              else
+               print *,"expecting fort_conserve_total_energy==0"
+               stop
+              endif
              else if ((fort_material_type_interface(iten).ge.1).and. &
                       (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then 
               !do nothing
@@ -12240,18 +12253,19 @@ stop
               stop
              endif
 
-            else if (LStest(im_opp).le.-DXMAXLS) then
+            else if (LStest(im_opp).le.-incomp_thickness*DXMAXLS) then
              !do nothing
             else
-             print *,"LStest(im_opp) is NaN: ",im_opp,LStest(im_opp)
+             print *,"LStest(im_opp) corrupt: ",im_opp,LStest(im_opp)
              stop
             endif 
            enddo !im_opp=im+1 ... num_materials
 
-          else if (LStest(im).le.-DXMAXLS) then
+          else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
            ! do nothing
           else
-           print *,"LStest(im) is NaN(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
+           print *,"LStest(im) corrupt(1)fort_mac_to_cell OP_VEL_DIVUP_TO_CELL"
+           print *,"im,LStest(im): ",im,LStest(im)
            stop
           endif 
          enddo ! im=1..num_materials
@@ -12431,7 +12445,7 @@ stop
                   dt*(pres_face(2)-pres_face(1))/(dencell*hx)
 
          else
-          print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL"
+          print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL: ",energyflag
           stop
          endif
 
@@ -12444,7 +12458,7 @@ stop
             (use_face_pres_cen.eq.1)) then 
          ! do nothing
         else
-         print *,"use_face_pres_cen bust"
+         print *,"use_face_pres_cen invalid:",use_face_pres_cen
          stop
         endif
 
@@ -12482,13 +12496,24 @@ stop
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
            if (use_conservation_form_velocity.eq.1) then
-            do dir=1,SDIM
-             veldest(D_DECL(i,j,k),dir)=velocity_conservative(dir)
-            enddo
+            if (fort_conserve_total_energy.eq.1) then
+             do dir=1,SDIM
+              veldest(D_DECL(i,j,k),dir)=velocity_conservative(dir)
+             enddo
+            else
+             print *,"expecting fort_conserve_total_energy==1"
+             stop
+            endif
            else if (use_conservation_form_velocity.eq.0) then
-            ! do nothing
+            if (fort_conserve_total_energy.eq.0) then
+             ! do nothing
+            else
+             print *,"expecting fort_conserve_total_energy==0"
+             stop
+            endif
            else
-            print *,"use_conservation_form_velocity invalid"
+            print *,"use_conservation_form_velocity invalid: ", &
+               use_conservation_form_velocity
             stop
            endif
 
@@ -12507,7 +12532,8 @@ stop
              enddo ! velcomp=1..sdim
 
             else
-             print *,"fort_conserve_total_energy invalid"
+             print *,"fort_conserve_total_energy invalid: ", &
+                     fort_conserve_total_energy
              stop
             endif
 
@@ -12534,7 +12560,7 @@ stop
               if (TEMPERATURE.gt.zero) then
                ! do nothing
               else
-               print *,"temperature underflow"
+               print *,"temperature underflow: ",TEMPERATURE
                stop
               endif
               call init_massfrac_parm(rho,massfrac_parm,im)
@@ -12569,7 +12595,7 @@ stop
                 stop
                endif
               else
-               print *,"internal_e must be positive"
+               print *,"internal_e must be positive: ",internal_e
                stop
               endif
 
@@ -12593,7 +12619,7 @@ stop
                 NEW_TEMPERATURE, &
                 internal_e,imattype,im)
               else
-               print *,"internal_e bust: ",im,internal_e
+               print *,"internal_e invalid: ",im,internal_e
                stop
               endif
 
@@ -12609,13 +12635,14 @@ stop
              else if (is_compressible_mat(im).eq.0) then
               ! do nothing
              else
-              print *,"is_compressible_mat(im) invalid"
+              print *,"is_compressible_mat(im) invalid: ", &
+                 is_compressible_mat(im)
               stop
              endif
             else if (LStest(im).le.-DXMAXLS) then
              ! do nothing
             else
-             print *,"LStest(im) is NaN: ",im,LStest(im)
+             print *,"LStest(im) invalid: ",im,LStest(im)
              stop
             endif 
            enddo ! im=1..num_materials
@@ -16902,7 +16929,7 @@ stop
       real(amrex_real) LS_predict(num_materials)
       real(amrex_real) LS_virtual(num_materials)
       real(amrex_real) LS_virtual_new(num_materials)
-      real(amrex_real) LS_virtual_max ! used for insuring tessellation property of LS
+      real(amrex_real) LS_virtual_max !used for insuring tessellation property of LS
       integer num_materials_fluid,num_materials_solid,num_materials_lag
       integer at_center
       integer ibase
