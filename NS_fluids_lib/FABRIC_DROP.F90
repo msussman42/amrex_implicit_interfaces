@@ -11,6 +11,8 @@
 #include "EXTRAP_COMP.H"
 
 ! #define DEBUG_FABRIC_DROP
+! This configuration file is authored by:
+! Mehdi Vahab, Yang Liu, and Kourosh Shoele
 #define FABRIC_DROP_PROB_TYPE 7001
 
 
