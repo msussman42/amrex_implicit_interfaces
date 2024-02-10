@@ -463,6 +463,11 @@ implicit none
 
       real(amrex_real), PARAMETER :: room_temperature=293.0d0
 
+      real(amrex_real), PARAMETER :: incomp_thickness=2.0d0
+
+        !nonconservative, staggared grid.
+        !verify: fort_conserve_total_energy=0
+      integer, PARAMETER :: use_conservation_form_velocity=0
 
 #ifdef BL_USE_FLOAT
 

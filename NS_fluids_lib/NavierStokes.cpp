@@ -5170,6 +5170,16 @@ NavierStokes::read_params ()
       } // ireverse=0,1
      } //im_opp=im+1..num_materials
     } // im=1..num_materials
+      
+    for (int i=0;i<num_interfaces;i++) {
+     if ((material_type_interface[i]==0)||
+         (material_type_interface[i]==999)) {
+      if (conserve_total_energy==0) {
+       //do nothing
+      } else
+       amrex::Error("expecting conserve_total_energy==0");
+     }
+    }
 
     for (int i=0;i<num_species_var;i++) {
      int im=spec_material_id_AMBIENT[i];

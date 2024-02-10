@@ -4386,7 +4386,7 @@ stop
        if (KE.ge.zero) then
         ! do nothing
        else
-        print *,"KE is NaN"
+        print *,"KE invalid: ",KE
         stop
        endif
 
@@ -4482,7 +4482,8 @@ stop
              dencore(im)*(KE+local_internal) 
 
            else 
-            print *,"fort_conserve_total_energy invalid"
+            print *,"fort_conserve_total_energy invalid: ", &
+              fort_conserve_total_energy
             stop
            endif
 
@@ -12933,7 +12934,8 @@ stop
       real(amrex_real), INTENT(in), target :: umac_displace(DIMV(umac_displace))
       real(amrex_real), pointer :: umac_displace_ptr(D_DECL(:,:,:))
        ! local variables
-      real(amrex_real), INTENT(in), target :: conserve(DIMV(conserve),nc_conserve)
+      real(amrex_real), INTENT(in), target ::  &
+            conserve(DIMV(conserve),nc_conserve)
       real(amrex_real), pointer :: conserve_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: xvel(DIMV(xvel)) 
       real(amrex_real), pointer :: xvel_ptr(D_DECL(:,:,:))
@@ -12986,6 +12988,11 @@ stop
       integer iside_low,iside_high
       integer vofcomp
       integer im
+      integer im_opp
+      integer iten
+      integer incompressible_interface_flag
+      real(amrex_real) dxmaxLS
+
       real(amrex_real) mom2(SDIM)
       real(amrex_real) xsten_MAC(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_accept(-nhalf:nhalf,SDIM)
@@ -13054,6 +13061,7 @@ stop
       real(amrex_real) snew_hold(ncomp_state)
       real(amrex_real) tennew_hold(NUM_CELL_ELASTIC)
       real(amrex_real) dencore(num_materials)
+      real(amrex_real) oldLS(num_materials)
       real(amrex_real) newLS(num_materials)
       real(amrex_real) newvfrac_weymouth(num_materials)
       real(amrex_real) newvfrac_cor(num_materials)
@@ -13360,6 +13368,14 @@ stop
        ! do nothing
       else
        print *,"levelrz invalid vfrac split"
+       stop
+      endif
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      if (dxmaxLS.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmaxLS invalid: ",dxmaxLS
        stop
       endif
 
@@ -14063,7 +14079,7 @@ stop
          if (volcell_accept.gt.zero) then
           ! do nothing
          else
-          print *,"volcell_accept invalid"
+          print *,"volcell_accept invalid: ",volcell_accept
           stop
          endif
 
@@ -14131,9 +14147,67 @@ stop
                   (usten_accept(-1).ne.zero)) then
           ! do nothing
          else
-          print *,"usten_accept is corrupt"
+          print *,"usten_accept is corrupt: ", &
+             usten_accept(1),usten_accept(-1)
           stop
          endif
+
+         incompressible_interface_flag=0
+
+         do im=1,num_materials
+          oldLS(im)=LS(D_DECL(icrse,jcrse,kcrse),im)
+         enddo
+
+         do im=1,num_materials
+          if (oldLS(im).ge.-incomp_thickness*dxmaxLS) then
+           if (is_rigid(im).eq.1) then
+            incompressible_interface_flag=1
+           else if (is_rigid(im).eq.0) then
+            do im_opp=im+1,num_materials
+             if (oldLS(im_opp).ge.-incomp_thickness*dxmaxLS) then
+              call get_iten(im,im_opp,iten)
+              if (fort_material_type_interface(iten).eq.0) then
+               if (fort_conserve_total_energy.eq.0) then
+                incompressible_interface_flag=1
+               else
+                print *,"expecting fort_conserve_total_energy==0"
+                stop
+               endif
+              else if (fort_material_type_interface(iten).eq.999) then
+               if (fort_conserve_total_energy.eq.0) then
+                incompressible_interface_flag=1
+               else
+                print *,"expecting fort_conserve_total_energy==0"
+                stop
+               endif
+              else if ((fort_material_type_interface(iten).ge.1).and. &
+                       (fort_material_type_interface(iten).le. &
+                        MAX_NUM_EOS)) then 
+               !do nothing
+              else
+               print *,"fort_materal_type_interface invalid: ", &
+                iten,fort_material_type_interface(iten)
+               stop
+              endif
+             else if (oldLS(im_opp).le.-incomp_thickness*dxmaxLS) then
+              !do nothing
+             else
+              print *,"oldLS(im_opp) corrupt: ",im_opp,oldLS(im_opp)
+              stop
+             endif 
+            enddo !im_opp=im+1 ... num_materials
+           else 
+            print *,"is_rigid(im) invalid: ",im,is_rigid(im)
+            stop
+           endif
+          else if (oldLS(im).le.-incomp_thickness*dxmaxLS) then
+           ! do nothing
+          else
+           print *,"oldLS(im) corrupt,fort_vfrac_split"
+           print *,"im,oldLS(im): ",im,oldLS(im)
+           stop
+          endif 
+         enddo !im=1,num_materials
 
          do istencil=idonatelow,idonatehigh
  
@@ -14638,9 +14712,17 @@ stop
           if (is_compressible_mat(im).eq.0) then
            vol_target_local=volmat_depart_cor(im)
           else if (is_compressible_mat(im).eq.1) then
-           ! do nothing
+           if (incompressible_interface_flag.eq.0) then
+            ! do nothing
+           else if (incompressible_interface_flag.eq.1) then
+            vol_target_local=volmat_depart_cor(im)
+           else 
+            print *,"incompressible_interface_flag invalid"
+            stop
+           endif
           else
-           print *,"is_compressible_mat invalid"
+           print *,"is_compressible_mat invalid: ", &
+                im,is_compressible_mat(im)
            stop
           endif
 
@@ -14874,8 +14956,10 @@ stop
               if (solidheat_flag.eq.0) then ! diffuse in solid
 
                massdepart=veldata(CISLCOMP_STATES+dencomp_data)
-               if (massdepart.le.zero) then
-                print *,"massdepart invalid"
+               if (massdepart.gt.zero) then
+                !do nothing
+               else
+                print *,"massdepart invalid: ",massdepart
                 stop
                endif 
                ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
@@ -14891,7 +14975,7 @@ stop
                ETcore=fort_tempconst(im)
 
               else
-               print *,"solidheat_flag invalid"
+               print *,"solidheat_flag invalid: ",solidheat_flag
                stop
               endif
 
@@ -14905,7 +14989,7 @@ stop
               if (ETcore.gt.zero) then
                ! do nothing
               else
-               print *,"Energy (ETcore) went negative"
+               print *,"Energy (ETcore) went negative: ",ETcore
                stop
               endif
 
@@ -15054,12 +15138,12 @@ stop
            else if (solidheat_flag.eq.1) then ! dirichlet
             ! do nothing
            else
-            print *,"solidheat_flag invalid"
+            print *,"solidheat_flag invalid: ",solidheat_flag
             stop
            endif
 
           else
-           print *,"is_rigid invalid GODUNOV_3D.F90"
+           print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
            stop
           endif
 
@@ -15448,13 +15532,17 @@ stop
       real(amrex_real), pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solxfab(DIMV(solxfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solyfab(DIMV(solyfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solzfab(DIMV(solzfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: LSNEW(DIMV(LSNEW),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in),target :: &
+              LSNEW(DIMV(LSNEW),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LSNEW_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
