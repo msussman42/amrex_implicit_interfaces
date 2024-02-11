@@ -14163,38 +14163,34 @@ stop
            if (is_rigid(im).eq.1) then
             incompressible_interface_flag=1
            else if (is_rigid(im).eq.0) then
-            do im_opp=im+1,num_materials
-             if (oldLS(im_opp).ge.-incomp_thickness*dxmaxLS) then
-              call get_iten(im,im_opp,iten)
-              if (fort_material_type_interface(iten).eq.0) then
-               if (fort_conserve_total_energy.eq.0) then
-                incompressible_interface_flag=1
+            do im_opp=1,num_materials
+             if (im_opp.ne.im) then
+              if (oldLS(im_opp).ge.-incomp_thickness*dxmaxLS) then
+               call get_iten(im,im_opp,iten)
+               if ((fort_material_type_interface(iten).eq.0).or. &
+                   (fort_material_type_interface(iten).eq.999)) then
+                if (fort_conserve_total_energy.eq.0) then
+                 incompressible_interface_flag=1
+                else
+                 print *,"expecting fort_conserve_total_energy==0"
+                 stop
+                endif
+               else if ((fort_material_type_interface(iten).ge.1).and. &
+                        (fort_material_type_interface(iten).le. &
+                         MAX_NUM_EOS)) then 
+                !do nothing
                else
-                print *,"expecting fort_conserve_total_energy==0"
+                print *,"fort_materal_type_interface invalid: ", &
+                 iten,fort_material_type_interface(iten)
                 stop
                endif
-              else if (fort_material_type_interface(iten).eq.999) then
-               if (fort_conserve_total_energy.eq.0) then
-                incompressible_interface_flag=1
-               else
-                print *,"expecting fort_conserve_total_energy==0"
-                stop
-               endif
-              else if ((fort_material_type_interface(iten).ge.1).and. &
-                       (fort_material_type_interface(iten).le. &
-                        MAX_NUM_EOS)) then 
+              else if (oldLS(im_opp).le.-incomp_thickness*dxmaxLS) then
                !do nothing
               else
-               print *,"fort_materal_type_interface invalid: ", &
-                iten,fort_material_type_interface(iten)
+               print *,"oldLS(im_opp) corrupt: ",im_opp,oldLS(im_opp)
                stop
               endif
-             else if (oldLS(im_opp).le.-incomp_thickness*dxmaxLS) then
-              !do nothing
-             else
-              print *,"oldLS(im_opp) corrupt: ",im_opp,oldLS(im_opp)
-              stop
-             endif 
+             endif  !im_opp<>im
             enddo !im_opp=im+1 ... num_materials
            else 
             print *,"is_rigid(im) invalid: ",im,is_rigid(im)
