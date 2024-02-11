@@ -12227,39 +12227,42 @@ stop
             stop
            endif
 
-           do im_opp=im+1,num_materials
-            if (LStest(im_opp).ge.-incomp_thickness*DXMAXLS) then
-             call get_iten(im,im_opp,iten)
-             if (fort_material_type_interface(iten).eq.0) then
-              if (fort_conserve_total_energy.eq.0) then
-               use_face_pres_cen=0
+           do im_opp=1,num_materials
+            if (im_opp.ne.im) then
+             if (LStest(im_opp).ge.-incomp_thickness*DXMAXLS) then
+              call get_iten(im,im_opp,iten)
+              if (fort_material_type_interface(iten).eq.0) then
+               if (fort_conserve_total_energy.eq.0) then
+                use_face_pres_cen=0
+               else
+                print *,"expecting fort_conserve_total_energy==0"
+                stop
+               endif
+              else if (fort_material_type_interface(iten).eq.999) then
+               if (fort_conserve_total_energy.eq.0) then
+                use_face_pres_cen=0
+               else
+                print *,"expecting fort_conserve_total_energy==0"
+                stop
+               endif
+              else if ((fort_material_type_interface(iten).ge.1).and. &
+                       (fort_material_type_interface(iten).le. &
+                        MAX_NUM_EOS)) then 
+               !do nothing
               else
-               print *,"expecting fort_conserve_total_energy==0"
+               print *,"fort_materal_type_interface invalid: ", &
+                iten,fort_material_type_interface(iten)
                stop
               endif
-             else if (fort_material_type_interface(iten).eq.999) then
-              if (fort_conserve_total_energy.eq.0) then
-               use_face_pres_cen=0
-              else
-               print *,"expecting fort_conserve_total_energy==0"
-               stop
-              endif
-             else if ((fort_material_type_interface(iten).ge.1).and. &
-                      (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then 
+
+             else if (LStest(im_opp).le.-incomp_thickness*DXMAXLS) then
               !do nothing
              else
-              print *,"fort_materal_type_interface invalid: ", &
-                iten,fort_material_type_interface(iten)
+              print *,"LStest(im_opp) corrupt: ",im_opp,LStest(im_opp)
               stop
-             endif
-
-            else if (LStest(im_opp).le.-incomp_thickness*DXMAXLS) then
-             !do nothing
-            else
-             print *,"LStest(im_opp) corrupt: ",im_opp,LStest(im_opp)
-             stop
-            endif 
-           enddo !im_opp=im+1 ... num_materials
+             endif 
+            endif !im_opp<>im
+           enddo !im_opp=1 ... num_materials
 
           else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
            ! do nothing

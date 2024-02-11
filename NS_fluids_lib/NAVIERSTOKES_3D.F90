@@ -1276,7 +1276,8 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: vol(DIMV(vol))
       real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: lsnew(DIMV(lsnew),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+              lsnew(DIMV(lsnew),num_materials*(1+SDIM))
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: csnd(DIMV(csnd),2) 
       real(amrex_real), pointer :: csnd_ptr(D_DECL(:,:,:),:)
@@ -1288,7 +1289,8 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: mdot_ptr(D_DECL(:,:,:))
 
       integer i,j,k
-      integer im,imcrit,im_weight
+      integer im,imcrit,im_weight,im_opp
+      integer iten
       integer ibase
       real(amrex_real) temperature,internal_energy,soundsqr
       real(amrex_real) pres(num_materials)
@@ -1329,7 +1331,8 @@ END SUBROUTINE SIMP
            (compressible_dt_factor(im).le.1.0D+20)) then
         ! do nothing
        else
-        print *,"compressible_dt_factor invalid"
+        print *,"compressible_dt_factor invalid: ",im, &
+                compressible_dt_factor(im)
         stop
        endif
       enddo
@@ -1337,14 +1340,15 @@ END SUBROUTINE SIMP
       if (nden.eq.num_materials*num_state_material) then
        ! do nothing
       else
-       print *,"nden invalid"
+       print *,"nden invalid: ",nden
        stop
       endif
       if ((pressure_select_criterion.ge.0).and. &
           (pressure_select_criterion.le.2)) then
        ! do nothing
       else
-       print *,"pressure_select_criterion invalid"
+       print *,"pressure_select_criterion invalid: ", &
+               pressure_select_criterion
        stop
       endif
       if (project_option.eq.SOLVETYPE_PRES) then
@@ -1356,7 +1360,7 @@ END SUBROUTINE SIMP
       if ((level.ge.0).and.(level.le.finest_level)) then
        ! do nothing
       else
-       print *,"level invalid"
+       print *,"level invalid: ",level
        stop
       endif
 
@@ -1390,7 +1394,7 @@ END SUBROUTINE SIMP
        if (local_volume.gt.zero) then
         ! do nothing
        else
-        print *,"local_volume must be positive"
+        print *,"local_volume must be positive: ",local_volume
         stop
        endif
 
@@ -1408,7 +1412,7 @@ END SUBROUTINE SIMP
          if ((vfrac(im).ge.-EPS1).and.(vfrac(im).le.one+EPS1)) then
           ! do nothing
          else
-          print *,"vfrac invalid: ",vfrac(im)
+          print *,"vfrac invalid: ",im,vfrac(im)
           stop
          endif
          if (vfrac(im).lt.VOFTOL) then
@@ -1474,7 +1478,7 @@ END SUBROUTINE SIMP
            if (rho(im).gt.zero) then
             ! do nothing
            else
-            print *,"cannot have non-pos density"
+            print *,"cannot have non-pos density: ",im,rho(im)
             stop
            endif
 
@@ -1518,13 +1522,40 @@ END SUBROUTINE SIMP
             one_over_c2(im)=one/soundsqr
             one_over_c(im)=sqrt(one_over_c2(im))
 
+            do im_opp=1,num_materials
+             if (im_opp.ne.im) then
+              call get_iten(im,im_opp,iten)
+              if ((fort_material_type_interface(iten).eq.0).or. &
+                  (fort_material_type_interface(iten).eq.999)) then
+               if (localLS(im_opp).ge.-incomp_thickness*DXMAXLS) then
+                pres(im)=zero
+                one_over_c2(im)=zero
+                one_over_c(im)=zero
+               else if (localLS(im_opp).le.-incomp_thickness*DXMAXLS) then
+                !do nothing
+               else
+                print *,"localLS(im_opp) invalid:",im,localLS(im_opp)
+                stop
+               endif
+              else if ((fort_material_type_interface(iten).ge.1).and. &
+                       (fort_material_type_interface(iten).le.MAX_NUM_EOS)) then
+               !do nothing
+              else
+               print *,"fort_material_type_interface(iten) invalid: ", &
+                 iten,fort_material_type_interface
+               stop
+              endif
+             endif !im_opp<>im
+            enddo !im_opp=1,num_materials
+
            else if ((fort_material_type(im).eq.0).or. &
                     (vfrac(im).eq.zero)) then
             pres(im)=zero
             one_over_c2(im)=zero
             one_over_c(im)=zero
            else
-            print *,"material type or vfrac invalid"
+            print *,"material type or vfrac invalid: ",im, &
+               fort_material_type(im),vfrac(im)
             stop
            endif
    
@@ -1710,7 +1741,8 @@ END SUBROUTINE SIMP
          endif
 
         else
-         print *,"project_option invalid advective pressure 2"
+         print *,"project_option invalid advective pressure 2: ", &
+           project_option
          stop
         endif
 
@@ -8228,7 +8260,8 @@ END SUBROUTINE SIMP
       real(amrex_real), INTENT(in), target :: &
               DEN(DIMV(DEN),num_materials*num_state_material)
       real(amrex_real), pointer :: DEN_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: VOF(DIMV(VOF),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in), target :: &
+              VOF(DIMV(VOF),num_materials*ngeom_recon)
       real(amrex_real), pointer :: VOF_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: volumefab(DIMV(volumefab))
       real(amrex_real), pointer :: volumefab_ptr(D_DECL(:,:,:))
@@ -10237,7 +10270,8 @@ END SUBROUTINE SIMP
       real(amrex_real), INTENT(in),target :: xface(DIMV(xface),FACECOMP_NCOMP)
       real(amrex_real), pointer :: xface_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+      real(amrex_real), INTENT(in),target :: &
+              lsnew(DIMV(lsnew),num_materials*(SDIM+1))
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout),target :: macnew(DIMV(macnew))
       real(amrex_real), pointer :: macnew_ptr(D_DECL(:,:,:))
@@ -10396,7 +10430,8 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: DIMDEC(den)
       real(amrex_real), INTENT(inout), target :: pres(DIMV(pres))
       real(amrex_real), pointer :: pres_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: levelpc(DIMV(levelpc),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+              levelpc(DIMV(levelpc),num_materials*(1+SDIM))
       real(amrex_real), pointer :: levelpc_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: den(DIMV(den),nden) ! den,temp,Y
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
@@ -11782,7 +11817,8 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: DIMDEC(fabin)
       integer, INTENT(in) :: DIMDEC(fabout)
        ! x,u,pmg,den,T,Y1..Yn,mag vort,LS
-      real(amrex_real), INTENT(inout),target :: fabout(DIMV(fabout),visual_ncomp) 
+      real(amrex_real), INTENT(inout),target :: &
+              fabout(DIMV(fabout),visual_ncomp) 
       real(amrex_real), pointer :: fabout_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout),target :: fabin(DIMV(fabin),visual_ncomp)
       real(amrex_real), pointer :: fabin_ptr(D_DECL(:,:,:),:)
