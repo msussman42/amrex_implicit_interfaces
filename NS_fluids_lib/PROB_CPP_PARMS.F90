@@ -474,6 +474,7 @@ stop
       use DROP_IN_SHEAR_module
       use MITSUHIRO_MELTING_module
       use AHMED_ICE_RESISTANT_module
+      use KOUROSH_CTML_DROP_module
       use FABRIC_DROP_MODULE
       use CRYOGENIC_TANK1_module
       use CRYOGENIC_TANK2_module
@@ -675,7 +676,7 @@ stop
       ! 4. create new module file (e.g. by copying an existing module file)
       ! 5. update Make.package accordingly (2 places)
       ! 6. create inputs file
-      probtype_list_size=22
+      probtype_list_size=23
       used_probtypes(1)=2000 ! flexible_plate_impact
       used_probtypes(2)=421  ! CRYOGENIC_TANK1
       used_probtypes(3)=414  ! MITSUHIRO_MELTING
@@ -699,6 +700,7 @@ stop
       used_probtypes(21)=82  ! Differentially Heated Rotating Annulus: 
                              ! ROTATING_ANNULUS
       used_probtypes(22)=820 ! Driven cavity: HOPF_BIFURCATION
+      used_probtypes(23)=426 ! KOUROSH_CTML_DROP
       
       SUB_INIT_MODULE=>INIT_STUB_MODULE
       SUB_DEALLOCATE_MODULE=>DEALLOCATE_STUB_MODULE
@@ -939,6 +941,19 @@ stop
        SUB_STATE_BC=>AHMED_ICE_RESISTANT_STATE_BC
        SUB_HEATSOURCE=>AHMED_ICE_RESISTANT_HEATSOURCE
        SUB_ASSIMILATE=>AHMED_ICE_RESISTANT_ASSIMILATE
+
+      else if (probtype.eq.426) then
+       SUB_INIT_MODULE=>INIT_KOUROSH_CTML_DROP_MODULE
+       SUB_LS=>KOUROSH_CTML_DROP_LS
+       SUB_VEL=>KOUROSH_CTML_DROP_VEL
+       SUB_PRES=>KOUROSH_CTML_DROP_PRES
+       SUB_STATE=>KOUROSH_CTML_DROP_STATE
+       SUB_LS_BC=>KOUROSH_CTML_DROP_LS_BC
+       SUB_VEL_BC=>KOUROSH_CTML_DROP_VEL_BC
+       SUB_PRES_BC=>KOUROSH_CTML_DROP_PRES_BC
+       SUB_STATE_BC=>KOUROSH_CTML_DROP_STATE_BC
+       SUB_HEATSOURCE=>KOUROSH_CTML_DROP_HEATSOURCE
+       SUB_ASSIMILATE=>KOUROSH_CTML_DROP_ASSIMILATE
 
       else if (probtype.eq.2001) then
        SUB_INIT_MODULE=>INIT_ICE_ON_SUBSTRATE_MODULE

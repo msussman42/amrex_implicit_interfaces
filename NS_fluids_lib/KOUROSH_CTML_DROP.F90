@@ -21,9 +21,9 @@ print *,"dimension bust"
 stop
 #endif
 
-! probtype==425 (see run2d/inputs.AHMED_ICE_RESISTANT or
-! run3d/inputs.AHMED_ICE_RESISTANT3d)
-module AHMED_ICE_RESISTANT_module
+! probtype==426 (see run2d/inputs.KOUROSH_CTML_DROP or
+! run3d/inputs.KOUROSH_CTML_DROP3d)
+module KOUROSH_CTML_DROP_module
 use amrex_fort_module, only : amrex_real
 
 implicit none                   
@@ -33,16 +33,16 @@ real(amrex_real) :: DEF_VAPOR_GAMMA
 contains
 
   ! do any initial preparation needed
-subroutine INIT_AHMED_ICE_RESISTANT_MODULE()
+subroutine INIT_KOUROSH_CTML_DROP_MODULE()
 IMPLICIT NONE
 
   DEF_VAPOR_GAMMA =  1.666666667D0
 
 return
-end subroutine INIT_AHMED_ICE_RESISTANT_MODULE
+end subroutine INIT_KOUROSH_CTML_DROP_MODULE
 
 ! Phi>0 in the solid
-subroutine AHMED_substrateLS(x,Phi) 
+subroutine KOUROSH_substrateLS(x,Phi) 
 use probcommon_module
 use global_utility_module
 implicit none
@@ -84,7 +84,7 @@ else
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
+if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
  local_time=zero
  im_substrate=num_materials
  if (SDIM.eq.2) then
@@ -122,10 +122,10 @@ else
  stop
 endif
 
-end subroutine AHMED_substrateLS
+end subroutine KOUROSH_substrateLS
 
 
-subroutine AHMED_ICE_RESISTANT_check_vel_rigid(x,t,vel,dir)
+subroutine KOUROSH_CTML_DROP_check_vel_rigid(x,t,vel,dir)
 use probcommon_module
 IMPLICIT NONE
 
@@ -161,11 +161,11 @@ else
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
+if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
  if (vel.eq.0.0d0) then
   ! do nothing
  else
-  print *,"AHMED_ICE_RESISTANT_check_vel_rigid: vel not expected"
+  print *,"KOUROSH_CTML_DROP_check_vel_rigid: vel not expected"
   print *,"x,y,z ",x(1),x(2),x(SDIM)
   print *,"t ",t
   print *,"dir,vel ",dir,vel
@@ -178,10 +178,10 @@ else
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_check_vel_rigid
+end subroutine KOUROSH_CTML_DROP_check_vel_rigid
 
 
-subroutine AHMED_ICE_RESISTANT_LS(x,t,LS,nmat)
+subroutine KOUROSH_CTML_DROP_LS(x,t,LS,nmat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -212,7 +212,7 @@ else
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
+if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
   ! fluids tessellate the domain, substrate is embedded.
 
   ! water is material 1
@@ -247,17 +247,17 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
   stop
  endif
 
- call AHMED_substrateLS(x,LS(num_materials))
+ call KOUROSH_substrateLS(x,LS(num_materials))
 else
  print *,"num_materials or probtype invalid"
  stop
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_LS
+end subroutine KOUROSH_CTML_DROP_LS
 
 ! initial velocity is zero
-subroutine AHMED_ICE_RESISTANT_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
+subroutine KOUROSH_CTML_DROP_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
 
@@ -309,7 +309,7 @@ integer :: assert_oil_velocity
   stop
  endif
 
- if ((num_materials.eq.expected_nmat).and.(probtype.eq.425)) then
+ if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
 
   do dir=1,SDIM
    VEL(dir)=zero
@@ -389,13 +389,13 @@ integer :: assert_oil_velocity
  endif
 
 return 
-end subroutine AHMED_ICE_RESISTANT_VEL
+end subroutine KOUROSH_CTML_DROP_VEL
 
 
 ! this routine used if pressure boundary conditions are prescribed,
 ! since only top wall is "outflow" (outflow in quotes since ice shrinks when
 ! melting), and flow is incompressible, ok to make the top wall pressure zero.
-subroutine AHMED_ICE_RESISTANT_PRES(x,t,LS,PRES,nmat)
+subroutine KOUROSH_CTML_DROP_PRES(x,t,LS,PRES,nmat)
 use probcommon_module
 IMPLICIT NONE
 
@@ -414,11 +414,11 @@ endif
 PRES=zero
 
 return 
-end subroutine AHMED_ICE_RESISTANT_PRES
+end subroutine KOUROSH_CTML_DROP_PRES
 
 
 
-subroutine AHMED_ICE_RESISTANT_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
+subroutine KOUROSH_CTML_DROP_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
 use probcommon_module
 use global_utility_module
 IMPLICIT NONE
@@ -461,7 +461,7 @@ endif
 
 if ((num_materials.eq.expected_nmat).and. &
     (num_state_material.ge.2).and. & ! density, temperature, vapor spec
-    (probtype.eq.425)) then
+    (probtype.eq.426)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
   STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im) 
@@ -485,10 +485,10 @@ else
 endif
  
 return
-end subroutine AHMED_ICE_RESISTANT_STATE
+end subroutine KOUROSH_CTML_DROP_STATE
 
  ! dir=1..sdim  side=1..2
-subroutine AHMED_ICE_RESISTANT_LS_BC(xwall,xghost,t,LS, &
+subroutine KOUROSH_CTML_DROP_LS_BC(xwall,xghost,t,LS, &
    LS_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -510,18 +510,18 @@ else
 endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
- call AHMED_ICE_RESISTANT_LS(xghost,t,LS,nmat)
+ call KOUROSH_CTML_DROP_LS(xghost,t,LS,nmat)
 else
  print *,"dir or side invalid"
  stop
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_LS_BC
+end subroutine KOUROSH_CTML_DROP_LS_BC
 
 
  ! dir=1..sdim  side=1..2 veldir=1..sdim
-subroutine AHMED_ICE_RESISTANT_VEL_BC(xwall,xghost,t,LS, &
+subroutine KOUROSH_CTML_DROP_VEL_BC(xwall,xghost,t,LS, &
    VEL,VEL_in,veldir,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -549,7 +549,7 @@ if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2).and. &
     (veldir.ge.1).and.(veldir.le.SDIM)) then
 
- call AHMED_ICE_RESISTANT_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ call KOUROSH_CTML_DROP_VEL(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
  VEL=local_VEL(veldir)
 
 else
@@ -558,10 +558,10 @@ else
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_VEL_BC
+end subroutine KOUROSH_CTML_DROP_VEL_BC
 
  ! dir=1..sdim  side=1..2
-subroutine AHMED_ICE_RESISTANT_PRES_BC(xwall,xghost,t,LS, &
+subroutine KOUROSH_CTML_DROP_PRES_BC(xwall,xghost,t,LS, &
    PRES,PRES_in,dir,side,dx,nmat)
 use probcommon_module
 IMPLICIT NONE
@@ -585,7 +585,7 @@ endif
 if ((dir.ge.1).and.(dir.le.SDIM).and. &
     (side.ge.1).and.(side.le.2)) then
 
- call AHMED_ICE_RESISTANT_PRES(xghost,t,LS,PRES,nmat)
+ call KOUROSH_CTML_DROP_PRES(xghost,t,LS,PRES,nmat)
 
 else
  print *,"dir or side invalid"
@@ -593,10 +593,10 @@ else
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_PRES_BC
+end subroutine KOUROSH_CTML_DROP_PRES_BC
 
  ! dir=1..sdim  side=1..2
-subroutine AHMED_ICE_RESISTANT_STATE_BC(xwall,xghost,t,LS, &
+subroutine KOUROSH_CTML_DROP_STATE_BC(xwall,xghost,t,LS, &
    STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
 use probcommon_module
 use global_utility_module
@@ -629,7 +629,7 @@ if ((istate.ge.1).and. &
     (istate.le.num_state_material).and. &
     (im.ge.1).and. &
     (im.le.num_materials)) then
- call AHMED_ICE_RESISTANT_STATE(xghost,t,LS,local_STATE,local_bcflag, &
+ call KOUROSH_CTML_DROP_STATE(xghost,t,LS,local_STATE,local_bcflag, &
          nmat,num_state_material)
  ibase=(im-1)*num_state_material
  STATE=local_STATE(ibase+istate)
@@ -642,9 +642,9 @@ else
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_STATE_BC
+end subroutine KOUROSH_CTML_DROP_STATE_BC
 
-subroutine AHMED_ICE_RESISTANT_HEATSOURCE(im,VFRAC,time,x, &
+subroutine KOUROSH_CTML_DROP_HEATSOURCE(im,VFRAC,time,x, &
      xsten,nhalf,temp, &
      heat_source,den,CV,dt,nmat)
 use probcommon_module
@@ -685,7 +685,7 @@ else
 endif
 
 if ((num_materials.eq.expected_nmat).and. &
-    (probtype.eq.425)) then
+    (probtype.eq.426)) then
  heat_source=zero
 else
  print *,"num_materials or probtype invalid"
@@ -693,7 +693,7 @@ else
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_HEATSOURCE
+end subroutine KOUROSH_CTML_DROP_HEATSOURCE
 
 real(amrex_real) function get_LS_seed(xpos,LS_normal)
 use probcommon_module
@@ -734,7 +734,7 @@ endif
 
 end function get_LS_seed
 
-subroutine AHMED_ICE_RESISTANT_ASSIMILATE( &
+subroutine KOUROSH_CTML_DROP_ASSIMILATE( &
      assimilate_in,assimilate_out, &
      i,j,k,cell_flag)
 use probcommon_module
@@ -780,7 +780,7 @@ endif
 
 if ((num_materials.ge.3).and. &
     (num_state_material.ge.2).and. & 
-    (probtype.eq.425)) then
+    (probtype.eq.426)) then
  do dir=1,SDIM
   xcrit(dir)=assimilate_in%xsten(0,dir)
  enddo
@@ -940,7 +940,7 @@ else
 endif
 
 return
-end subroutine AHMED_ICE_RESISTANT_ASSIMILATE
+end subroutine KOUROSH_CTML_DROP_ASSIMILATE
 
 
-end module AHMED_ICE_RESISTANT_module
+end module KOUROSH_CTML_DROP_module
