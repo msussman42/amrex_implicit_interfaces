@@ -85,8 +85,8 @@ else
 endif
 
 if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
- local_time=zero
  im_substrate=num_materials
+
  if (SDIM.eq.2) then
   yhalf=0.2d0
   xshift=x(1)+0.2d0
@@ -100,6 +100,8 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
 
   ! patterned_substrates is declared in GLOBALUTIL.F90.
   ! Phi<0 in the substrate, Phi>0 in the fluid
+  ! ptb_dist_low=ptb_dist_high for flat surface.
+
  ptb_dist_low=0.05d0
  ptb_dist_high=0.1d0
  if ((axis_dir.eq.0).or. &
@@ -114,6 +116,7 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
  endif
 
   ! patterned_substrates is declared in: GLOBALUTIL.F90
+ local_time=zero
  call patterned_substrates(xshift,yhalf,x(SDIM),Phi,local_time,im_substrate, &
          ptb_dist_low,ptb_dist_high)
  Phi=-Phi
@@ -256,6 +259,18 @@ endif
 return
 end subroutine KOUROSH_CTML_DROP_LS
 
+subroutine BL_INFLOW_VELOCITY(x,t,VEL_X)
+use probcommon_module
+IMPLICIT NONE
+
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: VEL_X
+
+ VEL_X=adv_vel
+
+end subroutine BL_INFLOW_VELOCITY
+
 ! initial velocity is zero
 subroutine KOUROSH_CTML_DROP_VEL(x,t,LS,VEL,velsolid_flag,dx,nmat)
 use probcommon_module
@@ -348,14 +363,15 @@ integer :: assert_oil_velocity
     else if (LS(1).le.-dx(1)) then
      ! do nothing
     else
-     print *,"LS(1) invalid"
+     print *,"LS(1) invalid: ",LS(1)
      stop
     endif
 
    else if ((axis_dir.eq.1).or. &
             (axis_dir.eq.2).or. &
             (axis_dir.eq.3)) then
-    VEL(1)=adv_vel
+
+    call BL_INFLOW_VELOCITY(x,t,VEL(1))
 
     if (LS(1).ge.-dx(1)) then ! near or inside the liquid drop.
      VEL(1)=xblob3
