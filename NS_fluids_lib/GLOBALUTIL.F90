@@ -16298,7 +16298,7 @@ end subroutine print_visual_descriptor
        print *,"time invalid in patterned dist"
        stop
       else
-       print *,"time bust in patterned dist"
+       print *,"time bust in patterned dist: ",time
        stop
       endif
 
