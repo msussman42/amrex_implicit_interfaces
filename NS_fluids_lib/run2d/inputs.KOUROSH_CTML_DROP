@@ -1,0 +1,291 @@
+#KOUROSH_CTML_DROP.F90
+max_step  = 200000    # maximum timestep
+#max_step  = 2    # maximum timestep
+
+stop_time = 10  
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# 0=>XYZ, 1=> RZ
+# XYZ: axis_dir=1,2,3 RZ: axis_dir=0
+geometry.coord_sys = 0 
+geometry.prob_lo=0.0 0.0    
+#geometry.prob_hi=0.2 0.6  # cm RZ axis_dir=0
+geometry.prob_hi=0.4 0.6  # cm XYZ axis_dir=1,2,3
+ns.slice_dir=1
+ns.xslice=0.0 0.0 0.0
+ns.EILE_flag=-1
+ns.truncate_thickness=2.0
+
+ns.minimum_relative_error=1.0e-22
+
+ns.initial_project_cycles=5   # initial jacobi iterations
+ns.initial_cg_cycles=10
+ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
+ns.projection_pressure_scale=1.0e+6
+#ns.num_materials=4 # 1:liquid 2:air 3:ice 4:substrate axis_dir=3
+#ns.num_materials=4 # 1:liquid 2:air 3:lubricant 4:substrate axis_dir=0 or 2
+ns.num_materials=3 # 1:liquid 2:air 3:substrate axis_dir=1
+ns.num_species_var=0 #  no evaporation
+ns.post_init_pressure_solve=1 
+ns.MOFITERMAX=15
+ns.MOF_TURN_OFF_LS=0
+ns.MOF_DEBUG_RECON=0
+ns.continuous_mof=1 # 0=MOF 1=CMOF 
+ns.mof_error_ordering=0
+# water,air,ice,substrate axis_dir=3
+#ns.mof_ordering=0 0 0 1 
+# water,air,lubricant,substrate axis_dir=0 or 2
+#ns.mof_ordering=0 0 0 1 
+# water,air,substrate axis_dir=1
+ns.mof_ordering=0 0 1 
+
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0 # 1=check initial residual  2=check all the residuals
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 400
+cg.restart_period=100
+mg.bot_atol = 1.0e-10
+mg.rtol_b = -0.01
+Lp.v = 0
+
+amr.plotfile_on_restart=1
+#ns.visual_revolve=32
+#0=tecplot 1=plt file(visit) 2=tecplot piecewise const.
+ns.visual_nddata_format=0
+
+#amr.n_cell=32 32 48 # XYZ
+#amr.n_cell=16 48 # RZ axis_dir=0
+amr.n_cell=32 48 # XY axis_dir=1,2,3
+amr.max_level = 0 # max_level=1 for production runs
+# water, gas, ice, substrate
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4   # number of buffer cells in error est
+amr.grid_eff        = 0.8   # what constitutes an efficient grid
+ns.ns_tiling=false
+amr.blocking_factor = 8 4   # block factor in grid generation
+amr.check_int       = 100
+#amr.check_int       = 10000  # static freezing test 10 
+amr.check_file      = chk     # root name of checkpoint file
+# blow up: ~ 84000 steps
+amr.plot_int        = 10 # 100 for production runs
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 32
+amr.file_name_digits=7
+#amr.restart         = chk0119700
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 1.0e-11  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-8
+
+# reduce cfl in order to reduce splitting errors?
+ns.cfl            = 0.5      # cfl number for hyperbolic system
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max     = 1.01 
+ns.visc_coef      = 1.0
+mac.visc_abs_tol   = 1.0e-8
+ns.gravity        = -980.0   # cgs
+
+# on the substrate (if there is ice):
+# sigma_{SG}-sigma_{SI}=sigma_{IG}cos(theta_I)
+# theta_I_substrate=33 degrees
+# sigma_{SG}=sigma_{IG}
+# sigma_{IG}-sigma_{SI}=sigma_{IG}cos(theta_I)
+# sigma_{IG}(1-cos(theta_I_substrate))=sigma_{SI}
+
+# sigma_{SG}-sigma_{SL}=sigma_{LG}cos(theta_L)
+# theta_L_substrate=33 degrees
+# sigma_{SG}=sigma_{LG}
+# sigma_{LG}(1-cos(theta_L_substrate))=sigma_{SL}
+# at the triple point:
+# sin(theta_I)/sigma_{LG}=sin(theta_L)/sigma_{IG}=sin(theta_G)/sigma_{LI}
+# theta_I=97 degrees
+# sigma_{LG}=0.831N/m
+# theta_{L}=95 degrees 
+# theta_{L}+theta_{G}=263
+# theta_{G}=168 degrees
+# sigma_{IG}=sigma_{LG}*sin(theta_{L})/sin(97)=0.83405 N/m
+# sigma_{IL}=sigma_{LG}*sin(theta_{G})/sin(97)=0.17407 N/m
+# sigma_{SI}=sigma_{IG}(1-cos(theta_I_substrate))= N/m
+# sigma_{SI}=sigma_{SG}-sigma_{IG}cos(theta_I_substrate)=0.13150 N/m
+# sigma_{SL}=sigma_{SG}-sigma_{LG}cos(theta_L_substrate)=0.13406 N/m
+# material 1=liquid 2=gas  3=ice 4=solid
+# 12,13,14,23,24,34
+# LG,LI,LS,IG,GS,SI  (LS not used)
+#advection, surface tension, gravity
+#Note: if gravity turned off, then surface tension force can be significantly
+#reduced so that advection and freezing time steps
+#can be used instead (simulation would run 100 times faster, giving similar
+#freezing times?).  
+
+#ns.tension=72.8 72.8 72.8 72.8 72.8 72.8 # axis_dir=3
+#ns.tension=72.8 24.8 128.6 34.0 72.8 61.2 # axis_dir=0,2
+ns.tension=72.8 128.6 72.8 # axis_dir=1  12,13,23
+# contact angle for water drop on substrate: 140 degrees
+# theta=theta_{water,substrate}
+# sigma_{ws}+sigma_{aw}cos(theta) = sigma_{as}
+# sigma_{ws}-sigma_{as} = -sigma_{aw}cos(theta)=-72.8 cos(140deg)
+# sigma_{as}=72.8
+# sigma_{ws}=-72.8(cos(140))+72.8=128.6
+# theta=theta_{lubricant,substrate}
+# sigma_{lub,sub}+sigma_{lub,air}cos(theta)=sigma_{air,substrate}
+# sigma_{lub,sub}=72.8-34.0cos(70)=61.2
+#ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K) axis_dir=0,2,3
+ns.stiffCP= 4.1855e+7  1.0e+7 0.385e+7  # erg/(g K) axis_dir=1
+ns.latent_heat = 0.0 -1.81e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.saturation_temp = 0.0 1683 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
+ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+#ns.fixed_dt	  = 0.01     # hardwire dt
+#There are over 300 oil parcels to have statistics for,
+#so recommended sum_interval>1
+ns.sum_interval   = 10      # timesteps between computing mass 
+
+# axis_dir=0 => drop falling vertically with given velocity onto a 
+# oil lubricated substrate.
+# 4 materials: liquid, air, lubricant, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# adv_vel = initially downward velocity of the drop.  adv_dir=sdim
+#
+# axis_dir=1 => drop falling at an angle with given velocity onto a 
+# non-lubricated surface with horizontal air flow.
+# 3 materials: liquid, vapor, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# Initial velocity of drop: (xblob3,yblob3,zblob3)  (sign important)
+# adv_vel = velocity of air flowing into the domain from the xlo position.
+# adv_dir=1
+#
+# axis_dir=2 => drop falling at an angle with given velocity onto a 
+# lubricated surface with horizontal air flow.
+# 4 materials: liquid, air, oil, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# Initial velocity of drop: (xblob3,yblob3,zblob3)  (sign important)
+# adv_vel = velocity of air flowing into the domain from the xlo position.
+# adv_dir=1
+#
+# axis_dir=3 => drop falling at an angle with given velocity onto an 
+# iced surface with horizontal air flow.
+# 4 materials: liquid, air, ice, substrate
+# (xblob,yblob,zblob,radblob) describe initial drop geometry.
+# Initial velocity of drop: (xblob3,yblob3,zblob3)  (sign important)
+# adv_vel = velocity of air flowing into the domain from the xlo position.
+# adv_dir=1
+#
+ns.axis_dir=1
+ns.vorterr=0.0 0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=263  # not used
+ns.advbot=0.0  
+#ns.adv_vel=155.0 # cm/s initial falling downwards speed (axis_dir=0)
+ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2,3)
+#ns.adv_dir=3 #3D vertical falling drop (axis_dir=0)
+#ns.adv_dir=2 #2D vertical falling drop (axis_dir=0)
+#ns.adv_dir=1 #axis_dir=1,2,3
+ns.adv_dir=1 
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+#ns.material_type=0 0 0 999 # axis_dir=3 liquid,gas,ice,substrate
+#ns.material_type=0 0 0 999 # axis_dir=0 or 2 liquid,gas,oil,substrate
+ns.material_type=0 0 999 # axis_dir=1
+#thermal conductivity
+#ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # axis_dir=0,2,3
+ns.heatviscconst=58000.0 2400.0 38600000.0 # axis_dir=1
+# 12 13 14 23 24 34  
+ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
+#evaporation: water vapor is solute, air is solvent units: cm^2/s
+#C_t + u dot grad C = div alpha laplacian C ?
+ns.speciesviscconst=0.0 0.0 0.0 0.0
+# 1=water 2=gas  3=oil  4=substrate 
+ns.speciesconst=0.0 0.0 0.0 0.0
+#1=water 2=gas  3=ice  4=substrate 
+#ns.viscconst=0.018 0.00017 10.0 10.0 # axis_dir=3
+#1=water 2=gas  3=oil  4=substrate 
+#ns.viscconst=0.018 0.00017 10.0 10.0 # axis_dir=0,2
+ns.viscconst=0.018 0.00017 10.0 # axis_dir=1
+ns.elastic_viscosity=0.0 0.0 0.0 0.0
+ns.viscoelastic_model=0 0 0 0
+ns.elastic_time=0.0 0.0 0.0 0.0
+#ns.denconst=1.0 0.001 0.95 8.96 # axis_dir=0,2,3
+ns.denconst=1.0 0.001 8.96 # axis_dir=1
+#ns.FSI_flag=0 0 3 1  # axis_dir=3
+#ns.FSI_flag=0 0 0 1  # axis_dir=0,2
+ns.FSI_flag=0 0 1  # axis_dir=1
+ns.recalesce_flag=0 0 0 0
+# solidheat_flag=0=>diffuse in solid 
+# solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
+# solidheat_flag=2=>neumann
+ns.solidheat_flag=0
+#1=water 2=gas 3=ice 4=substrate 
+#ns.tempconst=1684.0 1684.0 200.0 200.0  #axis_dir=3
+#1=water 2=gas 3=lubricant 4=substrate 
+#ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2
+ns.tempconst=273.0 273.0 353.0  #axis_dir=1
+
+#ns.initial_temperature=1684.0 1684.0 200.0 200.0  # axis_dir=3
+ns.initial_temperature=273.0 273.0 273.0 273.0  # axis_dir=0,1,2
+#ns.xblob=0.0 # axis_dir=0 RZ
+ns.xblob=0.1  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
+ns.yblob=0.38
+ns.zblob=0.38
+ns.radblob=0.06 
+#axis_dir=0,1,2
+#ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
+#axis_dir=3
+ns.zblob2=0.15    #zblob2 is the altitude of the ice layer
+ns.xblob3=50.0
+ns.yblob3=-155.0
+ns.zblob3=-155.0
+# dimensions of drops added after the fact.
+ns.xblob4=0.1
+ns.yblob4=0.38
+ns.zblob4=0.38
+ns.radblob4=0.06
+# velocity of drops added after the fact.
+ns.xblob5=50.0
+ns.yblob5=-155.0
+ns.zblob5=-155.0
+# period of drops added after the fact, starting at t=radblob5
+ns.radblob5=0.000625
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=426
+
+#ns.mem_debug = 1
+ns.v = 1
+ns.output_drop_distribution=1
+#ns.show_mem=1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+# boundary conditions 
+# 0=dirichlet at inflow
+# 1=dirichlet at inflow and outflow
+# 2=dirichlet at inflow and walls.
+# 3=dirichlet at inflow, outflow, and walls.
+ns.prescribe_temperature_outflow=3
+# axis_dir=0
+#ns.lo_bc          = 3 5  # RZ
+#ns.hi_bc          = 2 2  # RZ
+# axis_dir=1,2,3
+ns.lo_bc          = 1 5  # XY
+ns.hi_bc          = 2 5  # XY
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
