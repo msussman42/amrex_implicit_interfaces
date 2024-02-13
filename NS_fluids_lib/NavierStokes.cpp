@@ -10368,7 +10368,7 @@ void NavierStokes::CopyNewToOldALL() {
  int local_Redistribute=0; //redistribute "from scratch"
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_Redistribute);
- ns_level0.CopyNewToOldPC(lev_max); 
+ ns_level0.CopyNewToOldPC(lev_max); //CopyNewToOldPC declared in: AmrLevel.cpp
 
  Long num_particles=current_PC.TotalNumberOfParticles();
 
@@ -22723,7 +22723,7 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 // 2. nonlinear_advection()
 // 3. phase_change_code_segment()
 // 4. nucleation_code_segment()
-// 5. do_the_advance()
+// 5. VOF_Recon_ALL()
 void
 NavierStokes::init_particle_containerALL(int append_flag,
 	const std::string& caller_string) {
@@ -22760,7 +22760,7 @@ NavierStokes::init_particle_containerALL(int append_flag,
 
  } else if (append_flag==OP_PARTICLE_ADD) {
   num_neighbors=0;
- } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
+ } else if (append_flag==OP_PARTICLE_SLOPES) {
   num_neighbors=1;
  } else
   amrex::Error("append_flag invalid");
@@ -22803,7 +22803,7 @@ NavierStokes::init_particle_containerALL(int append_flag,
      (append_flag==OP_PARTICLE_ADD)) {
   localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_redistribute);
- } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
+ } else if (append_flag==OP_PARTICLE_SLOPES) {
   // do nothing
  } else {
   amrex::Error("append_flag invalid");
@@ -22845,6 +22845,8 @@ NavierStokes::init_particle_container(int append_flag,
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
+ MultiFab* slope_mf;
+
  MultiFab* lsmf=getStateDist(1,cur_time_slab,local_caller_string); 
 
  if (lsmf->nComp()==num_materials*(AMREX_SPACEDIM+1)) {
@@ -22874,10 +22876,18 @@ NavierStokes::init_particle_container(int append_flag,
   } else
    amrex::Error("expecting slab_step==ns_time_order-1");
 
+  slope_mf=lsmf;
+
  } else if (append_flag==OP_PARTICLE_ADD) {
   number_sweeps=2;
- } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
+
+  slope_mf=lsmf;
+
+ } else if (append_flag==OP_PARTICLE_SLOPES) {
   number_sweeps=1;
+
+  slope_mf=SLOPE_RECON_MF;
+
  } else
   amrex::Error("append_flag invalid");
 
@@ -22918,8 +22928,8 @@ NavierStokes::init_particle_container(int append_flag,
   FArrayBox& mfinerfab=(*localMF[MASKCOEF_MF])[mfi];
 
   FArrayBox& lsfab=(*lsmf)[mfi];
-
-  FArrayBox& lsnewfab=LS_new[mfi];
+  FArrayBox& slopefab=(*slope_mf)[mfi];
+  int ncomp_slope=slopefab.nComp();
 
    // component 1: number of cell (i,j,k) particles.
    // component 2: link to the first particle in the list of (i,j,k) particles.
@@ -23048,10 +23058,13 @@ NavierStokes::init_particle_container(int append_flag,
      lsfab.dataPtr(),
      ARLIM(lsfab.loVect()),
      ARLIM(lsfab.hiVect()),
-     lsnewfab.dataPtr(),
-     ARLIM(lsnewfab.loVect()),ARLIM(lsnewfab.hiVect()),
+     &ncomp_slope,
+     slopefab.dataPtr(),
+     ARLIM(slopefab.loVect()),
+     ARLIM(slopefab.hiVect()),
      mfinerfab.dataPtr(),
-     ARLIM(mfinerfab.loVect()),ARLIM(mfinerfab.hiVect()));
+     ARLIM(mfinerfab.loVect()),
+     ARLIM(mfinerfab.hiVect()));
     
    if (isweep==0) {
     new_particle_data.resize(Np_append*single_particle_size);
@@ -23124,7 +23137,7 @@ NavierStokes::init_particle_container(int append_flag,
     particles_grid_tile.push_back(mirrorPC_AoS[i_mirror]);
    }
 
-  } else if (append_flag==OP_PARTICLE_ASSIMILATE) {
+  } else if (append_flag==OP_PARTICLE_SLOPES) {
    //do nothing
   } else
    amrex::Error("append_flag invalid");

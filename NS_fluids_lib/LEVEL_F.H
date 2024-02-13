@@ -590,9 +590,10 @@ namespace amrex{
         Real* lsfab,
 	AMREX_ARLIM_P(lsfablo),
 	AMREX_ARLIM_P(lsfabhi),
-        Real* lsnewfab,
-	AMREX_ARLIM_P(lsnewfablo),
-	AMREX_ARLIM_P(lsnewfabhi),
+	int* ncomp_slope,
+        Real* slopefab,
+	AMREX_ARLIM_P(slopefablo),
+	AMREX_ARLIM_P(slopefabhi),
         Real* mfiner,
 	AMREX_ARLIM_P(mfinerlo),
 	AMREX_ARLIM_P(mfinerhi));

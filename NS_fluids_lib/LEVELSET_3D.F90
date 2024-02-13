@@ -18775,7 +18775,7 @@ stop
       if ((accum_PARM%append_flag.eq.OP_PARTICLE_INIT).or. &
           (accum_PARM%append_flag.eq.OP_PARTICLE_ADD)) then
        !do nothing
-      else if (accum_PARM%append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+      else if (accum_PARM%append_flag.eq.OP_PARTICLE_SLOPES) then
        local_ngrow=1
       else
        print *,"accum_PARM%append_flag invalid"
@@ -19285,7 +19285,8 @@ stop
         cell_particle_count, &
         DIMS(cell_particle_count), &
         lsfab,DIMS(lsfab), &
-        lsnewfab,DIMS(lsnewfab), &
+        ncomp_slope, &
+        slopefab,DIMS(slopefab), &
         mfiner,DIMS(mfiner)) &
       bind(c,name='fort_init_particle_container')
 
@@ -19306,6 +19307,7 @@ stop
       integer, INTENT(in) :: number_sweeps
       integer, INTENT(in) :: append_flag
       integer, INTENT(in) :: level,finest_level
+      integer, INTENT(in) :: ncomp_slope
 
       integer, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
@@ -19340,7 +19342,7 @@ stop
 
       integer, INTENT(in) :: DIMDEC(cell_particle_count)
       integer, INTENT(in) :: DIMDEC(lsfab)
-      integer, INTENT(in) :: DIMDEC(lsnewfab)
+      integer, INTENT(in) :: DIMDEC(slopefab)
       integer, INTENT(in) :: DIMDEC(mfiner)
    
        ! first component: number of particles in the cell
@@ -19359,8 +19361,8 @@ stop
       real(amrex_real), pointer, dimension(D_DECL(:,:,:)) :: mfiner_ptr
 
       real(amrex_real), INTENT(out), target :: &
-          lsnewfab(DIMV(lsnewfab),ncomp_state) 
-      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: lsnewfab_ptr
+          slopefab(DIMV(slopefab),ncomp_slope) 
+      real(amrex_real), pointer, dimension(D_DECL(:,:,:),:) :: slopefab_ptr
 
       type(accum_parm_type_count) :: accum_PARM
       type(grid_parm_type) :: grid_PARM
@@ -19441,6 +19443,31 @@ stop
        print *,"expecting ncomp_state=",num_materials*(1+AMREX_SPACEDIM)
        stop
       endif
+      if (append_flag.eq.OP_PARTICLE_ADD) then
+       if (ncomp_state.eq.ncomp_slope) then
+        !do nothing
+       else
+        print *,"ncomp_slope invalid: ",ncomp_slope
+        stop
+       endif
+      else if (append_flag.eq.OP_PARTICLE_INIT) then
+       if (ncomp_state.eq.ncomp_slope) then
+        !do nothing
+       else
+        print *,"ncomp_slope invalid: ",ncomp_slope
+        stop
+       endif
+      else if (append_flag.eq.OP_PARTICLE_SLOPES) then
+       if (ncomp_slope.eq.ngeom_recon*num_materials) then
+        !do nothing
+       else
+        print *,"ncomp_slope invalid: ",ncomp_slope
+        stop
+       endif
+      else
+       print *,"append_flag invalid: ",append_flag
+       stop
+      endif
 
       if (1.eq.0) then
        print *,"fort_caller_string: ",fort_caller_string
@@ -19486,16 +19513,16 @@ stop
       mfiner_ptr=>mfiner
       lsfab_ptr=>lsfab
 
-      lsnewfab_ptr=>lsnewfab
+      slopefab_ptr=>slopefab
 
       call checkbound_array(fablo,fabhi,lsfab_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,lsnewfab_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,slopefab_ptr,1,-1)
 
       call checkbound_array1(fablo,fabhi,mfiner_ptr,1,-1)
 
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,0,-1)
-      if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+      if (append_flag.eq.OP_PARTICLE_SLOPES) then
        call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,1,-1)
       endif
@@ -19581,7 +19608,7 @@ stop
          cell_particle_count_ptr, &
          particle_link_data, &
          Np)
-       else if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+       else if (append_flag.eq.OP_PARTICLE_SLOPES) then
         accum_PARM%Npart=NBR_Np
         call count_particles( &
          accum_PARM, &
@@ -19653,7 +19680,7 @@ stop
             (im_secondary.ge.1).and. &
             (im_secondary.le.num_materials)) then
          if (number_sweeps.eq.1) then
-          if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+          if (append_flag.eq.OP_PARTICLE_SLOPES) then
            accum_PARM%nsubdivide=1
           else
            print *,"append_flag invalid: ",append_flag
@@ -20187,7 +20214,7 @@ stop
 
          deallocate(sub_counter)
 
-        else if (append_flag.eq.OP_PARTICLE_ASSIMILATE) then
+        else if (append_flag.eq.OP_PARTICLE_SLOPES) then
 
          call gridsten_level(xsten,i,j,k,level,nhalf)
 
@@ -20196,7 +20223,7 @@ stop
           xpart(dir_local)=xsub(dir_local)
          enddo
 
-         !very little weight for the grid based data(OP_PARTICLE_ASSIMILATE)
+         !very little weight for the grid based data(OP_PARTICLE_SLOPES)
          local_dx_offset=(1.0D+3)*dx(1)
          call particle_grid_weight(xpart,xsub,local_dx_offset,local_weight)
 
