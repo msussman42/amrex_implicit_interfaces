@@ -449,7 +449,9 @@ public:
 
 #ifdef AMREX_PARTICLES
     //! This function can be called from the parent
-    virtual void particle_redistribute(int /*lbase*/ = 0, bool /*a_init*/ = false) {;}
+    virtual void particle_redistribute(
+      int /*lbase*/ = 0, 
+      bool /*a_init*/ = false) {;}
 
     void CopyNewToOldPC(int lev_max);
     void CopyOldToNewPC(int lev_max);
