@@ -8913,6 +8913,36 @@ void NavierStokes::VOF_Recon_ALL(
   int number_centroid=0;
   Real delta_centroid=0.0;
 
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   ns_level.delete_localMF_if_exist(SLOPE_RECON_MF,1);
+    // sets values to 0.0
+   ns_level.new_localMF(SLOPE_RECON_MF,num_materials*ngeom_recon,ngrow,-1);  
+
+   ns_level.delete_localMF_if_exist(VOF_RECON_MF,1);
+
+   ns_level.getState_localMF(VOF_RECON_MF,1,STATECOMP_MOF,
+     num_materials*ngeom_raw,time);
+
+   for (int im=0;im<num_materials;im++) {
+    int ibase_raw=im*ngeom_raw;
+    int ibase_recon=im*ngeom_recon;
+    ns_level.Copy_localMF(SLOPE_RECON_MF,VOF_RECON_MF,
+      ibase_raw,ibase_recon,ngeom_raw,1);
+    if (init_vof_prev_time==1) {
+     int ngrow_save=ns_level.localMF[VOF_PREV_TIME_MF]->nGrow();
+     if (ngrow_save!=1)
+      amrex::Error("vof prev time has invalid ngrow");
+     ns_level.Copy_localMF(VOF_PREV_TIME_MF,VOF_RECON_MF,
+	ibase_raw,im,1,ngrow_save); 
+    } else if (init_vof_prev_time==0) {
+     // do nothing
+    } else
+     amrex::Error("init_vof_prev_time invalid");
+   } // im=0..num_materials-1
+  } // for (int ilev=level;ilev<=finest_level;ilev++)
+
+
   // go from coarsest to finest so that SLOPE_RECON_MF
   // can have proper BC.
   for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -9107,31 +9137,18 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if (lsdata->nComp()!=num_materials*(1+AMREX_SPACEDIM))
   amrex::Error("lsdata invalid ncomp");
 
+ debug_ngrow(SLOPE_RECON_MF,0,local_caller_string);
+ if (localMF[SLOPE_RECON_MF]->nComp()!=num_materials*ngeom_recon)
+  amrex::Error("invalid ncomp for SLOPE_RECON_MF");
+
+ debug_ngrow(VOF_RECON_MF,0,local_caller_string);
+ if (localMF[VOF_RECON_MF]->nComp()!=num_materials*ngeom_raw)
+  amrex::Error("invalid ncomp for VOF_RECON_MF");
+
  resize_mask_nbr(1);
  debug_ngrow(MASK_NBR_MF,1,local_caller_string);
  if (localMF[MASK_NBR_MF]->nComp()!=4)
   amrex::Error("invalid ncomp for mask nbr");
-
- delete_localMF_if_exist(SLOPE_RECON_MF,1);
- // sets values to 0.0
- new_localMF(SLOPE_RECON_MF,num_materials*ngeom_recon,ngrow,-1);  
-
- delete_localMF_if_exist(VOF_RECON_MF,1);
- getState_localMF(VOF_RECON_MF,1,STATECOMP_MOF,num_materials*ngeom_raw,time);
- for (int im=0;im<num_materials;im++) {
-  int ibase_raw=im*ngeom_raw;
-  int ibase_recon=im*ngeom_recon;
-  Copy_localMF(SLOPE_RECON_MF,VOF_RECON_MF,ibase_raw,ibase_recon,ngeom_raw,1);
-  if (init_vof_prev_time==1) {
-   int ngrow_save=localMF[VOF_PREV_TIME_MF]->nGrow();
-   if (ngrow_save!=1)
-    amrex::Error("vof prev time has invalid ngrow");
-   Copy_localMF(VOF_PREV_TIME_MF,VOF_RECON_MF,ibase_raw,im,1,ngrow_save); 
-  } else if (init_vof_prev_time==0) {
-   // do nothing
-  } else
-   amrex::Error("init_vof_prev_time invalid");
- } // im=0..num_materials-1
 
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
