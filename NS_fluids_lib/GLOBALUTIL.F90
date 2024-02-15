@@ -21223,19 +21223,27 @@ end subroutine print_visual_descriptor
       integer, PARAMETER :: from_boundary_hydrostatic=0
 
       call air_parms(R,cp,cv,gamma_constant,omega) 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       ! do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal energy cannot be negative"
        stop
       endif
-      if (cv.le.zero) then
+      if (cv.gt.zero) then
+       !do nothing
+      else
        print *,"cv error"
        stop
       endif
-      if (cp.le.zero) then
+      if (cp.gt.zero) then
+       !do nothing
+      else
        print *,"cp error"
        stop
       endif

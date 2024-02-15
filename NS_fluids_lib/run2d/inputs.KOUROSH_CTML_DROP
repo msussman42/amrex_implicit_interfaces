@@ -9,8 +9,8 @@ stop_time = 10
 # XYZ: axis_dir=1,2,3 RZ: axis_dir=0
 geometry.coord_sys = 0 
 geometry.prob_lo=0.0 0.0    
-#geometry.prob_hi=0.2 0.6  # cm RZ axis_dir=0
-geometry.prob_hi=0.4 0.6  # cm XYZ axis_dir=1,2,3
+#geometry.prob_hi=0.05 0.1  # cm RZ axis_dir=0
+geometry.prob_hi=0.1 0.1  # cm XYZ axis_dir=1,2,3
 ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
 ns.EILE_flag=-1
@@ -56,9 +56,9 @@ amr.plotfile_on_restart=1
 #0=tecplot 1=plt file(visit) 2=tecplot piecewise const.
 ns.visual_nddata_format=0
 
-#amr.n_cell=32 32 48 # XYZ
-#amr.n_cell=16 48 # RZ axis_dir=0
-amr.n_cell=32 48 # XY axis_dir=1,2,3
+#amr.n_cell=64 64 64 # XYZ
+#amr.n_cell=32 64 # RZ axis_dir=0
+amr.n_cell=64 64 # XY axis_dir=1,2,3
 amr.max_level = 0 # max_level=1 for production runs
 # water, gas, ice, substrate
 # 0- 1 level 1- 2 levels  2- 3 levels
@@ -90,7 +90,8 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
-ns.gravity        = -980.0   # cgs
+#ns.gravity        = -980.0   # cgs (incompressible)
+ns.gravity        = 0.0   # cgs (compressible)
 
 # on the substrate (if there is ice):
 # sigma_{SG}-sigma_{SI}=sigma_{IG}cos(theta_I)
@@ -184,15 +185,16 @@ ns.vinletgas=0.0
 ns.twall=263  # not used
 ns.advbot=0.0  
 #ns.adv_vel=155.0 # cm/s initial falling downwards speed (axis_dir=0)
-ns.adv_vel=100.0 # cm/s air flow from left to right (axis_dir=1,2,3)
+ns.adv_vel=70000.0 # cm/s air flow from left to right (axis_dir=1,2,3)
 #ns.adv_dir=3 #3D vertical falling drop (axis_dir=0)
 #ns.adv_dir=2 #2D vertical falling drop (axis_dir=0)
 #ns.adv_dir=1 #axis_dir=1,2,3
 ns.adv_dir=1 
 ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.num_divu_outer_sweeps=2
 #ns.material_type=0 0 0 999 # axis_dir=3 liquid,gas,ice,substrate
 #ns.material_type=0 0 0 999 # axis_dir=0 or 2 liquid,gas,oil,substrate
-ns.material_type=0 0 999 # axis_dir=1
+ns.material_type=1 14 999 # axis_dir=1 1=tait EOS 14=EOS_air_rho2
 #thermal conductivity
 #ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # axis_dir=0,2,3
 ns.heatviscconst=58000.0 2400.0 38600000.0 # axis_dir=1
@@ -225,31 +227,32 @@ ns.solidheat_flag=0
 #ns.tempconst=1684.0 1684.0 200.0 200.0  #axis_dir=3
 #1=water 2=gas 3=lubricant 4=substrate 
 #ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2
+#
 ns.tempconst=273.0 273.0 353.0  #axis_dir=1
 
 #ns.initial_temperature=1684.0 1684.0 200.0 200.0  # axis_dir=3
 ns.initial_temperature=273.0 273.0 273.0 273.0  # axis_dir=0,1,2
 #ns.xblob=0.0 # axis_dir=0 RZ
-ns.xblob=0.1  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
-ns.yblob=0.38
-ns.zblob=0.38
-ns.radblob=0.06 
+ns.xblob=0.02  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
+ns.yblob=0.08  # vertical direction in 2D
+ns.zblob=0.08
+ns.radblob=0.01  #cm (medium supercooled droplets)
 #axis_dir=0,1,2
 #ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
 #axis_dir=3
 ns.zblob2=0.15    #zblob2 is the altitude of the ice layer
-ns.xblob3=50.0
-ns.yblob3=-155.0
-ns.zblob3=-155.0
+ns.xblob3=70000.0
+ns.yblob3=-49500.0 #45 degree angle
+ns.zblob3=-49500.0
 # dimensions of drops added after the fact.
-ns.xblob4=0.1
-ns.yblob4=0.38
-ns.zblob4=0.38
-ns.radblob4=0.06
+ns.xblob4=0.02
+ns.yblob4=0.08 #vertical direction in 2D
+ns.zblob4=0.08
+ns.radblob4=0.01
 # velocity of drops added after the fact.
-ns.xblob5=50.0
-ns.yblob5=-155.0
-ns.zblob5=-155.0
+ns.xblob5=70000.0 #Mach 2
+ns.yblob5=-49500.0
+ns.zblob5=-49500.0
 # period of drops added after the fact, starting at t=radblob5
 ns.radblob5=0.000625
 ns.denfact=1.0

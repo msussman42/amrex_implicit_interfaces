@@ -15119,7 +15119,8 @@ contains
       integer klo,khi
       integer dir
 
-      real(amrex_real), INTENT(in) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT(in) :: &
+            ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real) :: ls_mof_tet(sdim+1)
 
       real(amrex_real), INTENT(out)    :: lsnormal(num_materials,sdim)
@@ -15129,11 +15130,9 @@ contains
       real(amrex_real) LS_cen,LS_plus,LS_minus
       real(amrex_real) slope_plus,slope_minus
       real(amrex_real) theta_plus,theta_minus
-      integer always_use_default
+      integer, parameter :: always_use_default=0
 
 #include "mofdata.H"
-
-      always_use_default=0
 
       if (nhalf0.lt.3) then
        print *,"expecting nhalf0>=3: ",nhalf0

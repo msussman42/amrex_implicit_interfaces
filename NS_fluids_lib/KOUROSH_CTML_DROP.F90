@@ -259,6 +259,8 @@ endif
 return
 end subroutine KOUROSH_CTML_DROP_LS
 
+! function of x(2),x(SDIM),t  (in 3d)
+! function of x(SDIM),t  (in 2d)
 subroutine BL_INFLOW_VELOCITY(x,t,VEL_X)
 use probcommon_module
 IMPLICIT NONE
