@@ -41,7 +41,6 @@ extern "C"
         int* level,
         int* finest_level,
         int* max_level,
-        int* ngrow,
         int* vofbc,
         const int* tilelo,const int* tilehi,
         const int* fablo,const int* fabhi,

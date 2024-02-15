@@ -20116,7 +20116,7 @@ end subroutine RatePhaseChange
          geom_xtetlist(1,1,1,nucleate_in%tid+1), &
          nmax, &
          nmax, &
-         mofdata, &
+         mofdata, & !intent(inout)
          vof_super, &
          multi_centroidA, &
          continuous_mof, & ! =STANDARD_MOF
@@ -29509,6 +29509,11 @@ end subroutine initialize2d
            mofdata(ibasedst+dir3)=uboundary(ibasesrc+dir3)
           enddo
 
+           !slope=0
+          do dir3=1,SDIM
+           mofdata(ibasedst+SDIM+1+dir3)=zero
+          enddo
+
            ! order=0
           mofdata(ibasedst+SDIM+1)=zero
 
@@ -29537,7 +29542,7 @@ end subroutine initialize2d
           geom_xtetlist(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          mofdata, &
+          mofdata, & !intent(inout)
           vof_super, &
           multi_centroidA, &
           continuous_mof, & !=STANDARD_MOF

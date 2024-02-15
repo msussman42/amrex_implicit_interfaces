@@ -5443,7 +5443,7 @@ stop
              geom_xtetlist_old(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             mofdata_new, &
+             mofdata_new, & !intent(inout)
              vof_super, &
              multi_centroidA, &
              continuous_mof_parm, & !=STANDARD_MOF
