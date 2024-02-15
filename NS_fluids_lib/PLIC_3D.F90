@@ -44,7 +44,6 @@ stop
         level, &
         finest_level, &
         max_level, &
-        ngrow, &
         vofbc, &
         tilelo,tilehi, &
         fablo,fabhi, &
@@ -90,7 +89,7 @@ stop
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: ngrow
+      integer, parameter :: ngrow=1
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(masknbr)
       integer, INTENT(in) :: DIMDEC(snew)
@@ -108,7 +107,7 @@ stop
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials) 
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(out), target :: &
+      real(amrex_real), INTENT(inout), target :: &
               slopes(DIMV(slopes),num_materials*ngeom_recon) 
       real(amrex_real), pointer :: slopes_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: &
@@ -248,8 +247,8 @@ stop
        stop
       endif
 
-      if (ngrow.lt.1) then
-       print *,"ngrow invalid in fort_sloperecon"
+      if (ngrow.ne.1) then
+       print *,"ngrow invalid in fort_sloperecon: ",ngrow
        stop
       endif
       if ((continuous_mof.eq.STANDARD_MOF).or. & !MOF
@@ -432,7 +431,7 @@ stop
            stop
           endif
          else
-          print *,"outside_fab invalid"
+          print *,"outside_fab invalid: ",outside_fab
           stop
          endif
         enddo !side=1,2
@@ -469,6 +468,12 @@ stop
          mofdata(vofcomprecon+dir)=vof(D_DECL(i,j,k),vofcompraw+dir)
         enddo
 
+         !vof,cenref,order,slope,intercept
+        do dir=1,SDIM
+         mofdata(vofcomprecon+SDIM+1+dir)= &
+             slopes(D_DECL(i,j,k),vofcomprecon+SDIM+1+dir)
+        enddo
+
         if ((mofdata(vofcomprecon).ge.-0.1d0).and. &
             (mofdata(vofcomprecon).le.1.1d0)) then
          ! do nothing
@@ -486,9 +491,8 @@ stop
         orderflag=zero
         mofdata(vofcomprecon+SDIM+1)=orderflag
 
-        do dir=SDIM+3,ngeom_recon
-         mofdata(vofcomprecon+dir-1)=zero
-        enddo
+         !initialize the intercept to be zero
+        mofdata(vofcomprecon+ngeom_recon-1)=zero
 
        enddo  ! im=1..num_materials
 
@@ -705,12 +709,19 @@ stop
             mofsten(vofcomprecon+dir)= &
              vof(D_DECL(i+i1,j+j1,k+k1),vofcompraw+dir)
            enddo
+
+           !vof,cenref,order,slope,intercept
+           do dir=1,SDIM
+            mofsten(vofcomprecon+SDIM+1+dir)= &
+             slopes(D_DECL(i+i1,j+j1,k+k1),vofcomprecon+SDIM+1+dir)
+           enddo
+
            orderflag=zero
            mofsten(vofcomprecon+SDIM+1)=orderflag
-            !VFRAC,REF CENTROID,ORDER,SLOPE,INTERCEPT
-           do dir=SDIM+3,ngeom_recon
-            mofsten(vofcomprecon+dir-1)=zero
-           enddo
+
+           !initialize the intercept to be zero
+           mofsten(vofcomprecon+ngeom_recon-1)=zero
+
           enddo  ! im=1..num_materials
 
            ! sum of F_fluid=1
@@ -850,14 +861,14 @@ stop
          if (volume_super.gt.zero) then
           ! do nothing
          else
-          print *,"volume_super invalid"
+          print *,"volume_super invalid: ",volume_super
           stop
          endif
 
          if (volume_super_mofdata.gt.zero) then
           ! do nothing
          else
-          print *,"volume_super_mofdata invalid"
+          print *,"volume_super_mofdata invalid: ",volume_super_mofdata
           stop
          endif
 
@@ -890,7 +901,7 @@ stop
              mofdata_super(vofcomprecon+dir)=zero
             enddo
            else
-            print *,"vof_super(im) invalid"
+            print *,"vof_super(im) invalid: ",im,vof_super(im)
             stop
            endif
 
@@ -962,7 +973,7 @@ stop
           geom_xtetlist_old(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          mofdata_super, &
+          mofdata_super, & !intent(inout)
           vof_super, &
           multi_centroidA, & ! (num_materials,sdim) relative to supercell
           continuous_mof_parm, &
@@ -1038,7 +1049,7 @@ stop
           geom_xtetlist_old(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          mofdata_super_vfrac, &
+          mofdata_super_vfrac, & !intent(inout)
           vof_super, &
           multi_centroidA, & ! (num_materials,sdim) relative to supercell
           continuous_mof_parm_super, &
@@ -1157,6 +1168,16 @@ stop
           endif
          enddo ! im=1,num_materials
 
+          ! replace the slopes with the particle container derived slopes.
+         do im=1,num_materials
+          vofcomprecon=(im-1)*ngeom_recon+1
+          !vof,cenref,order,slope,intercept
+          do dir=1,SDIM
+           mofdata_super(vofcomprecon+SDIM+1+dir)= &
+             slopes(D_DECL(i,j,k),vofcomprecon+SDIM+1+dir)
+          enddo
+         enddo ! im=1,num_materials
+
          continuous_mof_parm=STANDARD_MOF
 
          call multimaterial_MOF( &
@@ -1170,7 +1191,7 @@ stop
           geom_xtetlist_old(1,1,1,tid+1), &
           nmax, &
           nmax, &
-          mofdata_super, &
+          mofdata_super, & !intent(inout)
           vof_super, &
           multi_centroidA, & ! (num_materials,sdim) relative to supercell
           continuous_mof_parm, &

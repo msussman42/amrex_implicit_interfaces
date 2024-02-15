@@ -18223,7 +18223,7 @@ stop
              geom_xtetlist_old(1,1,1,tid+1), &
              nmax, &
              nmax, &
-             local_mof, &
+             local_mof, & !intent(inout)
              vof_super, &
              multi_centroidA, &
              continuous_mof_parm, & !continuous_mof_parm=STANDARD_MOF

@@ -8862,7 +8862,7 @@ void NavierStokes::delete_array(int idx_localMF) {
 //  RECON_UPDATE_(NULL|STATE_ERR|STATE_CENTROID|STATE_ERR_AND_CENTROID)
 void NavierStokes::VOF_Recon_ALL(
   const std::string& caller_string,
-  int ngrow,Real time,
+  Real time,
   int update_flag,
   int init_vof_prev_time) {
 
@@ -8901,9 +8901,6 @@ void NavierStokes::VOF_Recon_ALL(
    }
   }
 
-  if ((ngrow<1)||(ngrow>ngrow_distance))
-   amrex::Error("ngrow invalid");
-
   int finest_level=parent->finestLevel();
 
 #if (NS_profile_solver==1)
@@ -8916,6 +8913,7 @@ void NavierStokes::VOF_Recon_ALL(
   for (int ilev=level;ilev<=finest_level;ilev++) {
    NavierStokes& ns_level=getLevel(ilev);
    ns_level.delete_localMF_if_exist(SLOPE_RECON_MF,1);
+   int ngrow=1;
     // sets values to 0.0
    ns_level.new_localMF(SLOPE_RECON_MF,num_materials*ngeom_recon,ngrow,-1);  
 
@@ -8924,6 +8922,18 @@ void NavierStokes::VOF_Recon_ALL(
    ns_level.getState_localMF(VOF_RECON_MF,1,STATECOMP_MOF,
      num_materials*ngeom_raw,time);
 
+   if (ngeom_raw==AMREX_SPACEDIM+1) {
+    //do nothing
+   } else
+    amrex::Error("ngeom_raw invalid");
+
+   if (ngeom_recon==2*AMREX_SPACEDIM+3) {
+    //do nothing
+   } else
+    amrex::Error("ngeom_recon invalid");
+
+    //SLOPE_RECON_MF: num_materials x (vof,cenref,order,slope,intercept)
+    //VOF_RECON_MF  : num_materials x (vof,cenref)
    for (int im=0;im<num_materials;im++) {
     int ibase_raw=im*ngeom_raw;
     int ibase_recon=im*ngeom_recon;
@@ -8949,7 +8959,8 @@ void NavierStokes::VOF_Recon_ALL(
    NavierStokes& ns_level=getLevel(ilev);
    int number_centroid_level=0;
    Real delta_centroid_level=0.0;
-   ns_level.VOF_Recon(ngrow,time,
+   ns_level.VOF_Recon(
+    time,
     local_update_flag,
     init_vof_prev_time,
     delta_centroid_level,
@@ -9063,7 +9074,7 @@ void NavierStokes::VOF_Recon_resize(int ngrow) {
 // 1. get MOF data with 1 ghost cell (so that CMOF can be chosen)
 // 2. reconstruct interior cells only.
 // 3. do extended filpatch; MOF used for coarse/fine and ext_dir cells.
-void NavierStokes::VOF_Recon(int ngrow,Real time,
+void NavierStokes::VOF_Recon(Real time,
   int update_flag,int init_vof_prev_time,
   Real& delta_centroid_level,
   int& number_centroid_level) {
@@ -9078,15 +9089,12 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  if (ngrow_distance!=4)
   amrex::Error("ngrow_distance invalid");
 
- if ((ngrow<1)||(ngrow>ngrow_distance))
-  amrex::Error("ngrow invalid");
-
  int bfact=parent->Space_blockingFactor(level);
 
  if ((verbose>0)&&(1==0)) {
   if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "beginning of VOF_Recon: ngrow,ngrow_distance,level: " << 
-    ngrow << ' ' << ngrow_distance << ' ' << level << '\n';
+   std::cout << "beginning of VOF_Recon: ngrow_distance,level: " << 
+    ngrow_distance << ' ' << level << '\n';
    std::cout << "time,update_flag,init_vof_prev_time " <<
     time << ' ' << update_flag << ' ' << 
     init_vof_prev_time << '\n';
@@ -9205,7 +9213,6 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
     &level,
     &finest_level,
     &max_level,
-    &ngrow,
     vofbc.dataPtr(),
     tilelo,tilehi,
     fablo,fabhi,&bfact,
@@ -9273,6 +9280,7 @@ void NavierStokes::VOF_Recon(int ngrow,Real time,
  }
 
   //scomp=0
+ int ngrow=1;
  PCINTERP_fill_borders(SLOPE_RECON_MF,ngrow,0,num_materials*ngeom_recon,
    State_Type,scompBC_map);
 

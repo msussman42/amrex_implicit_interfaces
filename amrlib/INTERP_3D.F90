@@ -258,6 +258,8 @@ stop
         mofdata(vofcomp_new)=datamof(D_DECL(i,j,k),vofcomp_old)
         do dir=1,SDIM
          mofdata(vofcomp_new+dir)=datamof(D_DECL(i,j,k),vofcomp_old+dir)
+          !slope=0
+         mofdata(vofcomp_new+SDIM+1+dir)=zero
         enddo
 
           ! order=0
@@ -297,7 +299,7 @@ stop
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         mofdata, &
+         mofdata, & !intent(inout)
          vof_super, &
          multi_centroidA, &
          continuous_mof, & ! continuous_mof=STANDARD_MOF
@@ -1049,6 +1051,8 @@ stop
         do dir=1,SDIM
          mofdata(vofcomp_new+dir)= &
            fdatamof(D_DECL(ifine,jfine,kfine),vofcomp_old+dir)
+          !slope=0
+         mofdata(vofcomp_new+SDIM+1+dir)=zero
         enddo
 
           ! order=0
@@ -1089,7 +1093,7 @@ stop
          geom_xtetlist(1,1,1,tid+1), &
          nmax, &
          nmax, &
-         mofdata, &
+         mofdata, & !intent(inout)
          vof_super, &
          multi_centroidA, &
          continuous_mof, & ! continuous_mof=STANDARD_MOF

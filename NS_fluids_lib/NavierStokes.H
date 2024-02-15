@@ -767,14 +767,14 @@ protected:
      // update_flag=RECON_UPDATE_STATE_ERR
      // update_flag=RECON_UPDATE_STATE_CENTROID
      // update_flag=RECON_UPDATE_STATE_ERR_AND_CENTROID
-    void VOF_Recon(int ngrow,
+    void VOF_Recon(
       Real time,int update_flag,
       int init_vof_prev_time,
       Real& delta_centroid_level,
       int& number_centroid_level); //output: SLOPE_RECON_MF
     void VOF_Recon_ALL(
       const std::string& caller_string,
-      int ngrow,Real time,int update_flag,
+      Real time,int update_flag,
       int init_vof_prev_time); //output: SLOPE_RECON_MF
     void VOF_Recon_resize(int ngrow); //output: SLOPE_RECON_MF
 

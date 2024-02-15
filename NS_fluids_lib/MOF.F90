@@ -15713,7 +15713,7 @@ contains
         xtetlist_cen, &
         nlist_alloc, &
         nmax, &
-        mofdata, &
+        mofdata, & !intent(inout)
         vof_super, &
         multi_centroidA, &
         continuous_mof, &
@@ -15741,17 +15741,22 @@ contains
 
        ! D_DECL(i,j,k) = i,j  in 2D
        !               = i,j,k in 3D
-      real(amrex_real), INTENT (IN) :: LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
+      real(amrex_real), INTENT (IN) :: &
+            LS_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
       real(amrex_real), INTENT (IN), DIMENSION(sdim) :: dx
 
-      real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_vof
-      real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: xtetlist_cen
+      real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: &
+              xtetlist_vof
+      real(amrex_real), INTENT (INOUT), DIMENSION(4,3,nlist_alloc) :: &
+              xtetlist_cen
       real(amrex_real), INTENT (IN), DIMENSION(-nhalf0:nhalf0,sdim) :: xsten0
-      real(amrex_real), INTENT (INOUT), DIMENSION(num_materials*ngeom_recon) :: mofdata
+      real(amrex_real), INTENT (INOUT),DIMENSION(num_materials*ngeom_recon) :: &
+              mofdata
       real(amrex_real), INTENT (IN), DIMENSION(num_materials) :: vof_super
       real(amrex_real), DIMENSION(num_materials*ngeom_recon) :: mofdata_in
-      real(amrex_real), INTENT (OUT), DIMENSION(num_materials,sdim) :: multi_centroidA
+      real(amrex_real), INTENT (OUT), DIMENSION(num_materials,sdim) :: &
+              multi_centroidA
 
       integer imaterial2
       integer imaterial
@@ -17541,7 +17546,7 @@ contains
           xtetlist, &
           nmax, &
           nmax, &
-          mofdata, &
+          mofdata, & !intent(inout)
           vof_super, &
           multi_centroidA, &
           continuous_mof, & 
@@ -17884,7 +17889,7 @@ contains
           if (boxhi.gt.boxlo) then
            ! do nothing
           else
-           print *,"boxhi>boxlo condition failed"
+           print *,"boxhi>boxlo condition failed: ",boxlo,boxhi
            stop
           endif
 
