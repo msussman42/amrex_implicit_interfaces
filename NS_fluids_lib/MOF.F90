@@ -15811,8 +15811,13 @@ contains
       real(amrex_real) dxmaxLS_volume_constraint
       real(amrex_real) null_intercept
       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: ls_mof
+
+      real(amrex_real), dimension(:,:), allocatable :: pls_normal
+      integer, dimension(:), allocatable :: pls_normal_valid
+
       real(amrex_real), dimension(:,:), allocatable :: lsnormal
       integer, dimension(:), allocatable :: lsnormal_valid
+
       real(amrex_real), dimension(:), allocatable :: ls_intercept
 
       integer fastflag
@@ -15979,14 +15984,14 @@ contains
            (vof_super(imaterial).le.1.1d0)) then
         ! do nothing
        else
-        print *,"vof_super out of range"
+        print *,"vof_super out of range: ",imaterial,vof_super(imaterial)
         stop
        endif
        if ((voftest(imaterial).ge.-0.1d0).and. &
            (voftest(imaterial).le.1.1d0)) then
         ! do nothing
        else
-        print *,"voftest out of range"
+        print *,"voftest out of range: ",imaterial,voftest(imaterial)
         stop
        endif
 
@@ -16022,12 +16027,13 @@ contains
           if (vof_super(imaterial).gt.zero) then
            ! do nothing
           else
-           print *,"vof_super_mismatch voftest(2)"
+           print *,"vof_super_mismatch voftest(2): ", &
+               imaterial,vof_super(imaterial)
            stop
           endif
          endif
         else
-         print *,"continuous_mof invalid: ",continuous_mof
+         print *,"continuous_mof invalid(16031): ",continuous_mof
          stop
         endif
 
@@ -16039,8 +16045,13 @@ contains
       enddo ! imaterial=1,num_materials
 
       allocate(ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials))
+
+      allocate(pls_normal(num_materials,sdim))
+      allocate(pls_normal_valid(num_materials))
+
       allocate(lsnormal(num_materials,sdim))
       allocate(lsnormal_valid(num_materials))
+
       allocate(ls_intercept(num_materials))
 
       if (use_ls_data.eq.1) then
@@ -16051,7 +16062,7 @@ contains
            (continuous_mof.eq.CMOF_F_AND_X)) then 
         !do nothing
        else
-        print *,"continuous_mof invalid: ",continuous_mof
+        print *,"continuous_mof invalid(16055): ",continuous_mof
         stop
        endif
 
@@ -17109,6 +17120,10 @@ contains
       endif
 
       deallocate(ls_mof)
+
+      deallocate(pls_normal)
+      deallocate(pls_normal_valid)
+
       deallocate(lsnormal)
       deallocate(lsnormal_valid)
       deallocate(ls_intercept)
