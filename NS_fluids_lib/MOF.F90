@@ -11810,6 +11810,8 @@ contains
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
+        pls_normal, &
+        pls_normal_valid, &
         bfact,dx, &
         xsten0,nhalf0, &
         refcentroid, & ! relative to cell centroid of the super cell.
@@ -11961,8 +11963,12 @@ contains
 
       real(amrex_real), INTENT(in) ::  &
          ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+
       real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
       integer, INTENT(in) :: lsnormal_valid(num_materials)
+
+      real(amrex_real), INTENT(in) :: pls_normal(num_materials,sdim)
+      integer, INTENT(in) :: pls_normal_valid(num_materials)
 
       integer training_nguess
       integer local_MOFITERMAX
@@ -12181,6 +12187,7 @@ contains
       tol=dx(1)*EPS_10_5
       local_tol=dx(1)*tol*EPS2
 
+      training_nguess=0
       nguess=0
 
       if (nMAT_OPT.eq.1) then
@@ -12217,14 +12224,48 @@ contains
          stop
         endif
 
+        if (pls_normal_valid(critical_material).eq.1) then
+
+         magLS=zero
+         do dir=1,sdim
+          nLS(dir)=pls_normal(critical_material,dir)
+          magLS=magLS+nLS(dir)**2
+         enddo
+         magLS=sqrt(magLS)
+          ! -pi < angle < pi
+         if ((magLS.ge.one-EPS2).and. &
+             (magLS.le.one+EPS2)) then
+          call slope_to_angle(nLS,angle_init,sdim)
+         else
+          print *,"magLS invalid (pls): ",magLS
+          do dir=1,sdim
+           print *,"dir,nLS (pls) ",dir,nLS(dir)
+          enddo
+          stop
+         endif
+
+         nguess=nguess+1 
+         training_nguess=nguess
+
+         do dir=1,sdim-1
+          angle_array(dir,nguess)=angle_init(dir)
+         enddo
+
+        else if (pls_normal_valid(critical_material).eq.0) then
+         ! do nothing
+        else
+         print *,"PLS_NORMAL_valid invalid2"
+         print *,"critical_material,flag ",critical_material, &
+          pls_normal_valid(critical_material) 
+         stop
+        endif
+
        else if (MOF_TURN_OFF_LS.eq.1) then
         ! do nothing
        else
-        print *,"MOF_TURN_OFF_LS invalid"
+        print *,"MOF_TURN_OFF_LS invalid: ",MOF_TURN_OFF_LS
         stop
        endif
-
-       training_nguess=0
 
        if ((continuous_mof.eq.STANDARD_MOF).or. &  
            (continuous_mof.eq.MOF_TRI_TET).or. & 
@@ -12629,7 +12670,7 @@ contains
        endif
        if (1.eq.0) then
         if (training_nguess.ge.1) then
-         print *,"iter,err,angle_guess ",iter,err,angle_init
+         print *,"(training_nguess) iter,err,angle_guess ",iter,err,angle_init
         endif
        endif
       enddo ! iter=1..nguess
@@ -12666,7 +12707,7 @@ contains
       else if (training_nguess.eq.0) then
        ! do nothing
       else
-       print *,"training_nguess invalid"
+       print *,"training_nguess invalid: ",training_nguess
        stop
       endif
 
@@ -13427,6 +13468,8 @@ contains
         ls_mof, &
         lsnormal, &
         lsnormal_valid, &
+        pls_normal, &
+        pls_normal_valid, &
         bfact,dx, &
         xsten0,nhalf0, &
         order_algorithm_in, &
@@ -13509,8 +13552,13 @@ contains
 
       real(amrex_real), INTENT(in) :: &
         ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+
       real(amrex_real), INTENT(in) :: lsnormal(num_materials,sdim)
       integer, INTENT(in) :: lsnormal_valid(num_materials)
+
+      real(amrex_real), INTENT(in) :: pls_normal(num_materials,sdim)
+      integer, INTENT(in) :: pls_normal_valid(num_materials)
+
       integer, PARAMETER :: tessellate=0
       integer, PARAMETER :: nMAT_OPT_standard=1
       integer :: nDOF_standard
@@ -14141,6 +14189,8 @@ contains
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
+           pls_normal, &
+           pls_normal_valid, &
            bfact,dx, &
            xsten0,nhalf0, &
            refcentroid, &
@@ -15074,6 +15124,8 @@ contains
       subroutine find_cut_geom_slope_CLSVOF( &
         continuous_mof, &
         ls_mof, &
+        particle_list, &
+        num_particles, &
         lsnormal, &
         lsnormal_valid, &
         ls_intercept, &
@@ -15121,6 +15173,11 @@ contains
 
       real(amrex_real), INTENT(in) :: &
             ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+
+      integer, INTENT(in) :: num_particles
+      real(amrex_real), INTENT(in) :: particle_list(num_particles,sdim)
+      real(amrex_real) :: w_particles(num_particles)
+
       real(amrex_real) :: ls_mof_tet(sdim+1)
 
       real(amrex_real), INTENT(out)    :: lsnormal(num_materials,sdim)
@@ -15191,7 +15248,7 @@ contains
        else if (abs(LS_cen).le.three*dxmaxLS_volume_constraint) then
         !do nothing
        else
-        print *,"LS_cen invalid"
+        print *,"LS_cen invalid: ",LS_cen
         stop
        endif
 
@@ -15284,7 +15341,7 @@ contains
           endif
 
          else
-          print *,"dxplus or dxminus invalid"
+          print *,"dxplus or dxminus invalid: ",dxminus,dxplus
           stop
          endif
 
@@ -15311,11 +15368,13 @@ contains
 
          if (lsnormal_valid(im).eq.1) then
 
-          if (always_use_default.eq.1) then
+          if ((always_use_default.eq.1).and.(num_particles.eq.0)) then
+
            do dir=1,sdim
             lsnormal(im,dir)=nsimple(dir)
            enddo
-          else if (always_use_default.eq.0) then
+
+          else if ((always_use_default.eq.0).or.(num_particles.gt.0)) then
 
            do k=klo,khi
            do j=-1,1
@@ -15347,6 +15406,36 @@ contains
            enddo
            enddo
            enddo ! i,j,k
+
+           do i=1,num_particles
+            LSWT=zero
+            do j=1,sdim
+             LSWT=LSWT+(particle_list(i,j)-xsten0(0,j))**2
+            enddo
+            LSWT=sqrt(LSWT)
+            wx=twelve
+            wy=twelve
+            wz=twelve
+            if (LSWT.ge.dxmaxLS_volume_constraint) then
+             wx=one
+             wy=one
+             wz=one
+            else if (LSWT.le.dxmaxLS_volume_constraint) then
+             !do nothing
+            else
+             print *,"LSWT invalid: ",LSWT
+             stop
+            endif
+
+            wx=wx*(xsten0(1,1)-xsten0(-1,1))
+            wy=wy*(xsten0(1,2)-xsten0(-1,2))
+            if (sdim.eq.3) then
+             wz=wz*(xsten0(1,sdim)-xsten0(-1,sdim))
+            endif
+
+            LSWT=zero
+            w_particles(i)=hsprime(LSWT,cutoff)*wx*wy*wz
+           enddo !i=1,num_particles
 
            if (lsnormal_valid(im).eq.1) then
 
@@ -15387,6 +15476,29 @@ contains
             enddo
             enddo
             enddo ! i1,j1,k1
+
+            do i1=1,num_particles
+             do i=1,sdim
+              xpoint(i)=particle_list(i1,i)-xsten0(0,i)
+             enddo
+     
+             do i=1,sdim+1
+              if (i.eq.sdim+1) then
+               m1=one
+              else
+               m1=xpoint(i)
+              endif
+
+              do j=1,sdim+1
+               if (j.eq.sdim+1) then
+                m2=one
+               else
+                m2=xpoint(j)
+               endif
+               aa(i,j)=aa(i,j)+w_particles(i1)*m1*m2
+              enddo ! j=1,sdim+1 
+             enddo ! i=1,sdim+1
+            enddo ! i1=1,num_particles
 
             call matrix_solve(aa,xx,bb,matstatus,sdim+1)
             if (matstatus.eq.1) then
@@ -15429,27 +15541,28 @@ contains
            endif
 
           else 
-           print *,"always_use_default invalid"
+           print *,"always_use_default invalid? ",always_use_default
+           print *,"num_particles invalid? ",num_particles
            stop
           endif
 
          else if (lsnormal_valid(im).eq.0) then
           ! do nothing
          else
-          print *,"lsnormal_valid(im) invalid"
+          print *,"lsnormal_valid(im) invalid 15498: ",im,lsnormal_valid(im)
           stop
          endif
 
         else if (lsnormal_valid(im).eq.0) then
          ! do nothing
         else
-         print *,"lsnormal_valid(im) invalid"
+         print *,"lsnormal_valid(im) invalid 15505: ",im,lsnormal_valid(im)
          stop
         endif
        else if (lsnormal_valid(im).eq.0) then
         ! do nothing
        else
-        print *,"lsnormal_valid(im) invalid"
+        print *,"lsnormal_valid(im) invalid 15511: ",im,lsnormal_valid(im)
         stop
        endif
 
@@ -15842,6 +15955,9 @@ contains
       integer :: nEQN_standard
       integer is_rigid_local(num_materials)
 
+      integer, parameter :: num_particles=0;
+      real(amrex_real) :: particle_list(1,sdim)
+
       integer :: tid=0
 
 #ifdef _OPENMP
@@ -16082,17 +16198,41 @@ contains
         if (voftest(imaterial).le.VOFTOL) then
 
          lsnormal_valid(imaterial)=0
+         pls_normal_valid(imaterial)=0
 
         else if ((continuous_mof.eq.STANDARD_MOF).or. & 
                  (continuous_mof.eq.MOF_TRI_TET).or. & 
                  (continuous_mof.eq.CMOF_F_AND_X).or. & 
                  (continuous_mof.eq.CMOF_X)) then 
- 
+
+         mag(1)=zero
+          !refvfrac,refcen,order,slope,intercept
+         do dir=1,sdim
+          pls_normal(imaterial,dir)= &
+                mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
+          mag(1)=mag(1)+pls_normal(imaterial,dir)**2
+         enddo
+         mag(1)=sqrt(mag(1))
+         if (mag(1).eq.zero) then
+          pls_normal_valid(imaterial)=0
+         else if ((mag(1).ge.one-EPS2).and. &
+                  (mag(1).le.one+EPS2)) then
+          do dir=1,sdim
+           pls_normal(imaterial,dir)=pls_normal(imaterial,dir)/mag(1)
+          enddo
+          pls_normal_valid(imaterial)=1
+         else
+          print *,"mag(1) invalid: ",mag(1)
+          stop
+         endif
+
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
          call find_cut_geom_slope_CLSVOF( &
           continuous_mof, & !intent(in)
           ls_mof, & !intent(in)
+          particle_list, & !intent(in)
+          num_particles, & !intent(in)
           lsnormal, & !intent(out)
           lsnormal_valid, & !intent(out)
           ls_intercept, & !intent(out)
@@ -16113,6 +16253,7 @@ contains
 
        do imaterial=1,num_materials
         lsnormal_valid(imaterial)=0
+        pls_normal_valid(imaterial)=0
        enddo
 
       else
@@ -16305,6 +16446,8 @@ contains
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
+           pls_normal, &
+           pls_normal_valid, &
            bfact,dx, &
            xsten0,nhalf0, &
            refcentroid, &
@@ -16745,6 +16888,8 @@ contains
           ls_mof, &
           lsnormal, &
           lsnormal_valid, &
+          pls_normal, &
+          pls_normal_valid, &
           bfact,dx, &
           xsten0,nhalf0, &
           order_algorithm_in, &
@@ -16939,6 +17084,8 @@ contains
            ls_mof, &
            lsnormal, &
            lsnormal_valid, &
+           pls_normal, &
+           pls_normal_valid, &
            bfact,dx,xsten0,nhalf0, &
            order_algorithm_in, &
            xtetlist_vof, & !intent(out)
@@ -25562,7 +25709,8 @@ contains
 
 #include "mofdata.H"
 
-      if ((num_materials.ge.2).and.(num_materials.le.MAX_NUM_MATERIALS)) then
+      if ((num_materials.ge.2).and. &
+          (num_materials.le.MAX_NUM_MATERIALS)) then
        ! do nothing
       else
        print *,"num_materials not initialized properly"

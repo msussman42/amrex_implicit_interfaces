@@ -1327,8 +1327,9 @@ void fortran_parameters() {
   // this is local variable, not static variable
  int MOFITERMAX=DEFAULT_MOFITERMAX;  
  pp.queryAdd("MOFITERMAX",MOFITERMAX);
- if ((MOFITERMAX<0)||(MOFITERMAX>MOFITERMAX_LIMIT)) {
+ if ((MOFITERMAX<MOFITERMAX_MIN)||(MOFITERMAX>MOFITERMAX_LIMIT)) {
   std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
+  std::cout << "MOFITERMAX_MIN= " << MOFITERMAX_MIN << '\n';
   std::cout << "MOFITERMAX_LIMIT= " << MOFITERMAX_LIMIT << '\n';
   amrex::Error("mof iter max invalid in navierstokes");
  }
@@ -3434,8 +3435,9 @@ NavierStokes::read_params ()
 
     MOFITERMAX=DEFAULT_MOFITERMAX;
     pp.queryAdd("MOFITERMAX",MOFITERMAX);
-    if ((MOFITERMAX<0)||(MOFITERMAX>MOFITERMAX_LIMIT)) {
+    if ((MOFITERMAX<MOFITERMAX_MIN)||(MOFITERMAX>MOFITERMAX_LIMIT)) {
      std::cout << "MOFITERMAX= " << MOFITERMAX << '\n';
+     std::cout << "MOFITERMAX_MIN= " << MOFITERMAX_MIN << '\n';
      std::cout << "MOFITERMAX_LIMIT= " << MOFITERMAX_LIMIT << '\n';
      amrex::Error("mof iter max invalid in navierstokes");
     }

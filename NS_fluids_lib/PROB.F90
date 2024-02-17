@@ -24771,7 +24771,8 @@ end subroutine initialize2d
        real(amrex_real), INTENT(inout), target :: scal(DIMV(scal),nc)
        real(amrex_real), pointer :: scal_ptr(D_DECL(:,:,:),:)
 
-       real(amrex_real), INTENT(inout), target :: LS(DIMV(LS),num_materials*(1+SDIM))
+       real(amrex_real), INTENT(inout), target :: &
+               LS(DIMV(LS),num_materials*(1+SDIM))
        real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
        real(amrex_real), INTENT(in) :: dx(SDIM)
@@ -24782,6 +24783,10 @@ end subroutine initialize2d
        integer ibase
        integer ic,jc,kc,n,im
        integer dir
+
+       integer, parameter :: num_particles=0
+       real(amrex_real) :: particle_list(1,SDIM)
+
        real(amrex_real) vfracsum_test
 
        real(amrex_real) fluiddata(num_materials,2*SDIM+2)
@@ -26245,6 +26250,8 @@ end subroutine initialize2d
          call find_cut_geom_slope_CLSVOF( &
           continuous_mof, &
           LS_stencil, &
+          particle_list, &
+          num_particles, &
           lsnormal, &
           lsnormal_valid, &
           ls_intercept, &
