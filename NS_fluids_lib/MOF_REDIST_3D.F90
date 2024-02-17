@@ -288,6 +288,10 @@ stop
       real(amrex_real) xsten(-3:3,SDIM)
       integer dir
       integer im
+
+      integer, parameter :: num_particles=0
+      real(amrex_real) :: particle_list(1,SDIM)
+
       real(amrex_real) ls_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real) lsnormal(num_materials,SDIM)
       integer lsnormal_valid(num_materials)
@@ -423,6 +427,8 @@ stop
             call find_cut_geom_slope_CLSVOF( &
              continuous_mof, &
              ls_stencil, & ! (-1,1)^3,num_materials
+             particle_list, &
+             num_particles, &
              lsnormal, &  ! (num_materials,sdim)
              lsnormal_valid, &  ! num_materials
              ls_intercept, & ! num_materials
