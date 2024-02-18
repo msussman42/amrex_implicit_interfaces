@@ -22880,15 +22880,30 @@ NavierStokes::init_particle_container(int append_flag,
 
   slope_mf=lsmf;
 
+  if (slope_mf->nComp()==num_materials*(AMREX_SPACEDIM+1)) {
+   //do nothing
+  } else
+   amrex::Error("slope_mf->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
+
  } else if (append_flag==OP_PARTICLE_ADD) {
   number_sweeps=2;
 
   slope_mf=lsmf;
 
+  if (slope_mf->nComp()==num_materials*(AMREX_SPACEDIM+1)) {
+   //do nothing
+  } else
+   amrex::Error("slope_mf->nComp()!=num_materials*(AMREX_SPACEDIM+1)");
+
  } else if (append_flag==OP_PARTICLE_SLOPES) {
   number_sweeps=1;
 
   slope_mf=SLOPE_RECON_MF;
+
+  if (slope_mf->nComp()==num_materials*ngeom_recon) {
+   //do nothing
+  } else
+   amrex::Error("slope_mf->nComp()!=num_materials*ngeom_recon");
 
  } else
   amrex::Error("append_flag invalid");

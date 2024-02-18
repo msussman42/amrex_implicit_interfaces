@@ -19178,12 +19178,8 @@ stop
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
 
       type(interp_from_grid_parm_type) :: data_in 
-      type(interp_from_grid_out_parm_type) :: data_out
       type(interp_from_grid_out_parm_type) :: data_out_LS
 
-      real(amrex_real), target, &
-         dimension(num_materials*num_state_material+SDIM) :: &
-         data_interp_local
       real(amrex_real), target, dimension(num_materials) :: &
          data_interp_local_LS
 
@@ -19215,7 +19211,6 @@ stop
       call checkbound_array(accum_PARM%fablo,accum_PARM%fabhi, &
          LEVELSETptr,1,-1)
 
-      data_out%data_interp=>data_interp_local
       data_out_LS%data_interp=>data_interp_local_LS
 
       data_in%scomp=1 
@@ -19368,6 +19363,8 @@ stop
       type(grid_parm_type) :: grid_PARM
    
       integer :: i,j,k
+      integer :: i1,j1,k1
+      integer :: k1lo,k1hi
       integer :: isub,jsub,ksub
       integer :: dir
       integer :: dir_local
@@ -19399,6 +19396,13 @@ stop
       integer :: im_primary_sub
       integer :: im_secondary
       integer :: im_loop
+      integer :: im1,im2
+
+      integer :: num_particles
+      real(amrex_real), allocatable, dimension(:,:) :: particle_list
+      real(amrex_real) :: lsnormal(num_materials,SDIM)
+      integer :: lsnormal_valid(num_materials)
+      real(amrex_real) :: ls_intercept(num_materials)
 
       integer, allocatable, dimension(:,:) :: sub_particle_data
       real(amrex_real), allocatable, dimension(:) :: sub_particle_data_dist
@@ -19422,7 +19426,7 @@ stop
       real(amrex_real) weight_sum
       real(amrex_real) LS_sum
       real(amrex_real) local_dx_offset
-      real(amrex_real), PARAMETER :: part_tol=0.1d0
+      real(amrex_real), PARAMETER :: part_tol=1.0d0
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
 
@@ -19430,6 +19434,11 @@ stop
       type(interp_from_grid_out_parm_type) :: data_out_LS
       real(amrex_real),target,dimension(num_materials*(1+AMREX_SPACEDIM))::&
            data_interp_local_LS
+
+      real(amrex_real) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+
+      integer :: slope_loop
+      integer, parameter :: continuous_mof=STANDARD_MOF
 
       allocate(CHARACTER(caller_string_len) :: fort_caller_string)
       do i=1,caller_string_len
@@ -19448,6 +19457,7 @@ stop
         !do nothing
        else
         print *,"ncomp_slope invalid: ",ncomp_slope
+        print *,"append_flag=",append_flag
         stop
        endif
       else if (append_flag.eq.OP_PARTICLE_INIT) then
@@ -19455,6 +19465,7 @@ stop
         !do nothing
        else
         print *,"ncomp_slope invalid: ",ncomp_slope
+        print *,"append_flag=",append_flag
         stop
        endif
       else if (append_flag.eq.OP_PARTICLE_SLOPES) then
@@ -19462,6 +19473,7 @@ stop
         !do nothing
        else
         print *,"ncomp_slope invalid: ",ncomp_slope
+        print *,"append_flag=",append_flag
         stop
        endif
       else
@@ -19475,6 +19487,13 @@ stop
        print *,"fablo,fabhi ",fablo,fabhi
        print *,"level, finest_level,time ",level,finest_level,cur_time_slab
        print *,"xlo,dx ",xlo,dx
+      endif
+
+      k1lo=-1
+      k1hi=1
+      if (SDIM.eq.2) then
+       k1lo=0
+       k1hi=0
       endif
 
       problo_arr(1)=problox
@@ -19565,7 +19584,7 @@ stop
           single_particle_size.eq.new_Pdata_size) then
        ! do nothing
       else
-       print *,"new_Pdata_size invalid"
+       print *,"new_Pdata_size invalid: ",new_Pdata_size
        stop
       endif
 
@@ -19593,7 +19612,7 @@ stop
       if (NBR_Np.ge.Np) then
        !do nothing
       else
-       print *,"NBR_Np invalid"
+       print *,"NBR_Np invalid: ",Np,NBR_Np
        stop
       endif
 
@@ -19968,7 +19987,7 @@ stop
               else if ((SDIM.eq.3).and.(ksub_test.ne.ksub)) then
                ! do nothing
               else
-               print *,"dimension or ksub bust"
+               print *,"dimension or ksub bust: ",ksub,ksub_test
                stop
               endif
              endif
@@ -20155,8 +20174,6 @@ stop
 
                 new_particles(ibase+SDIM+N_EXTRA_REAL+ &
                          N_EXTRA_INT_INTERFACE_ID+1)=iten_interp
-                 !CHECK THE MAGNITUDE OF LS_sub (primary,secondary)
-                 ! if too large, then set mag=0 and do not add.
                else
                 print *,"corruption:"
                 print *,"im_primary_sub: ",im_primary_sub
@@ -20173,7 +20190,7 @@ stop
              else if (local_mag.eq.zero) then
               ! do nothing
              else
-              print *,"local_mag invalid"
+              print *,"local_mag invalid: ",local_mag
               stop
              endif
 
@@ -20223,9 +20240,16 @@ stop
           xpart(dir_local)=xsub(dir_local)
          enddo
 
-         !very little weight for the grid based data(OP_PARTICLE_SLOPES)
-         local_dx_offset=(1.0D+3)*dx(1)
-         call particle_grid_weight(xpart,xsub,local_dx_offset,local_weight)
+         do i1=-1,1
+         do j1=-1,1
+         do k1=k1lo,k1hi
+         do im_loop=1,num_materials
+          ls_mof(D_DECL(i1,j1,k1),im_loop)= &
+             lsfab_ptr(D_DECL(i+i1,j+j1,k+k1),im_loop)
+         enddo
+         enddo
+         enddo
+         enddo
 
          do im_loop=1,num_materials
           LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
@@ -20239,55 +20263,123 @@ stop
              (im_secondary.ge.1).and. &
              (im_secondary.le.num_materials)) then
 
-          call get_iten(im_primary_sub,im_secondary,iten_interp)
-
-          weight_sum=local_weight
-          LS_sum=local_weight*lsfab(D_DECL(i,j,k),im_primary_sub)
-
-          cell_count_check=0
-          cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
-          current_link=cell_particle_count(D_DECL(i,j,k),2)
-          do while (current_link.ge.1)
+          do im_loop=1,num_materials
            do dir_local=1,SDIM
-            xpart(dir_local)=NBR_particles(current_link)%pos(dir_local)
-           enddo 
-           cell_count_check=cell_count_check+1
+            lsnormal(im_loop,dir_local)=zero
+           enddo
+           lsnormal_valid(im_loop)=0
+          enddo
 
-           call particle_grid_weight(xpart,xsub,EPS3*dx(1),local_weight)
+          if (abs(LS_sub(im_primary_sub)).gt.DXMAXLS) then
+           !do nothing
+          else if (abs(LS_sub(im_primary_sub)).le.DXMAXLS) then
 
-           iten_particle=NBR_particles(current_link)% &
+           do im_loop=1,num_materials
+            if (abs(LS_sub(im_loop)).gt.DXMAXLS) then
+             !do nothing
+            else if (abs(LS_sub(im_loop)).le.DXMAXLS) then
+
+             do slope_loop=0,1
+
+              num_particles=0
+              do i1=-1,1
+              do j1=-1,1
+              do k1=k1lo,k1hi
+               cell_count_check=0
+               cell_count_hold=cell_particle_count(D_DECL(i+i1,j+j1,k+k1),1)
+               current_link=cell_particle_count(D_DECL(i+i1,j+j1,k+k1),2)
+               do while (current_link.ge.1)
+                iten_particle=NBR_particles(current_link)% &
                   extra_int(N_EXTRA_INT_INTERFACE_ID+1)
-           if (iten_particle.eq.iten_interp) then
-            weight_sum=weight_sum+local_weight
-              ! sum up other least squares coefficients here
-           else if ((iten_particle.ge.1).and. &
-                    (iten_particle.le.num_interfaces)) then
-            !do nothing
-           else
-            print *,"iten_particle invalid"
-            stop
-           endif
+                call get_inverse_iten(im1,im2,iten_particle)
+                if ((im1.eq.im_loop).or.(im2.eq.im_loop)) then
+                 num_particles=num_particles+1
+                 if (slope_loop.eq.1) then
+                  do dir_local=1,SDIM
+                   particle_list(num_particles,dir_local)= &
+                       NBR_particles(current_link)%pos(dir_local)
+                  enddo 
+                 endif
+                endif
+                cell_count_check=cell_count_check+1
+                ibase=(current_link-1)*(1+SDIM)
+                current_link=particle_link_data(ibase+1)
+               enddo !do while (current_link.ge.1)
 
-           ibase=(current_link-1)*(1+SDIM)
-           current_link=particle_link_data(ibase+1)
-          enddo !do while (current_link.ge.1)
+               if (cell_count_check.eq.cell_count_hold) then
+                ! do nothing
+               else
+                print *,"cell_count_check invalid"
+                print *,"cell_count_hold: ",cell_count_hold
+                stop
+               endif
 
-          if (cell_count_check.eq.cell_count_hold) then
-           ! do nothing
-          else
-           print *,"cell_count_check invalid"
-           print *,"cell_count_hold: ",cell_count_hold
-           stop
-          endif
+              enddo !k1
+              enddo !j1
+              enddo !i1
 
-          local_weight=weight_sum
+              if (slope_loop.eq.0) then
+               if (num_particles.eq.0) then
+                !do nothing
+               else if (num_particles.gt.0) then
+                allocate(particle_list(num_particles,SDIM))
+               else
+                print *,"num_particles invalid"
+                stop
+               endif
+              else if (slope_loop.eq.1) then
+               if (num_particles.eq.0) then
+                !do nothing
+               else if (num_particles.gt.0) then
 
-          if (local_weight.gt.zero) then
-! im_secondary, gradient
-!          lsnewfab(D_DECL(i,j,k),im_primary_sub)= &
-          else
-           print *,"local_weight invalid: ",local_weight
-           stop
+                call find_cut_geom_slope_CLSVOF( &
+                  continuous_mof, &
+                  ls_mof, &
+                  particle_list, &
+                  num_particles, &
+                  lsnormal, &
+                  lsnormal_valid, &
+                  ls_intercept, &
+                  bfact,dx, &
+                  xsten,nhalf, &
+                  im_loop, &
+                  DXMAXLS, &
+                  SDIM)
+
+                deallocate(particle_list)
+
+                if (lsnormal_valid(im_loop).eq.0) then
+                 !do nothing
+                else if (lsnormal_valid(im_loop).eq.1) then
+                 do dir_local=1,SDIM
+                  slopefab_ptr(D_DECL(i,j,k), &
+                    (im_loop-1)*ngeom_recon+SDIM+2+dir_local)= &
+                   lsnormal(im_loop,dir_local)
+                 enddo
+                else 
+                 print *,"lsnormal_valid(im_loop) invalid"
+                 stop
+                endif
+               else
+                print *,"num_particles invalid"
+                stop
+               endif
+              else
+               print *,"slope_loop invalid"
+               stop
+              endif
+
+             enddo !slope_loop=0,1
+            else 
+             print *,"LS_sub(im_loop) invalid:",im_loop,LS_sub(im_loop)
+             stop
+            endif
+
+           enddo !im_loop=1,num_materials
+
+          else 
+           print *,"LS_sub(im_primary_sub) invalid:", &
+               im_primary_sub,LS_sub(im_primary_sub) 
           endif
 
          else
