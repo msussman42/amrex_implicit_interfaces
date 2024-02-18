@@ -15517,14 +15517,35 @@ contains
               do dir=1,sdim
                nn(dir)=nsimple(dir)
               enddo
+
+              if (num_particles.eq.0) then
+               ! do nothing
+              else if (num_particles.gt.0) then
+               lsnormal_valid(im)=0
+              else
+               print *,"num_particles invalid"
+               stop
+              endif
+
              else
-              print *,"dist invalid"
+              print *,"dist invalid: ",dist
               stop
              endif
+
             else if (matstatus.eq.0) then
              do dir=1,sdim
               nn(dir)=nsimple(dir)
              enddo
+
+             if (num_particles.eq.0) then
+              ! do nothing
+             else if (num_particles.gt.0) then
+              lsnormal_valid(im)=0
+             else
+              print *,"num_particles invalid"
+              stop
+             endif
+
             else
              print *,"matstatus invalid"
              stop
