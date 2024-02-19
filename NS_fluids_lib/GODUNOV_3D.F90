@@ -794,9 +794,13 @@ stop
       integer side
       integer nbase
 
-      integer im
+      integer im,im_opp
+      integer iten
+
       real(amrex_real) LSleft(num_materials)
       real(amrex_real) LSright(num_materials)
+      real(amrex_real) local_LS,local_LS_opp
+
       real(amrex_real) divterm
       integer compressible_face
       real(amrex_real) uxterm,vyterm,wzterm
@@ -860,6 +864,8 @@ stop
       integer inorm_elem
       integer local_bc
 
+      real(amrex_real) dxmaxLS
+
       real(amrex_real) local_flux_val
       real(amrex_real) local_flux_val_in
       real(amrex_real) local_flux_val_out
@@ -916,13 +922,13 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt must be positive in crossterm"
+       print *,"dt must be positive in crossterm: ",dt
        stop
       endif
       if (cur_time.ge.zero) then
        ! do nothing
       else
-       print *,"cur_time must be nonneg in crossterm"
+       print *,"cur_time must be nonneg in crossterm: ",cur_time
        stop
       endif
       if ((uncoupled_viscosity.ne.0).and. &
@@ -934,13 +940,15 @@ stop
       if (visc_coef.ge.zero) then
        ! do nothing
       else
-       print *,"visc_coef invalid"
+       print *,"visc_coef invalid: ",visc_coef
        stop
       endif
 
       do im=1,num_materials
-       if (fort_denconst(im).le.zero) then
-        print *,"denconst invalid"
+       if (fort_denconst(im).gt.zero) then
+        !do nothing
+       else
+        print *,"denconst invalid: ",im,fort_denconst(im)
         stop
        endif
       enddo
@@ -1013,6 +1021,14 @@ stop
        dirtan(2)=2
       else
        print *,"dir invalid crossterm 2"
+       stop
+      endif
+
+      call get_dxmaxLS(dx,bfact,dxmaxLS)
+      if (dxmaxLS.gt.zero) then
+       !do nothing
+      else
+       print *,"dxmaxLS invalid: ",dxmaxLS
        stop
       endif
 
@@ -1098,7 +1114,7 @@ stop
            total_mass=total_mass+DMface
            massfrac(im)=massfrac(im)+DMface
           enddo ! im
-         enddo ! side
+         enddo ! side=1,2
          if (total_mass.gt.zero) then
           do im=1,num_materials
            massfrac(im)=massfrac(im)/total_mass
@@ -1948,6 +1964,77 @@ stop
           endif
          enddo ! velcomp_alt=1..sdim
 
+         if (compressible_face.eq.0) then
+          ! do nothing
+         else if (compressible_face.eq.1) then
+
+          do im=1,num_materials
+
+           do side=1,2
+            if (side.eq.1) then
+             local_LS=LSleft(im)
+            else if (side.eq.2) then
+             local_LS=LSright(im)
+            else
+             print *,"side invalid (im) : ",side
+             stop
+            endif
+            if (local_LS.ge.-incomp_thickness*dxmaxLS) then
+             if (is_rigid(im).eq.1) then
+              compressible_face=0
+             else if (is_rigid(im).eq.0) then
+              do im_opp=1,num_materials
+               if (im_opp.ne.im) then
+                if (side.eq.1) then
+                 local_LS_opp=LSleft(im_opp)
+                else if (side.eq.2) then
+                 local_LS_opp=LSright(im_opp)
+                else
+                 print *,"side invalid (im_opp_) : ",side
+                 stop
+                endif
+
+                if (local_LS_opp.ge.-incomp_thickness*dxmaxLS) then
+                 call get_iten(im,im_opp,iten)
+                 if ((fort_material_type_interface(iten).eq.0).or. &
+                     (fort_material_type_interface(iten).eq.999)) then
+                  compressible_face=0
+                 else if ((fort_material_type_interface(iten).ge.1).and. &
+                          (fort_material_type_interface(iten).le. &
+                           MAX_NUM_EOS)) then 
+                  !do nothing
+                 else
+                  print *,"fort_materal_type_interface invalid: ", &
+                   iten,fort_material_type_interface(iten)
+                  stop
+                 endif
+                else if (local_LS_opp.le.-incomp_thickness*dxmaxLS) then
+                 !do nothing
+                else
+                 print *,"local_LS_opp corrupt: ",im_opp,local_LS_opp
+                 stop
+                endif
+               endif  !im_opp<>im
+              enddo !im_opp=im+1 ... num_materials
+             else 
+              print *,"is_rigid(im) invalid: ",im,is_rigid(im)
+              stop
+             endif
+            else if (local_LS.le.-incomp_thickness*dxmaxLS) then
+             ! do nothing
+            else
+             print *,"oldLS(im) corrupt,fort_vfrac_split"
+             print *,"im,oldLS(im): ",im,oldLS(im)
+             stop
+            endif 
+           enddo !side=1,2
+          enddo !im=1,num_materials
+
+         else 
+          print *,"compressible_face invalid: ",compressible_face
+          stop
+         endif
+
          wzterm=zero
 
          if (dir.eq.1) then
@@ -2009,7 +2096,7 @@ stop
          else if (compressible_face.eq.1) then
           divterm=-(two/SDIM)*(uxterm+vyterm+wzterm)
          else
-          print *,"compressible_face bust"
+          print *,"compressible_face bust: ",compressible_face
           stop
          endif
 
@@ -17826,19 +17913,25 @@ stop
       real(amrex_real), pointer :: faceLS_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out), target :: mdata(DIMV(mdata),SDIM)
       real(amrex_real), pointer :: mdata_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: tdata(DIMV(tdata),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(inout), target :: &
+              tdata(DIMV(tdata),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: tdata_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(out), target :: c_tdata(DIMV(c_tdata),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(out), target :: &
+              c_tdata(DIMV(c_tdata),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: c_tdata_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solidx(DIMV(solidx),nparts_def*SDIM)
+      real(amrex_real), INTENT(in), target :: &
+              solidx(DIMV(solidx),nparts_def*SDIM)
       real(amrex_real), pointer :: solidx_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solidy(DIMV(solidy),nparts_def*SDIM)
+      real(amrex_real), INTENT(in), target :: &
+              solidy(DIMV(solidy),nparts_def*SDIM)
       real(amrex_real), pointer :: solidy_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solidz(DIMV(solidz),nparts_def*SDIM)
+      real(amrex_real), INTENT(in), target :: &
+              solidz(DIMV(solidz),nparts_def*SDIM)
       real(amrex_real), pointer :: solidz_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: levelpc(DIMV(levelpc),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              levelpc(DIMV(levelpc),num_materials)
       real(amrex_real), pointer :: levelpc_ptr(D_DECL(:,:,:),:)
   
       integer i,j,k
@@ -17946,7 +18039,7 @@ stop
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid: ",time
        stop
       endif
       if (bfact.lt.1) then
@@ -18771,7 +18864,7 @@ stop
        stop
       endif
 
-       ! in: FACE_GRADIENTS
+       ! in: fort_face_gradients
       if (enable_spectral.eq.1) then
 
        if (bfact.ge.2) then
