@@ -18980,6 +18980,7 @@ stop
 
 
       subroutine interp_mac_velocity( &
+        splitting_dir, & ! -1=unsplit  0..sdim-1=split
         grid_PARM, &
         umacptr, &
         vmacptr, &
@@ -18993,6 +18994,7 @@ stop
 
       implicit none
 
+      integer, INTENT(in) :: splitting_dir
       type(grid_parm_type), INTENT(in) :: grid_PARM
       real(amrex_real), INTENT(in),pointer,dimension(D_DECL(:,:,:)) :: umacptr
       real(amrex_real), INTENT(in),pointer,dimension(D_DECL(:,:,:)) :: vmacptr
@@ -19027,7 +19029,7 @@ stop
       if (vel_time_slab.ge.zero) then
        ! do nothing
       else
-       print *,"vel_time_slab invalid"
+       print *,"vel_time_slab invalid: ",vel_time_slab
        stop
       endif
 
@@ -19037,7 +19039,17 @@ stop
       if (LS_clamped.ge.zero) then
 
        do dir=1,SDIM
-        u(dir)=vel_clamped(dir)
+        if ((splitting_dir.eq.-1).or. &
+            (splitting_dir.eq.dir-1)) then
+         u(dir)=vel_clamped(dir)
+        else if ((splitting_dir.ge.0).and. &
+                 (splitting_dir.lt.SDIM).and. &
+                 (splitting_dir.ne.dir-1)) then
+         u(dir)=zero
+        else
+         print *,"splitting_dir invalid: ",splitting_dir
+         stop
+        endif
        enddo
 
       else if (LS_clamped.lt.zero) then
@@ -19056,93 +19068,102 @@ stop
        call gridsten_level(xsten,i,j,k,grid_PARM%level,nhalf)
 
        do dir=1,SDIM
+        if ((splitting_dir.eq.-1).or. &
+            (splitting_dir.eq.dir-1)) then
 
-        ii=0
-        jj=0
-        kk=0
-        if (dir.eq.1) then
-         ii=1
-        else if (dir.eq.2) then
-         jj=1
-        else if ((dir.eq.3).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid"
-         stop
-        endif
-
-        imaclo(3)=0
-        imachi(3)=0
-        do dir_inner=1,SDIM
-         if (dir_inner.eq.dir) then
-          imaclo(dir_inner)=cell_index(dir_inner)
-          imachi(dir_inner)=cell_index(dir_inner)+1
-         else if (dir_inner.ne.dir) then
-          if (xpart(dir_inner).le.xsten(0,dir_inner)) then
-           imaclo(dir_inner)=cell_index(dir_inner)-1
-           imachi(dir_inner)=cell_index(dir_inner)
-          else if (xpart(dir_inner).ge.xsten(0,dir_inner)) then
-           imaclo(dir_inner)=cell_index(dir_inner)
-           imachi(dir_inner)=cell_index(dir_inner)+1
-          else
-           print *,"xpart or xsten invalid"
-           stop
-          endif
-         else
-          print *,"dir_inner or dir invalid"
-          stop
-         endif
-        enddo ! dir_inner=1..sdim
-
-         ! dir=1..sdim
-        call gridstenMAC_level(xstenMAC_lo, &
-         imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
-        call gridstenMAC_level(xstenMAC_hi, &
-         imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
-
-        do dir_inner=1,SDIM
-         dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)
-         if (dx_inner.gt.zero) then
-          wt_dist(dir_inner)=(xpart(dir_inner)-xstenMAC_lo(0,dir_inner))/ &
-            dx_inner
-         else
-          print *,"dx_inner invalid: ",dx_inner
-          stop
-         endif
-        enddo  ! dir_inner=1..sdim
-
-        do imac=imaclo(1),imachi(1)
-        do jmac=imaclo(2),imachi(2)
-        do kmac=imaclo(3),imachi(3)
-
-         isten=imac-imaclo(1)+1
-         jsten=jmac-imaclo(2)+1
-         ksten=kmac-imaclo(3)+1
+         ii=0
+         jj=0
+         kk=0
          if (dir.eq.1) then
-          local_data_fab=>umacptr
+          ii=1
          else if (dir.eq.2) then
-          local_data_fab=>vmacptr
+          jj=1
          else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          local_data_fab=>wmacptr
+          kk=1
          else
           print *,"dir invalid"
           stop
          endif
-         call safe_data_single(imac,jmac,kmac,local_data_fab,local_data)
 
-         data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
-        enddo ! kmac
-        enddo ! jmac
-        enddo ! imac
-     
-        ncomp_interp=1
-        call bilinear_interp_stencil(data_stencil, &
-          wt_dist,ncomp_interp,u(dir)) 
+         imaclo(3)=0
+         imachi(3)=0
+         do dir_inner=1,SDIM
+          if (dir_inner.eq.dir) then
+           imaclo(dir_inner)=cell_index(dir_inner)
+           imachi(dir_inner)=cell_index(dir_inner)+1
+          else if (dir_inner.ne.dir) then
+           if (xpart(dir_inner).le.xsten(0,dir_inner)) then
+            imaclo(dir_inner)=cell_index(dir_inner)-1
+            imachi(dir_inner)=cell_index(dir_inner)
+           else if (xpart(dir_inner).ge.xsten(0,dir_inner)) then
+            imaclo(dir_inner)=cell_index(dir_inner)
+            imachi(dir_inner)=cell_index(dir_inner)+1
+           else
+            print *,"xpart or xsten invalid"
+            stop
+           endif
+          else
+           print *,"dir_inner or dir invalid"
+           stop
+          endif
+         enddo ! dir_inner=1..sdim
 
+          ! dir=1..sdim
+         call gridstenMAC_level(xstenMAC_lo, &
+          imaclo(1),imaclo(2),imaclo(3),grid_PARM%level,nhalf,dir-1)
+         call gridstenMAC_level(xstenMAC_hi, &
+          imachi(1),imachi(2),imachi(3),grid_PARM%level,nhalf,dir-1)
+
+         do dir_inner=1,SDIM
+          dx_inner=xstenMAC_hi(0,dir_inner)-xstenMAC_lo(0,dir_inner)
+          if (dx_inner.gt.zero) then
+           wt_dist(dir_inner)=(xpart(dir_inner)-xstenMAC_lo(0,dir_inner))/ &
+             dx_inner
+          else
+           print *,"dx_inner invalid: ",dx_inner
+           stop
+          endif
+         enddo  ! dir_inner=1..sdim
+
+         do imac=imaclo(1),imachi(1)
+         do jmac=imaclo(2),imachi(2)
+         do kmac=imaclo(3),imachi(3)
+
+          isten=imac-imaclo(1)+1
+          jsten=jmac-imaclo(2)+1
+          ksten=kmac-imaclo(3)+1
+          if (dir.eq.1) then
+           local_data_fab=>umacptr
+          else if (dir.eq.2) then
+           local_data_fab=>vmacptr
+          else if ((dir.eq.3).and.(SDIM.eq.3)) then
+           local_data_fab=>wmacptr
+          else
+           print *,"dir invalid"
+           stop
+          endif
+          call safe_data_single(imac,jmac,kmac,local_data_fab,local_data)
+
+          data_stencil(D_DECL(isten,jsten,ksten),1)=local_data
+         enddo ! kmac
+         enddo ! jmac
+         enddo ! imac
+      
+         ncomp_interp=1
+         call bilinear_interp_stencil(data_stencil, &
+           wt_dist,ncomp_interp,u(dir)) 
+        else if ((splitting_dir.ge.0).and. &
+                 (splitting_dir.lt.SDIM).and. &
+                 (splitting_dir.ne.dir-1)) then
+         u(dir)=zero
+        else
+         print *,"splitting_dir invalid: ",splitting_dir
+         stop
+        endif
        enddo ! dir=1..sdim
 
       else
-       print *,"LS_clamped invalid"
+       print *,"LS_clamped invalid: ",LS_clamped
        stop
       endif
 
@@ -20518,6 +20539,7 @@ stop
 
        ! called from NavierStokes2.cpp
       subroutine fort_move_particle_container( &
+        splitting_dir, & ! -1=unsplit  0..sdim-1=split
         phase_change_displacement, &
         burning_velocity_ncomp, &
         tid, &
@@ -20550,6 +20572,7 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: splitting_dir
       integer, INTENT(in) :: phase_change_displacement
       integer, INTENT(in) :: burning_velocity_ncomp
       integer :: ncomp_per_burning
@@ -20627,7 +20650,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: ",dt
        stop
       endif
 
@@ -20635,7 +20658,7 @@ stop
       if (DXMAXLS.gt.zero) then
        ! do nothing
       else
-       print *,"DXMAXLS invalid"
+       print *,"DXMAXLS invalid: ",DXMAXLS
        stop
       endif
 
@@ -20683,6 +20706,14 @@ stop
        call checkbound_array1(fablo,fabhi,vmac_ptr,1,1)
        call checkbound_array1(fablo,fabhi,wmac_ptr,1,SDIM-1)
       else if (phase_change_displacement.eq.1) then
+
+       if (splitting_dir.eq.-1) then
+        !do nothing
+       else
+        print *,"splitting_dir invalid: ",splitting_dir
+        stop
+       endif
+
        call checkbound_array(fablo,fabhi,burning_ptr,ngrow_distance,-1)
 
        ncomp_per_burning=EXTRAP_PER_BURNING
@@ -20721,7 +20752,7 @@ stop
            (iten_particle.le.num_interfaces)) then
         !do nothing
        else
-        print *,"iten_particle invalid"
+        print *,"iten_particle invalid: ",iten_particle
         stop
        endif
 
@@ -20737,6 +20768,7 @@ stop
             (num_RK_stages.eq.4)) then
 
          call interp_mac_velocity( &
+          splitting_dir, &
           grid_PARM, &
           umac_ptr, &
           vmac_ptr, &
@@ -20757,6 +20789,7 @@ stop
          call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
          call interp_mac_velocity( &
+          splitting_dir, &
           grid_PARM, &
           umac_ptr, &
           vmac_ptr, &
@@ -20771,6 +20804,7 @@ stop
          call check_cfl_BC(grid_PARM,xpart1,xpart3)
 
          call interp_mac_velocity( &
+          splitting_dir, &
           grid_PARM, &
           umac_ptr, &
           vmac_ptr, &
@@ -20785,6 +20819,7 @@ stop
          call check_cfl_BC(grid_PARM,xpart1,xpart4)
 
          call interp_mac_velocity( &
+          splitting_dir, &
           grid_PARM, &
           umac_ptr, &
           vmac_ptr, &
@@ -20805,6 +20840,7 @@ stop
          call check_cfl_BC(grid_PARM,xpart1,xpart2)
 
          call interp_mac_velocity( &
+          splitting_dir, &
           grid_PARM, &
           umac_ptr, &
           vmac_ptr, &
@@ -20890,7 +20926,9 @@ stop
                  (abs(LS(im_secondary)).gt.DXMAXLS)) then
          ! do nothing
         else
-         print *,"LS invalid"
+         print *,"LS invalid move_particle_container: ", &
+            im_primary,im_secondary, &
+            LS(im_primary),LS(im_secondary)
          stop
         endif
 

@@ -12826,10 +12826,15 @@ NavierStokes::prepare_displacement() {
    //Umac_Type
   MultiFab* temp_mac_velocity=getStateMAC(mac_grow,normdir,vel_time_slab); 
 
+   // RAW_MAC_VELOCITY_MF and
    // MAC_VELOCITY_MF deleted towards the end of 
    //   NavierStokes::nonlinear_advection
    // velocity * dt_slab
   new_localMF(MAC_VELOCITY_MF+normdir,1,mac_grow,normdir);
+  new_localMF(RAW_MAC_VELOCITY_MF+normdir,1,mac_grow,normdir);
+
+  MultiFab::Copy(*localMF[RAW_MAC_VELOCITY_MF+normdir],*temp_mac_velocity,
+		  0,0,1,mac_grow);
 
   const Real* dx = geom.CellSize();
   MultiFab& S_new=get_new_data(State_Type,slab_step+1);
@@ -12910,6 +12915,7 @@ NavierStokes::prepare_displacement() {
    // do nothing
   } else if (cancel_advection==1) {
    localMF[MAC_VELOCITY_MF+normdir]->setVal(0.0);
+   localMF[RAW_MAC_VELOCITY_MF+normdir]->setVal(0.0);
   } else {
    amrex::Error("cancel_advection invalid");
   }
@@ -13970,6 +13976,11 @@ void
 NavierStokes::level_phase_change_convertALL() {
 
  std::string local_caller_string="level_phase_change_convertALL";
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  //do nothing
+ } else 
+  amrex::Error("slab_step invalid");
 
  int finest_level=parent->finestLevel();
  if (level==0) {
@@ -22898,7 +22909,7 @@ NavierStokes::init_particle_container(int append_flag,
  } else if (append_flag==OP_PARTICLE_SLOPES) {
   number_sweeps=1;
 
-  slope_mf=SLOPE_RECON_MF;
+  slope_mf=localMF[SLOPE_RECON_MF];
 
   if (slope_mf->nComp()==num_materials*ngeom_recon) {
    //do nothing

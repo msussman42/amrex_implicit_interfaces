@@ -406,7 +406,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 #ifdef AMREX_PARTICLES
 
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-  NavierStokes& ns_level0=getLevel(0);
 
   int lev_min=0;
   int lev_max=-1;
@@ -414,27 +413,20 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   int local_Redistribute=0; 
   bool local_copy=true; //do not redistribute inside of copyParticles
 
-  My_ParticleContainer& prevPC=ns_level0.newDataPC(slab_step);
+    // level=0
+  My_ParticleContainer& prevPC=newDataPC(slab_step);
 
   prevPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_Redistribute);
 
-  My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
+    // level=0
+  My_ParticleContainer& localPC=newDataPC(slab_step+1);
 
   localPC.clearParticles();
   localPC.Redistribute();
   localPC.copyParticles(prevPC,local_copy);
 
   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
-
-  localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
-
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-    //move_particles() declared in NavierStokes2.cpp
-   ns_level.move_particles(localPC,local_caller_string);
-  }
 
   localPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_Redistribute);
@@ -493,6 +485,39 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
    interface_touch_flag=1; //nonlinear_advection
 
+#ifdef AMREX_PARTICLES
+
+   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+    NavierStokes& ns_level0=getLevel(0);
+
+    int lev_min=0;
+    int lev_max=-1;
+    int nGrow_Redistribute=0;
+    int local_Redistribute=0; 
+
+      //level==0
+    My_ParticleContainer& localPC=newDataPC(slab_step+1);
+    init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+    localPC.Redistribute(lev_min,lev_max,
+      nGrow_Redistribute,local_Redistribute);
+
+    for (int ilev=finest_level;ilev>=level;ilev--) {
+     NavierStokes& ns_level=getLevel(ilev);
+      //move_particles() declared in NavierStokes2.cpp
+     ns_level.move_particles(
+       normdir_here,
+       localPC,
+       local_caller_string);
+    }
+
+    localPC.Redistribute(lev_min,lev_max,
+      nGrow_Redistribute,local_Redistribute);
+
+   } else
+    amrex::Error("slab_step invalid");
+
+#endif
+
    if ((dir_absolute_direct_split>=0)&&
        (dir_absolute_direct_split<AMREX_SPACEDIM-1)) {
      // in: nonlinear_advection
@@ -534,6 +559,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
    ns_level.delete_localMF(VOF_PREV_TIME_MF,1);
 
    ns_level.delete_localMF(MAC_VELOCITY_MF,AMREX_SPACEDIM);
+   ns_level.delete_localMF(RAW_MAC_VELOCITY_MF,AMREX_SPACEDIM);
 
     // sanity check
    ns_level.debug_ngrow(MASKCOEF_MF,1,local_caller_string);
@@ -1686,6 +1712,11 @@ void NavierStokes::phase_change_code_segment(
   int& color_count,
   Vector<blobclass>& blobdata) {
 
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  //do nothing
+ } else 
+  amrex::Error("slab_step invalid");
+
  int finest_level=parent->finestLevel();
  if (level==0) {
   //do nothing
@@ -1936,8 +1967,9 @@ void NavierStokes::phase_change_code_segment(
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
+   int splitting_dir=-1;
     //move_particles() declared in NavierStokes2.cpp
-   ns_level.move_particles(localPC,local_caller_string);
+   ns_level.move_particles(splitting_dir,localPC,local_caller_string);
   }
 
   localPC.Redistribute(lev_min,lev_max,
@@ -2828,15 +2860,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       //  (non-Newtonian materials)
       // second half of D^{upside down triangle}/Dt
       tensor_advection_updateALL();
-
-#ifdef AMREX_PARTICLES
-
-      if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-       init_particle_containerALL(OP_PARTICLE_ASSIMILATE,local_caller_string);
-      } else
-       amrex::Error("slab_step invalid");
-
-#endif
 
       if (is_zalesak()==1) {
 

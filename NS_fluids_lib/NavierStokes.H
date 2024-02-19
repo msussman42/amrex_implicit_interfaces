@@ -967,8 +967,10 @@ protected:
       const std::string& caller_string);
     void init_particle_container(int append_flag,
       const std::string& caller_string);
-    void move_particles(My_ParticleContainer& localPC,
-       const std::string& caller_string);
+    void move_particles(
+      int splitting_dir,
+      My_ParticleContainer& localPC,
+      const std::string& caller_string);
 #endif
 
     void truncate_VOF(Vector<Real>& delta_mass_all);

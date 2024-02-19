@@ -6632,6 +6632,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 #ifdef AMREX_PARTICLES
 
 void NavierStokes::move_particles(
+  int splitting_dir,
   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
   const std::string& caller_string) {
 
@@ -6705,10 +6706,24 @@ void NavierStokes::move_particles(
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   if (phase_change_displacement==0) {
-   mac_velocity[dir]=getStateMAC(1,dir,vel_time_slab);
+
+   if ((splitting_dir>=0)&&(splitting_dir<AMREX_SPACEDIM)) {
+    //do nothing
+   } else
+    amrex::Error("splitting_dir invalid");
+
+   mac_velocity[dir]=localMF[RAW_MAC_VELOCITY_MF+dir];
+   
    burning_velocity=lsmf;
    burning_velocity_ncomp=1;
+
   } else if (phase_change_displacement==1) {
+
+   if (splitting_dir==-1) {
+    //do nothing
+   } else
+    amrex::Error("splitting_dir invalid");
+
    mac_velocity[dir]=lsmf;
    burning_velocity=localMF[BURNING_VELOCITY_MF];
    burning_velocity_ncomp=EXTRAP_NCOMP_BURNING;
@@ -6769,6 +6784,7 @@ void NavierStokes::move_particles(
 
    // declared in: LEVELSET_3D.F90
   fort_move_particle_container( 
+   &splitting_dir,
    &phase_change_displacement,
    &burning_velocity_ncomp,
    &tid_current,
@@ -6807,7 +6823,7 @@ void NavierStokes::move_particles(
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   if (phase_change_displacement==0) {
-   delete mac_velocity[dir];
+   //do nothing
   } else if (phase_change_displacement==1) {
    //do nothing
   } else
@@ -8866,6 +8882,9 @@ void NavierStokes::VOF_Recon_ALL(
   int update_flag,
   int init_vof_prev_time) {
 
+ if (level!=0)
+  amrex::Error("level must be 0 ");
+
  if (interface_touch_flag==1) {
 
   std::string local_caller_string="VOF_Recon_ALL";
@@ -8891,8 +8910,6 @@ void NavierStokes::VOF_Recon_ALL(
   } else
    amrex::Error("update_centroid_after_recon invalid");
 
-  if (level!=0)
-   amrex::Error("level must be 0 ");
   if (verbose>0) {
    if (ParallelDescriptor::IOProcessor()) {
     std::cout << "Start: VOF_Recon_ALL: time= " <<
@@ -8952,6 +8969,21 @@ void NavierStokes::VOF_Recon_ALL(
    } // im=0..num_materials-1
   } // for (int ilev=level;ilev<=finest_level;ilev++)
 
+#ifdef AMREX_PARTICLES
+  int save_slab_step=slab_step;
+  if (slab_step==-1) {
+   slab_step=0;
+  } if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+   //do nothing
+  } else if (slab_step==ns_time_order) {
+   slab_step=ns_time_order-1;
+  } else
+   amrex::Error("slab_step invalid");
+
+  init_particle_containerALL(OP_PARTICLE_SLOPES,local_caller_string);
+
+  slab_step=save_slab_step;
+#endif
 
   // go from coarsest to finest so that SLOPE_RECON_MF
   // can have proper BC.
