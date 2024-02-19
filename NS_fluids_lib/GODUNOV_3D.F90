@@ -1976,7 +1976,7 @@ stop
             else if (side.eq.2) then
              local_LS=LSright(im)
             else
-             print *,"side invalid (im) : ",side
+             print *,"side invalid (im) : ",im,side
              stop
             endif
             if (local_LS.ge.-incomp_thickness*dxmaxLS) then
@@ -1990,7 +1990,7 @@ stop
                 else if (side.eq.2) then
                  local_LS_opp=LSright(im_opp)
                 else
-                 print *,"side invalid (im_opp_) : ",side
+                 print *,"side invalid (im_opp) : ",im_opp,side
                  stop
                 endif
 
@@ -2023,8 +2023,8 @@ stop
             else if (local_LS.le.-incomp_thickness*dxmaxLS) then
              ! do nothing
             else
-             print *,"oldLS(im) corrupt,fort_vfrac_split"
-             print *,"im,oldLS(im): ",im,oldLS(im)
+             print *,"local_LS corrupt,fort_crossterm"
+             print *,"im,local_LS: ",im,local_LS
              stop
             endif 
            enddo !side=1,2
@@ -2085,7 +2085,7 @@ stop
           wzterm=tdata(D_DECL(i,j,k),TENSOR_TRANSPOSE_WZ)
 
          else
-          print *,"dir invalid crossterm 6"
+          print *,"dir invalid crossterm 6: ",dir
           stop
          endif
 
