@@ -599,6 +599,7 @@ namespace amrex{
 	AMREX_ARLIM_P(mfinerhi));
 
      void fort_move_particle_container(
+        int* splitting_dir,
         int* phase_change_displacement,
         int* burning_velocity_ncomp,
         int* tid,
