@@ -24272,7 +24272,12 @@ MultiFab* NavierStokes::getState_list(
 
  if (ncomp_list<=0)
   amrex::Error("ncomp_list invalid");
- 
+
+ if (grids==state[State_Type].boxArray()) {
+  //do nothing
+ } else
+  amrex::Error("grids==state[State_Type].boxArray() failed");
+
  MultiFab* mf = new MultiFab(state[State_Type].boxArray(),dmap,ncomp_list,
    ngrow,MFInfo().SetTag("mf get state list"),FArrayBoxFactory());
 
