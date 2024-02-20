@@ -1789,13 +1789,17 @@ stop
 
       real(amrex_real), INTENT(in), target :: maskfab(DIMV(maskfab),4)
       real(amrex_real), pointer :: maskfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: facepairX(DIMV(facepairX),nface_dst)
+      real(amrex_real), INTENT(in), target :: &
+              facepairX(DIMV(facepairX),nface_dst)
       real(amrex_real), pointer :: facepairX_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: facepairY(DIMV(facepairY),nface_dst)
+      real(amrex_real), INTENT(in), target :: &
+              facepairY(DIMV(facepairY),nface_dst)
       real(amrex_real), pointer :: facepairY_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: facepairZ(DIMV(facepairZ),nface_dst)
+      real(amrex_real), INTENT(in), target :: &
+              facepairZ(DIMV(facepairZ),nface_dst)
       real(amrex_real), pointer :: facepairZ_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: facetest(DIMV(facetest),num_materials*SDIM)
+      real(amrex_real), INTENT(in), target :: &
+              facetest(DIMV(facetest),num_materials*SDIM)
       real(amrex_real), pointer :: facetest_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: stenfab(DIMV(stenfab),nstar)
       real(amrex_real), pointer :: stenfab_ptr(D_DECL(:,:,:),:)
@@ -1809,9 +1813,11 @@ stop
       real(amrex_real), INTENT(inout), target :: &
         newfab(DIMV(newfab),num_materials*(1+SDIM))
       real(amrex_real), pointer :: newfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: touchfab(DIMV(touchfab),num_materials)
+      real(amrex_real), INTENT(inout), target :: &
+              touchfab(DIMV(touchfab),num_materials)
       real(amrex_real), pointer :: touchfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: crsetouch(DIMV(crsetouch),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              crsetouch(DIMV(crsetouch),num_materials)
       real(amrex_real), pointer :: crsetouch_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
         crsedist(DIMV(crsedist),num_materials*(1+SDIM))
@@ -1936,8 +1942,10 @@ stop
        stop
       endif
 
-      if (max_problen.le.zero) then
-       print *,"max_problen invalid"
+      if (max_problen.gt.zero) then
+       !do nothing
+      else
+       print *,"max_problen invalid: ",max_problen
        stop
       endif
 

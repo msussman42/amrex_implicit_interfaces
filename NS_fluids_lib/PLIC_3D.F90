@@ -324,12 +324,14 @@ stop
 
         ! we must visit all of the covered cells too since
         ! the AMR error indicator is needed on the coarse levels.
+        ! Also, the covered cell reconstruction(s) are needed in order
+        ! reinitialize coarse grid level set function.
        local_maskcov=NINT(maskcov(D_DECL(i,j,k)))
        if ((local_maskcov.eq.1).or. &
            (local_maskcov.eq.0)) then
         ! do nothing
        else
-        print *,"local_maskcov invalid"
+        print *,"local_maskcov invalid: ",local_maskcov
         stop
        endif
 
@@ -1283,7 +1285,7 @@ stop
            endif
 
           else
-           print *,"local_maskcov invalid"
+           print *,"local_maskcov invalid: ",local_maskcov
            stop
           endif
 
