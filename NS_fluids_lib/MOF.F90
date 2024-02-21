@@ -23437,11 +23437,12 @@ contains
 
       do nc=1,n_im
        if ((im_test(nc).lt.1).or.(im_test(nc).gt.num_materials)) then
-        print *,"im_test invalid"
+        print *,"im_test invalid: ",nc,im_test(nc)
         stop
        endif
        if (is_rigid_local(im_test(nc)).ne.0) then
-        print *,"is_rigid invalid MOF.F90"
+        print *,"is_rigid invalid MOF.F90: ", &
+          nc,im_test(nc),is_rigid_local(im_test(nc))
         stop
        endif
       enddo ! nc=1..n_im
@@ -23452,11 +23453,11 @@ contains
        stop
       endif
       if ((imslope.lt.0).or.(imslope.gt.num_materials)) then
-       print *,"imslope invalid"
+       print *,"imslope invalid: ",imslope
        stop
       endif
       if ((center_stencil.ne.0).and.(center_stencil.ne.1)) then
-       print *,"center_stencil invalid"
+       print *,"center_stencil invalid: ",center_stencil
        stop
       endif
 
@@ -23474,10 +23475,10 @@ contains
          slopetest(dir)=slope(dir)
         enddo
        else if (center_stencil.eq.0) then
-        print *,"center_stencil invalid when disttest=0"
+        print *,"center_stencil invalid when disttest=0: ",center_stencil
         stop
        else
-        print *,"center_stencil invalid"
+        print *,"center_stencil invalid: ",center_stencil
         stop
        endif
       else if (disttest.gt.zero) then
@@ -23487,7 +23488,7 @@ contains
         slopetest(dir)=slopetest(dir)/disttest
        enddo
       else
-       print *,"disttest invalid"
+       print *,"disttest invalid: ",disttest
        stop
       endif
 
@@ -23555,7 +23556,7 @@ contains
            else if (distzero.eq.0) then
             ! do nothing
            else
-            print *,"distzero invalid"
+            print *,"distzero invalid: ",distzero
             stop
            endif
            do dir=1,sdim
@@ -23570,7 +23571,7 @@ contains
           endif
          else if (center_stencil.eq.0) then
           if (distzero.ne.0) then
-           print *,"distzero invalid"
+           print *,"distzero invalid: ",distzero
            stop
           endif
           LSSIGN=zero
@@ -23594,7 +23595,7 @@ contains
           else if (LSSIGN.eq.zero) then
            ! do nothing
           else
-           print *,"LSSIGN BUST"
+           print *,"LSSIGN BUST: ",LSSIGN
            stop
           endif
          else
@@ -23605,7 +23606,8 @@ contains
                  (touch_hold(im).eq.2)) then
          ! do nothing
         else
-         print *,"dist_compare, disttest, or touch_hold invalid"
+         print *,"dist_compare, disttest, or touch_hold invalid: ", &
+                 dist_compare,disttest,im,touch_hold(im)
          stop
         endif   
 
@@ -24325,7 +24327,7 @@ contains
        stop
       endif
       if ((center_stencil.ne.0).and.(center_stencil.ne.1)) then
-       print *,"center_stencil invalid"
+       print *,"center_stencil invalid: ",center_stencil
        stop
       endif
       maxdx=dx(1)
@@ -24653,7 +24655,7 @@ contains
           print *,"is_rigid invalid MOF.F90"
           stop
          endif
-        enddo ! im
+        enddo ! im=1,num_materials
         irank=irank+1
        enddo  ! while irank<=num_materials and uncaptured_volume>0 
 
@@ -24820,10 +24822,9 @@ contains
         enddo 
         enddo  ! ilist,jlist
        endif ! nlist >=2
-
  
       else
-       print *,"vfrac_data(im) out of range"
+       print *,"vfrac_data(im) out of range: ",im,vfrac_data(im)
        stop
       endif ! vfrac(im)>1-eps ?  im==sorted_list(1)
 
