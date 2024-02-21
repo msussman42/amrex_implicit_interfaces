@@ -24802,7 +24802,8 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
    PCINTERP_fill_coarse_patch(DIST_TOUCH_MF,i,
      1,State_Type,scompBC_map);
   } // i=0..num_materials-1
-  MultiFab::Copy(*dist_touch_coarse_mf,*localMF[DIST_TOUCH_MF],0,0,num_materials,0);
+  MultiFab::Copy(*dist_touch_coarse_mf,*localMF[DIST_TOUCH_MF],
+		 0,0,num_materials,0);
   localMF[DIST_TOUCH_MF]->setVal(0.0);
 
  } else if (level==0) {
