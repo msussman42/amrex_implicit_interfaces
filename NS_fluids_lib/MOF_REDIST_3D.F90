@@ -1740,8 +1740,8 @@ stop
          origdist,DIMS(origdist), &
          newfab,DIMS(newfab), &
          touchfab,DIMS(touchfab), &
-         crsetouch,DIMS(crsetouch), &
-         crsedist,DIMS(crsedist), &
+         crsetouch,DIMS(crsetouch), & !traverse coarsest to finest level.
+         crsedist,DIMS(crsedist), & !traverse coarsest to finest level.
          tilelo,tilehi, &
          fablo,fabhi, &
          bfact, &
@@ -1984,11 +1984,11 @@ stop
        print *,"ngrow_make_distance<>3 error in levelstrip"
        stop
       endif
-      if ((ngrow_make_distance_accept.eq.3).or. &
-          (ngrow_make_distance_accept.eq.2)) then
+       ! 7x7x7 stencil guarantees linearity preserving property.
+      if (ngrow_make_distance_accept.eq.3) then
        ! do nothing
       else
-       print *,"ngrow_make_distance_accept<>2,3 error in levelstrip"
+       print *,"ngrow_make_distance_accept<>3 in fort_levelstrip"
        stop
       endif
 
@@ -2123,7 +2123,8 @@ stop
                    (init_dist_from_crse.le.zero)) then
            ! do nothing
           else
-           print *,"im,im_crit, or init_dist_from_crse invalid"
+           print *,"im,im_crit, or init_dist_from_crse invalid: ", &
+                 im,im_crit,init_dist_from_crse
            stop
           endif 
           ctouch=NINT(crsetouch(D_DECL(i,j,k),im))
@@ -2132,11 +2133,11 @@ stop
           else if ((ctouch.eq.1).or.(ctouch.eq.2)) then
            ! do nothing
           else
-           print *,"ctouch invalid"
+           print *,"ctouch invalid: ",ctouch
            stop
           endif
          else
-          print *,"level invalid"
+          print *,"level invalid: ",level
           stop
          endif
         
@@ -2244,7 +2245,7 @@ stop
        if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_crit invalid"
+        print *,"im_crit invalid: ",im_crit
         stop
        endif
        if (is_rigid(im_crit).eq.0) then
@@ -2299,7 +2300,7 @@ stop
            (im_test_center.le.num_materials)) then
         ! do nothing
        else
-        print *,"im_test_center out of range (0)"
+        print *,"im_test_center out of range (0): ",im_test_center
         stop
        endif
         ! im_test_center must be a fluid material.
@@ -2425,13 +2426,13 @@ stop
               endif
 
               local_facetest=NINT(facetest(D_DECL(iside,jside,kside), &
-                                           (dir-1)*num_materials+im))
+                                  (dir-1)*num_materials+im))
               if (local_facetest.eq.0) then
                face_test(im)=0
               else if (local_facetest.eq.1) then
                ! do nothing
               else
-               print *,"local_facetest invalid"
+               print *,"local_facetest invalid: ",local_facetest
                stop
               endif
 
@@ -2526,7 +2527,7 @@ stop
               (im_test_stencil.le.num_materials)) then
            ! do nothing
           else
-           print *,"im_test_stencil out of range 1"
+           print *,"im_test_stencil out of range 1: ",im_test_stencil
            stop
           endif
           if (is_rigid(im_test_stencil).eq.0) then
@@ -2555,7 +2556,7 @@ stop
           else if (im_corner.eq.-1) then
            ! do nothing
           else
-           print *,"im_corner invalid"
+           print *,"im_corner invalid: ",im_corner
            stop
           endif
           do im=1,num_materials
@@ -2695,7 +2696,7 @@ stop
            if (ifacepair.eq.nface_dst+1) then
             ! do nothing
            else
-            print *,"ifacepair invalid"
+            print *,"ifacepair invalid: ",ifacepair
             stop
            endif 
 
@@ -2714,7 +2715,7 @@ stop
                        (f_index(dir).eq.-1)) then
                boundary_face_count(im)=1
               else
-               print *,"f_index invalid"
+               print *,"f_index invalid: ",dir,f_index(dir)
                stop
               endif
              else if ((frac_pair(im,im).ge.zero).and. &
@@ -2793,7 +2794,7 @@ stop
         ! do nothing 
 
        else
-        print *,"on_border invalid"
+        print *,"on_border invalid: ",on_border
         stop
        endif
 
@@ -2838,13 +2839,14 @@ stop
                    (truncate_volume_fractions(im).eq.1)) then
            keep_flotsam=0
           else
-           print *,"keep_all_interfaces, truncate_volume_fraction, err"
+           print *,"keep_all_interfaces, truncate_volume_fraction, err: ", &
+              keep_all_interfaces,im,truncate_volume_fractions(im)
            stop
           endif
          else if (cell_test(im).eq.0) then
           keep_flotsam=0
          else
-          print *,"cell_test invalid"
+          print *,"cell_test invalid: ",im,cell_test(im)
           stop
          endif
 
@@ -2887,7 +2889,7 @@ stop
              stop
             endif
            else
-            print *,"istar invalid"
+            print *,"istar invalid: ",istar
             stop
            endif
           enddo ! k3
@@ -2897,7 +2899,7 @@ stop
          else if (legitimate_material.eq.0) then
           ! do nothing
          else
-          print *,"legitimate_material invalid"
+          print *,"legitimate_material invalid 2902: ",legitimate_material
           stop
          endif
 
@@ -2908,7 +2910,7 @@ stop
          else if (legitimate_material.eq.0) then
           ! do nothing
          else
-          print *,"legitimate_material invalid"
+          print *,"legitimate_material invalid 2913: ",legitimate_material
           stop
          endif 
 
@@ -3314,9 +3316,9 @@ stop
 
          ! uses VOFTOL
         call check_full_cell_vfrac( &
-                vcenter, &
-                tessellate, &  ! =0
-                im_crit)
+          vcenter, &
+          tessellate, &  ! =0
+          im_crit)
 
         if ((im_crit.ge.1).and.(im_crit.le.num_materials)) then
 
@@ -3352,7 +3354,7 @@ stop
            call put_istar(istar,istar_array) 
            stenfab(D_DECL(i,j,k),istar)=im_test
           else
-           print *,"im_test invalid"
+           print *,"im_test invalid: ",im_test
            stop
           endif
          enddo
