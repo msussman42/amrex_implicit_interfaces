@@ -197,11 +197,12 @@ stop
           bfact,dx,xsten_donate,nhalf, &
           xaccept_point, &
           xdonate_vert, &
-          newLS, &
+          newLS, & !intent(inout)
           touch_hold, &
-          minLS, &
-          maxLS, &
-          im_test,n_im,LSslope, &
+          minLS, & !intent(inout)
+          maxLS, & !intent(inout) 
+          im_test,n_im, &
+          LSslope, &  ! slope if xaccept=xdonate=xcell intent(in)
           imslope, &
           im0_center, &
           SDIM, &
@@ -2982,16 +2983,21 @@ stop
          enddo
 
          call update_closest( &
-          xsten_accept,xsten_donate,nhalf, &
-          dx,xlo,bfact,level,fablo, &
-          mofdata,nstar, &
+          xsten_accept, &
+          xsten_donate, &
+          nhalf, &
+          dx,xlo,bfact, &
+          level, &
+          fablo, &
+          mofdata, & !intent(in)
+          nstar, &
           i,j,k, &  ! donate index
           i1,j1,k1, & ! accept index: i+i1,j+j1,k+k1
-          newfab_hold, &
-          touch_hold, &
-          minLS, &
-          maxLS, &
-          donateflag, &
+          newfab_hold, & !intent(inout)
+          touch_hold, &  !intent(inout)
+          minLS, & !intent(inout)
+          maxLS, & !intent(inout)
+          donateflag, & !intent(in)
           time)
 
          do im=1,num_materials*(1+SDIM)
@@ -3051,7 +3057,8 @@ stop
         newfab(DIMV(newfab),num_materials*(1+SDIM))
       real(amrex_real), pointer :: newfab_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: touchfab(DIMV(touchfab),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              touchfab(DIMV(touchfab),num_materials)
 
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
@@ -3093,6 +3100,8 @@ stop
 
        do im=1,num_materials
 
+         ! touchfab=1 => modify with candidate distance even if 
+         ! new distance will be larger.
         ctouch=NINT(touchfab(D_DECL(i,j,k),im))
 
         if (is_rigid(im).eq.0) then
@@ -3112,21 +3121,21 @@ stop
             init_dist=maxLS(im)
            endif
           else
-           print *,"init_dist bust"
+           print *,"init_dist bust: ",init_dist
            stop
           endif
           newfab(D_DECL(i,j,k),im)=init_dist
          else if ((ctouch.eq.1).or.(ctouch.eq.2)) then
           ! do nothing
          else
-          print *,"ctouch invalid"
+          print *,"ctouch invalid: ",ctouch
           stop
          endif
  
         else if (is_rigid(im).eq.1) then
 
          if (ctouch.ne.2) then
-          print *,"ctouch invalid"
+          print *,"ctouch invalid: ",ctouch
           stop
          endif
 
