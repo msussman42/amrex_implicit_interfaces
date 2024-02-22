@@ -70,7 +70,6 @@
 #define BURNING_VELOCITY_MF 60
 #define FACEFRAC_MF 61
 #define STENCIL_MF 62
-#define ORIGDIST_MF 63
 
 #define MDOT_LOCAL_MF 64
 

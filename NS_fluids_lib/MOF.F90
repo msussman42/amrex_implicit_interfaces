@@ -24108,6 +24108,7 @@ contains
        real(amrex_real) vfrac_data(num_materials)
        integer sorted_list(num_materials)
        real(amrex_real) uncaptured_volume
+       real(amrex_real) mag
        integer im,vofcomp,FSI_exclude,irank,testflag,dir
        integer is_rigid_local(num_materials)
        integer, PARAMETER :: tessellate=0
@@ -24226,9 +24227,32 @@ contains
          irank=irank+1
         enddo ! while irank<=num_materials and uncaptured _vol>0
        else
-        print *,"vfrac_data max out of range"
+        print *,"vfrac_data max out of range: ",im,vfrac_data(im)
         stop
        endif ! vfrac(im)>1-eps ?  (im==sorted_list(1))
+
+       if (imslope.eq.0) then
+        !do nothing
+       else if ((imslope.ge.1).and.(imslope.le.num_materials)) then
+        mag=zero
+        do dir=1,sdim
+         mag=mag+slope(dir)**2
+        enddo 
+        mag=sqrt(mag)
+        if (mag.eq.zero) then
+         imslope=0
+        else if (mag.gt.zero) then
+         do dir=1,sdim
+          slope(dir)=slope(dir)/mag
+         enddo
+        else
+         print *,"mag invalid: ",mag
+         stop
+        endif
+       else
+        print *,"imslope invalid: ",imslope
+        stop
+       endif
 
        return
        end subroutine get_primary_slope

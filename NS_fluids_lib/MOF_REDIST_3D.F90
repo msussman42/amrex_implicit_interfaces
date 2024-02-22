@@ -35,7 +35,10 @@ stop
       subroutine update_closest( &
         xsten_accept,xsten_donate,nhalf, &
         dx,xlo,bfact,level,fablo, &
-        mofdata,nstar, &
+        mofdata, &
+        LSslope_center, &
+        imslope_center, &
+        nstar, &
         idon,jdon,kdon, & ! donate index
         i1,j1,k1, &  ! accept index: idon+i1,jdon+j1,kdon+k1
         newLS, &
@@ -71,6 +74,7 @@ stop
       integer, INTENT(in) :: donateflag(num_materials+1+nstar)
       integer :: center_stencil
       integer :: im0_center
+      integer, INTENT(in) :: imslope_center
       integer :: imslope
 
       integer nstar_test
@@ -78,6 +82,7 @@ stop
       integer istar,i2,j2,k2,donateIND
       integer klosten,khisten
       integer dir
+      real(amrex_real), INTENT(in) :: LSslope_center(SDIM)
       real(amrex_real) LSslope(SDIM)
       integer n_im
       integer im_test(6)
@@ -119,15 +124,17 @@ stop
 
       center_stencil=0
       if ((i1.eq.0).and.(j1.eq.0).and.(k1.eq.0)) then
+
        center_stencil=1
         ! get the slope of the fluid material whose interface is closest to
         ! the center of the cell.  Slope comes from mofdata and points
         ! towards material "imslope"
         ! get_primary_slope is declared in: MOF.F90
-       call get_primary_slope( &
-        bfact,dx,xsten_donate,nhalf, &
-        mofdata, &
-        LSslope,imslope,SDIM) 
+       imslope=imslope_center
+       do dir=1,SDIM
+        LSslope(dir)=LSslope_center(dir)
+       enddo
+
       else if ((i1.ne.0).or.(j1.ne.0).or.(k1.ne.0)) then
        ! do nothing
       else
@@ -1738,7 +1745,6 @@ stop
          facetest,DIMS(facetest), &
          stenfab,DIMS(stenfab), &
          vofrecon,DIMS(vofrecon), &
-         origdist,DIMS(origdist), &
          newfab,DIMS(newfab), &
          touchfab,DIMS(touchfab), &
          crsetouch,DIMS(crsetouch), & !traverse coarsest to finest level.
@@ -1782,7 +1788,6 @@ stop
       integer, INTENT(in) :: DIMDEC(facetest)
       integer, INTENT(in) :: DIMDEC(stenfab)
       integer, INTENT(in) :: DIMDEC(vofrecon)
-      integer, INTENT(in) :: DIMDEC(origdist)
       integer, INTENT(in) :: DIMDEC(newfab)
       integer, INTENT(in) :: DIMDEC(touchfab)
       integer, INTENT(in) :: DIMDEC(crsetouch)
@@ -1808,9 +1813,6 @@ stop
       real(amrex_real), INTENT(in), target :: &
        vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
-       origdist(DIMV(origdist),num_materials*(1+SDIM))
-      real(amrex_real), pointer :: origdist_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: &
         newfab(DIMV(newfab),num_materials*(1+SDIM))
       real(amrex_real), pointer :: newfab_ptr(D_DECL(:,:,:),:)
@@ -1911,7 +1913,12 @@ stop
       integer iface,jface,kface
       integer f_index(3)
       integer ml,mr,ifacepair
-      real(amrex_real) frac_pair(num_materials,num_materials)  !(m_left,m_right)
+      real(amrex_real) frac_pair(num_materials,num_materials) !(m_left,m_right)
+      real(amrex_real) LSslope_center(SDIM)
+      integer imslope_center
+      real(amrex_real) bypass_cutoff
+      real(amrex_real) crude_dist,dotprod,crude_normal
+      integer bypass_update_closest
 
       newfab_ptr=>newfab
       touchfab_ptr=>touchfab
@@ -2021,8 +2028,6 @@ stop
       call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1)
       vofrecon_ptr=>vofrecon
       call checkbound_array(fablo,fabhi,vofrecon_ptr,ngrow_distance,-1)
-      origdist_ptr=>origdist
-      call checkbound_array(fablo,fabhi,origdist_ptr,ngrow_distance,-1)
       call checkbound_array(fablo,fabhi,newfab_ptr,1,-1)
       call checkbound_array(fablo,fabhi,touchfab_ptr,0,-1)
       crsetouch_ptr=>crsetouch
@@ -2164,7 +2169,7 @@ stop
            init_dist_from_crse=-max_problen
           endif
          else
-          print *,"crse_dist_valid invalid"
+          print *,"crse_dist_valid invalid: ",crse_dist_valid
           stop
          endif
  
@@ -2969,43 +2974,136 @@ stop
          endif
         enddo ! dir=1..sdim
 
+         !LSslope_center is normalized
+        call get_primary_slope( &
+         bfact,dx,xsten_donate,nhalf, &
+         mofdata, &
+         LSslope_center,imslope_center,SDIM) 
+
+        bypass_cutoff=sqrt(three)/two
+
         do k1=ilocut(3),ihicut(3)
         do j1=ilocut(2),ihicut(2)
         do i1=ilocut(1),ihicut(1)
 
          call gridsten_level(xsten_accept,i+i1,j+j1,k+k1,level,nhalf)
 
-         do im=1,num_materials*(1+SDIM)
-          newfab_hold(im)=newfab(D_DECL(i+i1,j+j1,k+k1),im)
-         enddo  ! im
-         do im=1,num_materials
-          touch_hold(im)=NINT(touchfab(D_DECL(i+i1,j+j1,k+k1),im))
-         enddo
+         bypass_update_closest=1
 
-         call update_closest( &
-          xsten_accept, &
-          xsten_donate, &
-          nhalf, &
-          dx,xlo,bfact, &
-          level, &
-          fablo, &
-          mofdata, & !intent(in)
-          nstar, &
-          i,j,k, &  ! donate index
-          i1,j1,k1, & ! accept index: i+i1,j+j1,k+k1
-          newfab_hold, & !intent(inout)
-          touch_hold, &  !intent(inout)
-          minLS, & !intent(inout)
-          maxLS, & !intent(inout)
-          donateflag, & !intent(in)
-          time)
+         if (levelrz.eq.COORDSYS_CARTESIAN) then
+          ! do nothing
+         else if (levelrz.eq.COORDSYS_RZ) then
+          if (SDIM.ne.2) then
+           print *,"dimension bust"
+           stop
+          endif
+         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+          bypass_update_closest=0
+         else
+          print *,"levelrz invalid in fort_levelstrip: ",levelrz
+          stop
+         endif
 
-         do im=1,num_materials*(1+SDIM)
-          newfab(D_DECL(i+i1,j+j1,k+k1),im)=newfab_hold(im)
-         enddo  ! im
-         do im=1,num_materials
-          touchfab(D_DECL(i+i1,j+j1,k+k1),im)=touch_hold(im)
-         enddo
+         if ((abs(i1).le.1).and.(abs(j1).le.1).and.(abs(k1).le.1)) then
+          bypass_update_closest=0
+         endif
+
+         if (fluid_materials_in_cell_stencil.eq.2) then
+          ! do nothing
+         else if ((fluid_materials_in_cell_stencil.ge.3).and. &
+                  (fluid_materials_in_cell_stencil.le.num_materials)) then
+          bypass_update_closest=0
+         else
+          print *,"fluid_materials_in_cell_stencil invalid: ", &
+            fluid_materials_in_cell_stencil
+          stop
+         endif
+
+         if (imslope_center.eq.0) then
+          bypass_update_closest=0
+         else if ((imslope_center.ge.1).and. &
+                  (imslope_center.le.num_materials)) then
+          ! do nothing
+         else
+          print *,"imslope_center invalid: ",imslope_center
+          stop
+         endif
+
+         if (bypass_update_closest.eq.1) then
+
+          crude_dist=zero
+          dotprod=zero
+          do dir=1,SDIM
+           crude_normal=xsten_donate(0,dir)-xsten_accept(0,dir)
+           crude_dist=crude_dist+crude_normal**2 
+           dotprod=dotprod+crude_normal*LSslope_center(dir)
+          enddo
+          crude_dist=sqrt(crude_dist)
+          if (crude_dist.gt.zero) then
+           dotprod=abs(dotprod)/crude_dist
+          else
+           print *,"crude_dist invalid: ",crude_dist
+           stop
+          endif
+           ! Sean Mauch type of algorithm
+          if ((dotprod.ge.zero).and.(dotprod.le.bypass_cutoff)) then
+           ! do nothing
+          else if ((dotprod.ge.bypass_cutoff).and. &
+                   (dotprod.le.one+EPS2)) then
+           bypass_update_closest=0
+          else
+           print *,"dotprod invalid: ",dotprod
+           stop
+          endif
+         else if (bypass_update_closest.eq.0) then
+          !do nothing
+         else
+          print *,"bypass_update_closest invalid: ",bypass_update_closest
+          stop
+         endif
+
+         if (bypass_update_closest.eq.0) then
+         
+          do im=1,num_materials*(1+SDIM)
+           newfab_hold(im)=newfab(D_DECL(i+i1,j+j1,k+k1),im)
+          enddo  ! im
+          do im=1,num_materials
+           touch_hold(im)=NINT(touchfab(D_DECL(i+i1,j+j1,k+k1),im))
+          enddo
+
+          call update_closest( &
+           xsten_accept, &
+           xsten_donate, &
+           nhalf, &
+           dx,xlo,bfact, &
+           level, &
+           fablo, &
+           mofdata, & !intent(in)
+           LSslope_center, &
+           imslope_center, &
+           nstar, &
+           i,j,k, &  ! donate index
+           i1,j1,k1, & ! accept index: i+i1,j+j1,k+k1
+           newfab_hold, & !intent(inout)
+           touch_hold, &  !intent(inout)
+           minLS, & !intent(inout)
+           maxLS, & !intent(inout)
+           donateflag, & !intent(in)
+           time)
+
+          do im=1,num_materials*(1+SDIM)
+           newfab(D_DECL(i+i1,j+j1,k+k1),im)=newfab_hold(im)
+          enddo  ! im
+          do im=1,num_materials
+           touchfab(D_DECL(i+i1,j+j1,k+k1),im)=touch_hold(im)
+          enddo
+
+         else if (bypass_update_closest.eq.1) then
+          !do nothing
+         else
+          print *,"bypass_update_closest invalid: ",bypass_update_closest
+          stop
+         endif
 
         enddo
         enddo
