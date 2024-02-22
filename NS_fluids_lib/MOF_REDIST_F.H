@@ -71,7 +71,6 @@ namespace amrex{
        Real* facetest,AMREX_ARLIM_P(facetestlo),AMREX_ARLIM_P(facetesthi),
        Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
        Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
-       Real* origdist,AMREX_ARLIM_P(origdistlo),AMREX_ARLIM_P(origdisthi),
        Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
        Real* touchfab,AMREX_ARLIM_P(touchfablo),AMREX_ARLIM_P(touchfabhi),
        Real* crsetouch,AMREX_ARLIM_P(crsetouchlo),AMREX_ARLIM_P(crsetouchhi),

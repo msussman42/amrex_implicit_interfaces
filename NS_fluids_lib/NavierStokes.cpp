@@ -24624,7 +24624,6 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,
    ns_level.delete_localMF(FACEFRAC_SOLVE_MM_MF+dir,1);
   }
   ns_level.delete_localMF(FACETEST_MF,1);
-  ns_level.delete_localMF(ORIGDIST_MF,1);
   ns_level.delete_localMF(STENCIL_MF,1);
   ns_level.delete_localMF(DIST_TOUCH_MF,1);
  }
@@ -24755,18 +24754,12 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
 
  MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
 
- getStateDist_localMF(ORIGDIST_MF,ngrow_distance,cur_time_slab,
-   local_caller_string);
-
  resize_mask_nbr(ngrow_distance);
  debug_ngrow(MASK_NBR_MF,ngrow_distance,local_caller_string);
  if (localMF[MASK_NBR_MF]->nComp()!=4)
   amrex::Error("invalid ncomp for mask nbr");
  VOF_Recon_resize(ngrow_distance); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_distance,local_caller_string);
- debug_ngrow(ORIGDIST_MF,ngrow_distance,local_caller_string);
- if (localMF[ORIGDIST_MF]->nComp()!=num_materials*(1+AMREX_SPACEDIM))
-  amrex::Error("invalid ncomp for origdist");
 
  if (profile_dist==1)
   before_profile = ParallelDescriptor::second();
@@ -24808,7 +24801,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
 
  } else if (level==0) {
 
-  dist_coarse_mf=localMF[ORIGDIST_MF];
+  dist_coarse_mf=&LS_new;
   dist_touch_coarse_mf=localMF[DIST_TOUCH_MF];
 
  } else
@@ -24985,7 +24978,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
 
    FArrayBox& voffab=(*localMF[SLOPE_RECON_MF])[mfi];
    FArrayBox& lsfab=LS_new[mfi];
-   FArrayBox& origdist=(*localMF[ORIGDIST_MF])[mfi];
 
    FArrayBox& stencilfab=(*localMF[STENCIL_MF])[mfi];
 
@@ -25032,8 +25024,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
     ARLIM(stencilfab.loVect()),ARLIM(stencilfab.hiVect()),
     voffab.dataPtr(),
     ARLIM(voffab.loVect()),ARLIM(voffab.hiVect()),
-    origdist.dataPtr(),
-    ARLIM(origdist.loVect()),ARLIM(origdist.hiVect()),
     lsfab.dataPtr(),
     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
     touchfab.dataPtr(),
