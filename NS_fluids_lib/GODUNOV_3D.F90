@@ -21052,16 +21052,20 @@ stop
       integer :: ibase
       integer :: velcomp
 
-      real(amrex_real), INTENT(in),target :: solxfab(DIMV(solxfab),nparts_def*SDIM)
-      real(amrex_real), INTENT(in),target :: solyfab(DIMV(solyfab),nparts_def*SDIM)
-      real(amrex_real), INTENT(in),target :: solzfab(DIMV(solzfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solxfab(DIMV(solxfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solyfab(DIMV(solyfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in),target :: &
+              solzfab(DIMV(solzfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(inout),target :: snew(DIMV(snew),nstate)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+      real(amrex_real), INTENT(in),target :: &
+              lsnew(DIMV(lsnew),num_materials*(SDIM+1))
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: du(DIMV(du),nsolve)
       real(amrex_real), pointer :: du_ptr(D_DECL(:,:,:),:)

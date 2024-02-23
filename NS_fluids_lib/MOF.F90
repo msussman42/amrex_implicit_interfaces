@@ -15199,7 +15199,8 @@ contains
       if (dxmaxLS_volume_constraint.gt.zero) then
        ! do nothing
       else
-       print *,"dxmaxLS_volume_constraint invalid"
+       print *,"dxmaxLS_volume_constraint invalid: ", &
+               dxmaxLS_volume_constraint
        stop
       endif
 
@@ -15243,9 +15244,10 @@ contains
 
        LS_cen=ls_mof(D_DECL(0,0,0),im)
 
-       if (abs(LS_cen).gt.three*dxmaxLS_volume_constraint) then
+        ! if 0<F<1 then |LS_{center}|<dx*sqrt(3)/2 (3D)
+       if (abs(LS_cen).gt.two*dxmaxLS_volume_constraint) then
         lsnormal_valid(im)=0
-       else if (abs(LS_cen).le.three*dxmaxLS_volume_constraint) then
+       else if (abs(LS_cen).le.two*dxmaxLS_volume_constraint) then
         !do nothing
        else
         print *,"LS_cen invalid: ",LS_cen
@@ -15265,7 +15267,7 @@ contains
          else if ((dir.eq.3).and.(sdim.eq.3)) then
           kk=1
          else
-          print *,"dir invalid CLSVOF slope"
+          print *,"dir invalid CLSVOF slope: ",dir
           stop
          endif
          dxplus=xsten0(2,dir)-xsten0(0,dir)
@@ -15273,9 +15275,16 @@ contains
          LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
          LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
 
-         if ((abs(LS_plus).gt.three*dxmaxLS_volume_constraint).or. &
-             (abs(LS_minus).gt.three*dxmaxLS_volume_constraint)) then
+         ! if 0<F<1 then |LS_{center}|<dx*sqrt(3)/2 (3D)
+         if ((abs(LS_plus).le.three*dxmaxLS_volume_constraint).and. &
+             (abs(LS_minus).le.three*dxmaxLS_volume_constraint)) then
+          !do nothing
+         else if ((abs(LS_plus).ge.three*dxmaxLS_volume_constraint).or. &
+                  (abs(LS_minus).ge.three*dxmaxLS_volume_constraint)) then
           lsnormal_valid(im)=0
+         else
+          print *,"LS_plus or LS_minus invalid: ",LS_plus,LS_minus
+          stop
          endif
   
          if ((dxplus.gt.zero).and.(dxminus.gt.zero)) then
@@ -15322,7 +15331,8 @@ contains
              stop
             endif
            else
-            print *,"LS_plus, LS_minus, or LS_cen invalid"
+            print *,"LS_plus, LS_minus, or LS_cen invalid: ", &
+               LS_plus,LS_minus,LS_cen
             stop
            endif
           else if ((LS_plus*LS_cen.gt.zero).and. &
@@ -15332,11 +15342,12 @@ contains
            else if (abs(LS_plus).ge.abs(LS_minus)) then
             nsimple(dir)=slope_minus
            else
-            print *,"LS_plus or LS_minus invalid"
+            print *,"LS_plus or LS_minus invalid: ",LS_plus,LS_minus
             stop
            endif
           else
-           print *,"LS_plus, LS_minus, or LS_cen invalid"
+           print *,"LS_plus, LS_minus, or LS_cen invalid: ", &
+              LS_plus,LS_minus,LS_cen
            stop
           endif
 
@@ -15399,8 +15410,13 @@ contains
             endif
 
             LSWT=abs(ls_mof(D_DECL(i,j,k),im))
-            if (LSWT.gt.three*dxmaxLS_volume_constraint) then
+            if (LSWT.le.three*dxmaxLS_volume_constraint) then
+             !do nothing
+            else if (LSWT.gt.three*dxmaxLS_volume_constraint) then
              lsnormal_valid(im)=0
+            else
+             print *,"LSWT invalid: ",LSWT
+             stop
             endif
             w(D_DECL(i,j,k))=hsprime(LSWT,cutoff)*wx*wy*wz
            enddo
@@ -15618,7 +15634,7 @@ contains
         else if (abs(ls_mof_tet(itet)).le.three*dxmaxLS_volume_constraint) then
          !do nothing
         else
-         print *,"ls_mof_tet invalid"
+         print *,"ls_mof_tet invalid: ",itet,ls_mof_tet(itet)
          stop
         endif
 
@@ -15628,12 +15644,12 @@ contains
         enddo
        enddo !itet=1,sdim+1
        LS_cen=LS_cen/(sdim+1)
-       if (abs(LS_cen).gt.three*dxmaxLS_volume_constraint) then
+       if (abs(LS_cen).gt.two*dxmaxLS_volume_constraint) then
         lsnormal_valid(im)=0
-       else if (abs(LS_cen).le.three*dxmaxLS_volume_constraint) then
+       else if (abs(LS_cen).le.two*dxmaxLS_volume_constraint) then
         !do nothing
        else
-        print *,"LS_cen invalid"
+        print *,"LS_cen invalid: ",LS_cen
         stop
        endif
 
@@ -15679,13 +15695,13 @@ contains
            enddo
            ls_intercept(im)=LS_cen
           else
-           print *,"dist invalid"
+           print *,"dist invalid: ",dist
            stop
           endif
          else if (distsimple.eq.zero) then
           lsnormal_valid(im)=0
          else
-          print *,"distsimple invalid"
+          print *,"distsimple invalid: ",distsimple
           stop
          endif
         else
