@@ -19558,6 +19558,7 @@ stop
 
       call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,0,-1)
+
       if (append_flag.eq.OP_PARTICLE_SLOPES) then
        call checkbound_array_INTEGER(tilelo,tilehi, &
               cell_particle_count_ptr,1,-1)
@@ -19954,7 +19955,8 @@ stop
                     !do nothing
                    else if ((abs(LS_sub(im_primary_sub)).gt. &
                              part_tol*DXMAXLS).or. &
-                            (abs(LS_sub(im_secondary)).gt.part_tol*DXMAXLS)) then
+                            (abs(LS_sub(im_secondary)).gt. &
+                             part_tol*DXMAXLS)) then
                     sort_data_mindist(sub_iter)=zero
                     particles(current_link)% &
                       extra_int(N_EXTRA_INT_INTERFACE_ID+1)=-1
@@ -20354,6 +20356,11 @@ stop
                       particle_list(num_particles,dir_local)= &
                          NBR_particles(current_link)%pos(dir_local)
                      enddo 
+                    else if (slope_loop.eq.0) then
+                     !do nothing
+                    else
+                     print *,"slope_loop invalid: ",slope_loop
+                     stop
                     endif
                    endif
 
