@@ -3639,9 +3639,9 @@ void NavierStokes::cross_check(
   bool_2d_array& grid_color,
   unsigned long long i) {
 
- if (grid_color.size()==stackdata.size()) {
+ if (grid_color.size()+1==stackdata.size()) {
   for (unsigned long long k=0;k<grid_color.size();k++) {
-   if (grid_color[k].size()==stackdata[k].size()) {
+   if (grid_color[k].size()+1==stackdata[k].size()) {
     //do nothing
    } else
     amrex::Error("grid_color[k].size invalid");
@@ -3746,7 +3746,7 @@ void NavierStokes::cross_check1D(
   std::vector<bool>& grid_color,
   unsigned long long i) {
 
- if (grid_color.size()==stackdata1D.size()) {
+ if (grid_color.size()+1==stackdata1D.size()) {
   //do nothing
  } else
   amrex::Error("stackdata1D.size() invalid");
@@ -4475,9 +4475,9 @@ void NavierStokes::sync_colors(
 
  if (ParallelDescriptor::IOProcessor()) {
   Long_2d_array stackdata;
-  stackdata.resize(Nside);
-  for (unsigned long long i=0;i<Nside;i++) {
-   stackdata[i].resize(Nside);
+  stackdata.resize(Nside+1);
+  for (unsigned long long i=0;i<Nside+1;i++) {
+   stackdata[i].resize(Nside+1);
   }
 
   for (int igrid=0;igrid<number_grids;igrid++) {
@@ -4674,7 +4674,7 @@ void NavierStokes::sync_colors(
    Vector<int> domaincolormap;
    domaincolormap.resize(2*max_colors_level);
    Vector<int> stackdata1D;
-   stackdata1D.resize(arrsize2);
+   stackdata1D.resize(arrsize2+1);
    for (unsigned long long i=0;i<domaincolormap.size();i++)
     domaincolormap[i]=0;
    total_colors=0;
