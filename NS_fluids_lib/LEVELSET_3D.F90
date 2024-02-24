@@ -19924,15 +19924,6 @@ stop
                  xpart(dir_local)=particles(current_link)%pos(dir_local)
                 enddo 
 
-                if (1.eq.0) then
-                 print *,"--------------------"
-                 print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
-                 print *,"xpart ",xpart
-                 print *,"sub_iter,sort_data_mindist ", &
-                     sub_iter,sort_data_mindist(sub_iter)
-                 print *,"--------------------"
-                endif
-
                 data_in%xtarget=xpart
                 call interp_from_grid_util(data_in,lsfab_ptr,data_out_LS)
                 do im_loop=1,num_materials
@@ -19945,7 +19936,7 @@ stop
                  imat_particle=particles(current_link)% &
                    extra_int(N_EXTRA_INT_MATERIAL_ID+1)
                  DIST_particle=particles(current_link)% &
-                   extra_real(N_EXTRA_REAL_DIST+1)
+                   extra_state(N_EXTRA_REAL_DIST+1)
 
                  if (DIST_particle.ge.zero) then
                   !do nothing
@@ -19960,7 +19951,7 @@ stop
                   keep_the_particle=0
                   if ((imat_particle.eq.im_primary_sub).and. &
                       (DIST_particle.gt.zero).and. &
-                      (LS_sub(im_primary_sub).le.DXMAX)) then
+                      (LS_sub(im_primary_sub).le.DXMAXLS)) then
                    keep_the_particle=1
                   endif
                   if ((DIST_particle.eq.zero).and. &
@@ -19975,10 +19966,10 @@ stop
                    else if (DIST_particle.gt.zero) then
                     if (LS_sub(imat_particle).le.zero) then
                      particles(current_link)% &
-                       extra_real(N_EXTRA_REAL_DIST+1)=zero
+                       extra_state(N_EXTRA_REAL_DIST+1)=zero
                     else if (LS_sub(imat_particle).gt.zero) then
                      particles(current_link)% &
-                       extra_real(N_EXTRA_REAL_DIST+1)=LS_sub(imat_particle)
+                       extra_state(N_EXTRA_REAL_DIST+1)=LS_sub(imat_particle)
                     else
                      print *,"LS_sub(imat_particle) invalid:", &
                           LS_sub(imat_particle)
@@ -20336,7 +20327,7 @@ stop
                        NBR_particles(current_link)%pos(dir_local)
                      enddo 
                      DIST_ADD=NBR_particles(current_link)% &
-                        extra_real(N_EXTRA_REAL_DIST+1)
+                        extra_state(N_EXTRA_REAL_DIST+1)
 
                      if (DIST_ADD.ge.zero) then
                       particle_list(num_particles,SDIM+1)=DIST_ADD
@@ -20695,7 +20686,7 @@ stop
       integer cell_index(SDIM)
       integer i,j,k
       integer im_loop,im_primary,im_secondary
-      integer iten_particle
+      integer imat_particle
       integer iten,ireverse,sign_reverse,tag_local,scomp
       real(amrex_real) LS(num_materials)
       real(amrex_real) DXMAXLS
@@ -20817,14 +20808,14 @@ stop
 
       do interior_ID=1,Np
 
-       iten_particle=particles(interior_ID)% &
-          extra_int(N_EXTRA_INT_INTERFACE_ID+1)
+       imat_particle=particles(interior_ID)% &
+          extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
-       if ((iten_particle.ge.1).and. &
-           (iten_particle.le.num_interfaces)) then
+       if ((imat_particle.ge.1).and. &
+           (imat_particle.le.num_materials)) then
         !do nothing
        else
-        print *,"iten_particle invalid: ",iten_particle
+        print *,"imat_particle invalid: ",imat_particle
         stop
        endif
 

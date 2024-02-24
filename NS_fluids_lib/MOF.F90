@@ -15519,6 +15519,8 @@ contains
                endif
                aa(i,j)=aa(i,j)+w_particles(i1)*m1*m2
               enddo ! j=1,sdim+1 
+              bb(i)=bb(i)+ &
+               w_particles(i1)*m1*particle_list(i1,sdim+1)
              enddo ! i=1,sdim+1
             enddo ! i1=1,num_particles
 
