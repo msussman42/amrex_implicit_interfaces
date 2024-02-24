@@ -22711,15 +22711,6 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  } else if (pattern_test(local_caller_string,"post_restart")==1) {
   // called from post_restart
 
-  if (1==0) {
-   int keep_all_interfaces=0;
-   int ngrow_make_distance_accept=ngrow_make_distance;
-   makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
-   prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
-		   local_truncate,
-		   local_caller_string);
-  }
-
  } else
   amrex::Error("local_caller_string invalid 22125");
 
@@ -22977,7 +22968,7 @@ NavierStokes::init_particle_container(int append_flag,
   }
   }
 
-  if (N_EXTRA_REAL==0) {
+  if (N_EXTRA_REAL==1) {
    // do nothing
   } else 
    amrex::Error("N_EXTRA_REAL invalid");
@@ -23225,11 +23216,12 @@ NavierStokes::post_init_state () {
  prepare_post_process(local_caller_string);
 
 #ifdef AMREX_PARTICLES
-
+ 
+  //calling from: post_init_state
  init_particle_containerALL(OP_PARTICLE_INIT,local_caller_string);
 
- NavierStokes& ns_level0=getLevel(0);
- My_ParticleContainer& localPC=ns_level0.newDataPC(slab_step+1);
+  // we should be on level zero.
+ My_ParticleContainer& localPC=newDataPC(slab_step+1);
 
  int lev_min=0;
  int lev_max=-1;
