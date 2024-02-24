@@ -24785,7 +24785,7 @@ end subroutine initialize2d
        integer dir
 
        integer, parameter :: num_particles=0
-       real(amrex_real) :: particle_list(1,SDIM)
+       real(amrex_real) :: particle_list(1,SDIM+1)
 
        real(amrex_real) vfracsum_test
 
