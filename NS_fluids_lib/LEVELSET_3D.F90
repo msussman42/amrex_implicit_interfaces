@@ -18787,6 +18787,7 @@ stop
        do dir=1,SDIM
         xpart(dir)=particlesptr(interior_ID)%pos(dir)
        enddo
+        !containing_cell is declared in: GLOBALUTIL.F90
        call containing_cell(accum_PARM%bfact, &
          accum_PARM%dx, &
          accum_PARM%xlo, &
@@ -18918,9 +18919,9 @@ stop
       do dir=1,SDIM
        dx_sub=(xsten(1,dir)-xsten(-1,dir))/accum_PARM%nsubdivide
        if (dx_sub.gt.zero) then
-        if (abs(xpart(dir)-xsten(-1,dir)).le.EPS8*dx_sub) then
+        if (abs(xpart(dir)-xsten(-1,dir)).le.EPS2*dx_sub) then
          isub_local(dir)=0
-        else if (abs(xpart(dir)-xsten(1,dir)).le.EPS8*dx_sub) then
+        else if (abs(xpart(dir)-xsten(1,dir)).le.EPS2*dx_sub) then
          isub_local(dir)=accum_PARM%nsubdivide-1
         else if ((xpart(dir).ge.xsten(-1,dir)).and. &
                  (xpart(dir).le.xsten(1,dir))) then
@@ -19684,6 +19685,7 @@ stop
        print *,"number_sweeps=",number_sweeps
        stop
       endif
+
       Np_append_test=0
 
       data_out_LS%data_interp=>data_interp_local_LS
@@ -19867,6 +19869,10 @@ stop
             sub_particle_data(cell_count_check,SDIM+1)=current_link
            else
             print *,"sub_box not found"
+            print *,"append_flag ",append_flag
+            print *,"accum_PARM%nsubdivide ",accum_PARM%nsubdivide
+            print *,"i,j,k ",i,j,k
+            print *,"xpart: ",xpart(1),xpart(2),xpart(SDIM)
             stop
            endif
            ibase=(current_link-1)*(1+SDIM)
@@ -20195,7 +20201,7 @@ stop
                  Np_append_test=Np_append_test+1
 
                  if (isweep.eq.0) then
-                  ! do nothing
+                  Np_append=Np_append+1
                  else if (isweep.eq.1) then
 
                   ibase=(Np_append_test-1)*single_particle_size
@@ -20481,6 +20487,21 @@ stop
       enddo 
       enddo 
       enddo  ! i,j,k
+
+      if ((append_flag.eq.OP_PARTICLE_ADD).or. &
+          (append_flag.eq.OP_PARTICLE_INIT)) then 
+       if (Np_append_test.eq.Np_append) then
+        ! do nothing
+       else
+        print *,"mismatch Np_append,Np_append_test ",Np_append,Np_append_test
+        stop
+       endif
+      else if (append_flag.eq.OP_PARTICLE_SLOPES) then
+       ! do nothing
+      else
+       print *,"append_flag invalid: ",append_flag
+       stop
+      endif
 
       deallocate(fort_caller_string)
 
