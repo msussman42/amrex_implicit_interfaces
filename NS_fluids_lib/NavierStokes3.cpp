@@ -426,6 +426,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   localPC.Redistribute();
   localPC.copyParticles(prevPC,local_copy);
 
+    //prior to advection
   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
 
   localPC.Redistribute(lev_min,lev_max,
@@ -497,9 +498,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
       //level==0
     My_ParticleContainer& localPC=newDataPC(slab_step+1);
-    init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
-    localPC.Redistribute(lev_min,lev_max,
-      nGrow_Redistribute,local_Redistribute);
 
     for (int ilev=finest_level;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);
@@ -1975,8 +1973,6 @@ void NavierStokes::phase_change_code_segment(
   localPC.Redistribute(lev_min,lev_max,
     nGrow_Redistribute,local_Redistribute);
 
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
-
  } else
   amrex::Error("slab_step invalid");
 
@@ -2008,6 +2004,23 @@ void NavierStokes::phase_change_code_segment(
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
 
+#ifdef AMREX_PARTICLES
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+ } else
+  amrex::Error("slab_step invalid");
+
+ My_ParticleContainer& localPC_DIST=newDataPC(slab_step+1);
+ int lev_min_DIST=0;
+ int lev_max_DIST=-1;
+ int nGrow_Redistribute_DIST=0;
+ int local_Redistribute_DIST=0; 
+ localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
+    nGrow_Redistribute_DIST,local_Redistribute_DIST);
+
+#endif
+
 #if (NS_profile_solver==1)
  bprof.stop();
 #endif
@@ -2029,24 +2042,6 @@ void NavierStokes::no_mass_transfer_code_segment(
  BLProfiler bprof(local_caller_string);
 #endif
 
-#ifdef AMREX_PARTICLES
-
- My_ParticleContainer& localPC=newDataPC(slab_step+1);
-
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
- } else
-  amrex::Error("slab_step invalid");
-
- int lev_min=0;
- int lev_max=-1;
- int nGrow_Redistribute=0;
- int local_Redistribute=0; 
- localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
-
-#endif
-
  interface_touch_flag=1; //no_mass_transfer_code_segment
 
  int init_vof_prev_time=0;
@@ -2060,6 +2055,25 @@ void NavierStokes::no_mass_transfer_code_segment(
  int keep_all_interfaces=0;
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
+
+#ifdef AMREX_PARTICLES
+
+ My_ParticleContainer& localPC_DIST=newDataPC(slab_step+1);
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+ } else
+  amrex::Error("slab_step invalid");
+
+ int lev_min_DIST=0;
+ int lev_max_DIST=-1;
+ int nGrow_Redistribute_DIST=0;
+ int local_Redistribute_DIST=0; 
+ localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
+    nGrow_Redistribute_DIST,local_Redistribute_DIST);
+
+#endif
+
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2162,25 +2176,6 @@ void NavierStokes::nucleation_code_segment(
   }
  } 
 
-
-#ifdef AMREX_PARTICLES
-
- My_ParticleContainer& localPC=newDataPC(slab_step+1);
-
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
- } else
-  amrex::Error("slab_step invalid");
-
- int lev_min=0;
- int lev_max=-1;
- int nGrow_Redistribute=0;
- int local_Redistribute=0; 
- localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
-
-#endif
-
  interface_touch_flag=1; //nucleation_code_segment
 
  // generates SLOPE_RECON_MF
@@ -2195,6 +2190,23 @@ void NavierStokes::nucleation_code_segment(
  int keep_all_interfaces=1;
  int ngrow_make_distance_accept=ngrow_make_distance;
  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
+
+#ifdef AMREX_PARTICLES
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+ } else
+  amrex::Error("slab_step invalid");
+
+ My_ParticleContainer& localPC_DIST=newDataPC(slab_step+1);
+ int lev_min_DIST=0;
+ int lev_max_DIST=-1;
+ int nGrow_Redistribute_DIST=0;
+ int local_Redistribute_DIST=0; 
+ localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
+    nGrow_Redistribute_DIST,local_Redistribute_DIST);
+
+#endif
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);
