@@ -19290,8 +19290,8 @@ stop
         dt_slab, &
         xlo,dx, &
         ncomp_state, &
-        particles, & ! a list of particles 
-        NBR_particles, & ! a list of particles 
+        particles, & ! a list of particles intent(inout)
+        NBR_particles, & ! a list of particles intent(in)
         Np, & !  Np = number of particles
         NBR_Np, & 
         new_particles, & ! size is "new_Pdata_size"
@@ -19413,12 +19413,10 @@ stop
       real(amrex_real) :: LS_sub(num_materials*(1+AMREX_SPACEDIM))
       real(amrex_real) :: local_mag
       real(amrex_real) :: local_normal(AMREX_SPACEDIM)
-      integer :: iten_interp
-      integer :: iten_particle
+      integer :: imat_particle
       integer :: im_primary_sub
       integer :: im_secondary
       integer :: im_loop
-      integer :: im1,im2
 
       integer :: num_particles
       real(amrex_real), allocatable, dimension(:,:) :: particle_list
@@ -19444,7 +19442,6 @@ stop
       integer local_mask
       real(amrex_real) dist_nbr
       real(amrex_real) DXMAXLS
-      real(amrex_real), PARAMETER :: part_tol=1.0d0
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
 
@@ -19454,6 +19451,9 @@ stop
            data_interp_local_LS
 
       real(amrex_real) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
+
+      real(amrex_real) :: DIST_particle,DIST_ADD
+      integer :: keep_the_particle
 
       integer :: slope_loop
       integer, parameter :: continuous_mof=STANDARD_MOF
@@ -19578,7 +19578,7 @@ stop
        stop
       endif
 
-      if (N_EXTRA_REAL.eq.0) then
+      if (N_EXTRA_REAL.eq.1) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL invalid"
@@ -19939,78 +19939,73 @@ stop
                  LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
                 enddo
                 call get_primary_material(LS_sub,im_primary_sub)
-                call get_secondary_material(LS_sub, &
-                  im_primary_sub,im_secondary)
-                call get_iten(im_primary_sub,im_secondary,iten_interp)
 
                 if ((im_primary_sub.ge.1).and. &
-                    (im_primary_sub.le.num_materials).and. &
-                    (im_secondary.ge.1).and. &
-                    (im_secondary.le.num_materials).and. &
-                    (iten_interp.ge.1).and. &
-                    (iten_interp.le.num_interfaces)) then
-                 iten_particle=particles(current_link)% &
-                   extra_int(N_EXTRA_INT_INTERFACE_ID+1)
-                 if ((iten_particle.ge.1).and. &
-                     (iten_particle.le.num_interfaces)) then
+                    (im_primary_sub.le.num_materials)) then
+                 imat_particle=particles(current_link)% &
+                   extra_int(N_EXTRA_INT_MATERIAL_ID+1)
+                 DIST_particle=particles(current_link)% &
+                   extra_real(N_EXTRA_REAL_DIST+1)
 
-                  if (iten_particle.eq.iten_interp) then
+                 if (DIST_particle.ge.zero) then
+                  !do nothing
+                 else
+                  print *,"DIST_particle invalid: ",DIST_particle
+                  stop
+                 endif
 
-                   if ((abs(LS_sub(im_primary_sub)).le.part_tol*DXMAXLS).and. &
-                       (abs(LS_sub(im_secondary)).le.part_tol*DXMAXLS)) then
+                 if ((imat_particle.ge.1).and. &
+                     (imat_particle.le.num_materials)) then
+
+                  keep_the_particle=0
+                  if ((imat_particle.eq.im_primary_sub).and. &
+                      (DIST_particle.gt.zero).and. &
+                      (LS_sub(im_primary_sub).le.DXMAX)) then
+                   keep_the_particle=1
+                  endif
+                  if ((DIST_particle.eq.zero).and. &
+                      (abs(LS_sub(imat_particle)).le. &
+                       DXMAXLS/particle_nsubdivide)) then
+                   keep_the_particle=1
+                  endif
+
+                  if (keep_the_particle.eq.1) then
+                   if (DIST_particle.eq.zero) then
                     !do nothing
-                   else if ((abs(LS_sub(im_primary_sub)).gt. &
-                             part_tol*DXMAXLS).or. &
-                            (abs(LS_sub(im_secondary)).gt. &
-                             part_tol*DXMAXLS)) then
-                    sort_data_mindist(sub_iter)=zero
-                    particles(current_link)% &
-                      extra_int(N_EXTRA_INT_INTERFACE_ID+1)=-1
+                   else if (DIST_particle.gt.zero) then
+                    if (LS_sub(imat_particle).le.zero) then
+                     particles(current_link)% &
+                       extra_real(N_EXTRA_REAL_DIST+1)=zero
+                    else if (LS_sub(imat_particle).gt.zero) then
+                     particles(current_link)% &
+                       extra_real(N_EXTRA_REAL_DIST+1)=LS_sub(imat_particle)
+                    else
+                     print *,"LS_sub(imat_particle) invalid:", &
+                          LS_sub(imat_particle)
+                     stop
+                    endif
                    else
-                    print *,"LS_sub corrupt: "
-                    print *,"im_primary_sub,LS=",im_primary_sub, &
-                            LS_sub(im_primary_sub)
-                    print *,"im_secondary,LS=",im_secondary, &
-                            LS_sub(im_secondary)
+                    print *,"DIST_particle invalid: ",DIST_particle
                     stop
                    endif
-
-                  else if (iten_particle.ne.iten_interp) then
-
-                   particles(current_link)% &
-                      extra_int(N_EXTRA_INT_INTERFACE_ID+1)=-1
-
-                    ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
+                  else if (keep_the_particle.eq.0) then
+                   ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
                    sort_data_mindist(sub_iter)=zero
-
-                   if (1.eq.0) then
-                    print *,"--------------------"
-                    print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
-                    print *,"xpart ",xpart
-                    print *,"iten_particle,iten_interp ", &
-                            iten_particle,iten_interp
-                    do im_loop=1,num_materials
-                     print *,"im_loop, LS ",im_loop,LS_sub(im_loop)
-                    enddo
-                    print *,"--------------------"
-                   endif
-
+                   particles(current_link)% &
+                     extra_int(N_EXTRA_INT_MATERIAL_ID+1)=-1
                   else
-                   print *,"iten_particle or iten_interp invalid: ", &
-                      iten_particle,iten_interp
+                   print *,"keep_the_particle invalid:",keep_the_particle
                    stop
                   endif
 
                  else
-                  print *,"iten_particle invalid: ",iten_particle
+                  print *,"imat_particle invalid: ",imat_particle
                   stop
                  endif
 
                 else
                  print *,"corruption:"
                  print *,"im_primary_sub: ",im_primary_sub
-                 print *,"im_secondary: ",im_secondary
-                 print *,"iten_interp: ",iten_interp
                  stop
                 endif
 
@@ -20050,23 +20045,15 @@ stop
               do bubble_iter=1,local_count
 
                temp_id=sort_data_id(bubble_iter)
-               iten_particle=particles(temp_id)% &
-                 extra_int(N_EXTRA_INT_INTERFACE_ID+1)
+               imat_particle=particles(temp_id)% &
+                 extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
-               if (iten_particle.eq.-1) then
+               if (imat_particle.eq.-1) then
                 particle_delete_flag(temp_id)=1
-               else if ((iten_particle.ge.1).and. &
-                        (iten_particle.le.num_interfaces)) then
+               else if ((imat_particle.ge.1).and. &
+                        (imat_particle.le.num_materials)) then
 
                 if (bubble_iter.gt.particle_max_per_nsubdivide) then
-                 if (1.eq.0) then
-                  print *,"-----------------------------"
-                  print *,"i,j,k,isub,jsub,ksub ",i,j,k,isub,jsub,ksub
-                  print *,"bubble_iter,sort_data_mindist,temp_id ", &
-                       bubble_iter,sort_data_mindist(bubble_iter),temp_id
-                  print *,"iten_particle=",iten_particle
-                  print *,"-----------------------------"
-                 endif
                  particle_delete_flag(sort_data_id(bubble_iter))=1
                 else if (bubble_iter.le.particle_max_per_nsubdivide) then
                  ! do nothing
@@ -20075,7 +20062,7 @@ stop
                  stop
                 endif
                else
-                print *,"iten_particle invalid:",iten_particle
+                print *,"imat_particle invalid:",imat_particle
                 stop
                endif
               enddo ! bubble_iter=1,local_count
@@ -20161,6 +20148,38 @@ stop
                    stop
                   endif
                  enddo ! do dir_local=1,SDIM
+
+                 call containing_sub_box( &
+                   accum_PARM, &
+                   xtarget, &
+                   i,j,k, &
+                   isub_test,jsub_test,ksub_test, &
+                   sub_found)
+
+                 if (isub_test.ne.isub) then
+                  sub_found=0
+                 endif 
+                 if (jsub_test.ne.jsub) then
+                  sub_found=0
+                 endif 
+                 if (SDIM.eq.3) then
+                  if (ksub_test.ne.ksub) then
+                   sub_found=0
+                  endif 
+                 endif
+
+                 if (sub_found.eq.1) then
+                  DIST_ADD=zero
+                 else if (sub_found.eq.0) then
+                  DIST_ADD=LS_sub(im_primary_sub)
+                  do dir_local=1,SDIM
+                   xtarget(dir_local)=xsub(dir_local)
+                  enddo
+                 else
+                  print *,"sub_found invalid: ",sub_found
+                  stop
+                 endif
+
                 else if ((LS_sub(im_primary_sub).le.zero).or. &
                          (LS_sub(im_primary_sub).gt.DXMAXLS)) then
                  ! do nothing
@@ -20176,64 +20195,23 @@ stop
                    
                if (local_mag.gt.zero) then
 
-                call interp_eul_lag_dist( &
-                  accum_PARM, &
-                  lsfab_ptr, &
-                  cur_time_slab, &
-                  grid_PARM, &
-                  i,j,k, &
-                  xtarget, &
-                  LS_sub)
+                Np_append_test=Np_append_test+1
 
-                call get_primary_material(LS_sub,im_primary_sub)
-                call get_secondary_material(LS_sub, &
-                  im_primary_sub,im_secondary)
-                call get_iten(im_primary_sub,im_secondary,iten_interp)
+                if (isweep.eq.0) then
+                 Np_append=Np_append+1
+                else if (isweep.eq.1) then
 
-                if ((is_rigid(im_primary_sub).eq.1).or. &
-                    (is_rigid(im_secondary).eq.1)) then
+                 ibase=(Np_append_test-1)*single_particle_size
+                 do dir_local=1,SDIM
+                  new_particles(ibase+dir_local)=xtarget(dir_local)
+                 enddo
 
-                 ! do nothing
-   
-                else if ((is_rigid(im_primary_sub).eq.0).and. &
-                         (is_rigid(im_secondary).eq.0)) then
-           
-                 Np_append_test=Np_append_test+1
+                 new_particles(ibase+SDIM+N_EXTRA_REAL+ &
+                        N_EXTRA_INT_MATERIAL_ID+1)=im_primary_sub
+                 new_particles(ibase+SDIM+N_EXTRA_REAL_DIST+1)=DIST_ADD
 
-                 if (isweep.eq.0) then
-                  Np_append=Np_append+1
-                 else if (isweep.eq.1) then
-
-                  ibase=(Np_append_test-1)*single_particle_size
-                  do dir_local=1,SDIM
-                   new_particles(ibase+dir_local)=xtarget(dir_local)
-                  enddo
-
-                  if ((im_primary_sub.ge.1).and. &
-                      (im_primary_sub.le.num_materials).and. &
-                      (im_secondary.ge.1).and. &
-                      (im_secondary.le.num_materials).and. &
-                      (iten_interp.ge.1).and. &
-                      (iten_interp.le.num_interfaces)) then
-
-                   new_particles(ibase+SDIM+N_EXTRA_REAL+ &
-                           N_EXTRA_INT_INTERFACE_ID+1)=iten_interp
-                  else
-                   print *,"corruption:"
-                   print *,"im_primary_sub: ",im_primary_sub
-                   print *,"im_secondary: ",im_secondary
-                   print *,"iten_interp: ",iten_interp
-                   stop
-                  endif
-
-                 else
-                  print *,"isweep invalid: ",isweep
-                  stop
-                 endif
-
-                else 
-                 print *,"is_rigid(im_primary_sub) invalid or "
-                 print *,"is_rigid(im_secondary) invalid" 
+                else
+                 print *,"isweep invalid: ",isweep
                  stop
                 endif
 
@@ -20310,13 +20288,9 @@ stop
            LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
           enddo
           call get_primary_material(LS_sub,im_primary_sub)
-          call get_secondary_material(LS_sub, &
-            im_primary_sub,im_secondary)
 
           if ((im_primary_sub.ge.1).and. &
-              (im_primary_sub.le.num_materials).and. &
-              (im_secondary.ge.1).and. &
-              (im_secondary.le.num_materials)) then
+              (im_primary_sub.le.num_materials)) then
 
            do im_loop=1,num_materials
             do dir_local=1,SDIM
@@ -20349,19 +20323,28 @@ stop
                  cell_count_hold=cell_particle_count(D_DECL(i+i1,j+j1,k+k1),1)
                  current_link=cell_particle_count(D_DECL(i+i1,j+j1,k+k1),2)
                  do while (current_link.ge.1)
-                  iten_particle=NBR_particles(current_link)% &
-                    extra_int(N_EXTRA_INT_INTERFACE_ID+1)
-                  call get_inverse_iten(im1,im2,iten_particle)
+                  imat_particle=NBR_particles(current_link)% &
+                    extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
-                  if ((is_rigid(im1).eq.0).and.(is_rigid(im2).eq.0)) then
+                  if (is_rigid(imat_particle).eq.0) then
 
-                   if ((im1.eq.im_loop).or.(im2.eq.im_loop)) then
+                   if (imat_particle.eq.im_loop) then
                     num_particles=num_particles+1
                     if (slope_loop.eq.1) then
                      do dir_local=1,SDIM
                       particle_list(num_particles,dir_local)= &
-                         NBR_particles(current_link)%pos(dir_local)
+                       NBR_particles(current_link)%pos(dir_local)
                      enddo 
+                     DIST_ADD=NBR_particles(current_link)% &
+                        extra_real(N_EXTRA_REAL_DIST+1)
+
+                     if (DIST_ADD.ge.zero) then
+                      particle_list(num_particles,SDIM+1)=DIST_ADD
+                     else
+                      print *,"DIST_ADD invalid: ",DIST_ADD
+                      stop
+                     endif
+                     
                     else if (slope_loop.eq.0) then
                      !do nothing
                     else
@@ -20396,7 +20379,7 @@ stop
                  if (num_particles.eq.0) then
                   !do nothing
                  else if (num_particles.gt.0) then
-                  allocate(particle_list(num_particles,SDIM))
+                  allocate(particle_list(num_particles,SDIM+1))
                  else
                   print *,"num_particles invalid"
                   stop
@@ -20462,8 +20445,7 @@ stop
            endif
 
           else
-           print *,"im_primary_sub or im_secondary invalid: ", &
-               im_primary_sub,im_secondary
+           print *,"im_primary_sub invalid: ",im_primary_sub
            stop
           endif
 
@@ -20480,7 +20462,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid: ",local_mask
         stop
        endif
 

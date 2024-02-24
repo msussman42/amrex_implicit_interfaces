@@ -298,7 +298,7 @@ stop
       integer im
 
       integer, parameter :: num_particles=0
-      real(amrex_real) :: particle_list(1,SDIM)
+      real(amrex_real) :: particle_list(1,SDIM+1)
 
       real(amrex_real) ls_stencil(D_DECL(-1:1,-1:1,-1:1),num_materials)
       real(amrex_real) lsnormal(num_materials,SDIM)

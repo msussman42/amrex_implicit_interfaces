@@ -22988,7 +22988,9 @@ NavierStokes::init_particle_container(int append_flag,
     // this is an object with a pointer to AoS data
   auto& particles_grid_tile = localPC.GetParticles(level)
     [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
- 
+
+   //particle redistribution must take place in order that
+   //"particles_grid_tile" contains the proper particles. 
   auto& particles_AoS = particles_grid_tile.GetArrayOfStructs();
   unsigned int Np=particles_AoS.size();
 
@@ -23062,8 +23064,8 @@ NavierStokes::init_particle_container(int append_flag,
      &dt_slab, //init_particle_container
      xlo,dx,
      &ncomp_state,
-     particles_AoS.data(), // existing particles
-     NBR_particles_AoS.data(), 
+     particles_AoS.data(), // existing particles, intent(inout)
+     NBR_particles_AoS.data(), //intent(in)
      Np,  // pass by value
      NBR_Np,  // pass by value
      new_particle_data.dataPtr(), // size is "new_Pdata_size"

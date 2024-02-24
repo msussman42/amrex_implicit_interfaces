@@ -15175,7 +15175,7 @@ contains
             ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
       integer, INTENT(in) :: num_particles
-      real(amrex_real), INTENT(in) :: particle_list(num_particles,sdim)
+      real(amrex_real), INTENT(in) :: particle_list(num_particles,sdim+1)
       real(amrex_real) :: w_particles(num_particles)
 
       real(amrex_real) :: ls_mof_tet(sdim+1)
@@ -15449,8 +15449,14 @@ contains
              wz=wz*(xsten0(1,sdim)-xsten0(-1,sdim))
             endif
 
-            LSWT=zero
-            w_particles(i)=hsprime(LSWT,cutoff)*wx*wy*wz
+            LSWT=particle_list(i,sdim+1)
+            if (LSWT.ge.zero) then
+             w_particles(i)=hsprime(LSWT,cutoff)*wx*wy*wz
+            else
+             print *,"LSWT invalid for w_particles: ",LSWT
+             stop
+            endif
+
            enddo !i=1,num_particles
 
            if (lsnormal_valid(im).eq.1) then
@@ -15993,7 +15999,7 @@ contains
       integer is_rigid_local(num_materials)
 
       integer, parameter :: num_particles=0;
-      real(amrex_real) :: particle_list(1,sdim)
+      real(amrex_real) :: particle_list(1,sdim+1)
 
       integer :: tid=0
 
