@@ -202,7 +202,7 @@ Vector<int> NavierStokes::truncate_volume_fractions;
 Vector<int> NavierStokes::force_blob_symmetry;
 
 int NavierStokes::particle_nsubdivide=4; 
-int NavierStokes::particle_max_per_nsubdivide=10; 
+int NavierStokes::particle_max_per_nsubdivide=2; 
 
 Real NavierStokes::truncate_thickness=2.0;  
 
