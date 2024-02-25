@@ -19467,6 +19467,14 @@ stop
       enddo
       fort_caller_string_len=caller_string_len
 
+      if ((level.ge.0).and. &
+          (level.le.finest_level)) then
+       !do nothing
+      else
+       print *,"level or finest_level invalid: init_particle_container"
+       stop
+      endif
+
       if (ncomp_state.eq.num_materials*(1+AMREX_SPACEDIM)) then
        !do nothing
       else
@@ -20470,6 +20478,16 @@ stop
                     SDIM)
 
                   deallocate(particle_list)
+
+                  if (1.eq.0) then
+                   if (level.eq.finest_level) then
+                    print *,"i,j,k,im,flag,slope ", &
+                      i,j,k,im_loop,lsnormal_valid(im_loop), &
+                      lsnormal(im_loop,1), &
+                      lsnormal(im_loop,2), &
+                      lsnormal(im_loop,SDIM)
+                   endif
+                  endif
 
                   if (lsnormal_valid(im_loop).eq.0) then
                    !do nothing
