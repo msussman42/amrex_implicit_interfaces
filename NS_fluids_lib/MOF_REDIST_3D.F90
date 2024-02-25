@@ -1757,7 +1757,6 @@ stop
          xlo,dx, &
          time, &
          ngrow_distance_in, &
-         ngrow_make_distance_accept, &
          nstar, &
          nface_dst) &
       bind(c,name='fort_levelstrip')
@@ -1776,7 +1775,9 @@ stop
       integer, INTENT(in) :: nstar
       integer, INTENT(in) :: nface_dst
       integer, INTENT(in) :: ngrow_distance_in
-      integer, INTENT(in) :: ngrow_make_distance_accept
+
+      integer, PARAMETER :: ngrow_make_distance_accept=3
+
       real(amrex_real), INTENT(inout) :: minLS(num_materials)
       real(amrex_real), INTENT(inout) :: maxLS(num_materials)
       real(amrex_real), INTENT(in) :: max_problen
