@@ -18851,9 +18851,13 @@ stop
          cell_particle_count(D_DECL(i,j,k),1)= &
            cell_particle_count(D_DECL(i,j,k),1)+1
 
+          ! the new particle is placed at the top of the list.
+          ! the previous particle that was at the top is now in the second
+          ! spot.
          cell_particle_count(D_DECL(i,j,k),2)=interior_ID
 
          ibase_new=(interior_ID-1)*(SDIM+1)
+          ! previous_link=0 if the list was previously empty.
          particle_link_data(ibase_new+1)=previous_link
          particle_link_data(ibase_new+2)=i 
          particle_link_data(ibase_new+3)=j
@@ -19720,6 +19724,7 @@ stop
              (im_primary_sub.le.num_materials).and. &
              (im_secondary.ge.1).and. &
              (im_secondary.le.num_materials)) then
+
           if (number_sweeps.eq.1) then
            if (append_flag.eq.OP_PARTICLE_SLOPES) then
             accum_PARM%nsubdivide=1
@@ -19782,10 +19787,12 @@ stop
           cell_count_check=0
           cell_count_hold=cell_particle_count(D_DECL(i,j,k),1)
 
-           ! isub,jsub,ksub,link
+           ! isub,jsub,ksub,link (SDIM+1)
            ! 1<=link<=total number particles
            ! 1<=cell_count_hold<=number particles in cell (i,j,k)
           allocate(sub_particle_data(cell_count_hold,SDIM+1))
+
+           ! 1<=cell_count_hold<=number particles in cell (i,j,k)
           allocate(sub_particle_data_dist(cell_count_hold))
 
           current_link=cell_particle_count(D_DECL(i,j,k),2)
@@ -19842,10 +19849,25 @@ stop
             ibase_nbr=(current_link_nbr-1)*(1+SDIM)
             current_link_nbr=particle_link_data(ibase_nbr+1)
            enddo !do while (current_link_nbr.ge.1)
+
+           if (current_link_nbr.eq.0) then
+            ! do nothing
+           else
+            print *,"expecting current_link_nbr=0"
+            stop
+           endif
+
            ibase=(current_link-1)*(1+SDIM)
            ! 0<=current_link<=total number particles
            current_link=particle_link_data(ibase+1)
           enddo !do while (current_link.ge.1)
+
+          if (current_link.eq.0) then
+           ! do nothing
+          else
+           print *,"expecting current_link=0"
+           stop
+          endif
 
           cell_count_check=0
            ! 0<=current_link<=total number particles
@@ -19870,6 +19892,7 @@ stop
             if (SDIM.eq.3) then
              sub_particle_data(cell_count_check,SDIM)=ksub
             endif
+             ! 1<=current_link<=total number particles
             sub_particle_data(cell_count_check,SDIM+1)=current_link
            else
             print *,"sub_box not found"
@@ -19883,6 +19906,13 @@ stop
            ! 0<=current_link<=total number particles
            current_link=particle_link_data(ibase+1)
           enddo !do while (current_link.ge.1)
+
+          if (current_link.eq.0) then
+           ! do nothing
+          else
+           print *,"expecting current_link=0"
+           stop
+          endif
 
           if (cell_count_check.eq.cell_count_hold) then
 
@@ -20026,6 +20056,12 @@ stop
                 print *,"dimension or ksub bust: ",ksub,ksub_test
                 stop
                endif
+              else if ((isub_test.ne.isub).or. &
+                       (jsub_test.ne.jsub)) then
+               !do nothing
+              else
+               print *,"isub,jsub bad:",isub,jsub,isub_test,jsub_test
+               stop
               endif
              enddo ! cell_iter=1..cell_count_hold
 
@@ -20086,6 +20122,7 @@ stop
              deallocate(sort_data_mindist)
              deallocate(sort_data_id)
             else if (local_count.eq.0) then
+             ! local_count=number particles in (isub,jsub,ksub)
              ! do nothing
             else
              print *,"local_count bust: ",local_count
@@ -20097,6 +20134,7 @@ stop
 
               ! insufficient particles in the subbox or adding the
               ! particles for the very first time.
+              ! local_count=number particles in (isub,jsub,ksub)
              if (((local_count.eq.0).and. &
                  (append_flag.eq.OP_PARTICLE_ADD)).or. &
                  (append_flag.eq.OP_PARTICLE_INIT)) then 
@@ -20196,7 +20234,7 @@ stop
                  ! do nothing
                 else
                  print *,"LS(im_primary_sub) invalid: ", &
-                     LS_sub(im_primary_sub)
+                   im_primary_sub,LS_sub(im_primary_sub)
                  stop
                 endif
                else
@@ -20234,7 +20272,8 @@ stop
                endif
 
               else
-               print *,"is_rigid(im_primary_sub) invalid"
+               print *,"is_rigid(im_primary_sub) invalid: ", &
+                  im_primary_sub,is_rigid(im_primary_sub)
                stop
               endif
 
@@ -20383,6 +20422,13 @@ stop
                   current_link=particle_link_data(ibase+1)
                  enddo !do while (current_link.ge.1)
 
+                 if (current_link.eq.0) then
+                  ! do nothing
+                 else
+                  print *,"expecting current_link=0"
+                  stop
+                 endif
+
                  if (cell_count_check.eq.cell_count_hold) then
                   ! do nothing
                  else
@@ -20434,26 +20480,29 @@ stop
                      lsnormal(im_loop,dir_local)
                    enddo
                   else 
-                   print *,"lsnormal_valid(im_loop) invalid"
+                   print *,"lsnormal_valid(im_loop) invalid: ", &
+                      im_loop,lsnormal_valid(im_loop)
                    stop
                   endif
                  else
-                  print *,"num_particles invalid"
+                  print *,"num_particles invalid: ",num_particles
                   stop
                  endif
                 else
-                 print *,"slope_loop invalid"
+                 print *,"slope_loop invalid: ",slope_loop
                  stop
                 endif
 
                enddo !slope_loop=0,1
+
               else 
                print *,"LS_sub(im_loop) invalid:",im_loop,LS_sub(im_loop)
                stop
               endif
 
              else
-              print *,"is_rigid(im_loop) invalid"
+              print *,"is_rigid(im_loop) invalid: ", &
+                 im_loop,is_rigid(im_loop)
               stop
              endif
 
