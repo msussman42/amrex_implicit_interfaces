@@ -19719,11 +19719,13 @@ stop
         do im_loop=1,num_materials
          LS_sub(im_loop)=lsfab_ptr(D_DECL(i,j,k),im_loop)
         enddo
+         ! get_primary_material is declared in: GLOBALUTIL.F90
+         ! get_primary_material can select either an "is_rigid" material
+         ! or "fluid" material.
         call get_primary_material(LS_sub,im_primary_sub)
 
-        if (is_rigid(im_primary_sub).eq.1) then
-         !do nothing
-        else if (is_rigid(im_primary_sub).eq.0) then
+        if ((is_rigid(im_primary_sub).eq.1).or. &
+            (is_rigid(im_primary_sub).eq.0)) then
 
          call get_secondary_material(LS_sub, &
            im_primary_sub,im_secondary)
@@ -19995,36 +19997,72 @@ stop
                      (imat_particle.le.num_materials)) then
 
                   keep_the_particle=0
-                  if ((imat_particle.eq.im_primary_sub).and. &
-                      (DIST_particle.gt.zero).and. &
-                      (LS_sub(im_primary_sub).le.DXMAXLS)) then
-                   keep_the_particle=1
-                  endif
-                  if ((DIST_particle.eq.zero).and. &
-                      (abs(LS_sub(imat_particle)).le. &
-                       DXMAXLS/particle_nsubdivide)) then
-                   keep_the_particle=1
+
+                  if (is_rigid(imat_particle).eq.0) then
+
+                   if ((imat_particle.eq.im_primary_sub).and. &
+                       (DIST_particle.gt.zero).and. &
+                       (LS_sub(im_primary_sub).le.DXMAXLS)) then
+                    keep_the_particle=1
+                   endif
+                   if ((DIST_particle.eq.zero).and. &
+                       (abs(LS_sub(imat_particle)).le. &
+                        DXMAXLS/particle_nsubdivide)) then
+                    keep_the_particle=1
+                   endif
+
+                  else if (is_rigid(imat_particle).eq.1) then
+
+                   if (LS_sub(imat_particle).lt.zero) then
+                    ! do nothing
+                   else if (LS_sub(imat_particle).ge.zero) then
+                    keep_the_particle=1
+                   else
+                    print *,"LS_sub(imat_particle) invalid: ", &
+                       imat_particle,LS_sub(imat_particle)
+                    stop
+                   endif
+
+                  else 
+                   print *,"is_rigid(imat_particle) bad:", &
+                      imat_particle,is_rigid(imat_particle)
+                   stop
                   endif
 
                   if (keep_the_particle.eq.1) then
-                   if (DIST_particle.eq.zero) then
-                    !do nothing
-                   else if (DIST_particle.gt.zero) then
-                    if (LS_sub(imat_particle).le.zero) then
-                     particles(current_link)% &
-                       extra_state(N_EXTRA_REAL_DIST+1)=zero
-                    else if (LS_sub(imat_particle).gt.zero) then
-                     particles(current_link)% &
+
+                   if (is_rigid(imat_particle).eq.0) then
+
+                    if (DIST_particle.eq.zero) then
+                     !do nothing
+                    else if (DIST_particle.gt.zero) then
+                     if (LS_sub(imat_particle).le.zero) then
+                      particles(current_link)% &
+                        extra_state(N_EXTRA_REAL_DIST+1)=zero
+                     else if (LS_sub(imat_particle).gt.zero) then
+                      particles(current_link)% &
                        extra_state(N_EXTRA_REAL_DIST+1)=LS_sub(imat_particle)
-                    else
-                     print *,"LS_sub(imat_particle) invalid:", &
+                     else
+                      print *,"LS_sub(imat_particle) invalid:", &
                           LS_sub(imat_particle)
+                      stop
+                     endif
+                    else
+                     print *,"DIST_particle invalid: ",DIST_particle
                      stop
                     endif
-                   else
-                    print *,"DIST_particle invalid: ",DIST_particle
+
+                   else if (is_rigid(imat_particle).eq.1) then
+
+                    particles(current_link)% &
+                      extra_state(N_EXTRA_REAL_DIST+1)=LS_sub(imat_particle)
+
+                   else 
+                    print *,"is_rigid(imat_particle) bad:", &
+                      imat_particle,is_rigid(imat_particle)
                     stop
                    endif
+
                   else if (keep_the_particle.eq.0) then
                    ! 1<=sub_iter<=number particles in sub cell isub,jsub,ksub
                    sort_data_mindist(sub_iter)=zero
@@ -20162,9 +20200,8 @@ stop
 
               call get_primary_material(LS_sub,im_primary_sub)
 
-              if (is_rigid(im_primary_sub).eq.1) then
-               ! do nothing
-              else if (is_rigid(im_primary_sub).eq.0) then
+              if ((is_rigid(im_primary_sub).eq.1).or. &
+                  (is_rigid(im_primary_sub).eq.0)) then
 
                if ((im_primary_sub.ge.1).and. &
                    (im_primary_sub.le.num_materials)) then
@@ -20363,9 +20400,8 @@ stop
 
             do im_loop=1,num_materials
 
-             if (is_rigid(im_loop).eq.1) then
-              !do nothing
-             else if (is_rigid(im_loop).eq.0) then
+             if ((is_rigid(im_loop).eq.1).or. &
+                 (is_rigid(im_loop).eq.0)) then
 
               if (abs(LS_sub(im_loop)).gt.DXMAXLS) then
                !do nothing
@@ -20392,7 +20428,8 @@ stop
                    stop
                   endif
 
-                  if (is_rigid(imat_particle).eq.0) then
+                  if ((is_rigid(imat_particle).eq.0).or. &
+                      (is_rigid(imat_particle).eq.1)) then
 
                    if (imat_particle.eq.im_loop) then
                     num_particles=num_particles+1

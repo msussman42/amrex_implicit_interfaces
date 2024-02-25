@@ -2769,7 +2769,12 @@ NavierStokes::read_params ()
      amrex::Error("expecting update_centroid_after_recon=0 or 1");
 
     pp.queryAdd("mof_machine_learning",mof_machine_learning);
+
     pp.queryAdd("mof_decision_tree_learning",mof_decision_tree_learning);
+    if (mof_decision_tree_learning>=1) {
+     //do nothing
+    } else
+     amrex::Error("require: mof_decision_tree_learning>=1");
 
     centroid_noise_factor.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
@@ -9868,6 +9873,12 @@ NavierStokes::initData () {
 
  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
  Long num_particles=current_PC.TotalNumberOfParticles();
+
+ if (num_particles==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting num_particles=0 in initData");
+
  if (ParallelDescriptor::IOProcessor()) {
   std::cout << "initData: level= " << level <<
     " TotalNumberOfParticles for slab ns_time_order= " <<
@@ -22698,12 +22709,15 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
  if (pattern_test(local_caller_string,"post_init_state")==1) {
 
   int keep_all_interfaces=1;
-  int ngrow_make_distance_accept=ngrow_make_distance;
-  makeStateDistALL(keep_all_interfaces,ngrow_make_distance_accept);
+  int update_particles=0;
+
+  makeStateDistALL(keep_all_interfaces,update_particles);
+
   prescribe_solid_geometryALL(cur_time_slab,
 		  renormalize_only,
 		  local_truncate,
-		  local_caller_string);
+		  local_caller_string,
+		  update_particles);
 
  } else if (pattern_test(local_caller_string,"writePlotFile")==1) {
   // called from writePlotFile
@@ -24549,8 +24563,7 @@ void NavierStokes::putStateDIV_DATA(
 // NavierStokes::prepare_post_process if via "post_init_state"
 // NavierStokes::do_the_advance
 void
-NavierStokes::makeStateDistALL(int keep_all_interfaces,
-   int ngrow_make_distance_accept) {
+NavierStokes::makeStateDistALL(int keep_all_interfaces,int update_particles) {
 
  interface_touch_flag=1; //makeStateDistALL
 
@@ -24603,7 +24616,7 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,
   // function values.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateDist(keep_all_interfaces,ngrow_make_distance_accept);
+  ns_level.makeStateDist(keep_all_interfaces);
  }
   // fort_correct_uninit is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -24632,6 +24645,24 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,
    }
   }
  }
+
+#ifdef AMREX_PARTICLES
+
+ if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+ } else
+  amrex::Error("slab_step invalid");
+
+ My_ParticleContainer& localPC_DIST=newDataPC(slab_step+1);
+ int lev_min_DIST=0;
+ int lev_max_DIST=-1;
+ int nGrow_Redistribute_DIST=0;
+ int local_Redistribute_DIST=0; 
+ localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
+    nGrow_Redistribute_DIST,local_Redistribute_DIST);
+
+#endif
+
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -24716,8 +24747,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
 } // end subroutine build_NRM_FD_MF
 
 void
-NavierStokes::makeStateDist(int keep_all_interfaces,
-		int ngrow_make_distance_accept) {
+NavierStokes::makeStateDist(int keep_all_interfaces) {
 
  std::string local_caller_string="makeStateDist";
 
@@ -25033,7 +25063,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces,
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
-    &ngrow_make_distance_accept,
     &nstar,
     &nface_dst);
  } // mfi

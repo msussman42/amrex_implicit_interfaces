@@ -6566,7 +6566,8 @@ void NavierStokes::metrics_data_min_max(const std::string& caller_string) {
 
 void NavierStokes::prescribe_solid_geometryALL(Real time,
   int renormalize_only,int local_truncate,
-  const std::string& caller_string) {
+  const std::string& caller_string,
+  int update_particles) {
 
  if (level!=0)
   amrex::Error("level should be 0 in prescribe_solid_geometryALL");
@@ -6575,6 +6576,19 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 
  std::string local_caller_string="prescribe_solid_geometryALL";
  local_caller_string=caller_string+local_caller_string;
+
+ if (renormalize_only==1) {
+  if (update_particles==0) {
+   //do nothing
+  } else
+   amrex::Error("expecting update_particles=0");
+ } else if (renormalize_only==0) {
+  if ((update_particles==0)||(update_particles==1)) {
+   //do nothing
+  } else
+   amrex::Error("expecting update_particles=0 or 1");
+ } else
+  amrex::Error("expecting renormalize_only=0 or 1");
 
  if (local_truncate==1) {
   Vector<Real> delta_mass_all;
@@ -6625,7 +6639,31 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
    ns_level.MOFavgDown();
   }
   ns_level.prescribe_solid_geometry(time,renormalize_only);
- }
+ } //ilev=finest_level downto level
+ 
+ if (update_particles==1) {
+
+#ifdef AMREX_PARTICLES
+
+  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+  } else
+   amrex::Error("slab_step invalid");
+
+  My_ParticleContainer& localPC_DIST=newDataPC(slab_step+1);
+  int lev_min_DIST=0;
+  int lev_max_DIST=-1;
+  int nGrow_Redistribute_DIST=0;
+  int local_Redistribute_DIST=0; 
+  localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
+    nGrow_Redistribute_DIST,local_Redistribute_DIST);
+
+#endif
+
+ } else if (update_particles==0) {
+  //do nothing
+ } else
+  amrex::Error("update_particles invalid");
 
 } // end subroutine prescribe_solid_geometryALL
 

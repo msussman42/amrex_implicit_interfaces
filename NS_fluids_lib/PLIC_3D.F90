@@ -2101,6 +2101,8 @@ stop
       if (num_samples.eq.0) then
 
        decision_tree_max_level=-1
+       print *,"need num_samples>=1 for decision tree"
+       stop
 
       else if (num_samples.gt.0) then
 
@@ -2472,7 +2474,7 @@ stop
        enddo !k
 
       else
-       print *,"num_samples invalid"
+       print *,"num_samples invalid: ",num_samples
        stop
       endif
 

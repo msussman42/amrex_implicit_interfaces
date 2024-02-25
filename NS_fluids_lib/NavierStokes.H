@@ -957,7 +957,8 @@ protected:
     void prescribe_solid_geometryALL(Real time,
       int renormalize_only,
       int local_truncate,
-      const std::string& caller_string);
+      const std::string& caller_string,
+      int update_particles);
 
     void prescribe_solid_geometry(Real time,int renormalize_only);
 #ifdef AMREX_PARTICLES
@@ -1314,10 +1315,10 @@ void apply_pressure_grad(
     void makeFaceTest(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
-    void makeStateDistALL(int keep_all_interfaces,
-       int ngrow_make_distance_accept);
-    void makeStateDist(int keep_all_interfaces,
-       int ngrow_make_distance_accept);
+    void makeStateDistALL(int keep_all_interfaces,int update_particles);
+
+    void makeStateDist(int keep_all_interfaces);
+
     void correct_dist_uninit();
 
     void makeStateCurv(int project_option,
