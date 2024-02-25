@@ -21,11 +21,11 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.continuous_mof=0
-ns.mof_decision_tree_learning=100
+ns.mof_decision_tree_learning=0
 ns.mof_machine_learning=0
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=15
-ns.MOFITERMAX_AFTER_PREDICT=15
+ns.MOFITERMAX_AFTER_PREDICT=0
 ns.num_materials=2
 ns.num_species_var=0
 # effective fine grid resolution: 96x96
@@ -40,18 +40,18 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 2 2 2    # number of buffer cells in error est
 amr.grid_eff        = 0.85   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 8 8 4    # block factor in grid generation
+amr.blocking_factor = 8 8 4     # block factor in grid generation
 amr.space_blocking_factor = 1 1 1 1
 amr.check_int       = 160     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 20      # 157 for convergence check
+amr.plot_int        = 20       # 157 for convergence check
 # 0=tecplot nodes 1=plt file cells (or HDF5) 2=tecplot cells
 # ns.visual_nddata_format=1
 ns.visual_ncell     = 96 96  # effective fine grid resolution 24x24 + 2 levels
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
 amr.max_grid_size   = 128 128 128
-#amr.restart         = chk00960
+#amr.restart         = chk00640
 #amr.v=1
 #amr.trace   =1
 
