@@ -19276,7 +19276,7 @@ stop
         domlo, &
         domhi, &
         single_particle_size, &
-        isweep, &
+        isweep, & ! 0 or 1
         number_sweeps, &
         append_flag, &
         particle_nsubdivide, &
@@ -19320,7 +19320,7 @@ stop
       integer :: fort_caller_string_len
       integer, INTENT(in) :: tid
       integer, INTENT(in) :: single_particle_size
-      integer, INTENT(in) :: isweep
+      integer, INTENT(in) :: isweep ! 0 or 1
       integer, INTENT(in) :: number_sweeps
       integer, INTENT(in) :: append_flag
       integer, INTENT(in) :: level,finest_level
@@ -19365,8 +19365,7 @@ stop
        ! first component: number of particles in the cell
        ! second component: link to the local particle container: 1..Np 
       integer, INTENT(inout), target :: cell_particle_count( &
-              DIMV(cell_particle_count), &
-              2) 
+              DIMV(cell_particle_count),2) 
       integer, pointer, &
         dimension(D_DECL(:,:,:),:) :: cell_particle_count_ptr
 
@@ -19670,9 +19669,7 @@ stop
       endif
        ! 1. traverse by cell
        ! 2. within each cell, initialize counts for each subdivision.
-       ! 3. add particles within the subdivided cell using LS and
-       !    xfoot from previous particle (Lagrangian) data in the 
-       !    cell and previous Eulerian data.
+       ! 3. add particles within the subdivided cell.
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
 
@@ -19742,8 +19739,8 @@ stop
             else
              print *,"im_primary_sub: ",im_primary_sub
              print *,"im_secondary: ",im_secondary
-             print *,"LS_sub is NaN: ",LS_sub(im_primary_sub)
-             print *,"LS_sub is NaN: ",LS_sub(im_secondary)
+             print *,"LS_sub(im_primary_sub) bad: ",LS_sub(im_primary_sub)
+             print *,"LS_sub(im_secondary) bad: ",LS_sub(im_secondary)
              stop
             endif
            else
@@ -19802,13 +19799,16 @@ stop
            current_link_nbr=cell_particle_count(D_DECL(i,j,k),2)
            ! 1<=current_link_nbr<=total number particles
            do while (current_link_nbr.ge.1)
+
             cell_count_nbr=cell_count_nbr+1
+
             if (cell_count_nbr.ne.cell_count_check) then
 
              if (current_link_nbr.ne.current_link) then
               !do nothing
              else
-              print *,"expecting current_link_nbr<>current_link"
+              print *,"expecting current_link_nbr<>current_link: ", &
+               current_link_nbr,current_link
               stop
              endif
 
@@ -19829,12 +19829,14 @@ stop
              if (current_link_nbr.eq.current_link) then
               !do nothing
              else
-              print *,"expecting current_link_nbr==current_link"
+              print *,"expecting current_link_nbr==current_link: ", &
+                current_link_nbr,current_link     
               stop
              endif
 
             else
-             print *,"cell_count_nbr or cell_count_check bust"
+             print *,"cell_count_nbr or cell_count_check bust: ", &
+               cell_count_nbr,cell_count_check 
              stop
             endif
             ibase_nbr=(current_link_nbr-1)*(1+SDIM)
@@ -19860,7 +19862,9 @@ stop
              sub_found)
            if (sub_found.eq.1) then
             sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
+
             cell_count_check=cell_count_check+1
+
             sub_particle_data(cell_count_check,1)=isub
             sub_particle_data(cell_count_check,2)=jsub
             if (SDIM.eq.3) then
@@ -19896,6 +19900,7 @@ stop
 
               ! check if particles need to be deleted or
               ! have their material id (and associated data) updated.
+              ! local_count=number particles in (isub,jsub,ksub)
             if (local_count.ge.1) then
 
               ! sort from largest separation to smallest.
@@ -19903,7 +19908,10 @@ stop
               ! Always delete particles with inconsistent material id.
              allocate(sort_data_mindist(local_count))
              allocate(sort_data_id(local_count))
+
              sub_iter=0
+
+               !cell_count_hold=number of particles in (i,j,k)
              do cell_iter=1,cell_count_hold
               isub_test=sub_particle_data(cell_iter,1)
               jsub_test=sub_particle_data(cell_iter,2)
@@ -19989,8 +19997,20 @@ stop
                    stop
                   endif
 
+                 else if (imat_particle.eq.-1) then
+
+                  if (isweep.eq.0) then
+                   print *,"imat_particle invalid (20002): ",imat_particle
+                   stop
+                  else if (isweep.eq.1) then
+                   !do nothing
+                  else
+                   print *,"isweep invalid: ",isweep
+                   stop
+                  endif
+
                  else
-                  print *,"imat_particle invalid: ",imat_particle
+                  print *,"imat_particle invalid (20007): ",imat_particle
                   stop
                  endif
 
@@ -20053,7 +20073,7 @@ stop
                  stop
                 endif
                else
-                print *,"imat_particle invalid:",imat_particle
+                print *,"imat_particle invalid (20064):",imat_particle
                 stop
                endif
               enddo ! bubble_iter=1,local_count
@@ -20317,6 +20337,14 @@ stop
                   imat_particle=NBR_particles(current_link)% &
                     extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
+                  if ((imat_particle.ge.1).and. &
+                      (imat_particle.le.num_materials)) then
+                   ! do nothing
+                  else
+                   print *,"imat_particle invalid(20332): ",imat_particle
+                   stop
+                  endif
+
                   if (is_rigid(imat_particle).eq.0) then
 
                    if (imat_particle.eq.im_loop) then
@@ -20345,7 +20373,8 @@ stop
                    endif
 
                   else
-                   print *,"is_rigid(im1) or is_rigid(im2) invalid"
+                   print *,"is_rigid(imat_particle) invalid: ", &
+                     imat_particle,is_rigid(imat_particle)
                    stop
                   endif
 
@@ -20357,7 +20386,7 @@ stop
                  if (cell_count_check.eq.cell_count_hold) then
                   ! do nothing
                  else
-                  print *,"cell_count_check invalid"
+                  print *,"cell_count_check invalid: ",cell_count_check
                   print *,"cell_count_hold: ",cell_count_hold
                   stop
                  endif
@@ -20446,7 +20475,8 @@ stop
          endif
 
         else
-         print *,"is_rigid(im_primary_sub) invalid"
+         print *,"is_rigid(im_primary_sub) invalid: ", &
+           im_primary_sub,is_rigid(im_primary_sub)
          stop
         endif
 
@@ -20815,7 +20845,7 @@ stop
            (imat_particle.le.num_materials)) then
         !do nothing
        else
-        print *,"imat_particle invalid: ",imat_particle
+        print *,"imat_particle invalid(20836): ",imat_particle
         stop
        endif
 

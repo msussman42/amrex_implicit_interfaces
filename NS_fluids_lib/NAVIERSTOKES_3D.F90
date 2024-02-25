@@ -14746,7 +14746,7 @@ END SUBROUTINE SIMP
       write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
       print *,"cenfilename36 ",cenfilename36
 
-      if (N_EXTRA_REAL.eq.0) then
+      if (N_EXTRA_REAL.eq.1) then
        ! do nothing
       else
        print *,"N_EXTRA_REAL unexpected value"
@@ -14786,7 +14786,7 @@ END SUBROUTINE SIMP
         else if (dir.eq.N_EXTRA_INT) then
          write(12,'(E25.16)') int_to_real_var
         else
-         print *,"dir invalid"
+         print *,"dir invalid (dir=1,N_EXTRA_INT): ",dir
          stop
         endif
        enddo ! dir=1..N_EXTRA_INT
@@ -14870,7 +14870,7 @@ END SUBROUTINE SIMP
         print *,"newcenfilename20 ",newcenfilename20
         open(unit=12,file=newcenfilename20)
 
-        if (N_EXTRA_REAL.eq.0) then
+        if (N_EXTRA_REAL.eq.1) then
          ! do nothing
         else
          print *,"N_EXTRA_REAL invalid"
@@ -14885,12 +14885,12 @@ END SUBROUTINE SIMP
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A37)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","Z","material id"'
+         write(12,'(A42)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","Z","LS","material id"'
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A33)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","material id"'
+         write(12,'(A38)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","LS","material id"'
         else
          print *,"dimension bust"
          stop

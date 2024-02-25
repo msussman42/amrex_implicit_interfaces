@@ -10,8 +10,6 @@
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
 
-! N_EXTRA_REAL.H is in the amrlib directory.
-#include "N_EXTRA_REAL.H"
 #include "INTEGRATED_QUANTITY.H"
 #include "EXTRAP_COMP.H"
 #include "GODUNOV_F.H"
