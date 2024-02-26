@@ -29,12 +29,12 @@ ns.speciesreactionrate=1.0e+10 1.0e+10 1.0e+10 1.0e+10
 ns.rigid_fraction_id=0 0 1 0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
+ns.MOFITERMAX_AFTER_PREDICT=0
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
 ns.continuous_mof=1
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=10000 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=2
+ns.mof_decision_tree_learning=1 # 100x100
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 ns.mof_error_ordering=0
@@ -59,7 +59,7 @@ Lp.v = 0
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
 
-amr.n_cell=64 64
+amr.n_cell=64 64  #Figure 25: 128x128
 amr.max_level = 0
 # water, gas, ice, substrate
 amr.regrid_int      = 1       # how often to regrid
@@ -90,7 +90,9 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = -980.0 #  cm/s^2
+#if L=3.34E+9 => rho_added=1.0E+6
+#if L=65.0E+9 => rho_added=1.0E+9
+ns.gravity        = -980.0e-6 #  cm/s^2
 ns.incremental_gravity_flag=1
 ns.segregated_gravity_flag=0
 
@@ -103,7 +105,7 @@ ns.segregated_gravity_flag=0
 # sigma_SL = sigma_LG * (1-cos(theta_L))
 #
 #contact line: theta_L_initial=60 degrees
-# LG,LI,LS,IG,GS,SI  (SI used)
+# LG,LI,LS,IG,GS,SI 
 #surface tension algorithm treats liquid and ice as just one liquid:
 #Lyu, S., Wang, K., Zhang, Z., Pedrono, A., Sun, C., & 
 #Legendre, D. (2021). A hybrid VOF-IBM method for the simulation of 
@@ -111,8 +113,11 @@ ns.segregated_gravity_flag=0
 #Physics, 432, 110160.
 #thermal effects only
 #ns.tension=0.0 0.0 0.0 0.0 0.0 0.0
-ns.tension=     72.0   0.0 36.0    0.0 72.0     0.0 # added mass 
-ns.tension_init=72.0   0.0 36.0    0.0 72.0     0.0 # 60 degrees
+#if L=3.34E+9 => rho_added=1.0E+6
+#if L=65.0E+9 => rho_added=1.0E+9
+#if surface tension ice-melt=0 => Lyu et al algorithm
+ns.tension=     72.0e-6   0.0 36.0e-6    0.0 72.0e-6  0.0 
+ns.tension_init=72.0e-6   0.0 36.0e-6    0.0 72.0e-6  0.0 # 60 degrees
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
@@ -183,6 +188,7 @@ ns.recalesce_flag=0 0 0 0
 # solidheat_flag=2=>neumann
 ns.solidheat_flag=1
 #instead of T=271.0 (-2 test plate), try -3,-4,-5,-6
+#Figure 25: -6 degrees
 ns.tempconst=          273.0 293.0 267.0 267.0
 ns.initial_temperature=273.0 293.0 267.0 267.0
 ns.xblob3=293.0 #force ambient temperature condition on all walls except the
