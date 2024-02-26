@@ -23,7 +23,7 @@ Lp.v = 0
 ns.continuous_mof=0
 ns.particle_nsubdivide=4
 ns.particle_max_per_nsubdivide=2
-ns.mof_decision_tree_learning=1
+ns.mof_decision_tree_learning=0
 ns.mof_machine_learning=0
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
 ns.MOFITERMAX=15

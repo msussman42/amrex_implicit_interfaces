@@ -3007,7 +3007,9 @@ stop
               else if (multi_volume(im).eq.zero) then
                if ((vcenter(im).gt.EPS2).and. &
                    (vfrac_solid_sum.eq.zero)) then
-                print *,"multi_volume(im) shouldnt be zero: ",multi_volume(im)
+                print *,"multi_volume(im) shouldnt be zero: ",im,multi_volume(im)
+                print *,"im,vcenter(im) ",im,vcenter(im)
+                print *,"vfrac_solid_sum ",vfrac_solid_sum
                 stop
                endif
               else

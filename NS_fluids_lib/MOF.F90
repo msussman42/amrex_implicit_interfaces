@@ -12035,6 +12035,8 @@ contains
        stop
       endif
 
+      local_MOFITERMAX=MOFITERMAX
+
       if ((sdim.ne.3).and.(sdim.ne.2)) then
        print *,"sdim invalid find_cut_geom_slope"
        stop
@@ -12042,7 +12044,7 @@ contains
 
       if ((num_materials.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS)) then
-       print *,"num_materials invalid find cut geom slope"
+       print *,"num_materials invalid find cut geom slope: ",num_materials
        stop
       endif
       if ((critical_material.lt.1).or. &
@@ -12078,7 +12080,7 @@ contains
       if (uncaptured_volume_vof.gt.zero) then
        ! do nothing
       else
-       print *,"uncaptured_volume_vof invalid"
+       print *,"uncaptured_volume_vof invalid: ",uncaptured_volume_vof
        stop
       endif
 
@@ -12089,7 +12091,7 @@ contains
            (nEQN.eq.sdim)) then
         ! do nothing
        else
-        print *,"invalid nMAT_OPT,nDOF, or nEQN"
+        print *,"invalid nMAT_OPT,nDOF, or nEQN:",nMAT_OPT,nDOF,nEQN
         stop
        endif
 
@@ -12180,7 +12182,7 @@ contains
                (dx_normalize.le.one)) then
        ! do nothing
       else
-       print *,"dx_normalize invalid"
+       print *,"dx_normalize invalid: ",dx_normalize
        stop
       endif
   
@@ -12425,7 +12427,7 @@ contains
             else if (continuous_mof.eq.CMOF_X) then !CMOF X
              cmofML=1
             else
-             print *,"continuous_mof invalid"
+             print *,"continuous_mof invalid:",continuous_mof
              stop
             endif
 
@@ -12457,7 +12459,7 @@ contains
           else if (mof_stencil_ok.eq.0) then
            ! do nothing
           else
-           print *,"mof_stencil_ok invalid"
+           print *,"mof_stencil_ok invalid: ",mof_stencil_ok
            stop
           endif
 
@@ -12676,7 +12678,7 @@ contains
       enddo ! iter=1..nguess
 
       if ((iicrit.lt.1).or.(iicrit.gt.nguess)) then
-       print *,"iicrit invalid"
+       print *,"iicrit invalid:",iicrit
        stop
       endif
 
@@ -12701,7 +12703,6 @@ contains
 
       iter=0
 
-      local_MOFITERMAX=MOFITERMAX
       if (training_nguess.ge.1) then
        local_MOFITERMAX=MOFITERMAX_AFTER_PREDICT
       else if (training_nguess.eq.0) then
