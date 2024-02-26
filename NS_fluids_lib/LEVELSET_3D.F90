@@ -2981,6 +2981,10 @@ stop
 
                else if (multi_volume(im).eq.zero) then
                 ! do nothing, material is completely hidden by solid(s)
+               else if (abs(one- &
+                            multi_volume_offset(im)/multi_volume(im)).le. &
+                        EPS2) then
+                !do nothing
                else
                 print *,"im region should grow 4"
                 print *,"im= ",im
@@ -3001,7 +3005,7 @@ stop
                endif
 
               else if (multi_volume(im).eq.zero) then
-               if ((vcenter(im).gt.EPS_3_2).and. &
+               if ((vcenter(im).gt.EPS2).and. &
                    (vfrac_solid_sum.eq.zero)) then
                 print *,"multi_volume(im) shouldnt be zero: ",multi_volume(im)
                 stop
