@@ -1454,7 +1454,7 @@ stop
       if (num_samples.gt.0) then
        ! do nothing
       else
-       print *,"num_samples invalid"
+       print *,"num_samples invalid: ",num_samples
        stop
       endif
 
@@ -2032,7 +2032,7 @@ stop
       !NavierStokes::prepare_post_process calls NavierStokes::MOF_training
       !NavierStokes::MOF_training calls fort_MOF_DT_training
       subroutine fort_MOF_DT_training( &
-        num_samples, &
+        num_samples, & !mof_decision_tree_learning
         finest_level, &
         max_level, &
         bfact, &
@@ -2101,8 +2101,6 @@ stop
       if (num_samples.eq.0) then
 
        decision_tree_max_level=-1
-       print *,"need num_samples>=1 for decision tree"
-       stop
 
       else if (num_samples.gt.0) then
 

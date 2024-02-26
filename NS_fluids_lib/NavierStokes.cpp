@@ -2771,10 +2771,10 @@ NavierStokes::read_params ()
     pp.queryAdd("mof_machine_learning",mof_machine_learning);
 
     pp.queryAdd("mof_decision_tree_learning",mof_decision_tree_learning);
-    if (mof_decision_tree_learning>=1) {
+    if (mof_decision_tree_learning>=0) {
      //do nothing
     } else
-     amrex::Error("require: mof_decision_tree_learning>=1");
+     amrex::Error("require: mof_decision_tree_learning>=0");
 
     centroid_noise_factor.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
