@@ -10198,7 +10198,8 @@ stop
          else if (is_rigid(implus_majority).eq.0) then
           ! do nothing
          else
-          print *,"is_rigid invalid"
+          print *,"is_rigid invalid: ", &
+            implus_majority,is_rigid(implus_majority)
           stop
          endif
 
@@ -11594,7 +11595,7 @@ stop
        if (VOLTERM.gt.zero) then
         ! do nothing
        else
-        print *,"VOLTERM invalid"
+        print *,"VOLTERM invalid: ",VOLTERM
         stop
        endif
        if ((AXL.ge.zero).and. &

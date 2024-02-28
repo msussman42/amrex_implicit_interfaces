@@ -155,7 +155,10 @@ stop
      
       integer klosten,khisten
       integer, parameter :: nhalf=3
+
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstencil_point(SDIM)
+
       real(amrex_real) xstenbox(-1:1,SDIM)
       integer num_fluid_materials_in_cell
       integer num_fluid_materials_in_stencil
@@ -194,6 +197,11 @@ stop
       real(amrex_real) :: multi_cen(SDIM,num_materials)
 
       integer :: local_maskcov
+      integer :: fluid_obscured
+      real(amrex_real) LS_clamped
+      real(amrex_real) VEL_clamped(SDIM)
+      real(amrex_real) temperature_clamped
+      integer :: prescribed_flag
 
 #include "mofdata.H"
 
@@ -405,7 +413,7 @@ stop
            if (imask.eq.0) then
             ! do nothing
            else
-            print *,"expecting imask=0"
+            print *,"expecting imask=0:",imask
             stop
            endif
           else if (vofbc(dir,side).eq.INT_DIR) then
@@ -453,6 +461,9 @@ stop
        endif
 
        call gridsten_level(xsten,i,j,k,level,nhalf)
+       do dir=1,SDIM
+        xstencil_point(dir)=xsten(0,dir)
+       enddo
 
        do k1=klosten,khisten
        do j1=-1,1
@@ -541,17 +552,18 @@ stop
           else if (vfrac_raster_solid.ge.voflist_center(im)) then
            ! do nothing
           else
-           print *,"vfrac_raster_solid or voflist_center is NaN"
+           print *,"vfrac_raster_solid or voflist_center is NaN:", &
+             im,vfrac_raster_solid,voflist_center(im)
            stop
           endif
          else
-          print *,"im_raster_solid invalid"
+          print *,"im_raster_solid invalid:",im_raster_solid
           stop
          endif
       
          vfrac_solid_sum=vfrac_solid_sum+voflist_center(im)
         else
-         print *,"is_rigid(im) invalid: ",is_rigid(im)
+         print *,"is_rigid(im) invalid: ",im,is_rigid(im)
          stop
         endif
 
@@ -628,6 +640,27 @@ stop
          stop
         endif
 
+        call SUB_clamped_LS(xstencil_point,time,LS_clamped, &
+          VEL_clamped,temperature_clamped,prescribed_flag,dx)
+
+        fluid_obscured=0
+        if (vfrac_solid_sum.ge.half) then
+         fluid_obscured=1
+        else if (vfrac_solid_sum.le.half) then
+         !do nothing
+        else
+         print *,"vfrac_solid_sum invalid:",vfrac_solid_sum
+         stop
+        endif
+        if (LS_clamped.ge.zero) then
+         fluid_obscured=1
+        else if (LS_clamped.le.zero) then
+         !do nothing
+        else
+         print *,"LS_clamped invalid:",LS_clamped
+         stop
+        endif 
+
         do im=1,num_materials*ngeom_recon
          mofdata_super(im)=mofdata(im)
         enddo
@@ -636,14 +669,17 @@ stop
           volume_super,cen_super,SDIM)
 
         if ((level.lt.max_level).or. &
-            (level.ne.decision_tree_max_level)) then
+            (level.ne.decision_tree_max_level).or. &
+            (fluid_obscured.eq.1)) then
 
          ! always use MOF on the coarser levels or if decision tree data
-         ! is not available.
+         ! is not available or if the fluids in a cell are ``mostly''
+         ! obscured by "is_rigid" materials.
          continuous_mof_parm=STANDARD_MOF
 
         else if ((level.eq.max_level).and. &
-                 (level.eq.decision_tree_max_level)) then
+                 (level.eq.decision_tree_max_level).and. &
+                 (fluid_obscured.eq.0)) then
 
          if (num_fluid_materials_in_cell.eq.1) then
           continuous_mof_parm=STANDARD_MOF
@@ -659,10 +695,11 @@ stop
          endif
 
         else
-         print *,"level or decision_tree_max_level invalid"
+         print *,"level or decision_tree_max_level or fluid_obscured invalid"
          print *,"level=",level
          print *,"max_level=",max_level
          print *,"decision_tree_max_level=",decision_tree_max_level
+         print *,"fluid_obscured=",fluid_obscured
          stop
         endif
 
@@ -763,7 +800,7 @@ stop
               vfrac_raster_solid=vfrac_local(im)
              endif
             else
-             print *,"im_raster_solid invalid"
+             print *,"im_raster_solid invalid:",im_raster_solid
              stop
             endif
      
