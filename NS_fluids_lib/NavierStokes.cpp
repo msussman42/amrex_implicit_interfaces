@@ -2860,6 +2860,7 @@ NavierStokes::read_params ()
      FSI_touch_flag[tid]=0;
     }
 
+     //blob_history_class is declared in AmrLevel.H
     blob_history_class.blob_history.resize(0);
     blob_history_class.start_time=-1.0;
     blob_history_class.end_time=-1.0;
@@ -9501,6 +9502,18 @@ void NavierStokes::post_restart() {
   init_aux_data();
 
   prepare_post_process(local_caller_string);
+
+  if (output_drop_distribution==1) {
+   //do nothing
+  } else if (output_drop_distribution==0) {
+   //blob_history_class is declared in AmrLevel.H
+   blob_history_class.blob_history.resize(0);
+   blob_history_class.start_time=-1.0;
+   blob_history_class.end_time=-1.0;
+   blob_history_class.start_step=-1;
+   blob_history_class.end_step=-1;
+  } else
+   amrex::Error("output_drop_distribution invalid");
 
   if (sum_interval>0) {
    sum_integrated_quantities(local_caller_string,local_stop_time);
@@ -24653,23 +24666,29 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,int update_particles) {
   }
  }
 
+ if (update_particles==1) {
+
 #ifdef AMREX_PARTICLES
 
- if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-  init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
- } else
-  amrex::Error("slab_step invalid");
+  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
+   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
+  } else
+   amrex::Error("slab_step invalid");
 
- My_ParticleContainer& localPC_DIST=newDataPC(slab_step+1);
- int lev_min_DIST=0;
- int lev_max_DIST=-1;
- int nGrow_Redistribute_DIST=0;
- int local_Redistribute_DIST=0; 
- localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
+  My_ParticleContainer& localPC_DIST=newDataPC(slab_step+1);
+  int lev_min_DIST=0;
+  int lev_max_DIST=-1;
+  int nGrow_Redistribute_DIST=0;
+  int local_Redistribute_DIST=0; 
+  localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
     nGrow_Redistribute_DIST,local_Redistribute_DIST);
 
 #endif
 
+ } else if (update_particles==0) {
+  //do nothing
+ } else
+  amrex::Error("update_particles invalid makeStateDistALL");
 
 #if (NS_profile_solver==1)
  bprof.stop();
