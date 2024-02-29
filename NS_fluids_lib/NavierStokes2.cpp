@@ -6663,7 +6663,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
  } else if (update_particles==0) {
   //do nothing
  } else
-  amrex::Error("update_particles invalid");
+  amrex::Error("update_particles invalid prescribe_solid_geometryALL");
 
 } // end subroutine prescribe_solid_geometryALL
 
