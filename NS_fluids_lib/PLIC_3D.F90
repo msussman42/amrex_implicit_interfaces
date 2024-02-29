@@ -668,8 +668,7 @@ stop
         call Box_volumeFAST(bfact,dx,xsten,nhalf, &
           volume_super,cen_super,SDIM)
 
-        if ((level.lt.max_level).or. &
-            (level.ne.decision_tree_max_level).or. &
+        if ((level.lt.finest_level).or. &
             (fluid_obscured.eq.1)) then
 
          ! always use MOF on the coarser levels or if decision tree data
@@ -677,8 +676,7 @@ stop
          ! obscured by "is_rigid" materials.
          continuous_mof_parm=STANDARD_MOF
 
-        else if ((level.eq.max_level).and. &
-                 (level.eq.decision_tree_max_level).and. &
+        else if ((level.ge.finest_level).and. &
                  (fluid_obscured.eq.0)) then
 
          if (num_fluid_materials_in_cell.eq.1) then

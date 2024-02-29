@@ -2759,6 +2759,13 @@ NavierStokes::read_params ()
     } else
      amrex::Error("continuous_mof invalid");
 
+#ifdef AMREX_PARTICLES
+    if (continuous_mof==STANDARD_MOF) {
+     //do nothing
+    } else
+     amrex::Error("expecting continuous_mof==0 if using particles");
+#endif
+
     pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
     if (update_centroid_after_recon==0) {
      //do nothing
