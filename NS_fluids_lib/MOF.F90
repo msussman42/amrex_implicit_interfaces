@@ -16655,11 +16655,12 @@ contains
                    mofdata(vofcomp)) then
            !do nothing
           else
-           print *,"mofdata invalid"
+           print *,"mofdata invalid: ",single_material, &
+            mofdata(vofcomp),mofdata(vofcomp_single)
            stop
           endif
          else
-          print *,"single_material invalid"
+          print *,"single_material invalid: ",single_material
           stop
          endif
 
@@ -16739,7 +16740,7 @@ contains
                (num_materials_cell.le.num_materials)) then
        ! do nothing
       else
-       print *,"num_materials_cell invalid"
+       print *,"num_materials_cell invalid: ",num_materials_cell
        stop
       endif
 

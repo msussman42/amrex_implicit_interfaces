@@ -19734,8 +19734,16 @@ stop
         if ((is_rigid(im_primary_sub).eq.1).or. &
             (is_rigid(im_primary_sub).eq.0)) then
 
-         call get_secondary_material(LS_sub, &
+         if (is_rigid(im_primary_sub).eq.1) then
+          im_secondary=im_primary_sub
+         else if (is_rigid(im_primary_sub).eq.0) then
+          call get_secondary_material(LS_sub, &
            im_primary_sub,im_secondary)
+         else
+          print *,"is_rigid(im_primary_sub) invalid: ", &
+            im_primary_sub,is_rigid(im_primary_sub)
+          stop
+         endif
 
          if ((im_primary_sub.ge.1).and. &
              (im_primary_sub.le.num_materials).and. &
