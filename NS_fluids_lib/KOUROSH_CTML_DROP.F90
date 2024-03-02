@@ -28,7 +28,6 @@ use amrex_fort_module, only : amrex_real
 
 implicit none                   
 
-real(amrex_real) :: DEF_VAPOR_GAMMA
 
 contains
 
@@ -36,7 +35,6 @@ contains
 subroutine INIT_KOUROSH_CTML_DROP_MODULE()
 IMPLICIT NONE
 
-  DEF_VAPOR_GAMMA =  1.666666667D0
 
 return
 end subroutine INIT_KOUROSH_CTML_DROP_MODULE
@@ -53,19 +51,34 @@ real(amrex_real) :: local_time
 real(amrex_real) :: ptb_dist_low
 real(amrex_real) :: ptb_dist_high
 integer :: im_substrate
-integer :: expected_nmat
 
 !drop falling vertically with given velocity onto oil lubricated surface
 if (axis_dir.eq.0) then
- expected_nmat=4
-!drop falling at an angle with given velocity onto a 
+ if (num_materials.eq.4) then
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop or melting ice falling at an angle with given velocity onto a 
 !  non-lubricated surface with horizontal air flow.
 else if (axis_dir.eq.1) then
- expected_nmat=3
+ if ((num_materials.eq.3).or. & !water,air,solid
+     (num_materials.eq.4)) then !water,air,ice,solid
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
 !drop falling at an angle with given velocity onto a 
 ! lubricated surface with horizontal air flow.
 else if (axis_dir.eq.2) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
 !ns.tension liq-air, liq-ice, liq-substrate, air-ice, air-substrate, 
 ! ice-substrate
 !thermal conductivity: all materials
@@ -78,13 +91,18 @@ else if (axis_dir.eq.2) then
 !  ice-seed (sheet) on the surface.
 !  im=1 drop, im=2 air, im=3 ice, im=4 substrate
 else if (axis_dir.eq.3) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
+if (probtype.eq.426) then
  im_substrate=num_materials
 
  if (SDIM.eq.2) then
@@ -121,7 +139,7 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
          ptb_dist_low,ptb_dist_high)
  Phi=-Phi
 else
- print *,"num_materials or probtype invalid"
+ print *,"probtype invalid: ",probtype
  stop
 endif
 
@@ -136,7 +154,6 @@ real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: vel
 integer, INTENT(in) :: dir
-integer :: expected_nmat
 
 if (t.ge.0.0d0) then
  ! do nothing
@@ -151,20 +168,58 @@ else
  stop
 endif
 
+
+!drop falling vertically with given velocity onto oil lubricated surface
 if (axis_dir.eq.0) then
- expected_nmat=4
+ if (num_materials.eq.4) then
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop or melting ice falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow.
 else if (axis_dir.eq.1) then
- expected_nmat=3
+ if ((num_materials.eq.3).or. & !water,air,solid
+     (num_materials.eq.4)) then !water,air,ice,solid
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop falling at an angle with given velocity onto a 
+! lubricated surface with horizontal air flow.
 else if (axis_dir.eq.2) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!ns.tension liq-air, liq-ice, liq-substrate, air-ice, air-substrate, 
+! ice-substrate
+!thermal conductivity: all materials
+!specific heat: all materials
+!density,viscosity:  "  "
+!latent heat
+!saturation temperature
+!drop falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow and 
+!  ice-seed (sheet) on the surface.
+!  im=1 drop, im=2 air, im=3 ice, im=4 substrate
 else if (axis_dir.eq.3) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
+if (probtype.eq.426) then
  if (vel.eq.0.0d0) then
   ! do nothing
  else
@@ -176,7 +231,7 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
   stop
  endif
 else
- print *,"num_materials or probtype invalid"
+ print *,"probtype invalid: ",probtype
  stop
 endif
 
@@ -193,7 +248,7 @@ integer, INTENT(in) :: nmat
 real(amrex_real), INTENT(in) :: x(SDIM)
 real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(out) :: LS(nmat)
-integer :: expected_nmat
+real(amrex_real) :: LS_MID
 
   if (nmat.eq.num_materials) then
    ! do nothing
@@ -202,20 +257,57 @@ integer :: expected_nmat
    stop
   endif
 
+!drop falling vertically with given velocity onto oil lubricated surface
 if (axis_dir.eq.0) then
- expected_nmat=4
+ if (num_materials.eq.4) then
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop or melting ice falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow.
 else if (axis_dir.eq.1) then
- expected_nmat=3
+ if ((num_materials.eq.3).or. & !water,air,solid
+     (num_materials.eq.4)) then !water,air,ice,solid
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop falling at an angle with given velocity onto a 
+! lubricated surface with horizontal air flow.
 else if (axis_dir.eq.2) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!ns.tension liq-air, liq-ice, liq-substrate, air-ice, air-substrate, 
+! ice-substrate
+!thermal conductivity: all materials
+!specific heat: all materials
+!density,viscosity:  "  "
+!latent heat
+!saturation temperature
+!drop falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow and 
+!  ice-seed (sheet) on the surface.
+!  im=1 drop, im=2 air, im=3 ice, im=4 substrate
 else if (axis_dir.eq.3) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
+if (probtype.eq.426) then
   ! fluids tessellate the domain, substrate is embedded.
 
   ! water is material 1
@@ -231,20 +323,59 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
 
  if ((axis_dir.eq.0).or. &
      (axis_dir.eq.2)) then
+
   ! oil is material 3
   ! zblob2 is the altitude of the oil layer
   LS(3)=zblob2-x(SDIM)
   ! air
   LS(2)=-(max(LS(1),LS(3)))
+
  else if (axis_dir.eq.1) then
+
   LS(2)=-LS(1)
+  if (num_materials.eq.3) then
+   !do nothing
+  else if (num_materials.eq.4) then !water,air,ice,substrate
+
+   if (radblob.gt.radblob2) then
+    ! do nothing
+   else
+    print *,"radblob or radblob2 invalid: ",radblob,radblob2
+    stop
+   endif
+   
+   LS(3)=LS(1)+radblob2-radblob
+
+   if (LS(1).le.0.0d0) then
+    !do nothing
+   else if (LS(1).ge.0.0d0) then
+    LS_MID=LS(3)+0.5d0*(radblob-radblob2)
+    if (LS_MID.le.0.0d0) then
+     !do nothing
+    else if (LS_MID.ge.0.0d0) then
+     LS(1)=-LS(3)
+    else
+     print *,"LS_MID invalid"
+     stop
+    endif
+   else
+    print *,"LS(1) invalid"
+    stop
+   endif
+
+  else
+   print *,"num_materials invalid: ",num_materials
+   stop
+  endif
 
   ! water, air, ice, substrate
  else if (axis_dir.eq.3) then
+
   ! zblob2 is the altitude of the ice layer
   LS(3)=zblob2-x(SDIM)
   ! air
   LS(2)=-(max(LS(1),LS(3)))
+
  else
   print *,"axis_dir invalid"
   stop
@@ -252,7 +383,7 @@ if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
 
  call KOUROSH_substrateLS(x,LS(num_materials))
 else
- print *,"num_materials or probtype invalid"
+ print *,"probtype invalid: ",probtype
  stop
 endif
 
@@ -286,7 +417,6 @@ real(amrex_real), INTENT(in) :: LS(nmat)
 real(amrex_real), INTENT(out) :: VEL(SDIM)
 integer dir
 integer, INTENT(in) :: velsolid_flag
-integer :: expected_nmat
 integer :: assert_oil_velocity
 
  if (nmat.eq.num_materials) then
@@ -313,20 +443,58 @@ integer :: assert_oil_velocity
   endif
  enddo
 
- if (axis_dir.eq.0) then
-  expected_nmat=4
- else if (axis_dir.eq.1) then
-  expected_nmat=3
- else if (axis_dir.eq.2) then
-  expected_nmat=4
- else if (axis_dir.eq.3) then
-  expected_nmat=4
+
+!drop falling vertically with given velocity onto oil lubricated surface
+if (axis_dir.eq.0) then
+ if (num_materials.eq.4) then
+  !do nothing
  else
-  print *,"axis_dir invalid"
+  print *,"num_materials invalid: ",axis_dir,num_materials
   stop
  endif
+!drop or melting ice falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow.
+else if (axis_dir.eq.1) then
+ if ((num_materials.eq.3).or. & !water,air,solid
+     (num_materials.eq.4)) then !water,air,ice,solid
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop falling at an angle with given velocity onto a 
+! lubricated surface with horizontal air flow.
+else if (axis_dir.eq.2) then
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!ns.tension liq-air, liq-ice, liq-substrate, air-ice, air-substrate, 
+! ice-substrate
+!thermal conductivity: all materials
+!specific heat: all materials
+!density,viscosity:  "  "
+!latent heat
+!saturation temperature
+!drop falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow and 
+!  ice-seed (sheet) on the surface.
+!  im=1 drop, im=2 air, im=3 ice, im=4 substrate
+else if (axis_dir.eq.3) then
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+else
+ print *,"axis_dir invalid: ",axis_dir
+ stop
+endif
 
- if ((num_materials.eq.expected_nmat).and.(probtype.eq.426)) then
+ if (probtype.eq.426) then
 
   do dir=1,SDIM
    VEL(dir)=zero
@@ -402,7 +570,7 @@ integer :: assert_oil_velocity
   endif
 
  else
-  print *,"num_materials or probtype invalid"
+  print *,"probtype invalid: ",probtype
   stop
  endif
 
@@ -449,7 +617,6 @@ real(amrex_real), INTENT(in) :: t
 real(amrex_real), INTENT(in) :: LS(nmat)
 real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
 integer im,ibase,n
-integer :: expected_nmat
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -464,21 +631,57 @@ else
  stop
 endif
 
+!drop falling vertically with given velocity onto oil lubricated surface
 if (axis_dir.eq.0) then
- expected_nmat=4
+ if (num_materials.eq.4) then
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop or melting ice falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow.
 else if (axis_dir.eq.1) then
- expected_nmat=3
+ if ((num_materials.eq.3).or. & !water,air,solid
+     (num_materials.eq.4)) then !water,air,ice,solid
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop falling at an angle with given velocity onto a 
+! lubricated surface with horizontal air flow.
 else if (axis_dir.eq.2) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!ns.tension liq-air, liq-ice, liq-substrate, air-ice, air-substrate, 
+! ice-substrate
+!thermal conductivity: all materials
+!specific heat: all materials
+!density,viscosity:  "  "
+!latent heat
+!saturation temperature
+!drop falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow and 
+!  ice-seed (sheet) on the surface.
+!  im=1 drop, im=2 air, im=3 ice, im=4 substrate
 else if (axis_dir.eq.3) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and. &
-    (num_state_material.ge.2).and. & ! density, temperature, vapor spec
+if ((num_state_material.ge.2).and. & ! density, temperature, vapor spec
     (probtype.eq.426)) then
  do im=1,num_materials
   ibase=(im-1)*num_state_material
@@ -498,7 +701,8 @@ if ((num_materials.eq.expected_nmat).and. &
   enddo
  enddo ! im=1..num_materials
 else
- print *,"num_materials,num_state_material, or probtype invalid"
+ print *,"num_state_material, or probtype invalid: ", &
+   num_state_material,probtype
  stop
 endif
  
@@ -680,7 +884,6 @@ real(amrex_real), INTENT(in) :: den(nmat)
 real(amrex_real), INTENT(in) :: CV(nmat)
 real(amrex_real), INTENT(in) :: dt
 real(amrex_real), INTENT(out) :: heat_source
-integer :: expected_nmat
 
 if (nmat.eq.num_materials) then
  ! do nothing
@@ -689,24 +892,60 @@ else
  stop
 endif
 
+!drop falling vertically with given velocity onto oil lubricated surface
 if (axis_dir.eq.0) then
- expected_nmat=4
+ if (num_materials.eq.4) then
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop or melting ice falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow.
 else if (axis_dir.eq.1) then
- expected_nmat=3
+ if ((num_materials.eq.3).or. & !water,air,solid
+     (num_materials.eq.4)) then !water,air,ice,solid
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!drop falling at an angle with given velocity onto a 
+! lubricated surface with horizontal air flow.
 else if (axis_dir.eq.2) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
+!ns.tension liq-air, liq-ice, liq-substrate, air-ice, air-substrate, 
+! ice-substrate
+!thermal conductivity: all materials
+!specific heat: all materials
+!density,viscosity:  "  "
+!latent heat
+!saturation temperature
+!drop falling at an angle with given velocity onto a 
+!  non-lubricated surface with horizontal air flow and 
+!  ice-seed (sheet) on the surface.
+!  im=1 drop, im=2 air, im=3 ice, im=4 substrate
 else if (axis_dir.eq.3) then
- expected_nmat=4
+ if (num_materials.eq.4) then 
+  !do nothing
+ else
+  print *,"num_materials invalid: ",axis_dir,num_materials
+  stop
+ endif
 else
- print *,"axis_dir invalid"
+ print *,"axis_dir invalid: ",axis_dir
  stop
 endif
 
-if ((num_materials.eq.expected_nmat).and. &
-    (probtype.eq.426)) then
+if (probtype.eq.426) then
  heat_source=zero
 else
- print *,"num_materials or probtype invalid"
+ print *,"probtype invalid"
  stop
 endif
 
@@ -799,6 +1038,7 @@ endif
 if ((num_materials.ge.3).and. &
     (num_state_material.ge.2).and. & 
     (probtype.eq.426)) then
+
  do dir=1,SDIM
   xcrit(dir)=assimilate_in%xsten(0,dir)
  enddo
