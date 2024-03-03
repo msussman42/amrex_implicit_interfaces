@@ -228,6 +228,10 @@ ns.solidheat_flag=0
 #1=water 2=gas 3=lubricant 4=substrate 
 #ns.tempconst=273.0 273.0 273.0 353.0  #axis_dir=0,2
 #
+#-54 degrees celcius at 35000 feet.  
+#"Ram Rise"=V^2/87^2   V=speed in knots.
+#temperature=-54 + V^2/87^2
+#liquid,gas,ice,solid
 ns.tempconst=273.0 273.0 353.0  #axis_dir=1
 
 #ns.initial_temperature=1684.0 1684.0 200.0 200.0  # axis_dir=3
@@ -254,7 +258,8 @@ ns.xblob5=70000.0 #Mach 2
 ns.yblob5=-49500.0
 ns.zblob5=-49500.0
 # period of drops added after the fact, starting at t=radblob5
-ns.radblob5=0.000625
+# Set this parameter to 0.0 to disable this feature.
+ns.radblob5=0.0  #0.000625
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=426

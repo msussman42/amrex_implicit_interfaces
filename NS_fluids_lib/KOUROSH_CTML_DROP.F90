@@ -597,7 +597,7 @@ else
  print *,"nmat invalid"
  stop
 endif
-PRES=zero
+PRES=A_TAIT !hydrostatic pressure = 1.0D+6
 
 return 
 end subroutine KOUROSH_CTML_DROP_PRES
@@ -1183,7 +1183,7 @@ if ((num_materials.ge.3).and. &
   else if (radblob5.eq.zero) then
    !do nothing
   else
-   print *,"radblob5 invalid"
+   print *,"radblob5 invalid: ",radblob5
    stop
   endif
  else if (t_lower.eq.t_upper) then
