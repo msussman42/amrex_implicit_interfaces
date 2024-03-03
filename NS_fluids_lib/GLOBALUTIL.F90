@@ -3651,7 +3651,7 @@ end subroutine dynamic_contact_angle
                (fort_material_type(im).eq.999)) then
        is_compressible_mat=0
       else
-       print *,"fort_material_type invalid"
+       print *,"fort_material_type invalid: ",im,fort_material_type(im)
        stop
        is_compressible_mat=0
       endif
@@ -19486,12 +19486,28 @@ end subroutine print_visual_descriptor
       GAMMA=GAMMA_TAIT
       pcav=PCAV_TAIT
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"e invalid"
+       stop
+      endif
+      if (A.gt.zero) then
+       !do nothing
+      else
+       print *,"A invalid"
+       stop
+      endif
+      if (B.gt.zero) then
+       !do nothing
+      else
+       print *,"B invalid"
        stop
       endif
 
@@ -21214,6 +21230,12 @@ end subroutine print_visual_descriptor
        !do nothing
       else
        print *,"cp error"
+       stop
+      endif
+      if (omega.gt.zero) then
+       !do nothing
+      else
+       print *,"omega error"
        stop
       endif
        ! (gamma-1)rho*cv T=(cp/cv -1)*rho*cv T=
