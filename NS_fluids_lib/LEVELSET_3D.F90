@@ -12220,6 +12220,7 @@ stop
          do im=1,num_materials
           if (LStest(im).ge.-incomp_thickness*DXMAXLS) then
 
+            !material_type=0 or 999
            if (is_compressible_mat(im).eq.0) then
             if (fort_conserve_total_energy.eq.0) then
              use_face_pres_cen=0

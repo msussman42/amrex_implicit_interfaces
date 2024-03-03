@@ -194,7 +194,7 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.num_divu_outer_sweeps=2
 #ns.material_type=0 0 0 999 # axis_dir=3 liquid,gas,ice,substrate
 #ns.material_type=0 0 0 999 # axis_dir=0 or 2 liquid,gas,oil,substrate
-ns.material_type=1 14 999 # axis_dir=1 1=tait EOS 14=EOS_air_rho2
+ns.material_type=1 14 999 # axis_dir=1 1=EOS_tait 14=EOS_air_rho2
 #thermal conductivity
 #ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # axis_dir=0,2,3
 ns.heatviscconst=58000.0 2400.0 38600000.0 # axis_dir=1
