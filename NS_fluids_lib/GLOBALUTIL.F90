@@ -8261,7 +8261,7 @@ end subroutine print_visual_descriptor
           (operation_flag.eq.OP_UGRAD_MAC).or. &
           (operation_flag.eq.OP_ISCHEME_MAC).or. &
           (operation_flag.eq.OP_UGRAD_COUPLING_MAC).or. &
-          (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
+          (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then
        ! do nothing
       else
        print *,"operation_flag invalid"
@@ -11378,7 +11378,7 @@ end subroutine print_visual_descriptor
         ! do nothing
        else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
         ! do nothing
-       else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
+       else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then
         ! do nothing
        else if (operation_flag.eq.OP_ISCHEME_MAC) then ! advection
         ! do nothing
@@ -11825,7 +11825,7 @@ end subroutine print_visual_descriptor
         ! do nothing
       else if (operation_flag.eq.OP_UGRAD_MAC) then ! rate of strain
        ! do nothing
-      else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
+      else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then
        ! do nothing
       else if (operation_flag.eq.OP_UGRAD_COUPLING_MAC) then ! coupling terms
        ! do nothing
@@ -11866,7 +11866,7 @@ end subroutine print_visual_descriptor
          ! do nothing
         else if (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC) then 
          ! do nothing
-        else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
+        else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then
          ! do nothing
         else if (operation_flag.eq.OP_ISCHEME_MAC) then
          ! do nothing (advection)

@@ -12506,6 +12506,7 @@ stop
            ! 5. e^proj=e^advect+rho UCELL^2^advect/2-rho UCELL^2^proj/2-div(up)
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
+            !use_conservation_form_velocity declared in PROBCOMMON.F90.
            if (use_conservation_form_velocity.eq.1) then
             if (fort_conserve_total_energy.eq.1) then
              do dir=1,SDIM
@@ -12516,12 +12517,7 @@ stop
              stop
             endif
            else if (use_conservation_form_velocity.eq.0) then
-            if (fort_conserve_total_energy.eq.0) then
-             ! do nothing
-            else
-             print *,"expecting fort_conserve_total_energy==0"
-             stop
-            endif
+            ! do nothing
            else
             print *,"use_conservation_form_velocity invalid: ", &
                use_conservation_form_velocity
@@ -13030,7 +13026,7 @@ stop
 ! operation_flag=7  advection.
 ! OP_UGRAD_COUPLING_MAC (8)
 ! operation_flag=8  reserved for coupling terms in fort_crossterm
-! OP_U_COMP_CELL_MAC_TO_MAC (11)
+! OP_U_SEM_CELL_MAC_TO_MAC (11)
 ! operation_flag=11 
 !   (i) unew^{f} in non-solid regions
 !   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
@@ -13069,17 +13065,17 @@ stop
        xface,DIMS(xface), &  ! xflux for advection
        ! Umac_old if:
        !  OP_UMAC_PLUS_VISC_CELL_TO_MAC or
-       !  OP_U_COMP_CELL_MAC_TO_MAC
+       !  OP_U_SEM_CELL_MAC_TO_MAC
        xgp,DIMS(xgp), & 
        xp,DIMS(xp), & ! holds AMRSYNC_PRES if OP_PRESGRAD_MAC
        xvel,DIMS(xvel), & !Umac_new
        vel,DIMS(vel), & !primary_velfab coming from increment_face_vel
         ! hydrostatic pressure if OP_POTGRAD_TO_MAC
-       pres,DIMS(pres), & ! U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
+       pres,DIMS(pres), & ! U_old(dir) if OP_U_SEM_CELL_MAC_TO_MAC
        den,DIMS(den), & !hydrostatic density if OP_POTGRAD_TO_MAC
         ! secondary_velfab if 
         !  OP_UNEW_CELL_TO_MAC, OP_UNEW_USOL_MAC_TO_MAC,
-        !  OP_UMAC_PLUS_VISC_CELL_TO_MAC, or OP_U_COMP_CELL_MAC_TO_MAC
+        !  OP_UMAC_PLUS_VISC_CELL_TO_MAC, or OP_U_SEM_CELL_MAC_TO_MAC
        mgoni,DIMS(mgoni), &!DIMS(dat)=datxlo,datxhi,datylo,datyhi,datzlo,datzhi
        colorfab,DIMS(colorfab), &
        typefab,DIMS(typefab), &
@@ -13174,9 +13170,11 @@ stop
       real(amrex_real), INTENT(in), target :: &
               levelPC(DIMV(levelPC),num_materials*(1+SDIM))
       real(amrex_real), pointer :: levelPC_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solfab(DIMV(solfab),nparts_def*SDIM)
+      real(amrex_real), INTENT(in), target :: &
+        solfab(DIMV(solfab),nparts_def*SDIM)
       real(amrex_real), pointer :: solfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: semflux(DIMV(semflux),ncfluxreg)
+      real(amrex_real), INTENT(inout), target :: &
+       semflux(DIMV(semflux),ncfluxreg)
       real(amrex_real), pointer :: semflux_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: xcut(DIMV(xcut),1)
       real(amrex_real), pointer :: xcut_ptr(D_DECL(:,:,:),:)
@@ -13184,7 +13182,7 @@ stop
       real(amrex_real), INTENT(inout), target :: xface(DIMV(xface),ncphys) 
       real(amrex_real), pointer :: xface_ptr(D_DECL(:,:,:),:)
        !holds Umac_old if 
-       ! OP_UMAC_PLUS_VISC_CELL_TO_MAC or OP_U_COMP_CELL_MAC_TO_MAC
+       ! OP_UMAC_PLUS_VISC_CELL_TO_MAC or OP_U_SEM_CELL_MAC_TO_MAC
       real(amrex_real), INTENT(inout), target :: xgp(DIMV(xgp),ncomp_xgp) 
       real(amrex_real), pointer :: xgp_ptr(D_DECL(:,:,:),:)
 
@@ -13197,7 +13195,7 @@ stop
       real(amrex_real), pointer :: xvel_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),SDIM)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
-       ! holds U_old(dir) if OP_U_COMP_CELL_MAC_TO_MAC
+       ! holds U_old(dir) if OP_U_SEM_CELL_MAC_TO_MAC
       real(amrex_real), INTENT(in), target :: pres(DIMV(pres),1)
       real(amrex_real), pointer :: pres_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target ::  &
@@ -13571,7 +13569,7 @@ stop
        print *,"(OP_UGRAD_MAC)"
        stop
 
-      else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then
+      else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then
 
        if (ncphys.ne.FACECOMP_NCOMP) then
         print *,"ncphys invalid"
@@ -13620,7 +13618,7 @@ stop
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+               (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
        if (energyflag.ne.SUB_OP_DEFAULT) then
         print *,"energyflag invalid OP_U etc CELL/MAC to MAC"
         stop
@@ -13855,7 +13853,7 @@ stop
          else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                   (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
                   (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+                  (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
 
           do im=1,ncphys
            local_face(im)=xface(D_DECL(i,j,k),im)
@@ -13863,7 +13861,7 @@ stop
            !Umac_new
           local_vel_MAC=xvel(D_DECL(i,j,k),1)
           if ((operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
-              (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
+              (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then
            local_vel_old_MAC=xgp(D_DECL(i,j,k),1) !Umac_old
           else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                    (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC)) then
@@ -13897,7 +13895,7 @@ stop
              (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
              (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. &
              (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
-             (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. & 
+             (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or. & 
              (operation_flag.eq.OP_PRES_CELL_TO_MAC)) then  ! p^CELL->MAC
 
           if (side_boundary.eq.0) then
@@ -14143,7 +14141,7 @@ stop
          else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
                   (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
                   (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+                  (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
 
           face_velocity_override=0
 
@@ -14367,7 +14365,7 @@ stop
                  !called after advection to update u^{advect,MAC}
                  !primary_vel_data="vel"=DELTA_CELL_VEL_MF; 
                  !secondary_vel_data="mgoni"=CURRENT_CELL_VEL_MF; 
-                else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
+                else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then 
 
                  velcomp=1
                   !local_vel_MAC=xvel=Umac_new=UMAC^{ADVECT}
@@ -15390,7 +15388,7 @@ stop
          else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !u^CELL->MAC
                   (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC).or. & 
                   (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                  (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+                  (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
 
           xvel(D_DECL(i,j,k),1)=uedge
   
@@ -15483,7 +15481,7 @@ stop
                 (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                 (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
                 (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
+                (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or.& 
                 (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
 
         if (operation_flag.eq.OP_POTGRAD_TO_MAC) then
@@ -15538,7 +15536,7 @@ stop
                  (operation_flag.eq.OP_POTGRAD_TO_MAC).or. & 
                  (operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & ! vel CELL->MAC
                  (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                 (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or.& 
+                 (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or.& 
                  (operation_flag.eq.OP_ISCHEME_MAC)) then ! advection
               ! do nothing
              else
@@ -15593,7 +15591,7 @@ stop
                ncomp_source=1
                scomp_bc=dir+1
 
-              else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
+              else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then 
 
                scomp=dir+1
                dcomp=1
@@ -15651,7 +15649,7 @@ stop
                den_ptr, &
                xface_ptr, &
                ! Umac_old if: OP_UMAC_PLUS_VISC_CELL_TO_MAC, or
-               !              OP_U_COMP_CELL_MAC_TO_MAC
+               !              OP_U_SEM_CELL_MAC_TO_MAC
                xgp_ptr, & 
                xcut_ptr, &   ! coeff*areafrac
                xp_ptr, &
