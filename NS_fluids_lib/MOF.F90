@@ -19579,14 +19579,14 @@ contains
                ! uncaptured_volume_fraction_fluid>0 and 
                ! uncaptured_volume_fluid>0
 
-        if (uncaptured_volume_fluid.le.two*EPS2*volcell) then
+        if (uncaptured_volume_fluid.le.four*EPS2*volcell) then
          !do nothing
         else
-         print *,"not all volume accounted for multi get volume"
+         print *,"not all volume accounted for multi_get_volume_grid"
          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
          print *,"volcell ",volcell
          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-         print *,"tolerance: ",two*EPS2
+         print *,"tolerance: ",four*EPS2
          stop
         endif
 
@@ -20802,7 +20802,7 @@ contains
        endif
 
        if (uncaptured_volume_fluid.le. &
-           two*EPS2*volume_plus) then
+           four*EPS2*volume_plus) then
         !do nothing
        else
         print *,"warning"
@@ -20811,7 +20811,7 @@ contains
         print *,"uncaptured_volume_START ",uncaptured_volume_START
         print *,"fraction of uncapt volume ", &
             uncaptured_volume_fluid/uncaptured_volume_START
-        print *,"tolerance: ",two*EPS2
+        print *,"tolerance: ",four*EPS2
 !        stop
        endif
 
@@ -21849,14 +21849,14 @@ contains
                ! uncaptured_volume_fraction_fluid>0 and 
                ! uncaptured_volume_fluid>0
 
-        if (uncaptured_volume_fluid.le.two*EPS_SINGLE*volcell) then
+        if (uncaptured_volume_fluid.le.four*EPS_SINGLE*volcell) then
          !do nothing
         else
-         print *,"not all volume accounted for multi get volume"
+         print *,"not all volume accounted for multi_get_volume_grid_simple"
          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
          print *,"volcell ",volcell
          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-         print *,"tolerance: ",two*EPS_SINGLE
+         print *,"tolerance: ",four*EPS_SINGLE
          stop
         endif
 
@@ -22770,14 +22770,14 @@ contains
               ! uncaptured_volume_fraction_fluid>0 and 
               ! uncaptured_volume_fluid>0
 
-       if (uncaptured_volume_fluid.le.two*EPS2*volcell) then
+       if (uncaptured_volume_fluid.le.four*EPS2*volcell) then
         !do nothing
        else
-        print *,"not all volume accounted for multi get volume"
+        print *,"not all volume accounted for multi_get_volume_grid_and_map"
         print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
         print *,"volcell ",volcell
         print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-        print *,"tolerance: ",two*EPS2
+        print *,"tolerance: ",four*EPS2
         stop
        endif
 

@@ -2537,7 +2537,7 @@ stop
                    (mdotY_bot.le.one)) then
            mdotY=mdotY_top/mdotY_bot
           else
-           print *,"mdotY_bot invalid"
+           print *,"mdotY_bot invalid: ",mdotY_bot
            stop
           endif
          else
@@ -7457,7 +7457,8 @@ stop
       real(amrex_real) :: K_f(0:1)
       real(amrex_real), INTENT(in) :: hardwire_Y_gamma(2*num_interfaces)
       real(amrex_real), INTENT(in) :: hardwire_T_gamma(2*num_interfaces)
-      real(amrex_real), INTENT(in) :: accommodation_coefficient(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: &
+        accommodation_coefficient(2*num_interfaces)
       real(amrex_real), INTENT(in) :: reference_pressure(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp_curv(2*num_interfaces)
