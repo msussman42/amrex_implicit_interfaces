@@ -1461,6 +1461,7 @@ void fortran_parameters() {
  NavierStokes::material_type_interface.resize(NavierStokes::num_interfaces);
 
  NavierStokes::conserve_total_energy=0;
+ pp.queryAdd("conserve_total_energy",NavierStokes::conserve_total_energy);
 
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
@@ -3164,6 +3165,7 @@ NavierStokes::read_params ()
     material_type_interface.resize(num_interfaces);
 
     conserve_total_energy=0;
+    pp.queryAdd("conserve_total_energy",conserve_total_energy);
 
     pp.getarr("material_type",material_type,0,num_materials);
     material_type_evap.resize(num_materials);
@@ -16458,7 +16460,7 @@ NavierStokes::allocate_flux_register(int operation_flag) {
   //   (i) unew^{f} in non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
   //   (iii) usolid in solid regions
- if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
+ if (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC) {
   ncfluxreg=AMREX_SPACEDIM;
  } else if (operation_flag==OP_ISCHEME_MAC) {  // advection
   ncfluxreg=AMREX_SPACEDIM*NFLUXSEM;

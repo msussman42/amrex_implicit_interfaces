@@ -12425,7 +12425,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 ! operation_flag=8  reserved for coupling terms in CROSSTERM
 !   (SEM_CELL_TO_MAC not called with 
 !    operation_flag==OP_UGRAD_COUPLING_MAC)
-! OP_U_COMP_CELL_MAC_TO_MAC (11)
+! OP_U_SEM_CELL_MAC_TO_MAC (11)
 ! operation_flag=11 unew^MAC=uold^MAC +(unew^cell-uold^cell)^{cell->MAC}
 ! SEM="spectral element method"
 ! CELL=Gauss-Legendre,Gauss-Legendre,Gauss-Legendre input data
@@ -12472,7 +12472,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        den, & 
        xface, & 
        ! Umac_old if OP_UMAC_PLUS_VISC_CELL_TO_MAC or 
-       !             OP_U_COMP_CELL_MAC_TO_MAC 
+       !             OP_U_SEM_CELL_MAC_TO_MAC 
        xgp, &  
        xcut, & 
        xp, &  ! holds amrsync if op==0,3,5,6,7,9,10,11
@@ -12843,7 +12843,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & !unew^CELL->MAC
-               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+               (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or. &
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
        if (ncomp_xgp.ne.1) then
@@ -13236,14 +13236,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              stop
             endif
            else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
-                    (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                    (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or. &
                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
              !if OP_UNEW_CELL_TO_MAC:
              !primary_vel_data="vel"=CURRENT_CELL_VEL_MF; 
              !if OP_UMAC_PLUS_VISC_CELL_TO_MAC:
              !primary_vel_data="vel"=idx_velcell;  (increment)
-             !if OP_U_COMP_CELL_MAC_TO_MAC:
+             !if OP_U_SEM_CELL_MAC_TO_MAC:
              !primary_vel_data="vel"=DELTA_CELL_VEL_MF; 
 
             if (nc.eq.1) then
@@ -13295,7 +13295,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif
 
            else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
-                    (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                    (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or. &
                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
 
             if (velbc_in(dir,side,scomp_bc).eq.REFLECT_EVEN) then
@@ -13704,7 +13704,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             endif
 
            else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
-                    (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                    (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or. &
                     (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then 
             if (simple_AMR_BC_flag.eq.0) then
              local_bctype(side)=bctype_tag
@@ -13781,12 +13781,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
 
           else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
-                   (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC).or. &
+                   (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC).or. &
                    (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC)) then
 
            if (nc.eq.1) then
             if (scomp.eq.dir) then
-              !if OP_U_COMP_CELL_MAC_TO_MAC:
+              !if OP_U_SEM_CELL_MAC_TO_MAC:
               !vel=primary_velfab=DELTA_CELL_VEL_MF
              local_data(isten+1)=vel(D_DECL(ic,jc,kc),scomp)
             else
@@ -13917,7 +13917,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                    (operation_flag.eq.OP_UGRAD_MAC).or. & !rate of strain
                    (operation_flag.eq.OP_ISCHEME_MAC).or. & !advection
                    (operation_flag.eq.OP_UGRAD_COUPLING_MAC).or. & !coupling
-                   (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
+                   (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then
            ! do nothing
           else
            print *,"operation_flag invalid24"
@@ -14101,7 +14101,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                    (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                    (operation_flag.eq.OP_UGRAD_MAC).or. & !rate of strain
                    (operation_flag.eq.OP_UGRAD_COUPLING_MAC).or. & !coupling
-                   (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then
+                   (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then
 
            do dir2=1,SDIM
             if ((index_opp(dir2).lt.fablo(dir2)).or. &
@@ -14511,7 +14511,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
             stop
            endif
 
-          else if (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC) then 
+          else if (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC) then 
 
            if (ncfluxreg.ne.SDIM) then
             print *,"ncfluxreg invalid8 ",ncfluxreg
@@ -14519,7 +14519,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
            endif
            if (spectral_loop.eq.0) then
 
-             !xgp=Umac_old if OP_U_COMP_CELL_MAC_TO_MAC
+             !xgp=Umac_old if OP_U_SEM_CELL_MAC_TO_MAC
             shared_face_value=xgp(D_DECL(ic,jc,kc),dcomp)+ &
               local_interp(isten+1)
 

@@ -954,7 +954,7 @@ void NavierStokes::avgDown_and_Copy_localMF(
   scomp_flux=0;
  } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)|| 
             (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)||
-	    (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
+	    (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=1;
@@ -1203,7 +1203,7 @@ void NavierStokes::interp_and_Copy_localMF(
   scomp_flux=0;
  } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)||
             (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)|| 
-	    (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
+	    (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC)) {
   ncomp_den=AMREX_SPACEDIM;
   ncomp_vel=AMREX_SPACEDIM;
   ncomp_flux=1;
@@ -2628,17 +2628,17 @@ void NavierStokes::increment_face_velocityALL(
  make_MAC_velocity_consistentALL();
 
   //  unew^{f} = 
-  //   (i) unew^{f} in incompressible non-solid regions
+  //   (i) unew^{f} in non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions
-  //   (iii) (unew^{c})^{c->f} in compressible regions.
-  //   (iv) usolid in solid regions
- if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
+  //   (iii) usolid in solid regions
+ if (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC) {
 
   if (enable_spectral==0) {
    //do nothing
   } else if (enable_spectral==1) {
   
    //ngrow,scomp,ncomp
+   //u^{c,n+1}-u^{c,n}
    minusALL(1,0,AMREX_SPACEDIM,DELTA_CELL_VEL_MF,ADVECT_REGISTER_MF);
 
   } else
@@ -2671,7 +2671,7 @@ void NavierStokes::increment_face_velocityALL(
 // OP_UNEW_USOL_MAC_TO_MAC unew^{f} = unew^{f} in fluid  (=usolid in solid)
 // OP_UMAC_PLUS_VISC_CELL_TO_MAC 
 //   unew^{f} = unew^{f} + beta * diffuse_register^{c->f}
-// OP_U_COMP_CELL_MAC_TO_MAC unew^{f} = 
+// OP_U_SEM_CELL_MAC_TO_MAC unew^{f} = 
 //   (i) unew^{f} in non-solid regions
 //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
 //   (iii) usolid in solid regions
@@ -2790,17 +2790,19 @@ void NavierStokes::increment_face_velocity(
    amrex::Error("beta invalid");
 
   // unew^{f} = 
-  //   (i) unew^{f} in incompressible non-solid regions
+  //   (i) unew^{f} in non-solid regions
   //   (ii) u^{f,save} + (unew^{c}-u^{c,save})^{c->f} in spectral regions 
-  //   (iii) (unew^{c})^{c->f} in compressible regions
-  //   (iv) usolid in solid regions
- } else if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) {
+  //   (iii) usolid in solid regions
+ } else if (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC) {
 
   if (enable_spectral==0) {
    //do nothing
   } else if (enable_spectral==1) {
 
+    //u^{c,n}
    debug_ngrow(ADVECT_REGISTER_MF,1,local_caller_string);
+
+    //u^{f,n}
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
     debug_ngrow(ADVECT_REGISTER_FACE_MF+dir,1,local_caller_string);
 
@@ -2904,10 +2906,10 @@ void NavierStokes::increment_face_velocity(
 
  if ((operation_flag==OP_UNEW_CELL_TO_MAC)||
      (operation_flag==OP_UMAC_PLUS_VISC_CELL_TO_MAC)||
-     (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC)) {
+     (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC)) {
 
-   //primary_vel_data=DELTA_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
-   //secondary_vel_data=CURRENT_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
+   //primary_vel_data=DELTA_CELL_VEL_MF if OP_U_SEM_CELL_MAC_TO_MAC
+   //secondary_vel_data=CURRENT_CELL_VEL_MF if OP_U_SEM_CELL_MAC_TO_MAC
 
   if (level<finest_level) {
    avgDown_and_Copy_localMF(
@@ -2946,16 +2948,20 @@ void NavierStokes::increment_face_velocity(
    MultiFab* Umac_old;
    MultiFab* U_old;
 
-   if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) { 
+   if (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC) { 
 
     if (enable_spectral==0) {
 
+      //u^{mac,n+1}
      Umac_old=&Umac_new;
+      //u^{cell,n+1}
      U_old=localMF[CURRENT_CELL_VEL_MF];
 
     } else if (enable_spectral==1) {
 
+      //u^{mac,n}
      Umac_old=localMF[ADVECT_REGISTER_FACE_MF+dir];
+      //u^{cell,n}
      U_old=localMF[ADVECT_REGISTER_MF];
 
     } else
@@ -3028,8 +3034,8 @@ void NavierStokes::increment_face_velocity(
        //  init_FSI_GHOST_MAC_MF_ALL(caller_string)
       FArrayBox& solfab=(*localMF[FSI_GHOST_MAC_MF+dir])[mfi];
 
-      //primary_vel_data=DELTA_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
-      //secondary_vel_data=CURRENT_CELL_VEL_MF if OP_U_COMP_CELL_MAC_TO_MAC
+      //primary_vel_data=DELTA_CELL_VEL_MF if OP_U_SEM_CELL_MAC_TO_MAC
+      //secondary_vel_data=CURRENT_CELL_VEL_MF if OP_U_SEM_CELL_MAC_TO_MAC
 
       FArrayBox& primary_velfab=(*localMF[primary_vel_data])[mfi];
       FArrayBox& secondary_velfab=(*localMF[secondary_vel_data])[mfi];
@@ -3076,7 +3082,7 @@ void NavierStokes::increment_face_velocity(
        &dir,
         //OP_UNEW_CELL_TO_MAC,OP_UNEW_USOL_MAC_TO_MAC,
 	//OP_UMAC_PLUS_VISC_CELL_TO_MAC, or
-	//OP_U_COMP_CELL_MAC_TO_MAC
+	//OP_U_SEM_CELL_MAC_TO_MAC
        &operation_flag, 
        &energyflag,
        &beta,
@@ -3144,7 +3150,7 @@ void NavierStokes::increment_face_velocity(
     ns_reconcile_d_num(LOOP_VEL_CELL_TO_MAC,"increment_face_velocity");
    } // tileloop
 
-   if (operation_flag==OP_U_COMP_CELL_MAC_TO_MAC) { 
+   if (operation_flag==OP_U_SEM_CELL_MAC_TO_MAC) { 
     // do nothing
    } else if ((operation_flag==OP_UNEW_CELL_TO_MAC)|| 
               (operation_flag==OP_UNEW_USOL_MAC_TO_MAC)|| 

@@ -1648,7 +1648,7 @@ void NavierStokes::advance_MAC_velocity(int project_option) {
  //      (u^{c,save} = *localMF[ADVECT_REGISTER_MF])
  //      (u^{f,save} = *localMF[ADVECT_REGISTER_FACE_MF+dir])
  // (iii) usolid in solid regions
- int operation_flag=OP_U_COMP_CELL_MAC_TO_MAC;  
+ int operation_flag=OP_U_SEM_CELL_MAC_TO_MAC;  
 
  Vector<blobclass> blobdata;
 

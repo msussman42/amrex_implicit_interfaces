@@ -4698,7 +4698,7 @@ END SUBROUTINE SIMP
        endif
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+               (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
        if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid"
         stop
@@ -5136,7 +5136,7 @@ END SUBROUTINE SIMP
              endif
             else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
                      (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                     (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+                     (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
              if (n.eq.1) then
               if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5269,7 +5269,7 @@ END SUBROUTINE SIMP
                   endif
                  else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
                       (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                      (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+                      (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
                   if (n.eq.1) then
                    if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                     fine_data=vel_fine(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -5472,7 +5472,7 @@ END SUBROUTINE SIMP
        endif
       else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-               (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+               (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
        if (ncomp_vel.ne.STATE_NCOMP_VEL) then
         print *,"ncomp_vel invalid"
         stop
@@ -5902,7 +5902,7 @@ END SUBROUTINE SIMP
                endif
               else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. & 
                        (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
-                       (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+                       (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
                if (n.eq.1) then
                 if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                  crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
@@ -6033,7 +6033,7 @@ END SUBROUTINE SIMP
                     endif
                    else if ((operation_flag.eq.OP_UNEW_CELL_TO_MAC).or. &
                       (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. &
-                      (operation_flag.eq.OP_U_COMP_CELL_MAC_TO_MAC)) then 
+                      (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
                     if (n.eq.1) then
                      if ((dir.ge.0).and.(dir.lt.AMREX_SPACEDIM)) then
                       crse_data=vel_crse(D_DECL(istrip,jstrip,kstrip),dir+1)
