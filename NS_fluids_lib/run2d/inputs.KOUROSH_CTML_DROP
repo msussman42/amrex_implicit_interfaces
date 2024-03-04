@@ -2,7 +2,7 @@
 max_step  = 200000    # maximum timestep
 #max_step  = 2    # maximum timestep
 
-stop_time = 10  
+stop_time = 10.0
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # 0=>XYZ, 1=> RZ
@@ -24,20 +24,27 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
 #ns.num_materials=4 # 1:liquid 2:air 3:ice 4:substrate axis_dir=3
 #ns.num_materials=4 # 1:liquid 2:air 3:lubricant 4:substrate axis_dir=0 or 2
-ns.num_materials=3 # 1:liquid 2:air 3:substrate axis_dir=1
-ns.num_species_var=0 #  no evaporation
+#ns.num_materials=3 # 1:liquid 2:air 3:substrate axis_dir=1 or
+ns.num_materials=4 # 1:liquid 2:air 3: ice 4:substrate axis_dir=1
+ns.num_species_var=1 #  num_species_var=1 if evaporation
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
+ns.MOFITERMAX_AFTER_PREDICT=0
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
-ns.continuous_mof=1 # 0=MOF 1=CMOF 
+ns.continuous_mof=0 # 0=MOF 1=CMOF 
+ns.vof_height_function=1
+ns.mof_decision_tree_learning=0 # 100x100
+# 0 - centroid furthest from uncaptured centroid
+# 1 - use MOF error
 ns.mof_error_ordering=0
 # water,air,ice,substrate axis_dir=3
 #ns.mof_ordering=0 0 0 1 
 # water,air,lubricant,substrate axis_dir=0 or 2
 #ns.mof_ordering=0 0 0 1 
-# water,air,substrate axis_dir=1
-ns.mof_ordering=0 0 1 
+# water,air,substrate axis_dir=1 or
+# water,air,ice,substrate axis_dir=1 
+ns.mof_ordering=0 0 0 1 
 
 # multigrid class
 mg.verbose = 0
@@ -127,7 +134,8 @@ ns.gravity        = 0.0   # cgs (compressible)
 
 #ns.tension=72.8 72.8 72.8 72.8 72.8 72.8 # axis_dir=3
 #ns.tension=72.8 24.8 128.6 34.0 72.8 61.2 # axis_dir=0,2
-ns.tension=72.8 128.6 72.8 # axis_dir=1  12,13,23
+#ns.tension=72.8 128.6 72.8 # axis_dir=1  12,13,23 or
+ns.tension=72.8 72.8 72.8 72.8 72.8 72.8 # axis_dir=1  12,13,14,23,24,34
 # contact angle for water drop on substrate: 140 degrees
 # theta=theta_{water,substrate}
 # sigma_{ws}+sigma_{aw}cos(theta) = sigma_{as}
@@ -138,11 +146,27 @@ ns.tension=72.8 128.6 72.8 # axis_dir=1  12,13,23
 # sigma_{lub,sub}+sigma_{lub,air}cos(theta)=sigma_{air,substrate}
 # sigma_{lub,sub}=72.8-34.0cos(70)=61.2
 #ns.stiffCP= 4.1855e+7  1.0e+7 2.108e+7 0.385e+7  # erg/(g K) axis_dir=0,2,3
-ns.stiffCP= 4.1855e+7  1.0e+7 0.385e+7  # erg/(g K) axis_dir=1
-ns.latent_heat = 0.0 -1.81e+5 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.saturation_temp = 0.0 1683 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.freezing_model=0 0 0 0 0 0 0 0 0 0 0 0
-ns.mass_fraction_id=0 0 0 0 0 0 0 0 0 0 0 0
+#ns.stiffCP= 4.1855e+7  1.0e+7 0.385e+7  # erg/(g K) axis_dir=1 or
+ns.stiffCP= 4.1855e+7  1.0e+7 2.03e+7 2.03e+7 # erg/(g K) axis_dir=1
+#1->2 (evaporation)
+#1->3
+#1->4
+#2->3
+#2->4
+#3->4
+#2->1
+#3->1 (melting)
+#4->1
+#3->2
+#4->2
+#4->3
+ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+ns.saturation_temp = 373.15 0.0 0.0 0.0 0.0 0.0 0.0 273.15 0.0 0.0 0.0 0.0
+ns.saturation_temp_min = 273.15 0.0 0.0 0.0 0.0 0.0 0.0 273.1499 0.0 0.0 0.0 0.0
+#evap: freezing_model=6 Palmore and Desjardins
+ns.freezing_model=6 0 0 0 0 0 0 0 0 0 0 0
+ns.Tanasawa_or_Schrage_or_Kassemi=0 0 0 0 0 0 0 0 0 0 0 0
+ns.mass_fraction_id=1 0 0 0 0 0 0 0 0 0 0 0
 #ns.fixed_dt	  = 0.01     # hardwire dt
 #There are over 300 oil parcels to have statistics for,
 #so recommended sum_interval>1
@@ -194,30 +218,39 @@ ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
 ns.num_divu_outer_sweeps=2
 #ns.material_type=0 0 0 999 # axis_dir=3 liquid,gas,ice,substrate
 #ns.material_type=0 0 0 999 # axis_dir=0 or 2 liquid,gas,oil,substrate
-ns.material_type=1 14 999 # axis_dir=1 1=EOS_tait 14=EOS_air_rho2
+#ns.material_type=1 14 999 # axis_dir=1 1=EOS_tait 14=EOS_air_rho2 or
+ns.material_type=1 14 0 999 # axis_dir=1 1=EOS_tait 14=EOS_air_rho2
+ns.reference_pressure=1.0e+6 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.accommodation_coefficient=1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 #thermal conductivity
 #ns.heatviscconst=58000.0 2400.0 218000.0 38600000.0 # axis_dir=0,2,3
-ns.heatviscconst=58000.0 2400.0 38600000.0 # axis_dir=1
+#ns.heatviscconst=58000.0 2400.0 38600000.0 # axis_dir=1 or
+ns.heatviscconst=58000.0 2400.0 2.2e+5 2.2e+5 # axis_dir=1
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
 #C_t + u dot grad C = div alpha laplacian C ?
-ns.speciesviscconst=0.0 0.0 0.0 0.0
-# 1=water 2=gas  3=oil  4=substrate 
-ns.speciesconst=0.0 0.0 0.0 0.0
+ns.speciesviscconst=0.1 0.1 0.1 0.1
+# 1=water 2=gas  3=oil  4=substrate  or
+# 1=water 2=gas  3=ice  4=substrate 
+ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3
 #1=water 2=gas  3=ice  4=substrate 
 #ns.viscconst=0.018 0.00017 10.0 10.0 # axis_dir=3
 #1=water 2=gas  3=oil  4=substrate 
 #ns.viscconst=0.018 0.00017 10.0 10.0 # axis_dir=0,2
-ns.viscconst=0.018 0.00017 10.0 # axis_dir=1
+#ns.viscconst=0.018 0.00017 10.0 # axis_dir=1 or
+ns.viscconst=0.018 0.00017 10.0 1000.0 # axis_dir=1 
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.elastic_time=0.0 0.0 0.0 0.0
 #ns.denconst=1.0 0.001 0.95 8.96 # axis_dir=0,2,3
-ns.denconst=1.0 0.001 8.96 # axis_dir=1
+#ns.denconst=1.0 0.001 8.96 # axis_dir=1 or
+ns.denconst=1.0 0.001 0.917 8.96 # axis_dir=1
 #ns.FSI_flag=0 0 3 1  # axis_dir=3
 #ns.FSI_flag=0 0 0 1  # axis_dir=0,2
-ns.FSI_flag=0 0 1  # axis_dir=1
+#ns.FSI_flag=0 0 1  # axis_dir=1 or
+#FSI_ICE_PROBF90=3 FSI_PRESCRIBED_PROBF90=1
+ns.FSI_flag=0 0 3 1  # axis_dir=1
 ns.recalesce_flag=0 0 0 0
 # solidheat_flag=0=>diffuse in solid 
 # solidheat_flag=1=>dirichlet  (must have heatvisc(im_solid)>0)
@@ -232,10 +265,11 @@ ns.solidheat_flag=0
 #"Ram Rise"=V^2/87^2   V=speed in knots.
 #temperature=-54 + V^2/87^2
 #liquid,gas,ice,solid
-ns.tempconst=273.0 273.0 353.0  #axis_dir=1
+#ns.tempconst=273.0 273.0 353.0  #axis_dir=1 or
+ns.tempconst=273.0 573.0 273.0 573.0  #axis_dir=1
 
 #ns.initial_temperature=1684.0 1684.0 200.0 200.0  # axis_dir=3
-ns.initial_temperature=273.0 273.0 273.0 273.0  # axis_dir=0,1,2
+ns.initial_temperature=273.0 573.0 273.0 273.0  # axis_dir=0,1,2
 #ns.xblob=0.0 # axis_dir=0 RZ
 ns.xblob=0.02  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
 ns.yblob=0.08  # vertical direction in 2D
