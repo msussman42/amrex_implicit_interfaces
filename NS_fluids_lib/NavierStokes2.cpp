@@ -3190,6 +3190,7 @@ void NavierStokes::project_to_rigid_velocityALL() {
 
  int tessellate=1;
  int operation_flag=OP_GATHER_MDOT;
+  //calling from: void NavierStokes::project_to_rigid_velocityALL() 
  ColorSumALL(
     operation_flag, // =OP_GATHER_MDOT
     tessellate, //=1

@@ -14696,7 +14696,7 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
 } // omp
  ns_reconcile_d_num(LOOP_SPECIES_REACTION,"level_species_reaction");
 
-} // subroutine level_species_reaction
+} // end subroutine level_species_reaction
 
 
 void
@@ -14906,6 +14906,7 @@ NavierStokes::phase_change_redistributeALL() {
  int idx_mdot_complement=JUMP_STRENGTH_COMPLEMENT_MF;
  int tessellate=3;
  int operation_flag=OP_GATHER_MDOT; 
+  //calling from: NavierStokes::phase_change_redistributeALL
  ColorSumALL(
   operation_flag, // =OP_GATHER_MDOT
   tessellate,  //=3
@@ -14925,6 +14926,7 @@ NavierStokes::phase_change_redistributeALL() {
 
  operation_flag=OP_SCATTER_MDOT; // scatter to mdot or density
 
+  //calling from: NavierStokes::phase_change_redistributeALL
  ColorSumALL(
   operation_flag, //=OP_SCATTER_MDOT
   tessellate,  //=3
@@ -23312,6 +23314,7 @@ NavierStokes::post_init_state () {
  int tessellate=1;
  int operation_flag=OP_GATHER_MDOT;
 
+  //calling from: NavierStokes::post_init_state()
  ColorSumALL(
   operation_flag, //=OP_GATHER_MDOT
   tessellate,  //=1
