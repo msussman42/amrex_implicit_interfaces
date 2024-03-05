@@ -161,6 +161,7 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.03e+7 2.03e+7 # erg/(g K) axis_dir=1
 #4->2
 #4->3
 ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
+#for evaporation (standard setup): 373.15
 ns.saturation_temp = 373.15 0.0 0.0 0.0 0.0 0.0 0.0 273.15 0.0 0.0 0.0 0.0
 ns.saturation_temp_min = 273.15 0.0 0.0 0.0 0.0 0.0 0.0 273.1499 0.0 0.0 0.0 0.0
 #evap: freezing_model=6 Palmore and Desjardins
@@ -271,10 +272,10 @@ ns.solidheat_flag=1
 #temperature=-54 + V^2/87^2
 #liquid,gas,ice,solid
 #ns.tempconst=273.0 273.0 353.0  #axis_dir=1 or
-ns.tempconst=273.0 573.0 273.0 573.0  #axis_dir=1
+ns.tempconst=273.0 273.0 273.0 573.0  #axis_dir=1
 
 #ns.initial_temperature=1684.0 1684.0 200.0 200.0  # axis_dir=3
-ns.initial_temperature=273.0 573.0 273.0 573.0  # axis_dir=0,1,2
+ns.initial_temperature=273.0 273.0 273.0 573.0  # axis_dir=0,1,2
 #ns.xblob=0.0 # axis_dir=0 RZ
 ns.xblob=0.02  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
 ns.yblob=0.08  # vertical direction in 2D
