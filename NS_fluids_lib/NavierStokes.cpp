@@ -5187,13 +5187,13 @@ NavierStokes::read_params ()
         if ((massfrac_id<1)||(massfrac_id>num_species_var))
          amrex::Error("massfrac_id invalid");
         if (LL>0.0) { //evaporation
-          spec_material_id_LIQUID[massfrac_id-1]=im_source;
-          spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
+         spec_material_id_LIQUID[massfrac_id-1]=im_source;
+         spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
 
-          if (material_type_interface[iten-1]==0) {
-	   // do nothing
-	  } else
-	   amrex::Error("material_type_interface[iten] invalid for evaporation");
+         if (material_type_interface[iten-1]==0) {
+          // do nothing
+         } else
+          amrex::Error("material_type_interface[iten-1] invalid for evap");
         } else if (LL<0.0) { // condensation
           spec_material_id_LIQUID[massfrac_id-1]=im_dest;
           spec_material_id_AMBIENT[massfrac_id-1]=im_source;

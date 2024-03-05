@@ -2267,7 +2267,8 @@ stop
       real(amrex_real), pointer :: cface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: maskfab(DIMV(maskfab),2)
       real(amrex_real), pointer :: maskfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in),target :: &
+              vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vofrecon_ptr(D_DECL(:,:,:),:)
 
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -2330,7 +2331,7 @@ stop
       integer is_processed(num_interfaces)
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
-      integer local_tessellate
+      integer, parameter :: local_tessellate=0
  
       if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
        print *,"tid invalid"
@@ -2340,7 +2341,7 @@ stop
       if ((tessellate.ne.0).and. &
           (tessellate.ne.1).and. &
           (tessellate.ne.3)) then
-       print *,"tessellate invalid1"
+       print *,"tessellate invalid1: ",tessellate
        stop
       endif
 
@@ -2468,7 +2469,6 @@ stop
         else if (im_crit.eq.0) then
 
          ! sum F_fluid=1  sum F_solid<=1
-         local_tessellate=0
          call make_vfrac_sum_ok_copy( &
            cmofsten, &
            xsten,nhalf, &
@@ -2580,7 +2580,7 @@ stop
                mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*EPS_3_2*dx(1)
        
                 ! solid case
-                ! in: FORT_CELLFACEINIT
+                ! in: fort_cellfaceinit
                 ! no need to compute multi_area here.
                 ! also, target volume is a cube, not a tet.
                 ! EPS2 
@@ -2714,9 +2714,14 @@ stop
                  print *,"multi_area(im)=",multi_area(im)
                  stop
                 endif
-
+               else if (multi_volume(im).eq.zero) then
+                ! do nothing
+               else if (abs(one- &
+                            multi_volume_offset(im)/multi_volume(im)).le. &
+                        EPS2) then
+                !do nothing
                else
-                print *,"im region should grow 3"
+                print *,"im region should grow (3)"
                 print *,"im=",im
                 print *,"multi_volume(im)=",multi_volume(im)
                 print *,"multi_volume_offset(im)=",multi_volume_offset(im)
@@ -2816,7 +2821,7 @@ stop
               mofdatavalid(vofcomp+2*SDIM+2)=intercept+half*EPS_3_2*dx(1)
 
                ! fluid case
-               ! in: FORT_CELLFACEINIT
+               ! in: fort_cellfaceinit
                ! EPS2
               call multi_get_volume_grid_simple( &
                EPS2, &
@@ -2986,7 +2991,7 @@ stop
                         EPS2) then
                 !do nothing
                else
-                print *,"im region should grow 4"
+                print *,"im region should grow (4)"
                 print *,"im= ",im
                 print *,"tessellate=",tessellate
                 print *,"uncaptured_volume_fraction=", &
@@ -3007,7 +3012,8 @@ stop
               else if (multi_volume(im).eq.zero) then
                if ((vcenter(im).gt.EPS2).and. &
                    (vfrac_solid_sum.eq.zero)) then
-                print *,"multi_volume(im) shouldnt be zero: ",im,multi_volume(im)
+                print *,"multi_volume(im) shouldnt be zero: ", &
+                     im,multi_volume(im)
                 print *,"im,vcenter(im) ",im,vcenter(im)
                 print *,"vfrac_solid_sum ",vfrac_solid_sum
                 stop
@@ -7994,7 +8000,7 @@ stop
       integer local_im_solid_primary
       integer ispec
       real(amrex_real) massfrac_parm(num_species_var+1)
-      integer local_tessellate
+      integer, parameter :: local_tessellate=3
 
       real(amrex_real) local_cenvisc
       real(amrex_real) local_cenden
@@ -10136,7 +10142,6 @@ stop
         enddo
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
-        local_tessellate=3
          !EPS2
         call multi_get_volume_tessellate( &
          local_tessellate, & ! =3
