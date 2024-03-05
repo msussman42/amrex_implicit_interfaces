@@ -1,4 +1,3 @@
-#include <algorithm>
 #include <vector>
 
 #include <cstdio>
@@ -4065,12 +4064,6 @@ NavierStokes::read_params ()
         } else
          amrex::Error("ireverse invalid");
 
-        if ((material_type[im_source-1]==0)&&
-            (material_type[im_dest-1]==0)) {
-         // do nothing
-        } else
-         amrex::Error("comp. divu source term model for phase change invalid");
-
 	 // if freezing, we want distribute_from_target (from ice) to
 	 // be 1 since the ice is modeled as a rigid material; need
 	 // to account for expansion in the liquid.
@@ -4302,6 +4295,42 @@ NavierStokes::read_params ()
        amrex::Error("preset flag invalid");
      } // im_opp=im+1;im_opp<num_materials;im_opp++
     } // im=0;im<num_materials;im++
+
+    for (int iten=0;iten<num_interfaces;iten++) {
+     for (int ireverse=0;ireverse<2;ireverse++) {
+      int iten_local=ireverse*num_interfaces+iten;
+      if (freezing_model[iten_local]>=0) {
+
+       Real LL=get_user_latent_heat(iten_local+1,293.0,1);
+       if (LL!=0.0) {
+        int im1=0;
+        int im2=0;
+        int im_source=0;
+        int im_dest=0;
+	 // get_inverse_iten_cpp declared in NavierStokes2.cpp
+	 // 1<=im1<im2<=num_materials
+        get_inverse_iten_cpp(im1,im2,iten+1);
+        if (ireverse==0) {
+         im_source=im1;  
+         im_dest=im2;  
+        } else if (ireverse==1) {
+         im_source=im2;  
+         im_dest=im1;  
+        } else
+         amrex::Error("ireverse invalid");
+
+        if (material_type_interface[iten]==0) {
+         // do nothing
+        } else
+         amrex::Error("comp. divu source term model for phase change invalid");
+       } else if (LL==0.0) {
+        //do nothing
+       } else
+        amrex::Error("latent_heat (LL) invalid");
+      } else
+       amrex::Error("freezing_model invalid");
+     } // ireverse
+    } // iten
 
 
     for (int im=0;im<num_materials;im++) {
@@ -5161,11 +5190,10 @@ NavierStokes::read_params ()
           spec_material_id_LIQUID[massfrac_id-1]=im_source;
           spec_material_id_AMBIENT[massfrac_id-1]=im_dest;
 
-          if (material_type[im_dest-1]==0) {
+          if (material_type_interface[iten-1]==0) {
 	   // do nothing
 	  } else
-	   amrex::Error("material_type[im_dest-1] invalid for evaporation");
-
+	   amrex::Error("material_type_interface[iten] invalid for evaporation");
         } else if (LL<0.0) { // condensation
           spec_material_id_LIQUID[massfrac_id-1]=im_dest;
           spec_material_id_AMBIENT[massfrac_id-1]=im_source;
