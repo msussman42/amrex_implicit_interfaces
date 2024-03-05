@@ -2251,6 +2251,7 @@ NavierStokes::sum_integrated_quantities (
   int operation_flag=OP_GATHER_MDOT;
 
    // declared in NavierStokes3.cpp
+   // calling from: NavierStokes::sum_integrated_quantities()
   ColorSumALL(
     operation_flag, // =OP_GATHER_MDOT
     tessellate, // =1

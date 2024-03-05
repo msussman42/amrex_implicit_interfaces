@@ -2107,6 +2107,7 @@ void NavierStokes::nucleation_code_segment(
  int operation_flag=OP_GATHER_MDOT;
  int coarsest_level=0;
 
+  //calling from: NavierStokes::nucleation_code_segment()
  ColorSumALL( 
    operation_flag, //=OP_GATHER_MDOT
    tessellate, //=1
@@ -3023,8 +3024,9 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         int local_tessellate=3;
         int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
 
-         // for each blob, find sum_{F>=1/2} pressure * vol and
+        // for each blob, find sum_{F>=1/2} pressure * vol and
 	// sum_{F>=1/2} vol.
+        // calling from: NavierStokes::do_the_advance()
         ColorSumALL(
          operation_flag, // =OP_GATHER_MDOT
          local_tessellate, //=3
@@ -9474,6 +9476,7 @@ void NavierStokes::multiphase_project(int project_option) {
 
   int tessellate=1;
   int operation_flag=OP_GATHER_MDOT;
+   //calling from: NavierStokes::multiphase_project
   ColorSumALL(
      operation_flag, // =OP_GATHER_MDOT
      tessellate, //=1
