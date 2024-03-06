@@ -281,6 +281,7 @@ ns.xblob=0.02  # axis_dir=1,2,3 (0<x<0.4 0<y<0.6)
 ns.yblob=0.08  # vertical direction in 2D
 ns.zblob=0.08
 ns.radblob=0.01  #cm (medium supercooled droplets)
+ns.radblob2=0.008
 #axis_dir=0,1,2
 #ns.zblob2=0.1    #zblob2 is the altitude of the oil layer
 #axis_dir=3

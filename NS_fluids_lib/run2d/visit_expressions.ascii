@@ -6,8 +6,8 @@
 6. Type: Vector mesh variable
 7. "Show variable in plot menus"
 8. Definition:
-   {x_velocity01,y_velocity01} or
-   {x_velocity01,y_velocity01,z_velocity01}
+   {x_velocity,y_velocity} or
+   {x_velocity,y_velocity,z_velocity}
 9. "save": "u_vector"
 10. Apply
 11. to plot vector field: "Add","Vector", "u_vector"
