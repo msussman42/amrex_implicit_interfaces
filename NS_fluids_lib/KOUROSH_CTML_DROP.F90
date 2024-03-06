@@ -126,7 +126,7 @@ if (probtype.eq.426) then
   !do nothing
  else if (axis_dir.eq.1) then
   if (fort_material_type(2).eq.0) then
-   !do nothing
+   !do nothing (incompressible gas case)
   else if (fort_material_type(2).ge.1) then
    ptb_dist_low=0.02d0
    ptb_dist_high=0.02d0
@@ -347,7 +347,8 @@ if (probtype.eq.426) then
    !do nothing
   else if (num_materials.eq.4) then !water,air,ice,substrate
 
-   if (radblob.gt.radblob2) then
+   if ((radblob.gt.radblob2).and. &
+       (radblob2.gt.zero)) then
     ! do nothing
    else
     print *,"radblob or radblob2 invalid: ",radblob,radblob2
