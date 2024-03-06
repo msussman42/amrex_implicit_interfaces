@@ -122,9 +122,19 @@ if (probtype.eq.426) then
 
  ptb_dist_low=0.05d0
  ptb_dist_high=0.1d0
- if ((axis_dir.eq.0).or. &
-     (axis_dir.eq.1).or. &
-     (axis_dir.eq.2)) then
+ if (axis_dir.eq.0) then
+  !do nothing
+ else if (axis_dir.eq.1) then
+  if (fort_material_type(2).eq.0) then
+   !do nothing
+  else if (fort_material_type(2).ge.1) then
+   ptb_dist_low=0.02d0
+   ptb_dist_high=0.02d0
+  else
+   print *,"fort_material_type(2) invalid"
+   stop
+  endif
+ else if (axis_dir.eq.2) then
   ! do nothing
  else if (axis_dir.eq.3) then
   ptb_dist_low=ptb_dist_high
