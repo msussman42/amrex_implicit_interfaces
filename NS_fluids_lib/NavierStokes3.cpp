@@ -3834,7 +3834,6 @@ void NavierStokes::assign_colors(
  } else
   amrex::Error("zero_diag_flag invalid");
 
- int ipass_max=2;  
  int typedim=type_flag.size();
  if (typedim!=ncomp_type)
   amrex::Error("typedim invalid");
@@ -3872,7 +3871,7 @@ void NavierStokes::assign_colors(
   // 0<=grid_no<num_grids
   // 2nd pass, replace color_num with max_colors_grid*grid_no+color_num
   // no tiling on this loop.
- for (int ipass=0;ipass<ipass_max;ipass++) {
+ for (int ipass=0;ipass<2;ipass++) {
 
   if (thread_class::nthreads<1)
    amrex::Error("thread_class::nthreads invalid");
@@ -3959,15 +3958,14 @@ void NavierStokes::assign_colors(
   } // ipass==0
 
 
- } // ipass
+ } // ipass=0 to 1
 
- if (ipass_max==2) {
    // max_colors_grid_array[0]==0 if this level is completely covered
-  if (max_colors_grid_array[0]==0) {
+ if (max_colors_grid_array[0]==0) {
    fully_covered=1;
    if (level==finest_level)
     amrex::Error("max_colors_grid_array[0]==0 on finest_level");
-  } else if (max_colors_grid_array[0]>=1) {
+ } else if (max_colors_grid_array[0]>=1) {
    int check_corners=1;
    sync_colors(idx_color,idx_type,
     color_per_grid_array[0],
@@ -3975,10 +3973,8 @@ void NavierStokes::assign_colors(
     max_colors_grid_array[0],
     maskmf,check_corners,
     zero_diag_flag);
-  } else
-   amrex::Error("max_colors_grid_array[0] invalid");
  } else
-  amrex::Error("ipass_max invalid");
+   amrex::Error("max_colors_grid_array[0] invalid");
   
  delete maskmf;
 } // subroutine assign_colors
