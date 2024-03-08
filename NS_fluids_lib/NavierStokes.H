@@ -1021,36 +1021,20 @@ protected:
       int& grids_per_level,
       BoxArray& cgrids_minusBA);
 
-    typedef std::vector< std::vector<bool> > bool_2d_array;
-    typedef std::vector< std::vector<unsigned long long> > Long_2d_array;
-
-    void push_stack(Long_2d_array& stackdata,
-	    unsigned long long& stackptr_i,
-	    unsigned long long& stackptr_j,
-	    unsigned long long& data);
-    void pop_stack(Long_2d_array& stackdata,
-	    unsigned long long& stackptr_i,
-	    unsigned long long& stackptr_j,
-	    unsigned long long& data);
+    void push_stack(
+       Vector<int>& stackdata,
+       int& stackptr,
+       int& data);
+    void pop_stack(
+       Vector<int>& stackdata,
+       int& stackptr,
+       int& data);
+		    
     void cross_check(
        Vector<int>& levelcolormap,
-       Long_2d_array& stackdata,
-       bool_2d_array& grid_color,
-       unsigned long long i);
-
-    void push_stack1D(
-	Vector<int>& stackdata1D,
-        unsigned long long& stackptr_i,
-        int& data);
-    void pop_stack1D(
-        Vector<int>& stackdata1D,
-        unsigned long long& stackptr_i,
-        int& data);
-    void cross_check1D(
-       Vector<int>& levelcolormap,
-       Vector<int>& stackdata1D,
-       std::vector<bool>& grid_color,
-       unsigned long long i);
+       Vector<int>& stackdata,
+       Vector< Vector<int> >& grid_color,
+       int i);
 
     void adjust_tolerance(Real error0,Real& error0_max,
       int project_option);
