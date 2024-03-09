@@ -4081,28 +4081,19 @@ void NavierStokes::sync_colors(
 
  Vector< Vector< Vector<int> > > grid_color_array;
  grid_color_array.resize(thread_class::nthreads);
-
-// COLORING LOOP
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- int tid=ns_thread();
-
- grid_color_array[tid].resize(Nside);
- for (int i=0;i<Nside;i++) {
-  grid_color_array[tid][i].resize(0);
- }
-  
-   // set the diagonal of grid_color_array
- for (int igrid=0;igrid<number_grids;igrid++) {
-  for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   int i=max_colors_grid*igrid+icolor-1;
-   grid_color_array[tid][i].resize(1);
-   grid_color_array[tid][i][0]=i;
-  } // icolor
- } // igrid
-} // omp
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  grid_color_array[tid].resize(Nside);
+  for (int i=0;i<Nside;i++) {
+   grid_color_array[tid][i].resize(0);
+  }
+  for (int igrid=0;igrid<number_grids;igrid++) {
+   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
+    int i=max_colors_grid*igrid+icolor-1;
+    grid_color_array[tid][i].resize(1);
+    grid_color_array[tid][i][0]=i;
+   } // icolor
+  } // igrid
+ } //tid
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -4246,22 +4237,24 @@ void NavierStokes::sync_colors(
   // first reduce grid_color_array from the different threads
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   unsigned long long i_index=max_colors_grid*igrid+icolor-1;
+   int i_index=max_colors_grid*igrid+icolor-1;
 
-   for (int jgrid=0;jgrid<number_grids;jgrid++) {
-    for (int jcolor=1;jcolor<=color_per_grid[jgrid];jcolor++) {
-
-     unsigned long long j_index=max_colors_grid*jgrid+jcolor-1;
-
-     for (int tid=0;tid<thread_class::nthreads;tid++) {
-      int tempbit=grid_color_array[tid][i_index][j_index];
-      if ((tempbit!=0)&&(tempbit!=1))
-       amrex::Error("bits can only be 0 or 1");
-      if (tempbit==1)
-       grid_color_array[0][i_index][j_index]=true;
-     }  // tid
-    }  // jcolor
-   } // jgrid
+   for (int tid=0;tid<thread_class::nthreads;tid++) {
+    int i_size=grid_color_array[tid][i_index].size();
+    for (int i_trial=0;i_trial<i_size;i_trial++) {
+     int j_index=grid_color_array[tid][i_index][i_trial];
+     int dup_flag=0;
+     int base_size=grid_color_array[0][i_index].size();
+     for (int idup=0;idup<base_size;idup++) {
+      if (grid_color_array[0][i_index][idup]==j_index)
+       dup_flag=1;
+     }
+     if (dup_flag==0) {
+      grid_color_array[0][i_index].resize(base_size+1);
+      grid_color_array[0][i_index][base_size]=j_index;
+     }
+    } //i_trial
+   } //tid
   } // icolor
  } // igrid
 
@@ -4269,25 +4262,39 @@ void NavierStokes::sync_colors(
 
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
-   unsigned long long i_index=max_colors_grid*igrid+icolor-1;
+   int i_index=max_colors_grid*igrid+icolor-1;
+
+   Vector<int> local_array;
+   local_array.resize(Nside);
+   for (int j_index=0;j_index<Nside;j_index++)
+    local_array[j_index]=0;
+   int i_size=grid_color_array[0][i_index].size();
+   for (int i_trial=0;i_trial<i_size;i_trial++) {
+    int j_index=grid_color_array[0][i_index][i_trial];
+    local_array[j_index]=1;
+   }
+
+   grid_color_array[0][i_index].resize(0);
+
+   ParallelDescriptor::Barrier();
 
    for (int jgrid=0;jgrid<number_grids;jgrid++) {
     for (int jcolor=1;jcolor<=color_per_grid[jgrid];jcolor++) {
 
-     unsigned long long j_index=max_colors_grid*jgrid+jcolor-1;
+     int j_index=max_colors_grid*jgrid+jcolor-1;
 
-     int tempbit=grid_color_array[0][i_index][j_index];
-     if ((tempbit!=0)&&(tempbit!=1))
-      amrex::Error("bits can only be 0 or 1");
-     ParallelDescriptor::ReduceIntMax(tempbit);
-     if (tempbit==0)
-      grid_color_array[0][i_index][j_index]=false;
-     else if (tempbit==1)
-      grid_color_array[0][i_index][j_index]=true;
-     else
-      amrex::Error("tempbit invalid");
+     ParallelDescriptor::ReduceIntMax(local_array[j_index]);
+     if (local_array[j_index]==0) {
+      //do nothing
+     } else if (local_array[j_index]==1) {
+      int i_size=grid_color_array[0][i_index].size();
+      grid_color_array[0][i_index].resize(i_size+1);
+      grid_color_array[0][i_index][i_size]=j_index;
+     } else
+      amrex::Error("local_array[j_index] invalid");
     }  // jcolor
    } // jgrid
+     
   } // icolor
  } // igrid
  ParallelDescriptor::Barrier();
@@ -4614,7 +4621,7 @@ void NavierStokes::sync_colors(
    ns_reconcile_d_num(LOOP_LEVELCOLORINIT,"sync_colors");
 
    delete fine_coarse_color;
-
+FIX ME
    for (int tid=1;tid<thread_class::nthreads;tid++) {
     for (unsigned long long i=0;i<arrsize2;i++) {
      if (level_color_array[tid][i]>level_color_array[0][i])
