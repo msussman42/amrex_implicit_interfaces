@@ -4152,15 +4152,15 @@ void NavierStokes::sync_colors(
       for (int ii=-1;ii<=1;ii++)
       for (int jj=-1;jj<=1;jj++)
       for (int kk=-1;kk<=1;kk++) {
-       IntVect pofs(i+ii,j+jj,k+kk);
        int idist=std::abs(ii)+std::abs(jj)+std::abs(kk);
 #endif
 #if (AMREX_SPACEDIM==2)
       for (int ii=-1;ii<=1;ii++)
       for (int jj=-1;jj<=1;jj++) {
-       IntVect pofs(i+ii,j+jj);
        int idist=std::abs(ii)+std::abs(jj);
 #endif
+       IntVect pofs(D_DECL(i+ii,j+jj,k+kk));
+
        if ((check_corners==1)||(idist<=1)) {
 
         unsigned long long jcolor=(int) (colorfab(pofs)+0.5);
@@ -4403,9 +4403,8 @@ FIX ME
    if (colormax[level]>max_colors_level)
     max_colors_level=colormax[level];
    int arrsize=2*max_colors_level;
-   unsigned long long arrsize2=arrsize*arrsize;
 
-   Vector< Vector<int> > level_color_array;
+   Vector< Vector< Vector<int> > > level_color_array;
    level_color_array.resize(thread_class::nthreads);
 
 // COLORING LOOP
@@ -4414,16 +4413,16 @@ FIX ME
 #endif
 {
    int tid=ns_thread();
-   level_color_array[tid].resize(arrsize2);
-   for (unsigned long long i=0;i<arrsize2;i++)
-    level_color_array[tid][i]=0;  // false
+   level_color_array[tid].resize(arrsize);
+   for (int i=0;i<arrsize;i++)
+    level_color_array[tid][i].resize(0);
 
      // set the diagonal of level_color
    for (int ilevel=0;ilevel<=1;ilevel++) {
     for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
-     unsigned long long i=max_colors_level*ilevel+icolor-1;
-     unsigned long long k=2*max_colors_level*i+i;
-     level_color_array[tid][k]=1;  // true
+     int i=max_colors_level*ilevel+icolor-1;
+     level_color_array[tid][i].resize(1);
+     level_color_array[tid][i][0]=i;
     }
    } // ilevel
 } // omp
@@ -4432,7 +4431,6 @@ FIX ME
     amrex::Error("thread_class::nthreads invalid");
    thread_class::init_d_numPts(typemf->boxArray().d_numPts());
 
-   FIX ME MIGRATE TO ARRAY4
     // level_color_array[i][j]=1 if color i neighbors color j and
     // the mask of one of them is 1.
 // COLORING LOOP
@@ -4445,10 +4443,10 @@ FIX ME
     const int gridno = mfi.index();
     const Box& tilegrid = mfi.tilebox();
     const Box& fabgrid = grids[gridno];
+    const int* lo = fabgrid.loVect();
+    const int* hi = fabgrid.hiVect();
     const int* tilelo=tilegrid.loVect();
     const int* tilehi=tilegrid.hiVect();
-    const int* fablo=fabgrid.loVect();
-    const int* fabhi=fabgrid.hiVect();
     int bfact=parent->Space_blockingFactor(level);
     const Real* xlo = grid_loc[gridno].lo();
 
@@ -4459,6 +4457,49 @@ FIX ME
 
     FArrayBox& maskfab=(*maskmf)[mfi];
     FArrayBox& colorfab=(*fine_coarse_color)[mfi];
+
+#if (AMREX_SPACEDIM==3)
+    for (int i=lo[0];i<=hi[0];i++)
+    for (int j=lo[1];j<=hi[1];j++)
+    for (int k=lo[2];k<=hi[2];k++) {
+#endif
+#if (AMREX_SPACEDIM==2)
+    for (int i=lo[0];i<=hi[0];i++)
+    for (int j=lo[1];j<=hi[1];j++) {
+#endif
+     for (int nbase=1;nbase<=3;nbase++) {
+      IntVect p0(D_DECL(i,j,k),2*nbase-2);
+      int icolor=(int) colorfab(p0);
+      IntVect p1(D_DECL(i,j,k),2*nbase-1);
+      int base_type=(int) colorfab(p1);
+      IntVect p(D_DECL(i,j,k));
+      int local_mask=(int) maskfab(p);
+      if ((icolor>0)||(local_mask==0)) {
+       //do nothing
+      } else {
+       amrex::Error("icolor>0 || local_mask==0 failed");
+
+      if (icolor>0) {
+       if (local_mask==0) {
+        icolor+=max_colors_level;
+       } else if (local_mask==1) {
+        //do nothing
+       } else
+        amrex::Error("local_mask invalid");
+
+#if (AMREX_SPACEDIM==3)
+       for (int ii=-1;ii<=1;ii++)
+       for (int jj=-1;jj<=1;jj++)
+       for (int kk=-1;kk<=1;kk++) {
+        int idist=std::abs(ii)+std::abs(jj)+std::abs(kk);
+#endif
+#if (AMREX_SPACEDIM==2)
+       for (int ii=-1;ii<=1;ii++)
+       for (int jj=-1;jj<=1;jj++) {
+        int idist=std::abs(ii)+std::abs(jj);
+#endif
+       IntVect pofs(D_DECL(i+ii,j+jj,k+kk));
+
      // in: LEVELSET_3D.F90
     fort_levelcolorinit(
      maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
