@@ -144,17 +144,6 @@ namespace amrex{
      int* color_per_grid,const int* gridno,int* max_colors_grid,
      int* typedim);
 
-    void fort_levelcolorinit(
-     Real* mask,AMREX_ARLIM_P(masklo),AMREX_ARLIM_P(maskhi),
-     Real* color,AMREX_ARLIM_P(colorlo),AMREX_ARLIM_P(colorhi),
-     const Real* xlo,const Real* dx,
-     const int* tilelo,const int* tilehi,
-     const int* fablo,const int* fabhi,
-     int* bfact,
-     int* level_color,
-     int* max_colors_level,
-     int* arrsize,int* check_corners);
-
     void fort_avgdowncolor(
      const Real* prob_lo,
      const Real* dxf,
