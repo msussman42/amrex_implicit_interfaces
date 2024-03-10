@@ -4388,7 +4388,8 @@ void NavierStokes::sync_colors(
 
  if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "after cross_check \n";
+   std::cout << "after first cross_check: level,ngrids,n_assoc " <<
+	   level << ' ' << number_grids << ' ' << n_assoc << '\n';
   }
  }
 
@@ -4771,6 +4772,15 @@ void NavierStokes::sync_colors(
   for (int tid=0;tid<thread_class::nthreads;tid++) {
    level_color_array[tid].resize(1);
   }
+
+ if (verbose>0) {
+  if (ParallelDescriptor::IOProcessor()) {
+   std::cout << "after 2nd cross_check: level,max_colors_level,n_assoc " <<
+     level << ' ' << max_colors_level << ' ' << n_assoc << '\n';
+  }
+ }
+
+
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    colormax[ilev]=total_colors;
