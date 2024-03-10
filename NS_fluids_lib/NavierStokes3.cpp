@@ -3580,8 +3580,8 @@ void NavierStokes::cross_check(
 
   if (levelcolormap[j]==0) {
    levelcolormap[j]=levelcolormap[i];
-   if (levelcolormap[j]<1)
-    amrex::Error("levelcolormap invalid");
+   if ((levelcolormap[j]<1)||(levelcolormap[j]>levelcolormap.size()))
+    amrex::Error("levelcolormap[j] invalid");
 
    for (int jj=0;jj<grid_color[j].size();jj++) {
     push_stack(stackdata,stackptr,grid_color[j][jj]);
@@ -3599,8 +3599,12 @@ void NavierStokes::correct_colors(
  int max_colors_level) {
 
  int finest_level=parent->finestLevel();
- if (base_level>=finest_level)
+
+ if ((base_level>=0)&&(base_level<finest_level)) {
+  //do nothing
+ } else
   amrex::Error("base_level invalid");
+
  const Real* dx = geom.CellSize();
 
  MultiFab* colormf=localMF[idx_color];
@@ -4136,9 +4140,18 @@ void NavierStokes::sync_colors(
    IntVect p(D_DECL(i,j,k));
 
    if (maskfab(p)==1.0) {
-    int icolor=(int) (colorfab(p)+0.5);
-    int primary_type=(int) (typefab(p)+0.5);
-    if (icolor>0) {
+    int icolor_round=(int) (colorfab(p)+0.5);
+    int icolor_trunc=(int) (colorfab(p));
+    int primary_type_round=(int) (typefab(p)+0.5);
+    int primary_type_trunc=(int) (typefab(p));
+
+    if ((icolor_round==icolor_trunc)&&
+        (primary_type_round==primary_type_trunc)) {
+     //do nothing
+    } else
+     amrex::Error("expecting round=trunc");
+
+    if (icolor_round>0) {
 #if (AMREX_SPACEDIM==3)
      for (int ii=-1;ii<=1;ii++)
      for (int jj=-1;jj<=1;jj++)
@@ -4154,12 +4167,20 @@ void NavierStokes::sync_colors(
 
       if ((check_corners==1)||(idist<=1)) {
 
-       int jcolor=(int) (colorfab(pofs)+0.5);
+       int jcolor_round=(int) (colorfab(pofs)+0.5);
+       int jcolor_trunc=(int) (colorfab(pofs));
        int mask2=(int) maskfab(pofs); 
-       int secondary_type=(int) (typefab(pofs)+0.5);
+       int secondary_type_round=(int) (typefab(pofs)+0.5);
+       int secondary_type_trunc=(int) (typefab(pofs));
+       if ((jcolor_round==jcolor_trunc)&&
+           (secondary_type_round==secondary_type_trunc)) {
+        //do nothing
+       } else
+        amrex::Error("expecting round=trunc");
+
        if (mask2==1) {
 
-        if (jcolor<=0) {
+        if (jcolor_round<=0) {
          std::cout << "level= " << level << '\n';
          std::cout << "ii,jj= " << ii << ' ' << jj << '\n';
          std::cout << "i,j= " << i << ' ' << j << '\n';
@@ -4169,41 +4190,45 @@ void NavierStokes::sync_colors(
           std::cout << "dir,lo,hi " << dir2 << ' ' <<
            lo[dir2] << ' ' << hi[dir2] << '\n';
          }
-         std::cout << "jcolor = " << jcolor << '\n';
-         amrex::Error("jcolor invalid"); 
+         std::cout << "jcolor_round = " << jcolor_round << '\n';
+         amrex::Error("jcolor_round invalid"); 
         } // jcolor<=0
 	   
-        if (secondary_type==primary_type) {
+        if (secondary_type_round==primary_type_round) {
 
-         if ((icolor>Nside)||(jcolor>Nside))
+         if ((icolor_round>Nside)||(jcolor_round>Nside))
           amrex::Error("icolor or jcolor invalid"); 
 
-	 if (icolor!=jcolor) {
+	 if (icolor_round!=jcolor_round) {
 
-	  int size_i=grid_color_array[tid_current][icolor-1].size();
-	  int size_j=grid_color_array[tid_current][jcolor-1].size();
+	  int size_i=grid_color_array[tid_current][icolor_round-1].size();
+	  int size_j=grid_color_array[tid_current][jcolor_round-1].size();
 
 	  if ((size_i>=1)&&(size_j>=1)) {
 
   	   int dup_flag=0;
 	   for (int idup=0;idup<size_i;idup++) {
- 	    if (grid_color_array[tid_current][icolor-1][idup]==jcolor-1)
+ 	    if (grid_color_array[tid_current][icolor_round-1][idup]==
+			    jcolor_round-1)
 	     dup_flag=1;
 	   }
 	   for (int idup=0;idup<size_j;idup++) {
- 	    if (grid_color_array[tid_current][jcolor-1][idup]==icolor-1)
+ 	    if (grid_color_array[tid_current][jcolor_round-1][idup]==
+			    icolor_round-1)
 	     dup_flag=1;
 	   }
            if (dup_flag==0) {
-            grid_color_array[tid_current][icolor-1].resize(size_i+1);
-            grid_color_array[tid_current][icolor-1][size_i]=jcolor-1;
-            grid_color_array[tid_current][jcolor-1].resize(size_j+1);
-            grid_color_array[tid_current][jcolor-1][size_j]=icolor-1;
+            grid_color_array[tid_current][icolor_round-1].resize(size_i+1);
+            grid_color_array[tid_current][icolor_round-1][size_i]=
+		    jcolor_round-1;
+            grid_color_array[tid_current][jcolor_round-1].resize(size_j+1);
+            grid_color_array[tid_current][jcolor_round-1][size_j]=
+		    icolor_round-1;
 	   }
 	  } else
 	   amrex::Error("size_i or size_j invalid");
 
-	 } else if (icolor==jcolor) {
+	 } else if (icolor_round==jcolor_round) {
 	  //do nothing
 	 } else
   	  amrex::Error("icolor or jcolor bust");
@@ -4266,6 +4291,8 @@ void NavierStokes::sync_colors(
  for (int igrid=0;igrid<number_grids;igrid++) {
   for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
    int i_index=max_colors_grid*igrid+icolor-1;
+
+   ParallelDescriptor::Barrier();
 
    Vector<int> local_array;
    local_array.resize(Nside);
@@ -4365,13 +4392,9 @@ void NavierStokes::sync_colors(
   }
  }
 
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
- int tid=ns_thread();
- grid_color_array[tid].resize(1);
-} // omp
+ for (int tid=0;tid<thread_class::nthreads;tid++) {
+  grid_color_array[tid].resize(1);
+ }
 
  ParallelDescriptor::Barrier();
 
@@ -4394,7 +4417,6 @@ void NavierStokes::sync_colors(
  // switches from local coloring scheme on the level to a global
  // coloring scheme on the level.
 
-// COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
@@ -4511,19 +4533,27 @@ void NavierStokes::sync_colors(
 
      IntVect p(D_DECL(i,j,k));
 
-     int icolor=(int) colorfab(p,2*nbase-2);
-     int base_type=(int) colorfab(p,2*nbase-1);
+     int icolor_round=(int) (colorfab(p,2*nbase-2)+0.5);
+     int icolor_trunc=(int) (colorfab(p,2*nbase-2));
+     int base_type_round=(int) (colorfab(p,2*nbase-1)+0.5);
+     int base_type_trunc=(int) (colorfab(p,2*nbase-1));
+     if ((icolor_round==icolor_trunc)&&
+         (base_type_round==base_type_trunc)) {
+      //do nothing
+     } else
+      amrex::Error("expecting round=trunc");
+
      int local_mask=(int) maskfab(p);
 
-     if ((icolor>0)||(local_mask==0)) {
+     if ((icolor_round>0)||(local_mask==0)) {
       //do nothing
      } else {
-      amrex::Error("icolor>0 || local_mask==0 failed");
+      amrex::Error("icolor_round>0 || local_mask==0 failed");
      }
 
-     if (icolor>0) {
+     if (icolor_round>0) {
       if (local_mask==0) {
-       icolor+=max_colors_level;
+       icolor_round+=max_colors_level;
       } else if (local_mask==1) {
        //do nothing
       } else
@@ -4545,78 +4575,90 @@ void NavierStokes::sync_colors(
        if ((check_corners==1)||(idist<=1)) {
         int mask2=(int) maskfab(pofs); 
         for (int nbase2=1;nbase2<=3;nbase2++) {
-         int jcolor=(int) colorfab(pofs,2*nbase2-2);
-         int near_type=(int) colorfab(pofs,2*nbase2-1);
-         if ((jcolor>0)||(mask2==0)) {
+         int jcolor_round=(int) (colorfab(pofs,2*nbase2-2)+0.5);
+         int jcolor_trunc=(int) (colorfab(pofs,2*nbase2-2));
+         int near_type_round=(int) (colorfab(pofs,2*nbase2-1)+0.5);
+         int near_type_trunc=(int) (colorfab(pofs,2*nbase2-1));
+         if ((jcolor_round==jcolor_trunc)&&
+             (near_type_round==near_type_trunc)) {
+          //do nothing
+         } else
+          amrex::Error("expecting round=trunc");
+
+         if ((jcolor_round>0)||(mask2==0)) {
           //do nothing
          } else {
-          amrex::Error("jcolor>0 || mask2==0 failed");
+          amrex::Error("jcolor_round>0 || mask2==0 failed");
          }
-         if (jcolor>0) {
-          if (near_type==base_type) {
+         if (jcolor_round>0) {
+          if (near_type_round==base_type_round) {
            if (mask2==0) {
-            jcolor+=max_colors_level;
+            jcolor_round+=max_colors_level;
            } else if (mask2==1) {
             //do nothing
            } else
             amrex::Error("mask2 invalid");
 
-           if ((icolor>arrsize)||(jcolor>arrsize))
-            amrex::Error("icolor>arrsize or jcolor>arrsize");
+           if ((icolor_round>arrsize)||(jcolor_round>arrsize))
+            amrex::Error("icolor_round>arrsize or jcolor_round>arrsize");
 
 	   if ((mask2==1)||(local_mask==1)) {
 
-            if (icolor!=jcolor) {
- 	     int size_i=level_color_array[tid_current][icolor-1].size();
-   	     int size_j=level_color_array[tid_current][jcolor-1].size();
+            if (icolor_round!=jcolor_round) {
+ 	     int size_i=level_color_array[tid_current][icolor_round-1].size();
+   	     int size_j=level_color_array[tid_current][jcolor_round-1].size();
   	     if ((size_i>=1)&&(size_j>=1)) {
 
  	      int dup_flag=0;
   	      for (int idup=0;idup<size_i;idup++) {
- 	       if (level_color_array[tid_current][icolor-1][idup]==jcolor-1)
+ 	       if (level_color_array[tid_current][icolor_round-1][idup]==
+			       jcolor_round-1)
 	        dup_flag=1;
 	      }
 	      for (int idup=0;idup<size_j;idup++) {
- 	       if (level_color_array[tid_current][jcolor-1][idup]==icolor-1)
+ 	       if (level_color_array[tid_current][jcolor_round-1][idup]==
+			       icolor_round-1)
 	        dup_flag=1;
 	      }
 
               if (dup_flag==0) {
-               level_color_array[tid_current][icolor-1].resize(size_i+1);
-               level_color_array[tid_current][icolor-1][size_i]=jcolor-1;
-               level_color_array[tid_current][jcolor-1].resize(size_j+1);
-               level_color_array[tid_current][jcolor-1][size_j]=icolor-1;
+               level_color_array[tid_current][icolor_round-1].resize(size_i+1);
+               level_color_array[tid_current][icolor_round-1][size_i]=
+		       jcolor_round-1;
+               level_color_array[tid_current][jcolor_round-1].resize(size_j+1);
+               level_color_array[tid_current][jcolor_round-1][size_j]=
+		       icolor_round-1;
 	      }
 
 	     } else
 	      amrex::Error("size_i or size_j invalid");
-	    } else if (icolor==jcolor) {
+	    } else if (icolor_round==jcolor_round) {
 	     //do nothing
 	    } else
-	     amrex::Error("icolor or jcolor bust");
+	     amrex::Error("icolor_round or jcolor_round bust");
 
 	   } else if ((mask2==0)&&(local_mask==0)) {
 	    //do nothing
 	   } else
   	    amrex::Error("mask2 or local_mask invalid");
-	  } else if (near_type!=base_type) {
+	  } else if (near_type_round!=base_type_round) {
 	   //do nothing
 	  } else
   	   amrex::Error("near_type or base_type invalid");
-	 } else if (jcolor==0) {
+	 } else if (jcolor_round==0) {
           //do nothing
 	 } else
- 	  amrex::Error("jcolor invalid");
-	} //for (int nbase2=1;nbase2<=3;nbase2++) 
+          amrex::Error("jcolor invalid");
+        } //for (int nbase2=1;nbase2<=3;nbase2++) 
        } else if ((check_corners==0)&&(idist>1)) {
         //do nothing
        } else
- 	amrex::Error("check_corners or idist invalid");
+        amrex::Error("check_corners or idist invalid");
       } //ii,jj,kk
-     } else if (icolor==0) {
+     } else if (icolor_round==0) {
       //do nothing
      } else
-      amrex::Error("icolor invalid");
+      amrex::Error("icolor_round invalid");
     } //for (int nbase=1;nbase<=3;nbase++) 
      
    } //i,j,k
@@ -4656,6 +4698,8 @@ void NavierStokes::sync_colors(
   for (int ilevel=0;ilevel<=1;ilevel++) {
    for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
     int i_index=max_colors_level*ilevel+icolor-1;
+
+    ParallelDescriptor::Barrier();
 
     Vector<int> local_array;
     local_array.resize(arrsize);
@@ -4721,6 +4765,12 @@ void NavierStokes::sync_colors(
     }
    } //icolor
   } //ilevel
+  
+  stackdata.resize(0);
+
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
+   level_color_array[tid].resize(1);
+  }
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    colormax[ilev]=total_colors;
