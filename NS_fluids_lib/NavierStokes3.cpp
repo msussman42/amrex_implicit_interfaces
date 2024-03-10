@@ -489,7 +489,6 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 #ifdef AMREX_PARTICLES
 
    if ((slab_step>=0)&&(slab_step<ns_time_order)) {
-    NavierStokes& ns_level0=getLevel(0);
 
     int lev_min=0;
     int lev_max=-1;
@@ -3555,8 +3554,8 @@ void NavierStokes::cross_check(
   int i) {
 
  int n_unique=grid_color.size();
- int n_assoc=0
- for (i_unique=0;i_unique<n_unique;i_unique++) { 
+ int n_assoc=0;
+ for (int i_unique=0;i_unique<n_unique;i_unique++) { 
   n_assoc+=grid_color[i_unique].size();
  }
  if (n_assoc==stackdata.size()) {
@@ -3592,7 +3591,7 @@ void NavierStokes::cross_check(
    amrex::Error("something wrong in cross_check");
  }  // while stackptr>=0
 
-} // subroutine cross_check
+} // end subroutine cross_check
 
 void NavierStokes::correct_colors(
  int idx_color,int base_level,
@@ -4036,7 +4035,7 @@ MultiFab* NavierStokes::CopyFineToCoarseColor(
  delete maskfinemf;
 
  return mf;
-}
+} //end subroutine CopyFineToCoarseColor
 
 // c++ example of iterating components of a FAB
 // for more examples, check FArrayBox.cpp:
@@ -4062,12 +4061,13 @@ void NavierStokes::sync_colors(
  int total_colors=0;
  colormf->FillBoundary(geom.periodicity());
 
- if (verbose>0)
+ if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "in sync colors level= " << level << '\n';
    std::cout << "ngrids,maxcolorgrid " << number_grids << ' ' <<
     max_colors_grid << '\n';
   }
+ }
 
  int Nside=number_grids*max_colors_grid;
 
@@ -4108,131 +4108,134 @@ void NavierStokes::sync_colors(
 #endif
 {
  for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const Box& tilegrid = mfi.tilebox();
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-   const int gridno = mfi.index();
-   const Box& fabgrid=grids[gridno];
-   const int* lo = fabgrid.loVect();
-   const int* hi = fabgrid.hiVect();
-   FArrayBox& maskfab=(*maskmf)[mfi];
-   FArrayBox& typefab=(*typemf)[mfi];
-   FArrayBox& colorfab=(*colormf)[mfi];
+  const int gridno = mfi.index();
+  const Box& fabgrid=grids[gridno];
+  const int* lo = fabgrid.loVect();
+  const int* hi = fabgrid.hiVect();
+  FArrayBox& maskfab=(*maskmf)[mfi];
+  FArrayBox& typefab=(*typemf)[mfi];
+  FArrayBox& colorfab=(*colormf)[mfi];
 
 #if (AMREX_SPACEDIM==3)
-   for (int i=lo[0];i<=hi[0];i++)
-   for (int j=lo[1];j<=hi[1];j++)
-   for (int k=lo[2];k<=hi[2];k++) {
+  for (int i=lo[0];i<=hi[0];i++)
+  for (int j=lo[1];j<=hi[1];j++)
+  for (int k=lo[2];k<=hi[2];k++) {
 #endif
 #if (AMREX_SPACEDIM==2)
-   for (int i=lo[0];i<=hi[0];i++)
-   for (int j=lo[1];j<=hi[1];j++) {
+  for (int i=lo[0];i<=hi[0];i++)
+  for (int j=lo[1];j<=hi[1];j++) {
 #endif
-    IntVect p(D_DECL(i,j,k));
+   IntVect p(D_DECL(i,j,k));
 
-    if (maskfab(p)==1.0) {
-     unsigned long long icolor=(int) (colorfab(p)+0.5);
-     int primary_type=(int) (typefab(p)+0.5);
-     if (icolor>0) {
+   if (maskfab(p)==1.0) {
+    int icolor=(int) (colorfab(p)+0.5);
+    int primary_type=(int) (typefab(p)+0.5);
+    if (icolor>0) {
 #if (AMREX_SPACEDIM==3)
-      for (int ii=-1;ii<=1;ii++)
-      for (int jj=-1;jj<=1;jj++)
-      for (int kk=-1;kk<=1;kk++) {
-       int idist=std::abs(ii)+std::abs(jj)+std::abs(kk);
+     for (int ii=-1;ii<=1;ii++)
+     for (int jj=-1;jj<=1;jj++)
+     for (int kk=-1;kk<=1;kk++) {
+      int idist=std::abs(ii)+std::abs(jj)+std::abs(kk);
 #endif
 #if (AMREX_SPACEDIM==2)
-      for (int ii=-1;ii<=1;ii++)
-      for (int jj=-1;jj<=1;jj++) {
-       int idist=std::abs(ii)+std::abs(jj);
+     for (int ii=-1;ii<=1;ii++)
+     for (int jj=-1;jj<=1;jj++) {
+      int idist=std::abs(ii)+std::abs(jj);
 #endif
-       IntVect pofs(D_DECL(i+ii,j+jj,k+kk));
+      IntVect pofs(D_DECL(i+ii,j+jj,k+kk));
 
-       if ((check_corners==1)||(idist<=1)) {
+      if ((check_corners==1)||(idist<=1)) {
 
-        unsigned long long jcolor=(int) (colorfab(pofs)+0.5);
-        int mask2=(int) maskfab(pofs); 
-        int secondary_type=(int) (typefab(pofs)+0.5);
-        if (mask2==1) {
+       int jcolor=(int) (colorfab(pofs)+0.5);
+       int mask2=(int) maskfab(pofs); 
+       int secondary_type=(int) (typefab(pofs)+0.5);
+       if (mask2==1) {
 
-         if (jcolor<=0) {
-          std::cout << "level= " << level << '\n';
-          std::cout << "ii,jj= " << ii << ' ' << jj << '\n';
-          std::cout << "i,j= " << i << ' ' << j << '\n';
-          std::cout << "ngrids,maxcolorgrid " << number_grids << ' ' <<
-            max_colors_grid << '\n';
-          for (int dir2=0;dir2<AMREX_SPACEDIM;dir2++) {
-           std::cout << "dir,lo,hi " << dir2 << ' ' <<
-            lo[dir2] << ' ' << hi[dir2] << '\n';
-          }
-          std::cout << "jcolor = " << jcolor << '\n';
-          amrex::Error("jcolor invalid"); 
-         } // jcolor<=0
+        if (jcolor<=0) {
+         std::cout << "level= " << level << '\n';
+         std::cout << "ii,jj= " << ii << ' ' << jj << '\n';
+         std::cout << "i,j= " << i << ' ' << j << '\n';
+         std::cout << "ngrids,maxcolorgrid " << number_grids << ' ' <<
+           max_colors_grid << '\n';
+         for (int dir2=0;dir2<AMREX_SPACEDIM;dir2++) {
+          std::cout << "dir,lo,hi " << dir2 << ' ' <<
+           lo[dir2] << ' ' << hi[dir2] << '\n';
+         }
+         std::cout << "jcolor = " << jcolor << '\n';
+         amrex::Error("jcolor invalid"); 
+        } // jcolor<=0
 	   
-         if (secondary_type==primary_type) {
-          if ((icolor>Nside)||(jcolor>Nside))
-           amrex::Error("icolor or jcolor invalid"); 
+        if (secondary_type==primary_type) {
 
-	  if (icolor!=jcolor) {
+         if ((icolor>Nside)||(jcolor>Nside))
+          amrex::Error("icolor or jcolor invalid"); 
 
-	   int size_i=grid_color_array[tid_current][icolor-1].size();
-	   int size_j=grid_color_array[tid_current][jcolor-1].size();
-	   if ((size_i>=1)&&(size_j>=1)) {
+	 if (icolor!=jcolor) {
 
-  	    int dup_flag=0;
-	    for (int idup=0;idup<size_i;idup++) {
- 	     if (grid_color_array[tid_current][icolor-1][idup]==jcolor-1)
-	      dup_flag=1;
-	    }
-	    for (int idup=0;idup<size_j;idup++) {
- 	     if (grid_color_array[tid_current][jcolor-1][idup]==icolor-1)
-	      dup_flag=1;
-	    }
-            if (dup_flag==0) {
-             grid_color_array[tid_current][icolor-1].resize(size_i+1);
-             grid_color_array[tid_current][icolor-1][size_i]=jcolor-1;
-             grid_color_array[tid_current][jcolor-1].resize(size_j+1);
-             grid_color_array[tid_current][jcolor-1][size_j]=icolor-1;
-	    }
-	   } else
-	    amrex::Error("size_i or size_j invalid");
+	  int size_i=grid_color_array[tid_current][icolor-1].size();
+	  int size_j=grid_color_array[tid_current][jcolor-1].size();
 
-	  } else if (icolor==jcolor) {
-	   //do nothing
+	  if ((size_i>=1)&&(size_j>=1)) {
+
+  	   int dup_flag=0;
+	   for (int idup=0;idup<size_i;idup++) {
+ 	    if (grid_color_array[tid_current][icolor-1][idup]==jcolor-1)
+	     dup_flag=1;
+	   }
+	   for (int idup=0;idup<size_j;idup++) {
+ 	    if (grid_color_array[tid_current][jcolor-1][idup]==icolor-1)
+	     dup_flag=1;
+	   }
+           if (dup_flag==0) {
+            grid_color_array[tid_current][icolor-1].resize(size_i+1);
+            grid_color_array[tid_current][icolor-1][size_i]=jcolor-1;
+            grid_color_array[tid_current][jcolor-1].resize(size_j+1);
+            grid_color_array[tid_current][jcolor-1][size_j]=icolor-1;
+	   }
 	  } else
-  	   amrex::Error("icolor or jcolor bust");
+	   amrex::Error("size_i or size_j invalid");
+
+	 } else if (icolor==jcolor) {
+	  //do nothing
+	 } else
+  	  amrex::Error("icolor or jcolor bust");
 				 
-         } // primary_type==secondary_type
-        } else if (mask2==0) {
-	 //do nothing
-	} else
-         amrex::Error("mask2 invalid");
-
-       } else if ((check_corners==0)&&(idist>1)) {
-	// do nothing
+        } // primary_type==secondary_type
+       } else if (mask2==0) {
+        //do nothing
        } else
-        amrex::Error("check_corners or idist invalid");
+        amrex::Error("mask2 invalid");
 
-      } // ii,jj,kk
-     } else
-      amrex::Error("icolor invalid");
-    } else if (maskfab(p)==0.0) {
-     //do nothing
+      } else if ((check_corners==0)&&(idist>1)) {
+       // do nothing
+      } else
+       amrex::Error("check_corners or idist invalid");
+
+     } // ii,jj,kk
     } else
-     amrex::Error("maskfab(p) invalid");
-   } // i,j,k
+     amrex::Error("icolor invalid");
+   } else if (maskfab(p)==0.0) {
+    //do nothing
+   } else
+    amrex::Error("maskfab(p) invalid");
+  } // i,j,k
  } // mfi
 } //omp
  ns_reconcile_d_num(LOOP_SYNC_COLORS,"sync_colors");
 
- if (verbose>0)
+ if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "after initializing grid_color_array \n";
   }
+ }
 
   // first reduce grid_color_array from the different threads
  for (int igrid=0;igrid<number_grids;igrid++) {
@@ -4268,8 +4271,8 @@ void NavierStokes::sync_colors(
    local_array.resize(Nside);
    for (int j_index=0;j_index<Nside;j_index++)
     local_array[j_index]=0;
-   int i_size=grid_color_array[0][i_index].size();
-   for (int i_trial=0;i_trial<i_size;i_trial++) {
+   int i_size_sync=grid_color_array[0][i_index].size();
+   for (int i_trial=0;i_trial<i_size_sync;i_trial++) {
     int j_index=grid_color_array[0][i_index][i_trial];
     local_array[j_index]=1;
    }
@@ -4287,9 +4290,9 @@ void NavierStokes::sync_colors(
      if (local_array[j_index]==0) {
       //do nothing
      } else if (local_array[j_index]==1) {
-      int i_size=grid_color_array[0][i_index].size();
-      grid_color_array[0][i_index].resize(i_size+1);
-      grid_color_array[0][i_index][i_size]=j_index;
+      int i_size_grid=grid_color_array[0][i_index].size();
+      grid_color_array[0][i_index].resize(i_size_grid+1);
+      grid_color_array[0][i_index][i_size_grid]=j_index;
      } else
       amrex::Error("local_array[j_index] invalid");
     }  // jcolor
@@ -4299,10 +4302,11 @@ void NavierStokes::sync_colors(
  } // igrid
  ParallelDescriptor::Barrier();
 
- if (verbose>0)
+ if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "after ReduceIntMax \n";
   }
+ }
 
    // levelcolormap[i] associates color "i" in the previous scheme with a
    // new absolute coloring scheme on the level.
@@ -4311,14 +4315,22 @@ void NavierStokes::sync_colors(
  for (int i=0;i<Nside;i++) 
   levelcolormap[i]=0;
 
- if (verbose>0)
+ if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "before cross_check \n";
   }
+ }
 
+ Vector<int> stackdata;
+ int n_assoc=0;
+
+
+  //levelcolormap only needs to be updated on the IOProcessor and
+  //initialized to 0 on the other processors.  A "reduceintmax"
+  //command synchronizes the IOProcessor to the others.
  if (ParallelDescriptor::IOProcessor()) {
-  Vector<int> stackdata;
-  int n_assoc=0;
+
+  n_assoc=0;
   for (int igrid=0;igrid<number_grids;igrid++) {
    for (int icolor=1;icolor<=color_per_grid[igrid];icolor++) {
     int i_index=max_colors_grid*igrid+icolor-1;
@@ -4338,7 +4350,8 @@ void NavierStokes::sync_colors(
       if (levelcolormap[i_index]<1)
        amrex::Error("levelcolormap invalid");
       cross_check(levelcolormap,stackdata,grid_color_array[0],i_index);
-     }
+     } else
+      amrex::Error("expecting grid_color_array[0][i_index].size()>0");
     } 
    } // icolor
   } // igrid
@@ -4346,10 +4359,11 @@ void NavierStokes::sync_colors(
   stackdata.resize(0);
  }  // IOProcessor
 
- if (verbose>0)
+ if (verbose>0) {
   if (ParallelDescriptor::IOProcessor()) {
    std::cout << "after cross_check \n";
   }
+ }
 
 #ifdef _OPENMP
 #pragma omp parallel
@@ -4386,28 +4400,28 @@ void NavierStokes::sync_colors(
 #endif
 {
  for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
-   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-   const int gridno = mfi.index();
-   const Box& tilegrid = mfi.tilebox();
-   const Box& fabgrid = grids[gridno];
-   const int* tilelo=tilegrid.loVect();
-   const int* tilehi=tilegrid.hiVect();
-   const int* fablo=fabgrid.loVect();
-   const int* fabhi=fabgrid.hiVect();
-   int bfact=parent->Space_blockingFactor(level);
-   const Real* xlo = grid_loc[gridno].lo();
+  BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+  const int gridno = mfi.index();
+  const Box& tilegrid = mfi.tilebox();
+  const Box& fabgrid = grids[gridno];
+  const int* tilelo=tilegrid.loVect();
+  const int* tilehi=tilegrid.hiVect();
+  const int* fablo=fabgrid.loVect();
+  const int* fabhi=fabgrid.hiVect();
+  int bfact=parent->Space_blockingFactor(level);
+  const Real* xlo = grid_loc[gridno].lo();
 
-   FArrayBox& maskfab=(*maskmf)[mfi];
-   FArrayBox& colorfab=(*colormf)[mfi];
-   int arrsize=levelcolormap.size();
+  FArrayBox& maskfab=(*maskmf)[mfi];
+  FArrayBox& colorfab=(*colormf)[mfi];
+  int arrsize=levelcolormap.size();
 
-   int tid_current=ns_thread();
-   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-    amrex::Error("tid_current invalid");
-   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    // in: LEVELSET_3D.F90
-   fort_gridrecolor(
+   // in: LEVELSET_3D.F90
+  fort_gridrecolor(
     maskfab.dataPtr(),ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
     colorfab.dataPtr(),ARLIM(colorfab.loVect()),ARLIM(colorfab.hiVect()),
     xlo,dx,
@@ -4424,256 +4438,300 @@ void NavierStokes::sync_colors(
 
  if (level<finest_level) {
 
-   avgDownColor(idx_color,idx_type);
+  avgDownColor(idx_color,idx_type);
    
-    // 1 ghost cell is initialized
-    // components are: color1,type1,color2,type2,color3,type3
-    // only copies where maskfine=1
-   MultiFab* fine_coarse_color=
-     CopyFineToCoarseColor(idx_color,idx_type,zero_diag_flag);
-   fine_coarse_color->FillBoundary(geom.periodicity());
+   // 1 ghost cell is initialized
+   // components are: color1,type1,color2,type2,color3,type3
+   // only copies where maskfine=1
+  MultiFab* fine_coarse_color=
+    CopyFineToCoarseColor(idx_color,idx_type,zero_diag_flag);
+  fine_coarse_color->FillBoundary(geom.periodicity());
 
-   int max_colors_level=colormax[level+1];
-   if (colormax[level]>max_colors_level)
-    max_colors_level=colormax[level];
-   int arrsize=2*max_colors_level;
+  int max_colors_level=colormax[level+1];
+  if (colormax[level]>max_colors_level)
+   max_colors_level=colormax[level];
+  int arrsize=2*max_colors_level;
 
-   Vector< Vector< Vector<int> > > level_color_array;
-   level_color_array.resize(thread_class::nthreads);
+  Vector< Vector< Vector<int> > > level_color_array;
+  level_color_array.resize(thread_class::nthreads);
 
-// COLORING LOOP
-#ifdef _OPENMP
-#pragma omp parallel
-#endif
-{
-   int tid=ns_thread();
+  for (int tid=0;tid<thread_class::nthreads;tid++) {
    level_color_array[tid].resize(arrsize);
-   for (int i=0;i<arrsize;i++)
+   for (int i=0;i<arrsize;i++) {
     level_color_array[tid][i].resize(0);
-
-     // set the diagonal of level_color
+   }
    for (int ilevel=0;ilevel<=1;ilevel++) {
     for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
      int i=max_colors_level*ilevel+icolor-1;
      level_color_array[tid][i].resize(1);
      level_color_array[tid][i][0]=i;
-    }
+    } // icolor
    } // ilevel
-} // omp
+  } //tid
 
-   if (thread_class::nthreads<1)
-    amrex::Error("thread_class::nthreads invalid");
-   thread_class::init_d_numPts(typemf->boxArray().d_numPts());
+  if (thread_class::nthreads<1)
+   amrex::Error("thread_class::nthreads invalid");
+  thread_class::init_d_numPts(typemf->boxArray().d_numPts());
 
-    // level_color_array[i][j]=1 if color i neighbors color j and
-    // the mask of one of them is 1.
-// COLORING LOOP
+   // level_color_array[i][j]=1 if color i neighbors color j and
+   // the mask of one of them is 1.
+   // COLORING LOOP
 #ifdef _OPENMP
 #pragma omp parallel
 #endif
 {
-   for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
-    BL_ASSERT(grids[mfi.index()] == mfi.validbox());
-    const int gridno = mfi.index();
-    const Box& tilegrid = mfi.tilebox();
-    const Box& fabgrid = grids[gridno];
-    const int* lo = fabgrid.loVect();
-    const int* hi = fabgrid.hiVect();
-    const int* tilelo=tilegrid.loVect();
-    const int* tilehi=tilegrid.hiVect();
-    int bfact=parent->Space_blockingFactor(level);
-    const Real* xlo = grid_loc[gridno].lo();
+  for (MFIter mfi(*typemf,false); mfi.isValid(); ++mfi) {
+   BL_ASSERT(grids[mfi.index()] == mfi.validbox());
+   const int gridno = mfi.index();
+   const Box& tilegrid = mfi.tilebox();
+   const Box& fabgrid = grids[gridno];
+   const int* lo = fabgrid.loVect();
+   const int* hi = fabgrid.hiVect();
 
-    int tid_current=ns_thread();
-    if ((tid_current<0)||(tid_current>=thread_class::nthreads))
-     amrex::Error("tid_current invalid");
-    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+   int tid_current=ns_thread();
+   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+    amrex::Error("tid_current invalid");
+   thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
-    FArrayBox& maskfab=(*maskmf)[mfi];
-    //components are: color1,type1,color2,type2,color3,type3
-    FArrayBox& colorfab=(*fine_coarse_color)[mfi];
+   FArrayBox& maskfab=(*maskmf)[mfi];
+
+   //components are: color1,type1,color2,type2,color3,type3
+   FArrayBox& colorfab=(*fine_coarse_color)[mfi];
 
 #if (AMREX_SPACEDIM==3)
-    for (int i=lo[0];i<=hi[0];i++)
-    for (int j=lo[1];j<=hi[1];j++)
-    for (int k=lo[2];k<=hi[2];k++) {
+   for (int i=lo[0];i<=hi[0];i++)
+   for (int j=lo[1];j<=hi[1];j++)
+   for (int k=lo[2];k<=hi[2];k++) {
 #endif
 #if (AMREX_SPACEDIM==2)
-    for (int i=lo[0];i<=hi[0];i++)
-    for (int j=lo[1];j<=hi[1];j++) {
+   for (int i=lo[0];i<=hi[0];i++)
+   for (int j=lo[1];j<=hi[1];j++) {
 #endif
-     for (int nbase=1;nbase<=3;nbase++) {
+    for (int nbase=1;nbase<=3;nbase++) {
 
-      IntVect p(D_DECL(i,j,k));
+     IntVect p(D_DECL(i,j,k));
 
-      int icolor=(int) colorfab(p,2*nbase-2);
-      int base_type=(int) colorfab(p,2*nbase-1);
-      int local_mask=(int) maskfab(p);
+     int icolor=(int) colorfab(p,2*nbase-2);
+     int base_type=(int) colorfab(p,2*nbase-1);
+     int local_mask=(int) maskfab(p);
 
-      if ((icolor>0)||(local_mask==0)) {
-       //do nothing
-      } else {
-       amrex::Error("icolor>0 || local_mask==0 failed");
-      }
+     if ((icolor>0)||(local_mask==0)) {
+      //do nothing
+     } else {
+      amrex::Error("icolor>0 || local_mask==0 failed");
+     }
 
-      if (icolor>0) {
-       if (local_mask==0) {
-        icolor+=max_colors_level;
-       } else if (local_mask==1) {
-        //do nothing
-       } else
-        amrex::Error("local_mask invalid");
-
-#if (AMREX_SPACEDIM==3)
-       for (int ii=-1;ii<=1;ii++)
-       for (int jj=-1;jj<=1;jj++)
-       for (int kk=-1;kk<=1;kk++) {
-        int idist=std::abs(ii)+std::abs(jj)+std::abs(kk);
-#endif
-#if (AMREX_SPACEDIM==2)
-       for (int ii=-1;ii<=1;ii++)
-       for (int jj=-1;jj<=1;jj++) {
-        int idist=std::abs(ii)+std::abs(jj);
-#endif
-        IntVect pofs(D_DECL(i+ii,j+jj,k+kk));
-
-        if ((check_corners==1)||(idist<=1)) {
-         int mask2=(int) maskfab(pofs); 
-	 for (int nbase2=1;nbase2<=3;nbase2++) {
-          int jcolor=(int) colorfab(pofs,2*nbase2-2);
-          int near_type=(int) colorfab(pofs,2*nbase2-1);
-          if ((jcolor>0)||(mask2==0)) {
-           //do nothing
-          } else {
-           amrex::Error("jcolor>0 || mask2==0 failed");
-          }
-          if (jcolor>0) {
-           if (near_type==base_type) {
-            if (mask2==0) {
-             jcolor+=max_colors_level;
-            } else if (mask2==1) {
-             //do nothing
-            } else
-             amrex::Error("mask2 invalid");
-
-            if ((icolor>arrsize)||(jcolor>arrsize))
-             amrex::Error("icolor>arrsize or jcolor>arrsize");
-
-	    if ((mask2==1)||(local_mask==1)) {
-
-             if (icolor!=jcolor) {
- 	      int size_i=level_color_array[tid_current][icolor-1].size();
-   	      int size_j=level_color_array[tid_current][jcolor-1].size();
-  	      if ((size_i>=1)&&(size_j>=1)) {
-
-  	       int dup_flag=0;
-  	       for (int idup=0;idup<size_i;idup++) {
- 	        if (level_color_array[tid_current][icolor-1][idup]==jcolor-1)
-	         dup_flag=1;
-	       }
-	       for (int idup=0;idup<size_j;idup++) {
- 	        if (level_color_array[tid_current][jcolor-1][idup]==icolor-1)
-	         dup_flag=1;
-	       }
-
-               if (dup_flag==0) {
-                level_color_array[tid_current][icolor-1].resize(size_i+1);
-                level_color_array[tid_current][icolor-1][size_i]=jcolor-1;
-                level_color_array[tid_current][jcolor-1].resize(size_j+1);
-                level_color_array[tid_current][jcolor-1][size_j]=icolor-1;
-	       }
-
-	      } else
-	       amrex::Error("size_i or size_j invalid");
-	     } else if (icolor==jcolor) {
-	      //do nothing
-	     } else
-	      amrex::Error("icolor or jcolor bust");
-
-	    } else if ((mask2==0)&&(local_mask==0)) {
-	     //do nothing
-	    } else
-  	     amrex::Error("mask2 or local_mask invalid");
-	   } else if (near_type!=base_type) {
-	    //do nothing
-	   } else
-  	    amrex::Error("near_type or base_type invalid");
-	  } else if (jcolor==0) {
-           //do nothing
-	  } else
- 	   amrex::Error("jcolor invalid");
-	 } //for (int nbase2=1;nbase2<=3;nbase2++) 
-	} else if ((check_corners==0)&&(idist>1)) {
-         //do noting
-	} else
- 	 amrex::Error("check_corners or idist invalid");
-       } //ii,jj,kk
-      } else if (icolor==0) {
+     if (icolor>0) {
+      if (local_mask==0) {
+       icolor+=max_colors_level;
+      } else if (local_mask==1) {
        //do nothing
       } else
-       amrex::Error("icolor invalid");
-     } //for (int nbase=1;nbase<=3;nbase++) 
+       amrex::Error("local_mask invalid");
+
+#if (AMREX_SPACEDIM==3)
+      for (int ii=-1;ii<=1;ii++)
+      for (int jj=-1;jj<=1;jj++)
+      for (int kk=-1;kk<=1;kk++) {
+       int idist=std::abs(ii)+std::abs(jj)+std::abs(kk);
+#endif
+#if (AMREX_SPACEDIM==2)
+      for (int ii=-1;ii<=1;ii++)
+      for (int jj=-1;jj<=1;jj++) {
+       int idist=std::abs(ii)+std::abs(jj);
+#endif
+       IntVect pofs(D_DECL(i+ii,j+jj,k+kk));
+
+       if ((check_corners==1)||(idist<=1)) {
+        int mask2=(int) maskfab(pofs); 
+        for (int nbase2=1;nbase2<=3;nbase2++) {
+         int jcolor=(int) colorfab(pofs,2*nbase2-2);
+         int near_type=(int) colorfab(pofs,2*nbase2-1);
+         if ((jcolor>0)||(mask2==0)) {
+          //do nothing
+         } else {
+          amrex::Error("jcolor>0 || mask2==0 failed");
+         }
+         if (jcolor>0) {
+          if (near_type==base_type) {
+           if (mask2==0) {
+            jcolor+=max_colors_level;
+           } else if (mask2==1) {
+            //do nothing
+           } else
+            amrex::Error("mask2 invalid");
+
+           if ((icolor>arrsize)||(jcolor>arrsize))
+            amrex::Error("icolor>arrsize or jcolor>arrsize");
+
+	   if ((mask2==1)||(local_mask==1)) {
+
+            if (icolor!=jcolor) {
+ 	     int size_i=level_color_array[tid_current][icolor-1].size();
+   	     int size_j=level_color_array[tid_current][jcolor-1].size();
+  	     if ((size_i>=1)&&(size_j>=1)) {
+
+ 	      int dup_flag=0;
+  	      for (int idup=0;idup<size_i;idup++) {
+ 	       if (level_color_array[tid_current][icolor-1][idup]==jcolor-1)
+	        dup_flag=1;
+	      }
+	      for (int idup=0;idup<size_j;idup++) {
+ 	       if (level_color_array[tid_current][jcolor-1][idup]==icolor-1)
+	        dup_flag=1;
+	      }
+
+              if (dup_flag==0) {
+               level_color_array[tid_current][icolor-1].resize(size_i+1);
+               level_color_array[tid_current][icolor-1][size_i]=jcolor-1;
+               level_color_array[tid_current][jcolor-1].resize(size_j+1);
+               level_color_array[tid_current][jcolor-1][size_j]=icolor-1;
+	      }
+
+	     } else
+	      amrex::Error("size_i or size_j invalid");
+	    } else if (icolor==jcolor) {
+	     //do nothing
+	    } else
+	     amrex::Error("icolor or jcolor bust");
+
+	   } else if ((mask2==0)&&(local_mask==0)) {
+	    //do nothing
+	   } else
+  	    amrex::Error("mask2 or local_mask invalid");
+	  } else if (near_type!=base_type) {
+	   //do nothing
+	  } else
+  	   amrex::Error("near_type or base_type invalid");
+	 } else if (jcolor==0) {
+          //do nothing
+	 } else
+ 	  amrex::Error("jcolor invalid");
+	} //for (int nbase2=1;nbase2<=3;nbase2++) 
+       } else if ((check_corners==0)&&(idist>1)) {
+        //do nothing
+       } else
+ 	amrex::Error("check_corners or idist invalid");
+      } //ii,jj,kk
+     } else if (icolor==0) {
+      //do nothing
+     } else
+      amrex::Error("icolor invalid");
+    } //for (int nbase=1;nbase<=3;nbase++) 
      
-    } //i,j,k
+   } //i,j,k
 
-   } //mfi
+  } //mfi
 } //omp
-   ns_reconcile_d_num(LOOP_LEVELCOLORINIT,"sync_colors");
+  ns_reconcile_d_num(LOOP_LEVELCOLORINIT,"sync_colors");
 
-   delete fine_coarse_color;
-FIX ME
-   for (int tid=1;tid<thread_class::nthreads;tid++) {
-    for (unsigned long long i=0;i<arrsize2;i++) {
-     if (level_color_array[tid][i]>level_color_array[0][i])
-      level_color_array[0][i]=level_color_array[tid][i];
-    } // i
-   } // tid
+  delete fine_coarse_color;
 
-   ParallelDescriptor::Barrier();
+  // first reduce level_color_array from the different threads
+  for (int ilevel=0;ilevel<=1;ilevel++) {
+   for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
+    int i_index=max_colors_level*ilevel+icolor-1;
 
-   for (unsigned long long i=0;i<arrsize2;i++)
-    ParallelDescriptor::ReduceIntMax(level_color_array[0][i]);
+    for (int tid=0;tid<thread_class::nthreads;tid++) {
+     int i_size_level2=level_color_array[tid][i_index].size();
+     for (int i_trial=0;i_trial<i_size_level2;i_trial++) {
+      int j_index=level_color_array[tid][i_index][i_trial];
+      int dup_flag=0;
+      int base_size=level_color_array[0][i_index].size();
+      for (int idup=0;idup<base_size;idup++) {
+       if (level_color_array[0][i_index][idup]==j_index)
+        dup_flag=1;
+      }
+      if (dup_flag==0) {
+       level_color_array[0][i_index].resize(base_size+1);
+       level_color_array[0][i_index][base_size]=j_index;
+      }
+     } //i_trial
+    } //tid
+   } // icolor
+  } // ilevel
 
-   Vector<int> domaincolormap;
-   domaincolormap.resize(2*max_colors_level);
-   Vector<int> stackdata1D;
-   stackdata1D.resize(arrsize2+1);
-   for (unsigned long long i=0;i<domaincolormap.size();i++)
-    domaincolormap[i]=0;
-   total_colors=0;
+  ParallelDescriptor::Barrier();
 
-   std::vector<bool> level_color_bool;
-   level_color_bool.resize(arrsize2);
-   for (unsigned long long k=0;k<level_color_bool.size();k++) {
-    if (level_color_array[0][k]==0)
-     level_color_bool[k]=false;
-    else if (level_color_array[0][k]==1)
-     level_color_bool[k]=true;
-    else
-     amrex::Error("level_color_array invalid value");
-   }
+  for (int ilevel=0;ilevel<=1;ilevel++) {
+   for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
+    int i_index=max_colors_level*ilevel+icolor-1;
 
-   for (unsigned long long i=0;i<domaincolormap.size();i++) {
-    if (domaincolormap[i]==0) {
-     unsigned long long k=i*domaincolormap.size()+i;
-     if (level_color_bool[k]==true) {
-      total_colors++;
-      domaincolormap[i]=total_colors;
-      cross_check1D(domaincolormap,stackdata1D,level_color_bool,i);
-     }
+    Vector<int> local_array;
+    local_array.resize(arrsize);
+    for (int j_index=0;j_index<arrsize;j_index++)
+     local_array[j_index]=0;
+
+    int i_size_level_sync=level_color_array[0][i_index].size();
+    for (int i_trial=0;i_trial<i_size_level_sync;i_trial++) {
+     int j_index=level_color_array[0][i_index][i_trial];
+     local_array[j_index]=1;
     }
-   }
 
-   for (int ilev=finest_level;ilev>=level;ilev--) {
-    colormax[ilev]=total_colors;
-    NavierStokes& ns_level=getLevel(ilev);
-    
-    ns_level.correct_colors(idx_color,level,domaincolormap,max_colors_level);
-     // if coarse_type=fine_type, then coarse_color=fine_color otherwise
-     // coarse_color=0.
-    if (ilev<finest_level)
-     ns_level.avgDownColor(idx_color,idx_type);
+    level_color_array[0][i_index].resize(0);
+
+    ParallelDescriptor::Barrier();
+
+    for (int jlevel=0;jlevel<=1;jlevel++) {
+     for (int jcolor=1;jcolor<=colormax[level+jlevel];jcolor++) {
+      int j_index=max_colors_level*jlevel+jcolor-1;
+      ParallelDescriptor::ReduceIntMax(local_array[j_index]);
+      if (local_array[j_index]==0) {
+       //do nothing
+      } else if (local_array[j_index]==1) {
+       int i_size_level3=level_color_array[0][i_index].size();
+       level_color_array[0][i_index].resize(i_size_level3+1);
+       level_color_array[0][i_index][i_size_level3]=j_index;
+      } else
+       amrex::Error("local_array[j_index] invalid");
+     }  // jcolor
+    } // jlevel
+     
+   } // icolor
+  } // ilevel
+  ParallelDescriptor::Barrier();
+
+  Vector<int> domaincolormap;
+  domaincolormap.resize(arrsize);
+  for (int i=0;i<arrsize;i++)
+   domaincolormap[i]=0;
+
+  total_colors=0;
+
+  stackdata.resize(0);
+  n_assoc=0;
+  for (int ilevel=0;ilevel<=1;ilevel++) {
+   for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
+    int i_index=max_colors_level*ilevel+icolor-1;
+    n_assoc+=level_color_array[0][i_index].size();
    }
+  }
+  stackdata.resize(n_assoc);
+
+  for (int ilevel=0;ilevel<=1;ilevel++) {
+   for (int icolor=1;icolor<=colormax[level+ilevel];icolor++) {
+    int i_index=max_colors_level*ilevel+icolor-1;
+    if (domaincolormap[i_index]==0) {
+     if (level_color_array[0][i_index].size()>0) {
+      total_colors++;
+      domaincolormap[i_index]=total_colors;
+       cross_check(domaincolormap,stackdata,level_color_array[0],i_index);
+     } else
+      amrex::Error("expecting level_color_array[0][i_index].size()>0");
+    }
+   } //icolor
+  } //ilevel
+
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   colormax[ilev]=total_colors;
+   NavierStokes& ns_level=getLevel(ilev);
+    
+   ns_level.correct_colors(idx_color,level,domaincolormap,max_colors_level);
+   // if coarse_type=fine_type, then coarse_color=fine_color otherwise
+   // coarse_color=0.
+   if (ilev<finest_level)
+    ns_level.avgDownColor(idx_color,idx_type);
+  }
  } // level<finest_level
 
 
