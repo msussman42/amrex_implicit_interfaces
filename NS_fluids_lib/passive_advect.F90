@@ -262,6 +262,8 @@ real(amrex_real) :: distline
 return
 end subroutine passive_advect_LS
 
+! SUB_OVERRIDE_TAGFLAG is called from override_tagflag is 
+! "is_in_probtype_list()==1". (PROB.F90)
 subroutine passive_advect_OVERRIDE_TAGFLAG( &
   i,j,k, &
   level,max_level, &
@@ -318,36 +320,42 @@ enddo !dir=1..sdim
 if ((probtype.eq.28).and. & ! zalesak
     (axis_dir.eq.0)) then
 
- if (level.lt.max_level-1) then
+ if (1.eq.1) then
   !do nothing
- else if (level.eq.max_level-1) then
-  rflag=0.0d0
-  tagflag=0
-  if (abs(lsnew_ptr(D_DECL(i,j,k),1)).le.local_delta(1)) then
-   do i1=-1,1
-   do j1=-1,1
-   do k1=-1,1
-    LS(D_DECL(i1,j1,k1))=lsnew_ptr(D_DECL(i+i1,j+j1,k+k1),1)
-   enddo
-   enddo
-   enddo
-   curv_cutoff=one/(four*local_delta(1))
-   call curverr(curv,LS,xsten,nhalf)
-   if (abs(curv).lt.curv_cutoff) then
-    !do nothing
-   else if (abs(curv).ge.curv_cutoff) then
-    rflag=1.0d0
-    tagflag=1
-   else
-    print *,"curv=",curv
-    print *,"curv_cutoff ",curv_cutoff
-    stop
-   endif
- 
-  endif
  else
-  print *,"level invalid"
-  stop
+
+  if (level.lt.max_level-1) then
+   !do nothing
+  else if (level.eq.max_level-1) then
+   rflag=0.0d0
+   tagflag=0
+   if (abs(lsnew_ptr(D_DECL(i,j,k),1)).le.local_delta(1)) then
+    do i1=-1,1
+    do j1=-1,1
+    do k1=-1,1
+     LS(D_DECL(i1,j1,k1))=lsnew_ptr(D_DECL(i+i1,j+j1,k+k1),1)
+    enddo
+    enddo
+    enddo
+    curv_cutoff=one/(four*local_delta(1))
+    call curverr(curv,LS,xsten,nhalf)
+    if (abs(curv).lt.curv_cutoff) then
+     !do nothing
+    else if (abs(curv).ge.curv_cutoff) then
+     rflag=1.0d0
+     tagflag=1
+    else
+     print *,"curv=",curv
+     print *,"curv_cutoff ",curv_cutoff
+     stop
+    endif
+  
+   endif
+  else
+   print *,"level invalid"
+   stop
+  endif
+
  endif
 
 endif

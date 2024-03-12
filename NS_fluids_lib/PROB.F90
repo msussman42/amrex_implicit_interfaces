@@ -6836,6 +6836,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       return
       end subroutine dumbbelldist
 
+       ! override_tagflag is called from fort_vfracerror (PROB.F90) if 
+       ! level<max_level_for_use.
       subroutine override_tagflag( &
         i,j,k, &
         level,max_level, &
@@ -6989,7 +6991,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! do nothing
 
       else
-       print *,"expecting probtype>=0"
+       print *,"expecting probtype>=0: ",probtype
        stop
       endif 
 
@@ -22848,16 +22850,16 @@ end subroutine initialize2d
       endif
 
       if (level.lt.0) then
-       print *,"level invalid vfrac error"
+       print *,"level invalid vfrac error: ",level
        stop
       endif
       if (max_level.le.level) then
-       print *,"max_level invalid"
+       print *,"max_level invalid: ",max_level
        stop
       endif
       if ((max_level_for_use.lt.0).or. &
           (max_level_for_use.gt.max_level)) then
-       print *,"max_level_for_use invalid"
+       print *,"max_level_for_use invalid: ",max_level_for_use
        stop
       endif
       if ((nblocks.lt.0).or.(ncoarseblocks.lt.0).or. &
