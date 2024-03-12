@@ -9,7 +9,8 @@ do
 #/usr/local/tecplot/360ex_2020r2/bin/preplot ${file}
 #/usr/local/tecplot/360ex_2023r2/bin/preplot ${file}
 #/Applications/Tecplot\ 360\ EX\ 2021\ R1/bin/preplot ${file}
-/Applications/Tecplot\ 360\ EX\ 2021\ R2/bin/preplot ${file}
+#/Applications/Tecplot\ 360\ EX\ 2021\ R2/bin/preplot ${file}
+/Applications/Tecplot\ 360\ EX\ 2023\ R2/bin/preplot ${file}
 # TECPLOT ON A MAC:
 #/Applications/Tecplot ..../Tecplot ...app/Contents/MacOS/Tecplot ....
 # VisIt:
