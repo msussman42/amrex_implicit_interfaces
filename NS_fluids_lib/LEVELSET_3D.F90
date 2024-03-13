@@ -19341,6 +19341,8 @@ stop
        !do nothing
       else
        print *,"level or finest_level invalid: init_particle_container"
+       print *,"level: ",level
+       print *,"finest_level: ",finest_level
        stop
       endif
 
@@ -19797,7 +19799,7 @@ stop
           if (current_link.eq.0) then
            ! do nothing
           else
-           print *,"expecting current_link=0"
+           print *,"expecting current_link=0: ",current_link
            stop
           endif
 
