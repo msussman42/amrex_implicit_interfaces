@@ -412,12 +412,13 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   int nGrow_Redistribute=0;
   int local_Redistribute=0; 
   bool local_copy=true; //do not redistribute inside of copyParticles
+  bool remove_negative=true;
 
     // level=0
   My_ParticleContainer& prevPC=newDataPC(slab_step);
 
   prevPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
+    nGrow_Redistribute,local_Redistribute,remove_negative);
 
     // level=0
   My_ParticleContainer& localPC=newDataPC(slab_step+1);
@@ -430,7 +431,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
   init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
 
   localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
+    nGrow_Redistribute,local_Redistribute,remove_negative);
 
  } else
   amrex::Error("slab_step invalid");
@@ -494,6 +495,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     int lev_max=-1;
     int nGrow_Redistribute=0;
     int local_Redistribute=0; 
+    bool remove_negative=true;
 
       //level==0
     My_ParticleContainer& localPC=newDataPC(slab_step+1);
@@ -508,7 +510,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
     }
 
     localPC.Redistribute(lev_min,lev_max,
-      nGrow_Redistribute,local_Redistribute);
+      nGrow_Redistribute,local_Redistribute,remove_negative);
 
    } else
     amrex::Error("slab_step invalid");
@@ -1167,11 +1169,12 @@ Real NavierStokes::advance(Real time,Real dt) {
    int lev_max=-1;
    int nGrow_Redistribute=0;
    int local_Redistribute=0;
+   bool remove_negative=true;
 
    NavierStokes& ns_level0=getLevel(0);
    My_ParticleContainer& old_PC=ns_level0.newDataPC(ns_time_order);
    old_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-     local_Redistribute);
+     local_Redistribute,remove_negative);
 
 #endif
 
@@ -1962,8 +1965,10 @@ void NavierStokes::phase_change_code_segment(
   int lev_max=-1;
   int nGrow_Redistribute=0;
   int local_Redistribute=0; 
+  bool remove_negative=true;
+
   localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
+    nGrow_Redistribute,local_Redistribute,remove_negative);
 
   for (int ilev=finest_level;ilev>=level;ilev--) {
    NavierStokes& ns_level=getLevel(ilev);
@@ -1973,7 +1978,7 @@ void NavierStokes::phase_change_code_segment(
   }
 
   localPC.Redistribute(lev_min,lev_max,
-    nGrow_Redistribute,local_Redistribute);
+    nGrow_Redistribute,local_Redistribute,remove_negative);
 
  } else
   amrex::Error("slab_step invalid");

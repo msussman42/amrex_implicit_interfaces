@@ -9937,8 +9937,11 @@ NavierStokes::initData () {
 
  int nGrow_Redistribute=0;
  int local_Redistribute=0; //redistribute "from scratch"
+ bool remove_negative=true;
+
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_Redistribute);
+    local_Redistribute,remove_negative);
+
  ns_level0.CopyNewToOldPC(lev_max); //copy and redistribute up to lev_max
 #endif
 
@@ -10186,6 +10189,7 @@ NavierStokes::init(
  int nGrow_Redistribute=0;
  bool local_copy=true; //do not redistribute inside of copyParticles
  int local_redistribute=0;
+ bool remove_negative=true;
 
   // if level==0, we must copy from the old Amr_level (level==0) to the
   // new Amr_level prior to deleting the old level==0 structure.
@@ -10213,14 +10217,14 @@ NavierStokes::init(
   }
 
   new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-   local_redistribute);
+   local_redistribute,remove_negative);
 
  } else if ((level>0)&&(level<=max_level)) {
 
   NavierStokes& ns_level0=getLevel(0);
   My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
   new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-   local_redistribute);
+   local_redistribute,remove_negative);
  
  } else
   amrex::Error("level invalid");
@@ -10370,6 +10374,7 @@ NavierStokes::init(
  int lev_max=level;
  int nGrow_Redistribute=0;
  int local_Redistribute=0;
+ bool remove_negative=true;
 
  if (level==0) {
   amrex::Error("level==0 cannot be made from nothing");
@@ -10382,7 +10387,7 @@ NavierStokes::init(
  My_ParticleContainer& new_PC=ns_level0.newDataPC(ns_time_order);
 
  new_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-   local_Redistribute);
+   local_Redistribute,remove_negative);
 
 #endif
 
@@ -10429,8 +10434,11 @@ void NavierStokes::CopyNewToOldALL() {
  My_ParticleContainer& current_PC=ns_level0.newDataPC(ns_time_order);
  int nGrow_Redistribute=0;
  int local_Redistribute=0; //redistribute "from scratch"
+ bool remove_negative=true;
+
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_Redistribute);
+    local_Redistribute,remove_negative);
+ 
  ns_level0.CopyNewToOldPC(lev_max); //CopyNewToOldPC declared in: AmrLevel.cpp
 
  Long num_particles=current_PC.TotalNumberOfParticles();
@@ -10480,8 +10488,11 @@ void NavierStokes::CopyOldToNewALL() {
  My_ParticleContainer& current_PC=ns_level0.newDataPC(0);
  int nGrow_Redistribute=0;
  int local_Redistribute=0; //redistribute "from scratch"
+ bool remove_negative=true;
+
  current_PC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_Redistribute);
+    local_Redistribute,remove_negative);
+
  ns_level0.CopyOldToNewPC(lev_max);
 
  Long num_particles=current_PC.TotalNumberOfParticles();
@@ -22853,12 +22864,15 @@ NavierStokes::init_particle_containerALL(int append_flag,
  int nGrow_Redistribute=0;
  bool local_copy=true; //do not redistribute inside of copyParticles
  int local_redistribute=0;
+ bool remove_negative=true;
 
  NBR_Particle_Container->clearParticles();
  NBR_Particle_Container->Redistribute();
  NBR_Particle_Container->copyParticles(localPC,local_copy);
+
  NBR_Particle_Container->Redistribute(lev_min,lev_max,nGrow_Redistribute, 
     local_redistribute);
+
  NBR_Particle_Container->fillNeighbors();
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
@@ -22872,7 +22886,7 @@ NavierStokes::init_particle_containerALL(int append_flag,
  if ((append_flag==OP_PARTICLE_INIT)||
      (append_flag==OP_PARTICLE_ADD)) {
   localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute, 
-    local_redistribute);
+    local_redistribute,remove_negative);
  } else if (append_flag==OP_PARTICLE_SLOPES) {
   // do nothing
  } else {
@@ -23296,7 +23310,10 @@ NavierStokes::post_init_state () {
  int nGrow_Redistribute=0;
   //particles are being redistributed for the first time.
  int local_Redistribute=0;
- localPC.Redistribute(lev_min,lev_max,nGrow_Redistribute,local_Redistribute);
+ bool remove_negative=true;
+
+ localPC.Redistribute(lev_min,lev_max,
+    nGrow_Redistribute,local_Redistribute,remove_negative);
 
 #endif
 
@@ -24713,8 +24730,10 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,int update_particles) {
   int lev_max_DIST=-1;
   int nGrow_Redistribute_DIST=0;
   int local_Redistribute_DIST=0; 
+  bool remove_negative_DIST=true; 
   localPC_DIST.Redistribute(lev_min_DIST,lev_max_DIST,
-    nGrow_Redistribute_DIST,local_Redistribute_DIST);
+    nGrow_Redistribute_DIST,local_Redistribute_DIST,
+    remove_negative_DIST);
 
 #endif
 
