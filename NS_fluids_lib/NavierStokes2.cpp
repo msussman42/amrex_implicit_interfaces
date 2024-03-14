@@ -6678,7 +6678,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 
 void NavierStokes::move_particles(
   int splitting_dir,
-  AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>& localPC,
+  My_ParticleContainer& localPC,
   const std::string& caller_string) {
 
  if ((slab_step>=0)&&(slab_step<ns_time_order)) {
@@ -6866,8 +6866,7 @@ void NavierStokes::move_particles(
 } // omp
  ns_reconcile_d_num(LOOP_MOVE_PARTICLE_CONTAINER,"move_particles");
 
- using MyParIter=
-   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>::ParIterType;
+ using MyParIter=My_ParticleContainer::ParIterType;
  for (MyParIter pti(localPC,level);pti.isValid();++pti) {
   auto& particles=pti.GetArrayOfStructs();
   for (auto& p : particles) {
