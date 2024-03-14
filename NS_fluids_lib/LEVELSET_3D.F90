@@ -20103,13 +20103,16 @@ stop
                   print *,"local_mag invalid: ",local_mag
                   stop
                  endif
+
+                 sub_found=1
+
                  do dir_local=1,SDIM
                   xtarget(dir_local)=xsub(dir_local)- &
                      LS_sub(im_primary_sub)*local_normal(dir_local)
-                  if (xtarget(dir_local).lt.problo_array(dir_local)) then
-                   xtarget(dir_local)=problo_array(dir_local)
-                  else if (xtarget(dir_local).gt.probhi_array(dir_local)) then
-                   xtarget(dir_local)=probhi_array(dir_local)
+                  if (xtarget(dir_local).le.problo_array(dir_local)) then
+                   sub_found=0
+                  else if (xtarget(dir_local).ge.probhi_array(dir_local)) then
+                   sub_found=0
                   else if ((xtarget(dir_local).ge. &
                             problo_array(dir_local)).and. &
                            (xtarget(dir_local).le. &
@@ -20122,12 +20125,27 @@ stop
                   endif
                  enddo ! do dir_local=1,SDIM
 
-                 call containing_sub_box( &
+                 if (sub_found.eq.1) then
+
+                  call containing_sub_box( &
                    accum_PARM, &
                    xtarget, &
                    i,j,k, &
                    isub_test,jsub_test,ksub_test, &
                    sub_found)
+
+                 else if (sub_found.eq.0) then
+
+                  isub_test=isub
+                  jsub_test=jsub
+                  if (SDIM.eq.3) then
+                   ksub_test=ksub
+                  endif
+
+                 else
+                  print *,"sub_found invalid: ",sub_found
+                  stop
+                 endif
 
                  if (isub_test.ne.isub) then
                   sub_found=0
@@ -20495,80 +20513,50 @@ stop
       end subroutine fort_init_particle_container
 
 
-      subroutine check_cfl_BC(grid_PARM, xpart1, xpart2)
+      subroutine check_cfl_BC(grid_PARM, xpart1, xpart2,imat_particle)
       use global_utility_module
 
       implicit none
 
       type(grid_parm_type), INTENT(in) :: grid_PARM
       real(amrex_real), INTENT(in) :: xpart1(SDIM)
-      real(amrex_real), INTENT(inout) :: xpart2(SDIM)
+      real(amrex_real), INTENT(in) :: xpart2(SDIM)
+      integer, INTENT(inout) :: imat_particle
+
       integer bc_local
       integer dir
-      integer dir_inner
-      real(amrex_real) factor
       real(amrex_real) mag
       real(amrex_real) max_travel
 
       max_travel=grid_PARM%dx(1)
 
       do dir=1,SDIM
-       if (xpart2(dir).lt.grid_PARM%problo(dir)) then
+       if (xpart2(dir).le.grid_PARM%problo(dir)) then
         bc_local=grid_PARM%velbc(dir,1,dir)
         if (bc_local.eq.REFLECT_ODD) then
-         if (xpart1(dir).ge.grid_PARM%problo(dir)) then
-          factor=(xpart1(dir)-grid_PARM%problo(dir))/ &
-                 (xpart1(dir)-xpart2(dir))
-          if ((factor.ge.zero).and. &
-              (factor.le.one)) then
-           do dir_inner=1,SDIM
-            xpart2(dir_inner)=xpart1(dir_inner)+ &
-             factor*(xpart2(dir_inner)-xpart1(dir_inner))
-           enddo
-          else
-           print *,"factor invalid: ",factor
-           stop
-          endif
-         else
-          print *,"xpart1(dir) invalid: ",dir,xpart1(dir)
-          stop
-         endif
-        else if ((bc_local.eq.INT_DIR).or. &
-                 (bc_local.eq.EXT_DIR).or. &
+         imat_particle=-1
+        else if (bc_local.eq.INT_DIR) then
+         ! do nothing
+        else if ((bc_local.eq.EXT_DIR).or. &
                  (bc_local.eq.REFLECT_EVEN).or. &
                  (bc_local.eq.FOEXTRAP)) then
-         ! do nothing
+         imat_particle=-1
         else
          print *,"bc_local invalid: ",bc_local
          stop
         endif
        endif
 
-       if (xpart2(dir).gt.grid_PARM%probhi(dir)) then
+       if (xpart2(dir).ge.grid_PARM%probhi(dir)) then
         bc_local=grid_PARM%velbc(dir,2,dir)
         if (bc_local.eq.REFLECT_ODD) then
-         if (xpart1(dir).le.grid_PARM%probhi(dir)) then
-          factor=(xpart1(dir)-grid_PARM%probhi(dir))/ &
-                 (xpart1(dir)-xpart2(dir))
-          if ((factor.ge.zero).and. &
-              (factor.le.one)) then
-           do dir_inner=1,SDIM
-            xpart2(dir_inner)=xpart1(dir_inner)+ &
-             factor*(xpart2(dir_inner)-xpart1(dir_inner))
-           enddo
-          else
-           print *,"factor invalid: ",factor
-           stop
-          endif
-         else
-          print *,"xpart1(dir) invalid: ",dir,xpart1(dir)
-          stop
-         endif
-        else if ((bc_local.eq.INT_DIR).or. &
-                 (bc_local.eq.EXT_DIR).or. &
+         imat_particle=-1
+        else if (bc_local.eq.INT_DIR) then
+         ! do nothing
+        else if ((bc_local.eq.EXT_DIR).or. &
                  (bc_local.eq.REFLECT_EVEN).or. &
                  (bc_local.eq.FOEXTRAP)) then
-         ! do nothing
+         imat_particle=-1
         else
          print *,"bc_local invalid: ",bc_local
          stop
@@ -20582,16 +20570,7 @@ stop
       enddo
       mag=sqrt(mag)
       if (mag.gt.max_travel) then
-       factor=max_travel/mag
-       if ((factor.ge.zero).and.(factor.le.one)) then
-        do dir=1,SDIM
-         xpart2(dir)=xpart1(dir)+ &
-             factor*(xpart2(dir)-xpart1(dir))
-        enddo
-       else
-        print *,"factor invalid: ",factor
-        stop
-       endif
+       imat_particle=-1
       else if (mag.le.max_travel) then
        ! do nothing
       else
@@ -20613,7 +20592,7 @@ stop
         level, &
         finest_level, &
         xlo,dx, &
-        particles, & ! a list of particles in the elastic structure
+        particles, & ! a list of particles
         Np, & !  Np = number of particles
         dt, &
         vel_time_slab, &
@@ -20862,7 +20841,7 @@ stop
          do dir=1,SDIM
           xpart2(dir)=xpart1(dir)+0.5d0*dt*u1(dir)
          enddo
-         call check_cfl_BC(grid_PARM,xpart1,xpart2)
+         call check_cfl_BC(grid_PARM,xpart1,xpart2,imat_particle)
 
          call interp_mac_velocity( &
           splitting_dir, &
@@ -20877,7 +20856,7 @@ stop
           xpart3(dir)=xpart1(dir)+0.5d0*dt*u2(dir)
          enddo
 
-         call check_cfl_BC(grid_PARM,xpart1,xpart3)
+         call check_cfl_BC(grid_PARM,xpart1,xpart3,imat_particle)
 
          call interp_mac_velocity( &
           splitting_dir, &
@@ -20892,7 +20871,7 @@ stop
           xpart4(dir)=xpart1(dir)+dt*u3(dir)
          enddo
 
-         call check_cfl_BC(grid_PARM,xpart1,xpart4)
+         call check_cfl_BC(grid_PARM,xpart1,xpart4,imat_particle)
 
          call interp_mac_velocity( &
           splitting_dir, &
@@ -20913,7 +20892,7 @@ stop
          do dir=1,SDIM
           xpart2(dir)=xpart1(dir)+dt*u1(dir)
          enddo
-         call check_cfl_BC(grid_PARM,xpart1,xpart2)
+         call check_cfl_BC(grid_PARM,xpart1,xpart2,imat_particle)
 
          call interp_mac_velocity( &
           splitting_dir, &
@@ -21014,7 +20993,7 @@ stop
         stop
        endif
 
-       call check_cfl_BC(grid_PARM,xpart1,xpart_last)
+       call check_cfl_BC(grid_PARM,xpart1,xpart_last,imat_particle)
 
        do dir=1,SDIM
         particles(interior_ID)%pos(dir)=xpart_last(dir)
@@ -21067,6 +21046,18 @@ stop
          stop
         endif
        enddo ! dir=1..sdim
+
+       if ((imat_particle.ge.1).and. &
+           (imat_particle.le.num_materials)) then
+        !do nothing
+       else if (imat_particle.eq.-1) then
+        particles(interior_ID)% &
+          extra_int(N_EXTRA_INT_MATERIAL_ID+1)=imat_particle
+       else
+        print *,"imat_particle invalid(21078): ",imat_particle
+        stop
+       endif
+
 
       enddo!do interior_ID=1,Np
 
