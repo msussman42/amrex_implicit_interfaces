@@ -6812,8 +6812,10 @@ void NavierStokes::move_particles(
 
   const Real* xlo = grid_loc[gridno].lo();
 
+    // this is an object with a pointer to AoS data
   auto& particles = localPC.GetParticles(level)
    [std::make_pair(mfi.index(),mfi.LocalTileIndex())];
+
   auto& particles_AoS = particles.GetArrayOfStructs();
   int Np=particles_AoS.size();
 
@@ -6863,6 +6865,21 @@ void NavierStokes::move_particles(
  }  // mfi
 } // omp
  ns_reconcile_d_num(LOOP_MOVE_PARTICLE_CONTAINER,"move_particles");
+
+ using MyParIter=
+   AmrParticleContainer<N_EXTRA_REAL,N_EXTRA_INT,0,0>::ParIterType;
+ for (MyParIter pti(localPC,level);pti.isValid();++pti) {
+  auto& particles=pti.GetArrayOfStructs();
+  for (auto& p : particles) {
+   int material_id=p.idata(N_EXTRA_INT_MATERIAL_ID);
+   if ((material_id>=1)&&(material_id<=num_materials)) {
+    //do nothing
+   } else if (material_id==-1) {
+    p.id()=-p.id();
+   } else
+    amrex::Error("material_id invalid");
+  }
+ }
 
  delete lsmf;
 
