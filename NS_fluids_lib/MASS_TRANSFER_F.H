@@ -120,6 +120,8 @@ extern "C"
     Real* saturation_temp_min,
     Real* saturation_temp_max,
     int* freezing_model,
+    Real* prescribed_mdot,
+    int* observe_initial_mdot,
     int* Tanasawa_or_Schrage_or_Kassemi,
     int* interface_mass_transfer_model,
     int* distribute_from_target,

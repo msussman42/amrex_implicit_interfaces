@@ -2445,7 +2445,10 @@ stop
        TSAT_Y_PARMS, &
        POUT, &
        Y_gamma,T_gamma, &
-       mdotY_top,mdotY_bot,mdotY)
+       mdotY_top, &
+       mdotY_bot, &
+       mdotY, &
+       Y_PROBE_VAPOR)
       use global_utility_module
       IMPLICIT NONE
 
@@ -2455,6 +2458,7 @@ stop
       real(amrex_real), INTENT(in) :: Y_gamma
       real(amrex_real), INTENT(in) :: T_gamma
       real(amrex_real), INTENT(out) :: mdotY_top,mdotY_bot,mdotY
+      real(amrex_real), INTENT(out) :: Y_PROBE_VAPOR
       real(amrex_real) D_MASS
       real(amrex_real) LL
       integer iprobe_vapor
@@ -2470,6 +2474,8 @@ stop
       integer imattype
       real(amrex_real) massfrac_parm(num_species_var+1)
       integer ispec
+
+      Y_PROBE_VAPOR=one
 
       YI_min=TSAT_Y_PARMS%YI_min
 
@@ -2515,7 +2521,9 @@ stop
          den_G=TSAT_Y_PARMS%den_G
          if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
 
-          mdotY_top=Y_gamma-POUT%Y_probe(iprobe_vapor)
+          Y_PROBE_VAPOR=POUT%Y_probe(iprobe_vapor)
+
+          mdotY_top=Y_gamma-Y_PROBE_VAPOR
           mdotY_top=den_G*D_MASS*mdotY_top/ &
                  POUT%dxprobe_target(iprobe_vapor)
           mdotY_bot=one-Y_gamma
@@ -2767,6 +2775,7 @@ stop
       integer Kassemi_flag
       real(amrex_real) TEMP_PROBE_source
       real(amrex_real) TEMP_PROBE_dest
+      real(amrex_real) Y_PROBE_VAPOR
 
       Kassemi_flag=TSAT_Y_PARMS%Tanasawa_or_Schrage_or_Kassemi
       if (Kassemi_flag.eq.0) then
@@ -2806,7 +2815,10 @@ stop
        TSAT_Y_PARMS, &
        POUT, &
        Y_gamma,T_gamma, &
-       mdotY_top,mdotY_bot,mdotY)
+       mdotY_top, &
+       mdotY_bot, &
+       mdotY, &
+       Y_PROBE_VAPOR)
 
       if ((mdotT.ge.zero).or. &
           (mdotT.le.zero)) then
@@ -7374,6 +7386,8 @@ stop
        saturation_temp_min, &
        saturation_temp_max, &
        freezing_model, &
+       prescribed_mdot, &
+       observe_initial_mdot, &
        Tanasawa_or_Schrage_or_Kassemi, &
        interface_mass_transfer_model, &
        distribute_from_target, &
@@ -7466,6 +7480,8 @@ stop
       real(amrex_real), INTENT(in) :: saturation_temp_min(2*num_interfaces)
       real(amrex_real), INTENT(in) :: saturation_temp_max(2*num_interfaces)
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
+      real(amrex_real), INTENT(in) :: prescribed_mdot(2*num_interfaces)
+      integer, INTENT(in) :: observe_initial_mdot
       integer, INTENT(in) :: Tanasawa_or_Schrage_or_Kassemi(2*num_interfaces)
       integer, INTENT(in) :: interface_mass_transfer_model(2*num_interfaces)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
@@ -7533,7 +7549,8 @@ stop
       real(amrex_real), target, INTENT(in) :: EOS(DIMV(EOS),nden)
       real(amrex_real), pointer :: EOS_ptr(D_DECL(:,:,:),:)
        ! F,X,order,SL,I x num_materials
-      real(amrex_real), target, INTENT(in) :: recon(DIMV(recon),num_materials*ngeom_recon) 
+      real(amrex_real), target, INTENT(in) :: &
+              recon(DIMV(recon),num_materials*ngeom_recon) 
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
       real(amrex_real), target, INTENT(in) :: pres(DIMV(pres)) 
       real(amrex_real), pointer :: pres_ptr(D_DECL(:,:,:))
@@ -7660,6 +7677,7 @@ stop
       real(amrex_real) mdotY_top_debug,mdotY_bot_debug,mdotY_debug
       real(amrex_real) TEMP_PROBE_source
       real(amrex_real) TEMP_PROBE_dest
+      real(amrex_real) Y_PROBE_VAPOR
 
       integer debug_limiter
 
@@ -9189,8 +9207,13 @@ stop
                      POUT%pres_I_interp(1), & ! PHYDWATER
                      Fsource,Fdest)
 
-                   if (VEL_correct.lt.zero) then
+                   if (VEL_correct.ge.zero) then
+                    ! do nothing
+                   else if (VEL_correct.lt.zero) then
                     VEL_correct=zero
+                   else
+                    print *,"VEL_correct bust"
+                    stop
                    endif
 
                    TSAT_correct=TSAT_predict
@@ -9340,7 +9363,10 @@ stop
                       TSAT_Y_PARMS, &
                       POUT, &
                       Y_predict,TSAT_correct, &
-                      mdotY_top_debug,mdotY_bot_debug,mdotY_debug)
+                      mdotY_top_debug, &
+                      mdotY_bot_debug, &
+                      mdotY_debug, &
+                      Y_PROBE_VAPOR)
 
                     else if &
                       (is_valid_freezing_modelF(local_freezing_model).eq.1) &
@@ -9492,6 +9518,23 @@ stop
 
                   enddo ! do while (TSAT_converge.eq.0)
 
+                  if (observe_initial_mdot.eq.1) then
+                   if (user_override_TI_YI.eq.0) then
+                    if (local_freezing_model.eq.6) then ! Palmore/Desjardins
+                     if (hardwire_flag(ireverse).eq.0) then
+                      print *,"i,j,k,iten,ireverse ", &
+                        i,j,k,iten,ireverse
+                      print *,"mdotT_debug ",mdotT_debug
+                      print *,"mdotY_debug ",mdotY_debug
+                      print *,"TEMP_PROBE_source ",TEMP_PROBE_source
+                      print *,"TEMP_PROBE_dest ",TEMP_PROBE_dest
+                      print *,"Y_PROBE_VAPOR ",Y_PROBE_VAPOR
+                     endif
+                    endif
+                   endif
+                  endif
+
+                     
                   if (TSAT_iter.eq.1) then
                    ! check nothing
                   else if (TSAT_iter.gt.1) then
@@ -9853,13 +9896,17 @@ stop
            do iten=1,num_interfaces
             do ireverse=0,1
              print *,"iten,ireverse,temp_probe(1) ", &
-               iten,ireverse,temp_target_probe_history(iten+ireverse*num_interfaces,1)
+               iten,ireverse, &
+               temp_target_probe_history(iten+ireverse*num_interfaces,1)
              print *,"iten,ireverse,temp_probe(2) ", &
-               iten,ireverse,temp_target_probe_history(iten+ireverse*num_interfaces,2)
+               iten,ireverse, &
+               temp_target_probe_history(iten+ireverse*num_interfaces,2)
              print *,"iten,ireverse,dxprobe(1) ", &
-               iten,ireverse,dxprobe_target_history(iten+ireverse*num_interfaces,1)
+               iten,ireverse, &
+               dxprobe_target_history(iten+ireverse*num_interfaces,1)
              print *,"iten,ireverse,dxprobe(2) ", &
-               iten,ireverse,dxprobe_target_history(iten+ireverse*num_interfaces,2)
+               iten,ireverse, &
+               dxprobe_target_history(iten+ireverse*num_interfaces,2)
             enddo
            enddo
            stop
