@@ -723,6 +723,18 @@ Vector<Real> NavierStokes::reaction_rate;
 // 7=cavitation
 Vector<int> NavierStokes::freezing_model;
 
+// mdot=n_gamma dot [k grad T]/[h]=
+//      n_gamma dot (rho_g D grad Y_V)/(Y_gamma-1)
+// mdot units: kg/(m^2 s)
+// [h]=h_V-h_L
+// k units: W/(m kelvin)=J/(sec m kelvin)
+// n_gamma points from liquid to vapor.
+// h units: J/kg
+// D units: m^2/s
+// rho units: kg/m^3
+Vector<Real> NavierStokes::prescribed_mdot; //default=0.0
+int NavierStokes::observe_initial_mdot=0;
+
 //0=Palmore and Desjardins (Villegas, Tanguy, Desjardins) 
 //1=Tanasawa  2=Schrage 3=Kassemi
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
@@ -3601,8 +3613,11 @@ NavierStokes::read_params ()
     latent_heat_min.resize(2*num_interfaces);
 
     reaction_rate.resize(2*num_interfaces);
+
     freezing_model.resize(2*num_interfaces);
+    prescribed_mdot.resize(2*num_interfaces);
     Tanasawa_or_Schrage_or_Kassemi.resize(2*num_interfaces);
+
     rigid_fraction_id.resize(num_materials);
     mass_fraction_id.resize(2*num_interfaces);
     distribute_from_target.resize(2*num_interfaces);
@@ -3692,10 +3707,16 @@ NavierStokes::read_params ()
 
      reaction_rate[i]=0.0;
      reaction_rate[i+num_interfaces]=0.0;
+
      freezing_model[i]=0;
      freezing_model[i+num_interfaces]=0;
+
+     prescribed_mdot[i]=0.0;
+     prescribed_mdot[i+num_interfaces]=0.0;
+
      Tanasawa_or_Schrage_or_Kassemi[i]=0;
      Tanasawa_or_Schrage_or_Kassemi[i+num_interfaces]=0;
+
      mass_fraction_id[i]=0;
      mass_fraction_id[i+num_interfaces]=0;
      distribute_from_target[i]=0;
@@ -4031,7 +4052,10 @@ NavierStokes::read_params ()
 
 
     pp.queryAdd("reaction_rate",reaction_rate,2*num_interfaces);
+
     pp.queryAdd("freezing_model",freezing_model,2*num_interfaces);
+    pp.queryAdd("prescribed_mdot",prescribed_mdot,2*num_interfaces);
+
     pp.queryAdd("Tanasawa_or_Schrage_or_Kassemi",
       Tanasawa_or_Schrage_or_Kassemi,2*num_interfaces);
 
@@ -4467,6 +4491,8 @@ NavierStokes::read_params ()
       amrex::Error("is_FSI_rigid_matC invalid");
 
     } // im=0;im<num_materials;im++
+
+    pp.queryAdd("observe_initial_mdot: ",observe_initial_mdot);
 
     pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins);
 
@@ -5541,6 +5567,8 @@ NavierStokes::read_params ()
        outflow_velocity_buffer_size[i] << '\n';
      }
 
+     std::cout << "observe_initial_mdot" << observe_initial_mdot << '\n';
+
      std::cout << "R_Palmore_Desjardins " << R_Palmore_Desjardins << '\n';
 
      std::cout << "unscaled_min_curvature_radius=" << 
@@ -5656,6 +5684,12 @@ NavierStokes::read_params ()
        freezing_model[i] << '\n';
       std::cout << "freezing_model i+num_interfaces=" << 
        i+num_interfaces << "  " << freezing_model[i+num_interfaces] << '\n';
+
+      std::cout << "prescribed_mdot i=" << i << "  " << 
+       prescribed_mdot[i] << '\n';
+      std::cout << "prescribed_mdot i+num_interfaces=" << 
+       i+num_interfaces << "  " << prescribed_mdot[i+num_interfaces] << '\n';
+
       std::cout << "Tanasawa_or_Schrage_or_Kassemi i=" << i << "  " << 
        Tanasawa_or_Schrage_or_Kassemi[i] << '\n';
       std::cout << "Tanasawa_or_Schrage_or_Kassemi i+num_interfaces=" << 
@@ -13572,6 +13606,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_min.dataPtr(),
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
+     prescribed_mdot.dataPtr(),
+     &observe_initial_mdot,
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
      interface_mass_transfer_model.dataPtr(),
      distribute_from_target.dataPtr(),
@@ -13654,6 +13690,8 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
      saturation_temp_min.dataPtr(),
      saturation_temp_max.dataPtr(),
      freezing_model.dataPtr(),
+     prescribed_mdot.dataPtr(),
+     &observe_initial_mdot,
      Tanasawa_or_Schrage_or_Kassemi.dataPtr(),
      interface_mass_transfer_model.dataPtr(),
      distribute_from_target.dataPtr(),
@@ -13709,6 +13747,21 @@ NavierStokes::level_phase_change_rate(Vector<blobclass> blobdata,
 
  delete presmf;
  delete pres_eos_mf;
+
+ if (level==finest_level) {
+  if (nucleation_flag==0) {
+   if (observe_initial_mdot==0) {
+    //do nothing
+   } else
+    amrex::Error("observe_initial_mdot<>0; aborting");
+  } else if (nucleation_flag==1) {
+   //do nothing
+  } else
+   amrex::Error("nucleation_flag invalid");
+ } else if ((level>=0)&&(level<finest_level)) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
 
 } // end subroutine level_phase_change_rate
 

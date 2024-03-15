@@ -1786,6 +1786,17 @@ protected:
      // 1-2 1-3 1-4 2-3 2-4 3-4
      // 2-1 3-1 4-1 3-2 4-2 4-3
     static Vector<int> freezing_model;
+     // mdot=n_gamma dot [k grad T]/[h]=
+     //      n_gamma dot (rho_g D grad Y_V)/(Y_gamma-1)
+     // mdot units: kg/(m^2 s)
+     // [h]=h_V-h_L
+     // k units: W/(m kelvin)=J/(sec m kelvin)
+     // n_gamma points from liquid to vapor.
+     // h units: J/kg
+     // D units: m^2/s
+     // rho units: kg/m^3
+    static Vector<Real> prescribed_mdot; //default=0.0
+    static int observe_initial_mdot;  //default=0
      // 0=Palmore and Desjardins (same as Villegas et al)
      // 1=Tanasawa  2=Schrage  3=Kassemi
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
