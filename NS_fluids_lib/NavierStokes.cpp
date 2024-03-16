@@ -5616,7 +5616,14 @@ NavierStokes::read_params ()
 
       std::cout << "saturation_temp_min i=" << i << "  " << 
        saturation_temp_min[i] << '\n';
-      std::cout << "saturation_temp_max i+num_interfaces=" << i+num_interfaces << "  " << 
+      std::cout << "saturation_temp_min i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
+       saturation_temp_min[i+num_interfaces] << '\n';
+
+      std::cout << "saturation_temp_max i=" << i << "  " << 
+       saturation_temp_max[i] << '\n';
+      std::cout << "saturation_temp_max i+num_interfaces=" << 
+       i+num_interfaces << "  " << 
        saturation_temp_max[i+num_interfaces] << '\n';
 
       std::cout << "nucleation_temp i=" << i << "  " << 

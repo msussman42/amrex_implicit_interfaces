@@ -160,10 +160,23 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.03e+7 2.03e+7 # erg/(g K) axis_dir=1
 #3->2
 #4->2
 #4->3
+
+# mdot=n_gamma dot [k grad T]/[h]=
+#      n_gamma dot (rho_g D grad Y_V)/(Y_gamma-1)
+# mdot units: kg/(m^2 s)
+# [h]=h_V-h_L
+# k units: W/(m kelvin)=J/(sec m kelvin)
+# n_gamma points from liquid to vapor.
+# h units: J/kg
+# D units: m^2/s
+# rho units: kg/m^3
+ns.observe_initial_mdot=1
+ns.prescribed_mdot = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #for evaporation (standard setup): 373.15
 ns.saturation_temp = 800.0 0.0 0.0 0.0 0.0 0.0 0.0 273.15 0.0 0.0 0.0 0.0
 ns.saturation_temp_min = 273.15 0.0 0.0 0.0 0.0 0.0 0.0 273.1499 0.0 0.0 0.0 0.0
+ns.saturation_temp_max = 800.0 0.0 0.0 0.0 0.0 0.0 0.0 273.1501 0.0 0.0 0.0 0.0
 #evap: freezing_model=6 Palmore and Desjardins
 ns.freezing_model=6 0 0 0 0 0 0 0 0 0 0 0
 ns.Tanasawa_or_Schrage_or_Kassemi=0 0 0 0 0 0 0 0 0 0 0 0
