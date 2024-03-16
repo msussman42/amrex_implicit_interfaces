@@ -2441,6 +2441,7 @@ stop
       end subroutine apply_TI_limiter
 
       subroutine mdot_from_Y_probe( &
+       prescribed_mdot, &
        probe_ok, &
        TSAT_Y_PARMS, &
        POUT, &
@@ -2452,11 +2453,12 @@ stop
       use global_utility_module
       IMPLICIT NONE
 
+      real(amrex_real), INTENT(in) :: prescribed_mdot
       integer, INTENT(in) :: probe_ok
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       type(probe_out_type), INTENT(inout) :: POUT
-      real(amrex_real), INTENT(in) :: Y_gamma
-      real(amrex_real), INTENT(in) :: T_gamma
+      real(amrex_real), INTENT(inout) :: Y_gamma
+      real(amrex_real), INTENT(inout) :: T_gamma
       real(amrex_real), INTENT(out) :: mdotY_top,mdotY_bot,mdotY
       real(amrex_real), INTENT(out) :: Y_PROBE_VAPOR
       real(amrex_real) D_MASS
@@ -2522,6 +2524,29 @@ stop
          if ((D_MASS.gt.zero).and.(den_G.gt.zero)) then
 
           Y_PROBE_VAPOR=POUT%Y_probe(iprobe_vapor)
+
+          if (prescribed_mdot.eq.zero) then
+           ! do nothing
+          else if (prescribed_mdot.gt.zero) then
+           !mdot=(Y-Yprobe)*rho*D/((1-Y)*dx)
+           !(1-Y)dx mdot=(Y-Yprobe)*rho*D
+           !Yprobe*rho*D+dx mdot=Y(rho*D+dx*mdot)
+           !Y=(dx mdot + Yprobe*rho*D)/(dx mdot+rho*D)
+           Y_gamma= &
+             (POUT%dxprobe_target(iprobe_vapor)*prescribed_mdot+ &
+             Y_PROBE_VAPOR*den_G*D_MASS)/ &
+             (POUT%dxprobe_target(iprobe_vapor)*prescribed_mdot+ &
+             den_G*D_MASS)
+           if ((Y_gamma.ge.zero).and.(Y_gamma.le.one)) then
+            !do nothing
+           else
+            print *,"Y_gamma invalid: ",Y_gamma
+            stop
+           endif
+          else
+           print *,"prescribed_mdot invalid"
+           stop
+          endif
 
           mdotY_top=Y_gamma-Y_PROBE_VAPOR
           mdotY_top=den_G*D_MASS*mdotY_top/ &
@@ -2621,6 +2646,7 @@ stop
 
 
       subroutine mdot_from_T_probe( &
+       prescribed_mdot, &
        probe_ok, &
        TSAT_Y_PARMS, &
        POUT, &
@@ -2630,11 +2656,12 @@ stop
        TEMP_PROBE_dest)
       IMPLICIT NONE
 
+      real(amrex_real), INTENT(in) :: prescribed_mdot
       integer, INTENT(in) :: probe_ok
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       type(probe_out_type), INTENT(inout) :: POUT
-      real(amrex_real), INTENT(in) :: T_gamma
-      real(amrex_real), INTENT(in) :: Y_gamma
+      real(amrex_real), INTENT(inout) :: T_gamma
+      real(amrex_real), INTENT(inout) :: Y_gamma
       real(amrex_real), INTENT(out) :: mdotT
       real(amrex_real), INTENT(out) :: TEMP_PROBE_source
       real(amrex_real), INTENT(out) :: TEMP_PROBE_dest
@@ -2722,8 +2749,21 @@ stop
          TEMP_PROBE_dest=POUT%T_probe(2)
 
          if (wt(1)+wt(2).gt.zero) then
-          probediff(1)=POUT%T_probe(1)-T_gamma
-          probediff(2)=POUT%T_probe(2)-T_gamma
+
+          if (prescribed_mdot.eq.zero) then
+           ! do nothing
+          else if (prescribed_mdot.gt.zero) then
+           !mdot=w1 (TS-T)+w2 (TD-T)=w1 TS + w2 TD-(w1+w2)T
+           !T=(w1 TS + w2 TD - mdot)/(w1+w2)
+           T_gamma=(wt(1)*TEMP_PROBE_source+wt(2)*TEMP_PROBE_dest- &
+                    prescribed_mdot)/(wt(1)+wt(2))
+          else
+           print *,"prescribed_mdot invalid"
+           stop
+          endif
+
+          probediff(1)=TEMP_PROBE_source-T_gamma
+          probediff(2)=TEMP_PROBE_dest-T_gamma
           mdotT=wt(1)*probediff(1)+wt(2)*probediff(2)
          else
           print *,"expecting wt(1)+wt(2) to be positive"
@@ -2756,6 +2796,7 @@ stop
 
 
       subroutine mdot_diff_func( &
+       prescribed_mdot, &
        probe_ok, &
        TSAT_Y_PARMS, &
        POUT, &
@@ -2764,11 +2805,12 @@ stop
        mdot_diff)
       IMPLICIT NONE
 
+      real(amrex_real), INTENT(in) :: prescribed_mdot
       integer, INTENT(in) :: probe_ok
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       type(probe_out_type), INTENT(inout) :: POUT
-      real(amrex_real), INTENT(in) :: T_gamma
-      real(amrex_real), INTENT(in) :: Y_gamma
+      real(amrex_real), INTENT(inout) :: T_gamma
+      real(amrex_real), INTENT(inout) :: Y_gamma
       real(amrex_real), INTENT(out) :: mdot_diff
       real(amrex_real) mdotT
       real(amrex_real) mdotY_top,mdotY_bot,mdotY
@@ -2802,6 +2844,7 @@ stop
       endif
 
       call mdot_from_T_probe( &
+       prescribed_mdot, &
        probe_ok, &
        TSAT_Y_PARMS, &
        POUT, &
@@ -2811,6 +2854,7 @@ stop
        TEMP_PROBE_dest)
 
       call mdot_from_Y_probe( &
+       prescribed_mdot, &
        probe_ok, &
        TSAT_Y_PARMS, &
        POUT, &
@@ -7165,6 +7209,7 @@ stop
       end subroutine add_to_TI_YI
 
       subroutine advance_TY_gamma( &
+        prescribed_mdot, &
         TSAT_Y_PARMS, &
         POUT, &
         fully_saturated, &
@@ -7186,6 +7231,7 @@ stop
       use mass_transfer_module
       IMPLICIT NONE
 
+      real(amrex_real), INTENT(in) :: prescribed_mdot
       real(amrex_real), INTENT(inout) :: X_gamma_a,X_gamma_b,X_gamma_c
       real(amrex_real), INTENT(inout) :: Y_gamma_a,Y_gamma_b,Y_gamma_c
       real(amrex_real), INTENT(inout) :: T_gamma_a,T_gamma_b,T_gamma_c
@@ -7258,21 +7304,25 @@ stop
       endif
 
       call mdot_diff_func( &
+       prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
        Y_gamma_a,T_gamma_a,mdot_diff_a)
 
       call mdot_diff_func( &
+       prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
        Y_gamma_b,T_gamma_b,mdot_diff_b)
 
       call mdot_diff_func( &
+       prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
        Y_gamma_c,T_gamma_c,mdot_diff_c)
 
       call mdot_diff_func( &
+       prescribed_mdot, &
        probe_ok,TSAT_Y_PARMS, &
        POUT, &
        Y_history,T_history, &
@@ -9239,6 +9289,7 @@ stop
                       if (fully_saturated.eq.2) then
 
                        call advance_TY_gamma( &
+                        prescribed_mdot(iten+ireverse*num_interfaces), &
                         TSAT_Y_PARMS, &
                         POUT, &
                         fully_saturated, &
@@ -9302,6 +9353,7 @@ stop
                         if (fully_saturated.eq.0) then
 
                          call advance_TY_gamma( &
+                          prescribed_mdot(iten+ireverse*num_interfaces), &
                           TSAT_Y_PARMS, &
                           POUT, &
                           fully_saturated, &
@@ -9350,6 +9402,7 @@ stop
                      endif
   
                      call mdot_from_T_probe( &
+                      prescribed_mdot(iten+ireverse*num_interfaces), &
                       probe_ok, &
                       TSAT_Y_PARMS, &
                       POUT, &
@@ -9359,6 +9412,7 @@ stop
                       TEMP_PROBE_dest)
 
                      call mdot_from_Y_probe( &
+                      prescribed_mdot(iten+ireverse*num_interfaces), &
                       probe_ok, &
                       TSAT_Y_PARMS, &
                       POUT, &
