@@ -96,6 +96,7 @@ stop
        real(amrex_real) :: universal_gas_constant_R
        real(amrex_real) :: molar_mass_ambient   
        real(amrex_real) :: molar_mass_vapor
+       real(amrex_real) :: Clausius_Clapyron_Tsat
        real(amrex_real) :: TSAT_base
        real(amrex_real) :: YI_min
        real(amrex_real) :: TI_min
@@ -121,9 +122,9 @@ stop
         dx,xlo, &
         fablo,fabhi, &
         TSATFAB, &
-        T_I, &
+        T_I, & !intent(out)
         latent_comp, &
-        TSAT_array, &
+        TSAT_array, & !intent(in)
         TSAT_flag_array, &  ! =0 if derived, =1 if T_interface(x,y,z,t) given.
         x_I,time)
       use global_utility_module
@@ -1919,9 +1920,9 @@ stop
        !              mdot_from_T_probe
        !              fort_ratemasschange
       subroutine probe_interpolation( &
-       PROBE_PARMS, &
-       T_I,Y_I, &
-       POUT)
+       PROBE_PARMS, & !intent(in)
+       T_I,Y_I, & !intent(in)
+       POUT) !intent(out)
       use global_utility_module
       use MOF_routines_module
 
@@ -2590,7 +2591,7 @@ stop
            Pgamma, & !intent(out)
            TSAT_Y_PARMS%reference_pressure, & !intent(in)
            T_gamma, & !intent(in)
-           TSAT_Y_PARMS%TSAT_base, & !intent(in)
+           TSAT_Y_PARMS%Clausius_Clapyron_Tsat, & !intent(in)
            LL, & !intent(in)
            TSAT_Y_PARMS%universal_gas_constant_R, & !intent(in)
            TSAT_Y_PARMS%molar_mass_vapor) !intent(in)
@@ -2847,6 +2848,21 @@ stop
        if (Y_gamma.eq.one) then
         print *,"expecting Y_gamma lt one in mdot_diff_func"
         print *,"Y_gamma= ",Y_gamma
+        print *,"probe_ok= ",probe_ok
+        print *,"Clausius_Clapyron_Tsat= ",TSAT_Y_PARMS%Clausius_Clapyron_Tsat
+        print *,"TSAT_base= ",TSAT_Y_PARMS%TSAT_base
+        print *,"YI_min= ",TSAT_Y_PARMS%YI_min
+        print *,"den_G= ",TSAT_Y_PARMS%den_G
+        print *,"molar_mass_ambient= ",TSAT_Y_PARMS%molar_mass_ambient
+        print *,"molar_mass_vapor= ",TSAT_Y_PARMS%molar_mass_vapor
+        print *,"POUT%Y_probe(1)= ",POUT%Y_probe(1)
+        print *,"POUT%Y_probe(2)= ",POUT%Y_probe(2)
+        print *,"TSAT_Y_PARMS%PROBE_PARMS%i= ", &
+                TSAT_Y_PARMS%PROBE_PARMS%i
+        print *,"TSAT_Y_PARMS%PROBE_PARMS%j= ", &
+                TSAT_Y_PARMS%PROBE_PARMS%j
+        print *,"TSAT_Y_PARMS%PROBE_PARMS%k= ", &
+                TSAT_Y_PARMS%PROBE_PARMS%k
         stop
        else if ((Y_gamma.ge.zero).and.(Y_gamma.lt.one)) then
         ! do nothing
@@ -2913,7 +2929,10 @@ stop
       type(TSAT_MASS_FRAC_parm_type), INTENT(in) :: TSAT_Y_PARMS
       real(amrex_real), INTENT(out) :: Y_I_MIN
       real(amrex_real) :: X_I_MIN
-      real(amrex_real) :: LL,R,TSAT_base,T_I_MAX,WA,WV
+      real(amrex_real) :: LL,R
+      real(amrex_real) :: Clausius_Clapyron_Tsat
+      real(amrex_real) :: TSAT_base
+      real(amrex_real) :: T_I_MAX,WA,WV
       real(amrex_real) YI_min_old
 
       YI_min_old=TSAT_Y_PARMS%YI_min
@@ -2928,6 +2947,7 @@ stop
        if ((LL.gt.zero).or.(LL.lt.zero)) then
 
         TSAT_base=TSAT_Y_PARMS%TSAT_base
+        Clausius_Clapyron_Tsat=TSAT_Y_PARMS%Clausius_Clapyron_Tsat
         T_I_MAX=TSAT_Y_PARMS%TI_max
 
         if ((TSAT_base.gt.zero).and. &
@@ -2940,7 +2960,7 @@ stop
           else if (LL.lt.zero) then
 
              ! X=exp(-(L*WV/R)*(one/Tgamma-one/TSAT))
-           call X_from_Tgamma(X_I_MIN,T_I_MAX,TSAT_base,LL,R,WV)
+           call X_from_Tgamma(X_I_MIN,T_I_MAX,Clausius_Clapyron_Tsat,LL,R,WV)
 
            if ((X_I_MIN.gt.zero).and.(X_I_MIN.le.one)) then
 
@@ -7243,7 +7263,8 @@ stop
         TSAT_correct, &
         Y_predict, &
         VEL_correct, &
-        TSAT_base, &
+        Clausius_Clapyron_Tsat, & !intent(in)
+        TSAT_base, & !intent(in)
         LL,RR,WA,WV, &
         TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
         TI_min,TI_max, &
@@ -7263,6 +7284,7 @@ stop
       integer, INTENT(inout) :: TI_YI_counter
       integer, INTENT(inout) :: TI_YI_best_guess_index
       real(amrex_real), INTENT(in) :: LL,RR,WA,WV
+      real(amrex_real), INTENT(in) :: Clausius_Clapyron_Tsat
       real(amrex_real), INTENT(in) :: TSAT_base
       real(amrex_real), INTENT(inout) :: TSAT_predict
       real(amrex_real), INTENT(inout) :: TSAT_correct
@@ -7321,12 +7343,12 @@ stop
        Y_history=one
       else if (fully_saturated.eq.0) then
        call X_from_Tgamma(X_gamma_c,T_gamma_c, &
-         TSAT_base, &
+         Clausius_Clapyron_Tsat, &
          LL,RR,WV) 
        call massfrac_from_volfrac(X_gamma_c,Y_gamma_c,WA,WV)
 
        call X_from_Tgamma(X_history,T_history, &
-         TSAT_base, &
+         Clausius_Clapyron_Tsat, &
          LL,RR,WV) 
        call massfrac_from_volfrac(X_history,Y_history,WA,WV)
       else
@@ -7395,6 +7417,7 @@ stop
          print *,"WA ",WA
          print *,"WV ",WV
          print *," LL ",LL
+         print *," Clausius_Clapyron_Tsat ",Clausius_Clapyron_Tsat
          print *," TSAT_base ",TSAT_base
          stop
         endif
@@ -7691,6 +7714,7 @@ stop
       real(amrex_real) local_hardwire_Y(0:1)
       integer hardwire_flag(0:1)  ! =0 do not hardwire  =1 hardwire
       real(amrex_real) local_Tsat(0:1)
+      real(amrex_real) Clausius_Clapyron_Tsat(0:1)
       real(amrex_real) delta_Tsat
       real(amrex_real) local_Tsat_base(0:1)
       real(amrex_real) vel_phasechange(0:1)
@@ -8234,6 +8258,13 @@ stop
                  saturation_temp(iten+ireverse*num_interfaces)
                local_Tsat_base(ireverse)= &
                  saturation_temp(iten+ireverse*num_interfaces)
+               Clausius_Clapyron_Tsat(ireverse)= &
+                 saturation_temp(iten+ireverse*num_interfaces)
+
+               if (1.eq.0) then
+                print *,"(1)local_Tsat: iten,ireverse,T ", &
+                   iten,ireverse,local_Tsat(ireverse)
+               endif
 
                debug_limiter=0
                if (1.eq.0) then
@@ -8412,7 +8443,7 @@ stop
                    dx,xlo, &
                    fablo,fabhi, &
                    Tsatfab_ptr, & ! not used since use_tsatfab==0
-                   local_Tsat(ireverse), & !user def. interface temperature 
+                   local_Tsat(ireverse), & !intent(out)
                    iten+ireverse*num_interfaces, &
                    saturation_temp, &
                    use_exact_temperature, &
@@ -8422,6 +8453,11 @@ stop
                  else
                   print *,"hardwire_flag(ireverse) invalid"
                   stop
+                 endif
+
+                 if (1.eq.0) then
+                  print *,"(2)local_Tsat: iten,ireverse,T ", &
+                   iten,ireverse,local_Tsat(ireverse)
                  endif
 
                  if (local_Tsat(ireverse).ge.zero) then
@@ -8679,6 +8715,11 @@ stop
                    print *,"hardwire_flag(ireverse) invalid"
                    stop
                   endif
+
+                  if (1.eq.0) then
+                   print *,"(3)local_Tsat: iten,ireverse,T ", &
+                    iten,ireverse,local_Tsat(ireverse)
+                  endif
               
                    ! initially probe_ok==0 since the probe values have
                    ! never been calculated at this point.
@@ -8696,10 +8737,10 @@ stop
                    ! if local_probe_constrain==0, then
                    !  probe values are insensitive to the interface values.
                    call probe_interpolation( &
-                    PROBE_PARMS, &
-                    local_Tsat(ireverse), &
-                    Y_predict, &
-                    POUT)
+                    PROBE_PARMS, & !intent(in)
+                    local_Tsat(ireverse), & !intent(in)
+                    Y_predict, & !intent(in)
+                    POUT) !intent(out)
                   else
                    print *,"probe_ok invalid"
                    stop
@@ -8733,6 +8774,7 @@ stop
                   user_override_TI_YI=0
 
                   if (hardwire_flag(ireverse).eq.0) then
+
                    if (is_in_probtype_list().eq.1) then
                     ! do not call "mdot_diff_func" (below) if 
                     ! user_override_TI_YI=1
@@ -8763,6 +8805,7 @@ stop
                      num_materials, &
                      num_species_var)
                    endif
+
                   else if (hardwire_flag(ireverse).eq.1) then
                    ! do nothing
                   else
@@ -8780,15 +8823,27 @@ stop
                             (interp_status.eq.0)) then
                     if (hardwire_flag(ireverse).eq.0) then
                      if (user_override_TI_YI.eq.0) then
+
+                      if (1.eq.0) then
+                       print *,"(3.8)local_Tsat: iten,ireverse,T ", &
+                        iten,ireverse,local_Tsat(ireverse)
+                      endif
+
                        ! TI must be in [TI_min,TI_max]
                       call apply_TI_limiter( &
-                       TI_min,TI_max, &
-                       PROBE_PARMS, &
-                       local_Tsat(ireverse), &
-                       Y_predict, &
-                       POUT)
+                       TI_min,TI_max, & !intent(inout)
+                       PROBE_PARMS, & !intent(in)
+                       local_Tsat(ireverse), & !intent(inout)
+                       Y_predict, & !intent(inout)
+                       POUT) !intent(in)
 
-                      if (prescribed_mdot(iten+ireverse*num_interfaces).eq.zero) then
+                      if (1.eq.0) then
+                       print *,"(3.9)local_Tsat: iten,ireverse,T ", &
+                        iten,ireverse,local_Tsat(ireverse)
+                      endif
+
+                      if (prescribed_mdot(iten+ireverse*num_interfaces).eq. &
+                          zero) then
                        trial_and_error=1
                       endif
 
@@ -8816,6 +8871,11 @@ stop
                   else
                    print *,"local_probe_constrain invalid"
                    stop
+                  endif
+
+                  if (1.eq.0) then
+                   print *,"(4)local_Tsat: iten,ireverse,T ", &
+                    iten,ireverse,local_Tsat(ireverse)
                   endif
 
                   TSAT_predict=local_Tsat(ireverse)
@@ -8933,10 +8993,12 @@ stop
                        Y_predict=one-EVAP_BISECTION_TOL
                        call volfrac_from_massfrac(X_predict,Y_predict, &
                         molar_mass_ambient,molar_mass_vapor) ! WA,WV
-                       call Tgamma_from_TSAT_and_X(TSAT_predict, &
-                        local_Tsat(ireverse), &
-                        X_predict,LL(ireverse),R_Palmore_Desjardins, &
-                        molar_mass_vapor,TI_min,TI_max)
+                       call Tgamma_from_TSAT_and_X( &
+                        TSAT_predict, & !intent(out)
+                        Clausius_Clapyron_Tsat(ireverse), & !intent(in)
+                        X_predict,LL(ireverse), & !intent(in)
+                        R_Palmore_Desjardins, & !intent(in)
+                        molar_mass_vapor,TI_min,TI_max) !intent(in)
 
                        T_gamma_a=TSAT_predict
                        T_gamma_b=TSAT_predict
@@ -8966,7 +9028,7 @@ stop
                        if (LL(ireverse).gt.zero) then ! evaporation
                         T_gamma_a=TI_min
                         call X_from_Tgamma(X_gamma_a,T_gamma_a, &
-                         local_Tsat(ireverse), &
+                         Clausius_Clapyron_Tsat(ireverse), &
                          LL(ireverse),R_Palmore_Desjardins, &
                          molar_mass_vapor) ! WV
                         call massfrac_from_volfrac(X_gamma_a,Y_gamma_a, &
@@ -8974,7 +9036,7 @@ stop
                        else if (LL(ireverse).lt.zero) then ! condensation
                         T_gamma_b=TI_max
                         call X_from_Tgamma(X_gamma_b,T_gamma_b, &
-                         local_Tsat(ireverse), &
+                         Clausius_Clapyron_Tsat(ireverse), &
                          LL(ireverse),R_Palmore_Desjardins, &
                          molar_mass_vapor) ! WV
                         call massfrac_from_volfrac(X_gamma_b,Y_gamma_b, &
@@ -9324,6 +9386,8 @@ stop
                      TSAT_Y_PARMS%YI_min=Y_interface_min
                      TSAT_Y_PARMS%TI_min=TI_min
                      TSAT_Y_PARMS%TI_max=TI_max
+                     TSAT_Y_PARMS%Clausius_Clapyron_Tsat= &
+                         Clausius_Clapyron_Tsat(ireverse)
                      TSAT_Y_PARMS%TSAT_base=local_Tsat(ireverse)
                      TSAT_Y_PARMS%D_MASS=FicksLawD(iprobe_vapor)
                      TSAT_Y_PARMS%den_G=den_I_interp_SAT(iprobe_vapor)
@@ -9346,7 +9410,8 @@ stop
                         TSAT_correct, &
                         Y_predict, &
                         VEL_correct, &
-                        local_Tsat(ireverse), &
+                        Clausius_Clapyron_Tsat(ireverse), & !intent(in)
+                        local_Tsat(ireverse), & !intent(in)
                         LL(ireverse),R_Palmore_Desjardins, &
                         molar_mass_ambient,molar_mass_vapor, &
                         TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
@@ -9410,7 +9475,8 @@ stop
                           TSAT_correct, &
                           Y_predict, &
                           VEL_correct, &
-                          local_Tsat(ireverse), &
+                          Clausius_Clapyron_Tsat(ireverse), & !intent(in)
+                          local_Tsat(ireverse), & !intent(in)
                           LL(ireverse),R_Palmore_Desjardins, &
                           molar_mass_ambient,molar_mass_vapor, &
                           TI_YI_ptr,TI_YI_counter,TI_YI_best_guess_index, &
