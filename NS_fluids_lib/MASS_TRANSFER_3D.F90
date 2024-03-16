@@ -2544,7 +2544,7 @@ stop
             stop
            endif
           else
-           print *,"prescribed_mdot invalid"
+           print *,"prescribed_mdot invalid: ",prescribed_mdot
            stop
           endif
 
@@ -2553,7 +2553,7 @@ stop
                  POUT%dxprobe_target(iprobe_vapor)
           mdotY_bot=one-Y_gamma
           if (mdotY_bot.lt.zero) then
-           print *,"Y_gamma cannot exceed 1"
+           print *,"Y_gamma cannot exceed 1; try increasing TSAT"
            print *,"mdotY_top= ",mdotY_top
            print *,"mdotY_bot= ",mdotY_bot
            print *,"den_G= ",den_G
@@ -2583,39 +2583,42 @@ stop
 
         else if (Kassemi_flag.eq.3) then ! Kassemi model
 
-         call Pgamma_Clausius_Clapyron( &
-          Pgamma, &
-          TSAT_Y_PARMS%reference_pressure, &
-          T_gamma, &
-          TSAT_Y_PARMS%TSAT_base, &
-          LL, &
-          TSAT_Y_PARMS%universal_gas_constant_R, &
-          TSAT_Y_PARMS%molar_mass_vapor)
+         if (prescribed_mdot.eq.zero) then
 
-         density_probe=POUT%den_I_interp(iprobe_vapor)
-         Tvapor_probe=POUT%T_probe(iprobe_vapor)
+          ! Pgamma_Clausius_Clapyron is declared in: GLOBALUTIL.F90
+          call Pgamma_Clausius_Clapyron( &
+           Pgamma, & !intent(out)
+           TSAT_Y_PARMS%reference_pressure, & !intent(in)
+           T_gamma, & !intent(in)
+           TSAT_Y_PARMS%TSAT_base, & !intent(in)
+           LL, & !intent(in)
+           TSAT_Y_PARMS%universal_gas_constant_R, & !intent(in)
+           TSAT_Y_PARMS%molar_mass_vapor) !intent(in)
 
-         if (LL.gt.zero) then  ! evaporation (destination=vapor)
-          im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_dest
-         else if (LL.lt.zero) then ! condensation (source=vapor)
-          im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_source
-         else
-          print *,"LL invalid"
-          stop
-         endif
+          density_probe=POUT%den_I_interp(iprobe_vapor)
+          Tvapor_probe=POUT%T_probe(iprobe_vapor)
 
-         call init_massfrac_parm(density_probe,massfrac_parm,im_probe)
-         do ispec=1,num_species_var
-          massfrac_parm(ispec)=Y_gamma
-         enddo
+          if (LL.gt.zero) then  ! evaporation (destination=vapor)
+           im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_dest
+          else if (LL.lt.zero) then ! condensation (source=vapor)
+           im_probe=TSAT_Y_PARMS%PROBE_PARMS%im_source
+          else
+           print *,"LL invalid"
+           stop
+          endif
 
-         imattype=TSAT_Y_PARMS%material_type_evap(im_probe)
-         call INTERNAL_material(density_probe,massfrac_parm, &
+          call init_massfrac_parm(density_probe,massfrac_parm,im_probe)
+          do ispec=1,num_species_var
+           massfrac_parm(ispec)=Y_gamma
+          enddo
+
+          imattype=TSAT_Y_PARMS%material_type_evap(im_probe)
+          call INTERNAL_material(density_probe,massfrac_parm, &
            T_gamma,internal_energy,imattype,im_probe)
-         call EOS_material(density_probe,massfrac_parm,internal_energy, &
+          call EOS_material(density_probe,massfrac_parm,internal_energy, &
            Pvapor_probe,imattype,im_probe)
 
-         call MDOT_Kassemi( &
+          call MDOT_Kassemi( &
             TSAT_Y_PARMS%accommodation_coefficient, &
             TSAT_Y_PARMS%molar_mass_vapor, &
             TSAT_Y_PARMS%universal_gas_constant_R, &
@@ -2624,6 +2627,17 @@ stop
             T_gamma, &
             Tvapor_probe, &
             mdotY)
+
+         else if (prescribed_mdot.gt.zero) then
+       
+          Y_gamma=one
+          mdotY=prescribed_mdot
+
+         else
+          print *,"prescribed_mdot invalid: ",prescribed_mdot
+          stop
+         endif
+
          mdotY_top=mdotY
          mdotY_bot=one
 
@@ -2757,8 +2771,17 @@ stop
            !T=(w1 TS + w2 TD - mdot)/(w1+w2)
            T_gamma=(wt(1)*TEMP_PROBE_source+wt(2)*TEMP_PROBE_dest- &
                     prescribed_mdot)/(wt(1)+wt(2))
+
+           if (T_gamma.gt.zero) then
+            !do nothing
+           else
+            print *,"T_gamma invalid: ",T_gamma
+            print *,"prescribed_mdot: ",prescribed_mdot
+            stop
+           endif
+
           else
-           print *,"prescribed_mdot invalid"
+           print *,"prescribed_mdot invalid: ",prescribed_mdot
            stop
           endif
 
@@ -7260,6 +7283,14 @@ stop
       if (trial_and_error.eq.0) then
        T_gamma_c=half*(T_gamma_a+T_gamma_b)
       else if (trial_and_error.eq.1) then
+
+       if (prescribed_mdot.eq.zero) then
+        !do nothing
+       else
+        print *,"expecting prescribed_mdot.eq.zero"
+        stop
+       endif
+
        if (TSAT_iter.eq.0) then
         T_gamma_c=TSAT_predict
        else if ((TSAT_iter.gt.0).and. &
@@ -7336,32 +7367,45 @@ stop
        TI_YI_best_guess_index)
 
       if (trial_and_error.eq.0) then
-       if (mdot_diff_a*mdot_diff_b.le.zero) then
-        if (mdot_diff_a*mdot_diff_c.gt.zero) then
-         T_gamma_a=T_gamma_c
-         Y_gamma_a=Y_gamma_c
-        else if (mdot_diff_a*mdot_diff_c.le.zero) then
-         T_gamma_b=T_gamma_c
-         Y_gamma_b=Y_gamma_c 
+
+       if (prescribed_mdot.eq.zero) then
+
+        if (mdot_diff_a*mdot_diff_b.le.zero) then
+         if (mdot_diff_a*mdot_diff_c.gt.zero) then
+          T_gamma_a=T_gamma_c
+          Y_gamma_a=Y_gamma_c
+         else if (mdot_diff_a*mdot_diff_c.le.zero) then
+          T_gamma_b=T_gamma_c
+          Y_gamma_b=Y_gamma_c 
+         else
+          print *,"mdot_diff_a or mdot_diff_c invalid"
+          stop
+         endif
         else
-         print *,"mdot_diff_a or mdot_diff_c invalid"
+         print *,"bracketing interval lost"
+         print *,"T_gamma a,b,c ", &
+          T_gamma_a,T_gamma_b,T_gamma_c
+         print *,"Y_gamma a,b,c ", &
+          Y_gamma_a,Y_gamma_b,Y_gamma_c
+         print *,"mdot_diff a,b,c ", &
+          mdot_diff_a,mdot_diff_b,mdot_diff_c
+         print *,"TSAT_iter=",TSAT_iter
+         print *,"TI_min ",TI_min
+         print *,"TI_max ",TI_max
+         print *,"WA ",WA
+         print *,"WV ",WV
+         print *," LL ",LL
+         print *," TSAT_base ",TSAT_base
          stop
         endif
+
+       else if (prescribed_mdot.gt.zero) then
+        T_gamma_a=T_gamma_c
+        T_gamma_b=T_gamma_c
+        Y_gamma_a=Y_gamma_c
+        Y_gamma_b=Y_gamma_c
        else
-        print *,"bracketing interval lost"
-        print *,"T_gamma a,b,c ", &
-         T_gamma_a,T_gamma_b,T_gamma_c
-        print *,"Y_gamma a,b,c ", &
-         Y_gamma_a,Y_gamma_b,Y_gamma_c
-        print *,"mdot_diff a,b,c ", &
-         mdot_diff_a,mdot_diff_b,mdot_diff_c
-        print *,"TSAT_iter=",TSAT_iter
-        print *,"TI_min ",TI_min
-        print *,"TI_max ",TI_max
-        print *,"WA ",WA
-        print *,"WV ",WV
-        print *," LL ",LL
-        print *," TSAT_base ",TSAT_base
+        print *,"prescribed_mdot invalid: ",prescribed_mdot
         stop
        endif
 
@@ -8744,7 +8788,9 @@ stop
                        Y_predict, &
                        POUT)
 
-                      trial_and_error=1
+                      if (prescribed_mdot(iten+ireverse*num_interfaces).eq.zero) then
+                       trial_and_error=1
+                      endif
 
                      else if (user_override_TI_YI.eq.1) then
                       ! do nothing

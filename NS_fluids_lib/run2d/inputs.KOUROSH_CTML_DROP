@@ -162,7 +162,7 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.03e+7 2.03e+7 # erg/(g K) axis_dir=1
 #4->3
 ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #for evaporation (standard setup): 373.15
-ns.saturation_temp = 373.15 0.0 0.0 0.0 0.0 0.0 0.0 273.15 0.0 0.0 0.0 0.0
+ns.saturation_temp = 800.0 0.0 0.0 0.0 0.0 0.0 0.0 273.15 0.0 0.0 0.0 0.0
 ns.saturation_temp_min = 273.15 0.0 0.0 0.0 0.0 0.0 0.0 273.1499 0.0 0.0 0.0 0.0
 #evap: freezing_model=6 Palmore and Desjardins
 ns.freezing_model=6 0 0 0 0 0 0 0 0 0 0 0
