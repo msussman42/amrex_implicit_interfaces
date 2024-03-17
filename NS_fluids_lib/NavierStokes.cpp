@@ -4492,7 +4492,7 @@ NavierStokes::read_params ()
 
     } // im=0;im<num_materials;im++
 
-    pp.queryAdd("observe_initial_mdot: ",observe_initial_mdot);
+    pp.queryAdd("observe_initial_mdot",observe_initial_mdot);
 
     pp.queryAdd("R_Palmore_Desjardins",R_Palmore_Desjardins);
 

@@ -23897,7 +23897,7 @@ if ((Tgamma.gt.zero).and.(TSAT.gt.zero)) then
    stop
   endif
  else
-  print *,"PSAT invalid in Pgamma_Clausius_Clapyron"
+  print *,"PSAT invalid in Pgamma_Clausius_Clapyron: ",PSAT
   stop
  endif
 else
