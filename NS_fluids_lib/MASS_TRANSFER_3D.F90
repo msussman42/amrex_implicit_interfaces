@@ -3325,7 +3325,8 @@ stop
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: nstate
-      real(amrex_real), INTENT(in) :: speciesreactionrate(num_species_var*num_materials)
+      real(amrex_real), INTENT(in) :: &
+              speciesreactionrate(num_species_var*num_materials)
       integer, INTENT(in) :: rigid_fraction_id(num_materials)
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
@@ -3358,6 +3359,7 @@ stop
       real(amrex_real) species_vfrac_sum
       real(amrex_real) species_mass_sum
       real(amrex_real) species_avg
+      real(amrex_real) speciesconst_avg
       real(amrex_real) species_base
       real(amrex_real) local_rate
       integer vofcomp
@@ -3365,6 +3367,7 @@ stop
       integer dencomp
       real(amrex_real) spec_old,spec_new
       real(amrex_real) local_cutoff
+      real(amrex_real) species_scale
       real(amrex_real), PARAMETER :: species_max=1.0d0
       real(amrex_real), PARAMETER :: MUSHY_THICK=2.0d0
 
@@ -3379,7 +3382,7 @@ stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in reactionrate"
+       print *,"level invalid in reactionrate: ",level,finest_level
        stop
       endif
       if (num_state_base.ne.2) then
@@ -3395,12 +3398,13 @@ stop
        stop
       endif
 
+       !called from NavierStokes::veldiffuseALL
       if (initialize_flag.eq.0) then
 
        if (dt.gt.zero) then
         ! do nothing
        else
-        print *,"dt invalid (fort_apply_reaction, init_flag==0)"
+        print *,"dt invalid (fort_apply_reaction, init_flag==0): ",dt
         stop
        endif
        if (time.gt.zero) then
@@ -3410,18 +3414,19 @@ stop
         stop
        endif
 
+       !called from NavierStokes::initData()
       else if (initialize_flag.eq.1) then
 
        if (dt.eq.zero) then
         ! do nothing
        else
-        print *,"dt invalid (fort_apply_reaction, init_flag==1)"
+        print *,"dt invalid (fort_apply_reaction, init_flag==1) ",dt
         stop
        endif
        if (time.eq.zero) then
         ! do nothing
        else
-        print *,"time invalid (fort_apply_reaction, init_flag==1)"
+        print *,"time invalid (fort_apply_reaction, init_flag==1) ",time
         stop
        endif
 
@@ -3520,18 +3525,32 @@ stop
         do ispec=1,num_species_var
 
          species_avg=zero
+         speciesconst_avg=zero
          do im=1,num_materials
           local_rate=speciesreactionrate((ispec-1)*num_materials+im)
 
           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
                ENUM_SPECIESVAR+ispec
 
+          species_scale=fort_speciesconst(im+num_materials*(ispec-1))
+          speciesconst_avg=speciesconst_avg+species_scale
+
+          if (species_scale.eq.zero) then
+           species_scale=one
+          else if ((species_scale.gt.zero).and. &
+                   (species_scale.le.species_max)) then
+           !do nothing
+          else
+           print *,"species_scale invalid: ",species_scale
+           stop
+          endif
+
           if (local_rate.ge.zero) then
            ! Y'=r(species_max-Y)
            ! Ynew=Yold+dt * r * (species_max-Ynew)
            ! Ynew=(Yold+species_max*r*dt)/(1+r*dt)
            spec_old=snew(D_DECL(i,j,k),spec_comp)
-           if (abs(spec_old).le.EPS3) then
+           if (abs(spec_old).le.EPS3*species_scale) then
             spec_old=zero
            else if (abs(spec_old-species_max).le.EPS3) then
             spec_old=species_max
@@ -3544,7 +3563,7 @@ stop
            endif
            spec_new=(spec_old+species_max*local_rate*dt)/(one+local_rate*dt)
 
-           if (abs(spec_new).le.EPS3) then
+           if (abs(spec_new).le.EPS3*species_scale) then
             spec_new=zero
            else if (abs(spec_new-species_max).le.EPS3) then
             spec_new=species_max
@@ -3571,6 +3590,19 @@ stop
           endif
          enddo ! im=1,num_materials
 
+         speciesconst_avg=speciesconst_avg/num_materials
+         species_scale=speciesconst_avg
+       
+         if (species_scale.eq.zero) then
+          species_scale=one
+         else if ((species_scale.gt.zero).and. &
+                  (species_scale.le.species_max)) then
+          !do nothing
+         else
+          print *,"species_scale invalid (avg): ",species_scale
+          stop
+         endif
+
          if ((species_vfrac_sum.gt.zero).and. &
              (species_mass_sum.gt.zero)) then
           species_avg=species_avg/species_mass_sum
@@ -3581,7 +3613,7 @@ stop
           stop
          endif
          if ((species_avg.ge.zero).and. &
-             (species_avg.le.EPS3)) then
+             (species_avg.le.EPS3*species_scale)) then
           species_avg=zero
          else if (abs(species_avg-species_max).le.EPS3) then
           species_avg=species_max

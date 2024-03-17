@@ -170,7 +170,7 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.03e+7 2.03e+7 # erg/(g K) axis_dir=1
 # h units: J/kg
 # D units: m^2/s
 # rho units: kg/m^3
-ns.observe_initial_mdot=1
+ns.observe_initial_mdot=0
 ns.prescribed_mdot = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #for evaporation (standard setup): 373.15
@@ -248,7 +248,7 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 ns.speciesviscconst=0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0
 # 1=water 2=gas  3=oil  4=substrate  or
 # 1=water 2=gas  3=ice  4=substrate 
-ns.speciesconst=2.0e-4 2.0e-4 2.0e-4 2.0e-4 1.0 1.0 1.0 1.0
+ns.speciesconst=0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0
 ns.speciesreactionrate=0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 ns.rigid_fraction_id=0 0 2 0
 ns.molar_mass=18.02 28.9 18.02 18.02
