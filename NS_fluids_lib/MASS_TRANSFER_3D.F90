@@ -1124,7 +1124,7 @@ stop
        endif
 
       else
-       print *,"LL invalid"
+       print *,"LL invalid: ",LL
        stop
       endif
 
@@ -8931,6 +8931,9 @@ stop
                     ! do nothing
                    else
                     print *,"expecting TSAT_Y_PARMS%reference_pressure>0"
+                    print *,"set ns.reference_pressure accordingly"
+                    print *,"iten= ",iten
+                    print *,"ireverse= ",ireverse
                     print *,"TSAT_Y_PARMS%reference_pressure=", &
                       TSAT_Y_PARMS%reference_pressure
                     stop
@@ -9694,7 +9697,17 @@ stop
                       print *,"mdotY_debug ",mdotY_debug
                       print *,"TEMP_PROBE_source ",TEMP_PROBE_source
                       print *,"TEMP_PROBE_dest ",TEMP_PROBE_dest
+                      print *,"Clausius_Clapyron_Tsat ", &
+                        Clausius_Clapyron_Tsat(ireverse)
                       print *,"Y_PROBE_VAPOR ",Y_PROBE_VAPOR
+                      print *,"Y_predict (Y_interface) ",Y_predict
+                      print *,"TSAT_correct (T_interface) ",TSAT_correct
+                      print *,"n dot rhoG(U_V-U_I)=n dot rhoL(U_L-U_I)=mdot"
+                      print *,"VEL_correct (U_I-U_L or U_I-U_V) ",VEL_correct
+                      print *,"dxprobe_target(1) (source): ", &
+                        POUT%dxprobe_target(1)
+                      print *,"dxprobe_target(2) (dest): ", &
+                        POUT%dxprobe_target(2)
                      endif
                     endif
                    endif
