@@ -19,6 +19,9 @@ stop_time=20.0
 
 # unique problem identifier associated with each new plug-in:
 # CRYOGENIC_TANK_MK.F90
+ns.probtype         = 423
+# variable accessible from plug-in:
+ns.axis_dir         = 1 #heater on top
 # if (TANK_MK_GEOM_DESCRIPTOR.eq.ZBOT_FLIGHT_ID).and.(axis_dir.eq.2) then
 #  zbot_flight_heatera.vtk
 #  zbot_flight_heaterb.vtk
@@ -44,10 +47,7 @@ stop_time=20.0
 #  tpce_shell.vtk
 #  nozzle_15deg.vtk or nozzle_15deg_01thick.vtk 
 #  tpce_ladhousing.vtk
-ns.probtype         = 423
-# variable accessible from plug-in:
 #ns.axis_dir        = 0 #heater only on side (see e.g. run2d/inputs.ZBOT)
-ns.axis_dir         = 1 #heater on top
 # ns.axis_dir         = 2 # user defined geometry files for TPCE
 # for ZBOT:
 # variable for compiling diagnostic output
@@ -152,12 +152,12 @@ ns.thermal_microlayer_size=1.0e-6 1.0e-6 1.0e-6
 # dy_coarse=(prob_hi_y-prob_lo_y)/n_cell_y
 # best to have dx=dy for now.
 #amr.n_cell          = 128 128 128
-amr.n_cell          = 32 32 32 #for debugging
-#amr.n_cell          = 64 64 64 #8 cores, compute1
+amr.n_cell          = 64 64 64 # 8 cores compute1
 amr.max_level       = 0
 
 amr.regrid_int      = 1     # How often to regrid
 amr.max_grid_size   = 32   # 32 is optimal for MPI in 3D
+amr.regrid_on_restart=1
 
 ns.multilevel_maxcycle=200
 ns.multilevel_restart_period=25
@@ -176,7 +176,7 @@ ns.vorterr	    = 0.0 0.0 0.0 # vorticity limit for grid refinement
 # Adaptive dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0      # scale back initial timestep
-ns.change_max=1.01      
+ns.change_max       = 1.01      
 ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 
 #0=only at t=0 1=always account for sound speed 2=ignore
@@ -208,16 +208,16 @@ amr.plot_int        = 40   # number of timesteps between plot files (3D)
 amr.plot_file       = plt     # root name of HDF5 plot file
 
 ns.output_drop_distribution=1
-ns.sum_interval     = 5     # timesteps between computing mass 
+ns.sum_interval     = 5      # timesteps between computing mass 
 
 amr.grid_log        = grdlog  # name of grid logging file
 
 amr.file_name_digits= 7
 
 # make ns.v=1 to check the residual magnitude information for the solvers.
-ns.v=0
+ns.v=1
 amr.plotfile_on_restart=1
-#amr.restart        = chk0000010 # Name of the restart checkpoint file
+#amr.restart        = chk0000800 # Name of the restart checkpoint file
 #amr.trace   	    = 1
 #ns.show_mem        = 1
 
@@ -274,6 +274,7 @@ ns.molar_mass = 0.2 0.2 1  # 1..num_materials
 
 # Density [kg/m^3]  HFE7000
 ns.denconst= 1400.0 5.3421449445 1190.0
+ns.mglib_min_coeff_factor=100.0
 cg.mglib_blocking_factor=2
 
 #ns.speciesconst= 1.0 1.0 1.0  #Kassemi
@@ -396,17 +397,17 @@ ns.xblob3 = 18.3 # Watts=J/s
 #
 # 64x64x64 grid, assume Rj=R0, R0=radius of "rasterized jet,
 # pi R0^2 V0=xblob5  V0=0.026 rhoL=1400 sigma=0.012
-ns.xblob5 = 4.5e-5  # m^3/s
+ns.xblob5 = 5.25e-5  # m^3/s
 
 ns.xblob6 = 0.0 # temperature of inflowing liquid, zero if no cooling (293.2)
 
 # ----------------------------------------------------------
 # -------- Reconstruction -----------------------------------
 # ----------------------------------------------------------
-ns.continuous_mof=1 # 0=MOF 1=CMOF
-ns.mof_decision_tree_learning=1000
+ns.continuous_mof   = 0 # 0=MOF 1=CMOF
+ns.mof_decision_tree_learning=0
 ns.mof_machine_learning=0
-ns.MOFITERMAX_AFTER_PREDICT = 15
+ns.MOFITERMAX_AFTER_PREDICT = 0
 
 #-1=Weymouth Yue, 0=Sussman and Puckett algorithm 
 # 1=EILE (default), 2=always EI, 3=always LE
@@ -426,7 +427,6 @@ ns.initial_project_cycles=3
 ns.initial_viscosity_cycles=1
 ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
-
 
 # ----------------------------------------------------------
 # -------- Other inputs ------------------------------------
