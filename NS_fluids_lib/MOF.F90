@@ -4040,7 +4040,7 @@ end subroutine intersection_volume_and_map
        if (dxmax.ge.zero) then
         !do nothing
        else
-        print *,"dxmax invalid"
+        print *,"dxmax invalid: ",dxmax
         stop
        endif
 
@@ -5093,7 +5093,7 @@ real(amrex_real) local_scale
      else if (abs(cum_volume-volslow).le.EPS_8_4*local_scale) then
       ! do nothing
      else
-      print *,"cum_volume corrupt"
+      print *,"cum_volume corrupt: ",cum_volume,volslow
       stop
      endif
 
@@ -5117,7 +5117,7 @@ real(amrex_real) local_scale
      else if (abs(cum_area-areaslow).le.EPS_8_4*local_scale) then
       ! do nothing
      else
-      print *,"cum_area corrupt"
+      print *,"cum_area corrupt: ",cum_area,areaslow
       stop
      endif
 
@@ -25355,7 +25355,7 @@ contains
            (VFRAC(im).le.one+EPS_8_4)) then
         ! do nothing
        else
-        print *,"VFRAC out of range"
+        print *,"VFRAC out of range: ",im,VFRAC(im)
         stop
        endif
 
@@ -25398,7 +25398,7 @@ contains
        stop
       endif
       if (abs(VOFSUM-sum_vfrac_fluid-sum_vfrac_solid).gt.EPS3) then
-       print *,"VOFSUM invalid"
+       print *,"VOFSUM invalid: ",VOFSUM,sum_vfrac_fluid
        stop
       endif
       if ((im_crit_fluid.lt.1).or. &

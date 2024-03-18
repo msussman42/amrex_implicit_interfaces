@@ -2991,6 +2991,10 @@ stop
 
          bypass_update_closest=1
 
+         if (1.eq.0) then
+          bypass_update_closest=0
+         endif
+
          if (levelrz.eq.COORDSYS_CARTESIAN) then
           ! do nothing
          else if (levelrz.eq.COORDSYS_RZ) then
