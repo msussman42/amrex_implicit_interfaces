@@ -6850,7 +6850,7 @@ stop
             (VFRAC(im).le.one+EPS1)) then
          ! do nothing
         else
-         print *,"VFRAC invalid"
+         print *,"VFRAC invalid: ",im,VFRAC(im)
          stop
         endif 
         if (den_local(im).gt.zero) then
