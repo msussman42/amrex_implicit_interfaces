@@ -7944,8 +7944,10 @@ stop
         enddo ! iquad
         sanity_sum=sanity_sum+GQwsQUAD(jstencil,kinterval)
        enddo  ! jstencil
-       if (abs(sanity_sum-two)>EPS12) then
-        print *,"SDC sanity check failed"
+       if (abs(sanity_sum-two).le.EPS12) then
+        !do nothing
+       else
+        print *,"SDC sanity check failed: ",sanity_sum
         stop
        endif
       enddo  ! kinterval
@@ -15627,7 +15629,8 @@ stop
       real(amrex_real), pointer :: LSNEW_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: vof(DIMV(vof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in),target :: &
+        vof(DIMV(vof),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
        ! output if,
        ! (1) project_option==SOLVETYPE_VISC and combine_flag==2
@@ -20718,7 +20721,7 @@ stop
                   (vfrac_sum_solid.le.one+EPS1)) then
           ! do nothing
          else
-          print *,"vfrac_sum_solid is NaN"
+          print *,"vfrac_sum_solid is NaN: ",vfrac_sum_solid
           stop
          endif
 
