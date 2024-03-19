@@ -19923,8 +19923,8 @@ end subroutine RatePhaseChange
       endif
 
        ! redistancing for phase change sees materials in which
-       ! F>VOFTOL_REDIST
-      VOFTOL_NUCLEATE=VOFTOL_REDIST*two
+       ! F>EPS3
+      VOFTOL_NUCLEATE=EPS3*two
 
       denbase=STATECOMP_STATES
       mofbase=STATECOMP_MOF

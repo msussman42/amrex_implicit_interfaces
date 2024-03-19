@@ -1538,7 +1538,6 @@ stop
       else 
        print *,"TSAT_weight invalid"
        print *,"VOFTOL=",VOFTOL
-       print *,"VOFTOL_REDIST=",VOFTOL_REDIST
        print *,"i,j,k,ireverse,iten,num_interfaces,ntsat,bfact ", &
                i,j,k,ireverse,iten,num_interfaces,ntsat,bfact
        print *,"level,finest_level,dx ",level,finest_level, &
