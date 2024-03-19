@@ -1,9 +1,9 @@
 #!MC 1410
 $!VarSet |LFDSFN1| = '"mat01ls000800.plt" "mat02ls000800.plt" "mat03ls000800.plt"'
 $!VarSet |LFDSVL1| = '"X" "Y" "Z"'
-$!VarSet |LFDSFN2| = '"../3D_WEJ5p25_machine_learning/mat03ls000806.plt" "../3D_WEJ5p25_machine_learning/mat02ls000806.plt" "../3D_WEJ5p25_machine_learning/mat01ls000806.plt"'
+$!VarSet |LFDSFN2| = '"../3D_WEJ5p25_PMOF/mat03ls000870.plt" "../3D_WEJ5p25_PMOF/mat02ls000870.plt" "../3D_WEJ5p25_PMOF/mat01ls000870.plt"'
 $!VarSet |LFDSVL2| = '"X" "Y" "Z"'
-$!VarSet |LFDSFN3| = '"nddata000800.plt"'
+$!VarSet |LFDSFN3| = '"../3D_WEJ5p25_PMOF/nddata000870.plt"'
 $!VarSet |LFDSVL3| = '"X" "Y" "Z" "x_velocity" "y_velocity" "z_velocity" "PRES_MG" "PRES_EOS" "DIV_DERIVED" "DIV_EXPECT" "MACH" "F01" "F02" "F03" "L0101" "L0202" "L0303" "x_normal0101" "y_normal0101" "z_normal0101" "x_normal0202" "y_normal0202" "z_normal0202" "x_normal0303" "y_normal0303" "z_normal0303" "D01" "T01" "D02" "T02" "D03" "T03" "MOMDEN01" "MOMDEN02" "MOMDEN03" "MU01" "MU02" "MU03" "K_THERMAL01" "K_THERMAL02" "K_THERMAL03" "DT01" "TR01" "TRT01" "TRTF01" "VORT01" "DT02" "TR02" "TRT02" "TRTF02" "VORT02" "DT03" "TR03" "TRT03" "TRTF03" "VORT03" "x_ELSTCFORCE" "y_ELSTCFORCE" "z_ELSTCFORCE" "GRADVEL01" "GRADVEL02" "GRADVEL03" "GRADVEL04" "GRADVEL05" "GRADVEL06" "GRADVEL07" "GRADVEL08" "GRADVEL09"'
 $!SetStyleBase Factory
 $!CreateColorMap 
