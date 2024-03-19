@@ -2851,7 +2851,7 @@ stop
           legitimate_material=1
          else if ((vcenter(im).le.half).and. &
                   (im.ne.im_crit).and. &
-                  (floatsam_test.eq.0).and. &
+                  (flotsam_test.eq.0).and. &
                   (full_neighbor(im).eq.0).and. &
                   (keep_flotsam.eq.0)) then
           legitimate_material=0
