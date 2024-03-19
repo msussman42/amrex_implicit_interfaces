@@ -1903,9 +1903,7 @@ stop
       integer j_DEB_DIST
       integer k_DEB_DIST
 
-      integer versionA_test
-      integer versionB_test
-      integer version_of_choice
+      integer flotsam_test
       integer keep_flotsam
       integer legitimate_material
       integer height_check(num_materials)
@@ -2267,10 +2265,10 @@ stop
         ! LS_{ij}(LS_{ij}+LS_{i+i',j+j'}) <= 0 for
         ! some |i'|<=1 |j'|<=1
         ! in the present algorithm, a reconstructed segment is valid if
-        ! (A) F>VOFTOL_REDIST and
+        ! (A) F>EPS3 and
         ! (B)        
        do im=1,num_materials
-        cell_test(im)=0 !F>VOFTOL_REDIST?
+        cell_test(im)=0 !F>EPS3?
         face_test(im)=0 !face areafrac between cells consistent?
         full_neighbor(im)=0 !neighbor F(im)>1-facetol ?
         stencil_test(im)=0 ! F(im)>1/2-eps on cell bdry?
@@ -2280,7 +2278,7 @@ stop
          ! initialize: cell_test
        do im=1,num_materials
         if (is_rigid(im).eq.0) then
-         if (vcenter(im).gt.VOFTOL_REDIST) then
+         if (vcenter(im).gt.EPS3) then
           cell_test(im)=1
          endif
         else if (is_rigid(im).eq.1) then
@@ -2371,7 +2369,7 @@ stop
             stencil_test(im)=1
            endif
           else if (is_rigid(im).eq.1) then
-           if (VFRAC_TEMP.ge.VOFTOL_REDIST) then
+           if (VFRAC_TEMP.ge.EPS3) then
             rigid_in_stencil=1
            endif
           else
@@ -2709,7 +2707,7 @@ stop
 
            do im=1,num_materials
             if (is_rigid(im).eq.0) then
-             if ((frac_pair(im,im).ge.VOFTOL_REDIST).and. &
+             if ((frac_pair(im,im).ge.EPS3).and. &
                  (frac_pair(im,im).le.one+EPS1)) then 
               if ((i3.eq.0).and. &
                   (j3.eq.0).and. &
@@ -2726,7 +2724,7 @@ stop
                stop
               endif
              else if ((frac_pair(im,im).ge.zero).and. &
-                      (frac_pair(im,im).le.VOFTOL_REDIST)) then
+                      (frac_pair(im,im).le.EPS3)) then
               ! do nothing
              else
               print *,"frac_pair invalid: ",frac_pair(im,im)
@@ -2817,24 +2815,11 @@ stop
          ! face_test=0 if cell_test==0
         if (is_rigid(im).eq.0) then
 
-         if ((stringent_test_passed(im).eq.1).or. &
-             (face_test(im).eq.1)) then
-          versionA_test=1
-         else
-          versionA_test=0
-         endif
-
          if ((height_check(im).eq.1).and. &
-             (cell_test(im).eq.1)) then
-          versionB_test=1
+             (cell_test(im).eq.1)) then  !F_{im}>EPS3?
+          flotsam_test=1
          else
-          versionB_test=0
-         endif
-
-         if (1.eq.1) then
-          version_of_choice=versionB_test
-         else
-          version_of_choice=versionA_test
+          flotsam_test=0
          endif
 
          keep_flotsam=0
@@ -2859,14 +2844,14 @@ stop
 
          legitimate_material=0
          if ((vcenter(im).ge.half).or. &
-             (im.eq.im_crit).or. &
-             (version_of_choice.eq.1).or. &
+             (im.eq.im_crit).or. & !im_crit=argmax_{im} F_{im}
+             (flotsam_test.eq.1).or. &
              (full_neighbor(im).eq.1).or. &
              (keep_flotsam.eq.1)) then
           legitimate_material=1
          else if ((vcenter(im).le.half).and. &
                   (im.ne.im_crit).and. &
-                  (version_of_choice.eq.0).and. &
+                  (floatsam_test.eq.0).and. &
                   (full_neighbor(im).eq.0).and. &
                   (keep_flotsam.eq.0)) then
           legitimate_material=0
