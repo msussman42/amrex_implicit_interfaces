@@ -13907,9 +13907,8 @@ stop
                   print *,"nmax bust 3"
                   stop
                  endif
-                  !EPS2 tolerance ok for momentum.
                  call multi_get_volume_grid_simple( &
-                   EPS2, &
+                   EPS_8_4, &
                    tessellate, &  !=0
                    bfact,dx, &
                    xsten_recon,1, &
@@ -13939,7 +13938,8 @@ stop
                  if (LS_voltotal_depart.gt.zero) then
                   ! do nothing
                  else
-                  print *,"LS_voltotal_depart bust "
+                  print *,"LS_voltotal_depart bust"
+                  print *,"(multi_get_volume_grid_simple)"
                   print *,"LS_voltotal_depart ",LS_voltotal_depart
                   stop
                  endif
@@ -14433,7 +14433,8 @@ stop
             if (LS_voltotal_depart.gt.zero) then
              ! do nothing
             else
-             print *,"LS_voltotal_depart bust "
+             print *,"EPS_8_4= ",EPS_8_4
+             print *,"LS_voltotal_depart bust (multi_get_volume_grid_and_map)"
              print *,"LS_voltotal_depart ",LS_voltotal_depart
              print *,"map_forward,volint ",map_forward,volint
              print *,"istencil ",istencil
