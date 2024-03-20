@@ -18781,21 +18781,21 @@ contains
        stop
       endif
 
-      if (abs(one-vfrac_fluid_sum).le.EPS_SINGLE) then
+      if (abs(one-vfrac_fluid_sum).le.EPS1) then
        ! do nothing
       else
        print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
        stop
       endif
-      if ((vfrac_solid_sum.gt.one+EPS_SINGLE).or. &
+      if ((vfrac_solid_sum.gt.one+EPS1).or. &
           (vfrac_solid_sum.lt.zero)) then
-       print *,"vfrac_solid_sum invalid"
+       print *,"vfrac_solid_sum invalid: ",vfrac_solid_sum
        stop
       else if ((vfrac_solid_sum.ge.zero).and. &
-               (vfrac_solid_sum.le.one+EPS_SINGLE)) then
+               (vfrac_solid_sum.le.one+EPS1)) then
        ! do nothing
       else
-       print *,"vfrac_solid_sum bust"
+       print *,"vfrac_solid_sum bust: ",vfrac_solid_sum
        stop
       endif
 
@@ -19052,7 +19052,7 @@ contains
                volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
-               EPS_SINGLE*volcell) then
+               EPS1*volcell) then
             print *,"volcut invalid multi volume get volume grid 1"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
@@ -19414,7 +19414,7 @@ contains
               volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
-               EPS_SINGLE*volcell) then
+               EPS1*volcell) then
             print *,"volcut invalid multi volume get volume grid 2 "
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -21099,13 +21099,13 @@ contains
        stop
       endif
 
-      if (abs(one-vfrac_fluid_sum).le.EPS_SINGLE) then
+      if (abs(one-vfrac_fluid_sum).le.EPS1) then
        ! do nothing
       else
-       print *,"vfrac_fluid_sum invalid"
+       print *,"vfrac_fluid_sum invalid(expecting 1.0): ",vfrac_fluid_sum
        stop
       endif
-      if ((vfrac_solid_sum.le.one+EPS_SINGLE).and. &
+      if ((vfrac_solid_sum.le.one+EPS1).and. &
           (vfrac_solid_sum.ge.zero)) then
        ! do nothing
       else
@@ -21344,7 +21344,7 @@ contains
                volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_solid).gt. &
-               EPS_SINGLE*volcell) then
+               EPS1*volcell) then
             print *,"volcut invalid multi volume get volume grid 3"
             print *,"CHECK IF RIGID BODIES INTERSECT"
             print *,"volcut= ",volcut
@@ -21685,7 +21685,7 @@ contains
               volcut,cencut,sdim)
 
            if (abs(volcut-uncaptured_volume_fluid).gt. &
-               EPS_SINGLE*volcell) then
+               EPS1*volcell) then
             print *,"volcut invalid multi volume get volume grid 4"
             print *,"volcut= ",volcut
             print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -21849,14 +21849,14 @@ contains
                ! uncaptured_volume_fraction_fluid>0 and 
                ! uncaptured_volume_fluid>0
 
-        if (uncaptured_volume_fluid.le.four*EPS_SINGLE*volcell) then
+        if (uncaptured_volume_fluid.le.four*EPS1*volcell) then
          !do nothing
         else
          print *,"not all volume accounted for multi_get_volume_grid_simple"
          print *,"uncaptured_volume_fluid ",uncaptured_volume_fluid
          print *,"volcell ",volcell
          print *,"fraction of uncapt volume ",uncaptured_volume_fluid/volcell
-         print *,"tolerance: ",four*EPS_SINGLE
+         print *,"tolerance: ",four*EPS1
          stop
         endif
 
