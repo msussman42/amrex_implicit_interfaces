@@ -14,6 +14,7 @@ ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
 ns.truncate_thickness=2.0
+ns.truncate_volume_fractions=0 0 0 0 0
 
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=5
