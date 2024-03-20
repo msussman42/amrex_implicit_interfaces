@@ -2705,6 +2705,8 @@ stop
             stop
            endif 
 
+            ! frac_pair(im,im)=fraction of a face in which there is material
+            ! "im" adjoining from BOTH sides.
            do im=1,num_materials
             if (is_rigid(im).eq.0) then
              if ((frac_pair(im,im).ge.EPS3).and. &
@@ -2823,7 +2825,7 @@ stop
          endif
 
          keep_flotsam=0
-         if (cell_test(im).eq.1) then
+         if (cell_test(im).eq.1) then !F_{im}>EPS3?
           if ((keep_all_interfaces.eq.1).or. &
               (truncate_volume_fractions(im).eq.0)) then
            keep_flotsam=1
@@ -2835,7 +2837,7 @@ stop
               keep_all_interfaces,im,truncate_volume_fractions(im)
            stop
           endif
-         else if (cell_test(im).eq.0) then
+         else if (cell_test(im).eq.0) then !F_{im}<EPS3?
           keep_flotsam=0
          else
           print *,"cell_test invalid: ",im,cell_test(im)
