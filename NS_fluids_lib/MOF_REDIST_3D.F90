@@ -2270,7 +2270,7 @@ stop
        do im=1,num_materials
         cell_test(im)=0 !F>EPS3?
         face_test(im)=0 !face areafrac between cells consistent?
-        full_neighbor(im)=0 !neighbor F(im)>1-facetol ?
+        full_neighbor(im)=0 !neighbor F(im)>1-EPS3 ?
         stencil_test(im)=0 ! F(im)>1/2-eps on cell bdry?
         stringent_test_passed(im)=0 ! stenfab consistent between cells?
        enddo
@@ -2775,7 +2775,7 @@ stop
            if (is_rigid(im).eq.0) then
             vofcomp=(im-1)*ngeom_recon+1
             VFRAC_TEMP=vofrecon(D_DECL(iside,jside,kside),vofcomp)
-            if (VFRAC_TEMP.ge.one-VOFTOL) then
+            if (VFRAC_TEMP.ge.one-EPS3) then
              full_neighbor(im)=1
              call put_istar(istar,istar_array) 
              donateflag(num_materials+1+istar)=im
@@ -2849,7 +2849,7 @@ stop
              (im.eq.im_crit).or. & !im_crit=argmax_{im} F_{im}
              (flotsam_test.eq.1).or. &
              (full_neighbor(im).eq.1).or. &
-             (keep_flotsam.eq.1)) then
+             (keep_flotsam.eq.1)) then!keep_flotsam=1 if Fm>EPS3 and no trunc.
           legitimate_material=1
          else if ((vcenter(im).le.half).and. &
                   (im.ne.im_crit).and. &
