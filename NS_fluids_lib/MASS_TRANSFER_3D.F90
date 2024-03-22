@@ -3907,10 +3907,12 @@ stop
           conductstate(DIMV(conductstate),num_materials)
       real(amrex_real), pointer :: conductstate_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), target, INTENT(in) :: nodevel(DIMV(nodevel),2*num_interfaces*SDIM)
+      real(amrex_real), target, INTENT(in) :: &
+              nodevel(DIMV(nodevel),2*num_interfaces*SDIM)
       real(amrex_real), pointer :: nodevel_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), target, INTENT(out) :: JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
+      real(amrex_real), target, INTENT(out) :: &
+              JUMPFAB(DIMV(JUMPFAB),2*num_interfaces)
       real(amrex_real), target, INTENT(out) :: TgammaFAB(DIMV(TgammaFAB),ntsat)
       real(amrex_real), pointer :: JUMPFAB_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: TgammaFAB_ptr(D_DECL(:,:,:),:)
@@ -3923,7 +3925,8 @@ stop
             LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), target, INTENT(in) :: recon(DIMV(recon),num_materials*ngeom_recon)
+      real(amrex_real), target, INTENT(in) :: &
+              recon(DIMV(recon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
@@ -9349,6 +9352,21 @@ stop
                     !  DTdst=(Tdst-TSAT_predict)
                     !  velsrc=ksrc*DTsrc/(LL * dxprobe_src)
                     !  veldst=kdst*DTdst/(LL * dxprobe_dest)
+                    !
+! distribute_from_target=0 => distribute to the destination material
+! => velocity in the source will be divergence free (continuous) => 
+! velocity on the interface will correspond to the source velocity.
+!  V=u_src dot n + mdot/rho_src
+! distribute_from_target=1 => distribute to the source material
+! => velocity in the destination will be divergence free (continuous) => 
+! velocity on the interface will correspond to the destination velocity.
+!  V=u_dst dot n + mdot/rho_dst
+! mdot=[n dot k grad T]/L=J/(s m K) (K/m) * (kg/J)=kg/(s m^2)
+! k units: 1 erg/(s cm K)=10^{-7} J/(s 10^{-2} m K)=10^{-5} J/(s m K)
+!
+! L units: 1 erg/g=10^{-4} J/kg
+! 1 erg=1 g(cm/s)^2=10^{-7} kg(m/s)^2 Joules
+                    !  
                     !  in: PROB.F90
                    call get_vel_phasechange( &
                      interface_mass_transfer_model( &
