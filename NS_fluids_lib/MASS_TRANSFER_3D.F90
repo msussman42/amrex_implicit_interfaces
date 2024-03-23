@@ -5999,8 +5999,8 @@ stop
              if (dF.le.EBVOFTOL) then
               denratio_factor=zero
              else if (dF.ge.EBVOFTOL) then
-              if ((den_dF(2).gt.zero).and. &
-                  (den_dF(1).lt.zero)) then
+              if ((den_dF(2).gt.zero).and. & !den_dst * dF
+                  (den_dF(1).lt.zero)) then  !-den_src * dF
                denratio_factor=-den_dF(1)/den_dF(2)-one ! den_src/den_dst-1
               else if ((den_dF(2).eq.zero).or. &
                        (den_dF(1).eq.zero)) then
@@ -6032,8 +6032,8 @@ stop
              if (dF.le.EBVOFTOL) then
               denratio_factor=zero
              else if (dF.ge.EBVOFTOL) then
-              if ((den_dF(2).gt.zero).and. &
-                  (den_dF(1).lt.zero)) then
+              if ((den_dF(2).gt.zero).and. & !den_dst * dF
+                  (den_dF(1).lt.zero)) then  !-den_src * dF
                denratio_factor=one+den_dF(2)/den_dF(1) ! 1-den_dst/den_src
               else if ((den_dF(2).eq.zero).or. &
                        (den_dF(1).eq.zero)) then
@@ -6064,10 +6064,15 @@ stop
             jump_strength=denratio_factor/dt 
 
              !for distribute_from_targ==0:
+             !mdot is distributed to the target material.
+             !velocity of the interface (cm/s) is U_source + mdot n/rho_source
+             !mdot=[k grad T]dot n/L
+             !dF=(dt/dx)mdot/rho_source
              !initially: jump_strength=(den_src/den_dst - 1)/dt
              !ultimately jump_strength has units of cm^{3}/s^{2}
              !source term is jump_strength
              !dF has no units.  dF=F^new_dest - F^old_dest
+             !dF * jump_strength = (mdot/dx)(1/rho_dst-1/rho_src) (units 1/dt)
              !note: vol div u/dt = cm^3 (cm/s) (1/cm) (1/s)=cm^3 / s^2
              !for boiling: jump_strength>0
             jump_strength=jump_strength*dF*volgrid/dt

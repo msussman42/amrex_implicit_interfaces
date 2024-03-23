@@ -2008,8 +2008,7 @@ void NavierStokes::phase_change_code_segment(
  prescribe_solid_geometryALL(cur_time_slab,renormalize_only,
   local_truncate,local_caller_string,update_particles);
 
- int keep_all_interfaces=0;
- makeStateDistALL(keep_all_interfaces,update_particles);
+ makeStateDistALL(update_particles);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2042,9 +2041,8 @@ void NavierStokes::no_mass_transfer_code_segment(
    RECON_UPDATE_STATE_ERR_AND_CENTROID,
    init_vof_prev_time);
 
- int keep_all_interfaces=0;
  int update_particles=1;
- makeStateDistALL(keep_all_interfaces,update_particles);
+ makeStateDistALL(update_particles);
 
 #if (NS_profile_solver==1)
  bprof.stop();
@@ -2159,9 +2157,8 @@ void NavierStokes::nucleation_code_segment(
    cur_time_slab,
    RECON_UPDATE_STATE_CENTROID,init_vof_prev_time);
 
- int keep_all_interfaces=1;
  int update_particles=1;
- makeStateDistALL(keep_all_interfaces,update_particles);
+ makeStateDistALL(update_particles);
 
  make_physics_varsALL(SOLVETYPE_PRES,local_caller_string); 
  delete_array(CELLTENSOR_MF);

@@ -52,7 +52,6 @@ geometry.prob_hi=0.75 0.75 1.0  # cm XYZ
 ns.slice_dir=1
 ns.xslice=0.0 0.0 0.0
 ns.EILE_flag=-1
-ns.truncate_thickness=2.0
 # 1: liquid 2: air 3: ice 4: substrate
 ns.num_divu_outer_sweeps=1
 

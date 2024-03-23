@@ -53,22 +53,13 @@ namespace amrex{
 
 
      void fort_levelstrip(
-       int* keep_all_interfaces,
        int* nprocessed,
        Real* minLS,
        Real* maxLS,
        Real* max_problen,
        int* level,
        int* finest_level,
-       int* truncate_volume_fractions,
        Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
-       Real* facepairX,
-       AMREX_ARLIM_P(facepairXlo),AMREX_ARLIM_P(facepairXhi),
-       Real* facepairY,
-       AMREX_ARLIM_P(facepairYlo),AMREX_ARLIM_P(facepairYhi),
-       Real* facepairZ,
-       AMREX_ARLIM_P(facepairZlo),AMREX_ARLIM_P(facepairZhi),
-       Real* facetest,AMREX_ARLIM_P(facetestlo),AMREX_ARLIM_P(facetesthi),
        Real* stenfab,AMREX_ARLIM_P(stenfablo),AMREX_ARLIM_P(stenfabhi),
        Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
        Real* newfab,AMREX_ARLIM_P(newfablo),AMREX_ARLIM_P(newfabhi),
@@ -82,8 +73,7 @@ namespace amrex{
        const Real* xlo,const Real* dx,
        Real* time,
        int* ngrowLS,
-       int* nstar,
-       int* nface_dst);
+       int* nstar);
 
      void fort_correct_uninit(
        Real* minLS,

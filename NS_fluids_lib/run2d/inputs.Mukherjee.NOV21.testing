@@ -94,7 +94,6 @@ amr.max_level =  1
 # to the finest possible level.
 # Triple junctions will always be adapted to the finest possible level.
 
-ns.truncate_volume_fractions=0 0 0
 ns.ns_tiling=false
 fabarray.mfiter_tile_size=16 16
 #amr.max_level =  0

@@ -1730,19 +1730,13 @@ stop
         ! newfab has num_materials*(sdim+1) components
         !
       subroutine fort_levelstrip( &
-         keep_all_interfaces, &
          nprocessed, &
          minLS, &
          maxLS, &
          max_problen, &
          level, &
          finest_level, &
-         truncate_volume_fractions, &
          maskfab,DIMS(maskfab), &
-         facepairX,DIMS(facepairX), &
-         facepairY,DIMS(facepairY), &
-         facepairZ,DIMS(facepairZ), &
-         facetest,DIMS(facetest), &
          stenfab,DIMS(stenfab), &
          vofrecon,DIMS(vofrecon), &
          newfab,DIMS(newfab), &
@@ -1757,8 +1751,7 @@ stop
          xlo,dx, &
          time, &
          ngrow_distance_in, &
-         nstar, &
-         nface_dst) &
+         nstar) &
       bind(c,name='fort_levelstrip')
 
       use global_utility_module
@@ -1769,11 +1762,9 @@ stop
       IMPLICIT NONE
 
       integer, INTENT(inout) :: nprocessed
-      integer, INTENT(in) :: keep_all_interfaces 
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
       integer, INTENT(in) :: nstar
-      integer, INTENT(in) :: nface_dst
       integer, INTENT(in) :: ngrow_distance_in
 
       integer, PARAMETER :: ngrow_make_distance_accept=3
@@ -1781,12 +1772,7 @@ stop
       real(amrex_real), INTENT(inout) :: minLS(num_materials)
       real(amrex_real), INTENT(inout) :: maxLS(num_materials)
       real(amrex_real), INTENT(in) :: max_problen
-      integer, INTENT(in) :: truncate_volume_fractions(num_materials)
       integer, INTENT(in) :: DIMDEC(maskfab)
-      integer, INTENT(in) :: DIMDEC(facepairX)
-      integer, INTENT(in) :: DIMDEC(facepairY)
-      integer, INTENT(in) :: DIMDEC(facepairZ)
-      integer, INTENT(in) :: DIMDEC(facetest)
       integer, INTENT(in) :: DIMDEC(stenfab)
       integer, INTENT(in) :: DIMDEC(vofrecon)
       integer, INTENT(in) :: DIMDEC(newfab)
@@ -1796,18 +1782,6 @@ stop
 
       real(amrex_real), INTENT(in), target :: maskfab(DIMV(maskfab),4)
       real(amrex_real), pointer :: maskfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
-              facepairX(DIMV(facepairX),nface_dst)
-      real(amrex_real), pointer :: facepairX_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
-              facepairY(DIMV(facepairY),nface_dst)
-      real(amrex_real), pointer :: facepairY_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
-              facepairZ(DIMV(facepairZ),nface_dst)
-      real(amrex_real), pointer :: facepairZ_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
-              facetest(DIMV(facetest),num_materials*SDIM)
-      real(amrex_real), pointer :: facetest_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: stenfab(DIMV(stenfab),nstar)
       real(amrex_real), pointer :: stenfab_ptr(D_DECL(:,:,:),:)
 
@@ -1842,8 +1816,7 @@ stop
       integer nhalf
       real(amrex_real) xsten_accept(-3:3,SDIM)
       real(amrex_real) xsten_donate(-3:3,SDIM)
-      integer dir,dir2,side
-      integer local_facetest
+      integer dir,dir2
 
       integer isten,jsten,ksten
       integer iside,jside,kside
@@ -1865,10 +1838,7 @@ stop
       integer im_crit
       integer stencil_test(num_materials)
       integer cell_test(num_materials)
-      integer face_test(num_materials)
-      integer stringent_test_passed(num_materials)
       integer full_neighbor(num_materials)
-      integer ii,jj,kk
       integer i3,j3,k3
       integer i4,j4,k4
       integer i4low(3)
@@ -1886,9 +1856,7 @@ stop
        ! donateflag(1..num_materials)=1 if the respective material is a fluid
        ! which has a "non-flotsam" presence in the cell.
        ! If (cell_test(im)==1) and 
-       !    ((keep_all_interfaces==1)or
-       !     (truncate_volume_fractions(im)==0)) and
-       !     (the local star point is owned by material im) then
+       !    (the local star point is owned by material im) then
        !  donateflag(num_materials+1+istar)=im 
       integer donateflag(num_materials+1+nstar)
       integer crse_dist_valid
@@ -1903,16 +1871,8 @@ stop
       integer j_DEB_DIST
       integer k_DEB_DIST
 
-      integer flotsam_test
       integer keep_flotsam
       integer legitimate_material
-      integer height_check(num_materials)
-      integer boundary_face_count(num_materials)
-      integer center_face_count(num_materials)
-      integer iface,jface,kface
-      integer f_index(3)
-      integer ml,mr,ifacepair
-      real(amrex_real) frac_pair(num_materials,num_materials) !(m_left,m_right)
       real(amrex_real) LSslope_center(SDIM)
       integer imslope_center
       real(amrex_real) bypass_cutoff
@@ -1941,25 +1901,10 @@ stop
        stop
       endif
 
-      if ((keep_all_interfaces.eq.0).or. &
-          (keep_all_interfaces.eq.1)) then
-       ! do nothing
-      else
-       print *,"keep_all_interfaces invalid"
-       stop
-      endif
-
       if (max_problen.gt.zero) then
        !do nothing
       else
        print *,"max_problen invalid: ",max_problen
-       stop
-      endif
-
-      if (nface_dst.eq.2*num_materials*num_materials) then
-       ! do nothing
-      else
-       print *,"nface_dst invalid"
        stop
       endif
 
@@ -1999,30 +1944,8 @@ stop
        stop
       endif
 
-      do im=1,num_materials
-       if (truncate_volume_fractions(im).eq.0) then
-        ! do nothing
-       else if (truncate_volume_fractions(im).eq.1) then
-        ! do nothing
-       else
-        print *,"truncate_volume_fractions invalid"
-        stop
-       endif
-      enddo !im=1..num_materials
-
       maskfab_ptr=>maskfab
       call checkbound_array(fablo,fabhi,maskfab_ptr,ngrow_distance,-1)
-      facepairX_ptr=>facepairX
-      facepairY_ptr=>facepairY
-      facepairZ_ptr=>facepairZ
-      call checkbound_array(fablo,fabhi,facepairX_ptr, &
-        ngrow_distance,0)
-      call checkbound_array(fablo,fabhi,facepairY_ptr, &
-        ngrow_distance,1)
-      call checkbound_array(fablo,fabhi,facepairZ_ptr, &
-        ngrow_distance,SDIM-1)
-      facetest_ptr=>facetest
-      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow_distance,-1)
       stenfab_ptr=>stenfab
       call checkbound_array(fablo,fabhi,stenfab_ptr,ngrow_distance,-1)
       vofrecon_ptr=>vofrecon
@@ -2224,9 +2147,7 @@ stop
        ! fluid material id that owns
        ! the respective star stencil position.
        ! If (cell_test(im)==1) and 
-       !    ((keep_all_interfaces==1)or
-       !     (truncate_volume_fractions(im)==0)) and
-       !     (the LOCAL star point is owned by material im) then
+       !    (the LOCAL star point is owned by material im) then
        !  donateflag(num_materials+1+istar)=im 
 
        do im=1,num_materials+1+nstar
@@ -2269,10 +2190,8 @@ stop
         ! (B)        
        do im=1,num_materials
         cell_test(im)=0 !F>EPS3?
-        face_test(im)=0 !face areafrac between cells consistent?
         full_neighbor(im)=0 !neighbor F(im)>1-EPS3 ?
         stencil_test(im)=0 ! F(im)>1/2-eps on cell bdry?
-        stringent_test_passed(im)=0 ! stenfab consistent between cells?
        enddo
 
          ! initialize: cell_test
@@ -2390,85 +2309,6 @@ stop
          enddo
         endif
 
-         ! face_test
-        do im=1,num_materials
-         if (is_rigid(im).eq.0) then
-
-          if (cell_test(im).eq.1) then
-
-           if ((stencil_test(im).eq.1).or. &
-               (rigid_in_stencil.eq.0)) then
- 
-            face_test(im)=1
-            do dir=1,SDIM
-             ii=0
-             jj=0
-             kk=0
-             if (dir.eq.1) then
-              ii=1
-             else if (dir.eq.2) then
-              jj=1
-             else if ((dir.eq.3).and.(SDIM.eq.3)) then
-              kk=1
-             else
-              print *,"dir invalid levelstrip"
-              stop
-             endif
-
-             do side=1,2
-
-              if (side.eq.1) then
-               iside=i
-               jside=j
-               kside=k
-              else if (side.eq.2) then
-               iside=i+ii
-               jside=j+jj
-               kside=k+kk
-              else
-               print *,"side invalid"
-               stop
-              endif
-
-              local_facetest=NINT(facetest(D_DECL(iside,jside,kside), &
-                                  (dir-1)*num_materials+im))
-              if (local_facetest.eq.0) then
-               face_test(im)=0
-              else if (local_facetest.eq.1) then
-               ! do nothing
-              else
-               print *,"local_facetest invalid: ",local_facetest
-               stop
-              endif
-
-             enddo ! side=1,2
-
-            enddo ! dir=1..sdim
-
-           else if ((stencil_test(im).eq.0).and. &
-                    (rigid_in_stencil.eq.1)) then
-            ! do nothing
-           else
-            print *,"stencil_test or rigid_in_stencil invalid"
-            stop
-           endif
-
-          else if (cell_test(im).eq.0) then
-           ! do nothing
-          else
-           print *,"cell_test invalid"
-           stop
-          endif
-         else if (is_rigid(im).eq.1) then
-          ! do nothing
-         else
-          print *,"is_rigid invalid MOF_REDIST_3D.F90"
-          stop
-         endif
-        enddo ! im=1..num_materials
-
-
-         ! stringent_test_passed (on_border==0):
          ! investigate all points coinciding at the intersection of the
          ! line connecting cells (i,j,k) and (i+i3,j+j3,k+k3) with the
          ! boundary of cell (i,j,k). 
@@ -2603,7 +2443,6 @@ stop
               (rigid_in_stencil.eq.0)) then
            call put_istar(istar,istar_array) 
            donateflag(num_materials+1+istar)=im_corner
-           stringent_test_passed(im_corner)=1
           else if ((stencil_test(im_corner).eq.0).and. &
                    (rigid_in_stencil.eq.1)) then
            ! do nothing
@@ -2629,134 +2468,6 @@ stop
         enddo
         enddo  ! i3,j3,k3
 
-         ! dir=1..sdim, side=1..2
-         ! on_border==0
-        do im=1,num_materials
-         height_check(im)=0
-        enddo
-
-        do dir=1,SDIM
-
-         ii=0
-         jj=0
-         kk=0
-         if (dir.eq.1) then
-          ii=1
-         else if (dir.eq.2) then
-          jj=1
-         else if ((dir.eq.3).and.(SDIM.eq.3)) then
-          kk=1
-         else
-          print *,"dir invalid levelstrip"
-          stop
-         endif
-
-         do side=1,2
-
-          do im=1,num_materials
-           boundary_face_count(im)=0
-           center_face_count(im)=0
-          enddo
-
-          if (side.eq.1) then
-           iface=i
-           jface=j
-           kface=k
-          else if (side.eq.2) then
-           iface=i+ii
-           jface=j+jj
-           kface=k+kk
-          else
-           print *,"side invalid"
-           stop
-          endif
-          do k3=klosten,khisten
-          do j3=-1,1
-          do i3=-1,1
-      
-           f_index(1)=i3 
-           f_index(2)=j3 
-           f_index(3)=k3 
-
-           i4=i3+iface
-           j4=j3+jface
-           k4=k3+kface
-
-           ifacepair=1
-           do ml = 1, num_materials
-           do mr = 1, num_materials
-            if (dir.eq.1) then
-             frac_pair(ml,mr)=facepairX(D_DECL(i4,j4,k4),ifacepair)
-            else if (dir.eq.2) then
-             frac_pair(ml,mr)=facepairY(D_DECL(i4,j4,k4),ifacepair)
-            else if ((dir.eq.3).and.(SDIM.eq.3)) then
-             frac_pair(ml,mr)=facepairZ(D_DECL(i4,j4,k4),ifacepair)
-            else
-             print *,"dir invalid"
-             stop
-            endif
-            ifacepair=ifacepair+2
-           enddo
-           enddo
-           if (ifacepair.eq.nface_dst+1) then
-            ! do nothing
-           else
-            print *,"ifacepair invalid: ",ifacepair
-            stop
-           endif 
-
-            ! frac_pair(im,im)=fraction of a face in which there is material
-            ! "im" adjoining from BOTH sides.
-           do im=1,num_materials
-            if (is_rigid(im).eq.0) then
-             if ((frac_pair(im,im).ge.EPS3).and. &
-                 (frac_pair(im,im).le.one+EPS1)) then 
-              if ((i3.eq.0).and. &
-                  (j3.eq.0).and. &
-                  (k3.eq.0).and. &
-                  (f_index(dir).eq.0)) then
-               center_face_count(im)=1
-              else if (f_index(dir).eq.0) then
-               ! do nothing 
-              else if ((f_index(dir).eq.1).or. &
-                       (f_index(dir).eq.-1)) then
-               boundary_face_count(im)=1
-              else
-               print *,"f_index invalid: ",dir,f_index(dir)
-               stop
-              endif
-             else if ((frac_pair(im,im).ge.zero).and. &
-                      (frac_pair(im,im).le.EPS3)) then
-              ! do nothing
-             else
-              print *,"frac_pair invalid: ",frac_pair(im,im)
-              stop
-             endif
-            else if (is_rigid(im).eq.1) then
-             ! do nothing
-            else
-             print *,"is_rigid(im) invalid"
-             stop
-            endif
-           enddo ! im=1..num_materials
-          enddo
-          enddo
-          enddo ! i3,j3,k3
-          do im=1,num_materials
-           if ((center_face_count(im).eq.1).and. &
-               (boundary_face_count(im).eq.1)) then
-            height_check(im)=1
-           else if ((center_face_count(im).eq.0).or. &
-                    (boundary_face_count(im).eq.0)) then
-            ! do nothing
-           else
-            print *,"center_face_count or boundary_face_count bad"
-            stop
-           endif
-          enddo ! im=1..num_materials
-         enddo ! side=1,2     
-        enddo ! dir=1..sdim
-        
          ! full_neighbor
         do k3=klosten,khisten
         do j3=-1,1
@@ -2807,36 +2518,11 @@ stop
 
        do im=1,num_materials
 
-        if ((i.eq.i_DEB_DIST).and. &
-            (j.eq.j_DEB_DIST).and. &
-            (k.eq.k_DEB_DIST)) then
-         print *,"DEB_DIST: im,stringent_test_passed,face_test ", &
-          im,stringent_test_passed(im),face_test(im)
-        endif
-
-         ! face_test=0 if cell_test==0
         if (is_rigid(im).eq.0) then
-
-         if ((height_check(im).eq.1).and. &
-             (cell_test(im).eq.1)) then  !F_{im}>EPS3?
-          flotsam_test=1
-         else
-          flotsam_test=0
-         endif
 
          keep_flotsam=0
          if (cell_test(im).eq.1) then !F_{im}>EPS3?
-          if ((keep_all_interfaces.eq.1).or. &
-              (truncate_volume_fractions(im).eq.0)) then
-           keep_flotsam=1
-          else if ((keep_all_interfaces.eq.0).and. &
-                   (truncate_volume_fractions(im).eq.1)) then
-           keep_flotsam=0
-          else
-           print *,"keep_all_interfaces, truncate_volume_fraction, err: ", &
-              keep_all_interfaces,im,truncate_volume_fractions(im)
-           stop
-          endif
+          keep_flotsam=1
          else if (cell_test(im).eq.0) then !F_{im}<EPS3?
           keep_flotsam=0
          else
@@ -2847,13 +2533,11 @@ stop
          legitimate_material=0
          if ((vcenter(im).ge.half).or. &
              (im.eq.im_crit).or. & !im_crit=argmax_{im} F_{im}
-             (flotsam_test.eq.1).or. &
              (full_neighbor(im).eq.1).or. &
              (keep_flotsam.eq.1)) then!keep_flotsam=1 if Fm>EPS3 and no trunc.
           legitimate_material=1
          else if ((vcenter(im).le.half).and. &
                   (im.ne.im_crit).and. &
-                  (flotsam_test.eq.0).and. &
                   (full_neighbor(im).eq.0).and. &
                   (keep_flotsam.eq.0)) then
           legitimate_material=0
@@ -3939,11 +3623,11 @@ stop
       integer side
       integer side_cell
       integer iface
+      integer local_face_test(num_materials)
       real(amrex_real) total_face
       real(amrex_real) facefrac(num_materials)
       real(amrex_real) faceleft(num_materials)
       real(amrex_real) faceright(num_materials)
-      real(amrex_real) local_face_test(num_materials)
       integer nface_test
       real(amrex_real) xstenMAC(-1:1,SDIM)
       integer nhalf

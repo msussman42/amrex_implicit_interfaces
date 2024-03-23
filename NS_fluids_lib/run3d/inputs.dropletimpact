@@ -44,7 +44,6 @@ ns.mof_decision_tree_learning=100
 amr.n_cell=32 32 24 # Kensuke 
 #amr.max_level =  1   # Yongsheng 2= 43.2 points per diameter
 amr.max_level=2 # Kensuke
-ns.truncate_thickness=2.0
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=10

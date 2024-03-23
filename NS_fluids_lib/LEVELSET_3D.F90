@@ -18292,15 +18292,12 @@ stop
 
       subroutine fort_purgeflotsam( &
        delta_mass, &
-       truncate_volume_fractions, &
-       truncate_thickness, &
        level,finest_level, &
        time, &
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        maskcov,DIMS(maskcov), &
        vofnew,DIMS(vofnew), &
-       LS,DIMS(LS), &
        xlo,dx) &
       bind(c,name='fort_purgeflotsam')
 
@@ -18320,36 +18317,27 @@ stop
       real(amrex_real), INTENT(inout) :: delta_mass(num_materials)
       integer, INTENT(in) :: DIMDEC(maskcov)
       integer, INTENT(in) :: DIMDEC(vofnew)
-      integer, INTENT(in) :: DIMDEC(LS)
-      integer, INTENT(in) :: truncate_volume_fractions(num_materials)
       real(amrex_real), INTENT(in),target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(inout),target :: &
         vofnew(DIMV(vofnew),num_materials*ngeom_raw)
       real(amrex_real), pointer :: vofnew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target ::  LS(DIMV(LS),num_materials)
-      real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
       integer :: growlo(3),growhi(3)
       integer, INTENT(in) :: bfact
-      real(amrex_real), INTENT(in) :: truncate_thickness
 
       integer i,j,k,dir
-      integer im,im2,imcrit
+      integer im
       integer vofcomprecon,vofcompraw
 
       real(amrex_real) mofdata(num_materials*ngeom_recon)
       real(amrex_real) volmat(num_materials)
-      real(amrex_real) lspoint(num_materials)
-      integer sorted_list(num_materials)
-      real(amrex_real) dxmax,dxmaxLS,LSbandsize,restore_sum
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) volgrid
       real(amrex_real) cengrid(SDIM)
       integer mask_test
-      integer FSI_exclude
       integer tessellate
       integer, parameter :: continuous_mof=STANDARD_MOF
       integer cmofsten(D_DECL(-1:1,-1:1,-1:1))
@@ -18373,11 +18361,6 @@ stop
        stop
       endif
 
-      if (truncate_thickness.lt.one) then
-       print *,"truncate_thickness too small"
-       stop
-      endif
-
       if (num_state_material.ne. &
           num_state_base+num_species_var) then
        print *,"num_state_material invalid"
@@ -18386,16 +18369,10 @@ stop
 
       maskcov_ptr=>maskcov
       vofnew_ptr=>vofnew
-      LS_ptr=>LS
       call checkbound_array1(fablo,fabhi,maskcov_ptr,1,-1)
       call checkbound_array(fablo,fabhi,vofnew_ptr,1,-1)
-      call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
-
-      call get_dxmax(dx,bfact,dxmax)
-      call get_dxmaxLS(dx,bfact,dxmaxLS)
-      LSbandsize=truncate_thickness*dxmaxLS
 
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
@@ -18406,120 +18383,29 @@ stop
 
         call gridsten_level(xsten,i,j,k,level,nhalf)
         call Box_volumeFAST(bfact,dx,xsten,nhalf,volgrid,cengrid,SDIM)
-        if (volgrid.le.zero) then
-         print *,"volgrid invalid"
+        if (volgrid.gt.zero) then
+         !do nothing
+        else
+         print *,"volgrid invalid: ",volgrid
          stop
         endif
+
         do dir=1,num_materials*ngeom_recon
          mofdata(dir)=zero 
         enddo
+
         do im=1,num_materials
          vofcomprecon=(im-1)*ngeom_recon+1
          vofcompraw=(im-1)*ngeom_raw+1
          volmat(im)=vofnew(D_DECL(i,j,k),vofcompraw)
-         lspoint(im)=LS(D_DECL(i,j,k),im)
          mofdata(vofcomprecon)=volmat(im)
          do dir=1,SDIM
           mofdata(vofcomprecon+dir)=vofnew(D_DECL(i,j,k),vofcompraw+dir)
          enddo
-        enddo ! im
-        FSI_exclude=1
-        call sort_volume_fraction(volmat,FSI_exclude,sorted_list)
-        imcrit=sorted_list(1)
-        if (is_rigid(imcrit).eq.0) then
-         ! do nothing
-        else
-         print *,"is_rigid(imcrit) invalid"
-         stop
-        endif
-        do im=1,num_materials
-         if (is_rigid(im).eq.0) then
+        enddo ! im=1..num_materials
 
-          if (lspoint(im).gt.LSbandsize) then
-           vofcomprecon=(im-1)*ngeom_recon+1
-           mofdata(vofcomprecon)=one
-           do dir=1,SDIM
-            mofdata(vofcomprecon+dir)=zero
-           enddo
-
-           restore_sum=zero
-
-           do im2=1,num_materials
-            if (is_rigid(im2).eq.0) then
-
-             if (im2.ne.im) then
-              vofcomprecon=(im2-1)*ngeom_recon+1
-
-              if (truncate_volume_fractions(im2).eq.1) then
-
-               mofdata(vofcomprecon)=zero
-               do dir=1,SDIM
-                mofdata(vofcomprecon+dir)=zero
-               enddo
-
-              else if (truncate_volume_fractions(im2).eq.0) then
-               restore_sum=restore_sum+mofdata(vofcomprecon)
-              else
-               print *,"truncate_volume_fractions invalid"
-               stop
-              endif
-
-             else if (im2.eq.im) then
-              ! do nothing
-             else
-              print *,"im2 and im mismatch"
-              stop
-             endif 
-
-            else if (is_rigid(im2).eq.1) then
-             ! do nothing
-            else
-             print *,"is_rigid(im2) invalid"
-             stop
-            endif
-           enddo ! im2
-
-           vofcomprecon=(im-1)*ngeom_recon+1
-           mofdata(vofcomprecon)=one-restore_sum
-          
-          else if (lspoint(im).lt.-LSbandsize) then
-           if (im.ne.imcrit) then
-
-            if (truncate_volume_fractions(im).eq.1) then
-             vofcomprecon=(im-1)*ngeom_recon+1
-
-             mofdata(vofcomprecon)=zero
-             do dir=1,SDIM
-              mofdata(vofcomprecon+dir)=zero
-             enddo
-            else if (truncate_volume_fractions(im).eq.0) then
-             ! do nothing
-            else
-             print *,"truncate_volume_fractions invalid"
-             stop
-            endif
-           else if (im.eq.imcrit) then
-            ! do nothing
-           else
-            print *,"im invalid34"
-            stop
-           endif
-          else if ((lspoint(im).ge.-LSbandsize).and. &
-                   (lspoint(im).le.LSbandsize)) then
-           ! do nothing
-          else
-           print *,"lspoint bust"
-           stop
-          endif 
-
-         else if (is_rigid(im).eq.1) then
-          ! do nothing
-         else
-          print *,"is_rigid(im) invalid"
-          stop
-         endif
-        enddo ! im=1...num_materials
-
+         ! F<VOFTOL => F=0.0
+         ! F>1-VOFTOL => F=1.0
          ! sum F_fluid=1  sum F_solid <=1
         call make_vfrac_sum_ok_base( &
           cmofsten, &

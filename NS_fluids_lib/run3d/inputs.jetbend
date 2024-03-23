@@ -35,11 +35,9 @@ ns.continuous_mof=0
 # EILE_flag=-1 Weymouth and Yue
 # EILE_flag=1 alternate EI-LE
 ns.EILE_flag=1
-# even though truncate_volume_fractions==1, the algorithm in the present
 # code is much better at selecting which material to truncate than from the
 # 2015 version.  In otherwords, the more modern versions will use more
 # degrees of freedom in order to maintain the extra droplets in the domain.
-ns.truncate_volume_fractions=1 1 1
 
 
 # multigrid class

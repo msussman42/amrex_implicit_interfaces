@@ -27,7 +27,6 @@ mg.rtol_b = -0.01
 
 ns.num_materials=3
 ns.num_species_var=0
-ns.truncate_thickness=2.0
 
 ns.EILE_flag=-1
 

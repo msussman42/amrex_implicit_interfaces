@@ -7141,12 +7141,9 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
  int finest_level = parent->finestLevel();
 
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
- MultiFab& LS_new = get_new_data(LS_Type,slab_step+1);
  int nc=STATE_NCOMP;
  if (nc!=S_new.nComp())
   amrex::Error("nc invalid in truncate_VOF");
- if (LS_new.nComp()!=num_materials*(AMREX_SPACEDIM+1))
-  amrex::Error("LS_new ncomp invalid");
 
  if (delta_mass_all.size()!=num_materials)
   amrex::Error("delta_mass_all has invalid size");
@@ -7184,7 +7181,6 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
    int bfact=parent->Space_blockingFactor(level);
 
    FArrayBox& vofnew=S_new[mfi];
-   FArrayBox& lsfab=LS_new[mfi];
     // mask=tag if not covered by level+1 or outside the domain.
    FArrayBox& maskcov=(*localMF[MASKCOEF_MF])[mfi];
 
@@ -7201,8 +7197,6 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
 //  in: LEVELSET_3D.F90
    fort_purgeflotsam(
      local_delta_mass[tid_current].dataPtr(),
-     truncate_volume_fractions.dataPtr(),
-     &truncate_thickness, 
      &level,&finest_level,
      &cur_time_slab,
      tilelo,tilehi,
@@ -7211,8 +7205,6 @@ void NavierStokes::truncate_VOF(Vector<Real>& delta_mass_all) {
      ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
      vofnew.dataPtr(STATECOMP_MOF),
      ARLIM(vofnew.loVect()),ARLIM(vofnew.hiVect()),
-     lsfab.dataPtr(),
-     ARLIM(lsfab.loVect()),ARLIM(lsfab.hiVect()),
      xlo,dx);
 
  }  // mfi

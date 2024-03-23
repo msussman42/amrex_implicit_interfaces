@@ -27,7 +27,6 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.continuous_mof=0 # 0=MOF
-ns.truncate_thickness=2.0
 ns.mof_error_ordering=1 # 0-centroid furthest  1-use MOF error
 # OPTION 1 
 ns.mof_ordering=0 0 1

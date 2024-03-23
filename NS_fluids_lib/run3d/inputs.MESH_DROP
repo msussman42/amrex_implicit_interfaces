@@ -188,7 +188,6 @@ ns.projection_pressure_scale=1.0
 ns.MOFITERMAX=10
 ns.mof_decision_tree_learning=125000 # default: 40000
 ns.MOFITERMAX_AFTER_PREDICT=2
-ns.truncate_thickness=2.0
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=10
