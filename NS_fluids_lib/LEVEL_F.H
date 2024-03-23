@@ -212,15 +212,12 @@ namespace amrex{
 
      void fort_purgeflotsam(
        Real* delta_mass,
-       int* truncate_volume_fractions,
-       Real* truncate_thickness,
        int* level,int* finest_level,
        Real* time,
        const int* tilelo,const int* tilehi,
        const int* fablo,const int* fabhi,int* bfact,
        Real* maskcov,AMREX_ARLIM_P(maskcovlo),AMREX_ARLIM_P(maskcovhi),
        Real* vofnew,AMREX_ARLIM_P(vofnewlo),AMREX_ARLIM_P(vofnewhi),
-       Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
        const Real* xlo,const Real* dx);
 
       void fort_cell_to_mac(

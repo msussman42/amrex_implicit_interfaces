@@ -4,7 +4,6 @@ stop_time =  1.4e-3  # 20 x (0.7cm / 10^4 cm/s) W NOZZLE
 stop_time =  100.0   # Simple J Nozzle
 
 # liquid,vacuum,solid  W Nozzle
-ns.truncate_volume_fractions=1 0 0 # CAVITATION
 ns.num_materials=3  # CAVITATION
 ns.num_species_var=1 # CAVITATION
 ns.num_divu_outer_sweeps=4
@@ -12,7 +11,6 @@ ns.num_divu_outer_sweeps=4
 ns.extend_pressure_into_solid=1
 
 # Simple J Nozzle
-ns.truncate_volume_fractions=0 0  # liquid,solid
 ns.num_materials=2  # CAVITATION
 ns.num_species_var=0 # CAVITATION
 ns.num_divu_outer_sweeps=1

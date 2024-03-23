@@ -25,7 +25,6 @@ stop_time =  1.4e-3  # 20 x (0.7cm / 10^4 cm/s)
 ns.extend_pressure_into_solid=1
 
 # liquid,vacuum,solid
-ns.truncate_volume_fractions=1 0 0 # CAVITATION
 ns.num_materials=3  # CAVITATION
 ns.num_species_var=1 # CAVITATION
 ns.num_divu_outer_sweeps=2

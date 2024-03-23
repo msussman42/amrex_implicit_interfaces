@@ -1299,9 +1299,9 @@ void apply_pressure_grad(
     void makeFaceTest(int tessellate,int ngrow,int idx);
     void ProcessFaceFrac(int tessellate,int idxsrc,int idxdst,
 		    int ngrow_dest);
-    void makeStateDistALL(int keep_all_interfaces,int update_particles);
+    void makeStateDistALL(int update_particles);
 
-    void makeStateDist(int keep_all_interfaces);
+    void makeStateDist();
 
     void correct_dist_uninit();
 
@@ -1561,16 +1561,10 @@ protected:
     static int  MOFITERMAX;
     static int  MOFITERMAX_AFTER_PREDICT;
 
-// default: tessellating fluid => default==1
-//          non-tesselating or tesselating solid => default==0
-    static Vector<int> truncate_volume_fractions;
-
     static Vector<int> force_blob_symmetry;
 
     static int particle_nsubdivide;  
     static int particle_max_per_nsubdivide;  
-
-    static Real truncate_thickness;  // default is 2.0
 
     static int  enable_spectral;
 

@@ -24,7 +24,6 @@ geometry.prob_lo   =  0.0 0.0
 # dimensionless contact radius 1.0
 geometry.prob_hi   =  1.25 2.5  # r=0.2 r^* 
 ns.EILE_flag=-1
-ns.truncate_thickness=2.0
 
 # 1  => tag cell if this material is primary material in the cell stencil.
 # 0  => tag cell if this material and another *qualified* 

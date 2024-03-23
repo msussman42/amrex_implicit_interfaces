@@ -194,16 +194,11 @@ Vector<Real> NavierStokes::centroid_noise_factor;
 int  NavierStokes::partial_cmof_stencil_at_walls=1;
 
 int  NavierStokes::enable_spectral=0;
-// default: tessellating fluid => default==1
-//          non-tessellating or tessellating solid => default==0
-Vector<int> NavierStokes::truncate_volume_fractions;
 
 Vector<int> NavierStokes::force_blob_symmetry;
 
 int NavierStokes::particle_nsubdivide=4; 
 int NavierStokes::particle_max_per_nsubdivide=2; 
-
-Real NavierStokes::truncate_thickness=2.0;  
 
 Real NavierStokes::init_shrink  = 1.0;
 Real NavierStokes::change_max   = 1.01;
@@ -4327,22 +4322,6 @@ NavierStokes::read_params ()
 
        Real LL=get_user_latent_heat(iten_local+1,293.0,1);
        if (LL!=0.0) {
-        int im1=0;
-        int im2=0;
-        int im_source=0;
-        int im_dest=0;
-	 // get_inverse_iten_cpp declared in NavierStokes2.cpp
-	 // 1<=im1<im2<=num_materials
-        get_inverse_iten_cpp(im1,im2,iten+1);
-        if (ireverse==0) {
-         im_source=im1;  
-         im_dest=im2;  
-        } else if (ireverse==1) {
-         im_source=im2;  
-         im_dest=im1;  
-        } else
-         amrex::Error("ireverse invalid");
-
         if (material_type_interface[iten]==0) {
          // do nothing
         } else
@@ -5124,44 +5103,10 @@ NavierStokes::read_params ()
     }
     pp.queryAdd("force_blob_symmetry",force_blob_symmetry,AMREX_SPACEDIM);
 
-    truncate_volume_fractions.resize(num_materials);
-
-    for (int i=0;i<num_materials;i++) {
-
-     if ((FSI_flag[i]==FSI_FLUID)|| // tessellating
-         (FSI_flag[i]==FSI_FLUID_NODES_INIT))  // fluid, tessellating
-      truncate_volume_fractions[i]=1;
-     else if (is_ice_matC(i)==1) // ice, tessellating
-      truncate_volume_fractions[i]=1;
-     else if (FSI_flag[i]==FSI_PRESCRIBED_PROBF90) 
-      truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==FSI_PRESCRIBED_NODES) 
-      truncate_volume_fractions[i]=0;
-     else if (FSI_flag[i]==FSI_SHOELE_CTML) 
-      truncate_volume_fractions[i]=0;
-     else if (is_FSI_rigid_matC(i)==1) // FSI rigid solid, tessellating
-      truncate_volume_fractions[i]=0;
-     else
-      amrex::Error("FSI_flag invalid");
-    }  // i=0..num_materials-1
-
      //default=4
     pp.queryAdd("particle_nsubdivide",particle_nsubdivide);
      //default=10
     pp.queryAdd("particle_max_per_nsubdivide",particle_max_per_nsubdivide);
-
-    pp.queryAdd("truncate_volume_fractions",truncate_volume_fractions,
-		num_materials);
-
-    for (int i=0;i<num_materials;i++) {
-     if ((truncate_volume_fractions[i]<0)||
-         (truncate_volume_fractions[i]>1))
-      amrex::Error("truncate_volume_fractions invalid");
-    }
-
-    pp.queryAdd("truncate_thickness",truncate_thickness);
-    if (truncate_thickness<1.0)
-     amrex::Error("truncate_thickness too small");
 
     for (int im=1;im<=num_materials;im++) {
      for (int im_opp=im+1;im_opp<=num_materials;im_opp++) {
@@ -5184,27 +5129,6 @@ NavierStokes::read_params ()
 
        Real LL=get_user_latent_heat(indexEXP+1,293.0,1);
 
-       if (LL!=0.0) {
-        if ((truncate_volume_fractions[im-1]==0)&&
-  	    (truncate_volume_fractions[im_opp-1]==0)) {
-	 // do nothing
-	} else {
-	 std::cout << "WARNING: (if microscopic seeds) \n";
-	 std::cout << "all materials at mass transfer interface\n";
-	 std::cout << "should have truncate_volume_fractions==0\n";
-	 std::cout << "im= " << im << '\n';
-	 std::cout << "truncate_volume_fractions[im-1]= " << 
-  	   truncate_volume_fractions[im-1] << '\n';
-	 std::cout << "im_opp= " << im_opp << '\n';
-	 std::cout << "truncate_volume_fractions[im_opp-1]= " << 
-  	   truncate_volume_fractions[im_opp-1] << '\n';
- 	 amrex::Warning("truncate_volume_fractions==1 for im or im_opp");
-	}
-       } else if (LL==0.0) {
-        // do nothing
-       } else
-        amrex::Error("LL invalid");
-      
        if (is_multi_component_evap(freezing_model[indexEXP],
            Tanasawa_or_Schrage_or_Kassemi[indexEXP],LL)==1) {
 
@@ -5385,7 +5309,6 @@ NavierStokes::read_params ()
      std::cout << "prescribe_temperature_outflow= " << 
       prescribe_temperature_outflow << '\n';
      std::cout << "solidheat_flag= " << solidheat_flag << '\n';
-     std::cout << "truncate_thickness= " << truncate_thickness << '\n';
 
      for (int i=0;i<num_materials;i++) {
       std::cout << "i= " << i << " compressible_dt_factor= " <<
@@ -5428,8 +5351,6 @@ NavierStokes::read_params ()
       std::cout << "mof_ordering i= " << i << ' ' <<
         mof_ordering[i] << '\n';
 
-      std::cout << "truncate_volume_fractions i= " << i << ' ' <<
-        truncate_volume_fractions[i] << '\n';
 
       std::cout << "viscosity_state_model i= " << i << ' ' <<
         viscosity_state_model[i] << '\n';
@@ -22831,10 +22752,9 @@ NavierStokes::prepare_post_process(const std::string& caller_string) {
 
  if (pattern_test(local_caller_string,"post_init_state")==1) {
 
-  int keep_all_interfaces=1;
   int update_particles=0;
 
-  makeStateDistALL(keep_all_interfaces,update_particles);
+  makeStateDistALL(update_particles);
 
   prescribe_solid_geometryALL(cur_time_slab,
 		  renormalize_only,
@@ -22889,6 +22809,10 @@ NavierStokes::init_particle_containerALL(int append_flag,
 
  std::string local_caller_string="init_particle_containerALL";
  local_caller_string=caller_string+local_caller_string;
+
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
 
  int num_neighbors=1;
  if (append_flag==OP_PARTICLE_INIT) {
@@ -22952,6 +22876,10 @@ NavierStokes::init_particle_containerALL(int append_flag,
  } else {
   amrex::Error("append_flag invalid");
  }
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
 
 } // end subroutine init_particle_containerALL
  
@@ -24693,7 +24621,7 @@ void NavierStokes::putStateDIV_DATA(
 // NavierStokes::prepare_post_process if via "post_init_state"
 // NavierStokes::do_the_advance
 void
-NavierStokes::makeStateDistALL(int keep_all_interfaces,int update_particles) {
+NavierStokes::makeStateDistALL(int update_particles) {
 
  interface_touch_flag=1; //makeStateDistALL
 
@@ -24746,7 +24674,7 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,int update_particles) {
   // function values.
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.makeStateDist(keep_all_interfaces);
+  ns_level.makeStateDist();
  }
   // fort_correct_uninit is in MOF_REDIST_3D.F90
  for (int ilev=level;ilev<=finest_level;ilev++) {
@@ -24756,11 +24684,6 @@ NavierStokes::makeStateDistALL(int keep_all_interfaces,int update_particles) {
 
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.delete_localMF(FACEFRAC_MF,1);
-  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-   ns_level.delete_localMF(FACEFRAC_SOLVE_MM_MF+dir,1);
-  }
-  ns_level.delete_localMF(FACETEST_MF,1);
   ns_level.delete_localMF(STENCIL_MF,1);
   ns_level.delete_localMF(DIST_TOUCH_MF,1);
  }
@@ -24885,7 +24808,7 @@ NavierStokes::build_NRM_FD_MF(int fd_mf,int ls_mf) {
 } // end subroutine build_NRM_FD_MF
 
 void
-NavierStokes::makeStateDist(int keep_all_interfaces) {
+NavierStokes::makeStateDist() {
 
  std::string local_caller_string="makeStateDist";
 
@@ -24983,47 +24906,9 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
  int nstar=9;
  if (AMREX_SPACEDIM==3)
   nstar*=3;
- int nface=num_materials*AMREX_SPACEDIM*2; 
-
-  // (num_materials,num_materials,2)  left material, right material, 
-  // frac_pair+dist_pair
- int nface_dst=num_materials*num_materials*2;
 
  new_localMF(STENCIL_MF,nstar,ngrow_distance,-1);
  localMF[STENCIL_MF]->setVal(0.0);
-
- int tessellate=0;
-  // fort_faceinit is in: MOF_REDIST_3D.F90
- makeFaceFrac(tessellate,ngrow_distance,FACEFRAC_MF);
-  // fort_faceprocess is in: MOF_REDIST_3D.F90
- ProcessFaceFrac(tessellate,FACEFRAC_MF,FACEFRAC_SOLVE_MM_MF,ngrow_distance);
-
- if (profile_dist==1) {
-  after_profile = ParallelDescriptor::second();
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "level= " << level << '\n';
-   std::cout << "makeFaceFrac time " << after_profile-before_profile << '\n';
-  }
- }
-
- if (profile_dist==1)
-  before_profile = ParallelDescriptor::second();
-
-  // fort_faceinittest is in MOF_REDIST_3D.F90
-  // FACETEST_MF has num_materials * sdim components.
-  // tessellate=0
- makeFaceTest(tessellate,ngrow_distance,FACETEST_MF);
-
- if (profile_dist==1) {
-  after_profile = ParallelDescriptor::second();
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "level= " << level << '\n';
-   std::cout << "makeFaceTest time " << after_profile-before_profile << '\n';
-  }
- }
-
- if (profile_dist==1)
-  before_profile = ParallelDescriptor::second();
 
  if (thread_class::nthreads<1)
   amrex::Error("thread_class::nthreads invalid");
@@ -25090,20 +24975,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
   }
  }
 
- debug_ngrow(FACETEST_MF,ngrow_distance,local_caller_string);
- if (localMF[FACETEST_MF]->nComp()!=num_materials*AMREX_SPACEDIM)
-  amrex::Error("localMF[FACETEST_MF]->nComp() invalid");
-
- debug_ngrow(FACEFRAC_MF,ngrow_distance,local_caller_string);
- if (localMF[FACEFRAC_MF]->nComp()!=nface)
-  amrex::Error("localMF[FACEFRAC_MF]->nComp() invalid");
-
- for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  debug_ngrow(FACEFRAC_SOLVE_MM_MF+dir,ngrow_distance,local_caller_string);
-  if (localMF[FACEFRAC_SOLVE_MM_MF+dir]->nComp()!=nface_dst)
-   amrex::Error("localMF[FACEFRAC_SOLVE_MM_MF+dir]->nComp()!=nface_dst");
- }
-
  debug_ngrow(STENCIL_MF,ngrow_distance,local_caller_string);
 
  Vector<int> nprocessed;
@@ -25143,12 +25014,6 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
 
    FArrayBox& stencilfab=(*localMF[STENCIL_MF])[mfi];
 
-   FArrayBox& facepairXfab=(*localMF[FACEFRAC_SOLVE_MM_MF])[mfi];
-   FArrayBox& facepairYfab=(*localMF[FACEFRAC_SOLVE_MM_MF+1])[mfi];
-   FArrayBox& facepairZfab=
-      (*localMF[FACEFRAC_SOLVE_MM_MF+AMREX_SPACEDIM-1])[mfi];
-
-   FArrayBox& facetestfab=(*localMF[FACETEST_MF])[mfi];
    FArrayBox& maskfab=(*localMF[MASK_NBR_MF])[mfi];
 
    FArrayBox& touchfab=(*localMF[DIST_TOUCH_MF])[mfi];
@@ -25164,24 +25029,14 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
 
     // in: MOF_REDIST_3D.F90
    fort_levelstrip( 
-    &keep_all_interfaces,
     &nprocessed[tid_current],
     minLS[tid_current].dataPtr(),
     maxLS[tid_current].dataPtr(),
     &max_problen,
     &level,
     &finest_level,
-    truncate_volume_fractions.dataPtr(),
     maskfab.dataPtr(),
     ARLIM(maskfab.loVect()),ARLIM(maskfab.hiVect()),
-    facepairXfab.dataPtr(),
-    ARLIM(facepairXfab.loVect()),ARLIM(facepairXfab.hiVect()),
-    facepairYfab.dataPtr(),
-    ARLIM(facepairYfab.loVect()),ARLIM(facepairYfab.hiVect()),
-    facepairZfab.dataPtr(),
-    ARLIM(facepairZfab.loVect()),ARLIM(facepairZfab.hiVect()),
-    facetestfab.dataPtr(),
-    ARLIM(facetestfab.loVect()),ARLIM(facetestfab.hiVect()),
     stencilfab.dataPtr(),
     ARLIM(stencilfab.loVect()),ARLIM(stencilfab.hiVect()),
     voffab.dataPtr(),
@@ -25201,8 +25056,7 @@ NavierStokes::makeStateDist(int keep_all_interfaces) {
     xlo,dx,
     &cur_time_slab,
     &ngrow_distance,
-    &nstar,
-    &nface_dst);
+    &nstar);
  } // mfi
 } // omp
 

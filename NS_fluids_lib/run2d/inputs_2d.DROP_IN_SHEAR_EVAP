@@ -26,7 +26,6 @@ geometry.prob_hi=0.0025 0.0025  # cm
 ns.slice_dir=1
 ns.xslice=0.0 0.0
 ns.EILE_flag=-1
-ns.truncate_thickness=2.0
 
 ns.minimum_relative_error=1.0e-22
 ns.diffusion_minimum_relative_error=1.0e-22
