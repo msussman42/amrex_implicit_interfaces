@@ -164,6 +164,33 @@ real(amrex_real) :: distline
     call polygondist(xstar,ystar,xblob,xblob2,yblob,yblob2, &
       xblob3,yblob3,LS(1))
     LS(2)=-LS(1)
+   else if (axis_dir.eq.5) then !dist<0 in circle, split in half
+    if (num_materials.ne.3) then
+     print *,"num_materials invalid"
+     stop
+    endif
+    if (SDIM.eq.2) then
+     LS(1)=sqrt( (xstar-xblob)**2 + (ystar-yblob)**2 ) - radblob
+    else if (SDIM.eq.3) then
+     LS(1)=sqrt((xstar-xblob)**2+(ystar-yblob)**2+(zstar-zblob)**2) - radblob
+    else
+     print *,"dimension bust"
+     stop
+    endif
+    LS(2)=-LS(1)
+
+    LS(3)=LS(1)  ! negative in the circle
+    LS(1)=-LS(3) ! positive in the circle
+    distline=xblob-xstar ! positive left side, negative right side
+    if (distline.lt.LS(1)) then
+     LS(1)=distline ! LS(1) is negative right side of circle
+    endif
+    LS(2)=-LS(3) ! positive in the circle
+    distline=xstar-xblob !positive right side, negative left side
+    if (distline.lt.LS(2)) then ! LS(2) is negative left side of circle
+     LS(2)=distline             ! LS(2) is positive right side of circle
+    endif
+
    else
     print *,"axis_dir invalid probtype=28"
     stop
