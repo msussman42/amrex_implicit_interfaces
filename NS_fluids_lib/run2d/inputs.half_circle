@@ -1,0 +1,126 @@
+max_step  =  999999   # maximum timestep
+#max_step  =  1    # maximum timestep
+stop_time =  628.0  # maximum problem time
+#wait_for_key = 1
+
+# ------------------  INPUTS TO CLASS AMR ---------------------
+# set up for bubble
+geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+geometry.prob_lo   =  0.0 0.0
+geometry.prob_hi   =  100.0 100.0
+geometry.is_periodic = 1 1
+# multigrid class
+mg.verbose = 0
+cg.verbose = 0
+# set above to 2 for maximum verbosity
+mg.nu_f = 40
+mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
+cg.maxiter = 9000
+mg.bot_atol = 1.0e-12
+mg.rtol_b = -0.01
+Lp.v = 0
+
+ns.continuous_mof=0
+ns.particle_nsubdivide=4
+ns.particle_max_per_nsubdivide=2
+ns.mof_decision_tree_learning=0
+ns.mof_machine_learning=0
+ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
+ns.MOFITERMAX=15
+ns.MOFITERMAX_AFTER_PREDICT=0
+ns.num_materials=3
+ns.num_species_var=0
+# effective fine grid resolution: 96x96
+amr.n_cell    = 24 24
+amr.max_level = 2
+
+ns.profile_debug=0
+ns.ns_tiling=false
+
+# 0- 1 level 1- 2 levels  2- 3 levels
+amr.regrid_int      = 1       # how often to regrid
+amr.n_error_buf     = 4 4 4 4 # number of buffer cells in error est
+amr.grid_eff        = 0.85   # what constitutes an efficient grid
+# above was .55 (smaller=> less boxes)
+amr.blocking_factor = 8 8 4     # block factor in grid generation
+amr.space_blocking_factor = 1 1 1 1
+amr.check_int       = 160     # number of timesteps between checkpoints
+amr.check_file      = chk     # root name of checkpoint file
+amr.plot_int        = 20       # 157 for convergence check
+# 0=tecplot nodes 1=plt file cells (or HDF5) 2=tecplot cells
+# ns.visual_nddata_format=1
+ns.visual_ncell     = 96 96  # effective fine grid resolution 24x24 + 2 levels
+amr.plot_file       = plt 
+amr.grid_log        = grdlog  # name of grid logging file
+amr.max_grid_size   = 128 128 128
+#amr.restart         = chk00640
+#amr.v=1
+#amr.trace   =1
+
+# ------------------  INPUTS TO PHYSICS CLASS -------------------
+ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
+
+mac.mac_abs_tol    = 1.0e-10
+
+#amr.plotfile_on_restart=1
+
+ns.cfl = 0.5  # cfl number for hyperbolic system
+
+ns.init_shrink    = 1.0      # scale back initial timestep
+ns.change_max=1.01      # scale back initial timestep
+ns.visc_coef      = 0.0      # coef of viscosity
+mac.visc_abs_tol   = 1.0e-10
+ns.gravity        = 0.0    # body force  (gravity in MKS units)
+ns.tension        = 0.0 0.0 0.0 0.0 0.0 0.0
+#ns.fixed_dt	  = 0.4      # hardwire dt
+ns.sum_interval   = 40        # timesteps between computing mass 
+ns.output_drop_distribution=1
+
+ns.axis_dir=5  # 0=notched disk 1=Adist 2=circle 5=half circle
+ns.vorterr=0.0 0.0 0.0
+ns.rgasinlet=1.57
+ns.vinletgas=0.0
+ns.twall=0.1
+ns.advbot=0.0
+ns.adv_vel=0.0 # adv_vel=0.0 => rotating velocity  adv_vel<>0 translation
+ns.adv_dir=2 # adv_dir=1,2,3
+ns.material_type=0 0 0 0
+ns.heatviscconst=0.0 0.0 0.0 0.0
+ns.viscconst=0.0 0.0 0.0 0.0
+ns.denconst=1.0 1.0 1.0 1.0
+ns.tempconst=293.0 293.0 293.0 293.0
+ns.pressure_error_cutoff=0.0 0.0 0.0 0.0
+ns.xblob=50.0
+ns.yblob=75.0
+ns.zblob=0.0
+#Pilliod and Puckett: 5 cells in the notch,
+#Pilliod and Puckett: 25 cells length of notch
+ns.radblob=15.0 #Pilliod and Puckett 2004: 15 cells in the radius
+ns.denfact=1.0
+ns.velfact=0.0
+ns.probtype=28
+
+#ns.mem_debug = 1
+ns.v = 1
+#ns.d = 1
+
+# ----------------  PROBLEM DEPENDENT INPUTS
+#ns.lo_bc          = 2 2
+#ns.hi_bc          = 2 2
+ns.lo_bc          = 0 0
+ns.hi_bc          = 0 0
+
+# >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
+# 0 = Interior           3 = Symmetry
+# 1 = Inflow             4 = SlipWall
+# 2 = Outflow            5 = NoSlipWall
+
+# turn any of these on to generate run-time timing stats
+
+fab.format = NATIVE
+
+# select single or double precision of FAB output data
+#        default is whatever precision code is compiled with.
+#fab.precision = FLOAT     # output in FLOAT or DOUBLE
+fab.precision = DOUBLE    # output in FLOAT or DOUBLE
+
