@@ -757,6 +757,16 @@ endif
 return
 end subroutine passive_advect_STATE_BC
 
+subroutine passive_advect_verification_flag(verification_flag)
+IMPLICIT NONE
+
+integer, INTENT(out) :: verification_flag
+
+ verification_flag=1
+
+return
+end subroutine passive_advect_verification_flag
+
 subroutine passive_advect_clamped_LS(x,t,LS,vel,temperature,prescribed_flag,dx)
 use probcommon_module
 use global_utility_module

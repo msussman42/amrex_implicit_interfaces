@@ -1114,6 +1114,10 @@ implicit none
        integer, INTENT(in) :: dir
       end subroutine TEMPLATE_check_vel_rigid
 
+      subroutine TEMPLATE_verification_flag(verification_flag)
+      integer, INTENT(out) :: verification_flag
+      end subroutine TEMPLATE_verification_flag
+
       subroutine TEMPLATE_clamped_LS(x,t,LS,vel,temperature,prescribed_flag,dx)
        use amrex_fort_module, only : amrex_real
        real(amrex_real), INTENT(in) :: x(SDIM)
@@ -1426,6 +1430,7 @@ implicit none
         SUB_GET_OUTSIDE_POINT
       PROCEDURE(TEMPLATE_BOUNDING_BOX_AUX), POINTER :: SUB_BOUNDING_BOX_AUX
       PROCEDURE(TEMPLATE_check_vel_rigid), POINTER :: SUB_check_vel_rigid
+      PROCEDURE(TEMPLATE_verification_flag), POINTER :: SUB_verification_flag
       PROCEDURE(TEMPLATE_clamped_LS), POINTER :: SUB_clamped_LS_no_scale
       PROCEDURE(TEMPLATE_VEL), POINTER :: SUB_VEL
       PROCEDURE(TEMPLATE_EOS), POINTER :: SUB_EOS

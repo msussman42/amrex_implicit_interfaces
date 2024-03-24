@@ -268,6 +268,16 @@ integer, INTENT(in) :: dir
 return
 end subroutine STUB_check_vel_rigid
 
+subroutine STUB_verification_flag(verification_flag)
+IMPLICIT NONE
+
+integer, INTENT(out) :: verification_flag
+
+ verification_flag=0
+
+return
+end subroutine STUB_verification_flag
+
 subroutine STUB_clamped_LS(x,t,LS,vel,temperature,prescribed_flag,dx)
 use probcommon_module
 use global_utility_module
