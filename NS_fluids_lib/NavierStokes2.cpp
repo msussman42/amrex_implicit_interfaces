@@ -6689,6 +6689,10 @@ void NavierStokes::move_particles(
  std::string local_caller_string="move_particles";
  local_caller_string=caller_string+local_caller_string;
 
+#if (NS_profile_solver==1)
+ BLProfiler bprof(local_caller_string);
+#endif
+
  if (pattern_test(local_caller_string,"do_the_advance")==1) {
   //do nothing
  } else {
@@ -6890,6 +6894,10 @@ void NavierStokes::move_particles(
   } else
    amrex::Error("phase_change_displacement invalid");
  }
+
+#if (NS_profile_solver==1)
+ bprof.stop();
+#endif
 
 } // end subroutine move_particles
 
