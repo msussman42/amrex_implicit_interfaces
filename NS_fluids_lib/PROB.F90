@@ -6001,7 +6001,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       if (fort_is_passive_advect_test().eq.1) then
 
        call SUB_LS(xvec,time,LS,num_materials)
-       dist=LS(1)
+       dist=LS(imaterial)
 
        ! drop on slope (exactdist)
       else if (probtype.eq.55) then
