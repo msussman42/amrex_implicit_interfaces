@@ -741,6 +741,7 @@ stop
       SUB_SUMINT=>STUB_SUMINT
       SUB_USER_DEFINED_FORCE=>STUB_USER_DEFINED_FORCE
       SUB_check_vel_rigid=>STUB_check_vel_rigid
+      SUB_verification_flag=>STUB_verification_flag
       SUB_clamped_LS_no_scale=>STUB_clamped_LS
 
       SUB_wallfunc=>STUB_wallfunc
@@ -864,6 +865,7 @@ stop
        SUB_VEL_BC=>passive_advect_VEL_BC
        SUB_PRES_BC=>passive_advect_PRES_BC
        SUB_STATE_BC=>passive_advect_STATE_BC
+       SUB_verification_flag=>passive_advect_verification_flag
        SUB_clamped_LS_no_scale=>passive_advect_clamped_LS
        SUB_OVERRIDE_TAGFLAG=>passive_advect_OVERRIDE_TAGFLAG
        SUB_CFL_HELPER=>passive_advect_CFL_HELPER

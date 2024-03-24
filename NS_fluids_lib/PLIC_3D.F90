@@ -202,6 +202,7 @@ stop
       real(amrex_real) VEL_clamped(SDIM)
       real(amrex_real) temperature_clamped
       integer :: prescribed_flag
+      integer :: verification_flag
 
 #include "mofdata.H"
 
@@ -643,6 +644,8 @@ stop
         call SUB_clamped_LS(xstencil_point,time,LS_clamped, &
           VEL_clamped,temperature_clamped,prescribed_flag,dx)
 
+        call SUB_verification_flag(verification_flag)
+
         fluid_obscured=0
         if (vfrac_solid_sum.ge.half) then
          fluid_obscured=1
@@ -652,12 +655,16 @@ stop
          print *,"vfrac_solid_sum invalid:",vfrac_solid_sum
          stop
         endif
-        if (LS_clamped.ge.zero) then
+
+        if ((LS_clamped.ge.zero).and. &
+            (verification_flag.eq.0)) then
          fluid_obscured=1
-        else if (LS_clamped.le.zero) then
+        else if ((LS_clamped.le.zero).or. &
+                 (verification_flag.eq.1)) then
          !do nothing
         else
          print *,"LS_clamped invalid:",LS_clamped
+         print *,"or verification_flag invalid:",verification_flag
          stop
         endif 
 
