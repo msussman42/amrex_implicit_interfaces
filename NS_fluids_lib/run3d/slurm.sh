@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH --job-name="fabric_drop_problem"
-#SBATCH --ntasks=4
+#SBATCH --job-name="tank Problem"
+#SBATCH --ntasks=8
 #SBATCH --partition=backfill
 #SBATCH --mail-type="ALL"
 #SBATCH --mail-user=msussman@fsu.edu
@@ -40,9 +40,10 @@
 
 # More resourecs at: https://rcc.fsu.edu/doc/ [rcc.fsu.edu]
 pwd;hostname;date
-echo "running amrMPI (FABRIC) on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
+echo "running amrMPI (tank) on $SLURM_JOB_NUM_NODES nodes with $SLURM_NTASKS tasks, each with $SLURM_CPUS_PER_TASK cores."
 module purge
-module load gnu openmpi
+module load gnu/11.2.1 
+module load openmpi
 #module load intel openmpi
-srun ~/FABRIC_DROP/amrMPI inputs.FABRIC_DROP
+srun ~/PMOFTANK/amrtank inputs3d.bubble_ullage
 
