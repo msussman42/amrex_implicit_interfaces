@@ -967,6 +967,13 @@ stop
 
         grid_level=-1
 
+         ! note: for the machine learning algorithm, 3 slopes are tested for
+         ! minimizing the centroid error together with volume constraint:
+         ! a) the machine learning guess
+         ! b) the slope derived from the centroid guess.(not via minimization)
+         !    (  (x_ref-x_cell)/||x_ref-x_cell|| )
+         ! c) level set derived guess
+         ! if 3 or more fluid materials, machine learning not used.
         if (interior_flag.eq.1) then
 
          if ((level.eq.training_max_level).or. &
@@ -1051,19 +1058,27 @@ stop
            total_errors(im)+mof_errors(tid+1,im)
          enddo  ! im=1..num_materials
 
-         ! for general CMOF reconstruction (>=3 materials):
+         ! suppose number of fluid materials in super cell greater
+         ! than number of fluid materials in the center cell and 
+         ! also greater or equal to 3.
+         ! Then:
+         !   i) pick the material whose super cell material centroid 
+         !      is furthest from the super cell centroid.
+         !   ii) if the material from (i) does not appear in the center
+         !       cell, then how to find the intercept? valid volume
+         !       preserving intercepts are multi-valued (non-unique)
+         !   iii) The scenario from (ii) is unacceptable since whatever
+         !        non-unique intercept is chosen, effects the slope for
+         !        the next "cut."
+         ! instead for general CMOF reconstruction (>=3 materials):
          ! 1. find CMOF reconstruction using both CMOF centroids and
-         !    CMOF volumes
+         !    CMOF volumes.
          ! 2. Find the centroids of the resulting reconstruction in the
          !    center cell.
          ! 3. If both the original center cell volume fractions and
          !    center cell reconstructed volume fraction satisfy 0<F<1,
          !    then replace center cell centroids with those from step 3.
          ! 4. Do a standard MOF reconstruction.
-         ! Future: if same number of materials 0<F<1 in center cell as in
-         !  the CMOF stencil, just do one step:
-         ! 1. find CMOF reconstruction using CMOF centroids and MOF 
-         !    (cell center) volumes.
         else if ((continuous_mof_parm.eq.CMOF_X).and. &
                  (num_fluid_materials_in_stencil.ge.3).and. &
                  (num_fluid_materials_in_stencil.gt. &
@@ -1182,6 +1197,12 @@ stop
            vfrac_local(im)=mofdata_super(vofcomprecon)
            vof_super(im)=vfrac_local(im)
 
+            ! if a material, post super cell reconstruction, disappears 
+            ! from the center cell, then we use the original centroid
+            ! in doing the final post "mof reconstruction," otherwise
+            ! we replace the centroid with the super cell derived 
+            ! centroid.  The final post "mof reconstruction" uses
+            ! regular(local center cell) reference volume fractions.
            if ((vfrac_local(im).ge.0.01D0).and. &
                (vfrac_local(im).le.0.99D0).and. &
                (multi_volume(im).ge.0.01D0).and. &
