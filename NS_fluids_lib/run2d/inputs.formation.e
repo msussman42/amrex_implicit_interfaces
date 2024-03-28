@@ -18,12 +18,12 @@ geometry.prob_hi   =  16.0 48.0
 geometry.is_periodic = 0 0 0     
 
 ns.EILE_flag=-1
-ns.continuous_mof=1
+ns.continuous_mof=0
 ns.partial_cmof_stencil_at_walls=1
 ns.MOFITERMAX=15
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=10000 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=15
+ns.mof_decision_tree_learning=0 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=0
 ns.FD_curv_interp=1
 
 # 0MGPCG 1PCG 2 MINV=I
