@@ -1886,8 +1886,12 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
         (evals[1]>=0.0)&&
         (evals[AMREX_SPACEDIM-1]>=0.0)) {
      //do nothing
-    } else
-     amrex::Error("evals must be non negative");
+    } else {
+     amrex::Warning("evals must be non negative(1)");
+     if (evals[0]<0.0) evals[0]=0.0;
+     if (evals[1]<0.0) evals[1]=0.0;
+     if (evals[AMREX_SPACEDIM-1]<0.0) evals[AMREX_SPACEDIM-1]=0.0;
+    }
 
     for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
      local_blob.blob_axis_len[dir]=std::sqrt(4.0*evals[dir]);
@@ -1960,8 +1964,12 @@ NavierStokes::append_blob_history(blobclass blobdata,Real time) {
        (evals[1]>=0.0)&&
        (evals[AMREX_SPACEDIM-1]>=0.0)) {
     //do nothing
-   } else
-    amrex::Error("evals must be non negative");
+   } else {
+    amrex::Warning("evals must be non negative(2)");
+    if (evals[0]<0.0) evals[0]=0.0;
+    if (evals[1]<0.0) evals[1]=0.0;
+    if (evals[AMREX_SPACEDIM-1]<0.0) evals[AMREX_SPACEDIM-1]=0.0;
+   }
 
    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
     local_blob.blob_axis_len[dir]=std::sqrt(5.0*evals[dir]);

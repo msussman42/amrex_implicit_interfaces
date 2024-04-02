@@ -45,10 +45,10 @@ cg.verbose = 0
 # -----------------------------------------
 # number of grid points on level=0
 #amr.n_cell          = 256 256 384
-amr.n_cell          = 32 32 96
+amr.n_cell          = 128 128 384
 #amr.n_cell          = 128 128 160
 #amr.n_cell          = 128 128 256
-amr.max_level       = 2
+amr.max_level       = 1
 #ns.fixed_dt        = 5.0e-5   # hardwire dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0      # scale back initial timestep
@@ -62,9 +62,9 @@ ns.shock_timestep   = 2 2 2
 amr.regrid_int      = 1        # how often to regrid
 amr.n_error_buf     = 2 2 2   # number of buffer cells in error est
 amr.grid_eff        = 0.9      # what constitutes an efficient grid (smaller=> less boxes)
-amr.blocking_factor = 8 8 4    # block factor in grid generation
+amr.blocking_factor = 8 4    # block factor in grid generation
 
-amr.max_grid_size   = 32
+amr.max_grid_size   = 64
 
 ns.vorterr=0.0 0.0 0.0        # AMR based on vorticity
 
@@ -99,7 +99,7 @@ ns.heatviscconst = 0.0 0.0 0.0
 
 # set theta=150  cos(theta)=-0.866
 #                       12       13        23
-ns.tension       = 2.2000E+01 2.2000E+01  0.0
+ns.tension       = 7.2800E+01 7.2800E+01  0.0
 #ns.tension       = 2.2000E+01 2.2000e+1  0.2948E+1 
 #ns.tension       = 2.2000E+01 0.2948 2.2000E+01
 #ns.tension       = 2.2000E+01 7.5700E+01 9.7000E+01
