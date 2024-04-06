@@ -24,12 +24,12 @@ geometry.is_periodic = 1 1 0
 # -----------------------------------------
 # I/O
 # -----------------------------------------
-amr.check_int       = 25     # number of timesteps between checkpoints
+amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 20      # number of timesteps between plots
 amr.plot_file       = plt     # root name of VisIr plot file
 amr.grid_log        = grdlog  # name of grid logging file
-#amr.restart        = chk0001100
+amr.restart        = chk0001400
 #amr.trace          = 1
 amr.file_name_digits= 7
 ns.sum_interval     = 2     # timesteps between computing statistics
@@ -43,7 +43,7 @@ cg.verbose = 0
 # -----------------------------------------
 # number of grid points on level=0
 amr.n_cell          = 128 128 128  
-amr.max_level       = 3
+amr.max_level       = 1
 #ns.fixed_dt        = 5.0e-5   # hardwire dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0      # scale back initial timestep
@@ -55,9 +55,9 @@ ns.dt_cutoff        = 1.0e-10  # level 0 timestep below which we halt
 ns.shock_timestep   = 2 2 2
 
 amr.regrid_int      = 1        # how often to regrid
-amr.n_error_buf     = 2 2 2  2     # number of buffer cells in error est
+amr.n_error_buf     = 2 2 2 2 2 # number of buffer cells in error est
 amr.grid_eff        = 0.9      # what constitutes an efficient grid (smaller=> less boxes)
-amr.blocking_factor = 8  8 8  4    # block factor in grid generation
+amr.blocking_factor = 8 4    # block factor in grid generation
 
 amr.max_grid_size   = 32
 
@@ -102,7 +102,11 @@ ns.heatviscconst = 0.0 0.0 0.0
 #  if cos(theta_1)>0 => set sigma_23=sigma_12
 # set theta=150  cos(theta)=-0.866
 #                       12       13        23
-ns.tension       = 2.2000E+01 2.2000e+1  0.2948E+1 
+#ns.tension       = 2.2000E+01 2.2000e+1  0.2948E+1 
+# We0
+#ns.tension       = 7.2800E+01 7.2800E+01  0.975335E+01  # 150 degree
+# 0.02 * We0
+ns.tension       = 3640.0 487.6675 3640.0    # 30 degree
 ns.stiffCP       = 4.1785E+03 1.0070E+03 4.1785E+03
 ns.tempconst     = 293.0 293.0 293.0
 
@@ -117,6 +121,8 @@ ns.xblob2=12.0
 # internal grid box
 # assuming [xblob3,yblob3]:[xblob4,yblob4] is the repeating pattern
 ns.xblob3= 0.0
+# xblob4=yblob4=1.5 if .55  (N1=N2=8)
+# xblob4=yblob4=1.0 if .30  (N1=N2=12)
 ns.xblob4= 1.5
 ns.yblob3= 0.0
 ns.yblob4= 1.5
@@ -171,8 +177,6 @@ cg.restart_period=25
 cg.maxiter = 200
 
 mg.bot_atol = 1.0e-5 # 1.0e-8 double 1.0e-5 single
-mg.visc_bot_atol = 1.0e-3 # 1.0e-8 double 1.0e-3 single
-mg.thermal_bot_atol = 1.0e-3 # 1.0e-8 double 1.0e-3 single
 mg.rtol_b = -0.01
 Lp.v = 1
 
@@ -183,13 +187,13 @@ ns.EILE_flag=1 #EILE
 ns.projection_pressure_scale=1.0
 #ns.show_mem=1
 ns.MOFITERMAX=10
-ns.mof_decision_tree_learning=0 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=10
+ns.mof_decision_tree_learning=125000 # default: 40000
+ns.MOFITERMAX_AFTER_PREDICT=2
 
 ns.minimum_relative_error=1.0e-18
 ns.initial_cg_cycles=10
-ns.initial_project_cycles=5
-ns.initial_viscosity_cycles=2
+ns.initial_project_cycles=3
+ns.initial_viscosity_cycles=1
 ns.initial_thermal_cycles=1
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # 0=GSRB 1=ICRB 2=ILU
@@ -197,8 +201,6 @@ Lp.smooth_type=2
 Lp.bottom_smooth_type=2
 mac.mac_tol=1.0e-4 # 1.0e-8 double 1.0e-4 single
 mac.mac_abs_tol = 1.0e-4 #1.0e-8 double 1.0e-4 single
-mac.visc_abs_tol = 1.0e-1 #1.0e-8 double 1.0e-1 single
-mac.thermal_abs_tol = 1.0e-1 #1.0e-8 double 1.0e-1 single
 
 
 # select single or double precision of FAB output data
