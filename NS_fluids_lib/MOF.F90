@@ -1342,14 +1342,15 @@ type(intersect_type) :: template_geom
     phi1=phinode(mapped_nodes(index1))
     phi2=phinode(mapped_nodes(index2))
 
-    if (((phi1.ge.zero).and.(phi2.lt.zero)).or. &
-        ((phi1.lt.zero).and.(phi2.ge.zero))) then
+    if (((phi1.ge.zero).and.(phi2.le.zero)).or. &
+        ((phi1.le.zero).and.(phi2.ge.zero))) then
      do dir=1,sdim
       if (phi1.eq.zero) then
        xnodelist_array(i,dir)=x1(dir)
       else if (phi2.eq.zero) then
        xnodelist_array(i,dir)=x2(dir)
-      else if (phi1*phi2.lt.zero) then 
+      else if (((phi1.gt.zero).and.(phi2.lt.zero)).or. &
+               ((phi1.lt.zero).and.(phi2.gt.zero))) then
        xnodelist_array(i,dir)= &
         (abs(phi1)*x2(dir)+abs(phi2)*x1(dir))/ &
         (abs(phi1)+abs(phi2))
