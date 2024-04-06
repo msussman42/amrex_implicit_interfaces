@@ -37,16 +37,25 @@ REAL(KIND=8),PARAMETER            :: r_2=0.10d0  ! radius of flat thread
 !real(amrex_real),PARAMETER        :: r_1=0.14d0  ! radius of wavy thread
 !real(amrex_real),PARAMETER        :: r_2=0.14d0  ! radius of flat thread
 
+!THIS IS -1.5<x<1.5  -1.5<y<1.5
 !integer,PARAMETER             :: N1=4   ! wavy threads
 !integer,PARAMETER             :: N2=4   ! Straight threads
 !real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
 
+!THIS IS -3.0<x<3.0  -3.0<y<3.0
+!8 * .75 = 6
+!.75-2*r_1=.55
+!xblob4=yblob4=1.5
 integer,PARAMETER             :: N1=8   ! wavy threads
 integer,PARAMETER             :: N2=8   ! Straight threads
 real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.5d0 ! 2 pi / 1.5
 
-!integer,PARAMETER             :: N1=6   ! wavy threads
-!integer,PARAMETER             :: N2=6   ! Straight threads
+!THIS IS -3.0<x<3.0  -3.0<y<3.0
+!12 * .5 = 6
+!.5-2*r_1=.3
+!xblob4=yblob4=1.0
+!integer,PARAMETER             :: N1=12   ! wavy threads
+!integer,PARAMETER             :: N2=12   ! Straight threads
 !real(amrex_real),PARAMETER    :: omega=2.0d0*pi/1.0d0 !2 pi / 1.0
 
 integer,parameter             :: P=96  ! number of partition points
