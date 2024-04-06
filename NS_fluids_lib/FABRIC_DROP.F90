@@ -425,6 +425,7 @@ else if (axis_dir.eq.1) then !mesh
  else
   call MESH_LS(x,LS(3))
  endif
+
 elseif(axis_dir.eq.2)then  ! single cylinder
  call CYL_LS(x,LS(3))   
 else
@@ -597,13 +598,13 @@ lstemp2=0.5d0*yblob6-sqrt((ty(2)-x(2))**2+(ty(SDIM)-x(SDIM))**2)
 
 LS=0.0d0
 if(lstemp1.lt.0.0d0.and.lstemp2.lt.0.0d0)then
- ls=max(lstemp1,lstemp2)
+ LS=max(lstemp1,lstemp2)
 elseif(lstemp1.ge.0.0d0.and.lstemp2.lt.0.0d0)then
- ls=lstemp1
+ LS=lstemp1
 elseif(lstemp2.ge.0.0d0.and.lstemp1.lt.0.0d0)then
- ls=lstemp2
+ LS=lstemp2
 elseif(lstemp1.ge.0.0d0.and.lstemp2.ge.0.0d0)then
- ls=min(lstemp1,lstemp2)
+ LS=min(lstemp1,lstemp2)
 else
  print *,"check thread ls setup" 
  print *,"lstemp1=",lstemp1
@@ -621,15 +622,16 @@ IMPLICIT NONE
 
 real(amrex_real), INTENT(in) :: x_in(SDIM)
 real(amrex_real), INTENT(out) :: LS
-real(amrex_real)         :: lstemp1
 
 real(amrex_real)         :: centerx,centery,centerz
 integer        :: i
 real(amrex_real)         :: tx(SDIM)
 real(amrex_real)         :: x(SDIM)
 
-if(axis_dir.ne.2)then
- print *,"set aixs_dir=1 for this single CYL test"
+if(axis_dir.eq.2)then
+ !do nothing
+else
+ print *,"set axis_dir=2 for this single CYL test"
  stop
 endif
 
@@ -648,7 +650,7 @@ centerz=0.0d0
 tx(1)=x(1)
 tx(2)=centery
 tx(SDIM)=centerz
-lstemp1=0.5d0*yblob6-sqrt((tx(2)-x(2))**2+(tx(SDIM)-x(SDIM))**2)
+LS=0.5d0*yblob6-sqrt((tx(2)-x(2))**2+(tx(SDIM)-x(SDIM))**2)
 
 return
 end subroutine CYL_LS
