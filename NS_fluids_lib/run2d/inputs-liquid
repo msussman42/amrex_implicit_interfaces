@@ -66,7 +66,6 @@ ns.clipfactor=2.0
 ns.enoextrap=1
 # 0 cell 1 edge 2 conserve
 ns.edgeextraptype=0
-ns.redist_on_init=0
 ns.tvdrk=1
 
 ns.conserve_vof=1

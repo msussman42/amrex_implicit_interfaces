@@ -62,7 +62,6 @@ ns.visual_header=1  # tecplot
 ns.visual_lo = -1 -1
 ns.visual_hi = 2048 2048
 
-ns.redist_on_init=0
 
 ns.overlap=2.0
 ns.is_twophase=1

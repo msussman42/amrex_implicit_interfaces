@@ -58,7 +58,6 @@ ns.hydrostatic_pressure=10.0
 ns.visual_lo = -1 -1
 ns.visual_hi = 512 512
 
-ns.redist_on_init=0
 ns.bubble_density=1.0
 ns.bubble_pressure=0.0
 

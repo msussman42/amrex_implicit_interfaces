@@ -74,7 +74,6 @@ ns.polymer_factor=0.0
 
 ns.overlap=0.0
 ns.enoextrap=1
-ns.redist_on_init=0
 ns.conserve_vof=3  # do not truncate
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system

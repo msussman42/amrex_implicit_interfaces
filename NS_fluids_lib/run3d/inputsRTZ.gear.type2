@@ -77,7 +77,6 @@ ns.visual_lo =-1 -1 -1  # MS
 ns.visual_hi =256 256 256  # MS
 
 ns.overlap=2.0
-ns.redist_on_init=0
 ns.conserve_vof=0
 
 ns.is_compressible=0

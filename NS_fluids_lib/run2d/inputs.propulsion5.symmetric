@@ -74,7 +74,6 @@ ns.clipfactor=1.0e+10
 ns.enoextrap=1
 # 0 cell 1 edge 2 conserve
 ns.edgeextraptype=0
-ns.redist_on_init=0
 ns.tvdrk=0
 ns.conserve_vof=0
 ns.overlap=2.0

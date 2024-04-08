@@ -13,7 +13,6 @@ geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  -2.0 0.0
 geometry.prob_hi   =  2.0 4.0  # MO changed dimensions slightly
 geometry.is_periodic=0 1
-ns.redist_on_init=1
 ns.implicit_surface_tension=0
 ns.cwater=1.0E+8
 ns.cvapor=1.0E+8

@@ -67,6 +67,10 @@ real(amrex_real) :: distline
    print *,"nmat invalid"
    stop
   endif
+  if (1.eq.0) then
+   print *,"probtype,axis_dir,adv_dir,adv_vel,x,t ", &
+     probtype,axis_dir,adv_dir,adv_vel,x(1),x(2),x(SDIM),t
+  endif
 
   xstar=x(1)
   ystar=x(2)
@@ -76,6 +80,7 @@ real(amrex_real) :: distline
 
    if (adv_vel.ne.zero) then
     if (SDIM.eq.2) then
+
      if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
       xstar=xstar-adv_vel*t
       do while (xstar.lt.problox)
@@ -84,7 +89,9 @@ real(amrex_real) :: distline
       do while (xstar.gt.probhix)
        xstar=xstar-probhix+problox
       enddo
-     else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
+     endif
+
+     if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
       ystar=ystar-adv_vel*t
       do while (ystar.lt.probloy)
        ystar=ystar+probhiy-probloy
@@ -92,12 +99,19 @@ real(amrex_real) :: distline
       do while (ystar.gt.probhiy)
        ystar=ystar-probhiy+probloy
       enddo
+     endif
+
+     if ((adv_dir.ge.1).and.(adv_dir.le.SDIM+1)) then
+      ! do nothing
      else
       print *,"adv_dir invalid probtype==28 (4)"
       stop
      endif
+
      zstar=ystar
+
     else if (SDIM.eq.3) then
+
      if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
       xstar=xstar-adv_vel*t
       do while (xstar.lt.problox)
@@ -106,7 +120,9 @@ real(amrex_real) :: distline
       do while (xstar.gt.probhix)
        xstar=xstar-probhix+problox
       enddo
-     else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
+     endif
+
+     if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
       ystar=ystar-adv_vel*t
       do while (ystar.lt.probloy)
        ystar=ystar+probhiy-probloy
@@ -114,7 +130,9 @@ real(amrex_real) :: distline
       do while (ystar.gt.probhiy)
        ystar=ystar-probhiy+probloy
       enddo
-     else if ((adv_dir.eq.3).or.(adv_dir.eq.SDIM+1)) then
+     endif
+
+     if ((adv_dir.eq.3).or.(adv_dir.eq.SDIM+1)) then
       zstar=zstar-adv_vel*t
       do while (zstar.lt.probloz)
        zstar=zstar+probhiz-probloz
@@ -122,14 +140,20 @@ real(amrex_real) :: distline
       do while (zstar.gt.probhiz)
        zstar=zstar-probhiz+probloz
       enddo
+     endif
+
+     if ((adv_dir.ge.1).and.(adv_dir.le.SDIM+1)) then
+      ! do nothing
      else
       print *,"adv_dir invalid probtype==28 (5)"
       stop
      endif
+
     else
      print *,"dimension bust"
      stop
     endif
+
    else if (adv_vel.eq.zero) then
     ! do nothing
    else

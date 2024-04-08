@@ -55,7 +55,6 @@ ns.num_materials=2
 ns.num_species_var=0
 ns.post_init_pressure_solve=1
 
-ns.redist_on_init=0
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep

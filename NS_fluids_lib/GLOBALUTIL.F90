@@ -25518,6 +25518,7 @@ if (SDIM.eq.2) then
 endif 
 
 if (adv_vel.eq.zero) then
+
  if (levelrz.eq.COORDSYS_CARTESIAN) then
   u=-(Pi/314.0)*(y-50.0)
  else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
@@ -25526,14 +25527,22 @@ if (adv_vel.eq.zero) then
   print *,"zalesakuu: levelrz invalid"
   stop
  endif
-else if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
- u=adv_vel
-else if (adv_dir.eq.2) then
- u=zero
-else if (adv_dir.eq.SDIM) then
- u=zero
+
+else if (adv_vel.ne.zero) then
+
+ if ((adv_dir.eq.1).or.(adv_dir.eq.SDIM+1)) then
+  u=adv_vel
+ else if (adv_dir.eq.2) then
+  u=zero
+ else if (adv_dir.eq.SDIM) then
+  u=zero
+ else
+  print *,"adv_dir invalid zalesakuu (7)"
+  stop
+ endif
+
 else
- print *,"adv_dir invalid zalesakuu (7)"
+ print *,"adv_vel invalid zalesakuu: ",adv_vel
  stop
 endif
 
@@ -25561,6 +25570,7 @@ if (SDIM.eq.2) then
 endif 
 
 if (adv_vel.eq.zero) then
+
  if (levelrz.eq.COORDSYS_CARTESIAN) then
   v=(Pi/314.0)*(x-50.0)
  else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
@@ -25569,14 +25579,22 @@ if (adv_vel.eq.zero) then
   print *,"zalesakvv: levelrz invalid"
   stop
  endif
-else if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
- v=adv_vel
-else if (adv_dir.eq.1) then
- v=zero
-else if ((adv_dir.eq.SDIM).and.(SDIM.eq.3)) then
- v=zero
+
+else if (adv_vel.ne.zero) then
+
+ if ((adv_dir.eq.2).or.(adv_dir.eq.SDIM+1)) then
+  v=adv_vel
+ else if (adv_dir.eq.1) then
+  v=zero
+ else if ((adv_dir.eq.SDIM).and.(SDIM.eq.3)) then
+  v=zero
+ else
+  print *,"adv_dir invalid zalesakvv (8)"
+  stop
+ endif
+
 else
- print *,"adv_dir invalid zalesakvv (8)"
+ print *,"adv_vel invalid zalesakvv: ",adv_vel
  stop
 endif
 
@@ -25609,15 +25627,24 @@ if (SDIM.eq.2) then
 endif 
 
 if (adv_vel.eq.zero) then
+
  w=zero
-else if ((adv_dir.eq.SDIM).or.(adv_dir.eq.SDIM+1)) then
- w=adv_vel
-else if (adv_dir.eq.1) then
- w=zero
-else if (adv_dir.eq.2) then
- w=zero
+
+else if (adv_vel.ne.zero) then
+
+ if ((adv_dir.eq.SDIM).or.(adv_dir.eq.SDIM+1)) then
+  w=adv_vel
+ else if (adv_dir.eq.1) then
+  w=zero
+ else if (adv_dir.eq.2) then
+  w=zero
+ else
+  print *,"adv_dir invalid zalesakww (9)"
+  stop
+ endif
+
 else
- print *,"adv_dir invalid zalesakww (9)"
+ print *,"adv_vel invalid zalesakww: ",adv_vel
  stop
 endif
 
