@@ -62,7 +62,6 @@ ns.visual_hi = 1024 1024
 
 ns.is_compressible=0
 
-ns.redist_on_init=0                   
 
 ns.conserve_vof=4   # default
 ns.uncoupled_viscosity=0

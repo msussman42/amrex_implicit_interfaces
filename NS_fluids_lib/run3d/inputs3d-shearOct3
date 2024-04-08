@@ -61,7 +61,6 @@ ns.hydrostatic_pressure=10.0
 ns.visual_lo = 11  0  0 
 ns.visual_hi = 37  512 512 
 
-ns.redist_on_init=0
 
 ns.overlap=0.0
 ns.is_twophase=1

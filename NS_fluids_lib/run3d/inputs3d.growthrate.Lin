@@ -86,7 +86,6 @@ ns.polymer_factor=0.0
 ns.is_twophase=1
 ns.is_compressible=0
 ns.enoextrap=1
-ns.redist_on_init=0
 ns.thetacut=0.001
 ns.overlap=1.0
 

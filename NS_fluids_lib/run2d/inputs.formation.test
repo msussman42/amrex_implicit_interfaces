@@ -74,7 +74,6 @@ ns.shock_timestep=0
 ns.limitfactor=2.0
 ns.clipfactor=2.0
 ns.enoextrap=1
-ns.redist_on_init=0
 ns.tvdrk=0
 ns.conserve_vof=0
 

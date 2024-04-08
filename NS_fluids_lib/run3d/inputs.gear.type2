@@ -64,7 +64,6 @@ ns.dt_cutoff      = 5.0e-8  # level 0 timestep below which we halt
 mac.mac_abs_tol    = 1.0e-11
 
 
-ns.redist_on_init=0
 ns.conserve_vof=0
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system MS

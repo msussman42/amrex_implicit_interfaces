@@ -60,7 +60,6 @@ ns.bubble_density=0.001
 ns.hydrostatic_pressure=10.0
 ns.visual_lo = -1  -1  -1  # -1 => default to outputting whole domain
 
-ns.redist_on_init=0
 
 ns.overlap=0.0
 ns.is_twophase=1

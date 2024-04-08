@@ -62,7 +62,6 @@ ns.hydrostatic_pressure=10.0
 ns.visual_lo = -1 -1
 ns.visual_hi = 512 1024
 
-ns.redist_on_init=0
 
 ns.conserve_vof=1
 ns.thetacut=1.0e-10

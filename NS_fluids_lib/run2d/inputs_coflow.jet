@@ -72,7 +72,6 @@ ns.polymer_factor=0.0
 
 ns.is_twophase=1 # is_twophase=0 gas=void is_twophase=1 gas incomp.
 ns.is_compressible=0
-ns.redist_on_init=0
 ns.overlap=0.0  # if den_heavy/den_light<10, make this zero
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system

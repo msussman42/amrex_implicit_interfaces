@@ -63,7 +63,6 @@ ns.visual_lo = -1  -1  -1
 ns.visual_hi = 512 512 512 
 ns.visual_side_max = 512
 
-ns.redist_on_init=0
 
 ns.overlap=0.0
 ns.is_twophase=1

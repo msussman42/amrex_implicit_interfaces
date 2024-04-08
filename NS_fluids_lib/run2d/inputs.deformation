@@ -49,7 +49,6 @@ mac.mac_abs_tol    = 1.0e-4
 
 
 
-ns.redist_on_init=0
 ns.multiLS=2
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system

@@ -72,7 +72,6 @@ ns.clipfactor=1.0e+10
 ns.enoextrap=1
 # 0 cell 1 edge 2 conserve
 ns.edgeextraptype=2
-ns.redist_on_init=0
 
 ns.cfl            = 0.5      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0     # scale back initial timestep
