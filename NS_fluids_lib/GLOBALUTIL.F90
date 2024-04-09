@@ -1908,6 +1908,7 @@ contains
 !(liquid region)
 !u_cl: velocity of contact line (input in dynamic contact angle models)
 ! (unused for GNBC)
+! u_cl is positive if the contact line is advancing into the gas.
 !u_slip: slip velocity of wall (output in gnbc)
 ! u_slip>0 if CL advancing into the vapor region.
 !thet_d: dynamic contact angle (output in dynamic contact angle models)
@@ -1962,17 +1963,17 @@ end if
  ! sanity check
 if (sigma.gt.0.0d0) then
  Ca = mu_l * u_cl / sigma
- if (Ca.ge.0.0d0) then
+ if (Ca.ge.0.0d0) then !advancing side of the liquid drop.
   sign_Ca=1.0d0
- else if (Ca.lt.0.0d0) then
+ else if (Ca.lt.0.0d0) then !receding side of the liquid drop.
   sign_Ca=-1.0d0
  else
   print *,"Ca corrupt"
   stop
  endif
 else
-        print *,"sigma invalid"
-        stop
+ print *,"sigma invalid: ",sigma
+ stop
 endif
 
 select case (imodel)
@@ -2046,6 +2047,7 @@ select case (imodel)
        end if
 
         if (ifgnbc.eq.0) then !If don't implement GNBC.
+             !Ca>0 if advancing => thet_d>thet_s
             thet_d = (thet_s**3 + 9. * Ca * log(l_macro / l_micro))**(1./3.)
             u_slip = 0.0d0
         else if (ifgnbc.eq.1) then !Implement GNBC
@@ -2065,7 +2067,10 @@ select case (imodel)
         else if (Ca.ne.0.0d0) then
          temp2=abs(Ca)**0.702d0
          temp=tanh(4.96*temp2)
-         temp=temp*(1.0d0+cos(thet_s))
+         temp=temp*(1.0d0+cos(thet_s)) 
+           ! if advancing side of the liquid drop, then Ca>0 =>
+           ! cos(theta_dynamic)<cos(theta_static) =>
+           ! theta_dynamic > theta_static    0<=theta<=pi
          temp=cos(thet_s)-(Ca/abs(Ca))*temp
          if (temp.gt.1.0d0) temp = 1.0d0 
          if (temp.lt.-1.0d0) temp = -1.0d0 
@@ -17939,14 +17944,16 @@ end subroutine print_visual_descriptor
 
        ! normal is contact line normal pointing towards "im" material
        ! (material 0 liquid)
-       ! vel_n is velocity in normal direction.
+       ! vel_n is the advancing velocity if vel_n>0 and
+       ! the receding velocity if vel_n<0.
        ! cos_thetae is the cosine of the static angle inbetween
        ! material 0 and material 2 (the solid material)
        ! cos_thetad is the output cosine of the dynamic angle.
        ! vis is viscosity of material 0 (liquid)
        ! imodel=0 static 
        ! imodel=1 Jiang   
-       ! imodel=2 Kistler
+       ! imodel=2 Kistler (obsolete: use Zeyu's code, DCA_select=105,
+       ! i.e. ZEYU_DCA_SELECT=5)
        ! DCA_select_model was written by Yongsheng Lian and
        ! students of his.
       subroutine DCA_select_model(normal,vel_n,cos_thetae,vis, &
@@ -17963,48 +17970,60 @@ end subroutine print_visual_descriptor
       real(amrex_real), intent(in) :: user_tension_scalar
       real(amrex_real) capillary,f_Hoff_inver,temp,temp1 
 
-      complex(kind=8) :: temp2
-
       if (user_tension_scalar.gt.zero) then
        ! do nothing
       else
-       print *,"user_tension_scalar should be positive"
+       print *,"user_tension_scalar invalid: ",user_tension_scalar
+       stop
+      endif
+      if (vis.ge.zero) then
+       ! do nothing
+      else
+       print *,"vis invalid: ",vis
        stop
       endif
 
       f_Hoff_inver = 0.0276
-      capillary = vel_n*vis/user_tension_scalar
+       ! vel_n is the advancing velocity if vel_n>0 and
+       ! the receding velocity if vel_n<0.
+      capillary = abs(vel_n)*vis/user_tension_scalar
 
-      if (imodel.eq.0) then ! static
-       cos_thetad=cos_thetae
-      else if (imodel.eq.1) then ! Jiang's model
-       temp2 = cmplx(capillary,0.0)
-       temp2 = temp2**0.702
-       temp = real(temp2)
-       temp = tanh(4.96*temp)
-       temp = temp*(1.0+cos_thetae)
-       temp = cos_thetae-temp
-       if (temp.gt.1.0) temp = 1.0  
-       if (temp.lt.-1.0) temp = -1.0  
-       cos_thetad=temp
-      else if (imodel.eq.2) then ! Kistler's model
-       temp2 = cmplx(capillary+f_Hoff_inver,0.0)
-       temp2 = temp2**0.99
-       temp = real(temp2)
-       temp1 = temp
-       temp = 1.0+1.31*temp
-       temp = temp1/temp
-       temp2 = cmplx(temp,0.0)
-       temp2 = temp2*0.706
-       temp = real(temp2)
-       temp = 1.0-2.0*tanh(5.16*temp)
-       if (temp.gt.1.0) temp = 1.0  
-       if (temp.lt.-1.0) temp = -1.0  
-       cos_thetad=temp
+      if (capillary.eq.zero) then
+       cos_thetad=cos_thetae !static
+      else if (capillary.ne.zero) then
+
+       if (imodel.eq.0) then ! static
+        cos_thetad=cos_thetae
+       else if (imodel.eq.1) then ! Jiang's model
+        temp = capillary**0.702d0
+        temp = tanh(4.96d0*temp)
+        temp = temp*(1.0d0+cos_thetae)
+        if (vel_n.gt.zero) then
+          !advancing => cos_thetad<cos_thetae => thetad>thetae
+         temp = cos_thetae-temp
+        else if (vel_n.lt.zero) then
+          !receding => cos_thetad>cos_thetae => thetad<thetae
+         temp = cos_thetae+temp
+        else
+         print *,"expecting vel_n<>0: ",vel_n
+         stop
+        endif
+        if (temp.gt.1.0) temp = 1.0  
+        if (temp.lt.-1.0) temp = -1.0  
+        cos_thetad=temp
+       else if (imodel.eq.2) then ! Kistler's model
+        print *,"use Zeyu's code instead for Kistler!"
+        print *,"make use_DCA=105 for Kistler (i.e. ZEYU_DCA_SELECT=5)"
+        stop
+       else
+        print*,"dynamic contact angle model type not valid: ",imodel
+        stop
+       end if
+
       else
-       print*, 'dynamic contact angle model type not valid'
+       print *,"capillary invalid: ",capillary
        stop
-      end if
+      endif
 
       return
       end subroutine DCA_select_model
