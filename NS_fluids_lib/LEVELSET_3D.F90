@@ -1517,6 +1517,8 @@ stop
 
             totalwt=totalwt+wt
 
+             ! nproject=(I-nsolid nsolid^T)nfluid
+             ! nfluid points towards the im material
             udotn=zero
             do dir2=1,SDIM
              udotn=udotn+velsten(i2,j2,k2,dir2)*nproject(dir2)
@@ -1542,27 +1544,32 @@ stop
              print *,"dir,x ",dir2,xcenter(dir2)
              print *,"dir,normal pointing into solid ", &
                dir2,nsolid(dir2)
-             print *,"dir,CL normal pointing into liquid ", &
+             print *,"dir,CL normal pointing into im material ", &
                dir2,nproject(dir2)
             enddo
-            print *,"CL velocity ",totaludotn
+            print *,"totaludotn=u dot nproject ",totaludotn
             print *," cos static angle ",cos_angle
            endif 
 
             ! ZEYU_u_cl is positive if the contact line is advancing into
             ! the gas.
             ! nproject points towards the im material
+            ! totaludotn=u dot nproject
            if (fort_denconst(im).ge. &
                fort_denconst(im_opp)) then
             im_liquid=im
             im_vapor=im_opp
             ZEYU_thet_s=angle_im  ! thet_s in the liquid.
+             !totaludotn>0 if velocity points towards liquid
+             !-totaludotn>0 if velocity points towards gas
             ZEYU_u_cl=-totaludotn
            else if (fort_denconst(im_opp).ge. &
                     fort_denconst(im)) then
             im_liquid=im_opp
             im_vapor=im
             ZEYU_thet_s=Pi-angle_im
+             !totaludotn>0 if velocity points towards "im" material (gas in
+             ! this case)
             ZEYU_u_cl=totaludotn
            else
             print *,"fort_denconst bust"
@@ -1599,7 +1606,10 @@ stop
                     (use_DCA.eq.2)) then !Kistler
 
               ! DCA_select_model is declared in GLOBALUTIL.F90
-            call DCA_select_model(nproject,totaludotn,cos_angle, &
+              ! nproject points towards the "im" material.
+              ! totaludotn=u dot nproject
+              ! ZEYU_u_cl>0 if liquid advancing into gas.
+            call DCA_select_model(nproject,ZEYU_u_cl,cos_angle, &
              liquid_viscosity,user_tension(iten),cos_angle,use_DCA)
 
             ZEYU_thet_d=acos(cos_angle)
@@ -1620,12 +1630,15 @@ stop
                      (use_DCA.le.108)) then
              ZEYU_imodel=use_DCA-100
 
+              ! dynamic_contact_angle is declared in GLOBALUTIL.F90
              call dynamic_contact_angle(ZEYU_mu_l, ZEYU_mu_g, ZEYU_sigma, &
                ZEYU_thet_s, &
                ZEYU_imodel, ZEYU_ifgnbc, ZEYU_lambda, &
                ZEYU_l_macro, ZEYU_l_micro, &
                ZEYU_dgrid, ZEYU_d_closest, ZEYU_thet_d_apparent, &
-               ZEYU_u_cl, ZEYU_u_slip, ZEYU_thet_d)
+               ZEYU_u_cl, &
+               ZEYU_u_slip, &
+               ZEYU_thet_d)
 
              if (DEBUG_DYNAMIC_CONTACT_ANGLE.eq.1) then
               print *,"ZEYU_imodel= ",ZEYU_imodel

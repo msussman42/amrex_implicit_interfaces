@@ -107,6 +107,9 @@ ns.heatviscconst = 0.0 0.0 0.0
 #ns.tension       = 7.2800E+01 7.2800E+01  0.975335E+01  # 150 degree
 # 0.02 * We0
 ns.tension       = 3640.0 487.6675 3640.0    # 30 degree
+ns.ZEYU_DCA_SELECT=-1 #static angle
+#ns.ZEYU_DCA_SELECT=2 #Jiang's model
+
 ns.stiffCP       = 4.1785E+03 1.0070E+03 4.1785E+03
 ns.tempconst     = 293.0 293.0 293.0
 
