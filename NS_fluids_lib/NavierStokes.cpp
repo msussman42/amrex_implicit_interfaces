@@ -5105,7 +5105,7 @@ NavierStokes::read_params ()
 
      //default=4
     pp.queryAdd("particle_nsubdivide",particle_nsubdivide);
-     //default=10
+     //default=2
     pp.queryAdd("particle_max_per_nsubdivide",particle_max_per_nsubdivide);
 
     for (int im=1;im<=num_materials;im++) {
@@ -23105,11 +23105,6 @@ NavierStokes::init_particle_container(int append_flag,
    int new_Pdata_size=new_particle_data.size();
 
    // declared in: LEVELSET_3D.F90
-   // 1. subdivide each cell with 
-   //    "particle_nsubdivide[bulk|narrow|curvature]" divisions.
-   //    e.g. if particle_nsubdivide_bulk=2 => 4 pieces in 2D.
-   //                 "         "        =4 => 64 pieces in 2D.
-   // 2. for each small sub-box, add a particle at the sub-box center.
    fort_init_particle_container( 
      local_caller_string.c_str(),
      local_caller_string.size(),
