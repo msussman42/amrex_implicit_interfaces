@@ -11,7 +11,7 @@ ns.ncomp_sum_int_user2=3
 # Space and time domain
 # -----------------------------------------
 max_step  = 100000    # maximum number of timesteps
-stop_time = 10.0    # maximum time value
+stop_time = 6.0    # maximum time value
 
 geometry.coord_sys   = 0              # 0 => cart, 1 => RZ
 #geometry.prob_lo     =-1.5 -1.5 -1.4 
@@ -28,7 +28,7 @@ geometry.is_periodic = 1 1 0
 # -----------------------------------------
 amr.check_int       = 100     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
-amr.plot_int        = 10      # number of timesteps between plots
+amr.plot_int        = 100     # number of timesteps between plots
 amr.plot_file       = plt     # root name of VisIr plot file
 amr.grid_log        = grdlog  # name of grid logging file
 #amr.restart        = chk0000200
@@ -48,7 +48,7 @@ cg.verbose = 0
 #amr.n_cell          = 256 256 320
 amr.n_cell          = 64 64 64
 #amr.n_cell          = 128 128 256
-amr.max_level       = 1
+amr.max_level       = 2
 #ns.fixed_dt        = 5.0e-5   # hardwire dt
 ns.cfl              = 0.5      # cfl number for hyperbolic system
 ns.init_shrink      = 1.0      # scale back initial timestep
@@ -62,7 +62,7 @@ ns.shock_timestep   = 2 2 2
 amr.regrid_int      = 1        # how often to regrid
 amr.n_error_buf     = 2 2 2 2 2   # number of buffer cells in error est
 amr.grid_eff        = 0.9 #what constitutes efficient grid(smaller=>less boxes)
-amr.blocking_factor = 8 4    # block factor in grid generation
+amr.blocking_factor = 8 8 4    # block factor in grid generation
 
 amr.max_grid_size   = 32
 
