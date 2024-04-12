@@ -19051,6 +19051,7 @@ stop
         isweep, & ! 0 or 1
         number_sweeps, &
         append_flag, &
+        particle_feedback, &
         particle_nsubdivide, &
         particle_max_per_nsubdivide, &
         tilelo,tilehi, &
@@ -19101,6 +19102,7 @@ stop
       integer, INTENT(in), target :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: particle_feedback
       integer, INTENT(in) :: particle_nsubdivide
       integer, INTENT(in) :: particle_max_per_nsubdivide
       real(amrex_real), INTENT(in)    :: cur_time_slab
@@ -20295,6 +20297,15 @@ stop
                  if (num_particles.eq.0) then
                   !do nothing
                  else if (num_particles.gt.0) then
+
+                  if (particle_feedback.eq.1) then
+                   !do nothing
+                  else if (particle_feedback.eq.0) then
+                   num_particles=0
+                  else
+                   print *,"particle_feedback invalid: ",particle_feedback
+                   stop
+                  endif
 
                   call find_cut_geom_slope_CLSVOF( &
                     continuous_mof, &

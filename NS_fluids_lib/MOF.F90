@@ -15583,7 +15583,7 @@ contains
               else if (num_particles.gt.0) then
                lsnormal_valid(im)=0
               else
-               print *,"num_particles invalid"
+               print *,"num_particles invalid: ",num_particles
                stop
               endif
 
