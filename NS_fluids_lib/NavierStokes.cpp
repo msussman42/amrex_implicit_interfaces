@@ -198,6 +198,7 @@ int  NavierStokes::enable_spectral=0;
 Vector<int> NavierStokes::force_blob_symmetry;
 
 int NavierStokes::particle_feedback=1; 
+int NavierStokes::particle_nsubdivide_dx=1; 
 int NavierStokes::particle_nsubdivide=4; 
 int NavierStokes::particle_max_per_nsubdivide=2; 
 
@@ -5106,6 +5107,8 @@ NavierStokes::read_params ()
 
      //default=1
     pp.queryAdd("particle_feedback",particle_feedback);
+     //default=1
+    pp.queryAdd("particle_nsubdivide_dx",particle_nsubdivide_dx);
      //default=4
     pp.queryAdd("particle_nsubdivide",particle_nsubdivide);
      //default=2
@@ -5342,6 +5345,7 @@ NavierStokes::read_params ()
       initial_temperature_diffuse_duration << '\n';
 
      std::cout<<"particle_feedback="<<particle_feedback<<'\n';
+     std::cout<<"particle_nsubdivide_dx="<<particle_nsubdivide_dx<<'\n';
      std::cout<<"particle_nsubdivide="<<particle_nsubdivide<<'\n';
      std::cout << "particle_max_per_nsubdivide= " <<
         particle_max_per_nsubdivide << '\n';
@@ -23121,6 +23125,7 @@ NavierStokes::init_particle_container(int append_flag,
      &number_sweeps,
      &append_flag,
      &particle_feedback,
+     &particle_nsubdivide_dx,
      &particle_nsubdivide,
      &particle_max_per_nsubdivide,
      tilelo,tilehi,

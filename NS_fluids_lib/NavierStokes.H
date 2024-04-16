@@ -1564,7 +1564,8 @@ protected:
     static Vector<int> force_blob_symmetry;
 
     static int particle_feedback;  //particle_feedback=1 is the default. 
-    static int particle_nsubdivide;  
+    static int particle_nsubdivide_dx; 
+    static int particle_nsubdivide;
     static int particle_max_per_nsubdivide;  
 
     static int  enable_spectral;

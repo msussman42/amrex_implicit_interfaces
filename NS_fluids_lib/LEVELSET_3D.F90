@@ -19052,6 +19052,7 @@ stop
         number_sweeps, &
         append_flag, &
         particle_feedback, &
+        particle_nsubdivide_dx, &
         particle_nsubdivide, &
         particle_max_per_nsubdivide, &
         tilelo,tilehi, &
@@ -19103,6 +19104,7 @@ stop
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: particle_feedback
+      integer, INTENT(in) :: particle_nsubdivide_dx
       integer, INTENT(in) :: particle_nsubdivide
       integer, INTENT(in) :: particle_max_per_nsubdivide
       real(amrex_real), INTENT(in)    :: cur_time_slab
@@ -19787,7 +19789,7 @@ stop
                    endif
                    if ((DIST_particle.eq.zero).and. &
                        (abs(LS_sub(imat_particle)).le. &
-                        DXMAXLS/particle_nsubdivide)) then
+                        DXMAXLS/particle_nsubdivide_dx)) then
                     keep_the_particle=1
                    endif
 
