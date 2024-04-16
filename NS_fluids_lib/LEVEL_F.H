@@ -551,6 +551,7 @@ namespace amrex{
         int* number_sweeps,
         int* append_flag,
         int* particle_feedback,
+        int* particle_nsubdivide_dx,
         int* particle_nsubdivide,
         int* particle_max_per_nsubdivide,
         const int* tilelo,const int* tilehi,
