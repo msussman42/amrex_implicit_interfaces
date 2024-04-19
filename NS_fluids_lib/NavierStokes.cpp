@@ -5107,10 +5107,14 @@ NavierStokes::read_params ()
 
      //default=1
     pp.queryAdd("particle_feedback",particle_feedback);
+
      //default=1
-    pp.queryAdd("particle_nsubdivide_dx",particle_nsubdivide_dx);
-     //default=4
     pp.queryAdd("particle_nsubdivide",particle_nsubdivide);
+    particle_nsubdivide_dx=particle_nsubdivide;
+
+     //default=particle_nsubdivide
+    pp.queryAdd("particle_nsubdivide_dx",particle_nsubdivide_dx);
+
      //default=2
     pp.queryAdd("particle_max_per_nsubdivide",particle_max_per_nsubdivide);
 
