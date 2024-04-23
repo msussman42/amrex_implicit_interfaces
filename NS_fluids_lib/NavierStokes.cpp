@@ -198,8 +198,8 @@ int  NavierStokes::enable_spectral=0;
 Vector<int> NavierStokes::force_blob_symmetry;
 
 int NavierStokes::particle_feedback=1; 
-int NavierStokes::particle_nsubdivide_dx=1; 
-int NavierStokes::particle_nsubdivide=1; 
+int NavierStokes::particle_nsubdivide_dx=4; 
+int NavierStokes::particle_nsubdivide=4; 
 int NavierStokes::particle_max_per_nsubdivide=2; 
 
 Real NavierStokes::init_shrink  = 1.0;
