@@ -3165,6 +3165,10 @@ stop
       end subroutine fort_steninit
 
 
+       ! fort_faceinit is called from NavierStokes.cpp,
+       !  NavierStokes::makeFaceFrac
+       ! makeFaceFrac is called from NavierStokes3.cpp,
+       !  NavierStokes::ColorSum
        ! for finding areas internal to a cell, perturb each internal 
        ! interface, find areas and volumes, then check for the difference 
        ! in volumes divided by eps times the area.
@@ -3503,21 +3507,23 @@ stop
            endif
           enddo ! im=1..num_materials
 
-          if (total_vol.gt.zero) then
-           do im=1,num_materials
+          do im=1,num_materials
+           if (total_vol.gt.zero) then
             vcenter_thin(im)=multi_volume(im)/total_vol
-            localface(im,dir,side)=vcenter_thin(im)
-           enddo ! im=1..num_materials
-          else
-           print *,"total_vol invalid"
-           stop
-          endif 
+           else if (total_vol.eq.zero) then
+            vcenter_thin(im)=zero
+           else
+            print *,"total_vol invalid: ",total_vol
+            stop
+           endif 
+           localface(im,dir,side)=vcenter_thin(im)
+          enddo ! im=1..num_materials
 
          enddo
          enddo ! dir,side
     
         else
-         print *,"im_crit out of range"
+         print *,"im_crit out of range: ",im_crit
          stop
         endif
 
@@ -3541,14 +3547,14 @@ stop
         enddo ! im
 
         if (iface.ne.nface) then
-         print *,"iface invalid"
+         print *,"iface invalid iface,nface: ",iface,nface
          stop
         endif
 
        else if ((mask2.eq.0).and.(mask1.eq.1)) then
         ! do nothing
        else
-        print *,"mask invalid"
+        print *,"mask invalid mask1,mask2: ",mask1,mask2
         stop
        endif
 
@@ -3559,294 +3565,6 @@ stop
       return
       end subroutine fort_faceinit
 
-
-      subroutine fort_faceinittest( &
-       tid, &
-       tessellate, &
-       level, &
-       finest_level, &
-       facefab,DIMS(facefab), &
-       facetest,DIMS(facetest), &
-       maskfab,DIMS(maskfab), &
-       vofrecon,DIMS(vofrecon), &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       rz_flag, &
-       xlo,dx, &
-       time, &
-       ngrow, &
-       nface) &
-      bind(c,name='fort_faceinittest')
-
-      use global_utility_module
-      use probcommon_module
-      use geometry_intersect_module
-      use MOF_routines_module
-      use mof_redist_module
-
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: tid
-      integer, INTENT(in) :: tessellate
-      integer, INTENT(in) :: level
-      integer, INTENT(in) :: finest_level
-      integer, INTENT(in) :: nface
-      integer, INTENT(in) :: ngrow
-      integer, INTENT(in) :: DIMDEC(facefab)
-      integer, INTENT(in) :: DIMDEC(facetest)
-      integer, INTENT(in) :: DIMDEC(maskfab)
-      integer, INTENT(in) :: DIMDEC(vofrecon)
-
-      real(amrex_real), INTENT(in), target :: facefab(DIMV(facefab),nface)
-
-      real(amrex_real), INTENT(out), target :: facetest(DIMV(facetest),num_materials*SDIM)
-      real(amrex_real), pointer :: facetest_ptr(D_DECL(:,:,:),:)
-
-      real(amrex_real), INTENT(in), target :: maskfab(DIMV(maskfab),2)
-      real(amrex_real), INTENT(in), target :: &
-       vofrecon(DIMV(vofrecon),num_materials*ngeom_recon)
-
-      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      integer :: growlo(3),growhi(3)
-      integer, INTENT(in) :: bfact
-      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
-      integer, INTENT(in) :: rz_flag
-      real(amrex_real), INTENT(in) :: time
-
-      integer i,j,k
-      integer icell,jcell,kcell
-      integer ii,jj,kk
-      integer im
-      integer dir
-      integer side
-      integer side_cell
-      integer iface
-      integer local_face_test(num_materials)
-      real(amrex_real) total_face
-      real(amrex_real) facefrac(num_materials)
-      real(amrex_real) faceleft(num_materials)
-      real(amrex_real) faceright(num_materials)
-      integer nface_test
-      real(amrex_real) xstenMAC(-1:1,SDIM)
-      integer nhalf
-      integer at_RZ_face
- 
-      nhalf=1
-
-      facetest_ptr=>facetest
-
-      if ((tid.lt.0).or.(tid.ge.geom_nthreads)) then
-       print *,"tid invalid"
-       stop
-      endif
-
-      if ((tessellate.ne.0).and.(tessellate.ne.1)) then
-       print *,"tessellate invalid49"
-       stop
-      endif
- 
-      if (bfact.lt.1) then
-       print *,"bfact invalid146"
-       stop
-      endif
-
-       ! (num_materials,sdim,2)
-      nface_test=num_materials*SDIM*2
-      if (nface_test.ne.nface) then
-       print *,"nface bad fort_faceinittest nface nface_test ", &
-               nface,nface_test
-       stop
-      endif
-
-      if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid in faceinittest"
-       stop
-      endif
-
-      if (ngrow.lt.1) then
-       print *,"ngrow<1 error in faceinittest"
-       stop
-      endif
-
-      call checkbound_array(fablo,fabhi,facetest_ptr,ngrow,-1)
-      call checkbound_array(fablo,fabhi,facefab,ngrow,-1)
-      call checkbound_array(fablo,fabhi,maskfab,ngrow,-1)
-      call checkbound_array(fablo,fabhi,vofrecon,ngrow,-1)
-      
-      if (ngeom_recon.ne.2*SDIM+3) then
-       print *,"ngeom_recon invalid faceinittest"
-       print *,"ngeom_recon=",ngeom_recon
-       stop
-      endif
-      if (ngeom_raw.ne.SDIM+1) then
-       print *,"ngeom_raw invalid faceinittest"
-       print *,"ngeom_raw=",ngeom_raw
-       stop
-      endif
-
-      if (rz_flag.eq.COORDSYS_CARTESIAN) then
-       ! do nothing
-      else if (rz_flag.eq.COORDSYS_RZ) then
-       if (SDIM.ne.2) then
-        print *,"dimension bust"
-        stop
-       endif
-      else if (rz_flag.eq.COORDSYS_CYLINDRICAL) then 
-       ! do nothing
-      else
-       print *,"rz_flag invalid in faceinittest"
-       stop
-      endif
-
-       ! facetest is initialized to zero in NavierStokes::makeFaceTest.
-      do dir=1,SDIM
- 
-       if ((level.ge.0).and.(level.le.finest_level)) then
-
-        ii=0
-        jj=0
-        kk=0
-        if (dir.eq.1) then
-         ii=1
-        else if (dir.eq.2) then
-         jj=1
-        else if ((dir.eq.3).and.(SDIM.eq.3)) then
-         kk=1
-        else
-         print *,"dir invalid in faceinittest"
-         stop
-        endif
-
-        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,ngrow-1,dir-1) 
-
-        do k=growlo(3),growhi(3)
-        do j=growlo(2),growhi(2)
-        do i=growlo(1),growhi(1)
-
-         call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir-1)
-
-         at_RZ_face=0
-         if (levelrz.eq.COORDSYS_CARTESIAN) then
-          ! do nothing
-         else if (levelrz.eq.COORDSYS_RZ) then
-          if (SDIM.ne.2) then
-           print *,"dimension bust"
-           stop
-          endif
-          if (dir.eq.1) then
-           if (abs(xstenMAC(0,1)).le.EPS2*dx(1)) then
-            at_RZ_face=1
-           endif
-          endif
-         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-          if (dir.eq.1) then
-           if (abs(xstenMAC(0,1)).le.EPS2*dx(1)) then
-            at_RZ_face=1
-           endif
-          endif
-         else
-          print *,"levelrz invalid"
-          stop
-         endif
-
-         if (at_RZ_face.eq.1) then
-          do im=1,num_materials
-           local_face_test(im)=1
-          enddo
-         else if (at_RZ_face.eq.0) then
-
-          do side=1,2
-
-           if (side.eq.1) then
-            icell=i-ii
-            jcell=j-jj
-            kcell=k-kk
-            side_cell=2
-           else if (side.eq.2) then
-            icell=i
-            jcell=j
-            kcell=k
-            side_cell=1
-           else
-            print *,"side invalid"
-            stop
-           endif
-
-           total_face=zero
-           do im=1,num_materials
-            ! (im,dir,side)
-            iface=(im-1)*SDIM*2+(dir-1)*2+side_cell
-            facefrac(im)=facefab(D_DECL(icell,jcell,kcell),iface)
-            if (tessellate.eq.1) then
-             total_face=total_face+facefrac(im)
-            else if (tessellate.eq.0) then
-             if (is_rigid(im).eq.0) then
-              total_face=total_face+facefrac(im)
-             else if (is_rigid(im).eq.1) then
-              ! do nothing
-             else
-              print *,"is_rigid invalid MOF_REDIST_3D.F90"
-              stop
-             endif
-            else
-             print *,"tessellate invalid50"
-             stop
-            endif
-           enddo !im=1..num_materials 
-
-           if (total_face.gt.zero) then
-            !do nothing
-           else
-            print *,"total_face invalid"
-            stop
-           endif
-           do im=1,num_materials
-            if (side.eq.1) then
-             faceleft(im)=facefrac(im)/total_face
-            else if (side.eq.2) then
-             faceright(im)=facefrac(im)/total_face
-            else
-             print *,"side invalid"
-             stop
-            endif
-           enddo ! im
-          enddo ! side
-        
-          do im=1,num_materials
-           if (abs(faceleft(im)-faceright(im)).le.FACETOL_REDIST) then
-            local_face_test(im)=1
-           else if (abs(faceleft(im)-faceright(im)).ge.FACETOL_REDIST) then
-            local_face_test(im)=0
-           else
-            print *,"faceleft or faceright bust"
-            stop
-           endif
-          enddo ! im=1..num_materials
-         else 
-          print *,"at_RZ_face invalid"
-          stop
-         endif
-
-         do im=1,num_materials
-          facetest(D_DECL(i,j,k),num_materials*(dir-1)+im)=local_face_test(im)
-         enddo ! im
-
-        enddo ! k
-        enddo ! j
-        enddo ! i
-
-       else
-        print *,"level invalid faceinittest 2"
-        stop
-       endif
-
-      enddo ! dir
-
-      return
-      end subroutine fort_faceinittest
 
        ! 1. NavierStokes::makeFaceFrac
        !      -> fort_faceinit
@@ -4181,16 +3899,24 @@ stop
 
         enddo ! im=1..num_materials
 
-        if ((left_total.gt.zero).and.(right_total.gt.zero)) then
-         ! do nothing
-        else
-         print *,"left_total or right_total invalid"
-         stop
-        endif
         do im=1,num_materials
-         frac_left(im)=frac_left(im)/left_total
-         frac_right(im)=frac_right(im)/right_total
-        enddo ! im
+         if (left_total.gt.zero) then
+          frac_left(im)=frac_left(im)/left_total
+         else if (left_total.eq.zero) then
+          frac_left(im)=zero
+         else
+          print *,"left_total invalid: ",left_total
+          stop
+         endif
+         if (right_total.gt.zero) then
+          frac_right(im)=frac_right(im)/right_total
+         else if (right_total.eq.zero) then
+          frac_right(im)=zero
+         else
+          print *,"right_total invalid: ",right_total
+          stop
+         endif
+        enddo ! im=1,num_materials
 
         call CISBOX(xsten_left,nhalf, &
          xlo,dx,i-ii,j-jj,k-kk, &
@@ -4213,6 +3939,8 @@ stop
               (frac_right(im).gt.one+EPS3).or. &
               (frac_right(im).lt.zero)) then
            print *,"frac_left or frac_right out of range"
+           print *,"im,frac_left ",im,frac_left(im)
+           print *,"im,frac_right ",im,frac_right(im)
            stop
           endif
           if (frac_left(im).le.EPS_3_2) then
@@ -4334,25 +4062,24 @@ stop
         enddo
         enddo
 
-        if (vol_total.gt.zero) then
-
-         do im=1,num_materials
-         do im_opp=1,num_materials
+        do im=1,num_materials
+        do im_opp=1,num_materials
+         if (vol_total.gt.zero) then
           frac_pair(im,im_opp)=frac_pair(im,im_opp)/vol_total
-         enddo
-         enddo
-
-        else
-         print *,"warning"
-         print *,"vol_total invalid: ",vol_total
-!         stop
-        endif
+         else if (vol_total.eq.zero) then
+          frac_pair(im,im_opp)=zero
+         else
+          print *,"vol_total invalid: ",vol_total
+          stop
+         endif
+        enddo !im_opp=1,num_materials
+        enddo !im=1,num_materials
 
         delta=xsten_right(0,dir+1)-xsten_left(0,dir+1)
         if (delta.gt.zero) then
          ! do nothing
         else
-         print *,"delta invalid faceprocess"
+         print *,"delta invalid faceprocess: ",delta
          stop
         endif 
 
