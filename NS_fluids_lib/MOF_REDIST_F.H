@@ -121,24 +121,6 @@ namespace amrex{
        int* ngrow,
        int* nface);
 
-     void fort_faceinittest(
-       int* tid,
-       int* tessellate,
-       int* level,
-       int* finest_level,
-       Real* facefab,AMREX_ARLIM_P(facefablo),AMREX_ARLIM_P(facefabhi),
-       Real* facetest,AMREX_ARLIM_P(facetestlo),AMREX_ARLIM_P(facetesthi),
-       Real* maskfab,AMREX_ARLIM_P(maskfablo),AMREX_ARLIM_P(maskfabhi),
-       Real* vofrecon,AMREX_ARLIM_P(vofreconlo),AMREX_ARLIM_P(vofreconhi),
-       const int* tilelo,const int* tilehi,
-       const int* fablo,const int* fabhi,
-       int* bfact,
-       const int* rz_flag,
-       const Real* xlo,const Real* dx,
-       Real* time,
-       int* ngrow,
-       int* nface);
-
      void fort_faceprocess(
        int* ngrow_source,
        int* ngrow_dest,
