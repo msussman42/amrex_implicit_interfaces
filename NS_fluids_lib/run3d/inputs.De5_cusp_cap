@@ -22,11 +22,10 @@ geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 10
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
-ns.continuous_mof=1
+ns.continuous_mof=0
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=1000000 # default: 1000000
-ns.MOFITERMAX_AFTER_PREDICT=0
-
+ns.mof_decision_tree_learning=0
+ns.MOFITERMAX_AFTER_PREDICT=15
 ns.MOFITERMAX=15
 ns.num_divu_outer_sweeps=1
 ns.minimum_relative_error=1.0e-22
@@ -78,7 +77,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 # cells is bf_lev[i]*n_proper. (2*bf_lev[i]=blocking_factor[i])
 amr.n_proper=1  # default is 1
 #FAST
-amr.blocking_factor = 8 8 2    # block factor in grid generation
+amr.blocking_factor = 8 8 4    # block factor in grid generation
 # viscoelastic terms are always discretized with the low order 
 # directionally split semi-Lagrangian method. This is to insure
 # positive definiteness of the configuration tensor.  
@@ -95,7 +94,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 50
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 32
 #amr.restart         = chk0300
 #amr.trace   =1
 

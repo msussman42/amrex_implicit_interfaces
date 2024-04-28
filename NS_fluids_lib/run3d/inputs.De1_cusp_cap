@@ -19,9 +19,10 @@ geometry.prob_hi   =  6.0 6.0 60.0    # D* 4 4 20
 # 1=EILE (default), -1=Weymouth Yue
 # 2=always EI   3=always LE
 ns.EILE_flag=-1
-ns.continuous_mof=1
+ns.continuous_mof=0
 ns.vof_height_function=1
-
+ns.mof_decision_tree_learning=0
+ns.MOFITERMAX_AFTER_PREDICT=15
 ns.MOFITERMAX=15
 ns.num_divu_outer_sweeps=1
 ns.minimum_relative_error=1.0e-22
@@ -81,7 +82,7 @@ amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 50
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
-amr.max_grid_size   = 16
+amr.max_grid_size   = 32
 #amr.restart         = chk0300
 #amr.trace   =1
 
