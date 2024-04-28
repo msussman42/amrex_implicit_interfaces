@@ -960,7 +960,7 @@ stop
             LSMAX=LSTEST(imhold)
            endif
           else
-           print *,"im3 invalid"
+           print *,"im3 invalid: ",im3
            stop
           endif
          else if ((imhold.eq.im).or.(imhold.eq.im_opp)) then
@@ -1005,7 +1005,7 @@ stop
       else if (im3.eq.0) then
        ! do nothing
       else
-       print *,"im3 invalid"
+       print *,"im3 invalid: ",im3
        stop
       endif
 
@@ -1020,7 +1020,7 @@ stop
       else if (num_materials.gt.2) then
        ! do nothing
       else
-       print *,"num_materials invalid"
+       print *,"num_materials invalid: ",num_materials
        stop
       endif
 
@@ -1126,7 +1126,9 @@ stop
          endif
         endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (xsten(-2,1).le.zero) then
+        if (xsten(-2,1).gt.zero) then
+         !do nothing
+        else
          print *,"xsten cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
          stop
         endif
@@ -1273,7 +1275,7 @@ stop
 
       if ((im3.lt.0).or.(im3.gt.num_materials).or. &
           (im3.eq.im).or.(im3.eq.im_opp)) then
-       print *,"im3 invalid"
+       print *,"im3 invalid: ",im3
        stop
       endif
 
@@ -1321,10 +1323,32 @@ stop
       enddo ! dir2=1..sdim
 
       RR=one
+
       call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
+
+      call prepare_normal(nfluid_def3, & !inout
+         RR, & !in
+         mag3, & !out
+         SDIM) !in;   im3 material
+
+      if (mag3.gt.zero) then
+       !do nothing
+      else if (mag3.eq.zero) then
+       im3=0
+       do dir2=1,SDIM
+        nfluid_def3(dir2)=nfluid_cen(dir2)
+       enddo
+       call prepare_normal(nfluid_def3, & !inout
+         RR, & !in
+         mag3, & !out
+         SDIM) !in;   im3 material
+      else
+       print *,"mag3 invalid: ",mag3
+       stop
+      endif
+
       call prepare_normal(nfluid_def1,RR,mag1,SDIM) ! im fluid
       call prepare_normal(nfluid_def2,RR,mag2,SDIM) ! im_opp fluid
-      call prepare_normal(nfluid_def3,RR,mag3,SDIM) ! im3 material
 
       if ((mag1.gt.zero).and. &
           (mag2.gt.zero).and. &
@@ -1417,7 +1441,7 @@ stop
         enddo
 
        else 
-        print *,"im3 invalid"
+        print *,"im3 invalid: ",im3
         stop
        endif
 
@@ -1704,7 +1728,7 @@ stop
       else if (im3.eq.0) then
        ! do nothing
       else
-       print *,"im3 invalid"
+       print *,"im3 invalid: ",im3
        stop
       endif
 
@@ -1753,7 +1777,7 @@ stop
         gamma2=half
 
        else
-        print *,"im3 invalid"
+        print *,"im3 invalid: ",im3
         stop
        endif
   
@@ -1831,7 +1855,7 @@ stop
         endif 
 
        else
-        print *,"is_rigid(im3) invalid"
+        print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
         stop
        endif
  
@@ -1871,11 +1895,11 @@ stop
                   (imhold.le.num_materials)) then 
           ngrid(dir2)=n1
          else
-          print *,"imhold invalid"
+          print *,"imhold invalid: ",imhold
           stop
          endif
         else
-         print *,"is_rigid(im3) invalid"
+         print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
          stop
         endif
         ngrid_save(D_DECL(i,j,k),dir2)=ngrid(dir2)
@@ -1980,7 +2004,7 @@ stop
                  (imhold.le.num_materials)) then 
          ! do nothing
         else
-         print *,"imhold invalid"
+         print *,"imhold invalid: ",imhold
          stop
         endif
 
@@ -2061,7 +2085,7 @@ stop
         else if (is_rigid(im3).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(im3) invalid"
+         print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
          stop
         endif
        enddo ! dir2
@@ -2084,11 +2108,11 @@ stop
          else if (im3_present_node.eq.0) then 
           ngrid(dir2)=n1
          else
-          print *,"im3_present_node invalid"
+          print *,"im3_present_node invalid: ",im3_present_node
           stop
          endif
         else
-         print *,"is_rigid(im3) invalid"
+         print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
          stop
         endif
        enddo ! dir2=1..sdim
