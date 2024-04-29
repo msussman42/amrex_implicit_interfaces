@@ -10159,7 +10159,7 @@ stop
          localvisc(im)=viscstate(D_DECL(i,j,k),im)
 
          if (localvisc(im).lt.zero) then
-          print *,"viscstate gone negative"
+          print *,"viscstate gone negative: ",im,localvisc(im)
           stop
          else if (localvisc(im).eq.zero) then
           if (volmat(im).gt.zero) then
