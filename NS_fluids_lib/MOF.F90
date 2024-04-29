@@ -12193,11 +12193,19 @@ contains
       training_nguess=0
       nguess=0
 
-      if (nMAT_OPT.eq.1) then
+      if (nMAT_OPT.eq.1) then !expecting nMAT_OPT==1
 
        if (MOF_TURN_OFF_LS.eq.0) then
 
         if (pls_normal_valid(critical_material).eq.1) then
+
+         if (MOFITERMAX_AFTER_PREDICT.eq.0) then
+          ! do nothing
+         else
+          print *,"expecting MOFITERMAX_AFTER_PREDICT==0: ", &
+             MOFITERMAX_AFTER_PREDICT
+          stop
+         endif
 
          magLS=zero
          do dir=1,sdim
@@ -12293,6 +12301,7 @@ contains
         stop
        endif
 
+        ! these are the valid choices for continuous_mof
        if ((continuous_mof.eq.STANDARD_MOF).or. &  
            (continuous_mof.eq.MOF_TRI_TET).or. & 
            (continuous_mof.eq.CMOF_F_AND_X).or. & 
@@ -12625,7 +12634,7 @@ contains
        endif
 
       else
-       print *,"nMAT_OPT invalid:",nMAT_OPT
+       print *,"expecting nMAT_OPT==1: ",nMAT_OPT
        stop
       endif
 
