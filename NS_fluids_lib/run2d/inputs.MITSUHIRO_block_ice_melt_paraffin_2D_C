@@ -90,18 +90,12 @@ ns.projection_pressure_scale=1.0e+6
 #
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
 # EVAPORATION or NO EVAPORATION
-ns.num_species_var=1 
+ns.num_species_var=2
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=15
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
-ns.continuous_mof=1 # 0=MOF 1=CMOF 
-# partial_cmof_stencil_at_walls=0 => use 3x3 stencil for cmof reconstruction
-# partial_cmof_stencil_at_walls=1 => use truncated stencil in which cells
-# which are "substrate cells" are ignored.
-# preferred: partial_cmof_stencil_at_walls=1 is more realistic at simulating
-# contact line motion.
-ns.partial_cmof_stencil_at_walls=1
+ns.continuous_mof=0 # 0=MOF 1=CMOF 
 ns.mof_error_ordering=0
 # water,air,ice,substrate
 ns.mof_ordering=3 1 2 1 
@@ -112,10 +106,14 @@ cg.verbose = 0 # 1=check initial residual  2=check all the residuals
 # set above to 2 for maximum verbosity
 mg.nu_f = 40
 mg.nu_0 = 1   # 1 - v-cycle 2 - w-cycle
-cg.maxiter = 400
 mg.bot_atol = 1.0e-12
 mg.rtol_b = -0.01
 Lp.v = 0
+
+ns.multilevel_maxcycle=200
+ns.multilevel_restart_period=25
+cg.restart_period=25
+cg.maxiter = 200
 
 amr.plotfile_on_restart=1
 #ns.visual_revolve=32
@@ -316,33 +314,32 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 # D units: cm^2/s
 # EVAPORATION or NO EVAPORATION
 # liquid, gas, ice, substrate
-ns.speciesviscconst=0.282 0.282 0.0 0.0
+ns.speciesviscconst=0.282 0.282 0.0 0.0 0.0 0.0 0.0 0.0
 #4.24 percent when dew point is 30 degrees celcius
 #https://www.tis-gdv.de/tis_e/misc/klima-htm/
 #https://www.ready.noaa.gov/READYmoistcal.php 
 #initial vapor mass fraction.
 #EVAPORATION or NO EVAPORATION
 #
-ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 # species 1: 1..num_materials
+ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 1.0 1.0 1.0 1.0
+ns.speciesreactionrate=0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+ns.rigid_fraction_id=0 0 2 0
+ns.species_molar_mass=18.02 18.02 # this is vapor molar mass=liquid molar mass
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
-# species molar mass (vapor) should be the same as the liquid molar mass.
-ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
-# ice is a very viscous fluid 
-ns.viscconst=0.018 0.00017 1000.0 1000.0 # dimensional
-# ns.viscconst=0.02 0.0001 1.0 1.0 # dimensional before
+
+ns.viscconst_artificial=100.0 100.0 100.0 100.0
+ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
+ns.uncoupled_viscosity=1 # div(mu grad u)
+
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.elastic_time=0.0 0.0 0.0 0.0
 ns.denconst=1.0 0.001 0.934 8.96
-# 0 fluid, tessellating (default)
-# 1 prescribed rigid solid, non-tessellating (PROB.F90)
-# 2 prescribed rigid solid, non-tessellating (sci_clsvof.F90)
-# 3 FSI ice,tessellating
-# 4 FSI, non-tessellating link w/Kourosh Shoele
-# 5 FSI rigid solid, tessellating (PROB.F90)
-# 6 FSI ice, tessellating (initial geometry: sci_clsvof.F90)
-# 7 fluid, tessellating (initial geometry: sci_clsvof.F90)
-ns.FSI_flag=0 0 3 1  # ice is a very viscous fluid
+
+#FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
+#FSI_ICE_PROBF90=3
+ns.FSI_flag=0 0 3 1 
+
 ns.recalesce_flag=0 0 0 0
 # remember saturation temp is 273 and we scale
 # by Delta T=T_m - T_c
@@ -408,6 +405,11 @@ ns.lo_bc          = 3 5  # RZ
 ns.hi_bc          = 3 2  # RZ
 ns.species_lo_bc  = 3 5  # RZ
 ns.species_hi_bc  = 3 2  # RZ
+ns.viscosity_lo_bc = 3 5
+ns.viscosity_hi_bc = 5 5
+ns.temperature_lo_bc=3 5
+ns.temperature_hi_bc=3 2
+
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
