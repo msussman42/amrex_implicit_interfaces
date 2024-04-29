@@ -41,7 +41,7 @@ USE_ASSERTION = TRUE
 TINY_PROFILE = FALSE
 PROFILE = FALSE
 MEM_PROFILE = FALSE
-DIM       = 3
+DIM       = 2
 
 BL_NO_FORT = FALSE
 
@@ -133,7 +133,7 @@ COMP = gnu
 #COMP = intel
 #COMP = PGI 
 #FCOMP = PGI
-USE_MPI = TRUE
+#USE_MPI = TRUE
 # set OMP_NUM_THREADS=<nthreads>
 # export OMP_NUM_THREADS=<nthreads>
 USE_OMP = FALSE
