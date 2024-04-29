@@ -1344,7 +1344,17 @@ void fortran_parameters() {
 
   // this is local variable, not static variable
  int MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;  
+#ifdef AMREX_PARTICLES
+ MOFITERMAX_AFTER_PREDICT=0;
+#endif
  pp.queryAdd("MOFITERMAX_AFTER_PREDICT",MOFITERMAX_AFTER_PREDICT);
+#ifdef AMREX_PARTICLES
+ if (MOFITERMAX_AFTER_PREDICT==0) {
+  //do nothing
+ } else
+  amrex::Error("expecting MOFITERMAX_AFTER_PREDICT==0 if PARTICLES");
+#endif
+
  if ((MOFITERMAX_AFTER_PREDICT<0)|| 
      (MOFITERMAX_AFTER_PREDICT>MOFITERMAX_LIMIT)||
      (MOFITERMAX_AFTER_PREDICT>MOFITERMAX)) {
@@ -2784,6 +2794,11 @@ NavierStokes::read_params ()
     } else
      amrex::Error("expecting update_centroid_after_recon=0 or 1");
 
+#ifdef AMREX_PARTICLES
+    mof_machine_learning=0;
+    mof_decision_tree_learning=0;
+#endif
+
     pp.queryAdd("mof_machine_learning",mof_machine_learning);
 
     pp.queryAdd("mof_decision_tree_learning",mof_decision_tree_learning);
@@ -2791,6 +2806,14 @@ NavierStokes::read_params ()
      //do nothing
     } else
      amrex::Error("require: mof_decision_tree_learning>=0");
+
+#ifdef AMREX_PARTICLES
+    if ((mof_machine_learning==0)&& 
+        (mof_decision_tree_learning==0)) {
+     //do nothing
+    } else
+     amrex::Error("mof_machine_learning==mof_decision_tree_learning=0?");
+#endif
 
     centroid_noise_factor.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
@@ -3465,8 +3488,18 @@ NavierStokes::read_params ()
      amrex::Error("mof iter max invalid in navierstokes");
     }
 
-    MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;  
+    MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;
+#ifdef AMREX_PARTICLES
+    MOFITERMAX_AFTER_PREDICT=0;
+#endif
     pp.queryAdd("MOFITERMAX_AFTER_PREDICT",MOFITERMAX_AFTER_PREDICT);
+#ifdef AMREX_PARTICLES
+    if (MOFITERMAX_AFTER_PREDICT==0) {
+     //do nothing
+    } else
+     amrex::Error("expecting MOFITERMAX_AFTER_PREDICT==0 if PARTICLES");
+#endif
+
     if ((MOFITERMAX_AFTER_PREDICT<0)||
 	(MOFITERMAX_AFTER_PREDICT>MOFITERMAX_LIMIT)||
 	(MOFITERMAX_AFTER_PREDICT>MOFITERMAX)) {
