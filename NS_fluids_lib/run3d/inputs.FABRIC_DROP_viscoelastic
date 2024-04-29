@@ -75,6 +75,14 @@ ns.advbot  =-20.0 # drop velocity
 ns.adv_dir = 3   # Direction of the drop       
 ns.output_drop_distribution=1
 
+ns.viscoelastic_model=0 0 0 #0=FENE CR  5=FENE-P
+ns.elastic_time=5.0000000 0.0 0.0 #Deborah    KSH4 
+ns.elastic_viscosity=11.11000000 0.0 0.0 #viscoelastic  11.11
+ns.polymer_factor=0.32790000 0.0 0.0       # parameter, 1/L
+ns.Carreau_alpha=2.0 0.0 0.0
+ns.Carreau_beta=0.0 0.0 0.0 # previously 1.0 0.0 0.0
+ns.Carreau_n=0.5 0.0 0.0
+
 ns.denconst      = 1.0000E+03 1.1270E+00 1.0000E+03
 ns.viscconst     = 6.5000E-01 1.9180E-02 6.5000E-01
 ns.heatviscconst = 0.0 0.0 0.0
