@@ -128,6 +128,7 @@ ns.heatviscconst=0.0 0.0 0.0 0.0
 # U=L/T  T=L/U  u^phys = U u^comp  T^phys=(L/U)t^comp
 # U^2/L  =  (sigma/rho)1/L^2   +  (mu/rho)U/L^2
 # 1  =  (sigma/rho) 1/(L U^2)  +  (mu/rho) 1/(L U)
+# (mu/(rho L U))  / (sigma/rho L U^2)= mu U /sigma = Capillary number
 #ns.uncoupled_viscosity=0  # gas lens
 ns.uncoupled_viscosity=1  # liquid lens
 #ns.viscconst=1.0 0.01 1.0 # gas lens
