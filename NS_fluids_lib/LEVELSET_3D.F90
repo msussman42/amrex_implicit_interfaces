@@ -1042,8 +1042,10 @@ stop
       enddo ! dir2
       RR=one
       call prepare_normal(nfluid,RR,mag,SDIM)
-      if (mag.le.zero) then
-       print *,"nfluid mag became corrupt"
+      if (mag.gt.zero) then
+       !do nothing
+      else
+       print *,"nfluid mag became corrupt: ",mag
        stop
       endif
  
@@ -1269,6 +1271,37 @@ stop
         n1d, &
         overall_crossing_status, &
         vof_height_function)
+
+      if ((im3.ge.1).and. &
+          (im3.le.num_materials)) then
+
+       if (is_rigid(im3).eq.1) then
+        !do nothing
+       else if (is_rigid(im3).eq.0) then
+
+        do imloop=0,1
+         if (imloop.eq.0) then
+          im_select=im
+         else if (imloop.eq.1) then
+          im_select=im_opp
+         else
+          print *,"imloop invalid: ",imloop
+          stop
+         endif
+
+        enddo !imloop=0,1 (im,im_opp)
+       else
+        print *,"is_rigid(im3) invalid"
+        stop
+       endif
+
+      else if (im3.eq.0) then
+       !do nothing
+      else
+       print *,"im3 invalid: ",im3
+       stop
+      endif
+
 
       ! above: use height function 
       ! below: use finite difference 
