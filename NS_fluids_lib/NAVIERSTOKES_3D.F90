@@ -995,6 +995,7 @@ stop
           stop
          endif
 
+          ! GRADVEL
           ! grad velocity
          do ivar_gb=1,AMREX_SPACEDIM_SQR
           index3d=index3d+1
@@ -1891,6 +1892,7 @@ END SUBROUTINE SIMP
        trace,DIMS(trace), &
        elasticforce, &
        DIMS(elasticforce), &
+        !ux,vx,wx,uy,vy,wy,uz,vz,wz
        gradvelocity, &
        DIMS(gradvelocity), &
        towerfab, &
@@ -1969,6 +1971,7 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: DIMDEC(conduct)
       integer, INTENT(in) :: DIMDEC(trace)
       integer, INTENT(in) :: DIMDEC(elasticforce)
+        !ux,vx,wx,uy,vy,wy,uz,vz,wz
       integer, INTENT(in) :: DIMDEC(gradvelocity)
       integer, INTENT(in) :: DIMDEC(towerfab)
       integer, INTENT(in) :: level
@@ -1993,22 +1996,28 @@ END SUBROUTINE SIMP
       real(amrex_real), INTENT(in), target :: &
           den(DIMV(den),num_state_material*num_materials)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: mom_den(DIMV(mom_den),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              mom_den(DIMV(mom_den),num_materials)
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: elastic(DIMV(elastic),elastic_ncomp)
+      real(amrex_real), INTENT(in), target :: &
+              elastic(DIMV(elastic),elastic_ncomp)
       real(amrex_real), pointer :: elastic_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: visc(DIMV(visc),num_materials)
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: conduct(DIMV(conduct),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              conduct(DIMV(conduct),num_materials)
       real(amrex_real), pointer :: conduct_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: trace(DIMV(trace),5*num_materials)
       real(amrex_real), pointer :: trace_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: elasticforce(DIMV(elasticforce),SDIM)
+      real(amrex_real), INTENT(in), target ::  &
+              elasticforce(DIMV(elasticforce),SDIM)
       real(amrex_real), pointer :: elasticforce_ptr(D_DECL(:,:,:),:)
+        !ux,vx,wx,uy,vy,wy,uz,vz,wz
       real(amrex_real), INTENT(in), target :: &
               gradvelocity(DIMV(gradvelocity),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: gradvelocity_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: towerfab(DIMV(towerfab),ncomp_tower)
+      real(amrex_real), INTENT(inout), target :: &
+              towerfab(DIMV(towerfab),ncomp_tower)
       real(amrex_real), pointer :: towerfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*num_materials)
       real(amrex_real), pointer :: lsdist_ptr(D_DECL(:,:,:),:)
@@ -2040,6 +2049,7 @@ END SUBROUTINE SIMP
       real(amrex_real) conductnd(num_materials)
       real(amrex_real) tracend(5*num_materials)
       real(amrex_real) elasticforcend(SDIM)
+        !ux,vx,wx,uy,vy,wy,uz,vz,wz
       real(amrex_real) gradvelocitynd(AMREX_SPACEDIM_SQR)
       real(amrex_real) writend(num_materials*200)
       integer scomp,iw
@@ -2300,6 +2310,7 @@ END SUBROUTINE SIMP
       call checkbound_array(lo,hi,trace_ptr,1,-1)
       elasticforce_ptr=>elasticforce
       call checkbound_array(lo,hi,elasticforce_ptr,1,-1)
+        !ux,vx,wx,uy,vy,wy,uz,vz,wz
       gradvelocity_ptr=>gradvelocity
       call checkbound_array(lo,hi,gradvelocity_ptr,1,-1)
       towerfab_ptr=>towerfab
@@ -2782,6 +2793,7 @@ END SUBROUTINE SIMP
           elasticforcend(dir)=elasticforcend(dir)+ &
             localwt*elasticforce(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
+         !ux,vx,wx,uy,vy,wy,uz,vz,wz
          do dir=1,AMREX_SPACEDIM_SQR
           gradvelocitynd(dir)=gradvelocitynd(dir)+ &
             localwt*gradvelocity(D_DECL(i-i1,j-j1,k-k1),dir)
@@ -3272,6 +3284,7 @@ END SUBROUTINE SIMP
          stop
         endif
 
+         !ux,vx,wx,uy,vy,wy,uz,vz,wz
         do iw=1,AMREX_SPACEDIM_SQR
          writend(scomp+iw)=gradvelocitynd(iw)
         enddo

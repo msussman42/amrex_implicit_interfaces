@@ -528,7 +528,9 @@ stop
         -ngrow_distance:ngrow_distance)
 
       integer crossing_status
-      integer overall_crossing_status
+      integer overall_crossing_status(3)
+
+      integer extrap_strategy
 
       integer cell_lo(3),cell_hi(3)
 
@@ -7751,7 +7753,8 @@ stop
       real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: curv(DIMV(curv),num_curv) 
       real(amrex_real), pointer :: curv_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: slope(DIMV(slope),num_materials*ngeom_recon) 
+      real(amrex_real), INTENT(in), target :: &
+              slope(DIMV(slope),num_materials*ngeom_recon) 
       real(amrex_real), pointer :: slope_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
               denstate(DIMV(denstate),num_materials*num_state_material) 
@@ -9840,7 +9843,7 @@ stop
                else if ((dirL.ge.1).and.(dirL.le.SDIM)) then
                 orientL=0
                else
-                print *,"dirL invalid"
+                print *,"dirL invalid: ",dirL
                 stop
                endif
 
@@ -9851,7 +9854,7 @@ stop
                else if ((dirR.ge.1).and.(dirR.le.SDIM)) then
                 orientR=0
                else
-                print *,"dirR invalid"
+                print *,"dirR invalid: ",dirR
                 stop
                endif
                
@@ -9902,14 +9905,24 @@ stop
                 ! March 10, 2018: 1.93, 2.07 XYZ 32x32x32 HT
                if (((im3L.ge.1).and.(im3L.le.num_materials)).or. &
                    ((im3R.ge.1).and.(im3R.le.num_materials))) then
-                if (FD_curv_interp.eq.1) then
-                 curv_interp_flag=0 ! interpolate curvFD
-                else if (FD_curv_interp.eq.0) then
-                 curv_interp_flag=5 ! closest curvFD
+
+                if ((is_rigid(im3L).eq.0).and. &
+                    (is_rigid(im3R).eq.0)) then
+                 curv_interp_flag=1 ! closest curvHT
+                else if ((is_rigid(im3L).eq.1).or. &
+                         (is_rigid(im3R).eq.1)) then
+                 if (FD_curv_interp.eq.1) then
+                  curv_interp_flag=0 ! interpolate curvFD
+                 else if (FD_curv_interp.eq.0) then
+                  curv_interp_flag=5 ! closest curvFD
+                 else
+                  print *,"FD_curv_interp invalid"
+                  stop
+                 endif 
                 else
-                 print *,"FD_curv_interp invalid"
+                 print *,"is_rigid(im3L or im3R) invalid"
                  stop
-                endif 
+                endif
                else if ((im3L.eq.0).and.(im3R.eq.0)) then
                 if ((orientL.eq.1).and.(orientR.eq.1)) then
                  curv_interp_flag=1 ! closest curvHT

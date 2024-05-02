@@ -7648,6 +7648,7 @@ void NavierStokes::output_zones(
    MultiFab* conductmf,
    MultiFab* magtracemf,
    MultiFab* elasticforcemf,
+    //ux,vx,wx,uy,vy,wy,uz,vz,wz
    MultiFab* gradvelocitymf,
    int& grids_per_level,
    BoxArray& cgrids_minusBA,
@@ -7760,6 +7761,7 @@ void NavierStokes::output_zones(
  check_for_NAN(conductmf);
  check_for_NAN(magtracemf);
  check_for_NAN(elasticforcemf);
+    //ux,vx,wx,uy,vy,wy,uz,vz,wz
  check_for_NAN(gradvelocitymf);
 
  int bfact=parent->Space_blockingFactor(level);
@@ -7860,6 +7862,7 @@ void NavierStokes::output_zones(
      AMREX_SPACEDIM,1,
      MFInfo().SetTag("elasticforcemfminus"),FArrayBoxFactory());
 
+    //ux,vx,wx,uy,vy,wy,uz,vz,wz
     MultiFab* gradvelocitymfminus=new MultiFab(cgrids_minusBA,cgrids_minus_map,
      AMREX_SPACEDIM_SQR,1,
      MFInfo().SetTag("gradvelocitymfminus"),FArrayBoxFactory());
@@ -7965,6 +7968,7 @@ void NavierStokes::output_zones(
     ParallelDescriptor::Barrier();
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+    //ux,vx,wx,uy,vy,wy,uz,vz,wz
     gradvelocitymfminus->ParallelCopy(*gradvelocitymf,0,0,AMREX_SPACEDIM_SQR,
 		   1,1,geom.periodicity()); 
 
@@ -8034,6 +8038,7 @@ void NavierStokes::output_zones(
      FArrayBox& conductfab=(*conductmfminus)[mfi];
      FArrayBox& magtracefab=(*magtracemfminus)[mfi];
      FArrayBox& elasticforcefab=(*elasticforcemfminus)[mfi];
+      //ux,vx,wx,uy,vy,wy,uz,vz,wz
      FArrayBox& gradvelocityfab=(*gradvelocitymfminus)[mfi];
 
      FArrayBox& towerfab=(*towermfminus)[mfi];
