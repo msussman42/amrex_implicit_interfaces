@@ -17204,6 +17204,7 @@ end subroutine print_visual_descriptor
         endif
        enddo
 
+       !ux,vx,wx,uy,vy,wy,uz,vz,wz
        ih=1
        Varname='GRADVEL'
        ih=ih+7
@@ -17981,7 +17982,7 @@ end subroutine print_visual_descriptor
       real(amrex_real), intent(out) :: cos_thetad  
       real(amrex_real), intent(in) :: vis 
       real(amrex_real), intent(in) :: user_tension_scalar
-      real(amrex_real) capillary,f_Hoff_inver,temp,temp1 
+      real(amrex_real) capillary,f_Hoff_inver,temp
 
       if (user_tension_scalar.gt.zero) then
        ! do nothing

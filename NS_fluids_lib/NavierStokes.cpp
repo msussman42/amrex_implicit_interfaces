@@ -20161,6 +20161,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
 
  int simple_AMR_BC_flag_viscosity=1;
  int do_alloc=1; 
+  //ux,vx,wx,uy,vy,wy,uz,vz,wz
  init_gradu_tensorALL(
    HOLD_VELOCITY_DATA_MF,//alloc and delete since do_alloc==1
    do_alloc,
