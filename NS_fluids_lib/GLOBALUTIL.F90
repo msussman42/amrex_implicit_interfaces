@@ -6996,14 +6996,14 @@ end subroutine print_visual_descriptor
 
 
       subroutine analyze_heights( &
-        htfunc_LS, &
-        htfunc_VOF, &
+        htfunc_LS, & !intent(in)
+        htfunc_VOF, & !intent(in)
         xsten, &
         nhalf, &
         itan,jtan, &
-        curvHT_LS, &
-        curvHT_VOF, &
-        curvHT_choice, &
+        curvHT_LS, & !intent(out)
+        curvHT_VOF, & !intent(out)
+        curvHT_choice, & !intent(out)
         normal_dir, &
         xcenter, &
         n1d, &
@@ -15383,7 +15383,15 @@ end subroutine print_visual_descriptor
        print *,"im or im_opp invalid"
        stop
       endif
-      if (LS(im).gt.LS(im_opp)) then
+      if ((LS(im).gt.zero).and. &
+          (LS(im_opp).gt.zero)) then
+       print *,"cannot have LS(im)>0 and LS(im_opp)>0"
+       print *,"im,im_opp,LS(im),LS(im_opp) ", &
+         im,im_opp,LS(im),LS(im_opp)
+       print *,"is_rigid(im) ",is_rigid(im)
+       print *,"is_rigid(im_opp) ",is_rigid(im_opp)
+       stop
+      else if (LS(im).gt.LS(im_opp)) then
        LS_extend=-LS(im_opp)
       else if (LS(im_opp).gt.LS(im)) then
        LS_extend=LS(im)
@@ -15391,6 +15399,10 @@ end subroutine print_visual_descriptor
        LS_extend=zero
       else
        print *,"LS bust"
+       print *,"im,im_opp,LS(im),LS(im_opp) ", &
+         im,im_opp,LS(im),LS(im_opp)
+       print *,"is_rigid(im) ",is_rigid(im)
+       print *,"is_rigid(im_opp) ",is_rigid(im_opp)
        stop
       endif
       
@@ -15466,7 +15478,8 @@ end subroutine print_visual_descriptor
        endif
 
       else
-       print *,"VOF bust"
+       print *,"VOF bust im,im_opp: ",im,im_opp
+       print *,"VOF(im),VOF(im_opp) ",VOF(im),VOF(im_opp)
        stop
       endif
       
