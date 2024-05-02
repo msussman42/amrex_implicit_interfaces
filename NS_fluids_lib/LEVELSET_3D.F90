@@ -383,8 +383,9 @@ stop
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: vol_sten
       real(amrex_real), INTENT(in) :: area_sten(SDIM,2)
-      real(amrex_real) :: curvHT_LS
-      real(amrex_real) :: curvHT_VOF
+      real(amrex_real) :: curvHT_LS(3)
+      real(amrex_real) :: curvHT_VOF(3)
+      real(amrex_real) :: local_curvHT_choice(3)
       real(amrex_real), INTENT(out) :: curvHT_choice
       real(amrex_real), INTENT(out) :: curvFD
       real(amrex_real), INTENT(out) :: mgoni_force(SDIM)
@@ -397,11 +398,11 @@ stop
       real(amrex_real) lsdata( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance)
+        -ngrow_distance:ngrow_distance,3)
       real(amrex_real) vofdata( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance)
+        -ngrow_distance:ngrow_distance,3)
 
       real(amrex_real) htfunc_LS(-1:1,-1:1)
       real(amrex_real) htfunc_VOF(-1:1,-1:1)
@@ -637,7 +638,7 @@ stop
       endif
       call get_iten(im,im_opp,iten_test)
       if (iten.ne.iten_test) then
-       print *,"iten and iten_test differ"
+       print *,"iten and iten_test differ: ",iten,iten_test
        stop
       endif
       if (vol_sten.gt.zero) then
@@ -940,8 +941,14 @@ stop
         VOFTEST(imhold)=vofsten(i,j,k,imhold)
        enddo
         ! declared in GLOBALUTIL.F90
-       call get_LS_extend(LSTEST,iten,lsdata(i,j,k))
-       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k))
+       call get_LS_extend(LSTEST,iten,lsdata(i,j,k,1))
+       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k,1))
+
+       lsdata(i,j,k,2)=LSTEST(im)
+       lsdata(i,j,k,3)=-LSTEST(im_opp)
+
+       vofdata(i,j,k,2)=VOFTEST(im)
+       vofdata(i,j,k,3)=one-VOFTEST(im_opp)
 
        call get_primary_material(LSTEST,imhold)
        im_primary_sten(i,j,k)=imhold
@@ -1024,6 +1031,62 @@ stop
        stop
       endif
 
+      if (user_tension(iten).eq.zero) then
+
+       gamma1=zero
+       gamma2=zero
+
+      else if (user_tension(iten).gt.zero) then
+
+       if ((im3.ge.1).and.(im3.le.num_materials)) then
+
+        if ((im3.eq.im).or.(im3.eq.im_opp)) then
+         print *,"im3 invalid" 
+         stop
+        endif
+
+        if (is_rigid(im3).eq.1) then
+
+         ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
+         ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
+         if (use_DCA.eq.101) then ! GNBC
+          gamma1=half*user_tension(iten)
+          gamma2=half*user_tension(iten)
+         else if (use_DCA.ge.-1) then  ! all other cases.
+          gamma1=half*(one-cos_angle)
+          gamma2=half*(one+cos_angle)
+         else
+          print *,"use_DCA invalid"
+          stop
+         endif 
+
+        else if (is_rigid(im3).eq.0) then
+
+         gamma1=half*(user_tension(iten)-user_tension(iten_23)+ &
+           user_tension(iten_13))/user_tension(iten)
+         gamma2=half*(user_tension(iten)+user_tension(iten_23)- &
+           user_tension(iten_13))/user_tension(iten)
+
+        else
+         print *,"is_rigid invalid LEVELSET_3D.F90"
+         stop
+        endif
+
+       else if (im3.eq.0) then
+
+        gamma1=half
+        gamma2=half
+
+       else
+        print *,"im3 invalid: ",im3
+        stop
+       endif
+  
+      else
+       print *,"user_tension coeff invalid"
+       stop
+      endif
+
       ! first: standard height function technique
 
 ! normal points towards "im"
@@ -1050,7 +1113,9 @@ stop
       endif
  
        ! signside points towards im 
-      if (nfluid(dircrit)*signside.le.zero) then
+      if (nfluid(dircrit)*signside.gt.zero) then
+       !do nothing
+      else
        print *,"nfluid or signside has wrong sign"
        stop
       endif
@@ -1087,7 +1152,8 @@ stop
       lmin=-ngrow_distance
       lmax=ngrow_distance
 
-      if ((levelrz.eq.COORDSYS_RZ).or.(levelrz.eq.COORDSYS_CYLINDRICAL)) then
+      if ((levelrz.eq.COORDSYS_RZ).or. &
+          (levelrz.eq.COORDSYS_CYLINDRICAL)) then
        if (dircrit.eq.1) then ! horizontal column
         do while (xsten(2*lmin,dircrit).lt.zero)
          lmin=lmin+1
@@ -1106,202 +1172,192 @@ stop
       xbottom=xsten(2*lmin-1,dircrit)
       xtop=xsten(2*lmax+1,dircrit)
 
-      overall_crossing_status=1
+      do extrap_strategy=1,3
 
-      do iwidth=itanlo,itanhi
-      do jwidth=jtanlo,jtanhi
+       overall_crossing_status(extrap_strategy)=1
 
-       iwidthnew=iwidth
+       do iwidth=itanlo,itanhi
+       do jwidth=jtanlo,jtanhi
+
+        iwidthnew=iwidth
         
-       if (levelrz.eq.COORDSYS_CARTESIAN) then
-        ! do nothing
-       else if (levelrz.eq.COORDSYS_RZ) then
-        if (SDIM.ne.2) then
-         print *,"dimension bust"
-         stop
-        endif
-        if (itan.eq.1) then ! vertical columns
-         if (iwidth.eq.-1) then
-          if (xsten(2*iwidth,1).le.zero) then
-           iwidthnew=0
-          endif
-         endif
-        endif
-       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-        if (xsten(-2,1).gt.zero) then
-         !do nothing
-        else
-         print *,"xsten cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
-         stop
-        endif
-       else
-        print *,"levelrz invalid initheight ls 4"
-        stop
-       endif
-       
-       do dir2=1,SDIM
-        x_col(dir2)=xsten(0,dir2)
-        x_col_avg(dir2)=half*(xsten(1,dir2)+xsten(-1,dir2))
-        dx_col(dir2)=xsten(1,dir2)-xsten(-1,dir2)
-       enddo
-       x_col(itan)=xsten(2*iwidthnew,itan)
-       dx_col(itan)=xsten(2*iwidthnew+1,itan)-xsten(2*iwidthnew-1,itan)
-       x_col_avg(itan)=half*(xsten(2*iwidthnew+1,itan)+ &
-                             xsten(2*iwidthnew-1,itan))
-
-       if ((SDIM.eq.3).or. &
-           ((SDIM.eq.2).and.(jtan.ge.1).and.(jtan.le.SDIM))) then
-        x_col(jtan)=xsten(2*jwidth,jtan)
-        dx_col(jtan)=xsten(2*jwidth+1,jtan)-xsten(2*jwidth-1,jtan)
-        x_col_avg(jtan)=half*(xsten(2*jwidth+1,jtan)+ &
-                              xsten(2*jwidth-1,jtan))
-       else if ((SDIM.eq.2).and.(jtan.eq.3)) then
-        !do nothing
-       else
-        print *,"sdim or jtan invalid"
-        stop
-       endif
- 
-       do kheight=-ngrow_distance,ngrow_distance
-
-        if (dircrit.eq.1) then
-         icell=kheight
-         jcell=iwidthnew
-         kcell=jwidth
-        else if (dircrit.eq.2) then
-         icell=iwidthnew
-         jcell=kheight
-         kcell=jwidth
-        else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
-         icell=iwidthnew
-         jcell=jwidth
-         kcell=kheight
-        else
-         print *,"dircrit invalid"
-         stop
-        endif
-
-        if (SDIM.eq.2) then
-         if (kcell.eq.0) then
-          ! do nothing
-         else
-          print *,"expecting kcell=0"
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         ! do nothing
+        else if (levelrz.eq.COORDSYS_RZ) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
           stop
          endif
-        else if (SDIM.eq.3) then
-         ! do nothing
+         if (itan.eq.1) then ! vertical columns
+          if (iwidth.eq.-1) then
+           if (xsten(2*iwidth,1).le.zero) then
+            iwidthnew=0
+           endif
+          endif
+         endif
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+         if (xsten(-2,1).gt.zero) then
+          !do nothing
+         else
+          print *,"xsten cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
+          stop
+         endif
         else
-         print *,"SDIM invalid"
+         print *,"levelrz invalid initheight ls 4"
          stop
-        endif 
+        endif
+       
+        do dir2=1,SDIM
+         x_col(dir2)=xsten(0,dir2)
+         x_col_avg(dir2)=half*(xsten(1,dir2)+xsten(-1,dir2))
+         dx_col(dir2)=xsten(1,dir2)-xsten(-1,dir2)
+        enddo
+        x_col(itan)=xsten(2*iwidthnew,itan)
+        dx_col(itan)=xsten(2*iwidthnew+1,itan)-xsten(2*iwidthnew-1,itan)
+        x_col_avg(itan)=half*(xsten(2*iwidthnew+1,itan)+ &
+                              xsten(2*iwidthnew-1,itan))
 
-        columnLS(kheight)=lsdata(icell,jcell,kcell)
-        columnVOF(kheight)=vofdata(icell,jcell,kcell)
+        if ((SDIM.eq.3).or. &
+            ((SDIM.eq.2).and.(jtan.ge.1).and.(jtan.le.SDIM))) then
+         x_col(jtan)=xsten(2*jwidth,jtan)
+         dx_col(jtan)=xsten(2*jwidth+1,jtan)-xsten(2*jwidth-1,jtan)
+         x_col_avg(jtan)=half*(xsten(2*jwidth+1,jtan)+ &
+                               xsten(2*jwidth-1,jtan))
+        else if ((SDIM.eq.2).and.(jtan.eq.3)) then
+         !do nothing
+        else
+         print *,"sdim or jtan invalid"
+         stop
+        endif
+ 
+        do kheight=-ngrow_distance,ngrow_distance
+
+         if (dircrit.eq.1) then
+          icell=kheight
+          jcell=iwidthnew
+          kcell=jwidth
+         else if (dircrit.eq.2) then
+          icell=iwidthnew
+          jcell=kheight
+          kcell=jwidth
+         else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
+          icell=iwidthnew
+          jcell=jwidth
+          kcell=kheight
+         else
+          print *,"dircrit invalid: ",dircrit
+          stop
+         endif
+
+         if (SDIM.eq.2) then
+          if (kcell.eq.0) then
+           ! do nothing
+          else
+           print *,"expecting kcell=0"
+           stop
+          endif
+         else if (SDIM.eq.3) then
+          ! do nothing
+         else
+          print *,"SDIM invalid"
+          stop
+         endif 
+
+         columnLS(kheight)=lsdata(icell,jcell,kcell,extrap_strategy)
+         columnVOF(kheight)=vofdata(icell,jcell,kcell,extrap_strategy)
           
-       enddo ! kheight
+        enddo ! kheight
 
         ! declared in MOF.F90
-       call get_col_ht_LS( &
-        vof_height_function, &
-        crossing_status, &
-        bfact, &
-        dx, &
-        xsten, &
-        dx_col, &
-        x_col, &
-        x_col_avg, &
-        columnLS, &
-        columnVOF, &
-        col_ht_LS, &
-        col_ht_VOF, &
-        dircrit, & ! 1<=dircrit<=SDIM
-        n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
-        SDIM)
+        call get_col_ht_LS( &
+         vof_height_function, &
+         crossing_status, &
+         bfact, &
+         dx, &
+         xsten, &
+         dx_col, &
+         x_col, &
+         x_col_avg, &
+         columnLS, &
+         columnVOF, &
+         col_ht_LS, &
+         col_ht_VOF, &
+         dircrit, & ! 1<=dircrit<=SDIM
+         n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
+         SDIM)
 
-       if (crossing_status.eq.1) then
-        ! do nothing
-       else if (crossing_status.eq.0) then
-        if (1.eq.0) then
-         print *,"no crossing found iwidth,jwidth= ",iwidth,jwidth
+        if (crossing_status.eq.1) then
+         ! do nothing
+        else if (crossing_status.eq.0) then
+         if (1.eq.0) then
+          print *,"no crossing found iwidth,jwidth= ",iwidth,jwidth
+         endif
+         overall_crossing_status(extrap_strategy)=0 
+        else
+         print *,"crossing_status invalid"
+         stop
         endif
-        overall_crossing_status=0 
-       else
-        print *,"crossing_status invalid"
-        stop
-       endif
 
-       if ((col_ht_LS.ge.xbottom-EPS3*dx(dircrit)).and. &
-           (col_ht_LS.le.xtop+EPS3*dx(dircrit))) then
-        ! do nothing
-       else
-        print *,"col_ht_LS out of bounds"
-        print *,"col_ht_VOF=",col_ht_LS
-        print *,"xtop=",xtop
-        print *,"xbottom=",xbottom
-        stop
-       endif
-       if ((col_ht_VOF.ge.xbottom-EPS3*dx(dircrit)).and. &
-           (col_ht_VOF.le.xtop+EPS3*dx(dircrit))) then
-        ! do nothing
-       else
-        print *,"col_ht_VOF out of bounds"
-        print *,"col_ht_VOF=",col_ht_VOF
-        print *,"xtop=",xtop
-        print *,"xbottom=",xbottom
-        stop
-       endif
+        if ((col_ht_LS.ge.xbottom-EPS3*dx(dircrit)).and. &
+            (col_ht_LS.le.xtop+EPS3*dx(dircrit))) then
+         ! do nothing
+        else
+         print *,"col_ht_LS out of bounds"
+         print *,"col_ht_VOF=",col_ht_LS
+         print *,"xtop=",xtop
+         print *,"xbottom=",xbottom
+         stop
+        endif
+        if ((col_ht_VOF.ge.xbottom-EPS3*dx(dircrit)).and. &
+            (col_ht_VOF.le.xtop+EPS3*dx(dircrit))) then
+         ! do nothing
+        else
+         print *,"col_ht_VOF out of bounds"
+         print *,"col_ht_VOF=",col_ht_VOF
+         print *,"xtop=",xtop
+         print *,"xbottom=",xbottom
+         stop
+        endif
 
-       htfunc_LS(iwidth,jwidth)=col_ht_LS
-       htfunc_VOF(iwidth,jwidth)=col_ht_VOF
-      enddo ! jwidth=-1,1
-      enddo ! iwidth=-1,1
+        htfunc_LS(iwidth,jwidth)=col_ht_LS
+        htfunc_VOF(iwidth,jwidth)=col_ht_VOF
+       enddo ! jwidth=-1,1
+       enddo ! iwidth=-1,1
 
        ! analyze_heights is declared in: GLOBALUTIL.F90
-      call analyze_heights( &
+       call analyze_heights( &
         htfunc_LS, &
         htfunc_VOF, &
         xsten, &
         nhalf_height, &
         itan,jtan, &
-        curvHT_LS, &
-        curvHT_VOF, &
-        curvHT_choice, &
+        curvHT_LS(extrap_strategy), &
+        curvHT_VOF(extrap_strategy), &
+        local_curvHT_choice(extrap_strategy), &
         dircrit, &
         xcenter, &
         n1d, &
-        overall_crossing_status, &
+        overall_crossing_status(extrap_strategy), &
         vof_height_function)
 
-      if ((im3.ge.1).and. &
-          (im3.le.num_materials)) then
+      enddo !extrap_strategy=1,2,3
 
+      if (im3.eq.0) then
+       curvHT_choice=local_curvHT_choice(1)
+      else if ((im3.ge.1).and.(im3.le.num_materials)) then
        if (is_rigid(im3).eq.1) then
-        !do nothing
+        curvHT_choice=local_curvHT_choice(1)
        else if (is_rigid(im3).eq.0) then
-
-        do imloop=0,1
-         if (imloop.eq.0) then
-          im_select=im
-         else if (imloop.eq.1) then
-          im_select=im_opp
-         else
-          print *,"imloop invalid: ",imloop
-          stop
-         endif
-
-        enddo !imloop=0,1 (im,im_opp)
+        curvHT_choice= &
+          gamma1*local_curvHT_choice(2)+gamma2*local_curvHT_choice(3)
        else
         print *,"is_rigid(im3) invalid"
         stop
        endif
-
-      else if (im3.eq.0) then
-       !do nothing
       else
-       print *,"im3 invalid: ",im3
+       print *,"im3 invalid"
        stop
       endif
-
 
       ! above: use height function 
       ! below: use finite difference 
@@ -1762,60 +1818,6 @@ stop
        ! do nothing
       else
        print *,"im3 invalid: ",im3
-       stop
-      endif
-
-      if (user_tension(iten).eq.zero) then
-       gamma1=zero
-       gamma2=zero
-      else if (user_tension(iten).gt.zero) then
-
-       if ((im3.ge.1).and.(im3.le.num_materials)) then
-
-        if ((im3.eq.im).or.(im3.eq.im_opp)) then
-         print *,"im3 invalid" 
-         stop
-        endif
-
-        if (is_rigid(im3).eq.1) then
-
-         ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
-         ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
-         if (use_DCA.eq.101) then ! GNBC
-          gamma1=half*user_tension(iten)
-          gamma2=half*user_tension(iten)
-         else if (use_DCA.ge.-1) then  ! all other cases.
-          gamma1=half*(one-cos_angle)
-          gamma2=half*(one+cos_angle)
-         else
-          print *,"use_DCA invalid"
-          stop
-         endif 
-
-        else if (is_rigid(im3).eq.0) then
-
-         gamma1=half*(user_tension(iten)-user_tension(iten_23)+ &
-           user_tension(iten_13))/user_tension(iten)
-         gamma2=half*(user_tension(iten)+user_tension(iten_23)- &
-           user_tension(iten_13))/user_tension(iten)
-
-        else
-         print *,"is_rigid invalid LEVELSET_3D.F90"
-         stop
-        endif
-
-       else if (im3.eq.0) then
-
-        gamma1=half
-        gamma2=half
-
-       else
-        print *,"im3 invalid: ",im3
-        stop
-       endif
-  
-      else
-       print *,"user_tension coeff invalid"
        stop
       endif
 
@@ -2281,7 +2283,8 @@ stop
        endif
 
       else
-       print *,"unscaled_min_curvature_radius invalid"
+       print *,"unscaled_min_curvature_radius invalid: ", &
+          unscaled_min_curvature_radius
        stop
       endif
 
@@ -3633,6 +3636,7 @@ stop
            ! do nothing
           else
            print *,"vol_sten invalid: cell volume should be positive"
+           print *,"vol_sten: ",vol_sten
            stop
           endif
 
@@ -3682,6 +3686,7 @@ stop
 
            ! loop through all possible interfaces involving im_merge_majority
            ! and initialize curvfab
+           ! curvfab has num_interfaces * CURVCOMP_NCOMP components.
           do im_opp=1,num_materials
 
            donate_flag=0
@@ -3842,7 +3847,7 @@ stop
                    dxcrossing=dxside
                   endif
                  else
-                  print *,"donate_flag invalid"
+                  print *,"donate_flag invalid: ",donate_flag
                   stop
                  endif
 
@@ -4241,8 +4246,8 @@ stop
               xcenter, &
               !num_materials x sdim components("nrmcenter" in initheightLS)
               nrmPROBE_merge, &
-              dircrossing, &
-              sidestar, &
+              dircrossing, & !intent(in)
+              sidestar, & !intent(in)
               signside, &
               time, &
               xsten_curv, &
@@ -4314,7 +4319,7 @@ stop
             else if (donate_flag.eq.0) then
              ! do nothing
             else
-             print *,"donate_flag invalid"
+             print *,"donate_flag invalid: ",donate_flag
              stop
             endif
 
