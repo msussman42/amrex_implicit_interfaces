@@ -1328,7 +1328,7 @@ stop
        dircrit, &
        xcenter, &
        n1d, &
-       overall_crossing_status(extrap_strategy), &
+       overall_crossing_status, &
        vof_height_function)
 
       if (im3.eq.0) then
