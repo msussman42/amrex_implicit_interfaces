@@ -9903,14 +9903,11 @@ stop
                 ! March 10, 2018: 1.99, 2.03 RZ 24x48 HT
                 ! March 10, 2018: 1.00, 1.01 XY 24x48 HT
                 ! March 10, 2018: 1.93, 2.07 XYZ 32x32x32 HT
-               if (((im3L.ge.1).and.(im3L.le.num_materials)).or. &
-                   ((im3R.ge.1).and.(im3R.le.num_materials))) then
+               if ((im3L.ge.1).and.(im3L.le.num_materials)) then
 
-                if ((is_rigid(im3L).eq.0).and. &
-                    (is_rigid(im3R).eq.0)) then
-                 curv_interp_flag=1 ! closest curvHT
-                else if ((is_rigid(im3L).eq.1).or. &
-                         (is_rigid(im3R).eq.1)) then
+                if (is_rigid(im3L).eq.0) then
+                 curv_interp_flag=4 ! interpolate curvHT
+                else if (is_rigid(im3L).eq.1) then
                  if (FD_curv_interp.eq.1) then
                   curv_interp_flag=0 ! interpolate curvFD
                  else if (FD_curv_interp.eq.0) then
@@ -9920,10 +9917,31 @@ stop
                   stop
                  endif 
                 else
-                 print *,"is_rigid(im3L or im3R) invalid"
+                 print *,"is_rigid(im3L) invalid"
                  stop
                 endif
+
+               else if ((im3R.ge.1).and.(im3R.le.num_materials)) then
+
+                if (is_rigid(im3R).eq.0) then
+                 curv_interp_flag=4 ! interpolate curvHT
+                else if (is_rigid(im3R).eq.1) then
+                 if (FD_curv_interp.eq.1) then
+                  curv_interp_flag=0 ! interpolate curvFD
+                 else if (FD_curv_interp.eq.0) then
+                  curv_interp_flag=5 ! closest curvFD
+                 else
+                  print *,"FD_curv_interp invalid"
+                  stop
+                 endif 
+
+                else
+                 print *,"is_rigid(im3R) invalid"
+                 stop
+                endif
+
                else if ((im3L.eq.0).and.(im3R.eq.0)) then
+
                 if ((orientL.eq.1).and.(orientR.eq.1)) then
                  curv_interp_flag=1 ! closest curvHT
                 else if ((orientL.eq.1).and.(orientR.eq.0)) then
@@ -9936,6 +9954,7 @@ stop
                  print *,"orientL or orientR invalid"
                  stop
                 endif
+
                else
                 print *,"im3L or im3R invalid"
                 stop
