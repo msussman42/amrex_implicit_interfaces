@@ -383,9 +383,8 @@ stop
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: vol_sten
       real(amrex_real), INTENT(in) :: area_sten(SDIM,2)
-      real(amrex_real) :: curvHT_LS(3)
-      real(amrex_real) :: curvHT_VOF(3)
-      real(amrex_real) :: local_curvHT_choice(3)
+      real(amrex_real) :: curvHT_LS
+      real(amrex_real) :: curvHT_VOF
       real(amrex_real), INTENT(out) :: curvHT_choice
       real(amrex_real), INTENT(out) :: curvFD
       real(amrex_real), INTENT(out) :: mgoni_force(SDIM)
@@ -398,11 +397,11 @@ stop
       real(amrex_real) lsdata( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance,3)
+        -ngrow_distance:ngrow_distance)
       real(amrex_real) vofdata( &
         -ngrow_distance:ngrow_distance, &
         -ngrow_distance:ngrow_distance, &
-        -ngrow_distance:ngrow_distance,3)
+        -ngrow_distance:ngrow_distance)
 
       real(amrex_real) htfunc_LS(-1:1,-1:1)
       real(amrex_real) htfunc_VOF(-1:1,-1:1)
@@ -528,9 +527,7 @@ stop
         -ngrow_distance:ngrow_distance)
 
       integer crossing_status
-      integer overall_crossing_status(3)
-
-      integer extrap_strategy
+      integer overall_crossing_status
 
       integer cell_lo(3),cell_hi(3)
 
@@ -943,14 +940,8 @@ stop
         VOFTEST(imhold)=vofsten(i,j,k,imhold)
        enddo
         ! declared in GLOBALUTIL.F90
-       call get_LS_extend(LSTEST,iten,lsdata(i,j,k,1))
-       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k,1))
-
-       lsdata(i,j,k,2)=LSTEST(im)
-       lsdata(i,j,k,3)=-LSTEST(im_opp)
-
-       vofdata(i,j,k,2)=VOFTEST(im)
-       vofdata(i,j,k,3)=one-VOFTEST(im_opp)
+       call get_LS_extend(LSTEST,iten,lsdata(i,j,k))
+       call get_VOF_extend(VOFTEST,iten,vofdata(i,j,k))
 
        call get_primary_material(LSTEST,imhold)
        im_primary_sten(i,j,k)=imhold
@@ -1174,184 +1165,179 @@ stop
       xbottom=xsten(2*lmin-1,dircrit)
       xtop=xsten(2*lmax+1,dircrit)
 
-      do extrap_strategy=1,3
+      overall_crossing_status=1
 
-       overall_crossing_status(extrap_strategy)=1
+      do iwidth=itanlo,itanhi
+      do jwidth=jtanlo,jtanhi
 
-       do iwidth=itanlo,itanhi
-       do jwidth=jtanlo,jtanhi
-
-        iwidthnew=iwidth
-        
-        if (levelrz.eq.COORDSYS_CARTESIAN) then
-         ! do nothing
-        else if (levelrz.eq.COORDSYS_RZ) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-         if (itan.eq.1) then ! vertical columns
-          if (iwidth.eq.-1) then
-           if (xsten(2*iwidth,1).le.zero) then
-            iwidthnew=0
-           endif
-          endif
-         endif
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten(-2,1).gt.zero) then
-          !do nothing
-         else
-          print *,"xsten cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
-          stop
-         endif
-        else
-         print *,"levelrz invalid initheight ls 4"
+       iwidthnew=iwidth
+       
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_RZ) then
+        if (SDIM.ne.2) then
+         print *,"dimension bust"
          stop
         endif
-       
-        do dir2=1,SDIM
-         x_col(dir2)=xsten(0,dir2)
-         x_col_avg(dir2)=half*(xsten(1,dir2)+xsten(-1,dir2))
-         dx_col(dir2)=xsten(1,dir2)-xsten(-1,dir2)
-        enddo
-        x_col(itan)=xsten(2*iwidthnew,itan)
-        dx_col(itan)=xsten(2*iwidthnew+1,itan)-xsten(2*iwidthnew-1,itan)
-        x_col_avg(itan)=half*(xsten(2*iwidthnew+1,itan)+ &
-                              xsten(2*iwidthnew-1,itan))
-
-        if ((SDIM.eq.3).or. &
-            ((SDIM.eq.2).and.(jtan.ge.1).and.(jtan.le.SDIM))) then
-         x_col(jtan)=xsten(2*jwidth,jtan)
-         dx_col(jtan)=xsten(2*jwidth+1,jtan)-xsten(2*jwidth-1,jtan)
-         x_col_avg(jtan)=half*(xsten(2*jwidth+1,jtan)+ &
-                               xsten(2*jwidth-1,jtan))
-        else if ((SDIM.eq.2).and.(jtan.eq.3)) then
+        if (itan.eq.1) then ! vertical columns
+         if (iwidth.eq.-1) then
+          if (xsten(2*iwidth,1).le.zero) then
+           iwidthnew=0
+          endif
+         endif
+        endif
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        if (xsten(-2,1).gt.zero) then
          !do nothing
         else
-         print *,"sdim or jtan invalid"
+         print *,"xsten cannot be negative for levelrz==COORDSYS_CYLINDRICAL"
          stop
         endif
+       else
+        print *,"levelrz invalid initheight ls 4"
+        stop
+       endif
+      
+       do dir2=1,SDIM
+        x_col(dir2)=xsten(0,dir2)
+        x_col_avg(dir2)=half*(xsten(1,dir2)+xsten(-1,dir2))
+        dx_col(dir2)=xsten(1,dir2)-xsten(-1,dir2)
+       enddo
+       x_col(itan)=xsten(2*iwidthnew,itan)
+       dx_col(itan)=xsten(2*iwidthnew+1,itan)-xsten(2*iwidthnew-1,itan)
+       x_col_avg(itan)=half*(xsten(2*iwidthnew+1,itan)+ &
+                             xsten(2*iwidthnew-1,itan))
+
+       if ((SDIM.eq.3).or. &
+           ((SDIM.eq.2).and.(jtan.ge.1).and.(jtan.le.SDIM))) then
+        x_col(jtan)=xsten(2*jwidth,jtan)
+        dx_col(jtan)=xsten(2*jwidth+1,jtan)-xsten(2*jwidth-1,jtan)
+        x_col_avg(jtan)=half*(xsten(2*jwidth+1,jtan)+ &
+                              xsten(2*jwidth-1,jtan))
+       else if ((SDIM.eq.2).and.(jtan.eq.3)) then
+        !do nothing
+       else
+        print *,"sdim or jtan invalid"
+        stop
+       endif
  
-        do kheight=-ngrow_distance,ngrow_distance
+       do kheight=-ngrow_distance,ngrow_distance
 
-         if (dircrit.eq.1) then
-          icell=kheight
-          jcell=iwidthnew
-          kcell=jwidth
-         else if (dircrit.eq.2) then
-          icell=iwidthnew
-          jcell=kheight
-          kcell=jwidth
-         else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
-          icell=iwidthnew
-          jcell=jwidth
-          kcell=kheight
-         else
-          print *,"dircrit invalid: ",dircrit
-          stop
-         endif
+        if (dircrit.eq.1) then
+         icell=kheight
+         jcell=iwidthnew
+         kcell=jwidth
+        else if (dircrit.eq.2) then
+         icell=iwidthnew
+         jcell=kheight
+         kcell=jwidth
+        else if ((dircrit.eq.3).and.(SDIM.eq.3)) then
+         icell=iwidthnew
+         jcell=jwidth
+         kcell=kheight
+        else
+         print *,"dircrit invalid: ",dircrit
+         stop
+        endif
 
-         if (SDIM.eq.2) then
-          if (kcell.eq.0) then
-           ! do nothing
-          else
-           print *,"expecting kcell=0"
-           stop
-          endif
-         else if (SDIM.eq.3) then
+        if (SDIM.eq.2) then
+         if (kcell.eq.0) then
           ! do nothing
          else
-          print *,"SDIM invalid"
+          print *,"expecting kcell=0"
           stop
-         endif 
-
-         columnLS(kheight)=lsdata(icell,jcell,kcell,extrap_strategy)
-         columnVOF(kheight)=vofdata(icell,jcell,kcell,extrap_strategy)
-          
-        enddo ! kheight
-
-        ! declared in MOF.F90
-        call get_col_ht_LS( &
-         vof_height_function, &
-         crossing_status, &
-         bfact, &
-         dx, &
-         xsten, &
-         dx_col, &
-         x_col, &
-         x_col_avg, &
-         columnLS, &
-         columnVOF, &
-         col_ht_LS, &
-         col_ht_VOF, &
-         dircrit, & ! 1<=dircrit<=SDIM
-         n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
-         SDIM)
-
-        if (crossing_status.eq.1) then
-         ! do nothing
-        else if (crossing_status.eq.0) then
-         if (1.eq.0) then
-          print *,"no crossing found iwidth,jwidth= ",iwidth,jwidth
          endif
-         overall_crossing_status(extrap_strategy)=0 
-        else
-         print *,"crossing_status invalid"
-         stop
-        endif
-
-        if ((col_ht_LS.ge.xbottom-EPS3*dx(dircrit)).and. &
-            (col_ht_LS.le.xtop+EPS3*dx(dircrit))) then
+        else if (SDIM.eq.3) then
          ! do nothing
         else
-         print *,"col_ht_LS out of bounds"
-         print *,"col_ht_VOF=",col_ht_LS
-         print *,"xtop=",xtop
-         print *,"xbottom=",xbottom
+         print *,"SDIM invalid"
          stop
-        endif
-        if ((col_ht_VOF.ge.xbottom-EPS3*dx(dircrit)).and. &
-            (col_ht_VOF.le.xtop+EPS3*dx(dircrit))) then
-         ! do nothing
-        else
-         print *,"col_ht_VOF out of bounds"
-         print *,"col_ht_VOF=",col_ht_VOF
-         print *,"xtop=",xtop
-         print *,"xbottom=",xbottom
-         stop
-        endif
+        endif 
 
-        htfunc_LS(iwidth,jwidth)=col_ht_LS
-        htfunc_VOF(iwidth,jwidth)=col_ht_VOF
-       enddo ! jwidth=-1,1
-       enddo ! iwidth=-1,1
+        columnLS(kheight)=lsdata(icell,jcell,kcell)
+        columnVOF(kheight)=vofdata(icell,jcell,kcell)
+         
+       enddo ! kheight
 
-       ! analyze_heights is declared in: GLOBALUTIL.F90
-       call analyze_heights( &
-        htfunc_LS, &
-        htfunc_VOF, &
+       ! declared in MOF.F90
+       call get_col_ht_LS( &
+        vof_height_function, &
+        crossing_status, &
+        bfact, &
+        dx, &
         xsten, &
-        nhalf_height, &
-        itan,jtan, &
-        curvHT_LS(extrap_strategy), &
-        curvHT_VOF(extrap_strategy), &
-        local_curvHT_choice(extrap_strategy), &
-        dircrit, &
-        xcenter, &
-        n1d, &
-        overall_crossing_status(extrap_strategy), &
-        vof_height_function)
+        dx_col, &
+        x_col, &
+        x_col_avg, &
+        columnLS, &
+        columnVOF, &
+        col_ht_LS, &
+        col_ht_VOF, &
+        dircrit, & ! 1<=dircrit<=SDIM
+        n1d, & ! n1d==1 => im material on top, n1d==-1 => im on bottom.
+        SDIM)
 
-      enddo !extrap_strategy=1,2,3
+       if (crossing_status.eq.1) then
+        ! do nothing
+       else if (crossing_status.eq.0) then
+        if (1.eq.0) then
+         print *,"no crossing found iwidth,jwidth= ",iwidth,jwidth
+        endif
+        overall_crossing_status=0 
+       else
+        print *,"crossing_status invalid: ",crossing_status
+        stop
+       endif
+
+       if ((col_ht_LS.ge.xbottom-EPS3*dx(dircrit)).and. &
+           (col_ht_LS.le.xtop+EPS3*dx(dircrit))) then
+        ! do nothing
+       else
+        print *,"col_ht_LS out of bounds"
+        print *,"col_ht_VOF=",col_ht_LS
+        print *,"xtop=",xtop
+        print *,"xbottom=",xbottom
+        stop
+       endif
+       if ((col_ht_VOF.ge.xbottom-EPS3*dx(dircrit)).and. &
+           (col_ht_VOF.le.xtop+EPS3*dx(dircrit))) then
+        ! do nothing
+       else
+        print *,"col_ht_VOF out of bounds"
+        print *,"col_ht_VOF=",col_ht_VOF
+        print *,"xtop=",xtop
+        print *,"xbottom=",xbottom
+        stop
+       endif
+
+       htfunc_LS(iwidth,jwidth)=col_ht_LS
+       htfunc_VOF(iwidth,jwidth)=col_ht_VOF
+      enddo ! jwidth=-1,1
+      enddo ! iwidth=-1,1
+
+      ! analyze_heights is declared in: GLOBALUTIL.F90
+      call analyze_heights( &
+       htfunc_LS, &
+       htfunc_VOF, &
+       xsten, &
+       nhalf_height, &
+       itan,jtan, &
+       curvHT_LS, &
+       curvHT_VOF, &
+       curvHT_choice, &
+       dircrit, &
+       xcenter, &
+       n1d, &
+       overall_crossing_status(extrap_strategy), &
+       vof_height_function)
 
       if (im3.eq.0) then
-       curvHT_choice=local_curvHT_choice(1)
+       !do nothing
       else if ((im3.ge.1).and.(im3.le.num_materials)) then
        if (is_rigid(im3).eq.1) then
-        curvHT_choice=local_curvHT_choice(1)
+        !do nothing
        else if (is_rigid(im3).eq.0) then
-        curvHT_choice= &
-          gamma1*local_curvHT_choice(2)+gamma2*local_curvHT_choice(3)
+        !do nothing
        else
         print *,"is_rigid(im3) invalid"
         stop
@@ -9906,7 +9892,14 @@ stop
                if ((im3L.ge.1).and.(im3L.le.num_materials)) then
 
                 if (is_rigid(im3L).eq.0) then
-                 curv_interp_flag=4 ! interpolate curvHT
+                 if (FD_curv_interp.eq.1) then
+                  curv_interp_flag=0 ! interpolate curvFD
+                 else if (FD_curv_interp.eq.0) then
+                  curv_interp_flag=5 ! closest curvFD
+                 else
+                  print *,"FD_curv_interp invalid"
+                  stop
+                 endif 
                 else if (is_rigid(im3L).eq.1) then
                  if (FD_curv_interp.eq.1) then
                   curv_interp_flag=0 ! interpolate curvFD
@@ -9924,7 +9917,14 @@ stop
                else if ((im3R.ge.1).and.(im3R.le.num_materials)) then
 
                 if (is_rigid(im3R).eq.0) then
-                 curv_interp_flag=4 ! interpolate curvHT
+                 if (FD_curv_interp.eq.1) then
+                  curv_interp_flag=0 ! interpolate curvFD
+                 else if (FD_curv_interp.eq.0) then
+                  curv_interp_flag=5 ! closest curvFD
+                 else
+                  print *,"FD_curv_interp invalid"
+                  stop
+                 endif 
                 else if (is_rigid(im3R).eq.1) then
                  if (FD_curv_interp.eq.1) then
                   curv_interp_flag=0 ! interpolate curvFD
@@ -9956,7 +9956,7 @@ stop
                 endif
 
                else
-                print *,"im3L or im3R invalid"
+                print *,"im3L or im3R invalid: ",im3L,im3R
                 stop
                endif
 
