@@ -15176,6 +15176,7 @@ contains
         ls_intercept, &
         bfact,dx, &
         xsten0,nhalf0, &
+        centroid_absolute, &
         im, &
         dxmaxLS_volume_constraint, &
         sdim)
@@ -15191,15 +15192,17 @@ contains
       integer, INTENT(in) :: nhalf0
       integer, INTENT(in) :: im
       integer, INTENT(in) :: sdim
-      real(amrex_real), INTENT(in)    :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: xsten0(-nhalf0:nhalf0,sdim)
+      real(amrex_real), INTENT(in) :: centroid_absolute(sdim)
       real(amrex_real) :: xtet(sdim+1,sdim)
-      real(amrex_real), INTENT(in)    :: dx(sdim)
-      real(amrex_real), INTENT(in)    :: dxmaxLS_volume_constraint
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: dxmaxLS_volume_constraint
       real(amrex_real) xpoint(sdim)
       real(amrex_real) cutoff,m1,m2
       real(amrex_real) nsimple(sdim)
       real(amrex_real) nn(sdim)
-      real(amrex_real) distsimple,dist,LSWT
+      real(amrex_real) distsimple,dist
+      real(amrex_real) LSWT
       real(amrex_real) w(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) aa(sdim+1,sdim+1)
       real(amrex_real) xx(sdim+1)
@@ -15208,7 +15211,6 @@ contains
       real(amrex_real) :: mapmat_inv(sdim,sdim)
       real(amrex_real) :: mapmat_scratch(sdim,sdim)
       integer matstatus
-      real(amrex_real) wx,wy,wz
       integer ii,jj,kk
       integer i,j,k
       integer i1,j1,k1
@@ -15317,6 +15319,20 @@ contains
          endif
          dxplus=xsten0(2,dir)-xsten0(0,dir)
          dxminus=xsten0(0,dir)-xsten0(-2,dir)
+
+         if (centroid_absolute(dir).ge.xsten0(-1,dir)-EPS2*dxminus) then
+          !do nothing
+         else
+          print *,"centroid_absolute invalid"
+          stop
+         endif
+         if (centroid_absolute(dir).le.xsten0(1,dir)+EPS2*dxplus) then
+          !do nothing
+         else
+          print *,"centroid_absolute invalid"
+          stop
+         endif
+
          LS_plus=ls_mof(D_DECL(ii,jj,kk),im)
          LS_minus=ls_mof(D_DECL(-ii,-jj,-kk),im)
 
@@ -15435,24 +15451,6 @@ contains
            do k=klo,khi
            do j=-1,1
            do i=-1,1
-            wx=twelve
-            wy=twelve
-            wz=twelve
-            if (i.ne.0) then
-             wx=one
-            endif
-            if (j.ne.0) then
-             wy=one
-            endif
-            if (k.ne.0) then
-             wz=one
-            endif
-
-            wx=wx*(xsten0(2*i+1,1)-xsten0(2*i-1,1))
-            wy=wy*(xsten0(2*j+1,2)-xsten0(2*j-1,2))
-            if (sdim.eq.3) then
-             wz=wz*(xsten0(2*k+1,sdim)-xsten0(2*k-1,sdim))
-            endif
 
             LSWT=abs(ls_mof(D_DECL(i,j,k),im))
             if (LSWT.le.three*dxmaxLS_volume_constraint) then
@@ -15463,7 +15461,15 @@ contains
              print *,"LSWT invalid: ",LSWT
              stop
             endif
-            w(D_DECL(i,j,k))=hsprime(LSWT,cutoff)*wx*wy*wz
+
+            LSWT=(xsten0(2*i,1)-centroid_absolute(1))**2
+            LSWT=LSWT+(xsten0(2*j,2)-centroid_absolute(2))**2
+            if (sdim.eq.3) then
+             LSWT=LSWT+(xsten0(2*k,sdim)-centroid_absolute(sdim))**2
+            endif
+            LSWT=sqrt(LSWT)
+
+            w(D_DECL(i,j,k))=hsprime(LSWT,cutoff)
            enddo
            enddo
            enddo ! i,j,k
@@ -15471,36 +15477,11 @@ contains
            do i=1,num_particles
             LSWT=zero
             do j=1,sdim
-             LSWT=LSWT+(particle_list(i,j)-xsten0(0,j))**2
+             LSWT=LSWT+(particle_list(i,j)-centroid_absolute(j))**2
             enddo
             LSWT=sqrt(LSWT)
-            wx=twelve
-            wy=twelve
-            wz=twelve
-            if (LSWT.ge.dxmaxLS_volume_constraint) then
-             wx=one
-             wy=one
-             wz=one
-            else if (LSWT.le.dxmaxLS_volume_constraint) then
-             !do nothing
-            else
-             print *,"LSWT invalid: ",LSWT
-             stop
-            endif
 
-            wx=wx*(xsten0(1,1)-xsten0(-1,1))
-            wy=wy*(xsten0(1,2)-xsten0(-1,2))
-            if (sdim.eq.3) then
-             wz=wz*(xsten0(1,sdim)-xsten0(-1,sdim))
-            endif
-
-            LSWT=particle_list(i,sdim+1)
-            if (LSWT.ge.zero) then
-             w_particles(i)=hsprime(LSWT,cutoff)*wx*wy*wz
-            else
-             print *,"LSWT invalid for w_particles: ",LSWT
-             stop
-            endif
+            w_particles(i)=hsprime(LSWT,cutoff)
 
            enddo !i=1,num_particles
 
@@ -15967,8 +15948,14 @@ contains
       integer dir
       integer imaterial_count
 
+      real(amrex_real) centroid_absolute(sdim)
+
+      real(amrex_real) uncaptured_volume_vof_rigid
+      real(amrex_real) uncaptured_centroid_vof_rigid(sdim)
+
       real(amrex_real) uncaptured_volume_vof
       real(amrex_real) uncaptured_centroid_vof(sdim)
+
       real(amrex_real) uncaptured_volume_cen
       real(amrex_real) uncaptured_centroid_cen(sdim)
 
@@ -16259,6 +16246,82 @@ contains
 
       allocate(ls_intercept(num_materials))
 
+       ! if F<eps or F>1-eps, then moments and vfracs are truncated.
+       ! sum of F_fluid=1
+       ! sum of F_rigid<=1
+      call make_vfrac_sum_ok_base( &
+        cmofsten, &
+        xsten0, &
+        nhalf0, &
+        continuous_mof, & 
+        bfact,dx, &
+        tessellate, &  ! =0
+        mofdata, &
+        sdim)
+
+      if (continuous_mof.eq.STANDARD_MOF) then 
+
+       call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_vof, &
+        uncaptured_centroid_vof, &
+        sdim)
+       call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_cen, &
+        uncaptured_centroid_cen, &
+        sdim)
+
+      else if (continuous_mof.eq.MOF_TRI_TET) then
+
+       call Box_volumeTRI_TET( &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         uncaptured_volume_vof, &
+         uncaptured_centroid_vof, &
+         sdim)
+
+       call Box_volumeTRI_TET( &
+         bfact,dx, &
+         xsten0,nhalf0, &
+         uncaptured_volume_cen, &
+         uncaptured_centroid_cen, &
+         sdim)
+
+      else if (continuous_mof.eq.CMOF_X) then
+
+       call Box_volumeFAST( &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_vof, &
+        uncaptured_centroid_vof, &
+        sdim)
+       call Box_volume_super( &
+        cmofsten, &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_cen, &
+        uncaptured_centroid_cen, &
+        sdim)
+
+      else if (continuous_mof.eq.CMOF_F_AND_X) then 
+
+       call Box_volume_super( &
+        cmofsten, &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_vof, &
+        uncaptured_centroid_vof, &
+        sdim)
+       call Box_volume_super( &
+        cmofsten, &
+        bfact,dx,xsten0,nhalf0, &
+        uncaptured_volume_cen, &
+        uncaptured_centroid_cen, &
+        sdim)
+
+      else
+       print *,"continuous_mof invalid"
+       stop
+      endif
+
       if (use_ls_data.eq.1) then
 
        if ((continuous_mof.eq.STANDARD_MOF).or. & 
@@ -16315,6 +16378,11 @@ contains
           print *,"mag(1) invalid: ",mag(1)
           stop
          endif
+         vofcomp=(imaterial-1)*ngeom_recon+1
+         do dir=1,sdim
+          centroid_absolute(dir)=uncaptured_centroid_cen(dir)+ &
+               mofdata(vofcomp+dir)
+         enddo
 
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
@@ -16328,6 +16396,7 @@ contains
           ls_intercept, & !intent(out)
           bfact,dx, & !intent(in)
           xsten0,nhalf0, & !intent(in)
+          centroid_absolute, & !intent(in)
           imaterial, & !intent(in)
           dxmaxLS_volume_constraint, & !intent(in)
           sdim) !intent(in)
@@ -16351,53 +16420,9 @@ contains
        stop
       endif
 
-      if (mof_verbose.eq.1) then
-       print *,"BEFORE BEFORE"
-       print *,"nmax = ",nmax
-       print *,"levelrz = ",levelrz
-       print *,"num_materials = ",num_materials
-       print *,"sdim = ",sdim
-       print *,"continuous_mof = ",continuous_mof
-       print *,"ngeom_recon = ",ngeom_recon
-       do imaterial=1,num_materials*ngeom_recon
-        print *,"i,mofdata ",imaterial,mofdata(imaterial)
-       enddo
-       do imaterial=1,num_materials
-        print *,"imaterial,order_algorithm ",imaterial, &
-         order_algorithm(imaterial)
-       enddo
-       do dir=1,sdim
-        print *,"dir,xsten0(0) ",dir,xsten0(0,dir)
-        print *,"dir,xsten0(2) ",dir,xsten0(2,dir)
-        print *,"dir,dx ",dir,xsten0(1,dir)-xsten0(-1,dir)
-       enddo
-       print *,"MOFITERMAX ",MOFITERMAX
-       print *,"MOFITERMAX_AFTER_PREDICT ",MOFITERMAX_AFTER_PREDICT
-      else if (mof_verbose.eq.0) then
-       ! do nothing
-      else
-       print *,"mof_verbose invalid in multimaterial_MOF"
-       print *,"mof_verbose= ",mof_verbose
-       print *,"continuous_mof=",continuous_mof
-       stop
-      endif
-
       remaining_vfrac=zero
       single_material=0
       num_materials_cell=0
-
-        ! if F<eps or F>1-eps, then moments and vfracs are truncated.
-        ! sum of F_fluid=1
-        ! sum of F_rigid<=1
-      call make_vfrac_sum_ok_base( &
-        cmofsten, &
-        xsten0, &
-        nhalf0, &
-        continuous_mof, & 
-        bfact,dx, &
-        tessellate, &  ! =0
-        mofdata, &
-        sdim)
 
        ! clear flag for all num_materials materials.
        ! vfrac,centroid,order,slope,intercept x num_materials
@@ -16453,18 +16478,20 @@ contains
 
          ! centroid is in absolute coordinate system 
         if (continuous_mof_rigid.eq.STANDARD_MOF) then
-         call Box_volumeFAST(bfact,dx,xsten0,nhalf0,uncaptured_volume_vof, &
-          uncaptured_centroid_vof,sdim)
+         call Box_volumeFAST(bfact,dx,xsten0,nhalf0, &
+          uncaptured_volume_vof_rigid, &
+          uncaptured_centroid_vof_rigid, &
+          sdim)
          fastflag=1
          nlist_vof=0
          nlist_cen=0
         else if (continuous_mof_rigid.eq.MOF_TRI_TET) then
          call Box_volumeTRI_TET( &
-           bfact,dx, &
-           xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
+          bfact,dx, &
+          xsten0,nhalf0, &
+          uncaptured_volume_vof_rigid, &
+          uncaptured_centroid_vof_rigid, &
+          sdim)
          fastflag=0
          nlist_vof=1
          nlist_cen=1
@@ -16497,19 +16524,20 @@ contains
         else if ((refvfrac(1).ge.VOFTOL).and. &
                  (refvfrac(1).le.one-VOFTOL)) then
          do dir=1,sdim
-          centroid_free(dir)=uncaptured_centroid_vof(dir)
-          centroid_ref(dir)=mofdata(vofcomp+dir)+uncaptured_centroid_vof(dir)
+          centroid_free(dir)=uncaptured_centroid_vof_rigid(dir)
+          centroid_ref(dir)= &
+             mofdata(vofcomp+dir)+uncaptured_centroid_vof_rigid(dir)
          enddo
 
-         single_volume=refvfrac(1)*uncaptured_volume_vof
+         single_volume=refvfrac(1)*uncaptured_volume_vof_rigid
 
           ! centroid_ref-centroid_free
           ! normal points from light to dark
          call find_predict_slope( &
            npredict, &
            mag, &
-           uncaptured_volume_vof, &
-           uncaptured_volume_vof, &
+           uncaptured_volume_vof_rigid, &
+           uncaptured_volume_vof_rigid, &
            centroid_free, &
            single_volume, &
            centroid_ref, &
@@ -16529,7 +16557,7 @@ contains
           ! continuous_mof_rigid=STANDARD_MOF or MOF_TRI_TET
           call find_cut_geom_slope( &
            tid, &
-           uncaptured_volume_vof, &
+           uncaptured_volume_vof_rigid, &
            mofdata, &
            grid_index, &
            grid_level, &
@@ -16634,7 +16662,7 @@ contains
           do dir=1,sdim
            mofdata(vofcomp+sdim+1+dir)=local_npredict(dir)
            multi_centroidA(imaterial,dir)= &
-              centroidA(dir)-uncaptured_centroid_vof(dir)
+              centroidA(dir)-uncaptured_centroid_vof_rigid(dir)
           enddo 
 
          else
@@ -16906,69 +16934,6 @@ contains
           ! no need to pick an optimal ordering
        if (n_ndef.eq.0) then
 
-        if (continuous_mof.eq.STANDARD_MOF) then 
-
-         call Box_volumeFAST( &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_vof, &
-          uncaptured_centroid_vof, &
-          sdim)
-         call Box_volumeFAST( &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen, &
-          uncaptured_centroid_cen, &
-          sdim)
-
-        else if (continuous_mof.eq.MOF_TRI_TET) then
-
-         call Box_volumeTRI_TET( &
-           bfact,dx, &
-           xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
-
-         call Box_volumeTRI_TET( &
-           bfact,dx, &
-           xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
-
-        else if (continuous_mof.eq.CMOF_X) then
-
-         call Box_volumeFAST( &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_vof, &
-          uncaptured_centroid_vof, &
-          sdim)
-         call Box_volume_super( &
-          cmofsten, &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen, &
-          uncaptured_centroid_cen, &
-          sdim)
-
-        else if (continuous_mof.eq.CMOF_F_AND_X) then 
-
-         call Box_volume_super( &
-          cmofsten, &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_vof, &
-          uncaptured_centroid_vof, &
-          sdim)
-         call Box_volume_super( &
-          cmofsten, &
-          bfact,dx,xsten0,nhalf0, &
-          uncaptured_volume_cen, &
-          uncaptured_centroid_cen, &
-          sdim)
-
-        else
-         print *,"continuous_mof invalid"
-         stop
-        endif
-
         imaterial_count=1
         do while ((imaterial_count.le.num_materials).and. &
                   (uncaptured_volume_vof.gt.zero))
@@ -17101,67 +17066,77 @@ contains
           endif
 
          enddo ! iflex=1...n_ndef
-        
-         if (continuous_mof.eq.STANDARD_MOF) then 
+       
+         if (order_count.eq.1) then
+          !do nothing, already initialized uncaptured_volume|centroid 
+         else if ((order_count.gt.1).and. &
+                  (order_count.le.n_orderings)) then
 
-          call Box_volumeFAST( &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
-          call Box_volumeFAST( &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
+          if (continuous_mof.eq.STANDARD_MOF) then 
 
-         else if (continuous_mof.eq.MOF_TRI_TET) then
+           call Box_volumeFAST( &
+            bfact,dx,xsten0,nhalf0, &
+            uncaptured_volume_vof, &
+            uncaptured_centroid_vof, &
+            sdim)
+           call Box_volumeFAST( &
+            bfact,dx,xsten0,nhalf0, &
+            uncaptured_volume_cen, &
+            uncaptured_centroid_cen, &
+            sdim)
 
-          call Box_volumeTRI_TET( &
-           bfact,dx, &
-           xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
+          else if (continuous_mof.eq.MOF_TRI_TET) then
 
-          call Box_volumeTRI_TET( &
-           bfact,dx, &
-           xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
+           call Box_volumeTRI_TET( &
+            bfact,dx, &
+            xsten0,nhalf0, &
+            uncaptured_volume_vof, &
+            uncaptured_centroid_vof, &
+            sdim)
 
-         else if (continuous_mof.eq.CMOF_X) then 
+           call Box_volumeTRI_TET( &
+            bfact,dx, &
+            xsten0,nhalf0, &
+            uncaptured_volume_cen, &
+            uncaptured_centroid_cen, &
+            sdim)
 
-          call Box_volumeFAST( &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
-          call Box_volume_super( &
-           cmofsten, &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
+          else if (continuous_mof.eq.CMOF_X) then 
 
-         else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+           call Box_volumeFAST( &
+            bfact,dx,xsten0,nhalf0, &
+            uncaptured_volume_vof, &
+            uncaptured_centroid_vof, &
+            sdim)
+           call Box_volume_super( &
+            cmofsten, &
+            bfact,dx,xsten0,nhalf0, &
+            uncaptured_volume_cen, &
+            uncaptured_centroid_cen, &
+            sdim)
 
-          call Box_volume_super( &
-           cmofsten, &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_vof, &
-           uncaptured_centroid_vof, &
-           sdim)
-          call Box_volume_super( &
-           cmofsten, &
-           bfact,dx,xsten0,nhalf0, &
-           uncaptured_volume_cen, &
-           uncaptured_centroid_cen, &
-           sdim)
+          else if (continuous_mof.eq.CMOF_F_AND_X) then !CMOF X and F
+
+           call Box_volume_super( &
+            cmofsten, &
+            bfact,dx,xsten0,nhalf0, &
+            uncaptured_volume_vof, &
+            uncaptured_centroid_vof, &
+            sdim)
+           call Box_volume_super( &
+            cmofsten, &
+            bfact,dx,xsten0,nhalf0, &
+            uncaptured_volume_cen, &
+            uncaptured_centroid_cen, &
+            sdim)
+
+          else
+           print *,"continuous_mof invalid"
+           stop
+          endif
 
          else
-          print *,"continuous_mof invalid"
+          print *,"order_count invalid: ",order_count
           stop
          endif
 

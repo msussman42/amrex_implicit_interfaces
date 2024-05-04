@@ -24814,6 +24814,7 @@ end subroutine initialize2d
        real(amrex_real) x,y,z,rr
        real(amrex_real) volcell
        real(amrex_real) cencell(SDIM)
+       real(amrex_real) centroid_absolute(SDIM)
        
        real(amrex_real) debug_vfrac_sum
        real(amrex_real) vel(SDIM)
@@ -26156,6 +26157,7 @@ end subroutine initialize2d
          mofdata(vofcomp_recon)=scalc(vofcomp_raw)
          mofdata(vofcomp_recon+SDIM+1)=zero ! order
          mofdata(vofcomp_recon+2*SDIM+2)=zero ! intercept
+
          do dir=1,SDIM
 
           if (level.eq.max_level) then
@@ -26180,7 +26182,7 @@ end subroutine initialize2d
            ! centroid relative to centroid of cell; not cell center.
           mofdata(vofcomp_recon+dir)=scalc(vofcomp_raw+dir)+centroid_noise
           mofdata(vofcomp_recon+SDIM+dir+1)=zero ! slope
-         enddo
+         enddo  !dir=1..SDIM
         enddo  ! im=1..num_materials
 
         ! sum F_fluid=1  sum F_solid <= 1
@@ -26249,6 +26251,13 @@ end subroutine initialize2d
         endif
 
         do imls=1,num_materials 
+
+         vofcomp_recon=(imls-1)*ngeom_recon+1
+         do dir=1,SDIM
+          centroid_absolute(dir)=cencell(dir)+ &
+             mofdata(vofcomp_recon+dir)
+         enddo
+
          call find_cut_geom_slope_CLSVOF( &
           continuous_mof, &
           LS_stencil, &
@@ -26257,7 +26266,9 @@ end subroutine initialize2d
           lsnormal, &
           lsnormal_valid, &
           ls_intercept, &
-          bfact,dx,xsten,nhalf, &
+          bfact,dx, &
+          xsten,nhalf, &
+          centroid_absolute, &
           imls, &
           dxmaxLS, &
           SDIM)

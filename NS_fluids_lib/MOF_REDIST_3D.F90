@@ -294,6 +294,8 @@ stop
 
       integer nhalf
       real(amrex_real) xsten(-3:3,SDIM)
+      real(amrex_real) :: centroid_absolute(SDIM)
+
       integer dir
       integer im
 
@@ -428,6 +430,11 @@ stop
        enddo ! im=1..num_materials
       
        if (triple_point_flag.eq.0) then 
+
+        do dir=1,SDIM
+         centroid_absolute(dir)=xsten(0,dir)
+        enddo
+
         do im=1,num_materials
          if (is_rigid(im).eq.0) then
           if (abs(local_LS(im)).le.two*dxmaxLS) then
@@ -442,6 +449,7 @@ stop
              ls_intercept, & ! num_materials
              bfact,dx, &
              xsten,nhalf, &
+             centroid_absolute, &
              im, &
              dxmaxLS, &
              SDIM)
