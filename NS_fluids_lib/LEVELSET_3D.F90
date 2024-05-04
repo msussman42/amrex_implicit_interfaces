@@ -19286,6 +19286,7 @@ stop
       integer :: im_primary_sub
       integer :: im_secondary
       integer :: im_loop
+      integer :: vofcomp
 
       integer :: num_particles
       real(amrex_real), allocatable, dimension(:,:) :: particle_list
@@ -19313,6 +19314,9 @@ stop
       real(amrex_real) DXMAXLS
       integer, PARAMETER :: nhalf=3
       real(amrex_real) :: xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) :: centroid_absolute(SDIM)
+      real(amrex_real) :: cencell(SDIM)
+      real(amrex_real) :: volcell
 
       type(interp_from_grid_parm_type) :: data_in 
       type(interp_from_grid_out_parm_type) :: data_out_LS
@@ -20257,6 +20261,9 @@ stop
 
           call gridsten_level(xsten,i,j,k,level,nhalf)
 
+          call Box_volumeFAST(bfact,dx,xsten,nhalf, &
+            volcell,cencell,SDIM)
+
           do dir_local=1,SDIM
            xsub(dir_local)=xsten(0,dir_local)
            xpart(dir_local)=xsub(dir_local)
@@ -20301,6 +20308,9 @@ stop
                !do nothing
               else if (abs(LS_sub(im_loop)).le.DXMAXLS) then
 
+                !slope_loop=0: determine number of local particles for
+                !  call to "CLSVOF" slope routine.
+                !slope_loop=1: make the call to the "CLSVOF" slope routine.
                do slope_loop=0,1
 
                 num_particles=0
@@ -20403,6 +20413,12 @@ stop
                    stop
                   endif
 
+                  vofcomp=(im_loop-1)*ngeom_recon+1
+                  do dir_local=1,SDIM
+                   centroid_absolute(dir_local)=cencell(dir_local)+ &
+                     slopefab_ptr(D_DECL(i,j,k),vofcomp+dir_local)
+                  enddo
+
                   call find_cut_geom_slope_CLSVOF( &
                     continuous_mof, &
                     ls_mof, &
@@ -20413,6 +20429,7 @@ stop
                     ls_intercept, &
                     bfact,dx, &
                     xsten,nhalf, &
+                    centroid_absolute, &
                     im_loop, &
                     DXMAXLS, &
                     SDIM)
@@ -20434,7 +20451,7 @@ stop
                   else if (lsnormal_valid(im_loop).eq.1) then
                    do dir_local=1,SDIM
                     slopefab_ptr(D_DECL(i,j,k), &
-                      (im_loop-1)*ngeom_recon+SDIM+2+dir_local)= &
+                      vofcomp+SDIM+1+dir_local)= &
                      lsnormal(im_loop,dir_local)
                    enddo
                   else 
