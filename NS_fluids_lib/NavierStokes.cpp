@@ -24746,6 +24746,7 @@ NavierStokes::makeStateDistALL(int update_particles) {
 
 #ifdef AMREX_PARTICLES
 
+   // calling from NavierStokes::makeStateDistALL (after reinitialization)
   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
    init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
   } else

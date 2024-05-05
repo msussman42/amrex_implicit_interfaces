@@ -6652,6 +6652,7 @@ void NavierStokes::prescribe_solid_geometryALL(Real time,
 
 #ifdef AMREX_PARTICLES
 
+   //calling from NavierStokes::prescribe_solid_geometryALL
   if ((slab_step>=0)&&(slab_step<ns_time_order)) {
    init_particle_containerALL(OP_PARTICLE_ADD,local_caller_string);
   } else
@@ -9046,6 +9047,7 @@ void NavierStokes::VOF_Recon_ALL(
   } else
    amrex::Error("slab_step invalid");
 
+   //calling from NavierStokes::VOF_Recon_ALL
   init_particle_containerALL(OP_PARTICLE_SLOPES,local_caller_string);
 
   slab_step=save_slab_step;
