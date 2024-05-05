@@ -15320,16 +15320,20 @@ contains
          dxplus=xsten0(2,dir)-xsten0(0,dir)
          dxminus=xsten0(0,dir)-xsten0(-2,dir)
 
-         if (centroid_absolute(dir).ge.xsten0(-1,dir)-EPS2*dxminus) then
+         if (centroid_absolute(dir).ge.xsten0(-3,dir)-EPS2*dxminus) then
           !do nothing
          else
           print *,"centroid_absolute invalid"
+          print *,"dir,centroid,xlo ", &
+            dir,centroid_absolute(dir),xsten0(-3,dir)
           stop
          endif
-         if (centroid_absolute(dir).le.xsten0(1,dir)+EPS2*dxplus) then
+         if (centroid_absolute(dir).le.xsten0(3,dir)+EPS2*dxplus) then
           !do nothing
          else
           print *,"centroid_absolute invalid"
+          print *,"dir,centroid,xhi ", &
+            dir,centroid_absolute(dir),xsten0(3,dir)
           stop
          endif
 
