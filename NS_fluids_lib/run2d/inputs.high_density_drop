@@ -38,7 +38,7 @@ amr.max_level =  1
 #ns.polymer_factor=0.0 0.0 0.0   # lambda(1-trace(A)*polymer_factor**2) 0.1
 
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 
 ns.minimum_relative_error=1.0e-13

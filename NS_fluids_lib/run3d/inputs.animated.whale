@@ -21,7 +21,7 @@ mg.bot_atol = 1.0e-8
 mg.rtol_b = -0.01
 Lp.v = 0
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.continuous_mof=0
 ns.MOF_TURN_OFF_LS=0
 ns.num_materials=2

@@ -26,7 +26,7 @@ ns.continuous_mof=0
 ns.vof_height_function=1
 ns.mof_decision_tree_learning=0
 ns.MOFITERMAX_AFTER_PREDICT=0
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.num_divu_outer_sweeps=1
 ns.minimum_relative_error=1.0e-22
 #number of Jacobi method cycles elliptic solver initially does.

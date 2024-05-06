@@ -16,7 +16,7 @@ ns.num_materials=3  # 1: liquid (outer)  2: ice (inner) 3: air (outer outer)
 ns.num_species_var=0
 ns.EILE_flag=-1 # weymouth and Yue
 ns.post_init_pressure_solve=1 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 # multigrid class
 mg.verbose = 0

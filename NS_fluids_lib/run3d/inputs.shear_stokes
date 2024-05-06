@@ -16,7 +16,7 @@ geometry.is_periodic = 1 1 0
 
 ns.EILE_flag=-1
 ns.continuous_mof=1
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 ns.tempconst=293.0 293.0 # default values for incomp flows
 ns.pressure_error_cutoff=0.0 0.0  # used only for compressible flows

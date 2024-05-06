@@ -28,7 +28,7 @@ mg.rtol_b = -0.01
 #Lp.v = 1
 
 ns.ns_tiling=false
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=0

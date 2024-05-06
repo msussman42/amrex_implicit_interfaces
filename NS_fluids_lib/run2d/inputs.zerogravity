@@ -27,7 +27,7 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 ns.num_materials=2
 ns.num_species_var=0

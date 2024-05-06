@@ -14,7 +14,7 @@ geometry.is_periodic=0 0
 # default is SFC (Space Filling Curve)
 DistributionMapping.strategy=SFC
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 # ns.continuous_mof=0 #regular MOF
 ns.continuous_mof=1 #CMOF(1)
 #ns.continuous_mof=10

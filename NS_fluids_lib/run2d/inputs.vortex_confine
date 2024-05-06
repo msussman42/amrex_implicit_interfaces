@@ -24,7 +24,7 @@ mg.rtol_b = -0.01
 ns.num_materials=2
 # num_species_var=3 for diagnostics
 ns.num_species_var=0
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.EILE_flag=1 # EI-LE (want same time step for 2d and 3d cases)
 amr.n_cell    = 64 64
 # 0- 1 level 1- 2 levels  2- 3 levels

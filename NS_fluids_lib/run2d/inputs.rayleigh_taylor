@@ -17,7 +17,7 @@ ns.show_timings=0
 
 ns.EILE_flag=-1
 ns.continuous_mof=1
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 
 # multigrid class

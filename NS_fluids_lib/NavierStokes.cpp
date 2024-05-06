@@ -52,8 +52,8 @@ namespace amrex{
 #define show_norm2_flag 0
 #define mf_check_inf_bounds 1
 
-#define DEFAULT_MOFITERMAX 15
-#define DEFAULT_MOFITERMAX_AFTER_PREDICT 15
+#define DEFAULT_MOFITERMAX 30
+#define DEFAULT_MOFITERMAX_AFTER_PREDICT 30
 
 #define PCOPY_DEBUG 0
 

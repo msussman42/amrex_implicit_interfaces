@@ -21,7 +21,7 @@ geometry.prob_lo  =  -0.01 0.0 0.0
 geometry.prob_hi  =  0.07 0.02 0.005  # units of cm
 geometry.is_periodic = 0 0 0
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.post_init_pressure_solve=1
 
 # multigrid class

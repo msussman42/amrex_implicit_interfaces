@@ -33,7 +33,7 @@ ns.num_species_var=0
 
 ns.continuous_mof=0
 ns.EILE_flag=1 # -1=Weymouth and Yue 1=alternate EI and LE
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
 # 1 solid (PROB_[23]D.F90)

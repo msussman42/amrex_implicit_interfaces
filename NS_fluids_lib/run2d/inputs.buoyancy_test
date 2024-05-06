@@ -28,7 +28,7 @@ mg.rtol_b = -0.01
 
 ns.num_materials=2
 ns.num_species_var=0
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 #-1=Weymouth Yue,  
 # 1=EILE (default), 2=always EI, 3=always LE
 ns.EILE_flag=1 # EI-LE (want same time step for 2d and 3d cases)

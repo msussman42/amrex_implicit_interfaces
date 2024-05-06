@@ -421,7 +421,7 @@ ns.mof_machine_learning=0
 # 1=EILE (default), 2=always EI, 3=always LE
 ns.EILE_flag        = -1
 
-ns.MOFITERMAX       = 15
+ns.MOFITERMAX=30
 
 
 # ----------------------------------------------------------

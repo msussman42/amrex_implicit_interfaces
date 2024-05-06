@@ -28,7 +28,7 @@ ns.num_materials=3 # 1: liquid ignore 2: viscoelastic fluid  3:solid helix
 ns.num_species_var=0
 ns.post_init_pressure_solve=1
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 #ns.MOF_TURN_OFF_LS=0
 #ns.MOF_DEBUG_RECON=0
 

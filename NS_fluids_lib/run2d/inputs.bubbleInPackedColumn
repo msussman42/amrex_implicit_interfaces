@@ -48,7 +48,7 @@ fab.do_initval=0  # default is 1
 amr.n_cell    = 48 144 
 amr.max_level = 0
 ns.use_LS_height=1
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid

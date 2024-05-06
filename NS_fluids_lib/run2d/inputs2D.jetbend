@@ -10,7 +10,7 @@ geometry.prob_hi   =  5.12 2.56
 geometry.is_periodic = 0 0 0
 
 ns.projection_pressure_scale=1.0e+8
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.continuous_mof=0
 ns.EILE_flag=1
 

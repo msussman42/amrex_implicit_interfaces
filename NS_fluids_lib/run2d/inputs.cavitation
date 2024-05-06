@@ -26,7 +26,7 @@ mg.rtol_b = -0.01
 Lp.v = 0
 
 ns.continuous_mof=0 # 0=MOF
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e+6
 ns.minimum_relative_error=1.0e-24

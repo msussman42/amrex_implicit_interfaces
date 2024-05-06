@@ -29,7 +29,7 @@ ns.num_materials=3
 ns.num_species_var=0
 
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 # about 3 cells separate the drop from the solid with 128x128 effective
 # fine grid resolution.

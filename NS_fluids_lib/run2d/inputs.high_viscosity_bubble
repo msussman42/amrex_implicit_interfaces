@@ -10,7 +10,7 @@ geometry.coord_sys      = 0  # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  8.0 16.0  
 geometry.is_periodic=0 0
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.EILE_flag=-1  # weymouth and yue method.
 
 

@@ -55,7 +55,7 @@ ns.num_materials=3
 ns.num_species_var=0
 ns.num_divu_outer_sweeps=2
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # was 1.0e+6 changed to 1.0e+10 October 21, 2017
 ns.projection_pressure_scale=1.0e+10

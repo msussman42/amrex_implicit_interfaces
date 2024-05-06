@@ -35,7 +35,7 @@ ns.continuous_mof=1
 ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0 # Kensuke 1.0e+4  Yongsheng 1.0 ZEYU ?
 #ns.show_mem=1
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 amr.n_cell=32 64 
 amr.max_level=0 
 

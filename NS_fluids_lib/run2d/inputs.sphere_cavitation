@@ -32,7 +32,7 @@ ns.mof_error_ordering=1 # 0-centroid furthest  1-use MOF error
 ns.mof_ordering=0 0 1
 # OPTION 2
 #ns.mof_ordering=0 1
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 # force AMR tagging within these specified boxes.
 ns.nblocks=1

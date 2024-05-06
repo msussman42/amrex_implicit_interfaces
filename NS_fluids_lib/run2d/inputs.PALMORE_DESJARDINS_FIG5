@@ -184,7 +184,7 @@ ns.FD_curv_interp   = 1
 # 1=EILE (default), 2=always EI, 3=always LE
 ns.EILE_flag        = -1
 
-ns.MOFITERMAX       = 15
+ns.MOFITERMAX=30
 
 
 # ----------------------------------------------------------
