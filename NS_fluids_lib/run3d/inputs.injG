@@ -19,7 +19,7 @@ ns.projection_pressure_scale=1.0e+4
 ns.num_materials=4
 ns.num_species_var=1
 ns.post_init_pressure_solve=0 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 # multigrid class
 mg.verbose = 0

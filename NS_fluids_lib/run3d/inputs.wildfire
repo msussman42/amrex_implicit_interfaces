@@ -18,7 +18,7 @@ ns.speciesconst=0.2 0.2 0.2 0.2 # oxygen concentration
 ns.speciesviscconst=1.0e-7 1.0e-7 0.01 1.0e-7
 ns.EILE_flag=-1 # weymouth and Yue
 ns.post_init_pressure_solve=1 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 # multigrid class
 mg.verbose = 0

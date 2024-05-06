@@ -29,7 +29,7 @@ Lp.v = 0
 
 ns.continuous_mof=0
 ns.EILE_flag=-1 # -1=Weymouth and Yue 1=alternate EI and LE
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.num_materials=2
 ns.num_species_var=0
 amr.n_cell    = 32 32

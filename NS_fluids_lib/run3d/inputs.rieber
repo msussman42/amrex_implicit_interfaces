@@ -26,7 +26,7 @@ ns.continuous_mof=0
 ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0e+6
 #ns.show_mem=1
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 
 amr.n_cell    = 64 64 32

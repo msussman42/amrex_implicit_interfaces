@@ -33,7 +33,7 @@ Lp.bottom_bottom_tol_factor=0.01 # def=0.01
 ns.num_materials=2
 # num_species_var=3 for diagnostics
 ns.num_species_var=0
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=0

@@ -62,7 +62,7 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  0.5 1.0
 geometry.is_periodic=0 0
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=0

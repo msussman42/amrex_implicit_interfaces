@@ -26,7 +26,7 @@ ns.angular_velocity=0.0
 
 geometry.is_periodic = 0 0 
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.continuous_mof=0
 
 

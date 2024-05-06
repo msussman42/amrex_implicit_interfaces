@@ -25,7 +25,7 @@ ns.num_materials=3
 ns.num_species_var=0
 
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 amr.n_cell    = 32 32
 amr.max_level = 6   # 6 = 3022 cpr

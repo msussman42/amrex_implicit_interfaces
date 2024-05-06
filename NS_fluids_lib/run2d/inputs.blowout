@@ -23,7 +23,7 @@ ns.initial_cg_cycles=10  # number of MGPCG steps to do in order to get
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.EILE_flag=-1
 ns.projection_pressure_scale=1.0e+6  # default is 1.0
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 #JAN18
 # (2014) and Sussman, Smith, Hussaini, Ohta, Zhi-Wei (2007)
 #JAN18

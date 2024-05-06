@@ -197,7 +197,7 @@ ns.FD_curv_interp=1
 ns.EILE_flag=1 #EILE
 ns.projection_pressure_scale=1.0
 #ns.show_mem=1
-ns.MOFITERMAX=10
+ns.MOFITERMAX=30
 ns.mof_decision_tree_learning=125000 # default: 40000
 ns.MOFITERMAX_AFTER_PREDICT=2
 

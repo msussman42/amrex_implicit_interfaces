@@ -7,7 +7,7 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   = 2.0 0.5
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 ns.num_materials=3
 ns.num_species_var=0

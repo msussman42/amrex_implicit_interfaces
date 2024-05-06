@@ -37,7 +37,7 @@ ns.projection_pressure_scale=10000.0
 #ns.v=1
 
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 # in IJMF paper, 8 ... 256 cells across drop diameter.
 # if domain is  6x3, base grid 96x48, max_level=1, diameter=2, then

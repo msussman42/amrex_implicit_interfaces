@@ -59,7 +59,7 @@ ns.angular_velocity=0.2583 # radians/s
 
 geometry.is_periodic = 0 1 0 
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.continuous_mof=0
 
 

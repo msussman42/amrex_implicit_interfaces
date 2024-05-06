@@ -38,7 +38,7 @@ ns.projection_pressure_scale=1.0e+6
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 ns.num_species_var=0
 ns.post_init_pressure_solve=1 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 
 # multigrid class
 mg.verbose = 0

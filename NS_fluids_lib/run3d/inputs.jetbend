@@ -30,7 +30,7 @@ amr.plotfile_on_restart=1
 geometry.is_periodic = 0 0 0 # 0 0 = RZ  0 0 0 = XYZ
 # 1.0e+8 appropriate for compressible or incompressible
 ns.projection_pressure_scale=1.0e+8
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
 ns.continuous_mof=0
 # EILE_flag=-1 Weymouth and Yue
 # EILE_flag=1 alternate EI-LE

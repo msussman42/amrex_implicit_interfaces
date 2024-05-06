@@ -32,7 +32,7 @@ geometry.prob_lo   =  -0.03 0.0  0.0
 geometry.prob_hi   =   0.09 0.06 0.0075   # x=L x^* L=1 cm
 geometry.is_periodic = 0 0 0
 
-ns.MOFITERMAX=15
+ns.MOFITERMAX=30
                             # and no gravity.
 
 # multigrid class
