@@ -12780,7 +12780,7 @@ contains
       if (use_only_pls_data.eq.1) then
 #ifdef AMREX_PARTICLES
        local_MOFITERMAX=0
-#elif
+#else
        print *,"expecting AMREX_PARTICLES==TRUE"
        stop
 #endif
