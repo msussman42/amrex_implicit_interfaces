@@ -368,7 +368,7 @@ stop
           else if (grid_side(dir).lt.fabhi(dir)) then
            !do nothing
           else
-           print *,"grid_side(dir) invalid"
+           print *,"grid_side(dir) (lo) invalid: ",dir,grid_side(dir)
            stop
           endif
          else if (side.eq.2) then
@@ -378,7 +378,7 @@ stop
           else if (grid_side(dir).gt.fablo(dir)) then
            !do nothing
           else
-           print *,"grid_side(dir) invalid"
+           print *,"grid_side(dir) (hi) invalid: ",dir,grid_side(dir)
            stop
           endif
          else
@@ -419,9 +419,9 @@ stop
            endif
           else if (vofbc(dir,side).eq.INT_DIR) then
 
-           if (imask.eq.1) then
+           if (imask.eq.1) then !fine-fine or periodic
             ! do nothing
-           else if (imask.eq.0) then
+           else if (imask.eq.0) then !coarse-fine
             interior_flag=0
            else
             print *,"imask invalid: ",imask
@@ -606,7 +606,7 @@ stop
             voflist_stencil(im)=voflist_test
            endif
           else
-           print *,"voflist_test bust"
+           print *,"voflist_test bust: ",voflist_test
            stop
           endif
          enddo ! im=1..num_materials
@@ -688,10 +688,15 @@ stop
 
          if (num_fluid_materials_in_cell.eq.1) then
           continuous_mof_parm=STANDARD_MOF
-         else if ((num_fluid_materials_in_cell.ge.2).and. &
+         else if (num_fluid_materials_in_cell.eq.2) then
+          continuous_mof_parm=continuous_mof
+         else if ((num_fluid_materials_in_cell.ge.3).and. &
                   (num_fluid_materials_in_cell.le.num_materials)) then
 
           continuous_mof_parm=continuous_mof
+#ifdef AMREX_PARTICLES
+          continuous_mof_parm=CMOF_X
+#endif
 
          else
           print *,"num_fluid_materials_in_cell invalid: ", &
