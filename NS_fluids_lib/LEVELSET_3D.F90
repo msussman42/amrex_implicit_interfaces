@@ -19285,6 +19285,7 @@ stop
       integer :: imat_particle
       integer :: im_primary_sub
       integer :: im_secondary
+      integer :: im_tertiary
       integer :: im_loop
       integer :: vofcomp
 
@@ -20078,7 +20079,14 @@ stop
                LS_sub(im_loop)=data_out_LS%data_interp(im_loop)
               enddo
 
+               ! get_primary_material is declared in: GLOBALUTIL.F90
               call get_primary_material(LS_sub,im_primary_sub)
+               ! get_secondary_material is declared in: MOF.F90
+              call get_secondary_material(LS_sub,im_primary_sub, &
+                      im_secondary)
+               ! get_tertiary_material is declared in: MOF.F90
+              call get_tertiary_material(LS_sub,im_primary_sub, &
+                      im_secondary,im_tertiary)
 
               if ((is_rigid(im_primary_sub).eq.1).or. &
                   (is_rigid(im_primary_sub).eq.0)) then
@@ -20158,6 +20166,23 @@ stop
                   if (ksub_test.ne.ksub) then
                    sub_found=0
                   endif 
+                 endif
+
+                 if (num_materials.eq.2) then
+                  !do nothing
+                 else if (num_materials.ge.3) then
+                  if ((im_tertiary.ge.1).and. &
+                      (im_tertiary.le.num_materials)) then
+                   if (abs(LS_sub(im_tertiary)).le.two*DXMAXLS) then
+                    sub_found=0
+                   endif
+                  else
+                   print *,"im_tertiary invalid"
+                   stop
+                  endif
+                 else
+                  print *,"num_materials invalid"
+                  stop
                  endif
 
                  if (sub_found.eq.1) then

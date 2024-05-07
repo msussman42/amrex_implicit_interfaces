@@ -11971,6 +11971,8 @@ contains
       real(amrex_real), INTENT(in) :: pls_normal(num_materials,sdim)
       integer, INTENT(in) :: pls_normal_valid(num_materials)
 
+      integer use_only_pls_data
+
       integer training_nguess
       integer local_MOFITERMAX
 
@@ -12192,6 +12194,7 @@ contains
 
       training_nguess=0
       nguess=0
+      use_only_pls_data=0
 
       if (nMAT_OPT.eq.1) then !expecting nMAT_OPT==1
 
@@ -12226,7 +12229,16 @@ contains
          endif
 
          nguess=nguess+1 
-         training_nguess=nguess
+         if (continuous_mof.eq.STANDARD_MOF) then 
+          training_nguess=nguess
+         else if (continuous_mof.eq.CMOF_X) then 
+          !do nothing
+         else if (continuous_mof.eq.CMOF_F_AND_X) then 
+          !do nothing
+         else
+          print *,"continuous_mof invalid: ",continuous_mof
+          stop
+         endif
 
          do dir=1,sdim-1
           angle_array(dir,nguess)=angle_init(dir)
@@ -12308,8 +12320,26 @@ contains
            (continuous_mof.eq.CMOF_X)) then  
 
         if (pls_normal_valid(critical_material).eq.1) then
-         !do nothing
+         if (continuous_mof.eq.STANDARD_MOF) then
+          use_only_pls_data=1
+         else if (continuous_mof.eq.CMOF_F_AND_X) then
+          use_only_pls_data=0
+         else if (continuous_mof.eq.CMOF_X) then
+          use_only_pls_data=0
+         else
+          print *,"continuous_mof invalid:",continuous_mof
+          stop
+         endif
         else if (pls_normal_valid(critical_material).eq.0) then
+         use_only_pls_data=0
+        else 
+         print *,"pls_normal_valid(critical_material) invalid"
+         stop
+        endif
+
+        if (use_only_pls_data.eq.1) then
+         !do nothing
+        else if (use_only_pls_data.eq.0) then
 
          do ipredict=1,MOF_INITIAL_GUESS_CENTROIDS
 
@@ -12622,7 +12652,7 @@ contains
          endif
 
         else
-         print *,"PLS_NORMAL_valid invalid2d"
+         print *,"use_only_pls_data invalid: ",use_only_pls_data
          print *,"critical_material,flag ",critical_material, &
           pls_normal_valid(critical_material) 
          stop
@@ -12747,12 +12777,32 @@ contains
 
       iter=0
 
-      if (training_nguess.ge.1) then
-       local_MOFITERMAX=MOFITERMAX_AFTER_PREDICT
-      else if (training_nguess.eq.0) then
-       ! do nothing
+      if (use_only_pls_data.eq.1) then
+#ifdef AMREX_PARTICLES
+       local_MOFITERMAX=0
+#elif
+       print *,"expecting AMREX_PARTICLES==TRUE"
+       stop
+#endif
+      else if (use_only_pls_data.eq.0) then
+
+       if (training_nguess.ge.1) then
+
+#ifdef AMREX_PARTICLES
+        print *,"expecting no training if AMREX_PARTICLES==TRUE"
+        stop
+#endif
+
+        local_MOFITERMAX=MOFITERMAX_AFTER_PREDICT
+
+       else if (training_nguess.eq.0) then
+        ! do nothing
+       else
+        print *,"training_nguess invalid: ",training_nguess
+        stop
+       endif
       else
-       print *,"training_nguess invalid: ",training_nguess
+       print *,"use_only_pls_data invalid: ",use_only_pls_data
        stop
       endif
 
@@ -16322,7 +16372,7 @@ contains
         sdim)
 
       else
-       print *,"continuous_mof invalid"
+       print *,"continuous_mof invalid: ",continuous_mof
        stop
       endif
 
@@ -16575,7 +16625,7 @@ contains
            refcentroid, &
            refvfrac, &
            npredict, &
-           continuous_mof_rigid, &
+           continuous_mof_rigid, & !STANDARD_MOF or MOF_TRI_TET
            cmofsten, &
            nslope, &
            intercept, &
@@ -17690,7 +17740,7 @@ contains
            xsten0_LS,nhalf0,xtet_domain,shapeflag,sdim)
 
          do dir2=1,nrecon
-          mofdata(dir2)=zero
+          mofdata(dir2)=zero !pls_normal zapped out.
          enddo
          do im=1,num_materials
           vof_super(im)=zero
