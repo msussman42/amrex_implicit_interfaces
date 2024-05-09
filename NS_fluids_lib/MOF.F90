@@ -15323,11 +15323,11 @@ contains
       if (sdim.eq.3) then
        klo=-1
        khi=1
-       cutoff=sqrt(three)*dxmaxLS_volume_constraint
+       cutoff=four*dxmaxLS_volume_constraint
       else if (sdim.eq.2) then
        klo=0
        khi=0
-       cutoff=sqrt(two)*dxmaxLS_volume_constraint
+       cutoff=four*dxmaxLS_volume_constraint
       else
        print *,"dimension bust"
        stop

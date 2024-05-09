@@ -20177,11 +20177,11 @@ stop
                     sub_found=0
                    endif
                   else
-                   print *,"im_tertiary invalid"
+                   print *,"im_tertiary invalid: ",im_tertiary
                    stop
                   endif
                  else
-                  print *,"num_materials invalid"
+                  print *,"num_materials invalid: ",num_materials
                   stop
                  endif
 
