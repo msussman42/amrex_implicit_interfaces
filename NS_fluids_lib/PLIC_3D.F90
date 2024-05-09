@@ -695,7 +695,9 @@ stop
 
           continuous_mof_parm=continuous_mof
 #ifdef AMREX_PARTICLES
-          continuous_mof_parm=CMOF_X
+          if (1.eq.0) then
+           continuous_mof_parm=CMOF_X
+          endif
 #endif
 
          else
