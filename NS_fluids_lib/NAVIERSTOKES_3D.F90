@@ -7056,6 +7056,7 @@ END SUBROUTINE SIMP
 
       real(amrex_real) ldata(D_DECL(3,3,3))
       real(amrex_real) LSvolume,LSfacearea
+      real(amrex_real) local_flotsam
       real(amrex_real) LScentroid(SDIM)
       real(amrex_real) LScen_material(SDIM)
       integer i1,j1,k1,k1lo,k1hi
@@ -7369,14 +7370,26 @@ END SUBROUTINE SIMP
         GRID_DATA_PARM%xsten=>xsten
 
         do im=1,num_materials
-
          LS_LOCAL(im)=lsfab(D_DECL(i,j,k),im)
+        enddo
+        call get_primary_material(LS_LOCAL,im_primary)
+
+        do im=1,num_materials
+
+         vofcomp=(im-1)*ngeom_recon+1
+
+         local_flotsam=mofdata_tess(vofcomp)
 
          do k1=k1lo,k1hi
          do j1=-1,1
          do i1=-1,1
           ldata(D_DECL(i1+2,j1+2,k1+2))= &
            lsfab(D_DECL(i+i1,j+j1,k+k1),im)
+
+          if (ldata(D_DECL(i1+2,j1+2,k1+2)).ge.zero) then
+           local_flotsam=zero
+          endif
+
          enddo
          enddo
          enddo
@@ -7386,7 +7399,6 @@ END SUBROUTINE SIMP
           ldata,LSvolume,LSfacearea, &
           LScentroid,VOFTOL,SDIM)
 
-         vofcomp=(im-1)*ngeom_recon+1
          do dir=1,SDIM
           cen_material(dir)=mofdata_tess(vofcomp+dir)+cengrid(dir)
           LScen_material(dir)=LScentroid(dir)
@@ -7399,7 +7411,11 @@ END SUBROUTINE SIMP
           idest=IQ_LS_CEN_SUM_COMP+dir+3*(im-1)
           local_result(idest)=local_result(idest)+ &
             volgrid*LSvolume*LScen_material(dir)
-         enddo
+         enddo !dir=1,SDIM
+
+         idest=IQ_F_FLOTSAM_COMP+im
+         local_result(idest)=local_result(idest)+volgrid*local_flotsam
+
          idest=IQ_LS_F_SUM_COMP+im
          local_result(idest)=local_result(idest)+volgrid*LSvolume
 
@@ -7453,8 +7469,6 @@ END SUBROUTINE SIMP
          local_result(idest)=local_result(idest)+totalE
 
         enddo  ! im=1..num_materials
-
-        call get_primary_material(LS_LOCAL,im_primary)
 
         do dir=1,3
          idest=IQ_VORT_SUM_COMP+dir
