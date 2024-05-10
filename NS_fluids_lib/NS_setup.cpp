@@ -2554,8 +2554,13 @@ NavierStokes::sum_integrated_quantities (
 
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" F=" << 
              F_MAT[im] << '\n';
+
+   std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" FLOTSAM F=" <<
+      NS_sumdata[im+IQ_F_FLOTSAM_COMP] << '\n';
+
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" LS F=" <<
       NS_sumdata[im+IQ_LS_F_SUM_COMP] << '\n';
+
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" E=" <<
       NS_sumdata[2*im+IQ_FE_SUM_COMP+1] << '\n';
   }

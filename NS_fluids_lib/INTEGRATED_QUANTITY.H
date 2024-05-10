@@ -57,7 +57,9 @@ integral of w dot w
 
 #define IQ_SPECIES_MASS_SUM_COMP (IQ_USER_SUM_COMP+ncomp_sum_int_user12)
 
-#define IQ_TOTAL_SUM_COMP (IQ_SPECIES_MASS_SUM_COMP+num_species_var*num_materials)
+#define IQ_F_FLOTSAM_COMP (IQ_SPECIES_MASS_SUM_COMP+num_species_var*num_materials)
+
+#define IQ_TOTAL_SUM_COMP (IQ_F_FLOTSAM_COMP+num_materials)
 
 
 #endif
