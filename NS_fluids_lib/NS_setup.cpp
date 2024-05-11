@@ -693,7 +693,7 @@ NavierStokes::set_refine_density_extrap_components(int coord,int indx) {
  }    
 #endif
 
- if (ibase_refine_density_local==ENUM_NUM_REFINE_DENSITY_TYPE-1) {
+ if (ibase_refine_density_local==ENUM_NUM_REFINE_DENSITY_TYPE) {
   // do nothing
  } else {
   std::cout << "ibase_refine_density_local=" << 
@@ -702,63 +702,6 @@ NavierStokes::set_refine_density_extrap_components(int coord,int indx) {
  }
 
 } // end subroutine set_refine_density_extrap_components
-
-void
-NavierStokes::set_refine_density_extrap_components_main(
-  int coord,int indx) {
-
- BCRec bc;
-
- int ibase_refine_density_local=0;
-
- if (ENUM_NUM_REFINE_DENSITY_TYPE==4*(AMREX_SPACEDIM-1)) {
-  // do nothing
- } else
-  amrex::Error("ENUM_NUM_REFINE_DENSITY_TYPE invalid");
-
- int k=0;
-
-#if (AMREX_SPACEDIM==3)
- for (k=0;k<=1;k++) {
-#endif
- for (int j=0;j<=1;j++) {
- for (int i=0;i<=1;i++) {
-
-  set_refine_density_bc(bc,phys_bc,i,j,k);
-  std::string ijk_strE="RefineDenMain";
-  if (i==0)
-   ijk_strE+="0";
-  else 
-   ijk_strE+="1";
-  if (j==0)
-   ijk_strE+="0";
-  else 
-   ijk_strE+="1";
-  if (k==0)
-   ijk_strE+="0";
-  else 
-   ijk_strE+="1";
-
-  desc_lst.setComponent(indx,ibase_refine_density_local,
-   ijk_strE,bc,fort_refine_density_extrapfill,
-   &refine_density_pc_interp);
-
-  ibase_refine_density_local++;
- }
- }
-#if (AMREX_SPACEDIM==3) 
- }    
-#endif
-     
- if (ibase_refine_density_local==ENUM_NUM_REFINE_DENSITY_TYPE-1) {
-  // do nothing
- } else {
-  std::cout << "ibase_refine_density_local=" << 
-   ibase_refine_density_local << '\n';
-  amrex::Error("ibase_refine_density_local invalid");
- }
-
-} // end subroutine set_refine_density_extrap_components_main
 
 
 // variableSetUp() is called from:
@@ -797,6 +740,8 @@ NavierStokes::variableSetUp ()
     std::cout << "num_species_var= " << num_species_var << '\n';
     std::cout << "num_materials_viscoelastic= " << 
      num_materials_viscoelastic << '\n';
+    std::cout << "num_materials_compressible= " << 
+     num_materials_compressible << '\n';
     std::cout << "prescribe_temperature_outflow= " << 
      prescribe_temperature_outflow << '\n';
     
@@ -1236,12 +1181,14 @@ NavierStokes::variableSetUp ()
      desc_lst.addDescriptor(Refine_Density_Type,
       IndexType::TheCellType(),
       1,NUM_CELL_REFINE_DENSITY,
-      &pc_interp,
+      &refine_density_pc_interp,
       state_holds_data);
 
       // ngrow=1
      desc_lstGHOST.addDescriptor(Refine_Density_Type,IndexType::TheCellType(),
-      1,EXTRAP_NCOMP_REFINE_DENSITY,&pc_interp,null_state_holds_data);
+      1,EXTRAP_NCOMP_REFINE_DENSITY,
+      &refine_density_pc_interp,
+      null_state_holds_data);
 
       // setComponent: 0..ENUM_NUM_REFINE_DENSITY_TYPE-1
       // modifies dest_lstGHOST
@@ -1270,136 +1217,65 @@ NavierStokes::variableSetUp ()
       MOFvelocity_bcs_refine_density.resize(ENUM_NUM_REFINE_DENSITY_TYPE);
 
       int ibase_refine_density=0;
-FIX ME PUT ijk loop here!
 
-      std::string T11_str="T11"; 
-      T11_str+=im_string;
-      MOFvelocity_names_tensor[ibase_tensor]=T11_str;
-      set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,0,0);
+      int k=0;
 
-      ibase_tensor++;
-     
-      std::string T12_str="T12"; 
-      T12_str+=im_string; 
-      MOFvelocity_names_tensor[ibase_tensor]=T12_str;
-      set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,0,1);
-    
-      ibase_tensor++;
-     
-      std::string T22_str="T22"; 
-      T22_str+=im_string; 
-      MOFvelocity_names_tensor[ibase_tensor]=T22_str;
-      set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,1,1);
-
-      ibase_tensor++;
-     
-      std::string T33_str="T33"; 
-      T33_str+=im_string; 
-      MOFvelocity_names_tensor[ibase_tensor]=T33_str;
-
-      if (AMREX_SPACEDIM==2) {
-       if (coord == COORDSYS_RZ) {
-        set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-       } else if (coord == COORDSYS_CARTESIAN) {
-	   // placeholder: Q33 should always be 0
-        set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-       } else if (coord == COORDSYS_CYLINDRICAL) {
-	   // placeholder: Q33 should always be 0
-        set_hoop_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc);
-       } else
-        amrex::Error("coord invalid");
-      } else if (AMREX_SPACEDIM==3) {
-       if (coord == COORDSYS_CARTESIAN) {
-        set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
-       } else if (coord == COORDSYS_CYLINDRICAL) {
-        set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,2,2);
-       } else
-        amrex::Error("coord invalid");
-      } else
-       amrex::Error("sdim invalid");
-
-#if (AMREX_SPACEDIM == 3)
-      ibase_tensor++;
-     
-      std::string T13_str="T13"; 
-      T13_str+=im_string; 
-      MOFvelocity_names_tensor[ibase_tensor]=T13_str;
-      set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,0,2);
-
-      ibase_tensor++;
-     
-      std::string T23_str="T23"; 
-      T23_str+=im_string; 
-      MOFvelocity_names_tensor[ibase_tensor]=T23_str;
-      set_tensor_bc(MOFvelocity_bcs_tensor[ibase_tensor],phys_bc,1,2);
-
+#if (AMREX_SPACEDIM==3)
+      for (k=0;k<=1;k++) {
 #endif
+      for (int j=0;j<=1;j++) {
+      for (int i=0;i<=1;i++) {
+       std::string ijk_str="RefineDen";
 
-      if (ibase_tensor==ENUM_NUM_TENSOR_TYPE-1) {
+       if (i==0)
+        ijk_str+="0";
+       else 
+        ijk_str+="1";
+       if (j==0)
+        ijk_str+="0";
+       else 
+        ijk_str+="1";
+       if (k==0)
+        ijk_str+="0";
+       else 
+        ijk_str+="1";
+       ijk_str+="-";
+       ijk_str+=im_string;
+       MOFvelocity_names_refine_density[ibase_refine_density]=ijk_str;
+       set_refine_density_bc(
+	 MOFvelocity_bcs_refine_density[ibase_refine_density],
+	 phys_bc,i,j,k);
+
+       ibase_refine_density++;
+      }
+      }
+#if (AMREX_SPACEDIM==3) 
+      }    
+#endif
+     
+      if (ibase_refine_density==ENUM_NUM_REFINE_DENSITY_TYPE) {
        // do nothing
       } else 
-       amrex::Error("ibase_tensor!=ENUM_NUM_TENSOR_TYPE-1");
+       amrex::Error("ibase_refine_density!=ENUM_NUM_TENSOR_TYPE");
 
-      StateDescriptor::BndryFunc MOFvelocity_fill_class_tensor(
-       fort_tensorfill,
-       fort_group_tensorfill);
+      StateDescriptor::BndryFunc MOFvelocity_fill_class_refine_density(
+       fort_refine_densityfill,
+       fort_group_refine_densityfill);
 
-      desc_lst.setComponent(Tensor_Type,
-       partid*ENUM_NUM_TENSOR_TYPE,
-       MOFvelocity_names_tensor,
-       MOFvelocity_bcs_tensor,
-       MOFvelocity_fill_class_tensor,
-       &pc_interp);
+      desc_lst.setComponent(Refine_Density_Type,
+       partid*ENUM_NUM_REFINE_DENSITY_TYPE,
+       MOFvelocity_names_refine_density,
+       MOFvelocity_bcs_refine_density,
+       MOFvelocity_fill_class_refine_density,
+       &refine_density_pc_interp);
 
      } // partid=0..nparts-1
 
-     //ngrow=0
-     desc_lst.addDescriptor(TensorX_Type,TheUMACType,
-      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorX_Type,TheUMACType,
-      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-
-     std::string MAC_postfix_str="X";
-      //modifies dest_lstGHOST, ibase_tensor=0
-     set_tensor_extrap_components(coord,MAC_postfix_str,TensorX_Type,0);
-      //modifies dest_lst
-     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorX_Type);
-
-     //ngrow=0
-     desc_lst.addDescriptor(TensorY_Type,TheVMACType,
-      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorY_Type,TheVMACType,
-      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-
-     MAC_postfix_str="Y";
-      //ibase_tensor=0
-     set_tensor_extrap_components(coord,MAC_postfix_str,TensorY_Type,0);
-     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorY_Type);
-
-      //ngrow=0
-     desc_lst.addDescriptor(TensorZ_Type,TheWMACType,
-      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-     desc_lstGHOST.addDescriptor(TensorZ_Type,TheWMACType,
-      0,ENUM_NUM_TENSOR_TYPE,&tensor_pc_interp,
-      null_state_holds_data);
-
-     MAC_postfix_str="Z";
-      //ibase_tensor=0
-     set_tensor_extrap_components(coord,MAC_postfix_str,TensorZ_Type,0);
-     set_tensor_extrap_components_main(coord,MAC_postfix_str,TensorZ_Type);
-
-    } else if (num_materials_viscoelastic==0) {
+    } else if (num_materials_compressible==0) {
      // do nothing
     } else
-     amrex::Error("num_materials_viscoelastic invalid");
+     amrex::Error("num_materials_compressible invalid");
 
-
-FIX ME ABOVE
 
 // LEVELSET ------------------------------------------------- 
 

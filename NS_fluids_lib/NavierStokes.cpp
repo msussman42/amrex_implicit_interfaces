@@ -417,6 +417,8 @@ int  NavierStokes::ncomp_sum_int_user12=0;
 // set using elastic_viscosity, and other criteria
 int  NavierStokes::num_materials_viscoelastic=0;
 
+int  NavierStokes::num_materials_compressible=0;
+
 int  NavierStokes::num_state_material=ENUM_SPECIESVAR; // den,T
 int  NavierStokes::num_state_base=ENUM_SPECIESVAR; // den,T
 int  NavierStokes::ngeom_raw=AMREX_SPACEDIM+1;
