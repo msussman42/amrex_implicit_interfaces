@@ -20,7 +20,9 @@ namespace {
 namespace amrex{
 
 // State_Type:
-//  vel, pres, num_state_material x num_materials, ngeom_raw x num_materials, error ind
+//  vel, pres, 
+//  num_state_material x num_materials, 
+//  ngeom_raw x num_materials, error ind
 // Umac_Type, Vmac_Type, Wmac_Type:
 //  mac vel
 // LS_Type:
@@ -31,7 +33,9 @@ namespace amrex{
 // Solid_State_Type:
 // velocity
 // Tensor_Type:
-// Tij x num_materials_viscoelastic + sdim
+// Tij x num_materials_viscoelastic 
+// refine_density_Type:
+// 2^d x num_materials_compressible
 
 // Q is stored in the code.  A=Q+I   A is sometimes called the
 // "configuration tensor" 
@@ -338,9 +342,13 @@ public:
     static int mof_error_ordering;
 
     static Vector<int> store_elastic_data; // viscoelastic parameter
+    static Vector<int> store_refine_density_data; // refine density parameter
 
      // this is set according to store_elastic_data
     static int num_materials_viscoelastic;
+
+     // this is set according to store_refine_density_data
+    static int num_materials_compressible;
 
      // FSI_FLUID=0
      // FSI_PRESCRIBED_PROBF90=1
@@ -1655,6 +1663,7 @@ protected:
     static int TensorX_Type;
     static int TensorY_Type;
     static int TensorZ_Type;
+    static int Refine_Density_Type;
     static int NUM_STATE_TYPE;
 
     static Vector<Real> tension_min;
@@ -1845,6 +1854,7 @@ protected:
 
     static Vector<int> im_solid_map;//nparts components, 0..num_materials-1
     static Vector<int> im_elastic_map;
+    static Vector<int> im_refine_density_map;
 
      // 0=volume fraction  1=mass fraction 2=impedance fraction
     static int pressure_select_criterion; 
