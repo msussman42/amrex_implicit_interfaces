@@ -504,7 +504,8 @@ Vector<int> NavierStokes::les_model; // def=0
 
 int NavierStokes::transposegradu=0;
 
-Vector<int> NavierStokes::store_elastic_data; // def=0, 0...num_materials-1
+Vector<int> NavierStokes::store_elastic_data;//def=0,0...num_materials-1
+Vector<int> NavierStokes::store_refine_density_data;//def=0,0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
 Vector<Real> NavierStokes::static_damping_coefficient; // def=0
 
@@ -572,8 +573,12 @@ int NavierStokes::BLB_PRES=-32767;
 int NavierStokes::BLB_SECONDMOMENT=-32767;
 
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..num_materials-1
-// 0<=im_elastic_map<num_materials
-Vector<int> NavierStokes::im_elastic_map; //0...num_materials_viscoelastic-1
+//0<=im_elastic_map<num_materials
+//0...num_materials_viscoelastic-1
+Vector<int> NavierStokes::im_elastic_map;
+//0<=im_refine_density_map<num_materials
+//0...num_materials_compressible-1
+Vector<int> NavierStokes::im_refine_density_map;
 
 Real NavierStokes::real_number_of_cells=0.0; 
 
@@ -1401,6 +1406,7 @@ void fortran_parameters() {
  viscoelastic_model_temp.resize(NavierStokes::num_materials);
 
  NavierStokes::store_elastic_data.resize(NavierStokes::num_materials);
+ NavierStokes::store_refine_density_data.resize(NavierStokes::num_materials);
  for (int im=0;im<NavierStokes::num_materials;im++) {
 
   elastic_viscosity_temp[im]=0.0;
@@ -1408,6 +1414,7 @@ void fortran_parameters() {
   viscoelastic_model_temp[im]=0;
 
   NavierStokes::store_elastic_data[im]=0;
+  NavierStokes::store_refine_density_data[im]=0;
  }
  pp.queryAdd("elastic_viscosity",elastic_viscosity_temp,
    NavierStokes::num_materials);
@@ -1894,6 +1901,8 @@ void fortran_parameters() {
   } else if ((NavierStokes::material_type[im]>0)&& 
              (NavierStokes::material_type[im]<999)) {
 
+   store_refine_density_data[im]=1;
+
    if ((NavierStokes::FSI_flag[im]==FSI_FLUID)||
        (NavierStokes::FSI_flag[im]==FSI_FLUID_NODES_INIT)) {
     //do nothing
@@ -2024,6 +2033,19 @@ void fortran_parameters() {
   std::cout << "n_sites= " << n_sites << '\n';
   amrex::Error("n_sites invalid(1)");
  }
+
+
+ NavierStokes::num_materials_compressible=0;
+ for (int im=0;im<NavierStokes::num_materials;im++) {
+  if (NavierStokes::store_refine_density_data[im]==1) {
+   NavierStokes::num_materials_compressible++;
+  } else if (NavierStokes::store_refine_density_data[im]==0) {
+   // do nothing
+  } else
+   amrex::Error("NavierStokes::store_refine_density_data invalid");
+ } // im=0..NavierStokes::num_materials-1 
+
+
  double start_initialization = ParallelDescriptor::second();
 
   // declared in PROB_CPP_PARMS.F90
@@ -2066,6 +2088,7 @@ void fortran_parameters() {
   &probhix,&probhiy,&probhiz,
   &NavierStokes::num_species_var,
   &NavierStokes::num_materials_viscoelastic,
+  &NavierStokes::num_materials_compressible,
   &NavierStokes::num_state_material,
   &NavierStokes::num_state_base,
   &NavierStokes::ngeom_raw,
@@ -2103,6 +2126,7 @@ void fortran_parameters() {
   elastic_time_temp.dataPtr(),
   viscoelastic_model_temp.dataPtr(),
   NavierStokes::store_elastic_data.dataPtr(),
+  NavierStokes::store_refine_density_data.dataPtr(),
   heatflux_factor_temp.dataPtr(),
   heatviscconst_temp.dataPtr(),
   prerecalesce_heatviscconst_temp.dataPtr(),
