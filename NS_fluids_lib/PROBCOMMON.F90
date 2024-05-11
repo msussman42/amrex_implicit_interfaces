@@ -339,6 +339,10 @@ implicit none
 !   fort_material_type_interface
 ! added January 30,
 !   fort_conserve_total_energy
+! added May 11,2024
+!   num_materials_compressible
+!   store_refine_density_data
+!   im_refine_density_map
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM
       integer, PARAMETER :: MOF_TRAINING_NDIM_CLASSIFY=AMREX_SPACEDIM-1
