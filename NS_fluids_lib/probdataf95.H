@@ -111,11 +111,14 @@
 
       integer num_species_var
       integer num_materials_viscoelastic
+      integer num_materials_compressible
       integer fort_im_elastic_map(MAX_NUM_MATERIALS)
+      integer fort_im_refine_density_map(MAX_NUM_MATERIALS)
       integer fort_viscoelastic_model(MAX_NUM_MATERIALS)
       real(amrex_real) fort_elastic_viscosity(MAX_NUM_MATERIALS)
       real(amrex_real) fort_elastic_time(MAX_NUM_MATERIALS)
       integer fort_store_elastic_data(MAX_NUM_MATERIALS)
+      integer fort_store_refine_density_data(MAX_NUM_MATERIALS)
 
       real(amrex_real) fort_Carreau_alpha(MAX_NUM_MATERIALS)
       real(amrex_real) fort_Carreau_beta(MAX_NUM_MATERIALS)

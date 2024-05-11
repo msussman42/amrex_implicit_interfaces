@@ -373,6 +373,7 @@ stop
         ccprobhix,ccprobhiy,ccprobhiz, &
         ccnum_species_var, &
         ccnum_materials_viscoelastic, &
+        ccnum_materials_compressible, &
         ccnum_state_material, &
         ccnum_state_base, &
         ccngeom_raw, &
@@ -410,6 +411,7 @@ stop
         ccelastic_time, &
         ccviscoelastic_model, &
         ccstore_elastic_data, &
+        ccstore_refine_density_data, &
         ccheatflux_factor, &
         ccheatviscconst, &
         ccprerecalesce_heatviscconst, &
@@ -532,7 +534,9 @@ stop
       integer, INTENT(in) :: ccnum_species_var
       
       integer, INTENT(in) :: ccnum_materials_viscoelastic
+      integer, INTENT(in) :: ccnum_materials_compressible
       integer :: nelastic
+      integer :: ncompressible
       
       integer, INTENT(in) :: ccnum_state_material
       integer, INTENT(in) :: ccnum_state_base
@@ -565,7 +569,8 @@ stop
 
       real(amrex_real), INTENT(in) :: ccthermal_microlayer_size(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccshear_microlayer_size(ccnum_materials)
-      real(amrex_real), INTENT(in) :: ccbuoyancy_microlayer_size(ccnum_materials)
+      real(amrex_real), INTENT(in) :: &
+            ccbuoyancy_microlayer_size(ccnum_materials)
       real(amrex_real), INTENT(in) :: &
             ccphasechange_microlayer_size(ccnum_materials)
 
@@ -574,6 +579,7 @@ stop
       real(amrex_real), INTENT(in) :: ccelastic_time(ccnum_materials)
       integer, INTENT(in) :: ccviscoelastic_model(ccnum_materials)
       integer, INTENT(in) :: ccstore_elastic_data(ccnum_materials)
+      integer, INTENT(in) :: ccstore_refine_density_data(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccheatflux_factor(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccheatviscconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: &
@@ -1451,6 +1457,7 @@ stop
       endif
       
       num_materials_viscoelastic=ccnum_materials_viscoelastic
+      num_materials_compressible=ccnum_materials_compressible
       
       num_state_base=ccnum_state_base
       if (num_state_base.ne.2) then
@@ -1468,6 +1475,8 @@ stop
       if ((num_species_var.lt.0).or. &
           (num_materials_viscoelastic.lt.0).or. &
           (num_materials_viscoelastic.gt.num_materials).or. &
+          (num_materials_compressible.lt.0).or. &
+          (num_materials_compressible.gt.num_materials).or. &
           (num_materials.lt.1).or. &
           (num_interfaces.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS).or. &
@@ -1503,6 +1512,7 @@ stop
        print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS ", &
         num_species_var,num_materials_viscoelastic, &
         MAX_NUM_MATERIALS
+       print *,"num_materials_compressible ",num_materials_compressible
        print *,"MAX_NUM_EOS ",MAX_NUM_EOS
        print *,"ngeom_raw ",ngeom_raw
        print *,"ngeom_recon ",ngeom_recon
@@ -1573,6 +1583,7 @@ stop
        fort_elastic_time(im)=ccelastic_time(im)
        fort_viscoelastic_model(im)=ccviscoelastic_model(im)
        fort_store_elastic_data(im)=ccstore_elastic_data(im)
+       fort_store_refine_density_data(im)=ccstore_refine_density_data(im)
        fort_heatflux_factor(im)=ccheatflux_factor(im)
        fort_heatviscconst(im)=ccheatviscconst(im)
        fort_prerecalesce_heatviscconst(im)=ccprerecalesce_heatviscconst(im)
@@ -1581,6 +1592,7 @@ stop
        fort_prerecalesce_stiffCV(im)=ccprerecalesce_stiffCV(im)
       
        fort_im_elastic_map(im)=-1
+       fort_im_refine_density_map(im)=-1
      
        fort_Carreau_alpha(im)=ccCarreau_alpha(im)
        fort_Carreau_beta(im)=ccCarreau_beta(im)
@@ -1629,7 +1641,31 @@ stop
        enddo
        stop
       endif
+     
+      ncompressible=0
+      do im=1,num_materials
+       if (fort_store_refine_density_data(im).eq.0) then
+        ! do nothing
+       else if (fort_store_refine_density_data(im).eq.1) then
+        ncompressible=ncompressible+1
+        fort_im_refine_density_map(ncompressible)=im-1
+       else
+        print *,"fort_store_refine_density_data(im) invalid"
+        stop
+       endif
+      enddo ! im=1..num_materials
       
+      if (ncompressible.ne.num_materials_compressible) then
+       print *,"ncompressible.ne.num_materials_compressible"
+       print *,"ncompressible ",ncompressible
+       print *,"num_materials_compressible ",num_materials_compressible
+       do im=1,num_materials
+        print *,"im,fort_store_refine_density_data(im) ",im, &
+                fort_store_refine_density_data(im)
+       enddo
+       stop
+      endif
+
       if (num_interfaces.ge.MAX_NUM_INTERFACES) then
        print *,"too many surface tension coefficients, increase "
        print *,"MAX_NUM_INTERFACES"
@@ -1746,7 +1782,11 @@ stop
         print *,"im,fort_elastic_time ",im,fort_elastic_time(im)
         print *,"im,fort_viscoelastic_model ",im,fort_viscoelastic_model(im)
         print *,"im,fort_store_elastic_data ",im,fort_store_elastic_data(im)
+        print *,"im,fort_store_refine_density_data ", &
+                im,fort_store_refine_density_data(im)
         print *,"im,fort_im_elastic_map ",im,fort_im_elastic_map(im)
+        print *,"im,fort_im_refine_density_map ", &
+                im,fort_im_refine_density_map(im)
 
         print *,"im,fort_Carreau_alpha ",im,fort_Carreau_alpha(im)
         print *,"im,fort_Carreau_beta ",im,fort_Carreau_beta(im)
@@ -2107,6 +2147,7 @@ stop
         cc_int_size, &
         ccnum_species_var, &
         ccnum_materials_viscoelastic, &
+        ccnum_materials_compressible, &
         ccnum_state_material, &
         ccnum_state_base, &
         ccngeom_raw, &
@@ -2125,6 +2166,7 @@ stop
       integer, INTENT(in) :: ccnten
       integer, INTENT(in) :: ccnum_species_var
       integer, INTENT(in) :: ccnum_materials_viscoelastic
+      integer, INTENT(in) :: ccnum_materials_compressible
       integer, INTENT(in) :: ccnum_state_material
       integer, INTENT(in) :: ccnum_state_base
       integer, INTENT(in) :: ccngeom_raw
@@ -2186,6 +2228,7 @@ stop
       endif
       
       num_materials_viscoelastic=ccnum_materials_viscoelastic
+      num_materials_compressible=ccnum_materials_compressible
       
       num_state_base=ccnum_state_base
       if (num_state_base.ne.2) then
@@ -2203,6 +2246,8 @@ stop
       if ((num_species_var.lt.0).or. &
           (num_materials_viscoelastic.lt.0).or. &
           (num_materials_viscoelastic.gt.num_materials).or. &
+          (num_materials_compressible.lt.0).or. &
+          (num_materials_compressible.gt.num_materials).or. &
           (num_materials.lt.1).or. &
           (num_interfaces.lt.1).or. &
           (num_materials.gt.MAX_NUM_MATERIALS).or. &
@@ -2232,6 +2277,7 @@ stop
        print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS ", &
         num_species_var,num_materials_viscoelastic, &
         MAX_NUM_MATERIALS
+       print *,"num_materials_compressible ",num_materials_compressible
        print *,"ngeom_raw ",ngeom_raw
        print *,"ngeom_recon ",ngeom_recon
        print *,"fort: num_state_material ",num_state_material

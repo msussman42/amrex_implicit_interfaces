@@ -1407,6 +1407,7 @@ void fortran_parameters() {
 
  NavierStokes::store_elastic_data.resize(NavierStokes::num_materials);
  NavierStokes::store_refine_density_data.resize(NavierStokes::num_materials);
+
  for (int im=0;im<NavierStokes::num_materials;im++) {
 
   elastic_viscosity_temp[im]=0.0;
@@ -1837,25 +1838,6 @@ void fortran_parameters() {
   } // im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++
  } // im=0;im<NavierStokes::num_materials;im++
 
- int ioproc=0;
- if (ParallelDescriptor::IOProcessor())
-  ioproc=1;
-
- const int cc_int_size=sizeof(int);
-
-  // declared in PROB_CPP_PARMS.F90
- fort_override_MAIN_GLOBALS(
-  &cc_int_size,
-  &NavierStokes::num_species_var,
-  &NavierStokes::num_materials_viscoelastic,
-  &NavierStokes::num_state_material,
-  &NavierStokes::num_state_base,
-  &NavierStokes::ngeom_raw,
-  &NavierStokes::ngeom_recon,
-  &NavierStokes::num_materials,
-  &NavierStokes::num_interfaces,
-  &ioproc);
-
  ParallelDescriptor::Barrier();
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
@@ -1901,7 +1883,7 @@ void fortran_parameters() {
   } else if ((NavierStokes::material_type[im]>0)&& 
              (NavierStokes::material_type[im]<999)) {
 
-   store_refine_density_data[im]=1;
+   NavierStokes::store_refine_density_data[im]=1;
 
    if ((NavierStokes::FSI_flag[im]==FSI_FLUID)||
        (NavierStokes::FSI_flag[im]==FSI_FLUID_NODES_INIT)) {
@@ -2044,6 +2026,31 @@ void fortran_parameters() {
   } else
    amrex::Error("NavierStokes::store_refine_density_data invalid");
  } // im=0..NavierStokes::num_materials-1 
+
+
+ ParallelDescriptor::Barrier();
+
+ int ioproc=0;
+ if (ParallelDescriptor::IOProcessor())
+  ioproc=1;
+
+ const int cc_int_size=sizeof(int);
+
+  // declared in PROB_CPP_PARMS.F90
+ fort_override_MAIN_GLOBALS(
+  &cc_int_size,
+  &NavierStokes::num_species_var,
+  &NavierStokes::num_materials_viscoelastic,
+  &NavierStokes::num_materials_compressible,
+  &NavierStokes::num_state_material,
+  &NavierStokes::num_state_base,
+  &NavierStokes::ngeom_raw,
+  &NavierStokes::ngeom_recon,
+  &NavierStokes::num_materials,
+  &NavierStokes::num_interfaces,
+  &ioproc);
+
+ ParallelDescriptor::Barrier();
 
 
  double start_initialization = ParallelDescriptor::second();
@@ -3225,6 +3232,7 @@ NavierStokes::read_params ()
     pp.queryAdd("conserve_total_energy",conserve_total_energy);
 
     pp.getarr("material_type",material_type,0,num_materials);
+
     material_type_evap.resize(num_materials);
     material_type_lowmach.resize(num_materials);
     material_type_visual.resize(num_materials);
@@ -3320,11 +3328,13 @@ NavierStokes::read_params ()
     elastic_viscosity.resize(num_materials);
     static_damping_coefficient.resize(num_materials);
     store_elastic_data.resize(num_materials);
+    store_refine_density_data.resize(num_materials);
 
     for (int im=0;im<num_materials;im++) {
      elastic_viscosity[im]=0.0;
      static_damping_coefficient[im]=0.0;
      store_elastic_data[im]=0;
+     store_refine_density_data[im]=0;
     }
     pp.queryAdd("elastic_viscosity",elastic_viscosity,num_materials);
 
@@ -3413,6 +3423,8 @@ NavierStokes::read_params ()
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
+    num_materials_compressible=0;
+
     for (int i=0;i<num_materials;i++) {
      if (material_type[i]==0) {
       if (ns_is_rigid(i)!=0)
@@ -3422,12 +3434,41 @@ NavierStokes::read_params ()
        amrex::Error("ns_is_rigid invalid");
      } else if ((material_type[i]>0)&&
                 (material_type[i]<999)) {
+      store_refine_density_data[i]=1;
+      num_materials_compressible++;
       if (ns_is_rigid(i)!=0)
        amrex::Error("ns_is_rigid invalid");
      } else
       amrex::Error("material_type invalid");
 
     } // i=0..num_materials-1
+
+    im_refine_density_map.resize(num_materials_compressible);
+
+    int refine_density_partid=0;
+    for (int i=0;i<num_materials;i++) {
+     if (store_refine_density_data[i]==1) {
+      im_refine_density_map[refine_density_partid]=i;
+      refine_density_partid++;
+     } else if (store_refine_density_data[i]==0) {
+      // do nothing
+     } else
+      amrex::Error("store_refine_density_data invalid");
+    } // im=0..num_materials-1 
+
+    if (refine_density_partid==num_materials_compressible) {
+     // do nothing
+    } else
+     amrex::Error("refine_density_partid==num_materials_compressible failed");
+
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
+     Refine_Density_Type=NUM_STATE_TYPE;
+     NUM_STATE_TYPE++;
+    } else if (num_materials_compressible==0) {
+     Refine_Density_Type=-1;
+    } else
+     amrex::Error("num_materials_compressible invalid");
 
      //smooth_type: 0=GSRB 1=weighted Jacobi 2=ILU
     ParmParse pplp("Lp");
@@ -4981,6 +5022,19 @@ NavierStokes::read_params ()
      } else
       amrex::Error("num_materials_viscoelastic invalid");
 
+     if ((num_materials_compressible>=1)&&
+         (num_materials_compressible<=num_materials)) {
+
+      if (ParallelDescriptor::IOProcessor()) {
+       std::cout << "for material " << i << '\n';
+       std::cout << "store_refine_density_data= " << 
+	       store_refine_density_data[i] << '\n';
+      }
+     } else if (num_materials_compressible==0) {
+      // do nothing
+     } else
+      amrex::Error("num_materials_compressible invalid");
+
     } // i=0..num_materials-1
 
     pp.queryAdd("wait_time",wait_time);
@@ -5748,6 +5802,8 @@ NavierStokes::read_params ()
 
      std::cout << "num_materials_viscoelastic " << 
         num_materials_viscoelastic << '\n';
+     std::cout << "num_materials_compressible " << 
+        num_materials_compressible << '\n';
      std::cout << "num_species_var " << num_species_var << '\n';
      std::cout << "num_materials " << num_materials << '\n';
      std::cout << "num_interfaces " << num_interfaces << '\n';
