@@ -11606,7 +11606,7 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         // NavierStokes::make_viscoelastic_tensorMACALL is declared in
 	//   NavierStokes.cpp
 	// make_viscoelastic_tensorMACALL -> make_viscoelastic_tensorMAC
-	// -> fort_maketensor_mac
+	// -> fort_maketensor_mac (GODUNOV_3D.F90)
 
        int flux_grid_type=0;
        make_viscoelastic_tensorMACALL(im,

@@ -8468,8 +8468,8 @@ stop
 
        do itensor=1,ENUM_NUM_TENSOR_TYPE
 
-         data_in%dir_deriv=-1
-         data_in%grid_type_data=-1
+         data_in%dir_deriv=-1 !interpolation
+         data_in%grid_type_data=-1 !cell centered
          do dir_local=1,SDIM
           data_in%box_type_data(dir_local)=0
          enddo
