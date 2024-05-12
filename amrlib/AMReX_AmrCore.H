@@ -120,6 +120,7 @@ public:
 
     int global_AMR_num_materials; //init in InitAmr
     int global_AMR_num_materials_viscoelastic; //init in InitAmr
+    int global_AMR_num_materials_compressible; //init in InitAmr
     int global_AMR_num_species_var; //init in InitAmr
 
 #ifdef AMREX_PARTICLES
