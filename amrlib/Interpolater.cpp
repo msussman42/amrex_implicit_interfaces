@@ -19,6 +19,7 @@ LSInterp                  ls_interp;
 SEMInterp                 sem_interp_DEFAULT;
 SEMInterp                 sem_interp_LOW_PARM;
 SEMInterp                 sem_interp_HIGH_PARM;
+RefineDensityInterp       refine_density_pc_interp;
 multiMOFInterp            multi_mof_interp;
 multiEXTMOFInterp         multi_extmof_interp;
 BurnVelInterp             burnvel_interp;
@@ -85,6 +86,96 @@ InterpolaterBoxCoarsener::clone () const
 
 
 Interpolater::~Interpolater () {}
+
+RefineDensityInterp::~RefineDensityInterp () {}
+
+Box
+RefineDensityInterp::CoarseBox (const Box& fine,
+  int bfactc,int bfactf,int grid_type)
+{
+ if ((bfactc<1)||(bfactf<1))
+  amrex::Error("bfactc or bfactf invalid");
+ if (bfactf>bfactc)
+  amrex::Error("cannot have bfactf>bfactc");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
+
+ Box crse = amrex::coarsen(fine,2);
+ 
+ if (bfactc>1) {
+  Box e_crse = amrex::coarsen(crse,bfactc);
+  e_crse.refine(bfactc);
+  crse=e_crse;
+ } else if (bfactc==1) {
+  // do nothing
+ } else
+  amrex::Error("bfactc invalid");
+
+ return crse;       
+}
+
+void
+RefineDensityInterp::interp (Real time,
+  const FArrayBox& crse,
+  int               crse_comp,
+  FArrayBox&        fine,
+  int               fine_comp,
+  int               ncomp,
+  const Box&        fine_region,
+  const Geometry&   crse_geom,
+  const Geometry&   fine_geom,
+  Vector<BCRec>& /* bcr */,
+  int levelc,int levelf,
+  int bfactc,int bfactf,
+  int grid_type)
+{
+
+ if (time>=0.0) {
+  //do nothing
+ } else 
+  amrex::Error("time invalid");
+
+ if (grid_type==-1) {
+  // do nothing
+ } else
+  amrex::Error("grid_type invalid");
+
+ //
+ // Set up to call FORTRAN.
+ //
+ const int* clo = crse.box().loVect();
+ const int* chi = crse.box().hiVect();
+ const int* flo = fine.loVect();
+ const int* fhi = fine.hiVect();
+ const int* lo  = fine_region.loVect();
+ const int* hi  = fine_region.hiVect();
+
+ const Real* cdat  = crse.dataPtr(crse_comp);
+ Real*       fdat  = fine.dataPtr(fine_comp);
+
+ const Real* prob_lo=fine_geom.ProbLo();
+ const Real* dxf = fine_geom.CellSize();
+ const Real* dxc = crse_geom.CellSize();
+
+ if (ncomp!=4*(AMREX_SPACEDIM-1)) {
+  std::cout << "ncomp " << ncomp << '\n';
+  amrex::Error("must interpolate all RefineDensity data at once");
+ }
+
+ fort_refine_density_interp(
+  cdat,AMREX_ARLIM(clo),AMREX_ARLIM(chi),
+  clo,chi,
+  fdat,AMREX_ARLIM(flo),AMREX_ARLIM(fhi),
+  lo,hi,
+  prob_lo,dxf,dxc,
+  &ncomp,
+  &levelc,&levelf,
+  &bfactc,&bfactf);
+
+}
 
 
 multiMOFInterp::~multiMOFInterp () {}

@@ -172,6 +172,33 @@ public:
 
 
 
+class RefineDensityInterp
+    :
+    public Interpolater
+{
+public:
+
+    virtual ~RefineDensityInterp ();
+    virtual Box CoarseBox (const Box& fine,int bfactc,int bfactf,
+       int grid_type);
+    virtual void interp (
+     Real time,
+     const FArrayBox& crse,
+     int              crse_comp,
+     FArrayBox&       fine,
+     int              fine_comp,
+     int              ncomp,
+     const Box&       fine_region,
+     const Geometry&  crse_geom,
+     const Geometry&  fine_geom,
+     Vector<BCRec>&    bcr,
+     int levelc,int levelf,
+     int bfactc,int bfactf,
+     int grid_type);
+};
+
+
+
 class multiMOFInterp
     :
     public Interpolater
@@ -296,6 +323,7 @@ extern SEMInterp                 sem_interp_DEFAULT;
 extern SEMInterp                 sem_interp_LOW_PARM;
 extern SEMInterp                 sem_interp_HIGH_PARM;
 extern PCInterpNull              pc_interp_null;
+extern RefineDensityInterp       refine_density_pc_interp;
 extern multiMOFInterp            multi_mof_interp;
 extern multiEXTMOFInterp         multi_extmof_interp;
 extern BurnVelInterp             burnvel_interp;

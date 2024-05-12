@@ -1820,6 +1820,215 @@ stop
 
       end subroutine fort_pcinterp
 
+      subroutine fort_refine_density_interp ( &
+       crse_data, &
+       DIMS(crse_data), &
+       crse_bx_lo, & ! crse_bx=CoarseBox(fine_bx)
+       crse_bx_hi, &
+       fine_data, &
+       DIMS(fine_data), &
+       fblo,fbhi, & ! fine_bx=fine_region & fine.box()
+       problo, &
+       dxf,dxc, &
+       nvar, &
+       levelc,levelf, &
+       bfact_coarse,bfact_fine) &
+      bind(c,name='fort_refine_density_interp')
+
+      use global_utility_module
+      use probcommon_module
+
+      implicit none
+
+      integer, INTENT(in) :: levelc,levelf
+      integer, INTENT(in) :: bfact_coarse,bfact_fine
+      integer, INTENT(in) :: crse_bx_lo(SDIM)
+      integer, INTENT(in) :: crse_bx_hi(SDIM)
+      integer clo(SDIM),chi(SDIM)
+      integer, INTENT(in) :: DIMDEC(crse_data)
+      integer, INTENT(in) :: DIMDEC(fine_data)
+      integer, INTENT(in) :: fblo(SDIM), fbhi(SDIM)
+      integer flo(SDIM),fhi(SDIM)
+      integer, INTENT(in) :: nvar
+      real(amrex_real), INTENT(in) :: crse_data(DIMV(crse_data),nvar)
+      real(amrex_real), INTENT(out) :: fine_data(DIMV(fine_data),nvar)
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM)
+      real(amrex_real), INTENT(in) :: dxc(SDIM)
+      integer stenlo(3),stenhi(3)
+      integer stenlen(3)
+      integer growlo(3),growhi(3)
+      integer :: box_type(SDIM)
+
+      integer ifine,jfine,kfine
+      integer ic,jc,kc
+      integer dir2
+      integer n
+
+      real(amrex_real) wt(SDIM)
+
+      real(amrex_real) voltotal,volall
+      real(amrex_real) fine_value(nvar)
+
+      integer, parameter :: nhalf=1
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
+      real(amrex_real) xfine(SDIM)
+      integer chi_loc(SDIM)
+
+      if (bfact_coarse.lt.1) then
+       print *,"bfact_coarse invalid: ",bfact_coarse
+       stop
+      endif
+      if (bfact_fine.lt.1) then
+       print *,"bfact_fine invalid: ",bfact_fine
+       stop
+      endif
+      if (bfact_fine.gt.bfact_coarse) then
+       print *,"bfact_fine invalid: ",bfact_fine
+       stop
+      endif
+      if ((levelc.ne.levelf-1).or.(levelc.lt.0)) then
+       print *,"levelc or levelf invalid"
+       stop
+      endif
+      if (levelf.gt.fort_finest_level) then
+       print *,"levelf invalid"
+       stop
+      endif
+      if (nvar.ne.4*(AMREX_SPACEDIM-1)) then
+       print *,"nvar invalid in fort_refine_density_interp"
+       stop
+      endif
+
+      do dir2=1,SDIM
+       chi_loc(dir2)=bfact_coarse-1
+      enddo
+
+      do dir2=1,SDIM
+       clo(dir2)=crse_bx_lo(dir2)
+       chi(dir2)=crse_bx_hi(dir2)
+       flo(dir2)=fblo(dir2)
+       fhi(dir2)=fbhi(dir2)
+      enddo ! dir2
+      
+      call growntilebox(flo,fhi,flo,fhi,growlo,growhi,0) 
+
+      do kfine=growlo(3),growhi(3)
+      do jfine=growlo(2),growhi(2)
+      do ifine=growlo(1),growhi(1)
+
+         !coarse_subelement_stencil is declared in GLOBALUTIL.F90
+       call coarse_subelement_stencil(ifine,jfine,kfine,stenlo,stenhi, &
+         bfact_coarse,bfact_fine)
+       do dir2=1,SDIM
+        stenlen(dir2)=stenhi(dir2)-stenlo(dir2)+1
+        if (stenlen(dir2).ne.bfact_coarse) then
+         print *,"stenlen invalid"
+         stop
+        endif
+       enddo ! dir2=1..sdim
+
+       call gridsten_level(xsten,ifine,jfine,kfine,levelf,nhalf)
+
+       ic=stenlo(1)
+       jc=stenlo(2)
+       kc=stenlo(SDIM)
+       call gridstenND_level(xstenND,ic,jc,kc,levelc,nhalf)
+       do dir2=1,SDIM
+        xfine(dir2)=xsten(0,dir2)-xstenND(0,dir2)
+        if ((xfine(dir2).ge.-EPS3*dxc(dir2)).and. &
+            (xfine(dir2).le.(EPS3+bfact_coarse)*dxc(dir2))) then
+         !do nothing
+        else
+         print *,"xfine out of bounds: ",dir2,xfine(dir2)
+         stop
+        endif
+       enddo ! dir2=1..sdim
+
+       n=0
+       kfine2=0
+#if (AMREX_SPACEDIM==3)
+       do kfine2=0,1
+#endif
+       do jfine2=0,1
+       do ifine2=0,1
+        n=n+1
+        fine_value(n)=zero
+        voltotal=zero
+
+        do ic=stenlo(1),stenhi(1)
+         do ic2=0,1
+          call intersect_weight_interp_refine( &
+           ic,ic2,ifine,ifine2,  &
+           bfact_coarse,bfact_fine,wt(1))
+
+FIX ME
+        if (wt(1).gt.zero) then
+         do jc=stenlo(2),stenhi(2)
+          if (box_type(2).eq.1) then
+           call intersect_weightMAC_interp(jc,jfine, &
+            bfact_coarse,bfact_fine,wt(2))
+          else if (box_type(2).eq.0) then
+           call intersect_weight_interp(jc,jfine, &
+            bfact_coarse,bfact_fine,wt(2))
+          else
+           print *,"box_type(2) invalid"
+           stop
+          endif
+          if (wt(2).gt.zero) then
+           do kc=stenlo(3),stenhi(3)
+            if (SDIM.eq.3) then
+             if (box_type(SDIM).eq.1) then
+              call intersect_weightMAC_interp(kc,kfine, &
+               bfact_coarse,bfact_fine,wt(SDIM))
+             else if (box_type(SDIM).eq.0) then
+              call intersect_weight_interp(kc,kfine, &
+               bfact_coarse,bfact_fine,wt(SDIM))
+             else
+              print *,"box_type(SDIM) invalid"
+              stop
+             endif
+            endif
+            if (wt(SDIM).gt.zero) then
+             volall=wt(1)
+             do dir2=2,SDIM
+              volall=volall*wt(dir2)
+             enddo
+             do n=1,nvar
+              if (zapflag.eq.0) then
+               fine_value(n)=fine_value(n)+ &
+                 volall*crse_data(D_DECL(ic,jc,kc),n)
+              else if (zapflag.eq.1) then
+               ! do nothing
+              else
+               print *,"zapflag invalid"
+               stop
+              endif
+             enddo
+             voltotal=voltotal+volall
+            endif
+           enddo ! kc
+          endif
+         enddo ! jc
+        endif
+       enddo ! ic
+
+       if (voltotal.gt.zero) then
+        do n=1,nvar
+         fine_value(n)=fine_value(n)/voltotal
+         fine_data(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
+        enddo
+       else
+        print *,"voltotal invalid: ",voltotal
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! looping ifine,jfine,kfine
+
+      end subroutine fort_refine_density_interp
 
       ! enable_spectral:
       ! 0 - low order
