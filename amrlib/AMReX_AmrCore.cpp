@@ -405,22 +405,33 @@ AmrCore::InitAmr () {
   amrex::Error("global_AMR_num_materials invalid");
 
  global_AMR_num_materials_viscoelastic=0;
+ global_AMR_num_materials_compressible=0;
 
  Vector<Real> elastic_viscosity_temp;
  Vector<Real> elastic_time_temp;
+ Vector<int> material_type_temp;
  Vector<int> viscoelastic_model_temp;
  Vector<int> store_elastic_data_temp;
+ Vector<int> store_refine_density_data_temp;
+ material_type_temp.resize(global_AMR_num_materials);
  elastic_viscosity_temp.resize(global_AMR_num_materials);
  elastic_time_temp.resize(global_AMR_num_materials);
  viscoelastic_model_temp.resize(global_AMR_num_materials);
  store_elastic_data_temp.resize(global_AMR_num_materials);
+ store_refine_density_data_temp.resize(global_AMR_num_materials);
 
  for (int im=0;im<global_AMR_num_materials;im++) {
+  material_type_temp[im]=0;
   elastic_viscosity_temp[im]=0.0;
   elastic_time_temp[im]=0.0;
   viscoelastic_model_temp[im]=0;
   store_elastic_data_temp[im]=0;
+  store_refine_density_data_temp[im]=0;
  }
+
+ ppns.getarr("material_type",material_type_temp,0,
+    global_AMR_num_materials);
+
  ppns.queryAdd("elastic_viscosity",elastic_viscosity_temp,
      	  global_AMR_num_materials);
  ppns.queryAdd("elastic_time",elastic_time_temp,
@@ -429,6 +440,7 @@ AmrCore::InitAmr () {
      	  global_AMR_num_materials);
 
  for (int im=0;im<global_AMR_num_materials;im++) {
+
   if (elastic_viscosity_temp[im]>0.0) {
    if (fort_built_in_elastic_model(&elastic_viscosity_temp[im],
         &viscoelastic_model_temp[im])==1) {
@@ -442,6 +454,18 @@ AmrCore::InitAmr () {
    // do nothing
   } else
    amrex::Error("elastic_viscosity_temp[im] invalid");
+
+  if (material_type_temp[im]==0) {
+   //do nothing
+  } else if (material_type_temp[im]==999) {
+   //do nothing
+  } else if ((material_type_temp[im]>=1)&&
+   	     (material_type_temp[im]<999)) {
+   store_refine_density_data_temp[im]=1;
+   global_AMR_num_materials_compressible++;
+  } else
+   amrex::Error("material_type_temp[im] invalid");
+
  } // im=0..global_AMR_num_materials-1 
 
  for (int im=0;im<global_AMR_num_materials;im++) {
@@ -496,6 +520,7 @@ AmrCore::InitAmr () {
  int num_materials=global_AMR_num_materials;
  int num_species_var=global_AMR_num_species_var;
  int num_materials_viscoelastic=global_AMR_num_materials_viscoelastic;
+ int num_materials_compressible=global_AMR_num_materials_compressible;
 
  std::fflush(NULL);
  std::fflush(NULL);
@@ -508,6 +533,10 @@ AmrCore::InitAmr () {
  std::fflush(NULL);
  std::fflush(NULL);
  std::cout << "num_materials_viscoelastic= "<<num_materials_viscoelastic<<
+      " on processor " << ParallelDescriptor::MyProc() << "\n";
+ std::fflush(NULL);
+ std::fflush(NULL);
+ std::cout << "num_materials_compressible= "<<num_materials_compressible<<
       " on processor " << ParallelDescriptor::MyProc() << "\n";
  std::fflush(NULL);
 
