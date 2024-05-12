@@ -644,66 +644,6 @@ NavierStokes::set_tensor_extrap_components_main(
 
 } // end subroutine set_tensor_extrap_components_main
 
-
-
-
-void
-NavierStokes::set_refine_density_extrap_components(int coord,int indx) {
-
- BCRec bc;
-
- int ibase_refine_density_local=0;
-
- if (ENUM_NUM_REFINE_DENSITY_TYPE==4*(AMREX_SPACEDIM-1)) {
-  // do nothing
- } else
-  amrex::Error("ENUM_NUM_REFINE_DENSITY_TYPE invalid");
-
- int k=0;
-
-#if (AMREX_SPACEDIM==3)
- for (k=0;k<=1;k++) {
-#endif
- for (int j=0;j<=1;j++) {
- for (int i=0;i<=1;i++) {
-
-  set_refine_density_bc(bc,phys_bc,i,j,k);
-  std::string ijk_strE="RefineDenExtrap";
-  if (i==0)
-   ijk_strE+="0";
-  else 
-   ijk_strE+="1";
-  if (j==0)
-   ijk_strE+="0";
-  else 
-   ijk_strE+="1";
-  if (k==0)
-   ijk_strE+="0";
-  else 
-   ijk_strE+="1";
-
-  desc_lstGHOST.setComponent(indx,ibase_refine_density_local,
-   ijk_strE,bc,fort_refine_density_extrapfill,
-   &refine_density_pc_interp);
-
-  ibase_refine_density_local++;
- }
- }
-#if (AMREX_SPACEDIM==3) 
- }    
-#endif
-
- if (ibase_refine_density_local==ENUM_NUM_REFINE_DENSITY_TYPE) {
-  // do nothing
- } else {
-  std::cout << "ibase_refine_density_local=" << 
-   ibase_refine_density_local << '\n';
-  amrex::Error("ibase_refine_density_local invalid");
- }
-
-} // end subroutine set_refine_density_extrap_components
-
-
 // variableSetUp() is called from:
 // NSBld::variableSetUp()
 // NSBld::variableSetUp() is called from:
@@ -1185,14 +1125,70 @@ NavierStokes::variableSetUp ()
       state_holds_data);
 
       // ngrow=1
-     desc_lstGHOST.addDescriptor(Refine_Density_Type,IndexType::TheCellType(),
+     desc_lstGHOST.addDescriptor(Refine_Density_Type,
+      IndexType::TheCellType(),
       1,EXTRAP_NCOMP_REFINE_DENSITY,
       &refine_density_pc_interp,
       null_state_holds_data);
 
-      // setComponent: 0..ENUM_NUM_REFINE_DENSITY_TYPE-1
-      // modifies dest_lstGHOST
-     set_refine_density_extrap_components(coord,Refine_Density_Type);
+     int ibase_refine_density_ghost=0;
+     if (ENUM_NUM_REFINE_DENSITY_TYPE==4*(AMREX_SPACEDIM-1)) {
+      // do nothing
+     } else
+      amrex::Error("ENUM_NUM_REFINE_DENSITY_TYPE invalid");
+
+     Vector<std::string> ghost_names_refine_density;
+     ghost_names_refine_density.resize(ENUM_NUM_REFINE_DENSITY_TYPE);
+    
+     Vector<BCRec> ghost_bcs_refine_density;
+     ghost_bcs_refine_density.resize(ENUM_NUM_REFINE_DENSITY_TYPE);
+
+     int k=0;
+#if (AMREX_SPACEDIM==3)
+     for (k=0;k<=1;k++) {
+#endif
+     for (int j=0;j<=1;j++) {
+     for (int i=0;i<=1;i++) {
+      std::string ijk_str="RefineDenGhost";
+
+      if (i==0)
+       ijk_str+="0";
+      else 
+       ijk_str+="1";
+      if (j==0)
+       ijk_str+="0";
+      else 
+       ijk_str+="1";
+      if (k==0)
+       ijk_str+="0";
+      else 
+       ijk_str+="1";
+      ghost_names_refine_density[ibase_refine_density_ghost]=ijk_str;
+      set_refine_density_bc(
+        ghost_bcs_refine_density[ibase_refine_density_ghost],
+        phys_bc,i,j,k);
+
+      ibase_refine_density_ghost++;
+     } //i
+     } //j
+#if (AMREX_SPACEDIM==3) 
+     } //k
+#endif
+     
+     if (ibase_refine_density_ghost==ENUM_NUM_REFINE_DENSITY_TYPE) {
+      // do nothing
+     } else 
+      amrex::Error("ibase_refine_density_ghost!=ENUM_NUM_REFINE_DENSITY_TYPE");
+
+     StateDescriptor::BndryFunc ghost_fill_class_refine_density(
+      fort_refine_densityfill,
+      fort_group_refine_densityfill);
+
+     desc_lstGhost.setComponent(Refine_Density_Type,0,
+     ghost_names_refine_density,
+     ghost_bcs_refine_density,
+     ghost_fill_class_refine_density,
+     &refine_density_pc_interp);
 
      if (ENUM_NUM_REFINE_DENSITY_TYPE==EXTRAP_NCOMP_REFINE_DENSITY) {
       // do nothing
@@ -1218,8 +1214,7 @@ NavierStokes::variableSetUp ()
 
       int ibase_refine_density=0;
 
-      int k=0;
-
+      k=0;
 #if (AMREX_SPACEDIM==3)
       for (k=0;k<=1;k++) {
 #endif
@@ -1256,7 +1251,7 @@ NavierStokes::variableSetUp ()
       if (ibase_refine_density==ENUM_NUM_REFINE_DENSITY_TYPE) {
        // do nothing
       } else 
-       amrex::Error("ibase_refine_density!=ENUM_NUM_TENSOR_TYPE");
+       amrex::Error("ibase_refine_density!=ENUM_NUM_REFINE_DENSITY_TYPE");
 
       StateDescriptor::BndryFunc MOFvelocity_fill_class_refine_density(
        fort_refine_densityfill,

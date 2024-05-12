@@ -19,6 +19,21 @@ extern "C"
       int* cc_time_order,
       Real* slablow,Real* slabhigh);
 
+    void fort_refine_density_interp (
+     const Real* crse, 
+     AMREX_ARLIM_P(clo), AMREX_ARLIM_P(chi),
+     const int* crse_bx_lo, 
+     const int* crse_bx_hi,
+     Real* fine, 
+     AMREX_ARLIM_P(flo), AMREX_ARLIM_P(fhi),
+     const int* fblo, const int* fbhi,
+     const Real* prob_lo,
+     const Real* dxf, const Real* dxc,
+     const int* nvar, 
+     int* levelc,int* levelf,
+     int* bfactc,int* bfactf);
+
+
     void fort_pcinterp (
      int* grid_type,
      int* zapflag,
