@@ -1873,7 +1873,7 @@ stop
       real(amrex_real) wt(SDIM)
 
       real(amrex_real) voltotal,volall
-      real(amrex_real) fine_value(nvar)
+      real(amrex_real) fine_value
 
       integer, parameter :: nhalf=1
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
@@ -1959,7 +1959,15 @@ stop
        do jfine2=0,1
        do ifine2=0,1
         nfine=nfine+1
-        fine_value(nfine)=zero
+
+        if (nfine.eq.4*kfine2+2*jfine2+ifine2+1) then
+         !do nothing
+        else
+         print *,"nfine invalid: ",nfine
+         stop
+        endif
+
+        fine_value=zero
         voltotal=zero
 
         do ic=stenlo(1),stenhi(1)
@@ -1993,7 +2001,7 @@ stop
                   volall=volall*wt(dir2)
                  enddo
                  ncrse=kc2*4+jc2*2+ic2+1
-                 fine_value(nfine)=fine_value(nfine)+ &
+                 fine_value=fine_value+ &
                   volall*crse_data(D_DECL(ic,jc,kc),ncrse)
                  voltotal=voltotal+volall
                 endif
@@ -2009,8 +2017,8 @@ stop
         enddo ! ic
 
         if (voltotal.gt.zero) then
-         fine_value(nfine)=fine_value(nfine)/voltotal
-         fine_data(D_DECL(ifine,jfine,kfine),nfine)=fine_value(nfine) 
+         fine_value=fine_value/voltotal
+         fine_data(D_DECL(ifine,jfine,kfine),nfine)=fine_value
         else
          print *,"voltotal invalid: ",voltotal
          stop
