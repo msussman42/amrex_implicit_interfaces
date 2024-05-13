@@ -143,9 +143,12 @@ stop
       integer, INTENT(in) :: clo(SDIM),chi(SDIM)
       integer, INTENT(in) :: flo(SDIM),fhi(SDIM)
       integer domlo(SDIM)
-      real(amrex_real), INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_raw)
-      real(amrex_real), INTENT(out) :: datarecon(DIMV(drecon),num_materials*ngeom_recon)
-      real(amrex_real), INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
+      real(amrex_real), INTENT(in) :: &
+              datamof(DIMV(dmof),num_materials*ngeom_raw)
+      real(amrex_real), INTENT(out) :: &
+              datarecon(DIMV(drecon),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(out) :: &
+              fdatamof(DIMV(fdmof),num_materials*ngeom_raw)
       real(amrex_real), INTENT(in) :: problo(SDIM)
       real(amrex_real), INTENT(in) :: dxf(SDIM),dxc(SDIM)
       integer growlo(3),growhi(3)
@@ -1861,9 +1864,11 @@ stop
       integer :: box_type(SDIM)
 
       integer ifine,jfine,kfine
+      integer ifine2,jfine2,kfine2
       integer ic,jc,kc
+      integer ic2,jc2,kc2
       integer dir2
-      integer n
+      integer nfine,ncrse
 
       real(amrex_real) wt(SDIM)
 
@@ -1946,15 +1951,15 @@ stop
         endif
        enddo ! dir2=1..sdim
 
-       n=0
+       nfine=0
        kfine2=0
 #if (AMREX_SPACEDIM==3)
        do kfine2=0,1
 #endif
        do jfine2=0,1
        do ifine2=0,1
-        n=n+1
-        fine_value(n)=zero
+        nfine=nfine+1
+        fine_value(nfine)=zero
         voltotal=zero
 
         do ic=stenlo(1),stenhi(1)
@@ -1963,66 +1968,58 @@ stop
            ic,ic2,ifine,ifine2,  &
            bfact_coarse,bfact_fine,wt(1))
 
-FIX ME
-        if (wt(1).gt.zero) then
-         do jc=stenlo(2),stenhi(2)
-          if (box_type(2).eq.1) then
-           call intersect_weightMAC_interp(jc,jfine, &
-            bfact_coarse,bfact_fine,wt(2))
-          else if (box_type(2).eq.0) then
-           call intersect_weight_interp(jc,jfine, &
-            bfact_coarse,bfact_fine,wt(2))
-          else
-           print *,"box_type(2) invalid"
-           stop
-          endif
-          if (wt(2).gt.zero) then
-           do kc=stenlo(3),stenhi(3)
-            if (SDIM.eq.3) then
-             if (box_type(SDIM).eq.1) then
-              call intersect_weightMAC_interp(kc,kfine, &
-               bfact_coarse,bfact_fine,wt(SDIM))
-             else if (box_type(SDIM).eq.0) then
-              call intersect_weight_interp(kc,kfine, &
-               bfact_coarse,bfact_fine,wt(SDIM))
-             else
-              print *,"box_type(SDIM) invalid"
-              stop
-             endif
-            endif
-            if (wt(SDIM).gt.zero) then
-             volall=wt(1)
-             do dir2=2,SDIM
-              volall=volall*wt(dir2)
-             enddo
-             do n=1,nvar
-              if (zapflag.eq.0) then
-               fine_value(n)=fine_value(n)+ &
-                 volall*crse_data(D_DECL(ic,jc,kc),n)
-              else if (zapflag.eq.1) then
-               ! do nothing
-              else
-               print *,"zapflag invalid"
-               stop
-              endif
-             enddo
-             voltotal=voltotal+volall
-            endif
-           enddo ! kc
-          endif
-         enddo ! jc
-        endif
-       enddo ! ic
+          if (wt(1).gt.zero) then
+           do jc=stenlo(2),stenhi(2)
+            do jc2=0,1
+             call intersect_weight_interp_refine( &
+              jc,jc2,jfine,jfine2, &
+              bfact_coarse,bfact_fine,wt(2))
 
-       if (voltotal.gt.zero) then
-        do n=1,nvar
-         fine_value(n)=fine_value(n)/voltotal
-         fine_data(D_DECL(ifine,jfine,kfine),n)=fine_value(n) 
-        enddo
-       else
-        print *,"voltotal invalid: ",voltotal
-        stop
-       endif
+             if (wt(2).gt.zero) then
+              do kc=stenlo(3),stenhi(3)
+               kc2=0
+#if (AMREX_SPACEDIM==3)
+               do kc2=0,1
+#endif
+                if (SDIM.eq.3) then
+                 call intersect_weight_interp_refine( &
+                  kc,kc2,kfine,kfine2, &
+                  bfact_coarse,bfact_fine,wt(SDIM))
+                endif
+
+                if (wt(SDIM).gt.zero) then
+                 volall=wt(1)
+                 do dir2=2,SDIM
+                  volall=volall*wt(dir2)
+                 enddo
+                 ncrse=kc2*4+jc2*2+ic2+1
+                 fine_value(nfine)=fine_value(nfine)+ &
+                  volall*crse_data(D_DECL(ic,jc,kc),ncrse)
+                 voltotal=voltotal+volall
+                endif
+#if (AMREX_SPACEDIM==3)
+               enddo ! kc2
+#endif
+              enddo ! kc
+             endif
+            enddo ! jc2
+           enddo ! jc
+          endif
+         enddo ! ic2
+        enddo ! ic
+
+        if (voltotal.gt.zero) then
+         fine_value(nfine)=fine_value(nfine)/voltotal
+         fine_data(D_DECL(ifine,jfine,kfine),nfine)=fine_value(nfine) 
+        else
+         print *,"voltotal invalid: ",voltotal
+         stop
+        endif
+       enddo !ifine2
+       enddo !jfine2
+#if (AMREX_SPACEDIM==3)
+       enddo !kfine2
+#endif
 
       enddo
       enddo
