@@ -1132,6 +1132,7 @@ NavierStokes::variableSetUp ()
       null_state_holds_data);
 
      int ibase_refine_density_ghost=0;
+
      if (ENUM_NUM_REFINE_DENSITY_TYPE==4*(AMREX_SPACEDIM-1)) {
       // do nothing
      } else
@@ -1242,10 +1243,10 @@ NavierStokes::variableSetUp ()
 	 phys_bc,i,j,k);
 
        ibase_refine_density++;
-      }
-      }
+      } //i
+      } //j
 #if (AMREX_SPACEDIM==3) 
-      }    
+      } //k
 #endif
      
       if (ibase_refine_density==ENUM_NUM_REFINE_DENSITY_TYPE) {
