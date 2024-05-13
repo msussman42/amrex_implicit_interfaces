@@ -19692,13 +19692,28 @@ stop
             xpart(dir_local)=particles(current_link)%pos(dir_local)
            enddo 
            cell_count_check=cell_count_check+1
+           if ((cell_count_check.ge.1).and. &
+               (cell_count_check.le.cell_count_hold)) then
+            !do nothing
+           else
+            print *,"cell_count_check invalid: ",cell_count_check
+            stop
+           endif
            sub_particle_data_dist(cell_count_check)=1.0D+20
            cell_count_nbr=0
            current_link_nbr=cell_particle_count(D_DECL(i,j,k),2)
            ! 1<=current_link_nbr<=total number particles
+           ! find particle closest to "cell_count_check"
            do while (current_link_nbr.ge.1)
 
             cell_count_nbr=cell_count_nbr+1
+            if ((cell_count_nbr.ge.1).and. &
+                (cell_count_nbr.le.cell_count_hold)) then
+             !do nothing
+            else
+             print *,"cell_count_nbr invalid: ",cell_count_nbr
+             stop
+            endif
 
             if (cell_count_nbr.ne.cell_count_check) then
 
@@ -19777,6 +19792,13 @@ stop
             sub_counter(isub,jsub,ksub)=sub_counter(isub,jsub,ksub)+1
 
             cell_count_check=cell_count_check+1
+            if ((cell_count_check.ge.1).and. &
+                (cell_count_check.le.cell_count_hold)) then
+             !do nothing
+            else
+             print *,"cell_count_check invalid(2): ",cell_count_check
+             stop
+            endif
 
             sub_particle_data(cell_count_check,1)=isub
             sub_particle_data(cell_count_check,2)=jsub
@@ -19816,13 +19838,21 @@ stop
             ! increment Np_append if isweep == 0
             ! always increment Np_append_test
             local_count=sub_counter(isub,jsub,ksub)
+            if ((local_count.ge.0).and. &
+                (local_count.le.cell_count_hold)) then
+             !do nothing
+            else
+             print *,"local_count invalid: ",local_count
+             stop
+            endif
 
             cell_count_check=cell_count_check+local_count
 
               ! check if particles need to be deleted or
               ! have their material id (and associated data) updated.
               ! local_count=number particles in (isub,jsub,ksub)
-            if (local_count.ge.1) then
+            if ((local_count.ge.1).and. &
+                (local_count.le.cell_count_hold)) then
 
               ! sort from largest separation to smallest.
               ! delete the cases with the smallest separation.
@@ -20022,7 +20052,7 @@ stop
                imat_particle=particles(temp_id)% &
                  extra_int(N_EXTRA_INT_MATERIAL_ID+1)
 
-               if (imat_particle.eq.-1) then
+               if (imat_particle.eq.-1) then !keep_the_particle==0
                 particle_delete_flag(temp_id)=1
                else if ((imat_particle.ge.1).and. &
                         (imat_particle.le.num_materials)) then
@@ -20272,7 +20302,7 @@ stop
            endif
 
           else
-           print *,"cell_count_check invalid: ",cell_count_check
+           print *,"cell_count_check invalid(3): ",cell_count_check
            print *,"cell_count_hold: ",cell_count_hold
            stop
           endif

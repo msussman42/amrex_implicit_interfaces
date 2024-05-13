@@ -159,6 +159,16 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
+
+     void fort_refine_densityfill(
+      int* grid_type,
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
      void fort_tensorfill(
       int* grid_type,
       int* level,
@@ -178,6 +188,16 @@ namespace amrex{
       const int* scomp,int* ncomp,int* bfact); 
 
      void fort_group_statefill(
+      int* grid_type,
+      int* level,
+      Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),
+      const int* dom_lo, const int* dom_hi,
+      const Real* dx, const Real* grd_lo,
+      const Real* time, const int* bc,
+      const int* scomp,int* ncomp,int* bfact);
+
+
+     void fort_group_refine_densityfill(
       int* grid_type,
       int* level,
       Real* data, AMREX_ARLIM_P(data_lo), AMREX_ARLIM_P(data_hi),

@@ -29039,6 +29039,32 @@ end subroutine initialize2d
       return
       end subroutine fort_moffill
 
+
+      subroutine fort_refine_densityfill( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_refinedensityfill')
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: grid_type
+      integer, INTENT(in) :: scomp,ncomp,bfact,level
+      integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM), xlo(SDIM), time
+      real(amrex_real), INTENT(inout) :: u(DIMV(u))
+      integer, INTENT(in) :: bc(SDIM,2)
+
+      print *,"fort_refine_densityfill should never be called"
+      stop
+
+      return
+      end subroutine fort_refine_densityfill
+
+
       subroutine fort_extmoffill( &
       grid_type, &
       level, &
@@ -29276,6 +29302,214 @@ end subroutine initialize2d
 
       return
       end subroutine fort_group_moffill
+
+
+      subroutine fort_group_refine_densityfill( &
+      grid_type, &
+      level, &
+      u,DIMS(u), &
+      domlo,domhi,dx, &
+      xlo,time,bc,scomp,ncomp,bfact) &
+      bind(c,name='fort_group_refine_densityfill')
+
+      use filcc_module
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: grid_type
+      integer, INTENT(in) :: scomp,ncomp,bfact,level
+      integer, INTENT(in) :: DIMDEC(u)  ! ulox,uloy,uloz,uhix,uhiy,uhiz
+      integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+      real(amrex_real), INTENT(in) :: dx(SDIM), xlo(SDIM), time
+      real(amrex_real), INTENT(inout), target :: u(DIMV(u),ncomp)
+      real(amrex_real), pointer :: u_ptr(D_DECL(:,:,:),:)
+      integer, INTENT(in) :: bc(SDIM,2,ncomp)
+      integer :: test_bc
+
+      integer i,j,k
+      integer irefine,jrefine,krefine
+      integer nrefine
+      integer dir2
+      integer side
+      integer ext_dir_flag,inside_index
+      integer fablo(SDIM)
+      integer fabhi(SDIM)
+      integer borderlo(3)
+      integer borderhi(3)
+      integer IWALL(3)
+      integer im
+      integer im_compressible
+      real(amrex_real) uwall_avg
+      real(amrex_real) ughost
+      integer, parameter :: nhalf=3
+      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+
+      if ((level.lt.0).or.(level.gt.fort_finest_level)) then
+       print *,"level invalid in group_refine_densityfill"
+       stop
+      endif
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid group_refine_densityfill"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid group_refine_densityfill"
+       stop
+      endif
+      if (grid_type.eq.-1) then
+       ! do nothing
+      else
+       print *,"grid_type invalid group_refine_densityfill"
+       stop
+      endif
+
+      fablo(1)=LBOUND(u,1)
+      fablo(2)=LBOUND(u,2)
+#if (AMREX_SPACEDIM==3)
+      fablo(SDIM)=LBOUND(u,SDIM)
+#endif
+      fabhi(1)=UBOUND(u,1)
+      fabhi(2)=UBOUND(u,2)
+#if (AMREX_SPACEDIM==3)
+      fabhi(SDIM)=UBOUND(u,SDIM)
+#endif
+
+      if (4*(SDIM-1).ne.ncomp) then
+       print *,"ncomp invalid group_refine_densityfill"
+       stop
+      endif
+      im_compressible=NINT(scomp/ncomp)+1
+      if (ncomp*(im_compressible-1).ne.scomp) then
+       print *,"scomp invalid group_refine_densityfill: ",scomp
+       stop
+      endif
+      if ((im_compressible.ge.1).and. &
+          (im_compressible.le.num_materials_compressible)) then
+       ! do nothing
+      else
+       print *,"im_compressible invalid"
+       stop
+      endif
+
+      u_ptr=>u
+      call local_filcc4D_refine(bfact, &
+       u_ptr,ncomp, &
+       domlo,domhi,bc)
+
+      do dir2=1,SDIM
+       if ((domlo(dir2)/bfact)*bfact.ne.domlo(dir2)) then
+        print *,"domlo not divisible by bfact"
+        stop
+       endif
+       if (((domhi(dir2)+1)/bfact)*bfact.ne.domhi(dir2)+1) then
+        print *,"domhi+1 not divisible by bfact"
+        stop
+       endif
+      enddo  ! dir2
+
+      do dir2=1,SDIM
+      do side=1,2
+
+       borderlo(3)=0
+       borderhi(3)=0
+       do dir3=1,SDIM
+        borderlo(dir3)=fablo(dir3)
+        borderhi(dir3)=fabhi(dir3)
+       enddo
+       ext_dir_flag=0
+
+       test_bc=bc(dir2,side,1)
+
+       if (test_bc.eq.EXT_DIR) then
+
+        if (side.eq.1) then
+         if (fablo(dir2).lt.domlo(dir2)) then
+          ext_dir_flag=1
+          borderhi(dir2)=domlo(dir2)-1
+          inside_index=domlo(dir2)
+         endif
+        else if (side.eq.2) then
+         if (fabhi(dir2).gt.domhi(dir2)) then
+          ext_dir_flag=1
+          borderlo(dir2)=domhi(dir2)+1
+          inside_index=domhi(dir2)
+         endif
+        else
+         print *,"side invalid"
+         stop
+        endif
+       else if ((test_bc.eq.FOEXTRAP).or. &
+                (test_bc.eq.HOEXTRAP).or. &
+                (test_bc.eq.REFLECT_EVEN).or. &
+                (test_bc.eq.REFLECT_ODD).or. &
+                (test_bc.eq.INT_DIR)) then
+        ! do nothing
+       else
+        print *,"test_bc invalid: ",test_bc
+        stop
+       endif  
+
+       if (ext_dir_flag.eq.1) then
+        do k=borderlo(3),borderhi(3)
+        do j=borderlo(2),borderhi(2)
+        do i=borderlo(1),borderhi(1)
+
+         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
+
+         IWALL(1)=i
+         IWALL(2)=j
+         IWALL(3)=k
+         IWALL(dir2)=inside_index
+
+         istate=1
+         im=fort_im_refine_density_map(im_compressible) 
+
+         uwall_avg=zero 
+         krefine=0
+#if (AMREX_SPACEDIM==3)
+         do krefine=0,1
+#endif
+         do jrefine=0,1
+         do irefine=0,1
+          nrefine=4*krefine+2*jrefine+irefine+1
+          uwall_avg=uwall_avg+u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),nrefine)
+         enddo
+         enddo
+#if (AMREX_SPACEDIM==3)
+         enddo
+#endif
+         uwall_avg=uwall_avg/ncomp
+         call denBC(time,dir2,side, &
+           ughost, &
+           uwall_avg, &
+           xsten,nhalf,dx,bfact,istate,im)
+
+         krefine=0
+#if (AMREX_SPACEDIM==3)
+         do krefine=0,1
+#endif
+         do jrefine=0,1
+         do irefine=0,1
+          nrefine=4*krefine+2*jrefine+irefine+1
+          u(D_DECL(i,j,k),nrefine)=ughost
+         enddo
+         enddo
+#if (AMREX_SPACEDIM==3)
+         enddo
+#endif
+
+        enddo
+        enddo
+        enddo
+       endif            
+
+      enddo ! side
+      enddo ! dir2
+
+      return
+      end subroutine fort_group_refine_densityfill
+
 
       subroutine fort_group_extmoffill( &
       grid_type, &
