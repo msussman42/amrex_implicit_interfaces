@@ -14646,7 +14646,7 @@ end subroutine print_visual_descriptor
 
        print *,"(breakpoint) break point and gdb: "
        print *,"(1) compile with the -g option"
-       print *,"(2) break GLOBALUTIL.F90:14202"
+       print *,"(2) break GLOBALUTIL.F90:14649"
        print *,"By pressing <CTRL C> during this read statement, the"
        print *,"gdb debugger will produce a stacktrace."
        print *,"type 0 then <enter> to exit the program"

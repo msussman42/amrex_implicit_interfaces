@@ -2144,6 +2144,7 @@ stop
 
 
       subroutine fort_override_MAIN_GLOBALS( &
+        num_prior_calls, &
         cc_int_size, &
         ccnum_species_var, &
         ccnum_materials_viscoelastic, &
@@ -2161,6 +2162,7 @@ stop
       
       IMPLICIT NONE
       
+      integer, INTENT(in) :: num_prior_calls
       integer, INTENT(in) :: cc_int_size
       integer, INTENT(in) :: ccnum_materials
       integer, INTENT(in) :: ccnten
@@ -2228,7 +2230,11 @@ stop
       endif
       
       num_materials_viscoelastic=ccnum_materials_viscoelastic
-      num_materials_compressible=ccnum_materials_compressible
+
+      num_materials_compressible=0
+      if (num_prior_calls.eq.1) then
+       num_materials_compressible=ccnum_materials_compressible
+      endif
       
       num_state_base=ccnum_state_base
       if (num_state_base.ne.2) then
@@ -2277,7 +2283,9 @@ stop
        print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS ", &
         num_species_var,num_materials_viscoelastic, &
         MAX_NUM_MATERIALS
-       print *,"num_materials_compressible ",num_materials_compressible
+       if (num_prior_calls.eq.1) then
+        print *,"num_materials_compressible ",num_materials_compressible
+       endif
        print *,"ngeom_raw ",ngeom_raw
        print *,"ngeom_recon ",ngeom_recon
        print *,"fort: num_state_material ",num_state_material

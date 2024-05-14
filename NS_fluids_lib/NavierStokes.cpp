@@ -1842,6 +1842,35 @@ void fortran_parameters() {
 
  ParallelDescriptor::Barrier();
 
+ int num_prior_calls=0;
+
+ int ioproc=0;
+ if (ParallelDescriptor::IOProcessor())
+  ioproc=1;
+
+ const int cc_int_size=sizeof(int);
+
+  // declared in PROB_CPP_PARMS.F90
+ num_prior_calls=0;
+ fort_override_MAIN_GLOBALS(
+  &num_prior_calls,
+  &cc_int_size,
+  &NavierStokes::num_species_var,
+  &NavierStokes::num_materials_viscoelastic,
+  &NavierStokes::num_materials_compressible,
+  &NavierStokes::num_state_material,
+  &NavierStokes::num_state_base,
+  &NavierStokes::ngeom_raw,
+  &NavierStokes::ngeom_recon,
+  &NavierStokes::num_materials,
+  &NavierStokes::num_interfaces,
+  &ioproc);
+
+ ParallelDescriptor::Barrier();
+
+
+ ParallelDescriptor::Barrier();
+
  for (int im=0;im<NavierStokes::num_materials;im++) {
 
   if (NavierStokes::material_type[im]==999) {
@@ -2032,14 +2061,10 @@ void fortran_parameters() {
 
  ParallelDescriptor::Barrier();
 
- int ioproc=0;
- if (ParallelDescriptor::IOProcessor())
-  ioproc=1;
-
- const int cc_int_size=sizeof(int);
-
   // declared in PROB_CPP_PARMS.F90
+ num_prior_calls=1;
  fort_override_MAIN_GLOBALS(
+  &num_prior_calls,
   &cc_int_size,
   &NavierStokes::num_species_var,
   &NavierStokes::num_materials_viscoelastic,
