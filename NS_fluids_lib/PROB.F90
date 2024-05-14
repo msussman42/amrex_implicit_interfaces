@@ -29046,7 +29046,7 @@ end subroutine initialize2d
       u,DIMS(u), &
       domlo,domhi,dx, &
       xlo,time,bc,scomp,ncomp,bfact) &
-      bind(c,name='fort_refinedensityfill')
+      bind(c,name='fort_refine_densityfill')
 
       IMPLICIT NONE
 
@@ -29331,6 +29331,7 @@ end subroutine initialize2d
       integer irefine,jrefine,krefine
       integer nrefine
       integer dir2
+      integer dir3
       integer side
       integer ext_dir_flag,inside_index
       integer fablo(SDIM)
@@ -29342,6 +29343,7 @@ end subroutine initialize2d
       integer im_compressible
       real(amrex_real) uwall_avg
       real(amrex_real) ughost
+      integer, parameter :: istate=1
       integer, parameter :: scomp_data=1
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
@@ -29397,7 +29399,8 @@ end subroutine initialize2d
        stop
       endif
 
-      im_compressible=NINT(scomp/ncomp)+1
+      im_compressible=scomp/ncomp
+      im_compressible=im_compressible+1
       if (ncomp*(im_compressible-1).ne.scomp) then
        print *,"scomp invalid group_refine_densityfill(2): ",scomp
        stop
@@ -29481,7 +29484,6 @@ end subroutine initialize2d
          IWALL(3)=k
          IWALL(dir2)=inside_index
 
-         istate=1
          im=fort_im_refine_density_map(im_compressible) 
 
          uwall_avg=zero 

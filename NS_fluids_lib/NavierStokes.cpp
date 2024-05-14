@@ -440,7 +440,9 @@ int  NavierStokes::TensorX_Type=Tensor_Type+1;
 int  NavierStokes::TensorY_Type=TensorX_Type+1;
 int  NavierStokes::TensorZ_Type=TensorY_Type+1;
 
-int  NavierStokes::NUM_STATE_TYPE=TensorZ_Type+1;
+int  NavierStokes::Refine_Density_Type=TensorZ_Type+1;
+
+int  NavierStokes::NUM_STATE_TYPE=Refine_Density_Type+1;
 
 
 Vector<Real> NavierStokes::compressible_dt_factor; 
