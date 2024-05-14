@@ -180,6 +180,7 @@ namespace amrex{
 
 
      void fort_override_MAIN_GLOBALS(
+       int* num_prior_calls,
        const int* cc_int_size,
        int* num_species_var,
        int* num_materials_viscoelastic,
