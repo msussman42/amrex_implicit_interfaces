@@ -1861,7 +1861,6 @@ stop
       integer stenlo(3),stenhi(3)
       integer stenlen(3)
       integer growlo(3),growhi(3)
-      integer :: box_type(SDIM)
 
       integer ifine,jfine,kfine
       integer ifine2,jfine2,kfine2

@@ -159,7 +159,6 @@ namespace amrex{
       const Real* time, const int* bc,
       const int* scomp,int* ncomp,int* bfact);
 
-
      void fort_refine_densityfill(
       int* grid_type,
       int* level,

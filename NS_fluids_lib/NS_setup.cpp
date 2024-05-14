@@ -295,14 +295,6 @@ set_scalar_bc (BCRec&       bc,
 
 static
 void
-set_refine_density_bc (BCRec&       bc,
-        const BCRec& phys_bc,int i,int j,int k)
-{
- set_scalar_bc(bc,phys_bc);
-}
-
-static
-void
 set_custom_temperature_bc (BCRec&       bc,
                const BCRec& phys_bc)
 {
@@ -1165,9 +1157,9 @@ NavierStokes::variableSetUp ()
       else 
        ijk_str+="1";
       ghost_names_refine_density[ibase_refine_density_ghost]=ijk_str;
-      set_refine_density_bc(
+      set_scalar_bc(
         ghost_bcs_refine_density[ibase_refine_density_ghost],
-        phys_bc,i,j,k);
+        phys_bc);
 
       ibase_refine_density_ghost++;
      } //i
@@ -1185,11 +1177,11 @@ NavierStokes::variableSetUp ()
       fort_refine_densityfill,
       fort_group_refine_densityfill);
 
-     desc_lstGhost.setComponent(Refine_Density_Type,0,
-     ghost_names_refine_density,
-     ghost_bcs_refine_density,
-     ghost_fill_class_refine_density,
-     &refine_density_pc_interp);
+     desc_lstGHOST.setComponent(Refine_Density_Type,0,
+       ghost_names_refine_density,
+       ghost_bcs_refine_density,
+       ghost_fill_class_refine_density,
+       &refine_density_pc_interp);
 
      if (ENUM_NUM_REFINE_DENSITY_TYPE==EXTRAP_NCOMP_REFINE_DENSITY) {
       // do nothing
@@ -1238,9 +1230,9 @@ NavierStokes::variableSetUp ()
        ijk_str+="-";
        ijk_str+=im_string;
        MOFvelocity_names_refine_density[ibase_refine_density]=ijk_str;
-       set_refine_density_bc(
+       set_scalar_bc(
 	 MOFvelocity_bcs_refine_density[ibase_refine_density],
-	 phys_bc,i,j,k);
+	 phys_bc);
 
        ibase_refine_density++;
       } //i
