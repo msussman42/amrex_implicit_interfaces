@@ -782,6 +782,518 @@ stop
 
       end subroutine local_filcc4D
 
+      subroutine local_filcc4D_refine( &
+       bfact, &
+       q, &
+       scomp,ncomp, &
+       domlo,domhi, &
+       bc)
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: scomp
+      integer, INTENT(in) :: ncomp
+      integer, INTENT(in) :: domlo(SDIM), domhi(SDIM)
+       ! q inherits attributes from the target.
+      real(amrex_real), INTENT(in), pointer :: q(D_DECL(:,:,:),:)
+      integer, INTENT(in) :: bc(SDIM,2,ncomp)
+
+      integer, INTENT(in) :: bfact
+
+      integer    nlft, nrgt, nbot, ntop, nup, ndwn
+      integer    ilo, ihi, jlo, jhi
+      integer    i, j
+#if (AMREX_SPACEDIM==3)
+      integer    k,klo,khi
+#endif
+      integer irefine,jrefine,krefine,nrefine_dest
+      integer isrc,jsrc,ksrc,nrefine_src
+
+      if (bfact.lt.1) then
+       print *,"bfact invalid710"
+       stop
+      endif
+
+      if (scomp.eq.1) then
+       !do nothing
+      else
+       print *,"scomp invalid local_filcc4D_refine"
+       stop
+      endif
+      if (ncomp.eq.4*(SDIM-1)) then
+       !do nothing
+      else
+       print *,"ncomp invalid local_filcc4D_refine"
+       stop
+      endif
+
+      nlft = max(0,domlo(1)-LBOUND(q,1))
+      nrgt = max(0,UBOUND(q,1)-domhi(1))
+      nbot = max(0,domlo(2)-LBOUND(q,2))
+      ntop = max(0,UBOUND(q,2)-domhi(2))
+      ndwn=0
+      nup=0
+#if (AMREX_SPACEDIM==3)
+      ndwn = max(0,domlo(SDIM)-LBOUND(q,SDIM))
+      nup  = max(0,UBOUND(q,SDIM)-domhi(SDIM))
+#elif (AMREX_SPACEDIM==2)
+      ! do nothing
+#else  
+print *,"dimension bust"
+stop
+#endif
+
+!
+!     ::::: first fill sides
+!
+      if (nlft .gt. 0) then
+       ilo = domlo(1)
+
+       if ((bc(1,1,scomp).eq.FOEXTRAP).or. &
+           (bc(1,1,scomp).eq.EXT_DIR)) then
+        do i = 1, nlft
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do j = LBOUND(q,2),UBOUND(q,2)
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            isrc=0
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(ilo-i,j,k),nrefine_dest)=q(D_DECL(ilo,j,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(1,1,scomp) .eq. HOEXTRAP) then
+        print *,"HOEXTRAP not supported for refine density variable"
+        stop
+       else if (bc(1,1,scomp) .eq. REFLECT_EVEN) then
+        do i = 1, nlft
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do j = LBOUND(q,2),UBOUND(q,2)
+
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            isrc=1-irefine
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(ilo-i,j,k),nrefine_dest)=q(D_DECL(ilo+i-1,j,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(1,1,scomp) .eq. REFLECT_ODD) then
+        print *,"REFLECT_ODD not supported for refine density variable"
+        stop
+       else if (bc(1,1,scomp).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
+      end if
+
+      if (nrgt .gt. 0) then
+       ihi = domhi(1)
+
+       if ((bc(1,2,scomp).eq.FOEXTRAP).or. &
+           (bc(1,2,scomp).eq.EXT_DIR)) then
+        do i = 1, nrgt
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do j = LBOUND(q,2),UBOUND(q,2)
+
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            isrc=1
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(ihi+i,j,k),nrefine_dest)=q(D_DECL(ihi,j,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(1,2,scomp) .eq. HOEXTRAP) then
+        print *,"HOEXTRAP not supported for refine_density"
+        stop
+       else if (bc(1,2,scomp) .eq. REFLECT_EVEN) then
+        do i = 1, nrgt
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do j = LBOUND(q,2),UBOUND(q,2)
+
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            isrc=1-irefine
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(ihi+i,j,k),nrefine_dest)=q(D_DECL(ihi-i+1,j,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+
+
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(1,2,scomp) .eq. REFLECT_ODD) then
+        print *,"REFLECT_ODD not supported for refine_density"
+        stop
+       else if (bc(1,2,scomp).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
+      end if
+
+      if (nbot .gt. 0) then
+       jlo = domlo(2)
+         
+       if ((bc(2,1,scomp).eq.FOEXTRAP).or. &
+           (bc(2,1,scomp).eq.EXT_DIR)) then
+        do j = 1, nbot
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do i = LBOUND(q,1),UBOUND(q,1)
+
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            jsrc=0
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(i,jlo-j,k),nrefine_dest)=q(D_DECL(i,jlo,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,1,scomp) .eq. HOEXTRAP) then
+        print *,"HOEXTRAP not supported refine_density"
+        stop
+       else if (bc(2,1,scomp) .eq. REFLECT_EVEN) then
+        do j = 1, nbot 
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do i = LBOUND(q,1),UBOUND(q,1)
+
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            jsrc=1-jrefine
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(i,jlo-j,k),nrefine_dest)=q(D_DECL(i,jlo+j-1,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+
+
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,1,scomp) .eq. REFLECT_ODD) then
+        print *,"REFLECT_ODD not supported refine_density"
+        stop
+       else if (bc(2,1,scomp).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
+      end if
+
+      if (ntop .gt. 0) then
+       jhi = domhi(2)
+
+       if ((bc(2,2,scomp).eq.FOEXTRAP).or. &
+           (bc(2,2,scomp).eq.EXT_DIR)) then
+        do j = 1, ntop
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do i = LBOUND(q,1),UBOUND(q,1)
+
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            jsrc=1
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(i,jhi+j,k),nrefine_dest)=q(D_DECL(i,jhi,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,2,scomp) .eq. HOEXTRAP) then
+        print *,"HOEXTRAP not supported refine_density"
+        stop
+       else if (bc(2,2,scomp) .eq. REFLECT_EVEN) then
+        do j = 1, ntop
+#if (AMREX_SPACEDIM==3)
+         do k = LBOUND(q,SDIM),UBOUND(q,SDIM)
+#endif
+          do i = LBOUND(q,1),UBOUND(q,1)
+
+           krefine=0
+#if (AMREX_SPACEDIM==3)
+           do krefine=0,1
+#endif
+           do jrefine=0,1
+           do irefine=0,1
+            nrefine_dest=4*krefine+2*jrefine+irefine+1
+            ksrc=krefine
+            jsrc=jrefine
+            isrc=irefine
+            jsrc=1-jrefine
+            nrefine_src=4*ksrc+2*jsrc+isrc+1
+            q(D_DECL(i,jhi+j,k),nrefine_dest)=q(D_DECL(i,jhi-j+1,k),nrefine_src)
+           enddo !irefine
+           enddo !jrefine
+#if (AMREX_SPACEDIM==3)
+           enddo !krefine
+#endif
+
+          end do
+#if (AMREX_SPACEDIM==3)
+         end do
+#endif
+        end do
+       else if (bc(2,2,scomp) .eq. REFLECT_ODD) then
+        print *,"REFLECT_ODD not supported refine_density"
+        stop
+       else if (bc(2,2,scomp).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
+      end if
+
+#if (AMREX_SPACEDIM==3)
+      if (ndwn .gt. 0) then
+       klo = domlo(SDIM)
+
+       if ((bc(SDIM,1,scomp).eq.FOEXTRAP).or. &
+           (bc(SDIM,1,scomp).eq.EXT_DIR)) then
+        do k = 1, ndwn
+        do j = LBOUND(q,2),UBOUND(q,2)
+        do i = LBOUND(q,1),UBOUND(q,1)
+         q(i,j,klo-k,scomp) = q(i,j,klo,scomp)
+
+         do krefine=0,1
+         do jrefine=0,1
+         do irefine=0,1
+          nrefine_dest=4*krefine+2*jrefine+irefine+1
+          ksrc=krefine
+          jsrc=jrefine
+          isrc=irefine
+          ksrc=0
+          nrefine_src=4*ksrc+2*jsrc+isrc+1
+          q(i,j,klo-k,nrefine_dest)=q(i,j,klo,nrefine_src)
+         enddo !irefine
+         enddo !jrefine
+         enddo !krefine
+
+        end do
+        end do
+        end do
+       else if (bc(SDIM,1,scomp) .eq. HOEXTRAP) then
+        print *,"HOEXTRAP not supported refine_density"
+        stop
+       else if (bc(SDIM,1,scomp) .eq. REFLECT_EVEN) then
+        do k = 1, ndwn
+        do j = LBOUND(q,2),UBOUND(q,2)
+        do i = LBOUND(q,1),UBOUND(q,1)
+
+         do krefine=0,1
+         do jrefine=0,1
+         do irefine=0,1
+          nrefine_dest=4*krefine+2*jrefine+irefine+1
+          ksrc=krefine
+          jsrc=jrefine
+          isrc=irefine
+          ksrc=1-krefine
+          nrefine_src=4*ksrc+2*jsrc+isrc+1
+          q(i,j,klo-k,nrefine_dest)=q(i,j,klo+k-1,nrefine_src)
+         enddo !irefine
+         enddo !jrefine
+         enddo !krefine
+
+        end do
+        end do
+        end do
+       else if (bc(SDIM,1,scomp) .eq. REFLECT_ODD) then
+        print *,"REFLECT_ODD not supported refine_density"
+        stop
+       else if (bc(SDIM,1,scomp).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
+      end if
+
+      if (nup .gt. 0) then
+       khi = domhi(SDIM)
+
+       if ((bc(SDIM,2,scomp).eq.FOEXTRAP).or. &
+           (bc(SDIM,2,scomp).eq.EXT_DIR)) then
+        do k = 1, nup
+        do j = LBOUND(q,2),UBOUND(q,2)
+        do i = LBOUND(q,1),UBOUND(q,1)
+
+         do krefine=0,1
+         do jrefine=0,1
+         do irefine=0,1
+          nrefine_dest=4*krefine+2*jrefine+irefine+1
+          ksrc=krefine
+          jsrc=jrefine
+          isrc=irefine
+          ksrc=1
+          nrefine_src=4*ksrc+2*jsrc+isrc+1
+          q(i,j,khi+k,nrefine_dest)=q(i,j,khi,nrefine_src)
+         enddo !irefine
+         enddo !jrefine
+         enddo !krefine
+
+
+        end do
+        end do
+        end do
+       else if (bc(SDIM,2,scomp) .eq. HOEXTRAP) then
+        print *,"HOEXTRAP not supported refine_density"
+        stop
+       else if (bc(SDIM,2,scomp) .eq. REFLECT_EVEN) then
+        do k = 1, nup
+        do j = LBOUND(q,2),UBOUND(q,2)
+        do i = LBOUND(q,1),UBOUND(q,1)
+
+         do krefine=0,1
+         do jrefine=0,1
+         do irefine=0,1
+          nrefine_dest=4*krefine+2*jrefine+irefine+1
+          ksrc=krefine
+          jsrc=jrefine
+          isrc=irefine
+          ksrc=1-krefine
+          nrefine_src=4*ksrc+2*jsrc+isrc+1
+          q(i,j,khi+k,nrefine_dest)=q(i,j,khi-k+1,nrefine_src)
+         enddo !irefine
+         enddo !jrefine
+         enddo !krefine
+
+        end do
+        end do
+        end do
+       else if (bc(SDIM,2,scomp) .eq. REFLECT_ODD) then
+        print *,"REFLECT_ODD not supported refine_density"
+        stop
+       else if (bc(SDIM,2,scomp).eq.INT_DIR) then
+        ! do nothing
+       else
+        print *,"bc invalid"
+        stop
+       end if
+      end if
+#endif
+
+      end subroutine local_filcc4D_refine
+
 
        ! box_type(dir)=0 => CELL
        ! box_type(dir)=1 => NODE

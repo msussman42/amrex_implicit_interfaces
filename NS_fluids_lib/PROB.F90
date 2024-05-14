@@ -29342,6 +29342,7 @@ end subroutine initialize2d
       integer im_compressible
       real(amrex_real) uwall_avg
       real(amrex_real) ughost
+      integer, parameter :: scomp_data=1
       integer, parameter :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
 
@@ -29379,22 +29380,40 @@ end subroutine initialize2d
        print *,"ncomp invalid group_refine_densityfill"
        stop
       endif
+
+      if ((num_materials_compressible.ge.1).and. &
+          (num_materials_compressible.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"num_materials_compressible invalid group_refine_densityfill"
+       stop
+      endif
+
+      if ((scomp.ge.0).and. &
+          (scomp.le.(num_materials_compressible-1)*ncomp)) then
+       !do nothing
+      else
+       print *,"scomp invalid group_refine_densityfill: ",scomp
+       stop
+      endif
+
       im_compressible=NINT(scomp/ncomp)+1
       if (ncomp*(im_compressible-1).ne.scomp) then
-       print *,"scomp invalid group_refine_densityfill: ",scomp
+       print *,"scomp invalid group_refine_densityfill(2): ",scomp
        stop
       endif
       if ((im_compressible.ge.1).and. &
           (im_compressible.le.num_materials_compressible)) then
        ! do nothing
       else
-       print *,"im_compressible invalid"
+       print *,"im_compressible invalid: ",im_compressible
        stop
       endif
 
       u_ptr=>u
       call local_filcc4D_refine(bfact, &
-       u_ptr,ncomp, &
+       u_ptr, &
+       scomp_data,ncomp, &
        domlo,domhi,bc)
 
       do dir2=1,SDIM
@@ -29436,7 +29455,7 @@ end subroutine initialize2d
           inside_index=domhi(dir2)
          endif
         else
-         print *,"side invalid"
+         print *,"side invalid fort_group_refine_densityfill"
          stop
         endif
        else if ((test_bc.eq.FOEXTRAP).or. &
@@ -29446,7 +29465,7 @@ end subroutine initialize2d
                 (test_bc.eq.INT_DIR)) then
         ! do nothing
        else
-        print *,"test_bc invalid: ",test_bc
+        print *,"test_bc invalid fort_group_refine_densityfill: ",test_bc
         stop
        endif  
 
