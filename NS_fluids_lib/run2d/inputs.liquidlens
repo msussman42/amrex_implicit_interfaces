@@ -24,16 +24,22 @@
 # max_level=1  recon: .462  LS: .455
 # max_level=2  recon: .460  LS: .456
 # max_level=3  recon: .460  LS: .458  dx_finest=0.00195
+#
+# L=radblob=.15   x^phys=L x^sim
+# T=\sqrt{\rho L^{3}/\sigma}
+# Ohnesorge number (Oh) = \mu/\sqrt{\rho \sigma L}
+# liquid lens: L=0.15, sigma=0.0444, rho=1, mu=1/60, T=0.276, Oh=0.204
+# gas lens: L=0.15, sigma=72.8, rho=1, mu=1/100, T=0.0068, Oh=0.00303
 max_step  =  99999    # maximum timestep
 #max_step  =  1    # maximum timestep
-stop_time=4.0  # liquid lens
-#stop_time=0.4  # gas lens ?
+stop_time=16.0  # liquid lens
+#stop_time=160.0  # gas lens ?
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
 geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 geometry.prob_lo   =  0.0 0.0
-geometry.prob_hi   =  1.0 1.0  
+geometry.prob_hi   =  6.667 6.667
 geometry.is_periodic = 1 0 0 
 mac.visc_abs_tol=1.0e-10
 
@@ -97,8 +103,8 @@ mac.mac_abs_tol    = 1.0e-10
 ns.cfl            = 0.85      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01    
-ns.visc_coef      = 0.0166667    # 1/60 liquid lens
-#ns.visc_coef      = 0.01  # water viscosity gas lens
+ns.visc_coef      = 0.204    # 1/60 physical liquid lens, Oh=0.204
+#ns.visc_coef      = 0.00303  # water viscosity gas lens Oh=0.00303
 ns.gravity        = 0.0
 ns.min_velocity_for_dt=1.0
 # 12, 13, 23
@@ -110,8 +116,7 @@ ns.min_velocity_for_dt=1.0
 # sigma_13=gamma_1+gamma_3
 # sigma_23=gamma_2+gamma_3
 # if 1cm^2 domain, then water surface tension is 72.8.
-ns.tension        = 0.044444444444 0.055555555555  0.044444444444 # liquid lens
-#ns.tension        = 72.8 91.0 72.8 # gas lens
+ns.tension        = 1.0 1.25 1.0
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 5        # timesteps between computing mass 
 

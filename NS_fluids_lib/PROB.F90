@@ -26164,6 +26164,7 @@ end subroutine initialize2d
            if (centroid_noise_factor(im).eq.zero) then
             centroid_noise=zero
            else if (centroid_noise_factor(im).gt.zero) then
+             ! 0.0<=noise_amplitude<=1.0
             Call random_number(noise_amplitude)
             centroid_noise=(two*noise_amplitude-one)* &
                centroid_noise_factor(im)*dx(1)
