@@ -29,11 +29,16 @@
 # T=\sqrt{\rho L^{3}/\sigma}
 # Ohnesorge number (Oh) = \mu/\sqrt{\rho \sigma L}
 # liquid lens: L=0.15, sigma=0.0444, rho=1, mu=1/60, T=0.276, Oh=0.204
+# U=L/T=.15/.276=0.543
 # gas lens: L=0.15, sigma=72.8, rho=1, mu=1/100, T=0.0068, Oh=0.00303
+# U=L/T=.15/.0068=22.06
+# floating lens: L=0.8, sigma=72.8, rho=1.0, mu=1/100, T=0.0839, Oh=0.0013
+# U=L/T=.8/.0013=615.4
 max_step  =  99999    # maximum timestep
 #max_step  =  1    # maximum timestep
 stop_time=16.0  # liquid lens
 #stop_time=160.0  # gas lens ?
+#stop_time=160.0  # floating lens ?
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
 # set up for bubble
@@ -105,6 +110,7 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01    
 ns.visc_coef      = 0.204    # 1/60 physical liquid lens, Oh=0.204
 #ns.visc_coef      = 0.00303  # water viscosity gas lens Oh=0.00303
+#ns.visc_coef      = 0.0013  # water viscosity floating lens Oh=0.0013
 ns.gravity        = 0.0
 ns.min_velocity_for_dt=1.0
 # 12, 13, 23
@@ -135,9 +141,12 @@ ns.heatviscconst=0.0 0.0 0.0 0.0
 # 1  =  (sigma/rho) 1/(L U^2)  +  (mu/rho) 1/(L U)
 # (mu/(rho L U))  / (sigma/rho L U^2)= mu U /sigma = Capillary number
 #ns.uncoupled_viscosity=0  # gas lens
+#ns.uncoupled_viscosity=0  # floating lens
 ns.uncoupled_viscosity=1  # liquid lens
+#ns.viscconst=1.0 91.5 1.78e-2 # floating lens
 #ns.viscconst=1.0 0.01 1.0 # gas lens
 ns.viscconst=1.0 1.0 1.0 # liquid lens
+#ns.denconst=1.0 0.577 0.001 # floating lens
 #ns.denconst=1.0 0.001 1.0 # gas lens
 ns.denconst=1.0 1.0 1.0 # liquid lens
 ns.tempconst=293.0 293.0 293.0 
@@ -166,8 +175,8 @@ ns.v = 1
 #ns.d = 1
 
 # ----------------  PROBLEM DEPENDENT INPUTS
-ns.lo_bc          = 0 3 
-ns.hi_bc          = 0 3  
+ns.lo_bc          = 0 5
+ns.hi_bc          = 0 5
 
 # >>>>>>>>>>>>>  BC FLAGS <<<<<<<<<<<<<<<<
 # 0 = Interior           3 = Symmetry
