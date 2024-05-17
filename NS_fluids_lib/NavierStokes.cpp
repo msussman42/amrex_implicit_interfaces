@@ -216,8 +216,6 @@ Vector<Real> NavierStokes::NS_sumdata;
 Vector<int> NavierStokes::NS_sumdata_type; 
 Vector<int> NavierStokes::NS_sumdata_sweep; 
 
-int NavierStokes::mean_curvature_dt = 0;
-
 Real NavierStokes::fixed_dt     = 0.0;
 Real NavierStokes::fixed_dt_init = 0.0;
 Real NavierStokes::min_velocity_for_dt = CPP_EPS_12_6;
@@ -2919,7 +2917,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("ns.change_max_init invalid");
 
-    pp.queryAdd("mean_curvature_dt",mean_curvature_dt);
 
     pp.queryAdd("fixed_dt",fixed_dt);
     fixed_dt_init=fixed_dt;
@@ -5948,7 +5945,6 @@ NavierStokes::read_params ()
      std::cout << "change_max=" << change_max << '\n';
      std::cout << "change_max_init=" << change_max_init << '\n';
 
-     std::cout << "mean_curvature_dt=" << mean_curvature_dt << '\n';
 
      std::cout << "fixed_dt=" << fixed_dt << '\n';
      std::cout << "fixed_dt_init=" << fixed_dt_init << '\n';
@@ -21759,7 +21755,6 @@ void NavierStokes::MaxAdvectSpeed(
     &local_dt_min_thread,
     &NS_geometry_coord,
     denconst.dataPtr(),
-    &mean_curvature_dt, //def=0
     &visc_coef,
     &gravity_reference_wavelen,
     &dir,

@@ -2416,7 +2416,6 @@ stop
         dt_min, &
         rzflag, &
         denconst, &
-        mean_curvature_dt, &
         visc_coef, &
         gravity_reference_wavelen_in, &
         dirnormal, &
@@ -2478,7 +2477,6 @@ stop
       integer icell,jcell,kcell
       integer ialt,jalt,kalt
       integer, INTENT(in) :: rzflag
-      integer, INTENT(in) :: mean_curvature_dt
       integer, INTENT(in) :: dirnormal
       integer side,dir2
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -2577,7 +2575,6 @@ stop
       integer partid
       integer ispec
       real(amrex_real) vapor_den
-      real(amrex_real) test_cap_wave_speed
       real(amrex_real) elastic_wave_speed
       real(amrex_real) source_perim_factor
       real(amrex_real) dest_perim_factor
@@ -2770,31 +2767,25 @@ stop
           endif
 
            ! capillary_wave_speed declared in PROB.F90
-           ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)=
+           ! theory:
+           ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)
+           ! practical:
+           ! wavespeed=sqrt(2\pi tension/(min(den1,den2)*dx)
+           ! =>
            ! sqrt( (N/m) (m^3/kg)(1/m) )=sqrt( (kg/s^2)(m^2/kg) )=m/s
+           !
+           ! alternate derivation:
+           ! ( dt tension kappa grad H/rho )dt < dx
+           ! dt^2 < rho dx^3/tension
+           ! dt < \sqrt(rho/tension)dx^{3/2} \equiv dx/U
+           ! U=sqrt(tension/(rho dx))
+
           call capillary_wave_speed( &
            dxmin, & !wavelen
            den1,den2, & 
            visc1,visc2, &
            user_tension(iten), &
            cap_wave_speed(iten)) !INTENT(out)
-
-          if (mean_curvature_dt.eq.0) then
-           ! do nothing
-          else if (mean_curvature_dt.eq.1) then
-           !phi_t + sigma kappa |grad phi|=0
-           !phi_t + sigma phi_xx = 0
-           ! dt sigma/dx^2 < 1
-           ! dt<dx^2/sigma
-           ! u=sigma/dx
-           test_cap_wave_speed=user_tension(iten)/dxmin
-           if (test_cap_wave_speed.gt.cap_wave_speed(iten)) then
-            cap_wave_speed(iten)=test_cap_wave_speed
-           endif
-          else
-           print *,"mean_curvature_dt invalid"
-           stop
-          endif
 
          else
           print *,"user_tension invalid fort_estdt"

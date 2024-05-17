@@ -1589,7 +1589,6 @@ protected:
     static Real change_max;    // maximum change in dt over a timestep
     static Real change_max_init; // maximum change in dt over a timestep
 
-    static int mean_curvature_dt; //default is 0
     static Real fixed_dt;      // set > 0 to specify dt
     static Real fixed_dt_init; // set > 0 to specify dt
     static Real min_velocity_for_dt; // dt<dx/min_velocity_for_dt

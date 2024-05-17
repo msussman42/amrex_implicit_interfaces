@@ -388,7 +388,6 @@ extern "C"
       Real* dt_min,
       int* rzflag,
       Real* denconst,
-      int* mean_curvature_dt,
       Real* visc_coef,
       Real* gravity_reference_wavelen_in,
       int* dir,

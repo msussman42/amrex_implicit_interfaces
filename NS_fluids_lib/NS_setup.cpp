@@ -2729,6 +2729,8 @@ NavierStokes::sum_integrated_quantities (
   std::cout << "TIME= "<<upper_slab_time<< " sound_max=" << USOUND << '\n';
   std::cout << "TIME= "<<upper_slab_time<< " max|U|/max|C|=" << UMACH << '\n';
 
+  Real flotsam_total=0.0;
+
   for (int im=0;im<num_materials;im++) {
    F_MAT[im]=NS_sumdata[2*im+IQ_FE_SUM_COMP];
 
@@ -2738,12 +2740,17 @@ NavierStokes::sum_integrated_quantities (
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" FLOTSAM F=" <<
       NS_sumdata[im+IQ_F_FLOTSAM_COMP] << '\n';
 
+   flotsam_total+=NS_sumdata[im+IQ_F_FLOTSAM_COMP];
+
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" LS F=" <<
       NS_sumdata[im+IQ_LS_F_SUM_COMP] << '\n';
 
    std::cout <<"TIME= "<< upper_slab_time << " MAT="<<im<<" E=" <<
       NS_sumdata[2*im+IQ_FE_SUM_COMP+1] << '\n';
   }
+  std::cout <<"TIME= "<< upper_slab_time << " TOTAL FLOTSAM =" <<
+     flotsam_total << '\n';
+
   if (parent->AMR_volume_history_recorded==0) {
    parent->AMR_volume_history.resize(num_materials);
    for (int im=0;im<num_materials;im++) {
