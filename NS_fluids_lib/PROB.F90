@@ -19413,10 +19413,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! dx ^ {3/2}/sqrt( pi * tension / den ) =
        ! dx^{3/2} sqrt{den/(tension * pi)}
       k=two*Pi/wavelen
-      omega=(k**(1.5d0))*sqrt(tension/(den1+den2))
+      omega=(k**(1.5d0))*sqrt(tension/min(den1,den2))
        ! wavespeed=omega/k=
        ! sqrt(k)*sqrt(tension/(den1+den2))=
        ! sqrt(2\pi tension/((den1+den2)*dx)=
+       ! (den1+den2) replaced by min(den1,den2)
       wavespeed=omega/k 
 
       return
