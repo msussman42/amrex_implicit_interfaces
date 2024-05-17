@@ -2416,6 +2416,7 @@ stop
         dt_min, &
         rzflag, &
         denconst, &
+        mean_curvature_dt, &
         visc_coef, &
         gravity_reference_wavelen_in, &
         dirnormal, &
@@ -2477,6 +2478,7 @@ stop
       integer icell,jcell,kcell
       integer ialt,jalt,kalt
       integer, INTENT(in) :: rzflag
+      integer, INTENT(in) :: mean_curvature_dt
       integer, INTENT(in) :: dirnormal
       integer side,dir2
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
@@ -2499,20 +2501,24 @@ stop
       integer, INTENT(in) :: DIMDEC(den)
       real(amrex_real), target, INTENT(in) :: velmac(DIMV(velmac))
       real(amrex_real), pointer :: velmac_ptr(D_DECL(:,:,:))
-      real(amrex_real), target, INTENT(in) :: velcell(DIMV(velcell),STATE_NCOMP_VEL)
+      real(amrex_real), target, INTENT(in) :: &
+        velcell(DIMV(velcell),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: velcell_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), target, INTENT(in) :: solidfab(DIMV(solidfab),nparts_def*SDIM) 
+      real(amrex_real), target, INTENT(in) :: &
+        solidfab(DIMV(solidfab),nparts_def*SDIM) 
       real(amrex_real), pointer :: solidfab_ptr(D_DECL(:,:,:),:)
        ! den,temp,species
       real(amrex_real), target, INTENT(in) :: &
               den(DIMV(den),num_state_material*num_materials)  
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), target, INTENT(in) :: vof(DIMV(vof),num_materials*ngeom_raw)
+      real(amrex_real), target, INTENT(in) :: &
+        vof(DIMV(vof),num_materials*ngeom_raw)
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), target, INTENT(in) :: dist(DIMV(dist),num_materials)
       real(amrex_real), pointer :: dist_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in) :: min_stefan_velocity_for_dt
-      real(amrex_real), INTENT(inout) :: cap_wave_speed(num_interfaces) !fort_estdt
+      real(amrex_real), INTENT(inout) :: &
+        cap_wave_speed(num_interfaces) !fort_estdt
       real(amrex_real) hx,hxmac
       real(amrex_real) dthold
       integer ii,jj,kk
@@ -2571,6 +2577,7 @@ stop
       integer partid
       integer ispec
       real(amrex_real) vapor_den
+      real(amrex_real) test_cap_wave_speed
       real(amrex_real) elastic_wave_speed
       real(amrex_real) source_perim_factor
       real(amrex_real) dest_perim_factor
@@ -2763,13 +2770,31 @@ stop
           endif
 
            ! capillary_wave_speed declared in PROB.F90
-           ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)
+           ! wavespeed=sqrt(2\pi tension/((den1+den2)*dx)=
+           ! sqrt( (N/m) (m^3/kg)(1/m) )=sqrt( (kg/s^2)(m^2/kg) )=m/s
           call capillary_wave_speed( &
            dxmin, & !wavelen
            den1,den2, & 
            visc1,visc2, &
            user_tension(iten), &
            cap_wave_speed(iten)) !INTENT(out)
+
+          if (mean_curvature_dt.eq.0) then
+           ! do nothing
+          else if (mean_curvature_dt.eq.1) then
+           !phi_t + sigma kappa |grad phi|=0
+           !phi_t + sigma phi_xx = 0
+           ! dt sigma/dx^2 < 1
+           ! dt<dx^2/sigma
+           ! u=sigma/dx
+           test_cap_wave_speed=user_tension(iten)/dxmin
+           if (test_cap_wave_speed.gt.cap_wave_speed(iten)) then
+            cap_wave_speed(iten)=test_cap_wave_speed
+           endif
+          else
+           print *,"mean_curvature_dt invalid"
+           stop
+          endif
 
          else
           print *,"user_tension invalid fort_estdt"
@@ -6571,7 +6596,8 @@ stop
       real(amrex_real), pointer :: rhoinverse_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: curv(DIMV(curv),num_curv)
       real(amrex_real), pointer :: curv_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: velnew(DIMV(velnew),STATE_NCOMP_VEL)
+      real(amrex_real), INTENT(inout), target :: &
+        velnew(DIMV(velnew),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: velnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in) :: dt,cur_time
 
