@@ -310,7 +310,7 @@ stop
       if ((im_tertiary.ge.0).and.(im_tertiary.le.num_materials)) then
        ! do nothing
       else
-       print *,"im_tertiary invalid"
+       print *,"im_tertiary invalid: ",im_tertiary
        stop
       endif
 
