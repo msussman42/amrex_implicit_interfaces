@@ -2117,6 +2117,7 @@ protected:
 
     static Vector<Real> denconst_interface;
     static Vector<Real> denconst_interface_min;
+    static Real local_density_ratio_cutoff; //def=10.0
 
     static Vector<Real> stiffPINF;
     static Vector<Real> prerecalesce_stiffCP; // def=4.1855E+7
