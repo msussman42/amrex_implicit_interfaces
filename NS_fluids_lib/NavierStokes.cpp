@@ -831,9 +831,12 @@ Vector<Real> NavierStokes::temperature_source_rad;
 Vector<Real> NavierStokes::density_floor;  // def=0.0
 Vector<Real> NavierStokes::density_ceiling;  // def=1.0e+20
 Vector<Real> NavierStokes::molar_mass;  // def=1
+					//
 Vector<Real> NavierStokes::denconst;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_interface_min;
+Real NavierStokes::local_density_ratio_cutoff=10.0;
+
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
 
@@ -3909,6 +3912,20 @@ NavierStokes::read_params ()
 
     pp.queryAdd("denconst_interface",
       denconst_interface,num_interfaces);
+
+    pp.queryAdd("local_density_ratio_cutoff",local_density_ratio_cutoff);
+
+    for (int im=0;im<num_materials;im++) {
+     for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
+      Real max_den=std::max(denconst[im],denconst[im_opp]);
+      int iten=0;
+      get_iten_cpp(im+1,im_opp+1,iten);
+      if ((iten<1)||(iten>num_interfaces))
+       amrex::Error("iten invalid");
+      denconst_interface_min[iten-1]=max_den/local_density_ratio_cutoff;
+     } //im_opp
+    } //im
+
     pp.queryAdd("denconst_interface_min",
       denconst_interface_min,num_interfaces);
 
@@ -5432,6 +5449,9 @@ NavierStokes::read_params ()
       std::cout << "i,temperature_source_rad=" << i << ' ' <<
          temperature_source_rad[i] << '\n';
      }
+
+     std::cout << "local_density_ratio_cutoff= " << 
+	     local_density_ratio_cutoff << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i= " << i << " denconst_interface "  << 
