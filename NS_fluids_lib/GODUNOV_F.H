@@ -372,6 +372,7 @@ extern "C"
       Real* molar_mass,
       Real* species_molar_mass,
       Real* denconst_interface,
+      Real* denconst_interface_min,
       const Real* Umac, AMREX_ARLIM_P(umaclo),AMREX_ARLIM_P(umachi),
       const Real* Ucell, AMREX_ARLIM_P(ucelllo),AMREX_ARLIM_P(ucellhi),
       const Real* sol, AMREX_ARLIM_P(sollo),AMREX_ARLIM_P(solhi),

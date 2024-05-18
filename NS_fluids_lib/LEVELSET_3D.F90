@@ -7594,9 +7594,10 @@ stop
        isweep, &
        nrefine_vof, &
        denconst_interface, &
-       visc_interface, &
-       heatvisc_interface, &
-       speciesvisc_interface, &
+       denconst_interface_min, &
+       viscconst_interface, &
+       heatviscconst_interface, &
+       speciesviscconst_interface, &
        freezing_model, &
        distribute_from_target, &
        solidheat_flag, &
@@ -7641,7 +7642,7 @@ stop
        levelPC,DIMS(levelPC), &
        vofC,DIMS(vofC), &
        vofF,DIMS(vofF), & !vofF: see fort_build_semirefinevof, tessellate==3
-       massF,DIMS(massF), &
+       massF,DIMS(massF), & !massF: "            "
        tilelo,tilehi, &
        fablo,fabhi,bfact, &
        presbc_arr, &
@@ -7767,7 +7768,8 @@ stop
       real(amrex_real), pointer :: cenvisc_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: vol(DIMV(vol))
       real(amrex_real), pointer :: vol_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: levelPC(DIMV(levelPC),num_materials)
+      real(amrex_real), INTENT(in), target :: &
+        levelPC(DIMV(levelPC),num_materials)
       real(amrex_real), pointer :: levelPC_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vofC(DIMV(vofC),num_materials)
       real(amrex_real), pointer :: vofC_ptr(D_DECL(:,:,:),:)
@@ -7779,10 +7781,11 @@ stop
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
-      real(amrex_real), INTENT(in) :: visc_interface(num_interfaces)
-      real(amrex_real), INTENT(in) :: heatvisc_interface(num_interfaces)
+      real(amrex_real), INTENT(in) :: denconst_interface_min(num_interfaces)
+      real(amrex_real), INTENT(in) :: viscconst_interface(num_interfaces)
+      real(amrex_real), INTENT(in) :: heatviscconst_interface(num_interfaces)
       real(amrex_real), INTENT(in) :: &
-          speciesvisc_interface(num_interfaces*num_species_var)
+          speciesviscconst_interface(num_interfaces*num_species_var)
 
       integer im1,jm1,km1
       integer i,j,k
@@ -8106,18 +8109,19 @@ stop
       do im=1,num_interfaces
 
        if ((denconst_interface(im).ge.zero).and. &
-           (visc_interface(im).ge.zero).and. &
-           (heatvisc_interface(im).ge.zero)) then
+           (denconst_interface_min(im).ge.zero).and. &
+           (viscconst_interface(im).ge.zero).and. &
+           (heatviscconst_interface(im).ge.zero)) then
         ! do nothing
        else
         print *,"den,visc, or heat interface coeff wrong"
         stop
        endif
        do imspec=1,num_species_var
-        if (speciesvisc_interface(num_interfaces*(imspec-1)+im).ge.zero) then
+        if (speciesviscconst_interface(num_interfaces*(imspec-1)+im).ge.zero) then
          !do nothing
         else
-         print *,"species interface coeff wrong"
+         print *,"speciesviscconst_interface coeff wrong"
          stop
         endif
        enddo
@@ -8703,7 +8707,7 @@ stop
           else if (gradh.eq.zero) then
            iten_main=0
           else
-           print *,"gradh is NaN"
+           print *,"gradh is NaN: ",gradh
            stop
           endif
 
@@ -8995,16 +8999,16 @@ stop
 
             call get_iten(imminus_majority,implus_majority,iten_majority)
 
-            if (heatvisc_interface(iten_majority).eq.zero) then
+            if (heatviscconst_interface(iten_majority).eq.zero) then
              ! do nothing
-            else if (heatvisc_interface(iten_majority).gt.zero) then
+            else if (heatviscconst_interface(iten_majority).gt.zero) then
 
              do ireverse=0,1
               local_iten=iten_majority+ireverse*num_interfaces
               if (get_user_latent_heat(local_iten,room_temperature,1).ne.zero) then
                if ((freezing_model(local_iten).eq.0).or. &
                    (freezing_model(local_iten).eq.5)) then
-                print *,"heatvisc_interface invalid"
+                print *,"heatviscconst_interface invalid"
                 stop
                endif 
               else if (get_user_latent_heat(local_iten,room_temperature,1).eq.zero) then
@@ -9015,10 +9019,10 @@ stop
               endif 
              enddo !do ireverse=0,1
 
-             faceheat_local=heatvisc_interface(iten_majority)
+             faceheat_local=heatviscconst_interface(iten_majority)
 
             else
-             print *,"heatvisc_interface invalid"
+             print *,"heatviscconst_interface invalid"
              stop
             endif
            else if (implus_majority.eq.imminus_majority) then
@@ -9109,14 +9113,14 @@ stop
             visc2=localvisc_minus(im_main_opp)
             heat2=localheatvisc_minus(im_main_opp)
            else
-            print *,"LSIDE bust"
+            print *,"LSIDE bust: ",LSIDE(1),LSIDE(2)
             stop
            endif
 
            if ((heat1.ge.zero).and.(heat2.ge.zero)) then
             ! do nothing
            else
-            print *,"heat1 or heat2 invalid"
+            print *,"heat1 or heat2 invalid: ",heat1,heat2
             stop
            endif
 
@@ -9152,14 +9156,14 @@ stop
             stop
            endif
 
-           if (visc_interface(iten_main).eq.zero) then
+           if (viscconst_interface(iten_main).eq.zero) then
             ! do nothing
-           else if (visc_interface(iten_main).gt.zero) then
+           else if (viscconst_interface(iten_main).gt.zero) then
 
-            facevisc_local=visc_interface(iten_main)
+            facevisc_local=viscconst_interface(iten_main)
 
            else
-            print *,"visc_interface invalid"
+            print *,"viscconst_interface invalid"
             stop
            endif
 
@@ -9186,14 +9190,14 @@ stop
             stop
            endif
 
-           if (heatvisc_interface(iten_main).eq.zero) then
+           if (heatviscconst_interface(iten_main).eq.zero) then
             ! do nothing
-           else if (heatvisc_interface(iten_main).gt.zero) then
+           else if (heatviscconst_interface(iten_main).gt.zero) then
 
             if (get_user_latent_heat(iten_main,room_temperature,1).ne.zero) then
              if ((freezing_model(iten_main).eq.0).or. &
                  (freezing_model(iten_main).eq.5)) then
-              print *,"heatvisc_interface invalid"
+              print *,"heatviscconst_interface invalid"
               stop
              endif 
             endif 
@@ -9201,14 +9205,14 @@ stop
                  iten_main+num_interfaces,room_temperature,1).ne.zero) then
              if ((freezing_model(iten_main+num_interfaces).eq.0).or. &
                  (freezing_model(iten_main+num_interfaces).eq.5)) then
-              print *,"heatvisc_interface invalid"
+              print *,"heatviscconst_interface invalid"
               stop
              endif 
             endif 
 
-            faceheat_local=heatvisc_interface(iten_main)
+            faceheat_local=heatviscconst_interface(iten_main)
            else
-            print *,"heatvisc_interface invalid"
+            print *,"heatviscconst_interface invalid"
             stop
            endif
 
@@ -9238,7 +9242,7 @@ stop
             endif
 
             spec_test= &
-              speciesvisc_interface((imspec-1)*num_interfaces+iten_main)
+              speciesviscconst_interface((imspec-1)*num_interfaces+iten_main)
             if (spec_test.eq.zero) then
              ! do nothing
             else if (spec_test.gt.zero) then
@@ -9316,16 +9320,16 @@ stop
           do im=1,num_materials
            do im_opp=im+1,num_materials 
  
-            if ((FFACE(im).gt.VOFTOL).and. &
-                (FFACE(im_opp).gt.VOFTOL)) then
+            if ((FFACE(im).gt.EPS2).and. &
+                (FFACE(im_opp).gt.EPS2)) then
              call get_iten(im,im_opp,iten_FFACE)
 
-             if (visc_interface(iten_FFACE).eq.zero) then
+             if (viscconst_interface(iten_FFACE).eq.zero) then
               ! do nothing
-             else if (visc_interface(iten_FFACE).gt.zero) then
-              facevisc_local=visc_interface(iten_FFACE)
+             else if (viscconst_interface(iten_FFACE).gt.zero) then
+              facevisc_local=viscconst_interface(iten_FFACE)
              else
-              print *,"visc_interface invalid"
+              print *,"viscconst_interface invalid"
               stop
              endif
 
@@ -9333,7 +9337,7 @@ stop
                      (FFACE(im_opp).gt.-EPS1)) then
              ! do nothing
             else
-             print *,"FFACE invalid"
+             print *,"FFACE invalid: ",im,im_opp,FFACE(im),FFACE(im_opp)
              stop
             endif
 
@@ -9640,9 +9644,10 @@ stop
 
            call get_iten(im,im_opp,iten_FFACE)
 
-           if (((FFACE(im).gt.VOFTOL).and. &
-                (FFACE(im_opp).gt.VOFTOL)).or. &
+           if (((FFACE(im).gt.EPS1).and. &
+                (FFACE(im_opp).gt.EPS1)).or. &
                (iten_main.eq.iten_FFACE)) then
+
             if (denconst_interface(iten_FFACE).eq.zero) then
              ! do nothing
             else if (denconst_interface(iten_FFACE).gt.zero) then
@@ -9667,6 +9672,40 @@ stop
              print *,"denconst_interface invalid"
              stop
             endif
+
+            if (denconst_interface_min(iten_FFACE).eq.zero) then
+             ! do nothing
+            else if (denconst_interface_min(iten_FFACE).gt.zero) then
+
+             if (local_face(FACECOMP_FACEDEN+1).gt.zero) then !1/rho
+
+              if (one/local_face(FACECOMP_FACEDEN+1).lt. &
+                  denconst_interface_min(iten_FFACE)) then
+
+               local_face(FACECOMP_FACEDEN+1)=one/ &
+                 denconst_interface_min(iten_FFACE)
+
+               if (local_face(FACECOMP_FACEDEN_BASE+1).gt. &
+                   local_face(FACECOMP_FACEDEN+1)) then
+                ! do nothing
+               else
+                print *,"local_face(FACECOMP_FACEDEN_BASE+1) invalid"
+                stop
+               endif
+
+              endif
+
+             else
+              print *,"local_face(FACECOMP_FACEDEN+1) invalid"
+              stop
+             endif
+
+            else
+             print *,"denconst_interface_min invalid"
+             stop
+            endif
+
+
            else if (iten_main.ne.iten_FFACE) then
             ! do nothing
            else if ((FFACE(im).gt.-EPS1).and. &
@@ -9676,6 +9715,7 @@ stop
             print *,"FFACE invalid"
             stop
            endif
+
           enddo ! im_opp=im+1..num_materials
          enddo ! im=1..num_materials
 
@@ -10107,6 +10147,7 @@ stop
         enddo
          ! before (mofdata): fluids tessellate
          ! after  (mofdata): fluids and solids tessellate
+         ! (if majority=solid => all solid)
          !EPS2
         call multi_get_volume_tessellate( &
          local_tessellate, & ! =3
@@ -10308,7 +10349,7 @@ stop
         if (DeDT_total.gt.zero) then
          ! do nothing
         else
-         print *,"DeDT_total must be positive"
+         print *,"DeDT_total must be positive: ",DeDT_total
          stop
         endif
 
@@ -10352,7 +10393,7 @@ stop
       return
       end subroutine fort_init_physics_vars
 
-
+       ! called from: NavierStokes::make_physics_vars
       subroutine fort_build_semirefinevof( &
        tid, &
        tessellate, &
@@ -10400,12 +10441,14 @@ stop
       integer, INTENT(in) :: DIMDEC(mom_den)
       integer, INTENT(in) :: DIMDEC(vofF)
       integer, INTENT(in) :: DIMDEC(massF)
-      real(amrex_real), INTENT(in), target :: slope(DIMV(slope),num_materials*ngeom_recon) 
+      real(amrex_real), INTENT(in), target :: &
+        slope(DIMV(slope),num_materials*ngeom_recon) 
       real(amrex_real), pointer :: slope_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate), &
               num_materials*num_state_material) 
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: mom_den(DIMV(mom_den),num_materials) 
+      real(amrex_real), INTENT(in), target :: &
+        mom_den(DIMV(mom_den),num_materials) 
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out), target :: vofF(DIMV(vofF),nrefine_vof)
       real(amrex_real), pointer :: vofF_ptr(D_DECL(:,:,:),:)
@@ -13577,7 +13620,7 @@ stop
             POTGRAD_SURFTEN)) then
         ! do nothing
        else
-        print *,"energyflag invalid OP_POTGRAD_TO_MAC"
+        print *,"energyflag invalid OP_POTGRAD_TO_MAC: ",energyflag
         stop
        endif
        if ((ncomp_xp.ne.1).or. &
@@ -13590,7 +13633,7 @@ stop
                (operation_flag.eq.OP_UMAC_PLUS_VISC_CELL_TO_MAC).or. & 
                (operation_flag.eq.OP_U_SEM_CELL_MAC_TO_MAC)) then 
        if (energyflag.ne.SUB_OP_DEFAULT) then
-        print *,"energyflag invalid OP_U etc CELL/MAC to MAC"
+        print *,"energyflag invalid OP_U etc CELL/MAC to MAC: ",energyflag
         stop
        endif
        if (project_option_momeqnF(project_option).eq.1) then
@@ -14283,7 +14326,7 @@ stop
                 else if (DMface.eq.zero) then
                  ! do nothing
                 else
-                 print *,"DMface invalid"
+                 print *,"DMface invalid: ",DMface
                  stop
                 endif
 
@@ -14893,7 +14936,7 @@ stop
               (dminus.gt.zero)) then
            ! do nothing
           else
-           print *,"hydrostatic density must be positive"
+           print *,"hydrostatic density must be positive: ",dplus,dminus
            stop
           endif
 
@@ -14981,14 +15024,14 @@ stop
            if (mass(side).ge.zero) then
             ! do nothing
            else
-            print *,"mass(side) invalid"
+            print *,"mass(side) invalid: ",side,mass(side)
             stop
            endif
 
            if (vol_local(side).ge.zero) then
             ! do nothing
            else
-            print *,"vol_local(side) invalid"
+            print *,"vol_local(side) invalid: ",side,vol_local(side)
             stop
            endif
 
@@ -14997,7 +15040,7 @@ stop
            else if (vol_local(side).eq.zero) then
             den_local(side)=zero
            else
-            print *,"cannot define den_local(side)"
+            print *,"cannot define den_local(side): ",side,vol_local(side)
             stop
            endif
 
@@ -15194,7 +15237,7 @@ stop
                incremental_gravity=-(pres_H/den_H)* &
                  (den_im-den_im_opp)*gradh_gravity/hx
               else
-               print *,"den_H invalid"
+               print *,"den_H invalid: ",den_H
                stop
               endif
       
@@ -15304,7 +15347,7 @@ stop
           if (cutedge.gt.zero) then
            ! do nothing
           else
-           print *,"cutedge invalid"
+           print *,"cutedge invalid: ",cutedge
            stop
           endif
 
