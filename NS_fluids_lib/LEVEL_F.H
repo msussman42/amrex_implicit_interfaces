@@ -375,6 +375,7 @@ namespace amrex{
        int* isweep,
        int* nrefine_vof,
        Real* denconst_interface,
+       Real* denconst_interface_min,
        Real* visc_interface,
        Real* heatvisc_interface,
        Real* speciesvisc_interface,
