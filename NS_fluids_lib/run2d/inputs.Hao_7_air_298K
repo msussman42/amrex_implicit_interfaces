@@ -167,9 +167,9 @@ ns.heatviscconst=0.516e+5 0.02421e+5 2.22e+5 2.22e+5 # erg/(s cm K)
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 1.0e-10 2.2e+5
 # 1 Pa = 10 CGS
-#ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
-ns.uncoupled_viscosity=1
-ns.viscconst=100.0 100.0 100.0 100.0
+ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
+#ns.uncoupled_viscosity=1
+#ns.viscconst=100.0 100.0 100.0 100.0
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
 ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
 #ns.denconst=1.0 0.00129 0.850 10.0 

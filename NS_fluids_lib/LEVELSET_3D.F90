@@ -20244,13 +20244,22 @@ stop
                  if (num_materials.eq.2) then
                   !do nothing
                  else if (num_materials.ge.3) then
-                  if ((im_tertiary.ge.1).and. &
-                      (im_tertiary.le.num_materials)) then
+                  if (im_tertiary.eq.0) then
+                   !do nothing (is_rigid materials cannot be tertiary)
+                  else if ((im_tertiary.ge.1).and. &
+                           (im_tertiary.le.num_materials)) then
                    if (abs(LS_sub(im_tertiary)).le.two*DXMAXLS) then
                     sub_found=0
                    endif
                   else
-                   print *,"im_tertiary invalid: ",im_tertiary
+                   print *,"im_tertiary invalid"
+                   print *,"(fort_init_particle_container): ", &
+                     im_tertiary
+                   print *,"im_primary_sub: ",im_primary_sub
+                   print *,"im_secondary: ",im_secondary
+                   do im_loop=1,num_materials
+                    print *,"LS_sub(im_loop)=",im_loop,LS_sub(im_loop)
+                   enddo
                    stop
                   endif
                  else
