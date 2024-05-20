@@ -835,7 +835,7 @@ Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_interface_min;
-Real NavierStokes::local_density_ratio_cutoff=10.0;
+Real NavierStokes::density_ratio_relaxation_factor=100.0;
 
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
@@ -3913,7 +3913,8 @@ NavierStokes::read_params ()
     pp.queryAdd("denconst_interface",
       denconst_interface,num_interfaces);
 
-    pp.queryAdd("local_density_ratio_cutoff",local_density_ratio_cutoff);
+    pp.queryAdd("density_ratio_relaxation_factor",
+		density_ratio_relaxation_factor);
 
     for (int im=0;im<num_materials;im++) {
      for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
@@ -3922,7 +3923,8 @@ NavierStokes::read_params ()
       get_iten_cpp(im+1,im_opp+1,iten);
       if ((iten<1)||(iten>num_interfaces))
        amrex::Error("iten invalid");
-      denconst_interface_min[iten-1]=max_den/local_density_ratio_cutoff;
+      denconst_interface_min[iten-1]=
+	   max_den/density_ratio_relaxation_factor;
      } //im_opp
     } //im
 
@@ -5450,8 +5452,8 @@ NavierStokes::read_params ()
          temperature_source_rad[i] << '\n';
      }
 
-     std::cout << "local_density_ratio_cutoff= " << 
-	     local_density_ratio_cutoff << '\n';
+     std::cout << "density_ratio_relaxation_factor= " << 
+	     density_ratio_relaxation_factor << '\n';
 
      for (int i=0;i<num_interfaces;i++) {
       std::cout << "i= " << i << " denconst_interface "  << 
@@ -24410,15 +24412,17 @@ void NavierStokes::avgDown_refine_density(int im_comp) {
   amrex::Error("S_fine invalid");
  if (S_crse.nComp()!=S_fine.nComp())
   amrex::Error("nComp mismatch");
+ if (S_crse.nComp()!=NUM_CELL_REFINE_DENSITY)
+  amrex::Error("nComp mismatch");
 
  BoxArray crse_S_fine_BA(fgrids.size());
  for (int i = 0; i < fgrids.size(); ++i) {
   crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
  }
 
- FIX ME
+ 
  DistributionMapping crse_dmap=fdmap;
- MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,num_materials*ngeom_raw,0,
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,ENUM_NUM_REFINE_DENSITY_TYPE,0,
    MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
 
  ParallelDescriptor::Barrier();
@@ -24449,7 +24453,7 @@ void NavierStokes::avgDown_refine_density(int im_comp) {
   const Box& fgrid=finefab.box();
   const int* flo=fgrid.loVect();
   const int* fhi=fgrid.hiVect();
-  const Real* f_dat=finefab.dataPtr(STATECOMP_MOF);
+  const Real* f_dat=finefab.dataPtr(im_comp*ENUM_NUM_REFINE_DENSITY_TYPE);
 
   FArrayBox& coarsefab=crse_S_fine[gridno];
   const Box& cgrid = coarsefab.box();
@@ -24460,7 +24464,7 @@ void NavierStokes::avgDown_refine_density(int im_comp) {
   int bfact_c=parent->Space_blockingFactor(level);
   int bfact_f=parent->Space_blockingFactor(f_level);
 
-  fort_mofavgdown(
+  fort_refine_density_avgdown(
    &cur_time_slab,
    prob_lo,
    dxc,
@@ -24471,8 +24475,9 @@ void NavierStokes::avgDown_refine_density(int im_comp) {
    ovlo,ovhi);
  } // mfi
 } //omp
- ns_reconcile_d_num(LOOP_MOFAVGDOWN,"MOFavgDown");
- S_crse.ParallelCopy(crse_S_fine,0,STATECOMP_MOF,num_materials*ngeom_raw);
+ ns_reconcile_d_num(LOOP_REFINE_DENSITY_AVGDOWN,"Refine_Density_avgDown");
+ S_crse.ParallelCopy(crse_S_fine,0,im_comp*ENUM_NUM_REFINE_DENSITY_TYPE,
+		 ENUM_NUM_REFINE_DENSITY_TYPE);
  ParallelDescriptor::Barrier();
 } // end subroutine avgDown_refine_density
 

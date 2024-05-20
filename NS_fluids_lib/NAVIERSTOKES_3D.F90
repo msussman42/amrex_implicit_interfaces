@@ -13374,9 +13374,11 @@ END SUBROUTINE SIMP
       integer, INTENT(in) :: lo(SDIM),hi(SDIM)
       integer  growlo(3),growhi(3)
       integer  stenlo(3),stenhi(3)
-      real(amrex_real), INTENT(out),target :: crse(DIMV(crse),num_materials*ngeom_raw)
+      real(amrex_real), INTENT(out),target :: &
+              crse(DIMV(crse),num_materials*ngeom_raw)
       real(amrex_real), pointer :: crse_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: fine(DIMV(fine),num_materials*ngeom_raw)
+      real(amrex_real), INTENT(in),target :: &
+              fine(DIMV(fine),num_materials*ngeom_raw)
       real(amrex_real), pointer :: fine_ptr(D_DECL(:,:,:),:)
       integer ifine,jfine,kfine
       integer ic,jc,kc
@@ -13757,6 +13759,182 @@ END SUBROUTINE SIMP
       return
       end subroutine fort_mofavgdown
 
+
+      subroutine fort_refine_density_avgdown ( &
+       time, &
+       problo, &
+       dxc, &
+       dxf, &
+       bfact_c,bfact_f, &
+       crse,DIMS(crse), &
+       fine,DIMS(fine), &
+       lo,hi) &
+      bind(c,name='fort_refine_density_avgdown')
+
+      use global_utility_module
+      use geometry_intersect_module
+      use MOF_routines_module
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      real(amrex_real), INTENT(in) :: problo(SDIM)
+      real(amrex_real), INTENT(in) :: dxf(SDIM)
+      real(amrex_real), INTENT(in) :: dxc(SDIM)
+      real(amrex_real), INTENT(in) :: time
+      integer, INTENT(in) :: bfact_c,bfact_f
+      integer, INTENT(in) :: DIMDEC(crse)
+      integer, INTENT(in) :: DIMDEC(fine)
+      integer, INTENT(in) :: lo(SDIM),hi(SDIM)
+      integer  growlo(3),growhi(3)
+      integer  stenlo(3),stenhi(3)
+      real(amrex_real), INTENT(out),target :: &
+              crse(DIMV(crse),ENUM_NUM_REFINE_DENSITY_TYPE)
+      real(amrex_real), pointer :: crse_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in),target :: &
+              fine(DIMV(fine),ENUM_NUM_REFINE_DENSITY_TYPE)
+      real(amrex_real), pointer :: fine_ptr(D_DECL(:,:,:),:)
+      integer ifine,jfine,kfine
+      integer ifine2,jfine2,kfine2
+      integer ic,jc,kc
+      integer ic2,jc2,kc2
+      integer ncrse,nfine
+
+      real(amrex_real) wt(SDIM)
+      real(amrex_real) testwt
+      real(amrex_real) wttotal
+      real(amrex_real) crse_value
+
+
+      integer tid
+#ifdef _OPENMP
+      integer omp_get_thread_num
+#endif
+
+      tid=0       
+#ifdef _OPENMP
+      tid=omp_get_thread_num()
+#endif
+      if ((tid.ge.geom_nthreads).or.(tid.lt.0)) then
+       print *,"tid invalid"
+       stop
+      endif 
+
+      if (time.ge.zero) then
+       ! do nothing
+      else
+       print *,"time invalid: ",time
+       stop
+      endif
+      if (bfact_f.lt.1) then
+       print *,"bfact_f invalid5 ",bfact_f
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+
+      crse_ptr=>crse
+      fine_ptr=>fine
+      call checkbound_array(lo,hi,crse_ptr,0,-1)
+
+      call growntilebox(lo,hi,lo,hi,growlo,growhi,0) 
+
+      do kc=growlo(3),growhi(3)
+      do jc=growlo(2),growhi(2)
+      do ic=growlo(1),growhi(1)
+
+       call fine_subelement_stencil(ic,jc,kc,stenlo,stenhi, &
+         bfact_c,bfact_f)
+
+       kc2=0
+#if (AMREX_SPACEDIM==3)
+       do kc2=0,1
+#endif
+       do jc2=0,1
+       do ic2=0,1
+
+        ncrse=4*kc2+2*jc2+ic2+1
+        wttotal=zero
+        crse_value=zero
+
+        do ifine=stenlo(1),stenhi(1)
+        do ifine2=0,1
+         call intersect_weight_avg_refine( &
+           ic,ic2,ifine,ifine2,  &
+           bfact_c,bfact_f,wt(1))
+         if (wt(1).gt.zero) then
+          do jfine=stenlo(2),stenhi(2)
+          do jfine2=0,1
+           call intersect_weight_avg_refine( &
+             jc,jc2,jfine,jfine2,  &
+             bfact_c,bfact_f,wt(2))
+           if (wt(2).gt.zero) then
+            do kfine=stenlo(3),stenhi(3)
+            kfine2=0
+#if (AMREX_SPACEDIM==3)
+            do kfine2=0,1
+#endif
+             if (SDIM.eq.3) then
+              call intersect_weight_avg_refine( &
+               kc,kc2,kfine,kfine2,  &
+               bfact_c,bfact_f,wt(SDIM))
+             endif
+             if (wt(SDIM).gt.zero) then
+              if (SDIM.eq.2) then
+               testwt=wt(1)*wt(2)
+              else if (SDIM.eq.3) then
+               testwt=wt(1)*wt(2)*wt(SDIM)
+              else
+               print *,"dimension bust"
+               stop
+              endif
+
+              if (testwt.gt.zero) then
+               nfine=4*kfine2+2*jfine2+ifine2+1
+               crse_value = crse_value +  &
+                testwt*fine(D_DECL(ifine,jfine,kfine),nfine)
+               wttotal=wttotal+testwt
+              else if (testwt.eq.zero) then
+               print *,"testwt should not be 0"
+               stop
+              else
+               print *,"testwt invalid: ",testwt
+               stop
+              endif
+             endif ! wt(sdim).gt.0
+#if (AMREX_SPACEDIM==3)
+            enddo ! kfine2
+#endif
+            enddo ! kfine
+           endif ! wt(2)>0
+          enddo ! jfine2
+          enddo ! jfine
+         endif ! wt(1)>0
+        enddo ! ifin2
+        enddo ! ifine
+
+        if (wttotal.gt.zero) then
+         !do nothing
+        else
+         print *,"wttotal invalid: ",wttotal
+         stop
+        endif
+        crse(D_DECL(ic,jc,kc),ncrse)=crse_value/wttotal
+       enddo !ic2
+       enddo !jc2
+#if (AMREX_SPACEDIM==3)
+       enddo !kc2
+#endif
+
+      enddo
+      enddo
+      enddo ! ic,jc,kc
+
+      return
+      end subroutine fort_refine_density_avgdown
 
       subroutine fort_erroravgdown ( &
        problo, &

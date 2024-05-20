@@ -418,6 +418,18 @@ extern "C" {
       const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
       const int* lo, const int* hi);
 
+
+    void fort_refine_density_avgdown(
+      Real* time,
+      const Real* problo,
+      const Real* dxc,
+      const Real* dxf,
+      int* bfact_c,int* bfact_f,
+      const Real* crse,AMREX_ARLIM_P(clo),AMREX_ARLIM_P(chi),
+      const Real* fine,AMREX_ARLIM_P(fine_lo),AMREX_ARLIM_P(fine_hi),
+      const int* lo, const int* hi);
+
+
     void fort_erroravgdown(
       const Real* problo,
       const Real* dxf,

@@ -9504,14 +9504,15 @@ end subroutine print_visual_descriptor
 
       integer, intent(in) :: ic,i,bfact_c,bfact_f
       real(amrex_real), intent(out) :: wt
-      integer nhalf,dir_index
+      integer, parameter :: nhalf=1
+      integer dir_index
       integer fablo(SDIM)
       real(amrex_real) intlo,inthi
       real(amrex_real) dxc(SDIM)
       real(amrex_real) dxf(SDIM)
       real(amrex_real) xlo(SDIM)
-      real(amrex_real) xc(-1:1)
-      real(amrex_real) xf(-1:1)
+      real(amrex_real) xc(-nhalf:nhalf)
+      real(amrex_real) xf(-nhalf:nhalf)
 
       if (bfact_c.lt.1) then
        print *,"bfact_c invalid"
@@ -9519,11 +9520,9 @@ end subroutine print_visual_descriptor
       endif
       if ((bfact_c.ne.bfact_f).and. &
           (bfact_c.ne.2*bfact_f)) then
-       print *,"bfact_c invalid"
+       print *,"bfact_c invalid: ",bfact_c
        stop
       endif
-
-      nhalf=1
 
       dxc(1)=one
       dxf(1)=half
@@ -9535,17 +9534,23 @@ end subroutine print_visual_descriptor
       call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
 
       if (bfact_f.eq.1) then
-       if (abs(xf(1)-xf(-1)-dxf(1)).ge.EPS_8_4) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_4) then
+        !do nothing
+       else
         print *,"xf invalid 1"
         stop
        endif
-       if (abs(xf(1)+xf(-1)-two*xf(0)).ge.EPS_8_4) then
+       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_4) then
+        !do nothing
+       else
         print *,"xf invalid 2"
         stop
        endif
       else if (bfact_f.gt.1) then
-       if ((xf(1)-xf(0).le.zero).or. &
-           (xf(0)-xf(-1).le.zero)) then
+       if ((xf(1)-xf(0).gt.zero).and. &
+           (xf(0)-xf(-1).gt.zero)) then
+        !do nothing
+       else
         print *,"xf invalid 3"
         stop
        endif
@@ -9555,17 +9560,23 @@ end subroutine print_visual_descriptor
       endif
 
       if (bfact_c.eq.1) then
-       if (abs(xc(1)-xc(-1)-dxc(1)).ge.EPS_8_4) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_4) then
+        !do nothing
+       else
         print *,"xc invalid"
         stop
        endif
-       if (abs(xc(1)+xc(-1)-two*xc(0)).ge.EPS_8_4) then
+       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_4) then
+        !do nothing
+       else
         print *,"xc invalid"
         stop
        endif
       else if (bfact_c.gt.1) then
-       if ((xc(1)-xc(0).le.zero).or. &
-           (xc(0)-xc(-1).le.zero)) then
+       if ((xc(1)-xc(0).gt.zero).and. &
+           (xc(0)-xc(-1).gt.zero)) then
+        !do nothing
+       else
         print *,"xc invalid 3"
         stop
        endif
@@ -9596,12 +9607,144 @@ end subroutine print_visual_descriptor
       end subroutine intersect_weight_avg
 
 
+
+      subroutine intersect_weight_avg_refine(ic,ic2,i,i2,bfact_c,bfact_f,wt)
+      use probcommon_module
+
+      integer, intent(in) :: ic,ic2,i,i2,bfact_c,bfact_f
+      real(amrex_real), intent(out) :: wt
+      integer, parameter :: nhalf=1
+      integer dir_index
+      integer fablo(SDIM)
+      real(amrex_real) intlo,inthi
+      real(amrex_real) dxc(SDIM)
+      real(amrex_real) dxf(SDIM)
+      real(amrex_real) xlo(SDIM)
+      real(amrex_real) xc(-nhalf:nhalf)
+      real(amrex_real) xf(-nhalf:nhalf)
+      real(amrex_real) xclo,xchi,xflo,xfhi
+
+      if (bfact_c.lt.1) then
+       print *,"bfact_c invalid"
+       stop
+      endif
+      if ((bfact_c.ne.bfact_f).and. &
+          (bfact_c.ne.2*bfact_f)) then
+       print *,"bfact_c invalid: ",bfact_c
+       stop
+      endif
+
+      dxc(1)=one
+      dxf(1)=half
+
+      xlo(1)=zero
+      dir_index=1
+      fablo(1)=0
+      call gridsten1D(xc,xlo,ic,fablo,bfact_c,dxc,dir_index,nhalf)
+      call gridsten1D(xf,xlo,i,fablo,bfact_f,dxf,dir_index,nhalf)
+
+      if (bfact_f.eq.1) then
+       if (abs(xf(1)-xf(-1)-dxf(1)).lt.EPS_8_4) then
+        !do nothing
+       else
+        print *,"xf invalid 1"
+        stop
+       endif
+       if (abs(xf(1)+xf(-1)-two*xf(0)).lt.EPS_8_4) then
+        !do nothing
+       else
+        print *,"xf invalid 2"
+        stop
+       endif
+      else if (bfact_f.gt.1) then
+       if ((xf(1)-xf(0).gt.zero).and. &
+           (xf(0)-xf(-1).gt.zero)) then
+        !do nothing
+       else
+        print *,"xf invalid 3"
+        stop
+       endif
+      else
+       print *,"bfact_f invalid"
+       stop
+      endif
+
+      if (bfact_c.eq.1) then
+       if (abs(xc(1)-xc(-1)-dxc(1)).lt.EPS_8_4) then
+        !do nothing
+       else
+        print *,"xc invalid"
+        stop
+       endif
+       if (abs(xc(1)+xc(-1)-two*xc(0)).lt.EPS_8_4) then
+        !do nothing
+       else
+        print *,"xc invalid"
+        stop
+       endif
+      else if (bfact_c.gt.1) then
+       if ((xc(1)-xc(0).gt.zero).and. &
+           (xc(0)-xc(-1).gt.zero)) then
+        !do nothing
+       else
+        print *,"xc invalid 3"
+        stop
+       endif
+      else
+       print *,"bfact_c invalid"
+       stop
+      endif
+
+      if (ic2.eq.0) then
+       xclo=xc(-1)
+       xchi=xc(0)
+      else if (ic2.eq.1) then
+       xclo=xc(0)
+       xchi=xc(1)
+      else
+       print *,"ic2 invalid: ",ic2
+       stop
+      endif
+
+      if (i2.eq.0) then
+       xflo=xf(-1)
+       xfhi=xf(0)
+      else if (i2.eq.1) then
+       xflo=xf(0)
+       xfhi=xf(1)
+      else
+       print *,"i2 invalid: ",i2
+       stop
+      endif
+
+      intlo=max(xflo,xclo)
+      inthi=min(xfhi,xchi)
+      if (intlo.ge.inthi) then
+       wt=zero
+      else
+       wt=(inthi-intlo)/(xchi-xclo) ! average down
+      endif
+      if (abs(wt).le.VOFTOL) then
+       wt=zero
+      else if (abs(wt-one).le.VOFTOL) then
+       wt=one
+      else if ((wt.gt.zero).and.(wt.lt.one)) then
+       !do nothing
+      else
+       print *,"wt invalid 2"
+       stop
+      endif
+
+      return
+      end subroutine intersect_weight_avg_refine
+
+
       subroutine intersect_weight_avg_COPY(ic,i,bfact_c,bfact_f,wt, &
          dir,dir_current)
       use probcommon_module
 
-      integer ic,i,bfact_c,bfact_f,dir,dir_current
-      real(amrex_real) wt
+      integer, intent(in) :: ic,i,bfact_c,bfact_f,dir,dir_current
+      real(amrex_real), intent(out) ::  wt
 
       if (bfact_c.lt.1) then
        print *,"bfact_c invalid"
@@ -9635,8 +9778,8 @@ end subroutine print_visual_descriptor
       subroutine intersect_weight_interp(ic,i,bfact_c,bfact_f,wt)
       use probcommon_module
 
-      integer ic,i,bfact_c,bfact_f
-      real(amrex_real) wt
+      integer, intent(in) :: ic,i,bfact_c,bfact_f
+      real(amrex_real), intent(out) :: wt
       integer, parameter :: nhalf=1
       integer dir_index
       integer fablo(SDIM)
@@ -9753,8 +9896,8 @@ end subroutine print_visual_descriptor
       subroutine intersect_weight_interp_refine(ic,ic2,i,i2,bfact_c,bfact_f,wt)
       use probcommon_module
 
-      integer ic,ic2,i,i2,bfact_c,bfact_f
-      real(amrex_real) wt
+      integer, intent(in) :: ic,ic2,i,i2,bfact_c,bfact_f
+      real(amrex_real), intent(out) :: wt
       integer, parameter :: nhalf=1
       integer dir_index
       integer fablo(SDIM)
@@ -9896,8 +10039,8 @@ end subroutine print_visual_descriptor
          dir,dir_current)
       use probcommon_module
 
-      integer ic,i,bfact_c,bfact_f,dir,dir_current
-      real(amrex_real) wt
+      integer, intent(in) :: ic,i,bfact_c,bfact_f,dir,dir_current
+      real(amrex_real), intent(out) :: wt
 
       if (bfact_c.lt.1) then
        print *,"bfact_c invalid"
@@ -9930,16 +10073,17 @@ end subroutine print_visual_descriptor
       subroutine intersect_weightMAC_interp(ic,i,bfact_c,bfact_f,wt)
       use probcommon_module
 
-      integer ic,i,bfact_c,bfact_f
-      real(amrex_real) wt
-      integer nhalf,dir_index
+      integer, intent(in) :: ic,i,bfact_c,bfact_f
+      real(amrex_real), intent(out) :: wt
+      integer, parameter :: nhalf=1
+      integer dir_index
       integer fablo(SDIM)
       real(amrex_real) intlo,inthi
       real(amrex_real) dxc(SDIM)
       real(amrex_real) dxf(SDIM)
       real(amrex_real) xlo(SDIM)
-      real(amrex_real) xc(-1:1)
-      real(amrex_real) xf(-1:1)
+      real(amrex_real) xc(-nhalf:nhalf)
+      real(amrex_real) xf(-nhalf:nhalf)
       integer denom
 
       if (bfact_c.lt.1) then
@@ -9984,7 +10128,6 @@ end subroutine print_visual_descriptor
         endif
        else
 
-        nhalf=1
 
         dxc(1)=one
         dxf(1)=half
@@ -10356,16 +10499,17 @@ end subroutine print_visual_descriptor
       subroutine intersect_weightMAC_avg(ic,i,bfact_c,bfact_f,wt)
       use probcommon_module
 
-      integer ic,i,bfact_c,bfact_f
-      real(amrex_real) wt
-      integer nhalf,dir_index
+      integer, intent(in) :: ic,i,bfact_c,bfact_f
+      real(amrex_real), intent(out) :: wt
+      integer, parameter :: nhalf=1
+      integer dir_index
       integer fablo(SDIM)
       real(amrex_real) intlo,inthi
       real(amrex_real) dxc(SDIM)
       real(amrex_real) dxf(SDIM)
       real(amrex_real) xlo(SDIM)
-      real(amrex_real) xc(-1:1)
-      real(amrex_real) xf(-1:1)
+      real(amrex_real) xc(-nhalf:nhalf)
+      real(amrex_real) xf(-nhalf:nhalf)
 
       if (bfact_c.lt.1) then
        print *,"bfact_c invalid"
@@ -10391,8 +10535,6 @@ end subroutine print_visual_descriptor
          wt=zero
         endif
        else
-
-        nhalf=1
 
         dxc(1)=one
         dxf(1)=half
