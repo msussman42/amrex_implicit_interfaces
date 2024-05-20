@@ -24378,6 +24378,106 @@ void NavierStokes::MOFavgDown() {
 }
 
 
+void NavierStokes::avgDown_refine_density(int im_comp) {
+
+ std::string local_caller_string="avgDown_refine_density";
+
+ if ((im_comp>=0)&&(im_comp<num_materials_compressible)) {
+  //do nothing
+ } else
+  amrex::Error("im_comp invalid");
+
+ int finest_level=parent->finestLevel();
+
+ if (level == finest_level)
+  return;
+
+ int f_level=level+1;
+ NavierStokes&   fine_lev = getLevel(f_level);
+ const BoxArray& fgrids=fine_lev.grids;
+ const DistributionMapping& fdmap=fine_lev.dmap;
+
+ MultiFab& S_fine=fine_lev.get_new_data(Refine_Density_Type,slab_step+1);
+ MultiFab& S_crse = get_new_data(Refine_Density_Type,slab_step+1);
+
+ const Real* dxf = fine_lev.geom.CellSize();
+ const Real* dxc = geom.CellSize();
+ const Real* prob_lo   = geom.ProbLo();
+
+ if (grids!=S_crse.boxArray())
+  amrex::Error("S_crse invalid avgDown_refine_density");
+ if (fgrids!=S_fine.boxArray())
+  amrex::Error("S_fine invalid");
+ if (S_crse.nComp()!=S_fine.nComp())
+  amrex::Error("nComp mismatch");
+
+ BoxArray crse_S_fine_BA(fgrids.size());
+ for (int i = 0; i < fgrids.size(); ++i) {
+  crse_S_fine_BA.set(i,amrex::coarsen(fgrids[i],2));
+ }
+
+ FIX ME
+ DistributionMapping crse_dmap=fdmap;
+ MultiFab crse_S_fine(crse_S_fine_BA,crse_dmap,num_materials*ngeom_raw,0,
+   MFInfo().SetTag("crse_S_fine"),FArrayBoxFactory());
+
+ ParallelDescriptor::Barrier();
+
+ if (thread_class::nthreads<1)
+  amrex::Error("thread_class::nthreads invalid");
+ thread_class::init_d_numPts(S_fine.boxArray().d_numPts());
+
+#ifdef _OPENMP
+#pragma omp parallel
+#endif
+{
+ for (MFIter mfi(S_fine,false); mfi.isValid(); ++mfi) {
+  BL_ASSERT(fgrids[mfi.index()] == mfi.validbox());
+  const Box& tilegrid = mfi.tilebox();
+
+  int tid_current=ns_thread();
+  if ((tid_current<0)||(tid_current>=thread_class::nthreads))
+   amrex::Error("tid_current invalid");
+  thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
+
+  const int gridno = mfi.index();
+  const Box& ovgrid = crse_S_fine_BA[gridno];
+  const int* ovlo=ovgrid.loVect();
+  const int* ovhi=ovgrid.hiVect();
+  
+  FArrayBox& finefab=S_fine[gridno];
+  const Box& fgrid=finefab.box();
+  const int* flo=fgrid.loVect();
+  const int* fhi=fgrid.hiVect();
+  const Real* f_dat=finefab.dataPtr(STATECOMP_MOF);
+
+  FArrayBox& coarsefab=crse_S_fine[gridno];
+  const Box& cgrid = coarsefab.box();
+  const int* clo=cgrid.loVect();
+  const int* chi=cgrid.hiVect();
+  const Real* c_dat=coarsefab.dataPtr();
+
+  int bfact_c=parent->Space_blockingFactor(level);
+  int bfact_f=parent->Space_blockingFactor(f_level);
+
+  fort_mofavgdown(
+   &cur_time_slab,
+   prob_lo,
+   dxc,
+   dxf,
+   &bfact_c,&bfact_f,
+   c_dat,ARLIM(clo),ARLIM(chi),
+   f_dat,ARLIM(flo),ARLIM(fhi),
+   ovlo,ovhi);
+ } // mfi
+} //omp
+ ns_reconcile_d_num(LOOP_MOFAVGDOWN,"MOFavgDown");
+ S_crse.ParallelCopy(crse_S_fine,0,STATECOMP_MOF,num_materials*ngeom_raw);
+ ParallelDescriptor::Barrier();
+} // end subroutine avgDown_refine_density
+
+
+
 void NavierStokes::avgDownError() {
 
  std::string local_caller_string="avgDownError";
