@@ -11537,6 +11537,31 @@ void NavierStokes::diffusion_heatingALL(
 
 }  // subroutine diffusion_heatingALL
 
+void NavierStokes::avgDownALL_refine_density() {
+
+ int finest_level = parent->finestLevel();
+ if (level!=0)
+  amrex::Error("only call with level=0");
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+
+  for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+
+   for (int i=finest_level-1;i>=level;i--) {
+    NavierStokes& ns_level=getLevel(i);
+    ns_level.avgDown_refine_density(im_comp);
+   }
+
+  } //im_comp
+
+ } else if (num_materials_compressible==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid");
+
+} //end subroutine avgDownALL_refine_density
+
 void NavierStokes::avgDownALL_TENSOR() {
 
  if ((num_materials_viscoelastic>=1)&&

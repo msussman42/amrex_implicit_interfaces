@@ -956,6 +956,9 @@ protected:
 
     void avgDownALL_TENSOR(); 
 
+    void avgDownALL_refine_density(); 
+    void avgDown_refine_density(int im_comp); 
+
      // spectral_override==1 => order derived from "enable_spectral"
      // spectral_override==0 => always low order.
     void avgDown(int stateidx,int startcomp,int numcomp,int spectral_override); 
