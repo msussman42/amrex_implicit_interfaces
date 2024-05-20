@@ -835,7 +835,7 @@ Vector<Real> NavierStokes::molar_mass;  // def=1
 Vector<Real> NavierStokes::denconst;
 Vector<Real> NavierStokes::denconst_interface;
 Vector<Real> NavierStokes::denconst_interface_min;
-Real NavierStokes::density_ratio_relaxation_factor=100.0;
+Real NavierStokes::density_ratio_relaxation_factor=10.0;
 
 int NavierStokes::stokes_flow=0;
 int NavierStokes::cancel_advection=0;
