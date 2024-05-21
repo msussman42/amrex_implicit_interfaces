@@ -20248,8 +20248,10 @@ stop
                    !do nothing (is_rigid materials cannot be tertiary)
                   else if ((im_tertiary.ge.1).and. &
                            (im_tertiary.le.num_materials)) then
-                   if (abs(LS_sub(im_tertiary)).le.two*DXMAXLS) then
-                    sub_found=0
+                   if (1.eq.0) then
+                    if (abs(LS_sub(im_tertiary)).le.two*DXMAXLS) then
+                     sub_found=0
+                    endif
                    endif
                   else
                    print *,"im_tertiary invalid"
