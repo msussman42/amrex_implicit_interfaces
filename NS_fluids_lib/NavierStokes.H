@@ -468,6 +468,9 @@ protected:
     void getStateTensor_localMF(int idx_MF,int ngrow,
      int scomp,int ncomp,Real time);
 
+    void getStateRefineDensity_localMF(int idx_MF,int ngrow,
+     int scomp,int ncomp,Real time);
+
     void getState_localMF_list(
      int idx_MF,int ngrow,
      int state_index,
@@ -1288,6 +1291,9 @@ void apply_pressure_grad(
        int num_comp,Real time);
 
     MultiFab* getStateSolid(int ngrow,int strt_comp,
+       int num_comp,Real time);
+
+    MultiFab* getStateRefineDensity(int ngrow,int strt_comp,
        int num_comp,Real time);
 
     MultiFab* getStateTensor(int ngrow,int strt_comp,

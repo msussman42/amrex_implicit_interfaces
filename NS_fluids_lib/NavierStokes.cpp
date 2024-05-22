@@ -10190,8 +10190,27 @@ void NavierStokes::init_boundary() {
              (num_materials_viscoelastic>=1)&&
              (num_materials_viscoelastic<=num_materials)) {
    // do nothing
-  } else 
+  } else if ((k==Refine_Density_Type)&&
+             (num_materials_compressible>=1)&&
+             (num_materials_compressible<=num_materials)) {
+
+   int nparts=im_refine_density_map.size();
+   if ((nparts<=0)||(nparts>num_materials))
+    amrex::Error("nparts invalid");
+   if (nparts!=num_materials_compressible)
+    amrex::Error("nparts!=num_materials_compressible");
+   MultiFab& Refine_Density_new=get_new_data(Refine_Density_Type,slab_step+1);
+     // ngrow=1 scomp=0
+   MultiFab* refine_density_mf=getStateRefineDensity(1,0,
+     NUM_CELL_REFINE_DENSITY,cur_time_slab);
+   MultiFab::Copy(Refine_Density_new,*refine_density_mf,0,0,
+     NUM_CELL_REFINE_DENSITY,1);
+   delete refine_density_mf;
+  
+  } else {
+   std::cout << "k= " << k << '\n';
    amrex::Error("k invalid");
+  }
 
  } // k=0..nstate-1
 
@@ -10270,15 +10289,16 @@ NavierStokes::init(
 
    int ncomp=S_new.nComp();
 
-   int numparts=1;
-   int ncomp_part[4];
-   int scomp_part[4];
+   Vector<int> ncomp_part;
+   Vector<int> scomp_part;
    
    if (local_index==State_Type) {
 
     int test_ncomp=0;
 
-    numparts=4;
+    ncomp_part.resize(4);
+    scomp_part.resize(4);
+
     scomp_part[0]=0;
     scomp_part[1]=STATE_NCOMP_VEL+STATE_NCOMP_PRES;
     scomp_part[2]=scomp_part[1]+num_materials*num_state_material;
@@ -10292,12 +10312,24 @@ NavierStokes::init(
     test_ncomp+=ncomp_part[2];
     ncomp_part[3]=1;
     test_ncomp+=ncomp_part[3];
+
     if (test_ncomp!=ncomp)
      amrex::Error("test ncomp invalid");
 
+   } else if ((local_index==Refine_Density_Type)&&
+              (num_materials_compressible>0)) {
+
+    ncomp_part.resize(num_materials_compressible);
+    scomp_part.resize(num_materials_compressible);
+    for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+     ncomp_part[im_comp]=ENUM_NUM_REFINE_DENSITY_TYPE;
+     scomp_part[im_comp]=im_comp*ENUM_NUM_REFINE_DENSITY_TYPE;
+    }
+
    } else if (local_index!=State_Type) {
 
-    numparts=1;
+    ncomp_part.resize(1);
+    scomp_part.resize(1);
     scomp_part[0]=0;
     ncomp_part[0]=ncomp;
 
@@ -10305,7 +10337,7 @@ NavierStokes::init(
     amrex::Error("local_index bust");
    }
     
-   for (int part_iter=0;part_iter<numparts;part_iter++) { 
+   for (int part_iter=0;part_iter<ncomp_part.size();part_iter++) { 
      //FillPatch is declared in amrlib/AmrLevel.cpp
     FillPatch(
        old,
@@ -10465,15 +10497,16 @@ NavierStokes::init(
 
    int ncomp=S_new.nComp();
 
-   int numparts=1;
-   int ncomp_part[4];
-   int scomp_part[4];
-   
+   Vector<int> ncomp_part;
+   Vector<int> scomp_part;
+
    if (local_index==State_Type) {
 
     int test_ncomp=0;
 
-    numparts=4;
+    ncomp_part.resize(4);
+    scomp_part.resize(4);
+
     scomp_part[0]=0;
     scomp_part[1]=STATE_NCOMP_VEL+STATE_NCOMP_PRES;
     scomp_part[2]=scomp_part[1]+num_materials*num_state_material;
@@ -10487,12 +10520,24 @@ NavierStokes::init(
     test_ncomp+=ncomp_part[2];
     ncomp_part[3]=1;
     test_ncomp+=ncomp_part[3];
+
     if (test_ncomp!=ncomp)
      amrex::Error("test ncomp invalid");
 
+   } else if ((local_index==Refine_Density_Type)&&
+              (num_materials_compressible>0)) {
+
+    ncomp_part.resize(num_materials_compressible);
+    scomp_part.resize(num_materials_compressible);
+    for (int im_comp=0;im_comp<num_materials_compressible;im_comp++) {
+     ncomp_part[im_comp]=ENUM_NUM_REFINE_DENSITY_TYPE;
+     scomp_part[im_comp]=im_comp*ENUM_NUM_REFINE_DENSITY_TYPE;
+    }
+
    } else if (local_index!=State_Type) {
 
-    numparts=1;
+    ncomp_part.resize(1);
+    scomp_part.resize(1);
     scomp_part[0]=0;
     ncomp_part[0]=ncomp;
 
@@ -10500,7 +10545,7 @@ NavierStokes::init(
     amrex::Error("local_index bust");
    }
 
-   for (int part_iter=0;part_iter<numparts;part_iter++) { 
+   for (int part_iter=0;part_iter<ncomp_part.size();part_iter++) { 
     FillCoarsePatch(
       S_new,scomp_part[part_iter],
       upper_slab_time,
@@ -17400,6 +17445,12 @@ NavierStokes::split_scalar_advection() {
  } else
   amrex::Error("NUM_CELL_ELASTIC invalid");
 
+ if (NUM_CELL_REFINE_DENSITY==
+     num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+  // do nothing
+ } else
+  amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
   // vof,ref centroid,order,slope,intercept  x num_materials
  VOF_Recon_resize(ngrow_mass); //output:SLOPE_RECON_MF
  debug_ngrow(SLOPE_RECON_MF,ngrow_mass,local_caller_string);
@@ -17462,6 +17513,27 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("num_materials_viscoelastic invalid");
 
  MultiFab& Tensor_new=get_new_data(Tensor_Type_local,slab_step+1);
+
+ int REFINE_DENSITY_RECON_MF_local=-1;
+ int Refine_Density_Type_local=-1;
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  REFINE_DENSITY_RECON_MF_local=REFINE_DENSITY_RECON_MF;
+  Refine_Density_Type_local=Refine_Density_Type;
+  getStateRefineDensity_localMF(
+   REFINE_DENSITY_RECON_MF_local,
+   ngrow_mass,0,
+   NUM_CELL_REFINE_DENSITY,
+   advect_time_slab);
+ } else if (num_materials_compressible==0) {
+  Refine_Density_Type_local=State_Type;
+  REFINE_DENSITY_RECON_MF_local=DEN_RECON_MF;
+ } else
+  amrex::Error("num_materials_compressble invalid");
+
+ MultiFab& Refine_Density_new=
+	 get_new_data(Refine_Density_Type_local,slab_step+1);
 
    //ngrow_scalar=1
  getStateDist_localMF(LS_RECON_MF,ngrow_scalar,advect_time_slab,
@@ -24822,6 +24894,96 @@ MultiFab* NavierStokes::getStateTensor (
  return nullptr;
 
 } // end subroutine getStateTensor
+
+
+MultiFab* NavierStokes::getStateRefineDensity (
+  int ngrow, int  scomp,
+  int ncomp, Real time) {
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+
+   // 0<=im_refine_density_map[i]<num_materials
+  int nparts=im_refine_density_map.size();
+
+  if (nparts==num_materials_compressible) {
+
+   if (ENUM_NUM_REFINE_DENSITY_TYPE==4*(AMREX_SPACEDIM-1)) {
+    // do nothing
+   } else
+    amrex::Error("ENUM_NUM_REFINE_DENSITY_TYPE became corrupted");
+
+    // Refine_Density_Type:
+    //   nparts * ENUM_NUM_REFINE_DENSITY_TYPE
+   int ntotal_test=NUM_CELL_REFINE_DENSITY;
+
+   if (NUM_CELL_REFINE_DENSITY==
+       num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+    // do nothing
+   } else
+    amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+   int im_comp_start=0;
+   int im_comp_end=0;
+
+   if ((ncomp==ntotal_test)&&(scomp==0)) {
+    im_comp_start=0;
+    im_comp_end=num_materials_compressible-1;
+   } else if (ncomp%ENUM_NUM_REFINE_DENSITY_TYPE==0) {
+    int partid=scomp/ENUM_NUM_REFINE_DENSITY_TYPE;
+    if ((partid<0)||(partid>=nparts))
+     amrex::Error("partid invalid");
+    im_comp_start=partid;
+    int num_refine_materials=ncomp/ENUM_NUM_REFINE_DENSITY_TYPE;
+    im_comp_end=im_comp_start+num_refine_materials-1;
+   } else {
+    std::cout << "ncomp= " << ncomp << 
+      " scomp=" << scomp << 
+      " num_materials_compressible= " << num_materials_compressible << 
+      " ENUM_NUM_REFINE_DENSITY_TYPE= " << ENUM_NUM_REFINE_DENSITY_TYPE << 
+      " NUM_CELL_REFINE_DENSITY= " << NUM_CELL_REFINE_DENSITY << '\n';
+    amrex::Error("ncomp or scomp invalid");
+   }
+
+   MultiFab& Refine_Density_new=get_new_data(Refine_Density_Type,slab_step+1);
+   int ntotal=Refine_Density_new.nComp();
+   if (ntotal==ntotal_test) {
+    // do nothing
+   } else
+    amrex::Error("ntotal invalid");
+
+   if (scomp<0)
+    amrex::Error("scomp invalid getStateRefineDensity"); 
+   if (ncomp<=0)
+    amrex::Error("ncomp invalid in getstateRefineDensity"); 
+   if (scomp+ncomp>ntotal)
+    amrex::Error("scomp,ncomp invalid");
+
+   MultiFab* mf = new MultiFab(state[Refine_Density_Type].boxArray(),dmap,ncomp,
+    ngrow,MFInfo().SetTag("mf getRefineDensity"),FArrayBoxFactory());
+
+   for (int im_comp=im_comp_start;im_comp<=im_comp_end;im_comp++) {
+    FillPatch(*this,*mf,
+	      (im_comp-im_comp_start)*ENUM_NUM_REFINE_DENSITY_TYPE,
+	      time,Refine_Density_Type,
+	      im_comp*ENUM_NUM_REFINE_DENSITY_TYPE,
+	      ENUM_NUM_REFINE_DENSITY_TYPE,
+	      debug_fillpatch);
+   }
+
+   ParallelDescriptor::Barrier();
+
+   return mf;
+  } else
+   amrex::Error("nparts!=num_materials_compressible");
+ } else
+  amrex::Error("num_materials_compressible bad:getStateRefineDensity");
+
+ return nullptr;
+
+} // end subroutine getStateRefineDensity
+
+
 
 MultiFab* NavierStokes::getStateDist (int ngrow,Real time,
    const std::string& caller_string) {

@@ -445,6 +445,21 @@ void NavierStokes::getStateTensor_localMF(int idx_MF,int ngrow,
 } //end subroutine getStateTensor_localMF
 
 
+void NavierStokes::getStateRefineDensity_localMF(int idx_MF,int ngrow,
+  int scomp,int ncomp,Real time) {
+
+ if (localMF_grow[idx_MF]==-1) {
+  // do nothing
+ } else
+  amrex::Error("localMF_grow invalid getStateRefineDensity_localMF");
+
+ if (ngrow<0)
+  amrex::Error("ngrow invalid");
+
+ localMF[idx_MF]=getStateRefineDensity(ngrow,scomp,ncomp,time);
+ localMF_grow[idx_MF]=ngrow;
+
+} //end subroutine getStateRefineDensity_localMF
 
 void NavierStokes::maskfiner_localMF(int idx_MF,int ngrow,
   Real tag,int clearbdry) {
