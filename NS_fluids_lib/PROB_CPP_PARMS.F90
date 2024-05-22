@@ -2234,6 +2234,11 @@ stop
       num_materials_compressible=0
       if (num_prior_calls.eq.1) then
        num_materials_compressible=ccnum_materials_compressible
+      else if (num_prior_calls.eq.0) then
+       !do nothing
+      else
+       print *,"num_prior_calls invalid: ",num_prior_calls
+       stop
       endif
       
       num_state_base=ccnum_state_base
@@ -2283,9 +2288,16 @@ stop
        print *,"numspec,num_mat_visc,MAX_NUM_MATERIALS ", &
         num_species_var,num_materials_viscoelastic, &
         MAX_NUM_MATERIALS
+
        if (num_prior_calls.eq.1) then
         print *,"num_materials_compressible ",num_materials_compressible
+       else if (num_prior_calls.eq.0) then
+        !do nothing
+       else
+        print *,"num_prior_calls invalid: ",num_prior_calls
+        stop
        endif
+
        print *,"ngeom_raw ",ngeom_raw
        print *,"ngeom_recon ",ngeom_recon
        print *,"fort: num_state_material ",num_state_material
