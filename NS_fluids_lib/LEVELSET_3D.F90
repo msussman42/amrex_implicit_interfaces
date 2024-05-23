@@ -12195,7 +12195,7 @@ stop
          stop
         endif
 
-         ! note, in fort_build_conserve, if 
+         ! note, in fort_vfrac_split, if 
          ! is_compressible_mat==0 or
          ! fort_conserve_total_energy==0,
          ! then 

@@ -4392,254 +4392,6 @@ stop
       return
       end subroutine fort_velmac_override
 
-      subroutine fort_build_conserve( &
-       constant_density_all_time, &
-       conserve,DIMS(conserve), &
-       den, &
-       DIMS(den), &
-       mom_den, &
-       DIMS(mom_den), &
-       vel,DIMS(vel), &
-       tilelo,tilehi, &
-       fablo,fabhi,bfact, &
-       ngrow, &
-       normdir, &
-       nc_conserve, &
-       nc_den) &
-      bind(c,name='fort_build_conserve')
-
-      use probf90_module
-      use global_utility_module
-      use MOF_routines_module
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: ngrow
-      integer, INTENT(in) :: normdir
-      integer, INTENT(in) :: nc_conserve
-      integer, INTENT(in) :: nc_den
-      integer, INTENT(in) :: constant_density_all_time(num_materials)
-      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: DIMDEC(conserve) 
-      integer, INTENT(in) :: DIMDEC(den) 
-      integer, INTENT(in) :: DIMDEC(mom_den) 
-      integer, INTENT(in) :: DIMDEC(vel) 
-      real(amrex_real), INTENT(out), target :: conserve(DIMV(conserve), &
-              nc_conserve)
-      real(amrex_real), pointer :: conserve_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: den(DIMV(den),nc_den)
-      real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: &
-              mom_den(DIMV(mom_den),num_materials)
-      real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
-      real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
-
-      integer i,j,k,im
-      integer istate,ispecies
-      integer dencomp,tempcomp,speccomp
-      integer veldir
-      integer igridlo(3),igridhi(3)
-      real(amrex_real) dencore(num_materials)
-      real(amrex_real) mom_dencore(num_materials)
-      real(amrex_real) KE,vel1D,local_temperature,local_internal
-      real(amrex_real) :: massfrac_parm(num_species_var+1)
-
-      conserve_ptr=>conserve
-      den_ptr=>den
-      mom_den_ptr=>mom_den
-      vel_ptr=>vel
-
-      if (nc_den.ne.num_state_material*num_materials) then
-       print *,"nc_den invalid"
-       stop
-      endif
-      if (nc_conserve.ne.CISLCOMP_CONS_NCOMP) then
-       print *,"nc_conserve invalid"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid44"
-       stop
-      endif
-      if (ngrow.ne.2) then
-       print *,"ngrow out of range in fort_build_conserve ngrow=",ngrow
-       stop
-      endif
-      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-       ! do nothing 
-      else
-       print *,"normdir invalid"
-       stop
-      endif
-      if (num_state_base.ne.2) then
-       print *,"num_state_base invalid"
-       stop
-      endif
-
-      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1)
-      call checkbound_array(fablo,fabhi,den_ptr,ngrow,-1)
-      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow,-1)
-      call checkbound_array(fablo,fabhi,vel_ptr,ngrow,-1)
-
-      call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        igridlo,igridhi,ngrow)
-
-      do k=igridlo(3),igridhi(3)
-      do j=igridlo(2),igridhi(2)
-      do i=igridlo(1),igridhi(1)
-
-        ! KE=u dot u/2
-       KE=zero
-       do veldir=1,SDIM
-        vel1D=vel(D_DECL(i,j,k),veldir)
-        conserve(D_DECL(i,j,k),veldir)=vel1D
-        KE=KE+vel1D**2
-       enddo
-       KE=half*KE
-
-       if (KE.ge.zero) then
-        ! do nothing
-       else
-        print *,"KE invalid: ",KE
-        stop
-       endif
-
-       do im=1,num_materials
-        istate=ENUM_DENVAR+1
-        dencomp=(im-1)*num_state_material+istate
-        dencore(im)=den(D_DECL(i,j,k),dencomp)
-        mom_dencore(im)=mom_den(D_DECL(i,j,k),im)
-          ! sanity check
-        if (constant_density_all_time(im).eq.1) then
-         if (abs(dencore(im)-fort_denconst(im)).le. &
-             fort_denconst(im)*EPS_8_4) then
-          ! do nothing
-         else
-          print *,"dencore(im) invalid"
-          print *,"im,i,j,k,den ",im,i,j,k,dencore(im)
-          print *,"fort_denconst(im) ",fort_denconst(im)
-          print *,"dencomp=",dencomp
-          print *,"normdir=",normdir
-          stop
-         endif
-        else if (constant_density_all_time(im).eq.0) then 
-         ! do nothing
-        else
-         print *,"constant_density_all_time invalid"
-         stop
-        endif
-
-        if (dencore(im).gt.zero) then
-         ! do nothing
-        else
-         print *,"density must be positive build_conserve"
-         print *,"im,dencore(im) ",im,dencore(im)
-         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
-         stop
-        endif  
-
-        if (mom_dencore(im).gt.zero) then
-         ! do nothing
-        else
-         print *,"mom_density must be positive build_conserve"
-         print *,"im,mom_dencore(im) ",im,mom_dencore(im)
-         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
-         stop
-        endif  
-
-       enddo ! im=1..num_materials
-
-       do im=1,num_materials
-
-         ! in: fort_build_conserve
-        istate=1
-        do while (istate.le.num_state_material)
-
-         if (istate.eq.ENUM_DENVAR+1) then ! Density
-          dencomp=(im-1)*num_state_material+ENUM_DENVAR+1
-          conserve(D_DECL(i,j,k),CISLCOMP_STATES+dencomp)=dencore(im)
-          istate=istate+1
-         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! Temperature
-          tempcomp=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-          local_temperature=den(D_DECL(i,j,k),tempcomp)
-          if (is_compressible_mat(im).eq.0) then
-            ! den * T
-           conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
-            dencore(im)*local_temperature
-          else if (is_compressible_mat(im).eq.1) then
-
-           if (fort_conserve_total_energy.eq.0) then
-
-            ! den * T
-            conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
-             dencore(im)*local_temperature
-
-           else if (fort_conserve_total_energy.eq.1) then
-
-            call init_massfrac_parm(dencore(im),massfrac_parm,im)
-            do ispecies=1,num_species_var
-             massfrac_parm(ispecies)=den(D_DECL(i,j,k),tempcomp+ispecies)
-             if (massfrac_parm(ispecies).ge.zero) then
-              ! do nothing
-             else
-              print *,"massfrac_parm(ispecies) invalid: ", &
-                 ispecies,massfrac_parm(ispecies)
-              stop
-             endif
-            enddo
-
-            ! den * (u dot u/2 + cv T)
-            call INTERNAL_material(dencore(im),massfrac_parm, &
-             local_temperature,local_internal, &
-             fort_material_type(im),im)
-            conserve(D_DECL(i,j,k),CISLCOMP_STATES+tempcomp)= &
-             dencore(im)*(KE+local_internal) 
-
-           else 
-            print *,"fort_conserve_total_energy invalid: ", &
-              fort_conserve_total_energy
-            stop
-           endif
-
-          else
-           print *,"is_compressible_mat invalid"
-           stop
-          endif
-          istate=istate+1
-         else if ((istate.eq.num_state_base+1).and. &
-                  (num_species_var.gt.0)) then 
-           ! den * Y
-          do ispecies=1,num_species_var
-           speccomp=(im-1)*num_state_material+num_state_base+ispecies
-           conserve(D_DECL(i,j,k),CISLCOMP_STATES+speccomp)= &
-             dencore(im)*den(D_DECL(i,j,k),speccomp)
-           istate=istate+1
-          enddo ! ispecies=1..num_species_var
-         else 
-          print *,"istate invalid"
-          stop
-         endif
-
-        enddo ! do while (istate.le.num_state_material)
-
-        if (dencore(im).gt.zero) then 
-         ! do nothing
-        else
-         print *,"dencore must be positive"
-         stop
-        endif
-
-       enddo ! im=1..num_materials
-
-      enddo !i 
-      enddo !j
-      enddo !k (cell center "conserved" variables) 
-
-      return
-      end subroutine fort_build_conserve
-
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
         !
@@ -5371,184 +5123,6 @@ stop
 
       return
       end subroutine fort_init_icemask_and_icefacecut
-
-      ! called from split_scalar_advection after 
-      !  BUILD_SEMIREFINEVOF(tessellate==0)
-      subroutine fort_build_macvof( &
-       level, &
-       finest_level, &
-       normdir, &
-       x_mac_old, &
-       DIMS(x_mac_old), &
-       xvel,DIMS(xvel), &  
-       xlo, &
-       dx, &
-       tilelo,tilehi, &
-       fablo,fabhi, &
-       bfact, &
-       ngrow, &  !=2
-       ngrowmac, & !=2
-       veldir) &
-      bind(c,name='fort_build_macvof')
-
-      use probcommon_module
-      use global_utility_module
-      use geometry_intersect_module
-      use MOF_routines_module
-      IMPLICIT NONE
-
-      integer, INTENT(in) :: level
-      integer, INTENT(in) :: finest_level
-      integer, INTENT(in) :: normdir
-      integer, INTENT(in) :: ngrow
-      integer, INTENT(in) :: ngrowmac,veldir
-      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
-      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
-      integer, INTENT(in) :: bfact
-      integer, INTENT(in) :: DIMDEC(x_mac_old) 
-      integer, INTENT(in) :: DIMDEC(xvel) 
-      real(amrex_real), INTENT(in), target :: x_mac_old(DIMV(x_mac_old))
-      real(amrex_real), pointer :: x_mac_old_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(out), target :: xvel(DIMV(xvel)) 
-      real(amrex_real), pointer :: xvel_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in) :: xlo(SDIM)
-      real(amrex_real), INTENT(in) :: dx(SDIM)
-
-      integer i,j,k
-      integer igridlo(3),igridhi(3)
-      real(amrex_real) velmac
-      integer, PARAMETER :: nhalf=1
-      real(amrex_real) xsten(-nhalf:nhalf,SDIM)
-
-      x_mac_old_ptr=>x_mac_old
-
-      xvel_ptr=>xvel
-
-      if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid build macvof"
-       stop
-      endif
-      if (bfact.lt.1) then
-       print *,"bfact invalid46"
-       stop
-      endif
-
-      if ((num_materials_viscoelastic.ge.1).and. &
-          (num_materials_viscoelastic.le.num_materials)) then
-       ! do nothing
-      else if (num_materials_viscoelastic.eq.0) then
-       ! do nothing
-      else
-       print *,"num_materials_viscoelastic invalid:fort_build_macvof"
-       stop
-      endif
-
-      if ((normdir.ge.0).and.(normdir.lt.SDIM)) then
-       ! do nothing
-      else
-       print *,"normdir invalid fort_build_macvof"
-       stop
-      endif
-
-      if (ngrow.ne.2) then
-       print *,"ngrow invalid"
-       stop
-      endif
-      if ((veldir.lt.1).or.(veldir.gt.SDIM)) then
-       print *,"veldir invalid"
-       stop
-      endif
-      if (ngrowmac.ne.2) then
-       print *,"ngrowmac invalid"
-       stop
-      endif
-      call checkbound_array1(fablo,fabhi,x_mac_old_ptr,ngrowmac,veldir-1)
-      call checkbound_array1(fablo,fabhi,xvel_ptr,ngrowmac,veldir-1)
-
-      call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-        igridlo,igridhi,ngrowmac,veldir-1)
-
-      do k=igridlo(3),igridhi(3)
-      do j=igridlo(2),igridhi(2)
-      do i=igridlo(1),igridhi(1)
-
-        ! veldir=1..sdim
-       call gridstenMAC_level(xsten,i,j,k,level,nhalf,veldir-1)
-
-       velmac=x_mac_old(D_DECL(i,j,k))
-
-       if (veldir.eq.1) then
-        if (levelrz.eq.COORDSYS_CARTESIAN) then
-         ! do nothing
-        else if (levelrz.eq.COORDSYS_RZ) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-         if (xsten(0,1).le.EPS2*dx(1)) then
-          velmac=zero
-         endif
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten(0,1).le.EPS2*dx(1)) then
-           velmac=zero
-         endif
-        else
-         print *,"levelrz invalid build macvof"
-         stop
-        endif
-       else if (veldir.eq.2) then
-        if (levelrz.eq.COORDSYS_CARTESIAN) then
-         ! do nothing
-        else if (levelrz.eq.COORDSYS_RZ) then
-         if (SDIM.ne.2) then
-          print *,"dimension bust"
-          stop
-         endif
-         if (xsten(0,1).le.EPS2*dx(1)) then
-           velmac=zero
-         endif
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten(0,1).le.EPS2*dx(1)) then
-           velmac=zero
-         endif
-        else
-         print *,"levelrz invalid build macvof 2"
-         stop
-        endif
-       else if ((veldir.eq.3).and.(SDIM.eq.3)) then
-        if (levelrz.eq.COORDSYS_CARTESIAN) then
-         ! do nothing
-        else if (levelrz.eq.COORDSYS_RZ) then
-         print *,"dimension bust"
-         stop
-        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
-         if (xsten(0,1).le.EPS2*dx(1)) then
-           velmac=zero
-         endif
-        else
-         print *,"levelrz invalid build macvof 3"
-         stop
-        endif
-       else
-        print *,"veldir invalid"
-        stop
-       endif
-
-       if ((velmac.ge.zero).or. &
-           (velmac.le.zero)) then
-        xvel(D_DECL(i,j,k))=velmac
-       else
-        print *,"velmac is NaN"
-        stop
-       endif
-
-      enddo !i 
-      enddo !j
-      enddo !k (face center "conserved" variables) 
-
-      return
-      end subroutine fort_build_macvof
-
 
       subroutine check_for_closest_UMAC( &
        xtarget, &
@@ -12887,10 +12461,12 @@ stop
        mom_den, &
        DIMS(mom_den), &
        tensor,DIMS(tensor), &
+       refineden,DIMS(refineden), &
        velfab,DIMS(velfab), & !VELADVECT_MF
        PLICSLP,DIMS(PLICSLP), &  ! slope data
        snew,DIMS(snew), &  ! this is the result
        tennew,DIMS(tennew), & 
+       refinedennew,DIMS(refinedennew), & 
        LSnew,DIMS(LSnew), &
        vof0,DIMS(vof0), &  
        mask,DIMS(mask), & !mask=1 if not covered by level+1 or outside domain
@@ -12984,12 +12560,14 @@ stop
       integer, INTENT(in) :: DIMDEC(den)
       integer, INTENT(in) :: DIMDEC(mom_den)
       integer, INTENT(in) :: DIMDEC(tensor)
+      integer, INTENT(in) :: DIMDEC(refineden)
       integer, INTENT(in) :: DIMDEC(velfab)
        ! slope data
       integer, INTENT(in) :: DIMDEC(PLICSLP)
        ! new data
       integer, INTENT(in) :: DIMDEC(snew)
       integer, INTENT(in) :: DIMDEC(tennew)
+      integer, INTENT(in) :: DIMDEC(refinedennew)
       integer, INTENT(in) :: DIMDEC(LSnew)
        ! other vars
       integer, INTENT(in) :: DIMDEC(vof0)
@@ -13027,6 +12605,9 @@ stop
       real(amrex_real), INTENT(in), target :: &
               tensor(DIMV(tensor),NUM_CELL_ELASTIC)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(in), target :: &
+              refineden(DIMV(refineden),NUM_CELL_REFINE_DENSITY)
+      real(amrex_real), pointer :: refineden_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: & !VELADVECT_MF
            velfab(DIMV(velfab),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       real(amrex_real), pointer :: velfab_ptr(D_DECL(:,:,:),:)
@@ -13039,6 +12620,9 @@ stop
       real(amrex_real), INTENT(inout), target :: &
               tennew(DIMV(tennew),NUM_CELL_ELASTIC)
       real(amrex_real), pointer :: tennew_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: &
+              refinedennew(DIMV(refinedennew),NUM_CELL_REFINE_DENSITY)
+      real(amrex_real), pointer :: refinedennew_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(inout), target :: &
               LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
@@ -13053,14 +12637,14 @@ stop
       real(amrex_real), INTENT(in), target :: umac_displace(DIMV(umac_displace))
       real(amrex_real), pointer :: umac_displace_ptr(D_DECL(:,:,:))
        ! local variables
-      real(amrex_real), INTENT(in), target ::  &
+      real(amrex_real), INTENT(inout), target ::  &
             conserve(DIMV(conserve),nc_conserve)
       real(amrex_real), pointer :: conserve_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: xvel(DIMV(xvel)) 
+      real(amrex_real), INTENT(inout), target :: xvel(DIMV(xvel)) 
       real(amrex_real), pointer :: xvel_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: yvel(DIMV(yvel))  
+      real(amrex_real), INTENT(inout), target :: yvel(DIMV(yvel))  
       real(amrex_real), pointer :: yvel_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: zvel(DIMV(zvel)) 
+      real(amrex_real), INTENT(inout), target :: zvel(DIMV(zvel)) 
       real(amrex_real), pointer :: zvel_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(inout), target :: xmomside(DIMV(xmomside),2)
@@ -13179,6 +12763,8 @@ stop
       real(amrex_real) mofdata_grid(recon_ncomp)
       real(amrex_real) snew_hold(ncomp_state)
       real(amrex_real) tennew_hold(NUM_CELL_ELASTIC)
+      real(amrex_real) refinedennew_hold(NUM_CELL_REFINE_DENSITY)
+      real(amrex_real) mom_dencore(num_materials)
       real(amrex_real) dencore(num_materials)
       real(amrex_real) oldLS(num_materials)
       real(amrex_real) newLS(num_materials)
@@ -13226,10 +12812,13 @@ stop
       real(amrex_real) :: massquarter
       real(amrex_real) :: momquarter
 
+      real(amrex_real) :: velmac
+
       real(amrex_real) :: xclamped(SDIM)
       real(amrex_real) :: LS_clamped
       real(amrex_real) :: vel_clamped(SDIM)
       real(amrex_real) :: temperature_clamped
+      real(amrex_real) :: local_temperature
       integer :: prescribed_flag
 
 ! fort_vfrac_split code starts here
@@ -13286,6 +12875,20 @@ stop
        stop
       endif
 
+
+      if ((num_materials_compressible.ge.1).and. &
+          (num_materials_compressible.le.num_materials)) then
+       refinedennew_ptr=>refinedennew
+       refineden_ptr=>refineden
+      else if (num_materials_compressible.eq.0) then
+       refinedennew_ptr=>snew
+       refineden_ptr=>den
+      else
+       print *,"num_materials_compressible invalid:fort_vfrac_split"
+       stop
+      endif
+
+
       nmax=POLYGON_LIST_MAX ! in: fort_vfrac_split
 
       k1lo=0
@@ -13335,7 +12938,7 @@ stop
       if (ngrow_mass.eq.2) then
        ! do nothing
       else
-       print *,"ngrow_mass invalid"
+       print *,"ngrow_mass invalid: ",ngrow_mass
        stop
       endif
 
@@ -13433,6 +13036,30 @@ stop
        stop
       endif
 
+      if (NUM_CELL_REFINE_DENSITY.eq. &
+          num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_REFINE_DENSITY invalid"
+       stop
+      endif
+      if (ENUM_NUM_REFINE_DENSITY_TYPE.eq.4*(SDIM-1)) then
+       ! do nothing
+      else
+       print *,"ENUM_NUM_REFINE_DENSITY_TYPE invalid"
+       stop
+      endif 
+
+      if ((num_materials_compressible.ge.0).and. &
+          (num_materials_compressible.le.num_materials)) then
+       ! do nothing
+      else
+       print *,"num_materials_compressible invalid:fort_vfrac_split"
+       stop
+      endif
+
+
+
       if ((divu_outer_sweeps.ge.0).and. &
           (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
        ! do nothing
@@ -13457,12 +13084,12 @@ stop
       endif
 
       if ((normdir.lt.0).or.(normdir.ge.SDIM)) then
-       print *,"normdir invalid"
+       print *,"normdir invalid: ",normdir
        stop
       endif
 
       if (den_recon_ncomp.ne.num_materials*num_state_material) then
-       print *,"den_recon_ncomp invalid"
+       print *,"den_recon_ncomp invalid: ",den_recon_ncomp
        stop
       endif
 
@@ -13508,12 +13135,14 @@ stop
       call checkbound_array(fablo,fabhi,den_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_mass,-1)
       call checkbound_array(fablo,fabhi,tensor_ptr,ngrow_scalar,-1)
+      call checkbound_array(fablo,fabhi,refineden_ptr,ngrow_scalar,-1)
       call checkbound_array(fablo,fabhi,velfab_ptr,ngrow_mass,-1)
        ! slope data
       call checkbound_array(fablo,fabhi,PLICSLP_ptr,ngrow_mass,-1)
        ! new data
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tennew_ptr,1,-1)
+      call checkbound_array(fablo,fabhi,refinedennew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
        ! other vars
       call checkbound_array(fablo,fabhi,vof0_ptr,1,-1)
@@ -13569,9 +13198,9 @@ stop
       call checkbound_array1(fablo,fabhi,ymac_new_ptr,0,1)
       call checkbound_array1(fablo,fabhi,zmac_new_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,xmac_old_ptr,0,0)
-      call checkbound_array1(fablo,fabhi,ymac_old_ptr,0,1)
-      call checkbound_array1(fablo,fabhi,zmac_old_ptr,0,SDIM-1)
+      call checkbound_array1(fablo,fabhi,xmac_old_ptr,ngrow_mac_old,0)
+      call checkbound_array1(fablo,fabhi,ymac_old_ptr,ngrow_mac_old,1)
+      call checkbound_array1(fablo,fabhi,zmac_old_ptr,ngrow_mac_old,SDIM-1)
 
       if (nc_conserve.ne.CISLCOMP_CONS_NCOMP) then
        print *,"nc_conserve invalid"
@@ -13635,6 +13264,161 @@ stop
        stop
       endif
 
+      call growntilebox(tilelo,tilehi,fablo,fabhi, &
+        growlo,growhi,ngrow_mass)
+
+      do kcrse=growlo(3),growhi(3)
+      do jcrse=growlo(2),growhi(2)
+      do icrse=growlo(1),growhi(1)
+
+        ! KE=u dot u/2
+       KE=zero
+       do veldir=1,SDIM
+        vel1D=velfab(D_DECL(icrse,jcrse,kcrse),veldir)
+        conserve(D_DECL(icrse,jcrse,kcrse),veldir)=vel1D
+        KE=KE+vel1D**2
+       enddo
+       KE=half*KE
+
+       if (KE.ge.zero) then
+        ! do nothing
+       else
+        print *,"KE invalid: ",KE
+        stop
+       endif
+
+       do im=1,num_materials
+        istate=ENUM_DENVAR+1
+        dencomp_data=(im-1)*num_state_material+istate
+        dencore(im)=den(D_DECL(icrse,jcrse,kcrse),dencomp_data)
+        mom_dencore(im)=mom_den(D_DECL(icrse,jcrse,kcrse),im)
+          ! sanity check
+        if (constant_density_all_time(im).eq.1) then
+         if (abs(dencore(im)-fort_denconst(im)).le. &
+             fort_denconst(im)*EPS_8_4) then
+          ! do nothing
+         else
+          print *,"dencore(im) invalid"
+          print *,"im,icrse,jcrse,kcrse,den ",im,icrse,jcrse,kcrse,dencore(im)
+          print *,"fort_denconst(im) ",fort_denconst(im)
+          print *,"dencomp_data=",dencomp_data
+          print *,"normdir=",normdir
+          stop
+         endif
+        else if (constant_density_all_time(im).eq.0) then 
+         ! do nothing
+        else
+         print *,"constant_density_all_time invalid"
+         stop
+        endif
+
+        if (dencore(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"density must be positive fort_vfrac_split"
+         print *,"im,dencore(im) ",im,dencore(im)
+         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+         stop
+        endif  
+
+        if (mom_dencore(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"mom_density must be positive fort_vfrac_split"
+         print *,"im,mom_dencore(im) ",im,mom_dencore(im)
+         print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+         stop
+        endif  
+
+       enddo ! im=1..num_materials
+
+       do im=1,num_materials
+
+         ! in: fort_vfrac_split
+        istate=1
+        do while (istate.le.num_state_material)
+
+         if (istate.eq.ENUM_DENVAR+1) then ! Density
+          dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
+          conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+dencomp_data)=dencore(im)
+          istate=istate+1
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then ! Temperature
+          tempcomp_data=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+          local_temperature=den(D_DECL(icrse,jcrse,kcrse),tempcomp_data)
+          if (is_compressible_mat(im).eq.0) then
+            ! den * T
+           conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+tempcomp_data)= &
+            dencore(im)*local_temperature
+          else if (is_compressible_mat(im).eq.1) then
+
+           if (fort_conserve_total_energy.eq.0) then
+
+            ! den * T
+            conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+tempcomp_data)= &
+             dencore(im)*local_temperature
+
+           else if (fort_conserve_total_energy.eq.1) then
+
+            call init_massfrac_parm(dencore(im),massfrac_parm,im)
+            do ispecies=1,num_species_var
+             massfrac_parm(ispecies)=den(D_DECL(icrse,jcrse,kcrse),tempcomp_data+ispecies)
+             if (massfrac_parm(ispecies).ge.zero) then
+              ! do nothing
+             else
+              print *,"massfrac_parm(ispecies) invalid: ", &
+                 ispecies,massfrac_parm(ispecies)
+              stop
+             endif
+            enddo
+
+            ! den * (u dot u/2 + cv T)
+            call INTERNAL_material(dencore(im),massfrac_parm, &
+             local_temperature,local_internal, &
+             fort_material_type(im),im)
+            conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+tempcomp_data)= &
+             dencore(im)*(KE+local_internal) 
+
+           else 
+            print *,"fort_conserve_total_energy invalid: ", &
+              fort_conserve_total_energy
+            stop
+           endif
+
+          else
+           print *,"is_compressible_mat invalid"
+           stop
+          endif
+          istate=istate+1
+         else if ((istate.eq.num_state_base+1).and. &
+                  (num_species_var.gt.0)) then 
+           ! den * Y
+          do ispecies=1,num_species_var
+           speccomp_data=(im-1)*num_state_material+num_state_base+ispecies
+           conserve(D_DECL(icrse,jcrse,kcrse),CISLCOMP_STATES+speccomp_data)= &
+             dencore(im)*den(D_DECL(icrse,jcrse,kcrse),speccomp_data)
+           istate=istate+1
+          enddo ! ispecies=1..num_species_var
+         else 
+          print *,"istate invalid"
+          stop
+         endif
+
+        enddo ! do while (istate.le.num_state_material)
+
+        if (dencore(im).gt.zero) then 
+         ! do nothing
+        else
+         print *,"dencore must be positive"
+         stop
+        endif
+
+       enddo ! im=1..num_materials
+
+      enddo !icrse 
+      enddo !jcrse
+      enddo !kcrse (cell center "conserved" variables) 
+
+
        ! xmomside,ymomside,zmomside already init to 0 
        ! xmassside,ymassside,zmassside already init to 0 
       do veldir=1,SDIM
@@ -13652,6 +13436,107 @@ stop
          print *,"veldir invalid"
          stop
         endif
+
+        call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
+         growlo,growhi,ngrow_mac_old,veldir-1)
+
+        do kcrse=growlo(3),growhi(3)
+        do jcrse=growlo(2),growhi(2)
+        do icrse=growlo(1),growhi(1)
+
+         ! veldir=1..sdim
+         call gridstenMAC_level(xsten_crse,icrse,jcrse,kcrse, &
+                 level,nhalf,veldir-1)
+
+         if (veldir.eq.1) then
+          velmac=xmac_old(D_DECL(icrse,jcrse,kcrse))
+         else if (veldir.eq.2) then
+          velmac=ymac_old(D_DECL(icrse,jcrse,kcrse))
+         else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+          velmac=zmac_old(D_DECL(icrse,jcrse,kcrse))
+         else
+          print *,"veldir invalid: ",veldir
+          stop
+         endif
+
+         if (veldir.eq.1) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
+           ! do nothing
+          else if (levelrz.eq.COORDSYS_RZ) then
+           if (SDIM.ne.2) then
+            print *,"dimension bust"
+            stop
+           endif
+           if (xsten_crse(0,1).le.EPS2*dx(1)) then
+            velmac=zero
+           endif
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           if (xsten_crse(0,1).le.EPS2*dx(1)) then
+            velmac=zero
+           endif
+          else
+           print *,"levelrz invalid fort_vfrac_split"
+           stop
+          endif
+         else if (veldir.eq.2) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
+           ! do nothing
+          else if (levelrz.eq.COORDSYS_RZ) then
+           if (SDIM.ne.2) then
+            print *,"dimension bust"
+            stop
+           endif
+           if (xsten_crse(0,1).le.EPS2*dx(1)) then
+            velmac=zero
+           endif
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           if (xsten_crse(0,1).le.EPS2*dx(1)) then
+            velmac=zero
+           endif
+          else
+           print *,"levelrz invalid fort_vfrac_split 2"
+           stop
+          endif
+         else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+          if (levelrz.eq.COORDSYS_CARTESIAN) then
+           ! do nothing
+          else if (levelrz.eq.COORDSYS_RZ) then
+           print *,"dimension bust"
+           stop
+          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+           if (xsten_crse(0,1).le.EPS2*dx(1)) then
+            velmac=zero
+           endif
+          else
+           print *,"levelrz invalid fort_vfrac_split 3"
+           stop
+          endif
+         else
+          print *,"veldir invalid"
+          stop
+         endif
+
+         if ((velmac.ge.zero).or. &
+             (velmac.le.zero)) then
+          if (veldir.eq.1) then
+           xvel(D_DECL(icrse,jcrse,kcrse))=velmac
+          else if (veldir.eq.2) then
+           yvel(D_DECL(icrse,jcrse,kcrse))=velmac
+          else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+           zvel(D_DECL(icrse,jcrse,kcrse))=velmac
+          else
+           print *,"veldir invalid: ",veldir
+           stop
+          endif
+         else
+          print *,"velmac is NaN: ",velmac
+          stop
+         endif
+
+        enddo
+        enddo
+        enddo  ! icrse,jcrse,kcrse -> growntileboxMAC(2 ghost)
+
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
          growlo,growhi,0,veldir-1)
@@ -14486,7 +14371,7 @@ stop
             do im=1,num_materials
              ! density
              dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
-              ! conserve is initialized in fort_build_conserve.
+              ! conserve is initialized in the beginning of this routine.
               ! donate_density is equal to the density that is stored in the
               ! old state variable.
              donate_density= &
@@ -14561,7 +14446,7 @@ stop
              do while (istate.le.num_state_material)
               statecomp_data=(im-1)*num_state_material+istate
 
-               ! conserve initialized in fort_build_conserve.
+               ! conserve initialized in the beginning of this routine.
                ! Temperature and species variables are multiplied by 
                ! dencore(im) in BUILD_CONSERVE.  (dencore(im) is the
                ! value of density stored in the state variable)

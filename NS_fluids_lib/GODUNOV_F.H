@@ -187,38 +187,6 @@ extern "C"
     int* bfact,
     int* bfact_fine);
 
-   void fort_build_conserve(
-    int* constant_density_all_time,
-    Real* conserve,AMREX_ARLIM_P(conservelo),AMREX_ARLIM_P(conservehi),
-    Real* den,
-    AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
-    Real* mom_den,
-    AMREX_ARLIM_P(mom_denlo),AMREX_ARLIM_P(mom_denhi),
-    Real* vel,AMREX_ARLIM_P(vello),AMREX_ARLIM_P(velhi),
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,int* bfact,
-    int* ngrow,
-    int* normdir,
-    int* nc_conserve,
-    int* nc_den);
-
-   void fort_build_macvof(
-    int* level,
-    int* finest_level,
-    int* normdir,
-    Real* x_mac_old,
-    AMREX_ARLIM_P(x_mac_oldlo),
-    AMREX_ARLIM_P(x_mac_oldhi),
-    Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),
-    const Real* xlo,
-    const Real* dx,
-    const int* tilelo,const int* tilehi,
-    const int* fablo,const int* fabhi,
-    int* bfact,
-    int* ngrow,
-    int* ngrowmac,
-    int* veldir);
-
    void fort_extend_mac_vel(
     int* tid_current,
     int* level,
@@ -732,6 +700,7 @@ extern "C"
      Real* den,AMREX_ARLIM_P(denlo),AMREX_ARLIM_P(denhi),
      Real* mom_den,AMREX_ARLIM_P(mom_denlo),AMREX_ARLIM_P(mom_denhi),
      Real* tensor,AMREX_ARLIM_P(tensorlo),AMREX_ARLIM_P(tensorhi),
+     Real* refineden,AMREX_ARLIM_P(refinedenlo),AMREX_ARLIM_P(refinedenhi),
       // VELADVECT_MF
      Real* velfab,AMREX_ARLIM_P(velfablo),AMREX_ARLIM_P(velfabhi),
       // slope data
@@ -739,6 +708,9 @@ extern "C"
       // this is the result
      Real* snew,AMREX_ARLIM_P(snewlo),AMREX_ARLIM_P(snewhi), 
      Real* tennew,AMREX_ARLIM_P(tennewlo),AMREX_ARLIM_P(tennewhi), 
+     Real* refinedennew,
+     AMREX_ARLIM_P(refinedennewlo),
+     AMREX_ARLIM_P(refinedennewhi), 
      Real* LSnew,AMREX_ARLIM_P(LSnewlo),AMREX_ARLIM_P(LSnewhi), 
       // other vars.
      Real* vof0,AMREX_ARLIM_P(vof0lo),AMREX_ARLIM_P(vof0hi),
