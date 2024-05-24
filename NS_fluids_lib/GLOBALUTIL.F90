@@ -17346,6 +17346,49 @@ end subroutine print_visual_descriptor
        endif
       enddo ! partid=1..num_materials_viscoelastic 
 
+      do partid=1,num_materials_compressible
+
+       im=fort_im_refine_density_map(partid)+1
+       if ((im.ge.1).and.(im.le.num_materials)) then
+        write(matstr,'(I2)') im
+        do i=1,2
+         if (matstr(i:i).eq.' ') then
+          matstr(i:i)='0'
+         endif
+        enddo
+
+        do ispec=1,ENUM_NUM_REFINE_DENSITY_TYPE
+
+         write(specstr,'(I2)') ispec
+         do i=1,2
+          if (specstr(i:i).eq.' ') then
+           specstr(i:i)='0'
+          endif
+         enddo
+
+         ih=1
+         Varname='REFINEDEN'
+         ih=ih+9
+         do i=1,2
+          Varname(ih:ih)=specstr(i:i)
+          ih=ih+1
+         enddo
+         Varname(ih:ih)='-'
+         ih=ih+1
+         do i=1,2
+          Varname(ih:ih)=matstr(i:i)
+          ih=ih+1
+         enddo
+         call dumpstring(Varname)
+         test_nwrite=test_nwrite+1
+
+        enddo  ! ispec=1..num_refine_density_type
+       else
+        print *,"im invalid (REFINEDEN varname)"
+        stop
+       endif
+      enddo ! partid=1..num_materials_compressible
+
       if (test_nwrite.eq.PLOTCOMP_VISC) then
        ! do nothing
       else

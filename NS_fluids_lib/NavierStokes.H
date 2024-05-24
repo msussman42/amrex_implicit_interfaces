@@ -1010,6 +1010,7 @@ protected:
       MultiFab* denmf,
       MultiFab* mom_denmf,
       MultiFab* viscoelasticmf,
+      MultiFab* refine_denmf,
       MultiFab* lsdistmf,
       MultiFab* viscmf,
       MultiFab* conductmf,

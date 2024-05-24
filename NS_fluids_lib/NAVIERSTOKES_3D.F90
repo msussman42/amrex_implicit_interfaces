@@ -1866,7 +1866,7 @@ END SUBROUTINE SIMP
 
       return
       end subroutine fort_update_div
-
+FIX ME
        ! called from: NavierStokes2.cpp
       subroutine fort_cellgrid( &
        plot_grid_type, & !0=interp to nodes   1=data "as is"
@@ -1886,6 +1886,7 @@ END SUBROUTINE SIMP
        den,DIMS(den), &
        mom_den,DIMS(mom_den), &
        elastic,DIMS(elastic), &
+       refineden,DIMS(refineden), &
        lsdist,DIMS(lsdist), &
        visc,DIMS(visc), &
        conduct,DIMS(conduct), &
