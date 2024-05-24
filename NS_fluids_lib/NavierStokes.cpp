@@ -20547,6 +20547,25 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
   } else
    amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
 
+  MultiFab* refine_denmf=nullptr;
+  if (NUM_CELL_REFINE_DENSITY==
+      num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+
+   refine_denmf=ns_level.getStateRefineDensity(1,0,
+	 NUM_CELL_REFINE_DENSITY,cur_time_slab);
+
+  } else if (num_materials_compressible==0) {
+   refine_denmf = lsdist; //placeholder
+  } else
+   amrex::Error("num_materials_compressible invalid:writeTECPLOT_File");
+
+
    //plot_grid_type==0 data interpolated to nodes.
    //plot_grid_type==1 data lives at the cells.
   for (int plot_grid_type=0;plot_grid_type<=1;plot_grid_type++) {
@@ -20567,6 +20586,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
     denmf,
     ns_level.localMF[MOM_DEN_MF],
     viscoelasticmf,
+    refine_denmf,
     lsdist,
     ns_level.localMF[CELL_VISC_MATERIAL_MF],
     ns_level.localMF[CELL_CONDUCTIVITY_MATERIAL_MF],
@@ -20595,7 +20615,16 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    // do nothing
   } else
    amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File(2)");
-   
+
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+   delete refine_denmf;
+  } else if (num_materials_compressible==0) {
+   // do nothing
+  } else
+   amrex::Error("num_materials_compressible invalid:writeTECPLOT_File(2)");
+
+
   delete div_data;
   delete velmf;
   delete denmf;
@@ -20973,6 +21002,25 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
       std::string ispec_string=ispec_string_stream.str();
       icomp++;
       varnames[icomp]="CT"+ispec_string+"-"+im_string;
+     } //ispec
+    } else
+     amrex::Error("im invalid");
+   } //partid
+
+   for (int partid=0;partid<num_materials_compressible;partid++) {
+    int im=im_refine_density_map[partid];
+    if ((im>=0)&&(im<num_materials)) {
+     std::stringstream im_string_stream(std::stringstream::in |
+      std::stringstream::out);
+     im_string_stream << std::setw(2) << std::setfill('0') << im+1;
+     std::string im_string=im_string_stream.str();
+     for (int ispec=0;ispec<ENUM_NUM_REFINE_DENSITY_TYPE;ispec++) {
+      std::stringstream ispec_string_stream(std::stringstream::in |
+       std::stringstream::out);
+      ispec_string_stream << std::setw(2) << std::setfill('0') << ispec+1;
+      std::string ispec_string=ispec_string_stream.str();
+      icomp++;
+      varnames[icomp]="REFINEDEN"+ispec_string+"-"+im_string;
      } //ispec
     } else
      amrex::Error("im invalid");

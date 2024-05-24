@@ -7660,6 +7660,7 @@ void NavierStokes::output_zones(
    MultiFab* denmf,
    MultiFab* mom_denmf,
    MultiFab* viscoelasticmf,
+   MultiFab* refine_denmf,
    MultiFab* lsdistmf,
    MultiFab* viscmf,
    MultiFab* conductmf,
@@ -7756,6 +7757,22 @@ void NavierStokes::output_zones(
  } else
   amrex::Error("elastic_ncomp invalid");
 
+ int refine_density_ncomp=0;
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  refine_density_ncomp=refine_denmf->nComp();
+ } else if (num_materials_compressible==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid");
+
+ if (refine_density_ncomp==
+     num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+  // do nothing
+ } else
+  amrex::Error("refine_density_ncomp invalid");
+
+
  check_for_NAN(localMF[MASKSEM_MF]);
  check_for_NAN(velmf);
  check_for_NAN(localMF[SLOPE_RECON_MF]);
@@ -7772,6 +7789,15 @@ void NavierStokes::output_zones(
   // do nothing
  } else
   amrex::Error("num_materials_viscoelastic invalid");
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  check_for_NAN(refine_densitymf);
+ } else if (num_materials_compressible==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid");
+
 
  check_for_NAN(lsdistmf);
  check_for_NAN(viscmf);
@@ -7857,6 +7883,19 @@ void NavierStokes::output_zones(
      viscoelasticmfminus=mom_denmfminus; //placeholder
     } else
      amrex::Error("num_materials_viscoelastic invalid");
+
+    MultiFab* refine_densitymfminus;
+
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
+     refine_densitymfminus=
+      new MultiFab(cgrids_minusBA,cgrids_minus_map,
+       refine_density_ncomp,1,
+       MFInfo().SetTag("refine_densitymfminus"),FArrayBoxFactory());
+    } else if (num_materials_compressible==0) {
+     refine_densitymfminus=mom_denmfminus; //placeholder
+    } else
+     amrex::Error("num_materials_compressible invalid");
 
     MultiFab* lsdistmfminus=
      new MultiFab(cgrids_minusBA,cgrids_minus_map,
@@ -7949,6 +7988,19 @@ void NavierStokes::output_zones(
      // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
+
+
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
+     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
+     refine_densitymfminus->ParallelCopy(*refine_densitymf,0,0,
+      refine_density_ncomp,
+      1,1,geom.periodicity()); 
+     check_for_NAN(refine_densitymfminus);
+    } else if (num_materials_compressible==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_compressible invalid");
 
     // scomp,dcomp,ncomp,sgrow,dgrow,period,op
     lsdistmfminus->ParallelCopy(*lsdistmf,0,0,num_materials*(1+AMREX_SPACEDIM),
@@ -8050,6 +8102,7 @@ void NavierStokes::output_zones(
      FArrayBox& denfab=(*denmfminus)[mfi];
      FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
      FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
+     FArrayBox& refinedensityfab=(*refine_densitymfminus)[mfi];
      FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
      FArrayBox& viscfab=(*viscmfminus)[mfi];
      FArrayBox& conductfab=(*conductmfminus)[mfi];
@@ -8090,7 +8143,11 @@ void NavierStokes::output_zones(
       mom_denfab.dataPtr(),
       ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
       elasticfab.dataPtr(),
-      ARLIM(elasticfab.loVect()),ARLIM(elasticfab.hiVect()),
+      ARLIM(elasticfab.loVect()),
+      ARLIM(elasticfab.hiVect()),
+      refine_densityfab.dataPtr(),
+      ARLIM(refine_densityfab.loVect()),
+      ARLIM(refine_densityfab.hiVect()),
       lsdistfab.dataPtr(),ARLIM(lsdistfab.loVect()),ARLIM(lsdistfab.hiVect()),
       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
       conductfab.dataPtr(),
@@ -8135,6 +8192,15 @@ void NavierStokes::output_zones(
      // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid");
+
+
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
+     delete refine_densitymfminus;
+    } else if (num_materials_compressible==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_compressible invalid");
 
     delete maskSEM_minus;
     delete velmfminus;
@@ -8215,6 +8281,16 @@ void NavierStokes::output_zones(
     } else
      amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
 
+
+    MultiFab* refine_densitymfminus=refine_densitymf;
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
+     check_for_NAN(refine_densitymfminus);
+    } else if (num_materials_compressible==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_compressible invalid:writeTECPLOT_File");
+
     MultiFab* lsdistmfminus=lsdistmf;
     check_for_NAN(lsdistmfminus);
 
@@ -8291,6 +8367,7 @@ void NavierStokes::output_zones(
      FArrayBox& denfab=(*denmfminus)[mfi];
      FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
      FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
+     FArrayBox& refine_densityfab=(*refine_densitymfminus)[mfi];
      FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
      FArrayBox& viscfab=(*viscmfminus)[mfi];
      FArrayBox& conductfab=(*conductmfminus)[mfi];
@@ -8330,7 +8407,11 @@ void NavierStokes::output_zones(
       mom_denfab.dataPtr(),
       ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
       elasticfab.dataPtr(),
-      ARLIM(elasticfab.loVect()),ARLIM(elasticfab.hiVect()),
+      ARLIM(elasticfab.loVect()),
+      ARLIM(elasticfab.hiVect()),
+      refine_densityfab.dataPtr(),
+      ARLIM(refine_densityfab.loVect()),
+      ARLIM(refine_densityfab.hiVect()),
       lsdistfab.dataPtr(),ARLIM(lsdistfab.loVect()),ARLIM(lsdistfab.hiVect()),
       viscfab.dataPtr(),ARLIM(viscfab.loVect()),ARLIM(viscfab.hiVect()),
       conductfab.dataPtr(),
