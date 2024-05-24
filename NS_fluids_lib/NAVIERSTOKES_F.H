@@ -139,6 +139,7 @@ extern "C" {
      int* nparts_def,
      int* im_solid_map,
      int* elastic_ncomp,
+     int* refineden_ncomp,
      Real* slice_data,int* nslice,
      int* nstate_slice,int* slice_dir,
      Real* xslice,const Real* dxfinest,
