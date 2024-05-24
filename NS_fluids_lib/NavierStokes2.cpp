@@ -7660,7 +7660,7 @@ void NavierStokes::output_zones(
    MultiFab* denmf,
    MultiFab* mom_denmf,
    MultiFab* viscoelasticmf,
-   MultiFab* refine_denmf,
+   MultiFab* refine_density_mf,
    MultiFab* lsdistmf,
    MultiFab* viscmf,
    MultiFab* conductmf,
@@ -7760,7 +7760,7 @@ void NavierStokes::output_zones(
  int refine_density_ncomp=0;
  if ((num_materials_compressible>=1)&&
      (num_materials_compressible<=num_materials)) {
-  refine_density_ncomp=refine_denmf->nComp();
+  refine_density_ncomp=refine_density_mf->nComp();
  } else if (num_materials_compressible==0) {
   // do nothing
  } else
@@ -7792,7 +7792,7 @@ void NavierStokes::output_zones(
 
  if ((num_materials_compressible>=1)&&
      (num_materials_compressible<=num_materials)) {
-  check_for_NAN(refine_densitymf);
+  check_for_NAN(refine_density_mf);
  } else if (num_materials_compressible==0) {
   // do nothing
  } else
@@ -7884,16 +7884,16 @@ void NavierStokes::output_zones(
     } else
      amrex::Error("num_materials_viscoelastic invalid");
 
-    MultiFab* refine_densitymfminus;
+    MultiFab* refine_density_mfminus;
 
     if ((num_materials_compressible>=1)&&
         (num_materials_compressible<=num_materials)) {
-     refine_densitymfminus=
+     refine_density_mfminus=
       new MultiFab(cgrids_minusBA,cgrids_minus_map,
        refine_density_ncomp,1,
-       MFInfo().SetTag("refine_densitymfminus"),FArrayBoxFactory());
+       MFInfo().SetTag("refine_density_mfminus"),FArrayBoxFactory());
     } else if (num_materials_compressible==0) {
-     refine_densitymfminus=mom_denmfminus; //placeholder
+     refine_density_mfminus=mom_denmfminus; //placeholder
     } else
      amrex::Error("num_materials_compressible invalid");
 
@@ -7993,10 +7993,10 @@ void NavierStokes::output_zones(
     if ((num_materials_compressible>=1)&&
         (num_materials_compressible<=num_materials)) {
      // scomp,dcomp,ncomp,sgrow,dgrow,period,op
-     refine_densitymfminus->ParallelCopy(*refine_densitymf,0,0,
+     refine_density_mfminus->ParallelCopy(*refine_density_mf,0,0,
       refine_density_ncomp,
       1,1,geom.periodicity()); 
-     check_for_NAN(refine_densitymfminus);
+     check_for_NAN(refine_density_mfminus);
     } else if (num_materials_compressible==0) {
      // do nothing
     } else
@@ -8102,7 +8102,7 @@ void NavierStokes::output_zones(
      FArrayBox& denfab=(*denmfminus)[mfi];
      FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
      FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
-     FArrayBox& refinedensityfab=(*refine_densitymfminus)[mfi];
+     FArrayBox& refine_densityfab=(*refine_density_mfminus)[mfi];
      FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
      FArrayBox& viscfab=(*viscmfminus)[mfi];
      FArrayBox& conductfab=(*conductmfminus)[mfi];
@@ -8174,6 +8174,7 @@ void NavierStokes::output_zones(
       &nparts_def,
       im_solid_map_ptr,
       &elastic_ncomp,
+      &refine_density_ncomp,
       slice_data,
       &nslice,
       &nstate_slice,&slice_dir,
@@ -8196,7 +8197,7 @@ void NavierStokes::output_zones(
 
     if ((num_materials_compressible>=1)&&
         (num_materials_compressible<=num_materials)) {
-     delete refine_densitymfminus;
+     delete refine_density_mfminus;
     } else if (num_materials_compressible==0) {
      // do nothing
     } else
@@ -8282,10 +8283,10 @@ void NavierStokes::output_zones(
      amrex::Error("num_materials_viscoelastic invalid:writeTECPLOT_File");
 
 
-    MultiFab* refine_densitymfminus=refine_densitymf;
+    MultiFab* refine_density_mfminus=refine_density_mf;
     if ((num_materials_compressible>=1)&&
         (num_materials_compressible<=num_materials)) {
-     check_for_NAN(refine_densitymfminus);
+     check_for_NAN(refine_density_mfminus);
     } else if (num_materials_compressible==0) {
      // do nothing
     } else
@@ -8367,7 +8368,7 @@ void NavierStokes::output_zones(
      FArrayBox& denfab=(*denmfminus)[mfi];
      FArrayBox& mom_denfab=(*mom_denmfminus)[mfi];
      FArrayBox& elasticfab=(*viscoelasticmfminus)[mfi];
-     FArrayBox& refine_densityfab=(*refine_densitymfminus)[mfi];
+     FArrayBox& refine_densityfab=(*refine_density_mfminus)[mfi];
      FArrayBox& lsdistfab=(*lsdistmfminus)[mfi];
      FArrayBox& viscfab=(*viscmfminus)[mfi];
      FArrayBox& conductfab=(*conductmfminus)[mfi];
@@ -8438,6 +8439,7 @@ void NavierStokes::output_zones(
       &nparts_def,
       im_solid_map_ptr,
       &elastic_ncomp,
+      &refine_density_ncomp,
       slice_data,
       &nslice,
       &nstate_slice,&slice_dir,

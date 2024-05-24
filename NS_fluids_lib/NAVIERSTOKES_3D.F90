@@ -1866,7 +1866,7 @@ END SUBROUTINE SIMP
 
       return
       end subroutine fort_update_div
-FIX ME
+
        ! called from: NavierStokes2.cpp
       subroutine fort_cellgrid( &
        plot_grid_type, & !0=interp to nodes   1=data "as is"
@@ -1885,8 +1885,10 @@ FIX ME
        divdat,DIMS(divdat), &
        den,DIMS(den), &
        mom_den,DIMS(mom_den), &
-       elastic,DIMS(elastic), &
-       refineden,DIMS(refineden), &
+       elastic, &
+       DIMS(elastic), &
+       refineden, &
+       DIMS(refineden), &
        lsdist,DIMS(lsdist), &
        visc,DIMS(visc), &
        conduct,DIMS(conduct), &
@@ -1912,6 +1914,7 @@ FIX ME
        nparts_def, &
        im_solid_map, &
        elastic_ncomp, &
+       refineden_ncomp, &
        slice_data, &
        nslice, & ! number of nodes in space for the slice
        nstate_slice, & ! number of data items stored for each slice node.
@@ -1951,6 +1954,7 @@ FIX ME
       integer, INTENT(in) :: nparts_def
       integer, INTENT(in) :: im_solid_map(nparts_def) 
       integer, INTENT(in) :: elastic_ncomp
+      integer, INTENT(in) :: refineden_ncomp
       integer, INTENT(in) :: visual_tessellate_vfrac
        ! x,u,pmg,den,temp,spec,mag vort,LS
       integer, INTENT(in) :: visual_ncomp
@@ -1967,6 +1971,7 @@ FIX ME
       integer, INTENT(in) :: DIMDEC(den)
       integer, INTENT(in) :: DIMDEC(mom_den)
       integer, INTENT(in) :: DIMDEC(elastic)
+      integer, INTENT(in) :: DIMDEC(refineden)
       integer, INTENT(in) :: DIMDEC(lsdist)
       integer, INTENT(in) :: DIMDEC(visc)
       integer, INTENT(in) :: DIMDEC(conduct)
@@ -1986,7 +1991,8 @@ FIX ME
       real(amrex_real), INTENT(in), target :: &
          vel(DIMV(vel),STATE_NCOMP_VEL+STATE_NCOMP_PRES)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: vof(DIMV(vof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in), target :: &
+              vof(DIMV(vof),num_materials*ngeom_recon)
       real(amrex_real), pointer :: vof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: pres(DIMV(pres))
       real(amrex_real), pointer :: pres_ptr(D_DECL(:,:,:))
@@ -2000,9 +2006,15 @@ FIX ME
       real(amrex_real), INTENT(in), target :: &
               mom_den(DIMV(mom_den),num_materials)
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: &
               elastic(DIMV(elastic),elastic_ncomp)
       real(amrex_real), pointer :: elastic_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: &
+              refineden(DIMV(refineden),refineden_ncomp)
+      real(amrex_real), pointer :: refineden_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: visc(DIMV(visc),num_materials)
       real(amrex_real), pointer :: visc_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
@@ -2040,10 +2052,12 @@ FIX ME
       real(amrex_real) dennd_merge(num_state_material)
       real(amrex_real) mom_dennd(num_materials)
       real(amrex_real) elasticnd(elastic_ncomp)
+      real(amrex_real) refinedennd(refineden_ncomp)
       real(amrex_real) dencell(num_state_material*num_materials)
       real(amrex_real) dencell_merge(num_state_material)
       real(amrex_real) mom_dencell(num_materials)
       real(amrex_real) elasticcell(elastic_ncomp)
+      real(amrex_real) refinedencell(refineden_ncomp)
       real(amrex_real) lsdistnd((SDIM+1)*num_materials)
       real(amrex_real) local_LS_data((SDIM+1)*num_materials)
       real(amrex_real) viscnd(num_materials)
@@ -2186,6 +2200,13 @@ FIX ME
        print *,"elastic_ncomp invalid"
        stop
       endif
+      if (refineden_ncomp.eq. &
+          num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) then
+       ! do nothing
+      else
+       print *,"refineden_ncomp invalid"
+       stop
+      endif
 
  
         ! x,y,z,xvel,yvel,zvel,PMG,PEOS,DIV,den,Temp,KE
@@ -2289,6 +2310,7 @@ FIX ME
       call checkbound_array(lo,hi,den_ptr,1,-1)
       mom_den_ptr=>mom_den
       call checkbound_array(lo,hi,mom_den_ptr,1,-1)
+
       elastic_ptr=>elastic
 
       if ((num_materials_viscoelastic.ge.1).and. &
@@ -2300,6 +2322,20 @@ FIX ME
        print *,"num_materials_viscoelastic invalid"
        stop
       endif
+
+      refineden_ptr=>refineden
+
+      if ((num_materials_compressible.ge.1).and. &
+          (num_materials_compressible.le.num_materials)) then
+       call checkbound_array(lo,hi,refineden_ptr,1,-1)
+      else if (num_materials_compressible.eq.0) then
+       ! do nothing
+      else
+       print *,"num_materials_compressible invalid"
+       stop
+      endif
+
+
 
       lsdist_ptr=>lsdist
       call checkbound_array(lo,hi,lsdist_ptr,1,-1)
@@ -2559,6 +2595,9 @@ FIX ME
         do dir=1,elastic_ncomp
          elasticnd(dir)=zero
         enddo
+        do dir=1,refineden_ncomp
+         refinedennd(dir)=zero
+        enddo
         presnd=zero
         divnd=zero
         divdatnd=zero
@@ -2749,9 +2788,15 @@ FIX ME
          do dir=1,elastic_ncomp
           elasticcell(dir)=elastic(D_DECL(i-i1,j-j1,k-k1),dir)
          enddo
+         do dir=1,refineden_ncomp
+          refinedencell(dir)=refineden(D_DECL(i-i1,j-j1,k-k1),dir)
+         enddo
 
          do dir=1,elastic_ncomp
           elasticnd(dir)=elasticnd(dir)+localwt*elasticcell(dir)
+         enddo
+         do dir=1,refineden_ncomp
+          refinedennd(dir)=refinedennd(dir)+localwt*refinedencell(dir)
          enddo
 
          presnd=presnd+localwt*pres(D_DECL(i-i1,j-j1,k-k1))
@@ -2848,6 +2893,9 @@ FIX ME
 
         do dir=1,elastic_ncomp
          elasticnd(dir)=elasticnd(dir)/sumweight
+        enddo
+        do dir=1,refineden_ncomp
+         refinedennd(dir)=refinedennd(dir)/sumweight
         enddo
 
         presnd=presnd/sumweight
@@ -3236,6 +3284,20 @@ FIX ME
          writend(scomp+iw)=elasticnd(iw) 
         enddo
         scomp=scomp+elastic_ncomp
+
+
+        if (scomp.eq.PLOTCOMP_REFINEDEN) then
+         ! do nothing
+        else
+         print *,"(scomp.ne.PLOTCOMP_REFINEDEN)"
+         stop
+        endif
+
+        do iw=1,refineden_ncomp
+         writend(scomp+iw)=refinedennd(iw) 
+        enddo
+        scomp=scomp+refineden_ncomp
+
 
         if (scomp.eq.PLOTCOMP_VISC) then
          ! do nothing
