@@ -103,7 +103,6 @@ ns.adv_dir=1
 ns.tempconst=293.0 293.0
 ns.pressure_error_cutoff=0.0 0.0
 ns.material_type=18 18
-ns.conserve_total_energy=1
 ns.heatviscconst=0.0 0.0
 ns.viscconst=0.0 0.0 
 ns.denconst=1.0 1.0

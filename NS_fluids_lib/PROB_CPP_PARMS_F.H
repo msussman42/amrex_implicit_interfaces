@@ -108,7 +108,6 @@ namespace amrex{
        int* cpp_num_materials,
        int* material_type,
        int* material_type_interface,
-       int* conserve_total_energy,
        int* cpp_num_interfaces,
        Real* DrhoDT,
        Real* tempconst,
