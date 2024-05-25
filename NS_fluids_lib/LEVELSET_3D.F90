@@ -11005,8 +11005,6 @@ stop
 
       real(amrex_real) DXMAXLS,cutoff
       real(amrex_real) Eforce_conservative
-      real(amrex_real) Eforce_non_conservative
-      real(amrex_real) averaged_pressure
 
       real(amrex_real) KE_diff
 
@@ -11074,7 +11072,6 @@ stop
 
       real(amrex_real) local_div_val
 
-      real(amrex_real) velocity_conservative(AMREX_SPACEDIM)
       integer near_wall
       integer mask_coarsefine
       integer bctest
@@ -12196,8 +12193,7 @@ stop
         endif
 
          ! note, in fort_vfrac_split, if 
-         ! is_compressible_mat==0 or
-         ! fort_conserve_total_energy==0,
+         !  is_compressible_mat==0 
          ! then 
          ! (1) (rho T) is advected instead of (rho cv T + rho u dot u/2)
          ! (2) rho_t + u dot grad rho=0 instead of
@@ -12235,12 +12231,7 @@ stop
 
             !material_type=0 or 999
            if (is_compressible_mat(im).eq.0) then
-            if (fort_conserve_total_energy.eq.0) then
-             use_face_pres_cen=0
-            else
-             print *,"expecting fort_conserve_total_energy==0"
-             stop
-            endif
+            use_face_pres_cen=0
            else if (is_compressible_mat(im).eq.1) then
             ! do nothing
            else
@@ -12253,19 +12244,9 @@ stop
              if (LStest(im_opp).ge.-incomp_thickness*DXMAXLS) then
               call get_iten(im,im_opp,iten)
               if (fort_material_type_interface(iten).eq.0) then
-               if (fort_conserve_total_energy.eq.0) then
-                use_face_pres_cen=0
-               else
-                print *,"expecting fort_conserve_total_energy==0"
-                stop
-               endif
+               use_face_pres_cen=0
               else if (fort_material_type_interface(iten).eq.999) then
-               if (fort_conserve_total_energy.eq.0) then
-                use_face_pres_cen=0
-               else
-                print *,"expecting fort_conserve_total_energy==0"
-                stop
-               endif
+               use_face_pres_cen=0
               else if ((fort_material_type_interface(iten).ge.1).and. &
                        (fort_material_type_interface(iten).le. &
                         MAX_NUM_EOS)) then 
@@ -12299,8 +12280,6 @@ stop
         endif 
 
         Eforce_conservative=zero
-        Eforce_non_conservative=zero
-        averaged_pressure=zero
 
         do dir=0,SDIM-1 
          ii=0
@@ -12458,25 +12437,12 @@ stop
                 AFACE(1)*uface(1)*pres_face(1))/ &
             (dencell*VOLTERM)
 
-          Eforce_non_conservative=Eforce_non_conservative- &
-            dt*(AFACE(2)*uface(2)- &
-                AFACE(1)*uface(1))/ &
-            (dencell*VOLTERM)
-          averaged_pressure=averaged_pressure+ &
-              half*(pres_face(1)+pres_face(2))
-
-          velocity_conservative(dir+1)=u_advect(D_DECL(i,j,k),dir+1)- &
-                  dt*(pres_face(2)-pres_face(1))/(dencell*hx)
-
          else
           print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL: ",energyflag
           stop
          endif
 
         enddo ! dir=0..sdim-1 (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) div(up)
-
-        Eforce_non_conservative= &
-            Eforce_non_conservative*averaged_pressure/AMREX_SPACEDIM
 
         if ((use_face_pres_cen.eq.0).or. &
             (use_face_pres_cen.eq.1)) then 
@@ -12494,24 +12460,15 @@ stop
          if (use_face_pres_cen.eq.0) then
 
           Eforce_conservative=zero
-          Eforce_non_conservative=zero
           rhs(D_DECL(i,j,k),1)=zero
 
          else if (use_face_pres_cen.eq.1) then
 
-          if (fort_conserve_total_energy.eq.0) then
-           ! -dt div(u)p/rho
-           rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
-          else if (fort_conserve_total_energy.eq.1) then
-           ! -dt div(up)/rho
-           rhs(D_DECL(i,j,k),1)=Eforce_conservative
-          else
-           print *,"fort_conserve_total_energy invalid"
-           stop
-          endif
+!
+! -dt div(up)/rho
+          rhs(D_DECL(i,j,k),1)=Eforce_conservative
 
-           ! update the temperature
-           ! summary (if fort_conserve_total_energy==1):
+           ! update the temperature:
            ! 1. cell centered advection to get E^advect, UCELL^advect
            ! 2. e^advect + rho UCELL^2^advect/2 = E^advect
            ! 3. E^proj=E^advect-div(up)=e^advect+rho UCELL^2^advect/2-div(up)
@@ -12519,43 +12476,15 @@ stop
            ! 5. e^proj=e^advect+rho UCELL^2^advect/2-rho UCELL^2^proj/2-div(up)
           if (energyflag.eq.SUB_OP_THERMAL_DIVUP_OK) then 
 
-            !use_conservation_form_velocity declared in PROBCOMMON.F90.
-           if (use_conservation_form_velocity.eq.1) then
-            if (fort_conserve_total_energy.eq.1) then
-             do dir=1,SDIM
-              veldest(D_DECL(i,j,k),dir)=velocity_conservative(dir)
-             enddo
-            else
-             print *,"expecting fort_conserve_total_energy==1"
-             stop
-            endif
-           else if (use_conservation_form_velocity.eq.0) then
-            ! do nothing
-           else
-            print *,"use_conservation_form_velocity invalid: ", &
-               use_conservation_form_velocity
-            stop
-           endif
-
            do im=1,num_materials
 
             KE_diff=zero
 
-            if (fort_conserve_total_energy.eq.0) then
-             !do nothing
-            else if (fort_conserve_total_energy.eq.1) then
-
-             do velcomp=1,SDIM
-              KE_diff=KE_diff+ &
+            do velcomp=1,SDIM
+             KE_diff=KE_diff+ &
                half*u_advect(D_DECL(i,j,k),velcomp)**2- &
                half*veldest(D_DECL(i,j,k),velcomp)**2
-             enddo ! velcomp=1..sdim
-
-            else
-             print *,"fort_conserve_total_energy invalid: ", &
-                     fort_conserve_total_energy
-             stop
-            endif
+            enddo ! velcomp=1..sdim
 
             if (LStest(im).ge.-DXMAXLS) then
 
@@ -12619,18 +12548,8 @@ stop
                stop
               endif
 
-              ! if (fort_conserve_total_energy==1):
-              !   e^proj=e^*+(rho U^2^advect/2-rho U^2^proj/2)-dt div(up)
-              ! if (fort_conserve_total_energy==0):
-              !   e^proj=e^*-dt div(u)p
-              if (fort_conserve_total_energy.eq.0) then
-               internal_e=internal_e+Eforce_non_conservative
-              else if (fort_conserve_total_energy.eq.1) then
-               internal_e=internal_e+KE_diff+Eforce_conservative
-              else
-               print *,"fort_conserve_total_energy invalid"
-               stop
-              endif
+              ! e^proj=e^*+(rho U^2^advect/2-rho U^2^proj/2)-dt div(up)
+              internal_e=internal_e+KE_diff+Eforce_conservative
 
               if (internal_e.le.zero) then
                NEW_TEMPERATURE=TEMPERATURE
