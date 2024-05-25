@@ -12455,7 +12455,7 @@ stop
        time, &
        cur_time, &
        passive_veltime, &
-       LS,DIMS(LS), &  ! original data; ngrow_scalar
+       LS,DIMS(LS), &  ! original data; ngrow=2
        den, &
        DIMS(den), &
        mom_den, &
@@ -12492,8 +12492,6 @@ stop
        zmac_old,DIMS(zmac_old), &
        stokes_flow, &
        denconst_interface, & !unused: fort_vfrac_split
-       ngrow_mass, &
-       ngrow_mac_old, &
        nc_conserve, &
        map_forward, &
        recon_ncomp, &
@@ -12520,12 +12518,9 @@ stop
       integer, INTENT(in) :: tid
 
       integer, INTENT(in) :: nc_conserve
-      integer, INTENT(in) :: ngrow_mass
+      integer, PARAMETER :: ngrow=2
       integer, INTENT(in) :: stokes_flow
       real(amrex_real), INTENT(in) :: denconst_interface(num_interfaces)
-      integer, PARAMETER :: ngrow_scalar=1
-      integer, PARAMETER :: ngrow_mac_displace=2
-      integer, INTENT(in) :: ngrow_mac_old
       integer, INTENT(in) :: solidheat_flag
       integer, INTENT(in) :: freezing_model(2*num_interfaces)
       integer, INTENT(in) :: distribute_from_target(2*num_interfaces)
@@ -12935,20 +12930,13 @@ stop
        stop
       endif
 
-      if (ngrow_mass.eq.2) then
+      if (ngrow.eq.2) then
        ! do nothing
       else
-       print *,"ngrow_mass invalid: ",ngrow_mass
+       print *,"ngrow invalid: ",ngrow
        stop
       endif
 
-      if (ngrow_mac_old.eq.2) then
-       ! do nothing
-      else
-       print *,"ngrow_mac_old invalid"
-       stop
-      endif
- 
       if (ncomp_state.ne.STATECOMP_STATES+ &
           num_materials*(num_state_material+ngeom_raw)+1) then
        print *,"ncomp_state invalid"
@@ -13129,16 +13117,15 @@ stop
        ! ghost cells.
 
        ! original data
-       ! ngrow_scalar=1
-      call checkbound_array(fablo,fabhi,LS_ptr,ngrow_scalar,-1)
-       ! ngrow_mass=2
-      call checkbound_array(fablo,fabhi,den_ptr,ngrow_mass,-1)
-      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_mass,-1)
-      call checkbound_array(fablo,fabhi,tensor_ptr,ngrow_scalar,-1)
-      call checkbound_array(fablo,fabhi,refineden_ptr,ngrow_scalar,-1)
-      call checkbound_array(fablo,fabhi,velfab_ptr,ngrow_mass,-1)
+      call checkbound_array(fablo,fabhi,LS_ptr,ngrow,-1)
+       ! ngrow=2
+      call checkbound_array(fablo,fabhi,den_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,tensor_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,refineden_ptr,ngrow,-1)
+      call checkbound_array(fablo,fabhi,velfab_ptr,ngrow,-1)
        ! slope data
-      call checkbound_array(fablo,fabhi,PLICSLP_ptr,ngrow_mass,-1)
+      call checkbound_array(fablo,fabhi,PLICSLP_ptr,ngrow,-1)
        ! new data
       call checkbound_array(fablo,fabhi,snew_ptr,1,-1)
       call checkbound_array(fablo,fabhi,tennew_ptr,1,-1)
@@ -13146,14 +13133,14 @@ stop
       call checkbound_array(fablo,fabhi,LSnew_ptr,1,-1)
        ! other vars
       call checkbound_array(fablo,fabhi,vof0_ptr,1,-1)
-      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow_mass,-1)
-      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow_mass,-1)
+      call checkbound_array1(fablo,fabhi,mask_ptr,ngrow,-1)
+      call checkbound_array1(fablo,fabhi,masknbr_ptr,ngrow,-1)
      
        ! example: imac=0, left side; then the parcel at imac=-1, left side
        ! might be advected: imac=-1, left side is in icell=-2.  icell=-2 is
        ! advected using imac=-2 and imac=-1.
       call checkbound_array1(fablo,fabhi,umac_displace_ptr, &
-              ngrow_mac_displace,normdir)
+              ngrow,normdir)
 
       if (dt.gt.zero) then
        ! do nothing
@@ -13182,9 +13169,9 @@ stop
       xvel_ptr=>xvel
       yvel_ptr=>yvel
       zvel_ptr=>zvel
-      call checkbound_array1(fablo,fabhi,xvel_ptr,ngrow_mac_old,0)
-      call checkbound_array1(fablo,fabhi,yvel_ptr,ngrow_mac_old,1)
-      call checkbound_array1(fablo,fabhi,zvel_ptr,ngrow_mac_old,SDIM-1)
+      call checkbound_array1(fablo,fabhi,xvel_ptr,ngrow,0)
+      call checkbound_array1(fablo,fabhi,yvel_ptr,ngrow,1)
+      call checkbound_array1(fablo,fabhi,zvel_ptr,ngrow,SDIM-1)
 
       call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1)
       call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1)
@@ -13198,20 +13185,20 @@ stop
       call checkbound_array1(fablo,fabhi,ymac_new_ptr,0,1)
       call checkbound_array1(fablo,fabhi,zmac_new_ptr,0,SDIM-1)
 
-      call checkbound_array1(fablo,fabhi,xmac_old_ptr,ngrow_mac_old,0)
-      call checkbound_array1(fablo,fabhi,ymac_old_ptr,ngrow_mac_old,1)
-      call checkbound_array1(fablo,fabhi,zmac_old_ptr,ngrow_mac_old,SDIM-1)
+      call checkbound_array1(fablo,fabhi,xmac_old_ptr,ngrow,0)
+      call checkbound_array1(fablo,fabhi,ymac_old_ptr,ngrow,1)
+      call checkbound_array1(fablo,fabhi,zmac_old_ptr,ngrow,SDIM-1)
 
-      if (nc_conserve.ne.CISLCOMP_CONS_NCOMP) then
-       print *,"nc_conserve invalid"
+      if (nc_conserve.ne.CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE) then
+       print *,"nc_conserve invalid: ",nc_conserve
        stop
       endif
 
-      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow_mass,-1)
+      call checkbound_array(fablo,fabhi,conserve_ptr,ngrow,-1)
      
       force_check=0
       datatype=0 
-      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow_mass)
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,ngrow)
  
       warning_cutoff=two
       call aggressive_worker( &
@@ -13225,7 +13212,7 @@ stop
        0, & !scomp=0
        num_materials*ngeom_recon, &
        num_materials*ngeom_recon, &
-       ngrow_mass, &
+       ngrow, &
        -1, & ! dir
        verbose, &
        force_check, &
@@ -13247,7 +13234,7 @@ stop
        0, &  !scomp=0
        nc_conserve, &
        nc_conserve, &
-       ngrow_mass, &
+       ngrow, &
        -1, & !dir
        verbose, &
        force_check, &
@@ -13265,7 +13252,7 @@ stop
       endif
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
-        growlo,growhi,ngrow_mass)
+        growlo,growhi,ngrow)
 
       do kcrse=growlo(3),growhi(3)
       do jcrse=growlo(2),growhi(2)
@@ -13438,7 +13425,7 @@ stop
         endif
 
         call growntileboxMAC(tilelo,tilehi,fablo,fabhi, &
-         growlo,growhi,ngrow_mac_old,veldir-1)
+         growlo,growhi,ngrow,veldir-1)
 
         do kcrse=growlo(3),growhi(3)
         do jcrse=growlo(2),growhi(2)

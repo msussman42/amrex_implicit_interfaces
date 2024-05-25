@@ -9102,7 +9102,7 @@ void NavierStokes::VOF_Recon_ALL(
 
    ns_level.delete_localMF_if_exist(VOF_RECON_MF,1);
 
-   ns_level.getState_localMF(VOF_RECON_MF,1,STATECOMP_MOF,
+   ns_level.getState_localMF(VOF_RECON_MF,2,STATECOMP_MOF,
      num_materials*ngeom_raw,time);
 
    if (ngeom_raw==AMREX_SPACEDIM+1) {
@@ -9124,10 +9124,10 @@ void NavierStokes::VOF_Recon_ALL(
       ibase_raw,ibase_recon,ngeom_raw,1);
     if (init_vof_prev_time==1) {
      int ngrow_save=ns_level.localMF[VOF_PREV_TIME_MF]->nGrow();
-     if (ngrow_save!=1)
+     if (ngrow_save!=2)
       amrex::Error("vof prev time has invalid ngrow");
      ns_level.Copy_localMF(VOF_PREV_TIME_MF,VOF_RECON_MF,
-	ibase_raw,im,1,ngrow_save); 
+	ibase_raw,im,2,ngrow_save); 
     } else if (init_vof_prev_time==0) {
      // do nothing
     } else

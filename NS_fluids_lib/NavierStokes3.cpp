@@ -337,7 +337,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
-  ns_level.new_localMF(VOF_PREV_TIME_MF,num_materials,1,-1);
+  ns_level.new_localMF(VOF_PREV_TIME_MF,num_materials,2,-1);
  }  // ilev=finest_level ... level
 
   // order_direct_split=base_step mod 2

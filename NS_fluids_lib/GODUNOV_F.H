@@ -739,8 +739,6 @@ extern "C"
      Real* zmac_old,AMREX_ARLIM_P(zmac_oldlo),AMREX_ARLIM_P(zmac_oldhi),
      int* stokes_flow,
      Real* denconst_interface,
-     int* ngrow_mass,
-     int* ngrow_mac_old,
      int* nc_conserve,
      int* map_forward,
      int* recon_ncomp,
