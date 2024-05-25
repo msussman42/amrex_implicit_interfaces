@@ -17433,12 +17433,7 @@ NavierStokes::split_scalar_advection() {
      (dir_absolute_direct_split>=AMREX_SPACEDIM))
   amrex::Error("dir_absolute_direct_split invalid");
 
-  // 2 ghost cells needed in order to form (rho u)^{mac,old} in the
-  // mac grid ghost cell.
- int ngrow_mass=2;
- int ngrow_scalar=1;
-
- int ngrow_mac_old=2;
+ int ngrow=2;
 
  if (NUM_CELL_ELASTIC==num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE) {
   // do nothing
@@ -17452,11 +17447,11 @@ NavierStokes::split_scalar_advection() {
   amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
 
   // vof,ref centroid,order,slope,intercept  x num_materials
- VOF_Recon_resize(ngrow_mass); //output:SLOPE_RECON_MF
- debug_ngrow(SLOPE_RECON_MF,ngrow_mass,local_caller_string);
- resize_maskfiner(ngrow_mass,MASKCOEF_MF);
- debug_ngrow(MASKCOEF_MF,ngrow_mass,local_caller_string);
- debug_ngrow(VOF_PREV_TIME_MF,ngrow_scalar,local_caller_string);
+ VOF_Recon_resize(ngrow); //output:SLOPE_RECON_MF
+ debug_ngrow(SLOPE_RECON_MF,ngrow,local_caller_string);
+ resize_maskfiner(ngrow,MASKCOEF_MF);
+ debug_ngrow(MASKCOEF_MF,ngrow,local_caller_string);
+ debug_ngrow(VOF_PREV_TIME_MF,ngrow,local_caller_string);
  if (localMF[VOF_PREV_TIME_MF]->nComp()!=num_materials)
   amrex::Error("vof prev time invalid ncomp");
 
@@ -17482,7 +17477,7 @@ NavierStokes::split_scalar_advection() {
   dombc[m]=b_rec[m];
 
   // in: split_scalar_advection
- getStateDen_localMF(DEN_RECON_MF,ngrow_mass,advect_time_slab);
+ getStateDen_localMF(DEN_RECON_MF,ngrow,advect_time_slab);
 
  //  (rho Y)_t + div(rho u Y)=div(D rho grad Y)
 
@@ -17491,7 +17486,7 @@ NavierStokes::split_scalar_advection() {
  // rho_im=rho(z)+rho0* DrhoDT * (T_im - T0_im)
  // if override_density(im)=0 or 2, density is not modified:
  // Du/Dt=-grad (p-rho0 g dot z)/rho0 - g DrhoDT (T-T0)
- getStateMOM_DEN(MOM_DEN_MF,ngrow_mass,advect_time_slab);
+ getStateMOM_DEN(MOM_DEN_MF,ngrow,advect_time_slab);
 
  int TENSOR_RECON_MF_local=-1;
  int Tensor_Type_local=-1;
@@ -17500,10 +17495,10 @@ NavierStokes::split_scalar_advection() {
      (num_materials_viscoelastic<=num_materials)) {
   TENSOR_RECON_MF_local=TENSOR_RECON_MF;
   Tensor_Type_local=Tensor_Type;
-   //ngrow_scalar=1
+   //ngrow=2
   getStateTensor_localMF(
    TENSOR_RECON_MF_local,
-   ngrow_scalar,0,
+   ngrow,0,
    NUM_CELL_ELASTIC,
    advect_time_slab);
  } else if (num_materials_viscoelastic==0) {
@@ -17523,7 +17518,7 @@ NavierStokes::split_scalar_advection() {
   Refine_Density_Type_local=Refine_Density_Type;
   getStateRefineDensity_localMF(
    REFINE_DENSITY_RECON_MF_local,
-   ngrow_mass,0,
+   ngrow,0,
    NUM_CELL_REFINE_DENSITY,
    advect_time_slab);
  } else if (num_materials_compressible==0) {
@@ -17535,18 +17530,17 @@ NavierStokes::split_scalar_advection() {
  MultiFab& Refine_Density_new=
 	 get_new_data(Refine_Density_Type_local,slab_step+1);
 
-   //ngrow_scalar=1
- getStateDist_localMF(LS_RECON_MF,ngrow_scalar,advect_time_slab,
+ getStateDist_localMF(LS_RECON_MF,ngrow,advect_time_slab,
      local_caller_string);
 
    // the pressure from before will be copied to the new pressure.
- getState_localMF(VELADVECT_MF,ngrow_mass,
+ getState_localMF(VELADVECT_MF,ngrow,
   STATECOMP_VEL,
   STATE_NCOMP_VEL+STATE_NCOMP_PRES,
   advect_time_slab); 
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  getStateMAC_localMF(UMACOLD_MF+dir,ngrow_mac_old,dir,advect_time_slab);
+  getStateMAC_localMF(UMACOLD_MF+dir,ngrow,dir,advect_time_slab);
  } // dir = 0..sdim-1
 
  if ((dir_absolute_direct_split<0)||
@@ -17577,10 +17571,10 @@ NavierStokes::split_scalar_advection() {
  if (LS_recon_ncomp!=num_materials*(1+AMREX_SPACEDIM))
    amrex::Error("LS_recon invalid");
 
- debug_ngrow(LS_RECON_MF,ngrow_scalar,local_caller_string);
+ debug_ngrow(LS_RECON_MF,ngrow,local_caller_string);
 
- resize_mask_nbr(ngrow_mass);
- debug_ngrow(MASK_NBR_MF,ngrow_mass,local_caller_string); 
+ resize_mask_nbr(ngrow);
+ debug_ngrow(MASK_NBR_MF,ngrow,local_caller_string); 
 
  MultiFab* umac_new[AMREX_SPACEDIM];
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
@@ -17589,10 +17583,12 @@ NavierStokes::split_scalar_advection() {
 
  int ngrid=grids.size();
 
- int nc_conserve=CISLCOMP_CONS_NCOMP;
- MultiFab* conserve=new MultiFab(grids,dmap,nc_conserve,
-    ngrow_mass,
-    MFInfo().SetTag("conserve"),FArrayBoxFactory());
+ int nc_conserve=CISLCOMP_CONS_NCOMP*ENUM_NUM_REFINE_DENSITY_TYPE;
+
+ MultiFab* conserve=new MultiFab(grids,dmap,
+   nc_conserve,
+   ngrow,
+   MFInfo().SetTag("conserve"),FArrayBoxFactory());
 
  int nc_bucket=CISLCOMP_NCOMP;
 
@@ -17835,7 +17831,7 @@ NavierStokes::split_scalar_advection() {
    &cur_time_slab,
    &prescribed_vel_time_slab,
      // this is the original data
-   LSfab.dataPtr(), //LS_RECON_MF, ngrow_scalar
+   LSfab.dataPtr(), //LS_RECON_MF, ngrow=2
    ARLIM(LSfab.loVect()),ARLIM(LSfab.hiVect()),
    denfab.dataPtr(),
    ARLIM(denfab.loVect()),ARLIM(denfab.hiVect()),
@@ -17891,8 +17887,6 @@ NavierStokes::split_scalar_advection() {
    zmac_old.dataPtr(),ARLIM(zmac_old.loVect()),ARLIM(zmac_old.hiVect()),
    &stokes_flow,
    denconst_interface.dataPtr(), //unused in fort_vfrac_split
-   &ngrow_mass, //=2
-   &ngrow_mac_old,
    &nc_conserve,
    &map_forward_direct_split[normdir_here],
    &vofrecon_ncomp,
