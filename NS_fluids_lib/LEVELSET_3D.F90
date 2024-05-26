@@ -16701,6 +16701,8 @@ stop
       return
       end subroutine fort_buildfacewt
 
+      FIX ME need to update the refine density variable
+
        ! solid: velx,vely,velz,dist  (dist<0 in solid)
        ! called from: NavierStokes::prescribe_solid_geometry
        !   (declared in NavierStokes2.cpp)
