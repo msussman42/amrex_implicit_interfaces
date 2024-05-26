@@ -7071,6 +7071,77 @@ end subroutine volume_sanity_check
       end subroutine CISBOX 
 
 
+      subroutine CISBOXFINE( &
+       xsten,nhalf, &
+       xlo,dx, &
+       i,j,k, &
+       ifine,jfine,kfine, &
+       bfact,level, &
+       vol,cen,sdim)
+      use global_utility_module
+
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: sdim
+      integer, INTENT(in) :: bfact,level
+      integer, INTENT(in) :: nhalf
+      real(amrex_real), INTENT(out) :: xsten(-nhalf:nhalf,sdim)
+      real(amrex_real), INTENT(in) :: dx(sdim)
+      real(amrex_real), INTENT(in) :: xlo(sdim)
+      integer, INTENT(in) :: i,j,k
+      integer, INTENT(in) :: ifine,jfine,kfine
+      real(amrex_real), INTENT(out) :: vol
+      real(amrex_real), INTENT(out) :: cen(sdim)
+      integer :: dir2
+
+      if (nhalf.lt.1) then
+       print *,"nhalf invalid cisboxfine"
+       stop
+      endif
+      if (bfact.lt.1) then
+       print *,"bfact invalid125"
+       stop
+      endif
+      if ((sdim.ne.2).and.(sdim.ne.3)) then
+       print *,"sdim invalid"
+       stop
+      endif
+      call gridsten_level(xsten,i,j,k,level,nhalf)
+
+      dir2=1
+      if (ifine.eq.0) then
+       xsten(1,dir2)=xsten(0,dir2)
+      else if (ifine.eq.1) then
+       xsten(-1,dir2)=xsten(0,dir2)
+      endif
+      dir2=2
+      if (jfine.eq.0) then
+       xsten(1,dir2)=xsten(0,dir2)
+      else if (jfine.eq.1) then
+       xsten(-1,dir2)=xsten(0,dir2)
+      endif
+      if (SDIM.eq.3) then
+       dir2=SDIM
+       if (kfine.eq.0) then
+        xsten(1,dir2)=xsten(0,dir2)
+       else if (kfine.eq.1) then
+        xsten(-1,dir2)=xsten(0,dir2)
+       endif
+      endif
+      do dir2=1,SDIM
+       xsten(0,dir2)=half*(xsten(-1,dir2)+xsten(1,dir2))
+      enddo
+
+        ! bfact is not used.
+      call Box_volumeFAST(bfact,dx,xsten,nhalf,vol,cen,sdim)
+
+      return
+      end subroutine CISBOXFINE 
+
+
+
+
+
       subroutine CISBOXHALF( &
        xsten,nhalf, &
        xlo,dx,i,j,k,iside,veldir, &

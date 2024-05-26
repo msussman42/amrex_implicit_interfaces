@@ -12716,7 +12716,10 @@ stop
      
       integer istate,ispecies,igeom
     
-      real(amrex_real) KE,vel1D,local_internal
+      real(amrex_real) KE,local_internal
+      real(amrex_real) :: vel_coarse(SDIM)
+      real(amrex_real) :: vel_fine(SDIM)
+
       integer no_material_flag
 
       integer dencomp_data,statecomp_data,tempcomp_data,speccomp_data
@@ -13262,6 +13265,29 @@ stop
 
        call gridsten_level(xsten_crse,icrse,jcrse,kcrse,level,nhalf)
 
+       do veldir=1,SDIM
+        vel_coarse(veldir)=velfab(D_DECL(icrse,jcrse,kcrse),veldir)
+       enddo
+
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if (levelrz.eq.COORDSYS_RZ) then
+        if (xsten_crse(0,1).lt.zero) then
+         do veldir=1,SDIM
+          vel_coarse(veldir)=zero
+         enddo
+        endif
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        if (xsten_crse(0,1).lt.zero) then
+         do veldir=1,SDIM
+          vel_coarse(veldir)=zero
+         enddo
+        endif
+       else
+        print *,"levelrz invalid fort_vfrac_split (vel_coarse)"
+        stop
+       endif
+
        kfine=0
 #if (AMREX_SPACEDIM==3)
        do kfine=0,1
@@ -13313,16 +13339,16 @@ stop
           enddo
          endif
         else
-         print *,"levelrz invalid fort_vfrac_split 3"
+         print *,"levelrz invalid fort_vfrac_split (vel_fine)"
          stop
         endif
 
         ! KE=u dot u/2
         KE=zero
         do veldir=1,SDIM
-         vel1D=vel_fine(veldir)
-         conserve(D_DECL(icrse,jcrse,kcrse),fine_offset+veldir)=vel1D
-         KE=KE+vel1D**2
+         conserve(D_DECL(icrse,jcrse,kcrse),fine_offset+veldir)= &
+              vel_fine(veldir)
+         KE=KE+vel_coarse(veldir)**2
         enddo
         KE=half*KE
 
@@ -13572,10 +13598,18 @@ stop
 #endif
        do jfine=0,1
        do ifine=0,1
+
+        do im_comp=1,num_materials_compressible
+         refine_den_bucket(im_comp)=zero
+         refine_vol_bucket(im_comp)=zero
+        enddo
+
         nfine=4*kfine+2*jfine+ifine+1
 
-        call CISBOX(xsten_accept,nhalf, &
-         xlo,dx,icrse,jcrse,kcrse, &
+        call CISBOXFINE(xsten_accept,nhalf, &
+         xlo,dx, &
+         icrse,jcrse,kcrse, &
+         ifine,jfine,kfine, &
          bfact,level, &
          volcell_accept,cencell_accept,SDIM)
 
@@ -13585,31 +13619,6 @@ stop
          print *,"volcell_accept invalid: ",volcell_accept
          stop
         endif
-
-        dir2=1
-        if (ifine.eq.0) then
-         xsten_accept(1,dir2)=xsten_accept(0,dir2)
-        else if (ifine.eq.1) then
-         xsten_accept(-1,dir2)=xsten_accept(0,dir2)
-        endif
-        dir2=2
-        if (jfine.eq.0) then
-         xsten_accept(1,dir2)=xsten_accept(0,dir2)
-        else if (jfine.eq.1) then
-         xsten_accept(-1,dir2)=xsten_accept(0,dir2)
-        endif
-        if (SDIM.eq.3) then
-         dir2=SDIM
-         if (kfine.eq.0) then
-          xsten_accept(1,dir2)=xsten_accept(0,dir2)
-         else if (kfine.eq.1) then
-          xsten_accept(-1,dir2)=xsten_accept(0,dir2)
-         endif
-        endif
-        do dir2=1,SDIM
-         xsten_accept(0,dir2)=half*(xsten_accept(-1,dir2)+ &
-                 xsten_accept(1,dir2))
-        enddo
 
         do ihalf=-1,1
         do dir2=1,SDIM
@@ -13627,8 +13636,11 @@ stop
           ! do nothing
          else if ((levelrz.eq.COORDSYS_RZ).or. &
                   (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-          if (icrse.eq.0) then
+          if (icrse.le.0) then
            usten_accept(-1)=zero
+          endif
+          if (icrse.lt.0) then
+           usten_accept(1)=zero
           endif
          else
           print *,"levelrz invalid"
@@ -13681,27 +13693,55 @@ stop
          stop
         endif
 
-FIX ME
-         do istencil=idonatelow,idonatehigh
+        do istencil=idonatelow,idonatehigh
  
-          if (normdir.eq.0) then
-           idonate=icrse+istencil
-          else if (normdir.eq.1) then 
-           jdonate=jcrse+istencil
-          else if ((normdir.eq.2).and.(SDIM.eq.3)) then
-           kdonate=kcrse+istencil
-          else
-           print *,"normdir invalid"
-           stop
-          endif
-      
-          call CISBOX(xsten_recon,1, &
-           xlo,dx,idonate,jdonate,kdonate, &
+         if (normdir.eq.0) then
+          idonate=icrse+istencil
+         else if (normdir.eq.1) then 
+          jdonate=jcrse+istencil
+         else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+          kdonate=kcrse+istencil
+         else
+          print *,"normdir invalid"
+          stop
+         endif
+         kfine_stencil_lo=kfine
+         jfine_stencil_lo=jfine
+         ifine_stencil_lo=ifine
+         kfine_stencil_hi=kfine
+         jfine_stencil_hi=jfine
+         ifine_stencil_hi=ifine
+         if (normdir.eq.0) then
+          ifine_stencil_lo=0 
+          ifine_stencil_hi=1
+         else if (normdir.eq.1) then 
+          jfine_stencil_lo=0 
+          jfine_stencil_hi=1
+         else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+          kfine_stencil_lo=0 
+          kfine_stencil_hi=1
+         else
+          print *,"normdir invalid"
+          stop
+         endif
+         kfine_stencil=0
+#if (AMREX_SPACEDIM==3)
+         do kfine_stencil=kfine_stencil_lo,kfine_stencil_hi
+#endif
+         do jfine_stencil=jfine_stencil_lo,jfine_stencil_hi
+         do ifine_stencil=ifine_stencil_lo,ifine_stencil_hi
+
+          call CISBOXFINE(xsten_recon,1, &
+           xlo,dx, &
+           idonate,jdonate,kdonate, &
+           ifine_stencil,jfine_stencil,kfine_stencil, &
            bfact,level, &
            volcell_recon,cencell_recon,SDIM)
  
           call CISBOX(xsten_donate,1, &
-           xlo,dx,idonate,jdonate,kdonate, &
+           xlo,dx, &
+           idonate,jdonate,kdonate, &
+           ifine_stencil,jfine_stencil,kfine_stencil, &
            bfact,level, &
            volcell_donate,cencell_donate,SDIM)
 
@@ -13733,28 +13773,52 @@ FIX ME
           if (check_intersection.eq.1) then 
 
            usten_donate(-1)=umac_displace(D_DECL(idonate,jdonate,kdonate))
-
-           call gridstenMAC_level(xsten_MAC,idonate,jdonate,kdonate, &
-             level,nhalf,normdir)
-
-           if (levelrz.eq.COORDSYS_CARTESIAN) then
-            ! do nothing
-           else if ((levelrz.eq.COORDSYS_RZ).or. &
-                    (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-
-            if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
-                (normdir.eq.0)) then
-             usten_donate(-1)=zero
-            endif
-
-           else
-            print *,"levelrz invalid add to bucket 3"
-            stop
-           endif
-
            usten_donate(1)= &
               umac_displace(D_DECL(idonate+ii,jdonate+jj,kdonate+kk))
 
+           if (normdir.eq.0) then
+
+            if (levelrz.eq.COORDSYS_CARTESIAN) then
+             ! do nothing
+            else if ((levelrz.eq.COORDSYS_RZ).or. &
+                     (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+             if (idonate.le.0) then
+              usten_donate(-1)=zero
+             endif
+             if (idonate.lt.0) then
+              usten_donate(1)=zero
+             endif
+            else
+             print *,"levelrz invalid"
+             stop
+            endif
+
+           endif
+
+           usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
+
+           if (normdir.eq.0) then
+            if (ifine_stencil.eq.0) then
+             usten_donate(1)=usten_donate(0)
+            else if (ifine_stencil.eq.1) then
+             usten_donate(-1)=usten_donate(0)
+            endif
+           else if (normdir.eq.1) then
+            if (jfine_stencil.eq.0) then
+             usten_donate(1)=usten_donate(0)
+            else if (jfine_stencil.eq.1) then
+             usten_donate(-1)=usten_donate(0)
+            endif
+           else if ((normdir.eq.2).and.(SDIM.eq.3)) then
+            if (kfine_stencil.eq.0) then
+             usten_donate(1)=usten_donate(0)
+            else if (kfine_stencil.eq.1) then
+             usten_donate(-1)=usten_donate(0)
+            endif
+           else
+            print *,"normdir invalid"
+            stop
+           endif
            usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
 
              ! normdir=0..sdim-1
@@ -13771,7 +13835,8 @@ FIX ME
             xhiint, &
             volint, &
             coeff, &
-            bfact,dx,map_forward,normdir)
+            bfact, & !only used for sanity checks
+            dx,map_forward,normdir)
 
            if (volint.gt.zero) then  
 
