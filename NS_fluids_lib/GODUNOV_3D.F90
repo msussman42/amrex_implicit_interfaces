@@ -13731,14 +13731,16 @@ stop
          do jfine_stencil=jfine_stencil_lo,jfine_stencil_hi
          do ifine_stencil=ifine_stencil_lo,ifine_stencil_hi
 
-          call CISBOXFINE(xsten_recon,1, &
+          nfine_stencil=4*kfine_stencil+2*jfine_stencil+ifine_stencil+1
+          fine_offset=CISLCOMP_CONS_NCOMP*(nfine_stencil-1)
+
+          call CISBOX(xsten_recon,1, &
            xlo,dx, &
            idonate,jdonate,kdonate, &
-           ifine_stencil,jfine_stencil,kfine_stencil, &
            bfact,level, &
            volcell_recon,cencell_recon,SDIM)
  
-          call CISBOX(xsten_donate,1, &
+          call CISBOXFINE(xsten_donate,1, &
            xlo,dx, &
            idonate,jdonate,kdonate, &
            ifine_stencil,jfine_stencil,kfine_stencil, &
@@ -13836,7 +13838,9 @@ stop
             volint, &
             coeff, &
             bfact, & !only used for sanity checks
-            dx,map_forward,normdir)
+            dx, &
+            map_forward, &
+            normdir)
 
            if (volint.gt.zero) then  
 
@@ -13906,6 +13910,8 @@ stop
             endif
             voltotal_depart=voltotal_depart+LS_voltotal_depart
 
+            im_refine_density=0
+
             do im=1,num_materials
              ! density
              dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
@@ -13914,9 +13920,26 @@ stop
               ! old state variable.
              donate_density= &
               conserve(D_DECL(idonate,jdonate,kdonate), &
-                       CISLCOMP_STATES+dencomp_data) 
-             donate_mom_density= &
-              mom_den(D_DECL(idonate,jdonate,kdonate),im) 
+                fine_offset+CISLCOMP_STATES+dencomp_data) 
+             if (is_compressible_mat(im).eq.0) then
+              donate_mom_density= &
+               mom_den(D_DECL(idonate,jdonate,kdonate),im) 
+             else if (is_compressible_mat(im).eq.1) then
+              im_refine_density=im_refine_density+1
+              if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+               !do nothing
+              else
+               print *,"fort_im_refine_density_map invalid"
+               stop
+              endif
+              donate_mom_density=refineden(D_DECL(idonate,jdonate,kdonate), &
+                (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+ &
+                nfine_stencil)
+             else
+              print *,"is_compressible_mat(im) invalid"
+              stop
+             endif
+
              if (donate_density.gt.zero) then
               ! do nothing
              else
@@ -13958,22 +13981,30 @@ stop
               stop
              endif
 
-
              do veldir=1,SDIM
               donate_data= &
-               conserve(D_DECL(idonate,jdonate,kdonate),veldir)
+               conserve(D_DECL(idonate,jdonate,kdonate), &
+                fine_offset+veldir)
               mom2(veldir)=multi_volume_grid(im)*massdepart_mom*donate_data
              enddo  ! veldir=1..sdim (velocity)
 
-              ! slope might not be zero.
              massdepart=massdepart*multi_volume_grid(im)
-              ! slope is zero.
              massdepart_mom=massdepart_mom*multi_volume_grid(im)
 
              veldata(CISLCOMP_DEN_MOM+im)= &
               veldata(CISLCOMP_DEN_MOM+im)+massdepart_mom
              veldata(CISLCOMP_STATES+dencomp_data)= &
               veldata(CISLCOMP_STATES+dencomp_data)+massdepart
+
+             if (is_compressible_mat(im).eq.0) then
+              !do nothing
+             else if (is_compressible_mat(im).eq.1) then
+              refine_den_bucket(im_refine_density)= &
+               refine_den_bucket(im_refine_density)+massdepart
+             else
+              print *,"is_compressible_mat(im) invalid"
+              stop
+             endif
 
              ! skip density,then do energy,scalars,Q, ...
              ! for temperature:
@@ -13990,7 +14021,7 @@ stop
                ! value of density stored in the state variable)
               donate_data= &
                conserve(D_DECL(idonate,jdonate,kdonate), &
-                        CISLCOMP_STATES+statecomp_data) 
+                 fine_offset+CISLCOMP_STATES+statecomp_data) 
               
               veldata(CISLCOMP_STATES+statecomp_data)= &
                veldata(CISLCOMP_STATES+statecomp_data)+ & 
@@ -14072,6 +14103,17 @@ stop
              veldata(CISLCOMP_FTARGET+im)= &
               veldata(CISLCOMP_FTARGET+im)+multi_volume(im)
 
+             if (is_compressible_mat(im).eq.0) then
+              !do nothing
+             else if (is_compressible_mat(im).eq.1) then
+              refine_vol_bucket(im_refine_density)= &
+               refine_vol_bucket(im_refine_density)+multi_volume(im)
+             else
+              print *,"is_compressible_mat(im) invalid"
+              stop
+             endif
+
+
              ! material centroid from target (accepting) region
              do dir2=1,SDIM
               veldata(CISLCOMP_MOF+vofcomp+dir2)= &
@@ -14083,6 +14125,33 @@ stop
                ! fluid materials tessellate the domain.
               if (is_rigid(im).eq.0) then
                veldata(veldir)=veldata(veldir)+mom2(veldir) 
+
+               if (veldir.eq.1) then
+                xmomside(D_DECL(icrse,jcrse,kcrse),ifine+1)= &
+                 xmomside(D_DECL(icrse,jcrse,kcrse),ifine+1)+ &
+                 mom2(veldir)
+                xmassside(D_DECL(icrse,jcrse,kcrse),ifine+1)= &
+                 xmassside(D_DECL(icrse,jcrse,kcrse),ifine+1)+ &
+                 massdepart_mom
+               else if (veldir.eq.2) then
+                ymomside(D_DECL(icrse,jcrse,kcrse),jfine+1)= &
+                 ymomside(D_DECL(icrse,jcrse,kcrse),jfine+1)+ &
+                 mom2(veldir)
+                ymassside(D_DECL(icrse,jcrse,kcrse),jfine+1)= &
+                 ymassside(D_DECL(icrse,jcrse,kcrse),jfine+1)+ &
+                 massdepart_mom
+               else if ((veldir.eq.3).and.(SDIM.eq.3)) then
+                zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
+                 zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
+                 veldata(momcomp)
+                zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
+                 zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
+                 massdepart_mom
+               else
+                print *,"veldir invalid"
+                stop
+               endif
+
               else if (is_rigid(im).eq.1) then
                ! do nothing
               else
@@ -14102,645 +14171,672 @@ stop
            stop
           endif
 
-         enddo  ! istencil=idonatelow..idonatehigh
+         enddo  ! ifine_stencil
+         enddo  ! jfine_stencil
+#if (AMREX_SPACEDIM==3)
+         enddo  ! kfine_stencil
+#endif
 
-         voltotal_depart=zero
-         voltotal_target=zero
-         do im=1,num_materials
-          vofcomp=(im-1)*ngeom_raw+1 
-          volmat_target(im)=veldata(CISLCOMP_FTARGET+im)
-          volmat_depart(im)=veldata(CISLCOMP_MOF+vofcomp)
+        enddo !istencil=idonatelow,idonaatehigh
 
-          volmat_target_cor(im)=volmat_target(im)
-          volmat_depart_cor(im)=volmat_depart(im)
-
-           ! fluid materials tessellate the domain.
-          if (is_rigid(im).eq.0) then
-           voltotal_target=voltotal_target+volmat_target(im)
-           voltotal_depart=voltotal_depart+volmat_depart(im)
-          else if (is_rigid(im).eq.1) then
-           ! do nothing
+        im_refine_density=0
+        do im=1,num_materials
+         if (is_compressible_mat(im).eq.0) then
+          !do nothing
+         else if (is_compressible_mat(im).eq.1) then
+          im_refine_density=im_refine_density+1
+          if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+           !do nothing
           else
-           print *,"is_rigid invalid GODUNOV_3D.F90"
+           print *,"fort_im_refine_density_map invalid"
            stop
           endif
-         enddo ! im=1..num_materials
-        
-         if (voltotal_depart.gt.zero) then
-          ! do nothing
+          if (refine_vol_bucket(im_refine_density).gt.zero) then
+           refinedennew(D_DECL(icrse,jcrse,crse),
+            (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
+             refine_den_bucket(im_refine_density)/ &
+             refine_vol_bucket(im_refine_density)
+          else if (refine_vol_bucket(im_refine_density).eq.zero) then
+           !do nothing
+          else
+           print *,"refine_vol_bucket invalid"
+           stop
+          endif
          else
-          print *,"voltotal_depart bust "
+          print *,"is_compressible_mat(im) invalid"
           stop
          endif
-         if (voltotal_target.gt.zero) then
-          ! do nothing
-         else
-          print *,"voltotal_target bust "
-          stop
-         endif
+        enddo ! im=1..num_materials
 
-         do im=1,num_materials
-          vofcomp=(im-1)*ngeom_raw+1 
+       enddo  ! ifine
+       enddo  ! jfine
+#if (AMREX_SPACEDIM==3)
+       enddo  ! kfine
+#endif
 
-          newvfrac(im)=volmat_target(im)/voltotal_target
-          newvfrac_cor(im)=volmat_target_cor(im)/voltotal_target
+       voltotal_depart=zero
+       voltotal_target=zero
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_raw+1 
+        volmat_target(im)=veldata(CISLCOMP_FTARGET+im)
+        volmat_depart(im)=veldata(CISLCOMP_MOF+vofcomp)
 
-          if (vof0(D_DECL(icrse,jcrse,kcrse),im).le.half) then
-           newvfrac_weymouth(im)=volmat_depart_cor(im)/voltotal_target
-           if (newvfrac_weymouth(im).gt.one) then
-            newvfrac_weymouth(im)=one
-           endif
-          else if (vof0(D_DECL(icrse,jcrse,kcrse),im).ge.half) then
-           newvfrac_weymouth(im)=one- &
-            (voltotal_depart-volmat_depart_cor(im))/voltotal_target
-           if (newvfrac_weymouth(im).lt.zero) then
-            newvfrac_weymouth(im)=zero
-           endif
-          else
-           print *,"vof0 bust"
-           stop
-          endif
+        volmat_target_cor(im)=volmat_target(im)
+        volmat_depart_cor(im)=volmat_depart(im)
 
-          if (newvfrac(im).le.VOFTOL) then
-           newvfrac_weymouth(im)=newvfrac(im)
-           newvfrac_cor(im)=newvfrac(im)
-          endif
-     
-          call CISBOX(xsten_accept,nhalf, &
-           xlo,dx,icrse,jcrse,kcrse, &
-           bfact,level, &
-           volcell_accept,cencell_accept,SDIM)
-  
-          do dir2=1,SDIM
-           if (newvfrac(im).gt.VOFTOL) then
-            newcen(dir2,im)= &
-             veldata(CISLCOMP_MOF+vofcomp+dir2)/ &
-             volmat_target(im)- &
-             cencell_accept(dir2)
-           else
-            newcen(dir2,im)=zero
-           endif
-          enddo ! dir2
-
-         enddo  ! im=1..num_materials (geometry)
-
-         call consistent_materials(newvfrac_cor,newcen)
-
-         if ((EILE_flag.eq.1).or. & ! EILE
-             (EILE_flag.eq.2).or. & ! EI
-             (EILE_flag.eq.3)) then ! LE
-          ! do nothing
-         else if (EILE_flag.eq.-1) then ! weymouth and Yue
-          do im=1,num_materials
-           newvfrac_cor(im)=newvfrac_weymouth(im)
-          enddo
-          call consistent_materials(newvfrac_cor,newcen)
-         else
-          print *,"EILE_flag invalid"
-          stop
-         endif
-   
-         ! pressure
-         statecomp_data=STATECOMP_PRES+1
-
-         if (divu_outer_sweeps.eq.0) then
-          snew_hold(statecomp_data)= &
-            velfab(D_DECL(icrse,jcrse,kcrse),statecomp_data)
-         else if ((divu_outer_sweeps.ge.1).and. &
-                  (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
-          snew_hold(statecomp_data)= &
-            snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)
-         else
-          print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
-          stop
-         endif
-
-         ! density
-         do im=1,num_materials
-
-          dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
-          massdepart=veldata(CISLCOMP_STATES+dencomp_data)
-          if (massdepart.ge.zero) then
-           ! do nothing
-          else
-           print *,"new mass cannot be negative"
-           print *,"im= ",im
-           print *,"new mass= ",massdepart
-           stop
-          endif
-           ! if is_rigid==1 or voldepart<eps or voltarget<eps then
-           !  den=fort_denconst(im)
-           ! else if mat_type==0 then
-           !  if override==0 or 2 then
-           !   den=fort_denconst(im)
-           !  else if override==1 then
-           !   den=massdepart/voldepart
-           !  endif
-           ! else if mat_type>0 then
-           !  den=massdepart/voltarget
-           ! endif
-          if (all_incomp.eq.1) then
-           vol_target_local=volmat_depart_cor(im)
-          else if (all_incomp.eq.0) then
-           vol_target_local=volmat_target_cor(im)
-          else
-           print *,"all_incomp invalid"
-           stop
-          endif
-
-          if (is_compressible_mat(im).eq.0) then
-           vol_target_local=volmat_depart_cor(im)
-          else if (is_compressible_mat(im).eq.1) then
-           if (incompressible_interface_flag.eq.0) then
-            ! do nothing
-           else if (incompressible_interface_flag.eq.1) then
-            vol_target_local=volmat_depart_cor(im)
-           else 
-            print *,"incompressible_interface_flag invalid"
-            stop
-           endif
-          else
-           print *,"is_compressible_mat invalid: ", &
-                im,is_compressible_mat(im)
-           stop
-          endif
-
-          ! if is_rigid(im), density=fort_denconst(im)
-          ! if incompressible,
-          !   if constant_density_all_time==1 then density=fort_denconst(im)
-          !   if constant_density_all_time==0 then 
-          !                                  density=mass_depart/vol_depart
-          ! if compressible,
-          !  if constant_density_all_time==0 then
-          !   density=massdepart/voltarget
-          !  else
-          !   return error.
-          ! subroutine derive_density declared in GODUNOV_3D.F90 (this file)
-          call derive_density(volmat_depart_cor(im), &
-           vol_target_local,voltotal_depart, &
-           constant_density_all_time, &
-           massdepart,im, &
-           dencore(im))
-          istate=STATECOMP_STATES+(im-1)*num_state_material+ENUM_DENVAR+1
-          if (dencore(im).gt.zero) then
-           ! do nothing
-          else
-           print *,"density must be positive vfrac_split 2"
-           print *,"im,dencore(im) ",im,dencore(im)
-           stop
-          endif
-          if (dencore(im).lt.density_floor(im)) then
-           dencore(im)=density_floor(im)
-          endif
-          if (density_ceiling(im).gt.zero) then
-           if (dencore(im).gt.density_ceiling(im)) then
-            dencore(im)=density_ceiling(im)
-           endif
-          else
-           print *,"density_ceiling(im) invalid"
-           stop
-          endif
-          snew_hold(istate)=dencore(im)
-
-         enddo ! im, updating density
-
-         ! levelset function
-         ! voltotal_depart=sum_{fluid mat} volmat_depart(im)
-         do im=1,num_materials
-          if (voltotal_depart.gt.zero) then
-           newLS(im)=veldata(CISLCOMP_LS+im)/voltotal_depart
-          else
-           print *,"voltotal_depart invalid"
-           stop
-          endif 
-         enddo  ! im=1..num_materials (updating levelset vars)
-
-         do im=1,num_materials
-
-          if ((num_materials_viscoelastic.ge.1).and. &
-              (num_materials_viscoelastic.le.num_materials)) then
-
-           if (fort_store_elastic_data(im).eq.1) then
-            imap=1
-            do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
-                      (imap.le.num_materials_viscoelastic))
-             imap=imap+1
-            enddo
-
-            if (imap.le.num_materials_viscoelastic) then
-
-             do istate=1,ENUM_NUM_TENSOR_TYPE
-              statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
-              if (voltotal_depart.gt.zero) then
-               tennew_hold(statecomp_data)= &
-                 veldata(CISLCOMP_TENSOR+statecomp_data)/voltotal_depart
-              else
-               print *,"voltotal_depart invalid"
-               stop
-              endif 
- 
-             enddo !istate=1..ENUM_NUM_TENSOR_TYPE
-
-            else 
-             print *,"imap invalid"
-             stop
-            endif
-           else if (fort_store_elastic_data(im).eq.0) then
-            ! do nothing
-           else
-            print *,"fort_store_elastic_data(im) invalid"
-            stop
-           endif
-
-          else if (num_materials_viscoelastic.eq.0) then
-           ! do nothing
-          else
-           print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
-           stop
-          endif
- 
-         enddo ! im=1..num_materials (updating viscoelastic vars)
-
-         ! velocity=mom/mass
          ! fluid materials tessellate the domain.
-         totalmass_depart=zero
-         do im=1,num_materials
-          if (is_rigid(im).eq.0) then
-           massdepart_mom=veldata(CISLCOMP_DEN_MOM+im)
-           totalmass_depart=totalmass_depart+massdepart_mom
-          else if (is_rigid(im).eq.1) then
-           ! do nothing
-          else
-           print *,"is_rigid invalid GODUNOV_3D.F90"
-           stop
-          endif
-         enddo ! im=1..num_materials
-
-         if (totalmass_depart.gt.zero) then
-          ! do nothing
-         else
-          print *,"totalmass_depart bust totalmass_depart=",totalmass_depart
-          do dir2=1,SDIM
-           print *,"dir,fablo,fabhi ",dir2,fablo(dir2),fabhi(dir2)
-          enddo
-          print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
-          print *,"num_state_material=",num_state_material
-          print *,"normdir=",normdir
-          print *,"dir_counter=",dir_counter
-          print *,"num_materials,map_forward,level,finest_level ", &
-           num_materials,map_forward,level,finest_level
-          stop
-         endif
-
-         do veldir=1,SDIM
-          snew_hold(veldir)=veldata(veldir)/totalmass_depart
-         enddo
-
-          ! make sure 0<=F<=1 and sum F_i = 1.
-          ! also truncation 1.0e-8 to 0 and 1-1.0e-8 to 1.
-         call consistent_materials(newvfrac_cor,newcen)
-
-         do im=1,num_materials
-
-          vofcomp=(im-1)*ngeom_raw+1
-
-          KE=zero
-          do veldir=1,SDIM
-           momcomp=veldir
-           vel1D=snew_hold(momcomp)
-           KE=KE+vel1D**2
-          enddo ! veldir
-          KE=half*KE
-
-          if (ngeom_raw.eq.SDIM+1) then
-           snew_hold(STATECOMP_MOF+vofcomp)=newvfrac_cor(im)
-           do dir2=1,SDIM
-            snew_hold(STATECOMP_MOF+vofcomp+dir2)=newcen(dir2,im)
-           enddo
-          else
-           print *,"ngeom_raw invalid in vfrac split"
-           print *,"ngeom_raw= ",ngeom_raw
-           stop
-          endif
-
-          no_material_flag=0
-
-          if ( (volmat_depart(im).le. &
-                VOFTOL*voltotal_depart).or. &
-               (volmat_depart_cor(im).le. &
-                VOFTOL*voltotal_depart).or. &
-               (newvfrac_cor(im).le.VOFTOL).or. &
-               (volmat_target(im).le. &
-                VOFTOL*voltotal_depart).or. &
-               (volmat_target_cor(im).le. &
-                VOFTOL*voltotal_depart) ) then
-
-           no_material_flag=1
-
-          endif
-
-           ! in: fort_vfrac_split
-          dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
-
-          istate=1
-          do while (istate.le.num_state_material)
-
-           if (istate.eq.ENUM_DENVAR+1) then
-            ! do nothing, density updated above
-            istate=istate+1
-           else if (istate.eq.ENUM_TEMPERATUREVAR+1) then 
-
-            do ispecies=1,num_species_var
-             speccomp_data=(im-1)*num_state_material+num_state_base+ &
-               ispecies
-             if (no_material_flag.eq.1) then ! no material (im)
-              snew_hold(STATECOMP_STATES+speccomp_data)=zero
-             else if (no_material_flag.eq.0) then
-              if (is_rigid(im).eq.1) then ! mass fraction=0 in solids.
-               snew_hold(STATECOMP_STATES+speccomp_data)=zero
-              else if (is_rigid(im).eq.0) then
-               massdepart=veldata(CISLCOMP_STATES+dencomp_data)
-               if (massdepart.gt.zero) then
-                snew_hold(STATECOMP_STATES+speccomp_data)= &
-                 veldata(CISLCOMP_STATES+speccomp_data)/massdepart
-               else
-                print *,"massdepart invalid"
-                stop
-               endif 
-              else
-               print *,"is_rigid invalid GODUNOV_3D.F90"
-               stop
-              endif
-             else 
-              print *,"no_material_flag invalid"
-              stop
-             endif
-
-            enddo ! ispecies=1..num_species_var
-
-            tempcomp_data=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
-
-            if (no_material_flag.eq.1) then
-             snew_hold(STATECOMP_STATES+tempcomp_data)=fort_tempconst(im)
-            else if (no_material_flag.eq.0) then
-             if (is_rigid(im).eq.1) then
-              if (fort_material_type(im).ne.999) then
-               print *,"fort_material_type(im).ne.999"
-               stop
-              endif
-
-              ! solidheat_flag==0 diffuse in solid
-              ! solidheat_flag==1 dirichlet bc at solid-fluid
-              ! solidheat_flag==2 insulating bc at solid-fluid
-              if (solidheat_flag.eq.0) then ! diffuse in solid
-
-               massdepart=veldata(CISLCOMP_STATES+dencomp_data)
-               if (massdepart.gt.zero) then
-                !do nothing
-               else
-                print *,"massdepart invalid: ",massdepart
-                stop
-               endif 
-               ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
-
-              else if (solidheat_flag.eq.2) then ! neumann
-
-               ! placeholder
-               ETcore=fort_tempconst(im)
-
-              else if (solidheat_flag.eq.1) then ! dirichlet
-
-               ! placeholder
-               ETcore=fort_tempconst(im)
-
-              else
-               print *,"solidheat_flag invalid: ",solidheat_flag
-               stop
-              endif
-
-              if (ETcore.lt.fort_tempcutoff(im)) then
-               ETcore=fort_tempcutoff(im)
-              endif
-              if (ETcore.gt.fort_tempcutoffmax(im)) then
-               ETcore=fort_tempcutoffmax(im)
-              endif
-
-              if (ETcore.gt.zero) then
-               ! do nothing
-              else
-               print *,"Energy (ETcore) went negative: ",ETcore
-               stop
-              endif
-
-              snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore
-             else if (is_rigid(im).eq.0) then
-              if ((fort_material_type(im).ge.0).and. &
-                  (fort_material_type(im).le.MAX_NUM_EOS)) then
-               ! do nothing
-              else
-               print *,"fort_material_type invalid"
-               stop
-              endif
-              massdepart=veldata(CISLCOMP_STATES+dencomp_data)
-              if (massdepart.gt.zero) then
-               ! do nothing
-              else
-               print *,"massdepart invalid: ",massdepart
-               stop
-              endif 
-              ! integral_omega_depart rho T F_m /
-              ! integral_omega_depart rho F_m
-              if (is_compressible_mat(im).eq.0) then
-               ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
-              else if (is_compressible_mat(im).eq.1) then
-               ! integral_omega_depart rho (u dot u/2 + c_v T) F_m /
-               ! integral_omega_depart rho F_m
-               ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
-
-               local_internal=ETcore-KE
-               if (local_internal.gt.zero) then
-
-                call init_massfrac_parm(dencore(im),massfrac_parm,im)
-                do ispecies=1,num_species_var
-                 speccomp_data=(im-1)*num_state_material+num_state_base+ &
-                   ispecies
-                 massfrac_parm(ispecies)= &
-                   snew_hold(STATECOMP_STATES+speccomp_data)
-                 if (massfrac_parm(ispecies).ge.zero) then
-                  ! do nothing
-                 else
-                  print *,"massfrac_parm(ispecies) invalid"
-                  stop
-                 endif
-                enddo ! ispecies=1..num_species_var
-
-                call TEMPERATURE_material(dencore(im),massfrac_parm, &
-                  ETcore,local_internal,fort_material_type(im),im) 
-               else if (local_internal.le.zero) then
-                ETcore=fort_tempcutoff(im)
-               else
-                print *,"local_internal invalid:",im,local_internal
-                stop
-               endif
-              else
-               print *,"is_compressible_mat invalid"
-               stop
-              endif
-              if (ETcore.lt.fort_tempcutoff(im)) then
-               ETcore=fort_tempcutoff(im)
-              endif
-              if (ETcore.gt.fort_tempcutoffmax(im)) then
-               ETcore=fort_tempcutoffmax(im)
-              endif
-              if (ETcore.gt.zero) then
-               ! do nothing
-              else
-               print *,"Energy (ETcore) went negative(2)"
-               stop
-              endif
-              snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore
-             else
-              print *,"is_rigid invalid GODUNOV_3D.F90"
-              stop
-             endif
-            else 
-             print *,"no_material_flag invalid"
-             stop
-            endif
-
-            istate=istate+1+num_species_var
-           else
-            print *,"istate invalid"
-            stop
-           endif
-
-          enddo ! do while (istate.le.num_state_material)
-
-         enddo  ! im=1..num_materials
-
-         do istate=1,STATECOMP_STATES
-          snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
-         enddo
-
-         if (stokes_flow.eq.1) then
-          wt_oldvel=one
-         else if (stokes_flow.eq.0) then
-          wt_oldvel=zero
-         else
-          print *,"stokes_flow invalid"
-          stop
-         endif
-
-         do istate=1,SDIM
-          snew(D_DECL(icrse,jcrse,kcrse),istate)= &
-             (one-wt_oldvel)*snew_hold(istate)+ &
-             wt_oldvel*velfab(D_DECL(icrse,jcrse,kcrse),istate)
-         enddo
-
-          ! density, temperature, other scalars
-          ! volume fractions, centroids
-         do im=1,num_materials
-
-          if (is_rigid(im).eq.0) then
-
-           do istate=1,num_state_material
-            statecomp_data=STATECOMP_STATES+(im-1)*num_state_material+istate
-            snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-              snew_hold(statecomp_data)
-           enddo ! istate=1..num_state_material
-
-           do igeom=1,ngeom_raw
-            statecomp_data=STATECOMP_STATES+ &
-              num_materials*num_state_material+ &
-              (im-1)*ngeom_raw+igeom
-            snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-              snew_hold(statecomp_data)
-           enddo
-
-          else if (is_rigid(im).eq.1) then
-
-           if (solidheat_flag.eq.0) then ! diffuse in solid
-            tempcomp_data=STATECOMP_STATES+(im-1)*num_state_material+ &
-              ENUM_TEMPERATUREVAR+1
-            snew(D_DECL(icrse,jcrse,kcrse),tempcomp_data)= &
-              snew_hold(tempcomp_data)
-           else if (solidheat_flag.eq.2) then ! neumann
-            ! do nothing
-           else if (solidheat_flag.eq.1) then ! dirichlet
-            ! do nothing
-           else
-            print *,"solidheat_flag invalid: ",solidheat_flag
-            stop
-           endif
-
-          else
-           print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
-           stop
-          endif
-
-          if ((num_materials_viscoelastic.ge.1).and. &
-              (num_materials_viscoelastic.le.num_materials)) then
-
-           if (fort_store_elastic_data(im).eq.1) then
-            imap=1
-            do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
-                      (imap.le.num_materials_viscoelastic))
-             imap=imap+1
-            enddo
-            if (imap.le.num_materials_viscoelastic) then
-
-             do istate=1,ENUM_NUM_TENSOR_TYPE
-              statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
-              tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
-               tennew_hold(statecomp_data)
-             enddo !istate=1..ENUM_NUM_TENSOR_TYPE
-
-            else 
-             print *,"imap invalid"
-             stop
-            endif
-           else if (fort_store_elastic_data(im).eq.0) then
-            ! do nothing
-           else
-            print *,"fort_store_elastic_data(im) invalid"
-            stop
-           endif
-
-          else if (num_materials_viscoelastic.eq.0) then
-           ! do nothing
-          else
-           print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
-           stop
-          endif
-
-         enddo ! im=1..num_materials
-
-         do im=1,num_materials
-          if (is_rigid(im).eq.0) then
-           LSnew(D_DECL(icrse,jcrse,kcrse),im)=newLS(im)
-
-           ! level set comes from Lagrangian representation.
-          else if (is_rigid(im).eq.1) then
-           ! do nothing
-          else
-           print *,"is_rigid(im) invalid"
-           stop
-          endif
-         enddo ! im=1..num_materials
-
-        else if (check_accept.eq.0) then
+        if (is_rigid(im).eq.0) then
+         voltotal_target=voltotal_target+volmat_target(im)
+         voltotal_depart=voltotal_depart+volmat_depart(im)
+        else if (is_rigid(im).eq.1) then
          ! do nothing
         else
-         print *,"check_accept invalid"
+         print *,"is_rigid invalid GODUNOV_3D.F90"
+         stop
+        endif
+       enddo ! im=1..num_materials
+       
+       if (voltotal_depart.gt.zero) then
+        ! do nothing
+       else
+        print *,"voltotal_depart bust "
+        stop
+       endif
+       if (voltotal_target.gt.zero) then
+        ! do nothing
+       else
+        print *,"voltotal_target bust "
+        stop
+       endif
+
+       do im=1,num_materials
+        vofcomp=(im-1)*ngeom_raw+1 
+
+        newvfrac(im)=volmat_target(im)/voltotal_target
+        newvfrac_cor(im)=volmat_target_cor(im)/voltotal_target
+
+        if (vof0(D_DECL(icrse,jcrse,kcrse),im).le.half) then
+         newvfrac_weymouth(im)=volmat_depart_cor(im)/voltotal_target
+         if (newvfrac_weymouth(im).gt.one) then
+          newvfrac_weymouth(im)=one
+         endif
+        else if (vof0(D_DECL(icrse,jcrse,kcrse),im).ge.half) then
+         newvfrac_weymouth(im)=one- &
+          (voltotal_depart-volmat_depart_cor(im))/voltotal_target
+         if (newvfrac_weymouth(im).lt.zero) then
+          newvfrac_weymouth(im)=zero
+         endif
+        else
+         print *,"vof0 bust"
          stop
         endif
 
-       else if (maskcell.eq.0) then
+        if (newvfrac(im).le.VOFTOL) then
+         newvfrac_weymouth(im)=newvfrac(im)
+         newvfrac_cor(im)=newvfrac(im)
+        endif
+     
+        call CISBOX(xsten_accept,nhalf, &
+         xlo,dx,icrse,jcrse,kcrse, &
+         bfact,level, &
+         volcell_accept,cencell_accept,SDIM)
+  
+        do dir2=1,SDIM
+         if (newvfrac(im).gt.VOFTOL) then
+          newcen(dir2,im)= &
+           veldata(CISLCOMP_MOF+vofcomp+dir2)/ &
+           volmat_target(im)- &
+           cencell_accept(dir2)
+         else
+          newcen(dir2,im)=zero
+         endif
+        enddo ! dir2
+
+       enddo  ! im=1..num_materials (geometry)
+
+       call consistent_materials(newvfrac_cor,newcen)
+
+       if ((EILE_flag.eq.1).or. & ! EILE
+           (EILE_flag.eq.2).or. & ! EI
+           (EILE_flag.eq.3)) then ! LE
         ! do nothing
+       else if (EILE_flag.eq.-1) then ! weymouth and Yue
+        do im=1,num_materials
+         newvfrac_cor(im)=newvfrac_weymouth(im)
+        enddo
+        call consistent_materials(newvfrac_cor,newcen)
        else
-        print *,"maskcell invalid"
+        print *,"EILE_flag invalid"
         stop
        endif
+   
+       ! pressure
+       statecomp_data=STATECOMP_PRES+1
+
+       if (divu_outer_sweeps.eq.0) then
+        snew_hold(statecomp_data)= &
+          velfab(D_DECL(icrse,jcrse,kcrse),statecomp_data)
+       else if ((divu_outer_sweeps.ge.1).and. &
+                (divu_outer_sweeps.lt.num_divu_outer_sweeps)) then
+        snew_hold(statecomp_data)= &
+          snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)
+       else
+        print *,"divu_outer_sweeps invalid: ",divu_outer_sweeps
+        stop
+       endif
+
+       ! density
+       do im=1,num_materials
+
+        dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
+        massdepart=veldata(CISLCOMP_STATES+dencomp_data)
+        if (massdepart.ge.zero) then
+         ! do nothing
+        else
+         print *,"new mass cannot be negative"
+         print *,"im= ",im
+         print *,"new mass= ",massdepart
+         stop
+        endif
+         ! if is_rigid==1 or voldepart<eps or voltarget<eps then
+         !  den=fort_denconst(im)
+         ! else if mat_type==0 then
+         !  if override==0 or 2 then
+         !   den=fort_denconst(im)
+         !  else if override==1 then
+         !   den=massdepart/voldepart
+         !  endif
+         ! else if mat_type>0 then
+         !  den=massdepart/voltarget
+         ! endif
+        if (all_incomp.eq.1) then
+         vol_target_local=volmat_depart_cor(im)
+        else if (all_incomp.eq.0) then
+         vol_target_local=volmat_target_cor(im)
+        else
+         print *,"all_incomp invalid"
+         stop
+        endif
+
+        if (is_compressible_mat(im).eq.0) then
+         vol_target_local=volmat_depart_cor(im)
+        else if (is_compressible_mat(im).eq.1) then
+         if (incompressible_interface_flag.eq.0) then
+          ! do nothing
+         else if (incompressible_interface_flag.eq.1) then
+          vol_target_local=volmat_depart_cor(im)
+         else 
+          print *,"incompressible_interface_flag invalid"
+          stop
+         endif
+        else
+         print *,"is_compressible_mat invalid: ", &
+              im,is_compressible_mat(im)
+         stop
+        endif
+
+        ! if is_rigid(im), density=fort_denconst(im)
+        ! if incompressible,
+        !   if constant_density_all_time==1 then density=fort_denconst(im)
+        !   if constant_density_all_time==0 then 
+        !                                  density=mass_depart/vol_depart
+        ! if compressible,
+        !  if constant_density_all_time==0 then
+        !   density=massdepart/voltarget
+        !  else
+        !   return error.
+        ! subroutine derive_density declared in GODUNOV_3D.F90 (this file)
+        call derive_density(volmat_depart_cor(im), &
+         vol_target_local,voltotal_depart, &
+         constant_density_all_time, &
+         massdepart,im, &
+         dencore(im))
+        istate=STATECOMP_STATES+(im-1)*num_state_material+ENUM_DENVAR+1
+        if (dencore(im).gt.zero) then
+         ! do nothing
+        else
+         print *,"density must be positive vfrac_split 2"
+         print *,"im,dencore(im) ",im,dencore(im)
+         stop
+        endif
+        if (dencore(im).lt.density_floor(im)) then
+         dencore(im)=density_floor(im)
+        endif
+        if (density_ceiling(im).gt.zero) then
+         if (dencore(im).gt.density_ceiling(im)) then
+          dencore(im)=density_ceiling(im)
+         endif
+        else
+         print *,"density_ceiling(im) invalid"
+         stop
+        endif
+        snew_hold(istate)=dencore(im)
+
+       enddo ! im, updating density
+
+       ! levelset function
+       ! voltotal_depart=sum_{fluid mat} volmat_depart(im)
+       do im=1,num_materials
+        if (voltotal_depart.gt.zero) then
+         newLS(im)=veldata(CISLCOMP_LS+im)/voltotal_depart
+        else
+         print *,"voltotal_depart invalid"
+         stop
+        endif 
+       enddo  ! im=1..num_materials (updating levelset vars)
+
+       do im=1,num_materials
+
+        if ((num_materials_viscoelastic.ge.1).and. &
+            (num_materials_viscoelastic.le.num_materials)) then
+
+         if (fort_store_elastic_data(im).eq.1) then
+          imap=1
+          do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+                    (imap.le.num_materials_viscoelastic))
+           imap=imap+1
+          enddo
+
+          if (imap.le.num_materials_viscoelastic) then
+
+           do istate=1,ENUM_NUM_TENSOR_TYPE
+            statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
+            if (voltotal_depart.gt.zero) then
+             tennew_hold(statecomp_data)= &
+               veldata(CISLCOMP_TENSOR+statecomp_data)/voltotal_depart
+            else
+             print *,"voltotal_depart invalid"
+             stop
+            endif 
+ 
+           enddo !istate=1..ENUM_NUM_TENSOR_TYPE
+
+          else 
+           print *,"imap invalid"
+           stop
+          endif
+         else if (fort_store_elastic_data(im).eq.0) then
+          ! do nothing
+         else
+          print *,"fort_store_elastic_data(im) invalid"
+          stop
+         endif
+
+        else if (num_materials_viscoelastic.eq.0) then
+         ! do nothing
+        else
+         print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+         stop
+        endif
+ 
+       enddo ! im=1..num_materials (updating viscoelastic vars)
+
+       ! velocity=mom/mass
+       ! fluid materials tessellate the domain.
+       totalmass_depart=zero
+       do im=1,num_materials
+        if (is_rigid(im).eq.0) then
+         massdepart_mom=veldata(CISLCOMP_DEN_MOM+im)
+         totalmass_depart=totalmass_depart+massdepart_mom
+        else if (is_rigid(im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid invalid GODUNOV_3D.F90"
+         stop
+        endif
+       enddo ! im=1..num_materials
+
+       if (totalmass_depart.gt.zero) then
+        ! do nothing
+       else
+        print *,"totalmass_depart bust totalmass_depart=",totalmass_depart
+        do dir2=1,SDIM
+         print *,"dir,fablo,fabhi ",dir2,fablo(dir2),fabhi(dir2)
+        enddo
+        print *,"icrse,jcrse,kcrse ",icrse,jcrse,kcrse
+        print *,"num_state_material=",num_state_material
+        print *,"normdir=",normdir
+        print *,"dir_counter=",dir_counter
+        print *,"num_materials,map_forward,level,finest_level ", &
+         num_materials,map_forward,level,finest_level
+        stop
+       endif
+
+       do veldir=1,SDIM
+        snew_hold(veldir)=veldata(veldir)/totalmass_depart
+       enddo
+
+        ! make sure 0<=F<=1 and sum F_i = 1.
+        ! also truncation 1.0e-8 to 0 and 1-1.0e-8 to 1.
+       call consistent_materials(newvfrac_cor,newcen)
+
+       do im=1,num_materials
+
+        vofcomp=(im-1)*ngeom_raw+1
+
+        KE=zero
+        do veldir=1,SDIM
+         momcomp=veldir
+         vel1D=snew_hold(momcomp)
+         KE=KE+vel1D**2
+        enddo ! veldir
+        KE=half*KE
+
+        if (ngeom_raw.eq.SDIM+1) then
+         snew_hold(STATECOMP_MOF+vofcomp)=newvfrac_cor(im)
+         do dir2=1,SDIM
+          snew_hold(STATECOMP_MOF+vofcomp+dir2)=newcen(dir2,im)
+         enddo
+        else
+         print *,"ngeom_raw invalid in vfrac split"
+         print *,"ngeom_raw= ",ngeom_raw
+         stop
+        endif
+
+        no_material_flag=0
+
+        if ( (volmat_depart(im).le. &
+              VOFTOL*voltotal_depart).or. &
+             (volmat_depart_cor(im).le. &
+              VOFTOL*voltotal_depart).or. &
+             (newvfrac_cor(im).le.VOFTOL).or. &
+             (volmat_target(im).le. &
+              VOFTOL*voltotal_depart).or. &
+             (volmat_target_cor(im).le. &
+              VOFTOL*voltotal_depart) ) then
+
+         no_material_flag=1
+
+        endif
+
+         ! in: fort_vfrac_split
+        dencomp_data=(im-1)*num_state_material+ENUM_DENVAR+1
+
+        istate=1
+        do while (istate.le.num_state_material)
+
+         if (istate.eq.ENUM_DENVAR+1) then
+          ! do nothing, density updated above
+          istate=istate+1
+         else if (istate.eq.ENUM_TEMPERATUREVAR+1) then 
+
+          do ispecies=1,num_species_var
+           speccomp_data=(im-1)*num_state_material+num_state_base+ &
+             ispecies
+           if (no_material_flag.eq.1) then ! no material (im)
+            snew_hold(STATECOMP_STATES+speccomp_data)=zero
+           else if (no_material_flag.eq.0) then
+            if (is_rigid(im).eq.1) then ! mass fraction=0 in solids.
+             snew_hold(STATECOMP_STATES+speccomp_data)=zero
+            else if (is_rigid(im).eq.0) then
+             massdepart=veldata(CISLCOMP_STATES+dencomp_data)
+             if (massdepart.gt.zero) then
+              snew_hold(STATECOMP_STATES+speccomp_data)= &
+               veldata(CISLCOMP_STATES+speccomp_data)/massdepart
+             else
+              print *,"massdepart invalid"
+              stop
+             endif 
+            else
+             print *,"is_rigid invalid GODUNOV_3D.F90"
+             stop
+            endif
+           else 
+            print *,"no_material_flag invalid"
+            stop
+           endif
+
+          enddo ! ispecies=1..num_species_var
+
+          tempcomp_data=(im-1)*num_state_material+ENUM_TEMPERATUREVAR+1
+
+          if (no_material_flag.eq.1) then
+           snew_hold(STATECOMP_STATES+tempcomp_data)=fort_tempconst(im)
+          else if (no_material_flag.eq.0) then
+           if (is_rigid(im).eq.1) then
+            if (fort_material_type(im).ne.999) then
+             print *,"fort_material_type(im).ne.999"
+             stop
+            endif
+
+            ! solidheat_flag==0 diffuse in solid
+            ! solidheat_flag==1 dirichlet bc at solid-fluid
+            ! solidheat_flag==2 insulating bc at solid-fluid
+            if (solidheat_flag.eq.0) then ! diffuse in solid
+
+             massdepart=veldata(CISLCOMP_STATES+dencomp_data)
+             if (massdepart.gt.zero) then
+              !do nothing
+             else
+              print *,"massdepart invalid: ",massdepart
+              stop
+             endif 
+             ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
+
+            else if (solidheat_flag.eq.2) then ! neumann
+
+             ! placeholder
+             ETcore=fort_tempconst(im)
+
+            else if (solidheat_flag.eq.1) then ! dirichlet
+
+             ! placeholder
+             ETcore=fort_tempconst(im)
+
+            else
+             print *,"solidheat_flag invalid: ",solidheat_flag
+             stop
+            endif
+
+            if (ETcore.lt.fort_tempcutoff(im)) then
+             ETcore=fort_tempcutoff(im)
+            endif
+            if (ETcore.gt.fort_tempcutoffmax(im)) then
+             ETcore=fort_tempcutoffmax(im)
+            endif
+
+            if (ETcore.gt.zero) then
+             ! do nothing
+            else
+             print *,"Energy (ETcore) went negative: ",ETcore
+             stop
+            endif
+
+            snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore
+           else if (is_rigid(im).eq.0) then
+            if ((fort_material_type(im).ge.0).and. &
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
+             ! do nothing
+            else
+             print *,"fort_material_type invalid"
+             stop
+            endif
+            massdepart=veldata(CISLCOMP_STATES+dencomp_data)
+            if (massdepart.gt.zero) then
+             ! do nothing
+            else
+             print *,"massdepart invalid: ",massdepart
+             stop
+            endif 
+            ! integral_omega_depart rho T F_m /
+            ! integral_omega_depart rho F_m
+            if (is_compressible_mat(im).eq.0) then
+             ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
+            else if (is_compressible_mat(im).eq.1) then
+             ! integral_omega_depart rho (u dot u/2 + c_v T) F_m /
+             ! integral_omega_depart rho F_m
+             ETcore=veldata(CISLCOMP_STATES+tempcomp_data)/massdepart
+
+             local_internal=ETcore-KE
+             if (local_internal.gt.zero) then
+
+              call init_massfrac_parm(dencore(im),massfrac_parm,im)
+              do ispecies=1,num_species_var
+               speccomp_data=(im-1)*num_state_material+num_state_base+ &
+                 ispecies
+               massfrac_parm(ispecies)= &
+                 snew_hold(STATECOMP_STATES+speccomp_data)
+               if (massfrac_parm(ispecies).ge.zero) then
+                ! do nothing
+               else
+                print *,"massfrac_parm(ispecies) invalid"
+                stop
+               endif
+              enddo ! ispecies=1..num_species_var
+
+              call TEMPERATURE_material(dencore(im),massfrac_parm, &
+                ETcore,local_internal,fort_material_type(im),im) 
+             else if (local_internal.le.zero) then
+              ETcore=fort_tempcutoff(im)
+             else
+              print *,"local_internal invalid:",im,local_internal
+              stop
+             endif
+            else
+             print *,"is_compressible_mat invalid"
+             stop
+            endif
+            if (ETcore.lt.fort_tempcutoff(im)) then
+             ETcore=fort_tempcutoff(im)
+            endif
+            if (ETcore.gt.fort_tempcutoffmax(im)) then
+             ETcore=fort_tempcutoffmax(im)
+            endif
+            if (ETcore.gt.zero) then
+             ! do nothing
+            else
+             print *,"Energy (ETcore) went negative(2)"
+             stop
+            endif
+            snew_hold(STATECOMP_STATES+tempcomp_data)=ETcore
+           else
+            print *,"is_rigid invalid GODUNOV_3D.F90"
+            stop
+           endif
+          else 
+           print *,"no_material_flag invalid"
+           stop
+          endif
+
+          istate=istate+1+num_species_var
+         else
+          print *,"istate invalid"
+          stop
+         endif
+
+        enddo ! do while (istate.le.num_state_material)
+
+       enddo  ! im=1..num_materials
+
+       do istate=1,STATECOMP_STATES
+        snew(D_DECL(icrse,jcrse,kcrse),istate)=snew_hold(istate)
+       enddo
+
+       if (stokes_flow.eq.1) then
+        wt_oldvel=one
+       else if (stokes_flow.eq.0) then
+        wt_oldvel=zero
+       else
+        print *,"stokes_flow invalid"
+        stop
+       endif
+
+       do istate=1,SDIM
+        snew(D_DECL(icrse,jcrse,kcrse),istate)= &
+           (one-wt_oldvel)*snew_hold(istate)+ &
+           wt_oldvel*velfab(D_DECL(icrse,jcrse,kcrse),istate)
+       enddo
+
+        ! density, temperature, other scalars
+        ! volume fractions, centroids
+       do im=1,num_materials
+
+        if (is_rigid(im).eq.0) then
+
+         do istate=1,num_state_material
+          statecomp_data=STATECOMP_STATES+(im-1)*num_state_material+istate
+          snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+            snew_hold(statecomp_data)
+         enddo ! istate=1..num_state_material
+
+         do igeom=1,ngeom_raw
+          statecomp_data=STATECOMP_STATES+ &
+            num_materials*num_state_material+ &
+            (im-1)*ngeom_raw+igeom
+          snew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+            snew_hold(statecomp_data)
+         enddo
+
+        else if (is_rigid(im).eq.1) then
+
+         if (solidheat_flag.eq.0) then ! diffuse in solid
+          tempcomp_data=STATECOMP_STATES+(im-1)*num_state_material+ &
+            ENUM_TEMPERATUREVAR+1
+          snew(D_DECL(icrse,jcrse,kcrse),tempcomp_data)= &
+            snew_hold(tempcomp_data)
+         else if (solidheat_flag.eq.2) then ! neumann
+          ! do nothing
+         else if (solidheat_flag.eq.1) then ! dirichlet
+          ! do nothing
+         else
+          print *,"solidheat_flag invalid: ",solidheat_flag
+          stop
+         endif
+
+        else
+         print *,"is_rigid invalid GODUNOV_3D.F90: ",im,is_rigid(im)
+         stop
+        endif
+
+        if ((num_materials_viscoelastic.ge.1).and. &
+            (num_materials_viscoelastic.le.num_materials)) then
+
+         if (fort_store_elastic_data(im).eq.1) then
+          imap=1
+          do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+                    (imap.le.num_materials_viscoelastic))
+           imap=imap+1
+          enddo
+          if (imap.le.num_materials_viscoelastic) then
+
+           do istate=1,ENUM_NUM_TENSOR_TYPE
+            statecomp_data=(imap-1)*ENUM_NUM_TENSOR_TYPE+istate
+            tennew(D_DECL(icrse,jcrse,kcrse),statecomp_data)= &
+             tennew_hold(statecomp_data)
+           enddo !istate=1..ENUM_NUM_TENSOR_TYPE
+
+          else 
+           print *,"imap invalid"
+           stop
+          endif
+         else if (fort_store_elastic_data(im).eq.0) then
+          ! do nothing
+         else
+          print *,"fort_store_elastic_data(im) invalid"
+          stop
+         endif
+
+        else if (num_materials_viscoelastic.eq.0) then
+         ! do nothing
+        else
+         print *,"num_materials_viscoelastic invalid:fort_vfrac_split"
+         stop
+        endif
+
+       enddo ! im=1..num_materials
+
+       do im=1,num_materials
+        if (is_rigid(im).eq.0) then
+         LSnew(D_DECL(icrse,jcrse,kcrse),im)=newLS(im)
+
+         ! level set comes from Lagrangian representation.
+        else if (is_rigid(im).eq.1) then
+         ! do nothing
+        else
+         print *,"is_rigid(im) invalid"
+         stop
+        endif
+       enddo ! im=1..num_materials
 
       enddo
       enddo
