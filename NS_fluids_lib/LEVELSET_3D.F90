@@ -10406,6 +10406,8 @@ stop
        slope,DIMS(slope), &
        denstate, &
        DIMS(denstate), &
+       refineden, &
+       DIMS(refineden), &
        mom_den, &
        DIMS(mom_den), &
        vofF,DIMS(vofF), &
@@ -10438,18 +10440,26 @@ stop
       integer, INTENT(in) :: bfact
       integer, INTENT(in) :: DIMDEC(slope)
       integer, INTENT(in) :: DIMDEC(denstate)
+      integer, INTENT(in) :: DIMDEC(refineden)
       integer, INTENT(in) :: DIMDEC(mom_den)
       integer, INTENT(in) :: DIMDEC(vofF)
       integer, INTENT(in) :: DIMDEC(massF)
       real(amrex_real), INTENT(in), target :: &
         slope(DIMV(slope),num_materials*ngeom_recon) 
       real(amrex_real), pointer :: slope_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate), &
               num_materials*num_state_material) 
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(in), target :: refineden(DIMV(refineden), &
+              NUM_CELL_REFINE_DENSITY) 
+      real(amrex_real), pointer :: refinedenptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(in), target :: &
         mom_den(DIMV(mom_den),num_materials) 
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(out), target :: vofF(DIMV(vofF),nrefine_vof)
       real(amrex_real), pointer :: vofF_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out), target :: massF(DIMV(massF),nrefine_vof)
@@ -10493,6 +10503,7 @@ stop
 
       slope_ptr=>slope
       denstate_ptr=>denstate
+      refineden_ptr=>refineden
       mom_den_ptr=>mom_den
 
       vofF_ptr=>vofF
@@ -10545,6 +10556,7 @@ stop
 
       call checkbound_array(fablo,fabhi,slope_ptr,ngrow_refine,-1)
       call checkbound_array(fablo,fabhi,denstate_ptr,ngrow_refine,-1)
+      call checkbound_array(fablo,fabhi,refineden_ptr,ngrow_refine,-1)
       call checkbound_array(fablo,fabhi,mom_den_ptr,ngrow_refine,-1)
       call checkbound_array(fablo,fabhi,vofF_ptr,ngrow_refine,-1)
       call checkbound_array(fablo,fabhi,massF_ptr,ngrow_refine,-1)
@@ -10601,189 +10613,257 @@ stop
       call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi, &
         ngrow_refine) 
 
-      do veldir=0,SDIM-1
+      do k=igridlo(3),igridhi(3)
+      do j=igridlo(2),igridhi(2)
+      do i=igridlo(1),igridhi(1)
 
-        do k=igridlo(3),igridhi(3)
-        do j=igridlo(2),igridhi(2)
-        do i=igridlo(1),igridhi(1)
+       call CISBOX(xsten_recon,1, &
+        xlo,dx,i,j,k, &
+        bfact,level, &
+        volrecon,cenrecon,SDIM)
 
-         call CISBOX(xsten_recon,1, &
-          xlo,dx,i,j,k, &
-          bfact,level, &
-          volrecon,cenrecon,SDIM)
+       do dir2=1,num_materials*ngeom_recon
+        mofdata(dir2)=slope(D_DECL(i,j,k),dir2)
+       enddo 
 
-         do iside=-1,1,2
- 
-          check_donate=1
-         
-          if (levelrz.eq.COORDSYS_CARTESIAN) then
-           ! do nothing
-          else if ((levelrz.eq.COORDSYS_RZ).or. &
-                   (levelrz.eq.COORDSYS_CYLINDRICAL)) then
-           if (xsten_recon(0,1).lt.EPS2*dx(1)) then
-            check_donate=0
-           endif
+       check_donate=1
+
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        ! do nothing
+       else if ((levelrz.eq.COORDSYS_RZ).or. &
+                (levelrz.eq.COORDSYS_CYLINDRICAL)) then
+        if (xsten_recon(0,1).lt.EPS2*dx(1)) then
+         check_donate=0
+        endif
+       else
+        print *,"levelrz invalid build semi refine vof"
+        stop
+       endif
+
+       do veldir=0,SDIM-1
+        do iside=-1,1,2
+         do im=1,num_materials
+          if (iside.eq.-1) then
+           irefine=veldir*2*num_materials+im
+          else if (iside.eq.1) then
+           irefine=veldir*2*num_materials+num_materials+im
           else
-           print *,"levelrz invalid build semi refine vof"
+           print *,"iside invalid"
            stop
           endif
- 
-          if (check_donate.eq.0) then !RZ R=0 or RTZ R=0
-           do im=1,num_materials
 
-            if (iside.eq.-1) then
-             irefine=veldir*2*num_materials+im
-            else if (iside.eq.1) then
-             irefine=veldir*2*num_materials+num_materials+im
-            else
-             print *,"iside invalid"
-             stop
-            endif
+          vofF(D_DECL(i,j,k),irefine)=zero
+          massF(D_DECL(i,j,k),irefine)=zero
+         enddo ! im=1..num_materials
+        enddo !iside=-1,1,2
+       enddo !veldir=0,..,sdim-1
 
-            vofF(D_DECL(i,j,k),irefine)=zero
-            massF(D_DECL(i,j,k),irefine)=zero
-           enddo ! im=1..num_materials
-          else if (check_donate.eq.1) then
+       if (check_donate.eq.1) then
+        kfine=0
+#if (AMREX_SPACEDIM==3)
+        do kfine=0,1
+#endif
+        do jfine=0,1
+        do ifine=0,1
+         nfine=4*kfine+2*jfine+ifine+1
 
-           call CISBOXHALF(xsten_donate,1, &
-            xlo,dx,i,j,k,iside,veldir+1, &
-            bfact,level, & 
-            voldonate,cendonate,SDIM)
+         call CISBOXFINE(xsten_donate,1, &
+          xlo,dx, &
+          i,j,k, &
+          ifine,jfine,kfine, &
+          bfact,level, & 
+          voldonate,cendonate,SDIM)
 
-           do dir2=1,num_materials*ngeom_recon
-            mofdata(dir2)=slope(D_DECL(i,j,k),dir2)
-           enddo 
-           ! multi_cen is "absolute" (not relative to cell centroid)
-           ! EPS2
-           call multi_get_volume_grid_simple( &
-             EPS2, &
-             tessellate, &  !=0,1, or 3
-             bfact,dx,xsten_recon,1, &
-             mofdata, &
-             xsten_donate,1, &
-             multi_volume,multi_cen, &
-             geom_xtetlist(1,1,1,tid+1), &
-             nmax, &
-             nmax, &
-             SDIM)
+          ! multi_cen is "absolute" (not relative to cell centroid)
+          ! EPS2
+         call multi_get_volume_grid_simple( &
+           EPS2, &
+           tessellate, &  !=0,1, or 3
+           bfact,dx, &
+           xsten_recon,1, &
+           mofdata, &
+           xsten_donate,1, &
+           multi_volume,multi_cen, &
+           geom_xtetlist(1,1,1,tid+1), &
+           nmax, &
+           nmax, &
+           SDIM)
        
-           mass_total_fluid=zero
-           voltotal_fluid=zero 
-           mass_total_solid=zero
-           voltotal_solid=zero 
-           do im=1,num_materials
-            dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
-            den=denstate(D_DECL(i,j,k),dencomp)
-            mom_den_local=mom_den(D_DECL(i,j,k),im)
+         mass_total_fluid=zero
+         voltotal_fluid=zero 
+         mass_total_solid=zero
+         voltotal_solid=zero 
 
-            den_value=mom_den_local
+         im_refine_density=0
 
-            if (den.gt.zero) then
-             ! do nothing
-            else
-             print *,"den must be positive build_semi_refine_vof"
-             print *,"im,den ",im,den
-             print *,"im,fort_denconst(im) ",im,fort_denconst(im)
-             print *,"level,finest_level ",level,finest_level
-             stop
-            endif  
+         do im=1,num_materials
+          dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
+          den=denstate(D_DECL(i,j,k),dencomp)
+          mom_den_local=mom_den(D_DECL(i,j,k),im)
 
-            if (mom_den_local.gt.zero) then
-             ! do nothing
-            else
-             print *,"mom_den_local must be pos build_semi_refine_vof"
-             print *,"im,mom_den_local ",im,mom_den_local
-             print *,"im,fort_denconst(im) ",im,fort_denconst(im)
-             print *,"level,finest_level ",level,finest_level
-             stop
-            endif  
-            if (den_value.gt.zero) then
-             ! do nothing
-            else
-             print *,"den_value must be pos build_semi_refine_vof"
-             print *,"im,den_value ",im,den_value
-             print *,"im,fort_denconst(im) ",im,fort_denconst(im)
-             print *,"level,finest_level ",level,finest_level
-             stop
-            endif  
- 
-            if (is_rigid(im).eq.0) then
-             voltotal_fluid=voltotal_fluid+multi_volume(im)
-             mass_total_fluid=mass_total_fluid+den_value*multi_volume(im)
-            else if (is_rigid(im).eq.1) then
-             voltotal_solid=voltotal_solid+multi_volume(im)
-             mass_total_solid=mass_total_solid+den_value*multi_volume(im)
-            else
-             print *,"is_rigid invalid LEVELSET_3D.F90"
-             stop
-            endif
-  
-            if (iside.eq.-1) then 
-             irefine=veldir*2*num_materials+im
-            else if (iside.eq.1) then
-             irefine=veldir*2*num_materials+num_materials+im
-            else
-             print *,"iside invalid"
-             stop
-            endif
-
-            vofF(D_DECL(i,j,k),irefine)=multi_volume(im)
-            massF(D_DECL(i,j,k),irefine)=den_value*multi_volume(im)
-           enddo ! im=1,num_materials
-
-           if (tessellate.eq.0) then
-            voltotal=voltotal_fluid
-            mass_total=mass_total_fluid
-           else if ((tessellate.eq.1).or. &
-                    (tessellate.eq.3)) then
-            voltotal=voltotal_fluid+voltotal_solid
-            mass_total=mass_total_fluid+mass_total_solid
+          if (is_compressible_mat(im).eq.0) then
+           !do nothing
+          else if (is_compressible_mat(im).eq.1) then
+           im_refine_density=im_refine_density+1
+           if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+            !do nothing
            else
-            print *,"tessellate invalid3"
+            print *,"fort_im_refine_density_map invalid"
             stop
            endif
- 
-           if ((voltotal.gt.zero).and.(mass_total.gt.zero)) then
-            ! do nothing
+           den=refineden(D_DECL(i,j,k), &
+             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)
+           mom_den_local=den
+           if (constant_density_all_time(im).eq.0) then
+            !do nothing
            else
-            print *,"voltotal or mass_total invalid"
-            print *,"voltotal, mass_total, num_materials ", &
-                    voltotal,mass_total,num_materials
-            print *,"voldonate,volrecon ",voldonate,volrecon
-            print *,"veldir ",veldir
-            print *,"fablo ",fablo(1),fablo(2),fablo(SDIM)
-            print *,"fabhi ",fabhi(1),fabhi(2),fabhi(SDIM)
-            print *,"i,j,k ",i,j,k
-            print *,"level,finest_level ",level,finest_level
+            print *,"expecting constant_density_all_time=0"
             stop
            endif
-           if ((voltotal_solid.ge.zero).and.(mass_total_solid.ge.zero)) then
-            ! do nothing
-           else
-            print *,"voltotal_solid or mass_total_solid invalid"
-            print *,"level,finest_level ",level,finest_level
-            stop
-           endif
-           if ((voltotal_fluid.ge.zero).and.(mass_total_fluid.ge.zero)) then
-            ! do nothing
-           else
-            print *,"voltotal_fluid or mass_total_fluid invalid"
-            print *,"level,finest_level ",level,finest_level
-            stop
-           endif
-
           else
-           print *,"check_donate invalid"
+           print *,"is_compressible(im) invalid"
            stop
           endif
 
-         enddo ! iside
+          den_value=mom_den_local
 
-        enddo
-        enddo
-        enddo ! i,j,k 
+          if (den.gt.zero) then
+           ! do nothing
+          else
+           print *,"den must be positive build_semi_refine_vof"
+           print *,"im,den ",im,den
+           print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+           print *,"level,finest_level ",level,finest_level
+           stop
+          endif  
 
-      enddo ! veldir
+          if (mom_den_local.gt.zero) then
+           ! do nothing
+          else
+           print *,"mom_den_local must be pos build_semi_refine_vof"
+           print *,"im,mom_den_local ",im,mom_den_local
+           print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+           print *,"level,finest_level ",level,finest_level
+           stop
+          endif  
+          if (den_value.gt.zero) then
+           ! do nothing
+          else
+           print *,"den_value must be pos build_semi_refine_vof"
+           print *,"im,den_value ",im,den_value
+           print *,"im,fort_denconst(im) ",im,fort_denconst(im)
+           print *,"level,finest_level ",level,finest_level
+           stop
+          endif  
+ 
+          if (is_rigid(im).eq.0) then
+           voltotal_fluid=voltotal_fluid+multi_volume(im)
+           mass_total_fluid=mass_total_fluid+den_value*multi_volume(im)
+          else if (is_rigid(im).eq.1) then
+           voltotal_solid=voltotal_solid+multi_volume(im)
+           mass_total_solid=mass_total_solid+den_value*multi_volume(im)
+          else
+           print *,"is_rigid invalid LEVELSET_3D.F90"
+           stop
+          endif
+  
+          do veldir=0,SDIM-1
+
+           if (veldir.eq.0) then
+            if (ifine.eq.0) then
+             iside=-1
+            else
+             iside=1
+            endif
+           else if (veldir.eq.1) then
+            if (jfine.eq.0) then
+             iside=-1
+            else
+             iside=1
+            endif
+           else if ((veldir.eq.2).and.(SDIM.eq.3)) then
+            if (kfine.eq.0) then
+             iside=-1
+            else
+             iside=1
+            endif
+           else
+            print *,"veldir invalid"
+            stop
+           endif
+
+           if (iside.eq.-1) then 
+            irefine=veldir*2*num_materials+im
+           else if (iside.eq.1) then
+            irefine=veldir*2*num_materials+num_materials+im
+           else
+            print *,"iside invalid"
+            stop
+           endif
+
+           vofF(D_DECL(i,j,k),irefine)= &
+             vofF(D_DECL(i,j,k),irefine)+multi_volume(im)
+           massF(D_DECL(i,j,k),irefine)= &
+             massF(D_DECL(i,j,k),irefine)+den_value*multi_volume(im)
+          enddo !veldir=0..sdim-1
+         enddo ! im=1,num_materials
+
+         if (tessellate.eq.0) then
+          voltotal=voltotal_fluid
+          mass_total=mass_total_fluid
+         else if ((tessellate.eq.1).or. &
+                  (tessellate.eq.3)) then
+          voltotal=voltotal_fluid+voltotal_solid
+          mass_total=mass_total_fluid+mass_total_solid
+         else
+          print *,"tessellate invalid3"
+          stop
+         endif
+ 
+         if ((voltotal.gt.zero).and.(mass_total.gt.zero)) then
+          ! do nothing
+         else
+          print *,"voltotal or mass_total invalid"
+          print *,"voltotal, mass_total, num_materials ", &
+                  voltotal,mass_total,num_materials
+          print *,"voldonate,volrecon ",voldonate,volrecon
+          print *,"veldir ",veldir
+          print *,"fablo ",fablo(1),fablo(2),fablo(SDIM)
+          print *,"fabhi ",fabhi(1),fabhi(2),fabhi(SDIM)
+          print *,"i,j,k ",i,j,k
+          print *,"level,finest_level ",level,finest_level
+          stop
+         endif
+         if ((voltotal_solid.ge.zero).and.(mass_total_solid.ge.zero)) then
+          ! do nothing
+         else
+          print *,"voltotal_solid or mass_total_solid invalid"
+          print *,"level,finest_level ",level,finest_level
+          stop
+         endif
+         if ((voltotal_fluid.ge.zero).and.(mass_total_fluid.ge.zero)) then
+          ! do nothing
+         else
+          print *,"voltotal_fluid or mass_total_fluid invalid"
+          print *,"level,finest_level ",level,finest_level
+          stop
+         endif
+
+        enddo !ifine=0,1
+        enddo !jfine=0,1
+#if (AMREX_SPACEDIM==3)
+        enddo !kfine=0,1
+#endif
+       else if (check_donate.eq.0) then
+        !do nothing
+       else
+        print *,"check_donate invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i,j,k 
 
       return
       end subroutine fort_build_semirefinevof

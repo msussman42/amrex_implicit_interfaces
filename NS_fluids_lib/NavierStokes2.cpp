@@ -5087,7 +5087,18 @@ void NavierStokes::make_physics_varsALL(int project_option,
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.getStateDen_localMF(DEN_RECON_MF,1,cur_time_slab);
   ns_level.getStateMOM_DEN(MOM_DEN_MF,1,cur_time_slab);
- }
+  if ((num_materials_compressible>=1)&&
+      (num_materials_compressible<=num_materials)) {
+   ns_level.getStateRefineDensity_localMF(
+     REFINE_DENSITY_RECON_MF,
+     1,0,
+     NUM_CELL_REFINE_DENSITY,
+     cur_time_slab);
+  } else if (num_materials_compressible==0) {
+   //do nothing
+  } else
+   amrex::Error("num_materials_compressble invalid");
+ } // for (int ilev=finest_level;ilev>=level;ilev--)
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -5144,6 +5155,13 @@ void NavierStokes::make_physics_varsALL(int project_option,
 
  delete_array(DEN_RECON_MF);
  delete_array(MOM_DEN_MF);
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  delete_array(REFINE_DENSITY_RECON_MF);
+ } else if (num_materials_compressible==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid:make_physics_varsALL");
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) 
   delete_array(AMRSYNC_VEL_MF+dir);
@@ -5325,6 +5343,18 @@ void NavierStokes::make_physics_vars(int project_option,
  if (localMF[MOM_DEN_MF]->nComp()!=num_materials)
   amrex::Error("mom_den has invalid ncomp in make_physics_vars");
 
+ int REFINE_DENSITY_RECON_MF_local=-1;
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  REFINE_DENSITY_RECON_MF_local=REFINE_DENSITY_RECON_MF;
+  debug_ngrow(REFINE_DENSITY_RECON_MF,1,local_caller_string);
+  if (localMF[REFINE_DENSITY_RECON_MF]->nComp()!=NUM_CELL_REFINE_DENSITY)
+   amrex::Error("REFINE_DENSITY_RECON_MF invalid ncomp in make_physics_vars");
+ } else if (num_materials_compressible==0) {
+  REFINE_DENSITY_RECON_MF_local=DEN_RECON_MF;
+ } else
+  amrex::Error("num_materials_compressble invalid");
+
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
   new_localMF(AMRSYNC_VEL_MF+dir,1,0,dir);
   setVal_localMF(AMRSYNC_VEL_MF+dir,1.0e+30,0,1,0);
@@ -5379,6 +5409,7 @@ void NavierStokes::make_physics_vars(int project_option,
   FArrayBox& slopefab=(*localMF[SLOPE_RECON_MF])[mfi];
   FArrayBox& denstatefab=(*localMF[DEN_RECON_MF])[mfi];
   FArrayBox& mom_denfab=(*localMF[MOM_DEN_MF])[mfi];
+  FArrayBox& refinedenfab=(*localMF[REFINE_DENSITY_RECON_MF_local])[mfi];
 
   FArrayBox& vofFfab=(*vofF)[mfi];
   FArrayBox& massFfab=(*massF)[mfi];
@@ -5408,7 +5439,11 @@ void NavierStokes::make_physics_vars(int project_option,
    slopefab.dataPtr(),
    ARLIM(slopefab.loVect()),ARLIM(slopefab.hiVect()),
    denstatefab.dataPtr(),
-   ARLIM(denstatefab.loVect()),ARLIM(denstatefab.hiVect()),
+   ARLIM(denstatefab.loVect()),
+   ARLIM(denstatefab.hiVect()),
+   refinedenfab.dataPtr(),
+   ARLIM(refinedenfab.loVect()),
+   ARLIM(refinedenfab.hiVect()),
    mom_denfab.dataPtr(),
    ARLIM(mom_denfab.loVect()),ARLIM(mom_denfab.hiVect()),
    vofFfab.dataPtr(),ARLIM(vofFfab.loVect()),ARLIM(vofFfab.hiVect()),
