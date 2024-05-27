@@ -6991,6 +6991,24 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
  MultiFab &S_new = get_new_data(State_Type,slab_step+1);
  MultiFab &LS_new = get_new_data(LS_Type,slab_step+1);
 
+ if (NUM_CELL_REFINE_DENSITY==
+     num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+  // do nothing
+ } else
+  amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+ int Refine_Density_Type_local=-1;
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  Refine_Density_Type_local=Refine_Density_Type;
+ } else if (num_materials_compressible==0) {
+  Refine_Density_Type_local=State_Type;
+ } else
+  amrex::Error("num_materials_compressble invalid");
+
+ MultiFab& Refine_Density_new=
+    get_new_data(Refine_Density_Type_local,slab_step+1);
+
  resize_maskfiner(1,MASKCOEF_MF);
  debug_ngrow(MASKCOEF_MF,1,local_caller_string);
 
@@ -7096,6 +7114,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
     FArrayBox& dennew=S_new[mfi];
     FArrayBox& lsnew=LS_new[mfi];
 
+    FArrayBox& refinedennew=Refine_Density_new[mfi];
+
     FArrayBox& solxfab=(*localMF[FSI_GHOST_MAC_MF])[mfi];
     FArrayBox& solyfab=(*localMF[FSI_GHOST_MAC_MF+1])[mfi];
     FArrayBox& solzfab=(*localMF[FSI_GHOST_MAC_MF+AMREX_SPACEDIM-1])[mfi];
@@ -7143,6 +7163,8 @@ void NavierStokes::prescribe_solid_geometry(Real time,int renormalize_only) {
       ARLIM(velnew.loVect()),ARLIM(velnew.hiVect()),
       dennew.dataPtr(STATECOMP_STATES),
       ARLIM(dennew.loVect()),ARLIM(dennew.hiVect()),
+      refinedennew.dataPtr(),
+      ARLIM(refinedennew.loVect()),ARLIM(refinedennew.hiVect()),
       lsnew.dataPtr(),
       ARLIM(lsnew.loVect()),ARLIM(lsnew.hiVect()),
       xlo,dx,

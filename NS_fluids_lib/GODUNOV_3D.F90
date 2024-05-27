@@ -12477,9 +12477,6 @@ stop
        DIMS(umac_displace), & 
        xlo,dx, &
        conserve,DIMS(conserve), & ! local variables
-       xvel,DIMS(xvel), & 
-       yvel,DIMS(yvel), &
-       zvel,DIMS(zvel), &
        xmomside,DIMS(xmomside), & ! 1..2
        ymomside,DIMS(ymomside), &
        zmomside,DIMS(zmomside), &
@@ -12573,9 +12570,6 @@ stop
       integer, INTENT(in) :: DIMDEC(umac_displace)
        ! local variables
       integer, INTENT(in) :: DIMDEC(conserve)
-      integer, INTENT(in) :: DIMDEC(xvel)
-      integer, INTENT(in) :: DIMDEC(yvel)
-      integer, INTENT(in) :: DIMDEC(zvel)
 
       integer, INTENT(in) :: DIMDEC(xmomside) 
       integer, INTENT(in) :: DIMDEC(ymomside) 
@@ -12637,12 +12631,6 @@ stop
       real(amrex_real), INTENT(inout), target ::  &
             conserve(DIMV(conserve),nc_conserve)
       real(amrex_real), pointer :: conserve_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: xvel(DIMV(xvel)) 
-      real(amrex_real), pointer :: xvel_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: yvel(DIMV(yvel))  
-      real(amrex_real), pointer :: yvel_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: zvel(DIMV(zvel)) 
-      real(amrex_real), pointer :: zvel_ptr(D_DECL(:,:,:))
 
       real(amrex_real), INTENT(inout), target :: xmomside(DIMV(xmomside),2)
       real(amrex_real), pointer :: xmomside_ptr(D_DECL(:,:,:),:)
@@ -12680,12 +12668,13 @@ stop
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       integer ibucket
+
+      real(amrex_real) refine_den_bucket(num_materials_compressible)
+      real(amrex_real) refine_vol_bucket(num_materials_compressible)
+
       real(amrex_real) xsten_crse(-nhalf:nhalf,SDIM)
       integer dir2
       integer iside
-      integer iside_part
-      integer isidedonate
-      integer iside_low,iside_high
       integer vofcomp
       integer im
       integer im_opp
@@ -12705,12 +12694,10 @@ stop
       real(amrex_real) xdepartsize,xtargetsize,xloint,xhiint
       real(amrex_real) volint
       real(amrex_real) coeff(2)
-      integer tessellate
       integer nmax
       integer ii,jj,kk
      
       integer veldir
-      integer veldir_comp
 
       real(amrex_real) totalmass_depart
      
@@ -12741,17 +12728,21 @@ stop
       integer datatype
 
       integer istencil
-      integer maskcell
       integer maskleft,maskright
       real(amrex_real) donate_data
-      real(amrex_real) donate_data_MAC(SDIM)
       real(amrex_real) donate_density
       real(amrex_real) donate_mom_density
       real(amrex_real) ETcore
 
-      integer idonate_MAC,jdonate_MAC,kdonate_MAC
       integer icrse,jcrse,kcrse
-      integer ipart,jpart,kpart
+      integer ifine,jfine,kfine
+      integer nfine
+      integer ifine_stencil,jfine_stencil,kfine_stencil
+      integer ifine_stencil_lo,jfine_stencil_lo,kfine_stencil_lo
+      integer ifine_stencil_hi,jfine_stencil_hi,kfine_stencil_hi
+      integer nfine_stencil
+      integer fine_offset
+      integer im_comp,im_refine_density
 
       integer idonatelow
       integer idonatehigh
@@ -12763,7 +12754,6 @@ stop
       real(amrex_real) mofdata_grid(recon_ncomp)
       real(amrex_real) snew_hold(ncomp_state)
       real(amrex_real) tennew_hold(NUM_CELL_ELASTIC)
-      real(amrex_real) refinedennew_hold(NUM_CELL_REFINE_DENSITY)
       real(amrex_real) mom_dencore(num_materials)
       real(amrex_real) dencore(num_materials)
       real(amrex_real) oldLS(num_materials)
@@ -12781,16 +12771,12 @@ stop
       real(amrex_real) multi_cen_grid(SDIM,num_materials)
       real(amrex_real) newcen(SDIM,num_materials)
       real(amrex_real) veldata(nc_bucket)
-      real(amrex_real) veldata_MAC(SDIM)
-      real(amrex_real) veldata_MAC_mass(SDIM)
 
       integer ihalf
       integer check_intersection
-      integer check_accept
       real(amrex_real) xsten_recon(-nhalf:nhalf,SDIM)
 
       real(amrex_real) warning_cutoff
-      integer momcomp
 
       integer all_incomp
       real(amrex_real) vol_target_local
@@ -12811,8 +12797,6 @@ stop
       real(amrex_real) :: massface_total
       real(amrex_real) :: massquarter
       real(amrex_real) :: momquarter
-
-      real(amrex_real) :: velmac
 
       real(amrex_real) :: xclamped(SDIM)
       real(amrex_real) :: LS_clamped
@@ -13170,13 +13154,6 @@ stop
 
       growlo(3)=0
       growhi(3)=0
-
-      xvel_ptr=>xvel
-      yvel_ptr=>yvel
-      zvel_ptr=>zvel
-      call checkbound_array1(fablo,fabhi,xvel_ptr,ngrow,0)
-      call checkbound_array1(fablo,fabhi,yvel_ptr,ngrow,1)
-      call checkbound_array1(fablo,fabhi,zvel_ptr,ngrow,SDIM-1)
 
       call checkbound_array(fablo,fabhi,xmomside_ptr,1,-1)
       call checkbound_array(fablo,fabhi,ymomside_ptr,1,-1)
@@ -14192,12 +14169,12 @@ stop
            stop
           endif
           if (refine_vol_bucket(im_refine_density).gt.zero) then
-           refinedennew(D_DECL(icrse,jcrse,crse),
+           refinedennew(D_DECL(icrse,jcrse,crse), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
              refine_den_bucket(im_refine_density)/ &
              refine_vol_bucket(im_refine_density)
           else if (refine_vol_bucket(im_refine_density).eq.zero) then
-           refinedennew(D_DECL(icrse,jcrse,crse),
+           refinedennew(D_DECL(icrse,jcrse,crse), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
              fort_denconst(im) 
           else
