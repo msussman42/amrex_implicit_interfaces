@@ -14143,7 +14143,7 @@ stop
                else if ((veldir.eq.3).and.(SDIM.eq.3)) then
                 zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
                  zmomside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
-                 veldata(momcomp)
+                 mom2(veldir)
                 zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)= &
                  zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
                  massdepart_mom
@@ -14197,7 +14197,9 @@ stop
              refine_den_bucket(im_refine_density)/ &
              refine_vol_bucket(im_refine_density)
           else if (refine_vol_bucket(im_refine_density).eq.zero) then
-           !do nothing
+           refinedennew(D_DECL(icrse,jcrse,crse),
+            (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
+             fort_denconst(im) 
           else
            print *,"refine_vol_bucket invalid"
            stop
@@ -14516,9 +14518,7 @@ stop
 
         KE=zero
         do veldir=1,SDIM
-         momcomp=veldir
-         vel1D=snew_hold(momcomp)
-         KE=KE+vel1D**2
+         KE=KE+snew_hold(veldir)**2
         enddo ! veldir
         KE=half*KE
 
@@ -17646,8 +17646,10 @@ stop
 
       do im=1,num_materials
 
-       if (fort_denconst(im).le.zero) then
-        print *,"denconst invalid"
+       if (fort_denconst(im).gt.zero) then
+        !do nothing
+       else
+        print *,"fort_denconst invalid: ",im,fort_denconst(im)
         stop
        endif
 
