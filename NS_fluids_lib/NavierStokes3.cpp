@@ -534,6 +534,7 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
      // "state" (all materials)
     avgDownALL(State_Type,STATECOMP_STATES,num_state_material*num_materials,
        SPECTRAL_ORDER_AVGDOWN);
+
     if ((num_materials_viscoelastic>=1)&&
         (num_materials_viscoelastic<=num_materials)) {
      avgDownALL_TENSOR();
@@ -541,6 +542,14 @@ void NavierStokes::nonlinear_advection(const std::string& caller_string) {
      // do nothing
     } else
      amrex::Error("num_materials_viscoelastic invalid in nonlinear_advection");
+
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
+     avgDownALL_refine_density();
+    } else if (num_materials_compressible==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_compressible invalid in nonlinear_advection");
 
     for (int ilev=finest_level-1;ilev>=level;ilev--) {
      NavierStokes& ns_level=getLevel(ilev);

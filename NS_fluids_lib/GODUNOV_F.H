@@ -722,9 +722,6 @@ extern "C"
      const Real* xlo,const Real* dx,
       // local variables
      Real* conserve,AMREX_ARLIM_P(conservelo),AMREX_ARLIM_P(conservehi),
-     Real* xvel,AMREX_ARLIM_P(xvello),AMREX_ARLIM_P(xvelhi),
-     Real* yvel,AMREX_ARLIM_P(yvello),AMREX_ARLIM_P(yvelhi),
-     Real* zvel,AMREX_ARLIM_P(zvello),AMREX_ARLIM_P(zvelhi),
      Real* xmomside,AMREX_ARLIM_P(xmomsidelo),AMREX_ARLIM_P(xmomsidehi),
      Real* ymomside,AMREX_ARLIM_P(ymomsidelo),AMREX_ARLIM_P(ymomsidehi),
      Real* zmomside,AMREX_ARLIM_P(zmomsidelo),AMREX_ARLIM_P(zmomsidehi),

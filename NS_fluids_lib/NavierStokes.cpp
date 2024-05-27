@@ -17577,10 +17577,6 @@ NavierStokes::split_scalar_advection() {
 
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
 
-   //ncomp=1
-  xvel[dir]=new MultiFab(state[Umac_Type+dir].boxArray(),dmap,
-    1,ngrow_mac_old,MFInfo().SetTag("xvel"),FArrayBoxFactory());
-
     //ncomp=2 ngrow=1
   side_bucket_mom[dir]=new MultiFab(grids,dmap,
      2,1,MFInfo().SetTag("side_bucket_mom"),FArrayBoxFactory());
@@ -17757,10 +17753,6 @@ NavierStokes::split_scalar_advection() {
 
   FArrayBox& consfab=(*conserve)[mfi];
 
-  FArrayBox& xvelfab=(*xvel[0])[mfi]; 
-  FArrayBox& yvelfab=(*xvel[1])[mfi];
-  FArrayBox& zvelfab=(*xvel[AMREX_SPACEDIM-1])[mfi];
-
   FArrayBox& xmomside=(*side_bucket_mom[0])[mfi];
   FArrayBox& ymomside=(*side_bucket_mom[1])[mfi];
   FArrayBox& zmomside=(*side_bucket_mom[AMREX_SPACEDIM-1])[mfi];
@@ -17847,9 +17839,6 @@ NavierStokes::split_scalar_advection() {
    xlo,dx,
     // local variables
    consfab.dataPtr(),ARLIM(consfab.loVect()),ARLIM(consfab.hiVect()),
-   xvelfab.dataPtr(),ARLIM(xvelfab.loVect()),ARLIM(xvelfab.hiVect()),
-   yvelfab.dataPtr(),ARLIM(yvelfab.loVect()),ARLIM(yvelfab.hiVect()),
-   zvelfab.dataPtr(),ARLIM(zvelfab.loVect()),ARLIM(zvelfab.hiVect()),
    xmomside.dataPtr(),ARLIM(xmomside.loVect()),ARLIM(xmomside.hiVect()),
    ymomside.dataPtr(),ARLIM(ymomside.loVect()),ARLIM(ymomside.hiVect()),
    zmomside.dataPtr(),ARLIM(zmomside.loVect()),ARLIM(zmomside.hiVect()),

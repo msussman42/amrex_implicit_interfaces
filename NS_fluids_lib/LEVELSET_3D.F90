@@ -10454,7 +10454,7 @@ stop
 
       real(amrex_real), INTENT(in), target :: refineden(DIMV(refineden), &
               NUM_CELL_REFINE_DENSITY) 
-      real(amrex_real), pointer :: refinedenptr(D_DECL(:,:,:),:)
+      real(amrex_real), pointer :: refineden_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: &
         mom_den(DIMV(mom_den),num_materials) 
@@ -10467,10 +10467,14 @@ stop
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
 
       integer i,j,k
+      integer ifine,jfine,kfine
+      integer nfine
       integer dir2
       integer iside
 
-      integer im,nmax
+      integer im
+      integer im_refine_density
+      integer nmax
       real(amrex_real) mofdata(num_materials*ngeom_recon)
 
       real(amrex_real) multi_volume(num_materials)
@@ -10697,6 +10701,7 @@ stop
          im_refine_density=0
 
          do im=1,num_materials
+
           dencomp=(im-1)*num_state_material+1+ENUM_DENVAR
           den=denstate(D_DECL(i,j,k),dencomp)
           mom_den_local=mom_den(D_DECL(i,j,k),im)
@@ -10714,12 +10719,6 @@ stop
            den=refineden(D_DECL(i,j,k), &
              (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)
            mom_den_local=den
-           if (constant_density_all_time(im).eq.0) then
-            !do nothing
-           else
-            print *,"expecting constant_density_all_time=0"
-            stop
-           endif
           else
            print *,"is_compressible(im) invalid"
            stop
@@ -16781,8 +16780,6 @@ stop
       return
       end subroutine fort_buildfacewt
 
-      FIX ME need to update the refine density variable
-
        ! solid: velx,vely,velz,dist  (dist<0 in solid)
        ! called from: NavierStokes::prescribe_solid_geometry
        !   (declared in NavierStokes2.cpp)
@@ -16802,7 +16799,10 @@ stop
        den,DIMS(den), &
        vel,DIMS(vel), &
        velnew,DIMS(velnew), &
-       dennew,DIMS(dennew), &
+       dennew, &
+       DIMS(dennew), &
+       refinedennew, &
+       DIMS(refinedennew), &
        lsnew,DIMS(lsnew), &
        xlo,dx, &
        time, &
@@ -16858,6 +16858,7 @@ stop
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(velnew)
       integer, INTENT(in) :: DIMDEC(dennew)
+      integer, INTENT(in) :: DIMDEC(refinedennew)
       integer, INTENT(in) :: DIMDEC(lsnew)
       real(amrex_real), INTENT(inout),target ::  &
               vofnew(DIMV(vofnew),num_materials*ngeom_raw)
@@ -16877,9 +16878,15 @@ stop
       real(amrex_real), INTENT(in),target :: &
               den(DIMV(den),num_materials*num_state_material)
       real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(inout),target :: &
               dennew(DIMV(dennew),num_materials*num_state_material)
       real(amrex_real), pointer :: dennew_ptr(D_DECL(:,:,:),:)
+
+      real(amrex_real), INTENT(inout),target :: &
+         refinedennew(DIMV(refinedennew),NUM_CELL_REFINE_DENSITY)
+      real(amrex_real), pointer :: refinedennew_ptr(D_DECL(:,:,:),:)
+
       real(amrex_real), INTENT(inout),target :: &
               lsnew(DIMV(lsnew),num_materials*(1+SDIM))
       real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
@@ -16898,8 +16905,11 @@ stop
       integer, INTENT(in), target :: fablo(SDIM),fabhi(SDIM)
       integer growlo(3),growhi(3)
 
-      integer i,j,k,dir
+      integer i,j,k
+      integer dir
       integer im,im_opp
+      integer nfine
+      integer im_refine_density
       integer im_primary_stencil
       integer im_solid_max
       integer vofcomp,vofcompraw
@@ -16952,7 +16962,8 @@ stop
       real(amrex_real) LS_predict(num_materials)
       real(amrex_real) LS_virtual(num_materials)
       real(amrex_real) LS_virtual_new(num_materials)
-      real(amrex_real) LS_virtual_max !used for insuring tessellation property of LS
+       !used for insuring tessellation property of LS
+      real(amrex_real) LS_virtual_max 
       integer num_materials_fluid,num_materials_solid,num_materials_lag
       integer at_center
       integer ibase
@@ -17205,8 +17216,13 @@ stop
       call checkbound_array(fablo,fabhi,vel_ptr,1,-1)
       den_ptr=>den
       call checkbound_array(fablo,fabhi,den_ptr,1,-1)
+
       dennew_ptr=>dennew
       call checkbound_array(fablo,fabhi,dennew_ptr,1,-1)
+
+      refinedennew_ptr=>refinedennew
+      call checkbound_array(fablo,fabhi,refinedennew_ptr,1,-1)
+
       lsnew_ptr=>lsnew
       call checkbound_array(fablo,fabhi,lsnew_ptr,1,-1)
 
@@ -17354,7 +17370,30 @@ stop
           local_species_sum(istate)=local_species_sum(istate)/local_mass_sum
          enddo
 
+         im_refine_density=0
+
          do im=1,num_materials
+
+          if (is_compressible_mat(im).eq.0) then
+           !do nothing
+          else if (is_compressible_mat(im).eq.1) then
+           im_refine_density=im_refine_density+1
+           if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+            !do nothing
+           else
+            print *,"fort_im_refine_density_map invalid"
+            stop
+           endif
+           if (constant_density_all_time(im).eq.0) then
+            !do nothing
+           else
+            print *,"expecting constant_density_all_time=0"
+            stop
+           endif
+          else
+           print *,"is_compressible(im) invalid"
+           stop
+          endif
 
           vofcompraw=(im-1)*ngeom_raw+1
           F_stencil=state_mof(D_DECL(i,j,k),vofcompraw)
@@ -17437,8 +17476,29 @@ stop
             enddo
 
             if (F_stencil_sum.gt.VOFTOL) then
+
              statecomp=(im-1)*num_state_material+1+ENUM_DENVAR
              dennew(D_DECL(i,j,k),statecomp)=density_stencil_sum/F_stencil_sum
+
+             if (is_compressible_mat(im).eq.0) then
+              !do nothing
+             else if (is_compressible_mat(im).eq.1) then
+              if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+               !do nothing
+              else
+               print *,"fort_im_refine_density_map invalid"
+               stop
+              endif
+              do nfine=1,ENUM_NUM_REFINE_DENSITY_TYPE
+               refinedennew(D_DECL(i,j,k), &
+                 (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
+                   density_stencil_sum/F_stencil_sum
+              enddo
+             else
+              print *,"is_compressible(im) invalid"
+              stop
+             endif
+
             else if ((F_stencil_sum.ge.zero).and. &
                      (F_stencil_sum.le.VOFTOL)) then
              ! do nothing
