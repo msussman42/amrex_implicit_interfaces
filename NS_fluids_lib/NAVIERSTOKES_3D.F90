@@ -2032,7 +2032,8 @@ END SUBROUTINE SIMP
       real(amrex_real), INTENT(inout), target :: &
               towerfab(DIMV(towerfab),ncomp_tower)
       real(amrex_real), pointer :: towerfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: lsdist(DIMV(lsdist),(SDIM+1)*num_materials)
+      real(amrex_real), INTENT(in), target :: &
+              lsdist(DIMV(lsdist),(SDIM+1)*num_materials)
       real(amrex_real), pointer :: lsdist_ptr(D_DECL(:,:,:),:)
       real(amrex_real) xposnd(SDIM)
       real(amrex_real) xposndT(SDIM)
@@ -3771,7 +3772,7 @@ END SUBROUTINE SIMP
               stop
              endif
             else
-             print *,"xstenhi or xstenlo invalid"
+             print *,"xstenhi or xstenlo bad: ",xstenlo(dir),xstenhi(dir)
              stop
             endif
            enddo ! dir=1..sdim
@@ -3951,10 +3952,26 @@ END SUBROUTINE SIMP
 
            deallocate(SEMloc)
 
-            ! we discard the SEM interpolated values of lsdist.
-           do dir=SDIM+1,visual_ncomp-num_materials
-            localfab(dir)=SEM_value(dir-SDIM)
-           enddo
+           if (VISUALCOMP_U.eq.SDIM) then
+            !do nothing
+           else
+            print *,"expecting VISUALCOMP_U=SDIM"
+            stop
+           endif
+
+            ! we discard the SEM interpolated values of lsdist, density,
+            ! and species.
+           do dir=SDIM+1,visual_ncomp
+
+            if ( ((dir.ge.VISUALCOMP_U+1).and. &
+                  (dir.le.VISUALCOMP_U+SDIM)).or. &
+                 (dir.eq.VISUALCOMP_PMG+1).or. &
+                 (dir.eq.VISUALCOMP_TEMP+1).or. &
+                 (dir.eq.VISUALCOMP_VORTMAG+1)) then
+             localfab(dir)=SEM_value(dir-SDIM) 
+            endif
+
+           enddo !dir=SDIM+1,visual_ncomp
 
           else
            print *,"bfact invalid155"
@@ -3968,7 +3985,7 @@ END SUBROUTINE SIMP
          else if (inbox.eq.0) then
           ! do nothing
          else
-          print *,"inbox invalid"
+          print *,"inbox invalid: ",inbox
           stop
          endif
         enddo ! kc
