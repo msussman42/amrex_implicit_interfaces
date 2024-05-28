@@ -3834,7 +3834,7 @@ END SUBROUTINE SIMP
             localfab(SDIM+dir)=localfab(SDIM+dir)/sumweight
            enddo
           else
-           print *,"sumweight invalid"
+           print *,"sumweight invalid: ",sumweight
            stop
           endif
           if (bfact.eq.1) then
@@ -3956,6 +3956,18 @@ END SUBROUTINE SIMP
             !do nothing
            else
             print *,"expecting VISUALCOMP_U=SDIM"
+            stop
+           endif
+           if (VISUALCOMP_PMG.eq.2*SDIM) then
+            !do nothing
+           else
+            print *,"expecting VISUALCOMP_PMG=2 * SDIM"
+            stop
+           endif
+           if (VISUALCOMP_TEMP.eq.2*SDIM+2) then
+            !do nothing
+           else
+            print *,"expecting VISUALCOMP_TEMP=2 * SDIM + 2"
             stop
            endif
 
