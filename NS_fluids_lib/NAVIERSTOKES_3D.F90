@@ -2060,6 +2060,7 @@ END SUBROUTINE SIMP
       real(amrex_real) elasticcell(elastic_ncomp)
       real(amrex_real) refinedencell(refineden_ncomp)
       real(amrex_real) lsdistnd((SDIM+1)*num_materials)
+      real(amrex_real) lsdist_interp(num_materials)
       real(amrex_real) local_LS_data((SDIM+1)*num_materials)
       real(amrex_real) viscnd(num_materials)
       real(amrex_real) conductnd(num_materials)
@@ -2073,6 +2074,8 @@ END SUBROUTINE SIMP
       integer im
       integer im_crit
       integer im_crit_SEM
+      integer im_interp
+      integer im_refine_density
 
       real(amrex_real), INTENT(in) :: problo(SDIM)
       real(amrex_real), INTENT(in) :: probhi(SDIM)
@@ -2085,6 +2088,8 @@ END SUBROUTINE SIMP
       character*32 filename32
 
       integer i,j,k
+      integer ifine,jfine,kfine
+      integer nfine
       integer ii,jj
       integer dir,dir2
       integer n
@@ -2116,17 +2121,21 @@ END SUBROUTINE SIMP
       real(amrex_real) psten1D(0:1)
       integer DIMDEC(plt)
 
-      real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable, target :: plotfab
+      real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable, target :: &
+              plotfab
       real(amrex_real), pointer :: plotfab_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: reconfab
-      real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: reconfab_raster
+      real(amrex_real), dimension(D_DECL(:,:,:),:), allocatable :: &
+              reconfab_raster
       integer debug_slice
       real(amrex_real) denslice,tempslice,eslice,KEslice
       integer, parameter :: nhalf=3
       real(amrex_real) xstenND(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten_corner(-nhalf:nhalf,SDIM)
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenBL(-nhalf:nhalf,SDIM)
+      real(amrex_real) xrefine(SDIM)
       real(amrex_real) xsten1D(-nhalf:nhalf)
       real(amrex_real) xsten1DL(-nhalf:nhalf)
       real(amrex_real) xsten1D_finest(-nhalf:nhalf)
@@ -2335,7 +2344,6 @@ END SUBROUTINE SIMP
        print *,"num_materials_compressible invalid"
        stop
       endif
-
 
 
       lsdist_ptr=>lsdist
@@ -3826,9 +3834,10 @@ END SUBROUTINE SIMP
            enddo
 
            sumweight=sumweight+localwt
-          enddo !kBL
-          enddo !jBL
           enddo !iBL
+          enddo !jBL
+          enddo !kBL
+
           if (sumweight.gt.zero) then
            do dir=1,VISUALCOMP_NCOMP_INTERP
             localfab(SDIM+dir)=localfab(SDIM+dir)/sumweight
@@ -3837,6 +3846,100 @@ END SUBROUTINE SIMP
            print *,"sumweight invalid: ",sumweight
            stop
           endif
+
+          do im=1,num_materials
+           lsdist_interp(im)=localfab(VISUALCOMP_LS+im)
+          enddo
+           ! primary material w.r.t. both fluids and solids.
+          call get_primary_material(lsdist_interp,im_interp)
+          if (is_compressible_mat(im_interp).eq.0) then
+           !do nothing
+          else if (is_compressible_mat(im_interp).eq.1) then
+           im_refine_density=0
+           do im=1,num_materials
+            if (is_compressible_mat(im).eq.0) then
+             !do nothing
+            else if (is_compressible_mat(im).eq.1) then
+             im_refine_density=im_refine_density+1
+             if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+              !do nothing
+             else
+              print *,"fort_im_refine_density_map invalid"
+              stop
+             endif
+             if (im.eq.im_interp) then
+              sumweight=zero
+              do kBL=icell_lo(3),icell_hi(3)
+              do jBL=icell_lo(2),icell_hi(2)
+              do iBL=icell_lo(1),icell_hi(1)
+                ! iproblo=0
+               call gridsten(xstenBL,problo,iBL,jBL,kBL,iproblo,bfact,dx,nhalf)
+
+               kfine=0
+#if (AMREX_SPACEDIM==3)
+               do kfine=0,1
+#endif
+               do jfine=0,1
+               do ifine=0,1
+
+                nfine=4*kfine+2*jfine+ifine+1
+
+                dir2=1
+                if (ifine.eq.0) then
+                 xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(-1,dir2))
+                else
+                 xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(1,dir2))
+                endif
+                dir2=2
+                if (jfine.eq.0) then
+                 xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(-1,dir2))
+                else
+                 xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(1,dir2))
+                endif
+                if (SDIM.eq.3) then
+                 dir2=SDIM
+                 if (kfine.eq.0) then
+                  xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(-1,dir2))
+                 else
+                  xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(1,dir2))
+                 endif
+                endif
+                localwt=EPS2*(dx(1)**2)
+                do dir2=1,SDIM
+                 localwt=localwt+(xrefine(dir2)-xcrit(dir2))**2
+                enddo
+                localwt=one/localwt
+                localfab(VISUALCOMP_DEN+1)=localfab(VISUALCOMP_DEN+1)+ &
+                  localwt* &
+                  refineden(D_DECL(iBL,jBL,kBL), &
+                    (im_interp-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)
+                sumweight=sumweight+localwt
+               enddo  ! ifine
+               enddo  ! jfine
+#if (AMREX_SPACEDIM==3)
+               enddo  ! kfine
+#endif
+              enddo !iBL
+              enddo !jBL
+              enddo !kBL
+
+              if (sumweight.gt.zero) then
+               localfab(VISUALCOMP_DEN+1)=localfab(VISUALCOMP_DEN+1)/sumweight
+              else
+               print *,"sumweight invalid: ",sumweight
+               stop
+              endif
+             endif !im==im_interp
+            else
+             print *,"is_compressible(im) invalid"
+             stop
+            endif
+           enddo !im=1,..,num_materials
+          else
+           print *,"is_compressible(im_interp) invalid"
+           stop
+          endif
+
           if (bfact.eq.1) then
            ! do nothing
           else if (bfact.gt.1) then
