@@ -7,11 +7,14 @@
       real*8 rtheta,e0
       real*8 gamma1,gamma2,gamma3
       real*8 pos1(3),pos2(3),distpos1pos2
+      real*8 virtual_radius
+      real*8 minor_axis
       integer dir
       integer select
 
       select=1
 
+c sin theta1/sigma23 = sin theta2/sigma13 = sin theta 3/sigma12
       if (select.eq.1) then
        sigma12=0.044444444444444d0
        sigma23=sigma12
@@ -39,9 +42,12 @@
       theta1=acos(-sigma13/(2.d0*sigma23))
       theta2=2.d0*mypi-2.d0*theta1
       sin1=sin(theta2)
+c     sin2=sin(0.5d0*theta2)
       sin2=sin(mypi-theta1)
       d=(theta2-sin1)/(4.d0*mypi*(rad**2)*(sin2**2))
       d=1.d0/sqrt(d)
+      virtual_radius=d/(2.0d0*sin2)
+      minor_axis=2.0d0*virtual_radius*(1.0d0-cos(0.5d0*theta2))
       print *,"gamma1,gamma2,g1/g2 (scale) ", 
      &  gamma1/sigma12,gamma2/sigma12,gamma1/gamma2
       print *,"gamma1,gamma3,g1/g3 (scale) ", 
@@ -51,6 +57,8 @@
       print *,"gamma1,gamma2,gamma3 ",gamma1,gamma2,gamma3
       print *,"sigma12,sigma23,sigma13 ",sigma12,sigma23,sigma13
       print *,"d= ",d
+      print *,"virtual_radius= ",virtual_radius
+      print *,"minor_axis= ",minor_axis
 
       theta1=acos(sigma13/(2.d0*sigma23))
       rad=0.15d0
