@@ -7095,15 +7095,15 @@ end subroutine volume_sanity_check
       integer :: dir2
 
       if (nhalf.lt.1) then
-       print *,"nhalf invalid cisboxfine"
+       print *,"nhalf invalid cisboxfine: ",nhalf
        stop
       endif
       if (bfact.lt.1) then
-       print *,"bfact invalid125"
+       print *,"bfact invalid cisboxfine"
        stop
       endif
       if ((sdim.ne.2).and.(sdim.ne.3)) then
-       print *,"sdim invalid"
+       print *,"sdim invalid cisboxfine"
        stop
       endif
       call gridsten_level(xsten,i,j,k,level,nhalf)
@@ -7113,12 +7113,18 @@ end subroutine volume_sanity_check
        xsten(1,dir2)=xsten(0,dir2)
       else if (ifine.eq.1) then
        xsten(-1,dir2)=xsten(0,dir2)
+      else
+       print *,"ifine invalid"
+       stop
       endif
       dir2=2
       if (jfine.eq.0) then
        xsten(1,dir2)=xsten(0,dir2)
       else if (jfine.eq.1) then
        xsten(-1,dir2)=xsten(0,dir2)
+      else
+       print *,"jfine invalid"
+       stop
       endif
       if (SDIM.eq.3) then
        dir2=SDIM
@@ -7126,6 +7132,9 @@ end subroutine volume_sanity_check
         xsten(1,dir2)=xsten(0,dir2)
        else if (kfine.eq.1) then
         xsten(-1,dir2)=xsten(0,dir2)
+       else
+        print *,"kfine invalid"
+        stop
        endif
       endif
       do dir2=1,SDIM
