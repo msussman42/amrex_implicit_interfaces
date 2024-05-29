@@ -17571,7 +17571,6 @@ NavierStokes::split_scalar_advection() {
 
  int nc_bucket=CISLCOMP_NCOMP;
 
- MultiFab* xvel[AMREX_SPACEDIM]; 
  MultiFab* side_bucket_mom[AMREX_SPACEDIM]; // 2 components
  MultiFab* side_bucket_mass[AMREX_SPACEDIM]; // 2 components
 
@@ -17890,7 +17889,6 @@ NavierStokes::split_scalar_advection() {
  delete conserve;
  
  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-  delete xvel[dir];
   delete side_bucket_mom[dir];
   delete side_bucket_mass[dir];
  }
