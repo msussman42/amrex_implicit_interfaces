@@ -13679,6 +13679,24 @@ stop
 
         usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
 
+        if (usten_accept(-1).gt.zero) then
+         idonatelow=-1
+        else if (usten_accept(-1).le.zero) then
+         idonatelow=0
+        else
+         print *,"usten_accept(-1) invalid: ",usten_accept(-1)
+         stop
+        endif
+
+        if (usten_accept(1).lt.zero) then
+         idonatehigh=1
+        else if (usten_accept(1).ge.zero) then
+         idonatehigh=0
+        else
+         print *,"usten_accept(1) invalid: ",usten_accept(1)
+         stop
+        endif
+
         if (normdir.eq.0) then
          if (ifine.eq.0) then
           usten_accept(1)=usten_accept(0)
@@ -13711,24 +13729,6 @@ stop
          stop
         endif
         usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
-
-        if (usten_accept(-1).gt.zero) then
-         idonatelow=-1
-        else if (usten_accept(-1).le.zero) then
-         idonatelow=0
-        else
-         print *,"usten_accept(-1) invalid"
-         stop
-        endif
-
-        if (usten_accept(1).lt.zero) then
-         idonatehigh=1
-        else if (usten_accept(1).ge.zero) then
-         idonatehigh=0
-        else
-         print *,"usten_accept(1) invalid"
-         stop
-        endif
 
         do istencil=idonatelow,idonatehigh
  
@@ -13795,13 +13795,15 @@ stop
            endif
            if (xsten_recon(0,1).le.EPS2*dx(1)) then
             check_intersection=0
-            print *,"idonate invalid"
+            print *,"idonate invalid (RZ): ",idonate
+            print *,"[ijk]crse ",icrse,jcrse,kcrse
+            print *,"normdir, [ijk]donate ",normdir,idonate,jdonate,kdonate
             stop
            endif
           else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
            if (xsten_recon(0,1).le.EPS2*dx(1)) then
             check_intersection=0
-            print *,"idonate invalid"
+            print *,"idonate invalid (RTZ): ",idonate
             stop
            endif
           else
@@ -13826,7 +13828,8 @@ stop
              endif
              if (idonate.lt.0) then
               usten_donate(1)=zero
-              print *,"idonate invalid"
+              print *,"idonate invalid: ",idonate
+              print *,"[ijk]donate: ",idonate,jdonate,kdonate
               stop
              endif
             else

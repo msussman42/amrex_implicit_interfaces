@@ -36,7 +36,7 @@
 # U=L/T=.8/.0013=615.4
 max_step  =  99999    # maximum timestep
 #max_step  =  1    # maximum timestep
-stop_time=16.0  # liquid lens
+stop_time=160.0  # liquid lens ?
 #stop_time=160.0  # gas lens ?
 #stop_time=160.0  # floating lens ?
 

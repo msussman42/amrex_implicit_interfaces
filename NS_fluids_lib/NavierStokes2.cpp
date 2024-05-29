@@ -9184,7 +9184,7 @@ void NavierStokes::VOF_Recon_ALL(
      if (ngrow_save!=2)
       amrex::Error("vof prev time has invalid ngrow");
      ns_level.Copy_localMF(VOF_PREV_TIME_MF,VOF_RECON_MF,
-	ibase_raw,im,2,ngrow_save); 
+	ibase_raw,im,1,ngrow_save); 
     } else if (init_vof_prev_time==0) {
      // do nothing
     } else

@@ -10638,9 +10638,15 @@ stop
                 (levelrz.eq.COORDSYS_CYLINDRICAL)) then
         if (xsten_recon(0,1).lt.EPS2*dx(1)) then
          check_donate=0
+         if (i.lt.0) then
+          !do nothing
+         else
+          print *,"expecting i<0"
+          stop
+         endif
         endif
        else
-        print *,"levelrz invalid build semi refine vof"
+        print *,"levelrz invalid build semi refine vof: ",levelrz
         stop
        endif
 
@@ -10771,23 +10777,32 @@ stop
            if (veldir.eq.0) then
             if (ifine.eq.0) then
              iside=-1
-            else
+            else if (ifine.eq.1) then
              iside=1
+            else
+             print *,"ifine invalid"
+             stop
             endif
            else if (veldir.eq.1) then
             if (jfine.eq.0) then
              iside=-1
-            else
+            else if (jfine.eq.1) then
              iside=1
+            else
+             print *,"jfine invalid"
+             stop
             endif
            else if ((veldir.eq.2).and.(SDIM.eq.3)) then
             if (kfine.eq.0) then
              iside=-1
-            else
+            else if (kfine.eq.1) then
              iside=1
+            else
+             print *,"kfine invalid"
+             stop
             endif
            else
-            print *,"veldir invalid"
+            print *,"veldir invalid: ",veldir
             stop
            endif
 
@@ -10796,7 +10811,7 @@ stop
            else if (iside.eq.1) then
             irefine=veldir*2*num_materials+num_materials+im
            else
-            print *,"iside invalid"
+            print *,"iside invalid: ",iside
             stop
            endif
 
@@ -10856,7 +10871,7 @@ stop
        else if (check_donate.eq.0) then
         !do nothing
        else
-        print *,"check_donate invalid"
+        print *,"check_donate invalid: ",check_donate
         stop
        endif
 
