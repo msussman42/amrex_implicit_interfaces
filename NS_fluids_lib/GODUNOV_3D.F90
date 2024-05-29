@@ -124,11 +124,11 @@ stop
       end subroutine departure_node_split
 
       subroutine derive_density( &
-       voldepart,voltarget,voltotal_depart, &
-       constant_density_all_time, &
-       massdepart, &
-       im, &
-       density)
+       voldepart,voltarget,voltotal_depart, & !intent(in)
+       constant_density_all_time, & !intent(in)
+       massdepart, & !intent(in)
+       im, & !intent(in)
+       density)  !intent(out)
       use global_utility_module
 
       IMPLICIT NONE
@@ -13229,7 +13229,7 @@ stop
 
       nc_bucket_test=CISLCOMP_NCOMP
       if (nc_bucket_test.ne.nc_bucket) then
-       print *,"nc_bucket invalid"
+       print *,"nc_bucket invalid: ",nc_bucket_test,nc_bucket
        stop
       endif
 
@@ -13253,12 +13253,24 @@ stop
          do veldir=1,SDIM
           vel_coarse(veldir)=zero
          enddo
+         if (icrse.lt.0) then
+          !do nothing
+         else
+          print *,"expecting icrse<0"
+          stop
+         endif
         endif
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         if (xsten_crse(0,1).lt.zero) then
          do veldir=1,SDIM
           vel_coarse(veldir)=zero
          enddo
+         if (icrse.lt.0) then
+          !do nothing
+         else
+          print *,"expecting icrse<0"
+          stop
+         endif
         endif
        else
         print *,"levelrz invalid fort_vfrac_split (vel_coarse)"
@@ -13277,21 +13289,30 @@ stop
         veldir=1
         if (ifine.eq.0) then
          vel_fine(veldir)=xmac_old(D_DECL(icrse,jcrse,kcrse))
-        else
+        else if (ifine.eq.1) then
          vel_fine(veldir)=xmac_old(D_DECL(icrse+1,jcrse,kcrse))
+        else
+         print *,"ifine invalid"
+         stop
         endif
         veldir=2
         if (jfine.eq.0) then
          vel_fine(veldir)=ymac_old(D_DECL(icrse,jcrse,kcrse))
-        else
+        else if (jfine.eq.1) then
          vel_fine(veldir)=ymac_old(D_DECL(icrse,jcrse+1,kcrse))
+        else
+         print *,"jfine invalid"
+         stop
         endif
         if (SDIM.eq.3) then
          veldir=SDIM
          if (kfine.eq.0) then
           vel_fine(veldir)=zmac_old(D_DECL(icrse,jcrse,kcrse))
-         else
+         else if (kfine.eq.1) then
           vel_fine(veldir)=zmac_old(D_DECL(icrse,jcrse,kcrse+1))
+         else
+          print *,"kfine invalid"
+          stop
          endif
         endif
 
@@ -13300,20 +13321,44 @@ stop
         else if (levelrz.eq.COORDSYS_RZ) then
          if ((xsten_crse(-1,1).le.EPS2*dx(1)).and.(ifine.eq.0)) then
           vel_fine(1)=zero
+          if (icrse.le.0) then
+           !do nothing
+          else
+           print *,"expecting icrse<=0"
+           stop
+          endif
          endif
          if (xsten_crse(0,1).lt.zero) then
           do veldir=1,SDIM
            vel_fine(veldir)=zero
           enddo
+          if (icrse.lt.0) then
+           !do nothing
+          else
+           print *,"expecting icrse<0"
+           stop
+          endif
          endif
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          if ((xsten_crse(-1,1).le.EPS2*dx(1)).and.(ifine.eq.0)) then
           vel_fine(1)=zero
+          if (icrse.le.0) then
+           !do nothing
+          else
+           print *,"expecting icrse<=0"
+           stop
+          endif
          endif
          if (xsten_crse(0,1).lt.zero) then
           do veldir=1,SDIM
            vel_fine(veldir)=zero
           enddo
+          if (icrse.lt.0) then
+           !do nothing
+          else
+           print *,"expecting icrse<0"
+           stop
+          endif
          endif
         else
          print *,"levelrz invalid fort_vfrac_split (vel_fine)"
@@ -13516,6 +13561,7 @@ stop
        call gridsten_level(xsten_crse,icrse,jcrse,kcrse,level,nhalf)
 
        voltotal_depart=zero
+
        do istate=1,nc_bucket
         veldata(istate)=zero
        enddo
@@ -13568,6 +13614,9 @@ stop
         endif 
        enddo !im=1,num_materials
 
+       idonate=icrse
+       jdonate=jcrse
+       kdonate=kcrse
 
        kfine=0
 #if (AMREX_SPACEDIM==3)
@@ -13618,6 +13667,8 @@ stop
           endif
           if (icrse.lt.0) then
            usten_accept(1)=zero
+           print *,"expecting icrse>=0"
+           stop
           endif
          else
           print *,"levelrz invalid"
@@ -13633,18 +13684,27 @@ stop
           usten_accept(1)=usten_accept(0)
          else if (ifine.eq.1) then
           usten_accept(-1)=usten_accept(0)
+         else
+          print *,"ifine invalid"
+          stop
          endif
         else if (normdir.eq.1) then
          if (jfine.eq.0) then
           usten_accept(1)=usten_accept(0)
          else if (jfine.eq.1) then
           usten_accept(-1)=usten_accept(0)
+         else
+          print *,"jfine invalid"
+          stop
          endif
         else if ((normdir.eq.2).and.(SDIM.eq.3)) then
          if (kfine.eq.0) then
           usten_accept(1)=usten_accept(0)
          else if (kfine.eq.1) then
           usten_accept(-1)=usten_accept(0)
+         else
+          print *,"kfine invalid"
+          stop
          endif
         else
          print *,"normdir invalid"
@@ -13766,6 +13826,8 @@ stop
              endif
              if (idonate.lt.0) then
               usten_donate(1)=zero
+              print *,"idonate invalid"
+              stop
              endif
             else
              print *,"levelrz invalid"
@@ -13781,18 +13843,27 @@ stop
              usten_donate(1)=usten_donate(0)
             else if (ifine_stencil.eq.1) then
              usten_donate(-1)=usten_donate(0)
+            else
+             print *,"ifine_stencil invalid"
+             stop
             endif
            else if (normdir.eq.1) then
             if (jfine_stencil.eq.0) then
              usten_donate(1)=usten_donate(0)
             else if (jfine_stencil.eq.1) then
              usten_donate(-1)=usten_donate(0)
+            else
+             print *,"jfine_stencil invalid"
+             stop
             endif
            else if ((normdir.eq.2).and.(SDIM.eq.3)) then
             if (kfine_stencil.eq.0) then
              usten_donate(1)=usten_donate(0)
             else if (kfine_stencil.eq.1) then
              usten_donate(-1)=usten_donate(0)
+            else
+             print *,"kfine_stencil invalid"
+             stop
             endif
            else
             print *,"normdir invalid"
@@ -13930,7 +14001,7 @@ stop
               stop
              endif
              massdepart=donate_density
-             massdepart_mom=donate_density
+             massdepart_mom=donate_mom_density
 
              if (massdepart.gt.zero) then
               ! do nothing
@@ -14125,7 +14196,7 @@ stop
                  zmassside(D_DECL(icrse,jcrse,kcrse),kfine+1)+ &
                  massdepart_mom
                else
-                print *,"veldir invalid"
+                print *,"veldir invalid: ",veldir
                 stop
                endif
 
@@ -14178,7 +14249,8 @@ stop
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
              fort_denconst(im) 
           else
-           print *,"refine_vol_bucket invalid"
+           print *,"refine_vol_bucket invalid: ",im_refine_density, &
+             refine_vol_bucket(im_refine_density)
            stop
           endif
          else
@@ -14368,8 +14440,10 @@ stop
         call derive_density(volmat_depart_cor(im), &
          vol_target_local,voltotal_depart, &
          constant_density_all_time, &
-         massdepart,im, &
-         dencore(im))
+         massdepart, & !intent(in)
+         im, &
+         dencore(im)) ! intent(out)
+
         istate=STATECOMP_STATES+(im-1)*num_state_material+ENUM_DENVAR+1
         if (dencore(im).gt.zero) then
          ! do nothing
@@ -14863,11 +14937,23 @@ stop
           if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
               (veldir.eq.1)) then
            zapvel=1
+           if (icrse.eq.0) then
+            !do nothing
+           else
+            print *,"icrse invalid"
+            stop
+           endif 
           endif
          else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
           if ((xsten_MAC(0,1).le.EPS2*dx(1)).and. &
               (veldir.eq.1)) then
            zapvel=1
+           if (icrse.eq.0) then
+            !do nothing
+           else
+            print *,"icrse invalid"
+            stop
+           endif 
           endif
          else
           print *,"levelrz invalid"
