@@ -747,7 +747,7 @@ stop
       call get_user_tension(xcenter,time, &
         fort_tension,user_tension,temperature_cen)
 
-      if (unscaled_min_curvature_radius.ge.two) then
+      if (unscaled_min_curvature_radius.ge.one) then
        ! do nothing
       else
        print *,"unscaled_min_curvature_radius invalid"
@@ -2229,7 +2229,7 @@ stop
        curvFD=curvFD+dnrm(dir2)
       enddo
 
-      if (unscaled_min_curvature_radius.ge.two) then
+      if (unscaled_min_curvature_radius.ge.one) then
        maxcurv=one/(unscaled_min_curvature_radius*dxmax)
        if (levelrz.eq.COORDSYS_CARTESIAN) then
         if (SDIM.eq.2) then
@@ -3447,7 +3447,7 @@ stop
        stop
       endif
 
-      if (unscaled_min_curvature_radius.ge.two) then
+      if (unscaled_min_curvature_radius.ge.one) then
        ! do nothing
       else
        print *,"unscaled_min_curvature radius invalid"
