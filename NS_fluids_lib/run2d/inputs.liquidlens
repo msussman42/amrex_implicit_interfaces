@@ -122,7 +122,10 @@ ns.min_velocity_for_dt=1.0
 # sigma_13=gamma_1+gamma_3
 # sigma_23=gamma_2+gamma_3
 # if 1cm^2 domain, then water surface tension is 72.8.
-ns.tension        = 1.0 1.25 1.0
+ns.tension        = 1.0 1.25 1.0  #liquid lens and gas lens
+# air-oil  air-water  oil-water
+#ns.tension = 0.055 0.0728 0.04 # floating lens
+#ns.tension = 0.7555 1.0 0.5495 # floating lens (scaled by 0.0728)
 #ns.fixed_dt	  = 0.0025     # hardwire dt
 ns.sum_interval   = 5        # timesteps between computing mass 
 
@@ -143,16 +146,17 @@ ns.heatviscconst=0.0 0.0 0.0 0.0
 #ns.uncoupled_viscosity=0  # gas lens
 #ns.uncoupled_viscosity=0  # floating lens
 ns.uncoupled_viscosity=1  # liquid lens
-#ns.viscconst=1.0 91.5 1.78e-2 # floating lens
+#ns.viscconst=1.78e-2 91.5 1.0 # floating lens air, oil, water
 #ns.viscconst=1.0 0.01 1.0 # gas lens
 ns.viscconst=1.0 1.0 1.0 # liquid lens
-#ns.denconst=1.0 0.577 0.001 # floating lens
+#ns.denconst=0.001 0.577 1.0 # floating lens air, oil, water
 #ns.denconst=1.0 0.001 1.0 # gas lens
 ns.denconst=1.0 1.0 1.0 # liquid lens
 #12 13 23
 ns.denconst_interface_min=0.0 0.0 0.0
 #ns.denconst_interface_min=0.1 1.0 0.1 #gas lens
-#ns.denconst_interface_min=0.577 0.1 0.0577 #floating lens
+#air-oil air-water oil-water
+#ns.denconst_interface_min=0.0577 0.1 0.577 #floating lens
 ns.tempconst=293.0 293.0 293.0 
 ns.material_type=0 0 0 
 ns.pressure_error_cutoff=0.0 0.0 0.0 
