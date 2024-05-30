@@ -14752,7 +14752,7 @@ end subroutine print_visual_descriptor
       integer, INTENT(in) :: im
 
       if ((im.lt.1).or.(im.gt.num_materials)) then
-       print *,"im invalid16"
+       print *,"im invalid (is_ice_or_FSI_rigid_material): ",im
        stop
       endif
 

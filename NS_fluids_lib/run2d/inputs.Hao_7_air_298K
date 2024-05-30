@@ -140,7 +140,7 @@ ns.freezing_model = 0 0 0 0 0 0 0 0 0 0 0 0
 ns.saturation_temp = 0.0 273.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
 # 
 #ns.fixed_dt	  = 0.01     # hardwire dt
-ns.sum_interval   = 10        # timesteps between computing mass 
+ns.sum_interval   = 5        # timesteps between computing mass 
 
 # initial droplet with small layer of ice at its bottom, on a solid substrate.
 # probtype=55 (GENERAL_PHASE_CHANGE.F90)
@@ -171,7 +171,9 @@ ns.viscconst=1.79e-2 1.724e-4 10000.0 10000.0 # derive CGS:  CGS= Pa s x 10
 #ns.uncoupled_viscosity=1
 #ns.viscconst=100.0 100.0 100.0 100.0
 #ns.denconst=1.0 0.00129 1.0 10.0 #thermal effects only
-ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
+#ns.denconst=1.0 0.001292 0.917 10.0 #physical values of denconst
+#rnew(0.00681)+0.00116 = rold*0.008  rold=1/0.917 rnew=1/0.9
+ns.denconst=1.0 0.001292 0.900 10.0 #make up for the seeded underside
 #ns.denconst=1.0 0.00129 0.850 10.0 
 ns.FSI_flag=0 0 9 1 #FSI_ICE_STATIC=9 FSI_PRESCRIBED_PROBF90=1
 ns.recalesce_flag=0 0 0 0
@@ -193,9 +195,9 @@ ns.yblob2=0.01875 #dxcoarse=0.4/64  4*dxcoarse=0.1/32=0.003125
 ns.zblob2=0.0
 ns.radblob2=0.0 # zero degrees incline (radians)
 # thickness of underside of droplet that is already frozen
-ns.radblob3=0.009375 #dimensionless 2*dxcoarse=0.05/32=0.0015625
+ns.radblob3=0.009375 #dimensionless 2*dxcoarse=2(0.3/64)=0.009375
 # effective radius of water/ice drop: volume=(1/2)  (4/3)pi r^3=
-# 3.2724923E-11 m^3
+# (1/2) (4/3) pi (0.15631)^3=0.007999
 #ns.zblob4=0.00625
 #transitional substrate temperature
 ns.zblob4=0.0 #substrate temperature=wall temperature(atylo)

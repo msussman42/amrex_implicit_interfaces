@@ -7634,7 +7634,7 @@ stop
        cenDeDT, &
        DIMS(cenDeDT), & 
         ! voltotal/mass_total = (1/rho)
-       cenden, &
+       cenden, & 
        DIMS(cenden), &   
        cenvof,DIMS(cenvof), &   
        cenvisc,DIMS(cenvisc), &
@@ -7685,7 +7685,8 @@ stop
       integer, INTENT(in) :: solidheat_flag
       real(amrex_real), INTENT(in) :: microlayer_size(num_materials)
       integer, INTENT(in) :: microlayer_substrate(num_materials)
-      real(amrex_real), INTENT(in) :: microlayer_temperature_substrate(num_materials)
+      real(amrex_real), INTENT(in) :: &
+           microlayer_temperature_substrate(num_materials)
 
       integer, INTENT(in) :: num_curv
       real(amrex_real), INTENT(in) :: time
@@ -7720,7 +7721,7 @@ stop
       integer, INTENT(in) :: DIMDEC(solyfab)
       integer, INTENT(in) :: DIMDEC(solzfab)
       integer, INTENT(in) :: DIMDEC(cenDeDT)
-      integer, INTENT(in) :: DIMDEC(cenden)
+      integer, INTENT(in) :: DIMDEC(cenden) ! 1/rho
       integer, INTENT(in) :: DIMDEC(cenvof)
       integer, INTENT(in) :: DIMDEC(vol)
       integer, INTENT(in) :: DIMDEC(levelPC)
@@ -7746,23 +7747,31 @@ stop
       real(amrex_real), INTENT(in), target :: &
               denstate(DIMV(denstate),num_materials*num_state_material) 
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: mom_den(DIMV(mom_den),num_materials) 
+      real(amrex_real), INTENT(in), target :: &
+              mom_den(DIMV(mom_den),num_materials) 
       real(amrex_real), pointer :: mom_den_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: viscstate(DIMV(viscstate),3*num_materials) 
+      real(amrex_real), INTENT(in), target :: &
+              viscstate(DIMV(viscstate),3*num_materials) 
       real(amrex_real), pointer :: viscstate_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: conductstate(DIMV(viscstate),num_materials) 
+      real(amrex_real), INTENT(in), target :: &
+              conductstate(DIMV(viscstate),num_materials) 
       real(amrex_real), pointer :: conductstate_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solxfab(DIMV(solxfab),nparts_def*SDIM) 
+      real(amrex_real), INTENT(in), target :: &
+              solxfab(DIMV(solxfab),nparts_def*SDIM) 
       real(amrex_real), pointer :: solxfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solyfab(DIMV(solyfab),nparts_def*SDIM) 
+      real(amrex_real), INTENT(in), target :: &
+              solyfab(DIMV(solyfab),nparts_def*SDIM) 
       real(amrex_real), pointer :: solyfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: solzfab(DIMV(solzfab),nparts_def*SDIM) 
+      real(amrex_real), INTENT(in), target :: &
+              solzfab(DIMV(solzfab),nparts_def*SDIM) 
       real(amrex_real), pointer :: solzfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out), target :: cenDeDT(DIMV(cenDeDT))
       real(amrex_real), pointer :: cenDeDT_ptr(D_DECL(:,:,:))
+       ! 1/rho
       real(amrex_real), INTENT(out), target :: cenden(DIMV(cenden))
       real(amrex_real), pointer :: cenden_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(out), target :: cenvof(DIMV(cenvof),num_materials)  
+      real(amrex_real), INTENT(out), target :: &
+              cenvof(DIMV(cenvof),num_materials)  
       real(amrex_real), pointer :: cenvof_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out), target :: cenvisc(DIMV(cenvisc))
       real(amrex_real), pointer :: cenvisc_ptr(D_DECL(:,:,:))
@@ -7928,7 +7937,7 @@ stop
       integer, parameter :: local_tessellate=3
 
       real(amrex_real) local_cenvisc
-      real(amrex_real) local_cenden
+      real(amrex_real) local_cenden  !1/rho
 
       integer :: test_for_make_physics_vars
 
@@ -8085,7 +8094,7 @@ stop
       if (DXMAXLS.gt.zero) then
        ! do nothing
       else
-       print *,"DXMAXLS invalid: fort_init_physics_vars"
+       print *,"DXMAXLS invalid: fort_init_physics_vars: ",DXMAXLS
        stop
       endif
 
@@ -8118,7 +8127,8 @@ stop
         stop
        endif
        do imspec=1,num_species_var
-        if (speciesviscconst_interface(num_interfaces*(imspec-1)+im).ge.zero) then
+        if (speciesviscconst_interface(num_interfaces*(imspec-1)+im).ge. &
+            zero) then
          !do nothing
         else
          print *,"speciesviscconst_interface coeff wrong"
@@ -8192,7 +8202,8 @@ stop
 
            do ireverse=0,1
             local_iten=iten_main+ireverse*num_interfaces
-            if (get_user_latent_heat(local_iten,room_temperature,1).ne.zero) then
+            if (get_user_latent_heat(local_iten,room_temperature,1).ne. &
+                zero) then
              if (freezing_model(local_iten).eq.0) then
               im_solid_micro=microlayer_substrate(im)
               if ((im_solid_micro.ge.1).and. &
@@ -8232,7 +8243,8 @@ stop
                stop
               endif 
              endif
-            else if (get_user_latent_heat(local_iten,room_temperature,1).eq.zero) then
+            else if (get_user_latent_heat(local_iten,room_temperature,1).eq. &
+                     zero) then
              ! do nothing
             else
              print *,"get_user_latent_heat invalid"
@@ -9005,13 +9017,15 @@ stop
 
              do ireverse=0,1
               local_iten=iten_majority+ireverse*num_interfaces
-              if (get_user_latent_heat(local_iten,room_temperature,1).ne.zero) then
+              if (get_user_latent_heat(local_iten,room_temperature,1).ne. &
+                  zero) then
                if ((freezing_model(local_iten).eq.0).or. &
                    (freezing_model(local_iten).eq.5)) then
                 print *,"heatviscconst_interface invalid"
                 stop
                endif 
-              else if (get_user_latent_heat(local_iten,room_temperature,1).eq.zero) then
+              else if (get_user_latent_heat(local_iten,room_temperature,1).eq. &
+                       zero) then
                !do nothing
               else
                print *,"get_user_latent_heat invalid"
@@ -10219,7 +10233,7 @@ stop
          else if (is_rigid(implus_majority).eq.0) then
           ! do nothing
          else
-          print *,"is_prescibed invalid"
+          print *,"is_rigid(implus_majority) invalid: ",implus_majority
           stop
          endif
 
@@ -10253,11 +10267,11 @@ stop
           ! if compressible,
           !   density=massdepart/voltarget
          call derive_density( &
-          voldepart,voldepart,voltotal, &
+          voldepart,voldepart,voltotal, & !intent(in)
           constant_density_all_time, &
-          delta_mass, &
+          delta_mass, & !intent(in)
           im, &
-          den) 
+          den)  !intent(out)
 
          if (den.gt.zero) then
           ! do nothing
@@ -10357,9 +10371,43 @@ stop
          cenvof(D_DECL(i,j,k),im)=volmat(im)/voltotal
         enddo
 
-        local_cenden=voltotal/mass_total
+        if (voltotal.gt.zero) then
+
+         local_cenden=mass_total/voltotal
+
+         if (abs(LSIDE_MAT(im_secondary)).le.DXMAXLS) then
+          call get_iten(implus_majority,im_secondary,iten_main)
+          if (denconst_interface_min(iten_main).eq.zero) then
+           ! do nothing
+          else if (denconst_interface_min(iten_main).gt.zero) then
+           if (local_cenden.lt.denconst_interface_min(iten_main)) then
+            local_cenden=denconst_interface_min(iten_main)
+           endif
+          else
+           print *,"denconst_interface_min(iten_main) invalid"
+           stop
+          endif
+         else if (abs(LSIDE_MAT(im_secondary)).gt.DXMAXLS) then
+          !do nothing
+         else
+          print *,"abs(LSIDE_MAT(im_secondary) invalid"
+          stop
+         endif
+         if (local_cenden.gt.zero) then
+          local_cenden=one/local_cenden
+         else
+          print *,"local_cenden invalid: ",local_cenden
+          stop
+         endif
+
+        else
+         print *,"voltotal invalid"
+         stop
+        endif
+
         local_cenvisc=one/((visc_total/voltotal)+EPS8)  
 
+         ! 1/rho
         if (local_cenden.gt.zero) then
          !do nothing
         else
@@ -10367,6 +10415,7 @@ stop
          stop
         endif
 
+         ! 1/rho
         cenden(D_DECL(i,j,k))=local_cenden
         cenDeDT(D_DECL(i,j,k))=voltotal/DeDT_total
 
@@ -16399,7 +16448,8 @@ stop
       integer, INTENT(in) :: DIMDEC(zface)
       integer, INTENT(in) :: DIMDEC(mask)
       real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
-      real(amrex_real), INTENT(inout),target :: offdiagcheck(DIMV(offdiagcheck),nsolve) 
+      real(amrex_real), INTENT(inout),target :: &
+              offdiagcheck(DIMV(offdiagcheck),nsolve) 
       real(amrex_real), pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: cenden(DIMV(cenden)) 
       real(amrex_real), pointer :: cenden_ptr(D_DECL(:,:,:))
