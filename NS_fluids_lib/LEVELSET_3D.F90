@@ -10142,7 +10142,7 @@ stop
 
       else if (isweep.eq.1) then
 
-        ! cenden, cenvof, cenDeDT, 
+        ! cenden=1/rho, cenvof, cenDeDT=1/(rho cv), 
         ! cenvisc, initialized in this loop.
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,igridlo,igridhi,1) 
@@ -10344,7 +10344,7 @@ stop
          if (DeDT.gt.zero) then
           ! do nothing
          else
-          print *,"DeDT must be positive"
+          print *,"DeDT must be positive: ",DeDT
           stop
          endif
 
@@ -10356,7 +10356,7 @@ stop
         if (mass_total.gt.zero) then
          ! do nothing
         else
-         print *,"mass_total invalid"
+         print *,"mass_total invalid: ",mass_total
          stop
         endif
 
@@ -10417,6 +10417,7 @@ stop
 
          ! 1/rho
         cenden(D_DECL(i,j,k))=local_cenden
+         ! 1/(rho cv)
         cenDeDT(D_DECL(i,j,k))=voltotal/DeDT_total
 
         if (null_viscosity.eq.1) then
