@@ -122,7 +122,12 @@ ns.segregated_gravity_flag=0
 # for theta_L=25 degrees, sigma_SL/sigma_LG=163/1740
 #
 # TRIPLE POINT LIQUID-GAS-ICE (tensions_from_angles.f)
-# sigma_LG/sin(theta_I)=sigma_LI/sin(theta_G)=sigma_GI/sin(theta_L)
+# sigma_LG/sin(theta_I)=sigma_LI/sin(theta_G)=sigma_GI/sin(theta_L) 
+#   or
+# sigma_GI sigma_LG sin(theta_G) =
+# sigma_LI sigma_LG sin(theta_L) =
+# sigma_LI sigma_GI sin(theta_I)
+#
 # theta_I=90 degrees
 # theta_G=180-18 degrees  (18 degrees is the growth angle)
 # theta_L=90+18 degrees 

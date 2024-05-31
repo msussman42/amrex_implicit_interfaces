@@ -22,9 +22,12 @@ ns.projection_pressure_scale=1.0e-2
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 
 ns.num_species_var=1
-ns.speciesconst=1.0 1.0 1.0 1.0
+#ns.speciesconst=1.0 1.0 1.0 1.0 #theta2=pi
+ns.speciesconst=0.9 0.9 0.9 0.9 #growthangle > 0
 ns.speciesviscconst=0.0 0.0 0.0 0.0
-ns.speciesreactionrate=1.0e+10 1.0e+10 1.0e+10 1.0e+10
+#dY/dt=r(1-Y)
+ns.speciesreactionrate=0.0 0.0 0.0 0.0
+#ns.speciesreactionrate=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #theta2=pi
 ns.rigid_fraction_id=0 0 1 0
 
 ns.post_init_pressure_solve=1 
@@ -110,9 +113,28 @@ ns.segregated_gravity_flag=0
 #Legendre, D. (2021). A hybrid VOF-IBM method for the simulation of 
 #freezing liquid films and freezing drops. Journal of Computational 
 #Physics, 432, 110160.
-ns.tension= 75.7e-6 0.0 36.75e-6 0.0 75.7e-6  0.0
-ns.tension_init= 75.7e-6 0.0 36.75e-6 0.0 75.7e-6  0.0
-
+#ns.tension= 75.7e-6 0.0 36.75e-6 0.0 75.7e-6 0.0 #theta2=pi
+#ns.tension_init= 75.7e-6 0.0 36.75e-6 0.0 75.7e-6 0.0
+# TRIPLE POINT LIQUID-GAS-ICE (tensions_from_angles.f)
+# sigma_LG/sin(theta_I)=sigma_LI/sin(theta_G)=sigma_GI/sin(theta_L) 
+#   or
+# sigma_GI sigma_LG sin(theta_G) =
+# sigma_LI sigma_LG sin(theta_L) =
+# sigma_LI sigma_GI sin(theta_I)
+#
+# theta_I=90 degrees
+# theta_G=180-18 degrees  (18 degrees is the growth angle)
+# theta_L=90+18 degrees 
+# Note: if the growth angle is 0 degrees (e.g. for freezing water), then
+# theta_I=90 degrees
+# theta_G=180 degrees  
+# theta_L=90 degrees 
+# and sigma_GI=sigma_LI=0.0 
+# LG,LI,LS,IG,GS,SI  
+ns.tension=      75.7e-6 23.4e-6 36.75e-6 71.99e-6 75.7e-6 0.0 #growth=18
+ns.tension_init= 75.7e-6 23.4e-6 36.75e-6 71.99e-6 75.7e-6 0.0
+#ns.tension=      75.7e-6 11.8e-6 36.75e-6 74.8e-6 75.7e-6 0.0 #growth=9
+#ns.tension_init= 75.7e-6 11.8e-6 36.75e-6 74.8e-6 75.7e-6 0.0
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
