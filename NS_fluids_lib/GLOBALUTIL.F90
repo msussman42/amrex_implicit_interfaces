@@ -8312,7 +8312,7 @@ end subroutine print_visual_descriptor
        enddo
        iten=previous_count+im_opp-im
       else
-       print *,"im or im_opp invalid"
+       print *,"im or im_opp invalid: ",im,im_opp
        stop
       endif
 
