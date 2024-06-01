@@ -109,6 +109,7 @@ ns.cfl            = 0.85      # cfl number for hyperbolic system
 ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max=1.01    
 ns.visc_coef      = 0.204    # 1/60 physical liquid lens, Oh=0.204
+#ns.visc_coef      = 0.05  # water viscosity gas lens Oh=0.05
 #ns.visc_coef      = 0.00303  # water viscosity gas lens Oh=0.00303
 #ns.visc_coef      = 0.0013  # water viscosity floating lens Oh=0.0013
 ns.gravity        = 0.0
