@@ -131,10 +131,21 @@ ns.segregated_gravity_flag=0
 # theta_L=90 degrees 
 # and sigma_GI=sigma_LI=0.0 
 # LG,LI,LS,IG,GS,SI  
-ns.tension=      75.7e-6 23.4e-6 36.75e-6 71.99e-6 75.7e-6 0.0 #growth=18
-ns.tension_init= 75.7e-6 23.4e-6 36.75e-6 71.99e-6 75.7e-6 0.0
+#ns.tension=      75.7e-6 23.4e-6 36.75e-6 71.99e-6 75.7e-6 0.0 #growth=18
+#ns.tension_init= 75.7e-6 23.4e-6 36.75e-6 71.99e-6 75.7e-6 0.0
 #ns.tension=      75.7e-6 11.8e-6 36.75e-6 74.8e-6 75.7e-6 0.0 #growth=9
 #ns.tension_init= 75.7e-6 11.8e-6 36.75e-6 74.8e-6 75.7e-6 0.0
+# theta_G=180-18
+# theta_L=90-18
+# theta_I=90+36
+ns.tension=      75.7e-6 28.9e-6 36.75e-6 89.0e-6 75.7e-6 0.0 
+ns.tension_init= 75.7e-6 28.9e-6 36.75e-6 89.0e-6 75.7e-6 0.0
+# theta_G=180-9
+# theta_L=90-9
+# theta_I=90+18
+#ns.tension=      75.7e-6 12.5e-6 36.75e-6 78.6e-6 75.7e-6 0.0 
+#ns.tension_init= 75.7e-6 12.5e-6 36.75e-6 78.6e-6 75.7e-6 0.0
+
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
 # specific heat of water: 4.186E+3 J/(kg K)
