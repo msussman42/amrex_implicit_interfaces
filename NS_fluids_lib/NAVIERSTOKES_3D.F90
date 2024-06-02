@@ -3887,21 +3887,30 @@ END SUBROUTINE SIMP
                 dir2=1
                 if (ifine.eq.0) then
                  xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(-1,dir2))
-                else
+                else if (ifine.eq.1) then
                  xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(1,dir2))
+                else
+                 print *,"ifine invalid"
+                 stop
                 endif
                 dir2=2
                 if (jfine.eq.0) then
                  xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(-1,dir2))
-                else
+                else if (jfine.eq.1) then
                  xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(1,dir2))
+                else
+                 print *,"jfine invalid"
+                 stop
                 endif
                 if (SDIM.eq.3) then
                  dir2=SDIM
                  if (kfine.eq.0) then
                   xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(-1,dir2))
-                 else
+                 else if (kfine.eq.1) then
                   xrefine(dir2)=0.5d0*(xstenBL(0,dir2)+xstenBL(1,dir2))
+                 else
+                  print *,"kfine invalid"
+                  stop
                  endif
                 endif
                 localwt=EPS2*(dx(1)**2)
@@ -5616,7 +5625,8 @@ END SUBROUTINE SIMP
       real(amrex_real), pointer :: masksem_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in),target :: cmasksem(DIMV(cmasksem))
       real(amrex_real), pointer :: cmasksem_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in),target :: coarseLS(DIMV(coarseLS),num_materials)
+      real(amrex_real), INTENT(in),target :: &
+        coarseLS(DIMV(coarseLS),num_materials)
       real(amrex_real), pointer :: coarseLS_ptr(D_DECL(:,:,:),:)
 
       integer clochi(SDIM)
@@ -6303,9 +6313,9 @@ END SUBROUTINE SIMP
           stop
          endif
  
-        enddo !kfine
-        enddo !jfine
         enddo !ifine
+        enddo !jfine
+        enddo !kfine
 
        else if ((velbc(dir+1,side,dir+1).eq.EXT_DIR).or. &
                 (velbc(dir+1,side,dir+1).eq.REFLECT_EVEN).or. &
@@ -6863,9 +6873,9 @@ END SUBROUTINE SIMP
           stop
          endif
  
-        enddo !kfine
-        enddo !jfine
         enddo !ifine
+        enddo !jfine
+        enddo !kfine
 
        else if ((velbc(dir+1,side,dir+1).eq.EXT_DIR).or. &
                 (velbc(dir+1,side,dir+1).eq.REFLECT_EVEN).or. &

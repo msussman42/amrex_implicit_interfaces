@@ -24731,8 +24731,12 @@ end subroutine initialize2d
         bfact, &
         nc, &
         saturation_temp, &
-        scal,DIMS(scal), &
-        LS,DIMS(LS), &
+        scal, &
+        DIMS(scal), &
+        refineden, &
+        DIMS(refineden), &
+        LS, &
+        DIMS(LS), &
         dx,xlo,xhi, &
         centroid_noise_factor) &
        bind(c,name='fort_initdata')
@@ -24769,10 +24773,15 @@ end subroutine initialize2d
        real(amrex_real), INTENT(in) :: saturation_temp(2*num_interfaces)
        real(amrex_real), INTENT(in) :: time
        integer, INTENT(in) :: DIMDEC(scal)
+       integer, INTENT(in) :: DIMDEC(refineden)
        integer, INTENT(in) :: DIMDEC(LS)
 
        real(amrex_real), INTENT(inout), target :: scal(DIMV(scal),nc)
        real(amrex_real), pointer :: scal_ptr(D_DECL(:,:,:),:)
+
+       real(amrex_real), INTENT(inout), target :: &
+         refineden(DIMV(refineden),NUM_CELL_REFINE_DENSITY)
+       real(amrex_real), pointer :: refineden_ptr(D_DECL(:,:,:),:)
 
        real(amrex_real), INTENT(inout), target :: &
                LS(DIMV(LS),num_materials*(1+SDIM))
@@ -24883,6 +24892,7 @@ end subroutine initialize2d
        endif
 
        scal_ptr=>scal
+       refineden_ptr=>refineden
        LS_ptr=>LS
 
        tessellate=0
@@ -24937,6 +24947,7 @@ end subroutine initialize2d
        endif
 
        call checkbound_array(fablo,fabhi,scal_ptr,1,-1)
+       call checkbound_array(fablo,fabhi,refineden_ptr,1,-1)
        call checkbound_array(fablo,fabhi,LS_ptr,1,-1)
 
        call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
@@ -26309,6 +26320,49 @@ end subroutine initialize2d
         do n=1,nc
          scal(D_DECL(ic,jc,kc),n)=scalc(n)
         enddo
+
+        if ((num_materials_compressible.ge.1).and. &
+            (num_materials_compressible.le.num_materials)) then
+         kfine=0
+#if (AMREX_SPACEDIM==3)
+         do kfine=0,1
+#endif
+         do jfine=0,1
+         do ifine=0,1
+          nfine=4*kfine+2*jfine+ifine+1
+
+          im_refine_density=0
+          do im=1,num_materials
+           if (is_compressible_mat(im).eq.0) then
+            !do nothing
+           else if (is_compressible_mat(im).eq.1) then
+            im_refine_density=im_refine_density+1
+            if (fort_im_refine_density_map(im_refine_density).eq.im-1) then
+             !do nothing
+            else
+             print *,"fort_im_refine_density_map invalid"
+             stop
+            endif
+ FIX ME
+           else
+            print *,"is_compressible_mat(im) invalid"
+            stop
+           endif
+          enddo ! im=1..num_materials
+
+         enddo !ifine
+         enddo !jfine
+#if (AMREX_SPACEDIM==3)
+         enddo !kfine
+#endif
+
+        else if (num_materials_compressible.eq.0) then
+         !do nothing
+        else
+         print *,"num_materials_compressible invalid"
+         stop
+        endif
+
         do imls=1,num_materials*(1+SDIM)
          LS(D_DECL(ic,jc,kc),imls)=LSc(imls)
         enddo

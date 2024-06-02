@@ -9817,15 +9817,63 @@ NavierStokes::initData () {
 
  int nparts_tensor=im_elastic_map.size();
 
- if ((nparts_tensor>=1)&&(nparts_tensor<=num_materials)) {  
-  MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
-  if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
-   amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
-  Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC,1);
- } else if (nparts_tensor==0) {
+ if ((num_materials_viscoelastic>=1)&&
+     (num_materials_viscoelastic<=num_materials)) {
+
+  if ((nparts_tensor>=1)&&(nparts_tensor<=num_materials)) {  
+   MultiFab& Tensor_new = get_new_data(Tensor_Type,slab_step+1);
+   if (Tensor_new.nComp()!=NUM_CELL_ELASTIC)
+    amrex::Error("Tensor_new.nComp()!=NUM_CELL_ELASTIC");
+   Tensor_new.setVal(0.0,0,NUM_CELL_ELASTIC,1);
+  } else if (nparts_tensor==0) {
+   amrex::Error("expecting nparts_tensor>0");
+  } else 
+   amrex::Error("nparts_tensor invalid");
+
+ } else if (num_materials_viscoelastic==0) {
+  //do nothing
+ } else
+  amrex::Error("num_materials_viscoelastic invalid");
+
+ if (NUM_CELL_REFINE_DENSITY==
+     num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
   // do nothing
- } else 
-  amrex::Error("nparts_tensor invalid");
+ } else
+  amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+ int Refine_Density_Type_local=-1;
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+  Refine_Density_Type_local=Refine_Density_Type;
+ } else if (num_materials_compressible==0) {
+  Refine_Density_Type_local=State_Type;
+ } else
+  amrex::Error("num_materials_compressble invalid");
+
+ MultiFab& Refine_Density_new=
+	 get_new_data(Refine_Density_Type_local,slab_step+1);
+
+ if ((num_materials_compressible>=1)&&
+     (num_materials_compressible<=num_materials)) {
+
+  if (NUM_CELL_REFINE_DENSITY==
+      num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) {
+   // do nothing
+  } else
+   amrex::Error("NUM_CELL_REFINE_DENSITY invalid");
+
+  if (Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) {
+   // do nothing
+  } else
+   amrex::Error("(Refine_Density_new.nComp()==NUM_CELL_REFINE_DENSITY) failed");
+
+  Refine_Density_new.setVal(0.0,0,NUM_CELL_REFINE_DENSITY,1);
+
+ } else if (num_materials_compressible==0) {
+  // do nothing
+ } else
+  amrex::Error("num_materials_compressible invalid:initData");
 
  DIV_new.setVal(0.0);
 
@@ -9937,6 +9985,9 @@ NavierStokes::initData () {
    S_new[mfi].dataPtr(),
    ARLIM(S_new[mfi].loVect()),
    ARLIM(S_new[mfi].hiVect()),
+   Refine_Density_new[mfi].dataPtr(),
+   ARLIM(Refine_Density_new[mfi].loVect()),
+   ARLIM(Refine_Density_new[mfi].hiVect()),
    LS_new[mfi].dataPtr(),
    ARLIM(LS_new[mfi].loVect()),
    ARLIM(LS_new[mfi].hiVect()),

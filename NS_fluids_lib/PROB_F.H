@@ -46,8 +46,15 @@ namespace amrex{
       int* bfact,
       int* nc,
       Real* saturation_temp,
-      Real* scal,AMREX_ARLIM_P(scallo),AMREX_ARLIM_P(scalhi),
-      Real* LS,AMREX_ARLIM_P(LSlo),AMREX_ARLIM_P(LShi),
+      Real* scal,
+      AMREX_ARLIM_P(scallo),
+      AMREX_ARLIM_P(scalhi),
+      Real* refineden,
+      AMREX_ARLIM_P(refinedenlo),
+      AMREX_ARLIM_P(refinedenhi),
+      Real* LS,
+      AMREX_ARLIM_P(LSlo),
+      AMREX_ARLIM_P(LShi),
       const Real* dx,const Real* xlo, const Real* xhi,
       Real* centroid_noise_factor);
 

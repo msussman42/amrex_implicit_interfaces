@@ -13311,7 +13311,7 @@ stop
          else if (kfine.eq.1) then
           vel_fine(veldir)=zmac_old(D_DECL(icrse,jcrse,kcrse+1))
          else
-          print *,"kfine invalid"
+          print *,"kfine invalid: ",kfine
           stop
          endif
         endif
@@ -13721,11 +13721,11 @@ stop
          else if (kfine.eq.1) then
           usten_accept(-1)=usten_accept(0)
          else
-          print *,"kfine invalid"
+          print *,"kfine invalid: ",kfine
           stop
          endif
         else
-         print *,"normdir invalid"
+         print *,"normdir invalid: ",normdir
          stop
         endif
         usten_accept(0)=half*(usten_accept(-1)+usten_accept(1))
@@ -13758,7 +13758,7 @@ stop
           kfine_stencil_lo=0 
           kfine_stencil_hi=1
          else
-          print *,"normdir invalid"
+          print *,"normdir invalid: ",normdir
           stop
          endif
          kfine_stencil=0
@@ -13865,11 +13865,11 @@ stop
             else if (kfine_stencil.eq.1) then
              usten_donate(-1)=usten_donate(0)
             else
-             print *,"kfine_stencil invalid"
+             print *,"kfine_stencil invalid: ",kfine_stencil
              stop
             endif
            else
-            print *,"normdir invalid"
+            print *,"normdir invalid: ",normdir
             stop
            endif
            usten_donate(0)=half*(usten_donate(-1)+usten_donate(1))
@@ -14243,12 +14243,12 @@ stop
            stop
           endif
           if (refine_vol_bucket(im_refine_density).gt.zero) then
-           refinedennew(D_DECL(icrse,jcrse,crse), &
+           refinedennew(D_DECL(icrse,jcrse,kcrse), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
              refine_den_bucket(im_refine_density)/ &
              refine_vol_bucket(im_refine_density)
           else if (refine_vol_bucket(im_refine_density).eq.zero) then
-           refinedennew(D_DECL(icrse,jcrse,crse), &
+           refinedennew(D_DECL(icrse,jcrse,kcrse), &
             (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)= &
              fort_denconst(im) 
           else

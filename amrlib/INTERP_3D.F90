@@ -774,8 +774,10 @@ stop
       integer, INTENT(in) :: DIMDEC(fdmof)
       integer, INTENT(in) :: flo(SDIM),fhi(SDIM)
       integer domlo(SDIM)
-      real(amrex_real), INTENT(in) :: datamof(DIMV(dmof),num_materials*ngeom_recon)
-      real(amrex_real), INTENT(out) :: fdatamof(DIMV(fdmof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in) :: &
+        datamof(DIMV(dmof),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(out) :: &
+        fdatamof(DIMV(fdmof),num_materials*ngeom_recon)
       real(amrex_real), INTENT(in) :: problo(SDIM),dxf(SDIM),dxc(SDIM)
       integer growlo(3),growhi(3)
       integer stenlo(3),stenhi(3)
