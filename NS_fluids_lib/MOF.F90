@@ -7133,7 +7133,7 @@ end subroutine volume_sanity_check
        else if (kfine.eq.1) then
         xsten(-1,dir2)=xsten(0,dir2)
        else
-        print *,"kfine invalid"
+        print *,"kfine invalid: ",kfine
         stop
        endif
       endif

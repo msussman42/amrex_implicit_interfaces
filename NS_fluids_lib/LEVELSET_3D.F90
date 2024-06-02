@@ -10786,6 +10786,8 @@ stop
            ! do nothing
           else
            print *,"den must be positive build_semi_refine_vof"
+           print *,"i,j,k,ifine,jfine,kfine,nfine ",i,j,k, &
+            ifine,jfine,kfine,nfine
            print *,"im,den ",im,den
            print *,"im,fort_denconst(im) ",im,fort_denconst(im)
            print *,"level,finest_level ",level,finest_level
@@ -10848,7 +10850,7 @@ stop
             else if (kfine.eq.1) then
              iside=1
             else
-             print *,"kfine invalid"
+             print *,"kfine invalid: ",kfine
              stop
             endif
            else
