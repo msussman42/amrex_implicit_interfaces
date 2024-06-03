@@ -24793,7 +24793,11 @@ end subroutine initialize2d
 
        real(amrex_real) centroid_noise,noise_amplitude
        integer ibase
-       integer ic,jc,kc,n,im
+       integer refine_comp
+       integer ic,jc,kc
+       integer ifine,jfine,kfine
+       integer nfine
+       integer n,im
        integer dir
 
        integer, parameter :: num_particles=0
@@ -24850,6 +24854,7 @@ end subroutine initialize2d
        real(amrex_real) voflist(num_materials)
 
        integer im_source,im_dest,ireverse,iten
+       integer im_refine_density
        real(amrex_real) L_ice_melt,TSAT,T_EXTREME,cp_melt,k_melt,rstefan
        real(amrex_real) T_FIELD
        real(amrex_real) den_ratio
@@ -24932,17 +24937,22 @@ end subroutine initialize2d
        endif
        max_levelstack=adapt_quad_depth
 
+      if (NUM_CELL_REFINE_DENSITY.eq. &
+          num_materials_compressible*ENUM_NUM_REFINE_DENSITY_TYPE) then
+       ! do nothing
+      else
+       print *,"NUM_CELL_REFINE_DENSITY invalid"
+       stop
+      endif
+
        if (nc.ne.STATE_NCOMP) then
-        print *,"nc invalid"
-        stop
-       endif
-       if (nc.ne.STATE_NCOMP) then
-        print *,"scal invalid"
+        print *,"nc invalid: ",nc
+        print *,"STATE_NCOMP: ",STATE_NCOMP
         stop
        endif
       
        if (num_state_base.ne.2) then
-        print *,"num_state_base invalid"
+        print *,"num_state_base invalid: ",num_state_base
         stop
        endif
 
@@ -25830,7 +25840,8 @@ end subroutine initialize2d
            ireverse=0
            call get_iten(im_source,im_dest,iten)
            L_ice_melt= &
-            abs(get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1))
+            abs(get_user_latent_heat(iten+ireverse*num_interfaces, &
+                 room_temperature,1))
            TSAT=saturation_temp(iten+ireverse*num_interfaces)
            T_EXTREME=fort_initial_temperature(im_source)
            cp_melt=get_user_stiffCP(im_source) ! J/Kelvin
@@ -26317,6 +26328,7 @@ end subroutine initialize2d
 
         enddo ! im=1..num_materials
 
+         ! nc=STATE_NCOMP
         do n=1,nc
          scal(D_DECL(ic,jc,kc),n)=scalc(n)
         enddo
@@ -26343,7 +26355,11 @@ end subroutine initialize2d
              print *,"fort_im_refine_density_map invalid"
              stop
             endif
- FIX ME
+            refine_comp=ENUM_NUM_REFINE_DENSITY_TYPE* &
+                   (im_refine_density-1)+nfine
+            ibase=STATECOMP_STATES+(im-1)*num_state_material+ &
+                    ENUM_DENVAR+1
+            refineden(D_DECL(ic,jc,kc),refine_comp)=scalc(ibase)
            else
             print *,"is_compressible_mat(im) invalid"
             stop
