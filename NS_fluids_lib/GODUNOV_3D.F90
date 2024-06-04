@@ -4765,17 +4765,21 @@ stop
       integer, INTENT(in) :: DIMDEC(recon)
       real(amrex_real), INTENT(in), target :: maskcov(DIMV(maskcov))
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(inout), target :: xface(DIMV(xface),FACECOMP_NCOMP)
+      real(amrex_real), INTENT(inout), target :: &
+              xface(DIMV(xface),FACECOMP_NCOMP)
       real(amrex_real), pointer :: xface_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: yface(DIMV(yface),FACECOMP_NCOMP)
+      real(amrex_real), INTENT(inout), target :: &
+              yface(DIMV(yface),FACECOMP_NCOMP)
       real(amrex_real), pointer :: yface_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(inout), target :: zface(DIMV(zface),FACECOMP_NCOMP)
+      real(amrex_real), INTENT(inout), target :: &
+              zface(DIMV(zface),FACECOMP_NCOMP)
       real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate),nden)
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: LSnew(DIMV(LSnew),num_materials)
       real(amrex_real), pointer :: LSnew_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: recon(DIMV(recon),num_materials*ngeom_recon)
+      real(amrex_real), INTENT(in), target :: &
+              recon(DIMV(recon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
 
       integer complement_flag
@@ -4828,7 +4832,7 @@ stop
       if (time.ge.zero) then
        ! do nothing
       else
-       print *,"time invalid"
+       print *,"time invalid: ",time
        stop
       endif
 
@@ -4850,7 +4854,7 @@ stop
       if (dt.gt.zero) then
        ! do nothing
       else
-       print *,"dt invalid"
+       print *,"dt invalid: ",dt
        stop
       endif
 
