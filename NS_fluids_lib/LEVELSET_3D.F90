@@ -12170,16 +12170,16 @@ stop
          ! side=1 left half of cell, side=2 right half of cell
          do side=1,2
 
-          if (side.eq.1) then
+          if (side.eq.1) then !left half of cell
            iface=i
            jface=j
            kface=k
-          else if (side.eq.2) then
+          else if (side.eq.2) then !right half of cell
            iface=i+ii
            jface=j+jj
            kface=k+kk
           else
-           print *,"side invalid"
+           print *,"side invalid: ",side
            stop
           endif
  
@@ -12264,18 +12264,18 @@ stop
 
           mass_side(side)=zero
           do im=1,num_materials 
-           if (side.eq.1) then  ! left half of cell
+           if (side.eq.1) then !left half of cell(right half of [ijk]face)
             sidecomp=FACECOMP_MASSFACE+2*(im-1)+2
-           else if (side.eq.2) then ! right half of cell
+           else if (side.eq.2) then !right half of cell(left half of [ijk]face)
             sidecomp=FACECOMP_MASSFACE+2*(im-1)+1
            else
-            print *,"side invalid"
+            print *,"side invalid: ",side
             stop
            endif
            mass_side(side)=mass_side(side)+ASIDE(side,sidecomp) 
           enddo ! im=1..num_materials
 
-         enddo ! side=1..2
+         enddo ! side=1..2 (left half of cell,right half of cell)
 
          masscell=mass_side(1)+mass_side(2)
 
@@ -12284,7 +12284,7 @@ stop
              (masscell.gt.zero)) then
           ! do nothing
          else
-          print *,"mass invalid"
+          print *,"mass invalid: ",mass_side(1),mass_side(2),masscell
           stop
          endif
 
@@ -12292,11 +12292,11 @@ stop
           veldest(D_DECL(i,j,k),velcomp)=vel_clamped(dir+1)
          else if (LS_clamped.lt.zero) then
 
-          if (cell_velocity_override.eq.1) then
+          if (cell_velocity_override.eq.1) then ! solid velocity
            veldest(D_DECL(i,j,k),velcomp)= &
             (mass_side(1)*ufacesolid(1)+ &
              mass_side(2)*ufacesolid(2))/masscell
-          else if (cell_velocity_override.eq.0) then
+          else if (cell_velocity_override.eq.0) then ! fluid velocity
            veldest(D_DECL(i,j,k),velcomp)= &
              (mass_side(1)*uface(1)+ &
               mass_side(2)*uface(2))/masscell
@@ -12471,11 +12471,11 @@ stop
           ! side=1 left half of cell, side=2 right half of cell
          do side=1,2
 
-          if (side.eq.1) then
+          if (side.eq.1) then !left half of cell
            iface=i
            jface=j
            kface=k
-          else if (side.eq.2) then
+          else if (side.eq.2) then !right half of cell
            iface=i+ii
            jface=j+jj
            kface=k+kk
@@ -12515,18 +12515,18 @@ stop
            use_face_pres(side)= &
                  NINT(zp(D_DECL(iface,jface,kface),VALID_PEDGE+1))
           else
-           print *,"dir invalid mac to cell 3"
+           print *,"dir invalid mac to cell 3: ",dir
            stop
           endif
 
           mass_side(side)=zero
           do im=1,num_materials 
            if (side.eq.1) then  ! left half of cell
-            sidecomp=FACECOMP_MASSFACE+2*(im-1)+2
+            sidecomp=FACECOMP_MASSFACE+2*(im-1)+2 !right half of [ijk]face
            else if (side.eq.2) then ! right half of cell
-            sidecomp=FACECOMP_MASSFACE+2*(im-1)+1
+            sidecomp=FACECOMP_MASSFACE+2*(im-1)+1 !left half of [ijk]face
            else
-            print *,"side invalid"
+            print *,"side invalid: ",side
             stop
            endif
            mass_side(side)=mass_side(side)+ASIDE(side,sidecomp) 
@@ -12541,7 +12541,8 @@ stop
              (masscell.gt.zero)) then
           !do nothing
          else
-          print *,"mass_side(1) or mass_side(2) or masscell invalid"
+          print *,"mass_side(1) or mass_side(2) or masscell invalid: "
+          print *,mass_side(1),mass_side(2),masscell
           stop
          endif
 
@@ -12770,7 +12771,7 @@ stop
         ! low order approximation: CISL or sem_mac_to_cell
         ! high order approximation: sem_mac_to_cell
        else
-        print *,"operation_flag invalid8"
+        print *,"operation_flag invalid8: ",operation_flag
         stop
        endif
 
@@ -15371,7 +15372,7 @@ stop
                   stop
                  endif
                 else
-                 print *,"den_H invalid"
+                 print *,"den_H invalid: ",den_H
                  stop
                 endif
 
