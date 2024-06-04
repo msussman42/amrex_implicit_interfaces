@@ -3277,18 +3277,21 @@ stop
       real(amrex_real), pointer :: areay_ptr(D_DECL(:,:,:))
       real(amrex_real), pointer :: areaz_ptr(D_DECL(:,:,:))
 
-      real(amrex_real), INTENT(out),target :: history_dat(DIMV(history_dat),nhistory)
+      real(amrex_real), INTENT(out),target :: &
+              history_dat(DIMV(history_dat),nhistory)
       real(amrex_real), pointer :: history_dat_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: masknbr(DIMV(masknbr),4)
       real(amrex_real), pointer :: masknbr_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: LSPC(DIMV(LSPC),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+              LSPC(DIMV(LSPC),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LSPC_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target ::  &
            recon(DIMV(recon),num_materials*ngeom_recon)
       real(amrex_real), pointer :: recon_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out),target :: curvfab(DIMV(curvfab),num_curv)
       real(amrex_real), pointer :: curvfab_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: velfab(DIMV(velfab),STATE_NCOMP_VEL)
+      real(amrex_real), INTENT(in), target :: &
+              velfab(DIMV(velfab),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: velfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target ::  &
               denfab(DIMV(denfab),num_materials*num_state_material)
