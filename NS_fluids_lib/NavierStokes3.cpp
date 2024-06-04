@@ -2639,8 +2639,18 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // velocity and pressure
     avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
 
-     // den,denA,(total E)/rho,temp,pres,...
-    avgDownALL(State_Type,STATECOMP_STATES,num_state_material*num_materials,1);  
+     // den,temp,species, ....
+    avgDownALL(State_Type,STATECOMP_STATES, 
+               num_state_material*num_materials,1);  
+
+    if ((num_materials_compressible>=1)&&
+        (num_materials_compressible<=num_materials)) {
+     avgDownALL_refine_density();
+    } else if (num_materials_compressible==0) {
+     // do nothing
+    } else
+     amrex::Error("num_materials_compressible invalid in do_the_advance");
+
     debug_memory();
 
     double start_phys_time=ParallelDescriptor::second();
