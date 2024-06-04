@@ -7007,13 +7007,13 @@ end subroutine print_visual_descriptor
         normal_dir, &
         xcenter, &
         n1d, &
-        overall_crossing_status, &
+        overall_crossing_status, & !intent(in) (1=success 0=not found)
         vof_height_function)
       use probcommon_module
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: overall_crossing_status
+      integer, INTENT(in) :: overall_crossing_status !1=success 0=not found
       integer, INTENT(in) :: vof_height_function
       real(amrex_real), INTENT(in) :: htfunc_LS(-1:1,-1:1)
       real(amrex_real), INTENT(in) :: htfunc_VOF(-1:1,-1:1)

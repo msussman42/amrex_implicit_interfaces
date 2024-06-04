@@ -10380,7 +10380,8 @@ stop
 
          if (abs(LSIDE_MAT(im_secondary)).le.DXMAXLS) then
           call get_iten(implus_majority,im_secondary,iten_main)
-          if (denconst_interface_min(iten_main).eq.zero) then
+          if ((denconst_interface_min(iten_main).eq.zero).or. &
+              (1.eq.1)) then
            ! do nothing
           else if (denconst_interface_min(iten_main).gt.zero) then
            if (local_cenden.lt.denconst_interface_min(iten_main)) then
