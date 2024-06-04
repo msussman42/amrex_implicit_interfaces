@@ -378,19 +378,23 @@ stop
        icemask=zero
        icefacecut=zero
 
-       ispec=rigid_fraction_id(im_FSI_rigid)
-       if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-        spec_comp=(im_FSI_rigid-1)*num_state_material+ENUM_SPECIESVAR+ispec
-        test_icefacecut=one-denstate(spec_comp);
-        if (test_icefacecut.eq.zero) then
-         ! do nothing
+       if (1.eq.0) then
+
+        ispec=rigid_fraction_id(im_FSI_rigid)
+        if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+         spec_comp=(im_FSI_rigid-1)*num_state_material+ENUM_SPECIESVAR+ispec
+         test_icefacecut=one-denstate(spec_comp);
+         if (test_icefacecut.eq.zero) then
+          ! do nothing
+         else
+          print *,"expecting test_icefacecut=0.0d0: ",test_icefacecut
+          stop
+         endif
         else
-         print *,"expecting test_icefacecut=0.0d0"
+         print *,"ispec invalid"
          stop
         endif
-       else
-        print *,"ispec invalid"
-        stop
+
        endif
 
       else if ((im_FSI_rigid.ge.0).and. &
@@ -423,7 +427,8 @@ stop
              call get_iten(im,im_opp,iten)
              do ireverse=0,1
               LL(ireverse)= &
-               get_user_latent_heat(iten+ireverse*num_interfaces,room_temperature,1)
+               get_user_latent_heat(iten+ireverse*num_interfaces, &
+                   room_temperature,1)
              enddo
             else if (is_ice(im_tertiary).eq.1) then
              ! do nothing
@@ -470,33 +475,37 @@ stop
           icemask=zero
           icefacecut=zero
 
-          ispec=rigid_fraction_id(im_primary)
-          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+          if (1.eq.0) then
 
-           species_base=fort_speciesconst((ispec-1)*num_materials+im_primary)
+           ispec=rigid_fraction_id(im_primary)
+           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
 
-           spec_comp=(im_primary-1)*num_state_material+ENUM_SPECIESVAR+ispec
+            species_base=fort_speciesconst((ispec-1)*num_materials+im_primary)
 
-           if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
-               (denstate(spec_comp).le.one)) then
+            spec_comp=(im_primary-1)*num_state_material+ENUM_SPECIESVAR+ispec
 
-            icefacecut=one-denstate(spec_comp);
-            if ((icefacecut.ge.zero).and. &
-                (icefacecut.lt.one)) then
-             ! do nothing
+            if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
+                (denstate(spec_comp).le.one)) then
+
+             icefacecut=one-denstate(spec_comp);
+             if ((icefacecut.ge.zero).and. &
+                 (icefacecut.lt.one)) then
+              ! do nothing
+             else
+              print *,"icefacecut invalid(3): ",icefacecut
+              stop
+             endif
+
             else
-             print *,"icefacecut invalid(3): ",icefacecut
+             print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
              stop
             endif
 
            else
-            print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
+            print *,"ispec invalid: ",ispec
             stop
            endif
 
-          else
-           print *,"ispec invalid: ",ispec
-           stop
           endif
 
          else if (is_ice(im_primary).eq.0) then
@@ -623,52 +632,56 @@ stop
           else if (icemask.eq.zero) then
            icefacecut=zero
 
-           ispec=rigid_fraction_id(im_ice)
-           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+           if (1.eq.0) then
 
-            species_base=fort_speciesconst((ispec-1)*num_materials+im_ice)
+            ispec=rigid_fraction_id(im_ice)
+            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
 
-            spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
+             species_base=fort_speciesconst((ispec-1)*num_materials+im_ice)
 
-            if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
-                (denstate(spec_comp).le.one)) then
+             spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
 
-             icefacecut=one-denstate(spec_comp);
-             if ((icefacecut.ge.zero).and. &
-                 (icefacecut.le.one)) then
+             if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
+                 (denstate(spec_comp).le.one)) then
+
+              icefacecut=one-denstate(spec_comp);
+              if ((icefacecut.ge.zero).and. &
+                  (icefacecut.le.one)) then
+               ! do nothing
+              else
+               print *,"icefacecut invalid(4)"
+               print *,"icefacecut= ",icefacecut
+               stop
+              endif
+
+             else
+              print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
+              stop
+             endif
+
+             call get_user_tension( &
+              xtarget,time,fort_tension,user_tension,def_thermal)
+
+             if (user_tension(iten).eq.zero) then
+              if (icefacecut.eq.zero) then
+               ! do nothing
+              else
+               print *,"icefacecut invalid(5)"
+               print *,"icefacecut= ",icefacecut
+               stop
+              endif
+             else if (user_tension(iten).gt.zero) then
               ! do nothing
              else
-              print *,"icefacecut invalid(4)"
-              print *,"icefacecut= ",icefacecut
+              print *,"user_tension invalid"
               stop
              endif
 
             else
-             print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
+             print *,"ispec invalid: ",ispec
              stop
             endif
 
-            call get_user_tension( &
-             xtarget,time,fort_tension,user_tension,def_thermal)
-
-            if (user_tension(iten).eq.zero) then
-             if (icefacecut.eq.zero) then
-              ! do nothing
-             else
-              print *,"icefacecut invalid(5)"
-              print *,"icefacecut= ",icefacecut
-              stop
-             endif
-            else if (user_tension(iten).gt.zero) then
-             ! do nothing
-            else
-             print *,"user_tension invalid"
-             stop
-            endif
-
-           else
-            print *,"ispec invalid: ",ispec
-            stop
            endif
 
           else if (icemask.eq.one) then
@@ -684,32 +697,36 @@ stop
 
            icefacecut=zero
 
-           ispec=rigid_fraction_id(im_ice)
-           if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
+           if (1.eq.0) then
 
-            species_base=fort_speciesconst((ispec-1)*num_materials+im_ice)
+            ispec=rigid_fraction_id(im_ice)
+            if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
 
-            spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
+             species_base=fort_speciesconst((ispec-1)*num_materials+im_ice)
 
-            if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
-                (denstate(spec_comp).le.one)) then
+             spec_comp=(im_ice-1)*num_state_material+ENUM_SPECIESVAR+ispec
 
-             icefacecut=one-denstate(spec_comp);
-             if (icefacecut.eq.zero) then
-              ! do nothing
+             if ((denstate(spec_comp).ge.species_base-VOFTOL).and. &
+                 (denstate(spec_comp).le.one)) then
+
+              icefacecut=one-denstate(spec_comp);
+              if (icefacecut.eq.zero) then
+               ! do nothing
+              else
+               print *,"expecting icefacecut=0 for melting"
+               stop
+              endif
+
              else
-              print *,"expecting icefacecut=0 for melting"
+              print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
               stop
              endif
 
             else
-             print *,"denstate(spec_comp) invalid: ",denstate(spec_comp)
+             print *,"ispec invalid: ",ispec
              stop
             endif
 
-           else
-            print *,"ispec invalid: ",ispec
-            stop
            endif
 
           else if (icemask.eq.one) then
