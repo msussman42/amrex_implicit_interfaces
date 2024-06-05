@@ -22972,15 +22972,18 @@ contains
          endif
         enddo !im_opp=1..num_materials
         if (im_tessellate.eq.0) then
-         if (LS(im).le.zero) then
-          print *,"im_tessellate invalid"
+         if (LS(im).gt.zero) then
+          !do nothing
+         else
+          print *,"im_tessellate invalid: ",im_tessellate
+          print *,"im,LS(im) ",im,LS(im)
           stop
          endif
         else if ((im_tessellate.ge.1).and. &
                  (im_tessellate.le.num_materials)) then
          LS_new(im)=(LS(im)-LS(im_tessellate))/two
         else
-         print *,"im_tessellate invalid"
+         print *,"im_tessellate invalid: ",im_tessellate
          stop
         endif
        else if (is_rigid_local(im).eq.1) then
@@ -23030,14 +23033,17 @@ contains
       enddo ! im=1..num_materials
 
       call get_primary_material(LS,im_primary)
+
       if (is_rigid_local(im_primary).eq.0) then
        do im=1,num_materials
         LS_new(im)=LS(im)
        enddo
       else if (is_rigid_local(im_primary).eq.1) then
        LS_primary=LS(im_primary)
-       if (LS_primary.lt.0) then
-        print *,"LS_primary invalid"
+       if (LS_primary.ge.0.0d0) then 
+        !do nothing
+       else
+        print *,"LS_primary invalid: ",LS_primary
         stop
        endif
        do im=1,num_materials
