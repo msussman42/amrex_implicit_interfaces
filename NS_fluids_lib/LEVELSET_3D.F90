@@ -706,6 +706,7 @@ stop
        stop
       endif 
 
+       ! get_LS_extend is declared in GLOBALUTIL.F90
       call get_LS_extend(LS_CENTER,iten,LS_CENTER_EXTEND)
       call get_LS_extend(LS_OPP,iten,LS_OPP_EXTEND)
 
@@ -1038,7 +1039,7 @@ stop
          stop
         endif
 
-        if (is_rigid(im3).eq.1) then
+        if (is_rigid_CL(im3).eq.1) then
 
          ! cos(theta_1)=(sigma_23-sigma_13)/sigma_12
          ! cos(theta_2)=(-sigma_23+sigma_13)/sigma_12
@@ -1053,7 +1054,7 @@ stop
           stop
          endif 
 
-        else if (is_rigid(im3).eq.0) then
+        else if (is_rigid_CL(im3).eq.0) then
 
          gamma1=half*(user_tension(iten)-user_tension(iten_23)+ &
            user_tension(iten_13))/user_tension(iten)
@@ -1061,7 +1062,7 @@ stop
            user_tension(iten_13))/user_tension(iten)
 
         else
-         print *,"is_rigid invalid LEVELSET_3D.F90"
+         print *,"is_rigid_CL invalid LEVELSET_3D.F90"
          stop
         endif
 
@@ -1334,12 +1335,12 @@ stop
       if (im3.eq.0) then
        !do nothing
       else if ((im3.ge.1).and.(im3.le.num_materials)) then
-       if (is_rigid(im3).eq.1) then
+       if (is_rigid_CL(im3).eq.1) then
         !do nothing
-       else if (is_rigid(im3).eq.0) then
+       else if (is_rigid_CL(im3).eq.0) then
         !do nothing
        else
-        print *,"is_rigid(im3) invalid"
+        print *,"is_rigid_CL(im3) invalid"
         stop
        endif
       else
@@ -1480,7 +1481,7 @@ stop
 
        if ((im3.ge.1).and.(im3.le.num_materials)) then
 
-        if (is_rigid(im3).eq.1) then
+        if (is_rigid_CL(im3).eq.1) then
 
          if ((im3.eq.im).or.(im3.eq.im_opp)) then
           print *,"im3 invalid" 
@@ -1502,12 +1503,12 @@ stop
           nsolid_save(D_DECL(i,j,k),dir2)=nsolid(dir2)
          enddo
 
-        else if (is_rigid(im3).eq.0) then
+        else if (is_rigid_CL(im3).eq.0) then
          do dir2=1,SDIM
           nsolid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
          enddo
         else 
-         print *,"is_rigid invalid LEVELSET_3D.F90"
+         print *,"is_rigid_CL invalid initheightLS; LEVELSET_3D.F90"
          stop
         endif
 
@@ -1566,10 +1567,10 @@ stop
 
       if ((im3.ge.1).and.(im3.le.num_materials)) then
 
-       if (is_rigid(im3).eq.1) then
+       if (is_rigid_CL(im3).eq.1) then
         
         if ((im3.eq.im).or.(im3.eq.im_opp)) then
-         print *,"im3 invalid" 
+         print *,"im3 invalid: ",im3 
          stop
         endif
         if (user_tension(iten).eq.zero) then  
@@ -1795,10 +1796,10 @@ stop
          stop
         endif
 
-       else if (is_rigid(im3).eq.0) then
+       else if (is_rigid_CL(im3).eq.0) then
         ! do nothing
        else
-        print *,"is_rigid invalid LEVELSET_3D.F90"
+        print *,"is_rigid_CL invalid initheightLS; LEVELSET_3D.F90"
         stop
        endif
 
@@ -1841,7 +1842,7 @@ stop
          nopp(dir2)=nopp_save(D_DECL(i,j,k),dir2)
         enddo
 
-       else if (is_rigid(im3).eq.0) then
+       else if (is_rigid_CL(im3).eq.0) then
 
         LSmain=LSTEST(im)
         LSopp=LSTEST(im_opp)
@@ -1850,7 +1851,7 @@ stop
          nopp(dir2)=nopp_save(D_DECL(i,j,k),dir2)
         enddo
 
-       else if (is_rigid(im3).eq.1) then
+       else if (is_rigid_CL(im3).eq.1) then
 
         call get_LS_extend(LSTEST,iten,LSmain)
         LSopp=LSmain
@@ -1878,7 +1879,7 @@ stop
         endif 
 
        else
-        print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
+        print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
         stop
        endif
  
@@ -1908,9 +1909,9 @@ stop
         n2=ncurv2_save(D_DECL(i,j,k),dir2)
         if (im3.eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(im3).eq.0) then
+        else if (is_rigid_CL(im3).eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(im3).eq.1) then
+        else if (is_rigid_CL(im3).eq.1) then
          if (imhold.eq.im3) then
           ngrid(dir2)=n2
          else if ((imhold.ne.im3).and. &
@@ -1922,7 +1923,7 @@ stop
           stop
          endif
         else
-         print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
+         print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
          stop
         endif
         ngrid_save(D_DECL(i,j,k),dir2)=ngrid(dir2)
@@ -2103,12 +2104,12 @@ stop
        
         if (im3.eq.0) then
          n_node2(dir2)=n_node2LS(dir2)
-        else if (is_rigid(im3).eq.0) then
+        else if (is_rigid_CL(im3).eq.0) then
          n_node2(dir2)=n_node2LS(dir2)
-        else if (is_rigid(im3).eq.1) then
+        else if (is_rigid_CL(im3).eq.1) then
          ! do nothing
         else
-         print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
+         print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
          stop
         endif
        enddo ! dir2
@@ -2123,9 +2124,9 @@ stop
 
         if (im3.eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(im3).eq.0) then
+        else if (is_rigid_CL(im3).eq.0) then
          ngrid(dir2)=gamma1*n1-gamma2*n2
-        else if (is_rigid(im3).eq.1) then
+        else if (is_rigid_CL(im3).eq.1) then
          if (im3_present_node.eq.1) then
           ngrid(dir2)=n2
          else if (im3_present_node.eq.0) then 
@@ -2135,7 +2136,7 @@ stop
           stop
          endif
         else
-         print *,"is_rigid(im3) invalid: ",im3,is_rigid(im3)
+         print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
          stop
         endif
        enddo ! dir2=1..sdim
@@ -3610,8 +3611,8 @@ stop
          call get_primary_material(LS_fixed,im_majority)
          call get_primary_material(LS_merge_fixed,im_merge_majority)
 
-         if ((is_rigid(im_merge_majority).eq.1).or. &
-             (is_rigid(im_majority).eq.1)) then
+         if ((is_rigid_CL(im_merge_majority).eq.1).or. &
+             (is_rigid_CL(im_majority).eq.1)) then
 
           ! do nothing, all interface forces are 0
   
@@ -3620,8 +3621,8 @@ stop
          
           ! do nothing, all interface forces are 0
          
-         else if ((is_rigid(im_merge_majority).eq.0).and. &
-                  (is_rigid(im_majority).eq.0)) then
+         else if ((is_rigid_CL(im_merge_majority).eq.0).and. &
+                  (is_rigid_CL(im_majority).eq.0)) then
 
           if (vol_sten.gt.zero) then
            ! do nothing
@@ -3684,9 +3685,9 @@ stop
   
            if (im_opp.eq.im_merge_majority) then
             ! do nothing
-           else if (is_rigid(im_opp).eq.1) then
+           else if (is_rigid_CL(im_opp).eq.1) then
             ! do nothing
-           else if (is_rigid(im_opp).eq.0) then
+           else if (is_rigid_CL(im_opp).eq.0) then
 
              ! im_main < im_main_opp
             if (im_merge_majority.lt.im_opp) then
@@ -4054,7 +4055,7 @@ stop
                 stop
                endif
 
-                ! nrm_mat: from PROBE normal
+                ! nrm_mat: from PROBE (closest point) normal
                 ! nrm_test: from FD normal
                if ((nrm_mat(dircrossing)*nrm_test(dircrossing).gt.zero).and. &
                    (abs(nrm_mat(dircrossing)).gt. &
@@ -4077,6 +4078,9 @@ stop
                ! do nothing
               else
                print *,"im_curv or im_main bust"
+               print *,"im_curv=",im_curv
+               print *,"im_main=",im_main
+               print *,"im_main_opp=",im_main_opp
                stop
               endif 
 
@@ -4086,9 +4090,9 @@ stop
               call prepare_normal(nrm_mat,RR,mag,SDIM)
 
               if (mag.eq.zero) then
-               if (is_rigid(im_curv).eq.0) then
+               if (is_rigid_CL(im_curv).eq.0) then
                 ! do nothing
-               else if (is_rigid(im_curv).eq.1) then
+               else if (is_rigid_CL(im_curv).eq.1) then
                  ! nrm_test obtained via finite differences.
                 do dirloc=1,SDIM
                  nrm_mat(dirloc)=nrm_test(dirloc)
@@ -4106,7 +4110,7 @@ stop
                  stop
                 endif
                else
-                print *,"is_rigid invalid LEVELSET_3D.F90"
+                print *,"is_rigid_CL invalid LEVELSET_3D.F90"
                 stop
                endif
 
@@ -4267,7 +4271,7 @@ stop
              else if ((im3.ge.1).and.(im3.le.num_materials)) then
 
                ! triple point algorithm: 3 fluids
-               ! contact line algorithm: 2 fluids and "is_rigid" material.
+               ! contact line algorithm: 2 fluids and "is_rigid_CL" material.
 
                !do nothing
 
@@ -9585,7 +9589,7 @@ stop
             else if (is_solid_face.eq.0) then
              ! do nothing
             else
-             print *,"is_solid_face invalid"
+             print *,"is_solid_face invalid: ",is_solid_face
              stop
             endif
 

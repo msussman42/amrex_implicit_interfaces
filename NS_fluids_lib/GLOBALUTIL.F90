@@ -15431,6 +15431,42 @@ end subroutine print_visual_descriptor
       return
       end function is_rigid
 
+      function is_rigid_CL(im)
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer is_rigid_CL
+      integer, INTENT(in) :: im
+      integer dummy_input
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid in is_rigid_CL: im=",im
+       print *,"num_materials=",num_materials
+
+       print *,"(breakpoint) break point and gdb: "
+       print *,"(1) compile with the -g option"
+       print *,"(2) break GLOBALUTIL.F90:15446"
+       print *,"By pressing <CTRL C> during this read statement, the"
+       print *,"gdb debugger will produce a stacktrace."
+       print *,"type 0 then <enter> to exit the program"
+
+       read(*,*) dummy_input
+       stop
+      endif
+
+      if ((is_rigid(im).eq.1).or. &
+          (is_ice_or_FSI_rigid_material(im).eq.1)) then
+       is_rigid_CL=1
+      else if ((is_rigid(im).eq.0).and. &
+               (is_ice_or_FSI_rigid_material(im).eq.0)) then
+       is_rigid_CL=0
+      else
+       print *,"is_rigid or is_ice_or_FSI_rigid_material invalid"
+       stop
+      endif
+
+      return
+      end function is_rigid_CL
 
       function fort_built_in_elastic_model(elastic_visc_in, &
         viscoelastic_model_in) &

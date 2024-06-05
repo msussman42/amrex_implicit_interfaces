@@ -5598,9 +5598,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
 
-      if (is_rigid(imL).eq.1) then
+      if (is_rigid_CL(imL).eq.1) then
        ! do nothing
-      else if (is_rigid(imR).eq.1) then
+      else if (is_rigid_CL(imR).eq.1) then
        ! do nothing
       else if (is_FSI_rigid(imL).eq.1) then
        ! do nothing
@@ -5608,8 +5608,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! do nothing
       else if (imL.eq.imR) then
        ! do nothing
-      else if ((is_rigid(imL).eq.0).and. &
-               (is_rigid(imR).eq.0).and. &
+      else if ((is_rigid_CL(imL).eq.0).and. &
+               (is_rigid_CL(imR).eq.0).and. &
                (is_FSI_rigid(imL).eq.0).and. &
                (is_FSI_rigid(imR).eq.0).and. &
                (imL.ne.imR)) then
