@@ -8712,8 +8712,11 @@ stop
          else if (is_solid_face.eq.0) then
 
           ! "merge_levelset" is NOT called inside of "fluid_interface"
+          ! "is_rigid" is called.
           ! fluid_interface is declared in: PROB.F90
-          call fluid_interface(LSminus,LSplus,gradh, &
+          call fluid_interface( &
+            LSminus,LSplus, &
+            gradh, &
             im_main_opp,im_main, &
             im_left_main,im_right_main)
 
@@ -8732,17 +8735,33 @@ stop
 
           if (covered_face.eq.2) then !maskL=maskR=0
            gradh_tension=zero
+          else if (gradh.eq.zero) then
+           gradh_tension=zero
+          else if (is_rigid_CL(im_main_opp).eq.1) then
+           gradh_tension=zero
+          else if (is_rigid_CL(im_main).eq.1) then
+           gradh_tension=zero
           else if ((covered_face.eq.0).or. & !maskL=maskR=1
                    (covered_face.eq.1)) then !maskL=1 or maskR=1
              ! fluid_interface_tension is declared in: PROB.F90
              ! "merge_levelset" is called inside of "fluid_interface_tension"
-           call fluid_interface_tension( &
-            xstenMAC_center,time, &
-            LSminus,LSplus,gradh_tension, &
-            im_opp_tension,im_tension, & !INTENT(out)
-            im_left_tension,im_right_tension) !INTENT(out)
+             ! "is_rigid_CL" is called.
+           if ((is_rigid_CL(im_main_opp).eq.0).and. &
+               (is_rigid_CL(im_main).eq.0).and. &
+               (gradh.ne.zero)) then
+            call fluid_interface_tension( &
+             xstenMAC_center,time, &
+             LSminus,LSplus, &
+             gradh_tension, &
+             im_opp_tension,im_tension, & !INTENT(out)
+             im_left_tension,im_right_tension) !INTENT(out)
+           else
+            print *,"is_rigid_CL or gradh became corrupt"
+            stop
+           endif
+
           else
-           print *,"covered_face invalid"
+           print *,"covered_face invalid: ",covered_face
            stop
           endif
          else

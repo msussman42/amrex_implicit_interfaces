@@ -4938,9 +4938,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         ! largest value.
         !
       subroutine fluid_interface( &
-        LSleft,LSright,gradh, &
-        im_opp,im, &
-        imL,imR)
+        LSleft,LSright, &
+        gradh, & !intent(out)
+        im_opp,im, & !intent(out)
+        imL,imR) !intent(out)
 
       use global_utility_module
 
@@ -5602,16 +5603,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! do nothing
       else if (is_rigid_CL(imR).eq.1) then
        ! do nothing
-      else if (is_FSI_rigid(imL).eq.1) then
-       ! do nothing
-      else if (is_FSI_rigid(imR).eq.1) then
-       ! do nothing
       else if (imL.eq.imR) then
        ! do nothing
       else if ((is_rigid_CL(imL).eq.0).and. &
                (is_rigid_CL(imR).eq.0).and. &
-               (is_FSI_rigid(imL).eq.0).and. &
-               (is_FSI_rigid(imR).eq.0).and. &
                (imL.ne.imR)) then
 
        if (imL.lt.imR) then
@@ -5628,7 +5623,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        endif
 
       else
-       print *,"is_rigid, is_FSI_rigid, imL, or imR invalid PROB.F90"
+       print *,"is_rigid_CL, imL, or imR invalid PROB.F90"
        stop
       endif 
 
