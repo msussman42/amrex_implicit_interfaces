@@ -4490,8 +4490,7 @@ NavierStokes::read_params ()
 
       if ((ispec>=1)&&(ispec<=num_species_var)) {
        for (int im_opp=0;im_opp<num_materials;im_opp++) {
-        if ((speciesconst[(ispec-1)*num_materials+im_opp]>0.0)&&
-            (speciesconst[(ispec-1)*num_materials+im_opp]<=1.0)) {
+        if (speciesconst[(ispec-1)*num_materials+im_opp]==1.0) {
          //do nothing
 	} else
 	 amrex::Error("speciesconst invalid");

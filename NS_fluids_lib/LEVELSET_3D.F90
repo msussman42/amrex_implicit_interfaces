@@ -9924,6 +9924,16 @@ stop
                  endif
                 else
                  print *,"dirL or dirR invalid"
+                 print *,"dirL=",dirL
+                 print *,"dirR=",dirR
+                 print *,"im3L=",im3L
+                 print *,"im3R=",im3R
+                 print *,"orientL=",orientL
+                 print *,"orientR=",orientR
+                 print *,"im_tension=",im_tension
+                 print *,"im_opp_tension=",im_opp_tension
+                 print *,"iten_tension=",iten_tension
+
                  stop
                 endif
                endif
