@@ -12464,10 +12464,11 @@ void NavierStokes::veldiffuseALL() {
     } else
      amrex::Error("heatviscconst invalid");
 
-   } //ns
+   } //ns=0 ... num_species_var-1
 
-  } // im 
- } //ilev
+  } // im=0..num_materials-1
+ } //ilev=level ... finest_level
+
  delete_array(save_state_MF);
 
 #if (NS_profile_solver==1)
