@@ -11901,9 +11901,16 @@ void NavierStokes::veldiffuseALL() {
   // NavierStokes.cpp: void NavierStokes::make_heat_source()
   // make_heat_source calls GODUNOV_3D.F90::fort_heatsource which
   // calls PROB.F90::get_local_heat_source
-  // if not supermesh algorithm, then the same temperature 
-  // increment is added to all of the materials.
+  // The same temperature increment is added to all of the materials.
   ns_level.make_heat_source();  // updates S_new
+
+  ns_level.getStateDen_localMF(save_state_MF,1,cur_time_slab);
+
+  if (ns_level.localMF[save_state_MF]->nComp()==
+      num_materials*num_state_material) {
+   //do nothing
+  } else
+   amrex::Error("ns_level.localMF[save_state_MF].nComp() invalid");
 
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
@@ -12430,6 +12437,38 @@ void NavierStokes::veldiffuseALL() {
 
   desc_lst.reset_bcrecs(State_Type,STATECOMP_VEL+dir,simulation_bc);
  } //dir=0 .. sdim-1
+
+ for (int ilev=level;ilev<=finest_level;ilev++) {
+  NavierStokes& ns_level=getLevel(ilev);
+  MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
+  MultiFab* save_S_new=ns_level.localMF[save_state_MF];
+  for (int im=0;im<num_materials;im++) {
+
+   if (heatviscconst[im]>0.0) {
+    //do nothing
+   } else if (heatviscconst[im]==0.0) {
+    MultiFab::Copy(S_new,*save_S_new,
+        num_state_material*im+ENUM_TEMPERATUREVAR,
+        STATECOMP_STATES+num_state_material*im+ENUM_TEMPERATUREVAR,1,1);
+   } else
+    amrex::Error("heatviscconst invalid");
+
+   for (int ns=0;ns<num_species_var;ns++) {
+
+    if (speciesviscconst[ns*num_materials+im]>0.0) {
+     //do nothing
+    } else if (speciesviscconst[ns*num_materials+im]==0.0) {
+     MultiFab::Copy(S_new,*save_S_new,
+        num_state_material*im+num_state_base+ns,
+        STATECOMP_STATES+num_state_material*im+num_state_base+ns,1,1);
+    } else
+     amrex::Error("heatviscconst invalid");
+
+   } //ns
+
+  } // im 
+ } //ilev
+ delete_array(save_state_MF);
 
 #if (NS_profile_solver==1)
  bprof.stop();

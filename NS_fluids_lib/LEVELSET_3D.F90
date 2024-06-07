@@ -12638,7 +12638,8 @@ stop
 
         rhs(D_DECL(i,j,k),1)=zero
 
-         ! update the total energy in compressible cells (regular project)
+                 ! update the total energy in compressible cells 
+                 ! (regular project)
         if (project_option.eq.SOLVETYPE_PRES) then
 
          if (use_face_pres_cen.eq.0) then
@@ -12718,9 +12719,11 @@ stop
 
               ! sanity checks
               if (internal_e.gt.zero) then
-               call TEMPERATURE_material(rho,massfrac_parm, &
-                NEW_TEMPERATURE, &
-                internal_e,imattype,im)
+               call TEMPERATURE_material( &
+                rho,massfrac_parm, &
+                NEW_TEMPERATURE, & !intent(out)
+                internal_e, & !intent(in)
+                imattype,im)
                if (abs(TEMPERATURE-NEW_TEMPERATURE).le.EPS3*TEMPERATURE) then
                 ! do nothing 
                else
@@ -12732,15 +12735,17 @@ stop
                stop
               endif
 
-              ! e^proj=e^*+(rho U^2^advect/2-rho U^2^proj/2)-dt div(up)
+              ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
               internal_e=internal_e+KE_diff+Eforce_conservative
 
               if (internal_e.le.zero) then
                NEW_TEMPERATURE=TEMPERATURE
               else if (internal_e.gt.zero) then
-               call TEMPERATURE_material(rho,massfrac_parm, &
-                NEW_TEMPERATURE, &
-                internal_e,imattype,im)
+               call TEMPERATURE_material( &
+                rho,massfrac_parm, &
+                NEW_TEMPERATURE, & !intent(out)
+                internal_e, & !intent(in)
+                imattype,im)
               else
                print *,"internal_e invalid: ",im,internal_e
                stop

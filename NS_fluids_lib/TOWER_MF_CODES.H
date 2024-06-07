@@ -268,7 +268,9 @@
 
 #define REFINE_DENSITY_RECON_MF (MAC_ELASTIC_FLUX_Z_MF+1)
 
-#define NEXT_MF (REFINE_DENSITY_RECON_MF+1)
+#define save_state_MF (REFINE_DENSITY_RECON_MF+1)
+
+#define NEXT_MF (save_state_MF+1)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 
