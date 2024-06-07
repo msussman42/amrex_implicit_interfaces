@@ -2833,6 +2833,31 @@ NavierStokes::sum_integrated_quantities (
    } // im_opp
   } // im=1..num_materials
 
+  Real total_fluid_energy=0.0;
+  Real total_fluid_mom[3];
+  for (int dir=0;dir<3;dir++) {
+   total_fluid_mom[dir]=0.0;
+  }
+
+  for (int im=0;im<num_materials;im++) {
+   if (ns_is_rigid(im)==1) {
+    //do nothing
+   } else if (ns_is_rigid(im)==0) {
+    total_fluid_energy+= NS_sumdata[im+IQ_ENERGY_SUM_COMP];
+    for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+     total_fluid_mom[dir]+= NS_sumdata[3*im+dir+IQ_MOM_SUM_COMP];
+    }
+   } else
+    amrex::Error("ns_is_rigid(im) invalid(total_fluid_energy)");
+  } //im=0 .. nmat-1
+
+  std::cout << "TIME= " << upper_slab_time << " total_fluid_energy=" <<
+      total_fluid_energy << '\n';
+  for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+   std::cout << "TIME= " << upper_slab_time << " dir= "<<
+      dir << " total_fluid_mom=" << total_fluid_mom[dir] << '\n';
+  }
+
    //minden1,mintemp1
    //minden2,mintemp2,....
   for (int im=0;im<num_materials;im++) {
