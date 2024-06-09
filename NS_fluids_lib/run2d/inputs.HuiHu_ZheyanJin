@@ -21,11 +21,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e-2 # phys
 #ns.projection_pressure_scale=1.0e-5 # L=65.0e+9 act
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
-ns.num_species_var=1
-ns.speciesconst=1.0 1.0 1.0 1.0
-ns.speciesviscconst=0.0 0.0 0.0 0.0
-ns.speciesreactionrate=1.0e+10 1.0e+10 1.0e+10 1.0e+10
-ns.rigid_fraction_id=0 0 1 0
+ns.num_species_var=0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
 ns.MOFITERMAX_AFTER_PREDICT=0

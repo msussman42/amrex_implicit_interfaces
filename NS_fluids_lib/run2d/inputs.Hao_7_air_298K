@@ -21,12 +21,7 @@ ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0e-2
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
 
-ns.num_species_var=1
-ns.speciesconst=1.0 1.0 1.0 1.0 
-ns.speciesviscconst=0.0 0.0 0.0 0.0
-#dY/dt=r(1-Y)
-ns.speciesreactionrate=1.0e+10 1.0e+10 1.0e+10 1.0e+10 #theta2=pi
-ns.rigid_fraction_id=0 0 1 0
+ns.num_species_var=0
 
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
@@ -91,7 +86,7 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = -980.0e-6 
+ns.gravity        = -980.0e-5 
 ns.incremental_gravity_flag=1
 ns.segregated_gravity_flag=0
 
@@ -111,23 +106,23 @@ ns.segregated_gravity_flag=0
 #Legendre, D. (2021). A hybrid VOF-IBM method for the simulation of 
 #freezing liquid films and freezing drops. Journal of Computational 
 #Physics, 432, 110160.
-ns.tension=      75.7e-6 0.0 36.75e-6 0.0 75.7e-6 0.0 #theta_L=90
-ns.tension_init= 75.7e-6 0.0 36.75e-6 0.0 75.7e-6 0.0
+#ns.tension=      75.7e-5 0.0 36.75e-5 0.0 75.7e-5 0.0 #theta_L=90
+#ns.tension_init= 75.7e-5 0.0 36.75e-5 0.0 75.7e-5 0.0
 # TRIPLE POINT LIQUID-GAS-ICE 
 # sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
 # LG,LI,LS,IG,GS,SI  
-#ns.tension=      75.7e-6 75.7e-6 36.75e-6 75.7e-6 75.7e-6 0.0 #theta_L=90
-#ns.tension_init= 75.7e-6 75.7e-6 36.75e-6 75.7e-6 75.7e-6 0.0
+#ns.tension=      75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=90
+#ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0
 
-#sigma_IL+sigma_LG cos(70)=sigma_IG  sigma_IG=sigma_LG
-#sigma_IL=sigma_LG(1-cos(70)=49.80
-#ns.tension=      75.7e-6 49.8e-6 36.75e-6 75.7e-6 75.7e-6 0.0 #theta_L=70
-#ns.tension_init= 75.7e-6 49.8e-6 36.75e-6 75.7e-6 75.7e-6 0.0
+#sigma_IL+sigma_LG cos(45)=sigma_IG  sigma_IG=sigma_LG
+#sigma_IL=sigma_LG(1-cos(45)=22.2
+#ns.tension=      75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=45
+#ns.tension_init= 75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0
 
-#sigma_IL+sigma_LG cos(110)=sigma_IG  sigma_IL=sigma_LG
-#sigma_LG(1+cos(110))=sigma_IG=49.8 
-#ns.tension=      75.7e-6 75.7e-6 36.75e-6 49.8e-6 75.7e-6 0.0 #theta_L=110
-#ns.tension_init= 75.7e-6 75.7e-6 36.75e-6 49.8e-6 75.7e-6 0.0
+#sigma_IL+sigma_LG cos(135)=sigma_IG  sigma_IL=sigma_LG
+#sigma_LG(1+cos(135))=sigma_IG=22.2 
+ns.tension=      75.7e-5 75.7e-5 36.75e-5 22.2e-5 75.7e-5 0.0 #theta_L=135
+ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 22.2e-5 75.7e-5 0.0
 
 
 # 1 J/kg = 10^4 erg/g

@@ -745,9 +745,6 @@ int NavierStokes::observe_initial_mdot=0;
 //1=Tanasawa  2=Schrage 3=Kassemi
 Vector<int> NavierStokes::Tanasawa_or_Schrage_or_Kassemi; 
 
-//ispec=rigid_fraction_id[0..num_materials-1]=1..num_species_var
-Vector<int> NavierStokes::rigid_fraction_id;
-
 //ispec=mass_fraction_id[0..2 num_interfaces-1]=1..num_species_var
 Vector<int> NavierStokes::mass_fraction_id; 
 //link diffused material to non-diff. (array 1..num_species_var)
@@ -3738,7 +3735,6 @@ NavierStokes::read_params ()
     prescribed_mdot.resize(2*num_interfaces);
     Tanasawa_or_Schrage_or_Kassemi.resize(2*num_interfaces);
 
-    rigid_fraction_id.resize(num_materials);
     mass_fraction_id.resize(2*num_interfaces);
     distribute_from_target.resize(2*num_interfaces);
     distribute_mdot_evenly.resize(2*num_interfaces);
@@ -3849,7 +3845,6 @@ NavierStokes::read_params ()
 
     for (int i=0;i<num_materials;i++) {
      constant_density_all_time[i]=1;
-     rigid_fraction_id[i]=0;
     }
     molar_mass.resize(num_materials);
 
@@ -4200,8 +4195,6 @@ NavierStokes::read_params ()
     pp.queryAdd("Tanasawa_or_Schrage_or_Kassemi",
       Tanasawa_or_Schrage_or_Kassemi,2*num_interfaces);
 
-    pp.queryAdd("rigid_fraction_id",rigid_fraction_id,num_materials);
-
     pp.queryAdd("mass_fraction_id",mass_fraction_id,2*num_interfaces);
 
      // set defaults for "distribute_from_target"
@@ -4486,22 +4479,6 @@ NavierStokes::read_params ()
 
      if (is_ice_matC(im)==1) {
 
-      int ispec=rigid_fraction_id[im];
-
-      if ((ispec>=1)&&(ispec<=num_species_var)) {
-       for (int im_opp=0;im_opp<num_materials;im_opp++) {
-        if (speciesconst[(ispec-1)*num_materials+im_opp]==1.0) {
-         //do nothing
-	} else
-	 amrex::Error("speciesconst invalid");
-        if (speciesreactionrate[(ispec-1)*num_materials+im_opp]>=0.0) {
-  	 //do nothing
-	} else
-	 amrex::Error("speciesreactionrate invalid");
-       } //im_opp=0..num_materials-1
-      } else
-       amrex::Error("rigid_fraction_id (ispec) invalid");
-
       for (int im_opp=0;im_opp<num_materials;im_opp++) {
        if (im!=im_opp) {
         if (ns_is_rigid(im_opp)==0) {
@@ -4580,35 +4557,7 @@ NavierStokes::read_params ()
       amrex::Error("is_ice_matC invalid");
 
      if (is_FSI_rigid_matC(im)==1) {
-
-      int ispec=rigid_fraction_id[im];
-
-      if ((ispec>=1)&&(ispec<=num_species_var)) {
-       for (int im_opp=0;im_opp<num_materials;im_opp++) {
-        if (im_opp==im) {
-         if (speciesconst[(ispec-1)*num_materials+im]==1.0) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesconst invalid");
-         if (speciesreactionrate[(ispec-1)*num_materials+im]>0.0) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesreactionrate invalid");
-	} else if (im_opp!=im) {
-         if (speciesconst[(ispec-1)*num_materials+im_opp]==1.0) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesconst invalid");
-         if (speciesreactionrate[(ispec-1)*num_materials+im_opp]>=0.0) {
-  	  //do nothing
-	 } else
-	  amrex::Error("speciesreactionrate invalid");
-	} else 
-	 amrex::Error("im_opp or im invalid");
-       } //im_opp=0..num_materials-1
-      } else
-       amrex::Error("rigid_fraction_id (ispec) invalid");
-
+      //do nothing
      } else if (is_FSI_rigid_matC(im)==0) {
       //do nothing
      } else
@@ -4695,8 +4644,6 @@ NavierStokes::read_params ()
 
     shock_timestep.resize(num_materials);
     for (int i=0;i<num_materials;i++) {
-     if (rigid_fraction_id[i]<0)
-      amrex::Error("rigid_fraction_id invalid in read_params");
      shock_timestep[i]=0;
     }
     pp.queryAdd("shock_timestep",shock_timestep,num_materials);
@@ -5821,8 +5768,6 @@ NavierStokes::read_params ()
      }  // i=0..num_interfaces-1
 
      for (int i=0;i<num_materials;i++) {
-      std::cout << "rigid_fraction_id i=" << i << "  " << 
-       rigid_fraction_id[i] << '\n';
       std::cout << "constant_density_all_time i=" << i << "  " << 
        constant_density_all_time[i] << '\n';
       std::cout << "cavitation_pressure i=" << i << "  " << 
@@ -14959,7 +14904,6 @@ NavierStokes::level_species_reaction(const std::string& caller_string) {
     &level,&finest_level,
     &nstate,
     speciesreactionrate.dataPtr(),
-    rigid_fraction_id.dataPtr(),
     tilelo,tilehi,
     fablo,fabhi,
     &bfact, 
@@ -15542,7 +15486,6 @@ NavierStokes::level_phase_change_redistribute(
     // material is neither a donor or a receiver.
     // donorfab is modified.
    fort_tagexpansion( 
-    rigid_fraction_id.dataPtr(),
     &nden,
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -16023,7 +15966,6 @@ NavierStokes::level_init_icemask_and_icefacecut() {
    
     // declared in: GODUNOV_3D.F90
    fort_init_icemask_and_icefacecut( 
-    rigid_fraction_id.dataPtr(),
     &nden,
     &cur_time_slab,
     &level,&finest_level,

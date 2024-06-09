@@ -563,7 +563,6 @@ extern "C"
 
 
    void fort_init_icemask_and_icefacecut(
-    int* rigid_fraction_id,
     int* nden,
     Real* time,
     int* level,int* finest_level,
@@ -584,7 +583,6 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
-    int* rigid_fraction_id,
     int* nden,
     int* freezing_model,
     int* distribute_from_target,

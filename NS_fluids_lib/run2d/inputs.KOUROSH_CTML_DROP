@@ -25,7 +25,7 @@ ns.projection_pressure_scale=1.0e+6
 #ns.num_materials=4 # 1:liquid 2:air 3:lubricant 4:substrate axis_dir=0 or 2
 #ns.num_materials=3 # 1:liquid 2:air 3:substrate axis_dir=1 or
 ns.num_materials=4 # 1:liquid 2:air 3: ice 4:substrate axis_dir=1
-ns.num_species_var=2 
+ns.num_species_var=1 
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
 ns.MOFITERMAX_AFTER_PREDICT=0
@@ -244,14 +244,13 @@ ns.heatviscconst=58000.0 2400.0 2.2e+5 2.2e+5 # axis_dir=1
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
 #C_t + u dot grad C = div alpha laplacian C ?
-ns.speciesviscconst=0.1 0.1 0.1 0.1 0.0 0.0 0.0 0.0
+ns.speciesviscconst=0.1 0.1 0.1 0.1
 # 1=water 2=gas  3=oil  4=substrate  or
 # 1=water 2=gas  3=ice  4=substrate 
-ns.speciesconst=0.0 0.0 0.0 0.0 1.0 1.0 1.0 1.0
-ns.speciesreactionrate=0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.rigid_fraction_id=0 0 2 0
+ns.speciesconst=0.0 0.0 0.0 0.0
+ns.speciesreactionrate=0.0 0.0 0.0 0.0 
 ns.molar_mass=18.02 28.9 18.02 18.02
-ns.species_molar_mass=18.02 18.02
+ns.species_molar_mass=18.02 
 ns.R_Palmore_Desjardins=8.31446261815324e+7 # ergs/(mol kelvin)
 #1=water 2=gas  3=ice  4=substrate 
 #ns.viscconst=0.018 0.00017 10.0 10.0 # axis_dir=3

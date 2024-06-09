@@ -4716,7 +4716,6 @@ stop
         !   which is called from
         !     NavierStokes::make_physics_varsALL
       subroutine fort_init_icemask_and_icefacecut( &
-       rigid_fraction_id, &
        nden, &
        time, &
        level,finest_level, &
@@ -4742,7 +4741,6 @@ stop
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: rigid_fraction_id(num_materials)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: level,finest_level
@@ -4939,7 +4937,6 @@ stop
           !  materials and "is_FSI_rigid" materials.
           ! this routine: fort_init_icemask_and_icefacecut
          call get_icemask_and_icefacecut( &
-          rigid_fraction_id, &
           nden, &
           xmac, &
           time, &
@@ -4961,7 +4958,6 @@ stop
           !  materials and "is_FSI_rigid" materials.
           ! this routine: fort_init_icemask_and_icefacecut
          call get_icemask_and_icefacecut( &
-          rigid_fraction_id, &
           nden, &
           xmac, &
           time, &
@@ -11151,7 +11147,6 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine fort_tagexpansion(&
-       rigid_fraction_id, &
        nden, &
        freezing_model, &
        distribute_from_target, &
@@ -11185,7 +11180,6 @@ stop
 
       IMPLICIT NONE
 
-      integer, INTENT(in) :: rigid_fraction_id(num_materials)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(inout) :: mdot_sum
@@ -11488,7 +11482,6 @@ stop
           ! ICEMASK=1 => do nothing
           ! get_icemask_and_icefacecut declared in PROB.F90
           call get_icemask_and_icefacecut( &
-           rigid_fraction_id, &
            nden, &
            xsten_center, &
            time, &
