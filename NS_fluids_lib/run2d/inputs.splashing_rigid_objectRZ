@@ -30,11 +30,7 @@ ns.outflow_pressure=0.0
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=100.0 
 ns.num_materials=3 # 1: liquid 2: vapor 3: solid 
-ns.num_species_var=1
-ns.speciesconst=0.0 0.0 1.0 
-ns.speciesviscconst=0.0 0.0 0.0 
-ns.speciesreactionrate=0.0 0.0 1.0e+10 
-ns.rigid_fraction_id=0 0 1
+ns.num_species_var=0
 ns.configuration_tensor_var=0
 ns.post_init_pressure_solve=1
 ns.output_drop_distribution=1

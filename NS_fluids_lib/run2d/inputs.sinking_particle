@@ -94,11 +94,7 @@ ns.projection_pressure_scale=1.0
 #ns.projection_pressure_scale=1.0e-12
 #ns.projection_pressure_scale=1.0e-19
 ns.num_materials=2
-ns.num_species_var=1
-ns.speciesconst=0.0 1.0
-ns.speciesviscconst=0.0 0.0 
-ns.speciesreactionrate=0.0 1.0e+10
-ns.rigid_fraction_id=0 1
+ns.num_species_var=0
 ns.post_init_pressure_solve=1 # 1=INCOMP 0=COMPRESSIBLE
 ns.minimum_relative_error=1.0e-22
 ns.initial_project_cycles=3

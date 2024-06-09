@@ -26,22 +26,15 @@ ns.initial_cg_cycles=10
 ns.project_solver_type=0 # 0MGPCG 1PCG 2 MINV=I
 ns.projection_pressure_scale=1.0
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: solid
-ns.num_species_var=1
-#EMPIRICAL PARAMETERS IN ORDER TO ALLOW FOR PROPER TRIPLE POINT DYNAMICS
-#AND A SMOOTH AIR-ICE INTERFACE.
-ns.speciesconst=0.9 0.9 0.9 0.9
-ns.speciesviscconst=0.0 0.0 0.0 0.0
-#dY/dt=r(1-Y)
-ns.speciesreactionrate=0.0 0.0 0.0 0.0
-ns.rigid_fraction_id=0 0 1 0
+ns.num_species_var=0
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
-ns.continuous_mof=1
+ns.continuous_mof=0
 ns.vof_height_function=1
-ns.mof_decision_tree_learning=10000 # default: 40000
-ns.MOFITERMAX_AFTER_PREDICT=2
+ns.mof_decision_tree_learning=0
+ns.MOFITERMAX_AFTER_PREDICT=0
 # 0 - centroid furthest from uncaptured centroid
 # 1 - use MOF error
 ns.mof_error_ordering=0
@@ -121,24 +114,13 @@ ns.segregated_gravity_flag=0
 # theta_L=33 degrees a little too large. (sigma_SL/sigma_LG=281/1740)
 # for theta_L=25 degrees, sigma_SL/sigma_LG=163/1740
 #
-# TRIPLE POINT LIQUID-GAS-ICE (tensions_from_angles.f)
-# sigma_LG/sin(theta_I)=sigma_LI/sin(theta_G)=sigma_GI/sin(theta_L) 
-#   or
-# sigma_GI sigma_LG sin(theta_G) =
-# sigma_LI sigma_LG sin(theta_L) =
-# sigma_LI sigma_GI sin(theta_I)
-#
-# theta_I=90 degrees
-# theta_G=180-18 degrees  (18 degrees is the growth angle)
-# theta_L=90+18 degrees 
-# Note: if the growth angle is 0 degrees (e.g. for freezing water), then
-# theta_I=90 degrees
-# theta_G=180 degrees  
-# theta_L=90 degrees 
-# and sigma_GI=sigma_LI=0.0 
+# need theta_L=135 on the ice!
+# sigma_IG-sigma_IL=sigma_LG cos(135)
+# sigma_IL=sigma_LG=1740e-1
+# sigma_IG=sigma_LG(1+cos(135))=509.6e-1
 # LG,LI,LS,IG,GS,SI  
-ns.tension=      1740.0e-1 538.0e-1 163.0e-1 1655.0e-1 1740.0e-1  0.0
-ns.tension_init= 1740.0e-1 538.0e-1 163.0e-1 1655.0e-1 1740.0e-1  0.0
+ns.tension=      1740.0e-1 1740.0e-1 163.0e-1 509.6e-1 1740.0e-1  0.0
+ns.tension_init= 1740.0e-1 1740.0e-1 163.0e-1 509.6e-1 1740.0e-1  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)

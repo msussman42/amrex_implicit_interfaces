@@ -3300,7 +3300,6 @@ stop
        level,finest_level, &
        nstate, &
        speciesreactionrate, &
-       rigid_fraction_id, &
        tilelo,tilehi, &
        fablo,fabhi, &
        bfact, &
@@ -3326,7 +3325,6 @@ stop
       integer, INTENT(in) :: nstate
       real(amrex_real), INTENT(in) :: &
               speciesreactionrate(num_species_var*num_materials)
-      integer, INTENT(in) :: rigid_fraction_id(num_materials)
       integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
       integer, INTENT(in),target :: fablo(SDIM),fabhi(SDIM)
       integer :: growlo(3),growhi(3)
@@ -3368,7 +3366,6 @@ stop
       real(amrex_real) local_cutoff
       real(amrex_real) species_scale
       real(amrex_real), PARAMETER :: species_max=1.0d0
-      real(amrex_real), PARAMETER :: MUSHY_THICK=2.0d0
 
       LSnew_ptr=>LSnew
       snew_ptr=>snew
@@ -3430,14 +3427,14 @@ stop
        endif
 
       else
-       print *,"initialize_flag invalid"
+       print *,"initialize_flag invalid: ",initialize_flag
        stop
       endif
 
       if (species_max.gt.zero) then
        !do nothing
       else
-       print *,"species_max invalid"
+       print *,"species_max invalid: ",species_max
        stop
       endif
 
@@ -3649,148 +3646,6 @@ stop
          enddo ! im=1,num_materials
 
         enddo ! ispec=1,num_species_var
-
-        do im=1,num_materials
-         if (is_ice(im).eq.1) then
-          ispec=rigid_fraction_id(im)
-          if ((ispec.ge.1).and.(ispec.le.num_species_var)) then
-           !do nothing 
-          else
-           print *,"ispec invalid"
-           stop
-          endif
-
-          species_base=fort_speciesconst((ispec-1)*num_materials+im)
-
-          if ((species_base.gt.zero).and. &
-              (species_base.le.one)) then
-
-           spec_comp=STATECOMP_STATES+(im-1)*num_state_material+ &
-               ENUM_SPECIESVAR+ispec
-
-           spec_old=snew(D_DECL(i,j,k),spec_comp)
-           spec_new=spec_old
-
-           if ((spec_old.ge.zero).and. &
-               (spec_old.lt.species_base)) then
-            spec_old=species_base
-            spec_new=spec_old
-           else if ((spec_old.ge.species_base).and. &
-                    (spec_old.le.species_max)) then
-
-            im_melt=0
-
-            do im_opp=1,num_materials
-             if (im_opp.ne.im) then
-              do ireverse=0,1
-               call get_iten(im,im_opp,iten)
-               LL=get_user_latent_heat(iten+ireverse*num_interfaces, &
-                                       room_temperature,1)
-               if (LL.eq.zero) then
-                ! do nothing
-               else if (LL.ne.zero) then
-                im_melt=im_opp
-               else
-                print *,"LL invalid"
-                stop
-               endif
-              enddo !ireverse=0,1
-             else if (im_opp.eq.im) then
-              ! do nothing
-             else
-              print *,"im_opp invalid"
-              stop
-             endif
-            enddo !im_opp=1,num_materials
-
-            if ((im_melt.ge.1).and.(im_melt.le.num_materials)) then
-
-             if (is_rigid(im_primary).eq.1) then
-
-              spec_new=one
-
-              if (1.eq.0) then
-               print *,"i,j,k,im,im_melt,im_primary,species_base ", &
-                  i,j,k,im,im_melt,im_primary,species_base
-              endif
-
-             else if (is_rigid(im_primary).eq.0) then
-
-              if (local_LS(im).lt.zero) then
-               spec_new=species_base
-              else if (local_LS(im).ge.zero) then
-               if (local_LS(im).ge.MUSHY_THICK*dx(1)) then
-                spec_new=species_max
-               else if ((local_LS(im).le.MUSHY_THICK*dx(1)).and. &
-                        (local_LS(im).ge.zero)) then
-                if (local_LS(im_melt).le.-MUSHY_THICK*dx(1)) then
-                 spec_new=species_max
-                else if (local_LS(im_melt).ge.zero) then
-                 spec_new=species_base
-                else if ((local_LS(im_melt).ge.-MUSHY_THICK*dx(1)).and. &
-                         (local_LS(im_melt).le.zero)) then
-                 local_cutoff=half*MUSHY_THICK*dx(1)
-                 LSMELT=abs(local_LS(im_melt))-local_cutoff
-                 spec_new=species_base+ &
-                    (one-species_base)*hs(LSMELT,local_cutoff)
-                else
-                 print *,"local_LS(im_melt) invalid: ",local_LS(im_melt)
-                 stop
-                endif
-               else
-                print *,"local_LS(im) invalid(1): ",local_LS(im)
-                stop
-               endif
-              else
-               print *,"local_LS(im) invalid(2): ",local_LS(im)
-               stop
-              endif
-
-             else
-              print *,"is_rigid(im_primary) invalid"
-              stop
-             endif
-
-             if ((spec_new.ge.(one-EPS_8_4)*species_base).and. &
-                 (spec_new.le.species_max)) then
-              ! do nothing
-             else
-              print *,"spec_new invalid: ",spec_new
-              stop
-             endif
-
-             spec_new=max(spec_new,spec_old)
-
-            else
-             print *,"im_melt invalid: ",im_melt
-             stop
-            endif
-
-            do im_inner=1,num_materials
-             spec_comp=STATECOMP_STATES+(im_inner-1)*num_state_material+ &
-               ENUM_SPECIESVAR+ispec
-             snew(D_DECL(i,j,k),spec_comp)=spec_new
-            enddo !do im_inner=1..num_materials
-
-           else
-            print *,"spec_old invalid(1): ",spec_old
-            print *,"species_base: ",species_base
-            print *,"species_max: ",species_max
-            stop
-           endif
-
-          else
-           print *,"species_base invalid: ",species_base
-           stop
-          endif
-
-         else if (is_ice(im).eq.0) then
-          ! do nothing
-         else
-          print *,"is_ice invalid"
-          stop
-         endif
-        enddo ! im=1,num_materials
 
        else if (local_mask.eq.0) then
         ! do nothing

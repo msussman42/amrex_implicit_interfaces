@@ -1812,9 +1812,6 @@ protected:
      // 0=Palmore and Desjardins (same as Villegas et al)
      // 1=Tanasawa  2=Schrage  3=Kassemi
     static Vector<int> Tanasawa_or_Schrage_or_Kassemi; 
-     // index: 1..num_materials
-     // value: 1..num_species_var
-    static Vector<int> rigid_fraction_id;
      // index: 1..2*num_interfaces
      // value: 1..num_species_var
     static Vector<int> mass_fraction_id; 

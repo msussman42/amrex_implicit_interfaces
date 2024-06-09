@@ -90,7 +90,7 @@ ns.projection_pressure_scale=1.0e+6
 #
 ns.num_materials=4 # 1: liquid 2: air 3: ice 4: substrate  
 # EVAPORATION or NO EVAPORATION
-ns.num_species_var=2
+ns.num_species_var=1
 ns.post_init_pressure_solve=1 
 ns.MOFITERMAX=30
 ns.MOF_TURN_OFF_LS=0
@@ -314,17 +314,16 @@ ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 # D units: cm^2/s
 # EVAPORATION or NO EVAPORATION
 # liquid, gas, ice, substrate
-ns.speciesviscconst=0.282 0.282 0.0 0.0 0.0 0.0 0.0 0.0
+ns.speciesviscconst=0.282 0.282 0.0 0.0 
 #4.24 percent when dew point is 30 degrees celcius
 #https://www.tis-gdv.de/tis_e/misc/klima-htm/
 #https://www.ready.noaa.gov/READYmoistcal.php 
 #initial vapor mass fraction.
 #EVAPORATION or NO EVAPORATION
 #
-ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 1.0 1.0 1.0 1.0
-ns.speciesreactionrate=0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
-ns.rigid_fraction_id=0 0 2 0
-ns.species_molar_mass=18.02 18.02 # this is vapor molar mass=liquid molar mass
+ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3 
+ns.speciesreactionrate=0.0 0.0 0.0 0.0 
+ns.species_molar_mass=18.02  # this is vapor molar mass=liquid molar mass
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 
 ns.viscconst_artificial=100.0 100.0 100.0 100.0
