@@ -15243,7 +15243,8 @@ stop
        ! (1) project_option==SOLVETYPE_VISC and combine_flag==2
        ! (2) project_option==SOLVETYPE_HEAT, SOLVETYPE_SPEC, and 
        !     combine_flag==2
-      real(amrex_real), INTENT(inout),target :: cellfab(DIMV(cellfab),ncomp_cell)
+      real(amrex_real), INTENT(inout),target :: &
+       cellfab(DIMV(cellfab),ncomp_cell)
       real(amrex_real), pointer :: cellfab_ptr(D_DECL(:,:,:),:)
        ! output if,
        !  project_option==SOLVETYPE_HEAT, SOLVETYPE_SPEC, and 
@@ -15251,7 +15252,8 @@ stop
       real(amrex_real), INTENT(out),target :: newcell(DIMV(newcell), &
               nsolve*num_materials_combine)
       real(amrex_real), pointer :: newcell_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: state(DIMV(state),nstate_main) !Snew
+       !Snew
+      real(amrex_real), INTENT(in),target :: state(DIMV(state),nstate_main) 
       real(amrex_real), pointer :: state_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real) DATA_FLOOR
@@ -15281,8 +15283,10 @@ stop
 
       real(amrex_real) total_vol_cell
       real(amrex_real) mass_sum
+      real(amrex_real) DeDT_total
       real(amrex_real) weight_sum
 
+      real(amrex_real) DeDT
       real(amrex_real) local_volume
       real(amrex_real) local_mass
 
@@ -15294,8 +15298,12 @@ stop
       real(amrex_real) cell_LS(num_materials)
       real(amrex_real) cell_vfrac(num_materials)
       real(amrex_real) cell_mfrac(num_materials)
+      real(amrex_real) cell_DeDT_mfrac(num_materials)
 
-      integer is_solid_cell !=0 no solid 1<=is_solid_cell<=num_materials+1 ot
+      integer imattype
+
+       !=0 no solid 1<=is_solid_cell<=num_materials+1 otherwise
+      integer is_solid_cell 
 
       integer dencomp
       integer tempcomp
@@ -15307,7 +15315,8 @@ stop
       real(amrex_real) state_mass_average
 
       real(amrex_real) test_density
-      real(amrex_real) test_temp
+      real(amrex_real) test_temperature
+      real(amrex_real) massfrac_parm(num_species_var+1)
 
       real(amrex_real) cell_temperature(num_materials)
       real(amrex_real) new_temperature(num_materials)
@@ -15589,6 +15598,7 @@ stop
 
         mass_sum=zero
         total_vol_cell=zero
+        DeDT_total=zero
 
         do im=1,num_materials
 
@@ -15623,6 +15633,40 @@ stop
 
          cell_mfrac(im)=local_mass
 
+         imattype=fort_material_type(im)
+
+         test_temperature=state(D_DECL(i,j,k),dencomp+1)
+         if (test_temperature.gt.zero) then
+          ! do nothing
+         else
+          print *,"test_temperature invalid: ",test_temperature
+          stop
+         endif
+
+         call init_massfrac_parm(test_density,massfrac_parm,im)
+         do ispec=1,num_species_var
+          massfrac_parm(ispec)=state(D_DECL(i,j,k),dencomp+1+ispec)
+          if (massfrac_parm(ispec).ge.zero) then
+           ! do nothing
+          else
+           print *,"massfrac_parm(ispec) invalid: ",massfrac_parm(ispec)
+           stop
+          endif
+         enddo ! ispec=1,num_species_var
+
+          !DeDT=cv
+         call DeDT_material(test_density,massfrac_parm, &
+           test_temperature,DeDT,imattype,im)
+         if (DeDT.gt.zero) then
+          ! do nothing
+         else
+          print *,"DeDT must be positive: ",DeDT
+          stop
+         endif
+
+         cell_DeDT_mfrac(im)=local_mass*DeDT
+         DeDT_total=DeDT_total+cell_DeDT_mfrac(im)
+
         enddo ! im=1,num_materials
 
         if (total_vol_cell.gt.zero) then
@@ -15636,6 +15680,12 @@ stop
          ! do nothing
         else
          print *,"mass_sum invalid: ",mass_sum
+         stop
+        endif
+        if (DeDT_total.gt.zero) then
+         ! do nothing
+        else
+         print *,"DeDT_total invalid: ",DeDT_total
          stop
         endif
 
@@ -15820,7 +15870,7 @@ stop
           endif
 
           do cellcomp=1,SDIM
-           if (hflag.eq.0) then
+           if (hflag.eq.0) then !inhomogeneous solid velocity
             if (im_solid_vel.eq.0) then
              vsol(cellcomp)=zero
             else if ((im_solid_vel.ge.1).and. &
@@ -15850,7 +15900,7 @@ stop
              print *,"im_solid_vel invalid"
              stop
             endif
-           else if (hflag.eq.1) then
+           else if (hflag.eq.1) then !homogeneous solid velocity
             vsol(cellcomp)=zero
            else
             print *,"hflag invalid2 hflag=",hflag
@@ -15868,7 +15918,7 @@ stop
             do dir=1,SDIM
              vsol(dir)=vel_clamped(dir)
             enddo
-           else if (hflag.eq.1) then
+           else if (hflag.eq.1) then !homogeneous
             do dir=1,SDIM
              vsol(dir)=zero
             enddo
@@ -15920,7 +15970,15 @@ stop
 
          do im_crit=1,num_materials
 
-          weight_sum=weight_sum+cell_mfrac(im_crit)
+          if (project_option.eq.SOLVETYPE_HEAT) then
+           weight_sum=weight_sum+cell_DeDT_mfrac(im_crit)
+          else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+           weight_sum=weight_sum+cell_mfrac(im_crit)
+          else
+           print *,"project_option invalid"
+           stop
+          endif
 
           if (combine_idx.eq.-1) then !State_Type (combine_flag=0,1)
            cellcomp=scomp(im_crit)+1
@@ -15933,7 +15991,7 @@ stop
 
           cell_temperature(im_crit)=cellfab(D_DECL(i,j,k),cellcomp)
 
-          if (hflag.eq.0) then
+          if (hflag.eq.0) then !inhomogeneous solid velocity
            if (cell_temperature(im_crit).ge.zero) then
             ! do nothing
            else
@@ -15943,7 +16001,7 @@ stop
             print *,"cellcomp=",cellcomp
             stop
            endif
-          else if (hflag.eq.1) then
+          else if (hflag.eq.1) then !homogeneous solid velocity
            if ((cell_temperature(im_crit).ge.zero).or. &
                (cell_temperature(im_crit).le.zero)) then
             ! do nothing
@@ -16010,8 +16068,17 @@ stop
            stop
           endif
  
-          state_mass_average=state_mass_average+ &
+          if (project_option.eq.SOLVETYPE_HEAT) then
+           state_mass_average=state_mass_average+ &
+             cell_DeDT_mfrac(im_crit)*cell_temperature(im_crit)
+          else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+           state_mass_average=state_mass_average+ &
              cell_mfrac(im_crit)*cell_temperature(im_crit)
+          else
+           print *,"project_option invalid"
+           stop
+          endif
 
          enddo ! im_crit=1 .. num_materials
 
@@ -16022,7 +16089,7 @@ stop
           stop
          endif 
 
-         if (hflag.eq.0) then
+         if (hflag.eq.0) then !inhomogeneous solid velocity
           if (state_mass_average.ge.zero) then
            ! do nothing
           else
@@ -16030,7 +16097,7 @@ stop
              state_mass_average
            stop
           endif
-         else if (hflag.eq.1) then
+         else if (hflag.eq.1) then !homogeneous solid velocity
           if ((state_mass_average.ge.zero).or. &
               (state_mass_average.le.zero)) then
            ! do nothing
@@ -16391,19 +16458,19 @@ stop
             do k1=k1lo,k1hi
             do j1=-1,1
             do i1=-1,1
-             test_temp=cellfab(D_DECL(i+i1,j+j1,k+k1),scomp(im)+1)
+             test_temperature=cellfab(D_DECL(i+i1,j+j1,k+k1),scomp(im)+1)
 
              if ((project_option.eq.SOLVETYPE_HEAT).or. & ! thermal combine
                  ((project_option.ge.SOLVETYPE_SPEC).and. &
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var))) then
 
-              if (hflag.eq.0) then
+              if (hflag.eq.0) then !inhomogeneous solid velocity
 
-               if (test_temp.ge.zero) then
+               if (test_temperature.ge.zero) then
                 ! do nothing
                else
                 print *,"project_option ",project_option
-                print *,"test_temp invalid test_temp=",test_temp
+                print *,"test_temperature invalid:",test_temperature
                 print *,"combine_flag=",combine_flag
                 print *,"level,finest_level ",level,finest_level
                 print *,"i,j,k ",i,j,k
@@ -16435,13 +16502,13 @@ stop
                 stop
                endif
 
-              else if (hflag.eq.1) then
+              else if (hflag.eq.1) then !homogeneous solid velocity
 
-               if ((test_temp.ge.zero).or. &
-                   (test_temp.le.zero)) then
+               if ((test_temperature.ge.zero).or. &
+                   (test_temperature.le.zero)) then
                 ! do nothing
                else
-                print *,"test_temp is NaN: ",test_temp
+                print *,"test_temperature bad:",test_temperature
                 stop
                endif
               else
@@ -16455,7 +16522,7 @@ stop
               stop
              endif
         
-             T_sten(D_DECL(i1,j1,k1))=test_temp
+             T_sten(D_DECL(i1,j1,k1))=test_temperature
             enddo
             enddo
             enddo ! i1,j1,k1

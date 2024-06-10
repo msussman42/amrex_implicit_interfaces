@@ -15,6 +15,7 @@ geometry.prob_lo   = -0.125 -0.125 0.0
 geometry.prob_hi   =  0.125  0.125 0.5   
 geometry.is_periodic = 0 0 0 # 0 0 = RZ  0 0 0 = XYZ
 ns.projection_pressure_scale=1.0e+6
+ns.compressible_dt_factor=1.0 1.0 1.0
 # 0: use volume fraction
 # 1: use mass fraction
 ns.pressure_select_criterion=0
@@ -37,6 +38,7 @@ ns.initial_cg_cycles=10
 ns.num_materials=2
 ns.num_species_var=0
 
+ns.post_init_pressure_solve=0  # 0=COMPRESSIBLE 1=INCOMPRESSIBLE
 
 # for big domain:
 # max_level=6 fine, max_level=7 finest
@@ -88,7 +90,8 @@ ns.twall=0.1
 # (p dt)dt = dx
 # dt=sqrt(dx/p) u=dx/dt=sqrt(dx p) dx~1/100  u~sqrt(10^6)=1000
 # advbot is inflow velocity from bottom if axis_dir<>2
-ns.advbot=6e4     # pressure bc used instead if axis_dir=2
+# advbot=6e4 is the realistic parameter.
+ns.advbot=6.0e4     # pressure bc used instead if axis_dir=2
 #ns.outflow_pressure=1.0e+6 # this is "general_hydrostatic_pressure"
 #ns.inflow_pressure=0.5e+8  # pressure is specified at inflow  (80 MPa)
 #ns.inflow_pressure=8.0e+8  # pressure is specified at inflow  (80 MPa)
@@ -101,17 +104,21 @@ ns.viscconst=0.013 0.000142 # g/(cm s)  0.000142
 # 1 Watt=10^7 ERG/S
 # 1 W/(M K)=10^5 ERG/(S CM K)
 # 1 ERG= 1 (gram cm^2/s^2)
-# air: k=0.024 W/(M K)  k/cv=2400/6E+6=0.0004
-# water: k=0.58 W/(M K)
-ns.heatviscconst=58000. 2400.
+# air: k=0.024 W/(M K)=2400 cgs units  k/cv=2400/6E+6=0.0004
+# water: k=0.58 W/(M K)=58000 cgs units
+ns.heatviscconst=58000.0 2400.0
 ns.denconst=0.78 0.00627
-# 7,4,999 compressible liquid (or 1,4,999), 0,4,999 incompressible liquid
+# 7,4,999 compressible liquid, 0,4,999 incompressible liquid
+# or 
+# 1,4,999 compressible liquid, 0,4,999 incompressible liquid
 # 0 0 999=incompressible liquid and gas.
 # material 4 is SF6 material, 7=tait w/rho0=den(1)
 # material 8 is EOS_airADIABAT (denconst(2) is base density)
+# material 16 is EOS_SF6ADIABAT (denconst(2) is base density)
 ns.material_type=1 4 999
 
-ns.pressure_error_cutoff=0.0 1.3  # 0.0 0.0 if both materials incomp
+ns.pressure_error_cutoff=0.0 1.3  # comp
+#ns.pressure_error_cutoff=0.0 0.0  # incomp
 
 # initial gas pressure and density give T_initial=280
 ns.tempconst=280.0 280.0 

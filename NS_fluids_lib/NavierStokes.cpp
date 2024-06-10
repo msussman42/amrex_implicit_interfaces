@@ -142,7 +142,9 @@ materials are immersed into the fluid(s).
 
 */
 
-int  NavierStokes::continuous_mof=CMOF_X;
+//int  NavierStokes::continuous_mof=CMOF_X;
+int  NavierStokes::continuous_mof=STANDARD_MOF;
+
 int  NavierStokes::update_centroid_after_recon=0;
 
 //make MOFITERMAX_AFTER_PREDICT=0 if mof_decision_tree_learning>=100^d
