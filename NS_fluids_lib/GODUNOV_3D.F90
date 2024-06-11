@@ -5739,15 +5739,18 @@ stop
       real(amrex_real), pointer :: xface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: yface_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: zface_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: lsfab(DIMV(lsfab),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in),target :: &
+        lsfab(DIMV(lsfab),num_materials*(1+SDIM))
       real(amrex_real), pointer :: lsfab_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in),target :: DeDTinverse(DIMV(DeDTinverse))
       real(amrex_real), pointer :: DeDTinverse_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(inout),target :: vischeat(DIMV(vischeat))
       real(amrex_real), pointer :: vischeat_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in),target :: tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real), INTENT(in),target :: &
+        tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), pointer :: tensor_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in),target :: gradu(DIMV(gradu),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(in),target :: &
+         gradu(DIMV(gradu),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: gradu_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in) :: dt
       integer, INTENT(in) :: irz
@@ -15655,8 +15658,12 @@ stop
          enddo ! ispec=1,num_species_var
 
           !DeDT=cv
-         call DeDT_material(test_density,massfrac_parm, &
-           test_temperature,DeDT,imattype,im)
+          !DeDT_material is declared in GLOBALUTIL.F90
+         call DeDT_material(test_density, & !intent(in)
+           massfrac_parm, & !intent(in)
+           test_temperature, & !intent(in)
+           DeDT, & !intent(out)
+           imattype,im) !intent(in)
          if (DeDT.gt.zero) then
           ! do nothing
          else
@@ -15682,6 +15689,7 @@ stop
          print *,"mass_sum invalid: ",mass_sum
          stop
         endif
+
         if (DeDT_total.gt.zero) then
          ! do nothing
         else
