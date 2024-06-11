@@ -17730,7 +17730,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        stop
       endif
       if ((im.le.0).or.(im.gt.num_materials)) then
-       print *,"im invalid80"
+       print *,"im invalid80: ",im
        stop
       endif
       x=xsten(0,1)
@@ -29429,7 +29429,13 @@ end subroutine initialize2d
          IWALL(3)=k
          IWALL(dir2)=inside_index
 
-         im=fort_im_refine_density_map(im_compressible) 
+         im=fort_im_refine_density_map(im_compressible)+1
+         if ((im.ge.1).and.(im.le.num_materials)) then
+          !do nothing
+         else
+          print *,"im invalid (im,im_compressible): ",im,im_compressible
+          stop
+         endif
 
          uwall_avg=zero 
          krefine=0
@@ -30392,10 +30398,15 @@ end subroutine initialize2d
 
          if ((istate.ge.1).and. &
              (istate.le.num_state_material)) then
-          call denBC(time,dir2,side, &
-           u(D_DECL(i,j,k)), &
-           u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
-           xsten,nhalf,dx,bfact,istate,im)
+          if ((im.ge.1).and.(im.le.num_materials)) then
+           call denBC(time,dir2,side, &
+            u(D_DECL(i,j,k)), &
+            u(D_DECL(IWALL(1),IWALL(2),IWALL(3))), &
+            xsten,nhalf,dx,bfact,istate,im)
+          else
+           print *,"im invalid (call to denBC): ",im
+           stop
+          endif
          else
           print *,"istate not supported"
           stop
@@ -30892,10 +30903,15 @@ end subroutine initialize2d
 
          if ((istate.ge.1).and. &
              (istate.le.num_state_material)) then
-          call denBC(time,dir2,side, &
-           u(D_DECL(i,j,k),icomp), &
-           u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
-           xsten,nhalf,dx,bfact,istate,im)
+          if ((im.ge.1).and.(im.le.num_materials)) then
+           call denBC(time,dir2,side, &
+            u(D_DECL(i,j,k),icomp), &
+            u(D_DECL(IWALL(1),IWALL(2),IWALL(3)),icomp), &
+            xsten,nhalf,dx,bfact,istate,im)
+          else
+           print *,"im invalid (call to denBC2): ",im
+           stop
+          endif
          else
           print *,"istate not supported"
           stop
