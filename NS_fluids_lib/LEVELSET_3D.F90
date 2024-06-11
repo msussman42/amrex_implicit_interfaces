@@ -11410,28 +11410,28 @@ stop
            SDIM+num_state_material*num_materials) then
         ! do nothing
        else
-        print *,"ncomp_veldest invalid"
+        print *,"ncomp_veldest invalid: ",ncomp_veldest
         stop
        endif
        if (ncomp_dendest.ge.num_state_material*num_materials) then
         ! do nothing
        else
-        print *,"ncomp_dendest invalid"
+        print *,"ncomp_dendest invalid: ",ncomp_dendest
         stop
        endif
        if (ncphys.ne.FACECOMP_NCOMP) then
-        print *,"ncphys invalid"
+        print *,"ncphys invalid: ",ncphys
         stop
        endif
        if (nsolve.ne.1) then
-        print *,"nsolve invalid 2"
+        print *,"nsolve invalid 2: ",nsolve
         stop
        endif
 
        if (ncomp_denold.eq.nsolve) then
         ! do nothing
        else
-        print *,"ncomp_denold invalid"
+        print *,"ncomp_denold invalid: ",ncomp_denold
         stop
        endif
 
@@ -11590,27 +11590,28 @@ stop
        endif
        if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. &
            (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then
-        print *,"energyflag invalid OP_VEL_MAC_TO_CELL "
+        print *,"energyflag invalid OP_VEL_MAC_TO_CELL: ",energyflag
         stop
        endif
        if (nsolve.ne.1) then
-        print *,"nsolve invalid5"
+        print *,"nsolve invalid5: ",nsolve
         stop
        endif
 
         ! copy u^{mac->cell} to u^{cell}, div(up),
       else if (operation_flag.eq.OP_VEL_DIVUP_TO_CELL) then 
+
        if (homflag.ne.0) then
-        print *,"homflag invalid"
+        print *,"homflag invalid: ",homflag
         stop
        endif
        if ((energyflag.ne.SUB_OP_THERMAL_DIVUP_NULL).and. & 
            (energyflag.ne.SUB_OP_THERMAL_DIVUP_OK)) then 
-        print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL"
+        print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL: ",energyflag
         stop
        endif
        if (nsolve.ne.1) then
-        print *,"nsolve invalid6"
+        print *,"nsolve invalid6: ",nsolve
         stop
        endif
 
@@ -12385,7 +12386,6 @@ stop
         do im=1,num_materials
          LStest(im)=levelPC(D_DECL(i,j,k),im)
         enddo
-        call get_primary_material(LStest,im)
 
         is_rigid_near=0
         do im=1,num_materials
@@ -12494,7 +12494,7 @@ stop
            stop
           endif
          else
-          print *,"levelrz invalid edge pressure 2"
+          print *,"levelrz invalid edge pressure 2: ",levelrz
           stop
          endif
          hx=hx*RR
@@ -12727,7 +12727,8 @@ stop
                if (abs(TEMPERATURE-NEW_TEMPERATURE).le.EPS3*TEMPERATURE) then
                 ! do nothing 
                else
-                print *,"T(rho,e) and e(rho,T) are not inverses"
+                print *,"T(rho,e) and e(rho,T) are not inverses: ", &
+                  TEMPERATURE,NEW_TEMPERATURE
                 stop
                endif
               else
