@@ -1442,7 +1442,7 @@ END SUBROUTINE SIMP
         if ((imcrit.ge.1).and.(imcrit.le.num_materials)) then
          ! do nothing
         else
-         print *,"imcrit invalid"
+         print *,"imcrit invalid: ",imcrit
          stop
         endif
 
@@ -1460,7 +1460,7 @@ END SUBROUTINE SIMP
         endif
 
 
-        if (project_option.eq.SOLVETYPE_PRES) then
+        if (project_option.eq.SOLVETYPE_PRES) then !sanity check
 
          do im=1,num_materials
           localLS(im)=lsnew(D_DECL(i,j,k),im)
@@ -1583,14 +1583,15 @@ END SUBROUTINE SIMP
          infinite_weight=0
          im_weight=0
 
-         if (imcrit.eq.0) then ! rigid material(s) dominate
+          ! rigid material(s) dominate
+         if (imcrit.eq.0) then 
           im_weight=imcrit
           infinite_weight=1
 
           ! fluid material dominates
          else if ((imcrit.ge.1).and.(imcrit.le.num_materials)) then
   
-          if (is_rigid(imcrit).eq.0) then
+          if (is_rigid(imcrit).eq.0) then !sanity check
 
            do im=1,num_materials
 
@@ -1602,7 +1603,8 @@ END SUBROUTINE SIMP
              if ((vfrac(im).gt.zero).and. &
                  (vfrac(im).le.one+EPS1)) then
               if (pressure_select_criterion.eq.0) then ! vol. frac.
-               ! do nothing (vfrac_weight=vfrac)
+               ! do nothing (vfrac_weight=vfrac) 
+               ! default value for pressure_select_criterion is 0.
               else if (pressure_select_criterion.eq.1) then ! mass frac. 
                vfrac_weight(im)=vfrac_weight(im)*rho(im)
               else if (pressure_select_criterion.eq.2) then ! impedance weight
@@ -1613,11 +1615,12 @@ END SUBROUTINE SIMP
                 vfrac_weight(im)=vfrac_weight(im)*rho(im)/one_over_c(im)
                endif
               else
-               print *,"pressure_select_criterion invalid"
+               print *,"pressure_select_criterion invalid: ", &
+                pressure_select_criterion
                stop
               endif
              else if (vfrac(im).eq.zero) then
-              ! do nothing (vfrac_weight is 0)
+              ! do nothing (vfrac_weight(im) is 0)
              else 
               print *,"vfrac invalid: ",im,vfrac(im)
               stop
@@ -1630,27 +1633,28 @@ END SUBROUTINE SIMP
                im_weight=im
               endif
              else
-              print *,"im_weight invalid"
+              print *,"im_weight invalid: ",im_weight
               stop
              endif
             else
-             print *,"is_rigid(im) invalid"
+             print *,"is_rigid(im) invalid: ",is_rigid(im)
              stop
             endif
 
            enddo ! im=1,num_materials
 
           else
-           print *,"is_rigid(imcrit) invalid"
+           print *,"is_rigid(imcrit) invalid: ",is_rigid(imcrit)
            stop
           endif
 
          else
-          print *,"imcrit invalid"
+          print *,"imcrit invalid: ",imcrit
           stop
          endif
        
-         if (imcrit.eq.0) then ! is_rigid material(s) dominate.
+          ! is_rigid material(s) dominate
+         if (imcrit.eq.0) then
 
           csnd(D_DECL(i,j,k),1)=zero  ! coeff
           csnd(D_DECL(i,j,k),2)=zero  ! padvect
@@ -1658,27 +1662,30 @@ END SUBROUTINE SIMP
           if (im_weight.eq.0) then
            ! do nothing
           else
-           print *,"expecting im_weight==0"
+           print *,"expecting im_weight==0: ",im_weight
            stop
           endif
 
+          ! fluid material dominates
          else if ((imcrit.ge.1).and.(imcrit.le.num_materials)) then
 
           if (is_rigid(imcrit).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(imcrit) invalid"
+           print *,"is_rigid(imcrit) invalid: ",is_rigid(imcrit)
            stop
           endif
 
           if (is_rigid(im_weight).eq.0) then
            ! do nothing
           else
-           print *,"is_rigid(im_weight).ne.0"
+           print *,"is_rigid(im_weight).ne.0: ",is_rigid(im_weight)
            stop
           endif
 
-          if (infinite_weight.eq.1) then ! sound speed=infinity
+           !sound speed=infinity and 
+           !pressure_select_criterion==2 (impedance weight)
+          if (infinite_weight.eq.1) then 
 
            csnd(D_DECL(i,j,k),1)=zero  ! coeff
            csnd(D_DECL(i,j,k),2)=zero  ! padvect
@@ -1692,7 +1699,8 @@ END SUBROUTINE SIMP
            if (vfrac_weight(im_weight).gt.zero) then
             ! do nothing
            else
-            print *,"vfrac_weight(im_weight) invalid"
+            print *,"vfrac_weight(im_weight) invalid: ", &
+              vfrac_weight(im_weight)
             stop
            endif
 
@@ -1703,7 +1711,7 @@ END SUBROUTINE SIMP
             if (rho(im_weight).gt.zero) then
              ! do nothing
             else
-             print *,"rho(im_weight) invalid"
+             print *,"rho(im_weight) invalid: ",rho(im_weight)
              stop
             endif
 
@@ -1728,16 +1736,17 @@ END SUBROUTINE SIMP
             csnd(D_DECL(i,j,k),2)=zero ! padvect
 
            else
-            print *,"material type invalid"
+            print *,"fort_material_type(im_weight) invalid: ", &
+              im_weight,fort_material_type(im_weight)
             stop
            endif
           else
-           print *,"infinite_weight invalid"
+           print *,"infinite_weight invalid: ",infinite_weight
            stop
           endif
 
          else
-          print *,"imcrit invalid"
+          print *,"imcrit invalid: ",imcrit
           stop
          endif
 

@@ -11195,8 +11195,6 @@ stop
       integer dir,side
       integer veldir
       integer im
-      integer im_opp
-      integer iten
       integer sidecomp,ibase
       integer ii,jj,kk
       integer iface,jface,kface
@@ -12421,33 +12419,6 @@ stop
             print *,"is_compressible_mat invalid: ",im,is_compressible_mat(im)
             stop
            endif
-
-           do im_opp=1,num_materials
-            if (im_opp.ne.im) then
-             if (LStest(im_opp).ge.-incomp_thickness*DXMAXLS) then
-              call get_iten(im,im_opp,iten)
-              if (fort_material_type_interface(iten).eq.0) then
-               use_face_pres_cen=0
-              else if (fort_material_type_interface(iten).eq.999) then
-               use_face_pres_cen=0
-              else if ((fort_material_type_interface(iten).ge.1).and. &
-                       (fort_material_type_interface(iten).le. &
-                        MAX_NUM_EOS)) then 
-               !do nothing
-              else
-               print *,"fort_materal_type_interface invalid: ", &
-                iten,fort_material_type_interface(iten)
-               stop
-              endif
-
-             else if (LStest(im_opp).le.-incomp_thickness*DXMAXLS) then
-              !do nothing
-             else
-              print *,"LStest(im_opp) corrupt: ",im_opp,LStest(im_opp)
-              stop
-             endif 
-            endif !im_opp<>im
-           enddo !im_opp=1 ... num_materials
 
           else if (LStest(im).le.-incomp_thickness*DXMAXLS) then
            ! do nothing

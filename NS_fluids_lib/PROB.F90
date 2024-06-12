@@ -244,11 +244,6 @@ stop
       integer iten
       real(amrex_real) LL(0:1)
       real(amrex_real) dxmax
-      integer ispec
-      integer spec_comp
-      real(amrex_real) species_base
-      real(amrex_real) test_icefacecut
-      real(amrex_real) :: user_tension(num_interfaces)
       real(amrex_real) :: def_thermal(num_materials)
       integer :: im_local
 
