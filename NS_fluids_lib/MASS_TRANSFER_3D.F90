@@ -3344,10 +3344,7 @@ stop
       real(amrex_real), target, INTENT(out) :: snew(DIMV(snew),nstate)
       real(amrex_real), pointer :: snew_ptr(D_DECL(:,:,:),:)
       integer i,j,k
-      integer im,im_inner,im_melt,im_opp,im_primary,ispec
-      integer ireverse,iten
-      real(amrex_real) LL
-      real(amrex_real) LSMELT
+      integer im,im_primary,ispec
       integer local_mask
       real(amrex_real) local_LS(num_materials)
       real(amrex_real) local_VOF(num_materials)
@@ -3357,13 +3354,11 @@ stop
       real(amrex_real) species_mass_sum
       real(amrex_real) species_avg
       real(amrex_real) speciesconst_avg
-      real(amrex_real) species_base
       real(amrex_real) local_rate
       integer vofcomp
       integer spec_comp
       integer dencomp
       real(amrex_real) spec_old,spec_new
-      real(amrex_real) local_cutoff
       real(amrex_real) species_scale
       real(amrex_real), PARAMETER :: species_max=1.0d0
 
