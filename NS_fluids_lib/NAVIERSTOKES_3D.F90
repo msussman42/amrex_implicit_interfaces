@@ -12216,7 +12216,8 @@ END SUBROUTINE SIMP
           if (abs(local_data(n)).le.1.0D+20) then
            fabin(D_DECL(i,j,k),n)=local_data(n)
           else
-           print *,"local_data(n) overflow"
+           print *,"local_data(n) overflow NAVIERSTOKES_3D.F90 12219"
+           print *,"i,j,k,n,local_data ",i,j,k,n,local_data(n)
            stop
           endif
          enddo ! n=1..visual_ncomp
@@ -12344,7 +12345,8 @@ END SUBROUTINE SIMP
            stop
           endif
          else
-          print *,"local_data(n) overflow"
+          print *,"local_data(n) overflow NAVIERSTOKES_3D.F90 12348"
+          print *,"i,j,k,n,local_data ",i,j,k,n,local_data(n)
           stop
          endif
         enddo ! n=1..visual_ncomp
