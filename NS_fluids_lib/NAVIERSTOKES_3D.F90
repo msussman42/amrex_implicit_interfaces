@@ -3401,8 +3401,15 @@ END SUBROUTINE SIMP
         endif
 
         do iw=1,scomp
-         towerfab(D_DECL(i,j,k),iw)=writend(iw)
-        enddo        
+         if (abs(writend(iw)).le.1.0D+20) then
+          towerfab(D_DECL(i,j,k),iw)=writend(iw)
+         else
+          print *,"NAVIERSTOKES_3D.F90 3407 writend"
+          print *,"i,j,k,iw,scomp,writend ", &
+            i,j,k,iw,scomp,writend(iw)
+          stop
+         endif
+        enddo !iw=1,scomp 
 
         if ((visual_nddata_format.eq.0).and. & ! tecplot format
             (plot_grid_type.eq.0)) then ! interp to nodes
@@ -3861,6 +3868,14 @@ END SUBROUTINE SIMP
           enddo
            ! primary material w.r.t. both fluids and solids.
           call get_primary_material(lsdist_interp,im_interp)
+
+          if ((im_interp.ge.1).and.(im_interp.le.num_materials)) then
+           !do nothing
+          else
+           print *,"im_interp invalid: ",im_interp
+           stop
+          endif
+
           if (is_compressible_mat(im_interp).eq.0) then
            !do nothing
           else if (is_compressible_mat(im_interp).eq.1) then
@@ -3930,7 +3945,7 @@ END SUBROUTINE SIMP
                 localfab(VISUALCOMP_DEN+1)=localfab(VISUALCOMP_DEN+1)+ &
                   localwt* &
                   refineden(D_DECL(iBL,jBL,kBL), &
-                    (im_interp-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)
+                    (im_refine_density-1)*ENUM_NUM_REFINE_DENSITY_TYPE+nfine)
                 sumweight=sumweight+localwt
                enddo  ! ifine
                enddo  ! jfine
@@ -3954,7 +3969,8 @@ END SUBROUTINE SIMP
             endif
            enddo !im=1,..,num_materials
           else
-           print *,"is_compressible(im_interp) invalid"
+           print *,"is_compressible_mat(im_interp) invalid: ", &
+             im_interp,is_compressible_mat(im_interp)
            stop
           endif
 
@@ -4112,8 +4128,15 @@ END SUBROUTINE SIMP
           endif
 
           do dir=1,visual_ncomp
-           fabout(D_DECL(ic,jc,kc),dir)=localfab(dir)
-          enddo
+           if (abs(localfab(dir)).le.1.0D+20) then
+            fabout(D_DECL(ic,jc,kc),dir)=localfab(dir)
+           else
+            print *,"NAVIERSTOKES_3D.F90 4125 localfab"
+            print *,"ic,jc,kc,dir,visual_ncomp,localfab ", &
+              ic,jc,kc,dir,visual_ncomp,localfab(dir)
+            stop
+           endif
+          enddo ! do dir=1,visual_ncomp
 
          else if (inbox.eq.0) then
           ! do nothing
@@ -12218,6 +12241,12 @@ END SUBROUTINE SIMP
           else
            print *,"local_data(n) overflow NAVIERSTOKES_3D.F90 12219"
            print *,"i,j,k,n,local_data ",i,j,k,n,local_data(n)
+           print *,"visual_ncomp: ",visual_ncomp
+           print *,"VISUALCOMP_X ",VISUALCOMP_X
+           print *,"VISUALCOMP_U ",VISUALCOMP_U
+           print *,"VISUALCOMP_PMG ",VISUALCOMP_PMG
+           print *,"VISUALCOMP_DEN ",VISUALCOMP_DEN
+           print *,"VISUALCOMP_TEMP ",VISUALCOMP_TEMP
            stop
           endif
          enddo ! n=1..visual_ncomp
@@ -12347,6 +12376,12 @@ END SUBROUTINE SIMP
          else
           print *,"local_data(n) overflow NAVIERSTOKES_3D.F90 12348"
           print *,"i,j,k,n,local_data ",i,j,k,n,local_data(n)
+          print *,"visual_ncomp: ",visual_ncomp
+          print *,"VISUALCOMP_X ",VISUALCOMP_X
+          print *,"VISUALCOMP_U ",VISUALCOMP_U
+          print *,"VISUALCOMP_PMG ",VISUALCOMP_PMG
+          print *,"VISUALCOMP_DEN ",VISUALCOMP_DEN
+          print *,"VISUALCOMP_TEMP ",VISUALCOMP_TEMP
           stop
          endif
         enddo ! n=1..visual_ncomp

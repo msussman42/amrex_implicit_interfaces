@@ -64,6 +64,7 @@ amr.grid_eff        = 0.8   # what constitutes an efficient grid
 amr.blocking_factor = 8       # block factor in grid generation
 amr.check_int       = 100    # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
+amr.plotfile_on_restart=1
 amr.plot_int        = 100
 amr.plot_file       = plt 
 #amr.grid_log        = grdlog  # name of grid logging file
