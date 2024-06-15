@@ -11188,6 +11188,9 @@ stop
 
       real(amrex_real) DXMAXLS,cutoff
       real(amrex_real) Eforce_conservative
+      real(amrex_real) Eforce_non_conservative
+      real(amrex_real) divu_cell_center
+      real(amrex_real) pres_cell_center
 
       real(amrex_real) KE_diff
 
@@ -11243,6 +11246,7 @@ stop
       integer partid_ghost
       integer nparts_temp
       integer im_solid
+      integer im_majority
       integer cell_velocity_override
       
       real(amrex_real) xclamped(SDIM)
@@ -12384,6 +12388,7 @@ stop
         do im=1,num_materials
          LStest(im)=levelPC(D_DECL(i,j,k),im)
         enddo
+        call get_primary_material(LStest,im_majority)
 
         is_rigid_near=0
         do im=1,num_materials
@@ -12434,6 +12439,9 @@ stop
         endif 
 
         Eforce_conservative=zero
+        Eforce_non_conservative=zero
+        divu_cell_center=zero
+        pres_cell_center=zero
 
         do dir=0,SDIM-1 
          ii=0
@@ -12591,6 +12599,16 @@ stop
             dt*(AFACE(2)*uface(2)*pres_face(2)- &
                 AFACE(1)*uface(1)*pres_face(1))/ &
             (dencell*VOLTERM)
+ 
+           ! dt div(u)
+          divu_cell_center=divu_cell_center+ &
+            dt*(AFACE(2)*uface(2)- &
+                AFACE(1)*uface(1))/ &
+            (VOLTERM)
+           !p
+          pres_cell_center=pres_cell_center+ &
+            (pres_face(2)+pres_face(1))/ &
+            (two)
 
          else
           print *,"energyflag invalid OP_VEL_DIVUP_TO_CELL: ",energyflag
@@ -12616,13 +12634,48 @@ stop
          if (use_face_pres_cen.eq.0) then
 
           Eforce_conservative=zero
+          Eforce_non_conservative=zero
+          divu_cell_center=zero
+          pres_cell_center=zero
+
           rhs(D_DECL(i,j,k),1)=zero
 
          else if (use_face_pres_cen.eq.1) then
 
-!
+          if (pres_cell_center.lt.zero) then
+           pres_cell_center=zero
+          else if (pres_cell_center.ge.zero) then
+           !do nothing
+          else
+           print *,"pres_cell_center invalid: ",pres_cell_center
+           stop
+          endif
+
+          if (dencell.gt.zero) then
+           !do nothing
+          else
+           print *,"dencell invalid: ",dencell
+           stop
+          endif
+
+          Eforce_non_conservative=-divu_cell_center*pres_cell_center/dencell
+
 ! -dt div(up)/rho
-          rhs(D_DECL(i,j,k),1)=Eforce_conservative
+          if (is_compressible_mat(im_majority).eq.0) then
+           rhs(D_DECL(i,j,k),1)=zero
+          else if (is_compressible_mat(im_majority).eq.1) then
+           if (fort_material_conservation_form(im_majority).eq.0) then
+            rhs(D_DECL(i,j,k),1)=Eforce_non_conservative
+           else if (fort_material_conservation_form(im_majority).eq.1) then
+            rhs(D_DECL(i,j,k),1)=Eforce_conservative
+           else 
+            print *,"fort_material_conservation_form(im_majority) bad"
+            stop
+           endif
+          else 
+           print *,"is_compressible_mat(im_majority) bad"
+           stop
+          endif
 
            ! update the temperature:
            ! 1. cell centered advection to get E^advect, UCELL^advect
@@ -12707,17 +12760,62 @@ stop
                stop
               endif
 
-              ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
-              internal_e=internal_e+KE_diff+Eforce_conservative
+              if (fort_material_conservation_form(im).eq.1) then
+
+               ! e^proj=e^*+(U^2^advect/2-U^2^proj/2)-dt div(up)/rho
+               internal_e=internal_e+KE_diff+Eforce_conservative
+
+              else if (fort_material_conservation_form(im).eq.0) then
+
+                ! dt div(u)
+                ! rho^{n+1}=rho^{n} - dt divu \rho
+               if (divu_cell_center.gt.zero) then
+                rho=rho/(one+divu_cell_center) 
+               else if (divu_cell_center.le.zero) then
+                rho=rho*(one-divu_cell_center)
+               else
+                print *,"divu_cell_center invalid"
+                stop
+               endif
+               if (rho.gt.zero) then
+                dendest(D_DECL(i,j,k),ibase+ENUM_DENVAR+1)=rho
+               else
+                print *,"rho invalid: ",rho
+                stop
+               endif
+ 
+               if (Eforce_non_conservative.ge.zero) then
+                ! e=e^*-dt div(up)/rho
+                internal_e=internal_e+Eforce_non_conservative
+               else if (Eforce_non_conservative.lt.zero) then
+                internal_e=internal_e/ &
+                 (one-Eforce_non_conservative/internal_e)
+               else
+                print *,"Eforce_non_conservative invalid: ", &
+                  Eforce_non_conservative
+                stop
+               endif
+         
+               if (internal_e.gt.zero) then
+                !do nothing
+               else
+                print *,"internal_e invalid: ",internal_e
+                stop
+               endif
+ 
+              else
+               print *,"fort_material_conservation_form(im) invalid"
+               stop
+              endif
 
               if (internal_e.le.zero) then
                NEW_TEMPERATURE=TEMPERATURE
               else if (internal_e.gt.zero) then
                call TEMPERATURE_material( &
-                rho,massfrac_parm, &
-                NEW_TEMPERATURE, & !intent(out)
-                internal_e, & !intent(in)
-                imattype,im)
+                 rho,massfrac_parm, &
+                 NEW_TEMPERATURE, & !intent(out)
+                 internal_e, & !intent(in)
+                 imattype,im)
               else
                print *,"internal_e invalid: ",im,internal_e
                stop

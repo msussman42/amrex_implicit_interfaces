@@ -888,6 +888,7 @@ int NavierStokes::solidheat_flag=0;
 
 Vector<int> NavierStokes::material_type;
 Vector<int> NavierStokes::material_type_interface;
+Vector<int> NavierStokes::material_conservation_form;
 
 //0 incomp; material_type_evap needed for the Kassemi model.
 Vector<int> NavierStokes::material_type_evap;
@@ -1491,6 +1492,8 @@ void fortran_parameters() {
 
  NavierStokes::material_type_interface.resize(NavierStokes::num_interfaces);
 
+ NavierStokes::material_conservation_form.resize(NavierStokes::num_materials);
+
  NavierStokes::FSI_flag.resize(NavierStokes::num_materials);
 
  NavierStokes::CTML_FSI_numsolids=0;
@@ -1788,6 +1791,10 @@ void fortran_parameters() {
  preset_flag.resize(NavierStokes::num_interfaces);
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
+  NavierStokes::material_conservation_form[im]=1;
+ }
+
+ for (int im=0;im<NavierStokes::num_materials;im++) {
   for (int im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++) {
    int iten=0;
    NavierStokes::get_iten_cpp(im+1,im_opp+1,iten);
@@ -1815,6 +1822,9 @@ void fortran_parameters() {
 
  pp.queryAdd("material_type_interface",
    NavierStokes::material_type_interface,NavierStokes::num_interfaces);
+
+ pp.queryAdd("material_conservation_form",
+   NavierStokes::material_conservation_form,NavierStokes::num_materials);
 
  for (int im=0;im<NavierStokes::num_materials;im++) {
   for (int im_opp=im+1;im_opp<NavierStokes::num_materials;im_opp++) {
@@ -2128,6 +2138,7 @@ void fortran_parameters() {
   &NavierStokes::num_materials,
   NavierStokes::material_type.dataPtr(),
   NavierStokes::material_type_interface.dataPtr(),
+  NavierStokes::material_conservation_form.dataPtr(),
   &NavierStokes::num_interfaces,
   DrhoDTtemp.dataPtr(),
   tempconst_temp.dataPtr(),
@@ -3252,6 +3263,7 @@ NavierStokes::read_params ()
 
     material_type.resize(num_materials);
     material_type_interface.resize(num_interfaces);
+    material_conservation_form.resize(num_materials);
 
     pp.getarr("material_type",material_type,0,num_materials);
 
@@ -4407,6 +4419,10 @@ NavierStokes::read_params ()
     preset_flag.resize(num_interfaces);
 
     for (int im=0;im<num_materials;im++) {
+     material_conservation_form[im]=1;
+    }
+
+    for (int im=0;im<num_materials;im++) {
      for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
       int iten=0;
       get_iten_cpp(im+1,im_opp+1,iten);
@@ -4433,6 +4449,9 @@ NavierStokes::read_params ()
 
     pp.queryAdd("material_type_interface",
       material_type_interface,num_interfaces);
+
+    pp.queryAdd("material_conservation_form",
+      material_conservation_form,num_materials);
 
     for (int im=0;im<num_materials;im++) {
      for (int im_opp=im+1;im_opp<num_materials;im_opp++) {
@@ -5479,6 +5498,8 @@ NavierStokes::read_params ()
 	      material_type_lowmach[i] << '\n';
       std::cout << "material_type_visual i=" << i << " " << 
 	      material_type_visual[i] << '\n';
+      std::cout << "material_conservation_form i=" << i << " " << 
+        material_conservation_form[i] << '\n';
       std::cout << "pressure_error_cutoff i=" << i << " " << 
         pressure_error_cutoff[i] << '\n';
       std::cout << "vorterr i=" << i << " " << 
