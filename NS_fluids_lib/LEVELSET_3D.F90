@@ -12774,7 +12774,7 @@ stop
                else if (divu_cell_center.le.zero) then
                 rho=rho*(one-divu_cell_center)
                else
-                print *,"divu_cell_center invalid"
+                print *,"divu_cell_center invalid: ",divu_cell_center
                 stop
                endif
                if (rho.gt.zero) then
