@@ -381,6 +381,7 @@ stop
         ccnum_materials, &
         ccmaterial_type, &
         ccmaterial_type_interface, &
+        ccmaterial_conservation_form, &
         ccnten, &
         ccDrhoDT, &
         cctempconst, &
@@ -544,6 +545,7 @@ stop
       
       integer, INTENT(in) :: ccmaterial_type(ccnum_materials)
       integer, INTENT(in) :: ccmaterial_type_interface(ccnten)
+      integer, INTENT(in) :: ccmaterial_conservation_form(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccDrhoDT(ccnum_materials)
       real(amrex_real), INTENT(in) :: cctempconst(ccnum_materials)
       real(amrex_real), INTENT(in) :: ccinitial_temperature(ccnum_materials)
@@ -1418,6 +1420,7 @@ stop
       do im=1,num_materials
       
        fort_material_type(im)=ccmaterial_type(im)
+       fort_material_conservation_form(im)=ccmaterial_conservation_form(im)
 
        FSI_flag(im)=ccFSI_flag(im)
 
@@ -1740,6 +1743,8 @@ stop
 
        do im=1,num_materials
         print *,"im,material_type ",im,fort_material_type(im)
+        print *,"im,material_conservation_form ", &
+          im,fort_material_conservation_form(im)
         print *,"im,fort_molar_mass ",im,fort_molar_mass(im)
         print *,"im,DrhoDT ",im,fort_DrhoDT(im)
         print *,"im,temp ",im,fort_tempconst(im)
