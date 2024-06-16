@@ -267,6 +267,15 @@ stop
        print *,"continuous_mof invalid (fort_sloperecon): ",continuous_mof
        stop
       endif
+#ifdef AMREX_PARTICLES
+      if (continuous_mof.eq.CMOF_X) then !CMOF
+       ! do nothing
+      else
+       print *,"continuous_mof invalid (fort_sloperecon, particles): ", &
+         continuous_mof
+       stop
+      endif
+#endif
 
       if (ngeom_recon.ne.2*SDIM+3) then
        print *,"ngeom_recon invalid"
@@ -692,14 +701,7 @@ stop
           continuous_mof_parm=continuous_mof
          else if ((num_fluid_materials_in_cell.ge.3).and. &
                   (num_fluid_materials_in_cell.le.num_materials)) then
-
           continuous_mof_parm=continuous_mof
-#ifdef AMREX_PARTICLES
-          if (1.eq.0) then
-           continuous_mof_parm=CMOF_X
-          endif
-#endif
-
          else
           print *,"num_fluid_materials_in_cell invalid: ", &
            num_fluid_materials_in_cell

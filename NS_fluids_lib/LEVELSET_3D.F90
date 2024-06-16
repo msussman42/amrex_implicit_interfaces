@@ -19540,6 +19540,10 @@ stop
    
       integer :: i,j,k
       integer :: i1,j1,k1
+      integer :: isten,jsten,ksten
+      integer :: reflect_particle_dir(SDIM)
+      real(amrex_real) :: reflect_particle_pos(SDIM)
+      real(amrex_real) :: local_pos
       integer :: k1lo,k1hi
       integer :: isub,jsub,ksub
       integer :: dir
@@ -20668,9 +20672,68 @@ stop
                 do i1=-1,1
                 do j1=-1,1
                 do k1=k1lo,k1hi
+                 isten=i+i1
+                 jsten=j+j1
+                 ksten=k+k1
+                 do dir_local=1,SDIM 
+                  reflect_particle_dir(dir_local)=0
+                  reflect_particle_pos(dir_local)=zero
+                 enddo
+
+                 dir_local=1
+                 if (isten.lt.domlo(dir_local)) then
+                  if (dombc(dir_local,1).eq.REFLECT_EVEN) then
+                   isten=i
+                   reflect_particle_dir(dir_local)=1
+                   reflect_particle_pos(dir_local)=problo_arr(dir_local)
+                  endif
+                 else if (isten.gt domhi(dir_local)) then
+                  if (dombc(dir_local,2).eq.REFLECT_EVEN) then
+                   isten=i
+                   reflect_particle_dir(dir_local)=1
+                   reflect_particle_pos(dir_local)=probhi_arr(dir_local)
+                  endif
+                 endif
+
+                 dir_local=2
+                 if (jsten.lt.domlo(dir_local)) then
+                  if (dombc(dir_local,1).eq.REFLECT_EVEN) then
+                   jsten=j
+                   reflect_particle_dir(dir_local)=1
+                   reflect_particle_pos(dir_local)=problo_arr(dir_local)
+                  endif
+                 else if (jsten.gt domhi(dir_local)) then
+                  if (dombc(dir_local,2).eq.REFLECT_EVEN) then
+                   jsten=j
+                   reflect_particle_dir(dir_local)=1
+                   reflect_particle_pos(dir_local)=probhi_arr(dir_local)
+                  endif
+                 endif
+
+                 if (SDIM.eq.3) then
+
+                  dir_local=SDIM
+                  if (ksten.lt.domlo(dir_local)) then
+                   if (dombc(dir_local,1).eq.REFLECT_EVEN) then
+                    ksten=k
+                    reflect_particle_dir(dir_local)=1
+                    reflect_particle_pos(dir_local)=problo_arr(dir_local)
+                   endif
+                  else if (ksten.gt domhi(dir_local)) then
+                   if (dombc(dir_local,2).eq.REFLECT_EVEN) then
+                    ksten=k
+                    reflect_particle_dir(dir_local)=1
+                    reflect_particle_pos(dir_local)=probhi_arr(dir_local)
+                   endif
+                  endif
+
+                 endif 
+
                  cell_count_check=0
-                 cell_count_hold=cell_particle_count(D_DECL(i+i1,j+j1,k+k1),1)
-                 current_link=cell_particle_count(D_DECL(i+i1,j+j1,k+k1),2)
+                 cell_count_hold= &
+                    cell_particle_count(D_DECL(isten,jsten,ksten),1)
+                 current_link= &
+                    cell_particle_count(D_DECL(isten,jsten,ksten),2)
                  do while (current_link.ge.1)
                   imat_particle=NBR_particles(current_link)% &
                     extra_int(N_EXTRA_INT_MATERIAL_ID+1)
@@ -20688,10 +20751,19 @@ stop
 
                    if (imat_particle.eq.im_loop) then
                     num_particles=num_particles+1
+
                     if (slope_loop.eq.1) then
                      do dir_local=1,SDIM
-                      particle_list(num_particles,dir_local)= &
-                       NBR_particles(current_link)%pos(dir_local)
+                      local_pos=NBR_particles(current_link)%pos(dir_local)
+                      if (reflect_particle_dir(dir_local).eq.0) then
+                       !do nothing
+                      else if (reflect_particle_dir(dir_local).eq.1) then
+                       local_pos=two*reflect_particle_pos(dir_local)-local_pos
+                      else
+                       print *,"reflect_particle_dir(dir_local) invalid"
+                       stop
+                      endif
+                      particle_list(num_particles,dir_local)=local_pos
                      enddo 
                      DIST_ADD=NBR_particles(current_link)% &
                         extra_state(N_EXTRA_REAL_DIST+1)
@@ -20908,13 +20980,13 @@ stop
        if (xpart2(dir).le.grid_PARM%problo(dir)) then
         bc_local=grid_PARM%velbc(dir,1,dir)
         if (bc_local.eq.REFLECT_ODD) then
-         imat_particle=-1
+         imat_particle=-1 !particle will be deleted
         else if (bc_local.eq.INT_DIR) then
          ! do nothing
         else if ((bc_local.eq.EXT_DIR).or. &
                  (bc_local.eq.REFLECT_EVEN).or. &
                  (bc_local.eq.FOEXTRAP)) then
-         imat_particle=-1
+         imat_particle=-1 !particle will be deleted
         else
          print *,"bc_local invalid: ",bc_local
          stop
@@ -20924,13 +20996,13 @@ stop
        if (xpart2(dir).ge.grid_PARM%probhi(dir)) then
         bc_local=grid_PARM%velbc(dir,2,dir)
         if (bc_local.eq.REFLECT_ODD) then
-         imat_particle=-1
+         imat_particle=-1 !particle will be deleted.
         else if (bc_local.eq.INT_DIR) then
          ! do nothing
         else if ((bc_local.eq.EXT_DIR).or. &
                  (bc_local.eq.REFLECT_EVEN).or. &
                  (bc_local.eq.FOEXTRAP)) then
-         imat_particle=-1
+         imat_particle=-1 !particle will be deleted
         else
          print *,"bc_local invalid: ",bc_local
          stop
@@ -20944,7 +21016,7 @@ stop
       enddo
       mag=sqrt(mag)
       if (mag.gt.max_travel) then
-       imat_particle=-1
+       imat_particle=-1 !particle will be deleted.
       else if (mag.le.max_travel) then
        ! do nothing
       else
