@@ -142,8 +142,11 @@ materials are immersed into the fluid(s).
 
 */
 
-//int  NavierStokes::continuous_mof=CMOF_X;
+#ifdef AMREX_PARTICLES
+int  NavierStokes::continuous_mof=CMOF_X;
+#else
 int  NavierStokes::continuous_mof=STANDARD_MOF;
+#endif
 
 int  NavierStokes::update_centroid_after_recon=0;
 
