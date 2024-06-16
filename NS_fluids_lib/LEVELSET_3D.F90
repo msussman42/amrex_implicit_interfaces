@@ -20687,12 +20687,18 @@ stop
                    reflect_particle_dir(dir_local)=1
                    reflect_particle_pos(dir_local)=problo_arr(dir_local)
                   endif
-                 else if (isten.gt domhi(dir_local)) then
+                 else if (isten.gt.domhi(dir_local)) then
                   if (dombc(dir_local,2).eq.REFLECT_EVEN) then
                    isten=i
                    reflect_particle_dir(dir_local)=1
                    reflect_particle_pos(dir_local)=probhi_arr(dir_local)
                   endif
+                 else if ((isten.ge.domlo(dir_local)).and. &
+                          (isten.le.domhi(dir_local))) then
+                  !do nothing
+                 else
+                  print *,"isten invalid"
+                  stop
                  endif
 
                  dir_local=2
@@ -20702,12 +20708,18 @@ stop
                    reflect_particle_dir(dir_local)=1
                    reflect_particle_pos(dir_local)=problo_arr(dir_local)
                   endif
-                 else if (jsten.gt domhi(dir_local)) then
+                 else if (jsten.gt.domhi(dir_local)) then
                   if (dombc(dir_local,2).eq.REFLECT_EVEN) then
                    jsten=j
                    reflect_particle_dir(dir_local)=1
                    reflect_particle_pos(dir_local)=probhi_arr(dir_local)
                   endif
+                 else if ((jsten.ge.domlo(dir_local)).and. &
+                          (jsten.le.domhi(dir_local))) then
+                  !do nothing
+                 else
+                  print *,"jsten invalid"
+                  stop
                  endif
 
                  if (SDIM.eq.3) then
@@ -20719,12 +20731,18 @@ stop
                     reflect_particle_dir(dir_local)=1
                     reflect_particle_pos(dir_local)=problo_arr(dir_local)
                    endif
-                  else if (ksten.gt domhi(dir_local)) then
+                  else if (ksten.gt.domhi(dir_local)) then
                    if (dombc(dir_local,2).eq.REFLECT_EVEN) then
                     ksten=k
                     reflect_particle_dir(dir_local)=1
                     reflect_particle_pos(dir_local)=probhi_arr(dir_local)
                    endif
+                  else if ((ksten.ge.domlo(dir_local)).and. &
+                           (ksten.le.domhi(dir_local))) then
+                   !do nothing
+                  else
+                   print *,"ksten invalid"
+                   stop
                   endif
 
                  endif 
