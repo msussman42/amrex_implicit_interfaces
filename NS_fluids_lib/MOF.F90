@@ -12309,8 +12309,10 @@ contains
          endif
 
          nguess=nguess+1 
+         training_nguess=nguess
+
          if (continuous_mof.eq.STANDARD_MOF) then 
-          training_nguess=nguess
+          !do nothing
          else if (continuous_mof.eq.CMOF_X) then 
           !do nothing
          else if (continuous_mof.eq.CMOF_F_AND_X) then 
@@ -12403,9 +12405,9 @@ contains
          if (continuous_mof.eq.STANDARD_MOF) then
           use_only_pls_data=1
          else if (continuous_mof.eq.CMOF_F_AND_X) then
-          use_only_pls_data=0
+          use_only_pls_data=1
          else if (continuous_mof.eq.CMOF_X) then
-          use_only_pls_data=0
+          use_only_pls_data=1
          else
           print *,"continuous_mof invalid:",continuous_mof
           stop

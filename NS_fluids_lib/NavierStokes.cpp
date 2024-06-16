@@ -121,7 +121,7 @@ int  NavierStokes::MOFITERMAX_AFTER_PREDICT=DEFAULT_MOFITERMAX_AFTER_PREDICT;
    F_ij^derived=derived volume fraction in cell ij for a given slope and
      intercept.   
 
-continuous_mof>STANDARD_MOF
+continuous_mof=CMOF_X
 
   CMOF  minimize E=||xS_ij^ref-xS_ij^derived||  "S"=super cell
   subject to the constraint that F_ij^ref=F_ij^derived
@@ -2847,18 +2847,24 @@ NavierStokes::read_params ()
      amrex::Error("continuous_mof invalid");
 
 #ifdef AMREX_PARTICLES
-    if (continuous_mof==STANDARD_MOF) {
+    if (continuous_mof==CMOF_X) {
      //do nothing
     } else
-     amrex::Error("expecting continuous_mof==0 if using particles");
+     amrex::Error("expecting continuous_mof==1 if using particles");
 #endif
 
     pp.queryAdd("update_centroid_after_recon",update_centroid_after_recon);
     if (update_centroid_after_recon==0) {
      //do nothing
     } else if (update_centroid_after_recon==1) {
-     if (continuous_mof==STANDARD_MOF)
+
+     if (continuous_mof==CMOF_X) {
+#ifdef AMREX_PARTICLES
+      amrex::Error("expecting update_centroid_after_recon=0 if particles");
+#endif
+     } else
       amrex::Error("expecting update_centroid_after_recon=0");
+
     } else
      amrex::Error("expecting update_centroid_after_recon=0 or 1");
 
