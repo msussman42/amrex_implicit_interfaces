@@ -31,7 +31,7 @@ ns.post_init_pressure_solve=1
 ns.MOFITERMAX=30
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
-ns.continuous_mof=0
+ns.continuous_mof=1
 ns.vof_height_function=1
 ns.mof_decision_tree_learning=0
 ns.MOFITERMAX_AFTER_PREDICT=0
@@ -114,13 +114,13 @@ ns.segregated_gravity_flag=0
 # theta_L=33 degrees a little too large. (sigma_SL/sigma_LG=281/1740)
 # for theta_L=25 degrees, sigma_SL/sigma_LG=163/1740
 #
-# need theta_L=135 on the ice!
-# sigma_IG-sigma_IL=sigma_LG cos(135)
-# sigma_IL=sigma_LG=1740e-1
-# sigma_IG=sigma_LG(1+cos(135))=509.6e-1
+# need theta_L=50 on the ice!
+# sigma_IG-sigma_IL=sigma_LG cos(50)
+# sigma_IG=sigma_LG=1740e-1
+# sigma_IL=sigma_LG(1-cos(50))=621.5
 # LG,LI,LS,IG,GS,SI  
-ns.tension=      1740.0e-1 1740.0e-1 163.0e-1 509.6e-1 1740.0e-1  0.0
-ns.tension_init= 1740.0e-1 1740.0e-1 163.0e-1 509.6e-1 1740.0e-1  0.0
+ns.tension=      1740.0e-1 621.5e-1 163.0e-1 1740.0e-1 1740.0e-1  0.0
+ns.tension_init= 1740.0e-1 621.5e-1 163.0e-1 1740.0e-1 1740.0e-1  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
