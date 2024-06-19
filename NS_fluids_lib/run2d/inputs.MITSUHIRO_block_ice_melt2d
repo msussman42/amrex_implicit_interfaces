@@ -75,10 +75,10 @@ ns.MOFITERMAX_AFTER_PREDICT=0
 ns.mof_decision_tree_learning=0
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
-ns.continuous_mof=0 # 0=MOF 1=CMOF 
+ns.continuous_mof=1 # 0=MOF 1=CMOF 
 ns.mof_error_ordering=0
 # water,air,ice,substrate
-ns.mof_ordering=3 1 2 1 
+ns.mof_ordering=3 3 2 1 
 
 # multigrid class
 mg.verbose = 0
@@ -144,21 +144,12 @@ ns.gravity        = -980.0   # cgs
 #freezing liquid films and freezing drops. Journal of Computational 
 #Physics, 432, 110160.
 #ns.tension=72.8 0.0 72.8 0.0 119.6 72.8   
-#make tension_air_ice=tension_melt_ice for "default" angle at melt, air,
-#ice junction.
+#
+# TRIPLE POINT LIQUID-GAS-ICE 
+# sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
+# theta_L=90 =>sigma_IG=sigma_IL=sigma_LG
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
 ns.tension=72.8 72.8 72.8 72.8 72.8 72.8   
-# sin(theta_water)/sigma_ice_air = sin(theta_air)/sigma_water_ice = 
-# sin(theta_ice)/sigma_water_air
-# sin(theta_water)/26400=sin(theta_air)/6800=sin(theta_ice)/20000
-#ns.tension=20000.0 6800.0 6800.0 26400.0 19400.0 6800.0
-# sigma_ice_water * cos(theta)+sigma_air_water=sigma_air_ice
-# theta=90 cos(90)=0
-# sigma_air_water=20000
-# sigma_air_ice=sigma_ice_water=20000
-# sin(theta_water)/20000=sin(theta_air)/3000=sin(theta_ice)/20000
-# sigma_water_air, sigma_water_ice, sigma_water_substrate,
-# sigma_air_ice, sigma_air_substrate, sigma_ice_substrate
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)
 #ns.stiffCP = 4.1855e+7 1.0e+7 2.0e+7 2.0e+7  # dimensional
@@ -292,7 +283,7 @@ ns.speciesviscconst=0.282 0.282 0.0 0.0
 #initial vapor mass fraction.
 #EVAPORATION or NO EVAPORATION
 ns.speciesconst=7.1e-3 7.1e-3 7.1e-3 7.1e-3
-ns.speciesreactionrate=0.0 0.0 0.0 0.0
+ns.speciesreactionrate=0.0 0.0 0.0 0.0 
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
@@ -301,9 +292,8 @@ ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
 # between the ice velocity at the triple point and the associated ice
 # rigid body motion
 # ice is a very viscous fluid 
-ns.viscconst_artificial=100.0 100.0 100.0 100.0
 ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
-ns.uncoupled_viscosity=1 # div(mu grad u)
+#ns.uncoupled_viscosity=1 # div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
 ns.elastic_time=0.0 0.0 0.0 0.0

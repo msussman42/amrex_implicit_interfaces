@@ -27,7 +27,7 @@ ns.post_init_pressure_solve=1
 ns.MOFITERMAX=30
 ns.MOF_TURN_OFF_LS=0
 ns.MOF_DEBUG_RECON=0
-ns.continuous_mof=0
+ns.continuous_mof=1
 ns.vof_height_function=1
 ns.mof_decision_tree_learning=0
 ns.MOFITERMAX_AFTER_PREDICT=0
@@ -86,7 +86,7 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol  = 1.0e-10
 #ns.gravity        = 0.0 # thermal effects only
-ns.gravity        = -980.0e-5 
+ns.gravity        = -980.0e-5
 ns.incremental_gravity_flag=1
 ns.segregated_gravity_flag=0
 
@@ -115,14 +115,14 @@ ns.segregated_gravity_flag=0
 #ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 75.7e-5 75.7e-5 0.0
 
 #sigma_IL+sigma_LG cos(45)=sigma_IG  sigma_IG=sigma_LG
-#sigma_IL=sigma_LG(1-cos(45)=22.2
-#ns.tension=      75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=45
-#ns.tension_init= 75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0
+#sigma_IL=sigma_LG(1-cos(45))=22.2
+ns.tension=      75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0 #theta_L=45
+ns.tension_init= 75.7e-5 22.2e-5 36.75e-5 75.7e-5 75.7e-5 0.0
 
 #sigma_IL+sigma_LG cos(135)=sigma_IG  sigma_IL=sigma_LG
-#sigma_LG(1+cos(135))=sigma_IG=22.2 
-ns.tension=      75.7e-5 75.7e-5 36.75e-5 22.2e-5 75.7e-5 0.0 #theta_L=135
-ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 22.2e-5 75.7e-5 0.0
+#sigma_LG(1+cos(135))=sigma_IG=22.2
+#ns.tension=      75.7e-5 75.7e-5 36.75e-5 22.2e-5 75.7e-5 0.0 #theta_L=135
+#ns.tension_init= 75.7e-5 75.7e-5 36.75e-5 22.2e-5 75.7e-5 0.0
 
 
 # 1 J/kg = 10^4 erg/g
