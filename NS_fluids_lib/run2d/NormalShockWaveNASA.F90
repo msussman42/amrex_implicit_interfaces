@@ -7,25 +7,30 @@
       real*8 :: rho1,u1,c1,p1,T1,M1  ! downstream subsonic
       real*8 :: EE1
       real*8 :: cv
+      real*8 :: cp
+      real*8 :: R
       real*8 :: jump
       integer :: MKS_or_CGS
 
-      gamma=1.4d0
       M0=2.0d0  ! Mach 2 upstream
       T0=273.0d0  ! Kelvin
 
       MKS_or_CGS=1
 
       if (MKS_or_CGS.eq.0) then
-       rho0=0.001d0
-       cv=7.18d+6 ! erg/g
+       rho0=0.00123d0
+       R=2.87d+6 ! ergs/(Kelvin g)
+       cv=7.2d+6 ! erg/g
       else if (MKS_or_CGS.eq.1) then
-       rho0=1.0d0
-       cv=7.18d+2 ! J/kg
+       rho0=1.23d0
+       R=2.87d+2 ! J/(Kelvin kg)
+       cv=7.2d+2 ! J/kg
       else
        print *,"MKS_or_CGS invalid"
        stop
       endif
+      cp=R+cv
+      gamma=cp/cv
 
       p0=(gamma-1.0d0)*rho0*cv*T0
       c0=sqrt(gamma*p0/rho0)
@@ -52,6 +57,8 @@
       print *,"[2 c^2 /(gamma-1)+u^2] = ",jump
       jump=rho0*u0*EE0+u0*p0-(rho1*u1*EE1+u1*p1)
       print *,"[rho u E + u p] = ",jump
+
+      print *,"gamma,R,cp,cv ",gamma,R,cp,cv
 
       print *,"The shock wave is stationary"
       print *,"UPSTREAM rho,u,p,c,T,M ",rho0,u0,p0,c0,T0,M0

@@ -15263,8 +15263,9 @@ stop
 
       real(amrex_real) cell_LS(num_materials)
       real(amrex_real) cell_vfrac(num_materials)
-      real(amrex_real) cell_mfrac(num_materials)
+      real(amrex_real) cell_species_mfrac(num_materials)
       real(amrex_real) cell_DeDT_mfrac(num_materials)
+      real(amrex_real) local_diffusion_coeff
 
       integer imattype
 
@@ -15585,6 +15586,32 @@ stop
          endif
          cell_vfrac(im)=local_volume
 
+         if (project_option.eq.SOLVETYPE_HEAT) then
+          local_diffusion_coeff=fort_heatviscconst(im)
+         else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
+                  (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
+          local_diffusion_coeff= &
+           fort_speciesviscconst((project_option-SOLVETYPE_SPEC)* &
+              num_materials+im)
+         else
+          print *,"project_option invalid: ",project_option
+          stop
+         endif
+
+         if (local_diffusion_coeff.ge.zero) then 
+          if (local_diffusion_coeff.eq.zero) then
+           local_diffusion_coeff=EPS5
+          else if (local_diffusion_coeff.gt.zero) then
+           local_diffusion_coeff=one
+          else
+           print *,"local_diffusion_coeff invalidA: ",local_diffusion_coeff
+           stop
+          endif
+         else
+          print *,"local_diffusion_coeff invalidB: ",local_diffusion_coeff
+          stop
+         endif
+
          dencomp=STATECOMP_STATES+(im-1)*num_state_material+ENUM_DENVAR+1
          test_density=state(D_DECL(i,j,k),dencomp)
          if (test_density.gt.zero) then
@@ -15595,9 +15622,10 @@ stop
          endif
          local_mass=test_density*local_volume ! local_volume is a volume frac.
          total_vol_cell=total_vol_cell+local_volume
+
          mass_sum=mass_sum+local_mass
 
-         cell_mfrac(im)=local_mass
+         cell_species_mfrac(im)=local_mass*local_diffusion_coeff
 
          imattype=fort_material_type(im)
 
@@ -15634,8 +15662,8 @@ stop
           stop
          endif
 
-         cell_DeDT_mfrac(im)=local_mass*DeDT
-         DeDT_total=DeDT_total+cell_DeDT_mfrac(im)
+         cell_DeDT_mfrac(im)=local_mass*DeDT*local_diffusion_coeff
+         DeDT_total=DeDT_total+local_mass*DeDT
 
         enddo ! im=1,num_materials
 
@@ -15945,7 +15973,7 @@ stop
            weight_sum=weight_sum+cell_DeDT_mfrac(im_crit)
           else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
-           weight_sum=weight_sum+cell_mfrac(im_crit)
+           weight_sum=weight_sum+cell_species_mfrac(im_crit)
           else
            print *,"project_option invalid"
            stop
@@ -16045,9 +16073,9 @@ stop
           else if ((project_option.ge.SOLVETYPE_SPEC).and. & ! species
                    (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
            state_mass_average=state_mass_average+ &
-             cell_mfrac(im_crit)*cell_temperature(im_crit)
+             cell_species_mfrac(im_crit)*cell_temperature(im_crit)
           else
-           print *,"project_option invalid"
+           print *,"project_option invalid: ",project_option
            stop
           endif
 

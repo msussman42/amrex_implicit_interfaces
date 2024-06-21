@@ -21921,20 +21921,28 @@ end subroutine print_visual_descriptor
 
       call air_parms(R,cp,cv,gamma_constant,omega)
     
-      if (rho.le.zero) then
-       print *,"density negative"
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative: ",rho
        stop
       endif
-      if (internal_energy.le.zero) then
-       print *,"internal energy cannot be <=0"
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"internal energy cannot be <=0: ",internal_energy
        stop
       endif
-      if (cv.le.zero) then
-       print *,"cv error"
+      if (cv.gt.zero) then
+       !do nothing
+      else
+       print *,"cv error: ",cv
        stop
       endif
-      if (cp.le.zero) then
-       print *,"cp error"
+      if (cp.gt.zero) then
+       !do nothing
+      else
+       print *,"cp error: ",cp
        stop
       endif
         ! e=cv T
