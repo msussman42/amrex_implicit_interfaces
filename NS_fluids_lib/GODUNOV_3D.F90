@@ -15593,6 +15593,8 @@ stop
           local_diffusion_coeff= &
            fort_speciesviscconst((project_option-SOLVETYPE_SPEC)* &
               num_materials+im)
+         else if (project_option.eq.SOLVETYPE_VISC) then
+          local_diffusion_coeff=one
          else
           print *,"project_option invalid: ",project_option
           stop
