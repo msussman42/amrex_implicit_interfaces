@@ -21,19 +21,30 @@ stop
 MODULE shockdrop
 use amrex_fort_module, only : amrex_real
 
-       real(amrex_real) shockdrop_P
-       real(amrex_real) shockdrop_T
-       real(amrex_real) shockdrop_DEN
-       real(amrex_real) shockdrop_M
-       real(amrex_real) shockdrop_VEL
-       real(amrex_real) shockdrop_C
+        !see run2d/NormalShockWaveNASA.F90
+        !see run2d/inputs.shockdrop
 
+       real(amrex_real) shockdrop_R
+       real(amrex_real) shockdrop_cp
+       real(amrex_real) shockdrop_cv
+
+        !upstream supersonic
+       real(amrex_real) shockdrop_P0
+       real(amrex_real) shockdrop_T0
+       real(amrex_real) shockdrop_DEN0
+       real(amrex_real) shockdrop_M0
+       real(amrex_real) shockdrop_VEL0
+       real(amrex_real) shockdrop_C0
+       real(amrex_real) shockdrop_EE0
+
+        !downstream subsonic
        real(amrex_real) shockdrop_P1
        real(amrex_real) shockdrop_T1
        real(amrex_real) shockdrop_DEN1
        real(amrex_real) shockdrop_M1
        real(amrex_real) shockdrop_VEL1
        real(amrex_real) shockdrop_C1
+       real(amrex_real) shockdrop_EE1
 
        real(amrex_real) shockdrop_gamma
 
@@ -41,46 +52,54 @@ CONTAINS
 
           ! units are cgs
        subroutine shockdrop_init()
+       use probcommon_module
        IMPLICIT NONE
 
-!      shockdrop_M=1.4
-       shockdrop_M=3.0
+        !material_type=5 EOS_air
+       shockdrop_R=R_AIR_PARMS !ergs/(Kelvin g)
+       shockdrop_cv=CV_AIR_PARMS !ergs/(Kelvin g)
+       shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 
-         ! if this value is not 1.39861, then material_type=5 parameters
-         ! should be changed too:
-       shockdrop_gamma=1.39861111111111d0
+!      shockdrop_M0=1.4
+       shockdrop_M0=3.0
+       shockdrop_T0=278.0d0
+       shockdrop_DEN0=0.00123d0
+
+        ! this value must be consistent with material_type=5 parameters
+       shockdrop_gamma=shockdrop_cp/shockdrop_cv
+
         ! if compressible liquid, this value should be the same
         ! as the equilibrium pressure of the liquid drop.
-       shockdrop_P=1.0d+6 ! 1 g cm/s^2 /cm^2=g/(s^2 cm)=(1/10) kg/(s^2 m)
-       shockdrop_T=278.0
-       shockdrop_DEN=0.00123
-       shockdrop_C=(shockdrop_gamma*shockdrop_P/shockdrop_DEN)**half
-       shockdrop_VEL=shockdrop_M*shockdrop_C
+       shockdrop_P0=(shockdrop_gamma-1.0d0)* &
+        shockdrop_DEN0*shockdrop_cv*shockdrop_T0
 
-       shockdrop_P1=shockdrop_P* &
-        (two*shockdrop_gamma*(shockdrop_M**2)-shockdrop_gamma+one)/ &
+       shockdrop_C0=(shockdrop_gamma*shockdrop_P0/shockdrop_DEN0)**half
+       shockdrop_VEL0=shockdrop_M0*shockdrop_C0
+
+       shockdrop_P1=shockdrop_P0* &
+        (two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one)/ &
         (shockdrop_gamma+one)
 
-       shockdrop_T1=shockdrop_T* &
-        ( two*shockdrop_gamma*(shockdrop_M**2)-shockdrop_gamma+one )* &
-        ( (shockdrop_gamma-one)*(shockdrop_M**2)+two )/ &
-        ( ((shockdrop_gamma+one)*shockdrop_M)**2 )
+       shockdrop_T1=shockdrop_T0* &
+        ( two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one )* &
+        ( (shockdrop_gamma-one)*(shockdrop_M0**2)+two )/ &
+        ( ((shockdrop_gamma+one)*shockdrop_M0)**2 )
 
-       shockdrop_DEN1=shockdrop_DEN* &
-        ((shockdrop_gamma+one)*(shockdrop_M**2))/ &
-        ((shockdrop_gamma-one)*(shockdrop_M**2)+two)
+       shockdrop_DEN1=shockdrop_DEN0* &
+        ((shockdrop_gamma+one)*(shockdrop_M0**2))/ &
+        ((shockdrop_gamma-one)*(shockdrop_M0**2)+two)
 
        shockdrop_C1=sqrt(shockdrop_gamma*shockdrop_P1/shockdrop_DEN1)
        shockdrop_M1= &
-        ((shockdrop_gamma-one)*(shockdrop_M**2)+two)/ &
-        (two*shockdrop_gamma*(shockdrop_M**2)-shockdrop_gamma+one)
+        ((shockdrop_gamma-one)*(shockdrop_M0**2)+two)/ &
+        (two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one)
        shockdrop_M1=sqrt(shockdrop_M1)
        shockdrop_VEL1=shockdrop_M1*shockdrop_C1
 
        print *,"shockdrop: upstream den,vel,T,M,C ", &
-        shockdrop_DEN,shockdrop_VEL,shockdrop_T,shockdrop_M,shockdrop_C
+        shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
        print *,"shockdrop: downstream den,vel,T,M,C ", &
-        shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C
+        shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
 
        return
        end subroutine shockdrop_init
@@ -110,7 +129,7 @@ CONTAINS
         if (LS.ge.zero) then  ! upstream
          vel(SDIM)=zero
         else
-         vel(SDIM)=shockdrop_VEL-shockdrop_VEL1
+         vel(SDIM)=shockdrop_VEL0-shockdrop_VEL1
         endif
        endif 
 
@@ -123,7 +142,7 @@ CONTAINS
        integer axis_dir
        real(amrex_real) vel
 
-       vel=max(abs(shockdrop_VEL),abs(shockdrop_VEL1))
+       vel=max(abs(shockdrop_VEL0),abs(shockdrop_VEL1))
 
        return
        end subroutine shockdrop_maxvelocity
@@ -146,11 +165,11 @@ CONTAINS
 
        call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
        if (LS.ge.zero) then ! liquid
-        pres=shockdrop_P
+        pres=shockdrop_P0
        else
         call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
         if (LS.ge.zero) then  ! upstream
-         pres=shockdrop_P
+         pres=shockdrop_P0
         else
          pres=shockdrop_P1
         endif
@@ -176,11 +195,11 @@ CONTAINS
 
        call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
        if (LS.ge.zero) then ! liquid
-        den=shockdrop_DEN
+        den=shockdrop_DEN0
        else
         call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
         if (LS.ge.zero) then  ! upstream
-         den=shockdrop_DEN
+         den=shockdrop_DEN0
         else
          den=shockdrop_DEN1
         endif
@@ -206,11 +225,11 @@ CONTAINS
 
        call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
        if (LS.ge.zero) then ! liquid
-        temp=shockdrop_T
+        temp=shockdrop_T0
        else
         call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
         if (LS.ge.zero) then  ! upstream
-         temp=shockdrop_T
+         temp=shockdrop_T0
         else
          temp=shockdrop_T1
         endif

@@ -25367,8 +25367,8 @@ end subroutine initialize2d
              stop
             endif 
             call general_hydrostatic_pressure(test_pres)
-            if (abs(test_pres-shockdrop_P)/test_pres.gt.1.0E-8) then
-             print *,"shockdrop_P inconsistent w/ general_hydrostatic_pressure"
+            if (abs(test_pres-shockdrop_P0)/test_pres.gt.1.0E-8) then
+             print *,"shockdrop_P0 inconsistent w/ general_hydrostatic_pressure"
              stop
             endif
             if (fort_material_type(2).ne.5) then

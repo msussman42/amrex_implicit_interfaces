@@ -10016,8 +10016,6 @@ NavierStokes::initData () {
   if (Reynolds>0.0) Reynolds=1.0/Reynolds;
   Real Weber=tension[0];
   if (Weber>0.0) Weber=1.0/Weber;
-  Real RGASRWATER=probhi[0];
-  if (xblob>0.0) RGASRWATER/=xblob;
 
   int tid_current=ns_thread();
   if ((tid_current<0)||(tid_current>=thread_class::nthreads))
