@@ -13696,7 +13696,7 @@ contains
       integer, INTENT(in) :: imaterial_count
       real(amrex_real) distmax
       integer ordermax,order_min
-      integer critical_material,override_selected
+      integer critical_material
       real(amrex_real) volcut_vof,volcell_vof
       real(amrex_real) volcut_cen,volcell_cen
       real(amrex_real) mag(3)
@@ -13784,7 +13784,7 @@ contains
       if (uncaptured_volume_vof.gt.zero) then
        ! do nothing
       else
-       print *,"uncaptured_volume_vof invalid"
+       print *,"uncaptured_volume_vof invalid: ",uncaptured_volume_vof
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
@@ -14149,7 +14149,7 @@ contains
         stop
       endif
       if (ordermax.lt.0) then
-        print *,"ordermax invalid"
+        print *,"ordermax invalid: ",ordermax
         stop
       endif
 
@@ -14213,8 +14213,6 @@ contains
 
          ! find unprocessed material whose moment is furthest from cencut. 
 
-        override_selected=0
-
         do im=1,num_materials
 
          if (is_rigid_local(im).eq.1) then
@@ -14254,13 +14252,11 @@ contains
             if (order_algorithm_in(im).le.0) then
              print *,"order_algorithm_in invalid"
              stop
-            else if ((order_algorithm_in(im).lt.order_min).and. &
-                     (override_selected.eq.0)) then
+            else if (order_algorithm_in(im).lt.order_min) then
              distmax=mag(1)
              order_min=order_algorithm_in(im)
              critical_material=im
-            else if ((order_algorithm_in(im).eq.order_min).and. &
-                     (override_selected.eq.0)) then
+            else if (order_algorithm_in(im).eq.order_min) then
              if (mag(1).gt.distmax) then
               distmax=mag(1)
               critical_material=im
@@ -16589,7 +16585,7 @@ contains
         endif
 
        else
-        print *,"continuous_mof invalid"
+        print *,"continuous_mof invalid: ",continuous_mof
         stop 
        endif
 
@@ -16847,28 +16843,27 @@ contains
             (continuous_mof.eq.CMOF_F_AND_X).or. &
             (continuous_mof.eq.CMOF_X)) then 
 
+          ! order_algorithm is declared in mofdata.H
          order_algorithm_in(imaterial)=order_algorithm(imaterial)
- 
-         if (order_algorithm(imaterial).eq.0) then
 
-          if (mofdata(vofcomp).ge.one-VOFTOL) then
-           order_algorithm_in(imaterial)=num_materials+1
-          else if (mofdata(vofcomp).le.VOFTOL) then
-           order_algorithm_in(imaterial)=num_materials+1  
-          else if ((mofdata(vofcomp).gt.VOFTOL).and. &
-                   (mofdata(vofcomp).lt.one-VOFTOL)) then
-           ! do nothing
-          else
-           print *,"mofdata(vofcomp) invalid"
-           stop
-          endif
-
-         else if ((order_algorithm(imaterial).ge.1).and. &
-                  (order_algorithm(imaterial).le.num_materials+1)) then
+         if ((order_algorithm(imaterial).ge.0).and. &
+             (order_algorithm(imaterial).le.num_materials+1)) then
           ! do nothing
          else
           print *,"order_algorithm(imaterial) invalid: ",imaterial, &
            order_algorithm(imaterial)
+          stop
+         endif
+
+         if (mofdata(vofcomp).ge.one-VOFTOL) then
+          order_algorithm_in(imaterial)=num_materials+1
+         else if (mofdata(vofcomp).le.VOFTOL) then
+          order_algorithm_in(imaterial)=num_materials+1  
+         else if ((mofdata(vofcomp).gt.VOFTOL).and. &
+                  (mofdata(vofcomp).lt.one-VOFTOL)) then
+          ! do nothing
+         else
+          print *,"mofdata(vofcomp) invalid: ",vofcomp,mofdata(vofcomp)
           stop
          endif
 
@@ -16898,13 +16893,22 @@ contains
        do imaterial=1,num_materials
 
         if (is_rigid_local(imaterial).eq.1) then
-         ! do nothing
-        else if (is_rigid_local(imaterial).eq.0) then
-         if (order_algorithm(imaterial).eq.0) then
-          order_algorithm_in(imaterial)=num_materials+1 
+
+         if (order_algorithm_in(imaterial).eq.1) then
+          ! do nothing
+         else
+          print *,"expecting order_algorithm_in=1: ",imaterial, &
+            order_algorithm_in(imaterial)
+          stop
          endif
+
+        else if (is_rigid_local(imaterial).eq.0) then
+
+         order_algorithm_in(imaterial)=num_materials+1 
+
         else
-         print *,"is_rigid_local invalid"
+         print *,"is_rigid_local invalid: ", &
+           imaterial,is_rigid_local(imaterial)
          stop
         endif
 
@@ -16963,7 +16967,8 @@ contains
        endif
       enddo  ! imaterial
       if (number_of_open_places.lt.n_ndef) then
-       print *,"number_of_open_places invalid"
+       print *,"number_of_open_places invalid: ",number_of_open_places
+       print *,"n_ndef=",n_ndef
        stop
       endif
 
