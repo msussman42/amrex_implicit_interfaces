@@ -2236,8 +2236,12 @@ void fortran_parameters() {
   NavierStokes::FSI_flag.dataPtr());
 
  pp.queryAdd("mof_ordering",mof_ordering_local,NavierStokes::num_materials);
+
+ int n_ndef=0;
  
  for (int i=0;i<NavierStokes::num_materials;i++) {
+
+  if (mof_ordering_local[i]==0) n_ndef++;
 
   if (mof_error_ordering_local==0) {//centroid furthest from uncapt centroid
    if ((mof_ordering_local[i]<1)||
@@ -2251,6 +2255,11 @@ void fortran_parameters() {
    amrex::Error("mof_error_ordering_local invalid");
 
  } //for (int i=0;i<NavierStokes::num_materials;i++) 
+
+ if (mof_error_ordering_local==1) { // smallest MOF error
+  if (n_ndef<2)
+   amrex::Error("n_ndef<2 but error_ordering==1");
+ }
 
  int temp_POLYGON_LIST_MAX=1000;
  
@@ -5365,7 +5374,11 @@ NavierStokes::read_params ()
 
     pp.queryAdd("mof_ordering",mof_ordering,num_materials);
 
+    int n_ndef=0;
+
     for (int i=0;i<num_materials;i++) {
+
+     if (mof_ordering[i]==0) n_ndef++;
 
      if (mof_error_ordering==0) {//centroid furthest from uncapt centroid
       if ((mof_ordering[i]<1)||
@@ -5380,6 +5393,10 @@ NavierStokes::read_params ()
 
     } //for (int i=0;i<num_materials;i++) 
 
+    if (mof_error_ordering==1) { // smallest MOF error
+     if (n_ndef<2)
+      amrex::Error("n_ndef<2 but error_ordering==1");
+    }
 
     for (int i=0;i<num_materials;i++) {
 
