@@ -1,10 +1,12 @@
 #ifndef N_EXTRA_REAL_H_
 #define N_EXTRA_REAL_H_
 
-#define N_EXTRA_REAL (1)
-#define N_EXTRA_REAL_DIST (0)
+#define N_EXTRA_REAL (2)
+#define N_EXTRA_REAL_PRIMARY_DIST (0)
+#define N_EXTRA_REAL_SECONDARY_DIST (1)
 
-#define N_EXTRA_INT (1)
-#define N_EXTRA_INT_MATERIAL_ID (0)
+#define N_EXTRA_INT (2)
+#define N_EXTRA_INT_PRIMARY_MATERIAL_ID (0)
+#define N_EXTRA_INT_SECONDARY_MATERIAL_ID (1)
 
 #endif

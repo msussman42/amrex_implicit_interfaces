@@ -15202,16 +15202,16 @@ END SUBROUTINE SIMP
       write(cenfilename36,'(A28,A3,A5)') cennamestr28,levstr,gridstr
       print *,"cenfilename36 ",cenfilename36
 
-      if (N_EXTRA_REAL.eq.1) then
+      if (N_EXTRA_REAL.eq.2) then
        ! do nothing
       else
-       print *,"N_EXTRA_REAL unexpected value"
+       print *,"N_EXTRA_REAL unexpected value: ",N_EXTRA_REAL
        stop
       endif
-      if (N_EXTRA_INT.eq.1) then
+      if (N_EXTRA_INT.eq.2) then
        ! do nothing
       else
-       print *,"N_EXTRA_INT unexpected value"
+       print *,"N_EXTRA_INT unexpected value: ",N_EXTRA_INT
        stop
       endif
 
@@ -15326,27 +15326,27 @@ END SUBROUTINE SIMP
         print *,"newcenfilename20 ",newcenfilename20
         open(unit=12,file=newcenfilename20)
 
-        if (N_EXTRA_REAL.eq.1) then
+        if (N_EXTRA_REAL.eq.2) then
          ! do nothing
         else
-         print *,"N_EXTRA_REAL invalid"
+         print *,"N_EXTRA_REAL invalid: ",N_EXTRA_REAL
          stop
         endif
-        if (N_EXTRA_INT.eq.1) then
+        if (N_EXTRA_INT.eq.2) then
          ! do nothing
         else
-         print *,"N_EXTRA_INT invalid"
+         print *,"N_EXTRA_INT invalid: ",N_EXTRA_INT
          stop
         endif
 
         if (SDIM.eq.3) then
          write(12,*) 'TITLE = "3D particles" '
-         write(12,'(A42)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","Z","LS","material id"'
+         write(12,'(A65)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","Z","LS1","LS2","material id1","material_id2"'
         else if (SDIM.eq.2) then
          write(12,*) 'TITLE = "2D particles" '
-         write(12,'(A38)',ADVANCE="NO") &
-          'VARIABLES = "X","Y","LS","material id"'
+         write(12,'(A61)',ADVANCE="NO") &
+          'VARIABLES = "X","Y","LS1","LS2","material id1","material_id2"'
         else
          print *,"dimension bust"
          stop
