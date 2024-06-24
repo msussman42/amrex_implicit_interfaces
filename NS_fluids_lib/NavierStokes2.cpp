@@ -6926,13 +6926,18 @@ void NavierStokes::move_particles(
  for (MyParIter pti(localPC,level);pti.isValid();++pti) {
   auto& particles=pti.GetArrayOfStructs();
   for (auto& p : particles) {
-   int material_id=p.idata(N_EXTRA_INT_MATERIAL_ID);
-   if ((material_id>=1)&&(material_id<=num_materials)) {
+   int primary_material_id=p.idata(N_EXTRA_INT_PRIMARY_MATERIAL_ID);
+   int secondary_material_id=p.idata(N_EXTRA_INT_SECONDARY_MATERIAL_ID);
+   if ((primary_material_id>=1)&&
+       (primary_material_id<=num_materials)&&
+       (secondary_material_id>=1)&&
+       (secondary_material_id<=num_materials)) {
     //do nothing
-   } else if (material_id==-1) {
+   } else if ((primary_material_id==-1)&&
+              (secondary_material_id==-1)) {
     p.id()=-p.id();
    } else
-    amrex::Error("material_id invalid");
+    amrex::Error("primary_material_id or secondary_material_id invalid");
   }
  }
 

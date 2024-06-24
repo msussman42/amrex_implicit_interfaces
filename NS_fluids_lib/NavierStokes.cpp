@@ -23318,12 +23318,12 @@ NavierStokes::init_particle_container(int append_flag,
   }
   }
 
-  if (N_EXTRA_REAL==1) {
+  if (N_EXTRA_REAL==2) {
    // do nothing
   } else 
    amrex::Error("N_EXTRA_REAL invalid");
 
-  if (N_EXTRA_INT==1) {
+  if (N_EXTRA_INT==2) {
    // do nothing
   } else 
    amrex::Error("N_EXTRA_INT invalid");
