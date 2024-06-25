@@ -21258,7 +21258,9 @@ stop
       integer i,j,k
       integer im_loop,im_primary,im_secondary
       integer imat_particle
+      integer imat_secondary_particle
       integer iten,ireverse,sign_reverse,tag_local,scomp
+      real(amrex_real) DIST_particle
       real(amrex_real) LS(num_materials)
       real(amrex_real) DXMAXLS
       real(amrex_real) LL
@@ -21384,7 +21386,30 @@ stop
 
        if ((imat_particle.ge.1).and. &
            (imat_particle.le.num_materials)) then
-        !do nothing
+        DIST_particle=particles(interior_ID)% &
+            extra_state(N_EXTRA_REAL_PRIMARY_DIST+1)
+        if (DIST_particle.ge.zero) then
+         imat_secondary_particle=particles(interior_ID)% &
+          extra_int(N_EXTRA_INT_SECONDARY_MATERIAL_ID+1)
+         if ((imat_secondary_particle.ge.1).and. &
+             (imat_secondary_particle.le.num_materials)) then
+          DIST_particle=particles(interior_ID)% &
+            extra_state(N_EXTRA_REAL_SECONDARY_DIST+1)
+          if (abs(DIST_particle).ge.zero) then
+           !do nothing
+          else
+           print *,"DIST_particle(secondary) invalid: ",DIST_particle
+           stop
+          endif
+         else
+          print *,"imat_secondary_particle invalid: ",imat_secondary_particle
+          stop
+         endif
+        else
+         print *,"DIST_particle(primary) invalid: ",DIST_particle
+         stop
+        endif
+
        else
         print *,"imat_particle invalid(20836): ",imat_particle
         stop
@@ -21572,7 +21597,11 @@ stop
         stop
        endif
 
-       call check_cfl_BC(grid_PARM,xpart1,xpart_last,imat_particle)
+       call check_cfl_BC( &
+          grid_PARM, & !intent(in)
+          xpart1, & !intent(in)
+          xpart_last, & !intent(in)
+          imat_particle) !intent(inout)
 
        do dir=1,SDIM
         particles(interior_ID)%pos(dir)=xpart_last(dir)
