@@ -72,8 +72,8 @@ ns.FD_curv_interp=1
 
 ns.num_materials=3
 ns.num_species_var=0
-ns.mof_error_ordering=0 # 1=try all combintations 0=recon. furthest x 1st.
-ns.mof_ordering=4 4 4
+ns.mof_error_ordering=1 # 1=try all combintations 0=recon. furthest x 1st.
+ns.mof_ordering=0 1 0
 
 ns.projection_pressure_scale=1.0
 
