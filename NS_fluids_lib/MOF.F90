@@ -17146,8 +17146,10 @@ contains
             print *,"flexlist(iflex) or flexlist(iflex+1) bad"
             stop
            endif
+          else if ((iflex.eq.1).and.(n_ndef.eq.1)) then
+           ! do nothing
           else
-           print *,"iflex invalid"
+           print *,"iflex invalid: ",iflex,n_ndef
            stop
           endif
 
