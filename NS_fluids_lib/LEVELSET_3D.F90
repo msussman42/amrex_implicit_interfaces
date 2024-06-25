@@ -19575,7 +19575,6 @@ stop
       integer :: imat_secondary_particle
       integer :: im_primary_sub
       integer :: im_secondary
-      integer :: im_tertiary
       integer :: im_loop
       integer :: vofcomp
 
@@ -19618,6 +19617,7 @@ stop
       real(amrex_real) :: ls_mof(D_DECL(-1:1,-1:1,-1:1),num_materials)
 
       real(amrex_real) :: DIST_particle
+      real(amrex_real) :: secondary_DIST_particle
       real(amrex_real) :: primary_DIST_ADD
       real(amrex_real) :: secondary_DIST_ADD
       integer :: keep_the_particle
@@ -20197,11 +20197,20 @@ stop
                    extra_int(N_EXTRA_INT_SECONDARY_MATERIAL_ID+1)
                  DIST_particle=particles(current_link)% &
                    extra_state(N_EXTRA_REAL_PRIMARY_DIST+1)
+                 secondary_DIST_particle=particles(current_link)% &
+                   extra_state(N_EXTRA_REAL_SECONDARY_DIST+1)
 
                  if (DIST_particle.ge.zero) then
                   !do nothing
                  else
                   print *,"DIST_particle invalid: ",DIST_particle
+                  stop
+                 endif
+                 if (abs(secondary_DIST_particle).ge.zero) then
+                  !do nothing
+                 else
+                  print *,"secondary_DIST_particle invalid: ", &
+                    secondary_DIST_particle
                   stop
                  endif
 
@@ -20218,7 +20227,8 @@ stop
                        (imat_secondary_particle.eq.im_secondary).and. &
                        (DIST_particle.gt.zero).and. &
                        (LS_sub(im_primary_sub).le.DXMAXLS).and. &
-                       (LS_sub(im_primary_sub).ge.zero)) then
+                       (LS_sub(im_primary_sub).ge.zero).and. &
+                       (abs(LS_sub(im_secondary)).le.DXMAXLS)) then
                     keep_the_particle=1
                    endif
 
@@ -20232,14 +20242,10 @@ stop
 
                   else if (is_rigid(imat_primary_particle).eq.1) then
 
-                   if (LS_sub(imat_primary_particle).lt.zero) then
-                    ! do nothing
-                   else if (LS_sub(imat_primary_particle).ge.zero) then
+                   if ((imat_primary_particle.eq.im_primary_sub).and. &
+                       (LS_sub(im_primary_sub).le.DXMAXLS).and. &
+                       (LS_sub(im_primary_sub).ge.zero)) then
                     keep_the_particle=1
-                   else
-                    print *,"LS_sub(imat_primary_particle) invalid: ", &
-                       imat_primary_particle,LS_sub(imat_primary_particle)
-                    stop
                    endif
 
                   else 
@@ -20321,9 +20327,9 @@ stop
                   endif
 
                  else
-                  print *,"imat_primary_particle invalid (20007): ", &
+                  print *,"imat_primary_particle invalid (20007)? ", &
                      imat_primary_particle
-                  print *,"imat_secondary_particle invalid (20007): ", &
+                  print *,"imat_secondary_particle invalid (20007)? ", &
                      imat_secondary_particle
                   stop
                  endif
@@ -20443,9 +20449,6 @@ stop
                ! get_secondary_material is declared in: MOF.F90
               call get_secondary_material(LS_sub,im_primary_sub, &
                       im_secondary)
-               ! get_tertiary_material is declared in: MOF.F90
-              call get_tertiary_material(LS_sub,im_primary_sub, &
-                      im_secondary,im_tertiary)
 
               if ((is_rigid(im_primary_sub).eq.1).or. &
                   (is_rigid(im_primary_sub).eq.0)) then
@@ -20453,17 +20456,29 @@ stop
                if ((im_primary_sub.ge.1).and. &
                    (im_primary_sub.le.num_materials)) then
 
+                if (is_rigid(im_primary_sub).eq.1) then
+                 im_secondary=im_primary_sub
+                else if (is_rigid(im_primary_sub).eq.0) then
+                 !do nothing
+                else
+                 print *,"is_rigid(im_primary_sub) invalid"
+                 stop
+                endif
+
                 local_mag=zero
 
                 if ((LS_sub(im_primary_sub).gt.zero).and. &
-                    (LS_sub(im_primary_sub).le.DXMAXLS)) then
+                    (LS_sub(im_primary_sub).le.DXMAXLS).and. &
+                    (abs(LS_sub(im_secondary)).le.DXMAXLS)) then
 
                  do dir_local=1,SDIM
                   local_normal(dir_local)=LS_sub(num_materials+ &
                     (im_primary_sub-1)*AMREX_SPACEDIM+dir_local)
                   local_mag=local_mag+local_normal(dir_local)**2
                  enddo
+
                  local_mag=sqrt(local_mag)
+
                  if (local_mag.gt.zero) then
                   do dir_local=1,SDIM
                    local_normal(dir_local)=local_normal(dir_local)/local_mag
@@ -20530,34 +20545,6 @@ stop
                   endif 
                  endif
 
-                 if (num_materials.eq.2) then
-                  !do nothing
-                 else if (num_materials.ge.3) then
-                  if (im_tertiary.eq.0) then
-                   !do nothing (is_rigid materials cannot be tertiary)
-                  else if ((im_tertiary.ge.1).and. &
-                           (im_tertiary.le.num_materials)) then
-                   if (1.eq.0) then
-                    if (abs(LS_sub(im_tertiary)).le.two*DXMAXLS) then
-                     sub_found=0
-                    endif
-                   endif
-                  else
-                   print *,"im_tertiary invalid"
-                   print *,"(fort_init_particle_container): ", &
-                     im_tertiary
-                   print *,"im_primary_sub: ",im_primary_sub
-                   print *,"im_secondary: ",im_secondary
-                   do im_loop=1,num_materials
-                    print *,"LS_sub(im_loop)=",im_loop,LS_sub(im_loop)
-                   enddo
-                   stop
-                  endif
-                 else
-                  print *,"num_materials invalid: ",num_materials
-                  stop
-                 endif
-
                  if (sub_found.eq.1) then
                   primary_DIST_ADD=zero
                   secondary_DIST_ADD=zero
@@ -20573,11 +20560,14 @@ stop
                  endif
 
                 else if ((LS_sub(im_primary_sub).le.zero).or. &
-                         (LS_sub(im_primary_sub).gt.DXMAXLS)) then
+                         (LS_sub(im_primary_sub).gt.DXMAXLS).or. &
+                         (abs(LS_sub(im_secondary)).gt.DXMAXLS)) then
                  ! do nothing
                 else
-                 print *,"LS(im_primary_sub) invalid: ", &
+                 print *,"LS(im_primary_sub) invalid? ", &
                    im_primary_sub,LS_sub(im_primary_sub)
+                 print *,"LS(im_secondary) invalid? ", &
+                   im_secondary,LS_sub(im_secondary)
                  stop
                 endif
                else
@@ -20611,6 +20601,12 @@ stop
                   !do nothing
                  else
                   print *,"primary_DIST_ADD invalid: ",primary_DIST_ADD
+                  stop
+                 endif
+                 if (abs(secondary_DIST_ADD).ge.zero) then
+                  !do nothing
+                 else
+                  print *,"secondary_DIST_ADD invalid: ",secondary_DIST_ADD
                   stop
                  endif
 
@@ -20874,7 +20870,7 @@ stop
                       if (primary_DIST_ADD.ge.zero) then 
                        !do nothing
                       else
-                       print *,"primary_DIST_ADD invalid: ",primary_DIST_ADD
+                       print *,"primary_DIST_ADD invalid(1):",primary_DIST_ADD
                        print *,"secondary dist: ", &
                          NBR_particles(current_link)% &
                             extra_state(N_EXTRA_REAL_SECONDARY_DIST+1)
@@ -20892,6 +20888,25 @@ stop
                       primary_DIST_ADD=NBR_particles(current_link)% &
                         extra_state(N_EXTRA_REAL_SECONDARY_DIST+1)
 
+                      if (abs(primary_DIST_ADD).ge.zero) then 
+                       !do nothing
+                      else
+                       print *,"primary_DIST_ADD invalid(2):",primary_DIST_ADD
+                       print *,"primary dist: ", &
+                         NBR_particles(current_link)% &
+                            extra_state(N_EXTRA_REAL_PRIMARY_DIST+1)
+                       print *,"secondary dist: ", &
+                         NBR_particles(current_link)% &
+                            extra_state(N_EXTRA_REAL_SECONDARY_DIST+1)
+                       print *,"im_primary: ", &
+                         NBR_particles(current_link)% &
+                         extra_int(N_EXTRA_INT_PRIMARY_MATERIAL_ID+1)
+                       print *,"im_secondary: ", &
+                         NBR_particles(current_link)% &
+                         extra_int(N_EXTRA_INT_SECONDARY_MATERIAL_ID+1)
+                       stop
+                      endif
+
                      else
                       print *,"imat_prim_particle or imat_sec_part invalid"
                       stop
@@ -20906,6 +20921,16 @@ stop
                      stop
                     endif
 
+                   else if ((imat_primary_particle.ne.im_loop).and. &
+                           ((imat_secondary_particle.ne.im_loop).or. &
+                            (is_rigid(imat_primary_particle).eq.1).or. &
+                            (is_rigid(imat_secondary_particle).eq.1))) then
+                    !do nothing
+                   else
+                    print *,"data bust:"
+                    print *,"imat_primary_particle ",imat_primary_particle
+                    print *,"imat_secondary_particle ",imat_secondary_particle
+                    stop
                    endif
 
                   else
@@ -20934,9 +20959,9 @@ stop
                   stop
                  endif
 
-                enddo !k1
-                enddo !j1
-                enddo !i1
+                enddo !k1=k1lo,k1hi
+                enddo !j1=-1,1
+                enddo !i1=-1,1
 
                 if (num_particles.ge.num_primary_particles) then
                  !do nothing
@@ -21042,6 +21067,7 @@ stop
            else 
             print *,"LS_sub(im_primary_sub) invalid:", &
                 im_primary_sub,LS_sub(im_primary_sub) 
+            stop
            endif
 
           else

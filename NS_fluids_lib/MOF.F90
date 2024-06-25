@@ -16904,7 +16904,7 @@ contains
 
         else if (is_rigid_local(imaterial).eq.0) then
 
-         order_algorithm_in(imaterial)=num_materials+1 
+!        order_algorithm_in(imaterial)=num_materials+1 
 
         else
          print *,"is_rigid_local invalid: ", &
