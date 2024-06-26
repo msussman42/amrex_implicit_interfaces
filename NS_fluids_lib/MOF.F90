@@ -16904,7 +16904,17 @@ contains
 
         else if (is_rigid_local(imaterial).eq.0) then
 
-!        order_algorithm_in(imaterial)=num_materials+1 
+         if (order_algorithm_in(imaterial).eq.0) then
+          order_algorithm_in(imaterial)=num_materials+1 
+         else if (order_algorithm_in(imaterial).eq.num_materials+1) then
+          ! do nothing
+         else if ((order_algorithm_in(imaterial).ge.1).and. &
+                  (order_algorithm_in(imaterial).le.num_materials)) then
+          ! do nothing
+         else
+          print *,"order_algorithm_in(imaterial) invalid: ", &
+           imaterial,order_algorithm_in(imaterial),num_materials
+         endif
 
         else
          print *,"is_rigid_local invalid: ", &
@@ -16916,7 +16926,61 @@ contains
 
       else if ((num_materials_cell.ge.3).and. &
                (num_materials_cell.le.num_materials)) then
-       ! do nothing
+
+        !if n_ndef==1, then convert all order_algorithm_in==0 values.
+       n_ndef=0
+       do imaterial=1,num_materials
+        if (is_rigid_local(imaterial).eq.1) then
+         ! do nothing
+        else if (is_rigid_local(imaterial).eq.0) then
+         if (order_algorithm_in(imaterial).eq.0) then
+          n_ndef=n_ndef+1
+         else if (order_algorithm_in(imaterial).eq.num_materials+1) then
+          ! do nothing
+         else if ((order_algorithm_in(imaterial).ge.1).and. &
+                  (order_algorithm_in(imaterial).le.num_materials)) then
+          ! do nothing
+         else
+          print *,"order_algorithm_in(imaterial) invalid: ", &
+           imaterial,order_algorithm_in(imaterial),num_materials
+          stop
+         endif
+        else
+         print *,"is_rigid_local invalid"
+         stop
+        endif
+       enddo ! imaterial=1..num_materials
+
+       if (n_ndef.eq.1) then
+        do imaterial=1,num_materials
+         if (is_rigid_local(imaterial).eq.1) then
+          ! do nothing
+         else if (is_rigid_local(imaterial).eq.0) then
+          if (order_algorithm_in(imaterial).eq.0) then
+           order_algorithm_in(imaterial)=num_materials+1 
+          else if (order_algorithm_in(imaterial).eq.num_materials+1) then
+           ! do nothing
+          else if ((order_algorithm_in(imaterial).ge.1).and. &
+                   (order_algorithm_in(imaterial).le.num_materials)) then
+           ! do nothing
+          else
+           print *,"order_algorithm_in(imaterial) invalid: ", &
+            imaterial,order_algorithm_in(imaterial),num_materials
+           stop
+          endif
+         else
+          print *,"is_rigid_local invalid"
+          stop
+         endif
+        enddo ! imaterial=1..num_materials
+       else if (n_ndef.eq.0) then
+        !do nothing
+       else if ((n_ndef.ge.2).and.(n_ndef.le.num_materials_cell)) then
+        !do nothing
+       else
+        print *,"n_ndef invalid: ",n_ndef
+        stop
+       endif 
       else
        print *,"num_materials_cell invalid: ",num_materials_cell
        stop
@@ -16955,6 +17019,14 @@ contains
         stop
        endif
       enddo ! imaterial=1..num_materials
+
+      if ((n_ndef.eq.0).or. &
+          ((n_ndef.ge.2).and.(n_ndef.le.num_materials))) then
+       !do nothing
+      else
+       print *,"n_ndef invalid: ",n_ndef
+       stop
+      endif
 
       !n_ndef=number of "is_rigid==0" materials with order_algorithm_in=0
       !placelist: list of available places (size of list >= n_ndef)
@@ -17042,7 +17114,7 @@ contains
        endif
 
       else
-       print *,"n_ndef invalid"
+       print *,"n_ndef invalid: ",n_ndef
        stop
       endif
 
@@ -17147,7 +17219,8 @@ contains
             stop
            endif
           else if ((iflex.eq.1).and.(n_ndef.eq.1)) then
-           ! do nothing
+           print *,"expecting n_ndef>1 (iflex,n_ndef): ",iflex,n_ndef
+           stop
           else
            print *,"iflex invalid: ",iflex,n_ndef
            stop
