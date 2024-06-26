@@ -20908,7 +20908,8 @@ stop
                       endif
 
                      else
-                      print *,"imat_prim_particle or imat_sec_part invalid"
+                      print *,"imat_prim_part. or imat_sec_part. invalid:", &
+                       imat_primary_particle,imat_secondary_particle
                       stop
                      endif
 
@@ -20966,23 +20967,33 @@ stop
                 if (num_particles.ge.num_primary_particles) then
                  !do nothing
                 else
-                 print *,"expecting num_particles>=num_primary_particles"
+                 print *,"expecting num_particles>=num_primary_particles:", &
+                   num_particles,num_primary_particles
                  stop
                 endif
 
                 if (slope_loop.eq.0) then
-                 if (num_primary_particles.eq.0) then
+                 if (num_particles.eq.0) then
                   !do nothing
-                 else if (num_primary_particles.gt.0) then
+                 else if (num_particles.gt.0) then
                   allocate(particle_list(num_particles,SDIM+1))
                  else
-                  print *,"num_primary_particles invalid: ", &
-                    num_primary_particles
+                  print *,"num_particles invalid: ", &
+                    num_particles
                   stop
                  endif
                 else if (slope_loop.eq.1) then
                  if (num_primary_particles.eq.0) then
-                  !do nothing
+
+                  if (num_particles.gt.0) then
+                   deallocate(particle_list)
+                  else if (num_particles.eq.0) then
+                   !do nothing
+                  else
+                   print *,"num_particles invalid: ",num_particles
+                   stop
+                  endif
+
                  else if (num_primary_particles.gt.0) then
 
                   if (particle_feedback.eq.1) then
@@ -21041,7 +21052,9 @@ stop
                    stop
                   endif
                  else
-                  print *,"num_particles invalid: ",num_particles
+                  print *,"num_primary_particles invalid: ", &
+                    num_primary_particles
+                  print *,"num_particles: ",num_particles
                   stop
                  endif
                 else
