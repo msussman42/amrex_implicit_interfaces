@@ -92,6 +92,12 @@ ns.vorterr=0.0 0.0 0.0
 ns.rgasinlet=1.57
 ns.vinletgas=0.0
 ns.twall=0.1
+#for SF6:
+#if pressure=1.0E+6 cgs
+#   density=0.00627
+#   gamma=cp/cv=1.09
+#   c^2=1.09 * 1.0E+6/0.00627=1.7E+8
+#   c=13209 cm/s
 # u dt = dx
 # (p dt)dt = dx
 # dt=sqrt(dx/p) u=dx/dt=sqrt(dx p) dx~1/100  u~sqrt(10^6)=1000

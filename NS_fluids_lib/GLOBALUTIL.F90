@@ -22742,19 +22742,27 @@ end subroutine print_visual_descriptor
 
       call SF6_parms(R,cp,cv,gamma_constant,omega)
        
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal energy cannot be <=0"
        stop
       endif
-      if (cv.le.zero) then
+      if (cv.gt.zero) then
+       !do nothing
+      else
        print *,"cv error"
        stop
       endif
-      if (cp.le.zero) then
+      if (cp.gt.zero) then
+       !do nothing
+      else
        print *,"cp error"
        stop
       endif
@@ -22775,15 +22783,21 @@ end subroutine print_visual_descriptor
       call general_hydrostatic_pressure(PI)
       call SF6_parms(R,cp,cv,gamma_constant,omega)
        
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (cv.le.zero) then
+      if (cv.gt.zero) then
+       !do nothing
+      else
        print *,"cv error"
        stop
       endif
-      if (cp.le.zero) then
+      if (cp.gt.zero) then
+       !do nothing
+      else
        print *,"cp error"
        stop
       endif
@@ -22800,7 +22814,9 @@ end subroutine print_visual_descriptor
 
       call EOS_SF6(rho,internal_energy,pressure)
       call EOS_SF6_ADIABAT(rho,press_adiabat)
-      if (press_adiabat.le.zero) then
+      if (press_adiabat.gt.zero) then
+       !do nothing
+      else
        print *,"press_adiabat invalid"
        stop
       endif
@@ -22816,11 +22832,15 @@ end subroutine print_visual_descriptor
       real(amrex_real) rho,entropy,internal_energy
       real(amrex_real) press_adiabat,unit_internal_energy,unit_press
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (entropy.le.zero) then
+      if (entropy.gt.zero) then
+       !do nothing
+      else
        print *,"entropy invalid"
        stop
       endif
@@ -22828,7 +22848,9 @@ end subroutine print_visual_descriptor
       unit_internal_energy=one
       call EOS_SF6(rho,unit_internal_energy,unit_press)
       internal_energy=press_adiabat*entropy/unit_press
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal_energy invalid"
        stop
       endif
@@ -22905,19 +22927,27 @@ end subroutine print_visual_descriptor
 
       call SF6_parms(R,cp,cv,gamma_constant,omega)
     
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal energy cannot be <=0"
        stop
       endif
-      if (cv.le.zero) then
+      if (cv.gt.zero) then
+       !do nothing
+      else
        print *,"cv error"
        stop
       endif
-      if (cp.le.zero) then
+      if (cp.gt.zero) then
+       !do nothing
+      else
        print *,"cp error"
        stop
       endif
