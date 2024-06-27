@@ -28,7 +28,7 @@ use amrex_fort_module, only : amrex_real
        real(amrex_real) shockdrop_cp
        real(amrex_real) shockdrop_cv
 
-        !upstream supersonic
+        !upstream supersonic relative to shock
        real(amrex_real) shockdrop_P0
        real(amrex_real) shockdrop_T0
        real(amrex_real) shockdrop_DEN0
@@ -37,7 +37,7 @@ use amrex_fort_module, only : amrex_real
        real(amrex_real) shockdrop_C0
        real(amrex_real) shockdrop_EE0
 
-        !downstream subsonic
+        !downstream subsonic relative to shock
        real(amrex_real) shockdrop_P1
        real(amrex_real) shockdrop_T1
        real(amrex_real) shockdrop_DEN1
@@ -56,14 +56,15 @@ CONTAINS
        IMPLICIT NONE
 
         !material_type=5 EOS_air
+        !see PROBCOMMON.F90
        shockdrop_R=R_AIR_PARMS !ergs/(Kelvin g)
        shockdrop_cv=CV_AIR_PARMS !ergs/(Kelvin g)
        shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 
 !      shockdrop_M0=1.4
        shockdrop_M0=3.0
-       shockdrop_T0=278.0d0
-       shockdrop_DEN0=0.00123d0
+       shockdrop_T0=278.0d0 !tempconst(2)
+       shockdrop_DEN0=0.00123d0 !denconst(2)
 
         ! this value must be consistent with material_type=5 parameters
        shockdrop_gamma=shockdrop_cp/shockdrop_cv
@@ -96,9 +97,9 @@ CONTAINS
        shockdrop_M1=sqrt(shockdrop_M1)
        shockdrop_VEL1=shockdrop_M1*shockdrop_C1
 
-       print *,"shockdrop: upstream den,vel,T,M,C ", &
+       print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
         shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
-       print *,"shockdrop: downstream den,vel,T,M,C ", &
+       print *,"shockdrop: downstream den,SPEED,T,M,C ", &
         shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
 
        return
@@ -112,21 +113,30 @@ CONTAINS
        real(amrex_real) vel(SDIM)
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-6) then
+        if (abs(z-y).le.1.0E-6) then
+         !do nothing
+        else
          print *,"expecting z=y"
          stop
         endif
        endif
+
        do dir=1,SDIM
         vel(dir)=zero
        enddo
 
        call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
        if (LS.ge.zero) then
-        ! do nothing
+        ! do nothing (drop is upstream from shock and
+        ! stationary in the "upstream frame of reference")
+        ! shock velocity > 0
+        ! shock is approaching with speed: shockdrop_VEL0
        else
         call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-        if (LS.ge.zero) then  ! upstream
+         ! in shock frame of reference:
+         ! upstream: v=-shockdrop_VEL0
+         ! downstream: v=-shockdrop_VEL1
+        if (LS.ge.zero) then  ! upstream (above the shock)
          vel(SDIM)=zero
         else
          vel(SDIM)=shockdrop_VEL0-shockdrop_VEL1
@@ -157,7 +167,9 @@ CONTAINS
        real(amrex_real) pres,LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-6) then
+        if (abs(z-y).le.1.0E-6) then
+         !do nothing
+        else
          print *,"expecting z=y"
          stop
         endif
@@ -168,7 +180,7 @@ CONTAINS
         pres=shockdrop_P0
        else
         call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-        if (LS.ge.zero) then  ! upstream
+        if (LS.ge.zero) then  ! upstream (above the approaching shock)
          pres=shockdrop_P0
         else
          pres=shockdrop_P1
@@ -187,7 +199,9 @@ CONTAINS
        real(amrex_real) den,LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-6) then
+        if (abs(z-y).le.1.0E-6) then
+         !do nothing
+        else
          print *,"expecting z=y"
          stop
         endif
@@ -198,7 +212,7 @@ CONTAINS
         den=shockdrop_DEN0
        else
         call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-        if (LS.ge.zero) then  ! upstream
+        if (LS.ge.zero) then  ! upstream (above the shock)
          den=shockdrop_DEN0
         else
          den=shockdrop_DEN1
@@ -217,7 +231,9 @@ CONTAINS
        real(amrex_real) temp,LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-6) then
+        if (abs(z-y).le.1.0E-6) then
+         !do nothing
+        else
          print *,"expecting z=y"
          stop
         endif
@@ -228,7 +244,7 @@ CONTAINS
         temp=shockdrop_T0
        else
         call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-        if (LS.ge.zero) then  ! upstream
+        if (LS.ge.zero) then  ! upstream (above the shock)
          temp=shockdrop_T0
         else
          temp=shockdrop_T1
@@ -251,7 +267,9 @@ CONTAINS
        real(amrex_real),INTENT(out) :: LS
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-6) then
+        if (abs(z-y).le.1.0E-6) then
+         !do nothing
+        else
          print *,"z<>y error"
          stop
         endif
@@ -278,7 +296,9 @@ CONTAINS
        real(amrex_real) x,y,z,LS,xblob,yblob,zblob,radblob,mag
 
        if (SDIM.eq.2) then
-        if (abs(z-y).gt.1.0E-6) then
+        if (abs(z-y).le.1.0E-6) then
+         !do nothing
+        else
          print *,"z<>y error"
          stop
         endif
