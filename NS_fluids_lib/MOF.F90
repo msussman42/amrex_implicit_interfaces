@@ -15294,6 +15294,8 @@ contains
 ! finds grad phi/|grad phi| where grad=(d/dx,d/dy,d/dz) or
 ! grad=(d/dr,d/dz) or
 ! grad=(d/dr,d/dtheta,d/dz)
+! dxmaxLS_volume_constraint=dx if STANDARD_MOF, CMOF_X
+! dxmaxLS_volume_constraint=3 dx if CMOF_F_AND_X
       subroutine find_cut_geom_slope_CLSVOF( &
         continuous_mof, &
         ls_mof, &
@@ -15306,7 +15308,7 @@ contains
         xsten0,nhalf0, &
         centroid_absolute, &
         im, &
-        dxmaxLS_volume_constraint, &
+        dxmaxLS_volume_constraint, & ! dx or (3 dx)
         sdim)
 
       use probcommon_module
@@ -15331,6 +15333,7 @@ contains
       real(amrex_real) nn(sdim)
       real(amrex_real) distsimple,dist
       real(amrex_real) LSWT
+      real(amrex_real) LSWT_grid
       real(amrex_real) w(D_DECL(-1:1,-1:1,-1:1))
       real(amrex_real) aa(sdim+1,sdim+1)
       real(amrex_real) xx(sdim+1)
@@ -15594,26 +15597,28 @@ contains
              stop
             endif
 
-            LSWT=(xsten0(2*i,1)-centroid_absolute(1))**2
-            LSWT=LSWT+(xsten0(2*j,2)-centroid_absolute(2))**2
+            LSWT_grid=(xsten0(2*i,1)-xsten0(0,1))**2
+            LSWT_grid=LSWT_grid+(xsten0(2*j,2)-xsten0(0,2))**2
             if (sdim.eq.3) then
-             LSWT=LSWT+(xsten0(2*k,sdim)-centroid_absolute(sdim))**2
+             LSWT_grid=LSWT_grid+(xsten0(2*k,sdim)-xsten0(0,sdim))**2
             endif
-            LSWT=sqrt(LSWT)
+            LSWT_grid=sqrt(LSWT_grid)
 
-            w(D_DECL(i,j,k))=hsprime(LSWT,cutoff)
+            w(D_DECL(i,j,k))=hsprime(LSWT_grid,cutoff)*hsprime(LSWT,cutoff)
            enddo
            enddo
            enddo ! i,j,k
 
            do i=1,num_particles
-            LSWT=zero
+            LSWT_grid=zero
             do j=1,sdim
-             LSWT=LSWT+(particle_list(i,j)-centroid_absolute(j))**2
+             LSWT_grid=LSWT_grid+(particle_list(i,j)-xsten0(0,j))**2
             enddo
-            LSWT=sqrt(LSWT)
+            LSWT_grid=sqrt(LSWT_grid)
 
-            w_particles(i)=hsprime(LSWT,cutoff)
+            LSWT=abs(particle_list(i,sdim+1))
+
+            w_particles(i)=hsprime(LSWT_grid,cutoff)*hsprime(LSWT,cutoff)
 
            enddo !i=1,num_particles
 
