@@ -331,6 +331,8 @@ implicit none
          ! R=CP-CV
          ! CP=1.007D+7 Specific heat at constant pressure cgs ergs/(Kelvin g)
          ! GAMMA=CP/CV=1.39861
+         ! for air, molar_mass=28.9 g/mol =>
+         !  R=(2.87E+6 erg/(K g))*(28.9 g/mol)=8.2943E+7 ergs/(Kelvin mol)
       real(amrex_real), PARAMETER :: R_AIR_PARMS=0.287D+7  ! ergs/(Kelvin g)
       real(amrex_real), PARAMETER :: CV_AIR_PARMS=0.72D+7  ! ergs/(Kelvin g)
       real(amrex_real), PARAMETER :: PCAV_TAIT=220.2726D0  ! cgs dyne/cm^2
