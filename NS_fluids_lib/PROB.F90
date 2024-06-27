@@ -26151,7 +26151,7 @@ end subroutine initialize2d
          enddo
 
          call find_cut_geom_slope_CLSVOF( &
-          continuous_mof, &
+          continuous_mof, & !STANDARD_MOF
           LS_stencil, &
           particle_list, &
           num_particles, &

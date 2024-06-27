@@ -440,7 +440,7 @@ stop
           if (abs(local_LS(im)).le.two*dxmaxLS) then
            if ((im.eq.im_primary).or.(im.eq.im_secondary)) then
             call find_cut_geom_slope_CLSVOF( &
-             continuous_mof, &
+             continuous_mof, & !STANDARD_MOF
              ls_stencil, & ! (-1,1)^3,num_materials
              particle_list, &
              num_particles, &
