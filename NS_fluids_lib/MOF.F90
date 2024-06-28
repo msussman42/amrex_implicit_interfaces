@@ -16485,62 +16485,72 @@ contains
        enddo
 
        do imaterial=1,num_materials
-        if (voftest(imaterial).le.VOFTOL) then
+
+        if ((voftest(imaterial).le.VOFTOL).or. &
+            (voftest(imaterial).ge.one-VOFTOL)) then
 
          lsnormal_valid(imaterial)=0
          pls_normal_valid(imaterial)=0
 
-        else if ((continuous_mof.eq.STANDARD_MOF).or. & 
-                 (continuous_mof.eq.MOF_TRI_TET).or. & 
-                 (continuous_mof.eq.CMOF_F_AND_X).or. & 
-                 (continuous_mof.eq.CMOF_X)) then 
+        else if ((voftest(imaterial).ge.VOFTOL).and. &
+                 (voftest(imaterial).le.one-VOFTOL)) then
 
-         mag(1)=zero
+         if ((continuous_mof.eq.STANDARD_MOF).or. & 
+             (continuous_mof.eq.MOF_TRI_TET).or. & 
+             (continuous_mof.eq.CMOF_F_AND_X).or. & 
+             (continuous_mof.eq.CMOF_X)) then 
+
+          mag(1)=zero
           !refvfrac,refcen,order,slope,intercept
-         do dir=1,sdim
-          pls_normal(imaterial,dir)= &
-                mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
-          mag(1)=mag(1)+pls_normal(imaterial,dir)**2
-         enddo
-         mag(1)=sqrt(mag(1))
-         if (mag(1).eq.zero) then
-          pls_normal_valid(imaterial)=0
-         else if ((mag(1).ge.one-EPS2).and. &
-                  (mag(1).le.one+EPS2)) then
           do dir=1,sdim
-           pls_normal(imaterial,dir)=pls_normal(imaterial,dir)/mag(1)
+           pls_normal(imaterial,dir)= &
+                mofdata((imaterial-1)*ngeom_recon+sdim+2+dir)
+           mag(1)=mag(1)+pls_normal(imaterial,dir)**2
           enddo
-          pls_normal_valid(imaterial)=1
-         else
-          print *,"mag(1) invalid: ",mag(1)
-          stop
-         endif
-         vofcomp=(imaterial-1)*ngeom_recon+1
-         do dir=1,sdim
-          centroid_absolute(dir)=uncaptured_centroid_cen(dir)+ &
+          mag(1)=sqrt(mag(1))
+          if (mag(1).eq.zero) then
+           pls_normal_valid(imaterial)=0
+          else if ((mag(1).ge.one-EPS2).and. &
+                   (mag(1).le.one+EPS2)) then
+           do dir=1,sdim
+            pls_normal(imaterial,dir)=pls_normal(imaterial,dir)/mag(1)
+           enddo
+           pls_normal_valid(imaterial)=1
+          else
+           print *,"mag(1) invalid: ",mag(1)
+           stop
+          endif
+          vofcomp=(imaterial-1)*ngeom_recon+1
+          do dir=1,sdim
+           centroid_absolute(dir)=uncaptured_centroid_cen(dir)+ &
                mofdata(vofcomp+dir)
-         enddo
+          enddo
 
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
-         call find_cut_geom_slope_CLSVOF( &
-          continuous_mof, & !intent(in)
-          ls_mof, & !intent(in)
-          particle_list, & !intent(in)
-          num_particles, & !intent(in)
-          lsnormal, & !intent(out)
-          lsnormal_valid, & !intent(out)
-          ls_intercept, & !intent(out)
-          bfact,dx, & !intent(in)
-          xsten0,nhalf0, & !intent(in)
-          centroid_absolute, & !intent(in)
-          imaterial, & !intent(in)
-          dxmaxLS_volume_constraint, & !intent(in)
-          sdim) !intent(in)
+          call find_cut_geom_slope_CLSVOF( &
+           continuous_mof, & !intent(in)
+           ls_mof, & !intent(in)
+           particle_list, & !intent(in)
+           num_particles, & !intent(in)
+           lsnormal, & !intent(out)
+           lsnormal_valid, & !intent(out)
+           ls_intercept, & !intent(out)
+           bfact,dx, & !intent(in)
+           xsten0,nhalf0, & !intent(in)
+           centroid_absolute, & !intent(in)
+           imaterial, & !intent(in)
+           dxmaxLS_volume_constraint, & !intent(in)
+           sdim) !intent(in)
  
+         else
+          print *,"continuous_mof invalid: ",continuous_mof
+          stop 
+         endif
+
         else
-         print *,"continuous_mof invalid: ",continuous_mof
-         stop 
+         print *,"voftest(imaterial) invalid: ",imaterial,voftest(imaterial)
+         stop
         endif
 
        enddo ! imaterial=1,num_materials
@@ -16607,7 +16617,8 @@ contains
         else if (continuous_mof.eq.MOF_TRI_TET) then !TRI-TET
          continuous_mof_rigid=MOF_TRI_TET
         else
-         print *,"continuous_mof invalid"
+         print *,"continuous_mof (continuous_mof_rigid) invalid: ", &
+          continuous_mof
          stop
         endif
 
@@ -16839,8 +16850,11 @@ contains
           stop
          endif
 
-        else
+        else if (mofdata(vofcomp).le.one-EPS_8_4) then
          remaining_vfrac=remaining_vfrac+mofdata(vofcomp)
+        else
+         print *,"mofdata(vofcomp) invalid:",vofcomp,mofdata(vofcomp)
+         stop
         endif
 
         if ((continuous_mof.eq.STANDARD_MOF).or. & 
@@ -17126,8 +17140,11 @@ contains
       if ((single_material.gt.0).and. &
           (remaining_vfrac.le.EPS_8_4)) then
 
-       if (is_rigid_local(single_material).ne.0) then
-        print *,"is_rigid_local(single_material) invalid"
+       if (is_rigid_local(single_material).eq.0) then
+        !do nothing
+       else
+        print *,"is_rigid_local(single_material) invalid: ", &
+          single_material,is_rigid_local(single_material)
         stop
        endif
 
@@ -17256,7 +17273,7 @@ contains
              stop
             endif
            else
-            print *,"irank invalid"
+            print *,"irank invalid: ",irank
             stop
            endif
 
@@ -17479,7 +17496,8 @@ contains
        endif
 
       else
-       print *,"single_material or remaining_vfrac invalid"
+       print *,"single_material or remaining_vfrac invalid: ", &
+        single_material,remaining_vfrac
        stop
       endif
 
