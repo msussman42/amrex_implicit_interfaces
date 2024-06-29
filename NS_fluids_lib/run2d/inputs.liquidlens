@@ -92,6 +92,7 @@ amr.blocking_factor = 8       # block factor in grid generation
 amr.check_int       = 500     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 ns.output_drop_distribution=1
+amr.plotfile_on_restart=1
 amr.plot_int        = 200
 amr.plot_file       = plt 
 amr.grid_log        = grdlog  # name of grid logging file
@@ -128,7 +129,7 @@ ns.tension        = 1.0 1.25 1.0  #liquid lens and gas lens
 #ns.tension = 0.055 0.0728 0.04 # floating lens
 #ns.tension = 0.7555 1.0 0.5495 # floating lens (scaled by 0.0728)
 #ns.fixed_dt	  = 0.0025     # hardwire dt
-ns.sum_interval   = 5        # timesteps between computing mass 
+ns.sum_interval   = 1        # timesteps between computing mass 
 
 ns.axis_dir=0
 ns.vorterr=0.0 0.0 0.0

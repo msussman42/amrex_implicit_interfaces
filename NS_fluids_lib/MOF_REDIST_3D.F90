@@ -2542,7 +2542,7 @@ stop
          if ((vcenter(im).ge.half).or. &
              (im.eq.im_crit).or. & !im_crit=argmax_{im} F_{im}
              (full_neighbor(im).eq.1).or. &
-             (keep_flotsam.eq.1)) then!keep_flotsam=1 if Fm>EPS3 and no trunc.
+             (keep_flotsam.eq.1)) then!keep_flotsam=1 if Fm>EPS3 
           legitimate_material=1
          else if ((vcenter(im).le.half).and. &
                   (im.ne.im_crit).and. &
