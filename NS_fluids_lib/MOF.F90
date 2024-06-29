@@ -14138,7 +14138,7 @@ contains
           ordermax=NINT(mofdata(vofcomp+sdim+1))
          endif
         else
-         print *,"is_rigid_local invalid"
+         print *,"is_rigid_local invalid: ",im,is_rigid_local(im)
          stop
         endif
         vofmain(im)=mofdata(vofcomp)
@@ -14192,7 +14192,7 @@ contains
           endif
          endif  ! material not already processed.
         else
-         print *,"is_rigid invalid MOF.F90"
+         print *,"is_rigid invalid MOF.F90: ",im,is_rigid_local(im)
          stop
         endif
       enddo ! im
@@ -14250,7 +14250,8 @@ contains
 
              ! order_min initialized to be 9999.
             if (order_algorithm_in(im).le.0) then
-             print *,"order_algorithm_in invalid"
+             print *,"order_algorithm_in invalid: ", &
+               im,order_algorithm_in(im)
              stop
             else if (order_algorithm_in(im).lt.order_min) then
              distmax=mag(1)
@@ -14292,12 +14293,12 @@ contains
         if (distmax.lt.zero) then
          ! do nothing
         else
-         print *,"distmax should be negative here"
+         print *,"distmax should be negative here: ",distmax
          stop
         endif
 
       else
-        print *,"uncaptured_volume_vof invalid"
+        print *,"uncaptured_volume_vof invalid: ",uncaptured_volume_vof
         stop
       endif 
 
@@ -14602,7 +14603,7 @@ contains
           stop
          endif
       else
-        print *,"distmax invalid"
+        print *,"distmax invalid: ",distmax
         stop
       endif  
 
@@ -16528,11 +16529,15 @@ contains
 
           ! in multimaterial_MOF
           ! find n=grad phi/|grad phi| corresponding to "imaterial"
+          ! if num_particles==0, then lsnormal_valid=1 if either the
+          ! "simple slope" or the least squares slope are valid.
+          ! if num_particles>0, then lsnormal_valid=1 if the least 
+          ! squares slope is valid.
           call find_cut_geom_slope_CLSVOF( &
            continuous_mof, & !intent(in)
            ls_mof, & !intent(in)
            particle_list, & !intent(in)
-           num_particles, & !intent(in)
+           num_particles, & !intent(in) (=0)
            lsnormal, & !intent(out)
            lsnormal_valid, & !intent(out)
            ls_intercept, & !intent(out)
@@ -16901,7 +16906,8 @@ contains
         endif
 
        else
-        print *,"is_rigid_local invalid"
+        print *,"is_rigid_local invalid: ", &
+          imaterial,is_rigid_local(imaterial)
         stop
        endif
 
