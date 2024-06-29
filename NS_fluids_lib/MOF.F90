@@ -14163,7 +14163,7 @@ contains
         else if (is_rigid_local(im).eq.0) then
          if (mofdata(vofcomp+sdim+1).eq.zero) then
           single_volume=mofdata(vofcomp)*volcell_vof
-          if (single_volume.ge.(one-EPS_8_4)*uncaptured_volume_vof) then
+          if (single_volume.ge.(one-EPS_UNCAPTURED)*uncaptured_volume_vof) then
 
            if (single_material_im.eq.0) then
             single_material_im=im
@@ -14225,8 +14225,8 @@ contains
 
           ! only find the slope if refvfrac<>0 and refvfrac<available vol.
           if ((NINT(mofdata(vofcomp+sdim+1)).eq.0).and. & ! order==0?
-              (single_volume.ge.EPS_8_4*volcell_vof).and. & ! 0<V<Vavail?
-              (single_volume.le.(one-EPS_8_4)*uncaptured_volume_vof)) then
+              (single_volume.ge.EPS_UNCAPTURED*volcell_vof).and. & ! 0<V<Vavail?
+              (single_volume.le.(one-EPS_UNCAPTURED)*uncaptured_volume_vof)) then
 
            do dir=1,sdim
             centroid_free(dir)=cencut_cen(dir)
@@ -14272,8 +14272,8 @@ contains
            endif
 
           else if ((NINT(mofdata(vofcomp+sdim+1)).ge.1).or. & ! order>=1?
-                   (abs(single_volume).le.EPS_8_4*volcell_vof).or. &
-                   (single_volume.ge.(one-EPS_8_4)*uncaptured_volume_vof)) then
+                   (abs(single_volume).le.EPS_UNCAPTURED*volcell_vof).or. &
+                   (single_volume.ge.(one-EPS_UNCAPTURED)*uncaptured_volume_vof)) then
            ! do nothing
           else
            print *,"order or single_volume invalid"
@@ -14395,7 +14395,7 @@ contains
           multi_centroidA(critical_material,dir)=centroidA(dir)
          enddo 
          uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
-         if (uncaptured_volume_vof.le.volcell_vof*EPS_8_4) then
+         if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
           uncaptured_volume_vof=zero
          endif
 
@@ -14574,7 +14574,7 @@ contains
            use_initial_guess,centroidA,fastflag,sdim)
 
           uncaptured_volume_vof=uncaptured_volume_vof-refvfrac(1)*volcell_vof
-          if (uncaptured_volume_vof.le.volcell_vof*EPS_8_4) then
+          if (uncaptured_volume_vof.le.volcell_vof*EPS_UNCAPTURED) then
            uncaptured_volume_vof=zero
           endif
   
@@ -16832,7 +16832,7 @@ contains
   
        else if (is_rigid_local(imaterial).eq.0) then
 
-        if (mofdata(vofcomp).gt.one-EPS_8_4) then
+        if (mofdata(vofcomp).gt.one-EPS_UNCAPTURED) then
 
          if (single_material.eq.0) then
           single_material=imaterial
@@ -16855,7 +16855,7 @@ contains
           stop
          endif
 
-        else if (mofdata(vofcomp).le.one-EPS_8_4) then
+        else if (mofdata(vofcomp).le.one-EPS_UNCAPTURED) then
          remaining_vfrac=remaining_vfrac+mofdata(vofcomp)
         else
          print *,"mofdata(vofcomp) invalid:",vofcomp,mofdata(vofcomp)
@@ -17144,7 +17144,7 @@ contains
       endif
 
       if ((single_material.gt.0).and. &
-          (remaining_vfrac.le.EPS_8_4)) then
+          (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
        if (is_rigid_local(single_material).eq.0) then
         !do nothing
@@ -17170,7 +17170,7 @@ contains
        enddo 
 
       else if ((single_material.eq.0).or. &
-               (remaining_vfrac.ge.EPS_8_4)) then
+               (remaining_vfrac.ge.EPS_UNCAPTURED)) then
 
           ! no need to pick an optimal ordering
        if (n_ndef.eq.0) then
@@ -18747,7 +18747,7 @@ contains
         !   
         ! It is assumed that the rigid materials do not overlap amongst
         ! themselves.
-        ! for advection, EPS_SINGLE=EPS_8_4
+        ! for advection, EPS_SINGLE=EPS_8_4=EPS_UNCAPTURED
       subroutine multi_get_volume_grid( &
        EPS_SINGLE, &
        tessellate, & ! =0,1,2,3
@@ -19886,7 +19886,7 @@ contains
           (EPS_SINGLE.lt.half)) then
        !do nothing
       else
-       print *,"EPS_SINGLE invalid"
+       print *,"EPS_SINGLE invalid: ",EPS_SINGLE
        stop
       endif
       if (ngeom_recon.ne.2*sdim+3) then
@@ -20341,7 +20341,7 @@ contains
        ! since multi_get_volume_tessellate tessellates each cell with 
        ! fluids and solids (tess=1,3), the flag "is_rigid" should be ignored.
       call multi_get_volume_grid( &
-       EPS2, & !tolerance for "single material" criterion
+       EPS_FULL_WEAK, & !tolerance for "single material" criterion
        local_tessellate_in, &  ! =0 or 2
        bfact,dx, &
        xsten0_plus,nhalf0, &
@@ -20455,7 +20455,7 @@ contains
           if (material_used(im_test).eq.0) then !i.e. "material subtracted"
 
            if (mofdataproject_minus(vofcomp).gt. &
-               (one-EPS2)*uncaptured_volume_fraction_fluid) then
+               (one-EPS_FULL_WEAK)*uncaptured_volume_fraction_fluid) then
 
             if (single_material.eq.0) then
              single_material=im_test
@@ -20559,7 +20559,7 @@ contains
             volcut,cencut,sdim)
 
          if (abs(volcut-uncaptured_volume_fluid).gt. &
-             EPS2*volume_plus) then
+             EPS_FULL_WEAK*volume_plus) then
            print *,"volcut invalid multi get area pairs 2 "
            print *,"volcut= ",volcut
            print *,"volume_plus=",volume_plus
@@ -20586,7 +20586,7 @@ contains
               (material_used(critical_material).le.num_materials)) then
 
             call multi_get_volume_tetlist( &
-             EPS2, & !tolerance for "single material" criterion
+             EPS_FULL_WEAK, & !tolerance for "single material" criterion
              local_tessellate_in, &  ! =0 or 2
              bfact,dx, &
              xsten0_plus,nhalf0, &
@@ -20606,7 +20606,7 @@ contains
 
               vol_old=multi_volume_plus_thin(im_opp)
               vol_new=multi_volume_plus_thin_shrink(im_opp)
-              if (vol_old-vol_new.ge.-EPS2*volume_plus) then
+              if (vol_old-vol_new.ge.-EPS_FULL_WEAK*volume_plus) then
                if (vol_old-vol_new.le.zero) then
                 vol_diff=zero
                else if (vol_old-vol_new.ge.zero) then
@@ -20736,7 +20736,7 @@ contains
         critical_material=0
 
         if ((single_material.gt.0).and. &
-            (remaining_vfrac.le.EPS2)) then
+            (remaining_vfrac.le.EPS_FULL_WEAK)) then
 
           !we leave critical_material==0 since the "pair" variables
           !are updated right here and only "single_material" is
@@ -20766,7 +20766,7 @@ contains
          material_used(single_material)=num_processed_fluid
 
         else if ((single_material.eq.0).or. &
-                 (remaining_vfrac.ge.EPS2)) then
+                 (remaining_vfrac.ge.EPS_FULL_WEAK)) then
 
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
@@ -20853,14 +20853,14 @@ contains
           uncaptured_volume_save=uncaptured_volume_fluid
           uncaptured_volume_fluid=uncaptured_volume_fluid-voltemp
           if (uncaptured_volume_fluid.lt. &
-              EPS2*uncaptured_volume_START) then
+              EPS_FULL_WEAK*uncaptured_volume_START) then
            uncaptured_volume_fluid=zero
           endif
 
           uncaptured_volume_fraction_fluid= &
            uncaptured_volume_fraction_fluid- &
            mofdataproject_minus(vofcomp)
-          if (uncaptured_volume_fraction_fluid.lt.EPS2) then
+          if (uncaptured_volume_fraction_fluid.lt.EPS_FULL_WEAK) then
            uncaptured_volume_fraction_fluid=zero
           endif
 
@@ -21021,7 +21021,7 @@ contains
        dxthin=half*(xsten0_plus(1,dir_plus)-xsten0_minus(-1,dir_plus))
 
        if (abs(voltemp-uncaptured_volume_START).le. &
-           two*EPS2*volume_plus) then
+           two*EPS_FULL_WEAK*volume_plus) then
         ! do nothing
        else
         print *,"warning"
@@ -21032,7 +21032,7 @@ contains
        endif
 
        if (uncaptured_volume_fluid.le. &
-           four*EPS2*volume_plus) then
+           four*EPS_FULL_WEAK*volume_plus) then
         !do nothing
        else
         print *,"warning"
@@ -21041,7 +21041,7 @@ contains
         print *,"uncaptured_volume_START ",uncaptured_volume_START
         print *,"fraction of uncapt volume ", &
             uncaptured_volume_fluid/uncaptured_volume_START
-        print *,"tolerance: ",four*EPS2
+        print *,"tolerance: ",four*EPS_FULL_WEAK
 !        stop
        endif
 
@@ -22424,7 +22424,7 @@ contains
          if ((material_used(im_test).eq.0).and. &
              (is_rigid_local(im_test).eq.1)) then
           if (mofdatasave(vofcomp).gt. &
-              (one-EPS_8_4)*uncaptured_volume_fraction_solid) then
+              (one-EPS_UNCAPTURED)*uncaptured_volume_fraction_solid) then
            if (single_material.ne.0) then
             print *,"cannot have two rigid materials at once"
             print *,"single_material ",single_material
@@ -22449,7 +22449,7 @@ contains
         enddo  ! im_test=1..num_materials
 
         if ((single_material.gt.0).and. &
-            (remaining_vfrac.le.EPS_8_4)) then
+            (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
          vofcomp=(single_material-1)*ngeom_recon+1
          multi_volume(single_material)=uncaptured_volume_solid
@@ -22467,7 +22467,7 @@ contains
          material_used(single_material)=num_processed_solid
 
         else if ((single_material.eq.0).or. &
-                 (remaining_vfrac.ge.EPS_8_4)) then
+                 (remaining_vfrac.ge.EPS_UNCAPTURED)) then
 
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
@@ -22524,7 +22524,7 @@ contains
               volcut,cencut,sdim)
 
           if (abs(volcut-uncaptured_volume_solid).gt. &
-              EPS_8_4*volcell) then
+              EPS_UNCAPTURED*volcell) then
            print *,"volcut invalid multi volume get volume grid 5"
            print *,"CHECK IF RIGID BODIES INTERSECT"
            print *,"volcut= ",volcut
@@ -22637,9 +22637,9 @@ contains
           uncaptured_volume_solid=uncaptured_volume_solid-voltemp
           uncaptured_volume_solid_map=uncaptured_volume_solid_map-voltemp_map
           if ((uncaptured_volume_solid.lt. &
-               EPS_8_4*uncaptured_volume_START).or. &
+               EPS_UNCAPTURED*uncaptured_volume_START).or. &
               (uncaptured_volume_solid_map.lt. &
-               EPS_8_4*uncaptured_volume_map_START)) then
+               EPS_UNCAPTURED*uncaptured_volume_map_START)) then
            uncaptured_volume_solid=zero
            uncaptured_volume_solid_map=zero
           endif
@@ -22665,7 +22665,7 @@ contains
           uncaptured_volume_fraction_solid=uncaptured_volume_fraction_solid- &
            mofdatalocal(vofcomp)
           if (uncaptured_volume_fraction_solid.lt. &
-              one-vfrac_solid_sum+EPS_8_4) then
+              one-vfrac_solid_sum+EPS_UNCAPTURED) then
            uncaptured_volume_fraction_solid=one-vfrac_solid_sum
           endif
 
@@ -22715,7 +22715,7 @@ contains
          if ((material_used(im_test).eq.0).and. &
              (is_rigid_local(im_test).eq.0)) then
           if (mofdatasave(vofcomp).gt. &
-              (one-EPS_8_4)*uncaptured_volume_fraction_fluid) then
+              (one-EPS_UNCAPTURED)*uncaptured_volume_fraction_fluid) then
 
            if (single_material.eq.0) then
             single_material=im_test
@@ -22751,7 +22751,7 @@ contains
         enddo  ! im_test=1..num_materials
 
         if ((single_material.gt.0).and. &
-            (remaining_vfrac.le.EPS_8_4)) then
+            (remaining_vfrac.le.EPS_UNCAPTURED)) then
 
          vofcomp=(single_material-1)*ngeom_recon+1
          multi_volume(single_material)=uncaptured_volume_fluid
@@ -22771,7 +22771,7 @@ contains
          material_used(single_material)=num_processed_total
 
         else if ((single_material.eq.0).or. &
-                 (remaining_vfrac.ge.EPS_8_4)) then
+                 (remaining_vfrac.ge.EPS_UNCAPTURED)) then
 
          do im=1,num_materials
           vofcomp=(im-1)*ngeom_recon+1
@@ -22828,7 +22828,7 @@ contains
              volcut,cencut,sdim)
 
           if (abs(volcut-uncaptured_volume_fluid).gt. &
-              EPS_8_4*volcell) then
+              EPS_UNCAPTURED*volcell) then
            print *,"volcut invalid multi volume get volume grid 6"
            print *,"volcut= ",volcut
            print *,"uncaptured_volume_fluid=",uncaptured_volume_fluid
@@ -22946,9 +22946,9 @@ contains
           uncaptured_volume_fluid=uncaptured_volume_fluid-voltemp
           uncaptured_volume_fluid_map=uncaptured_volume_fluid_map-voltemp_map
           if ((uncaptured_volume_fluid.lt. &
-               EPS_8_4*uncaptured_volume_START).or. &
+               EPS_UNCAPTURED*uncaptured_volume_START).or. &
               (uncaptured_volume_fluid_map.lt. &
-               EPS_8_4*uncaptured_volume_map_START)) then
+               EPS_UNCAPTURED*uncaptured_volume_map_START)) then
            uncaptured_volume_fluid=zero
            uncaptured_volume_fluid_map=zero
           endif
@@ -22973,7 +22973,7 @@ contains
   
           uncaptured_volume_fraction_fluid=uncaptured_volume_fraction_fluid- &
            mofdatalocal(vofcomp)
-          if (uncaptured_volume_fraction_fluid.lt.EPS_8_4) then
+          if (uncaptured_volume_fraction_fluid.lt.EPS_UNCAPTURED) then
            uncaptured_volume_fraction_fluid=zero
           endif
 
@@ -23454,7 +23454,7 @@ contains
        endif
 
        call multi_get_volume_grid( &
-        EPS2, & ! tolerance for "single material" criterion
+        EPS_FULL_WEAK, & ! tolerance for "single material" criterion
         local_tessellate, & ! =1 or 2
         bfact,dx,xsten0,nhalf0, &
         mofdata, &
@@ -23494,22 +23494,22 @@ contains
 
         vofcomp=(im-1)*ngeom_recon+1
 
-        if (abs(mofdata(vofcomp)).le.EPS2) then
+        if (abs(mofdata(vofcomp)).le.EPS_FULL_WEAK) then
 
          mofdata(vofcomp)=zero
          do dir=1,sdim
           mofdata(vofcomp+dir)=zero
          enddo
 
-        else if (abs(mofdata(vofcomp)-one).le.EPS2) then
+        else if (abs(mofdata(vofcomp)-one).le.EPS_FULL_WEAK) then
 
          mofdata(vofcomp)=one
          do dir=1,sdim
           mofdata(vofcomp+dir)=zero
          enddo
 
-        else if ((mofdata(vofcomp).ge.EPS2).and. &
-                 (mofdata(vofcomp).le.one-EPS2)) then
+        else if ((mofdata(vofcomp).ge.EPS_FULL_WEAK).and. &
+                 (mofdata(vofcomp).le.one-EPS_FULL_WEAK)) then
 
          do dir=1,sdim
           mofdata(vofcomp+dir)=multi_cen(dir,im)-cencell(dir)
@@ -24480,10 +24480,10 @@ contains
         stop
        endif
 
-       if (vfrac_data(im).ge.one-EPS_8_4) then
+       if (vfrac_data(im).ge.one-EPS_UNCAPTURED) then
         ! do nothing, there are no reconstructed interfaces in the cell.
-       else if ((vfrac_data(im).ge.EPS_8_4).and. &
-                (vfrac_data(im).lt.one-EPS_8_4)) then
+       else if ((vfrac_data(im).ge.EPS_UNCAPTURED).and. &
+                (vfrac_data(im).lt.one-EPS_UNCAPTURED)) then
 
         uncaptured_volume=one
         irank=1
@@ -24501,7 +24501,7 @@ contains
             intercept=mofdatavalid(vofcomp+2*sdim+2)
 
             uncaptured_volume=uncaptured_volume-mofdatavalid(vofcomp)
-            if (uncaptured_volume.lt.EPS_8_4) then
+            if (uncaptured_volume.lt.EPS_UNCAPTURED) then
              uncaptured_volume=zero
             endif
             if (uncaptured_volume.gt.zero) then ! we have a valid interface.
@@ -24705,10 +24705,10 @@ contains
       endif
        ! a full cell, so distance is either +bigdist or -bigdist,
        ! and a default normal is used.
-      if (vfrac_data(im).ge.one-EPS_8_4) then
+      if (vfrac_data(im).ge.one-EPS_UNCAPTURED) then
        ! do nothing, there are no reconstructed interfaces in the cell.
-      else if ((vfrac_data(im).ge.EPS_8_4).and. &
-               (vfrac_data(im).lt.one-EPS_8_4)) then
+      else if ((vfrac_data(im).ge.EPS_UNCAPTURED).and. &
+               (vfrac_data(im).lt.one-EPS_UNCAPTURED)) then
 
        do dir=1,sdim
         x0(dir)=xsten_recon(0,dir)
@@ -24736,7 +24736,7 @@ contains
            intercept=mofdatavalid(vofcomp+2*sdim+2)
 
            uncaptured_volume=uncaptured_volume-mofdatavalid(vofcomp)
-           if (uncaptured_volume.lt.EPS_8_4) then
+           if (uncaptured_volume.lt.EPS_UNCAPTURED) then
             uncaptured_volume=zero
            endif
            if (uncaptured_volume.gt.zero) then ! we have a valid interface.
@@ -25314,14 +25314,14 @@ contains
         endif
        enddo ! im=1..num_materials
 
-       if (abs(one-vfrac_fluid_sum).le.EPS_8_4) then
+       if (abs(one-vfrac_fluid_sum).le.EPS_UNCAPTURED) then
         ! do nothing
        else
         print *,"vfrac_fluid_sum invalid: ",vfrac_fluid_sum
         stop
        endif
 
-       if ((vfrac_solid_sum.le.one+EPS_8_4).and. &
+       if ((vfrac_solid_sum.le.one+EPS_UNCAPTURED).and. &
            (vfrac_solid_sum.ge.zero)) then
         ! do nothing
        else
@@ -25425,7 +25425,7 @@ contains
 
              if ((ls.ge.zero).or. &
                  (mofdatavalid(vofcomp).ge. &
-                  (one-EPS2)*uncaptured_volume_fraction)) then
+                  (one-EPS_FULL_WEAK)*uncaptured_volume_fraction)) then
               im_crit=im
               uncaptured_volume_fraction=zero
              else 
