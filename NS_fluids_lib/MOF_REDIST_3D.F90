@@ -1085,7 +1085,7 @@ stop
        !  sum F_fluid=1
        tessellate=3
 
-        !EPS2
+        !EPS2=EPS_FULL_WEAK
        call multi_get_volume_tessellate( &
          tessellate, & ! =1 or 3
          bfact, &
@@ -2006,8 +2006,8 @@ stop
       endif
 
        ! the maximum distance error that is created by using a number
-       ! less than 1/2 here is VOFTOL^{1/d} where d=2 or 3.
-      VFRAC_STENCIL_CUTOFF=half-VOFTOL
+       ! less than 1/2 here is EPS_FULL_WEAK^{1/d} where d=2 or 3.
+      VFRAC_STENCIL_CUTOFF=half-EPS_FULL_WEAK
 
       call growntilebox(tilelo,tilehi,fablo,fabhi, &
         growlo,growhi,0)
@@ -2194,18 +2194,18 @@ stop
         ! LS_{ij}(LS_{ij}+LS_{i+i',j+j'}) <= 0 for
         ! some |i'|<=1 |j'|<=1
         ! in the present algorithm, a reconstructed segment is valid if
-        ! (A) F>EPS3 and
+        ! (A) F>EPS_FULL_WEAK and
         ! (B)        
        do im=1,num_materials
-        cell_test(im)=0 !F>EPS3?
-        full_neighbor(im)=0 !neighbor F(im)>1-EPS3 ?
-        stencil_test(im)=0 ! F(im)>1/2-eps on cell bdry?
+        cell_test(im)=0 !F>EPS_FULL_WEAK?
+        full_neighbor(im)=0 !neighbor F(im)>1-EPS_FULL_WEAK ?
+        stencil_test(im)=0 ! F(im)>1/2-EPS_FULL_WEAK on cell bdry?
        enddo
 
          ! initialize: cell_test
        do im=1,num_materials
         if (is_rigid(im).eq.0) then
-         if (vcenter(im).gt.EPS3) then
+         if (vcenter(im).gt.EPS_FULL_WEAK) then
           cell_test(im)=1
          endif
         else if (is_rigid(im).eq.1) then
@@ -2296,7 +2296,7 @@ stop
             stencil_test(im)=1
            endif
           else if (is_rigid(im).eq.1) then
-           if (VFRAC_TEMP.ge.EPS3) then
+           if (VFRAC_TEMP.ge.EPS_FULL_WEAK) then
             rigid_in_stencil=1
            endif
           else
@@ -2494,7 +2494,7 @@ stop
            if (is_rigid(im).eq.0) then
             vofcomp=(im-1)*ngeom_recon+1
             VFRAC_TEMP=vofrecon(D_DECL(iside,jside,kside),vofcomp)
-            if (VFRAC_TEMP.ge.one-EPS3) then
+            if (VFRAC_TEMP.ge.one-EPS_FULL_WEAK) then
              full_neighbor(im)=1
              call put_istar(istar,istar_array) 
              donateflag(num_materials+1+istar)=im
@@ -2529,9 +2529,9 @@ stop
         if (is_rigid(im).eq.0) then
 
          keep_flotsam=0
-         if (cell_test(im).eq.1) then !F_{im}>EPS3?
+         if (cell_test(im).eq.1) then !F_{im}>EPS_FULL_WEAK?
           keep_flotsam=1
-         else if (cell_test(im).eq.0) then !F_{im}<EPS3?
+         else if (cell_test(im).eq.0) then !F_{im}<EPS_FULL_WEAK?
           keep_flotsam=0
          else
           print *,"cell_test invalid: ",im,cell_test(im)
@@ -2542,7 +2542,7 @@ stop
          if ((vcenter(im).ge.half).or. &
              (im.eq.im_crit).or. & !im_crit=argmax_{im} F_{im}
              (full_neighbor(im).eq.1).or. &
-             (keep_flotsam.eq.1)) then!keep_flotsam=1 if Fm>EPS3 
+             (keep_flotsam.eq.1)) then!keep_flotsam=1 if Fm>EPS_FULL_WEAK 
           legitimate_material=1
          else if ((vcenter(im).le.half).and. &
                   (im.ne.im_crit).and. &
@@ -3377,7 +3377,7 @@ stop
 
          local_tessellate=2
 
-          !EPS2
+          !EPS_FULL_WEAK
          call multi_get_volume_tessellate( &
           tessellate, &  ! =3
           bfact,dx, &
@@ -3480,7 +3480,7 @@ stop
            ! centroid)
            ! in: fort_faceinit
           call multi_get_volume_grid( &
-            EPS2, &
+            EPS_FULL_WEAK, &
             local_tessellate, &  ! 0,1, or 2
             bfact,dx,xsten,nhalf, &
             mofdataproject, &
@@ -3942,23 +3942,23 @@ stop
              (tessellate.eq.3).or. &
              (is_rigid(im).eq.0)) then
 
-          if ((frac_left(im).gt.one+EPS3).or. &
+          if ((frac_left(im).gt.one+EPS_FULL_WEAK).or. &
               (frac_left(im).lt.zero).or. &
-              (frac_right(im).gt.one+EPS3).or. &
+              (frac_right(im).gt.one+EPS_FULL_WEAK).or. &
               (frac_right(im).lt.zero)) then
            print *,"frac_left or frac_right out of range"
            print *,"im,frac_left ",im,frac_left(im)
            print *,"im,frac_right ",im,frac_right(im)
            stop
           endif
-          if (frac_left(im).le.EPS_3_2) then
+          if (frac_left(im).le.EPS_FULL_WEAK) then
            frac_left(im) = zero
-          else if (frac_left(im).ge.one-EPS_3_2) then
+          else if (frac_left(im).ge.one-EPS_FULL_WEAK) then
            frac_left(im) = one
           endif
-          if (frac_right(im).lt.EPS_3_2) then
+          if (frac_right(im).lt.EPS_FULL_WEAK) then
            frac_right(im) = zero
-          else if (frac_right(im).gt.one-EPS_3_2)then
+          else if (frac_right(im).gt.one-EPS_FULL_WEAK)then
            frac_right(im) = one
           endif
 
@@ -4110,7 +4110,7 @@ stop
              stop
             endif
   
-            if (frac_pair(ml,mr).lt.EPS_3_2) then
+            if (frac_pair(ml,mr).lt.EPS_FULL_WEAK) then
              frac_pair(ml,mr)=zero
              dist_pair(ml,mr)=delta
             else

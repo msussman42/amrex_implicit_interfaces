@@ -387,7 +387,6 @@ implicit none
       !BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: LS_CURV_TOL=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: VOFTOL_SLOPES=BL_REAL_E(1.0,-2)
-      real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-4)
       real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=BL_REAL_E(1.0,-1)
       real(amrex_real), PARAMETER :: EVAP_BISECTION_TOL=BL_REAL_E(1.0,-5)
       real(amrex_real), PARAMETER :: INTERCEPT_TOL=BL_REAL_E(1.0,-6)
@@ -435,7 +434,6 @@ implicit none
       !BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: LS_CURV_TOL=BL_REAL_E(1.0,-2)
       real(amrex_real), PARAMETER :: VOFTOL_SLOPES=BL_REAL_E(1.0,-2)
-      real(amrex_real), PARAMETER :: VOFTOL=BL_REAL_E(1.0,-8)
       real(amrex_real), PARAMETER :: VOFTOL_AREAFRAC=BL_REAL_E(1.0,-1)
       real(amrex_real), PARAMETER :: EVAP_BISECTION_TOL=BL_REAL_E(1.0,-12)
       real(amrex_real), PARAMETER :: INTERCEPT_TOL=BL_REAL_E(1.0,-12)
@@ -472,6 +470,9 @@ implicit none
       real(amrex_real), PARAMETER :: EPS_14_7=BL_REAL_E(1.0,-14)
       real(amrex_real), PARAMETER :: EPS_13_5=BL_REAL_E(1.0,-13)
 #endif
+      real(amrex_real), PARAMETER :: EPS_UNCAPTURED=EPS_8_4
+      real(amrex_real), PARAMETER :: VOFTOL=EPS_8_4
+      real(amrex_real), PARAMETER :: EPS_FULL_WEAK=EPS2
 
       integer, PARAMETER :: tecplot_real=8
       integer, PARAMETER :: tecplot_real_short=4
