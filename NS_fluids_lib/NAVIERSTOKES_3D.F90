@@ -14381,7 +14381,7 @@ END SUBROUTINE SIMP
       endif
       if ((pressure_error_flag.ne.0).and. &
           (pressure_error_flag.ne.1)) then
-       print *,"pressure_error_flag invalid"
+       print *,"pressure_error_flag invalid: ",pressure_error_flag
        stop
       endif
       maskcov_ptr=>maskcov

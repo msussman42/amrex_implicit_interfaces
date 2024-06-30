@@ -2719,7 +2719,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       enddo
       if ((pressure_error_flag.ne.0).and. &
           (pressure_error_flag.ne.1)) then
-       print *,"pressure_error_flag invalid"
+       print *,"pressure_error_flag invalid: ",pressure_error_flag
        stop
       endif
       if (vorterr.eq.zero) then
