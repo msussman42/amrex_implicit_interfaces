@@ -19,7 +19,7 @@ geometry.prob_hi   =  0.23125 14.8
 # 1=face
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
-ns.continuous_mof=0
+ns.continuous_mof=1
 ns.MOFITERMAX=30
 # EILE_flag=-1 Weymouth and Yue
 # EILE_flag=1 alternate EI-LE
@@ -120,6 +120,12 @@ ns.pressure_error_flag=1 # look at pressure variation
 # values)
 # shifted Peng Robinson EOS: material_type=23
 ns.material_type=22 5
+ns.stiffCP=4.1855e+7 10.07e+6
+ns.stiffCV=4.1855e+7 7.2e+6
+#R=2.87e+6 ergs/(K g)
+ns.R_Palmore_Desjardins=8.31446261815324e+7  #ergs/(mol K)
+ns.molar_mass=18.02 28.9 #g/mol
+
 ns.heatviscconst=0.0 0.0
 # May 17:
 # a non-zero gas viscosity will work fine too.

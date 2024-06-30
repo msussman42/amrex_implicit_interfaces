@@ -171,6 +171,8 @@ ns.stiffCP= 4.1855e+7  1.0e+7 2.03e+7 2.03e+7 # erg/(g K) axis_dir=1
 # rho units: kg/m^3
 ns.observe_initial_mdot=0
 ns.prescribed_mdot = 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0
+# latent(12)=2.26e+10 (evaporation)
+# latent(31)=3.34e+9 (melting)
 ns.latent_heat = 2.26e+10 0.0 0.0 0.0 0.0 0.0 0.0 3.34e+9 0.0 0.0 0.0 0.0
 #for evaporation (standard setup): 373.15
 ns.saturation_temp = 574.0 0.0 0.0 0.0 0.0 0.0 0.0 273.15 0.0 0.0 0.0 0.0

@@ -14,13 +14,14 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 #geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  1.0 1.0   
 #Sep 16, 2018
+#aspect ratio: 2
 geometry.prob_lo   =  -3.7 0.0
 geometry.prob_hi   =  3.7 14.8
 # 0=cell
 # 1=face
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
-ns.continuous_mof=0
+ns.continuous_mof=1
 ns.MOFITERMAX=30
 # EILE_flag=-1 Weymouth and Yue
 # EILE_flag=1 alternate EI-LE
@@ -117,6 +118,7 @@ ns.pressure_error_flag=1 # look at pressure variation
 # for air: material_type=5 EOS_air
 # LIQUID COMPRESSIBLE: make material_type(1)=7
 ns.material_type=7 5
+#ns.material_type_interface=0
 ns.stiffCP=4.1855e+7 10.07e+6
 ns.stiffCV=4.1855e+7 7.2e+6
 #R=2.87e+6 ergs/(K g)
@@ -124,6 +126,24 @@ ns.R_Palmore_Desjardins=8.31446261815324e+7  #ergs/(mol K)
 ns.molar_mass=18.02 28.9 #g/mol
 
 ns.heatviscconst=0.0 0.0
+#ns.heatviscconst=58000.0 2400.0 #evaporation
+#ns.latent_heat=2.26e+10 0.0  #evaporation
+#ns.saturation_temp=574.0 0.0 #evaporation
+#ns.saturation_temp_min=273.15 0.0 #evaporation
+#ns.saturation_temp_max=574.0 0.0 #evaporation
+#evaporation: freezing_model=6 Palmore and Desjardins
+#ns.freezing_model=6 0 #evaporation
+#ns.Tanasawa_or_Schrage_or_Kassemi=0 0 #evaporation
+#ns.mass_fraction_id=1 0 #evaporation
+#ns.observe_initial_mdot=0 #evaporation
+#ns_prescribed_mdot = 0.0 0.0 #evaporation
+#ns.reference_pressure=1.0e+6 0.0 #evaporation
+#ns.accommodation_coefficient=1.0 0.0 #evaporation
+#ns.speciesviscconst=0.1 0.1 #evaporation
+#ns.speciesconst=0.0 0.0 #evaporation
+#ns.speciesreactionrate=0.0 0.0 #evaporation
+#ns.species_molar_mass=18.02 #evaporation
+
 # May 17:
 # a non-zero gas viscosity will work fine too.
 ns.viscconst=0.01 0.0 
