@@ -1011,7 +1011,7 @@ stop
       end subroutine get_local_heat_source 
 
 
-
+       !check_user_defined_velbc is called from fort_estdt (GODUNOV_3D.F90)
       subroutine check_user_defined_velbc(time,dir,uu,dx)
       use global_utility_module
       use shockdrop
@@ -25347,6 +25347,7 @@ end subroutine initialize2d
            scalc(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  ! temperature
           endif  ! probtype=603
 
+           !we are in:fort_initdata
           if ((probtype.eq.1).and. &
               ((axis_dir.eq.150).or. &
                (axis_dir.eq.151))) then
@@ -25368,11 +25369,14 @@ end subroutine initialize2d
             endif 
             call general_hydrostatic_pressure(test_pres)
             if (abs(test_pres-shockdrop_P0)/test_pres.gt.1.0E-8) then
-             print *,"shockdrop_P0 inconsistent w/ general_hydrostatic_pressure"
+             print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
+             print *,"test_pres=",test_pres
+             print *,"shockdrop_P0=",shockdrop_P0
              stop
             endif
             if (fort_material_type(2).ne.5) then
              print *,"only material_type=5 supported for gas for this problem"
+             print *,"fort_material_type(2)=",fort_material_type(2)
              stop
             endif
             e_jwl=p_jwl/((shockdrop_gamma-one)*den_jwl)
