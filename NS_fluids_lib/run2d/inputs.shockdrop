@@ -128,6 +128,7 @@ ns.molar_mass=18.02 28.9 #g/mol
 ns.heatviscconst=0.0 0.0
 #ns.heatviscconst=58000.0 2400.0 #evaporation
 #ns.latent_heat=2.26e+10 0.0  #evaporation
+#for evaporation (standard setup): 373.15
 #ns.saturation_temp=574.0 0.0 #evaporation
 #ns.saturation_temp_min=273.15 0.0 #evaporation
 #ns.saturation_temp_max=574.0 0.0 #evaporation
@@ -139,6 +140,7 @@ ns.heatviscconst=0.0 0.0
 #ns_prescribed_mdot = 0.0 0.0 #evaporation
 #ns.reference_pressure=1.0e+6 0.0 #evaporation
 #ns.accommodation_coefficient=1.0 0.0 #evaporation
+#(rho C)_t + div(rho C) = div (rho D grad C)
 #ns.speciesviscconst=0.1 0.1 #evaporation
 #ns.speciesconst=0.0 0.0 #evaporation
 #ns.speciesreactionrate=0.0 0.0 #evaporation
