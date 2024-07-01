@@ -16767,7 +16767,7 @@ stop
           else if (project_option.eq.SOLVETYPE_VISC) then ! viscosity
            !do nothing
           else
-           print *,"project_option invalid"
+           print *,"project_option invalid(buildfacewt): ",project_option
            stop
           endif
 

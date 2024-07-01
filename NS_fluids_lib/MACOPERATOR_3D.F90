@@ -416,7 +416,8 @@ stop
        real(amrex_real), pointer :: mu_ptr(D_DECL(:,:,:))
        real(amrex_real), INTENT(in),target :: den(DIMV(den))
        real(amrex_real), pointer :: den_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(in),target :: offdiagcheck(DIMV(offdiagcheck),nsolve)
+       real(amrex_real), INTENT(in),target :: &
+         offdiagcheck(DIMV(offdiagcheck),nsolve)
        real(amrex_real), pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
        real(amrex_real), INTENT(out),target :: cterm(DIMV(cterm),nsolve)
        real(amrex_real), pointer :: cterm_ptr(D_DECL(:,:,:),:)
@@ -424,7 +425,8 @@ stop
        real(amrex_real), pointer :: c2_ptr(D_DECL(:,:,:),:)
        real(amrex_real), INTENT(in),target :: DeDT(DIMV(DeDT))
        real(amrex_real), pointer :: DeDT_ptr(D_DECL(:,:,:))
-       real(amrex_real), INTENT(in),target :: lsnew(DIMV(lsnew),num_materials*(SDIM+1))
+       real(amrex_real), INTENT(in),target :: &
+         lsnew(DIMV(lsnew),num_materials*(SDIM+1))
        real(amrex_real), pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 
        integer i,j,k
@@ -784,14 +786,14 @@ stop
          if (dt.gt.zero) then
           ! do nothing
          else
-          print *,"dt invalid"
+          print *,"dt invalid (SOLVETYPE_SPEC): ",dt
           stop
          endif
          den_inverse=den(D_DECL(i,j,k)) ! 1/den
          if (den_inverse.gt.zero) then
           ! do nothing
          else
-          print *,"den_inverse invalid"
+          print *,"den_inverse invalid (SOLVETYPE_SPEC): ",den_inverse
           stop
          endif
           ! diffuse mass fraction

@@ -245,7 +245,7 @@ ns.heatviscconst=58000.0 2400.0 2.2e+5 2.2e+5 # axis_dir=1
 # 12 13 14 23 24 34  
 ns.heatviscconst_interface=0.0 0.0 0.0 0.0 0.0 0.0
 #evaporation: water vapor is solute, air is solvent units: cm^2/s
-#C_t + u dot grad C = div alpha laplacian C ?
+#(rho C)_t + div(rho C) = div (rho D grad C)
 ns.speciesviscconst=0.1 0.1 0.1 0.1
 # 1=water 2=gas  3=oil  4=substrate  or
 # 1=water 2=gas  3=ice  4=substrate 
