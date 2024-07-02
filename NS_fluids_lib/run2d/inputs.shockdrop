@@ -15,10 +15,12 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 #geometry.prob_hi   =  1.0 1.0   
 #Sep 16, 2018
 #aspect ratio: 2
-geometry.prob_lo   =  -3.7 0.0
-geometry.prob_hi   =  3.7 14.8
-# 0=cell
-# 1=face
+#geometry.prob_lo   =  -3.7 0.0
+#geometry.prob_hi   =  3.7 14.8
+#July 2, 2024
+#aspect ratio: 2
+geometry.prob_lo   =  -0.37 0.0
+geometry.prob_hi   =  0.37 1.48
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
 ns.continuous_mof=1
@@ -63,7 +65,7 @@ amr.regrid_int      = 1       # how often to regrid
 amr.n_error_buf     = 8 8 8 8 8 8 8   # number of buffer cells in error est
 amr.grid_eff        = 0.7   # what constitutes an efficient grid
 # above was .55 (smaller=> less boxes)
-amr.blocking_factor = 4       # block factor in grid generation
+amr.blocking_factor = 8 8 8 8 8 8 8 8   # block factor in grid generation
 amr.check_int       = 1000     # number of timesteps between checkpoints
 amr.check_file      = chk     # root name of checkpoint file
 amr.plot_int        = 100     # 50
@@ -113,6 +115,7 @@ ns.num_divu_outer_sweeps=2
 # on each level, and for each uncovered cell, code computes:
 # sum_star_stencil |pmg_i'j'k'-pmg_ijk|/(2 dim patmos)
 ns.pressure_error_flag=1 # look at pressure variation
+ns.pressure_error_cutoff=1.0e+6 0.1
 # May 17:
 # for water: material_type=7 EOS_tait_rho (base density is denconst(1))
 # for air: material_type=5 EOS_air
@@ -149,20 +152,23 @@ ns.heatviscconst=0.0 0.0
 # May 17:
 # a non-zero gas viscosity will work fine too.
 ns.viscconst=0.01 0.0 
-ns.denconst=1.0 0.00123
+ns.denconst=1.0 0.00125335272
 ns.density_ceiling=10.0 1.0
 ns.density_floor=0.1 0.0001
 # reduce numerical dissipation
 ns.xblob=0.0
-ns.yblob=5.0
+#July 2, 2024
+ns.yblob=0.5
 ns.zblob=0.0
 # zblob2 is the initial position of the shock.
 #ns.zblob2=0.3 
-#Sep 16, 2018
-ns.zblob2=2.0
+#July 2, 2024
+ns.zblob2=0.2
 #ns.radblob=0.1 
 #Sep 16, 2018
-ns.radblob=1.1 
+#ns.radblob=1.1 
+#July 2, 2024
+ns.radblob=0.1 #2 mm diameter
 ns.denfact=1.0
 ns.velfact=0.0
 ns.probtype=1

@@ -62,9 +62,37 @@ CONTAINS
        shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 
 !      shockdrop_M0=1.4
-       shockdrop_M0=3.0
+!      shockdrop_M0=3.0
+       shockdrop_M0=1.17
        shockdrop_T0=278.0d0 !tempconst(2)
-       shockdrop_DEN0=0.00123d0 !denconst(2)
+       shockdrop_DEN0=0.00125335272d0 !denconst(2)
+
+       if (abs(shockdrop_DEN0-fort_denconst(2)).le.EPS6) then
+        !do nothing
+       else
+        print *,"shockdrop_DEN0 ",shockdrop_DEN0
+        print *,"fort_denconst(2) ",fort_denconst(2)
+        print *,"mismatch"
+        stop
+       endif
+
+       if (abs(shockdrop_T0-fort_tempconst(2)).le.EPS6) then
+        !do nothing
+       else
+        print *,"shockdrop_T0 ",shockdrop_T0
+        print *,"fort_tempconst(2) ",fort_tempconst(2)
+        print *,"mismatch"
+        stop
+       endif
+       if (abs(shockdrop_T0-fort_tempconst(1)).le.EPS6) then
+        !do nothing
+       else
+        print *,"shockdrop_T0 ",shockdrop_T0
+        print *,"fort_tempconst(1) ",fort_tempconst(1)
+        print *,"mismatch"
+        stop
+       endif
+    
 
         ! this value must be consistent with material_type=5 parameters
        shockdrop_gamma=shockdrop_cp/shockdrop_cv
