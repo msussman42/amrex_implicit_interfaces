@@ -1014,7 +1014,6 @@ stop
        !check_user_defined_velbc is called from fort_estdt (GODUNOV_3D.F90)
       subroutine check_user_defined_velbc(time,dir,uu,dx)
       use global_utility_module
-      use shockdrop
 
       IMPLICIT NONE
 
@@ -1044,12 +1043,6 @@ stop
          uu=max(abs(uu),abs(adv_vel))
          uu=max(abs(uu),abs(advbot))
          uu=max(abs(uu),abs(vinletgas))
-        endif
-       endif
-       if (probtype.eq.1) then
-        if ((axis_dir.eq.150).or.(axis_dir.eq.151)) then
-         call shockdrop_maxvelocity(utest,axis_dir)
-         uu=max(abs(uu),abs(utest))
         endif
        endif
        
@@ -9056,7 +9049,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       subroutine vapordist(xsten,nhalf,dx,bfact,dist)
       use global_utility_module
       use global_distance_module
-      use shockdrop
       use marangoni
 
       IMPLICIT NONE
@@ -9123,11 +9115,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        ! vapordist 2d or 3d
        ! dist>0 in material 1
        ! dist<0 in material 2
-      else if ((probtype.eq.1).and. &
-               ((axis_dir.eq.150).or. &
-                (axis_dir.eq.151))) then 
-       call shockdrop_dropLS(x,y,z,dist, &
-        xblob,yblob,zblob,radblob,axis_dir)
       else if (probtype.eq.537) then ! vapordist
 
         zmin=-1.0e+10
@@ -15821,7 +15808,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use hydrateReactor_module
       use unimaterialChannel_module
       use River
-      use shockdrop
       use USERDEF_module
       use HELIX_module
       use TSPRAY_module
@@ -15957,11 +15943,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
         do dir2=1,SDIM
          velcell(dir2)=zero
         enddo
-       else if ((probtype.eq.1).and. &
-                ((axis_dir.eq.150).or. &
-                 (axis_dir.eq.151))) then
-        call shockdrop_velocity(x,y,z,velcell, &
-         xblob,yblob,zblob,radblob,zblob2,axis_dir)
        else if (probtype.eq.209) then ! River
         if (dir.eq.SDIM) then
          call RiverVelocity(x,y,z,velcell,axis_dir,probloz,probhiz)
@@ -17014,7 +16995,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use hydrateReactor_module
       use unimaterialChannel_module
       use River
-      use shockdrop
       use USERDEF_module
       use HELIX_module
       use TSPRAY_module
@@ -17160,11 +17140,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        else if (probtype.eq.209) then ! River
         call RiverPressure(x,y,z,time,ADV, &
          fort_denconst(2),fort_denconst(1),axis_dir)
-       else if ((probtype.eq.1).and. &
-                ((axis_dir.eq.150).or. &
-                 (axis_dir.eq.151))) then
-        call shockdrop_pressure(x,y,z,ADV, &
-         xblob,yblob,zblob,radblob,zblob2,axis_dir)
        else  
  
         base_pres=zero
@@ -24616,7 +24591,6 @@ end subroutine initialize2d
        use unimaterialChannel_module
        use global_utility_module
        use global_distance_module
-       use shockdrop
        use marangoni
        use USERDEF_module
        use HELIX_module
@@ -24700,7 +24674,7 @@ end subroutine initialize2d
        
        real(amrex_real) debug_vfrac_sum
        real(amrex_real) vel(SDIM)
-       real(amrex_real) temp,dens,ccnt,test_gamma,test_pres
+       real(amrex_real) temp,dens,ccnt
        real(amrex_real) distsolid
 
        real(amrex_real) den_jwl_left,den_jwl_right
@@ -24712,7 +24686,7 @@ end subroutine initialize2d
        real(amrex_real) den_jwl,denroom,e_jwl,e_room,eps_benard
        real(amrex_real) gamma_jwl
        real(amrex_real) p_hyd,p_jwl,p_room,preshydro,rhohydro
-       real(amrex_real) temp_jwl,temp_slope,temproom,u_jwl
+       real(amrex_real) temp_jwl,temp_slope,temproom
        real(amrex_real) water_temp
        integer imattype,isten
        integer max_levelstack
@@ -25346,54 +25320,6 @@ end subroutine initialize2d
            endif
            scalc(ibase+ENUM_TEMPERATUREVAR+1)=water_temp  ! temperature
           endif  ! probtype=603
-
-           !we are in:fort_initdata
-          if ((probtype.eq.1).and. &
-              ((axis_dir.eq.150).or. &
-               (axis_dir.eq.151))) then
-    
-           if (im.eq.2) then ! air
-            call shockdrop_pressure(x,y,z,p_jwl, &
-             xblob,yblob,zblob,radblob,zblob2,axis_dir)
-            call shockdrop_gas_density(x,y,z,den_jwl, &
-             xblob,yblob,zblob,radblob,zblob2,axis_dir)
-            call shockdrop_velocity(x,y,z,vel, &
-             xblob,yblob,zblob,radblob,zblob2,axis_dir)
-            u_jwl=vel(SDIM)
-            test_gamma=one+R_AIR_PARMS/CV_AIR_PARMS
-            if (abs(test_gamma-shockdrop_gamma).gt.1.0E-8) then
-             print *,"shockdrop_gamma inconsistent with mattype=5 parms"
-             print *,"test_gamma=",test_gamma
-             print *,"shockdrop_gamma=",shockdrop_gamma
-             stop
-            endif 
-            call general_hydrostatic_pressure(test_pres)
-            if (abs(test_pres-shockdrop_P0)/test_pres.gt.1.0E-8) then
-             print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
-             print *,"test_pres=",test_pres
-             print *,"shockdrop_P0=",shockdrop_P0
-             stop
-            endif
-            if (fort_material_type(2).ne.5) then
-             print *,"only material_type=5 supported for gas for this problem"
-             print *,"fort_material_type(2)=",fort_material_type(2)
-             stop
-            endif
-            e_jwl=p_jwl/((shockdrop_gamma-one)*den_jwl)
-            call init_massfrac_parm(den_jwl,massfrac_parm,im)
-            call TEMPERATURE_material(den_jwl,massfrac_parm, &
-             temp_jwl,e_jwl, &
-             fort_material_type(im),im)
-            scalc(ibase+ENUM_DENVAR+1)=den_jwl
-            scalc(ibase+ENUM_TEMPERATUREVAR+1)=temp_jwl
-           else if (im.eq.1) then ! water
-            ! do nothing (use fort_denconst and fort_initial_temperature)
-           else
-            print *,"im invalid83"
-            stop
-           endif
-
-          endif  ! shockdrop
 
            ! shock tube problems
            ! do not use material_type=5 (EOS_air),
@@ -26632,7 +26558,6 @@ end subroutine initialize2d
       use hydrateReactor_module
       use unimaterialChannel_module
       use River
-      use shockdrop
       use USERDEF_module
       use HELIX_module
       use TSPRAY_module
@@ -27088,14 +27013,6 @@ end subroutine initialize2d
          x_vel=zero
          y_vel=zero
          z_vel=zero
-        else if ((probtype.eq.1).and. &
-                 ((axis_dir.eq.150).or. &
-                  (axis_dir.eq.151))) then
-         call shockdrop_velocity(x,y,z,velcell, &
-          xblob,yblob,zblob,radblob,zblob2,axis_dir)
-         x_vel=velcell(1)
-         y_vel=velcell(2)
-         z_vel=velcell(SDIM)
          ! Marioff injector
         else if (probtype.eq.537) then
           call get_jetbend_velocity(xsten,nhalf,dx,bfact,velcell)

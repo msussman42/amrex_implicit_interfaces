@@ -148,7 +148,7 @@ ns.zblob2=2.0
 ns.radblob=1.1 
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=1
+ns.probtype=3001
 
 #ns.mem_debug = 1
 ns.v = 1
