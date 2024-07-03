@@ -8,6 +8,9 @@
 #include "AMReX_SPACE.H"
 #include "AMReX_BC_TYPES.H"
 #include "AMReX_ArrayLim.H"
+#include "EXTRAP_COMP.H"
+
+#define shockdrop_PROB_TYPE 3001
 
 #if (AMREX_SPACEDIM==3)
 #define SDIM 3
@@ -20,343 +23,647 @@ stop
 
 MODULE shockdrop
 use amrex_fort_module, only : amrex_real
+implicit none 
 
-        !see run2d/NormalShockWaveNASA.F90
-        !see run2d/inputs.shockdrop
+ !see run2d/NormalShockWaveNASA.F90
+ !see run2d/inputs.shockdrop
 
-       real(amrex_real) shockdrop_R
-       real(amrex_real) shockdrop_cp
-       real(amrex_real) shockdrop_cv
+real(amrex_real) shockdrop_R
+real(amrex_real) shockdrop_cp
+real(amrex_real) shockdrop_cv
 
-        !upstream supersonic relative to shock
-       real(amrex_real) shockdrop_P0
-       real(amrex_real) shockdrop_T0
-       real(amrex_real) shockdrop_DEN0
-       real(amrex_real) shockdrop_M0
-       real(amrex_real) shockdrop_VEL0
-       real(amrex_real) shockdrop_C0
-       real(amrex_real) shockdrop_EE0
+ !upstream supersonic relative to shock
+real(amrex_real) shockdrop_P0
+real(amrex_real) shockdrop_T0
+real(amrex_real) shockdrop_DEN0
+real(amrex_real) shockdrop_M0
+real(amrex_real) shockdrop_VEL0
+real(amrex_real) shockdrop_C0
+real(amrex_real) shockdrop_EE0
 
-        !downstream subsonic relative to shock
-       real(amrex_real) shockdrop_P1
-       real(amrex_real) shockdrop_T1
-       real(amrex_real) shockdrop_DEN1
-       real(amrex_real) shockdrop_M1
-       real(amrex_real) shockdrop_VEL1
-       real(amrex_real) shockdrop_C1
-       real(amrex_real) shockdrop_EE1
+ !downstream subsonic relative to shock
+real(amrex_real) shockdrop_P1
+real(amrex_real) shockdrop_T1
+real(amrex_real) shockdrop_DEN1
+real(amrex_real) shockdrop_M1
+real(amrex_real) shockdrop_VEL1
+real(amrex_real) shockdrop_C1
+real(amrex_real) shockdrop_EE1
 
-       real(amrex_real) shockdrop_gamma
+real(amrex_real) shockdrop_gamma
 
 CONTAINS
 
           ! units are cgs
-       subroutine shockdrop_init()
-       use probcommon_module
-       IMPLICIT NONE
+subroutine shockdrop_init()
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+real(amrex_real) test_pres
 
-        !material_type=5 EOS_air
-        !see PROBCOMMON.F90
-       shockdrop_R=R_AIR_PARMS !ergs/(Kelvin g)
-       shockdrop_cv=CV_AIR_PARMS !ergs/(Kelvin g)
-       shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
+ !material_type=5 EOS_air
+ !see PROBCOMMON.F90
+shockdrop_R=R_AIR_PARMS !ergs/(Kelvin g)
+shockdrop_cv=CV_AIR_PARMS !ergs/(Kelvin g)
+shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 
-!      shockdrop_M0=1.4
-!      shockdrop_M0=3.0
-       shockdrop_M0=1.17
-       shockdrop_T0=278.0d0 !tempconst(2)
-       shockdrop_DEN0=0.00125335272d0 !denconst(2)
+! shockdrop_M0=1.4
+! shockdrop_M0=3.0
+shockdrop_M0=1.17
+shockdrop_T0=278.0d0 !tempconst(2)
+shockdrop_DEN0=0.00125335272d0 !denconst(2)
 
-       if (abs(shockdrop_DEN0-fort_denconst(2)).le.EPS6) then
-        !do nothing
-       else
-        print *,"shockdrop_DEN0 ",shockdrop_DEN0
-        print *,"fort_denconst(2) ",fort_denconst(2)
-        print *,"mismatch"
-        stop
-       endif
+if (abs(shockdrop_DEN0-fort_denconst(2)).le.EPS6) then
+ !do nothing
+else
+ print *,"shockdrop_DEN0 ",shockdrop_DEN0
+ print *,"fort_denconst(2) ",fort_denconst(2)
+ print *,"mismatch"
+ stop
+endif
 
-       if (abs(shockdrop_T0-fort_tempconst(2)).le.EPS6) then
-        !do nothing
-       else
-        print *,"shockdrop_T0 ",shockdrop_T0
-        print *,"fort_tempconst(2) ",fort_tempconst(2)
-        print *,"mismatch"
-        stop
-       endif
-       if (abs(shockdrop_T0-fort_tempconst(1)).le.EPS6) then
-        !do nothing
-       else
-        print *,"shockdrop_T0 ",shockdrop_T0
-        print *,"fort_tempconst(1) ",fort_tempconst(1)
-        print *,"mismatch"
-        stop
-       endif
-    
-
-        ! this value must be consistent with material_type=5 parameters
-       shockdrop_gamma=shockdrop_cp/shockdrop_cv
-
-        ! if compressible liquid, this value should be the same
-        ! as the equilibrium pressure of the liquid drop.
-       shockdrop_P0=(shockdrop_gamma-1.0d0)* &
-        shockdrop_DEN0*shockdrop_cv*shockdrop_T0
-
-       shockdrop_C0=(shockdrop_gamma*shockdrop_P0/shockdrop_DEN0)**half
-       shockdrop_VEL0=shockdrop_M0*shockdrop_C0
-
-       shockdrop_P1=shockdrop_P0* &
-        (two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one)/ &
-        (shockdrop_gamma+one)
-
-       shockdrop_T1=shockdrop_T0* &
-        ( two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one )* &
-        ( (shockdrop_gamma-one)*(shockdrop_M0**2)+two )/ &
-        ( ((shockdrop_gamma+one)*shockdrop_M0)**2 )
-
-       shockdrop_DEN1=shockdrop_DEN0* &
-        ((shockdrop_gamma+one)*(shockdrop_M0**2))/ &
-        ((shockdrop_gamma-one)*(shockdrop_M0**2)+two)
-
-       shockdrop_C1=sqrt(shockdrop_gamma*shockdrop_P1/shockdrop_DEN1)
-       shockdrop_M1= &
-        ((shockdrop_gamma-one)*(shockdrop_M0**2)+two)/ &
-        (two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one)
-       shockdrop_M1=sqrt(shockdrop_M1)
-       shockdrop_VEL1=shockdrop_M1*shockdrop_C1
-
-       print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
-        shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
-       print *,"shockdrop: downstream den,SPEED,T,M,C ", &
-        shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
-
-       return
-       end subroutine shockdrop_init
-
-       subroutine shockdrop_velocity(x,y,z,vel, &
-         xblob,yblob,zblob,radblob,zblob2,axis_dir)
-       IMPLICIT NONE
-       integer axis_dir,dir
-       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2,LS
-       real(amrex_real) vel(SDIM)
-
-       if (SDIM.eq.2) then
-        if (abs(z-y).le.1.0E-6) then
-         !do nothing
-        else
-         print *,"expecting z=y"
-         stop
-        endif
-       endif
-
-       do dir=1,SDIM
-        vel(dir)=zero
-       enddo
-
-       call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
-       if (LS.ge.zero) then
-        ! do nothing (drop is upstream from shock and
-        ! stationary in the "upstream frame of reference")
-        ! shock velocity > 0
-        ! shock is approaching with speed: shockdrop_VEL0
-       else
-        call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-         ! in shock frame of reference:
-         ! upstream: v=-shockdrop_VEL0
-         ! downstream: v=-shockdrop_VEL1
-        if (LS.ge.zero) then  ! upstream (above the shock)
-         vel(SDIM)=zero
-        else
-         vel(SDIM)=shockdrop_VEL0-shockdrop_VEL1
-        endif
-       endif 
-
-       return
-       end subroutine shockdrop_velocity
+if (abs(shockdrop_T0-fort_tempconst(2)).le.EPS6) then
+ !do nothing
+else
+ print *,"shockdrop_T0 ",shockdrop_T0
+ print *,"fort_tempconst(2) ",fort_tempconst(2)
+ print *,"mismatch"
+ stop
+endif
+if (abs(shockdrop_T0-fort_tempconst(1)).le.EPS6) then
+ !do nothing
+else
+ print *,"shockdrop_T0 ",shockdrop_T0
+ print *,"fort_tempconst(1) ",fort_tempconst(1)
+ print *,"mismatch"
+ stop
+endif
 
 
-       subroutine shockdrop_maxvelocity(vel,axis_dir)
-       IMPLICIT NONE
-       integer axis_dir
-       real(amrex_real) vel
+ ! this value must be consistent with material_type=5 parameters
+shockdrop_gamma=shockdrop_cp/shockdrop_cv
 
-       vel=max(abs(shockdrop_VEL0),abs(shockdrop_VEL1))
+ ! if compressible liquid, this value should be the same
+ ! as the equilibrium pressure of the liquid drop.
+shockdrop_P0=(shockdrop_gamma-1.0d0)* &
+ shockdrop_DEN0*shockdrop_cv*shockdrop_T0
 
-       return
-       end subroutine shockdrop_maxvelocity
+shockdrop_C0=(shockdrop_gamma*shockdrop_P0/shockdrop_DEN0)**half
+shockdrop_VEL0=shockdrop_M0*shockdrop_C0
 
+shockdrop_P1=shockdrop_P0* &
+ (two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one)/ &
+ (shockdrop_gamma+one)
 
+shockdrop_T1=shockdrop_T0* &
+ ( two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one )* &
+ ( (shockdrop_gamma-one)*(shockdrop_M0**2)+two )/ &
+ ( ((shockdrop_gamma+one)*shockdrop_M0)**2 )
 
-       subroutine shockdrop_pressure(x,y,z,pres, &
-         xblob,yblob,zblob,radblob,zblob2,axis_dir)
-       IMPLICIT NONE
-       integer axis_dir
-       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2
-       real(amrex_real) pres,LS
+shockdrop_DEN1=shockdrop_DEN0* &
+ ((shockdrop_gamma+one)*(shockdrop_M0**2))/ &
+ ((shockdrop_gamma-one)*(shockdrop_M0**2)+two)
 
-       if (SDIM.eq.2) then
-        if (abs(z-y).le.1.0E-6) then
-         !do nothing
-        else
-         print *,"expecting z=y"
-         stop
-        endif
-       endif
-
-       call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
-       if (LS.ge.zero) then ! liquid
-        pres=shockdrop_P0
-       else
-        call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-        if (LS.ge.zero) then  ! upstream (above the approaching shock)
-         pres=shockdrop_P0
-        else
-         pres=shockdrop_P1
-        endif
-       endif 
-
-       return
-       end subroutine shockdrop_pressure
+shockdrop_C1=sqrt(shockdrop_gamma*shockdrop_P1/shockdrop_DEN1)
+shockdrop_M1= &
+ ((shockdrop_gamma-one)*(shockdrop_M0**2)+two)/ &
+ (two*shockdrop_gamma*(shockdrop_M0**2)-shockdrop_gamma+one)
+shockdrop_M1=sqrt(shockdrop_M1)
+shockdrop_VEL1=shockdrop_M1*shockdrop_C1
 
 
-       subroutine shockdrop_gas_density(x,y,z,den, &
-         xblob,yblob,zblob,radblob,zblob2,axis_dir)
-       IMPLICIT NONE
-       integer axis_dir
-       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2
-       real(amrex_real) den,LS
+call general_hydrostatic_pressure(test_pres)
+if (abs(test_pres-shockdrop_P0)/test_pres.gt.1.0E-8) then
+ print *,"shockdrop_P0 inconsistent w/general_hydrostatic_pressure"
+ print *,"test_pres=",test_pres
+ print *,"shockdrop_P0=",shockdrop_P0
+ stop
+endif
+if (fort_material_type(2).ne.5) then
+ print *,"only material_type=5 supported for gas for this problem"
+ print *,"fort_material_type(2)=",fort_material_type(2)
+ stop
+endif
 
-       if (SDIM.eq.2) then
-        if (abs(z-y).le.1.0E-6) then
-         !do nothing
-        else
-         print *,"expecting z=y"
-         stop
-        endif
-       endif
+print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
+ shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
+print *,"shockdrop: downstream den,SPEED,T,M,C ", &
+ shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
 
-       call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
-       if (LS.ge.zero) then ! liquid
-        den=shockdrop_DEN0
-       else
-        call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-        if (LS.ge.zero) then  ! upstream (above the shock)
-         den=shockdrop_DEN0
-        else
-         den=shockdrop_DEN1
-        endif
-       endif 
+return
+end subroutine shockdrop_init
 
-       return
-       end subroutine shockdrop_gas_density
+subroutine shockdrop_velocity(x,t,ls,vel, &
+  velsolid_flag,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: ls(nmat)
+real(amrex_real) :: ls_local
+real(amrex_real), INTENT(out) :: vel(SDIM)
+integer dir
+integer, INTENT(in) :: velsolid_flag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if ((velsolid_flag.eq.0).or. &
+    (velsolid_flag.eq.1)) then
+ ! do nothing
+else 
+ print *,"velsolid_flag invalid: ",velsolid_flag
+ stop
+endif
+do dir=1,SDIM
+ if (dx(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"dx invalid: ",dx(dir)
+  stop
+ endif
+enddo
+
+do dir=1,SDIM
+ vel(dir)=zero
+enddo
+
+call shockdrop_dropLS(x(1),x(2),x(SDIM),ls_local)
+if (ls_local.ge.zero) then
+ ! do nothing (drop is upstream from shock and
+ ! stationary in the "upstream frame of reference")
+ ! shock velocity > 0
+ ! shock is approaching with speed: shockdrop_VEL0
+else
+ call shockdrop_shockLS(x(1),x(2),x(SDIM),ls_local)
+ ! in shock frame of reference:
+ ! upstream: v=-shockdrop_VEL0
+ ! downstream: v=-shockdrop_VEL1
+ if (ls_local.ge.zero) then  ! upstream (above the shock)
+  vel(SDIM)=zero
+ else
+  vel(SDIM)=shockdrop_VEL0-shockdrop_VEL1
+ endif
+endif 
+
+return
+end subroutine shockdrop_velocity
+
+ !gets mapped to SUB_CFL_HELPER
+subroutine shockdrop_maxvelocity(time,dir,vel,dx)
+IMPLICIT NONE
+integer, INTENT(in) :: dir
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) ::  vel
+real(amrex_real) :: vel_local
+real(amrex_real), INTENT(in) :: dx(SDIM)
+
+if ((dir.lt.0).or.(dir.ge.SDIM)) then
+ print *,"dir invalid: ",dir
+ stop
+endif
+vel_local=max(abs(shockdrop_VEL0),abs(shockdrop_VEL1))
+vel=max(abs(vel),abs(vel_local))
+
+return
+end subroutine shockdrop_maxvelocity
 
 
-       subroutine shockdrop_gas_temperature(x,y,z,temp, &
-         xblob,yblob,zblob,radblob,zblob2,axis_dir)
-       IMPLICIT NONE
-       integer axis_dir
-       real(amrex_real) x,y,z,xblob,yblob,zblob,radblob,zblob2
-       real(amrex_real) temp,LS
+subroutine shockdrop_LS(x,t,LS,nmat)
+use probcommon_module
+IMPLICIT NONE
 
-       if (SDIM.eq.2) then
-        if (abs(z-y).le.1.0E-6) then
-         !do nothing
-        else
-         print *,"expecting z=y"
-         stop
-        endif
-       endif
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(out) :: LS(nmat)
 
-       call shockdrop_dropLS(x,y,z,LS,xblob,yblob,zblob,radblob,axis_dir)
-       if (LS.ge.zero) then ! liquid
-        temp=shockdrop_T0
-       else
-        call shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-        if (LS.ge.zero) then  ! upstream (above the shock)
-         temp=shockdrop_T0
-        else
-         temp=shockdrop_T1
-        endif
-       endif 
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 
-       return
-       end subroutine shockdrop_gas_temperature
+call shockdrop_dropLS(x(1),x(2),x(SDIM),LS(1))
+LS(2)=-LS(1)
+
+return
+end subroutine shockdrop_LS
+
+subroutine shockdrop_pressure(x,t,ls,pres,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: ls(nmat)
+real(amrex_real) :: ls_local
+real(amrex_real), INTENT(out) :: pres
 
 
-       ! probtype=1 in the inputs file
-       ! axis_dir=150 shock drop
-       ! axis_dir=151 shock column
-       ! LS>0 upstream of the shock  z>zblob2
-       ! LS<0 downstream of the shock z<zblob2
-       SUBROUTINE shockdrop_shockLS(x,y,z,LS,zblob2,axis_dir)
-       IMPLICIT NONE
-       integer,INTENT(in) :: axis_dir
-       real(amrex_real),INTENT(in) :: x,y,z,zblob2
-       real(amrex_real),INTENT(out) :: LS
+if (num_materials.eq.nmat) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
 
-       if (SDIM.eq.2) then
-        if (abs(z-y).le.1.0E-6) then
-         !do nothing
-        else
-         print *,"z<>y error"
-         stop
-        endif
-       endif
+call shockdrop_dropLS(x(1),x(2),x(SDIM),ls_local)
+if (ls_local.ge.zero) then ! liquid
+ pres=shockdrop_P0
+else
+ call shockdrop_shockLS(x(1),x(2),x(SDIM),ls_local)
+ if (ls_local.ge.zero) then  ! upstream (above the approaching shock)
+  pres=shockdrop_P0
+ else
+  pres=shockdrop_P1
+ endif
+endif 
 
-       if ((axis_dir.eq.150).or.(axis_dir.eq.151)) then
-        LS=z-zblob2
-       else
-        print *,"axis_dir invalid"
-        stop
-       endif
+return
+end subroutine shockdrop_pressure
 
-       return
-       END SUBROUTINE shockdrop_shockLS
 
-       ! probtype=1 in the inputs file
-       ! axis_dir=150 shock drop
-       ! axis_dir=151 shock column
-       ! LS>0 in the drop
-       subroutine shockdrop_dropLS(x,y,z,LS, &
-         xblob,yblob,zblob,radblob,axis_dir)
-       IMPLICIT NONE
-       integer axis_dir
-       real(amrex_real) x,y,z,LS,xblob,yblob,zblob,radblob,mag
+subroutine shockdrop_gas_density(x,y,z,den)
+use probcommon_module
+IMPLICIT NONE
+real(amrex_real), intent(in) :: x,y,z
+real(amrex_real), intent(out) :: den
+real(amrex_real) LS
 
-       if (SDIM.eq.2) then
-        if (abs(z-y).le.1.0E-6) then
-         !do nothing
-        else
-         print *,"z<>y error"
-         stop
-        endif
-       endif
+if (SDIM.eq.2) then
+ if (abs(z-y).le.1.0E-6) then
+  !do nothing
+ else
+  print *,"expecting z=y"
+  stop
+ endif
+endif
 
-       if (axis_dir.eq.150) then ! shock drop
-        mag=(x-xblob)**2+(y-yblob)**2
-        if (SDIM.eq.3) then
-         mag=mag+(z-zblob)**2
-        endif
-        LS=radblob-sqrt(mag) 
-       else if (axis_dir.eq.151) then ! shock column
-        if (SDIM.eq.2) then
-         mag=(y-yblob)**2
-         LS=radblob-sqrt(mag) 
-        else if (SDIM.eq.3) then
-         mag=(z-zblob)**2
-         LS=radblob-sqrt(mag) 
-        else 
-         print *,"dimension bust"
-         stop
-        endif
-       else
-        print *,"axis_dir invalid in shockdrop_dropLS"
-        stop
-       endif
+call shockdrop_dropLS(x,y,z,LS)
+if (LS.ge.zero) then ! liquid
+ den=shockdrop_DEN0
+else
+ call shockdrop_shockLS(x,y,z,LS)
+ if (LS.ge.zero) then  ! upstream (above the shock)
+  den=shockdrop_DEN0
+ else
+  den=shockdrop_DEN1
+ endif
+endif 
+
+return
+end subroutine shockdrop_gas_density
+
+
+subroutine shockdrop_gas_temperature(x,y,z,temp)
+use probcommon_module
+IMPLICIT NONE
+real(amrex_real), intent(in) :: x,y,z
+real(amrex_real), intent(out) :: temp
+real(amrex_real) LS
+
+if (SDIM.eq.2) then
+ if (abs(z-y).le.1.0E-6) then
+  !do nothing
+ else
+  print *,"expecting z=y"
+  stop
+ endif
+endif
+
+call shockdrop_dropLS(x,y,z,LS)
+if (LS.ge.zero) then ! liquid
+ temp=shockdrop_T0
+else
+ call shockdrop_shockLS(x,y,z,LS)
+ if (LS.ge.zero) then  ! upstream (above the shock)
+  temp=shockdrop_T0
+ else
+  temp=shockdrop_T1
+ endif
+endif 
+
+return
+end subroutine shockdrop_gas_temperature
+
+
+! probtype=1 in the inputs file
+! axis_dir=150 shock drop
+! axis_dir=151 shock column
+! LS>0 upstream of the shock  z>zblob2
+! LS<0 downstream of the shock z<zblob2
+SUBROUTINE shockdrop_shockLS(x,y,z,LS)
+use probcommon_module
+IMPLICIT NONE
+real(amrex_real),INTENT(in) :: x,y,z
+real(amrex_real),INTENT(out) :: LS
+
+if (SDIM.eq.2) then
+ if (abs(z-y).le.1.0E-6) then
+  !do nothing
+ else
+  print *,"z<>y error"
+  stop
+ endif
+endif
+
+if ((axis_dir.eq.150).or.(axis_dir.eq.151)) then
+ LS=z-zblob2
+else
+ print *,"axis_dir invalid"
+ stop
+endif
+
+return
+END SUBROUTINE shockdrop_shockLS
+
+! probtype=1 in the inputs file
+! axis_dir=150 shock drop
+! axis_dir=151 shock column
+! LS>0 in the drop
+subroutine shockdrop_dropLS(x,y,z,LS)
+use probcommon_module
+IMPLICIT NONE
+real(amrex_real),INTENT(in) :: x,y,z
+real(amrex_real),INTENT(out) :: LS
+real(amrex_real) mag
+
+if (SDIM.eq.2) then
+ if (abs(z-y).le.1.0E-6) then
+  !do nothing
+ else
+  print *,"z<>y error"
+  stop
+ endif
+endif
+
+if (axis_dir.eq.150) then ! shock drop
+ mag=(x-xblob)**2+(y-yblob)**2
+ if (SDIM.eq.3) then
+  mag=mag+(z-zblob)**2
+ endif
+ LS=radblob-sqrt(mag) 
+else if (axis_dir.eq.151) then ! shock column
+ if (SDIM.eq.2) then
+  mag=(y-yblob)**2
+  LS=radblob-sqrt(mag) 
+ else if (SDIM.eq.3) then
+  mag=(z-zblob)**2
+  LS=radblob-sqrt(mag) 
+ else 
+  print *,"dimension bust"
+  stop
+ endif
+else
+ print *,"axis_dir invalid in shockdrop_dropLS"
+ stop
+endif
+
+return
+END SUBROUTINE shockdrop_dropLS
+
+
+subroutine shockdrop_STATE(x,t,LS,STATE,bcflag,nmat,nstate_mat)
+use probcommon_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: bcflag !0=called from initialize  1=called from bc
+integer, INTENT(in) :: nmat
+integer, INTENT(in) :: nstate_mat
+real(amrex_real), INTENT(in) :: x(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(out) :: STATE(nmat*nstate_mat)
+integer im,ibase,n
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if (nstate_mat.eq.num_state_material) then
+ ! do nothing
+else
+ print *,"nstate_mat invalid"
+ stop
+endif
+
+if ((num_materials.eq.2).and. &
+    (num_state_material.ge.2).and. &
+    (probtype.eq.shockdrop_PROB_TYPE)) then
+ do im=1,num_materials
+  ibase=(im-1)*num_state_material
+  STATE(ibase+ENUM_DENVAR+1)=fort_denconst(im)
+
+  if (im.eq.1) then
+   !do nothing
+  else if (im.eq.2) then
+   call shockdrop_gas_density(x(1),x(2),x(SDIM),STATE(ibase+ENUM_DENVAR+1))
+  else
+   print *,"im out of range"
+   stop
+  endif
+
+  if (t.eq.zero) then
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_initial_temperature(im)
+  else if (t.gt.zero) then
+   STATE(ibase+ENUM_TEMPERATUREVAR+1)=fort_tempconst(im)
+  else
+   print *,"t invalid"
+   stop
+  endif
+
+  if (im.eq.1) then
+   !do nothing
+  else if (im.eq.2) then
+   call shockdrop_gas_temperature(x(1),x(2),x(SDIM), &
+     STATE(ibase+ENUM_TEMPERATUREVAR+1))
+  else
+   print *,"im out of range"
+   stop
+  endif
+
+  do n=1,num_species_var
+   STATE(ibase+ENUM_SPECIESVAR+n)=fort_speciesconst((n-1)*num_materials+im)
+  enddo
+ enddo ! im=1..num_materials
+else
+ print *,"num_materials,num_state_material, or probtype invalid"
+ stop
+endif
  
-       return
-       END SUBROUTINE shockdrop_dropLS
+return
+end subroutine shockdrop_STATE
 
+ ! dir=1..sdim  side=1..2
+subroutine shockdrop_LS_BC(xwall,xghost,t,LS, &
+   LS_in,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(inout) :: LS(nmat)
+real(amrex_real), INTENT(in) :: LS_in(nmat)
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2)) then
+ call shockdrop_LS(xghost,t,LS,nmat)
+else
+ print *,"dir or side invalid"
+ stop
+endif
+
+return
+end subroutine shockdrop_LS_BC
+
+
+ ! dir=1..sdim  side=1..2 veldir=1..sdim
+subroutine shockdrop_VEL_BC(xwall,xghost,t,LS, &
+   VEL,VEL_in,veldir,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: VEL
+real(amrex_real), INTENT(in) :: VEL_in
+integer, INTENT(in) :: veldir,dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+real(amrex_real) local_VEL(SDIM)
+integer velsolid_flag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+velsolid_flag=0
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2).and. &
+    (veldir.ge.1).and.(veldir.le.SDIM)) then
+
+ call shockdrop_velocity(xghost,t,LS,local_VEL,velsolid_flag,dx,nmat)
+ VEL=local_VEL(veldir)
+
+else
+ print *,"dir,side, or veldir invalid"
+ stop
+endif
+
+return
+end subroutine shockdrop_VEL_BC
+
+ ! dir=1..sdim  side=1..2
+subroutine shockdrop_PRES_BC(xwall,xghost,t,LS, &
+   PRES,PRES_in,dir,side,dx,nmat)
+use probcommon_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real), INTENT(inout) :: PRES
+real(amrex_real), INTENT(in) :: PRES_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
+
+if ((dir.ge.1).and.(dir.le.SDIM).and. &
+    (side.ge.1).and.(side.le.2)) then
+
+ call shockdrop_pressure(xghost,t,LS,PRES,nmat)
+
+else
+ print *,"dir or side invalid"
+ stop
+endif
+
+return
+end subroutine shockdrop_PRES_BC
+
+ ! dir=1..sdim  side=1..2
+subroutine shockdrop_STATE_BC(xwall,xghost,t,LS, &
+   STATE,STATE_merge,STATE_in,im,istate,dir,side,dx,nmat)
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+
+integer, INTENT(in) :: nmat
+real(amrex_real), INTENT(in) :: xwall
+real(amrex_real), INTENT(in) :: xghost(SDIM)
+real(amrex_real), INTENT(in) :: t
+real(amrex_real), INTENT(in) :: LS(nmat)
+real(amrex_real) local_STATE(nmat*num_state_material)
+real(amrex_real), INTENT(inout) :: STATE
+real(amrex_real), INTENT(inout) :: STATE_merge
+real(amrex_real), INTENT(in) :: STATE_in
+integer, INTENT(in) :: dir,side
+real(amrex_real), INTENT(in) :: dx(SDIM)
+integer, INTENT(in) :: istate,im
+integer ibase,im_crit
+integer local_bcflag
+
+if (nmat.eq.num_materials) then
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+local_bcflag=1
+
+
+if ((istate.ge.1).and. &
+    (istate.le.num_state_material).and. &
+    (im.ge.1).and. &
+    (im.le.num_materials)) then
+ call shockdrop_STATE(xghost,t,LS,local_STATE, &
+         local_bcflag,nmat,num_state_material)
+ ibase=(im-1)*num_state_material
+ STATE=local_STATE(ibase+istate)
+ call get_primary_material(LS,im_crit)
+ ibase=(im_crit-1)*num_state_material
+ STATE_merge=local_STATE(ibase+istate)
+else
+ print *,"istate invalid"
+ stop
+endif
+
+return
+end subroutine shockdrop_STATE_BC
 
 
 END MODULE shockdrop

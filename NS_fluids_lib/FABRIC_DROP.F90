@@ -671,11 +671,12 @@ integer dir
 integer, INTENT(in) :: velsolid_flag
 
 if (nmat.eq.num_materials) then
-   ! do nothing
-  else
-   print *,"nmat invalid"
-   stop
-  endif
+ ! do nothing
+else
+ print *,"nmat invalid"
+ stop
+endif
+
 if ((velsolid_flag.eq.0).or. &
     (velsolid_flag.eq.1)) then
  ! do nothing

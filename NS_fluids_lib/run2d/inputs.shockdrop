@@ -171,7 +171,7 @@ ns.zblob2=0.2
 ns.radblob=0.1 #2 mm diameter
 ns.denfact=1.0
 ns.velfact=0.0
-ns.probtype=1
+ns.probtype=3001
 
 #ns.mem_debug = 1
 ns.v = 1
