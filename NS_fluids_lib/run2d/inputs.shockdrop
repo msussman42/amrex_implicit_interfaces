@@ -8,9 +8,9 @@ max_step  =  99999    # maximum timestep
 stop_time =  5.0e-3  # maximum problem time
 
 # ------------------  INPUTS TO CLASS AMR ---------------------
-#geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
+geometry.coord_sys      = 1        # 0 => cart, 1 => RZ
 #Sep 16, 2018
-geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
+#geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 #geometry.prob_lo   =  0.0 0.0
 #geometry.prob_hi   =  1.0 1.0   
 #Sep 16, 2018
@@ -18,8 +18,8 @@ geometry.coord_sys      = 0        # 0 => cart, 1 => RZ
 #geometry.prob_lo   =  -3.7 0.0
 #geometry.prob_hi   =  3.7 14.8
 #July 2, 2024
-#aspect ratio: 2
-geometry.prob_lo   =  -0.37 0.0
+#aspect ratio: 4
+geometry.prob_lo   =  0.0 0.0
 geometry.prob_hi   =  0.37 1.48
 # continuous_mof=0 regular MOF
 # continuous_mof=1 CMOF
@@ -58,7 +58,7 @@ ns.initial_cg_cycles=3  # number of MGPCG steps to do in order to get
 #
 
 #May 17: n_cell and max_level changed
-amr.n_cell    = 48 96
+amr.n_cell    = 24 96
 amr.max_level =  2
 # 0- 1 level 1- 2 levels  2- 3 levels
 amr.regrid_int      = 1       # how often to regrid
@@ -115,7 +115,7 @@ ns.num_divu_outer_sweeps=2
 # on each level, and for each uncovered cell, code computes:
 # sum_star_stencil |pmg_i'j'k'-pmg_ijk|/(2 dim patmos)
 ns.pressure_error_flag=1 # look at pressure variation
-ns.pressure_error_cutoff=1.0e+6 0.1
+ns.pressure_error_cutoff=1.0e+6 0.01
 # May 17:
 # for water: material_type=7 EOS_tait_rho (base density is denconst(1))
 # for air: material_type=5 EOS_air

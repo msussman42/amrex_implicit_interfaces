@@ -2862,7 +2862,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          else if (err.eq.one) then
           ! do nothing
          else
-          print *,"err invalid"
+          print *,"err invalid: ",err
           stop
          endif
 
