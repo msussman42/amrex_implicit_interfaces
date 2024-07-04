@@ -1062,7 +1062,8 @@ stop
            user_tension(iten_13))/user_tension(iten)
 
         else
-         print *,"is_rigid_CL invalid LEVELSET_3D.F90"
+         print *,"is_rigid_CL invalid LEVELSET_3D.F90: ", &
+          im3,is_rigid_CL(im3)
          stop
         endif
 
@@ -1340,7 +1341,7 @@ stop
        else if (is_rigid_CL(im3).eq.0) then
         !do nothing
        else
-        print *,"is_rigid_CL(im3) invalid"
+        print *,"is_rigid_CL(im3) invalid: ",im3,is_rigid_CL(im3)
         stop
        endif
       else
@@ -1484,7 +1485,7 @@ stop
         if (is_rigid_CL(im3).eq.1) then
 
          if ((im3.eq.im).or.(im3.eq.im_opp)) then
-          print *,"im3 invalid" 
+          print *,"im3 invalid: ",im3
           stop
          endif
 
@@ -1509,6 +1510,7 @@ stop
          enddo
         else 
          print *,"is_rigid_CL invalid initheightLS; LEVELSET_3D.F90"
+         print *,im3,is_rigid_CL(im3)
          stop
         endif
 
@@ -1800,6 +1802,7 @@ stop
         ! do nothing
        else
         print *,"is_rigid_CL invalid initheightLS; LEVELSET_3D.F90"
+        print *,im3,is_rigid_CL(im3)
         stop
        endif
 
@@ -4110,7 +4113,8 @@ stop
                  stop
                 endif
                else
-                print *,"is_rigid_CL invalid LEVELSET_3D.F90"
+                print *,"is_rigid_CL invalid LEVELSET_3D.F90: "
+                print *,im_curv,is_rigid_CL(im_curv)
                 stop
                endif
 
@@ -8756,7 +8760,9 @@ stop
              im_opp_tension,im_tension, & !INTENT(out)
              im_left_tension,im_right_tension) !INTENT(out)
            else
-            print *,"is_rigid_CL or gradh became corrupt"
+            print *,"is_rigid_CL or gradh became corrupt: ", &
+             im_main,im_main_opp,is_rigid_CL(im_main), &
+             is_rigid_CL(im_main_opp)
             stop
            endif
 
@@ -9079,7 +9085,9 @@ stop
 
            ! neither adjoining cell is a solid cell.
            ! All adjoining cells are either "fluid" cells or
-           ! "ice" cells or "FSI_rigid" cells.
+           ! "ice" cells,
+           ! "FSI_rigid" cells, or
+           ! "FSI_EULERIAN_ELASTIC" cells.
          else if (solid_present_flag.eq.0) then
 
           if (gradh.eq.zero) then

@@ -4612,6 +4612,15 @@ NavierStokes::read_params ()
      } else
       amrex::Error("is_FSI_rigid_matC invalid");
 
+     if (is_FSI_elastic_matC(im)==1) {
+      //do nothing
+     } else if (is_FSI_elastic_matC(im)==0) {
+      //do nothing
+     } else
+      amrex::Error("is_FSI_elastic_matC invalid");
+
+
+
     } // im=0;im<num_materials;im++
 
     pp.queryAdd("observe_initial_mdot",observe_initial_mdot);
@@ -6854,6 +6863,19 @@ int NavierStokes::is_FSI_rigid_matC(int im) {
  return local_is_FSI_rigid;
 
 }  // end function is_FSI_rigid_matC()
+
+int NavierStokes::is_FSI_elastic_matC(int im) {
+
+ if ((im<0)|(im>=num_materials))
+  amrex::Error("im invalid60d (is_FSI_elastic_matC)");
+
+ int imp1=im+1;
+ int local_is_FSI_elastic=fort_is_FSI_elastic_base(&FSI_flag[im],&imp1);
+
+ return local_is_FSI_elastic;
+
+}  // end function is_FSI_elastic_matC()
+
 
 int NavierStokes::is_singular_coeff(int im) {
 
