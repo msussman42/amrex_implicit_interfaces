@@ -2724,6 +2724,9 @@ stop
          else if ((is_ice_or_FSI_rigid_material(im).eq.1).or. &
                   (is_ice_or_FSI_rigid_material(im_opp).eq.1)) then
           cap_wave_speed(iten)=zero
+         else if ((is_FSI_elastic(im).eq.1).or. &
+                  (is_FSI_elastic(im_opp).eq.1)) then
+          cap_wave_speed(iten)=zero
          else if (user_tension(iten).eq.zero) then
           cap_wave_speed(iten)=zero
          else if (user_tension(iten).gt.zero) then
@@ -20488,6 +20491,8 @@ stop
           else if (is_ice(imcrit).eq.1) then
            local_maskSEM=0
           else if (is_FSI_rigid(imcrit).eq.1) then
+           local_maskSEM=0
+          else if (is_FSI_elastic(imcrit).eq.1) then
            local_maskSEM=0
           else if ((FSI_flag(imcrit).eq.FSI_FLUID).or. & 
                    (FSI_flag(imcrit).eq.FSI_FLUID_NODES_INIT)) then

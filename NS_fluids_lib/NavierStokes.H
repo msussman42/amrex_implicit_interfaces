@@ -358,6 +358,7 @@ public:
      // FSI_RIGID_NOTPRESCRIBED=5
      // FSI_ICE_NODES=6
      // FSI_FLUID_NODES_INIT=7
+     // FSI_EULERIAN_ELASTIC=8
      // FSI_ICE_STATIC=9
      
     static Vector<int> FSI_flag; 
@@ -1401,6 +1402,7 @@ void apply_pressure_grad(
     static int is_ice_matC(int im);
     static int is_singular_coeff(int im);
     static int is_FSI_rigid_matC(int im);
+    static int is_FSI_elastic_matC(int im);
     static int CTML_FSI_flagC();
     static int CTML_FSI_matC(int im);
     static int FSI_material_exists_CTML();

@@ -14473,6 +14473,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
                (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_EULERIAN_ELASTIC).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then
        fort_CTML_FSI_mat_base=0
       else
@@ -14555,6 +14556,7 @@ end subroutine print_visual_descriptor
           (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
           (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
           (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
+          (FSI_flag_local.eq.FSI_EULERIAN_ELASTIC).or. &
           (FSI_flag_local.eq.FSI_SHOELE_CTML)) then
        fort_FSI_flag_valid_base=1
       else
@@ -14623,6 +14625,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
                (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
+               (FSI_flag_local.eq.FSI_EULERIAN_ELASTIC).or. &
                (FSI_flag_local.eq.FSI_SHOELE_CTML)) then
        fort_is_ice_base=0
       else
@@ -14688,6 +14691,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
                (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_EULERIAN_ELASTIC).or. &
                (FSI_flag_local.eq.FSI_SHOELE_CTML)) then
        fort_is_FSI_rigid_base=0
       else
@@ -14698,6 +14702,44 @@ end subroutine print_visual_descriptor
 
       return
       end function fort_is_FSI_rigid_base
+
+
+      function fort_is_FSI_elastic_base(FSI_flag_local,im) &
+      bind(c,name='fort_is_FSI_elastic_base')
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      integer fort_is_FSI_elastic_base
+      integer, INTENT(in) :: FSI_flag_local
+      integer, INTENT(in) :: im ! 1<=im<=num_materials
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid16 fort_is_FSI_elastic_base: im:",im
+       stop
+      endif
+      fort_is_FSI_elastic_base=0
+      if (FSI_flag_local.eq.FSI_EULERIAN_ELASTIC) then
+       fort_is_FSI_elastic_base=1
+      else if ((FSI_flag_local.eq.FSI_FLUID).or. &
+               (FSI_flag_local.eq.FSI_FLUID_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_PRESCRIBED_NODES).or. &
+               (FSI_flag_local.eq.FSI_ICE_PROBF90).or. &
+               (FSI_flag_local.eq.FSI_ICE_STATIC).or. &
+               (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. &
+               (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED).or. &
+               (FSI_flag_local.eq.FSI_SHOELE_CTML)) then
+       fort_is_FSI_elastic_base=0
+      else
+       print *,"FSI_flag_local invalid in fort_is_FSI_elastic_base"
+       print *,"im,FSI_flag_local ",im,FSI_flag_local
+       stop
+      endif
+
+      return
+      end function fort_is_FSI_elastic_base
+
 
       function is_FSI_rigid(im)
       use probcommon_module
@@ -14715,6 +14757,24 @@ end subroutine print_visual_descriptor
 
       return
       end function is_FSI_rigid
+
+      function is_FSI_elastic(im)
+      use probcommon_module
+
+      IMPLICIT NONE
+
+      integer :: is_FSI_elastic
+      integer, INTENT(in) :: im
+
+      if ((im.lt.1).or.(im.gt.num_materials)) then
+       print *,"im invalid16 is_FSI_elastic: im=",im
+       stop
+      endif
+      is_FSI_elastic=fort_is_FSI_elastic_base(FSI_flag(im),im)
+
+      return
+      end function is_FSI_elastic
+
 
       function swap1_0(in_flag,control_flag)
       IMPLICIT NONE
@@ -14806,6 +14866,7 @@ end subroutine print_visual_descriptor
       else if ((FSI_flag_local.eq.FSI_FLUID).or. &
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. & 
                (FSI_flag_local.eq.FSI_ICE_STATIC).or. & 
+               (FSI_flag_local.eq.FSI_EULERIAN_ELASTIC).or. & 
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        fort_is_lag_part_base=0
       else
@@ -14863,6 +14924,7 @@ end subroutine print_visual_descriptor
                (fsi_flag_local.eq.FSI_PRESCRIBED_PROBF90).or. & 
                (fsi_flag_local.eq.FSI_ICE_PROBF90).or. & 
                (fsi_flag_local.eq.FSI_ICE_STATIC).or. & 
+               (fsi_flag_local.eq.FSI_EULERIAN_ELASTIC).or. & 
                (fsi_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        ! do nothing
       else
@@ -15389,6 +15451,7 @@ end subroutine print_visual_descriptor
                (FSI_flag_local.eq.FSI_ICE_PROBF90).or. & 
                (FSI_flag_local.eq.FSI_ICE_STATIC).or. & 
                (FSI_flag_local.eq.FSI_ICE_NODES_INIT).or. & 
+               (FSI_flag_local.eq.FSI_EULERIAN_ELASTIC).or. & 
                (FSI_flag_local.eq.FSI_RIGID_NOTPRESCRIBED)) then 
        fort_is_rigid_base=0  ! tessellating material
       else
@@ -15455,13 +15518,15 @@ end subroutine print_visual_descriptor
       endif
 
       if ((is_rigid(im).eq.1).or. &
+          (is_FSI_elastic(im).eq.1).or. &
           (is_ice_or_FSI_rigid_material(im).eq.1)) then
        is_rigid_CL=1
       else if ((is_rigid(im).eq.0).and. &
+               (is_FSI_elastic(im).eq.0).and. &
                (is_ice_or_FSI_rigid_material(im).eq.0)) then
        is_rigid_CL=0
       else
-       print *,"is_rigid or is_ice_or_FSI_rigid_material invalid"
+       print *,"is_rigid, FSI_elastic,or is_ice_or_FSI_rigid_material invalid"
        stop
       endif
 
