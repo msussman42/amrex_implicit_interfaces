@@ -28,8 +28,8 @@ mg.rtol_b = -0.01
 ns.num_materials=3  # material 1=drop material 2=gas material 3=substrate
 ns.num_divu_outer_sweeps=2
 ns.num_species_var=0
-# 0 = MOF (moment of fluid)
-# 1=CMOF (continuous moment of fluid)
+#0=MOF (moment of fluid)
+#1=CMOF(continuous moment of fluid)
 ns.continuous_mof=1
 # -1=Weymouth Yue
 ns.EILE_flag=-1
@@ -40,7 +40,7 @@ amr.n_cell=32 64
 amr.max_level=0 
 
 ns.mof_error_ordering=0  #centroid furthest from uncaptured centroid
-ns.mof_ordering=1 4 1 #liquid, gas, substrate
+ns.mof_ordering=4 4 1 #liquid, gas, substrate
 
 
 ns.minimum_relative_error=1.0e-18
@@ -120,20 +120,29 @@ ns.denfact=1.0
 ns.velfact=0.0
 #flexible_plate_impact.F90
 ns.probtype=2000
-ns.material_type=0 0 999
+#ns.material_type=0 0 999 # CTML
+ns.material_type=0 0 0 # Eulerian FSI
 # FSI_flag for avaiable phase/material
 # 0 fluid (default)
 # 1 solid (PROB_[23]D.F90)
 # 2 solid (lagrangian)
 # 3 ice
 # 4 CTML
-ns.FSI_flag=0 0 4
+# 8 EULERIAN FSI
+#ns.FSI_flag=0 0 4 #CTML
+ns.FSI_flag=0 0 8 #Eulerian FSI
 ns.heatviscconst=0.0 0.0 0.0
-ns.elastic_viscosity=0.0 0.0 0.0
-ns.elastic_time=0.0 0.0 0.0
+ns.elastic_viscosity=0.0 0.0 1.0
+ns.elastic_time=0.0 0.0 1.0e+9
 ns.polymer_factor=0.0 0.0 0.0
+#0=FENE-CR
+#1=Oldroyd B
+#3=incremental elastic
+#5=FENE P
+#6=Linear PTT
+#7=Neo-Hookean
 ns.viscoelastic_model=0 0 0
-ns.viscconst=0.01 0.000181 0.01 #CGS
+ns.viscconst=0.01 0.000181 1.0 #CGS
 ns.denconst=1.0 0.001225 1.0 
 ns.pressure_error_cutoff=0.0 0.0 0.0
 ns.tempconst=293.0 293.0 293.0
