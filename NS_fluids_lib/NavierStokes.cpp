@@ -475,10 +475,7 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 //       (vi) Q^n+1=lambda' Q^n+1/(lambda'+dt)
 // 1 => Oldroyd-B
 //       (i) lambda'=lambda
-// 2=> elastic material  Q=bulk_modulus*(grad X + grad X^{T}) (linear ex.)
 // 3=> incremental elastic model 
-//   (a) cell centered formulation
-//   (b) face centered formulation
 //   DS/DT=2 (D0-Dp) - (SW-WS)
 //     mu=Lame coefficient (bulk modulus?)
 //     D0=D-tr(D)Id/DIM 
