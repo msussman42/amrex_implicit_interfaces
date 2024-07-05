@@ -101,8 +101,8 @@ ns.sum_interval   = 1        # timesteps between computing mass
 ns.axis_dir=151 # axis_dir=150 for shock drop, axis_dir=151 for shock column
 ns.vorterr=1.0e+10 1.0e+10
 ns.rgasinlet=1.57
-# May 17: this parameter is not used.
-ns.vinletgas=0.0
+# MACH number of shock.
+ns.vinletgas=1.17
 ns.twall=0.1
 ns.advbot=0.0
 ns.adv_vel=0.0
