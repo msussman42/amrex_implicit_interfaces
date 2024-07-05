@@ -32,6 +32,11 @@ real(amrex_real) shockdrop_R
 real(amrex_real) shockdrop_cp
 real(amrex_real) shockdrop_cv
 
+real(amrex_real) shockdrop_We
+real(amrex_real) shockdrop_Oh
+real(amrex_real) shockdrop_Re
+real(amrex_real) shockdrop_inertial_time_scale
+
  !upstream supersonic relative to shock
 real(amrex_real) shockdrop_P0
 real(amrex_real) shockdrop_T0
@@ -69,7 +74,16 @@ shockdrop_cp=shockdrop_cv+shockdrop_R !ergs/(Kelvin g)
 
 ! shockdrop_M0=1.4
 ! shockdrop_M0=3.0
-shockdrop_M0=1.17
+! shockdrop_M0=1.17
+shockdrop_M0=vinletgas
+
+if (shockdrop_M0.gt.one) then
+ !do nothing
+else
+ print *,"shockdrop_M0 invalid: ",shockdrop_M0
+ stop
+endif
+
 shockdrop_T0=278.0d0 !tempconst(2)
 shockdrop_DEN0=0.00125335272d0 !denconst(2)
 
@@ -149,6 +163,31 @@ print *,"shockdrop: upstream den,approaching SPEED,T,M,C ", &
  shockdrop_DEN0,shockdrop_VEL0,shockdrop_T0,shockdrop_M0,shockdrop_C0
 print *,"shockdrop: downstream den,SPEED,T,M,C ", &
  shockdrop_DEN1,shockdrop_VEL1,shockdrop_T1,shockdrop_M1,shockdrop_C1
+
+! in shock frame of reference, the upstream velocity is -|V0| and the
+! downstream velocity is -|V1|.  In upstream frame of reference the 
+! downstream velocity is |V0|-|V1|
+
+if (shockdrop_VEL0.gt.shockdrop_VEL1) then
+ shockdrop_We=shockdrop_DEN1* &
+   ((shockdrop_VEL0-shockdrop_VEL1)**2)*two*radblob/ &
+   fort_tension(1)
+ shockdrop_Oh=fort_viscconst(1)/ &
+   sqrt(fort_denconst(1)*fort_tension(1)*two*radblob)
+ shockdrop_Re=shockdrop_DEN1*(shockdrop_VEL0-shockdrop_VEL1)* &
+   two*radblob/fort_viscconst(1)
+ shockdrop_inertial_time_scale=two*radblob* &
+    sqrt(fort_denconst(1)/shockdrop_DEN1)/ &
+    (shockdrop_VEL0-shockdrop_VEL1) 
+ print *,"shockdrop_We=",shockdrop_We
+ print *,"shockdrop_Oh=",shockdrop_Oh
+ print *,"shockdrop_Re=",shockdrop_Re
+ print *,"shockdrop_inertial_time_scale=",shockdrop_inertial_time_scale
+else
+ print *,"shockdrop_VEL0 or shockdrop_VEL1 invalid: ", &
+   shockdrop_VEL0,shockdrop_VEL1
+ stop
+endif
 
 return
 end subroutine shockdrop_init
@@ -665,5 +704,121 @@ endif
 return
 end subroutine shockdrop_STATE_BC
 
+subroutine shockdrop_OVERRIDE_TAGFLAG( &
+  i,j,k, &
+  level,max_level, &
+  snew_ptr,lsnew_ptr, &
+  xsten,nhalf,time, &
+  rflag,tagflag)
+use amrex_fort_module, only : amrex_real
+use probcommon_module
+use global_utility_module
+IMPLICIT NONE
+integer, INTENT(in) :: i,j,k
+integer, INTENT(in) :: level,max_level
+integer, INTENT(in) :: nhalf
+real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
+real(amrex_real), INTENT(in) :: time
+real(amrex_real), INTENT(inout) :: rflag
+integer, INTENT(inout) :: tagflag
+real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
+real(amrex_real), dimension(3) :: local_x
+real(amrex_real), dimension(SDIM) :: local_delta
+real(amrex_real) :: F_LIQUID,LS_LIQUID,P_diff,mag
+integer :: dir
+integer :: ii,jj,kk
+
+if (nhalf.lt.3) then
+ print *,"nhalf invalid shock drop override tagflag"
+ stop
+endif
+if ((level.ge.0).and.(level.lt.max_level)) then
+ ! do nothing
+else
+ print *,"level and/or max_level invalid"
+ print *,"level=",level
+ print *,"max_level=",max_level
+ stop
+endif
+do dir=1,SDIM
+ local_x(dir)=xsten(0,dir)
+enddo
+local_x(3)=xsten(0,SDIM)
+do dir=1,SDIM
+ local_delta(dir)=xsten(1,dir)-xsten(-1,dir)
+ if (local_delta(dir).gt.zero) then
+  ! do nothing
+ else
+  print *,"local_delta invalid shockdrop_override_tagflag"
+  stop
+ endif
+enddo !dir=1..sdim
+
+if ((num_materials.ge.2).and. &
+    (probtype.eq.shockdrop_PROB_TYPE)) then
+
+ if ((axis_dir.ge.150).and.(axis_dir.le.151)) then
+
+  ii=0
+  jj=0
+  kk=0
+  if (AMREX_SPACEDIM.eq.2) then
+   jj=1
+  else if (AMREX_SPACEDIM.eq.3) then
+   kk=1
+  else
+   print *,"dimension problem"
+   stop
+  endif
+
+  rflag=0.0d0
+  tagflag=0
+  LS_LIQUID=lsnew_ptr(D_DECL(i,j,k),1)
+  F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
+  if (time.eq.zero) then
+   P_diff=zero
+  else if (time.gt.zero) then
+   P_diff=abs((snew_ptr(D_DECL(i+ii,j+jj,k+kk),STATECOMP_PRES+1)- &
+               snew_ptr(D_DECL(i,j,k),STATECOMP_PRES+1))/shockdrop_P0)
+  else
+   print *,"time invalid: ",time
+   stop
+  endif
+
+  mag=(local_x(1)-xblob)**2+(local_x(2)-yblob)**2
+  if (AMREX_SPACEDIM.eq.3) then
+   mag=mag+(local_x(SDIM)-zblob)**2
+  endif
+  mag=sqrt(mag)
+  if (mag.gt.five*radblob) then
+   !do nothing
+  else if (mag.ge.zero) then
+   if ((LS_LIQUID.ge.zero).or.(F_LIQUID.ge.0.1d0)) then
+    rflag=1.0d0
+    tagflag=1
+   endif
+   if (P_diff.ge.0.01d0) then
+    rflag=1.0d0
+    tagflag=1
+   endif
+  else
+   print *,"mag invalid: ",mag
+   stop
+  endif
+
+ else
+  print *,"axis_dir invalid: ",axis_dir
+  stop
+ endif
+
+else
+ print *,"num_materials or probtype invalid"
+ print *,"num_materials: ",num_materials
+ print *,"probtype: ",probtype
+ stop
+endif
+
+end subroutine shockdrop_OVERRIDE_TAGFLAG
 
 END MODULE shockdrop
