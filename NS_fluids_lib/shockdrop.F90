@@ -725,7 +725,7 @@ real(amrex_real), INTENT(in),pointer :: snew_ptr(D_DECL(:,:,:),:)
 real(amrex_real), INTENT(in),pointer :: lsnew_ptr(D_DECL(:,:,:),:)
 real(amrex_real), dimension(3) :: local_x
 real(amrex_real), dimension(SDIM) :: local_delta
-real(amrex_real) :: F_LIQUID,LS_LIQUID,P_diff,mag
+real(amrex_real) :: F_LIQUID,LS_LIQUID,LS_SHOCK,P_diff,mag
 integer :: dir
 integer :: ii,jj,kk
 
@@ -774,10 +774,18 @@ if ((num_materials.ge.2).and. &
 
   rflag=0.0d0
   tagflag=0
+  call shockdrop_shockLS(local_x(1),local_x(2),local_x(SDIM),LS_SHOCK)
   LS_LIQUID=lsnew_ptr(D_DECL(i,j,k),1)
   F_LIQUID=snew_ptr(D_DECL(i,j,k),STATECOMP_MOF+1)
   if (time.eq.zero) then
-   P_diff=zero
+   if (abs(LS_SHOCK).le.two*local_delta(SDIM)) then
+    p_diff=abs((shockdrop_P1-shockdrop_P0)/shockdrop_P0)
+   else if (abs(LS_SHOCK).ge.two*local_delta(SDIM)) then
+    P_diff=zero
+   else
+    print *,"LS_SHOCK invalid: ",LS_SHOCK
+    stop
+   endif
   else if (time.gt.zero) then
    P_diff=abs((snew_ptr(D_DECL(i+ii,j+jj,k+kk),STATECOMP_PRES+1)- &
                snew_ptr(D_DECL(i,j,k),STATECOMP_PRES+1))/shockdrop_P0)
