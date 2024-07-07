@@ -175,7 +175,7 @@ if (shockdrop_VEL0.gt.shockdrop_VEL1) then
  shockdrop_Oh=fort_viscconst(1)/ &
    sqrt(fort_denconst(1)*fort_tension(1)*two*radblob)
  shockdrop_Re=shockdrop_DEN1*(shockdrop_VEL0-shockdrop_VEL1)* &
-   two*radblob/fort_viscconst(1)
+   two*radblob/fort_viscconst(2)
  shockdrop_inertial_time_scale=two*radblob* &
     sqrt(fort_denconst(1)/shockdrop_DEN1)/ &
     (shockdrop_VEL0-shockdrop_VEL1) 
