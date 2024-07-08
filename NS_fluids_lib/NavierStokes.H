@@ -1950,6 +1950,9 @@ protected:
     static int visual_divergence_plot_int; //def=0
     static int visual_WALLVEL_plot_int; //def=0
     static int visual_drag_plot_int; //def=0
+
+    static int blob_history_plot_int; //def=0
+
     //0=tecplot nodes
     //1=plt file cells
     //2=tecplot cells (piecewise constant reconstruction).

@@ -324,6 +324,9 @@ int  NavierStokes::visual_divergence_plot_int=0;
 //set visual_WALLVEL_plot_int>0 in order to generate WALLVEL*.plt files.
 int  NavierStokes::visual_WALLVEL_plot_int=0; 
 int  NavierStokes::visual_drag_plot_int=0; 
+
+int  NavierStokes::blob_history_plot_int=0;
+
 //default: tecplot nodes
 //0=tecplot nodes
 //1=plt file cells
@@ -3212,6 +3215,9 @@ NavierStokes::read_params ()
     pp.queryAdd("visual_divergence_plot_int",visual_divergence_plot_int);
     pp.queryAdd("visual_WALLVEL_plot_int",visual_WALLVEL_plot_int);
     pp.queryAdd("visual_drag_plot_int",visual_drag_plot_int);
+
+    pp.queryAdd("blob_history_plot_int",blob_history_plot_int);
+
     pp.queryAdd("visual_nddata_format",visual_nddata_format);
 
     if ((visual_tessellate_vfrac!=0)&&
@@ -5963,6 +5969,10 @@ NavierStokes::read_params ()
 	     visual_WALLVEL_plot_int << '\n';
      std::cout << "visual_drag_plot_int " << 
 	     visual_drag_plot_int << '\n';
+
+     std::cout << "blob_history_plot_int " << 
+	     blob_history_plot_int << '\n';
+
      std::cout << "visual_nddata_format " << 
 	     visual_nddata_format << '\n';
 
@@ -21555,8 +21565,12 @@ NavierStokes::writePlotFile (
 
   writeTECPLOT_File(do_plot,do_slice);
 
-  int nsteps=parent->levelSteps(0); //0<=step
-				    //
+  int nsteps=parent->levelSteps(0);
+  if (nsteps>=0) {
+   //do nothing
+  } else
+   amrex::Error("nsteps invalid"); 
+				   
   ParallelDescriptor::Barrier();
   std::fflush(NULL);
    // call FLUSH(6)
@@ -21564,35 +21578,64 @@ NavierStokes::writePlotFile (
   ParallelDescriptor::Barrier();
   std::cout.precision(20);
 
-  if (ParallelDescriptor::IOProcessor()) {
-   std::cout << "BLOB HISTORY STEP= " << nsteps << '\n';
-   std::cout << "BLOB HISTORY START_TIME= " << blob_history_class.start_time << '\n';
-   std::cout << "BLOB HISTORY END_TIME= " << blob_history_class.end_time << '\n';
-   std::cout << "BLOB HISTORY START_STEP= " << blob_history_class.start_step << '\n';
-   std::cout << "BLOB HISTORY END_STEP= " << blob_history_class.end_step << '\n';
+  int blob_history_trigger=0;
+  if (blob_history_plot_int>0) {
+   if (nsteps%blob_history_plot_int == 0) {
+    blob_history_trigger=1;
+   }
+  } else if ((blob_history_plot_int==0)||
+             (blob_history_plot_int==-1)) {
+   // do nothing
+  } else
+   amrex::Error("blob_history_plot_int invalid");
 
-   int history_size=blob_history_class.blob_history.size();
-   for (int i=0;i<history_size;i++) {
-    int snapshot_size=blob_history_class.blob_history[i].snapshots.size();
-    for (int j=0;j<snapshot_size;j++) {
-     std::cout << "BLOB HISTORY REC im,i,j,time,cen,rad,vol " <<
-      blob_history_class.blob_history[i].im << ' ' <<
-      i << ' ' <<
-      j << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_time << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_center[0] << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_center[1] << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_center[AMREX_SPACEDIM-1] << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_axis_len[0] << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_axis_len[1] << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_axis_len[AMREX_SPACEDIM-1] << ' ' <<
-      blob_history_class.blob_history[i].snapshots[j].blob_volume << '\n';
-    } //j
-   } //i
-   std::cout << "END BLOB HISTORY STEP= " << nsteps << '\n';
-  } //ParallelDescriptor::IOProcessor
+  if (blob_history_trigger==1) {
 
- }
+   if (ParallelDescriptor::IOProcessor()) {
+    std::cout << "BLOB HISTORY STEP= " << nsteps << '\n';
+    std::cout << "BLOB HISTORY START_TIME= " << 
+      blob_history_class.start_time << '\n';
+    std::cout << "BLOB HISTORY END_TIME= " << 
+      blob_history_class.end_time << '\n';
+    std::cout << "BLOB HISTORY START_STEP= " << 
+      blob_history_class.start_step << '\n';
+    std::cout << "BLOB HISTORY END_STEP= " << 
+      blob_history_class.end_step << '\n';
+
+    int history_size=blob_history_class.blob_history.size();
+    for (int i=0;i<history_size;i++) {
+     int snapshot_size=blob_history_class.blob_history[i].snapshots.size();
+     for (int j=0;j<snapshot_size;j++) {
+      std::cout << "BLOB HISTORY REC im,i,j,time,cen,rad,vol " <<
+       blob_history_class.blob_history[i].im << ' ' <<
+       i << ' ' <<
+       j << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].blob_time << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].blob_center[0] << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].blob_center[1] << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].
+          blob_center[AMREX_SPACEDIM-1] << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].
+          blob_axis_len[0] << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].
+          blob_axis_len[1] << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].
+          blob_axis_len[AMREX_SPACEDIM-1] << ' ' <<
+       blob_history_class.blob_history[i].snapshots[j].
+          blob_volume << '\n';
+     } //j
+    } //i
+    std::cout << "END BLOB HISTORY STEP= " << nsteps << '\n';
+   } //ParallelDescriptor::IOProcessor
+  } else if (blob_history_trigger==0) {
+   //do nothing
+  } else {
+   amrex::Error("blob_history_trigger invalid");
+  }
+ } else if (level>0) {
+  //do nothing
+ } else
+  amrex::Error("level invalid");
 
  std::string path2="./temptecplot";
  UtilCreateDirectoryDestructive(path2);
