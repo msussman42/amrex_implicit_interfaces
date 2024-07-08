@@ -35,7 +35,7 @@ ns.MOFITERMAX_AFTER_PREDICT=0
 # 1 - use MOF error
 ns.mof_error_ordering=0
 # water,air,ice,solid
-ns.mof_ordering=3 1 2 1
+ns.mof_ordering=3 4 2 1
 
 # multigrid class
 mg.verbose = 0
