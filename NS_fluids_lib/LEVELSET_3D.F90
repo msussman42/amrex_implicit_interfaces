@@ -332,6 +332,7 @@ stop
         bfact, & !intent(in)
         dx, & !intent(in)
         xcenter, & !intent(in)
+        ! derived from closest point normal and FD normal.
         nrmcenter, & !intent(in)  sdim x num_materials components
         dircrit, & !intent(in)  1..sdim
         side, & !intent(in)  -1 or 1
@@ -340,11 +341,15 @@ stop
         xsten, & !intent(in)
         velsten, & !intent(in)
         mgoni_temp, & !intent(in)
+        ! -ngrow_distance:ngrow_distance ^{3} x num_materials
         lssten, & !intent(in)
+        ! -ngrow_distance:ngrow_distance ^{3} x num_materials
         vofsten, & !intent(in)
+        !3x3x3x num_materials x sdim components
+        !closest point normal.
         nrmsten, & !intent(in)
+        !scalar (i,j,k)
         vol_sten, & !intent(in)
-        area_sten, & !intent(in)
         curvHT_choice, & !intent(out)
         curvFD, & !intent(out)
         mgoni_force, & !intent(out)
@@ -382,7 +387,6 @@ stop
       real(amrex_real) user_tension(num_interfaces)
       real(amrex_real), INTENT(in) :: dx(SDIM)
       real(amrex_real), INTENT(in) :: vol_sten
-      real(amrex_real), INTENT(in) :: area_sten(SDIM,2)
       real(amrex_real) :: curvHT_LS
       real(amrex_real) :: curvHT_VOF
       real(amrex_real), INTENT(out) :: curvHT_choice
@@ -631,6 +635,21 @@ stop
        print *,"im_opp invalid init height mof im_opp=",im_opp
        stop
       endif
+
+      if (fort_denconst(im).ge. &
+          fort_denconst(im_opp)) then
+       im_liquid=im
+       im_vapor=im_opp
+      else if (fort_denconst(im_opp).ge. &
+               fort_denconst(im)) then
+       im_liquid=im_opp
+       im_vapor=im
+      else
+       print *,"fort_denconst bust: ",fort_denconst(im), &
+         fort_denconst(im_opp)
+       stop
+      endif
+
       if ((iten.lt.1).or.(iten.gt.num_interfaces)) then
        print *,"iten invalid"
        stop
@@ -967,11 +986,11 @@ stop
          else if ((imhold.eq.im).or.(imhold.eq.im_opp)) then
           ! do nothing
          else
-          print *,"imhold invalid"
+          print *,"imhold invalid: ",imhold
           stop
          endif
         else
-         print *,"imhold invalid"
+         print *,"imhold invalid: ",imhold
          stop
         endif
        endif ! abs(i)<=1 abs(j)<=1 abs(k)<=1
@@ -1089,12 +1108,14 @@ stop
 
       imhold=im_primary_sten(0,0,0)
       do dir2=1,SDIM
+        ! nrmcenter: derived from closest point normal and FD normal.
        if (imhold.eq.im) then
         nfluid(dir2)=-nrmcenter(SDIM*(im_opp-1)+dir2)
        else if (imhold.eq.im_opp) then
         nfluid(dir2)=nrmcenter(SDIM*(im-1)+dir2)
        else
-        print *,"either im or im_opp material must be at center"
+        print *,"either im or im_opp material must be at center: ", &
+          im,im_opp,imhold
         stop
        endif
       enddo ! dir2
@@ -1345,7 +1366,7 @@ stop
         stop
        endif
       else
-       print *,"im3 invalid"
+       print *,"im3 invalid: ",im3
        stop
       endif
 
@@ -1405,7 +1426,8 @@ stop
 
       call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
 
-      call prepare_normal(nfluid_def3, & !inout
+      call prepare_normal( &
+         nfluid_def3, & !inout
          RR, & !in
          mag3, & !out
          SDIM) !in;   im3 material
@@ -1417,7 +1439,8 @@ stop
        do dir2=1,SDIM
         nfluid_def3(dir2)=nfluid_cen(dir2)
        enddo
-       call prepare_normal(nfluid_def3, & !inout
+       call prepare_normal( &
+         nfluid_def3, & !inout
          RR, & !in
          mag3, & !out
          SDIM) !in;   im3 material
@@ -1495,10 +1518,15 @@ stop
          enddo
          RR=one
          call prepare_normal(nsolid,RR,mag,SDIM)
-         if (mag.le.zero) then
+         if (mag.gt.zero) then
+          !do nothing
+         else if (mag.eq.zero) then
           do dir2=1,SDIM
-           nsolid(dir2)=nfluid_def3(dir2)
+           nsolid(dir2)=nfluid_def3(dir2) !copied from nrmcenter
           enddo
+         else
+          print *,"mag invalid: ",mag
+          stop
          endif
          do dir2=1,SDIM
           nsolid_save(D_DECL(i,j,k),dir2)=nsolid(dir2)
@@ -1582,8 +1610,14 @@ stop
          ! implement dynamic contact angle algorithm here.
          ! first project nfluid onto the solid (im3) material
 
+         ! use_DCA=-1 static angle
+         ! use_DCA=0  static angle
+         ! if (probtype.eq.5501).and.(sdim.eq.3) then use_DCA=[-1,0,1,2]
+         ! otherwise, if ZEYU_DCA_SELECT=-1 then use_DCA=-1 (static model)
+         ! else if ZEYU_DCA_SELECT in [1,...,8], then
+         !  use_DCA=ZEYU_DCA_SELECT+100.
          if ((use_DCA.eq.-1).or. & !static option; probtype.ne.5501
-             (use_DCA.ge.0)) then  !static option; probtype.eq.5501
+             (use_DCA.ge.0)) then 
 
           dotprod=zero
           do dir2=1,SDIM
@@ -1661,22 +1695,19 @@ stop
             ! totaludotn=u dot nproject
            if (fort_denconst(im).ge. &
                fort_denconst(im_opp)) then
-            im_liquid=im
-            im_vapor=im_opp
             ZEYU_thet_s=angle_im  ! thet_s in the liquid.
              !totaludotn>0 if velocity points towards liquid
              !-totaludotn>0 if velocity points towards gas
             ZEYU_u_cl=-totaludotn
            else if (fort_denconst(im_opp).ge. &
                     fort_denconst(im)) then
-            im_liquid=im_opp
-            im_vapor=im
             ZEYU_thet_s=Pi-angle_im
              !totaludotn>0 if velocity points towards "im" material (gas in
              ! this case)
             ZEYU_u_cl=totaludotn
            else
-            print *,"fort_denconst bust"
+            print *,"fort_denconst bust: ",fort_denconst(im), &
+              fort_denconst(im_opp)
             stop
            endif
            ZEYU_mu_l=fort_viscconst(im_liquid)
@@ -1764,11 +1795,11 @@ stop
              endif
                      
             else
-             print *,"use_DCA bust"
+             print *,"use_DCA bust: ",use_DCA
              stop
             endif
            else
-            print *,"use_DCA invalid"
+            print *,"use_DCA invalid: ",use_DCA
             stop
            endif
 
@@ -1789,7 +1820,7 @@ stop
           endif 
 
          else
-          print *,"use_DCA invalid"
+          print *,"use_DCA invalid: ",use_DCA
           stop
          endif 
  
@@ -1858,6 +1889,7 @@ stop
 
         call get_LS_extend(LSTEST,iten,LSmain)
         LSopp=LSmain
+
         do dir2=1,SDIM
           ! nmain points from material im_opp into material im.
          nmain(dir2)=nfluid_save(D_DECL(i,j,k),dir2)
@@ -1865,19 +1897,20 @@ stop
           ! nopp points aways from the solid.
          nopp(dir2)=-nsolid_save(D_DECL(i,j,k),dir2)
         enddo
-        if (use_DCA.eq.101) then
+
+        if (use_DCA.eq.101) then !ZEYU_DCA_SELECT=1 (GNBC)
          do dir2=1,SDIM
           nghost(dir2)=nmain(dir2)
           nopp(dir2)=nmain(dir2)
          enddo
-        else if (use_DCA.ge.-1) then
+        else if (use_DCA.ge.-1) then !static angle
           ! nghost points from material im_opp into material im.
          call ghostnormal(nmain,nopp,cos_angle,nghost,nperp)
          do dir2=1,SDIM
           nopp(dir2)=nghost(dir2)
          enddo
         else
-         print *,"use_DCA invalid"
+         print *,"use_DCA invalid: ",use_DCA
          stop
         endif 
 
@@ -3403,7 +3436,6 @@ stop
 
       real(amrex_real) x1dcen,x1dside,x1dcross
       real(amrex_real) vol_sten
-      real(amrex_real) area_sten(SDIM,2)
       integer side_index
 
       integer, parameter :: nhalf=3
@@ -3660,6 +3692,7 @@ stop
             do im=1,num_materials
              LSSIDE(im)=LSPC(D_DECL(iside,jside,kside),im)
             enddo
+
             call merge_levelset(xcenter,time,LSSIDE,LS_merge)
             call FIX_LS_tessellate(LS_merge,LSSIDE_merge_fixed)
             call get_primary_material(LSSIDE_merge_fixed,im_opp)
@@ -3722,7 +3755,7 @@ stop
                  (XCEN-XLEFT.gt.zero)) then
               ! do nothing
              else
-              print *,"position bust"
+              print *,"position bust: ",XLEFT,XCEN,XRIGHT
               stop
              endif
    
@@ -3776,17 +3809,6 @@ stop
                stop
               endif
 
-              if (dirstar.eq.1) then
-               area_sten(dirstar,side_index)=areax(D_DECL(iface,jface,kface))
-              else if (dirstar.eq.2) then
-               area_sten(dirstar,side_index)=areay(D_DECL(iface,jface,kface))
-              else if ((dirstar.eq.3).and.(SDIM.eq.3)) then
-               area_sten(dirstar,side_index)=areaz(D_DECL(iface,jface,kface))
-              else
-               print *,"dirstar invalid curvstrip"
-               stop
-              endif
-            
               x1dside=xsten0(2*sidestar,dirstar)
   
               do im=1,num_materials
@@ -3849,7 +3871,7 @@ stop
                 else if (LSIDE*LCEN.le.zero) then
                  ! do nothing
                 else
-                 print *,"LSIDE or LCEN bust"
+                 print *,"LSIDE or LCEN bust: ",LCEN,LSIDE
                  stop
                 endif
 
@@ -3864,7 +3886,7 @@ stop
               else if (im_opp_merge_test.ne.im_opp) then
                ! do nothing
               else
-               print *,"im_opp_merge_test invalid"
+               print *,"im_opp_merge_test invalid: ",im_opp_merge_test
                stop
               endif 
 
@@ -3965,7 +3987,7 @@ stop
                   (XCEN-XLEFT.gt.zero)) then
                ! do nothing
               else
-               print *,"position bust"
+               print *,"position bust: ",XLEFT,XCEN,XRIGHT
                stop
               endif
 
@@ -3982,14 +4004,14 @@ stop
                 else if (sidestar.eq.-1) then
                  nrmFD(inormal)=(LCEN-LSLEFT_EXTEND)/(XCEN-XLEFT)
                 else
-                 print *,"sidestar invalid"
+                 print *,"sidestar invalid: ",sidestar
                  stop
                 endif
                else if (dirstar.ne.dircrossing) then
                 nrmFD(inormal)= &
                   (LSRIGHT_EXTEND-LSLEFT_EXTEND)/(XRIGHT-XLEFT)
                else
-                print *,"dirstar invalid"
+                print *,"dirstar invalid: ",dirstar
                 stop
                endif
               enddo ! im_curv=1..num_materials
@@ -4073,6 +4095,9 @@ stop
                 enddo
                else
                 print *,"nrm_mat or nrm_test is NaN"
+                print *,"dircrossing: ",dircrossing
+                print *,"nrm_mat: ",nrm_mat(dircrossing)
+                print *,"nrm_test: ",nrm_test(dircrossing)
                 stop
                endif
   
@@ -4244,20 +4269,26 @@ stop
               bfact,dx, &
               xcenter, &
               !num_materials x sdim components("nrmcenter" in initheightLS)
+              !nrmPROBE_merge is derived from both the closest point
+              !normal and the FD normal.
               nrmPROBE_merge, &
               dircrossing, & !intent(in)
               sidestar, & !intent(in)
               signside, &
               time, &
               xsten_curv, &
+              !3x3x3xSDIM
               velsten, &
               mgoni_temp, &
+              ! -ngrow_distance:ngrow_distance ^{3} x num_materials
               lssten, &
+              ! -ngrow_distance:ngrow_distance ^{3} x num_materials
               vofsten, &
               !3x3x3x num_materials x sdim components
+              !closest point normal.
               nrmsten, &
+              !scalar (i,j,k)
               vol_sten, &
-              area_sten, &
               curv_cellHT, & !intent(out)
               curv_cellFD, & !intent(out)
               mgoni_force, & !intent(out) (I-nn^T)(grad sigma) delta
