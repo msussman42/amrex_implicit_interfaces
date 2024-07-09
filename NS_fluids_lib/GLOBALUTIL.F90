@@ -15835,7 +15835,7 @@ end subroutine print_visual_descriptor
                NRM(SDIM*(im_opp-1)+dir))
        enddo ! dir=1..sdim
       else
-       print *,"LS bust"
+       print *,"LS bust: ",im,im_opp,LS(im),LS(im_opp)
        stop
       endif
       

@@ -501,8 +501,10 @@ stop
       real(amrex_real) nmain_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) nopp_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) ngrid_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
-      real(amrex_real) nsolid(SDIM) 
-      real(amrex_real) nsolid_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
+      real(amrex_real) nsolid_sum(SDIM) 
+      real(amrex_real) nsolid_local(SDIM) 
+      real(amrex_real) nsolid_weight
+      real(amrex_real) local_weight
       real(amrex_real) ncurv1_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) ncurv2_save(D_DECL(-1:1,-1:1,-1:1),SDIM)
       real(amrex_real) n1
@@ -701,9 +703,19 @@ stop
       endif
 
       do im_sort=1,num_materials
+
+       if (fort_denconst(im_sort).gt.zero) then
+        !do nothing
+       else
+        print *,"fort_denconst(im_sort) invalid: ", &
+          im_sort,fort_denconst(im_sort)
+        stop
+       endif
+
        LS_CENTER(im_sort)=lssten(0,0,0,im_sort)
        LS_OPP(im_sort)=lssten(ii,jj,kk,im_sort)
-      enddo
+
+      enddo !im_sort=1,num_materials
 
       if (LS_CENTER(im).ge.zero) then
        ! do nothing
@@ -1019,7 +1031,7 @@ stop
        else if ((sin_angle.ge.zero).and.(cos_angle.le.zero)) then
         angle_im=Pi-asin(sin_angle)
        else
-        print *,"sin_angle or cos_angle invalid"
+        print *,"sin_angle or cos_angle invalid: ",sin_angle,cos_angle
         stop
        endif
       else if (im3.eq.0) then
@@ -1035,6 +1047,7 @@ stop
       else if (num_materials.eq.2) then
        if (im3.ne.0) then
         print *,"im3 invalid, num_materials=",num_materials
+        print *,"im3=",im3
         stop
        endif
       else if (num_materials.gt.2) then
@@ -1054,7 +1067,7 @@ stop
        if ((im3.ge.1).and.(im3.le.num_materials)) then
 
         if ((im3.eq.im).or.(im3.eq.im_opp)) then
-         print *,"im3 invalid" 
+         print *,"im3 invalid: ",im,im_opp,im3 
          stop
         endif
 
@@ -1376,6 +1389,7 @@ stop
       if ((im3.lt.0).or.(im3.gt.num_materials).or. &
           (im3.eq.im).or.(im3.eq.im_opp)) then
        print *,"im3 invalid: ",im3
+       print *,"im,im_opp,num_materials: ",im,im_opp,num_materials
        stop
       endif
 
@@ -1392,7 +1406,7 @@ stop
 
 ! nsolid points into the solid material (im3)
 ! nfluid points into im (outward from im_opp)
-!  (nfluid derived from distance function)
+!  (nfluid derived from closest point map and finite differences)
 
 ! nfluid_cen is a normal to the im,im_opp interface
 ! and points towards the im material.
@@ -1408,6 +1422,7 @@ stop
         nfluid_cen(dir2)=nrmcenter(SDIM*(im-1)+dir2)
        else 
         print *,"either im or im_opp material must be at center"
+        print *,"im,im_opp,imhold ",im,im_opp,imhold
         stop
        endif
 
@@ -1417,7 +1432,7 @@ stop
         ! nrmcenter is derived from closest point normal and FD normal.
         nfluid_def3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
        else
-        print *,"im3 invalid"
+        print *,"im3 invalid: ",im3
         stop
        endif
      
@@ -1428,10 +1443,10 @@ stop
       call prepare_normal(nfluid_cen,RR,mag,SDIM) ! im or im_opp fluid
 
       call prepare_normal( &
-         nfluid_def3, & !inout
-         RR, & !in
-         mag3, & !out
-         SDIM) !in;   im3 material
+         nfluid_def3, & !intent(inout)
+         RR, & !intent(in)
+         mag3, & !intent(out)
+         SDIM) !intent(in);   im3 material
 
       if (mag3.gt.zero) then
        !do nothing
@@ -1441,10 +1456,10 @@ stop
         nfluid_def3(dir2)=nfluid_cen(dir2)
        enddo
        call prepare_normal( &
-         nfluid_def3, & !inout
-         RR, & !in
-         mag3, & !out
-         SDIM) !in;   im3 material
+         nfluid_def3, & !intent(inout)
+         RR, & !intent(in)
+         mag3, & !intent(out)
+         SDIM) !intent(in);   im3 material
       else
        print *,"mag3 invalid: ",mag3
        stop
@@ -1472,6 +1487,7 @@ stop
       do dir2=1,SDIM
        nsolid_sum(dir2)=zero
       enddo
+
       do k=klo_sten_short,khi_sten_short 
       do j=-1,1
       do i=-1,1
@@ -1485,7 +1501,7 @@ stop
          if (lssten(i,j,k,im_liquid).ge.lssten(i,j,k,im_vapor)) then
           local_weight=one
          else if (lssten(i,j,k,im_liquid).le.lssten(i,j,k,im_vapor)) then
-          local_weight=EPS3
+          local_weight=fort_denconst(im_vapor)/fort_denconst(im_liquid)
          else
           print *,"lssten invalid"
           print *,"im_liquid,lssten: ",im_liquid,lssten(i,j,k,im_liquid)
@@ -1496,8 +1512,14 @@ stop
          do dir2=1,SDIM
           nsolid_local(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
          enddo
+
          RR=one
-         call prepare_normal(nsolid_local,RR,mag,SDIM)
+         call prepare_normal( &
+           nsolid_local, & !intent(inout)
+           RR, & !intent(in)
+           mag, & !intent(out)
+           SDIM) !intent(in)
+
          if (mag.gt.zero) then
           !do nothing
          else if (mag.eq.zero) then
@@ -1532,12 +1554,19 @@ stop
       enddo !j
       enddo !k
 
+       !nsolid points into the solid.
       if (nsolid_weight.gt.zero) then
        do dir2=1,SDIM
         nsolid_sum(dir2)=nsolid_sum(dir2)/nsolid_weight
        enddo
+
        RR=one
-       call prepare_normal(nsolid_sum,RR,mag,SDIM)
+       call prepare_normal( &
+         nsolid_sum, & !intent(inout)
+         RR, & !intent(in)
+         mag, & !intent(out)
+         SDIM) !intent(in)
+
        if (mag.gt.zero) then
         !do nothing
        else if (mag.eq.zero) then
@@ -1553,8 +1582,7 @@ stop
        print *,"nsolid_weight invalid: ",nsolid_weight
        stop
       endif
-FIX ME USE nsolid_sum from here ... delete other nsolid variables, declare
-the new variables
+
       do k=klo_sten_short,khi_sten_short 
       do j=-1,1
       do i=-1,1
@@ -1573,7 +1601,11 @@ the new variables
         enddo
        enddo ! imhold
 
-       call get_LSNRM_extend(LSTEST,nrmtest,iten,nfluid)
+       call get_LSNRM_extend( &
+        LSTEST, & !intent(in)
+        nrmtest, & !intent(in)
+        iten, & !intent(in)
+        nfluid) !intent(out)
 
        RR=one
        call prepare_normal(nfluid,RR,mag,SDIM)
@@ -1584,63 +1616,13 @@ the new variables
        else if (mag.gt.zero) then
         ! do nothing
        else
-        print *,"mag invalid LEVELSET_3D.F90 1487"
+        print *,"mag invalid LEVELSET_3D.F90 1487: ",mag
         stop
        endif  
 
        do dir2=1,SDIM
         nfluid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
        enddo
-
-       if ((im3.ge.1).and.(im3.le.num_materials)) then
-
-        if (is_rigid_CL(im3).eq.1) then
-
-         if ((im3.eq.im).or.(im3.eq.im_opp)) then
-          print *,"im3 invalid: ",im3
-          stop
-         endif
-
-         ! nsolid points into the solid
-         do dir2=1,SDIM
-          nsolid(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
-         enddo
-         RR=one
-         call prepare_normal(nsolid,RR,mag,SDIM)
-         if (mag.gt.zero) then
-          !do nothing
-         else if (mag.eq.zero) then
-          do dir2=1,SDIM
-           nsolid(dir2)=nfluid_def3(dir2) !copied from nrmcenter
-          enddo
-         else
-          print *,"mag invalid: ",mag
-          stop
-         endif
-         do dir2=1,SDIM
-          nsolid_save(D_DECL(i,j,k),dir2)=nsolid(dir2)
-         enddo
-
-        else if (is_rigid_CL(im3).eq.0) then
-         do dir2=1,SDIM
-          nsolid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
-         enddo
-        else 
-         print *,"is_rigid_CL invalid initheightLS; LEVELSET_3D.F90"
-         print *,im3,is_rigid_CL(im3)
-         stop
-        endif
-
-       else if (im3.eq.0) then
-
-        do dir2=1,SDIM
-         nsolid_save(D_DECL(i,j,k),dir2)=nfluid(dir2)
-        enddo
-
-       else 
-        print *,"im3 invalid: ",im3
-        stop
-       endif
 
        do dir2=1,SDIM
         nfluid(dir2)=nrmsten(i,j,k,SDIM*(im-1)+dir2)
@@ -1711,12 +1693,11 @@ the new variables
           dotprod=zero
           do dir2=1,SDIM
            nfluid(dir2)=nfluid_save(D_DECL(0,0,0),dir2)
-           nsolid(dir2)=nsolid_save(D_DECL(0,0,0),dir2) 
-           dotprod=dotprod+nfluid(dir2)*nsolid(dir2) 
+           dotprod=dotprod+nfluid(dir2)*nsolid_sum(dir2) 
           enddo
            ! nproject=(I-nsolid nsolid^T)nfluid
           do dir2=1,SDIM
-           nproject(dir2)=nfluid(dir2)-dotprod*nsolid(dir2)
+           nproject(dir2)=nfluid(dir2)-dotprod*nsolid_sum(dir2)
           enddo
           RR=one
           call prepare_normal(nproject,RR,mag,SDIM)
@@ -1758,7 +1739,7 @@ the new variables
            if (totalwt.gt.zero) then
             ! do nothing
            else
-            print *,"totalwt invalid"
+            print *,"totalwt invalid: ",totalwt
             stop
            endif
            totaludotn=totaludotn/totalwt  ! contact line velocity
@@ -1770,7 +1751,7 @@ the new variables
             do dir2=1,SDIM
              print *,"dir,x ",dir2,xcenter(dir2)
              print *,"dir,normal pointing into solid ", &
-               dir2,nsolid(dir2)
+               dir2,nsolid_sum(dir2)
              print *,"dir,CL normal pointing into im material ", &
                dir2,nproject(dir2)
             enddo
@@ -1880,6 +1861,7 @@ the new variables
               cos_angle=Pi-cos(ZEYU_thet_d)
              else
               print *,"im invalid 2240: ",im
+              print *,"im_liquid,im_vapor: ",im_liquid,im_vapor
               stop
              endif
                      
@@ -1982,9 +1964,9 @@ the new variables
         do dir2=1,SDIM
           ! nmain points from material im_opp into material im.
          nmain(dir2)=nfluid_save(D_DECL(i,j,k),dir2)
-          ! nsolid_save points into the solid
+          ! nsolid_sum points into the solid
           ! nopp points aways from the solid.
-         nopp(dir2)=-nsolid_save(D_DECL(i,j,k),dir2)
+         nopp(dir2)=-nsolid_sum(dir2)
         enddo
 
         if (use_DCA.eq.101) then !ZEYU_DCA_SELECT=1 (GNBC)
@@ -1992,7 +1974,7 @@ the new variables
           nghost(dir2)=nmain(dir2)
           nopp(dir2)=nmain(dir2)
          enddo
-        else if (use_DCA.ge.-1) then !static angle
+        else if (use_DCA.ge.-1) then !non GNBC DCA models.
           ! nghost points from material im_opp into material im.
          call ghostnormal(nmain,nopp,cos_angle,nghost,nperp)
          do dir2=1,SDIM
