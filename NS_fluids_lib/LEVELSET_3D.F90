@@ -1414,6 +1414,7 @@ stop
        if (im3.eq.0) then
         nfluid_def3(dir2)=nfluid_cen(dir2)
        else if ((im3.ge.1).and.(im3.le.num_materials)) then
+        ! nrmcenter is derived from closest point normal and FD normal.
         nfluid_def3(dir2)=nrmcenter(SDIM*(im3-1)+dir2)
        else
         print *,"im3 invalid"
@@ -1466,6 +1467,94 @@ stop
        stop
       endif
 
+      ! nsolid points into the solid
+      nsolid_weight=zero
+      do dir2=1,SDIM
+       nsolid_sum(dir2)=zero
+      enddo
+      do k=klo_sten_short,khi_sten_short 
+      do j=-1,1
+      do i=-1,1
+       if (im3.eq.0) then
+        local_weight=EPS3
+        do dir2=1,SDIM
+         nsolid_local(dir2)=nfluid_def3(dir2)
+        enddo
+       else if ((im3.ge.1).and.(im3.le.num_materials)) then
+        if (is_rigid_CL(im3).eq.1) then
+         if (lssten(i,j,k,im_liquid).ge.lssten(i,j,k,im_vapor)) then
+          local_weight=one
+         else if (lssten(i,j,k,im_liquid).le.lssten(i,j,k,im_vapor)) then
+          local_weight=EPS3
+         else
+          print *,"lssten invalid"
+          print *,"im_liquid,lssten: ",im_liquid,lssten(i,j,k,im_liquid)
+          print *,"im_vapor,lssten: ",im_vapor,lssten(i,j,k,im_vapor)
+          stop
+         endif
+         ! nsolid points into the solid
+         do dir2=1,SDIM
+          nsolid_local(dir2)=nrmsten(i,j,k,SDIM*(im3-1)+dir2)
+         enddo
+         RR=one
+         call prepare_normal(nsolid_local,RR,mag,SDIM)
+         if (mag.gt.zero) then
+          !do nothing
+         else if (mag.eq.zero) then
+          local_weight=EPS3
+          do dir2=1,SDIM
+           nsolid_local(dir2)=nfluid_def3(dir2) !copied from nrmcenter
+          enddo
+         else
+          print *,"mag invalid: ",mag
+          stop
+         endif
+
+        else if (is_rigid_CL(im3).eq.0) then
+         local_weight=EPS3
+         do dir2=1,SDIM
+          nsolid_local(dir2)=nfluid_def3(dir2)
+         enddo
+        else
+         print *,"is_rigid_CL invalid: ",im3,is_rigid_CL(im3)
+         stop
+        endif
+       else
+        print *,"im3 invalid: ",im3
+        stop
+       endif
+       nsolid_weight=nsolid_weight+local_weight
+       do dir2=1,SDIM
+        nsolid_sum(dir2)=nsolid_sum(dir2)+local_weight*nsolid_local(dir2)
+       enddo
+
+      enddo !i
+      enddo !j
+      enddo !k
+
+      if (nsolid_weight.gt.zero) then
+       do dir2=1,SDIM
+        nsolid_sum(dir2)=nsolid_sum(dir2)/nsolid_weight
+       enddo
+       RR=one
+       call prepare_normal(nsolid_sum,RR,mag,SDIM)
+       if (mag.gt.zero) then
+        !do nothing
+       else if (mag.eq.zero) then
+        do dir2=1,SDIM
+         nsolid_sum(dir2)=nfluid_def3(dir2)
+        enddo
+       else
+        print *,"mag invalid: ",mag
+        stop
+       endif
+
+      else
+       print *,"nsolid_weight invalid: ",nsolid_weight
+       stop
+      endif
+FIX ME USE nsolid_sum from here ... delete other nsolid variables, declare
+the new variables
       do k=klo_sten_short,khi_sten_short 
       do j=-1,1
       do i=-1,1
