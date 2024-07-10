@@ -4999,7 +4999,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       end subroutine fixed_face
 
        !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
-       !if theta_air=Pi => sigma_ice_melt=0
+       !if theta_air=Pi => sigma_ice_melt=0.0
+       !In general: if sigma_{ij}=0.0, then merge materials i and j.
+       !For contact line dynamics:
+       !sigma_{jk}-sigma_{ik}=sigma_{ij}cos(theta_{i})
+       !if sigma_{jk}=0 and sigma_{ik}=sigma_{ij} => theta_{i}=180 deg.
+       ! => merge materials j and k.
+       !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
+       ! => merge materials i and k.
       subroutine merge_levelset(xpos,time,LS,LS_merge)
       use global_utility_module
       use MOF_routines_module
