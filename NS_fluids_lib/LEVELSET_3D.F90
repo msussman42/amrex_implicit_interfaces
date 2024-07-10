@@ -4112,6 +4112,8 @@ stop
                 critsign=-signside
                else
                 print *,"im_curv invalid"
+                print *,"im_main,im_main_opp,im_curv: ", &
+                   im_main,im_main_opp,im_curv
                 stop
                endif
                if (nrm_test(dircrossing)*critsign.gt.zero) then
@@ -4151,6 +4153,9 @@ stop
                 stop
                endif
 
+                ! (note: If the distance function is zero, then the
+                ! closest point normal corresponds to the reconstructed
+                ! slope.)
                 ! nrm_mat: from PROBE (closest point) normal
                 ! nrm_test: from FD normal
                if ((nrm_mat(dircrossing)*nrm_test(dircrossing).gt.zero).and. &
