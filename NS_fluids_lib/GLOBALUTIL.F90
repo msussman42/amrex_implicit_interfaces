@@ -27335,13 +27335,13 @@ do im=1,num_materials
   else if (LS(im).le.zero) then
    ! do nothing
   else
-   print *,"LS bust"
+   print *,"LS bust: ",im,LS(im)
    stop
   endif
  else if (is_rigid_local(im).eq.0) then
   ! do nothing
  else
-  print *,"is_rigid invalid GLOBALUTIL.F90"
+  print *,"is_rigid_local invalid GLOBALUTIL.F90: ",im,is_rigid_local(im)
   stop
  endif
 enddo !im=1..num_materials
@@ -27357,11 +27357,11 @@ if (im_primary.eq.0) then
     else if (LS(im).le.LS(im_primary)) then
      ! do nothing
     else
-     print *,"LS bust"
+     print *,"LS bust: ",im,im_primary,LS(im),LS(im_primary)
      stop
     endif
    else
-    print *,"im_primary invalid"
+    print *,"im_primary invalid: ",im_primary
     stop
    endif
  enddo !im=1..num_materials
