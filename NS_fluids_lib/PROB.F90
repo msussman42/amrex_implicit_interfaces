@@ -5054,8 +5054,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
            if (user_tension(iten).eq.zero) then
 
+             !get_primary_material is declared in GLOBALUTIL.F90
             call get_primary_material(LS,im_primary)
+             !get_secondary_material is declared in MOF.F90
             call get_secondary_material(LS,im_primary,im_secondary)
+             !get_tertiary_material is declared in MOF.F90
+             !is_rigid(im_tertiary)=0
             call get_tertiary_material(LS, &
               im_primary,im_secondary,im_tertiary)
             if (im_tertiary.eq.0) then
@@ -5068,9 +5072,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              if (im_primary.eq.im) then ! ice/rigid/rigid_CL was primary
 
               if (im_secondary.eq.im_opp) then !"water" was secondary
-               LS_merge(im_opp)=-LS(im_tertiary)
+               LS_merge(im_opp)=-LS(im_tertiary) !im_tertiary="air"
               else if (im_secondary.ne.im_opp) then
-               LS_merge(im_opp)=-LS(im_secondary)
+               LS_merge(im_opp)=-LS(im_secondary) !im_secondary="air"
               else
                print *,"im_secondary bust: ",im_secondary
                stop
@@ -5079,9 +5083,9 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
              else if (im_primary.eq.im_opp) then !"water" is primary
 
               if (im_secondary.eq.im) then ! ice/rigid/rigid_CL is secondary
-               LS_merge(im_opp)=-LS(im_tertiary)
+               LS_merge(im_opp)=-LS(im_tertiary) !im_tertiary="air"
               else
-               ! do nothing
+               ! do nothing (im_secondary is "air")
               endif
 
              else if ((im_primary.ne.im).and. &
@@ -5216,8 +5220,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
               ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
            if (user_tension(iten).eq.zero) then
 
+             !get_primary_material is declared in GLOBALUTIL.F90
             call get_primary_material(LS,im_primary)
+             !get_secondary_material is declared in MOF.F90
             call get_secondary_material(LS,im_primary,im_secondary)
+             !get_tertiary_material is declared in MOF.F90
+             !is_rigid(im_tertiary)=0
             call get_tertiary_material(LS, &
               im_primary,im_secondary,im_tertiary)
             if (im_tertiary.eq.0) then
@@ -5250,7 +5258,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
                      -nrm((im_tertiary-1)*SDIM+dir)
                enddo
               else
-               ! do nothing
+               ! do nothing (im_secondary is "air")
               endif
 
              else if ((im_primary.ne.im).and. &
