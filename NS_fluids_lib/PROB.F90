@@ -5018,8 +5018,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(out) :: LS_merge(num_materials)
       integer im,im_opp
       integer iten
-      integer default_flag
-      real(amrex_real) LH1,LH2
       integer im_primary
       integer im_secondary
       integer im_tertiary
@@ -5030,131 +5028,128 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        def_thermal(im)=room_temperature
        LS_merge(im)=LS(im)
       enddo
-      do im=1,num_materials
-       if (is_ice(im).eq.1) then
-        if (is_rigid(im).eq.0) then
-         do im_opp=1,num_materials
-          if (im_opp.ne.im) then
-           if (is_rigid(im_opp).eq.0) then
-            call get_iten(im,im_opp,iten)
-            if ((iten.ge.1).and.(iten.le.num_interfaces)) then
-             ! do nothing
-            else
-             print *,"iten invalid"
-             stop
-            endif
 
-            call get_user_tension( &
-             xpos,time,fort_tension,user_tension,def_thermal)
+      do im=1,num_materials
+       if ((is_ice(im).eq.1).or. &
+           (is_rigid(im).eq.1).or. &
+           (is_rigid_CL(im).eq.1)) then
+        do im_opp=1,num_materials
+         if (im_opp.ne.im) then
+          if ((is_rigid(im_opp).eq.0).and. &
+              (is_ice(im_opp).eq.0).and. &
+              (is_rigid_CL(im_opp).eq.0)) then
+           call get_iten(im,im_opp,iten)
+           if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+            ! do nothing
+           else
+            print *,"iten invalid: ",iten
+            stop
+           endif
+
+           call get_user_tension( &
+            xpos,time,fort_tension,user_tension,def_thermal)
 
               ! "merge_levelset" is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
               ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
-            if (user_tension(iten).eq.zero) then
+           if (user_tension(iten).eq.zero) then
 
-             default_flag=1
-             LH1=get_user_latent_heat(iten,room_temperature,default_flag)
+            call get_primary_material(LS,im_primary)
+            call get_secondary_material(LS,im_primary,im_secondary)
+            call get_tertiary_material(LS, &
+              im_primary,im_secondary,im_tertiary)
+            if (im_tertiary.eq.0) then
+             ! do nothing (there is no surface tension in this case)
+            else if ((im_tertiary.ge.1).and. &
+                     (im_tertiary.le.num_materials)) then
 
-             LH2= &
-               get_user_latent_heat(iten+num_interfaces,room_temperature,default_flag)
+             LS_merge(im)=-99999.0d0 ! delete the ice/rigid/rigid_CL material.
 
-             if ((LH1.ne.zero).or.(LH2.ne.zero)) then
-              call get_primary_material(LS,im_primary)
-              call get_secondary_material(LS,im_primary,im_secondary)
-              call get_tertiary_material(LS, &
-                im_primary,im_secondary,im_tertiary)
-              if (im_tertiary.eq.0) then
-               ! do nothing (there is no surface tension in this case)
-              else if ((im_tertiary.ge.1).and. &
-                       (im_tertiary.le.num_materials)) then
+             if (im_primary.eq.im) then ! ice/rigid/rigid_CL was primary
 
-               LS_merge(im)=-99999.0d0 ! delete the ice.
-
-               if (im_primary.eq.im) then ! ice was primary
-
-                if (im_secondary.eq.im_opp) then !water was secondary
-                 LS_merge(im_opp)=-LS(im_tertiary)
-                else if (im_secondary.ne.im_opp) then
-                 LS_merge(im_opp)=-LS(im_secondary)
-                else
-                 print *,"im_secondary bust"
-                 stop
-                endif
-
-               else if (im_primary.eq.im_opp) then !water is primary
-
-                if (im_secondary.eq.im) then ! ice is secondary
-                 LS_merge(im_opp)=-LS(im_tertiary)
-                else
-                 ! do nothing
-                endif
-
-               else if ((im_primary.ne.im).and. &
-                        (im_primary.ne.im_opp)) then
-
-                ! water replaces ice
-                if (im_secondary.eq.im) then
-                 LS_merge(im_opp)=LS(im) 
-                else if (im_secondary.eq.im_opp) then
-                 ! do nothing
-                else if ((im_secondary.ne.im).and. &
-                         (im_secondary.ne.im_opp)) then
-                 if (LS(im).gt.LS(im_opp)) then
-                  LS_merge(im_opp)=LS(im) 
-                 else if (LS(im).le.LS(im_opp)) then
-                  ! do nothing
-                 else
-                  print *,"LS(im) invalid"
-                  stop 
-                 endif
-                else
-                 print *,"im_secondary invalid"
-                 stop
-                endif
-
-               else
-                print *,"im_primary invalid"
-                stop
-               endif
-
+              if (im_secondary.eq.im_opp) then !"water" was secondary
+               LS_merge(im_opp)=-LS(im_tertiary)
+              else if (im_secondary.ne.im_opp) then
+               LS_merge(im_opp)=-LS(im_secondary)
               else
-               print *,"im_tertiary invalid"
+               print *,"im_secondary bust: ",im_secondary
                stop
               endif
 
-             else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
-              ! do nothing
+             else if (im_primary.eq.im_opp) then !"water" is primary
+
+              if (im_secondary.eq.im) then ! ice/rigid/rigid_CL is secondary
+               LS_merge(im_opp)=-LS(im_tertiary)
+              else
+               ! do nothing
+              endif
+
+             else if ((im_primary.ne.im).and. &
+                      (im_primary.ne.im_opp)) then
+
+              ! "water" replaces ice/rigid/rigid_CL
+              if (im_secondary.eq.im) then
+               LS_merge(im_opp)=LS(im) 
+              else if (im_secondary.eq.im_opp) then
+               ! do nothing
+              else if ((im_secondary.ne.im).and. &
+                       (im_secondary.ne.im_opp)) then
+               if (LS(im).gt.LS(im_opp)) then
+                LS_merge(im_opp)=LS(im) 
+               else if (LS(im).le.LS(im_opp)) then
+                ! do nothing
+               else
+                print *,"LS(im) invalid: ",im,LS(im)
+                stop 
+               endif
+              else
+               print *,"im_secondary invalid: ",im_secondary
+               stop
+              endif
+
              else
-              print *,"LH1 or LH2 invalid"
+              print *,"im_primary invalid: ",im_primary
               stop
              endif
-            else if (user_tension(iten).gt.zero) then
-             !do nothing
+
             else
-             print *,"user_tension invalid"
+             print *,"im_tertiary invalid: ",im_tertiary
              stop
             endif
-           else if (is_rigid(im_opp).eq.1) then
-            ! do nothing
+
+           else if (user_tension(iten).gt.zero) then
+            !do nothing
            else
-            print *,"is_rigid(im_opp) invalid"
+            print *,"user_tension invalid: ",user_tension(iten)
             stop
            endif
-          else if (im_opp.eq.im) then
+          else if ((is_rigid(im_opp).eq.1).or. &
+                   (is_ice(im_opp).eq.1).or. &
+                   (is_rigid_CL(im_opp).eq.1)) then
            ! do nothing
           else
-           print *,"im_opp bust"
+           print *,"im_opp inconsistency: ",im_opp
+           print *,"is_rigid(im_opp): ",is_rigid(im_opp)
+           print *,"is_ice(im_opp): ",is_ice(im_opp)
+           print *,"is_rigid_CL(im_opp): ",is_rigid_CL(im_opp)
            stop
           endif
-         enddo !im_opp=1,num_materials
-        else
-         print *,"is_ice(im)==1 and is_rigid(im)!=0  is not allowed"
-         stop
-        endif
-       else if (is_ice(im).eq.0) then
+         else if (im_opp.eq.im) then
+          ! do nothing
+         else
+          print *,"im_opp or im bust: ",im,im_opp
+          stop
+         endif
+        enddo !im_opp=1,num_materials
+       else if ((is_ice(im).eq.0).and. &
+                (is_rigid(im).eq.0).and. &
+                (is_rigid_CL(im).eq.0)) then
         ! do nothing
        else
-        print *,"is_ice invalid"
+        print *,"im inconsistency: ",im
+        print *,"is_rigid(im): ",is_rigid(im)
+        print *,"is_ice(im): ",is_ice(im)
+        print *,"is_rigid_CL(im): ",is_rigid_CL(im)
         stop
        endif
       enddo !im=1,num_materials
@@ -5164,6 +5159,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
        !if theta_air=Pi => sigma_ice_melt=0
+       !In general: if sigma_{ij}=0.0, then merge materials i and j.
+       !For contact line dynamics:
+       !sigma_{jk}-sigma_{ik}=sigma_{ij}cos(theta_{i})
+       !if sigma_{jk}=0 and sigma_{ik}=sigma_{ij} => theta_{i}=180 deg.
+       ! => merge materials j and k.
+       !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
+       ! => merge materials i and k.
       subroutine merge_normal(xpos,time,LS,nrm,nrm_merge)
       use global_utility_module
       use MOF_routines_module
@@ -5177,8 +5179,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer im,im_opp
       integer iten
       integer dir
-      integer default_flag
-      real(amrex_real) LH1,LH2
       integer im_primary
       integer im_secondary
       integer im_tertiary
@@ -5192,136 +5192,139 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        nrm_merge(im)=nrm(im)
       enddo
       do im=1,num_materials
-       if (is_ice(im).eq.1) then
-        if (is_rigid(im).eq.0) then
-         do im_opp=1,num_materials
-          if (im_opp.ne.im) then
-           if (is_rigid(im_opp).eq.0) then
-            call get_iten(im,im_opp,iten)
+       if ((is_ice(im).eq.1).or. &
+           (is_rigid(im).eq.1).or. &
+           (is_rigid_CL(im).eq.1)) then
+        do im_opp=1,num_materials
+         if (im_opp.ne.im) then
+          if ((is_rigid(im_opp).eq.0).and. &
+              (is_ice(im_opp).eq.0).and. &
+              (is_rigid_CL(im_opp).eq.0)) then
+           call get_iten(im,im_opp,iten)
+           if ((iten.ge.1).and.(iten.le.num_interfaces)) then
+            ! do nothing
+           else
+            print *,"iten invalid: ",iten
+            stop
+           endif
 
-            call get_user_tension( &
-              xpos,time,fort_tension,user_tension,def_thermal)
+           call get_user_tension( &
+             xpos,time,fort_tension,user_tension,def_thermal)
 
               ! "merge_normal" is for the algorithm described by:
               ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
               ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
-            if (user_tension(iten).eq.zero) then
+           if (user_tension(iten).eq.zero) then
 
-             default_flag=1
-             LH1=get_user_latent_heat(iten,room_temperature,default_flag)
+            call get_primary_material(LS,im_primary)
+            call get_secondary_material(LS,im_primary,im_secondary)
+            call get_tertiary_material(LS, &
+              im_primary,im_secondary,im_tertiary)
+            if (im_tertiary.eq.0) then
+             ! do nothing (there is no surface tension in this case)
+            else if ((im_tertiary.ge.1).and. &
+                     (im_tertiary.le.num_materials)) then
 
-             LH2= &
-               get_user_latent_heat(iten+num_interfaces,room_temperature,default_flag)
+             if (im_primary.eq.im) then ! ice/rigid/rigid_CL was primary
 
-             if ((LH1.ne.zero).or.(LH2.ne.zero)) then
-              call get_primary_material(LS,im_primary)
-              call get_secondary_material(LS,im_primary,im_secondary)
-              call get_tertiary_material(LS, &
-                im_primary,im_secondary,im_tertiary)
-              if (im_tertiary.eq.0) then
-               ! do nothing (there is no surface tension in this case)
-              else if ((im_tertiary.ge.1).and. &
-                       (im_tertiary.le.num_materials)) then
-
-               if (im_primary.eq.im) then ! ice was primary
-                if (im_secondary.eq.im_opp) then !water was secondary
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                        -nrm((im_tertiary-1)*SDIM+dir)
-                 enddo
-                else if (im_secondary.ne.im_opp) then
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                        -nrm((im_secondary-1)*SDIM+dir)
-                 enddo
-                else
-                 print *,"im_secondary bust"
-                 stop
-                endif
-
-               else if (im_primary.eq.im_opp) then !water is primary
-
-                if (im_secondary.eq.im) then ! ice is secondary
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                        -nrm((im_tertiary-1)*SDIM+dir)
-                 enddo
-                else
-                 ! do nothing
-                endif
-
-               else if ((im_primary.ne.im).and. &
-                        (im_primary.ne.im_opp)) then
-
-                ! water replaces ice
-                if (im_secondary.eq.im) then
-                 do dir=1,SDIM
-                  nrm_merge((im_opp-1)*SDIM+dir)= &
-                        nrm((im-1)*SDIM+dir)
-                 enddo
-                else if (im_secondary.eq.im_opp) then
-                 ! do nothing
-                else if ((im_secondary.ne.im).and. &
-                         (im_secondary.ne.im_opp)) then
-                 if (LS(im).gt.LS(im_opp)) then
-                  do dir=1,SDIM
-                   nrm_merge((im_opp-1)*SDIM+dir)= &
-                        nrm((im-1)*SDIM+dir)
-                  enddo
-                 else if (LS(im).le.LS(im_opp)) then
-                  ! do nothing
-                 else
-                  print *,"LS(im) invalid"
-                  stop 
-                 endif
-                else
-                 print *,"im_secondary invalid"
-                 stop
-                endif
-
-               else
-                print *,"im_primary invalid"
-                stop
-               endif
-
+              if (im_secondary.eq.im_opp) then !"water" was secondary
+               do dir=1,SDIM
+                nrm_merge((im_opp-1)*SDIM+dir)= &
+                      -nrm((im_tertiary-1)*SDIM+dir)
+               enddo
+              else if (im_secondary.ne.im_opp) then
+               do dir=1,SDIM
+                nrm_merge((im_opp-1)*SDIM+dir)= &
+                      -nrm((im_secondary-1)*SDIM+dir)
+               enddo
               else
-               print *,"im_tertiary invalid"
+               print *,"im_secondary bust: ",im_secondary
                stop
               endif
 
-             else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
-              ! do nothing
+             else if (im_primary.eq.im_opp) then !"water" is primary
+
+              if (im_secondary.eq.im) then ! ice/rigid/rigid_CL is secondary
+               do dir=1,SDIM
+                nrm_merge((im_opp-1)*SDIM+dir)= &
+                     -nrm((im_tertiary-1)*SDIM+dir)
+               enddo
+              else
+               ! do nothing
+              endif
+
+             else if ((im_primary.ne.im).and. &
+                      (im_primary.ne.im_opp)) then
+
+              ! "water" replaces ice/rigid/rigid_CL
+              if (im_secondary.eq.im) then
+               do dir=1,SDIM
+                nrm_merge((im_opp-1)*SDIM+dir)= &
+                      nrm((im-1)*SDIM+dir)
+               enddo
+              else if (im_secondary.eq.im_opp) then
+               ! do nothing
+              else if ((im_secondary.ne.im).and. &
+                       (im_secondary.ne.im_opp)) then
+               if (LS(im).gt.LS(im_opp)) then
+                do dir=1,SDIM
+                 nrm_merge((im_opp-1)*SDIM+dir)= &
+                      nrm((im-1)*SDIM+dir)
+                enddo
+               else if (LS(im).le.LS(im_opp)) then
+                ! do nothing
+               else
+                print *,"LS(im) invalid: ",im,LS(im)
+                stop 
+               endif
+              else
+               print *,"im_secondary invalid: ",im_secondary
+               stop
+              endif
+
              else
-              print *,"LH1 or LH2 invalid"
+              print *,"im_primary invalid: ",im_primary
               stop
              endif
-            else if (user_tension(iten).gt.zero) then
-             ! do nothing
+
             else
-             print *,"user_tension invalid"
+             print *,"im_tertiary invalid: ",im_tertiary
              stop
             endif
-           else if (is_rigid(im_opp).eq.1) then
+
+           else if (user_tension(iten).gt.zero) then
             ! do nothing
            else
-            print *,"is_rigid(im_opp) invalid"
+            print *,"user_tension invalid: ",user_tension(iten)
             stop
            endif
-          else if (im_opp.eq.im) then
+          else if ((is_rigid(im_opp).eq.1).or. &
+                   (is_ice(im_opp).eq.1).or. &
+                   (is_rigid_CL(im_opp).eq.1)) then
            ! do nothing
           else
-           print *,"im_opp bust"
+           print *,"im_opp inconsistency: ",im_opp
+           print *,"is_rigid(im_opp): ",is_rigid(im_opp)
+           print *,"is_ice(im_opp): ",is_ice(im_opp)
+           print *,"is_rigid_CL(im_opp): ",is_rigid_CL(im_opp)
            stop
           endif
-         enddo !im_opp=1,num_materials
-        else
-         print *,"is_rigid invalid"
-         stop
-        endif
-       else if (is_ice(im).eq.0) then
+         else if (im_opp.eq.im) then
+          ! do nothing
+         else
+          print *,"im_opp or im bust: ",im,im_opp
+          stop
+         endif
+        enddo !im_opp=1,num_materials
+       else if ((is_ice(im).eq.0).and. &
+                (is_rigid(im).eq.0).and. &
+                (is_rigid_CL(im).eq.0)) then
         ! do nothing
        else
-        print *,"is_ice invalid"
+        print *,"im inconsistency: ",im
+        print *,"is_rigid(im): ",is_rigid(im)
+        print *,"is_ice(im): ",is_ice(im)
+        print *,"is_rigid_CL(im): ",is_rigid_CL(im)
         stop
        endif
       enddo !im=1,num_materials
@@ -5331,6 +5334,13 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
        !sin(theta1)/sigma23 = sin(theta2)/sigma13 = sin(theta3)/sigma12
        !if theta_air=Pi => sigma_ice_melt=0
+       !In general: if sigma_{ij}=0.0, then merge materials i and j.
+       !For contact line dynamics:
+       !sigma_{jk}-sigma_{ik}=sigma_{ij}cos(theta_{i})
+       !if sigma_{jk}=0 and sigma_{ik}=sigma_{ij} => theta_{i}=180 deg.
+       ! => merge materials j and k.
+       !if sigma_{ik}=0 and sigma_{jk}=sigma_{ij} => theta_{i}=0 deg.
+       ! => merge materials i and k.
       subroutine merge_vof(xpos,time,vof,vof_merge)
       use global_utility_module
       use MOF_routines_module
@@ -5342,8 +5352,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       real(amrex_real), INTENT(out) :: vof_merge(num_materials)
       integer im,im_opp
       integer iten
-      integer default_flag
-      real(amrex_real) LH1,LH2
       real(amrex_real) :: user_tension(num_interfaces)
       real(amrex_real) :: def_thermal(num_materials)
 
@@ -5352,63 +5360,67 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        vof_merge(im)=vof(im)
       enddo
       do im=1,num_materials
-       if (is_ice(im).eq.1) then
-        if (is_rigid(im).eq.0) then
-         do im_opp=1,num_materials
-          if (im_opp.ne.im) then
-           if (is_rigid(im_opp).eq.0) then
-            call get_iten(im,im_opp,iten)
-
-            call get_user_tension( &
-              xpos,time,fort_tension,user_tension,def_thermal)
-
-              ! "merge_vof" code is for the algorithm described by:
-              ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
-              ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
-            if (user_tension(iten).eq.zero) then
-
-             default_flag=1
-             LH1=get_user_latent_heat(iten,room_temperature,default_flag)
-
-             LH2= &
-               get_user_latent_heat(iten+num_interfaces,room_temperature,default_flag)
-
-             if ((LH1.ne.zero).or.(LH2.ne.zero)) then
-              vof_merge(im)=zero
-              vof_merge(im_opp)=vof(im_opp)+vof(im)
-             else if ((LH1.eq.zero).and.(LH2.eq.zero)) then
-              ! do nothing
-             else
-              print *,"LH1 or LH2 invalid"
-              stop
-             endif
-            else if (user_tension(iten).gt.zero) then
-             ! do nothing
-            else
-             print *,"user_tension invalid"
-             stop
-            endif
-           else if (is_rigid(im_opp).eq.1) then
+       if ((is_ice(im).eq.1).or. &
+           (is_rigid(im).eq.1).or. &
+           (is_rigid_CL(im).eq.1)) then
+        do im_opp=1,num_materials
+         if (im_opp.ne.im) then
+          if ((is_rigid(im_opp).eq.0).and. &
+              (is_ice(im_opp).eq.0).and. &
+              (is_rigid_CL(im_opp).eq.0)) then
+           call get_iten(im,im_opp,iten)
+           if ((iten.ge.1).and.(iten.le.num_interfaces)) then
             ! do nothing
            else
-            print *,"is_rigid(im_opp) invalid"
+            print *,"iten invalid: ",iten
             stop
            endif
-          else if (im_opp.eq.im) then
+
+           call get_user_tension( &
+             xpos,time,fort_tension,user_tension,def_thermal)
+
+             ! "merge_vof" code is for the algorithm described by:
+             ! Lyu, Wang, Zhang, Pedrono, Sun, Legendre JCP 2021
+             ! sigma_ice_melt=0 => theta_ambient=0 (=>growth_angle=0)
+           if (user_tension(iten).eq.zero) then
+
+            vof_merge(im)=zero
+            vof_merge(im_opp)=vof(im_opp)+vof(im)
+
+           else if (user_tension(iten).gt.zero) then
+            ! do nothing
+           else
+            print *,"user_tension invalid: ",user_tension(iten)
+            stop
+           endif
+          else if ((is_rigid(im_opp).eq.1).or. &
+                   (is_ice(im_opp).eq.1).or. &
+                   (is_rigid_CL(im_opp).eq.1)) then
            ! do nothing
           else
-           print *,"im_opp bust"
+           print *,"im_opp inconsistency: ",im_opp
+           print *,"is_rigid(im_opp): ",is_rigid(im_opp)
+           print *,"is_ice(im_opp): ",is_ice(im_opp)
+           print *,"is_rigid_CL(im_opp): ",is_rigid_CL(im_opp)
            stop
           endif
-         enddo !im_opp=1,num_materials
-        else
-         print *,"is_rigid invalid"
-         stop
-        endif
-       else if (is_ice(im).eq.0) then
+
+         else if (im_opp.eq.im) then
+          ! do nothing
+         else
+          print *,"im_opp or im bust: ",im,im_opp
+          stop
+         endif
+        enddo !im_opp=1,num_materials
+       else if ((is_ice(im).eq.0).and. &
+                (is_rigid(im).eq.0).and. &
+                (is_rigid_CL(im).eq.0)) then
         ! do nothing
        else
-        print *,"is_ice invalid"
+        print *,"im inconsistency: ",im
+        print *,"is_rigid(im): ",is_rigid(im)
+        print *,"is_ice(im): ",is_ice(im)
+        print *,"is_rigid_CL(im): ",is_rigid_CL(im)
         stop
        endif
       enddo !im=1,num_materials
