@@ -12687,11 +12687,12 @@ END SUBROUTINE SIMP
           stop
          endif
         else if (prescribed_flag.ne.1) then
-         print *,"expecting prescribed_flag=1"
+         print *,"expecting prescribed_flag=1: ",prescribed_flag
          stop
         endif
        else
         print *,"expecting fort_is_passive_advect_test().eq.1"
+        print *,"fort_is_passive_advect_test: ",fort_is_passive_advect_test()
         stop
        endif
 

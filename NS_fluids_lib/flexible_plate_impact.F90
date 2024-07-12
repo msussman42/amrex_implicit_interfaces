@@ -47,9 +47,45 @@ use global_utility_module
 implicit none
 real(amrex_real), INTENT(in), dimension(SDIM) :: x !spatial coordinates
 real(amrex_real), INTENT(out) :: Phi !LS dist, Phi>0 in the substrate
+integer, parameter :: im_solid=3
 
-!CTML takes care of this.
-Phi=-99999.0
+ if (num_materials.eq.im_solid) then
+
+  if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
+   !CTML takes care of this.
+   Phi=-99999.0
+  else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+   if (AMREX_SPACEDIM.eq.2) then
+    call squaredist(x(1),x(2), &
+      xblob2-radblob2, &
+      xblob2+radblob2, &
+      yblob2-radblob3, &
+      yblob2+radblob3, &
+      Phi)
+    Phi=-Phi
+   else if (AMREX_SPACEDIM.eq.3) then
+    call cubedist( &
+      xblob2-radblob2, &
+      xblob2+radblob2, &
+      yblob2-radblob2, &
+      yblob2+radblob2, &
+      zblob2-radblob3, &
+      zblob2+radblob3, &
+      x(1),x(2),x(SDIM), &
+      Phi)
+    Phi=-Phi
+   else
+    print *,"dimension bust"
+    stop
+   endif
+  else
+   print *,"FSI_flag invalid: ",im_solid,FSI_flag(im_solid)
+   stop
+  endif
+ else
+  print *,"num_materials invalid: ",num_materials
+  stop
+ endif
 
 end subroutine flexible_substrateLS
 
@@ -140,17 +176,90 @@ IMPLICIT NONE
   real(amrex_real), INTENT(out) :: temperature
   integer, INTENT(out) :: prescribed_flag
   integer :: dir
-
+  integer, parameter :: im_solid=3
+  real(amrex_real) :: radeps,LS_A,LS_B
 
 if (probtype.eq.2000) then
 
- prescribed_flag=0
+ prescribed_flag=0 !prescribed_flag=1 if "zalesak's" problem
  do dir=1,SDIM
   vel(dir)=zero
  enddo
  LS=-99999.0d0
  temperature=293.0d0
 
+ if (num_materials.eq.im_solid) then
+  if (FSI_flag(im_solid).eq.FSI_SHOELE_CTML) then
+   LS=-99999.0d0
+  else if (FSI_flag(im_solid).eq.FSI_EULERIAN_ELASTIC) then
+
+   radeps=radblob2/10.0d0
+
+   if (AMREX_SPACEDIM.eq.2) then
+    call squaredist(x(1),x(2), &
+      xblob2-radblob2+radeps, &
+      xblob2+radblob2-radeps, &
+      yblob2-radblob3, &
+      yblob2+radblob3, &
+      LS_A)
+    LS_A=-LS_A
+
+    call squaredist(x(1),x(2), &
+      xblob2-radblob2-radeps, &
+      xblob2+radblob2+radeps, &
+      yblob2-radblob3, &
+      yblob2+radblob3, &
+      LS_B)
+    LS_B=-LS_B
+    
+   else if (AMREX_SPACEDIM.eq.3) then
+
+    call cubedist( &
+      xblob2-radblob2+radeps, &
+      xblob2+radblob2-radeps, &
+      yblob2-radblob2+radeps, &
+      yblob2+radblob2-radeps, &
+      zblob2-radblob3, &
+      zblob2+radblob3, &
+      x(1),x(2),x(SDIM), &
+      LS_A)
+    LS_A=-LS_A
+
+    call cubedist( &
+      xblob2-radblob2-radeps, &
+      xblob2+radblob2+radeps, &
+      yblob2-radblob2-radeps, &
+      yblob2+radblob2+radeps, &
+      zblob2-radblob3, &
+      zblob2+radblob3, &
+      x(1),x(2),x(SDIM), &
+      LS_B)
+    LS_B=-LS_B
+
+   else
+    print *,"dimension bust"
+    stop
+   endif
+
+   if (LS_A.gt.zero) then
+    LS=-99999.0d0
+   else if ((LS_A.le.zero).and.(LS_B.ge.zero)) then
+    LS=99999.0d0
+   else if ((LS_A.le.zero).and.(LS_B.le.zero)) then
+    LS=-99999.0d0
+   else
+    print *,"LS_A or LS_B invalid"
+    stop
+   endif
+
+  else
+   print *,"FSI_flag invalid: ",im_solid,FSI_flag(im_solid)
+   stop
+  endif
+ else
+  print *,"num_materials invalid: ",num_materials
+  stop
+ endif
 else
  print *,"probtype invalid"
  stop
