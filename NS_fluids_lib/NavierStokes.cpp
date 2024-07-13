@@ -543,10 +543,16 @@ Vector<Real> NavierStokes::etaS; // def=0
 Vector<Real> NavierStokes::etaP; // def=0 (etaP0)
 
 // (1/L)   eps=0.01
+// 0 => viscoelastic FENE-CR material  (NN_FENE_CR)
 // viscoelastic_model=0  FENE CR   trac(A)<L^2 lambda(A)>eps/L^2
+// 1 => Oldroyd-B (NN_OLDROYD_B)
 // viscoelastic_model=1  Oldroyd B trac(A)<inf lambda(A)>eps/L^2
+// 5=> FENE-P (NN_FENE_P)
 // viscoelastic_model=5  FENE P    trac(A)<L^2 lambda(A)>eps/L^2
+// 6=> Linear PTT (NN_LINEAR_PTT)
 // viscoelastic_model=6  linearPTT trac(A)<inf lambda(A)>eps/L^2
+// 7 => viscoelastic Neo-Hookean material  (NN_NEO_HOOKEAN)
+// viscoelastic_model=7  Neo-Hookean   trac(A)<L^2 lambda(A)>eps/L^2
 Vector<Real> NavierStokes::polymer_factor; // def=0
 
  // 0 - centroid furthest from uncaptured centroid
@@ -4886,12 +4892,12 @@ NavierStokes::read_params ()
      if (elastic_viscosity[i]>=0.0) {
       if (fort_built_in_elastic_model(&elastic_viscosity[i],
                                       &viscoelastic_model[i])==1) {
-       if (viscoelastic_model[i]==3) { // incremental elastic model
+       if (viscoelastic_model[i]==NN_MAIRE_ABGRALL_ETAL) { // incremental 
         if (elastic_time[i]>=1.0e+8) {
          // do nothing
         } else
          amrex::Error("elastic time inconsistent with model");
-       } else if (viscoelastic_model[i]==7) { // incremental Neo-Hookean model
+       } else if (viscoelastic_model[i]==NN_NEO_HOOKEAN) { // incremental
         if (elastic_time[i]>=1.0e+8) {
          // do nothing
         } else
@@ -4950,15 +4956,21 @@ NavierStokes::read_params ()
       amrex::Error("elastic_time/elastic_viscosity invalid read_params");
 
      // (1/L) eps=0.01
+     // 0 => viscoelastic FENE-CR material  (NN_FENE_CR)
      // viscoelastic_model=0  FENE CR   trac(A)<L^2 lambda(A)>eps/L^2
+     // 1 => Oldroyd-B (NN_OLDROYD_B)
      // viscoelastic_model=1  Oldroyd B trac(A)<inf lambda(A)>eps/L^2
+     // 5=> FENE-P (NN_FENE_P)
      // viscoelastic_model=5  FENE P    trac(A)<L^2 lambda(A)>eps/L^2
+     // 6=> Linear PTT (NN_LINEAR_PTT)
      // viscoelastic_model=6  linearPTT trac(A)<inf lambda(A)>eps/L^2
+     // 7=> Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
+     //      (NN_NEO_HOOKEAN)
      if (polymer_factor[i]>=0.0) {
-      if ((viscoelastic_model[i]==0)|| //FENE CR
-          (viscoelastic_model[i]==1)|| //Oldroyd B
-          (viscoelastic_model[i]==5)|| //FENE-P
-          (viscoelastic_model[i]==6)) {//linearPTT
+      if ((viscoelastic_model[i]==NN_FENE_CR)|| //FENE CR
+          (viscoelastic_model[i]==NN_OLDROYD_B)|| //Oldroyd B
+          (viscoelastic_model[i]==NN_FENE_P)|| //FENE-P
+          (viscoelastic_model[i]==NN_LINEAR_PTT)) {//linearPTT
 
        if (elastic_viscosity[i]>0.0) {
         if (polymer_factor[i]>0.0) {
@@ -4974,8 +4986,8 @@ NavierStokes::read_params ()
        } else
         amrex::Error("elastic_viscosity invalid");
 
-      } else if ((viscoelastic_model[i]==7)|| //Neo-Hookean
-   	         (viscoelastic_model[i]==3)) { //incremental model
+      } else if ((viscoelastic_model[i]==NN_NEO_HOOKEAN)|| //Neo-Hookean
+   	         (viscoelastic_model[i]==NN_MAIRE_ABGRALL_ETAL)) { 
        // do nothing
       } else
        amrex::Error("viscoelastic_model invalid");
@@ -11243,11 +11255,18 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
      thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
 
        // fort_maketensor_mac is declared in: GODUNOV_3D.F90
+       // 0 => viscoelastic FENE-CR material  (NN_FENE_CR)
        // viscoelastic_model==0 => FENE-CR
+       // 1 => Oldroyd-B (NN_OLDROYD_B)
        // viscoelastic_model==1 => Oldroyd B
+       // 3=> incremental elastic model (NN_MAIRE_ABGRALL_ETAL) 
        // viscoelastic_model==3 => incremental elastic model
+       // 5=> FENE-P (NN_FENE_P)
        // viscoelastic_model==5 => FENE-P
+       // 6=> Linear PTT (NN_LINEAR_PTT)
        // viscoelastic_model==6 => linear PTT
+       // 7=> Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
+       //      (NN_NEO_HOOKEAN)
        // viscoelastic_model==7 => incremental Neo-Hookean model
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
 			           &viscoelastic_model[im])==1) {

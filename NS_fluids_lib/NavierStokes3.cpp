@@ -11593,7 +11593,7 @@ void NavierStokes::avgDownALL_TENSOR() {
 
 } // end subroutine avgDownALL_TENSOR
 
-// VISCOELASTIC, CTML FORCE
+// VISCOELASTIC FORCE
 // if viscoelastic_force_only==0, then the following command is given 
 // prior to this routine:
 //  SET_STOKES_MARK(REGISTER_MARK_MF);
