@@ -952,12 +952,12 @@ stop
          !viscconst(im_parm) in default case.
         mu=get_user_viscconst(im_parm,density,temperature)
 
-        if ((viscoelastic_model.eq.0).or. & !FENE-CR
-            (viscoelastic_model.eq.1).or. & ! Oldroyd B
-            (viscoelastic_model.eq.5).or. & ! FENE-P
-            (Viscoelastic_model.eq.6)) then ! linear PTT
+        if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
+            (viscoelastic_model.eq.NN_OLDROYD_B).or. & ! Oldroyd B
+            (viscoelastic_model.eq.NN_FENE_P).or. & ! FENE-P
+            (Viscoelastic_model.eq.NN_LINEAR_PTT)) then ! linear PTT
          ! do nothing
-        else if (viscoelastic_model.eq.3) then !incremental
+        else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental
          ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
          if (elastic_viscosity.ge.zero) then
           ! do nothing
@@ -965,7 +965,7 @@ stop
           print *,"elastic_viscosity invalid"
           stop
          endif
-        else if (viscoelastic_model.eq.7) then !incremental
+        else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !incremental
          ! Xia, Lu, Tryggvason 2018
          if (elastic_viscosity.ge.zero) then
           ! do nothing
@@ -1077,10 +1077,10 @@ stop
            ! for elastic materials, Q does not need to be SPD.
           traceA=zero
 
-          if ((viscoelastic_model.eq.0).or. & ! FENE-CR
-              (viscoelastic_model.eq.1).or. & ! Oldroyd B
-              (viscoelastic_model.eq.5).or. & ! FENE-P
-              (viscoelastic_model.eq.6)) then ! linear PTT
+          if ((viscoelastic_model.eq.NN_FENE_CR).or. & ! FENE-CR
+              (viscoelastic_model.eq.NN_OLDROYD_B).or. & ! Oldroyd B
+              (viscoelastic_model.eq.NN_FENE_P).or. & ! FENE-P
+              (viscoelastic_model.eq.NN_LINEAR_PTT)) then ! linear PTT
 
            traceA=zero
            do ii=1,3
@@ -1097,8 +1097,8 @@ stop
             endif
            enddo ! ii=1..3
 
-           if ((viscoelastic_model.eq.0).or. & !FENE-CR
-               (viscoelastic_model.eq.5)) then ! FENE-P
+           if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
+               (viscoelastic_model.eq.NN_FENE_P)) then ! FENE-P
 
             ! declared in PROB.F90
             ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))=max(0,lambda/f(A))
@@ -1106,11 +1106,11 @@ stop
             call get_mod_elastic_time(elastic_time,traceA, &
              polymer_factor,modtime)
 
-           else if (viscoelastic_model.eq.1) then ! Oldroyd B
+           else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd B
 
             modtime=elastic_time
 
-           else if (viscoelastic_model.eq.6) then ! linear PTT
+           else if (viscoelastic_model.eq.NN_LINEAR_PTT) then ! linear PTT
 
             modtime=elastic_time
 
@@ -1120,8 +1120,8 @@ stop
            endif
 
            ! modtime=elastic_time >> 1 for 2,3,7
-          else if ((viscoelastic_model.eq.3).or. & !incremental (plastic)
-                   (viscoelastic_model.eq.7)) then !incremental (Neo-Hookean)
+          else if ((viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL).or. & !plastic
+                   (viscoelastic_model.eq.NN_NEO_HOOKEAN)) then !incremental
            modtime=elastic_time
           else
            print *,"viscoelastic_model invalid: ",viscoelastic_model
@@ -1131,23 +1131,23 @@ stop
           if (modtime.ge.zero) then
            ! do nothing
           else
-           print *,"modtime invalid"
+           print *,"modtime invalid: ",modtime
            stop
           endif
          
            ! etaS=etaL-etaP=viscconst-elastic_viscosity 
           if (modtime+dt.gt.zero) then
-           if ((viscoelastic_model.eq.0).or. &!FENE-CR(lambda_tilde=f(A)/lambda)
-               (viscoelastic_model.eq.1).or. &!Oldroyd-B(modtime=elastic_time)
-               (viscoelastic_model.eq.5).or. &!FENE-P (lambda_tilde=f(A)/lambda
-               (viscoelastic_model.eq.6)) then!linearPTT(modtime=elastic_time)
+           if ((viscoelastic_model.eq.NN_FENE_CR).or. &!lambda_tilde=f(A)/lambda
+               (viscoelastic_model.eq.NN_OLDROYD_B).or. &!modtime=elastic_time
+               (viscoelastic_model.eq.NN_FENE_P).or. &!lambda_tilde=f(A)/lambda
+               (viscoelastic_model.eq.NN_LINEAR_PTT)) then!modtime=elastic_time
              ! etaS=etaL-etaP=viscconst-elastic_viscosity 
             viscoelastic_coeff= &
              (visc(D_DECL(i,j,k),im_parm)-etaS)/(modtime+dt)
-           else if (viscoelastic_model.eq.3) then !incremental
+           else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then
             ! Maire et al
             viscoelastic_coeff=elastic_viscosity
-           else if (viscoelastic_model.eq.7) then !incremental
+           else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !incremental
             ! Xia, Lu, Tryggvason
             viscoelastic_coeff=elastic_viscosity
            else
@@ -1164,7 +1164,7 @@ stop
           if (viscoelastic_coeff.ge.zero) then
            ! do nothing
           else
-           print *,"viscoelastic_coef invalid"
+           print *,"viscoelastic_coeff invalid: ",viscoelastic_coeff
            stop
           endif
 
@@ -1794,15 +1794,14 @@ stop
         else if ((T11.le.zero).or. &
                  (T22.le.zero).or. &
                  (T33.le.zero)) then
-         if ((fort_viscoelastic_model(im+1).eq.0).or. &!FENE-CR
-             (fort_viscoelastic_model(im+1).eq.1).or. &!Oldroyd-B 
-             (fort_viscoelastic_model(im+1).eq.5).or. &!FENE-P 
-             (fort_viscoelastic_model(im+1).eq.7).or. &!incremental,neohookean
-             (fort_viscoelastic_model(im+1).eq.6)) then!linear PTT
+         if ((fort_viscoelastic_model(im+1).eq.NN_FENE_CR).or. &!FENE-CR
+             (fort_viscoelastic_model(im+1).eq.NN_OLDROYD_B).or. &!Oldroyd-B 
+             (fort_viscoelastic_model(im+1).eq.NN_FENE_P).or. &!FENE-P 
+             (fort_viscoelastic_model(im+1).eq.NN_NEO_HOOKEAN).or. &
+             (fort_viscoelastic_model(im+1).eq.NN_LINEAR_PTT)) then!linear PTT
           print *,"T11, T22, T33 must be positive"
           stop
-         else if ((fort_viscoelastic_model(im+1).eq.3).or. & !incremental,plst
-                  (fort_viscoelastic_model(im+1).eq.4)) then !pres vel coupling
+         else if (fort_viscoelastic_model(im+1).eq.NN_MAIRE_ABGRALL_ETAL) then
           ! check nothing
          else
           print *,"fort_viscoelastic_model(im+1) invalid"

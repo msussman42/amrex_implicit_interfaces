@@ -7742,22 +7742,22 @@ stop
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
 
-       if (viscoelastic_model.eq.0) then ! FENE-CR
+       if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
         ! coeff=(visc-etaS)/(modtime+dt)
         ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
-       else if (viscoelastic_model.eq.1) then ! Oldroyd-B
+       else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
         ! coeff=(visc-etaS)/(modtime+dt)
         ! modtime=elastic_time
-       else if (viscoelastic_model.eq.5) then ! FENE-P
+       else if (viscoelastic_model.eq.NN_FENE_P) then ! FENE-P
         ! coeff=(visc-etaS)/(modtime+dt)
         ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
-       else if (viscoelastic_model.eq.6) then ! linear PTT
+       else if (viscoelastic_model.eq.NN_LINEAR_PTT) then ! linear PTT
         ! coeff=(visc-etaS)/(modtime+dt)
         ! modtime=elastic_time
-       else if (viscoelastic_model.eq.3) then ! incremental model
+       else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then 
         ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
         ! coeff=elastic_viscosity
-       else if (viscoelastic_model.eq.7) then ! incremental model
+       else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental model
         ! Xia, Lu, Tryggvason 2018
         ! coeff=elastic_viscosity*|Q+I|^{-5/6}
        else
@@ -7768,19 +7768,19 @@ stop
        trace_A=zero
        do ii=1,3
         trace_A=trace_A+Q(ii,ii)+one
-        if ((viscoelastic_model.eq.0).or. & !FENE-CR
-            (viscoelastic_model.eq.1).or. & !OLDROYD-B
-            (viscoelastic_model.eq.5).or. & !FENE-P
-            (viscoelastic_model.eq.6)) then !linear PTT
+        if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
+            (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
+            (viscoelastic_model.eq.NN_FENE_P).or. & !FENE-P
+            (viscoelastic_model.eq.NN_LINEAR_PTT)) then !linear PTT
          if (Q(ii,ii)+one.gt.zero) then
           ! do nothing
          else
           print *,"A=Q+I should be positive definite"
           stop
          endif
-        else if (viscoelastic_model.eq.3) then ! incremental model, plastic
+        else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! plastic
          ! do nothing
-        else if (viscoelastic_model.eq.7) then ! incremental model, Neo-Hookian 
+        else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! Neo-Hookian 
          if (Q(ii,ii)+one.gt.zero) then
           ! do nothing
          else
@@ -7795,7 +7795,7 @@ stop
 
        determinant_factor=one
 
-       if (viscoelastic_model.eq.5) then !FENE-P          
+       if (viscoelastic_model.eq.NN_FENE_P) then !FENE-P          
         if (trace_A.gt.zero) then
          if (polymer_factor.gt.zero) then !1/L
              ! (f(A)A-I)/lambda  f(A)=1/(1-trac(A)/L^2)
@@ -7817,13 +7817,13 @@ stop
          print *,"trace_A should be positive for FENE-P"
          stop
         endif
-       else if (viscoelastic_model.eq.0) then !FENE-CR
+       else if (viscoelastic_model.eq.NN_FENE_CR) then !FENE-CR
         ! do nothing 
-       else if (viscoelastic_model.eq.1) then !OLDROYD-B
+       else if (viscoelastic_model.eq.NN_OLDROYD_B) then !OLDROYD-B
         ! do nothing 
-       else if (viscoelastic_model.eq.3) then ! incremental model,plastic
+       else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! plastic
         ! do nothing
-       else if (viscoelastic_model.eq.7) then ! incremental model,Neo-Hookean
+       else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !Neo-Hookean
         do ii=1,3
         do jj=1,3
          Q_plus_I(ii,jj)=Q(ii,jj)
@@ -7851,7 +7851,7 @@ stop
          stop
         endif
         
-       else if (viscoelastic_model.eq.6) then !linearPTT
+       else if (viscoelastic_model.eq.NN_LINEAR_PTT) then !linearPTT
         ! do nothing
        else
         print *,"viscoelastic_model invalid: ",viscoelastic_model
@@ -8539,7 +8539,8 @@ stop
       real(amrex_real), pointer :: tnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: point_tnew(ENUM_NUM_TENSOR_TYPE)
 
-      real(amrex_real), INTENT(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real), INTENT(in), target :: &
+        told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), pointer :: told_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: point_told(ENUM_NUM_TENSOR_TYPE)
 
@@ -8581,22 +8582,22 @@ stop
        stop
       endif
 
-      if (viscoelastic_model.eq.0) then ! FENE-CR
+      if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
        ! coeff=(visc-etaS)/(modtime+dt)
        ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
-      else if (viscoelastic_model.eq.1) then ! Oldroyd-B
+      else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
        ! coeff=(visc-etaS)/(modtime+dt)
        ! modtime=elastic_time
-      else if (viscoelastic_model.eq.5) then ! FENE-P
+      else if (viscoelastic_model.eq.NN_FENE_P) then ! FENE-P
        ! coeff=(visc-etaS)/(modtime+dt)
        ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
-      else if (viscoelastic_model.eq.6) then ! linear PTT
+      else if (viscoelastic_model.eq.NN_LINEAR_PTT) then ! linear PTT
        ! coeff=(visc-etaS)/(modtime+dt)
        ! modtime=elastic_time
-      else if (viscoelastic_model.eq.3) then ! incremental model
+      else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental
        ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
        ! coeff=elastic_viscosity
-      else if (viscoelastic_model.eq.7) then ! incremental model
+      else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental model
        ! Xia, Lu, Tryggvason 2018
        ! coeff=elastic_viscosity
       else

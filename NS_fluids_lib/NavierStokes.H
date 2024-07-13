@@ -2004,7 +2004,7 @@ protected:
 
     static Vector<Real> elastic_time; // viscoelastic parameter
 
-     // 0 => viscoelastic FENE-CR material  
+     // 0 => viscoelastic FENE-CR material  (NN_FENE_CR)
      //    force= (div mu_p(f(A)/lambda) Q)   Q=A-I  mu_p="elastic_viscosity"
      //                                       (no shear thinning case)
      //    relaxation term=(f(A)/lambda)Q     f(A)=1/(1-trac(A)/L^2)
@@ -2016,10 +2016,10 @@ protected:
      //           Q^advect+dt (2D) + dt gradu Q + dt Q gradu^T+O(dt^2)
      //       (v) lambda'=lambda * (1-tr(A)/L^2)
      //       (vi) Q^n+1=lambda' Q^n+1/(lambda'+dt)
-     // 1 => Oldroyd-B
+     // 1 => Oldroyd-B (NN_OLDROYD_B)
      //       Oldroyd-B=lim_{L\rightarrow\infty} FENE_CR
      //       (i) lambda'=lambda
-     // 3=> incremental elastic model 
+     // 3=> incremental elastic model (NN_MAIRE_ABGRALL_ETAL) 
      //   DS/DT=2 (D0-Dp) - (SW-WS)
      //     mu=Lame coefficient (bulk modulus?)
      //     D0=D-tr(D)Id/DIM 
@@ -2031,8 +2031,7 @@ protected:
      //       (iii) X=I+dt W
      //       (iv) S^{n+1}=X A^advect X^T-I=
      //         S^advect+dt (2D)+dt W S+dt S W^T + O(dt^2)
-     // 4=> elastic model handled in the coupler (Lagrangian).
-     // 5=> FENE-P 
+     // 5=> FENE-P  (NN_FENE_P)
      //       force=div mu_p (1/lambda)(f(A)A - I)
      //       relaxation term=(1/lambda)(f(A)A-I)
      //       (v) lambda'=lambda * (1-tr(A)/L^2)
@@ -2043,14 +2042,22 @@ protected:
      //       (viv) Q^{n+1}=(lambda'/(lambda'+dt))*(Q^star-dt*ofs/lambda')
      //       (x) for incompressible flow, source term is equivalent to 
      //           FENE-CR source term which is tau=Q/lambda'.
-     // 6=> Linear PTT
+     // 6=> Linear PTT (NN_LINEAR_PTT)
      //       (v) lambda'=lambda
      //       (vi) Q_t = -(1/lambda)(Q+Tr(Q)Q/L^2)
      //       (vii) lambda''=lambda*(1/(1+Tr(Q)/L^2))
      //       (vii) Q^{n+1}-Q^star=-(dt/lambda'')Q^{n+1}
      //       (viii) Q^{n+1}=lambda'' Q^n+1/(lambda''+dt)
      // 7=> Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
+     //      (NN_NEO_HOOKEAN)
      //     Xia, Lu, Tryggvason 2018
+     //     updating Q:
+     //       (i) CISL advection Q^advect=Q^n(x-V dt)=Q^n @ x_{d}
+     //       (ii) A^advect=Q^advect+I
+     //       (iii) X=I+dt gradu^T
+     //       (iv)  Q^{n+1}=X A^adv X^T -I=
+     //           Q^advect+dt (2D) + dt gradu Q + dt Q gradu^T+O(dt^2)
+     //       (v) lambda'=lambda * (1-tr(A)/L^2)
     static Vector<int> viscoelastic_model; // def=0
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;
@@ -2080,10 +2087,16 @@ protected:
     static Vector<Real> static_damping_coefficient; // dv/dt = -mu v
 
     // (1/L)   eps=0.01
+    // NN_FENE_CR
     // viscoelastic_model=0  FENE CR   trac(A)<L^2 lambda(A)>eps/L^2
+    // NN_OLDROYD_B
     // viscoelastic_model=1  Oldroyd B trac(A)<inf lambda(A)>eps/L^2
+    // NN_FENE_P
     // viscoelastic_model=5  FENE P    trac(A)<L^2 lambda(A)>eps/L^2
+    // NN_LINEAR_PTT
     // viscoelastic_model=6  linearPTT trac(A)<inf lambda(A)>eps/L^2
+    // NN_NEO_HOOKEAN
+    // viscoelastic_model=7  Neo-Hookean trac(A)<L^2 lambda(A)>eps/L^2
     static Vector<Real> polymer_factor; // (1/L)
 
     static int adv_dir;
