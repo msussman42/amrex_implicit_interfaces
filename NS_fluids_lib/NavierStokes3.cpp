@@ -1679,6 +1679,10 @@ void NavierStokes::pressure_gradient_code_segment(
  BLProfiler bprof(local_caller_string);
 #endif
 
+FIX ME delete segregated gravity flag from inputs files and code, make sure 
+ice face cut variable is activated for is_rigid_CL materials if second sweep
+(first sweep is_rigid_CL materials are not masked off)
+check FSI_outer_sweeps
  if (segregated_gravity_flag==1) {
   multiphase_project(SOLVETYPE_PRESGRAVITY);
  } else if (segregated_gravity_flag==0) {
@@ -2842,6 +2846,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
       // 3. TENSOR ADVECTION
       //  (non-Newtonian materials)
       // second half of D^{upside down triangle}/Dt
+      // extrapolates Q at the end.
       tensor_advection_updateALL();
 
       if (is_zalesak()==1) {
@@ -2896,212 +2901,238 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
        int alloc_flag=1;
        alloc_DTDtALL(alloc_flag);
 
+       for (FSI_outer_sweeps=0;FSI_outer_sweeps<num_FSI_outer_sweeps; 
+            FSI_outer_sweeps++) {
 
-       project_to_rigid_velocityALL();
+        //project_to_rigid_velocityALL is declared in NavierStokes2.cpp
+        //fort_project_to_rigid_velocity is declared in LEVELSET_3D.F90
+        //overwrite the MAC and CELL velocity.
+        project_to_rigid_velocityALL();
 
-       // 4. Backwards Euler building block: VISCOSITY, thermal diffusion,
-       //    species diffusion
-       //   a. hoop stress
-       //   b. boussinesq approximation:
-       //      rho Du/Dt=-grad p + rho g zhat +
-       //                 rho Omega^2 r rhat
-       //      rho0 Du/Dt=-grad p + rho g zhat +
-       //                 rho Omega^2 r rhat
-       //      rho/rho0=(1+beta(T-T0))
-       //      Du/Dt=-grad p/rho0+g zhat + g zhat beta (T-T0)+
-       //            Omega^{2} r rhat +
-       //            Omega^{2} r rhat beta (T-T0)
-       //      (beta<0 here)
-       //      
-       //   c. coriolis effect
-       //   d. viscous force
-       //   e. viscoelastic force
-       //   f. FSI force
-       //   g. momentum force
-       //   h. Marangoni force 
-       //
-       veldiffuseALL();  
+        if (num_FSI_outer_sweeps==1) {
+         //do nothing
+        } else if (num_FSI_outer_sweeps==2) {
+          //allocates and saves FSI_CELL|MAC_VELOCITY_MF if sweeps==0,
+          //copies fluid velocity and deletes if sweeps==1.
+         manage_FSI_dataALL(); 
+        } else
+         amrex::Error("num_FSI_outer_sweeps invalid");
 
-       debug_memory();
+        // 4. Backwards Euler building block: VISCOSITY, thermal diffusion,
+        //    species diffusion
+        //   a. hoop stress
+        //   b. boussinesq approximation:
+        //      rho Du/Dt=-grad p + rho g zhat +
+        //                 rho Omega^2 r rhat
+        //      rho0 Du/Dt=-grad p + rho g zhat +
+        //                 rho Omega^2 r rhat
+        //      rho/rho0=(1+beta(T-T0))
+        //      Du/Dt=-grad p/rho0+g zhat + g zhat beta (T-T0)+
+        //            Omega^{2} r rhat +
+        //            Omega^{2} r rhat beta (T-T0)
+        //      (beta<0 here)
+        //      
+        //   c. coriolis effect
+        //   d. viscous force
+        //   e. viscoelastic force
+        //   f. FSI force
+        //   g. momentum force
+        //   h. Marangoni force 
+        //
+        veldiffuseALL();  
+
+        debug_memory();
   
-       double end_velocity_diff = ParallelDescriptor::second();
-       if ((verbose>0)||(show_timings==1)) {
-        if (ParallelDescriptor::IOProcessor()) {
-         std::cout << "veldiffuse time " << 
-          end_velocity_diff-start_velocity_diff << '\n';
+        double end_velocity_diff = ParallelDescriptor::second();
+        if ((verbose>0)||(show_timings==1)) {
+         if (ParallelDescriptor::IOProcessor()) {
+          std::cout << "veldiffuse time " << 
+           end_velocity_diff-start_velocity_diff << '\n';
+         }
         }
-       }
 
-       //The viscous solver might have slightly perturbed the 
-       //velocity in the rigid solid regions, so the velocity
-       //in these regions must be re-prescribed.
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        int combine_flag=2; // combine if vfrac<VOFTOL
-        int hflag=0; // inhomogeneous option
-        int combine_idx=-1;  // update state variables
-        int update_flux=0;
-        int interface_cond_avail=0;
+        //The viscous solver might have slightly perturbed the 
+        //velocity in the rigid solid regions, so the velocity
+        //in these regions must be re-prescribed.
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
+         int combine_flag=2; // combine if vfrac<VOFTOL
+         int hflag=0; // inhomogeneous option
+         int combine_idx=-1;  // update state variables
+         int update_flux=0;
+         int interface_cond_avail=0;
 
 	  // declared in: Diffusion.cpp
-        ns_level.combine_state_variable(
-         SOLVETYPE_VISC,  //cell centered velocity
-         combine_idx,
-         combine_flag, //=2 (combine if vfrac<VOFTOL)
-         hflag,
-         update_flux, 
-         interface_cond_avail);
+         ns_level.combine_state_variable(
+          SOLVETYPE_VISC,  //cell centered velocity
+          combine_idx,
+          combine_flag, //=2 (combine if vfrac<VOFTOL)
+          hflag,
+          update_flux, 
+          interface_cond_avail);
 
-        update_flux=1;
-        ns_level.combine_state_variable(
-         SOLVETYPE_PRES, //mac velocity
-         combine_idx,
-         combine_flag,
-         hflag,
-         update_flux,
-         interface_cond_avail);
-       } // ilev = finest_level ... level
+         update_flux=1;
+         ns_level.combine_state_variable(
+          SOLVETYPE_PRES, //mac velocity
+          combine_idx,
+          combine_flag,
+          hflag,
+          update_flux,
+          interface_cond_avail);
+        } // ilev = finest_level ... level
 
 
-       if (1==0) {
-          // S_new is level 0 data
-        MultiFab& S_new=get_new_data(State_Type,slab_step+1);
+        if (1==0) {
+           // S_new is level 0 data
+         MultiFab& S_new=get_new_data(State_Type,slab_step+1);
 	 // data file name "VISCSOLVE<stuff>.plt"
 	 // after the viscous solve, but before the pressure projection.
 	 // cell data in the fluid, next to the solid, should "make sense"
 	 // xvel,yvel,zvel,pressure,(density, temperature) x num_materials,
 	 // (VFRAC,centroid) x num_materials, error indicator
-        writeSanityCheckData(
-         "VISCSOLVE",
-         "in: NavierStokes::do_the_advance, State_Type after veldiffuseALL", 
-         local_caller_string,
-         State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
-         S_new.nComp(),
-         -1, // data_mf==-1
-         State_Type, //state_type_mf==State_Type
-         -1,  // data_dir==-1
-         parent->levelSteps(0)); 
-       }
+         writeSanityCheckData(
+          "VISCSOLVE",
+          "in: NavierStokes::do_the_advance, State_Type after veldiffuseALL", 
+          local_caller_string,
+          State_Type+GET_NEW_DATA_OFFSET, //tower_mf_id
+          S_new.nComp(),
+          -1, // data_mf==-1
+          State_Type, //state_type_mf==State_Type
+          -1,  // data_dir==-1
+          parent->levelSteps(0)); 
+        }
 
-       if (1==0) {
-        int basestep_debug=nStep();
-        parent->writeDEBUG_PlotFile(
+        if (1==0) {
+         int basestep_debug=nStep();
+         parent->writeDEBUG_PlotFile(
 	  basestep_debug,
 	  SDC_outer_sweeps,
 	  slab_step,
 	  divu_outer_sweeps);
-       }
+        }
 
-        //NavierStokes::Mass_Energy_Sources_SinksALL declared in 
-	//this file: NavierStokes3.cpp
-       Mass_Energy_Sources_SinksALL();
+        if (FSI_outer_sweeps==0) {
 
-        // DTDt_MF=T_new - T_advect_MF
-       alloc_flag=2;
-       alloc_DTDtALL(alloc_flag);
+         //NavierStokes::Mass_Energy_Sources_SinksALL declared in 
+	 //this file: NavierStokes3.cpp
+         Mass_Energy_Sources_SinksALL();
 
-       int is_any_lowmach=0;
+         // DTDt_MF=T_new - T_advect_MF
+         alloc_flag=2;
+         alloc_DTDtALL(alloc_flag);
 
-       for (int im_low=0;im_low<num_materials;im_low++) {
-        if (ns_is_rigid(im_low)==1) {
-         // do nothing
-        } else if (ns_is_rigid(im_low)==0) {
-         if ((material_type[im_low]==0)&&
-             (material_type_lowmach[im_low]>0)&&
-             (material_type_lowmach[im_low]<999)) {
-          is_any_lowmach=1;
-         } else if ((material_type[im_low]==0)&&
-                    (material_type_lowmach[im_low]==0)) {
-          // do nothing
-         } else if ((material_type[im_low]>0)&&
-                    (material_type[im_low]<999)&&
-                    (material_type_lowmach[im_low]==
-		     material_type[im_low])) {
+         int is_any_lowmach=0;
+
+         for (int im_low=0;im_low<num_materials;im_low++) {
+          if (ns_is_rigid(im_low)==1) {
+           // do nothing
+          } else if (ns_is_rigid(im_low)==0) {
+           if ((material_type[im_low]==0)&&
+               (material_type_lowmach[im_low]>0)&&
+               (material_type_lowmach[im_low]<999)) {
+            is_any_lowmach=1;
+           } else if ((material_type[im_low]==0)&&
+                      (material_type_lowmach[im_low]==0)) {
+            // do nothing
+           } else if ((material_type[im_low]>0)&&
+                      (material_type[im_low]<999)&&
+                      (material_type_lowmach[im_low]==
+    		       material_type[im_low])) {
+            // do nothing
+           } else
+            amrex::Error("material_type or material_type_lowmach invalid");
+          } else
+           amrex::Error("ns_is_rigid invalid");
+         }  //im_low=0..num_materials-1
+
+         if (is_any_lowmach==1) {
+
+          Vector<blobclass> local_blobdata;
+  
+          //local_mdot_data, local_mdot_comp_data,
+          //local_mdot_data_redistribute, 
+          //local_mdot_comp_data_redistribute,
+          //are not used; they are placeholders.
+          Vector< Vector<Real> > local_mdot_data;
+          Vector< Vector<Real> > local_mdot_comp_data;
+          Vector< Vector<Real> > local_mdot_data_redistribute;
+          Vector< Vector<Real> > local_mdot_comp_data_redistribute;
+          Vector<int> local_type_flag;
+
+          int local_color_count=0;
+          int coarsest_level=0;
+          int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
+          int local_tessellate=3;
+          int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
+
+          // for each blob, find sum_{F>=1/2} pressure * vol and
+ 	  // sum_{F>=1/2} vol.
+          // calling from: NavierStokes::do_the_advance()
+          ColorSumALL(
+           operation_flag, // =OP_GATHER_MDOT
+           local_tessellate, //=3
+           coarsest_level,
+           local_color_count,
+           TYPE_MF,COLOR_MF,
+           idx_mdot,
+           idx_mdot,
+           local_type_flag,
+           local_blobdata,
+           local_mdot_data,
+           local_mdot_comp_data,
+           local_mdot_data_redistribute,
+           local_mdot_comp_data_redistribute 
+          );
+          ParallelDescriptor::Barrier();
+
+          if (color_count!=blobdata.size())
+           amrex::Error("color_count!=blobdata.size()");
+
+          // increment MDOF_MF
+          LowMachDIVUALL(
+           coarsest_level,
+           local_color_count,
+           TYPE_MF,
+           COLOR_MF,
+           local_type_flag, 
+           local_blobdata);
+
+          delete_array(TYPE_MF);
+          delete_array(COLOR_MF);
+
+         } else if (is_any_lowmach==0) {
           // do nothing
          } else
-          amrex::Error("material_type or material_type_lowmach invalid");
+          amrex::Error("is_any_lowmach invalid");
+
+         // delete T_advect_MF, DTDt_MF
+         alloc_flag=0;
+         alloc_DTDtALL(alloc_flag);
+
+        } else if (FSI_outer_sweeps==1) {
+         //do nothing
         } else
-         amrex::Error("ns_is_rigid invalid");
-       }  //im_low=0..num_materials-1
+         amrex::Error("FSI_outer_sweeps invalid");
 
-       if (is_any_lowmach==1) {
+        double intermediate_time = ParallelDescriptor::second();
 
-        Vector<blobclass> local_blobdata;
- 
-         //local_mdot_data, local_mdot_comp_data,
-         //local_mdot_data_redistribute, 
-         //local_mdot_comp_data_redistribute,
-         //are not used; they are placeholders.
-        Vector< Vector<Real> > local_mdot_data;
-        Vector< Vector<Real> > local_mdot_comp_data;
-        Vector< Vector<Real> > local_mdot_data_redistribute;
-        Vector< Vector<Real> > local_mdot_comp_data_redistribute;
-        Vector<int> local_type_flag;
+         // 5. PRESSURE PROJECTION 
+         //    a. gravity
+         //    b. surface tension
+         //    c. pressure gradient
+        if (disable_pressure_solve==0) {
 
-        int local_color_count=0;
-        int coarsest_level=0;
-        int idx_mdot=-1; //idx_mdot==-1 => do not collect auxiliary data.
-        int local_tessellate=3;
-        int operation_flag=OP_GATHER_MDOT; // allocate TYPE_MF,COLOR_MF
+         pressure_gradient_code_segment(local_caller_string);
 
-        // for each blob, find sum_{F>=1/2} pressure * vol and
-	// sum_{F>=1/2} vol.
-        // calling from: NavierStokes::do_the_advance()
-        ColorSumALL(
-         operation_flag, // =OP_GATHER_MDOT
-         local_tessellate, //=3
-         coarsest_level,
-         local_color_count,
-         TYPE_MF,COLOR_MF,
-         idx_mdot,
-         idx_mdot,
-         local_type_flag,
-         local_blobdata,
-         local_mdot_data,
-         local_mdot_comp_data,
-         local_mdot_data_redistribute,
-         local_mdot_comp_data_redistribute 
-        );
-        ParallelDescriptor::Barrier();
+        } else if (disable_pressure_solve==1) {
+         // do nothing
+        } else
+         amrex::Error("disable_pressure_solve invalid");
 
-        if (color_count!=blobdata.size())
-         amrex::Error("color_count!=blobdata.size()");
+       } //FSI_outer_sweeps=0 ... num_FSI_outer_sweeps-1
 
-         // increment MDOF_MF
-        LowMachDIVUALL(
-         coarsest_level,
-         local_color_count,
-         TYPE_MF,
-         COLOR_MF,
-         local_type_flag, 
-         local_blobdata);
+       FSI_outer_sweeps=0;
 
-        delete_array(TYPE_MF);
-        delete_array(COLOR_MF);
-
-       } else if (is_any_lowmach==0) {
-        // do nothing
-       } else
-        amrex::Error("is_any_lowmach invalid");
-
-        // delete T_advect_MF, DTDt_MF
-       alloc_flag=0;
-       alloc_DTDtALL(alloc_flag);
-
-       double intermediate_time = ParallelDescriptor::second();
-
-        // 5. PRESSURE PROJECTION 
-        //    a. gravity
-        //    b. surface tension
-        //    c. pressure gradient
-       if (disable_pressure_solve==0) {
-
-        pressure_gradient_code_segment(local_caller_string);
-
-       } else if (disable_pressure_solve==1) {
-        // do nothing
-       } else
-        amrex::Error("disable_pressure_solve invalid");
 
         // in: do_the_advance
         // 1. prescribe solid temperature, velocity, and geometry where
@@ -11668,15 +11699,39 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        } else
         amrex::Error("dimension bust");
 
+       int is_rigid_CL_flag=0;
+       int imp1=im+1;
+
+       if (fort_is_ice_base(&FSI_flag[im],&imp1)==1) {
+        is_rigid_CL_flag=1;
+       } else if (fort_is_FSI_rigid_base(&FSI_flag[im],&imp1)==1) {
+        is_rigid_CL_flag=1;
+       } else if (fort_is_FSI_elastic_base(&FSI_flag[im],&imp1)==1) {
+        is_rigid_CL_flag=1;
+       } else if (fort_FSI_flag_valid_base(&FSI_flag[im],&imp1)==1) {
+        //do nothing
+       } else
+        amrex::Error("FSI_flag[im] invalid");
+
+       if ((FSI_outer_sweeps==0)||
+           ((FSI_outer_sweeps==1)&&
+            (is_rigid_CL_flag==0))) {
+
          // find divergence of the X,Y,Z variables.
 	 // NavierStokes::CELL_GRID_ELASTIC_FORCE is declared in
 	 //    NavierStokes2.cpp
 	 // CELL_GRID_ELASTIC_FORCE -> fort_elastic_force ->
 	 // tensor_Heaviside
-       for (int ilev=finest_level;ilev>=level;ilev--) {
-        NavierStokes& ns_level=getLevel(ilev);
-        ns_level.CELL_GRID_ELASTIC_FORCE(im);
-       }
+        for (int ilev=finest_level;ilev>=level;ilev--) {
+         NavierStokes& ns_level=getLevel(ilev);
+         ns_level.CELL_GRID_ELASTIC_FORCE(im);
+        }
+
+       } else if ((FSI_outer_sweeps==1)&&
+                  (is_rigid_CL_flag==1)) {
+        //do nothing
+       } else
+        amrex::Error("FSI_outer_sweeps or is_rigid_CL_flag invalid");
 
        delete_array(VISCOTEN_MF);
 
@@ -11888,29 +11943,31 @@ void NavierStokes::veldiffuseALL() {
     amrex::Error("speciesviscconst invalid");
  } // im=0..num_materials*num_species_var-1 
 
- for (int ilev=finest_level;ilev>=level;ilev--) {
-  NavierStokes& ns_level=getLevel(ilev);
+ if (FSI_outer_sweeps==0) {
 
-  int hflag=0;
+  for (int ilev=finest_level;ilev>=level;ilev--) {
+   NavierStokes& ns_level=getLevel(ilev);
 
-  ns_level.solid_temperature();  // if solid temperature is prescribed
+   int hflag=0;
 
-  ns_level.level_species_reaction(local_caller_string);
+   ns_level.solid_temperature();  // if solid temperature is prescribed
 
-  // MEHDI VAHAB HEAT SOURCE
-  // NavierStokes.cpp: void NavierStokes::make_heat_source()
-  // make_heat_source calls GODUNOV_3D.F90::fort_heatsource which
-  // calls PROB.F90::get_local_heat_source
-  // The same temperature increment is added to all of the materials.
-  ns_level.make_heat_source();  // updates S_new
+   ns_level.level_species_reaction(local_caller_string);
 
-  ns_level.getStateDen_localMF(save_state_MF,1,cur_time_slab);
+   // MEHDI VAHAB HEAT SOURCE
+   // NavierStokes.cpp: void NavierStokes::make_heat_source()
+   // make_heat_source calls GODUNOV_3D.F90::fort_heatsource which
+   // calls PROB.F90::get_local_heat_source
+   // The same temperature increment is added to all of the materials.
+   ns_level.make_heat_source();  // updates S_new
 
-  if (ns_level.localMF[save_state_MF]->nComp()==
-      num_materials*num_state_material) {
-   //do nothing
-  } else
-   amrex::Error("ns_level.localMF[save_state_MF].nComp() invalid");
+   ns_level.getStateDen_localMF(save_state_MF,1,cur_time_slab);
+
+   if (ns_level.localMF[save_state_MF]->nComp()==
+       num_materials*num_state_material) {
+    //do nothing
+   } else
+    amrex::Error("ns_level.localMF[save_state_MF].nComp() invalid");
 
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
@@ -11923,34 +11980,40 @@ void NavierStokes::veldiffuseALL() {
  
    //FVM->GFM if phase change
    //FVM->mass weighted average if no phase change. 
-  combine_flag=0; 
-
-  ns_level.combine_state_variable(
-   SOLVETYPE_HEAT,
-   combine_idx,
-   combine_flag,
-   hflag,
-   update_flux,
-   interface_cond_avail); 
-
-  for (int ns=0;ns<num_species_var;ns++) {
-
-   //FVM->GFM if phase change
-   //FVM->mass weighted average if no phase change. 
    combine_flag=0; 
 
    ns_level.combine_state_variable(
-    SOLVETYPE_SPEC+ns,
+    SOLVETYPE_HEAT,
     combine_idx,
     combine_flag,
     hflag,
     update_flux,
     interface_cond_avail); 
-  }  // ns=0;ns<num_species_var;ns++
 
- }  // ilev=finest_level ... level
+   for (int ns=0;ns<num_species_var;ns++) {
 
- avgDownALL(State_Type,STATECOMP_STATES,nden,1);
+    //FVM->GFM if phase change
+    //FVM->mass weighted average if no phase change. 
+    combine_flag=0; 
+
+    ns_level.combine_state_variable(
+     SOLVETYPE_SPEC+ns,
+     combine_idx,
+     combine_flag,
+     hflag,
+     update_flux,
+     interface_cond_avail); 
+   }  // ns=0;ns<num_species_var;ns++
+
+  }  // ilev=finest_level ... level
+
+  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
+
+ } else if (FSI_outer_sweeps==1) {
+  //do nothing
+ } else
+  amrex::Error("FSI_outer_sweeps invalid");
+
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12163,248 +12226,256 @@ void NavierStokes::veldiffuseALL() {
   // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
  INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
 
-// ---------------- begin thermal diffusion ---------------------
+
+ if (FSI_outer_sweeps==0) {
+
+  // ---------------- begin thermal diffusion ---------------------
 
    // HOFAB=-div k grad T 
    // Tnew=Tnew-(1/(rho cv))(int (HOFAB) - dt (LOFAB))
    // call to fort_semdeltaforce with dcomp=slab_step*NSTATE_SDC+SEMDIFFUSE_T
- if ((SDC_outer_sweeps>0)&&
-     (SDC_outer_sweeps<ns_time_order)&&
-     (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
+  if ((SDC_outer_sweeps>0)&&
+      (SDC_outer_sweeps<ns_time_order)&&
+      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
 
-  if (ns_time_order>=2) {
+   if (ns_time_order>=2) {
 
+    if (enable_spectral==1) {
+
+     for (int ilev=finest_level;ilev>=level;ilev--) {
+      NavierStokes& ns_level=getLevel(ilev);
+      // calls: fort_semdeltaforce in GODUNOV_3D.F90
+      ns_level.make_SEM_delta_force(SOLVETYPE_HEAT); 
+     }
+
+    } else if (enable_spectral==0) {
+
+     // do nothing
+     
+    } else
+     amrex::Error("enable_spectral invalid");
+
+    avgDownALL(State_Type,STATECOMP_STATES,nden,1);
+   } else
+    amrex::Error("ns_time_order invalid");
+
+  } else if (SDC_outer_sweeps==0) {
+   // do nothing
+  } else if ((divu_outer_sweeps>=0)&&
+             (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
+   // do nothing
+  } else 
+   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
+
+    // why average down the density here?
+  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
+
+  multiphase_project(SOLVETYPE_HEAT); 
+
+  // --------------- end thermal diffusion -------------------
+
+
+
+  // ---------------begin save stable thermal diffusion and viscous forces
+
+  if ((ns_time_order>=2)&&
+      (ns_time_order<=32)&&
+      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
+
+    //num_materials_combine=1
+   get_mm_scomp_solver(
+    1,
+    SOLVETYPE_HEAT,
+    state_index,
+    scomp,
+    ncomp,
+    ncomp_check);
+
+   if (ncomp_check!=nsolve_thermal)
+    amrex::Error("ncomp_check invalid");
+
+     //localMF[PRESPC2_MF] will hold the latest temperature from the implicit
+     //backwards Euler system.
+     //ngrow=1
+   getState_localMF_listALL(
+     PRESPC2_MF,  
+     1,
+     state_index,
+     scomp,
+     ncomp);
+   
+   int update_spectralF=0;
+   int update_stableF=1;
+    //currently in: NavierStokes::veldiffuseALL
+    //LOfab=-div(k grad T)
+    //NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
+    //NavierStokes::update_SEM_forces declared in MacProj.cpp
+    //fort_updatesemforce declared in GODUNOV_3D.F90
    if (enable_spectral==1) {
-
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     // calls: fort_semdeltaforce in GODUNOV_3D.F90
-     ns_level.make_SEM_delta_force(SOLVETYPE_HEAT); 
-    }
-
+    update_SEM_forcesALL(SOLVETYPE_HEAT,PRESPC2_MF,
+     update_spectralF,update_stableF);
    } else if (enable_spectral==0) {
-
     // do nothing
-    
    } else
     amrex::Error("enable_spectral invalid");
 
+   delete_array(PRESPC2_MF);
+
+
+    //currently in: NavierStokes::veldiffuseALL
+    //LOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
+    //NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
+    //NavierStokes::update_SEM_forces declared in MacProj.cpp
+    //fort_updatesemforce declared in GODUNOV_3D.F90
+   if (enable_spectral==1) {
+    update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,
+     update_spectralF,update_stableF);
+   } else if (enable_spectral==0) {
+    // do nothing
+   } else
+    amrex::Error("enable_spectral invalid");
+
+  } else if ((ns_time_order==1)||
+             ((divu_outer_sweeps>=0)&&
+              (divu_outer_sweeps+1<num_divu_outer_sweeps))) {
+   // do nothing
+  } else
+   amrex::Error("ns_time_order or divu_outer_sweeps invalid");
+
+  // ---------------end save stable thermal diffusion and viscous forces
+
+  for (int species_comp=0;species_comp<num_species_var;species_comp++) {
+
+    // (rho Y)_{t} + div(rho u Y) =div (rho D) grad Y
+    // [rho_t + div(rho u)]Y+rho DY/DT=div(rho D) grad Y
+    // DY/DT=div (rho D) grad Y/rho
+
+    // why average down the density here?
    avgDownALL(State_Type,STATECOMP_STATES,nden,1);
-  } else
-   amrex::Error("ns_time_order invalid");
 
- } else if (SDC_outer_sweeps==0) {
-  // do nothing
- } else if ((divu_outer_sweeps>=0)&&
-            (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
-  // do nothing
- } else 
-  amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
+   multiphase_project(SOLVETYPE_SPEC+species_comp); 
 
-   // why average down the density here?
- avgDownALL(State_Type,STATECOMP_STATES,nden,1);
+  } // species_comp=0..num_species_var-1
 
- multiphase_project(SOLVETYPE_HEAT); 
-
-// --------------- end thermal diffusion -------------------
-
-
-
-// ---------------begin save stable thermal diffusion and viscous forces
-
- if ((ns_time_order>=2)&&
-     (ns_time_order<=32)&&
-     (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
-
-   //num_materials_combine=1
-  get_mm_scomp_solver(
-   1,
-   SOLVETYPE_HEAT,
-   state_index,
-   scomp,
-   ncomp,
-   ncomp_check);
-
-  if (ncomp_check!=nsolve_thermal)
-   amrex::Error("ncomp_check invalid");
-
-    //localMF[PRESPC2_MF] will hold the latest temperature from the implicit
-    //backwards Euler system.
-    //ngrow=1
-  getState_localMF_listALL(
-    PRESPC2_MF,  
-    1,
-    state_index,
-    scomp,
-    ncomp);
-  
-  int update_spectralF=0;
-  int update_stableF=1;
-   //currently in: NavierStokes::veldiffuseALL
-   //LOfab=-div(k grad T)
-   //NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
-   //NavierStokes::update_SEM_forces declared in MacProj.cpp
-   //fort_updatesemforce declared in GODUNOV_3D.F90
-  if (enable_spectral==1) {
-   update_SEM_forcesALL(SOLVETYPE_HEAT,PRESPC2_MF,
-    update_spectralF,update_stableF);
-  } else if (enable_spectral==0) {
-   // do nothing
-  } else
-   amrex::Error("enable_spectral invalid");
-
-  delete_array(PRESPC2_MF);
-
-
-   //currently in: NavierStokes::veldiffuseALL
-   //LOfab=-div(2 mu D)-HOOP_FORCE_MARK_MF
-   //NavierStokes::update_SEM_forcesALL declared in MacProj.cpp
-   //NavierStokes::update_SEM_forces declared in MacProj.cpp
-   //fort_updatesemforce declared in GODUNOV_3D.F90
-  if (enable_spectral==1) {
-   update_SEM_forcesALL(SOLVETYPE_VISC,VISCHEAT_SOURCE_MF,
-    update_spectralF,update_stableF);
-  } else if (enable_spectral==0) {
-   // do nothing
-  } else
-   amrex::Error("enable_spectral invalid");
-
- } else if ((ns_time_order==1)||
-            ((divu_outer_sweeps>=0)&&
-             (divu_outer_sweeps+1<num_divu_outer_sweeps))) {
-  // do nothing
- } else
-  amrex::Error("ns_time_order or divu_outer_sweeps invalid");
-
-// ---------------end save stable thermal diffusion and viscous forces
-
- for (int species_comp=0;species_comp<num_species_var;species_comp++) {
-
-   // (rho Y)_{t} + div(rho u Y) =div (rho D) grad Y
-   // [rho_t + div(rho u)]Y+rho DY/DT=div(rho D) grad Y
-   // DY/DT=div (rho D) grad Y/rho
-
-   // why average down the density here?
   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
-  multiphase_project(SOLVETYPE_SPEC+species_comp); 
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
 
- } // species_comp=0..num_species_var-1
+   int hflag=0;
+   ns_level.solid_temperature();
 
- avgDownALL(State_Type,STATECOMP_STATES,nden,1);
+   int combine_flag=1;  // GFM -> FVM
+   int combine_idx=-1;  // update state variables
+   int update_flux=0;
+   int interface_cond_avail=1;
 
- for (int ilev=level;ilev<=finest_level;ilev++) {
-  NavierStokes& ns_level=getLevel(ilev);
-
-  int hflag=0;
-  ns_level.solid_temperature();
-
-  int combine_flag=1;  // GFM -> FVM
-  int combine_idx=-1;  // update state variables
-  int update_flux=0;
-  int interface_cond_avail=1;
-
-   //GFM->FVM if phase change
-   //GFM copied to FVM if no phase change.
-  combine_flag=1; 
-
-  ns_level.combine_state_variable(
-   SOLVETYPE_HEAT,
-   combine_idx,
-   combine_flag,
-   hflag,
-   update_flux,
-   interface_cond_avail); 
-
-  for (int ns=0;ns<num_species_var;ns++) {
-
-   //GFM->FVM if phase change
-   //GFM copied to FVM if no phase change.
-   combine_flag=1;
+    //GFM->FVM if phase change
+    //GFM copied to FVM if no phase change.
+   combine_flag=1; 
 
    ns_level.combine_state_variable(
-    SOLVETYPE_SPEC+ns,
+    SOLVETYPE_HEAT,
     combine_idx,
     combine_flag,
     hflag,
     update_flux,
     interface_cond_avail); 
-  }
- } // ilev=level ... finest_level
+
+   for (int ns=0;ns<num_species_var;ns++) {
+
+    //GFM->FVM if phase change
+    //GFM copied to FVM if no phase change.
+    combine_flag=1;
+
+    ns_level.combine_state_variable(
+     SOLVETYPE_SPEC+ns,
+     combine_idx,
+     combine_flag,
+     hflag,
+     update_flux,
+     interface_cond_avail); 
+   }
+  } // ilev=level ... finest_level
 
 
-  // viscous heating is grad u : tau
- if (include_viscous_heating==1) {
+   // viscous heating is grad u : tau
+  if (include_viscous_heating==1) {
 
-  int do_alloc=0;
+   int do_alloc=0;
 
-  int simple_AMR_BC_flag_viscosity=1;
-  init_gradu_tensorALL(
-    VISCHEAT_SOURCE_MF,
-    do_alloc,
-    CELLTENSOR_MF,
-    FACETENSOR_MF,
-    simple_AMR_BC_flag_viscosity);
+   int simple_AMR_BC_flag_viscosity=1;
+   init_gradu_tensorALL(
+     VISCHEAT_SOURCE_MF,
+     do_alloc,
+     CELLTENSOR_MF,
+     FACETENSOR_MF,
+     simple_AMR_BC_flag_viscosity);
 
-  if ((num_materials_viscoelastic>=1)&&
-      (num_materials_viscoelastic<=num_materials)) {
+   if ((num_materials_viscoelastic>=1)&&
+       (num_materials_viscoelastic<=num_materials)) {
 
-   for (int im=0;im<num_materials;im++) {
-    if (ns_is_rigid(im)==0) {
-     if ((elastic_time[im]>0.0)&&
-         (elastic_viscosity[im]>0.0)) {
-      // initializes VISCOTEN_MF
-      // we are currently in "veldiffuseALL"
-      make_viscoelastic_tensorALL(im);
-      for (int ilev=finest_level;ilev>=level;ilev--) {
-       NavierStokes& ns_level=getLevel(ilev);
-        // VISCHEAT_MF is initialized to zero in ::prepare_viscous_solver().
-        // VISCHEAT_MF is incremented with heating terms due to 
-        // viscoelastic heating in this loop.
-        // uses VISCOTEN_MF
-       ns_level.make_viscoelastic_heating(im,VISCHEAT_MF);
-      }  
-      delete_array(VISCOTEN_MF);
-     } else if ((elastic_time[im]==0.0)||
-                (elastic_viscosity[im]==0.0)) {
+    for (int im=0;im<num_materials;im++) {
+     if (ns_is_rigid(im)==0) {
+      if ((elastic_time[im]>0.0)&&
+          (elastic_viscosity[im]>0.0)) {
+       // initializes VISCOTEN_MF
+       // we are currently in "veldiffuseALL"
+       make_viscoelastic_tensorALL(im);
+       for (int ilev=finest_level;ilev>=level;ilev--) {
+        NavierStokes& ns_level=getLevel(ilev);
+         // VISCHEAT_MF is initialized to zero in ::prepare_viscous_solver().
+         // VISCHEAT_MF is incremented with heating terms due to 
+         // viscoelastic heating in this loop.
+         // uses VISCOTEN_MF
+        ns_level.make_viscoelastic_heating(im,VISCHEAT_MF);
+       }  
+       delete_array(VISCOTEN_MF);
+      } else if ((elastic_time[im]==0.0)||
+                 (elastic_viscosity[im]==0.0)) {
+       // do nothing
+      } else
+       amrex::Error("elastic_time or elastic_viscosity invalid");
+
+     } else if (ns_is_rigid(im)==1) {
       // do nothing
      } else
-      amrex::Error("elastic_time or elastic_viscosity invalid");
+      amrex::Error("ns_is_rigid invalid");
+    } // im=0..num_materials-1
 
-    } else if (ns_is_rigid(im)==1) {
-     // do nothing
-    } else
-     amrex::Error("ns_is_rigid invalid");
-   } // im=0..num_materials-1
+   } else if (num_materials_viscoelastic==0) {
+    // do nothing
+   } else {
+    amrex::Error("num_materials_viscoelastic invalid");
+   }
 
-  } else if (num_materials_viscoelastic==0) {
-   // do nothing
-  } else {
-   amrex::Error("num_materials_viscoelastic invalid");
-  }
+    // viscosity heating
+    // VISCHEAT_SOURCE is the velocity from the viscosity solver.
+    // 1. localMF[CONSERVE_FLUXES_MF]=mu(grad U+grad U^T)
+    // 2. localMF[VISCHEAT_MF]+=(dt/(rho cv)) mu(grad U+grad U^T) ddot grad U 
+   diffusion_heatingALL(VISCHEAT_SOURCE_MF,VISCHEAT_MF);
 
-   // viscosity heating
-   // VISCHEAT_SOURCE is the velocity from the viscosity solver.
-   // 1. localMF[CONSERVE_FLUXES_MF]=mu(grad U+grad U^T)
-   // 2. localMF[VISCHEAT_MF]+=(dt/(rho cv)) mu(grad U+grad U^T) ddot grad U 
-  diffusion_heatingALL(VISCHEAT_SOURCE_MF,VISCHEAT_MF);
+    // add viscous (and viscoelastic) heating to T_m  m=1...M
+   APPLY_VISCOUS_HEATINGALL(VISCHEAT_MF); // increment
 
-   // add viscous (and viscoelastic) heating to T_m  m=1...M
-  APPLY_VISCOUS_HEATINGALL(VISCHEAT_MF); // increment
+      // overwrite T_m if phi_solid>0   m=1...M
+   for (int ilev=finest_level;ilev>=level;ilev--) {
+    NavierStokes& ns_level=getLevel(ilev);
+    ns_level.solid_temperature();
+   }
 
-     // overwrite T_m if phi_solid>0   m=1...M
-  for (int ilev=finest_level;ilev>=level;ilev--) {
-   NavierStokes& ns_level=getLevel(ilev);
-   ns_level.solid_temperature();
-  }
+   delete_array(CELLTENSOR_MF);
+   delete_array(FACETENSOR_MF);
 
-  delete_array(CELLTENSOR_MF);
-  delete_array(FACETENSOR_MF);
+  } else if (include_viscous_heating==0) {
+    // do nothing
+  } else
+   amrex::Error("include_viscous_heating invalid");
 
- } else if (include_viscous_heating==0) {
-   // do nothing
+ } else if (FSI_outer_sweeps==1) {
+  //do nothing
  } else
-  amrex::Error("include_viscous_heating invalid");
+  amrex::Error("FSI_outer_sweeps invalid");
 
  for (int ilev=finest_level;ilev>=level;ilev--) {
   NavierStokes& ns_level=getLevel(ilev);
@@ -12414,12 +12485,11 @@ void NavierStokes::veldiffuseALL() {
  avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,1);
  avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
-  // delete scratch variables (including CONSERVE_FLUXES_MF)
+ // delete scratch variables (including CONSERVE_FLUXES_MF)
  for (int ilev=level;ilev<=finest_level;ilev++) {
   NavierStokes& ns_level=getLevel(ilev);
   ns_level.exit_viscous_solver();
  }  // ilev
-
  delete_array(BOUSSINESQ_TEMP_MF);
 
  // AmrLevel.H, protected:
@@ -12438,38 +12508,45 @@ void NavierStokes::veldiffuseALL() {
   desc_lst.reset_bcrecs(State_Type,STATECOMP_VEL+dir,simulation_bc);
  } //dir=0 .. sdim-1
 
- for (int ilev=level;ilev<=finest_level;ilev++) {
-  NavierStokes& ns_level=getLevel(ilev);
-  MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
-  MultiFab* save_S_new=ns_level.localMF[save_state_MF];
-  for (int im=0;im<num_materials;im++) {
+ if (FSI_outer_sweeps==0) {
 
-   if (heatviscconst[im]>0.0) {
-    //do nothing
-   } else if (heatviscconst[im]==0.0) {
-    MultiFab::Copy(S_new,*save_S_new,
-        num_state_material*im+ENUM_TEMPERATUREVAR,
-        STATECOMP_STATES+num_state_material*im+ENUM_TEMPERATUREVAR,1,1);
-   } else
-    amrex::Error("heatviscconst invalid");
+  for (int ilev=level;ilev<=finest_level;ilev++) {
+   NavierStokes& ns_level=getLevel(ilev);
+   MultiFab& S_new=ns_level.get_new_data(State_Type,slab_step+1);
+   MultiFab* save_S_new=ns_level.localMF[save_state_MF];
+   for (int im=0;im<num_materials;im++) {
 
-   for (int ns=0;ns<num_species_var;ns++) {
-
-    if (speciesviscconst[ns*num_materials+im]>0.0) {
+    if (heatviscconst[im]>0.0) {
      //do nothing
-    } else if (speciesviscconst[ns*num_materials+im]==0.0) {
+    } else if (heatviscconst[im]==0.0) {
      MultiFab::Copy(S_new,*save_S_new,
-        num_state_material*im+num_state_base+ns,
-        STATECOMP_STATES+num_state_material*im+num_state_base+ns,1,1);
+         num_state_material*im+ENUM_TEMPERATUREVAR,
+         STATECOMP_STATES+num_state_material*im+ENUM_TEMPERATUREVAR,1,1);
     } else
      amrex::Error("heatviscconst invalid");
 
-   } //ns=0 ... num_species_var-1
+    for (int ns=0;ns<num_species_var;ns++) {
 
-  } // im=0..num_materials-1
- } //ilev=level ... finest_level
+     if (speciesviscconst[ns*num_materials+im]>0.0) {
+      //do nothing
+     } else if (speciesviscconst[ns*num_materials+im]==0.0) {
+      MultiFab::Copy(S_new,*save_S_new,
+         num_state_material*im+num_state_base+ns,
+         STATECOMP_STATES+num_state_material*im+num_state_base+ns,1,1);
+     } else
+      amrex::Error("heatviscconst invalid");
 
- delete_array(save_state_MF);
+    } //ns=0 ... num_species_var-1
+
+   } // im=0..num_materials-1
+  } //ilev=level ... finest_level
+
+  delete_array(save_state_MF);
+ } else if (FSI_outer_sweeps==1) {
+  //do nothing
+ } else
+  amrex::Error("FSI_outer_sweeps invalid");
+
 
 #if (NS_profile_solver==1)
  bprof.stop();

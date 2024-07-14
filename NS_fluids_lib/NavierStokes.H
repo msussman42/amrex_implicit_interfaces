@@ -1459,6 +1459,8 @@ protected:
     static int SDC_outer_sweeps;
     static int divu_outer_sweeps;
     static int very_last_sweep;
+    static int FSI_outer_sweeps;
+    static int num_FSI_outer_sweeps;
     static Real upper_slab_time;
     static Real lower_slab_time;
     static Real delta_slab_time;

@@ -16157,7 +16157,7 @@ stop
        if (fort_denconst(im).gt.zero) then
         ! do nothing
        else
-        print *,"denconst invalid"
+        print *,"denconst invalid: ",im,fort_denconst(im)
         stop
        endif
 
@@ -16186,7 +16186,7 @@ stop
                 (fort_material_type(im).le.MAX_NUM_EOS)) then
         ! do nothing
        else
-        print *,"fort_material_type invalid"
+        print *,"fort_material_type invalid: ",im,fort_material_type(im)
         stop
        endif
 

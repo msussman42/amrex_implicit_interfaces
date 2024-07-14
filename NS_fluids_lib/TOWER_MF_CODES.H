@@ -270,7 +270,10 @@
 
 #define save_state_MF (REFINE_DENSITY_RECON_MF+1)
 
-#define NEXT_MF (save_state_MF+1)
+#define FSI_CELL_VELOCITY_MF (save_state_MF+1)
+#define FSI_MAC_VELOCITY_MF (FSI_CELL_VELOCITY_MF+1)
+
+#define NEXT_MF (FSI_MAC_VELOCITY_MF+3)
 
 #define MAX_NUM_LOCAL_MF (NEXT_MF+3)
 

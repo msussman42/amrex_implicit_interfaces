@@ -79,6 +79,10 @@ int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;
 int  NavierStokes::num_divu_outer_sweeps=1;
 
+//FSI_CELL_VELOCITY_MF,FSI_MAC_VELOCITY_MF used when FSI_outer_sweeps==1
+int  NavierStokes::FSI_outer_sweeps=0;
+int  NavierStokes::num_FSI_outer_sweeps=1;
+
 int NavierStokes::interface_touch_flag=1;
 
 Real NavierStokes::prev_time_slab=0.0;
@@ -3360,7 +3364,22 @@ NavierStokes::read_params ()
 
     int nparts=0;
     int CTML_FSI_numsolids_test=0;
+    num_FSI_outer_sweeps=1;
+
     for (int im=0;im<num_materials;im++) {
+
+     int imp1=im+1;
+
+     if (fort_is_ice_base(&FSI_flag[im],&imp1)==1) {
+      num_FSI_outer_sweeps=2;
+     } else if (fort_is_FSI_rigid_base(&FSI_flag[im],&imp1)==1) {
+      num_FSI_outer_sweeps=2;
+     } else if (fort_is_FSI_elastic_base(&FSI_flag[im],&imp1)==1) {
+      num_FSI_outer_sweeps=2;
+     } else if (fort_FSI_flag_valid_base(&FSI_flag[im],&imp1)==1) {
+      //do nothing
+     } else
+      amrex::Error("FSI_flag[im] invalid");
 
      if (FSI_flag[im]==FSI_SHOELE_CTML) { 
       CTML_FSI_numsolids_test++;
@@ -3376,6 +3395,7 @@ NavierStokes::read_params ()
      } else
       amrex::Error("ns_is_lag_part invalid");
     }  // im=0..num_materials-1
+
     im_solid_map.resize(nparts);
 
     if (CTML_FSI_numsolids!=CTML_FSI_numsolids_test)
