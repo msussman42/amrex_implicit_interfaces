@@ -93,7 +93,8 @@ stop
       real(amrex_real), pointer :: maskcov_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(in), target :: alpha(DIMV(alpha),nsolve)
       real(amrex_real), pointer :: alpha_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: offdiagcheck(DIMV(offdiagcheck),nsolve)
+      real(amrex_real), INTENT(in), target :: &
+        offdiagcheck(DIMV(offdiagcheck),nsolve)
       real(amrex_real), pointer :: offdiagcheck_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(out), target :: maskdivres(DIMV(maskdivres))
       real(amrex_real), pointer :: maskdivres_ptr(D_DECL(:,:,:))
@@ -560,7 +561,7 @@ stop
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
           ! do nothing
          else if (project_option.eq.SOLVETYPE_VISC) then
-         
+FIX ME FSI_outer_sweeps is_rigid_CL materials         
           do im=1,num_materials
            if (is_ice_or_FSI_rigid_material(im).eq.1) then
             LSTEST=lsnew(D_DECL(i,j,k),im)

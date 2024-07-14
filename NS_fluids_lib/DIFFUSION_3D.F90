@@ -163,6 +163,7 @@ stop
        contains
 
        subroutine fort_hoopimplicit( &
+         FSI_outer_sweeps, &
          override_density, &
          constant_density_all_time, & ! 1..num_materials
          force,DIMS(force), &
@@ -294,19 +295,19 @@ stop
        real(amrex_real) vt_over_r,ut_over_r
        real(amrex_real) param1,param2,hoop_force_coef
        integer ut_comp
-       integer partid,im_solid,partid_crit
+       integer partid,im_solid,partid_crit,im_FSI
        real(amrex_real) LStest,LScrit
 
        if (dt.gt.zero) then
         ! do nothing
        else
-        print *,"expecting dt>0"
+        print *,"expecting dt>0: ",dt
         stop
        endif
        if (cur_time_slab.ge.zero) then
         ! do nothing
        else
-        print *,"expecting cur_time_slab>=0.0d0"
+        print *,"expecting cur_time_slab>=0.0d0: ",cur_time_slab
         stop
        endif
 
@@ -427,12 +428,14 @@ stop
 
         partid=0
         im_solid=0
+        im_FSI=0
         partid_crit=0
 
         do im=1,num_materials
+         LStest=lsnew(D_DECL(i,j,k),im)
+
          if (is_lag_part(im).eq.1) then
           if (is_rigid(im).eq.1) then
-           LStest=lsnew(D_DECL(i,j,k),im)
            if (LStest.ge.zero) then
             if (im_solid.eq.0) then
              im_solid=im
@@ -463,6 +466,31 @@ stop
           endif
           partid=partid+1
          else if (is_lag_part(im).eq.0) then
+
+          if (FSI_outer_sweeps==0) then
+           !do nothing
+          else if (FSI_outer_sweeps==1) then
+           if (LStest.ge.zero) then
+            if (is_rigid_CL(im).eq.1) then
+             im_FSI=im
+            else if (is_rigid_CL(im).eq.0) then
+             !do nothing
+            else
+             print *,"is_rigid_CL(im) invalid"
+             stop
+            endif 
+           else if (LStest.lt.zero) then
+            ! do nothing
+           else
+            print *,"LStest invalid: ",LStest
+            stop
+           endif
+
+          else
+           print *,"FSI_outer_sweeps invalid"
+           stop
+          endif
+
           if (is_rigid(im).eq.0) then
            ! do nothing
           else
@@ -486,14 +514,14 @@ stop
         if (inverseden.gt.zero) then
          ! do nothing
         else
-         print *,"inverseden invalid"
+         print *,"inverseden invalid: ",inverseden
          stop
         endif
 
         if (mu_cell.ge.zero) then
          ! do nothing
         else
-         print *,"mu_cell invalid"
+         print *,"mu_cell invalid: ",mu_cell
          stop
         endif
  
@@ -519,6 +547,8 @@ stop
             solzfab(D_DECL(i,j,k+1),partid_crit*SDIM+dir))
          endif
 
+        else if ((im_FSI.ge.1).and.(im_FSI.le.num_materials)) then
+         !do nothing
         else if (im_solid.eq.0) then ! in the fluid
 
          RCEN=xsten(0,1)
@@ -861,7 +891,7 @@ stop
          endif
 
         else
-         print *,"im_solid invalid 2"
+         print *,"im_solid invalid 2: ",im_solid
          stop
         endif
 

@@ -8720,10 +8720,12 @@ stop
             LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real), INTENT(out), target :: &
+        tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), pointer :: tnew_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in), target :: told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real), INTENT(in), target :: &
+        told(DIMV(told),ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), pointer :: told_ptr(D_DECL(:,:,:),:)
 
       integer :: i,j,k
@@ -8856,7 +8858,7 @@ stop
            Q_extrap(dir_local)=Q_extrap(dir_local)/wtsum
           enddo
          else
-          print *,"wtsum invalid"
+          print *,"wtsum invalid: ",wtsum
           stop
          endif
 
