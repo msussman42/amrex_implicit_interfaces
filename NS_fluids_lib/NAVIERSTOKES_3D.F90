@@ -11595,6 +11595,8 @@ END SUBROUTINE SIMP
        ! correct_velocity called from: NavierStokes::mac_update
        ! called from: NavierStokes::correct_velocity (NavierStokes3.cpp)
       subroutine fort_fluidsolidcor( &
+       num_FSI_outer_sweeps, &
+       FSI_outer_sweeps, &
        level, &
        finest_level, &
        velcomp, &
@@ -11628,6 +11630,8 @@ END SUBROUTINE SIMP
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: velcomp
       integer :: veldir
@@ -11891,6 +11895,8 @@ END SUBROUTINE SIMP
 
           ! declared in: PROB.F90
          call eval_face_coeff( &
+           num_FSI_outer_sweeps, &
+           FSI_outer_sweeps, &
            xsten,nhalf, &
            level,finest_level, &
            AL, & !intent(in)

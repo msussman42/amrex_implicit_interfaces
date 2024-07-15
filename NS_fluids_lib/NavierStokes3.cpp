@@ -3121,6 +3121,19 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
         } else
          amrex::Error("disable_pressure_solve invalid");
 
+
+        double end_pressure_solve = ParallelDescriptor::second();
+
+        if ((verbose>0)||(show_timings==1)) {
+         if (ParallelDescriptor::IOProcessor()) {
+          std::cout << "FSI_outer_sweeps=" << FSI_outer_sweeps << '\n';
+          std::cout << "pressure solve time " << end_pressure_solve-
+            intermediate_time << '\n';
+          std::cout << "number of cells in the pressure solve " <<
+             real_number_of_cells << '\n';
+         }
+        }
+
        } //FSI_outer_sweeps=0 ... num_FSI_outer_sweeps-1
 
        FSI_outer_sweeps=0;
@@ -3161,17 +3174,6 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          interface_cond_avail);
        } // for (int ilev=finest_level;ilev>=level;ilev--) 
        debug_memory();
-
-       double end_pressure_solve = ParallelDescriptor::second();
-
-       if ((verbose>0)||(show_timings==1)) {
-        if (ParallelDescriptor::IOProcessor()) {
-         std::cout << "pressure solve time " << end_pressure_solve-
-            intermediate_time << '\n';
-         std::cout << "number of cells in the pressure solve " <<
-            real_number_of_cells << '\n';
-        }
-       }
 
       } else
        amrex::Error("is_zalesak invalid");
@@ -7577,6 +7579,8 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
    // fort_buildfacewt is declared in LEVELSET_3D.F90
    fort_buildfacewt(
+    &num_FSI_outer_sweeps,
+    &FSI_outer_sweeps,
     &facewt_iter,
     &level,
     &finest_level,
@@ -8152,6 +8156,8 @@ void NavierStokes::correct_velocity(
 
     // declared in: NAVIERSTOKES_3D.F90
    fort_fluidsolidcor(
+    &num_FSI_outer_sweeps,
+    &FSI_outer_sweeps,
     &level,
     &finest_level,
     &velcomp,
@@ -11234,7 +11240,10 @@ void NavierStokes::multiphase_project(int project_option) {
 
     if (num_FSI_outer_sweeps==1) {
      // update temperature if compressible material
-     update_energy=SUB_OP_THERMAL_DIVUP_OK; 
+     if (FSI_outer_sweeps==0) {
+      update_energy=SUB_OP_THERMAL_DIVUP_OK; 
+     } else
+      amrex::Error("FSI_outer_sweeps invalid");
     } else if (num_FSI_outer_sweeps==2) {
      if (FSI_outer_sweeps==0) {
       update_energy=SUB_OP_THERMAL_DIVUP_NULL;
@@ -11910,7 +11919,7 @@ void NavierStokes::veldiffuseALL() {
 
   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
- } else if (FSI_outer_sweeps==1) {
+ } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12039,49 +12048,56 @@ void NavierStokes::veldiffuseALL() {
 // -----------veldiffuseALL: viscosity -----------------------------
 
 
- if ((SDC_outer_sweeps>0)&&
-     (SDC_outer_sweeps<ns_time_order)&&
-     (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
+ if (num_FSI_outer_sweeps-1==FSI_outer_sweeps) {
 
-  if (ns_time_order>=2) {
+  if ((SDC_outer_sweeps>0)&&
+      (SDC_outer_sweeps<ns_time_order)&&
+      (divu_outer_sweeps+1==num_divu_outer_sweeps)) {
 
-   // fort_updatesemforce declared in GODUNOV_3D.F90:
-   // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF 
-   // (update_state=OP_HOOP_BOUSSINESQ_EXPLICIT at end of 
-   //  NavierStokes::do_the_advance)
-   // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
-   if (enable_spectral==1) {
-    for (int ilev=finest_level;ilev>=level;ilev--) {
-     NavierStokes& ns_level=getLevel(ilev);
-     // calls: fort_semdeltaforce in GODUNOV_3D.F90
-     // does not look at: enable_spectral
-     ns_level.make_SEM_delta_force(SOLVETYPE_VISC);
-    }
-   } else if (enable_spectral==0) {
-    // do nothing
+   if (ns_time_order>=2) {
+
+    // fort_updatesemforce declared in GODUNOV_3D.F90:
+    // HOFAB=-div(2 mu D) - HOOP_FORCE_MARK_MF 
+    // (update_state=OP_HOOP_BOUSSINESQ_EXPLICIT at end of 
+    //  NavierStokes::do_the_advance)
+    // unew=unew-(1/rho)(int (HOFAB) - dt (LOFAB))
+    if (enable_spectral==1) {
+     for (int ilev=finest_level;ilev>=level;ilev--) {
+      NavierStokes& ns_level=getLevel(ilev);
+      // calls: fort_semdeltaforce in GODUNOV_3D.F90
+      // does not look at: enable_spectral
+      ns_level.make_SEM_delta_force(SOLVETYPE_VISC);
+     }
+    } else if (enable_spectral==0) {
+     // do nothing
+    } else
+     amrex::Error("enable_spectral invalid");
+
+    // spectral_override==1 => order derived from "enable_spectral"
+    avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
+       SPECTRAL_ORDER_AVGDOWN);
+
+    // umacnew+=INTERP_TO_MAC(unew-register_mark)
+    // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
+    INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
+
+    // register_mark=unew
+    SET_STOKES_MARK(REGISTER_MARK_MF);
    } else
-    amrex::Error("enable_spectral invalid");
+    amrex::Error("ns_time_order invalid");
 
-   // spectral_override==1 => order derived from "enable_spectral"
-   avgDownALL(State_Type,STATECOMP_VEL,STATE_NCOMP_VEL+STATE_NCOMP_PRES,
-      SPECTRAL_ORDER_AVGDOWN);
+  } else if (SDC_outer_sweeps==0) {
+   // do nothing
+  } else if ((divu_outer_sweeps>=0)&&
+             (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
+   // do nothing
+  } else 
+   amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
-   // umacnew+=INTERP_TO_MAC(unew-register_mark)
-   // (OP_UMAC_PLUS_VISC_CELL_TO_MAC)
-   INCREMENT_REGISTERS_ALL(REGISTER_MARK_MF); 
-
-   // register_mark=unew
-   SET_STOKES_MARK(REGISTER_MARK_MF);
-  } else
-   amrex::Error("ns_time_order invalid");
-
- } else if (SDC_outer_sweeps==0) {
-  // do nothing
- } else if ((divu_outer_sweeps>=0)&&
-            (divu_outer_sweeps+1<num_divu_outer_sweeps)) {
-  // do nothing
- } else 
-  amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
+ } else if (FSI_outer_sweeps<num_FSI_outer_sweeps-1) {
+  //do nothing
+ } else
+  amrex::Error("FSI_outer_sweeps invalid");
 
  SET_STOKES_MARK(REGISTER_MARK_MF); //register_mark=unew
 
@@ -12177,7 +12193,8 @@ void NavierStokes::veldiffuseALL() {
 
 
 
-  // ---------------begin save stable thermal diffusion and viscous forces
+  // ---------------begin save stable (i.e. low order)
+  //                thermal diffusion and viscous forces
 
   if ((ns_time_order>=2)&&
       (ns_time_order<=32)&&
@@ -12373,7 +12390,7 @@ void NavierStokes::veldiffuseALL() {
   } else
    amrex::Error("include_viscous_heating invalid");
 
- } else if (FSI_outer_sweeps==1) {
+ } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12443,7 +12460,7 @@ void NavierStokes::veldiffuseALL() {
   } //ilev=level ... finest_level
 
   delete_array(save_state_MF);
- } else if (FSI_outer_sweeps==1) {
+ } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12866,6 +12883,8 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
 //copies fluid velocity and deletes if sweeps==1.
 void NavierStokes::manage_FSI_data() {
 
+ int finest_level=parent->finestLevel();
+
  std::string local_caller_string="manage_FSI_data";
 
  if (num_FSI_outer_sweeps==2) {
@@ -12945,7 +12964,11 @@ void NavierStokes::manage_FSI_data() {
      FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
      FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
+     if (FSIvelMAC.nComp()!=1)
+      amrex::Error("FSIvelMAC.nComp() invalid");
      FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
+     if (FSIvelCELL.nComp()!=AMREX_SPACEDIM)
+      amrex::Error("FSIvelCELL.nComp() invalid");
 
      // mask=tag if not covered by level+1 or outside the domain.
      FArrayBox& maskcoeffab=(*localMF[MASKCOEF_MF])[mfi];

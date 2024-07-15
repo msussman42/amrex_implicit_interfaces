@@ -459,6 +459,8 @@ extern "C" {
 
 
     void fort_fluidsolidcor(
+      int* num_FSI_outer_sweeps,
+      int* FSI_outer_sweeps,
       int* level,
       int* finest_level,
       int* velcomp,

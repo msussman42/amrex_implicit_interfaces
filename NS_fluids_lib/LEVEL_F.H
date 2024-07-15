@@ -494,6 +494,8 @@ namespace amrex{
         int* level,int* finest_level);
 
       void fort_buildfacewt(
+        int* num_FSI_outer_sweeps,
+        int* FSI_outer_sweeps,
         int* facewt_iter,
         int* level,
         int* finest_level,

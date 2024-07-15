@@ -251,6 +251,7 @@ void NavierStokes::diffuse_hoop(int idx_vel,int idx_thermal,
 
     // declared in: DIFFUSION_3D.F90
   fort_hoopimplicit(
+   &num_FSI_outer_sweeps,
    &FSI_outer_sweeps,
    override_density.dataPtr(), 
    constant_density_all_time.dataPtr(),

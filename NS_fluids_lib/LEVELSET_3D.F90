@@ -16597,7 +16597,7 @@ stop
        bfact, &
        level,finest_level, &
        rz_flag, &
-       domlo,domhi)
+       domlo,domhi) &
       bind(c,name='fort_manage_elastic_velocity')
 
       use global_utility_module
@@ -16645,14 +16645,12 @@ stop
   
       integer i,j,k,ii,jj,kk
       integer im1,jm1,km1
-      integer iboundary
       integer im
       integer im_left,im_right
       integer dir2
       integer, parameter :: nhalf=3
       real(amrex_real) xstenMAC(-nhalf:nhalf,SDIM)
       real(amrex_real) xstenMAC_center(SDIM)
-      integer idx
       integer at_RZ_face
       real(amrex_real) LSleft(num_materials)
       real(amrex_real) LSright(num_materials)
@@ -16775,17 +16773,6 @@ stop
        jm1=j-jj
        km1=k-kk
 
-       if (dir.eq.0) then
-        idx=i
-       else if (dir.eq.1) then
-        idx=j
-       else if ((dir.eq.2).and.(SDIM.eq.3)) then
-        idx=k
-       else
-        print *,"dir invalid fort_manage_elastic_velocity, dir=",dir
-        stop
-       endif
-
        do im=1,num_materials
         LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
         LSright(im)=levelPC(D_DECL(i,j,k),im)
@@ -16843,17 +16830,20 @@ stop
                   (is_rigid_CL(im_right).eq.0)) then
           velMAC(D_DECL(i,j,k))=FSIvelMAC(D_DECL(i,j,k))
          else
-          print *,"is_rigid_CL bust"
+          print *,"is_rigid_CL bust: ",im_left,im_right, &
+           is_rigid_CL(im_left),is_rigid_CL(im_right)
           stop
          endif
 
         else
-         print *,"at_RZ_face invalid"
+         print *,"at_RZ_face invalid: ",at_RZ_face
          stop
         endif
 
        else
         print *,"LS_clamped invalid"
+        print *,"LS_clamped_plus: ",LS_clamped_plus
+        print *,"LS_clamped_minus: ",LS_clamped_minus
         stop
        endif
 
@@ -16880,7 +16870,7 @@ stop
        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
         !do nothing 
        else
-        print *,"levelrz invalid fort_manage_elastic_velocity "
+        print *,"levelrz invalid fort_manage_elastic_velocity: ",levelrz
         stop
        endif 
 
@@ -16930,6 +16920,8 @@ stop
       !   NavierStokes::diffusion_heatingALL 
       ! mask=1 at fine-fine boundaries
       subroutine fort_buildfacewt( &
+       num_FSI_outer_sweeps, &
+       FSI_outer_sweeps, &
        facewt_iter, &
        level, &
        finest_level, &
@@ -16965,6 +16957,8 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: facewt_iter
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
@@ -17248,6 +17242,8 @@ stop
              ! eval_face_coeff is declared in: PROB.F90
              ! e.g. 1/rho for div( (1/rho) gradp ) = div( ustar )
             call eval_face_coeff( &
+             num_FSI_outer_sweeps, &
+             FSI_outer_sweeps, &
              xsten,nhalf, &
              level,finest_level, &
              cc, &
