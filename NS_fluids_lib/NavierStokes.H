@@ -294,6 +294,8 @@ public:
     void alloc_DTDtALL(int alloc_flag);
     void alloc_DTDt(int alloc_flag);
 
+    void manage_FSI_data();
+
     void prepare_advect_vars(Real time);
     void delete_advect_vars();
 
