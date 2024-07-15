@@ -163,6 +163,7 @@ stop
        contains
 
        subroutine fort_hoopimplicit( &
+         num_FSI_outer_sweeps, &
          FSI_outer_sweeps, &
          override_density, &
          constant_density_all_time, & ! 1..num_materials
@@ -202,6 +203,8 @@ stop
 
        IMPLICIT NONE
 
+       integer, INTENT(in) :: num_FSI_outer_sweeps
+       integer, INTENT(in) :: FSI_outer_sweeps
        integer, INTENT(in) :: override_density(num_materials)
        integer, INTENT(in) :: constant_density_all_time(num_materials)
  
@@ -297,6 +300,21 @@ stop
        integer ut_comp
        integer partid,im_solid,partid_crit,im_FSI
        real(amrex_real) LStest,LScrit
+
+       if ((num_FSI_outer_sweeps.eq.1).or. &
+           (num_FSI_outer_sweeps.eq.2)) then
+        !do nothing
+       else
+        print *,"num_FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
+        stop
+       endif
+       if ((FSI_outer_sweeps.eq.0).or. &
+           (FSI_outer_sweeps.eq.num_FSI_outer_sweeps-1)) then
+        !do nothing
+       else
+        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+        stop
+       endif
 
        if (dt.gt.zero) then
         ! do nothing
@@ -467,7 +485,7 @@ stop
           partid=partid+1
          else if (is_lag_part(im).eq.0) then
 
-          if (FSI_outer_sweeps==0) then
+          if (FSI_outer_sweeps.eq.0) then
            !do nothing
           else if (FSI_outer_sweeps==1) then
            if (LStest.ge.zero) then
@@ -476,18 +494,18 @@ stop
             else if (is_rigid_CL(im).eq.0) then
              !do nothing
             else
-             print *,"is_rigid_CL(im) invalid"
+             print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
              stop
             endif 
            else if (LStest.lt.zero) then
             ! do nothing
            else
-            print *,"LStest invalid: ",LStest
+            print *,"LStest invalid: ",im,LStest
             stop
            endif
 
           else
-           print *,"FSI_outer_sweeps invalid"
+           print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
            stop
           endif
 
@@ -549,7 +567,7 @@ stop
 
         else if ((im_FSI.ge.1).and.(im_FSI.le.num_materials)) then
          !do nothing
-        else if (im_solid.eq.0) then ! in the fluid
+        else if ((im_solid.eq.0).and.(im_FSI.eq.0))  then ! in the fluid
 
          RCEN=xsten(0,1)
 
@@ -891,7 +909,7 @@ stop
          endif
 
         else
-         print *,"im_solid invalid 2: ",im_solid
+         print *,"im_solid or im_fsi invalid 2: ",im_FSI,im_solid
          stop
         endif
 

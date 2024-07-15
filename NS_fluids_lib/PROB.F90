@@ -396,7 +396,7 @@ stop
        icefacecut=zero
 
       else if ((im_FSI_rigid.ne.im_primary).and. &
-               (im_FSI_elastic.ne.im_primary) then
+               (im_FSI_elastic.ne.im_primary)) then
 
        if ((im_FSI_rigid.lt.0).or. &
            (im_FSI_rigid.gt.num_materials).or. &
@@ -11977,6 +11977,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   fort_buildfacewt (LEVELSET_3D.F90)
        !   fort_fluidsolidcor (NAVIERSTOKES_3D.F90)
       subroutine eval_face_coeff( &
+       num_FSI_outer_sweeps, &
+       FSI_outer_sweeps, &
        xsten,nhalf, &
        level,finest_level, &
        cc, &
@@ -11997,6 +11999,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       use global_utility_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: nhalf
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
@@ -12014,6 +12018,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer :: at_RZ_boundary
 
       if ((nhalf.ge.3).and. &
+          ((num_FSI_outer_sweeps.eq.1).or. &
+           (num_FSI_outer_sweeps.eq.2)).and. &
+          ((FSI_outer_sweeps.eq.0).or. &
+           (FSI_outer_sweeps.eq.num_FSI_outer_sweeps-1)).and. &
           (cc.ge.zero).and. &
           (cc.le.one).and. &
           (cc_ice.ge.zero).and. &
@@ -12106,6 +12114,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
          else
           print *,"num_FSI_outer_sweeps or FSU_outer_sweeps invalid"
+          print *,"num_FSI_outer_sweeps: ",num_FSI_outer_sweeps
+          print *,"FSI_outer_sweeps: ",FSI_outer_sweeps
           stop
          endif
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
@@ -12320,6 +12330,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else 
        print *,"coefficients bust"
+       print *,"num_FSI_outer_sweeps=",num_FSI_outer_sweeps
+       print *,"FSI_outer_sweeps=",FSI_outer_sweeps
        print *,"cc=",cc
        print *,"cc_ice=",cc_ice
        print *,"cc_ice_mask=",cc_ice_mask
