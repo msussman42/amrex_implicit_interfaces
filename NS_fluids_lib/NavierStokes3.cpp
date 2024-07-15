@@ -13046,8 +13046,8 @@ void NavierStokes::manage_FSI_data() {
 
      FArrayBox& lsfab=(*localMF[LEVELPC_MF])[mfi];
 
-     FArrayBox& FSI_velMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
-     FArrayBox& FSI_velCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
+     FArrayBox& FSIvelMAC=(*localMF[FSI_MAC_VELOCITY_MF+dir])[mfi];
+     FArrayBox& FSIvelCELL=(*localMF[FSI_CELL_VELOCITY_MF])[mfi];
 
      // mask=tag if not covered by level+1 or outside the domain.
      FArrayBox& maskcoeffab=(*localMF[MASKCOEF_MF])[mfi];
@@ -13076,10 +13076,10 @@ void NavierStokes::manage_FSI_data() {
       ARLIM(velMAC.loVect()),ARLIM(velMAC.hiVect()), 
       velCELL.dataPtr(STATECOMP_VEL+dir),
       ARLIM(velCELL.loVect()),ARLIM(velCELL.hiVect()),
-      FSI_velMAC.dataPtr(),
-      ARLIM(FSI_velMAC.loVect()),ARLIM(FSI_velMAC.hiVect()), 
-      FSI_velCELL.dataPtr(dir),
-      ARLIM(FSI_velCELL.loVect()),ARLIM(FSI_velCELL.hiVect()),
+      FSIvelMAC.dataPtr(),
+      ARLIM(FSIvelMAC.loVect()),ARLIM(FSIvelMAC.hiVect()), 
+      FSIvelCELL.dataPtr(dir),
+      ARLIM(FSIvelCELL.loVect()),ARLIM(FSIvelCELL.hiVect()),
       tilelo,tilehi,
       fablo,fabhi,
       &bfact,
