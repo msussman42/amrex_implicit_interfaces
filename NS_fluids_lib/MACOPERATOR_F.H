@@ -97,6 +97,8 @@ extern "C"
         Real* cdiag,AMREX_ARLIM_P(cdiag_lo),AMREX_ARLIM_P(cdiag_hi));
 
     void fort_scalarcoeff(
+       int* num_FSI_outer_sweeps,
+       int* FSI_outer_sweeps,
        int* nsolve,
        const Real* xlo,
        const Real* dx,

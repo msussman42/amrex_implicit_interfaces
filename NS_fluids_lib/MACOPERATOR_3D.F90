@@ -365,6 +365,8 @@ stop
 
 
        subroutine fort_scalarcoeff( &
+         num_FSI_outer_sweeps, &
+         FSI_outer_sweeps, &
          nsolve, &
          xlo,dx, &
          offdiagcheck, &
@@ -391,6 +393,8 @@ stop
        use global_utility_module
        IMPLICIT NONE
  
+       integer, INTENT(in) :: num_FSI_outer_sweeps
+       integer, INTENT(in) :: FSI_outer_sweeps
        integer, INTENT(in) :: nsolve
        integer, INTENT(in) :: level
        integer, INTENT(in) :: finest_level
@@ -490,13 +494,13 @@ stop
        if (dt.gt.zero) then
         ! do nothing
        else
-        print *,"dt invalid"
+        print *,"dt invalid: ",dt
         stop
        endif
        if (cur_time.ge.zero) then
         ! do nothing
        else
-        print *,"cur_time invalid"
+        print *,"cur_time invalid: ",cur_time
         stop
        endif
 
@@ -561,27 +565,41 @@ stop
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
           ! do nothing
          else if (project_option.eq.SOLVETYPE_VISC) then
-FIX ME FSI_outer_sweeps is_rigid_CL materials         
-          do im=1,num_materials
-           if (is_ice_or_FSI_rigid_material(im).eq.1) then
-            LSTEST=lsnew(D_DECL(i,j,k),im)
-            if (LSTEST.ge.zero) then
-              !SOLVETYPE_VISC
-             rigid_mask=1.0D+6
-             in_rigid=1
-            else if (LSTEST.lt.zero) then
-             ! do nothing
-            else
-             print *,"LSTEST is NaN: ",LSTEST
-             stop
-            endif
-           else if (is_ice_or_FSI_rigid_material(im).eq.0) then
-            ! do nothing
+
+          if (num_FSI_outer_sweeps.eq.1) then
+           !do nothing
+          else if (num_FSI_outer_sweeps.eq.2) then
+           if (FSI_outer_sweeps.eq.0) then
+            !do nothing
+           else if (FSI_outer_sweeps.eq.1) then
+            do im=1,num_materials
+             if (is_rigid_CL(im).eq.1) then
+              LSTEST=lsnew(D_DECL(i,j,k),im)
+              if (LSTEST.ge.zero) then
+               !SOLVETYPE_VISC
+               rigid_mask=1.0D+6
+               in_rigid=1
+              else if (LSTEST.lt.zero) then
+               ! do nothing
+              else
+               print *,"LSTEST is NaN: ",LSTEST
+               stop
+              endif
+             else if (is_rigid_CL(im).eq.0) then
+              ! do nothing
+             else
+              print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
+              stop
+             endif
+            enddo ! im=1..num_materials
            else
-            print *,"is_ice_or_FSI_rigid_materal(im) invalid"
+            print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
             stop
            endif
-          enddo ! im=1..num_materials
+          else
+           print *,"num_FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
+           stop
+          endif
 
          else
           print *,"project_option invalid scalar coeff"
@@ -594,7 +612,6 @@ FIX ME FSI_outer_sweeps is_rigid_CL materials
         endif
 
          ! SOLVETYPE_PRES, 
-         ! SOLVETYPE_PRESGRAVITY, 
          ! SOLVETYPE_INITPROJ
         if (project_option_projectionF(project_option).eq.1) then
 
@@ -606,8 +623,6 @@ FIX ME FSI_outer_sweeps is_rigid_CL materials
          if (project_option.eq.SOLVETYPE_PRES) then
           local_cterm(1)=c2(D_DECL(i,j,k),1) ! 1/(rho c^2 dt^2)
          else if (project_option.eq.SOLVETYPE_INITPROJ) then
-          local_cterm(1)=zero
-         else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
           local_cterm(1)=zero
          else
           print *,"project_option invalid fort_scalarcoeff"
@@ -772,7 +787,7 @@ FIX ME FSI_outer_sweeps is_rigid_CL materials
            endif
 
           else
-           print *,"in_rigid invalid"
+           print *,"in_rigid invalid: ",in_rigid
            stop
           endif
 

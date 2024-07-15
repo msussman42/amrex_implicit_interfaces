@@ -96,7 +96,6 @@ mac.visc_abs_tol  = 1.0e-5 #1.0e-10 double, 1.0e-5 float
 #test problem.
 ns.gravity        = -980.0e-1
 ns.incremental_gravity_flag=1
-ns.segregated_gravity_flag=0
 
 #EMPIRICAL PARAMETERS IN ORDER TO REDUCE THE SIMULATION TIME:
 #gravity and surface tension forces are both reduced by the same orders of

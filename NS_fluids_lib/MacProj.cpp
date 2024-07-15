@@ -76,8 +76,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
  std::string local_caller_string="allocate_maccoef";
 
-  //SOLVETYPE_PRES,SOLVETYPE_PRESGRAVITY,
-  //SOLVETYPE_INITPROJ,SOLVETYPE_PRESSSTATIC
+  //SOLVETYPE_PRES,
+  //SOLVETYPE_INITPROJ
  if (project_option_projection(project_option)==1) {
 
   // do nothing
@@ -339,6 +339,8 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // declared in MACOPERATOR_3D.F90
   fort_scalarcoeff(
+    &num_FSI_outer_sweeps,
+    &FSI_outer_sweeps,
     &nsolve,
     xlo,dx,
     offdiagcheck.dataPtr(),
@@ -639,7 +641,6 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // if project_option==SOLVETYPE_PRES,
    //    project_option==SOLVETYPE_INITPROJ,
-   //    project_option==SOLVETYPE_PRESGRAVITY,
    //    project_option==SOLVETYPE_PRESEXTRAP,  
   if (project_option_singular_possible(project_option)==1) {
 

@@ -240,6 +240,7 @@ stop
       integer im_tertiary
       integer im_ice
       integer im_FSI_rigid
+      integer im_FSI_elastic
       integer im_dest,im_source
       integer iten
       real(amrex_real) LL(0:1)
@@ -365,15 +366,45 @@ stop
        stop
       endif
 
+      if ((is_FSI_elastic(im).eq.0).and. &
+          (is_FSI_elastic(im_opp).eq.0)) then
+       im_FSI_elastic=0
+      else if ((is_FSI_elastic(im).eq.1).and. &
+               (is_FSI_elastic(im_opp).eq.0)) then
+       im_FSI_elastic=im
+      else if ((is_FSI_elastic(im).eq.0).and. &
+               (is_FSI_elastic(im_opp).eq.1)) then
+       im_FSI_elastic=im_opp
+      else if ((is_FSI_elastic(im).eq.1).and. &
+               (is_FSI_elastic(im_opp).eq.1)) then
+       im_FSI_elastic=im_primary
+      else
+       print *,"is_FSI_elastic invalid"
+       stop
+      endif
+
       if (im_FSI_rigid.eq.im_primary) then
 
        ireverse=-1
        icemask=zero
        icefacecut=zero
 
-      else if ((im_FSI_rigid.ge.0).and. &
-               (im_FSI_rigid.le.num_materials).and. &
-               (im_FSI_rigid.ne.im_primary)) then
+      else if (im_FSI_elastic.eq.im_primary) then
+
+       ireverse=-1
+       icemask=zero
+       icefacecut=zero
+
+      else if ((im_FSI_rigid.ne.im_primary).and. &
+               (im_FSI_elastic.ne.im_primary) then
+
+       if ((im_FSI_rigid.lt.0).or. &
+           (im_FSI_rigid.gt.num_materials).or. &
+           (im_FSI_elastic.lt.0).or. &
+           (im_FSI_elastic.gt.num_materials)) then
+        print *,"im_FSI_rigid or im_FSI_elastic invalid"
+        stop
+       endif
 
         ! either the primary or secondary material is "ice"
        if ((im_ice.ge.1).and. &
@@ -387,27 +418,35 @@ stop
              (im_tertiary.le.num_materials)) then
           if (is_rigid(im_tertiary).eq.0) then
            if (is_FSI_rigid(im_tertiary).eq.0) then
-            if (is_ice(im_tertiary).eq.0) then
-             if (im_ice.lt.im_tertiary) then
-              im=im_ice
-              im_opp=im_tertiary
-             else if (im_ice.gt.im_tertiary) then
-              im_opp=im_ice
-              im=im_tertiary
+            if (is_FSI_elastic(im_tertiary).eq.0) then
+             if (is_ice(im_tertiary).eq.0) then
+              if (im_ice.lt.im_tertiary) then
+               im=im_ice
+               im_opp=im_tertiary
+              else if (im_ice.gt.im_tertiary) then
+               im_opp=im_ice
+               im=im_tertiary
+              else
+               print *,"im_ice or im_tertiary invalid"
+               stop
+              endif
+
+              call get_iten(im,im_opp,iten)
+              do ireverse=0,1
+               LL(ireverse)= &
+                get_user_latent_heat(iten+ireverse*num_interfaces, &
+                   room_temperature,1)
+              enddo
+             else if (is_ice(im_tertiary).eq.1) then
+              ! do nothing
              else
-              print *,"im_ice or im_tertiary invalid"
+              print *,"is_ice(im_tertiary) invalid"
               stop
              endif
-             call get_iten(im,im_opp,iten)
-             do ireverse=0,1
-              LL(ireverse)= &
-               get_user_latent_heat(iten+ireverse*num_interfaces, &
-                   room_temperature,1)
-             enddo
-            else if (is_ice(im_tertiary).eq.1) then
+            else if (is_FSI_elastic(im_tertiary).eq.1) then
              ! do nothing
             else
-             print *,"is_ice(im_tertiary) invalid"
+             print *,"is_FSI_elastic(im_tertiary) invalid"
              stop
             endif
            else if (is_FSI_rigid(im_tertiary).eq.1) then
@@ -427,6 +466,7 @@ stop
           print *,"im_tertiary: ",im_tertiary
           print *,"im_ice: ",im_ice
           print *,"im_FSI_rigid: ",im_FSI_rigid
+          print *,"im_FSI_elastic: ",im_FSI_elastic
           stop
          else
           print *,"im_tertiary invalid: ",im_tertiary
@@ -614,7 +654,8 @@ stop
        endif
 
       else
-       print *,"im_FSI_rigid invalid: ",im_FSI_rigid
+       print *,"im_FSI_rigid invalid? ",im_FSI_rigid
+       print *,"im_FSI_elastic invalid? ",im_FSI_elastic
        print *,"num_materials: ",num_materials
        print *,"im_primary: ",im_primary
        stop
@@ -12053,16 +12094,22 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        dd_group=dd
 
         ! SOLVETYPE_PRES, 
-        ! SOLVETYPE_PRESGRAVITY, 
         ! SOLVETYPE_INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
-         cc_group=cc*cc_ice
+         if ((num_FSI_outer_sweeps.eq.1).or. &
+             ((num_FSI_outer_sweeps.eq.2).and.(FSI_outer_sweeps.eq.1))) then
+          cc_group=cc*cc_ice
+         else if ((num_FSI_outer_sweeps.eq.2).and. &
+                  (FSI_outer_sweeps.eq.0)) then
+          cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
+         else
+          print *,"num_FSI_outer_sweeps or FSU_outer_sweeps invalid"
+          stop
+         endif
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
          cc_group=cc*cc_ice_mask
-        else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then!grav projection
-         cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
         else
          print *,"project_option invalid eval_face_coeff"
          stop
@@ -14779,7 +14826,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       else if (operation_flag.eq.OP_RHS_CELL) then ! RHS for solver
 
-        ! SOLVETYPE_PRES, PRESGRAVITY, INITPROJ
+        ! SOLVETYPE_PRES, INITPROJ
        if (project_option_projectionF(project_option).eq.1) then
         if (ncomp.ne.1) then
          print *,"ncomp invalid2 SEM_MAC_TO_CELL"
