@@ -16715,7 +16715,7 @@ stop
        stop
       endif
       if ((level.gt.finest_level).or.(level.lt.0)) then
-       print *,"level invalid fort_project_to_rigid_velocity"
+       print *,"level invalid fort_manage_elastic_velocity"
        stop
       endif
  
@@ -16736,7 +16736,7 @@ stop
       enddo ! im=1..num_materials
 
       if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
-       print *,"slab_step invalid fort_project_to_rigid_velocity"
+       print *,"slab_step invalid fort_manage_elastic_velocity"
        stop
       endif
 
@@ -16774,7 +16774,7 @@ stop
       else if ((dir.eq.2).and.(SDIM.eq.3)) then
        kk=1
       else
-       print *,"dir out of range in fort_project_to_rigid_velocity, dir=",dir
+       print *,"dir out of range in fort_manage_elastic_velocity, dir=",dir
        stop
       endif 
 
