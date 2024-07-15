@@ -577,6 +577,8 @@ ENUM_NUM_TENSOR_TYPE=2 * AMREX_SPACEDIM
 
 #define LOOP_REFINE_DENSITY_AVGDOWN 183
 
+#define LOOP_MANAGE_VEL 184
+
 #define caller_FSI_make_distance 0
 #define caller_post_restart 1
 #define caller_initData 2
