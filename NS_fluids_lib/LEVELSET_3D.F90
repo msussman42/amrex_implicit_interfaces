@@ -16611,6 +16611,350 @@ stop
       return
       end subroutine fort_project_to_rigid_velocity
 
+
+      subroutine fort_manage_elastic_velocity( &
+       dir, &
+       velbc_in, &
+       slab_step, &
+       time, &
+       xlo,dx, &
+       maskcoef,DIMS(maskcoef), & ! 1=not cov. or outside domain  0=covered
+       levelPC,DIMS(levelPC), &
+       velMAC,DIMS(velMAC), &
+       velCELL,DIMS(velCELL), &
+       FSIvelMAC,DIMS(FSIvelMAC), &
+       FSIvelCELL,DIMS(FSIvelCELL), &
+       tilelo,tilehi, &
+       fablo,fabhi, &
+       bfact, &
+       level,finest_level, &
+       rz_flag, &
+       domlo,domhi)
+      bind(c,name='fort_manage_elastic_velocity')
+
+      use global_utility_module
+      use MOF_routines_module
+      use probf90_module
+      use probcommon_module
+      IMPLICIT NONE
+
+      integer, INTENT(in) :: dir
+      integer, INTENT(in) :: slab_step
+      integer, INTENT(in) :: level
+      integer, INTENT(in) :: finest_level
+      real(amrex_real), INTENT(in) :: time
+      real(amrex_real), INTENT(in) :: xlo(SDIM),dx(SDIM)
+      integer, INTENT(in) :: DIMDEC(maskcoef)
+      integer, INTENT(in) :: DIMDEC(velMAC)
+      integer, INTENT(in) :: DIMDEC(velCELL)
+      integer, INTENT(in) :: DIMDEC(FSIvelMAC)
+      integer, INTENT(in) :: DIMDEC(FSIvelCELL)
+      integer, INTENT(in) :: DIMDEC(levelPC)
+
+      integer, INTENT(in) :: velbc_in(SDIM,2,SDIM)
+      integer, INTENT(in) :: tilelo(SDIM),tilehi(SDIM)
+      integer, INTENT(in) :: fablo(SDIM),fabhi(SDIM)
+      integer growlo(3),growhi(3)
+      integer, INTENT(in) :: bfact
+      integer, INTENT(in) :: rz_flag
+      integer, INTENT(in) :: domlo(SDIM),domhi(SDIM)
+
+      real(amrex_real), INTENT(in), target :: maskcoef(DIMV(maskcoef))
+      real(amrex_real), pointer :: maskcoef_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(in), target :: &
+              levelPC(DIMV(levelPC),num_materials*(1+SDIM))
+      real(amrex_real), pointer :: levelPC_ptr(D_DECL(:,:,:),:)
+      real(amrex_real), INTENT(inout), target :: velMAC(DIMV(velMAC))
+      real(amrex_real), pointer :: velMAC_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(inout), target :: velCELL(DIMV(velCELL))
+      real(amrex_real), pointer :: velCELL_ptr(D_DECL(:,:,:))
+
+      real(amrex_real), INTENT(inout), target :: FSIvelMAC(DIMV(FSIvelMAC))
+      real(amrex_real), pointer :: FSIvelMAC_ptr(D_DECL(:,:,:))
+      real(amrex_real), INTENT(inout), target :: FSIvelCELL(DIMV(FSIvelCELL))
+      real(amrex_real), pointer :: FSIvelCELL_ptr(D_DECL(:,:,:))
+  
+      integer i,j,k,ii,jj,kk
+      integer im1,jm1,km1
+      integer iboundary
+      integer im
+      integer im_left,im_right
+      integer dir2
+      integer, parameter :: nhalf=3
+      real(amrex_real) xstenMAC(-nhalf:nhalf,SDIM)
+      real(amrex_real) xstenMAC_center(SDIM)
+      integer idx
+      integer at_RZ_face
+      real(amrex_real) LSleft(num_materials)
+      real(amrex_real) LSright(num_materials)
+      real(amrex_real) localLS(num_materials)
+      real(amrex_real) xclamped_minus(SDIM)
+      real(amrex_real) xclamped_plus(SDIM)
+      real(amrex_real) LS_clamped_plus
+      real(amrex_real) LS_clamped_minus
+      real(amrex_real) vel_clamped_plus(SDIM)
+      real(amrex_real) vel_clamped_minus(SDIM)
+      real(amrex_real) temperature_clamped_plus
+      real(amrex_real) temperature_clamped_minus
+      integer prescribed_flag
+      real(amrex_real) vel_clamped(SDIM)
+      real(amrex_real) temperature_clamped
+      real(amrex_real) xclamped_minus_sten(-nhalf:nhalf,SDIM)
+      real(amrex_real) xclamped_plus_sten(-nhalf:nhalf,SDIM)
+
+      velMAC_ptr=>velMAC
+      velCELL_ptr=>velCELL
+      FSIvelMAC_ptr=>FSIvelMAC
+      FSIvelCELL_ptr=>FSIvelCELL
+      maskcoef_ptr=>maskcoef
+      levelPC_ptr=>levelPC
+
+      if (bfact.lt.1) then
+       print *,"bfact too small"
+       stop
+      endif
+      if ((level.gt.finest_level).or.(level.lt.0)) then
+       print *,"level invalid fort_project_to_rigid_velocity"
+       stop
+      endif
+ 
+      if (num_state_base.ne.2) then
+       print *,"num_state_base invalid"
+       stop
+      endif
+
+      do im=1,num_materials
+
+       if (fort_denconst(im).gt.zero) then
+        ! do nothing
+       else
+        print *,"denconst invalid: ",im,fort_denconst(im)
+        stop
+       endif
+
+      enddo ! im=1..num_materials
+
+      if ((slab_step.lt.0).or.(slab_step.ge.bfact_time_order)) then
+       print *,"slab_step invalid fort_project_to_rigid_velocity"
+       stop
+      endif
+
+      call checkbound_array1(fablo,fabhi,velMAC_ptr,0,dir)
+      call checkbound_array1(fablo,fabhi,velCELL_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,FSIvelMAC_ptr,0,dir)
+      call checkbound_array1(fablo,fabhi,FSIvelCELL_ptr,1,-1)
+
+      call checkbound_array(fablo,fabhi,levelPC_ptr,1,-1)
+      call checkbound_array1(fablo,fabhi,maskcoef_ptr,1,-1)
+
+      do im=1,num_materials
+
+       if (fort_material_type(im).eq.0) then
+        ! do nothing
+       else if (fort_material_type(im).eq.999) then
+        ! do nothing
+       else if ((fort_material_type(im).ge.1).and. &
+                (fort_material_type(im).le.MAX_NUM_EOS)) then
+        ! do nothing
+       else
+        print *,"fort_material_type invalid: ",im,fort_material_type(im)
+        stop
+       endif
+
+      enddo  ! im=1..num_materials
+
+      ii=0
+      jj=0
+      kk=0
+      if (dir.eq.0) then
+       ii=1
+      else if (dir.eq.1) then
+       jj=1
+      else if ((dir.eq.2).and.(SDIM.eq.3)) then
+       kk=1
+      else
+       print *,"dir out of range in fort_project_to_rigid_velocity, dir=",dir
+       stop
+      endif 
+
+      call growntileboxMAC(tilelo,tilehi,fablo,fabhi,growlo,growhi,0,dir)
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       ! dir=0..sdim-1
+       call gridstenMAC_level(xstenMAC,i,j,k,level,nhalf,dir)
+       do dir2=1,SDIM
+        xstenMAC_center(dir2)=xstenMAC(0,dir2)
+       enddo
+
+       im_left=0
+       im_right=0
+
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_RZ) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        !do nothing 
+       else
+        print *,"levelrz invalid fort_manage_elastic_velocity "
+        stop
+       endif 
+
+       im1=i-ii
+       jm1=j-jj
+       km1=k-kk
+
+       if (dir.eq.0) then
+        idx=i
+       else if (dir.eq.1) then
+        idx=j
+       else if ((dir.eq.2).and.(SDIM.eq.3)) then
+        idx=k
+       else
+        print *,"dir invalid fort_manage_elastic_velocity, dir=",dir
+        stop
+       endif
+
+       do im=1,num_materials
+        LSleft(im)=levelPC(D_DECL(im1,jm1,km1),im)
+        LSright(im)=levelPC(D_DECL(i,j,k),im)
+        localLS(im)=half*(LSright(im)+LSleft(im))
+       enddo
+       call get_primary_material(LSleft,im_left)
+       call get_primary_material(LSright,im_right)
+
+       call gridsten_level(xclamped_minus_sten,im1,jm1,km1,level,nhalf)
+       call gridsten_level(xclamped_plus_sten,i,j,k,level,nhalf)
+       do dir2=1,SDIM
+        xclamped_minus(dir2)=xclamped_minus_sten(0,dir2)
+        xclamped_plus(dir2)=xclamped_plus_sten(0,dir2)
+       enddo
+       call SUB_clamped_LS(xclamped_minus,time,LS_clamped_minus, &
+        vel_clamped_minus,temperature_clamped_minus,prescribed_flag,dx)
+       call SUB_clamped_LS(xclamped_plus,time,LS_clamped_plus, &
+        vel_clamped_plus,temperature_clamped_plus,prescribed_flag,dx)
+       if ((LS_clamped_plus.ge.zero).or. &
+           (LS_clamped_minus.ge.zero)) then
+        !do nothing
+       else if ((LS_clamped_plus.lt.zero).and. &
+                (LS_clamped_minus.lt.zero)) then
+
+        at_RZ_face=0
+        if (levelrz.eq.COORDSYS_CARTESIAN) then
+         ! do nothing
+        else if (levelrz.eq.COORDSYS_RZ) then
+         if (SDIM.ne.2) then
+          print *,"dimension bust"
+          stop
+         endif
+         if ((dir.eq.0).and. &
+             (xstenMAC_center(1).le.EPS2*dx(1))) then
+          at_RZ_face=1
+         endif
+        else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+         if ((dir.eq.0).and. &
+             (xstenMAC_center(1).le.EPS2*dx(1))) then
+          at_RZ_face=1
+         endif
+        else
+         print *,"levelrz invalid fort_manage_elastic_velocity"
+         stop
+        endif 
+
+        if (at_RZ_face.eq.1) then
+         !do nothing
+        else if (at_RZ_face.eq.0) then
+
+         if ((is_rigid_CL(im_left).eq.1).or. &
+             (is_rigid_CL(im_right).eq.1)) then
+          !do nothing
+         else if ((is_rigid_CL(im_left).eq.0).and. &
+                  (is_rigid_CL(im_right).eq.0)) then
+          velMAC(D_DECL(i,j,k))=FSIvelMAC(D_DECL(i,j,k))
+         else
+          print *,"is_rigid_CL bust"
+          stop
+         endif
+
+        else
+         print *,"at_RZ_face invalid"
+         stop
+        endif
+
+       else
+        print *,"LS_clamped invalid"
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i,j,k (MAC grid, zero ghost cells)
+
+      call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
+
+      do k=growlo(3),growhi(3)
+      do j=growlo(2),growhi(2)
+      do i=growlo(1),growhi(1)
+
+       ! dir=0..sdim-1
+       call gridsten_level(xstenMAC,i,j,k,level,nhalf)
+       do dir2=1,SDIM
+        xstenMAC_center(dir2)=xstenMAC(0,dir2)
+       enddo
+
+       if (levelrz.eq.COORDSYS_CARTESIAN) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_RZ) then
+        !do nothing 
+       else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
+        !do nothing 
+       else
+        print *,"levelrz invalid fort_manage_elastic_velocity "
+        stop
+       endif 
+
+       do im=1,num_materials
+        localLS(im)=levelPC(D_DECL(i,j,k),im)
+       enddo
+       call get_primary_material(localLS,im_left)
+
+       call SUB_clamped_LS( &
+         xstenMAC_center, & !intent(in)
+         time, & !intent(in)
+         LS_clamped_minus, & !intent(out)
+         vel_clamped,& !intent(out)
+         temperature_clamped,& !intent(out)
+         prescribed_flag, & !intent(out) 
+         dx) !intent(in)
+
+       if (LS_clamped_minus.ge.zero) then
+        !do nothing
+       else if (LS_clamped_minus.lt.zero) then
+
+        if (is_rigid_CL(im_left).eq.1) then
+         !do nothing
+        else if (is_rigid_CL(im_left).eq.0) then
+         velCELL(D_DECL(i,j,k))=FSIvelCELL(D_DECL(i,j,k))
+        else
+         print *,"is_rigid_CL bust"
+         stop
+        endif
+        
+       else
+        print *," LS_clamped_minus invalid: ",LS_clamped_minus 
+        stop
+       endif
+
+      enddo
+      enddo
+      enddo ! i,j,k (CELL grid, zero ghost cells)
+
+      return
+      end subroutine fort_manage_elastic_velocity
+
       ! called from: NavierStokes::allocate_FACE_WEIGHT (NavierStokes3.cpp)
       !  which is called from:
       !   NavierStokes::update_SEM_forcesALL
