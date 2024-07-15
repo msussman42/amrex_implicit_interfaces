@@ -626,8 +626,7 @@ void NavierStokes::combine_state_variable(
  int num_materials_combine=1;
 
  int nsolve=1;
- if ((project_option==SOLVETYPE_INITPROJ)||   
-     (project_option==SOLVETYPE_PRESGRAVITY)) {
+ if (project_option==SOLVETYPE_INITPROJ) {
   amrex::Error("project_option invalid in combine_state_variable");
  } else if (project_option==SOLVETYPE_PRES) {    // regular projection
   nsolve=1;

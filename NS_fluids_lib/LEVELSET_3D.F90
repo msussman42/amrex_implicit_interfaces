@@ -11997,7 +11997,6 @@ stop
           endif
 
            !SOLVETYPE_PRES, 
-           !SOLVETYPE_PRESGRAVITY, 
            !SOLVETYPE_INITPROJ, 
            !SOLVETYPE_PRESEXTRAP
           if (project_option_singular_possibleF(project_option).eq.1) then
@@ -12981,13 +12980,6 @@ stop
           print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)"
           stop
          endif
-        else if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
-         if (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL) then
-          ! do nothing if solvetype_presgravity
-         else
-          print *,"expecting (energyflag.eq.SUB_OP_THERMAL_DIVUP_NULL)mac_cell"
-          stop
-         endif
         else
          print *,"project_option invalid fort_mac_to_cell 5"
          print *,"operation_flag.eq.OP_VEL_DIVUP_TO_CELL"
@@ -13897,9 +13889,6 @@ stop
         print *,"energyflag invalid OP_PRES_CELL_TO_MAC"
         stop
        endif
-       if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
-        homogeneous_rigid_velocity=1
-       endif
       else if (operation_flag.eq.OP_POTGRAD_TO_MAC) then 
        if ((energyflag.eq.SUB_OP_FORCE_MASK_BASE+ &
             POTGRAD_SURFTEN_INCREMENTAL_GRAV).or. &
@@ -13934,16 +13923,6 @@ stop
        else
         print *,"project_option_momeqnF(project_option) invalid"
         stop
-       endif
-
-       if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
-        if (operation_flag.eq.OP_UNEW_USOL_MAC_TO_MAC) then
-         ! do nothing
-        else
-         print *,"OP_UNEW_USOL_MAC_TO_MAC expected"
-         stop
-        endif
-        homogeneous_rigid_velocity=1
        endif
 
       else if (operation_flag.eq.OP_PRESGRAD_MAC) then ! (grad p)_MAC
@@ -14584,23 +14563,16 @@ stop
            else if ((is_solid_face.eq.0).or. &
                     (face_velocity_override.eq.0)) then
 
-            if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
-             test_current_icefacecut=one
-            else
-             test_current_icefacecut= &
+            test_current_icefacecut= &
                  xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-            endif
           
             if ((test_current_icefacecut.ge.zero).and. &
                 (test_current_icefacecut.le.one)) then
 
-              ! test_current_icemask=zero for both ice materials and
-              ! "is_FSI_rigid" materials.
-             if (project_option.eq.SOLVETYPE_PRESGRAVITY) then
-              test_current_icemask=one
-             else
-              test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
-             endif
+              ! test_current_icemask=zero for ice materials,
+              ! "is_FSI_rigid" materials, and 
+              ! "is_FSI_elastic" materials.
+             test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
 
              if ((test_current_icemask.eq.zero).or. &
                  (test_current_icemask.eq.one)) then
@@ -14923,12 +14895,10 @@ stop
          else if (operation_flag.eq.OP_PRES_CELL_TO_MAC) then ! p^CELL->MAC
 
           if ((project_option.eq.SOLVETYPE_PRES).or. &
-              (project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
               (project_option.eq.SOLVETYPE_INITPROJ)) then
            ! do nothing
           else
            print *,"expecting project_option=SOLVETYPE_PRES or "
-           print *,"expecting project_option=SOLVETYPE_PRESGRAVITY or "
            print *,"expecting project_option=SOLVETYPE_INITPROJ  "
            stop
           endif
@@ -15211,8 +15181,7 @@ stop
            !
            ! hydrostatic pressure (HYDROSTATIC_PRESDEN_MF, 1st component)
 
-          if ((project_option.eq.SOLVETYPE_PRES).or. &
-              (project_option.eq.SOLVETYPE_PRESGRAVITY)) then
+          if (project_option.eq.SOLVETYPE_PRES) then
            ! do nothing
           else
            print *,"project_option invalid(fort_cell_to_mac): ",project_option
@@ -15430,8 +15399,7 @@ stop
                 mgoni(D_DECL(im1,jm1,km1),tcomp))
               enddo ! im_heat
 
-              if ((project_option.eq.SOLVETYPE_PRES).or. &
-                  (project_option.eq.SOLVETYPE_PRESGRAVITY)) then
+              if (project_option.eq.SOLVETYPE_PRES) then
                call get_user_tension(xstenMAC_center,time, &
                 fort_tension,user_tension,mgoni_temp)
               else
@@ -17214,7 +17182,6 @@ stop
           if (project_option_projectionF(project_option).eq.1) then
            !do nothing 
            !SOLVETYPE_PRES,
-           !SOLVETYPE_PRESGRAVITY,
            !SOLVETYPE_INITPROJ
           else if (project_option.eq.SOLVETYPE_PRESEXTRAP) then 
            !do nothing

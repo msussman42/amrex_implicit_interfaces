@@ -86,7 +86,6 @@ ns.change_max     = 1.01
 ns.visc_coef      = 1.0
 mac.visc_abs_tol  = 1.0e-10
 ns.incremental_gravity_flag=1
-ns.segregated_gravity_flag=0
 ns.gravity        = 0.0 # thermal effects only
 #ns.gravity        = -980.0 # cm/s^2
 

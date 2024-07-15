@@ -27405,7 +27405,6 @@ IMPLICIT NONE
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESEXTRAP).or.& ! pressure extrapolation
      (project_option.eq.SOLVETYPE_VISC)) then      ! viscosity
@@ -27430,7 +27429,6 @@ IMPLICIT NONE
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_singular_possibleF=1
@@ -27454,7 +27452,6 @@ IMPLICIT NONE
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. & ! initial project
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then ! pressure extension
   project_option_olddata_neededF=0
@@ -27478,7 +27475,6 @@ IMPLICIT NONE
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. &
-     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ).or. &
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then  !pressure extrap
   project_option_pressureF=1
@@ -27505,7 +27501,6 @@ integer :: project_option_needs_scalingF
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
-     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. &
      (project_option.eq.SOLVETYPE_PRESEXTRAP)) then 
   project_option_needs_scalingF=1
  else if ((project_option.eq.SOLVETYPE_INITPROJ).or. & 
@@ -27532,7 +27527,6 @@ IMPLICIT NONE
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & ! regular project
-     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ)) then ! initial project
   project_option_FSI_rigid=1
  else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. &
@@ -27560,7 +27554,6 @@ integer :: project_option_projectionF
 integer, INTENT(in) :: project_option
 
  if ((project_option.eq.SOLVETYPE_PRES).or. & 
-     (project_option.eq.SOLVETYPE_PRESGRAVITY).or. & 
      (project_option.eq.SOLVETYPE_INITPROJ)) then 
   project_option_projectionF=1
  else if ((project_option.eq.SOLVETYPE_PRESEXTRAP).or. & 

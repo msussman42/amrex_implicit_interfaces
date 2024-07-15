@@ -239,7 +239,6 @@ Real NavierStokes::gravity_reference_wavelen = 0.0;
 int NavierStokes::gravity_dir = AMREX_SPACEDIM;
 int NavierStokes::invert_gravity = 0;
 int NavierStokes::incremental_gravity_flag = 0;
-int NavierStokes::segregated_gravity_flag = 0;
 
 Vector<Real> NavierStokes::gravity_vector;
 
@@ -3109,23 +3108,6 @@ NavierStokes::read_params ()
     } else
      amrex::Error("incremental_gravity_flag invalid");
 
-    pp.queryAdd("segregated_gravity_flag",segregated_gravity_flag);
-    if (segregated_gravity_flag==1) {
-     if (enable_spectral==0) {
-      // do nothing
-     } else if (enable_spectral==1) {
-      //do nothing
-      //having just SOLVETYPE_PRESGRAVITY low order will not
-      //adversely effect the numerical dissipation of an 
-      //otherwise spectrally accurate method (only the order
-      //will be adversely effected)
-     } else
-      amrex::Error("enable_spectral invalid");
-    } else if (segregated_gravity_flag==0) {
-     // do nothing
-    } else
-     amrex::Error("segregated_gravity_flag invalid");
-
     pp.get("visc_coef",visc_coef);
 
     pp.queryAdd("include_viscous_heating",include_viscous_heating);
@@ -3161,8 +3143,6 @@ NavierStokes::read_params ()
 
      std::cout << "incremental_gravity_flag " << 
 	  incremental_gravity_flag << '\n';
-     std::cout << "segregated_gravity_flag " << 
-	  segregated_gravity_flag << '\n';
 
      std::cout << "cfl " << cfl << '\n';
      std::cout << "enable_spectral " << enable_spectral << '\n';
@@ -3591,6 +3571,10 @@ NavierStokes::read_params ()
      amrex::Error("global_presmooth!=global_postsmooth");
 
     if (ParallelDescriptor::IOProcessor()) {
+
+     std::cout << "num_FSI_outer_sweeps: " << 
+      num_FSI_outer_sweeps << '\n';
+
      std::cout << "extend_pressure_into_solid " << 
       extend_pressure_into_solid << '\n';
      std::cout << "smooth_type " << smooth_type << '\n';
@@ -6088,10 +6072,7 @@ NavierStokes::read_params ()
        if (enable_spectral==0) {
         // do nothing
        } else if (enable_spectral==1) {
-        //having just SOLVETYPE_PRESGRAVITY low order will not
-        //adversely effect the numerical dissipation of an 
-        //otherwise spectrally accurate method (only the order
-        //will be adversely effected)
+        // do nothing
        } else
         amrex::Error("enable_spectral invalid");
 
@@ -6286,7 +6267,6 @@ int NavierStokes::project_option_momeqn(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)||  
-     (project_option==SOLVETYPE_PRESGRAVITY)|| 
      (project_option==SOLVETYPE_PRESEXTRAP)|| 
      (project_option==SOLVETYPE_VISC)) {
   return 1;
@@ -6314,7 +6294,6 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)|| 
      (project_option==SOLVETYPE_INITPROJ)|| 
-     (project_option==SOLVETYPE_PRESGRAVITY)||  
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 0;
  } else if ((project_option==SOLVETYPE_HEAT)|| 
@@ -6333,7 +6312,6 @@ int NavierStokes::project_option_olddata_needed(int project_option) {
 int NavierStokes::project_option_pressure(int project_option) {
 
  if ((project_option==SOLVETYPE_PRES)||
-     (project_option==SOLVETYPE_PRESGRAVITY)||
      (project_option==SOLVETYPE_INITPROJ)||
      (project_option==SOLVETYPE_PRESEXTRAP)) {
   return 1;
@@ -6380,7 +6358,6 @@ NavierStokes::get_mm_scomp_solver(
  int nlist=1;
 
  if ((project_option==SOLVETYPE_PRES)||   
-     (project_option==SOLVETYPE_PRESGRAVITY)||   
      (project_option==SOLVETYPE_INITPROJ)) { 
   nsolve=1;
   nlist=1;
@@ -7277,9 +7254,6 @@ void NavierStokes::print_project_option(int project_option) {
 
  if (project_option==SOLVETYPE_PRES) {
   std::cout << "project_option= " << project_option << " (SOLVETYPE_PRES) \n";
- } else if (project_option==SOLVETYPE_PRESGRAVITY) {
-  std::cout << "project_option= " << project_option << 
-    " (SOLVETYPE_PRESGRAVITY) \n";
  } else if (project_option==SOLVETYPE_INITPROJ) {
   std::cout << "project_option= " << project_option << 
     " (SOLVETYPE_INITPROJ) \n";
@@ -18773,7 +18747,7 @@ void NavierStokes::project_right_hand_side(
 
  change_flag=0;
 
-  //SOLVETYPE_PRES, SOLVETYPE_PRESGRAVITY, SOLVETYPE_INITPROJ,
+  //SOLVETYPE_PRES, SOLVETYPE_INITPROJ,
   //SOLVETYPE_PRESEXTRAP
  if (project_option_singular_possible(project_option)==1) {
 
