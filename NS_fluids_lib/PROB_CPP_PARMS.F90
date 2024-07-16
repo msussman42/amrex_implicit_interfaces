@@ -1608,7 +1608,7 @@ stop
        fort_prerecalesce_stiffCP(im)=ccprerecalesce_stiffCP(im)
        fort_prerecalesce_stiffCV(im)=ccprerecalesce_stiffCV(im)
       
-       fort_im_elastic_map(im)=-1
+       fort_im_viscoelastic_map(im)=-1
        fort_im_refine_density_map(im)=-1
      
        fort_Carreau_alpha(im)=ccCarreau_alpha(im)
@@ -1641,7 +1641,7 @@ stop
         ! do nothing
        else if (fort_store_elastic_data(im).eq.1) then
         nelastic=nelastic+1
-        fort_im_elastic_map(nelastic)=im-1
+        fort_im_viscoelastic_map(nelastic)=im-1
        else
         print *,"fort_store_elastic_data(im) invalid"
         stop
@@ -1801,7 +1801,7 @@ stop
         print *,"im,fort_store_elastic_data ",im,fort_store_elastic_data(im)
         print *,"im,fort_store_refine_density_data ", &
                 im,fort_store_refine_density_data(im)
-        print *,"im,fort_im_elastic_map ",im,fort_im_elastic_map(im)
+        print *,"im,fort_im_viscoelastic_map ",im,fort_im_viscoelastic_map(im)
         print *,"im,fort_im_refine_density_map ", &
                 im,fort_im_refine_density_map(im)
 

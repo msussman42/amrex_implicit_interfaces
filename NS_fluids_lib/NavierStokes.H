@@ -1301,7 +1301,7 @@ void apply_pressure_grad(
     MultiFab* getStateTensor(int ngrow,int strt_comp,
        int num_comp,Real time);
 
-    void CELL_GRID_ELASTIC_FORCE(int im_elastic);
+    void CELL_GRID_ELASTIC_FORCE(int im_viscoelastic);
 
     MultiFab* getStateMAC(int ngrow,int dir,Real time);
 
@@ -1865,6 +1865,7 @@ protected:
 
     static Vector<int> im_solid_map;//nparts components, 0..num_materials-1
     static Vector<int> im_elastic_map;
+    static Vector<int> im_viscoelastic_map;
     static Vector<int> im_refine_density_map;
 
      // 0=volume fraction  1=mass fraction 2=impedance fraction

@@ -17406,7 +17406,7 @@ end subroutine print_visual_descriptor
       enddo  ! im=1..num_materials mom_den
 
       do partid=1,num_materials_viscoelastic
-       im=fort_im_elastic_map(partid)+1
+       im=fort_im_viscoelastic_map(partid)+1
        if ((im.ge.1).and.(im.le.num_materials)) then
         write(matstr,'(I2)') im
         do i=1,2

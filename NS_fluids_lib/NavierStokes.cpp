@@ -604,8 +604,9 @@ int NavierStokes::BLB_PRES=-32767;
 int NavierStokes::BLB_SECONDMOMENT=-32767;
 
 Vector<int> NavierStokes::im_solid_map; //nparts components, in range 0..num_materials-1
-//0<=im_elastic_map<num_materials
+//0<=im_viscoelastic_map<num_materials
 //0...num_materials_viscoelastic-1
+Vector<int> NavierStokes::im_viscoelastic_map;
 Vector<int> NavierStokes::im_elastic_map;
 //0<=im_refine_density_map<num_materials
 //0...num_materials_compressible-1
@@ -3345,17 +3346,21 @@ NavierStokes::read_params ()
     int nparts=0;
     int CTML_FSI_numsolids_test=0;
     num_FSI_outer_sweeps=1;
+    im_elastic_map.resize(0);
 
     for (int im=0;im<num_materials;im++) {
 
      int imp1=im+1;
 
      if (fort_is_ice_base(&FSI_flag[im],&imp1)==1) {
-      num_FSI_outer_sweeps=2;
+      num_FSI_outer_sweeps++;
+      im_elastic_map.push_back(im);
      } else if (fort_is_FSI_rigid_base(&FSI_flag[im],&imp1)==1) {
-      num_FSI_outer_sweeps=2;
+      num_FSI_outer_sweeps++;
+      im_elastic_map.push_back(im);
      } else if (fort_is_FSI_elastic_base(&FSI_flag[im],&imp1)==1) {
-      num_FSI_outer_sweeps=2;
+      num_FSI_outer_sweeps++;
+      im_elastic_map.push_back(im);
      } else if (fort_FSI_flag_valid_base(&FSI_flag[im],&imp1)==1) {
       //do nothing
      } else
@@ -3375,6 +3380,12 @@ NavierStokes::read_params ()
      } else
       amrex::Error("ns_is_lag_part invalid");
     }  // im=0..num_materials-1
+
+    if (im_elastic_map.size()!=num_FSI_outer_sweeps-1)
+     amrex::Error("im_elastic_map invalid");
+
+    if (im_elastic_map.size()>=num_materials)
+     amrex::Error("im_elastic_map.size()>=num_materials");
 
     im_solid_map.resize(nparts);
 
@@ -3464,12 +3475,12 @@ NavierStokes::read_params ()
       amrex::Error("store_elastic_data invalid");
     } // im=0..num_materials-1 
 
-    im_elastic_map.resize(num_materials_viscoelastic);
+    im_viscoelastic_map.resize(num_materials_viscoelastic);
 
     int elastic_partid=0;
     for (int i=0;i<num_materials;i++) {
      if (store_elastic_data[i]==1) {
-      im_elastic_map[elastic_partid]=i;
+      im_viscoelastic_map[elastic_partid]=i;
       elastic_partid++;
      } else if (store_elastic_data[i]==0) {
       // do nothing
@@ -3574,6 +3585,10 @@ NavierStokes::read_params ()
 
      std::cout << "num_FSI_outer_sweeps: " << 
       num_FSI_outer_sweeps << '\n';
+     for (int i=0;i<im_elastic_map.size();i++) {
+      std::cout << "i= " << i << " im_elastic_map " << 
+        im_elastic_map[i] << '\n';
+     }
 
      std::cout << "extend_pressure_into_solid " << 
       extend_pressure_into_solid << '\n';
@@ -9879,7 +9894,7 @@ NavierStokes::initData () {
  } else 
   amrex::Error("nparts invalid");
 
- int nparts_tensor=im_elastic_map.size();
+ int nparts_tensor=im_viscoelastic_map.size();
 
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
@@ -10258,7 +10273,7 @@ void NavierStokes::init_boundary() {
   } else if ((k==Tensor_Type)&&
              (num_materials_viscoelastic>=1)&&
              (num_materials_viscoelastic<=num_materials)) {
-   int nparts=im_elastic_map.size();
+   int nparts=im_viscoelastic_map.size();
    if ((nparts<=0)||(nparts>num_materials))
     amrex::Error("nparts invalid");
    if (nparts!=num_materials_viscoelastic)
@@ -11197,11 +11212,11 @@ void NavierStokes::make_viscoelastic_tensorMAC(int im,
   if (store_elastic_data[im]==1) {
 
    int partid=0;
-   while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
+   while ((im_viscoelastic_map[partid]!=im)&&(partid<im_viscoelastic_map.size())) {
     partid++;
    }
 
-   if (partid<im_elastic_map.size()) {
+   if (partid<im_viscoelastic_map.size()) {
 
     if (ENUM_NUM_TENSOR_TYPE!=2*AMREX_SPACEDIM)
      amrex::Error("ENUM_NUM_TENSOR_TYPE invalid");
@@ -11424,11 +11439,11 @@ void NavierStokes::make_viscoelastic_tensor(int im) {
   if (store_elastic_data[im]==1) {
 
    int partid=0;
-   while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
+   while ((im_viscoelastic_map[partid]!=im)&&(partid<im_viscoelastic_map.size())) {
     partid++;
    }
 
-   if (partid<im_elastic_map.size()) {
+   if (partid<im_viscoelastic_map.size()) {
 
     int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
 
@@ -12617,8 +12632,8 @@ void NavierStokes::tensor_advection_update() {
    if (store_elastic_data[im]==1) {
 
     int partid=0;
-    while ((im_elastic_map[partid]!=im)&&
-	   (partid<im_elastic_map.size())) {
+    while ((im_viscoelastic_map[partid]!=im)&&
+	   (partid<im_viscoelastic_map.size())) {
      partid++;
     }
 
@@ -12629,7 +12644,7 @@ void NavierStokes::tensor_advection_update() {
 
     partid_test++;
 
-    if (partid<im_elastic_map.size()) {
+    if (partid<im_viscoelastic_map.size()) {
 
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
       	                             &viscoelastic_model[im])==1) {
@@ -12814,8 +12829,8 @@ void NavierStokes::tensor_extrapolation() {
    if (store_elastic_data[im]==1) {
 
     int partid=0;
-    while ((im_elastic_map[partid]!=im)&&
-	   (partid<im_elastic_map.size())) {
+    while ((im_viscoelastic_map[partid]!=im)&&
+	   (partid<im_viscoelastic_map.size())) {
      partid++;
     }
 
@@ -12826,7 +12841,7 @@ void NavierStokes::tensor_extrapolation() {
 
     partid_test++;
 
-    if (partid<im_elastic_map.size()) {
+    if (partid<im_viscoelastic_map.size()) {
 
      if (fort_built_in_elastic_model(&elastic_viscosity[im],
       	                             &viscoelastic_model[im])==1) {
@@ -21066,7 +21081,7 @@ void NavierStokes::writeTECPLOT_File(int do_plot,int do_slice) {
    }  // for (int im=0;im<num_materials;im++)
 
    for (int partid=0;partid<num_materials_viscoelastic;partid++) {
-    int im=im_elastic_map[partid];
+    int im=im_viscoelastic_map[partid];
     if ((im>=0)&&(im<num_materials)) {
      std::stringstream im_string_stream(std::stringstream::in |
       std::stringstream::out);
@@ -22685,11 +22700,11 @@ NavierStokes::volWgtSumALL(
      if (elastic_viscosity[im]>0.0) {
 
       int partid=0;
-      while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
+      while ((im_viscoelastic_map[partid]!=im)&&(partid<im_viscoelastic_map.size())) {
        partid++;
       }
 
-      if (partid<im_elastic_map.size()) {
+      if (partid<im_viscoelastic_map.size()) {
        // we are currently in "volWgtSumALL"
        make_viscoelastic_tensorALL(im); // (mu_p/lambda)(f(A)A-I) if FENE-P
        Copy_array(VISCOTEN_ALL_MAT_MF,VISCOTEN_MF,
@@ -24941,8 +24956,8 @@ MultiFab* NavierStokes::getStateTensor (
  if ((num_materials_viscoelastic>=1)&&
      (num_materials_viscoelastic<=num_materials)) {
 
-   // 0<=im_elastic_map[i]<num_materials
-  int nparts=im_elastic_map.size();
+   // 0<=im_viscoelastic_map[i]<num_materials
+  int nparts=im_viscoelastic_map.size();
 
   if (nparts==num_materials_viscoelastic) {
 

@@ -18588,8 +18588,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"im invalid81:tensorBC"
        stop
       endif
-      if (fort_im_elastic_map(ipart)+1.ne.im) then
-       print *,"fort_im_elastic_map(ipart)+1.ne.im"
+      if (fort_im_viscoelastic_map(ipart)+1.ne.im) then
+       print *,"fort_im_viscoelastic_map(ipart)+1.ne.im"
        stop
       endif
 
@@ -30499,7 +30499,7 @@ end subroutine initialize2d
        print *,"ipart out of range:FORT_TENSORFILL"
        stop
       endif
-      im=fort_im_elastic_map(ipart)+1
+      im=fort_im_viscoelastic_map(ipart)+1
       if ((im.ge.1).and.(im.le.num_materials)) then
 
        u_ptr=>u
@@ -31066,7 +31066,7 @@ end subroutine initialize2d
              (icomp_total.le. &
               num_materials_viscoelastic*ENUM_NUM_TENSOR_TYPE)) then
 
-          im=fort_im_elastic_map(ipart)+1
+          im=fort_im_viscoelastic_map(ipart)+1
 
           borderlo(3)=0
           borderhi(3)=0
