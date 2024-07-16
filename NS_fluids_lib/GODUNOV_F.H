@@ -562,7 +562,10 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
 
-   void fort_init_icemask_and_icefacecut(
+   void fort_init_elasticmask_and_elasticmaskpart(
+    int* im_elastic,
+    int* num_FSI_outer_sweeps,
+    int* FSI_outer_sweeps,
     int* nden,
     Real* time,
     int* level,int* finest_level,
@@ -583,6 +586,9 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
+    int* im_elastic,
+    int* num_FSI_outer_sweeps,
+    int* FSI_outer_sweeps,
     int* nden,
     int* freezing_model,
     int* distribute_from_target,

@@ -2900,11 +2900,13 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
 
         if (num_FSI_outer_sweeps==1) {
          //do nothing
-        } else if (num_FSI_outer_sweeps==2) {
+        } else if ((num_FSI_outer_sweeps>=2)&&
+                   (num_FSI_outer_sweeps<=num_materials)) {
           //allocates and saves FSI_CELL|MAC_VELOCITY_MF if sweeps==0,
           //copies fluid velocity and deletes if sweeps==1.
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
+          ns_level.level_init_elasticmask_and_elasticmaskpart();
           ns_level.manage_FSI_data(); 
          }
         } else
@@ -3101,7 +3103,8 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          alloc_flag=0;
          alloc_DTDtALL(alloc_flag);
 
-        } else if (FSI_outer_sweeps==1) {
+        } else if ((FSI_outer_sweeps>=1)&&
+                   (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
          //do nothing
         } else
          amrex::Error("FSI_outer_sweeps invalid");
@@ -7579,6 +7582,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
    // fort_buildfacewt is declared in LEVELSET_3D.F90
    fort_buildfacewt(
+    im_elastic.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,
     &facewt_iter,
@@ -8156,6 +8160,7 @@ void NavierStokes::correct_velocity(
 
     // declared in: NAVIERSTOKES_3D.F90
    fort_fluidsolidcor(
+    im_elastic.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,
     &level,
@@ -12879,41 +12884,21 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
 }  // SET_STOKES_MARK
 
 
-//allocates and saves FSI_CELL|MAC_VELOCITY_MF if sweeps==0,
-//copies fluid velocity and deletes if sweeps==1.
+//allocates and saves FSI_CELL|MAC_VELOCITY_MF if sweeps>=0 and
+//sweeps<num_FSI_outer_sweeps
+//copies fluid velocity and deletes if sweeps>=1 and 
+//sweeps<=num_FSI_outer_sweeps
 void NavierStokes::manage_FSI_data() {
 
  int finest_level=parent->finestLevel();
 
  std::string local_caller_string="manage_FSI_data";
 
- if (num_FSI_outer_sweeps==2) {
+ if ((num_FSI_outer_sweeps>=2)&&
+     (num_FSI_outer_sweeps<=num_materials)) {
 
-  if (FSI_outer_sweeps==0) {
-
-   new_localMF(FSI_CELL_VELOCITY_MF,AMREX_SPACEDIM,1,-1);
-   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
-    //ngrow=1
-    //Umac_Type+dir
-    //getStateMAC_localMF is declared in NavierStokes2.cpp
-    //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
-    getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,0,dir,cur_time_slab);
-   } // dir=0 ... sdim-1
-
-   // advect_register has 1 ghost initialized.
-   push_back_state_register(FSI_CELL_VELOCITY_MF,cur_time_slab);
-
-   if (localMF[FSI_CELL_VELOCITY_MF]->nGrow()>=1) {
-    //do nothing
-   } else
-    amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nGrow()<1");
-
-   if (localMF[FSI_CELL_VELOCITY_MF]->nComp()==AMREX_SPACEDIM) {
-    //do nothing
-   } else
-    amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nComp()!=sdim");
-
-  } else if (FSI_outer_sweeps==1) {
+  if ((FSI_outer_sweeps>=1)&&
+      (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
 
    bool use_tiling=ns_tiling;
 
@@ -12983,6 +12968,9 @@ void NavierStokes::manage_FSI_data() {
 
       // fort_manage_elastic_velocity is declared in: LEVELSET_3D.F90
      fort_manage_elastic_velocity(
+      im_elastic.dataPtr(),
+      &num_FSI_outer_sweeps,
+      &FSI_outer_sweeps,
       &dir, //dir=0,1,2
       velbc.dataPtr(),  
       &slab_step,
@@ -13015,11 +13003,43 @@ void NavierStokes::manage_FSI_data() {
 
    delete_localMF(FSI_MAC_VELOCITY_MF,AMREX_SPACEDIM);
    delete_localMF(FSI_CELL_VELOCITY_MF,1);
+  } else if (FSI_outer_sweeps==0) {
+   //do nothing
+  } else
+   amrex::Error("FSI_outer_sweeps invalid");
+
+  if ((FSI_outer_sweeps>=0)&&
+      (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+
+   new_localMF(FSI_CELL_VELOCITY_MF,AMREX_SPACEDIM,1,-1);
+   for (int dir=0;dir<AMREX_SPACEDIM;dir++) {
+    //ngrow=1
+    //Umac_Type+dir
+    //getStateMAC_localMF is declared in NavierStokes2.cpp
+    //localMF[FSI_MAC_VELOCITY_MF+dir allocated in getStateMAC_localMF.
+    getStateMAC_localMF(FSI_MAC_VELOCITY_MF+dir,0,dir,cur_time_slab);
+   } // dir=0 ... sdim-1
+
+   // advect_register has 1 ghost initialized.
+   push_back_state_register(FSI_CELL_VELOCITY_MF,cur_time_slab);
+
+   if (localMF[FSI_CELL_VELOCITY_MF]->nGrow()>=1) {
+    //do nothing
+   } else
+    amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nGrow()<1");
+
+   if (localMF[FSI_CELL_VELOCITY_MF]->nComp()==AMREX_SPACEDIM) {
+    //do nothing
+   } else
+    amrex::Error("localMF[FSI_CELL_VELOCITY_MF]->nComp()!=sdim");
+
+  } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+   //do nothing
   } else
    amrex::Error("FSI_outer_sweeps invalid");
 
  } else
-  amrex::Error("expecting num_FSI_outer_sweeps==2");
+  amrex::Error("expecting num_FSI_outer_sweeps>=2");
 
 } // end subroutine manage_FSI_data()
 

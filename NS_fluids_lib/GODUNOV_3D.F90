@@ -4376,7 +4376,7 @@ stop
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
         !
-        ! FACECOMP_ICEMASK and FACECOMP_ICEFACECUT components are 
+        ! FACECOMP_elasticmask and FACECOMP_elasticmaskpart components are 
         !   initialized to one
         !   in "fort_init_physics_vars"
         ! if num_materials=2, num_interfaces=1
@@ -4679,22 +4679,17 @@ stop
         ! recon:
         ! vof,ref centroid,order,slope,intercept  x num_materials
         !
-        ! xface(FACECOMP_ICEMASK+1)=one and 
-        ! xface(FACECOMP_ICEFACECUT+1) = one in
-        ! fluid regions (not ice and not FSI_RIGID).
-        !
-        ! local_face(FACECOMP_ICEMASK+1) and 
-        ! local_face(FACECOMP_ICEFACECUT+1) 
-        ! are initialized to one in "fort_init_physics_vars."
-        !
         ! if num_materials=2, num_interfaces=1
         ! if num_materials=3, num_interfaces=3    12 13 23
         ! if num_materials=4, num_interfaces=6    12 13 14 23 24 34
         ! This routine is called from NavierStokes.cpp: 
-        !  NavierStokes::level_init_icemask_and_icefacecut()
+        !  NavierStokes::level_init_elasticmask_and_elasticmaskpart()
         !   which is called from
         !     NavierStokes::make_physics_varsALL
-      subroutine fort_init_icemask_and_icefacecut( &
+      subroutine fort_init_elasticmask_and_elasticmaskpart( &
+       im_elastic, &
+       num_FSI_outer_sweeps, &
+       FSI_outer_sweeps, &
        nden, &
        time, &
        level,finest_level, &
@@ -4713,13 +4708,16 @@ stop
        denstate,DIMS(denstate), &
        LSnew,DIMS(LSnew), &
        recon,DIMS(recon) ) &
-      bind(c,name='fort_init_icemask_and_icefacecut')
+      bind(c,name='fort_init_elasticmask_and_elasticmaskpart')
       use probf90_module
       use global_utility_module
       use MOF_routines_module
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: level,finest_level
@@ -4779,13 +4777,14 @@ stop
       real(amrex_real) VOFright(num_materials)
       integer vofcomp
 
-      real(amrex_real) ice_test,cut_test
-      real(amrex_real) icemask_left
-      real(amrex_real) icemask_right
-      real(amrex_real) icefacecut_left
-      real(amrex_real) icefacecut_right
-      real(amrex_real) icemask
-      real(amrex_real) icefacecut
+      real(amrex_real) elasticmask_left
+      real(amrex_real) elasticmask_right
+      real(amrex_real) elasticmaskpart_left
+      real(amrex_real) elasticmaskpart_right
+
+      real(amrex_real) elasticmask
+      real(amrex_real) elasticmaskpart
+
       integer, PARAMETER :: nhalf=3
       real(amrex_real) xstenMAC(-nhalf:nhalf,SDIM)
       real(amrex_real) xmac(SDIM)
@@ -4814,7 +4813,7 @@ stop
       endif
 
       if ((level.lt.0).or.(level.gt.finest_level)) then
-       print *,"level invalid in fort_init_icemask_and_icefacecut"
+       print *,"level invalid in fort_init_elasticmask_and_elasticmaskpart"
        stop
       endif
       if (num_state_base.ne.2) then
@@ -4843,13 +4842,13 @@ stop
               freezing_model(iten+ireverse*num_interfaces)).eq.1) then
           ! do nothing 
          else
-          print *,"freezing_model invalid fort_init_icemask_and_icefacecut"
+          print *,"freezing_model invalid fort_init_elasticmask_and_elasticmaskpart"
           print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
          if ((distribute_from_target(iten+ireverse*num_interfaces).lt.0).or. &
              (distribute_from_target(iten+ireverse*num_interfaces).gt.1)) then
-          print *,"distribute_from_target err fort_init_icemask_and_icefacecut"
+          print *,"distribute_from_target err fort_init_elasticmask_and_elasticmaskpart"
           print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
@@ -4876,7 +4875,7 @@ stop
        else if ((dir.eq.2).and.(SDIM.eq.3)) then
         kk=1
        else
-        print *,"dir invalid fort_init_icemask_and_icefacecut"
+        print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart"
         stop
        endif
 
@@ -4911,17 +4910,18 @@ stop
 
          complement_flag=0
 
-          ! get_icemask_and_icefacecut defined in PROB.F90
-          ! get_icemask_and_icefacecut is "triggered" for both ice 
-          !  materials and "is_FSI_rigid" materials.
-          ! this routine: fort_init_icemask_and_icefacecut
-         call get_icemask_and_icefacecut( &
+          ! get_elasticmask_and_elasticmaskpart defined in PROB.F90
+          ! this routine: fort_init_elasticmask_and_elasticmaskpart
+         call get_elasticmask_and_elasticmaskpart( &
+          im_elastic, &
+          num_FSI_outer_sweeps, &
+          FSI_outer_sweeps, &
           nden, &
           xmac, &
           time, &
           dx,bfact, &
-          icemask_left, &  ! 0 or 1
-          icefacecut_left, & ! 0<=f<=1
+          elasticmask_left, &  ! 0 or 1
+          elasticmaskpart_left, &
           im_left, &
           im_opp_left, &
           im_primary_left, &
@@ -4932,17 +4932,18 @@ stop
           distribute_from_target, &
           complement_flag)
 
-          ! get_icemask_and_icefacecut defined in PROB.F90
-          ! get_icemask_and_icefacecut is "triggered" for both ice 
-          !  materials and "is_FSI_rigid" materials.
-          ! this routine: fort_init_icemask_and_icefacecut
-         call get_icemask_and_icefacecut( &
+          ! get_elasticmask_and_elasticmaskpart defined in PROB.F90
+          ! this routine: fort_init_elasticmask_and_elasticmaskpart
+         call get_elasticmask_and_elasticmaskpart( &
+          im_elastic, &
+          num_FSI_outer_sweeps, &
+          FSI_outer_sweeps, &
           nden, &
           xmac, &
           time, &
           dx,bfact, &
-          icemask_right, &  ! 0 or 1
-          icefacecut_right, & ! 0<=f<=1
+          elasticmask_right, &  ! 0 or 1
+          elasticmaskpart_right, & 
           im_right, &
           im_opp_right, &
           im_primary_right, &
@@ -4953,139 +4954,39 @@ stop
           distribute_from_target, &
           complement_flag)
 
-         icemask=min(icemask_left,icemask_right)
+         elasticmask=min(elasticmask_left,elasticmask_right)
 
-         if (icemask.eq.one) then
+         if (elasticmask.eq.one) then
           ! do nothing
-         else if (icemask.eq.zero) then
+         else if (elasticmask.eq.zero) then
           ! do nothing
          else
-          print *,"icemask invalid"
+          print *,"elasticmask invalid"
           stop
          endif
 
-         if ((icefacecut_left.ge.zero).and. &
-             (icefacecut_right.ge.zero).and. &
-             (icefacecut_left.le.one).and. &
-             (icefacecut_right.le.one)) then
+         elasticmaskpart=min(elasticmaskpart_left,elasticmaskpart_right)
 
-          if ((icefacecut_left.eq.zero).and. &
-              (icefacecut_right.eq.zero)) then
-           icefacecut=zero
-          else if ((icefacecut_left.eq.zero).or. &
-                   (icefacecut_right.eq.zero)) then
-           icefacecut=zero
-          else if ((icefacecut_left.eq.one).and. &
-                   (icefacecut_right.eq.one)) then
-           icefacecut=one
-          else if ((icefacecut_left.gt.zero).and. &
-                   (icefacecut_left.le.one).and. &
-                   (icefacecut_right.gt.zero).and. &
-                   (icefacecut_right.le.one)) then
-           icefacecut=min(icefacecut_left,icefacecut_right)
-          else
-           print *,"icefacecut_left or icefacecut_right invalid"
-           print *,"icefacecut_left ",icefacecut_left
-           print *,"icefacecut_right ",icefacecut_right
-           stop
-          endif
-
-         else
-          print *,"icefacecut_left or icefacecut_right invalid"
-          print *,"icefacecut_left ",icefacecut_left
-          print *,"icefacecut_right ",icefacecut_right
-          stop
-         endif
-
-         if (icemask.eq.one) then
-          if (icefacecut.eq.one) then
-           ! do nothing
-          else
-           print *,"icefacecut invalid(1)"
-           print *,"icefacecut ",icefacecut
-           print *,"icemask ",icemask
-           stop
-          endif
-         else if (icemask.eq.zero) then
-          if ((icefacecut.ge.zero).and. &
-              (icefacecut.lt.one)) then
-           ! do nothing
-          else
-           print *,"icefacecut invalid(2)"
-           print *,"icefacecut ",icefacecut
-           print *,"icefacecut_left ",icefacecut_left
-           print *,"icefacecut_right ",icefacecut_right
-           print *,"icemask ",icemask
-           print *,"icemask_left ",icemask_left
-           print *,"icemask_right ",icemask_right
-           stop
-          endif
-         else
-          print *,"icemask invalid icemask=",icemask
-          print *,"icefacecut=",icefacecut
-          stop
-         endif
-
-         if ((icefacecut.ge.zero).and. &
-             (icefacecut.le.one)) then
+         if (elasticmaskpart.eq.one) then
+          ! do nothing
+         else if (elasticmaskpart.eq.zero) then
           ! do nothing
          else
-          print *,"icefacecut invalid icefacecut=",icefacecut 
-          stop
-         endif
-
-         if (icefacecut.ge.icemask) then
-          ! do nothing
-         else
-          print *,"expecting icefacecut>=icemask"
-          print *,"icefacecut=",icefacecut
-          print *,"icemask=",icemask
+          print *,"elasticmaskpart invalid"
           stop
          endif
 
          if (dir.eq.0) then
-          ice_test=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
-          cut_test=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
+          xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
          else if (dir.eq.1) then
-          ice_test=yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
-          cut_test=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          yface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
+          yface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          ice_test=zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
-          cut_test=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+          zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
+          zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
          else
-          print *,"dir invalid fort_init_icemask_and_icefacecut 2"
-          stop
-         endif
-
-         if (ice_test.eq.zero) then
-          ! do nothing
-         else if (ice_test.eq.one) then
-          ! do nothing
-         else
-          print *,"ice_test invalid ice_test=",ice_test
-          print *,"cut_test=",cut_test
-          stop
-         endif
-         if ((cut_test.ge.zero).and. &
-             (cut_test.le.one)) then
-          ! do nothing
-         else
-          print *,"cut_test invalid" 
-          print *,"cut_test ",cut_test
-          stop
-         endif
-  
-         if (dir.eq.0) then
-          xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)=icefacecut
-          xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)=icemask
-         else if (dir.eq.1) then
-          yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)=icefacecut
-          yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)=icemask
-         else if ((dir.eq.2).and.(SDIM.eq.3)) then
-          zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)=icefacecut
-          zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)=icemask
-         else
-          print *,"dir invalid fort_init_icemask_and_icefacecut 3"
+          print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart 3"
           stop
          endif
 
@@ -5103,7 +5004,7 @@ stop
       enddo ! dir=0..sdim-1
 
       return
-      end subroutine fort_init_icemask_and_icefacecut
+      end subroutine fort_init_elasticmask_and_elasticmaskpart
 
       subroutine check_for_closest_UMAC( &
        xtarget, &
@@ -11132,6 +11033,9 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine fort_tagexpansion(&
+       im_elastic, &
+       num_FSI_outer_sweeps, &
+       FSI_outer_sweeps, &
        nden, &
        freezing_model, &
        distribute_from_target, &
@@ -11165,6 +11069,9 @@ stop
 
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(inout) :: mdot_sum
@@ -11197,14 +11104,16 @@ stop
       real(amrex_real), pointer :: tag_ptr(D_DECL(:,:,:))
       real(amrex_real), INTENT(out), target :: tag_comp(DIMV(tag_comp))
       real(amrex_real), pointer :: tag_comp_ptr(D_DECL(:,:,:))
-      real(amrex_real), INTENT(in), target :: expan(DIMV(expan),2*num_interfaces)
+      real(amrex_real), INTENT(in), target :: &
+         expan(DIMV(expan),2*num_interfaces)
       real(amrex_real), pointer :: expan_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
            expan_comp(DIMV(expan_comp),2*num_interfaces)
       real(amrex_real), pointer :: expan_comp_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: denstate(DIMV(denstate),nden)
       real(amrex_real), pointer :: denstate_ptr(D_DECL(:,:,:),:)
-      real(amrex_real), INTENT(in), target :: LS(DIMV(LS),num_materials*(1+SDIM))
+      real(amrex_real), INTENT(in), target :: &
+        LS(DIMV(LS),num_materials*(1+SDIM))
       real(amrex_real), pointer :: LS_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: &
            recon(DIMV(recon),num_materials*ngeom_recon)
@@ -11217,8 +11126,8 @@ stop
       real(amrex_real) VDOT
       real(amrex_real) local_denstate(nden)
       real(amrex_real) LSCELL(num_materials)
-      real(amrex_real) ICEMASK
-      real(amrex_real) icefacecut
+      real(amrex_real) elasticmaskpart
+      real(amrex_real) elasticmask
       integer im,im_opp
       integer ireverse
       integer iten
@@ -11389,10 +11298,10 @@ stop
          ! check for being a donor cell:
          ! 1. non-zero expansion term
          ! 2. (F_ice < 0.5) or
-         !    (icemask=0.0)
+         !    (elasticmask=0.0)
          ! 
          ! check for being a receiving cell:
-         ! (F_ice_tessellate > 0.5)&&(icemask>0.0)
+         ! (F_ice_tessellate > 0.5)&&(elasticmask>0.0)
          ! 
          ! weight for redistribution: equal weight for all cells in the
          ! redistribution stencil.
@@ -11458,21 +11367,24 @@ stop
          endif
 
          if (im_ice.eq.0) then!both source and dest can be distributed to.
-          ICEMASK=one
+          elasticmask=one
          else if ((im_ice.ge.1).and. &
                   (im_ice.le.num_materials)) then
 
           ! in: fort_tagexpansion
-          ! ICEMASK=0 => mask off this cell.
-          ! ICEMASK=1 => do nothing
-          ! get_icemask_and_icefacecut declared in PROB.F90
-          call get_icemask_and_icefacecut( &
+          ! elasticmask=0 => mask off this cell.
+          ! elasticmask=1 => do nothing
+          ! get_elasticmask_and_elasticmaskpart declared in PROB.F90
+          call get_elasticmask_and_elasticmaskpart( &
+           im_elastic, &
+           num_FSI_outer_sweeps, &
+           FSI_outer_sweeps, &
            nden, &
            xsten_center, &
            time, &
            dx,bfact, &
-           ICEMASK, &
-           icefacecut, &
+           elasticmask, &
+           elasticmaskpart, &
            im, &
            im_opp, &
            im_primary_icemask, &
@@ -11484,7 +11396,7 @@ stop
            complement_flag)
 
           if (ireverse.eq.-1) then!both source and dest can be distributed to.
-           ICEMASK=one
+           elasticmask=one
           else if ((ireverse.eq.0).or.(ireverse.eq.1)) then
            call get_iten(im,im_opp,iten)
            index_compare=iten+ireverse*num_interfaces-1
@@ -11493,7 +11405,7 @@ stop
             if (index_compare.eq.indexEXP) then
              ! do nothing
             else
-             ICEMASK=one !assume both source and dest can be distributed to.
+             elasticmask=one !assume both source and dest can be distributed to.
             endif
            else
             print *,"index_compare invalid"
@@ -11519,6 +11431,7 @@ stop
          endif
 
          if ((is_rigid(im_primary).eq.0).and. &
+             (is_FSI_elastic(im_primary).eq.0).and. &
              (is_FSI_rigid(im_primary).eq.0)) then
 
            ! first tag donor cells (tag=one)
@@ -11529,7 +11442,7 @@ stop
              .eq.0) then
 
             if ((VFRAC(im_dest).lt.half).or. &
-                (ICEMASK.eq.zero)) then
+                (elasticmask.eq.zero)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -11539,10 +11452,10 @@ stop
               stop
              endif
             else if ((VFRAC(im_dest).ge.half).and. &
-                     (ICEMASK.eq.one)) then
+                     (elasticmask.eq.one)) then
              ! do nothing - acceptor cell
             else
-             print *,"VFRAC or ICEMASK bust"
+             print *,"VFRAC or elasticmask bust"
              stop      
             endif
 
@@ -11551,7 +11464,7 @@ stop
              .eq.1) then
 
             if ((VFRAC(im_source).lt.half).or. &
-                (ICEMASK.eq.zero)) then
+                (elasticmask.eq.zero)) then
              if (complement_flag.eq.0) then
               tag(D_DECL(i,j,k)) = one ! donor cell
              else if (complement_flag.eq.1) then
@@ -11561,10 +11474,10 @@ stop
               stop
              endif
             else if ((VFRAC(im_source).ge.half).and. &
-                     (ICEMASK.eq.one)) then
+                     (elasticmask.eq.one)) then
              ! do nothing - acceptor cell
             else
-             print *,"VFRAC or ICEMASK bust"     
+             print *,"VFRAC or elasticmask bust"     
              stop
             endif
 
@@ -11586,7 +11499,7 @@ stop
             .eq.0) then
 
            if ((VFRAC(im_dest).ge.half).and. &
-               (ICEMASK.eq.one)) then
+               (elasticmask.eq.one)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -11596,10 +11509,10 @@ stop
              stop
             endif
            else if ((VFRAC(im_dest).lt.half).or. &
-                    (ICEMASK.eq.zero)) then
+                    (elasticmask.eq.zero)) then
             ! do nothing - donor cell if VDOT<>0
            else
-            print *,"VFRAC or ICEMASK bust"
+            print *,"VFRAC or elasticmask bust"
             stop      
            endif
  
@@ -11608,7 +11521,7 @@ stop
               .eq.1) then
 
            if ((VFRAC(im_source).ge.half).and. &
-               (ICEMASK.eq.one)) then
+               (elasticmask.eq.one)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -11618,10 +11531,10 @@ stop
              stop
             endif
            else if ((VFRAC(im_source).lt.half).or. &
-                    (ICEMASK.eq.zero)) then
+                    (elasticmask.eq.zero)) then
             ! do nothing - donor cell if VDOT<>0
            else
-            print *,"VFRAC or ICEMASK bust"     
+            print *,"VFRAC or elasticmask bust"     
             stop
            endif
  
@@ -11632,11 +11545,13 @@ stop
 
          !in the prescribed solid.
          else if ((is_rigid(im_primary).eq.1).or. &
+                  (is_FSI_elastic(im_primary).eq.1).or. &
                   (is_FSI_rigid(im_primary).eq.1)) then 
           ! do nothing (tag initialized to 0, neither donor nor receiver)
          else
           print *,"is_rigid(im_primary) invalid or"
-          print *,"is_FSI_rigid(im_primary) invalid"
+          print *,"is_FSI_rigid(im_primary) invalid or "
+          print *,"is_FSI_elastic(im_primary) invalid "
           stop
          endif 
 

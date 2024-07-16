@@ -16581,6 +16581,9 @@ stop
 
 
       subroutine fort_manage_elastic_velocity( &
+       im_elastic, &
+       num_FSI_outer_sweeps, &
+       FSI_outer_sweeps, &
        dir, &
        velbc_in, &
        slab_step, &
@@ -16606,6 +16609,9 @@ stop
       use probcommon_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: dir
       integer, INTENT(in) :: slab_step
       integer, INTENT(in) :: level
@@ -16668,6 +16674,7 @@ stop
       real(amrex_real) temperature_clamped
       real(amrex_real) xclamped_minus_sten(-nhalf:nhalf,SDIM)
       real(amrex_real) xclamped_plus_sten(-nhalf:nhalf,SDIM)
+      integer im_rigid_CL
 
       velMAC_ptr=>velMAC
       velCELL_ptr=>velCELL
@@ -16675,6 +16682,21 @@ stop
       FSIvelCELL_ptr=>FSIvelCELL
       maskcoef_ptr=>maskcoef
       levelPC_ptr=>levelPC
+
+      if (FSI_outer_sweeps.ge.1) then
+       !do nothing
+      else
+       print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+       stop
+      endif
+
+      im_rigid_CL=im_elastic(FSI_outer_sweeps)+1
+      if (is_rigid_CL(im_rigid_CL).eq.1) then
+       !do nothing
+      else
+       print *,"im_rigid_CL invalid: ",im_rigid_CL
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact too small"
@@ -16823,15 +16845,23 @@ stop
          !do nothing
         else if (at_RZ_face.eq.0) then
 
-         if ((is_rigid_CL(im_left).eq.1).or. &
-             (is_rigid_CL(im_right).eq.1)) then
+         if ((is_rigid(im_left).eq.1).or. &
+             (is_rigid(im_right).eq.1)) then
           !do nothing
-         else if ((is_rigid_CL(im_left).eq.0).and. &
-                  (is_rigid_CL(im_right).eq.0)) then
+         else if (((is_rigid_CL(im_left).eq.1).and. &
+                   (im_left.le.im_rigid_CL)).or. &
+                  ((is_rigid_CL(im_right).eq.1).and. &
+                   (im_right.le.im_rigid_CL))) then
+          !do nothing
+         else if (((is_rigid_CL(im_left).eq.0).or. &
+                   (im_left.gt.im_rigid_CL)).and. &
+                  ((is_rigid_CL(im_right).eq.0).or. &
+                   (im_right.gt.im_rigid_CL))) then
           velMAC(D_DECL(i,j,k))=FSIvelMAC(D_DECL(i,j,k))
          else
           print *,"is_rigid_CL bust: ",im_left,im_right, &
            is_rigid_CL(im_left),is_rigid_CL(im_right)
+          print *,"im_rigid_CL: ",im_rigid_CL
           stop
          endif
 
@@ -16892,9 +16922,13 @@ stop
         !do nothing
        else if (LS_clamped_minus.lt.zero) then
 
-        if (is_rigid_CL(im_left).eq.1) then
+        if (is_rigid(im_left).eq.1) then
          !do nothing
-        else if (is_rigid_CL(im_left).eq.0) then
+        else if ((is_rigid_CL(im_left).eq.1).and. &
+                 (im_left.le.im_rigid_CL)) then
+         !do nothing
+        else if ((is_rigid_CL(im_left).eq.0).or. &
+                 (im_left.gt.im_rigid_CL)) then
          velCELL(D_DECL(i,j,k))=FSIvelCELL(D_DECL(i,j,k))
         else
          print *,"is_rigid_CL bust"
@@ -16920,6 +16954,7 @@ stop
       !   NavierStokes::diffusion_heatingALL 
       ! mask=1 at fine-fine boundaries
       subroutine fort_buildfacewt( &
+       im_elastic, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        facewt_iter, &
@@ -16959,6 +16994,7 @@ stop
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: facewt_iter
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
@@ -17014,8 +17050,8 @@ stop
       integer inorm
       real(amrex_real) dd,dd_group
       real(amrex_real) cc,cc_group
-      real(amrex_real) cc_ice
-      real(amrex_real) cc_ice_mask
+      real(amrex_real) cc_elasticmask
+      real(amrex_real) cc_elasticmaskpart
       integer side
       integer dir
       integer veldir
@@ -17208,16 +17244,16 @@ stop
 
              if (dir.eq.0) then
               cc=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-              cc_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-              cc_ice_mask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+              cc_elasticmask=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
+              cc_elasticmaskpart=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
              else if (dir.eq.1) then
               cc=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-              cc_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-              cc_ice_mask=yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+              cc_elasticmask=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
+              cc_elasticmaskpart=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
              else if ((dir.eq.2).and.(SDIM.eq.3)) then
               cc=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-              cc_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-              cc_ice_mask=zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+              cc_elasticmask=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
+              cc_elasticmaskpart=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
              else
               print *,"dir invalid buildfacewt"
               stop
@@ -17242,13 +17278,14 @@ stop
              ! eval_face_coeff is declared in: PROB.F90
              ! e.g. 1/rho for div( (1/rho) gradp ) = div( ustar )
             call eval_face_coeff( &
+             im_elastic, &
              num_FSI_outer_sweeps, &
              FSI_outer_sweeps, &
              xsten,nhalf, &
              level,finest_level, &
              cc, &
-             cc_ice, &
-             cc_ice_mask, &
+             cc_elasticmask, &
+             cc_elasticmaskpart, &
              cc_group, &  ! intent(out)
              dd, &
              dd_group, &  ! intent(out)
