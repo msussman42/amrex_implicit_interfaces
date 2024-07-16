@@ -607,7 +607,7 @@ protected:
     void tensor_advection_update();
     void tensor_advection_updateALL();
 
-    void level_init_icemask_and_icefacecut();
+    void level_init_elasticmask_and_elasticmaskpart();
     void phase_change_redistributeALL();
     void level_phase_change_redistribute(
       Real expect_mdot_sign,

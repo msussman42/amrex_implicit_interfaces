@@ -3382,7 +3382,7 @@ NavierStokes::read_params ()
     }  // im=0..num_materials-1
 
     if (im_elastic_map.size()!=num_FSI_outer_sweeps-1)
-     amrex::Error("im_elastic_map invalid");
+     amrex::Error("im_elastic_map.size() invalid");
 
     if (im_elastic_map.size()>=num_materials)
      amrex::Error("im_elastic_map.size()>=num_materials");
@@ -15626,6 +15626,9 @@ NavierStokes::level_phase_change_redistribute(
     // material is neither a donor or a receiver.
     // donorfab is modified.
    fort_tagexpansion( 
+    im_elastic.dataPtr(),
+    &num_FSI_outer_sweeps,
+    &FSI_outer_sweeps,
     &nden,
     freezing_model.dataPtr(),
     distribute_from_target.dataPtr(),
@@ -16037,14 +16040,14 @@ NavierStokes::level_phase_change_redistribute(
 
 // called from: NavierStokes::make_physics_varsALL
 void
-NavierStokes::level_init_icemask_and_icefacecut() {
+NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
 
- std::string local_caller_string="level_init_icemask_and_icefacecut";
+ std::string local_caller_string="level_init_elasticmask_and_elasticmaskpart";
 
  bool use_tiling=ns_tiling;
  int finest_level=parent->finestLevel();
  if ((level<0)||(level>finest_level))
-  amrex::Error("level invalid level_init_icemask_and_icefacecut");
+  amrex::Error("level invalid level_init_elasticmask_and_elasticmaskpart");
 
  resize_maskfiner(1,MASKCOEF_MF);
  VOF_Recon_resize(1); //output:SLOPE_RECON_MF
@@ -16105,7 +16108,10 @@ NavierStokes::level_init_icemask_and_icefacecut() {
    thread_class::tile_d_numPts[tid_current]+=tilegrid.d_numPts();
    
     // declared in: GODUNOV_3D.F90
-   fort_init_icemask_and_icefacecut( 
+   fort_init_elasticmask_and_elasticmaskpart( 
+    im_elastic.dataPtr(),
+    &num_FSI_outer_sweeps,
+    &FSI_outer_sweeps,
     &nden,
     &cur_time_slab,
     &level,&finest_level,
@@ -16116,7 +16122,7 @@ NavierStokes::level_init_icemask_and_icefacecut() {
     fablo,fabhi,
     &bfact, 
     xlo,dx,
-    &dt_slab, //fort_init_icemask_and_icefacecut
+    &dt_slab, //fort_init_elasticmask_and_elasticmaskpart
     maskcov.dataPtr(),
     ARLIM(maskcov.loVect()),ARLIM(maskcov.hiVect()),
     xface.dataPtr(),ARLIM(xface.loVect()),ARLIM(xface.hiVect()),
@@ -16130,13 +16136,13 @@ NavierStokes::level_init_icemask_and_icefacecut() {
 
   } // mfi
 } // omp
-  ns_reconcile_d_num(LOOP_INIT_ICEMASK_AND_ICEFACECUT,
-	"level_init_icemask_and_icefacecut");
+  ns_reconcile_d_num(LOOP_INIT_ELASTICMASK_AND_ELASTICMASKPART,
+	"level_init_elasticmask_and_elasticmaskpart");
 
   delete_localMF(LSNEW_MF,1);
   delete state_var_mf;
 
-} // subroutine level_init_icemask_and_icefacecut
+} // subroutine level_init_elasticmask_and_elasticmaskpart
 
 
 // 1. called if "is_GFM_freezing_model"

@@ -192,18 +192,16 @@ stop
       return
       end subroutine get_mach_number 
 
-
-       ! called from fort_init_icemask_and_icefacecut (GODUNOV_3D.F90) and
-       !             tagexpansion (GODUNOV_3D.F90)
-       ! input: LS, latent_heat, distribute_from_target
-       ! output: icemask,icefacecut,im,im_opp,ireverse
-      subroutine get_icemask_and_icefacecut( &
+      subroutine get_elasticmask_and_elasticmaskpart( &
+        im_elastic, &
+        num_FSI_outer_sweeps, &
+        FSI_outer_sweeps, &
         nden, &
         xtarget, &
         time, &
         dx,bfact, &
-        icemask, &
-        icefacecut, &
+        elasticmask, &
+        elasticmaskpart, &
         im, &
         im_opp, &
         im_primary, &
@@ -217,6 +215,9 @@ stop
       use MOF_routines_module
       IMPLICIT NONE
 
+      integer, INTENT(in) :: num_FSI_outer_sweeps
+      integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: xtarget(SDIM)
       real(amrex_real), INTENT(in) :: time
@@ -226,8 +227,8 @@ stop
       integer, INTENT(out) :: ireverse
       integer, INTENT(in) :: bfact
       real(amrex_real), INTENT(in) :: dx(SDIM)
-      real(amrex_real), INTENT(out) :: icemask
-      real(amrex_real), INTENT(out) :: icefacecut
+      real(amrex_real), INTENT(out) :: elasticmask
+      real(amrex_real), INTENT(out) :: elasticmaskpart
       real(amrex_real), INTENT(in) :: denstate(nden)
       real(amrex_real), INTENT(in) :: LS(num_materials)
       real(amrex_real), INTENT(in) :: VOF(num_materials)
@@ -247,6 +248,22 @@ stop
       real(amrex_real) dxmax
       real(amrex_real) :: def_thermal(num_materials)
       integer :: im_local
+      integer im_rigid_CL
+
+      if (FSI_outer_sweeps.eq.0) then
+       im_rigid_CL=num_materials
+      else if (FSI_outer_sweeps.ge.1) then
+       im_rigid_CL=im_elastic(FSI_outer_sweeps)+1
+       if (is_rigid_CL(im_rigid_CL).eq.1) then
+        !do nothing
+       else
+        print *,"im_rigid_CL invalid: ",im_rigid_CL
+        stop
+       endif
+      else
+       print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+       stop
+      endif
 
       if (bfact.lt.1) then
        print *,"bfact invalid200"
@@ -386,14 +403,20 @@ stop
       if (im_FSI_rigid.eq.im_primary) then
 
        ireverse=-1
-       icemask=zero
-       icefacecut=zero
+       elasticmask=zero
+       elasticmaskpart=one
+       if (im_primary.le.im_rigid_CL) then
+        elasticmaskpart=zero
+       endif
 
       else if (im_FSI_elastic.eq.im_primary) then
 
        ireverse=-1
-       icemask=zero
-       icefacecut=zero
+       elasticmask=zero
+       elasticmaskpart=one
+       if (im_primary.le.im_rigid_CL) then
+        elasticmaskpart=zero
+       endif
 
       else if ((im_FSI_rigid.ne.im_primary).and. &
                (im_FSI_elastic.ne.im_primary)) then
@@ -486,12 +509,15 @@ stop
 
          if (is_ice(im_primary).eq.1) then ! in ice bulk region
 
-          icemask=zero
-          icefacecut=zero
+          elasticmask=zero
+          elasticmaskpart=one
+          if (im_primary.le.im_rigid_CL) then
+           elasticmaskpart=zero
+          endif
 
          else if (is_ice(im_primary).eq.0) then
-          icemask=one
-          icefacecut=one
+          elasticmask=one
+          elasticmaskpart=one
          else
           print *,"is_ice(im_primary) invalid"
           print *,"im_primary ",im_primary
@@ -548,22 +574,38 @@ stop
           call icemask_override(xtarget,im_source,im_dest,dist_mask_override)
 
           if (dist_mask_override.ge.zero) then
-           icemask=zero  ! mask off this cell.
+           elasticmask=zero
+           elasticmaskpart=zero
           else if (dist_mask_override.le.zero) then
-           if ((LS(im_ice).ge.zero).or. &
-               (im_primary_vof.eq.im_ice).or. &
-               (im_primary.eq.im_ice).or. &
-               (VOF(im_ice).ge.0.5d0)) then
-            icemask=zero
-           else if ((LS(im_ice).le.zero).and. &
-                    (im_primary_vof.ne.im_ice).and. &
-                    (im_primary.ne.im_ice).and. &
-                    (VOF(im_ice).le.0.5d0)) then
-            icemask=one
+           if (LS(im_ice).ge.zero) then
+            elasticmask=zero
+            elasticmaskpart=one
+            if (im_ice.le.im_rigid_CL) then
+             elasticmaskpart=zero
+            endif
+           else if (im_primary_vof.eq.im_ice) then
+            elasticmask=zero
+            elasticmaskpart=one
+            if (im_ice.le.im_rigid_CL) then
+             elasticmaskpart=zero
+            endif
+           else if (im_primary.eq.im_ice) then
+            elasticmask=zero
+            elasticmaskpart=one
+            if (im_ice.le.im_rigid_CL) then
+             elasticmaskpart=zero
+            endif
+           else if (VOF(im_ice).ge.0.5d0) then
+            elasticmask=zero
+            elasticmaskpart=one
+            if (im_ice.le.im_rigid_CL) then
+             elasticmaskpart=zero
+            endif
            else
-            print *,"LS(im_ice) bust"
-            stop
+            elasticmask=one
+            elasticmaskpart=one
            endif
+
           else
            print *,"dist_mask_override bust"
            stop
@@ -579,61 +621,37 @@ stop
            stop
           endif
 
-          if ((LS(im_ice).ge.zero).or. &
-              (im_primary_vof.eq.im_ice).or. &
-              (im_primary.eq.im_ice).or. &
-              (VOF(im_ice).ge.0.5d0)) then
-           icemask=zero
-          else if ((LS(im_ice).le.zero).and. &
-                   (im_primary_vof.ne.im_ice).and. &
-                   (im_primary.ne.im_ice).and. &
-                   (VOF(im_ice).le.0.5d0)) then
-           icemask=one
+          if (LS(im_ice).ge.zero) then
+           elasticmask=zero
+           elasticmaskpart=one
+           if (im_ice.le.im_rigid_CL) then
+            elasticmaskpart=zero
+           endif
+          else if (im_primary_vof.eq.im_ice) then
+           elasticmask=zero
+           elasticmaskpart=one
+           if (im_ice.le.im_rigid_CL) then
+            elasticmaskpart=zero
+           endif
+          else if (im_primary.eq.im_ice) then
+           elasticmask=zero
+           elasticmaskpart=one
+           if (im_ice.le.im_rigid_CL) then
+            elasticmaskpart=zero
+           endif
+          else if (VOF(im_ice).ge.0.5d0) then
+           elasticmask=zero
+           elasticmaskpart=one
+           if (im_ice.le.im_rigid_CL) then
+            elasticmaskpart=zero
+           endif
           else
-           print *,"LS(im_ice) bust"
-           stop
+           elasticmask=one
+           elasticmaskpart=one
           endif
 
          else
-          print *,"im_ice invalid"
-          stop
-         endif
-
-         if ((icemask.eq.zero).or.(icemask.eq.one)) then
-          ! do nothing
-         else
-          print *,"icemask invalid: ",icemask
-          stop
-         endif
-
-         if (im_ice.eq.im_dest) then ! freezing
-
-          if (dist_mask_override.ge.zero) then ! in a substrate
-           icefacecut=zero
-          else if (icemask.eq.zero) then
-           icefacecut=zero
-          else if (icemask.eq.one) then
-           icefacecut=one
-          else
-           print *,"icemask invalid: ",icemask
-           stop
-          endif
-
-         else if (im_ice.eq.im_source) then ! melting
-
-          if (icemask.eq.zero) then
-
-           icefacecut=zero
-
-          else if (icemask.eq.one) then
-           icefacecut=one
-          else
-           print *,"icemask invalid: ",icemask
-           stop
-          endif
-
-         else
-          print *,"im_ice invalid"
+          print *,"im_ice invalid: ",im_ice
           stop
          endif
 
@@ -645,8 +663,8 @@ stop
        else if (im_ice.eq.0) then
 
         ireverse=-1
-        icemask=one
-        icefacecut=one
+        elasticmask=one
+        elasticmaskpart=one
 
        else
         print *,"im_ice invalid:",im_ice
@@ -661,30 +679,8 @@ stop
        stop
       endif
 
-      if ((icemask.eq.zero).or.(icemask.eq.one)) then
-       ! do nothing
-      else
-       print *,"icemask invalid: ",icemask
-       stop
-      endif
-   
-      if ((icefacecut.ge.zero).and. &
-          (icefacecut.le.one)) then
-       ! do nothing
-      else
-       print *,"icefacecut invalid(6): ",icefacecut
-       print *,"icemask=",icemask
-       stop
-      endif
-      if (icemask.le.icefacecut) then
-       ! do nothing
-      else
-       print *,"expecting icemask<=icefacecut"
-       stop
-      endif
- 
       return
-      end subroutine get_icemask_and_icefacecut
+      end subroutine get_elasticmask_and_elasticmaskpart
 
        ! MEHDI VAHAB HEAT SOURCE
        ! T^new=T^* + dt * (Q)/(rho cv)
@@ -11977,13 +11973,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   fort_buildfacewt (LEVELSET_3D.F90)
        !   fort_fluidsolidcor (NAVIERSTOKES_3D.F90)
       subroutine eval_face_coeff( &
+       im_elastic, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        xsten,nhalf, &
        level,finest_level, &
        cc, &
-       cc_ice, & !intent(in)
-       cc_ice_mask, & !intent(in)
+       cc_elasticmask, & !intent(in)
+       cc_elasticmaskpart, & !intent(in)
        cc_group, &  ! intent(out)
        dd, &
        dd_group, & ! intent(out)
@@ -12001,10 +11998,11 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: nhalf
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
-      real(amrex_real), INTENT(in) :: cc,cc_ice,cc_ice_mask
+      real(amrex_real), INTENT(in) :: cc,cc_elasticmask,cc_elasticmaskpart
       real(amrex_real), INTENT(out) :: cc_group
       real(amrex_real), INTENT(in) :: dd
       real(amrex_real) :: ddfactor
@@ -12018,15 +12016,14 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
       integer :: at_RZ_boundary
 
       if ((nhalf.ge.3).and. &
-          ((num_FSI_outer_sweeps.eq.1).or. &
-           (num_FSI_outer_sweeps.eq.2)).and. &
-          ((FSI_outer_sweeps.eq.0).or. &
-           (FSI_outer_sweeps.eq.num_FSI_outer_sweeps-1)).and. &
+          (num_FSI_outer_sweeps.ge.1).and. &
+          (num_FSI_outer_sweeps.le.num_materials).and. &
+          (FSI_outer_sweeps.ge.0).and. &
+          (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1).and. &
           (cc.ge.zero).and. &
           (cc.le.one).and. &
-          (cc_ice.ge.zero).and. &
-          (cc_ice.le.one).and. &
-          ((cc_ice_mask.eq.zero).or.(cc_ice_mask.eq.one)).and. &
+          ((cc_elasticmask.eq.zero).or.(cc_elasticmask.eq.one)).and. &
+          ((cc_elasticmaskpart.eq.zero).or.(cc_elasticmaskpart.eq.one)).and. &
           (dd.ge.zero).and. &
           (visc_coef.ge.zero).and. &
           (nsolve.ge.1).and. &
@@ -12106,10 +12103,12 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        if (project_option_projectionF(project_option).eq.1) then
 
         if (project_option.eq.SOLVETYPE_PRES) then!regular pressure projection
-         if ((num_FSI_outer_sweeps.eq.1).or. &
-             ((num_FSI_outer_sweeps.eq.2).and.(FSI_outer_sweeps.eq.1))) then
-          cc_group=cc*cc_ice
-         else if ((num_FSI_outer_sweeps.eq.2).and. &
+         if (num_FSI_outer_sweeps.eq.1) then
+          cc_group=cc*cc_elasticmask
+         else if ((num_FSI_outer_sweeps.gt.1).and. &
+                  (FSI_outer_sweeps.ge.1)) then
+          cc_group=cc*cc_elasticmaskpart
+         else if ((num_FSI_outer_sweeps.gt.1).and. &
                   (FSI_outer_sweeps.eq.0)) then
           cc_group=cc ! we do not mask off the ice or "FSI is rigid" regions
          else
@@ -12119,7 +12118,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           stop
          endif
         else if (project_option.eq.SOLVETYPE_INITPROJ) then!initial projection
-         cc_group=cc*cc_ice_mask
+         cc_group=cc*cc_elasticmask
         else
          print *,"project_option invalid eval_face_coeff"
          stop
@@ -12159,8 +12158,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           print *,"dd_group or cc_group invalid1"
           print *,"dd_group= ",dd_group
           print *,"cc_group= ",cc_group
-          print *,"cc,cc_ice,cc_ice_mask,dd,nsolve,dir,side ", &
-             cc,cc_ice,cc_ice_mask,dd,nsolve,dir,side
+          print *,"cc,cc_elasticmask,cc_elasticmaskpart,dd,nsolve,dir,side ", &
+             cc,cc_elasticmask,cc_elasticmaskpart,dd,nsolve,dir,side
           print *,"level,finest_level ", &
             level,finest_level
           print *,"at_RZ_boundary ",at_RZ_boundary
@@ -12179,7 +12178,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          print *,"nsolve invalid for pressure extrapolation"
          stop
         endif
-        cc_group=cc*cc_ice
+        cc_group=cc*cc_elasticmask
 
         if (at_RZ_boundary.eq.1) then
          local_wt(veldir)=zero
@@ -12333,8 +12332,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        print *,"num_FSI_outer_sweeps=",num_FSI_outer_sweeps
        print *,"FSI_outer_sweeps=",FSI_outer_sweeps
        print *,"cc=",cc
-       print *,"cc_ice=",cc_ice
-       print *,"cc_ice_mask=",cc_ice_mask
+       print *,"cc_elasticmask=",cc_elasticmask
+       print *,"cc_elasticmaskpart=",cc_elasticmaskpart
        print *,"dd=",dd
        print *,"visc_coef=",visc_coef
        print *,"nsolve=",nsolve

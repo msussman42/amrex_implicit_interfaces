@@ -11595,6 +11595,7 @@ END SUBROUTINE SIMP
        ! correct_velocity called from: NavierStokes::mac_update
        ! called from: NavierStokes::correct_velocity (NavierStokes3.cpp)
       subroutine fort_fluidsolidcor( &
+       im_elastic, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        level, &
@@ -11632,6 +11633,7 @@ END SUBROUTINE SIMP
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
+      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: velcomp
       integer :: veldir
@@ -11696,8 +11698,8 @@ END SUBROUTINE SIMP
       integer ii,jj,kk
       real(amrex_real) local_dest,local_src,local_gp
       real(amrex_real) AL
-      real(amrex_real) AL_ice
-      real(amrex_real) AL_ice_mask
+      real(amrex_real) AL_elastic
+      real(amrex_real) AL_elasticpart
       real(amrex_real) local_dd,local_visc_coef
       real(amrex_real) cc_group,local_dd_group
       integer local_uncoupled_viscosity
@@ -11807,24 +11809,24 @@ END SUBROUTINE SIMP
           local_src=xsrc(D_DECL(i,j,k))
           local_gp=xgp(D_DECL(i,j,k))
           AL=xface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-          AL_ice=xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-          AL_ice_mask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+          AL_elastic=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
+          AL_elasticpart=xface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
           icrit=i
          else if (dir.eq.1) then
           local_dest=ydest(D_DECL(i,j,k))
           local_src=ysrc(D_DECL(i,j,k))
           local_gp=ygp(D_DECL(i,j,k))
           AL=yface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-          AL_ice=yface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-          AL_ice_mask=yface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+          AL_elastic=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
+          AL_elasticpart=yface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
           icrit=j
          else if ((dir.eq.2).and.(SDIM.eq.3)) then
           local_dest=zdest(D_DECL(i,j,k))
           local_src=zsrc(D_DECL(i,j,k))
           local_gp=zgp(D_DECL(i,j,k))
           AL=zface(D_DECL(i,j,k),FACECOMP_FACECUT+1)
-          AL_ice=zface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
-          AL_ice_mask=zface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
+          AL_elastic=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
+          AL_elasticpart=zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)
           icrit=k
          else
           print *,"dir invalid fluid solid cor"
@@ -11895,13 +11897,14 @@ END SUBROUTINE SIMP
 
           ! declared in: PROB.F90
          call eval_face_coeff( &
+           im_elastic, &
            num_FSI_outer_sweeps, &
            FSI_outer_sweeps, &
            xsten,nhalf, &
            level,finest_level, &
            AL, & !intent(in)
-           AL_ice, & !intent(in)
-           AL_ice_mask, & !intent(in)
+           AL_elastic, & !intent(in)
+           AL_elasticpart, & !intent(in)
            cc_group, & !intent(out)
            local_dd, & !intent(in)
            local_dd_group, & !intent(out)
@@ -11918,8 +11921,8 @@ END SUBROUTINE SIMP
             print *,"local_gp invalid"
             print *,"local_gp ",local_gp
             print *,"level,finest_level ",level,finest_level
-            print *,"AL,AL_ice,AL_ice_mask,cc_group ", &
-                  AL,AL_ice,AL_ice_mask,cc_group
+            print *,"AL,AL_elastic,AL_elasticpart,cc_group ", &
+                  AL,AL_elastic,AL_elasticpart,cc_group
             print *,"veldir=",veldir
             print *,"local_wt(veldir) ",local_wt(veldir)
             print *,"local_dd,local_dd_group ",local_dd,local_dd_group
