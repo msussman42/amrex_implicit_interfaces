@@ -900,8 +900,8 @@ NavierStokes::variableSetUp ()
 
 // Tensor_Type  -------------------------------------------
 
-    if (num_materials_viscoelastic!=im_elastic_map.size())
-     amrex::Error("num_materials_viscoelastic!=im_elastic_map.size()");
+    if (num_materials_viscoelastic!=im_viscoelastic_map.size())
+     amrex::Error("num_materials_viscoelastic!=im_viscoelastic_map.size()");
 
     if (ENUM_NUM_TENSOR_TYPE==2*AMREX_SPACEDIM) {
      // do nothing
@@ -936,7 +936,7 @@ NavierStokes::variableSetUp ()
 
      for (int partid=0;partid<num_materials_viscoelastic;partid++) {
 
-      int im_part=im_elastic_map[partid];
+      int im_part=im_viscoelastic_map[partid];
       if ((im_part<0)||(im_part>=num_materials))
        amrex::Error("im_part invalid");
 

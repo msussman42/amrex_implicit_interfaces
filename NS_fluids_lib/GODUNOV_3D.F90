@@ -7656,7 +7656,7 @@ stop
       real(amrex_real) Q(3,3),TQ(3,3),Q_plus_I(3,3)
       integer i,j,k
       integer dir_local
-      integer im_elastic_p1
+      integer im_viscoelastic_p1
       real(amrex_real) xcenter(SDIM)
 
        ! Q=A-I
@@ -7702,7 +7702,7 @@ stop
        stop
       endif
 
-      im_elastic_p1=im_parm+1
+      im_viscoelastic_p1=im_parm+1
 
       if (ncomp_visc.ne.3*num_materials) then
        print *,"ncomp_visc invalid"
@@ -7942,7 +7942,7 @@ stop
 
       integer i,j,k
       integer dir_local
-      integer im_elastic_p1
+      integer im_viscoelastic_p1
       real(amrex_real) xcenter(SDIM)
 
       type(deriv_from_grid_parm_type) :: data_in
@@ -8005,7 +8005,7 @@ stop
        stop
       endif
 
-      im_elastic_p1=im_parm+1
+      im_viscoelastic_p1=im_parm+1
 
       if (ncomp_visc.ne.3*num_materials) then
        print *,"ncomp_visc invalid"
@@ -14063,7 +14063,7 @@ stop
 
               if (fort_store_elastic_data(im).eq.1) then
                imap=1
-               do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+               do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
                          (imap.le.num_materials_viscoelastic))
                 imap=imap+1
                enddo
@@ -14454,7 +14454,7 @@ stop
 
          if (fort_store_elastic_data(im).eq.1) then
           imap=1
-          do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+          do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
                     (imap.le.num_materials_viscoelastic))
            imap=imap+1
           enddo
@@ -14816,7 +14816,7 @@ stop
 
          if (fort_store_elastic_data(im).eq.1) then
           imap=1
-          do while ((fort_im_elastic_map(imap)+1.ne.im).and. &
+          do while ((fort_im_viscoelastic_map(imap)+1.ne.im).and. &
                     (imap.le.num_materials_viscoelastic))
            imap=imap+1
           enddo
@@ -18828,7 +18828,7 @@ stop
        ! fort_elastic_force is called from NavierStokes2.cpp:
        ! void NavierStokes::MAC_GRID_ELASTIC_FORCE
       subroutine fort_elastic_force( &
-       im_elastic, & ! 0..num_materials-1
+       im_viscoelastic, & ! 0..num_materials-1
        partid, & ! 0..num_materials_viscoelastic-1
        force_dir, & ! 0..sdim-1
        ncomp_visc, &
@@ -18873,7 +18873,7 @@ stop
  
       IMPLICIT NONE
 
-      integer, INTENT(in) :: im_elastic !0..num_materials-1
+      integer, INTENT(in) :: im_viscoelastic !0..num_materials-1
       integer, INTENT(in) :: partid !0..num_materials_viscoelastic-1
 
        ! MAC force component, force_dir=0..sdim-1
@@ -18958,7 +18958,7 @@ stop
       real(amrex_real), target :: x_CELL_control_volume(SDIM)
       real(amrex_real) DISP_TEN(3,3)
       real(amrex_real) dxmin
-      integer im_elastic_p1
+      integer im_viscoelastic_p1
       integer im_LS
 
       integer dir_local
@@ -18995,7 +18995,7 @@ stop
 
       SNEW_ptr=>SNEW
 
-      im_elastic_p1=im_elastic+1
+      im_viscoelastic_p1=im_viscoelastic+1
 
       if (ENUM_NUM_TENSOR_TYPE.eq.2*SDIM) then
        ! do nothing
@@ -19038,11 +19038,11 @@ stop
        stop
       endif
 
-      if ((im_elastic.ge.0).and. &
-          (im_elastic.lt.num_materials)) then
+      if ((im_viscoelastic.ge.0).and. &
+          (im_viscoelastic.lt.num_materials)) then
        ! do nothing
       else
-       print *,"im_elastic invalid"
+       print *,"im_viscoelastic invalid"
        stop
       endif
       if ((partid.ge.0).and. &
@@ -19111,7 +19111,7 @@ stop
 
        call get_primary_material(LS_control_volume,local_mask)
 
-       if (local_mask.eq.im_elastic_p1) then
+       if (local_mask.eq.im_viscoelastic_p1) then
         local_mask=1
        else if ((local_mask.ge.1).and. &
                 (local_mask.le.num_materials)) then
@@ -19137,7 +19137,7 @@ stop
            
        mask_control_volume=local_mask
 
-        ! im_elastic_p1 dominates the center of the MAC control volume.
+        ! im_viscoelastic_p1 dominates the center of the MAC control volume.
        if (mask_control_volume.eq.1) then
 
         do itensor=1,ENUM_NUM_TENSOR_TYPE
@@ -19296,7 +19296,7 @@ stop
          enddo !im_LS=1...num_materials
 
          call get_primary_material(LS_outside,local_mask)
-         if (local_mask.eq.im_elastic_p1) then
+         if (local_mask.eq.im_viscoelastic_p1) then
           local_mask=1
          else if ((local_mask.ge.1).and. &
                   (local_mask.le.num_materials)) then
@@ -19491,10 +19491,10 @@ stop
           stop
          endif 
 
-         if (is_rigid(im_elastic_p1).eq.1) then
-          print *,"im_elastic should not be an is_rigid material"
+         if (is_rigid(im_viscoelastic_p1).eq.1) then
+          print *,"im_viscoelastic should not be an is_rigid material"
           stop
-         else if (is_rigid(im_elastic_p1).eq.0) then
+         else if (is_rigid(im_viscoelastic_p1).eq.0) then
           do dir_row=1,SDIM
            force(dir_row)=force(dir_row)*dt
           enddo

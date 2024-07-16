@@ -1771,31 +1771,31 @@ void NavierStokes::avgDownEdge_localMF(
 
 } // avgDownEdge_localMF
 
-void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
+void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_viscoelastic) {
 
  std::string local_caller_string="CELL_GRID_ELASTIC_FORCE";
 
- if ((im_elastic>=0)&&(im_elastic<num_materials)) {
-   if (ns_is_rigid(im_elastic)==0) {
-    if ((elastic_time[im_elastic]>0.0)&&
-        (elastic_viscosity[im_elastic]>0.0)) {
-     if (store_elastic_data[im_elastic]==1) {
+ if ((im_viscoelastic>=0)&&(im_viscoelastic<num_materials)) {
+   if (ns_is_rigid(im_viscoelastic)==0) {
+    if ((elastic_time[im_viscoelastic]>0.0)&&
+        (elastic_viscosity[im_viscoelastic]>0.0)) {
+     if (store_elastic_data[im_viscoelastic]==1) {
       // do nothing
      } else
-      amrex::Error("expecting store_elastic_data[im_elastic]==1");
+      amrex::Error("expecting store_elastic_data[im_viscoelastic]==1");
     } else
      amrex::Error("expecting elastic_time>0 and elastic_viscosity>0");
    } else
-    amrex::Error("expecting ns_is_rigid(im_elastic)==0)"); 
+    amrex::Error("expecting ns_is_rigid(im_viscoelastic)==0)"); 
  } else
-  amrex::Error("im_elastic invalid");
+  amrex::Error("im_viscoelastic invalid");
 
  int partid=0;
- while ((im_elastic_map[partid]!=im_elastic)&&
-        (partid<im_elastic_map.size())) {
+ while ((im_viscoelastic_map[partid]!=im_viscoelastic)&&
+        (partid<im_viscoelastic_map.size())) {
   partid++;
  }
- if (partid<im_elastic_map.size()) {
+ if (partid<im_viscoelastic_map.size()) {
   // do nothing
  } else
   amrex::Error("partid invalid");
@@ -1912,7 +1912,7 @@ void NavierStokes::CELL_GRID_ELASTIC_FORCE(int im_elastic) {
 
     // declared in: GODUNOV_3D.F90
    fort_elastic_force(
-     &im_elastic, // 0..num_materials-1
+     &im_viscoelastic, // 0..num_materials-1
      &partid, //0..num_materials_viscoelastic-1
      &force_dir, // force_dir=0,1,..sdim-1  
      &ncomp_visc, 
@@ -10699,11 +10699,11 @@ void NavierStokes::getStateVISC(const std::string& caller_string) {
   if (store_elastic_data[im]==1) {
 
    int partid=0;
-   while ((im_elastic_map[partid]!=im)&&
-          (partid<im_elastic_map.size())) {
+   while ((im_viscoelastic_map[partid]!=im)&&
+          (partid<im_viscoelastic_map.size())) {
     partid++;
    }
-   if (partid<im_elastic_map.size()) {
+   if (partid<im_viscoelastic_map.size()) {
     scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
    } else
     amrex::Error("partid could not be found: getStateVISC");
@@ -11093,10 +11093,10 @@ void NavierStokes::getState_tracemag(int idx) {
   if (ns_is_rigid(im)==0) {
    if (elastic_viscosity[im]>0.0) {
     int partid=0;
-    while ((im_elastic_map[partid]!=im)&&(partid<im_elastic_map.size())) {
+    while ((im_viscoelastic_map[partid]!=im)&&(partid<im_viscoelastic_map.size())) {
      partid++;
     }
-    if (partid<im_elastic_map.size()) {
+    if (partid<im_viscoelastic_map.size()) {
      int scomp_tensor=partid*ENUM_NUM_TENSOR_TYPE;
       //ngrow=1
      tensor=getStateTensor(1,scomp_tensor,ENUM_NUM_TENSOR_TYPE,cur_time_slab);

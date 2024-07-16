@@ -2654,7 +2654,7 @@ stop
                    fort_elastic_viscosity(im_primary), &
                    fort_viscoelastic_model(im_primary)).eq.1) then 
                partid=1
-               do while ((fort_im_elastic_map(partid)+1.ne.im_primary).and. &
+               do while ((fort_im_viscoelastic_map(partid)+1.ne.im_primary).and. &
                          (partid.le.num_materials_viscoelastic))
                 partid=partid+1
                enddo
