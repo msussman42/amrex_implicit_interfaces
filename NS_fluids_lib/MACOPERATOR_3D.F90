@@ -576,10 +576,11 @@ stop
           else if (num_FSI_outer_sweeps.gt.1) then
            if (FSI_outer_sweeps.eq.0) then
             im_rigid_CL=num_materials
-           else if (FSI_outer_sweeps.ge.1) then
+           else if ((FSI_outer_sweeps.ge.1).and. &
+                    (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1)) then
             im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
            else
-            print *,"FSI_outer_sweeps invalid"
+            print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
             stop
            endif
            do im=1,num_materials
@@ -588,7 +589,8 @@ stop
             else if (is_rigid_CL(im).eq.1) then
              if (FSI_outer_sweeps.eq.0) then
               !do nothing
-             else if (FSI_outer_sweeps.ge.1) then
+             else if ((FSI_outer_sweeps.ge.1).and. &
+                      (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1)) then
               if (im.le.im_rigid_CL) then
                LSTEST=lsnew(D_DECL(i,j,k),im)
                if (LSTEST.ge.zero) then
@@ -608,7 +610,7 @@ stop
                stop
               endif
              else
-              print *,"FSI_outer_sweeps invalid"
+              print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
               stop
              endif
             else if (is_rigid_CL(im).eq.0) then
@@ -624,7 +626,7 @@ stop
           endif
 
          else
-          print *,"project_option invalid scalar coeff"
+          print *,"project_option invalid scalar coeff: ",project_option
           stop
          endif 
 
