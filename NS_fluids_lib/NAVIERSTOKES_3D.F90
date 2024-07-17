@@ -11595,7 +11595,7 @@ END SUBROUTINE SIMP
        ! correct_velocity called from: NavierStokes::mac_update
        ! called from: NavierStokes::correct_velocity (NavierStokes3.cpp)
       subroutine fort_fluidsolidcor( &
-       im_elastic, &
+       im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        level, &
@@ -11633,7 +11633,7 @@ END SUBROUTINE SIMP
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: velcomp
       integer :: veldir
@@ -11897,7 +11897,7 @@ END SUBROUTINE SIMP
 
           ! declared in: PROB.F90
          call eval_face_coeff( &
-           im_elastic, &
+           im_elastic_map, &
            num_FSI_outer_sweeps, &
            FSI_outer_sweeps, &
            xsten,nhalf, &
@@ -14585,7 +14585,6 @@ END SUBROUTINE SIMP
       real(amrex_real) xcoarse(SDIM)
       integer finelo_index
       real(amrex_real), dimension(D_DECL(:,:,:),:),allocatable :: ffine
-      real(amrex_real) icemask
       integer khi
       integer testmask,testmask2
       integer local_enable_spectral
@@ -14599,7 +14598,6 @@ END SUBROUTINE SIMP
       endif
 
       if ((spectral_override.ne.LOW_ORDER_AVGDOWN).and. &
-          (spectral_override.ne.ICEMASK_AVGDOWN).and. &
           (spectral_override.ne.SPECTRAL_ORDER_AVGDOWN)) then
        print *,"spectral_override invalid: ",spectral_override
        stop
@@ -14811,8 +14809,7 @@ END SUBROUTINE SIMP
        else if ((bfact_f.eq.1).or. &
                 (local_enable_spectral.eq.0).or. &
                 (testmask.eq.0).or. &
-                (spectral_override.eq.LOW_ORDER_AVGDOWN).or. &
-                (spectral_override.eq.ICEMASK_AVGDOWN)) then
+                (spectral_override.eq.LOW_ORDER_AVGDOWN)) then
 
         call fine_subelement_stencilMAC(ic,jc,kc,stenlo,stenhi, &
          bfact_c,bfact_f,grid_type)
@@ -14876,29 +14873,6 @@ END SUBROUTINE SIMP
                  enddo
                  voltotal=voltotal+volall
 
-                else if (spectral_override.eq.ICEMASK_AVGDOWN) then
-
-                 voltotal=one
-
-                 do n=1,ncomp
-                  icemask=fine(D_DECL(ifine,jfine,kfine),n)
-                  if (icemask.eq.zero) then
-                   crse_value(n)=zero
-                  else if (icemask.eq.one) then
-                   if (crse_value(n).eq.one) then
-                    ! do nothing
-                   else if (crse_value(n).eq.zero) then
-                    ! do nothing
-                   else
-                    print *,"crse_value(n) invalid: ",crse_value(n)
-                    stop
-                   endif
-                  else
-                   print *,"icemask invalid: ",icemask
-                   stop
-                  endif
-                 enddo  !n=1,ncomp
-              
                 else
                  print *,"spectral_override invalid: ",spectral_override
                  stop
@@ -14914,7 +14888,7 @@ END SUBROUTINE SIMP
               else if (infab.eq.0) then
                ! do nothing
               else
-               print *,"infab invalid"
+               print *,"infab invalid: ",infab
                stop
               endif
              endif ! wt(sdim).gt.0

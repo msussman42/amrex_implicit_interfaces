@@ -247,7 +247,6 @@ use probcommon_module_types
 implicit none
 
 ! fort_material_conservation_form added June 15, 2024
-! fort_im_elastic_map added July 16,2024
 ! fort_im_viscoelastic_map added July 16,2024
 
       integer, PARAMETER :: MOF_TRAINING_NDIM_DECISIONS=AMREX_SPACEDIM

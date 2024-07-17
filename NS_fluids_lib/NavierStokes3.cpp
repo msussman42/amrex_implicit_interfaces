@@ -2907,6 +2907,12 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
           ns_level.level_init_elasticmask_and_elasticmaskpart();
+
+          ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ELASTICMASK,1,0,
+           AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
+          ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ELASTICMASKPART,1,0,
+           AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
+
           ns_level.manage_FSI_data(); 
          }
         } else
@@ -7582,7 +7588,7 @@ void NavierStokes::allocate_FACE_WEIGHT(
 
    // fort_buildfacewt is declared in LEVELSET_3D.F90
    fort_buildfacewt(
-    im_elastic.dataPtr(),
+    im_elastic_map.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,
     &facewt_iter,
@@ -8160,7 +8166,7 @@ void NavierStokes::correct_velocity(
 
     // declared in: NAVIERSTOKES_3D.F90
    fort_fluidsolidcor(
-    im_elastic.dataPtr(),
+    im_elastic_map.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,
     &level,
@@ -11249,10 +11255,11 @@ void NavierStokes::multiphase_project(int project_option) {
       update_energy=SUB_OP_THERMAL_DIVUP_OK; 
      } else
       amrex::Error("FSI_outer_sweeps invalid");
-    } else if (num_FSI_outer_sweeps==2) {
-     if (FSI_outer_sweeps==0) {
+    } else if (num_FSI_outer_sweeps>1) {
+     if ((FSI_outer_sweeps>=0)&&
+         (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
       update_energy=SUB_OP_THERMAL_DIVUP_NULL;
-     } else if (FSI_outer_sweeps==1) {
+     } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
       update_energy=SUB_OP_THERMAL_DIVUP_OK; 
      } else
       amrex::Error("FSI_outer_sweeps invalid");
@@ -11327,7 +11334,8 @@ void NavierStokes::multiphase_project(int project_option) {
   if (project_option==SOLVETYPE_PRES) {
  
    if ((num_FSI_outer_sweeps==1)||
-       ((num_FSI_outer_sweeps==2)&&(FSI_outer_sweeps==1))) {
+       ((num_FSI_outer_sweeps>1)&&
+        (FSI_outer_sweeps==num_FSI_outer_sweeps-1))) {
 
     int do_alloc=1;
     int simple_AMR_BC_flag_viscosity=1;
@@ -11347,8 +11355,9 @@ void NavierStokes::multiphase_project(int project_option) {
     delete_array(FACETENSOR_MF);
     delete_array(CELLTENSOR_MF);
 
-   } else if ((num_FSI_outer_sweeps==2)&&
-              (FSI_outer_sweeps==0)) {
+   } else if ((num_FSI_outer_sweeps>1)&&
+              (FSI_outer_sweeps>=0)&&
+              (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
     //do nothing
    } else 
     amrex::Error("num_FSI_outer_sweeps bust");
@@ -11628,9 +11637,16 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
        } else
         amrex::Error("FSI_flag[im] invalid");
 
+       int im_cutoff=num_materials;
+       if (FSI_outer_sweeps>0)
+        im_cutoff=im_elastic_map[FSI_outer_sweeps-1]+1;
+
        if ((FSI_outer_sweeps==0)||
-           ((FSI_outer_sweeps==1)&&
-            (is_rigid_CL_flag==0))) {
+           ((FSI_outer_sweeps>=1)&&
+            (is_rigid_CL_flag==0))||
+           ((FSI_outer_sweeps>=1)&&
+            (is_rigid_CL_flag==1)&&
+            (imp1>im_cutoff))) {
 
          // find divergence of the X,Y,Z variables.
 	 // NavierStokes::CELL_GRID_ELASTIC_FORCE is declared in
@@ -11642,8 +11658,9 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
          ns_level.CELL_GRID_ELASTIC_FORCE(im);
         }
 
-       } else if ((FSI_outer_sweeps==1)&&
-                  (is_rigid_CL_flag==1)) {
+       } else if ((FSI_outer_sweeps>0)&&
+                  (is_rigid_CL_flag==1)&&
+                  (imp1<=im_cutoff)) {
         //do nothing
        } else
         amrex::Error("FSI_outer_sweeps or is_rigid_CL_flag invalid");
@@ -11924,7 +11941,7 @@ void NavierStokes::veldiffuseALL() {
 
   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
- } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+ } else if (FSI_outer_sweeps>0) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12395,7 +12412,7 @@ void NavierStokes::veldiffuseALL() {
   } else
    amrex::Error("include_viscous_heating invalid");
 
- } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+ } else if (FSI_outer_sweeps>0) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12465,7 +12482,7 @@ void NavierStokes::veldiffuseALL() {
   } //ilev=level ... finest_level
 
   delete_array(save_state_MF);
- } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+ } else if (FSI_outer_sweeps>0) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12968,7 +12985,7 @@ void NavierStokes::manage_FSI_data() {
 
       // fort_manage_elastic_velocity is declared in: LEVELSET_3D.F90
      fort_manage_elastic_velocity(
-      im_elastic.dataPtr(),
+      im_elastic_map.dataPtr(),
       &num_FSI_outer_sweeps,
       &FSI_outer_sweeps,
       &dir, //dir=0,1,2

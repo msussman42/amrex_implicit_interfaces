@@ -163,6 +163,7 @@ stop
        contains
 
        subroutine fort_hoopimplicit( &
+         im_elastic_map, &
          num_FSI_outer_sweeps, &
          FSI_outer_sweeps, &
          override_density, &
@@ -205,6 +206,7 @@ stop
 
        integer, INTENT(in) :: num_FSI_outer_sweeps
        integer, INTENT(in) :: FSI_outer_sweeps
+       integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
        integer, INTENT(in) :: override_density(num_materials)
        integer, INTENT(in) :: constant_density_all_time(num_materials)
  
@@ -300,16 +302,25 @@ stop
        integer ut_comp
        integer partid,im_solid,partid_crit,im_FSI
        real(amrex_real) LStest,LScrit
+       integer im_rigid_CL
 
-       if ((num_FSI_outer_sweeps.eq.1).or. &
-           (num_FSI_outer_sweeps.eq.2)) then
+       if (FSI_outer_sweeps.eq.0) then
+        im_rigid_CL=num_materials
+       else if (FSI_outer_sweeps.ge.1) then
+        im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+       else
+        print *,"FSI_outer_sweeps invalid"
+        stop
+       endif
+
+       if (num_FSI_outer_sweeps.ge.1) then
         !do nothing
        else
         print *,"num_FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
         stop
        endif
-       if ((FSI_outer_sweeps.eq.0).or. &
-           (FSI_outer_sweeps.eq.num_FSI_outer_sweeps-1)) then
+       if ((FSI_outer_sweeps.ge.0).and. &
+           (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1)) then
         !do nothing
        else
         print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
@@ -487,9 +498,10 @@ stop
 
           if (FSI_outer_sweeps.eq.0) then
            !do nothing
-          else if (FSI_outer_sweeps==1) then
+          else if (FSI_outer_sweeps.ge.1) then
            if (LStest.ge.zero) then
-            if (is_rigid_CL(im).eq.1) then
+            if ((is_rigid_CL(im).eq.1).and. &
+                (im.le.im_rigid_CL)) then
              im_FSI=im
             else if (is_rigid_CL(im).eq.0) then
              !do nothing

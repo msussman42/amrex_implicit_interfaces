@@ -339,6 +339,7 @@ NavierStokes::allocate_maccoef(int project_option,int nsolve,
 
    // declared in MACOPERATOR_3D.F90
   fort_scalarcoeff(
+    im_elastic_map.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,
     &nsolve,

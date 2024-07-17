@@ -15,6 +15,7 @@ namespace amrex{
 extern "C"
 {
     void fort_hoopimplicit(
+      int* im_elastic_map,
       int* num_FSI_outer_sweeps,
       int* FSI_outer_sweeps,
       int* override_density,

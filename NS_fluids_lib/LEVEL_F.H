@@ -303,7 +303,7 @@ namespace amrex{
 
 
       void fort_manage_elastic_velocity(
-        int* im_elastic,
+        int* im_elastic_map,
         int* num_FSI_outer_sweeps,
         int* FSI_outer_sweeps,
         int* dir, //dir=0,1,2
@@ -497,7 +497,7 @@ namespace amrex{
         int* level,int* finest_level);
 
       void fort_buildfacewt(
-        int* im_elastic,
+        int* im_elastic_map,
         int* num_FSI_outer_sweeps,
         int* FSI_outer_sweeps,
         int* facewt_iter,

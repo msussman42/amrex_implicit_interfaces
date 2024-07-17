@@ -563,7 +563,7 @@ extern "C"
 
 
    void fort_init_elasticmask_and_elasticmaskpart(
-    int* im_elastic,
+    int* im_elastic_map,
     int* num_FSI_outer_sweeps,
     int* FSI_outer_sweeps,
     int* nden,
@@ -586,7 +586,7 @@ extern "C"
     Real* recon,AMREX_ARLIM_P(reconlo),AMREX_ARLIM_P(reconhi));
 
    void fort_tagexpansion(
-    int* im_elastic,
+    int* im_elastic_map,
     int* num_FSI_outer_sweeps,
     int* FSI_outer_sweeps,
     int* nden,

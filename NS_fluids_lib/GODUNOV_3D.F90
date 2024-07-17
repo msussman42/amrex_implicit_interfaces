@@ -4687,7 +4687,7 @@ stop
         !   which is called from
         !     NavierStokes::make_physics_varsALL
       subroutine fort_init_elasticmask_and_elasticmaskpart( &
-       im_elastic, &
+       im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        nden, &
@@ -4717,7 +4717,7 @@ stop
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: time
       integer, INTENT(in) :: level,finest_level
@@ -4913,7 +4913,7 @@ stop
           ! get_elasticmask_and_elasticmaskpart defined in PROB.F90
           ! this routine: fort_init_elasticmask_and_elasticmaskpart
          call get_elasticmask_and_elasticmaskpart( &
-          im_elastic, &
+          im_elastic_map, &
           num_FSI_outer_sweeps, &
           FSI_outer_sweeps, &
           nden, &
@@ -4935,7 +4935,7 @@ stop
           ! get_elasticmask_and_elasticmaskpart defined in PROB.F90
           ! this routine: fort_init_elasticmask_and_elasticmaskpart
          call get_elasticmask_and_elasticmaskpart( &
-          im_elastic, &
+          im_elastic_map, &
           num_FSI_outer_sweeps, &
           FSI_outer_sweeps, &
           nden, &
@@ -4961,7 +4961,7 @@ stop
          else if (elasticmask.eq.zero) then
           ! do nothing
          else
-          print *,"elasticmask invalid"
+          print *,"elasticmask invalid: ",elasticmask
           stop
          endif
 
@@ -4972,7 +4972,7 @@ stop
          else if (elasticmaskpart.eq.zero) then
           ! do nothing
          else
-          print *,"elasticmaskpart invalid"
+          print *,"elasticmaskpart invalid: ",elasticmaskpart
           stop
          endif
 
@@ -11033,7 +11033,7 @@ stop
       ! tag = 2 -> receving cell
       ! tag = 0 -> none of above
       subroutine fort_tagexpansion(&
-       im_elastic, &
+       im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        nden, &
@@ -11071,7 +11071,7 @@ stop
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: time
       real(amrex_real), INTENT(inout) :: mdot_sum
@@ -11132,7 +11132,7 @@ stop
       integer ireverse
       integer iten
       integer im_primary
-      integer im_primary_icemask
+      integer im_primary_elasticmask
       integer vofcomp
       integer, PARAMETER :: nhalf=3
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
@@ -11376,7 +11376,7 @@ stop
           ! elasticmask=1 => do nothing
           ! get_elasticmask_and_elasticmaskpart declared in PROB.F90
           call get_elasticmask_and_elasticmaskpart( &
-           im_elastic, &
+           im_elastic_map, &
            num_FSI_outer_sweeps, &
            FSI_outer_sweeps, &
            nden, &
@@ -11387,7 +11387,7 @@ stop
            elasticmaskpart, &
            im, &
            im_opp, &
-           im_primary_icemask, &
+           im_primary_elasticmask, &
            ireverse, &
            local_denstate, &
            LSCELL, &
@@ -11452,7 +11452,7 @@ stop
               stop
              endif
             else if ((VFRAC(im_dest).ge.half).and. &
-                     (elasticmask.eq.one)) then
+                     (elasticmask.gt.zero)) then
              ! do nothing - acceptor cell
             else
              print *,"VFRAC or elasticmask bust"
@@ -11474,7 +11474,7 @@ stop
               stop
              endif
             else if ((VFRAC(im_source).ge.half).and. &
-                     (elasticmask.eq.one)) then
+                     (elasticmask.gt.zero)) then
              ! do nothing - acceptor cell
             else
              print *,"VFRAC or elasticmask bust"     
@@ -11499,7 +11499,7 @@ stop
             .eq.0) then
 
            if ((VFRAC(im_dest).ge.half).and. &
-               (elasticmask.eq.one)) then
+               (elasticmask.gt.zero)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
@@ -11521,7 +11521,7 @@ stop
               .eq.1) then
 
            if ((VFRAC(im_source).ge.half).and. &
-               (elasticmask.eq.one)) then
+               (elasticmask.gt.zero)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then

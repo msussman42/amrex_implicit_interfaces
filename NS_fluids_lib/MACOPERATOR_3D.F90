@@ -365,6 +365,7 @@ stop
 
 
        subroutine fort_scalarcoeff( &
+         im_elastic_map, &
          num_FSI_outer_sweeps, &
          FSI_outer_sweeps, &
          nsolve, &
@@ -395,6 +396,7 @@ stop
  
        integer, INTENT(in) :: num_FSI_outer_sweeps
        integer, INTENT(in) :: FSI_outer_sweeps
+       integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
        integer, INTENT(in) :: nsolve
        integer, INTENT(in) :: level
        integer, INTENT(in) :: finest_level
@@ -444,6 +446,7 @@ stop
        real(amrex_real) xsten(-nhalf:nhalf,SDIM)
        real(amrex_real) local_cterm(nsolve)
        integer im
+       integer im_rigid_CL
        integer velcomp
        real(amrex_real) LSTEST
        real(amrex_real) local_diag
@@ -508,6 +511,7 @@ stop
        do k=growlo(3),growhi(3)
        do j=growlo(2),growhi(2)
        do i=growlo(1),growhi(1)
+
         call gridsten_level(xsten,i,j,k,level,nhalf)
         do dir_local=1,SDIM
          xclamped(dir_local)=xsten(0,dir_local)
@@ -565,37 +569,55 @@ stop
                   (project_option.lt.SOLVETYPE_SPEC+num_species_var)) then
           ! do nothing
          else if (project_option.eq.SOLVETYPE_VISC) then
-
+ 
+          ! "is_rigid" case handled above.
           if (num_FSI_outer_sweeps.eq.1) then
            !do nothing
-          else if (num_FSI_outer_sweeps.eq.2) then
+          else if (num_FSI_outer_sweeps.gt.1) then
            if (FSI_outer_sweeps.eq.0) then
-            !do nothing
-           else if (FSI_outer_sweeps.eq.1) then
-            do im=1,num_materials
-             if (is_rigid_CL(im).eq.1) then
-              LSTEST=lsnew(D_DECL(i,j,k),im)
-              if (LSTEST.ge.zero) then
-               !SOLVETYPE_VISC
-               rigid_mask=1.0D+6
-               in_rigid=1
-              else if (LSTEST.lt.zero) then
-               ! do nothing
-              else
-               print *,"LSTEST is NaN: ",LSTEST
-               stop
-              endif
-             else if (is_rigid_CL(im).eq.0) then
-              ! do nothing
-             else
-              print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
-              stop
-             endif
-            enddo ! im=1..num_materials
+            im_rigid_CL=num_materials
+           else if (FSI_outer_sweeps.ge.1) then
+            im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
            else
-            print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
+            print *,"FSI_outer_sweeps invalid"
             stop
            endif
+           do im=1,num_materials
+            if (is_rigid(im).eq.1) then
+             ! do nothing
+            else if (is_rigid_CL(im).eq.1) then
+             if (FSI_outer_sweeps.eq.0) then
+              !do nothing
+             else if (FSI_outer_sweeps.ge.1) then
+              if (im.le.im_rigid_CL) then
+               LSTEST=lsnew(D_DECL(i,j,k),im)
+               if (LSTEST.ge.zero) then
+                !SOLVETYPE_VISC
+                rigid_mask=1.0D+6
+                in_rigid=1
+               else if (LSTEST.lt.zero) then
+                ! do nothing
+               else
+                print *,"LSTEST is NaN: ",LSTEST
+                stop
+               endif
+              else if (im.gt.im_rigid_CL) then
+               !do nothing
+              else
+               print *,"im invalid"
+               stop
+              endif
+             else
+              print *,"FSI_outer_sweeps invalid"
+              stop
+             endif
+            else if (is_rigid_CL(im).eq.0) then
+             ! do nothing
+            else
+             print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
+             stop
+            endif
+           enddo ! im=1..num_materials
           else
            print *,"num_FSI_outer_sweeps invalid: ",num_FSI_outer_sweeps
            stop
