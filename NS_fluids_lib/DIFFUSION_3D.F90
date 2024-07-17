@@ -503,7 +503,8 @@ stop
             if ((is_rigid_CL(im).eq.1).and. &
                 (im.le.im_rigid_CL)) then
              im_FSI=im
-            else if (is_rigid_CL(im).eq.0) then
+            else if ((is_rigid_CL(im).eq.0).or. &
+                     (im.gt.im_rigid_CL)) then
              !do nothing
             else
              print *,"is_rigid_CL(im) invalid: ",im,is_rigid_CL(im)
