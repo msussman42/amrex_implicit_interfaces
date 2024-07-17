@@ -145,6 +145,7 @@ shockdrop_M1= &
 shockdrop_M1=sqrt(shockdrop_M1)
 shockdrop_VEL1=shockdrop_M1*shockdrop_C1
 
+!shock_vel0-shock_vel1=M0 * C0 - M1 * C1
 
 call general_hydrostatic_pressure(test_pres)
 if (abs(test_pres-shockdrop_P0)/test_pres.gt.1.0E-8) then
