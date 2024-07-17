@@ -7693,8 +7693,6 @@ stop
 
 ! faceden=1/rho
 ! facecut=A
-! icefacecut=1
-! icemask=1
 ! mside=mass
 ! slope: vof,ref centroid,order,slope,intercept  x num_materials
 ! vof: piecewise constant interp at coarse/fine borders
@@ -8437,8 +8435,8 @@ stop
          endif
 
           ! in: fort_init_physics_vars
-         local_face(FACECOMP_ICEMASK+1)=one
-         local_face(FACECOMP_ICEFACECUT+1)=one
+         local_face(FACECOMP_ELASTICMASK+1)=one
+         local_face(FACECOMP_ELASTICMASKPART+1)=one
          local_face(FACECOMP_CURV+1)=zero
          local_face(FACECOMP_FACEVEL+1)=zero
 
@@ -8607,11 +8605,6 @@ stop
           !  FSI_PRESCRIBED_PROBF90,
           !  FSI_PRESCRIBED_NODES,
           !  FSI_SHOELE_CTML.
-          !
-          ! Remark: 
-          ! local_face(FACECOMP_ICEFACECUT+1) and
-          ! local_Face(FACECOMP_ICEMASK+1) are updated in
-          ! GODUNOV_3D.F90: fort_init_icemask_and_icefacecut
           !
           ! local_face(FACECOMP_FACECUT+1) 
           ! is initialized and updated in 
@@ -13621,8 +13614,7 @@ stop
       integer local_compressible
       integer in_the_bulk
 
-      real(amrex_real) test_current_icefacecut
-      real(amrex_real) test_current_icemask
+      real(amrex_real) test_current_elasticmask
 
       integer :: homogeneous_rigid_velocity
 
@@ -14563,19 +14555,11 @@ stop
            else if ((is_solid_face.eq.0).or. &
                     (face_velocity_override.eq.0)) then
 
-            test_current_icefacecut= &
-                 xface(D_DECL(i,j,k),FACECOMP_ICEFACECUT+1)
+            test_current_elasticmask= &
+                 xface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)
           
-            if ((test_current_icefacecut.ge.zero).and. &
-                (test_current_icefacecut.le.one)) then
-
-              ! test_current_icemask=zero for ice materials,
-              ! "is_FSI_rigid" materials, and 
-              ! "is_FSI_elastic" materials.
-             test_current_icemask=xface(D_DECL(i,j,k),FACECOMP_ICEMASK+1)
-
-             if ((test_current_icemask.eq.zero).or. &
-                 (test_current_icemask.eq.one)) then
+            if ((test_current_elasticmask.ge.zero).and. &
+                (test_current_elasticmask.le.one)) then
 
               velsum_primary=zero
               mass_sum=zero
@@ -14770,8 +14754,8 @@ stop
                     stop
                    endif
 
-                   uedge=test_current_icemask*uedge+ &
-                         (one-test_current_icemask)*uedge_rigid
+                   uedge=test_current_elasticmask*uedge+ &
+                         (one-test_current_elasticmask)*uedge_rigid
 
                   else if (colorface.eq.0) then
                    ! do nothing
@@ -14806,23 +14790,8 @@ stop
                stop
               endif 
 
-             else
-              print *,"in fort_cell_to_mac: dir=",dir
-              print *,"test_current_icemask bad: ",test_current_icemask
-              print *,"level,finest_level ",level,finest_level
-              print *,"domlo ",domlo
-              print *,"domhi ",domhi
-              print *,"project_option ",project_option
-              print *,"tilelo ",tilelo
-              print *,"tilehi ",tilehi
-              print *,"fablo ",fablo
-              print *,"fabhi ",fabhi
-              print *,"i,j,k:  ",i,j,k
-              stop
-             endif
-
             else
-             print *,"test_current_icefacecut bad: ",test_current_icefacecut
+             print *,"test_current_elasticmask bad: ",test_current_elasticmask
              stop
             endif
 
@@ -14994,17 +14963,14 @@ stop
            stop
           endif
 
-           ! local_face(FACECOMP_ICEMASK+1)=zero for both 
-           ! ice materials and "is_FSI_rigid" materials.
-          if (local_face(FACECOMP_ICEMASK+1).eq.zero) then
+          if (local_face(FACECOMP_ELASTICMASK+1).eq.zero) then
            use_face_pres=0 ! do not use div(up)
-          else if (local_face(FACECOMP_ICEMASK+1).eq.one) then
+          else if (local_face(FACECOMP_ELASTICMASK+1).gt.zero) then
            ! do nothing
           else
-           print *,"icemask invalid in fort_cell_to_mac"
+           print *,"elasticmask invalid in fort_cell_to_mac"
            print *,"This is the p^CELL->MAC operation"
            print *,"operation_flag (=1) = ",operation_flag
-           print *,"FACECOMP_ICEMASK= ",FACECOMP_ICEMASK
            stop
           endif
 
@@ -16581,7 +16547,7 @@ stop
 
 
       subroutine fort_manage_elastic_velocity( &
-       im_elastic, &
+       im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        dir, &
@@ -16611,7 +16577,7 @@ stop
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: dir
       integer, INTENT(in) :: slab_step
       integer, INTENT(in) :: level
@@ -16690,7 +16656,7 @@ stop
        stop
       endif
 
-      im_rigid_CL=im_elastic(FSI_outer_sweeps)+1
+      im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
       if (is_rigid_CL(im_rigid_CL).eq.1) then
        !do nothing
       else
@@ -16954,7 +16920,7 @@ stop
       !   NavierStokes::diffusion_heatingALL 
       ! mask=1 at fine-fine boundaries
       subroutine fort_buildfacewt( &
-       im_elastic, &
+       im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        facewt_iter, &
@@ -16994,7 +16960,7 @@ stop
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: facewt_iter
       integer, INTENT(in) :: level
       integer, INTENT(in) :: finest_level
@@ -17278,7 +17244,7 @@ stop
              ! eval_face_coeff is declared in: PROB.F90
              ! e.g. 1/rho for div( (1/rho) gradp ) = div( ustar )
             call eval_face_coeff( &
-             im_elastic, &
+             im_elastic_map, &
              num_FSI_outer_sweeps, &
              FSI_outer_sweeps, &
              xsten,nhalf, &

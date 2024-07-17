@@ -15626,7 +15626,7 @@ NavierStokes::level_phase_change_redistribute(
     // material is neither a donor or a receiver.
     // donorfab is modified.
    fort_tagexpansion( 
-    im_elastic.dataPtr(),
+    im_elastic_map.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,
     &nden,
@@ -16109,7 +16109,7 @@ NavierStokes::level_init_elasticmask_and_elasticmaskpart() {
    
     // declared in: GODUNOV_3D.F90
    fort_init_elasticmask_and_elasticmaskpart( 
-    im_elastic.dataPtr(),
+    im_elastic_map.dataPtr(),
     &num_FSI_outer_sweeps,
     &FSI_outer_sweeps,
     &nden,

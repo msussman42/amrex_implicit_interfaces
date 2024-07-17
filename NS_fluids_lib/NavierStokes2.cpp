@@ -5111,9 +5111,9 @@ void NavierStokes::make_physics_varsALL(int project_option,
     // Zero level set is completely contained on the finest level.
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACECUT,1,0,
     AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEMASK,1,0,
-    AMREX_SPACEDIM,ICEMASK_AVGDOWN,local_caller_string);
-  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ICEFACECUT,1,0,
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ELASTICMASK,1,0,
+    AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
+  ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ELASTICMASKPART,1,0,
     AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
 
    // spectral_override==0 => always low order.

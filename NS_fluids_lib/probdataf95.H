@@ -113,7 +113,6 @@
       integer num_materials_viscoelastic
       integer num_materials_compressible
       integer fort_im_viscoelastic_map(MAX_NUM_MATERIALS)
-      integer fort_im_elastic_map(MAX_NUM_MATERIALS)
       integer fort_im_refine_density_map(MAX_NUM_MATERIALS)
       integer fort_viscoelastic_model(MAX_NUM_MATERIALS)
       real(amrex_real) fort_elastic_viscosity(MAX_NUM_MATERIALS)

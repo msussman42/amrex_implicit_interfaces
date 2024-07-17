@@ -193,7 +193,7 @@ stop
       end subroutine get_mach_number 
 
       subroutine get_elasticmask_and_elasticmaskpart( &
-        im_elastic, &
+        im_elastic_map, &
         num_FSI_outer_sweeps, &
         FSI_outer_sweeps, &
         nden, &
@@ -217,7 +217,7 @@ stop
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: nden
       real(amrex_real), INTENT(in) :: xtarget(SDIM)
       real(amrex_real), INTENT(in) :: time
@@ -253,7 +253,13 @@ stop
       if (FSI_outer_sweeps.eq.0) then
        im_rigid_CL=num_materials
       else if (FSI_outer_sweeps.ge.1) then
-       im_rigid_CL=im_elastic(FSI_outer_sweeps)+1
+       im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
+       if ((im_rigid_CL.ge.1).and.(im_rigid_CL.le.num_materials)) then
+        !do nothing
+       else
+        print *,"im_rigid_CL invalid: ",im_rigid_CL
+        stop
+       endif
        if (is_rigid_CL(im_rigid_CL).eq.1) then
         !do nothing
        else
@@ -293,8 +299,6 @@ stop
       endif
 
       call get_dxmax(dx,bfact,dxmax)
-
-        ! we are in "get_icemask_and_icefacecut"
 
       call get_primary_material(LS,im_primary)
       call get_primary_material_VFRAC(VOF,im_primary_vof)
@@ -607,7 +611,7 @@ stop
            endif
 
           else
-           print *,"dist_mask_override bust"
+           print *,"dist_mask_override bust: ",dist_mask_override
            stop
           endif
 
@@ -7555,7 +7559,6 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
 
         ! ice behaves like rigid solid where dist>0
-        ! called from "get_icemask_and_icefacecut" (PROB.F90) and 
       subroutine icemask_override(xtarget,im_source,im_dest,dist)
       use global_utility_module
       use global_distance_module
@@ -11973,7 +11976,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
        !   fort_buildfacewt (LEVELSET_3D.F90)
        !   fort_fluidsolidcor (NAVIERSTOKES_3D.F90)
       subroutine eval_face_coeff( &
-       im_elastic, &
+       im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
        xsten,nhalf, &
@@ -11998,7 +12001,7 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
 
       integer, INTENT(in) :: num_FSI_outer_sweeps
       integer, INTENT(in) :: FSI_outer_sweeps
-      integer, INTENT(in) :: im_elastic(num_FSI_outer_sweeps-1)
+      integer, INTENT(in) :: im_elastic_map(num_FSI_outer_sweeps-1)
       integer, INTENT(in) :: level,finest_level
       integer, INTENT(in) :: nhalf
       real(amrex_real), INTENT(in) :: xsten(-nhalf:nhalf,SDIM)
@@ -12022,8 +12025,10 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
           (FSI_outer_sweeps.le.num_FSI_outer_sweeps-1).and. &
           (cc.ge.zero).and. &
           (cc.le.one).and. &
-          ((cc_elasticmask.eq.zero).or.(cc_elasticmask.eq.one)).and. &
-          ((cc_elasticmaskpart.eq.zero).or.(cc_elasticmaskpart.eq.one)).and. &
+          (cc_elasticmask.ge.zero).and. &
+          (cc_elasticmask.le.one).and. &
+          (cc_elasticmaskpart.ge.zero).and. &
+          (cc_elasticmaskpart.le.one).and. &
           (dd.ge.zero).and. &
           (visc_coef.ge.zero).and. &
           (nsolve.ge.1).and. &
