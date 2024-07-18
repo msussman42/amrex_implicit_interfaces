@@ -2902,8 +2902,7 @@ void NavierStokes::do_the_advance(Real timeSEM,Real dtSEM,
          //do nothing
         } else if ((num_FSI_outer_sweeps>=2)&&
                    (num_FSI_outer_sweeps<=num_materials)) {
-          //allocates and saves FSI_CELL|MAC_VELOCITY_MF if sweeps==0,
-          //copies fluid velocity and deletes if sweeps==1.
+
          for (int ilev=finest_level;ilev>=level;ilev--) {
           NavierStokes& ns_level=getLevel(ilev);
           ns_level.level_init_elasticmask_and_elasticmaskpart();
@@ -11255,7 +11254,8 @@ void NavierStokes::multiphase_project(int project_option) {
       update_energy=SUB_OP_THERMAL_DIVUP_OK; 
      } else
       amrex::Error("FSI_outer_sweeps invalid");
-    } else if (num_FSI_outer_sweeps>1) {
+    } else if ((num_FSI_outer_sweeps>1)&&
+               (num_FSI_outer_sweeps<=num_materials)) {
      if ((FSI_outer_sweeps>=0)&&
          (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
       update_energy=SUB_OP_THERMAL_DIVUP_NULL;
@@ -11638,8 +11638,13 @@ void NavierStokes::vel_elastic_ALL(int viscoelastic_force_only) {
         amrex::Error("FSI_flag[im] invalid");
 
        int im_cutoff=num_materials;
-       if (FSI_outer_sweeps>0)
+       if (FSI_outer_sweeps==0) {
+        im_cutoff=num_materials;
+       } else if ((FSI_outer_sweeps>0)&&
+                  (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
         im_cutoff=im_elastic_map[FSI_outer_sweeps-1]+1;
+       } else
+        amrex::Error("FSI_outer_sweeps invalid");
 
        if ((FSI_outer_sweeps==0)||
            ((FSI_outer_sweeps>=1)&&
@@ -11941,7 +11946,8 @@ void NavierStokes::veldiffuseALL() {
 
   avgDownALL(State_Type,STATECOMP_STATES,nden,1);
 
- } else if (FSI_outer_sweeps>0) {
+ } else if ((FSI_outer_sweeps>0)&&
+            (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12116,7 +12122,8 @@ void NavierStokes::veldiffuseALL() {
   } else 
    amrex::Error("SDC_outer_sweeps or divu_outer_sweeps invalid");
 
- } else if (FSI_outer_sweeps<num_FSI_outer_sweeps-1) {
+ } else if ((FSI_outer_sweeps>=0)&&
+            (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12412,7 +12419,8 @@ void NavierStokes::veldiffuseALL() {
   } else
    amrex::Error("include_viscous_heating invalid");
 
- } else if (FSI_outer_sweeps>0) {
+ } else if ((FSI_outer_sweeps>0)&&
+            (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12482,7 +12490,8 @@ void NavierStokes::veldiffuseALL() {
   } //ilev=level ... finest_level
 
   delete_array(save_state_MF);
- } else if (FSI_outer_sweeps>0) {
+ } else if ((FSI_outer_sweeps>0)&&
+            (FSI_outer_sweeps<num_FSI_outer_sweeps)) {
   //do nothing
  } else
   amrex::Error("FSI_outer_sweeps invalid");
@@ -12902,7 +12911,7 @@ void NavierStokes::SET_STOKES_MARK(int idx_MF) {
 
 
 //allocates and saves FSI_CELL|MAC_VELOCITY_MF if sweeps>=0 and
-//sweeps<num_FSI_outer_sweeps
+//sweeps<num_FSI_outer_sweeps-1
 //copies fluid velocity and deletes if sweeps>=1 and 
 //sweeps<=num_FSI_outer_sweeps
 void NavierStokes::manage_FSI_data() {
@@ -13056,7 +13065,7 @@ void NavierStokes::manage_FSI_data() {
    amrex::Error("FSI_outer_sweeps invalid");
 
  } else
-  amrex::Error("expecting num_FSI_outer_sweeps>=2");
+  amrex::Error("expecting num_FSI_outer_sweeps>=2 and <= num_materials");
 
 } // end subroutine manage_FSI_data()
 

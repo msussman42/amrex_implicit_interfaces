@@ -5106,9 +5106,6 @@ void NavierStokes::make_physics_varsALL(int project_option,
    // average down from ilev+1 to ilev.
   
     // idxMF,scomp,ncomp,start_dir,ndir
-    // spectral_override==1 => order derived from "enable_spectral"
-    // spectral_override==0 => always low order.
-    // Zero level set is completely contained on the finest level.
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_FACECUT,1,0,
     AMREX_SPACEDIM,LOW_ORDER_AVGDOWN,local_caller_string);
   ns_level.avgDownEdge_localMF(FACE_VAR_MF,FACECOMP_ELASTICMASK,1,0,

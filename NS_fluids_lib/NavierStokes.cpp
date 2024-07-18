@@ -79,7 +79,7 @@ int  NavierStokes::divu_outer_sweeps=0;
 int  NavierStokes::very_last_sweep=0;
 int  NavierStokes::num_divu_outer_sweeps=1;
 
-//FSI_CELL_VELOCITY_MF,FSI_MAC_VELOCITY_MF used when FSI_outer_sweeps==1
+//FSI_CELL_VELOCITY_MF,FSI_MAC_VELOCITY_MF used when FSI_outer_sweeps>=1
 int  NavierStokes::FSI_outer_sweeps=0;
 int  NavierStokes::num_FSI_outer_sweeps=1;
 
