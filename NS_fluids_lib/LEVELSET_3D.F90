@@ -16550,7 +16550,7 @@ stop
        im_elastic_map, &
        num_FSI_outer_sweeps, &
        FSI_outer_sweeps, &
-       dir, &
+       dir, & !0,1,2
        velbc_in, &
        slab_step, &
        time, &
@@ -16649,7 +16649,8 @@ stop
       maskcoef_ptr=>maskcoef
       levelPC_ptr=>levelPC
 
-      if (FSI_outer_sweeps.ge.1) then
+      if ((FSI_outer_sweeps.ge.1).and. &
+          (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
        !do nothing
       else
        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
@@ -16897,7 +16898,7 @@ stop
                  (im_left.gt.im_rigid_CL)) then
          velCELL(D_DECL(i,j,k))=FSIvelCELL(D_DECL(i,j,k))
         else
-         print *,"is_rigid_CL bust"
+         print *,"is_rigid_CL bust: ",im_left,is_rigid_CL(im_left)
          stop
         endif
         
