@@ -306,10 +306,11 @@ stop
 
        if (FSI_outer_sweeps.eq.0) then
         im_rigid_CL=num_materials
-       else if (FSI_outer_sweeps.ge.1) then
+       else if ((FSI_outer_sweeps.ge.1).and. &
+                (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
         im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
        else
-        print *,"FSI_outer_sweeps invalid"
+        print *,"FSI_outer_sweeps invalid: ",FSI_outer_sweeps
         stop
        endif
 
@@ -498,7 +499,8 @@ stop
 
           if (FSI_outer_sweeps.eq.0) then
            !do nothing
-          else if (FSI_outer_sweeps.ge.1) then
+          else if ((FSI_outer_sweeps.ge.1).and. &
+                   (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
            if (LStest.ge.zero) then
             if ((is_rigid_CL(im).eq.1).and. &
                 (im.le.im_rigid_CL)) then

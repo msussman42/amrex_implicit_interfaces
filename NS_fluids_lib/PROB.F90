@@ -252,7 +252,8 @@ stop
 
       if (FSI_outer_sweeps.eq.0) then
        im_rigid_CL=num_materials
-      else if (FSI_outer_sweeps.ge.1) then
+      else if ((FSI_outer_sweeps.ge.1).and. &
+               (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
        im_rigid_CL=im_elastic_map(FSI_outer_sweeps)+1
        if ((im_rigid_CL.ge.1).and.(im_rigid_CL.le.num_materials)) then
         !do nothing
@@ -429,7 +430,8 @@ stop
            (im_FSI_rigid.gt.num_materials).or. &
            (im_FSI_elastic.lt.0).or. &
            (im_FSI_elastic.gt.num_materials)) then
-        print *,"im_FSI_rigid or im_FSI_elastic invalid"
+        print *,"im_FSI_rigid or im_FSI_elastic invalid", &
+          im_FSI_rigid,im_FSI_elastic
         stop
        endif
 
@@ -12111,7 +12113,8 @@ real(amrex_real) costheta, eps, dis, mag, phimin, tmp(3), tmp1(3), &
          if (num_FSI_outer_sweeps.eq.1) then
           cc_group=cc*cc_elasticmask
          else if ((num_FSI_outer_sweeps.gt.1).and. &
-                  (FSI_outer_sweeps.ge.1)) then
+                  (FSI_outer_sweeps.ge.1).and. &
+                  (FSI_outer_sweeps.lt.num_FSI_outer_sweeps)) then
           cc_group=cc*cc_elasticmaskpart
          else if ((num_FSI_outer_sweeps.gt.1).and. &
                   (FSI_outer_sweeps.eq.0)) then
