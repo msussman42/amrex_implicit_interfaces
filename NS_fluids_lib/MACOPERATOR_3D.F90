@@ -573,7 +573,8 @@ stop
           ! "is_rigid" case handled above.
           if (num_FSI_outer_sweeps.eq.1) then
            !do nothing
-          else if (num_FSI_outer_sweeps.gt.1) then
+          else if ((num_FSI_outer_sweeps.gt.1).and. &
+                   (num_FSI_outer_sweeps.le.num_materials)) then
            if (FSI_outer_sweeps.eq.0) then
             im_rigid_CL=num_materials
            else if ((FSI_outer_sweeps.ge.1).and. &
@@ -606,7 +607,7 @@ stop
               else if (im.gt.im_rigid_CL) then
                !do nothing
               else
-               print *,"im invalid"
+               print *,"im invalid: ",im
                stop
               endif
              else

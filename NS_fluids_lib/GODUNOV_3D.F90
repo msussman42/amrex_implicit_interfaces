@@ -4842,13 +4842,15 @@ stop
               freezing_model(iten+ireverse*num_interfaces)).eq.1) then
           ! do nothing 
          else
-          print *,"freezing_model invalid fort_init_elasticmask_and_elasticmaskpart"
+          print *,"freezing_model invalid ... "
+          print *," fort_init_elasticmask_and_elasticmaskpart"
           print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
          if ((distribute_from_target(iten+ireverse*num_interfaces).lt.0).or. &
              (distribute_from_target(iten+ireverse*num_interfaces).gt.1)) then
-          print *,"distribute_from_target err fort_init_elasticmask_and_elasticmaskpart"
+          print *,"distribute_from_target error"
+          print *," fort_init_elasticmask_and_elasticmaskpart"
           print *,"iten,ireverse,num_interfaces ",iten,ireverse,num_interfaces
           stop
          endif
@@ -4986,7 +4988,8 @@ stop
           zface(D_DECL(i,j,k),FACECOMP_ELASTICMASKPART+1)=elasticmaskpart
           zface(D_DECL(i,j,k),FACECOMP_ELASTICMASK+1)=elasticmask
          else
-          print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart 3"
+          print *,"dir invalid fort_init_elasticmask_and_elasticmaskpart 3:", &
+           dir
           stop
          endif
 
@@ -11332,7 +11335,7 @@ stop
          else if (VDOT.ge.zero) then
           ! do nothing
          else
-          print *,"VDOT bust"
+          print *,"VDOT bust: ",VDOT
           stop
          endif
         else if (expect_mdot_sign.eq.-one) then
@@ -11343,7 +11346,7 @@ stop
          else if (VDOT.le.zero) then
           ! do nothing
          else
-          print *,"VDOT bust"
+          print *,"VDOT bust: ",VDOT
           stop
          endif
         else
@@ -11408,16 +11411,16 @@ stop
              elasticmask=one !assume both source and dest can be distributed to.
             endif
            else
-            print *,"index_compare invalid"
+            print *,"index_compare invalid: ",index_compare
             stop
            endif
           else
-           print *,"ireverse invalid"
+           print *,"ireverse invalid: ",ireverse
            stop
           endif
  
          else 
-          print *,"im_ice invalid"
+          print *,"im_ice invalid: ",im_ice
           stop
          endif
 
@@ -11426,7 +11429,7 @@ stop
          else if (complement_flag.eq.1) then
           mdot_sum_comp=mdot_sum_comp+VDOT
          else
-          print *,"complement_flag invalid"
+          print *,"complement_flag invalid: ",complement_flag
           stop
          endif
 
@@ -11448,14 +11451,16 @@ stop
              else if (complement_flag.eq.1) then
               tag_comp(D_DECL(i,j,k)) = one ! donor cell
              else
-              print *,"complement_flag invalid"
+              print *,"complement_flag invalid: ",complement_flag
               stop
              endif
             else if ((VFRAC(im_dest).ge.half).and. &
-                     (elasticmask.gt.zero)) then
+                     (elasticmask.gt.zero).and. &
+                     (elasticmask.le.one)) then
              ! do nothing - acceptor cell
             else
-             print *,"VFRAC or elasticmask bust"
+             print *,"VFRAC or elasticmask bust: ",im_dest,VFRAC(im_dest), &
+              elasticmask
              stop      
             endif
 
@@ -11470,14 +11475,16 @@ stop
              else if (complement_flag.eq.1) then
               tag_comp(D_DECL(i,j,k)) = one ! donor cell
              else
-              print *,"complement_flag invalid"
+              print *,"complement_flag invalid: ",complement_flag
               stop
              endif
             else if ((VFRAC(im_source).ge.half).and. &
-                     (elasticmask.gt.zero)) then
+                     (elasticmask.gt.zero).and. &
+                     (elasticmask.le.one)) then
              ! do nothing - acceptor cell
             else
-             print *,"VFRAC or elasticmask bust"     
+             print *,"VFRAC or elasticmask bust: ", &
+               im_source,VFRAC(im_source),elasticmask 
              stop
             endif
 
@@ -11489,7 +11496,7 @@ stop
           else if (VDOT.eq.zero) then
            ! do nothing
           else
-           print *,"VDOT became corrupt"
+           print *,"VDOT became corrupt: ",VDOT
            stop
           endif 
 
@@ -11499,20 +11506,22 @@ stop
             .eq.0) then
 
            if ((VFRAC(im_dest).ge.half).and. &
-               (elasticmask.gt.zero)) then
+               (elasticmask.gt.zero).and. &
+               (elasticmask.le.one)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
              tag_comp(D_DECL(i,j,k)) = two ! receiver
             else
-             print *,"complement_flag invalid"
+             print *,"complement_flag invalid: ",complement_flag
              stop
             endif
            else if ((VFRAC(im_dest).lt.half).or. &
                     (elasticmask.eq.zero)) then
             ! do nothing - donor cell if VDOT<>0
            else
-            print *,"VFRAC or elasticmask bust"
+            print *,"VFRAC or elasticmask bust: ",im_dest,VFRAC(im_dest), &
+             elasticmask
             stop      
            endif
  
@@ -11521,20 +11530,22 @@ stop
               .eq.1) then
 
            if ((VFRAC(im_source).ge.half).and. &
-               (elasticmask.gt.zero)) then
+               (elasticmask.gt.zero).and. &
+               (elasticmask.le.one)) then
             if (complement_flag.eq.0) then
              tag(D_DECL(i,j,k)) = two ! receiver
             else if (complement_flag.eq.1) then
              tag_comp(D_DECL(i,j,k)) = two ! receiver
             else
-             print *,"complement_flag invalid"
+             print *,"complement_flag invalid: ",complement_flag
              stop
             endif
            else if ((VFRAC(im_source).lt.half).or. &
                     (elasticmask.eq.zero)) then
             ! do nothing - donor cell if VDOT<>0
            else
-            print *,"VFRAC or elasticmask bust"     
+            print *,"VFRAC or elasticmask bust: ",im_source,VFRAC(im_source), &
+              elasticmask
             stop
            endif
  
@@ -11560,7 +11571,7 @@ stop
        else if (local_mask.eq.0) then
         ! do nothing
        else
-        print *,"local_mask invalid"
+        print *,"local_mask invalid: ",local_mask
         stop
        endif
 

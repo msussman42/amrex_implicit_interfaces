@@ -14965,10 +14965,12 @@ stop
 
           if (local_face(FACECOMP_ELASTICMASK+1).eq.zero) then
            use_face_pres=0 ! do not use div(up)
-          else if (local_face(FACECOMP_ELASTICMASK+1).gt.zero) then
+          else if ((local_face(FACECOMP_ELASTICMASK+1).gt.zero).and. &
+                   (local_face(FACECOMP_ELASTICMASK+1).le.one)) then
            ! do nothing
           else
            print *,"elasticmask invalid in fort_cell_to_mac"
+           print *,"elasticmask=",local_face(FACECOMP_ELASTICMASK+1)
            print *,"This is the p^CELL->MAC operation"
            print *,"operation_flag (=1) = ",operation_flag
            stop
