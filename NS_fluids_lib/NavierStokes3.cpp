@@ -1695,7 +1695,14 @@ void NavierStokes::pressure_gradient_code_segment(
  if (singular_parts_exist==1) {
 
   if (extend_pressure_into_solid==1) {
-   multiphase_project(SOLVETYPE_PRESEXTRAP);
+   if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+    multiphase_project(SOLVETYPE_PRESEXTRAP);
+   } else if ((FSI_outer_sweeps>=0)&&
+              (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+    //do nothing
+   } else
+    amrex::Error("FSI_outer_sweeps invalid");
+
   } else if (extend_pressure_into_solid==0) {
    // do nothing
   } else
