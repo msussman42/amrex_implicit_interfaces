@@ -111,14 +111,15 @@ ns.incremental_gravity_flag=1
 # 1-sigma_{SL}/sigma_{LG}=cos(theta_L_initial)
 # sigma_SL = sigma_LG * (1-cos(theta_L))
 # theta_L=35 degrees sigma_SL=sigma_LG * (1-cos(35))=315.0
+# theta_L=40 degrees sigma_SL=sigma_LG * (1-cos(40))=407.1
 #
 # theta_L=45 on the ice
 # sigma_IG-sigma_IL=sigma_LG cos(45)
 # sigma_IG=sigma_LG=1740e-1
 # sigma_IL=sigma_LG(1-cos(45))=510.0
 # LG,LI,LS,IG,GS,SI  
-ns.tension=      1740.0e-1 510.0e-1 315.0e-1 1740.0e-1 1740.0e-1  0.0
-ns.tension_init= 1740.0e-1 510.0e-1 315.0e-1 1740.0e-1 1740.0e-1  0.0
+ns.tension=      1740.0e-1 510.0e-1 407.1e-1 1740.0e-1 1740.0e-1  0.0
+ns.tension_init= 1740.0e-1 510.0e-1 407.1e-1 1740.0e-1 1740.0e-1  0.0
 
 # 1 J/kg = 10^4 erg/g
 # specific heat of glass: 0.84E+3 J/(kg K)
