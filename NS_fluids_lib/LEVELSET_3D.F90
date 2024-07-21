@@ -1501,7 +1501,8 @@ stop
          if (lssten(i,j,k,im_liquid).ge.lssten(i,j,k,im_vapor)) then
           local_weight=one
          else if (lssten(i,j,k,im_liquid).le.lssten(i,j,k,im_vapor)) then
-          local_weight=fort_denconst(im_vapor)/fort_denconst(im_liquid)
+!         local_weight=fort_denconst(im_vapor)/fort_denconst(im_liquid)
+          local_weight=one
          else
           print *,"lssten invalid"
           print *,"im_liquid,lssten: ",im_liquid,lssten(i,j,k,im_liquid)
