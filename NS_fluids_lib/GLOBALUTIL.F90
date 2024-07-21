@@ -8289,7 +8289,7 @@ end subroutine print_visual_descriptor
       if ((im1.lt.1).or.(im1.gt.num_materials).or. & 
           (im2.lt.1).or.(im2.gt.num_materials).or. &
           (im1.eq.im2)) then
-       print *,"im1,im2 mismatch im1,im2=",im1,im2
+       print *,"im1,im2 mismatch(A) im1,im2=",im1,im2
        print *,"num_materials=",num_materials
        stop
       endif
@@ -8301,7 +8301,7 @@ end subroutine print_visual_descriptor
        im=im2
        im_opp=im1
       else
-       print *,"im1,im2 mismatch2 im1,im2=",im1,im2
+       print *,"im1,im2 mismatch(A2) im1,im2=",im1,im2
        print *,"num_materials=",num_materials
        stop
       endif
@@ -8343,7 +8343,7 @@ end subroutine print_visual_descriptor
       if ((im1.lt.1).or.(im1.gt.num_materials).or. & 
           (im2.lt.1).or.(im2.gt.num_materials).or. &
           (im1.eq.im2)) then
-       print *,"im1,im2 mismatch im1,im2=",im1,im2
+       print *,"im1,im2 mismatch(B) im1,im2=",im1,im2
        print *,"num_materials=",num_materials
        stop
       endif
@@ -15874,6 +15874,7 @@ end subroutine print_visual_descriptor
        endif
 
       else
+       print *,"get_VOF_extend"
        print *,"VOF bust im,im_opp: ",im,im_opp
        print *,"VOF(im),VOF(im_opp) ",VOF(im),VOF(im_opp)
        stop

@@ -2520,7 +2520,7 @@ void NavierStokes::get_iten_cpp(int im1,int im2,int& iten) {
  if ((im1<1)||(im1>num_materials)||
      (im2<1)||(im2>num_materials)||
      (im1==im2)) {
-  std::cout << "im1,im2 mismatch im1,im2=" << im1 << ' ' << im2 << '\n';
+  std::cout << "im1,im2 mismatch(C) im1,im2=" << im1 << ' ' << im2 << '\n';
   std::cout << "num_materials=" << num_materials << '\n';
   amrex::Error("get_iten_cpp problem "); 
  }
@@ -2567,7 +2567,7 @@ void NavierStokes::get_inverse_iten_cpp(int& im1,int& im2,int iten) {
  if ((im1<1)||(im1>num_materials)||
      (im2<1)||(im2>num_materials)||
      (im1==im2)) {
-  std::cout << "im1,im2 mismatch im1,im2=" << im1 << ' ' << im2 << '\n';
+  std::cout << "im1,im2 mismatch(D) im1,im2=" << im1 << ' ' << im2 << '\n';
   std::cout << "num_materials=" << num_materials << '\n';
   amrex::Error("get_inverse_iten_cpp problem "); 
  }
