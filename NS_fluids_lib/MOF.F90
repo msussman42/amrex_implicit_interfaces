@@ -25855,15 +25855,17 @@ contains
       if ((im_primary.ge.1).and.(im_primary.le.num_materials)) then
        ! do nothing
       else
-       print *,"im_primary invalid get_tertiary_material"
+       print *,"im_primary invalid get_tertiary_material: ",im_primary
        stop
       endif
+
       if ((im_secondary.ge.1).and. &
           (im_secondary.le.num_materials).and. &
           (im_secondary.ne.im_primary)) then
        ! do nothing
       else
-       print *,"im_secondary invalid get_tertiary_material"
+       print *,"im_secondary invalid get_tertiary_material: ", &
+        im_secondary
        stop
       endif
 
@@ -25881,7 +25883,7 @@ contains
            im_tertiary=im_3
           endif
          else
-          print *,"im_tertiary invalid"
+          print *,"im_tertiary invalid: ",im_tertiary
           stop
          endif
         else if ((im_3.eq.im_primary).or. &
@@ -25894,7 +25896,8 @@ contains
        else if (is_rigid_local(im_3).eq.1) then
         ! do nothing
        else
-        print *,"is_rigid_local(im_3) invalid"
+        print *,"is_rigid_local(im_3) invalid: ", &
+         im_3,is_rigid_local(im_3)
         stop
        endif
       enddo !im_3=1..num_materials
