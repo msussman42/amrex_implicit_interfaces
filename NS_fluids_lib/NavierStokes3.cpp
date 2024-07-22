@@ -9389,12 +9389,28 @@ void NavierStokes::multiphase_project(int project_option) {
 
   int potgrad_surface_tension_mask=POTGRAD_NULLOPTION;
 
-  if (incremental_gravity_flag==1) {
-   potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
-  } else if (incremental_gravity_flag==0) {
-   potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
+  if ((FSI_outer_sweeps>=0)&&
+      (FSI_outer_sweeps<num_FSI_outer_sweeps-1)) {
+
+   if (incremental_gravity_flag==1) {
+    potgrad_surface_tension_mask=POTGRAD_INCREMENTAL_GRAV;
+   } else if (incremental_gravity_flag==0) {
+    potgrad_surface_tension_mask=POTGRAD_BASE_GRAV;
+   } else
+    amrex::Error("incremental_gravity_flag invalid");
+
+  } else if (FSI_outer_sweeps==num_FSI_outer_sweeps-1) {
+
+   if (incremental_gravity_flag==1) {
+    potgrad_surface_tension_mask=POTGRAD_SURFTEN_INCREMENTAL_GRAV;
+   } else if (incremental_gravity_flag==0) {
+    potgrad_surface_tension_mask=POTGRAD_SURFTEN_BASE_GRAV;
+   } else
+    amrex::Error("incremental_gravity_flag invalid");
+
   } else
-   amrex::Error("incremental_gravity_flag invalid");
+   amrex::Error("FSI_outer_sweeps invalid");
+
 
    // 1. init_gravity_potential
    //      output: HYDROSTATIC_PRESDEN_MF
