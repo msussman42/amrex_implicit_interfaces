@@ -59,7 +59,7 @@ real(amrex_real) shockdrop_gamma
 
 CONTAINS
 
-          ! units are cgs
+! units are cgs
 subroutine shockdrop_init()
 use probcommon_module
 use global_utility_module
@@ -236,10 +236,11 @@ enddo
 
 call shockdrop_dropLS(x(1),x(2),x(SDIM),ls_local)
 if (ls_local.ge.zero) then
- ! do nothing (drop is upstream from shock and
+ ! do nothing in y/z direction (drop is upstream from shock and
  ! stationary in the "upstream frame of reference")
  ! shock velocity > 0
  ! shock is approaching with speed: shockdrop_VEL0
+ vel(1)=advbot ! velocity in the "periodic" direction
 else
  call shockdrop_shockLS(x(1),x(2),x(SDIM),ls_local)
  ! in shock frame of reference:
@@ -257,6 +258,7 @@ end subroutine shockdrop_velocity
 
  !gets mapped to SUB_CFL_HELPER
 subroutine shockdrop_maxvelocity(time,dir,vel,dx)
+use probcommon_module
 IMPLICIT NONE
 integer, INTENT(in) :: dir
 real(amrex_real), INTENT(in) :: time
@@ -269,6 +271,7 @@ if ((dir.lt.0).or.(dir.ge.SDIM)) then
  stop
 endif
 vel_local=max(abs(shockdrop_VEL0),abs(shockdrop_VEL1))
+vel_local=max(abs(advbot),abs(vel_local))
 vel=max(abs(vel),abs(vel_local))
 
 return
@@ -399,6 +402,7 @@ end subroutine shockdrop_gas_temperature
 ! probtype=1 in the inputs file
 ! axis_dir=150 shock drop
 ! axis_dir=151 shock column
+! axis_dir=152 shock cylinder
 ! LS>0 upstream of the shock  z>zblob2
 ! LS<0 downstream of the shock z<zblob2
 SUBROUTINE shockdrop_shockLS(x,y,z,LS)
@@ -416,7 +420,9 @@ if (SDIM.eq.2) then
  endif
 endif
 
-if ((axis_dir.eq.150).or.(axis_dir.eq.151)) then
+if ((axis_dir.eq.150).or. &
+    (axis_dir.eq.151).or. &
+    (axis_dir.eq.152)) then
  LS=z-zblob2
 else
  print *,"axis_dir invalid"
@@ -429,6 +435,7 @@ END SUBROUTINE shockdrop_shockLS
 ! probtype=1 in the inputs file
 ! axis_dir=150 shock drop
 ! axis_dir=151 shock column
+! axis_dir=152 shock cylinder
 ! LS>0 in the drop
 subroutine shockdrop_dropLS(x,y,z,LS)
 use probcommon_module
@@ -458,6 +465,17 @@ else if (axis_dir.eq.151) then ! shock column
   LS=radblob-sqrt(mag) 
  else if (SDIM.eq.3) then
   mag=(z-zblob)**2
+  LS=radblob-sqrt(mag) 
+ else 
+  print *,"dimension bust"
+  stop
+ endif
+else if (axis_dir.eq.152) then ! shock cylinder
+ if (SDIM.eq.2) then
+  mag=(y-yblob)**2
+  LS=radblob-sqrt(mag) 
+ else if (SDIM.eq.3) then
+  mag=(y-yblob)**2+(z-zblob)**2
   LS=radblob-sqrt(mag) 
  else 
   print *,"dimension bust"
@@ -759,7 +777,7 @@ enddo !dir=1..sdim
 if ((num_materials.ge.2).and. &
     (probtype.eq.shockdrop_PROB_TYPE)) then
 
- if ((axis_dir.ge.150).and.(axis_dir.le.151)) then
+ if ((axis_dir.ge.150).and.(axis_dir.le.152)) then
 
   ii=0
   jj=0

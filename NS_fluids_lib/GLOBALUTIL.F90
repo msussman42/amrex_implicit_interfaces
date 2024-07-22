@@ -20454,7 +20454,6 @@ end subroutine print_visual_descriptor
 ! end dodecane routines (material type=15)
 
 
-
       subroutine INTERNAL_tait_rho(rho,temperature,internal_energy)
       use probcommon_module
       IMPLICIT NONE
@@ -20462,11 +20461,15 @@ end subroutine print_visual_descriptor
       real(amrex_real) rho,temperature,internal_energy,cv
 
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then 
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (temperature.le.zero) then
+      if (temperature.gt.zero) then
+       !do nothing
+      else
        print *,"temperature <=0"
        stop
       endif
@@ -20483,11 +20486,15 @@ end subroutine print_visual_descriptor
       real(amrex_real) rho,temperature,internal_energy,cv
 
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"density negative"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"internal energy <=0"
        stop
       endif
@@ -20509,18 +20516,24 @@ end subroutine print_visual_descriptor
       B=B_TAIT  ! dyne/cm^2
       rhobar=fort_denconst(1) ! g/cm^3
 
-      if (rhobar.lt.0.001) then
+      if (rhobar.ge.0.001) then
+       !do nothing
+      else
        print *,"rhobar invalid in eos tait rho"
        stop
       endif
 
       pcav=PCAV_TAIT
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"e invalid"
        stop
       endif
@@ -20581,11 +20594,15 @@ end subroutine print_visual_descriptor
       real(amrex_real) rho_sound
 
 
-      if (rho.le.zero) then
+      if (rho.gt.zero) then
+       !do nothing
+      else
        print *,"rho invalid"
        stop
       endif
-      if (internal_energy.le.zero) then
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
        print *,"e invalid"
        stop
       endif
@@ -20594,7 +20611,9 @@ end subroutine print_visual_descriptor
       B=B_TAIT  ! dyne/cm^2
       rhobar=fort_denconst(1) ! g/cm^3
 
-      if (rhobar.lt.0.001) then
+      if (rhobar.ge.0.001) then
+       !do nothing
+      else
        print *,"rhobar invalid in soundsqr tait rho"
        stop
       endif
@@ -20603,7 +20622,9 @@ end subroutine print_visual_descriptor
       rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_TAIT) )
       pressure=B*( (rho/rhobar)**GAMMA_TAIT - one ) + A
       
-      if (rhocav.le.zero) then
+      if (rhocav.gt.zero) then
+       !do nothing
+      else
        print *,"rhocav invalid"
        stop
       endif
@@ -20617,6 +20638,157 @@ end subroutine print_visual_descriptor
 
       return
       end subroutine SOUNDSQR_tait_rho
+
+
+      subroutine INTERNAL_galinstan_rho(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,temperature,internal_energy,cv
+
+
+      if (rho.gt.zero) then 
+       !do nothing
+      else
+       print *,"density negative"
+       stop
+      endif
+      if (temperature.gt.zero) then
+       !do nothing
+      else
+       print *,"temperature <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      internal_energy=temperature*cv
+
+      return
+      end subroutine INTERNAL_galinstan_rho
+
+      subroutine TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,temperature,internal_energy,cv
+
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"density negative"
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"internal energy <=0"
+       stop
+      endif
+      cv=4.1855D+7
+      temperature=internal_energy/cv
+
+      return
+      end subroutine TEMPERATURE_galinstan_rho
+
+      subroutine EOS_galinstan_rho(rho,internal_energy,pressure)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,internal_energy,pressure
+      real(amrex_real) A,B,rhobar,pcav
+
+
+      A=A_GALINSTAN   ! dyne/cm^2
+      B=B_GALINSTAN  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.ge.0.001) then
+       !do nothing
+      else
+       print *,"rhobar invalid in eos galinstan rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid"
+       stop
+      endif
+
+      pressure=B*( (rho/rhobar)**GAMMA_GALINSTAN - one ) + A
+
+      if (pressure.lt.pcav) then
+       pressure=pcav
+      endif
+
+      return
+      end subroutine EOS_galinstan_rho
+
+
+      subroutine SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
+      use probcommon_module
+      IMPLICIT NONE
+
+      real(amrex_real) rho,internal_energy,soundsqr
+      real(amrex_real) A,B,rhobar,pcav,rhocav,pressure
+      real(amrex_real) rho_sound
+
+
+      if (rho.gt.zero) then
+       !do nothing
+      else
+       print *,"rho invalid"
+       stop
+      endif
+      if (internal_energy.gt.zero) then
+       !do nothing
+      else
+       print *,"e invalid"
+       stop
+      endif
+
+      A=A_GALINSTAN   ! dyne/cm^2
+      B=B_GALINSTAN  ! dyne/cm^2
+      rhobar=fort_denconst(1) ! g/cm^3
+
+      if (rhobar.ge.0.001) then
+       !do nothing
+      else
+       print *,"rhobar invalid in soundsqr galinstan rho"
+       stop
+      endif
+
+      pcav=PCAV_TAIT
+      rhocav=rhobar*( ((pcav-A)/B+one)**(one/GAMMA_GALINSTAN) )
+      pressure=B*( (rho/rhobar)**GAMMA_GALINSTAN - one ) + A
+      
+      if (rhocav.gt.zero) then
+       !do nothing
+      else
+       print *,"rhocav invalid"
+       stop
+      endif
+
+      if (pressure.lt.pcav) then
+       rho_sound=rhocav
+      else
+       rho_sound=rho
+      endif
+      soundsqr=(GAMMA_GALINSTAN*B/rhobar)* &
+        ( (rho_sound/rhobar)**(GAMMA_GALINSTAN-one) )
+
+      return
+      end subroutine SOUNDSQR_galinstan_rho
+
 
 
 
@@ -23511,6 +23683,8 @@ end subroutine print_visual_descriptor
        call EOS_tillotson(rho,internal_energy,pressure)
       else if (imattype.eq.23) then
        call EOS_peng_robinson(rho,internal_energy,pressure)
+      else if (imattype.eq.24) then
+       call EOS_galinstan_rho(rho,internal_energy,pressure)
       else
        print *,"imattype invalid EOS_material_CORE"
        stop
@@ -23563,7 +23737,7 @@ end subroutine print_visual_descriptor
       endif
 
       if ((imattype.ge.1).and. &
-          (imattype.le.23)) then
+          (imattype.le.24)) then
        dVdT=(fort_stiffGAMMA(im)-one) * fort_stiffCV(im)/pressure
       else if (imattype.eq.0) then
        dVdT=zero
@@ -23651,6 +23825,8 @@ end subroutine print_visual_descriptor
        call SOUNDSQR_tillotson(rho,internal_energy,soundsqr)
       else if (imattype.eq.23) then
        call SOUNDSQR_peng_robinson(rho,internal_energy,soundsqr)
+      else if (imattype.eq.24) then
+       call SOUNDSQR_galinstan_rho(rho,internal_energy,soundsqr)
       else
        print *,"imattype invalid SOUNDSQR_material_CORE"
        stop
@@ -23737,6 +23913,8 @@ end subroutine print_visual_descriptor
        call INTERNAL_tillotson(rho,temperature,local_internal_energy)
       else if (imattype.eq.23) then
        call INTERNAL_peng_robinson(rho,temperature,local_internal_energy)
+      else if (imattype.eq.24) then
+       call INTERNAL_galinstan_rho(rho,temperature,local_internal_energy)
       else
        print *,"imattype invalid INTERNAL_material_CORE"
        stop
@@ -23825,6 +24003,8 @@ end subroutine print_visual_descriptor
        call TEMPERATURE_tillotson(rho,temperature,internal_energy)
       else if (imattype.eq.23) then
        call TEMPERATURE_peng_robinson(rho,temperature,internal_energy)
+      else if (imattype.eq.24) then
+       call TEMPERATURE_galinstan_rho(rho,temperature,internal_energy)
       else
        print *,"imattype invalid TEMPERATURE_material_CORE"
        print *,"imattype= ",imattype

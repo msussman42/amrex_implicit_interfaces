@@ -342,6 +342,9 @@ implicit none
       real(amrex_real), PARAMETER :: B_TAIT=3.31D+9  ! dyne/cm^2
       real(amrex_real), PARAMETER :: RHOBAR_TAIT=1.0D0  ! g/cm^3
       real(amrex_real), PARAMETER :: GAMMA_TAIT=7.15D0
+      real(amrex_real), PARAMETER :: A_GALINSTAN=1.0D+6  ! dyne/cm^2
+      real(amrex_real), PARAMETER :: B_GALINSTAN=6.76D+10  ! dyne/cm^2
+      real(amrex_real), PARAMETER :: GAMMA_GALINSTAN=7.15D0
 
       real(amrex_real), PARAMETER :: P0_tillotson=1.0D+6 ! dyne/cm^2
       real(amrex_real), PARAMETER :: a_hydro_tillotson=0.7d0  ! dimensionless
