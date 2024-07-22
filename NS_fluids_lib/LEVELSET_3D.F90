@@ -15736,7 +15736,8 @@ stop
                   POTGRAD_BASE_GRAV) then
           ! do nothing 
          else
-          print *,"spectral method not for incremental formulation"
+          print *,"spectral method not for incremental formulation: ", &
+           energyflag
           stop
          endif
 
@@ -15814,7 +15815,8 @@ stop
                         POTGRAD_BASE_GRAV) then
                 ! do nothing 
                else
-                print *,"spectral method not for incremental formulation"
+                print *,"spectral method not for incremental formulation "
+                print *,"energyflag=",energyflag
                 stop
                endif
 
