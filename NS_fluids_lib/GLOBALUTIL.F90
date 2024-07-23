@@ -5816,19 +5816,27 @@ else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
  ! Q is traceless if trace(Q)=0 at t=0.
  call project_to_traceless(A_local,A_dim)
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental Neo-Hookean
- ! Xia, Lu, Tryggvason 2018
- ! Df/Dt + f grad U=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
- ! D(f^T f)/Dt=f^T Df/Dt + Df^T/Dt f =
- ! f^T(-f grad U)+(-grad U^T f^T)f  
+ ! Xia, Lu, Tryggvason 2018 Rapid Prototyping Journal
+ ! f=dX/dx=F^{-1}  (dx/dX)_ij = (x_{i})_{j}
+ ! F=dx/dX
+ ! D X/Dt = 0
+ ! Df/Dt + f grad U=0  
+ ! Df^T/Dt + grad U^T f^T=0  
+ ! Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
+ ! D(f^T f)/Dt=
+ !   f^T Df/Dt + Df^T/Dt f =
+ !   f^T(-f grad U)+(-grad U^T f^T)f  
  ! let Binv=f^T f
  ! D Binv/Dt + Binv grad U + grad U^T Binv = 0
- ! D (Binv B)/Dt=D Binv/Dt B + Binv DB/Dt=
- ! (-Binv grad U - grad U^T Binv)B + Binv DB/Dt = 0
+ ! D (Binv B)/Dt=
+ !   D Binv/Dt B + Binv DB/Dt=
+ !   (-Binv grad U - grad U^T Binv)B + Binv DB/Dt = 0
  ! -(grad U)B-B grad U^T + DB/Dt = 0
  ! DB/Dt = (grad U)B + B(grad U)^T
  ! equilibrium is B=I
  ! discretely, B should maintain as positive definite:
  ! B^n+1 = (I+dt grad U)Bstar(I+dt grad U)^T
+ !
  min_eval=0.01D0
  call project_to_positive_definite(A_local,A_dim,min_eval)
 else
