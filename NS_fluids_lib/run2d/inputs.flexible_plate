@@ -1,3 +1,16 @@
+# Shin et al
+# radius=0.6 cm
+# y_c=7.2cm
+# drop_bottom=6.6cm
+# plate_top=6cm
+# plate_bottom=6-0.08=5.92 cm
+# rho_plate=1.5 g/cm^3
+# rho_water=1.0 g/cm^3
+# rho_air=0.001 g/cm^3
+# G=4E+5 PA=4E+6 Barye          1PA=1 N/m^2=1 kg/(m s^2)=10 g/(cm s^2)
+# 0.5 (980)t^2 = .6  t=sqrt(1.2/980)=0.035
+# impact velocity=980 * 0.035=34.3 cm/s
+# scale the elastic tensor: det(B)=I
 max_step  =  99999   # maximum timestep 
 stop_time=10000.0
 
