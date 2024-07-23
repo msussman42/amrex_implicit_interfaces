@@ -2054,7 +2054,7 @@ protected:
      //       (viii) Q^{n+1}=lambda'' Q^n+1/(lambda''+dt)
      // 7=> Neo-Hookean (using Left Cauchy Green tensor B=F F^{T}
      //      (NN_NEO_HOOKEAN)
-     //     Xia, Lu, Tryggvason 2018
+     //     Xia, Lu, Tryggvason 2018 Rapid Prototyping Journal
      //     updating Q:
      //       (i) CISL advection Q^advect=Q^n(x-V dt)=Q^n @ x_{d}
      //       (ii) A^advect=Q^advect+I
