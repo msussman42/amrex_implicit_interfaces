@@ -26446,8 +26446,7 @@ subroutine point_updatetensor( &
  polymer_factor, &
  elastic_viscosity, &
  irz, &
- bc, &
- transposegradu) 
+ bc) 
 
 use probcommon_module
 IMPLICIT NONE
@@ -26480,13 +26479,12 @@ real(amrex_real), INTENT(in) :: dt,elastic_time
 integer, INTENT(in) :: viscoelastic_model
 real(amrex_real), INTENT(in) :: polymer_factor
 real(amrex_real), INTENT(in) :: elastic_viscosity
-integer, INTENT(in) :: transposegradu
 integer, INTENT(in) :: bc(SDIM,2,SDIM)
 integer, INTENT(in) :: irz
 integer ii,jj,kk
 real(amrex_real) visctensor(3,3)
-real(amrex_real) gradu_FENECR(3,3)
-real(amrex_real) gradV(3,3)
+real(amrex_real) gradV_transpose_FENECR(3,3)
+real(amrex_real) gradV_transpose(3,3) !partial V/partial x
 real(amrex_real) Q(3,3)
 real(amrex_real) W_Jaumann(3,3)  ! W=(1/2)(grad V - (grad V)^T)
 real(amrex_real) Aadvect(3,3)
@@ -26601,7 +26599,7 @@ endif
 if (dt.gt.zero) then
  ! do nothing
 else
- print *,"dt invalid"
+ print *,"dt invalid: ",dt
  stop
 endif
 
@@ -26609,12 +26607,6 @@ call checkbound_array(fablo,fabhi,visc,0,-1)
 call checkbound_array1(fablo,fabhi,one_over_den,0,-1)
 call checkbound_array(fablo,fabhi,tendata,0,-1)
 call checkbound_array(fablo,fabhi,vel,1,-1)
-
-if ((transposegradu.ne.0).and. &
-    (transposegradu.ne.1)) then
- print *,"transposegradu invalid"
- stop
-endif
 
 if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
@@ -26633,14 +26625,14 @@ else
 endif
 
 call gridsten_level(xsten,i,j,k,level,nhalf)
- ! grad u=| u_r  u_t/r-v/r  u_z  |
- !        | v_r  v_t/r+u/r  v_z  |
- !        | w_r  w_t/r      w_z  |
+ ! (grad u)^T=| u_r  u_t/r-v/r  u_z  |=(\partial u)/(\partial x)
+ !            | v_r  v_t/r+u/r  v_z  |
+ !            | w_r  w_t/r      w_z  |
  ! if levelrz==COORDSYS_RZ,
  !  gradU(3,3)=u/|r|
  ! if levelrz==COORDSYS_CYLINDRICAL,
  !  gradU(2,2)+=u/|r|
- !  gradU(1,2)-=v/|r|
+ !  (gradU)^T(1,2)-=v/|r|
  ! tendata is intialized in: fort_getshear
  ! D=(1/2)(gradU + gradU^Transpose)
  ! tendata has: |D|, D, grad U
@@ -26666,15 +26658,21 @@ endif
 
 do ii=1,3
 do jj=1,3
- gradV(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
- if (transposegradu.eq.0) then
-  !gradu(veldir,dir)
-  gradu_FENECR(ii,jj)=gradV(ii,jj)
- else if (transposegradu.eq.1) then
-  !gradu(dir,veldir)
-  gradu_FENECR(jj,ii)=gradV(ii,jj)
+  !gradV_transpose=(\partial V)/(\partial x)
+ gradV_transpose(ii,jj)=tendata(D_DECL(i,j,k),n) !(vel dir,deriv dir)
+ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
+     (viscoelastic_model.eq.NN_OLDROYD_B).or. & !OLDROYD-B
+     (viscoelastic_model.eq.NN_FENE_P).or. & !FENE-P
+     (viscoelastic_model.eq.NN_LINEAR_PTT)) then !linear PTT
+  !gradV_transpose
+  gradV_transpose_FENECR(ii,jj)=gradV_transpose(ii,jj)
+ else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental model
+  !stub
+  gradV_transpose_FENECR(ii,jj)=gradV_transpose(ii,jj)
+ else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
+  gradV_transpose_FENECR(ii,jj)=gradV_transpose(ii,jj)
  else
-  print *,"transposegradu invalid"
+  print *,"viscoelastic_model invalid: ",viscoelastic_model
   stop
  endif
 
@@ -26682,12 +26680,12 @@ do jj=1,3
 enddo 
 enddo 
 
-save_hoop_term=gradV(3,3)  ! u/r
+save_hoop_term=gradV_transpose(3,3)  ! u/r
 
 if (abs(save_hoop_term).ge.zero) then
  ! do nothing
 else
- print *,"save_hoop_term corruption"
+ print *,"save_hoop_term corruption: ",save_hoop_term
  stop
 endif
 
@@ -26700,7 +26698,8 @@ endif
 
 do ii=1,3
 do jj=1,3
- W_Jaumann(ii,jj)=half*(gradV(ii,jj)-gradV(jj,ii))
+  !W=(grad V - grad V^T)/2
+ W_Jaumann(ii,jj)=half*(gradV_transpose(jj,ii)-gradV_transpose(ii,jj))
 enddo 
 enddo 
  
@@ -26724,7 +26723,7 @@ modtime=visc(D_DECL(i,j,k),2*num_materials+im_critical+1)
 if (modtime.ge.zero) then
  ! do nothing
 else
- print *,"modtime invalid"
+ print *,"modtime invalid: ",modtime
  stop
 endif
 
@@ -26734,7 +26733,7 @@ force_coef=visc(D_DECL(i,j,k),num_materials+im_critical+1)
 if (force_coef.gt.zero) then
  ! do nothing
 else
- print *,"expecting force_coef>0"
+ print *,"expecting force_coef>0: ",force_coef
  stop
 endif
 
@@ -26743,7 +26742,7 @@ one_over_den_local=one_over_den(D_DECL(i,j,k))
 if (one_over_den_local.gt.zero) then
  ! do nothing
 else
- print *,"one_over_den_local invalid"
+ print *,"one_over_den_local invalid: ",one_over_den_local
  stop
 endif
 
@@ -26782,7 +26781,7 @@ do ii=1,3
    if (Q_hoop_old.gt.-one) then
     ! do nothing
    else
-    print *,"Q_hoop_old invalid"
+    print *,"Q_hoop_old invalid: ",Q_hoop_old
     stop
    endif
   else
@@ -26862,7 +26861,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
 
    !cfl cond: |u|dt<dx and dt|gradu|<1
   if (dumbbell_model.eq.1) then
-   Smult_left(ii,jj)=dt*gradu_FENECR(ii,jj) 
+   Smult_left(ii,jj)=dt*gradV_transpose_FENECR(ii,jj) 
    Smult_right(ii,jj)=Smult_left(ii,jj)
   else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental
    if (dumbbell_model.eq.0) then
@@ -26874,20 +26873,21 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
    endif
   else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then !incremental Neo-Hookean
    ! Xia, Lu, Tryggvason 2018
-   ! Df/Dt + f grad U=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
+   ! (grad U)^T_{ki}=(partial u_k)/(partial x_i)
+   ! Df/Dt + f (grad U)^T=0  Left Cauchy Green tensor B=F F^T=(f^T f)^{-1}
    ! D(f^T f)/Dt=f^T Df/Dt + Df^T/Dt f =
-   ! f^T(-f grad U)+(-grad U^T f^T)f  
+   !             f^T(-f grad U^T)+(-grad U f^T)f  
    ! let Binv=f^T f
-   ! D Binv/Dt + Binv grad U + grad U^T Binv = 0
+   ! D Binv/Dt + Binv grad U^T + grad U Binv = 0
    ! D (Binv B)/Dt=D Binv/Dt B + Binv DB/Dt=
-   ! (-Binv grad U - grad U^T Binv)B + Binv DB/Dt = 0
-   ! -(grad U)B-B grad U^T + DB/Dt = 0
-   ! DB/Dt = (grad U)B + B(grad U)^T
+   ! (-Binv grad U^T - grad U Binv)B + Binv DB/Dt = 0
+   ! -(grad U^T)B-B grad U + DB/Dt = 0
+   ! DB/Dt = (grad U)^T B + B(grad U)
    ! equilibrium is B=I
    ! discretely, B should maintain as positive definite:
-   ! B^n+1 = (I+dt grad U)Bstar(I+dt grad U)^T
+   ! B^n+1 = (I+dt grad U^T)Bstar(I+dt grad U)
    if (dumbbell_model.eq.0) then
-    Smult_left(ii,jj)=dt*gradu_FENECR(ii,jj) 
+    Smult_left(ii,jj)=dt*gradV_transpose_FENECR(ii,jj) 
     Smult_right(ii,jj)=Smult_left(ii,jj)
    else
     print *,"dumbbell_model invalid"

@@ -8400,8 +8400,7 @@ stop
        polymer_factor, &
        elastic_viscosity, &
        irz, &
-       bc, &
-       transposegradu) &
+       bc) &
       bind(c,name='fort_updatetensor')
 
       use probcommon_module
@@ -8453,7 +8452,6 @@ stop
       integer, INTENT(in) :: viscoelastic_model
       real(amrex_real), INTENT(in) :: polymer_factor
       real(amrex_real), INTENT(in) :: elastic_viscosity
-      integer, INTENT(in) :: transposegradu
       integer, INTENT(in) :: bc(SDIM,2,SDIM)
       integer, INTENT(in) :: irz
       integer :: dir_local
@@ -8537,12 +8535,6 @@ stop
       told_ptr=>told
       call checkbound_array(fablo,fabhi,told_ptr,0,-1)
 
-      if ((transposegradu.ne.0).and. &
-          (transposegradu.ne.1)) then
-       print *,"transposegradu invalid"
-       stop
-      endif
-
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0)
 
       do k=growlo(3),growhi(3)
@@ -8576,8 +8568,7 @@ stop
         polymer_factor, &
         elastic_viscosity, &
         irz, &
-        bc, &
-        transposegradu) 
+        bc) 
 
        do dir_local=1,ENUM_NUM_TENSOR_TYPE
         tnew(D_DECL(i,j,k),dir_local)=point_tnew(dir_local)

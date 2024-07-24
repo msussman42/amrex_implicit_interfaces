@@ -80,7 +80,6 @@ ns.sum_interval   = 1        # timesteps between computing mass
 # axis_dir=12 viscoelastic inside drop (LS>0 inside, LS<0 outside)
 # probtype=1, axis_dir=11
 ns.axis_dir=11 # LS<0 inside of drop ("gas")  LS>0 outside drop ("liquid")
-ns.transposegradu=0
 ns.is_viscoelastic=1
 ns.elastic_time=5.0  # relaxation time or Deborah number
 ns.elastic_viscosity=1.0  # c*eta_solvent or c*eta_solvent/(eta_total*Re)
