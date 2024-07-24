@@ -26609,7 +26609,6 @@ if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
  implicit_hoop=1
- force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
@@ -27165,8 +27164,8 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  ! new eigenvalues: alpha lambda + (1-alpha)
  ! in 2D the product is:
  ! (alpha l1 + 1-alpha)(alpha l2+1-alpha)= 
- ! alpha^2+alpha l1(1-alpha)+alpha l2(1-alpha)+(1-alpha)^2=
- ! 1-2 dt+l1 dt+dt/l1  l^2+1=2 l  l^2-2l+1=0  l=1
+ ! (alpha l1 + 1-alpha)(alpha/l1+1-alpha)=
+ ! alpha^2 + (1-alpha)(alpha)(l1+1/l1)+(1-alpha)^2
  do ii=1,3
  do jj=1,3
   if (ii.eq.jj) then
