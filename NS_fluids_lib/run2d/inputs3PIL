@@ -81,7 +81,6 @@ ns.uncoupled_viscosity=0
 ns.overlap=0.0
 ns.is_twophase=1
 
-ns.transposegradu=1
 ns.is_viscoelastic=1
 ns.elastic_time=0.1           # relaxation time or Deborah number
 ns.elastic_viscosity=8.75    # c*eta_solvent or c*eta_solvent/(eta_total*Re)

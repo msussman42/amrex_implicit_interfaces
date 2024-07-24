@@ -527,8 +527,6 @@ Vector<int> NavierStokes::viscosity_state_model; // def=0
 Vector<int> NavierStokes::viscoelastic_model; // def=0
 Vector<int> NavierStokes::les_model; // def=0
 
-int NavierStokes::transposegradu=0;
-
 Vector<int> NavierStokes::store_elastic_data;//def=0,0...num_materials-1
 Vector<int> NavierStokes::store_refine_density_data;//def=0,0...num_materials-1
 Vector<Real> NavierStokes::elastic_viscosity; // def=0
@@ -12750,8 +12748,7 @@ void NavierStokes::tensor_advection_update() {
          &polymer_factor[im],
          &elastic_viscosity[im],
          &NS_geometry_coord,
-         velbc.dataPtr(),
-         &transposegradu);
+         velbc.dataPtr());
        } else {
 	std::cout << "illegal: store_elastic_data==1 and visc_model==4\n";
         amrex::Error("fort_built_in_elastic_model invalid");

@@ -305,8 +305,7 @@ extern "C"
     Real* polymer_factor,
     Real* elastic_viscosity,
     int* irz,
-    const int* bcrec,
-    int* transposegradu);
+    const int* bcrec);
 
    void fort_extrapolate_tensor(
     int* level,

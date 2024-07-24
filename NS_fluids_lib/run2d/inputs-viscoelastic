@@ -49,8 +49,6 @@ ns.dt_cutoff      = 0.000005  # level 0 timestep below which we halt
 
 mac.mac_abs_tol    = 1.0e-8
 
-
-ns.transposegradu=0
 ns.elastic_time=0.1 0.0          # relaxation time
 ns.elastic_viscosity=8.751 0.0   # c=5.8375  eta_s=1.5  c*eta_s=8.751
 ns.polymer_factor=0.01 0.0        # parameter, 1/L

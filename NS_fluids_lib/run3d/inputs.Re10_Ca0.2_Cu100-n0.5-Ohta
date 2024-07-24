@@ -60,7 +60,6 @@ mac.mac_abs_tol    = 1.0e-8
 #probtype=1 axis_dir=11 => LS<0 inside of drop LS>0 outside of drop
 # material 1 corresponds to material where LS>0 (outside drop)
 # material 2 corresponds to material where LS<0 (inside drop)
-ns.transposegradu=0
 ns.elastic_time=0.0 0.0     # relaxation time or Deborah number
 ns.elastic_viscosity=0.0 0.0  # c*eta_solvent, c*eta_solvent/(eta_total*Re)
 ns.polymer_factor=0.1 0.0        # parameter, 1/L

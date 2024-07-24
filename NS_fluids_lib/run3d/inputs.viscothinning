@@ -59,7 +59,6 @@ ns.dt_cutoff      = 5.0e-7  # truncate u if u dt_cut>dx
 mac.mac_abs_tol    = 1.0e-8
 
 
-ns.transposegradu=0
 ns.elastic_time=0.4699 0.0     # relaxation time or Deborah number
 ns.elastic_viscosity=9.99000999 0.0  # c*eta_solvent, c*eta_solvent/(eta_total*Re)
 ns.polymer_factor=0.1 0.0        # parameter, 1/L

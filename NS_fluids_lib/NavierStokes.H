@@ -2066,8 +2066,6 @@ protected:
     static Vector<int> viscosity_state_model; // def=0
     static Vector<int> les_model;
 
-    static int transposegradu; //def=0
-
     static Vector<Real> elastic_viscosity; // viscoelastic parameter
      // for freezing:
      // 1. nonlinear advection
