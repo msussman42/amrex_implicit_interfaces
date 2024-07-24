@@ -5599,11 +5599,12 @@ end subroutine project_to_traceless
 
 
 
-subroutine project_to_positive_definite(S,n,min_eval)
+subroutine project_to_positive_definite(S,n,min_eval,unity_det)
 use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(in)    :: min_eval
+integer, INTENT(in) :: unity_det
 integer, INTENT(in) :: n
 real(amrex_real), INTENT(inout) :: S(n,n)
 
@@ -5617,11 +5618,12 @@ real(amrex_real) :: evals_STS(n)
 real(amrex_real) :: evecs_STS(n,n)
 integer :: i,j,k
 real(amrex_real) :: max_eval_sqr
+real(amrex_real) :: product_evals
 
 if (min_eval.gt.zero) then
  ! do nothing
 else
- print *,"min_eval invalid"
+ print *,"min_eval invalid: ",min_eval
  stop
 endif
 
@@ -5692,9 +5694,36 @@ do i=1,n
   stop
  endif
 enddo
+product_evals=one
 do i=1,n
  evals_project(i)=max(min_eval,evals_S(i))
+ product_evals=product_evals*evals_project(i)
 enddo
+
+if (product_evals.gt.zero) then
+
+ if (unity_det.eq.1) then
+  product_evals=product_evals**(one/n)
+  if (product_evals.gt.zero) then
+   do i=1,n
+    evals_project(i)=evals_project(i)/product_evals
+   enddo
+  else
+   print *,"product_evals invalid: ",product_evals
+   stop
+  endif
+ else if (unity_det.eq.0) then
+  ! do nothing
+ else
+  print *,"unity_det invalid: ",unity_det
+  stop
+ endif
+
+else
+ print *,"product_evals invalid: ",product_evals
+ stop
+endif
+
  ! AX=X Lambda
  ! A=X Lambda X^T
 do i=1,n
@@ -5713,16 +5742,19 @@ enddo
 
 end subroutine project_to_positive_definite
 
- ! called from fort_updatetensor which is declared in GODUNOV_3D.F90.
+ ! called from point_updatetensor which is declared in GLOBALUTIL.F90
+ ! point_updatetensor called from fort_updatetensor 
+ ! which is declared in GODUNOV_3D.F90.
  ! A=Q+I must be symmetric and positive definite.
 subroutine project_A_to_positive_definite_or_traceless(A, &
-   viscoelastic_model,polymer_factor)
+   viscoelastic_model,polymer_factor,unity_det)
 use probcommon_module
 IMPLICIT NONE
 
 real(amrex_real), INTENT(inout) :: A(3,3)
 integer, INTENT(in) :: viscoelastic_model
 real(amrex_real), INTENT(in) :: polymer_factor
+integer, INTENT(in) :: unity_det
 integer A_dim
 integer i,j
 real(amrex_real) min_eval
@@ -5806,7 +5838,7 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
     (viscoelastic_model.eq.NN_LINEAR_PTT)) then !linear PTT
 
  min_eval=0.01D0*(polymer_factor**2)
- call project_to_positive_definite(A_local,A_dim,min_eval)
+ call project_to_positive_definite(A_local,A_dim,min_eval,unity_det)
 
 else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then ! incremental
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
@@ -5838,7 +5870,7 @@ else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental Neo-Hookean
  ! B^n+1 = (I+dt grad U)Bstar(I+dt grad U)^T
  !
  min_eval=0.01D0
- call project_to_positive_definite(A_local,A_dim,min_eval)
+ call project_to_positive_definite(A_local,A_dim,min_eval,unity_det)
 else
  print *,"viscoelastic_model invalid: ",viscoelastic_model
  stop
@@ -26468,6 +26500,11 @@ real(amrex_real), INTENT(in), pointer :: one_over_den(D_DECL(:,:,:))
 ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
 ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
 ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
+! grad u = | ux vx wx |
+!          | uy vy wy |
+!          | uz vz wz |
+! (\partial u)/(\partial x)=(grad u)^T
+!
 real(amrex_real), INTENT(in), pointer :: tendata(D_DECL(:,:,:),:)
 real(amrex_real), INTENT(in), pointer :: vel(D_DECL(:,:,:),:)
 
@@ -26494,7 +26531,8 @@ real(amrex_real) SA(3,3)
 real(amrex_real) SAS(3,3)
 real(amrex_real) NP(3,3)
 real(amrex_real) shear
-real(amrex_real) modtime,trace_A,equilibrium_diagonal
+real(amrex_real) modtime,trace_A
+real(amrex_real) equilibrium_diagonal
 real(amrex_real) inverse_tol
 real(amrex_real) inverse_tol_hoop
 
@@ -26517,6 +26555,8 @@ real(amrex_real) explicit_hoop
 real(amrex_real) u_coef
 real(amrex_real) Q_coef
 real(amrex_real) improved_hoop
+real(amrex_real) force_unity_determinant
+integer unity_det
 
 nhalf=3
 
@@ -26546,12 +26586,30 @@ else
  stop
 endif
 
+if (fort_material_type(im_critical+1).eq.0) then
+ force_unity_determinant=1
+else if (fort_material_type(im_critical+1).eq.999) then
+ print *,"999 is unexpected material_type"
+ print *,"im_critical,fort_material_type: ",im_critical, &
+    fort_material_type(im_critical+1)
+ stop
+else if ((fort_material_type(im_critical+1).gt.0).and. &
+         (fort_material_type(im_critical+1).le.MAX_NUM_EOS)) then
+ force_unity_determinant=0
+else
+ print *,"unexpected material_type"
+ print *,"im_critical,fort_material_type: ",im_critical, &
+    fort_material_type(im_critical+1)
+ stop
+endif
+
 implicit_hoop=0
 
 if (viscoelastic_model.eq.NN_FENE_CR) then ! FENE-CR
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
  implicit_hoop=1
+ force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_OLDROYD_B) then ! Oldroyd-B
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
@@ -26560,14 +26618,17 @@ else if (viscoelastic_model.eq.NN_FENE_P) then ! FENE-P
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=max(0.0,elastic_time*(1-Tr(A)/L^2))
  implicit_hoop=0
+ force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_LINEAR_PTT) then ! linear PTT
  ! coeff=(visc-etaS)/(modtime+dt)
  ! modtime=elastic_time
  implicit_hoop=0
+ force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_MAIRE_ABGRALL_ETAL) then !incremental model
  ! Maire, Abgrall, Breil, Loubere, Rebourcet JCP 2013
  ! coeff=elastic_viscosity
  implicit_hoop=0
+ force_unity_determinant=0
 else if (viscoelastic_model.eq.NN_NEO_HOOKEAN) then ! incremental 
  ! Xia, Lu, Tryggvason 2018
  ! coeff=elastic_viscosity
@@ -26589,7 +26650,7 @@ else
 endif
 
 if ((im_critical.lt.0).or.(im_critical.ge.num_materials)) then
- print *,"im_critical invalid27"
+ print *,"im_critical invalid27: ",im_critical
  stop
 endif
 if (ncomp_visc.ne.3*num_materials) then
@@ -26806,7 +26867,7 @@ if (viscoelastic_model.eq.NN_FENE_P) then !FENE-P
   if (polymer_factor.gt.zero) then !1/L
    equilibrium_diagonal=min(trace_A*(polymer_factor**2),one)
   else
-   print *,"polymer_factor out of range for FENE-P"
+   print *,"polymer_factor out of range for FENE-P: ",polymer_factor
    stop
   endif
  else
@@ -26951,8 +27012,9 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   endif
  enddo  ! ii=1,3
 
+ unity_det=0
  call project_A_to_positive_definite_or_traceless(Aadvect, &
-         viscoelastic_model,polymer_factor)
+         viscoelastic_model,polymer_factor,unity_det)
 
  if (dumbbell_model.eq.1) then
   ! do nothing
@@ -27046,8 +27108,20 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  endif
 
   ! Q=S A S^T at this stage
+ unity_det=0
  call project_A_to_positive_definite_or_traceless(Q, &
-       viscoelastic_model,polymer_factor)
+    viscoelastic_model,polymer_factor,unity_det)
+
+ if (force_unity_determinant.eq.1) then
+  unity_det=1
+  call project_A_to_positive_definite_or_traceless(Q, &
+    viscoelastic_model,polymer_factor,unity_det)
+ else if (force_unity_determinant.eq.0) then
+  ! do nothing
+ else
+  print *,"force_unity_determinant invalid"
+  stop
+ endif
 
  do ii=1,3
 
@@ -27086,6 +27160,13 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
  ! Q^n+1 = (Q_n/dt-ofs/lambda_tilde)*dt*lambda_tilde/
  !         (lambda_tilde+dt)
  ! Q^n+1=(Q^n * lambda_tilde - ofs * dt)/(lambda+dt) 
+ ! Note for determinants:
+ ! Anp1=alpha An + (1-alpha)I  alpha=1-dt
+ ! new eigenvalues: alpha lambda + (1-alpha)
+ ! in 2D the product is:
+ ! (alpha l1 + 1-alpha)(alpha l2+1-alpha)= 
+ ! alpha^2+alpha l1(1-alpha)+alpha l2(1-alpha)+(1-alpha)^2=
+ ! 1-2 dt+l1 dt+dt/l1  l^2+1=2 l  l^2-2l+1=0  l=1
  do ii=1,3
  do jj=1,3
   if (ii.eq.jj) then
@@ -27125,8 +27206,9 @@ if ((viscoelastic_model.eq.NN_FENE_CR).or. & !FENE-CR
   endif
  enddo ! do ii=1,3
 
+ unity_det=0
  call project_A_to_positive_definite_or_traceless(Aadvect, &
-         viscoelastic_model,polymer_factor)
+   viscoelastic_model,polymer_factor,unity_det)
 
  do ii=1,3
  do jj=1,3
