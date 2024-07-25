@@ -7469,6 +7469,10 @@ END SUBROUTINE SIMP
 
         call gridsten(xsten,xlo,i,j,k,fablo,bfact,dx,nhalf)
 
+         ! gradu is actually the Jacobian: (\partial u)/(\partial x)
+         ! i.e gradu(i,j)=\partial u_{i}/\partial x_{j}
+         ! The gradient of a vector is the TRANSPOSE of the Jacobian.
+         ! (grad * u^{T})_{ij}=\partial u_{j}/\partial x_{i}
         do veldir=1,3
         do dir=1,3
          gradu(veldir,dir)=zero
@@ -7506,15 +7510,16 @@ END SUBROUTINE SIMP
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          rr=xsten(0,1)
          gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),velcomp)/abs(rr)
+           !u_y term
          gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),velcomp+1)/abs(rr)
         else
          print *,"levelrz invalid summass"
          stop
         endif
 
-        vort(1)=gradu(3,2)-gradu(2,3)
-        vort(2)=gradu(1,3)-gradu(3,1)
-        vort(3)=gradu(2,1)-gradu(1,2)
+        vort(1)=gradu(3,2)-gradu(2,3) !w_y-v_z
+        vort(2)=gradu(1,3)-gradu(3,1) !u_z-w_x
+        vort(3)=gradu(2,1)-gradu(1,2) !v_x-u_y
 
         do dir=1,num_materials*ngeom_recon
          mofdata(dir)=slopes(D_DECL(i,j,k),dir)

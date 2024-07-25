@@ -5699,6 +5699,10 @@ stop
 
       call growntilebox(tilelo,tilehi,fablo,fabhi,growlo,growhi,0) 
  
+! gradu is actually the Jacobian: (\partial u)/(\partial x)
+! i.e gradu(i,j)=\partial u_{i}/\partial x_{j}
+! The gradient of a vector is the TRANSPOSE of the Jacobian.
+! (grad * u^{T})_{ij}=\partial u_{j}/\partial x_{i}
       do k=growlo(3),growhi(3)
       do j=growlo(2),growhi(2)
       do i=growlo(1),growhi(1)
@@ -5709,6 +5713,7 @@ stop
         local_gradu(veldir,dir)=zero
        enddo 
        enddo 
+
        do dir=1,SDIM
         if (dir.eq.1) then
          nbase=TENSOR_TRANSPOSE_UX-1
@@ -5775,8 +5780,17 @@ stop
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
 
+        ! (u dot tau)_{i}=u_{k}\tau_{ki}=
+        !  (u tau_11 + v tau_21 + w tau_31 ,
+        !   u tau 12 + v tau_22 + w tau_32 ,
+        !   u tau_13 + v tau_23 + w tau_33)
+        !
+        ! div( u dot tau )=(u_{k}tau_{ki})_{i}=
+        !   (u_{k})_{i}tau_{ki}+u_{k}(tau_{ki})_{i}
+        !
         ! E: div( u dot tau )=(u tau_11)_x+(u tau_12)_y+(u tau_13)_z+...
         ! e: grad u : tau
+        ! (grad u)_{ki} = Jacobian = (u_{k})_{i}
 
        if (local_mask.eq.0) then
         IEforce=zero
