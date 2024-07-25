@@ -1,3 +1,8 @@
+#Hao, Lv, Zhang 2014 Applied Physics Letters
+#6 microliter water drop=6E-3 cm^3 
+#ambient air: 293 Kelvin
+#substrate: 265 Kelvin
+#68 degree contact angle
 #Hui Hu and Zheyan Jin, IJMF 2010
 #radius: 400 microns, height: 250 microns
 max_step  =  9999999    # maximum timestep
