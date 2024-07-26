@@ -2,7 +2,8 @@
 #radius: 400 microns, height: 250 microns
 #THIS FILE: (Silicon freezing, Figure 6)
 #Vu, Tryggvason, Homma, Wells, Takakura, J. Chem. Eng. of Japan, Vol 46(11)
-#See also Satunkin (2003)
+#See also Satunkin (2003), Figure 15e, r0=5.1mm z0=3.6mm 
+#wetting angle=33 degrees
 #Pr=0.013 St=0.116 Bo=1.32 We=0.05 k_sl=0.5
 #k_gl=0.01  Cp=1 mu_sl=5 mu_gl=0.05 rho_sl=0.91 rho_gl=0.05
 #St=Stefan=(Tm-Tc)/L_h
