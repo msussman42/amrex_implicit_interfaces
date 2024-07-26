@@ -5577,6 +5577,8 @@ stop
 
          ! 1=T11 2=T12 3=T22 4=T33 5=T13 6=T23
          ! rhoinverse is 1/den
+         ! fort_tensorheat is called from 
+         ! NavierStokes::make_viscoelastic_heating (NavierStokes.cpp)
       subroutine fort_tensorheat( &
        nstate, &
        xlo,dx,  &
@@ -5646,7 +5648,6 @@ stop
       real(amrex_real) xsten(-nhalf:nhalf,SDIM)
       real(amrex_real) local_gradu(3,3)
       integer nbase
-      integer grdcomp
       integer imlocal
       real(amrex_real) LScen(num_materials)
       real(amrex_real) Q(3,3)
@@ -5726,8 +5727,7 @@ stop
          stop
         endif
         do veldir=1,SDIM
-         grdcomp=nbase+veldir
-         local_gradu(veldir,dir)=gradu(D_DECL(i,j,k),grdcomp)
+         local_gradu(veldir,dir)=gradu(D_DECL(i,j,k),nbase+veldir)
         enddo ! veldir
        enddo ! dir
 
@@ -5780,13 +5780,14 @@ stop
        Q(3,1)=Q(1,3)
        Q(3,2)=Q(2,3)
 
+        ! inner product:
         ! (u dot tau)_{i}=u_{k}\tau_{ki}=
         !  (u tau_11 + v tau_21 + w tau_31 ,
         !   u tau 12 + v tau_22 + w tau_32 ,
         !   u tau_13 + v tau_23 + w tau_33)
         !
-        ! div( u dot tau )=(u_{k}tau_{ki})_{i}=
-        !   (u_{k})_{i}tau_{ki}+u_{k}(tau_{ki})_{i}
+        ! div( u dot tau )=(u_{k}tau_{ki})_{x_{i}}=
+        !   (u_{k})_{x_{i}}tau_{ki}+u_{k}(tau_{ki})_{x_{i}}
         !
         ! E: div( u dot tau )=(u tau_11)_x+(u tau_12)_y+(u tau_13)_z+...
         ! e: grad u : tau
@@ -5808,7 +5809,7 @@ stop
         if (one_over_DeDT.gt.zero) then
          ! do nothing
         else
-         print *,"one_over_DeDT invalid"
+         print *,"one_over_DeDT invalid: ",one_over_DeDT
          stop
         endif
 
@@ -5830,6 +5831,8 @@ stop
 
 
          ! rhoinverse is 1/den
+         ! fort_visctensorheat is called from NavierStokes::diffusion_heating
+         ! which is declared in Diffusion.cpp.
       subroutine fort_visctensorheat( &
        nsolve, &
        nstate, &
@@ -5880,7 +5883,8 @@ stop
       real(amrex_real), pointer :: ystress_ptr(D_DECL(:,:,:),:)
       real(amrex_real), pointer :: zstress_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(in),target :: gradu(DIMV(gradu),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(in),target :: &
+              gradu(DIMV(gradu),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: gradu_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in) :: dt
       integer, INTENT(in) :: irz
@@ -5894,7 +5898,6 @@ stop
       real(amrex_real) local_gradu(3,3)
       real(amrex_real) tensor(SDIM,SDIM)
       integer nbase
-      integer grdcomp
 
       if (bfact.lt.1) then
        print *,"bfact invalid51"
@@ -5970,8 +5973,25 @@ stop
         stop
        endif
 
+
+
+        ! inner product:
+        ! (u dot tau)_{i}=u_{k}\tau_{ki}=
+        !  (u tau_11 + v tau_21 + w tau_31 ,
+        !   u tau 12 + v tau_22 + w tau_32 ,
+        !   u tau_13 + v tau_23 + w tau_33)
+        !
+        ! div( u dot tau )=(u_{k}tau_{ki})_{x_{i}}=
+        !   (u_{k})_{x_{i}}tau_{ki}+u_{k}(tau_{ki})_{x_{i}}
+        !
         ! E: div( u dot tau )=(u tau_11)_x+(u tau_12)_y+(u tau_13)_z+...
         ! e: grad u : tau
+        ! (grad u)_{ki} = Jacobian = (u_{k})_{i}
+        !
+        ! gradu is actually the Jacobian: (\partial u)/(\partial x)
+        ! i.e gradu(i,j)=\partial u_{i}/\partial x_{j}
+        ! The gradient of a vector is the TRANSPOSE of the Jacobian.
+        ! (grad * u^{T})_{ij}=\partial u_{j}/\partial x_{i}
 
        do veldir=1,3
        do dir=1,3
@@ -5990,16 +6010,18 @@ stop
          stop
         endif
         do veldir=1,SDIM
-         grdcomp=nbase+veldir
-         local_gradu(veldir,dir)=gradu(D_DECL(i,j,k),grdcomp)
+         local_gradu(veldir,dir)=gradu(D_DECL(i,j,k),nbase+veldir)
         enddo ! veldir
        enddo ! dir=1..sdim
 
        do veldir=1,SDIM
+        !on the xface we have (tau dot (1 0 0))_{i}=tau_{ij}e_{j}=tau_{i1}
         tensor(veldir,1)=half*(xstress(D_DECL(i,j,k),veldir)+ &
                xstress(D_DECL(i+1,j,k),veldir))
+        !on the yface we have (tau dot (0 1 0))_{i}=tau_{ij}e_{j}=tau_{i2}
         tensor(veldir,2)=half*(ystress(D_DECL(i,j,k),veldir)+ &
                ystress(D_DECL(i,j+1,k),veldir))
+        !on the zface we have (tau dot (0 0 1))_{i}=tau_{ij}e_{j}=tau_{i3}
         if (SDIM.eq.3) then
          tensor(veldir,SDIM)=half*(zstress(D_DECL(i,j,k),veldir)+ &
                 zstress(D_DECL(i,j,k+1),veldir))
@@ -6018,7 +6040,7 @@ stop
        if (one_over_DeDT.gt.zero) then
         ! do nothing
        else
-        print *,"one_over_DeDT invalid"
+        print *,"one_over_DeDT invalid: ",one_over_DeDT
         stop
        endif
        Tforce=-IEforce*dt*one_over_DeDT
@@ -8447,12 +8469,14 @@ stop
       ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
       ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
       ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
-      real(amrex_real), INTENT(in), target :: tendata(DIMV(tendata),DERIVE_TENSOR_NCOMP)
+      real(amrex_real), INTENT(in), target :: &
+              tendata(DIMV(tendata),DERIVE_TENSOR_NCOMP)
       real(amrex_real), pointer :: tendata_ptr(D_DECL(:,:,:),:)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), pointer :: vel_ptr(D_DECL(:,:,:),:)
 
-      real(amrex_real), INTENT(out), target :: tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real), INTENT(out), target :: &
+              tnew(DIMV(tnew),ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), pointer :: tnew_ptr(D_DECL(:,:,:),:)
       real(amrex_real) :: point_tnew(ENUM_NUM_TENSOR_TYPE)
 
@@ -18333,7 +18357,7 @@ stop
 
            tdata(D_DECL(i,j,k),tensorcomponent)=hold_grad
 
-          enddo ! nc=1..sdim
+          enddo ! nc=1..sdim (velocity component)
 
          enddo
          enddo
