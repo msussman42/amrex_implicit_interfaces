@@ -450,7 +450,8 @@ stop
       integer, INTENT(in) :: DIMDEC(vel)
       integer, INTENT(in) :: DIMDEC(tensordata)
   
-      real(amrex_real), INTENT(in), target :: cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
+      real(amrex_real), INTENT(in), target :: &
+              cellten(DIMV(cellten),AMREX_SPACEDIM_SQR)
       real(amrex_real), pointer :: cellten_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
@@ -529,7 +530,7 @@ stop
         enddo
        enddo ! dir=1..sdim
 
-! grad u=| u_r  u_t/r-v/r  u_z  |
+! grad u=| u_r  u_t/r-v/r  u_z  |=Jacobian
 !        | v_r  v_t/r+u/r  v_z  |
 !        | w_r  w_t/r      w_z  |
 
@@ -551,6 +552,7 @@ stop
         rr=abs(xsten(0,1))
         if (rr.gt.zero) then
          gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),1)/rr
+           !u_y term (i.e. u_{theta})  u_{theta}-=v/r
          gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),2)/rr
         else
          print *,"rr invalid"
@@ -583,9 +585,9 @@ stop
        if (only_scalar.eq.1) then
         tensordata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1)=shear
        else if (only_scalar.eq.2) then
-        vort(1)=gradu(3,2)-gradu(2,3)
-        vort(2)=gradu(1,3)-gradu(3,1)
-        vort(3)=gradu(2,1)-gradu(1,2)
+        vort(1)=gradu(3,2)-gradu(2,3) !w_y-v_z
+        vort(2)=gradu(1,3)-gradu(3,1) !u_z-w_x
+        vort(3)=gradu(2,1)-gradu(1,2) !v_x-u_y
         tensordata(D_DECL(i,j,k),DERIVE_TENSOR_MAG+1)= &
           sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
        else if (only_scalar.eq.0) then
@@ -604,6 +606,10 @@ stop
          stop
         endif
 
+      ! D=(1/2)(gradU + gradU^Transpose)
+      ! DERIVE_TENSOR_MAG+1: sqrt(2 * D : D)
+      ! DERIVE_TENSOR_RATE_DEFORM+1: D11,D12,D13,D21,D22,D23,D31,D32,D33
+      ! DERIVE_TENSOR_GRAD_VEL+1: ux,uy,uz,vx,vy,vz,wx,wy,wz
         do i1=1,3
         do j1=1,3
          tensordata(D_DECL(i,j,k),n)=gradu(i1,j1) !gradu(veldir,dir)
@@ -1626,7 +1632,8 @@ stop
       real(amrex_real), pointer :: dest_ptr(D_DECL(:,:,:),:)
 
       real(amrex_real), INTENT(in), target :: den(DIMV(den),ncomp_den)
-      real(amrex_real), INTENT(in), target :: tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
+      real(amrex_real), INTENT(in), target :: &
+              tensor(DIMV(tensor),ENUM_NUM_TENSOR_TYPE)
       real(amrex_real), INTENT(in), target :: vel(DIMV(vel),STATE_NCOMP_VEL)
       real(amrex_real), INTENT(in), target :: visc(DIMV(visc),ncomp_visc)
 
@@ -1742,7 +1749,7 @@ stop
        enddo ! dir=1..sdim
 
 ! in RZ:
-! grad u=| u_r  0  u_z  |
+! grad u=| u_r  0  u_z  |=Jacobian
 !        | 0   u/r  0   |
 !        | w_r  0  w_z  |
        if (levelrz.eq.COORDSYS_CARTESIAN) then
@@ -1763,9 +1770,9 @@ stop
         stop
        endif
 
-       vort(1)=gradu(3,2)-gradu(2,3)
-       vort(2)=gradu(1,3)-gradu(3,1)
-       vort(3)=gradu(2,1)-gradu(1,2)
+       vort(1)=gradu(3,2)-gradu(2,3) !w_y-v_z
+       vort(2)=gradu(1,3)-gradu(3,1) !u_z-w_x
+       vort(3)=gradu(2,1)-gradu(1,2) !v_x-u_y
        dest(D_DECL(i,j,k),5)= &
          sqrt(vort(1)**2+vort(2)**2+vort(3)**2)
 
@@ -2654,7 +2661,8 @@ stop
                    fort_elastic_viscosity(im_primary), &
                    fort_viscoelastic_model(im_primary)).eq.1) then 
                partid=1
-               do while ((fort_im_viscoelastic_map(partid)+1.ne.im_primary).and. &
+               do while ((fort_im_viscoelastic_map(partid)+1.ne. &
+                          im_primary).and. &
                          (partid.le.num_materials_viscoelastic))
                 partid=partid+1
                enddo

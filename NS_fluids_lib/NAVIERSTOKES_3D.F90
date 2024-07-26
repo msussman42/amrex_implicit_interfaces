@@ -7510,7 +7510,7 @@ END SUBROUTINE SIMP
         else if (levelrz.eq.COORDSYS_CYLINDRICAL) then
          rr=xsten(0,1)
          gradu(2,2)=gradu(2,2)+vel(D_DECL(i,j,k),velcomp)/abs(rr)
-           !u_y term
+           !u_y term (i.e. u_{theta})  u_{theta}-=v/r
          gradu(1,2)=gradu(1,2)-vel(D_DECL(i,j,k),velcomp+1)/abs(rr)
         else
          print *,"levelrz invalid summass"
