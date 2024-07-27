@@ -202,6 +202,8 @@ stop
         mof_ordering_local(im)=1 ! non-tessellating
        else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then
         mof_ordering_local(im)=1 ! tessellating
+       else if (local_FSI_flag.eq.FSI_EULERIAN_ELASTIC) then
+        mof_ordering_local(im)=1 ! tessellating
        else
         print *,"local_FSI_flag invalid in fort_mof_ordering_override"
         print *,"im,local_FSI_flag ",im,local_FSI_flag
@@ -231,6 +233,8 @@ stop
         else if (local_FSI_flag.eq.FSI_SHOELE_CTML) then  
          mof_ordering_local(im)=1  ! non-tessellating
         else if (local_FSI_flag.eq.FSI_RIGID_NOTPRESCRIBED) then 
+         mof_ordering_local(im)=1  ! tessellating
+        else if (local_FSI_flag.eq.FSI_EULERIAN_ELASTIC) then 
          mof_ordering_local(im)=1  ! tessellating
         else
          print *,"local_FSI_flag invalid in fort_mof_ordering_override"
@@ -1057,6 +1061,7 @@ stop
        SUB_STATE_BC=>flexible_plate_impact_STATE_BC
        SUB_HEATSOURCE=>flexible_plate_impact_HEATSOURCE
        SUB_ASSIMILATE=>flexible_plate_impact_ASSIMILATE
+       SUB_OVERRIDE_TAGFLAG=>flexible_plate_impact_OVERRIDE_TAGFLAG
       else if (probtype.eq.710) then
        SUB_INIT_MODULE=>INIT_CAVITY_PHASE_CHANGE_MODULE
        SUB_LS=>CAVITY_PHASE_CHANGE_LS
