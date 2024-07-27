@@ -130,7 +130,9 @@ ns.init_shrink    = 1.0      # scale back initial timestep
 ns.change_max     = 1.01 
 ns.visc_coef      = 1.0
 mac.visc_abs_tol   = 1.0e-8
-ns.gravity        = -980.0   # cgs
+#Reduce surface_tension and gravity by a factor of 10; i.e. use the
+#proper Bond number and increase the Weber number by a factor of 10.
+ns.gravity        = -980.0e-1   # cgs
 #ns.incremental_gravity_flag=1
 # sigma_{SV}-sigma_{SL}=sigma_{LV}cos(theta)
 # 1=water 2=gas  3=ice  4=substrate 
@@ -148,7 +150,8 @@ ns.gravity        = -980.0   # cgs
 # sigma_{IG}-sigma_{IL}=sigma_{LG}cos(theta_L)
 # theta_L=90 =>sigma_IG=sigma_IL=sigma_LG
 #melt/air,melt/ice,melt/substrate,air/ice,air/substrate,substrate/ice
-ns.tension=72.8 72.8 72.8 72.8 72.8 72.8   
+ns.tension=72.8e-1 72.8e-1 72.8e-1 72.8e-1 72.8e-1 72.8e-1
+  
 # material 1=liquid 2=gas  3=ice 4=solid
 # default is 4.1855e+7 erg/(g K)
 #ns.stiffCP = 4.1855e+7 1.0e+7 2.0e+7 2.0e+7  # dimensional
@@ -286,12 +289,10 @@ ns.speciesreactionrate=0.0 0.0 0.0 0.0
 ns.molar_mass=18.02 28.9 18.02 18.02 # liquid, ambient,ice,substrate
 # species molar mass (vapor) should be the same as the liquid molar mass.
 ns.species_molar_mass=18.02 # this is vapor molar mass=liquid molar mass
-# order to have a reduction factor per step
-# of about 50 percent in the difference
-# between the ice velocity at the triple point and the associated ice
-# rigid body motion
 # ice is a very viscous fluid 
-ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
+#increase viscosity by a factor of 100.
+#ns.viscconst=0.018 0.00017 10.0 100.0 # dimensional
+ns.viscconst=1.8 0.017 10.0 100.0 # dimensional
 #ns.uncoupled_viscosity=1 # div(mu grad u)
 ns.elastic_viscosity=0.0 0.0 0.0 0.0
 ns.viscoelastic_model=0 0 0 0
